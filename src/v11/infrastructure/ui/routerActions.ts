@@ -1,8 +1,8 @@
 import type { IncomingMessage } from "node:http";
 import { join } from "node:path";
 
-import { AttachBubbleError } from "../../../core/bubble/attachBubble.js";
 import type { UiBubbleDetail } from "../../../types/ui.js";
+import { AttachBubbleError } from "../executor/command/pairflowCommandAttachContract.js";
 import type { RuntimeSessionRecord } from "../executor/sessionRuntime/runtimeSessionsRegistry.js";
 import { presentBubbleDetail, presentBubbleList } from "./presenters/bubblePresenter.js";
 import { UiRepoScopeError, resolveScopedRepoPath } from "./repoScope.js";

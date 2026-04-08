@@ -1,8 +1,8 @@
 import type { BubbleInboxView } from "../../../shared/inbox/inboxCommandApi.js";
 import type {
-  BubbleListEntry,
-  BubbleListView
-} from "../../../../core/bubble/listBubbles.js";
+  UiBubbleListEntry as BubbleListEntry,
+  UiBubbleListView as BubbleListView
+} from "../../../shared/ports/uiRouter.js";
 import type { BubbleStatusView } from "../../../shared/status/statusCommandApi.js";
 import type { RuntimeSessionRecord } from "../../executor/sessionRuntime/runtimeSessionsRegistry.js";
 import type { BubbleLifecycleState } from "../../../../types/bubble.js";
