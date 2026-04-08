@@ -249,17 +249,11 @@ export class MetricsReportAggregator {
     }
   }
 
-  public observe(event: MetricsReportEvent): void {
-    const bubble = this.getOrCreateBubbleState(event.bubbleInstanceId);
-    if (isHumanInterventionEvent(event)) {
-      bubble.hasHumanIntervention = true;
-    }
-
-    if (
-      event.eventType === "bubble_passed" &&
-      event.actorRole === "implementer" &&
-      event.round !== null
-    ) {
+  private observeBubblePassedEvent(
+    event: MetricsReportEvent,
+    bubble: BubbleAggregateState
+  ): void {
+    if (event.actorRole === "implementer" && event.round !== null) {
       const roundKey = buildRoundKey(event.bubbleInstanceId, event.round);
       const existing = this.pendingImplementerPassByRound.get(roundKey) ?? [];
       existing.push(event.tsMs);
@@ -267,62 +261,69 @@ export class MetricsReportAggregator {
       return;
     }
 
-    if (event.eventType === "bubble_converged") {
-      if (event.round !== null) {
-        this.roundsToConverge.push(event.round);
-        this.consumeReviewCycle(event.bubbleInstanceId, event.round, event.tsMs);
-      }
-      if (
-        bubble.firstConvergedAtMs === null ||
-        event.tsMs < bubble.firstConvergedAtMs
-      ) {
-        bubble.firstConvergedAtMs = event.tsMs;
-      }
+    if (event.actorRole !== "reviewer") {
       return;
     }
 
+    if (event.round !== null) {
+      this.consumeReviewCycle(event.bubbleInstanceId, event.round, event.tsMs);
+    }
+
+    const parsedFindings = parseReviewerFindingMetadata(event.metadata);
+    if (parsedFindings === null) {
+      return;
+    }
+
+    this.reviewerRoundsTotal += 1;
     if (
-      event.eventType === "bubble_passed" &&
-      event.actorRole === "reviewer"
+      parsedFindings.hasFindings &&
+      parsedFindings.p0 === 0 &&
+      parsedFindings.p1 === 0 &&
+      parsedFindings.p2 + parsedFindings.p3 > 0
     ) {
-      if (event.round !== null) {
-        this.consumeReviewCycle(event.bubbleInstanceId, event.round, event.tsMs);
-      }
-
-      const parsedFindings = parseReviewerFindingMetadata(event.metadata);
-      if (parsedFindings !== null) {
-        this.reviewerRoundsTotal += 1;
-        if (
-          parsedFindings.hasFindings &&
-          parsedFindings.p0 === 0 &&
-          parsedFindings.p1 === 0 &&
-          parsedFindings.p2 + parsedFindings.p3 > 0
-        ) {
-          this.reviewerRoundsOnlyP2P3 += 1;
-        }
-
-        if (
-          bubble.firstConvergedAtMs !== null &&
-          event.tsMs > bubble.firstConvergedAtMs &&
-          parsedFindings.p1 > 0
-        ) {
-          this.escapedP1AfterConverged += 1;
-        }
-      }
-      return;
+      this.reviewerRoundsOnlyP2P3 += 1;
     }
 
     if (
-      event.eventType === "bubble_rework_requested" &&
+      bubble.firstConvergedAtMs !== null &&
+      event.tsMs > bubble.firstConvergedAtMs &&
+      parsedFindings.p1 > 0
+    ) {
+      this.escapedP1AfterConverged += 1;
+    }
+  }
+
+  private observeBubbleConvergedEvent(
+    event: MetricsReportEvent,
+    bubble: BubbleAggregateState
+  ): void {
+    if (event.round !== null) {
+      this.roundsToConverge.push(event.round);
+      this.consumeReviewCycle(event.bubbleInstanceId, event.round, event.tsMs);
+    }
+    if (
+      bubble.firstConvergedAtMs === null ||
+      event.tsMs < bubble.firstConvergedAtMs
+    ) {
+      bubble.firstConvergedAtMs = event.tsMs;
+    }
+  }
+
+  private observeBubbleReworkRequestedEvent(
+    event: MetricsReportEvent,
+    bubble: BubbleAggregateState
+  ): void {
+    if (
       bubble.firstConvergedAtMs !== null &&
       event.tsMs > bubble.firstConvergedAtMs &&
       !bubble.falseConvergenceCounted
     ) {
       bubble.falseConvergenceCounted = true;
       this.falseConvergenceCount += 1;
-      return;
     }
+  }
 
+  private observeMetaReviewEvent(event: MetricsReportEvent): void {
     if (event.eventType === "bubble_meta_review_routed") {
       const routeKey = asMetaReviewRouteKey(event.metadata.gate_route);
       if (routeKey !== null) {
@@ -353,6 +354,33 @@ export class MetricsReportAggregator {
       if (blockingReasonCodes.includes("PAIRFLOW_COMMAND_PATH_STALE")) {
         this.metaReviewPairflowCommandPathStaleCount += 1;
       }
+    }
+  }
+
+  public observe(event: MetricsReportEvent): void {
+    const bubble = this.getOrCreateBubbleState(event.bubbleInstanceId);
+    if (isHumanInterventionEvent(event)) {
+      bubble.hasHumanIntervention = true;
+    }
+
+    switch (event.eventType) {
+      case "bubble_passed":
+        this.observeBubblePassedEvent(event, bubble);
+        return;
+      case "bubble_converged":
+        this.observeBubbleConvergedEvent(event, bubble);
+        return;
+      case "bubble_rework_requested":
+        this.observeBubbleReworkRequestedEvent(event, bubble);
+        return;
+      case "bubble_meta_review_routed":
+      case "bubble_meta_review_auto_rework_dispatched":
+      case "bubble_meta_review_human_gate_reached":
+      case "bubble_meta_review_rollout_blocked":
+        this.observeMetaReviewEvent(event);
+        return;
+      default:
+        return;
     }
   }
 
