@@ -1,6 +1,3 @@
-import { mkdir, readFile, writeFile } from "node:fs/promises";
-import { dirname } from "node:path";
-
 import { reviewerTestEvidenceSchemaVersion } from "../../../shared/reviewer/testEvidence.js";
 import type {
   ReviewerTestCommandEvidence,
@@ -22,44 +19,31 @@ import {
 } from "./testEvidenceSourcePolicy.js";
 import type { EvidenceSourcePolicyDecision } from "./testEvidenceSourcePolicy.js";
 import {
+  compareFingerprint,
+  createDocsOnlySkipDirective,
+  docsOnlyRuntimeChecksNotRequiredDetail,
+  isDocsOnlyCompatibilityArtifact,
+  summarizeReason
+} from "./testEvidenceDirectiveSupport.js";
+import {
+  readReviewerTestEvidenceArtifact as readReviewerTestEvidenceArtifactFromStore,
+  writeReviewerTestEvidenceArtifact as writeReviewerTestEvidenceArtifactFromStore
+} from "./testEvidenceArtifactStore.js";
+import {
   buildCommandEvidence,
   hasTrustedCommandEvidenceProvenance,
   normalizeCommandEvidenceProvenance,
   normalizeRequiredCommands,
   readWorktreeFingerprint
 } from "./testEvidenceVerificationHelpers.js";
-import type { WorktreeFingerprint } from "./testEvidenceVerificationHelpers.js";
 
-const docsOnlyRuntimeChecksNotRequiredDetail = "docs-only scope, runtime checks not required";
+export {
+  readReviewerTestEvidenceArtifactFromStore as readReviewerTestEvidenceArtifact,
+  writeReviewerTestEvidenceArtifactFromStore as writeReviewerTestEvidenceArtifact
+};
 
-function summarizeReason(reasonCode: ReviewerTestReasonCode, detail: string): string {
-  if (detail.trim().length > 0) {
-    return detail;
-  }
-
-  switch (reasonCode) {
-    case "evidence_missing":
-      return "Latest implementer handoff did not include evidence for all required checks.";
-    case "evidence_unverifiable":
-      return "Latest implementer evidence could not be verified for command provenance, exit status, or completion markers.";
-    case "evidence_stale":
-      return "Verified evidence no longer matches current worktree fingerprint.";
-    case "pass_validation_policy_missing":
-      return "PASS validation policy is not configured in bubble [commands]; reviewer must run checks.";
-    case "no_trigger":
-      return "Evidence is verified, fresh, and complete.";
-  }
-}
-
-function createDocsOnlySkipDirective(
-  detail: string = docsOnlyRuntimeChecksNotRequiredDetail
-): ReviewerTestExecutionDirective {
-  return {
-    skip_full_rerun: true,
-    reason_code: "no_trigger",
-    reason_detail: summarizeReason("no_trigger", detail),
-    verification_status: "trusted"
-  };
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function classifyEvidence(input: {
@@ -156,59 +140,6 @@ function classifyEvidence(input: {
   };
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-function compareFingerprint(
-  artifact: ReviewerTestEvidenceArtifact,
-  current: WorktreeFingerprint
-): { stale: boolean; detail: string } {
-  if (!current.ok) {
-    return {
-      stale: true,
-      detail: "Cannot resolve current git fingerprint; evidence freshness cannot be confirmed."
-    };
-  }
-
-  if (artifact.git.commit_sha !== current.commitSha) {
-    return {
-      stale: true,
-      detail: `Commit changed after verification (${artifact.git.commit_sha ?? "unknown"} -> ${current.commitSha ?? "unknown"}).`
-    };
-  }
-
-  if (artifact.git.status_hash !== current.statusHash) {
-    return {
-      stale: true,
-      detail: "Worktree status changed after verification; prior evidence is stale."
-    };
-  }
-
-  return {
-    stale: false,
-    detail: "Evidence fingerprint matches current worktree state."
-  };
-}
-
-function isDocsOnlyCompatibilityArtifact(artifact: ReviewerTestEvidenceArtifact): boolean {
-  const reasonDetail = artifact.reason_detail.trim();
-  const hasDocsOnlyDiscriminator =
-    /(?:docs-only|document-only)\s+scope/iu.test(reasonDetail);
-
-  return (
-    artifact.status === "trusted" &&
-    artifact.decision === "skip_full_rerun" &&
-    artifact.reason_code === "no_trigger" &&
-    hasDocsOnlyDiscriminator &&
-    artifact.required_commands.length === 0 &&
-    artifact.command_evidence.length === 0 &&
-    artifact.git.commit_sha === null &&
-    artifact.git.status_hash === null &&
-    artifact.git.dirty === null
-  );
-}
-
 export async function verifyImplementerTestEvidence(
   input: VerifyImplementerTestEvidenceInput
 ): Promise<ReviewerTestEvidenceArtifact> {
@@ -285,74 +216,11 @@ export async function verifyImplementerTestEvidence(
   };
 }
 
-export async function writeReviewerTestEvidenceArtifact(
-  artifactPath: string,
-  artifact: ReviewerTestEvidenceArtifact
-): Promise<void> {
-  await mkdir(dirname(artifactPath), { recursive: true });
-  await writeFile(artifactPath, `${JSON.stringify(artifact, null, 2)}\n`, {
-    encoding: "utf8"
-  });
-}
-
-export async function readReviewerTestEvidenceArtifact(
-  artifactPath: string
-): Promise<ReviewerTestEvidenceArtifact | undefined> {
-  const raw = await readFile(artifactPath, "utf8").catch((error: NodeJS.ErrnoException) => {
-    if (error.code === "ENOENT") {
-      return undefined;
-    }
-    throw error;
-  });
-  if (raw === undefined) {
-    return undefined;
-  }
-
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(raw) as unknown;
-  } catch (error: unknown) {
-    if (error instanceof SyntaxError) {
-      return undefined;
-    }
-    throw error;
-  }
-  if (!isRecord(parsed)) {
-    return undefined;
-  }
-
-  if (parsed.schema_version !== reviewerTestEvidenceSchemaVersion) {
-    return undefined;
-  }
-
-  const required = [
-    "bubble_id",
-    "pass_envelope_id",
-    "pass_ts",
-    "round",
-    "verified_at",
-    "status",
-    "decision",
-    "reason_code",
-    "reason_detail",
-    "required_commands",
-    "command_evidence",
-    "git"
-  ];
-  for (const key of required) {
-    if (!(key in parsed)) {
-      return undefined;
-    }
-  }
-
-  return parsed as unknown as ReviewerTestEvidenceArtifact;
-}
-
 export async function resolveReviewerTestExecutionDirective(
   input: ResolveReviewerTestExecutionDirectiveInput
 ): Promise<ReviewerTestExecutionDirective> {
   try {
-    const artifact = await readReviewerTestEvidenceArtifact(input.artifactPath);
+    const artifact = await readReviewerTestEvidenceArtifactFromStore(input.artifactPath);
 
     if (artifact === undefined) {
       if (input.reviewArtifactType === "document") {
