@@ -3,7 +3,6 @@ import type {
   DeleteBubbleResult
 } from "../../../contracts/deleteBubble.js";
 import { BubbleLookupError } from "../../../core/bubble/bubbleLookup.js";
-import { emitBubbleLifecycleEventBestEffort } from "../../../v11/shared/metrics/bubbleEvents.js";
 import {
   RuntimeSessionsRegistryError,
   RuntimeSessionsRegistryLockError
@@ -25,7 +24,6 @@ import {
   type DeleteExecutionContext,
   type DeleteResolution,
   type DeleteRuntimeCleanupResult,
-  type DeleteWorkspaceCleanupResult,
   inferCreatedAtFromBubbleInstanceId,
   preDeleteStopStateByLifecycle,
   requiresDeleteConfirmation,
@@ -33,6 +31,11 @@ import {
   type ResolvedBubble,
   type ResolvedDeleteDependencies
 } from "./deleteBubbleSupport.js";
+import {
+  cleanupDeleteWorkspace,
+  createDeleteArchive,
+  emitDeleteLifecycleEvent
+} from "./deleteBubbleFinalization.js";
 
 export type {
   DeleteBubbleArtifacts,
@@ -206,136 +209,6 @@ async function cleanupDeleteRuntimeArtifacts(input: {
   return { tmuxSessionTerminated, runtimeSessionRemoved };
 }
 
-async function createDeleteArchive(input: {
-  input: DeleteBubbleInput;
-  resolved: ResolvedBubble;
-  execution: DeleteExecutionContext;
-  dependencies: ResolvedDeleteDependencies;
-  now: Date;
-}): Promise<void> {
-  const createdAt = inferCreatedAtFromBubbleInstanceId(
-    input.execution.bubbleInstanceId
-  );
-
-  let archivePath: string;
-  try {
-    const snapshot = await input.dependencies.createArchiveSnapshot({
-      repoPath: input.resolved.repoPath,
-      bubbleId: input.resolved.bubbleId,
-      bubbleInstanceId: input.execution.bubbleInstanceId,
-      bubbleDir: input.resolved.bubblePaths.bubbleDir,
-      locksDir: input.dependencies.archiveLocksDir,
-      ...(input.input.archiveRootPath !== undefined
-        ? { archiveRootPath: input.input.archiveRootPath }
-        : {}),
-      now: input.now
-    });
-    archivePath = snapshot.archivePath;
-  } catch (error) {
-    throw toDeleteStepError({
-      bubbleId: input.resolved.bubbleId,
-      bubbleInstanceId: input.execution.bubbleInstanceId,
-      step: "snapshot",
-      error
-    });
-  }
-
-  try {
-    await input.dependencies.upsertDeletedArchiveIndexEntry({
-      repoPath: input.resolved.repoPath,
-      bubbleId: input.resolved.bubbleId,
-      bubbleInstanceId: input.execution.bubbleInstanceId,
-      archivePath,
-      locksDir: input.dependencies.archiveLocksDir,
-      createdAt,
-      ...(input.input.archiveRootPath !== undefined
-        ? { archiveRootPath: input.input.archiveRootPath }
-        : {}),
-      now: input.now
-    });
-  } catch (error) {
-    throw toDeleteStepError({
-      bubbleId: input.resolved.bubbleId,
-      bubbleInstanceId: input.execution.bubbleInstanceId,
-      step: "index",
-      error
-    });
-  }
-}
-
-async function cleanupDeleteWorkspace(input: {
-  resolved: ResolvedBubble;
-  artifacts: DeleteBubbleArtifacts;
-  execution: DeleteExecutionContext;
-  dependencies: ResolvedDeleteDependencies;
-}): Promise<DeleteWorkspaceCleanupResult> {
-  let removedWorktree = false;
-  let removedBubbleBranch = false;
-
-  if (input.artifacts.worktree.exists || input.artifacts.branch.exists) {
-    try {
-      const cleanupResult = await input.dependencies.cleanupWorktreeWorkspace({
-        repoPath: input.resolved.repoPath,
-        bubbleBranch: input.resolved.bubbleConfig.bubble_branch,
-        worktreePath: input.resolved.bubblePaths.worktreePath
-      });
-      removedWorktree = cleanupResult.removedWorktree;
-      removedBubbleBranch = cleanupResult.removedBranch;
-    } catch (error) {
-      throw toDeleteStepError({
-        bubbleId: input.resolved.bubbleId,
-        bubbleInstanceId: input.execution.bubbleInstanceId,
-        step: "worktree-cleanup",
-        error
-      });
-    }
-  }
-
-  try {
-    await input.dependencies.removeBubbleDirectory(input.resolved.bubblePaths.bubbleDir);
-  } catch (error) {
-    throw toDeleteStepError({
-      bubbleId: input.resolved.bubbleId,
-      bubbleInstanceId: input.execution.bubbleInstanceId,
-      step: "remove-active",
-      error
-    });
-  }
-
-  return { removedWorktree, removedBubbleBranch };
-}
-
-async function emitDeleteLifecycleEvent(input: {
-  resolved: ResolvedBubble;
-  artifacts: DeleteBubbleArtifacts;
-  execution: DeleteExecutionContext;
-  runtimeCleanup: DeleteRuntimeCleanupResult;
-  workspaceCleanup: DeleteWorkspaceCleanupResult;
-  force: boolean;
-  now: Date;
-}): Promise<void> {
-  await emitBubbleLifecycleEventBestEffort({
-    repoPath: input.resolved.repoPath,
-    bubbleId: input.resolved.bubbleId,
-    bubbleInstanceId: input.execution.bubbleInstanceId,
-    eventType: "bubble_deleted",
-    round: input.execution.metricsRound,
-    actorRole: "orchestrator",
-    metadata: {
-      force: input.force,
-      tmux_session_terminated: input.runtimeCleanup.tmuxSessionTerminated,
-      runtime_session_removed: input.runtimeCleanup.runtimeSessionRemoved,
-      removed_worktree: input.workspaceCleanup.removedWorktree,
-      removed_bubble_branch: input.workspaceCleanup.removedBubbleBranch,
-      had_worktree: input.artifacts.worktree.exists,
-      had_tmux_session: input.artifacts.tmux.exists,
-      had_runtime_session: input.artifacts.runtimeSession.exists,
-      had_branch: input.artifacts.branch.exists
-    },
-    now: input.now
-  });
-}
-
 export async function deleteBubble(
   input: DeleteBubbleInput,
   dependencies: DeleteBubbleDependencies = {}
@@ -364,13 +237,16 @@ export async function deleteBubble(
     resolved,
     execution,
     dependencies: resolvedDependencies,
-    now
+    now,
+    inferCreatedAtFromBubbleInstanceId,
+    toDeleteStepError
   });
   const workspaceCleanup = await cleanupDeleteWorkspace({
     resolved,
     artifacts,
     execution,
-    dependencies: resolvedDependencies
+    dependencies: resolvedDependencies,
+    toDeleteStepError
   });
   await emitDeleteLifecycleEvent({
     resolved,

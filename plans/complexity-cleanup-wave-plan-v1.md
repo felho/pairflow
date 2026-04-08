@@ -212,7 +212,8 @@ Minden bounded batch után:
    - `f8bbf6be` `refactor(complexity): split tmux delivery runtime helpers`
    - `6d845cf2` `refactor(complexity): split watchdog pane activity monitoring`
    - `3570e356` `refactor(complexity): split metrics report aggregate support`
-   - `pending` `refactor(complexity): split pass validation recovery marker support`
+   - `71292a44` `refactor(complexity): split pass validation recovery marker support`
+   - `pending` `refactor(complexity): split delete bubble finalization`
    - `pending` `refactor(complexity): split ui router request surfaces`
 6. Következő párhuzamos batch-ek:
    - `stateSchema` focused validator slice
