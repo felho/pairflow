@@ -39,7 +39,7 @@ Legutóbbi teljes fitness report:
 
 Jelenlegi `complexity` summary:
 
-1. `73` budget violation
+1. `69` budget violation
 2. a legnagyobb klaszterek:
    - `src/v11/infrastructure/ui/**`
    - `src/v11/shared/state/stateSchema.ts`
@@ -156,8 +156,8 @@ Minden bounded batch után:
 ## Progress Ledger
 
 - [x] Error hard-fail backlog lezárva; `complexity` maradt az egyetlen hard-fail checker
-- [ ] Wave 1 started
-- [ ] Wave 1 completed
+- [x] Wave 1 started
+- [x] Wave 1 completed
 - [ ] Wave 2 started
 - [ ] Wave 2 completed
 - [ ] Wave 3 started
@@ -169,3 +169,6 @@ Minden bounded batch után:
 
 1. Ha egy `complexity` offender valójában policy- vagy boundary-refaktorba csúszna át, azt külön batch-re kell bontani.
 2. Ha valamelyik large-file offendernél a checker-küszöb helyett a design a valódi probléma, ott nem szabad vak helper-szórással “kijátszani” a budgetet.
+3. Wave 1 lezárt commitok a jelenlegi `main`-en:
+   - `806c9fc2` `refactor(complexity): extract pass validation runner settlement`
+   - `02a93a06` `refactor(v11): split meta-review runner parsing helpers`
