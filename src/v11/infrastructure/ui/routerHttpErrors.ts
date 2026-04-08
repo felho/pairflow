@@ -1,6 +1,6 @@
 import type { ServerResponse } from "node:http";
 import type { BubbleLifecycleState } from "../../../types/bubble.js";
-import { AttachBubbleError } from "../../../core/bubble/attachBubble.js";
+import { AttachBubbleError } from "../executor/command/pairflowCommandAttachContract.js";
 import type { UiApiError } from "./routerContracts.js";
 
 const jsonContentType = "application/json; charset=utf-8";

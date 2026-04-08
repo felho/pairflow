@@ -3,7 +3,7 @@ import { readdir, stat } from "node:fs/promises";
 import { join, resolve } from "node:path";
 
 import { getBubblePaths } from "../artifact/bubble/paths.js";
-import { type BubbleListEntry } from "../../../core/bubble/listBubbles.js";
+import type { UiBubbleListEntry as BubbleListEntry } from "../../shared/ports/uiRouter.js";
 import type { UiRepoSummary } from "../../../types/ui.js";
 
 function normalizeRepoPathForQueue(repoPath: string): string {
