@@ -12,7 +12,7 @@ owners:
 
 ## Objective
 
-Last updated from `main` at `26faa8db`.
+Last updated from `main` at `61b657e1`.
 
 A fitness hard-fail backlog az `error` check lezárása után egyetlen checkerre szűkült:
 
@@ -39,7 +39,7 @@ Legutóbbi teljes fitness report:
 
 Jelenlegi `complexity` summary:
 
-1. `52` budget violation
+1. `51` budget violation
 2. a legnagyobb klaszterek:
    - `src/v11/shared/state/stateSchema.ts`
    - `src/v11/infrastructure/artifact/**`
@@ -189,7 +189,8 @@ Minden bounded batch után:
    - `00b32f4b` `refactor(complexity): split reviewer gate finding evaluation`
    - `aa36d237` `refactor(complexity): split tmux delivery message builder`
    - `26faa8db` `refactor(complexity): split state snapshot inspection`
+   - `pending` `refactor(complexity): split reviewer test evidence verification helpers`
 6. Következő párhuzamos batch-ek:
    - `passValidationEvidence` recovery-marker extract
-   - `testEvidenceRuntime` command-match / evidence-classification extract
+   - `testEvidenceRuntime` evidence-classification extract
    - `tmuxDelivery` emit runtime branch split
