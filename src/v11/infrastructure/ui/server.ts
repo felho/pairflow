@@ -1,9 +1,8 @@
 import { constants as fsConstants, watch, type FSWatcher } from "node:fs";
-import { createServer, type Server } from "node:http";
+import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import { access, readFile, stat } from "node:fs/promises";
 import { dirname, extname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-
 import { createUiEventsBroker, type UiEventsBroker } from "./events.js";
 import {
   createUiRouter,
@@ -15,7 +14,6 @@ import {
   resolveUiRepoScope,
   type UiRepoScope
 } from "./repoScope.js";
-
 const defaultHost = "127.0.0.1";
 const defaultPort = 4173;
 
@@ -37,7 +35,6 @@ export interface StartUiServerInput {
       }
     | undefined;
 }
-
 export interface UiServerHandle {
   host: string;
   port: number;
@@ -46,7 +43,6 @@ export interface UiServerHandle {
   assetsDir: string | null;
   close(): Promise<void>;
 }
-
 function contentTypeForPath(path: string): string {
   const extension = extname(path).toLowerCase();
   switch (extension) {
@@ -71,13 +67,11 @@ function contentTypeForPath(path: string): string {
       return "application/octet-stream";
   }
 }
-
 async function pathExists(path: string): Promise<boolean> {
   return access(path, fsConstants.F_OK)
     .then(() => true)
     .catch(() => false);
 }
-
 async function fileSignature(path: string): Promise<string> {
   return stat(path)
     .then((info) => `${info.mtimeMs}:${info.size}`)
@@ -88,7 +82,6 @@ async function fileSignature(path: string): Promise<string> {
       throw error;
     });
 }
-
 async function findAssetsDirFromCwd(cwd: string): Promise<string | null> {
   let current = resolve(cwd);
   while (true) {
@@ -104,7 +97,6 @@ async function findAssetsDirFromCwd(cwd: string): Promise<string | null> {
     current = parent;
   }
 }
-
 function fallbackAssetsHtml(): string {
   return [
     "<!doctype html>",
@@ -120,7 +112,6 @@ function fallbackAssetsHtml(): string {
     "</html>"
   ].join("\n");
 }
-
 async function resolveAssetsDir(input: {
   cwd: string;
   explicitAssetsDir?: string | undefined;
@@ -154,7 +145,6 @@ async function resolveAssetsDir(input: {
 
   return null;
 }
-
 async function listen(server: Server, port: number, host: string): Promise<number> {
   return new Promise<number>((resolvePromise, rejectPromise) => {
     server.once("error", (error) => {
@@ -172,23 +162,252 @@ async function listen(server: Server, port: number, host: string): Promise<numbe
     });
   });
 }
-
 function closeServer(server: Server): Promise<void> {
   return new Promise<void>((resolvePromise, rejectPromise) => {
-    server.close((error) => {
-      if (error !== undefined) {
-        rejectPromise(error);
-        return;
+      server.close((error) => {
+        if (error !== undefined) {
+          rejectPromise(error);
+          return;
+        }
+        resolvePromise();
+      });
+      if (typeof server.closeAllConnections === "function") {
+        server.closeAllConnections();
       }
-      resolvePromise();
+      if (typeof server.closeIdleConnections === "function") {
+        server.closeIdleConnections();
+      }
     });
-    if (typeof server.closeAllConnections === "function") {
-      server.closeAllConnections();
+  }
+interface UiServerRegistrySyncController {
+  close(): Promise<void>;
+}
+
+interface UiServerRegistrySyncState {
+  closing: boolean;
+  requestedVersion: number;
+  appliedVersion: number;
+  promise: Promise<void> | null;
+  watchTimer: NodeJS.Timeout | null;
+  watcher: FSWatcher | null;
+  lastSignature: string | null;
+}
+function createUiServerRegistrySyncState(): UiServerRegistrySyncState {
+  return {
+    closing: false,
+    requestedVersion: 0,
+    appliedVersion: 0,
+    promise: null,
+    watchTimer: null,
+    watcher: null,
+    lastSignature: null
+  };
+}
+async function runUiServerRegistrySyncLoop(input: {
+  state: UiServerRegistrySyncState;
+  events: UiEventsBroker;
+  refreshFromRegistry: () => ReturnType<NonNullable<UiRepoScope["refreshFromRegistry"]>>;
+}): Promise<void> {
+  while (!input.state.closing && input.state.appliedVersion < input.state.requestedVersion) {
+    const requestVersion = input.state.requestedVersion;
+    let refreshed = false;
+    try {
+      const diff = await input.refreshFromRegistry();
+      refreshed = true;
+      for (const removed of diff.removed) {
+        try {
+          await input.events.removeRepo(removed);
+        } catch (error) {
+          console.error(
+            `Failed to remove UI events repo after registry refresh: ${removed}`,
+            error
+          );
+        }
+      }
+      for (const added of diff.added) {
+        try {
+          await input.events.addRepo(added);
+        } catch (error) {
+          console.error(
+            `Failed to add UI events repo after registry refresh: ${added}`,
+            error
+          );
+        }
+      }
+      await input.events.refreshNow();
+    } finally {
+      if (refreshed) {
+        input.state.appliedVersion = Math.max(input.state.appliedVersion, requestVersion);
+      } else if (input.state.appliedVersion < requestVersion) {
+        input.state.requestedVersion = Math.max(input.state.requestedVersion, requestVersion);
+      }
     }
-    if (typeof server.closeIdleConnections === "function") {
-      server.closeIdleConnections();
+  }
+}
+function createUiServerRegistryRefreshScheduler(input: {
+  state: UiServerRegistrySyncState;
+  events: UiEventsBroker;
+  refreshFromRegistry: () => ReturnType<NonNullable<UiRepoScope["refreshFromRegistry"]>>;
+}): () => void {
+  return () => {
+    if (input.state.closing) {
+      return;
     }
+    input.state.requestedVersion += 1;
+    if (input.state.promise !== null) {
+      return;
+    }
+    input.state.promise = runUiServerRegistrySyncLoop({
+      state: input.state,
+      events: input.events,
+      refreshFromRegistry: input.refreshFromRegistry
+    })
+      .catch((error) => {
+        console.error("Failed to refresh UI repo scope from registry", error);
+      })
+      .finally(() => {
+        input.state.promise = null;
+        if (
+          !input.state.closing &&
+          input.state.appliedVersion < input.state.requestedVersion
+        ) {
+          void createUiServerRegistryRefreshScheduler({
+            state: input.state,
+            events: input.events,
+            refreshFromRegistry: input.refreshFromRegistry
+          })();
+        }
+      });
+  };
+}
+function createUiServerRegistryWatcher(input: {
+  state: UiServerRegistrySyncState;
+  registryPath: string;
+  scheduleRegistryRefresh: () => void;
+}): void {
+  void (async () => {
+    input.state.lastSignature = await fileSignature(input.registryPath);
+    if (await pathExists(input.registryPath)) {
+      input.state.watcher = watch(input.registryPath, () => {
+        if (input.state.watchTimer !== null) {
+          clearTimeout(input.state.watchTimer);
+        }
+        input.state.watchTimer = setTimeout(() => {
+          input.state.watchTimer = null;
+          void (async () => {
+            const nextSignature = await fileSignature(input.registryPath);
+            if (nextSignature === input.state.lastSignature) {
+              return;
+            }
+            input.state.lastSignature = nextSignature;
+            input.scheduleRegistryRefresh();
+          })().catch((error) => {
+            console.error("Failed to schedule UI repo registry refresh", error);
+          });
+        }, 100);
+      });
+      input.state.watcher.on("error", (error) => {
+        console.error("UI repo registry watcher error", error);
+      });
+    }
+  })().catch((error) => {
+    console.error("Failed to initialize UI repo registry watcher", error);
   });
+}
+function createUiServerRegistrySyncController(input: {
+  repoScope: UiRepoScope;
+  events: UiEventsBroker;
+}): UiServerRegistrySyncController {
+  const state = createUiServerRegistrySyncState();
+
+  const refreshFromRegistry = input.repoScope.refreshFromRegistry;
+  if (typeof refreshFromRegistry !== "function") {
+    return {
+      async close(): Promise<void> {
+        state.closing = true;
+        await Promise.resolve();
+      }
+    };
+  }
+
+  const registryPath = input.repoScope.registryPath;
+  if (registryPath === undefined) {
+    return {
+      async close(): Promise<void> {
+        state.closing = true;
+        await Promise.resolve();
+      }
+    };
+  }
+
+  const scheduleRegistryRefresh = createUiServerRegistryRefreshScheduler({
+    state,
+    events: input.events,
+    refreshFromRegistry
+  });
+  createUiServerRegistryWatcher({
+    state,
+    registryPath,
+    scheduleRegistryRefresh
+  });
+  return {
+    async close(): Promise<void> {
+      state.closing = true;
+      if (state.watchTimer !== null) {
+        clearTimeout(state.watchTimer);
+        state.watchTimer = null;
+      }
+      state.watcher?.close();
+      state.watcher = null;
+      await state.promise;
+    }
+  };
+}
+function createUiServerRequestHandler(input: {
+  router: UiRouter;
+  assetsDir: string | null;
+}): (req: IncomingMessage, res: ServerResponse<IncomingMessage>) => void {
+  return (req: IncomingMessage, res: ServerResponse<IncomingMessage>) => {
+    void (async () => {
+      try {
+        const handledByApi = await input.router.handleRequest(req, res);
+        if (handledByApi) {
+          return;
+        }
+
+        if (input.assetsDir === null) {
+          const body = fallbackAssetsHtml();
+          res.writeHead(503, {
+            "content-type": "text/html; charset=utf-8",
+            "content-length": String(Buffer.byteLength(body))
+          });
+          res.end(body);
+          return;
+        }
+
+        const requestPath = req.url ?? "/";
+        const resolvedAsset = await resolveStaticAssetPath({
+          assetsDir: input.assetsDir,
+          requestPath
+        });
+        const body = await readFile(resolvedAsset.path);
+        res.writeHead(200, {
+          "content-type": contentTypeForPath(resolvedAsset.path),
+          "content-length": String(body.byteLength),
+          ...(resolvedAsset.type === "fallback"
+            ? { "cache-control": "no-store" }
+            : {})
+        });
+        res.end(body);
+      } catch (error) {
+        console.error("UI server error", error);
+        res.writeHead(500, {
+          "content-type": "text/plain; charset=utf-8"
+        });
+        res.end("Internal server error\n");
+      }
+    })();
+  };
 }
 
 export async function startUiServer(
@@ -234,168 +453,16 @@ export async function startUiServer(
       : {})
   });
 
-  let registryWatcher: FSWatcher | null = null;
-  let registryWatchDebounceTimer: NodeJS.Timeout | null = null;
-  let registrySyncClosing = false;
-  let registrySyncPromise: Promise<void> | null = null;
-  let registrySyncRequestedVersion = 0;
-  let registrySyncAppliedVersion = 0;
-  let lastRegistrySignature: string | null = null;
-
-  const runRegistrySyncLoop = async (
-    refreshFromRegistry: () => ReturnType<
-      NonNullable<UiRepoScope["refreshFromRegistry"]>
-    >
-  ): Promise<void> => {
-    while (
-      !registrySyncClosing &&
-      registrySyncAppliedVersion < registrySyncRequestedVersion
-    ) {
-      const requestVersion = registrySyncRequestedVersion;
-      let refreshed = false;
-      try {
-        const diff = await refreshFromRegistry();
-        refreshed = true;
-        for (const removed of diff.removed) {
-          try {
-            await events.removeRepo(removed);
-          } catch (error) {
-            console.error(
-              `Failed to remove UI events repo after registry refresh: ${removed}`,
-              error
-            );
-          }
-        }
-        for (const added of diff.added) {
-          try {
-            await events.addRepo(added);
-          } catch (error) {
-            console.error(
-              `Failed to add UI events repo after registry refresh: ${added}`,
-              error
-            );
-          }
-        }
-        await events.refreshNow();
-      } finally {
-        if (refreshed) {
-          registrySyncAppliedVersion = Math.max(
-            registrySyncAppliedVersion,
-            requestVersion
-          );
-        } else if (registrySyncAppliedVersion < requestVersion) {
-          registrySyncRequestedVersion = Math.max(
-            registrySyncRequestedVersion,
-            requestVersion
-          );
-        }
-      }
-    }
-  };
-
-  const scheduleRegistryRefresh = (
-    refreshFromRegistry: () => ReturnType<NonNullable<UiRepoScope["refreshFromRegistry"]>>
-  ): void => {
-    if (registrySyncClosing) {
-      return;
-    }
-    registrySyncRequestedVersion += 1;
-    if (registrySyncPromise !== null) {
-      return;
-    }
-    registrySyncPromise = runRegistrySyncLoop(refreshFromRegistry)
-      .catch((error) => {
-        console.error("Failed to refresh UI repo scope from registry", error);
-      })
-      .finally(() => {
-        registrySyncPromise = null;
-        if (
-          !registrySyncClosing &&
-          registrySyncAppliedVersion < registrySyncRequestedVersion
-        ) {
-          scheduleRegistryRefresh(refreshFromRegistry);
-        }
-      });
-  };
-
-  let refreshFromRegistry: NonNullable<UiRepoScope["refreshFromRegistry"]> | undefined;
-  if (typeof repoScope.refreshFromRegistry === "function") {
-    const repoScopeRefreshFromRegistry = repoScope.refreshFromRegistry;
-    refreshFromRegistry = (): ReturnType<NonNullable<UiRepoScope["refreshFromRegistry"]>> =>
-      repoScopeRefreshFromRegistry();
-  }
-  if (
-    repoScope.registryPath !== undefined &&
-    typeof refreshFromRegistry === "function"
-  ) {
-    const registryPath = repoScope.registryPath;
-    lastRegistrySignature = await fileSignature(registryPath);
-    if (await pathExists(registryPath)) {
-      registryWatcher = watch(registryPath, () => {
-        if (registryWatchDebounceTimer !== null) {
-          clearTimeout(registryWatchDebounceTimer);
-        }
-        registryWatchDebounceTimer = setTimeout(() => {
-          registryWatchDebounceTimer = null;
-          void (async () => {
-            const nextSignature = await fileSignature(registryPath);
-            if (nextSignature === lastRegistrySignature) {
-              return;
-            }
-            lastRegistrySignature = nextSignature;
-            scheduleRegistryRefresh(refreshFromRegistry);
-          })().catch((error) => {
-            console.error("Failed to schedule UI repo registry refresh", error);
-          });
-        }, 100);
-      });
-      registryWatcher.on("error", (error) => {
-        console.error("UI repo registry watcher error", error);
-      });
-    }
-  }
-
-  const server = createServer((req, res) => {
-    void (async () => {
-      try {
-        const handledByApi = await router.handleRequest(req, res);
-        if (handledByApi) {
-          return;
-        }
-
-        if (assetsDir === null) {
-          const body = fallbackAssetsHtml();
-          res.writeHead(503, {
-            "content-type": "text/html; charset=utf-8",
-            "content-length": String(Buffer.byteLength(body))
-          });
-          res.end(body);
-          return;
-        }
-
-        const requestPath = req.url ?? "/";
-        const resolvedAsset = await resolveStaticAssetPath({
-          assetsDir,
-          requestPath
-        });
-        const body = await readFile(resolvedAsset.path);
-        res.writeHead(200, {
-          "content-type": contentTypeForPath(resolvedAsset.path),
-          "content-length": String(body.byteLength),
-          ...(resolvedAsset.type === "fallback"
-            ? { "cache-control": "no-store" }
-            : {})
-        });
-        res.end(body);
-      } catch (error) {
-        console.error("UI server error", error);
-        res.writeHead(500, {
-          "content-type": "text/plain; charset=utf-8"
-        });
-        res.end("Internal server error\n");
-      }
-    })();
+  const registrySyncController = createUiServerRegistrySyncController({
+    repoScope,
+    events
   });
+  const server = createServer(
+    createUiServerRequestHandler({
+      router,
+      assetsDir
+    })
+  );
 
   const actualPort = await listen(server, requestedPort, host);
   const url = `http://${host}:${actualPort}`;
@@ -407,18 +474,8 @@ export async function startUiServer(
     repoScope,
     assetsDir,
     async close(): Promise<void> {
-      registrySyncClosing = true;
-      if (registryWatchDebounceTimer !== null) {
-        clearTimeout(registryWatchDebounceTimer);
-        registryWatchDebounceTimer = null;
-      }
-      registryWatcher?.close();
-      registryWatcher = null;
-      await Promise.all([
-        closeServer(server),
-        events.close(),
-        registrySyncPromise ?? Promise.resolve()
-      ]);
+      await registrySyncController.close();
+      await Promise.all([closeServer(server), events.close()]);
     }
   };
 }
