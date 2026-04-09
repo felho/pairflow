@@ -4,14 +4,20 @@ import { join } from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { emitConvergedFromWorkspace } from "../../../src/core/agent/converged.js";
-import { emitAskHumanFromWorkspace } from "../../../src/core/agent/askHuman.js";
-import { emitPassFromWorkspace } from "../../../src/core/agent/pass.js";
 import {
-  emitApprove,
-  emitRequestRework,
-  ApprovalCommandError
-} from "../../../src/core/human/approval.js";
+  emitConvergedFromWorkspaceV11 as emitConvergedFromWorkspace
+} from "../../../src/v11/application/converged/emitConvergedV11.js";
+import {
+  emitAskHumanFromWorkspaceV11 as emitAskHumanFromWorkspace
+} from "../../../src/v11/application/askHuman/emitAskHumanV11.js";
+import {
+  emitPassFromWorkspaceV11 as emitPassFromWorkspace
+} from "../../../src/v11/application/pass/emitPassV11.js";
+import {
+  emitApproveV11 as emitApprove,
+  emitRequestReworkV11 as emitRequestRework,
+  ApprovalCommandErrorV11 as ApprovalCommandError
+} from "../../../src/v11/application/approval/emitApprovalV11.js";
 import {
   getMetaReviewLastReport,
   getMetaReviewStatus
