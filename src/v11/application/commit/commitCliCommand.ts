@@ -1,28 +1,11 @@
 import { parseArgs } from "node:util";
 
-import {
-  appendProtocolEnvelope,
-  readTranscriptEnvelopes
-} from "../../infrastructure/artifact/transcript/transcriptStore.js";
-import { ensureBubbleInstanceIdForMutation } from "../../infrastructure/artifact/bubble/bubbleInstanceId.js";
-import { resolveBubbleById } from "../../infrastructure/executor/workspace/bubbleLookup.js";
-import { readStateSnapshot, writeStateSnapshot } from "../../infrastructure/state/stateStore.js";
-import { runGit } from "../../infrastructure/workspace/git.js";
+import { commitBubbleDependencyDefaults } from "../../../core/bubble/commitBubbleDefaults.js";
 import {
   commitBubble,
   asBubbleCommitError
 } from "./commitCommandApi.js";
 import type { CommitBubbleResult } from "./commitCommandContract.js";
-
-const defaultCommitBubbleDependencies = {
-  appendProtocolEnvelope,
-  ensureBubbleInstanceIdForMutation,
-  readStateSnapshot,
-  readTranscriptEnvelopes,
-  resolveBubbleById,
-  runGit,
-  writeStateSnapshot
-} as const;
 
 export interface BubbleCommitCommandOptions {
   id: string;
@@ -134,7 +117,7 @@ export async function runBubbleCommitCommand(
       message: options.message,
       auto: options.auto,
       cwd
-    }, defaultCommitBubbleDependencies);
+    }, commitBubbleDependencyDefaults);
   } catch (error) {
     asBubbleCommitError(error);
   }
