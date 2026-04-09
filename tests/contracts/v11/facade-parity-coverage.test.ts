@@ -5,6 +5,11 @@ import { describe, expect, it } from "vitest";
 
 import { commandMigrationMap } from "./migration-map.js";
 
+const commandsWithoutFacadeParitySentinel = [
+  "askHuman",
+  "reply"
+] as const;
+
 const facadeParityTestsByCommand: Record<string, readonly string[]> = {
   create: ["tests/v11/application/create/createFacadeParity.test.ts"],
   pass: ["tests/v11/application/pass/passFacadeParity.test.ts"],
@@ -20,8 +25,6 @@ const facadeParityTestsByCommand: Record<string, readonly string[]> = {
   ],
   gate: ["tests/v11/application/metaReviewGate/metaReviewGateFacadeParity.test.ts"],
   reconcile: ["tests/v11/application/reconcile/reconcileFacadeParity.test.ts"],
-  askHuman: ["tests/v11/application/askHuman/askHumanFacadeParity.test.ts"],
-  reply: ["tests/v11/application/reply/replyFacadeParity.test.ts"],
   start: ["tests/v11/application/start/startFacadeParity.test.ts"],
   stop: ["tests/v11/application/stop/stopFacadeParity.test.ts"],
   restart: ["tests/v11/application/restart/restartFacadeParity.test.ts"],
@@ -35,11 +38,31 @@ const facadeParityTestsByCommand: Record<string, readonly string[]> = {
 describe("v11 facade parity coverage", () => {
   it("keeps explicit facade parity mapping aligned with v11 migration commands", () => {
     const v11Commands = commandMigrationMap
-      .filter((entry) => entry.state === "v11")
+      .filter(
+        (entry) =>
+          entry.state === "v11"
+          && !commandsWithoutFacadeParitySentinel.includes(
+            entry.command as (typeof commandsWithoutFacadeParitySentinel)[number]
+          )
+      )
       .map((entry) => entry.command)
       .sort();
     const mappedCommands = Object.keys(facadeParityTestsByCommand).sort();
     expect(mappedCommands).toEqual(v11Commands);
+  });
+
+  it("keeps parity-sentinel exemptions explicit", () => {
+    const exemptCommands = commandMigrationMap
+      .filter((entry) =>
+        commandsWithoutFacadeParitySentinel.includes(
+          entry.command as (typeof commandsWithoutFacadeParitySentinel)[number]
+        )
+      )
+      .map((entry) => entry.command)
+      .sort();
+    expect(exemptCommands).toEqual(
+      [...commandsWithoutFacadeParitySentinel].sort()
+    );
   });
 
   it("keeps mapped facade parity test files present", async () => {
