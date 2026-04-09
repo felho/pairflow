@@ -3,10 +3,6 @@ import type { PersistPassValidationRecoveryMarkerPort } from "../../shared/ports
 import type { RemoveRuntimeSessionPort } from "../../shared/ports/runtimeSessions.js";
 import type { TerminateBubbleTmuxSessionPort } from "../../shared/ports/tmuxSessions.js";
 import type { RestartBubbleDependencies } from "./restartCommandContract.js";
-import { resolveBubbleById } from "../../../core/bubble/bubbleLookup.js";
-import { persistPassValidationRecoveryMarker } from "../../../core/runtime/passValidationEvidence.js";
-import { removeRuntimeSession } from "../../../core/runtime/sessionsRegistry.js";
-import { terminateBubbleTmuxSession } from "../../../core/runtime/tmuxManager.js";
 import { startBubbleV11 as startBubble } from "../start/emitStartV11.js";
 
 export interface ResolvedRestartBubbleDependencies {
@@ -17,17 +13,33 @@ export interface ResolvedRestartBubbleDependencies {
   startBubble: typeof startBubble;
 }
 
+function requireRestartDependency<T>(value: T | undefined, name: string): T {
+  if (value === undefined) {
+    throw new Error(`Missing restart dependency: ${name}`);
+  }
+  return value;
+}
+
 export function resolveRestartBubbleDependencies(
   dependencies: RestartBubbleDependencies = {}
 ): ResolvedRestartBubbleDependencies {
   return {
-    resolveBubbleById: dependencies.resolveBubbleById ?? resolveBubbleById,
-    terminateBubbleTmuxSession:
-      dependencies.terminateBubbleTmuxSession ?? terminateBubbleTmuxSession,
-    removeRuntimeSession: dependencies.removeRuntimeSession ?? removeRuntimeSession,
-    persistPassValidationRecoveryMarker:
-      dependencies.persistPassValidationRecoveryMarker
-      ?? persistPassValidationRecoveryMarker,
+    resolveBubbleById: requireRestartDependency(
+      dependencies.resolveBubbleById,
+      "resolveBubbleById"
+    ),
+    terminateBubbleTmuxSession: requireRestartDependency(
+      dependencies.terminateBubbleTmuxSession,
+      "terminateBubbleTmuxSession"
+    ),
+    removeRuntimeSession: requireRestartDependency(
+      dependencies.removeRuntimeSession,
+      "removeRuntimeSession"
+    ),
+    persistPassValidationRecoveryMarker: requireRestartDependency(
+      dependencies.persistPassValidationRecoveryMarker,
+      "persistPassValidationRecoveryMarker"
+    ),
     startBubble: dependencies.startBubble ?? startBubble
   };
 }

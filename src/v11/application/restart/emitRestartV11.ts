@@ -8,11 +8,9 @@ export type {
 } from "./restartCommandContract.js";
 export {
   RestartBubbleError,
-  RestartBubbleError as RestartBubbleErrorV11
-} from "./restartCommandRuntime.js";
-export {
-  restartBubbleCommandOrchestration as restartBubble,
-  restartBubbleCommandOrchestration as restartBubbleV11,
-  throwAsRestartBubbleError as asRestartBubbleError,
-  throwAsRestartBubbleError as asRestartBubbleErrorV11
-} from "./restartCommandOrchestration.js";
+  RestartBubbleError as RestartBubbleErrorV11,
+  asRestartBubbleError,
+  asRestartBubbleError as asRestartBubbleErrorV11,
+  restartBubble,
+  restartBubble as restartBubbleV11
+} from "../../../core/bubble/restartBubble.js";
