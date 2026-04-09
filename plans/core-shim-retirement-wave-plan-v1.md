@@ -53,7 +53,6 @@ Latest verified checkpoint after the meta-review-gate defaults redesign:
 
 Current remaining non-inventory bridge candidates:
 
-- `src/v11/shared/gates/docContractGateArtifactDefaults.ts`
 - `src/v11/shared/metaReview/metaReviewDependencyDefaults.ts`
 - `src/v11/shared/metrics/bubbleEvents.ts`
 
@@ -62,7 +61,6 @@ Current classification:
 - `easy`
   - none confirmed at this checkpoint
 - `medium`
-  - `docContractGateArtifactDefaults`
   - `metaReviewDependencyDefaults`
   - `bubbleEvents`
 - `hard / architecture-sensitive`
@@ -93,6 +91,10 @@ Immediate planning note:
     `src/v11/application/pass/passValidationCommandDefaults.ts`
   - `passValidationDependencyDefaults.ts` no longer imports
     `src/core/runtime/passValidationDefaults.ts`
+- the previous `docContractGateArtifactDefaults` bridge is now retired:
+  - the shared defaults file now lazy-loads the canonical v11 infrastructure
+    owner directly
+  - it no longer imports `src/core/gates/docContractGateArtifacts.ts`
 
 Observed warning snapshot when the test was downgraded:
 

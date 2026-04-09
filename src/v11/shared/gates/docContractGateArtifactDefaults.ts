@@ -4,25 +4,25 @@ import type {
   WriteDocContractGateArtifactPort
 } from "../ports/docContractGateArtifacts.js";
 
-type CoreDocContractGateArtifactsModule = {
+type DocContractGateArtifactsModule = {
   readDocContractGateArtifact: ReadDocContractGateArtifactPort;
   writeDocContractGateArtifact: WriteDocContractGateArtifactPort;
 };
 
-let coreDocContractGateArtifactsModulePromise:
-  | Promise<CoreDocContractGateArtifactsModule>
+let docContractGateArtifactsModulePromise:
+  | Promise<DocContractGateArtifactsModule>
   | undefined;
 
-async function loadCoreDocContractGateArtifactsModule(): Promise<
-  CoreDocContractGateArtifactsModule
+async function loadDocContractGateArtifactsModule(): Promise<
+  DocContractGateArtifactsModule
 > {
-  coreDocContractGateArtifactsModulePromise ??= import(
-    "../../../core/gates/docContractGateArtifacts.js"
+  docContractGateArtifactsModulePromise ??= import(
+    "../../infrastructure/artifact/gates/docContractGateArtifacts.js"
   ).then(({ readDocContractGateArtifact, writeDocContractGateArtifact }) => ({
     readDocContractGateArtifact,
     writeDocContractGateArtifact
   }));
-  return coreDocContractGateArtifactsModulePromise;
+  return docContractGateArtifactsModulePromise;
 }
 
 export function resolveDocContractGateArtifactPath(artifactsDir: string): string {
@@ -32,7 +32,7 @@ export function resolveDocContractGateArtifactPath(artifactsDir: string): string
 export const readDocContractGateArtifact: ReadDocContractGateArtifactPort = async (
   artifactPath
 ) => {
-  const module = await loadCoreDocContractGateArtifactsModule();
+  const module = await loadDocContractGateArtifactsModule();
   return module.readDocContractGateArtifact(artifactPath);
 };
 
@@ -40,6 +40,6 @@ export const writeDocContractGateArtifact: WriteDocContractGateArtifactPort = as
   artifactPath,
   artifact
 ) => {
-  const module = await loadCoreDocContractGateArtifactsModule();
+  const module = await loadDocContractGateArtifactsModule();
   return module.writeDocContractGateArtifact(artifactPath, artifact);
 };
