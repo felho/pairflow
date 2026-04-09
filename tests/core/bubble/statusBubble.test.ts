@@ -4,14 +4,14 @@ import { join } from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { emitAskHumanFromWorkspace } from "../../../src/core/agent/askHuman.js";
+import { emitAskHumanFromWorkspaceV11 as emitAskHumanFromWorkspace } from "../../../src/v11/application/askHuman/emitAskHumanV11.js";
 import { emitPassFromWorkspace } from "../../../src/core/agent/pass.js";
 import { createBubble } from "../../../src/core/bubble/createBubble.js";
-import { emitHumanReply } from "../../../src/core/human/reply.js";
-import { getBubbleStatus } from "../../../src/core/bubble/statusBubble.js";
+import { emitHumanReplyV11 as emitHumanReply } from "../../../src/v11/application/reply/emitReplyV11.js";
+import { getBubbleStatusV11 as getBubbleStatus } from "../../../src/v11/application/status/emitStatusV11.js";
 import { resolveDocContractGateArtifactPath } from "../../../src/core/gates/docContractGateArtifacts.js";
-import { appendProtocolEnvelope } from "../../../src/core/protocol/transcriptStore.js";
-import { resolveWorktreePairflowEntrypoint } from "../../../src/core/runtime/pairflowCommand.js";
+import { appendProtocolEnvelope } from "../../../src/v11/infrastructure/artifact/transcript/transcriptStore.js";
+import { resolveWorktreePairflowEntrypoint } from "../../../src/v11/infrastructure/executor/command/pairflowCommand.js";
 import { writeWatchdogPaneActivity } from "../../../src/core/watchdog/watchdogPaneActivityStore.js";
 import { initGitRepository } from "../../helpers/git.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";

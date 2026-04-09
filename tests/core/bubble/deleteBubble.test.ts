@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { parseBubbleConfigToml, renderBubbleConfigToml } from "../../../src/config/bubbleConfig.js";
-import { resolveArchivePaths } from "../../../src/core/archive/archivePaths.js";
+import { resolveArchivePaths } from "../../../src/v11/infrastructure/artifact/archive/archivePaths.js";
 import { createBubble } from "../../../src/core/bubble/createBubble.js";
 import {
   deleteBubble,
@@ -15,7 +15,7 @@ import {
   readRuntimeSessionsRegistry,
   removeRuntimeSession,
   upsertRuntimeSession
-} from "../../../src/core/runtime/sessionsRegistry.js";
+} from "../../../src/v11/infrastructure/executor/sessionRuntime/runtimeSessionsRegistry.js";
 import type {
   CreateArchiveSnapshotResult
 } from "../../../src/v11/infrastructure/artifact/archive/archiveSnapshot.js";
@@ -25,9 +25,9 @@ import type {
 import {
   readStateSnapshot,
   writeStateSnapshot
-} from "../../../src/core/state/stateStore.js";
+} from "../../../src/v11/infrastructure/state/stateStore.js";
 import type { ArchiveIndexDocument, ArchiveManifest } from "../../../src/types/archive.js";
-import { branchExists } from "../../../src/core/workspace/git.js";
+import { branchExists } from "../../../src/v11/infrastructure/workspace/git.js";
 import { initGitRepository } from "../../helpers/git.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
 
