@@ -1,5 +1,6 @@
 import { readFile, writeFile } from "node:fs/promises";
 
+import { metaReviewGateDependencyDefaults as metaReviewGateDependencyDefaultsCore } from "../../../core/bubble/metaReviewGateDefaults.js";
 import {
   appendProtocolEnvelope,
   readTranscriptEnvelopes
@@ -62,39 +63,14 @@ let metaReviewGateDependencyDefaultsPromise:
 export async function loadMetaReviewGateDependencyDefaults(): Promise<
   MetaReviewGateDependencyDefaults
 > {
-  metaReviewGateDependencyDefaultsPromise ??= Promise.all([
-    import("../../infrastructure/executor/command/agentCommand.js"),
-    import("../../infrastructure/channel/tmux/tmuxInput.js"),
-    import("../../infrastructure/executor/workspace/bubbleLookup.js"),
-    import("../../infrastructure/channel/tmux/tmuxManager.js"),
-    import("../../infrastructure/channel/tmux/metaReviewerPaneBinding.js")
-  ]).then(
-    ([
-      { buildAgentCommand },
-      {
-        maybeAcceptClaudeTrustPrompt,
-        sendAndSubmitTmuxPaneMessage,
-        submitTmuxPaneInput
-      },
-      { resolveBubbleById },
-      { runTmux, respawnTmuxPaneCommand },
-      { setMetaReviewerPaneBinding }
-    ]) => ({
-      appendProtocolEnvelope,
-      buildAgentCommand,
-      maybeAcceptClaudeTrustPrompt,
-      readFile,
-      readTranscriptEnvelopes,
-      readStateSnapshot,
-      respawnTmuxPaneCommand,
-      resolveBubbleById,
-      runTmux,
-      sendAndSubmitTmuxPaneMessage,
-      setMetaReviewerPaneBinding,
-      submitTmuxPaneInput,
-      writeFile,
-      writeStateSnapshot
-    })
-  );
+  metaReviewGateDependencyDefaultsPromise ??= Promise.resolve({
+    ...metaReviewGateDependencyDefaultsCore,
+    appendProtocolEnvelope,
+    readFile,
+    readTranscriptEnvelopes,
+    readStateSnapshot,
+    writeFile,
+    writeStateSnapshot
+  });
   return metaReviewGateDependencyDefaultsPromise;
 }

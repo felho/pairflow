@@ -5,38 +5,50 @@ import {
 import { readStateSnapshot } from "../state/stateStoreDefaults.js";
 import { readTranscriptEnvelopes } from "../transcript/transcriptDependencyDefaults.js";
 import type { ResolveBubbleByIdPort } from "../ports/bubbleLookup.js";
-import type { InspectedStateSnapshot } from "../../infrastructure/state/stateSnapshotInspection.js";
 import type {
+  StateValidationDiagnostics
+} from "../ports/stateSnapshots.js";
+import type {
+  ReadReviewVerificationArtifactStatusPort,
   ReadReviewVerificationArtifactStatusOptions
 } from "../ports/reviewVerificationArtifacts.js";
+import type {
+  BubbleStatusState
+} from "./statusCommandTypes.js";
 import type {
   ReviewVerificationArtifactStatus
 } from "../reviewer/reviewVerification.js";
 
+interface StatusInboxInspectionResult {
+  state: BubbleStatusState;
+  fingerprint: string;
+  stateValidation: StateValidationDiagnostics | null;
+}
+
 type InspectStateSnapshot = (
   statePath: string
-) => Promise<InspectedStateSnapshot>;
-type ReadReviewVerificationArtifactStatus = (
+) => Promise<StatusInboxInspectionResult>;
+type StatusInboxDependencyDefaults = {
+  resolveBubbleById: ResolveBubbleByIdPort;
+  inspectStateSnapshot: InspectStateSnapshot;
+};
+type StatusGateDefaults = {
+  readReviewVerificationArtifactStatus: ReadReviewVerificationArtifactStatus;
+};
+type ReadReviewVerificationArtifactStatus = ReadReviewVerificationArtifactStatusPort;
+type ReadReviewVerificationArtifactStatusResult = (
   artifactPath: string,
   options?: ReadReviewVerificationArtifactStatusOptions
 ) => Promise<ReviewVerificationArtifactStatus>;
 
 let statusInboxDependencyDefaultsPromise:
-  | Promise<{
-      resolveBubbleById: ResolveBubbleByIdPort;
-      inspectStateSnapshot: InspectStateSnapshot;
-    }>
+  | Promise<StatusInboxDependencyDefaults>
   | undefined;
 let statusGateDefaultsPromise:
-  | Promise<{
-      readReviewVerificationArtifactStatus: ReadReviewVerificationArtifactStatus;
-    }>
+  | Promise<StatusGateDefaults>
   | undefined;
 
-async function loadStatusInboxDependencyDefaults(): Promise<{
-  resolveBubbleById: ResolveBubbleByIdPort;
-  inspectStateSnapshot: InspectStateSnapshot;
-}> {
+async function loadStatusInboxDependencyDefaults(): Promise<StatusInboxDependencyDefaults> {
   statusInboxDependencyDefaultsPromise ??= import(
     "../../../core/bubble/statusInboxDefaults.js"
   ).then(({ statusInboxDependencyDefaults }) => {
@@ -50,9 +62,7 @@ async function loadStatusInboxDependencyDefaults(): Promise<{
   return statusInboxDependencyDefaultsPromise;
 }
 
-async function loadStatusGateDefaults(): Promise<{
-  readReviewVerificationArtifactStatus: ReadReviewVerificationArtifactStatus;
-}> {
+async function loadStatusGateDefaults(): Promise<StatusGateDefaults> {
   statusGateDefaultsPromise ??= import(
     "../../../core/bubble/statusGateDefaults.js"
   ).then(({ statusGateDefaults }) => {
@@ -77,8 +87,8 @@ async function inspectStateSnapshot(
 }
 
 async function readReviewVerificationArtifactStatus(
-  ...args: Parameters<ReadReviewVerificationArtifactStatus>
-): Promise<Awaited<ReturnType<ReadReviewVerificationArtifactStatus>>> {
+  ...args: Parameters<ReadReviewVerificationArtifactStatusResult>
+): Promise<Awaited<ReturnType<ReadReviewVerificationArtifactStatusResult>>> {
   const defaults = await loadStatusGateDefaults();
   return defaults.readReviewVerificationArtifactStatus(...args);
 }

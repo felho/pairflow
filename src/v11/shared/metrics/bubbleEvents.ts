@@ -1,29 +1,11 @@
 import { resolve } from "node:path";
 
 import { type MetricsActorRole } from "../../../types/metrics.js";
+import { bubbleEventsDefaults } from "../../../core/metrics/bubbleEventsDefaults.js";
 import { createMetricsEvent } from "./events.js";
 import {
-  type AppendMetricsEventPort,
   type AppendMetricsEventResult
 } from "./eventsStorePort.js";
-
-type CoreBubbleEventsDefaults = {
-  normalizeRepoPath: (path: string) => Promise<string>;
-  resolveDefaultMetricsEventStorePort: () => Promise<AppendMetricsEventPort>;
-};
-
-let bubbleEventsDefaultsPromise: Promise<CoreBubbleEventsDefaults> | undefined;
-
-async function loadBubbleEventsDefaults(): Promise<CoreBubbleEventsDefaults> {
-  bubbleEventsDefaultsPromise ??= Promise.all([
-    import("../../infrastructure/executor/workspace/repoResolution.js"),
-    import("../../infrastructure/artifact/metrics/eventsStore.js")
-  ]).then(([{ normalizeRepoPath }, { appendMetricsEvent }]) => ({
-    normalizeRepoPath,
-    resolveDefaultMetricsEventStorePort: () => Promise.resolve(appendMetricsEvent)
-  }));
-  return bubbleEventsDefaultsPromise;
-}
 
 export interface EmitBubbleLifecycleEventInput {
   repoPath: string;
@@ -65,12 +47,11 @@ export function clearReportedBubbleEventWarnings(): void {
 export async function emitBubbleLifecycleEvent(
   input: EmitBubbleLifecycleEventInput
 ): Promise<AppendMetricsEventResult> {
-  const defaults = await loadBubbleEventsDefaults();
-  const normalizedRepoPath = await defaults.normalizeRepoPath(
+  const normalizedRepoPath = await bubbleEventsDefaults.normalizeRepoPath(
     resolve(input.repoPath)
   );
   const appendMetricsEvent =
-    await defaults.resolveDefaultMetricsEventStorePort();
+    await bubbleEventsDefaults.resolveDefaultMetricsEventStorePort();
   return appendMetricsEvent({
     event: createMetricsEvent({
       repo_path: normalizedRepoPath,

@@ -1,9 +1,3 @@
-const createBubbleDefaultsPromise = Promise.all([
-  import("../../infrastructure/artifact/transcript/transcriptStore.js"),
-  import("../../infrastructure/workspace/git.js")
-]).then(([transcriptStore, git]) => ({
-  appendProtocolEnvelope: transcriptStore.appendProtocolEnvelope,
-  assertGitRepository: git.assertGitRepository
-}));
+import { createBubbleDependencyDefaults } from "../../../core/bubble/createBubbleDefaults.js";
 
-export const createBubbleDefaults = await createBubbleDefaultsPromise;
+export const createBubbleDefaults = createBubbleDependencyDefaults;

@@ -1,5 +1,4 @@
-import { readStateSnapshot, writeStateSnapshot } from "../../shared/state/stateStoreDefaults.js";
-import { emitBubbleLifecycleEventBestEffort } from "../../shared/metrics/bubbleEvents.js";
+import { mergeBubbleDependencyDefaults as mergeBubbleDependencyDefaultsCore } from "../../../core/bubble/mergeBubbleDefaults.js";
 import type { MergeBubbleDependencies } from "./mergeCommandContract.js";
 
 export interface MergeBubbleDependencyDefaults {
@@ -27,33 +26,8 @@ let mergeBubbleDependencyDefaultsPromise:
 export async function loadMergeBubbleDependencyDefaults(): Promise<
   MergeBubbleDependencyDefaults
 > {
-  mergeBubbleDependencyDefaultsPromise ??= Promise.all([
-    import("../../infrastructure/workspace/git.js"),
-    import("../../infrastructure/executor/workspace/bubbleLookup.js"),
-    import("../../infrastructure/workspace/worktreeManager.js"),
-    import("../../infrastructure/channel/tmux/tmuxManager.js"),
-    import("../../infrastructure/executor/sessionRuntime/runtimeSessionsRegistry.js"),
-    import("../../infrastructure/artifact/bubble/bubbleInstanceId.js")
-  ]).then(
-    ([
-      { runGit, branchExists },
-      { resolveBubbleById },
-      { cleanupWorktreeWorkspace },
-      { terminateBubbleTmuxSession },
-      { removeRuntimeSession },
-      { ensureBubbleInstanceIdForMutation }
-    ]) => ({
-      runGit,
-      resolveBubbleById,
-      readStateSnapshot,
-      writeStateSnapshot,
-      branchExists,
-      terminateBubbleTmuxSession,
-      removeRuntimeSession,
-      cleanupWorktreeWorkspace,
-      ensureBubbleInstanceIdForMutation,
-      emitBubbleLifecycleEventBestEffort
-    })
+  mergeBubbleDependencyDefaultsPromise ??= Promise.resolve(
+    mergeBubbleDependencyDefaultsCore
   );
   return mergeBubbleDependencyDefaultsPromise;
 }
