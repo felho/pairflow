@@ -5,9 +5,8 @@ import { join } from "node:path";
 
 import {
   DEFAULT_RESUME_MESSAGE,
-  resumeBubble
-} from "../../../src/core/bubble/resumeBubble.js";
-import { resumeBubbleV11 } from "../../../src/v11/application/resume/emitResumeV11.js";
+  resumeBubbleV11
+} from "../../../src/v11/application/resume/emitResumeV11.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
 import { initGitRepository } from "../../helpers/git.js";
 import { applyStateTransition } from "../../../src/v11/domain/state/machine.js";
@@ -44,7 +43,6 @@ export type ResumeContractOutput =
 
 export interface ResumeContractRunResult {
   mode: ContractCase["mode"];
-  baseline?: ResumeContractOutput;
   v11?: ResumeContractOutput;
 }
 
@@ -90,7 +88,7 @@ function parseResumeCaseInput(input: ContractCase["input"]): ParsedResumeCaseInp
 }
 
 function normalizeResumeResult(
-  result: Awaited<ReturnType<typeof resumeBubble>>
+  result: Awaited<ReturnType<typeof resumeBubbleV11>>
 ): ResumeContractSuccessOutput {
   return {
     status: "ok",
@@ -146,18 +144,6 @@ function assertContractExpectedSubset(input: {
   ) {
     throw new Error(
       `${input.label}: stateSubset.state mismatch (expected=${expectedState}, actual=${input.output.stateSubset.state})`
-    );
-  }
-}
-
-function assertParityEquivalent(input: {
-  baseline: ResumeContractOutput;
-  v11: ResumeContractOutput;
-  caseId: string;
-}): void {
-  if (JSON.stringify(input.baseline) !== JSON.stringify(input.v11)) {
-    throw new Error(
-      `resume parity mismatch for case=${input.caseId}: baseline=${JSON.stringify(input.baseline)} v11=${JSON.stringify(input.v11)}`
     );
   }
 }
@@ -223,7 +209,7 @@ async function seedWaitingHumanState(input: {
 
 async function executeResumeCase(input: {
   caseDef: ContractCase;
-  executor: typeof resumeBubble;
+  executor: typeof resumeBubbleV11;
 }): Promise<ResumeContractOutput> {
   const repoPath = await mkdtemp(join(tmpdir(), "pairflow-resume-contract-"));
   try {
@@ -276,64 +262,17 @@ export async function runResumeContractCase(
     );
   }
 
-  if (caseDef.mode === "baseline") {
-    const baseline = await executeResumeCase({
-      caseDef,
-      executor: resumeBubble
-    });
-    assertContractExpectedSubset({
-      output: baseline,
-      expected: caseDef.expected,
-      label: "baseline"
-    });
-    return {
-      mode: caseDef.mode,
-      baseline
-    };
-  }
-
-  if (caseDef.mode === "v11") {
-    const v11 = await executeResumeCase({
-      caseDef,
-      executor: resumeBubbleV11
-    });
-    assertContractExpectedSubset({
-      output: v11,
-      expected: caseDef.expected,
-      label: "v11"
-    });
-    return {
-      mode: caseDef.mode,
-      v11
-    };
-  }
-
-  const baseline = await executeResumeCase({
-    caseDef,
-    executor: resumeBubble
-  });
   const v11 = await executeResumeCase({
     caseDef,
     executor: resumeBubbleV11
   });
   assertContractExpectedSubset({
-    output: baseline,
-    expected: caseDef.expected,
-    label: "parity/baseline"
-  });
-  assertContractExpectedSubset({
     output: v11,
     expected: caseDef.expected,
-    label: "parity/v11"
-  });
-  assertParityEquivalent({
-    baseline,
-    v11,
-    caseId: caseDef.id
+    label: "v11"
   });
   return {
     mode: caseDef.mode,
-    baseline,
     v11
   };
 }

@@ -11,21 +11,11 @@ import { readContractCase } from "./runner.js";
 
 const execFileAsync = promisify(execFile);
 const resumeCaseSources = [
-  "tests/contracts/v11/cases/resume/resume-basic.case.json",
   "tests/contracts/v11/cases/resume/resume-basic-v11.case.json",
-  "tests/contracts/v11/cases/resume/resume-basic-parity.case.json",
-  "tests/contracts/v11/cases/resume/resume-state-not-waiting-human.case.json",
   "tests/contracts/v11/cases/resume/resume-state-not-waiting-human-v11.case.json",
-  "tests/contracts/v11/cases/resume/resume-state-not-waiting-human-parity.case.json",
-  "tests/contracts/v11/cases/resume/resume-waiting-human-round-invalid.case.json",
   "tests/contracts/v11/cases/resume/resume-waiting-human-round-invalid-v11.case.json",
-  "tests/contracts/v11/cases/resume/resume-waiting-human-round-invalid-parity.case.json",
-  "tests/contracts/v11/cases/resume/resume-waiting-human-context-incomplete.case.json",
   "tests/contracts/v11/cases/resume/resume-waiting-human-context-incomplete-v11.case.json",
-  "tests/contracts/v11/cases/resume/resume-waiting-human-context-incomplete-parity.case.json",
-  "tests/contracts/v11/cases/resume/resume-default-message-invariant.case.json",
-  "tests/contracts/v11/cases/resume/resume-default-message-invariant-v11.case.json",
-  "tests/contracts/v11/cases/resume/resume-default-message-invariant-parity.case.json"
+  "tests/contracts/v11/cases/resume/resume-default-message-invariant-v11.case.json"
 ] as const;
 
 const resumeExpectedSourcesSorted = [...resumeCaseSources].sort();
@@ -49,12 +39,12 @@ describe("v11 resume contract harness skeleton", () => {
     const casePath = resolve(process.cwd(), resumeCaseSources[0]);
     const caseDef = await readContractCase(casePath);
     expect(caseDef.command).toBe("resume");
-    expect(caseDef.mode).toBe("baseline");
+    expect(caseDef.mode).toBe("v11");
     expect(caseDef.expected.status).toBe("ok");
   });
 
   it(
-    "executes baseline and parity assertions via shared runner",
+    "executes v11 assertions via shared runner",
     { timeout: CONTRACT_TEST_TIMEOUT.parityStandardMs },
     async () => {
     const casePaths = resumeCaseSources.map((source) =>
@@ -64,26 +54,11 @@ describe("v11 resume contract harness skeleton", () => {
     for (const casePath of casePaths) {
       const caseDef = await readContractCase(casePath);
       const run = await runResumeContractCase(caseDef);
-      if (caseDef.mode === "baseline") {
-        expect(run.baseline?.status).toBe(caseDef.expected.status);
-        if (caseDef.expected.reasonCode !== undefined) {
-          expect(run.baseline?.reasonCode).toBe(caseDef.expected.reasonCode);
-        }
-        expect(run.v11).toBeUndefined();
-        continue;
+      expect(caseDef.mode).toBe("v11");
+      expect(run.v11?.status).toBe(caseDef.expected.status);
+      if (caseDef.expected.reasonCode !== undefined) {
+        expect(run.v11?.reasonCode).toBe(caseDef.expected.reasonCode);
       }
-      if (caseDef.mode === "v11") {
-        expect(run.v11?.status).toBe(caseDef.expected.status);
-        if (caseDef.expected.reasonCode !== undefined) {
-          expect(run.v11?.reasonCode).toBe(caseDef.expected.reasonCode);
-        }
-        expect(run.baseline).toBeUndefined();
-        continue;
-      }
-
-      expect(run.baseline).toBeDefined();
-      expect(run.v11).toBeDefined();
-      expect(run.baseline).toEqual(run.v11);
     }
     }
   );
