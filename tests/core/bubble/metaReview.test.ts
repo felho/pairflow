@@ -20,7 +20,7 @@ import {
   submitMetaReviewResult,
   toMetaReviewError
 } from "../../../src/core/bubble/metaReview.js";
-import { buildMetaReviewExecutionContext } from "../../../src/core/bubble/metaReviewExecutionContext.js";
+import { buildMetaReviewExecutionContext } from "../../../src/v11/shared/metaReview/metaReviewExecutionContext.js";
 import {
   appendProtocolEnvelope,
   readTranscriptEnvelopes

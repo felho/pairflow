@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   ConvergedCommandErrorV11
 } from "../../src/v11/application/converged/emitConvergedV11.js";
-import * as actorEmitContextModule from "../../src/core/bubble/actorEmitContext.js";
+import * as actorEmitContextModule from "../../src/v11/shared/actorProtocol/actorEmitContext.js";
 import * as actorProtocolModule from "../../src/v11/application/actorProtocol/emitActorProtocolV11.js";
 import { parsePassCommandOptions } from "../../src/cli/commands/agent/pass.js";
 import {

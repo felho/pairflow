@@ -16,7 +16,7 @@ import {
 import { notifyMetaReviewerSubmissionRequest } from "../../../src/v11/application/metaReviewGate/metaReviewGateNotify.js";
 import {
   appendHumanApprovalRequestEnvelope
-} from "../../../src/core/bubble/approvalRequestEnvelope.js";
+} from "../../../src/v11/shared/metaReviewGate/approvalRequestEnvelope.js";
 import {
   appendProtocolEnvelope,
   readTranscriptEnvelopes

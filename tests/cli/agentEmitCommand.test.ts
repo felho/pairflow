@@ -15,7 +15,7 @@ import { setupRunningBubbleFixture } from "../helpers/bubble.js";
 import { initGitRepository } from "../helpers/git.js";
 import {
   buildMetaReviewExecutionContext
-} from "../../src/core/bubble/metaReviewExecutionContext.js";
+} from "../../src/v11/shared/metaReview/metaReviewExecutionContext.js";
 import {
   buildRunningExecutionContext,
   metaReviewExecutionContextToRunningContext

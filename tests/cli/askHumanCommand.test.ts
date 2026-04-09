@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { AskHumanCommandErrorV11 } from "../../src/v11/application/askHuman/emitAskHumanV11.js";
-import * as actorEmitContextModule from "../../src/core/bubble/actorEmitContext.js";
+import * as actorEmitContextModule from "../../src/v11/shared/actorProtocol/actorEmitContext.js";
 import * as actorProtocolModule from "../../src/v11/application/actorProtocol/emitActorProtocolV11.js";
 import {
   getAskHumanHelpText,

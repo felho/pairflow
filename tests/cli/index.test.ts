@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { afterAll, afterEach, describe, expect, it, vi } from "vitest";
 
 import { runCli } from "../../src/cli/index.js";
-import { buildMetaReviewExecutionContext } from "../../src/core/bubble/metaReviewExecutionContext.js";
+import { buildMetaReviewExecutionContext } from "../../src/v11/shared/metaReview/metaReviewExecutionContext.js";
 import {
   metaReviewExecutionContextToRunningContext
 } from "../../src/v11/shared/state/executionContext.js";
