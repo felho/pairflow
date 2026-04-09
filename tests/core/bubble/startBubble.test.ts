@@ -10,10 +10,10 @@ import { buildMetaReviewExecutionContext } from "../../../src/core/bubble/metaRe
 import {
   buildRunningExecutionContext,
   metaReviewExecutionContextToRunningContext
-} from "../../../src/core/state/executionContext.js";
-import { readStateSnapshot, writeStateSnapshot } from "../../../src/core/state/stateStore.js";
+} from "../../../src/v11/shared/state/executionContext.js";
+import { readStateSnapshot, writeStateSnapshot } from "../../../src/v11/infrastructure/state/stateStore.js";
 import { startBubble, StartBubbleError } from "../../../src/core/bubble/startBubble.js";
-import { upsertRuntimeSession } from "../../../src/core/runtime/sessionsRegistry.js";
+import { upsertRuntimeSession } from "../../../src/v11/infrastructure/executor/sessionRuntime/runtimeSessionsRegistry.js";
 import {
   REVIEWER_COMMAND_GATE_FORBIDDEN,
   REVIEWER_COMMAND_GATE_REQ_A,
@@ -22,7 +22,7 @@ import {
   REVIEWER_COMMAND_GATE_REQ_D,
   REVIEWER_COMMAND_GATE_REQ_E,
   REVIEWER_COMMAND_GATE_REQ_F
-} from "../../../src/core/runtime/reviewerCommandGateGuidance.js";
+} from "../../../src/v11/shared/reviewer/reviewerCommandGateGuidance.js";
 import {
   resolveReviewerTestEvidenceArtifactPath,
   verifyImplementerTestEvidence,
@@ -30,7 +30,7 @@ import {
 } from "../../../src/core/reviewer/testEvidence.js";
 import {
   reviewerSeverityOntologyFullMarkdown
-} from "../../../src/core/runtime/reviewerSeverityOntology.generated.js";
+} from "../../../src/v11/shared/reviewer/reviewerSeverityOntology.generated.js";
 import { shellQuote } from "../../../src/core/util/shellQuote.js";
 import type { BubbleStateSnapshot } from "../../../src/types/bubble.js";
 import { initGitRepository } from "../../helpers/git.js";

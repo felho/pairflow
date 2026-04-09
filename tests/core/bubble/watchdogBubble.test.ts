@@ -10,15 +10,15 @@ import { buildMetaReviewExecutionContext } from "../../../src/core/bubble/metaRe
 import { MetaReviewGateError } from "../../../src/core/bubble/metaReviewGate.js";
 import { emitAskHumanFromWorkspace } from "../../../src/core/agent/askHuman.js";
 import { emitRequestRework } from "../../../src/core/human/approval.js";
-import { readTranscriptEnvelopes } from "../../../src/core/protocol/transcriptStore.js";
+import { readTranscriptEnvelopes } from "../../../src/v11/infrastructure/artifact/transcript/transcriptStore.js";
 import {
   readRuntimeSessionsRegistry,
-  setMetaReviewerPaneBinding,
   upsertRuntimeSession
-} from "../../../src/core/runtime/sessionsRegistry.js";
-import { metaReviewExecutionContextToRunningContext } from "../../../src/core/state/executionContext.js";
-import { applyStateTransition } from "../../../src/core/state/machine.js";
-import { readStateSnapshot, writeStateSnapshot } from "../../../src/core/state/stateStore.js";
+} from "../../../src/v11/infrastructure/executor/sessionRuntime/runtimeSessionsRegistry.js";
+import { setMetaReviewerPaneBinding } from "../../../src/v11/infrastructure/channel/tmux/metaReviewerPaneBinding.js";
+import { metaReviewExecutionContextToRunningContext } from "../../../src/v11/shared/state/executionContext.js";
+import { applyStateTransition } from "../../../src/v11/domain/state/machine.js";
+import { readStateSnapshot, writeStateSnapshot } from "../../../src/v11/infrastructure/state/stateStore.js";
 import { runBubbleWatchdog } from "../../../src/core/bubble/watchdogBubble.js";
 import type { EmitTmuxDeliveryNotificationPort } from "../../../src/v11/shared/ports/tmuxDelivery.js";
 import { initGitRepository } from "../../helpers/git.js";

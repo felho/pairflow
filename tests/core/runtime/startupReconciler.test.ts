@@ -7,17 +7,17 @@ import { afterEach, describe, expect, it } from "vitest";
 import { createBubble } from "../../../src/core/bubble/createBubble.js";
 import { buildMetaReviewExecutionContext } from "../../../src/core/bubble/metaReviewExecutionContext.js";
 import { startBubble } from "../../../src/core/bubble/startBubble.js";
-import { metaReviewExecutionContextToRunningContext } from "../../../src/core/state/executionContext.js";
-import { readStateSnapshot, writeStateSnapshot } from "../../../src/core/state/stateStore.js";
-import { applyStateTransition } from "../../../src/core/state/machine.js";
+import { metaReviewExecutionContextToRunningContext } from "../../../src/v11/shared/state/executionContext.js";
+import { readStateSnapshot, writeStateSnapshot } from "../../../src/v11/infrastructure/state/stateStore.js";
+import { applyStateTransition } from "../../../src/v11/domain/state/machine.js";
 import {
   reconcileRuntimeSessions,
   StartupReconcilerError
-} from "../../../src/core/runtime/startupReconciler.js";
+} from "../../../src/v11/application/reconcile/reconcileCommandApi.js";
 import {
   readRuntimeSessionsRegistry,
   upsertRuntimeSession
-} from "../../../src/core/runtime/sessionsRegistry.js";
+} from "../../../src/v11/infrastructure/executor/sessionRuntime/runtimeSessionsRegistry.js";
 import { initGitRepository } from "../../helpers/git.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
 
