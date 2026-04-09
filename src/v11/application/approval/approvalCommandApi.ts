@@ -16,15 +16,52 @@ import type {
 } from "./approvalCommandContract.js";
 import type { ApprovalCommandDefaultDependencies } from "./approvalCommandDependencyResolution.js";
 import { ApprovalCommandError } from "../../shared/approval/approvalCommandError.js";
+import { startCommandContextDefaults } from "../start/startCommandDependencyDefaults.js";
+import { reviewerDeliveryDefaults } from "../pass/reviewerDeliveryDefaults.js";
+import {
+  appendProtocolEnvelope,
+  readTranscriptEnvelopes
+} from "../../shared/transcript/transcriptDependencyDefaults.js";
+import { readStateSnapshot, writeStateSnapshot } from "../../shared/state/stateStoreDefaults.js";
 
 let approvalDependencyDefaultsPromise:
   | Promise<ApprovalCommandDefaultDependencies>
   | undefined;
 
+async function ensureBubbleInstanceIdForMutation(
+  ...args: Parameters<
+    ApprovalCommandDefaultDependencies["ensureBubbleInstanceIdForMutation"]
+  >
+): Promise<
+  Awaited<
+    ReturnType<
+      ApprovalCommandDefaultDependencies["ensureBubbleInstanceIdForMutation"]
+    >
+  >
+> {
+  return startCommandContextDefaults.ensureBubbleInstanceIdForMutation(...args);
+}
+
+async function resolveBubbleById(
+  ...args: Parameters<ApprovalCommandDefaultDependencies["resolveBubbleById"]>
+): Promise<
+  Awaited<ReturnType<ApprovalCommandDefaultDependencies["resolveBubbleById"]>>
+> {
+  return startCommandContextDefaults.resolveBubbleById(...args);
+}
+
 async function loadApprovalDependencyDefaults(): Promise<ApprovalCommandDefaultDependencies> {
-  approvalDependencyDefaultsPromise ??= import(
-    "../../../core/human/approvalDefaults.js"
-  ).then(({ approvalDependencyDefaults }) => approvalDependencyDefaults);
+  approvalDependencyDefaultsPromise ??= Promise.resolve({
+    appendProtocolEnvelope,
+    emitTmuxDeliveryNotification:
+      reviewerDeliveryDefaults.emitTmuxDeliveryNotification,
+    ensureBubbleInstanceIdForMutation,
+    readStateSnapshot,
+    readTranscriptEnvelopes,
+    resolveBubbleById,
+    resolveDeliveryMessageRef: reviewerDeliveryDefaults.resolveDeliveryMessageRef,
+    writeStateSnapshot
+  });
   return approvalDependencyDefaultsPromise;
 }
 
