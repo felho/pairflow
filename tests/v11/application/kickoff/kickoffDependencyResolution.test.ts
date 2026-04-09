@@ -2,23 +2,25 @@ import { readFile, writeFile } from "node:fs/promises";
 
 import { describe, expect, it } from "vitest";
 
-import { resolveBubbleById } from "../../../../src/v11/infrastructure/executor/workspace/bubbleLookup.js";
-import { appendProtocolEnvelope } from "../../../../src/v11/infrastructure/artifact/transcript/transcriptStore.js";
-import { emitTmuxDeliveryNotification } from "../../../../src/v11/infrastructure/channel/tmux/tmuxDelivery.js";
-import { readStateSnapshot, writeStateSnapshot } from "../../../../src/v11/infrastructure/state/stateStore.js";
+import { openBubbleDefaults } from "../../../../src/v11/application/open/openBubbleDefaults.js";
+import { reviewerDeliveryDefaults } from "../../../../src/v11/application/pass/reviewerDeliveryDefaults.js";
+import { appendProtocolEnvelope } from "../../../../src/v11/shared/transcript/transcriptDependencyDefaults.js";
+import { readStateSnapshot, writeStateSnapshot } from "../../../../src/v11/shared/state/stateStoreDefaults.js";
 import { resolveKickoffDependencies } from "../../../../src/v11/application/kickoff/kickoffDependencyResolution.js";
 
 describe("kickoffDependencyResolution", () => {
   it("uses kickoff defaults when overrides are omitted", () => {
     const resolved = resolveKickoffDependencies({});
 
-    expect(resolved.resolveBubble).toBe(resolveBubbleById);
+    expect(resolved.resolveBubble).toBe(openBubbleDefaults.resolveBubbleById);
     expect(resolved.readState).toBe(readStateSnapshot);
     expect(resolved.writeState).toBe(writeStateSnapshot);
     expect(resolved.readFileFn).toBe(readFile);
     expect(resolved.writeFileFn).toBe(writeFile);
     expect(resolved.appendEnvelope).toBe(appendProtocolEnvelope);
-    expect(resolved.emitDelivery).toBe(emitTmuxDeliveryNotification);
+    expect(resolved.emitDelivery).toBe(
+      reviewerDeliveryDefaults.emitTmuxDeliveryNotification
+    );
   });
 
   it("uses provided kickoff overrides", () => {
