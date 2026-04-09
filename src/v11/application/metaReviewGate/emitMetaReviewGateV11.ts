@@ -1,4 +1,5 @@
 import { metaReviewGateDependencyDefaults } from "../../../core/bubble/metaReviewGateDefaults.js";
+import { readTranscriptEnvelopes } from "../../../core/protocol/transcriptStore.js";
 
 import {
   applyMetaReviewGateOnConvergence,
@@ -14,35 +15,69 @@ import type {
   RecoverMetaReviewGateFromSnapshotDependencies,
   RecoverMetaReviewGateFromSnapshotInput
 } from "../../shared/metaReviewGate/metaReviewGateCommandContract.js";
+import type { ReadTranscriptEnvelopesPort } from "../../shared/ports/transcript.js";
 import { notifyMetaReviewerSubmissionRequest } from "./metaReviewGateNotify.js";
 import { resolveMetaReviewerPaneWarning } from "./metaReviewGatePaneBinding.js";
+
+const defaultReadTranscriptEnvelopes: ReadTranscriptEnvelopesPort =
+  readTranscriptEnvelopes;
 
 function withMetaReviewGateApplyDefaults(
   dependencies: ApplyMetaReviewGateOnConvergenceDependencies = {}
 ): ApplyMetaReviewGateOnConvergenceDependencies {
   return {
     appendProtocolEnvelope:
-      metaReviewGateDependencyDefaults.appendProtocolEnvelope,
-    readStateSnapshot: metaReviewGateDependencyDefaults.readStateSnapshot,
-    resolveBubbleById: metaReviewGateDependencyDefaults.resolveBubbleById,
+      dependencies.appendProtocolEnvelope
+      ?? metaReviewGateDependencyDefaults.appendProtocolEnvelope,
+    readStateSnapshot:
+      dependencies.readStateSnapshot
+      ?? metaReviewGateDependencyDefaults.readStateSnapshot,
+    resolveBubbleById:
+      dependencies.resolveBubbleById
+      ?? metaReviewGateDependencyDefaults.resolveBubbleById,
     setMetaReviewerPaneBinding:
-      metaReviewGateDependencyDefaults.setMetaReviewerPaneBinding,
-    writeStateSnapshot: metaReviewGateDependencyDefaults.writeStateSnapshot,
-    readFile: metaReviewGateDependencyDefaults.readFile,
-    runTmux: metaReviewGateDependencyDefaults.runTmux,
-    notifyMetaReviewerSubmissionRequest,
-    resolveMetaReviewerPaneWarning,
-    ...dependencies
+      dependencies.setMetaReviewerPaneBinding
+      ?? metaReviewGateDependencyDefaults.setMetaReviewerPaneBinding,
+    writeStateSnapshot:
+      dependencies.writeStateSnapshot
+      ?? metaReviewGateDependencyDefaults.writeStateSnapshot,
+    readFile: dependencies.readFile ?? metaReviewGateDependencyDefaults.readFile,
+    runTmux: dependencies.runTmux ?? metaReviewGateDependencyDefaults.runTmux,
+    notifyMetaReviewerSubmissionRequest:
+      dependencies.notifyMetaReviewerSubmissionRequest
+      ?? notifyMetaReviewerSubmissionRequest,
+    resolveMetaReviewerPaneWarning:
+      dependencies.resolveMetaReviewerPaneWarning
+      ?? resolveMetaReviewerPaneWarning
   };
 }
 
 function withMetaReviewGateRecoveryDefaults(
   dependencies: RecoverMetaReviewGateFromSnapshotDependencies = {}
 ): RecoverMetaReviewGateFromSnapshotDependencies {
+  const resolvedReadTranscriptEnvelopes: ReadTranscriptEnvelopesPort =
+    dependencies.readTranscriptEnvelopes ?? defaultReadTranscriptEnvelopes;
   return {
-    readFile: metaReviewGateDependencyDefaults.readFile,
-    writeFile: metaReviewGateDependencyDefaults.writeFile,
-    ...dependencies
+    appendProtocolEnvelope:
+      dependencies.appendProtocolEnvelope
+      ?? metaReviewGateDependencyDefaults.appendProtocolEnvelope,
+    readStateSnapshot:
+      dependencies.readStateSnapshot
+      ?? metaReviewGateDependencyDefaults.readStateSnapshot,
+    readTranscriptEnvelopes: resolvedReadTranscriptEnvelopes,
+    resolveBubbleById:
+      dependencies.resolveBubbleById
+      ?? metaReviewGateDependencyDefaults.resolveBubbleById,
+    setMetaReviewerPaneBinding:
+      dependencies.setMetaReviewerPaneBinding
+      ?? metaReviewGateDependencyDefaults.setMetaReviewerPaneBinding,
+    writeStateSnapshot:
+      dependencies.writeStateSnapshot
+      ?? metaReviewGateDependencyDefaults.writeStateSnapshot,
+    readFile: dependencies.readFile ?? metaReviewGateDependencyDefaults.readFile,
+    writeFile:
+      dependencies.writeFile ?? metaReviewGateDependencyDefaults.writeFile,
+    sleepForRetryMs: dependencies.sleepForRetryMs
   };
 }
 

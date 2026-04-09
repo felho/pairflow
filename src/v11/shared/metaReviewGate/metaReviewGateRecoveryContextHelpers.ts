@@ -1,5 +1,7 @@
-import { metaReviewGateRecoveryDefaults } from "../../../core/bubble/metaReviewGateRecoveryDefaults.js";
-import type { LoadedStateSnapshot } from "../../../core/bubble/metaReviewGateRecoveryDefaults.js";
+import type { LoadedStateSnapshot, ReadStateSnapshotPort, WriteStateSnapshotPort } from "../ports/stateSnapshots.js";
+import type { AppendProtocolEnvelopePort, ReadTranscriptEnvelopesPort } from "../ports/transcript.js";
+import type { ResolveBubbleByIdPort } from "../ports/bubbleLookup.js";
+import type { SetMetaReviewerPaneBindingPort } from "../ports/runtimeSessions.js";
 import { writeRecoveredMetaReviewArtifacts } from "./metaReviewGateRunResultArtifacts.js";
 import {
   MetaReviewGateError,
@@ -20,12 +22,12 @@ import { metaReviewGatePaneDeactivationUnavoidableReasonCode } from "./metaRevie
 import { SchemaValidationError } from "../validation/primitives.js";
 
 export interface ResolvedRecoveryContextDependencies {
-  resolveBubble: typeof metaReviewGateRecoveryDefaults.resolveBubbleById;
-  readState: typeof metaReviewGateRecoveryDefaults.readStateSnapshot;
-  writeState: typeof metaReviewGateRecoveryDefaults.writeStateSnapshot;
-  appendEnvelope: typeof metaReviewGateRecoveryDefaults.appendProtocolEnvelope;
-  readTranscript: typeof metaReviewGateRecoveryDefaults.readTranscriptEnvelopes;
-  setMetaReviewerPane: typeof metaReviewGateRecoveryDefaults.setMetaReviewerPaneBinding;
+  resolveBubble: ResolveBubbleByIdPort;
+  readState: ReadStateSnapshotPort;
+  writeState: WriteStateSnapshotPort;
+  appendEnvelope: AppendProtocolEnvelopePort;
+  readTranscript: ReadTranscriptEnvelopesPort;
+  setMetaReviewerPane: SetMetaReviewerPaneBindingPort;
   readFileFn: MetaReviewArtifactReadPort;
   writeFileFn: MetaReviewArtifactWritePort;
 }
@@ -34,24 +36,49 @@ export function resolveRecoveryContextDependencies(
   dependencies: RecoverMetaReviewGateFromSnapshotDependencies
 ): ResolvedRecoveryContextDependencies {
   return {
-    resolveBubble:
-      dependencies.resolveBubbleById ?? metaReviewGateRecoveryDefaults.resolveBubbleById,
-    readState:
-      dependencies.readStateSnapshot ?? metaReviewGateRecoveryDefaults.readStateSnapshot,
-    writeState:
-      dependencies.writeStateSnapshot ?? metaReviewGateRecoveryDefaults.writeStateSnapshot,
-    appendEnvelope:
-      dependencies.appendProtocolEnvelope
-      ?? metaReviewGateRecoveryDefaults.appendProtocolEnvelope,
-    readTranscript:
-      dependencies.readTranscriptEnvelopes
-      ?? metaReviewGateRecoveryDefaults.readTranscriptEnvelopes,
-    setMetaReviewerPane:
-      dependencies.setMetaReviewerPaneBinding
-      ?? metaReviewGateRecoveryDefaults.setMetaReviewerPaneBinding,
+    resolveBubble: requireRecoveryCapability(
+      dependencies.resolveBubbleById,
+      "meta-review gate bubble resolution capability is unavailable."
+    ),
+    readState: requireRecoveryCapability(
+      dependencies.readStateSnapshot,
+      "meta-review gate state read capability is unavailable."
+    ),
+    writeState: requireRecoveryCapability(
+      dependencies.writeStateSnapshot,
+      "meta-review gate state write capability is unavailable."
+    ),
+    appendEnvelope: requireRecoveryCapability(
+      dependencies.appendProtocolEnvelope,
+      "meta-review gate transcript append capability is unavailable."
+    ),
+    readTranscript: requireRecoveryCapability(
+      dependencies.readTranscriptEnvelopes,
+      "meta-review gate transcript read capability is unavailable."
+    ),
+    setMetaReviewerPane: requireRecoveryCapability(
+      dependencies.setMetaReviewerPaneBinding,
+      "meta-review gate pane binding capability is unavailable."
+    ),
     readFileFn: requireRecoveryArtifactReadPort(dependencies),
     writeFileFn: requireRecoveryArtifactWritePort(dependencies)
   };
+}
+
+function requireRecoveryCapability<T>(
+  value: T | undefined,
+  message: string
+): T {
+  if (value !== undefined) {
+    return value;
+  }
+  throw new MetaReviewGateError(
+    "META_REVIEW_GATE_TRANSITION_INVALID",
+    `META_REVIEW_GATE_TRANSITION_INVALID: ${message}`,
+    {
+      stageReasonCode: "META_REVIEW_GATE_TRANSITION_INVALID"
+    }
+  );
 }
 
 function requireRecoveryArtifactReadPort(
@@ -85,8 +112,7 @@ function requireRecoveryArtifactWritePort(
 }
 
 export function buildDeactivateMetaReviewerPane(input: {
-  setMetaReviewerPane:
-    typeof metaReviewGateRecoveryDefaults.setMetaReviewerPaneBinding;
+  setMetaReviewerPane: SetMetaReviewerPaneBindingPort;
   sessionsPath: string;
   bubbleId: string;
   now: Date;
