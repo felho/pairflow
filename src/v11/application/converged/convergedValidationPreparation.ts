@@ -1,3 +1,4 @@
+import { convergedDependencyDefaults } from "../../../core/agent/convergedDefaults.js";
 import {
   isDocContractGateScopeActive,
 } from "../../../v11/shared/gates/docContractGates.js";
@@ -5,15 +6,10 @@ import type {
   ReadReviewVerificationArtifactStatusPort
 } from "../../../v11/shared/ports/reviewVerificationArtifacts.js";
 import {
-  readDocContractGateArtifact,
-  resolveDocContractGateArtifactPath
-} from "../../../core/gates/docContractGateArtifacts.js";
-import {
   evaluateSummaryVerifierConsistencyGate,
   resolveSummaryVerifierConsistencyGateArtifactPath,
   writeSummaryVerifierConsistencyGateArtifact
 } from "../../../v11/shared/reviewer/summaryVerifierConsistencyGate.js";
-import { readReviewVerificationArtifactStatus } from "../../../core/reviewer/reviewVerificationArtifacts.js";
 import {
   resolveReviewerTestExecutionDirective as defaultResolveReviewerTestExecutionDirective
 } from "../reviewer/reviewerTestEvidenceDefaults.js";
@@ -51,8 +47,9 @@ type ResolvedReviewerDirective = {
 
 interface ResolvedValidationDependencies {
   isDocGateScopeActive: typeof isDocContractGateScopeActive;
-  readDocGateArtifact: typeof readDocContractGateArtifact;
-  resolveDocGateArtifactPath: typeof resolveDocContractGateArtifactPath;
+  readDocGateArtifact: typeof convergedDependencyDefaults.validation.readDocContractGateArtifact;
+  resolveDocGateArtifactPath:
+    typeof convergedDependencyDefaults.validation.resolveDocContractGateArtifactPath;
   readVerificationArtifactStatus: ReadReviewVerificationArtifactStatusPort;
   resolveTestEvidenceArtifactPath: typeof resolveReviewerTestEvidenceArtifactPath;
   resolveReviewerDirective: (
@@ -87,11 +84,14 @@ function resolveValidationDependencies(
     isDocGateScopeActive:
       dependencies.isDocContractGateScopeActive ?? isDocContractGateScopeActive,
     readDocGateArtifact:
-      dependencies.readDocContractGateArtifact ?? readDocContractGateArtifact,
+      dependencies.readDocContractGateArtifact
+      ?? convergedDependencyDefaults.validation.readDocContractGateArtifact,
     resolveDocGateArtifactPath:
-      dependencies.resolveDocContractGateArtifactPath ?? resolveDocContractGateArtifactPath,
+      dependencies.resolveDocContractGateArtifactPath
+      ?? convergedDependencyDefaults.validation.resolveDocContractGateArtifactPath,
     readVerificationArtifactStatus:
-      dependencies.readReviewVerificationArtifactStatus ?? readReviewVerificationArtifactStatus,
+      dependencies.readReviewVerificationArtifactStatus
+      ?? convergedDependencyDefaults.validation.readReviewVerificationArtifactStatus,
     resolveTestEvidenceArtifactPath:
       dependencies.resolveReviewerTestEvidenceArtifactPath
       ?? resolveReviewerTestEvidenceArtifactPath,
@@ -137,7 +137,9 @@ async function resolveDocGateValidationState(
     violated: false,
     round: input.state.round
   };
-  let gateArtifact: Awaited<ReturnType<typeof readDocContractGateArtifact>> | undefined;
+  let gateArtifact: Awaited<
+    ReturnType<typeof convergedDependencyDefaults.validation.readDocContractGateArtifact>
+  > | undefined;
   let docGateArtifactReadFailureReason: string | undefined;
   if (docGateScopeActive) {
     try {

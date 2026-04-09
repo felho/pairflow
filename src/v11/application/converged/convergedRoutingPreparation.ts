@@ -1,12 +1,10 @@
-import { readStateSnapshot } from "../../../core/state/stateStore.js";
+import { convergedDependencyDefaults } from "../../../core/agent/convergedDefaults.js";
 import {
   IDEATION_CONVERGED_BLOCKED
 } from "../../shared/ideation/ideationReasonCodes.js";
 import {
   resolveIdeationMetadata
 } from "../../domain/ideation/ideationMetadata.js";
-import { resolveBubbleFromWorkspaceCwd } from "../../../core/bubble/workspaceResolution.js";
-import { ensureBubbleInstanceIdForMutation } from "../../../core/bubble/bubbleInstanceId.js";
 import type { ActorEmitContextSnapshot } from "../../shared/actorProtocol/actorEmitContext.js";
 import type { AgentName, BubbleStateSnapshot } from "../../../types/bubble.js";
 
@@ -21,15 +19,15 @@ export interface PrepareConvergedRoutingInput {
 }
 
 export interface PrepareConvergedRoutingDependencies {
-  resolveBubbleFromWorkspaceCwd?: typeof resolveBubbleFromWorkspaceCwd;
-  ensureBubbleInstanceIdForMutation?: typeof ensureBubbleInstanceIdForMutation;
-  readStateSnapshot?: typeof readStateSnapshot;
+  resolveBubbleFromWorkspaceCwd?: typeof convergedDependencyDefaults.routing.resolveBubbleFromWorkspaceCwd;
+  ensureBubbleInstanceIdForMutation?: typeof convergedDependencyDefaults.routing.ensureBubbleInstanceIdForMutation;
+  readStateSnapshot?: typeof convergedDependencyDefaults.routing.readStateSnapshot;
   resolveIdeationMetadata?: typeof resolveIdeationMetadata;
 }
 
 export interface PrepareConvergedRoutingResult {
-  resolved: Awaited<ReturnType<typeof resolveBubbleFromWorkspaceCwd>>;
-  bubbleIdentity: Awaited<ReturnType<typeof ensureBubbleInstanceIdForMutation>>;
+  resolved: Awaited<ReturnType<typeof convergedDependencyDefaults.routing.resolveBubbleFromWorkspaceCwd>>;
+  bubbleIdentity: Awaited<ReturnType<typeof convergedDependencyDefaults.routing.ensureBubbleInstanceIdForMutation>>;
   state: BubbleStateSnapshot;
   implementer: AgentName;
   reviewer: AgentName;
@@ -102,11 +100,14 @@ export async function prepareConvergedRouting(
   dependencies: PrepareConvergedRoutingDependencies = {}
 ): Promise<PrepareConvergedRoutingResult> {
   const resolveBubbleFromWorkspace =
-    dependencies.resolveBubbleFromWorkspaceCwd ?? resolveBubbleFromWorkspaceCwd;
+    dependencies.resolveBubbleFromWorkspaceCwd
+    ?? convergedDependencyDefaults.routing.resolveBubbleFromWorkspaceCwd;
   const ensureBubbleIdentity =
-    dependencies.ensureBubbleInstanceIdForMutation ?? ensureBubbleInstanceIdForMutation;
+    dependencies.ensureBubbleInstanceIdForMutation
+    ?? convergedDependencyDefaults.routing.ensureBubbleInstanceIdForMutation;
   const readStateSnapshotFn =
-    dependencies.readStateSnapshot ?? readStateSnapshot;
+    dependencies.readStateSnapshot
+    ?? convergedDependencyDefaults.routing.readStateSnapshot;
   const resolveIdeationMetadataFn =
     dependencies.resolveIdeationMetadata ?? resolveIdeationMetadata;
 
