@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { parseBubbleConfigToml, renderBubbleConfigToml } from "../../../src/config/bubbleConfig.js";
 import { createBubble } from "../../../src/core/bubble/createBubble.js";
-import { kickoffBubble } from "../../../src/core/bubble/kickoffBubble.js";
+import { kickoffBubbleV11 as kickoffBubble } from "../../../src/v11/application/kickoff/emitKickoffV11.js";
 import { buildRunningExecutionContext } from "../../../src/v11/shared/state/executionContext.js";
 import {
   IDEATION_ALREADY_ACTIVE,

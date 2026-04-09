@@ -1,5 +1,5 @@
 import { buildAgentCommand } from "./agentCommand.js";
-import { buildMetaReviewerStartupPrompt } from "./metaReviewerStartupPrompt.js";
+import { buildMetaReviewerStartupPrompt } from "../../v11/application/start/startCommandPrompts.js";
 import {
   maybeAcceptClaudeTrustPrompt,
   sendAndSubmitTmuxPaneMessage,

@@ -3,7 +3,7 @@ import { deleteBubble } from "../bubble/deleteBubble.js";
 import { emitApprove, emitRequestRework } from "../human/approval.js";
 import { emitHumanReply } from "../human/reply.js";
 import { listBubbles } from "../bubble/listBubbles.js";
-import { getBubbleStatus } from "../bubble/statusBubble.js";
+import { getBubbleStatusV11 as getBubbleStatus } from "../../v11/application/status/emitStatusV11.js";
 import { mergeBubble } from "../bubble/mergeBubble.js";
 import { openBubble } from "../../v11/application/open/emitOpenV11.js";
 import { restartBubble } from "../bubble/restartBubble.js";
