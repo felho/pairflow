@@ -16,16 +16,16 @@ import { IDEATION_PASS_BLOCKED } from "../../../src/core/bubble/ideation.js";
 import {
   buildRunningExecutionContext,
   metaReviewExecutionContextToRunningContext
-} from "../../../src/core/state/executionContext.js";
+} from "../../../src/v11/shared/state/executionContext.js";
 import {
   readStateSnapshot,
   writeStateSnapshot as rawWriteStateSnapshot
-} from "../../../src/core/state/stateStore.js";
-import { bootstrapWorktreeWorkspace } from "../../../src/core/workspace/worktreeManager.js";
+} from "../../../src/v11/infrastructure/state/stateStore.js";
+import { bootstrapWorktreeWorkspace } from "../../../src/v11/infrastructure/workspace/worktreeManager.js";
 import {
   appendProtocolEnvelope,
   readTranscriptEnvelopes
-} from "../../../src/core/protocol/transcriptStore.js";
+} from "../../../src/v11/infrastructure/artifact/transcript/transcriptStore.js";
 import { deliveryTargetRoleMetadataKey } from "../../../src/types/protocol.js";
 import {
   repeatCleanAutoconvergeTriggeredReasonCode,
@@ -47,8 +47,8 @@ import {
 } from "../../../src/core/reviewer/testEvidence.js";
 import {
   resolvePassValidationReviewerCompatibilityArtifactPath
-} from "../../../src/core/runtime/passValidationEvidence.js";
-import type { EmitTmuxDeliveryNotificationInput } from "../../../src/core/runtime/tmuxDelivery.js";
+} from "../../../src/v11/infrastructure/artifact/validation/passValidationEvidence.js";
+import type { EmitTmuxDeliveryNotificationInput } from "../../../src/v11/infrastructure/channel/tmux/tmuxDelivery.js";
 import { initGitRepository } from "../../helpers/git.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
 import { writeEvidenceLog } from "../../helpers/evidence.js";
