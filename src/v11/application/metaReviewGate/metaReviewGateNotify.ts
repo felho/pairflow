@@ -1,9 +1,4 @@
-import {
-  maybeAcceptClaudeTrustPrompt,
-  sendAndSubmitTmuxPaneMessage,
-  submitTmuxPaneInput
-} from "../../../core/runtime/tmuxInput.js";
-import { runTmux } from "../../../core/runtime/tmuxManager.js";
+import { metaReviewGateRuntimeDefaults } from "../../../core/runtime/metaReviewGateRuntimeDefaults.js";
 import {
   buildMetaReviewSubmitApproveParityNote,
   buildMetaReviewSubmitCommandTemplate
@@ -63,7 +58,7 @@ function detectSubmittedMarker(text: string, marker: string): MarkerStatus {
 }
 
 async function assertMetaReviewRequestSubmitted(input: {
-  runTmux: typeof runTmux;
+  runTmux: typeof metaReviewGateRuntimeDefaults.runTmux;
   targetPane: string;
   marker: string;
 }): Promise<MetaReviewRuntimeDeliveryObservation> {
@@ -98,7 +93,10 @@ async function assertMetaReviewRequestSubmitted(input: {
 
     if (attempt < 2) {
       await sleep(900);
-      await submitTmuxPaneInput(input.runTmux, input.targetPane);
+      await metaReviewGateRuntimeDefaults.submitTmuxPaneInput(
+        input.runTmux,
+        input.targetPane
+      );
     }
   }
 
@@ -113,7 +111,7 @@ export async function notifyMetaReviewerSubmissionRequest(
   input: NotifyMetaReviewerSubmissionRequestInput,
   dependencies: NotifyMetaReviewerSubmissionRequestDependencies = {}
 ): Promise<MetaReviewRuntimeDeliveryObservation> {
-  const runner = dependencies.runTmux ?? runTmux;
+  const runner = dependencies.runTmux ?? metaReviewGateRuntimeDefaults.runTmux;
   const requestMarker = `bubble=${input.bubbleId} meta-review request round=${input.round}.`;
   const message = [
     `# [pairflow] ${requestMarker}`,
@@ -121,9 +119,15 @@ export async function notifyMetaReviewerSubmissionRequest(
     `Required command (include --report-json parity fields): ${buildMetaReviewSubmitCommandTemplate({ bubbleId: input.bubbleId, round: input.round })}. ${buildMetaReviewSubmitApproveParityNote()}`
   ].join(" ");
 
-  await maybeAcceptClaudeTrustPrompt(runner, input.targetPane).catch(() => undefined);
+  await metaReviewGateRuntimeDefaults
+    .maybeAcceptClaudeTrustPrompt(runner, input.targetPane)
+    .catch(() => undefined);
   try {
-    await sendAndSubmitTmuxPaneMessage(runner, input.targetPane, message);
+    await metaReviewGateRuntimeDefaults.sendAndSubmitTmuxPaneMessage(
+      runner,
+      input.targetPane,
+      message
+    );
   } catch (error) {
     return {
       status: "failed",

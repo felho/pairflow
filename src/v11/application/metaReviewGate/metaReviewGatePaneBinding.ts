@@ -1,8 +1,4 @@
-import {
-  respawnTmuxPaneCommand
-} from "../../../core/runtime/tmuxManager.js";
-import { buildAgentCommand } from "../../../core/runtime/agentCommand.js";
-import { buildMetaReviewerStartupPrompt } from "../../../core/runtime/metaReviewerStartupPrompt.js";
+import { metaReviewGateRuntimeDefaults } from "../../../core/runtime/metaReviewGateRuntimeDefaults.js";
 import type {
   ResolveMetaReviewerPaneWarning
 } from "../../shared/metaReviewGate/metaReviewGateTypes.js";
@@ -51,12 +47,12 @@ export const resolveMetaReviewerPaneWarning: ResolveMetaReviewerPaneWarning = as
   shouldDeactivate = true;
   const paneIndex = bindStart.record.metaReviewerPane?.paneIndex ?? 3;
   const targetPane = `${bindStart.record.tmuxSessionName}:0.${paneIndex}`;
-  const metaReviewerCommand = buildAgentCommand({
+  const metaReviewerCommand = metaReviewGateRuntimeDefaults.buildAgentCommand({
     agentName: "codex",
     bubbleId: input.bubbleId,
     worktreePath: bindStart.record.worktreePath,
     pairflowCommandProfile: input.pairflowCommandProfile,
-    startupPrompt: buildMetaReviewerStartupPrompt({
+    startupPrompt: metaReviewGateRuntimeDefaults.buildMetaReviewerStartupPrompt({
       bubbleId: input.bubbleId,
       repoPath: bindStart.record.repoPath,
       worktreePath: bindStart.record.worktreePath,
@@ -65,7 +61,7 @@ export const resolveMetaReviewerPaneWarning: ResolveMetaReviewerPaneWarning = as
     })
   });
   try {
-    await respawnTmuxPaneCommand({
+    await metaReviewGateRuntimeDefaults.respawnTmuxPaneCommand({
       sessionName: bindStart.record.tmuxSessionName,
       paneIndex,
       cwd: bindStart.record.worktreePath,
