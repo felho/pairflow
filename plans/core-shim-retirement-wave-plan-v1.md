@@ -63,6 +63,45 @@ Current classification:
 - `hard / architecture-sensitive`
   - none confirmed at this checkpoint
 
+## Core Proxy Typology Snapshot
+
+Post-lint inspection confirms that the remaining `src/core/**` surface is not a
+single class of shim. The useful buckets are:
+
+- `thin proxy / pure re-export`
+  - examples:
+    - `src/core/bubble/paths.ts`
+    - `src/core/bubble/bubbleLookup.ts`
+    - `src/core/bubble/workspaceResolution.ts`
+    - `src/core/ui/router.ts`
+    - `src/core/runtime/tmuxDelivery.ts`
+  - likely removable late, once external consumers are retired
+
+- `compatibility facade`
+  - examples:
+    - `src/core/agent/askHuman.ts`
+    - `src/core/human/reply.ts`
+    - `src/core/bubble/startBubble.ts`
+    - `src/core/bubble/restartBubble.ts`
+    - `src/core/bubble/listBubbles.ts`
+  - these keep stable core-facing names and sometimes local defaults modules
+  - removal requires consumer migration, but not necessarily behavior redesign
+
+- `retained behavior / architecture-sensitive`
+  - examples:
+    - `src/core/bubble/metaReview.ts`
+    - `src/core/bubble/commitBubble.ts`
+    - `src/core/metrics/events.ts`
+  - these still compose defaults, runtime wiring, or live behavior locally
+  - they should not be treated as path-only cleanup
+
+Practical consequence:
+
+- deleting every remaining `src/core/**` file is not the next step
+- the next safe wave is consumer retirement for thin proxies and the simpler
+  compatibility facades
+- retained-behavior files need dedicated redesign batches
+
 ## Post-Lint Core Proxy Inventory Snapshot
 
 Verified after the staged `tests/core/**` retirement waves:
@@ -80,16 +119,21 @@ Verified after the staged `tests/core/**` retirement waves:
 - `93aeb595` `test(shim): retarget kickoff and commit tests`
 - `15777eab` `test(shim): retarget approval test`
 - `784dc692` `test(shim): retarget bubble smoke and approval tests`
+- `d3715bd4` `test(shim): retarget converged ask-human and reply tests`
 
 Current residual summary:
 
 - `tests/core/**` thin-shim frontier: `0`
 - intentional bridge coverage: `0`
+- compatibility-facade coverage remains in `tests/core/**`, but this is no longer
+  counted as thin-shim drift
 
 Outcome:
 
 - the broad `tests/core/**` shim-consumer retirement is complete
 - no `tests/core/**` compatibility sentinel bridge remains
+- any remaining `tests/core/** -> src/core/**` imports are now interpreted as
+  `core` public API / compatibility facade coverage unless proven otherwise
 - remaining future work, if any, is not about test-consumer shim drift
 - the boundary coverage test can stay warn-only only for broader policy
   reasons, not because this `tests/core/**` frontier remains large
