@@ -11,18 +11,10 @@ import { readContractCase } from "./runner.js";
 
 const execFileAsync = promisify(execFile);
 const startCaseSources = [
-  "tests/contracts/v11/cases/start/start-basic.case.json",
   "tests/contracts/v11/cases/start/start-basic-v11.case.json",
-  "tests/contracts/v11/cases/start/start-basic-parity.case.json",
-  "tests/contracts/v11/cases/start/start-state-not-startable.case.json",
   "tests/contracts/v11/cases/start/start-state-not-startable-v11.case.json",
-  "tests/contracts/v11/cases/start/start-state-not-startable-parity.case.json",
-  "tests/contracts/v11/cases/start/start-bootstrap-fails-cleanup.case.json",
   "tests/contracts/v11/cases/start/start-bootstrap-fails-cleanup-v11.case.json",
-  "tests/contracts/v11/cases/start/start-bootstrap-fails-cleanup-parity.case.json",
-  "tests/contracts/v11/cases/start/start-stale-session-reclaim.case.json",
-  "tests/contracts/v11/cases/start/start-stale-session-reclaim-v11.case.json",
-  "tests/contracts/v11/cases/start/start-stale-session-reclaim-parity.case.json"
+  "tests/contracts/v11/cases/start/start-stale-session-reclaim-v11.case.json"
 ] as const;
 
 const startExpectedSourcesSorted = [...startCaseSources].sort();
@@ -46,12 +38,12 @@ describe("v11 start contract harness skeleton", () => {
     const casePath = resolve(process.cwd(), startCaseSources[0]);
     const caseDef = await readContractCase(casePath);
     expect(caseDef.command).toBe("start");
-    expect(caseDef.mode).toBe("baseline");
+    expect(caseDef.mode).toBe("v11");
     expect(caseDef.expected.status).toBe("ok");
   });
 
   it(
-    "executes baseline and parity assertions via shared runner",
+    "executes v11 assertions via shared runner",
     { timeout: CONTRACT_TEST_TIMEOUT.parityStandardMs },
     async () => {
     const casePaths = startCaseSources.map((source) =>
@@ -61,26 +53,11 @@ describe("v11 start contract harness skeleton", () => {
     for (const casePath of casePaths) {
       const caseDef = await readContractCase(casePath);
       const run = await runStartContractCase(caseDef);
-      if (caseDef.mode === "baseline") {
-        expect(run.baseline?.status).toBe(caseDef.expected.status);
-        if (caseDef.expected.reasonCode !== undefined) {
-          expect(run.baseline?.reasonCode).toBe(caseDef.expected.reasonCode);
-        }
-        expect(run.v11).toBeUndefined();
-        continue;
+      expect(run.mode).toBe("v11");
+      expect(run.v11?.status).toBe(caseDef.expected.status);
+      if (caseDef.expected.reasonCode !== undefined) {
+        expect(run.v11?.reasonCode).toBe(caseDef.expected.reasonCode);
       }
-      if (caseDef.mode === "v11") {
-        expect(run.v11?.status).toBe(caseDef.expected.status);
-        if (caseDef.expected.reasonCode !== undefined) {
-          expect(run.v11?.reasonCode).toBe(caseDef.expected.reasonCode);
-        }
-        expect(run.baseline).toBeUndefined();
-        continue;
-      }
-
-      expect(run.baseline).toBeDefined();
-      expect(run.v11).toBeDefined();
-      expect(run.baseline).toEqual(run.v11);
     }
     }
   );

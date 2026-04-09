@@ -261,27 +261,9 @@
       "kind": "seed_case"
     },
     {
-      "id": "start-basic",
-      "command": "start",
-      "source": "tests/contracts/v11/cases/start/start-basic.case.json",
-      "kind": "seed_case"
-    },
-    {
       "id": "start-basic-v11",
       "command": "start",
       "source": "tests/contracts/v11/cases/start/start-basic-v11.case.json",
-      "kind": "seed_case"
-    },
-    {
-      "id": "start-basic-parity",
-      "command": "start",
-      "source": "tests/contracts/v11/cases/start/start-basic-parity.case.json",
-      "kind": "seed_case"
-    },
-    {
-      "id": "start-state-not-startable",
-      "command": "start",
-      "source": "tests/contracts/v11/cases/start/start-state-not-startable.case.json",
       "kind": "seed_case"
     },
     {
@@ -291,45 +273,15 @@
       "kind": "seed_case"
     },
     {
-      "id": "start-state-not-startable-parity",
-      "command": "start",
-      "source": "tests/contracts/v11/cases/start/start-state-not-startable-parity.case.json",
-      "kind": "seed_case"
-    },
-    {
-      "id": "start-bootstrap-fails-cleanup",
-      "command": "start",
-      "source": "tests/contracts/v11/cases/start/start-bootstrap-fails-cleanup.case.json",
-      "kind": "seed_case"
-    },
-    {
       "id": "start-bootstrap-fails-cleanup-v11",
       "command": "start",
       "source": "tests/contracts/v11/cases/start/start-bootstrap-fails-cleanup-v11.case.json",
       "kind": "seed_case"
     },
     {
-      "id": "start-bootstrap-fails-cleanup-parity",
-      "command": "start",
-      "source": "tests/contracts/v11/cases/start/start-bootstrap-fails-cleanup-parity.case.json",
-      "kind": "seed_case"
-    },
-    {
-      "id": "start-stale-session-reclaim",
-      "command": "start",
-      "source": "tests/contracts/v11/cases/start/start-stale-session-reclaim.case.json",
-      "kind": "seed_case"
-    },
-    {
       "id": "start-stale-session-reclaim-v11",
       "command": "start",
       "source": "tests/contracts/v11/cases/start/start-stale-session-reclaim-v11.case.json",
-      "kind": "seed_case"
-    },
-    {
-      "id": "start-stale-session-reclaim-parity",
-      "command": "start",
-      "source": "tests/contracts/v11/cases/start/start-stale-session-reclaim-parity.case.json",
       "kind": "seed_case"
     },
     {
@@ -843,33 +795,9 @@
       "kind": "seed_case"
     },
     {
-      "id": "converged-basic",
-      "command": "converged",
-      "source": "tests/contracts/v11/cases/converged/converged-basic.case.json",
-      "kind": "seed_case"
-    },
-    {
       "id": "converged-basic-v11",
       "command": "converged",
       "source": "tests/contracts/v11/cases/converged/converged-basic-v11.case.json",
-      "kind": "seed_case"
-    },
-    {
-      "id": "converged-basic-parity",
-      "command": "converged",
-      "source": "tests/contracts/v11/cases/converged/converged-basic-parity.case.json",
-      "kind": "seed_case"
-    },
-    {
-      "id": "converged-document-parity",
-      "command": "converged",
-      "source": "tests/contracts/v11/cases/converged/converged-document-parity.case.json",
-      "kind": "seed_case"
-    },
-    {
-      "id": "converged-document",
-      "command": "converged",
-      "source": "tests/contracts/v11/cases/converged/converged-document.case.json",
       "kind": "seed_case"
     },
     {
@@ -879,39 +807,15 @@
       "kind": "seed_case"
     },
     {
-      "id": "converged-no-refs-parity",
-      "command": "converged",
-      "source": "tests/contracts/v11/cases/converged/converged-no-refs-parity.case.json",
-      "kind": "seed_case"
-    },
-    {
-      "id": "converged-no-refs",
-      "command": "converged",
-      "source": "tests/contracts/v11/cases/converged/converged-no-refs.case.json",
-      "kind": "seed_case"
-    },
-    {
       "id": "converged-no-refs-v11",
       "command": "converged",
       "source": "tests/contracts/v11/cases/converged/converged-no-refs-v11.case.json",
       "kind": "seed_case"
     },
     {
-      "id": "converged-delivery-partial-failure",
-      "command": "converged",
-      "source": "tests/contracts/v11/cases/converged/converged-delivery-partial-failure.case.json",
-      "kind": "seed_case"
-    },
-    {
       "id": "converged-delivery-partial-failure-v11",
       "command": "converged",
       "source": "tests/contracts/v11/cases/converged/converged-delivery-partial-failure-v11.case.json",
-      "kind": "seed_case"
-    },
-    {
-      "id": "converged-delivery-partial-failure-parity",
-      "command": "converged",
-      "source": "tests/contracts/v11/cases/converged/converged-delivery-partial-failure-parity.case.json",
       "kind": "seed_case"
     },
     {

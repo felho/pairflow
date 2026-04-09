@@ -96,11 +96,11 @@ describe("v11 converged contract harness skeleton", () => {
   it("loads seed contract case metadata", async () => {
     const casePath = resolve(
       process.cwd(),
-      "tests/contracts/v11/cases/converged/converged-basic.case.json"
+      "tests/contracts/v11/cases/converged/converged-basic-v11.case.json"
     );
     const caseDef = await readContractCase(casePath);
     expect(caseDef.command).toBe("converged");
-    expect(caseDef.mode).toBe("baseline");
+    expect(caseDef.mode).toBe("v11");
     expect(caseDef.expected.status).toBe("ok");
   });
 
@@ -163,15 +163,7 @@ describe("v11 converged contract harness skeleton", () => {
         "tests/contracts/v11/cases/converged/converged-document-v11.case.json"
       )
     );
-    const inflightParityCase = await readContractCase(
-      resolve(
-        process.cwd(),
-        "tests/contracts/v11/cases/converged/converged-document-parity.case.json"
-      )
-    );
-
     const advisoryFixture = readConvergedCaseFixture(advisoryV11Case);
-    const inflightFixture = readConvergedCaseFixture(inflightParityCase);
 
     expect(advisoryFixture.reviewer_routing_contract?.expected_route).toBe(
       "converged_with_advisory_findings"
@@ -191,31 +183,8 @@ describe("v11 converged contract harness skeleton", () => {
     expect(Array.isArray(advisoryV11Case.input.findings)).toBe(true);
     expect((advisoryV11Case.input.findings as unknown[]).length).toBeGreaterThan(0);
 
-    expect(inflightFixture.reviewer_routing_contract?.expected_route).toBe(
-      "converged_clean"
-    );
-    expect(
-      inflightFixture.reviewer_routing_contract?.requires_no_structured_findings
-    ).toBe(true);
-    expect(inflightFixture.rollout_contract?.kickoff_contract_version).toBe(
-      "baseline_inflight"
-    );
-    expect(inflightFixture.rollout_contract?.inflight_policy).toBe(
-      "kickoff_pinned_until_close"
-    );
-    expect(inflightFixture.rollout_contract?.grace_period_gate).toBe(
-      "baseline_only_within_window"
-    );
-    expect(inflightFixture.reviewer_routing_contract?.forbidden_patterns).toEqual(
-      advisoryFixture.reviewer_routing_contract?.forbidden_patterns
-    );
-    expect(inflightParityCase.input.findings).toBeUndefined();
-
     expect(advisoryV11Case.tags).toEqual(
       expect.arrayContaining(["reviewer-guidance-phase1", "advisory-v1-rollout"])
-    );
-    expect(inflightParityCase.tags).toEqual(
-      expect.arrayContaining(["reviewer-guidance-phase1", "inflight-rollout-edge"])
     );
   });
 
@@ -245,40 +214,22 @@ describe("v11 converged contract harness skeleton", () => {
       }
     });
 
-    expect(run.baseline).toBeUndefined();
     expect(run.v11?.status).toBe("ok");
   });
 
   it(
-    "executes baseline, v11 and parity assertions via shared runner",
+    "executes converged v11 cases via shared runner",
     { timeout: CONTRACT_TEST_TIMEOUT.parityExhaustiveMs },
     async () => {
       const casePaths = await listConvergedCasePaths();
       expect(casePaths.length).toBeGreaterThan(0);
-      const seenModes = new Set<string>();
-
       for (const casePath of casePaths) {
         const caseDef = await readContractCase(casePath);
-        seenModes.add(caseDef.mode);
         const run = await runConvergedContractCase(caseDef);
-        if (caseDef.mode === "baseline") {
-          expect(run.baseline?.status).toBe("ok");
-          expect(run.v11).toBeUndefined();
-          continue;
-        }
-        if (caseDef.mode === "v11") {
-          expect(run.v11?.status).toBe("ok");
-          expect(run.baseline).toBeUndefined();
-          continue;
-        }
-
-        expect(run.baseline).toBeDefined();
+        expect(caseDef.mode).toBe("v11");
         expect(run.v11).toBeDefined();
-        expect(run.baseline).toEqual(run.v11);
+        expect(run.v11?.status).toBe("ok");
       }
-      expect(seenModes.has("baseline")).toBe(true);
-      expect(seenModes.has("v11")).toBe(true);
-      expect(seenModes.has("parity")).toBe(true);
     }
   );
 
@@ -287,7 +238,7 @@ describe("v11 converged contract harness skeleton", () => {
       runConvergedContractCase({
         id: "converged-invalid-review-artifact-type",
         command: "converged",
-        mode: "baseline",
+        mode: "v11",
         description: "Invalid converged contract input shape",
         input: {
           summary: "Invalid case",
@@ -305,7 +256,7 @@ describe("v11 converged contract harness skeleton", () => {
       runConvergedContractCase({
         id: "converged-invalid-empty-summary",
         command: "converged",
-        mode: "baseline",
+        mode: "v11",
         description: "Invalid converged contract summary",
         input: {
           summary: "   "
@@ -322,7 +273,7 @@ describe("v11 converged contract harness skeleton", () => {
       runConvergedContractCase({
         id: "converged-invalid-refs",
         command: "converged",
-        mode: "baseline",
+        mode: "v11",
         description: "Invalid converged contract refs input",
         input: {
           summary: "Valid summary",
@@ -364,7 +315,7 @@ describe("v11 converged contract harness skeleton", () => {
       runConvergedContractCase({
         id: "converged-unsupported-command",
         command: "pass",
-        mode: "baseline",
+        mode: "v11",
         description: "Wrong command routed to converged runner",
         input: {
           summary: "Should not execute"

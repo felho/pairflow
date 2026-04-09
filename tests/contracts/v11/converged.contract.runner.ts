@@ -3,14 +3,12 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import {
-  emitConvergedFromWorkspace,
-  type EmitConvergedDependencies,
-  type EmitConvergedInput,
-  type EmitConvergedResult
-} from "../../../src/core/agent/converged.js";
-import { applyMetaReviewGateOnConvergence } from "../../../src/core/bubble/metaReviewGate.js";
+  emitConvergedFromWorkspaceV11,
+  type EmitConvergedV11Dependencies as EmitConvergedDependencies,
+  type EmitConvergedV11Input as EmitConvergedInput,
+  type EmitConvergedV11Result as EmitConvergedResult
+} from "../../../src/v11/application/converged/emitConvergedV11.js";
 import { resolveConvergedSummaryFindingsContradiction } from "../../../src/v11/domain/convergence/policy.js";
-import { emitConvergedFromWorkspaceV11 } from "../../../src/v11/application/converged/emitConvergedV11.js";
 import { applyMetaReviewGateOnConvergenceV11 } from "../../../src/v11/application/metaReviewGate/emitMetaReviewGateV11.js";
 import {
   isConvergedStructuredFindingSeverity,
@@ -53,7 +51,6 @@ export interface ConvergedContractOutput {
 
 export interface ConvergedContractRunResult {
   mode: ContractCase["mode"];
-  baseline?: ConvergedContractOutput;
   v11?: ConvergedContractOutput;
 }
 
@@ -499,18 +496,6 @@ function assertContractExpectedSubset(input: {
   }
 }
 
-function assertParityEquivalent(input: {
-  baseline: ConvergedContractOutput;
-  v11: ConvergedContractOutput;
-  caseId: string;
-}): void {
-  if (JSON.stringify(input.baseline) !== JSON.stringify(input.v11)) {
-    throw new Error(
-      `converged parity mismatch for case=${input.caseId}: baseline=${JSON.stringify(input.baseline)} v11=${JSON.stringify(input.v11)}`
-    );
-  }
-}
-
 function assertConvergedScenarioInvariant(input: {
   result: EmitConvergedResult;
   scenario: ParsedConvergedCaseInput["scenario"];
@@ -720,7 +705,7 @@ function assertFixtureRuntimeBinding(input: {
 
 async function executeConvergedCase(input: {
   caseDef: ContractCase;
-  executor: typeof emitConvergedFromWorkspace;
+  executor: typeof emitConvergedFromWorkspaceV11;
   applyMetaReviewGateExecutor?: EmitConvergedDependencies["applyMetaReviewGateOnConvergence"];
 }): Promise<ConvergedContractOutput> {
   const repoPath = await mkdtemp(join(tmpdir(), "pairflow-converged-contract-"));
@@ -825,68 +810,18 @@ export async function runConvergedContractCase(
     );
   }
 
-  if (caseDef.mode === "baseline") {
-    const baseline = await executeConvergedCase({
-      caseDef,
-      executor: emitConvergedFromWorkspace,
-      applyMetaReviewGateExecutor: applyMetaReviewGateOnConvergence
-    });
-    assertContractExpectedSubset({
-      output: baseline,
-      expected: caseDef.expected,
-      label: "baseline"
-    });
-    return {
-      mode: caseDef.mode,
-      baseline
-    };
-  }
-
-  if (caseDef.mode === "v11") {
-    const v11 = await executeConvergedCase({
-      caseDef,
-      executor: emitConvergedFromWorkspaceV11,
-      applyMetaReviewGateExecutor: applyMetaReviewGateOnConvergenceV11
-    });
-    assertContractExpectedSubset({
-      output: v11,
-      expected: caseDef.expected,
-      label: "v11"
-    });
-    return {
-      mode: caseDef.mode,
-      v11
-    };
-  }
-
-  const baseline = await executeConvergedCase({
-    caseDef,
-    executor: emitConvergedFromWorkspace,
-    applyMetaReviewGateExecutor: applyMetaReviewGateOnConvergence
-  });
   const v11 = await executeConvergedCase({
     caseDef,
     executor: emitConvergedFromWorkspaceV11,
     applyMetaReviewGateExecutor: applyMetaReviewGateOnConvergenceV11
   });
   assertContractExpectedSubset({
-    output: baseline,
-    expected: caseDef.expected,
-    label: "parity/baseline"
-  });
-  assertContractExpectedSubset({
     output: v11,
     expected: caseDef.expected,
-    label: "parity/v11"
-  });
-  assertParityEquivalent({
-    baseline,
-    v11,
-    caseId: caseDef.id
+    label: "v11"
   });
   return {
     mode: caseDef.mode,
-    baseline,
     v11
   };
 }

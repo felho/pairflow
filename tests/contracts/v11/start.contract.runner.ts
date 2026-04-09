@@ -3,8 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createHash } from "node:crypto";
 
-import { createBubble } from "../../../src/core/bubble/createBubble.js";
-import { startBubble } from "../../../src/core/bubble/startBubble.js";
+import { createBubble } from "../../../src/v11/application/create/createBubble.js";
 import {
   readStateSnapshot,
   writeStateSnapshot
@@ -40,7 +39,6 @@ export type StartContractOutput =
 
 export interface StartContractRunResult {
   mode: ContractCase["mode"];
-  baseline?: StartContractOutput;
   v11?: StartContractOutput;
 }
 
@@ -86,9 +84,7 @@ function parseStartCaseInput(input: ContractCase["input"]): ParsedStartCaseInput
   };
 }
 
-function normalizeStartResult(
-  result: Awaited<ReturnType<typeof startBubble>>
-): StartContractSuccessOutput {
+function normalizeStartResult(result: Awaited<ReturnType<typeof startBubbleV11>>): StartContractSuccessOutput {
   return {
     status: "ok",
     reasonCode: "STARTED",
@@ -162,21 +158,9 @@ function assertContractExpectedSubset(input: {
   }
 }
 
-function assertParityEquivalent(input: {
-  baseline: StartContractOutput;
-  v11: StartContractOutput;
-  caseId: string;
-}): void {
-  if (JSON.stringify(input.baseline) !== JSON.stringify(input.v11)) {
-    throw new Error(
-      `start parity mismatch for case=${input.caseId}: baseline=${JSON.stringify(input.baseline)} v11=${JSON.stringify(input.v11)}`
-    );
-  }
-}
-
 async function executeStartCase(input: {
   caseDef: ContractCase;
-  executor: typeof startBubble;
+  executor: typeof startBubbleV11;
 }): Promise<StartContractOutput> {
   const repoPath = await mkdtemp(join(tmpdir(), "pairflow-start-contract-"));
   try {
@@ -308,64 +292,23 @@ export async function runStartContractCase(
     throw new Error(`Unsupported command for start contract runner: ${caseDef.command}`);
   }
 
-  if (caseDef.mode === "baseline") {
-    const baseline = await executeStartCase({
-      caseDef,
-      executor: startBubble
-    });
-    assertContractExpectedSubset({
-      output: baseline,
-      expected: caseDef.expected,
-      label: "baseline"
-    });
-    return {
-      mode: caseDef.mode,
-      baseline
-    };
+  if (caseDef.mode !== "v11") {
+    throw new Error(
+      `start contract runner only supports v11 cases; received mode=${caseDef.mode}`
+    );
   }
 
-  if (caseDef.mode === "v11") {
-    const v11 = await executeStartCase({
-      caseDef,
-      executor: startBubbleV11
-    });
-    assertContractExpectedSubset({
-      output: v11,
-      expected: caseDef.expected,
-      label: "v11"
-    });
-    return {
-      mode: caseDef.mode,
-      v11
-    };
-  }
-
-  const baseline = await executeStartCase({
-    caseDef,
-    executor: startBubble
-  });
   const v11 = await executeStartCase({
     caseDef,
     executor: startBubbleV11
   });
   assertContractExpectedSubset({
-    output: baseline,
-    expected: caseDef.expected,
-    label: "parity/baseline"
-  });
-  assertContractExpectedSubset({
     output: v11,
     expected: caseDef.expected,
-    label: "parity/v11"
-  });
-  assertParityEquivalent({
-    baseline,
-    v11,
-    caseId: caseDef.id
+    label: "v11"
   });
   return {
     mode: caseDef.mode,
-    baseline,
     v11
   };
 }
