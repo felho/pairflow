@@ -1,13 +1,13 @@
 import type { BubbleMetaReviewSnapshotState } from "../../../types/bubble.js";
 import { deliveryTargetRoleMetadataKey, type FindingsParityMetadata } from "../../../types/protocol.js";
 import type { MetaReviewResult } from "../metaReview/metaReviewTypes.js";
-import { StateStoreConflictError } from "../../../core/state/stateStore.js";
 import {
   resolveFindingsParityMetadataForEnvelope,
   toConflictError,
   toTransitionError
 } from "./metaReviewGateShared.js";
 import { MetaReviewGateError, type MetaReviewGateResult } from "./metaReviewGateTypes.js";
+import { isNamedError } from "../errors/namedError.js";
 import {
   type RecoverMetaReviewExecutionContext,
   persistRecoveryDispatchFailedHumanRoute
@@ -54,7 +54,7 @@ export async function handleRecoveryAutoReworkRoute(input: {
     context: input.context,
     loaded: input.context.loaded
   }).catch((error: unknown) => {
-    if (error instanceof StateStoreConflictError) {
+    if (isNamedError(error, "StateStoreConflictError")) {
       throw toConflictError(error);
     }
     throw toTransitionError(error);

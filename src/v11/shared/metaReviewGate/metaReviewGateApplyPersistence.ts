@@ -1,9 +1,9 @@
-import { StateStoreConflictError } from "../../../core/state/stateStore.js";
 import type { LoadedStateSnapshot } from "../ports/stateSnapshots.js";
 import { isMetaReviewExecutionContextActiveState } from "../metaReview/metaReviewExecutionContext.js";
 import { resolveActiveMetaReviewRuntimeDelivery } from "../metaReview/metaReviewSnapshot.js";
 import type { BubbleMetaReviewRuntimeDeliveryState } from "../../../types/bubble.js";
 import type { ApplyMetaReviewGateExecutionContext } from "./metaReviewGateApplyContext.js";
+import { isNamedError } from "../errors/namedError.js";
 
 export async function persistRuntimeDeliveryObservation(input: {
   context: ApplyMetaReviewGateExecutionContext;
@@ -30,7 +30,7 @@ export async function persistRuntimeDeliveryObservation(input: {
       }
     );
   } catch (error) {
-    if (!(error instanceof StateStoreConflictError)) {
+    if (!isNamedError(error, "StateStoreConflictError")) {
       throw error;
     }
     const latest = await input.context.readState(
@@ -65,7 +65,7 @@ export async function persistRuntimeDeliveryObservation(input: {
         }
       );
     } catch (retryError) {
-      if (!(retryError instanceof StateStoreConflictError)) {
+      if (!isNamedError(retryError, "StateStoreConflictError")) {
         throw retryError;
       }
       return input.context.readState(input.context.resolved.bubblePaths.statePath);

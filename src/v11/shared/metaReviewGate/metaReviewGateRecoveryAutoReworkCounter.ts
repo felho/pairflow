@@ -1,7 +1,6 @@
 import {
-  StateStoreConflictError,
   type LoadedStateSnapshot
-} from "../../../core/state/stateStore.js";
+} from "../ports/stateSnapshots.js";
 import type { BubbleMetaReviewSnapshotState, BubbleStateSnapshot } from "../../../types/bubble.js";
 import type { MetaReviewResult } from "../metaReview/metaReviewTypes.js";
 import {
@@ -16,6 +15,7 @@ import {
 } from "./metaReviewGateShared.js";
 import { MetaReviewGateError } from "./metaReviewGateTypes.js";
 import type { RecoverMetaReviewExecutionContext } from "./metaReviewGateRecoveryContext.js";
+import { isNamedError } from "../errors/namedError.js";
 
 export async function persistAutoReworkCounterAfterRecoveryDispatch(input: {
   context: RecoverMetaReviewExecutionContext;
@@ -42,10 +42,10 @@ export async function persistAutoReworkCounterAfterRecoveryDispatch(input: {
       }
     );
   } catch (error) {
-    if (!(error instanceof StateStoreConflictError)) {
+    if (!isNamedError(error, "StateStoreConflictError")) {
       throw toTransitionError(error);
     }
-    let latestConflict: StateStoreConflictError = error;
+    let latestConflict: Error = error;
     const expectedCount = input.snapshot.auto_rework_count;
     const targetCount = expectedCount + 1;
 
@@ -119,7 +119,7 @@ export async function persistAutoReworkCounterAfterRecoveryDispatch(input: {
         );
         break;
       } catch (retryError) {
-        if (!(retryError instanceof StateStoreConflictError)) {
+        if (!isNamedError(retryError, "StateStoreConflictError")) {
           throw toTransitionError(retryError);
         }
         latestConflict = retryError;

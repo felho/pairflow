@@ -1,9 +1,9 @@
 import {
-  StateStoreConflictError,
   type LoadedStateSnapshot
-} from "../../../../core/state/stateStore.js";
+} from "../../ports/stateSnapshots.js";
 import { MetaReviewError } from "../metaReviewError.js";
 import type { MetaReviewDependencies } from "./metaReviewLiveRunContract.js";
+import { isNamedError } from "../../errors/namedError.js";
 
 type GateReasonCode =
   | "META_REVIEW_GATE_STATE_CONFLICT"
@@ -76,7 +76,7 @@ export async function resolveApprovalRefreshRollbackContext(input: {
     const rollbackReason =
       rollbackError instanceof Error ? rollbackError.message : String(rollbackError);
     rollbackContext = `rollback_outcome=failed rollback_error=${rollbackReason}`;
-    if (rollbackError instanceof StateStoreConflictError) {
+    if (isNamedError(rollbackError, "StateStoreConflictError")) {
       gateReasonCode = "META_REVIEW_GATE_STATE_CONFLICT";
       rollbackReasonCode =
         "META_REVIEW_GATE_REFRESH_APPROVAL_ROLLBACK_STATE_CONFLICT";

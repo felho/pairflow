@@ -2,9 +2,8 @@ import { applyStateTransition } from "../../domain/state/machine.js";
 import { buildRunningExecutionContext } from "../../shared/state/executionContext.js";
 import { assertValidBubbleStateSnapshot } from "../../shared/state/stateSchema.js";
 import {
-  StateStoreConflictError,
   type LoadedStateSnapshot
-} from "../../../core/state/stateStore.js";
+} from "../ports/stateSnapshots.js";
 import type { BubbleStateSnapshot } from "../../../types/bubble.js";
 import type { MetaReviewResult } from "../metaReview/metaReviewTypes.js";
 import {
@@ -14,6 +13,7 @@ import {
 import { clearLiveMetaReviewSnapshot } from "../metaReview/metaReviewSnapshot.js";
 import { MetaReviewGateError } from "./metaReviewGateTypes.js";
 import type { RecoverMetaReviewExecutionContext } from "./metaReviewGateRecoveryContext.js";
+import { isNamedError } from "../errors/namedError.js";
 export { persistAutoReworkCounterAfterRecoveryDispatch } from "./metaReviewGateRecoveryAutoReworkCounter.js";
 
 export async function transitionRecoveryToRunningForAutoRework(input: {
@@ -92,7 +92,7 @@ export async function restoreHumanGateAfterDispatchFailure(input: {
     const restoreReason =
       recoveryError instanceof Error ? recoveryError.message : String(recoveryError);
     restoreOutcome = `restore_outcome=failed restore_error=${restoreReason}`;
-    if (recoveryError instanceof StateStoreConflictError) {
+    if (isNamedError(recoveryError, "StateStoreConflictError")) {
       throw new MetaReviewGateError(
         "META_REVIEW_GATE_STATE_CONFLICT",
         `META_REVIEW_GATE_STATE_CONFLICT: auto-rework dispatch append failed (append_error=${input.appendReason}) and restore to READY_FOR_HUMAN_APPROVAL failed (${restoreOutcome}).`,

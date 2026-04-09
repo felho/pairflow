@@ -1,7 +1,6 @@
 import {
-  StateStoreConflictError,
   type LoadedStateSnapshot
-} from "../../../../core/state/stateStore.js";
+} from "../../ports/stateSnapshots.js";
 import {
   normalizeMetaReviewSnapshot
 } from "../metaReviewSnapshot.js";
@@ -22,6 +21,7 @@ import type {
   MetaReviewResult,
   MetaReviewRunWarning
 } from "./metaReviewLiveRunContract.js";
+import { isNamedError } from "../../errors/namedError.js";
 
 export function buildNextMetaReviewStateSnapshot(input: {
   loadedState: LoadedStateSnapshot;
@@ -71,7 +71,7 @@ export async function persistMetaReviewStateSnapshot(input: {
       expectedState: input.loadedState.state.state
     });
   } catch (error) {
-    if (error instanceof StateStoreConflictError) {
+    if (isNamedError(error, "StateStoreConflictError")) {
       const normalizedError = stateWriteConflictToMetaReviewError(error);
       throw new MetaReviewError(
         normalizedError.reasonCode,

@@ -1,8 +1,7 @@
 import {
-  StateStoreConflictError,
   type LoadedStateSnapshot,
-  type writeStateSnapshot
-} from "../../../core/state/stateStore.js";
+  type WriteStateSnapshotPort
+} from "../ports/stateSnapshots.js";
 import type {
   BubbleStateSnapshot,
   MetaReviewRecommendation
@@ -10,9 +9,9 @@ import type {
 import type { MetaReviewResult } from "../metaReview/metaReviewTypes.js";
 import type { FindingsParityMetadata } from "../../../types/protocol.js";
 import type {
-  appendProtocolEnvelope,
+  AppendProtocolEnvelopePort,
   AppendProtocolEnvelopeResult
-} from "../../../core/protocol/transcriptStore.js";
+} from "../ports/transcript.js";
 import {
   MetaReviewGateError,
   type MetaReviewGateResult,
@@ -31,6 +30,7 @@ import {
   resolveAdvisoryFindingsFromReportJson,
   type MetaReviewGateAdvisoryFinding
 } from "./metaReviewGateFindingsSplit.js";
+import { isNamedError } from "../errors/namedError.js";
 
 export {
   metaReviewGateRollbackAppliedReasonCode,
@@ -40,8 +40,8 @@ export {
 } from "./metaReviewGateHumanGatePersistenceHelpers.js";
 
 export interface PersistHumanGateRouteInput {
-  appendEnvelope: typeof appendProtocolEnvelope;
-  writeState: typeof writeStateSnapshot;
+  appendEnvelope: AppendProtocolEnvelopePort;
+  writeState: WriteStateSnapshotPort;
   statePath: string;
   transcriptPath: string;
   inboxPath: string;
@@ -119,7 +119,7 @@ export async function persistHumanGateRoute(
       expectedState: input.expectedState
     });
   } catch (error) {
-    if (error instanceof StateStoreConflictError) {
+    if (isNamedError(error, "StateStoreConflictError")) {
       const reason = error instanceof Error ? error.message : String(error);
       // reason_code=META_REVIEW_GATE_STATE_CONFLICT state_path expected_state
       throw new MetaReviewGateError(

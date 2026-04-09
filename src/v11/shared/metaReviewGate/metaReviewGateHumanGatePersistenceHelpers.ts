@@ -1,8 +1,7 @@
 import { appendHumanApprovalRequestEnvelope } from "./approvalRequestEnvelope.js";
 import {
-  StateStoreConflictError,
-  type writeStateSnapshot
-} from "../../../core/state/stateStore.js";
+  type WriteStateSnapshotPort
+} from "../ports/stateSnapshots.js";
 import type {
   BubbleStateSnapshot,
   MetaReviewRecommendation
@@ -10,11 +9,12 @@ import type {
 import type { MetaReviewResult } from "../metaReview/metaReviewTypes.js";
 import type { FindingsParityMetadata } from "../../../types/protocol.js";
 import type {
-  appendProtocolEnvelope,
+  AppendProtocolEnvelopePort,
   AppendProtocolEnvelopeResult
-} from "../../../core/protocol/transcriptStore.js";
+} from "../ports/transcript.js";
 import type { MetaReviewGateRoute } from "./metaReviewGateTypes.js";
 import type { MetaReviewGateAdvisoryFinding } from "./metaReviewGateFindingsSplit.js";
+import { isNamedError } from "../errors/namedError.js";
 
 export const metaReviewGateRollbackNotAttemptedReasonCode =
   "META_REVIEW_GATE_ROLLBACK_NOT_ATTEMPTED";
@@ -26,7 +26,7 @@ export const metaReviewGateRollbackTransitionInvalidReasonCode =
   "META_REVIEW_GATE_ROLLBACK_TRANSITION_INVALID";
 
 export interface ResolveRollbackAfterGateAppendFailureInput {
-  writeState: typeof writeStateSnapshot;
+  writeState: WriteStateSnapshotPort;
   statePath: string;
   rollbackState: BubbleStateSnapshot;
   expectedFingerprint: string;
@@ -51,7 +51,7 @@ export function resolveHumanGateRecommendation(input: {
 }
 
 export interface AppendHumanGateApprovalRequestInput {
-  appendEnvelope: typeof appendProtocolEnvelope;
+  appendEnvelope: AppendProtocolEnvelopePort;
   transcriptPath: string;
   inboxPath: string;
   lockPath: string;
@@ -105,7 +105,7 @@ export async function resolveRollbackAfterGateAppendFailure(
     rollbackDiagnosticReasonCode = metaReviewGateRollbackAppliedReasonCode;
     rollbackOutcome = "applied";
   } catch (rollbackError) {
-    if (rollbackError instanceof StateStoreConflictError) {
+    if (isNamedError(rollbackError, "StateStoreConflictError")) {
       rollbackReasonCode = "META_REVIEW_GATE_STATE_CONFLICT";
       rollbackDiagnosticReasonCode = metaReviewGateRollbackStateConflictReasonCode;
     } else {
