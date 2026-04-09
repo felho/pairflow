@@ -1,5 +1,4 @@
 import { metaReviewGateDependencyDefaults } from "../../../core/bubble/metaReviewGateDefaults.js";
-import { readTranscriptEnvelopes } from "../../../core/protocol/transcriptStore.js";
 
 import {
   applyMetaReviewGateOnConvergence,
@@ -15,12 +14,8 @@ import type {
   RecoverMetaReviewGateFromSnapshotDependencies,
   RecoverMetaReviewGateFromSnapshotInput
 } from "../../shared/metaReviewGate/metaReviewGateCommandContract.js";
-import type { ReadTranscriptEnvelopesPort } from "../../shared/ports/transcript.js";
 import { notifyMetaReviewerSubmissionRequest } from "./metaReviewGateNotify.js";
 import { resolveMetaReviewerPaneWarning } from "./metaReviewGatePaneBinding.js";
-
-const defaultReadTranscriptEnvelopes: ReadTranscriptEnvelopesPort =
-  readTranscriptEnvelopes;
 
 function withMetaReviewGateApplyDefaults(
   dependencies: ApplyMetaReviewGateOnConvergenceDependencies = {}
@@ -33,7 +28,8 @@ function withMetaReviewGateApplyDefaults(
       dependencies.readStateSnapshot
       ?? metaReviewGateDependencyDefaults.readStateSnapshot,
     readTranscriptEnvelopes:
-      dependencies.readTranscriptEnvelopes ?? defaultReadTranscriptEnvelopes,
+      dependencies.readTranscriptEnvelopes
+      ?? metaReviewGateDependencyDefaults.readTranscriptEnvelopes,
     resolveBubbleById:
       dependencies.resolveBubbleById
       ?? metaReviewGateDependencyDefaults.resolveBubbleById,
@@ -57,8 +53,6 @@ function withMetaReviewGateApplyDefaults(
 function withMetaReviewGateRecoveryDefaults(
   dependencies: RecoverMetaReviewGateFromSnapshotDependencies = {}
 ): RecoverMetaReviewGateFromSnapshotDependencies {
-  const resolvedReadTranscriptEnvelopes: ReadTranscriptEnvelopesPort =
-    dependencies.readTranscriptEnvelopes ?? defaultReadTranscriptEnvelopes;
   return {
     appendProtocolEnvelope:
       dependencies.appendProtocolEnvelope
@@ -66,7 +60,9 @@ function withMetaReviewGateRecoveryDefaults(
     readStateSnapshot:
       dependencies.readStateSnapshot
       ?? metaReviewGateDependencyDefaults.readStateSnapshot,
-    readTranscriptEnvelopes: resolvedReadTranscriptEnvelopes,
+    readTranscriptEnvelopes:
+      dependencies.readTranscriptEnvelopes
+      ?? metaReviewGateDependencyDefaults.readTranscriptEnvelopes,
     resolveBubbleById:
       dependencies.resolveBubbleById
       ?? metaReviewGateDependencyDefaults.resolveBubbleById,

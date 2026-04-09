@@ -1,4 +1,7 @@
-import { appendProtocolEnvelope } from "../protocol/transcriptStore.js";
+import {
+  appendProtocolEnvelope,
+  readTranscriptEnvelopes
+} from "../protocol/transcriptStore.js";
 import { resolveBubbleById } from "./bubbleLookup.js";
 import { setMetaReviewerPaneBinding } from "../runtime/sessionsRegistry.js";
 import { readFile, writeFile } from "node:fs/promises";
@@ -11,6 +14,7 @@ import { runTmux } from "../runtime/tmuxManager.js";
 export const metaReviewGateDependencyDefaults = {
   appendProtocolEnvelope,
   readFile,
+  readTranscriptEnvelopes,
   readStateSnapshot,
   resolveBubbleById,
   runTmux,
