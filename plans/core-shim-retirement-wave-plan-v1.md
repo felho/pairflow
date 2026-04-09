@@ -325,14 +325,20 @@ These numbers are triage inputs, not yet a finalized ledger.
   - current residual set:
     `merge`, `metaReviewGate`, and `reconcile`
 
+- latest checkpoint after the `merge + metaReviewGate` defaults-shape batch:
+  - total direct residual imports: `0`
+  - `mergeCommandDependencyResolution` and
+    `metaReviewGateDependencyDefaults` now use local explicit defaults-shapes
+    over dynamic loaders instead of static `src/core/**` type imports
+  - current residual set:
+    none
+
 Latest validated state:
 
 - `tests/contracts/v11/core-shim-boundary-coverage.test.ts` PASS in fail-only mode
-- latest validated boundary residual count: `3`
+- latest validated boundary residual count: `0`
 - latest explicit residuals:
-  - `src/v11/application/merge/mergeCommandDependencyResolution.ts -> src/core/bubble/mergeBubbleDefaults.ts`
-  - `src/v11/application/metaReviewGate/metaReviewGateDependencyDefaults.ts -> src/core/bubble/metaReviewGateDefaults.ts`
-  - `src/v11/application/reconcile/emitReconcileV11.ts -> src/core/runtime/startupReconciler.ts`
+  - none in static `src/v11/**` / `src/cli/**` -> `src/core/**` imports
 - latest targeted validation still green for the shim-retirement wave:
   - `tests/contracts/v11/core-shim-boundary-coverage.test.ts`
   - `tests/v11/shared/metrics/bubbleEvents.test.ts`

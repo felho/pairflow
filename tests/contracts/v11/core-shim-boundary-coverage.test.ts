@@ -36,10 +36,7 @@ const forbiddenCoreShimTargets = new Set([
   "src/core/util/structuredRef.ts"
 ]);
 
-const allowedResidualCoreBridgeImports: string[] = [
-  "src/v11/application/merge/mergeCommandDependencyResolution.ts -> src/core/bubble/mergeBubbleDefaults.ts",
-  "src/v11/application/metaReviewGate/metaReviewGateDependencyDefaults.ts -> src/core/bubble/metaReviewGateDefaults.ts",
-];
+const allowedResidualCoreBridgeImports: string[] = [];
 
 async function listTypeScriptFiles(root: string): Promise<string[]> {
   const entries = await readdir(root, {
