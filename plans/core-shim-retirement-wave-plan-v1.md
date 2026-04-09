@@ -72,6 +72,14 @@ These numbers are triage inputs, not yet a finalized ledger.
   - total direct residual imports: `165`
   - retired-shim subset: `7`
   - commit consumer lane now routes through `src/core/bubble/commitBubble.ts`
+- after the approval public-api perimeter alignment:
+  - total direct residual imports: `160`
+  - retired-shim subset: `7`
+  - `emitApprovalV11` no longer points at `src/core/human/approval.ts`
+- after the converged defaults fan-in batch:
+  - total direct residual imports: `158`
+  - retired-shim subset: `7`
+  - `convergedFlowInvocationBuilders.ts` no longer carries direct core-backed defaults
 
 Latest validated state:
 

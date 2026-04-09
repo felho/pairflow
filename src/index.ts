@@ -33,10 +33,10 @@ export {
   getBubbleInboxV11 as getBubbleInbox
 } from "./v11/application/inbox/emitInboxV11.js";
 export {
-  asBubbleCommitError,
-  BubbleCommitError
-} from "./core/bubble/commitBubble.js";
-export { commitBubble } from "./core/bubble/commitBubble.js";
+  asBubbleCommitErrorV11 as asBubbleCommitError,
+  BubbleCommitErrorV11 as BubbleCommitError,
+  commitBubbleV11 as commitBubble
+} from "./v11/application/commit/emitCommitV11.js";
 export {
   asBubbleMergeErrorV11 as asBubbleMergeError,
   BubbleMergeErrorV11 as BubbleMergeError,
@@ -94,10 +94,10 @@ export {
   getBubbleStatusV11 as getBubbleStatus
 } from "./v11/application/status/emitStatusV11.js";
 export {
-  asBubbleWatchdogError,
-  BubbleWatchdogError,
-  runBubbleWatchdog
-} from "./core/bubble/watchdogBubble.js";
+  asBubbleWatchdogErrorV11 as asBubbleWatchdogError,
+  BubbleWatchdogErrorV11 as BubbleWatchdogError,
+  runBubbleWatchdogV11 as runBubbleWatchdog
+} from "./v11/application/watchdog/emitWatchdogV11.js";
 export {
   resolveBubbleFromWorkspaceCwd,
   WorkspaceResolutionError
@@ -473,10 +473,10 @@ export type {
   BubbleStatusV11View as BubbleStatusView
 } from "./v11/application/status/emitStatusV11.js";
 export type {
-  BubbleWatchdogInput,
-  BubbleWatchdogNoopReason,
-  BubbleWatchdogResult
-} from "./core/bubble/watchdogBubble.js";
+  BubbleWatchdogV11Input as BubbleWatchdogInput,
+  BubbleWatchdogV11NoopReason as BubbleWatchdogNoopReason,
+  BubbleWatchdogV11Result as BubbleWatchdogResult
+} from "./v11/application/watchdog/emitWatchdogV11.js";
 export type {
   ResolvedBubbleWorkspace
 } from "./v11/infrastructure/executor/workspace/workspaceResolution.js";
