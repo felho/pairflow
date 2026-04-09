@@ -3,12 +3,12 @@ import { describe, expect, it, vi } from "vitest";
 import { getBubblePaths } from "../../../src/core/bubble/paths.js";
 import {
   attachBubble
-} from "../../../src/core/bubble/attachBubble.js";
+} from "../../../src/v11/application/attach/emitAttachV11.js";
 import { SchemaValidationError } from "../../../src/core/validation.js";
 import type {
   AttachBubbleError,
   LauncherAvailabilityInput
-} from "../../../src/core/bubble/attachBubble.js";
+} from "../../../src/v11/application/attach/emitAttachV11.js";
 import type { AttachLauncher, BubbleConfig } from "../../../src/types/bubble.js";
 
 function createResolvedBubbleFixture(input: {

@@ -8,10 +8,12 @@ import { renderBubbleConfigToml } from "../../../src/config/bubbleConfig.js";
 import { createBubble } from "../../../src/core/bubble/createBubble.js";
 import { parsePassCommandOptions } from "../../../src/cli/commands/agent/pass.js";
 import {
-  emitPassFromWorkspace,
-  PassCommandError,
+  emitPassFromWorkspaceV11 as emitPassFromWorkspace
+} from "../../../src/v11/application/pass/emitPassV11.js";
+import { PassCommandError } from "../../../src/v11/shared/pass/passCommandError.js";
+import {
   resolveMostRecentPreviousReviewerPassIsCleanFromMetadata
-} from "../../../src/core/agent/pass.js";
+} from "../../../src/v11/domain/pass/repeatCleanMetadata.js";
 import { IDEATION_PASS_BLOCKED } from "../../../src/core/bubble/ideation.js";
 import {
   buildRunningExecutionContext,

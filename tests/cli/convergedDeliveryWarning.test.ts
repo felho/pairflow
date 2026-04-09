@@ -1,6 +1,6 @@
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { EmitConvergedResult } from "../../src/core/agent/converged.js";
+import type { EmitConvergedV11Result as EmitConvergedResult } from "../../src/v11/application/converged/emitConvergedV11.js";
 
 describe("runCli converged delivery warning parity", () => {
   const stdoutSpy = vi.spyOn(process.stdout, "write").mockImplementation(() => true);

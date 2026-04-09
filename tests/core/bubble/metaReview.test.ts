@@ -5,7 +5,7 @@ import { join } from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { getBubbleInbox } from "../../../src/core/bubble/inboxBubble.js";
+import { getBubbleInboxV11 as getBubbleInbox } from "../../../src/v11/application/inbox/emitInboxV11.js";
 import { getBubblePaths } from "../../../src/core/bubble/paths.js";
 import { getBubbleStatus } from "../../../src/core/bubble/statusBubble.js";
 import {

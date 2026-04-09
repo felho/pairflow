@@ -8,9 +8,9 @@ import type {
   MetaReviewRunStatus
 } from "./bubble.js";
 import type {
-  PendingInboxItem,
-  PendingInboxItemType
-} from "../core/bubble/inboxBubble.js";
+  PendingInboxItemV11 as PendingInboxItem,
+  PendingInboxItemV11Type as PendingInboxItemType
+} from "../v11/application/inbox/emitInboxV11.js";
 import type { ProtocolEnvelopePayload, ProtocolMessageType } from "./protocol.js";
 import type { WatchdogStatus } from "../core/runtime/watchdog.js";
 import type { StateValidationDiagnostics } from "../core/state/stateStore.js";

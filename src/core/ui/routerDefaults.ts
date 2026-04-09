@@ -5,11 +5,11 @@ import { emitHumanReply } from "../human/reply.js";
 import { listBubbles } from "../bubble/listBubbles.js";
 import { getBubbleStatus } from "../bubble/statusBubble.js";
 import { mergeBubble } from "../bubble/mergeBubble.js";
-import { openBubble } from "../bubble/openBubble.js";
+import { openBubble } from "../../v11/application/open/emitOpenV11.js";
 import { restartBubble } from "../bubble/restartBubble.js";
-import { resumeBubble } from "../bubble/resumeBubble.js";
+import { resumeBubbleV11 as resumeBubble } from "../../v11/application/resume/emitResumeV11.js";
 import { startBubble } from "../bubble/startBubble.js";
-import { stopBubble } from "../bubble/stopBubble.js";
+import { stopBubbleV11 as stopBubble } from "../../v11/application/stop/emitStopV11.js";
 import type { UiRouterDependencies } from "../../v11/shared/ports/uiRouter.js";
 
 export const uiRouterDependencyDefaults = {
