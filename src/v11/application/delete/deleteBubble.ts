@@ -2,13 +2,7 @@ import type {
   DeleteBubbleArtifacts,
   DeleteBubbleResult
 } from "../../../contracts/deleteBubble.js";
-import {
-  buildBubbleTmuxSessionName,
-  TmuxCommandError,
-  type TmuxRunner
-} from "../../../core/runtime/tmuxManager.js";
-import { readStateSnapshot } from "../../../core/state/stateStore.js";
-import { ensureBubbleInstanceIdForMutation } from "../../../core/bubble/bubbleInstanceId.js";
+import { deleteBubbleDependencyDefaults } from "../../../core/bubble/deleteBubbleDefaults.js";
 import { StopBubbleErrorV11 as StopBubbleError } from "../stop/emitStopV11.js";
 import { isNamedError } from "../../shared/errors/namedError.js";
 import {
@@ -47,6 +41,8 @@ export class DeleteBubbleError extends Error {
     this.name = "DeleteBubbleError";
   }
 }
+
+type TmuxRunner = typeof deleteBubbleDependencyDefaults.runTmux;
 
 function toDeleteBubbleError(message: string): DeleteBubbleError {
   return new DeleteBubbleError(message);
@@ -107,7 +103,8 @@ async function resolveDeleteArtifacts(
 
   const runtimeSession = runtimeSessions[resolved.bubbleId] ?? null;
   const tmuxSessionName =
-    runtimeSession?.tmuxSessionName ?? buildBubbleTmuxSessionName(resolved.bubbleId);
+    runtimeSession?.tmuxSessionName ??
+    deleteBubbleDependencyDefaults.buildBubbleTmuxSessionName(resolved.bubbleId);
   const tmuxSessionExists = await isTmuxSessionAlive(
     tmuxSessionName,
     dependencies.runTmux
@@ -140,7 +137,8 @@ async function determineDeleteExecutionContext(
   resolved: ResolvedBubble,
   now: Date
 ): Promise<DeleteExecutionContext> {
-  const bubbleIdentity = await ensureBubbleInstanceIdForMutation({
+  const bubbleIdentity =
+    await deleteBubbleDependencyDefaults.ensureBubbleInstanceIdForMutation({
     bubbleId: resolved.bubbleId,
     repoPath: resolved.repoPath,
     bubblePaths: resolved.bubblePaths,
@@ -152,7 +150,9 @@ async function determineDeleteExecutionContext(
   let requiresPreDeleteStop = false;
   let metricsRound: number | null = null;
   try {
-    const loadedState = await readStateSnapshot(resolved.bubblePaths.statePath);
+    const loadedState = await deleteBubbleDependencyDefaults.readStateSnapshot(
+      resolved.bubblePaths.statePath
+    );
     requiresPreDeleteStop = preDeleteStopStateByLifecycle[loadedState.state.state];
     metricsRound = loadedState.state.round > 0 ? loadedState.state.round : null;
   } catch {
@@ -268,7 +268,7 @@ export function asDeleteBubbleError(error: unknown): never {
   if (isNamedError(error, "BubbleLookupError")) {
     throw toDeleteBubbleError(error.message);
   }
-  if (error instanceof TmuxCommandError) {
+  if (error instanceof deleteBubbleDependencyDefaults.TmuxCommandError) {
     throw toDeleteBubbleError(error.message);
   }
   if (error instanceof StopBubbleError) {
