@@ -1,7 +1,4 @@
-import {
-  BubbleLookupError,
-  resolveBubbleById
-} from "../../infrastructure/executor/workspace/bubbleLookup.js";
+import { isNamedError } from "../../shared/errors/namedError.js";
 import {
   createOpenBubbleError,
   executeOpenCommand,
@@ -14,6 +11,7 @@ import {
   type OpenCommandExecutionResult,
   type OpenCommandExecutor
 } from "./openBubbleRuntime.js";
+import { openBubbleDefaults } from "./openBubbleDefaults.js";
 
 export async function openBubble(
   input: OpenBubbleInput,
@@ -21,7 +19,8 @@ export async function openBubble(
 ): Promise<OpenBubbleResult> {
   return openBubbleRuntime(input, {
     ...dependencies,
-    resolveBubbleById: dependencies.resolveBubbleById ?? resolveBubbleById
+    resolveBubbleById:
+      dependencies.resolveBubbleById ?? openBubbleDefaults.resolveBubbleById
   });
 }
 
@@ -29,7 +28,7 @@ export function asOpenBubbleError(error: unknown): never {
   if (error instanceof OpenBubbleError) {
     throw error;
   }
-  if (error instanceof BubbleLookupError) {
+  if (isNamedError(error, "BubbleLookupError")) {
     throw createOpenBubbleError({
       message: error.message,
       context: {
