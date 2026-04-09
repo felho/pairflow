@@ -6,7 +6,7 @@ import {
 import { appendProtocolEnvelope, readTranscriptEnvelopes } from "../protocol/transcriptStore.js";
 import { ensureBubbleInstanceIdForMutation } from "../../v11/infrastructure/artifact/bubble/bubbleInstanceId.js";
 import { resolveBubbleFromWorkspaceCwd } from "../../v11/infrastructure/executor/workspace/workspaceResolution.js";
-import { assessPairflowCommandPath } from "../runtime/pairflowCommand.js";
+import { assessPairflowCommandPath } from "../../v11/shared/command/pairflowCommandPathAssessment.js";
 import {
   readDocContractGateArtifact,
   resolveDocContractGateArtifactPath

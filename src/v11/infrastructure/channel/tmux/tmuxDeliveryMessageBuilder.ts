@@ -19,7 +19,7 @@ import {
   formatReviewerFocusDeliveryReminder,
   type ReviewerFocusExtractionResult
 } from "../../../../v11/shared/reviewer/reviewerBrief.js";
-import { buildPairflowCommandGuidance } from "../../executor/command/pairflowCommand.js";
+import { buildPairflowCommandGuidance } from "../../../shared/command/pairflowCommandBootstrap.js";
 import {
   buildMetaReviewSubmitApproveParityNote,
   buildMetaReviewSubmitCommandTemplate

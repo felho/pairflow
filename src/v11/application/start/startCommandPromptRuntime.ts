@@ -1,6 +1,6 @@
 const startCommandPromptRuntimePromise = Promise.all([
-  import("../../../core/runtime/agentCommand.js"),
-  import("../../../core/runtime/pairflowCommand.js")
+  import("../../shared/command/agentCommand.js"),
+  import("../../shared/command/pairflowCommandBootstrap.js")
 ]).then(([agentCommand, pairflowCommand]) => ({
   buildAgentCommand: agentCommand.buildAgentCommand,
   buildPairflowCommandGuidance:

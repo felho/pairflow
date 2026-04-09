@@ -10,7 +10,7 @@ import {
   writeStateSnapshot
 } from "../state/stateStore.js";
 import { runTmux } from "../runtime/tmuxManager.js";
-import { buildAgentCommand } from "../runtime/agentCommand.js";
+import { buildAgentCommand } from "../../v11/shared/command/agentCommand.js";
 import {
   maybeAcceptClaudeTrustPrompt,
   sendAndSubmitTmuxPaneMessage,

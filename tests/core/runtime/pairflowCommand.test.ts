@@ -6,12 +6,14 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import {
   assessPairflowCommandPath,
-  buildPairflowCommandBootstrap,
-  buildPairflowCommandGuidance,
-  buildPinnedPairflowCommand,
   resolveExternalPairflowCommand,
   resolveWorktreePairflowEntrypoint
-} from "../../../src/v11/infrastructure/executor/command/pairflowCommand.js";
+} from "../../../src/v11/shared/command/pairflowCommandPathAssessment.js";
+import {
+  buildPairflowCommandBootstrap,
+  buildPairflowCommandGuidance,
+  buildPinnedPairflowCommand
+} from "../../../src/v11/shared/command/pairflowCommandBootstrap.js";
 
 const tempDirs: string[] = [];
 

@@ -5,7 +5,7 @@ import {
   runtimePaneIndices,
   type TmuxRunner
 } from "./tmuxManager.js";
-import { buildAgentCommand } from "../../executor/command/agentCommand.js";
+import { buildAgentCommand } from "../../../shared/command/agentCommand.js";
 import type {
   RefreshReviewerContextInput,
   RefreshReviewerContextResult

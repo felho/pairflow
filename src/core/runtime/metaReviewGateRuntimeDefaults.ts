@@ -1,4 +1,4 @@
-import { buildAgentCommand } from "./agentCommand.js";
+import { buildAgentCommand } from "../../v11/shared/command/agentCommand.js";
 import { buildMetaReviewerStartupPrompt } from "../../v11/application/start/startCommandPrompts.js";
 import {
   maybeAcceptClaudeTrustPrompt,
