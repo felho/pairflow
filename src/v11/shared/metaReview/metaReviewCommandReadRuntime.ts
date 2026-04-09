@@ -1,9 +1,4 @@
-import {
-  resolveBubbleById
-} from "../../../core/bubble/bubbleLookup.js";
-import {
-  readStateSnapshot
-} from "../../../core/state/stateStore.js";
+import { metaReviewReadDefaults } from "../../../core/bubble/metaReviewReadDefaults.js";
 import { MetaReviewError } from "./metaReviewError.js";
 import {
   clearLiveMetaReviewSnapshot,
@@ -55,8 +50,10 @@ export async function getMetaReviewStatus(
   input: MetaReviewReadInput,
   dependencies: MetaReviewCommandDependencies = {}
 ): Promise<MetaReviewStatusView> {
-  const resolveBubble = dependencies.resolveBubbleById ?? resolveBubbleById;
-  const readState = dependencies.readStateSnapshot ?? readStateSnapshot;
+  const resolveBubble =
+    dependencies.resolveBubbleById ?? metaReviewReadDefaults.resolveBubbleById;
+  const readState =
+    dependencies.readStateSnapshot ?? metaReviewReadDefaults.readStateSnapshot;
   const readFileFn = resolveMetaReviewArtifactReadPort(input, dependencies);
 
   const resolved = await resolveBubble({
@@ -123,8 +120,10 @@ export async function getMetaReviewLastReport(
   input: MetaReviewReadInput,
   dependencies: MetaReviewCommandDependencies = {}
 ): Promise<MetaReviewLastReportView> {
-  const resolveBubble = dependencies.resolveBubbleById ?? resolveBubbleById;
-  const readState = dependencies.readStateSnapshot ?? readStateSnapshot;
+  const resolveBubble =
+    dependencies.resolveBubbleById ?? metaReviewReadDefaults.resolveBubbleById;
+  const readState =
+    dependencies.readStateSnapshot ?? metaReviewReadDefaults.readStateSnapshot;
   const readFileFn = resolveMetaReviewArtifactReadPort(input, dependencies);
 
   const resolved = await resolveBubble({
