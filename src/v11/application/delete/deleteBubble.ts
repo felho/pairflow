@@ -2,20 +2,15 @@ import type {
   DeleteBubbleArtifacts,
   DeleteBubbleResult
 } from "../../../contracts/deleteBubble.js";
-import { BubbleLookupError } from "../../../core/bubble/bubbleLookup.js";
-import {
-  RuntimeSessionsRegistryError,
-  RuntimeSessionsRegistryLockError
-} from "../../../core/runtime/sessionsRegistry.js";
 import {
   buildBubbleTmuxSessionName,
   TmuxCommandError,
   type TmuxRunner
 } from "../../../core/runtime/tmuxManager.js";
 import { readStateSnapshot } from "../../../core/state/stateStore.js";
-import { WorkspaceCleanupError } from "../../../core/workspace/worktreeManager.js";
 import { ensureBubbleInstanceIdForMutation } from "../../../core/bubble/bubbleInstanceId.js";
 import { StopBubbleErrorV11 as StopBubbleError } from "../stop/emitStopV11.js";
+import { isNamedError } from "../../shared/errors/namedError.js";
 import {
   buildDeleteConfirmationResult,
   buildDeleteSuccessResult,
@@ -270,7 +265,7 @@ export function asDeleteBubbleError(error: unknown): never {
   if (error instanceof DeleteBubbleError) {
     throw error;
   }
-  if (error instanceof BubbleLookupError) {
+  if (isNamedError(error, "BubbleLookupError")) {
     throw toDeleteBubbleError(error.message);
   }
   if (error instanceof TmuxCommandError) {
@@ -280,12 +275,12 @@ export function asDeleteBubbleError(error: unknown): never {
     throw toDeleteBubbleError(error.message);
   }
   if (
-    error instanceof RuntimeSessionsRegistryError ||
-    error instanceof RuntimeSessionsRegistryLockError
+    isNamedError(error, "RuntimeSessionsRegistryError") ||
+    isNamedError(error, "RuntimeSessionsRegistryLockError")
   ) {
     throw toDeleteBubbleError(error.message);
   }
-  if (error instanceof WorkspaceCleanupError) {
+  if (isNamedError(error, "WorkspaceCleanupError")) {
     throw toDeleteBubbleError(error.message);
   }
   if (error instanceof Error) {

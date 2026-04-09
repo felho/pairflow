@@ -1,4 +1,4 @@
-import { GitCommandError } from "../../../core/workspace/git.js";
+import { isNamedError } from "../../shared/errors/namedError.js";
 import type { MergeBubbleResult } from "./mergeCommandContract.js";
 import { buildMergeBubbleResult } from "./mergeResultMapping.js";
 import type { ResolvedMergeCommandDependencies } from "./mergeCommandDependencyResolution.js";
@@ -37,7 +37,7 @@ async function mergeBubbleBranchIntoBase(input: {
       cwd: input.repoPath,
       allowFailure: true
     }).catch(() => undefined);
-    if (error instanceof GitCommandError) {
+    if (isNamedError(error, "GitCommandError")) {
       throw input.createError({
         reasonCode: MERGE_CONFLICT_REQUIRES_MANUAL_RESOLUTION,
         message:

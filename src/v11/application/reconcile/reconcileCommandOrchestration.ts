@@ -1,4 +1,4 @@
-import { RepoResolutionError } from "../../../core/bubble/repoResolution.js";
+import { isNamedError } from "../../shared/errors/namedError.js";
 import { runReconcileFlow } from "./runReconcileFlow.js";
 import type {
   ReconcileRuntimeSessionsDependencies,
@@ -32,7 +32,7 @@ export async function reconcileRuntimeSessionsCommandOrchestration(
       ...(normalizedInput.cwd !== undefined ? { cwd: normalizedInput.cwd } : {})
     });
   } catch (error) {
-    if (error instanceof RepoResolutionError) {
+    if (isNamedError(error, "RepoResolutionError")) {
       throw createStartupReconcilerError(
         `${RECONCILE_REPO_RESOLUTION_FAILED}: ${error.message}`
       );
