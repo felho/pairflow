@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { RepoResolutionError } from "../../../../src/core/bubble/repoResolution.js";
+import { RepoResolutionError } from "../../../../src/v11/infrastructure/executor/workspace/repoResolution.js";
 import {
   asBubbleListError,
   BubbleListError

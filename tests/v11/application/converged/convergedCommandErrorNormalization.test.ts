@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { MetaReviewGateErrorV11 as MetaReviewGateError } from "../../../../src/v11/application/metaReviewGate/emitMetaReviewGateV11.js";
-import { WorkspaceResolutionError } from "../../../../src/core/bubble/workspaceResolution.js";
+import { WorkspaceResolutionError } from "../../../../src/v11/infrastructure/executor/workspace/workspaceResolution.js";
 import { normalizeConvergedCommandError } from "../../../../src/v11/application/converged/convergedCommandErrorNormalization.js";
 
 class SyntheticConvergedCommandError extends Error {
