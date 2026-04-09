@@ -6,8 +6,8 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { emitPassFromWorkspace } from "../../../src/core/agent/pass.js";
 import { listBubbles } from "../../../src/core/bubble/listBubbles.js";
-import { readTranscriptEnvelopes } from "../../../src/core/protocol/transcriptStore.js";
-import { readStateSnapshot } from "../../../src/core/state/stateStore.js";
+import { readTranscriptEnvelopes } from "../../../src/v11/infrastructure/artifact/transcript/transcriptStore.js";
+import { readStateSnapshot } from "../../../src/v11/infrastructure/state/stateStore.js";
 import { initGitRepository } from "../../helpers/git.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
 

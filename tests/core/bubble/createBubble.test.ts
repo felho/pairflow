@@ -16,8 +16,8 @@ import {
   parseBubbleConfigToml
 } from "../../../src/config/bubbleConfig.js";
 import { resolveDocContractGateArtifactPath } from "../../../src/core/gates/docContractGateArtifacts.js";
-import { readTranscriptEnvelopes } from "../../../src/core/protocol/transcriptStore.js";
-import { validateBubbleStateSnapshot } from "../../../src/core/state/stateSchema.js";
+import { readTranscriptEnvelopes } from "../../../src/v11/infrastructure/artifact/transcript/transcriptStore.js";
+import { validateBubbleStateSnapshot } from "../../../src/v11/shared/state/stateSchema.js";
 import { initGitRepository } from "../../helpers/git.js";
 
 const tempDirs: string[] = [];

@@ -8,8 +8,8 @@ import { emitConvergedFromWorkspace } from "../../../src/core/agent/converged.js
 import { emitPassFromWorkspace } from "../../../src/core/agent/pass.js";
 import { createBubble } from "../../../src/core/bubble/createBubble.js";
 import { startBubble } from "../../../src/core/bubble/startBubble.js";
-import { readTranscriptEnvelopes } from "../../../src/core/protocol/transcriptStore.js";
-import { readStateSnapshot } from "../../../src/core/state/stateStore.js";
+import { readTranscriptEnvelopes } from "../../../src/v11/infrastructure/artifact/transcript/transcriptStore.js";
+import { readStateSnapshot } from "../../../src/v11/infrastructure/state/stateStore.js";
 import type { ProtocolEnvelope } from "../../../src/types/protocol.js";
 import { initGitRepository } from "../../helpers/git.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";

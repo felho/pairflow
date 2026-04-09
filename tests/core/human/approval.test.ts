@@ -19,14 +19,14 @@ import {
   ApprovalCommandErrorV11 as ApprovalCommandError
 } from "../../../src/v11/application/approval/emitApprovalV11.js";
 import {
-  getMetaReviewLastReport,
-  getMetaReviewStatus
-} from "../../../src/core/bubble/metaReview.js";
+  getMetaReviewLastReportV11 as getMetaReviewLastReport,
+  getMetaReviewStatusV11 as getMetaReviewStatus
+} from "../../../src/v11/application/metaReview/emitMetaReviewV11.js";
 import {
-  applyMetaReviewGateOnConvergence,
-  MetaReviewGateError,
-  recoverMetaReviewGateFromSnapshot
-} from "../../../src/core/bubble/metaReviewGate.js";
+  applyMetaReviewGateOnConvergenceV11 as applyMetaReviewGateOnConvergence,
+  MetaReviewGateErrorV11 as MetaReviewGateError,
+  recoverMetaReviewGateFromSnapshotV11 as recoverMetaReviewGateFromSnapshot
+} from "../../../src/v11/application/metaReviewGate/emitMetaReviewGateV11.js";
 import { createBubble } from "../../../src/core/bubble/createBubble.js";
 import {
   appendProtocolEnvelope,
