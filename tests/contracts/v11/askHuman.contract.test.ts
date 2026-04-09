@@ -178,7 +178,10 @@ describe("v11 askHuman contract harness skeleton", () => {
     });
   });
 
-  it("builds corpus output manifest with ask-human seed entries", async () => {
+  it(
+    "builds corpus output manifest with ask-human seed entries",
+    { timeout: CONTRACT_TEST_TIMEOUT.parityStandardMs },
+    async () => {
     await execFileAsync("pnpm", [
       "exec",
       "tsx",
@@ -193,9 +196,13 @@ describe("v11 askHuman contract harness skeleton", () => {
     const askHumanSources = parseAskHumanSourcesFromManifest(outputRaw);
 
     expect(askHumanSources).toEqual(askHumanExpectedSourcesSorted);
-  });
+    }
+  );
 
-  it("builds corpus output manifest with ask-human no-refs seed entries", async () => {
+  it(
+    "builds corpus output manifest with ask-human no-refs seed entries",
+    { timeout: CONTRACT_TEST_TIMEOUT.parityStandardMs },
+    async () => {
     await execFileAsync("pnpm", [
       "exec",
       "tsx",
@@ -213,7 +220,8 @@ describe("v11 askHuman contract harness skeleton", () => {
       actualSources: askHumanSources,
       expectedSources: askHumanNoRefsExpectedSourcesSorted
     });
-  });
+    }
+  );
 
   for (const testCase of askHumanInvalidInputCases) {
     it(testCase.name, async () => {
