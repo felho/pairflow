@@ -1,7 +1,7 @@
 import { resolve } from "node:path";
 
 import { type MetricsActorRole } from "../../../types/metrics.js";
-import { bubbleEventsDefaults } from "../../../core/metrics/bubbleEventsDefaults.js";
+import { bubbleEventsDefaults } from "../../defaults/metrics/bubbleEventsDefaults.js";
 import { createMetricsEvent } from "./events.js";
 import {
   type AppendMetricsEventResult
