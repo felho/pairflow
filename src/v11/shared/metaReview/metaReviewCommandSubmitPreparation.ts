@@ -1,14 +1,6 @@
 import { randomUUID } from "node:crypto";
 
-import {
-  resolveBubbleById
-} from "../../../core/bubble/bubbleLookup.js";
-import {
-  readRuntimeSessionsRegistry
-} from "../../../core/runtime/sessionsRegistry.js";
-import {
-  readStateSnapshot
-} from "../../../core/state/stateStore.js";
+import { metaReviewCommandSubmitDefaults } from "../../../core/runtime/metaReviewCommandSubmitDefaults.js";
 import {
   isInteger,
   isNonEmptyString,
@@ -45,8 +37,8 @@ import type {
 } from "./metaReviewCommandContract.js";
 
 export interface PreparedMetaReviewSubmitContext {
-  resolved: Awaited<ReturnType<typeof resolveBubbleById>>;
-  loadedState: Awaited<ReturnType<typeof readStateSnapshot>>;
+  resolved: Awaited<ReturnType<typeof metaReviewCommandSubmitDefaults.resolveBubbleById>>;
+  loadedState: Awaited<ReturnType<typeof metaReviewCommandSubmitDefaults.readStateSnapshot>>;
   readFileFn: NonNullable<MetaReviewCommandDependencies["readFile"]>;
   writeFileFn: NonNullable<MetaReviewCommandDependencies["writeFile"]>;
   recommendation: MetaReviewSubmitInput["recommendation"];
@@ -102,7 +94,9 @@ function resolveMetaReviewArtifactWritePort(
 
 function resolveValidatedSubmitShape(input: {
   submitInput: MetaReviewSubmitInput;
-  loadedState: Awaited<ReturnType<typeof readStateSnapshot>>;
+  loadedState: Awaited<
+    ReturnType<typeof metaReviewCommandSubmitDefaults.readStateSnapshot>
+  >;
   now: Date;
   randomUuidFn: () => string;
 }): {
@@ -223,10 +217,13 @@ export async function prepareMetaReviewSubmitContext(input: {
   dependencies: MetaReviewCommandDependencies;
   now: Date;
 }): Promise<PreparedMetaReviewSubmitContext> {
-  const resolveBubble = input.dependencies.resolveBubbleById ?? resolveBubbleById;
-  const readState = input.dependencies.readStateSnapshot ?? readStateSnapshot;
+  const resolveBubble =
+    input.dependencies.resolveBubbleById ?? metaReviewCommandSubmitDefaults.resolveBubbleById;
+  const readState =
+    input.dependencies.readStateSnapshot ?? metaReviewCommandSubmitDefaults.readStateSnapshot;
   const readRuntimeSessions =
-    input.dependencies.readRuntimeSessionsRegistry ?? readRuntimeSessionsRegistry;
+    input.dependencies.readRuntimeSessionsRegistry
+    ?? metaReviewCommandSubmitDefaults.readRuntimeSessionsRegistry;
   const readFileFn = resolveMetaReviewArtifactReadPort(
     input.submitInput.bubbleId,
     input.dependencies
