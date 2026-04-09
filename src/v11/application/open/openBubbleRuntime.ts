@@ -51,6 +51,7 @@ interface OpenBubbleErrorContext {
   cwd?: string | undefined;
   exitCode?: number | undefined;
   reason?: string | undefined;
+  reason_code?: string | undefined;
   worktreePath?: string | undefined;
 }
 
@@ -89,7 +90,8 @@ function renderOpenCommand(
       message: "open_command cannot be empty.",
       context: {
         commandTemplate,
-        reason: "empty_open_command"
+        reason: "empty_open_command",
+        reason_code: "OPEN_COMMAND_EMPTY"
       }
     });
   }
@@ -144,7 +146,8 @@ async function assertWorktreeExistsDefault(worktreePath: string): Promise<void> 
           message: `Bubble worktree does not exist yet: ${worktreePath}. Start the bubble before opening it.`,
           context: {
             worktreePath,
-            reason: "worktree_missing"
+            reason: "worktree_missing",
+            reason_code: "OPEN_WORKTREE_MISSING"
           },
           cause: error
         });
@@ -174,7 +177,8 @@ async function resolveOpenCommandTemplate(input: {
         message: `Invalid global Pairflow config while opening bubble '${input.bubbleId}': ${error.message}`,
         context: {
           bubbleId: input.bubbleId,
-          reason: "invalid_global_config"
+          reason: "invalid_global_config",
+          reason_code: "OPEN_GLOBAL_CONFIG_INVALID"
         },
         cause: error
       });
@@ -185,7 +189,8 @@ async function resolveOpenCommandTemplate(input: {
       message: `Failed to load global Pairflow config while opening bubble '${input.bubbleId}': ${reason}`,
       context: {
         bubbleId: input.bubbleId,
-        reason: "load_global_config_failed"
+        reason: "load_global_config_failed",
+        reason_code: "OPEN_GLOBAL_CONFIG_LOAD_FAILED"
       },
       cause: error
     });
@@ -203,7 +208,8 @@ export async function openBubbleRuntime(
       message: "Open bubble requires a bubble resolver dependency.",
       context: {
         bubbleId: input.bubbleId,
-        reason: "open_bubble_dependency_missing"
+        reason: "open_bubble_dependency_missing",
+        reason_code: "OPEN_DEPENDENCY_MISSING"
       }
     });
   }
@@ -248,6 +254,7 @@ export async function openBubbleRuntime(
         cwd: resolved.repoPath,
         exitCode: executed.exitCode,
         reason: "open_command_failed",
+        reason_code: "OPEN_COMMAND_FAILED",
         worktreePath
       }
     });
