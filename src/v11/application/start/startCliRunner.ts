@@ -13,12 +13,10 @@ import {
 import {
   hasIdeationMetadataParseWarning
 } from "../../domain/ideation/ideationMetadata.js";
-import {
-  resolveBubbleById,
-  type ResolvedBubbleById
-} from "../../../core/bubble/bubbleLookup.js";
+import { resolveBubbleById } from "../../../core/bubble/bubbleLookup.js";
 import { parseBubbleStartCommandOptions } from "./startCliOptions.js";
 import { registerRepoInRegistry } from "../../../core/repo/registry.js";
+import type { ResolvedBubbleById } from "../../shared/ports/bubbleLookup.js";
 
 export interface BubbleStartCommandDependencies {
   startBubble?: typeof startBubble;

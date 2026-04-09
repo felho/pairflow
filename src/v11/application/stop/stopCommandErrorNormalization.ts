@@ -1,25 +1,18 @@
-import type { BubbleLookupError } from "../../../core/bubble/bubbleLookup.js";
-import type { TmuxCommandError } from "../../../core/runtime/tmuxManager.js";
-import type {
-  RuntimeSessionsRegistryError,
-  RuntimeSessionsRegistryLockError
-} from "../../../core/runtime/sessionsRegistry.js";
-
 export interface NormalizeStopBubbleErrorInput {
   error: unknown;
   isStopBubbleError: (candidate: unknown) => boolean;
   createStopBubbleError: PairflowCreateCommandError;
-  isBubbleLookupError: (candidate: unknown) => candidate is BubbleLookupError;
-  isTmuxCommandError: (candidate: unknown) => candidate is TmuxCommandError;
-  isRuntimeSessionsRegistryError:
-    (candidate: unknown) => candidate is RuntimeSessionsRegistryError;
-  isRuntimeSessionsRegistryLockError:
-    (candidate: unknown) => candidate is RuntimeSessionsRegistryLockError;
+  isBubbleLookupError: (candidate: unknown) => boolean;
+  isTmuxCommandError: (candidate: unknown) => boolean;
+  isRuntimeSessionsRegistryError: (candidate: unknown) => boolean;
+  isRuntimeSessionsRegistryLockError: (candidate: unknown) => boolean;
 }
 
 export function normalizeStopBubbleError(
   input: NormalizeStopBubbleErrorInput
 ): unknown {
+  const message =
+    input.error instanceof Error ? input.error.message : String(input.error);
   if (input.isStopBubbleError(input.error)) {
     return input.error;
   }
@@ -29,7 +22,7 @@ export function normalizeStopBubbleError(
     input.isRuntimeSessionsRegistryError(input.error) ||
     input.isRuntimeSessionsRegistryLockError(input.error)
   ) {
-    return input.createStopBubbleError(input.error.message);
+    return input.createStopBubbleError(message);
   }
   if (input.error instanceof Error) {
     return input.createStopBubbleError(input.error.message);
