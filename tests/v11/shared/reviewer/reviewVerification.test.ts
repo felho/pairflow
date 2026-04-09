@@ -12,7 +12,7 @@ import {
 } from "../../../../src/v11/shared/reviewer/reviewerBrief.js";
 import {
   readReviewerFocusArtifact
-} from "../../../../src/core/reviewer/reviewerBrief.js";
+} from "../../../../src/v11/infrastructure/artifact/reviewer/reviewerBriefArtifacts.js";
 import {
   createReviewVerificationArtifact,
   validateReviewVerificationArtifact,
@@ -22,7 +22,7 @@ import {
   readReviewVerificationArtifactStatus,
   resolveReviewVerificationInputFromRefs,
   writeReviewVerificationArtifactAtomic
-} from "../../../../src/core/reviewer/reviewVerificationArtifacts.js";
+} from "../../../../src/v11/infrastructure/artifact/reviewer/reviewVerificationArtifacts.js";
 
 const tempDirs: string[] = [];
 

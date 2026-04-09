@@ -13,7 +13,7 @@ import type {
 } from "../v11/application/inbox/emitInboxV11.js";
 import type { ProtocolEnvelopePayload, ProtocolMessageType } from "./protocol.js";
 import type { WatchdogStatus } from "../v11/shared/watchdog/watchdogStatus.js";
-import type { StateValidationDiagnostics } from "../core/state/stateStore.js";
+import type { StateValidationDiagnostics } from "../v11/shared/ports/stateSnapshots.js";
 
 export interface UiBubbleStateCounts {
   CREATED: number;
