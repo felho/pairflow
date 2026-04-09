@@ -12,7 +12,7 @@ import {
 import {
   readDocContractGateArtifact,
   resolveDocContractGateArtifactPath
-} from "../../../../src/core/gates/docContractGateArtifacts.js";
+} from "../../../../src/v11/infrastructure/artifact/gates/docContractGateArtifacts.js";
 import type { BubbleConfig } from "../../../../src/types/bubble.js";
 import type { Finding } from "../../../../src/types/findings.js";
 
