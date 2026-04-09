@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { buildRunningExecutionContext } from "../../../src/core/state/executionContext.js";
+import { buildRunningExecutionContext } from "../../../src/v11/shared/state/executionContext.js";
 import { SchemaValidationError } from "../../../src/core/validation.js";
-import { applyStateTransition } from "../../../src/core/state/machine.js";
-import { createInitialBubbleState } from "../../../src/core/state/initialState.js";
+import { applyStateTransition } from "../../../src/v11/domain/state/machine.js";
+import { createInitialBubbleState } from "../../../src/v11/domain/state/initialState.js";
 
 describe("state machine", () => {
   it("applies valid transition and updates state", () => {

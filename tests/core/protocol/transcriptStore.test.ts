@@ -11,8 +11,8 @@ import {
   ProtocolTranscriptValidationError,
   readTranscriptEnvelopesOrThrow,
   readTranscriptEnvelopes
-} from "../../../src/core/protocol/transcriptStore.js";
-import type { ProtocolEnvelopeDraft } from "../../../src/core/protocol/transcriptStore.js";
+} from "../../../src/v11/infrastructure/artifact/transcript/transcriptStore.js";
+import type { ProtocolEnvelopeDraft } from "../../../src/v11/infrastructure/artifact/transcript/transcriptStore.js";
 
 const tempDirs: string[] = [];
 

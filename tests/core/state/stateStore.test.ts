@@ -4,14 +4,14 @@ import { join } from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { createInitialBubbleState } from "../../../src/core/state/initialState.js";
+import { createInitialBubbleState } from "../../../src/v11/domain/state/initialState.js";
 import {
   StateStoreConflictError,
   createStateSnapshot,
   inspectStateSnapshot,
   readStateSnapshot,
   writeStateSnapshot
-} from "../../../src/core/state/stateStore.js";
+} from "../../../src/v11/infrastructure/state/stateStore.js";
 
 const tempDirs: string[] = [];
 

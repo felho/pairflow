@@ -6,7 +6,7 @@ import {
   canTransition,
   getAllowedTransitions,
   isFinalState
-} from "../../../src/core/state/transitions.js";
+} from "../../../src/v11/domain/state/transitions.js";
 
 describe("state transitions", () => {
   it("accepts spec-defined direct transitions", () => {

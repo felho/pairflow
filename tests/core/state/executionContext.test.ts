@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildRestartedExecutionContext,
   buildRunningExecutionContext
-} from "../../../src/core/state/executionContext.js";
+} from "../../../src/v11/shared/state/executionContext.js";
 
 describe("buildRunningExecutionContext", () => {
   it("builds canonical running authority for pass actors", () => {

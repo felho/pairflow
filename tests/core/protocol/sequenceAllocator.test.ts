@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   allocateNextProtocolSequence,
   TranscriptSequenceError
-} from "../../../src/core/protocol/sequenceAllocator.js";
+} from "../../../src/v11/shared/protocol/sequenceAllocator.js";
 import type { ProtocolEnvelope } from "../../../src/types/protocol.js";
 
 function buildEnvelope(id: string): ProtocolEnvelope {

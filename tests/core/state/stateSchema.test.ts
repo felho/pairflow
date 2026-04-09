@@ -4,9 +4,9 @@ import { buildMetaReviewExecutionContext } from "../../../src/core/bubble/metaRe
 import {
   buildRunningExecutionContext,
   metaReviewExecutionContextToRunningContext
-} from "../../../src/core/state/executionContext.js";
-import { createInitialBubbleState } from "../../../src/core/state/initialState.js";
-import { validateBubbleStateSnapshot } from "../../../src/core/state/stateSchema.js";
+} from "../../../src/v11/shared/state/executionContext.js";
+import { createInitialBubbleState } from "../../../src/v11/domain/state/initialState.js";
+import { validateBubbleStateSnapshot } from "../../../src/v11/shared/state/stateSchema.js";
 
 describe("state schema", () => {
   it("initial state contains deterministic meta-review defaults", () => {
