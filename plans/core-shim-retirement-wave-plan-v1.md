@@ -42,25 +42,24 @@ state still contains a large residual `v11/cli -> core` surface.
 
 ## Current Explicit Residual Inventory
 
-Latest verified checkpoint after the reconcile facade/defaults redesign:
+Latest verified checkpoint after the merge defaults redesign:
 
 - worktree clean
 - `tests/contracts/v11/core-shim-boundary-coverage.test.ts` passes
-- current explicit residual bridge inventory is locked to 2 entries
+- static direct residual bridge inventory is locked to 0 entries
+- remaining work has moved to dynamic core bridges that the current boundary
+  test does not detect
 
-Current residual set:
+Current remaining non-inventory bridge set:
 
-- `src/v11/application/merge/mergeCommandDependencyResolution.ts`
-  -> `src/core/bubble/mergeBubbleDefaults.ts`
 - `src/v11/application/metaReviewGate/metaReviewGateDependencyDefaults.ts`
-  -> `src/core/bubble/metaReviewGateDefaults.ts`
+  -> dynamic import of `src/core/bubble/metaReviewGateDefaults.ts`
 
 Current classification:
 
 - `easy`
   - none confirmed at this checkpoint
 - `medium`
-  - `mergeCommandDependencyResolution`
   - `metaReviewGateDependencyDefaults`
   - remaining broader non-inventory cleanup candidates still include:
     `passValidationDependencyDefaults`,
@@ -81,6 +80,10 @@ Immediate planning note:
   - source-of-truth wrapper lives in
     `src/v11/application/reconcile/reconcileCommandApi.ts`
   - `src/core/runtime/startupReconciler.ts` now re-exports the v11 facade
+- the previous `merge` residual is now retired:
+  - local defaults live in `src/v11/application/merge/mergeCommandDefaults.ts`
+  - `mergeCommandDependencyResolution.ts` no longer imports
+    `src/core/bubble/mergeBubbleDefaults.ts`
 
 Observed warning snapshot when the test was downgraded:
 
