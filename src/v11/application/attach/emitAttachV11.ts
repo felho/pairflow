@@ -8,10 +8,6 @@ import {
   loadPairflowGlobalConfig,
 } from "../../../config/pairflowConfig.js";
 import type { AttachLauncher } from "../../../types/bubble.js";
-import {
-  BubbleLookupError,
-  attachDefaults
-} from "../../../core/bubble/attachDefaults.js";
 import { buildBubbleTmuxSessionName } from "../../shared/bubble/tmuxSessionName.js";
 import { buildCheckLauncherAvailabilityDefault } from "./attachBubbleLauncherAvailability.js";
 import {
@@ -107,7 +103,17 @@ export async function attachBubble(
   input: AttachBubbleInput,
   dependencies: AttachBubbleDependencies = {}
 ): Promise<AttachBubbleResult> {
-  const resolveBubble = dependencies.resolveBubbleById ?? attachDefaults.resolveBubbleById;
+  const resolveBubble = dependencies.resolveBubbleById;
+  if (resolveBubble === undefined) {
+    throw new AttachBubbleError(
+      "Attach bubble requires resolveBubbleById dependency.",
+      {
+        context: {
+          reason: "resolve_bubble_dependency_missing"
+        }
+      }
+    );
+  }
   const checkSession =
     dependencies.checkTmuxSessionExists ?? checkTmuxSessionExistsDefault;
   const writeYaml = dependencies.writeYamlFile ?? writeYamlFileDefault;
@@ -195,11 +201,22 @@ export async function attachBubble(
 
 export { attachBubble as attachBubbleV11 };
 
+function isBubbleLookupError(
+  candidate: unknown
+): candidate is Error & { name: "BubbleLookupError" } {
+  return (
+    typeof candidate === "object" &&
+    candidate !== null &&
+    "name" in candidate &&
+    (candidate as { name?: unknown }).name === "BubbleLookupError"
+  );
+}
+
 export function asAttachBubbleError(error: unknown): never {
   if (error instanceof AttachBubbleError) {
     throw error;
   }
-  if (error instanceof BubbleLookupError) {
+  if (isBubbleLookupError(error)) {
     throw new AttachBubbleError(error.message, {
       context: {
         reason: "bubble_lookup_error"
