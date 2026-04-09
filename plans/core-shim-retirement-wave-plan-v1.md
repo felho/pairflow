@@ -66,6 +66,35 @@ Latest validated state:
 - all hard-fail fitness checks PASS
 - no active dependency-direction regressions introduced by the easy waves
 
+Current medium frontier after the latest easy/error-only waves:
+
+- default-wiring modules that already depend on `shared/ports/**` types but still
+  source runtime defaults from `src/core/**` bridges:
+  - `src/v11/application/restart/restartCommandDependencyResolution.ts`
+  - `src/v11/application/reply/replyCommandDependencyResolution.ts`
+  - `src/v11/application/approval/approvalCommandDependencyResolution.ts`
+  - `src/v11/application/delete/deleteBubbleSupport.ts`
+  - `src/v11/application/converged/convergedDefaultDependencies.ts`
+  - `src/v11/application/converged/convergedValidationPreparation.ts`
+  - `src/v11/application/watchdog/watchdogCommandApi.ts`
+  - `src/v11/application/pass/reviewerDelivery.ts`
+  - `src/v11/application/pass/normalPassAppendExecution.ts`
+  - `src/v11/application/pass/autoConvergePreparation.ts`
+  - `src/v11/application/pass/passWorkspaceContextPreparation.ts`
+  - `src/v11/application/pass/postAppendReviewVerificationWriter.ts`
+  - `src/v11/application/start/startCliRunner.ts`
+  - `src/v11/application/start/startCommandContext.ts`
+  - `src/v11/application/start/startCommandOrchestration.ts`
+  - `src/v11/application/kickoff/kickoffCliRunner.ts`
+  - `src/v11/application/create/createCliRunHelpers.ts`
+  - `src/v11/infrastructure/ui/routerDependencies.ts`
+
+Operational note:
+
+- these are not safe path-only rewrites,
+- most of them need either outward default-wiring migration into legacy wrappers
+  or a new explicit value-level boundary that preserves current public behavior.
+
 ## Wave 0 Findings
 
 Initial inventory run from `tests/contracts/v11/core-shim-boundary-coverage.test.ts`
