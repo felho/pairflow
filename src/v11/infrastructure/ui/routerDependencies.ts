@@ -1,42 +1,19 @@
-import { listBubbles } from "../../../core/bubble/listBubbles.js";
-import { getBubbleStatus } from "../../../core/bubble/statusBubble.js";
+import { uiRouterDependencyDefaults } from "../../../core/ui/routerDefaults.js";
 import { getBubbleInbox } from "../../shared/inbox/inboxCommandApi.js";
 import { readRuntimeSessionsRegistry } from "../executor/sessionRuntime/runtimeSessionsRegistry.js";
 import { readBubbleTimeline } from "./presenters/timelinePresenter.js";
-import { startBubble } from "../../../core/bubble/startBubble.js";
-import { emitApprove, emitRequestRework } from "../../../core/human/approval.js";
-import { emitHumanReply } from "../../../core/human/reply.js";
-import { resumeBubble } from "../../../core/bubble/resumeBubble.js";
-import { commitBubble } from "../../../core/bubble/commitBubble.js";
-import { mergeBubble } from "../../../core/bubble/mergeBubble.js";
-import { openBubble } from "../../../core/bubble/openBubble.js";
 import { attachBubble } from "../executor/command/pairflowCommandAttach.js";
-import { stopBubble } from "../../../core/bubble/stopBubble.js";
-import { restartBubble } from "../../../core/bubble/restartBubble.js";
-import { deleteBubble } from "../../../core/bubble/deleteBubble.js";
 import type { UiRouterDependencies } from "../../shared/ports/uiRouter.js";
 import type {
   CreateUiRouterInput
 } from "./routerContracts.js";
 
 export const defaultUiRouterDependencies = {
-  listBubbles,
-  getBubbleStatus,
+  ...uiRouterDependencyDefaults,
   getBubbleInbox,
   readRuntimeSessionsRegistry,
   readBubbleTimeline,
-  startBubble,
-  emitApprove,
-  emitRequestRework,
-  emitHumanReply,
-  resumeBubble,
-  commitBubble,
-  mergeBubble,
-  openBubble,
   attachBubble,
-  stopBubble,
-  restartBubble,
-  deleteBubble
 };
 
 export function resolveUiRouterDependencies(

@@ -447,6 +447,7 @@ Current medium clusters:
    - `src/v11/infrastructure/ui/routerContracts.ts`
    - `src/v11/infrastructure/ui/routerDependencies.ts`
    - shape: current UI boundary still depends on `core` command surfaces; direct retarget to `application` opens `infrastructure -> application` violations, so this needs a dedicated interface/boundary decision
+   - status: core-backed defaults fan-in is now being collapsed through `src/core/ui/routerDefaults.ts`; the remaining non-core UI defaults stay local to the router perimeter
 
 ### Next Medium Batch Candidate: Reviewer Evidence / Reviewer Brief
 
