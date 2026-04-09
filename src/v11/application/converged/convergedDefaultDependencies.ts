@@ -2,17 +2,12 @@ import {
   applyMetaReviewGateOnConvergenceV11 as applyMetaReviewGateOnConvergence,
   recoverMetaReviewGateFromSnapshotV11 as recoverMetaReviewGateFromSnapshot
 } from "../metaReviewGate/emitMetaReviewGateV11.js";
-import { appendProtocolEnvelope } from "../../../core/protocol/transcriptStore.js";
-import { assessPairflowCommandPath } from "../../../core/runtime/pairflowCommand.js";
-import { emitBubbleNotification } from "../../../core/runtime/notifications.js";
-import {
-  emitTmuxDeliveryNotification,
-  resolveDeliveryMessageRef
-} from "../../../core/runtime/tmuxDelivery.js";
+import { convergedDependencyDefaults } from "../../../core/agent/convergedDefaults.js";
 import { emitBubbleLifecycleEventBestEffort } from "../../shared/metrics/bubbleEvents.js";
 import type { EmitBubbleNotificationPort } from "../../shared/ports/notifications.js";
 import type {
-  AppendProtocolEnvelopePort
+  AppendProtocolEnvelopePort,
+  ReadTranscriptEnvelopesPort
 } from "../../shared/ports/transcript.js";
 import type {
   EmitTmuxDeliveryNotificationPort,
@@ -52,7 +47,8 @@ export function buildDefaultConvergedExecutionDependencies(
 ): ResolvedConvergedExecutionDependencies {
   return {
     appendProtocolEnvelope:
-      input.appendProtocolEnvelope ?? appendProtocolEnvelope,
+      input.appendProtocolEnvelope ??
+      convergedDependencyDefaults.execution.appendProtocolEnvelope,
     applyMetaReviewGateOnConvergence:
       input.applyMetaReviewGateOnConvergence ??
       applyMetaReviewGateOnConvergence,
@@ -60,11 +56,14 @@ export function buildDefaultConvergedExecutionDependencies(
       input.recoverMetaReviewGateFromSnapshot ??
       recoverMetaReviewGateFromSnapshot,
     emitTmuxDeliveryNotification:
-      input.emitTmuxDeliveryNotification ?? emitTmuxDeliveryNotification,
+      input.emitTmuxDeliveryNotification ??
+      convergedDependencyDefaults.execution.emitTmuxDeliveryNotification,
     emitBubbleNotification:
-      input.emitBubbleNotification ?? emitBubbleNotification,
+      input.emitBubbleNotification ??
+      convergedDependencyDefaults.execution.emitBubbleNotification,
     resolveDeliveryMessageRef:
-      input.resolveDeliveryMessageRef ?? resolveDeliveryMessageRef
+      input.resolveDeliveryMessageRef ??
+      convergedDependencyDefaults.execution.resolveDeliveryMessageRef
   };
 }
 
@@ -83,10 +82,21 @@ export function buildDefaultConvergedGateDeliveryDependencies(
 ): ResolvedConvergedGateDeliveryDependencies {
   return {
     emitTmuxDeliveryNotification:
-      input.emitTmuxDeliveryNotification ?? emitTmuxDeliveryNotification,
+      input.emitTmuxDeliveryNotification ??
+      convergedDependencyDefaults.gateDelivery.emitTmuxDeliveryNotification,
     resolveDeliveryMessageRef:
-      input.resolveDeliveryMessageRef ?? resolveDeliveryMessageRef
+      input.resolveDeliveryMessageRef ??
+      convergedDependencyDefaults.gateDelivery.resolveDeliveryMessageRef
   };
+}
+
+export function resolveDefaultConvergedReadTranscriptEnvelopes(
+  readTranscriptEnvelopes?: ReadTranscriptEnvelopesPort
+): ReadTranscriptEnvelopesPort {
+  return (
+    readTranscriptEnvelopes ??
+    convergedDependencyDefaults.flow.readTranscriptEnvelopes
+  );
 }
 
 export interface BuildDefaultConvergedFinalizationDependenciesInput {
@@ -109,7 +119,8 @@ export function buildDefaultConvergedFinalizationDependencies(
       ? { activeEntrypoint: input.activeEntrypoint }
       : {}),
     assessPairflowCommandPath:
-      input.assessPairflowCommandPath ?? assessPairflowCommandPath,
+      input.assessPairflowCommandPath ??
+      convergedDependencyDefaults.finalization.assessPairflowCommandPath,
     emitBubbleLifecycleEventBestEffort:
       input.emitBubbleLifecycleEventBestEffort ??
       emitBubbleLifecycleEventBestEffort
