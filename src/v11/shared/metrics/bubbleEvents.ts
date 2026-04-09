@@ -1,8 +1,7 @@
 import { resolve } from "node:path";
 
 import { type MetricsActorRole } from "../../../types/metrics.js";
-import { normalizeRepoPath } from "../../../core/bubble/repoResolution.js";
-import { resolveDefaultMetricsEventStorePort } from "../../../core/metrics/events.js";
+import { bubbleEventsDefaults } from "../../../core/metrics/bubbleEventsDefaults.js";
 import { createMetricsEvent } from "./events.js";
 import {
   type AppendMetricsEventResult
@@ -48,8 +47,11 @@ export function clearReportedBubbleEventWarnings(): void {
 export async function emitBubbleLifecycleEvent(
   input: EmitBubbleLifecycleEventInput
 ): Promise<AppendMetricsEventResult> {
-  const normalizedRepoPath = await normalizeRepoPath(resolve(input.repoPath));
-  const appendMetricsEvent = await resolveDefaultMetricsEventStorePort();
+  const normalizedRepoPath = await bubbleEventsDefaults.normalizeRepoPath(
+    resolve(input.repoPath)
+  );
+  const appendMetricsEvent =
+    await bubbleEventsDefaults.resolveDefaultMetricsEventStorePort();
   return appendMetricsEvent({
     event: createMetricsEvent({
       repo_path: normalizedRepoPath,
