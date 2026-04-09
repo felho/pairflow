@@ -2,7 +2,6 @@ import { readdir, readFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 
 import { parseBubbleConfigToml } from "../../../config/bubbleConfig.js";
-import { listCommandDefaults } from "../../../core/bubble/listCommandDefaults.js";
 import { isMetaReviewExecutionContextActiveState } from "../../shared/metaReview/metaReviewExecutionContext.js";
 import { resolveActiveMetaReviewRuntimeDelivery } from "../../shared/metaReview/metaReviewSnapshot.js";
 import { getBubblePaths } from "../../shared/bubble/bubblePaths.js";
@@ -15,6 +14,10 @@ import type {
   BubbleListStateCounts,
   BubbleListView
 } from "./listCommandContract.js";
+import {
+  RepoResolutionError,
+  listCommandDefaults
+} from "./listCommandDefaults.js";
 
 export type {
   BubbleListEntry,
@@ -106,7 +109,7 @@ async function resolveListBubblesContext(input: BubbleListInput): Promise<{
   try {
     repoPath = await listCommandDefaults.resolveRepoPath(input);
   } catch (error) {
-    if (error instanceof listCommandDefaults.RepoResolutionError) {
+    if (error instanceof RepoResolutionError) {
       throw new BubbleListError(error.message);
     }
     throw error;
