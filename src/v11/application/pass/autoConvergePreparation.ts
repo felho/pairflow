@@ -7,7 +7,7 @@ import type {
   WriteReviewVerificationArtifactAtomicPort
 } from "../../../v11/shared/ports/reviewVerificationArtifacts.js";
 import type { ReadStateSnapshotPort } from "../../shared/ports/stateSnapshots.js";
-import { readStateSnapshot } from "../../../core/state/stateStore.js";
+import { repeatCleanAutoConvergeDefaults } from "../../../core/convergence/repeatCleanAutoConvergeDefaults.js";
 import type { AgentName, BubbleStateSnapshot, ReviewArtifactType } from "../../../types/bubble.js";
 import type { ProtocolEnvelope } from "../../../types/protocol.js";
 import {
@@ -15,7 +15,6 @@ import {
   raiseRepeatCleanPolicyGateRejected,
   raiseRepeatCleanReviewVerificationWriteFailed
 } from "../../domain/pass/repeatCleanPolicyRejection.js";
-import { writeReviewVerificationArtifactAtomic } from "../../../core/reviewer/reviewVerificationArtifacts.js";
 
 export interface PrepareRepeatCleanAutoConvergeInput {
   round: number;
@@ -52,13 +51,14 @@ export async function prepareRepeatCleanAutoConverge(
 ): Promise<PrepareRepeatCleanAutoConvergeResult> {
   const validatePolicy =
     dependencies.validateConvergencePolicy ?? validateConvergencePolicy;
-  const readState = dependencies.readStateSnapshot ?? readStateSnapshot;
+  const readState =
+    dependencies.readStateSnapshot ?? repeatCleanAutoConvergeDefaults.readStateSnapshot;
   const createArtifact =
     dependencies.createReviewVerificationArtifact
     ?? createReviewVerificationArtifact;
   const writeArtifact =
     dependencies.writeReviewVerificationArtifactAtomic
-    ?? writeReviewVerificationArtifactAtomic;
+    ?? repeatCleanAutoConvergeDefaults.writeReviewVerificationArtifactAtomic;
 
   const policyResult = validatePolicy({
     currentRound: input.round,
