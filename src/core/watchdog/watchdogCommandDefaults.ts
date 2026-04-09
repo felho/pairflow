@@ -9,7 +9,7 @@ import {
   readWatchdogPaneActivity,
   writeWatchdogPaneActivity
 } from "./watchdogPaneActivityStore.js";
-import { appendWatchdogTrace } from "./watchdogTraceStore.js";
+import { appendWatchdogTrace } from "../../v11/infrastructure/artifact/watchdog/watchdogTraceStore.js";
 import { emitBubbleNotification } from "../../v11/infrastructure/channel/notifications.js";
 
 export const watchdogCommandDefaults = {

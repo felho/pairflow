@@ -26,9 +26,9 @@ import {
   readTranscriptEnvelopes
 } from "../../../src/v11/infrastructure/artifact/transcript/transcriptStore.js";
 import {
-  MetaReviewGateError,
-  recoverMetaReviewGateFromSnapshot
-} from "../../../src/core/bubble/metaReviewGate.js";
+  MetaReviewGateErrorV11 as MetaReviewGateError,
+  recoverMetaReviewGateFromSnapshotV11 as recoverMetaReviewGateFromSnapshot
+} from "../../../src/v11/application/metaReviewGate/emitMetaReviewGateV11.js";
 import {
   type LoadedStateSnapshot,
   StateStoreConflictError,

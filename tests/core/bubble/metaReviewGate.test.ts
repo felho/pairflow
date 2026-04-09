@@ -6,9 +6,9 @@ import { dirname, join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
-  applyMetaReviewGateOnConvergence,
-  recoverMetaReviewGateFromSnapshot
-} from "../../../src/core/bubble/metaReviewGate.js";
+  applyMetaReviewGateOnConvergenceV11 as applyMetaReviewGateOnConvergence,
+  recoverMetaReviewGateFromSnapshotV11 as recoverMetaReviewGateFromSnapshot
+} from "../../../src/v11/application/metaReviewGate/emitMetaReviewGateV11.js";
 import { clearLiveMetaReviewSnapshot } from "../../../src/core/bubble/metaReview.js";
 import {
   buildMetaReviewSubmitCommandTemplate
