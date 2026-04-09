@@ -1,9 +1,5 @@
-import { appendProtocolEnvelope } from "../../../core/protocol/transcriptStore.js";
-import { writeStateSnapshot } from "../../../core/state/stateStore.js";
-import { applyStateTransition } from "../../domain/state/machine.js";
+import { askHumanDependencyDefaults } from "../../../core/agent/askHumanDefaults.js";
 
 export const askHumanExecutionDependencyDefaults = {
-  appendProtocolEnvelope,
-  writeStateSnapshot,
-  applyStateTransition
+  ...askHumanDependencyDefaults.execution
 } as const;

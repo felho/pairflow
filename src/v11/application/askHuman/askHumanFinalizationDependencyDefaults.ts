@@ -1,13 +1,5 @@
-import { emitBubbleLifecycleEventBestEffort } from "../../../v11/shared/metrics/bubbleEvents.js";
-import { emitBubbleNotification } from "../../../core/runtime/notifications.js";
-import {
-  emitTmuxDeliveryNotification,
-  resolveDeliveryMessageRef
-} from "../../../core/runtime/tmuxDelivery.js";
+import { askHumanDependencyDefaults } from "../../../core/agent/askHumanDefaults.js";
 
 export const askHumanFinalizationDependencyDefaults = {
-  emitTmuxDeliveryNotification,
-  emitBubbleNotification,
-  resolveDeliveryMessageRef,
-  emitBubbleLifecycleEventBestEffort
+  ...askHumanDependencyDefaults.finalization
 } as const;
