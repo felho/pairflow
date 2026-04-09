@@ -1,5 +1,7 @@
 import { isFinalState } from "../../domain/state/transitions.js";
-import { stopCommandDefaults } from "../../../core/runtime/stopCommandDefaults.js";
+import {
+  stopBubbleDependencyDefaults as stopCommandDefaults
+} from "../../../core/bubble/stopBubbleDefaults.js";
 import type {
   StopBubbleDependencies,
   StopBubbleInput,
