@@ -1,10 +1,8 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 
-import { readStateSnapshot } from "../../../core/state/stateStore.js";
-import { resolveBubbleById } from "../../../core/bubble/bubbleLookup.js";
+import { startCommandContextDefaults } from "../../../core/bubble/startCommandContextDefaults.js";
 import { buildBubbleTmuxSessionName } from "../../shared/bubble/tmuxSessionName.js";
-import { ensureBubbleInstanceIdForMutation } from "../../../core/bubble/bubbleInstanceId.js";
 import type { ReviewerFocusExtractionResult } from "../../shared/reviewer/reviewerBrief.js";
 import {
   reviewerSeverityOntologyFullMarkdown,
@@ -18,7 +16,8 @@ import type {
 import { resolveStartBubbleMode } from "./startCommandOrchestration.js";
 import { createStartBubbleError } from "./startCommandRuntime.js";
 
-export type StartLoadedState = Awaited<ReturnType<typeof readStateSnapshot>>;
+export type StartLoadedState =
+  Awaited<ReturnType<typeof startCommandContextDefaults.readStateSnapshot>>;
 export const reviewerPolicySnapshotFileName = "reviewer-policy-snapshot.md";
 export const reviewerPolicySnapshotUnavailableReasonCode =
   "REVIEWER_POLICY_SNAPSHOT_UNAVAILABLE";
@@ -82,10 +81,14 @@ async function ensureReviewerPolicySnapshot(
 }
 
 export interface StartExecutionContext {
-  resolved: Awaited<ReturnType<typeof resolveBubbleById>>;
+  resolved:
+    Awaited<ReturnType<typeof startCommandContextDefaults.resolveBubbleById>>;
   now: Date;
   nowIso: string;
-  bubbleIdentity: Awaited<ReturnType<typeof ensureBubbleInstanceIdForMutation>>;
+  bubbleIdentity:
+    Awaited<
+      ReturnType<typeof startCommandContextDefaults.ensureBubbleInstanceIdForMutation>
+    >;
   loadedState: StartLoadedState;
   startMode: ReturnType<typeof resolveStartBubbleMode>;
   expectedTmuxSessionName: string;
@@ -102,14 +105,15 @@ export async function loadStartExecutionContext(
     readReviewerFocusArtifact: ReadReviewerFocusArtifactPort;
   }
 ): Promise<StartExecutionContext> {
-  const resolved = await resolveBubbleById({
+  const resolved = await startCommandContextDefaults.resolveBubbleById({
     bubbleId: input.bubbleId,
     ...(input.repoPath !== undefined ? { repoPath: input.repoPath } : {}),
     ...(input.cwd !== undefined ? { cwd: input.cwd } : {})
   });
   const now = input.now ?? new Date();
   const nowIso = now.toISOString();
-  const bubbleIdentity = await ensureBubbleInstanceIdForMutation({
+  const bubbleIdentity =
+    await startCommandContextDefaults.ensureBubbleInstanceIdForMutation({
     bubbleId: resolved.bubbleId,
     repoPath: resolved.repoPath,
     bubblePaths: resolved.bubblePaths,
@@ -127,7 +131,8 @@ export async function loadStartExecutionContext(
   const policySnapshotPathAbs = await ensureReviewerPolicySnapshot(
     resolved.bubblePaths.artifactsDir
   );
-  const loadedState = await readStateSnapshot(resolved.bubblePaths.statePath);
+  const loadedState =
+    await startCommandContextDefaults.readStateSnapshot(resolved.bubblePaths.statePath);
 
   return {
     resolved,
