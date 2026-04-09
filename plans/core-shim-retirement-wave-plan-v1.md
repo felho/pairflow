@@ -129,6 +129,11 @@ These numbers are triage inputs, not yet a finalized ledger.
   - `startCommandDependencyDefaults`, `passTranscriptDefaults`, and
     `metaReviewGateTranscriptDefaults` now route through one shared
     `shared/transcript/transcriptDependencyDefaults` bridge
+- after the shared `stateStore` fan-in batch:
+  - total direct residual imports: `42`
+  - `postAppendStateWriter`, `metaReviewCommandSubmitRuntime`, and
+    `metaReviewCommandSubmitPersistence` now route through one shared
+    `shared/state/stateStoreDefaults` bridge
 - after the `start + kickoff` local fan-in batch:
   - total direct residual imports: `54`
   - `application/start` prompt/runtime and default wiring now route through two

@@ -1,7 +1,7 @@
 import {
   type LoadedStateSnapshot,
   writeStateSnapshot
-} from "../../../core/state/stateStore.js";
+} from "../../shared/state/stateStoreDefaults.js";
 import { buildRunningExecutionContext } from "../../shared/state/executionContext.js";
 import type { BubbleStateSnapshot } from "../../../types/bubble.js";
 import type { ResolvedPassHandoff } from "../../domain/pass/handoff.js";

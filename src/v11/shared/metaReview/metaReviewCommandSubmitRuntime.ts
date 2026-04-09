@@ -1,7 +1,7 @@
 import {
   readStateSnapshot,
   writeStateSnapshot
-} from "../../../core/state/stateStore.js";
+} from "../state/stateStoreDefaults.js";
 import {
   assertSubmitReworkFindingsArtifactContract,
   buildCanonicalSubmitRunResult,
