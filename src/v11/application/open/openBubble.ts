@@ -33,7 +33,8 @@ export function asOpenBubbleError(error: unknown): never {
     throw createOpenBubbleError({
       message: error.message,
       context: {
-        reason: "bubble_lookup_error"
+        reason: "bubble_lookup_error",
+        reason_code: "OPEN_BUBBLE_LOOKUP_ERROR"
       },
       cause: error
     });
@@ -42,7 +43,8 @@ export function asOpenBubbleError(error: unknown): never {
     throw createOpenBubbleError({
       message: error.message,
       context: {
-        reason: "unexpected_open_error"
+        reason: "unexpected_open_error",
+        reason_code: "OPEN_UNEXPECTED_ERROR"
       },
       cause: error
     });

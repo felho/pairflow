@@ -1,8 +1,13 @@
 import { describe, expect, it, vi } from "vitest";
 
+import { BubbleLookupError } from "../../../src/core/bubble/bubbleLookup.js";
 import { SchemaValidationError } from "../../../src/core/validation.js";
 import { getBubblePaths } from "../../../src/core/bubble/paths.js";
-import { openBubble } from "../../../src/core/bubble/openBubble.js";
+import {
+  asOpenBubbleError,
+  openBubble,
+  OpenBubbleError
+} from "../../../src/core/bubble/openBubble.js";
 import type { BubbleConfig } from "../../../src/types/bubble.js";
 
 function createResolvedBubbleFixture(input: {
@@ -492,5 +497,35 @@ describe("openBubble", () => {
         }
       )
     ).rejects.toThrow(/command not found/u);
+  });
+
+  it("normalizes bubble lookup failures with a stable error code", () => {
+    const error = new BubbleLookupError("bubble not found");
+
+    expect(() => asOpenBubbleError(error)).toThrowError(OpenBubbleError);
+
+    try {
+      asOpenBubbleError(error);
+    } catch (thrown) {
+      expect(thrown).toBeInstanceOf(OpenBubbleError);
+      expect((thrown as OpenBubbleError).context?.reason_code).toBe(
+        "OPEN_BUBBLE_LOOKUP_ERROR"
+      );
+    }
+  });
+
+  it("normalizes unexpected failures with a stable error code", () => {
+    const error = new Error("unexpected");
+
+    expect(() => asOpenBubbleError(error)).toThrowError(OpenBubbleError);
+
+    try {
+      asOpenBubbleError(error);
+    } catch (thrown) {
+      expect(thrown).toBeInstanceOf(OpenBubbleError);
+      expect((thrown as OpenBubbleError).context?.reason_code).toBe(
+        "OPEN_UNEXPECTED_ERROR"
+      );
+    }
   });
 });
