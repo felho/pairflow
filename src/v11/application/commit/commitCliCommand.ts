@@ -102,7 +102,9 @@ export function parseBubbleCommitCommandOptions(
 
   const id = parsed.values.id;
   if (id === undefined) {
-    throw new Error("Missing required option: --id");
+    throw new Error(
+      "COMMIT_ID_REQUIRED: Missing required option: --id. context: command_name=commit."
+    );
   }
 
   return {
