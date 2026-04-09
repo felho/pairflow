@@ -3,7 +3,7 @@ import { dirname, extname, relative, resolve } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-const coreShimBoundaryCoverageMode = "warn" as const;
+const coreShimBoundaryCoverageMode = "fail" as const;
 const maxWarningSampleSize = 20;
 
 const forbiddenCoreShimTargets = new Set([
