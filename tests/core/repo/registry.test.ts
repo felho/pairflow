@@ -11,7 +11,7 @@ import {
   RepoRegistryError,
   resolveRepoRegistryPath
 } from "../../../src/core/repo/registry.js";
-import { normalizeRepoPath } from "../../../src/core/bubble/repoResolution.js";
+import { normalizeRepoPath } from "../../../src/v11/infrastructure/executor/workspace/repoResolution.js";
 import { initGitRepository } from "../../helpers/git.js";
 
 const tempDirs: string[] = [];

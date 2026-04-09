@@ -8,7 +8,7 @@ import {
   createBubble,
   extractReviewerFocus
 } from "../../../src/core/bubble/createBubble.js";
-import { getBubblePaths } from "../../../src/core/bubble/paths.js";
+import { getBubblePaths } from "../../../src/v11/infrastructure/artifact/bubble/paths.js";
 import {
   INVALID_REVIEW_ARTIFACT_TYPE_OPTION,
   MISSING_REVIEW_ARTIFACT_TYPE_OPTION,

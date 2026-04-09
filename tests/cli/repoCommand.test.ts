@@ -4,7 +4,7 @@ import { join } from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { normalizeRepoPath } from "../../src/core/bubble/repoResolution.js";
+import { normalizeRepoPath } from "../../src/v11/infrastructure/executor/workspace/repoResolution.js";
 import { registerRepoInRegistry } from "../../src/core/repo/registry.js";
 import {
   getRepoAddHelpText,

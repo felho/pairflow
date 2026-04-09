@@ -6,8 +6,8 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { getBubbleInboxV11 as getBubbleInbox } from "../../../src/v11/application/inbox/emitInboxV11.js";
-import { getBubblePaths } from "../../../src/core/bubble/paths.js";
-import { getBubbleStatus } from "../../../src/core/bubble/statusBubble.js";
+import { getBubblePaths } from "../../../src/v11/infrastructure/artifact/bubble/paths.js";
+import { getBubbleStatusV11 as getBubbleStatus } from "../../../src/v11/application/status/emitStatusV11.js";
 import {
   extractMetaReviewDelimitedBlock,
   hasCanonicalSubmitForActiveMetaReviewRound,

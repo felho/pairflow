@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { getBubblePaths } from "../../../src/core/bubble/paths.js";
+import { getBubblePaths } from "../../../src/v11/infrastructure/artifact/bubble/paths.js";
 import {
   attachBubble
 } from "../../../src/v11/application/attach/emitAttachV11.js";
