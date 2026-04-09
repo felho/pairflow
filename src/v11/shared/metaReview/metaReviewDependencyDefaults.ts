@@ -2,17 +2,10 @@ import {
   readStateSnapshot,
   writeStateSnapshot
 } from "../state/stateStoreDefaults.js";
-import type { ResolveBubbleByIdPort } from "../ports/bubbleLookup.js";
 import type { ReadRuntimeSessionsRegistryPort } from "../ports/runtimeSessions.js";
-import { metaReviewReadDefaults as metaReviewReadDefaultsCore } from "../../../core/bubble/metaReviewReadDefaults.js";
+import { resolveBubbleById } from "../bubbleLookup/bubbleLookupDefaults.js";
 import { metaReviewCommandSubmitDefaults as metaReviewCommandSubmitDefaultsCore } from "../../../core/runtime/metaReviewCommandSubmitDefaults.js";
 import { metaReviewLiveRunDefaults as metaReviewLiveRunDefaultsCore } from "../../../core/runtime/metaReviewLiveRunDefaults.js";
-
-async function resolveBubbleById(
-  ...args: Parameters<ResolveBubbleByIdPort>
-): Promise<Awaited<ReturnType<ResolveBubbleByIdPort>>> {
-  return metaReviewReadDefaultsCore.resolveBubbleById(...args);
-}
 
 async function readRuntimeSessionsRegistry(
   ...args: Parameters<ReadRuntimeSessionsRegistryPort>

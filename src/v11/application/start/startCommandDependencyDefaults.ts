@@ -4,14 +4,15 @@ import type { EnsureBubbleInstanceIdForMutationPort } from "../../shared/ports/b
 import type { RegisterRepoInRegistryPort } from "../../shared/ports/repoRegistry.js";
 import type { ReadStateSnapshotPort } from "../../shared/ports/stateSnapshots.js";
 import type { TmuxRunner } from "../../shared/ports/tmuxSessions.js";
+import {
+  resolveBubbleById
+} from "../../shared/bubbleLookup/bubbleLookupDefaults.js";
 
 interface StartCliDependencyDefaults {
-  resolveBubbleById: ResolveBubbleByIdPort;
   registerRepoInRegistry: RegisterRepoInRegistryPort;
 }
 
 interface StartCommandContextDefaults {
-  resolveBubbleById: ResolveBubbleByIdPort;
   ensureBubbleInstanceIdForMutation: EnsureBubbleInstanceIdForMutationPort;
   readStateSnapshot: ReadStateSnapshotPort;
 }
@@ -59,12 +60,7 @@ export async function runTmux(
 }
 
 export const startCliDependencyDefaults = {
-  async resolveBubbleById(
-    ...args: Parameters<StartCliDependencyDefaults["resolveBubbleById"]>
-  ) {
-    const defaults = await loadStartCliDependencyDefaults();
-    return defaults.resolveBubbleById(...args);
-  },
+  resolveBubbleById,
   async registerRepoInRegistry(
     ...args: Parameters<StartCliDependencyDefaults["registerRepoInRegistry"]>
   ) {
@@ -74,12 +70,7 @@ export const startCliDependencyDefaults = {
 } as const;
 
 export const startCommandContextDefaults = {
-  async resolveBubbleById(
-    ...args: Parameters<StartCommandContextDefaults["resolveBubbleById"]>
-  ) {
-    const defaults = await loadStartCommandContextDefaults();
-    return defaults.resolveBubbleById(...args);
-  },
+  resolveBubbleById,
   async ensureBubbleInstanceIdForMutation(
     ...args: Parameters<StartCommandContextDefaults["ensureBubbleInstanceIdForMutation"]>
   ) {
