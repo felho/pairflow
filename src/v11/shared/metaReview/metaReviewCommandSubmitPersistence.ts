@@ -1,5 +1,4 @@
 import type { LoadedStateSnapshot } from "../ports/stateSnapshots.js";
-import { StateStoreConflictError } from "../state/stateStoreDefaults.js";
 import {
   isMetaReviewExecutionContextActiveState
 } from "./metaReviewExecutionContext.js";
@@ -16,6 +15,7 @@ import { toMetaReviewExecutionContext } from "../state/executionContext.js";
 import {
   stateWriteConflictToMetaReviewError
 } from "./metaReviewCommandErrorMapping.js";
+import { isNamedError } from "../errors/namedError.js";
 import type {
   MetaReviewArtifactReadPort,
   MetaReviewArtifactWritePort
@@ -110,7 +110,7 @@ export async function writeCanonicalSubmitState(input: {
       expectedState: "RUNNING"
     });
   } catch (error) {
-    if (error instanceof StateStoreConflictError) {
+    if (isNamedError(error, "StateStoreConflictError")) {
       const latest = await input.readState(input.resolved.bubblePaths.statePath);
       if (!isMetaReviewExecutionContextActiveState(latest.state)) {
         throw new MetaReviewError(

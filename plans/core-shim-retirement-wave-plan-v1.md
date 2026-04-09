@@ -201,6 +201,13 @@ These numbers are triage inputs, not yet a finalized ledger.
     `restart`, `askHumanDependencyDefaults`,
     `docContractGateArtifactDefaults`, `stateStoreDefaults`,
     and `statusCommandDependencyDefaults`
+- after the shared `doc-gate + state` lazy-wrapper batch:
+  - total direct residual imports: `4`
+  - `docContractGateArtifactDefaults` and `stateStoreDefaults` no longer carry
+    static `src/core/**` imports
+  - current residual set:
+    `restart`, `askHumanDependencyDefaults`,
+    and `statusCommandDependencyDefaults`
 - after the `reply + router + reconcile-input` cleanup wave:
   - total direct residual imports: `8`
   - `replyCommandDependencyResolution`, `routerDependencies`, and
@@ -240,6 +247,13 @@ Latest validated state:
 - no active dependency-direction regressions introduced by the easy waves
 
 Current conscious-triage note after the `open` owner-flip:
+
+Residual target-shape notes (current best understanding):
+
+- `restart`: not an easy owner-flip under the current dependency policy; keep as residual until a dedicated defaults-boundary batch can move the facade without introducing new dependency-direction findings
+- `askHumanDependencyDefaults`: medium composite-defaults case; likely next active redesign candidate because execution/routing/finalization slices are already separate on the consumer side
+- `statusCommandDependencyDefaults`: medium composite-defaults case coupled to the `docContractGateArtifactDefaults` and `stateStoreDefaults` bridges
+- `docContractGateArtifactDefaults` + `stateStoreDefaults`: thin bridges, but direct retarget currently opens `shared -> infrastructure` findings; treat as intentional residuals until the shared-boundary policy or target shape is clarified
 
 - the residual frontier is no longer a uniform easy-wave backlog
 - attempted `restart` owner-flip proved that boundary-count reduction alone is
