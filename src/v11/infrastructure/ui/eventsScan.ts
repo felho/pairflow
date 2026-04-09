@@ -3,7 +3,7 @@ import { join } from "node:path";
 
 import { getBubblePaths } from "../artifact/bubble/paths.js";
 import { pathExists } from "../foundation/fs/pathExists.js";
-import { listBubbles } from "../../../core/bubble/listBubbles.js";
+import { listBubblesV11 as listBubbles } from "../../application/list/emitListV11.js";
 import type { UiEvent, UiRepoUpdatedEvent } from "../../../types/ui.js";
 import { presentBubbleSummaryFromListEntry, presentRepoSummary } from "./presenters/bubblePresenter.js";
 import type { BubbleFingerprintSnapshot, RepoDiff, RepoSnapshot } from "./eventsState.js";
