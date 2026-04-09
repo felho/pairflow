@@ -42,11 +42,11 @@ state still contains a large residual `v11/cli -> core` surface.
 
 ## Current Explicit Residual Inventory
 
-Latest verified checkpoint after `938b0b69 refactor(lint): tighten default dependency loaders`:
+Latest verified checkpoint after the reconcile facade/defaults redesign:
 
 - worktree clean
 - `tests/contracts/v11/core-shim-boundary-coverage.test.ts` passes
-- current explicit residual bridge inventory is locked to 8 entries
+- current explicit residual bridge inventory is locked to 2 entries
 
 Current residual set:
 
@@ -54,18 +54,6 @@ Current residual set:
   -> `src/core/bubble/mergeBubbleDefaults.ts`
 - `src/v11/application/metaReviewGate/metaReviewGateDependencyDefaults.ts`
   -> `src/core/bubble/metaReviewGateDefaults.ts`
-- `src/v11/application/pass/passValidationDependencyDefaults.ts`
-  -> `src/core/runtime/passValidationDefaults.ts`
-- `src/v11/application/reconcile/emitReconcileV11.ts`
-  -> `src/core/runtime/startupReconciler.ts`
-- `src/v11/shared/gates/docContractGateArtifactDefaults.ts`
-  -> `src/core/gates/docContractGateArtifacts.ts`
-- `src/v11/shared/metaReview/metaReviewDependencyDefaults.ts`
-  -> `src/core/bubble/bubbleLookup.ts`
-- `src/v11/shared/metaReview/metaReviewDependencyDefaults.ts`
-  -> `src/core/runtime/sessionsRegistry.ts`
-- `src/v11/shared/metrics/bubbleEvents.ts`
-  -> `src/core/metrics/bubbleEventsDefaults.ts`
 
 Current classification:
 
@@ -74,14 +62,13 @@ Current classification:
 - `medium`
   - `mergeCommandDependencyResolution`
   - `metaReviewGateDependencyDefaults`
-  - `passValidationDependencyDefaults`
-  - `docContractGateArtifactDefaults`
-  - `metaReviewDependencyDefaults`
-  - `bubbleEvents`
+  - remaining broader non-inventory cleanup candidates still include:
+    `passValidationDependencyDefaults`,
+    `docContractGateArtifactDefaults`,
+    `metaReviewDependencyDefaults`,
+    and `bubbleEvents`
 - `hard / architecture-sensitive`
-  - `emitReconcileV11`
-    - currently tied to facade parity via direct alias to `core/runtime/startupReconciler.ts`
-    - eliminating this residual cleanly likely needs a dedicated reconcile boundary/perimeter redesign batch
+  - none confirmed at this checkpoint
 
 Immediate planning note:
 
@@ -90,6 +77,10 @@ Immediate planning note:
   edges if rewritten naively
 - the next safe wave should pick one medium cluster and replace the `core`
   bundle with a local explicit dependency/defaults bridge, not direct infra imports
+- the previous `reconcile` hard residual is now retired:
+  - source-of-truth wrapper lives in
+    `src/v11/application/reconcile/reconcileCommandApi.ts`
+  - `src/core/runtime/startupReconciler.ts` now re-exports the v11 facade
 
 Observed warning snapshot when the test was downgraded:
 
@@ -102,20 +93,14 @@ These numbers are triage inputs, not yet a finalized ledger.
 ## Progress Ledger
 
 - latest checkpoint after the lint-loader cleanup and boundary inventory refresh:
-  - explicit residual inventory locked to `8` direct `src/v11 -> src/core` bridges
+  - explicit residual inventory locked to `3` direct `src/v11 -> src/core` bridges
   - current residual set:
     - `src/v11/application/merge/mergeCommandDependencyResolution.ts -> src/core/bubble/mergeBubbleDefaults.ts`
     - `src/v11/application/metaReviewGate/metaReviewGateDependencyDefaults.ts -> src/core/bubble/metaReviewGateDefaults.ts`
-    - `src/v11/application/pass/passValidationDependencyDefaults.ts -> src/core/runtime/passValidationDefaults.ts`
     - `src/v11/application/reconcile/emitReconcileV11.ts -> src/core/runtime/startupReconciler.ts`
-    - `src/v11/shared/gates/docContractGateArtifactDefaults.ts -> src/core/gates/docContractGateArtifacts.ts`
-    - `src/v11/shared/metaReview/metaReviewDependencyDefaults.ts -> src/core/bubble/bubbleLookup.ts`
-    - `src/v11/shared/metaReview/metaReviewDependencyDefaults.ts -> src/core/runtime/sessionsRegistry.ts`
-    - `src/v11/shared/metrics/bubbleEvents.ts -> src/core/metrics/bubbleEventsDefaults.ts`
   - easy shim-through rewrites are effectively exhausted
   - remaining work is now mostly `medium/hard` boundary-default redesign:
-    - `merge`, `pass`, `docContractGateArtifactDefaults`, `metaReviewDependencyDefaults`,
-      and `metrics/bubbleEvents` are `medium`
+    - `merge` is `medium`
     - `metaReviewGateDependencyDefaults` is `hard`
     - `reconcile/emitReconcileV11` is an intentional residual until a dedicated
       facade/defaults redesign replaces the current parity-preserving alias
