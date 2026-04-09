@@ -53,7 +53,6 @@ Latest verified checkpoint after the meta-review-gate defaults redesign:
 
 Current remaining non-inventory bridge candidates:
 
-- `src/v11/application/pass/passValidationDependencyDefaults.ts`
 - `src/v11/shared/gates/docContractGateArtifactDefaults.ts`
 - `src/v11/shared/metaReview/metaReviewDependencyDefaults.ts`
 - `src/v11/shared/metrics/bubbleEvents.ts`
@@ -63,7 +62,6 @@ Current classification:
 - `easy`
   - none confirmed at this checkpoint
 - `medium`
-  - `passValidationDependencyDefaults`
   - `docContractGateArtifactDefaults`
   - `metaReviewDependencyDefaults`
   - `bubbleEvents`
@@ -90,6 +88,11 @@ Immediate planning note:
     `src/v11/application/metaReviewGate/metaReviewGateCommandDefaults.ts`
   - `metaReviewGateDependencyDefaults.ts` no longer imports
     `src/core/bubble/metaReviewGateDefaults.ts`
+- the previous `passValidation` bridge is now retired:
+  - local defaults live in
+    `src/v11/application/pass/passValidationCommandDefaults.ts`
+  - `passValidationDependencyDefaults.ts` no longer imports
+    `src/core/runtime/passValidationDefaults.ts`
 
 Observed warning snapshot when the test was downgraded:
 

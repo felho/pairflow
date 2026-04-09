@@ -1,34 +1,5 @@
-import type { PassValidationCommandResult } from "../../infrastructure/artifact/validation/passValidationEvidence.js";
-
-const passValidationDefaultsPromise = import(
-  "../../../core/runtime/passValidationDefaults.js"
-).then(({ passValidationDefaults, PassValidationRunnerExecutionError }) => ({
-  ...passValidationDefaults,
+export {
+  passValidationDefaults,
   PassValidationRunnerExecutionError
-}));
-
-const resolvedPassValidationDefaults = await passValidationDefaultsPromise;
-
-export const passValidationDefaults = {
-  buildPassValidationEvidenceArtifact:
-    resolvedPassValidationDefaults.buildPassValidationEvidenceArtifact,
-  createPassValidationReviewerDirective:
-    resolvedPassValidationDefaults.createPassValidationReviewerDirective,
-  resolvePassValidationArtifactPath:
-    resolvedPassValidationDefaults.resolvePassValidationArtifactPath,
-  resolvePassValidationPolicy:
-    resolvedPassValidationDefaults.resolvePassValidationPolicy,
-  resolvePassValidationReviewerCompatibilityArtifactPath:
-    resolvedPassValidationDefaults.resolvePassValidationReviewerCompatibilityArtifactPath,
-  runPassValidationCommand:
-    resolvedPassValidationDefaults.runPassValidationCommand,
-  writePassValidationEvidenceArtifact:
-    resolvedPassValidationDefaults.writePassValidationEvidenceArtifact,
-  writePassValidationReviewerCompatibilityArtifact:
-    resolvedPassValidationDefaults.writePassValidationReviewerCompatibilityArtifact
-} as const;
-
-export const PassValidationRunnerExecutionError =
-  resolvedPassValidationDefaults.PassValidationRunnerExecutionError;
-
-export type { PassValidationCommandResult };
+} from "./passValidationCommandDefaults.js";
+export type { PassValidationCommandResult } from "./passValidationCommandDefaults.js";
