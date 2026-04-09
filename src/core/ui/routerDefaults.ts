@@ -6,7 +6,7 @@ import {
 } from "../../v11/application/approval/emitApprovalV11.js";
 import { commitBubbleV11 } from "../../v11/application/commit/emitCommitV11.js";
 import { emitHumanReplyV11 as emitHumanReply } from "../../v11/application/reply/emitReplyV11.js";
-import { listBubbles } from "../bubble/listBubbles.js";
+import { listBubbles } from "../../v11/shared/list/listCommandApi.js";
 import { getBubbleStatusV11 as getBubbleStatus } from "../../v11/application/status/emitStatusV11.js";
 import { mergeBubbleV11 as mergeBubble } from "../../v11/application/merge/emitMergeV11.js";
 import { openBubble } from "../../v11/application/open/emitOpenV11.js";
