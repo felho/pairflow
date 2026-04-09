@@ -7,10 +7,24 @@ export const resolveMetaReviewerPaneWarning: ResolveMetaReviewerPaneWarning = as
   input
 ) => {
   if (input.buildAgentCommand === undefined) {
-    throw new Error("meta-review gate pane binding is missing agent command builder.");
+    return {
+      delivery: {
+        status: "failed",
+        reasonCode: "META_REVIEWER_PANE_RUNTIME_UNAVAILABLE",
+        message: "meta-review gate pane binding is missing agent command builder."
+      },
+      shouldDeactivate: false
+    };
   }
   if (input.respawnTmuxPaneCommand === undefined) {
-    throw new Error("meta-review gate pane binding is missing respawn capability.");
+    return {
+      delivery: {
+        status: "failed",
+        reasonCode: "META_REVIEWER_PANE_RUNTIME_UNAVAILABLE",
+        message: "meta-review gate pane binding is missing respawn capability."
+      },
+      shouldDeactivate: false
+    };
   }
 
   let shouldDeactivate = false;
