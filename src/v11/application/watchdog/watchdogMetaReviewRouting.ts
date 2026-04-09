@@ -1,4 +1,3 @@
-import { resolveDeliveryMessageRef } from "../../../core/runtime/tmuxDelivery.js";
 import {
   MetaReviewGateError
 } from "../../shared/metaReviewGate/metaReviewGateCommandApi.js";
@@ -7,7 +6,10 @@ import type { BubbleStateSnapshot } from "../../../types/bubble.js";
 import type { BubbleWatchdogResult } from "./watchdogCommandContract.js";
 import type { ResolvedBubbleById } from "../../shared/ports/bubbleLookup.js";
 import type { ReadStateSnapshotPort } from "../../shared/ports/stateSnapshots.js";
-import type { EmitTmuxDeliveryNotificationPort } from "../../shared/ports/tmuxDelivery.js";
+import type {
+  EmitTmuxDeliveryNotificationPort,
+  ResolveDeliveryMessageRefPort
+} from "../../shared/ports/tmuxDelivery.js";
 import { SchemaValidationError } from "../../shared/validation/primitives.js";
 import {
   isMetaReviewExecutionContextActiveState,
@@ -93,13 +95,14 @@ function emitRecoveredMetaReviewDelivery(input: {
   resolved: ResolvedBubbleById;
   envelope: NonNullable<BubbleWatchdogResult["envelope"]>;
   emitDelivery: EmitTmuxDeliveryNotificationPort;
+  resolveDeliveryMessageRef: ResolveDeliveryMessageRefPort;
 }): void {
   void input.emitDelivery({
     bubbleId: input.bubbleId,
     bubbleConfig: input.resolved.bubbleConfig,
     sessionsPath: input.resolved.bubblePaths.sessionsPath,
     envelope: input.envelope,
-    messageRef: resolveDeliveryMessageRef({
+    messageRef: input.resolveDeliveryMessageRef({
       bubbleId: input.bubbleId,
       sessionsPath: input.resolved.bubblePaths.sessionsPath,
       envelope: input.envelope
@@ -114,6 +117,7 @@ export function maybeRouteMetaReviewBeforeExpiry(input: {
   readState: ReadStateSnapshotPort;
   recoverMetaReviewRoute: typeof recoverMetaReviewGateFromSnapshot;
   emitDelivery: EmitTmuxDeliveryNotificationPort;
+  resolveDeliveryMessageRef: ResolveDeliveryMessageRefPort;
 }): BubbleWatchdogResult | null {
   if (!isMetaReviewExecutionContextActiveState(input.state)) {
     return null;
@@ -134,6 +138,7 @@ export async function maybeRouteMetaReviewOnExpiry(input: {
   readState: ReadStateSnapshotPort;
   recoverMetaReviewRoute: typeof recoverMetaReviewGateFromSnapshot;
   emitDelivery: EmitTmuxDeliveryNotificationPort;
+  resolveDeliveryMessageRef: ResolveDeliveryMessageRefPort;
 }): Promise<BubbleWatchdogResult | null> {
   if (!isMetaReviewExecutionContextActiveState(input.state)) {
     return null;
@@ -157,7 +162,8 @@ export async function maybeRouteMetaReviewOnExpiry(input: {
       bubbleId: input.resolved.bubbleId,
       resolved: input.resolved,
       envelope: mapped.envelope,
-      emitDelivery: input.emitDelivery
+      emitDelivery: input.emitDelivery,
+      resolveDeliveryMessageRef: input.resolveDeliveryMessageRef
     });
   }
   return mapped;

@@ -1,7 +1,10 @@
 import { appendProtocolEnvelope } from "../protocol/transcriptStore.js";
 import { resolveBubbleById } from "../bubble/bubbleLookup.js";
 import { emitBubbleNotification } from "../runtime/notifications.js";
-import { emitTmuxDeliveryNotification } from "../runtime/tmuxDelivery.js";
+import {
+  emitTmuxDeliveryNotification,
+  retryStuckAgentInput
+} from "../runtime/tmuxDelivery.js";
 import { readStateSnapshot, writeStateSnapshot } from "../state/stateStore.js";
 import {
   readWatchdogPaneActivity,
@@ -14,6 +17,7 @@ export const watchdogCommandDefaults = {
   appendWatchdogTrace,
   emitBubbleNotification,
   emitTmuxDeliveryNotification,
+  retryStuckAgentInput,
   readStateSnapshot,
   readWatchdogPaneActivity,
   resolveBubbleById,

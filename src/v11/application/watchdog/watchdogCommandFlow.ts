@@ -1,11 +1,14 @@
-import { retryStuckAgentInput, resolveDeliveryMessageRef } from "../../../core/runtime/tmuxDelivery.js";
 import type { BubbleStateSnapshot } from "../../../types/bubble.js";
 import type { BubbleWatchdogResult } from "./watchdogCommandContract.js";
 import { executeWatchdogEscalationMutation } from "../../shared/watchdog/watchdogEscalationMutation.js";
 import type { recoverMetaReviewGateFromSnapshot } from "../../shared/metaReviewGate/metaReviewGateCommandApi.js";
 import type { ResolvedBubbleById } from "../../shared/ports/bubbleLookup.js";
 import type { EmitBubbleNotificationPort } from "../../shared/ports/notifications.js";
-import type { EmitTmuxDeliveryNotificationPort } from "../../shared/ports/tmuxDelivery.js";
+import type {
+  EmitTmuxDeliveryNotificationPort,
+  ResolveDeliveryMessageRefPort,
+  RetryStuckAgentInputPort
+} from "../../shared/ports/tmuxDelivery.js";
 import type {
   AppendProtocolEnvelopePort
 } from "../../shared/ports/transcript.js";
@@ -27,6 +30,8 @@ export interface WatchdogRuntimeContext {
   state: BubbleStateSnapshot;
   emitDelivery: EmitTmuxDeliveryNotificationPort;
   emitNotification: EmitBubbleNotificationPort;
+  resolveDeliveryMessageRef: ResolveDeliveryMessageRefPort;
+  retryStuckAgentInput: RetryStuckAgentInputPort;
 }
 
 export async function buildNotExpiredResult(
@@ -36,7 +41,7 @@ export async function buildNotExpiredResult(
   // input buffer (Enter didn't register during delivery), retry it now.
   let stuckRetried: boolean | undefined;
   if (context.state.state === "RUNNING" && context.state.active_agent !== null) {
-    const retryResult = await retryStuckAgentInput({
+    const retryResult = await context.retryStuckAgentInput({
       bubbleId: context.resolved.bubbleId,
       bubbleConfig: context.resolved.bubbleConfig,
       sessionsPath: context.resolved.bubblePaths.sessionsPath,
@@ -81,7 +86,7 @@ export async function escalateRunningWatchdog(
     bubbleConfig: context.resolved.bubbleConfig,
     sessionsPath: context.resolved.bubblePaths.sessionsPath,
     envelope: appended.envelope,
-    messageRef: resolveDeliveryMessageRef({
+    messageRef: context.resolveDeliveryMessageRef({
       bubbleId: context.resolved.bubbleId,
       sessionsPath: context.resolved.bubblePaths.sessionsPath,
       envelope: appended.envelope

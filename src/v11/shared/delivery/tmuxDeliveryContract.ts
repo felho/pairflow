@@ -1,4 +1,4 @@
-import type { BubbleConfig } from "../../../types/bubble.js";
+import type { AgentName, BubbleConfig } from "../../../types/bubble.js";
 import type { ProtocolEnvelope } from "../../../types/protocol.js";
 import type { ReviewerTestExecutionDirective } from "../reviewer/testEvidence.js";
 import type { ReviewerFocusExtractionResult } from "../reviewer/reviewerBrief.js";
@@ -43,4 +43,16 @@ export interface ResolveDeliveryMessageRefInput {
   sessionsPath: string;
   envelope: ProtocolEnvelope;
   messageRef?: string;
+}
+
+export interface RetryStuckAgentInputOptions {
+  bubbleId: string;
+  bubbleConfig: BubbleConfig;
+  sessionsPath: string;
+  activeAgent: AgentName;
+}
+
+export interface RetryStuckAgentInputResult {
+  retried: boolean;
+  reason?: "no_session" | "no_pane" | "not_stuck" | "pane_read_failed";
 }

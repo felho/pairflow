@@ -76,6 +76,9 @@ export async function runBubbleWatchdog(
   const resolveDeliveryMessageRef =
     dependencies.resolveDeliveryMessageRef
     ?? watchdogPendingReworkDefaults.resolveDeliveryMessageRef;
+  const retryStuckAgentInput =
+    dependencies.retryStuckAgentInput
+    ?? watchdogCommandDefaults.retryStuckAgentInput;
   const context: WatchdogRuntimeContext = {
     now,
     nowIso,
@@ -87,32 +90,18 @@ export async function runBubbleWatchdog(
     loadedState,
     state,
     emitDelivery,
-    emitNotification
+    emitNotification,
+    resolveDeliveryMessageRef,
+    retryStuckAgentInput
   };
 
-  const pendingRework = await maybeApplyPendingReworkIntent({
-    now: context.now,
-    nowIso: context.nowIso,
-    resolved: context.resolved,
-    loadedState: context.loadedState,
-    state: context.state,
-    writeState: context.writeState,
-    emitDelivery: context.emitDelivery,
+  const pendingRework = await tryApplyPendingReworkIntent({
+    context,
+    appendTrace,
     ensureBubbleInstanceIdForMutation,
     resolveDeliveryMessageRef
   });
   if (pendingRework !== null) {
-    await appendTrace({
-      runtimeDir: resolved.bubblePaths.runtimeDir,
-      bubbleId: resolved.bubbleId,
-      entry: buildWatchdogTraceEntry({
-        nowIso,
-        state,
-        watchdog: null,
-        paneActivity: null,
-        result: pendingRework
-      })
-    });
     return pendingRework;
   }
 
@@ -152,6 +141,45 @@ export async function runBubbleWatchdog(
 
 export function asBubbleWatchdogError(error: unknown): never {
   return throwAsBubbleWatchdogError(error);
+}
+
+async function tryApplyPendingReworkIntent(input: {
+  context: WatchdogRuntimeContext;
+  appendTrace: AppendWatchdogTracePort;
+  ensureBubbleInstanceIdForMutation: NonNullable<
+    BubbleWatchdogDependencies["ensureBubbleInstanceIdForMutation"]
+  >;
+  resolveDeliveryMessageRef: NonNullable<
+    BubbleWatchdogDependencies["resolveDeliveryMessageRef"]
+  >;
+}): Promise<BubbleWatchdogResult | null> {
+  const pendingRework = await maybeApplyPendingReworkIntent({
+    now: input.context.now,
+    nowIso: input.context.nowIso,
+    resolved: input.context.resolved,
+    loadedState: input.context.loadedState,
+    state: input.context.state,
+    writeState: input.context.writeState,
+    emitDelivery: input.context.emitDelivery,
+    ensureBubbleInstanceIdForMutation: input.ensureBubbleInstanceIdForMutation,
+    resolveDeliveryMessageRef: input.resolveDeliveryMessageRef
+  });
+  if (pendingRework === null) {
+    return null;
+  }
+
+  await input.appendTrace({
+    runtimeDir: input.context.resolved.bubblePaths.runtimeDir,
+    bubbleId: input.context.resolved.bubbleId,
+    entry: buildWatchdogTraceEntry({
+      nowIso: input.context.nowIso,
+      state: input.context.state,
+      watchdog: null,
+      paneActivity: null,
+      result: pendingRework
+    })
+  });
+  return pendingRework;
 }
 
 function buildWatchdogTraceEntry(input: {
