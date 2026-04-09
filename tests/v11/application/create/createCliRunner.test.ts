@@ -2,27 +2,18 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { BubbleCreateResult } from "../../../../src/v11/application/create/createCommandContract.js";
 
-const { registerRepoInRegistry } = vi.hoisted(() => ({
-  registerRepoInRegistry: vi.fn(async () => ({
-    added: true,
-    entry: {
-      repoPath: "/tmp/repo",
-      addedAt: "2026-02-25T20:00:00.000Z"
-    },
-    registryPath: "/tmp/registry.json"
-  }))
-}));
-
-vi.mock("../../../../src/core/repo/createCliDefaults.js", () => ({
-  createCliDependencyDefaults: {
-    registerRepoInRegistry
-  }
-}));
-
 import { runBubbleCreateCommand } from "../../../../src/v11/application/create/createCliRunner.js";
 
 describe("create CLI runner", () => {
-  it("uses the caller-boundary repo registry default when no override is provided", async () => {
+  it("uses an injected repo registry dependency when provided", async () => {
+    const registerRepoInRegistry = vi.fn(async () => ({
+      added: true,
+      entry: {
+        repoPath: "/tmp/repo",
+        addedAt: "2026-02-25T20:00:00.000Z"
+      },
+      registryPath: "/tmp/registry.json"
+    }));
     const createBubble = vi.fn(async () => ({
       bubbleId: "b_create_runner_01"
     }) as unknown as BubbleCreateResult);
@@ -42,7 +33,8 @@ describe("create CLI runner", () => {
       ],
       "/tmp",
       {
-        createBubble
+        createBubble,
+        registerRepoInRegistry
       }
     );
 

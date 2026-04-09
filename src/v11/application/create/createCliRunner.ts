@@ -1,4 +1,3 @@
-import { createCliDependencyDefaults } from "../../../core/repo/createCliDefaults.js";
 import type { RegisterRepoInRegistryPort } from "../../shared/ports/repoRegistry.js";
 import {
   buildCreateBubbleInput,
@@ -30,14 +29,13 @@ export async function runBubbleCreateCommand(
   }
 
   const resolvedDependencies = resolveBubbleCreateCommandDependencies(dependencies);
-  const registerRepoInRegistry =
-    dependencies.registerRepoInRegistry ??
-    createCliDependencyDefaults.registerRepoInRegistry;
   const createInput = buildCreateBubbleInput(options, cwd);
   const created = await resolvedDependencies.create(createInput.input);
   await registerRepoAfterCreateBestEffort({
     repoPath: createInput.repoPath,
-    register: registerRepoInRegistry,
+    ...(resolvedDependencies.register !== undefined
+      ? { register: resolvedDependencies.register }
+      : {}),
     reportWarning: resolvedDependencies.reportWarning
   });
   return created;
