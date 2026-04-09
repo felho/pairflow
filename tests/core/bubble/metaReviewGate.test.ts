@@ -29,7 +29,7 @@ import {
 } from "../../../src/v11/infrastructure/state/stateStore.js";
 import { buildRunningExecutionContext } from "../../../src/v11/shared/state/executionContext.js";
 import { applyStateTransition } from "../../../src/v11/domain/state/machine.js";
-import { SchemaValidationError } from "../../../src/core/validation.js";
+import { SchemaValidationError } from "../../../src/v11/shared/validation/primitives.js";
 import { deliveryTargetRoleMetadataKey } from "../../../src/types/protocol.js";
 import type { BubbleMetaReviewSnapshotState } from "../../../src/types/bubble.js";
 import { initGitRepository } from "../../helpers/git.js";

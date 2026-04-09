@@ -7,7 +7,7 @@ import {
   isRecord,
   validationOk,
   type ValidationResult
-} from "../core/validation.js";
+} from "../v11/shared/validation/primitives.js";
 import { parseToml } from "./bubbleConfig.js";
 
 export type PairflowRepoConfig = Record<string, never>;

@@ -9,7 +9,7 @@ import {
   clearStaleRecoveryMisconfigurationWarnings,
   FileLockTimeoutError,
   withFileLock
-} from "../../../src/core/util/fileLock.js";
+} from "../../../src/v11/infrastructure/foundation/fs/fileLock.js";
 
 const tempDirs: string[] = [];
 

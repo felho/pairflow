@@ -4,7 +4,7 @@ import { join } from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { SchemaValidationError } from "../../src/core/validation.js";
+import { SchemaValidationError } from "../../src/v11/shared/validation/primitives.js";
 import {
   loadPairflowGlobalConfig,
   parsePairflowGlobalConfigToml,

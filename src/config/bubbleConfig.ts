@@ -8,7 +8,7 @@ import {
   validationOk,
   type ValidationError,
   type ValidationResult
-} from "../core/validation.js";
+} from "../v11/shared/validation/primitives.js";
 import {
   DEFAULT_COMMIT_REQUIRES_APPROVAL,
   DEFAULT_DOC_CONTRACT_ROUND_GATE_APPLIES_AFTER,

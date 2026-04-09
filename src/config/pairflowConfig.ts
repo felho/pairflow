@@ -11,7 +11,7 @@ import {
   validationOk,
   type ValidationError,
   type ValidationResult
-} from "../core/validation.js";
+} from "../v11/shared/validation/primitives.js";
 import { isAttachLauncher, type AttachLauncher } from "../types/bubble.js";
 
 export interface PairflowGlobalConfig {

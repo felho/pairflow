@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { isIsoTimestamp } from "../../src/core/validation.js";
+import { isIsoTimestamp } from "../../src/v11/shared/validation/primitives.js";
 
 describe("isIsoTimestamp", () => {
   it("accepts strict UTC ISO format", () => {
