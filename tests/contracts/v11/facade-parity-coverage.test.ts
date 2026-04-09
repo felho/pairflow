@@ -8,7 +8,8 @@ import { commandMigrationMap } from "./migration-map.js";
 const commandsWithoutFacadeParitySentinel = [
   "approval",
   "askHuman",
-  "reply"
+  "reply",
+  "resume"
 ] as const;
 
 const facadeParityTestsByCommand: Record<string, readonly string[]> = {
@@ -28,7 +29,6 @@ const facadeParityTestsByCommand: Record<string, readonly string[]> = {
   start: ["tests/v11/application/start/startFacadeParity.test.ts"],
   stop: ["tests/v11/application/stop/stopFacadeParity.test.ts"],
   restart: ["tests/v11/application/restart/restartFacadeParity.test.ts"],
-  resume: ["tests/v11/application/resume/resumeFacadeParity.test.ts"],
   watchdog: ["tests/v11/application/watchdog/watchdogFacadeParity.test.ts"],
   commit: ["tests/v11/application/commit/commitFacadeParity.test.ts"],
   merge: ["tests/v11/application/merge/mergeFacadeParity.test.ts"],

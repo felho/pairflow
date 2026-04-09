@@ -96,7 +96,7 @@ export const commandMigrationMap: readonly CommandMigrationEntry[] = [
     command: "resume",
     state: "v11",
     owner: "runtime",
-    notes: "Core facade now delegates to v11 resume orchestration seams; v11 is the source of truth."
+    notes: "Direct library exports already route to the v11 resume entrypoint; remaining core compatibility is tracked separately from facade-parity sentinels."
   },
   {
     command: "watchdog",
