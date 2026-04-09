@@ -3,8 +3,8 @@ import { clearLiveMetaReviewSnapshot } from "../metaReview/metaReviewSnapshot.js
 import { metaReviewExecutionContextToRunningContext } from "../../shared/state/executionContext.js";
 import {
   type LoadedStateSnapshot,
-  type writeStateSnapshot
-} from "../../../core/state/stateStore.js";
+  type WriteStateSnapshotPort
+} from "../ports/stateSnapshots.js";
 import type { BubbleStateSnapshot } from "../../../types/bubble.js";
 import { toMetaReviewGateError } from "./metaReviewGateErrorConversion.js";
 import {
@@ -33,7 +33,7 @@ export async function stageMetaReviewRunningState(input: {
   nowIso: string;
   watchdogTimeoutMinutes: number;
   statePath: string;
-  writeState: typeof writeStateSnapshot;
+  writeState: WriteStateSnapshotPort;
 }): Promise<LoadedStateSnapshot> {
   const previousMetaReview = clearLiveMetaReviewSnapshot(
     input.loadedRunning.state.meta_review

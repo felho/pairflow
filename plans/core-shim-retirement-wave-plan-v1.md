@@ -59,6 +59,9 @@ These numbers are triage inputs, not yet a finalized ledger.
 - after `4224fd82 refactor(shim): remove error-only core classifiers`:
   - total direct residual imports: `188`
   - retired-shim subset: `7`
+- after the meta-review-gate shared type-port batch:
+  - total direct residual imports: `185`
+  - retired-shim subset: `7`
 
 Latest validated state:
 

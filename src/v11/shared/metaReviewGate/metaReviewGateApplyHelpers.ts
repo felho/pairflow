@@ -1,12 +1,12 @@
 import type {
-  appendProtocolEnvelope,
+  AppendProtocolEnvelopePort,
   AppendProtocolEnvelopeResult
-} from "../../../core/protocol/transcriptStore.js";
+} from "../ports/transcript.js";
 import { buildMetaReviewSubmitCommandTemplate } from "../metaReview/metaReviewSubmitGuidance.js";
 import {
   type LoadedStateSnapshot,
-  type writeStateSnapshot
-} from "../../../core/state/stateStore.js";
+  type WriteStateSnapshotPort
+} from "../ports/stateSnapshots.js";
 import {
   deliveryTargetRoleMetadataKey
 } from "../../../types/protocol.js";
@@ -22,7 +22,7 @@ import {
 import type { MetaReviewGateResult } from "./metaReviewGateTypes.js";
 
 export async function appendMetaReviewKickoffEnvelope(input: {
-  appendEnvelope: typeof appendProtocolEnvelope;
+  appendEnvelope: AppendProtocolEnvelopePort;
   transcriptPath: string;
   inboxPath: string;
   lockPath: string;
@@ -65,8 +65,8 @@ export async function appendMetaReviewKickoffEnvelope(input: {
 }
 
 export async function persistMetaReviewRunFailedRoute(input: {
-  appendEnvelope: typeof appendProtocolEnvelope;
-  writeState: typeof writeStateSnapshot;
+  appendEnvelope: AppendProtocolEnvelopePort;
+  writeState: WriteStateSnapshotPort;
   statePath: string;
   transcriptPath: string;
   inboxPath: string;
