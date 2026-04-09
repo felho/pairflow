@@ -27,7 +27,7 @@ import {
   MetaReviewGateErrorV11 as MetaReviewGateError,
   recoverMetaReviewGateFromSnapshotV11 as recoverMetaReviewGateFromSnapshot
 } from "../../../src/v11/application/metaReviewGate/emitMetaReviewGateV11.js";
-import { createBubble } from "../../../src/core/bubble/createBubble.js";
+import { createBubble } from "../../../src/v11/application/create/createBubble.js";
 import {
   appendProtocolEnvelope,
   readTranscriptEnvelopes

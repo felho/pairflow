@@ -4,7 +4,7 @@ import { join } from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { createBubble } from "../../../src/core/bubble/createBubble.js";
+import { createBubble } from "../../../src/v11/application/create/createBubble.js";
 import { buildMetaReviewExecutionContext } from "../../../src/v11/shared/metaReview/metaReviewExecutionContext.js";
 import {
   BubbleListErrorV11 as BubbleListError,

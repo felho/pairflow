@@ -7,7 +7,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   createBubble,
   extractReviewerFocus
-} from "../../../src/core/bubble/createBubble.js";
+} from "../../../src/v11/application/create/createBubble.js";
 import { getBubblePaths } from "../../../src/v11/infrastructure/artifact/bubble/paths.js";
 import {
   INVALID_REVIEW_ARTIFACT_TYPE_OPTION,

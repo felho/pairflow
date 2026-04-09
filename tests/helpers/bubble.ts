@@ -2,7 +2,8 @@ import { createHash } from "node:crypto";
 import { writeFile } from "node:fs/promises";
 
 import { renderBubbleConfigToml } from "../../src/config/bubbleConfig.js";
-import { createBubble, type BubbleCreateResult } from "../../src/core/bubble/createBubble.js";
+import { createBubble } from "../../src/v11/application/create/createBubble.js";
+import type { BubbleCreateResult } from "../../src/v11/application/create/createCommandContract.js";
 import { buildRunningExecutionContext } from "../../src/v11/shared/state/executionContext.js";
 import { readStateSnapshot, writeStateSnapshot } from "../../src/v11/infrastructure/state/stateStore.js";
 import { bootstrapWorktreeWorkspace } from "../../src/v11/infrastructure/workspace/worktreeManager.js";

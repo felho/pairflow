@@ -10,7 +10,7 @@ import {
   ensureBubbleInstanceIdForMutation
 } from "../../../src/v11/infrastructure/artifact/bubble/bubbleInstanceId.js";
 import { resolveBubbleById } from "../../../src/v11/infrastructure/executor/workspace/bubbleLookup.js";
-import { createBubble } from "../../../src/core/bubble/createBubble.js";
+import { createBubble } from "../../../src/v11/application/create/createBubble.js";
 import { initGitRepository } from "../../helpers/git.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
 

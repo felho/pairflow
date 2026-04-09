@@ -17,7 +17,7 @@ import {
   parseBubbleCreateCommandOptions,
   runBubbleCreateCommand
 } from "../../src/cli/commands/bubble/create.js";
-import type { BubbleCreateResult } from "../../src/core/bubble/createBubble.js";
+import type { BubbleCreateResult } from "../../src/v11/application/create/createCommandContract.js";
 
 describe("parseBubbleCreateCommandOptions", () => {
   it("parses required flags", () => {

@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { renderBubbleConfigToml } from "../../../src/config/bubbleConfig.js";
-import { createBubble } from "../../../src/core/bubble/createBubble.js";
+import { createBubble } from "../../../src/v11/application/create/createBubble.js";
 import { parsePassCommandOptions } from "../../../src/cli/commands/agent/pass.js";
 import {
   emitPassFromWorkspaceV11 as emitPassFromWorkspace

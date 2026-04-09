@@ -5,7 +5,7 @@ import { join } from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { createBubble } from "../../../src/core/bubble/createBubble.js";
+import { createBubble } from "../../../src/v11/application/create/createBubble.js";
 import { MetaReviewGateErrorV11 as MetaReviewGateError } from "../../../src/v11/application/metaReviewGate/emitMetaReviewGateV11.js";
 import {
   emitAskHumanFromWorkspaceV11 as emitAskHumanFromWorkspace

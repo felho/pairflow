@@ -7,7 +7,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { emitConvergedFromWorkspaceV11 as emitConvergedFromWorkspace } from "../../../src/v11/application/converged/emitConvergedV11.js";
 import { emitPassFromWorkspaceV11 as emitPassFromWorkspace } from "../../../src/v11/application/pass/emitPassV11.js";
 import { runAgentEmitCommand } from "../../../src/cli/commands/agent/emit.js";
-import { createBubble } from "../../../src/core/bubble/createBubble.js";
+import { createBubble } from "../../../src/v11/application/create/createBubble.js";
 import { submitMetaReviewResultV11 as submitMetaReviewResult } from "../../../src/v11/application/metaReview/emitMetaReviewV11.js";
 import { applyMetaReviewGateOnConvergenceV11 as applyMetaReviewGateOnConvergence } from "../../../src/v11/application/metaReviewGate/emitMetaReviewGateV11.js";
 import { startBubbleV11 as startBubble } from "../../../src/v11/application/start/emitStartV11.js";
