@@ -13,4 +13,4 @@ export {
   asRestartBubbleError as asRestartBubbleErrorV11,
   restartBubble,
   restartBubble as restartBubbleV11
-} from "../../../core/bubble/restartBubble.js";
+} from "./restartCommandApi.js";

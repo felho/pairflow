@@ -253,16 +253,24 @@ These numbers are triage inputs, not yet a finalized ledger.
     instead of class identity
   - current residual set:
     `restart`
+- latest checkpoint after the `restart` defaults-boundary redesign batch:
+  - total direct residual imports: `0`
+  - `emitRestartV11` no longer carries a static `src/core/**` import
+  - `restart` now resolves defaults through a local `restartCommandApi` +
+    `restartCommandDefaults` split while `core/bubble/restartBubble.ts`
+    remains a compatibility facade
+  - restart parity and contract coverage stayed green
 
 Latest validated state:
 
 - `tests/contracts/v11/core-shim-boundary-coverage.test.ts` PASS in warn-only mode
-- latest validated boundary residual count: `1`
+- latest validated boundary residual count: `0`
 - latest explicit residual:
-  - `src/v11/application/restart/emitRestartV11.ts -> src/core/bubble/restartBubble.ts`
+  - none in static `src/v11/**` / `src/cli/**` -> `src/core/**` imports
 - latest targeted validation still green for the shim-retirement wave:
   - `tests/v11/application/restart/restartFacadeParity.test.ts`
   - `tests/core/bubble/restartBubble.test.ts`
+  - `tests/contracts/v11/restart.contract.test.ts`
   - `tests/cli/bubbleRestartCommand.test.ts`
   - `tests/core/bubble/statusBubble.test.ts`
   - `tests/cli/bubbleStatusCommand.test.ts`
@@ -270,6 +278,10 @@ Latest validated state:
   - `tests/v11/application/status/statusCliEntrypointParity.test.ts`
   - `tests/v11/shared/inbox/inboxCommandApi.test.ts`
   - `tests/contracts/v11/core-shim-boundary-coverage.test.ts`
+  - `pnpm typecheck`
+- latest fitness baseline after the restart redesign:
+  - `dependency`: `30 fail / 2 warn`
+  - `error`: `2 fail / 0 warn`
   - `pnpm typecheck`
 - note:
   - full fitness still has pre-existing non-shim findings (`error`, `dependency`)
