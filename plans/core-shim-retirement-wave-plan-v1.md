@@ -48,9 +48,7 @@ waves:
 - worktree clean
 - `tests/contracts/v11/core-shim-boundary-coverage.test.ts` passes
 - static direct residual bridge inventory remains locked to 0 entries
-- non-intentional `tests/core/**` thin-shim frontier is retired
-- one intentional compatibility bridge remains:
-  - `tests/core/runtime/passValidationRunner.bridge.test.ts`
+- `tests/core/**` thin-shim frontier is retired to 0 entries
 
 Current remaining non-inventory bridge candidates:
 
@@ -85,13 +83,13 @@ Verified after the staged `tests/core/**` retirement waves:
 
 Current residual summary:
 
-- `tests/core/**` non-intentional thin-shim frontier: `0`
-- intentional bridge coverage:
-  - `tests/core/runtime/passValidationRunner.bridge.test.ts`
+- `tests/core/**` thin-shim frontier: `0`
+- intentional bridge coverage: `0`
 
 Outcome:
 
 - the broad `tests/core/**` shim-consumer retirement is complete
+- no `tests/core/**` compatibility sentinel bridge remains
 - remaining future work, if any, is not about test-consumer shim drift
 - the boundary coverage test can stay warn-only only for broader policy
   reasons, not because this `tests/core/**` frontier remains large
