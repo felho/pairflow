@@ -3,11 +3,11 @@ import {
   BubbleStatusError,
   getBubbleStatus
 } from "../../shared/status/statusCommandApi.js";
-import { readWatchdogPaneActivity } from "../../infrastructure/artifact/watchdog/watchdogPaneActivityStore.js";
 import type {
   BubbleStatusInput,
   BubbleStatusView
 } from "../../shared/status/statusCommandApi.js";
+import { readWatchdogPaneActivity } from "./statusCommandDefaults.js";
 export type {
   BubbleStatusInput as BubbleStatusV11Input,
   BubbleStatusView as BubbleStatusV11View
