@@ -42,30 +42,31 @@ state still contains a large residual `v11/cli -> core` surface.
 
 ## Current Explicit Residual Inventory
 
-Latest verified checkpoint after the merge defaults redesign:
+Latest verified checkpoint after the meta-review-gate defaults redesign:
 
 - worktree clean
 - `tests/contracts/v11/core-shim-boundary-coverage.test.ts` passes
-- static direct residual bridge inventory is locked to 0 entries
-- remaining work has moved to dynamic core bridges that the current boundary
-  test does not detect
+- static direct residual bridge inventory remains locked to 0 entries
+- the previously known `metaReviewGate` dynamic core bridge is retired
+- remaining work has moved to broader dynamic core bridges that the current
+  boundary test does not detect
 
-Current remaining non-inventory bridge set:
+Current remaining non-inventory bridge candidates:
 
-- `src/v11/application/metaReviewGate/metaReviewGateDependencyDefaults.ts`
-  -> dynamic import of `src/core/bubble/metaReviewGateDefaults.ts`
+- `src/v11/application/pass/passValidationDependencyDefaults.ts`
+- `src/v11/shared/gates/docContractGateArtifactDefaults.ts`
+- `src/v11/shared/metaReview/metaReviewDependencyDefaults.ts`
+- `src/v11/shared/metrics/bubbleEvents.ts`
 
 Current classification:
 
 - `easy`
   - none confirmed at this checkpoint
 - `medium`
-  - `metaReviewGateDependencyDefaults`
-  - remaining broader non-inventory cleanup candidates still include:
-    `passValidationDependencyDefaults`,
-    `docContractGateArtifactDefaults`,
-    `metaReviewDependencyDefaults`,
-    and `bubbleEvents`
+  - `passValidationDependencyDefaults`
+  - `docContractGateArtifactDefaults`
+  - `metaReviewDependencyDefaults`
+  - `bubbleEvents`
 - `hard / architecture-sensitive`
   - none confirmed at this checkpoint
 
@@ -84,6 +85,11 @@ Immediate planning note:
   - local defaults live in `src/v11/application/merge/mergeCommandDefaults.ts`
   - `mergeCommandDependencyResolution.ts` no longer imports
     `src/core/bubble/mergeBubbleDefaults.ts`
+- the previous `metaReviewGate` bridge is now retired:
+  - local defaults live in
+    `src/v11/application/metaReviewGate/metaReviewGateCommandDefaults.ts`
+  - `metaReviewGateDependencyDefaults.ts` no longer imports
+    `src/core/bubble/metaReviewGateDefaults.ts`
 
 Observed warning snapshot when the test was downgraded:
 
