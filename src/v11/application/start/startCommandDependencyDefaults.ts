@@ -1,25 +1,43 @@
 import { readTranscriptEnvelopes } from "../../shared/transcript/transcriptDependencyDefaults.js";
+import type { ResolveBubbleByIdPort } from "../../shared/ports/bubbleLookup.js";
+import type { EnsureBubbleInstanceIdForMutationPort } from "../../shared/ports/bubbleIdentity.js";
+import type { RegisterRepoInRegistryPort } from "../../shared/ports/repoRegistry.js";
+import type { ReadStateSnapshotPort } from "../../shared/ports/stateSnapshots.js";
+import type { TmuxRunner } from "../../shared/ports/tmuxSessions.js";
 
-type StartCliDependencyDefaults = typeof import("../../../core/bubble/startCliDefaults.js").startCliDependencyDefaults;
-type StartCommandContextDefaults = typeof import("../../../core/bubble/startCommandContextDefaults.js").startCommandContextDefaults;
-type RunTmuxPort = typeof import("../../../core/runtime/tmuxManager.js").runTmux;
+interface StartCliDependencyDefaults {
+  resolveBubbleById: ResolveBubbleByIdPort;
+  registerRepoInRegistry: RegisterRepoInRegistryPort;
+}
 
-let startCliDependencyDefaultsPromise: Promise<StartCliDependencyDefaults> | undefined;
+interface StartCommandContextDefaults {
+  resolveBubbleById: ResolveBubbleByIdPort;
+  ensureBubbleInstanceIdForMutation: EnsureBubbleInstanceIdForMutationPort;
+  readStateSnapshot: ReadStateSnapshotPort;
+}
+
+type RunTmuxPort = TmuxRunner;
+
+let startCliDependencyDefaultsPromise:
+  | Promise<StartCliDependencyDefaults>
+  | undefined;
 let startCommandContextDefaultsPromise:
   | Promise<StartCommandContextDefaults>
   | undefined;
-let tmuxManagerPromise:
-  | Promise<{ runTmux: RunTmuxPort }>
-  | undefined;
+let tmuxManagerPromise: Promise<{ runTmux: RunTmuxPort }> | undefined;
 
-async function loadStartCliDependencyDefaults(): Promise<StartCliDependencyDefaults> {
+async function loadStartCliDependencyDefaults(): Promise<
+  StartCliDependencyDefaults
+> {
   startCliDependencyDefaultsPromise ??= import(
     "../../../core/bubble/startCliDefaults.js"
   ).then(({ startCliDependencyDefaults }) => startCliDependencyDefaults);
   return startCliDependencyDefaultsPromise;
 }
 
-async function loadStartCommandContextDefaults(): Promise<StartCommandContextDefaults> {
+async function loadStartCommandContextDefaults(): Promise<
+  StartCommandContextDefaults
+> {
   startCommandContextDefaultsPromise ??= import(
     "../../../core/bubble/startCommandContextDefaults.js"
   ).then(({ startCommandContextDefaults }) => startCommandContextDefaults);
@@ -27,7 +45,9 @@ async function loadStartCommandContextDefaults(): Promise<StartCommandContextDef
 }
 
 async function loadTmuxManager(): Promise<{ runTmux: RunTmuxPort }> {
-  tmuxManagerPromise ??= import("../../../core/runtime/tmuxManager.js");
+  tmuxManagerPromise ??= import("../../../core/runtime/tmuxManager.js").then(
+    ({ runTmux }) => ({ runTmux })
+  );
   return tmuxManagerPromise;
 }
 

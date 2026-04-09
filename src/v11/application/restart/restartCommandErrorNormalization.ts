@@ -1,5 +1,3 @@
-import type { StartBubbleErrorV11 as StartBubbleError } from "../start/emitStartV11.js";
-
 export interface NormalizeRestartBubbleErrorInput {
   error: unknown;
   isRestartBubbleError: (candidate: unknown) => boolean;

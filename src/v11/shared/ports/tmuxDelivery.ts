@@ -3,6 +3,7 @@ import type {
   EmitTmuxDeliveryNotificationResult,
   ResolveDeliveryMessageRefInput
 } from "../delivery/tmuxDeliveryContract.js";
+import type * as TmuxDeliveryContract from "../delivery/tmuxDeliveryContract.js";
 
 export type {
   DeliveryTargetReasonCode,
@@ -23,5 +24,5 @@ export type ResolveDeliveryMessageRefPort = (
 ) => string;
 
 export type RetryStuckAgentInputPort = (
-  input: import("../delivery/tmuxDeliveryContract.js").RetryStuckAgentInputOptions
-) => Promise<import("../delivery/tmuxDeliveryContract.js").RetryStuckAgentInputResult>;
+  input: TmuxDeliveryContract.RetryStuckAgentInputOptions
+) => Promise<TmuxDeliveryContract.RetryStuckAgentInputResult>;

@@ -19,8 +19,22 @@ import type {
 import type {
   ResolveReviewerTestExecutionDirectivePort
 } from "../../shared/ports/reviewerTestEvidenceArtifacts.js";
-
-type StartBubbleDependencyDefaults = typeof import("../../../core/bubble/startBubbleDefaults.js").startBubbleDependencyDefaults;
+interface StartBubbleDependencyDefaults {
+  bootstrapWorktreeWorkspace:
+    NonNullable<StartBubbleDependencies["bootstrapWorktreeWorkspace"]>;
+  cleanupWorktreeWorkspace:
+    NonNullable<StartBubbleDependencies["cleanupWorktreeWorkspace"]>;
+  launchBubbleTmuxSession:
+    NonNullable<StartBubbleDependencies["launchBubbleTmuxSession"]>;
+  terminateBubbleTmuxSession:
+    NonNullable<StartBubbleDependencies["terminateBubbleTmuxSession"]>;
+  claimRuntimeSession:
+    NonNullable<StartBubbleDependencies["claimRuntimeSession"]>;
+  removeRuntimeSession:
+    NonNullable<StartBubbleDependencies["removeRuntimeSession"]>;
+  writeStateSnapshot:
+    NonNullable<StartBubbleDependencies["writeStateSnapshot"]>;
+}
 
 let startBubbleDependencyDefaultsPromise:
   | Promise<StartBubbleDependencyDefaults>
@@ -29,7 +43,22 @@ let startBubbleDependencyDefaultsPromise:
 async function loadStartBubbleDependencyDefaults(): Promise<StartBubbleDependencyDefaults> {
   startBubbleDependencyDefaultsPromise ??= import(
     "../../../core/bubble/startBubbleDefaults.js"
-  ).then(({ startBubbleDependencyDefaults }) => startBubbleDependencyDefaults);
+  ).then(({ startBubbleDependencyDefaults }) => ({
+    bootstrapWorktreeWorkspace:
+      startBubbleDependencyDefaults.bootstrapWorktreeWorkspace,
+    cleanupWorktreeWorkspace:
+      startBubbleDependencyDefaults.cleanupWorktreeWorkspace,
+    launchBubbleTmuxSession:
+      startBubbleDependencyDefaults.launchBubbleTmuxSession,
+    terminateBubbleTmuxSession:
+      startBubbleDependencyDefaults.terminateBubbleTmuxSession,
+    claimRuntimeSession:
+      startBubbleDependencyDefaults.claimRuntimeSession,
+    removeRuntimeSession:
+      startBubbleDependencyDefaults.removeRuntimeSession,
+    writeStateSnapshot:
+      startBubbleDependencyDefaults.writeStateSnapshot
+  }));
   return startBubbleDependencyDefaultsPromise;
 }
 

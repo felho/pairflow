@@ -63,10 +63,10 @@ function resolveBubbleStartDependencies(
   return {
     resolveBubble:
       dependencies.resolveBubbleById
-      ?? startCliDependencyDefaults.resolveBubbleById,
+      ?? ((...args) => startCliDependencyDefaults.resolveBubbleById(...args)),
     register:
       dependencies.registerRepoInRegistry
-      ?? startCliDependencyDefaults.registerRepoInRegistry,
+      ?? ((...args) => startCliDependencyDefaults.registerRepoInRegistry(...args)),
     runStartBubble: dependencies.startBubble ?? startBubble,
     reportWarning:
       dependencies.reportRegistryRegistrationWarning ??

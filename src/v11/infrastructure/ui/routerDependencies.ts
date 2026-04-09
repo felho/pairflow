@@ -7,18 +7,49 @@ import type {
   CreateUiRouterInput
 } from "./routerContracts.js";
 
+type CoreUiRouterDependencyDefaults = Pick<
+  UiRouterDependencies,
+  | "commitBubble"
+  | "deleteBubble"
+  | "emitApprove"
+  | "emitHumanReply"
+  | "emitRequestRework"
+  | "getBubbleStatus"
+  | "listBubbles"
+  | "mergeBubble"
+  | "openBubble"
+  | "restartBubble"
+  | "resumeBubble"
+  | "startBubble"
+  | "stopBubble"
+>;
+
 let uiRouterDependencyDefaultsPromise:
-  | Promise<typeof import("../../../core/ui/routerDefaults.js")["uiRouterDependencyDefaults"]>
+  | Promise<CoreUiRouterDependencyDefaults>
   | undefined;
 
-async function loadUiRouterDependencyDefaults() {
+async function loadUiRouterDependencyDefaults(): Promise<CoreUiRouterDependencyDefaults> {
   uiRouterDependencyDefaultsPromise ??= import(
     "../../../core/ui/routerDefaults.js"
-  ).then(({ uiRouterDependencyDefaults }) => uiRouterDependencyDefaults);
+  ).then(({ uiRouterDependencyDefaults }) => ({
+    commitBubble: uiRouterDependencyDefaults.commitBubble,
+    deleteBubble: uiRouterDependencyDefaults.deleteBubble,
+    emitApprove: uiRouterDependencyDefaults.emitApprove,
+    emitHumanReply: uiRouterDependencyDefaults.emitHumanReply,
+    emitRequestRework: uiRouterDependencyDefaults.emitRequestRework,
+    getBubbleStatus: uiRouterDependencyDefaults.getBubbleStatus,
+    listBubbles: uiRouterDependencyDefaults.listBubbles,
+    mergeBubble: uiRouterDependencyDefaults.mergeBubble,
+    openBubble: uiRouterDependencyDefaults.openBubble,
+    restartBubble: uiRouterDependencyDefaults.restartBubble,
+    resumeBubble: uiRouterDependencyDefaults.resumeBubble,
+    startBubble: uiRouterDependencyDefaults.startBubble,
+    stopBubble: uiRouterDependencyDefaults.stopBubble
+  }));
   return uiRouterDependencyDefaultsPromise;
 }
 
-export const defaultUiRouterDependencies = {
+export const defaultUiRouterDependencies: UiRouterDependencies = {
   ...await loadUiRouterDependencyDefaults(),
   getBubbleInbox,
   readRuntimeSessionsRegistry,

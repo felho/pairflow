@@ -199,6 +199,7 @@ export async function emitMetaReviewerActorProtocolV11(
   ActorEmitResultV11,
   { kind: "meta_review_result" }
 >> {
+  void dependencies;
   const { input, authoritativeContext: context } = resolvedInput;
   assertActorEmitInputMatchesContext({
     actorInput: input,

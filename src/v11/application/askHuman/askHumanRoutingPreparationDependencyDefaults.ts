@@ -1,9 +1,15 @@
 import {
   readStateSnapshot
 } from "../../shared/state/stateStoreDefaults.js";
+import type {
+  EnsureAskHumanBubbleInstanceIdentity,
+  ResolveAskHumanBubbleFromWorkspaceCwd
+} from "../../shared/askHuman/askHumanRoutingPreparationDependencyResolutionContract.js";
 
-type CoreAskHumanRoutingPreparationDefaults =
-  typeof import("../../../core/agent/askHumanDefaults.js").askHumanDependencyDefaults.routingPreparation;
+interface CoreAskHumanRoutingPreparationDefaults {
+  resolveBubbleFromWorkspaceCwd: ResolveAskHumanBubbleFromWorkspaceCwd;
+  ensureBubbleInstanceIdForMutation: EnsureAskHumanBubbleInstanceIdentity;
+}
 
 let coreAskHumanRoutingPreparationDefaultsPromise:
   | Promise<CoreAskHumanRoutingPreparationDefaults>
@@ -12,7 +18,12 @@ let coreAskHumanRoutingPreparationDefaultsPromise:
 async function loadCoreAskHumanRoutingPreparationDefaults(): Promise<CoreAskHumanRoutingPreparationDefaults> {
   coreAskHumanRoutingPreparationDefaultsPromise ??= import(
     "../../../core/agent/askHumanDefaults.js"
-  ).then(({ askHumanDependencyDefaults }) => askHumanDependencyDefaults.routingPreparation);
+  ).then(({ askHumanDependencyDefaults }) => ({
+    resolveBubbleFromWorkspaceCwd:
+      askHumanDependencyDefaults.routingPreparation.resolveBubbleFromWorkspaceCwd,
+    ensureBubbleInstanceIdForMutation:
+      askHumanDependencyDefaults.routingPreparation.ensureBubbleInstanceIdForMutation
+  }));
   return coreAskHumanRoutingPreparationDefaultsPromise;
 }
 

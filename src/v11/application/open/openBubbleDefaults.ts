@@ -13,11 +13,13 @@ async function loadBubbleLookupModule(): Promise<{
   return bubbleLookupModulePromise;
 }
 
+export async function resolveBubbleById(
+  ...args: Parameters<ResolveBubbleByIdPort>
+): Promise<Awaited<ReturnType<ResolveBubbleByIdPort>>> {
+  const { resolveBubbleById } = await loadBubbleLookupModule();
+  return resolveBubbleById(...args);
+}
+
 export const openBubbleDefaults = {
-  async resolveBubbleById(
-    ...args: Parameters<ResolveBubbleByIdPort>
-  ): Promise<Awaited<ReturnType<ResolveBubbleByIdPort>>> {
-    const { resolveBubbleById } = await loadBubbleLookupModule();
-    return resolveBubbleById(...args);
-  }
+  resolveBubbleById
 } as const;

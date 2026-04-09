@@ -4,10 +4,8 @@ import {
   startBubbleV11
 } from "../../v11/application/start/emitStartV11.js";
 
-export {
-  asStartBubbleErrorV11 as asStartBubbleError,
-  StartBubbleErrorV11 as StartBubbleError
-} from "../../v11/application/start/emitStartV11.js";
+export const asStartBubbleError = asStartBubbleErrorV11;
+export const StartBubbleError = StartBubbleErrorV11;
 export type {
   StartBubbleV11Dependencies as StartBubbleDependencies,
   StartBubbleV11Input as StartBubbleInput,

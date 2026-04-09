@@ -20,7 +20,8 @@ export async function openBubble(
   return openBubbleRuntime(input, {
     ...dependencies,
     resolveBubbleById:
-      dependencies.resolveBubbleById ?? openBubbleDefaults.resolveBubbleById
+      dependencies.resolveBubbleById
+      ?? ((...args) => openBubbleDefaults.resolveBubbleById(...args))
   });
 }
 

@@ -8,7 +8,6 @@ import {
   writePassValidationReviewerCompatibilityArtifact
 } from "../../v11/infrastructure/artifact/validation/passValidationEvidence.js";
 import {
-  PassValidationRunnerExecutionError,
   runPassValidationCommand
 } from "../../v11/infrastructure/executor/validation/passValidationCommandRunner.js";
 

@@ -3,43 +3,26 @@ import {
   writeStateSnapshot
 } from "../state/stateStoreDefaults.js";
 import { appendProtocolEnvelope } from "../transcript/transcriptDependencyDefaults.js";
+import {
+  resolveBubbleById as coreResolveBubbleById
+} from "../../../core/bubble/bubbleLookup.js";
+import {
+  readRuntimeSessionsRegistry as coreReadRuntimeSessionsRegistry
+} from "../../../core/runtime/sessionsRegistry.js";
 
-type ResolveBubbleByIdPort =
-  typeof import("../../../core/bubble/bubbleLookup.js").resolveBubbleById;
-type ReadRuntimeSessionsRegistryPort =
-  typeof import("../../../core/runtime/sessionsRegistry.js").readRuntimeSessionsRegistry;
-
-let bubbleLookupModulePromise:
-  | Promise<typeof import("../../../core/bubble/bubbleLookup.js")>
-  | undefined;
-let runtimeSessionsRegistryModulePromise:
-  | Promise<typeof import("../../../core/runtime/sessionsRegistry.js")>
-  | undefined;
-
-async function loadBubbleLookupModule() {
-  bubbleLookupModulePromise ??= import("../../../core/bubble/bubbleLookup.js");
-  return bubbleLookupModulePromise;
-}
-
-async function loadRuntimeSessionsRegistryModule() {
-  runtimeSessionsRegistryModulePromise ??= import(
-    "../../../core/runtime/sessionsRegistry.js"
-  );
-  return runtimeSessionsRegistryModulePromise;
-}
+type ResolveBubbleByIdPort = typeof coreResolveBubbleById;
+type ReadRuntimeSessionsRegistryPort = typeof coreReadRuntimeSessionsRegistry;
 
 async function resolveBubbleById(
   ...args: Parameters<ResolveBubbleByIdPort>
 ): Promise<Awaited<ReturnType<ResolveBubbleByIdPort>>> {
-  const { resolveBubbleById } = await loadBubbleLookupModule();
-  return resolveBubbleById(...args);
+  return coreResolveBubbleById(...args);
 }
 
 async function readRuntimeSessionsRegistry(
   ...args: Parameters<ReadRuntimeSessionsRegistryPort>
 ): Promise<Awaited<ReturnType<ReadRuntimeSessionsRegistryPort>>> {
-  const { readRuntimeSessionsRegistry } = await loadRuntimeSessionsRegistryModule();
-  return readRuntimeSessionsRegistry(...args);
+  return coreReadRuntimeSessionsRegistry(...args);
 }
 
 export const metaReviewReadDefaults = {

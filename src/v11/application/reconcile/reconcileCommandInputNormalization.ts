@@ -2,15 +2,14 @@ import type {
   ReconcileRuntimeSessionsInput,
   TmuxSessionLivenessProbe
 } from "./reconcileCommandContract.js";
+import type { TmuxRunner } from "../../shared/ports/tmuxSessions.js";
 
-let tmuxManagerModulePromise:
-  | Promise<typeof import("../../../core/runtime/tmuxManager.js")>
-  | undefined;
+let tmuxManagerModulePromise: Promise<{ runTmux: TmuxRunner }> | undefined;
 
-async function loadTmuxManagerModule() {
+async function loadTmuxManagerModule(): Promise<{ runTmux: TmuxRunner }> {
   tmuxManagerModulePromise ??= import(
     "../../../core/runtime/tmuxManager.js"
-  );
+  ).then(({ runTmux }) => ({ runTmux }));
   return tmuxManagerModulePromise;
 }
 

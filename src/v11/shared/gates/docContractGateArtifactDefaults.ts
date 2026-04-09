@@ -4,14 +4,15 @@ import type {
   WriteDocContractGateArtifactPort
 } from "../ports/docContractGateArtifacts.js";
 
-type CoreDocContractGateArtifactsModule =
-  typeof import("../../../core/gates/docContractGateArtifacts.js");
+import type * as CoreDocContractGateArtifactsModule from "../../../core/gates/docContractGateArtifacts.js";
 
 let coreDocContractGateArtifactsModulePromise:
-  | Promise<CoreDocContractGateArtifactsModule>
+  | Promise<typeof CoreDocContractGateArtifactsModule>
   | undefined;
 
-async function loadCoreDocContractGateArtifactsModule() {
+async function loadCoreDocContractGateArtifactsModule(): Promise<
+  typeof CoreDocContractGateArtifactsModule
+> {
   coreDocContractGateArtifactsModulePromise ??= import(
     "../../../core/gates/docContractGateArtifacts.js"
   );

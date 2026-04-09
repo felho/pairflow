@@ -2,11 +2,15 @@ import { basename, dirname, join } from "node:path";
 
 import { emitBubbleLifecycleEventBestEffort } from "../../shared/metrics/bubbleEvents.js";
 import type {
+  EmitAskHumanBubbleNotificationPort,
+  EmitAskHumanTmuxDeliveryNotificationPort,
   ResolveAskHumanDeliveryMessageRefInput
 } from "../../shared/askHuman/askHumanDeliveryPortsContract.js";
 
-type CoreAskHumanFinalizationDefaults =
-  typeof import("../../../core/agent/askHumanDefaults.js").askHumanDependencyDefaults.finalization;
+interface CoreAskHumanFinalizationDefaults {
+  emitTmuxDeliveryNotification: EmitAskHumanTmuxDeliveryNotificationPort;
+  emitBubbleNotification: EmitAskHumanBubbleNotificationPort;
+}
 
 let coreAskHumanFinalizationDefaultsPromise:
   | Promise<CoreAskHumanFinalizationDefaults>
@@ -15,7 +19,12 @@ let coreAskHumanFinalizationDefaultsPromise:
 async function loadCoreAskHumanFinalizationDefaults(): Promise<CoreAskHumanFinalizationDefaults> {
   coreAskHumanFinalizationDefaultsPromise ??= import(
     "../../../core/agent/askHumanDefaults.js"
-  ).then(({ askHumanDependencyDefaults }) => askHumanDependencyDefaults.finalization);
+  ).then(({ askHumanDependencyDefaults }) => ({
+    emitTmuxDeliveryNotification:
+      askHumanDependencyDefaults.finalization.emitTmuxDeliveryNotification,
+    emitBubbleNotification:
+      askHumanDependencyDefaults.finalization.emitBubbleNotification
+  }));
   return coreAskHumanFinalizationDefaultsPromise;
 }
 

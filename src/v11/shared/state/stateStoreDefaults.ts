@@ -5,12 +5,20 @@ import type {
   WriteStateSnapshotPort
 } from "../ports/stateSnapshots.js";
 
-type CoreStateStoreModule = typeof import("../../../core/state/stateStore.js");
+type CoreStateStoreModule = {
+  readStateSnapshot: ReadStateSnapshotPort;
+  writeStateSnapshot: WriteStateSnapshotPort;
+};
 
 let coreStateStoreModulePromise: Promise<CoreStateStoreModule> | undefined;
 
-async function loadCoreStateStoreModule() {
-  coreStateStoreModulePromise ??= import("../../../core/state/stateStore.js");
+async function loadCoreStateStoreModule(): Promise<CoreStateStoreModule> {
+  coreStateStoreModulePromise ??= import(
+    "../../../core/state/stateStore.js"
+  ).then(({ readStateSnapshot, writeStateSnapshot }) => ({
+    readStateSnapshot,
+    writeStateSnapshot
+  }));
   return coreStateStoreModulePromise;
 }
 

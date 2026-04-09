@@ -1,19 +1,27 @@
-type AppendProtocolEnvelopePort =
-  typeof import("../../../core/protocol/transcriptStore.js").appendProtocolEnvelope;
-type ReadTranscriptEnvelopesPort =
-  typeof import("../../../core/protocol/transcriptStore.js").readTranscriptEnvelopes;
+import type {
+  AppendProtocolEnvelopePort,
+  ReadTranscriptEnvelopesPort
+} from "../ports/transcript.js";
 
-export type AppendProtocolEnvelopeResult =
-  import("../../../core/protocol/transcriptStore.js").AppendProtocolEnvelopeResult;
+export type { AppendProtocolEnvelopeResult } from "../ports/transcript.js";
 
 let transcriptStoreModulePromise:
-  | Promise<typeof import("../../../core/protocol/transcriptStore.js")>
+  | Promise<{
+      appendProtocolEnvelope: AppendProtocolEnvelopePort;
+      readTranscriptEnvelopes: ReadTranscriptEnvelopesPort;
+    }>
   | undefined;
 
-async function loadTranscriptStoreModule() {
+async function loadTranscriptStoreModule(): Promise<{
+  appendProtocolEnvelope: AppendProtocolEnvelopePort;
+  readTranscriptEnvelopes: ReadTranscriptEnvelopesPort;
+}> {
   transcriptStoreModulePromise ??= import(
     "../../../core/protocol/transcriptStore.js"
-  );
+  ).then(({ appendProtocolEnvelope, readTranscriptEnvelopes }) => ({
+    appendProtocolEnvelope,
+    readTranscriptEnvelopes
+  }));
   return transcriptStoreModulePromise;
 }
 

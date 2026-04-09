@@ -1,3 +1,5 @@
+import type { PassValidationCommandResult } from "../../../core/runtime/passValidationDefaults.js";
+
 const passValidationDefaultsPromise = import(
   "../../../core/runtime/passValidationDefaults.js"
 ).then(({ passValidationDefaults, PassValidationRunnerExecutionError }) => ({
@@ -29,5 +31,4 @@ export const passValidationDefaults = {
 export const PassValidationRunnerExecutionError =
   resolvedPassValidationDefaults.PassValidationRunnerExecutionError;
 
-export type PassValidationCommandResult =
-  import("../../../core/runtime/passValidationDefaults.js").PassValidationCommandResult;
+export type { PassValidationCommandResult };
