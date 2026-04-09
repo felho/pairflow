@@ -1,12 +1,10 @@
 import { isFinalState } from "../../domain/state/transitions.js";
-import {
-  stopBubbleDependencyDefaults as stopCommandDefaults
-} from "../../../core/bubble/stopBubbleDefaults.js";
 import type {
   StopBubbleDependencies,
   StopBubbleInput,
   StopBubbleResult
 } from "./stopCommandContract.js";
+import { stopCommandDefaults } from "./stopCommandDefaults.js";
 import { executeStopCancellationMutation } from "../../shared/stop/stopCancellationMutation.js";
 import {
   StopBubbleError,

@@ -1,3 +1,5 @@
-import { kickoffDefaults } from "../../../core/bubble/kickoffDefaults.js";
+const kickoffDefaultsPromise = import(
+  "../../../core/bubble/kickoffDefaults.js"
+).then(({ kickoffDefaults }) => kickoffDefaults);
 
-export { kickoffDefaults };
+export const kickoffDefaults = await kickoffDefaultsPromise;

@@ -1,3 +1,6 @@
-import { deleteBubbleDependencyDefaults } from "../../../core/bubble/deleteBubbleDefaults.js";
+const deleteBubbleDependencyDefaultsPromise = import(
+  "../../../core/bubble/deleteBubbleDefaults.js"
+).then(({ deleteBubbleDependencyDefaults }) => deleteBubbleDependencyDefaults);
 
-export { deleteBubbleDependencyDefaults };
+export const deleteBubbleDependencyDefaults =
+  await deleteBubbleDependencyDefaultsPromise;
