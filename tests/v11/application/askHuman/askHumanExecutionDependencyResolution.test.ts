@@ -1,7 +1,5 @@
 import { describe, expect, it } from "vitest";
 
-import { appendProtocolEnvelope } from "../../../../src/v11/infrastructure/artifact/transcript/transcriptStore.js";
-import { writeStateSnapshot } from "../../../../src/v11/infrastructure/state/stateStore.js";
 import { applyStateTransition } from "../../../../src/v11/domain/state/machine.js";
 import { resolveAskHumanExecutionDependencies } from "../../../../src/v11/shared/askHuman/askHumanExecutionDependencyResolution.js";
 
