@@ -1,17 +1,14 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { createCliDependencyDefaults } from "../../../../src/core/repo/createCliDefaults.js";
 import {
   resolveBubbleCreateCommandDependencies
 } from "../../../../src/v11/application/create/createCliRunHelpers.js";
 
 describe("create CLI run helpers", () => {
-  it("uses the core perimeter repo registry default when no override is provided", () => {
+  it("leaves repo registry wiring to the caller boundary", () => {
     const resolved = resolveBubbleCreateCommandDependencies({});
 
-    expect(resolved.register).toBe(
-      createCliDependencyDefaults.registerRepoInRegistry
-    );
+    expect(resolved.register).toBeUndefined();
   });
 
   it("keeps explicit dependency overrides intact", () => {

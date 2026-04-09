@@ -8,7 +8,6 @@ import type {
   CreateBubbleImplementation
 } from "./createCommandContract.js";
 import type { RegisterRepoInRegistryPort } from "../../shared/ports/repoRegistry.js";
-import { createCliDependencyDefaults } from "../../../core/repo/createCliDefaults.js";
 
 export interface BubbleCreateCommandRuntimeOptions {
   id?: string;
@@ -42,11 +41,10 @@ interface ResolvedBubbleCreateCommandDependencies {
 export function resolveBubbleCreateCommandDependencies(
   dependencies: BubbleCreateCommandRuntimeDependencies
 ): ResolvedBubbleCreateCommandDependencies {
+  const register = dependencies.registerRepoInRegistry;
   return {
     create: dependencies.createBubble ?? createBubble,
-    register:
-      dependencies.registerRepoInRegistry ??
-      createCliDependencyDefaults.registerRepoInRegistry,
+    ...(register !== undefined ? { register } : {}),
     reportWarning:
       dependencies.reportRegistryRegistrationWarning ??
       ((message: string) => {
