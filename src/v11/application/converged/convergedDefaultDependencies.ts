@@ -2,13 +2,13 @@ import {
   applyMetaReviewGateOnConvergenceV11 as applyMetaReviewGateOnConvergence,
   recoverMetaReviewGateFromSnapshotV11 as recoverMetaReviewGateFromSnapshot
 } from "../metaReviewGate/emitMetaReviewGateV11.js";
-import { appendProtocolEnvelope } from "../../../core/protocol/transcriptStore.js";
-import { assessPairflowCommandPath } from "../../../core/runtime/pairflowCommand.js";
-import { emitBubbleNotification } from "../../../core/runtime/notifications.js";
+import { appendProtocolEnvelope } from "../../../v11/infrastructure/artifact/transcript/transcriptStore.js";
+import { assessPairflowCommandPath } from "../../../v11/infrastructure/executor/command/pairflowCommand.js";
+import { emitBubbleNotification } from "../../../v11/infrastructure/channel/notifications.js";
 import {
   emitTmuxDeliveryNotification,
   resolveDeliveryMessageRef
-} from "../../../core/runtime/tmuxDelivery.js";
+} from "../../../v11/infrastructure/channel/tmux/tmuxDelivery.js";
 import { emitBubbleLifecycleEventBestEffort } from "../../shared/metrics/bubbleEvents.js";
 import type { EmitBubbleNotificationPort } from "../../shared/ports/notifications.js";
 import type {

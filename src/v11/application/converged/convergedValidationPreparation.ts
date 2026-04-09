@@ -7,13 +7,13 @@ import type {
 import {
   readDocContractGateArtifact,
   resolveDocContractGateArtifactPath
-} from "../../../core/gates/docContractGateArtifacts.js";
+} from "../../../v11/infrastructure/artifact/gates/docContractGateArtifacts.js";
 import {
   evaluateSummaryVerifierConsistencyGate,
   resolveSummaryVerifierConsistencyGateArtifactPath,
   writeSummaryVerifierConsistencyGateArtifact
 } from "../../../v11/shared/reviewer/summaryVerifierConsistencyGate.js";
-import { readReviewVerificationArtifactStatus } from "../../../core/reviewer/reviewVerificationArtifacts.js";
+import { readReviewVerificationArtifactStatus } from "../../../v11/infrastructure/artifact/reviewer/reviewVerificationArtifacts.js";
 import {
   resolveReviewerTestExecutionDirective as defaultResolveReviewerTestExecutionDirective
 } from "../reviewer/reviewerTestEvidenceDefaults.js";

@@ -62,6 +62,9 @@ These numbers are triage inputs, not yet a finalized ledger.
 - after the meta-review-gate shared type-port batch:
   - total direct residual imports: `185`
   - retired-shim subset: `7`
+- after the converged defaults/routing/validation batch:
+  - total direct residual imports: `162`
+  - retired-shim subset: `7`
 
 Latest validated state:
 
@@ -73,15 +76,13 @@ Current medium frontier after the latest easy/error-only waves:
 
 - default-wiring modules that already depend on `shared/ports/**` types but still
   source runtime defaults from `src/core/**` bridges:
-  - `src/v11/application/restart/restartCommandDependencyResolution.ts`
-  - `src/v11/application/reply/replyCommandDependencyResolution.ts`
-  - `src/v11/application/approval/approvalCommandDependencyResolution.ts`
-  - `src/v11/application/delete/deleteBubbleSupport.ts`
-  - `src/v11/application/converged/convergedDefaultDependencies.ts`
-  - `src/v11/application/converged/convergedValidationPreparation.ts`
-  - `src/v11/application/watchdog/watchdogCommandApi.ts`
-  - `src/v11/application/pass/reviewerDelivery.ts`
-  - `src/v11/application/pass/normalPassAppendExecution.ts`
+- `src/v11/application/restart/restartCommandDependencyResolution.ts`
+- `src/v11/application/reply/replyCommandDependencyResolution.ts`
+- `src/v11/application/approval/approvalCommandDependencyResolution.ts`
+- `src/v11/application/delete/deleteBubbleSupport.ts`
+- `src/v11/application/watchdog/watchdogCommandApi.ts`
+- `src/v11/application/pass/reviewerDelivery.ts`
+- `src/v11/application/pass/normalPassAppendExecution.ts`
   - `src/v11/application/pass/autoConvergePreparation.ts`
   - `src/v11/application/pass/passWorkspaceContextPreparation.ts`
   - `src/v11/application/pass/postAppendReviewVerificationWriter.ts`
