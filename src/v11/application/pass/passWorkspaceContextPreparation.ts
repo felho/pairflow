@@ -9,18 +9,12 @@ import {
   IDEATION_PASS_BLOCKED
 } from "../../shared/ideation/ideationReasonCodes.js";
 import type { ActorEmitContextSnapshot } from "../../shared/actorProtocol/actorEmitContext.js";
-import {
-  ensureBubbleInstanceIdForMutation
-} from "../../../v11/infrastructure/artifact/bubble/bubbleInstanceId.js";
-import {
-  resolveBubbleFromWorkspaceCwd
-} from "../../../v11/infrastructure/executor/workspace/workspaceResolution.js";
-import { readStateSnapshot } from "../../shared/state/stateStoreDefaults.js";
 import type { AgentName, BubbleStateSnapshot } from "../../../types/bubble.js";
 import {
   resolveIdeationMetadata as resolveV11IdeationMetadata
 } from "../../domain/ideation/ideationMetadata.js";
 import { resolvePassHandoff, type ResolvedPassHandoff } from "../../domain/pass/handoff.js";
+import { passWorkspaceContextDefaults } from "./passWorkspaceContextDefaults.js";
 
 export interface PreparePassWorkspaceContextInput {
   cwd?: string | undefined;
@@ -31,9 +25,11 @@ export interface PreparePassWorkspaceContextInput {
 }
 
 export interface PreparePassWorkspaceContextDependencies {
-  resolveBubbleFromWorkspaceCwd?: typeof resolveBubbleFromWorkspaceCwd;
-  ensureBubbleInstanceIdForMutation?: typeof ensureBubbleInstanceIdForMutation;
-  readStateSnapshot?: typeof readStateSnapshot;
+  resolveBubbleFromWorkspaceCwd?:
+    typeof passWorkspaceContextDefaults.resolveBubbleFromWorkspaceCwd;
+  ensureBubbleInstanceIdForMutation?:
+    typeof passWorkspaceContextDefaults.ensureBubbleInstanceIdForMutation;
+  readStateSnapshot?: typeof passWorkspaceContextDefaults.readStateSnapshot;
   resolveIdeationMetadata?: typeof resolveV11IdeationMetadata;
   resolvePassHandoff?: typeof resolvePassHandoff;
 }
@@ -53,11 +49,13 @@ export async function preparePassWorkspaceContext(
   dependencies: PreparePassWorkspaceContextDependencies = {}
 ): Promise<PreparedPassWorkspaceContext> {
   const resolveBubble =
-    dependencies.resolveBubbleFromWorkspaceCwd ?? resolveBubbleFromWorkspaceCwd;
+    dependencies.resolveBubbleFromWorkspaceCwd
+    ?? passWorkspaceContextDefaults.resolveBubbleFromWorkspaceCwd;
   const ensureBubbleIdentity =
     dependencies.ensureBubbleInstanceIdForMutation
-    ?? ensureBubbleInstanceIdForMutation;
-  const readState = dependencies.readStateSnapshot ?? readStateSnapshot;
+    ?? passWorkspaceContextDefaults.ensureBubbleInstanceIdForMutation;
+  const readState =
+    dependencies.readStateSnapshot ?? passWorkspaceContextDefaults.readStateSnapshot;
   const resolveIdeation =
     dependencies.resolveIdeationMetadata ?? resolveV11IdeationMetadata;
   const resolveHandoff = dependencies.resolvePassHandoff ?? resolvePassHandoff;
