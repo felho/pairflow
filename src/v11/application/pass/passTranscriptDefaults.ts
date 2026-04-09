@@ -1,7 +1,7 @@
 import {
   appendProtocolEnvelope,
   readTranscriptEnvelopes
-} from "../../../core/protocol/transcriptStore.js";
+} from "../../shared/transcript/transcriptDependencyDefaults.js";
 
 export {
   appendProtocolEnvelope,

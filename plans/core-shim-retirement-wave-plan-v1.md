@@ -124,6 +124,11 @@ These numbers are triage inputs, not yet a finalized ledger.
   - total direct residual imports: `46`
   - `createBubblePersistence` and `reviewerDocGateArtifactUpdater` now share
     one `shared/gates/docContractGateArtifactDefaults` bridge
+- after the shared `transcriptStore` fan-in batch:
+  - total direct residual imports: `44`
+  - `startCommandDependencyDefaults`, `passTranscriptDefaults`, and
+    `metaReviewGateTranscriptDefaults` now route through one shared
+    `shared/transcript/transcriptDependencyDefaults` bridge
 - after the `start + kickoff` local fan-in batch:
   - total direct residual imports: `54`
   - `application/start` prompt/runtime and default wiring now route through two
