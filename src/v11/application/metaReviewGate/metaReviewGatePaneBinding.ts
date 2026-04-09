@@ -1,11 +1,18 @@
-import { metaReviewGateRuntimeDependencyDefaults } from "./metaReviewGateRuntimeDependencyDefaults.js";
 import type {
   ResolveMetaReviewerPaneWarning
 } from "../../shared/metaReviewGate/metaReviewGateTypes.js";
+import { buildMetaReviewerStartupPrompt } from "../start/startCommandPrompts.js";
 
 export const resolveMetaReviewerPaneWarning: ResolveMetaReviewerPaneWarning = async (
   input
 ) => {
+  if (input.buildAgentCommand === undefined) {
+    throw new Error("meta-review gate pane binding is missing agent command builder.");
+  }
+  if (input.respawnTmuxPaneCommand === undefined) {
+    throw new Error("meta-review gate pane binding is missing respawn capability.");
+  }
+
   let shouldDeactivate = false;
   const bindStart = await input.setMetaReviewerPane({
     sessionsPath: input.sessionsPath,
@@ -47,23 +54,21 @@ export const resolveMetaReviewerPaneWarning: ResolveMetaReviewerPaneWarning = as
   shouldDeactivate = true;
   const paneIndex = bindStart.record.metaReviewerPane?.paneIndex ?? 3;
   const targetPane = `${bindStart.record.tmuxSessionName}:0.${paneIndex}`;
-  const metaReviewerCommand =
-    metaReviewGateRuntimeDependencyDefaults.buildAgentCommand({
+  const metaReviewerCommand = input.buildAgentCommand({
     agentName: "codex",
     bubbleId: input.bubbleId,
     worktreePath: bindStart.record.worktreePath,
     pairflowCommandProfile: input.pairflowCommandProfile,
-    startupPrompt:
-      metaReviewGateRuntimeDependencyDefaults.buildMetaReviewerStartupPrompt({
-        bubbleId: input.bubbleId,
-        repoPath: bindStart.record.repoPath,
-        worktreePath: bindStart.record.worktreePath,
-        taskArtifactPath: input.taskArtifactPath,
-        pairflowCommandProfile: input.pairflowCommandProfile
-      })
+    startupPrompt: buildMetaReviewerStartupPrompt({
+      bubbleId: input.bubbleId,
+      repoPath: bindStart.record.repoPath,
+      worktreePath: bindStart.record.worktreePath,
+      taskArtifactPath: input.taskArtifactPath,
+      pairflowCommandProfile: input.pairflowCommandProfile
+    })
   });
   try {
-    await metaReviewGateRuntimeDependencyDefaults.respawnTmuxPaneCommand({
+    await input.respawnTmuxPaneCommand({
       sessionName: bindStart.record.tmuxSessionName,
       paneIndex,
       cwd: bindStart.record.worktreePath,

@@ -296,6 +296,20 @@ function buildApproveReportJson(input?: {
 }
 
 describe("notifyMetaReviewerSubmissionRequest", () => {
+  it("fails explicitly when runtime capabilities are unavailable", async () => {
+    const result = await notifyMetaReviewerSubmissionRequest({
+      bubbleId: "bubble-1",
+      round: 2,
+      targetPane: "pf_meta_structured:0.3"
+    });
+
+    expect(result).toEqual({
+      status: "failed",
+      reasonCode: "META_REVIEW_REQUEST_DELIVERY_RUNTIME_UNAVAILABLE",
+      message: "meta-review gate notify runtime capabilities are unavailable."
+    });
+  });
+
   it("sends required structured submit command with --report-json parity fields", async () => {
     const tmuxCalls: string[][] = [];
     let captureCount = 0;

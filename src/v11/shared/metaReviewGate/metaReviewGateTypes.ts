@@ -47,7 +47,7 @@ export interface NotifyMetaReviewerSubmissionRequestDependencies {
   maybeAcceptClaudeTrustPrompt?: (
     runner: MetaReviewGateTmuxRunner,
     targetPane: string
-  ) => Promise<void>;
+  ) => Promise<boolean | void>;
   sendAndSubmitTmuxPaneMessage?: (
     runner: MetaReviewGateTmuxRunner,
     targetPane: string,
@@ -74,6 +74,20 @@ export interface ResolveMetaReviewerPaneWarningInput {
   setMetaReviewerPane: SetMetaReviewerPaneBindingPort;
   notifySubmissionRequest: NotifyMetaReviewerSubmissionRequest;
   runTmuxRunner: MetaReviewGateTmuxRunner;
+  buildAgentCommand?: (input: {
+    agentName: "codex";
+    bubbleId: string;
+    worktreePath: string;
+    pairflowCommandProfile?: PairflowCommandProfile;
+    startupPrompt?: string | undefined;
+  }) => string;
+  respawnTmuxPaneCommand?: (input: {
+    sessionName: string;
+    paneIndex: number;
+    cwd: string;
+    command: string;
+    runner?: MetaReviewGateTmuxRunner;
+  }) => Promise<void>;
   sessionsPath: string;
   bubbleId: string;
   round: number;

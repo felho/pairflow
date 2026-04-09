@@ -11,14 +11,16 @@ import type {
   ApplyMetaReviewGateOnConvergenceDependencies,
   ApplyMetaReviewGateOnConvergenceInput,
   MetaReviewGateResult,
-  NotifyMetaReviewerSubmissionRequest,
-  NotifyMetaReviewerSubmissionRequestDependencies,
   RecoverMetaReviewGateFromSnapshotDependencies,
   RecoverMetaReviewGateFromSnapshotInput
 } from "../../shared/metaReviewGate/metaReviewGateCommandContract.js";
+import type {
+  NotifyMetaReviewerSubmissionRequest,
+  NotifyMetaReviewerSubmissionRequestDependencies,
+  ResolveMetaReviewerPaneWarning
+} from "../../shared/metaReviewGate/metaReviewGateTypes.js";
 import { notifyMetaReviewerSubmissionRequest } from "./metaReviewGateNotify.js";
 import { resolveMetaReviewerPaneWarning } from "./metaReviewGatePaneBinding.js";
-import { metaReviewGateRuntimeDependencyDefaults } from "./metaReviewGateRuntimeDependencyDefaults.js";
 
 function withMetaReviewGateNotifyDefaults(
   notify: NotifyMetaReviewerSubmissionRequest = notifyMetaReviewerSubmissionRequest
@@ -31,13 +33,28 @@ function withMetaReviewGateNotifyDefaults(
       runTmux: dependencies.runTmux ?? metaReviewGateDependencyDefaults.runTmux,
       maybeAcceptClaudeTrustPrompt:
         dependencies.maybeAcceptClaudeTrustPrompt
-        ?? metaReviewGateRuntimeDependencyDefaults.maybeAcceptClaudeTrustPrompt,
+        ?? metaReviewGateDependencyDefaults.maybeAcceptClaudeTrustPrompt,
       sendAndSubmitTmuxPaneMessage:
         dependencies.sendAndSubmitTmuxPaneMessage
-        ?? metaReviewGateRuntimeDependencyDefaults.sendAndSubmitTmuxPaneMessage,
+        ?? metaReviewGateDependencyDefaults.sendAndSubmitTmuxPaneMessage,
       submitTmuxPaneInput:
         dependencies.submitTmuxPaneInput
-        ?? metaReviewGateRuntimeDependencyDefaults.submitTmuxPaneInput
+        ?? metaReviewGateDependencyDefaults.submitTmuxPaneInput
+    });
+}
+
+function withMetaReviewGatePaneBindingDefaults(
+  resolveWarning: ResolveMetaReviewerPaneWarning = resolveMetaReviewerPaneWarning
+): ResolveMetaReviewerPaneWarning {
+  return (input) =>
+    resolveWarning({
+      ...input,
+      buildAgentCommand:
+        input.buildAgentCommand
+        ?? metaReviewGateDependencyDefaults.buildAgentCommand,
+      respawnTmuxPaneCommand:
+        input.respawnTmuxPaneCommand
+        ?? metaReviewGateDependencyDefaults.respawnTmuxPaneCommand
     });
 }
 
@@ -70,7 +87,7 @@ function withMetaReviewGateApplyDefaults(
       ?? withMetaReviewGateNotifyDefaults(),
     resolveMetaReviewerPaneWarning:
       dependencies.resolveMetaReviewerPaneWarning
-      ?? resolveMetaReviewerPaneWarning
+      ?? withMetaReviewGatePaneBindingDefaults()
   };
 }
 
@@ -110,9 +127,10 @@ export {
   MetaReviewGateError as MetaReviewGateErrorV11,
   toMetaReviewGateError as toMetaReviewGateErrorV11
 };
-export {
-  notifyMetaReviewerSubmissionRequest as notifyMetaReviewerSubmissionRequestV11
-};
+
+export const notifyMetaReviewerSubmissionRequestV11: NotifyMetaReviewerSubmissionRequest =
+  (input, dependencies = {}) =>
+    withMetaReviewGateNotifyDefaults()(input, dependencies);
 export type {
   ApplyMetaReviewGateOnConvergenceDependencies as ApplyMetaReviewGateOnConvergenceV11Dependencies,
   ApplyMetaReviewGateOnConvergenceInput as ApplyMetaReviewGateOnConvergenceV11Input,

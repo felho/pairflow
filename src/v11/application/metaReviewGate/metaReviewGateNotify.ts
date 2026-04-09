@@ -122,9 +122,11 @@ export async function notifyMetaReviewerSubmissionRequest(
     sendAndSubmitTmuxPaneMessage === undefined ||
     submitTmuxPaneInput === undefined
   ) {
-    throw new Error(
-      "meta-review gate notify runtime capabilities are unavailable."
-    );
+    return {
+      status: "failed",
+      reasonCode: "META_REVIEW_REQUEST_DELIVERY_RUNTIME_UNAVAILABLE",
+      message: "meta-review gate notify runtime capabilities are unavailable."
+    };
   }
   const requestMarker = `bubble=${input.bubbleId} meta-review request round=${input.round}.`;
   const message = [
