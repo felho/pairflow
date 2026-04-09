@@ -7,7 +7,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { parseBubbleConfigToml, renderBubbleConfigToml } from "../../../src/config/bubbleConfig.js";
 import { createBubble } from "../../../src/core/bubble/createBubble.js";
 import { kickoffBubble } from "../../../src/core/bubble/kickoffBubble.js";
-import { buildRunningExecutionContext } from "../../../src/core/state/executionContext.js";
+import { buildRunningExecutionContext } from "../../../src/v11/shared/state/executionContext.js";
 import {
   IDEATION_ALREADY_ACTIVE,
   IDEATION_KICKOFF_NOT_ALLOWED,
@@ -17,12 +17,12 @@ import {
   IDEATION_KICKOFF_TASK_INVALID,
   IDEATION_KICKOFF_STATE_CONFLICT
 } from "../../../src/core/bubble/ideation.js";
-import { readTranscriptEnvelopes } from "../../../src/core/protocol/transcriptStore.js";
+import { readTranscriptEnvelopes } from "../../../src/v11/infrastructure/artifact/transcript/transcriptStore.js";
 import {
   readStateSnapshot,
   StateStoreConflictError,
   writeStateSnapshot
-} from "../../../src/core/state/stateStore.js";
+} from "../../../src/v11/infrastructure/state/stateStore.js";
 import { initGitRepository } from "../../helpers/git.js";
 
 const tempDirs: string[] = [];
