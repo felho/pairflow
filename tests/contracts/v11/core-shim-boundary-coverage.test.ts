@@ -42,7 +42,6 @@ const allowedResidualCoreBridgeImports: string[] = [
   "src/v11/application/create/createCliCommand.ts -> src/core/repo/createCliDefaults.ts",
   "src/v11/application/merge/mergeCommandDefaults.ts -> src/core/bubble/mergeBubbleDefaults.ts",
   "src/v11/application/metaReviewGate/metaReviewGateCommandDefaults.ts -> src/core/bubble/metaReviewGateDefaults.ts",
-  "src/v11/application/pass/passValidationCommandDefaults.ts -> src/core/runtime/passValidationDefaults.ts",
   "src/v11/application/reconcile/reconcileCommandDefaults.ts -> src/core/runtime/reconcileCommandDefaults.ts",
   "src/v11/shared/metaReview/metaReviewDependencyDefaults.ts -> src/core/bubble/metaReviewReadDefaults.ts",
   "src/v11/shared/metaReview/metaReviewDependencyDefaults.ts -> src/core/runtime/metaReviewCommandSubmitDefaults.ts",
