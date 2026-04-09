@@ -1,7 +1,10 @@
 import { commitBubble } from "../bubble/commitBubble.js";
 import { deleteBubble } from "../../v11/application/delete/deleteBubble.js";
-import { emitApprove, emitRequestRework } from "../human/approval.js";
-import { emitHumanReply } from "../human/reply.js";
+import {
+  emitApproveV11 as emitApprove,
+  emitRequestReworkV11 as emitRequestRework
+} from "../../v11/application/approval/emitApprovalV11.js";
+import { emitHumanReplyV11 as emitHumanReply } from "../../v11/application/reply/emitReplyV11.js";
 import { listBubbles } from "../bubble/listBubbles.js";
 import { getBubbleStatusV11 as getBubbleStatus } from "../../v11/application/status/emitStatusV11.js";
 import { mergeBubbleV11 as mergeBubble } from "../../v11/application/merge/emitMergeV11.js";
