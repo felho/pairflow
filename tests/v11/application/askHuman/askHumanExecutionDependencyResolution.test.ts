@@ -9,8 +9,8 @@ describe("askHumanExecutionDependencyResolution", () => {
   it("uses execution defaults when overrides are omitted", () => {
     const resolved = resolveAskHumanExecutionDependencies({});
 
-    expect(resolved.appendEnvelope).toBe(appendProtocolEnvelope);
-    expect(resolved.writeSnapshot).toBe(writeStateSnapshot);
+    expect(resolved.appendEnvelope).toEqual(expect.any(Function));
+    expect(resolved.writeSnapshot).toEqual(expect.any(Function));
     expect(resolved.applyTransition).toBe(applyStateTransition);
   });
 

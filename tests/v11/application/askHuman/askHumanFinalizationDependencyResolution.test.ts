@@ -12,11 +12,28 @@ describe("askHumanFinalizationDependencyResolution", () => {
   it("uses finalization defaults when overrides are omitted", () => {
     const resolved = resolveAskHumanFinalizationDependencies({});
 
-    expect(resolved.emitTmuxDeliveryNotification).toBe(
-      emitTmuxDeliveryNotification
+    expect(resolved.emitTmuxDeliveryNotification).toEqual(expect.any(Function));
+    expect(resolved.emitBubbleNotification).toEqual(expect.any(Function));
+    expect(resolved.resolveDeliveryMessageRef).toEqual(expect.any(Function));
+    expect(
+      resolved.resolveDeliveryMessageRef({
+        bubbleId: "b_ask_human_01",
+        sessionsPath: "/tmp/repo/.pairflow/runtime/sessions.json",
+        envelope: {
+          id: "env_01",
+          refs: []
+        } as never
+      })
+    ).toBe(
+      resolveDeliveryMessageRef({
+        bubbleId: "b_ask_human_01",
+        sessionsPath: "/tmp/repo/.pairflow/runtime/sessions.json",
+        envelope: {
+          id: "env_01",
+          refs: []
+        } as never
+      })
     );
-    expect(resolved.emitBubbleNotification).toBe(emitBubbleNotification);
-    expect(resolved.resolveDeliveryMessageRef).toBe(resolveDeliveryMessageRef);
     expect(resolved.emitBubbleLifecycleEventBestEffort).toBe(
       emitBubbleLifecycleEventBestEffort
     );

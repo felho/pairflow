@@ -9,9 +9,9 @@ describe("askHumanRoutingPreparationDependencyResolution", () => {
   it("uses routing preparation defaults when overrides are omitted", () => {
     const resolved = resolveAskHumanRoutingPreparationDependencies({});
 
-    expect(resolved.resolveBubble).toBe(resolveBubbleFromWorkspaceCwd);
-    expect(resolved.ensureBubbleIdentity).toBe(ensureBubbleInstanceIdForMutation);
-    expect(resolved.readState).toBe(readStateSnapshot);
+    expect(resolved.resolveBubble).toEqual(expect.any(Function));
+    expect(resolved.ensureBubbleIdentity).toEqual(expect.any(Function));
+    expect(resolved.readState).toEqual(expect.any(Function));
   });
 
   it("uses provided routing preparation overrides", () => {

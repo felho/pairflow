@@ -239,6 +239,13 @@ These numbers are triage inputs, not yet a finalized ledger.
   - `convergedDefaultDependencies`, `convergedRoutingPreparation`, and
     `convergedValidationPreparation` now route through one local converged
     defaults fan-in module
+- latest checkpoint after the `askHuman` lazy shared-default batch:
+  - total direct residual imports: `3`
+  - `askHumanDependencyDefaults` no longer carries a static `src/core/**`
+    import; the shared defaults now load runtime bridges lazily and keep the
+    local sync message-ref helper in-repo
+  - current residual set:
+    `restart` and `statusCommandDependencyDefaults`
 
 Latest validated state:
 
