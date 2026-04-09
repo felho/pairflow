@@ -13,23 +13,22 @@ import {
 import {
   hasIdeationMetadataParseWarning
 } from "../../domain/ideation/ideationMetadata.js";
-import { resolveBubbleById } from "../../../core/bubble/bubbleLookup.js";
+import { startCliDependencyDefaults } from "../../../core/bubble/startCliDefaults.js";
 import { parseBubbleStartCommandOptions } from "./startCliOptions.js";
-import { registerRepoInRegistry } from "../../../core/repo/registry.js";
 import type { ResolvedBubbleById } from "../../shared/ports/bubbleLookup.js";
 
 export interface BubbleStartCommandDependencies {
   startBubble?: typeof startBubble;
-  resolveBubbleById?: typeof resolveBubbleById;
-  registerRepoInRegistry?: typeof registerRepoInRegistry;
+  resolveBubbleById?: typeof startCliDependencyDefaults.resolveBubbleById;
+  registerRepoInRegistry?: typeof startCliDependencyDefaults.registerRepoInRegistry;
   reportRegistryRegistrationWarning?:
     | ((message: string) => void)
     | undefined;
 }
 
 interface ResolvedBubbleStartDependencies {
-  resolveBubble: typeof resolveBubbleById;
-  register: typeof registerRepoInRegistry;
+  resolveBubble: typeof startCliDependencyDefaults.resolveBubbleById;
+  register: typeof startCliDependencyDefaults.registerRepoInRegistry;
   runStartBubble: typeof startBubble;
   reportWarning: (message: string) => void;
 }
@@ -62,8 +61,12 @@ function resolveBubbleStartDependencies(
   dependencies: BubbleStartCommandDependencies
 ): ResolvedBubbleStartDependencies {
   return {
-    resolveBubble: dependencies.resolveBubbleById ?? resolveBubbleById,
-    register: dependencies.registerRepoInRegistry ?? registerRepoInRegistry,
+    resolveBubble:
+      dependencies.resolveBubbleById
+      ?? startCliDependencyDefaults.resolveBubbleById,
+    register:
+      dependencies.registerRepoInRegistry
+      ?? startCliDependencyDefaults.registerRepoInRegistry,
     runStartBubble: dependencies.startBubble ?? startBubble,
     reportWarning:
       dependencies.reportRegistryRegistrationWarning ??
@@ -102,7 +105,7 @@ async function canonicalizeBubbleRepoPath(input: {
 
 async function registerStartRepoBestEffort(input: {
   repoPath: string | null;
-  register: typeof registerRepoInRegistry;
+  register: typeof startCliDependencyDefaults.registerRepoInRegistry;
   reportWarning: (message: string) => void;
 }): Promise<void> {
   if (input.repoPath === null) {
