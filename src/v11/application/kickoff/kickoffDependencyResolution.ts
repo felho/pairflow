@@ -1,9 +1,6 @@
 import { readFile, stat, writeFile } from "node:fs/promises";
 
-import { appendProtocolEnvelope } from "../../../core/protocol/transcriptStore.js";
-import { emitTmuxDeliveryNotification } from "../../../core/runtime/tmuxDelivery.js";
-import { readStateSnapshot, writeStateSnapshot } from "../../../core/state/stateStore.js";
-import { resolveBubbleById } from "../../../core/bubble/bubbleLookup.js";
+import { kickoffDefaults } from "../../../core/bubble/kickoffDefaults.js";
 import type {
   KickoffDependencyOverrides,
   ResolvedKickoffDependencies
@@ -11,14 +8,14 @@ import type {
 
 function buildKickoffDefaultDependencies(): ResolvedKickoffDependencies {
   return {
-    resolveBubble: resolveBubbleById,
-    readState: readStateSnapshot,
-    writeState: writeStateSnapshot,
+    resolveBubble: kickoffDefaults.resolveBubbleById,
+    readState: kickoffDefaults.readStateSnapshot,
+    writeState: kickoffDefaults.writeStateSnapshot,
     readFileFn: readFile,
     statFileFn: stat,
     writeFileFn: writeFile,
-    appendEnvelope: appendProtocolEnvelope,
-    emitDelivery: emitTmuxDeliveryNotification
+    appendEnvelope: kickoffDefaults.appendProtocolEnvelope,
+    emitDelivery: kickoffDefaults.emitTmuxDeliveryNotification
   };
 }
 
