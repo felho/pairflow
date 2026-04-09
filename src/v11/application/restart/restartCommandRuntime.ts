@@ -1,9 +1,3 @@
-import { BubbleLookupError } from "../../../core/bubble/bubbleLookup.js";
-import {
-  RuntimeSessionsRegistryError,
-  RuntimeSessionsRegistryLockError
-} from "../../../core/runtime/sessionsRegistry.js";
-import { TmuxCommandError } from "../../../core/runtime/tmuxManager.js";
 import {
   asStartBubbleErrorV11 as asStartBubbleError,
   StartBubbleErrorV11 as StartBubbleError
@@ -13,6 +7,7 @@ import {
   normalizePairflowCommandErrorInput,
   withRequiredCommandContext
 } from "../../shared/errors/commandErrorDetails.js";
+import { isNamedError } from "../../shared/errors/namedError.js";
 
 export class RestartBubbleError extends Error {
   public readonly reasonCode: string | undefined;
@@ -38,17 +33,15 @@ export function throwAsRestartBubbleError(error: unknown): never {
     error,
     isRestartBubbleError: (candidate) => candidate instanceof RestartBubbleError,
     createRestartBubbleError,
-    isBubbleLookupError: (candidate): candidate is BubbleLookupError =>
-      candidate instanceof BubbleLookupError,
-    isTmuxCommandError: (candidate): candidate is TmuxCommandError =>
-      candidate instanceof TmuxCommandError,
-    isRuntimeSessionsRegistryError:
-      (candidate): candidate is RuntimeSessionsRegistryError =>
-        candidate instanceof RuntimeSessionsRegistryError,
-    isRuntimeSessionsRegistryLockError:
-      (candidate): candidate is RuntimeSessionsRegistryLockError =>
-        candidate instanceof RuntimeSessionsRegistryLockError,
-    isStartBubbleError: (candidate): candidate is StartBubbleError =>
+    isBubbleLookupError: (candidate) =>
+      isNamedError(candidate, "BubbleLookupError"),
+    isTmuxCommandError: (candidate) =>
+      isNamedError(candidate, "TmuxCommandError"),
+    isRuntimeSessionsRegistryError: (candidate) =>
+      isNamedError(candidate, "RuntimeSessionsRegistryError"),
+    isRuntimeSessionsRegistryLockError: (candidate) =>
+      isNamedError(candidate, "RuntimeSessionsRegistryLockError"),
+    isStartBubbleError: (candidate) =>
       candidate instanceof StartBubbleError,
     asStartBubbleError
   });

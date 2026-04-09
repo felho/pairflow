@@ -1,4 +1,3 @@
-import { BubbleLookupError } from "../../../core/bubble/bubbleLookup.js";
 import type {
   ApprovalCommandDependencies
 } from "./approvalCommandDependencyResolution.js";
@@ -18,6 +17,7 @@ import {
   runApprovalDecisionFlow,
   runRequestReworkFlow
 } from "./runApprovalFlow.js";
+import { isNamedError } from "../../shared/errors/namedError.js";
 import type {
   EmitApprovalDecisionDependencies,
   EmitApprovalDecisionInput,
@@ -107,6 +107,7 @@ export function throwAsApprovalCommandError(error: unknown): never {
     error,
     isApprovalCommandError,
     createApprovalCommandError,
-    isBubbleLookupError: (candidate) => candidate instanceof BubbleLookupError
+    isBubbleLookupError: (candidate) =>
+      isNamedError(candidate, "BubbleLookupError")
   });
 }

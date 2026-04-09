@@ -1,7 +1,7 @@
 import {
   appendHumanApprovalRequestEnvelope
 } from "../../metaReviewGate/approvalRequestEnvelope.js";
-import { type LoadedStateSnapshot } from "../../../../core/state/stateStore.js";
+import type { LoadedStateSnapshot } from "../../ports/stateSnapshots.js";
 import {
   readApprovalAdvisoryFindingsSnapshot,
   readMetaReviewFindingsParitySnapshot

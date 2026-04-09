@@ -1,18 +1,9 @@
-import { BubbleLookupError } from "../../../core/bubble/bubbleLookup.js";
-import { WorkspaceBootstrapError } from "../../../core/workspace/worktreeManager.js";
-import {
-  TmuxCommandError,
-  TmuxSessionExistsError
-} from "../../../core/runtime/tmuxManager.js";
-import {
-  RuntimeSessionsRegistryError,
-  RuntimeSessionsRegistryLockError
-} from "../../../core/runtime/sessionsRegistry.js";
 import { normalizeStartBubbleError } from "./startCommandErrorNormalization.js";
 import {
   normalizePairflowCommandErrorInput,
   withRequiredCommandContext
 } from "../../shared/errors/commandErrorDetails.js";
+import { isNamedError } from "../../shared/errors/namedError.js";
 
 export class StartBubbleError extends Error {
   public readonly reasonCode: string | undefined;
@@ -38,19 +29,17 @@ export function throwAsStartBubbleError(error: unknown): never {
     error,
     isStartBubbleError: (candidate) => candidate instanceof StartBubbleError,
     createStartBubbleError,
-    isBubbleLookupError: (candidate): candidate is BubbleLookupError =>
-      candidate instanceof BubbleLookupError,
-    isWorkspaceBootstrapError: (candidate): candidate is WorkspaceBootstrapError =>
-      candidate instanceof WorkspaceBootstrapError,
-    isTmuxCommandError: (candidate): candidate is TmuxCommandError =>
-      candidate instanceof TmuxCommandError,
-    isTmuxSessionExistsError: (candidate): candidate is TmuxSessionExistsError =>
-      candidate instanceof TmuxSessionExistsError,
-    isRuntimeSessionsRegistryError:
-      (candidate): candidate is RuntimeSessionsRegistryError =>
-        candidate instanceof RuntimeSessionsRegistryError,
-    isRuntimeSessionsRegistryLockError:
-      (candidate): candidate is RuntimeSessionsRegistryLockError =>
-        candidate instanceof RuntimeSessionsRegistryLockError
+    isBubbleLookupError: (candidate) =>
+      isNamedError(candidate, "BubbleLookupError"),
+    isWorkspaceBootstrapError: (candidate) =>
+      isNamedError(candidate, "WorkspaceBootstrapError"),
+    isTmuxCommandError: (candidate) =>
+      isNamedError(candidate, "TmuxCommandError"),
+    isTmuxSessionExistsError: (candidate) =>
+      isNamedError(candidate, "TmuxSessionExistsError"),
+    isRuntimeSessionsRegistryError: (candidate) =>
+      isNamedError(candidate, "RuntimeSessionsRegistryError"),
+    isRuntimeSessionsRegistryLockError: (candidate) =>
+      isNamedError(candidate, "RuntimeSessionsRegistryLockError")
   });
 }

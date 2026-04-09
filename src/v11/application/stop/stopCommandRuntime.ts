@@ -1,13 +1,8 @@
-import { BubbleLookupError } from "../../../core/bubble/bubbleLookup.js";
-import { TmuxCommandError } from "../../../core/runtime/tmuxManager.js";
-import {
-  RuntimeSessionsRegistryError,
-  RuntimeSessionsRegistryLockError
-} from "../../../core/runtime/sessionsRegistry.js";
 import {
   normalizePairflowCommandErrorInput,
   withRequiredCommandContext
 } from "../../shared/errors/commandErrorDetails.js";
+import { isNamedError } from "../../shared/errors/namedError.js";
 import { normalizeStopBubbleError } from "./stopCommandErrorNormalization.js";
 
 export class StopBubbleError extends Error {
@@ -34,15 +29,13 @@ export function throwAsStopBubbleError(error: unknown): never {
     error,
     isStopBubbleError: (candidate) => candidate instanceof StopBubbleError,
     createStopBubbleError,
-    isBubbleLookupError: (candidate): candidate is BubbleLookupError =>
-      candidate instanceof BubbleLookupError,
-    isTmuxCommandError: (candidate): candidate is TmuxCommandError =>
-      candidate instanceof TmuxCommandError,
-    isRuntimeSessionsRegistryError:
-      (candidate): candidate is RuntimeSessionsRegistryError =>
-        candidate instanceof RuntimeSessionsRegistryError,
-    isRuntimeSessionsRegistryLockError:
-      (candidate): candidate is RuntimeSessionsRegistryLockError =>
-        candidate instanceof RuntimeSessionsRegistryLockError
+    isBubbleLookupError: (candidate) =>
+      isNamedError(candidate, "BubbleLookupError"),
+    isTmuxCommandError: (candidate) =>
+      isNamedError(candidate, "TmuxCommandError"),
+    isRuntimeSessionsRegistryError: (candidate) =>
+      isNamedError(candidate, "RuntimeSessionsRegistryError"),
+    isRuntimeSessionsRegistryLockError: (candidate) =>
+      isNamedError(candidate, "RuntimeSessionsRegistryLockError")
   });
 }

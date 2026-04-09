@@ -1,5 +1,5 @@
 import { toMetaReviewGateError } from "../../shared/metaReviewGate/metaReviewGateCommandApi.js";
-import { WorkspaceResolutionError } from "../../../core/bubble/workspaceResolution.js";
+import { isNamedError } from "../../shared/errors/namedError.js";
 
 export interface NormalizeConvergedCommandErrorInput {
   error: unknown;
@@ -14,7 +14,7 @@ export function normalizeConvergedCommandError(
     return input.error;
   }
 
-  if (input.error instanceof WorkspaceResolutionError) {
+  if (isNamedError(input.error, "WorkspaceResolutionError")) {
     return input.createConvergedCommandError(input.error.message);
   }
 
