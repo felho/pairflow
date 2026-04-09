@@ -5,7 +5,6 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import {
-  asConvergedCommandErrorV11 as asConvergedCommandError,
   ConvergedCommandErrorV11 as ConvergedCommandError,
   emitConvergedFromWorkspaceV11 as emitConvergedFromWorkspace,
   resolveMetaReviewRolloutBlockingReasonCodesV11 as resolveMetaReviewRolloutBlockingReasonCodes
