@@ -246,6 +246,14 @@ These numbers are triage inputs, not yet a finalized ledger.
     local sync message-ref helper in-repo
   - current residual set:
     `restart` and `statusCommandDependencyDefaults`
+- latest checkpoint after the `status` lazy defaults batch:
+  - total direct residual imports: `1`
+  - `statusCommandDependencyDefaults` no longer carries static
+    `src/core/**` imports; `status`/`inbox` now rely on a local shared
+    defaults object with lazy core bridges only where the bundle still lacks a
+    direct v11 owner path
+  - current residual set:
+    `restart`
 
 Latest validated state:
 

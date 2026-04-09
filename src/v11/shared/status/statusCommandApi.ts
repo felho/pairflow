@@ -1,7 +1,4 @@
-import {
-  BubbleLookupError,
-  statusCommandDependencyDefaults
-} from "./statusCommandDependencyDefaults.js";
+import { statusCommandDependencyDefaults } from "./statusCommandDependencyDefaults.js";
 import {
   countPendingHumanQuestions,
   readStatusTranscriptData,
@@ -18,6 +15,7 @@ import type {
   ReadWatchdogPaneActivity,
   ReadWatchdogPaneActivityResult
 } from "../watchdog/watchdogPaneActivityStore.js";
+import { isNamedError } from "../errors/namedError.js";
 
 export interface BubbleStatusInput {
   bubbleId: string;
@@ -118,7 +116,7 @@ export function asBubbleStatusError(error: unknown): never {
   if (error instanceof BubbleStatusError) {
     throw error;
   }
-  if (error instanceof BubbleLookupError) {
+  if (isNamedError(error, "BubbleLookupError")) {
     throw new BubbleStatusError(
       `${error.message} context: command_name=status.`
     );

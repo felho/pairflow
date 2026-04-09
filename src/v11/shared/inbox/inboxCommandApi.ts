@@ -1,9 +1,7 @@
-import {
-  BubbleLookupError,
-  statusCommandDependencyDefaults
-} from "../status/statusCommandDependencyDefaults.js";
+import { statusCommandDependencyDefaults } from "../status/statusCommandDependencyDefaults.js";
 import type { BubbleLifecycleState } from "../../../types/bubble.js";
 import { resolveCanonicalPendingApprovalSignal } from "../approval/pendingApprovalSignal.js";
+import { isNamedError } from "../errors/namedError.js";
 
 export type PendingInboxItemType = "HUMAN_QUESTION" | "APPROVAL_REQUEST";
 
@@ -163,7 +161,7 @@ export function asBubbleInboxError(
   if (error instanceof BubbleInboxError) {
     throw error;
   }
-  if (error instanceof BubbleLookupError) {
+  if (isNamedError(error, "BubbleLookupError")) {
     throw new BubbleInboxError({
       message: error.message,
       cause: error,
