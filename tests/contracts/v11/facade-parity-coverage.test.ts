@@ -6,6 +6,7 @@ import { describe, expect, it } from "vitest";
 import { commandMigrationMap } from "./migration-map.js";
 
 const commandsWithoutFacadeParitySentinel = [
+  "approval",
   "askHuman",
   "reply"
 ] as const;
@@ -15,7 +16,6 @@ const facadeParityTestsByCommand: Record<string, readonly string[]> = {
   pass: ["tests/v11/application/pass/passFacadeParity.test.ts"],
   kickoff: ["tests/v11/application/kickoff/kickoffFacadeParity.test.ts"],
   converged: ["tests/v11/application/converged/convergedFacadeParity.test.ts"],
-  approval: ["tests/v11/application/approval/approvalFacadeParity.test.ts"],
   delete: ["tests/v11/application/delete/deleteFacadeParity.test.ts"],
   inbox: ["tests/v11/application/inbox/inboxFacadeParity.test.ts"],
   open: ["tests/v11/application/open/openFacadeParity.test.ts"],

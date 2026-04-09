@@ -30,7 +30,7 @@ export const commandMigrationMap: readonly CommandMigrationEntry[] = [
     command: "approval",
     state: "v11",
     owner: "runtime",
-    notes: "Core facade now delegates to v11 approval orchestration seams; v11 is the source of truth."
+    notes: "Direct library exports already route to the v11 approval entrypoint; remaining core compatibility is tracked separately from facade-parity sentinels."
   },
   {
     command: "delete",
