@@ -1,15 +1,15 @@
 import type { LoadedStateSnapshot } from "../../shared/ports/stateSnapshots.js";
+import type {
+  EnsureBubbleInstanceIdForMutationResult
+} from "../../shared/ports/bubbleIdentity.js";
+import type {
+  ResolvedBubbleWorkspace
+} from "../../shared/ports/workspaceResolution.js";
 import {
   IDEATION_PASS_BLOCKED
 } from "../../shared/ideation/ideationReasonCodes.js";
 import type { ActorEmitContextSnapshot } from "../../shared/actorProtocol/actorEmitContext.js";
 import { passWorkspaceContextDefaults } from "../../../core/bubble/passWorkspaceContextDefaults.js";
-import type {
-  EnsureBubbleInstanceIdForMutationResult
-} from "../../../core/bubble/bubbleInstanceId.js";
-import type {
-  ResolvedBubbleWorkspace
-} from "../../../core/bubble/workspaceResolution.js";
 import type { AgentName, BubbleStateSnapshot } from "../../../types/bubble.js";
 import {
   resolveIdeationMetadata as resolveV11IdeationMetadata
