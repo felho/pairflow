@@ -17,7 +17,7 @@ export async function mergeBubbleCommandOrchestration(
   dependencies: MergeBubbleDependencies = {}
 ): Promise<MergeBubbleResult> {
   const normalized = normalizeMergeBubbleInput(input, createBubbleMergeError);
-  const resolvedDependencies = resolveMergeCommandDependencies(dependencies);
+  const resolvedDependencies = await resolveMergeCommandDependencies(dependencies);
   return runMergeFlow(
     {
       ...normalized,

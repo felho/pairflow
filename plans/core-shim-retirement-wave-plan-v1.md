@@ -168,6 +168,11 @@ These numbers are triage inputs, not yet a finalized ledger.
   - the remaining frontier is now mostly:
     `merge`, `metaReviewGate`, `open`, `reply`, `restart`, `start`,
     `routerDependencies`, and the intentional shared wrapper bridges
+- after the `merge` dependency-resolution lazy-load batch:
+  - total direct residual imports: `21`
+  - `resolveMergeCommandDependencies` and `mergeBubbleCommandOrchestration`
+    now load `core/bubble/mergeBubbleDefaults` lazily instead of importing it
+    statically at the `v11` perimeter
 - after the `start + kickoff` local fan-in batch:
   - total direct residual imports: `54`
   - `application/start` prompt/runtime and default wiring now route through two

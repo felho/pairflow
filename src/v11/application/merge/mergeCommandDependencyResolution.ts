@@ -1,22 +1,35 @@
-import { mergeBubbleDependencyDefaults } from "../../../core/bubble/mergeBubbleDefaults.js";
 import type { MergeBubbleDependencies } from "./mergeCommandContract.js";
 
-export interface ResolvedMergeCommandDependencies {
-  runGit: typeof mergeBubbleDependencyDefaults.runGit;
-  resolveBubbleById: typeof mergeBubbleDependencyDefaults.resolveBubbleById;
-  readStateSnapshot: typeof mergeBubbleDependencyDefaults.readStateSnapshot;
-  writeStateSnapshot: typeof mergeBubbleDependencyDefaults.writeStateSnapshot;
-  branchExists: typeof mergeBubbleDependencyDefaults.branchExists;
-  terminateBubbleTmuxSession: typeof mergeBubbleDependencyDefaults.terminateBubbleTmuxSession;
-  removeRuntimeSession: typeof mergeBubbleDependencyDefaults.removeRuntimeSession;
-  cleanupWorktreeWorkspace: typeof mergeBubbleDependencyDefaults.cleanupWorktreeWorkspace;
-  ensureBubbleInstanceIdForMutation: typeof mergeBubbleDependencyDefaults.ensureBubbleInstanceIdForMutation;
-  emitBubbleLifecycleEventBestEffort: typeof mergeBubbleDependencyDefaults.emitBubbleLifecycleEventBestEffort;
+type MergeBubbleDependencyDefaults = typeof import("../../../core/bubble/mergeBubbleDefaults.js")["mergeBubbleDependencyDefaults"];
+
+let mergeBubbleDependencyDefaultsPromise:
+  | Promise<MergeBubbleDependencyDefaults>
+  | undefined;
+
+async function loadMergeBubbleDependencyDefaults(): Promise<MergeBubbleDependencyDefaults> {
+  mergeBubbleDependencyDefaultsPromise ??= import(
+    "../../../core/bubble/mergeBubbleDefaults.js"
+  ).then(({ mergeBubbleDependencyDefaults }) => mergeBubbleDependencyDefaults);
+  return mergeBubbleDependencyDefaultsPromise;
 }
 
-export function resolveMergeCommandDependencies(
+export interface ResolvedMergeCommandDependencies {
+  runGit: MergeBubbleDependencyDefaults["runGit"];
+  resolveBubbleById: MergeBubbleDependencyDefaults["resolveBubbleById"];
+  readStateSnapshot: MergeBubbleDependencyDefaults["readStateSnapshot"];
+  writeStateSnapshot: MergeBubbleDependencyDefaults["writeStateSnapshot"];
+  branchExists: MergeBubbleDependencyDefaults["branchExists"];
+  terminateBubbleTmuxSession: MergeBubbleDependencyDefaults["terminateBubbleTmuxSession"];
+  removeRuntimeSession: MergeBubbleDependencyDefaults["removeRuntimeSession"];
+  cleanupWorktreeWorkspace: MergeBubbleDependencyDefaults["cleanupWorktreeWorkspace"];
+  ensureBubbleInstanceIdForMutation: MergeBubbleDependencyDefaults["ensureBubbleInstanceIdForMutation"];
+  emitBubbleLifecycleEventBestEffort: MergeBubbleDependencyDefaults["emitBubbleLifecycleEventBestEffort"];
+}
+
+export async function resolveMergeCommandDependencies(
   dependencies: MergeBubbleDependencies = {}
-): ResolvedMergeCommandDependencies {
+): Promise<ResolvedMergeCommandDependencies> {
+  const mergeBubbleDependencyDefaults = await loadMergeBubbleDependencyDefaults();
   return {
     runGit: dependencies.runGit ?? mergeBubbleDependencyDefaults.runGit,
     resolveBubbleById:

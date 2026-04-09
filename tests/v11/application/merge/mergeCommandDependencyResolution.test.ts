@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { resolveMergeCommandDependencies } from "../../../../src/v11/application/merge/mergeCommandDependencyResolution.js";
 
 describe("mergeCommandDependencyResolution", () => {
-  it("preserves explicit dependency overrides", () => {
+  it("preserves explicit dependency overrides", async () => {
     const customRunGit = (async () =>
       ({
         exitCode: 0,
@@ -11,7 +11,7 @@ describe("mergeCommandDependencyResolution", () => {
         stderr: ""
       })) as never;
 
-    const resolved = resolveMergeCommandDependencies({
+    const resolved = await resolveMergeCommandDependencies({
       runGit: customRunGit
     });
 
