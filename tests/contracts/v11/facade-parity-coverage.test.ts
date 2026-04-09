@@ -13,6 +13,7 @@ const commandsWithoutFacadeParitySentinel = [
   "inbox",
   "list",
   "open",
+  "pass",
   "reply",
   "restart",
   "resume",
@@ -21,7 +22,6 @@ const commandsWithoutFacadeParitySentinel = [
 ] as const;
 
 const facadeParityTestsByCommand: Record<string, readonly string[]> = {
-  pass: ["tests/v11/application/pass/passFacadeParity.test.ts"],
   kickoff: ["tests/v11/application/kickoff/kickoffFacadeParity.test.ts"],
   converged: ["tests/v11/application/converged/convergedFacadeParity.test.ts"],
   metaReviewGate: [

@@ -92,7 +92,7 @@ const passInvalidInputCases: Array<{
     caseDef: {
       id: "pass-invalid-empty-summary",
       command: "pass",
-      mode: "baseline",
+      mode: "v11",
       description: "invalid empty summary validation",
       input: {
         summary: "   ",
@@ -110,7 +110,7 @@ const passInvalidInputCases: Array<{
     caseDef: {
       id: "pass-invalid-refs",
       command: "pass",
-      mode: "baseline",
+      mode: "v11",
       description: "invalid refs validation",
       input: {
         summary: "Valid summary",
@@ -147,7 +147,7 @@ const passInvalidInputCases: Array<{
     caseDef: {
       id: "pass-invalid-no-findings",
       command: "pass",
-      mode: "baseline",
+      mode: "v11",
       description: "invalid noFindings validation",
       input: {
         summary: "Valid summary",
@@ -165,7 +165,7 @@ const passInvalidInputCases: Array<{
     caseDef: {
       id: "pass-invalid-seed-round-two-clean-history",
       command: "pass",
-      mode: "parity",
+      mode: "v11",
       description: "invalid seedRoundTwoCleanHistory validation",
       input: {
         summary: "Valid summary",
@@ -185,11 +185,11 @@ describe("v11 pass contract harness skeleton", () => {
   it("loads seed contract case metadata", async () => {
     const casePath = resolve(
       process.cwd(),
-      "tests/contracts/v11/cases/pass/pass-basic-handoff.case.json"
+      "tests/contracts/v11/cases/pass/pass-basic-handoff-v11.case.json"
     );
     const caseDef = await readContractCase(casePath);
     expect(caseDef.command).toBe("pass");
-    expect(caseDef.mode).toBe("baseline");
+    expect(caseDef.mode).toBe("v11");
     expect(caseDef.expected.status).toBe("ok");
   });
 
@@ -257,7 +257,7 @@ describe("v11 pass contract harness skeleton", () => {
   );
 
   it(
-    "executes baseline, v11 and parity assertions via shared runner",
+    "executes v11 assertions via shared runner",
     { timeout: CONTRACT_TEST_TIMEOUT.parityExhaustiveMs },
     async () => {
       const casePaths = await listPassCasePaths();
@@ -271,49 +271,18 @@ describe("v11 pass contract harness skeleton", () => {
         const caseDef = await readContractCase(casePath);
         seenModes.add(caseDef.mode);
         const run = await runPassContractCase(caseDef);
-        if (caseDef.mode === "baseline") {
-          expect(run.baseline?.status).toBe(caseDef.expected.status);
-          if (caseDef.expected.reasonCode !== undefined) {
-            expect(run.baseline?.reasonCode).toBe(caseDef.expected.reasonCode);
-          }
-          expect(run.v11).toBeUndefined();
-          seenReasonCodes.add(run.baseline?.reasonCode ?? "");
-          if (run.baseline?.status === "ok") {
-            seenEnvelopeTypes.add(run.baseline.envelopeType);
-          }
-          seenStates.add(run.baseline?.stateSubset.state ?? "");
-          continue;
-        }
-        if (caseDef.mode === "v11") {
-          expect(run.v11?.status).toBe(caseDef.expected.status);
-          if (caseDef.expected.reasonCode !== undefined) {
-            expect(run.v11?.reasonCode).toBe(caseDef.expected.reasonCode);
-          }
-          expect(run.baseline).toBeUndefined();
-          seenReasonCodes.add(run.v11?.reasonCode ?? "");
-          if (run.v11?.status === "ok") {
-            seenEnvelopeTypes.add(run.v11.envelopeType);
-          }
-          seenStates.add(run.v11?.stateSubset.state ?? "");
-          continue;
-        }
-
-        expect(run.baseline).toBeDefined();
-        expect(run.v11).toBeDefined();
-        expect(run.baseline).toEqual(run.v11);
-        expect(run.baseline?.status).toBe(caseDef.expected.status);
+        expect(caseDef.mode).toBe("v11");
+        expect(run.v11?.status).toBe(caseDef.expected.status);
         if (caseDef.expected.reasonCode !== undefined) {
-          expect(run.baseline?.reasonCode).toBe(caseDef.expected.reasonCode);
+          expect(run.v11?.reasonCode).toBe(caseDef.expected.reasonCode);
         }
-        seenReasonCodes.add(run.baseline?.reasonCode ?? "");
-        if (run.baseline?.status === "ok") {
-          seenEnvelopeTypes.add(run.baseline.envelopeType);
+        seenReasonCodes.add(run.v11?.reasonCode ?? "");
+        if (run.v11?.status === "ok") {
+          seenEnvelopeTypes.add(run.v11.envelopeType);
         }
-        seenStates.add(run.baseline?.stateSubset.state ?? "");
+        seenStates.add(run.v11?.stateSubset.state ?? "");
       }
-      expect(seenModes.has("baseline")).toBe(true);
       expect(seenModes.has("v11")).toBe(true);
-      expect(seenModes.has("parity")).toBe(true);
       expect(seenReasonCodes.has("PASS_ACCEPTED")).toBe(true);
       expect(seenReasonCodes.has("PASS_AUTO_CONVERGED")).toBe(true);
       expect(seenEnvelopeTypes.has("PASS")).toBe(true);

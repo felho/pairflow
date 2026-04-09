@@ -3,11 +3,10 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import {
-  emitPassFromWorkspace,
-  type EmitPassInput,
-  type EmitPassResult
-} from "../../../src/core/agent/pass.js";
-import { emitPassFromWorkspaceV11 } from "../../../src/v11/application/pass/emitPassV11.js";
+  emitPassFromWorkspaceV11,
+  type EmitPassV11Input as EmitPassInput,
+  type EmitPassV11Result as EmitPassResult
+} from "../../../src/v11/application/pass/emitPassV11.js";
 import { readStateSnapshot } from "../../../src/v11/infrastructure/state/stateStore.js";
 import { isPassIntent, type PassIntent } from "../../../src/types/protocol.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
@@ -37,7 +36,6 @@ export type PassContractOutput =
 
 export interface PassContractRunResult {
   mode: ContractCase["mode"];
-  baseline?: PassContractOutput;
   v11?: PassContractOutput;
 }
 
@@ -175,18 +173,6 @@ function assertContractExpectedSubset(input: {
   }
 }
 
-function assertParityEquivalent(input: {
-  baseline: PassContractOutput;
-  v11: PassContractOutput;
-  caseId: string;
-}): void {
-  if (JSON.stringify(input.baseline) !== JSON.stringify(input.v11)) {
-    throw new Error(
-      `PASS parity mismatch for case=${input.caseId}: baseline=${JSON.stringify(input.baseline)} v11=${JSON.stringify(input.v11)}`
-    );
-  }
-}
-
 async function executePassCase(input: {
   caseDef: ContractCase;
   executor: (passInput: EmitPassInput) => Promise<EmitPassResult>;
@@ -224,18 +210,18 @@ async function executePassCase(input: {
 async function advanceToReviewerRoundTwoWithCleanHistory(
   worktreePath: string
 ): Promise<void> {
-  await emitPassFromWorkspace({
+  await emitPassFromWorkspaceV11({
     summary: "Implementer handoff round 1",
     cwd: worktreePath,
     now: new Date("2026-03-01T10:01:00.000Z")
   });
-  await emitPassFromWorkspace({
+  await emitPassFromWorkspaceV11({
     summary: "Reviewer clean handoff round 1",
     noFindings: true,
     cwd: worktreePath,
     now: new Date("2026-03-01T10:02:00.000Z")
   });
-  await emitPassFromWorkspace({
+  await emitPassFromWorkspaceV11({
     summary: "Implementer handoff round 2",
     cwd: worktreePath,
     now: new Date("2026-03-01T10:03:00.000Z")
@@ -249,64 +235,17 @@ export async function runPassContractCase(
     throw new Error(`Unsupported command for PASS contract runner: ${caseDef.command}`);
   }
 
-  if (caseDef.mode === "baseline") {
-    const baseline = await executePassCase({
-      caseDef,
-      executor: emitPassFromWorkspace
-    });
-    assertContractExpectedSubset({
-      output: baseline,
-      expected: caseDef.expected,
-      label: "baseline"
-    });
-    return {
-      mode: caseDef.mode,
-      baseline
-    };
-  }
-
-  if (caseDef.mode === "v11") {
-    const v11 = await executePassCase({
-      caseDef,
-      executor: emitPassFromWorkspaceV11
-    });
-    assertContractExpectedSubset({
-      output: v11,
-      expected: caseDef.expected,
-      label: "v11"
-    });
-    return {
-      mode: caseDef.mode,
-      v11
-    };
-  }
-
-  const baseline = await executePassCase({
-    caseDef,
-    executor: emitPassFromWorkspace
-  });
   const v11 = await executePassCase({
     caseDef,
     executor: emitPassFromWorkspaceV11
   });
   assertContractExpectedSubset({
-    output: baseline,
-    expected: caseDef.expected,
-    label: "parity/baseline"
-  });
-  assertContractExpectedSubset({
     output: v11,
     expected: caseDef.expected,
-    label: "parity/v11"
-  });
-  assertParityEquivalent({
-    baseline,
-    v11,
-    caseId: caseDef.id
+    label: "v11"
   });
   return {
     mode: caseDef.mode,
-    baseline,
     v11
   };
 }
