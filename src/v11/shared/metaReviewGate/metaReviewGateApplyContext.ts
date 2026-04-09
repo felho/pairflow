@@ -1,16 +1,18 @@
-import { appendProtocolEnvelope } from "../../../core/protocol/transcriptStore.js";
-import { resolveBubbleById } from "../../../core/bubble/bubbleLookup.js";
-import { setMetaReviewerPaneBinding } from "../../../core/runtime/sessionsRegistry.js";
-import {
-  readStateSnapshot,
-  type LoadedStateSnapshot,
-  writeStateSnapshot
-} from "../../../core/state/stateStore.js";
 import {
   assertRunningConvergenceState,
   buildGateLockPath
 } from "./metaReviewGateShared.js";
 import type { MetaReviewArtifactReadPort } from "../metaReview/metaReviewArtifactIo.js";
+import type { ResolveBubbleByIdPort } from "../ports/bubbleLookup.js";
+import type {
+  LoadedStateSnapshot,
+  ReadStateSnapshotPort,
+  WriteStateSnapshotPort
+} from "../ports/stateSnapshots.js";
+import type {
+  AppendProtocolEnvelopePort
+} from "../ports/transcript.js";
+import type { SetMetaReviewerPaneBindingPort } from "../ports/runtimeSessions.js";
 import type {
   ApplyMetaReviewGateOnConvergenceDependencies,
   ApplyMetaReviewGateOnConvergenceInput,
@@ -19,10 +21,10 @@ import type {
 import { MetaReviewGateError } from "./metaReviewGateTypes.js";
 
 export interface ApplyMetaReviewGateExecutionContext {
-  appendEnvelope: typeof appendProtocolEnvelope;
-  readState: typeof readStateSnapshot;
-  writeState: typeof writeStateSnapshot;
-  setMetaReviewerPane: typeof setMetaReviewerPaneBinding;
+  appendEnvelope: AppendProtocolEnvelopePort;
+  readState: ReadStateSnapshotPort;
+  writeState: WriteStateSnapshotPort;
+  setMetaReviewerPane: SetMetaReviewerPaneBindingPort;
   notifySubmissionRequest: NotifyMetaReviewerSubmissionRequest;
   resolvePaneWarning:
     NonNullable<ApplyMetaReviewGateOnConvergenceDependencies["resolveMetaReviewerPaneWarning"]>;
@@ -31,7 +33,7 @@ export interface ApplyMetaReviewGateExecutionContext {
   now: Date;
   nowIso: string;
   refs: string[];
-  resolved: Awaited<ReturnType<typeof resolveBubbleById>>;
+  resolved: Awaited<ReturnType<ResolveBubbleByIdPort>>;
   lockPath: string;
   deactivateMetaReviewerPane: () => Promise<void>;
   loadedRunning: LoadedStateSnapshot;
@@ -41,12 +43,14 @@ export async function initializeApplyMetaReviewGateExecutionContext(
   input: ApplyMetaReviewGateOnConvergenceInput,
   dependencies: ApplyMetaReviewGateOnConvergenceDependencies
 ): Promise<ApplyMetaReviewGateExecutionContext> {
-  const resolveBubble = dependencies.resolveBubbleById ?? resolveBubbleById;
-  const readState = dependencies.readStateSnapshot ?? readStateSnapshot;
-  const writeState = dependencies.writeStateSnapshot ?? writeStateSnapshot;
-  const appendEnvelope = dependencies.appendProtocolEnvelope ?? appendProtocolEnvelope;
-  const setMetaReviewerPane =
-    dependencies.setMetaReviewerPaneBinding ?? setMetaReviewerPaneBinding;
+  const resolveBubble = requireApplyResolveBubbleById(dependencies, input.bubbleId);
+  const readState = requireApplyReadStateSnapshot(dependencies, input.bubbleId);
+  const writeState = requireApplyWriteStateSnapshot(dependencies, input.bubbleId);
+  const appendEnvelope = requireApplyAppendProtocolEnvelope(dependencies, input.bubbleId);
+  const setMetaReviewerPane = requireApplySetMetaReviewerPaneBinding(
+    dependencies,
+    input.bubbleId
+  );
   const notifySubmissionRequest =
     requireApplyNotifySubmissionRequest(dependencies, input.bubbleId);
   const resolvePaneWarning = requireApplyPaneWarningResolver(
@@ -95,6 +99,71 @@ export async function initializeApplyMetaReviewGateExecutionContext(
     deactivateMetaReviewerPane,
     loadedRunning
   };
+}
+
+function requireApplyResolveBubbleById(
+  dependencies: ApplyMetaReviewGateOnConvergenceDependencies,
+  bubbleId: string
+): ResolveBubbleByIdPort {
+  if (dependencies.resolveBubbleById !== undefined) {
+    return dependencies.resolveBubbleById;
+  }
+  return buildMissingApplyCapabilityError(
+    bubbleId,
+    "meta-review gate bubble resolution capability is unavailable."
+  );
+}
+
+function requireApplyReadStateSnapshot(
+  dependencies: ApplyMetaReviewGateOnConvergenceDependencies,
+  bubbleId: string
+): ReadStateSnapshotPort {
+  if (dependencies.readStateSnapshot !== undefined) {
+    return dependencies.readStateSnapshot;
+  }
+  return buildMissingApplyCapabilityError(
+    bubbleId,
+    "meta-review gate state read capability is unavailable."
+  );
+}
+
+function requireApplyWriteStateSnapshot(
+  dependencies: ApplyMetaReviewGateOnConvergenceDependencies,
+  bubbleId: string
+): WriteStateSnapshotPort {
+  if (dependencies.writeStateSnapshot !== undefined) {
+    return dependencies.writeStateSnapshot;
+  }
+  return buildMissingApplyCapabilityError(
+    bubbleId,
+    "meta-review gate state write capability is unavailable."
+  );
+}
+
+function requireApplyAppendProtocolEnvelope(
+  dependencies: ApplyMetaReviewGateOnConvergenceDependencies,
+  bubbleId: string
+): AppendProtocolEnvelopePort {
+  if (dependencies.appendProtocolEnvelope !== undefined) {
+    return dependencies.appendProtocolEnvelope;
+  }
+  return buildMissingApplyCapabilityError(
+    bubbleId,
+    "meta-review gate transcript append capability is unavailable."
+  );
+}
+
+function requireApplySetMetaReviewerPaneBinding(
+  dependencies: ApplyMetaReviewGateOnConvergenceDependencies,
+  bubbleId: string
+): SetMetaReviewerPaneBindingPort {
+  if (dependencies.setMetaReviewerPaneBinding !== undefined) {
+    return dependencies.setMetaReviewerPaneBinding;
+  }
+  return buildMissingApplyCapabilityError(
+    bubbleId,
+    "meta-review gate pane binding capability is unavailable."
+  );
 }
 
 function requireApplyPaneWarningResolver(

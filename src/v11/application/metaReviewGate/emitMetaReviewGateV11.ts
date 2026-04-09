@@ -1,4 +1,11 @@
+import { appendProtocolEnvelope } from "../../../core/protocol/transcriptStore.js";
+import { resolveBubbleById } from "../../../core/bubble/bubbleLookup.js";
+import { setMetaReviewerPaneBinding } from "../../../core/runtime/sessionsRegistry.js";
 import { readFile, writeFile } from "node:fs/promises";
+import {
+  readStateSnapshot,
+  writeStateSnapshot
+} from "../../../core/state/stateStore.js";
 import { runTmux } from "../../../core/runtime/tmuxManager.js";
 
 import {
@@ -22,6 +29,11 @@ function withMetaReviewGateApplyDefaults(
   dependencies: ApplyMetaReviewGateOnConvergenceDependencies = {}
 ): ApplyMetaReviewGateOnConvergenceDependencies {
   return {
+    appendProtocolEnvelope,
+    readStateSnapshot,
+    resolveBubbleById,
+    setMetaReviewerPaneBinding,
+    writeStateSnapshot,
     readFile,
     runTmux,
     notifyMetaReviewerSubmissionRequest,
