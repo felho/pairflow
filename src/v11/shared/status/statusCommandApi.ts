@@ -1,4 +1,5 @@
-import { BubbleLookupError, resolveBubbleById } from "../../../core/bubble/bubbleLookup.js";
+import { BubbleLookupError } from "../../../core/bubble/bubbleLookup.js";
+import { statusInboxDependencyDefaults } from "../../../core/bubble/statusInboxDefaults.js";
 import {
   countPendingHumanQuestions,
   readStatusTranscriptData,
@@ -40,7 +41,7 @@ export async function getBubbleStatus(
   input: BubbleStatusInput,
   dependencies: BubbleStatusDependencies
 ): Promise<BubbleStatusView> {
-  const resolved = await resolveBubbleById({
+  const resolved = await statusInboxDependencyDefaults.resolveBubbleById({
     bubbleId: input.bubbleId,
     ...(input.repoPath !== undefined ? { repoPath: input.repoPath } : {}),
     ...(input.cwd !== undefined ? { cwd: input.cwd } : {})
@@ -92,9 +93,9 @@ export async function getBubbleStatus(
   const now = input.now ?? new Date();
   const paneActivityRead: ReadWatchdogPaneActivityResult =
     await dependencies.readWatchdogPaneActivity({
-    runtimeDir: resolved.bubblePaths.runtimeDir,
-    bubbleId: resolved.bubbleId
-  });
+      runtimeDir: resolved.bubblePaths.runtimeDir,
+      bubbleId: resolved.bubbleId
+    });
 
   return buildBubbleStatusView({
     resolved,

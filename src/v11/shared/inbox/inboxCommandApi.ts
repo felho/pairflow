@@ -1,9 +1,7 @@
-import { readTranscriptEnvelopes } from "../../../core/protocol/transcriptStore.js";
-import { readStateSnapshot } from "../../../core/state/stateStore.js";
 import {
   BubbleLookupError,
-  resolveBubbleById
 } from "../../../core/bubble/bubbleLookup.js";
+import { statusInboxDependencyDefaults } from "../../../core/bubble/statusInboxDefaults.js";
 import type { BubbleLifecycleState } from "../../../types/bubble.js";
 import { resolveCanonicalPendingApprovalSignal } from "../approval/pendingApprovalSignal.js";
 
@@ -81,15 +79,15 @@ function deriveQuestionSummary(payload: Record<string, unknown>): string {
 export async function getBubbleInbox(
   input: BubbleInboxInput
 ): Promise<BubbleInboxView> {
-  const resolved = await resolveBubbleById({
+  const resolved = await statusInboxDependencyDefaults.resolveBubbleById({
     bubbleId: input.bubbleId,
     ...(input.repoPath !== undefined ? { repoPath: input.repoPath } : {}),
     ...(input.cwd !== undefined ? { cwd: input.cwd } : {})
   });
 
   const [{ state }, inbox] = await Promise.all([
-    readStateSnapshot(resolved.bubblePaths.statePath),
-    readTranscriptEnvelopes(resolved.bubblePaths.inboxPath, {
+    statusInboxDependencyDefaults.readStateSnapshot(resolved.bubblePaths.statePath),
+    statusInboxDependencyDefaults.readTranscriptEnvelopes(resolved.bubblePaths.inboxPath, {
       allowMissing: true,
       tolerateInvalidEnvelopeLines: true
     })
