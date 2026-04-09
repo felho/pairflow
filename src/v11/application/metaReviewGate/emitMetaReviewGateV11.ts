@@ -77,7 +77,9 @@ function withMetaReviewGateRecoveryDefaults(
     readFile: dependencies.readFile ?? metaReviewGateDependencyDefaults.readFile,
     writeFile:
       dependencies.writeFile ?? metaReviewGateDependencyDefaults.writeFile,
-    sleepForRetryMs: dependencies.sleepForRetryMs
+    ...(dependencies.sleepForRetryMs !== undefined
+      ? { sleepForRetryMs: dependencies.sleepForRetryMs }
+      : {})
   };
 }
 
