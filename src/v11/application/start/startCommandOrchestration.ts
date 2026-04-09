@@ -1,17 +1,5 @@
 import { buildResumeTranscriptSummary } from "./startCommandResumeSummary.js";
-import {
-  bootstrapWorktreeWorkspace,
-  cleanupWorktreeWorkspace
-} from "../../../core/workspace/worktreeManager.js";
-import {
-  launchBubbleTmuxSession,
-  terminateBubbleTmuxSession
-} from "../../../core/runtime/tmuxManager.js";
-import {
-  claimRuntimeSession,
-  removeRuntimeSession
-} from "../../../core/runtime/sessionsRegistry.js";
-import { writeStateSnapshot } from "../../../core/state/stateStore.js";
+import { startBubbleDependencyDefaults } from "../../../core/bubble/startBubbleDefaults.js";
 import type { BubbleStateSnapshot } from "../../../types/bubble.js";
 import type {
   StartBubbleDependencies,
@@ -76,19 +64,31 @@ export function resolveStartBubbleDependencies(
   const { dependencies } = input;
 
   return {
-    bootstrap: dependencies.bootstrapWorktreeWorkspace ?? bootstrapWorktreeWorkspace,
-    cleanup: dependencies.cleanupWorktreeWorkspace ?? cleanupWorktreeWorkspace,
+    bootstrap:
+      dependencies.bootstrapWorktreeWorkspace
+      ?? startBubbleDependencyDefaults.bootstrapWorktreeWorkspace,
+    cleanup:
+      dependencies.cleanupWorktreeWorkspace
+      ?? startBubbleDependencyDefaults.cleanupWorktreeWorkspace,
     runWorktreeBootstrapCommand:
       dependencies.runWorktreeBootstrapCommand
       ?? input.runWorktreeBootstrapCommandDefault,
-    launchTmux: dependencies.launchBubbleTmuxSession ?? launchBubbleTmuxSession,
+    launchTmux:
+      dependencies.launchBubbleTmuxSession
+      ?? startBubbleDependencyDefaults.launchBubbleTmuxSession,
     terminateTmux:
-      dependencies.terminateBubbleTmuxSession ?? terminateBubbleTmuxSession,
+      dependencies.terminateBubbleTmuxSession
+      ?? startBubbleDependencyDefaults.terminateBubbleTmuxSession,
     isTmuxSessionAlive:
       dependencies.isTmuxSessionAlive ?? input.isTmuxSessionAliveDefault,
-    claimSession: dependencies.claimRuntimeSession ?? claimRuntimeSession,
-    removeSession: dependencies.removeRuntimeSession ?? removeRuntimeSession,
-    writeState: dependencies.writeStateSnapshot ?? writeStateSnapshot,
+    claimSession:
+      dependencies.claimRuntimeSession
+      ?? startBubbleDependencyDefaults.claimRuntimeSession,
+    removeSession:
+      dependencies.removeRuntimeSession
+      ?? startBubbleDependencyDefaults.removeRuntimeSession,
+    writeState:
+      dependencies.writeStateSnapshot ?? startBubbleDependencyDefaults.writeStateSnapshot,
     buildResumeSummary:
       dependencies.buildResumeTranscriptSummary ?? buildResumeTranscriptSummary,
     readReviewerBriefArtifact:
