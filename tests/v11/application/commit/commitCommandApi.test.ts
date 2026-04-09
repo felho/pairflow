@@ -10,9 +10,10 @@ import {
 import { emitPassFromWorkspace } from "../../../../src/v11/application/pass/passCommandOrchestration.js";
 import { submitMetaReviewResultV11 as submitMetaReviewResult } from "../../../../src/v11/application/metaReview/emitMetaReviewV11.js";
 import { emitApproveV11 as emitApprove } from "../../../../src/v11/application/approval/emitApprovalV11.js";
-import { commitBubble } from "../../../../src/core/bubble/commitBubble.js";
+import { commitBubbleV11 as commitBubble } from "../../../../src/v11/application/commit/emitCommitV11.js";
 import { readStateSnapshot } from "../../../../src/v11/infrastructure/state/stateStore.js";
 import { readTranscriptEnvelopes } from "../../../../src/v11/infrastructure/artifact/transcript/transcriptStore.js";
+import { buildCommitBubbleDependencies } from "../../../helpers/commit.js";
 import { initGitRepository, runGit } from "../../../helpers/git.js";
 import { setupRunningBubbleFixture } from "../../../helpers/bubble.js";
 
@@ -138,7 +139,7 @@ describe("commitCommandApi", () => {
       bubbleId: bubble.bubbleId,
       cwd: repoPath,
       now: new Date("2026-02-22T15:10:00.000Z")
-    });
+    }, buildCommitBubbleDependencies());
 
     expect(result.state.state).toBe("DONE");
     expect(result.commitSha.length).toBeGreaterThan(6);
