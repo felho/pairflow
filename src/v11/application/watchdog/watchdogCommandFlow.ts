@@ -2,10 +2,10 @@ import { retryStuckAgentInput, resolveDeliveryMessageRef } from "../../../core/r
 import type { BubbleStateSnapshot } from "../../../types/bubble.js";
 import type { BubbleWatchdogResult } from "./watchdogCommandContract.js";
 import { executeWatchdogEscalationMutation } from "../../shared/watchdog/watchdogEscalationMutation.js";
-import type { resolveBubbleById } from "../../../core/bubble/bubbleLookup.js";
-import type { emitBubbleNotification } from "../../../core/runtime/notifications.js";
-import type { emitTmuxDeliveryNotification } from "../../../core/runtime/tmuxDelivery.js";
 import type { recoverMetaReviewGateFromSnapshot } from "../../shared/metaReviewGate/metaReviewGateCommandApi.js";
+import type { ResolvedBubbleById } from "../../shared/ports/bubbleLookup.js";
+import type { EmitBubbleNotificationPort } from "../../shared/ports/notifications.js";
+import type { EmitTmuxDeliveryNotificationPort } from "../../shared/ports/tmuxDelivery.js";
 import type {
   AppendProtocolEnvelopePort
 } from "../../shared/ports/transcript.js";
@@ -18,15 +18,15 @@ import type {
 export interface WatchdogRuntimeContext {
   now: Date;
   nowIso: string;
-  resolved: Awaited<ReturnType<typeof resolveBubbleById>>;
+  resolved: ResolvedBubbleById;
   readState: ReadStateSnapshotPort;
   appendEnvelope: AppendProtocolEnvelopePort;
   writeState: WriteStateSnapshotPort;
   recoverMetaReviewRoute: typeof recoverMetaReviewGateFromSnapshot;
   loadedState: LoadedStateSnapshot;
   state: BubbleStateSnapshot;
-  emitDelivery: typeof emitTmuxDeliveryNotification;
-  emitNotification: typeof emitBubbleNotification;
+  emitDelivery: EmitTmuxDeliveryNotificationPort;
+  emitNotification: EmitBubbleNotificationPort;
 }
 
 export async function buildNotExpiredResult(

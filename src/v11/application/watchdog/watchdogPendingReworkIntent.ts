@@ -1,5 +1,3 @@
-import type { readStateSnapshot } from "../../../core/state/stateStore.js";
-import type { resolveBubbleById } from "../../../core/bubble/bubbleLookup.js";
 import { emitBubbleLifecycleEventBestEffort } from "../../shared/metrics/bubbleEvents.js";
 import {
   resolveDeliveryMessageRef,
@@ -11,22 +9,21 @@ import { persistPendingReworkIntentState } from "../../shared/watchdog/watchdogP
 import type { BubbleStateSnapshot } from "../../../types/bubble.js";
 import type { ProtocolEnvelope } from "../../../types/protocol.js";
 import type { BubbleWatchdogResult } from "./watchdogCommandContract.js";
+import type { ResolvedBubbleById } from "../../shared/ports/bubbleLookup.js";
+import type {
+  LoadedStateSnapshot,
+  WriteStateSnapshotPort
+} from "../../shared/ports/stateSnapshots.js";
+import type { EmitTmuxDeliveryNotificationPort } from "../../shared/ports/tmuxDelivery.js";
 
 export async function maybeApplyPendingReworkIntent(input: {
   now: Date;
   nowIso: string;
-  resolved: Awaited<ReturnType<typeof resolveBubbleById>>;
-  loadedState: Awaited<ReturnType<typeof readStateSnapshot>>;
+  resolved: ResolvedBubbleById;
+  loadedState: LoadedStateSnapshot;
   state: BubbleStateSnapshot;
-  writeState: (
-    statePath: string,
-    state: BubbleStateSnapshot,
-    options?: {
-      expectedFingerprint?: string;
-      expectedState?: BubbleStateSnapshot["state"];
-    }
-  ) => Promise<Awaited<ReturnType<typeof readStateSnapshot>>>;
-  emitDelivery: typeof emitTmuxDeliveryNotification;
+  writeState: WriteStateSnapshotPort;
+  emitDelivery: EmitTmuxDeliveryNotificationPort;
 }): Promise<BubbleWatchdogResult | null> {
   if (input.state.state !== "WAITING_HUMAN") {
     return null;
