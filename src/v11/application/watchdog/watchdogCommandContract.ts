@@ -1,6 +1,9 @@
 import type { EmitBubbleNotificationPort } from "../../shared/ports/notifications.js";
 import type { AppendProtocolEnvelopePort } from "../../shared/ports/transcript.js";
-import type { EmitTmuxDeliveryNotificationPort } from "../../shared/ports/tmuxDelivery.js";
+import type {
+  EmitTmuxDeliveryNotificationPort,
+  ResolveDeliveryMessageRefPort
+} from "../../shared/ports/tmuxDelivery.js";
 import type {
   ReadStateSnapshotPort,
   WriteStateSnapshotPort
@@ -15,6 +18,7 @@ import type {
   WriteWatchdogPaneActivityPort
 } from "../../shared/ports/watchdogPaneActivity.js";
 import type { AppendWatchdogTracePort } from "../../shared/ports/watchdogTrace.js";
+import type { EnsureBubbleInstanceIdForMutationPort } from "../../shared/ports/bubbleIdentity.js";
 import type {
   sampleWatchdogPaneActivity
 } from "./watchdogPaneActivitySampler.js";
@@ -41,6 +45,8 @@ export interface BubbleWatchdogDependencies {
   sampleWatchdogPaneActivity?: typeof sampleWatchdogPaneActivity;
   readRuntimeSessionsRegistry?: ReadRuntimeSessionsRegistryPort;
   runTmux?: TmuxRunner;
+  ensureBubbleInstanceIdForMutation?: EnsureBubbleInstanceIdForMutationPort;
+  resolveDeliveryMessageRef?: ResolveDeliveryMessageRefPort;
 }
 
 export type BubbleWatchdogNoopReason =

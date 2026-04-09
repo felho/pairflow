@@ -3,6 +3,7 @@ import {
   type WatchdogStatus
 } from "../../shared/watchdog/watchdogStatus.js";
 import { watchdogCommandDefaults } from "../../../core/watchdog/watchdogCommandDefaults.js";
+import { watchdogPendingReworkDefaults } from "../../../core/watchdog/watchdogPendingReworkDefaults.js";
 import {
   recoverMetaReviewGateFromSnapshotV11 as recoverMetaReviewGateFromSnapshot
 } from "../metaReviewGate/emitMetaReviewGateV11.js";
@@ -69,6 +70,12 @@ export async function runBubbleWatchdog(
   const readRuntimeSessionsRegistry =
     dependencies.readRuntimeSessionsRegistry;
   const runTmux = dependencies.runTmux;
+  const ensureBubbleInstanceIdForMutation =
+    dependencies.ensureBubbleInstanceIdForMutation
+    ?? watchdogPendingReworkDefaults.ensureBubbleInstanceIdForMutation;
+  const resolveDeliveryMessageRef =
+    dependencies.resolveDeliveryMessageRef
+    ?? watchdogPendingReworkDefaults.resolveDeliveryMessageRef;
   const context: WatchdogRuntimeContext = {
     now,
     nowIso,
@@ -90,7 +97,9 @@ export async function runBubbleWatchdog(
     loadedState: context.loadedState,
     state: context.state,
     writeState: context.writeState,
-    emitDelivery: context.emitDelivery
+    emitDelivery: context.emitDelivery,
+    ensureBubbleInstanceIdForMutation,
+    resolveDeliveryMessageRef
   });
   if (pendingRework !== null) {
     await appendTrace({

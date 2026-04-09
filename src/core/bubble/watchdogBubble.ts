@@ -1,5 +1,6 @@
 import { runTmux } from "../../v11/infrastructure/channel/tmux/tmuxManager.js";
 import { readRuntimeSessionsRegistry } from "../../v11/infrastructure/executor/sessionRuntime/runtimeSessionsRegistry.js";
+import { watchdogPendingReworkDefaults } from "../watchdog/watchdogPendingReworkDefaults.js";
 import {
   asBubbleWatchdogErrorV11,
   BubbleWatchdogErrorV11,
@@ -23,8 +24,14 @@ export async function runBubbleWatchdog(
 ): Promise<BubbleWatchdogResult> {
   return runBubbleWatchdogWithDependencies(input, {
     ...dependencies,
+    ensureBubbleInstanceIdForMutation:
+      dependencies.ensureBubbleInstanceIdForMutation
+      ?? watchdogPendingReworkDefaults.ensureBubbleInstanceIdForMutation,
     readRuntimeSessionsRegistry:
       dependencies.readRuntimeSessionsRegistry ?? readRuntimeSessionsRegistry,
+    resolveDeliveryMessageRef:
+      dependencies.resolveDeliveryMessageRef
+      ?? watchdogPendingReworkDefaults.resolveDeliveryMessageRef,
     runTmux: dependencies.runTmux ?? runTmux
   });
 }
