@@ -10,8 +10,8 @@ import {
 import type { AttachLauncher } from "../../../types/bubble.js";
 import {
   BubbleLookupError,
-  resolveBubbleById
-} from "../../../core/bubble/bubbleLookup.js";
+  attachDefaults
+} from "../../../core/bubble/attachDefaults.js";
 import { buildBubbleTmuxSessionName } from "../../shared/bubble/tmuxSessionName.js";
 import { buildCheckLauncherAvailabilityDefault } from "./attachBubbleLauncherAvailability.js";
 import {
@@ -107,7 +107,7 @@ export async function attachBubble(
   input: AttachBubbleInput,
   dependencies: AttachBubbleDependencies = {}
 ): Promise<AttachBubbleResult> {
-  const resolveBubble = dependencies.resolveBubbleById ?? resolveBubbleById;
+  const resolveBubble = dependencies.resolveBubbleById ?? attachDefaults.resolveBubbleById;
   const checkSession =
     dependencies.checkTmuxSessionExists ?? checkTmuxSessionExistsDefault;
   const writeYaml = dependencies.writeYamlFile ?? writeYamlFileDefault;
