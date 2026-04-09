@@ -3,15 +3,7 @@ import type {
   TmuxSessionLivenessProbe
 } from "./reconcileCommandContract.js";
 import type { TmuxRunner } from "../../shared/ports/tmuxSessions.js";
-
-let tmuxManagerModulePromise: Promise<{ runTmux: TmuxRunner }> | undefined;
-
-async function loadTmuxManagerModule(): Promise<{ runTmux: TmuxRunner }> {
-  tmuxManagerModulePromise ??= import(
-    "../../../core/runtime/tmuxManager.js"
-  ).then(({ runTmux }) => ({ runTmux }));
-  return tmuxManagerModulePromise;
-}
+import { runTmux } from "../../shared/tmux/tmuxRunner.js";
 
 export interface NormalizedReconcileRuntimeSessionsInput {
   repoPath?: string;
@@ -24,7 +16,6 @@ export const isTmuxSessionAliveDefault: TmuxSessionLivenessProbe = async (
   sessionName: string
 ): Promise<boolean> => {
   try {
-    const { runTmux } = await loadTmuxManagerModule();
     const result = await runTmux(["has-session", "-t", sessionName], {
       allowFailure: true
     });

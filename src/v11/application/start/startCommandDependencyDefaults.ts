@@ -1,4 +1,5 @@
 import { readTranscriptEnvelopes } from "../../shared/transcript/transcriptDependencyDefaults.js";
+import { runTmux as runTmuxShared } from "../../shared/tmux/tmuxRunner.js";
 import type { ResolveBubbleByIdPort } from "../../shared/ports/bubbleLookup.js";
 import type { EnsureBubbleInstanceIdForMutationPort } from "../../shared/ports/bubbleIdentity.js";
 import type { RegisterRepoInRegistryPort } from "../../shared/ports/repoRegistry.js";
@@ -25,8 +26,6 @@ let startCliDependencyDefaultsPromise:
 let startCommandContextDefaultsPromise:
   | Promise<StartCommandContextDefaults>
   | undefined;
-let tmuxManagerPromise: Promise<{ runTmux: RunTmuxPort }> | undefined;
-
 async function loadStartCliDependencyDefaults(): Promise<
   StartCliDependencyDefaults
 > {
@@ -45,18 +44,10 @@ async function loadStartCommandContextDefaults(): Promise<
   return startCommandContextDefaultsPromise;
 }
 
-async function loadTmuxManager(): Promise<{ runTmux: RunTmuxPort }> {
-  tmuxManagerPromise ??= import("../../../core/runtime/tmuxManager.js").then(
-    ({ runTmux }) => ({ runTmux })
-  );
-  return tmuxManagerPromise;
-}
-
 export async function runTmux(
   ...args: Parameters<RunTmuxPort>
 ): Promise<Awaited<ReturnType<RunTmuxPort>>> {
-  const { runTmux: runTmuxImpl } = await loadTmuxManager();
-  return runTmuxImpl(...args);
+  return runTmuxShared(...args);
 }
 
 export const startCliDependencyDefaults = {
