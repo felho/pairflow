@@ -165,39 +165,15 @@
       "kind": "seed_case"
     },
     {
-      "id": "restart-basic",
-      "command": "restart",
-      "source": "tests/contracts/v11/cases/restart/restart-basic.case.json",
-      "kind": "seed_case"
-    },
-    {
       "id": "restart-basic-v11",
       "command": "restart",
       "source": "tests/contracts/v11/cases/restart/restart-basic-v11.case.json",
       "kind": "seed_case"
     },
     {
-      "id": "restart-basic-parity",
-      "command": "restart",
-      "source": "tests/contracts/v11/cases/restart/restart-basic-parity.case.json",
-      "kind": "seed_case"
-    },
-    {
-      "id": "restart-start-state-not-startable",
-      "command": "restart",
-      "source": "tests/contracts/v11/cases/restart/restart-start-state-not-startable.case.json",
-      "kind": "seed_case"
-    },
-    {
       "id": "restart-start-state-not-startable-v11",
       "command": "restart",
       "source": "tests/contracts/v11/cases/restart/restart-start-state-not-startable-v11.case.json",
-      "kind": "seed_case"
-    },
-    {
-      "id": "restart-start-state-not-startable-parity",
-      "command": "restart",
-      "source": "tests/contracts/v11/cases/restart/restart-start-state-not-startable-parity.case.json",
       "kind": "seed_case"
     },
     {

@@ -3,16 +3,17 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { restartBubble } from "../../../src/core/bubble/restartBubble.js";
 import {
-  startBubble,
-  type StartBubbleResult
-} from "../../../src/core/bubble/startBubble.js";
+  restartBubbleV11
+} from "../../../src/v11/application/restart/emitRestartV11.js";
+import {
+  startBubbleV11 as startBubble,
+  type StartBubbleV11Result as StartBubbleResult
+} from "../../../src/v11/application/start/emitStartV11.js";
 import {
   readStateSnapshot,
   writeStateSnapshot
 } from "../../../src/v11/infrastructure/state/stateStore.js";
-import { restartBubbleV11 } from "../../../src/v11/application/restart/emitRestartV11.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
 import { initGitRepository } from "../../helpers/git.js";
 import type { ContractCase, ContractCaseExpected } from "./schema.js";
@@ -43,7 +44,6 @@ export type RestartContractOutput =
 
 export interface RestartContractRunResult {
   mode: ContractCase["mode"];
-  baseline?: RestartContractOutput;
   v11?: RestartContractOutput;
 }
 
@@ -108,7 +108,7 @@ function parseRestartCaseInput(input: ContractCase["input"]): ParsedRestartCaseI
 }
 
 function normalizeRestartResult(
-  result: Awaited<ReturnType<typeof restartBubble>>
+  result: Awaited<ReturnType<typeof restartBubbleV11>>
 ): RestartContractSuccessOutput {
   return {
     status: "ok",
@@ -176,21 +176,9 @@ function assertContractExpectedSubset(input: {
   }
 }
 
-function assertParityEquivalent(input: {
-  baseline: RestartContractOutput;
-  v11: RestartContractOutput;
-  caseId: string;
-}): void {
-  if (JSON.stringify(input.baseline) !== JSON.stringify(input.v11)) {
-    throw new Error(
-      `restart parity mismatch for case=${input.caseId}: baseline=${JSON.stringify(input.baseline)} v11=${JSON.stringify(input.v11)}`
-    );
-  }
-}
-
 async function executeRestartCase(input: {
   caseDef: ContractCase;
-  executor: typeof restartBubble;
+  executor: typeof restartBubbleV11;
 }): Promise<RestartContractOutput> {
   const repoPath = await mkdtemp(join(tmpdir(), "pairflow-restart-contract-"));
   try {
@@ -237,9 +225,10 @@ async function executeRestartCase(input: {
             }),
           removeRuntimeSession: () =>
             Promise.resolve(parsedInput.previousRuntimeSessionRemoved),
-          startBubble: parsedInput.scenario === "start_state_not_startable"
-            ? startBubble
-            : () =>
+          startBubble:
+            parsedInput.scenario === "start_state_not_startable"
+              ? startBubble
+              : () =>
                 Promise.resolve({
                   bubbleId: bubble.bubbleId,
                   state: { state: "RUNNING" },
@@ -271,64 +260,17 @@ export async function runRestartContractCase(
     );
   }
 
-  if (caseDef.mode === "baseline") {
-    const baseline = await executeRestartCase({
-      caseDef,
-      executor: restartBubble
-    });
-    assertContractExpectedSubset({
-      output: baseline,
-      expected: caseDef.expected,
-      label: "baseline"
-    });
-    return {
-      mode: caseDef.mode,
-      baseline
-    };
-  }
-
-  if (caseDef.mode === "v11") {
-    const v11 = await executeRestartCase({
-      caseDef,
-      executor: restartBubbleV11
-    });
-    assertContractExpectedSubset({
-      output: v11,
-      expected: caseDef.expected,
-      label: "v11"
-    });
-    return {
-      mode: caseDef.mode,
-      v11
-    };
-  }
-
-  const baseline = await executeRestartCase({
-    caseDef,
-    executor: restartBubble
-  });
   const v11 = await executeRestartCase({
     caseDef,
     executor: restartBubbleV11
   });
   assertContractExpectedSubset({
-    output: baseline,
-    expected: caseDef.expected,
-    label: "parity/baseline"
-  });
-  assertContractExpectedSubset({
     output: v11,
     expected: caseDef.expected,
-    label: "parity/v11"
-  });
-  assertParityEquivalent({
-    baseline,
-    v11,
-    caseId: caseDef.id
+    label: "v11"
   });
   return {
     mode: caseDef.mode,
-    baseline,
     v11
   };
 }

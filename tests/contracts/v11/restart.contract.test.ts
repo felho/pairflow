@@ -11,12 +11,8 @@ import { readContractCase } from "./runner.js";
 
 const execFileAsync = promisify(execFile);
 const restartCaseSources = [
-  "tests/contracts/v11/cases/restart/restart-basic.case.json",
   "tests/contracts/v11/cases/restart/restart-basic-v11.case.json",
-  "tests/contracts/v11/cases/restart/restart-basic-parity.case.json",
-  "tests/contracts/v11/cases/restart/restart-start-state-not-startable.case.json",
-  "tests/contracts/v11/cases/restart/restart-start-state-not-startable-v11.case.json",
-  "tests/contracts/v11/cases/restart/restart-start-state-not-startable-parity.case.json"
+  "tests/contracts/v11/cases/restart/restart-start-state-not-startable-v11.case.json"
 ] as const;
 
 const restartExpectedSourcesSorted = [...restartCaseSources].sort();
@@ -40,12 +36,12 @@ describe("v11 restart contract harness skeleton", () => {
     const casePath = resolve(process.cwd(), restartCaseSources[0]);
     const caseDef = await readContractCase(casePath);
     expect(caseDef.command).toBe("restart");
-    expect(caseDef.mode).toBe("baseline");
+    expect(caseDef.mode).toBe("v11");
     expect(caseDef.expected.status).toBe("ok");
   });
 
   it(
-    "executes baseline and parity assertions via shared runner",
+    "executes v11 assertions via shared runner",
     { timeout: CONTRACT_TEST_TIMEOUT.parityStandardMs },
     async () => {
     const casePaths = restartCaseSources.map((source) =>
@@ -55,26 +51,11 @@ describe("v11 restart contract harness skeleton", () => {
     for (const casePath of casePaths) {
       const caseDef = await readContractCase(casePath);
       const run = await runRestartContractCase(caseDef);
-      if (caseDef.mode === "baseline") {
-        expect(run.baseline?.status).toBe(caseDef.expected.status);
-        if (caseDef.expected.reasonCode !== undefined) {
-          expect(run.baseline?.reasonCode).toBe(caseDef.expected.reasonCode);
-        }
-        expect(run.v11).toBeUndefined();
-        continue;
+      expect(caseDef.mode).toBe("v11");
+      expect(run.v11?.status).toBe(caseDef.expected.status);
+      if (caseDef.expected.reasonCode !== undefined) {
+        expect(run.v11?.reasonCode).toBe(caseDef.expected.reasonCode);
       }
-      if (caseDef.mode === "v11") {
-        expect(run.v11?.status).toBe(caseDef.expected.status);
-        if (caseDef.expected.reasonCode !== undefined) {
-          expect(run.v11?.reasonCode).toBe(caseDef.expected.reasonCode);
-        }
-        expect(run.baseline).toBeUndefined();
-        continue;
-      }
-
-      expect(run.baseline).toBeDefined();
-      expect(run.v11).toBeDefined();
-      expect(run.baseline).toEqual(run.v11);
     }
     }
   );
