@@ -1,7 +1,7 @@
 import {
   emitTmuxDeliveryNotification,
   resolveDeliveryMessageRef
-} from "./tmuxDelivery.js";
+} from "../../v11/infrastructure/channel/tmux/tmuxDelivery.js";
 
 export const metaReviewDefaults = {
   emitTmuxDeliveryNotification,

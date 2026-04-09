@@ -5,7 +5,7 @@ import { resolveBubbleById } from "./bubbleLookup.js";
 import {
   readRuntimeSessionsRegistry,
   removeRuntimeSession
-} from "../runtime/sessionsRegistry.js";
+} from "../../v11/infrastructure/executor/sessionRuntime/runtimeSessionsRegistry.js";
 import {
   buildBubbleTmuxSessionName,
   TmuxCommandError,

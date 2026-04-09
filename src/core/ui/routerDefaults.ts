@@ -1,9 +1,10 @@
-import { commitBubble } from "../bubble/commitBubble.js";
+import { commitBubbleDependencyDefaults } from "../bubble/commitBubbleDefaults.js";
 import { deleteBubble } from "../../v11/application/delete/deleteBubble.js";
 import {
   emitApproveV11 as emitApprove,
   emitRequestReworkV11 as emitRequestRework
 } from "../../v11/application/approval/emitApprovalV11.js";
+import { commitBubbleV11 } from "../../v11/application/commit/emitCommitV11.js";
 import { emitHumanReplyV11 as emitHumanReply } from "../../v11/application/reply/emitReplyV11.js";
 import { listBubbles } from "../bubble/listBubbles.js";
 import { getBubbleStatusV11 as getBubbleStatus } from "../../v11/application/status/emitStatusV11.js";
@@ -16,7 +17,9 @@ import { stopBubbleV11 as stopBubble } from "../../v11/application/stop/emitStop
 import type { UiRouterDependencies } from "../../v11/shared/ports/uiRouter.js";
 
 export const uiRouterDependencyDefaults = {
-  commitBubble,
+  async commitBubble(input) {
+    return commitBubbleV11(input, commitBubbleDependencyDefaults);
+  },
   deleteBubble,
   emitApprove,
   emitHumanReply,

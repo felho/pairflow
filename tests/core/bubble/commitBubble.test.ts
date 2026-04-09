@@ -10,10 +10,14 @@ import {
 import {
   emitPassFromWorkspaceV11 as emitPassFromWorkspace
 } from "../../../src/v11/application/pass/emitPassV11.js";
-import { commitBubble, BubbleCommitError } from "../../../src/core/bubble/commitBubble.js";
+import {
+  BubbleCommitErrorV11 as BubbleCommitError,
+  commitBubbleV11
+} from "../../../src/v11/application/commit/emitCommitV11.js";
 import { submitMetaReviewResult } from "../../../src/core/bubble/metaReview.js";
 import { emitApproveV11 as emitApprove } from "../../../src/v11/application/approval/emitApprovalV11.js";
 import { createBubble } from "../../../src/core/bubble/createBubble.js";
+import { commitBubbleDependencyDefaults } from "../../../src/core/bubble/commitBubbleDefaults.js";
 import { readTranscriptEnvelopes } from "../../../src/v11/infrastructure/artifact/transcript/transcriptStore.js";
 import { readStateSnapshot } from "../../../src/v11/infrastructure/state/stateStore.js";
 import { bootstrapWorktreeWorkspace } from "../../../src/v11/infrastructure/workspace/worktreeManager.js";
@@ -21,6 +25,12 @@ import { initGitRepository, runGit } from "../../helpers/git.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
 
 const tempDirs: string[] = [];
+
+async function commitBubble(
+  input: Parameters<typeof commitBubbleV11>[0]
+): Promise<Awaited<ReturnType<typeof commitBubbleV11>>> {
+  return commitBubbleV11(input, commitBubbleDependencyDefaults);
+}
 
 async function createTempRepo(): Promise<string> {
   const root = await mkdtemp(join(tmpdir(), "pairflow-commit-bubble-"));

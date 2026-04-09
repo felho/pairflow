@@ -3,7 +3,7 @@ import { resolveBubbleById } from "../bubble/bubbleLookup.js";
 import {
   emitTmuxDeliveryNotification,
   retryStuckAgentInput
-} from "../runtime/tmuxDelivery.js";
+} from "../../v11/infrastructure/channel/tmux/tmuxDelivery.js";
 import { readStateSnapshot, writeStateSnapshot } from "../state/stateStore.js";
 import {
   readWatchdogPaneActivity,

@@ -6,7 +6,10 @@ import {
   launchBubbleTmuxSession,
   terminateBubbleTmuxSession
 } from "../runtime/tmuxManager.js";
-import { claimRuntimeSession, removeRuntimeSession } from "../runtime/sessionsRegistry.js";
+import {
+  claimRuntimeSession,
+  removeRuntimeSession
+} from "../../v11/infrastructure/executor/sessionRuntime/runtimeSessionsRegistry.js";
 import { writeStateSnapshot } from "../state/stateStore.js";
 import type { StartBubbleDependencies } from "../../v11/application/start/startCommandContract.js";
 

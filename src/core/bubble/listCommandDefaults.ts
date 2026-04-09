@@ -3,8 +3,8 @@ import {
   RepoResolutionError,
   resolveRepoPath
 } from "../../v11/infrastructure/executor/workspace/repoResolution.js";
+import { readRuntimeSessionsRegistry } from "../../v11/infrastructure/executor/sessionRuntime/runtimeSessionsRegistry.js";
 import { inspectStateSnapshot } from "../state/stateStore.js";
-import { readRuntimeSessionsRegistry } from "../runtime/sessionsRegistry.js";
 import { readWatchdogPaneActivity } from "../watchdog/watchdogPaneActivityStore.js";
 
 export const listCommandDefaults = {

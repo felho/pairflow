@@ -2,8 +2,8 @@ import {
   appendProtocolEnvelope,
   readTranscriptEnvelopes
 } from "../protocol/transcriptStore.js";
+import { setMetaReviewerPaneBinding } from "../../v11/infrastructure/channel/tmux/metaReviewerPaneBinding.js";
 import { resolveBubbleById } from "./bubbleLookup.js";
-import { setMetaReviewerPaneBinding } from "../runtime/sessionsRegistry.js";
 import { readFile, writeFile } from "node:fs/promises";
 import {
   readStateSnapshot,

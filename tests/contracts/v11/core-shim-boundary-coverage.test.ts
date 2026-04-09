@@ -49,6 +49,7 @@ const allowedResidualCoreBridgeImports: string[] = [
   "src/v11/shared/metaReview/metaReviewDependencyDefaults.ts -> src/core/runtime/metaReviewCommandSubmitDefaults.ts",
   "src/v11/shared/metaReview/metaReviewDependencyDefaults.ts -> src/core/runtime/metaReviewLiveRunDefaults.ts",
   "src/v11/shared/metrics/bubbleEvents.ts -> src/core/metrics/bubbleEventsDefaults.ts",
+  "src/v11/shared/bubbleLookup/bubbleLookupDefaults.ts -> src/core/bubble/bubbleLookup.ts",
   "src/v11/shared/state/stateStoreDefaults.ts -> src/core/state/stateStore.ts",
   "src/v11/shared/transcript/transcriptDependencyDefaults.ts -> src/core/protocol/transcriptStore.ts"
 ];
