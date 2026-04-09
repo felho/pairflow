@@ -2,14 +2,7 @@ import {
   computeWatchdogStatus,
   type WatchdogStatus
 } from "../../shared/watchdog/watchdogStatus.js";
-import { appendProtocolEnvelope } from "../../../core/protocol/transcriptStore.js";
-import { resolveBubbleById } from "../../../core/bubble/bubbleLookup.js";
-import { emitBubbleNotification } from "../../../core/runtime/notifications.js";
-import { emitTmuxDeliveryNotification } from "../../../core/runtime/tmuxDelivery.js";
-import { readStateSnapshot, writeStateSnapshot } from "../../../core/state/stateStore.js";
-import { readWatchdogPaneActivity } from "../../../core/watchdog/watchdogPaneActivityStore.js";
-import { writeWatchdogPaneActivity } from "../../../core/watchdog/watchdogPaneActivityStore.js";
-import { appendWatchdogTrace } from "../../../core/watchdog/watchdogTraceStore.js";
+import { watchdogCommandDefaults } from "../../../core/watchdog/watchdogCommandDefaults.js";
 import {
   recoverMetaReviewGateFromSnapshotV11 as recoverMetaReviewGateFromSnapshot
 } from "../metaReviewGate/emitMetaReviewGateV11.js";
@@ -39,31 +32,38 @@ export async function runBubbleWatchdog(
 ): Promise<BubbleWatchdogResult> {
   const now = input.now ?? new Date();
   const nowIso = now.toISOString();
-  const resolved = await resolveBubbleById(
+  const resolved = await watchdogCommandDefaults.resolveBubbleById(
     {
       bubbleId: input.bubbleId,
       ...(input.repoPath !== undefined ? { repoPath: input.repoPath } : {}),
       ...(input.cwd !== undefined ? { cwd: input.cwd } : {})
     }
   );
-  const readState = dependencies.readStateSnapshot ?? readStateSnapshot;
+  const readState =
+    dependencies.readStateSnapshot ?? watchdogCommandDefaults.readStateSnapshot;
   const appendEnvelope =
-    dependencies.appendProtocolEnvelope ?? appendProtocolEnvelope;
-  const writeState = dependencies.writeStateSnapshot ?? writeStateSnapshot;
+    dependencies.appendProtocolEnvelope ??
+    watchdogCommandDefaults.appendProtocolEnvelope;
+  const writeState =
+    dependencies.writeStateSnapshot ?? watchdogCommandDefaults.writeStateSnapshot;
   const recoverMetaReviewRoute =
     dependencies.recoverMetaReviewGateFromSnapshot ?? recoverMetaReviewGateFromSnapshot;
   const loadedState = await readState(resolved.bubblePaths.statePath);
   const state = loadedState.state;
   const emitDelivery =
-    dependencies.emitTmuxDeliveryNotification ?? emitTmuxDeliveryNotification;
+    dependencies.emitTmuxDeliveryNotification ??
+    watchdogCommandDefaults.emitTmuxDeliveryNotification;
   const emitNotification =
-    dependencies.emitBubbleNotification ?? emitBubbleNotification;
+    dependencies.emitBubbleNotification ??
+    watchdogCommandDefaults.emitBubbleNotification;
   const readPaneActivity =
-    dependencies.readWatchdogPaneActivity ?? readWatchdogPaneActivity;
+    dependencies.readWatchdogPaneActivity ??
+    watchdogCommandDefaults.readWatchdogPaneActivity;
   const writePaneActivity =
-    dependencies.writeWatchdogPaneActivity ?? writeWatchdogPaneActivity;
+    dependencies.writeWatchdogPaneActivity ??
+    watchdogCommandDefaults.writeWatchdogPaneActivity;
   const appendTrace: AppendWatchdogTracePort =
-    dependencies.appendWatchdogTrace ?? appendWatchdogTrace;
+    dependencies.appendWatchdogTrace ?? watchdogCommandDefaults.appendWatchdogTrace;
   const samplePaneActivity =
     dependencies.sampleWatchdogPaneActivity ?? sampleWatchdogPaneActivity;
   const readRuntimeSessionsRegistry =
