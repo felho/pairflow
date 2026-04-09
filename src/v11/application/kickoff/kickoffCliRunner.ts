@@ -11,7 +11,7 @@ import {
   kickoffBubbleV11 as kickoffBubble,
   type KickoffBubbleV11Result as KickoffBubbleResult
 } from "./emitKickoffV11.js";
-import { resolveBubbleById } from "../../infrastructure/executor/workspace/bubbleLookup.js";
+import { kickoffDefaults } from "../../../core/bubble/kickoffDefaults.js";
 import { parseBubbleKickoffCommandOptions } from "./kickoffCliOptions.js";
 
 export interface BubbleKickoffCommandDependencies {
@@ -35,7 +35,7 @@ export async function runBubbleKickoffCommand(
   }
 
   const resolveBubbleByIdCommand =
-    dependencies.resolveBubbleById ?? resolveBubbleById;
+    dependencies.resolveBubbleById ?? kickoffDefaults.resolveBubbleById;
   const kickoffBubbleCommand = dependencies.kickoffBubble ?? kickoffBubble;
   const writeStderr = dependencies.writeStderr ?? ((message: string) => {
     process.stderr.write(message);

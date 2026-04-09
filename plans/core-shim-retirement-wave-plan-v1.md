@@ -88,6 +88,11 @@ These numbers are triage inputs, not yet a finalized ledger.
   - total direct residual imports: `64`
   - `metaReviewGateNotify` and `metaReviewGatePaneBinding` now route through one
     local application defaults module
+- after the `kickoff + ui router defaults` cleanup batch:
+  - total direct residual imports: `61`
+  - `kickoffCliRunner` and `kickoffDependencyResolution` are back on the
+    validated `core/bubble/kickoffDefaults` bridge
+  - `routerDependencies` is back on `core/ui/routerDefaults` plus local UI extras
 
 Latest validated state:
 
