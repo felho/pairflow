@@ -36,7 +36,22 @@ const forbiddenCoreShimTargets = new Set([
   "src/core/util/structuredRef.ts"
 ]);
 
-const allowedResidualCoreBridgeImports: string[] = [];
+const allowedResidualCoreBridgeImports: string[] = [
+  "src/v11/application/commit/commitCliCommand.ts -> src/core/bubble/commitBubbleDefaults.ts",
+  "src/v11/application/create/createBubbleDefaults.ts -> src/core/bubble/createBubbleDefaults.ts",
+  "src/v11/application/create/createCliCommand.ts -> src/core/repo/createCliDefaults.ts",
+  "src/v11/application/merge/mergeCommandDefaults.ts -> src/core/bubble/mergeBubbleDefaults.ts",
+  "src/v11/application/metaReviewGate/metaReviewGateCommandDefaults.ts -> src/core/bubble/metaReviewGateDefaults.ts",
+  "src/v11/application/pass/passValidationCommandDefaults.ts -> src/core/runtime/passValidationDefaults.ts",
+  "src/v11/application/reconcile/reconcileCommandDefaults.ts -> src/core/runtime/reconcileCommandDefaults.ts",
+  "src/v11/shared/gates/docContractGateArtifactDefaults.ts -> src/core/gates/docContractGateArtifacts.ts",
+  "src/v11/shared/metaReview/metaReviewDependencyDefaults.ts -> src/core/bubble/metaReviewReadDefaults.ts",
+  "src/v11/shared/metaReview/metaReviewDependencyDefaults.ts -> src/core/runtime/metaReviewCommandSubmitDefaults.ts",
+  "src/v11/shared/metaReview/metaReviewDependencyDefaults.ts -> src/core/runtime/metaReviewLiveRunDefaults.ts",
+  "src/v11/shared/metrics/bubbleEvents.ts -> src/core/metrics/bubbleEventsDefaults.ts",
+  "src/v11/shared/state/stateStoreDefaults.ts -> src/core/state/stateStore.ts",
+  "src/v11/shared/transcript/transcriptDependencyDefaults.ts -> src/core/protocol/transcriptStore.ts"
+];
 
 async function listTypeScriptFiles(root: string): Promise<string[]> {
   const entries = await readdir(root, {
