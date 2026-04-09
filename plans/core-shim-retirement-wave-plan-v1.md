@@ -558,7 +558,7 @@ Current remaining retired-shim frontier:
 - `src/v11/application/create/createCommandApi.ts`
   - `src/core/bubble/createBubble.ts`
 - `src/v11/application/delete/deleteBubbleSupport.ts`
-  - `src/core/util/pathExists.ts`
+  - `src/core/bubble/deleteBubbleDefaults.ts`
 - `src/v11/application/pass/reviewerDeliveryHelpers.ts`
   - `src/core/reviewer/reviewerBrief.ts`
 - `src/v11/application/pass/reviewerTestDirectiveResolver.ts`
@@ -577,3 +577,6 @@ Wave note:
   - reviewer evidence / reviewer brief dependency-default cleanup,
   - approval dependency-resolution cleanup,
   - explicit hard-decision handling for `createBubble` and `metrics/events`.
+- delete support now uses a dedicated core perimeter defaults owner
+  (`src/core/bubble/deleteBubbleDefaults.ts`), reducing the support file to a
+  single explicit perimeter import instead of eight scattered core imports.

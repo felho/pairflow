@@ -16,11 +16,17 @@ import {
   removeRuntimeSession,
   upsertRuntimeSession
 } from "../../../src/core/runtime/sessionsRegistry.js";
+import type {
+  CreateArchiveSnapshotResult
+} from "../../../src/v11/infrastructure/artifact/archive/archiveSnapshot.js";
+import type {
+  UpsertDeletedArchiveIndexEntryResult
+} from "../../../src/v11/infrastructure/artifact/archive/archiveIndex.js";
 import {
   readStateSnapshot,
   writeStateSnapshot
 } from "../../../src/core/state/stateStore.js";
-import type { ArchiveIndexDocument } from "../../../src/types/archive.js";
+import type { ArchiveIndexDocument, ArchiveManifest } from "../../../src/types/archive.js";
 import { branchExists } from "../../../src/core/workspace/git.js";
 import { initGitRepository } from "../../helpers/git.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
@@ -69,6 +75,25 @@ async function readArchiveIndexFromRepo(
   });
 
   return JSON.parse(await readFile(paths.archiveIndexPath, "utf8")) as ArchiveIndexDocument;
+}
+
+function buildArchiveManifest(input: {
+  bubbleId: string;
+  bubbleInstanceId: string;
+  repoPath: string;
+  sourceBubbleDir: string;
+  archivedAt: string;
+}): ArchiveManifest {
+  return {
+    schema_version: 1,
+    archived_at: input.archivedAt,
+    repo_path: input.repoPath,
+    repo_key: "pairflow-delete-bubble",
+    bubble_instance_id: input.bubbleInstanceId,
+    bubble_id: input.bubbleId,
+    source_bubble_dir: input.sourceBubbleDir,
+    archived_files: []
+  };
 }
 
 describe("deleteBubble", () => {
@@ -680,8 +705,16 @@ describe("deleteBubble", () => {
             })
           ),
           createArchiveSnapshot: vi.fn(async () => ({
-            archivePath: "/tmp/pairflow/archive/fake"
-          })),
+            archivePath: "/tmp/pairflow/archive/fake",
+            manifest: buildArchiveManifest({
+              bubbleId: bubble.bubbleId,
+              bubbleInstanceId: bubble.config.bubble_instance_id as string,
+              repoPath,
+              sourceBubbleDir: bubble.paths.bubbleDir,
+              archivedAt: "2026-04-09T00:00:00.000Z"
+            }),
+            reusedExisting: false
+          } satisfies CreateArchiveSnapshotResult)),
           upsertDeletedArchiveIndexEntry: vi.fn(async () => {
             throw new Error("index failed");
           }),
@@ -925,9 +958,31 @@ describe("deleteBubble", () => {
     const archiveRootPath = "/tmp/pairflow-custom-archive-root";
     const archiveLocksDir = join(homedir(), ".pairflow", "locks");
     const createArchiveSnapshotMock = vi.fn(async () => ({
-      archivePath: "/tmp/pairflow-custom-archive-root/fake-instance"
-    }));
-    const upsertArchiveIndexMock = vi.fn(async () => ({}));
+      archivePath: "/tmp/pairflow-custom-archive-root/fake-instance",
+      manifest: buildArchiveManifest({
+        bubbleId: bubble.bubbleId,
+        bubbleInstanceId: bubble.config.bubble_instance_id as string,
+        repoPath,
+        sourceBubbleDir: bubble.paths.bubbleDir,
+        archivedAt: "2026-04-09T00:00:00.000Z"
+      }),
+      reusedExisting: false
+    } satisfies CreateArchiveSnapshotResult));
+    const upsertArchiveIndexMock = vi.fn(async () => ({
+      indexPath: "/tmp/pairflow-custom-archive-root/index.json",
+      entry: {
+        bubble_instance_id: bubble.config.bubble_instance_id as string,
+        bubble_id: bubble.bubbleId,
+        repo_path: repoPath,
+        repo_key: "pairflow-delete-bubble",
+        archive_path: "/tmp/pairflow-custom-archive-root/fake-instance",
+        status: "deleted",
+        created_at: "2026-04-09T00:00:00.000Z",
+        deleted_at: "2026-04-09T00:00:00.000Z",
+        purged_at: null,
+        updated_at: "2026-04-09T00:00:00.000Z"
+      }
+    } satisfies UpsertDeletedArchiveIndexEntryResult));
 
     await deleteBubble(
       {

@@ -7,27 +7,7 @@ import type {
   DeleteBubbleResult
 } from "../../../contracts/deleteBubble.js";
 import type { BubbleLifecycleState } from "../../../types/bubble.js";
-import {
-  createArchiveSnapshot,
-  type CreateArchiveSnapshotInput
-} from "../../../core/archive/archiveSnapshot.js";
-import {
-  upsertDeletedArchiveIndexEntry,
-  type UpsertDeletedArchiveIndexEntryInput
-} from "../../../core/archive/archiveIndex.js";
-import { resolveBubbleById } from "../../../core/bubble/bubbleLookup.js";
-import {
-  readRuntimeSessionsRegistry,
-  removeRuntimeSession
-} from "../../../core/runtime/sessionsRegistry.js";
-import {
-  runTmux,
-  terminateBubbleTmuxSession,
-  type TmuxRunner
-} from "../../../core/runtime/tmuxManager.js";
-import { cleanupWorktreeWorkspace } from "../../../core/workspace/worktreeManager.js";
-import { pathExists } from "../../../core/util/pathExists.js";
-import { branchExists } from "../../../core/workspace/git.js";
+import { deleteBubbleDependencyDefaults } from "../../../core/bubble/deleteBubbleDefaults.js";
 import type { BranchExistsPort } from "../../shared/ports/git.js";
 import type { PathExistsPort } from "../../shared/ports/pathExists.js";
 import { stopBubbleV11 as stopBubble } from "../stop/emitStopV11.js";
@@ -42,43 +22,45 @@ export interface DeleteBubbleInput {
 }
 
 export interface DeleteBubbleDependencies {
-  resolveBubbleById?: typeof resolveBubbleById;
+  resolveBubbleById?: typeof deleteBubbleDependencyDefaults.resolveBubbleById;
   branchExists?: BranchExistsPort;
   pathExists?: PathExistsPort;
-  runTmux?: TmuxRunner;
-  readRuntimeSessionsRegistry?: typeof readRuntimeSessionsRegistry;
-  terminateBubbleTmuxSession?: typeof terminateBubbleTmuxSession;
-  removeRuntimeSession?: typeof removeRuntimeSession;
-  cleanupWorktreeWorkspace?: typeof cleanupWorktreeWorkspace;
+  runTmux?: typeof deleteBubbleDependencyDefaults.runTmux;
+  readRuntimeSessionsRegistry?: typeof deleteBubbleDependencyDefaults.readRuntimeSessionsRegistry;
+  terminateBubbleTmuxSession?: typeof deleteBubbleDependencyDefaults.terminateBubbleTmuxSession;
+  removeRuntimeSession?: typeof deleteBubbleDependencyDefaults.removeRuntimeSession;
+  cleanupWorktreeWorkspace?: typeof deleteBubbleDependencyDefaults.cleanupWorktreeWorkspace;
   removeBubbleDirectory?: ((path: string) => Promise<void>) | undefined;
   stopBubble?: typeof stopBubble;
   createArchiveSnapshot?:
-    | ((input: CreateArchiveSnapshotInput) => Promise<{ archivePath: string }>)
+    | typeof deleteBubbleDependencyDefaults.createArchiveSnapshot
     | undefined;
   upsertDeletedArchiveIndexEntry?:
-    | ((input: UpsertDeletedArchiveIndexEntryInput) => Promise<unknown>)
+    | typeof deleteBubbleDependencyDefaults.upsertDeletedArchiveIndexEntry
     | undefined;
 }
 
 export interface ResolvedDeleteDependencies {
-  resolveBubbleById: typeof resolveBubbleById;
+  resolveBubbleById: typeof deleteBubbleDependencyDefaults.resolveBubbleById;
   branchExists: BranchExistsPort;
   pathExists: PathExistsPort;
-  runTmux: TmuxRunner;
-  readRuntimeSessionsRegistry: typeof readRuntimeSessionsRegistry;
-  terminateBubbleTmuxSession: typeof terminateBubbleTmuxSession;
-  removeRuntimeSession: typeof removeRuntimeSession;
-  cleanupWorktreeWorkspace: typeof cleanupWorktreeWorkspace;
+  runTmux: typeof deleteBubbleDependencyDefaults.runTmux;
+  readRuntimeSessionsRegistry: typeof deleteBubbleDependencyDefaults.readRuntimeSessionsRegistry;
+  terminateBubbleTmuxSession: typeof deleteBubbleDependencyDefaults.terminateBubbleTmuxSession;
+  removeRuntimeSession: typeof deleteBubbleDependencyDefaults.removeRuntimeSession;
+  cleanupWorktreeWorkspace: typeof deleteBubbleDependencyDefaults.cleanupWorktreeWorkspace;
   removeBubbleDirectory: (path: string) => Promise<void>;
   stopBubble: typeof stopBubble;
   createArchiveSnapshot:
-    (input: CreateArchiveSnapshotInput) => Promise<{ archivePath: string }>;
+    typeof deleteBubbleDependencyDefaults.createArchiveSnapshot;
   upsertDeletedArchiveIndexEntry:
-    (input: UpsertDeletedArchiveIndexEntryInput) => Promise<unknown>;
+    typeof deleteBubbleDependencyDefaults.upsertDeletedArchiveIndexEntry;
   archiveLocksDir: string;
 }
 
-export type ResolvedBubble = Awaited<ReturnType<typeof resolveBubbleById>>;
+export type ResolvedBubble = Awaited<
+  ReturnType<typeof deleteBubbleDependencyDefaults.resolveBubbleById>
+>;
 
 export interface DeleteResolution {
   resolved: ResolvedBubble;
@@ -147,25 +129,34 @@ export function resolveDeleteDependencies(
   dependencies: DeleteBubbleDependencies
 ): ResolvedDeleteDependencies {
   return {
-    resolveBubbleById: dependencies.resolveBubbleById ?? resolveBubbleById,
-    branchExists: dependencies.branchExists ?? branchExists,
-    pathExists: dependencies.pathExists ?? pathExists,
-    runTmux: dependencies.runTmux ?? runTmux,
+    resolveBubbleById:
+      dependencies.resolveBubbleById ??
+      deleteBubbleDependencyDefaults.resolveBubbleById,
+    branchExists:
+      dependencies.branchExists ?? deleteBubbleDependencyDefaults.branchExists,
+    pathExists: dependencies.pathExists ?? deleteBubbleDependencyDefaults.pathExists,
+    runTmux: dependencies.runTmux ?? deleteBubbleDependencyDefaults.runTmux,
     readRuntimeSessionsRegistry:
-      dependencies.readRuntimeSessionsRegistry ?? readRuntimeSessionsRegistry,
+      dependencies.readRuntimeSessionsRegistry ??
+      deleteBubbleDependencyDefaults.readRuntimeSessionsRegistry,
     terminateBubbleTmuxSession:
-      dependencies.terminateBubbleTmuxSession ?? terminateBubbleTmuxSession,
-    removeRuntimeSession: dependencies.removeRuntimeSession ?? removeRuntimeSession,
+      dependencies.terminateBubbleTmuxSession ??
+      deleteBubbleDependencyDefaults.terminateBubbleTmuxSession,
+    removeRuntimeSession:
+      dependencies.removeRuntimeSession ??
+      deleteBubbleDependencyDefaults.removeRuntimeSession,
     cleanupWorktreeWorkspace:
-      dependencies.cleanupWorktreeWorkspace ?? cleanupWorktreeWorkspace,
+      dependencies.cleanupWorktreeWorkspace ??
+      deleteBubbleDependencyDefaults.cleanupWorktreeWorkspace,
     removeBubbleDirectory:
       dependencies.removeBubbleDirectory ?? removeBubbleDirectory,
     stopBubble: dependencies.stopBubble ?? stopBubble,
     createArchiveSnapshot:
-      dependencies.createArchiveSnapshot ?? createArchiveSnapshot,
+      dependencies.createArchiveSnapshot ??
+      deleteBubbleDependencyDefaults.createArchiveSnapshot,
     upsertDeletedArchiveIndexEntry:
       dependencies.upsertDeletedArchiveIndexEntry ??
-      upsertDeletedArchiveIndexEntry,
+      deleteBubbleDependencyDefaults.upsertDeletedArchiveIndexEntry,
     archiveLocksDir: join(homedir(), ".pairflow", "locks")
   };
 }

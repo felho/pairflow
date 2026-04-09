@@ -14,6 +14,12 @@ import {
   deleteBubble,
   type DeleteBubbleDependencies
 } from "../../../src/v11/application/delete/deleteBubble.js";
+import type {
+  CreateArchiveSnapshotResult
+} from "../../../src/v11/infrastructure/artifact/archive/archiveSnapshot.js";
+import type {
+  UpsertDeletedArchiveIndexEntryResult
+} from "../../../src/v11/infrastructure/artifact/archive/archiveIndex.js";
 
 function buildDependencies(): DeleteBubbleDependencies {
   const resolveBubbleById: NonNullable<DeleteBubbleDependencies["resolveBubbleById"]> =
@@ -47,12 +53,35 @@ function buildDependencies(): DeleteBubbleDependencies {
       exitCode: 1
     })),
     readRuntimeSessionsRegistry: vi.fn(() => Promise.resolve({})),
-    createArchiveSnapshot: vi.fn(() =>
-      Promise.resolve({
-        archivePath: "/tmp/archive/bi_00m8f7w14k_2f03e8b8e4f24d17ac12"
-      })
-    ),
-    upsertDeletedArchiveIndexEntry: vi.fn(() => Promise.resolve({}))
+    createArchiveSnapshot: vi.fn(async () => ({
+      archivePath: "/tmp/archive/bi_00m8f7w14k_2f03e8b8e4f24d17ac12",
+      manifest: {
+        schema_version: 1,
+        archived_at: "2026-04-09T00:00:00.000Z",
+        repo_path: "/tmp/repo",
+        repo_key: "tmp-repo",
+        bubble_instance_id: "bi_00m8f7w14k_2f03e8b8e4f24d17ac12",
+        bubble_id: "b-delete-rm-01",
+        source_bubble_dir: "/tmp/bubble-dir",
+        archived_files: []
+      },
+      reusedExisting: false
+    } satisfies CreateArchiveSnapshotResult)),
+    upsertDeletedArchiveIndexEntry: vi.fn(async () => ({
+      indexPath: "/tmp/repo/.pairflow/archive/index.json",
+      entry: {
+        bubble_instance_id: "bi_00m8f7w14k_2f03e8b8e4f24d17ac12",
+        bubble_id: "b-delete-rm-01",
+        repo_path: "/tmp/repo",
+        repo_key: "tmp-repo",
+        archive_path: "/tmp/archive/bi_00m8f7w14k_2f03e8b8e4f24d17ac12",
+        status: "deleted",
+        created_at: "2026-04-09T00:00:00.000Z",
+        deleted_at: "2026-04-09T00:00:00.000Z",
+        purged_at: null,
+        updated_at: "2026-04-09T00:00:00.000Z"
+      }
+    } satisfies UpsertDeletedArchiveIndexEntryResult))
   };
 }
 
