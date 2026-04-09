@@ -1,9 +1,6 @@
 import { emitBubbleLifecycleEventBestEffort } from "../../shared/metrics/bubbleEvents.js";
-import {
-  resolveDeliveryMessageRef,
-  type emitTmuxDeliveryNotification
-} from "../../../core/runtime/tmuxDelivery.js";
-import { ensureBubbleInstanceIdForMutation } from "../../../core/bubble/bubbleInstanceId.js";
+import { type emitTmuxDeliveryNotification } from "../../../core/runtime/tmuxDelivery.js";
+import { watchdogPendingReworkDefaults } from "../../../core/watchdog/watchdogPendingReworkDefaults.js";
 import { applyDeferredReworkIntent } from "../../shared/approval/reworkIntent.js";
 import { persistPendingReworkIntentState } from "../../shared/watchdog/watchdogPendingReworkMutation.js";
 import type { BubbleStateSnapshot } from "../../../types/bubble.js";
@@ -53,7 +50,7 @@ export async function maybeApplyPendingReworkIntent(input: {
     bubbleConfig: input.resolved.bubbleConfig,
     sessionsPath: input.resolved.bubblePaths.sessionsPath,
     envelope: deliveryEnvelope,
-    messageRef: resolveDeliveryMessageRef({
+    messageRef: watchdogPendingReworkDefaults.resolveDeliveryMessageRef({
       bubbleId: input.resolved.bubbleId,
       sessionsPath: input.resolved.bubblePaths.sessionsPath,
       envelope: deliveryEnvelope
@@ -87,7 +84,8 @@ export async function maybeApplyPendingReworkIntent(input: {
     };
   }
 
-  const bubbleIdentity = await ensureBubbleInstanceIdForMutation({
+  const bubbleIdentity =
+    await watchdogPendingReworkDefaults.ensureBubbleInstanceIdForMutation({
     bubbleId: input.resolved.bubbleId,
     repoPath: input.resolved.repoPath,
     bubblePaths: input.resolved.bubblePaths,
