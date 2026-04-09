@@ -64,6 +64,124 @@ Current classification:
 - `hard / architecture-sensitive`
   - none confirmed at this checkpoint
 
+## Post-Lint Core Proxy Inventory Snapshot
+
+Verified after:
+
+- `cc54dd3e` `refactor(cli): move commit boundary into v11`
+- `610a4af5` `test(doc-gate): align fail-open mock target with v11 defaults`
+- `31c8a41e` `test(meta-review-gate): raise corpus manifest timeout`
+- full `pnpm check` PASS
+
+This snapshot is no longer about `src/v11 -> src/core` boundary failures.
+Those are cleared. The next retirement frontier is the remaining compatibility
+surface under `src/core/**`.
+
+### Easy Thin Shells
+
+These are mostly pure re-export bridges and look safe for retirement once
+their remaining legacy consumers are redirected:
+
+- `src/core/archive/archiveIndex.ts`
+- `src/core/archive/archivePaths.ts`
+- `src/core/archive/archiveSnapshot.ts`
+- `src/core/protocol/envelope.ts`
+- `src/core/protocol/sequenceAllocator.ts`
+- `src/core/protocol/transcriptStore.ts`
+- `src/core/protocol/validators.ts`
+- `src/core/state/executionContext.ts`
+- `src/core/state/initialState.ts`
+- `src/core/state/machine.ts`
+- `src/core/state/stateSchema.ts`
+- `src/core/state/stateStore.ts`
+- `src/core/state/transitions.ts`
+- `src/core/runtime/notifications.ts`
+- `src/core/runtime/reviewerContext.ts`
+- `src/core/runtime/tmuxDelivery.ts`
+- `src/core/runtime/tmuxInput.ts`
+- `src/core/runtime/tmuxManager.ts`
+- `src/core/runtime/reviewerGuidance.ts`
+- `src/core/runtime/reviewerCommandGateGuidance.ts`
+- `src/core/runtime/reviewerScoutExpansionGuidance.ts`
+- `src/core/runtime/reviewerSeverityOntology.ts`
+- `src/core/runtime/reviewerSeverityOntology.generated.ts`
+- `src/core/runtime/watchdog.ts`
+- `src/core/ui/events.ts`
+- `src/core/ui/repoScope.ts`
+- `src/core/ui/router.ts`
+- `src/core/ui/server.ts`
+- `src/core/workspace/git.ts`
+- `src/core/workspace/worktreeManager.ts`
+
+### Medium Compatibility Shells
+
+These are still thin, but they keep extra exports, local defaults, or
+compatibility-shaped public names. They are good candidates for the next
+bounded retirement waves:
+
+- facade wrappers with extra type/export surface:
+  - `src/core/agent/askHuman.ts`
+  - `src/core/agent/converged.ts`
+  - `src/core/agent/pass.ts`
+  - `src/core/bubble/attachBubble.ts`
+  - `src/core/bubble/createBubble.ts`
+  - `src/core/bubble/deleteBubble.ts`
+  - `src/core/bubble/inboxBubble.ts`
+  - `src/core/bubble/kickoffBubble.ts`
+  - `src/core/bubble/listBubbles.ts`
+  - `src/core/bubble/mergeBubble.ts`
+  - `src/core/bubble/openBubble.ts`
+  - `src/core/bubble/resumeBubble.ts`
+  - `src/core/bubble/startBubble.ts`
+  - `src/core/bubble/statusBubble.ts`
+  - `src/core/bubble/stopBubble.ts`
+  - `src/core/runtime/startupReconciler.ts`
+- thin shells with extra infra/shared exports:
+  - `src/core/gates/docContractGateArtifacts.ts`
+  - `src/core/reviewer/reviewerBrief.ts`
+  - `src/core/reviewer/summaryVerifierConsistencyGate.ts`
+  - `src/core/reviewer/testEvidence.ts`
+  - `src/core/reviewer/reviewVerificationArtifacts.ts`
+  - `src/core/metrics/events.ts`
+  - `src/core/util/fileLock.ts`
+  - `src/core/util/normalize.ts`
+  - `src/core/util/pathExists.ts`
+  - `src/core/util/shellQuote.ts`
+  - `src/core/util/structuredRef.ts`
+
+### Hard / Retained-Behavior Candidates
+
+These still do meaningful local wiring or runtime selection and should not be
+treated as simple delete-after-repoint shims:
+
+- `src/core/bubble/metaReview.ts`
+- `src/core/bubble/watchdogBubble.ts`
+- defaults bundles that still compose multiple legacy-facing dependencies:
+  - `src/core/agent/askHumanDefaults.ts`
+  - `src/core/agent/convergedDefaults.ts`
+  - `src/core/bubble/deleteBubbleDefaults.ts`
+  - `src/core/bubble/kickoffDefaults.ts`
+  - `src/core/bubble/mergeBubbleDefaults.ts`
+  - `src/core/bubble/metaReviewGateDefaults.ts`
+  - `src/core/bubble/metaReviewGateRecoveryDefaults.ts`
+  - `src/core/bubble/replyBubbleDefaults.ts`
+  - `src/core/bubble/startBubbleDefaults.ts`
+  - `src/core/ui/routerDefaults.ts`
+  - `src/core/runtime/passValidationDefaults.ts`
+
+### Next Easy Retirement Wave
+
+The next low-risk retirement wave should target the pure shells first,
+preferably in file-disjoint clusters:
+
+1. `archive + protocol` shells
+2. `state` shells
+3. `runtime tmux/notification` shells
+4. `ui/workspace` shells
+
+Only after those should we start deleting the medium compatibility facade
+wrappers.
+
 Immediate planning note:
 
 - do not treat the remaining residuals as path-only rewrites
