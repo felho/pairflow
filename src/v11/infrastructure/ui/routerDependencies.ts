@@ -1,4 +1,3 @@
-import { uiRouterDependencyDefaults } from "../../../core/ui/routerDefaults.js";
 import { getBubbleInbox } from "../../shared/inbox/inboxCommandApi.js";
 import { readRuntimeSessionsRegistry } from "../executor/sessionRuntime/runtimeSessionsRegistry.js";
 import { readBubbleTimeline } from "./presenters/timelinePresenter.js";
@@ -8,8 +7,19 @@ import type {
   CreateUiRouterInput
 } from "./routerContracts.js";
 
+let uiRouterDependencyDefaultsPromise:
+  | Promise<typeof import("../../../core/ui/routerDefaults.js")["uiRouterDependencyDefaults"]>
+  | undefined;
+
+async function loadUiRouterDependencyDefaults() {
+  uiRouterDependencyDefaultsPromise ??= import(
+    "../../../core/ui/routerDefaults.js"
+  ).then(({ uiRouterDependencyDefaults }) => uiRouterDependencyDefaults);
+  return uiRouterDependencyDefaultsPromise;
+}
+
 export const defaultUiRouterDependencies = {
-  ...uiRouterDependencyDefaults,
+  ...await loadUiRouterDependencyDefaults(),
   getBubbleInbox,
   readRuntimeSessionsRegistry,
   readBubbleTimeline,

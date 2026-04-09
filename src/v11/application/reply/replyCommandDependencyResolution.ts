@@ -1,7 +1,11 @@
-import { replyBubbleDependencyDefaults } from "../../../core/bubble/replyBubbleDefaults.js";
-import type {
-  EmitHumanReplyDependencies,
-} from "./replyCommandContract.js";
+import type { EmitHumanReplyDependencies } from "./replyCommandContract.js";
+
+const replyBubbleDependencyDefaultsPromise = import(
+  "../../../core/bubble/replyBubbleDefaults.js"
+).then(({ replyBubbleDependencyDefaults }) => replyBubbleDependencyDefaults);
+
+const replyBubbleDependencyDefaults =
+  await replyBubbleDependencyDefaultsPromise;
 
 export interface ResolvedReplyCommandDependencies {
   appendProtocolEnvelope: NonNullable<EmitHumanReplyDependencies["appendProtocolEnvelope"]>;

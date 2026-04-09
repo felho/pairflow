@@ -1,5 +1,3 @@
-import { metaReviewGateDependencyDefaults } from "../../../core/bubble/metaReviewGateDefaults.js";
-
 import {
   applyMetaReviewGateOnConvergence,
   asMetaReviewGateError,
@@ -16,106 +14,124 @@ import type {
 } from "../../shared/metaReviewGate/metaReviewGateCommandContract.js";
 import type {
   NotifyMetaReviewerSubmissionRequest,
+  NotifyMetaReviewerSubmissionRequestInput,
   NotifyMetaReviewerSubmissionRequestDependencies,
+  MetaReviewRuntimeDeliveryObservation,
   ResolveMetaReviewerPaneWarning
 } from "../../shared/metaReviewGate/metaReviewGateTypes.js";
 import { notifyMetaReviewerSubmissionRequest } from "./metaReviewGateNotify.js";
 import { resolveMetaReviewerPaneWarning } from "./metaReviewGatePaneBinding.js";
+import { resolveMetaReviewGateDependencyDefaults } from "./metaReviewGateDependencyDefaults.js";
+
+let metaReviewGateDependencyDefaultsPromise:
+  | Promise<Awaited<ReturnType<typeof resolveMetaReviewGateDependencyDefaults>>>
+  | undefined;
+
+async function loadMetaReviewGateDependencyDefaults() {
+  metaReviewGateDependencyDefaultsPromise ??=
+    resolveMetaReviewGateDependencyDefaults();
+  return metaReviewGateDependencyDefaultsPromise;
+}
 
 function withMetaReviewGateNotifyDefaults(
   notify: NotifyMetaReviewerSubmissionRequest = notifyMetaReviewerSubmissionRequest
-): NotifyMetaReviewerSubmissionRequest {
-  return (
-    input,
-    dependencies: NotifyMetaReviewerSubmissionRequestDependencies = {}
-  ) =>
-    notify(input, {
-      runTmux: dependencies.runTmux ?? metaReviewGateDependencyDefaults.runTmux,
-      maybeAcceptClaudeTrustPrompt:
-        dependencies.maybeAcceptClaudeTrustPrompt
-        ?? metaReviewGateDependencyDefaults.maybeAcceptClaudeTrustPrompt,
-      sendAndSubmitTmuxPaneMessage:
-        dependencies.sendAndSubmitTmuxPaneMessage
-        ?? metaReviewGateDependencyDefaults.sendAndSubmitTmuxPaneMessage,
-      submitTmuxPaneInput:
-        dependencies.submitTmuxPaneInput
-        ?? metaReviewGateDependencyDefaults.submitTmuxPaneInput
-    });
+): Promise<NotifyMetaReviewerSubmissionRequest> {
+  return loadMetaReviewGateDependencyDefaults().then((defaults) =>
+    (
+      input,
+      dependencies: NotifyMetaReviewerSubmissionRequestDependencies = {}
+    ) =>
+      notify(input, {
+        runTmux: dependencies.runTmux ?? defaults.runTmux,
+        maybeAcceptClaudeTrustPrompt:
+          dependencies.maybeAcceptClaudeTrustPrompt
+          ?? defaults.maybeAcceptClaudeTrustPrompt,
+        sendAndSubmitTmuxPaneMessage:
+          dependencies.sendAndSubmitTmuxPaneMessage
+          ?? defaults.sendAndSubmitTmuxPaneMessage,
+        submitTmuxPaneInput:
+          dependencies.submitTmuxPaneInput
+          ?? defaults.submitTmuxPaneInput
+      })
+  );
 }
 
 function withMetaReviewGatePaneBindingDefaults(
   resolveWarning: ResolveMetaReviewerPaneWarning = resolveMetaReviewerPaneWarning
-): ResolveMetaReviewerPaneWarning {
-  return (input) =>
-    resolveWarning({
-      ...input,
-      buildAgentCommand:
-        input.buildAgentCommand
-        ?? metaReviewGateDependencyDefaults.buildAgentCommand,
-      respawnTmuxPaneCommand:
-        input.respawnTmuxPaneCommand
-        ?? metaReviewGateDependencyDefaults.respawnTmuxPaneCommand
-    });
+): Promise<ResolveMetaReviewerPaneWarning> {
+  return loadMetaReviewGateDependencyDefaults().then((defaults) =>
+    (input) =>
+      resolveWarning({
+        ...input,
+        buildAgentCommand:
+          input.buildAgentCommand
+          ?? defaults.buildAgentCommand,
+        respawnTmuxPaneCommand:
+          input.respawnTmuxPaneCommand
+          ?? defaults.respawnTmuxPaneCommand
+      })
+  );
 }
 
-function withMetaReviewGateApplyDefaults(
+async function withMetaReviewGateApplyDefaults(
   dependencies: ApplyMetaReviewGateOnConvergenceDependencies = {}
-): ApplyMetaReviewGateOnConvergenceDependencies {
+): Promise<ApplyMetaReviewGateOnConvergenceDependencies> {
+  const defaults = await loadMetaReviewGateDependencyDefaults();
   return {
     appendProtocolEnvelope:
       dependencies.appendProtocolEnvelope
-      ?? metaReviewGateDependencyDefaults.appendProtocolEnvelope,
+      ?? defaults.appendProtocolEnvelope,
     readStateSnapshot:
       dependencies.readStateSnapshot
-      ?? metaReviewGateDependencyDefaults.readStateSnapshot,
+      ?? defaults.readStateSnapshot,
     readTranscriptEnvelopes:
       dependencies.readTranscriptEnvelopes
-      ?? metaReviewGateDependencyDefaults.readTranscriptEnvelopes,
+      ?? defaults.readTranscriptEnvelopes,
     resolveBubbleById:
       dependencies.resolveBubbleById
-      ?? metaReviewGateDependencyDefaults.resolveBubbleById,
+      ?? defaults.resolveBubbleById,
     setMetaReviewerPaneBinding:
       dependencies.setMetaReviewerPaneBinding
-      ?? metaReviewGateDependencyDefaults.setMetaReviewerPaneBinding,
+      ?? defaults.setMetaReviewerPaneBinding,
     writeStateSnapshot:
       dependencies.writeStateSnapshot
-      ?? metaReviewGateDependencyDefaults.writeStateSnapshot,
-    readFile: dependencies.readFile ?? metaReviewGateDependencyDefaults.readFile,
-    runTmux: dependencies.runTmux ?? metaReviewGateDependencyDefaults.runTmux,
+      ?? defaults.writeStateSnapshot,
+    readFile: dependencies.readFile ?? defaults.readFile,
+    runTmux: dependencies.runTmux ?? defaults.runTmux,
     notifyMetaReviewerSubmissionRequest:
       dependencies.notifyMetaReviewerSubmissionRequest
-      ?? withMetaReviewGateNotifyDefaults(),
+      ?? (await withMetaReviewGateNotifyDefaults()),
     resolveMetaReviewerPaneWarning:
       dependencies.resolveMetaReviewerPaneWarning
-      ?? withMetaReviewGatePaneBindingDefaults()
+      ?? (await withMetaReviewGatePaneBindingDefaults())
   };
 }
 
-function withMetaReviewGateRecoveryDefaults(
+async function withMetaReviewGateRecoveryDefaults(
   dependencies: RecoverMetaReviewGateFromSnapshotDependencies = {}
-): RecoverMetaReviewGateFromSnapshotDependencies {
+): Promise<RecoverMetaReviewGateFromSnapshotDependencies> {
+  const defaults = await loadMetaReviewGateDependencyDefaults();
   return {
     appendProtocolEnvelope:
       dependencies.appendProtocolEnvelope
-      ?? metaReviewGateDependencyDefaults.appendProtocolEnvelope,
+      ?? defaults.appendProtocolEnvelope,
     readStateSnapshot:
       dependencies.readStateSnapshot
-      ?? metaReviewGateDependencyDefaults.readStateSnapshot,
+      ?? defaults.readStateSnapshot,
     readTranscriptEnvelopes:
       dependencies.readTranscriptEnvelopes
-      ?? metaReviewGateDependencyDefaults.readTranscriptEnvelopes,
+      ?? defaults.readTranscriptEnvelopes,
     resolveBubbleById:
       dependencies.resolveBubbleById
-      ?? metaReviewGateDependencyDefaults.resolveBubbleById,
+      ?? defaults.resolveBubbleById,
     setMetaReviewerPaneBinding:
       dependencies.setMetaReviewerPaneBinding
-      ?? metaReviewGateDependencyDefaults.setMetaReviewerPaneBinding,
+      ?? defaults.setMetaReviewerPaneBinding,
     writeStateSnapshot:
       dependencies.writeStateSnapshot
-      ?? metaReviewGateDependencyDefaults.writeStateSnapshot,
-    readFile: dependencies.readFile ?? metaReviewGateDependencyDefaults.readFile,
-    writeFile:
-      dependencies.writeFile ?? metaReviewGateDependencyDefaults.writeFile,
+      ?? defaults.writeStateSnapshot,
+    readFile: dependencies.readFile ?? defaults.readFile,
+    writeFile: dependencies.writeFile ?? defaults.writeFile,
     ...(dependencies.sleepForRetryMs !== undefined
       ? { sleepForRetryMs: dependencies.sleepForRetryMs }
       : {})
@@ -128,9 +144,12 @@ export {
   toMetaReviewGateError as toMetaReviewGateErrorV11
 };
 
-export const notifyMetaReviewerSubmissionRequestV11: NotifyMetaReviewerSubmissionRequest =
-  (input, dependencies = {}) =>
-    withMetaReviewGateNotifyDefaults()(input, dependencies);
+export async function notifyMetaReviewerSubmissionRequestV11(
+  input: NotifyMetaReviewerSubmissionRequestInput,
+  dependencies: NotifyMetaReviewerSubmissionRequestDependencies = {}
+): Promise<MetaReviewRuntimeDeliveryObservation> {
+  return (await withMetaReviewGateNotifyDefaults())(input, dependencies);
+}
 export type {
   ApplyMetaReviewGateOnConvergenceDependencies as ApplyMetaReviewGateOnConvergenceV11Dependencies,
   ApplyMetaReviewGateOnConvergenceInput as ApplyMetaReviewGateOnConvergenceV11Input,
@@ -149,7 +168,7 @@ export async function applyMetaReviewGateOnConvergenceV11(
 ): Promise<MetaReviewGateResult> {
   return applyMetaReviewGateOnConvergence(
     input,
-    withMetaReviewGateApplyDefaults(dependencies)
+    await withMetaReviewGateApplyDefaults(dependencies)
   );
 }
 
@@ -159,6 +178,6 @@ export async function recoverMetaReviewGateFromSnapshotV11(
 ): Promise<MetaReviewGateResult> {
   return recoverMetaReviewGateFromSnapshot(
     input,
-    withMetaReviewGateRecoveryDefaults(dependencies)
+    await withMetaReviewGateRecoveryDefaults(dependencies)
   );
 }

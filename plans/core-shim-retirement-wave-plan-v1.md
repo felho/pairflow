@@ -178,6 +178,31 @@ These numbers are triage inputs, not yet a finalized ledger.
     `metaReviewGate`, `open`, `reply`, `restart`, `routerDependencies`,
     `askHumanDependencyDefaults`, `docContractGateArtifactDefaults`,
     `stateStoreDefaults`, and `statusCommandDependencyDefaults`
+- after the `start` prompt-runtime retarget and latest boundary measurement:
+  - total direct residual imports: `11`
+  - `start/**` is out of the residual frontier
+  - current explicit residuals:
+    `metaReviewGate`, `open`, `reconcileCommandInputNormalization`, `reply`,
+    `restart`, `routerDependencies`, `askHumanDependencyDefaults`,
+    `docContractGateArtifactDefaults`, `stateStoreDefaults`,
+    and `statusCommandDependencyDefaults`
+- after the `metaReviewGate + reply + router/reconcile-input` endgame wave:
+  - total direct residual imports: `7`
+  - `metaReviewGate`, `reply`, `routerDependencies`, and
+    `reconcileCommandInputNormalization` are out of the residual frontier
+  - current residual set is now the intentional / harder edge list:
+    `open`, `restart`, `askHumanDependencyDefaults`,
+    `docContractGateArtifactDefaults`, `stateStoreDefaults`,
+    and `statusCommandDependencyDefaults`
+- after the `reply + router + reconcile-input` cleanup wave:
+  - total direct residual imports: `8`
+  - `replyCommandDependencyResolution`, `routerDependencies`, and
+    `reconcileCommandInputNormalization` no longer carry direct
+    `src/core/**` imports
+  - current explicit residuals:
+    `metaReviewGate`, `open`, `restart`,
+    `askHumanDependencyDefaults`, `docContractGateArtifactDefaults`,
+    `stateStoreDefaults`, and `statusCommandDependencyDefaults`
 - after the `merge` dependency-resolution lazy-load batch:
   - total direct residual imports: `21`
   - `resolveMergeCommandDependencies` and `mergeBubbleCommandOrchestration`
