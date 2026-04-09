@@ -3,12 +3,11 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import {
-  emitHumanReply,
-  type EmitHumanReplyDependencies,
-  type EmitHumanReplyResult
-} from "../../../src/core/human/reply.js";
-import { emitAskHumanFromWorkspace } from "../../../src/core/agent/askHuman.js";
-import { emitHumanReplyV11 } from "../../../src/v11/application/reply/emitReplyV11.js";
+  emitHumanReplyV11,
+  type EmitHumanReplyV11Dependencies as EmitHumanReplyDependencies,
+  type EmitHumanReplyV11Result as EmitHumanReplyResult
+} from "../../../src/v11/application/reply/emitReplyV11.js";
+import { emitAskHumanFromWorkspaceV11 as emitAskHumanFromWorkspace } from "../../../src/v11/application/askHuman/emitAskHumanV11.js";
 import {
   readStateSnapshot,
   writeStateSnapshot
@@ -66,7 +65,6 @@ export type ReplyContractResultOutput =
 
 export interface ReplyContractRunResult {
   mode: ContractCase["mode"];
-  baseline?: ReplyContractResultOutput;
   v11?: ReplyContractResultOutput;
 }
 
@@ -319,21 +317,9 @@ function assertContractExpectedSubset(input: {
   }
 }
 
-function assertParityEquivalent(input: {
-  baseline: ReplyContractResultOutput;
-  v11: ReplyContractResultOutput;
-  caseId: string;
-}): void {
-  if (JSON.stringify(input.baseline) !== JSON.stringify(input.v11)) {
-    throw new Error(
-      `reply parity mismatch for case=${input.caseId}: baseline=${JSON.stringify(input.baseline)} v11=${JSON.stringify(input.v11)}`
-    );
-  }
-}
-
 async function executeReplyCase(input: {
   caseDef: ContractCase;
-  executor: typeof emitHumanReply;
+  executor: typeof emitHumanReplyV11;
   label: string;
 }): Promise<ReplyContractResultOutput> {
   const repoPath = await mkdtemp(join(tmpdir(), "pairflow-reply-contract-"));
@@ -446,68 +432,18 @@ export async function runReplyContractCase(
     throw new Error(`Unsupported command for reply contract runner: ${caseDef.command}`);
   }
 
-  if (caseDef.mode === "baseline") {
-    const baseline = await executeReplyCase({
-      caseDef,
-      executor: emitHumanReply,
-      label: "baseline"
-    });
-    assertContractExpectedSubset({
-      output: baseline,
-      expected: caseDef.expected,
-      label: "baseline"
-    });
-    return {
-      mode: caseDef.mode,
-      baseline
-    };
-  }
-
-  if (caseDef.mode === "v11") {
-    const v11 = await executeReplyCase({
-      caseDef,
-      executor: emitHumanReplyV11,
-      label: "v11"
-    });
-    assertContractExpectedSubset({
-      output: v11,
-      expected: caseDef.expected,
-      label: "v11"
-    });
-    return {
-      mode: caseDef.mode,
-      v11
-    };
-  }
-
-  const baseline = await executeReplyCase({
-    caseDef,
-    executor: emitHumanReply,
-    label: "parity/baseline"
-  });
   const v11 = await executeReplyCase({
     caseDef,
     executor: emitHumanReplyV11,
-    label: "parity/v11"
-  });
-  assertContractExpectedSubset({
-    output: baseline,
-    expected: caseDef.expected,
-    label: "parity/baseline"
+    label: "v11"
   });
   assertContractExpectedSubset({
     output: v11,
     expected: caseDef.expected,
-    label: "parity/v11"
-  });
-  assertParityEquivalent({
-    baseline,
-    v11,
-    caseId: caseDef.id
+    label: "v11"
   });
   return {
     mode: caseDef.mode,
-    baseline,
     v11
   };
 }

@@ -11,21 +11,11 @@ import type { ContractCase } from "./schema.js";
 
 const execFileAsync = promisify(execFile);
 const replyCaseSources = [
-  "tests/contracts/v11/cases/reply/reply-basic.case.json",
   "tests/contracts/v11/cases/reply/reply-basic-v11.case.json",
-  "tests/contracts/v11/cases/reply/reply-basic-parity.case.json",
-  "tests/contracts/v11/cases/reply/reply-no-refs.case.json",
   "tests/contracts/v11/cases/reply/reply-no-refs-v11.case.json",
-  "tests/contracts/v11/cases/reply/reply-no-refs-parity.case.json",
-  "tests/contracts/v11/cases/reply/reply-state-not-waiting-human.case.json",
   "tests/contracts/v11/cases/reply/reply-state-not-waiting-human-v11.case.json",
-  "tests/contracts/v11/cases/reply/reply-state-not-waiting-human-parity.case.json",
-  "tests/contracts/v11/cases/reply/reply-waiting-human-round-invalid.case.json",
   "tests/contracts/v11/cases/reply/reply-waiting-human-round-invalid-v11.case.json",
-  "tests/contracts/v11/cases/reply/reply-waiting-human-round-invalid-parity.case.json",
-  "tests/contracts/v11/cases/reply/reply-waiting-human-context-incomplete.case.json",
-  "tests/contracts/v11/cases/reply/reply-waiting-human-context-incomplete-v11.case.json",
-  "tests/contracts/v11/cases/reply/reply-waiting-human-context-incomplete-parity.case.json"
+  "tests/contracts/v11/cases/reply/reply-waiting-human-context-incomplete-v11.case.json"
 ] as const;
 const replyExpectedSourcesSorted = [...replyCaseSources].sort();
 
@@ -53,7 +43,7 @@ const replyInvalidInputCases: Array<{
     caseDef: {
       id: "reply-invalid-empty-message",
       command: "reply",
-      mode: "baseline",
+      mode: "v11",
       description: "invalid empty message validation",
       input: {
         message: "   ",
@@ -70,7 +60,7 @@ const replyInvalidInputCases: Array<{
     caseDef: {
       id: "reply-invalid-refs",
       command: "reply",
-      mode: "baseline",
+      mode: "v11",
       description: "invalid refs validation",
       input: {
         message: "Valid reply message",
@@ -106,12 +96,12 @@ describe("v11 reply contract harness skeleton", () => {
     const casePath = resolve(process.cwd(), replyCaseSources[0]);
     const caseDef = await readContractCase(casePath);
     expect(caseDef.command).toBe("reply");
-    expect(caseDef.mode).toBe("baseline");
+    expect(caseDef.mode).toBe("v11");
     expect(caseDef.expected.status).toBe("ok");
   });
 
   it(
-    "executes baseline and parity assertions via shared runner",
+    "executes v11 assertions via shared runner",
     { timeout: CONTRACT_TEST_TIMEOUT.parityGitHeavyMs },
     async () => {
     const casePaths = replyCaseSources.map((source) =>
@@ -121,26 +111,11 @@ describe("v11 reply contract harness skeleton", () => {
     for (const casePath of casePaths) {
       const caseDef = await readContractCase(casePath);
       const run = await runReplyContractCase(caseDef);
-      if (caseDef.mode === "baseline") {
-        expect(run.baseline?.status).toBe(caseDef.expected.status);
-        if (caseDef.expected.reasonCode !== undefined) {
-          expect(run.baseline?.reasonCode).toBe(caseDef.expected.reasonCode);
-        }
-        expect(run.v11).toBeUndefined();
-        continue;
+      expect(caseDef.mode).toBe("v11");
+      expect(run.v11?.status).toBe(caseDef.expected.status);
+      if (caseDef.expected.reasonCode !== undefined) {
+        expect(run.v11?.reasonCode).toBe(caseDef.expected.reasonCode);
       }
-      if (caseDef.mode === "v11") {
-        expect(run.v11?.status).toBe(caseDef.expected.status);
-        if (caseDef.expected.reasonCode !== undefined) {
-          expect(run.v11?.reasonCode).toBe(caseDef.expected.reasonCode);
-        }
-        expect(run.baseline).toBeUndefined();
-        continue;
-      }
-
-      expect(run.baseline).toBeDefined();
-      expect(run.v11).toBeDefined();
-      expect(run.baseline).toEqual(run.v11);
     }
     }
   );

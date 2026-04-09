@@ -993,27 +993,9 @@
       "kind": "seed_case"
     },
     {
-      "id": "ask-human-basic",
-      "command": "askHuman",
-      "source": "tests/contracts/v11/cases/ask-human/ask-human-basic.case.json",
-      "kind": "seed_case"
-    },
-    {
       "id": "ask-human-basic-v11",
       "command": "askHuman",
       "source": "tests/contracts/v11/cases/ask-human/ask-human-basic-v11.case.json",
-      "kind": "seed_case"
-    },
-    {
-      "id": "ask-human-basic-parity",
-      "command": "askHuman",
-      "source": "tests/contracts/v11/cases/ask-human/ask-human-basic-parity.case.json",
-      "kind": "seed_case"
-    },
-    {
-      "id": "ask-human-no-refs",
-      "command": "askHuman",
-      "source": "tests/contracts/v11/cases/ask-human/ask-human-no-refs.case.json",
       "kind": "seed_case"
     },
     {
@@ -1023,33 +1005,9 @@
       "kind": "seed_case"
     },
     {
-      "id": "ask-human-no-refs-parity",
-      "command": "askHuman",
-      "source": "tests/contracts/v11/cases/ask-human/ask-human-no-refs-parity.case.json",
-      "kind": "seed_case"
-    },
-    {
-      "id": "ask-human-state-not-running",
-      "command": "askHuman",
-      "source": "tests/contracts/v11/cases/ask-human/ask-human-state-not-running.case.json",
-      "kind": "seed_case"
-    },
-    {
       "id": "ask-human-state-not-running-v11",
       "command": "askHuman",
       "source": "tests/contracts/v11/cases/ask-human/ask-human-state-not-running-v11.case.json",
-      "kind": "seed_case"
-    },
-    {
-      "id": "ask-human-state-not-running-parity",
-      "command": "askHuman",
-      "source": "tests/contracts/v11/cases/ask-human/ask-human-state-not-running-parity.case.json",
-      "kind": "seed_case"
-    },
-    {
-      "id": "ask-human-running-round-invalid",
-      "command": "askHuman",
-      "source": "tests/contracts/v11/cases/ask-human/ask-human-running-round-invalid.case.json",
       "kind": "seed_case"
     },
     {
@@ -1059,27 +1017,9 @@
       "kind": "seed_case"
     },
     {
-      "id": "ask-human-running-round-invalid-parity",
-      "command": "askHuman",
-      "source": "tests/contracts/v11/cases/ask-human/ask-human-running-round-invalid-parity.case.json",
-      "kind": "seed_case"
-    },
-    {
-      "id": "ask-human-running-role-unsupported",
-      "command": "askHuman",
-      "source": "tests/contracts/v11/cases/ask-human/ask-human-running-role-unsupported.case.json",
-      "kind": "seed_case"
-    },
-    {
       "id": "ask-human-running-role-unsupported-v11",
       "command": "askHuman",
       "source": "tests/contracts/v11/cases/ask-human/ask-human-running-role-unsupported-v11.case.json",
-      "kind": "seed_case"
-    },
-    {
-      "id": "ask-human-running-role-unsupported-parity",
-      "command": "askHuman",
-      "source": "tests/contracts/v11/cases/ask-human/ask-human-running-role-unsupported-parity.case.json",
       "kind": "seed_case"
     },
     {
@@ -1257,27 +1197,9 @@
       "kind": "seed_case"
     },
     {
-      "id": "reply-basic",
-      "command": "reply",
-      "source": "tests/contracts/v11/cases/reply/reply-basic.case.json",
-      "kind": "seed_case"
-    },
-    {
       "id": "reply-basic-v11",
       "command": "reply",
       "source": "tests/contracts/v11/cases/reply/reply-basic-v11.case.json",
-      "kind": "seed_case"
-    },
-    {
-      "id": "reply-basic-parity",
-      "command": "reply",
-      "source": "tests/contracts/v11/cases/reply/reply-basic-parity.case.json",
-      "kind": "seed_case"
-    },
-    {
-      "id": "reply-no-refs",
-      "command": "reply",
-      "source": "tests/contracts/v11/cases/reply/reply-no-refs.case.json",
       "kind": "seed_case"
     },
     {
@@ -1287,33 +1209,9 @@
       "kind": "seed_case"
     },
     {
-      "id": "reply-no-refs-parity",
-      "command": "reply",
-      "source": "tests/contracts/v11/cases/reply/reply-no-refs-parity.case.json",
-      "kind": "seed_case"
-    },
-    {
-      "id": "reply-state-not-waiting-human",
-      "command": "reply",
-      "source": "tests/contracts/v11/cases/reply/reply-state-not-waiting-human.case.json",
-      "kind": "seed_case"
-    },
-    {
       "id": "reply-state-not-waiting-human-v11",
       "command": "reply",
       "source": "tests/contracts/v11/cases/reply/reply-state-not-waiting-human-v11.case.json",
-      "kind": "seed_case"
-    },
-    {
-      "id": "reply-state-not-waiting-human-parity",
-      "command": "reply",
-      "source": "tests/contracts/v11/cases/reply/reply-state-not-waiting-human-parity.case.json",
-      "kind": "seed_case"
-    },
-    {
-      "id": "reply-waiting-human-round-invalid",
-      "command": "reply",
-      "source": "tests/contracts/v11/cases/reply/reply-waiting-human-round-invalid.case.json",
       "kind": "seed_case"
     },
     {
@@ -1323,27 +1221,9 @@
       "kind": "seed_case"
     },
     {
-      "id": "reply-waiting-human-round-invalid-parity",
-      "command": "reply",
-      "source": "tests/contracts/v11/cases/reply/reply-waiting-human-round-invalid-parity.case.json",
-      "kind": "seed_case"
-    },
-    {
-      "id": "reply-waiting-human-context-incomplete",
-      "command": "reply",
-      "source": "tests/contracts/v11/cases/reply/reply-waiting-human-context-incomplete.case.json",
-      "kind": "seed_case"
-    },
-    {
       "id": "reply-waiting-human-context-incomplete-v11",
       "command": "reply",
       "source": "tests/contracts/v11/cases/reply/reply-waiting-human-context-incomplete-v11.case.json",
-      "kind": "seed_case"
-    },
-    {
-      "id": "reply-waiting-human-context-incomplete-parity",
-      "command": "reply",
-      "source": "tests/contracts/v11/cases/reply/reply-waiting-human-context-incomplete-parity.case.json",
       "kind": "seed_case"
     },
     {
