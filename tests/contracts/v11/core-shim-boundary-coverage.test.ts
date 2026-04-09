@@ -26,7 +26,6 @@ const forbiddenCoreShimTargets = new Set([
   "src/core/metrics/report/warnings.ts",
   "src/core/reviewer/reviewVerification.ts",
   "src/core/reviewer/reviewerBrief.ts",
-  "src/core/reviewer/summaryVerifierConsistencyGate.ts",
   "src/core/reviewer/testEvidence.ts",
   "src/core/validation.ts",
   "src/core/util/fileLock.ts",
@@ -36,15 +35,7 @@ const forbiddenCoreShimTargets = new Set([
   "src/core/util/structuredRef.ts"
 ]);
 
-const allowedResidualCoreBridgeImports: string[] = [
-  "src/v11/application/commit/commitCliCommand.ts -> src/core/bubble/commitBubbleDefaults.ts",
-  "src/v11/application/merge/mergeCommandDefaults.ts -> src/core/bubble/mergeBubbleDefaults.ts",
-  "src/v11/application/metaReviewGate/metaReviewGateCommandDefaults.ts -> src/core/bubble/metaReviewGateDefaults.ts",
-  "src/v11/shared/metaReview/metaReviewDependencyDefaults.ts -> src/core/bubble/metaReviewReadDefaults.ts",
-  "src/v11/shared/metaReview/metaReviewDependencyDefaults.ts -> src/core/runtime/metaReviewCommandSubmitDefaults.ts",
-  "src/v11/shared/metaReview/metaReviewDependencyDefaults.ts -> src/core/runtime/metaReviewLiveRunDefaults.ts",
-  "src/v11/shared/metrics/bubbleEvents.ts -> src/core/metrics/bubbleEventsDefaults.ts"
-];
+const allowedResidualCoreBridgeImports: string[] = [];
 
 async function listTypeScriptFiles(root: string): Promise<string[]> {
   const entries = await readdir(root, {
