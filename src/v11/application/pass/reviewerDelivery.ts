@@ -1,7 +1,6 @@
 import {
   type EmitTmuxDeliveryNotificationResult
 } from "../../../v11/shared/ports/tmuxDelivery.js";
-import { reviewerDeliveryDefaults } from "../../../core/runtime/reviewerDeliveryDefaults.js";
 import {
   readReviewerBriefArtifact as defaultReadReviewerBriefArtifact,
   readReviewerFocusArtifact as defaultReadReviewerFocusArtifact
@@ -32,6 +31,11 @@ import {
   shouldRetryPassDelivery
 } from "./reviewerDeliveryHelpers.js";
 import { executeImplementerHandoffDelivery } from "../../shared/delivery/implementerHandoffDelivery.js";
+import {
+  emitTmuxDeliveryNotification,
+  resolveDeliveryMessageRef
+} from "../../../v11/infrastructure/channel/tmux/tmuxDelivery.js";
+import { refreshReviewerContext } from "../../../v11/infrastructure/channel/tmux/reviewerContext.js";
 
 export interface PassDeliveryDependencies {
   emitTmuxDeliveryNotification?: EmitTmuxDeliveryNotificationPort;
@@ -67,11 +71,9 @@ export async function executePassDelivery(
   dependencies: PassDeliveryDependencies = {}
 ): Promise<ExecutePassDeliveryResult> {
   const emitDelivery =
-    dependencies.emitTmuxDeliveryNotification
-    ?? reviewerDeliveryDefaults.emitTmuxDeliveryNotification;
+    dependencies.emitTmuxDeliveryNotification ?? emitTmuxDeliveryNotification;
   const resolveMessageRef =
-    dependencies.resolveDeliveryMessageRef
-    ?? reviewerDeliveryDefaults.resolveDeliveryMessageRef;
+    dependencies.resolveDeliveryMessageRef ?? resolveDeliveryMessageRef;
   if (input.recipientRole === "implementer") {
     const deliveryInput = buildPassDeliveryInput({
       executeInput: input,
@@ -102,7 +104,7 @@ export async function executePassDelivery(
   });
 
   const refreshReviewer =
-    dependencies.refreshReviewerContext ?? reviewerDeliveryDefaults.refreshReviewerContext;
+    dependencies.refreshReviewerContext ?? refreshReviewerContext;
   const deliveryInitialDelayMs = await resolveDeliveryInitialDelayMs({
     executeInput: input,
     reviewerStartupPrompt,

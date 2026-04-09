@@ -1,7 +1,7 @@
 import {
   resolveReviewVerificationInputFromRefs,
   writeReviewVerificationArtifactAtomic
-} from "../../../core/reviewer/reviewVerificationArtifacts.js";
+} from "../../../v11/infrastructure/artifact/reviewer/reviewVerificationArtifacts.js";
 
 export {
   resolveReviewVerificationInputFromRefs,

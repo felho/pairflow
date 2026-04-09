@@ -7,7 +7,8 @@ import type {
   WriteReviewVerificationArtifactAtomicPort
 } from "../../../v11/shared/ports/reviewVerificationArtifacts.js";
 import type { ReadStateSnapshotPort } from "../../shared/ports/stateSnapshots.js";
-import { repeatCleanAutoConvergeDefaults } from "../../../core/convergence/repeatCleanAutoConvergeDefaults.js";
+import { readStateSnapshot } from "../../shared/state/stateStoreDefaults.js";
+import { writeReviewVerificationArtifactAtomic } from "../../../v11/infrastructure/artifact/reviewer/reviewVerificationArtifacts.js";
 import type { AgentName, BubbleStateSnapshot, ReviewArtifactType } from "../../../types/bubble.js";
 import type { ProtocolEnvelope } from "../../../types/protocol.js";
 import {
@@ -52,13 +53,13 @@ export async function prepareRepeatCleanAutoConverge(
   const validatePolicy =
     dependencies.validateConvergencePolicy ?? validateConvergencePolicy;
   const readState =
-    dependencies.readStateSnapshot ?? repeatCleanAutoConvergeDefaults.readStateSnapshot;
+    dependencies.readStateSnapshot ?? readStateSnapshot;
   const createArtifact =
     dependencies.createReviewVerificationArtifact
     ?? createReviewVerificationArtifact;
   const writeArtifact =
     dependencies.writeReviewVerificationArtifactAtomic
-    ?? repeatCleanAutoConvergeDefaults.writeReviewVerificationArtifactAtomic;
+    ?? writeReviewVerificationArtifactAtomic;
 
   const policyResult = validatePolicy({
     currentRound: input.round,
