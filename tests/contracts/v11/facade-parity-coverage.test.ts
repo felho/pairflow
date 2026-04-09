@@ -8,6 +8,7 @@ import { commandMigrationMap } from "./migration-map.js";
 const commandsWithoutFacadeParitySentinel = [
   "approval",
   "askHuman",
+  "converged",
   "create",
   "delete",
   "inbox",
@@ -23,7 +24,6 @@ const commandsWithoutFacadeParitySentinel = [
 
 const facadeParityTestsByCommand: Record<string, readonly string[]> = {
   kickoff: ["tests/v11/application/kickoff/kickoffFacadeParity.test.ts"],
-  converged: ["tests/v11/application/converged/convergedFacadeParity.test.ts"],
   metaReviewGate: [
     "tests/v11/application/metaReviewGate/metaReviewGateFacadeParity.test.ts"
   ],
