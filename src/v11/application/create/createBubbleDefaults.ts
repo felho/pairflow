@@ -1,6 +1,6 @@
 const createBubbleDefaultsPromise = Promise.all([
-  import("../../../core/protocol/transcriptStore.js"),
-  import("../../../core/workspace/git.js")
+  import("../../infrastructure/artifact/transcript/transcriptStore.js"),
+  import("../../infrastructure/workspace/git.js")
 ]).then(([transcriptStore, git]) => ({
   appendProtocolEnvelope: transcriptStore.appendProtocolEnvelope,
   assertGitRepository: git.assertGitRepository

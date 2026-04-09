@@ -17,7 +17,7 @@ async function loadTranscriptStoreModule(): Promise<{
   readTranscriptEnvelopes: ReadTranscriptEnvelopesPort;
 }> {
   transcriptStoreModulePromise ??= import(
-    "../../../core/protocol/transcriptStore.js"
+    "../../infrastructure/artifact/transcript/transcriptStore.js"
   ).then(({ appendProtocolEnvelope, readTranscriptEnvelopes }) => ({
     appendProtocolEnvelope,
     readTranscriptEnvelopes
