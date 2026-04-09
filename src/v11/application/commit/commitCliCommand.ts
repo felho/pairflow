@@ -1,6 +1,6 @@
 import { parseArgs } from "node:util";
 
-import { commitBubbleDependencyDefaults } from "../../../core/bubble/commitBubbleDefaults.js";
+import { commitBubbleDependencyDefaults } from "./commitCommandDefaults.js";
 import {
   commitBubble,
   asBubbleCommitError
