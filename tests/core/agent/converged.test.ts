@@ -14,18 +14,21 @@ import { emitPassFromWorkspace } from "../../../src/core/agent/pass.js";
 import { renderBubbleConfigToml } from "../../../src/config/bubbleConfig.js";
 import { createBubble } from "../../../src/core/bubble/createBubble.js";
 import { IDEATION_CONVERGED_BLOCKED } from "../../../src/core/bubble/ideation.js";
-import { readTranscriptEnvelopes, appendProtocolEnvelope } from "../../../src/core/protocol/transcriptStore.js";
 import { applyMetaReviewGateOnConvergence } from "../../../src/core/bubble/metaReviewGate.js";
-import { upsertRuntimeSession } from "../../../src/core/runtime/sessionsRegistry.js";
+import {
+  appendProtocolEnvelope,
+  readTranscriptEnvelopes
+} from "../../../src/v11/infrastructure/artifact/transcript/transcriptStore.js";
+import { upsertRuntimeSession } from "../../../src/v11/infrastructure/executor/sessionRuntime/runtimeSessionsRegistry.js";
 import {
   buildRunningExecutionContext,
   metaReviewExecutionContextToRunningContext
-} from "../../../src/core/state/executionContext.js";
+} from "../../../src/v11/shared/state/executionContext.js";
 import {
   readStateSnapshot,
   writeStateSnapshot as rawWriteStateSnapshot
-} from "../../../src/core/state/stateStore.js";
-import { bootstrapWorktreeWorkspace } from "../../../src/core/workspace/worktreeManager.js";
+} from "../../../src/v11/infrastructure/state/stateStore.js";
+import { bootstrapWorktreeWorkspace } from "../../../src/v11/infrastructure/workspace/worktreeManager.js";
 import { resolveReviewerTestEvidenceArtifactPath } from "../../../src/v11/shared/reviewer/testEvidence.js";
 import { resolveSummaryVerifierConsistencyGateArtifactPath } from "../../../src/v11/shared/reviewer/summaryVerifierConsistencyGate.js";
 import { resolveDocContractGateArtifactPath } from "../../../src/core/gates/docContractGateArtifacts.js";
