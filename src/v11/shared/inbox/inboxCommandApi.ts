@@ -1,7 +1,7 @@
 import {
   BubbleLookupError,
-} from "../../../core/bubble/bubbleLookup.js";
-import { statusInboxDependencyDefaults } from "../../../core/bubble/statusInboxDefaults.js";
+  statusInboxDependencyDefaults
+} from "../../../core/bubble/statusInboxDefaults.js";
 import type { BubbleLifecycleState } from "../../../types/bubble.js";
 import { resolveCanonicalPendingApprovalSignal } from "../approval/pendingApprovalSignal.js";
 

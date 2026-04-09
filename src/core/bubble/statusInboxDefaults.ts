@@ -1,3 +1,4 @@
+import { BubbleLookupError } from "./bubbleLookup.js";
 import { resolveBubbleById } from "../bubble/bubbleLookup.js";
 import { readTranscriptEnvelopes } from "../protocol/transcriptStore.js";
 import {
@@ -11,3 +12,5 @@ export const statusInboxDependencyDefaults = {
   readTranscriptEnvelopes,
   resolveBubbleById
 } as const;
+
+export { BubbleLookupError };

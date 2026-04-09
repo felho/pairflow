@@ -1,5 +1,7 @@
-import { BubbleLookupError } from "../../../core/bubble/bubbleLookup.js";
-import { statusInboxDependencyDefaults } from "../../../core/bubble/statusInboxDefaults.js";
+import {
+  BubbleLookupError,
+  statusInboxDependencyDefaults
+} from "../../../core/bubble/statusInboxDefaults.js";
 import {
   countPendingHumanQuestions,
   readStatusTranscriptData,
