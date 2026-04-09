@@ -11,7 +11,7 @@ import {
   readDocContractGateArtifact,
   resolveDocContractGateArtifactPath
 } from "../gates/docContractGateArtifacts.js";
-import { readReviewVerificationArtifactStatus } from "../reviewer/reviewVerificationArtifacts.js";
+import { readReviewVerificationArtifactStatus } from "../../v11/shared/reviewer/reviewVerificationArtifactReaders.js";
 import { readStateSnapshot } from "../state/stateStore.js";
 
 export const convergedDependencyDefaults = {

@@ -1,5 +1,5 @@
 import { readStateSnapshot } from "../state/stateStore.js";
-import { writeReviewVerificationArtifactAtomic } from "../reviewer/reviewVerificationArtifacts.js";
+import { writeReviewVerificationArtifactAtomic } from "../../v11/shared/reviewer/reviewVerificationArtifactReaders.js";
 
 export const repeatCleanAutoConvergeDefaults = {
   readStateSnapshot,
