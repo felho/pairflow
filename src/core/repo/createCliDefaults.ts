@@ -1,4 +1,4 @@
-import { registerRepoInRegistry } from "./registry.js";
+import { registerRepoInRegistry } from "../../v11/infrastructure/executor/workspace/repoRegistry.js";
 import type { RegisterRepoInRegistryPort } from "../../v11/shared/ports/repoRegistry.js";
 
 export const createCliDependencyDefaults = {
