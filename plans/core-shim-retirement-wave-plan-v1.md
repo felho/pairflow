@@ -253,47 +253,46 @@ These numbers are triage inputs, not yet a finalized ledger.
     instead of class identity
   - current residual set:
     `restart`
-- latest checkpoint after the `status` lazy defaults batch:
-  - total direct residual imports: `1`
-  - `statusCommandDependencyDefaults` no longer carries static
-    `src/core/**` imports; `status`/`inbox` now rely on a local shared
-    defaults object with lazy core bridges only where the bundle still lacks a
-- latest checkpoint after the `restart` local facade batch:
-  - total direct residual imports: `0`
-  - `emitRestartV11` no longer statically re-exports `src/core/bubble/restartBubble.ts`
-  - `core-shim-boundary-coverage` now runs clean with no residual
-    `src/v11/src/cli -> src/core` imports
-    direct v11 owner path
-  - current residual set:
-    `restart`
 
 Latest validated state:
 
 - `tests/contracts/v11/core-shim-boundary-coverage.test.ts` PASS in warn-only mode
-- all hard-fail fitness checks PASS
-- no active dependency-direction regressions introduced by the easy waves
+- latest validated boundary residual count: `1`
+- latest explicit residual:
+  - `src/v11/application/restart/emitRestartV11.ts -> src/core/bubble/restartBubble.ts`
+- latest targeted validation still green for the shim-retirement wave:
+  - `tests/v11/application/restart/restartFacadeParity.test.ts`
+  - `tests/core/bubble/restartBubble.test.ts`
+  - `tests/cli/bubbleRestartCommand.test.ts`
+  - `tests/core/bubble/statusBubble.test.ts`
+  - `tests/cli/bubbleStatusCommand.test.ts`
+  - `tests/v11/application/status/statusFacadeParity.test.ts`
+  - `tests/v11/application/status/statusCliEntrypointParity.test.ts`
+  - `tests/v11/shared/inbox/inboxCommandApi.test.ts`
+  - `tests/contracts/v11/core-shim-boundary-coverage.test.ts`
+  - `pnpm typecheck`
+- note:
+  - full fitness still has pre-existing non-shim findings (`error`, `dependency`)
+    outside this wave; the latest shim work did not increase those counts
 
 Current conscious-triage note after the `open` owner-flip:
 
 Residual target-shape notes (current best understanding):
 
-- `restart`: not an easy owner-flip under the current dependency policy; keep as residual until a dedicated defaults-boundary batch can move the facade without introducing new dependency-direction findings
-- `askHumanDependencyDefaults`: medium composite-defaults case; likely next active redesign candidate because execution/routing/finalization slices are already separate on the consumer side
-- `statusCommandDependencyDefaults`: medium composite-defaults case coupled to the `docContractGateArtifactDefaults` and `stateStoreDefaults` bridges
-- `docContractGateArtifactDefaults` + `stateStoreDefaults`: thin bridges, but direct retarget currently opens `shared -> infrastructure` findings; treat as intentional residuals until the shared-boundary policy or target shape is clarified
+- `restart`: not an easy owner-flip under the current dependency policy
+- recommended immediate stance: treat it as an intentional residual until a
+  dedicated defaults-boundary redesign is scheduled
+- alternative path exists only if the project explicitly accepts parity-contract
+  relaxation or a local lazy facade pattern on the v11 perimeter
 
 - the residual frontier is no longer a uniform easy-wave backlog
 - attempted `restart` owner-flip proved that boundary-count reduction alone is
   not enough; if the replacement opens new dependency-direction findings, the
   batch is not acceptable and must be reverted
-- the remaining residuals currently fall into two buckets:
-  - composite defaults / fan-in aggregates:
-    `restart`, `askHumanDependencyDefaults`, `statusCommandDependencyDefaults`
-  - intentional shared bridge wrappers whose direct retarget would currently
-    violate the `shared -> infrastructure` rule:
-    `docContractGateArtifactDefaults`, `stateStoreDefaults`
-- practical next step is no longer "remove all easy cases", but residual-by-
-  residual target-shape design with policy compatibility checked up front
+- practical next step is now explicit:
+  - either accept `restart` as the last intentional residual for this wave,
+  - or open a separate restart-boundary redesign batch with wider contract
+    scope than the shim-retirement wave
 
 Current medium frontier after the latest easy/error-only waves:
 
