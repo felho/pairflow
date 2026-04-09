@@ -6,13 +6,16 @@ import { spawn } from "node:child_process";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { createBubble } from "../../../src/core/bubble/createBubble.js";
-import { buildMetaReviewExecutionContext } from "../../../src/core/bubble/metaReviewExecutionContext.js";
+import { buildMetaReviewExecutionContext } from "../../../src/v11/shared/metaReview/metaReviewExecutionContext.js";
 import {
   buildRunningExecutionContext,
   metaReviewExecutionContextToRunningContext
 } from "../../../src/v11/shared/state/executionContext.js";
 import { readStateSnapshot, writeStateSnapshot } from "../../../src/v11/infrastructure/state/stateStore.js";
-import { startBubble, StartBubbleError } from "../../../src/core/bubble/startBubble.js";
+import {
+  startBubbleV11 as startBubble,
+  StartBubbleErrorV11 as StartBubbleError
+} from "../../../src/v11/application/start/emitStartV11.js";
 import { upsertRuntimeSession } from "../../../src/v11/infrastructure/executor/sessionRuntime/runtimeSessionsRegistry.js";
 import {
   REVIEWER_COMMAND_GATE_FORBIDDEN,
@@ -31,7 +34,7 @@ import {
 import {
   reviewerSeverityOntologyFullMarkdown
 } from "../../../src/v11/shared/reviewer/reviewerSeverityOntology.generated.js";
-import { shellQuote } from "../../../src/core/util/shellQuote.js";
+import { shellQuote } from "../../../src/v11/shared/foundation/shellQuote.js";
 import type { BubbleStateSnapshot } from "../../../src/types/bubble.js";
 import { initGitRepository } from "../../helpers/git.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";

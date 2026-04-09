@@ -3,9 +3,9 @@ import { describe, expect, it, vi } from "vitest";
 import {
   restartBubble,
   RestartBubbleError
-} from "../../../src/core/bubble/restartBubble.js";
-import type { ResolvedBubbleById } from "../../../src/core/bubble/bubbleLookup.js";
-import type { StartBubbleResult } from "../../../src/core/bubble/startBubble.js";
+} from "../../../src/v11/application/restart/restartCommandApi.js";
+import type { ResolvedBubbleById } from "../../../src/v11/infrastructure/executor/workspace/bubbleLookup.js";
+import type { StartBubbleV11Result as StartBubbleResult } from "../../../src/v11/application/start/emitStartV11.js";
 
 describe("restartBubble", () => {
   it("terminates previous runtime and starts bubble from resolved repo context", async () => {

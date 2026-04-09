@@ -4,14 +4,14 @@ import { join } from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { emitConvergedFromWorkspace } from "../../../src/core/agent/converged.js";
-import { emitPassFromWorkspace } from "../../../src/core/agent/pass.js";
+import { emitConvergedFromWorkspaceV11 as emitConvergedFromWorkspace } from "../../../src/v11/application/converged/emitConvergedV11.js";
+import { emitPassFromWorkspaceV11 as emitPassFromWorkspace } from "../../../src/v11/application/pass/emitPassV11.js";
 import { runAgentEmitCommand } from "../../../src/cli/commands/agent/emit.js";
 import { createBubble } from "../../../src/core/bubble/createBubble.js";
-import { submitMetaReviewResult } from "../../../src/core/bubble/metaReview.js";
-import { applyMetaReviewGateOnConvergence } from "../../../src/core/bubble/metaReviewGate.js";
-import { startBubble } from "../../../src/core/bubble/startBubble.js";
-import { buildMetaReviewExecutionContext } from "../../../src/core/bubble/metaReviewExecutionContext.js";
+import { submitMetaReviewResultV11 as submitMetaReviewResult } from "../../../src/v11/application/metaReview/emitMetaReviewV11.js";
+import { applyMetaReviewGateOnConvergenceV11 as applyMetaReviewGateOnConvergence } from "../../../src/v11/application/metaReviewGate/emitMetaReviewGateV11.js";
+import { startBubbleV11 as startBubble } from "../../../src/v11/application/start/emitStartV11.js";
+import { buildMetaReviewExecutionContext } from "../../../src/v11/shared/metaReview/metaReviewExecutionContext.js";
 import {
   readRuntimeSessionsRegistry,
   upsertRuntimeSession
