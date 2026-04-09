@@ -1,4 +1,4 @@
-import { metaReviewReadDefaults } from "../../../core/bubble/metaReviewReadDefaults.js";
+import { metaReviewReadDefaults } from "./metaReviewDependencyDefaults.js";
 import { MetaReviewError } from "./metaReviewError.js";
 import {
   clearLiveMetaReviewSnapshot,

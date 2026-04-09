@@ -134,6 +134,17 @@ These numbers are triage inputs, not yet a finalized ledger.
   - `postAppendStateWriter`, `metaReviewCommandSubmitRuntime`, and
     `metaReviewCommandSubmitPersistence` now route through one shared
     `shared/state/stateStoreDefaults` bridge
+- after the parallel `approval + attach + list` easy-wave:
+  - total direct residual imports: `39`
+  - `approvalCommandApi` now lazy-loads the approval defaults bridge instead of
+    carrying a direct `core` import in the public API file
+  - `emitAttachV11` no longer depends on the `core` attach defaults shim
+  - `listCommandApi` now routes through one local `listCommandDefaults` bridge
+- after the shared `metaReview` dependency-defaults fan-in batch:
+  - total direct residual imports: `38`
+  - `metaReviewCommandSubmitPreparation`, `metaReviewCommandReadRuntime`, and
+    `metaReviewLiveRunPorts` now share one
+    `shared/metaReview/metaReviewDependencyDefaults` bridge
 - after the `start + kickoff` local fan-in batch:
   - total direct residual imports: `54`
   - `application/start` prompt/runtime and default wiring now route through two

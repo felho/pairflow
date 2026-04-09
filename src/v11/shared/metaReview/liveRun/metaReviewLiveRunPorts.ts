@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 
-import { metaReviewLiveRunDefaults } from "../../../../core/runtime/metaReviewLiveRunDefaults.js";
+import { metaReviewLiveRunDefaults } from "../metaReviewDependencyDefaults.js";
 import { MetaReviewError } from "../metaReviewError.js";
 import type { MetaReviewDependencies, MetaReviewLiveRunnerOutput } from "./metaReviewLiveRunContract.js";
 
