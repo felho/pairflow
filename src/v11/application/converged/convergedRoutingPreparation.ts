@@ -1,12 +1,12 @@
-import { readStateSnapshot } from "../../../v11/infrastructure/state/stateStore.js";
+import { readStateSnapshot } from "../../../core/state/stateStore.js";
 import {
   IDEATION_CONVERGED_BLOCKED
 } from "../../shared/ideation/ideationReasonCodes.js";
 import {
   resolveIdeationMetadata
 } from "../../domain/ideation/ideationMetadata.js";
-import { resolveBubbleFromWorkspaceCwd } from "../../../v11/infrastructure/executor/workspace/workspaceResolution.js";
-import { ensureBubbleInstanceIdForMutation } from "../../../v11/infrastructure/artifact/bubble/bubbleInstanceId.js";
+import { resolveBubbleFromWorkspaceCwd } from "../../../core/bubble/workspaceResolution.js";
+import { ensureBubbleInstanceIdForMutation } from "../../../core/bubble/bubbleInstanceId.js";
 import type { ActorEmitContextSnapshot } from "../../shared/actorProtocol/actorEmitContext.js";
 import type { AgentName, BubbleStateSnapshot } from "../../../types/bubble.js";
 
