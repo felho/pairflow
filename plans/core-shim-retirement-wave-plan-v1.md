@@ -53,14 +53,14 @@ Latest verified checkpoint after the meta-review-gate defaults redesign:
 
 Current remaining non-inventory bridge candidates:
 
-- `src/v11/shared/metaReview/metaReviewDependencyDefaults.ts`
+- none confirmed at this checkpoint
 
 Current classification:
 
 - `easy`
   - none confirmed at this checkpoint
 - `medium`
-  - `metaReviewDependencyDefaults`
+  - none confirmed at this checkpoint
 - `hard / architecture-sensitive`
   - none confirmed at this checkpoint
 
@@ -97,6 +97,11 @@ Immediate planning note:
   - the shared metrics lifecycle writer now loads the canonical v11 repo
     normalization + events-store owners directly
   - it no longer imports `src/core/metrics/bubbleEventsDefaults.ts`
+- the previous `metaReviewDependencyDefaults` bridge is now retired:
+  - the shared meta-review defaults now load the canonical v11 bubble lookup
+    and runtime sessions owners directly
+  - it no longer imports `src/core/bubble/bubbleLookup.ts` or
+    `src/core/runtime/sessionsRegistry.ts`
 
 Observed warning snapshot when the test was downgraded:
 

@@ -17,7 +17,7 @@ async function loadBubbleLookupModule(): Promise<{
   resolveBubbleById: ResolveBubbleByIdPort;
 }> {
   bubbleLookupModulePromise ??= import(
-    "../../../core/bubble/bubbleLookup.js"
+    "../../infrastructure/executor/workspace/bubbleLookup.js"
   ).then(({ resolveBubbleById }) => ({ resolveBubbleById }));
   return bubbleLookupModulePromise;
 }
@@ -26,7 +26,7 @@ async function loadRuntimeSessionsModule(): Promise<{
   readRuntimeSessionsRegistry: ReadRuntimeSessionsRegistryPort;
 }> {
   runtimeSessionsModulePromise ??= import(
-    "../../../core/runtime/sessionsRegistry.js"
+    "../../infrastructure/executor/sessionRuntime/runtimeSessionsRegistry.js"
   ).then(({ readRuntimeSessionsRegistry }) => ({ readRuntimeSessionsRegistry }));
   return runtimeSessionsModulePromise;
 }
