@@ -12,6 +12,6 @@ export {
 } from "../../shared/reconcile/reconcileCommandRuntime.js";
 import {
   reconcileRuntimeSessions as reconcileRuntimeSessionsV11
-} from "../../../core/runtime/startupReconciler.js";
+} from "./reconcileCommandApi.js";
 
 export { reconcileRuntimeSessionsV11 };
