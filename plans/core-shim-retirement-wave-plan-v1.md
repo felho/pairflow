@@ -102,6 +102,11 @@ These numbers are triage inputs, not yet a finalized ledger.
   - total direct residual imports: `54`
   - `kickoffCliRunner` and `kickoffDependencyResolution` now share one local
     `kickoffDependencyDefaults` bridge instead of two direct `core` imports
+- after the `delete defaults` fan-in batch:
+  - total direct residual imports: `51`
+  - `deleteBubble` and `deleteBubbleSupport` now share one local
+    `deleteBubbleDependencyDefaults` bridge instead of two direct `core`
+    imports
 - after the `start + kickoff` local fan-in batch:
   - total direct residual imports: `54`
   - `application/start` prompt/runtime and default wiring now route through two

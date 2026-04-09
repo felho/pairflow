@@ -7,7 +7,7 @@ import type {
   DeleteBubbleResult
 } from "../../../contracts/deleteBubble.js";
 import type { BubbleLifecycleState } from "../../../types/bubble.js";
-import { deleteBubbleDependencyDefaults } from "../../../core/bubble/deleteBubbleDefaults.js";
+import { deleteBubbleDependencyDefaults } from "./deleteBubbleDependencyDefaults.js";
 import type { BranchExistsPort } from "../../shared/ports/git.js";
 import type { PathExistsPort } from "../../shared/ports/pathExists.js";
 import { stopBubbleV11 as stopBubble } from "../stop/emitStopV11.js";
