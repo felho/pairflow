@@ -7,6 +7,7 @@ import { resolveActiveMetaReviewRuntimeDelivery } from "../../shared/metaReview/
 import { getBubblePaths } from "../../shared/bubble/bubblePaths.js";
 import { computeWatchdogStatus } from "../../shared/watchdog/watchdogStatus.js";
 import { resolveBubbleAttention } from "../../shared/status/bubbleAttention.js";
+import { isNamedError } from "../../shared/errors/namedError.js";
 import type { BubbleLifecycleState } from "../../../types/bubble.js";
 import type {
   BubbleListEntry,
@@ -15,7 +16,6 @@ import type {
   BubbleListView
 } from "./listCommandContract.js";
 import {
-  RepoResolutionError,
   listCommandDefaults
 } from "./listCommandDefaults.js";
 
@@ -109,7 +109,7 @@ async function resolveListBubblesContext(input: BubbleListInput): Promise<{
   try {
     repoPath = await listCommandDefaults.resolveRepoPath(input);
   } catch (error) {
-    if (error instanceof RepoResolutionError) {
+    if (isNamedError(error, "RepoResolutionError")) {
       throw new BubbleListError(error.message);
     }
     throw error;
@@ -314,7 +314,7 @@ export function asBubbleListError(
       message: error.message,
       cause: error,
       context: {
-        source: error instanceof listCommandDefaults.RepoResolutionError
+        source: isNamedError(error, "RepoResolutionError")
           ? "repo_resolution"
           : "unexpected_error",
         repoPathProvided: context.repoPathProvided,
