@@ -1,13 +1,8 @@
 import {
-  BubbleLookupError
-} from "../../../core/bubble/bubbleLookup.js";
-import {
-  StateStoreConflictError
-} from "../../../core/state/stateStore.js";
-import {
   SchemaValidationError
 } from "../validation/primitives.js";
 import { MetaReviewError } from "./metaReviewError.js";
+import { isNamedError } from "../errors/namedError.js";
 
 export function stateWriteConflictToMetaReviewError(error: unknown): MetaReviewError {
   const reason = error instanceof Error ? error.message : String(error);
@@ -38,10 +33,10 @@ export function toMetaReviewError(error: unknown): MetaReviewError {
     const gateReason = (error as { reasonCode: string }).reasonCode;
     return new MetaReviewError("META_REVIEW_GATE_RUN_FAILED", `${gateReason}: ${error.message}`);
   }
-  if (error instanceof BubbleLookupError) {
+  if (isNamedError(error, "BubbleLookupError")) {
     return new MetaReviewError("META_REVIEW_BUBBLE_LOOKUP_FAILED", error.message);
   }
-  if (error instanceof StateStoreConflictError) {
+  if (isNamedError(error, "StateStoreConflictError")) {
     return stateWriteConflictToMetaReviewError(error);
   }
   if (error instanceof SchemaValidationError || error instanceof SyntaxError) {

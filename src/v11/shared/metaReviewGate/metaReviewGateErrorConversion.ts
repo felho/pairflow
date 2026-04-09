@@ -1,17 +1,16 @@
-import { BubbleLookupError } from "../../../core/bubble/bubbleLookup.js";
 import { MetaReviewError } from "../metaReview/metaReviewError.js";
-import { StateStoreConflictError } from "../../../core/state/stateStore.js";
 import { MetaReviewGateError } from "./metaReviewGateTypes.js";
 import { toConflictError } from "./metaReviewGateShared.js";
+import { isNamedError } from "../errors/namedError.js";
 
 export function toMetaReviewGateError(error: unknown): MetaReviewGateError {
   if (error instanceof MetaReviewGateError) {
     return error;
   }
-  if (error instanceof StateStoreConflictError) {
+  if (isNamedError(error, "StateStoreConflictError")) {
     return toConflictError(error);
   }
-  if (error instanceof BubbleLookupError) {
+  if (isNamedError(error, "BubbleLookupError")) {
     return new MetaReviewGateError(
       "META_REVIEW_GATE_TRANSITION_INVALID",
       error.message

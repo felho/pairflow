@@ -1,6 +1,6 @@
-import { BubbleLookupError } from "../../../core/bubble/bubbleLookup.js";
 import { normalizeReplyCommandError } from "./replyCommandErrorNormalization.js";
 import { normalizePairflowCommandErrorInput } from "../errors/commandErrorDetails.js";
+import { isNamedError } from "../errors/namedError.js";
 
 export class HumanReplyCommandError extends Error {
   public readonly reasonCode: string | undefined;
@@ -25,7 +25,8 @@ export function throwAsHumanReplyCommandError(error: unknown): never {
   throw normalizeReplyCommandError({
     error,
     isReplyCommandError: (candidate) => candidate instanceof HumanReplyCommandError,
-    isBubbleLookupError: (candidate) => candidate instanceof BubbleLookupError,
+    isBubbleLookupError: (candidate) =>
+      isNamedError(candidate, "BubbleLookupError"),
     createReplyCommandError: createHumanReplyCommandError
   });
 }

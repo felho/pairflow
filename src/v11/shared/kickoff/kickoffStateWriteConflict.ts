@@ -1,5 +1,5 @@
-import { StateStoreConflictError } from "../../../core/state/stateStore.js";
+import { isNamedError } from "../errors/namedError.js";
 
 export function isKickoffStateWriteConflict(error: unknown): boolean {
-  return error instanceof StateStoreConflictError;
+  return isNamedError(error, "StateStoreConflictError");
 }

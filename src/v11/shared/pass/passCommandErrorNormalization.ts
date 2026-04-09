@@ -1,4 +1,4 @@
-import { WorkspaceResolutionError } from "../../../core/bubble/workspaceResolution.js";
+import { isNamedError } from "../errors/namedError.js";
 
 export interface NormalizePassCommandErrorInput {
   error: unknown;
@@ -13,7 +13,7 @@ export function normalizePassCommandError(
     return input.error;
   }
 
-  if (input.error instanceof WorkspaceResolutionError) {
+  if (isNamedError(input.error, "WorkspaceResolutionError")) {
     return input.createPassCommandError(input.error.message);
   }
 
