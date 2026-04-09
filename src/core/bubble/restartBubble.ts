@@ -3,7 +3,7 @@ export {
   asRestartBubbleError,
   restartBubble
 } from "../../v11/application/restart/restartCommandApi.js";
-import {
+export {
   restartBubbleDependencyDefaults as restartBubbleDefaults
 } from "./restartBubbleDefaults.js";
 
