@@ -11,18 +11,10 @@ import { readContractCase } from "./runner.js";
 
 const execFileAsync = promisify(execFile);
 const commitCaseSources = [
-  "tests/contracts/v11/cases/commit/commit-basic.case.json",
   "tests/contracts/v11/cases/commit/commit-basic-v11.case.json",
-  "tests/contracts/v11/cases/commit/commit-basic-parity.case.json",
-  "tests/contracts/v11/cases/commit/commit-staged-files-empty.case.json",
   "tests/contracts/v11/cases/commit/commit-staged-files-empty-v11.case.json",
-  "tests/contracts/v11/cases/commit/commit-staged-files-empty-parity.case.json",
-  "tests/contracts/v11/cases/commit/commit-state-not-approved.case.json",
   "tests/contracts/v11/cases/commit/commit-state-not-approved-v11.case.json",
-  "tests/contracts/v11/cases/commit/commit-state-not-approved-parity.case.json",
-  "tests/contracts/v11/cases/commit/commit-done-package-invariant.case.json",
-  "tests/contracts/v11/cases/commit/commit-done-package-invariant-v11.case.json",
-  "tests/contracts/v11/cases/commit/commit-done-package-invariant-parity.case.json"
+  "tests/contracts/v11/cases/commit/commit-done-package-invariant-v11.case.json"
 ] as const;
 
 const commitExpectedSourcesSorted = [...commitCaseSources].sort();
@@ -46,42 +38,27 @@ describe("v11 commit contract harness skeleton", () => {
     const casePath = resolve(process.cwd(), commitCaseSources[0]);
     const caseDef = await readContractCase(casePath);
     expect(caseDef.command).toBe("commit");
-    expect(caseDef.mode).toBe("baseline");
+    expect(caseDef.mode).toBe("v11");
     expect(caseDef.expected.status).toBe("ok");
   });
 
   it(
-    "executes baseline and parity assertions via shared runner",
+    "executes commit v11 cases via shared runner",
     { timeout: CONTRACT_TEST_TIMEOUT.parityGitHeavyMs },
     async () => {
-    const casePaths = commitCaseSources.map((source) =>
-      resolve(process.cwd(), source)
-    );
+      const casePaths = commitCaseSources.map((source) =>
+        resolve(process.cwd(), source)
+      );
 
-    for (const casePath of casePaths) {
-      const caseDef = await readContractCase(casePath);
-      const run = await runCommitContractCase(caseDef);
-      if (caseDef.mode === "baseline") {
-        expect(run.baseline?.status).toBe(caseDef.expected.status);
-        if (caseDef.expected.reasonCode !== undefined) {
-          expect(run.baseline?.reasonCode).toBe(caseDef.expected.reasonCode);
-        }
-        expect(run.v11).toBeUndefined();
-        continue;
-      }
-      if (caseDef.mode === "v11") {
+      for (const casePath of casePaths) {
+        const caseDef = await readContractCase(casePath);
+        const run = await runCommitContractCase(caseDef);
+        expect(caseDef.mode).toBe("v11");
         expect(run.v11?.status).toBe(caseDef.expected.status);
         if (caseDef.expected.reasonCode !== undefined) {
           expect(run.v11?.reasonCode).toBe(caseDef.expected.reasonCode);
         }
-        expect(run.baseline).toBeUndefined();
-        continue;
       }
-
-      expect(run.baseline).toBeDefined();
-      expect(run.v11).toBeDefined();
-      expect(run.baseline).toEqual(run.v11);
-    }
     }
   );
 

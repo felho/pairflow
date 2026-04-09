@@ -351,27 +351,9 @@
       "kind": "seed_case"
     },
     {
-      "id": "commit-basic",
-      "command": "commit",
-      "source": "tests/contracts/v11/cases/commit/commit-basic.case.json",
-      "kind": "seed_case"
-    },
-    {
       "id": "commit-basic-v11",
       "command": "commit",
       "source": "tests/contracts/v11/cases/commit/commit-basic-v11.case.json",
-      "kind": "seed_case"
-    },
-    {
-      "id": "commit-basic-parity",
-      "command": "commit",
-      "source": "tests/contracts/v11/cases/commit/commit-basic-parity.case.json",
-      "kind": "seed_case"
-    },
-    {
-      "id": "commit-staged-files-empty",
-      "command": "commit",
-      "source": "tests/contracts/v11/cases/commit/commit-staged-files-empty.case.json",
       "kind": "seed_case"
     },
     {
@@ -381,45 +363,15 @@
       "kind": "seed_case"
     },
     {
-      "id": "commit-staged-files-empty-parity",
-      "command": "commit",
-      "source": "tests/contracts/v11/cases/commit/commit-staged-files-empty-parity.case.json",
-      "kind": "seed_case"
-    },
-    {
-      "id": "commit-state-not-approved",
-      "command": "commit",
-      "source": "tests/contracts/v11/cases/commit/commit-state-not-approved.case.json",
-      "kind": "seed_case"
-    },
-    {
       "id": "commit-state-not-approved-v11",
       "command": "commit",
       "source": "tests/contracts/v11/cases/commit/commit-state-not-approved-v11.case.json",
       "kind": "seed_case"
     },
     {
-      "id": "commit-state-not-approved-parity",
-      "command": "commit",
-      "source": "tests/contracts/v11/cases/commit/commit-state-not-approved-parity.case.json",
-      "kind": "seed_case"
-    },
-    {
-      "id": "commit-done-package-invariant",
-      "command": "commit",
-      "source": "tests/contracts/v11/cases/commit/commit-done-package-invariant.case.json",
-      "kind": "seed_case"
-    },
-    {
       "id": "commit-done-package-invariant-v11",
       "command": "commit",
       "source": "tests/contracts/v11/cases/commit/commit-done-package-invariant-v11.case.json",
-      "kind": "seed_case"
-    },
-    {
-      "id": "commit-done-package-invariant-parity",
-      "command": "commit",
-      "source": "tests/contracts/v11/cases/commit/commit-done-package-invariant-parity.case.json",
       "kind": "seed_case"
     },
     {

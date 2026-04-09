@@ -3,12 +3,13 @@ import { createHash } from "node:crypto";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { emitConvergedFromWorkspace } from "../../../src/core/agent/converged.js";
-import { emitPassFromWorkspace } from "../../../src/core/agent/pass.js";
-import { commitBubble } from "../../../src/core/bubble/commitBubble.js";
-import { submitMetaReviewResult } from "../../../src/core/bubble/metaReview.js";
-import { emitApprove } from "../../../src/core/human/approval.js";
 import { readStateSnapshot } from "../../../src/v11/infrastructure/state/stateStore.js";
+import {
+  emitConvergedFromWorkspaceV11
+} from "../../../src/v11/application/converged/emitConvergedV11.js";
+import { emitPassFromWorkspaceV11 } from "../../../src/v11/application/pass/emitPassV11.js";
+import { submitMetaReviewResultV11 } from "../../../src/v11/application/metaReview/emitMetaReviewV11.js";
+import { emitApproveV11 } from "../../../src/v11/application/approval/emitApprovalV11.js";
 import { commitBubbleV11 } from "../../../src/v11/application/commit/emitCommitV11.js";
 import { buildCommitBubbleDependencies } from "../../helpers/commit.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
@@ -41,7 +42,6 @@ export type CommitContractOutput =
 
 export interface CommitContractRunResult {
   mode: ContractCase["mode"];
-  baseline?: CommitContractOutput;
   v11?: CommitContractOutput;
 }
 
@@ -99,7 +99,7 @@ function parseCommitCaseInput(input: ContractCase["input"]): ParsedCommitCaseInp
 }
 
 function normalizeCommitResult(
-  result: Awaited<ReturnType<typeof commitBubble>>
+  result: Awaited<ReturnType<typeof commitBubbleV11WithDefaults>>
 ): CommitContractSuccessOutput {
   return {
     status: "ok",
@@ -165,18 +165,6 @@ function assertContractExpectedSubset(input: {
   }
 }
 
-function assertParityEquivalent(input: {
-  baseline: CommitContractOutput;
-  v11: CommitContractOutput;
-  caseId: string;
-}): void {
-  if (JSON.stringify(input.baseline) !== JSON.stringify(input.v11)) {
-    throw new Error(
-      `commit parity mismatch for case=${input.caseId}: baseline=${JSON.stringify(input.baseline)} v11=${JSON.stringify(input.v11)}`
-    );
-  }
-}
-
 function assertCommitScenarioInvariant(input: {
   output: CommitContractOutput;
   scenario: CommitContractExtendedScenario;
@@ -232,28 +220,28 @@ async function setupApprovedBubble(repoPath: string, bubbleId: string) {
     task: "Commit contract parity fixture"
   });
 
-  await emitPassFromWorkspace({
+  await emitPassFromWorkspaceV11({
     summary: "Implementation pass 1",
     cwd: bubble.paths.worktreePath,
     now: new Date("2026-03-20T13:00:00.000Z")
   });
-  await emitPassFromWorkspace({
+  await emitPassFromWorkspaceV11({
     summary: "Review pass 1 clean",
     noFindings: true,
     cwd: bubble.paths.worktreePath,
     now: new Date("2026-03-20T13:01:00.000Z")
   });
-  await emitPassFromWorkspace({
+  await emitPassFromWorkspaceV11({
     summary: "Implementation pass 2",
     cwd: bubble.paths.worktreePath,
     now: new Date("2026-03-20T13:02:00.000Z")
   });
-  const converged = await emitConvergedFromWorkspace({
+  const converged = await emitConvergedFromWorkspaceV11({
     summary: "Ready for approval",
     cwd: bubble.paths.worktreePath,
     now: new Date("2026-03-20T13:03:00.000Z")
   });
-  await submitMetaReviewResult(
+  await submitMetaReviewResultV11(
     {
       bubbleId: bubble.bubbleId,
       repoPath,
@@ -278,7 +266,7 @@ async function setupApprovedBubble(repoPath: string, bubbleId: string) {
       }
     }
   );
-  await emitApprove({
+  await emitApproveV11({
     bubbleId: bubble.bubbleId,
     cwd: repoPath,
     now: new Date("2026-03-20T13:04:00.000Z")
@@ -295,7 +283,7 @@ function commitBubbleV11WithDefaults(
 
 async function executeCommitCase(input: {
   caseDef: ContractCase;
-  executor: typeof commitBubble;
+  executor: typeof commitBubbleV11WithDefaults;
 }): Promise<CommitContractOutput> {
   const repoPath = await mkdtemp(join(tmpdir(), "pairflow-commit-contract-"));
   try {
@@ -358,64 +346,17 @@ export async function runCommitContractCase(
     throw new Error(`Unsupported command for commit contract runner: ${caseDef.command}`);
   }
 
-  if (caseDef.mode === "baseline") {
-    const baseline = await executeCommitCase({
-      caseDef,
-      executor: commitBubble
-    });
-    assertContractExpectedSubset({
-      output: baseline,
-      expected: caseDef.expected,
-      label: "baseline"
-    });
-    return {
-      mode: caseDef.mode,
-      baseline
-    };
-  }
-
-  if (caseDef.mode === "v11") {
-    const v11 = await executeCommitCase({
-      caseDef,
-      executor: commitBubbleV11WithDefaults
-    });
-    assertContractExpectedSubset({
-      output: v11,
-      expected: caseDef.expected,
-      label: "v11"
-    });
-    return {
-      mode: caseDef.mode,
-      v11
-    };
-  }
-
-  const baseline = await executeCommitCase({
-    caseDef,
-    executor: commitBubble
-  });
   const v11 = await executeCommitCase({
     caseDef,
     executor: commitBubbleV11WithDefaults
   });
   assertContractExpectedSubset({
-    output: baseline,
-    expected: caseDef.expected,
-    label: "parity/baseline"
-  });
-  assertContractExpectedSubset({
     output: v11,
     expected: caseDef.expected,
-    label: "parity/v11"
-  });
-  assertParityEquivalent({
-    baseline,
-    v11,
-    caseId: caseDef.id
+    label: "v11"
   });
   return {
     mode: caseDef.mode,
-    baseline,
     v11
   };
 }
