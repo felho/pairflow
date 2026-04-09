@@ -1,15 +1,5 @@
 import { isFinalState } from "../../domain/state/transitions.js";
-import {
-  readStateSnapshot,
-  writeStateSnapshot
-} from "../../../core/state/stateStore.js";
-import { resolveBubbleById } from "../../../core/bubble/bubbleLookup.js";
-import {
-  removeRuntimeSession
-} from "../../../core/runtime/sessionsRegistry.js";
-import {
-  terminateBubbleTmuxSession
-} from "../../../core/runtime/tmuxManager.js";
+import { stopCommandDefaults } from "../../../core/runtime/stopCommandDefaults.js";
 import type {
   StopBubbleDependencies,
   StopBubbleInput,
@@ -30,11 +20,14 @@ export async function stopBubbleCommandOrchestration(
   dependencies: StopBubbleDependencies = {}
 ): Promise<StopBubbleResult> {
   const terminateTmux =
-    dependencies.terminateBubbleTmuxSession ?? terminateBubbleTmuxSession;
-  const removeSession = dependencies.removeRuntimeSession ?? removeRuntimeSession;
-  const writeState = dependencies.writeStateSnapshot ?? writeStateSnapshot;
+    dependencies.terminateBubbleTmuxSession
+    ?? stopCommandDefaults.terminateBubbleTmuxSession;
+  const removeSession =
+    dependencies.removeRuntimeSession ?? stopCommandDefaults.removeRuntimeSession;
+  const writeState =
+    dependencies.writeStateSnapshot ?? stopCommandDefaults.writeStateSnapshot;
 
-  const resolved = await resolveBubbleById({
+  const resolved = await stopCommandDefaults.resolveBubbleById({
     bubbleId: input.bubbleId,
     ...(input.repoPath !== undefined ? { repoPath: input.repoPath } : {}),
     ...(input.cwd !== undefined ? { cwd: input.cwd } : {})
@@ -42,7 +35,9 @@ export async function stopBubbleCommandOrchestration(
   const now = input.now ?? new Date();
   const nowIso = now.toISOString();
 
-  const loaded = await readStateSnapshot(resolved.bubblePaths.statePath);
+  const loaded = await stopCommandDefaults.readStateSnapshot(
+    resolved.bubblePaths.statePath
+  );
   if (isFinalState(loaded.state.state)) {
     throw createStopBubbleError(
       `${STOP_BUBBLE_REQUIRES_NON_FINAL_STATE}: bubble stop requires non-final state (current: ${loaded.state.state}).`
