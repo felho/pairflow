@@ -39,7 +39,6 @@ const forbiddenCoreShimTargets = new Set([
 const allowedResidualCoreBridgeImports: string[] = [
   "src/v11/application/commit/commitCliCommand.ts -> src/core/bubble/commitBubbleDefaults.ts",
   "src/v11/application/create/createBubbleDefaults.ts -> src/core/bubble/createBubbleDefaults.ts",
-  "src/v11/application/create/createCliCommand.ts -> src/core/repo/createCliDefaults.ts",
   "src/v11/application/merge/mergeCommandDefaults.ts -> src/core/bubble/mergeBubbleDefaults.ts",
   "src/v11/application/metaReviewGate/metaReviewGateCommandDefaults.ts -> src/core/bubble/metaReviewGateDefaults.ts",
   "src/v11/application/reconcile/reconcileCommandDefaults.ts -> src/core/runtime/reconcileCommandDefaults.ts",
