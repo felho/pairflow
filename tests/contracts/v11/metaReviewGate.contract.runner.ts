@@ -8,8 +8,8 @@ import {
   recoverMetaReviewGateFromSnapshot
 } from "../../../src/core/bubble/metaReviewGate.js";
 import { buildMetaReviewExecutionContext } from "../../../src/core/bubble/metaReviewExecutionContext.js";
-import { metaReviewExecutionContextToRunningContext } from "../../../src/core/state/executionContext.js";
-import { readStateSnapshot, writeStateSnapshot } from "../../../src/core/state/stateStore.js";
+import { metaReviewExecutionContextToRunningContext } from "../../../src/v11/shared/state/executionContext.js";
+import { readStateSnapshot, writeStateSnapshot } from "../../../src/v11/infrastructure/state/stateStore.js";
 import {
   applyMetaReviewGateOnConvergenceV11,
   recoverMetaReviewGateFromSnapshotV11
@@ -18,9 +18,9 @@ import type { MetaReviewResult } from "../../../src/v11/shared/metaReview/metaRe
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
 import { initGitRepository } from "../../helpers/git.js";
 import type {
-  RuntimeSessionRecord,
-  SetMetaReviewerPaneBindingResult
-} from "../../../src/core/runtime/sessionsRegistry.js";
+  RuntimeSessionRecord
+} from "../../../src/v11/infrastructure/executor/sessionRuntime/runtimeSessionsRegistry.js";
+import type { SetMetaReviewerPaneBindingResult } from "../../../src/v11/infrastructure/channel/tmux/metaReviewerPaneBinding.js";
 import type { ContractCase, ContractCaseExpected } from "./schema.js";
 import { DEFAULT_META_REVIEW_AUTO_REWORK_LIMIT } from "../../../src/types/bubble.js";
 

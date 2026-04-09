@@ -3,9 +3,9 @@ import { writeFile } from "node:fs/promises";
 
 import { renderBubbleConfigToml } from "../../src/config/bubbleConfig.js";
 import { createBubble, type BubbleCreateResult } from "../../src/core/bubble/createBubble.js";
-import { buildRunningExecutionContext } from "../../src/core/state/executionContext.js";
-import { readStateSnapshot, writeStateSnapshot } from "../../src/core/state/stateStore.js";
-import { bootstrapWorktreeWorkspace } from "../../src/core/workspace/worktreeManager.js";
+import { buildRunningExecutionContext } from "../../src/v11/shared/state/executionContext.js";
+import { readStateSnapshot, writeStateSnapshot } from "../../src/v11/infrastructure/state/stateStore.js";
+import { bootstrapWorktreeWorkspace } from "../../src/v11/infrastructure/workspace/worktreeManager.js";
 import type {
   CreateReviewArtifactType,
   PairflowCommandProfile,

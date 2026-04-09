@@ -7,13 +7,13 @@ import { parseBubbleConfigToml, renderBubbleConfigToml } from "../../../src/conf
 import { createBubble } from "../../../src/core/bubble/createBubble.js";
 import { kickoffBubble } from "../../../src/core/bubble/kickoffBubble.js";
 import { readTranscriptEnvelopes } from "../../../src/v11/infrastructure/artifact/transcript/transcriptStore.js";
-import type { EmitTmuxDeliveryNotificationResult } from "../../../src/core/runtime/tmuxDelivery.js";
-import { buildRunningExecutionContext } from "../../../src/core/state/executionContext.js";
+import type { EmitTmuxDeliveryNotificationResult } from "../../../src/v11/infrastructure/channel/tmux/tmuxDelivery.js";
+import { buildRunningExecutionContext } from "../../../src/v11/shared/state/executionContext.js";
 import {
   readStateSnapshot,
   StateStoreConflictError,
   writeStateSnapshot
-} from "../../../src/core/state/stateStore.js";
+} from "../../../src/v11/infrastructure/state/stateStore.js";
 import { kickoffBubbleV11 } from "../../../src/v11/application/kickoff/emitKickoffV11.js";
 import { deliveryTargetRoleMetadataKey } from "../../../src/types/protocol.js";
 import { initGitRepository } from "../../helpers/git.js";

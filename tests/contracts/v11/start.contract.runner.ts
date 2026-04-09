@@ -8,7 +8,7 @@ import { startBubble } from "../../../src/core/bubble/startBubble.js";
 import {
   readStateSnapshot,
   writeStateSnapshot
-} from "../../../src/core/state/stateStore.js";
+} from "../../../src/v11/infrastructure/state/stateStore.js";
 import { startBubbleV11 } from "../../../src/v11/application/start/emitStartV11.js";
 import { initGitRepository } from "../../helpers/git.js";
 import type { ContractCase, ContractCaseExpected } from "./schema.js";

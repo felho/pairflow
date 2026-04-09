@@ -5,12 +5,12 @@ import { join } from "node:path";
 
 import { createBubble } from "../../../src/core/bubble/createBubble.js";
 import { mergeBubble } from "../../../src/core/bubble/mergeBubble.js";
-import { upsertRuntimeSession } from "../../../src/core/runtime/sessionsRegistry.js";
+import { upsertRuntimeSession } from "../../../src/v11/infrastructure/executor/sessionRuntime/runtimeSessionsRegistry.js";
 import {
   readStateSnapshot,
   writeStateSnapshot
-} from "../../../src/core/state/stateStore.js";
-import { bootstrapWorktreeWorkspace } from "../../../src/core/workspace/worktreeManager.js";
+} from "../../../src/v11/infrastructure/state/stateStore.js";
+import { bootstrapWorktreeWorkspace } from "../../../src/v11/infrastructure/workspace/worktreeManager.js";
 import { mergeBubbleV11 } from "../../../src/v11/application/merge/emitMergeV11.js";
 import { initGitRepository, runGit } from "../../helpers/git.js";
 import type { ContractCase, ContractCaseExpected } from "./schema.js";

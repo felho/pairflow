@@ -11,7 +11,7 @@ import {
 import {
   readStateSnapshot,
   writeStateSnapshot
-} from "../../../src/core/state/stateStore.js";
+} from "../../../src/v11/infrastructure/state/stateStore.js";
 import { restartBubbleV11 } from "../../../src/v11/application/restart/emitRestartV11.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
 import { initGitRepository } from "../../helpers/git.js";

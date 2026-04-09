@@ -8,7 +8,7 @@ import {
   type EmitPassResult
 } from "../../../src/core/agent/pass.js";
 import { emitPassFromWorkspaceV11 } from "../../../src/v11/application/pass/emitPassV11.js";
-import { readStateSnapshot } from "../../../src/core/state/stateStore.js";
+import { readStateSnapshot } from "../../../src/v11/infrastructure/state/stateStore.js";
 import { isPassIntent, type PassIntent } from "../../../src/types/protocol.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
 import { initGitRepository } from "../../helpers/git.js";

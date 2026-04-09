@@ -9,17 +9,17 @@ import { buildMetaReviewExecutionContext } from "../../../src/core/bubble/metaRe
 import {
   buildRunningExecutionContext,
   metaReviewExecutionContextToRunningContext
-} from "../../../src/core/state/executionContext.js";
+} from "../../../src/v11/shared/state/executionContext.js";
 import {
   writeWatchdogPaneActivity
 } from "../../../src/v11/infrastructure/artifact/watchdog/watchdogPaneActivityStore.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
 import { initGitRepository } from "../../helpers/git.js";
-import { applyStateTransition } from "../../../src/core/state/machine.js";
+import { applyStateTransition } from "../../../src/v11/domain/state/machine.js";
 import {
   readStateSnapshot,
   writeStateSnapshot
-} from "../../../src/core/state/stateStore.js";
+} from "../../../src/v11/infrastructure/state/stateStore.js";
 import type { ContractCase, ContractCaseExpected } from "./schema.js";
 
 export interface WatchdogContractOutput {

@@ -3,17 +3,17 @@ import { createHash } from "node:crypto";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { reconcileRuntimeSessions } from "../../../src/core/runtime/startupReconciler.js";
+import { reconcileRuntimeSessions } from "../../../src/v11/application/reconcile/reconcileCommandApi.js";
 import {
   reconcileRuntimeSessionsV11
 } from "../../../src/v11/application/reconcile/emitReconcileV11.js";
-import { upsertRuntimeSession } from "../../../src/core/runtime/sessionsRegistry.js";
+import { upsertRuntimeSession } from "../../../src/v11/infrastructure/executor/sessionRuntime/runtimeSessionsRegistry.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
 import { initGitRepository } from "../../helpers/git.js";
 import {
   readStateSnapshot,
   writeStateSnapshot
-} from "../../../src/core/state/stateStore.js";
+} from "../../../src/v11/infrastructure/state/stateStore.js";
 import type { ContractCase, ContractCaseExpected } from "./schema.js";
 
 export interface ReconcileContractOutput {

@@ -8,7 +8,7 @@ import { emitPassFromWorkspace } from "../../../src/core/agent/pass.js";
 import { commitBubble } from "../../../src/core/bubble/commitBubble.js";
 import { submitMetaReviewResult } from "../../../src/core/bubble/metaReview.js";
 import { emitApprove } from "../../../src/core/human/approval.js";
-import { readStateSnapshot } from "../../../src/core/state/stateStore.js";
+import { readStateSnapshot } from "../../../src/v11/infrastructure/state/stateStore.js";
 import { commitBubbleV11 } from "../../../src/v11/application/commit/emitCommitV11.js";
 import { buildCommitBubbleDependencies } from "../../helpers/commit.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";

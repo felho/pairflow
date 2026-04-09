@@ -11,8 +11,8 @@ import { emitAskHumanFromWorkspaceV11 } from "../../../src/v11/application/askHu
 import {
   readStateSnapshot,
   writeStateSnapshot
-} from "../../../src/core/state/stateStore.js";
-import { buildRunningExecutionContext } from "../../../src/core/state/executionContext.js";
+} from "../../../src/v11/infrastructure/state/stateStore.js";
+import { buildRunningExecutionContext } from "../../../src/v11/shared/state/executionContext.js";
 import { buildMetaReviewExecutionContext } from "../../../src/core/bubble/metaReviewExecutionContext.js";
 import { deliveryTargetRoleMetadataKey } from "../../../src/types/protocol.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
