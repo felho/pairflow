@@ -4,7 +4,7 @@ import { join } from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { appendHumanApprovalRequestEnvelope } from "../../../src/core/bubble/approvalRequestEnvelope.js";
+import { appendHumanApprovalRequestEnvelope } from "../../../src/v11/shared/metaReviewGate/approvalRequestEnvelope.js";
 import type { Finding } from "../../../src/types/findings.js";
 import {
   deliveryTargetRoleMetadataKey,
@@ -15,7 +15,7 @@ import {
   appendProtocolEnvelope,
   type AppendProtocolEnvelopeResult,
   type AppendProtocolEnvelopeInput
-} from "../../../src/core/protocol/transcriptStore.js";
+} from "../../../src/v11/infrastructure/artifact/transcript/transcriptStore.js";
 
 const tempDirs: string[] = [];
 

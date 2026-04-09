@@ -16,7 +16,7 @@ vi.mock("../../../src/v11/shared/gates/docContractGateArtifactDefaults.js", asyn
 
 import { createBubble } from "../../../src/core/bubble/createBubble.js";
 import * as docContractGates from "../../../src/v11/shared/gates/docContractGateArtifactDefaults.js";
-import { readTranscriptEnvelopes } from "../../../src/core/protocol/transcriptStore.js";
+import { readTranscriptEnvelopes } from "../../../src/v11/infrastructure/artifact/transcript/transcriptStore.js";
 import { initGitRepository } from "../../helpers/git.js";
 
 const tempDirs: string[] = [];

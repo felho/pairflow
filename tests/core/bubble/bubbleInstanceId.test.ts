@@ -5,11 +5,11 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { parseBubbleConfigToml, renderBubbleConfigToml } from "../../../src/config/bubbleConfig.js";
-import { emitAskHumanFromWorkspace } from "../../../src/core/agent/askHuman.js";
+import { emitAskHumanFromWorkspaceV11 as emitAskHumanFromWorkspace } from "../../../src/v11/application/askHuman/emitAskHumanV11.js";
 import {
   ensureBubbleInstanceIdForMutation
-} from "../../../src/core/bubble/bubbleInstanceId.js";
-import { resolveBubbleById } from "../../../src/core/bubble/bubbleLookup.js";
+} from "../../../src/v11/infrastructure/artifact/bubble/bubbleInstanceId.js";
+import { resolveBubbleById } from "../../../src/v11/infrastructure/executor/workspace/bubbleLookup.js";
 import { createBubble } from "../../../src/core/bubble/createBubble.js";
 import { initGitRepository } from "../../helpers/git.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";

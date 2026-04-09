@@ -5,8 +5,8 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { createBubble } from "../../../src/core/bubble/createBubble.js";
-import { resolveBubbleById } from "../../../src/core/bubble/bubbleLookup.js";
-import { bootstrapWorktreeWorkspace } from "../../../src/core/workspace/worktreeManager.js";
+import { resolveBubbleById } from "../../../src/v11/infrastructure/executor/workspace/bubbleLookup.js";
+import { bootstrapWorktreeWorkspace } from "../../../src/v11/infrastructure/workspace/worktreeManager.js";
 import { initGitRepository } from "../../helpers/git.js";
 
 const tempDirs: string[] = [];
