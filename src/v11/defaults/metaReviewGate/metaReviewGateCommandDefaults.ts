@@ -1,6 +1,7 @@
 import { readFile, writeFile } from "node:fs/promises";
 
-import { metaReviewGateDependencyDefaults as metaReviewGateDependencyDefaultsV11 } from "../../defaults/metaReviewGate/metaReviewGateCommandDefaults.js";
+import { buildAgentCommand } from "../../shared/command/agentCommand.js";
+import { resolveBubbleById } from "../../shared/bubbleLookup/bubbleLookupDefaults.js";
 import {
   appendProtocolEnvelope,
   readTranscriptEnvelopes
@@ -9,6 +10,16 @@ import {
   readStateSnapshot,
   writeStateSnapshot
 } from "../../shared/state/stateStoreDefaults.js";
+import { setMetaReviewerPaneBinding } from "../../infrastructure/channel/tmux/metaReviewerPaneBinding.js";
+import {
+  respawnTmuxPaneCommand,
+  runTmux
+} from "../../infrastructure/channel/tmux/tmuxManager.js";
+import {
+  maybeAcceptClaudeTrustPrompt,
+  sendAndSubmitTmuxPaneMessage,
+  submitTmuxPaneInput
+} from "../../infrastructure/channel/tmux/tmuxInput.js";
 import type {
   ApplyMetaReviewGateOnConvergenceDependencies,
   RecoverMetaReviewGateFromSnapshotDependencies
@@ -18,7 +29,7 @@ import type {
   ResolveMetaReviewerPaneWarningInput
 } from "../../shared/metaReviewGate/metaReviewGateTypes.js";
 
-export interface MetaReviewGateDependencyDefaults {
+type MetaReviewGateDependencyDefaults = {
   appendProtocolEnvelope:
     NonNullable<ApplyMetaReviewGateOnConvergenceDependencies["appendProtocolEnvelope"]>;
   buildAgentCommand:
@@ -54,23 +65,21 @@ export interface MetaReviewGateDependencyDefaults {
     NonNullable<RecoverMetaReviewGateFromSnapshotDependencies["writeFile"]>;
   writeStateSnapshot:
     NonNullable<ApplyMetaReviewGateOnConvergenceDependencies["writeStateSnapshot"]>;
-}
+};
 
-let metaReviewGateDependencyDefaultsPromise:
-  | Promise<MetaReviewGateDependencyDefaults>
-  | undefined;
-
-export async function loadMetaReviewGateDependencyDefaults(): Promise<
-  MetaReviewGateDependencyDefaults
-> {
-  metaReviewGateDependencyDefaultsPromise ??= Promise.resolve({
-    ...metaReviewGateDependencyDefaultsV11,
-    appendProtocolEnvelope,
-    readFile,
-    readTranscriptEnvelopes,
-    readStateSnapshot,
-    writeFile,
-    writeStateSnapshot
-  });
-  return metaReviewGateDependencyDefaultsPromise;
-}
+export const metaReviewGateDependencyDefaults = {
+  appendProtocolEnvelope,
+  buildAgentCommand,
+  maybeAcceptClaudeTrustPrompt,
+  readFile,
+  readTranscriptEnvelopes,
+  readStateSnapshot,
+  respawnTmuxPaneCommand,
+  resolveBubbleById,
+  runTmux,
+  sendAndSubmitTmuxPaneMessage,
+  setMetaReviewerPaneBinding,
+  submitTmuxPaneInput,
+  writeFile,
+  writeStateSnapshot
+} as const satisfies MetaReviewGateDependencyDefaults;
