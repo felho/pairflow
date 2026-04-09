@@ -28,7 +28,7 @@ import { prepareReviewerVerification } from "./reviewerVerificationPreparation.j
 import { buildPassLifecycleMetricMetadata } from "../../domain/pass/lifecycleMetricMetadata.js";
 import { resolveMostRecentPreviousReviewerPassIsCleanFromMetadata } from "../../domain/pass/repeatCleanMetadata.js";
 import { buildPassRoutingDependencies } from "./passRoutingInvocationBuilders.js";
-import { passValidationDefaults } from "../../../core/runtime/passValidationDefaults.js";
+import { passValidationDefaults } from "./passValidationDependencyDefaults.js";
 import { buildAutoConvergeFlowDependencies } from "./autoConvergeFlowInvocationBuilders.js";
 import { buildNormalPassFlowDependencies } from "./normalPassFlowInvocationBuilders.js";
 

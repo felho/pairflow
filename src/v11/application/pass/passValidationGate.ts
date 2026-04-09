@@ -3,7 +3,7 @@ import {
   PassValidationRunnerExecutionError,
   passValidationDefaults,
   type PassValidationCommandResult
-} from "../../../core/runtime/passValidationDefaults.js";
+} from "./passValidationDependencyDefaults.js";
 import type { BubbleConfig } from "../../../types/bubble.js";
 
 export interface ResolvePassValidationForPassInput {

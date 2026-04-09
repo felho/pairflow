@@ -7,7 +7,7 @@ import type {
 } from "../../../v11/shared/ports/reviewVerificationArtifacts.js";
 import type { AgentName } from "../../../types/bubble.js";
 import { raisePostAppendReviewVerificationWriteFailed } from "../../domain/pass/postAppendReviewVerificationWriteFailure.js";
-import { writeReviewVerificationArtifactAtomic } from "../../../core/reviewer/reviewVerificationArtifacts.js";
+import { writeReviewVerificationArtifactAtomic } from "./passReviewVerificationDefaults.js";
 
 export interface WritePostAppendReviewVerificationArtifactInput {
   reviewerVerification: ReviewVerificationInputResolution | undefined;

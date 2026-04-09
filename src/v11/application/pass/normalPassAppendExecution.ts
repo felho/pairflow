@@ -1,6 +1,6 @@
 import {
   appendProtocolEnvelope
-} from "../../../core/protocol/transcriptStore.js";
+} from "./passTranscriptDefaults.js";
 import type {
   RepeatCleanAutoconvergeReasonCode,
   RepeatCleanAutoconvergeReasonDetail

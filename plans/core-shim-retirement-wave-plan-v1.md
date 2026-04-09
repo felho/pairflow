@@ -107,6 +107,15 @@ These numbers are triage inputs, not yet a finalized ledger.
   - `deleteBubble` and `deleteBubbleSupport` now share one local
     `deleteBubbleDependencyDefaults` bridge instead of two direct `core`
     imports
+- after the first `pass` transcript + validation fan-in batch:
+  - total direct residual imports: `49`
+  - `passRoutingPreparation`, `normalPassAppendExecution`,
+    `passValidationGate`, and `passFlowDependencyWiring` now route through two
+    local `pass` support modules instead of four direct `core` imports
+- after the `pass` review-verification fan-in batch:
+  - total direct residual imports: `48`
+  - `postAppendReviewVerificationWriter` and `reviewerVerificationResolver`
+    now share one local `passReviewVerificationDefaults` bridge
 - after the `start + kickoff` local fan-in batch:
   - total direct residual imports: `54`
   - `application/start` prompt/runtime and default wiring now route through two
@@ -114,6 +123,11 @@ These numbers are triage inputs, not yet a finalized ledger.
     `core/protocol/*`, and `core/bubble/*` imports
   - `kickoffCliRunner` and `kickoffDependencyResolution` now route through one
     local kickoff defaults fan-in module
+- after the `delete` local fan-in cleanup batch:
+  - total direct residual imports: `51`
+  - `deleteBubble` and `deleteBubbleSupport` now route through one local delete
+    defaults fan-in module
+  - the orphaned `deleteBubbleLegacyDefaults.ts` shim wrapper was removed
 - after the `converged defaults` local fan-in batch:
   - total direct residual imports: `52`
   - `convergedDefaultDependencies`, `convergedRoutingPreparation`, and
