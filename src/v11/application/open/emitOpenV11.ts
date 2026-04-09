@@ -2,7 +2,7 @@ import type {
   OpenBubbleDependencies,
   OpenBubbleInput,
   OpenBubbleResult
-} from "../../../core/bubble/openBubble.js";
+} from "./openBubble.js";
 
 export {
   asOpenBubbleError,
@@ -12,7 +12,7 @@ export {
   OpenBubbleError as OpenBubbleErrorV11,
   openBubble,
   openBubble as openBubbleV11
-} from "../../../core/bubble/openBubble.js";
+} from "./openBubble.js";
 export type {
   OpenBubbleDependencies,
   OpenBubbleInput,
@@ -20,7 +20,7 @@ export type {
   OpenCommandExecutionInput,
   OpenCommandExecutionResult,
   OpenCommandExecutor
-} from "../../../core/bubble/openBubble.js";
+} from "./openBubble.js";
 export type OpenBubbleV11Input = OpenBubbleInput;
 export type OpenBubbleV11Result = OpenBubbleResult;
 export type OpenBubbleV11Dependencies = OpenBubbleDependencies;

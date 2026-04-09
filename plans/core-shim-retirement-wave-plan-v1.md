@@ -194,6 +194,13 @@ These numbers are triage inputs, not yet a finalized ledger.
     `open`, `restart`, `askHumanDependencyDefaults`,
     `docContractGateArtifactDefaults`, `stateStoreDefaults`,
     and `statusCommandDependencyDefaults`
+- after the `open` canonical-owner flip:
+  - total direct residual imports: `6`
+  - `open` is out of the residual frontier while facade parity remains intact
+  - current residual set:
+    `restart`, `askHumanDependencyDefaults`,
+    `docContractGateArtifactDefaults`, `stateStoreDefaults`,
+    and `statusCommandDependencyDefaults`
 - after the `reply + router + reconcile-input` cleanup wave:
   - total direct residual imports: `8`
   - `replyCommandDependencyResolution`, `routerDependencies`, and
