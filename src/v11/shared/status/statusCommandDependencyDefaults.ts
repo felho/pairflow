@@ -7,9 +7,9 @@ import { readTranscriptEnvelopes } from "../transcript/transcriptDependencyDefau
 import type { ResolveBubbleByIdPort } from "../ports/bubbleLookup.js";
 
 type InspectStateSnapshot =
-  typeof import("../../infrastructure/state/stateStore.js").inspectStateSnapshot;
+  typeof import("../../../core/bubble/statusInboxDefaults.js").statusInboxDependencyDefaults.inspectStateSnapshot;
 type ReadReviewVerificationArtifactStatus =
-  typeof import("../../infrastructure/artifact/reviewer/reviewVerificationArtifacts.js").readReviewVerificationArtifactStatus;
+  typeof import("../../../core/bubble/statusGateDefaults.js").statusGateDefaults.readReviewVerificationArtifactStatus;
 
 let statusInboxDependencyDefaultsPromise:
   | Promise<{
@@ -28,11 +28,10 @@ async function loadStatusInboxDependencyDefaults(): Promise<{
   inspectStateSnapshot: InspectStateSnapshot;
 }> {
   statusInboxDependencyDefaultsPromise ??= import(
-    "../../infrastructure/executor/workspace/bubbleLookup.js"
-  ).then(async ({ resolveBubbleById }) => {
-    const { inspectStateSnapshot } = await import(
-      "../../infrastructure/state/stateStore.js"
-    );
+    "../../../core/bubble/statusInboxDefaults.js"
+  ).then(({ statusInboxDependencyDefaults }) => {
+    const { resolveBubbleById, inspectStateSnapshot } =
+      statusInboxDependencyDefaults;
     return {
       resolveBubbleById,
       inspectStateSnapshot
@@ -45,10 +44,11 @@ async function loadStatusGateDefaults(): Promise<{
   readReviewVerificationArtifactStatus: ReadReviewVerificationArtifactStatus;
 }> {
   statusGateDefaultsPromise ??= import(
-    "../../infrastructure/artifact/reviewer/reviewVerificationArtifacts.js"
-  ).then(({ readReviewVerificationArtifactStatus }) => ({
-    readReviewVerificationArtifactStatus
-  }));
+    "../../../core/bubble/statusGateDefaults.js"
+  ).then(({ statusGateDefaults }) => {
+    const { readReviewVerificationArtifactStatus } = statusGateDefaults;
+    return { readReviewVerificationArtifactStatus };
+  });
   return statusGateDefaultsPromise;
 }
 
