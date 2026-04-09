@@ -28,13 +28,7 @@ import { prepareReviewerVerification } from "./reviewerVerificationPreparation.j
 import { buildPassLifecycleMetricMetadata } from "../../domain/pass/lifecycleMetricMetadata.js";
 import { resolveMostRecentPreviousReviewerPassIsCleanFromMetadata } from "../../domain/pass/repeatCleanMetadata.js";
 import { buildPassRoutingDependencies } from "./passRoutingInvocationBuilders.js";
-import {
-  buildPassValidationEvidenceArtifact,
-  resolvePassValidationPolicy,
-  writePassValidationEvidenceArtifact,
-  writePassValidationReviewerCompatibilityArtifact
-} from "../../../core/runtime/passValidationEvidence.js";
-import { runPassValidationCommand } from "../../../core/runtime/passValidationRunner.js";
+import { passValidationDefaults } from "../../../core/runtime/passValidationDefaults.js";
 import { buildAutoConvergeFlowDependencies } from "./autoConvergeFlowInvocationBuilders.js";
 import { buildNormalPassFlowDependencies } from "./normalPassFlowInvocationBuilders.js";
 
@@ -85,11 +79,15 @@ export function createNormalPassFlowDependencies(
     prepareNormalPassAppend,
     executeNormalPassAppend,
     resolvePassValidationForPass,
-    resolvePassValidationPolicy,
-    runPassValidationCommand,
-    buildPassValidationEvidenceArtifact,
-    writePassValidationEvidenceArtifact,
-    writePassValidationReviewerCompatibilityArtifact,
+    resolvePassValidationPolicy:
+      passValidationDefaults.resolvePassValidationPolicy,
+    runPassValidationCommand: passValidationDefaults.runPassValidationCommand,
+    buildPassValidationEvidenceArtifact:
+      passValidationDefaults.buildPassValidationEvidenceArtifact,
+    writePassValidationEvidenceArtifact:
+      passValidationDefaults.writePassValidationEvidenceArtifact,
+    writePassValidationReviewerCompatibilityArtifact:
+      passValidationDefaults.writePassValidationReviewerCompatibilityArtifact,
     persistNormalPassPostAppend,
     writePostAppendReviewVerificationArtifact,
     writePostAppendPassState,
