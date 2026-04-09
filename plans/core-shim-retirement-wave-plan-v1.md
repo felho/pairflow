@@ -246,6 +246,13 @@ These numbers are triage inputs, not yet a finalized ledger.
     local sync message-ref helper in-repo
   - current residual set:
     `restart` and `statusCommandDependencyDefaults`
+- latest checkpoint after the `status` lazy shared-default batch:
+  - total direct residual imports: `1`
+  - `statusCommandDependencyDefaults` no longer carries static
+    `src/core/**` imports; inbox/status now resolve lookup errors by name
+    instead of class identity
+  - current residual set:
+    `restart`
 - latest checkpoint after the `status` lazy defaults batch:
   - total direct residual imports: `1`
   - `statusCommandDependencyDefaults` no longer carries static
