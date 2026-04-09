@@ -12,12 +12,10 @@ const execFileAsync = promisify(execFile);
 const metaReviewGateCaseSources = [
   "tests/contracts/v11/cases/meta-review-gate/gate-apply-basic-parity.case.json",
   "tests/contracts/v11/cases/meta-review-gate/gate-recover-approve-parity.case.json",
-  "tests/contracts/v11/cases/meta-review-gate/meta-review-gate-apply-basic.case.json",
   "tests/contracts/v11/cases/meta-review-gate/meta-review-gate-apply-basic-v11.case.json",
   "tests/contracts/v11/cases/meta-review-gate/meta-review-gate-apply-basic-parity.case.json",
   "tests/contracts/v11/cases/meta-review-gate/meta-review-gate-apply-running-parity.case.json",
   "tests/contracts/v11/cases/meta-review-gate/meta-review-gate-apply-sticky-bypass-parity.case.json",
-  "tests/contracts/v11/cases/meta-review-gate/meta-review-gate-recover-basic.case.json",
   "tests/contracts/v11/cases/meta-review-gate/meta-review-gate-recover-basic-v11.case.json",
   "tests/contracts/v11/cases/meta-review-gate/meta-review-gate-recover-basic-parity.case.json",
   "tests/contracts/v11/cases/meta-review-gate/meta-review-gate-recover-auto-rework-parity.case.json",
@@ -65,16 +63,16 @@ describe("v11 metaReviewGate contract harness", () => {
   it("loads seed contract case metadata", async () => {
     const casePath = resolve(
       process.cwd(),
-      "tests/contracts/v11/cases/meta-review-gate/meta-review-gate-apply-basic.case.json"
+      "tests/contracts/v11/cases/meta-review-gate/meta-review-gate-apply-basic-v11.case.json"
     );
     const caseDef = await readContractCase(casePath);
     expect(caseDef.command).toBe("metaReviewGate");
-    expect(caseDef.mode).toBe("baseline");
+    expect(caseDef.mode).toBe("v11");
     expect(caseDef.expected.status).toBe("ok");
   });
 
   it(
-    "executes baseline and parity assertions via shared runner",
+    "executes metaReviewGate v11 assertions via shared runner",
     { timeout: CONTRACT_TEST_TIMEOUT.parityLargeCorpusMs },
     async () => {
       const casePaths = metaReviewGateCaseSources.map((source) =>
@@ -84,20 +82,7 @@ describe("v11 metaReviewGate contract harness", () => {
       for (const casePath of casePaths) {
         const caseDef = await readContractCase(casePath);
         const run = await runMetaReviewGateContractCase(caseDef);
-        if (caseDef.mode === "baseline") {
-          expect(run.baseline?.status).toBe("ok");
-          expect(run.v11).toBeUndefined();
-          continue;
-        }
-        if (caseDef.mode === "v11") {
-          expect(run.v11?.status).toBe("ok");
-          expect(run.baseline).toBeUndefined();
-          continue;
-        }
-
-        expect(run.baseline).toBeDefined();
-        expect(run.v11).toBeDefined();
-        expect(run.baseline).toEqual(run.v11);
+        expect(run.v11?.status).toBe("ok");
       }
     }
   );

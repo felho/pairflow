@@ -4,16 +4,13 @@ import { join } from "node:path";
 import { createHash } from "node:crypto";
 
 import {
-  applyMetaReviewGateOnConvergence,
-  recoverMetaReviewGateFromSnapshot
-} from "../../../src/core/bubble/metaReviewGate.js";
+  applyMetaReviewGateOnConvergenceV11,
+  recoverMetaReviewGateFromSnapshotV11,
+  type MetaReviewGateResultV11
+} from "../../../src/v11/application/metaReviewGate/emitMetaReviewGateV11.js";
 import { metaReviewExecutionContextToRunningContext } from "../../../src/v11/shared/state/executionContext.js";
 import { buildMetaReviewExecutionContext } from "../../../src/v11/shared/metaReview/metaReviewExecutionContext.js";
 import { readStateSnapshot, writeStateSnapshot } from "../../../src/v11/infrastructure/state/stateStore.js";
-import {
-  applyMetaReviewGateOnConvergenceV11,
-  recoverMetaReviewGateFromSnapshotV11
-} from "../../../src/v11/application/metaReviewGate/emitMetaReviewGateV11.js";
 import type { MetaReviewResult } from "../../../src/v11/shared/metaReview/metaReviewTypes.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
 import { initGitRepository } from "../../helpers/git.js";
@@ -36,7 +33,6 @@ export interface MetaReviewGateContractOutput {
 
 export interface MetaReviewGateContractRunResult {
   mode: ContractCase["mode"];
-  baseline?: MetaReviewGateContractOutput;
   v11?: MetaReviewGateContractOutput;
 }
 
@@ -351,7 +347,7 @@ function buildSyntheticMetaReviewRunReworkDispatchFailed(input: {
 }
 
 function normalizeMetaReviewGateResult(
-  result: Awaited<ReturnType<typeof recoverMetaReviewGateFromSnapshot>>
+  result: MetaReviewGateResultV11
 ): MetaReviewGateContractOutput {
   const envelopePayload =
     typeof result.gateEnvelope.payload === "object" &&
@@ -483,41 +479,10 @@ function assertContractExpectedSubset(input: {
   }
 }
 
-function assertParityEquivalent(input: {
-  baseline: MetaReviewGateContractOutput;
-  v11: MetaReviewGateContractOutput;
-  caseId: string;
-}): void {
-  const normalizedBaseline = normalizeParityComparableValue(input.baseline);
-  const normalizedV11 = normalizeParityComparableValue(input.v11);
-  if (JSON.stringify(normalizedBaseline) !== JSON.stringify(normalizedV11)) {
-    throw new Error(
-      `metaReviewGate parity mismatch for case=${input.caseId}: baseline=${JSON.stringify(input.baseline)} v11=${JSON.stringify(input.v11)}`
-    );
-  }
-}
-
-function normalizeParityComparableValue(value: unknown): unknown {
-  if (Array.isArray(value)) {
-    return value.map((item) => normalizeParityComparableValue(item));
-  }
-  if (!isRecord(value)) {
-    return value;
-  }
-  const normalized: Record<string, unknown> = {};
-  const sortedKeys = Object.keys(value).sort((left, right) =>
-    left.localeCompare(right)
-  );
-  for (const key of sortedKeys) {
-    normalized[key] = normalizeParityComparableValue(value[key]);
-  }
-  return normalized;
-}
-
 async function executeMetaReviewGateCase(input: {
   caseDef: ContractCase;
-  applyExecutor: typeof applyMetaReviewGateOnConvergence;
-  recoverExecutor: typeof recoverMetaReviewGateFromSnapshot;
+  applyExecutor: typeof applyMetaReviewGateOnConvergenceV11;
+  recoverExecutor: typeof recoverMetaReviewGateFromSnapshotV11;
 }): Promise<MetaReviewGateContractOutput> {
   const repoPath = await mkdtemp(join(tmpdir(), "pairflow-meta-review-gate-contract-"));
   try {
@@ -529,7 +494,7 @@ async function executeMetaReviewGateCase(input: {
     });
 
     const caseInput = parseMetaReviewGateCaseInput(input.caseDef.input);
-    let result: Awaited<ReturnType<typeof recoverMetaReviewGateFromSnapshot>>;
+    let result: MetaReviewGateResultV11;
 
     if (caseInput.route === "apply") {
       const stateForApply = await readStateSnapshot(bubble.paths.statePath);
@@ -759,68 +724,18 @@ export async function runMetaReviewGateContractCase(
     );
   }
 
-  if (caseDef.mode === "baseline") {
-    const baseline = await executeMetaReviewGateCase({
-      caseDef,
-      applyExecutor: applyMetaReviewGateOnConvergence,
-      recoverExecutor: recoverMetaReviewGateFromSnapshot
-    });
-    assertContractExpectedSubset({
-      output: baseline,
-      expected: caseDef.expected,
-      label: "baseline"
-    });
-    return {
-      mode: caseDef.mode,
-      baseline
-    };
-  }
-
-  if (caseDef.mode === "v11") {
-    const v11 = await executeMetaReviewGateCase({
-      caseDef,
-      applyExecutor: applyMetaReviewGateOnConvergenceV11,
-      recoverExecutor: recoverMetaReviewGateFromSnapshotV11
-    });
-    assertContractExpectedSubset({
-      output: v11,
-      expected: caseDef.expected,
-      label: "v11"
-    });
-    return {
-      mode: caseDef.mode,
-      v11
-    };
-  }
-
-  const baseline = await executeMetaReviewGateCase({
-    caseDef,
-    applyExecutor: applyMetaReviewGateOnConvergence,
-    recoverExecutor: recoverMetaReviewGateFromSnapshot
-  });
   const v11 = await executeMetaReviewGateCase({
     caseDef,
     applyExecutor: applyMetaReviewGateOnConvergenceV11,
     recoverExecutor: recoverMetaReviewGateFromSnapshotV11
   });
   assertContractExpectedSubset({
-    output: baseline,
-    expected: caseDef.expected,
-    label: "parity/baseline"
-  });
-  assertContractExpectedSubset({
     output: v11,
     expected: caseDef.expected,
-    label: "parity/v11"
-  });
-  assertParityEquivalent({
-    baseline,
-    v11,
-    caseId: caseDef.id
+    label: "v11"
   });
   return {
     mode: caseDef.mode,
-    baseline,
     v11
   };
 }
