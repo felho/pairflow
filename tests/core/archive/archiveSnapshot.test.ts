@@ -9,8 +9,8 @@ import {
   ArchivePathCollisionError,
   createArchiveSnapshot,
   readArchiveManifest
-} from "../../../src/core/archive/archiveSnapshot.js";
-import { resolveArchivePaths } from "../../../src/core/archive/archivePaths.js";
+} from "../../../src/v11/infrastructure/artifact/archive/archiveSnapshot.js";
+import { resolveArchivePaths } from "../../../src/v11/infrastructure/artifact/archive/archivePaths.js";
 import { archiveSchemaVersion } from "../../../src/types/archive.js";
 import { initGitRepository } from "../../helpers/git.js";
 

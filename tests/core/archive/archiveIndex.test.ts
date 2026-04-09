@@ -4,8 +4,8 @@ import { join } from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { upsertDeletedArchiveIndexEntry } from "../../../src/core/archive/archiveIndex.js";
-import { resolveArchivePaths } from "../../../src/core/archive/archivePaths.js";
+import { upsertDeletedArchiveIndexEntry } from "../../../src/v11/infrastructure/artifact/archive/archiveIndex.js";
+import { resolveArchivePaths } from "../../../src/v11/infrastructure/artifact/archive/archivePaths.js";
 import type { ArchiveIndexDocument } from "../../../src/types/archive.js";
 import { archiveSchemaVersion } from "../../../src/types/archive.js";
 

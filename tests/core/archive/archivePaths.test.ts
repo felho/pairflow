@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   deriveArchiveRepoKey,
   resolveArchivePaths
-} from "../../../src/core/archive/archivePaths.js";
+} from "../../../src/v11/infrastructure/artifact/archive/archivePaths.js";
 
 describe("archivePaths", () => {
   it("derives deterministic 16-char repo keys", () => {

@@ -42,10 +42,10 @@ describe("archive locking", () => {
     }));
 
     const { createArchiveSnapshot } = await import(
-      "../../../src/core/archive/archiveSnapshot.js"
+      "../../../src/v11/infrastructure/artifact/archive/archiveSnapshot.js"
     );
     const { upsertDeletedArchiveIndexEntry } = await import(
-      "../../../src/core/archive/archiveIndex.js"
+      "../../../src/v11/infrastructure/artifact/archive/archiveIndex.js"
     );
 
     const repoPath = await createTempRepo();
@@ -111,10 +111,10 @@ describe("archive locking", () => {
     }));
 
     const { createArchiveSnapshot } = await import(
-      "../../../src/core/archive/archiveSnapshot.js"
+      "../../../src/v11/infrastructure/artifact/archive/archiveSnapshot.js"
     );
     const { upsertDeletedArchiveIndexEntry } = await import(
-      "../../../src/core/archive/archiveIndex.js"
+      "../../../src/v11/infrastructure/artifact/archive/archiveIndex.js"
     );
 
     await expect(
