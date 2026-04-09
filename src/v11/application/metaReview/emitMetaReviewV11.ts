@@ -1,6 +1,5 @@
 import { readFile, writeFile } from "node:fs/promises";
 
-import { metaReviewDefaults } from "../../../core/runtime/metaReviewDefaults.js";
 import {
   getMetaReviewLastReport,
   getMetaReviewStatus,
@@ -29,9 +28,28 @@ import type {
   MetaReviewSubmitResult
 } from "../../shared/metaReview/metaReviewCommandContract.js";
 
-function withMetaReviewDefaults(
+let metaReviewDefaultsPromise:
+  | Promise<{
+    emitTmuxDeliveryNotification: NonNullable<
+      MetaReviewCommandDependencies["emitDeliveryNotification"]
+    >;
+    resolveDeliveryMessageRef: NonNullable<
+      MetaReviewCommandDependencies["buildDeliveryMessageRef"]
+    >;
+  }>
+  | undefined;
+
+async function loadMetaReviewDefaults() {
+  metaReviewDefaultsPromise ??= import(
+    "../../../core/runtime/metaReviewDefaults.js"
+  ).then(({ metaReviewDefaults }) => metaReviewDefaults);
+  return metaReviewDefaultsPromise;
+}
+
+async function withMetaReviewDefaults(
   dependencies: MetaReviewCommandDependencies = {}
-): MetaReviewCommandDependencies {
+): Promise<MetaReviewCommandDependencies> {
+  const metaReviewDefaults = await loadMetaReviewDefaults();
   return {
     readFile,
     writeFile,
@@ -50,19 +68,19 @@ export async function getMetaReviewStatusV11(
   input: MetaReviewReadInput,
   dependencies: MetaReviewCommandDependencies = {}
 ): Promise<MetaReviewStatusView> {
-  return getMetaReviewStatus(input, withMetaReviewDefaults(dependencies));
+  return getMetaReviewStatus(input, await withMetaReviewDefaults(dependencies));
 }
 
 export async function getMetaReviewLastReportV11(
   input: MetaReviewReadInput,
   dependencies: MetaReviewCommandDependencies = {}
 ): Promise<MetaReviewLastReportView> {
-  return getMetaReviewLastReport(input, withMetaReviewDefaults(dependencies));
+  return getMetaReviewLastReport(input, await withMetaReviewDefaults(dependencies));
 }
 
 export async function submitMetaReviewResultV11(
   input: MetaReviewSubmitInput,
   dependencies: MetaReviewCommandDependencies = {}
 ): Promise<MetaReviewSubmitResult> {
-  return submitMetaReviewResult(input, withMetaReviewDefaults(dependencies));
+  return submitMetaReviewResult(input, await withMetaReviewDefaults(dependencies));
 }

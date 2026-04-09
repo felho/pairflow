@@ -145,6 +145,13 @@ These numbers are triage inputs, not yet a finalized ledger.
   - `metaReviewCommandSubmitPreparation`, `metaReviewCommandReadRuntime`, and
     `metaReviewLiveRunPorts` now share one
     `shared/metaReview/metaReviewDependencyDefaults` bridge
+- after the `approval + attach + list + converged + pass` wave plus
+  `emitMetaReviewV11` perimeter lazy-loading:
+  - total direct residual imports: `31`
+  - `approval`, `attach`, `list`, `converged`, and `pass` no longer dominate
+    the frontier
+  - `emitMetaReviewV11` no longer carries a static `core/runtime/metaReviewDefaults`
+    import on the public v11 perimeter
 - after the `start + kickoff` local fan-in batch:
   - total direct residual imports: `54`
   - `application/start` prompt/runtime and default wiring now route through two
