@@ -5,16 +5,17 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import {
-  emitConvergedFromWorkspace,
-  ConvergedCommandError,
-  resolveMetaReviewRolloutBlockingReasonCodes
-} from "../../../src/core/agent/converged.js";
-import { buildMetaReviewExecutionContext } from "../../../src/core/bubble/metaReviewExecutionContext.js";
-import { emitPassFromWorkspace } from "../../../src/core/agent/pass.js";
+  asConvergedCommandErrorV11 as asConvergedCommandError,
+  ConvergedCommandErrorV11 as ConvergedCommandError,
+  emitConvergedFromWorkspaceV11 as emitConvergedFromWorkspace,
+  resolveMetaReviewRolloutBlockingReasonCodesV11 as resolveMetaReviewRolloutBlockingReasonCodes
+} from "../../../src/v11/application/converged/emitConvergedV11.js";
+import { buildMetaReviewExecutionContext } from "../../../src/v11/shared/metaReview/metaReviewExecutionContext.js";
+import { emitPassFromWorkspaceV11 as emitPassFromWorkspace } from "../../../src/v11/application/pass/emitPassV11.js";
 import { renderBubbleConfigToml } from "../../../src/config/bubbleConfig.js";
 import { createBubble } from "../../../src/core/bubble/createBubble.js";
 import { IDEATION_CONVERGED_BLOCKED } from "../../../src/core/bubble/ideation.js";
-import { applyMetaReviewGateOnConvergence } from "../../../src/core/bubble/metaReviewGate.js";
+import { applyMetaReviewGateOnConvergenceV11 as applyMetaReviewGateOnConvergence } from "../../../src/v11/application/metaReviewGate/emitMetaReviewGateV11.js";
 import {
   appendProtocolEnvelope,
   readTranscriptEnvelopes
