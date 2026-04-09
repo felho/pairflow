@@ -3,7 +3,7 @@ import {
   resolveReviewerTestExecutionDirectiveFromArtifact,
   verifyImplementerTestEvidence,
   writeReviewerTestEvidenceArtifact
-} from "../../../core/reviewer/testEvidence.js";
+} from "../../../v11/infrastructure/artifact/reviewer/testEvidenceRuntime.js";
 
 export {
   resolveReviewerTestExecutionDirective,

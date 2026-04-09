@@ -1,7 +1,7 @@
 import {
   readReviewerBriefArtifact,
   readReviewerFocusArtifact
-} from "../../../core/reviewer/reviewerBrief.js";
+} from "../../../v11/infrastructure/artifact/reviewer/reviewerBriefArtifacts.js";
 
 export {
   readReviewerBriefArtifact,
