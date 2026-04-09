@@ -54,6 +54,43 @@ Current remaining non-inventory bridge candidates:
 
 - none confirmed at this checkpoint
 
+## Next Architecture-Aware Frontier
+
+The next likely cleanup wave is no longer about thin test-consumer shim drift.
+It is about retiring selected `core` compatibility facades whose remaining
+consumers are now mostly parity / contract harness tests.
+
+Current confirmed example cluster:
+
+- `src/core/agent/askHuman.ts`
+- `src/core/human/reply.ts`
+
+Observed remaining consumers:
+
+- `tests/contracts/v11/askHuman.contract.runner.ts`
+- `tests/contracts/v11/reply.contract.runner.ts`
+- `tests/v11/application/askHuman/askHumanFacadeParity.test.ts`
+- `tests/v11/application/reply/replyFacadeParity.test.ts`
+
+Important constraint:
+
+- this is not a safe path-only import rewrite anymore
+- the current `baseline / v11 / parity` contract model treats `core` as the
+  baseline reference for these commands
+- the `facade-parity-coverage` map also explicitly requires dedicated parity
+  tests for them
+- the contract harness extends beyond the direct runners into:
+  - `tests/contracts/v11/askHuman.contract.test.ts`
+  - `tests/contracts/v11/reply.contract.test.ts`
+  - corpus manifest expectations for the `baseline` and `parity` case sources
+
+Implication:
+
+- the smallest *correct* first batch for `askHuman/reply` facade retirement is a
+  test-architecture batch
+- a too-small rewrite that merely points both `baseline` and `v11` to the same
+  v11 executor would make the parity signal tautological
+
 Current classification:
 
 - `easy`
