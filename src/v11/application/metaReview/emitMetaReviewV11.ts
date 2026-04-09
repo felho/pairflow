@@ -8,6 +8,9 @@ import {
   submitMetaReviewResult,
   toMetaReviewError
 } from "../../shared/metaReview/metaReviewCommandApi.js";
+import {
+  recoverMetaReviewGateFromSnapshotV11 as recoverMetaReviewGateFromSnapshot
+} from "../metaReviewGate/emitMetaReviewGateV11.js";
 export type {
   MetaReviewLastReportView as MetaReviewLastReportViewV11,
   MetaReviewStatusView as MetaReviewStatusViewV11,
@@ -34,6 +37,9 @@ function withMetaReviewDefaults(
     writeFile,
     emitDeliveryNotification: metaReviewDefaults.emitTmuxDeliveryNotification,
     buildDeliveryMessageRef: metaReviewDefaults.resolveDeliveryMessageRef,
+    recoverMetaReviewGateFromSnapshot:
+      dependencies.recoverMetaReviewGateFromSnapshot ??
+      recoverMetaReviewGateFromSnapshot,
     ...dependencies
   };
 }
