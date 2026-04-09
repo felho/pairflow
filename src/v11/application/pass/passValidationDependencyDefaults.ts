@@ -1,4 +1,4 @@
-import type { PassValidationCommandResult } from "../../../core/runtime/passValidationDefaults.js";
+import type { PassValidationCommandResult } from "../../infrastructure/artifact/validation/passValidationEvidence.js";
 
 const passValidationDefaultsPromise = import(
   "../../../core/runtime/passValidationDefaults.js"

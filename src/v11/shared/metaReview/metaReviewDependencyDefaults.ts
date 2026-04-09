@@ -3,26 +3,46 @@ import {
   writeStateSnapshot
 } from "../state/stateStoreDefaults.js";
 import { appendProtocolEnvelope } from "../transcript/transcriptDependencyDefaults.js";
-import {
-  resolveBubbleById as coreResolveBubbleById
-} from "../../../core/bubble/bubbleLookup.js";
-import {
-  readRuntimeSessionsRegistry as coreReadRuntimeSessionsRegistry
-} from "../../../core/runtime/sessionsRegistry.js";
+import type { ResolveBubbleByIdPort } from "../ports/bubbleLookup.js";
+import type { ReadRuntimeSessionsRegistryPort } from "../ports/runtimeSessions.js";
 
-type ResolveBubbleByIdPort = typeof coreResolveBubbleById;
-type ReadRuntimeSessionsRegistryPort = typeof coreReadRuntimeSessionsRegistry;
+let bubbleLookupModulePromise:
+  | Promise<{ resolveBubbleById: ResolveBubbleByIdPort }>
+  | undefined;
+let runtimeSessionsModulePromise:
+  | Promise<{ readRuntimeSessionsRegistry: ReadRuntimeSessionsRegistryPort }>
+  | undefined;
+
+async function loadBubbleLookupModule(): Promise<{
+  resolveBubbleById: ResolveBubbleByIdPort;
+}> {
+  bubbleLookupModulePromise ??= import(
+    "../../../core/bubble/bubbleLookup.js"
+  ).then(({ resolveBubbleById }) => ({ resolveBubbleById }));
+  return bubbleLookupModulePromise;
+}
+
+async function loadRuntimeSessionsModule(): Promise<{
+  readRuntimeSessionsRegistry: ReadRuntimeSessionsRegistryPort;
+}> {
+  runtimeSessionsModulePromise ??= import(
+    "../../../core/runtime/sessionsRegistry.js"
+  ).then(({ readRuntimeSessionsRegistry }) => ({ readRuntimeSessionsRegistry }));
+  return runtimeSessionsModulePromise;
+}
 
 async function resolveBubbleById(
   ...args: Parameters<ResolveBubbleByIdPort>
 ): Promise<Awaited<ReturnType<ResolveBubbleByIdPort>>> {
-  return coreResolveBubbleById(...args);
+  const { resolveBubbleById } = await loadBubbleLookupModule();
+  return resolveBubbleById(...args);
 }
 
 async function readRuntimeSessionsRegistry(
   ...args: Parameters<ReadRuntimeSessionsRegistryPort>
 ): Promise<Awaited<ReturnType<ReadRuntimeSessionsRegistryPort>>> {
-  return coreReadRuntimeSessionsRegistry(...args);
+  const { readRuntimeSessionsRegistry } = await loadRuntimeSessionsModule();
+  return readRuntimeSessionsRegistry(...args);
 }
 
 export const metaReviewReadDefaults = {

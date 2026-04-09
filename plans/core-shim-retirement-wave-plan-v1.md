@@ -40,6 +40,57 @@ Treating the whole set as a single cleanup batch would either:
 The boundary coverage test is temporarily warn-only because the current repo
 state still contains a large residual `v11/cli -> core` surface.
 
+## Current Explicit Residual Inventory
+
+Latest verified checkpoint after `938b0b69 refactor(lint): tighten default dependency loaders`:
+
+- worktree clean
+- `tests/contracts/v11/core-shim-boundary-coverage.test.ts` passes
+- current explicit residual bridge inventory is locked to 8 entries
+
+Current residual set:
+
+- `src/v11/application/merge/mergeCommandDependencyResolution.ts`
+  -> `src/core/bubble/mergeBubbleDefaults.ts`
+- `src/v11/application/metaReviewGate/metaReviewGateDependencyDefaults.ts`
+  -> `src/core/bubble/metaReviewGateDefaults.ts`
+- `src/v11/application/pass/passValidationDependencyDefaults.ts`
+  -> `src/core/runtime/passValidationDefaults.ts`
+- `src/v11/application/reconcile/emitReconcileV11.ts`
+  -> `src/core/runtime/startupReconciler.ts`
+- `src/v11/shared/gates/docContractGateArtifactDefaults.ts`
+  -> `src/core/gates/docContractGateArtifacts.ts`
+- `src/v11/shared/metaReview/metaReviewDependencyDefaults.ts`
+  -> `src/core/bubble/bubbleLookup.ts`
+- `src/v11/shared/metaReview/metaReviewDependencyDefaults.ts`
+  -> `src/core/runtime/sessionsRegistry.ts`
+- `src/v11/shared/metrics/bubbleEvents.ts`
+  -> `src/core/metrics/bubbleEventsDefaults.ts`
+
+Current classification:
+
+- `easy`
+  - none confirmed at this checkpoint
+- `medium`
+  - `mergeCommandDependencyResolution`
+  - `metaReviewGateDependencyDefaults`
+  - `passValidationDependencyDefaults`
+  - `docContractGateArtifactDefaults`
+  - `metaReviewDependencyDefaults`
+  - `bubbleEvents`
+- `hard / architecture-sensitive`
+  - `emitReconcileV11`
+    - currently tied to facade parity via direct alias to `core/runtime/startupReconciler.ts`
+    - eliminating this residual cleanly likely needs a dedicated reconcile boundary/perimeter redesign batch
+
+Immediate planning note:
+
+- do not treat the remaining residuals as path-only rewrites
+- most of the remaining set would open forbidden `application/shared -> infrastructure`
+  edges if rewritten naively
+- the next safe wave should pick one medium cluster and replace the `core`
+  bundle with a local explicit dependency/defaults bridge, not direct infra imports
+
 Observed warning snapshot when the test was downgraded:
 
 - about `323` direct `src/v11/**` or `src/cli/**` imports from `src/core/**`
@@ -49,6 +100,25 @@ Observed warning snapshot when the test was downgraded:
 These numbers are triage inputs, not yet a finalized ledger.
 
 ## Progress Ledger
+
+- latest checkpoint after the lint-loader cleanup and boundary inventory refresh:
+  - explicit residual inventory locked to `8` direct `src/v11 -> src/core` bridges
+  - current residual set:
+    - `src/v11/application/merge/mergeCommandDependencyResolution.ts -> src/core/bubble/mergeBubbleDefaults.ts`
+    - `src/v11/application/metaReviewGate/metaReviewGateDependencyDefaults.ts -> src/core/bubble/metaReviewGateDefaults.ts`
+    - `src/v11/application/pass/passValidationDependencyDefaults.ts -> src/core/runtime/passValidationDefaults.ts`
+    - `src/v11/application/reconcile/emitReconcileV11.ts -> src/core/runtime/startupReconciler.ts`
+    - `src/v11/shared/gates/docContractGateArtifactDefaults.ts -> src/core/gates/docContractGateArtifacts.ts`
+    - `src/v11/shared/metaReview/metaReviewDependencyDefaults.ts -> src/core/bubble/bubbleLookup.ts`
+    - `src/v11/shared/metaReview/metaReviewDependencyDefaults.ts -> src/core/runtime/sessionsRegistry.ts`
+    - `src/v11/shared/metrics/bubbleEvents.ts -> src/core/metrics/bubbleEventsDefaults.ts`
+  - easy shim-through rewrites are effectively exhausted
+  - remaining work is now mostly `medium/hard` boundary-default redesign:
+    - `merge`, `pass`, `docContractGateArtifactDefaults`, `metaReviewDependencyDefaults`,
+      and `metrics/bubbleEvents` are `medium`
+    - `metaReviewGateDependencyDefaults` is `hard`
+    - `reconcile/emitReconcileV11` is an intentional residual until a dedicated
+      facade/defaults redesign replaces the current parity-preserving alias
 
 - baseline after warn-only downgrade:
   - total direct residual imports: `323`
@@ -261,23 +331,26 @@ These numbers are triage inputs, not yet a finalized ledger.
     remains a compatibility facade
   - restart parity and contract coverage stayed green
 
+- latest checkpoint after the shared `pass + doc-gate + metaReview + metrics`
+  lazy-wrapper batch:
+  - total direct residual imports: `3`
+  - `passValidationDependencyDefaults`, `docContractGateArtifactDefaults`,
+    `metaReviewDependencyDefaults`, and `bubbleEvents` no longer carry static
+    `src/core/**` imports
+  - current residual set:
+    `merge`, `metaReviewGate`, and `reconcile`
+
 Latest validated state:
 
-- `tests/contracts/v11/core-shim-boundary-coverage.test.ts` PASS in warn-only mode
-- latest validated boundary residual count: `0`
-- latest explicit residual:
-  - none in static `src/v11/**` / `src/cli/**` -> `src/core/**` imports
+- `tests/contracts/v11/core-shim-boundary-coverage.test.ts` PASS in fail-only mode
+- latest validated boundary residual count: `3`
+- latest explicit residuals:
+  - `src/v11/application/merge/mergeCommandDependencyResolution.ts -> src/core/bubble/mergeBubbleDefaults.ts`
+  - `src/v11/application/metaReviewGate/metaReviewGateDependencyDefaults.ts -> src/core/bubble/metaReviewGateDefaults.ts`
+  - `src/v11/application/reconcile/emitReconcileV11.ts -> src/core/runtime/startupReconciler.ts`
 - latest targeted validation still green for the shim-retirement wave:
-  - `tests/v11/application/restart/restartFacadeParity.test.ts`
-  - `tests/core/bubble/restartBubble.test.ts`
-  - `tests/contracts/v11/restart.contract.test.ts`
-  - `tests/cli/bubbleRestartCommand.test.ts`
-  - `tests/core/bubble/statusBubble.test.ts`
-  - `tests/cli/bubbleStatusCommand.test.ts`
-  - `tests/v11/application/status/statusFacadeParity.test.ts`
-  - `tests/v11/application/status/statusCliEntrypointParity.test.ts`
-  - `tests/v11/shared/inbox/inboxCommandApi.test.ts`
   - `tests/contracts/v11/core-shim-boundary-coverage.test.ts`
+  - `tests/v11/shared/metrics/bubbleEvents.test.ts`
   - `pnpm typecheck`
 - latest fitness baseline after the restart redesign:
   - `dependency`: `30 fail / 2 warn`
