@@ -1,4 +1,4 @@
-import { createCliDependencyDefaults } from "../../../core/repo/createCliDefaults.js";
+import { registerRepoInRegistry } from "../../defaults/repoRegistry/repoRegistryDefaults.js";
 import {
   getBubbleCreateHelpText,
   parseBubbleCreateCommandOptions
@@ -23,7 +23,7 @@ export async function runBubbleCreateCommand(
   return runBubbleCreateCommandRuntime(args, cwd, {
     registerRepoInRegistry:
       dependencies.registerRepoInRegistry
-      ?? createCliDependencyDefaults.registerRepoInRegistry,
+      ?? registerRepoInRegistry,
     ...dependencies
   });
 }
