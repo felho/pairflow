@@ -1,16 +1,14 @@
 import { randomUUID } from "node:crypto";
 
-import { resolveBubbleById } from "../../../../core/bubble/bubbleLookup.js";
-import { readStateSnapshot, writeStateSnapshot } from "../../../../core/state/stateStore.js";
-import { appendProtocolEnvelope } from "../../../../core/protocol/transcriptStore.js";
+import { metaReviewLiveRunDefaults } from "../../../../core/runtime/metaReviewLiveRunDefaults.js";
 import { MetaReviewError } from "../metaReviewError.js";
 import type { MetaReviewDependencies, MetaReviewLiveRunnerOutput } from "./metaReviewLiveRunContract.js";
 
 export interface ResolvedMetaReviewLiveRunPorts {
-  resolveBubble: typeof resolveBubbleById;
-  readState: typeof readStateSnapshot;
-  writeState: typeof writeStateSnapshot;
-  appendEnvelope: typeof appendProtocolEnvelope;
+  resolveBubble: typeof metaReviewLiveRunDefaults.resolveBubbleById;
+  readState: typeof metaReviewLiveRunDefaults.readStateSnapshot;
+  writeState: typeof metaReviewLiveRunDefaults.writeStateSnapshot;
+  appendEnvelope: typeof metaReviewLiveRunDefaults.appendProtocolEnvelope;
   runLiveReview: NonNullable<MetaReviewDependencies["runLiveReview"]>;
   readFileFn: NonNullable<MetaReviewDependencies["readFile"]>;
   writeFileFn: NonNullable<MetaReviewDependencies["writeFile"]>;
@@ -50,10 +48,12 @@ export function resolveMetaReviewLiveRunPorts(
   }
 
   return {
-    resolveBubble: dependencies.resolveBubbleById ?? resolveBubbleById,
-    readState: dependencies.readStateSnapshot ?? readStateSnapshot,
-    writeState: dependencies.writeStateSnapshot ?? writeStateSnapshot,
-    appendEnvelope: dependencies.appendProtocolEnvelope ?? appendProtocolEnvelope,
+    resolveBubble: dependencies.resolveBubbleById ?? metaReviewLiveRunDefaults.resolveBubbleById,
+    readState: dependencies.readStateSnapshot ?? metaReviewLiveRunDefaults.readStateSnapshot,
+    writeState: dependencies.writeStateSnapshot ?? metaReviewLiveRunDefaults.writeStateSnapshot,
+    appendEnvelope:
+      dependencies.appendProtocolEnvelope ??
+      metaReviewLiveRunDefaults.appendProtocolEnvelope,
     runLiveReview: dependencies.runLiveReview ?? unavailableMetaReviewLiveRunner,
     readFileFn,
     writeFileFn,
