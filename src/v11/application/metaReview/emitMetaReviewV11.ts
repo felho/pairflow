@@ -1,9 +1,6 @@
 import { readFile, writeFile } from "node:fs/promises";
 
-import {
-  emitTmuxDeliveryNotification,
-  resolveDeliveryMessageRef
-} from "../../../core/runtime/tmuxDelivery.js";
+import { metaReviewDefaults } from "../../../core/runtime/metaReviewDefaults.js";
 import {
   getMetaReviewLastReport,
   getMetaReviewStatus,
@@ -35,8 +32,8 @@ function withMetaReviewDefaults(
   return {
     readFile,
     writeFile,
-    emitDeliveryNotification: emitTmuxDeliveryNotification,
-    buildDeliveryMessageRef: resolveDeliveryMessageRef,
+    emitDeliveryNotification: metaReviewDefaults.emitTmuxDeliveryNotification,
+    buildDeliveryMessageRef: metaReviewDefaults.resolveDeliveryMessageRef,
     ...dependencies
   };
 }
