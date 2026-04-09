@@ -1,12 +1,5 @@
-import { resolveBubbleById } from "../../infrastructure/executor/workspace/bubbleLookup.js";
-import { removeRuntimeSession } from "../../infrastructure/executor/sessionRuntime/runtimeSessionsRegistry.js";
-import { terminateBubbleTmuxSession } from "../../infrastructure/channel/tmux/tmuxManager.js";
-import { readStateSnapshot, writeStateSnapshot } from "../../infrastructure/state/stateStore.js";
+const stopCommandDefaultsPromise = import(
+  "../../../core/bubble/stopBubbleDefaults.js"
+).then(({ stopBubbleDependencyDefaults }) => stopBubbleDependencyDefaults);
 
-export const stopCommandDefaults = {
-  readStateSnapshot,
-  removeRuntimeSession,
-  resolveBubbleById,
-  terminateBubbleTmuxSession,
-  writeStateSnapshot
-} as const;
+export const stopCommandDefaults = await stopCommandDefaultsPromise;
