@@ -5,6 +5,10 @@ import {
   createDocContractGateArtifact,
   isDocContractGateScopeActive
 } from "../../../v11/shared/gates/docContractGates.js";
+import {
+  resolveDocContractGateArtifactPath,
+  writeDocContractGateArtifact
+} from "../../shared/gates/docContractGateArtifactDefaults.js";
 import { appendInitialTaskEnvelope } from "../../shared/create/createInitialTaskEnvelopeAppend.js";
 import { renderBubbleConfigToml } from "../../../config/bubbleConfig.js";
 import type {
@@ -17,10 +21,6 @@ import type {
 } from "./createCommandContract.js";
 import { BubbleCreateError, ensureRuntimeSessionFile, renderTaskArtifact } from "./createCommandRuntime.js";
 import type { ReviewerFocusExtractionResult } from "../../../v11/shared/reviewer/reviewerBrief.js";
-import {
-  resolveDocContractGateArtifactPath,
-  writeDocContractGateArtifact
-} from "../../../core/gates/docContractGateArtifacts.js";
 
 export interface CreateBubblePersistenceInput {
   bubbleId: string;
