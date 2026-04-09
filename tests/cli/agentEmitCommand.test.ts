@@ -10,7 +10,7 @@ import {
   parseAgentEmitCommandOptions,
   runAgentEmitCommand
 } from "../../src/cli/commands/agent/emit.js";
-import { readStateSnapshot } from "../../src/core/state/stateStore.js";
+import { readStateSnapshot } from "../../src/v11/infrastructure/state/stateStore.js";
 import { setupRunningBubbleFixture } from "../helpers/bubble.js";
 import { initGitRepository } from "../helpers/git.js";
 import {
@@ -19,8 +19,8 @@ import {
 import {
   buildRunningExecutionContext,
   metaReviewExecutionContextToRunningContext
-} from "../../src/core/state/executionContext.js";
-import { writeStateSnapshot } from "../../src/core/state/stateStore.js";
+} from "../../src/v11/shared/state/executionContext.js";
+import { writeStateSnapshot } from "../../src/v11/infrastructure/state/stateStore.js";
 import type { AgentName } from "../../src/types/bubble.js";
 
 const tempDirs: string[] = [];
