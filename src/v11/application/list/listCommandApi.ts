@@ -2,14 +2,7 @@ import { readdir, readFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 
 import { parseBubbleConfigToml } from "../../../config/bubbleConfig.js";
-import {
-  normalizeRepoPath,
-  RepoResolutionError,
-  resolveRepoPath
-} from "../../../core/bubble/repoResolution.js";
-import { inspectStateSnapshot } from "../../../core/state/stateStore.js";
-import { readRuntimeSessionsRegistry } from "../../../core/runtime/sessionsRegistry.js";
-import { readWatchdogPaneActivity } from "../../../core/watchdog/watchdogPaneActivityStore.js";
+import { listCommandDefaults } from "../../../core/bubble/listCommandDefaults.js";
 import { isMetaReviewExecutionContextActiveState } from "../../shared/metaReview/metaReviewExecutionContext.js";
 import { resolveActiveMetaReviewRuntimeDelivery } from "../../shared/metaReview/metaReviewSnapshot.js";
 import { getBubblePaths } from "../../shared/bubble/bubblePaths.js";
@@ -105,15 +98,15 @@ async function listBubbleIds(repoPath: string): Promise<string[]> {
 async function resolveListBubblesContext(input: BubbleListInput): Promise<{
   repoPath: string;
   bubbleIds: string[];
-  sessions: Awaited<ReturnType<typeof readRuntimeSessionsRegistry>>;
+  sessions: Awaited<ReturnType<typeof listCommandDefaults.readRuntimeSessionsRegistry>>;
   normalizedRepoPath: string;
   now: Date;
 }> {
   let repoPath: string;
   try {
-    repoPath = await resolveRepoPath(input);
+    repoPath = await listCommandDefaults.resolveRepoPath(input);
   } catch (error) {
-    if (error instanceof RepoResolutionError) {
+    if (error instanceof listCommandDefaults.RepoResolutionError) {
       throw new BubbleListError(error.message);
     }
     throw error;
@@ -121,10 +114,10 @@ async function resolveListBubblesContext(input: BubbleListInput): Promise<{
 
   const bubbleIds = await listBubbleIds(repoPath);
   const sessionsPath = join(repoPath, ".pairflow", "runtime", "sessions.json");
-  const sessions = await readRuntimeSessionsRegistry(sessionsPath, {
+  const sessions = await listCommandDefaults.readRuntimeSessionsRegistry(sessionsPath, {
     allowMissing: true
   });
-  const normalizedRepoPath = await normalizeRepoPath(repoPath);
+  const normalizedRepoPath = await listCommandDefaults.normalizeRepoPath(repoPath);
   const now = input.now ?? new Date();
   return {
     repoPath,
@@ -139,7 +132,7 @@ async function buildBubbleListEntry(input: {
   repoPath: string;
   normalizedRepoPath: string;
   bubbleId: string;
-  sessions: Awaited<ReturnType<typeof readRuntimeSessionsRegistry>>;
+  sessions: Awaited<ReturnType<typeof listCommandDefaults.readRuntimeSessionsRegistry>>;
   now: Date;
 }): Promise<{
   entry: BubbleListEntry;
@@ -150,8 +143,8 @@ async function buildBubbleListEntry(input: {
   const bubblePaths = getBubblePaths(input.repoPath, input.bubbleId);
   const [bubbleToml, stateLoaded, paneActivityRead] = await Promise.all([
     readFile(bubblePaths.bubbleTomlPath, "utf8"),
-    inspectStateSnapshot(bubblePaths.statePath),
-    readWatchdogPaneActivity({
+    listCommandDefaults.inspectStateSnapshot(bubblePaths.statePath),
+    listCommandDefaults.readWatchdogPaneActivity({
       runtimeDir: bubblePaths.runtimeDir,
       bubbleId: input.bubbleId
     })
@@ -164,7 +157,9 @@ async function buildBubbleListEntry(input: {
     );
   }
 
-  const normalizedConfigRepoPath = await normalizeRepoPath(resolve(config.repo_path));
+  const normalizedConfigRepoPath = await listCommandDefaults.normalizeRepoPath(
+    resolve(config.repo_path)
+  );
   if (normalizedConfigRepoPath !== input.normalizedRepoPath) {
     throw new BubbleListError(
       `Bubble ${input.bubbleId} belongs to different repository path: ${config.repo_path}`
@@ -316,7 +311,7 @@ export function asBubbleListError(
       message: error.message,
       cause: error,
       context: {
-        source: error instanceof RepoResolutionError
+        source: error instanceof listCommandDefaults.RepoResolutionError
           ? "repo_resolution"
           : "unexpected_error",
         repoPathProvided: context.repoPathProvided,
