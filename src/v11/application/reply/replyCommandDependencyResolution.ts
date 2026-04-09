@@ -1,11 +1,4 @@
-import { ensureBubbleInstanceIdForMutation } from "../../../core/bubble/bubbleInstanceId.js";
-import { resolveBubbleById } from "../../../core/bubble/bubbleLookup.js";
-import { appendProtocolEnvelope } from "../../../core/protocol/transcriptStore.js";
-import { readStateSnapshot, writeStateSnapshot } from "../../../core/state/stateStore.js";
-import {
-  emitTmuxDeliveryNotification,
-  resolveDeliveryMessageRef
-} from "../../../core/runtime/tmuxDelivery.js";
+import { replyBubbleDependencyDefaults } from "../../../core/bubble/replyBubbleDefaults.js";
 import type {
   EmitHumanReplyDependencies,
 } from "./replyCommandContract.js";
@@ -31,16 +24,22 @@ export function resolveReplyCommandDependencies(
 ): ResolvedReplyCommandDependencies {
   return {
     appendProtocolEnvelope:
-      dependencies.appendProtocolEnvelope ?? appendProtocolEnvelope,
+      dependencies.appendProtocolEnvelope
+      ?? replyBubbleDependencyDefaults.appendProtocolEnvelope,
     emitTmuxDeliveryNotification:
-      dependencies.emitTmuxDeliveryNotification ?? emitTmuxDeliveryNotification,
+      dependencies.emitTmuxDeliveryNotification
+      ?? replyBubbleDependencyDefaults.emitTmuxDeliveryNotification,
     ensureBubbleInstanceIdForMutation:
       dependencies.ensureBubbleInstanceIdForMutation
-      ?? ensureBubbleInstanceIdForMutation,
-    readStateSnapshot: dependencies.readStateSnapshot ?? readStateSnapshot,
-    resolveBubbleById: dependencies.resolveBubbleById ?? resolveBubbleById,
+      ?? replyBubbleDependencyDefaults.ensureBubbleInstanceIdForMutation,
+    readStateSnapshot:
+      dependencies.readStateSnapshot ?? replyBubbleDependencyDefaults.readStateSnapshot,
+    resolveBubbleById:
+      dependencies.resolveBubbleById ?? replyBubbleDependencyDefaults.resolveBubbleById,
     resolveDeliveryMessageRef:
-      dependencies.resolveDeliveryMessageRef ?? resolveDeliveryMessageRef,
-    writeStateSnapshot: dependencies.writeStateSnapshot ?? writeStateSnapshot
+      dependencies.resolveDeliveryMessageRef
+      ?? replyBubbleDependencyDefaults.resolveDeliveryMessageRef,
+    writeStateSnapshot:
+      dependencies.writeStateSnapshot ?? replyBubbleDependencyDefaults.writeStateSnapshot
   };
 }
