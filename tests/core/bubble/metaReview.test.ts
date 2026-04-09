@@ -24,7 +24,7 @@ import { buildMetaReviewExecutionContext } from "../../../src/core/bubble/metaRe
 import {
   appendProtocolEnvelope,
   readTranscriptEnvelopes
-} from "../../../src/core/protocol/transcriptStore.js";
+} from "../../../src/v11/infrastructure/artifact/transcript/transcriptStore.js";
 import {
   MetaReviewGateError,
   recoverMetaReviewGateFromSnapshot
@@ -34,12 +34,12 @@ import {
   StateStoreConflictError,
   readStateSnapshot,
   writeStateSnapshot
-} from "../../../src/core/state/stateStore.js";
+} from "../../../src/v11/infrastructure/state/stateStore.js";
 import {
   buildRunningExecutionContext,
   metaReviewExecutionContextToRunningContext
-} from "../../../src/core/state/executionContext.js";
-import { applyStateTransition } from "../../../src/core/state/machine.js";
+} from "../../../src/v11/shared/state/executionContext.js";
+import { applyStateTransition } from "../../../src/v11/domain/state/machine.js";
 import { SchemaValidationError } from "../../../src/core/validation.js";
 import type { Finding } from "../../../src/types/findings.js";
 import { deliveryTargetRoleMetadataKey } from "../../../src/types/protocol.js";
