@@ -5,7 +5,10 @@ import {
   sendAndSubmitTmuxPaneMessage,
   submitTmuxPaneInput
 } from "../../v11/infrastructure/channel/tmux/tmuxInput.js";
-import { respawnTmuxPaneCommand, runTmux } from "./tmuxManager.js";
+import {
+  respawnTmuxPaneCommand,
+  runTmux
+} from "../../v11/infrastructure/channel/tmux/tmuxManager.js";
 
 export const metaReviewGateRuntimeDefaults = {
   buildAgentCommand,

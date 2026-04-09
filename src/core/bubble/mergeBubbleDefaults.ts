@@ -4,7 +4,7 @@ import { removeRuntimeSession } from "../../v11/infrastructure/executor/sessionR
 import { readStateSnapshot, writeStateSnapshot } from "../state/stateStore.js";
 import { branchExists, runGit } from "../../v11/infrastructure/workspace/git.js";
 import { cleanupWorktreeWorkspace } from "../../v11/infrastructure/workspace/worktreeManager.js";
-import { terminateBubbleTmuxSession } from "../runtime/tmuxManager.js";
+import { terminateBubbleTmuxSession } from "../../v11/infrastructure/channel/tmux/tmuxManager.js";
 import { emitBubbleLifecycleEventBestEffort } from "../../v11/shared/metrics/bubbleEvents.js";
 
 export const mergeBubbleDependencyDefaults = {

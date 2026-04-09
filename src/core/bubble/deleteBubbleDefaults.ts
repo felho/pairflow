@@ -11,7 +11,7 @@ import {
   TmuxCommandError,
   runTmux,
   terminateBubbleTmuxSession
-} from "../runtime/tmuxManager.js";
+} from "../../v11/infrastructure/channel/tmux/tmuxManager.js";
 import { readStateSnapshot } from "../state/stateStore.js";
 import { cleanupWorktreeWorkspace } from "../../v11/infrastructure/workspace/worktreeManager.js";
 import { pathExists } from "../../v11/infrastructure/foundation/fs/pathExists.js";

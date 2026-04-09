@@ -9,14 +9,16 @@ import {
   readStateSnapshot,
   writeStateSnapshot
 } from "../state/stateStore.js";
-import { runTmux } from "../runtime/tmuxManager.js";
+import {
+  respawnTmuxPaneCommand,
+  runTmux
+} from "../../v11/infrastructure/channel/tmux/tmuxManager.js";
 import { buildAgentCommand } from "../../v11/shared/command/agentCommand.js";
 import {
   maybeAcceptClaudeTrustPrompt,
   sendAndSubmitTmuxPaneMessage,
   submitTmuxPaneInput
 } from "../../v11/infrastructure/channel/tmux/tmuxInput.js";
-import { respawnTmuxPaneCommand } from "../runtime/tmuxManager.js";
 
 export const metaReviewGateDependencyDefaults = {
   appendProtocolEnvelope,
