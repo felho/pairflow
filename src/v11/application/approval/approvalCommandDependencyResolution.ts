@@ -1,69 +1,86 @@
-import {
-  appendProtocolEnvelope,
-  readTranscriptEnvelopes
-} from "../../../core/protocol/transcriptStore.js";
 import { applyStateTransition } from "../../domain/state/machine.js";
-import { readStateSnapshot, writeStateSnapshot } from "../../../core/state/stateStore.js";
-import { resolveBubbleById } from "../../../core/bubble/bubbleLookup.js";
-import {
-  emitTmuxDeliveryNotification,
-  resolveDeliveryMessageRef
-} from "../../../core/runtime/tmuxDelivery.js";
-import { ensureBubbleInstanceIdForMutation } from "../../../core/bubble/bubbleInstanceId.js";
 import { emitBubbleLifecycleEventBestEffort } from "../../shared/metrics/bubbleEvents.js";
 import { queueDeferredReworkIntent } from "../../shared/approval/reworkIntent.js";
+import type { EnsureBubbleInstanceIdForMutationPort } from "../../shared/ports/bubbleIdentity.js";
+import type { ResolveBubbleByIdPort } from "../../shared/ports/bubbleLookup.js";
+import type {
+  AppendProtocolEnvelopePort,
+  ReadTranscriptEnvelopesPort
+} from "../../shared/ports/transcript.js";
+import type {
+  EmitTmuxDeliveryNotificationPort,
+  ResolveDeliveryMessageRefPort
+} from "../../shared/ports/tmuxDelivery.js";
+import type {
+  ReadStateSnapshotPort,
+  WriteStateSnapshotPort
+} from "../../shared/ports/stateSnapshots.js";
 
 export interface ApprovalCommandDependencies {
-  appendProtocolEnvelope?: typeof appendProtocolEnvelope;
+  appendProtocolEnvelope?: AppendProtocolEnvelopePort;
   applyStateTransition?: typeof applyStateTransition;
   emitBubbleLifecycleEventBestEffort?: typeof emitBubbleLifecycleEventBestEffort;
-  emitTmuxDeliveryNotification?: typeof emitTmuxDeliveryNotification;
-  ensureBubbleInstanceIdForMutation?: typeof ensureBubbleInstanceIdForMutation;
+  emitTmuxDeliveryNotification?: EmitTmuxDeliveryNotificationPort;
+  ensureBubbleInstanceIdForMutation?: EnsureBubbleInstanceIdForMutationPort;
   queueDeferredReworkIntent?: typeof queueDeferredReworkIntent;
-  readStateSnapshot?: typeof readStateSnapshot;
-  readTranscriptEnvelopes?: typeof readTranscriptEnvelopes;
-  resolveBubbleById?: typeof resolveBubbleById;
-  resolveDeliveryMessageRef?: typeof resolveDeliveryMessageRef;
-  writeStateSnapshot?: typeof writeStateSnapshot;
+  readStateSnapshot?: ReadStateSnapshotPort;
+  readTranscriptEnvelopes?: ReadTranscriptEnvelopesPort;
+  resolveBubbleById?: ResolveBubbleByIdPort;
+  resolveDeliveryMessageRef?: ResolveDeliveryMessageRefPort;
+  writeStateSnapshot?: WriteStateSnapshotPort;
+}
+
+export interface ApprovalCommandDefaultDependencies {
+  appendProtocolEnvelope: AppendProtocolEnvelopePort;
+  emitTmuxDeliveryNotification: EmitTmuxDeliveryNotificationPort;
+  ensureBubbleInstanceIdForMutation: EnsureBubbleInstanceIdForMutationPort;
+  readStateSnapshot: ReadStateSnapshotPort;
+  readTranscriptEnvelopes: ReadTranscriptEnvelopesPort;
+  resolveBubbleById: ResolveBubbleByIdPort;
+  resolveDeliveryMessageRef: ResolveDeliveryMessageRefPort;
+  writeStateSnapshot: WriteStateSnapshotPort;
 }
 
 export interface ResolvedApprovalCommandDependencies {
-  appendProtocolEnvelope: typeof appendProtocolEnvelope;
+  appendProtocolEnvelope: AppendProtocolEnvelopePort;
   applyStateTransition: typeof applyStateTransition;
   emitBubbleLifecycleEventBestEffort: typeof emitBubbleLifecycleEventBestEffort;
-  emitTmuxDeliveryNotification: typeof emitTmuxDeliveryNotification;
-  ensureBubbleInstanceIdForMutation: typeof ensureBubbleInstanceIdForMutation;
+  emitTmuxDeliveryNotification: EmitTmuxDeliveryNotificationPort;
+  ensureBubbleInstanceIdForMutation: EnsureBubbleInstanceIdForMutationPort;
   queueDeferredReworkIntent: typeof queueDeferredReworkIntent;
-  readStateSnapshot: typeof readStateSnapshot;
-  readTranscriptEnvelopes: typeof readTranscriptEnvelopes;
-  resolveBubbleById: typeof resolveBubbleById;
-  resolveDeliveryMessageRef: typeof resolveDeliveryMessageRef;
-  writeStateSnapshot: typeof writeStateSnapshot;
+  readStateSnapshot: ReadStateSnapshotPort;
+  readTranscriptEnvelopes: ReadTranscriptEnvelopesPort;
+  resolveBubbleById: ResolveBubbleByIdPort;
+  resolveDeliveryMessageRef: ResolveDeliveryMessageRefPort;
+  writeStateSnapshot: WriteStateSnapshotPort;
 }
 
 export function resolveApprovalCommandDependencies(
-  dependencies: ApprovalCommandDependencies = {}
+  dependencies: ApprovalCommandDependencies = {},
+  defaults: ApprovalCommandDefaultDependencies
 ): ResolvedApprovalCommandDependencies {
   return {
     appendProtocolEnvelope:
-      dependencies.appendProtocolEnvelope ?? appendProtocolEnvelope,
+      dependencies.appendProtocolEnvelope ?? defaults.appendProtocolEnvelope,
     applyStateTransition: dependencies.applyStateTransition ?? applyStateTransition,
     emitBubbleLifecycleEventBestEffort:
       dependencies.emitBubbleLifecycleEventBestEffort
       ?? emitBubbleLifecycleEventBestEffort,
     emitTmuxDeliveryNotification:
-      dependencies.emitTmuxDeliveryNotification ?? emitTmuxDeliveryNotification,
+      dependencies.emitTmuxDeliveryNotification
+      ?? defaults.emitTmuxDeliveryNotification,
     ensureBubbleInstanceIdForMutation:
       dependencies.ensureBubbleInstanceIdForMutation
-      ?? ensureBubbleInstanceIdForMutation,
+      ?? defaults.ensureBubbleInstanceIdForMutation,
     queueDeferredReworkIntent:
       dependencies.queueDeferredReworkIntent ?? queueDeferredReworkIntent,
-    readStateSnapshot: dependencies.readStateSnapshot ?? readStateSnapshot,
+    readStateSnapshot:
+      dependencies.readStateSnapshot ?? defaults.readStateSnapshot,
     readTranscriptEnvelopes:
-      dependencies.readTranscriptEnvelopes ?? readTranscriptEnvelopes,
-    resolveBubbleById: dependencies.resolveBubbleById ?? resolveBubbleById,
+      dependencies.readTranscriptEnvelopes ?? defaults.readTranscriptEnvelopes,
+    resolveBubbleById: dependencies.resolveBubbleById ?? defaults.resolveBubbleById,
     resolveDeliveryMessageRef:
-      dependencies.resolveDeliveryMessageRef ?? resolveDeliveryMessageRef,
-    writeStateSnapshot: dependencies.writeStateSnapshot ?? writeStateSnapshot
+      dependencies.resolveDeliveryMessageRef ?? defaults.resolveDeliveryMessageRef,
+    writeStateSnapshot: dependencies.writeStateSnapshot ?? defaults.writeStateSnapshot
   };
 }

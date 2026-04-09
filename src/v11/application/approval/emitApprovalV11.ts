@@ -1,13 +1,13 @@
 export {
-  emitApprovalDecisionCommandOrchestration as emitApprovalDecisionV11,
-  emitApproveCommandOrchestration as emitApproveV11,
-  emitRequestReworkCommandOrchestration as emitRequestReworkV11,
-  throwAsApprovalCommandError as asApprovalCommandErrorV11
-} from "./approvalCommandOrchestration.js";
-export {
-  ApprovalCommandError as ApprovalCommandErrorV11
-} from "../../shared/approval/approvalCommandError.js";
+  ApprovalCommandError as ApprovalCommandErrorV11,
+  asApprovalCommandError as asApprovalCommandErrorV11,
+  emitApprovalDecision as emitApprovalDecisionV11,
+  emitApprove as emitApproveV11,
+  emitRequestRework as emitRequestReworkV11
+} from "../../../core/human/approval.js";
 export type {
+  ApprovalCommandDependencies,
+  ApprovalCommandDefaultDependencies,
   EmitApprovalDecisionDependencies as EmitApprovalDecisionV11Dependencies,
   EmitApprovalDecisionInput as EmitApprovalDecisionV11Input,
   EmitApprovalDecisionResult as EmitApprovalDecisionV11Result,
@@ -15,5 +15,6 @@ export type {
   EmitRequestReworkImmediateResult as EmitRequestReworkImmediateV11Result,
   EmitRequestReworkInput as EmitRequestReworkV11Input,
   EmitRequestReworkQueuedResult as EmitRequestReworkQueuedV11Result,
-  EmitRequestReworkResult as EmitRequestReworkV11Result
-} from "./approvalCommandContract.js";
+  EmitRequestReworkResult as EmitRequestReworkV11Result,
+  ResolvedApprovalCommandDependencies
+} from "../../../core/human/approval.js";

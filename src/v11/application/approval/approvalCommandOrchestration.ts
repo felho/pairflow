@@ -1,8 +1,5 @@
 import type {
-  ApprovalCommandDependencies
-} from "./approvalCommandDependencyResolution.js";
-import {
-  resolveApprovalCommandDependencies
+  ResolvedApprovalCommandDependencies
 } from "./approvalCommandDependencyResolution.js";
 import {
   createApprovalCommandError,
@@ -19,7 +16,6 @@ import {
 } from "./runApprovalFlow.js";
 import { isNamedError } from "../../shared/errors/namedError.js";
 import type {
-  EmitApprovalDecisionDependencies,
   EmitApprovalDecisionInput,
   EmitApprovalDecisionResult,
   EmitApproveInput,
@@ -27,12 +23,9 @@ import type {
   EmitRequestReworkResult
 } from "./approvalCommandContract.js";
 
-type ApprovalRuntimeDependencies = EmitApprovalDecisionDependencies
-  & Omit<ApprovalCommandDependencies, "emitTmuxDeliveryNotification">;
-
 export async function emitApprovalDecisionCommandOrchestration(
   input: EmitApprovalDecisionInput,
-  dependencies: ApprovalRuntimeDependencies = {}
+  dependencies: ResolvedApprovalCommandDependencies
 ): Promise<EmitApprovalDecisionResult> {
   const normalized = normalizeApprovalDecisionInput({
     bubbleId: input.bubbleId,
@@ -45,22 +38,19 @@ export async function emitApprovalDecisionCommandOrchestration(
     now: input.now,
     createApprovalCommandError
   });
-  const resolvedDependencies = resolveApprovalCommandDependencies({
-    ...dependencies
-  });
   return runApprovalDecisionFlow(
     {
       ...normalized,
       overrideNonApprove: input.overrideNonApprove,
       createError: createApprovalCommandError
     },
-    resolvedDependencies
+    dependencies
   );
 }
 
 export async function emitApproveCommandOrchestration(
   input: EmitApproveInput,
-  dependencies: ApprovalRuntimeDependencies = {}
+  dependencies: ResolvedApprovalCommandDependencies
 ): Promise<EmitApprovalDecisionResult> {
   return emitApprovalDecisionCommandOrchestration(
     {
@@ -79,7 +69,7 @@ export async function emitApproveCommandOrchestration(
 
 export async function emitRequestReworkCommandOrchestration(
   input: EmitRequestReworkInput,
-  dependencies: ApprovalRuntimeDependencies = {}
+  dependencies: ResolvedApprovalCommandDependencies
 ): Promise<EmitRequestReworkResult> {
   const normalized = normalizeRequestReworkInput({
     bubbleId: input.bubbleId,
@@ -90,15 +80,12 @@ export async function emitRequestReworkCommandOrchestration(
     now: input.now,
     createApprovalCommandError
   });
-  const resolvedDependencies = resolveApprovalCommandDependencies({
-    ...dependencies
-  });
   return runRequestReworkFlow(
     {
       ...normalized,
       createError: createApprovalCommandError
     },
-    resolvedDependencies
+    dependencies
   );
 }
 
