@@ -1,12 +1,4 @@
-import { appendProtocolEnvelope } from "../../../core/protocol/transcriptStore.js";
-import { resolveBubbleById } from "../../../core/bubble/bubbleLookup.js";
-import { setMetaReviewerPaneBinding } from "../../../core/runtime/sessionsRegistry.js";
-import { readFile, writeFile } from "node:fs/promises";
-import {
-  readStateSnapshot,
-  writeStateSnapshot
-} from "../../../core/state/stateStore.js";
-import { runTmux } from "../../../core/runtime/tmuxManager.js";
+import { metaReviewGateDependencyDefaults } from "../../../core/bubble/metaReviewGateDefaults.js";
 
 import {
   applyMetaReviewGateOnConvergence,
@@ -29,13 +21,15 @@ function withMetaReviewGateApplyDefaults(
   dependencies: ApplyMetaReviewGateOnConvergenceDependencies = {}
 ): ApplyMetaReviewGateOnConvergenceDependencies {
   return {
-    appendProtocolEnvelope,
-    readStateSnapshot,
-    resolveBubbleById,
-    setMetaReviewerPaneBinding,
-    writeStateSnapshot,
-    readFile,
-    runTmux,
+    appendProtocolEnvelope:
+      metaReviewGateDependencyDefaults.appendProtocolEnvelope,
+    readStateSnapshot: metaReviewGateDependencyDefaults.readStateSnapshot,
+    resolveBubbleById: metaReviewGateDependencyDefaults.resolveBubbleById,
+    setMetaReviewerPaneBinding:
+      metaReviewGateDependencyDefaults.setMetaReviewerPaneBinding,
+    writeStateSnapshot: metaReviewGateDependencyDefaults.writeStateSnapshot,
+    readFile: metaReviewGateDependencyDefaults.readFile,
+    runTmux: metaReviewGateDependencyDefaults.runTmux,
     notifyMetaReviewerSubmissionRequest,
     resolveMetaReviewerPaneWarning,
     ...dependencies
@@ -46,8 +40,8 @@ function withMetaReviewGateRecoveryDefaults(
   dependencies: RecoverMetaReviewGateFromSnapshotDependencies = {}
 ): RecoverMetaReviewGateFromSnapshotDependencies {
   return {
-    readFile,
-    writeFile,
+    readFile: metaReviewGateDependencyDefaults.readFile,
+    writeFile: metaReviewGateDependencyDefaults.writeFile,
     ...dependencies
   };
 }
