@@ -11,5 +11,5 @@ export {
   throwAsStartupReconcilerError as asStartupReconcilerErrorV11
 } from "../../shared/reconcile/reconcileCommandRuntime.js";
 export {
-  reconcileRuntimeSessionsCommandOrchestration as reconcileRuntimeSessionsV11
-} from "./reconcileCommandOrchestration.js";
+  reconcileRuntimeSessions as reconcileRuntimeSessionsV11
+} from "../../../core/runtime/startupReconciler.js";

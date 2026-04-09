@@ -1,31 +1,28 @@
 import { isNamedError } from "../../shared/errors/namedError.js";
 import { runReconcileFlow } from "./runReconcileFlow.js";
 import type {
-  ReconcileRuntimeSessionsDependencies,
   ReconcileRuntimeSessionsInput,
   ReconcileRuntimeSessionsReport
 } from "./reconcileCommandContract.js";
+import type {
+  ResolvedReconcileRuntimeSessionsDependencies
+} from "./reconcileCommandDependencyResolution.js";
 import { createStartupReconcilerError } from "../../shared/reconcile/reconcileCommandRuntime.js";
 import {
   normalizeReconcileRuntimeSessionsInput
 } from "./reconcileCommandInputNormalization.js";
-import {
-  resolveReconcileRuntimeSessionsDependencies
-} from "./reconcileCommandDependencyResolution.js";
 
 const RECONCILE_REPO_RESOLUTION_FAILED = "RECONCILE_REPO_RESOLUTION_FAILED";
 
 export async function reconcileRuntimeSessionsCommandOrchestration(
   input: ReconcileRuntimeSessionsInput = {},
-  dependencies: ReconcileRuntimeSessionsDependencies = {}
+  dependencies: ResolvedReconcileRuntimeSessionsDependencies
 ): Promise<ReconcileRuntimeSessionsReport> {
   const normalizedInput = normalizeReconcileRuntimeSessionsInput(input);
-  const resolvedDependencies =
-    resolveReconcileRuntimeSessionsDependencies(dependencies);
 
   let repoPath: string;
   try {
-    repoPath = await resolvedDependencies.resolveRepoPath({
+    repoPath = await dependencies.resolveRepoPath({
       ...(normalizedInput.repoPath !== undefined
         ? { repoPath: normalizedInput.repoPath }
         : {}),
@@ -40,5 +37,5 @@ export async function reconcileRuntimeSessionsCommandOrchestration(
     throw error;
   }
 
-  return runReconcileFlow(repoPath, normalizedInput, resolvedDependencies);
+  return runReconcileFlow(repoPath, normalizedInput, dependencies);
 }

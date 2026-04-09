@@ -1,15 +1,13 @@
-import { resolveRepoPath } from "../../../core/bubble/repoResolution.js";
 import { readdir } from "node:fs/promises";
 import { join } from "node:path";
 import {
-  persistPassValidationRecoveryMarker
-} from "../../../core/runtime/passValidationEvidence.js";
-import {
   type RuntimeSessionsRegistry,
-  readRuntimeSessionsRegistry,
-  removeRuntimeSessions
-} from "../../../core/runtime/sessionsRegistry.js";
-import { readStateSnapshot } from "../../../core/state/stateStore.js";
+  type ReadRuntimeSessionsRegistryPort,
+  type RemoveRuntimeSessionsPort
+} from "../../shared/ports/runtimeSessions.js";
+import type { PersistPassValidationRecoveryMarkerPort } from "../../shared/ports/passValidationRecovery.js";
+import type { ResolveRepoPathPort } from "../../shared/ports/repoResolution.js";
+import type { ReadStateSnapshotPort } from "../../shared/ports/stateSnapshots.js";
 import { isFinalState } from "../../domain/state/transitions.js";
 import type {
   ListBubbleIdSet,
@@ -17,14 +15,22 @@ import type {
 } from "./reconcileCommandContract.js";
 
 export interface ResolvedReconcileRuntimeSessionsDependencies {
-  resolveRepoPath: typeof resolveRepoPath;
+  resolveRepoPath: ResolveRepoPathPort;
   listBubbleIdSet: ListBubbleIdSet;
-  readRuntimeSessionsRegistry: typeof readRuntimeSessionsRegistry;
-  removeRuntimeSessions: typeof removeRuntimeSessions;
-  persistPassValidationRecoveryMarker: typeof persistPassValidationRecoveryMarker;
-  readStateSnapshot: typeof readStateSnapshot;
+  readRuntimeSessionsRegistry: ReadRuntimeSessionsRegistryPort;
+  removeRuntimeSessions: RemoveRuntimeSessionsPort;
+  persistPassValidationRecoveryMarker: PersistPassValidationRecoveryMarkerPort;
+  readStateSnapshot: ReadStateSnapshotPort;
   isFinalState: typeof isFinalState;
   countRegistryEntries: (registry: RuntimeSessionsRegistry) => number;
+}
+
+export interface ReconcileRuntimeSessionsDefaultDependencies {
+  resolveRepoPath: ResolveRepoPathPort;
+  readRuntimeSessionsRegistry: ReadRuntimeSessionsRegistryPort;
+  removeRuntimeSessions: RemoveRuntimeSessionsPort;
+  persistPassValidationRecoveryMarker: PersistPassValidationRecoveryMarkerPort;
+  readStateSnapshot: ReadStateSnapshotPort;
 }
 
 export const listBubbleIdSetDefault: ListBubbleIdSet = async (
@@ -52,19 +58,21 @@ export function countRegistryEntriesDefault(
 }
 
 export function resolveReconcileRuntimeSessionsDependencies(
-  dependencies: ReconcileRuntimeSessionsDependencies = {}
+  dependencies: ReconcileRuntimeSessionsDependencies = {},
+  defaults: ReconcileRuntimeSessionsDefaultDependencies
 ): ResolvedReconcileRuntimeSessionsDependencies {
   return {
-    resolveRepoPath: dependencies.resolveRepoPath ?? resolveRepoPath,
+    resolveRepoPath: dependencies.resolveRepoPath ?? defaults.resolveRepoPath,
     listBubbleIdSet: dependencies.listBubbleIdSet ?? listBubbleIdSetDefault,
     readRuntimeSessionsRegistry:
-      dependencies.readRuntimeSessionsRegistry ?? readRuntimeSessionsRegistry,
+      dependencies.readRuntimeSessionsRegistry ??
+      defaults.readRuntimeSessionsRegistry,
     removeRuntimeSessions:
-      dependencies.removeRuntimeSessions ?? removeRuntimeSessions,
+      dependencies.removeRuntimeSessions ?? defaults.removeRuntimeSessions,
     persistPassValidationRecoveryMarker:
       dependencies.persistPassValidationRecoveryMarker ??
-      persistPassValidationRecoveryMarker,
-    readStateSnapshot: dependencies.readStateSnapshot ?? readStateSnapshot,
+      defaults.persistPassValidationRecoveryMarker,
+    readStateSnapshot: dependencies.readStateSnapshot ?? defaults.readStateSnapshot,
     isFinalState: dependencies.isFinalState ?? isFinalState,
     countRegistryEntries:
       dependencies.countRegistryEntries ?? countRegistryEntriesDefault
