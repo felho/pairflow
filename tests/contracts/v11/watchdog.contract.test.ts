@@ -11,23 +11,14 @@ import { readContractCase } from "./runner.js";
 
 const execFileAsync = promisify(execFile);
 const watchdogCaseSources = [
-  "tests/contracts/v11/cases/watchdog/watchdog-waiting-human.case.json",
   "tests/contracts/v11/cases/watchdog/watchdog-waiting-human-v11.case.json",
-  "tests/contracts/v11/cases/watchdog/watchdog-final-state.case.json",
   "tests/contracts/v11/cases/watchdog/watchdog-final-state-v11.case.json",
-  "tests/contracts/v11/cases/watchdog/watchdog-expired-recent-change-noop.case.json",
   "tests/contracts/v11/cases/watchdog/watchdog-expired-recent-change-noop-v11.case.json",
-  "tests/contracts/v11/cases/watchdog/watchdog-expired-quiet-window-escalates.case.json",
   "tests/contracts/v11/cases/watchdog/watchdog-expired-quiet-window-escalates-v11.case.json",
-  "tests/contracts/v11/cases/watchdog/watchdog-expired-missing-session-escalates.case.json",
   "tests/contracts/v11/cases/watchdog/watchdog-expired-missing-session-escalates-v11.case.json",
-  "tests/contracts/v11/cases/watchdog/watchdog-expired-unreadable-pane-escalates.case.json",
   "tests/contracts/v11/cases/watchdog/watchdog-expired-unreadable-pane-escalates-v11.case.json",
-  "tests/contracts/v11/cases/watchdog/watchdog-meta-review-authority-expired.case.json",
   "tests/contracts/v11/cases/watchdog/watchdog-meta-review-authority-expired-v11.case.json",
-  "tests/contracts/v11/cases/watchdog/watchdog-meta-review-authority-before-deadline-delivery-failed.case.json",
   "tests/contracts/v11/cases/watchdog/watchdog-meta-review-authority-before-deadline-delivery-failed-v11.case.json",
-  "tests/contracts/v11/cases/watchdog/watchdog-meta-review-authority-expired-after-rebind.case.json",
   "tests/contracts/v11/cases/watchdog/watchdog-meta-review-authority-expired-after-rebind-v11.case.json"
 ] as const;
 
@@ -52,12 +43,12 @@ describe("v11 watchdog contract harness skeleton", () => {
     const casePath = resolve(process.cwd(), watchdogCaseSources[0]);
     const caseDef = await readContractCase(casePath);
     expect(caseDef.command).toBe("watchdog");
-    expect(caseDef.mode).toBe("baseline");
+    expect(caseDef.mode).toBe("v11");
     expect(caseDef.expected.status).toBe("ok");
   });
 
   it(
-    "executes baseline and v11 assertions via shared runner",
+    "executes watchdog v11 assertions via shared runner",
     { timeout: CONTRACT_TEST_TIMEOUT.parityHeavyMs },
     async () => {
     const casePaths = watchdogCaseSources.map((source) =>
@@ -67,26 +58,11 @@ describe("v11 watchdog contract harness skeleton", () => {
     for (const casePath of casePaths) {
       const caseDef = await readContractCase(casePath);
       const run = await runWatchdogContractCase(caseDef);
-      if (caseDef.mode === "baseline") {
-        expect(run.baseline?.status).toBe(caseDef.expected.status);
-        if (caseDef.expected.reasonCode !== undefined) {
-          expect(run.baseline?.reasonCode).toBe(caseDef.expected.reasonCode);
-        }
-        expect(run.v11).toBeUndefined();
-        continue;
+      expect(caseDef.mode).toBe("v11");
+      expect(run.v11?.status).toBe(caseDef.expected.status);
+      if (caseDef.expected.reasonCode !== undefined) {
+        expect(run.v11?.reasonCode).toBe(caseDef.expected.reasonCode);
       }
-      if (caseDef.mode === "v11") {
-        expect(run.v11?.status).toBe(caseDef.expected.status);
-        if (caseDef.expected.reasonCode !== undefined) {
-          expect(run.v11?.reasonCode).toBe(caseDef.expected.reasonCode);
-        }
-        expect(run.baseline).toBeUndefined();
-        continue;
-      }
-
-      expect(run.baseline).toBeDefined();
-      expect(run.v11).toBeDefined();
-      expect(run.baseline).toEqual(run.v11);
     }
     }
   );

@@ -3,8 +3,10 @@ import { createHash } from "node:crypto";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { runBubbleWatchdog } from "../../../src/core/bubble/watchdogBubble.js";
-import { runBubbleWatchdogV11 } from "../../../src/v11/application/watchdog/emitWatchdogV11.js";
+import {
+  runBubbleWatchdogV11,
+  type BubbleWatchdogV11Result
+} from "../../../src/v11/application/watchdog/emitWatchdogV11.js";
 import {
   buildRunningExecutionContext,
   metaReviewExecutionContextToRunningContext
@@ -35,7 +37,6 @@ export interface WatchdogContractOutput {
 
 export interface WatchdogContractRunResult {
   mode: ContractCase["mode"];
-  baseline?: WatchdogContractOutput;
   v11?: WatchdogContractOutput;
 }
 
@@ -89,7 +90,7 @@ function parseWatchdogCaseInput(input: ContractCase["input"]): ParsedWatchdogCas
 }
 
 function normalizeWatchdogResult(
-  result: Awaited<ReturnType<typeof runBubbleWatchdog>>
+  result: BubbleWatchdogV11Result
 ): WatchdogContractOutput {
   return {
     status: "ok",
@@ -136,18 +137,6 @@ function assertContractExpectedSubset(input: {
   ) {
     throw new Error(
       `${input.label}: stateSubset.state mismatch (expected=${expectedState}, actual=${input.output.stateSubset.state})`
-    );
-  }
-}
-
-function assertParityEquivalent(input: {
-  baseline: WatchdogContractOutput;
-  v11: WatchdogContractOutput;
-  caseId: string;
-}): void {
-  if (JSON.stringify(input.baseline) !== JSON.stringify(input.v11)) {
-    throw new Error(
-      `watchdog parity mismatch for case=${input.caseId}: baseline=${JSON.stringify(input.baseline)} v11=${JSON.stringify(input.v11)}`
     );
   }
 }
@@ -461,7 +450,7 @@ function buildWatchdogScenarioDependencies(
 
 async function executeWatchdogCase(input: {
   caseDef: ContractCase;
-  executor: typeof runBubbleWatchdog;
+  executor: typeof runBubbleWatchdogV11;
 }): Promise<WatchdogContractOutput> {
   const repoPath = await mkdtemp(join(tmpdir(), "pairflow-watchdog-contract-"));
   try {
@@ -550,64 +539,17 @@ export async function runWatchdogContractCase(
     );
   }
 
-  if (caseDef.mode === "baseline") {
-    const baseline = await executeWatchdogCase({
-      caseDef,
-      executor: runBubbleWatchdog
-    });
-    assertContractExpectedSubset({
-      output: baseline,
-      expected: caseDef.expected,
-      label: "baseline"
-    });
-    return {
-      mode: caseDef.mode,
-      baseline
-    };
-  }
-
-  if (caseDef.mode === "v11") {
-    const v11 = await executeWatchdogCase({
-      caseDef,
-      executor: runBubbleWatchdogV11
-    });
-    assertContractExpectedSubset({
-      output: v11,
-      expected: caseDef.expected,
-      label: "v11"
-    });
-    return {
-      mode: caseDef.mode,
-      v11
-    };
-  }
-
-  const baseline = await executeWatchdogCase({
-    caseDef,
-    executor: runBubbleWatchdog
-  });
   const v11 = await executeWatchdogCase({
     caseDef,
     executor: runBubbleWatchdogV11
   });
   assertContractExpectedSubset({
-    output: baseline,
-    expected: caseDef.expected,
-    label: "parity/baseline"
-  });
-  assertContractExpectedSubset({
     output: v11,
     expected: caseDef.expected,
-    label: "parity/v11"
-  });
-  assertParityEquivalent({
-    baseline,
-    v11,
-    caseId: caseDef.id
+    label: "v11"
   });
   return {
     mode: caseDef.mode,
-    baseline,
     v11
   };
 }
