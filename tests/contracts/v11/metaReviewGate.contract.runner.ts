@@ -7,8 +7,8 @@ import {
   applyMetaReviewGateOnConvergence,
   recoverMetaReviewGateFromSnapshot
 } from "../../../src/core/bubble/metaReviewGate.js";
-import { buildMetaReviewExecutionContext } from "../../../src/core/bubble/metaReviewExecutionContext.js";
 import { metaReviewExecutionContextToRunningContext } from "../../../src/v11/shared/state/executionContext.js";
+import { buildMetaReviewExecutionContext } from "../../../src/v11/shared/metaReview/metaReviewExecutionContext.js";
 import { readStateSnapshot, writeStateSnapshot } from "../../../src/v11/infrastructure/state/stateStore.js";
 import {
   applyMetaReviewGateOnConvergenceV11,

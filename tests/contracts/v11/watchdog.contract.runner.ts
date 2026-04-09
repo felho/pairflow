@@ -5,11 +5,11 @@ import { join } from "node:path";
 
 import { runBubbleWatchdog } from "../../../src/core/bubble/watchdogBubble.js";
 import { runBubbleWatchdogV11 } from "../../../src/v11/application/watchdog/emitWatchdogV11.js";
-import { buildMetaReviewExecutionContext } from "../../../src/core/bubble/metaReviewExecutionContext.js";
 import {
   buildRunningExecutionContext,
   metaReviewExecutionContextToRunningContext
 } from "../../../src/v11/shared/state/executionContext.js";
+import { buildMetaReviewExecutionContext } from "../../../src/v11/shared/metaReview/metaReviewExecutionContext.js";
 import {
   writeWatchdogPaneActivity
 } from "../../../src/v11/infrastructure/artifact/watchdog/watchdogPaneActivityStore.js";
