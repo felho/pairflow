@@ -1,10 +1,10 @@
 export {
   asAskHumanCommandError as asAskHumanCommandErrorV11,
-  AskHumanCommandError as AskHumanCommandErrorV11,
   emitAskHumanFromWorkspace as emitAskHumanFromWorkspaceV11
-} from "../../../core/agent/askHuman.js";
+} from "./askHumanCommandApi.js";
+export { AskHumanCommandError as AskHumanCommandErrorV11 } from "../../shared/askHuman/askHumanCommandRuntime.js";
 export type {
   EmitAskHumanDependencies as EmitAskHumanV11Dependencies,
   EmitAskHumanInput as EmitAskHumanV11Input,
   EmitAskHumanResult as EmitAskHumanV11Result
-} from "../../../core/agent/askHuman.js";
+} from "../../shared/askHuman/askHumanCommandContract.js";

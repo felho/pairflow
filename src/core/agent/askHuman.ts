@@ -1,10 +1,11 @@
 export {
-  asAskHumanCommandError,
-  emitAskHumanFromWorkspace
-} from "../../v11/application/askHuman/askHumanCommandApi.js";
-export { AskHumanCommandError } from "../../v11/shared/askHuman/askHumanCommandRuntime.js";
+  asAskHumanCommandErrorV11 as asAskHumanCommandError,
+  AskHumanCommandErrorV11 as AskHumanCommandError,
+  emitAskHumanFromWorkspaceV11 as emitAskHumanFromWorkspace
+} from "../../v11/application/askHuman/emitAskHumanV11.js";
 export type {
-  EmitAskHumanDependencies,
-  EmitAskHumanInput,
-  EmitAskHumanResult
-} from "../../v11/shared/askHuman/askHumanCommandContract.js";
+  EmitAskHumanV11Dependencies as EmitAskHumanDependencies,
+  EmitAskHumanV11Input as EmitAskHumanInput,
+  EmitAskHumanV11Result as EmitAskHumanResult
+} from "../../v11/application/askHuman/emitAskHumanV11.js";
+export { askHumanDependencyDefaults } from "./askHumanDefaults.js";

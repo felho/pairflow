@@ -62,6 +62,12 @@ These numbers are triage inputs, not yet a finalized ledger.
 - after the meta-review-gate shared type-port batch:
   - total direct residual imports: `185`
   - retired-shim subset: `7`
+- after `9f4462d6 refactor(open): move wrapper defaults to core perimeter`:
+  - total direct residual imports: `173`
+  - retired-shim subset: `7`
+- after the `askHuman` defaults-owner split plus façade realignment:
+  - total direct residual imports: `171`
+  - retired-shim subset: `7`
 
 Latest validated state:
 
@@ -79,6 +85,8 @@ Current medium frontier after the latest easy/error-only waves:
 - `src/v11/application/delete/deleteBubbleSupport.ts`
 - `src/v11/application/converged/convergedDefaultDependencies.ts`
 - `src/v11/application/converged/convergedValidationPreparation.ts`
+- `src/v11/application/askHuman/askHumanFinalizationDependencyDefaults.ts`
+- `src/v11/application/askHuman/askHumanRoutingPreparationDependencyDefaults.ts`
 - `src/v11/application/watchdog/watchdogCommandApi.ts`
 - `src/v11/application/pass/reviewerDelivery.ts`
 - `src/v11/application/pass/normalPassAppendExecution.ts`
