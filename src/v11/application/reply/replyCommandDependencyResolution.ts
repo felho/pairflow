@@ -1,11 +1,52 @@
+import { appendProtocolEnvelope } from "../../shared/transcript/transcriptDependencyDefaults.js";
+import { writeStateSnapshot } from "../../shared/state/stateStoreDefaults.js";
 import type { EmitHumanReplyDependencies } from "./replyCommandContract.js";
+import { startCommandContextDefaults } from "../start/startCommandDependencyDefaults.js";
+import { reviewerDeliveryDefaults } from "../pass/reviewerDeliveryDefaults.js";
 
-const replyBubbleDependencyDefaultsPromise = import(
-  "../../../core/bubble/replyBubbleDefaults.js"
-).then(({ replyBubbleDependencyDefaults }) => replyBubbleDependencyDefaults);
+async function emitTmuxDeliveryNotification(
+  ...args: Parameters<typeof reviewerDeliveryDefaults.emitTmuxDeliveryNotification>
+): Promise<
+  Awaited<ReturnType<typeof reviewerDeliveryDefaults.emitTmuxDeliveryNotification>>
+> {
+  return reviewerDeliveryDefaults.emitTmuxDeliveryNotification(...args);
+}
 
-const replyBubbleDependencyDefaults =
-  await replyBubbleDependencyDefaultsPromise;
+async function ensureBubbleInstanceIdForMutation(
+  ...args: Parameters<typeof startCommandContextDefaults.ensureBubbleInstanceIdForMutation>
+): Promise<
+  Awaited<ReturnType<typeof startCommandContextDefaults.ensureBubbleInstanceIdForMutation>>
+> {
+  return startCommandContextDefaults.ensureBubbleInstanceIdForMutation(...args);
+}
+
+async function readStateSnapshot(
+  ...args: Parameters<typeof startCommandContextDefaults.readStateSnapshot>
+): Promise<Awaited<ReturnType<typeof startCommandContextDefaults.readStateSnapshot>>> {
+  return startCommandContextDefaults.readStateSnapshot(...args);
+}
+
+async function resolveBubbleById(
+  ...args: Parameters<typeof startCommandContextDefaults.resolveBubbleById>
+): Promise<Awaited<ReturnType<typeof startCommandContextDefaults.resolveBubbleById>>> {
+  return startCommandContextDefaults.resolveBubbleById(...args);
+}
+
+function resolveDeliveryMessageRef(
+  ...args: Parameters<typeof reviewerDeliveryDefaults.resolveDeliveryMessageRef>
+): ReturnType<typeof reviewerDeliveryDefaults.resolveDeliveryMessageRef> {
+  return reviewerDeliveryDefaults.resolveDeliveryMessageRef(...args);
+}
+
+const replyCommandDependencyDefaults = {
+  appendProtocolEnvelope,
+  emitTmuxDeliveryNotification,
+  ensureBubbleInstanceIdForMutation,
+  readStateSnapshot,
+  resolveBubbleById,
+  resolveDeliveryMessageRef,
+  writeStateSnapshot
+} as const;
 
 export interface ResolvedReplyCommandDependencies {
   appendProtocolEnvelope: NonNullable<EmitHumanReplyDependencies["appendProtocolEnvelope"]>;
@@ -29,21 +70,21 @@ export function resolveReplyCommandDependencies(
   return {
     appendProtocolEnvelope:
       dependencies.appendProtocolEnvelope
-      ?? replyBubbleDependencyDefaults.appendProtocolEnvelope,
+      ?? replyCommandDependencyDefaults.appendProtocolEnvelope,
     emitTmuxDeliveryNotification:
       dependencies.emitTmuxDeliveryNotification
-      ?? replyBubbleDependencyDefaults.emitTmuxDeliveryNotification,
+      ?? replyCommandDependencyDefaults.emitTmuxDeliveryNotification,
     ensureBubbleInstanceIdForMutation:
       dependencies.ensureBubbleInstanceIdForMutation
-      ?? replyBubbleDependencyDefaults.ensureBubbleInstanceIdForMutation,
+      ?? replyCommandDependencyDefaults.ensureBubbleInstanceIdForMutation,
     readStateSnapshot:
-      dependencies.readStateSnapshot ?? replyBubbleDependencyDefaults.readStateSnapshot,
+      dependencies.readStateSnapshot ?? replyCommandDependencyDefaults.readStateSnapshot,
     resolveBubbleById:
-      dependencies.resolveBubbleById ?? replyBubbleDependencyDefaults.resolveBubbleById,
+      dependencies.resolveBubbleById ?? replyCommandDependencyDefaults.resolveBubbleById,
     resolveDeliveryMessageRef:
       dependencies.resolveDeliveryMessageRef
-      ?? replyBubbleDependencyDefaults.resolveDeliveryMessageRef,
+      ?? replyCommandDependencyDefaults.resolveDeliveryMessageRef,
     writeStateSnapshot:
-      dependencies.writeStateSnapshot ?? replyBubbleDependencyDefaults.writeStateSnapshot
+      dependencies.writeStateSnapshot ?? replyCommandDependencyDefaults.writeStateSnapshot
   };
 }
