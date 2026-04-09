@@ -6,16 +6,18 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { createBubble } from "../../../src/core/bubble/createBubble.js";
-import { buildMetaReviewExecutionContext } from "../../../src/core/bubble/metaReviewExecutionContext.js";
-import { MetaReviewGateError } from "../../../src/core/bubble/metaReviewGate.js";
-import { emitAskHumanFromWorkspace } from "../../../src/core/agent/askHuman.js";
-import { emitRequestRework } from "../../../src/core/human/approval.js";
+import { MetaReviewGateErrorV11 as MetaReviewGateError } from "../../../src/v11/application/metaReviewGate/emitMetaReviewGateV11.js";
+import {
+  emitAskHumanFromWorkspaceV11 as emitAskHumanFromWorkspace
+} from "../../../src/v11/application/askHuman/emitAskHumanV11.js";
+import { emitRequestReworkV11 as emitRequestRework } from "../../../src/v11/application/approval/emitApprovalV11.js";
 import { readTranscriptEnvelopes } from "../../../src/v11/infrastructure/artifact/transcript/transcriptStore.js";
 import {
   readRuntimeSessionsRegistry,
   upsertRuntimeSession
 } from "../../../src/v11/infrastructure/executor/sessionRuntime/runtimeSessionsRegistry.js";
 import { setMetaReviewerPaneBinding } from "../../../src/v11/infrastructure/channel/tmux/metaReviewerPaneBinding.js";
+import { buildMetaReviewExecutionContext } from "../../../src/v11/shared/metaReview/metaReviewExecutionContext.js";
 import { metaReviewExecutionContextToRunningContext } from "../../../src/v11/shared/state/executionContext.js";
 import { applyStateTransition } from "../../../src/v11/domain/state/machine.js";
 import { readStateSnapshot, writeStateSnapshot } from "../../../src/v11/infrastructure/state/stateStore.js";
