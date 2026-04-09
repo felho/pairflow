@@ -168,6 +168,16 @@ These numbers are triage inputs, not yet a finalized ledger.
   - the remaining frontier is now mostly:
     `merge`, `metaReviewGate`, `open`, `reply`, `restart`, `start`,
     `routerDependencies`, and the intentional shared wrapper bridges
+- after the `merge + start` perimeter wave plus the shared
+  `metrics/transcript/metaReview` lazy-wrapper batch:
+  - total direct residual imports: `13`
+  - `startCommandPromptRuntime`, the merge dependency bridge, and the shared
+    `metrics`, `transcript`, and `metaReview` wrapper modules no longer carry
+    static `src/core/**` imports
+  - the residual frontier is now concentrated in:
+    `metaReviewGate`, `open`, `reply`, `restart`, `routerDependencies`,
+    `askHumanDependencyDefaults`, `docContractGateArtifactDefaults`,
+    `stateStoreDefaults`, and `statusCommandDependencyDefaults`
 - after the `merge` dependency-resolution lazy-load batch:
   - total direct residual imports: `21`
   - `resolveMergeCommandDependencies` and `mergeBubbleCommandOrchestration`

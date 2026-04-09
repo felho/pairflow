@@ -1,11 +1,22 @@
 import { resolve } from "node:path";
 
 import { type MetricsActorRole } from "../../../types/metrics.js";
-import { bubbleEventsDefaults } from "../../../core/metrics/bubbleEventsDefaults.js";
 import { createMetricsEvent } from "./events.js";
 import {
   type AppendMetricsEventResult
 } from "./eventsStorePort.js";
+
+type BubbleEventsDefaults =
+  typeof import("../../../core/metrics/bubbleEventsDefaults.js").bubbleEventsDefaults;
+
+let bubbleEventsDefaultsPromise: Promise<BubbleEventsDefaults> | undefined;
+
+async function loadBubbleEventsDefaults(): Promise<BubbleEventsDefaults> {
+  bubbleEventsDefaultsPromise ??= import(
+    "../../../core/metrics/bubbleEventsDefaults.js"
+  ).then(({ bubbleEventsDefaults }) => bubbleEventsDefaults);
+  return bubbleEventsDefaultsPromise;
+}
 
 export interface EmitBubbleLifecycleEventInput {
   repoPath: string;
@@ -47,6 +58,7 @@ export function clearReportedBubbleEventWarnings(): void {
 export async function emitBubbleLifecycleEvent(
   input: EmitBubbleLifecycleEventInput
 ): Promise<AppendMetricsEventResult> {
+  const bubbleEventsDefaults = await loadBubbleEventsDefaults();
   const normalizedRepoPath = await bubbleEventsDefaults.normalizeRepoPath(
     resolve(input.repoPath)
   );
