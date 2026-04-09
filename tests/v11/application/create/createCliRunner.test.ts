@@ -25,7 +25,7 @@ describe("create CLI runner", () => {
   it("uses the caller-boundary repo registry default when no override is provided", async () => {
     const createBubble = vi.fn(async () => ({
       bubbleId: "b_create_runner_01"
-    }) as Promise<BubbleCreateResult>);
+    }) as unknown as BubbleCreateResult);
 
     const result = await runBubbleCreateCommand(
       [
