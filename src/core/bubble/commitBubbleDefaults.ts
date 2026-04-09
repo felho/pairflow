@@ -2,7 +2,7 @@ import { appendProtocolEnvelope, readTranscriptEnvelopes } from "../protocol/tra
 import { ensureBubbleInstanceIdForMutation } from "../../v11/infrastructure/artifact/bubble/bubbleInstanceId.js";
 import { resolveBubbleById } from "./bubbleLookup.js";
 import { readStateSnapshot, writeStateSnapshot } from "../state/stateStore.js";
-import { runGit } from "../workspace/git.js";
+import { runGit } from "../../v11/infrastructure/workspace/git.js";
 
 export const commitBubbleDependencyDefaults = {
   appendProtocolEnvelope,

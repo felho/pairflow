@@ -1,4 +1,7 @@
-import { bootstrapWorktreeWorkspace, cleanupWorktreeWorkspace } from "../workspace/worktreeManager.js";
+import {
+  bootstrapWorktreeWorkspace,
+  cleanupWorktreeWorkspace
+} from "../../v11/infrastructure/workspace/worktreeManager.js";
 import {
   launchBubbleTmuxSession,
   terminateBubbleTmuxSession

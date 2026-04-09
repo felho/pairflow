@@ -13,9 +13,9 @@ import {
   terminateBubbleTmuxSession
 } from "../runtime/tmuxManager.js";
 import { readStateSnapshot } from "../state/stateStore.js";
-import { cleanupWorktreeWorkspace } from "../workspace/worktreeManager.js";
-import { pathExists } from "../util/pathExists.js";
-import { branchExists } from "../workspace/git.js";
+import { cleanupWorktreeWorkspace } from "../../v11/infrastructure/workspace/worktreeManager.js";
+import { pathExists } from "../../v11/infrastructure/foundation/fs/pathExists.js";
+import { branchExists } from "../../v11/infrastructure/workspace/git.js";
 
 export const deleteBubbleDependencyDefaults = {
   buildBubbleTmuxSessionName,
