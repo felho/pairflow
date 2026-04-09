@@ -1,3 +1,3 @@
-import { convergedDependencyDefaults } from "../../../core/agent/convergedDefaults.js";
+import { convergedDependencyDefaults } from "../../shared/converged/convergedDependencyDefaults.js";
 
 export { convergedDependencyDefaults };
