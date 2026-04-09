@@ -1,45 +1,44 @@
-import { resolveBubbleById } from "../../../core/bubble/bubbleLookup.js";
-import { ensureBubbleInstanceIdForMutation } from "../../../core/bubble/bubbleInstanceId.js";
-import { readStateSnapshot, writeStateSnapshot } from "../../../core/state/stateStore.js";
-import { branchExists, runGit } from "../../../core/workspace/git.js";
-import { cleanupWorktreeWorkspace } from "../../../core/workspace/worktreeManager.js";
-import { terminateBubbleTmuxSession } from "../../../core/runtime/tmuxManager.js";
-import { removeRuntimeSession } from "../../../core/runtime/sessionsRegistry.js";
-import { emitBubbleLifecycleEventBestEffort } from "../../shared/metrics/bubbleEvents.js";
+import { mergeBubbleDependencyDefaults } from "../../../core/bubble/mergeBubbleDefaults.js";
 import type { MergeBubbleDependencies } from "./mergeCommandContract.js";
 
 export interface ResolvedMergeCommandDependencies {
-  runGit: typeof runGit;
-  resolveBubbleById: typeof resolveBubbleById;
-  readStateSnapshot: typeof readStateSnapshot;
-  writeStateSnapshot: typeof writeStateSnapshot;
-  branchExists: typeof branchExists;
-  terminateBubbleTmuxSession: typeof terminateBubbleTmuxSession;
-  removeRuntimeSession: typeof removeRuntimeSession;
-  cleanupWorktreeWorkspace: typeof cleanupWorktreeWorkspace;
-  ensureBubbleInstanceIdForMutation: typeof ensureBubbleInstanceIdForMutation;
-  emitBubbleLifecycleEventBestEffort: typeof emitBubbleLifecycleEventBestEffort;
+  runGit: typeof mergeBubbleDependencyDefaults.runGit;
+  resolveBubbleById: typeof mergeBubbleDependencyDefaults.resolveBubbleById;
+  readStateSnapshot: typeof mergeBubbleDependencyDefaults.readStateSnapshot;
+  writeStateSnapshot: typeof mergeBubbleDependencyDefaults.writeStateSnapshot;
+  branchExists: typeof mergeBubbleDependencyDefaults.branchExists;
+  terminateBubbleTmuxSession: typeof mergeBubbleDependencyDefaults.terminateBubbleTmuxSession;
+  removeRuntimeSession: typeof mergeBubbleDependencyDefaults.removeRuntimeSession;
+  cleanupWorktreeWorkspace: typeof mergeBubbleDependencyDefaults.cleanupWorktreeWorkspace;
+  ensureBubbleInstanceIdForMutation: typeof mergeBubbleDependencyDefaults.ensureBubbleInstanceIdForMutation;
+  emitBubbleLifecycleEventBestEffort: typeof mergeBubbleDependencyDefaults.emitBubbleLifecycleEventBestEffort;
 }
 
 export function resolveMergeCommandDependencies(
   dependencies: MergeBubbleDependencies = {}
 ): ResolvedMergeCommandDependencies {
   return {
-    runGit: dependencies.runGit ?? runGit,
-    resolveBubbleById: dependencies.resolveBubbleById ?? resolveBubbleById,
-    readStateSnapshot: dependencies.readStateSnapshot ?? readStateSnapshot,
-    writeStateSnapshot: dependencies.writeStateSnapshot ?? writeStateSnapshot,
-    branchExists: dependencies.branchExists ?? branchExists,
+    runGit: dependencies.runGit ?? mergeBubbleDependencyDefaults.runGit,
+    resolveBubbleById:
+      dependencies.resolveBubbleById ?? mergeBubbleDependencyDefaults.resolveBubbleById,
+    readStateSnapshot:
+      dependencies.readStateSnapshot ?? mergeBubbleDependencyDefaults.readStateSnapshot,
+    writeStateSnapshot:
+      dependencies.writeStateSnapshot ?? mergeBubbleDependencyDefaults.writeStateSnapshot,
+    branchExists: dependencies.branchExists ?? mergeBubbleDependencyDefaults.branchExists,
     terminateBubbleTmuxSession:
-      dependencies.terminateBubbleTmuxSession ?? terminateBubbleTmuxSession,
-    removeRuntimeSession: dependencies.removeRuntimeSession ?? removeRuntimeSession,
+      dependencies.terminateBubbleTmuxSession
+      ?? mergeBubbleDependencyDefaults.terminateBubbleTmuxSession,
+    removeRuntimeSession:
+      dependencies.removeRuntimeSession ?? mergeBubbleDependencyDefaults.removeRuntimeSession,
     cleanupWorktreeWorkspace:
-      dependencies.cleanupWorktreeWorkspace ?? cleanupWorktreeWorkspace,
+      dependencies.cleanupWorktreeWorkspace
+      ?? mergeBubbleDependencyDefaults.cleanupWorktreeWorkspace,
     ensureBubbleInstanceIdForMutation:
       dependencies.ensureBubbleInstanceIdForMutation
-      ?? ensureBubbleInstanceIdForMutation,
+      ?? mergeBubbleDependencyDefaults.ensureBubbleInstanceIdForMutation,
     emitBubbleLifecycleEventBestEffort:
       dependencies.emitBubbleLifecycleEventBestEffort
-      ?? emitBubbleLifecycleEventBestEffort
+      ?? mergeBubbleDependencyDefaults.emitBubbleLifecycleEventBestEffort
   };
 }
