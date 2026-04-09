@@ -1,5 +1,5 @@
 import { ensureBubbleInstanceIdForMutation } from "../../v11/infrastructure/artifact/bubble/bubbleInstanceId.js";
-import { resolveBubbleFromWorkspaceCwd } from "./workspaceResolution.js";
+import { resolveBubbleFromWorkspaceCwd } from "../../v11/infrastructure/executor/workspace/workspaceResolution.js";
 import { readStateSnapshot } from "../state/stateStore.js";
 
 export type {
@@ -7,7 +7,7 @@ export type {
 } from "../../v11/infrastructure/artifact/bubble/bubbleInstanceId.js";
 export type {
   ResolvedBubbleWorkspace
-} from "./workspaceResolution.js";
+} from "../../v11/infrastructure/executor/workspace/workspaceResolution.js";
 export type {
   LoadedStateSnapshot
 } from "../state/stateStore.js";

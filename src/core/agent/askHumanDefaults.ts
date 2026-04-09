@@ -2,7 +2,7 @@ import { applyStateTransition } from "../../v11/domain/state/machine.js";
 import { emitBubbleNotification } from "../../v11/infrastructure/channel/notifications.js";
 import { emitBubbleLifecycleEventBestEffort } from "../../v11/shared/metrics/bubbleEvents.js";
 import { ensureBubbleInstanceIdForMutation } from "../../v11/infrastructure/artifact/bubble/bubbleInstanceId.js";
-import { resolveBubbleFromWorkspaceCwd } from "../bubble/workspaceResolution.js";
+import { resolveBubbleFromWorkspaceCwd } from "../../v11/infrastructure/executor/workspace/workspaceResolution.js";
 import { appendProtocolEnvelope } from "../protocol/transcriptStore.js";
 import {
   emitTmuxDeliveryNotification,
