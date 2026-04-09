@@ -1,8 +1,12 @@
 import { join } from "node:path";
+import { writeSummaryVerifierConsistencyGateArtifact as writeSummaryVerifierConsistencyGateArtifactDefault } from "../../defaults/reviewer/summaryVerifierConsistencyGateDefaults.js";
 
 import { isReviewArtifactType, type ReviewArtifactType } from "../../../types/bubble.js";
-
-export const summaryVerifierConsistencyGateSchemaVersion = 1 as const;
+import {
+  summaryVerifierConsistencyGateSchemaVersion,
+  type SummaryVerifierConsistencyGateArtifact
+} from "./summaryVerifierConsistencyGateArtifact.js";
+export { summaryVerifierConsistencyGateSchemaVersion } from "./summaryVerifierConsistencyGateArtifact.js";
 
 export type SummaryVerifierGateDecision = "allow" | "block" | "not_applicable";
 
@@ -29,14 +33,6 @@ export interface SummaryVerifierConsistencyGateDecisionInput {
   reviewArtifactType?: string | undefined;
   verifierStatus: string | undefined;
   verifierOriginReason?: string | undefined;
-}
-
-export interface SummaryVerifierConsistencyGateArtifact
-  extends SummaryVerifierConsistencyGateDecisionRecord {
-  schema_version: typeof summaryVerifierConsistencyGateSchemaVersion;
-  bubble_id: string;
-  round: number;
-  evaluated_at: string;
 }
 
 const claimClassOrder: RuntimeClaimClass[] = ["test", "typecheck", "lint"];
@@ -216,6 +212,5 @@ export async function writeSummaryVerifierConsistencyGateArtifact(
   artifactPath: string,
   artifact: SummaryVerifierConsistencyGateArtifact
 ): Promise<void> {
-  const compat = await import("../../../core/reviewer/summaryVerifierConsistencyGate.js");
-  return compat.writeSummaryVerifierConsistencyGateArtifact(artifactPath, artifact);
+  return writeSummaryVerifierConsistencyGateArtifactDefault(artifactPath, artifact);
 }
