@@ -1,5 +1,5 @@
 import { resolveBubbleById } from "./bubbleLookup.js";
-import { ensureBubbleInstanceIdForMutation } from "./bubbleInstanceId.js";
+import { ensureBubbleInstanceIdForMutation } from "../../v11/infrastructure/artifact/bubble/bubbleInstanceId.js";
 import { readStateSnapshot, writeStateSnapshot } from "../state/stateStore.js";
 import { branchExists, runGit } from "../workspace/git.js";
 import { cleanupWorktreeWorkspace } from "../workspace/worktreeManager.js";

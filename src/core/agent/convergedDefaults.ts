@@ -1,8 +1,8 @@
+import { emitBubbleNotification } from "../../v11/infrastructure/channel/notifications.js";
 import { appendProtocolEnvelope, readTranscriptEnvelopes } from "../protocol/transcriptStore.js";
-import { ensureBubbleInstanceIdForMutation } from "../bubble/bubbleInstanceId.js";
+import { ensureBubbleInstanceIdForMutation } from "../../v11/infrastructure/artifact/bubble/bubbleInstanceId.js";
 import { resolveBubbleFromWorkspaceCwd } from "../bubble/workspaceResolution.js";
 import { assessPairflowCommandPath } from "../runtime/pairflowCommand.js";
-import { emitBubbleNotification } from "../runtime/notifications.js";
 import {
   emitTmuxDeliveryNotification,
   resolveDeliveryMessageRef

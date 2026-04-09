@@ -1,6 +1,6 @@
 import { appendProtocolEnvelope, readTranscriptEnvelopes } from "../protocol/transcriptStore.js";
-import { ensureBubbleInstanceIdForMutation } from "../bubble/bubbleInstanceId.js";
-import { resolveBubbleById } from "../bubble/bubbleLookup.js";
+import { ensureBubbleInstanceIdForMutation } from "../../v11/infrastructure/artifact/bubble/bubbleInstanceId.js";
+import { resolveBubbleById } from "../../v11/infrastructure/executor/workspace/bubbleLookup.js";
 import { readStateSnapshot, writeStateSnapshot } from "../state/stateStore.js";
 import { runGit } from "../workspace/git.js";
 import { commitBubbleV11 } from "../../v11/application/commit/emitCommitV11.js";

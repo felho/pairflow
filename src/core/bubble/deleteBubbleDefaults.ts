@@ -1,6 +1,6 @@
 import { createArchiveSnapshot } from "../../v11/infrastructure/artifact/archive/archiveSnapshot.js";
 import { upsertDeletedArchiveIndexEntry } from "../../v11/infrastructure/artifact/archive/archiveIndex.js";
-import { ensureBubbleInstanceIdForMutation } from "./bubbleInstanceId.js";
+import { ensureBubbleInstanceIdForMutation } from "../../v11/infrastructure/artifact/bubble/bubbleInstanceId.js";
 import { resolveBubbleById } from "./bubbleLookup.js";
 import {
   readRuntimeSessionsRegistry,

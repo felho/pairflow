@@ -15,7 +15,7 @@ import {
   maybeAcceptClaudeTrustPrompt,
   sendAndSubmitTmuxPaneMessage,
   submitTmuxPaneInput
-} from "../runtime/tmuxInput.js";
+} from "../../v11/infrastructure/channel/tmux/tmuxInput.js";
 import { respawnTmuxPaneCommand } from "../runtime/tmuxManager.js";
 
 export const metaReviewGateDependencyDefaults = {

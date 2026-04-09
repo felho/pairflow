@@ -4,7 +4,7 @@ import {
   maybeAcceptClaudeTrustPrompt,
   sendAndSubmitTmuxPaneMessage,
   submitTmuxPaneInput
-} from "./tmuxInput.js";
+} from "../../v11/infrastructure/channel/tmux/tmuxInput.js";
 import { respawnTmuxPaneCommand, runTmux } from "./tmuxManager.js";
 
 export const metaReviewGateRuntimeDefaults = {

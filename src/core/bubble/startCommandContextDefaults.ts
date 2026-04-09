@@ -1,4 +1,4 @@
-import { ensureBubbleInstanceIdForMutation } from "./bubbleInstanceId.js";
+import { ensureBubbleInstanceIdForMutation } from "../../v11/infrastructure/artifact/bubble/bubbleInstanceId.js";
 import { resolveBubbleById } from "./bubbleLookup.js";
 import { readStateSnapshot } from "../state/stateStore.js";
 

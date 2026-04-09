@@ -2,7 +2,7 @@ import {
   normalizeRepoPath,
   RepoResolutionError,
   resolveRepoPath
-} from "../bubble/repoResolution.js";
+} from "../../v11/infrastructure/executor/workspace/repoResolution.js";
 import { inspectStateSnapshot } from "../state/stateStore.js";
 import { readRuntimeSessionsRegistry } from "../runtime/sessionsRegistry.js";
 import { readWatchdogPaneActivity } from "../watchdog/watchdogPaneActivityStore.js";
