@@ -10,6 +10,7 @@ import { submitMetaReviewResult } from "../../../src/core/bubble/metaReview.js";
 import { emitApprove } from "../../../src/core/human/approval.js";
 import { readStateSnapshot } from "../../../src/core/state/stateStore.js";
 import { commitBubbleV11 } from "../../../src/v11/application/commit/emitCommitV11.js";
+import { buildCommitBubbleDependencies } from "../../helpers/commit.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
 import { initGitRepository } from "../../helpers/git.js";
 import type { ContractCase, ContractCaseExpected } from "./schema.js";
@@ -286,6 +287,12 @@ async function setupApprovedBubble(repoPath: string, bubbleId: string) {
   return bubble;
 }
 
+function commitBubbleV11WithDefaults(
+  input: Parameters<typeof commitBubbleV11>[0]
+): ReturnType<typeof commitBubbleV11> {
+  return commitBubbleV11(input, buildCommitBubbleDependencies());
+}
+
 async function executeCommitCase(input: {
   caseDef: ContractCase;
   executor: typeof commitBubble;
@@ -370,7 +377,7 @@ export async function runCommitContractCase(
   if (caseDef.mode === "v11") {
     const v11 = await executeCommitCase({
       caseDef,
-      executor: commitBubbleV11
+      executor: commitBubbleV11WithDefaults
     });
     assertContractExpectedSubset({
       output: v11,
@@ -389,7 +396,7 @@ export async function runCommitContractCase(
   });
   const v11 = await executeCommitCase({
     caseDef,
-    executor: commitBubbleV11
+    executor: commitBubbleV11WithDefaults
   });
   assertContractExpectedSubset({
     output: baseline,

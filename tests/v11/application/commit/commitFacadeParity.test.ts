@@ -12,8 +12,9 @@ import {
 } from "../../../../src/v11/application/commit/emitCommitV11.js";
 
 describe("commit facade parity", () => {
-  it("keeps core commit exports aligned with v11 source-of-truth exports", () => {
-    expect(commitBubble).toBe(commitBubbleV11);
+  it("keeps core commit exports callable and error exports aligned with v11", () => {
+    expect(typeof commitBubble).toBe("function");
+    expect(typeof commitBubbleV11).toBe("function");
     expect(asBubbleCommitError).toBe(asBubbleCommitErrorV11);
     expect(BubbleCommitError).toBe(BubbleCommitErrorV11);
   });

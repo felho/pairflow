@@ -33,10 +33,10 @@ export {
   getBubbleInboxV11 as getBubbleInbox
 } from "./v11/application/inbox/emitInboxV11.js";
 export {
-  asBubbleCommitErrorV11 as asBubbleCommitError,
-  BubbleCommitErrorV11 as BubbleCommitError,
-  commitBubbleV11 as commitBubble
-} from "./v11/application/commit/emitCommitV11.js";
+  asBubbleCommitError,
+  BubbleCommitError
+} from "./core/bubble/commitBubble.js";
+export { commitBubble } from "./core/bubble/commitBubble.js";
 export {
   asBubbleMergeErrorV11 as asBubbleMergeError,
   BubbleMergeErrorV11 as BubbleMergeError,

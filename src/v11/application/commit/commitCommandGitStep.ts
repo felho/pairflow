@@ -1,9 +1,9 @@
-import { runGit } from "../../../core/workspace/git.js";
 import type { CommitBubbleInput } from "./commitCommandContract.js";
 import type {
   CommitGitResult,
   CommitRuntimeContext
 } from "./commitCommandApiContract.js";
+import type { RunGitPort } from "../../shared/ports/git.js";
 import { BubbleCommitError } from "./commitCommandRuntime.js";
 import {
   assertStagedFilesWithinWorktree,
@@ -15,14 +15,18 @@ export async function runCommitGitStep(input: {
   command: CommitBubbleInput;
   context: CommitRuntimeContext;
   auto: boolean;
+  runGit: RunGitPort;
 }): Promise<CommitGitResult> {
   if (input.auto) {
-    await runGit(["add", "-A"], {
+    await input.runGit(["add", "-A"], {
       cwd: input.context.resolved.bubblePaths.worktreePath
     });
   }
 
-  const stagedFiles = await collectStagedFiles(input.context.resolved.bubblePaths.worktreePath);
+  const stagedFiles = await collectStagedFiles(
+    input.context.resolved.bubblePaths.worktreePath,
+    input.runGit
+  );
   if (stagedFiles.length === 0) {
     throw new BubbleCommitError(
       formatCommitErrorMessage({
@@ -48,11 +52,11 @@ export async function runCommitGitStep(input: {
   );
 
   const commitMessage = input.command.message ?? `bubble(${input.context.resolved.bubbleId}): finalize`;
-  await runGit(["commit", "-m", commitMessage], {
+  await input.runGit(["commit", "-m", commitMessage], {
     cwd: input.context.resolved.bubblePaths.worktreePath
   });
   const commitSha = (
-    await runGit(["rev-parse", "HEAD"], {
+    await input.runGit(["rev-parse", "HEAD"], {
       cwd: input.context.resolved.bubblePaths.worktreePath
     })
   ).stdout.trim();

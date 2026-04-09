@@ -1,6 +1,6 @@
 import { isAbsolute, resolve } from "node:path";
 
-import { runGit } from "../../../core/workspace/git.js";
+import type { RunGitPort } from "../../shared/ports/git.js";
 import { BubbleCommitError } from "./commitCommandRuntime.js";
 
 function isPathInside(parentPath: string, childPath: string): boolean {
@@ -20,7 +20,10 @@ export function formatCommitErrorMessage(input: {
   return `${input.reasonCode}: ${input.message} context=${JSON.stringify(input.context)}`;
 }
 
-export async function collectStagedFiles(worktreePath: string): Promise<string[]> {
+export async function collectStagedFiles(
+  worktreePath: string,
+  runGit: RunGitPort
+): Promise<string[]> {
   const staged = await runGit(["diff", "--cached", "--name-only"], {
     cwd: worktreePath
   });

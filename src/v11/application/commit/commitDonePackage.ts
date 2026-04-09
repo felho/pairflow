@@ -1,9 +1,7 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 
-import {
-  readTranscriptEnvelopes
-} from "../../../core/protocol/transcriptStore.js";
+import type { ReadTranscriptEnvelopesPort } from "../../shared/ports/transcript.js";
 import type { ProtocolEnvelope } from "../../../types/protocol.js";
 import { BubbleCommitError } from "./commitCommandRuntime.js";
 
@@ -115,6 +113,7 @@ export async function readOrCreateDonePackage(input: {
   autoGenerate: boolean;
   implementer: string;
   reviewer: string;
+  readTranscriptEnvelopes: ReadTranscriptEnvelopesPort;
 }): Promise<string> {
   const existing = await readFile(input.donePackagePath, "utf8").catch(
     (error: NodeJS.ErrnoException) => {
@@ -157,7 +156,7 @@ export async function readOrCreateDonePackage(input: {
     );
   }
 
-  const transcript = await readTranscriptEnvelopes(input.transcriptPath, {
+  const transcript = await input.readTranscriptEnvelopes(input.transcriptPath, {
     allowMissing: true,
     toleratePartialFinalLine: true
   });

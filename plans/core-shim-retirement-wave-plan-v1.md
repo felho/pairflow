@@ -68,6 +68,10 @@ These numbers are triage inputs, not yet a finalized ledger.
 - after the `askHuman` defaults-owner split plus façade realignment:
   - total direct residual imports: `171`
   - retired-shim subset: `7`
+- after the first bounded `commit` perimeter-wrapper batch:
+  - total direct residual imports: `165`
+  - retired-shim subset: `7`
+  - commit consumer lane now routes through `src/core/bubble/commitBubble.ts`
 
 Latest validated state:
 

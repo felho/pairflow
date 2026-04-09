@@ -1,13 +1,6 @@
 import { resolve } from "node:path";
 
-import {
-  readStateSnapshot,
-  writeStateSnapshot
-} from "../../../core/state/stateStore.js";
-import { appendProtocolEnvelope } from "../../../core/protocol/transcriptStore.js";
 import { normalizeStringList } from "../../shared/normalization/stringNormalization.js";
-import { resolveBubbleById } from "../../../core/bubble/bubbleLookup.js";
-import { ensureBubbleInstanceIdForMutation } from "../../../core/bubble/bubbleInstanceId.js";
 import type {
   CommitBubbleInput,
   CommitBubbleResult
@@ -25,6 +18,7 @@ import {
   readOrCreateDonePackage
 } from "./commitDonePackage.js";
 import type {
+  CommitBubbleDependencies,
   CommitRuntimeContext
 } from "./commitCommandApiContract.js";
 import { runCommitGitStep } from "./commitCommandGitStep.js";
@@ -35,13 +29,14 @@ async function prepareCommitRuntimeContext(input: {
   now: Date;
   nowIso: string;
   auto: boolean;
+  dependencies: CommitBubbleDependencies;
 }): Promise<CommitRuntimeContext> {
-  const resolved = await resolveBubbleById({
+  const resolved = await input.dependencies.resolveBubbleById({
     bubbleId: input.command.bubbleId,
     ...(input.command.repoPath !== undefined ? { repoPath: input.command.repoPath } : {}),
     ...(input.command.cwd !== undefined ? { cwd: input.command.cwd } : {})
   });
-  const bubbleIdentity = await ensureBubbleInstanceIdForMutation({
+  const bubbleIdentity = await input.dependencies.ensureBubbleInstanceIdForMutation({
     bubbleId: resolved.bubbleId,
     repoPath: resolved.repoPath,
     bubblePaths: resolved.bubblePaths,
@@ -49,7 +44,7 @@ async function prepareCommitRuntimeContext(input: {
     now: input.now
   });
   resolved.bubbleConfig = bubbleIdentity.bubbleConfig;
-  const loadedState = await readStateSnapshot(resolved.bubblePaths.statePath);
+  const loadedState = await input.dependencies.readStateSnapshot(resolved.bubblePaths.statePath);
   const state = loadedState.state;
 
   if (state.state !== "APPROVED_FOR_COMMIT") {
@@ -67,7 +62,8 @@ async function prepareCommitRuntimeContext(input: {
     nowIso: input.nowIso,
     autoGenerate: input.auto,
     implementer: resolved.bubbleConfig.agents.implementer,
-    reviewer: resolved.bubbleConfig.agents.reviewer
+    reviewer: resolved.bubbleConfig.agents.reviewer,
+    readTranscriptEnvelopes: input.dependencies.readTranscriptEnvelopes
   });
 
   return {
@@ -75,15 +71,16 @@ async function prepareCommitRuntimeContext(input: {
     bubbleIdentity,
     loadedState,
     state,
-    appendProtocolEnvelope,
-    writeStateSnapshot,
+    appendProtocolEnvelope: input.dependencies.appendProtocolEnvelope,
+    writeStateSnapshot: input.dependencies.writeStateSnapshot,
     donePackagePath,
     donePackageContent
   };
 }
 
 export async function commitBubble(
-  input: CommitBubbleInput
+  input: CommitBubbleInput,
+  dependencies: CommitBubbleDependencies
 ): Promise<CommitBubbleResult> {
   const now = input.now ?? new Date();
   const nowIso = now.toISOString();
@@ -94,13 +91,15 @@ export async function commitBubble(
     command: input,
     now,
     nowIso,
-    auto
+    auto,
+    dependencies
   });
 
   const { stagedFiles, commitMessage, commitSha } = await runCommitGitStep({
     command: input,
     context,
-    auto
+    auto,
+    runGit: dependencies.runGit
   });
 
   const appended = await appendDonePackageEnvelope({
