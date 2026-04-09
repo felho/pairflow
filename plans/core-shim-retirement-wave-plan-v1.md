@@ -48,6 +48,24 @@ Observed warning snapshot when the test was downgraded:
 
 These numbers are triage inputs, not yet a finalized ledger.
 
+## Progress Ledger
+
+- baseline after warn-only downgrade:
+  - total direct residual imports: `323`
+  - retired-shim subset: `17`
+- after early easy waves and type-port retargets:
+  - total direct residual imports: `193`
+  - retired-shim subset: `7`
+- after `4224fd82 refactor(shim): remove error-only core classifiers`:
+  - total direct residual imports: `188`
+  - retired-shim subset: `7`
+
+Latest validated state:
+
+- `tests/contracts/v11/core-shim-boundary-coverage.test.ts` PASS in warn-only mode
+- all hard-fail fitness checks PASS
+- no active dependency-direction regressions introduced by the easy waves
+
 ## Wave 0 Findings
 
 Initial inventory run from `tests/contracts/v11/core-shim-boundary-coverage.test.ts`
@@ -94,6 +112,14 @@ Most important triage result:
 
 This means the next wave should aggressively favor thin-shim consumer rewrites
 before opening deeper architecture batches.
+
+Current tactical refinement from the completed easy waves:
+
+- pure error-class imports are one of the safest remaining reducers,
+- direct `application -> infrastructure` or `shared -> infrastructure`
+  retargets are still out-of-bounds even when the `core` target is thin,
+- some files that look easy by target shape are actually `medium` because the
+  consumer layer cannot legally point at the canonical infrastructure owner.
 
 ## Classification Model
 
