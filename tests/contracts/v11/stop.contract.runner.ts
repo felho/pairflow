@@ -3,16 +3,15 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import {
-  stopBubble,
-  type StopBubbleDependencies,
-  type StopBubbleInput,
-  type StopBubbleResult
-} from "../../../src/core/bubble/stopBubble.js";
+  stopBubbleV11,
+  type StopBubbleV11Dependencies as StopBubbleDependencies,
+  type StopBubbleV11Input as StopBubbleInput,
+  type StopBubbleV11Result as StopBubbleResult
+} from "../../../src/v11/application/stop/emitStopV11.js";
 import {
   readStateSnapshot,
   writeStateSnapshot
 } from "../../../src/v11/infrastructure/state/stateStore.js";
-import { stopBubbleV11 } from "../../../src/v11/application/stop/emitStopV11.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
 import { initGitRepository } from "../../helpers/git.js";
 import type { ContractCase, ContractCaseExpected } from "./schema.js";
@@ -41,7 +40,6 @@ export type StopContractOutput =
 
 export interface StopContractRunResult {
   mode: ContractCase["mode"];
-  baseline?: StopContractOutput;
   v11?: StopContractOutput;
 }
 
@@ -149,18 +147,6 @@ function assertContractExpectedSubset(input: {
   ) {
     throw new Error(
       `${input.label}: stateSubset.state mismatch (expected=${expectedState}, actual=${input.output.stateSubset.state})`
-    );
-  }
-}
-
-function assertParityEquivalent(input: {
-  baseline: StopContractOutput;
-  v11: StopContractOutput;
-  caseId: string;
-}): void {
-  if (JSON.stringify(input.baseline) !== JSON.stringify(input.v11)) {
-    throw new Error(
-      `stop parity mismatch for case=${input.caseId}: baseline=${JSON.stringify(input.baseline)} v11=${JSON.stringify(input.v11)}`
     );
   }
 }
@@ -273,64 +259,17 @@ export async function runStopContractCase(
     throw new Error(`Unsupported command for stop contract runner: ${caseDef.command}`);
   }
 
-  if (caseDef.mode === "baseline") {
-    const baseline = await executeStopCase({
-      caseDef,
-      executor: stopBubble
-    });
-    assertContractExpectedSubset({
-      output: baseline,
-      expected: caseDef.expected,
-      label: "baseline"
-    });
-    return {
-      mode: caseDef.mode,
-      baseline
-    };
-  }
-
-  if (caseDef.mode === "v11") {
-    const v11 = await executeStopCase({
-      caseDef,
-      executor: stopBubbleV11
-    });
-    assertContractExpectedSubset({
-      output: v11,
-      expected: caseDef.expected,
-      label: "v11"
-    });
-    return {
-      mode: caseDef.mode,
-      v11
-    };
-  }
-
-  const baseline = await executeStopCase({
-    caseDef,
-    executor: stopBubble
-  });
   const v11 = await executeStopCase({
     caseDef,
     executor: stopBubbleV11
   });
   assertContractExpectedSubset({
-    output: baseline,
-    expected: caseDef.expected,
-    label: "parity/baseline"
-  });
-  assertContractExpectedSubset({
     output: v11,
     expected: caseDef.expected,
-    label: "parity/v11"
-  });
-  assertParityEquivalent({
-    baseline,
-    v11,
-    caseId: caseDef.id
+    label: "v11"
   });
   return {
     mode: caseDef.mode,
-    baseline,
     v11
   };
 }

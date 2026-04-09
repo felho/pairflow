@@ -11,18 +11,10 @@ import type { ContractCase } from "./schema.js";
 
 const execFileAsync = promisify(execFile);
 const stopCaseSources = [
-  "tests/contracts/v11/cases/stop/stop-basic.case.json",
   "tests/contracts/v11/cases/stop/stop-basic-v11.case.json",
-  "tests/contracts/v11/cases/stop/stop-basic-parity.case.json",
-  "tests/contracts/v11/cases/stop/stop-no-runtime-session.case.json",
   "tests/contracts/v11/cases/stop/stop-no-runtime-session-v11.case.json",
-  "tests/contracts/v11/cases/stop/stop-no-runtime-session-parity.case.json",
-  "tests/contracts/v11/cases/stop/stop-final-state.case.json",
   "tests/contracts/v11/cases/stop/stop-final-state-v11.case.json",
-  "tests/contracts/v11/cases/stop/stop-final-state-parity.case.json",
-  "tests/contracts/v11/cases/stop/stop-cleanup-invariant.case.json",
-  "tests/contracts/v11/cases/stop/stop-cleanup-invariant-v11.case.json",
-  "tests/contracts/v11/cases/stop/stop-cleanup-invariant-parity.case.json"
+  "tests/contracts/v11/cases/stop/stop-cleanup-invariant-v11.case.json"
 ] as const;
 const stopExpectedSourcesSorted = [...stopCaseSources].sort();
 
@@ -50,7 +42,7 @@ const stopInvalidInputCases: Array<{
     caseDef: {
       id: "stop-invalid-tmux-session-existed",
       command: "stop",
-      mode: "baseline",
+      mode: "v11",
       description: "invalid tmuxSessionExisted validation",
       input: {
         tmuxSessionExisted: "yes"
@@ -66,7 +58,7 @@ const stopInvalidInputCases: Array<{
     caseDef: {
       id: "stop-invalid-runtime-session-removed",
       command: "stop",
-      mode: "baseline",
+      mode: "v11",
       description: "invalid runtimeSessionRemoved validation",
       input: {
         runtimeSessionRemoved: "no"
@@ -102,42 +94,27 @@ describe("v11 stop contract harness skeleton", () => {
     const casePath = resolve(process.cwd(), stopCaseSources[0]);
     const caseDef = await readContractCase(casePath);
     expect(caseDef.command).toBe("stop");
-    expect(caseDef.mode).toBe("baseline");
+    expect(caseDef.mode).toBe("v11");
     expect(caseDef.expected.status).toBe("ok");
   });
 
   it(
-    "executes baseline and parity assertions via shared runner",
+    "executes stop v11 cases via shared runner",
     { timeout: CONTRACT_TEST_TIMEOUT.parityHeavyMs },
     async () => {
-    const casePaths = stopCaseSources.map((source) =>
-      resolve(process.cwd(), source)
-    );
+      const casePaths = stopCaseSources.map((source) =>
+        resolve(process.cwd(), source)
+      );
 
-    for (const casePath of casePaths) {
-      const caseDef = await readContractCase(casePath);
-      const run = await runStopContractCase(caseDef);
-      if (caseDef.mode === "baseline") {
-        expect(run.baseline?.status).toBe(caseDef.expected.status);
-        if (caseDef.expected.reasonCode !== undefined) {
-          expect(run.baseline?.reasonCode).toBe(caseDef.expected.reasonCode);
-        }
-        expect(run.v11).toBeUndefined();
-        continue;
-      }
-      if (caseDef.mode === "v11") {
+      for (const casePath of casePaths) {
+        const caseDef = await readContractCase(casePath);
+        const run = await runStopContractCase(caseDef);
+        expect(caseDef.mode).toBe("v11");
         expect(run.v11?.status).toBe(caseDef.expected.status);
         if (caseDef.expected.reasonCode !== undefined) {
           expect(run.v11?.reasonCode).toBe(caseDef.expected.reasonCode);
         }
-        expect(run.baseline).toBeUndefined();
-        continue;
       }
-
-      expect(run.baseline).toBeDefined();
-      expect(run.v11).toBeDefined();
-      expect(run.baseline).toEqual(run.v11);
-    }
     }
   );
 
