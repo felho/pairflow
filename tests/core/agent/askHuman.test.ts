@@ -11,9 +11,9 @@ import {
 } from "../../../src/core/agent/askHuman.js";
 import { createBubble } from "../../../src/core/bubble/createBubble.js";
 import { WorkspaceResolutionError } from "../../../src/core/bubble/workspaceResolution.js";
-import { bootstrapWorktreeWorkspace } from "../../../src/core/workspace/worktreeManager.js";
-import { readStateSnapshot } from "../../../src/core/state/stateStore.js";
-import { readTranscriptEnvelopes } from "../../../src/core/protocol/transcriptStore.js";
+import { readTranscriptEnvelopes } from "../../../src/v11/infrastructure/artifact/transcript/transcriptStore.js";
+import { readStateSnapshot } from "../../../src/v11/infrastructure/state/stateStore.js";
+import { bootstrapWorktreeWorkspace } from "../../../src/v11/infrastructure/workspace/worktreeManager.js";
 import { initGitRepository } from "../../helpers/git.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
 
