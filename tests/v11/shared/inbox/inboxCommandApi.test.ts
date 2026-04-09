@@ -4,7 +4,7 @@ import {
   asBubbleInboxError,
   BubbleInboxError
 } from "../../../../src/v11/shared/inbox/inboxCommandApi.js";
-import { BubbleLookupError } from "../../../../src/core/bubble/bubbleLookup.js";
+import { BubbleLookupError } from "../../../../src/v11/infrastructure/executor/workspace/bubbleLookup.js";
 
 describe("inboxCommandApi", () => {
   it("normalizes bubble lookup failures with caller context", () => {
