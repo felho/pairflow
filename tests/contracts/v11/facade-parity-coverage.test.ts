@@ -16,6 +16,7 @@ const commandsWithoutFacadeParitySentinel = [
   "reply",
   "restart",
   "resume",
+  "start",
   "status"
 ] as const;
 
@@ -28,7 +29,6 @@ const facadeParityTestsByCommand: Record<string, readonly string[]> = {
   ],
   gate: ["tests/v11/application/metaReviewGate/metaReviewGateFacadeParity.test.ts"],
   reconcile: ["tests/v11/application/reconcile/reconcileFacadeParity.test.ts"],
-  start: ["tests/v11/application/start/startFacadeParity.test.ts"],
   stop: ["tests/v11/application/stop/stopFacadeParity.test.ts"],
   watchdog: ["tests/v11/application/watchdog/watchdogFacadeParity.test.ts"],
   commit: ["tests/v11/application/commit/commitFacadeParity.test.ts"],
