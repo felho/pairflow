@@ -2,7 +2,7 @@ import {
   applyMetaReviewGateOnConvergenceV11 as applyMetaReviewGateOnConvergence,
   recoverMetaReviewGateFromSnapshotV11 as recoverMetaReviewGateFromSnapshot
 } from "../metaReviewGate/emitMetaReviewGateV11.js";
-import { convergedDependencyDefaults } from "../../../core/agent/convergedDefaults.js";
+import { convergedDependencyDefaults } from "./convergedDependencyDefaults.js";
 import { emitBubbleLifecycleEventBestEffort } from "../../shared/metrics/bubbleEvents.js";
 import type { EmitBubbleNotificationPort } from "../../shared/ports/notifications.js";
 import type {

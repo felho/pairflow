@@ -1,4 +1,4 @@
-import { convergedDependencyDefaults } from "../../../core/agent/convergedDefaults.js";
+import { convergedDependencyDefaults } from "./convergedDependencyDefaults.js";
 import {
   IDEATION_CONVERGED_BLOCKED
 } from "../../shared/ideation/ideationReasonCodes.js";

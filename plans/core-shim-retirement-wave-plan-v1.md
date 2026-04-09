@@ -109,6 +109,11 @@ These numbers are triage inputs, not yet a finalized ledger.
     `core/protocol/*`, and `core/bubble/*` imports
   - `kickoffCliRunner` and `kickoffDependencyResolution` now route through one
     local kickoff defaults fan-in module
+- after the `converged defaults` local fan-in batch:
+  - total direct residual imports: `52`
+  - `convergedDefaultDependencies`, `convergedRoutingPreparation`, and
+    `convergedValidationPreparation` now route through one local converged
+    defaults fan-in module
 
 Latest validated state:
 

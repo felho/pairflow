@@ -1,4 +1,4 @@
-import { convergedDependencyDefaults } from "../../../core/agent/convergedDefaults.js";
+import { convergedDependencyDefaults } from "./convergedDependencyDefaults.js";
 import {
   isDocContractGateScopeActive,
 } from "../../../v11/shared/gates/docContractGates.js";
