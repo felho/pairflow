@@ -1,27 +1,25 @@
 import {
-  buildPassValidationEvidenceArtifact,
-  createPassValidationReviewerDirective,
-  resolvePassValidationArtifactPath,
-  resolvePassValidationPolicy,
-  resolvePassValidationReviewerCompatibilityArtifactPath,
-  type PassValidationCommandResult,
-  writePassValidationEvidenceArtifact,
-  writePassValidationReviewerCompatibilityArtifact
-} from "../../../v11/infrastructure/artifact/validation/passValidationEvidence.js";
-import {
+  passValidationDefaults as corePassValidationDefaults,
   PassValidationRunnerExecutionError,
-  runPassValidationCommand
-} from "../../../v11/infrastructure/executor/validation/passValidationCommandRunner.js";
+  type PassValidationCommandResult
+} from "../../../core/runtime/passValidationDefaults.js";
 
 export const passValidationDefaults = {
-  buildPassValidationEvidenceArtifact,
-  createPassValidationReviewerDirective,
-  resolvePassValidationArtifactPath,
-  resolvePassValidationPolicy,
-  resolvePassValidationReviewerCompatibilityArtifactPath,
-  runPassValidationCommand,
-  writePassValidationEvidenceArtifact,
-  writePassValidationReviewerCompatibilityArtifact
+  buildPassValidationEvidenceArtifact:
+    corePassValidationDefaults.buildPassValidationEvidenceArtifact,
+  createPassValidationReviewerDirective:
+    corePassValidationDefaults.createPassValidationReviewerDirective,
+  resolvePassValidationArtifactPath:
+    corePassValidationDefaults.resolvePassValidationArtifactPath,
+  resolvePassValidationPolicy:
+    corePassValidationDefaults.resolvePassValidationPolicy,
+  resolvePassValidationReviewerCompatibilityArtifactPath:
+    corePassValidationDefaults.resolvePassValidationReviewerCompatibilityArtifactPath,
+  runPassValidationCommand: corePassValidationDefaults.runPassValidationCommand,
+  writePassValidationEvidenceArtifact:
+    corePassValidationDefaults.writePassValidationEvidenceArtifact,
+  writePassValidationReviewerCompatibilityArtifact:
+    corePassValidationDefaults.writePassValidationReviewerCompatibilityArtifact
 } as const;
 
 export {

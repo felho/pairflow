@@ -1,5 +1,5 @@
-import { appendProtocolEnvelope } from "../../infrastructure/artifact/transcript/transcriptStore.js";
-import { assertGitRepository } from "../../infrastructure/workspace/git.js";
+import { appendProtocolEnvelope } from "../../../core/protocol/transcriptStore.js";
+import { assertGitRepository } from "../../../core/workspace/git.js";
 import { extractReviewerFocus } from "./createReviewerFocus.js";
 import { BubbleCreateError } from "./createCommandRuntime.js";
 import { runCreateBubbleFlow } from "./runCreateBubbleFlow.js";

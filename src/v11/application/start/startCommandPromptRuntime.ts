@@ -1,8 +1,8 @@
-import { buildAgentCommand } from "../../infrastructure/executor/command/agentCommand.js";
+import { buildAgentCommand } from "../../../core/runtime/agentCommand.js";
 import {
   buildPairflowCommandGuidance,
   buildPinnedPairflowCommand
-} from "../../infrastructure/executor/command/pairflowCommand.js";
+} from "../../../core/runtime/pairflowCommand.js";
 
 export {
   buildAgentCommand,
