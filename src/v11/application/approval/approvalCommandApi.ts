@@ -1,8 +1,3 @@
-import { appendProtocolEnvelope, readTranscriptEnvelopes } from "../../infrastructure/artifact/transcript/transcriptStore.js";
-import { ensureBubbleInstanceIdForMutation } from "../../infrastructure/artifact/bubble/bubbleInstanceId.js";
-import { emitTmuxDeliveryNotification, resolveDeliveryMessageRef } from "../../infrastructure/channel/tmux/tmuxDelivery.js";
-import { resolveBubbleById } from "../../infrastructure/executor/workspace/bubbleLookup.js";
-import { readStateSnapshot, writeStateSnapshot } from "../../infrastructure/state/stateStore.js";
 import {
   emitApprovalDecisionCommandOrchestration,
   emitRequestReworkCommandOrchestration,
@@ -10,7 +5,6 @@ import {
 } from "./approvalCommandOrchestration.js";
 import {
   resolveApprovalCommandDependencies,
-  type ApprovalCommandDefaultDependencies,
 } from "./approvalCommandDependencyResolution.js";
 import type {
   EmitApprovalDecisionDependencies,
@@ -21,17 +15,7 @@ import type {
   EmitRequestReworkResult
 } from "./approvalCommandContract.js";
 import { ApprovalCommandError } from "../../shared/approval/approvalCommandError.js";
-
-const defaultApprovalCommandDependencies: ApprovalCommandDefaultDependencies = {
-  appendProtocolEnvelope,
-  emitTmuxDeliveryNotification,
-  ensureBubbleInstanceIdForMutation,
-  readStateSnapshot,
-  readTranscriptEnvelopes,
-  resolveBubbleById,
-  resolveDeliveryMessageRef,
-  writeStateSnapshot
-};
+import { approvalDependencyDefaults } from "../../../core/human/approvalDefaults.js";
 
 export async function emitApprovalDecision(
   input: EmitApprovalDecisionInput,
@@ -39,7 +23,7 @@ export async function emitApprovalDecision(
 ): Promise<EmitApprovalDecisionResult> {
   const resolvedDependencies = resolveApprovalCommandDependencies(
     dependencies,
-    defaultApprovalCommandDependencies
+    approvalDependencyDefaults
   );
   return emitApprovalDecisionCommandOrchestration(input, resolvedDependencies);
 }
@@ -69,7 +53,7 @@ export async function emitRequestRework(
 ): Promise<EmitRequestReworkResult> {
   const resolvedDependencies = resolveApprovalCommandDependencies(
     dependencies,
-    defaultApprovalCommandDependencies
+    approvalDependencyDefaults
   );
   return emitRequestReworkCommandOrchestration(input, resolvedDependencies);
 }
