@@ -4,6 +4,7 @@ import type { RemoveRuntimeSessionPort } from "../../shared/ports/runtimeSession
 import type { TerminateBubbleTmuxSessionPort } from "../../shared/ports/tmuxSessions.js";
 import type { RestartBubbleDependencies } from "./restartCommandContract.js";
 import { startBubbleV11 as startBubble } from "../start/emitStartV11.js";
+import { createRestartBubbleError } from "./restartCommandRuntime.js";
 
 export interface ResolvedRestartBubbleDependencies {
   resolveBubbleById: ResolveBubbleByIdPort;
@@ -15,7 +16,14 @@ export interface ResolvedRestartBubbleDependencies {
 
 function requireRestartDependency<T>(value: T | undefined, name: string): T {
   if (value === undefined) {
-    throw new Error(`Missing restart dependency: ${name}`);
+    throw createRestartBubbleError({
+      reasonCode: "RESTART_DEPENDENCY_MISSING",
+      message: `restart requires dependency ${name}.`,
+      context: {
+        dependency: name,
+        stage: "resolve_restart_dependencies"
+      }
+    });
   }
   return value;
 }
