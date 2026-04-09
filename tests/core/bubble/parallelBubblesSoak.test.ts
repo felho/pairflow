@@ -4,10 +4,14 @@ import { join } from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { emitAskHumanFromWorkspace } from "../../../src/core/agent/askHuman.js";
-import { emitPassFromWorkspace } from "../../../src/core/agent/pass.js";
+import {
+  emitAskHumanFromWorkspaceV11 as emitAskHumanFromWorkspace
+} from "../../../src/v11/application/askHuman/emitAskHumanV11.js";
+import {
+  emitPassFromWorkspaceV11 as emitPassFromWorkspace
+} from "../../../src/v11/application/pass/emitPassV11.js";
 import { listBubbles } from "../../../src/core/bubble/listBubbles.js";
-import { emitHumanReply } from "../../../src/core/human/reply.js";
+import { emitHumanReplyV11 as emitHumanReply } from "../../../src/v11/application/reply/emitReplyV11.js";
 import { readTranscriptEnvelopes } from "../../../src/v11/infrastructure/artifact/transcript/transcriptStore.js";
 import { readStateSnapshot } from "../../../src/v11/infrastructure/state/stateStore.js";
 import { initGitRepository } from "../../helpers/git.js";

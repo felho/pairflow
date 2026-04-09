@@ -4,8 +4,12 @@ import { join } from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { emitConvergedFromWorkspace } from "../../../src/core/agent/converged.js";
-import { emitPassFromWorkspace } from "../../../src/core/agent/pass.js";
+import {
+  emitConvergedFromWorkspaceV11 as emitConvergedFromWorkspace
+} from "../../../src/v11/application/converged/emitConvergedV11.js";
+import {
+  emitPassFromWorkspaceV11 as emitPassFromWorkspace
+} from "../../../src/v11/application/pass/emitPassV11.js";
 import { createBubble } from "../../../src/core/bubble/createBubble.js";
 import { startBubble } from "../../../src/core/bubble/startBubble.js";
 import { readTranscriptEnvelopes } from "../../../src/v11/infrastructure/artifact/transcript/transcriptStore.js";
