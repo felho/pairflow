@@ -1,4 +1,4 @@
-import { mergeBubbleDependencyDefaults as mergeBubbleDependencyDefaultsCore } from "../../../core/bubble/mergeBubbleDefaults.js";
+import { mergeBubbleDependencyDefaults as mergeBubbleDependencyDefaultsV11 } from "../../defaults/merge/mergeCommandDefaults.js";
 import type { MergeBubbleDependencies } from "./mergeCommandContract.js";
 
 export interface MergeBubbleDependencyDefaults {
@@ -27,7 +27,7 @@ export async function loadMergeBubbleDependencyDefaults(): Promise<
   MergeBubbleDependencyDefaults
 > {
   mergeBubbleDependencyDefaultsPromise ??= Promise.resolve(
-    mergeBubbleDependencyDefaultsCore
+    mergeBubbleDependencyDefaultsV11
   );
   return mergeBubbleDependencyDefaultsPromise;
 }
