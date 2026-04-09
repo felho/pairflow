@@ -239,6 +239,21 @@ Latest validated state:
 - all hard-fail fitness checks PASS
 - no active dependency-direction regressions introduced by the easy waves
 
+Current conscious-triage note after the `open` owner-flip:
+
+- the residual frontier is no longer a uniform easy-wave backlog
+- attempted `restart` owner-flip proved that boundary-count reduction alone is
+  not enough; if the replacement opens new dependency-direction findings, the
+  batch is not acceptable and must be reverted
+- the remaining residuals currently fall into two buckets:
+  - composite defaults / fan-in aggregates:
+    `restart`, `askHumanDependencyDefaults`, `statusCommandDependencyDefaults`
+  - intentional shared bridge wrappers whose direct retarget would currently
+    violate the `shared -> infrastructure` rule:
+    `docContractGateArtifactDefaults`, `stateStoreDefaults`
+- practical next step is no longer "remove all easy cases", but residual-by-
+  residual target-shape design with policy compatibility checked up front
+
 Current medium frontier after the latest easy/error-only waves:
 
 - default-wiring modules that already depend on `shared/ports/**` types but still
