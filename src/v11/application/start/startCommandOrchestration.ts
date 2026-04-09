@@ -1,5 +1,4 @@
 import { buildResumeTranscriptSummary } from "./startCommandResumeSummary.js";
-import { startBubbleDependencyDefaults } from "../../../core/bubble/startBubbleDefaults.js";
 import type { BubbleStateSnapshot } from "../../../types/bubble.js";
 import type {
   StartBubbleDependencies,
@@ -20,6 +19,19 @@ import type {
 import type {
   ResolveReviewerTestExecutionDirectivePort
 } from "../../shared/ports/reviewerTestEvidenceArtifacts.js";
+
+type StartBubbleDependencyDefaults = typeof import("../../../core/bubble/startBubbleDefaults.js").startBubbleDependencyDefaults;
+
+let startBubbleDependencyDefaultsPromise:
+  | Promise<StartBubbleDependencyDefaults>
+  | undefined;
+
+async function loadStartBubbleDependencyDefaults(): Promise<StartBubbleDependencyDefaults> {
+  startBubbleDependencyDefaultsPromise ??= import(
+    "../../../core/bubble/startBubbleDefaults.js"
+  ).then(({ startBubbleDependencyDefaults }) => startBubbleDependencyDefaults);
+  return startBubbleDependencyDefaultsPromise;
+}
 
 export type StartBubbleMode = "fresh" | "resume";
 
@@ -58,10 +70,11 @@ export interface ResolveStartBubbleDependenciesInput {
     NonNullable<StartBubbleDependencies["isTmuxSessionAlive"]>;
 }
 
-export function resolveStartBubbleDependencies(
+export async function resolveStartBubbleDependencies(
   input: ResolveStartBubbleDependenciesInput
-): ResolvedStartBubbleDependencies {
+): Promise<ResolvedStartBubbleDependencies> {
   const { dependencies } = input;
+  const startBubbleDependencyDefaults = await loadStartBubbleDependencyDefaults();
 
   return {
     bootstrap:

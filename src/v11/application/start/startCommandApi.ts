@@ -33,7 +33,7 @@ export async function startBubble(
   input: StartBubbleInput,
   dependencies: StartBubbleDependencies = {}
 ): Promise<StartBubbleResult> {
-  const deps = resolveStartBubbleDependencies({
+  const deps = await resolveStartBubbleDependencies({
     dependencies,
     runWorktreeBootstrapCommandDefault,
     isTmuxSessionAliveDefault

@@ -21,11 +21,11 @@ import {
 } from "../../../../src/v11/application/start/startCommandOrchestration.js";
 
 describe("startCommandOrchestration", () => {
-  it("resolves default dependencies when no override is provided", () => {
+  it("resolves default dependencies when no override is provided", async () => {
     const runWorktreeBootstrapCommandDefault = vi.fn(async () => undefined);
     const isTmuxSessionAliveDefault = vi.fn(async () => false);
 
-    const resolved = resolveStartBubbleDependencies({
+    const resolved = await resolveStartBubbleDependencies({
       dependencies: {},
       runWorktreeBootstrapCommandDefault,
       isTmuxSessionAliveDefault
@@ -42,7 +42,7 @@ describe("startCommandOrchestration", () => {
     expect(resolved.buildResumeSummary).toBe(buildResumeTranscriptSummary);
   });
 
-  it("prefers explicit dependency overrides", () => {
+  it("prefers explicit dependency overrides", async () => {
     const overrides = {
       bootstrapWorktreeWorkspace: vi.fn(async () => ({
         repoPath: "repo",
@@ -83,7 +83,7 @@ describe("startCommandOrchestration", () => {
     const fallbackRunWorktreeBootstrapCommand = vi.fn(async () => undefined);
     const fallbackIsTmuxSessionAlive = vi.fn(async () => false);
 
-    const resolved = resolveStartBubbleDependencies({
+    const resolved = await resolveStartBubbleDependencies({
       dependencies: overrides,
       runWorktreeBootstrapCommandDefault: fallbackRunWorktreeBootstrapCommand,
       isTmuxSessionAliveDefault: fallbackIsTmuxSessionAlive
