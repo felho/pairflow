@@ -36,13 +36,13 @@ export const commandMigrationMap: readonly CommandMigrationEntry[] = [
     command: "delete",
     state: "v11",
     owner: "runtime",
-    notes: "Core facade now delegates to v11 delete runtime; v11 is the source of truth."
+    notes: "Direct library exports already route to the v11 delete entrypoint; remaining core compatibility is tracked separately from facade-parity sentinels."
   },
   {
     command: "create",
     state: "v11",
     owner: "runtime",
-    notes: "Core facade now delegates to v11 create orchestration seams; v11 is the source of truth."
+    notes: "Direct library exports already route to the v11 create entrypoint; remaining core compatibility is tracked separately from facade-parity sentinels."
   },
   {
     command: "metaReviewGate",
@@ -90,7 +90,7 @@ export const commandMigrationMap: readonly CommandMigrationEntry[] = [
     command: "restart",
     state: "v11",
     owner: "runtime",
-    notes: "Core facade now delegates to v11 restart orchestration seams; v11 is the source of truth."
+    notes: "Direct library exports already route to the v11 restart entrypoint; remaining core compatibility is tracked separately from facade-parity sentinels."
   },
   {
     command: "resume",
@@ -120,25 +120,25 @@ export const commandMigrationMap: readonly CommandMigrationEntry[] = [
     command: "inbox",
     state: "v11",
     owner: "runtime",
-    notes: "Core facade now delegates to v11 inbox runtime seams; v11 is the source of truth."
+    notes: "Direct library exports already route to the v11 inbox entrypoint; remaining core compatibility is tracked separately from facade-parity sentinels."
   },
   {
     command: "open",
     state: "v11",
     owner: "runtime",
-    notes: "Core facade now delegates to v11 open runtime seams; v11 is the source of truth."
+    notes: "Direct library exports already route to the v11 open entrypoint; remaining core compatibility is tracked separately from facade-parity sentinels."
   },
   {
     command: "list",
     state: "v11",
     owner: "runtime",
-    notes: "Core facade now delegates to v11 list read-model runtime; v11 is the source of truth."
+    notes: "Direct library exports already route to the v11 list entrypoint; remaining core compatibility is tracked separately from facade-parity sentinels."
   },
   {
     command: "status",
     state: "v11",
     owner: "runtime",
-    notes: "Core facade now delegates to v11 status runtime; v11 is the source of truth."
+    notes: "Direct library exports already route to the v11 status entrypoint; remaining core compatibility is tracked separately from facade-parity sentinels."
   }
 ];
 
