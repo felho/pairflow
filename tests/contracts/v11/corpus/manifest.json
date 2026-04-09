@@ -375,27 +375,9 @@
       "kind": "seed_case"
     },
     {
-      "id": "kickoff-basic",
-      "command": "kickoff",
-      "source": "tests/contracts/v11/cases/kickoff/kickoff-basic.case.json",
-      "kind": "seed_case"
-    },
-    {
       "id": "kickoff-basic-v11",
       "command": "kickoff",
       "source": "tests/contracts/v11/cases/kickoff/kickoff-basic-v11.case.json",
-      "kind": "seed_case"
-    },
-    {
-      "id": "kickoff-basic-parity",
-      "command": "kickoff",
-      "source": "tests/contracts/v11/cases/kickoff/kickoff-basic-parity.case.json",
-      "kind": "seed_case"
-    },
-    {
-      "id": "kickoff-not-allowed",
-      "command": "kickoff",
-      "source": "tests/contracts/v11/cases/kickoff/kickoff-not-allowed.case.json",
       "kind": "seed_case"
     },
     {
@@ -405,33 +387,9 @@
       "kind": "seed_case"
     },
     {
-      "id": "kickoff-not-allowed-parity",
-      "command": "kickoff",
-      "source": "tests/contracts/v11/cases/kickoff/kickoff-not-allowed-parity.case.json",
-      "kind": "seed_case"
-    },
-    {
-      "id": "kickoff-requires-running",
-      "command": "kickoff",
-      "source": "tests/contracts/v11/cases/kickoff/kickoff-requires-running.case.json",
-      "kind": "seed_case"
-    },
-    {
       "id": "kickoff-requires-running-v11",
       "command": "kickoff",
       "source": "tests/contracts/v11/cases/kickoff/kickoff-requires-running-v11.case.json",
-      "kind": "seed_case"
-    },
-    {
-      "id": "kickoff-requires-running-parity",
-      "command": "kickoff",
-      "source": "tests/contracts/v11/cases/kickoff/kickoff-requires-running-parity.case.json",
-      "kind": "seed_case"
-    },
-    {
-      "id": "kickoff-task-invalid",
-      "command": "kickoff",
-      "source": "tests/contracts/v11/cases/kickoff/kickoff-task-invalid.case.json",
       "kind": "seed_case"
     },
     {
@@ -441,33 +399,9 @@
       "kind": "seed_case"
     },
     {
-      "id": "kickoff-task-invalid-parity",
-      "command": "kickoff",
-      "source": "tests/contracts/v11/cases/kickoff/kickoff-task-invalid-parity.case.json",
-      "kind": "seed_case"
-    },
-    {
-      "id": "kickoff-already-active",
-      "command": "kickoff",
-      "source": "tests/contracts/v11/cases/kickoff/kickoff-already-active.case.json",
-      "kind": "seed_case"
-    },
-    {
       "id": "kickoff-already-active-v11",
       "command": "kickoff",
       "source": "tests/contracts/v11/cases/kickoff/kickoff-already-active-v11.case.json",
-      "kind": "seed_case"
-    },
-    {
-      "id": "kickoff-already-active-parity",
-      "command": "kickoff",
-      "source": "tests/contracts/v11/cases/kickoff/kickoff-already-active-parity.case.json",
-      "kind": "seed_case"
-    },
-    {
-      "id": "kickoff-not-eligible",
-      "command": "kickoff",
-      "source": "tests/contracts/v11/cases/kickoff/kickoff-not-eligible.case.json",
       "kind": "seed_case"
     },
     {
@@ -477,33 +411,9 @@
       "kind": "seed_case"
     },
     {
-      "id": "kickoff-not-eligible-parity",
-      "command": "kickoff",
-      "source": "tests/contracts/v11/cases/kickoff/kickoff-not-eligible-parity.case.json",
-      "kind": "seed_case"
-    },
-    {
-      "id": "kickoff-state-conflict",
-      "command": "kickoff",
-      "source": "tests/contracts/v11/cases/kickoff/kickoff-state-conflict.case.json",
-      "kind": "seed_case"
-    },
-    {
       "id": "kickoff-state-conflict-v11",
       "command": "kickoff",
       "source": "tests/contracts/v11/cases/kickoff/kickoff-state-conflict-v11.case.json",
-      "kind": "seed_case"
-    },
-    {
-      "id": "kickoff-state-conflict-parity",
-      "command": "kickoff",
-      "source": "tests/contracts/v11/cases/kickoff/kickoff-state-conflict-parity.case.json",
-      "kind": "seed_case"
-    },
-    {
-      "id": "kickoff-persistence-failed",
-      "command": "kickoff",
-      "source": "tests/contracts/v11/cases/kickoff/kickoff-persistence-failed.case.json",
       "kind": "seed_case"
     },
     {
@@ -513,33 +423,9 @@
       "kind": "seed_case"
     },
     {
-      "id": "kickoff-persistence-failed-parity",
-      "command": "kickoff",
-      "source": "tests/contracts/v11/cases/kickoff/kickoff-persistence-failed-parity.case.json",
-      "kind": "seed_case"
-    },
-    {
-      "id": "kickoff-task-file",
-      "command": "kickoff",
-      "source": "tests/contracts/v11/cases/kickoff/kickoff-task-file.case.json",
-      "kind": "seed_case"
-    },
-    {
       "id": "kickoff-task-file-v11",
       "command": "kickoff",
       "source": "tests/contracts/v11/cases/kickoff/kickoff-task-file-v11.case.json",
-      "kind": "seed_case"
-    },
-    {
-      "id": "kickoff-task-file-parity",
-      "command": "kickoff",
-      "source": "tests/contracts/v11/cases/kickoff/kickoff-task-file-parity.case.json",
-      "kind": "seed_case"
-    },
-    {
-      "id": "kickoff-task-file-missing",
-      "command": "kickoff",
-      "source": "tests/contracts/v11/cases/kickoff/kickoff-task-file-missing.case.json",
       "kind": "seed_case"
     },
     {
@@ -549,33 +435,9 @@
       "kind": "seed_case"
     },
     {
-      "id": "kickoff-task-file-missing-parity",
-      "command": "kickoff",
-      "source": "tests/contracts/v11/cases/kickoff/kickoff-task-file-missing-parity.case.json",
-      "kind": "seed_case"
-    },
-    {
-      "id": "kickoff-task-file-placeholder",
-      "command": "kickoff",
-      "source": "tests/contracts/v11/cases/kickoff/kickoff-task-file-placeholder.case.json",
-      "kind": "seed_case"
-    },
-    {
       "id": "kickoff-task-file-placeholder-v11",
       "command": "kickoff",
       "source": "tests/contracts/v11/cases/kickoff/kickoff-task-file-placeholder-v11.case.json",
-      "kind": "seed_case"
-    },
-    {
-      "id": "kickoff-task-file-placeholder-parity",
-      "command": "kickoff",
-      "source": "tests/contracts/v11/cases/kickoff/kickoff-task-file-placeholder-parity.case.json",
-      "kind": "seed_case"
-    },
-    {
-      "id": "kickoff-task-file-empty",
-      "command": "kickoff",
-      "source": "tests/contracts/v11/cases/kickoff/kickoff-task-file-empty.case.json",
       "kind": "seed_case"
     },
     {
@@ -585,33 +447,9 @@
       "kind": "seed_case"
     },
     {
-      "id": "kickoff-task-file-empty-parity",
-      "command": "kickoff",
-      "source": "tests/contracts/v11/cases/kickoff/kickoff-task-file-empty-parity.case.json",
-      "kind": "seed_case"
-    },
-    {
-      "id": "kickoff-task-input-conflict",
-      "command": "kickoff",
-      "source": "tests/contracts/v11/cases/kickoff/kickoff-task-input-conflict.case.json",
-      "kind": "seed_case"
-    },
-    {
       "id": "kickoff-task-input-conflict-v11",
       "command": "kickoff",
       "source": "tests/contracts/v11/cases/kickoff/kickoff-task-input-conflict-v11.case.json",
-      "kind": "seed_case"
-    },
-    {
-      "id": "kickoff-task-input-conflict-parity",
-      "command": "kickoff",
-      "source": "tests/contracts/v11/cases/kickoff/kickoff-task-input-conflict-parity.case.json",
-      "kind": "seed_case"
-    },
-    {
-      "id": "kickoff-task-file-not-regular",
-      "command": "kickoff",
-      "source": "tests/contracts/v11/cases/kickoff/kickoff-task-file-not-regular.case.json",
       "kind": "seed_case"
     },
     {
@@ -621,27 +459,9 @@
       "kind": "seed_case"
     },
     {
-      "id": "kickoff-task-file-not-regular-parity",
-      "command": "kickoff",
-      "source": "tests/contracts/v11/cases/kickoff/kickoff-task-file-not-regular-parity.case.json",
-      "kind": "seed_case"
-    },
-    {
-      "id": "kickoff-task-input-missing",
-      "command": "kickoff",
-      "source": "tests/contracts/v11/cases/kickoff/kickoff-task-input-missing.case.json",
-      "kind": "seed_case"
-    },
-    {
       "id": "kickoff-task-input-missing-v11",
       "command": "kickoff",
       "source": "tests/contracts/v11/cases/kickoff/kickoff-task-input-missing-v11.case.json",
-      "kind": "seed_case"
-    },
-    {
-      "id": "kickoff-task-input-missing-parity",
-      "command": "kickoff",
-      "source": "tests/contracts/v11/cases/kickoff/kickoff-task-input-missing-parity.case.json",
       "kind": "seed_case"
     },
     {

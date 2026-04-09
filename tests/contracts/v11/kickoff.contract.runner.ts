@@ -4,8 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { parseBubbleConfigToml, renderBubbleConfigToml } from "../../../src/config/bubbleConfig.js";
-import { createBubble } from "../../../src/core/bubble/createBubble.js";
-import { kickoffBubble } from "../../../src/core/bubble/kickoffBubble.js";
+import { createBubble } from "../../../src/v11/application/create/createBubble.js";
 import { readTranscriptEnvelopes } from "../../../src/v11/infrastructure/artifact/transcript/transcriptStore.js";
 import type { EmitTmuxDeliveryNotificationResult } from "../../../src/v11/infrastructure/channel/tmux/tmuxDelivery.js";
 import { buildRunningExecutionContext } from "../../../src/v11/shared/state/executionContext.js";
@@ -21,7 +20,7 @@ import type { ContractCase, ContractCaseExpected } from "./schema.js";
 
 type DeliveryRefKind = "external" | "none" | "transcript";
 type KickoffDependencyOverrideMap = NonNullable<
-  Parameters<typeof kickoffBubble>[1]
+  Parameters<typeof kickoffBubbleV11>[1]
 >;
 
 interface CapturedKickoffDelivery {
@@ -58,7 +57,6 @@ export interface KickoffContractOutput {
 
 export interface KickoffContractRunResult {
   mode: ContractCase["mode"];
-  baseline?: KickoffContractOutput;
   v11?: KickoffContractOutput;
 }
 
@@ -257,7 +255,7 @@ function parseKickoffCaseInput(input: ContractCase["input"]): ParsedKickoffCaseI
 }
 
 function normalizeKickoffResult(input: {
-  result: Awaited<ReturnType<typeof kickoffBubble>>;
+  result: Awaited<ReturnType<typeof kickoffBubbleV11>>;
   taskEnvelopeCount: number;
   taskArtifactContainsTask: boolean;
   deliveries: CapturedKickoffDelivery[];
@@ -353,18 +351,6 @@ function assertContractExpectedSubset(input: {
   ) {
     throw new Error(
       `${input.label}: deliveryRefKinds mismatch (expected=${JSON.stringify(input.expected.deliveryRefKinds)}, actual=${JSON.stringify(input.output.deliveryRefKinds)})`
-    );
-  }
-}
-
-function assertParityEquivalent(input: {
-  baseline: KickoffContractOutput;
-  v11: KickoffContractOutput;
-  caseId: string;
-}): void {
-  if (JSON.stringify(input.baseline) !== JSON.stringify(input.v11)) {
-    throw new Error(
-      `kickoff parity mismatch for case=${input.caseId}: baseline=${JSON.stringify(input.baseline)} v11=${JSON.stringify(input.v11)}`
     );
   }
 }
@@ -471,7 +457,7 @@ async function setupKickoffFixture(
 
 async function executeKickoffCase(input: {
   caseDef: ContractCase;
-  executor: typeof kickoffBubble;
+  executor: typeof kickoffBubbleV11;
 }): Promise<KickoffContractOutput> {
   const repoPath = await mkdtemp(join(tmpdir(), "pairflow-kickoff-contract-"));
   try {
@@ -569,64 +555,17 @@ export async function runKickoffContractCase(
     throw new Error(`Unsupported command for kickoff contract runner: ${caseDef.command}`);
   }
 
-  if (caseDef.mode === "baseline") {
-    const baseline = await executeKickoffCase({
-      caseDef,
-      executor: kickoffBubble
-    });
-    assertContractExpectedSubset({
-      output: baseline,
-      expected: caseDef.expected,
-      label: "baseline"
-    });
-    return {
-      mode: caseDef.mode,
-      baseline
-    };
-  }
-
-  if (caseDef.mode === "v11") {
-    const v11 = await executeKickoffCase({
-      caseDef,
-      executor: kickoffBubbleV11
-    });
-    assertContractExpectedSubset({
-      output: v11,
-      expected: caseDef.expected,
-      label: "v11"
-    });
-    return {
-      mode: caseDef.mode,
-      v11
-    };
-  }
-
-  const baseline = await executeKickoffCase({
-    caseDef,
-    executor: kickoffBubble
-  });
   const v11 = await executeKickoffCase({
     caseDef,
     executor: kickoffBubbleV11
   });
   assertContractExpectedSubset({
-    output: baseline,
-    expected: caseDef.expected,
-    label: "parity/baseline"
-  });
-  assertContractExpectedSubset({
     output: v11,
     expected: caseDef.expected,
-    label: "parity/v11"
-  });
-  assertParityEquivalent({
-    baseline,
-    v11,
-    caseId: caseDef.id
+    label: "v11"
   });
   return {
     mode: caseDef.mode,
-    baseline,
     v11
   };
 }
