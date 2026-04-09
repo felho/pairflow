@@ -2,7 +2,7 @@
 artifact_type: plan
 artifact_id: plan_core_zero_retirement_v1
 title: "Core Zero Retirement Plan"
-status: draft
+status: in_progress
 prd_ref: null
 owners:
   - "felho"
@@ -33,6 +33,7 @@ Jelenlegi baseline:
 - `fitness:check:ci`: PASS
 - a `src/v11/src/cli -> src/core` direkt frontier a korábbi hullámok után már
   nagyrészt kifogyott
+- Phase 1 inventory ledger: `plans/core-zero-retirement-inventory-ledger-v1.md`
 
 Ez a terv tehát nem unblock-terv, hanem **endgame decommission plan**.
 

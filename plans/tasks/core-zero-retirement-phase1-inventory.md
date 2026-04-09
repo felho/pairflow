@@ -2,7 +2,7 @@
 artifact_type: task
 artifact_id: task_core_zero_retirement_phase1_inventory_v1
 title: "Core Zero Retirement Phase 1 Inventory"
-status: draft
+status: completed
 phase: phase1
 target_files:
   - "plans/core-zero-retirement-plan-v1.md"
@@ -161,3 +161,8 @@ Mark task as `IMPLEMENTABLE` when all `P0/P1 + required-now` items are closed.
    gépi generálású snapshot?
 2. A `retained-behavior` bucketen belül szükség van-e további alcímkékre
    (`runtime`, `read-model`, `public-facade`, `metrics`)?
+
+## Execution Result
+
+1. Elkészült a teljes inventory ledger: `plans/core-zero-retirement-inventory-ledger-v1.md`.
+2. A Phase 2 worker-wave most már lane-alapon indítható a ledgerből.
