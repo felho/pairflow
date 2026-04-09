@@ -1,7 +1,7 @@
 import {
   BubbleLookupError,
-  statusInboxDependencyDefaults
-} from "../../../core/bubble/statusInboxDefaults.js";
+  statusCommandDependencyDefaults
+} from "../status/statusCommandDependencyDefaults.js";
 import type { BubbleLifecycleState } from "../../../types/bubble.js";
 import { resolveCanonicalPendingApprovalSignal } from "../approval/pendingApprovalSignal.js";
 
@@ -79,15 +79,15 @@ function deriveQuestionSummary(payload: Record<string, unknown>): string {
 export async function getBubbleInbox(
   input: BubbleInboxInput
 ): Promise<BubbleInboxView> {
-  const resolved = await statusInboxDependencyDefaults.resolveBubbleById({
+  const resolved = await statusCommandDependencyDefaults.resolveBubbleById({
     bubbleId: input.bubbleId,
     ...(input.repoPath !== undefined ? { repoPath: input.repoPath } : {}),
     ...(input.cwd !== undefined ? { cwd: input.cwd } : {})
   });
 
   const [{ state }, inbox] = await Promise.all([
-    statusInboxDependencyDefaults.readStateSnapshot(resolved.bubblePaths.statePath),
-    statusInboxDependencyDefaults.readTranscriptEnvelopes(resolved.bubblePaths.inboxPath, {
+    statusCommandDependencyDefaults.readStateSnapshot(resolved.bubblePaths.statePath),
+    statusCommandDependencyDefaults.readTranscriptEnvelopes(resolved.bubblePaths.inboxPath, {
       allowMissing: true,
       tolerateInvalidEnvelopeLines: true
     })

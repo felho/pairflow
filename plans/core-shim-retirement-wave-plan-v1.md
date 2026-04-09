@@ -80,6 +80,14 @@ These numbers are triage inputs, not yet a finalized ledger.
   - total direct residual imports: `158`
   - retired-shim subset: `7`
   - `convergedFlowInvocationBuilders.ts` no longer carries direct core-backed defaults
+- after the `status/inbox` shared-default fan-in batch:
+  - total direct residual imports: `65`
+  - `statusCommandApi`, `statusCommandInternals`, `statusCommandGateState`, and
+    `inboxCommandApi` now route through one local shared defaults module
+- after the `metaReviewGate runtime` fan-in batch:
+  - total direct residual imports: `64`
+  - `metaReviewGateNotify` and `metaReviewGatePaneBinding` now route through one
+    local application defaults module
 
 Latest validated state:
 

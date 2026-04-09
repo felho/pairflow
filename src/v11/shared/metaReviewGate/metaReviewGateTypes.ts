@@ -44,6 +44,19 @@ export interface NotifyMetaReviewerSubmissionRequestInput {
 
 export interface NotifyMetaReviewerSubmissionRequestDependencies {
   runTmux?: MetaReviewGateTmuxRunner;
+  maybeAcceptClaudeTrustPrompt?: (
+    runner: MetaReviewGateTmuxRunner,
+    targetPane: string
+  ) => Promise<void>;
+  sendAndSubmitTmuxPaneMessage?: (
+    runner: MetaReviewGateTmuxRunner,
+    targetPane: string,
+    message: string
+  ) => Promise<void>;
+  submitTmuxPaneInput?: (
+    runner: MetaReviewGateTmuxRunner,
+    targetPane: string
+  ) => Promise<void>;
 }
 
 export interface MetaReviewRuntimeDeliveryObservation {

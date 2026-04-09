@@ -1,4 +1,4 @@
-import { statusInboxDependencyDefaults } from "../../../core/bubble/statusInboxDefaults.js";
+import { statusCommandDependencyDefaults } from "./statusCommandDependencyDefaults.js";
 import type { ProtocolEnvelope } from "../../../types/protocol.js";
 import { resolveCanonicalPendingApprovalSignal } from "../approval/pendingApprovalSignal.js";
 export {
@@ -55,19 +55,19 @@ export async function readStatusTranscriptData(
   state: BubbleStatusState;
   stateValidation:
     | Awaited<
-        ReturnType<typeof statusInboxDependencyDefaults.inspectStateSnapshot>
+        ReturnType<typeof statusCommandDependencyDefaults.inspectStateSnapshot>
       >["stateValidation"]
     | null;
   transcript: ProtocolEnvelope[];
   inbox: ProtocolEnvelope[];
 }> {
   const [loadedState, transcript, inbox] = await Promise.all([
-    statusInboxDependencyDefaults.inspectStateSnapshot(resolved.bubblePaths.statePath),
-    statusInboxDependencyDefaults.readTranscriptEnvelopes(resolved.bubblePaths.transcriptPath, {
+    statusCommandDependencyDefaults.inspectStateSnapshot(resolved.bubblePaths.statePath),
+    statusCommandDependencyDefaults.readTranscriptEnvelopes(resolved.bubblePaths.transcriptPath, {
       allowMissing: true,
       tolerateInvalidEnvelopeLines: true
     }),
-    statusInboxDependencyDefaults.readTranscriptEnvelopes(resolved.bubblePaths.inboxPath, {
+    statusCommandDependencyDefaults.readTranscriptEnvelopes(resolved.bubblePaths.inboxPath, {
       allowMissing: true,
       tolerateInvalidEnvelopeLines: true
     })

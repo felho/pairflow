@@ -1,4 +1,3 @@
-import { metaReviewGateRuntimeDefaults } from "../../../core/runtime/metaReviewGateRuntimeDefaults.js";
 import {
   buildMetaReviewSubmitApproveParityNote,
   buildMetaReviewSubmitCommandTemplate
@@ -58,7 +57,10 @@ function detectSubmittedMarker(text: string, marker: string): MarkerStatus {
 }
 
 async function assertMetaReviewRequestSubmitted(input: {
-  runTmux: typeof metaReviewGateRuntimeDefaults.runTmux;
+  runTmux: NonNullable<NotifyMetaReviewerSubmissionRequestDependencies["runTmux"]>;
+  submitTmuxPaneInput: NonNullable<
+    NotifyMetaReviewerSubmissionRequestDependencies["submitTmuxPaneInput"]
+  >;
   targetPane: string;
   marker: string;
 }): Promise<MetaReviewRuntimeDeliveryObservation> {
@@ -93,10 +95,7 @@ async function assertMetaReviewRequestSubmitted(input: {
 
     if (attempt < 2) {
       await sleep(900);
-      await metaReviewGateRuntimeDefaults.submitTmuxPaneInput(
-        input.runTmux,
-        input.targetPane
-      );
+      await input.submitTmuxPaneInput(input.runTmux, input.targetPane);
     }
   }
 
@@ -111,7 +110,22 @@ export async function notifyMetaReviewerSubmissionRequest(
   input: NotifyMetaReviewerSubmissionRequestInput,
   dependencies: NotifyMetaReviewerSubmissionRequestDependencies = {}
 ): Promise<MetaReviewRuntimeDeliveryObservation> {
-  const runner = dependencies.runTmux ?? metaReviewGateRuntimeDefaults.runTmux;
+  const runner = dependencies.runTmux;
+  const maybeAcceptClaudeTrustPrompt =
+    dependencies.maybeAcceptClaudeTrustPrompt;
+  const sendAndSubmitTmuxPaneMessage =
+    dependencies.sendAndSubmitTmuxPaneMessage;
+  const submitTmuxPaneInput = dependencies.submitTmuxPaneInput;
+  if (
+    runner === undefined ||
+    maybeAcceptClaudeTrustPrompt === undefined ||
+    sendAndSubmitTmuxPaneMessage === undefined ||
+    submitTmuxPaneInput === undefined
+  ) {
+    throw new Error(
+      "meta-review gate notify runtime capabilities are unavailable."
+    );
+  }
   const requestMarker = `bubble=${input.bubbleId} meta-review request round=${input.round}.`;
   const message = [
     `# [pairflow] ${requestMarker}`,
@@ -119,15 +133,11 @@ export async function notifyMetaReviewerSubmissionRequest(
     `Required command (include --report-json parity fields): ${buildMetaReviewSubmitCommandTemplate({ bubbleId: input.bubbleId, round: input.round })}. ${buildMetaReviewSubmitApproveParityNote()}`
   ].join(" ");
 
-  await metaReviewGateRuntimeDefaults
-    .maybeAcceptClaudeTrustPrompt(runner, input.targetPane)
-    .catch(() => undefined);
+  await maybeAcceptClaudeTrustPrompt(runner, input.targetPane).catch(
+    () => undefined
+  );
   try {
-    await metaReviewGateRuntimeDefaults.sendAndSubmitTmuxPaneMessage(
-      runner,
-      input.targetPane,
-      message
-    );
+    await sendAndSubmitTmuxPaneMessage(runner, input.targetPane, message);
   } catch (error) {
     return {
       status: "failed",
@@ -137,6 +147,7 @@ export async function notifyMetaReviewerSubmissionRequest(
   }
   return assertMetaReviewRequestSubmitted({
     runTmux: runner,
+    submitTmuxPaneInput,
     targetPane: input.targetPane,
     marker: requestMarker
   });

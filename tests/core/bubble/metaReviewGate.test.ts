@@ -84,6 +84,36 @@ async function runSuccessfulMetaReviewerRespawn() {
   };
 }
 
+function buildNotifyRuntimeDependencies(
+  runTmux: (
+    args: string[],
+    options?: { allowFailure?: boolean }
+  ) => Promise<{
+    stdout: string;
+    stderr: string;
+    exitCode: number;
+  }>
+) {
+  return {
+    runTmux,
+    maybeAcceptClaudeTrustPrompt: async () => undefined,
+    sendAndSubmitTmuxPaneMessage: async (
+      runner: typeof runTmux,
+      targetPane: string,
+      message: string
+    ) => {
+      await runner(["send-keys", "-t", targetPane, "-l", message]);
+      await runner(["send-keys", "-t", targetPane, "Enter"]);
+    },
+    submitTmuxPaneInput: async (
+      runner: typeof runTmux,
+      targetPane: string
+    ) => {
+      await runner(["send-keys", "-t", targetPane, "Enter"]);
+    }
+  };
+}
+
 function defaultMetaReviewSnapshot(): BubbleMetaReviewSnapshotState {
   return {
     execution_context: null,
@@ -276,7 +306,7 @@ describe("notifyMetaReviewerSubmissionRequest", () => {
         targetPane: "pf_meta_structured:0.3"
       },
       {
-        runTmux: async (args) => {
+        ...buildNotifyRuntimeDependencies(async (args) => {
           tmuxCalls.push(args);
           if (args[0] === "capture-pane") {
             captureCount += 1;
@@ -294,7 +324,7 @@ describe("notifyMetaReviewerSubmissionRequest", () => {
             stderr: "",
             exitCode: 0
           };
-        }
+        })
       }
     );
     expect(result).toEqual({
@@ -335,7 +365,7 @@ describe("notifyMetaReviewerSubmissionRequest", () => {
         targetPane: "pf_meta_structured:0.3"
       },
       {
-        runTmux: async (args) => {
+        ...buildNotifyRuntimeDependencies(async (args) => {
           tmuxCalls.push(args);
           if (args[0] === "capture-pane") {
             const capturesScrollback =
@@ -357,7 +387,7 @@ describe("notifyMetaReviewerSubmissionRequest", () => {
             stderr: "",
             exitCode: 0
           };
-        }
+        })
       }
     );
     expect(result.status).toBe("confirmed");
@@ -383,8 +413,7 @@ describe("notifyMetaReviewerSubmissionRequest", () => {
           round: 2,
           targetPane: "pf_meta_structured:0.3"
         },
-        {
-          runTmux: async (args) => {
+        buildNotifyRuntimeDependencies(async (args) => {
             if (args[0] === "capture-pane") {
               return {
                 stdout: [
@@ -400,8 +429,7 @@ describe("notifyMetaReviewerSubmissionRequest", () => {
               stderr: "",
               exitCode: 0
             };
-          }
-        }
+          })
       )
     ).resolves.toMatchObject({
       status: "failed",

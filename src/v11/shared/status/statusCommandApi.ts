@@ -1,7 +1,7 @@
 import {
   BubbleLookupError,
-  statusInboxDependencyDefaults
-} from "../../../core/bubble/statusInboxDefaults.js";
+  statusCommandDependencyDefaults
+} from "./statusCommandDependencyDefaults.js";
 import {
   countPendingHumanQuestions,
   readStatusTranscriptData,
@@ -43,7 +43,7 @@ export async function getBubbleStatus(
   input: BubbleStatusInput,
   dependencies: BubbleStatusDependencies
 ): Promise<BubbleStatusView> {
-  const resolved = await statusInboxDependencyDefaults.resolveBubbleById({
+  const resolved = await statusCommandDependencyDefaults.resolveBubbleById({
     bubbleId: input.bubbleId,
     ...(input.repoPath !== undefined ? { repoPath: input.repoPath } : {}),
     ...(input.cwd !== undefined ? { cwd: input.cwd } : {})

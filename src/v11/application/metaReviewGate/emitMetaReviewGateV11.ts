@@ -11,11 +11,35 @@ import type {
   ApplyMetaReviewGateOnConvergenceDependencies,
   ApplyMetaReviewGateOnConvergenceInput,
   MetaReviewGateResult,
+  NotifyMetaReviewerSubmissionRequest,
+  NotifyMetaReviewerSubmissionRequestDependencies,
   RecoverMetaReviewGateFromSnapshotDependencies,
   RecoverMetaReviewGateFromSnapshotInput
 } from "../../shared/metaReviewGate/metaReviewGateCommandContract.js";
 import { notifyMetaReviewerSubmissionRequest } from "./metaReviewGateNotify.js";
 import { resolveMetaReviewerPaneWarning } from "./metaReviewGatePaneBinding.js";
+import { metaReviewGateRuntimeDependencyDefaults } from "./metaReviewGateRuntimeDependencyDefaults.js";
+
+function withMetaReviewGateNotifyDefaults(
+  notify: NotifyMetaReviewerSubmissionRequest = notifyMetaReviewerSubmissionRequest
+): NotifyMetaReviewerSubmissionRequest {
+  return (
+    input,
+    dependencies: NotifyMetaReviewerSubmissionRequestDependencies = {}
+  ) =>
+    notify(input, {
+      runTmux: dependencies.runTmux ?? metaReviewGateDependencyDefaults.runTmux,
+      maybeAcceptClaudeTrustPrompt:
+        dependencies.maybeAcceptClaudeTrustPrompt
+        ?? metaReviewGateRuntimeDependencyDefaults.maybeAcceptClaudeTrustPrompt,
+      sendAndSubmitTmuxPaneMessage:
+        dependencies.sendAndSubmitTmuxPaneMessage
+        ?? metaReviewGateRuntimeDependencyDefaults.sendAndSubmitTmuxPaneMessage,
+      submitTmuxPaneInput:
+        dependencies.submitTmuxPaneInput
+        ?? metaReviewGateRuntimeDependencyDefaults.submitTmuxPaneInput
+    });
+}
 
 function withMetaReviewGateApplyDefaults(
   dependencies: ApplyMetaReviewGateOnConvergenceDependencies = {}
@@ -43,7 +67,7 @@ function withMetaReviewGateApplyDefaults(
     runTmux: dependencies.runTmux ?? metaReviewGateDependencyDefaults.runTmux,
     notifyMetaReviewerSubmissionRequest:
       dependencies.notifyMetaReviewerSubmissionRequest
-      ?? notifyMetaReviewerSubmissionRequest,
+      ?? withMetaReviewGateNotifyDefaults(),
     resolveMetaReviewerPaneWarning:
       dependencies.resolveMetaReviewerPaneWarning
       ?? resolveMetaReviewerPaneWarning

@@ -4,8 +4,8 @@ import {
   isDocContractGateScopeActive
 } from "../../../v11/shared/gates/docContractGates.js";
 import {
-  statusGateDefaults
-} from "../../../core/bubble/statusGateDefaults.js";
+  statusCommandDependencyDefaults
+} from "./statusCommandDependencyDefaults.js";
 import type { BubbleFailingGate } from "../../../types/bubble.js";
 import type {
   BubbleStatusState,
@@ -71,7 +71,7 @@ export async function resolveReviewVerificationState(
   if (!accuracyCritical) {
     return "missing";
   }
-  const verification = await statusGateDefaults.readReviewVerificationArtifactStatus(
+  const verification = await statusCommandDependencyDefaults.readReviewVerificationArtifactStatus(
     resolved.bubblePaths.reviewVerificationArtifactPath,
     {
       expectedRound: state.round,
@@ -94,8 +94,8 @@ export async function resolveStatusGateState(
   }
 
   try {
-    const gateArtifact = await statusGateDefaults.readDocContractGateArtifact(
-      statusGateDefaults.resolveDocContractGateArtifactPath(
+    const gateArtifact = await statusCommandDependencyDefaults.readDocContractGateArtifact(
+      statusCommandDependencyDefaults.resolveDocContractGateArtifactPath(
         resolved.bubblePaths.artifactsDir
       )
     );
