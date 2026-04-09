@@ -4,7 +4,7 @@ export {
   emitApprovalDecision as emitApprovalDecisionV11,
   emitApprove as emitApproveV11,
   emitRequestRework as emitRequestReworkV11
-} from "../../../core/human/approval.js";
+} from "./approvalCommandApi.js";
 export type {
   ApprovalCommandDependencies,
   ApprovalCommandDefaultDependencies,
@@ -17,4 +17,4 @@ export type {
   EmitRequestReworkQueuedResult as EmitRequestReworkQueuedV11Result,
   EmitRequestReworkResult as EmitRequestReworkV11Result,
   ResolvedApprovalCommandDependencies
-} from "../../../core/human/approval.js";
+} from "./approvalCommandApi.js";
