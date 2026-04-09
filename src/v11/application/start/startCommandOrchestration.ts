@@ -18,6 +18,13 @@ import type {
   StartBubbleResult
 } from "./startCommandContract.js";
 import { createStartBubbleError } from "./startCommandRuntime.js";
+import {
+  readReviewerBriefArtifact as defaultReadReviewerBriefArtifact,
+  readReviewerFocusArtifact as defaultReadReviewerFocusArtifact
+} from "../reviewer/reviewerArtifactDefaults.js";
+import {
+  resolveReviewerTestExecutionDirective as defaultResolveReviewerTestExecutionDirective
+} from "../reviewer/reviewerTestEvidenceDefaults.js";
 import type {
   ReadReviewerBriefArtifactPort,
   ReadReviewerFocusArtifactPort
@@ -86,41 +93,13 @@ export function resolveStartBubbleDependencies(
       dependencies.buildResumeTranscriptSummary ?? buildResumeTranscriptSummary,
     readReviewerBriefArtifact:
       dependencies.readReviewerBriefArtifact
-      ?? (() => {
-        throw createStartBubbleError({
-          reasonCode: "START_DEPENDENCY_MISSING",
-          message: "start requires a reviewer brief artifact reader dependency.",
-          context: {
-            dependency: "readReviewerBriefArtifact",
-            stage: "resolve_start_dependencies"
-          }
-        });
-      }),
+      ?? defaultReadReviewerBriefArtifact,
     readReviewerFocusArtifact:
       dependencies.readReviewerFocusArtifact
-      ?? (() => {
-        throw createStartBubbleError({
-          reasonCode: "START_DEPENDENCY_MISSING",
-          message: "start requires a reviewer focus artifact reader dependency.",
-          context: {
-            dependency: "readReviewerFocusArtifact",
-            stage: "resolve_start_dependencies"
-          }
-        });
-      }),
+      ?? defaultReadReviewerFocusArtifact,
     resolveReviewerTestExecutionDirective:
       dependencies.resolveReviewerTestExecutionDirective
-      ?? (() => {
-        throw createStartBubbleError({
-          reasonCode: "START_DEPENDENCY_MISSING",
-          message:
-            "start requires a reviewer test-evidence directive resolver dependency.",
-          context: {
-            dependency: "resolveReviewerTestExecutionDirective",
-            stage: "resolve_start_dependencies"
-          }
-        });
-      })
+      ?? defaultResolveReviewerTestExecutionDirective
   };
 }
 
