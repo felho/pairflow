@@ -18,7 +18,7 @@ export const commandMigrationMap: readonly CommandMigrationEntry[] = [
     command: "kickoff",
     state: "v11",
     owner: "runtime",
-    notes: "Core facade now delegates to v11 kickoff orchestration seams; v11 is the source of truth."
+    notes: "Direct library exports already route to the v11 kickoff entrypoint; remaining core compatibility is tracked separately from facade-parity sentinels."
   },
   {
     command: "converged",
@@ -60,7 +60,7 @@ export const commandMigrationMap: readonly CommandMigrationEntry[] = [
     command: "reconcile",
     state: "v11",
     owner: "runtime",
-    notes: "Core facade now delegates to v11 reconcile orchestration seams; v11 is the source of truth."
+    notes: "Direct library exports already route to the v11 reconcile entrypoint; remaining core compatibility is tracked separately from facade-parity sentinels."
   },
   {
     command: "askHuman",
@@ -84,7 +84,7 @@ export const commandMigrationMap: readonly CommandMigrationEntry[] = [
     command: "stop",
     state: "v11",
     owner: "runtime",
-    notes: "Core facade now delegates to v11 stop orchestration seams; v11 is the source of truth."
+    notes: "Direct library exports already route to the v11 stop entrypoint; remaining core compatibility is tracked separately from facade-parity sentinels."
   },
   {
     command: "restart",
@@ -108,13 +108,13 @@ export const commandMigrationMap: readonly CommandMigrationEntry[] = [
     command: "commit",
     state: "v11",
     owner: "runtime",
-    notes: "Core facade now delegates to v11 commit orchestration seams; v11 is the source of truth."
+    notes: "Direct library exports already route to the v11 commit entrypoint; remaining core compatibility is tracked separately from facade-parity sentinels."
   },
   {
     command: "merge",
     state: "v11",
     owner: "runtime",
-    notes: "Core facade now delegates to v11 merge orchestration seams; v11 is the source of truth."
+    notes: "Direct library exports already route to the v11 merge entrypoint; remaining core compatibility is tracked separately from facade-parity sentinels."
   },
   {
     command: "inbox",

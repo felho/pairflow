@@ -8,31 +8,31 @@ import { commandMigrationMap } from "./migration-map.js";
 const commandsWithoutFacadeParitySentinel = [
   "approval",
   "askHuman",
+  "commit",
   "converged",
   "create",
   "delete",
   "inbox",
+  "kickoff",
   "list",
+  "merge",
   "open",
   "pass",
+  "reconcile",
   "reply",
   "restart",
   "resume",
   "start",
+  "stop",
   "status"
 ] as const;
 
 const facadeParityTestsByCommand: Record<string, readonly string[]> = {
-  kickoff: ["tests/v11/application/kickoff/kickoffFacadeParity.test.ts"],
   metaReviewGate: [
     "tests/v11/application/metaReviewGate/metaReviewGateFacadeParity.test.ts"
   ],
   gate: ["tests/v11/application/metaReviewGate/metaReviewGateFacadeParity.test.ts"],
-  reconcile: ["tests/v11/application/reconcile/reconcileFacadeParity.test.ts"],
-  stop: ["tests/v11/application/stop/stopFacadeParity.test.ts"],
-  watchdog: ["tests/v11/application/watchdog/watchdogFacadeParity.test.ts"],
-  commit: ["tests/v11/application/commit/commitFacadeParity.test.ts"],
-  merge: ["tests/v11/application/merge/mergeFacadeParity.test.ts"]
+  watchdog: ["tests/v11/application/watchdog/watchdogFacadeParity.test.ts"]
 };
 
 describe("v11 facade parity coverage", () => {
