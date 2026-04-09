@@ -3,13 +3,9 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import {
-  emitApprove,
-  emitRequestRework,
-  type EmitApprovalDecisionDependencies
-} from "../../../src/core/human/approval.js";
-import {
   emitApproveV11,
-  emitRequestReworkV11
+  emitRequestReworkV11,
+  type EmitApprovalDecisionV11Dependencies as EmitApprovalDecisionDependencies
 } from "../../../src/v11/application/approval/emitApprovalV11.js";
 import { deliveryTargetRoleMetadataKey } from "../../../src/types/protocol.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
@@ -55,7 +51,6 @@ export interface ApprovalContractOutput {
 
 export interface ApprovalContractRunResult {
   mode: ContractCase["mode"];
-  baseline?: ApprovalContractOutput;
   v11?: ApprovalContractOutput;
 }
 
@@ -147,18 +142,6 @@ function assertContractExpectedSubset(input: {
   ) {
     throw new Error(
       `${input.label}: deliveryRefKinds mismatch (expected=${JSON.stringify(input.expected.deliveryRefKinds)}, actual=${JSON.stringify(input.output.deliveryRefKinds)})`
-    );
-  }
-}
-
-function assertParityEquivalent(input: {
-  baseline: ApprovalContractOutput;
-  v11: ApprovalContractOutput;
-  caseId: string;
-}): void {
-  if (JSON.stringify(input.baseline) !== JSON.stringify(input.v11)) {
-    throw new Error(
-      `approval parity mismatch for case=${input.caseId}: baseline=${JSON.stringify(input.baseline)} v11=${JSON.stringify(input.v11)}`
     );
   }
 }
@@ -313,7 +296,7 @@ function assertApprovalDeliveryInvariant(input: {
 }
 
 function normalizeApproveResult(
-  result: Awaited<ReturnType<typeof emitApprove>>,
+  result: Awaited<ReturnType<typeof emitApproveV11>>,
   deliveries: CapturedApprovalDelivery[]
 ): ApprovalContractOutput {
   const decisionRaw = result.envelope.payload.decision;
@@ -337,7 +320,7 @@ function normalizeApproveResult(
 }
 
 function normalizeImmediateReworkResult(
-  result: Awaited<ReturnType<typeof emitRequestRework>>,
+  result: Awaited<ReturnType<typeof emitRequestReworkV11>>,
   deliveries: CapturedApprovalDelivery[]
 ): ApprovalContractOutput {
   if (result.mode !== "immediate") {
@@ -364,7 +347,7 @@ function normalizeImmediateReworkResult(
 }
 
 function normalizeQueuedReworkResult(
-  result: Awaited<ReturnType<typeof emitRequestRework>>,
+  result: Awaited<ReturnType<typeof emitRequestReworkV11>>,
   deliveries: CapturedApprovalDelivery[]
 ): ApprovalContractOutput {
   if (result.mode !== "queued") {
@@ -387,8 +370,8 @@ function normalizeQueuedReworkResult(
 async function executeApprovalCase(input: {
   caseDef: ContractCase;
   action: ParsedApprovalCaseInput;
-  emitApproveFn: typeof emitApprove;
-  emitRequestReworkFn: typeof emitRequestRework;
+  emitApproveFn: typeof emitApproveV11;
+  emitRequestReworkFn: typeof emitRequestReworkV11;
   label: string;
 }): Promise<ApprovalContractOutput> {
   const repoPath = await mkdtemp(join(tmpdir(), "pairflow-approval-contract-"));
@@ -509,77 +492,20 @@ export async function runApprovalContractCase(
     );
   }
   const parsedInput = parseApprovalCaseInput(caseDef.input);
-
-  if (caseDef.mode === "baseline") {
-    const baseline = await executeApprovalCase({
-      caseDef,
-      action: parsedInput,
-      emitApproveFn: emitApprove,
-      emitRequestReworkFn: emitRequestRework,
-      label: "baseline"
-    });
-    assertContractExpectedSubset({
-      output: baseline,
-      expected: caseDef.expected,
-      label: "baseline"
-    });
-    return {
-      mode: caseDef.mode,
-      baseline
-    };
-  }
-
-  if (caseDef.mode === "v11") {
-    const v11 = await executeApprovalCase({
-      caseDef,
-      action: parsedInput,
-      emitApproveFn: emitApproveV11,
-      emitRequestReworkFn: emitRequestReworkV11,
-      label: "v11"
-    });
-    assertContractExpectedSubset({
-      output: v11,
-      expected: caseDef.expected,
-      label: "v11"
-    });
-    return {
-      mode: caseDef.mode,
-      v11
-    };
-  }
-
-  const baseline = await executeApprovalCase({
-    caseDef,
-    action: parsedInput,
-    emitApproveFn: emitApprove,
-    emitRequestReworkFn: emitRequestRework,
-    label: "parity/baseline"
-  });
   const v11 = await executeApprovalCase({
     caseDef,
     action: parsedInput,
     emitApproveFn: emitApproveV11,
     emitRequestReworkFn: emitRequestReworkV11,
-    label: "parity/v11"
-  });
-  assertContractExpectedSubset({
-    output: baseline,
-    expected: caseDef.expected,
-    label: "parity/baseline"
+    label: "v11"
   });
   assertContractExpectedSubset({
     output: v11,
     expected: caseDef.expected,
-    label: "parity/v11"
-  });
-  assertParityEquivalent({
-    baseline,
-    v11,
-    caseId: caseDef.id
+    label: "v11"
   });
   return {
     mode: caseDef.mode,
-    baseline,
     v11
   };
 }

@@ -11,33 +11,19 @@ import { readContractCase } from "./runner.js";
 
 const execFileAsync = promisify(execFile);
 const approvalCaseSources = [
-  "tests/contracts/v11/cases/approval/approval-approve-basic.case.json",
   "tests/contracts/v11/cases/approval/approval-approve-basic-v11.case.json",
-  "tests/contracts/v11/cases/approval/approval-approve-basic-parity.case.json",
-  "tests/contracts/v11/cases/approval/approval-rework-immediate.case.json",
   "tests/contracts/v11/cases/approval/approval-rework-immediate-v11.case.json",
-  "tests/contracts/v11/cases/approval/approval-rework-immediate-parity.case.json",
-  "tests/contracts/v11/cases/approval/approval-rework-queued.case.json",
   "tests/contracts/v11/cases/approval/approval-rework-queued-v11.case.json",
-  "tests/contracts/v11/cases/approval/approval-rework-queued-parity.case.json",
-  "tests/contracts/v11/cases/approval/approval-rework-queued-supersede.case.json",
-  "tests/contracts/v11/cases/approval/approval-rework-queued-supersede-v11.case.json",
-  "tests/contracts/v11/cases/approval/approval-rework-queued-supersede-parity.case.json"
+  "tests/contracts/v11/cases/approval/approval-rework-queued-supersede-v11.case.json"
 ] as const;
 
 const approvalExpectedSourcesSorted = [...approvalCaseSources].sort();
 const approvalQueuedReworkSources = [
-  "tests/contracts/v11/cases/approval/approval-rework-queued.case.json",
   "tests/contracts/v11/cases/approval/approval-rework-queued-v11.case.json",
-  "tests/contracts/v11/cases/approval/approval-rework-queued-parity.case.json",
-  "tests/contracts/v11/cases/approval/approval-rework-queued-supersede.case.json",
-  "tests/contracts/v11/cases/approval/approval-rework-queued-supersede-v11.case.json",
-  "tests/contracts/v11/cases/approval/approval-rework-queued-supersede-parity.case.json"
+  "tests/contracts/v11/cases/approval/approval-rework-queued-supersede-v11.case.json"
 ] as const;
 const approvalImmediateReworkSources = [
-  "tests/contracts/v11/cases/approval/approval-rework-immediate.case.json",
-  "tests/contracts/v11/cases/approval/approval-rework-immediate-v11.case.json",
-  "tests/contracts/v11/cases/approval/approval-rework-immediate-parity.case.json"
+  "tests/contracts/v11/cases/approval/approval-rework-immediate-v11.case.json"
 ] as const;
 
 function parseApprovalSourcesFromManifest(
@@ -68,12 +54,12 @@ describe("v11 approval contract harness skeleton", () => {
     const casePath = resolve(process.cwd(), approvalCaseSources[0]);
     const caseDef = await readContractCase(casePath);
     expect(caseDef.command).toBe("approval");
-    expect(caseDef.mode).toBe("baseline");
+    expect(caseDef.mode).toBe("v11");
     expect(caseDef.expected.status).toBe("ok");
   });
 
   it(
-    "executes baseline and parity assertions via shared runner",
+    "executes v11 assertions via shared runner",
     { timeout: CONTRACT_TEST_TIMEOUT.parityStandardMs },
     async () => {
     const casePaths = approvalCaseSources.map((source) =>
@@ -83,20 +69,8 @@ describe("v11 approval contract harness skeleton", () => {
     for (const casePath of casePaths) {
       const caseDef = await readContractCase(casePath);
       const run = await runApprovalContractCase(caseDef);
-      if (caseDef.mode === "baseline") {
-        expect(run.baseline?.status).toBe("ok");
-        expect(run.v11).toBeUndefined();
-        continue;
-      }
-      if (caseDef.mode === "v11") {
-        expect(run.v11?.status).toBe("ok");
-        expect(run.baseline).toBeUndefined();
-        continue;
-      }
-
-      expect(run.baseline).toBeDefined();
-      expect(run.v11).toBeDefined();
-      expect(run.baseline).toEqual(run.v11);
+      expect(caseDef.mode).toBe("v11");
+      expect(run.v11?.status).toBe("ok");
     }
     }
   );
