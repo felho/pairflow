@@ -7,7 +7,7 @@ import {
 import {
   appendProtocolEnvelope,
   type AppendProtocolEnvelopeResult
-} from "../../../core/protocol/transcriptStore.js";
+} from "./metaReviewGateTranscriptDefaults.js";
 import {
   readLatestSameRoundReviewerSnapshotFromTranscript,
   type LatestSameRoundReviewerSnapshot

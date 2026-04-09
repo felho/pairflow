@@ -116,6 +116,10 @@ These numbers are triage inputs, not yet a finalized ledger.
   - total direct residual imports: `48`
   - `postAppendReviewVerificationWriter` and `reviewerVerificationResolver`
     now share one local `passReviewVerificationDefaults` bridge
+- after the `metaReviewGate` transcript fan-in batch:
+  - total direct residual imports: `47`
+  - `approvalRequestEnvelope` and `metaReviewGateReviewerSnapshot` now share
+    one local `metaReviewGateTranscriptDefaults` bridge
 - after the `start + kickoff` local fan-in batch:
   - total direct residual imports: `54`
   - `application/start` prompt/runtime and default wiring now route through two
