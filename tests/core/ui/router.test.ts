@@ -5,11 +5,11 @@ import { join } from "node:path";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { createUiRouter, resolveStaticAssetPath } from "../../../src/core/ui/router.js";
-import { AttachBubbleError } from "../../../src/core/bubble/attachBubble.js";
-import type { RestartBubbleResult } from "../../../src/core/bubble/restartBubble.js";
-import type { UiEventsBroker } from "../../../src/core/ui/events.js";
-import type { UiRepoScope } from "../../../src/core/ui/repoScope.js";
+import { AttachBubbleError } from "../../../src/v11/application/attach/emitAttachV11.js";
+import type { RestartBubbleResult } from "../../../src/v11/application/restart/restartCommandContract.js";
+import { createUiRouter, resolveStaticAssetPath } from "../../../src/v11/infrastructure/ui/router.js";
+import type { UiEventsBroker } from "../../../src/v11/infrastructure/ui/events.js";
+import type { UiRepoScope } from "../../../src/v11/infrastructure/ui/repoScope.js";
 
 function createDeferred<T>(): {
   promise: Promise<T>;

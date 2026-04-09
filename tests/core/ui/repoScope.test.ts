@@ -4,17 +4,17 @@ import { join } from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { normalizeRepoPath } from "../../../src/core/bubble/repoResolution.js";
+import { normalizeRepoPath } from "../../../src/v11/infrastructure/executor/workspace/repoResolution.js";
 import {
   readRepoRegistry,
   registerRepoInRegistry,
   removeRepoFromRegistry
-} from "../../../src/core/repo/registry.js";
+} from "../../../src/v11/infrastructure/executor/workspace/repoRegistry.js";
 import {
   resolveScopedRepoPath,
   resolveUiRepoScope,
   UiRepoScopeError
-} from "../../../src/core/ui/repoScope.js";
+} from "../../../src/v11/infrastructure/ui/repoScope.js";
 import { initGitRepository } from "../../helpers/git.js";
 
 const tempDirs: string[] = [];

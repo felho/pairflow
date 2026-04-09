@@ -4,7 +4,7 @@ import { join } from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { readBubbleTimelineFromTranscriptPath } from "../../../src/core/ui/presenters/timelinePresenter.js";
+import { readBubbleTimelineFromTranscriptPath } from "../../../src/v11/infrastructure/ui/presenters/timelinePresenter.js";
 
 const tempDirs: string[] = [];
 

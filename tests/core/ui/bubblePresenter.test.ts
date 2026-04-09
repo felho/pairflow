@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   presentBubbleSummaryFromListEntry,
   presentRuntimeHealth
-} from "../../../src/core/ui/presenters/bubblePresenter.js";
+} from "../../../src/v11/infrastructure/ui/presenters/bubblePresenter.js";
 
 describe("bubblePresenter", () => {
   it("marks runtime as stale when a runtime-expected state has no session", () => {

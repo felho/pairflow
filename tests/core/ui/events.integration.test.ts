@@ -4,13 +4,13 @@ import { join } from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { emitAskHumanFromWorkspace } from "../../../src/core/agent/askHuman.js";
-import { getBubblePaths } from "../../../src/core/bubble/paths.js";
-import { normalizeRepoPath } from "../../../src/core/bubble/repoResolution.js";
-import { emitHumanReply } from "../../../src/core/human/reply.js";
-import { startUiServer, type UiServerHandle } from "../../../src/core/ui/server.js";
-import { upsertRuntimeSession } from "../../../src/core/runtime/sessionsRegistry.js";
-import { registerRepoInRegistry } from "../../../src/core/repo/registry.js";
+import { emitAskHumanFromWorkspaceV11 as emitAskHumanFromWorkspace } from "../../../src/v11/application/askHuman/emitAskHumanV11.js";
+import { emitHumanReplyV11 as emitHumanReply } from "../../../src/v11/application/reply/emitReplyV11.js";
+import { getBubblePaths } from "../../../src/v11/infrastructure/artifact/bubble/paths.js";
+import { normalizeRepoPath } from "../../../src/v11/infrastructure/executor/workspace/repoResolution.js";
+import { registerRepoInRegistry } from "../../../src/v11/infrastructure/executor/workspace/repoRegistry.js";
+import { upsertRuntimeSession } from "../../../src/v11/infrastructure/executor/sessionRuntime/runtimeSessionsRegistry.js";
+import { startUiServer, type UiServerHandle } from "../../../src/v11/infrastructure/ui/server.js";
 import { initGitRepository } from "../../helpers/git.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
 

@@ -4,9 +4,9 @@ import { join } from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { emitAskHumanFromWorkspace } from "../../../src/core/agent/askHuman.js";
-import { normalizeRepoPath } from "../../../src/core/bubble/repoResolution.js";
-import { createUiEventsBroker } from "../../../src/core/ui/events.js";
+import { emitAskHumanFromWorkspaceV11 as emitAskHumanFromWorkspace } from "../../../src/v11/application/askHuman/emitAskHumanV11.js";
+import { normalizeRepoPath } from "../../../src/v11/infrastructure/executor/workspace/repoResolution.js";
+import { createUiEventsBroker } from "../../../src/v11/infrastructure/ui/events.js";
 import { initGitRepository } from "../../helpers/git.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
 
