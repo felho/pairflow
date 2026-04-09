@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { emitAskHumanFromWorkspaceV11 as emitAskHumanFromWorkspace } from "../../../src/v11/application/askHuman/emitAskHumanV11.js";
-import { emitPassFromWorkspace } from "../../../src/core/agent/pass.js";
+import { emitPassFromWorkspaceV11 as emitPassFromWorkspace } from "../../../src/v11/application/pass/emitPassV11.js";
 import { createBubble } from "../../../src/core/bubble/createBubble.js";
 import { emitHumanReplyV11 as emitHumanReply } from "../../../src/v11/application/reply/emitReplyV11.js";
 import { getBubbleStatusV11 as getBubbleStatus } from "../../../src/v11/application/status/emitStatusV11.js";
