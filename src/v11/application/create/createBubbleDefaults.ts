@@ -1,3 +1,3 @@
-import { createBubbleDependencyDefaults } from "../../../core/bubble/createBubbleDefaults.js";
+import { createBubbleDependencyDefaults } from "../../defaults/create/createBubbleDefaults.js";
 
 export const createBubbleDefaults = createBubbleDependencyDefaults;
