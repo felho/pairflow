@@ -2,16 +2,9 @@ import {
   readStateSnapshot,
   writeStateSnapshot
 } from "../state/stateStoreDefaults.js";
-import type { ReadRuntimeSessionsRegistryPort } from "../ports/runtimeSessions.js";
 import { resolveBubbleById } from "../bubbleLookup/bubbleLookupDefaults.js";
-import { metaReviewCommandSubmitDefaults as metaReviewCommandSubmitDefaultsCore } from "../../../core/runtime/metaReviewCommandSubmitDefaults.js";
-import { metaReviewLiveRunDefaults as metaReviewLiveRunDefaultsCore } from "../../../core/runtime/metaReviewLiveRunDefaults.js";
-
-async function readRuntimeSessionsRegistry(
-  ...args: Parameters<ReadRuntimeSessionsRegistryPort>
-): Promise<Awaited<ReturnType<ReadRuntimeSessionsRegistryPort>>> {
-  return metaReviewCommandSubmitDefaultsCore.readRuntimeSessionsRegistry(...args);
-}
+import { appendProtocolEnvelope } from "../transcript/transcriptDependencyDefaults.js";
+import { readRuntimeSessionsRegistry } from "../../defaults/runtimeSessions/runtimeSessionsDefaults.js";
 
 export const metaReviewReadDefaults = {
   readStateSnapshot,
@@ -25,7 +18,7 @@ export const metaReviewCommandSubmitDefaults = {
 } as const;
 
 export const metaReviewLiveRunDefaults = {
-  appendProtocolEnvelope: metaReviewLiveRunDefaultsCore.appendProtocolEnvelope,
+  appendProtocolEnvelope,
   readStateSnapshot,
   resolveBubbleById,
   writeStateSnapshot
