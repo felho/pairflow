@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildMetaReviewSubmitCommandTemplate,
   buildMetaReviewSubmitUsageLine
-} from "../../../src/core/runtime/metaReviewSubmitGuidance.js";
+} from "../../../src/v11/shared/metaReview/metaReviewSubmitGuidance.js";
 import { getBubbleMetaReviewHelpText } from "../../../src/v11/application/metaReview/metaReviewCliOptions.js";
 import { buildMetaReviewerStartupPrompt } from "../../../src/v11/application/start/startCommandPrompts.js";
 

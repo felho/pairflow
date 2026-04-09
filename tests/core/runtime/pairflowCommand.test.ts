@@ -11,7 +11,7 @@ import {
   buildPinnedPairflowCommand,
   resolveExternalPairflowCommand,
   resolveWorktreePairflowEntrypoint
-} from "../../../src/core/runtime/pairflowCommand.js";
+} from "../../../src/v11/infrastructure/executor/command/pairflowCommand.js";
 
 const tempDirs: string[] = [];
 

@@ -11,7 +11,7 @@ import {
   buildReviewerCanonicalCommandGateLines,
   buildReviewerFindingsPassInstruction,
   buildReviewerRoundCommandGateProjection
-} from "../../../src/core/runtime/reviewerCommandGateGuidance.js";
+} from "../../../src/v11/shared/reviewer/reviewerCommandGateGuidance.js";
 
 describe("reviewerCommandGateGuidance", () => {
   it("keeps canonical routing and forbidden-pattern guidance in startup lines", () => {

@@ -10,8 +10,8 @@ import {
   reviewerSeverityOntologyRuntimeBlockMarkdown,
   reviewerSeverityOntologyRuntimeReminderText,
   reviewerSeverityOntologySourceDoc
-} from "../../../src/core/runtime/reviewerSeverityOntology.generated.js";
-import { buildReviewerSeverityOntologyReminder } from "../../../src/core/runtime/reviewerSeverityOntology.js";
+} from "../../../src/v11/shared/reviewer/reviewerSeverityOntology.generated.js";
+import { buildReviewerSeverityOntologyReminder } from "../../../src/v11/shared/reviewer/reviewerSeverityOntology.js";
 
 describe("buildReviewerSeverityOntologyReminder", () => {
   it("uses generated canonical ontology content", () => {

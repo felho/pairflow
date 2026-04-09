@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { buildMetaReviewExecutionContext } from "../../../src/core/bubble/metaReviewExecutionContext.js";
-import { computeWatchdogStatus } from "../../../src/core/runtime/watchdog.js";
+import { computeWatchdogStatus } from "../../../src/v11/shared/watchdog/watchdogStatus.js";
 import type { BubbleStateSnapshot } from "../../../src/types/bubble.js";
 
 function createState(partial: Partial<BubbleStateSnapshot>): BubbleStateSnapshot {

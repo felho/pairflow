@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildReviewerPassOutputContractGuidance,
   buildReviewerScoutExpansionWorkflowGuidance
-} from "../../../src/core/runtime/reviewerScoutExpansionGuidance.js";
+} from "../../../src/v11/shared/reviewer/reviewerScoutExpansionGuidance.js";
 
 const branchRangeAnchor = /(<revA>\.\.<revB>|main\.\.HEAD)/;
 const historyLogAnchor = /git\s+(log|show)\s+--name-status/;

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { buildReviewerAgentSelectionGuidance } from "../../../src/core/runtime/reviewerGuidance.js";
+import { buildReviewerAgentSelectionGuidance } from "../../../src/v11/shared/reviewer/reviewerGuidance.js";
 
 describe("buildReviewerAgentSelectionGuidance", () => {
   it("adds runtime-check exemption guidance for document scope", () => {
