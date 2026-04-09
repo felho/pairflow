@@ -1,18 +1,18 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { buildResumeTranscriptSummary } from "../../../../src/core/protocol/resumeSummary.js";
+import { buildResumeTranscriptSummary } from "../../../../src/v11/application/start/startCommandResumeSummary.js";
 import {
   bootstrapWorktreeWorkspace,
   cleanupWorktreeWorkspace
-} from "../../../../src/core/workspace/worktreeManager.js";
+} from "../../../../src/v11/infrastructure/workspace/worktreeManager.js";
 import {
   launchBubbleTmuxSession,
   terminateBubbleTmuxSession
-} from "../../../../src/core/runtime/tmuxManager.js";
+} from "../../../../src/v11/infrastructure/channel/tmux/tmuxManager.js";
 import {
   claimRuntimeSession,
   removeRuntimeSession
-} from "../../../../src/core/runtime/sessionsRegistry.js";
+} from "../../../../src/v11/infrastructure/executor/sessionRuntime/runtimeSessionsRegistry.js";
 import { StartBubbleError } from "../../../../src/v11/application/start/startCommandRuntime.js";
 import {
   mapStartBubbleResult,

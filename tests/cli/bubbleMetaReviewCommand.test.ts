@@ -4,7 +4,7 @@ import { join } from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { buildMetaReviewSubmitUsageLine } from "../../src/core/runtime/metaReviewSubmitGuidance.js";
+import { buildMetaReviewSubmitUsageLine } from "../../src/v11/shared/metaReview/metaReviewSubmitGuidance.js";
 import {
   getBubbleMetaReviewHelpText,
   parseBubbleMetaReviewCommandOptions,
@@ -19,8 +19,8 @@ import { buildMetaReviewExecutionContext } from "../../src/core/bubble/metaRevie
 import { MetaReviewError } from "../../src/core/bubble/metaReview.js";
 import {
   metaReviewExecutionContextToRunningContext
-} from "../../src/core/state/executionContext.js";
-import { readStateSnapshot, writeStateSnapshot } from "../../src/core/state/stateStore.js";
+} from "../../src/v11/shared/state/executionContext.js";
+import { readStateSnapshot, writeStateSnapshot } from "../../src/v11/infrastructure/state/stateStore.js";
 import { initGitRepository } from "../helpers/git.js";
 import { setupRunningBubbleFixture } from "../helpers/bubble.js";
 

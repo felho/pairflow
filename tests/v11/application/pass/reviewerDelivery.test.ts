@@ -13,10 +13,10 @@ import {
 import {
   readReviewerBriefArtifact,
   readReviewerFocusArtifact
-} from "../../../../src/core/reviewer/reviewerBrief.js";
+} from "../../../../src/v11/infrastructure/artifact/reviewer/reviewerBriefArtifacts.js";
 import {
   resolveDeliveryMessageRef
-} from "../../../../src/core/runtime/tmuxDelivery.js";
+} from "../../../../src/v11/infrastructure/channel/tmux/tmuxDelivery.js";
 
 function createBubbleConfig(
   reviewerContextMode: BubbleConfig["reviewer_context_mode"] = "persistent"
