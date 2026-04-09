@@ -54,7 +54,6 @@ Latest verified checkpoint after the meta-review-gate defaults redesign:
 Current remaining non-inventory bridge candidates:
 
 - `src/v11/shared/metaReview/metaReviewDependencyDefaults.ts`
-- `src/v11/shared/metrics/bubbleEvents.ts`
 
 Current classification:
 
@@ -62,7 +61,6 @@ Current classification:
   - none confirmed at this checkpoint
 - `medium`
   - `metaReviewDependencyDefaults`
-  - `bubbleEvents`
 - `hard / architecture-sensitive`
   - none confirmed at this checkpoint
 
@@ -95,6 +93,10 @@ Immediate planning note:
   - the shared defaults file now lazy-loads the canonical v11 infrastructure
     owner directly
   - it no longer imports `src/core/gates/docContractGateArtifacts.ts`
+- the previous `bubbleEvents` bridge is now retired:
+  - the shared metrics lifecycle writer now loads the canonical v11 repo
+    normalization + events-store owners directly
+  - it no longer imports `src/core/metrics/bubbleEventsDefaults.ts`
 
 Observed warning snapshot when the test was downgraded:
 
