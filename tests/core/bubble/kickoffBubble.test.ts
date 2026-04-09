@@ -16,7 +16,7 @@ import {
   IDEATION_KICKOFF_REQUIRES_RUNNING,
   IDEATION_KICKOFF_TASK_INVALID,
   IDEATION_KICKOFF_STATE_CONFLICT
-} from "../../../src/core/bubble/ideation.js";
+} from "../../../src/v11/shared/ideation/ideationReasonCodes.js";
 import { readTranscriptEnvelopes } from "../../../src/v11/infrastructure/artifact/transcript/transcriptStore.js";
 import {
   readStateSnapshot,

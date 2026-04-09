@@ -14,7 +14,7 @@ import { PassCommandError } from "../../../src/v11/shared/pass/passCommandError.
 import {
   resolveMostRecentPreviousReviewerPassIsCleanFromMetadata
 } from "../../../src/v11/domain/pass/repeatCleanMetadata.js";
-import { IDEATION_PASS_BLOCKED } from "../../../src/core/bubble/ideation.js";
+import { IDEATION_PASS_BLOCKED } from "../../../src/v11/shared/ideation/ideationReasonCodes.js";
 import {
   buildRunningExecutionContext,
   metaReviewExecutionContextToRunningContext
