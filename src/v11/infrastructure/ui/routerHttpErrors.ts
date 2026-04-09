@@ -207,9 +207,27 @@ export function isConflictErrorMessage(message: string): boolean {
   return patterns.some((pattern) => message.includes(pattern));
 }
 
+export interface AttachBubbleErrorLike {
+  name: string;
+  reasonCode?: string | undefined;
+  launcher?: string | undefined;
+  failureClass?: string | undefined;
+  stdoutExcerpt?: string | undefined;
+  stderrExcerpt?: string | undefined;
+}
+
+export function isAttachBubbleErrorLike(
+  error: unknown
+): error is AttachBubbleErrorLike {
+  if (error instanceof AttachBubbleError) {
+    return true;
+  }
+  if (!(error instanceof Error) || error.name !== "AttachBubbleError") {
+    return false;
+  }
+  return true;
+}
+
 export function isAttachRuntimeMissingError(error: unknown): boolean {
-  return (
-    error instanceof AttachBubbleError &&
-    error.reasonCode === "TMUX_SESSION_MISSING"
-  );
+  return isAttachBubbleErrorLike(error) && error.reasonCode === "TMUX_SESSION_MISSING";
 }

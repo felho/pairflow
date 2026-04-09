@@ -1,4 +1,5 @@
 export {
+  type AttachBubbleErrorLike,
   UiApiHttpError,
   type UiApiHttpErrorContext,
   type UiApiHttpErrorInput,
@@ -7,6 +8,7 @@ export {
   badRequest,
   conflict,
   internalError,
+  isAttachBubbleErrorLike,
   isAttachRuntimeMissingError,
   isConflictErrorMessage,
   isNotFoundErrorMessage,

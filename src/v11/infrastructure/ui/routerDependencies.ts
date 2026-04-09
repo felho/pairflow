@@ -1,6 +1,28 @@
-import { uiRouterDependencyDefaults } from "../../../core/ui/routerDefaults.js";
+import {
+  emitApprove,
+  emitRequestRework
+} from "../../application/approval/approvalCommandApi.js";
+import { commitBubble } from "../../application/commit/commitCommandApi.js";
+import { deleteBubble } from "../../application/delete/deleteBubble.js";
+import { listBubbles } from "../../application/list/listCommandApi.js";
+import { mergeBubbleCommandOrchestration as mergeBubble } from "../../application/merge/mergeCommandOrchestration.js";
+import { openBubbleRuntime } from "../../application/open/openBubbleRuntime.js";
+import { emitHumanReply } from "../../application/reply/replyCommandApi.js";
+import { restartBubbleCommandOrchestration as restartBubble } from "../../application/restart/restartCommandOrchestration.js";
+import { resumeBubbleCommandOrchestration as resumeBubble } from "../../application/resume/resumeCommandOrchestration.js";
+import { startBubble } from "../../application/start/startCommandApi.js";
+import { getBubbleStatusV11 as getBubbleStatus } from "../../application/status/emitStatusV11.js";
+import { stopBubbleCommandOrchestration as stopBubble } from "../../application/stop/stopCommandOrchestration.js";
 import { getBubbleInbox } from "../../shared/inbox/inboxCommandApi.js";
 import { readRuntimeSessionsRegistry } from "../executor/sessionRuntime/runtimeSessionsRegistry.js";
+import {
+  appendProtocolEnvelope,
+  readTranscriptEnvelopes
+} from "../artifact/transcript/transcriptStore.js";
+import { ensureBubbleInstanceIdForMutation } from "../artifact/bubble/bubbleInstanceId.js";
+import { resolveBubbleById } from "../executor/workspace/bubbleLookup.js";
+import { readStateSnapshot, writeStateSnapshot } from "../state/stateStore.js";
+import { runGit } from "../workspace/git.js";
 import { readBubbleTimeline } from "./presenters/timelinePresenter.js";
 import { attachBubble } from "../executor/command/pairflowCommandAttach.js";
 import type { UiRouterDependencies } from "../../shared/ports/uiRouter.js";
@@ -8,13 +30,45 @@ import type {
   CreateUiRouterInput
 } from "./routerContracts.js";
 
+async function commitBubbleForUi(
+  input: Parameters<UiRouterDependencies["commitBubble"]>[0]
+) {
+  return commitBubble(input, {
+    appendProtocolEnvelope,
+    ensureBubbleInstanceIdForMutation,
+    readStateSnapshot,
+    readTranscriptEnvelopes,
+    resolveBubbleById,
+    runGit,
+    writeStateSnapshot
+  });
+}
+
+async function openBubble(input: Parameters<UiRouterDependencies["openBubble"]>[0]) {
+  return openBubbleRuntime(input, {
+    resolveBubbleById
+  });
+}
+
 export const defaultUiRouterDependencies = {
-  ...uiRouterDependencyDefaults,
+  commitBubble: commitBubbleForUi,
+  deleteBubble,
+  emitApprove,
+  emitHumanReply,
+  emitRequestRework,
+  getBubbleStatus,
+  listBubbles,
+  mergeBubble,
+  openBubble,
+  restartBubble,
+  resumeBubble,
+  startBubble,
+  stopBubble,
   getBubbleInbox,
   readRuntimeSessionsRegistry,
   readBubbleTimeline,
   attachBubble,
-};
+} satisfies UiRouterDependencies;
 
 export function resolveUiRouterDependencies(
   input: CreateUiRouterInput

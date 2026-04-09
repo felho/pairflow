@@ -2,7 +2,6 @@ import type { IncomingMessage } from "node:http";
 import { join } from "node:path";
 
 import type { UiBubbleDetail } from "../../../types/ui.js";
-import { AttachBubbleError } from "../executor/command/pairflowCommandAttachContract.js";
 import type { RuntimeSessionRecord } from "../executor/sessionRuntime/runtimeSessionsRegistry.js";
 import { presentBubbleDetail, presentBubbleList } from "./presenters/bubblePresenter.js";
 import { UiRepoScopeError, resolveScopedRepoPath } from "./repoScope.js";
@@ -13,6 +12,7 @@ import {
   badRequest,
   conflict,
   internalError,
+  isAttachBubbleErrorLike,
   isConflictErrorMessage,
   isNotFoundErrorMessage,
   notFound,
@@ -133,7 +133,7 @@ async function mapActionErrorToApiError(input: {
   }
 
   if (
-    input.error instanceof AttachBubbleError &&
+    isAttachBubbleErrorLike(input.error) &&
     input.error.launcher !== undefined &&
     input.error.failureClass !== undefined
   ) {
