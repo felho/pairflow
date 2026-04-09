@@ -14,13 +14,25 @@ import type {
   EmitRequestReworkInput,
   EmitRequestReworkResult
 } from "./approvalCommandContract.js";
+import type { ApprovalCommandDefaultDependencies } from "./approvalCommandDependencyResolution.js";
 import { ApprovalCommandError } from "../../shared/approval/approvalCommandError.js";
-import { approvalDependencyDefaults } from "../../../core/human/approvalDefaults.js";
+
+let approvalDependencyDefaultsPromise:
+  | Promise<ApprovalCommandDefaultDependencies>
+  | undefined;
+
+async function loadApprovalDependencyDefaults(): Promise<ApprovalCommandDefaultDependencies> {
+  approvalDependencyDefaultsPromise ??= import(
+    "../../../core/human/approvalDefaults.js"
+  ).then(({ approvalDependencyDefaults }) => approvalDependencyDefaults);
+  return approvalDependencyDefaultsPromise;
+}
 
 export async function emitApprovalDecision(
   input: EmitApprovalDecisionInput,
   dependencies: EmitApprovalDecisionDependencies = {}
 ): Promise<EmitApprovalDecisionResult> {
+  const approvalDependencyDefaults = await loadApprovalDependencyDefaults();
   const resolvedDependencies = resolveApprovalCommandDependencies(
     dependencies,
     approvalDependencyDefaults
@@ -51,6 +63,7 @@ export async function emitRequestRework(
   input: EmitRequestReworkInput,
   dependencies: EmitApprovalDecisionDependencies = {}
 ): Promise<EmitRequestReworkResult> {
+  const approvalDependencyDefaults = await loadApprovalDependencyDefaults();
   const resolvedDependencies = resolveApprovalCommandDependencies(
     dependencies,
     approvalDependencyDefaults
