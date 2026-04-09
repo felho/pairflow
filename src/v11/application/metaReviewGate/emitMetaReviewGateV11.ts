@@ -32,6 +32,8 @@ function withMetaReviewGateApplyDefaults(
     readStateSnapshot:
       dependencies.readStateSnapshot
       ?? metaReviewGateDependencyDefaults.readStateSnapshot,
+    readTranscriptEnvelopes:
+      dependencies.readTranscriptEnvelopes ?? defaultReadTranscriptEnvelopes,
     resolveBubbleById:
       dependencies.resolveBubbleById
       ?? metaReviewGateDependencyDefaults.resolveBubbleById,

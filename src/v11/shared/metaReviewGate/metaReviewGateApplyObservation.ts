@@ -1,6 +1,5 @@
 import type { LoadedStateSnapshot } from "../ports/stateSnapshots.js";
 import { isMetaReviewExecutionContextActiveState } from "../metaReview/metaReviewExecutionContext.js";
-import { readTranscriptEnvelopes } from "../../../core/protocol/transcriptStore.js";
 import type { ProtocolEnvelope } from "../../../types/protocol.js";
 import type {
   MetaReviewGateRoute,
@@ -42,7 +41,7 @@ export async function reconcileObservedGateResult(input: {
     };
   }
 
-  const transcript = await readTranscriptEnvelopes(
+  const transcript = await input.context.readTranscript(
     input.context.resolved.bubblePaths.transcriptPath,
     {
       allowMissing: true,

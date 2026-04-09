@@ -10,7 +10,8 @@ import type {
   WriteStateSnapshotPort
 } from "../ports/stateSnapshots.js";
 import type {
-  AppendProtocolEnvelopePort
+  AppendProtocolEnvelopePort,
+  ReadTranscriptEnvelopesPort
 } from "../ports/transcript.js";
 import type { SetMetaReviewerPaneBindingPort } from "../ports/runtimeSessions.js";
 import type {
@@ -22,6 +23,7 @@ import { MetaReviewGateError } from "./metaReviewGateTypes.js";
 
 export interface ApplyMetaReviewGateExecutionContext {
   appendEnvelope: AppendProtocolEnvelopePort;
+  readTranscript: ReadTranscriptEnvelopesPort;
   readState: ReadStateSnapshotPort;
   writeState: WriteStateSnapshotPort;
   setMetaReviewerPane: SetMetaReviewerPaneBindingPort;
@@ -47,6 +49,10 @@ export async function initializeApplyMetaReviewGateExecutionContext(
   const readState = requireApplyReadStateSnapshot(dependencies, input.bubbleId);
   const writeState = requireApplyWriteStateSnapshot(dependencies, input.bubbleId);
   const appendEnvelope = requireApplyAppendProtocolEnvelope(dependencies, input.bubbleId);
+  const readTranscript = requireApplyReadTranscriptEnvelopes(
+    dependencies,
+    input.bubbleId
+  );
   const setMetaReviewerPane = requireApplySetMetaReviewerPaneBinding(
     dependencies,
     input.bubbleId
@@ -84,6 +90,7 @@ export async function initializeApplyMetaReviewGateExecutionContext(
 
   return {
     appendEnvelope,
+    readTranscript,
     readState,
     writeState,
     setMetaReviewerPane,
@@ -150,6 +157,19 @@ function requireApplyAppendProtocolEnvelope(
   return buildMissingApplyCapabilityError(
     bubbleId,
     "meta-review gate transcript append capability is unavailable."
+  );
+}
+
+function requireApplyReadTranscriptEnvelopes(
+  dependencies: ApplyMetaReviewGateOnConvergenceDependencies,
+  bubbleId: string
+): ReadTranscriptEnvelopesPort {
+  if (dependencies.readTranscriptEnvelopes !== undefined) {
+    return dependencies.readTranscriptEnvelopes;
+  }
+  return buildMissingApplyCapabilityError(
+    bubbleId,
+    "meta-review gate transcript read capability is unavailable."
   );
 }
 

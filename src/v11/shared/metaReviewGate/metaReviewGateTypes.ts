@@ -95,6 +95,7 @@ export interface ApplyMetaReviewGateOnConvergenceDependencies {
   readStateSnapshot?: ReadStateSnapshotPort;
   writeStateSnapshot?: WriteStateSnapshotPort;
   appendProtocolEnvelope?: AppendProtocolEnvelopePort;
+  readTranscriptEnvelopes?: ReadTranscriptEnvelopesPort;
   setMetaReviewerPaneBinding?: SetMetaReviewerPaneBindingPort;
   notifyMetaReviewerSubmissionRequest?: NotifyMetaReviewerSubmissionRequest;
   resolveMetaReviewerPaneWarning?: ResolveMetaReviewerPaneWarning;
