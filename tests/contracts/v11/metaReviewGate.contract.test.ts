@@ -126,22 +126,26 @@ describe("v11 metaReviewGate contract harness", () => {
     expect(gateAliasSources).toEqual(gateAliasExpectedSourcesSorted);
   });
 
-  it("builds corpus output manifest with metaReviewGate seed entries", async () => {
-    await execFileAsync("pnpm", [
-      "exec",
-      "tsx",
-      "./tests/contracts/v11/corpus/build-corpus.ts"
-    ]);
+  it(
+    "builds corpus output manifest with metaReviewGate seed entries",
+    { timeout: CONTRACT_TEST_TIMEOUT.parityLargeCorpusMs },
+    async () => {
+      await execFileAsync("pnpm", [
+        "exec",
+        "tsx",
+        "./tests/contracts/v11/corpus/build-corpus.ts"
+      ]);
 
-    const outputManifestPath = resolve(
-      process.cwd(),
-      ".pairflow/evidence/contracts-v11-corpus-manifest.json"
-    );
-    const outputRaw = await readFile(outputManifestPath, "utf8");
-    const metaReviewGateSources = parseMetaReviewGateSourcesFromManifest(outputRaw);
-    const gateAliasSources = parseGateAliasSourcesFromManifest(outputRaw);
+      const outputManifestPath = resolve(
+        process.cwd(),
+        ".pairflow/evidence/contracts-v11-corpus-manifest.json"
+      );
+      const outputRaw = await readFile(outputManifestPath, "utf8");
+      const metaReviewGateSources = parseMetaReviewGateSourcesFromManifest(outputRaw);
+      const gateAliasSources = parseGateAliasSourcesFromManifest(outputRaw);
 
-    expect(metaReviewGateSources).toEqual(metaReviewGateExpectedSourcesSorted);
-    expect(gateAliasSources).toEqual(gateAliasExpectedSourcesSorted);
-  });
+      expect(metaReviewGateSources).toEqual(metaReviewGateExpectedSourcesSorted);
+      expect(gateAliasSources).toEqual(gateAliasExpectedSourcesSorted);
+    }
+  );
 });
