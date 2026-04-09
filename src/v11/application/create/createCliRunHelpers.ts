@@ -2,13 +2,13 @@ import { resolve } from "node:path";
 
 import { DEPENDENCY_FAIL_REPO_REGISTRY_REGISTER } from "../../../config/bubbleConfig.js";
 import type { CreateReviewArtifactType } from "../../../types/bubble.js";
-import { registerRepoInRegistry } from "../../../core/repo/registry.js";
 import { createBubble } from "./createCommandApi.js";
 import type {
   BubbleCreateInput,
   CreateBubbleImplementation
 } from "./createCommandContract.js";
 import type { RegisterRepoInRegistryPort } from "../../shared/ports/repoRegistry.js";
+import { createCliDependencyDefaults } from "../../../core/repo/createCliDefaults.js";
 
 export interface BubbleCreateCommandRuntimeOptions {
   id?: string;
@@ -44,7 +44,9 @@ export function resolveBubbleCreateCommandDependencies(
 ): ResolvedBubbleCreateCommandDependencies {
   return {
     create: dependencies.createBubble ?? createBubble,
-    register: dependencies.registerRepoInRegistry ?? registerRepoInRegistry,
+    register:
+      dependencies.registerRepoInRegistry ??
+      createCliDependencyDefaults.registerRepoInRegistry,
     reportWarning:
       dependencies.reportRegistryRegistrationWarning ??
       ((message: string) => {
