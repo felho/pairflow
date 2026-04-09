@@ -12,7 +12,7 @@ import {
 import { clearLiveMetaReviewSnapshot } from "../../../src/core/bubble/metaReview.js";
 import {
   buildMetaReviewSubmitCommandTemplate
-} from "../../../src/core/runtime/metaReviewSubmitGuidance.js";
+} from "../../../src/v11/shared/metaReview/metaReviewSubmitGuidance.js";
 import { notifyMetaReviewerSubmissionRequest } from "../../../src/v11/application/metaReviewGate/metaReviewGateNotify.js";
 import {
   appendHumanApprovalRequestEnvelope
@@ -20,15 +20,15 @@ import {
 import {
   appendProtocolEnvelope,
   readTranscriptEnvelopes
-} from "../../../src/core/protocol/transcriptStore.js";
-import { serializeEnvelopeLine } from "../../../src/core/protocol/envelope.js";
+} from "../../../src/v11/infrastructure/artifact/transcript/transcriptStore.js";
+import { serializeEnvelopeLine } from "../../../src/v11/shared/protocol/envelope.js";
 import {
   readStateSnapshot,
   StateStoreConflictError,
   writeStateSnapshot
-} from "../../../src/core/state/stateStore.js";
-import { buildRunningExecutionContext } from "../../../src/core/state/executionContext.js";
-import { applyStateTransition } from "../../../src/core/state/machine.js";
+} from "../../../src/v11/infrastructure/state/stateStore.js";
+import { buildRunningExecutionContext } from "../../../src/v11/shared/state/executionContext.js";
+import { applyStateTransition } from "../../../src/v11/domain/state/machine.js";
 import { SchemaValidationError } from "../../../src/core/validation.js";
 import { deliveryTargetRoleMetadataKey } from "../../../src/types/protocol.js";
 import type { BubbleMetaReviewSnapshotState } from "../../../src/types/bubble.js";
