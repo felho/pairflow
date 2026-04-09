@@ -3,6 +3,10 @@ import { appendProtocolEnvelope, readTranscriptEnvelopes } from "../protocol/tra
 import { setMetaReviewerPaneBinding } from "../runtime/sessionsRegistry.js";
 import { readStateSnapshot, writeStateSnapshot } from "../state/stateStore.js";
 
+export type {
+  LoadedStateSnapshot
+} from "../state/stateStore.js";
+
 export const metaReviewGateRecoveryDefaults = {
   appendProtocolEnvelope,
   readStateSnapshot,

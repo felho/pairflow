@@ -1,7 +1,5 @@
 import { metaReviewGateRecoveryDefaults } from "../../../core/bubble/metaReviewGateRecoveryDefaults.js";
-import type {
-  LoadedStateSnapshot
-} from "../../../core/state/stateStore.js";
+import type { LoadedStateSnapshot } from "../../../core/bubble/metaReviewGateRecoveryDefaults.js";
 import { writeRecoveredMetaReviewArtifacts } from "./metaReviewGateRunResultArtifacts.js";
 import {
   MetaReviewGateError,
