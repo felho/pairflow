@@ -2,8 +2,6 @@ import {
   computeWatchdogStatus,
   type WatchdogStatus
 } from "../../shared/watchdog/watchdogStatus.js";
-import { watchdogCommandDefaults } from "../../../core/watchdog/watchdogCommandDefaults.js";
-import { watchdogPendingReworkDefaults } from "../../../core/watchdog/watchdogPendingReworkDefaults.js";
 import {
   recoverMetaReviewGateFromSnapshotV11 as recoverMetaReviewGateFromSnapshot
 } from "../metaReviewGate/emitMetaReviewGateV11.js";
@@ -25,6 +23,10 @@ import {
   maybeMonitorWatchdogPaneActivity,
   type WatchdogPaneActivityState
 } from "./watchdogPaneActivityMonitoring.js";
+import {
+  loadWatchdogCommandDefaults,
+  loadWatchdogPendingReworkDefaults
+} from "./watchdogDependencyDefaults.js";
 export { BubbleWatchdogError } from "./watchdogCommandRuntime.js";
 
 export async function runBubbleWatchdog(
@@ -33,6 +35,8 @@ export async function runBubbleWatchdog(
 ): Promise<BubbleWatchdogResult> {
   const now = input.now ?? new Date();
   const nowIso = now.toISOString();
+  const watchdogCommandDefaults = await loadWatchdogCommandDefaults();
+  const watchdogPendingReworkDefaults = await loadWatchdogPendingReworkDefaults();
   const resolved = await watchdogCommandDefaults.resolveBubbleById(
     {
       bubbleId: input.bubbleId,
