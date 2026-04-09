@@ -1,4 +1,4 @@
-import type { RuntimeSessionRecord } from "../core/runtime/sessionsRegistry.js";
+import type { RuntimeSessionRecord } from "../v11/infrastructure/executor/sessionRuntime/runtimeSessionsRegistry.js";
 import type {
   BubbleLifecycleState
 } from "./bubble.js";
@@ -12,7 +12,7 @@ import type {
   PendingInboxItemV11Type as PendingInboxItemType
 } from "../v11/application/inbox/emitInboxV11.js";
 import type { ProtocolEnvelopePayload, ProtocolMessageType } from "./protocol.js";
-import type { WatchdogStatus } from "../core/runtime/watchdog.js";
+import type { WatchdogStatus } from "../v11/shared/watchdog/watchdogStatus.js";
 import type { StateValidationDiagnostics } from "../core/state/stateStore.js";
 
 export interface UiBubbleStateCounts {

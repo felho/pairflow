@@ -7,7 +7,7 @@ import {
   runBubbleStartCommand
 } from "../../src/cli/commands/bubble/start.js";
 import type { ResolvedBubbleById } from "../../src/core/bubble/bubbleLookup.js";
-import type { StartBubbleResult } from "../../src/core/bubble/startBubble.js";
+import type { StartBubbleV11Result as StartBubbleResult } from "../../src/v11/application/start/emitStartV11.js";
 
 describe("parseBubbleStartCommandOptions", () => {
   it("parses required and optional options", () => {

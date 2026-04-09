@@ -5,7 +5,7 @@ import {
   parseBubbleRestartCommandOptions,
   runBubbleRestartCommand
 } from "../../src/cli/commands/bubble/restart.js";
-import type { RestartBubbleResult } from "../../src/core/bubble/restartBubble.js";
+import type { RestartBubbleResult } from "../../src/v11/application/restart/restartCommandApi.js";
 
 describe("parseBubbleRestartCommandOptions", () => {
   it("parses required and optional options", () => {

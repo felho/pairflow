@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { isLikelyStructuredRef } from "../../../src/core/util/structuredRef.js";
+import { isLikelyStructuredRef } from "../../../src/v11/shared/reference/structuredRef.js";
 
 describe("isLikelyStructuredRef", () => {
   it("returns true for path-like and URI-like refs that include slash", () => {

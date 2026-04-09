@@ -8,7 +8,7 @@ vi.mock("node:fs/promises", () => ({
   access: accessMock
 }));
 
-import { pathExists } from "../../../src/core/util/pathExists.js";
+import { pathExists } from "../../../src/v11/infrastructure/foundation/fs/pathExists.js";
 
 afterEach(() => {
   accessMock.mockReset();
