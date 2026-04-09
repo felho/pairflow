@@ -1,13 +1,6 @@
-import {
-  appendProtocolEnvelope,
-  readTranscriptEnvelopes
-} from "../../../core/protocol/transcriptStore.js";
-import { resolveBubbleById } from "../../../core/bubble/bubbleLookup.js";
-import { setMetaReviewerPaneBinding } from "../../../core/runtime/sessionsRegistry.js";
-import {
-  readStateSnapshot,
-  writeStateSnapshot,
-  type LoadedStateSnapshot
+import { metaReviewGateRecoveryDefaults } from "../../../core/bubble/metaReviewGateRecoveryDefaults.js";
+import type {
+  LoadedStateSnapshot
 } from "../../../core/state/stateStore.js";
 import { writeRecoveredMetaReviewArtifacts } from "./metaReviewGateRunResultArtifacts.js";
 import {
@@ -29,12 +22,12 @@ import { metaReviewGatePaneDeactivationUnavoidableReasonCode } from "./metaRevie
 import { SchemaValidationError } from "../validation/primitives.js";
 
 export interface ResolvedRecoveryContextDependencies {
-  resolveBubble: typeof resolveBubbleById;
-  readState: typeof readStateSnapshot;
-  writeState: typeof writeStateSnapshot;
-  appendEnvelope: typeof appendProtocolEnvelope;
-  readTranscript: typeof readTranscriptEnvelopes;
-  setMetaReviewerPane: typeof setMetaReviewerPaneBinding;
+  resolveBubble: typeof metaReviewGateRecoveryDefaults.resolveBubbleById;
+  readState: typeof metaReviewGateRecoveryDefaults.readStateSnapshot;
+  writeState: typeof metaReviewGateRecoveryDefaults.writeStateSnapshot;
+  appendEnvelope: typeof metaReviewGateRecoveryDefaults.appendProtocolEnvelope;
+  readTranscript: typeof metaReviewGateRecoveryDefaults.readTranscriptEnvelopes;
+  setMetaReviewerPane: typeof metaReviewGateRecoveryDefaults.setMetaReviewerPaneBinding;
   readFileFn: MetaReviewArtifactReadPort;
   writeFileFn: MetaReviewArtifactWritePort;
 }
@@ -43,13 +36,21 @@ export function resolveRecoveryContextDependencies(
   dependencies: RecoverMetaReviewGateFromSnapshotDependencies
 ): ResolvedRecoveryContextDependencies {
   return {
-    resolveBubble: dependencies.resolveBubbleById ?? resolveBubbleById,
-    readState: dependencies.readStateSnapshot ?? readStateSnapshot,
-    writeState: dependencies.writeStateSnapshot ?? writeStateSnapshot,
-    appendEnvelope: dependencies.appendProtocolEnvelope ?? appendProtocolEnvelope,
-    readTranscript: dependencies.readTranscriptEnvelopes ?? readTranscriptEnvelopes,
+    resolveBubble:
+      dependencies.resolveBubbleById ?? metaReviewGateRecoveryDefaults.resolveBubbleById,
+    readState:
+      dependencies.readStateSnapshot ?? metaReviewGateRecoveryDefaults.readStateSnapshot,
+    writeState:
+      dependencies.writeStateSnapshot ?? metaReviewGateRecoveryDefaults.writeStateSnapshot,
+    appendEnvelope:
+      dependencies.appendProtocolEnvelope
+      ?? metaReviewGateRecoveryDefaults.appendProtocolEnvelope,
+    readTranscript:
+      dependencies.readTranscriptEnvelopes
+      ?? metaReviewGateRecoveryDefaults.readTranscriptEnvelopes,
     setMetaReviewerPane:
-      dependencies.setMetaReviewerPaneBinding ?? setMetaReviewerPaneBinding,
+      dependencies.setMetaReviewerPaneBinding
+      ?? metaReviewGateRecoveryDefaults.setMetaReviewerPaneBinding,
     readFileFn: requireRecoveryArtifactReadPort(dependencies),
     writeFileFn: requireRecoveryArtifactWritePort(dependencies)
   };
@@ -86,7 +87,8 @@ function requireRecoveryArtifactWritePort(
 }
 
 export function buildDeactivateMetaReviewerPane(input: {
-  setMetaReviewerPane: typeof setMetaReviewerPaneBinding;
+  setMetaReviewerPane:
+    typeof metaReviewGateRecoveryDefaults.setMetaReviewerPaneBinding;
   sessionsPath: string;
   bubbleId: string;
   now: Date;
