@@ -4,6 +4,7 @@ import { basename, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
 const cliEntrypointParityTestsByCommand: Record<string, readonly string[]> = {
+  commit: ["tests/v11/application/commit/commitCliEntrypointParity.test.ts"],
   create: ["tests/v11/application/create/createCliEntrypointParity.test.ts"],
   delete: ["tests/v11/application/delete/deleteCliEntrypointParity.test.ts"],
   inbox: ["tests/v11/application/inbox/inboxCliEntrypointParity.test.ts"],
@@ -22,6 +23,7 @@ const cliEntrypointParityTestsByCommand: Record<string, readonly string[]> = {
 };
 
 const directBubbleCliShimCommands = [
+  "commit",
   "create",
   "delete",
   "inbox",

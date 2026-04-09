@@ -12,12 +12,9 @@ interface CoreAskHumanFinalizationDefaults {
   emitBubbleNotification: EmitAskHumanBubbleNotificationPort;
 }
 
-let coreAskHumanFinalizationDefaultsPromise:
-  | Promise<CoreAskHumanFinalizationDefaults>
-  | undefined;
-
-async function loadCoreAskHumanFinalizationDefaults(): Promise<CoreAskHumanFinalizationDefaults> {
-  coreAskHumanFinalizationDefaultsPromise ??= import(
+const coreAskHumanFinalizationDefaultsPromise: Promise<
+  CoreAskHumanFinalizationDefaults
+> = import(
     "../../../core/agent/askHumanDefaults.js"
   ).then(({ askHumanDependencyDefaults }) => ({
     emitTmuxDeliveryNotification:
@@ -25,26 +22,9 @@ async function loadCoreAskHumanFinalizationDefaults(): Promise<CoreAskHumanFinal
     emitBubbleNotification:
       askHumanDependencyDefaults.finalization.emitBubbleNotification
   }));
-  return coreAskHumanFinalizationDefaultsPromise;
-}
 
-async function emitTmuxDeliveryNotification(
-  ...args: Parameters<CoreAskHumanFinalizationDefaults["emitTmuxDeliveryNotification"]>
-): Promise<
-  Awaited<ReturnType<CoreAskHumanFinalizationDefaults["emitTmuxDeliveryNotification"]>>
-> {
-  const defaults = await loadCoreAskHumanFinalizationDefaults();
-  return defaults.emitTmuxDeliveryNotification(...args);
-}
-
-async function emitBubbleNotification(
-  ...args: Parameters<CoreAskHumanFinalizationDefaults["emitBubbleNotification"]>
-): Promise<
-  Awaited<ReturnType<CoreAskHumanFinalizationDefaults["emitBubbleNotification"]>>
-> {
-  const defaults = await loadCoreAskHumanFinalizationDefaults();
-  return defaults.emitBubbleNotification(...args);
-}
+const coreAskHumanFinalizationDefaults =
+  await coreAskHumanFinalizationDefaultsPromise;
 
 function buildTranscriptFallbackRef(
   bubbleId: string,
@@ -79,8 +59,10 @@ function resolveDeliveryMessageRef(
 }
 
 export const askHumanFinalizationDependencyDefaults = {
-  emitTmuxDeliveryNotification,
-  emitBubbleNotification,
+  emitTmuxDeliveryNotification:
+    coreAskHumanFinalizationDefaults.emitTmuxDeliveryNotification,
+  emitBubbleNotification:
+    coreAskHumanFinalizationDefaults.emitBubbleNotification,
   resolveDeliveryMessageRef,
   emitBubbleLifecycleEventBestEffort
 } as const;
