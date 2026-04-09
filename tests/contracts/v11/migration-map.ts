@@ -48,13 +48,13 @@ export const commandMigrationMap: readonly CommandMigrationEntry[] = [
     command: "metaReviewGate",
     state: "v11",
     owner: "runtime",
-    notes: "Core facade now delegates to v11 shared meta-review gate runtime; v11 is the source of truth."
+    notes: "Direct library exports already route to the v11 meta-review gate entrypoint; remaining core compatibility is tracked separately from facade-parity sentinels."
   },
   {
     command: "gate",
     state: "v11",
     owner: "runtime",
-    notes: "W3 matrix compatibility alias follows v11 metaReviewGate source-of-truth runtime."
+    notes: "Direct library exports already route to the v11 meta-review gate alias; remaining core compatibility is tracked separately from facade-parity sentinels."
   },
   {
     command: "reconcile",
@@ -102,7 +102,7 @@ export const commandMigrationMap: readonly CommandMigrationEntry[] = [
     command: "watchdog",
     state: "v11",
     owner: "runtime",
-    notes: "Core facade now delegates to v11 watchdog orchestration seams; v11 is the source of truth."
+    notes: "Direct library exports already route to the v11 watchdog entrypoint; remaining core compatibility is tracked separately from facade-parity sentinels."
   },
   {
     command: "commit",

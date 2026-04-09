@@ -16,6 +16,8 @@ const commandsWithoutFacadeParitySentinel = [
   "kickoff",
   "list",
   "merge",
+  "metaReviewGate",
+  "gate",
   "open",
   "pass",
   "reconcile",
@@ -24,16 +26,11 @@ const commandsWithoutFacadeParitySentinel = [
   "resume",
   "start",
   "stop",
-  "status"
+  "status",
+  "watchdog"
 ] as const;
 
-const facadeParityTestsByCommand: Record<string, readonly string[]> = {
-  metaReviewGate: [
-    "tests/v11/application/metaReviewGate/metaReviewGateFacadeParity.test.ts"
-  ],
-  gate: ["tests/v11/application/metaReviewGate/metaReviewGateFacadeParity.test.ts"],
-  watchdog: ["tests/v11/application/watchdog/watchdogFacadeParity.test.ts"]
-};
+const facadeParityTestsByCommand: Record<string, readonly string[]> = {};
 
 describe("v11 facade parity coverage", () => {
   it("keeps explicit facade parity mapping aligned with v11 migration commands", () => {
