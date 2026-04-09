@@ -5,8 +5,8 @@ import {
   emitTmuxDeliveryNotification,
   resolveDeliveryMessageRef,
   retryStuckAgentInput
-} from "../../../src/core/runtime/tmuxDelivery.js";
-import { buildMetaReviewSubmitCommandTemplate } from "../../../src/core/runtime/metaReviewSubmitGuidance.js";
+} from "../../../src/v11/infrastructure/channel/tmux/tmuxDelivery.js";
+import { buildMetaReviewSubmitCommandTemplate } from "../../../src/v11/shared/metaReview/metaReviewSubmitGuidance.js";
 import {
   REVIEWER_COMMAND_GATE_FORBIDDEN,
   REVIEWER_COMMAND_GATE_REQ_A,
@@ -15,9 +15,13 @@ import {
   REVIEWER_COMMAND_GATE_REQ_D,
   REVIEWER_COMMAND_GATE_REQ_E,
   REVIEWER_COMMAND_GATE_REQ_F
-} from "../../../src/core/runtime/reviewerCommandGateGuidance.js";
-import type { RuntimeSessionsRegistry } from "../../../src/core/runtime/sessionsRegistry.js";
-import { runtimePaneIndices, type TmuxRunResult, type TmuxRunner } from "../../../src/core/runtime/tmuxManager.js";
+} from "../../../src/v11/shared/reviewer/reviewerCommandGateGuidance.js";
+import type { RuntimeSessionsRegistry } from "../../../src/v11/shared/ports/runtimeSessions.js";
+import {
+  runtimePaneIndices,
+  type TmuxRunResult,
+  type TmuxRunner
+} from "../../../src/v11/infrastructure/channel/tmux/tmuxManager.js";
 import type { ReviewerTestExecutionDirective } from "../../../src/v11/shared/reviewer/testEvidence.js";
 import type { BubbleConfig } from "../../../src/types/bubble.js";
 import { deliveryTargetRoleMetadataKey, type ProtocolEnvelope } from "../../../src/types/protocol.js";

@@ -8,7 +8,7 @@ import {
   TmuxSessionExistsError,
   type TmuxRunResult,
   type TmuxRunner
-} from "../../../src/core/runtime/tmuxManager.js";
+} from "../../../src/v11/infrastructure/channel/tmux/tmuxManager.js";
 
 function buildSplitPaneStdout(args: string[]): string {
   if (args[0] !== "split-window") {

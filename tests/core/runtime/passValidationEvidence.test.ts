@@ -12,7 +12,7 @@ import {
   resolvePassValidationRecoveryRepoMarkerPath,
   resolvePassValidationRecoveryWorktreeMarkerPath,
   type PassValidationEvidenceArtifact
-} from "../../../src/core/runtime/passValidationEvidence.js"
+} from "../../../src/v11/infrastructure/artifact/validation/passValidationEvidence.js"
 import { initGitRepository } from "../../helpers/git.js"
 
 async function createRepoFixture() {
