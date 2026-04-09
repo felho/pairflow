@@ -2,7 +2,7 @@ import { spawn } from "node:child_process";
 
 import { describe, expect, it } from "vitest";
 
-import { buildAgentCommand } from "../../../src/v11/infrastructure/executor/command/agentCommand.js";
+import { buildAgentCommand } from "../../../src/v11/shared/command/agentCommand.js";
 import { shellQuote } from "../../../src/v11/shared/foundation/shellQuote.js";
 
 async function assertBashParses(command: string): Promise<void> {
