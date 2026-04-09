@@ -12,334 +12,313 @@ owners:
 
 ## Objective
 
-Deliver the repository to a true `core-zero` end-state:
+Ez a terv a `src/core/**` teljes felszámolását célozza.
 
-1. `src/core/**` is not a tolerated permanent compatibility layer.
-2. The final target is to eliminate the remaining `src/core/**` code, not merely to stabilize an intermediate bridge inventory.
-3. `src/v11/**` becomes the only canonical home for retained application, domain, shared, and infrastructure behavior.
-4. Any temporary bridge introduced on the way must be explicitly tracked and then retired in a later wave; no bridge is treated as an acceptable steady state.
-5. The end of this plan is a repository state where legacy `src/core/**` files are either deleted or proven unnecessary.
+Nem az a végállapot, hogy a `core` egy kis, elfogadott shim-rétegként megmarad.
+A végállapot ez:
 
-Success means:
+1. a kanonikus alkalmazási, domain, shared és infrastructure ownership teljesen
+   `src/v11/**` alatt él,
+2. a `src/v11/**`, `src/cli/**`, a contract harness és a public surface nem függ
+   a `src/core/**`-tól,
+3. a `src/core/**` összes fájlja vagy migrálva, vagy törölve van,
+4. a `core-shim-boundary-coverage` teszt újra szigorú blocker marad,
+5. a repo végállapotban nem tart fenn legacy `core` compatibility parkolót.
 
-- no meaningful runtime or test dependency remains on `src/core/**`,
-- the remaining `src/core/**` file count trends to `0`,
-- direct `src/v11/**` or `src/cli/**` imports from `src/core/**` stay at `0`,
-- no residual compatibility-facade logic remains hidden behind parity or contract harnesses,
-- `core-shim-boundary-coverage` can enforce a zero-inventory end-state again.
+Jelenlegi baseline:
+
+- `src/core/**` fájlok száma: `139`
+- a legutóbbi dependency/frontier unblock kész
+- `ci:local`: PASS
+- `fitness:check:ci`: PASS
+- a `src/v11/src/cli -> src/core` direkt frontier a korábbi hullámok után már
+  nagyrészt kifogyott
+
+Ez a terv tehát nem unblock-terv, hanem **endgame decommission plan**.
 
 ## Complexity / Split Rationale
 
-1. `risk_score`: `9`
+1. `risk_score`: `8/10`
 2. Why a plan is needed:
-   - this work moves and deletes canonical ownership,
-   - the same concept spans application/domain/shared/infrastructure/test surfaces,
-   - refactor and runtime preservation must be separated cleanly,
-   - a naive delete-first approach would create regressions or false parity.
+   - canonical source-of-truth végső áthelyezése több klaszterben még hátravan,
+   - a `core` nem egy homogén shim-réteg, hanem thin proxy + compatibility
+     facade + retained behavior keveréke,
+   - a törlés csak consumer retirement után biztonságos,
+   - a munka több, egymástól részben független lane-re bontható, ezért a
+     párhuzamosítás külön tervezést igényel.
 3. Split decision:
    - `foundation/refactor`
-   - `delivery`
-   - `activation/rollout`
+   - `migration`
+   - `decommission`
 4. Milestone-gated behavior to defer:
-   - no product behavior activation is deferred,
-   - but stricter `core-zero` sentinel promotion should happen only after the final deletion waves are complete.
+   - `N/A`
 
-## Current Baseline
+## End-State Rules
 
-Latest verified baseline at plan creation:
+1. Nem elfogadható végállapot a “thin `core` bridge inventory”.
+2. Nem elfogadható végállapot az “explicit temporary bridge” sem.
+3. Bármely megmaradó `src/core/**` fájl csak átmeneti állapot lehet.
+4. A terv sikerességi feltétele nem pusztán a zöld CI, hanem:
+   - `src/core/**` üres vagy teljesen megszűnt,
+   - nincs consumer a `core` felé,
+   - a parity/contract/facade coverage már közvetlenül a `v11` canonical
+     surface-t ellenőrzi.
 
-- `ci:local`: PASS
-- `fitness:check:ci`: PASS
-- direct `src/v11/**` and `src/cli/**` imports from `src/core/**`: `0`
-- current `src/core/**` file count: `139`
+## Current Core Typology Snapshot
 
-Interpretation:
+Jelenlegi nagy klaszterek:
 
-- the repository is no longer blocked on the old `v11 -> core` dependency frontier,
-- but the larger endgame is still open because a substantial `src/core/**` tree remains,
-- therefore the next phase is no longer "dependency unblock", but "remove the remaining legacy compatibility layer itself".
+- `bubble`: `47`
+- `runtime`: `26`
+- `metrics`: `11`
+- `ui`: `8`
+- `state`: `6`
+- `protocol`: `5`
+- `reviewer`: `5`
+- `agent`: `5`
+- `util`: `5`
+- `watchdog`: `4`
+- `human`: `4`
+- kisebb klaszterek: `convergence`, `archive`, `repo`, `gates`, `workspace`
 
-## End-State Policy
+Hasznos munkatípusok:
 
-This plan uses the following hard rule:
+1. `thin proxy`
+   - többnyire sima `export * from "../../v11/..."`
+   - ezeket consumer retirement után közvetlenül lehet törölni
 
-1. Interim bridge inventories are allowed only as temporary migration steps.
-2. Temporary bridge inventories are not the success metric.
-3. The final success metric is the disappearance of the remaining `src/core/**` code.
-4. If a residual `src/core/**` file is kept for any reason, that file must have an explicit architectural exception and expiry condition; otherwise it is a deletion candidate.
+2. `compatibility facade`
+   - még stabil core-facing neveket vagy csomagolt defaults surface-t tartanak
+   - consumer migration után törölhetők
+
+3. `retained behavior`
+   - még saját wiring, runtime döntés vagy összerakott default object maradt benne
+   - ezekhez külön redesign/migration batch kell
+
+Representative examples:
+
+- thin proxy:
+  - `src/core/protocol/transcriptStore.ts`
+  - `src/core/workspace/git.ts`
+  - `src/core/bubble/bubbleLookup.ts`
+- compatibility facade:
+  - `src/core/bubble/startBubble.ts`
+  - `src/core/runtime/startupReconciler.ts`
+  - `src/core/repo/createCliDefaults.ts`
+- retained behavior:
+  - `src/core/bubble/metaReview.ts`
+  - `src/core/metrics/events.ts`
+  - valószínűleg néhány `*Defaults.ts` fan-in modul
 
 ## Parallelization Model
 
-This plan is intentionally written for aggressive parallel execution.
+Ez a munka agresszíven párhuzamosítható, de nem egyetlen közös branchen.
 
-Safe operating model:
+Ajánlott működési modell:
 
-1. Up to `8-10` active agents may work in parallel.
-2. Every agent gets its own worktree.
-3. Every agent operates on one bounded lane with a disjoint write set.
-4. Every lane must end in a runnable intermediate state:
-   - targeted tests pass,
-   - `typecheck` passes,
-   - no known merge-conflicting half-state is left behind.
-5. After each small logical commit:
-   - merge to `main`,
-   - sync `main` back into the other active worktrees,
-   - continue from the updated baseline.
+1. max `8-10` worker lane
+2. minden lane saját diszjunkt write setet kap
+3. minden lane csak kis, futtatható, merge-ready batch-et adhat vissza
+4. minden merge után:
+   - `main` gyors validáció
+   - a többi worker worktree sync
+   - majd a következő batch
 
-Unsafe parallelization patterns:
+Kötelező szabályok:
 
-1. Multiple agents editing the same compatibility facade family at once.
-2. Multiple agents redefining the same replacement `v11` authority surface at once.
-3. Mixing deletion of a `core` facade with concurrent updates to the tests that still assume it exists.
+1. ugyanazt a `core` fájlt egyszerre csak egy worker birtokolhatja
+2. ugyanazt a `v11` canonical target modult egyszerre csak egy worker írhatja
+3. parity/contract harness rewrite lane külön fusson a runtime retained-behavior
+   lane-ektől
+4. “delete files” csak akkor mehet workerre, ha a consumer retirement már
+   bizonyított
 
-## Core Retirement Typology
+## Recommended Lane Topology
 
-Every `src/core/**` file belongs to exactly one temporary working bucket:
+### Lane A: Thin Proxy Retirement
 
-1. `thin_shim`
-   - simple re-export or near-zero logic,
-   - delete as soon as no consumers remain.
-2. `compatibility_facade`
-   - preserves old naming or public shape,
-   - can disappear only after consumers, parity assumptions, and harness expectations are migrated.
-3. `retained_behavior`
-   - still contains meaningful logic or composition,
-   - requires explicit migration into `src/v11/**` before deletion.
+Fókusz:
 
-The important rule:
+- `protocol`
+- `workspace`
+- `util`
+- egyes `state` proxyk
 
-- we are not planning to preserve these buckets,
-- we are using them only to decide the safest deletion order.
+Cél:
+
+- a vékony `core` re-exportok összes consumerének közvetlen `v11` targetre
+  átírása
+- utána fájltörlés
+
+### Lane B: Bubble Command Facade Retirement
+
+Fókusz:
+
+- `start`
+- `restart`
+- `resume`
+- `open`
+- `inbox`
+- `status`
+- `stop`
+
+Cél:
+
+- a core command facade-ok kifogyasztása
+- parity/contract harness közvetlen `v11` targetre állítása
+
+### Lane C: Human / Agent Surface Retirement
+
+Fókusz:
+
+- `askHuman`
+- `reply`
+- `approval`
+- `pass`
+- `converged`
+
+Cél:
+
+- a core-facing human/agent facade-ok törlése
+- az esetleges legacy baseline logika megszüntetése
+
+### Lane D: Runtime Defaults Retirement
+
+Fókusz:
+
+- `tmux*`
+- `sessionsRegistry`
+- `reviewerDeliveryDefaults`
+- `passValidationDefaults`
+- `metaReview*Defaults`
+
+Cél:
+
+- a core runtime defaults fan-in modulok felbontása vagy közvetlen `v11`
+  surface-re cserélése
+
+### Lane E: Bubble Defaults Retirement
+
+Fókusz:
+
+- `createBubbleDefaults`
+- `mergeBubbleDefaults`
+- `deleteBubbleDefaults`
+- `statusInboxDefaults`
+- `statusGateDefaults`
+- `kickoffDefaults`
+
+Cél:
+
+- az application/shared oldalon még meglévő core perimeter bridge-ek további
+  kifogyasztása
+- utána a defaults-fájlak törlése
+
+### Lane F: Reviewer / Metrics / Watchdog Retirement
+
+Fókusz:
+
+- `reviewer/*`
+- `metrics/*`
+- `watchdog/*`
+
+Cél:
+
+- a retained behavior és infrastructure fan-in szétválasztása
+- a core köztes réteg megszüntetése
+
+### Lane G: Meta-Review Endgame
+
+Fókusz:
+
+- `src/core/bubble/metaReview.ts`
+- kapcsolódó runtime defaults
+- live-run és submit/recovery compatibility surface
+
+Megjegyzés:
+
+- ez külön, architecture-sensitive lane
+- ide ne kerüljön egyszerre más nagy retained-behavior klaszter
+
+### Lane H: Final Decommission / Delete Sweep
+
+Fókusz:
+
+- fájltörlések
+- import cleanup
+- manifest / public surface cleanup
+- boundary test visszaszigorítása
 
 ## Phase Breakdown
 
 | Phase | Goal | Inputs | Outputs | Exit Criteria |
 |---|---|---|---|---|
-| Phase 1 | Build a reliable `core-zero` inventory and lane map | current `src/core/**`, current tests, current bridge inventory | categorized deletion ledger, lane ownership, explicit zero-end-state policy | every `src/core/**` file belongs to a lane and a typology bucket |
-| Phase 2 | Retire delete-ready thin shims and trivial bridges in parallel | Phase 1 ledger | multiple small deletion batches merged to `main` | all `thin_shim` files with no remaining consumers are deleted |
-| Phase 3 | Retire compatibility facades by migrating tests, callers, and public assumptions | Phase 2 baseline | command-family closure batches | compatibility facades are reduced to only the truly retained-behavior families |
-| Phase 4 | Migrate retained behavior into `src/v11/**` and delete the remaining `core` owners | Phase 3 baseline | owner-migration batches by domain/capability | every retained-behavior `core` file has either moved or been deleted |
-| Phase 5 | Remove the final sentinel exceptions and enforce `core-zero` | Phase 4 baseline | zero-inventory sentinel, retired bridge removal, final doc updates | `src/core/**` is functionally eliminated and policy is back to hard zero |
-
-## Lane Breakdown
-
-The lane model is designed for parallel execution with up to `10` agents.
-
-### Lane 1: Bubble Thin Shims
-
-Scope:
-
-- `src/core/bubble/paths.ts`
-- `src/core/bubble/bubbleLookup.ts`
-- `src/core/bubble/workspaceResolution.ts`
-- similar pure bridge files in `bubble/*`
-
-Goal:
-
-- delete files that are already behavior-empty once consumers are migrated.
-
-Parallelization:
-
-- high
-
-### Lane 2: Bubble Compatibility Facades
-
-Scope:
-
-- `src/core/bubble/startBubble.ts`
-- `src/core/bubble/restartBubble.ts`
-- `src/core/bubble/listBubbles.ts`
-- `src/core/bubble/openBubble.ts`
-- `src/core/bubble/statusBubble.ts`
-- neighboring command-shaped facades
-
-Goal:
-
-- migrate remaining consumers and parity assumptions off these public compatibility wrappers.
-
-Parallelization:
-
-- medium, command-family disjoint only
-
-### Lane 3: Agent/Human Facades
-
-Scope:
-
-- `src/core/agent/*`
-- `src/core/human/*`
-
-Goal:
-
-- eliminate compatibility surfaces such as `askHuman`, `reply`, `approval`, `pass` lineage if still retained through core-facing contracts or harnesses.
-
-Parallelization:
-
-- medium-high, because command families can usually be isolated
-
-### Lane 4: Runtime/Tmux/Sessions Bridges
-
-Scope:
-
-- `src/core/runtime/tmux*`
-- `src/core/runtime/sessionsRegistry.ts`
-- `src/core/runtime/agentCommand.ts`
-- `src/core/runtime/reviewer*`
-
-Goal:
-
-- move the remaining compatibility entrypoints fully onto `src/v11/infrastructure/**` or remove them once consumers are gone.
-
-Parallelization:
-
-- medium, avoid concurrent edits to the same runtime family
-
-### Lane 5: State/Protocol Primitives
-
-Scope:
-
-- `src/core/state/*`
-- `src/core/protocol/*`
-
-Goal:
-
-- eliminate remaining low-level compatibility bridges after all higher-level consumers stop depending on them.
-
-Parallelization:
-
-- low-medium, because these are high-fan-out primitives
-
-### Lane 6: Reviewer/Gates/Validation
-
-Scope:
-
-- `src/core/reviewer/*`
-- `src/core/gates/*`
-- `src/core/validation.ts`
-
-Goal:
-
-- migrate retained canonical contract logic into `src/v11/shared/**` or `src/v11/infrastructure/**` and delete old facades.
-
-Parallelization:
-
-- medium
-
-### Lane 7: Metrics/Reporting
-
-Scope:
-
-- `src/core/metrics/*`
-
-Goal:
-
-- remove residual reporting and metrics compatibility layers after v11 consumers and reports use only `src/v11/**`.
-
-Parallelization:
-
-- medium
-
-### Lane 8: UI/Repo/Workspace/Util
-
-Scope:
-
-- `src/core/ui/*`
-- `src/core/repo/*`
-- `src/core/workspace/*`
-- `src/core/util/*`
-
-Goal:
-
-- delete infrastructure and utility bridges once all callers are routed to their v11 owners.
-
-Parallelization:
-
-- high, because sub-families are mostly disjoint
-
-### Lane 9: Watchdog/Archive
-
-Scope:
-
-- `src/core/watchdog/*`
-- `src/core/archive/*`
-
-Goal:
-
-- migrate any retained runtime/archive behavior and then delete the compatibility files.
-
-Parallelization:
-
-- medium
-
-### Lane 10: Meta-Review / Convergence Retained Behavior
-
-Scope:
-
-- `src/core/bubble/metaReview.ts`
-- `src/core/bubble/metaReviewExecutionContext.ts`
-- `src/core/bubble/metaReviewGate.ts`
-- `src/core/convergence/*`
-- neighboring retained-behavior clusters
-
-Goal:
-
-- resolve the hard cases where core may still hide real behavior, not just naming bridges.
-
-Parallelization:
-
-- low, this should usually be a dedicated lane
+| Phase 1 | Inventory lock and lane ownership | current `src/core/**` tree, current contract/parity/fitness state | explicit typed inventory, lane map, delete eligibility rules | every `src/core/**` file is tagged as `thin-proxy`, `compat-facade`, or `retained-behavior` |
+| Phase 2 | Consumer retirement for thin proxies | Phase 1 inventory | direct consumer rewrites, first delete batches | all thin proxies have either zero consumers or explicit blocker note |
+| Phase 3 | Compatibility facade retirement | Phase 2 cleaned frontier | command/harness/runtime facade removals | all simple/medium compat facades retired from active consumers |
+| Phase 4 | Retained behavior migration | only retained clusters remain | `metaReview`, `metrics`, `reviewer`, selected runtime defaults migrated to canonical `v11` owners | no retained canonical behavior remains in `src/core/**` |
+| Phase 5 | Core delete sweep | zero-consumer inventory | file deletions, manifest cleanup, stricter boundary tests | `src/core/**` deleted or empty by policy-approved exception count `0` |
 
 ## Task List
 
-1. `plans/tasks/core-zero/phase1-inventory-and-lane-map.md`
-2. `plans/tasks/core-zero/phase2-bubble-thin-shim-retirement.md`
-3. `plans/tasks/core-zero/phase2-runtime-ui-util-retirement.md`
-4. `plans/tasks/core-zero/phase3-agent-human-facade-retirement.md`
-5. `plans/tasks/core-zero/phase3-bubble-facade-retirement.md`
-6. `plans/tasks/core-zero/phase4-reviewer-gates-migration.md`
-7. `plans/tasks/core-zero/phase4-state-protocol-migration.md`
-8. `plans/tasks/core-zero/phase4-metrics-watchdog-archive-migration.md`
-9. `plans/tasks/core-zero/phase4-meta-review-convergence-migration.md`
-10. `plans/tasks/core-zero/phase5-core-zero-sentinel-promotion.md`
+1. `plans/tasks/core-zero-retirement/phase1-inventory-and-lane-lock.md`
+2. `plans/tasks/core-zero-retirement/phase2-thin-proxy-retirement.md`
+3. `plans/tasks/core-zero-retirement/phase3-command-facade-retirement.md`
+4. `plans/tasks/core-zero-retirement/phase3-runtime-defaults-retirement.md`
+5. `plans/tasks/core-zero-retirement/phase4-metrics-reviewer-watchdog-retirement.md`
+6. `plans/tasks/core-zero-retirement/phase4-meta-review-endgame.md`
+7. `plans/tasks/core-zero-retirement/phase5-core-delete-sweep.md`
 
 ## Dependencies
 
-1. The current `ci:local` green baseline must be preserved after every merged batch.
-2. The current explicit residual bridge inventory must stay documented until the final zero-inventory phase removes it.
-3. High-fan-out primitives (`state`, `protocol`, `runtime sessions`, `tmux`) should not be migrated concurrently by multiple agents.
-4. Test-harness and parity expectations must be migrated before deleting any compatibility facade they still reference.
+1. `core-shim-boundary-coverage` must remain authoritative and eventually
+   return to a strict zero-residual model.
+2. Existing contract/parity harnesses must keep behavioral guarantees while
+   consumer retirement proceeds.
+3. `v11` canonical targets must stay file-disjoint between active lanes.
+4. Worker merge cadence must be short; no long-lived divergent branches.
 
 ## Risks and Mitigations
 
-1. Hidden consumer risk - each phase starts from inventory, not assumptions.
-2. Merge-churn risk under heavy parallelism - use bounded write sets, short-lived worktrees, and immediate main sync after every merge.
-3. False sense of completion risk - success is defined as `core-zero`, not as "dependency checks are green".
-4. Parity tautology risk - never replace both baseline and v11 paths with the same implementation without first redesigning the affected harness.
-5. Primitive fan-out risk - state/protocol/runtime lanes stay narrow and serialize when necessary.
+1. `False progress by bridge accumulation`
+   - mitigation: every bridge batch must state whether it reduces consumer count
+     or only relocates the problem
+2. `Parallel merge noise`
+   - mitigation: diszjunkt lane ownership and rapid sync after each merge
+3. `Retained behavior hidden behind thin-looking files`
+   - mitigation: Phase 1 file-level tagging before delete waves
+4. `Parity tautology`
+   - mitigation: test/harness lanes may not silently point both sides at the
+     same implementation without explicit de-baselining decision
+5. `Stopping at an interim steady state`
+   - mitigation: explicit plan rule that bridge inventory is not acceptable
+     end-state
 
 ## Validation Strategy
 
-1. For every lane batch:
+1. Every merged batch runs:
    - targeted `eslint`
    - targeted `vitest`
    - `pnpm typecheck`
-2. At every merge checkpoint:
    - `pnpm fitness:check:ci`
-3. At every phase exit:
+2. Every wave checkpoint runs:
    - `pnpm run ci:local`
-4. At the final phase:
-   - zero-inventory `core-shim-boundary-coverage`
-   - updated `core` file count ledger
-   - explicit proof that no retained `src/core/**` consumers remain
+3. Phase completion evidence must record:
+   - current `src/core/**` file count
+   - current `src/v11/src/cli -> src/core` import count
+   - remaining tagged retained-behavior files
+4. Success is measured by:
+   - decreasing `src/core/**` file count,
+   - decreasing `core` consumer count,
+   - not only by green CI.
 
-## Immediate Next Step
+## Success Criteria
 
-Create the Phase 1 inventory task and refresh the current `src/core/**` ledger to a machine-auditable form:
+The plan is complete only when all of the following are true:
 
-1. every file tagged as `thin_shim`, `compatibility_facade`, or `retained_behavior`
-2. every tag mapped to a lane
-3. every lane marked:
-   - `parallel_safe`
-   - `serial_only`
-   - or `depends_on_other_lane`
-
-Without this ledger, aggressive 8-10 agent parallelization would create conflict noise instead of throughput.
+1. `find src/core -type f` returns `0`
+2. `src/v11/**`, `src/cli/**`, and contract harnesses no longer import from
+   `src/core/**`
+3. no explicit residual core bridge inventory remains
+4. the repo passes `ci:local`
+5. the final architecture no longer relies on legacy `core` compatibility code
