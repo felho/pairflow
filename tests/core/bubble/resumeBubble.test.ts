@@ -2,9 +2,9 @@ import { describe, expect, it } from "vitest";
 
 import {
   DEFAULT_RESUME_MESSAGE,
-  resumeBubble
-} from "../../../src/core/bubble/resumeBubble.js";
-import type { EmitHumanReplyResult } from "../../../src/core/human/reply.js";
+  resumeBubbleV11 as resumeBubble
+} from "../../../src/v11/application/resume/emitResumeV11.js";
+import type { EmitHumanReplyV11Result as EmitHumanReplyResult } from "../../../src/v11/application/reply/emitReplyV11.js";
 
 function createResumeResultFixture(): EmitHumanReplyResult {
   return {

@@ -8,8 +8,8 @@ import { createBubble } from "../../../src/core/bubble/createBubble.js";
 import {
   resolveBubbleFromWorkspaceCwd,
   WorkspaceResolutionError
-} from "../../../src/core/bubble/workspaceResolution.js";
-import { bootstrapWorktreeWorkspace } from "../../../src/core/workspace/worktreeManager.js";
+} from "../../../src/v11/infrastructure/executor/workspace/workspaceResolution.js";
+import { bootstrapWorktreeWorkspace } from "../../../src/v11/infrastructure/workspace/worktreeManager.js";
 import { initGitRepository, runGit } from "../../helpers/git.js";
 
 const tempDirs: string[] = [];

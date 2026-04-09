@@ -5,8 +5,11 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { createBubble } from "../../../src/core/bubble/createBubble.js";
-import { stopBubble, StopBubbleError } from "../../../src/core/bubble/stopBubble.js";
-import { readStateSnapshot } from "../../../src/core/state/stateStore.js";
+import {
+  StopBubbleErrorV11 as StopBubbleError,
+  stopBubbleV11 as stopBubble
+} from "../../../src/v11/application/stop/emitStopV11.js";
+import { readStateSnapshot } from "../../../src/v11/infrastructure/state/stateStore.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
 import { initGitRepository } from "../../helpers/git.js";
 

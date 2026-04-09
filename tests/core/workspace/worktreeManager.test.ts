@@ -8,7 +8,7 @@ import {
   WorkspaceBootstrapError,
   cleanupWorktreeWorkspace,
   bootstrapWorktreeWorkspace
-} from "../../../src/core/workspace/worktreeManager.js";
+} from "../../../src/v11/infrastructure/workspace/worktreeManager.js";
 import { initGitRepository, runGit } from "../../helpers/git.js";
 
 const tempDirs: string[] = [];

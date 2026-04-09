@@ -4,8 +4,8 @@ import {
   buildMetaReviewExecutionContext,
   isMetaReviewExecutionContextActiveState,
   validateActiveMetaReviewExecutionContext
-} from "../../../src/core/bubble/metaReviewExecutionContext.js";
-import { metaReviewExecutionContextToRunningContext } from "../../../src/core/state/executionContext.js";
+} from "../../../src/v11/shared/metaReview/metaReviewExecutionContext.js";
+import { metaReviewExecutionContextToRunningContext } from "../../../src/v11/shared/state/executionContext.js";
 import type { BubbleStateSnapshot } from "../../../src/types/bubble.js";
 
 function createMetaReviewRunningState(
