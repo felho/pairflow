@@ -1,7 +1,6 @@
-import { appendProtocolEnvelope } from "../../../core/protocol/transcriptStore.js";
-import { assertGitRepository } from "../../../core/workspace/git.js";
 import { extractReviewerFocus } from "./createReviewerFocus.js";
 import { BubbleCreateError } from "./createCommandRuntime.js";
+import { createBubbleDefaults } from "./createBubbleDefaults.js";
 import { runCreateBubbleFlow } from "./runCreateBubbleFlow.js";
 import type {
   BubbleCreateDependencies,
@@ -18,8 +17,8 @@ export async function createBubble(
   return runCreateBubbleFlow(input, {
     ...dependencies,
     assertGitRepository:
-      dependencies.assertGitRepository ?? assertGitRepository,
+      dependencies.assertGitRepository ?? createBubbleDefaults.assertGitRepository,
     appendProtocolEnvelope:
-      dependencies.appendProtocolEnvelope ?? appendProtocolEnvelope
+      dependencies.appendProtocolEnvelope ?? createBubbleDefaults.appendProtocolEnvelope
   });
 }

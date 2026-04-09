@@ -1,7 +1,12 @@
 import type { AgentRole, BubbleExecutionContext } from "../../../types/bubble.js";
-import { actorEmitContextDefaults } from "../../../core/bubble/actorEmitContextDefaults.js";
 import type { ResolvedBubbleById } from "../ports/bubbleLookup.js";
 import type { LoadedStateSnapshot } from "../ports/stateSnapshots.js";
+
+const actorEmitContextDefaultsPromise = import(
+  "../../../core/bubble/actorEmitContextDefaults.js"
+).then(({ actorEmitContextDefaults }) => actorEmitContextDefaults);
+
+const actorEmitContextDefaults = await actorEmitContextDefaultsPromise;
 
 export type ActorEmitContextErrorReasonCode =
   | "ACTOR_EMIT_COMPAT_ADAPTER_INVALID"

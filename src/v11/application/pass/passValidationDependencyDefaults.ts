@@ -1,28 +1,33 @@
-import {
-  passValidationDefaults as corePassValidationDefaults,
-  PassValidationRunnerExecutionError,
-  type PassValidationCommandResult
-} from "../../../core/runtime/passValidationDefaults.js";
+const passValidationDefaultsPromise = import(
+  "../../../core/runtime/passValidationDefaults.js"
+).then(({ passValidationDefaults, PassValidationRunnerExecutionError }) => ({
+  ...passValidationDefaults,
+  PassValidationRunnerExecutionError
+}));
+
+const resolvedPassValidationDefaults = await passValidationDefaultsPromise;
 
 export const passValidationDefaults = {
   buildPassValidationEvidenceArtifact:
-    corePassValidationDefaults.buildPassValidationEvidenceArtifact,
+    resolvedPassValidationDefaults.buildPassValidationEvidenceArtifact,
   createPassValidationReviewerDirective:
-    corePassValidationDefaults.createPassValidationReviewerDirective,
+    resolvedPassValidationDefaults.createPassValidationReviewerDirective,
   resolvePassValidationArtifactPath:
-    corePassValidationDefaults.resolvePassValidationArtifactPath,
+    resolvedPassValidationDefaults.resolvePassValidationArtifactPath,
   resolvePassValidationPolicy:
-    corePassValidationDefaults.resolvePassValidationPolicy,
+    resolvedPassValidationDefaults.resolvePassValidationPolicy,
   resolvePassValidationReviewerCompatibilityArtifactPath:
-    corePassValidationDefaults.resolvePassValidationReviewerCompatibilityArtifactPath,
-  runPassValidationCommand: corePassValidationDefaults.runPassValidationCommand,
+    resolvedPassValidationDefaults.resolvePassValidationReviewerCompatibilityArtifactPath,
+  runPassValidationCommand:
+    resolvedPassValidationDefaults.runPassValidationCommand,
   writePassValidationEvidenceArtifact:
-    corePassValidationDefaults.writePassValidationEvidenceArtifact,
+    resolvedPassValidationDefaults.writePassValidationEvidenceArtifact,
   writePassValidationReviewerCompatibilityArtifact:
-    corePassValidationDefaults.writePassValidationReviewerCompatibilityArtifact
+    resolvedPassValidationDefaults.writePassValidationReviewerCompatibilityArtifact
 } as const;
 
-export {
-  PassValidationRunnerExecutionError,
-  type PassValidationCommandResult
-};
+export const PassValidationRunnerExecutionError =
+  resolvedPassValidationDefaults.PassValidationRunnerExecutionError;
+
+export type PassValidationCommandResult =
+  import("../../../core/runtime/passValidationDefaults.js").PassValidationCommandResult;
