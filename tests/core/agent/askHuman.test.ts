@@ -5,10 +5,10 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import {
-  asAskHumanCommandError,
-  emitAskHumanFromWorkspace,
-  AskHumanCommandError
-} from "../../../src/core/agent/askHuman.js";
+  asAskHumanCommandErrorV11 as asAskHumanCommandError,
+  emitAskHumanFromWorkspaceV11 as emitAskHumanFromWorkspace,
+  AskHumanCommandErrorV11 as AskHumanCommandError
+} from "../../../src/v11/application/askHuman/emitAskHumanV11.js";
 import { createBubble } from "../../../src/core/bubble/createBubble.js";
 import { WorkspaceResolutionError } from "../../../src/core/bubble/workspaceResolution.js";
 import { readTranscriptEnvelopes } from "../../../src/v11/infrastructure/artifact/transcript/transcriptStore.js";

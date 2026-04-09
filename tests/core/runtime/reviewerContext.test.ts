@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { refreshReviewerContext } from "../../../src/core/runtime/reviewerContext.js";
+import { refreshReviewerContext } from "../../../src/v11/infrastructure/channel/tmux/reviewerContext.js";
 import type { BubbleConfig } from "../../../src/types/bubble.js";
-import type { TmuxRunResult, TmuxRunner } from "../../../src/core/runtime/tmuxManager.js";
-import { shellQuote } from "../../../src/core/util/shellQuote.js";
+import type { TmuxRunResult, TmuxRunner } from "../../../src/v11/shared/ports/tmuxSessions.js";
+import { shellQuote } from "../../../src/v11/shared/foundation/shellQuote.js";
 
 const baseConfig: BubbleConfig = {
   id: "b_reviewer_ctx_01",

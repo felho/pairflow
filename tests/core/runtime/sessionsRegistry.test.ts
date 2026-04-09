@@ -11,10 +11,10 @@ import {
   removeRuntimeSessions,
   RuntimeSessionsRegistryError,
   RuntimeSessionsRegistryLockError,
-  setMetaReviewerPaneBinding,
   upsertRuntimeSession
-} from "../../../src/core/runtime/sessionsRegistry.js";
-import { runtimePaneIndices } from "../../../src/core/runtime/tmuxManager.js";
+} from "../../../src/v11/infrastructure/executor/sessionRuntime/runtimeSessionsRegistry.js";
+import { setMetaReviewerPaneBinding } from "../../../src/v11/infrastructure/channel/tmux/metaReviewerPaneBinding.js";
+import { runtimePaneIndices } from "../../../src/v11/infrastructure/channel/tmux/tmuxManager.js";
 
 const tempDirs: string[] = [];
 

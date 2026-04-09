@@ -4,9 +4,12 @@ import { join } from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { emitAskHumanFromWorkspace } from "../../../src/core/agent/askHuman.js";
+import { emitAskHumanFromWorkspaceV11 as emitAskHumanFromWorkspace } from "../../../src/v11/application/askHuman/emitAskHumanV11.js";
 import { createBubble } from "../../../src/core/bubble/createBubble.js";
-import { emitHumanReply, HumanReplyCommandError } from "../../../src/core/human/reply.js";
+import {
+  emitHumanReplyV11 as emitHumanReply,
+  HumanReplyCommandErrorV11 as HumanReplyCommandError
+} from "../../../src/v11/application/reply/emitReplyV11.js";
 import { readTranscriptEnvelopes } from "../../../src/v11/infrastructure/artifact/transcript/transcriptStore.js";
 import { readStateSnapshot, writeStateSnapshot } from "../../../src/v11/infrastructure/state/stateStore.js";
 import { deliveryTargetRoleMetadataKey } from "../../../src/types/protocol.js";
