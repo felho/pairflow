@@ -918,13 +918,27 @@ export async function buildDependencyCheckReport({
   }
 
   const sourceByPath = new Map<string, string>();
+  const availableFiles: string[] = [];
   for (const path of files) {
-    sourceByPath.set(path, await readFile(path, "utf8"));
+    try {
+      sourceByPath.set(path, await readFile(path, "utf8"));
+      availableFiles.push(path);
+    } catch (error) {
+      if (
+        typeof error === "object"
+        && error !== null
+        && "code" in error
+        && error.code === "ENOENT"
+      ) {
+        continue;
+      }
+      throw error;
+    }
   }
 
   const edges = buildImportEdges({
     repoRoot,
-    files,
+    files: availableFiles,
     sourceByPath
   });
 
@@ -935,17 +949,17 @@ export async function buildDependencyCheckReport({
     }),
     ...detectAntiCircumventionViolations({
       repoRoot,
-      files,
+      files: availableFiles,
       sourceByPath
     }),
     ...detectOwnershipSignalViolations({
       repoRoot,
-      files,
+      files: availableFiles,
       sourceByPath
     }),
     ...detectCycles({
       repoRoot,
-      files,
+      files: availableFiles,
       edges
     })
   ];
@@ -961,7 +975,7 @@ export async function buildDependencyCheckReport({
   if (failViolations.length === 0 && warnViolations.length === 0) {
     const details = [
       `scope=${scope.join(", ")}`,
-      `files_scanned=${String(files.length)}`,
+      `files_scanned=${String(availableFiles.length)}`,
       `import_edges=${String(edges.length)}`,
       `exceptions_configured=${String(check.exceptions?.length ?? 0)}`,
       `exceptions_applied=${String(filtered.appliedExceptionIds.length)}`,
@@ -1022,7 +1036,7 @@ export async function buildDependencyCheckReport({
       owner: check.owner ?? "unknown",
       mode,
       status: "pass",
-      summary: `Dependency check passed: ${files.length} scoped files scanned with no cycle or forbidden-layer violations.`,
+      summary: `Dependency check passed: ${availableFiles.length} scoped files scanned with no cycle or forbidden-layer violations.`,
       metric: check.metric,
       details
     };
