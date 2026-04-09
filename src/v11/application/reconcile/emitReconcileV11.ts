@@ -10,6 +10,32 @@ export {
   StartupReconcilerError as StartupReconcilerErrorV11,
   throwAsStartupReconcilerError as asStartupReconcilerErrorV11
 } from "../../shared/reconcile/reconcileCommandRuntime.js";
-export {
-  reconcileRuntimeSessions as reconcileRuntimeSessionsV11
-} from "../../../core/runtime/startupReconciler.js";
+
+let startupReconcilerModulePromise:
+  | Promise<typeof import("../../../core/runtime/startupReconciler.js")>
+  | undefined;
+
+async function loadStartupReconcilerModule() {
+  startupReconcilerModulePromise ??= import(
+    "../../../core/runtime/startupReconciler.js"
+  );
+  return startupReconcilerModulePromise;
+}
+
+export async function reconcileRuntimeSessionsV11(
+  input: Parameters<
+    typeof import("../../../core/runtime/startupReconciler.js")["reconcileRuntimeSessions"]
+  >[0] = {},
+  dependencies: Parameters<
+    typeof import("../../../core/runtime/startupReconciler.js")["reconcileRuntimeSessions"]
+  >[1] = {}
+): Promise<
+  Awaited<
+    ReturnType<
+      typeof import("../../../core/runtime/startupReconciler.js")["reconcileRuntimeSessions"]
+    >
+  >
+> {
+  const { reconcileRuntimeSessions } = await loadStartupReconcilerModule();
+  return reconcileRuntimeSessions(input, dependencies);
+}

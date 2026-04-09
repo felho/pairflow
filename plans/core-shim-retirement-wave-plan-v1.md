@@ -152,6 +152,22 @@ These numbers are triage inputs, not yet a finalized ledger.
     the frontier
   - `emitMetaReviewV11` no longer carries a static `core/runtime/metaReviewDefaults`
     import on the public v11 perimeter
+- after the `status + ui events scan + actor protocol` cleanup wave:
+  - total direct residual imports: `28`
+  - `emitStatusV11`, `eventsScan`, and `actorEmitContext` no longer carry
+    direct `src/core/**` imports
+  - the remaining frontier is now concentrated in the harder application
+    perimeter clusters: `reconcile`, `restart`, `start`, `watchdog`,
+    `routerDependencies`, `metaReviewGate`, `open`, `merge`, `delete`,
+    and `kickoff`
+- after the `stop + watchdog + reconcile` perimeter wave:
+  - total direct residual imports: `22`
+  - `emitStatusV11`, `watchdogCommandApi`, `stop` lifecycle entrypoints, and
+    `reconcileRuntimeSessionsV11` now avoid new static `src/core/**` perimeter
+    imports
+  - the remaining frontier is now mostly:
+    `merge`, `metaReviewGate`, `open`, `reply`, `restart`, `start`,
+    `routerDependencies`, and the intentional shared wrapper bridges
 - after the `start + kickoff` local fan-in batch:
   - total direct residual imports: `54`
   - `application/start` prompt/runtime and default wiring now route through two
