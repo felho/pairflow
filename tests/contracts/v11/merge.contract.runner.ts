@@ -3,15 +3,19 @@ import { createHash } from "node:crypto";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { createBubble } from "../../../src/core/bubble/createBubble.js";
-import { mergeBubble } from "../../../src/core/bubble/mergeBubble.js";
+import { createBubble } from "../../../src/v11/application/create/createBubble.js";
 import { upsertRuntimeSession } from "../../../src/v11/infrastructure/executor/sessionRuntime/runtimeSessionsRegistry.js";
 import {
   readStateSnapshot,
   writeStateSnapshot
 } from "../../../src/v11/infrastructure/state/stateStore.js";
 import { bootstrapWorktreeWorkspace } from "../../../src/v11/infrastructure/workspace/worktreeManager.js";
-import { mergeBubbleV11 } from "../../../src/v11/application/merge/emitMergeV11.js";
+import {
+  mergeBubbleV11,
+  type MergeBubbleV11Input as MergeBubbleInput,
+  type MergeBubbleV11Dependencies as MergeBubbleDependencies,
+  type MergeBubbleV11Result as MergeBubbleResult
+} from "../../../src/v11/application/merge/emitMergeV11.js";
 import { initGitRepository, runGit } from "../../helpers/git.js";
 import type { ContractCase, ContractCaseExpected } from "./schema.js";
 
@@ -46,7 +50,6 @@ export type MergeContractOutput =
 
 export interface MergeContractRunResult {
   mode: ContractCase["mode"];
-  baseline?: MergeContractOutput;
   v11?: MergeContractOutput;
 }
 
@@ -107,7 +110,7 @@ function parseMergeCaseInput(input: ContractCase["input"]): ParsedMergeCaseInput
 }
 
 function normalizeMergeResult(
-  result: Awaited<ReturnType<typeof mergeBubble>>,
+  result: MergeBubbleResult,
   state: string
 ): MergeContractSuccessOutput {
   return {
@@ -168,18 +171,6 @@ function assertContractExpectedSubset(input: {
   ) {
     throw new Error(
       `${input.label}: stateSubset.state mismatch (expected=${expectedState}, actual=${input.output.stateSubset.state})`
-    );
-  }
-}
-
-function assertParityEquivalent(input: {
-  baseline: MergeContractOutput;
-  v11: MergeContractOutput;
-  caseId: string;
-}): void {
-  if (JSON.stringify(input.baseline) !== JSON.stringify(input.v11)) {
-    throw new Error(
-      `merge parity mismatch for case=${input.caseId}: baseline=${JSON.stringify(input.baseline)} v11=${JSON.stringify(input.v11)}`
     );
   }
 }
@@ -353,7 +344,10 @@ async function setupDoneBubbleWithConflict(repoPath: string, bubbleId: string) {
 
 async function executeMergeCase(input: {
   caseDef: ContractCase;
-  executor: typeof mergeBubble;
+  executor: (
+    mergeInput: MergeBubbleInput,
+    dependencies?: MergeBubbleDependencies
+  ) => Promise<MergeBubbleResult>;
 }): Promise<MergeContractOutput> {
   const repoPath = await mkdtemp(join(tmpdir(), "pairflow-merge-contract-"));
   try {
@@ -428,64 +422,17 @@ export async function runMergeContractCase(
     throw new Error(`Unsupported command for merge contract runner: ${caseDef.command}`);
   }
 
-  if (caseDef.mode === "baseline") {
-    const baseline = await executeMergeCase({
-      caseDef,
-      executor: mergeBubble
-    });
-    assertContractExpectedSubset({
-      output: baseline,
-      expected: caseDef.expected,
-      label: "baseline"
-    });
-    return {
-      mode: caseDef.mode,
-      baseline
-    };
-  }
-
-  if (caseDef.mode === "v11") {
-    const v11 = await executeMergeCase({
-      caseDef,
-      executor: mergeBubbleV11
-    });
-    assertContractExpectedSubset({
-      output: v11,
-      expected: caseDef.expected,
-      label: "v11"
-    });
-    return {
-      mode: caseDef.mode,
-      v11
-    };
-  }
-
-  const baseline = await executeMergeCase({
-    caseDef,
-    executor: mergeBubble
-  });
   const v11 = await executeMergeCase({
     caseDef,
     executor: mergeBubbleV11
   });
   assertContractExpectedSubset({
-    output: baseline,
-    expected: caseDef.expected,
-    label: "parity/baseline"
-  });
-  assertContractExpectedSubset({
     output: v11,
     expected: caseDef.expected,
-    label: "parity/v11"
-  });
-  assertParityEquivalent({
-    baseline,
-    v11,
-    caseId: caseDef.id
+    label: "v11"
   });
   return {
     mode: caseDef.mode,
-    baseline,
     v11
   };
 }

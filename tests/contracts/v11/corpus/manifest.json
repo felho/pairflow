@@ -129,27 +129,9 @@
       "kind": "seed_case"
     },
     {
-      "id": "merge-basic",
-      "command": "merge",
-      "source": "tests/contracts/v11/cases/merge/merge-basic.case.json",
-      "kind": "seed_case"
-    },
-    {
       "id": "merge-basic-v11",
       "command": "merge",
       "source": "tests/contracts/v11/cases/merge/merge-basic-v11.case.json",
-      "kind": "seed_case"
-    },
-    {
-      "id": "merge-basic-parity",
-      "command": "merge",
-      "source": "tests/contracts/v11/cases/merge/merge-basic-parity.case.json",
-      "kind": "seed_case"
-    },
-    {
-      "id": "merge-state-not-done",
-      "command": "merge",
-      "source": "tests/contracts/v11/cases/merge/merge-state-not-done.case.json",
       "kind": "seed_case"
     },
     {
@@ -159,33 +141,9 @@
       "kind": "seed_case"
     },
     {
-      "id": "merge-state-not-done-parity",
-      "command": "merge",
-      "source": "tests/contracts/v11/cases/merge/merge-state-not-done-parity.case.json",
-      "kind": "seed_case"
-    },
-    {
-      "id": "merge-repo-dirty",
-      "command": "merge",
-      "source": "tests/contracts/v11/cases/merge/merge-repo-dirty.case.json",
-      "kind": "seed_case"
-    },
-    {
       "id": "merge-repo-dirty-v11",
       "command": "merge",
       "source": "tests/contracts/v11/cases/merge/merge-repo-dirty-v11.case.json",
-      "kind": "seed_case"
-    },
-    {
-      "id": "merge-repo-dirty-parity",
-      "command": "merge",
-      "source": "tests/contracts/v11/cases/merge/merge-repo-dirty-parity.case.json",
-      "kind": "seed_case"
-    },
-    {
-      "id": "merge-branch-missing",
-      "command": "merge",
-      "source": "tests/contracts/v11/cases/merge/merge-branch-missing.case.json",
       "kind": "seed_case"
     },
     {
@@ -195,45 +153,15 @@
       "kind": "seed_case"
     },
     {
-      "id": "merge-branch-missing-parity",
-      "command": "merge",
-      "source": "tests/contracts/v11/cases/merge/merge-branch-missing-parity.case.json",
-      "kind": "seed_case"
-    },
-    {
-      "id": "merge-conflict-manual-resolution",
-      "command": "merge",
-      "source": "tests/contracts/v11/cases/merge/merge-conflict-manual-resolution.case.json",
-      "kind": "seed_case"
-    },
-    {
       "id": "merge-conflict-manual-resolution-v11",
       "command": "merge",
       "source": "tests/contracts/v11/cases/merge/merge-conflict-manual-resolution-v11.case.json",
       "kind": "seed_case"
     },
     {
-      "id": "merge-conflict-manual-resolution-parity",
-      "command": "merge",
-      "source": "tests/contracts/v11/cases/merge/merge-conflict-manual-resolution-parity.case.json",
-      "kind": "seed_case"
-    },
-    {
-      "id": "merge-cleanup-invariant",
-      "command": "merge",
-      "source": "tests/contracts/v11/cases/merge/merge-cleanup-invariant.case.json",
-      "kind": "seed_case"
-    },
-    {
       "id": "merge-cleanup-invariant-v11",
       "command": "merge",
       "source": "tests/contracts/v11/cases/merge/merge-cleanup-invariant-v11.case.json",
-      "kind": "seed_case"
-    },
-    {
-      "id": "merge-cleanup-invariant-parity",
-      "command": "merge",
-      "source": "tests/contracts/v11/cases/merge/merge-cleanup-invariant-parity.case.json",
       "kind": "seed_case"
     },
     {
