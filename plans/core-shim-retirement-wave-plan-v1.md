@@ -258,6 +258,11 @@ These numbers are triage inputs, not yet a finalized ledger.
   - `statusCommandDependencyDefaults` no longer carries static
     `src/core/**` imports; `status`/`inbox` now rely on a local shared
     defaults object with lazy core bridges only where the bundle still lacks a
+- latest checkpoint after the `restart` local facade batch:
+  - total direct residual imports: `0`
+  - `emitRestartV11` no longer statically re-exports `src/core/bubble/restartBubble.ts`
+  - `core-shim-boundary-coverage` now runs clean with no residual
+    `src/v11/src/cli -> src/core` imports
     direct v11 owner path
   - current residual set:
     `restart`
