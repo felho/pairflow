@@ -1,5 +1,5 @@
 import { readStateSnapshot } from "../../shared/state/stateStoreDefaults.js";
-import { reconcileRuntimeSessionsDefaultDependencies } from "../../../core/runtime/reconcileCommandDefaults.js";
+import { reconcileRuntimeSessionsDefaultDependencies } from "../../defaults/reconcile/reconcileCommandDefaults.js";
 import type {
   ReconcileRuntimeSessionsDefaultDependencies
 } from "./reconcileCommandDependencyResolution.js";
