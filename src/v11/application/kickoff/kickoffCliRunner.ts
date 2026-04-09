@@ -11,7 +11,7 @@ import {
   kickoffBubbleV11 as kickoffBubble,
   type KickoffBubbleV11Result as KickoffBubbleResult
 } from "./emitKickoffV11.js";
-import { kickoffDefaults } from "../../../core/bubble/kickoffDefaults.js";
+import { kickoffDefaults } from "./kickoffDependencyDefaults.js";
 import { parseBubbleKickoffCommandOptions } from "./kickoffCliOptions.js";
 
 export interface BubbleKickoffCommandDependencies {

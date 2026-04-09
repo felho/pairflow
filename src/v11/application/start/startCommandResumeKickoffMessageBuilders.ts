@@ -3,7 +3,7 @@ import {
   buildReviewerRoundCommandGateProjection,
   type ReviewerCommandGateProjectionVariant
 } from "../../shared/reviewer/reviewerCommandGateGuidance.js";
-import { buildPairflowCommandGuidance } from "../../../core/runtime/pairflowCommand.js";
+import { buildPairflowCommandGuidance } from "./startCommandPromptRuntime.js";
 import type {
   PairflowCommandProfile,
   ReviewArtifactType

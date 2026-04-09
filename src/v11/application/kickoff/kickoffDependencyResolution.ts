@@ -1,6 +1,6 @@
 import { readFile, stat, writeFile } from "node:fs/promises";
 
-import { kickoffDefaults } from "../../../core/bubble/kickoffDefaults.js";
+import { kickoffDefaults } from "./kickoffDependencyDefaults.js";
 import type {
   KickoffDependencyOverrides,
   ResolvedKickoffDependencies

@@ -13,7 +13,7 @@ import {
 import {
   hasIdeationMetadataParseWarning
 } from "../../domain/ideation/ideationMetadata.js";
-import { startCliDependencyDefaults } from "../../../core/bubble/startCliDefaults.js";
+import { startCliDependencyDefaults } from "./startCommandDependencyDefaults.js";
 import { parseBubbleStartCommandOptions } from "./startCliOptions.js";
 import type { ResolvedBubbleById } from "../../shared/ports/bubbleLookup.js";
 

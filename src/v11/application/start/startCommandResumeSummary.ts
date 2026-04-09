@@ -1,4 +1,4 @@
-import { readTranscriptEnvelopes } from "../../../core/protocol/transcriptStore.js";
+import { readTranscriptEnvelopes } from "./startCommandDependencyDefaults.js";
 import type { Finding } from "../../../types/findings.js";
 import { resolveFindingPriority } from "../../../types/findings.js";
 import {

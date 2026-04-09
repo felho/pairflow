@@ -1,6 +1,6 @@
 import { spawn } from "node:child_process";
 import type { RunWorktreeBootstrapCommandInput } from "./startCommandContract.js";
-import { runTmux } from "../../../core/runtime/tmuxManager.js";
+import { runTmux } from "./startCommandDependencyDefaults.js";
 import { StartBubbleError } from "./startCommandRuntime.js";
 
 function truncateCommandOutput(raw: string, maxChars: number = 1200): string {

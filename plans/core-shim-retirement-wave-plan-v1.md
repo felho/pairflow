@@ -93,6 +93,22 @@ These numbers are triage inputs, not yet a finalized ledger.
   - `kickoffCliRunner` and `kickoffDependencyResolution` are back on the
     validated `core/bubble/kickoffDefaults` bridge
   - `routerDependencies` is back on `core/ui/routerDefaults` plus local UI extras
+- after the `start prompt/defaults` fan-in batch:
+  - total direct residual imports: `55`
+  - `startCommandPrompts`, resume prompt builders, tmux launch wiring, CLI
+    runner, context loader, defaults, and resume summary now route through two
+    local `start` support modules instead of scattered direct `core` imports
+- after the `kickoff defaults` fan-in batch:
+  - total direct residual imports: `54`
+  - `kickoffCliRunner` and `kickoffDependencyResolution` now share one local
+    `kickoffDependencyDefaults` bridge instead of two direct `core` imports
+- after the `start + kickoff` local fan-in batch:
+  - total direct residual imports: `54`
+  - `application/start` prompt/runtime and default wiring now route through two
+    local fan-in modules instead of repeated direct `core/runtime/*`,
+    `core/protocol/*`, and `core/bubble/*` imports
+  - `kickoffCliRunner` and `kickoffDependencyResolution` now route through one
+    local kickoff defaults fan-in module
 
 Latest validated state:
 

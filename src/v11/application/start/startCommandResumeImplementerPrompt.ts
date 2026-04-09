@@ -1,6 +1,6 @@
 import {
   buildPairflowCommandGuidance
-} from "../../../core/runtime/pairflowCommand.js";
+} from "./startCommandPromptRuntime.js";
 import type {
   BubbleStateSnapshot,
   PairflowCommandProfile,
