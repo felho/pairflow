@@ -42,14 +42,15 @@ state still contains a large residual `v11/cli -> core` surface.
 
 ## Current Explicit Residual Inventory
 
-Latest verified checkpoint after the meta-review-gate defaults redesign:
+Latest verified checkpoint after the `tests/core/**` shim-consumer retirement
+waves:
 
 - worktree clean
 - `tests/contracts/v11/core-shim-boundary-coverage.test.ts` passes
 - static direct residual bridge inventory remains locked to 0 entries
-- the previously known `metaReviewGate` dynamic core bridge is retired
-- remaining work has moved to broader dynamic core bridges that the current
-  boundary test does not detect
+- non-intentional `tests/core/**` thin-shim frontier is retired
+- one intentional compatibility bridge remains:
+  - `tests/core/runtime/passValidationRunner.bridge.test.ts`
 
 Current remaining non-inventory bridge candidates:
 
@@ -58,166 +59,42 @@ Current remaining non-inventory bridge candidates:
 Current classification:
 
 - `easy`
-  - none confirmed at this checkpoint
+  - retired
 - `medium`
-  - none confirmed at this checkpoint
+  - retired
 - `hard / architecture-sensitive`
   - none confirmed at this checkpoint
 
 ## Post-Lint Core Proxy Inventory Snapshot
 
-Verified after:
+Verified after the staged `tests/core/**` retirement waves:
 
-- `cc54dd3e` `refactor(cli): move commit boundary into v11`
-- `610a4af5` `test(doc-gate): align fail-open mock target with v11 defaults`
-- `31c8a41e` `test(meta-review-gate): raise corpus manifest timeout`
-- full `pnpm check` PASS
+- `a698121b` `test(shim): retarget core ui tests`
+- `e4575a57` `test(shim): retarget core human state helpers`
+- `4e50e12c` `test(shim): retarget runtime recovery tests`
+- `d2e41fc8` `test(shim): retarget interaction runtime tests`
+- `443a6d7c` `test(shim): retarget tmux runtime tests`
+- `ef2d23e7` `test(shim): retarget bubble flow tests`
+- `63ab96fb` `test(shim): retarget converged test`
+- `f61fb40f` `test(shim): retarget meta-review gate test`
+- `8edad2b9` `test(shim): retarget pass test`
+- `ddf04499` `test(shim): retarget meta-review test`
+- `93aeb595` `test(shim): retarget kickoff and commit tests`
+- `15777eab` `test(shim): retarget approval test`
+- `784dc692` `test(shim): retarget bubble smoke and approval tests`
 
-This snapshot is no longer about `src/v11 -> src/core` boundary failures.
-Those are cleared. The next retirement frontier is the remaining compatibility
-surface under `src/core/**`.
+Current residual summary:
 
-### Easy Thin Shells
+- `tests/core/**` non-intentional thin-shim frontier: `0`
+- intentional bridge coverage:
+  - `tests/core/runtime/passValidationRunner.bridge.test.ts`
 
-These are mostly pure re-export bridges and look safe for retirement once
-their remaining legacy consumers are redirected:
+Outcome:
 
-- `src/core/archive/archiveIndex.ts`
-- `src/core/archive/archivePaths.ts`
-- `src/core/archive/archiveSnapshot.ts`
-- `src/core/protocol/envelope.ts`
-- `src/core/protocol/sequenceAllocator.ts`
-- `src/core/protocol/transcriptStore.ts`
-- `src/core/protocol/validators.ts`
-- `src/core/state/executionContext.ts`
-- `src/core/state/initialState.ts`
-- `src/core/state/machine.ts`
-- `src/core/state/stateSchema.ts`
-- `src/core/state/stateStore.ts`
-- `src/core/state/transitions.ts`
-- `src/core/runtime/notifications.ts`
-- `src/core/runtime/reviewerContext.ts`
-- `src/core/runtime/tmuxDelivery.ts`
-- `src/core/runtime/tmuxInput.ts`
-- `src/core/runtime/tmuxManager.ts`
-- `src/core/runtime/reviewerGuidance.ts`
-- `src/core/runtime/reviewerCommandGateGuidance.ts`
-- `src/core/runtime/reviewerScoutExpansionGuidance.ts`
-- `src/core/runtime/reviewerSeverityOntology.ts`
-- `src/core/runtime/reviewerSeverityOntology.generated.ts`
-- `src/core/runtime/watchdog.ts`
-- `src/core/ui/events.ts`
-- `src/core/ui/repoScope.ts`
-- `src/core/ui/router.ts`
-- `src/core/ui/server.ts`
-- `src/core/workspace/git.ts`
-- `src/core/workspace/worktreeManager.ts`
-
-### Medium Compatibility Shells
-
-These are still thin, but they keep extra exports, local defaults, or
-compatibility-shaped public names. They are good candidates for the next
-bounded retirement waves:
-
-- facade wrappers with extra type/export surface:
-  - `src/core/agent/askHuman.ts`
-  - `src/core/agent/converged.ts`
-  - `src/core/agent/pass.ts`
-  - `src/core/bubble/attachBubble.ts`
-  - `src/core/bubble/createBubble.ts`
-  - `src/core/bubble/deleteBubble.ts`
-  - `src/core/bubble/inboxBubble.ts`
-  - `src/core/bubble/kickoffBubble.ts`
-  - `src/core/bubble/listBubbles.ts`
-  - `src/core/bubble/mergeBubble.ts`
-  - `src/core/bubble/openBubble.ts`
-  - `src/core/bubble/resumeBubble.ts`
-  - `src/core/bubble/startBubble.ts`
-  - `src/core/bubble/statusBubble.ts`
-  - `src/core/bubble/stopBubble.ts`
-  - `src/core/runtime/startupReconciler.ts`
-- thin shells with extra infra/shared exports:
-  - `src/core/gates/docContractGateArtifacts.ts`
-  - `src/core/reviewer/reviewerBrief.ts`
-  - `src/core/reviewer/summaryVerifierConsistencyGate.ts`
-  - `src/core/reviewer/testEvidence.ts`
-  - `src/core/reviewer/reviewVerificationArtifacts.ts`
-  - `src/core/metrics/events.ts`
-  - `src/core/util/fileLock.ts`
-  - `src/core/util/normalize.ts`
-  - `src/core/util/pathExists.ts`
-  - `src/core/util/shellQuote.ts`
-  - `src/core/util/structuredRef.ts`
-
-### Hard / Retained-Behavior Candidates
-
-These still do meaningful local wiring or runtime selection and should not be
-treated as simple delete-after-repoint shims:
-
-- `src/core/bubble/metaReview.ts`
-- `src/core/bubble/watchdogBubble.ts`
-- defaults bundles that still compose multiple legacy-facing dependencies:
-  - `src/core/agent/askHumanDefaults.ts`
-  - `src/core/agent/convergedDefaults.ts`
-  - `src/core/bubble/deleteBubbleDefaults.ts`
-  - `src/core/bubble/kickoffDefaults.ts`
-  - `src/core/bubble/mergeBubbleDefaults.ts`
-  - `src/core/bubble/metaReviewGateDefaults.ts`
-  - `src/core/bubble/metaReviewGateRecoveryDefaults.ts`
-  - `src/core/bubble/replyBubbleDefaults.ts`
-  - `src/core/bubble/startBubbleDefaults.ts`
-  - `src/core/ui/routerDefaults.ts`
-  - `src/core/runtime/passValidationDefaults.ts`
-
-### Next Easy Retirement Wave
-
-The next low-risk retirement wave should target the pure shells first,
-preferably in file-disjoint clusters:
-
-1. `archive + protocol` shells
-2. `state` shells
-3. `runtime tmux/notification` shells
-4. `ui/workspace` shells
-
-Only after those should we start deleting the medium compatibility facade
-wrappers.
-
-Immediate planning note:
-
-- do not treat the remaining residuals as path-only rewrites
-- most of the remaining set would open forbidden `application/shared -> infrastructure`
-  edges if rewritten naively
-- the next safe wave should pick one medium cluster and replace the `core`
-  bundle with a local explicit dependency/defaults bridge, not direct infra imports
-- the previous `reconcile` hard residual is now retired:
-  - source-of-truth wrapper lives in
-    `src/v11/application/reconcile/reconcileCommandApi.ts`
-  - `src/core/runtime/startupReconciler.ts` now re-exports the v11 facade
-- the previous `merge` residual is now retired:
-  - local defaults live in `src/v11/application/merge/mergeCommandDefaults.ts`
-  - `mergeCommandDependencyResolution.ts` no longer imports
-    `src/core/bubble/mergeBubbleDefaults.ts`
-- the previous `metaReviewGate` bridge is now retired:
-  - local defaults live in
-    `src/v11/application/metaReviewGate/metaReviewGateCommandDefaults.ts`
-  - `metaReviewGateDependencyDefaults.ts` no longer imports
-    `src/core/bubble/metaReviewGateDefaults.ts`
-- the previous `passValidation` bridge is now retired:
-  - local defaults live in
-    `src/v11/application/pass/passValidationCommandDefaults.ts`
-  - `passValidationDependencyDefaults.ts` no longer imports
-    `src/core/runtime/passValidationDefaults.ts`
-- the previous `docContractGateArtifactDefaults` bridge is now retired:
-  - the shared defaults file now lazy-loads the canonical v11 infrastructure
-    owner directly
-  - it no longer imports `src/core/gates/docContractGateArtifacts.ts`
-- the previous `bubbleEvents` bridge is now retired:
-  - the shared metrics lifecycle writer now loads the canonical v11 repo
-    normalization + events-store owners directly
-  - it no longer imports `src/core/metrics/bubbleEventsDefaults.ts`
-- the previous `metaReviewDependencyDefaults` bridge is now retired:
-  - the shared meta-review defaults now load the canonical v11 bubble lookup
-    and runtime sessions owners directly
+- the broad `tests/core/**` shim-consumer retirement is complete
+- remaining future work, if any, is not about test-consumer shim drift
+- the boundary coverage test can stay warn-only only for broader policy
+  reasons, not because this `tests/core/**` frontier remains large
   - it no longer imports `src/core/bubble/bubbleLookup.ts` or
     `src/core/runtime/sessionsRegistry.ts`
 
