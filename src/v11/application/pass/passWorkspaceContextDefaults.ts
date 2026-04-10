@@ -1,6 +1,9 @@
-const passWorkspaceContextDefaultsPromise = import(
-  "../../../core/bubble/passWorkspaceContextDefaults.js"
-).then(({ passWorkspaceContextDefaults }) => passWorkspaceContextDefaults);
+import { ensureBubbleInstanceIdForMutation } from "../../defaults/bubbleIdentity/bubbleIdentityDefaults.js";
+import { resolveBubbleFromWorkspaceCwd } from "../../defaults/workspace/workspaceResolutionDefaults.js";
+import { readStateSnapshot } from "../../shared/state/stateStoreDefaults.js";
 
-export const passWorkspaceContextDefaults =
-  await passWorkspaceContextDefaultsPromise;
+export const passWorkspaceContextDefaults = {
+  ensureBubbleInstanceIdForMutation,
+  readStateSnapshot,
+  resolveBubbleFromWorkspaceCwd
+} as const;
