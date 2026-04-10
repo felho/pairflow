@@ -8,7 +8,7 @@ import { readStateSnapshot, writeStateSnapshot } from "../state/stateStore.js";
 import {
   readWatchdogPaneActivity,
   writeWatchdogPaneActivity
-} from "./watchdogPaneActivityStore.js";
+} from "../../v11/defaults/watchdog/watchdogPaneActivityDefaults.js";
 import { appendWatchdogTrace } from "../../v11/infrastructure/artifact/watchdog/watchdogTraceStore.js";
 import { emitBubbleNotification } from "../../v11/infrastructure/channel/notifications.js";
 

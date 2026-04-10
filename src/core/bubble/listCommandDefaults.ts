@@ -4,8 +4,8 @@ import {
   resolveRepoPath
 } from "../../v11/infrastructure/executor/workspace/repoResolution.js";
 import { readRuntimeSessionsRegistry } from "../../v11/infrastructure/executor/sessionRuntime/runtimeSessionsRegistry.js";
+import { readWatchdogPaneActivity } from "../../v11/defaults/watchdog/watchdogPaneActivityDefaults.js";
 import { inspectStateSnapshot } from "../state/stateStore.js";
-import { readWatchdogPaneActivity } from "../watchdog/watchdogPaneActivityStore.js";
 
 export const listCommandDefaults = {
   RepoResolutionError,
