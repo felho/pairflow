@@ -2,13 +2,19 @@
 artifact_type: plan
 artifact_id: plan_fitness_check_hardening_v1
 title: "Fitness Check Hardening Plan"
-status: draft
+status: completed
 prd_ref: null
 owners:
   - "felho"
 ---
 
 # Plan: Fitness Check Hardening
+
+## Current Codebase Check (2026-04-10)
+
+1. The live fitness report is green for `boundary`, `mutation`, `transition`, `error`, `complexity`, `dependency`, `critical_side_effect`, and `contract_timeout_policy`.
+2. The checked-in dependency checker already implements the `shared-ports` layer model, anti-circumvention findings, and ownership-signal warnings.
+3. The checked-in critical side-effect and contract-timeout-policy checks are present with dedicated tests, so this hardening roadmap has effectively landed.
 
 ## Objective
 

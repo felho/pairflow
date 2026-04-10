@@ -18,6 +18,12 @@ Egységes, repo-szintű validation contract bevezetése, amely:
 3. egyértelműen elválasztja a projekt default és a bubble override felelősségi szintet,
 4. single-repo és multi-target repo esetben is determinisztikus futást ad.
 
+## Current Codebase Check (2026-04-10)
+
+1. `src/config/repoConfig.ts` jelenleg csak legacy enforcement-mode maradvanyokat toleral, es a validalt eredmeny ma is ures objektum.
+2. A checked-out kodban nincs `[validation]` parser, command profile resolver vagy bubble-command precedence implementation.
+3. Ezert a plan tovabbra is `draft`, de a hozza tartozo implementation taskokat a mai `src/v11/**` topologyhoz kell igazítani.
+
 ## Decision Baseline
 
 1. Canonical forrás: a meglévő repo-root `pairflow.toml`, ezen belül a `[validation]` szekció. Phase 1-ben nem vezetünk be külön `pairflow.validation.toml` vagy más párhuzamos validation config fájlt.

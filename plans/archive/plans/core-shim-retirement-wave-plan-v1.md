@@ -1,3 +1,12 @@
+---
+artifact_type: plan
+artifact_id: plan_core_shim_retirement_wave_v1
+title: "Core Shim Retirement Wave Plan V1"
+status: completed
+owners:
+  - "felho"
+---
+
 # Core Shim Retirement Wave Plan V1
 
 Last updated from `main` after the temporary warn-only downgrade of
@@ -33,7 +42,13 @@ Treating the whole set as a single cleanup batch would either:
 - `tests/contracts/v11/core-shim-boundary-coverage.test.ts`
 - `docs/architecture/v11-placement-and-extraction-governance.md`
 - `docs/architecture/architecture-fitness-checks.md`
-- `plans/v11-closure-and-residual-core-plan-v1.md`
+- `plans/archive/plans/v11-closure-and-residual-core-plan-v1.md`
+
+## Current Codebase Check (2026-04-10)
+
+1. `src/core/**` no longer exists in the checked-out tree.
+2. `tests/contracts/v11/core-shim-boundary-coverage.test.ts` now runs in strict `fail` mode.
+3. The active fitness report is `dependency=pass`, and there is no remaining direct `src/v11/src/cli -> src/core` bridge inventory in the live codebase.
 
 ## Current Operating Baseline
 

@@ -2,13 +2,19 @@
 artifact_type: plan
 artifact_id: plan_core_zero_retirement_v1
 title: "Core Zero Retirement Plan"
-status: in_progress
+status: completed
 prd_ref: null
 owners:
   - "felho"
 ---
 
 # Plan: Core Zero Retirement
+
+## Current Codebase Check (2026-04-10)
+
+1. `src/core/**` no longer exists in the checked-out tree.
+2. The active fitness report is green across every hard-fail checker, including `dependency`.
+3. `tests/contracts/v11/core-shim-boundary-coverage.test.ts` is already back in strict `fail` mode, so the plan objective is complete and this file is now a historical endgame record.
 
 ## Objective
 
@@ -33,7 +39,7 @@ Jelenlegi baseline:
 - `fitness:check:ci`: PASS
 - a `src/v11/src/cli -> src/core` direkt frontier a korábbi hullámok után már
   nagyrészt kifogyott
-- Phase 1 inventory ledger: `plans/core-zero-retirement-inventory-ledger-v1.md`
+- Phase 1 inventory ledger: `plans/archive/plans/core-zero-retirement-inventory-ledger-v1.md`
 
 Ez a terv tehát nem unblock-terv, hanem **endgame decommission plan**.
 

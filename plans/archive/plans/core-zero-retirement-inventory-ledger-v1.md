@@ -3,7 +3,7 @@ artifact_type: ledger
 artifact_id: ledger_core_zero_retirement_inventory_v1
 title: "Core Zero Retirement Inventory Ledger"
 status: completed
-plan_ref: plans/core-zero-retirement-plan-v1.md
+plan_ref: plans/archive/plans/core-zero-retirement-plan-v1.md
 task_ref: plans/archive/tasks/core-zero-retirement-phase1-inventory.md
 generated_on: 2026-04-09
 owners:
@@ -11,6 +11,11 @@ owners:
 ---
 
 # Core Zero Retirement Inventory Ledger
+
+## Historical Note (2026-04-10)
+
+1. This ledger remains a historical Phase 1 inventory snapshot.
+2. The checked-out codebase no longer contains `src/core/**`, so the row-level inventory below is no longer the current repo state.
 
 Ez a ledger a `src/core/**` teljes Phase 1 inventoryja. A cél nem thin bridge steady state, hanem a `src/core/**` teljes kifogyasztása és végső törlése.
 

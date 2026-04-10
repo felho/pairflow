@@ -2,7 +2,7 @@
 artifact_type: inventory
 artifact_id: inventory_actor_runtime_interface_behavior_phaseA_v1
 title: "Actor Runtime Interface Behavior Inventory (Phase A Inventory)"
-status: draft
+status: completed
 phase: phaseA
 source_task_ref: plans/tasks/actor-runtime-interface-behavior-inventory-phaseA.md
 plan_ref: plans/actor-runtime-interface-discovery-and-migration-plan-v1.md

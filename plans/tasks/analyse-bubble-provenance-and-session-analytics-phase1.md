@@ -2,7 +2,7 @@
 artifact_type: task
 artifact_id: task_analyse_bubble_provenance_and_session_analytics_phase1_v1
 title: "AnalyseBubble - Provenance Persistence and Session Analytics (Phase 1)"
-status: implementable
+status: draft
 phase: phase1
 target_files:
   - src/types/archive.ts
@@ -38,6 +38,12 @@ owners:
 ---
 
 # Task: AnalyseBubble - Provenance Persistence and Session Analytics (Phase 1)
+
+## Current Codebase Check (2026-04-10)
+
+1. A `target_files` listaban szereplo `src/core/**` pathok mar nem leteznek.
+2. A checked-out kodban nincs `bubble provenance` vagy `analyze bubble` CLI surface.
+3. A tasket `draft` allapotban kell tartani, es ujra kell scopolni a mai `src/v11/**` / `src/cli/**` topology alapjan.
 
 ## L0 - Policy
 
@@ -245,4 +251,3 @@ Task is `IMPLEMENTABLE` when all are true:
 3. CLI provenance and analysis contracts are defined with fallback behavior.
 4. Session-link confidence model is defined and test-mapped.
 5. Skill workflow routing for `AnalyseBubble` is explicitly documented.
-

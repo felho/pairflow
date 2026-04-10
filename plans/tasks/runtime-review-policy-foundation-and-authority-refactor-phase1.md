@@ -2,7 +2,7 @@
 artifact_type: task
 artifact_id: task_runtime_review_policy_foundation_and_authority_refactor_phase1_v1
 title: "Runtime Review Policy Foundation and Authority Refactor (Phase 1)"
-status: implementable
+status: draft
 phase: phase1
 target_files:
   - src/types/bubble.ts
@@ -36,6 +36,12 @@ owners:
 ---
 
 # Task: Runtime Review Policy Foundation and Authority Refactor (Phase 1)
+
+## Current Codebase Check (2026-04-10)
+
+1. A checked-out kodban nincs `review_policy` runtime surface vagy `metaReviewGateThresholdAuthority` implementation.
+2. A task `target_files` listajanak `src/core/**` resze mar nem letezik.
+3. A task jelenleg nem implementalhato as-is; a scope-ot elobb a mai `src/v11/**` topologyra kell retargetelni.
 
 ## L0 - Policy
 

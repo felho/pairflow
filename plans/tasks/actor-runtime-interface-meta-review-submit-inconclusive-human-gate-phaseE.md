@@ -28,6 +28,12 @@ owners:
 
 # Task: Actor Runtime Interface Meta-Review Submit Inconclusive Human-Gate Alignment (Phase E)
 
+## Current Codebase Check (2026-04-10)
+
+1. A task `target_files` listajaban meg stale `src/core/bubble/metaReview.ts` szerepel, mikozben a mai canonical submit/gate ownerseg mar `src/v11/**` alatt van.
+2. A task bugleirasa tovabbra is ertelmes lehet, de a konkret write set mar nem up to date.
+3. A task marad `draft`, es ujra kell targetelni a mai `src/v11/application/metaReview/**` es `src/v11/shared/metaReviewGate/**` ownersegekre.
+
 ## L0 - Policy
 
 ### Goal

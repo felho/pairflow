@@ -27,6 +27,12 @@ owners:
 
 # Task: Watchdog Impossible-State Reconcile + Escalation Follow-up
 
+## Current Codebase Check (2026-04-10)
+
+1. A mai watchdog/reconcile canonical kod `src/v11/application/watchdog/**` es `src/v11/application/reconcile/**` alatt el.
+2. A task `target_files` listajaban szereplo `src/core/**` es `src/v11/shared/watchdog/**` pathok kozul tobb mar nem a jelenlegi owner.
+3. A task tovabbra is iranyrogzito `draft`, de a concrete implementation scope-ot frissiteni kell a mai topologyra.
+
 ## L0 - Policy
 
 ### Goal

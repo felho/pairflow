@@ -2,7 +2,7 @@
 artifact_type: task
 artifact_id: task_review_policy_runtime_surface_and_rollout_phase1_v1
 title: "Review Policy Runtime Surface and Rollout (Phase 1)"
-status: implementable
+status: draft
 phase: phase1
 target_files:
   - src/types/bubble.ts
@@ -50,6 +50,12 @@ owners:
 ---
 
 # Task: Review Policy Runtime Surface and Rollout (Phase 1)
+
+## Current Codebase Check (2026-04-10)
+
+1. A checked-out `src`, `tests` es `ui` kodban jelenleg nincs `review_policy` runtime/config surface.
+2. A task `target_files` listajanak tobb `src/core/**` eleme mar nem letezik a vegleges core retirement utan.
+3. A tasket `draft` allapotban kell tartani, amig a target file listat a mai `src/v11/**` es `ui/**` ownersegekhez nem igazítjuk.
 
 ## L0 - Policy
 

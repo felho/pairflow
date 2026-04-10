@@ -2,7 +2,7 @@
 artifact_type: task
 artifact_id: task_actor_runtime_interface_meta_review_operator_read_surface_closure_phaseE_v1
 title: "Actor Runtime Interface Meta-Review Operator Read Surface Closure (Phase E)"
-status: implementable
+status: draft
 phase: phaseE
 target_files:
   - src/core/bubble/metaReview.ts
@@ -23,6 +23,12 @@ owners:
 ---
 
 # Task: Actor Runtime Interface Meta-Review Operator Read Surface Closure (Phase E)
+
+## Current Codebase Check (2026-04-10)
+
+1. A retained operator read surface ma tenylegesen `src/v11/application/metaReview/**` alatt el, de a `target_files` listaban meg stale `src/core/**` es egy mar nem letezo parity test path is szerepel.
+2. A task tartalmi iranya tovabbra is relevans lehet, de a file-level scope nem pontos.
+3. Emiatt a task statusza visszakerul `draft` allapotba, amig a mai canonical file listat ra nem vezetjuk.
 
 ## Executive Summary
 

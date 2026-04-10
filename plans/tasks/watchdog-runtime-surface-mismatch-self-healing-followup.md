@@ -24,6 +24,12 @@ owners:
 
 # Task: Watchdog Runtime Surface Mismatch Self-Healing Follow-up
 
+## Current Codebase Check (2026-04-10)
+
+1. A mai watchdog canonical owner file-ok az `src/v11/application/watchdog/**` alatt vannak, nem a taskban felsorolt `src/v11/shared/watchdog/**` pathokon.
+2. A `src/core/runtime/*` targetek mar nem leteznek a checked-out tree-ben.
+3. A task marad `draft`, de a target file listat aktualizalni kell, mielott konkret implementation task lehetne belole.
+
 ## L0 - Policy
 
 ### Goal

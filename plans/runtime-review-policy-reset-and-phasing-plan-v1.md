@@ -19,6 +19,12 @@ Ujra-szekvencialni a runtime review policy munkat ugy, hogy:
 4. a shared runtime review policy foundation, az auto-rework threshold, es a reviewer bypass ne egyetlen szeles blast-radiusu feature-kent mozogjon,
 5. a tenyleges bypass-aktivacio tovabbra is a reviewer + meta-reviewer cutover milestone-ok utan tortenjen.
 
+## Current Codebase Check (2026-04-10)
+
+1. A checked-out `src`, `tests` es `ui` scope-ban nincs `review_policy`, `review_loop_mode` vagy `meta_review_auto_rework_min_severity` runtime surface.
+2. A korabbi taskokban szereplo `src/core/**` targetek a vegleges core retirement utan mar nem leteznek.
+3. A plan tovabbra is `draft`, es a kovetkezo implementacios kor elott friss `v11`-owned target file listat igenyel.
+
 Sikernek az szamit, ha a kovetkezo kor mar nem egyetlen bubble-ben mozgatja egyszerre a policy schema-t, a threshold routingot, a human-gate envelope semantics-et, a runtime projection surface-eket, a recovery pathokat es a web UI/store reteget.
 
 ## Decision Baseline

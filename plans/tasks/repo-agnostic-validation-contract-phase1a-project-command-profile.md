@@ -2,7 +2,7 @@
 artifact_type: task
 artifact_id: task_repo_agnostic_validation_contract_phase1a_project_command_profile_v1
 title: "Repo-Agnostic Validation Contract - Phase 1A Project-Level Command Profile"
-status: implementable
+status: draft
 phase: phase1
 target_files:
   - src/types/validation.ts
@@ -22,6 +22,12 @@ owners:
 ---
 
 # Task: Repo-Agnostic Validation Contract - Phase 1A Project-Level Command Profile
+
+## Current Codebase Check (2026-04-10)
+
+1. `src/config/repoConfig.ts` jelenleg nem parse-olja a `[validation]` szekciot; a validalt repo config ma is ures objektum.
+2. A `target_files` listaban szereplo `src/core/**` pathok a vegleges core retirement utan mar nem leteznek.
+3. A task nem implementalhato a jelenlegi formaban; elobb a target file listat kell a mai `src/v11/application/create/**`, `src/config/**` es `src/v11/shared/reviewer/**` ownersegekhez igazitani.
 
 ## L0 - Policy
 

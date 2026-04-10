@@ -11,6 +11,11 @@ owners:
 
 # Task: Actor Runtime Interface Meta-Review Recovery Reconcile Refactor
 
+## Current Codebase Check (2026-04-10)
+
+1. A checked-out tree-ben a meta-review es reconcile canonical ownership ma mar `src/v11/**` alatt van.
+2. A draft iranya tovabbra is relevans, de minden kesobbi implementation scope-ot a mai `src/v11/application/metaReview/**`, `src/v11/application/reconcile/**` es `src/v11/application/watchdog/**` topologyhoz kell kotni.
+
 ## Why this draft exists
 
 Ez a draft a jelenlegi beszelgetes lenyeget rogziti a `recover` iranyanak ujragondolasahoz.

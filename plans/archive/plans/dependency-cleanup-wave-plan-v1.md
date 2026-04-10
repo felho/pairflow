@@ -1,6 +1,21 @@
+---
+artifact_type: plan
+artifact_id: plan_dependency_cleanup_wave_v1
+title: "Dependency Cleanup Wave Plan V1"
+status: completed
+owners:
+  - "felho"
+---
+
 # Dependency Cleanup Wave Plan V1
 
 Last updated from `main` at `35745032`.
+
+## Current Codebase Check (2026-04-10)
+
+1. `pnpm exec tsx tools/fitness/run-report.ts` currently reports `dependency: pass`.
+2. The same report also shows no cycle or forbidden-layer violations in `src/v11/**`.
+3. Remaining wave notes below are historical execution history; the plan objective is complete.
 
 ## Goal
 

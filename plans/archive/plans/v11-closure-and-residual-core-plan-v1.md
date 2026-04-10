@@ -2,13 +2,19 @@
 artifact_type: plan
 artifact_id: plan_v11_closure_and_residual_core_v1
 title: "v11 Closure And Residual Core Plan"
-status: draft
+status: completed
 prd_ref: null
 owners:
   - "felho"
 ---
 
 # Plan: v11 Closure And Residual Core
+
+## Current Codebase Check (2026-04-10)
+
+1. `src/core/**` no longer exists in the checked-out tree.
+2. The checked-out repository already contains the capability-oriented `src/v11/infrastructure/**` topology that this plan was trying to reach.
+3. The remaining text below is historical closure planning; the closure target itself is already achieved in code.
 
 ## Objective
 

@@ -33,6 +33,12 @@ owners:
 
 # Task: Commit Snapshot Envelope + Done-Package Removal (Phase 1)
 
+## Current Codebase Check (2026-04-10)
+
+1. A jelenlegi checked-out kod tovabbra is `DONE_PACKAGE` envelope-ot es `done-package.md` artifactot hasznal a commit flow-ban.
+2. A task `target_files` listaja reszben a pre-v11 pathokra mutat; a commit implementacio ma a `src/v11/application/commit/**` es `src/v11/shared/commit/commitCommandFinalizationMutation.ts` alatt el.
+3. A task tovabbra is `draft`, es a target file listat frissiteni kell a mai commit topologyhoz, mielott implementalhato lenne.
+
 ## L0 - Policy
 
 ### Goal

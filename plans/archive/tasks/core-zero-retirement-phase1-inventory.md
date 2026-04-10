@@ -5,11 +5,11 @@ title: "Core Zero Retirement Phase 1 Inventory"
 status: completed
 phase: phase1
 target_files:
-  - "plans/core-zero-retirement-plan-v1.md"
+  - "plans/archive/plans/core-zero-retirement-plan-v1.md"
   - "plans/archive/tasks/core-zero-retirement-phase1-inventory.md"
-  - "plans/core-zero-retirement-inventory-ledger-v1.md"
+  - "plans/archive/plans/core-zero-retirement-inventory-ledger-v1.md"
 prd_ref: null
-plan_ref: plans/core-zero-retirement-plan-v1.md
+plan_ref: plans/archive/plans/core-zero-retirement-plan-v1.md
 system_context_ref: docs/pairflow-initial-design.md
 owners:
   - "felho"
@@ -80,8 +80,8 @@ végső törlését, nem pedig egy interim compatibility steady state fenntartá
 
 | ID | File | Function/Entry | Exact Signature (args -> return) | Insertion Point | Expected Behavior | Priority | Timing | Evidence |
 |---|---|---|---|---|---|---|---|---|
-| CS1 | plans/core-zero-retirement-inventory-ledger-v1.md | new ledger artifact | `N/A -> markdown inventory` | new file | Teljes `src/core/**` inventory, bucket, lane, delete-eligibility, notes | P1 | required-now | `src/core/**` aktuális fájllista |
-| CS2 | plans/core-zero-retirement-plan-v1.md | phase-1 references | `markdown update -> markdown update` | progress / dependency sections | A plan hivatkozik a ledgerre mint phase-1 source of truth | P2 | required-now | Phase 1 inventory completion |
+| CS1 | plans/archive/plans/core-zero-retirement-inventory-ledger-v1.md | new ledger artifact | `N/A -> markdown inventory` | new file | Teljes `src/core/**` inventory, bucket, lane, delete-eligibility, notes | P1 | required-now | `src/core/**` aktuális fájllista |
+| CS2 | plans/archive/plans/core-zero-retirement-plan-v1.md | phase-1 references | `markdown update -> markdown update` | progress / dependency sections | A plan hivatkozik a ledgerre mint phase-1 source of truth | P2 | required-now | Phase 1 inventory completion |
 | CS3 | plans/archive/tasks/core-zero-retirement-phase1-inventory.md | task contract | `markdown task -> markdown task` | current file | A végrehajtási szabályok explicit, worker-kompatibilis formában rögzítve vannak | P1 | required-now | task-consistency gate |
 
 ### 2) Data and Interface Contract
@@ -111,7 +111,7 @@ Constraint: if no allowed side effects are listed above, implementation must be 
 
 | Type | Items | Priority | Timing |
 |---|---|---|---|
-| must-use | `plans/core-zero-retirement-plan-v1.md`, aktuális `src/core/**` fájllista, aktuális `src/v11/src/cli/tests -> src/core` consumer scan | P2 | required-now |
+| must-use | `plans/archive/plans/core-zero-retirement-plan-v1.md`, aktuális `src/core/**` fájllista, aktuális `src/v11/src/cli/tests -> src/core` consumer scan | P2 | required-now |
 | must-not-use | becslés pusztán fájlszámból, bucket nélküli delete javaslat, implicit lane-hozzárendelés | P2 | required-now |
 
 ### 6) Test Matrix
@@ -164,5 +164,5 @@ Mark task as `IMPLEMENTABLE` when all `P0/P1 + required-now` items are closed.
 
 ## Execution Result
 
-1. Elkészült a teljes inventory ledger: `plans/core-zero-retirement-inventory-ledger-v1.md`.
+1. Elkészült a teljes inventory ledger: `plans/archive/plans/core-zero-retirement-inventory-ledger-v1.md`.
 2. A Phase 2 worker-wave most már lane-alapon indítható a ledgerből.

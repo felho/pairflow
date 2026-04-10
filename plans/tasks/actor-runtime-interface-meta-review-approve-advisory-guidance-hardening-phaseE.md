@@ -2,7 +2,7 @@
 artifact_type: task
 artifact_id: task_actor_runtime_interface_meta_review_approve_advisory_guidance_hardening_phaseE_v1
 title: "Actor Runtime Interface Meta-Review Approve Advisory Guidance Hardening (Phase E)"
-status: implementable
+status: draft
 phase: phaseE
 target_files:
   - src/core/runtime/metaReviewSubmitGuidance.ts
@@ -25,6 +25,12 @@ owners:
 ---
 
 # Task: Actor Runtime Interface Meta-Review Approve Advisory Guidance Hardening (Phase E)
+
+## Current Codebase Check (2026-04-10)
+
+1. A mai canonical file-ok itt elnek: `src/v11/shared/metaReview/metaReviewSubmitGuidance.ts`, `src/v11/application/metaReviewGate/metaReviewGateNotify.ts`, `src/v11/application/start/startCommandPrompts.ts`, `src/v11/shared/metaReviewGate/approvalRequestEnvelope.ts`.
+2. A task `target_files` listajanak `src/core/**` resze es egyes korabbi `shared` pathjai mar stale-ek.
+3. A task jelenleg nem implementalhato valtoztatas nelkul; elobb a target file listat kell a mai ownersegekhez igazitani.
 
 ## Executive Summary
 

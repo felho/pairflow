@@ -2,7 +2,7 @@
 artifact_type: task
 artifact_id: task_actor_runtime_interface_scenario_simulation_phaseC_v1
 title: "Actor Runtime Interface Scenario Simulation (Phase C)"
-status: draft
+status: completed
 phase: phaseC
 target_files:
   - plans/tasks/actor-runtime-interface-scenario-simulation-phaseC-matrix.md

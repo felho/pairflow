@@ -2,7 +2,7 @@
 artifact_type: task
 artifact_id: task_actor_runtime_interface_migration_spine_phaseD_v1
 title: "Actor Runtime Interface Migration Spine (Phase D)"
-status: draft
+status: completed
 phase: phaseD
 target_files:
   - plans/tasks/actor-runtime-interface-migration-spine-phaseD-plan.md

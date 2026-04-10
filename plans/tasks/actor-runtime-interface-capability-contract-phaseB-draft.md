@@ -2,7 +2,7 @@
 artifact_type: contract_draft
 artifact_id: draft_actor_runtime_interface_capability_contract_phaseB_v1
 title: "Actor Runtime Interface Capability Contract (Phase B Draft)"
-status: draft
+status: completed
 phase: phaseB
 source_task_ref: plans/tasks/actor-runtime-interface-capability-contract-phaseB.md
 source_inventory_ref: plans/tasks/actor-runtime-interface-behavior-inventory-phaseA-inventory.md

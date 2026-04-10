@@ -2,7 +2,7 @@
 artifact_type: scenario_matrix
 artifact_id: matrix_actor_runtime_interface_scenario_simulation_phaseC_v1
 title: "Actor Runtime Interface Scenario Simulation (Phase C Matrix)"
-status: draft
+status: completed
 phase: phaseC
 source_task_ref: plans/tasks/actor-runtime-interface-scenario-simulation-phaseC.md
 source_contract_ref: plans/tasks/actor-runtime-interface-capability-contract-phaseB-draft.md

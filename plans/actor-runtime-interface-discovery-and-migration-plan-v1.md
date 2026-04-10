@@ -2,13 +2,19 @@
 artifact_type: plan
 artifact_id: plan_actor_runtime_interface_discovery_and_migration_v1
 title: "Actor Runtime Interface Discovery and Migration Preparation"
-status: draft
+status: in_progress
 prd_ref: null
 owners:
   - "felho"
 ---
 
 # Plan: Actor Runtime Interface Discovery and Migration Preparation
+
+## Current Codebase Check (2026-04-10)
+
+1. `src/core/**` is already gone from the checked-out tree, so the original closure dependency on residual core retirement is historical context rather than a current blocker.
+2. The docs-only Phase A-D deliverables referenced by this plan are already checked in.
+3. The remaining live scope is the still-open Phase E retained cleanup and any later actor-runtime implementation follow-up, not the production of the A-D planning artifacts themselves.
 
 ## Objective
 
