@@ -19,6 +19,9 @@ import type {
   MetaReviewResult
 } from "../metaReview/metaReviewTypes.js";
 import type { ProtocolEnvelope } from "../../../types/protocol.js";
+import type {
+  FinishIncompleteActorResultPort
+} from "../reconcile/finishIncompleteActorResultPort.js";
 
 export type MetaReviewGateRoute =
   | "meta_review_running"
@@ -150,6 +153,7 @@ export interface RecoverMetaReviewGateFromSnapshotDependencies {
   readFile?: MetaReviewArtifactReadPort;
   writeFile?: MetaReviewArtifactWritePort;
   sleepForRetryMs?: (delayMs: number) => Promise<void>;
+  finishIncompleteActorResult?: FinishIncompleteActorResultPort;
 }
 
 export interface MetaReviewGateResult {
@@ -159,6 +163,8 @@ export interface MetaReviewGateResult {
   gateEnvelope: ProtocolEnvelope;
   state: BubbleStateSnapshot;
   metaReviewRun?: MetaReviewResult;
+  warnings?: string[];
+  diagnostics?: string[];
 }
 
 export interface MetaReviewGateErrorDiagnostics {

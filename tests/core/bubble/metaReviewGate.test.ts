@@ -9,6 +9,7 @@ import {
   applyMetaReviewGateOnConvergenceV11 as applyMetaReviewGateOnConvergence,
   recoverMetaReviewGateFromSnapshotV11 as recoverMetaReviewGateFromSnapshot
 } from "../../../src/v11/application/metaReviewGate/emitMetaReviewGateV11.js";
+import { finishIncompleteActorResult } from "../../../src/v11/application/reconcile/finishIncompleteActorResult.js";
 import { clearLiveMetaReviewSnapshot } from "../../../src/v11/defaults/metaReview/metaReviewApi.js";
 import {
   buildMetaReviewSubmitAdvisoryOnlyCorrectionNote,
@@ -294,6 +295,28 @@ function buildApproveReportJson(input?: {
       ? { findings_artifact_open_total: artifactOpenTotal }
       : {})
   } as const;
+}
+
+interface FinishIncompleteActorResultInputCapture {
+  bubbleId: string;
+  repoPath: string | undefined;
+  cwd: string | undefined;
+  summary: string | undefined;
+  callerTag: string | undefined;
+  executionContext: {
+    active_role: string;
+    awaited_output_type: string;
+    round: number;
+  };
+  snapshotState:
+    | {
+        last_autonomous_recommendation: string | null | undefined;
+        last_autonomous_summary: string | null | undefined;
+        last_autonomous_updated_at: string | null | undefined;
+      }
+    | undefined;
+  refs: string[];
+  runResult: unknown;
 }
 
 describe("notifyMetaReviewerSubmissionRequest", () => {
@@ -1167,15 +1190,24 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
       now: new Date("2026-03-12T12:09:00.000Z")
     });
     expect(started.route).toBe("meta_review_running");
+    let finishIncompleteActorResultCalls = 0;
+    const finishIncompleteActorResultSpy: typeof finishIncompleteActorResult =
+      async (finishInput, finishDependencies) => {
+        finishIncompleteActorResultCalls += 1;
+        return finishIncompleteActorResult(finishInput, finishDependencies);
+      };
     const recovered = await recoverMetaReviewGateFromSnapshot({
       bubbleId: bubble.bubbleId,
       repoPath,
       summary: "Converged.",
       now: new Date("2026-03-12T12:09:02.000Z")
+    }, {
+      finishIncompleteActorResult: finishIncompleteActorResultSpy
     });
     expect(recovered.route).toBe("meta_review_running");
     expect(recovered.state.state).toBe("RUNNING");
     expect(recovered.state.meta_review?.execution_context).not.toBeNull();
+    expect(finishIncompleteActorResultCalls).toBe(0);
     await expect(
       readFile(bubble.paths.metaReviewLastJsonArtifactPath, "utf8")
     ).rejects.toMatchObject({ code: "ENOENT" });
@@ -1198,13 +1230,22 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
     });
     expect(started.route).toBe("meta_review_running");
 
+    let finishIncompleteActorResultCalls = 0;
+    const finishIncompleteActorResultSpy: typeof finishIncompleteActorResult =
+      async (finishInput, finishDependencies) => {
+        finishIncompleteActorResultCalls += 1;
+        return finishIncompleteActorResult(finishInput, finishDependencies);
+      };
     const recovered = await recoverMetaReviewGateFromSnapshot({
       bubbleId: bubble.bubbleId,
       repoPath,
       summary: "Converged.",
       now: new Date("2026-03-12T14:09:02.000Z")
+    }, {
+      finishIncompleteActorResult: finishIncompleteActorResultSpy
     });
 
+    expect(finishIncompleteActorResultCalls).toBe(1);
     expect(recovered.route).toBe("human_gate_run_failed");
     expect(recovered.state.state).toBe("READY_FOR_HUMAN_APPROVAL");
     expect(recovered.gateEnvelope.type).toBe("APPROVAL_REQUEST");
@@ -1217,6 +1258,80 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
       last_autonomous_status: "error",
       last_autonomous_recommendation: "inconclusive"
     });
+  });
+
+  it("preserves kernel warnings and diagnostics on snapshot-driven recovery results", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_meta_gate_recover_approve_diagnostics_01",
+      task: "Recover approve diagnostics"
+    });
+
+    const started = await startAsyncMetaReviewGate({
+      bubbleId: bubble.bubbleId,
+      repoPath,
+      worktreePath: bubble.paths.worktreePath,
+      summary: "Converged.",
+      now: new Date("2026-03-12T12:10:00.000Z")
+    });
+    expect(started.route).toBe("meta_review_running");
+
+    await writeCanonicalMetaReviewSnapshot({
+      statePath: bubble.paths.statePath,
+      recommendation: "approve",
+      summary: "Approve recommendation.",
+      updatedAt: "2026-03-12T12:10:01.000Z"
+    });
+    await writeFileFs(
+      bubble.paths.metaReviewLastJsonArtifactPath,
+      `${JSON.stringify(
+        {
+          bubble_id: bubble.bubbleId,
+          run_id: "run_recover_approve_diagnostics_01",
+          report_json: {
+            findings_claim_state: "clean",
+            findings_claim_source: "meta_review_artifact",
+            findings_count: 0,
+            findings_claimed_open_total: 0,
+            findings_blocking_open_total: 0,
+            findings_advisory_open_total: 0
+          }
+        },
+        null,
+        2
+      )}\n`,
+      "utf8"
+    );
+
+    const recovered = await recoverMetaReviewGateFromSnapshot(
+      {
+        bubbleId: bubble.bubbleId,
+        repoPath,
+        summary: "Converged.",
+        now: new Date("2026-03-12T12:10:02.000Z")
+      },
+      {
+        finishIncompleteActorResult: (async (finishInput, finishDependencies) => {
+          const result = await finishIncompleteActorResult(
+            finishInput,
+            finishDependencies
+          );
+          return {
+            ...result,
+            warnings: ["route warning", "apply warning"],
+            diagnostics: ["route diagnostic", "apply diagnostic"]
+          };
+        }) as typeof finishIncompleteActorResult
+      }
+    );
+
+    expect(recovered.route).toBe("human_gate_approve");
+    expect(recovered.warnings).toEqual(["route warning", "apply warning"]);
+    expect(recovered.diagnostics).toEqual([
+      "route diagnostic",
+      "apply diagnostic"
+    ]);
   });
 
   it("rejects before-deadline recovery when only a generic TASK remains and the meta-review kickoff envelope is missing", async () => {
@@ -1358,11 +1473,83 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
       "utf8"
     );
 
+    let finishIncompleteActorResultCalls = 0;
+    let lastFinishIncompleteActorResultInput:
+      | FinishIncompleteActorResultInputCapture
+      | null = null;
+    const finishIncompleteActorResultSpy: typeof finishIncompleteActorResult =
+      async (finishInput, finishDependencies) => {
+        finishIncompleteActorResultCalls += 1;
+        const snapshotState =
+          finishInput.snapshotState as
+            | {
+                last_autonomous_recommendation?: string | null;
+                last_autonomous_summary?: string | null;
+                last_autonomous_updated_at?: string | null;
+              }
+            | undefined;
+        lastFinishIncompleteActorResultInput = {
+          bubbleId: finishInput.bubbleId,
+          repoPath: finishInput.repoPath,
+          cwd: finishInput.cwd,
+          summary: finishInput.summary,
+          callerTag: finishInput.callerTag,
+          executionContext: {
+            active_role: finishInput.executionContext.active_role,
+            awaited_output_type: finishInput.executionContext.awaited_output_type,
+            round: finishInput.executionContext.round
+          },
+          snapshotState:
+            snapshotState === undefined
+              ? undefined
+              : {
+                  last_autonomous_recommendation:
+                    snapshotState.last_autonomous_recommendation,
+                  last_autonomous_summary:
+                    snapshotState.last_autonomous_summary,
+                  last_autonomous_updated_at:
+                    snapshotState.last_autonomous_updated_at
+                },
+          refs: finishInput.refs ?? [],
+          runResult: finishInput.runResult
+        };
+        return finishIncompleteActorResult(finishInput, finishDependencies);
+      };
     const recovered = await recoverMetaReviewGateFromSnapshot({
       bubbleId: bubble.bubbleId,
       repoPath,
       summary: "Converged.",
       now: new Date("2026-03-12T12:10:02.000Z")
+    }, {
+      finishIncompleteActorResult: finishIncompleteActorResultSpy
+    });
+    expect(finishIncompleteActorResultCalls).toBe(1);
+    expect(lastFinishIncompleteActorResultInput).toMatchObject({
+      bubbleId: bubble.bubbleId,
+      repoPath,
+      cwd: undefined,
+      summary: "Approve recommendation.",
+      callerTag: "meta_review_gate_recovery",
+      executionContext: {
+        active_role: "meta_reviewer",
+        awaited_output_type: "meta_review_result",
+        round: 1
+      },
+      snapshotState: {
+        last_autonomous_recommendation: "approve",
+        last_autonomous_summary: "Approve recommendation.",
+        last_autonomous_updated_at: "2026-03-12T12:10:01.000Z"
+      }
+    });
+    expect(lastFinishIncompleteActorResultInput).not.toBeNull();
+    const capturedFinishIncompleteActorResultInput =
+      lastFinishIncompleteActorResultInput as unknown as FinishIncompleteActorResultInputCapture;
+    expect(capturedFinishIncompleteActorResultInput.refs).toEqual([]);
+    expect(capturedFinishIncompleteActorResultInput.runResult).toMatchObject({
+      bubble_id: bubble.bubbleId,
+      recommendation: "approve",
+      status: "success",
+      summary: "Approve recommendation."
     });
     expect(recovered.route).toBe("human_gate_approve");
     expect(recovered.state.state).toBe("READY_FOR_HUMAN_APPROVAL");
@@ -1393,6 +1580,12 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
     });
     expect(started.route).toBe("meta_review_running");
 
+    let finishIncompleteActorResultCalls = 0;
+    const finishIncompleteActorResultSpy: typeof finishIncompleteActorResult =
+      async (finishInput, finishDependencies) => {
+        finishIncompleteActorResultCalls += 1;
+        return finishIncompleteActorResult(finishInput, finishDependencies);
+      };
     const recovered = await recoverMetaReviewGateFromSnapshot({
       bubbleId: bubble.bubbleId,
       repoPath,
@@ -1423,8 +1616,11 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
           findings: []
         }
       }
+    }, {
+      finishIncompleteActorResult: finishIncompleteActorResultSpy
     });
 
+    expect(finishIncompleteActorResultCalls).toBe(0);
     expect(recovered.route).toBe("human_gate_approve");
     expect(recovered.gateEnvelope.type).toBe("APPROVAL_REQUEST");
     expect(recovered.gateEnvelope.payload.metadata).toMatchObject({
@@ -1733,12 +1929,65 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
       "utf8"
     );
 
-    const recovered = await recoverMetaReviewGateFromSnapshot({
-      bubbleId: bubble.bubbleId,
-      repoPath,
-      summary: "Converged.",
-      now: new Date("2026-03-12T12:12:02.000Z")
-    });
+    let capturedAutoReworkRouteDecision:
+      | {
+          appliedRoute: string;
+          routeContext:
+            | {
+                budgetAvailable: boolean;
+                snapshot?: {
+                  last_autonomous_recommendation: string | null;
+                };
+              }
+            | undefined;
+        }
+      | null = null;
+    const finishIncompleteActorResultAutoReworkSpy: typeof finishIncompleteActorResult =
+      (async (finishInput, finishDependencies) => {
+        const applyRoute = finishDependencies?.applyRoute as
+          | ((input: unknown) => Promise<unknown>)
+          | undefined;
+        if (applyRoute === undefined) {
+          throw new Error("expected applyRoute dependency");
+        }
+        return finishIncompleteActorResult(
+          finishInput as never,
+          {
+            ...(finishDependencies as object),
+            applyRoute: async (applyInput: {
+              routeDecision: {
+                appliedRoute: string;
+                routeContext?: unknown;
+              };
+            }) => {
+              capturedAutoReworkRouteDecision = {
+                appliedRoute: applyInput.routeDecision.appliedRoute,
+                routeContext:
+                  applyInput.routeDecision.routeContext as
+                    | {
+                        budgetAvailable: boolean;
+                        snapshot?: {
+                          last_autonomous_recommendation: string | null;
+                        };
+                      }
+                    | undefined
+              };
+              return applyRoute(applyInput);
+            }
+          } as never
+        );
+      }) as typeof finishIncompleteActorResult;
+    const recovered = await recoverMetaReviewGateFromSnapshot(
+      {
+        bubbleId: bubble.bubbleId,
+        repoPath,
+        summary: "Converged.",
+        now: new Date("2026-03-12T12:12:02.000Z")
+      },
+      {
+        finishIncompleteActorResult: finishIncompleteActorResultAutoReworkSpy
+      }
+    );
     expect(recovered.route).toBe("auto_rework");
     expect(recovered.state.state).toBe("RUNNING");
     expect(recovered.state.active_role).toBe("implementer");
@@ -1762,6 +2011,130 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
       status: "success",
       report_ref: "artifacts/meta-review-last.json"
     });
+    expect(capturedAutoReworkRouteDecision).toMatchObject({
+      appliedRoute: "auto_rework",
+      routeContext: {
+        budgetAvailable: true,
+        snapshot: {
+          last_autonomous_recommendation: "rework"
+        }
+      }
+    });
+  });
+
+  it("routes snapshot parity failure through finishIncompleteActorResult to human_gate_dispatch_failed", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_meta_gate_recover_snapshot_dispatch_failed_via_finish_01",
+      task: "Recover snapshot dispatch-failed via finish helper"
+    });
+
+    const started = await startAsyncMetaReviewGate({
+      bubbleId: bubble.bubbleId,
+      repoPath,
+      worktreePath: bubble.paths.worktreePath,
+      summary: "Converged.",
+      now: new Date("2026-03-12T12:12:30.000Z")
+    });
+    expect(started.route).toBe("meta_review_running");
+
+    await writeCanonicalMetaReviewSnapshot({
+      statePath: bubble.paths.statePath,
+      recommendation: "rework",
+      summary: "Snapshot parity should fail before auto-rework dispatch.",
+      reworkTargetMessage: "Recover dispatch failure path.",
+      updatedAt: "2026-03-12T12:12:31.000Z"
+    });
+
+    let capturedDispatchFailedRouteDecision:
+      | {
+          appliedRoute: string;
+          routeContext:
+            | {
+                budgetAvailable: boolean;
+                fallbackReason?: string;
+                snapshot?: {
+                  last_autonomous_recommendation: string | null;
+                };
+              }
+            | undefined;
+        }
+      | null = null;
+    const finishIncompleteActorResultDispatchFailedSpy: typeof finishIncompleteActorResult =
+      (async (finishInput, finishDependencies) => {
+        const applyRoute = finishDependencies?.applyRoute as
+          | ((input: unknown) => Promise<unknown>)
+          | undefined;
+        if (applyRoute === undefined) {
+          throw new Error("expected applyRoute dependency");
+        }
+        return finishIncompleteActorResult(
+          finishInput as never,
+          {
+            ...(finishDependencies as object),
+            applyRoute: async (applyInput: {
+              routeDecision: {
+                appliedRoute: string;
+                routeContext?: unknown;
+              };
+            }) => {
+              capturedDispatchFailedRouteDecision = {
+                appliedRoute: applyInput.routeDecision.appliedRoute,
+                routeContext:
+                  applyInput.routeDecision.routeContext as
+                    | {
+                        budgetAvailable: boolean;
+                        fallbackReason?: string;
+                        snapshot?: {
+                          last_autonomous_recommendation: string | null;
+                        };
+                      }
+                    | undefined
+              };
+              return applyRoute(applyInput);
+            }
+          } as never
+        );
+      }) as typeof finishIncompleteActorResult;
+    const recovered = await recoverMetaReviewGateFromSnapshot(
+      {
+        bubbleId: bubble.bubbleId,
+        repoPath,
+        summary: "Converged.",
+        now: new Date("2026-03-12T12:12:32.000Z")
+      },
+      {
+        finishIncompleteActorResult: finishIncompleteActorResultDispatchFailedSpy
+      }
+    );
+
+    expect(recovered.route).toBe("human_gate_dispatch_failed");
+    expect(recovered.state.state).toBe("READY_FOR_HUMAN_APPROVAL");
+    expect(capturedDispatchFailedRouteDecision).toMatchObject({
+      appliedRoute: "human_gate_dispatch_failed",
+      routeContext: {
+        budgetAvailable: false,
+        snapshot: {
+          last_autonomous_recommendation: "rework"
+        }
+      }
+    });
+    expect(capturedDispatchFailedRouteDecision).not.toBeNull();
+    if (capturedDispatchFailedRouteDecision === null) {
+      throw new Error("expected captured dispatch-failed route decision");
+    }
+    const dispatchFailedRouteDecision =
+      capturedDispatchFailedRouteDecision as unknown as {
+        routeContext?: {
+          fallbackReason?: string;
+        };
+      };
+    const dispatchFailedFallbackReason =
+      dispatchFailedRouteDecision.routeContext?.fallbackReason;
+    expect(dispatchFailedFallbackReason).toContain(
+      "META_REVIEW_GATE_REWORK_DISPATCH_FAILED"
+    );
   });
 
   it("hydrates current run metadata into READY_FOR_HUMAN_APPROVAL restore when auto-rework dispatch append fails", async () => {
