@@ -273,7 +273,7 @@ describe("fitness:check:ci milestone gate behavior", () => {
   );
 
   it(
-    "does not block CI when dependency check emits warn-only ownership-signal findings",
+    "does not block CI when dependency check has no hard-fail findings at M6",
     async () => {
       const root = await createTempRoot();
       const policyPath = join(root, "policy.json");
@@ -281,7 +281,7 @@ describe("fitness:check:ci milestone gate behavior", () => {
       const scriptPath = resolve(process.cwd(), "scripts/fitness-check-ci.sh");
 
       const fixtureDir = await mkdtemp(
-        join(process.cwd(), "src/v11/shared/.fitness-dependency-ci-")
+        join(process.cwd(), "src/v11/infrastructure/.fitness-dependency-ci-")
       );
       tempRepoArtifacts.push(fixtureDir);
       const fixtureRelativePath = fixtureDir
@@ -352,8 +352,8 @@ describe("fitness:check:ci milestone gate behavior", () => {
       };
       const dependency = report.checks.find((check) => check.id === "dependency");
       expect(dependency?.mode).toBe("hard-fail");
-      expect(dependency?.status).toBe("warn");
-      expect(dependency?.summary).toContain("report-only ownership");
+      expect(dependency?.status).toBe("pass");
+      expect(dependency?.summary).toContain("passed");
     },
     30_000
   );
