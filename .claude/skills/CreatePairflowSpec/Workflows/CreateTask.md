@@ -39,6 +39,7 @@ Use `references/Complexity-Risk-Gate.md`.
 1. Score:
    - `authority_risk`
    - `surface_spread`
+   - `identity_join_risk`
    - `activation_coupling`
    - `prerequisite_risk`
    - `acceptance_multiplicity`
@@ -47,9 +48,9 @@ Use `references/Complexity-Risk-Gate.md`.
 4. Decide whether single-task output is still allowed.
 
 Policy:
-1. `0-3`: task may stay single if artifact-chain rules also allow it.
-2. `4-6`: strongly prefer `Plan -> Task`, especially if the task would otherwise mix foundation and delivery.
-3. `7-10`: do not draft as a single direct feature-delivery task; split into at least:
+1. `0-4`: task may stay single if artifact-chain rules also allow it.
+2. `5-7`: strongly prefer `Plan -> Task`, especially if the task would otherwise mix foundation and delivery.
+3. `8-12`: do not draft as a single direct feature-delivery task; split into at least:
    - `foundation/refactor`
    - `delivery`
    - optional `activation/rollout`
@@ -58,6 +59,7 @@ Policy:
    - specify the contract now,
    - keep activation in a later task,
    - keep current runtime behavior fail-closed.
+6. If public consume correctness depends on multi-seam identity matching, prefer splitting `authority/read-model parity` from `payload/UI consume cutover`.
 
 ### 1) Gather context first
 
@@ -104,7 +106,8 @@ Required blockers for Task output:
    - canonical token names must be used consistently (no shorthand aliases).
 8. Complexity-risk blockers must be explicit:
    - if `risk_score >= 4`, split decision must be recorded,
-   - if `risk_score >= 7` or hard-stop applies, task must not pretend to be direct one-shot delivery,
+   - if `identity_join_risk >= 1`, the task must state the matching seam and forbidden fallback identities,
+   - if `risk_score >= 8` or hard-stop applies, task must not pretend to be direct one-shot delivery,
    - authority/source-of-truth note is mandatory when authority risk is non-zero.
 
 If blockers exist, ask only focused questions for those blockers.

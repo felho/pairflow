@@ -23,15 +23,17 @@ Use `references/Complexity-Risk-Gate.md` when the plan is implementation-oriente
 1. Score:
    - `authority_risk`
    - `surface_spread`
+   - `identity_join_risk`
    - `activation_coupling`
    - `prerequisite_risk`
    - `acceptance_multiplicity`
-2. If the score is `4+`, the plan should prefer explicit phase split over a single broad implementation slice.
-3. If the score is `7+` or a hard-stop applies, the plan should explicitly separate:
+2. If the score is `5+`, the plan should prefer explicit phase split over a single broad implementation slice.
+3. If the score is `8+` or a hard-stop applies, the plan should explicitly separate:
    - `foundation/refactor`
    - `delivery`
    - `activation/rollout`
 4. If future milestone-gated behavior is involved, the plan may capture contract/design now, but activation should remain in a later phase.
+5. If `identity_join_risk >= 1`, the plan should isolate the authority/read-model seam before UI or payload cutover whenever feasible.
 
 ### 2) Draft from template
 

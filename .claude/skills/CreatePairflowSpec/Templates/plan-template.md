@@ -16,7 +16,7 @@ owners:
 
 ## Complexity / Split Rationale
 
-1. `risk_score`: `<0-10>`
+1. `risk_score`: `<0-12>`
 2. Why a plan is needed:
    - `<boundary risk / contract override / prerequisite / phase split>`
 3. Split decision:

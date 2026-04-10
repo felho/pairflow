@@ -48,17 +48,19 @@ Before drafting implementation-oriented Plan or Task artifacts, run the `Complex
 Use `references/Complexity-Risk-Gate.md` and score these axes:
 1. `authority_risk`
 2. `surface_spread`
-3. `activation_coupling`
-4. `prerequisite_risk`
-5. `acceptance_multiplicity`
+3. `identity_join_risk`
+4. `activation_coupling`
+5. `prerequisite_risk`
+6. `acceptance_multiplicity`
 
 Policy:
-1. `0-3`: single task is generally acceptable.
-2. `4-6`: split is strongly recommended; prefer `Plan -> Task`.
-3. `7-10`: refactor-first split is mandatory; do not keep the scope as one feature-delivery task.
+1. `0-4`: single task is generally acceptable.
+2. `5-7`: split is strongly recommended; prefer `Plan -> Task`.
+3. `8-12`: refactor-first split is mandatory; do not keep the scope as one feature-delivery task.
 4. If a hard-stop rule from the reference applies, split regardless of total score.
 5. If the task introduces a canonical source-of-truth and also activates runtime behavior, default to `foundation -> delivery -> activation`.
 6. If future milestone-gated behavior is involved, document the contract now but keep activation in a later task.
+7. If the task changes a public contract or UI consume while correct behavior depends on fragile identity matching across seams, default to split even below the top score band.
 
 ## Core Principles
 
@@ -90,9 +92,10 @@ Policy:
 11. Implementation-oriented Task outputs must record complexity-risk triage explicitly:
    - `risk_score`,
    - split decision,
+   - `identity_join_risk` when applicable,
    - authority/source-of-truth note when applicable.
 12. High-risk scopes (`4+`) should prefer an explicit Plan even if work type would otherwise allow task-only.
-13. Very high-risk scopes (`7+` or hard-stop) must not be emitted as direct feature-delivery tasks without an explicit foundation phase.
+13. Very high-risk scopes (`8+` or hard-stop) must not be emitted as direct feature-delivery tasks without an explicit foundation phase.
 
 ## Templates and References
 

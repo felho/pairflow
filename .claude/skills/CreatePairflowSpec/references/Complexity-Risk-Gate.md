@@ -11,9 +11,10 @@ Do not estimate risk primarily from file count.
 Estimate risk from boundary spread:
 1. whether the task introduces or moves a canonical source-of-truth,
 2. whether the same concept must appear across multiple surfaces,
-3. whether refactor and feature activation are coupled in the same task,
-4. whether the task depends on unfinished prerequisite milestones,
-5. whether the task tries to close too many distinct acceptance goals at once.
+3. whether consumer correctness depends on fragile cross-seam identity matching,
+4. whether refactor and feature activation are coupled in the same task,
+5. whether the task depends on unfinished prerequisite milestones,
+6. whether the task tries to close too many distinct acceptance goals at once.
 
 ## Risk Axes
 
@@ -40,19 +41,30 @@ Score:
 - `1`: 3 surfaces
 - `2`: 4+ surfaces
 
-### 3) Activation Coupling
+### 3) Identity / Join Fragility
+
+- `0`: no cross-seam identity matching; one stable identifier path is enough
+- `1`: one stable cross-seam mapping exists, but consumer correctness still depends on it
+- `2`: multiple identifier forms, legacy/new seams, or competing mapping paths must align for correct behavior
+
+Examples:
+- Stripe invoice id -> local authority row
+- payment_intent vs invoice id vs vendor id reconciliation
+- legacy payload identity vs new canonical authority identity
+
+### 4) Activation Coupling
 
 - `0`: pure refactor/foundation only, or pure feature delivery on top of stable seams
 - `1`: small coupling between cleanup and delivery
 - `2`: same task introduces foundation/refactor and also turns on new runtime behavior
 
-### 4) Prerequisite Risk
+### 5) Prerequisite Risk
 
 - `0`: no dependency on unfinished milestone
 - `1`: depends on partially stabilized adjacent work
 - `2`: depends on explicit unfinished prerequisite milestone/cutover/contract
 
-### 5) Acceptance Multiplicity
+### 6) Acceptance Multiplicity
 
 Count how many distinct success classes the task tries to prove at once.
 Examples:
@@ -70,9 +82,9 @@ Score:
 
 ## Score Interpretation
 
-- `0-3`: single task/bubble is usually acceptable
-- `4-6`: split strongly recommended
-- `7-10`: mandatory refactor-first split
+- `0-4`: single task/bubble is usually acceptable
+- `5-7`: split strongly recommended
+- `8-12`: mandatory refactor-first split
 
 ## Hard Stops
 
@@ -88,6 +100,17 @@ Do not keep the scope as a single implementation task if any of the following is
    - UI/API/store
 3. The task activates behavior that explicitly depends on unfinished milestone work.
 4. The task relies on multiple competing authority paths for the same decision.
+5. The task mixes contract cutover and UI consume cutover while the primary consumer depends on fragile identity matching.
+
+## Escalation Rules Below Hard-Stop
+
+Even if no hard-stop fires, default to `single-task allowed: no` when any of the following is true:
+
+1. `surface_spread = 2` and `acceptance_multiplicity >= 1`
+2. `identity_join_risk = 2` and `surface_spread >= 1`
+3. `authority_risk >= 1`, `identity_join_risk >= 1`, and a public payload or UI consume changes in the same task
+
+These are not optional style preferences. They are intended to prevent review-loop tasks where the backend contract, route parity, and consumer rendering regress each other across rounds.
 
 ## Required split shape when risk is high
 
@@ -107,10 +130,11 @@ When risk score is `4+`, the spec should explicitly capture:
 1. `risk_score`
 2. `authority_change`
 3. `surface_count`
-4. `feature_activation`
-5. `prerequisite_boundaries`
-6. split decision:
+4. `identity_join_risk`
+5. `feature_activation`
+6. `prerequisite_boundaries`
+7. split decision:
    - `single-task allowed: yes|no`
    - if `no`, specify `foundation / delivery / activation`
 
-When risk score is `7+`, do not write the task as if it were direct feature delivery unless the user explicitly asks for a knowingly high-risk bundle.
+When risk score is `8+`, do not write the task as if it were direct feature delivery unless the user explicitly asks for a knowingly high-risk bundle.

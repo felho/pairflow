@@ -42,16 +42,20 @@ owners:
 
 1. `authority_risk`: `0|1|2`
 2. `surface_spread`: `0|1|2`
-3. `activation_coupling`: `0|1|2`
-4. `prerequisite_risk`: `0|1|2`
-5. `acceptance_multiplicity`: `0|1|2`
-6. `risk_score`: `<0-10>`
-7. `single-task allowed`: `yes|no`
-8. If `no`, required split:
+3. `identity_join_risk`: `0|1|2`
+4. `activation_coupling`: `0|1|2`
+5. `prerequisite_risk`: `0|1|2`
+6. `acceptance_multiplicity`: `0|1|2`
+7. `risk_score`: `<0-12>`
+8. `single-task allowed`: `yes|no`
+9. If `no`, required split:
    - `foundation/refactor`
    - `delivery`
    - `activation/rollout` (optional)
-9. Authority/source-of-truth note:
+10. Identity/join note:
+   - canonical identity path: `<text>`
+   - competing identifiers or fallback identities: `<text>`
+11. Authority/source-of-truth note:
    - canonical source: `<text>`
    - forbidden secondary sources: `<text>`
 
