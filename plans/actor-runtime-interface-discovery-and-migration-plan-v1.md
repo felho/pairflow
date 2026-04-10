@@ -15,7 +15,12 @@ owners:
 1. `src/core/**` is already gone from the checked-out tree, so the original closure dependency on residual core retirement is historical context rather than a current blocker.
 2. The docs-only Phase A-D deliverables referenced by this plan are already checked in.
 3. The remaining live scope is the still-open Phase E retained cleanup and any later actor-runtime implementation follow-up, not the production of the A-D planning artifacts themselves.
-4. Within that remaining Phase E scope, the currently legitimate bounded target is the approve-advisory guidance/parity hardening slice on the live `src/v11` submit, prompt, and reviewer-snapshot surfaces, not the older broad `src/core`-era framing.
+4. The narrow Phase E meta-review follow-up tasks that were active in the 2026-04-10 checkpoint discussion are now both completed and archived:
+   - `plans/archive/tasks/actor-runtime-interface-meta-review-submit-inconclusive-human-gate-phaseE.md`
+   - `plans/archive/tasks/actor-runtime-interface-meta-review-approve-advisory-guidance-hardening-phaseE.md`
+5. The public operator `pairflow bubble meta-review run` surface is already removed in the current tree; the retained operator subtree is `status | last-report | recover`.
+6. The `recover` direction is still only captured as a draft refactor artifact, so the next correct step is an explicit checkpoint re-evaluation, not automatic activation of another read-surface cleanup slice.
+7. As of this checkpoint, `plans/tasks/actor-runtime-interface-meta-review-operator-read-surface-closure-phaseE.md` should be treated as a superseded historical artifact, not the default next active implementation target.
 
 ## Objective
 
@@ -39,6 +44,19 @@ Ez a plan discovery- es preparation-jellegu. Nem celja a Phase 4 vagy Phase 5 le
 5. A `run` removal es a `recover` refaktor utan explicit decision checkpoint kovetkezik: tudatosan ujra kell nezni, maradt-e barmilyen indokolt tovabbi munka a `status` / `last-report` korul, vagy azok valtozatlanul retained maradhatnak.
 6. Ennek megfeleloen a korabbi egyben kezelt Phase E operator cleanup task historical parent artifactkent marad meg, de nem tekintendo a jelenlegi legjobb aktiv implementation targetnek.
 7. Ettol fuggetlenul egy szukebb, jelen tree-re ujragroundolt Phase E follow-up legitim marad: az approve-advisory guidance/parity hardening a live `v11` submit/prompt/diagnostics seamsen.
+
+## Checkpoint Status (2026-04-10)
+
+1. A `run` removal precondition mar teljesult a jelenlegi tree-ben: a retained public operator help mar csak `status | last-report | recover` commandokat mutat, es a removed `run` pathra explicit fail-closed guidance van.
+2. A ket szuk, current-tree Phase E meta-review follow-up task, amelyet ez a plan a direction change utan legitim bounded targetkent kezelt, le van zárva es archiválva:
+   - `actor-runtime-interface-meta-review-submit-inconclusive-human-gate-phaseE`
+   - `actor-runtime-interface-meta-review-approve-advisory-guidance-hardening-phaseE`
+3. A `recover` refaktor viszont tovabbra sem implementalt Phase E task, hanem draft iranyrogzites; a jelenlegi rendszerben a recovery mogotti reconcile/route-application kepesseg meg mindig reszben shared engine szerepet tolt be.
+4. Emiatt a direction-change checkpoint eredmenye most az, hogy az `operator-read-surface-closure` task superseded allapotba keruljon, es ne legyen automatikusan aktiv implementation target.
+5. A kovetkezo helyes docs/decision lepes:
+   - explicitten ujraertekelni, maradt-e konkret user-visible vagy contract-level residual delta a retained `status` / `last-report` feluleten, amely a `recover` refaktor lezárása nelkul is vedheto,
+   - vagy kimondani, hogy a task megmarad draft/superseded candidate allapotban addig, amig a `recover` iranybol nem lesz implementalhato, canonical follow-up.
+6. A jelen checkpoint alapjan a task superseded allapotba kerul: a retained read-surface closure nem marad aktiv Phase E task, es a tovabbi nyitott irany a kulon `recover` / `reconcile` draft alatt ertelmezendo.
 
 ## Decision Baseline
 
