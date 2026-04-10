@@ -17,7 +17,7 @@ import {
 import { submitMetaReviewResult } from "../../../src/core/bubble/metaReview.js";
 import { emitApproveV11 as emitApprove } from "../../../src/v11/application/approval/emitApprovalV11.js";
 import { createBubble } from "../../../src/v11/application/create/createBubble.js";
-import { commitBubbleDependencyDefaults } from "../../../src/core/bubble/commitBubbleDefaults.js";
+import { commitBubbleDependencyDefaults } from "../../../src/v11/application/commit/commitCommandDefaults.js";
 import { readTranscriptEnvelopes } from "../../../src/v11/infrastructure/artifact/transcript/transcriptStore.js";
 import { readStateSnapshot } from "../../../src/v11/infrastructure/state/stateStore.js";
 import { bootstrapWorktreeWorkspace } from "../../../src/v11/infrastructure/workspace/worktreeManager.js";

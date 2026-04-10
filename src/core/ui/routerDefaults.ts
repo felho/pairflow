@@ -1,4 +1,4 @@
-import { commitBubbleDependencyDefaults } from "../bubble/commitBubbleDefaults.js";
+import { commitBubbleDependencyDefaults } from "../../v11/application/commit/commitCommandDefaults.js";
 import { deleteBubble } from "../../v11/application/delete/deleteBubble.js";
 import {
   emitApproveV11 as emitApprove,
