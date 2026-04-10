@@ -394,7 +394,7 @@ describe("dependency fitness check", () => {
     ).toBe(true);
   });
 
-  it("warns on strong infrastructure ownership signal under shared", async () => {
+  it("does not warn on shared modules that only probe paths via node:fs", async () => {
     const repoRoot = await createTempRoot();
     await writeRepoFile(
       repoRoot,
@@ -404,6 +404,43 @@ describe("dependency fitness check", () => {
         "export const pathExists = async (path: string): Promise<boolean> => {",
         "  await access(path);",
         "  return true;",
+        "};",
+        ""
+      ].join("\n")
+    );
+
+    const report = await buildDependencyCheckReport({
+      check: {
+        id: "dependency",
+        metric: "cycle and forbidden import direction detection",
+        mode: "report-only",
+        exception_lifecycle_mode: undefined,
+        owner: "architecture",
+        scope: ["src/v11/**"],
+        exceptions: []
+      },
+      repoRoot,
+      fallbackMode: "report-only",
+      currentMilestone: undefined
+    });
+
+    expect(report.status).toBe("pass");
+    expect(
+      report.details?.some((detail) =>
+        detail.includes("ownership-signal warning: shared module shows strong infrastructure signals (filesystem-persistence)")
+      )
+    ).toBe(false);
+  });
+
+  it("still warns on shared modules that read artifact content via node:fs", async () => {
+    const repoRoot = await createTempRoot();
+    await writeRepoFile(
+      repoRoot,
+      "src/v11/shared/fs/readArtifact.ts",
+      [
+        "import { readFile } from 'node:fs/promises';",
+        "export const readArtifact = async (path: string): Promise<string> => {",
+        "  return readFile(path, 'utf8');",
         "};",
         ""
       ].join("\n")

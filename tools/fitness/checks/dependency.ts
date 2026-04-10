@@ -737,7 +737,12 @@ const ownershipSignalMatchers: readonly {
   {
     signal: "filesystem-persistence",
     matches: (sourceText) =>
-      /\bfrom\s+["']node:fs(?:\/promises)?["']|\bfrom\s+["']fs(?:\/promises)?["']/u.test(
+      (
+        /\bfrom\s+["']node:fs(?:\/promises)?["']|\bfrom\s+["']fs(?:\/promises)?["']/u.test(
+          sourceText
+        )
+      ) &&
+      /\b(?:readFile|writeFile|appendFile|mkdir|rm|rename|readdir|opendir|copyFile|open|mkdtemp|cp|createReadStream|createWriteStream)\b/u.test(
         sourceText
       )
   },
