@@ -10,7 +10,7 @@ import {
 import { readTranscriptEnvelopes } from "../transcript/transcriptDependencyDefaults.js";
 import {
   readReviewVerificationArtifactStatus
-} from "../reviewer/reviewVerificationArtifactReaders.js";
+} from "../../defaults/reviewer/reviewVerificationArtifactDefaults.js";
 import type {
   InspectedStateSnapshot,
   StateValidationDiagnostics

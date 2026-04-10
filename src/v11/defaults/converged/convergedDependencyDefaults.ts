@@ -6,7 +6,7 @@ import {
 import { assessPairflowCommandPath } from "../../shared/command/pairflowCommandPathAssessment.js";
 import {
   readReviewVerificationArtifactStatus
-} from "../../shared/reviewer/reviewVerificationArtifactReaders.js";
+} from "../reviewer/reviewVerificationArtifactDefaults.js";
 import {
   appendProtocolEnvelope,
   readTranscriptEnvelopes
