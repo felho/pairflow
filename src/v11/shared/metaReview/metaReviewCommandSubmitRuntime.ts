@@ -9,7 +9,6 @@ import {
   writeCanonicalSubmitState
 } from "./metaReviewCommandSubmitPersistence.js";
 import {
-  assertSubmitRecommendationRouteable,
   finalizeMetaReviewSubmitResult,
   recoverMetaReviewSubmitRoute
 } from "./metaReviewCommandSubmitRouting.js";
@@ -81,8 +80,6 @@ export async function submitMetaReviewResult(
     reportJson: prepared.canonicalReportJson,
     readFileFn: prepared.readFileFn
   });
-
-  assertSubmitRecommendationRouteable(prepared.recommendation);
 
   const routed = await recoverMetaReviewSubmitRoute({
     resolved: prepared.resolved,

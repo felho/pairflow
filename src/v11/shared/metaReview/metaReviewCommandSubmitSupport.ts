@@ -5,8 +5,9 @@ export {
   resolveSubmitCanonicalRunId
 } from "./metaReviewCommandSubmitLink.js";
 export {
-  assertRunPayloadInvariants,
-  mapRecommendationToStatus,
+  assertSubmitPayloadInvariants,
+  assertSubmitStatusIsSuccess,
+  resolveSubmitRunStatus,
   normalizeRequiredSubmitText
 } from "./metaReviewCommandSubmitValidation.js";
 export {

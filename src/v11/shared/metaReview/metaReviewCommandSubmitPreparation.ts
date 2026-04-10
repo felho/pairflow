@@ -21,8 +21,9 @@ import {
   assertMetaReviewSubmitterAuthority
 } from "./metaReviewCommandSubmitAuthority.js";
 import {
-  assertRunPayloadInvariants,
-  mapRecommendationToStatus,
+  assertSubmitPayloadInvariants,
+  assertSubmitStatusIsSuccess,
+  resolveSubmitRunStatus,
   normalizeRequiredSubmitText
 } from "./metaReviewCommandSubmitValidation.js";
 import {
@@ -42,7 +43,7 @@ export interface PreparedMetaReviewSubmitContext {
   readFileFn: NonNullable<MetaReviewCommandDependencies["readFile"]>;
   writeFileFn: NonNullable<MetaReviewCommandDependencies["writeFile"]>;
   recommendation: MetaReviewSubmitInput["recommendation"];
-  status: ReturnType<typeof mapRecommendationToStatus>;
+  status: ReturnType<typeof resolveSubmitRunStatus>;
   summary: string;
   reworkTargetMessage: string | null;
   reportJson: Record<string, unknown>;
@@ -101,7 +102,7 @@ function resolveValidatedSubmitShape(input: {
   randomUuidFn: () => string;
 }): {
   recommendation: MetaReviewSubmitInput["recommendation"];
-  status: ReturnType<typeof mapRecommendationToStatus>;
+  status: ReturnType<typeof resolveSubmitRunStatus>;
   summary: string;
   reworkTargetMessage: string | null;
   reportJson: Record<string, unknown>;
@@ -185,14 +186,14 @@ function resolveValidatedSubmitShape(input: {
   }
 
   const recommendation = input.submitInput.recommendation;
-  const status = mapRecommendationToStatus(recommendation);
+  const status = resolveSubmitRunStatus();
   const summary = normalizeRequiredSubmitText(input.submitInput.summary, "summary");
   const reworkTargetMessage = normalizeOptionalText(
     input.submitInput.rework_target_message ?? undefined
   );
-  assertRunPayloadInvariants({
+  assertSubmitStatusIsSuccess(status);
+  assertSubmitPayloadInvariants({
     recommendation,
-    status,
     reworkTargetMessage
   });
   assertSummaryStructuredParity({

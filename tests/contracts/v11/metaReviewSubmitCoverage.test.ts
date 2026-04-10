@@ -9,6 +9,7 @@ import { parseBubbleMetaReviewCommandOptions } from "../../../src/cli/commands/b
 import { submitMetaReviewResultV11 as submitMetaReviewResult } from "../../../src/v11/application/metaReview/emitMetaReviewV11.js";
 import { buildMetaReviewExecutionContext } from "../../../src/v11/shared/metaReview/metaReviewExecutionContext.js";
 import { MetaReviewError } from "../../../src/v11/shared/metaReview/metaReviewError.js";
+import { readTranscriptEnvelopes } from "../../../src/v11/infrastructure/artifact/transcript/transcriptStore.js";
 import { metaReviewExecutionContextToRunningContext } from "../../../src/v11/shared/state/executionContext.js";
 import { readStateSnapshot, writeStateSnapshot } from "../../../src/v11/infrastructure/state/stateStore.js";
 import { parseRequiredSubmitReportJson } from "../../../src/v11/application/metaReview/metaReviewCliOptionValueReader.js";
@@ -254,6 +255,86 @@ describe("v11 meta-review submit contract", () => {
       recommendation: "approve",
       gate_route: "human_gate_approve",
       lifecycle_state: "READY_FOR_HUMAN_APPROVAL"
+    });
+  });
+
+  it("accepts inconclusive submit contract as routed human-gate success", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_meta_contract_submit_inconclusive_accept_01",
+      task: "Contract: successful inconclusive submit"
+    });
+    await writeMetaReviewRunningState({
+      statePath: bubble.paths.statePath,
+      activeAgent: "codex",
+      activeRole: "meta_reviewer",
+      nowIso: "2026-03-24T10:32:15.000Z"
+    });
+
+    const result = await submitMetaReviewResult(
+      {
+        bubbleId: bubble.bubbleId,
+        repoPath,
+        round: 1,
+        recommendation: "inconclusive",
+        summary: "Needs human interpretation before approval.",
+        report_json: {
+          findings_claim_state: "unknown",
+          findings_claim_source: "meta_review_artifact",
+          findings_count: 2
+        }
+      },
+      {
+        randomUUID: () => "run_meta_contract_submit_inconclusive_01",
+        readRuntimeSessionsRegistry: async () =>
+          buildActiveMetaReviewerSession({
+            bubbleId: bubble.bubbleId,
+            repoPath,
+            worktreePath: bubble.paths.worktreePath
+          })
+      }
+    );
+
+    expect(result).toMatchObject({
+      run_id: "run_meta_contract_submit_inconclusive_01",
+      status: "success",
+      recommendation: "inconclusive",
+      gate_route: "human_gate_inconclusive",
+      gate_envelope_type: "APPROVAL_REQUEST",
+      lifecycle_state: "READY_FOR_HUMAN_APPROVAL"
+    });
+
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    expect(loaded.state.state).toBe("READY_FOR_HUMAN_APPROVAL");
+    expect(loaded.state.meta_review).toMatchObject({
+      last_autonomous_run_id: "run_meta_contract_submit_inconclusive_01",
+      last_autonomous_status: "success",
+      last_autonomous_recommendation: "inconclusive",
+      last_autonomous_summary: "Needs human interpretation before approval."
+    });
+    expect(loaded.state.meta_review?.last_autonomous_rework_target_message).toBeNull();
+
+    const transcript = await readTranscriptEnvelopes(
+      bubble.paths.transcriptPath,
+      { allowMissing: false }
+    );
+    const last = transcript.at(-1);
+    expect(last?.type).toBe("APPROVAL_REQUEST");
+    expect(last?.payload.metadata).toStrictEqual({
+      actor: "meta-reviewer",
+      actor_agent: "codex",
+      delivery_target_role: "status",
+      findings_advisory_open_total: null,
+      findings_artifact_open_total: null,
+      findings_artifact_status: null,
+      findings_blocking_open_total: null,
+      findings_claimed_open_total: 2,
+      findings_digest_sha256: null,
+      findings_parity_status: null,
+      latest_recommendation: "inconclusive",
+      meta_review_gate_route: "human_gate_inconclusive",
+      meta_review_run_id: "run_meta_contract_submit_inconclusive_01"
     });
   });
 

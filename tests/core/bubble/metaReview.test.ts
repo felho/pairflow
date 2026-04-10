@@ -2840,12 +2840,12 @@ describe("meta-review submit", () => {
     });
   });
 
-  it("rejects inconclusive submit as non-routeable after canonical snapshot persist", async () => {
+  it("routes inconclusive submit to human approval after canonical snapshot persist", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({
       repoPath,
       bubbleId: "b_meta_submit_inconclusive_01",
-      task: "Meta submit inconclusive route rejection"
+      task: "Meta submit inconclusive routed success"
     });
     await writeMetaReviewRunningState({
       statePath: bubble.paths.statePath,
@@ -2854,41 +2854,68 @@ describe("meta-review submit", () => {
       nowIso: "2026-03-09T09:22:30.000Z"
     });
 
-    await expect(
-      submitMetaReviewResult(
-        {
-          bubbleId: bubble.bubbleId,
-          repoPath,
-          round: 1,
-          recommendation: "inconclusive",
-          summary: "Needs human interpretation.",
-          report_json: {
-            findings_claim_state: "unknown",
-            findings_claim_source: "meta_review_artifact",
-            findings_count: 0
-          }
-        },
-        {
-          randomUUID: () => "run_meta_submit_inconclusive_01",
-          now: new Date("2026-03-09T09:23:00.000Z"),
-          readRuntimeSessionsRegistry: async () =>
-            buildActiveMetaReviewerSession({
-              bubbleId: bubble.bubbleId,
-              repoPath,
-              worktreePath: bubble.paths.worktreePath
-            })
+    const result = await submitMetaReviewResult(
+      {
+        bubbleId: bubble.bubbleId,
+        repoPath,
+        round: 1,
+        recommendation: "inconclusive",
+        summary: "Needs human interpretation.",
+        report_json: {
+          findings_claim_state: "unknown",
+          findings_claim_source: "meta_review_artifact",
+          findings_count: 0
         }
-      )
-    ).rejects.toMatchObject({
-      reasonCode: "META_REVIEW_GATE_RUN_FAILED"
-    });
+      },
+      {
+        randomUUID: () => "run_meta_submit_inconclusive_01",
+        now: new Date("2026-03-09T09:23:00.000Z"),
+        readRuntimeSessionsRegistry: async () =>
+          buildActiveMetaReviewerSession({
+            bubbleId: bubble.bubbleId,
+            repoPath,
+            worktreePath: bubble.paths.worktreePath
+          })
+      }
+    );
+
+    expect(result.status).toBe("success");
+    expect(result.recommendation).toBe("inconclusive");
+    expect(result.run_id).toBe("run_meta_submit_inconclusive_01");
+    expect(result.gate_route).toBe("human_gate_inconclusive");
+    expect(result.gate_envelope_type).toBe("APPROVAL_REQUEST");
+    expect(result.lifecycle_state).toBe("READY_FOR_HUMAN_APPROVAL");
 
     const loaded = await readStateSnapshot(bubble.paths.statePath);
-    expect(loaded.state.state).toBe("RUNNING");
+    expect(loaded.state.state).toBe("READY_FOR_HUMAN_APPROVAL");
     expect(loaded.state.meta_review).toMatchObject({
       last_autonomous_run_id: "run_meta_submit_inconclusive_01",
+      last_autonomous_status: "success",
       last_autonomous_recommendation: "inconclusive",
-      last_autonomous_summary: "Needs human interpretation."
+      last_autonomous_summary: "Needs human interpretation.",
+      last_autonomous_rework_target_message: null
+    });
+
+    const transcript = await readTranscriptEnvelopes(
+      bubble.paths.transcriptPath,
+      { allowMissing: false }
+    );
+    const last = transcript.at(-1);
+    expect(last?.type).toBe("APPROVAL_REQUEST");
+    expect(last?.payload.metadata).toStrictEqual({
+      actor: "meta-reviewer",
+      actor_agent: "codex",
+      delivery_target_role: "status",
+      findings_advisory_open_total: null,
+      findings_artifact_open_total: null,
+      findings_artifact_status: null,
+      findings_blocking_open_total: null,
+      findings_claimed_open_total: 0,
+      findings_digest_sha256: null,
+      findings_parity_status: null,
+      latest_recommendation: "inconclusive",
+      meta_review_gate_route: "human_gate_inconclusive",
+      meta_review_run_id: "run_meta_submit_inconclusive_01"
     });
   });
 
