@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { BubbleLookupError } from "../../../src/core/bubble/bubbleLookup.js";
+import { BubbleLookupError } from "../../../src/v11/infrastructure/executor/workspace/bubbleLookup.js";
 import { SchemaValidationError } from "../../../src/v11/shared/validation/primitives.js";
 import { getBubblePaths } from "../../../src/v11/infrastructure/artifact/bubble/paths.js";
 import {

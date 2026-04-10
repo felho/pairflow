@@ -13,7 +13,7 @@ import {
   parseBubbleKickoffCommandOptions,
   runBubbleKickoffCommand
 } from "../../src/cli/commands/bubble/kickoff.js";
-import type { ResolvedBubbleById } from "../../src/core/bubble/bubbleLookup.js";
+import type { ResolvedBubbleById } from "../../src/v11/infrastructure/executor/workspace/bubbleLookup.js";
 
 describe("parseBubbleKickoffCommandOptions", () => {
   it("parses required args with inline task", () => {
