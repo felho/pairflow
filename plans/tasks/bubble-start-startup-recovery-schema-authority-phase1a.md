@@ -42,7 +42,7 @@ owners:
 
 ### Goal
 
-Lezarni a canonical `startup_recovery` type/schema/read authorityt ugy, hogy a kesobbi write-boundary, routing es failure-policy taskok egyetlen, ellentmondasmentes validity contractra epuljenek.
+Lezarni a canonical `startup_recovery` type/schema/read authorityt ugy, hogy a kozvetlenul szukseges write-boundary munka egyetlen, ellentmondasmentes validity contractra epuljon, minden tovabbi recovery-roadmap nelkul.
 
 ### In Scope
 
@@ -119,21 +119,21 @@ Implementation notes:
 
 | Field | Phase 1A-schema-authority Closure | Downstream Consumer |
 |---|---|---|
-| `stage` | canonical literal family explicit; nem maradhat free-form string | `1A-write-boundary`, Phase 1B |
-| `next_start_policy` | canonical token-family explicit (`rollback`, `retry`, `preserve_for_recovery` minimum csalad) | Phase 1C |
-| `ownership_confidence` | canonical literal family explicit; minimum coarse class szinten `authoritative`, `observed`, `ambiguous` vagy exact ekvivalens union | `1A-write-boundary`, Phase 1C |
-| `runtime_session_status` | canonical literal family explicit; minimum `absent`, `live`, `ambiguous` osztaly | `1A-write-boundary`, Phase 1C/2A |
-| `worktree_status` | canonical literal family explicit; minimum `absent`, `partial`, `ready` osztaly | `1A-write-boundary`, Phase 1D |
-| `tmux_status` | canonical literal family explicit; minimum `absent`, `named_session`, `ambiguous` osztaly | `1A-write-boundary`, Phase 2A/2B |
-| `retry_reason_code` | canonical reason-code token family; nem free-form operator szoveg | Phase 1C |
+| `stage` | canonical literal family explicit; nem maradhat free-form string | `1A-write-boundary` |
+| `next_start_policy` | canonical token-family explicit (`rollback`, `retry`, `preserve_for_recovery` minimum csalad) | jelenlegi planon kivul |
+| `ownership_confidence` | canonical literal family explicit; minimum coarse class szinten `authoritative`, `observed`, `ambiguous` vagy exact ekvivalens union | `1A-write-boundary` |
+| `runtime_session_status` | canonical literal family explicit; minimum `absent`, `live`, `ambiguous` osztaly | `1A-write-boundary` |
+| `worktree_status` | canonical literal family explicit; minimum `absent`, `partial`, `ready` osztaly | `1A-write-boundary` |
+| `tmux_status` | canonical literal family explicit; minimum `absent`, `named_session`, `ambiguous` osztaly | `1A-write-boundary` |
+| `retry_reason_code` | canonical reason-code token family; nem free-form operator szoveg | jelenlegi planon kivul |
 
 ### 2.2) Lifecycle Invariant Matrix
 
 | Lifecycle State | Allowed `startup_recovery` Shape | Forbidden Shape | Schema-Level Meaning | Downstream Consumer |
 |---|---|---|---|---|
 | `CREATED` | missing block only | active block, archival-only block | nincs committed startup recovery authority | `1A-write-boundary` a first write elott ezt tekinti baseline-nak |
-| `PREPARING_WORKSPACE` | explicit active descriptor only | missing block, archival-only block | partial startup authority csak explicit canonical descriptorral ertelmezheto | Phase 1B es `1A-write-boundary` |
-| `RUNNING` | missing block vagy minimal archival-only marker | active block | startup recovery mar nem aktiv authority | Phase 1D es `1A-write-boundary` success-path writer |
+| `PREPARING_WORKSPACE` | explicit active descriptor only | missing block, archival-only block | partial startup authority csak explicit canonical descriptorral ertelmezheto | `1A-write-boundary` |
+| `RUNNING` | missing block vagy minimal archival-only marker | active block | startup recovery mar nem aktiv authority | `1A-write-boundary` success-path writer |
 
 ### 2.3) Legacy Compatibility Matrix
 
@@ -170,9 +170,9 @@ Constraint: ez a task nem valaszthat concrete persistence authoring seamet.
 |---|---|---|---|
 | must-use | canonical state schema, explicit active vs archival split, lifecycle invariant table | P1 | required-now |
 | must-use | `plans/tasks/bubble-start-startup-recovery-write-boundary-phase1a.md` mint explicit downstream authoring consumer | P1 | required-now |
-| must-use | `plans/tasks/bubble-start-preparing-routing-and-admission-phase1b.md`, `plans/tasks/bubble-start-startup-failure-policy-persistence-phase1c.md`, `plans/tasks/bubble-start-running-commit-gate-and-reason-propagation-phase1d.md` mint scope-boundary consumer tasks | P1 | required-now |
 | must-not-use | inferred descriptor synthesis tmux/registry/worktree alapjan | P1 | required-now |
 | must-not-use | concrete persistence seam, mutation plumbing vagy first-write baseline ownership visszahuzasa ebbe a taskba | P1 | required-now |
+| must-not-use | retry routing, failure-policy persistence vagy commit-gate semantics roadmapkent valo visszacsempeszese ebbe a taskba | P1 | required-now |
 
 ### 6) Test Matrix
 
@@ -228,4 +228,4 @@ Ez a task artifact `IMPLEMENTABLE`, mert:
 1. a canonical `startup_recovery` type/schema authority explicit es write-seam-fuggetlen,
 2. a lifecycle invariant matrix es a legacy compatibility closure kulon, ellentmondasmentesen zarul,
 3. a concrete persisted-write ownership explicitten a `1A-write-boundary` utod-taskhoz van kotve,
-4. routing, failure-policy persistence es `RUNNING` commit-gate scope tovabbra is downstream consumer marad.
+4. a task nem tart fenn kulon routing-, failure-policy- vagy commit-gate roadmap ownershipet a jelenlegi minimal scope-on kivul.

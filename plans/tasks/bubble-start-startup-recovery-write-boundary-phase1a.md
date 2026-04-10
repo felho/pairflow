@@ -30,7 +30,7 @@ owners:
 2. A chosen seam ebben a taskban: az elso canonical startup-recovery descriptor authoring a `src/v11/shared/start/startStateMutation.ts` mutation layer ownershipe.
 3. Az `applyStateTransition(...)` maradhat lifecycle-transition helper, de nem lehet onallo persisted descriptor-authority felulet.
 4. A task csak a concrete write boundaryt zarja le; a schema-validity/read semantics authority a `plans/tasks/bubble-start-startup-recovery-schema-authority-phase1a.md` ownershipe.
-5. Ez a slice fresh-start first-write ownershipot zar le; retry-safe admission, failure-policy producer semantics es commit-gate reason propagation tovabbra is downstream task ownership.
+5. Ez a slice fresh-start first-write ownershipot zar le; minden tovabbi retry-, failure-policy- vagy commit-gate kerdes jelenleg tudatosan planon kivul marad.
 
 ## L0 - Policy
 
@@ -76,9 +76,9 @@ Lezarni a canonical `startup_recovery` first-write authoring seamet ugy, hogy a 
 |---|---|---|---|
 | `startup_recovery` field vocabulary, active-vs-archival shape, lifecycle invariant matrix | `plans/tasks/bubble-start-startup-recovery-schema-authority-phase1a.md` | a mutation seam csak a schema-authority altal mar lezart canonical shape-et irhatja ki | schema-literal familyk vagy read compatibility ujradefinialasa ebben a taskban |
 | first fresh `CREATED -> PREPARING_WORKSPACE` canonical baseline write | ez a task | a mutation seam egyetlen canonical baseline-t authoral explicit mezokeszlettel | alternativ baseline-ok, flow-level authoring, helper-level persistence authority |
-| `PREPARING_WORKSPACE` retry-safe admission, stale descriptor fail-closed routing | `plans/tasks/bubble-start-preparing-routing-and-admission-phase1b.md` | ez a task csak annyit rogzit, hogy fresh pathon a baseline descriptor mar schema-valid es determinisztikus | retry-safe gate vagy stale detection semantics behuzasa ide |
-| `next_start_policy` / `retry_reason_code` producer semantics, cleanup vegallapot persistence | `plans/tasks/bubble-start-startup-failure-policy-persistence-phase1c.md` | fresh first write default szerint nem kenyszerit failure-policy tokent | failure-policy tokenek meaningje vagy failed cleanup write shape ide huzasa |
-| `RUNNING` commit-ready gate, canonical `START_RUNNING_COMMIT_BLOCKED`, clear-vs-archive default | `plans/tasks/bubble-start-running-commit-gate-and-reason-propagation-phase1d.md` | ez a task csak azt zarja le, hogy fresh success write alatt active descriptor nem maradhat persisted allapotban | commit-ready subcode-ok, wrapper propagation, archival retention policy defaultjanak elodontese |
+| `PREPARING_WORKSPACE` retry-safe admission, stale descriptor fail-closed routing | jelenlegi planon kivul | ez a task csak annyit rogzit, hogy fresh pathon a baseline descriptor mar schema-valid es determinisztikus | retry-safe gate vagy stale detection semantics behuzasa ide |
+| `next_start_policy` / `retry_reason_code` producer semantics, cleanup vegallapot persistence | jelenlegi planon kivul | fresh first write default szerint nem kenyszerit failure-policy tokent | failure-policy tokenek meaningje vagy failed cleanup write shape ide huzasa |
+| `RUNNING` commit-ready gate, canonical `START_RUNNING_COMMIT_BLOCKED`, clear-vs-archive default | jelenlegi planon kivul | ez a task csak azt zarja le, hogy fresh success write alatt active descriptor nem maradhat persisted allapotban | commit-ready subcode-ok, wrapper propagation, archival retention policy defaultjanak elodontese |
 
 ### Complexity Risk Gate
 
@@ -122,10 +122,10 @@ Implementation notes:
 
 | Surface | Upstream Authority | This Task Locks | Downstream Consumer |
 |---|---|---|---|
-| descriptor field families (`stage`, `ownership_confidence`, `runtime_session_status`, `worktree_status`, `tmux_status`) | Phase `1A-schema-authority` | a fresh first write csak ezekbol a canonical familykbol authoralhat baseline-t | Phase `1B`, `1C`, `1D` |
-| `attempt_id` | start invocation boundary + Phase `1A-schema-authority` optionality | same-attempt carry-through a preparing es running write kozott | Phase `1B` retry-safe attempt matching |
-| `next_start_policy`, `retry_reason_code` | Phase `1A-schema-authority` token family closure | fresh first write default szerint nem authoralja oket | Phase `1C` producer semantics |
-| success-path retained archival marker | Phase `1A-schema-authority` archival shape closure | active descriptor tiltasa `RUNNING` alatt | Phase `1D` clear/archive default |
+| descriptor field families (`stage`, `ownership_confidence`, `runtime_session_status`, `worktree_status`, `tmux_status`) | Phase `1A-schema-authority` | a fresh first write csak ezekbol a canonical familykbol authoralhat baseline-t | kozvetlen current-scope implementacio |
+| `attempt_id` | start invocation boundary + Phase `1A-schema-authority` optionality | same-attempt carry-through a preparing es running write kozott | kozvetlen current-scope implementacio |
+| `next_start_policy`, `retry_reason_code` | Phase `1A-schema-authority` token family closure | fresh first write default szerint nem authoralja oket | jelenlegi planon kivul |
+| success-path retained archival marker | Phase `1A-schema-authority` archival shape closure | active descriptor tiltasa `RUNNING` alatt | jelenlegi planon kivul |
 
 ### 3) Side Effects Contract
 
@@ -146,9 +146,9 @@ Implementation notes:
 
 Constraint:
 
-1. Commit-gate decision es `START_RUNNING_COMMIT_BLOCKED` propagation tovabbra is Phase 1D ownership; ez a task csak a success-path persisted write shape-et es a seam ownershipet zarja le.
-2. Retry-safe vs stale `PREPARING_WORKSPACE` descriptor gate tovabbra is Phase 1B ownership; ez a task nem minosit descriptorokat admission semantics szerint.
-3. `next_start_policy` / `retry_reason_code` presence rule failed vagy interrupted pathon tovabbra is Phase 1C ownership.
+1. Commit-gate decision es `START_RUNNING_COMMIT_BLOCKED` propagation jelenlegi planon kivul marad; ez a task csak a success-path persisted write shape-et es a seam ownershipet zarja le.
+2. Retry-safe vs stale `PREPARING_WORKSPACE` descriptor gate jelenlegi planon kivul marad; ez a task nem minosit descriptorokat admission semantics szerint.
+3. `next_start_policy` / `retry_reason_code` presence rule failed vagy interrupted pathon jelenlegi planon kivul marad.
 
 ### 5) Dependency Constraints
 
@@ -156,10 +156,10 @@ Constraint:
 |---|---|---|---|
 | must-use | `plans/tasks/bubble-start-startup-recovery-schema-authority-phase1a.md` mint upstream validity authority | P1 | required-now |
 | must-use | explicit chosen seam: mutation-layer snapshot authoring a `src/v11/shared/start/startStateMutation.ts` boundaryn | P1 | required-now |
-| must-use | `plans/tasks/bubble-start-preparing-routing-and-admission-phase1b.md`, `plans/tasks/bubble-start-startup-failure-policy-persistence-phase1c.md`, `plans/tasks/bubble-start-running-commit-gate-and-reason-propagation-phase1d.md` mint downstream ownership boundaryk | P1 | required-now |
 | must-not-use | `applyStateTransition(...)` expansion mint alternativ persisted descriptor-authoring baseline | P1 | required-now |
 | must-not-use | flow-layer ad hoc snapshot authoring vagy schema-invalid koztes write | P1 | required-now |
 | must-not-use | routing, failure-policy persistence, `FAILED` cleanup, `RUNNING` commit-gate propagation ownership visszahuzasa ebbe a taskba | P1 | required-now |
+| must-not-use | barmilyen tovabbi recovery-roadmap implicit benne hagyasa ebben az artifactban | P1 | required-now |
 
 ### 6) Test Matrix
 
@@ -177,7 +177,7 @@ Constraint:
 3. AC3: A fresh success-path `PREPARING_WORKSPACE -> RUNNING` first persisted write contract explicitten tiltja az active `startup_recovery` retained allapotot.
 4. AC4: A mutation/transition boundary nem tud schema-invalid intermediate snapshotot perzisztalni.
 5. AC5: A task nem huzza vissza magahoz a schema-validity authorityt vagy a Phase 1B / 1C / 1D downstream ownershipet.
-6. AC6: A task explicit ownership ledgerrel kimondja, hogy a fresh success-path `RUNNING` write negativ boundaryja itt zarul, de a clear-vs-archive default es a `START_RUNNING_COMMIT_BLOCKED` propagation tovabbra is Phase 1D ownership.
+6. AC6: A task explicit ownership ledgerrel kimondja, hogy a fresh success-path `RUNNING` write negativ boundaryja itt zarul, de a clear-vs-archive default es a `START_RUNNING_COMMIT_BLOCKED` propagation jelenlegi planon kivul marad.
 
 ### Acceptance Traceability
 
@@ -193,7 +193,7 @@ Constraint:
 ## L2 - Implementation Notes (Optional)
 
 1. [later-hardening] Ha kesobb kulon direct mutation test file jon letre, a seam-level regressziokat erdemes kivenni a nagy `startBubble` integacios filebol.
-2. [later-hardening] Ha a Phase 1D clear-vs-archive default megallapodik, erdemes kulon explicit cross-linket hagyni ehhez a taskhoz a success-path negativ boundary mellett.
+2. [later-hardening] Ha kesobb uj bizonyitek miatt visszajon a clear-vs-archive default kerdese, erdemes kulon explicit cross-linket hagyni ehhez a taskhoz a success-path negativ boundary mellett.
 
 ## Hardening Backlog (Optional)
 
