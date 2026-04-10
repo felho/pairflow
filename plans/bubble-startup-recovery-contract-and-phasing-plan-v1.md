@@ -16,9 +16,10 @@ Ujra-keretezni a `bubble start` startup/recovery viselkedeset ugy, hogy a `CREAT
 
 Sikernek az szamit, ha:
 1. a `PREPARING_WORKSPACE` nem implicit "feluton elakadt" allapot, hanem explicit recovery boundary,
-2. a start flow nem hagy maga utan hamis `RUNNING` snapshotot,
-3. a partial startup hibak nem teardownolnak vakon megosztott eroforrasokat,
-4. a kovetkezo implementacios kor clean `main`-rol indulhat, a mostani lokalis kiserleti patch pedig nem delivery baseline.
+2. a canonical `state.json` snapshot explicit `startup_recovery` blokkal irja le a startup authority allapotat,
+3. a start flow nem hagy maga utan hamis `RUNNING` snapshotot,
+4. a partial startup hibak nem teardownolnak vakon megosztott eroforrasokat,
+5. a kovetkezo implementacios kor clean `main`-rol indulhat, a mostani lokalis kiserleti patch pedig nem delivery baseline.
 
 ## Current Codebase Check (2026-04-10)
 
@@ -50,12 +51,14 @@ Sikernek az szamit, ha:
    - `operator/recovery-surface hardening`
 9. Milestone-gated behavior to defer:
    - kulon operator UX vagy uj lifecycle command surface nem resze az elso implementation kornek.
+10. Canonical-state decision:
+   - a `startup_recovery` descriptor a `state.json` resze; nem kulso optional artifact.
 
 ## Phase Breakdown
 
 | Phase | Goal | Inputs | Outputs | Exit Criteria |
 |---|---|---|---|---|
-| Phase 1 | Startup resource contract foundation | `docs/pairflow-initial-design.md`, jelenlegi `src/v11/application/start/**`, review findingok | explicit `PREPARING_WORKSPACE` invariant tabla, startup commit pont, failure policy (`rollback` / `retry` / `preserve-for-recovery`) | a start flow resource-szerzodese implementalhato modon le van zarva, de meg nincs delivery valtozas |
+| Phase 1 | Startup resource contract foundation | `docs/pairflow-initial-design.md`, jelenlegi `src/v11/application/start/**`, review findingok | explicit `PREPARING_WORKSPACE` invariant tabla, canonical `startup_recovery` block, startup commit pont, failure policy (`rollback` / `retry` / `preserve-for-recovery`), migration note, foundation seam-ek | a start flow resource-szerzodese implementalhato modon le van zarva: a stale descriptor es retry gate fail-closed, a teardown policy nem inferred side effectekre epul, a task machine-readable statusa `implementable`, es meg nincs tmux/reconcile/operator delivery valtozas |
 | Phase 2A | Startup interruption safety delivery | Phase 1 foundation | tmux launch attribution, signal-safe startup cleanup, explicit teardown ownership szabalyok | partial startup hiba es process interruption nem hagy maga utan hamis `RUNNING` snapshotot vagy vak teardown-t |
 | Phase 2B | `PREPARING_WORKSPACE` recovery delivery | Phase 1 foundation + Phase 2A delivery | `recover_preparing` start/restart path, live tmux reuse vs stale reclaim, reconcile alignment | a `PREPARING_WORKSPACE` bubble deterministicen ujraindithato vagy ujrahasznalhato explicit contract menten |
 | Phase 3 | Operator/recovery surface hardening | Phase 2B delivery | status/reconcile attention semantics, incident docs, optional diagnostics tightening | a recovery allapotok operatori olvasata tiszta es nincs rejtett manualis lepes a normal pathon |
@@ -78,7 +81,7 @@ Sikernek az szamit, ha:
 ## Risks and Mitigations
 
 1. Risk: a Phase 1 task megint delivery-taskka hizik.
-   Mitigation: a foundation task explicitten csak a startup resource contractot es failure policy-t zarja le.
+   Mitigation: a foundation task explicitten csak a startup resource contractot, a canonical `startup_recovery` blockot, a commit pontot es a failure policy-t zarja le.
 
 2. Risk: a signal handling es a tmux attribution ugyanabban a patchben osszecsuszik a recovery deliveryvel.
    Mitigation: Phase 2A csak interruption safety es teardown ownership delivery lehet; `recover_preparing` behavior nem.
@@ -92,12 +95,16 @@ Sikernek az szamit, ha:
 5. Risk: a recovery implementacio tovabbra is csak stubolt dependencykkel latszik jonak.
    Mitigation: a validation strategy kotelezove teszi a default dependency integration coverage-et.
 
+6. Risk: a descriptor helye korul nyitva marad az authority kerdes, es emiatt uj review-loop indul.
+   Mitigation: a plan Phase 1-ben elore dont a canonical state-be tett `startup_recovery` block mellett.
+
 ## Validation Strategy
 
 1. Phase 1 validacio:
    - document-level consistency review,
    - state/invariant tabla teljesseg-ellenorzes,
-   - failure-policy matrix review.
+   - failure-policy matrix review,
+   - scope-boundary review annak bizonyitasara, hogy Phase 2A/2B/3 acceptance nem szivarog vissza.
 2. Phase 2A validacio:
    - tmux launch attribution regressziok,
    - signal interruption cleanup coverage,
@@ -115,7 +122,15 @@ Sikernek az szamit, ha:
 1. A startup/recovery contract belso boundary valtozas, nem uj user-facing product feature.
 2. A `PREPARING_WORKSPACE` tovabbra is ervenyes lifecycle state marad; nem uj top-level state bevezetese az elso cel.
 3. A kovetkezo implementacios kor clean `main`-rol fog indulni.
+4. A Phase 1 foundation munka csak seam-eket es contract-level acceptance-et szallit; runtime delivery Phase 2A/2B/3-ban jon.
 
-## Open Questions
+## Decisions Captured
 
-1. Kulon persisted `startup_recovery` block keruljon-e a canonical state-be, vagy eleg egy kulso artifact? Ez Phase 1 implementacios dontes, de a tasknak kotelezoen le kell fednie.
+1. A `startup_recovery` descriptor a canonical `state.json` resze.
+2. A `RUNNING` commit pont kulon explicit transition, amely clear-eli vagy archival-only allapotba teszi a `startup_recovery` blokkot.
+3. A stale descriptor kulon fail-closed trigger; generic retry vagy resume nem engedheto descriptor mismatch mellett.
+4. Phase 1-ben a `retry` csak explicit retry metadata mellett ervenyes; kulonben `preserve-for-recovery` a default.
+5. Legacy snapshot migrationnel a hianyzo `startup_recovery` blokk csak `CREATED` es `RUNNING` alatt kompatibilis; `PREPARING_WORKSPACE` alatt fail-closed routing szukseges.
+6. `RUNNING` alatt a recovery blokk cleared-by-default; ha retained, csak minimal archival-only marker shape megengedett.
+7. A bubble kimenetekent a Phase 1 task frontmatter statusa `implementable`.
+8. Phase 1 nem szallit tmux attribution deliveryt, live reuse/reclaim deliveryt vagy operator surface hardeninget.
