@@ -1,3 +1,12 @@
+---
+artifact_type: plan
+artifact_id: plan_boundary_cleanup_wave_v1
+title: "Boundary Cleanup Wave Plan V1"
+status: completed
+owners:
+  - "felho"
+---
+
 # Boundary Cleanup Wave Plan V1
 
 ## Goal

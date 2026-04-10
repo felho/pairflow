@@ -1,7 +1,7 @@
 ---
 title: Error warning cleanup wave plan v1
-status: in_progress
-updated_at: 2026-04-08
+status: completed
+updated_at: 2026-04-10
 owner: codex
 ---
 
@@ -59,7 +59,7 @@ Az `error` fitness check jelenleg hard-fail helyett `warn` módban fut, de a bac
     - `file-lock`
     - `reviewer-artifact`
     - `docContractGateArtifacts`
-    - státusz: pending
+    - státusz: completed
 
 # Guardrail
 

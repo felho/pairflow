@@ -26,7 +26,7 @@ owners:
 
 ## Executive Summary
 
-1. Ez a task a `plans/tasks/actor-runtime-interface-meta-review-operator-projection-cleanup-phaseE.md` parent task megmaradt, meg nem zart read-surface szeletet kuloniti el bounded implementation taskkent.
+1. Ez a task a `plans/archive/tasks/actor-runtime-interface-meta-review-operator-projection-cleanup-phaseE.md` parent task megmaradt, meg nem zart read-surface szeletet kuloniti el bounded implementation taskkent.
 2. A `recover` snapshot-route replay closure mar lezart upstream scope; ebben a taskban a retained `status` es `last-report` projection-only semantics, a renderer freshness/parity boundary, valamint a retained `run` non-regression guard explicit lezárasa a cel.
 3. A task csak akkor sikeres, ha a read surface se kodban, se CLI szovegben nem sugall canonical actor authorityt vagy current-round acceptance-t stale/historical projectionbol.
 4. `README.md` es `docs/pairflow-initial-design.md` csak akkor touched, ha bizonyithato user-visible operator semantics delta tortenik; ellenkezo esetben explicit `T9` docs-omission closure kell a primary artifact + completion artifact paron.
@@ -128,7 +128,7 @@ Ez a task akkor sikeres, ha:
 1. Canonical plan:
    - `plans/actor-runtime-interface-discovery-and-migration-plan-v1.md`
 2. Parent cleanup contract:
-   - `plans/tasks/actor-runtime-interface-meta-review-operator-projection-cleanup-phaseE.md`
+   - `plans/archive/tasks/actor-runtime-interface-meta-review-operator-projection-cleanup-phaseE.md`
 3. Binding migration/context refs:
    - `plans/tasks/actor-runtime-interface-migration-spine-phaseD-plan.md`
    - `plans/tasks/actor-runtime-interface-capability-contract-phaseB-draft.md`
@@ -214,7 +214,7 @@ Normative rules:
 | `plans/archive/tasks/protocol-first/protocol-first-cli-and-protocol-surface-unification-phase4.md` Phase 4 operator-vs-actor split | a `bubble meta-review` surface operator namespace maradjon, a `submit` removed maradjon | ez akadalyozza meg az actor-facing special-case path visszatereset | T4, T5 |
 | `plans/archive/tasks/protocol-first/protocol-first-legacy-meta-review-model-removal-phase5.md` Phase 5 state-neutral operator surface | a retained operator surface ne koveteljen legacy actor-write authorityt | ettol marad a subtree projection reteg, nem kulon canonical control bus | T1, T2, T5 |
 | `docs/meta-review-gate-prd.md` Meta-review gate read contract | `status`/`last-report` cheap non-generative retrieval | ez a task ugyanennek a mar rogzitett kontraktnak a migration utani cleanup-megerositese | T1, T2, T3 |
-| `plans/tasks/actor-runtime-interface-meta-review-operator-projection-cleanup-phaseE.md` + `19c4ab6` parent tracking snapshot | a maradek scope read-surface closure-ra szukuljon | ez ved a recovery lane vagy teljes operator redesign visszanyitasatol | T4, T5, T9 |
+| `plans/archive/tasks/actor-runtime-interface-meta-review-operator-projection-cleanup-phaseE.md` + `19c4ab6` parent tracking snapshot | a maradek scope read-surface closure-ra szukuljon | ez ved a recovery lane vagy teljes operator redesign visszanyitasatol | T4, T5, T9 |
 | `ef1d965` bubble kickoff task extraction evidence | a child task explicit completion contracttal zarjon | ez keri szamon, hogy a primary artifact ne csak problemaleiras, hanem handoff-kompatibilis closure contract is legyen | T9 |
 
 Normative rules:

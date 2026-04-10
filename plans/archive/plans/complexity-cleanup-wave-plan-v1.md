@@ -2,7 +2,7 @@
 artifact_type: plan
 artifact_id: plan_complexity_cleanup_wave_v1
 title: "Complexity Cleanup Wave Plan"
-status: draft
+status: completed
 prd_ref: null
 owners:
   - "felho"
@@ -166,9 +166,10 @@ Minden bounded batch után:
 - [x] Wave 2 started
 - [x] Wave 2 completed
 - [x] Wave 3 started
-- [ ] Wave 3 completed
+- [x] Wave 3 completed
 - [ ] Wave 4 started
 - [ ] Wave 4 completed
+- [x] Plan objective completed before Wave 4; the remaining heavyweight monolith splits became elective once the `complexity` hard-fail checker and the full fitness report both reached `pass`
 
 ## Notes
 

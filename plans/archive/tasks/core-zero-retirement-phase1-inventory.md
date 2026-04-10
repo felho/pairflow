@@ -6,7 +6,7 @@ status: completed
 phase: phase1
 target_files:
   - "plans/core-zero-retirement-plan-v1.md"
-  - "plans/tasks/core-zero-retirement-phase1-inventory.md"
+  - "plans/archive/tasks/core-zero-retirement-phase1-inventory.md"
   - "plans/core-zero-retirement-inventory-ledger-v1.md"
 prd_ref: null
 plan_ref: plans/core-zero-retirement-plan-v1.md
@@ -82,7 +82,7 @@ végső törlését, nem pedig egy interim compatibility steady state fenntartá
 |---|---|---|---|---|---|---|---|---|
 | CS1 | plans/core-zero-retirement-inventory-ledger-v1.md | new ledger artifact | `N/A -> markdown inventory` | new file | Teljes `src/core/**` inventory, bucket, lane, delete-eligibility, notes | P1 | required-now | `src/core/**` aktuális fájllista |
 | CS2 | plans/core-zero-retirement-plan-v1.md | phase-1 references | `markdown update -> markdown update` | progress / dependency sections | A plan hivatkozik a ledgerre mint phase-1 source of truth | P2 | required-now | Phase 1 inventory completion |
-| CS3 | plans/tasks/core-zero-retirement-phase1-inventory.md | task contract | `markdown task -> markdown task` | current file | A végrehajtási szabályok explicit, worker-kompatibilis formában rögzítve vannak | P1 | required-now | task-consistency gate |
+| CS3 | plans/archive/tasks/core-zero-retirement-phase1-inventory.md | task contract | `markdown task -> markdown task` | current file | A végrehajtási szabályok explicit, worker-kompatibilis formában rögzítve vannak | P1 | required-now | task-consistency gate |
 
 ### 2) Data and Interface Contract
 

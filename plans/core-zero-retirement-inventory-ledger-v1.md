@@ -4,7 +4,7 @@ artifact_id: ledger_core_zero_retirement_inventory_v1
 title: "Core Zero Retirement Inventory Ledger"
 status: completed
 plan_ref: plans/core-zero-retirement-plan-v1.md
-task_ref: plans/tasks/core-zero-retirement-phase1-inventory.md
+task_ref: plans/archive/tasks/core-zero-retirement-phase1-inventory.md
 generated_on: 2026-04-09
 owners:
   - "felho"
