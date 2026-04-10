@@ -3,13 +3,19 @@ import {
   resolveDocContractGateArtifactPath
 } from "../gates/docContractGateArtifactDefaults.js";
 import { resolveBubbleById } from "../bubbleLookup/bubbleLookupDefaults.js";
-import { readStateSnapshot } from "../state/stateStoreDefaults.js";
+import {
+  inspectStateSnapshot,
+  readStateSnapshot
+} from "../state/stateStoreDefaults.js";
 import { readTranscriptEnvelopes } from "../transcript/transcriptDependencyDefaults.js";
+import {
+  readReviewVerificationArtifactStatus
+} from "../reviewer/reviewVerificationArtifactReaders.js";
 import type {
+  InspectedStateSnapshot,
   StateValidationDiagnostics
 } from "../ports/stateSnapshots.js";
 import type {
-  ReadReviewVerificationArtifactStatusPort,
   ReadReviewVerificationArtifactStatusOptions
 } from "../ports/reviewVerificationArtifacts.js";
 import type {
@@ -25,68 +31,35 @@ interface StatusInboxInspectionResult {
   stateValidation: StateValidationDiagnostics | null;
 }
 
-type InspectStateSnapshot = (
-  statePath: string
-) => Promise<StatusInboxInspectionResult>;
-type StatusInboxDependencyDefaults = {
-  inspectStateSnapshot: InspectStateSnapshot;
-};
-type StatusGateDefaults = {
-  readReviewVerificationArtifactStatus: ReadReviewVerificationArtifactStatus;
-};
-type ReadReviewVerificationArtifactStatus = ReadReviewVerificationArtifactStatusPort;
 type ReadReviewVerificationArtifactStatusResult = (
   artifactPath: string,
   options?: ReadReviewVerificationArtifactStatusOptions
 ) => Promise<ReviewVerificationArtifactStatus>;
+type InspectStateSnapshot = (
+  statePath: string
+) => Promise<InspectedStateSnapshot>;
 
-let statusInboxDependencyDefaultsPromise:
-  | Promise<StatusInboxDependencyDefaults>
-  | undefined;
-let statusGateDefaultsPromise:
-  | Promise<StatusGateDefaults>
-  | undefined;
-
-async function loadStatusInboxDependencyDefaults(): Promise<StatusInboxDependencyDefaults> {
-  statusInboxDependencyDefaultsPromise ??= import(
-    "../../../core/bubble/statusInboxDefaults.js"
-  ).then(({ statusInboxDependencyDefaults }) => {
-    const { inspectStateSnapshot } = statusInboxDependencyDefaults;
-    return {
-      inspectStateSnapshot
-    };
-  });
-  return statusInboxDependencyDefaultsPromise;
-}
-
-async function loadStatusGateDefaults(): Promise<StatusGateDefaults> {
-  statusGateDefaultsPromise ??= import(
-    "../../../core/bubble/statusGateDefaults.js"
-  ).then(({ statusGateDefaults }) => {
-    const { readReviewVerificationArtifactStatus } = statusGateDefaults;
-    return { readReviewVerificationArtifactStatus };
-  });
-  return statusGateDefaultsPromise;
-}
-
-async function inspectStateSnapshot(
+async function inspectStateSnapshotForStatus(
   ...args: Parameters<InspectStateSnapshot>
-): Promise<Awaited<ReturnType<InspectStateSnapshot>>> {
-  const defaults = await loadStatusInboxDependencyDefaults();
-  return defaults.inspectStateSnapshot(...args);
+): Promise<StatusInboxInspectionResult> {
+  const inspected = await inspectStateSnapshot(...args);
+  return {
+    fingerprint: inspected.fingerprint,
+    state: inspected.state,
+    stateValidation: inspected.stateValidation
+  };
 }
 
-async function readReviewVerificationArtifactStatus(
+async function readReviewVerificationArtifactStatusForStatus(
   ...args: Parameters<ReadReviewVerificationArtifactStatusResult>
 ): Promise<Awaited<ReturnType<ReadReviewVerificationArtifactStatusResult>>> {
-  const defaults = await loadStatusGateDefaults();
-  return defaults.readReviewVerificationArtifactStatus(...args);
+  return readReviewVerificationArtifactStatus(...args);
 }
 
 export const statusCommandDependencyDefaults = {
-  inspectStateSnapshot,
+  inspectStateSnapshot: inspectStateSnapshotForStatus,
   readDocContractGateArtifact,
-  readReviewVerificationArtifactStatus,
+  readReviewVerificationArtifactStatus: readReviewVerificationArtifactStatusForStatus,
   readStateSnapshot,
   readTranscriptEnvelopes,
   resolveBubbleById,

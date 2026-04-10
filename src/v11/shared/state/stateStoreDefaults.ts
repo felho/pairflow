@@ -1,8 +1,10 @@
 import {
+  inspectStateSnapshot as inspectStateSnapshotDefaults,
   readStateSnapshot as readStateSnapshotDefaults,
   writeStateSnapshot as writeStateSnapshotDefaults
 } from "../../defaults/state/stateStoreDefaults.js";
 import type {
+  InspectedStateSnapshot,
   LoadedStateSnapshot,
   ReadStateSnapshotPort,
   WriteStateSnapshotOptions,
@@ -12,6 +14,10 @@ import type {
 export const readStateSnapshot: ReadStateSnapshotPort = async (statePath) =>
   readStateSnapshotDefaults(statePath);
 
+export const inspectStateSnapshot = async (
+  statePath: string
+): Promise<InspectedStateSnapshot> => inspectStateSnapshotDefaults(statePath);
+
 export const writeStateSnapshot: WriteStateSnapshotPort = async (
   statePath,
   state,
@@ -19,5 +25,6 @@ export const writeStateSnapshot: WriteStateSnapshotPort = async (
 ) => writeStateSnapshotDefaults(statePath, state, options);
 
 export type {
+  InspectedStateSnapshot,
   LoadedStateSnapshot
 };

@@ -14,6 +14,10 @@ export interface LoadedStateSnapshot {
   fingerprint: string;
 }
 
+export interface InspectedStateSnapshot extends LoadedStateSnapshot {
+  stateValidation: StateValidationDiagnostics | null;
+}
+
 export type ReadStateSnapshotPort = (
   statePath: string
 ) => Promise<LoadedStateSnapshot>;

@@ -1,8 +1,10 @@
 import {
+  inspectStateSnapshot as inspectStateSnapshotCanonical,
   readStateSnapshot as readStateSnapshotCanonical,
   writeStateSnapshot as writeStateSnapshotCanonical
 } from "../../infrastructure/state/stateStore.js";
 import type {
+  InspectedStateSnapshot,
   LoadedStateSnapshot,
   ReadStateSnapshotPort,
   WriteStateSnapshotOptions,
@@ -12,6 +14,10 @@ import type {
 export const readStateSnapshot: ReadStateSnapshotPort = async (statePath) =>
   readStateSnapshotCanonical(statePath);
 
+export const inspectStateSnapshot = async (
+  statePath: string
+): Promise<InspectedStateSnapshot> => inspectStateSnapshotCanonical(statePath);
+
 export const writeStateSnapshot: WriteStateSnapshotPort = async (
   statePath,
   state,
@@ -19,5 +25,6 @@ export const writeStateSnapshot: WriteStateSnapshotPort = async (
 ) => writeStateSnapshotCanonical(statePath, state, options);
 
 export type {
+  InspectedStateSnapshot,
   LoadedStateSnapshot
 };
