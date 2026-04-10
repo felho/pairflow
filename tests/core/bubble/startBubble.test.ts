@@ -27,10 +27,12 @@ import {
   REVIEWER_COMMAND_GATE_REQ_F
 } from "../../../src/v11/shared/reviewer/reviewerCommandGateGuidance.js";
 import {
-  resolveReviewerTestEvidenceArtifactPath,
   verifyImplementerTestEvidence,
   writeReviewerTestEvidenceArtifact
-} from "../../../src/core/reviewer/testEvidence.js";
+} from "../../../src/v11/infrastructure/artifact/reviewer/testEvidenceRuntime.js";
+import {
+  resolveReviewerTestEvidenceArtifactPath
+} from "../../../src/v11/shared/reviewer/testEvidence.js";
 import {
   reviewerSeverityOntologyFullMarkdown
 } from "../../../src/v11/shared/reviewer/reviewerSeverityOntology.generated.js";

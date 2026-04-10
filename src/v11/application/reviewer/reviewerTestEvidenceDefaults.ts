@@ -23,7 +23,7 @@ async function loadReviewerTestEvidenceModule(): Promise<{
   writeReviewerTestEvidenceArtifact: WriteReviewerTestEvidenceArtifactPort;
 }> {
   reviewerTestEvidenceModulePromise ??= import(
-    "../../../core/reviewer/testEvidence.js"
+    "../../defaults/reviewer/reviewerTestEvidenceDefaults.js"
   );
   return reviewerTestEvidenceModulePromise;
 }

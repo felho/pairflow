@@ -44,9 +44,11 @@ import {
   writeDocContractGateArtifact
 } from "../../../src/core/gates/docContractGateArtifacts.js";
 import {
-  resolveReviewerTestEvidenceArtifactPath,
   resolveReviewerTestExecutionDirective
-} from "../../../src/core/reviewer/testEvidence.js";
+} from "../../../src/v11/infrastructure/artifact/reviewer/testEvidenceRuntime.js";
+import {
+  resolveReviewerTestEvidenceArtifactPath
+} from "../../../src/v11/shared/reviewer/testEvidence.js";
 import {
   resolvePassValidationReviewerCompatibilityArtifactPath
 } from "../../../src/v11/infrastructure/artifact/validation/passValidationEvidence.js";
