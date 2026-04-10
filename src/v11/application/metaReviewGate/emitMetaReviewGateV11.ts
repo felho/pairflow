@@ -22,6 +22,7 @@ import type {
 import { notifyMetaReviewerSubmissionRequest } from "./metaReviewGateNotify.js";
 import { resolveMetaReviewerPaneWarning } from "./metaReviewGatePaneBinding.js";
 import { resolveMetaReviewGateDependencyDefaults } from "./metaReviewGateDependencyDefaults.js";
+import { finishIncompleteActorResult } from "../reconcile/finishIncompleteActorResult.js";
 
 let metaReviewGateDependencyDefaultsPromise:
   | Promise<Awaited<ReturnType<typeof resolveMetaReviewGateDependencyDefaults>>>
@@ -132,6 +133,9 @@ async function withMetaReviewGateRecoveryDefaults(
       ?? defaults.writeStateSnapshot,
     readFile: dependencies.readFile ?? defaults.readFile,
     writeFile: dependencies.writeFile ?? defaults.writeFile,
+    finishIncompleteActorResult:
+      dependencies.finishIncompleteActorResult
+      ?? finishIncompleteActorResult,
     ...(dependencies.sleepForRetryMs !== undefined
       ? { sleepForRetryMs: dependencies.sleepForRetryMs }
       : {})
