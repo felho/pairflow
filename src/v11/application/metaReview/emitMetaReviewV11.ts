@@ -41,7 +41,7 @@ let metaReviewDefaultsPromise:
 
 async function loadMetaReviewDefaults() {
   metaReviewDefaultsPromise ??= import(
-    "../../../core/runtime/metaReviewDefaults.js"
+    "../../defaults/metaReview/metaReviewDefaults.js"
   ).then(({ metaReviewDefaults }) => metaReviewDefaults);
   return metaReviewDefaultsPromise;
 }
