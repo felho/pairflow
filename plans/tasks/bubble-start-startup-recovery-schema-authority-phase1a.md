@@ -11,6 +11,7 @@ target_files:
   - src/v11/infrastructure/state/stateSnapshotInspection.ts
   - tests/core/state/stateSchema.test.ts
   - tests/core/state/stateStore.test.ts
+  - tests/v11/shared/state/stateSchema.test.ts
   - tests/v11/infrastructure/state/stateStore.test.ts
 prd_ref: null
 plan_ref: plans/bubble-startup-recovery-contract-and-phasing-plan-v1.md
@@ -177,9 +178,13 @@ Constraint: ez a task nem valaszthat concrete persistence authoring seamet.
 
 | ID | Scenario | Given | When | Then | Priority | Timing | Evidence |
 |---|---|---|---|---|---|---|---|
-| T1 | typed descriptor + vocabulary closure | active es archival peldak | type/schema load | canonical fields, literal families es optionality rules explicitten ellenorizhetok | P1 | required-now | `tests/core/state/stateSchema.test.ts` |
-| T2 | lifecycle invariants | `CREATED`, `PREPARING_WORKSPACE`, `RUNNING` snapshots | schema validation fut | csak a Phase 1A-schema-authority altal engedett alakok validak | P1 | required-now | `tests/core/state/stateSchema.test.ts` |
+| T1 | typed descriptor + vocabulary closure | active es archival peldak | type/schema load | canonical fields, literal families es optionality rules explicitten ellenorizhetok | P1 | required-now | `tests/core/state/stateSchema.test.ts`, `tests/v11/shared/state/stateSchema.test.ts` |
+| T2 | lifecycle invariants | `CREATED`, `PREPARING_WORKSPACE`, `RUNNING` snapshots | schema validation fut | csak a Phase 1A-schema-authority altal engedett alakok validak | P1 | required-now | `tests/core/state/stateSchema.test.ts`, `tests/v11/shared/state/stateSchema.test.ts` |
 | T3 | legacy compatibility inspect/read | hianyzo vagy malformed descriptoros snapshot | inspect/read fut | `CREATED`/`RUNNING` kompatibilis marad, `PREPARING_WORKSPACE` fail-closed marad | P1 | required-now | `tests/core/state/stateStore.test.ts`, `tests/v11/infrastructure/state/stateStore.test.ts` |
+
+Validation note:
+
+1. Mivel a canonical schema authority a `src/v11/shared/state/**` boundaryn el, a core schema suite mellett a `tests/v11/shared/state/stateSchema.test.ts` is explicit required-now regression surface.
 
 ## Acceptance Criteria
 
