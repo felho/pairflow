@@ -2,21 +2,18 @@
 artifact_type: task
 artifact_id: task_actor_runtime_interface_meta_review_submit_inconclusive_human_gate_phaseE_v1
 title: "Actor Runtime Interface Meta-Review Submit Inconclusive Human-Gate Alignment (Phase E)"
-status: draft
+status: implementable
 phase: phaseE
 target_files:
-  - src/core/bubble/metaReview.ts
+  - src/v11/shared/metaReview/metaReviewCommandSubmitRuntime.ts
+  - src/v11/shared/metaReview/metaReviewCommandSubmitRouting.ts
   - src/v11/shared/metaReviewGate/metaReviewGateStateHelpers.ts
   - src/v11/shared/metaReviewGate/metaReviewGateRecovery.ts
+  - src/v11/application/metaReview/emitMetaReviewV11.ts
+  - src/v11/application/actorProtocol/actorProtocolEmitters.ts
   - src/v11/application/actorProtocol/emitActorProtocolV11.ts
-  - src/v11/application/metaReview/metaReviewCliDispatcher.ts
-  - src/v11/application/metaReview/metaReviewCliRenderers.ts
-  - src/v11/application/metaReview/metaReviewCliRenderersHelpers.ts
-  - README.md
-  - docs/pairflow-initial-design.md
   - tests/core/bubble/metaReview.test.ts
   - tests/core/bubble/metaReviewGate.test.ts
-  - tests/cli/bubbleMetaReviewCommand.test.ts
   - tests/contracts/v11/metaReviewSubmitCoverage.test.ts
   - tests/v11/application/actorProtocol/emitActorProtocolV11.test.ts
 prd_ref: null
@@ -30,9 +27,23 @@ owners:
 
 ## Current Codebase Check (2026-04-10)
 
-1. A task `target_files` listajaban meg stale `src/core/bubble/metaReview.ts` szerepel, mikozben a mai canonical submit/gate ownerseg mar `src/v11/**` alatt van.
-2. A task bugleirasa tovabbra is ertelmes lehet, de a konkret write set mar nem up to date.
-3. A task marad `draft`, es ujra kell targetelni a mai `src/v11/application/metaReview/**` es `src/v11/shared/metaReviewGate/**` ownersegekre.
+1. A task eredeti `target_files` listaja tobb ponton stale: a submit runtime mar nem `src/core/bubble/metaReview.ts`, hanem elsosorban `src/v11/shared/metaReview/metaReviewCommandSubmitRuntime.ts` es `src/v11/shared/metaReview/metaReviewCommandSubmitRouting.ts` alatt el.
+2. A bug viszont tovabbra is valos current-state gap: a live codeban meg mindig letezik az `assertSubmitRecommendationRouteable("inconclusive")` tiltasa, mikozben a shared gate policy es a recovery path mar canonical `human_gate_inconclusive` route-kent kezeli ugyanezt az outcome-ot.
+3. A mai acceptance surface is megvan es aktualis: a "persist then reject" elvart viselkedest tovabbra is a `tests/core/bubble/metaReview.test.ts` rogzit egy explicit regresszios fixture-ben, a recovery parityt a `tests/core/bubble/metaReviewGate.test.ts`, a retained facade-t a `tests/contracts/v11/metaReviewSubmitCoverage.test.ts`, a public actor-emit wrapper parityt pedig a `tests/v11/application/actorProtocol/emitActorProtocolV11.test.ts`.
+4. A task ezert tovabbra is legitim es bounded implementation target, de a base write setet a `submit` runtime + routing seam, a shared gate policy/recovery seam, a retained `emitMetaReviewV11` facade, a canonical actor-emit wrapper, valamint az ezekhez tartozo core/contract/wrapper regresszios tesztek menten kell ujrairni.
+5. A CLI/docs surface jelenleg masodlagos es conditional: a mai renderer mar lathatoan surfacedeli a `gate_route` + `lifecycle_state` mezoket, ezert renderer- vagy docs-touch csak akkor indokolt, ha a corrected success path utan a wording meg mindig limbot vagy recovery-kotelezettseget sugall. Emiatt a renderer/helper/test surface nem resze a default base write setnek.
+
+### Implementation Target Decision
+
+1. `implementable_now`: `yes`
+2. A legszukebb aktualis implementation seam a canonical submit flow `write canonical submit state/artifact -> assert routeability -> recover/apply shared gate route -> finalize result` lanc, nem a removed legacy operator subtree.
+3. A retained `submit` facade es a public `pairflow agent emit --kind meta_review_result` wrapper explicit parity surface, ezert a task nem allhat meg a shared submit seamnel; facade- es wrapper-szintu coverage is kotelezo.
+4. `README.md` es `docs/pairflow-initial-design.md` jelen taskban nem primary write target. Docs frissites csak bizonyitott user-visible semantics delta eseten indokolt.
+
+### Recommended Sequencing
+
+1. Ez a task tartalmilag fuggetlen az operator read-surface closure tasktol; csak akkor kell szorosabban egyeztetni veluk, ha az `inconclusive` happy-path miatt a CLI renderer wording is modosul.
+2. Az approve-advisory guidance hardening taskkal a runtime policy-layer nem fed at, de a `tests/core/bubble/metaReview.test.ts` es `tests/core/bubble/metaReviewGate.test.ts` kozos touched surface lehet, ezert merge-sorrend vagy rebase-friction miatt erdemes ugyanabban az idoszakban tudatosan koordinálni.
 
 ## L0 - Policy
 
@@ -45,21 +56,21 @@ Igazitsa a `submitMetaReviewResult(...)` es a canonical `pairflow agent emit --k
 
 Ez a task azt a konkret bugot zarja le, ahol az `inconclusive` submit elobb canonical snapshotot persistal, majd exceptionnel megall, emiatt a bubble `RUNNING` + active `meta_reviewer` limbo allapotban ragad.
 
-### Current Behavior Anchor (2026-04-06)
+### Current Behavior Anchor (2026-04-10)
 
-1. A jelenlegi `submitMetaReviewResult(...)` flow a canonical snapshot write utan meghivja az `assertSubmitRecommendationRouteable(...)` guardot, es ez ma explicitten elutasitja az `inconclusive` recommendationt.
-2. Ugyanebben a flow-ban a submit mar most is a `recoverMetaReviewGateFromSnapshot(...)` executor felé delegal a persisted canonical snapshot route-olasahoz.
+1. A jelenlegi `src/v11/shared/metaReview/metaReviewCommandSubmitRuntime.ts::submitMetaReviewResult(...)` flow a canonical snapshot write utan meghivja a `src/v11/shared/metaReview/metaReviewCommandSubmitRouting.ts::assertSubmitRecommendationRouteable(...)` guardot, es ez ma explicitten elutasitja az `inconclusive` recommendationt.
+2. Ugyanebben a flow-ban a submit mar most is a `recoverMetaReviewSubmitRoute(...)` seam-en keresztul a `recoverMetaReviewGateFromSnapshot(...)` executor fele delegal a persisted canonical snapshot route-olasahoz.
 3. A shared gate policy jelenlegi canonical route-ja mar most is `resolveHumanGateRoute("inconclusive", false) -> "human_gate_inconclusive"`.
 4. A submit result mar tartalmaz operator-visible route surface-et (`lifecycle_state`, `gate_route`, `gate_envelope_type`), tehat az elvart routed-success contract additive strukturaval nem igenyel uj special-case submit API-t.
-5. A publikus canonical write boundary ma az actor emit wrapper: `emitMetaReviewerActorProtocolV11(...) -> submitMetaReviewResult(...)`; a legacy `pairflow bubble meta-review submit` operator surface el van tavolitva, es explicit iranyitott hibaval a canonical actor emit pathra terel.
-6. A CLI submit/status/recover text egy resze helperen keresztul epul, ezert barmilyen operatori clarity delta eseten a renderer helper file is legitim target.
+5. A publikus canonical write boundary ma az actor emit wrapper-lanc: `emitMetaReviewerActorProtocolV11(...) -> emitMetaReviewActorResultV11(...) -> submitMetaReviewResultV11(...) -> submitMetaReviewResult(...)`; a legacy `pairflow bubble meta-review submit` operator surface el van tavolitva, es explicit iranyitott hibaval a canonical actor emit pathra terel.
+6. A CLI clarity seam mar ma is a `buildMetaReviewSubmitHeaderLines(...)` helperen keresztul epul, ezert renderer-touch csak akkor legitim, ha a corrected routed-success utan a surfaced szoveg meg mindig ketertelmu.
 
 ### In Scope
 
 1. A `submitMetaReviewResult(...)` normal submit szemantikajanak javitasa ugy, hogy az `inconclusive` recommendation route-olhato legyen.
 2. A submit path es a recovery path recommendation->route szerzodesenek egységesitese.
 3. A fel-commitolt allapot megszuntetese, ahol canonical snapshot/artifact mar letezik, de a lifecycle route nincs alkalmazva.
-4. A submit-result, transcript/inbox es CLI surface regresszios tesztjei `inconclusive` eseten.
+4. A submit-result es transcript/inbox regresszios tesztjei `inconclusive` eseten kotelezoek; a CLI/operator surface assertion csak akkor kotelezo, ha a corrected success path utan a renderelt szoveg meg mindig felreertheto.
 5. A submit contract regression coverage-je a core tesztek mellett a retained v11 submit contract surface-en es a canonical actor emit wrapper parity surface-en is frissuljon.
 6. A docs frissitese csak akkor szukseges, ha a user-facing `submit` szemantika vagy CLI copy tenylegesen valtozik.
 
@@ -117,15 +128,15 @@ Ez a task azt a konkret bugot zarja le, ahol az `inconclusive` submit elobb cano
 
 | ID | File | Function/Entry | Exact Signature (args -> return) | Insertion Point | Expected Behavior | Priority | Timing | Evidence |
 |---|---|---|---|---|---|---|---|---|
-| CS1 | `src/core/bubble/metaReview.ts` | `submitMetaReviewResult` | `submitMetaReviewResult(input: MetaReviewSubmitInput, dependencies?: MetaReviewDependencies) -> Promise<MetaReviewSubmitResult>` | canonical submit success path a snapshot/artifact persist es route apply korul | `inconclusive` recommendation ne dobjon submit-hibat pusztan routeability miatt; a submit a shared gate route apply flow-val `human_gate_inconclusive` eredmenyre fusson | P1 | required-now | aktualis bug: canonical snapshot persist utan exception, limbo `RUNNING` bubble |
-| CS2 | `src/core/bubble/metaReview.ts` | `assertSubmitRecommendationRouteable` vagy utodja | helper -> `void` | submit pre-route validation | vagy megszunik, vagy ugy szukul, hogy az `inconclusive` ne legyen tiltott normal canonical outcome | P1 | required-now | jelenleg ez tiltja a recovery altal amugy tamogatott route-ot |
+| CS1 | `src/v11/shared/metaReview/metaReviewCommandSubmitRuntime.ts` | `submitMetaReviewResult` | `submitMetaReviewResult(input: MetaReviewSubmitInput, dependencies?: MetaReviewCommandDependencies) -> Promise<MetaReviewSubmitResult>` | canonical submit success path a snapshot/artifact persist es route apply korul | `inconclusive` recommendation ne dobjon submit-hibat pusztan routeability miatt; a submit a shared gate route apply flow-val `human_gate_inconclusive` eredmenyre fusson | P1 | required-now | aktualis bug: canonical snapshot persist utan exception, limbo `RUNNING` bubble |
+| CS2 | `src/v11/shared/metaReview/metaReviewCommandSubmitRouting.ts` | `assertSubmitRecommendationRouteable` vagy utodja | `assertSubmitRecommendationRouteable(recommendation: MetaReviewRecommendation) -> void` | submit pre-route validation | vagy megszunik, vagy ugy szukul, hogy az `inconclusive` ne legyen tiltott normal canonical outcome | P1 | required-now | jelenleg ez tiltja a recovery altal amugy tamogatott route-ot |
 | CS3 | `src/v11/shared/metaReviewGate/metaReviewGateStateHelpers.ts` | `resolveHumanGateRoute` | `(recommendation: MetaReviewRecommendation, budgetAvailable: boolean) -> MetaReviewGateRoute` | shared route policy | a submit path altal is ez legyen a recommendation truth, hogy `inconclusive -> human_gate_inconclusive` egyseges maradjon | P1 | required-now | recovery mar ezt hasznalja |
 | CS4 | `src/v11/shared/metaReviewGate/metaReviewGateRecovery.ts` | `recoverMetaReviewGateFromSnapshot` | existing signature | fallback path | regressziosan meg kell maradnia annak, hogy canonical `inconclusive` snapshotbol `READY_FOR_HUMAN_APPROVAL` route keletkezik; ne legyen duplicate route append | P1 | required-now | recovery parity guard |
 | CS5 | `tests/core/bubble/metaReview.test.ts` | submit tests | vitest | submit `inconclusive` coverage | a mostani "persist then reject" expectation helyett success + routed lifecycle expectation kell; a post-persist failure coverage maradjon kulon explicit recoverable branchkent | P1 | required-now | jelenlegi teszt a hibas viselkedest kodolja le |
 | CS6 | `tests/core/bubble/metaReviewGate.test.ts` | recovery tests | vitest | parity/regression | bizonyitsa, hogy a normal submit semantic alignment utan a recovery route-policy valtozatlan marad | P2 | required-now | existing parity surface |
-| CS7 | `tests/cli/bubbleMetaReviewCommand.test.ts` + `src/v11/application/metaReview/metaReviewCliRenderers.ts` + `src/v11/application/metaReview/metaReviewCliRenderersHelpers.ts` | CLI submit/status rendering | dispatcher/render path | operator surface | a submit eredmeny es a kovetkezo bubble allapot ne sugalljon route-failed limbot legitim `inconclusive` esetben | P2 | required-now | operator clarity |
-| CS8 | `tests/contracts/v11/metaReviewSubmitCoverage.test.ts` | retained submit contract coverage | vitest | v11 facade / contract parity | a retained submit contract is routed success-kent kezelje a legitim `inconclusive` canonical outcome-ot, ne csak a core test surface | P2 | required-now | contract parity |
-| CS9 | `src/v11/application/actorProtocol/emitActorProtocolV11.ts` | `emitMetaReviewerActorProtocolV11` | actor-emit wrapper -> `Promise<ActorEmitResultV11>` | canonical public meta-review submit wrapper | a publikus `agent emit --kind meta_review_result` path ne szukitse vissza a corrected core submit szemantikajat; legitim `inconclusive` outcome ugyanarra a routed success eredmenyre fusson | P1 | required-now | public write boundary parity |
+| CS7 | `tests/cli/bubbleMetaReviewCommand.test.ts` + `src/v11/application/metaReview/metaReviewCliRenderers.ts` + `src/v11/application/metaReview/metaReviewCliRenderersHelpers.ts` | CLI submit/status rendering | dispatcher/render path | conditional operator surface | csak akkor kell renderer/assertion touch, ha a corrected success path utan a surfaced output meg mindig route-failed limbot vagy manual recovery-kotelezettseget sugall | P2 | conditional-if-needed | a jelenlegi helper mar surfacedeli a `gate_route` + `lifecycle_state` mezoket; csak bizonyitott wording-gap eseten legitim write target |
+| CS8 | `src/v11/application/metaReview/emitMetaReviewV11.ts` + `tests/contracts/v11/metaReviewSubmitCoverage.test.ts` | `submitMetaReviewResultV11` facade + retained contract coverage | `submitMetaReviewResultV11(input: MetaReviewSubmitInput, dependencies?: MetaReviewCommandDependencies) -> Promise<MetaReviewSubmitResult>` | retained v11 facade / contract parity | a retained submit contract is routed success-kent kezelje a legitim `inconclusive` canonical outcome-ot, ne csak a core test surface | P2 | required-now | contract parity |
+| CS9 | `src/v11/application/actorProtocol/actorProtocolEmitters.ts` + `src/v11/application/actorProtocol/emitActorProtocolV11.ts` | `emitMetaReviewActorResultV11` + `emitMetaReviewerActorProtocolV11` | actor-emit wrapper -> `Promise<ActorEmitResultV11>` | canonical public meta-review submit wrapper | a publikus `agent emit --kind meta_review_result` path ne szukitse vissza a corrected core submit szemantikajat; legitim `inconclusive` outcome ugyanarra a routed success eredmenyre fusson | P1 | required-now | public write boundary parity |
 | CS10 | `tests/v11/application/actorProtocol/emitActorProtocolV11.test.ts` | actor-emit wrapper parity tests | vitest | wrapper regression | explicit coverage a canonical public wrapperen, hogy `inconclusive` submit is routed success-kent jojjon vissza a bubble lifecycle allapottal egyutt | P2 | required-now | public boundary regression guard |
 
 ### 2) Data and Interface Contract
@@ -158,7 +169,7 @@ Normative rules:
 | Bubble state | canonical submit snapshot write + gate-driven lifecycle transition | canonical snapshot persist intentional limbo exceptionnel | state es route semantics maradjanak osszhangban | P1 | required-now |
 | Transcript/inbox | `APPROVAL_REQUEST` append `human_gate_inconclusive` route-tal | recoveryre hagyott normal-path approval append | a normal submit maga route-oljon | P1 | required-now |
 | Runtime session | meta-reviewer pane deactivation a routed submit flow vegen | active meta-reviewer ownership nyitva hagyasa sikeres `inconclusive` submit utan | pane close failure tovabbra is explicit recoverable hiba lehet, de a mar committed route/appoval append boundaryt nem nyithatja ujra | P1 | required-now |
-| CLI/docs | routed allapot egyertelmu jelzese | `inconclusive` submit route-failurekent vagy "recorded but not routed" allapotkent valo kommunikacio | csak ha user-visible semantics valtozik | P2 | required-now |
+| CLI/docs | routed allapot egyertelmu jelzese | `inconclusive` submit route-failurekent vagy "recorded but not routed" allapotkent valo kommunikacio | csak ha a corrected runtime path utan a user-visible wording tovabbra is felreertheto | P2 | conditional-if-needed |
 
 Constraint: a normal submit path nem fugghet watchdogtol vagy explicit recovery commandtol ahhoz, hogy egy legitim `inconclusive` decision human gate-re jusson.
 
@@ -171,7 +182,7 @@ Constraint: a normal submit path nem fugghet watchdogtol vagy explicit recovery 
 | canonical snapshot persist utan gate route apply/append hibazik | transcript/state mutation | throw | explicit recoverable failure, snapshot maradhat authoritative | existing typed submit route/apply failure surface | error | P1 | required-now |
 | canonical route apply sikerult, de pane close hibazik | runtime session mutation | throw | explicit recoverable post-commit failure; a routed lifecycle state + approval request authoritative marad, recovery/ujraprobalas csak pane cleanup/deactivation jellegu lehet, uj route/appoval append nelkul | existing typed pane-close failure surface | error | P1 | required-now |
 | explicit recovery mar routed `human_gate_inconclusive` outcome utan fut | recovery path | fallback | detect authoritative route outcome es ne appendeljen duplicate approval requestet | existing recovery parity guard surface | warn | P2 | required-now |
-| dependency failure during docs/CLI projection | renderer/docs only | fallback | keep runtime contract primary; diagnostics may degrade, lifecycle nem | N/A | warn | P2 | required-now |
+| dependency failure during docs/CLI projection | renderer/docs only | fallback | keep runtime contract primary; diagnostics may degrade, lifecycle nem | N/A | warn | P2 | conditional-if-needed |
 
 ### 5) Dependency Constraints
 
@@ -196,7 +207,7 @@ Constraint: a normal submit path nem fugghet watchdogtol vagy explicit recovery 
 | T6 | Recovery parity remains consistent | canonical `inconclusive` snapshot recovery fixture | `recoverMetaReviewGateFromSnapshot(...)` fut | recovery tovabbra is `human_gate_inconclusive` route-ra jut | P1 | required-now | automated test |
 | T7 | Post-persist route failure stays recoverable | injected failure a snapshot persist utan, route apply vagy append kozben | submit fut | explicit typed failure, de nem recommendation-blacklist miatt; recovery kesobb deterministicen befejezheto | P1 | required-now | automated test |
 | T8 | No duplicate approval request after fallback recovery | routed vagy reszben routed `inconclusive` fixture | recovery explicit fut | nincs duplicate `APPROVAL_REQUEST` ugyanarra a roundra/handoffra | P2 | required-now | automated test |
-| T9 | CLI/operator output clarity | successful `inconclusive` submit | CLI render fut | output nem sugall hibas limbot vagy manual recovery-kotelezettseget normal-path success eseten; minimum a routed `gate_route` + `lifecycle_state` olvashato | P2 | required-now | automated test or renderer assertion |
+| T9 | CLI/operator output clarity | successful `inconclusive` submit, es a runtime-fix utan a renderer-szoveg meg mindig potencialisan felreertheto | CLI render fut | output nem sugall hibas limbot vagy manual recovery-kotelezettseget normal-path success eseten; minimum a routed `gate_route` + `lifecycle_state` olvashato | P2 | conditional-if-needed | automated test or renderer assertion |
 | T10 | Retained submit contract parity | successful `inconclusive` submit a retained facade surface-en | contract coverage fut | a retained submit contract is success-kent adja vissza a routed outcome-ot (`human_gate_inconclusive`, `READY_FOR_HUMAN_APPROVAL`, `gate_envelope_type=APPROVAL_REQUEST`) | P2 | required-now | automated test |
 | T11 | Pane-close failure stays post-commit only | route apply + approval append mar committed, de pane deactivation hibara van injektalt fixture | submit fut, majd recovery/ujraprobalas surface vizsgalodik | a typed hiba explicit marad, de a mar committed routed outcome authoritative marad es nincs duplicate approval append | P2 | required-now | automated test |
 | T12 | Canonical actor emit wrapper parity | active meta-review authority + legitim `inconclusive` payload a public actor emit wrapperen keresztul | `emitMetaReviewerActorProtocolV11(...)` vagy outer actor emit dispatcher fut | a visszaadott `meta_review_result` routed success marad (`human_gate_inconclusive`, `READY_FOR_HUMAN_APPROVAL`, `gate_envelope_type=APPROVAL_REQUEST`) | P2 | required-now | automated test |
@@ -212,6 +223,7 @@ Constraint: a normal submit path nem fugghet watchdogtol vagy explicit recovery 
 7. AC7: A sikeres route/appoval append utan bekovetkezo pane-close hiba explicit post-commit operational failure marad, es nem nyithatja ujra a gate mutationt vagy az approval appendet.
 8. AC8: A legitim `inconclusive` submit success path explicitten bizonyitja a `gate_envelope_type=APPROVAL_REQUEST` surfaced mezot a core es retained submit coverage-ben.
 9. AC9: A canonical public actor emit submit wrapper is ugyanazt a routed-success szemantikat tukrozi legitim `inconclusive` canonical outcome-ra, mint a corrected core submit seam.
+10. AC10: Az existing `approve` es `rework` submit pathok regresszio nelkul valtozatlan route-semantikaval maradnak a bounded `inconclusive` alignment mellett.
 
 ### Acceptance Traceability
 
@@ -219,13 +231,16 @@ Constraint: a normal submit path nem fugghet watchdogtol vagy explicit recovery 
 |---|---|---|
 | AC1 | CS1, CS2, CS3 | T1, T2, T3 |
 | AC2 | CS1, CS3, CS4 | T6 |
-| AC3 | CS1, CS2, CS7 | T1, T3, T9 |
+| AC3 | CS1, CS2 | T1, T3 |
 | AC4 | CS5 | T3 |
 | AC5 | CS1, CS4 | T7, T8, T11 |
 | AC6 | CS1, CS8 | T10 |
 | AC7 | CS1, CS4 | T8, T11 |
 | AC8 | CS1, CS5, CS8 | T1, T10 |
 | AC9 | CS1, CS9, CS10 | T12 |
+| AC10 | CS1, CS3, CS4 | T4, T5 |
+
+Megjegyzes: `CS7` / `T9` csak akkor aktiv kotelezettseg, ha a corrected runtime path utan a retained CLI renderer wording tenylegesen felreertheto marad.
 
 ## L2 - Implementation Notes (Optional)
 
