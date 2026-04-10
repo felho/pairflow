@@ -10,12 +10,16 @@ import {
   hasApproveFindingsSplitMetadata
 } from "../../../../types/protocol.js";
 import {
+  isAdvisoryOnlyReviewerSnapshot,
   readLatestSameRoundReviewerSnapshotFromTranscript,
   type LatestSameRoundReviewerSnapshot
 } from "../../metaReviewGate/metaReviewGateReviewerSnapshot.js";
 import {
   resolveFindingsParityMetadataFromReportJson
 } from "../../metaReviewGate/metaReviewGateFindingsMetadata.js";
+import {
+  buildMetaReviewSubmitAdvisoryOnlyCorrectionNote
+} from "../metaReviewSubmitGuidance.js";
 
 export function assertApproveRecommendationConsistentWithReviewerSnapshot(
   input: {
@@ -59,18 +63,17 @@ export function assertApproveRecommendationConsistentWithReviewerSnapshot(
     );
   }
   if (mismatchDetails.length > 0) {
+    const advisoryOnlyCorrectionHint = isAdvisoryOnlyReviewerSnapshot(latestSnapshot)
+      ? ` ${buildMetaReviewSubmitAdvisoryOnlyCorrectionNote()}`
+      : "";
     throw new MetaReviewError(
       "META_REVIEW_GATE_REVIEWER_CONVERGENCE_CONFLICT",
-      `META_REVIEW_GATE_REVIEWER_CONVERGENCE_CONFLICT: latest same-round reviewer snapshot (${latestSnapshot.envelopeId}) contradicts approve report_json (${mismatchDetails.join("; ")}).`
+      `META_REVIEW_GATE_REVIEWER_CONVERGENCE_CONFLICT: latest same-round reviewer snapshot (${latestSnapshot.envelopeId}) contradicts approve report_json (${mismatchDetails.join("; ")}).${advisoryOnlyCorrectionHint}`
     );
   }
 
   const noFindingsAssertion = evaluateNoFindingsSummaryFindingsAssertion(input.summary);
-  const advisoryOnlyOpenFindings =
-    latestSnapshot.findings_open_total > 0 &&
-    latestSnapshot.findings_blocking_open_total === 0 &&
-    latestSnapshot.findings_advisory_open_total !== null &&
-    latestSnapshot.findings_advisory_open_total === latestSnapshot.findings_open_total;
+  const advisoryOnlyOpenFindings = isAdvisoryOnlyReviewerSnapshot(latestSnapshot);
   if (
     noFindingsAssertion.hasNoFindingsAssertion &&
     latestSnapshot.findings_open_total > 0 &&
@@ -79,9 +82,12 @@ export function assertApproveRecommendationConsistentWithReviewerSnapshot(
       !hasGlobalNoFindingsSummaryAssertion(input.summary)
     )
   ) {
+    const advisoryOnlyCorrectionHint = advisoryOnlyOpenFindings
+      ? ` ${buildMetaReviewSubmitAdvisoryOnlyCorrectionNote()}`
+      : "";
     throw new MetaReviewError(
       "META_REVIEW_GATE_REVIEWER_CONVERGENCE_CONFLICT",
-      `META_REVIEW_GATE_REVIEWER_CONVERGENCE_CONFLICT: latest same-round reviewer snapshot (${latestSnapshot.envelopeId}) reports open findings, so clean approve summary cannot be emitted.`
+      `META_REVIEW_GATE_REVIEWER_CONVERGENCE_CONFLICT: latest same-round reviewer snapshot (${latestSnapshot.envelopeId}) reports open findings, so clean approve summary cannot be emitted.${advisoryOnlyCorrectionHint}`
     );
   }
 }

@@ -20,6 +20,7 @@ import {
   submitMetaReviewResult,
   toMetaReviewError
 } from "../../../src/v11/defaults/metaReview/metaReviewApi.js";
+import { buildMetaReviewSubmitAdvisoryOnlyCorrectionNote } from "../../../src/v11/shared/metaReview/metaReviewSubmitGuidance.js";
 import { buildMetaReviewExecutionContext } from "../../../src/v11/shared/metaReview/metaReviewExecutionContext.js";
 import {
   appendProtocolEnvelope,
@@ -1925,31 +1926,88 @@ describe("meta-review submit", () => {
       advisoryFindingsOpenTotal: 1
     });
 
-    await expect(
-      submitMetaReviewResult(
-        {
-          bubbleId: bubble.bubbleId,
-          repoPath,
-          round: 1,
-          recommendation: "approve",
-          summary: "No findings remain after this review.",
-          report_json: buildStructuredSubmitReportJson({
-            findingsClaimState: "clean",
-            findingsCount: 0
+    const submitPromise = submitMetaReviewResult(
+      {
+        bubbleId: bubble.bubbleId,
+        repoPath,
+        round: 1,
+        recommendation: "approve",
+        summary: "No findings remain after this review.",
+        report_json: buildStructuredSubmitReportJson({
+          findingsClaimState: "clean",
+          findingsCount: 0
+        })
+      },
+      {
+        readRuntimeSessionsRegistry: async () =>
+          buildActiveMetaReviewerSession({
+            bubbleId: bubble.bubbleId,
+            repoPath,
+            worktreePath: bubble.paths.worktreePath
           })
-        },
-        {
-          readRuntimeSessionsRegistry: async () =>
-            buildActiveMetaReviewerSession({
-              bubbleId: bubble.bubbleId,
-              repoPath,
-              worktreePath: bubble.paths.worktreePath
-            })
-        }
-      )
-    ).rejects.toMatchObject({
+      }
+    );
+
+    await expect(submitPromise).rejects.toMatchObject({
       reasonCode: "META_REVIEW_GATE_REVIEWER_CONVERGENCE_CONFLICT"
     });
+    await expect(submitPromise).rejects.toThrow(
+      buildMetaReviewSubmitAdvisoryOnlyCorrectionNote()
+    );
+  });
+
+  it("does not add advisory-only correction hint on approve submit when the latest same-round reviewer snapshot includes blocking findings", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_meta_submit_snapshot_blocking_01",
+      task: "Meta submit reviewer snapshot blocking conflict"
+    });
+    await writeMetaReviewRunningState({
+      statePath: bubble.paths.statePath,
+      activeAgent: "codex",
+      activeRole: "meta_reviewer",
+      nowIso: "2026-03-09T09:10:10.000Z"
+    });
+    await appendReviewerSnapshot({
+      bubble,
+      nowIso: "2026-03-09T09:10:10.050Z",
+      findings: [
+        {
+          severity: "P1",
+          title: "Blocking reviewer finding"
+        }
+      ]
+    });
+
+    const submitPromise = submitMetaReviewResult(
+      {
+        bubbleId: bubble.bubbleId,
+        repoPath,
+        round: 1,
+        recommendation: "approve",
+        summary: "No findings remain after this review.",
+        report_json: buildStructuredSubmitReportJson({
+          findingsClaimState: "clean",
+          findingsCount: 0
+        })
+      },
+      {
+        readRuntimeSessionsRegistry: async () =>
+          buildActiveMetaReviewerSession({
+            bubbleId: bubble.bubbleId,
+            repoPath,
+            worktreePath: bubble.paths.worktreePath
+          })
+      }
+    );
+
+    await expect(submitPromise).rejects.toMatchObject({
+      reasonCode: "META_REVIEW_GATE_REVIEWER_CONVERGENCE_CONFLICT"
+    });
+    await expect(submitPromise).rejects.not.toThrow(
+      buildMetaReviewSubmitAdvisoryOnlyCorrectionNote()
+    );
   });
 
   it("uses the latest same-round reviewer snapshot instead of older open snapshots on approve submit", async () => {

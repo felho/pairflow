@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  buildMetaReviewSubmitAdvisoryOnlyCorrectionNote,
+  buildMetaReviewSubmitApproveParityNote,
   buildMetaReviewSubmitCommandTemplate,
   buildMetaReviewSubmitUsageLine
 } from "../../../src/v11/shared/metaReview/metaReviewSubmitGuidance.js";
@@ -18,6 +20,9 @@ describe("metaReviewSubmitGuidance", () => {
     });
 
     expect(prompt).toContain(buildMetaReviewSubmitCommandTemplate());
+    expect(prompt).toContain(buildMetaReviewSubmitApproveParityNote());
+    expect(prompt).toContain("Clean approve requires zero open findings.");
+    expect(prompt).toContain("do not switch to inconclusive");
     expect(prompt).not.toContain("--report-markdown");
     expect(prompt).toContain("`P0`, `P1`, `P2`, `P3`");
     expect(prompt).toContain("Do not emit alias severities such as `blocking` or `advisory`");
@@ -28,5 +33,13 @@ describe("metaReviewSubmitGuidance", () => {
 
     expect(helpText).toContain(buildMetaReviewSubmitUsageLine());
     expect(helpText).not.toContain("--report-markdown");
+  });
+
+  it("keeps the advisory-only corrective note explicit in shared guidance", () => {
+    const note = buildMetaReviewSubmitAdvisoryOnlyCorrectionNote();
+
+    expect(note).toContain("keep recommendation=approve");
+    expect(note).toContain("do not switch to inconclusive");
+    expect(note).toContain("findings_claim_state=open_findings");
   });
 });

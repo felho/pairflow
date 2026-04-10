@@ -11,6 +11,7 @@ import {
 } from "../../../src/v11/application/metaReviewGate/emitMetaReviewGateV11.js";
 import { clearLiveMetaReviewSnapshot } from "../../../src/v11/defaults/metaReview/metaReviewApi.js";
 import {
+  buildMetaReviewSubmitAdvisoryOnlyCorrectionNote,
   buildMetaReviewSubmitCommandTemplate
 } from "../../../src/v11/shared/metaReview/metaReviewSubmitGuidance.js";
 import { notifyMetaReviewerSubmissionRequest } from "../../../src/v11/application/metaReviewGate/metaReviewGateNotify.js";
@@ -367,6 +368,8 @@ describe("notifyMetaReviewerSubmissionRequest", () => {
     expect(messageCall?.[4]).toContain("findings_claimed_open_total");
     expect(messageCall?.[4]).toContain("findings_blocking_open_total");
     expect(messageCall?.[4]).toContain("findings_advisory_open_total");
+    expect(messageCall?.[4]).toContain("Clean approve requires zero open findings.");
+    expect(messageCall?.[4]).toContain("do not switch to inconclusive");
     expect(messageCall?.[4]).not.toContain("--report-markdown");
   });
 
@@ -3067,6 +3070,9 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
     expect(recovered.route).toBe("human_gate_dispatch_failed");
     expect(recovered.gateEnvelope.payload.summary).toContain(
       "META_REVIEW_APPROVE_BLOCKING_FINDINGS_PRESENT"
+    );
+    expect(recovered.gateEnvelope.payload.summary).not.toContain(
+      buildMetaReviewSubmitAdvisoryOnlyCorrectionNote()
     );
   });
 
