@@ -30,21 +30,21 @@ let uiRouterDependencyDefaultsPromise:
 
 async function loadUiRouterDependencyDefaults(): Promise<CoreUiRouterDependencyDefaults> {
   uiRouterDependencyDefaultsPromise ??= import(
-    "../../../core/ui/routerDefaults.js"
+    "../../defaults/ui/routerDefaults.js"
   ).then(({ uiRouterDependencyDefaults }) => ({
-    commitBubble: uiRouterDependencyDefaults.commitBubble,
-    deleteBubble: uiRouterDependencyDefaults.deleteBubble,
-    emitApprove: uiRouterDependencyDefaults.emitApprove,
-    emitHumanReply: uiRouterDependencyDefaults.emitHumanReply,
-    emitRequestRework: uiRouterDependencyDefaults.emitRequestRework,
-    getBubbleStatus: uiRouterDependencyDefaults.getBubbleStatus,
-    listBubbles: uiRouterDependencyDefaults.listBubbles,
-    mergeBubble: uiRouterDependencyDefaults.mergeBubble,
-    openBubble: uiRouterDependencyDefaults.openBubble,
-    restartBubble: uiRouterDependencyDefaults.restartBubble,
-    resumeBubble: uiRouterDependencyDefaults.resumeBubble,
-    startBubble: uiRouterDependencyDefaults.startBubble,
-    stopBubble: uiRouterDependencyDefaults.stopBubble
+    commitBubble: (...args) => uiRouterDependencyDefaults.commitBubble(...args),
+    deleteBubble: (...args) => uiRouterDependencyDefaults.deleteBubble(...args),
+    emitApprove: (...args) => uiRouterDependencyDefaults.emitApprove(...args),
+    emitHumanReply: (...args) => uiRouterDependencyDefaults.emitHumanReply(...args),
+    emitRequestRework: (...args) => uiRouterDependencyDefaults.emitRequestRework(...args),
+    getBubbleStatus: (...args) => uiRouterDependencyDefaults.getBubbleStatus(...args),
+    listBubbles: (...args) => uiRouterDependencyDefaults.listBubbles(...args),
+    mergeBubble: (...args) => uiRouterDependencyDefaults.mergeBubble(...args),
+    openBubble: (...args) => uiRouterDependencyDefaults.openBubble(...args),
+    restartBubble: (...args) => uiRouterDependencyDefaults.restartBubble(...args),
+    resumeBubble: (...args) => uiRouterDependencyDefaults.resumeBubble(...args),
+    startBubble: (...args) => uiRouterDependencyDefaults.startBubble(...args),
+    stopBubble: (...args) => uiRouterDependencyDefaults.stopBubble(...args)
   }));
   return uiRouterDependencyDefaultsPromise;
 }
