@@ -145,6 +145,20 @@ function buildApproveMetaReviewReportJson(runId: string): {
   };
 }
 
+function buildInconclusiveMetaReviewReportJson(runId: string): {
+  findings_claim_state: "unknown";
+  findings_claim_source: "meta_review_artifact";
+  findings_count: number;
+  meta_review_run_id: string;
+} {
+  return {
+    findings_claim_state: "unknown",
+    findings_claim_source: "meta_review_artifact",
+    findings_count: 0,
+    meta_review_run_id: runId
+  };
+}
+
 afterEach(async () => {
   await Promise.all(
     tempDirs.splice(0).map((path) =>
@@ -502,6 +516,50 @@ describe("emitActorProtocolV11 wrappers", () => {
     );
     expect(result.meta_review_result.summary).toBe(
       "Meta-review wrapper approve parity"
+    );
+  });
+
+  it("routes inconclusive meta-review wrapper calls to the human gate", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_actor_protocol_meta_review_inconclusive_01",
+      task: "Direct meta-reviewer wrapper inconclusive parity"
+    });
+    await switchFixtureToMetaReviewerAuthority({
+      bubbleId: bubble.bubbleId,
+      statePath: bubble.paths.statePath
+    });
+    const authoritativeContext = await resolveActorEmitContextByBubbleId({
+      bubbleId: bubble.bubbleId,
+      repoPath
+    });
+
+    const result = await actorProtocolModule.emitMetaReviewerActorProtocolV11({
+      input: {
+        kind: "meta_review_result",
+        repo: repoPath,
+        bubble_id: bubble.bubbleId,
+        handoff_id: authoritativeContext.handoff_id,
+        round: authoritativeContext.expected_round,
+        recommendation: "inconclusive",
+        summary: "Meta-review wrapper inconclusive parity",
+        report_json: buildInconclusiveMetaReviewReportJson(
+          "meta-review-wrapper-inconclusive-parity"
+        )
+      },
+      authoritativeContext
+    });
+
+    expect(result.kind).toBe("meta_review_result");
+    if (result.kind !== "meta_review_result") {
+      throw new Error("Expected meta_review_result.");
+    }
+    expect(result.meta_review_result.recommendation).toBe("inconclusive");
+    expect(result.meta_review_result.gate_route).toBe("human_gate_inconclusive");
+    expect(result.meta_review_result.gate_envelope_type).toBe("APPROVAL_REQUEST");
+    expect(result.meta_review_result.lifecycle_state).toBe(
+      "READY_FOR_HUMAN_APPROVAL"
     );
   });
 

@@ -7,9 +7,6 @@ import {
   toMetaReviewError
 } from "./metaReviewCommandErrorMapping.js";
 import type {
-  MetaReviewRecommendation
-} from "../../../types/bubble.js";
-import type {
   MetaReviewCommandDependencies,
   MetaReviewResult,
   MetaReviewSubmitResult
@@ -57,23 +54,6 @@ function buildMetaReviewGateRecoveryDependencies(
     resolved.writeFile = dependencies.writeFile;
   }
   return resolved;
-}
-
-export function assertSubmitRecommendationRouteable(
-  recommendation: MetaReviewRecommendation
-): void {
-  if (recommendation !== "inconclusive") {
-    return;
-  }
-  throw new MetaReviewError({
-    reasonCode: "META_REVIEW_GATE_RUN_FAILED",
-    message:
-      "meta-review submit recorded a canonical snapshot but recommendation=inconclusive is not routeable in the normal submit handoff. Use recovery only as fallback.",
-    context: {
-      source: "meta_review_command_submit_routing",
-      reason: "inconclusive_submit_not_routeable"
-    }
-  });
 }
 
 async function emitSubmitAutoReworkDelivery(input: {

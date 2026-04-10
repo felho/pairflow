@@ -5,15 +5,30 @@ import type {
   MetaReviewRunStatus
 } from "../../../types/bubble.js";
 
-export function mapRecommendationToStatus(
-  recommendation: MetaReviewRecommendation
-): MetaReviewRunStatus {
-  return recommendation === "inconclusive" ? "inconclusive" : "success";
+export type SubmitRunStatus = "success";
+
+export function resolveSubmitRunStatus(): SubmitRunStatus {
+  return "success";
 }
 
-export function assertRunPayloadInvariants(input: {
+export function assertSubmitStatusIsSuccess(
+  status: MetaReviewRunStatus
+): asserts status is SubmitRunStatus {
+  if (status !== "success") {
+    throw new MetaReviewError({
+      reasonCode: "META_REVIEW_SCHEMA_INVALID_COMBINATION",
+      message:
+        "meta-review submit only accepts status=success; recommendation carries the routed outcome semantics",
+      context: {
+        source: "meta_review_command_submit_validation",
+        reason: "submit_status_must_be_success"
+      }
+    });
+  }
+}
+
+export function assertSubmitPayloadInvariants(input: {
   recommendation: MetaReviewRecommendation;
-  status: MetaReviewRunStatus;
   reworkTargetMessage: string | null;
 }): void {
   if (
@@ -42,34 +57,6 @@ export function assertRunPayloadInvariants(input: {
       context: {
         source: "meta_review_command_submit_validation",
         reason: "advisory_rework_target_message_invalid"
-      }
-    });
-  }
-
-  if (
-    (input.recommendation === "rework" || input.recommendation === "approve") &&
-    input.status !== "success"
-  ) {
-    throw new MetaReviewError({
-      reasonCode: "META_REVIEW_SCHEMA_INVALID_COMBINATION",
-      message: "invalid meta-review status/recommendation combination",
-      context: {
-        source: "meta_review_command_submit_validation",
-        reason: "success_recommendation_without_success_status"
-      }
-    });
-  }
-
-  if (
-    (input.status === "error" || input.status === "inconclusive") &&
-    input.recommendation !== "inconclusive"
-  ) {
-    throw new MetaReviewError({
-      reasonCode: "META_REVIEW_SCHEMA_INVALID_COMBINATION",
-      message: "invalid meta-review status/recommendation combination",
-      context: {
-        source: "meta_review_command_submit_validation",
-        reason: "non_inconclusive_recommendation_with_error_status"
       }
     });
   }

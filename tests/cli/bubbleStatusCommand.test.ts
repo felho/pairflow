@@ -321,6 +321,35 @@ describe("renderBubbleStatusText", () => {
     expect(rendered).toContain("reason=META_REVIEW_REQUEST_DELIVERY_UNCONFIRMED");
     expect(rendered).toContain("message=pane delivery not confirmed");
   });
+
+  it("renders routed inconclusive review as success in text mode", () => {
+    const rendered = renderBubbleStatusText(
+      createStatusView({
+        state: "READY_FOR_HUMAN_APPROVAL",
+        activeAgent: null,
+        activeRole: null,
+        activeSince: null,
+        executionContext: null,
+        metaReview: {
+          actor: "meta-reviewer",
+          authorityActive: false,
+          latestRecommendation: "inconclusive",
+          latestStatus: "success",
+          latestSummary: "Needs human interpretation before approval.",
+          latestReportRef: "artifacts/meta-review-last.json",
+          latestUpdatedAt: "2026-02-22T12:05:10.000Z",
+          latestRoute: "human_gate_inconclusive",
+          latestRouteReasonCode: null,
+          latestRouteObservedAt: "2026-02-22T12:05:10.000Z",
+          runtimeDelivery: null
+        }
+      })
+    );
+
+    expect(rendered).toContain(
+      "Meta-review: status=success recommendation=inconclusive route=human_gate_inconclusive"
+    );
+  });
 });
 
 describe("renderBubbleStatusTable", () => {
@@ -459,6 +488,34 @@ describe("renderBubbleStatusTable", () => {
     const inboxIndex = rendered.indexOf("| Inbox");
     const metaReviewIndex = rendered.indexOf("| Meta-review");
     expect(metaReviewIndex).toBeGreaterThan(inboxIndex);
+  });
+
+  it("renders routed inconclusive review as success in table mode", () => {
+    const rendered = renderBubbleStatusTable(
+      createStatusView({
+        state: "READY_FOR_HUMAN_APPROVAL",
+        activeAgent: null,
+        activeRole: null,
+        activeSince: null,
+        executionContext: null,
+        metaReview: {
+          actor: "meta-reviewer",
+          authorityActive: false,
+          latestRecommendation: "inconclusive",
+          latestStatus: "success",
+          latestSummary: "Needs human interpretation before approval.",
+          latestReportRef: "artifacts/meta-review-last.json",
+          latestUpdatedAt: "2026-03-08T21:29:00.000Z",
+          latestRoute: "human_gate_inconclusive",
+          latestRouteReasonCode: null,
+          latestRouteObservedAt: "2026-03-08T21:29:00.000Z",
+          runtimeDelivery: null
+        }
+      })
+    );
+
+    expect(rendered).toContain("status=success | recommendation=inconclusive");
+    expect(rendered).toContain("route=human_gate_inconclusive | runtime_delivery=-");
   });
 
   it("adds escalation section when watchdog is expired", () => {
