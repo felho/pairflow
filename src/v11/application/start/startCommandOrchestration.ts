@@ -42,7 +42,7 @@ let startBubbleDependencyDefaultsPromise:
 
 async function loadStartBubbleDependencyDefaults(): Promise<StartBubbleDependencyDefaults> {
   startBubbleDependencyDefaultsPromise ??= import(
-    "../../../core/bubble/startBubbleDefaults.js"
+    "../../defaults/start/startBubbleDefaults.js"
   ).then(({ startBubbleDependencyDefaults }) => ({
     bootstrapWorktreeWorkspace:
       startBubbleDependencyDefaults.bootstrapWorktreeWorkspace,
