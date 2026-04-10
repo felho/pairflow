@@ -1,5 +1,5 @@
 const stopCommandDefaultsPromise = import(
-  "../../../core/bubble/stopBubbleDefaults.js"
+  "../../defaults/stop/stopCommandDefaults.js"
 ).then(({ stopBubbleDependencyDefaults }) => stopBubbleDependencyDefaults);
 
 export const stopCommandDefaults = await stopCommandDefaultsPromise;

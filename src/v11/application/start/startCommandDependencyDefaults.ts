@@ -1,6 +1,5 @@
 import { readTranscriptEnvelopes } from "../../shared/transcript/transcriptDependencyDefaults.js";
 import { runTmux as runTmuxShared } from "../../shared/tmux/tmuxRunner.js";
-import type { ResolveBubbleByIdPort } from "../../shared/ports/bubbleLookup.js";
 import type { EnsureBubbleInstanceIdForMutationPort } from "../../shared/ports/bubbleIdentity.js";
 import type { RegisterRepoInRegistryPort } from "../../shared/ports/repoRegistry.js";
 import type { ReadStateSnapshotPort } from "../../shared/ports/stateSnapshots.js";
@@ -30,7 +29,7 @@ async function loadStartCliDependencyDefaults(): Promise<
   StartCliDependencyDefaults
 > {
   startCliDependencyDefaultsPromise ??= import(
-    "../../../core/bubble/startCliDefaults.js"
+    "../../defaults/start/startCliDefaults.js"
   ).then(({ startCliDependencyDefaults }) => startCliDependencyDefaults);
   return startCliDependencyDefaultsPromise;
 }
@@ -39,7 +38,7 @@ async function loadStartCommandContextDefaults(): Promise<
   StartCommandContextDefaults
 > {
   startCommandContextDefaultsPromise ??= import(
-    "../../../core/bubble/startCommandContextDefaults.js"
+    "../../defaults/start/startCommandContextDefaults.js"
   ).then(({ startCommandContextDefaults }) => startCommandContextDefaults);
   return startCommandContextDefaultsPromise;
 }
