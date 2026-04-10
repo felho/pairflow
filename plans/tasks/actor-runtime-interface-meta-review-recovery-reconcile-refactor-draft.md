@@ -2,8 +2,15 @@
 artifact_type: task
 artifact_id: task_actor_runtime_interface_meta_review_recovery_reconcile_refactor_draft_v1
 title: "Actor Runtime Interface Meta-Review Recovery Reconcile Refactor"
-status: draft
+status: superseded
 phase: phaseE
+superseded_reason: "The draft direction has been promoted into an explicit Phase E plan and task chain that fully removes the public recover command and requires an actor-agnostic reconcile kernel."
+superseded_by:
+  - plans/actor-runtime-incomplete-emit-reconcile-and-recover-removal-plan-v1.md
+  - plans/tasks/actor-runtime-incomplete-emit/foundation-generic-reconcile-kernel-phaseE.md
+  - plans/tasks/actor-runtime-incomplete-emit/meta-review-submit-cutover-phaseE.md
+  - plans/tasks/actor-runtime-incomplete-emit/internal-caller-cutover-and-public-recover-removal-phaseE.md
+  - plans/tasks/actor-runtime-incomplete-emit/actor-agnostic-cleanup-phaseE.md
 plan_ref: plans/actor-runtime-interface-discovery-and-migration-plan-v1.md
 owners:
   - "felho"
