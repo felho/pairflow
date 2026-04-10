@@ -1,30 +1,10 @@
 import { basename, dirname, join } from "node:path";
 
+import { askHumanFinalizationDefaults } from "../../defaults/askHuman/askHumanFinalizationDefaults.js";
 import { emitBubbleLifecycleEventBestEffort } from "../../shared/metrics/bubbleEvents.js";
 import type {
-  EmitAskHumanBubbleNotificationPort,
-  EmitAskHumanTmuxDeliveryNotificationPort,
   ResolveAskHumanDeliveryMessageRefInput
 } from "../../shared/askHuman/askHumanDeliveryPortsContract.js";
-
-interface CoreAskHumanFinalizationDefaults {
-  emitTmuxDeliveryNotification: EmitAskHumanTmuxDeliveryNotificationPort;
-  emitBubbleNotification: EmitAskHumanBubbleNotificationPort;
-}
-
-const coreAskHumanFinalizationDefaultsPromise: Promise<
-  CoreAskHumanFinalizationDefaults
-> = import(
-    "../../../core/agent/askHumanDefaults.js"
-  ).then(({ askHumanDependencyDefaults }) => ({
-    emitTmuxDeliveryNotification:
-      askHumanDependencyDefaults.finalization.emitTmuxDeliveryNotification,
-    emitBubbleNotification:
-      askHumanDependencyDefaults.finalization.emitBubbleNotification
-  }));
-
-const coreAskHumanFinalizationDefaults =
-  await coreAskHumanFinalizationDefaultsPromise;
 
 function buildTranscriptFallbackRef(
   bubbleId: string,
@@ -60,9 +40,9 @@ function resolveDeliveryMessageRef(
 
 export const askHumanFinalizationDependencyDefaults = {
   emitTmuxDeliveryNotification:
-    coreAskHumanFinalizationDefaults.emitTmuxDeliveryNotification,
+    askHumanFinalizationDefaults.emitTmuxDeliveryNotification,
   emitBubbleNotification:
-    coreAskHumanFinalizationDefaults.emitBubbleNotification,
+    askHumanFinalizationDefaults.emitBubbleNotification,
   resolveDeliveryMessageRef,
   emitBubbleLifecycleEventBestEffort
 } as const;
