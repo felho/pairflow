@@ -10,6 +10,8 @@ import {
 } from "../state/stateStoreDefaults.js";
 import { appendProtocolEnvelope } from "../../shared/transcript/transcriptDependencyDefaults.js";
 import { resolveBubbleById } from "../../shared/bubbleLookup/bubbleLookupDefaults.js";
+import { readRuntimeSessionsRegistry } from "../runtimeSessions/runtimeSessionsDefaults.js";
+import { runTmux } from "../tmux/tmuxRunnerDefaults.js";
 import {
   readWatchdogPaneActivity,
   writeWatchdogPaneActivity
@@ -22,8 +24,10 @@ export const watchdogCommandDefaults = {
   emitTmuxDeliveryNotification,
   retryStuckAgentInput,
   readStateSnapshot,
+  readRuntimeSessionsRegistry,
   readWatchdogPaneActivity,
   resolveBubbleById,
+  runTmux,
   writeStateSnapshot,
   writeWatchdogPaneActivity
 } as const;

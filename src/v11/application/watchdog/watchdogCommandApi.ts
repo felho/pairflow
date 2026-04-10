@@ -72,8 +72,9 @@ export async function runBubbleWatchdog(
   const samplePaneActivity =
     dependencies.sampleWatchdogPaneActivity ?? sampleWatchdogPaneActivity;
   const readRuntimeSessionsRegistry =
-    dependencies.readRuntimeSessionsRegistry;
-  const runTmux = dependencies.runTmux;
+    dependencies.readRuntimeSessionsRegistry
+    ?? watchdogCommandDefaults.readRuntimeSessionsRegistry;
+  const runTmux = dependencies.runTmux ?? watchdogCommandDefaults.runTmux;
   const ensureBubbleInstanceIdForMutation =
     dependencies.ensureBubbleInstanceIdForMutation
     ?? watchdogPendingReworkDefaults.ensureBubbleInstanceIdForMutation;

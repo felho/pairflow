@@ -10,6 +10,8 @@ import type {
   ReadStateSnapshotPort,
   WriteStateSnapshotPort
 } from "../../shared/ports/stateSnapshots.js";
+import type { ReadRuntimeSessionsRegistryPort } from "../../shared/ports/runtimeSessions.js";
+import type { TmuxRunner } from "../../shared/ports/tmuxSessions.js";
 import type {
   ReadWatchdogPaneActivityPort,
   WriteWatchdogPaneActivityPort
@@ -24,8 +26,10 @@ interface CoreWatchdogCommandDefaults {
   emitTmuxDeliveryNotification: EmitTmuxDeliveryNotificationPort;
   retryStuckAgentInput: RetryStuckAgentInputPort;
   readStateSnapshot: ReadStateSnapshotPort;
+  readRuntimeSessionsRegistry: ReadRuntimeSessionsRegistryPort;
   readWatchdogPaneActivity: ReadWatchdogPaneActivityPort;
   resolveBubbleById: ResolveBubbleByIdPort;
+  runTmux: TmuxRunner;
   writeStateSnapshot: WriteStateSnapshotPort;
   writeWatchdogPaneActivity: WriteWatchdogPaneActivityPort;
 }
