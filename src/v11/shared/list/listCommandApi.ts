@@ -1,4 +1,3 @@
-import { readdir, readFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 
 import { parseBubbleConfigToml } from "../../../config/bubbleConfig.js";
@@ -81,26 +80,9 @@ const runtimeSessionExpectedStates = new Set<BubbleLifecycleState>([
   "COMMITTED"
 ]);
 
-async function listBubbleIds(repoPath: string): Promise<string[]> {
-  const root = join(repoPath, ".pairflow", "bubbles");
-  const entries = await readdir(root, { withFileTypes: true }).catch(
-    (error: NodeJS.ErrnoException) => {
-      if (error.code === "ENOENT") {
-        return [];
-      }
-      throw error;
-    }
-  );
-
-  return entries
-    .filter((entry) => entry.isDirectory())
-    .map((entry) => entry.name)
-    .sort((a, b) => a.localeCompare(b));
-}
-
 async function resolveListBubblesContext(input: BubbleListInput): Promise<{
   repoPath: string;
-  bubbleIds: string[];
+  bubbleIds: Awaited<ReturnType<typeof listCommandDefaults.listBubbleIds>>;
   sessions: Awaited<ReturnType<typeof listCommandDefaults.readRuntimeSessionsRegistry>>;
   normalizedRepoPath: string;
   now: Date;
@@ -115,7 +97,7 @@ async function resolveListBubblesContext(input: BubbleListInput): Promise<{
     throw error;
   }
 
-  const bubbleIds = await listBubbleIds(repoPath);
+  const bubbleIds = await listCommandDefaults.listBubbleIds(repoPath);
   const sessionsPath = join(repoPath, ".pairflow", "runtime", "sessions.json");
   const sessions = await listCommandDefaults.readRuntimeSessionsRegistry(sessionsPath, {
     allowMissing: true
@@ -145,7 +127,7 @@ async function buildBubbleListEntry(input: {
 }> {
   const bubblePaths = getBubblePaths(input.repoPath, input.bubbleId);
   const [bubbleToml, stateLoaded, paneActivityRead] = await Promise.all([
-    readFile(bubblePaths.bubbleTomlPath, "utf8"),
+    listCommandDefaults.readBubbleTomlArtifact(bubblePaths.bubbleTomlPath),
     listCommandDefaults.inspectStateSnapshot(bubblePaths.statePath),
     listCommandDefaults.readWatchdogPaneActivity({
       runtimeDir: bubblePaths.runtimeDir,
