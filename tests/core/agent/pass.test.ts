@@ -42,7 +42,7 @@ import {
   readDocContractGateArtifact,
   resolveDocContractGateArtifactPath,
   writeDocContractGateArtifact
-} from "../../../src/core/gates/docContractGateArtifacts.js";
+} from "../../../src/v11/defaults/gates/docContractGateArtifactDefaults.js";
 import {
   resolveReviewerTestExecutionDirective
 } from "../../../src/v11/infrastructure/artifact/reviewer/testEvidenceRuntime.js";

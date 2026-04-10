@@ -9,7 +9,7 @@ import { emitPassFromWorkspaceV11 as emitPassFromWorkspace } from "../../../src/
 import { createBubble } from "../../../src/v11/application/create/createBubble.js";
 import { emitHumanReplyV11 as emitHumanReply } from "../../../src/v11/application/reply/emitReplyV11.js";
 import { getBubbleStatusV11 as getBubbleStatus } from "../../../src/v11/application/status/emitStatusV11.js";
-import { resolveDocContractGateArtifactPath } from "../../../src/core/gates/docContractGateArtifacts.js";
+import { resolveDocContractGateArtifactPath } from "../../../src/v11/defaults/gates/docContractGateArtifactDefaults.js";
 import { appendProtocolEnvelope } from "../../../src/v11/infrastructure/artifact/transcript/transcriptStore.js";
 import { writeWatchdogPaneActivity } from "../../../src/v11/infrastructure/artifact/watchdog/watchdogPaneActivityStore.js";
 import { resolveWorktreePairflowEntrypoint } from "../../../src/v11/shared/command/pairflowCommandPathAssessment.js";
