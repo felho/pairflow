@@ -52,7 +52,7 @@ export async function loadWatchdogCommandDefaults(): Promise<CoreWatchdogCommand
 
 export async function loadWatchdogPendingReworkDefaults(): Promise<CoreWatchdogPendingReworkDefaults> {
   watchdogPendingReworkDefaultsPromise ??= import(
-    "../../../core/watchdog/watchdogPendingReworkDefaults.js"
+    "../../defaults/watchdog/watchdogPendingReworkDefaults.js"
   ).then(({ watchdogPendingReworkDefaults }) => watchdogPendingReworkDefaults);
   return watchdogPendingReworkDefaultsPromise;
 }
