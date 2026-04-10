@@ -11,7 +11,7 @@ import type {
 import {
   runTmux,
   TmuxCommandError
-} from "../../../shared/tmux/tmuxRunner.js";
+} from "./tmuxRunner.js";
 import { launchBubbleTmuxSessionLayout } from "./tmuxManagerSessionLayout.js";
 import { seedBubbleTmuxPaneMessages } from "./tmuxManagerPaneSeed.js";
 
@@ -26,7 +26,7 @@ export type {
   TmuxRunResult,
   TmuxRunner
 } from "../../../shared/ports/tmuxSessions.js";
-export { runTmux, TmuxCommandError } from "../../../shared/tmux/tmuxRunner.js";
+export { runTmux, TmuxCommandError } from "./tmuxRunner.js";
 
 export const runtimePaneIndices = {
   status: 0,

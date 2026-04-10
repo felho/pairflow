@@ -4,7 +4,7 @@ import type {
   TmuxRunOptions,
   TmuxRunResult,
   TmuxRunner
-} from "../ports/tmuxSessions.js";
+} from "../../../shared/ports/tmuxSessions.js";
 
 export class TmuxCommandError extends Error {
   public readonly args: string[];

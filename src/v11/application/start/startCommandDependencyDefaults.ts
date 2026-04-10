@@ -1,5 +1,5 @@
 import { readTranscriptEnvelopes } from "../../shared/transcript/transcriptDependencyDefaults.js";
-import { runTmux as runTmuxShared } from "../../shared/tmux/tmuxRunner.js";
+import { runTmux as runTmuxDefaults } from "../../defaults/tmux/tmuxRunnerDefaults.js";
 import type { EnsureBubbleInstanceIdForMutationPort } from "../../shared/ports/bubbleIdentity.js";
 import type { RegisterRepoInRegistryPort } from "../../shared/ports/repoRegistry.js";
 import type { ReadStateSnapshotPort } from "../../shared/ports/stateSnapshots.js";
@@ -46,7 +46,7 @@ async function loadStartCommandContextDefaults(): Promise<
 export async function runTmux(
   ...args: Parameters<RunTmuxPort>
 ): Promise<Awaited<ReturnType<RunTmuxPort>>> {
-  return runTmuxShared(...args);
+  return runTmuxDefaults(...args);
 }
 
 export const startCliDependencyDefaults = {
