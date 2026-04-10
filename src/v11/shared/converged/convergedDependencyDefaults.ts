@@ -1,5 +1,5 @@
 const convergedDependencyDefaultsPromise = import(
-  "../../../core/agent/convergedDefaults.js"
+  "../../defaults/converged/convergedDependencyDefaults.js"
 ).then(({ convergedDependencyDefaults }) => convergedDependencyDefaults);
 
 export const convergedDependencyDefaults = await convergedDependencyDefaultsPromise;
