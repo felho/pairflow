@@ -45,7 +45,7 @@ let watchdogPendingReworkDefaultsPromise:
 
 export async function loadWatchdogCommandDefaults(): Promise<CoreWatchdogCommandDefaults> {
   watchdogCommandDefaultsPromise ??= import(
-    "../../../core/watchdog/watchdogCommandDefaults.js"
+    "../../defaults/watchdog/watchdogCommandDefaults.js"
   ).then(({ watchdogCommandDefaults }) => watchdogCommandDefaults);
   return watchdogCommandDefaultsPromise;
 }
