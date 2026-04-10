@@ -125,6 +125,7 @@ Gate-critical routing must use canonical claim fields, not prose parsing:
    - format: all three must be non-negative integers
    - invariants: `claimed = blocking + advisory`; if `findings_artifact_open_total` is present, it must equal `claimed`
    - semantic gate: `findings_blocking_open_total` must be `0`; advisory-only open findings are allowed
+   - corrective rule: clean approve requires zero open findings; if the latest same-round reviewer snapshot is advisory-only, keep `recommendation=approve`, do not switch to `inconclusive`, and re-emit advisory-only approve metadata with `findings_claim_state=open_findings`, `findings_blocking_open_total=0`, and positive `findings_advisory_open_total`
 6. Split/semantic failures are fail-closed via:
    - `META_REVIEW_APPROVE_ADVISORY_SPLIT_REQUIRED`
    - `META_REVIEW_APPROVE_ADVISORY_SPLIT_FORMAT_INVALID`

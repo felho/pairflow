@@ -124,7 +124,7 @@ export function buildMetaReviewerStartupPrompt(input: {
     "This is a dedicated static worker pane for autonomous meta-review tasks.",
     "Stay idle until orchestration signals a meta-review run.",
     `When signaled, submit only through structured Pairflow CLI and always include required report-json parity fields: \`${buildMetaReviewSubmitCommandTemplate()}\`.`,
-    `${buildMetaReviewSubmitApproveParityNote()} Advisory-only open findings are allowed.`,
+    buildMetaReviewSubmitApproveParityNote(),
     "In findings artifacts, use canonical finding severity/priority values only: `P0`, `P1`, `P2`, `P3`.",
     "Do not emit alias severities such as `blocking` or `advisory` in findings artifact entries.",
     "Do not modify transcript/inbox/state files manually.",

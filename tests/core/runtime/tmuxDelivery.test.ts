@@ -6,7 +6,10 @@ import {
   resolveDeliveryMessageRef,
   retryStuckAgentInput
 } from "../../../src/v11/infrastructure/channel/tmux/tmuxDelivery.js";
-import { buildMetaReviewSubmitCommandTemplate } from "../../../src/v11/shared/metaReview/metaReviewSubmitGuidance.js";
+import {
+  buildMetaReviewSubmitApproveParityNote,
+  buildMetaReviewSubmitCommandTemplate
+} from "../../../src/v11/shared/metaReview/metaReviewSubmitGuidance.js";
 import {
   REVIEWER_COMMAND_GATE_FORBIDDEN,
   REVIEWER_COMMAND_GATE_REQ_A,
@@ -246,6 +249,11 @@ describe("emitTmuxDeliveryNotification", () => {
     expect(metaReviewMessageCall?.[4]).toContain("findings_claimed_open_total");
     expect(metaReviewMessageCall?.[4]).toContain("findings_blocking_open_total");
     expect(metaReviewMessageCall?.[4]).toContain("findings_advisory_open_total");
+    expect(metaReviewMessageCall?.[4]).toContain(
+      buildMetaReviewSubmitApproveParityNote()
+    );
+    expect(metaReviewMessageCall?.[4]).toContain("Clean approve requires zero open findings.");
+    expect(metaReviewMessageCall?.[4]).toContain("do not switch to inconclusive");
     expect(metaReviewMessageCall?.[4]).not.toContain("--report-markdown");
   });
 

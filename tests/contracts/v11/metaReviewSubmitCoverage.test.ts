@@ -9,10 +9,14 @@ import { parseBubbleMetaReviewCommandOptions } from "../../../src/cli/commands/b
 import { submitMetaReviewResultV11 as submitMetaReviewResult } from "../../../src/v11/application/metaReview/emitMetaReviewV11.js";
 import { buildMetaReviewExecutionContext } from "../../../src/v11/shared/metaReview/metaReviewExecutionContext.js";
 import { MetaReviewError } from "../../../src/v11/shared/metaReview/metaReviewError.js";
-import { readTranscriptEnvelopes } from "../../../src/v11/infrastructure/artifact/transcript/transcriptStore.js";
+import {
+  appendProtocolEnvelope,
+  readTranscriptEnvelopes
+} from "../../../src/v11/infrastructure/artifact/transcript/transcriptStore.js";
 import { metaReviewExecutionContextToRunningContext } from "../../../src/v11/shared/state/executionContext.js";
 import { readStateSnapshot, writeStateSnapshot } from "../../../src/v11/infrastructure/state/stateStore.js";
 import { parseRequiredSubmitReportJson } from "../../../src/v11/application/metaReview/metaReviewCliOptionValueReader.js";
+import type { Finding } from "../../../src/types/findings.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
 import { initGitRepository } from "../../helpers/git.js";
 
@@ -90,6 +94,42 @@ function buildActiveMetaReviewerSession(input: {
       }
     }
   };
+}
+
+async function appendReviewerSnapshot(input: {
+  bubble: Awaited<ReturnType<typeof setupRunningBubbleFixture>>;
+  nowIso: string;
+  findings?: Finding[];
+  advisoryFindingsOpenTotal?: number;
+  round?: number;
+}): Promise<void> {
+  await appendProtocolEnvelope({
+    transcriptPath: input.bubble.paths.transcriptPath,
+    lockPath: join(
+      input.bubble.paths.locksDir,
+      `${input.bubble.bubbleId}.lock`
+    ),
+    now: new Date(input.nowIso),
+    envelope: {
+      bubble_id: input.bubble.bubbleId,
+      sender: "claude",
+      recipient: "orchestrator",
+      type: "CONVERGENCE",
+      round: input.round ?? 1,
+      payload: {
+        summary: "Reviewer converged snapshot.",
+        ...(input.findings !== undefined ? { findings: input.findings } : {}),
+        ...(input.advisoryFindingsOpenTotal !== undefined
+          ? {
+              metadata: {
+                advisory_findings_open_total: input.advisoryFindingsOpenTotal
+              }
+            }
+          : {})
+      },
+      refs: []
+    }
+  });
 }
 
 afterEach(async () => {
@@ -255,6 +295,110 @@ describe("v11 meta-review submit contract", () => {
       recommendation: "approve",
       gate_route: "human_gate_approve",
       lifecycle_state: "READY_FOR_HUMAN_APPROVAL"
+    });
+  });
+
+  it("accepts advisory-only approve submit contract against same-round reviewer snapshot and preserves split metadata end-to-end", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_meta_contract_submit_approve_advisory_01",
+      task: "Contract: advisory-only approve submit"
+    });
+    await writeMetaReviewRunningState({
+      statePath: bubble.paths.statePath,
+      activeAgent: "codex",
+      activeRole: "meta_reviewer",
+      nowIso: "2026-03-24T10:32:05.000Z"
+    });
+    await appendReviewerSnapshot({
+      bubble,
+      nowIso: "2026-03-24T10:32:05.050Z",
+      findings: [
+        {
+          severity: "P2",
+          title: "Operator wording could be clearer"
+        },
+        {
+          severity: "P3",
+          title: "Runbook example can be tightened"
+        }
+      ],
+      advisoryFindingsOpenTotal: 2
+    });
+
+    const result = await submitMetaReviewResult(
+      {
+        bubbleId: bubble.bubbleId,
+        repoPath,
+        round: 1,
+        recommendation: "approve",
+        summary: "2 advisory findings remain open.",
+        report_json: {
+          findings_claim_state: "open_findings",
+          findings_claim_source: "meta_review_artifact",
+          findings_count: 2,
+          findings_claimed_open_total: 2,
+          findings_blocking_open_total: 0,
+          findings_advisory_open_total: 2
+        }
+      },
+      {
+        randomUUID: () => "run_meta_contract_submit_approve_advisory_01",
+        readRuntimeSessionsRegistry: async () =>
+          buildActiveMetaReviewerSession({
+            bubbleId: bubble.bubbleId,
+            repoPath,
+            worktreePath: bubble.paths.worktreePath
+          })
+      }
+    );
+
+    expect(result).toMatchObject({
+      run_id: "run_meta_contract_submit_approve_advisory_01",
+      status: "success",
+      recommendation: "approve",
+      gate_route: "human_gate_approve",
+      gate_envelope_type: "APPROVAL_REQUEST",
+      lifecycle_state: "READY_FOR_HUMAN_APPROVAL"
+    });
+    expect(result.report_json).toMatchObject({
+      findings_claim_state: "open_findings",
+      findings_count: 2,
+      findings_claimed_open_total: 2,
+      findings_blocking_open_total: 0,
+      findings_advisory_open_total: 2,
+      findings_artifact_open_total: null,
+      findings_parity_status: null
+    });
+
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    expect(loaded.state.state).toBe("READY_FOR_HUMAN_APPROVAL");
+    expect(loaded.state.meta_review).toMatchObject({
+      last_autonomous_run_id: "run_meta_contract_submit_approve_advisory_01",
+      last_autonomous_status: "success",
+      last_autonomous_recommendation: "approve",
+      last_autonomous_summary: "2 advisory findings remain open."
+    });
+
+    const transcript = await readTranscriptEnvelopes(
+      bubble.paths.transcriptPath,
+      { allowMissing: false }
+    );
+    const last = transcript.at(-1);
+    expect(last?.type).toBe("APPROVAL_REQUEST");
+    expect(last?.payload.metadata).toMatchObject({
+      actor: "meta-reviewer",
+      actor_agent: "codex",
+      delivery_target_role: "status",
+      latest_recommendation: "approve",
+      meta_review_gate_route: "human_gate_approve",
+      meta_review_run_id: "run_meta_contract_submit_approve_advisory_01",
+      findings_claimed_open_total: 2,
+      findings_blocking_open_total: 0,
+      findings_advisory_open_total: 2,
+      findings_artifact_open_total: null,
+      findings_parity_status: null
     });
   });
 

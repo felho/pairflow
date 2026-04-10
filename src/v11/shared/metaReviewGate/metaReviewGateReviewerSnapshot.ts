@@ -22,6 +22,18 @@ export interface LatestSameRoundReviewerSnapshot {
   advisoryFindings: MetaReviewGateAdvisoryFinding[] | undefined;
 }
 
+export function isAdvisoryOnlyReviewerSnapshot(
+  snapshot: LatestSameRoundReviewerSnapshot
+): boolean {
+  return (
+    snapshot.findings_open_total !== null &&
+    snapshot.findings_open_total > 0 &&
+    snapshot.findings_blocking_open_total === 0 &&
+    snapshot.findings_advisory_open_total !== null &&
+    snapshot.findings_advisory_open_total === snapshot.findings_open_total
+  );
+}
+
 export function resolveReviewerSnapshotMetadataAdvisoryOpenTotal(
   envelope: ProtocolEnvelope
 ): number | null {

@@ -16,6 +16,7 @@ import {
   type AppendProtocolEnvelopeResult,
   type AppendProtocolEnvelopeInput
 } from "../../../src/v11/infrastructure/artifact/transcript/transcriptStore.js";
+import { buildMetaReviewSubmitAdvisoryOnlyCorrectionNote } from "../../../src/v11/shared/metaReview/metaReviewSubmitGuidance.js";
 
 const tempDirs: string[] = [];
 
@@ -210,7 +211,12 @@ describe("appendHumanApprovalRequestEnvelope", () => {
           findings_parity_status: "ok"
         }
       })
-    ).rejects.toThrow("META_REVIEW_GATE_REVIEWER_CONVERGENCE_CONFLICT");
+    ).rejects.toThrow(
+      new RegExp(
+        `META_REVIEW_GATE_REVIEWER_CONVERGENCE_CONFLICT[\\s\\S]*${buildMetaReviewSubmitAdvisoryOnlyCorrectionNote()
+          .replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`
+      )
+    );
   });
 
   it("keeps open-findings summary unchanged via structured-open-findings suppression branch even when parity status is mismatch", async () => {
@@ -833,28 +839,33 @@ describe("appendHumanApprovalRequestEnvelope", () => {
     const now = new Date("2026-03-14T12:39:00.000Z");
     const stub = createAppendEnvelopeStub(now);
 
-    await expect(
-      appendHumanApprovalRequestEnvelope({
-        appendEnvelope: stub.appendEnvelope,
-        transcriptPath: "/tmp/transcript.ndjson",
-        inboxPath: "/tmp/inbox.ndjson",
-        lockPath: "/tmp/bubble.lock",
-        now,
-        bubbleId: "b_approval_env_blocking_guard_01",
-        round: 18,
-        summary: "Blocking findings remain open.",
-        route: "human_gate_approve",
-        refs: [],
-        recommendation: "approve",
-        parityMetadata: {
-          findings_claimed_open_total: 1,
-          findings_artifact_open_total: 1,
-          findings_blocking_open_total: 1,
-          findings_advisory_open_total: 0,
-          findings_parity_status: "ok"
-        }
-      })
-    ).rejects.toThrow("META_REVIEW_APPROVE_BLOCKING_FINDINGS_PRESENT");
+    const appendPromise = appendHumanApprovalRequestEnvelope({
+      appendEnvelope: stub.appendEnvelope,
+      transcriptPath: "/tmp/transcript.ndjson",
+      inboxPath: "/tmp/inbox.ndjson",
+      lockPath: "/tmp/bubble.lock",
+      now,
+      bubbleId: "b_approval_env_blocking_guard_01",
+      round: 18,
+      summary: "Blocking findings remain open.",
+      route: "human_gate_approve",
+      refs: [],
+      recommendation: "approve",
+      parityMetadata: {
+        findings_claimed_open_total: 1,
+        findings_artifact_open_total: 1,
+        findings_blocking_open_total: 1,
+        findings_advisory_open_total: 0,
+        findings_parity_status: "ok"
+      }
+    });
+
+    await expect(appendPromise).rejects.toThrow(
+      "META_REVIEW_APPROVE_BLOCKING_FINDINGS_PRESENT"
+    );
+    await expect(appendPromise).rejects.not.toThrow(
+      buildMetaReviewSubmitAdvisoryOnlyCorrectionNote()
+    );
   });
 
   it("fails closed when recommendation=approve split arithmetic is inconsistent", async () => {
@@ -889,28 +900,33 @@ describe("appendHumanApprovalRequestEnvelope", () => {
     const now = new Date("2026-03-14T12:41:00.000Z");
     const stub = createAppendEnvelopeStub(now);
 
-    await expect(
-      appendHumanApprovalRequestEnvelope({
-        appendEnvelope: stub.appendEnvelope,
-        transcriptPath: "/tmp/transcript.ndjson",
-        inboxPath: "/tmp/inbox.ndjson",
-        lockPath: "/tmp/bubble.lock",
-        now,
-        bubbleId: "b_approval_env_blocking_precedence_01",
-        round: 18,
-        summary: "Blocking findings remain open.",
-        route: "human_gate_approve",
-        refs: [],
-        recommendation: "approve",
-        parityMetadata: {
-          findings_claimed_open_total: 1,
-          findings_artifact_open_total: 2,
-          findings_blocking_open_total: 1,
-          findings_advisory_open_total: 0,
-          findings_parity_status: "ok"
-        }
-      })
-    ).rejects.toThrow("META_REVIEW_APPROVE_BLOCKING_FINDINGS_PRESENT");
+    const appendPromise = appendHumanApprovalRequestEnvelope({
+      appendEnvelope: stub.appendEnvelope,
+      transcriptPath: "/tmp/transcript.ndjson",
+      inboxPath: "/tmp/inbox.ndjson",
+      lockPath: "/tmp/bubble.lock",
+      now,
+      bubbleId: "b_approval_env_blocking_precedence_01",
+      round: 18,
+      summary: "Blocking findings remain open.",
+      route: "human_gate_approve",
+      refs: [],
+      recommendation: "approve",
+      parityMetadata: {
+        findings_claimed_open_total: 1,
+        findings_artifact_open_total: 2,
+        findings_blocking_open_total: 1,
+        findings_advisory_open_total: 0,
+        findings_parity_status: "ok"
+      }
+    });
+
+    await expect(appendPromise).rejects.toThrow(
+      "META_REVIEW_APPROVE_BLOCKING_FINDINGS_PRESENT"
+    );
+    await expect(appendPromise).rejects.not.toThrow(
+      buildMetaReviewSubmitAdvisoryOnlyCorrectionNote()
+    );
   });
 
   it("keeps valid refs while dropping invalid refs within the same advisory finding", async () => {

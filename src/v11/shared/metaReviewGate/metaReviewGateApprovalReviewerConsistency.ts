@@ -7,7 +7,13 @@ import {
   evaluateNoFindingsSummaryFindingsAssertion,
   hasGlobalNoFindingsSummaryAssertion
 } from "../../../v11/domain/convergence/policy.js";
-import type { LatestSameRoundReviewerSnapshot } from "./metaReviewGateReviewerSnapshot.js";
+import {
+  isAdvisoryOnlyReviewerSnapshot,
+  type LatestSameRoundReviewerSnapshot
+} from "./metaReviewGateReviewerSnapshot.js";
+import {
+  buildMetaReviewSubmitAdvisoryOnlyCorrectionNote
+} from "../metaReview/metaReviewSubmitGuidance.js";
 import {
   assertAdvisorySplitMetadataWhenRequired,
   hasConsistentApproveAdvisoryOnlySplit,
@@ -81,8 +87,11 @@ export function assertApprovePathConsistentWithReviewerSnapshot(input: {
     snapshot: input.snapshot
   });
   if (parityMismatch !== null) {
+    const advisoryOnlyCorrectionHint = isAdvisoryOnlyReviewerSnapshot(input.snapshot)
+      ? ` ${buildMetaReviewSubmitAdvisoryOnlyCorrectionNote()}`
+      : "";
     throw new Error(
-      `${metaReviewGateReviewerConvergenceConflictReasonCode}: latest same-round reviewer snapshot (${input.snapshot.envelopeId}) contradicts approval parity metadata (${parityMismatch}).`
+      `${metaReviewGateReviewerConvergenceConflictReasonCode}: latest same-round reviewer snapshot (${input.snapshot.envelopeId}) contradicts approval parity metadata (${parityMismatch}).${advisoryOnlyCorrectionHint}`
     );
   }
 
@@ -99,11 +108,7 @@ export function assertApprovePathConsistentWithReviewerSnapshot(input: {
   }
 
   const noFindingsAssertion = evaluateNoFindingsSummaryFindingsAssertion(input.summary);
-  const advisoryOnlyOpenFindings =
-    input.snapshot.findings_open_total > 0 &&
-    input.snapshot.findings_blocking_open_total === 0 &&
-    input.snapshot.findings_advisory_open_total !== null &&
-    input.snapshot.findings_advisory_open_total === input.snapshot.findings_open_total;
+  const advisoryOnlyOpenFindings = isAdvisoryOnlyReviewerSnapshot(input.snapshot);
   if (
     noFindingsAssertion.hasNoFindingsAssertion &&
     input.snapshot.findings_open_total > 0 &&
@@ -112,8 +117,11 @@ export function assertApprovePathConsistentWithReviewerSnapshot(input: {
       !hasGlobalNoFindingsSummaryAssertion(input.summary)
     )
   ) {
+    const advisoryOnlyCorrectionHint = advisoryOnlyOpenFindings
+      ? ` ${buildMetaReviewSubmitAdvisoryOnlyCorrectionNote()}`
+      : "";
     throw new Error(
-      `${metaReviewGateReviewerConvergenceConflictReasonCode}: latest same-round reviewer snapshot (${input.snapshot.envelopeId}) reports open findings, so clean approve summary cannot be emitted.`
+      `${metaReviewGateReviewerConvergenceConflictReasonCode}: latest same-round reviewer snapshot (${input.snapshot.envelopeId}) reports open findings, so clean approve summary cannot be emitted.${advisoryOnlyCorrectionHint}`
     );
   }
 }
