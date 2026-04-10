@@ -2,8 +2,14 @@
 artifact_type: task
 artifact_id: task_bubble_start_preparing_workspace_recovery_foundation_phase1_v1
 title: "Bubble Start PREPARING_WORKSPACE Recovery Foundation (Phase 1)"
-status: implementable
+status: superseded
 phase: phase1
+superseded_reason: "Bubble review and implementation evidence showed that the original Phase 1 foundation scope still mixed four separate contract axes: canonical schema/invariants, PREPARING admission routing, failure-policy persistence, and RUNNING commit-gate reason propagation. Continuing as one task produced repeated high-severity review findings after multiple rounds, so the scope is superseded by a smaller Phase 1A-1D task chain."
+superseded_by:
+  - plans/tasks/bubble-start-startup-recovery-schema-and-invariants-phase1a.md
+  - plans/tasks/bubble-start-preparing-routing-and-admission-phase1b.md
+  - plans/tasks/bubble-start-startup-failure-policy-persistence-phase1c.md
+  - plans/tasks/bubble-start-running-commit-gate-and-reason-propagation-phase1d.md
 target_files:
   - src/types/bubble.ts
   - src/v11/application/start/startCommandApi.ts
@@ -32,6 +38,23 @@ owners:
    - tmux session
    - worktree/branch lifecycle
 3. Ez a task a kovetkezo implementacios kor foundation specje. A mostani lokalis patch learning baseline, nem delivery target.
+4. A 2026-04-10-i bubble review alapjan ez a task mar nem tarthato egyben: a review loop ujra es ujra kulon contract-problemakat talalt a retry-safe descriptor shape, a rollback vegallapot, a cleanup persistence es a commit-gate reason propagation korul.
+
+## Superseded Status
+
+Ez a task mar nem aktiv implementation slice.
+
+Miert lett superseded:
+1. a canonical `startup_recovery` schema/invariant scope kulon lezarast igenyel;
+2. a `PREPARING_WORKSPACE` start routing es admission gate kulon reviewable boundary;
+3. a `rollback|retry|preserve_for_recovery` persistence semantics kulon failure-policy task;
+4. a `RUNNING` commit gate es canonical reason-code propagation kulon acceptance class.
+
+Az aktiv utod-taskok:
+1. `plans/tasks/bubble-start-startup-recovery-schema-and-invariants-phase1a.md`
+2. `plans/tasks/bubble-start-preparing-routing-and-admission-phase1b.md`
+3. `plans/tasks/bubble-start-startup-failure-policy-persistence-phase1c.md`
+4. `plans/tasks/bubble-start-running-commit-gate-and-reason-propagation-phase1d.md`
 
 ## L0 - Policy
 
