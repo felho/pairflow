@@ -15,6 +15,7 @@ owners:
 1. `src/core/**` is already gone from the checked-out tree, so the original closure dependency on residual core retirement is historical context rather than a current blocker.
 2. The docs-only Phase A-D deliverables referenced by this plan are already checked in.
 3. The remaining live scope is the still-open Phase E retained cleanup and any later actor-runtime implementation follow-up, not the production of the A-D planning artifacts themselves.
+4. Within that remaining Phase E scope, the currently legitimate bounded target is the approve-advisory guidance/parity hardening slice on the live `src/v11` submit, prompt, and reviewer-snapshot surfaces, not the older broad `src/core`-era framing.
 
 ## Objective
 
@@ -37,6 +38,7 @@ Ez a plan discovery- es preparation-jellegu. Nem celja a Phase 4 vagy Phase 5 le
 4. A jelenlegi munkahipotézis szerint ez jobban illeszkedik a plan eredeti celjahoz is, mert csokkenti a retained role-specifikus operator surface-et, mikozben kozelebb visz egy kozosebb actor emit / reconcile kernelhez.
 5. A `run` removal es a `recover` refaktor utan explicit decision checkpoint kovetkezik: tudatosan ujra kell nezni, maradt-e barmilyen indokolt tovabbi munka a `status` / `last-report` korul, vagy azok valtozatlanul retained maradhatnak.
 6. Ennek megfeleloen a korabbi egyben kezelt Phase E operator cleanup task historical parent artifactkent marad meg, de nem tekintendo a jelenlegi legjobb aktiv implementation targetnek.
+7. Ettol fuggetlenul egy szukebb, jelen tree-re ujragroundolt Phase E follow-up legitim marad: az approve-advisory guidance/parity hardening a live `v11` submit/prompt/diagnostics seamsen.
 
 ## Decision Baseline
 
