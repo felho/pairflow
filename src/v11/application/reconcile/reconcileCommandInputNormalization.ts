@@ -2,7 +2,6 @@ import type {
   ReconcileRuntimeSessionsInput,
   TmuxSessionLivenessProbe
 } from "./reconcileCommandContract.js";
-import type { TmuxRunner } from "../../shared/ports/tmuxSessions.js";
 import { runTmux } from "../../shared/tmux/tmuxRunner.js";
 
 export interface NormalizedReconcileRuntimeSessionsInput {

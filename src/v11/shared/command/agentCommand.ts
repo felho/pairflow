@@ -43,6 +43,8 @@ export function buildAgentCommand(input: BuildAgentCommandInput): string {
     worktreePath,
     input.pairflowCommandProfile ?? "external"
   );
+  const agentExitedMessage =
+    `${agentName} exited (code $agent_exit_code). Dropping to interactive shell.`;
   const script = [
     "set +e",
     `if ! cd ${shellQuote(worktreePath)}; then`,
@@ -53,7 +55,7 @@ export function buildAgentCommand(input: BuildAgentCommandInput): string {
     `if command -v ${agentName} >/dev/null 2>&1; then`,
     `  ${launchCommand}`,
     "  agent_exit_code=$?",
-    `  printf '%s\\n' \"${agentName} exited (code $agent_exit_code). Dropping to interactive shell.\"`,
+    `  printf '%s\\n' ${shellQuote(agentExitedMessage)}`,
     "  exec bash -i",
     "fi",
     `printf '%s\\n' ${shellQuote(missingBinaryMessage)}`,

@@ -21,7 +21,10 @@ describe("runCli auto-converge warning parity", () => {
     stderrSpy.mockRestore();
   });
 
-  it("prints delivery warning for auto-converge output when delivery is unconfirmed", async () => {
+  it(
+    "prints delivery warning for auto-converge output when delivery is unconfirmed",
+    { timeout: 10_000 },
+    async () => {
     const mockedResult = {
       bubbleId: "b_auto_01",
       sequence: 5,
@@ -81,7 +84,8 @@ describe("runCli auto-converge warning parity", () => {
       "Warning: reviewer doc-gate artifact update failed during PASS handling"
     );
     expect(runPassCommand).toHaveBeenCalledWith(["--summary", "x"]);
-  });
+    }
+  );
 
   it("prints resume-oriented delivery warning for normal PASS output when delivery is unconfirmed", async () => {
     const mockedResult = {

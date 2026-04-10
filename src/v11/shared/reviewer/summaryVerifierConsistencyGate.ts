@@ -2,10 +2,7 @@ import { join } from "node:path";
 import { writeSummaryVerifierConsistencyGateArtifact as writeSummaryVerifierConsistencyGateArtifactDefault } from "../../defaults/reviewer/summaryVerifierConsistencyGateDefaults.js";
 
 import { isReviewArtifactType, type ReviewArtifactType } from "../../../types/bubble.js";
-import {
-  summaryVerifierConsistencyGateSchemaVersion,
-  type SummaryVerifierConsistencyGateArtifact
-} from "./summaryVerifierConsistencyGateArtifact.js";
+import { type SummaryVerifierConsistencyGateArtifact } from "./summaryVerifierConsistencyGateArtifact.js";
 export { summaryVerifierConsistencyGateSchemaVersion } from "./summaryVerifierConsistencyGateArtifact.js";
 
 export type SummaryVerifierGateDecision = "allow" | "block" | "not_applicable";

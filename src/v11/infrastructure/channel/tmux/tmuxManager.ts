@@ -6,8 +6,6 @@ import type {
   TerminateBubbleTmuxSessionInput,
   TerminateBubbleTmuxSessionPort,
   TerminateBubbleTmuxSessionResult,
-  TmuxRunOptions,
-  TmuxRunResult,
   TmuxRunner
 } from "../../../shared/ports/tmuxSessions.js";
 import {
