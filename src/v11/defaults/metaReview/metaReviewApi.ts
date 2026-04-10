@@ -1,31 +1,29 @@
 import { readFile, rm, writeFile } from "node:fs/promises";
 
 import {
-  toMetaReviewErrorV11
-} from "../../v11/application/metaReview/emitMetaReviewV11.js";
-import {
   clearLiveMetaReviewSnapshot,
   hasCanonicalSubmitForActiveMetaReviewRound,
   normalizeMetaReviewSnapshot,
   resolveActiveMetaReviewRuntimeDelivery
-} from "../../v11/shared/metaReview/metaReviewSnapshot.js";
+} from "../../shared/metaReview/metaReviewSnapshot.js";
 import {
   MetaReviewError,
   type MetaReviewErrorReasonCode
-} from "../../v11/shared/metaReview/metaReviewError.js";
-import { resolveMetaReviewRunnerMode } from "../../v11/shared/metaReview/liveRun/metaReviewLiveRunnerConfig.js";
+} from "../../shared/metaReview/metaReviewError.js";
+import { asMetaReviewError as throwAsMetaReviewError } from "../../shared/metaReview/metaReviewCommandErrorMapping.js";
+import { resolveMetaReviewRunnerMode } from "../../shared/metaReview/liveRun/metaReviewLiveRunnerConfig.js";
 import {
   runMetaReview as runMetaReviewShared
-} from "../../v11/shared/metaReview/liveRun/metaReviewLiveRunRuntime.js";
+} from "../../shared/metaReview/liveRun/metaReviewLiveRunRuntime.js";
 import {
   runCodexAgentLiveReview,
   runCodexPaneLiveReview
-} from "../../v11/infrastructure/executor/sessionRuntime/metaReviewLiveRunnerRuntime.js";
+} from "../../infrastructure/executor/sessionRuntime/metaReviewLiveRunnerRuntime.js";
 import type {
   MetaReviewDependencies,
   MetaReviewResult,
   MetaReviewRunInput
-} from "../../v11/shared/metaReview/liveRun/metaReviewLiveRunContract.js";
+} from "../../shared/metaReview/liveRun/metaReviewLiveRunContract.js";
 
 export type {
   MetaReviewDepth,
@@ -37,18 +35,18 @@ export type {
   MetaReviewStatusView,
   MetaReviewSubmitInput,
   MetaReviewSubmitResult
-} from "../../v11/shared/metaReview/liveRun/metaReviewLiveRunContract.js";
+} from "../../shared/metaReview/liveRun/metaReviewLiveRunContract.js";
 export type { MetaReviewErrorReasonCode };
 export {
   extractMetaReviewDelimitedBlock,
   parseMetaReviewRunnerOutput
-} from "../../v11/shared/metaReview/liveRun/metaReviewLiveRunner.js";
+} from "../../shared/metaReview/liveRun/metaReviewLiveRunner.js";
 export {
   getMetaReviewLastReportV11 as getMetaReviewLastReport,
   getMetaReviewStatusV11 as getMetaReviewStatus,
   submitMetaReviewResultV11 as submitMetaReviewResult,
   toMetaReviewErrorV11 as toMetaReviewError
-} from "../../v11/application/metaReview/emitMetaReviewV11.js";
+} from "../../application/metaReview/emitMetaReviewV11.js";
 export {
   clearLiveMetaReviewSnapshot,
   hasCanonicalSubmitForActiveMetaReviewRound,
@@ -66,7 +64,14 @@ export async function runMetaReview(
     (async (liveInput) => {
       const mode = resolveMetaReviewRunnerMode();
       if (mode === "unavailable") {
-        throw new Error("Meta-review runner adapter is unavailable.");
+        throw new MetaReviewError({
+          reasonCode: "META_REVIEW_UNKNOWN_ERROR",
+          message: "Meta-review runner adapter is unavailable.",
+          context: {
+            source: "meta_review_api",
+            reason: "runner_adapter_unavailable"
+          }
+        });
       }
       if (mode === "agent") {
         return runCodexAgentLiveReview(liveInput);
@@ -88,5 +93,5 @@ export async function runMetaReview(
 }
 
 export function asMetaReviewError(error: unknown): never {
-  throw toMetaReviewErrorV11(error);
+  return throwAsMetaReviewError(error);
 }

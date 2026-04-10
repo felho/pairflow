@@ -16,7 +16,7 @@ import {
 } from "../../src/cli/commands/bubble/metaReview.js";
 import { formatMetaReviewProjectionFreshness } from "../../src/v11/application/metaReview/metaReviewCliRenderersHelpers.js";
 import { buildMetaReviewExecutionContext } from "../../src/v11/shared/metaReview/metaReviewExecutionContext.js";
-import { MetaReviewError } from "../../src/core/bubble/metaReview.js";
+import { MetaReviewError } from "../../src/v11/defaults/metaReview/metaReviewApi.js";
 import {
   metaReviewExecutionContextToRunningContext
 } from "../../src/v11/shared/state/executionContext.js";

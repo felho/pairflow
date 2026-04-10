@@ -14,7 +14,7 @@ import {
   BubbleCommitErrorV11 as BubbleCommitError,
   commitBubbleV11
 } from "../../../src/v11/application/commit/emitCommitV11.js";
-import { submitMetaReviewResult } from "../../../src/core/bubble/metaReview.js";
+import { submitMetaReviewResult } from "../../../src/v11/defaults/metaReview/metaReviewApi.js";
 import { emitApproveV11 as emitApprove } from "../../../src/v11/application/approval/emitApprovalV11.js";
 import { createBubble } from "../../../src/v11/application/create/createBubble.js";
 import { commitBubbleDependencyDefaults } from "../../../src/v11/application/commit/commitCommandDefaults.js";

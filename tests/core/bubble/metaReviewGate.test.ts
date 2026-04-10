@@ -9,7 +9,7 @@ import {
   applyMetaReviewGateOnConvergenceV11 as applyMetaReviewGateOnConvergence,
   recoverMetaReviewGateFromSnapshotV11 as recoverMetaReviewGateFromSnapshot
 } from "../../../src/v11/application/metaReviewGate/emitMetaReviewGateV11.js";
-import { clearLiveMetaReviewSnapshot } from "../../../src/core/bubble/metaReview.js";
+import { clearLiveMetaReviewSnapshot } from "../../../src/v11/defaults/metaReview/metaReviewApi.js";
 import {
   buildMetaReviewSubmitCommandTemplate
 } from "../../../src/v11/shared/metaReview/metaReviewSubmitGuidance.js";
