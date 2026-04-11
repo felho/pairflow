@@ -41,13 +41,14 @@ owners:
    - `plans/tasks/actor-runtime-interface-meta-review-cached-workflow-ui-cleanup-phaseE.md`
    - `plans/tasks/actor-runtime-interface-meta-review-cached-active-docs-cleanup-phaseE.md`
 6. A vegrehajtasi sorrend kotelezo:
-   - eloszor foundation/refactor: current-round authority/runtime consumer cutover,
+   - eloszor foundation/refactor: meta-review authority/runtime cutover reviewer-parity modellre,
    - utana foundation/refactor: approval es projection consumer cutover,
    - utana delivery/removal: CLI/read-model public surface torlese,
    - utana foundation/removal: cached state shape es persistence physical field removal,
    - utana delivery/removal: repo-local workflow es UI copied prompt cleanup,
    - vegul delivery/removal: active docs cleanup es superseded traceability update.
-7. Ez a direction update supersedalja a korabbi "retained read-only projection maradhat" interim dontest, de nem valtoztat a plan eredeti fo celjan: a canonical actor runtime boundary tovabbi szerepsemleges tisztitasan.
+7. Az elso foundation taskban nincs uj `submit_receipt` vagy mas atmeneti state contract: a cel kozvetlenul reviewer-parity authority/stale-guard modell.
+8. Ez a direction update supersedalja a korabbi "retained read-only projection maradhat" interim dontest, de nem valtoztat a plan eredeti fo celjan: a canonical actor runtime boundary tovabbi szerepsemleges tisztitasan.
 
 ## Objective
 
@@ -89,7 +90,7 @@ Ez a plan discovery- es preparation-jellegu. Nem celja a Phase 4 vagy Phase 5 le
 
 1. A 2026-04-10 retained-read-surface dontes historical interim checkpointte valt; mar nem tekintendo aktualis target end-state-nek.
 2. A jelenlegi aktiv problemat hat kotott sorrendu szeletre kell bontani:
-   - foundation 1: current-round authority es hidden runtime consumer cutover,
+   - foundation 1: reviewer-parity meta-review authority es hidden runtime consumer cutover,
    - foundation 2: approval es projection consumer cutover,
    - delivery 1: cached CLI/read-stack public surface removal,
    - foundation 3: cached state shape es persistence physical field removal,
@@ -101,7 +102,7 @@ Ez a plan discovery- es preparation-jellegu. Nem celja a Phase 4 vagy Phase 5 le
    - nincs CLI help reminder,
    - nincs skill guidance, amely a `cached` modra vagy a `last-report` / `status` commandokra hivatkozik,
    - nincs UI prompt, amely `--meta-review-source=cached` kapcsolot masol.
-5. A plan aktualis kovetkezo implementacios targetje ezentul nem a historical operator-read-surface closure task vagy az umbrella removal task, hanem az uj current-round authority foundation task, majd az azt koveto Phase E replacement lanc a fenti sorrendben.
+5. A plan aktualis kovetkezo implementacios targetje ezentul nem a historical operator-read-surface closure task vagy az umbrella removal task, hanem az uj reviewer-parity authority foundation task, majd az azt koveto Phase E replacement lanc a fenti sorrendben.
 
 ## Decision Baseline
 

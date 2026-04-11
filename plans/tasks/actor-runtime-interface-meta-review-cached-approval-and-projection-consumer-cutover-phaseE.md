@@ -29,7 +29,7 @@ owners:
    - summary
    - report ref
    - updated at
-3. A current-round authority/runtime foundation task utan ezek a consumer seams explicit transcript/current-round es live-authority alapu cutovert igenyelnek, meg mielott a fizikai cached field-removal megtortenik.
+3. A reviewer-parity authority/runtime foundation task utan ezek a consumer seams explicit transcript/current-round es live-authority alapu cutovert igenyelnek, meg mielott a fizikai cached field-removal megtortenik.
 
 ## Executive Summary
 

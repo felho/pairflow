@@ -29,14 +29,14 @@ owners:
 
 1. A bubble state schema es az initial state ma meg fizikailag tartja a cached `last_autonomous_*` blokkot.
 2. A submit es live-run persistence seam-ek ezt a blokkot ma meg canonical state-be irjak vissza.
-3. A hidden runtime authority cutover, az approval/projection cutover es a retained CLI/read-stack removal kulon, korabbi Phase E szeletekbe kerul.
+3. A hidden runtime reviewer-parity authority cutover, az approval/projection cutover es a retained CLI/read-stack removal kulon, korabbi Phase E szeletekbe kerul.
 4. Emiatt ez a task mar nem az elso foundation lepes, hanem a kesobbi fizikai field-removal es writer-cleanup szelet.
 
 ## Executive Summary
 
 1. Ez a Phase E utolso kodszintu cached-state removal szelete.
 2. A cel, hogy a `meta_review` state shape-bol fizikailag eltunjenek a cached last-run scalar mezok, es a runtime write path se perzisztalja oket.
-3. Ez a task nem owns-olja a current-round authority contractot, az approval/projection cutovert vagy a retained read-stack removal munkat; ezek explicit elozo szeletek.
+3. Ez a task nem owns-olja a reviewer-parity authority contractot, az approval/projection cutovert vagy a retained read-stack removal munkat; ezek explicit elozo szeletek.
 
 ## L0 - Policy
 
@@ -65,12 +65,11 @@ Szuntesse meg fizikailag a cached meta-review state shape-et es annak writer own
 3. A megmarado live mezok:
    - `execution_context`
    - `runtime_delivery`
-   - `submit_receipt`
    - `auto_rework_count`
    - `auto_rework_limit`
    - `sticky_human_gate`
 4. Minden mas cached last-run scalar kivezetendo ebben a taskban.
-5. A task csak a current-round authority foundation, az approval/projection cutover es a retained CLI/read-stack removal utan landolhat.
+5. A task csak a reviewer-parity authority foundation, az approval/projection cutover es a retained CLI/read-stack removal utan landolhat.
 
 ### Contract Boundary / Blast Radius
 
@@ -91,7 +90,7 @@ Szuntesse meg fizikailag a cached meta-review state shape-et es annak writer own
 7. `risk_score`: `5`
 8. `single-task allowed`: `yes`
 9. Identity/join note:
-   - canonical identity path: upstream current-round authority contract -> reduced `state.meta_review` shape -> writers
+   - canonical identity path: upstream reviewer-parity authority contract -> reduced `state.meta_review` shape -> writers
    - competing identifiers or fallback identities: cached `last_autonomous_*` scalars
 10. Authority/source-of-truth note:
    - canonical source: live `meta_review` ownership fields only
@@ -110,14 +109,14 @@ Szuntesse meg fizikailag a cached meta-review state shape-et es annak writer own
 |---|---|---|---|---|---|---|---|---|
 | CS1 | `src/types/bubble.ts`, `src/v11/domain/state/initialState.ts` | `BubbleMetaReviewSnapshotState`, `createInitialBubbleState` | type/state shape -> type/state shape | meta-review state definition | A `meta_review` state shape ne tartalmazza a cached `last_autonomous_*` scalars blokkot. | P1 | required-now | type + compile |
 | CS2 | `src/v11/shared/state/stateSchemaMetaReview.ts`, `src/v11/shared/state/stateSchemaMetaReviewAutonomous.ts`, `src/v11/shared/state/stateSchemaMetaReviewAutonomousSupport.ts` | `validateMetaReviewSnapshot(...)` es kapcsolodo validators | `(input: unknown, errors: ValidationError[]) -> BubbleMetaReviewSnapshotState \| undefined` | schema validation | A validator az uj, szukitett shape-et fogadja el; explicit compatibility bridge ne keruljon be. | P1 | required-now | schema tests/build |
-| CS3 | `src/v11/shared/metaReview/metaReviewCommandSubmitPersistence.ts`, `src/v11/shared/metaReview/metaReviewSnapshot.ts`, `src/v11/shared/metaReview/liveRun/metaReviewLiveRunPersistence.ts` | persistence helpers | existing persistence helpers -> updated state writes | canonical submit + live-run persistence | A runtime ne irjon cached `last_autonomous_*` mezoket state-be; a writer a korabbi current-round authority contracthoz illeszkedjen. | P1 | required-now | core tests |
-| CS4 | `tests/core/bubble/metaReview.test.ts`, `tests/core/state/stateSchema.test.ts`, `tests/contracts/v11/metaReviewSubmitCoverage.test.ts` | regression coverage | tests -> tests | shape removal + writer cleanup matrix | A coverage explicitten fogja a fizikai field-removalt es a writer cleanupot a mar meglevo current-round authority contract mellett. | P1 | required-now | automated tests |
+| CS3 | `src/v11/shared/metaReview/metaReviewCommandSubmitPersistence.ts`, `src/v11/shared/metaReview/metaReviewSnapshot.ts`, `src/v11/shared/metaReview/liveRun/metaReviewLiveRunPersistence.ts` | persistence helpers | existing persistence helpers -> updated state writes | canonical submit + live-run persistence | A runtime ne irjon cached `last_autonomous_*` mezoket state-be; a writer a korabbi reviewer-parity authority contracthoz illeszkedjen. | P1 | required-now | core tests |
+| CS4 | `tests/core/bubble/metaReview.test.ts`, `tests/core/state/stateSchema.test.ts`, `tests/contracts/v11/metaReviewSubmitCoverage.test.ts` | regression coverage | tests -> tests | shape removal + writer cleanup matrix | A coverage explicitten fogja a fizikai field-removalt es a writer cleanupot a mar meglevo reviewer-parity authority contract mellett. | P1 | required-now | automated tests |
 
 ### 2) Data and Interface Contract
 
 | Contract | Current | Target | Required Fields | Optional Fields | Compatibility | Priority | Timing |
 |---|---|---|---|---|---|---|---|
-| `state.meta_review` schema | live fields + cached `last_autonomous_*` scalars | live authority/runtime/gate ownership only | `execution_context`, `runtime_delivery`, `submit_receipt`, `auto_rework_count`, `auto_rework_limit`, `sticky_human_gate` | none | breaking internal state reduction | P1 | required-now |
+| `state.meta_review` schema | live fields + cached `last_autonomous_*` scalars | live authority/runtime/gate ownership only | `execution_context`, `runtime_delivery`, `auto_rework_count`, `auto_rework_limit`, `sticky_human_gate` | none | breaking internal state reduction | P1 | required-now |
 | Submit/live-run persistence | writes cached last-run scalars into state | writes only live ownership fields and counters | live fields above | none | breaking internal write contract | P1 | required-now |
 
 ### 3) Side Effects Contract
@@ -150,7 +149,7 @@ Szuntesse meg fizikailag a cached meta-review state shape-et es annak writer own
 |---|---|---|---|---|---|---|---|
 | T1 | State persistence writes reduced meta-review shape | active submit/live-run fixture | state write occurs | persisted `meta_review` block omits cached `last_autonomous_*` scalars | P1 | required-now | automated test |
 | T2 | Old persisted state file does not require explicit migration bridge | fixture contains deprecated cached keys | state load + new write path runs | new write emits reduced shape without bridge code | P2 | required-now | automated test |
-| T3 | Sequencing gate documented and reviewable | current tree meg nem a vegso allapot | task is read for implementation planning | a doc explicitten kimondja, hogy a physical field-removal a current-round authority foundation, az approval/projection cutover es a CLI/read-stack removal utan jon | P1 | required-now | docs diff |
+| T3 | Sequencing gate documented and reviewable | current tree meg nem a vegso allapot | task is read for implementation planning | a doc explicitten kimondja, hogy a physical field-removal a reviewer-parity authority foundation, az approval/projection cutover es a CLI/read-stack removal utan jon | P1 | required-now | docs diff |
 
 ## L2 - Implementation Notes (Optional)
 
@@ -180,4 +179,4 @@ Szuntesse meg fizikailag a cached meta-review state shape-et es annak writer own
 
 ## Spec Lock
 
-Mark task as `IMPLEMENTABLE` when all `P0/P1 + required-now` items are closed, es a current-round authority foundation, az approval/projection cutover es a CLI/read-stack removal mar lezarta a mezok runtime/compile consume-jat.
+Mark task as `IMPLEMENTABLE` when all `P0/P1 + required-now` items are closed, es a reviewer-parity authority foundation, az approval/projection cutover es a CLI/read-stack removal mar lezarta a mezok runtime/compile consume-jat.
