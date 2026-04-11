@@ -56,14 +56,7 @@ These codes are expected informational or route-shaping signals for the round-lo
 3. `META_REVIEW_STICKY_FLAG_CLEARED_ON_ROUND_INCREMENT`
 4. `META_REVIEW_CURRENT_ROUND_PENDING`
 
-`META_REVIEW_RECOVERY_REQUIRES_CURRENT_ROUND_RESULT` is not a generic rollout blocker by itself, but it is a smoke-check failure for recovery validation if it appears during the dedicated same-round recovery check where canonical current-round output is expected.
-
-Operator action outside that dedicated happy-path recovery smoke:
-
-1. Classify it as an expected unhappy-path diagnostic meaning the bubble does not currently have recoverable current-round meta-review output.
-2. Do not treat it as proof of a current-round recovery regression unless canonical current-round output was expected to exist.
-3. Inspect transcript and persisted historical artifacts to confirm the available output is prior-round-only.
-4. Route operations back toward a fresh current-round meta-review path rather than trying to force same-round recovery from prior-round artifacts.
+`META_REVIEW_RECOVERY_REQUIRES_CURRENT_ROUND_RESULT` is not a generic rollout blocker by itself. Treat it as a diagnostic that the bubble lacks canonical current-round output and route operations toward `restart` or a fresh current-round meta-review run rather than trying to replay prior-round artifacts.
 ## Pre-flight
 
 1. Start from the target worktree/release checkout.
@@ -80,8 +73,7 @@ Operator interpretation must follow these invariants:
 2. Prior-round meta-review output is historical only after round increment; it must not be treated as active/current-round gate authority.
 3. After round increment and before a fresh current-round run exists, `bubble meta-review status` / `last-report` must be interpreted as pending/none for the current round.
 4. `sticky_human_gate` is not a cross-round bypass signal in this rollout phase; on round increment it is cleared from live state.
-5. Same-round recovery remains valid when canonical current-round meta-review output already exists and matches the active gate context.
-6. If prior-round details are needed for diagnosis, use transcript and persisted historical artifacts rather than current-round status surfaces.
+5. If prior-round details are needed for diagnosis, use transcript and persisted historical artifacts rather than current-round status surfaces.
 
 For this runbook, "persisted historical artifacts" means prior-round transcript entries or other persisted prior-round records used for diagnosis only, not as current-round routing or status authority.
 
@@ -187,24 +179,15 @@ Run each command from the release worktree root and capture the command, timesta
    prior-round report is not rendered as the current-round last report
    after a fresh current-round run, the visible report ref corresponds to the current round
 
-7. `<pairflow-command> bubble meta-review recover --id <bubble-id> --repo <repo-path>`
+7. `<pairflow-command> bubble restart --id <bubble-id> --repo <repo-path>`
    Preconditions:
-   bubble is in `RUNNING` with canonical current-round meta-review output already persisted for recovery.
+   bubble is stuck in `RUNNING` after snapshot persistence or pane/runtime loss.
    Expected markers:
-   `route=...`
-   `Lifecycle state: ...`
-   no new autonomous run is started for this command
-   no `META_REVIEW_RECOVERY_REQUIRES_CURRENT_ROUND_RESULT` reason is emitted when canonical current-round output exists
+   runtime restart completes without command-profile fallback errors
+   no implicit `bubble meta-review recover` reroute is suggested or required
+   follow-up `bubble meta-review status` / `last-report` remains consistent with current-round freshness rules
 
-8. `<pairflow-command> bubble meta-review recover --id <bubble-id> --repo <repo-path>`
-   Preconditions:
-   bubble is in `RUNNING`, but only prior-round meta-review output is available for diagnosis.
-   Expected markers:
-   `META_REVIEW_RECOVERY_REQUIRES_CURRENT_ROUND_RESULT`
-   no recovered current-round route is claimed
-   output is classified as expected unhappy-path diagnostic evidence, not same-round recovery success
-
-9. `<pairflow-command> metrics report --from <iso-from> --to <iso-to>`
+8. `<pairflow-command> metrics report --from <iso-from> --to <iso-to>`
    Expected markers:
    `meta_review_rollout.route_counts`
    `meta_review_rollout.rollout_blocked_events: 0`
@@ -258,7 +241,7 @@ If a blocking reason code appears during rollout:
 3. keep lifecycle fail-safe routing explicit:
    - default fail-safe path is `READY_FOR_HUMAN_APPROVAL`,
    - meta-review execution failure (`META_REVIEW_GATE_RUN_FAILED` / `META_REVIEW_RUNNER_ERROR`) routes to `READY_FOR_HUMAN_APPROVAL` with run-failed diagnostics for explicit human override handling,
-   - if the bubble is stuck in `RUNNING` with active meta-review authority after snapshot persistence, execute `bubble meta-review recover` before declaring manual escalation,
+   - if the bubble is stuck in `RUNNING` with active meta-review authority after snapshot persistence, execute `bubble restart` or trigger a fresh meta-review run before declaring manual escalation,
 4. resolve the blocking condition before re-running the smoke checklist.
 
 If the block is `PAIRFLOW_COMMAND_PATH_STALE`:

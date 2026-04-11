@@ -2,7 +2,6 @@ export {
   applyMetaReviewGateOnConvergence,
   asMetaReviewGateError,
   MetaReviewGateError,
-  recoverMetaReviewGateFromSnapshot,
   toMetaReviewGateError
 } from "./metaReviewGateCommandRuntime.js";
 export type {
@@ -12,7 +11,5 @@ export type {
   MetaReviewGateResult,
   MetaReviewGateRoute,
   NotifyMetaReviewerSubmissionRequestDependencies,
-  NotifyMetaReviewerSubmissionRequestInput,
-  RecoverMetaReviewGateFromSnapshotDependencies,
-  RecoverMetaReviewGateFromSnapshotInput
+  NotifyMetaReviewerSubmissionRequestInput
 } from "./metaReviewGateCommandContract.js";

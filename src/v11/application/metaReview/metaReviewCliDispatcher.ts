@@ -2,7 +2,6 @@ import {
   getMetaReviewLastReportV11 as getMetaReviewLastReport,
   getMetaReviewStatusV11 as getMetaReviewStatus
 } from "./emitMetaReviewV11.js";
-import { recoverMetaReviewGateFromSnapshotV11 as recoverMetaReviewGateFromSnapshot } from "../metaReviewGate/emitMetaReviewGateV11.js";
 import type {
   BubbleMetaReviewCommandResult,
   BubbleMetaReviewExecutableCommandOptions
@@ -44,20 +43,6 @@ async function runMetaReviewLastReportProjectionCommand(input: {
   };
 }
 
-async function runMetaReviewRecoverSnapshotReplayCommand(input: {
-  options: Extract<BubbleMetaReviewExecutableCommandOptions, { command: "recover" }>;
-  cwd: string;
-}): Promise<BubbleMetaReviewCommandResult> {
-  await recoverMetaReviewGateFromSnapshot({
-    bubbleId: input.options.id,
-    ...toRepoPathOption(input.options.repo),
-    cwd: input.cwd
-  });
-  throw new Error(
-    "META_REVIEW_RECOVER_UNEXPECTED_SUCCESS: retained recover is expected to fail closed."
-  );
-}
-
 export async function dispatchMetaReviewCommand(input: {
   options: BubbleMetaReviewExecutableCommandOptions;
   cwd: string;
@@ -70,12 +55,6 @@ export async function dispatchMetaReviewCommand(input: {
   }
   if (input.options.command === "last-report") {
     return runMetaReviewLastReportProjectionCommand({
-      options: input.options,
-      cwd: input.cwd
-    });
-  }
-  if (input.options.command === "recover") {
-    return runMetaReviewRecoverSnapshotReplayCommand({
       options: input.options,
       cwd: input.cwd
     });

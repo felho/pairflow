@@ -9,18 +9,13 @@ import {
   getBubbleMetaReviewHelpText,
   parseBubbleMetaReviewCommandOptions,
   renderMetaReviewLastReportText,
-  renderMetaReviewRecoverText,
   renderMetaReviewSubmitText,
   renderMetaReviewStatusText,
   runBubbleMetaReviewCommand
 } from "../../src/cli/commands/bubble/metaReview.js";
 import { formatMetaReviewProjectionFreshness } from "../../src/v11/application/metaReview/metaReviewCliRenderersHelpers.js";
-import { buildMetaReviewExecutionContext } from "../../src/v11/shared/metaReview/metaReviewExecutionContext.js";
 import { MetaReviewError } from "../../src/v11/defaults/metaReview/metaReviewApi.js";
-import {
-  metaReviewExecutionContextToRunningContext
-} from "../../src/v11/shared/state/executionContext.js";
-import { readStateSnapshot, writeStateSnapshot } from "../../src/v11/infrastructure/state/stateStore.js";
+import { readStateSnapshot } from "../../src/v11/infrastructure/state/stateStore.js";
 import { initGitRepository } from "../helpers/git.js";
 import { setupRunningBubbleFixture } from "../helpers/bubble.js";
 
@@ -41,7 +36,7 @@ afterEach(async () => {
   );
 });
 
-async function expectRejectedRecover(
+async function expectRejectedUnsupportedRecover(
   promise: Promise<unknown>
 ): Promise<void> {
   let thrown: unknown;
@@ -55,8 +50,9 @@ async function expectRejectedRecover(
   if (!(thrown instanceof MetaReviewError)) {
     throw new Error("Expected MetaReviewError.");
   }
-  expect(thrown.reasonCode).toBe("META_REVIEW_GATE_RUN_FAILED");
-  expect(thrown.message).toContain("META_REVIEW_GATE_TRANSITION_INVALID");
+  expect(thrown.reasonCode).toBe("META_REVIEW_SCHEMA_INVALID");
+  expect(thrown.message).toContain("pairflow bubble meta-review recover");
+  expect(thrown.message).toContain("no longer supported");
 }
 
 describe("parseBubbleMetaReviewCommandOptions", () => {
@@ -99,7 +95,7 @@ describe("parseBubbleMetaReviewCommandOptions", () => {
     expect(parsed).toEqual({ help: true });
     expect(getBubbleMetaReviewHelpText()).toContain("pairflow bubble meta-review");
     expect(getBubbleMetaReviewHelpText()).toContain(
-      "Operator projection/fail-closed recover commands"
+      "Operator projection commands"
     );
     expect(getBubbleMetaReviewHelpText()).toContain(
       "pairflow agent emit --kind meta_review_result"
@@ -111,10 +107,10 @@ describe("parseBubbleMetaReviewCommandOptions", () => {
       "`status` and `last-report` are read-only projections"
     );
     expect(getBubbleMetaReviewHelpText()).toContain(
-      "unsupported fail-closed operator surface"
+      "pairflow bubble restart --id <id>"
     );
     expect(getBubbleMetaReviewHelpText()).not.toContain(
-      "replays persisted snapshot routing only"
+      "pairflow bubble meta-review recover"
     );
     expect(getBubbleMetaReviewHelpText()).toContain(
       "`pairflow bubble meta-review run` was removed"
@@ -145,19 +141,14 @@ describe("parseBubbleMetaReviewCommandOptions", () => {
     ).toThrow(/pairflow agent emit --kind meta_review_result/u);
   });
 
-  it("parses recover options", () => {
-    const parsed = parseBubbleMetaReviewCommandOptions([
-      "recover",
-      "--id",
-      "b_meta_cli_recover_01"
-    ]);
-
-    expect(parsed.help).toBe(false);
-    if (parsed.help || parsed.command !== "recover") {
-      throw new Error("Expected recover command options.");
-    }
-
-    expect(parsed.id).toBe("b_meta_cli_recover_01");
+  it("rejects removed recover subcommand with explicit restart guidance", () => {
+    expect(() =>
+      parseBubbleMetaReviewCommandOptions([
+        "recover",
+        "--id",
+        "b_meta_cli_recover_01"
+      ])
+    ).toThrow(/pairflow bubble meta-review recover` is no longer supported/u);
   });
 
   it("rejects removed run subcommand even when --depth is present", () => {
@@ -198,8 +189,7 @@ describe("parseBubbleMetaReviewCommandOptions", () => {
 
   it.each([
     "status",
-    "last-report",
-    "recover"
+    "last-report"
   ])(
     "rejects submit-only flags for retained %s subcommand with canonical actor guidance",
     (subcommand) => {
@@ -266,7 +256,7 @@ describe("runBubbleMetaReviewCommand", () => {
     expect(result).toBeNull();
   });
 
-  it("routes status/last-report and fails closed for recover", async () => {
+  it("routes status/last-report and rejects removed recover at parse boundary", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({
       repoPath,
@@ -294,51 +284,7 @@ describe("runBubbleMetaReviewCommand", () => {
     expect(reportResult).not.toBeNull();
     expect(reportResult?.command).toBe("last-report");
 
-    const loaded = await readStateSnapshot(bubble.paths.statePath);
-    await writeStateSnapshot(
-      bubble.paths.statePath,
-      {
-        ...loaded.state,
-        state: "RUNNING",
-        active_agent: null,
-        active_role: null,
-        active_since: null,
-        execution_context: metaReviewExecutionContextToRunningContext(
-          buildMetaReviewExecutionContext({
-            bubbleId: bubble.bubbleId,
-            round: loaded.state.round,
-            startedAt: "2026-03-08T12:29:00.000Z",
-            watchdogTimeoutMinutes: 60,
-            attempt: 1
-          })
-        ),
-        meta_review: {
-          execution_context: buildMetaReviewExecutionContext({
-            bubbleId: bubble.bubbleId,
-            round: loaded.state.round,
-            startedAt: "2026-03-08T12:29:00.000Z",
-            watchdogTimeoutMinutes: 60,
-            attempt: 1
-          }),
-          last_autonomous_run_id: "run_meta_cli_recover_01",
-          last_autonomous_status: "success",
-          last_autonomous_recommendation: "approve",
-          last_autonomous_summary: "Recovered via CLI routing test.",
-          last_autonomous_report_ref: "artifacts/meta-review-last.json",
-          last_autonomous_rework_target_message: null,
-          last_autonomous_updated_at: "2026-03-08T12:30:00.000Z",
-          auto_rework_count: 0,
-          auto_rework_limit: 5,
-          sticky_human_gate: false
-        }
-      },
-      {
-        expectedFingerprint: loaded.fingerprint,
-        expectedState: "RUNNING"
-      }
-    );
-
-    await expectRejectedRecover(
+    await expectRejectedUnsupportedRecover(
       runBubbleMetaReviewCommand([
         "recover",
         "--id",
@@ -349,59 +295,17 @@ describe("runBubbleMetaReviewCommand", () => {
     );
   });
 
-  it("does not synthesize recover persistence after rejected recover", async () => {
+  it("does not mutate state when removed recover is invoked", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({
       repoPath,
       bubbleId: "b_meta_cli_recover_persist_01",
-      task: "CLI recover persistence visibility"
+      task: "CLI removed recover boundary"
     });
 
-    const loaded = await readStateSnapshot(bubble.paths.statePath);
-    await writeStateSnapshot(
-      bubble.paths.statePath,
-      {
-        ...loaded.state,
-        state: "RUNNING",
-        active_agent: "codex",
-        active_role: "meta_reviewer",
-        active_since: "2026-03-12T12:36:00.000Z",
-        execution_context: metaReviewExecutionContextToRunningContext(
-          buildMetaReviewExecutionContext({
-            bubbleId: bubble.bubbleId,
-            round: loaded.state.round,
-            startedAt: "2026-03-12T12:36:00.000Z",
-            watchdogTimeoutMinutes: 60,
-            attempt: 1
-          })
-        ),
-        meta_review: {
-          execution_context: buildMetaReviewExecutionContext({
-            bubbleId: bubble.bubbleId,
-            round: loaded.state.round,
-            startedAt: "2026-03-12T12:36:00.000Z",
-            watchdogTimeoutMinutes: 60,
-            attempt: 1
-          }),
-          last_autonomous_run_id: null,
-          last_autonomous_status: null,
-          last_autonomous_recommendation: null,
-          last_autonomous_summary: null,
-          last_autonomous_report_ref: null,
-          last_autonomous_rework_target_message: null,
-          last_autonomous_updated_at: null,
-          auto_rework_count: 0,
-          auto_rework_limit: 5,
-          sticky_human_gate: false
-        }
-      },
-      {
-        expectedFingerprint: loaded.fingerprint,
-        expectedState: "RUNNING"
-      }
-    );
+    const before = await readStateSnapshot(bubble.paths.statePath);
 
-    await expectRejectedRecover(
+    await expectRejectedUnsupportedRecover(
       runBubbleMetaReviewCommand([
         "recover",
         "--id",
@@ -410,6 +314,9 @@ describe("runBubbleMetaReviewCommand", () => {
         repoPath
       ])
     );
+
+    const after = await readStateSnapshot(bubble.paths.statePath);
+    expect(after.fingerprint).toBe(before.fingerprint);
 
     const statusResult = await runBubbleMetaReviewCommand([
       "status",
@@ -435,12 +342,10 @@ describe("runBubbleMetaReviewCommand", () => {
     if (reportResult?.command !== "last-report") {
       throw new Error("Expected last-report command result.");
     }
-    expect(reportResult.lastReport.has_report).toBe(false);
-    expect(reportResult.lastReport.report_ref).toBeNull();
-    expect(reportResult.lastReport.report_json).toBeNull();
+    expect(reportResult.lastReport.bubbleId).toBe(bubble.bubbleId);
   });
 
-  it("supports pre-parsed options overload for status/last-report and rejects recover", async () => {
+  it("supports pre-parsed options overload for status/last-report", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({
       repoPath,
@@ -467,71 +372,6 @@ describe("runBubbleMetaReviewCommand", () => {
       verbose: false
     });
     expect(reportResult?.command).toBe("last-report");
-
-    const loaded = await readStateSnapshot(bubble.paths.statePath);
-    await writeStateSnapshot(
-      bubble.paths.statePath,
-      {
-        ...loaded.state,
-        state: "RUNNING",
-        active_agent: null,
-        active_role: null,
-        active_since: null,
-        execution_context: metaReviewExecutionContextToRunningContext(
-          buildMetaReviewExecutionContext({
-            bubbleId: bubble.bubbleId,
-            round: loaded.state.round,
-            startedAt: "2026-03-08T12:34:00.000Z",
-            watchdogTimeoutMinutes: 60,
-            attempt: 1
-          })
-        ),
-        meta_review: {
-          execution_context: buildMetaReviewExecutionContext({
-            bubbleId: bubble.bubbleId,
-            round: loaded.state.round,
-            startedAt: "2026-03-08T12:34:00.000Z",
-            watchdogTimeoutMinutes: 60,
-            attempt: 1
-          }),
-          last_autonomous_run_id: "run_meta_cli_recover_02",
-          last_autonomous_status: "success",
-          last_autonomous_recommendation: "approve",
-          last_autonomous_summary: "Recovered via parsed overload test.",
-          last_autonomous_report_ref: "artifacts/meta-review-last.json",
-          last_autonomous_rework_target_message: null,
-          last_autonomous_updated_at: "2026-03-08T12:35:00.000Z",
-          auto_rework_count: 0,
-          auto_rework_limit: 5,
-          sticky_human_gate: false
-        }
-      },
-      {
-        expectedFingerprint: loaded.fingerprint,
-        expectedState: "RUNNING"
-      }
-    );
-
-    await expectRejectedRecover(
-      runBubbleMetaReviewCommand({
-        help: false,
-        command: "recover",
-        id: bubble.bubbleId,
-        repo: repoPath,
-        json: false,
-        verbose: false
-      })
-    );
-
-    const afterRecover = await readStateSnapshot(bubble.paths.statePath);
-    if (afterRecover.state.meta_review === undefined) {
-      throw new Error("Expected meta_review after recover.");
-    }
-    expect(afterRecover.state.meta_review.last_autonomous_run_id).toBe(
-      "run_meta_cli_recover_02"
-    );
-    expect(afterRecover.state.meta_review.last_autonomous_status).toBe("success");
-
   });
 
   it("maps missing bubble lookup failures to dedicated meta-review reason code", async () => {
@@ -880,54 +720,4 @@ describe("meta-review render helpers", () => {
     ).toThrow(/META_REVIEW_PROJECTION_FRESHNESS_UNEXPECTED/u);
   });
 
-  it("renders recover output", () => {
-    const rendered = renderMetaReviewRecoverText({
-      bubbleId: "b_meta_cli_render_recover_01",
-      route: "human_gate_approve",
-      gateSequence: 42,
-      gateEnvelope: {
-        id: "msg_meta_recover_01",
-        ts: "2026-03-08T12:40:00.000Z",
-        bubble_id: "b_meta_cli_render_recover_01",
-        sender: "orchestrator",
-        recipient: "human",
-        type: "APPROVAL_REQUEST",
-        round: 4,
-        payload: {
-          summary: "Recovered summary."
-        },
-        refs: ["artifacts/meta-review-last.json"]
-      },
-      state: {
-        bubble_id: "b_meta_cli_render_recover_01",
-        state: "READY_FOR_HUMAN_APPROVAL",
-        round: 4,
-        active_agent: null,
-        active_since: null,
-        active_role: null,
-        round_role_history: [],
-        last_command_at: "2026-03-08T12:40:00.000Z",
-        pending_rework_intent: null,
-        rework_intent_history: [],
-        meta_review: {
-          last_autonomous_run_id: "run_meta_cli_render_recover_01",
-          last_autonomous_status: "success",
-          last_autonomous_recommendation: "approve",
-          last_autonomous_summary: "Recovered summary.",
-          last_autonomous_report_ref: "artifacts/meta-review-last.json",
-          last_autonomous_rework_target_message: null,
-          last_autonomous_updated_at: "2026-03-08T12:39:00.000Z",
-          auto_rework_count: 0,
-          auto_rework_limit: 5,
-          sticky_human_gate: true
-        }
-      }
-    });
-
-    expect(rendered).toContain("route=human_gate_approve");
-    expect(rendered).toContain("unsupported fail-closed recovery surface");
-    expect(rendered).not.toContain("snapshot-route replay only");
-    expect(rendered).toContain("APPROVAL_REQUEST msg_meta_recover_01");
-    expect(rendered).toContain("READY_FOR_HUMAN_APPROVAL");
-  });
 });

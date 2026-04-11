@@ -5,7 +5,5 @@ export type {
   MetaReviewGateResult,
   MetaReviewGateRoute,
   NotifyMetaReviewerSubmissionRequestDependencies,
-  NotifyMetaReviewerSubmissionRequestInput,
-  RecoverMetaReviewGateFromSnapshotDependencies,
-  RecoverMetaReviewGateFromSnapshotInput
+  NotifyMetaReviewerSubmissionRequestInput
 } from "./metaReviewGateTypes.js";

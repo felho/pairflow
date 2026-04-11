@@ -5,9 +5,9 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import {
-  applyMetaReviewGateOnConvergenceV11 as applyMetaReviewGateOnConvergence,
-  recoverMetaReviewGateFromSnapshotV11 as recoverMetaReviewGateFromSnapshot
+  applyMetaReviewGateOnConvergenceV11 as applyMetaReviewGateOnConvergence
 } from "../../../src/v11/application/metaReviewGate/emitMetaReviewGateV11.js";
+import { recoverMetaReviewGateFromSnapshot } from "../../../src/v11/shared/metaReviewGate/metaReviewGateUnsupportedRecovery.js";
 import {
   readTranscriptEnvelopes
 } from "../../../src/v11/infrastructure/artifact/transcript/transcriptStore.js";
@@ -18,6 +18,10 @@ import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
 import { initGitRepository } from "../../helpers/git.js";
 
 const tempDirs: string[] = [];
+const noRuntimeSessionPaneBinding = async () => ({
+  updated: false as const,
+  reason: "no_runtime_session" as const
+});
 
 async function createTempRepo(): Promise<string> {
   const root = await mkdtemp(join(tmpdir(), "pairflow-meta-review-gate-"));
@@ -49,6 +53,7 @@ describe("applyMetaReviewGateOnConvergence", () => {
       summary: "Ready for meta-review.",
       now: new Date("2026-03-13T12:00:00.000Z")
     }, {
+      setMetaReviewerPaneBinding: noRuntimeSessionPaneBinding,
       notifyMetaReviewerSubmissionRequest: async () => ({
         status: "confirmed",
         reasonCode: null,
@@ -80,6 +85,7 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
       summary: "Ready for meta-review.",
       now: new Date("2026-03-13T12:00:00.000Z")
     }, {
+      setMetaReviewerPaneBinding: noRuntimeSessionPaneBinding,
       notifyMetaReviewerSubmissionRequest: async () => ({
         status: "confirmed",
         reasonCode: null,

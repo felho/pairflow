@@ -6,11 +6,10 @@ import {
 } from "./metaReviewCliOptionValueReader.js";
 import type {
   BubbleMetaReviewLastReportCommandOptions,
-  BubbleMetaReviewRecoverCommandOptions,
   BubbleMetaReviewStatusCommandOptions
 } from "./metaReviewCliOptionTypes.js";
 
-export type MetaReviewSubcommand = "status" | "last-report" | "recover";
+export type MetaReviewSubcommand = "status" | "last-report";
 
 export type BubbleMetaReviewBaseOptions = {
   id: string;
@@ -33,18 +32,19 @@ export function parseMetaReviewSubcommand(
   }
   if (value === "run") {
     return invalidMetaReviewCliOptions(
-      "`pairflow bubble meta-review run` was removed. Use canonical `pairflow agent emit --kind meta_review_result ...` for actor writes. Retained operator commands: status, last-report, recover (fail-closed/unsupported)."
+      "`pairflow bubble meta-review run` was removed. Use canonical `pairflow agent emit --kind meta_review_result ...` for actor writes. Retained operator commands: status, last-report."
     );
   }
-  if (
-    value === "status" ||
-    value === "last-report" ||
-    value === "recover"
-  ) {
+  if (value === "recover") {
+    return invalidMetaReviewCliOptions(
+      "`pairflow bubble meta-review recover` is no longer supported. Use `pairflow bubble restart --id <id>` to recover runtime state or trigger a fresh meta-review run through the normal workflow. Read-only commands: status, last-report."
+    );
+  }
+  if (value === "status" || value === "last-report") {
     return value;
   }
   return invalidMetaReviewCliOptions(
-    "Unknown meta-review subcommand. Use one of: status, last-report, recover."
+    "Unknown meta-review subcommand. Use one of: status, last-report."
   );
 }
 
@@ -132,7 +132,7 @@ export function assertSubmitOnlyOptionsAllowed(
 export function assertDepthOptionRemoved(depth: string | undefined): void {
   if (depth !== undefined) {
     invalidMetaReviewCliOptions(
-      "`--depth` is no longer supported because `pairflow bubble meta-review run` was removed. Retained operator commands: status, last-report, recover (fail-closed/unsupported)."
+      "`--depth` is no longer supported because `pairflow bubble meta-review run` was removed. Retained operator commands: status, last-report."
     );
   }
 }
@@ -141,8 +141,7 @@ export function buildMetaReviewReadonlyCommandOptions(
   base: BubbleMetaReviewBaseOptions,
   subcommand: MetaReviewSubcommand
 ): BubbleMetaReviewStatusCommandOptions
-  | BubbleMetaReviewLastReportCommandOptions
-  | BubbleMetaReviewRecoverCommandOptions {
+  | BubbleMetaReviewLastReportCommandOptions {
   return {
     ...base,
     command: subcommand

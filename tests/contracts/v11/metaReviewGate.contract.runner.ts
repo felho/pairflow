@@ -1,26 +1,20 @@
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { createHash } from "node:crypto";
 
 import {
   applyMetaReviewGateOnConvergenceV11,
-  recoverMetaReviewGateFromSnapshotV11,
   type MetaReviewGateResultV11
 } from "../../../src/v11/application/metaReviewGate/emitMetaReviewGateV11.js";
-import { metaReviewExecutionContextToRunningContext } from "../../../src/v11/shared/state/executionContext.js";
-import { buildMetaReviewExecutionContext } from "../../../src/v11/shared/metaReview/metaReviewExecutionContext.js";
 import { readStateSnapshot, writeStateSnapshot } from "../../../src/v11/infrastructure/state/stateStore.js";
-import type { MetaReviewResult } from "../../../src/v11/shared/metaReview/metaReviewTypes.js";
-import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
-import { initGitRepository } from "../../helpers/git.js";
+import { DEFAULT_META_REVIEW_AUTO_REWORK_LIMIT } from "../../../src/types/bubble.js";
 import type {
   RuntimeSessionRecord
 } from "../../../src/v11/infrastructure/executor/sessionRuntime/runtimeSessionsRegistry.js";
 import type { SetMetaReviewerPaneBindingResult } from "../../../src/v11/infrastructure/channel/tmux/metaReviewerPaneBinding.js";
 import type { ContractCase, ContractCaseExpected } from "./schema.js";
-import { DEFAULT_META_REVIEW_AUTO_REWORK_LIMIT } from "../../../src/types/bubble.js";
-import { MetaReviewGateError } from "../../../src/v11/shared/metaReviewGate/metaReviewGateTypes.js";
+import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
+import { initGitRepository } from "../../helpers/git.js";
 
 export interface MetaReviewGateContractOutput {
   status: "ok" | "error";
@@ -38,20 +32,11 @@ export interface MetaReviewGateContractRunResult {
   v11?: MetaReviewGateContractOutput;
 }
 
-type MetaReviewGateContractRoute = "recover" | "apply";
 type MetaReviewGateApplyScenario =
   | "run_failed"
   | "meta_review_running"
   | "sticky_bypass";
-type MetaReviewGateRecoverScenario =
-  | "error"
-  | "approve"
-  | "approve_advisory"
-  | "approve_advisory_with_artifact"
-  | "inconclusive"
-  | "rework_budget_exhausted"
-  | "rework_dispatch_failed"
-  | "auto_rework";
+
 interface NormalizedMetaReviewSnapshot {
   last_autonomous_run_id: string | null;
   last_autonomous_status: "success" | "error" | null;
@@ -66,16 +51,15 @@ interface NormalizedMetaReviewSnapshot {
 }
 
 function parseMetaReviewGateCaseInput(input: ContractCase["input"]): {
-  route: MetaReviewGateContractRoute;
+  route: "apply";
   applyScenario: MetaReviewGateApplyScenario;
-  recoverScenario: MetaReviewGateRecoverScenario;
   summary?: string;
   refs: string[];
 } {
   const routeRaw = input.route;
-  if (routeRaw !== "recover" && routeRaw !== "apply") {
+  if (routeRaw !== "apply") {
     throw new Error(
-      "metaReviewGate contract input.route must be one of: recover, apply."
+      "metaReviewGate contract input.route must be `apply`; recover parity cases were removed with the public recover surface."
     );
   }
 
@@ -106,27 +90,9 @@ function parseMetaReviewGateCaseInput(input: ContractCase["input"]): {
     );
   }
 
-  const recoverScenarioRaw = input.recoverScenario;
-  if (
-    recoverScenarioRaw !== undefined &&
-    recoverScenarioRaw !== "error" &&
-    recoverScenarioRaw !== "approve" &&
-    recoverScenarioRaw !== "approve_advisory" &&
-    recoverScenarioRaw !== "approve_advisory_with_artifact" &&
-    recoverScenarioRaw !== "inconclusive" &&
-    recoverScenarioRaw !== "rework_budget_exhausted" &&
-    recoverScenarioRaw !== "rework_dispatch_failed" &&
-    recoverScenarioRaw !== "auto_rework"
-  ) {
-    throw new Error(
-      "metaReviewGate contract input.recoverScenario must be one of: error, approve, approve_advisory, approve_advisory_with_artifact, inconclusive, rework_budget_exhausted, rework_dispatch_failed, auto_rework."
-    );
-  }
-
   return {
-    route: routeRaw,
+    route: "apply",
     applyScenario: applyScenarioRaw ?? "run_failed",
-    recoverScenario: recoverScenarioRaw ?? "error",
     ...(typeof summaryRaw === "string" ? { summary: summaryRaw } : {}),
     refs: refsRaw ?? []
   };
@@ -180,171 +146,7 @@ function normalizeMetaReviewSnapshotForContract(
       metaReview.auto_rework_limit >= 0
         ? metaReview.auto_rework_limit
         : DEFAULT_META_REVIEW_AUTO_REWORK_LIMIT,
-    sticky_human_gate:
-      metaReview?.sticky_human_gate === true
-  };
-}
-
-function buildSyntheticMetaReviewRunError(input: {
-  bubbleId: string;
-}): MetaReviewResult {
-  return {
-    bubble_id: input.bubbleId,
-    status: "error",
-    recommendation: "inconclusive",
-    summary: "Seed meta-review recover contract failure snapshot.",
-    report_ref: "artifacts/meta-review-last.json",
-    rework_target_message: null,
-    updated_at: "2026-03-19T10:03:00.000Z",
-    warnings: [
-      {
-        reason_code: "META_REVIEW_RUNNER_ERROR",
-        message: "Seeded failure for recover contract parity check."
-      }
-    ],
-    report_json: {
-      findings_count: 0
-    }
-  };
-}
-
-function buildSyntheticMetaReviewRunApprove(input: {
-  bubbleId: string;
-}): MetaReviewResult {
-  return {
-    bubble_id: input.bubbleId,
-    status: "success",
-    recommendation: "approve",
-    summary: "Seed meta-review recover contract approve snapshot.",
-    report_ref: "artifacts/meta-review-last.json",
-    rework_target_message: null,
-    updated_at: "2026-03-19T10:03:00.000Z",
-    warnings: [],
-    report_json: {
-      findings_claim_state: "clean",
-      findings_claim_source: "meta_review_artifact",
-      findings_count: 0,
-      findings_claimed_open_total: 0,
-      findings_blocking_open_total: 0,
-      findings_advisory_open_total: 0
-    }
-  };
-}
-
-function buildSyntheticMetaReviewRunApproveAdvisory(input: {
-  bubbleId: string;
-}): MetaReviewResult {
-  return {
-    bubble_id: input.bubbleId,
-    status: "success",
-    recommendation: "approve",
-    summary: "No open P0/P1 findings remain.",
-    report_ref: "artifacts/meta-review-last.json",
-    rework_target_message: null,
-    updated_at: "2026-03-19T10:03:00.000Z",
-    warnings: [],
-    report_json: {
-      findings_claim_state: "open_findings",
-      findings_claim_source: "meta_review_artifact",
-      findings_count: 2,
-      findings_claimed_open_total: 2,
-      findings_blocking_open_total: 0,
-      findings_advisory_open_total: 2,
-      findings: [
-        {
-          severity: "P2",
-          title: "Seed advisory finding P2",
-          refs: ["artifact://seed/advisory-p2"]
-        },
-        {
-          priority: "P3",
-          title: "Seed advisory finding P3"
-        }
-      ]
-    }
-  };
-}
-
-function buildSyntheticMetaReviewRunApproveAdvisoryWithArtifact(input: {
-  bubbleId: string;
-}): MetaReviewResult {
-  return {
-    bubble_id: input.bubbleId,
-    status: "success",
-    recommendation: "approve",
-    summary: "Seed meta-review recover contract approve/advisory+artifact snapshot.",
-    report_ref: "artifacts/meta-review-last.json",
-    rework_target_message: null,
-    updated_at: "2026-03-19T10:03:00.000Z",
-    warnings: [],
-    report_json: {
-      findings_claim_state: "open_findings",
-      findings_claim_source: "meta_review_artifact",
-      findings_count: 2,
-      findings_claimed_open_total: 2,
-      findings_blocking_open_total: 0,
-      findings_advisory_open_total: 2,
-      findings_artifact_open_total: 2
-    }
-  };
-}
-
-function buildSyntheticMetaReviewRunInconclusive(input: {
-  bubbleId: string;
-}): MetaReviewResult {
-  return {
-    bubble_id: input.bubbleId,
-    status: "success",
-    recommendation: "inconclusive",
-    summary: "Seed meta-review recover contract inconclusive snapshot.",
-    report_ref: "artifacts/meta-review-last.json",
-    rework_target_message: null,
-    updated_at: "2026-03-19T10:03:00.000Z",
-    warnings: []
-  };
-}
-
-function buildSyntheticMetaReviewRunReworkOpenFindings(input: {
-  bubbleId: string;
-  runId: string;
-  findingsCount: number;
-  findingsArtifactRef: string;
-  findingsDigestSha256: string;
-}): MetaReviewResult {
-  return {
-    bubble_id: input.bubbleId,
-    run_id: input.runId,
-    status: "success",
-    recommendation: "rework",
-    summary: "Seed meta-review recover contract rework/budget-exhausted snapshot.",
-    report_ref: "artifacts/meta-review-last.json",
-    rework_target_message: "Fix the remaining blocker findings.",
-    updated_at: "2026-03-19T10:03:00.000Z",
-    warnings: [],
-    report_json: {
-      findings_claim_state: "open_findings",
-      findings_claim_source: "meta_review_artifact",
-      findings_count: input.findingsCount,
-      findings_artifact_ref: input.findingsArtifactRef,
-      meta_review_run_id: input.runId,
-      findings_digest_sha256: input.findingsDigestSha256,
-      findings_artifact_status: "available"
-    }
-  };
-}
-
-function buildSyntheticMetaReviewRunReworkDispatchFailed(input: {
-  bubbleId: string;
-}): MetaReviewResult {
-  return {
-    bubble_id: input.bubbleId,
-    status: "success",
-    recommendation: "rework",
-    summary: "Seed meta-review recover contract rework dispatch failed snapshot.",
-    report_ref: "artifacts/meta-review-last.json",
-    rework_target_message: "Fix the blocker findings before retry.",
-    updated_at: "2026-03-19T10:03:00.000Z",
-    warnings: []
+    sticky_human_gate: metaReview?.sticky_human_gate === true
   };
 }
 
@@ -365,19 +167,6 @@ function normalizeMetaReviewGateResult(
     stateSubset: {
       state: result.state.state
     }
-  };
-}
-
-function normalizeMetaReviewGateError(
-  error: MetaReviewGateError
-): MetaReviewGateContractOutput {
-  return {
-    status: "error",
-    reasonCode: error.reasonCode,
-    gateRoute: null,
-    envelopeType: null,
-    envelopePayload: null,
-    stateSubset: null
   };
 }
 
@@ -437,9 +226,7 @@ function assertRecordSubset(input: {
 }): void {
   for (const [key, expectedValue] of Object.entries(input.expected)) {
     if (!(key in input.actual)) {
-      throw new Error(
-        `${input.label}: missing key at ${input.path}.${key}`
-      );
+      throw new Error(`${input.label}: missing key at ${input.path}.${key}`);
     }
     assertSubsetValue({
       actual: input.actual[key],
@@ -509,7 +296,6 @@ function assertContractExpectedSubset(input: {
 async function executeMetaReviewGateCase(input: {
   caseDef: ContractCase;
   applyExecutor: typeof applyMetaReviewGateOnConvergenceV11;
-  recoverExecutor: typeof recoverMetaReviewGateFromSnapshotV11;
 }): Promise<MetaReviewGateContractOutput> {
   const repoPath = await mkdtemp(join(tmpdir(), "pairflow-meta-review-gate-contract-"));
   try {
@@ -521,227 +307,70 @@ async function executeMetaReviewGateCase(input: {
     });
 
     const caseInput = parseMetaReviewGateCaseInput(input.caseDef.input);
-    let result: MetaReviewGateResultV11;
-
-    if (caseInput.route === "apply") {
-      const stateForApply = await readStateSnapshot(bubble.paths.statePath);
-      if (caseInput.applyScenario === "sticky_bypass") {
-        await writeStateSnapshot(
-          bubble.paths.statePath,
-          {
-            ...stateForApply.state,
-            meta_review: {
-              ...normalizeMetaReviewSnapshotForContract(
-                stateForApply.state.meta_review
-              ),
-              sticky_human_gate: true
-            }
-          },
-          {
-            expectedFingerprint: stateForApply.fingerprint,
-            expectedState: "RUNNING"
-          }
-        );
-      }
-
-      const noRuntimeSessionBindingResult: SetMetaReviewerPaneBindingResult = {
-        updated: false,
-        reason: "no_runtime_session"
-      };
-      const nowIso = "2026-03-19T10:04:00.000Z";
-      const activeMetaReviewerRecord: RuntimeSessionRecord = {
-        bubbleId: bubble.bubbleId,
-        repoPath,
-        worktreePath: bubble.paths.worktreePath,
-        tmuxSessionName: "pf-meta-review-contract",
-        updatedAt: nowIso,
-        metaReviewerPane: {
-          role: "meta-reviewer",
-          paneIndex: 3,
-          active: true,
-          updatedAt: nowIso
-        }
-      };
-      result = await input.applyExecutor(
-        {
-          bubbleId: bubble.bubbleId,
-          repoPath,
-          summary:
-            caseInput.summary ??
-            "Seed meta-review gate apply contract baseline summary.",
-          refs: caseInput.refs,
-          now: new Date(nowIso)
-        },
-        {
-          setMetaReviewerPaneBinding: () => Promise.resolve(
-            caseInput.applyScenario === "meta_review_running" ||
-              caseInput.applyScenario === "sticky_bypass"
-              ? {
-                  updated: true,
-                  record: activeMetaReviewerRecord
-                }
-              : noRuntimeSessionBindingResult
-          ),
-          notifyMetaReviewerSubmissionRequest: () => Promise.resolve({
-            status: "confirmed" as const,
-            reasonCode: null,
-            message: "ok"
-          })
-        }
-      );
-    } else {
-      const loaded = await readStateSnapshot(bubble.paths.statePath);
-      const metaReviewSnapshot = normalizeMetaReviewSnapshotForContract(
-        loaded.state.meta_review
-      );
-      const isBudgetExhaustedScenario =
-        caseInput.recoverScenario === "rework_budget_exhausted";
-      const isAutoReworkScenario = caseInput.recoverScenario === "auto_rework";
-      const autoReworkLimit = Math.max(metaReviewSnapshot.auto_rework_limit, 1);
+    const stateForApply = await readStateSnapshot(bubble.paths.statePath);
+    if (caseInput.applyScenario === "sticky_bypass") {
       await writeStateSnapshot(
         bubble.paths.statePath,
         {
-          ...loaded.state,
-          state: "RUNNING",
-          active_agent: "codex",
-          active_role: "meta_reviewer",
-          active_since: "2026-03-19T10:03:30.000Z",
-          last_command_at: "2026-03-19T10:03:30.000Z",
-          execution_context: metaReviewExecutionContextToRunningContext(
-            buildMetaReviewExecutionContext({
-              bubbleId: bubble.bubbleId,
-              round: loaded.state.round,
-              startedAt: "2026-03-19T10:03:30.000Z",
-              watchdogTimeoutMinutes: 60,
-              attempt: 1
-            })
-          ),
+          ...stateForApply.state,
           meta_review: {
-            ...metaReviewSnapshot,
-            execution_context: buildMetaReviewExecutionContext({
-              bubbleId: bubble.bubbleId,
-              round: loaded.state.round,
-              startedAt: "2026-03-19T10:03:30.000Z",
-              watchdogTimeoutMinutes: 60,
-              attempt: 1
-            }),
-            ...(isBudgetExhaustedScenario
-              ? {
-                  auto_rework_limit: autoReworkLimit,
-                  auto_rework_count: autoReworkLimit
-                }
-              : isAutoReworkScenario
-                ? {
-                    auto_rework_limit: autoReworkLimit,
-                    auto_rework_count: Math.max(0, autoReworkLimit - 1)
-                  }
-                : {})
+            ...normalizeMetaReviewSnapshotForContract(stateForApply.state.meta_review),
+            sticky_human_gate: true
           }
         },
         {
-          expectedFingerprint: loaded.fingerprint,
+          expectedFingerprint: stateForApply.fingerprint,
           expectedState: "RUNNING"
         }
       );
-
-      let runResult: MetaReviewResult;
-      if (caseInput.recoverScenario === "approve") {
-        runResult = buildSyntheticMetaReviewRunApprove({
-          bubbleId: bubble.bubbleId
-        });
-      } else if (caseInput.recoverScenario === "approve_advisory") {
-        runResult = buildSyntheticMetaReviewRunApproveAdvisory({
-          bubbleId: bubble.bubbleId
-        });
-      } else if (caseInput.recoverScenario === "approve_advisory_with_artifact") {
-        runResult = buildSyntheticMetaReviewRunApproveAdvisoryWithArtifact({
-          bubbleId: bubble.bubbleId
-        });
-      } else if (caseInput.recoverScenario === "inconclusive") {
-        runResult = buildSyntheticMetaReviewRunInconclusive({
-          bubbleId: bubble.bubbleId
-        });
-      } else if (caseInput.recoverScenario === "rework_budget_exhausted") {
-        const findingsCount = 2;
-        const findingsArtifactRef = "artifacts/meta-review-findings-contract.json";
-        const findingsArtifactPath = join(
-          bubble.paths.artifactsDir,
-          "meta-review-findings-contract.json"
-        );
-        const findingsArtifactRaw = `${JSON.stringify(
-          {
-            open_total: findingsCount,
-            summary: {
-              open_total: findingsCount
-            }
-          },
-          null,
-          2
-        )}\n`;
-        await writeFile(findingsArtifactPath, findingsArtifactRaw, "utf8");
-        const findingsDigestSha256 = createHash("sha256")
-          .update(findingsArtifactRaw, "utf8")
-          .digest("hex");
-        runResult = buildSyntheticMetaReviewRunReworkOpenFindings({
-          bubbleId: bubble.bubbleId,
-          runId: "meta-review-run-contract-1",
-          findingsCount,
-          findingsArtifactRef,
-          findingsDigestSha256
-        });
-      } else if (caseInput.recoverScenario === "auto_rework") {
-        const findingsCount = 2;
-        const findingsArtifactRef = "artifacts/meta-review-findings-contract-auto-rework.json";
-        const findingsArtifactPath = join(
-          bubble.paths.artifactsDir,
-          "meta-review-findings-contract-auto-rework.json"
-        );
-        const findingsArtifactRaw = `${JSON.stringify(
-          {
-            open_total: findingsCount,
-            summary: {
-              open_total: findingsCount
-            }
-          },
-          null,
-          2
-        )}\n`;
-        await writeFile(findingsArtifactPath, findingsArtifactRaw, "utf8");
-        const findingsDigestSha256 = createHash("sha256")
-          .update(findingsArtifactRaw, "utf8")
-          .digest("hex");
-        runResult = buildSyntheticMetaReviewRunReworkOpenFindings({
-          bubbleId: bubble.bubbleId,
-          runId: "meta-review-run-contract-auto-rework",
-          findingsCount,
-          findingsArtifactRef,
-          findingsDigestSha256
-        });
-      } else if (caseInput.recoverScenario === "rework_dispatch_failed") {
-        runResult = buildSyntheticMetaReviewRunReworkDispatchFailed({
-          bubbleId: bubble.bubbleId
-        });
-      } else {
-        runResult = buildSyntheticMetaReviewRunError({
-          bubbleId: bubble.bubbleId
-        });
-      }
-
-      try {
-        result = await input.recoverExecutor({
-          bubbleId: bubble.bubbleId,
-          repoPath,
-          refs: caseInput.refs,
-          now: new Date("2026-03-19T10:04:00.000Z"),
-          runResult
-        });
-      } catch (error) {
-        if (error instanceof MetaReviewGateError) {
-          return normalizeMetaReviewGateError(error);
-        }
-        throw error;
-      }
     }
+
+    const noRuntimeSessionBindingResult: SetMetaReviewerPaneBindingResult = {
+      updated: false,
+      reason: "no_runtime_session"
+    };
+    const nowIso = "2026-03-19T10:04:00.000Z";
+    const activeMetaReviewerRecord: RuntimeSessionRecord = {
+      bubbleId: bubble.bubbleId,
+      repoPath,
+      worktreePath: bubble.paths.worktreePath,
+      tmuxSessionName: "pf-meta-review-contract",
+      updatedAt: nowIso,
+      metaReviewerPane: {
+        role: "meta-reviewer",
+        paneIndex: 3,
+        active: true,
+        updatedAt: nowIso
+      }
+    };
+
+    const result = await input.applyExecutor(
+      {
+        bubbleId: bubble.bubbleId,
+        repoPath,
+        summary:
+          caseInput.summary ??
+          "Seed meta-review gate apply contract baseline summary.",
+        refs: caseInput.refs,
+        now: new Date(nowIso)
+      },
+      {
+        setMetaReviewerPaneBinding: () => Promise.resolve(
+          caseInput.applyScenario === "meta_review_running" ||
+            caseInput.applyScenario === "sticky_bypass"
+            ? {
+                updated: true,
+                record: activeMetaReviewerRecord
+              }
+            : noRuntimeSessionBindingResult
+        ),
+        notifyMetaReviewerSubmissionRequest: () => Promise.resolve({
+          status: "confirmed" as const,
+          reasonCode: null,
+          message: "ok"
+        })
+      }
+    );
 
     return normalizeMetaReviewGateResult(result);
   } finally {
@@ -760,8 +389,7 @@ export async function runMetaReviewGateContractCase(
 
   const v11 = await executeMetaReviewGateCase({
     caseDef,
-    applyExecutor: applyMetaReviewGateOnConvergenceV11,
-    recoverExecutor: recoverMetaReviewGateFromSnapshotV11
+    applyExecutor: applyMetaReviewGateOnConvergenceV11
   });
   assertContractExpectedSubset({
     output: v11,
