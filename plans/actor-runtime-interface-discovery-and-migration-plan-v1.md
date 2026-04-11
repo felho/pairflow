@@ -22,6 +22,25 @@ owners:
 6. The earlier meta-review-specific `recover` / `reconcile` direction is no longer a live follow-up under this plan; that hole was removed from the code, and no recovery-specific implementation slice remains active here.
 7. As of this checkpoint, `plans/tasks/actor-runtime-interface-meta-review-operator-read-surface-closure-phaseE.md` should be treated as a superseded historical artifact, not the default next active implementation target.
 
+## Direction Update (2026-04-11)
+
+1. A 2026-04-10 checkpoint azon resze, amely a retained `status` / `last-report` surface befagyasztott megtartasarol beszelt, mar nem a jelenlegi celallapot.
+2. Uj explicit termekdontes szuletett: a cached meta-review functionality teljesen kivezetendo, backward compatibility, operator reminder es "removed surface" guidance nelkul.
+3. A celallapot ezen a planen belul most mar ez:
+   - nincs `ReviewBubble --meta-review-source=cached`,
+   - nincs public `pairflow bubble meta-review` operator subtree,
+   - nincs `status` / `last-report` read-model vagy CLI projection surface,
+   - nincs olyan canonical control-path dependence, amely `state.meta_review.last_autonomous_*` mezokre vagy cached report snapshotra epul,
+   - a repo-local docs es skill workflowk nem ugy beszelnek a rendszerrol, mintha ez a feature ma is letezne.
+4. A fenti scope nem egyetlen delivery szeletben viheto le, mert a jelenlegi tree-ben a cached snapshot mezok egy resze meg approval/gate/status/list control-pathokba van bekotve.
+5. A plan alatt aktivalt uj, kotott sorrendu Phase E follow-up taskok:
+   - `plans/tasks/actor-runtime-interface-meta-review-cached-state-decoupling-phaseE.md`
+   - `plans/tasks/actor-runtime-interface-meta-review-cached-surface-removal-phaseE.md`
+6. A vegrehajtasi sorrend kotelezo:
+   - eloszor foundation/refactor: cached snapshot control-path dependence megszuntetese,
+   - utana delivery/removal: CLI/read-model/skill/docs/UI/test surface teljes torlese.
+7. Ez a direction update supersedalja a korabbi "retained read-only projection maradhat" interim dontest, de nem valtoztat a plan eredeti fo celjan: a canonical actor runtime boundary tovabbi szerepsemleges tisztitasan.
+
 ## Objective
 
 Elokesziteni egy olyan actor runtime interface-et vagy actor adapter contractot, amely:
@@ -57,6 +76,20 @@ Ez a plan discovery- es preparation-jellegu. Nem celja a Phase 4 vagy Phase 5 le
    - explicitten kimondani, hogy a retained `status` / `last-report` felulet jelen allapotban read-only operator projectionkent maradhat,
    - es rogziteni, hogy nincs tovabbi meta-review recovery-specifikus follow-up ezen a planon belul.
 6. A jelen checkpoint alapjan a task superseded allapotba kerul: a retained read-surface closure nem marad aktiv Phase E task, es a tovabbi nyitott iranyok mar nem meta-review recovery lane-kent ertelmezendok.
+
+## Full Cached-Surface Removal Checkpoint (2026-04-11)
+
+1. A 2026-04-10 retained-read-surface dontes historical interim checkpointte valt; mar nem tekintendo aktualis target end-state-nek.
+2. A jelenlegi aktiv problemat ket kulon szeletre kell bontani:
+   - foundation: a cached snapshot/state mezok es a control-path kozotti kotodes megszuntetese,
+   - delivery: a teljes cached/public/operator/docs surface torlese.
+3. A foundation szelet addig nem hagyhato ki, amig az approval override, a status/list projection vagy a state schema meg `last_autonomous_*` mezokre epul.
+4. A delivery szeletben nincs backward compatibility budget:
+   - nincs removed-command shim,
+   - nincs CLI help reminder,
+   - nincs skill guidance, amely a `cached` modra vagy a `last-report` / `status` commandokra hivatkozik,
+   - nincs UI prompt, amely `--meta-review-source=cached` kapcsolot masol.
+5. A plan aktualis kovetkezo implementacios targetje ezentul nem a historical operator-read-surface closure task, hanem a ket uj, explicit removal-task a fenti sorrendben.
 
 ## Decision Baseline
 
