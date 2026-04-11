@@ -309,7 +309,58 @@ describe("createBubbleStore", () => {
       latestSummary: null,
       latestReportRef: null,
       latestUpdatedAt: null,
+      latestRoute: null,
+      latestRouteReasonCode: null,
+      latestRouteObservedAt: null,
       runtimeDelivery: null
+    });
+  });
+
+  it("retains meta-review route fields from incoming realtime payloads", async () => {
+    const api = createApiStub({
+      getRepos: vi.fn(async () => ["/repo-a"]),
+      getBubbles: vi.fn(async () => ({
+        repo: repoSummary("/repo-a"),
+        bubbles: []
+      }))
+    });
+
+    let emitEvent: (event: UiEvent) => void = () => undefined;
+    const store = createBubbleStore({
+      api,
+      createEventsClient: (input) => {
+        emitEvent = input.onEvent;
+        return {
+          start: () => undefined,
+          stop: () => undefined,
+          refresh: () => undefined
+        };
+      }
+    });
+
+    await store.getState().initialize();
+
+    emitEvent({
+      id: 41,
+      ts: "2026-02-24T12:42:30.000Z",
+      type: "bubble.updated",
+      repoPath: "/repo-a",
+      bubbleId: "b-route-payload",
+      bubble: bubbleSummary({
+        bubbleId: "b-route-payload",
+        repoPath: "/repo-a",
+        metaReview: {
+          latestRoute: "human_gate_dispatch_failed",
+          latestRouteReasonCode: "META_REVIEW_GATE_RUN_FAILED",
+          latestRouteObservedAt: "2026-02-24T12:42:00.000Z"
+        }
+      })
+    });
+
+    expect(store.getState().bubblesById["b-route-payload"]?.metaReview).toMatchObject({
+      latestRoute: "human_gate_dispatch_failed",
+      latestRouteReasonCode: "META_REVIEW_GATE_RUN_FAILED",
+      latestRouteObservedAt: "2026-02-24T12:42:00.000Z"
     });
   });
 

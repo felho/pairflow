@@ -48,6 +48,9 @@ describe("bubblePresenter", () => {
         latestSummary: "Autonomous review clean.",
         latestReportRef: "artifacts/meta-review-last.json",
         latestUpdatedAt: "2026-02-24T12:00:30.000Z",
+        latestRoute: "human_gate_approve",
+        latestRouteReasonCode: null,
+        latestRouteObservedAt: "2026-02-24T12:00:30.000Z",
         runtimeDelivery: null
       },
       attention: null,
@@ -67,6 +70,7 @@ describe("bubblePresenter", () => {
     expect(presented.metaReview).toMatchObject({
       actor: "meta-reviewer",
       latestRecommendation: "approve",
+      latestRoute: "human_gate_approve",
       runtimeDelivery: null
     });
   });

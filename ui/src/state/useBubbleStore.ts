@@ -133,6 +133,9 @@ function defaultMetaReviewSummary(): UiBubbleSummary["metaReview"] {
     latestSummary: null,
     latestReportRef: null,
     latestUpdatedAt: null,
+    latestRoute: null,
+    latestRouteReasonCode: null,
+    latestRouteObservedAt: null,
     runtimeDelivery: null
   };
 }
@@ -191,6 +194,16 @@ function normalizeBubbleSummary(input: UiBubbleSummary): UiBubbleSummary {
         typeof meta.latestReportRef === "string" ? meta.latestReportRef : null,
       latestUpdatedAt:
         typeof meta.latestUpdatedAt === "string" ? meta.latestUpdatedAt : null,
+      latestRoute:
+        typeof meta.latestRoute === "string" ? meta.latestRoute : null,
+      latestRouteReasonCode:
+        typeof meta.latestRouteReasonCode === "string"
+          ? meta.latestRouteReasonCode
+          : null,
+      latestRouteObservedAt:
+        typeof meta.latestRouteObservedAt === "string"
+          ? meta.latestRouteObservedAt
+          : null,
       runtimeDelivery:
         meta.runtimeDelivery !== null &&
         meta.runtimeDelivery !== undefined &&

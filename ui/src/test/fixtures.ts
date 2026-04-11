@@ -78,6 +78,9 @@ export function bubbleSummary(input: {
       latestSummary: "Looks good.",
       latestReportRef: "artifacts/meta-review-last.json",
       latestUpdatedAt: "2026-02-24T12:00:00.000Z",
+      latestRoute: null,
+      latestRouteReasonCode: null,
+      latestRouteObservedAt: null,
       runtimeDelivery: null,
       ...input.metaReview
     }

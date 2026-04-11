@@ -65,7 +65,7 @@ export interface StatusExecutionContextView {
   attempt: number;
 }
 
-function resolveLatestMetaReviewRoute(transcript: ProtocolEnvelope[]): {
+export function resolveLatestMetaReviewRoute(transcript: ProtocolEnvelope[]): {
   route: MetaReviewGateRoute;
   reasonCode: string | null;
   observedAt: string;
