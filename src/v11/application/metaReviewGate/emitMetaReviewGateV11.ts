@@ -2,15 +2,12 @@ import {
   applyMetaReviewGateOnConvergence,
   asMetaReviewGateError,
   MetaReviewGateError,
-  recoverMetaReviewGateFromSnapshot,
   toMetaReviewGateError
 } from "../../shared/metaReviewGate/metaReviewGateCommandApi.js";
 import type {
   ApplyMetaReviewGateOnConvergenceDependencies,
   ApplyMetaReviewGateOnConvergenceInput,
-  MetaReviewGateResult,
-  RecoverMetaReviewGateFromSnapshotDependencies,
-  RecoverMetaReviewGateFromSnapshotInput
+  MetaReviewGateResult
 } from "../../shared/metaReviewGate/metaReviewGateCommandContract.js";
 import type {
   NotifyMetaReviewerSubmissionRequest,
@@ -126,9 +123,7 @@ export type {
   MetaReviewGateResult as MetaReviewGateResultV11,
   MetaReviewGateRoute as MetaReviewGateRouteV11,
   NotifyMetaReviewerSubmissionRequestDependencies as NotifyMetaReviewerSubmissionRequestV11Dependencies,
-  NotifyMetaReviewerSubmissionRequestInput as NotifyMetaReviewerSubmissionRequestV11Input,
-  RecoverMetaReviewGateFromSnapshotDependencies as RecoverMetaReviewGateFromSnapshotV11Dependencies,
-  RecoverMetaReviewGateFromSnapshotInput as RecoverMetaReviewGateFromSnapshotV11Input
+  NotifyMetaReviewerSubmissionRequestInput as NotifyMetaReviewerSubmissionRequestV11Input
 } from "./metaReviewGateCommandContract.js";
 
 export async function applyMetaReviewGateOnConvergenceV11(
@@ -139,11 +134,4 @@ export async function applyMetaReviewGateOnConvergenceV11(
     input,
     await withMetaReviewGateApplyDefaults(dependencies)
   );
-}
-
-export async function recoverMetaReviewGateFromSnapshotV11(
-  input: RecoverMetaReviewGateFromSnapshotInput,
-  dependencies: RecoverMetaReviewGateFromSnapshotDependencies = {}
-): Promise<MetaReviewGateResult> {
-  return recoverMetaReviewGateFromSnapshot(input, dependencies);
 }

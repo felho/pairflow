@@ -3,7 +3,6 @@ import type {
   MetaReviewStatusViewV11 as MetaReviewStatusView,
   MetaReviewSubmitResultV11 as MetaReviewSubmitResult
 } from "./emitMetaReviewV11.js";
-import type { MetaReviewGateResultV11 as MetaReviewGateResult } from "../metaReviewGate/emitMetaReviewGateV11.js";
 import {
   appendMetaReviewLastReportVerboseLines,
   appendMetaReviewMissingRunLines,
@@ -14,7 +13,6 @@ import {
   appendMetaReviewParityDiagnostics,
   appendMetaReviewStatusRunLines,
   appendMetaReviewStatusVerboseLines,
-  buildMetaReviewRecoverText,
   buildMetaReviewSubmitHeaderLines,
   buildMetaReviewStatusHeaderLines,
   formatMetaReviewProjectionFreshness
@@ -67,10 +65,5 @@ export function renderMetaReviewLastReportText(
     appendMetaReviewLastReportVerboseLines(lines, view);
   }
 
-  return lines.join("\n");
-}
-
-export function renderMetaReviewRecoverText(result: MetaReviewGateResult): string {
-  const lines = buildMetaReviewRecoverText(result);
   return lines.join("\n");
 }

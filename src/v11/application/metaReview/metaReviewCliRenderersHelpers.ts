@@ -3,7 +3,6 @@ import type {
   MetaReviewLastReportViewV11 as MetaReviewLastReportView,
   MetaReviewStatusViewV11 as MetaReviewStatusView
 } from "./emitMetaReviewV11.js";
-import type { MetaReviewGateResultV11 as MetaReviewGateResult } from "../metaReviewGate/emitMetaReviewGateV11.js";
 
 interface MetaReviewRenderedResultLike {
   bubbleId: string;
@@ -188,13 +187,4 @@ export function appendMetaReviewLastReportVerboseLines(
   lines.push(`Findings artifact status: ${view.findings_artifact_status ?? "-"}`);
   lines.push(`Findings digest: ${view.findings_digest_sha256 ?? "-"}`);
   lines.push(`Meta-review run id: ${view.meta_review_run_id ?? "-"}`);
-}
-
-export function buildMetaReviewRecoverText(result: MetaReviewGateResult): string[] {
-  return [
-    `Retained meta-review recover surface for ${result.bubbleId}: route=${result.route}`,
-    "Operator semantics: unsupported fail-closed recovery surface (successful output here is diagnostic-only and does not imply supported snapshot replay)",
-    `Gate envelope: ${result.gateEnvelope.type} ${result.gateEnvelope.id}`,
-    `Lifecycle state: ${result.state.state}`
-  ];
 }

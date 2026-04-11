@@ -5,20 +5,19 @@ export type {
   BubbleMetaReviewCommandOptions,
   BubbleMetaReviewHelpCommandOptions,
   BubbleMetaReviewLastReportCommandOptions,
-  BubbleMetaReviewRecoverCommandOptions,
   BubbleMetaReviewStatusCommandOptions
 } from "./metaReviewCliOptionTypes.js";
 
 export function getBubbleMetaReviewHelpText(): string {
   return [
     "Usage:",
-    "  Operator projection/fail-closed recover commands:",
+    "  Operator projection commands:",
     "  pairflow bubble meta-review status --id <id> [--repo <path>] [--json] [--verbose]",
     "  pairflow bubble meta-review last-report --id <id> [--repo <path>] [--json] [--verbose]",
-    "  pairflow bubble meta-review recover --id <id> [--repo <path>] [--json]",
     "  Canonical actor submit:",
     `  ${buildMetaReviewSubmitUsageLine()}`,
-    "  `status` and `last-report` are read-only projections; retained `recover` is an unsupported fail-closed operator surface and does not replay persisted snapshot routing.",
+    "  `status` and `last-report` are read-only projections.",
+    "  If a meta-review gate stalls after snapshot persistence, use `pairflow bubble restart --id <id>` or trigger a fresh meta-review run through the active workflow.",
     "  `pairflow bubble meta-review run` was removed; there is no operator live-run replacement.",
     "  Legacy `pairflow bubble meta-review submit` was removed; use the canonical actor emit command above.",
     "",

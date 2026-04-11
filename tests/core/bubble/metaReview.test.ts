@@ -28,8 +28,8 @@ import {
 } from "../../../src/v11/infrastructure/artifact/transcript/transcriptStore.js";
 import {
   MetaReviewGateErrorV11 as MetaReviewGateError,
-  recoverMetaReviewGateFromSnapshotV11 as recoverMetaReviewGateFromSnapshot
 } from "../../../src/v11/application/metaReviewGate/emitMetaReviewGateV11.js";
+import { recoverMetaReviewGateFromSnapshot } from "../../../src/v11/shared/metaReviewGate/metaReviewGateUnsupportedRecovery.js";
 import {
   type LoadedStateSnapshot,
   StateStoreConflictError,

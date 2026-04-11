@@ -39,11 +39,10 @@ Core intent:
 5. When budget is exhausted, flow moves to `READY_FOR_HUMAN_APPROVAL`.
 6. `approve` is never auto-executed in MVP; final approval remains human-driven.
 7. A dedicated meta-reviewer pane runs autonomous review execution and shows live progress.
-8. Pairflow CLI meta-review surface has four explicit commands:
-   - `run`: Pairflow-invoked live autonomous review, lifecycle actions allowed.
+8. Pairflow CLI meta-review surface is limited to one canonical actor submit path and two read-only projection commands:
+   - `agent emit --kind meta_review_result`: canonical autonomous gate write path.
    - `status`: cached last-autonomous snapshot read (no live review execution).
    - `last-report`: cached last-autonomous report read (no live review execution).
-   - `recover`: deterministic lifecycle routing replay from cached snapshot when bubble is already in `RUNNING` with active meta-review authority.
 9. Latest review recommendation must be readable from state/artifacts without rerun.
 10. Once bubble reaches `READY_FOR_HUMAN_APPROVAL`, it enters sticky human-gate mode for the remainder of that bubble lifecycle.
 
@@ -120,7 +119,7 @@ Pain points:
 
 Review execution engine:
 1. The review computation must reuse the existing `UsePairflow/ReviewBubble` workflow logic.
-2. Pairflow CLI covers canonical result submission, cached retrieval, and recovery routing; fresh manual deep review remains an external workflow in user Codex session.
+2. Pairflow CLI covers canonical result submission and cached retrieval; restart or fresh rerun recovery remains outside the public meta-review subcommand surface.
 3. Cached retrieval commands (`status`, `last-report`) do not execute a new review; they only read persisted latest autonomous output.
 
 Boundary contract (skill vs Pairflow CLI):
@@ -135,12 +134,10 @@ Boundary contract (skill vs Pairflow CLI):
 | `agent emit --kind meta_review_result` | Structured actor submission | Allowed (`request-rework`, state updates) | Full report + recommendation + rework target message (if `rework`) | Canonical autonomous gate write path in production flow |
 | `meta-review status` | User command | None | Cached latest autonomous recommendation + counters | Low-cost decision/status retrieval |
 | `meta-review last-report` | User command | None | Cached latest autonomous report summary/reference | Low-cost report retrieval |
-| `meta-review recover` | User/operator recovery trigger | Allowed (route replay only from persisted snapshot) | Deterministic routing result (`RUNNING` / `READY_FOR_HUMAN_APPROVAL`) + emitted gate envelope | Recover from partial gate failure without rerunning review |
-
 Rules:
-1. Pairflow CLI command set is intentionally minimal: one canonical actor write command (`agent emit --kind meta_review_result`), one recovery command (`recover`), and two retrieval commands (`status`, `last-report`).
+1. Pairflow CLI command set is intentionally minimal: one canonical actor write command (`agent emit --kind meta_review_result`) and two retrieval commands (`status`, `last-report`).
 2. Public operator `meta-review run` is removed; autonomous review execution happens outside the public operator CLI and submits results through the canonical actor emit path.
-3. `meta-review recover` never executes a new review; it may perform lifecycle actions only by replaying route decisions from the latest persisted autonomous snapshot.
+3. Public operator `meta-review recover` is removed; supported remediation is `pairflow bubble restart --id <id>` or a fresh meta-review run through the active workflow.
 4. Retrieval commands must be non-generative and near-constant-cost.
 
 Reviewer output payload contract:
@@ -222,16 +219,15 @@ Requirements:
    - Default output should be compact for quick operator checks.
 3. `pairflow bubble meta-review last-report --id <id>`
    - Returns the latest stored report reference/content summary.
-4. `pairflow bubble meta-review recover --id <id> [--json]`
-   - Requires lifecycle state `RUNNING` with active meta-review authority/current-round snapshot.
-   - Does not run a new review.
-   - Replays deterministic routing from the latest persisted autonomous snapshot.
+4. `pairflow bubble restart --id <id>`
+   - Supported operator remediation when a bubble is stuck after snapshot persistence.
+   - Restores runtime execution instead of exposing a public snapshot replay subcommand.
 
 Behavioral requirement:
 1. `meta-review status` and `meta-review last-report` must be cheap and non-generative.
 2. Retrieval commands are read-only by contract: no mutation of canonical snapshot, counters, or lifecycle state.
-3. `meta-review recover` must fail fast if lifecycle state is not `RUNNING` with active meta-review authority/current-round snapshot.
-4. If convergence gate execution partially fails after persisting snapshot/run result, orchestrator may invoke the same recovery route automatically to avoid stuck `RUNNING` meta-review authority.
+3. Removed public `meta-review recover` invocations must fail fast as unsupported and must not reroute automatically.
+4. If convergence gate execution partially fails after persisting snapshot/run result, supported remediation is `restart` or a fresh meta-review rerun rather than a public snapshot replay command.
 
 ## Meta-Reviewer Pane Requirement
 
@@ -303,7 +299,7 @@ Fleet-level:
 3. Auto-rework budget default is `5`, and dispatch stops automatically at limit.
 4. Final approval is never auto-executed in MVP.
 5. `meta-review status` and `meta-review last-report` return latest autonomous snapshot data without running a new review.
-6. Pairflow CLI supports `run`, `status`, `last-report`, and `recover`; fresh manual deep review remains an external workflow.
+6. Pairflow CLI supports canonical submit plus `status` and `last-report`; fresh manual deep review remains an external workflow.
 7. When budget is exhausted or review is inconclusive, bubble routes to `READY_FOR_HUMAN_APPROVAL` and sets sticky human gate.
 8. Autonomous run execution failure routes bubble to `READY_FOR_HUMAN_APPROVAL` with persisted run-failed diagnostics.
 9. Human decision paths remain explicit (`request-rework` or override-aware `approve`).
@@ -312,7 +308,7 @@ Fleet-level:
 12. All automated rework decisions are reflected in current state/snapshot.
 13. UI renders `RUNNING` with active meta-review authority plus `READY_FOR_HUMAN_APPROVAL` without fallback/unknown behavior.
 14. UI renders `meta-reviewer` actor and latest autonomous recommendation from the canonical snapshot.
-15. If gate execution fails after snapshot persistence, recovery path (`meta-review recover` or equivalent automatic replay) routes deterministically from `RUNNING` meta-review authority without requiring a new review run.
+15. If gate execution fails after snapshot persistence, supported operator remediation is `restart` or a fresh meta-review run; the public CLI does not expose a snapshot replay command.
 
 ## Risks and Mitigations
 
@@ -325,7 +321,7 @@ Fleet-level:
 4. Risk: autonomous flow opacity.
    - Mitigation: meta-reviewer pane + persisted last autonomous snapshot.
 5. Risk: bubble stuck in `RUNNING` with meta-review authority after partial gate failure.
-   - Mitigation: deterministic snapshot-route recovery command (`meta-review recover`) and converged-path automatic recovery fallback.
+   - Mitigation: explicit restart/new-run remediation and converged-path fail-closed routing to human-visible state.
 
 ## Resolved Decisions (from PRD discussion)
 

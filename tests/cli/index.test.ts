@@ -680,99 +680,16 @@ describe("runCli", () => {
     ]);
   });
 
-  it("renders meta-review recover failure through runCli", async () => {
+  it("renders removed meta-review recover as explicit invalid subcommand", async () => {
     const repoPath = await mkdtemp(join(tmpdir(), "pairflow-cli-meta-review-json-recover-"));
     tempDirs.push(repoPath);
     await initGitRepository(repoPath);
-    const bubble = await setupRunningBubbleFixture({
-      repoPath,
-      bubbleId: "b_meta_review_cli_json_05",
-      task: "meta-review json recover"
-    });
-
-    const loaded = await readStateSnapshot(join(
-      repoPath,
-      ".pairflow",
-      "bubbles",
-      bubble.bubbleId,
-      "state.json"
-    ));
-    await writeStateSnapshot(
-      join(repoPath, ".pairflow", "bubbles", bubble.bubbleId, "state.json"),
-      {
-        ...loaded.state,
-        state: "RUNNING",
-        active_agent: "codex",
-        active_role: "meta_reviewer",
-        active_since: "2026-03-08T12:49:00.000Z",
-        execution_context: metaReviewExecutionContextToRunningContext(
-          buildMetaReviewExecutionContext({
-            bubbleId: bubble.bubbleId,
-            round: loaded.state.round,
-            startedAt: "2026-03-08T12:49:00.000Z",
-            watchdogTimeoutMinutes: 60,
-            attempt: 1
-          })
-        ),
-        meta_review: {
-          execution_context: buildMetaReviewExecutionContext({
-            bubbleId: bubble.bubbleId,
-            round: loaded.state.round,
-            startedAt: "2026-03-08T12:49:00.000Z",
-            watchdogTimeoutMinutes: 60,
-            attempt: 1
-          }),
-          last_autonomous_run_id: "run_meta_review_cli_json_05",
-          last_autonomous_status: "success",
-          last_autonomous_recommendation: "approve",
-          last_autonomous_summary: "Recovered from CLI JSON test.",
-          last_autonomous_report_ref: "artifacts/meta-review-last.json",
-          last_autonomous_rework_target_message: null,
-          last_autonomous_updated_at: "2026-03-08T12:50:00.000Z",
-          auto_rework_count: 0,
-          auto_rework_limit: 5,
-          sticky_human_gate: false
-        }
-      },
-      {
-        expectedFingerprint: loaded.fingerprint,
-        expectedState: "RUNNING"
-      }
-    );
-    await writeFile(
-      join(
-        repoPath,
-        ".pairflow",
-        "bubbles",
-        bubble.bubbleId,
-        "artifacts",
-        "meta-review-last.json"
-      ),
-      `${JSON.stringify(
-        {
-          bubble_id: bubble.bubbleId,
-          run_id: "run_meta_review_cli_json_05",
-          report_json: {
-            findings_claim_state: "clean",
-            findings_claim_source: "meta_review_artifact",
-            findings_count: 0,
-            findings_claimed_open_total: 0,
-            findings_blocking_open_total: 0,
-            findings_advisory_open_total: 0
-          }
-        },
-        null,
-        2
-      )}\n`,
-      "utf8"
-    );
-
     const exitCode = await runCli([
       "bubble",
       "meta-review",
       "recover",
       "--id",
-      bubble.bubbleId,
+      "b_meta_review_cli_json_05",
       "--repo",
       repoPath,
       "--json"
@@ -782,8 +699,9 @@ describe("runCli", () => {
     const stdoutText = stdoutSpy.mock.calls.map((call) => String(call[0])).join("");
     const stderrText = stderrSpy.mock.calls.map((call) => String(call[0])).join("");
     expect(stdoutText).toBe("");
-    expect(stderrText).toContain("reason_code=META_REVIEW_GATE_RUN_FAILED");
-    expect(stderrText).toContain("META_REVIEW_GATE_TRANSITION_INVALID");
+    expect(stderrText).toContain("reason_code=META_REVIEW_SCHEMA_INVALID");
+    expect(stderrText).toContain("pairflow bubble meta-review recover");
+    expect(stderrText).toContain("no longer supported");
   });
 
   it("prints registry-backed unknown command support list", async () => {

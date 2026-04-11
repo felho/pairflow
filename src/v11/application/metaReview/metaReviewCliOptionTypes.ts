@@ -16,11 +16,6 @@ export interface BubbleMetaReviewLastReportCommandOptions
   command: "last-report";
 }
 
-export interface BubbleMetaReviewRecoverCommandOptions
-  extends BubbleMetaReviewCommandBase {
-  command: "recover";
-}
-
 export interface BubbleMetaReviewHelpCommandOptions {
   help: true;
 }
@@ -28,5 +23,4 @@ export interface BubbleMetaReviewHelpCommandOptions {
 export type BubbleMetaReviewCommandOptions =
   | BubbleMetaReviewStatusCommandOptions
   | BubbleMetaReviewLastReportCommandOptions
-  | BubbleMetaReviewRecoverCommandOptions
   | BubbleMetaReviewHelpCommandOptions;
