@@ -266,6 +266,11 @@ describe("v11 meta-review submit contract", () => {
       activeRole: "meta_reviewer",
       nowIso: "2026-03-24T10:32:00.000Z"
     });
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    const executionContext = loaded.state.execution_context ?? null;
+    if (executionContext === null) {
+      throw new Error("Expected canonical execution_context for guarded submit.");
+    }
 
     await expect(
       submitMetaReviewResult(
@@ -279,7 +284,11 @@ describe("v11 meta-review submit contract", () => {
             findings_claim_state: "clean",
             findings_claim_source: "meta_review_artifact",
             findings_count: 0
-          }
+          },
+          expectedHandoffId: executionContext.handoff_id,
+          expectedRole: executionContext.active_role,
+          expectedRound: executionContext.round,
+          expectedStateFingerprint: loaded.fingerprint
         },
         {
           readRuntimeSessionsRegistry: async () =>
@@ -534,7 +543,7 @@ describe("v11 meta-review submit contract", () => {
     });
   });
 
-  it("accepts valid submit contract without restored runtime pane binding when execution_context is still current", async () => {
+  it("rejects submit contract when expected handoff authority has already rotated", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({
       repoPath,
@@ -547,6 +556,39 @@ describe("v11 meta-review submit contract", () => {
       activeRole: "meta_reviewer",
       nowIso: "2026-03-24T10:33:00.000Z"
     });
+    const original = await readStateSnapshot(bubble.paths.statePath);
+    const originalExecutionContext = original.state.execution_context ?? null;
+    if (originalExecutionContext === null) {
+      throw new Error("Expected canonical execution_context before stale handoff test.");
+    }
+    const refreshedExecutionContext = buildMetaReviewExecutionContext({
+      bubbleId: bubble.bubbleId,
+      round: original.state.round,
+      startedAt: "2026-03-24T10:33:30.000Z",
+      watchdogTimeoutMinutes: 60 * 24 * 30,
+      attempt: 2
+    });
+    await writeStateSnapshot(
+      bubble.paths.statePath,
+      {
+        ...original.state,
+        active_agent: "codex",
+        active_role: "meta_reviewer",
+        active_since: "2026-03-24T10:33:30.000Z",
+        last_command_at: "2026-03-24T10:33:30.000Z",
+        execution_context: metaReviewExecutionContextToRunningContext(
+          refreshedExecutionContext
+        ),
+        meta_review: {
+          ...original.state.meta_review!,
+          execution_context: refreshedExecutionContext
+        }
+      },
+      {
+        expectedFingerprint: original.fingerprint,
+        expectedState: "RUNNING"
+      }
+    );
 
     await expect(
       submitMetaReviewResult(
@@ -560,17 +602,17 @@ describe("v11 meta-review submit contract", () => {
             findings_claim_state: "clean",
             findings_claim_source: "meta_review_artifact",
             findings_count: 0
-          }
+          },
+          expectedHandoffId: originalExecutionContext.handoff_id,
+          expectedRole: originalExecutionContext.active_role,
+          expectedRound: originalExecutionContext.round
         },
         {
           readRuntimeSessionsRegistry: async () => ({})
         }
       )
-    ).resolves.toMatchObject({
-      status: "success",
-      recommendation: "approve",
-      gate_route: "human_gate_approve",
-      lifecycle_state: "READY_FOR_HUMAN_APPROVAL"
+    ).rejects.toMatchObject({
+      reasonCode: "META_REVIEW_STATE_INVALID"
     });
   });
 

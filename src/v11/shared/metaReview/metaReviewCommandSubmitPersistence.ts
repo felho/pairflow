@@ -1,21 +1,19 @@
 import type { LoadedStateSnapshot } from "../ports/stateSnapshots.js";
 import {
-  isMetaReviewExecutionContextActiveState
-} from "./metaReviewExecutionContext.js";
-import {
   CANONICAL_META_REVIEW_REPORT_REF
 } from "./metaReviewCanonicalization.js";
 import { normalizeStringList } from "../normalization/stringNormalization.js";
-import {
-  hasCanonicalSubmitForActiveMetaReviewRound,
-  normalizeMetaReviewSnapshot
-} from "./metaReviewSnapshot.js";
+import { normalizeMetaReviewSnapshot } from "./metaReviewSnapshot.js";
 import { MetaReviewError } from "./metaReviewError.js";
 import { toMetaReviewExecutionContext } from "../state/executionContext.js";
 import {
   stateWriteConflictToMetaReviewError
 } from "./metaReviewCommandErrorMapping.js";
 import { isNamedError } from "../errors/namedError.js";
+import {
+  assertActiveMetaReviewExecutionContext,
+  assertMetaReviewSubmitStaleGuard
+} from "./metaReviewCommandSubmitAuthority.js";
 import type {
   MetaReviewArtifactReadPort,
   MetaReviewArtifactWritePort
@@ -75,17 +73,6 @@ export async function writeCanonicalSubmitState(input: {
   const previousMetaReview = normalizeMetaReviewSnapshot(
     input.loadedState.state.meta_review
   );
-  if (
-    hasCanonicalSubmitForActiveMetaReviewRound({
-      state: input.loadedState.state,
-      snapshot: previousMetaReview
-    })
-  ) {
-    throw new MetaReviewError(
-      "META_REVIEW_STATE_INVALID",
-      "meta-review submit rejected: canonical submit already recorded for active meta-review round."
-    );
-  }
   const nextMetaReview = {
     ...previousMetaReview,
     execution_context: toMetaReviewExecutionContext(input.executionContext),
@@ -112,29 +99,36 @@ export async function writeCanonicalSubmitState(input: {
   } catch (error) {
     if (isNamedError(error, "StateStoreConflictError")) {
       const latest = await input.readState(input.resolved.bubblePaths.statePath);
-      if (!isMetaReviewExecutionContextActiveState(latest.state)) {
-        throw new MetaReviewError(
-          "META_REVIEW_STATE_INVALID",
-          `meta-review submit requires RUNNING state with active meta-review authority (current: ${latest.state.state}).`
-        );
-      }
-      if (latest.state.round !== input.submitInput.round) {
-        throw new MetaReviewError(
-          "META_REVIEW_ROUND_MISMATCH",
-          `meta-review submit round mismatch (active: ${latest.state.round}, received: ${input.submitInput.round}).`
-        );
-      }
-      const latestSnapshot = normalizeMetaReviewSnapshot(latest.state.meta_review);
+      const latestExecutionContext =
+        assertActiveMetaReviewExecutionContext(latest.state);
+      assertMetaReviewSubmitStaleGuard({
+        bubbleId: input.resolved.bubbleId,
+        executionContext: latestExecutionContext,
+        stateFingerprint: latest.fingerprint,
+        ...(input.submitInput.expectedHandoffId !== undefined
+          ? { expectedHandoffId: input.submitInput.expectedHandoffId }
+          : {}),
+        ...(input.submitInput.expectedRole !== undefined
+          ? { expectedRole: input.submitInput.expectedRole }
+          : {}),
+        ...(input.submitInput.expectedRound !== undefined
+          ? { expectedRound: input.submitInput.expectedRound }
+          : {})
+      });
       if (
-        hasCanonicalSubmitForActiveMetaReviewRound({
-          state: latest.state,
-          snapshot: latestSnapshot
-        })
+        input.submitInput.expectedStateFingerprint !== undefined &&
+        latest.fingerprint !== input.submitInput.expectedStateFingerprint
       ) {
-        throw new MetaReviewError(
-          "META_REVIEW_STATE_INVALID",
-          "meta-review submit rejected: canonical submit already recorded for active meta-review round."
-        );
+        throw new MetaReviewError({
+          reasonCode: "META_REVIEW_STATE_INVALID",
+          message:
+            "meta-review submit rejected: canonical state fingerprint mismatch.",
+          context: {
+            source: "write_canonical_submit_state",
+            reason: "state_fingerprint_mismatch_after_conflict_refresh",
+            bubbleId: input.resolved.bubbleId
+          }
+        });
       }
       throw stateWriteConflictToMetaReviewError(error);
     }

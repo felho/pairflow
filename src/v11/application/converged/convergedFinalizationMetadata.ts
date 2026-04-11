@@ -89,6 +89,50 @@ export function buildConvergedEventMetadata(input: {
   };
 }
 
+export function resolveMetaReviewRouteRecommendation(input: {
+  route: MetaReviewGateRoute;
+}): string {
+  switch (input.route) {
+    case "auto_rework":
+    case "human_gate_budget_exhausted":
+      return "rework";
+    case "human_gate_approve":
+      return "approve";
+    case "human_gate_inconclusive":
+    case "human_gate_run_failed":
+    case "human_gate_dispatch_failed":
+    case "human_gate_sticky_bypass":
+    case "meta_review_running":
+      return "inconclusive";
+  }
+  const unreachable: never = input.route;
+  throw new Error(
+    `CONVERGED_META_REVIEW_ROUTE_UNEXPECTED: recommendation fallback is undefined for route=${String(unreachable)}.`
+  );
+}
+
+export function resolveMetaReviewRouteStatus(input: {
+  route: MetaReviewGateRoute;
+}): string {
+  switch (input.route) {
+    case "human_gate_run_failed":
+    case "human_gate_dispatch_failed":
+      return "error";
+    case "human_gate_sticky_bypass":
+    case "meta_review_running":
+      return "inconclusive";
+    case "auto_rework":
+    case "human_gate_approve":
+    case "human_gate_budget_exhausted":
+    case "human_gate_inconclusive":
+      return "success";
+  }
+  const unreachable: never = input.route;
+  throw new Error(
+    `CONVERGED_META_REVIEW_ROUTE_UNEXPECTED: status fallback is undefined for route=${String(unreachable)}.`
+  );
+}
+
 export function buildMetaReviewRoutedMetadata(input: {
   advisoryFindingsOpenTotal: number;
   gateResult: {
@@ -111,12 +155,10 @@ export function buildMetaReviewRoutedMetadata(input: {
     advisory_findings_open_total: input.advisoryFindingsOpenTotal,
     recommendation:
       input.gateResult.metaReviewRun?.recommendation ??
-      input.gateResult.state.meta_review?.last_autonomous_recommendation ??
-      "inconclusive",
+      resolveMetaReviewRouteRecommendation({ route: input.gateResult.route }),
     run_status:
       input.gateResult.metaReviewRun?.status ??
-      input.gateResult.state.meta_review?.last_autonomous_status ??
-      "inconclusive",
+      resolveMetaReviewRouteStatus({ route: input.gateResult.route }),
     warning_reason_codes: JSON.stringify(
       (input.gateResult.metaReviewRun?.warnings ?? []).map((warning) => warning.reason_code)
     ),

@@ -3599,6 +3599,67 @@ describe("meta-review submit", () => {
     );
   });
 
+  it("rejects structured submit when expected_state_fingerprint is stale even if handoff authority is unchanged", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_meta_submit_guard_stale_fingerprint_01",
+      task: "Meta submit stale fingerprint guard"
+    });
+    await writeMetaReviewRunningState({
+      statePath: bubble.paths.statePath,
+      activeAgent: "codex",
+      activeRole: "meta_reviewer",
+      nowIso: "2026-03-09T09:48:30.000Z"
+    });
+
+    const before = await readStateSnapshot(bubble.paths.statePath);
+    const executionContext = before.state.execution_context ?? null;
+    if (executionContext === null) {
+      throw new Error("Expected canonical execution_context for stale fingerprint test.");
+    }
+
+    await writeStateSnapshot(
+      bubble.paths.statePath,
+      {
+        ...before.state,
+        last_command_at: "2026-03-09T09:48:31.000Z"
+      },
+      {
+        expectedFingerprint: before.fingerprint,
+        expectedState: "RUNNING"
+      }
+    );
+
+    await expect(
+      submitMetaReviewResult(
+        {
+          bubbleId: bubble.bubbleId,
+          repoPath,
+          round: 1,
+          recommendation: "approve",
+          summary: "Stale fingerprint must fail closed.",
+          report_json: buildStructuredSubmitReportJson(),
+          expectedHandoffId: executionContext.handoff_id,
+          expectedRole: executionContext.active_role,
+          expectedRound: executionContext.round,
+          expectedStateFingerprint: before.fingerprint
+        },
+        {
+          now: new Date("2026-03-09T09:48:32.000Z"),
+          readRuntimeSessionsRegistry: async () =>
+            buildActiveMetaReviewerSession({
+              bubbleId: bubble.bubbleId,
+              repoPath,
+              worktreePath: bubble.paths.worktreePath
+            })
+        }
+      )
+    ).rejects.toMatchObject({
+      reasonCode: "META_REVIEW_STATE_INVALID"
+    });
+  });
+
   it("rejects structured submit when updatedAt falls outside the canonical execution window", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({

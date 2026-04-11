@@ -3,7 +3,8 @@ import { describe, expect, it } from "vitest";
 import { buildMetaReviewExecutionContext } from "../../../src/v11/shared/metaReview/metaReviewExecutionContext.js";
 import {
   buildRunningExecutionContext,
-  metaReviewExecutionContextToRunningContext
+  metaReviewExecutionContextToRunningContext,
+  toMetaReviewExecutionContext
 } from "../../../src/v11/shared/state/executionContext.js";
 import { createInitialBubbleState } from "../../../src/v11/domain/state/initialState.js";
 import { validateBubbleStateSnapshot } from "../../../src/v11/shared/state/stateSchema.js";
@@ -178,7 +179,7 @@ describe("state schema", () => {
     expect(result.errors.some((error) => error.path === "active_*")).toBe(true);
   });
 
-  it("accepts RUNNING meta-review authority with cleared active context when recovering from an existing snapshot", () => {
+  it("accepts RUNNING meta-review authority with cleared active context when canonical execution_context remains current", () => {
     const executionContext = buildMetaReviewExecutionContext({
       bubbleId: "b_test_meta_state_03b",
       round: 2,
@@ -197,7 +198,7 @@ describe("state schema", () => {
       round_role_history: [],
       last_command_at: "2026-03-08T10:01:00.000Z",
       meta_review: {
-        execution_context: executionContext,
+        execution_context: null,
         last_autonomous_run_id: "run_meta_state_03b",
         last_autonomous_status: "success",
         last_autonomous_recommendation: "approve",
@@ -214,7 +215,7 @@ describe("state schema", () => {
     expect(result.ok).toBe(true);
   });
 
-  it("rejects RUNNING meta-review snapshots that only persist nested execution_context authority", () => {
+  it("rejects RUNNING snapshots that only persist nested meta_review.execution_context without canonical authority", () => {
     const result = validateBubbleStateSnapshot({
       bubble_id: "b_test_meta_state_03c",
       state: "RUNNING",
@@ -255,12 +256,12 @@ describe("state schema", () => {
         (error) =>
           error.path === "execution_context" &&
           error.message ===
-            "RUNNING meta-review state requires canonical execution_context authority"
+            "RUNNING state requires canonical execution_context authority when round >= 1"
       )
     ).toBe(true);
   });
 
-  it("rejects RUNNING meta-review authority when execution_context.round drifts from state.round", () => {
+  it("accepts RUNNING meta-review authority and canonicalizes a drifted meta_review.execution_context mirror", () => {
     const result = validateBubbleStateSnapshot({
       bubble_id: "b_test_meta_state_round_drift",
       state: "RUNNING",
@@ -270,6 +271,13 @@ describe("state schema", () => {
       active_role: "meta_reviewer",
       round_role_history: [],
       last_command_at: "2026-03-08T10:01:00.000Z",
+      execution_context: buildRunningExecutionContext({
+        bubbleId: "b_test_meta_state_round_drift",
+        round: 3,
+        activeRole: "meta_reviewer",
+        startedAt: "2026-03-08T10:00:00.000Z",
+        watchdogTimeoutMinutes: 60
+      }),
       meta_review: {
         execution_context: buildMetaReviewExecutionContext({
           bubbleId: "b_test_meta_state_round_drift",
@@ -291,18 +299,13 @@ describe("state schema", () => {
       }
     });
 
-    expect(result.ok).toBe(false);
-    if (result.ok) {
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
       return;
     }
-    expect(
-      result.errors.some(
-        (error) =>
-          error.path === "meta_review.execution_context.round" &&
-          error.message ===
-            "Must match state.round (3) while meta-review authority is active"
-      )
-    ).toBe(true);
+    expect(result.value.meta_review?.execution_context).toEqual(
+      toMetaReviewExecutionContext(result.value.execution_context)
+    );
   });
 
   it("rejects RUNNING meta-review authority when active ownership role is not meta_reviewer", () => {

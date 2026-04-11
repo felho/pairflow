@@ -42,6 +42,7 @@ export function transitionToGateState(input: {
   metaReviewRun?: MetaReviewResult;
   fallbackRecommendation?: MetaReviewRecommendation;
   fallbackSummary?: string;
+  fallbackReworkTargetMessage?: string | null;
 }): BubbleStateSnapshot {
   const transitioned =
     input.current.state === input.targetState
@@ -74,9 +75,9 @@ export function transitionToGateState(input: {
   const fallbackReworkTargetMessage =
     fallbackRecommendation === "rework"
       ? (
-          typeof metaReview.last_autonomous_rework_target_message === "string" &&
-          metaReview.last_autonomous_rework_target_message.trim().length > 0
-            ? metaReview.last_autonomous_rework_target_message
+          typeof input.fallbackReworkTargetMessage === "string" &&
+          input.fallbackReworkTargetMessage.trim().length > 0
+            ? input.fallbackReworkTargetMessage
             : "Meta-review gate fallback rework target unavailable."
         )
       : null;
