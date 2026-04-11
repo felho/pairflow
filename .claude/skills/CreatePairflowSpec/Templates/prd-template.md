@@ -19,9 +19,13 @@ owners:
 
 ## Business Invariants
 
+Include this section only when domain invariants materially constrain the feature. Otherwise omit it instead of filling noisy `N/A` placeholders.
+
 1. <What must remain true from the business/domain perspective.>
 
 ## Control Model
+
+Include this section only when the feature depends on multiple truths, authority/read-model decisions, or explicit missing-data behavior. Otherwise omit it instead of filling noisy `N/A` placeholders.
 
 1. State/control owner: <Which source decides whether something should exist, happen, or be shown.>
 2. Read-path rule: <Where the system may read the thing from. If N/A, say N/A.>

@@ -21,7 +21,7 @@ owners:
 
 <1-3 lines>
 
-### Domain / Control Model
+### Domain / Control Model Summary
 
 1. Business invariant: <What must remain true from the business/domain perspective. If N/A, say N/A.>
 2. Control model: <Which source decides whether something should exist, happen, or be shown. If N/A, say N/A.>
@@ -69,6 +69,17 @@ owners:
    - forbidden secondary sources: `<text>`
 
 ## L1 - Change Contract
+
+### 0) Domain / Control Contract
+
+| Item | Rule | Implementation Consequence | Priority | Timing |
+|---|---|---|---|---|
+| Business invariant | <explicit rule or `N/A`> | <what implementation must preserve> | P1 | required-now |
+| Control model | <explicit rule or `N/A`> | <what is allowed to decide existence/state/visibility> | P1 | required-now |
+| Read-path rule | <explicit rule or `N/A`> | <where implementation may read from> | P1 | required-now |
+| Forbidden fallback | <explicit rule or `N/A`> | <what must not be used as fallback truth> | P1 | required-now |
+| Missing-data rule | <explicit rule or `N/A`> | <fail-closed/unavailable/error behavior> | P1 | required-now |
+| Phase boundary | <explicit rule or `N/A`> | <what this task owns vs successor tasks> | P2 | required-now |
 
 ### 1) Call-site Matrix
 

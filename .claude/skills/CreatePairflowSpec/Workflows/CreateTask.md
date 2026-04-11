@@ -32,7 +32,22 @@ Create or refine a Pairflow task file using `L0 -> L1 -> L2`.
    - ask a focused blocker question for missing refs, or
    - route to `CreatePRD`/`CreatePlan` first.
 
-### 0a) Run the Control-Model Readiness Gate
+### 1) Gather context first
+
+1. Read any explicit references from the user.
+2. If `TARGET_PATH` exists, read and treat as baseline.
+3. Extract known values before asking questions:
+   - title, scope, refs, likely target files, constraints.
+4. Extract likely:
+   - canonical source-of-truth candidates,
+   - business invariant and control model,
+   - allowed read-path and missing-data rule,
+   - forbidden fallback sources,
+   - affected surfaces,
+   - prerequisite milestones,
+   - distinct acceptance goals.
+
+### 1a) Run the Control-Model Readiness Gate
 
 Use `references/Control-Model-Readiness-Gate.md`.
 
@@ -43,6 +58,8 @@ This gate is mandatory whenever the task touches:
 4. UI/API consume correctness,
 5. missing-data behavior,
 6. or user-visible `unavailable` vs fallback rules.
+
+Evaluate the gate only after the context load above, using the actual references, existing task content, and known code/context that were gathered.
 
 Extract or confirm:
 1. `business_invariant`
@@ -59,7 +76,7 @@ Policy:
 4. Never invent a control model, fallback rule, or missing-data behavior just to make the task look implementable.
 5. Do not transform missing control-model decisions into selector ladders, route-local heuristics, or UI fallbacks.
 
-### 0b) Run the Complexity-Risk Gate
+### 1b) Run the Complexity-Risk Gate
 
 Use `references/Complexity-Risk-Gate.md`.
 
@@ -87,21 +104,6 @@ Policy:
    - keep activation in a later task,
    - keep current runtime behavior fail-closed.
 6. If public consume correctness depends on multi-seam identity matching, prefer splitting `authority/read-model parity` from `payload/UI consume cutover`.
-
-### 1) Gather context first
-
-1. Read any explicit references from the user.
-2. If `TARGET_PATH` exists, read and treat as baseline.
-3. Extract known values before asking questions:
-   - title, scope, refs, likely target files, constraints.
-4. Extract likely:
-   - canonical source-of-truth candidates,
-   - business invariant and control model,
-   - allowed read-path and missing-data rule,
-   - forbidden fallback sources,
-   - affected surfaces,
-   - prerequisite milestones,
-   - distinct acceptance goals.
 
 ### 2) Build draft immediately
 
@@ -156,17 +158,18 @@ If blockers exist, ask only focused questions for those blockers.
 2. Confirm safety default behavior.
 3. Keep this section short and policy-level.
 4. Include complexity-risk outcome and split decision.
-5. If applicable, explicitly record the control model before implementation seam details.
+5. If applicable, keep the L0 control-model summary short, then restate it concretely in a dedicated L1 domain/control contract section.
 
 ### 5) L1 pass
 
 Fill each section or mark `N/A`:
-1. Call-site matrix
-2. Data and interface contract
-3. Side effects contract
-4. Error and fallback contract
-5. Dependency constraints
-6. Test matrix (at least one golden path and one invalid case)
+1. Domain/control contract
+2. Call-site matrix
+3. Data and interface contract
+4. Side effects contract
+5. Error and fallback contract
+6. Dependency constraints
+7. Test matrix (at least one golden path and one invalid case)
 
 Rules:
 1. `target_files` must align with call-site matrix.

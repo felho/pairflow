@@ -39,6 +39,7 @@ If these are materially needed for the PRD but not recoverable from context, ask
 
 1. Use `Templates/prd-template.md`.
 2. Fill context, goal, scope, business invariants/control model when applicable, requirements, and acceptance criteria.
+3. If the control-model sections are not relevant, omit them instead of filling noisy `N/A` placeholders.
 
 ### 3) Gap-only questions
 
