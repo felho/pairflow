@@ -1,16 +1,16 @@
 ---
 artifact_type: task
-artifact_id: task_bubble_start_fail_closed_restart_minimal_bugfix_v1
-title: "Bubble Start Fail-Closed Restart Minimal Bugfix"
+artifact_id: task_bubble_start_fail_closed_restart_minimal_bugfix_v2
+title: "Bubble Start Startup-Incomplete Message Minimal Bugfix"
 status: implementable
-phase: bugfix-startup-incomplete
+phase: bugfix-startup-incomplete-message
 target_files:
   - src/v11/application/start/startCommandApi.ts
-  - src/v11/application/start/startCommandCleanup.ts
-  - src/v11/application/start/startCommandFlows.ts
   - src/v11/application/start/startCommandOrchestration.ts
+  - src/v11/shared/status/bubbleAttention.ts
   - tests/core/bubble/startBubble.test.ts
-  - tests/core/runtime/startupReconciler.test.ts
+  - tests/core/ui/bubblePresenter.test.ts
+  - tests/v11/application/start/startCommandOrchestration.test.ts
 prd_ref: null
 plan_ref: null
 system_context_ref: docs/pairflow-initial-design.md
@@ -18,70 +18,51 @@ owners:
   - "felho"
 ---
 
-# Task: Bubble Start Fail-Closed Restart Minimal Bugfix
+# Task: Bubble Start Startup-Incomplete Message Minimal Bugfix
 
 ## Current Codebase Check (2026-04-11)
 
-1. A startup flow ma tobb lepesben megy `CREATED -> PREPARING_WORKSPACE -> RUNNING`, mikozben a bootstrap es a tmux launch koztes fail pontok maradhatnak.
-2. A rendelkezesre allo kod- es tesztbizonyitek alapjan a problema elsodlegesen nem silent state corruption, hanem ritka startup-incomplete beragadas:
-   - a bubble nem jut legitim `RUNNING` allapotba,
-   - reszleges workspace/runtime residue maradhat,
-   - operatori restart vagy reconcile szukseges lehet.
-3. A jelen feladat celja nem recovery-authority modell epites, hanem a ritka hiba fail-closed kezelese a leheto legkisebb scope-pal.
+1. A jelenlegi rendszerben a `bubble start` csak `CREATED` vagy resumable runtime state-bol indulhat.
+2. A `PREPARING_WORKSPACE` nem tamogatott restart/recovery beleeptetesi pont.
+3. Ha a fresh start a `PREPARING_WORKSPACE` utan, de a legitim `RUNNING` elott hasal el, a bubble startup-incomplete allapotban ragadhat.
+4. A valos user-facing problema nem egy hianyzo recovery platform, hanem az, hogy a hiba ma nem mondja ki eleg tisztan:
+   - ez nem resumable start,
+   - a bubble nem tekintheto futonak,
+   - a jelenlegi rendszerben a tamogatott operatori kiut egy uj, tiszta indulashoz az incomplete bubble torlese es ujraletrehozasa.
 
 ## L0 - Policy
 
 ### Goal
 
-Minimal bugfix szallitas a ritka startup-incomplete hibara ugy, hogy:
-1. a rendszer ne folytathasson reszleges startup utan bizonytalan authorityval,
-2. a user/operator egyertelmu restart-guidance-ot kapjon,
-3. ne vezessunk be uj canonical recovery/state authority reget.
+Legkisebb lehetseges bugfix:
+1. a rendszer explicitten mondja ki, hogy a startup nem fejezodott be;
+2. a `PREPARING_WORKSPACE` ne tunjon resumable vagy restarttal helyreallithato allapotnak;
+3. az operator egy oszinte, jelenleg is tamogatott remediaciot kapjon;
+4. ne vezessunk be uj recovery authorityt, uj state szemantikat, uj cleanup taxonomy-t vagy uj retry logikat.
 
 ### In Scope
 
-1. A fresh start failure path explicit fail-closed kezelese.
-2. A `PREPARING_WORKSPACE`-ban ragadt bubble-ra adott start-hibauzenet tisztazasa.
-3. A startup cleanup best-effort viselkedes pontositasa ott, ahol ez a restartot biztonsagosabba teszi.
-4. A kapcsolodo tesztek frissitese a fail-closed + restart contractra.
+1. A `PREPARING_WORKSPACE` allapotrol dobott start-hiba wordingjenek pontositasa.
+2. A fresh startup partial-failure top-level hiba wordingjenek pontositasa.
+3. Minimal UI attention szabaly a beragadt `PREPARING_WORKSPACE` bubble-re.
+4. A kapcsolodo tesztek frissitese a minimal operator-facing contractra.
 
 ### Out of Scope
 
 1. Uj `startup_recovery` descriptor vagy barmilyen uj persisted recovery authority.
-2. `PREPARING_WORKSPACE` explicit recovery/resume mode.
-3. Retry-safe routing, admission policy, stale descriptor taxonomy.
-4. Uj lifecycle state, uj operator command surface, vagy UI redesign.
-5. Altalanos startup/recovery roadmap vagy foundation/refactor program.
+2. `PREPARING_WORKSPACE` explicit recovery vagy resume mode.
+3. Restart, reconcile, retry-safe routing vagy stale taxonomy bevezetese.
+4. Cleanup result object, cleanup-status channel vagy uj reason-code csalad.
+5. UI/status surface redesign.
+6. Barmilyen altalanos startup recovery roadmap.
+7. Altalanos warning minden `PREPARING_WORKSPACE` bubble-re idokuszob nelkul.
 
 ### Safety Defaults
 
-1. Reszleges startup utan a bubble nem folytathat normal runtime authorityval.
-2. `PREPARING_WORKSPACE` alatt beragadt snapshot nem szamithat generic resumable allapotnak.
-3. Tmux/runtime/worktree residue onmagaban nem lehet truth source vagy tovabbleptetesi alap.
-4. Ha cleanup nem bizonyithatoan sikeres, a rendszer akkor is fail-closed maradjon, explicit restart/reconcile guidance mellett.
-5. A task nem valtoztathatja meg a canonical state schema-t es nem adhat uj persisted recovery szemantikat.
-
-### Contract Boundary / Blast Radius
-
-1. `contract_boundary_override`: `no`
-2. A task belso bugfix a start-orchestration, cleanup es operatori hibauzenet retegeben; nincs public API vagy config contract valtozas.
-
-### Complexity Risk Gate
-
-1. `authority_risk`: `0`
-2. `surface_spread`: `1`
-3. `identity_join_risk`: `0`
-4. `activation_coupling`: `1`
-5. `prerequisite_risk`: `0`
-6. `acceptance_multiplicity`: `1`
-7. `risk_score`: `3`
-8. `single-task allowed`: `yes`
-9. Identity/join note:
-   - canonical identity path: `bubble_id -> resolved bubble paths -> state.json`
-   - competing identifiers or fallback identities: tmux session name es worktree path csak operacios residue, nem authority identifier
-10. Authority/source-of-truth note:
-   - canonical source: a meglevo lifecycle snapshot es az ervenyes `execution_context` jelenlete
-   - forbidden secondary sources: tmux existence alone, runtime registry residue alone, partial worktree alone
+1. Reszleges startup utan a bubble nem folytathat runtime authorityval.
+2. `PREPARING_WORKSPACE` alatt beragadt bubble nem szamithat generic resumable allapotnak.
+3. A hiba nem allithatja vagy sugallhatja, hogy a bubble fut.
+4. A hiba nem igerhet olyan remediaciot, amit a rendszer ma valojaban nem tamogat.
 
 ## L1 - Change Contract
 
@@ -89,86 +70,111 @@ Minimal bugfix szallitas a ritka startup-incomplete hibara ugy, hogy:
 
 | ID | File | Function/Entry | Exact Signature (args -> return) | Insertion Point | Expected Behavior | Priority | Timing | Evidence |
 |---|---|---|---|---|---|---|---|---|
-| CS1 | `src/v11/application/start/startCommandOrchestration.ts` | `resolveStartBubbleMode` | `(currentState: string) -> StartBubbleMode` | start mode routing | `PREPARING_WORKSPACE` ne tunjon resumable allapotnak; az exception szovege explicit restart/reconcile guidance-ot adjon a startup-incomplete helyzetre | P1 | required-now | T1 |
-| CS2 | `src/v11/application/start/startCommandApi.ts` | `startBubble` catch path | `(input, dependencies) -> Promise<StartBubbleResult>` | top-level start error surface | fresh start kozbeni bootstrap/tmux/startup-failure eseten a dobott hiba mondja ki, hogy a startup incomplete es restart szukseges lehet; ne sugalljon sikeres continuationt | P1 | required-now | T2 |
-| CS3 | `src/v11/application/start/startCommandCleanup.ts` | `cleanupFailedStart` | `(input) -> Promise<void>` | failed-start cleanup | cleanup best-effort marad, de a fail-closed kimenet legyen egyertelmu: ha state rollback/finalize nem sikerul, attol meg ne legyen hamis success/continuation benyomas | P1 | required-now | T2, T3 |
-| CS4 | `src/v11/application/start/startCommandFlows.ts` | `runFreshStartFlow` progress handoff | `({ context, deps, progress }) -> Promise<FreshStartResult>` | failure handoff context | a top-level catch mindig megkapja a startup failure ertelmezesehez szukseges minimalis kontextust (`preparingState`, bootstrap progress), uj recovery descriptor nelkul | P2 | required-now | T2 |
-| CS5 | `tests/core/runtime/startupReconciler.test.ts` | reconcile regression coverage | test surface | stale pre-runtime residue behavior | a stale pre-runtime session eltakaritasa tovabbra is tamogassa a kesobbi tiszta restartot, anelkul hogy resumable runtime truthot allitana | P2 | required-now | T3 |
+| CS1 | `src/v11/application/start/startCommandOrchestration.ts` | `resolveStartBubbleMode` | `(currentState: string) -> StartBubbleMode` | start mode routing | ha `currentState === PREPARING_WORKSPACE`, a hiba explicitten mondja ki, hogy ez incomplete startup / non-resumable allapot, nem altalanos "resumable runtime state" hiba | P1 | required-now | T1 |
+| CS2 | `src/v11/application/start/startCommandApi.ts` | `startBubble` catch path | `(input, dependencies) -> Promise<StartBubbleResult>` | top-level start error surface | fresh startup partial failure eseten a vegso hiba mondja ki, hogy a bubble startupja nem fejezodott be es a bubble nem fut; ne irjon restart/reconcile guidance-ot, hanem uj tiszta indulast kerjen a jelenlegi tamogatott operatori uton | P1 | required-now | T2 |
+| CS3 | `src/v11/shared/status/bubbleAttention.ts` | `resolveBubbleAttention` | `({ state, runtimeSession, stateValidation, watchdog, paneActivityRead, now }) -> UiBubbleAttention | null` | UI attention surface | csak a beragadt `PREPARING_WORKSPACE` bubble kapjon figyelmeztetest; a normal, nehany masodperces startup ne | P1 | required-now | T3 |
 
-### 2) Data and Interface Contract
+### 2) Operator Message Contract
 
-| Contract | Current | Target | Required Fields | Optional Fields | Compatibility | Priority | Timing |
-|---|---|---|---|---|---|---|---|
-| Startup failure error wording | altalanos start failure uzenet | explicit startup-incomplete + restart guidance | bubble id, failure fact, restart guidance | reconcile guidance, stale cleanup hint | backward-compatible text hardening | P1 | required-now |
-| `PREPARING_WORKSPACE` start retry behavior | non-resumable, de operatori jelentese nem eleg explicit | tovabbra is non-resumable, explicit fail-closed wordinggel | current state, non-resumable reason, restart guidance | reconcile hint | backward-compatible bugfix | P1 | required-now |
-| Cleanup result interpretation | best-effort, implicit | best-effort, de soha nem sugall successful continuationt | fail-closed outcome | cleanup detail in message | backward-compatible bugfix | P1 | required-now |
+#### A) `PREPARING_WORKSPACE` start reject
 
-Required-now rules:
+Kotelezo operatori teny:
+1. a bubble egy felbehagyott vagy incomplete startup allapotban van;
+2. ez nem resumable `bubble start` allapot;
+3. a bubble nem tekintheto futonak.
 
-1. A task nem adhat hozza uj fieldet a persisted state schemahoz.
-2. A task nem teheti resumable-va a `PREPARING_WORKSPACE` allapotot.
-3. A startup-failure path explicit operatori remediationje: restart; reconcile csak akkor emlitheto, ha stale runtime residue a valoszinubb kovetkezo blokkolo ok.
-4. A kod nem kovetkeztethet reszleges startup residue-bol legitim runtime authorityra.
+Kotelezo remediation:
+1. a jelenlegi bubble-t el kell tavolitani;
+2. ezutan uj bubble-t kell inditani.
 
-### 3) Side Effects Contract
+Megengedett konkret operatori pelda:
+1. `pairflow bubble delete --id <id> --force`
+2. majd uj bubble letrehozasa / inditasa
 
-| Area | Allowed | Forbidden | Notes | Priority | Timing |
-|---|---|---|---|---|---|
-| state write | meglevo `FAILED` finalize path vagy meglevo state megtartasa fail-closed modban | uj persisted recovery descriptor vagy archival marker | state semantics maradjon minimalis | P1 | required-now |
-| runtime cleanup | best-effort tmux/session/worktree cleanup a meglevo helper surfacesen | uj cleanup policy matrix vagy ownership taxonomy | cleanup csak a restartot segitheti, nem recovery truthot gyart | P1 | required-now |
-| error messaging | explicit restart/reconcile guidance | misleading success/continue wording | operatori clarity a fobb szallitas | P1 | required-now |
+Tiltott allitasok:
+1. `restart` mint tamogatott helyreallitas erre az allapotra
+2. `reconcile` mint altalanos startup recovery
+3. barmilyen sugallat, hogy a startup egyszeruen folytathato
 
-Constraint: implementation nem hozhat be uj canonical recovery/severity/state vocabularyt a jelenlegi start bugfix scope-on tul.
+#### B) Fresh startup partial failure
 
-### 4) Error and Fallback Contract
+Kotelezo operatori teny:
+1. a startup nem fejezodott be;
+2. a bubble nem lett legitim `RUNNING`;
+3. a bubble nem tekintheto futonak.
 
-| Trigger | Dependency (if any) | Behavior (`throw|result|fallback`) | Fallback Value/Action | Reason Code | Log Level | Priority | Timing |
-|---|---|---|---|---|---|---|---|
-| bootstrap vagy tmux fail a `PREPARING_WORKSPACE` es `RUNNING` kozott | startup flow | throw | explicit startup-incomplete hiba; restart guidance | `STARTUP_INCOMPLETE_RESTART_REQUIRED` | error | P1 | required-now |
-| `bubble start` hivasa `PREPARING_WORKSPACE` allapotban | state snapshot | throw | explicit fail-closed uzenet; restart, nem resume | `START_PREPARING_NOT_RESUMABLE` | warn | P1 | required-now |
-| failed-start cleanup state-write hiba vagy conflict | state store | fallback | fail-closed marad; uzenet nem allithatja, hogy a bubble tisztan tovabbmehet | `STARTUP_CLEANUP_INCOMPLETE` | warn | P1 | required-now |
-| stale pre-runtime runtime-session residue | runtime registry | result | reconcile tovabbra is eltakarithatja a stale entryt, hogy kesobbi fresh start unblockolhato legyen | `NON_RUNTIME_STATE_STALE_SESSION` | info | P2 | required-now |
+Kotelezo remediation:
+1. uj, tiszta indulast kell kerni;
+2. a jelenlegi incomplete bubble operatori torlese utan.
 
-### 5) Dependency Constraints
+Tiltott allitasok:
+1. `restart required`
+2. `reconcile may fix this startup`
+3. `you can continue from here`
 
-| Type | Items | Priority | Timing |
-|---|---|---|---|
-| must-use | meglevo `FAILED` write path, meglevo reconcile stale-session behavior | P1 | required-now |
-| must-use | explicit restart-focused operatori wording | P1 | required-now |
-| must-not-use | `startup_recovery` schema, active/archival descriptor, new persisted recovery object | P1 | required-now |
-| must-not-use | `PREPARING_WORKSPACE` resume/recover mode, retry taxonomy, new lifecycle state | P1 | required-now |
+### 3) UI Attention Contract
 
-### 6) Test Matrix
+Kotelezo viselkedes:
+1. a UI ne mutasson warningot minden `PREPARING_WORKSPACE` bubble-re;
+2. kulon attention csak akkor jelenjen meg, ha a bubble gyanusan sokaig marad ebben az allapotban;
+3. az attention ugyanazt a jelentest kozvetitse, mint a CLI bugfix: a startup incomplete, a bubble nem resumable, es uj tiszta inditas szukseges torles utan.
+
+Required-now heuristic:
+1. `state === PREPARING_WORKSPACE`
+2. nincs aktiv runtime session
+3. az allapot egy rovid, fix idokuszobon tul fennall
+
+Time-threshold rule:
+1. a kuszob legyen perc alapu, ne masodperc alapu;
+2. a kuszob legyen eleg rovid ahhoz, hogy a tenylegesen beragadt bubble-t jelezze;
+3. a kuszob legyen eleg hosszu ahhoz, hogy a normal startupot ne jelolje hibasnak;
+4. uj config surface nem szukseges.
+
+Allowed UI wording:
+1. `Startup incomplete`
+2. `This bubble is not resumable. Delete it and create a new bubble.`
+
+Forbidden UI behavior:
+1. altalanos warning minden friss `PREPARING_WORKSPACE` bubble-re
+2. `restart` mint ajanlott fo action
+3. `reconcile` mint ajanlott fo action
+
+### 4) Required-Now Rules
+
+1. A task nem vezet be uj persisted state fieldet.
+2. A task nem valtoztatja meg a lifecycle state machine-t.
+3. A task nem kovetel cleanup seam vagy state-write refaktort.
+4. A task nem kovetel uj reason code-ot; a meglevo error family megtarthato.
+5. A task nem vezet be uj UI config vagy threshold config surface-t.
+6. A task csak az operator-facing uzeneti contractot es egy minimal UI attention heuristicat szukiti es pontositja.
+
+### 5) Test Matrix
 
 | ID | Scenario | Given | When | Then | Priority | Timing | Evidence |
 |---|---|---|---|---|---|---|---|
-| T1 | fail-closed start from `PREPARING_WORKSPACE` | bubble state=`PREPARING_WORKSPACE` | `bubble start` fut | explicit non-resumable/startup-incomplete hiba jon vissza restart guidance-dzsal | P1 | required-now | `tests/core/bubble/startBubble.test.ts` |
-| T2 | fresh startup partial failure | fresh bubble, `PREPARING_WORKSPACE` mar perzisztalt, bootstrap vagy tmux fail | start flow elhasal | nincs `RUNNING` continuation; a dobott hiba startup-incomplete + restart guidance tartalmu | P1 | required-now | `tests/core/bubble/startBubble.test.ts` |
-| T3 | stale pre-runtime residue nem lesz runtime truth | bubble nem runtime state-ben, stale runtime session entry maradt | reconcile fut, majd kesobb fresh start | stale entry eltunik, a kesobbi start unblockolhato, de nincs implicit resume authority | P2 | required-now | `tests/core/runtime/startupReconciler.test.ts` |
+| T1 | `PREPARING_WORKSPACE` nem tunik resumable allapotnak | bubble state=`PREPARING_WORKSPACE` | `bubble start` fut | a hiba explicit startup-incomplete / non-resumable jelentest ad; a bubble nem tunik futonak; a remediation torles + uj start, nem restart/reconcile | P1 | required-now | `tests/core/bubble/startBubble.test.ts`, `tests/v11/application/start/startCommandOrchestration.test.ts` |
+| T2 | fresh startup partial failure fail-closed wording | fresh bubble, a start flow a `PREPARING_WORKSPACE` utan, de `RUNNING` elott elhasal | `bubble start` hibaval visszater | a vegso hiba kimondja, hogy a startup nem fejezodott be es a bubble nem fut; nem iger restartot/reconcile-t; uj tiszta indulast ker a jelenlegi incomplete bubble torlese utan | P1 | required-now | `tests/core/bubble/startBubble.test.ts` |
+| T3 | UI attention csak a beragadt `PREPARING_WORKSPACE` bubble-re jelenik meg | egy friss es egy regota `PREPARING_WORKSPACE` allapotban levo bubble, runtime session nelkul | bubble summary/detail presenter lefut | csak a regi bubble kap `Startup incomplete` figyelmeztetest; a friss, normal startup nem | P1 | required-now | `tests/core/ui/bubblePresenter.test.ts` |
 
 ## L2 - Implementation Notes (Optional)
 
-1. [later-hardening] Ha a restart guidance operatori szinten meg mindig nem eleg, kulon follow-up taskban johet status/UI wording hardening.
-2. [later-hardening] Ha uj bizonyitek jelenik meg unsafe continuationrol vagy state corruptionrol, kulon recovery-authority task nyithato, nem ebben a bugfixben.
-
-## Hardening Backlog (Optional)
-
-| ID | Item | Layer | Priority | Timing | Source | Proposed Action |
-|---|---|---|---|---|---|---|
-| H1 | Startup failure reason-code family finomitasa | L2 | P2 | later-hardening | current bugfix scoping | csak akkor nyisd ujra, ha tobb, tenylegesen kulon operatori remediationt igenylo startup-fail osztaly gyulik ossze |
-| H2 | Status/UI surface restart hint | L2 | P3 | later-hardening | current bugfix scoping | kulon docs/UI taskban kezeld, ha a CLI hiba onmagaban nem eleg |
+1. Ez a task szandekosan nem probalja "megjavitani" a beragadt startupot.
+2. Ez a task csak oszinteve es egyertelmuve teszi a jelenlegi rendszer valos viselkedeset.
+3. A UI kiegeszites szandekosan egyszeru heuristic, nem uj recovery authority.
+4. Ha kesobb tenyleges startup recovery feature kell, az kulon, uj task legyen, sajat acceptance contracttal.
 
 ## Review Control
 
-1. Minden finding tartalmazza: `priority`, `timing`, `layer`, `evidence`.
-2. Max 2 L1 hardening round.
-3. Uj `required-now` item csak konkret bizonyitekkal johet, ha kimutatott unsafe continuation vagy state corruption jelenik meg.
-4. Barmely recovery-authority vagy schema-expansion javaslat automatikusan `later-hardening`, hacsak nincs ra uj, eros bizonyitek.
+1. Csak implementacios blocker finding emelheto be.
+2. Wording asymmetry vagy traceability-only finding onmagaban nem nyit uj kort.
+3. Barmely javaslat, amely uj recovery authorityt vagy uj retry platformot hozna be, out-of-scope.
 
 ## Spec Lock
 
 Ez a task akkor `IMPLEMENTABLE`, ha:
-1. a startup-incomplete hiba explicit fail-closed + restart guidance mellett jelenik meg,
-2. a `PREPARING_WORKSPACE` nem tunik resumable allapotnak,
-3. a stale pre-runtime reconcile viselkedes tovabbra is unblockolja a kesobbi tiszta startot,
-4. a diff nem vezet be uj persisted recovery authorityt vagy startup schema programot.
+1. a `PREPARING_WORKSPACE` path nem tunik resumable start allapotnak;
+2. a fresh partial failure nem tunik sikeresen elindult bubble-nek;
+3. egyik hiba sem igert restart/reconcile helyreallitast;
+4. a remediation a jelenleg is tamogatott operatori utra mutat: torles, majd uj tiszta inditas;
+5. a UI nem altalanos `PREPARING_WORKSPACE` warningot mutat, hanem csak a beragadt esetre ad attentiont;
+6. a diff nem vezet be uj state/schema/recovery contractot.
