@@ -59,7 +59,7 @@ owners:
 ## Executive Summary
 
 1. Ez a task a cached meta-review functionality teljes delivery/removal szelete.
-2. A foundation task utan ez torli:
+2. A ket foundation task utan ez torli:
    - a `ReviewBubble --meta-review-source=cached` workflowt,
    - a teljes `pairflow bubble meta-review` public operator namespace-t,
    - a `status` / `last-report` read-model/application stackot,
@@ -84,7 +84,7 @@ Torolje a cached meta-review functionality minden public/operator/docs/UI/skill/
 
 1. A canonical `pairflow agent emit --kind meta_review_result` write surface valtoztatasa.
 2. A live meta-review gate routing vagy approval policy atirasa.
-3. A foundation taskban kezelt state/control-path source-of-truth atalakitas megismetelese.
+3. A foundation taskokban kezelt state/control-path source-of-truth atalakitas megismetelese.
 4. Uj operator replacement surface bevezetese a torolt `bubble meta-review` namespace helyere.
 
 ### Safety Defaults
@@ -116,7 +116,7 @@ Torolje a cached meta-review functionality minden public/operator/docs/UI/skill/
 7. `risk_score`: `7`
 8. `single-task allowed`: `yes`
 9. Split note:
-   - Ez a task csak a mar kulon specifikalt foundation task utan hajthato vegre.
+   - Ez a task csak a ket kulon specifikalt foundation task utan hajthato vegre.
 10. Identity/join note:
    - canonical identity path: `ReviewBubble -> fresh direct review`, `CLI -> no meta-review subtree`
    - competing identifiers or fallback identities: `--meta-review-source=cached`, `bubble meta-review status`, `bubble meta-review last-report`
@@ -170,7 +170,7 @@ Constraint: this task must not preserve cached functionality by renaming it, hid
 
 | Type | Items | Priority | Timing |
 |---|---|---|---|
-| must-use | foundation task output: `plans/tasks/actor-runtime-interface-meta-review-cached-state-decoupling-phaseE.md` | P1 | required-now |
+| must-use | foundation task outputs: `plans/tasks/actor-runtime-interface-meta-review-cached-state-shape-and-persistence-decoupling-phaseE.md`, `plans/tasks/actor-runtime-interface-meta-review-cached-approval-and-projection-consumer-cutover-phaseE.md` | P1 | required-now |
 | must-use | repo-local skill source files under `.claude/skills/UsePairflow/**` | P1 | required-now |
 | must-not-use | `pairflow bubble meta-review` placeholder help text | P1 | required-now |
 | must-not-use | `--meta-review-source=cached` in any repo-local workflow, docs, UI copy, or tests | P1 | required-now |
@@ -194,7 +194,7 @@ Constraint: this task must not preserve cached functionality by renaming it, hid
 
 ## Assumptions
 
-1. A foundation task mar lezarta a cached state/control-path dependence megszunteteset, igy a public surface most mar torolheto runtime regresszio nelkul.
+1. A ket foundation task mar lezarta a cached state/control-path dependence megszunteteset, igy a public surface most mar torolheto runtime regresszio nelkul.
 2. A generic CLI unknown-command behavior elfogadhato default a torolt namespace helyen; nem kell kulon user guidance.
 
 ## Open Questions
