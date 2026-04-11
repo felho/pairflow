@@ -4,3 +4,4 @@
 - https://github.com/addyosmani/agent-skills --> check this
 - https://github.com/vladikk/modularity --> check this
 - https://claude.com/plugins/superpowers --> check this
+- Add to prompts "I love you" :D
