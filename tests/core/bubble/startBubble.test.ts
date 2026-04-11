@@ -580,56 +580,75 @@ describe("startBubble", () => {
     let cleanupCalled = false;
     const removedSessions: string[] = [];
 
-    await expect(
-      startBubble(
-        {
-          bubbleId: created.bubbleId,
-          cwd: repoPath,
-          now: new Date("2026-02-22T13:00:00.000Z")
+    const thrown = await startBubble(
+      {
+        bubbleId: created.bubbleId,
+        cwd: repoPath,
+        now: new Date("2026-02-22T13:00:00.000Z")
+      },
+      {
+        bootstrapWorktreeWorkspace: () =>
+          Promise.resolve({
+            repoPath,
+            baseRef: "refs/heads/main",
+            bubbleBranch: created.config.bubble_branch,
+            worktreePath: created.paths.worktreePath
+          }),
+        runWorktreeBootstrapCommand: () =>
+          Promise.reject(new Error("bootstrap command failed")),
+        launchBubbleTmuxSession: () => {
+          launchCalled = true;
+          return Promise.resolve({ sessionName: "pf-b_start_bootstrap_cmd_fail_01" });
         },
-        {
-          bootstrapWorktreeWorkspace: () =>
-            Promise.resolve({
-              repoPath,
-              baseRef: "refs/heads/main",
-              bubbleBranch: created.config.bubble_branch,
-              worktreePath: created.paths.worktreePath
-            }),
-          runWorktreeBootstrapCommand: () =>
-            Promise.reject(new Error("bootstrap command failed")),
-          launchBubbleTmuxSession: () => {
-            launchCalled = true;
-            return Promise.resolve({ sessionName: "pf-b_start_bootstrap_cmd_fail_01" });
-          },
-          cleanupWorktreeWorkspace: () => {
-            cleanupCalled = true;
-            return Promise.resolve({
-              repoPath,
-              bubbleBranch: created.config.bubble_branch,
-              worktreePath: created.paths.worktreePath,
-              removedWorktree: true,
-              removedBranch: true
-            });
-          },
-          claimRuntimeSession: (input) =>
-            Promise.resolve({
-              claimed: true,
-              record: {
-                bubbleId: input.bubbleId,
-                repoPath: input.repoPath,
-                worktreePath: input.worktreePath,
-                tmuxSessionName: input.tmuxSessionName,
-                updatedAt: "2026-02-22T13:00:00.000Z"
-              }
-            }),
-          removeRuntimeSession: (input) => {
-            removedSessions.push(input.bubbleId);
-            return Promise.resolve(true);
-          }
+        cleanupWorktreeWorkspace: () => {
+          cleanupCalled = true;
+          return Promise.resolve({
+            repoPath,
+            bubbleBranch: created.config.bubble_branch,
+            worktreePath: created.paths.worktreePath,
+            removedWorktree: true,
+            removedBranch: true
+          });
+        },
+        claimRuntimeSession: (input) =>
+          Promise.resolve({
+            claimed: true,
+            record: {
+              bubbleId: input.bubbleId,
+              repoPath: input.repoPath,
+              worktreePath: input.worktreePath,
+              tmuxSessionName: input.tmuxSessionName,
+              updatedAt: "2026-02-22T13:00:00.000Z"
+            }
+          }),
+        removeRuntimeSession: (input) => {
+          removedSessions.push(input.bubbleId);
+          return Promise.resolve(true);
         }
-      )
-    ).rejects.toThrow(
-      /Failed to start bubble b_start_bootstrap_cmd_fail_01: bootstrap command failed/u
+      }
+    ).then(
+      () => null,
+      (error: unknown) => error
+    );
+
+    expect(thrown).toBeInstanceOf(StartBubbleError);
+    expect((thrown as StartBubbleError).message).toContain(
+      "Bubble b_start_bootstrap_cmd_fail_01 startup did not complete."
+    );
+    expect((thrown as StartBubbleError).message).toContain(
+      "This bubble is not resumable with `pairflow bubble start` and must not be treated as running."
+    );
+    expect((thrown as StartBubbleError).message).toContain(
+      "pairflow bubble delete --id b_start_bootstrap_cmd_fail_01 --force"
+    );
+    expect((thrown as StartBubbleError).message).toContain(
+      "create a new bubble"
+    );
+    expect((thrown as StartBubbleError).message).toContain(
+      "Cause: bootstrap command failed"
+    );
+    expect((thrown as StartBubbleError).message).not.toMatch(
+      /restart required|reconcile may fix this startup|continue from here/u
     );
 
     expect(launchCalled).toBe(false);
@@ -1174,6 +1193,91 @@ describe("startBubble", () => {
     ).rejects.toMatchObject({
       reasonCode: reviewerPolicySnapshotUnavailableReasonCode
     });
+  });
+
+  it("preserves StartBubbleError metadata when startup-incomplete catch rewrites the message", async () => {
+    const repoPath = await createTempRepo();
+    const created = await createBubble({
+      id: "b_start_reason_incomplete_01",
+      repoPath,
+      baseBranch: "main",
+      reviewArtifactType: "code",
+      task: "Preserve StartBubbleError metadata in startup-incomplete catch",
+      cwd: repoPath
+    });
+
+    const injectedError = new StartBubbleError({
+      reasonCode: reviewerPolicySnapshotUnavailableReasonCode,
+      message: "Injected startup-incomplete StartBubbleError",
+      context: {
+        stage: "launch_tmux",
+        bubble_id: created.bubbleId
+      }
+    });
+
+    const thrown = await startBubble(
+      {
+        bubbleId: created.bubbleId,
+        cwd: repoPath,
+        now: new Date("2026-03-23T10:04:00.000Z")
+      },
+      {
+        bootstrapWorktreeWorkspace: () =>
+          Promise.resolve({
+            repoPath,
+            baseRef: "refs/heads/main",
+            bubbleBranch: created.config.bubble_branch,
+            worktreePath: created.paths.worktreePath
+          }),
+        launchBubbleTmuxSession: () => Promise.reject(injectedError),
+        cleanupWorktreeWorkspace: () =>
+          Promise.resolve({
+            repoPath,
+            bubbleBranch: created.config.bubble_branch,
+            worktreePath: created.paths.worktreePath,
+            removedBranch: true,
+            removedWorktree: true
+          }),
+        claimRuntimeSession: (input) =>
+          Promise.resolve({
+            claimed: true,
+            record: {
+              bubbleId: input.bubbleId,
+              repoPath: input.repoPath,
+              worktreePath: input.worktreePath,
+              tmuxSessionName: input.tmuxSessionName,
+              updatedAt: "2026-03-23T10:04:00.000Z"
+            }
+          }),
+        removeRuntimeSession: () => Promise.resolve(true)
+      }
+    ).then(
+      () => null,
+      (error: unknown) => error
+    );
+
+    expect(thrown).toBeInstanceOf(StartBubbleError);
+    expect((thrown as StartBubbleError).reasonCode).toBe(
+      reviewerPolicySnapshotUnavailableReasonCode
+    );
+    expect((thrown as StartBubbleError).context).toMatchObject({
+      command_name: "start",
+      stage: "launch_tmux",
+      bubble_id: created.bubbleId
+    });
+    expect((thrown as StartBubbleError).cause).toBe(injectedError);
+    expect((thrown as StartBubbleError).message).toContain(
+      `Bubble ${created.bubbleId} startup did not complete.`
+    );
+    expect((thrown as StartBubbleError).message).toContain(
+      "This bubble is not resumable with `pairflow bubble start` and must not be treated as running."
+    );
+    expect((thrown as StartBubbleError).message).toContain(
+      `pairflow bubble delete --id ${created.bubbleId} --force`
+    );
+    expect((thrown as StartBubbleError).message).toContain(
+      "Cause: REVIEWER_POLICY_SNAPSHOT_UNAVAILABLE: Injected startup-incomplete StartBubbleError"
+    );
   });
 
   it("fails before bootstrap when runtime session ownership claim fails", async () => {

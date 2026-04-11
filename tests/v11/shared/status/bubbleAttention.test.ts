@@ -19,7 +19,8 @@ describe("v11 status bubbleAttention", () => {
       stateValidation: null,
       watchdog: {
         monitored: true,
-        expired: false
+        expired: false,
+        referenceTimestamp: "2026-02-22T18:40:00.000Z"
       },
       paneActivityRead: {
         status: "missing"
@@ -47,12 +48,72 @@ describe("v11 status bubbleAttention", () => {
       stateValidation: null,
       watchdog: {
         monitored: false,
-        expired: false
+        expired: false,
+        referenceTimestamp: "2026-02-22T18:45:00.000Z"
       },
       paneActivityRead: {
         status: "missing"
       },
       now: new Date("2026-02-22T18:45:02.000Z")
+    });
+
+    expect(attention).toBeNull();
+  });
+
+  it("surfaces startup-incomplete attention only after five minutes in PREPARING_WORKSPACE", () => {
+    const freshAttention = resolveBubbleAttention({
+      state: "PREPARING_WORKSPACE",
+      runtimeSession: null,
+      stateValidation: null,
+      watchdog: {
+        monitored: false,
+        expired: false,
+        referenceTimestamp: "2026-02-22T18:41:00.000Z"
+      },
+      paneActivityRead: {
+        status: "missing"
+      },
+      now: new Date("2026-02-22T18:45:00.000Z")
+    });
+
+    const staleAttention = resolveBubbleAttention({
+      state: "PREPARING_WORKSPACE",
+      runtimeSession: null,
+      stateValidation: null,
+      watchdog: {
+        monitored: false,
+        expired: false,
+        referenceTimestamp: "2026-02-22T18:39:30.000Z"
+      },
+      paneActivityRead: {
+        status: "missing"
+      },
+      now: new Date("2026-02-22T18:45:00.000Z")
+    });
+
+    expect(freshAttention).toBeNull();
+    expect(staleAttention).toMatchObject({
+      code: "startup_incomplete",
+      severity: "warning",
+      label: "Startup incomplete",
+      detail: "This bubble is not resumable. Delete it and create a new bubble."
+    });
+  });
+
+  it("does not surface startup-incomplete attention when PREPARING_WORKSPACE lacks a reference timestamp", () => {
+    const attention = resolveBubbleAttention({
+      state: "PREPARING_WORKSPACE",
+      runtimeSession: null,
+      stateValidation: null,
+      watchdog: {
+        monitored: false,
+        expired: false,
+        referenceTimestamp: null
+      },
+      paneActivityRead: {
+        status: "missing"
+      },
+      now: new Date("2026-02-22T18:45:00.000Z")
     });
 
     expect(attention).toBeNull();
@@ -71,7 +132,8 @@ describe("v11 status bubbleAttention", () => {
       stateValidation: null,
       watchdog: {
         monitored: true,
-        expired: false
+        expired: false,
+        referenceTimestamp: "2026-02-22T18:22:00.000Z"
       },
       paneActivityRead: {
         status: "ok",

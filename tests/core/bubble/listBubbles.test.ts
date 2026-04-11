@@ -275,6 +275,40 @@ describe("listBubbles", () => {
     expect(listed.bubbles[0]?.attention).toBeNull();
   });
 
+  it("surfaces startup-incomplete attention with a distinct code for stale PREPARING_WORKSPACE", async () => {
+    const repoPath = await createTempRepo();
+    const created = await createBubble({
+      id: "b_list_preparing_stale_01",
+      repoPath,
+      baseBranch: "main",
+      reviewArtifactType: "code",
+      task: "Preparing workspace stale startup attention",
+      cwd: repoPath
+    });
+
+    const loaded = await readStateSnapshot(created.paths.statePath);
+    const preparing = applyStateTransition(loaded.state, {
+      to: "PREPARING_WORKSPACE",
+      lastCommandAt: "2026-02-22T18:39:30.000Z"
+    });
+    await writeStateSnapshot(created.paths.statePath, preparing, {
+      expectedFingerprint: loaded.fingerprint,
+      expectedState: "CREATED"
+    });
+
+    const listed = await listBubbles({
+      repoPath,
+      now: new Date("2026-02-22T18:45:00.000Z")
+    });
+
+    expect(listed.bubbles[0]?.state).toBe("PREPARING_WORKSPACE");
+    expect(listed.bubbles[0]?.attention).toMatchObject({
+      code: "startup_incomplete",
+      severity: "warning",
+      label: "Startup incomplete"
+    });
+  });
+
   it("surfaces quiet-pane attention after five quiet minutes", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({

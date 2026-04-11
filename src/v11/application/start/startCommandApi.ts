@@ -8,7 +8,11 @@ import {
   mapStartBubbleResult,
   resolveStartBubbleDependencies
 } from "./startCommandOrchestration.js";
-import { StartBubbleError, throwAsStartBubbleError } from "./startCommandRuntime.js";
+import {
+  buildStartupIncompleteStartFailureMessage,
+  StartBubbleError,
+  throwAsStartBubbleError
+} from "./startCommandRuntime.js";
 import {
   cleanupFailedStart,
   runFreshStartFlow,
@@ -127,10 +131,33 @@ export async function startBubble(
       tmuxSessionName,
       preparingState: freshProgress.preparingState
     });
+    const message = error instanceof Error ? error.message : String(error);
+    if (context.startMode === "fresh" && freshProgress.preparingState !== null) {
+      if (error instanceof StartBubbleError) {
+        throw new StartBubbleError({
+          message: buildStartupIncompleteStartFailureMessage(
+            context.resolved.bubbleId,
+            message
+          ),
+          ...(error.reasonCode !== undefined
+            ? { reasonCode: error.reasonCode }
+            : {}),
+          ...(error.context !== undefined
+            ? { context: error.context }
+            : {}),
+          cause: error
+        });
+      }
+      throw new StartBubbleError(
+        buildStartupIncompleteStartFailureMessage(
+          context.resolved.bubbleId,
+          message
+        )
+      );
+    }
     if (error instanceof StartBubbleError) {
       throw error;
     }
-    const message = error instanceof Error ? error.message : String(error);
     throw new StartBubbleError(`Failed to start bubble ${context.resolved.bubbleId}: ${message}`);
   }
 }

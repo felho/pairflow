@@ -37,6 +37,7 @@ export interface UiRuntimeHealth {
 export type UiBubbleAttentionCode =
   | "state_invalid"
   | "runtime_missing"
+  | "startup_incomplete"
   | "runtime_mismatch"
   | "no_session"
   | "pane_unreadable"

@@ -18,10 +18,33 @@ export class StartBubbleError extends Error {
   }
 }
 
+const startupIncompleteOutcome =
+  "This bubble is not resumable with `pairflow bubble start` and must not be treated as running.";
+
 export function createStartBubbleError(
   input: PairflowCommandErrorInput
 ): StartBubbleError {
   return new StartBubbleError(input);
+}
+
+export function buildPreparingWorkspaceStartRejectMessage(): string {
+  return [
+    "bubble start rejected: state PREPARING_WORKSPACE indicates an incomplete startup.",
+    startupIncompleteOutcome,
+    "Delete this incomplete bubble with `pairflow bubble delete --id <id> --force`, then create a new bubble."
+  ].join(" ");
+}
+
+export function buildStartupIncompleteStartFailureMessage(
+  bubbleId: string,
+  causeMessage: string
+): string {
+  return [
+    `Bubble ${bubbleId} startup did not complete.`,
+    startupIncompleteOutcome,
+    `Delete this incomplete bubble with \`pairflow bubble delete --id ${bubbleId} --force\`, then create a new bubble.`,
+    `Cause: ${causeMessage}`
+  ].join(" ");
 }
 
 export function throwAsStartBubbleError(error: unknown): never {
