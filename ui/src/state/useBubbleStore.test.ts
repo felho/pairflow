@@ -304,19 +304,11 @@ describe("createBubbleStore", () => {
     ).toEqual({
       actor: "meta-reviewer",
       authorityActive: false,
-      latestRecommendation: null,
-      latestStatus: null,
-      latestSummary: null,
-      latestReportRef: null,
-      latestUpdatedAt: null,
-      latestRoute: null,
-      latestRouteReasonCode: null,
-      latestRouteObservedAt: null,
       runtimeDelivery: null
     });
   });
 
-  it("retains meta-review route fields from incoming realtime payloads", async () => {
+  it("drops removed meta-review route fields from incoming realtime payloads", async () => {
     const api = createApiStub({
       getRepos: vi.fn(async () => ["/repo-a"]),
       getBubbles: vi.fn(async () => ({
@@ -350,6 +342,7 @@ describe("createBubbleStore", () => {
         bubbleId: "b-route-payload",
         repoPath: "/repo-a",
         metaReview: {
+          authorityActive: true,
           latestRoute: "human_gate_dispatch_failed",
           latestRouteReasonCode: "META_REVIEW_GATE_RUN_FAILED",
           latestRouteObservedAt: "2026-02-24T12:42:00.000Z"
@@ -357,11 +350,21 @@ describe("createBubbleStore", () => {
       })
     });
 
-    expect(store.getState().bubblesById["b-route-payload"]?.metaReview).toMatchObject({
-      latestRoute: "human_gate_dispatch_failed",
-      latestRouteReasonCode: "META_REVIEW_GATE_RUN_FAILED",
-      latestRouteObservedAt: "2026-02-24T12:42:00.000Z"
+    const metaReview = store.getState().bubblesById["b-route-payload"]?.metaReview;
+    expect(metaReview).toStrictEqual({
+      actor: "meta-reviewer",
+      authorityActive: true,
+      runtimeDelivery: null
     });
+    const metaReviewRecord = metaReview as unknown as Record<string, unknown>;
+    expect(metaReviewRecord).not.toHaveProperty("latestRecommendation");
+    expect(metaReviewRecord).not.toHaveProperty("latestStatus");
+    expect(metaReviewRecord).not.toHaveProperty("latestSummary");
+    expect(metaReviewRecord).not.toHaveProperty("latestReportRef");
+    expect(metaReviewRecord).not.toHaveProperty("latestUpdatedAt");
+    expect(metaReviewRecord).not.toHaveProperty("latestRoute");
+    expect(metaReviewRecord).not.toHaveProperty("latestRouteReasonCode");
+    expect(metaReviewRecord).not.toHaveProperty("latestRouteObservedAt");
   });
 
   it("positions a realtime-created bubble in the same row when right slot is available", async () => {

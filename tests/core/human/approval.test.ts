@@ -510,7 +510,7 @@ describe("approval decisions", () => {
     });
   });
 
-  it("keeps sticky run-failed override behavior symmetric in READY_FOR_HUMAN_APPROVAL", async () => {
+  it("fails closed when sticky run-failed approval request lacks transcript recommendation metadata", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({
       repoPath,
@@ -584,23 +584,20 @@ describe("approval decisions", () => {
         cwd: repoPath,
         now: new Date("2026-02-22T12:05:00.000Z")
       })
-    ).rejects.toThrow(/APPROVAL_OVERRIDE_REQUIRED/u);
+    ).rejects.toThrow(/APPROVAL_RECOMMENDATION_UNAVAILABLE/u);
 
-    const approved = await emitApprove({
-      bubbleId: bubble.bubbleId,
-      overrideNonApprove: true,
-      overrideReason: "Legacy sticky run-failed fallback manually accepted.",
-      cwd: repoPath,
-      now: new Date("2026-02-22T12:05:01.000Z")
-    });
-    expect(approved.state.state).toBe("APPROVED_FOR_COMMIT");
-    expect(approved.envelope.payload.metadata).toMatchObject({
-      recommendation_at_decision: "inconclusive",
-      override_non_approve: true
-    });
+    await expect(
+      emitApprove({
+        bubbleId: bubble.bubbleId,
+        overrideNonApprove: true,
+        overrideReason: "Legacy sticky run-failed fallback manually accepted.",
+        cwd: repoPath,
+        now: new Date("2026-02-22T12:05:01.000Z")
+      })
+    ).rejects.toThrow(/APPROVAL_RECOMMENDATION_UNAVAILABLE/u);
   });
 
-  it("falls back to inconclusive instead of recommendation-unavailable on legacy sticky compatibility path", async () => {
+  it("fails closed on legacy sticky compatibility path without transcript recommendation metadata", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({
       repoPath,
@@ -681,21 +678,17 @@ describe("approval decisions", () => {
 
     expect(caught).toBeInstanceOf(ApprovalCommandError);
     const message = (caught as Error).message;
-    expect(message).toMatch(/APPROVAL_OVERRIDE_REQUIRED/u);
-    expect(message).not.toMatch(/APPROVAL_RECOMMENDATION_UNAVAILABLE/u);
+    expect(message).toMatch(/APPROVAL_RECOMMENDATION_UNAVAILABLE/u);
 
-    const approved = await emitApprove({
-      bubbleId: bubble.bubbleId,
-      overrideNonApprove: true,
-      overrideReason: "Legacy sticky compatibility fallback manually accepted.",
-      cwd: repoPath,
-      now: new Date("2026-02-22T12:05:01.000Z")
-    });
-    expect(approved.state.state).toBe("APPROVED_FOR_COMMIT");
-    expect(approved.envelope.payload.metadata).toMatchObject({
-      recommendation_at_decision: "inconclusive",
-      override_non_approve: true
-    });
+    await expect(
+      emitApprove({
+        bubbleId: bubble.bubbleId,
+        overrideNonApprove: true,
+        overrideReason: "Legacy sticky compatibility fallback manually accepted.",
+        cwd: repoPath,
+        now: new Date("2026-02-22T12:05:01.000Z")
+      })
+    ).rejects.toThrow(/APPROVAL_RECOMMENDATION_UNAVAILABLE/u);
   });
 
   it("uses deterministic inconclusive fallback on sticky READY_FOR_HUMAN_APPROVAL compatibility path", async () => {
@@ -757,7 +750,7 @@ describe("approval decisions", () => {
     });
   });
 
-  it("uses inconclusive fallback when sticky context has no current-round approval request", async () => {
+  it("fails closed when sticky context has no current-round approval request", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupReadyForHumanApprovalBubble(
       repoPath,
@@ -829,21 +822,17 @@ describe("approval decisions", () => {
     }
     expect(caught).toBeInstanceOf(ApprovalCommandError);
     const message = (caught as Error).message;
-    expect(message).toMatch(/APPROVAL_OVERRIDE_REQUIRED/u);
-    expect(message).not.toMatch(/APPROVAL_RECOMMENDATION_UNAVAILABLE/u);
+    expect(message).toMatch(/APPROVAL_RECOMMENDATION_UNAVAILABLE/u);
 
-    const approved = await emitApprove({
-      bubbleId: bubble.bubbleId,
-      overrideNonApprove: true,
-      overrideReason: "Sticky context had no current-round approval request; accepted manually.",
-      cwd: repoPath,
-      now: new Date("2026-02-22T12:05:01.000Z")
-    });
-    expect(approved.state.state).toBe("APPROVED_FOR_COMMIT");
-    expect(approved.envelope.payload.metadata).toMatchObject({
-      recommendation_at_decision: "inconclusive",
-      override_non_approve: true
-    });
+    await expect(
+      emitApprove({
+        bubbleId: bubble.bubbleId,
+        overrideNonApprove: true,
+        overrideReason: "Sticky context had no current-round approval request; accepted manually.",
+        cwd: repoPath,
+        now: new Date("2026-02-22T12:05:01.000Z")
+      })
+    ).rejects.toThrow(/APPROVAL_RECOMMENDATION_UNAVAILABLE/u);
   });
 
   it("supports override-based approve after human_gate_run_failed fallback", async () => {
@@ -1068,6 +1057,29 @@ describe("approval decisions", () => {
     await writeStateSnapshot(bubble.paths.statePath, approveRecommendationState, {
       expectedFingerprint: loaded.fingerprint,
       expectedState: "READY_FOR_HUMAN_APPROVAL"
+    });
+    await appendProtocolEnvelope({
+      transcriptPath: bubble.paths.transcriptPath,
+      mirrorPaths: [bubble.paths.inboxPath],
+      lockPath: join(bubble.paths.locksDir, `${bubble.bubbleId}.lock`),
+      now: new Date("2026-02-22T12:04:59.500Z"),
+      envelope: {
+        bubble_id: bubble.bubbleId,
+        sender: "orchestrator",
+        recipient: "human",
+        type: "APPROVAL_REQUEST",
+        round: approveRecommendationState.round,
+        payload: {
+          summary: "Autonomous gate approved.",
+          metadata: {
+            [deliveryTargetRoleMetadataKey]: "status",
+            actor: "meta-reviewer",
+            actor_agent: "codex",
+            latest_recommendation: "approve"
+          }
+        },
+        refs: ["artifacts/meta-review-last.json"]
+      }
     });
 
     const result = await emitApprove({
@@ -1404,7 +1416,7 @@ describe("approval decisions", () => {
     });
     expect(approved.state.state).toBe("APPROVED_FOR_COMMIT");
     expect(approved.envelope.payload.metadata).toMatchObject({
-      recommendation_at_decision: "inconclusive",
+      recommendation_at_decision: "approve",
       findings_parity_inconsistent: true,
       override_non_approve: true
     });

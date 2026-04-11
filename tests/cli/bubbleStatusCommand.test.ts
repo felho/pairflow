@@ -153,11 +153,6 @@ describe("renderBubbleStatusText", () => {
       metaReview: {
         actor: "meta-reviewer",
         authorityActive: true,
-        latestRecommendation: "inconclusive",
-        latestStatus: "inconclusive",
-        latestSummary: "No deterministic recommendation.",
-        latestReportRef: "artifacts/meta-review-last.json",
-        latestUpdatedAt: "2026-02-22T12:04:59.000Z",
         latestRoute: null,
         latestRouteReasonCode: null,
         latestRouteObservedAt: null,
@@ -258,7 +253,7 @@ describe("renderBubbleStatusText", () => {
       "pinned=node '/tmp/worktree/dist/cli/index.js'"
     );
     expect(rendered).toContain(
-      "Meta-review: status=inconclusive recommendation=inconclusive route=-"
+      "Meta-review: authority=active route=-"
     );
     expect(rendered).toContain("Bubble start: 2026-02-22T11:58:00.000Z");
     expect(rendered).toContain(
@@ -294,11 +289,6 @@ describe("renderBubbleStatusText", () => {
         metaReview: {
           actor: "meta-reviewer",
           authorityActive: false,
-          latestRecommendation: "inconclusive",
-          latestStatus: "inconclusive",
-          latestSummary: "No deterministic recommendation.",
-          latestReportRef: "artifacts/meta-review-last.json",
-          latestUpdatedAt: "2026-02-22T12:04:59.000Z",
           latestRoute: "human_gate_dispatch_failed",
           latestRouteReasonCode: null,
           latestRouteObservedAt: "2026-02-22T12:05:10.000Z",
@@ -316,7 +306,7 @@ describe("renderBubbleStatusText", () => {
 
     expect(rendered).toContain("Meta-review runtime delivery: uncertain");
     expect(rendered).toContain(
-      "Meta-review: status=inconclusive recommendation=inconclusive route=human_gate_dispatch_failed"
+      "Meta-review: authority=inactive route=human_gate_dispatch_failed"
     );
     expect(rendered).toContain("reason=META_REVIEW_REQUEST_DELIVERY_UNCONFIRMED");
     expect(rendered).toContain("message=pane delivery not confirmed");
@@ -333,11 +323,6 @@ describe("renderBubbleStatusText", () => {
         metaReview: {
           actor: "meta-reviewer",
           authorityActive: false,
-          latestRecommendation: "inconclusive",
-          latestStatus: "success",
-          latestSummary: "Needs human interpretation before approval.",
-          latestReportRef: "artifacts/meta-review-last.json",
-          latestUpdatedAt: "2026-02-22T12:05:10.000Z",
           latestRoute: "human_gate_inconclusive",
           latestRouteReasonCode: null,
           latestRouteObservedAt: "2026-02-22T12:05:10.000Z",
@@ -347,7 +332,7 @@ describe("renderBubbleStatusText", () => {
     );
 
     expect(rendered).toContain(
-      "Meta-review: status=success recommendation=inconclusive route=human_gate_inconclusive"
+      "Meta-review: authority=inactive route=human_gate_inconclusive"
     );
   });
 });
@@ -411,11 +396,6 @@ describe("renderBubbleStatusTable", () => {
       metaReview: {
         actor: "meta-reviewer",
         authorityActive: false,
-        latestRecommendation: "approve",
-        latestStatus: "success",
-        latestSummary: "Autonomous recommendation approve.",
-        latestReportRef: "artifacts/meta-review-last.json",
-        latestUpdatedAt: "2026-03-08T21:29:00.000Z",
         latestRoute: null,
         latestRouteReasonCode: null,
         latestRouteObservedAt: null,
@@ -464,7 +444,7 @@ describe("renderBubbleStatusTable", () => {
     expect(rendered).toContain("| Runtime");
     expect(rendered).toContain("| Inbox");
     expect(rendered).toContain("| Meta-review");
-    expect(rendered).toContain("status=success | recommendation=approve");
+    expect(rendered).toContain("authority=inactive");
     expect(rendered).toContain("route=- | runtime_delivery=-");
     expect(rendered).toContain("| Review");
     expect(rendered).toContain("| Gates");
@@ -501,11 +481,6 @@ describe("renderBubbleStatusTable", () => {
         metaReview: {
           actor: "meta-reviewer",
           authorityActive: false,
-          latestRecommendation: "inconclusive",
-          latestStatus: "success",
-          latestSummary: "Needs human interpretation before approval.",
-          latestReportRef: "artifacts/meta-review-last.json",
-          latestUpdatedAt: "2026-03-08T21:29:00.000Z",
           latestRoute: "human_gate_inconclusive",
           latestRouteReasonCode: null,
           latestRouteObservedAt: "2026-03-08T21:29:00.000Z",
@@ -514,7 +489,7 @@ describe("renderBubbleStatusTable", () => {
       })
     );
 
-    expect(rendered).toContain("status=success | recommendation=inconclusive");
+    expect(rendered).toContain("authority=inactive");
     expect(rendered).toContain("route=human_gate_inconclusive | runtime_delivery=-");
   });
 
@@ -589,11 +564,6 @@ describe("renderBubbleStatusTable", () => {
         metaReview: {
           actor: "meta-reviewer",
           authorityActive: false,
-          latestRecommendation: "approve",
-          latestStatus: "success",
-          latestSummary: "Autonomous recommendation approve.",
-          latestReportRef: "artifacts/meta-review-last.json",
-          latestUpdatedAt: "2026-03-08T21:29:00.000Z",
           latestRoute: "human_gate_dispatch_failed",
           latestRouteReasonCode: null,
           latestRouteObservedAt: "2026-03-08T21:29:05.000Z",
@@ -610,7 +580,7 @@ describe("renderBubbleStatusTable", () => {
     );
 
     expect(rendered).toContain("| Meta-review");
-    expect(rendered).toContain("status=success | recommendation=approve");
+    expect(rendered).toContain("authority=inactive");
     expect(rendered).toContain(
       "route=human_gate_dispatch_failed | runtime_delivery=failed/META_REVIEW_REQUEST_DELIVERY_FAILED"
     );

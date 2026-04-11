@@ -1,20 +1,15 @@
+import type { MetaReviewRecommendation } from "../../../types/bubble.js";
 import type { ProtocolEnvelope } from "../../../types/protocol.js";
 import type { ReadTranscriptEnvelopesPort } from "../ports/transcript.js";
 
-const metaReviewRunFailedSummaryPrefix = "META_REVIEW_GATE_RUN_FAILED:";
-const metaReviewGateRunFailedReasonCode = "META_REVIEW_GATE_RUN_FAILED";
-const metaReviewGateRouteMetadataKey = "meta_review_gate_route";
-const metaReviewGateReasonCodeMetadataKey = "meta_review_gate_reason_code";
-const metaReviewGateRunFailedMetadataKey = "meta_review_gate_run_failed";
 const approvalSummaryConsistencyStatusMetadataKey =
   "approval_summary_consistency_status";
 
 export interface ApprovalTranscriptContext {
   latestRoundApprovalRequest?: ProtocolEnvelope;
-  hasRunFailedApprovalRequestHistory: boolean;
 }
 
-function isHumanApprovalRequest(envelope: ProtocolEnvelope): boolean {
+export function isHumanApprovalRequest(envelope: ProtocolEnvelope): boolean {
   return (
     envelope.type === "APPROVAL_REQUEST" &&
     envelope.sender === "orchestrator" &&
@@ -22,30 +17,30 @@ function isHumanApprovalRequest(envelope: ProtocolEnvelope): boolean {
   );
 }
 
-function isRunFailedApprovalRequest(
+function isHumanApprovalDecision(envelope: ProtocolEnvelope): boolean {
+  return (
+    envelope.type === "APPROVAL_DECISION" &&
+    envelope.sender === "human" &&
+    envelope.recipient === "orchestrator"
+  );
+}
+
+export function resolveApprovalRecommendationFromRequest(
   approvalRequest: ProtocolEnvelope | undefined
-): boolean {
+): MetaReviewRecommendation | undefined {
   if (approvalRequest === undefined || !isHumanApprovalRequest(approvalRequest)) {
-    return false;
+    return undefined;
   }
   const metadata = approvalRequest.payload.metadata;
-  if (typeof metadata === "object" && metadata !== null) {
-    const gateMetadata = metadata as Record<string, unknown>;
-    if (gateMetadata[metaReviewGateRunFailedMetadataKey] === true) {
-      return true;
-    }
-    if (gateMetadata[metaReviewGateRouteMetadataKey] === "human_gate_run_failed") {
-      return true;
-    }
-    if (gateMetadata[metaReviewGateReasonCodeMetadataKey] === metaReviewGateRunFailedReasonCode) {
-      return true;
-    }
+  if (typeof metadata !== "object" || metadata === null) {
+    return undefined;
   }
-  const summary = approvalRequest.payload.summary;
-  return (
-    typeof summary === "string" &&
-    summary.startsWith(metaReviewRunFailedSummaryPrefix)
-  );
+  const recommendation = (metadata as Record<string, unknown>).latest_recommendation;
+  return recommendation === "approve" ||
+    recommendation === "rework" ||
+    recommendation === "inconclusive"
+    ? recommendation
+    : undefined;
 }
 
 export function hasParityInconsistencyMetadata(
@@ -92,33 +87,20 @@ export async function readApprovalTranscriptContext(
   const transcript = await dependencies.readTranscriptEnvelopes(transcriptPath, {
     allowMissing: true
   });
-  let latestRoundApprovalRequest: ProtocolEnvelope | undefined;
-  let hasRunFailedApprovalRequestHistory = false;
   for (let index = transcript.length - 1; index >= 0; index -= 1) {
     const envelope = transcript[index];
-    if (envelope === undefined || !isHumanApprovalRequest(envelope)) {
+    if (envelope === undefined || envelope.round !== round) {
       continue;
     }
-    if (
-      latestRoundApprovalRequest === undefined &&
-      envelope.round === round
-    ) {
-      latestRoundApprovalRequest = envelope;
+    if (isHumanApprovalDecision(envelope)) {
+      return {};
     }
-    if (envelope.round === round && isRunFailedApprovalRequest(envelope)) {
-      hasRunFailedApprovalRequestHistory = true;
+    if (!isHumanApprovalRequest(envelope)) {
+      continue;
     }
-    if (
-      latestRoundApprovalRequest !== undefined &&
-      hasRunFailedApprovalRequestHistory
-    ) {
-      break;
-    }
+    return {
+      latestRoundApprovalRequest: envelope
+    };
   }
-  return {
-    ...(latestRoundApprovalRequest !== undefined
-      ? { latestRoundApprovalRequest }
-      : {}),
-    hasRunFailedApprovalRequestHistory
-  };
+  return {};
 }

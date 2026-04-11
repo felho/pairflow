@@ -614,10 +614,7 @@ describe("meta-review run", () => {
     expect(status.pendingInboxItems.approvalRequests).toBe(1);
     expect(status.pendingInboxItems.total).toBe(1);
     expect(status.transcript.lastMessageType).toBe("APPROVAL_REQUEST");
-    expect(status.metaReview.latestRecommendation).toBe("approve");
-    expect(status.metaReview.latestSummary).toBe(
-      "Recovered approve recommendation"
-    );
+    expect(status.metaReview.latestRoute).toBe("human_gate_approve");
   });
 
   it("avoids stale snapshot drift when deep approve refresh omits report_json split metadata", async () => {
@@ -727,7 +724,7 @@ describe("meta-review run", () => {
       bubbleId: bubble.bubbleId,
       cwd: repoPath
     });
-    expect(status.metaReview.latestSummary).toBe(refreshedSummary);
+    expect(status.metaReview.latestRoute).toBe("human_gate_approve");
   });
 
   it("fails closed on deep approve refresh when open findings split metadata is omitted", async () => {

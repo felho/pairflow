@@ -128,14 +128,6 @@ function defaultMetaReviewSummary(): UiBubbleSummary["metaReview"] {
   return {
     actor: "meta-reviewer",
     authorityActive: false,
-    latestRecommendation: null,
-    latestStatus: null,
-    latestSummary: null,
-    latestReportRef: null,
-    latestUpdatedAt: null,
-    latestRoute: null,
-    latestRouteReasonCode: null,
-    latestRouteObservedAt: null,
     runtimeDelivery: null
   };
 }
@@ -170,40 +162,12 @@ function normalizeBubbleSummary(input: UiBubbleSummary): UiBubbleSummary {
     };
   }
   const meta = candidate as Partial<UiBubbleSummary["metaReview"]>;
-  const recommendation = meta.latestRecommendation;
-  const status = meta.latestStatus;
   return {
     ...input,
     attention: normalizeAttention((input as Partial<UiBubbleSummary>).attention),
     metaReview: {
       actor: "meta-reviewer",
       authorityActive: meta.authorityActive === true,
-      latestRecommendation:
-        recommendation === "approve" ||
-          recommendation === "rework" ||
-          recommendation === "inconclusive"
-          ? recommendation
-          : null,
-      latestStatus:
-        status === "success" || status === "error" || status === "inconclusive"
-          ? status
-          : null,
-      latestSummary:
-        typeof meta.latestSummary === "string" ? meta.latestSummary : null,
-      latestReportRef:
-        typeof meta.latestReportRef === "string" ? meta.latestReportRef : null,
-      latestUpdatedAt:
-        typeof meta.latestUpdatedAt === "string" ? meta.latestUpdatedAt : null,
-      latestRoute:
-        typeof meta.latestRoute === "string" ? meta.latestRoute : null,
-      latestRouteReasonCode:
-        typeof meta.latestRouteReasonCode === "string"
-          ? meta.latestRouteReasonCode
-          : null,
-      latestRouteObservedAt:
-        typeof meta.latestRouteObservedAt === "string"
-          ? meta.latestRouteObservedAt
-          : null,
       runtimeDelivery:
         meta.runtimeDelivery !== null &&
         meta.runtimeDelivery !== undefined &&

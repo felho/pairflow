@@ -11,6 +11,7 @@ import { deliveryTargetRoleMetadataKey } from "../../../src/types/protocol.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
 import { initGitRepository } from "../../helpers/git.js";
 import { applyStateTransition } from "../../../src/v11/domain/state/machine.js";
+import { appendProtocolEnvelope } from "../../../src/v11/infrastructure/artifact/transcript/transcriptStore.js";
 import {
   readStateSnapshot,
   writeStateSnapshot
@@ -183,7 +184,7 @@ async function seedReadyForHumanApprovalState(input: {
         runtime_delivery: null,
         last_autonomous_run_id: "run_contract_approval_ready_01",
         last_autonomous_status: "success",
-        last_autonomous_recommendation: "approve",
+        last_autonomous_recommendation: "inconclusive",
         last_autonomous_summary: "Autonomous approval recommendation is ready.",
         last_autonomous_report_ref: "artifacts/meta-review-last.json",
         last_autonomous_rework_target_message: null,
@@ -195,6 +196,29 @@ async function seedReadyForHumanApprovalState(input: {
       expectedState: "RUNNING"
     }
   );
+  await appendProtocolEnvelope({
+    transcriptPath: bubble.paths.transcriptPath,
+    mirrorPaths: [bubble.paths.inboxPath],
+    lockPath: join(bubble.paths.locksDir, `${bubble.bubbleId}.lock`),
+    now: new Date("2026-03-20T11:29:30.000Z"),
+    envelope: {
+      bubble_id: bubble.bubbleId,
+      sender: "orchestrator",
+      recipient: "human",
+      type: "APPROVAL_REQUEST",
+      round: transitioned.round,
+      payload: {
+        summary: "Autonomous approval recommendation is ready.",
+        metadata: {
+          [deliveryTargetRoleMetadataKey]: "status",
+          actor: "meta-reviewer",
+          actor_agent: "codex",
+          latest_recommendation: "approve"
+        }
+      },
+      refs: ["artifacts/meta-review-last.json"]
+    }
+  });
   return bubble;
 }
 

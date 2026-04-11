@@ -1,10 +1,5 @@
-import type {
-  BubbleLifecycleState,
-  BubbleMetaReviewSnapshotState
-} from "../../../types/bubble.js";
 import type { ProtocolEnvelope } from "../../../types/protocol.js";
-import { isHumanApprovalState } from "./approvalRoutingEligibility.js";
-export { isHumanApprovalState } from "./approvalRoutingEligibility.js";
+import { isHumanApprovalRequest } from "./approvalTranscriptContext.js";
 
 export interface PendingApprovalSignal {
   envelopeId: string;
@@ -15,19 +10,8 @@ export interface PendingApprovalSignal {
   refs: string[];
 }
 
-export interface BuildCanonicalPendingApprovalSignalInput {
-  bubbleId: string;
-  state: BubbleLifecycleState;
-  round: number;
-  metaReview: BubbleMetaReviewSnapshotState | undefined;
-  pendingApproval: PendingApprovalSignal | undefined;
-}
-
 export interface ResolveCanonicalPendingApprovalSignalInput {
-  bubbleId: string;
-  state: BubbleLifecycleState;
   round: number;
-  metaReview: BubbleMetaReviewSnapshotState | undefined;
   envelopes: ProtocolEnvelope[];
 }
 
@@ -39,13 +23,21 @@ function deriveApprovalSummary(payload: Record<string, unknown>): string {
 }
 
 export function resolveLatestPendingApprovalRequest(
-  envelopes: ProtocolEnvelope[]
+  envelopes: ProtocolEnvelope[],
+  round: number
 ): PendingApprovalSignal | undefined {
-  let pendingApproval: PendingApprovalSignal | undefined;
+  for (let index = envelopes.length - 1; index >= 0; index -= 1) {
+    const envelope = envelopes[index]!;
+    if (envelope.round !== round) {
+      continue;
+    }
 
-  for (const envelope of envelopes) {
-    if (envelope.type === "APPROVAL_REQUEST") {
-      pendingApproval = {
+    if (envelope.type === "APPROVAL_DECISION") {
+      return undefined;
+    }
+
+    if (isHumanApprovalRequest(envelope)) {
+      return {
         envelopeId: envelope.id,
         ts: envelope.ts,
         round: envelope.round,
@@ -55,62 +47,14 @@ export function resolveLatestPendingApprovalRequest(
         ),
         refs: envelope.refs
       };
-      continue;
-    }
-
-    if (envelope.type === "APPROVAL_DECISION") {
-      pendingApproval = undefined;
     }
   }
 
-  return pendingApproval;
-}
-
-export function buildCanonicalPendingApprovalSignal(
-  input: BuildCanonicalPendingApprovalSignalInput
-): PendingApprovalSignal | undefined {
-  if (!isHumanApprovalState(input.state)) {
-    return input.pendingApproval;
-  }
-
-  const updatedAt = input.metaReview?.last_autonomous_updated_at ?? null;
-  const summary = input.metaReview?.last_autonomous_summary ?? null;
-  if (
-    updatedAt === null ||
-    summary === null ||
-    summary.trim().length === 0
-  ) {
-    return input.pendingApproval;
-  }
-  if (
-    input.pendingApproval !== undefined &&
-    input.pendingApproval.ts >= updatedAt
-  ) {
-    return input.pendingApproval;
-  }
-
-  return {
-    envelopeId: `meta_review_snapshot:${input.bubbleId}:${updatedAt}`,
-    ts: updatedAt,
-    round: input.round,
-    sender: "orchestrator",
-    summary: summary.trim(),
-    refs:
-      input.metaReview?.last_autonomous_report_ref !== null &&
-        input.metaReview?.last_autonomous_report_ref !== undefined
-        ? [input.metaReview.last_autonomous_report_ref]
-        : []
-  };
+  return undefined;
 }
 
 export function resolveCanonicalPendingApprovalSignal(
   input: ResolveCanonicalPendingApprovalSignalInput
 ): PendingApprovalSignal | undefined {
-  return buildCanonicalPendingApprovalSignal({
-    bubbleId: input.bubbleId,
-    state: input.state,
-    round: input.round,
-    metaReview: input.metaReview,
-    pendingApproval: resolveLatestPendingApprovalRequest(input.envelopes)
-  });
+  return resolveLatestPendingApprovalRequest(input.envelopes, input.round);
 }

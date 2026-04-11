@@ -87,7 +87,7 @@ describe("getBubbleInbox", () => {
         sender: "claude",
         recipient: "human",
         type: "HUMAN_QUESTION",
-        round: 2,
+        round: 0,
         payload: {
           question: "Question 2?"
         },
@@ -101,10 +101,10 @@ describe("getBubbleInbox", () => {
       now: new Date("2026-02-22T10:03:00.000Z"),
       envelope: {
         bubble_id: bubble.bubbleId,
-        sender: "claude",
+        sender: "orchestrator",
         recipient: "human",
         type: "APPROVAL_REQUEST",
-        round: 2,
+        round: 0,
         payload: {
           summary: "Approve pass A"
         },
@@ -119,9 +119,9 @@ describe("getBubbleInbox", () => {
       envelope: {
         bubble_id: bubble.bubbleId,
         sender: "human",
-        recipient: "claude",
+        recipient: "orchestrator",
         type: "APPROVAL_DECISION",
-        round: 2,
+        round: 0,
         payload: {
           decision: "approve"
         },
@@ -135,10 +135,10 @@ describe("getBubbleInbox", () => {
       now: new Date("2026-02-22T10:05:00.000Z"),
       envelope: {
         bubble_id: bubble.bubbleId,
-        sender: "claude",
+        sender: "orchestrator",
         recipient: "human",
         type: "APPROVAL_REQUEST",
-        round: 3,
+        round: 0,
         payload: {
           summary: "Approve pass B"
         },
@@ -242,7 +242,7 @@ describe("getBubbleInbox", () => {
         sender: "orchestrator",
         recipient: "human",
         type: "APPROVAL_REQUEST",
-        round: 1,
+        round: 0,
         payload: {
           summary: "Older approval summary"
         },
@@ -259,7 +259,7 @@ describe("getBubbleInbox", () => {
         sender: "orchestrator",
         recipient: "human",
         type: "APPROVAL_REQUEST",
-        round: 1,
+        round: 0,
         payload: {
           summary: "Latest approval summary"
         },
@@ -277,7 +277,7 @@ describe("getBubbleInbox", () => {
     expect(view.items[0]?.summary).toBe("Latest approval summary");
   });
 
-  it("surfaces newer meta-review snapshot summary as the canonical pending approval item", async () => {
+  it("does not synthesize a pending approval item from a newer meta-review snapshot", async () => {
     const repoPath = await createTempRepo();
     const bubble = await createBubble({
       id: "b_inbox_04",
@@ -337,7 +337,55 @@ describe("getBubbleInbox", () => {
 
     expect(view.pending.approvalRequests).toBe(1);
     expect(view.items).toHaveLength(1);
-    expect(view.items[0]?.summary).toBe("Fresh approve summary");
-    expect(view.items[0]?.envelopeId).toContain("meta_review_snapshot:");
+    expect(view.items[0]?.summary).toBe("META_REVIEW_GATE_RUN_FAILED: stale timeout");
+    expect(view.items[0]?.envelopeId).toBeDefined();
+    expect(view.items[0]?.envelopeId).not.toContain("meta_review_snapshot:");
+  });
+
+  it("returns no pending approval item when only cached snapshot exists without current-round request", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await createBubble({
+      id: "b_inbox_05",
+      repoPath,
+      baseBranch: "main",
+      reviewArtifactType: "code",
+      task: "Inbox snapshot-only path",
+      cwd: repoPath
+    });
+
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    await writeStateSnapshot(
+      bubble.paths.statePath,
+      {
+        ...loaded.state,
+        state: "READY_FOR_HUMAN_APPROVAL",
+        round: 1,
+        meta_review: {
+          ...loaded.state.meta_review!,
+          last_autonomous_run_id: "run_meta_only_cached",
+          last_autonomous_status: "success",
+          last_autonomous_recommendation: "approve",
+          last_autonomous_summary: "Cached approval summary only",
+          last_autonomous_report_ref: "artifacts/meta-review-last.json",
+          last_autonomous_rework_target_message: null,
+          last_autonomous_updated_at: "2026-02-22T10:15:00.000Z"
+        }
+      },
+      {
+        expectedFingerprint: loaded.fingerprint
+      }
+    );
+
+    const view = await getBubbleInbox({
+      bubbleId: bubble.bubbleId,
+      cwd: repoPath
+    });
+
+    expect(view.pending).toEqual({
+      humanQuestions: 0,
+      approvalRequests: 0,
+      total: 0
+    });
+    expect(view.items).toEqual([]);
   });
 });

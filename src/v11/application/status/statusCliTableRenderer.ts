@@ -134,7 +134,7 @@ export function renderBubbleStatusTable(
     ],
     [
       "Meta-review",
-      `status=${status.metaReview.latestStatus ?? "-"} | recommendation=${status.metaReview.latestRecommendation ?? "-"}`
+      `authority=${status.metaReview.authorityActive ? green("active") : dim("inactive")}`
     ],
     [
       "",
