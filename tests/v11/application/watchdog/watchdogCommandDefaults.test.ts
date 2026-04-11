@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import type { WriteWatchdogPaneActivityPort } from "../../../../src/v11/shared/ports/watchdogPaneActivity.js";
 
 describe("watchdog command defaults", () => {
   afterEach(() => {
@@ -16,7 +17,9 @@ describe("watchdog command defaults", () => {
   });
 
   it("falls back to default runtime session and tmux dependencies when callers omit them", async () => {
-    const writeWatchdogPaneActivity = vi.fn(async () => "/tmp/watchdog-pane.json");
+    const writeWatchdogPaneActivity = vi.fn<WriteWatchdogPaneActivityPort>(
+      async () => "/tmp/watchdog-pane.json"
+    );
     const appendWatchdogTrace = vi.fn(async () => undefined);
     const readRuntimeSessionsRegistry = vi.fn(async () => ({
       b_watchdog_defaults_01: {
@@ -130,16 +133,29 @@ describe("watchdog command defaults", () => {
       { allowFailure: true }
     );
     expect(writeWatchdogPaneActivity).toHaveBeenCalledTimes(1);
-    expect(writeWatchdogPaneActivity).toHaveBeenCalledWith({
-      runtimeDir: "/tmp/runtime",
-      bubbleId: "b_watchdog_defaults_01",
-      record: expect.objectContaining({
-        bubble_id: "b_watchdog_defaults_01",
-        session_name: "pf-watchdog-defaults",
-        target_pane: "pf-watchdog-defaults:0.2",
-        last_sample_status: "sampled"
-      })
-    });
+    const writeWatchdogPaneActivityCall =
+      writeWatchdogPaneActivity.mock.calls[0];
+    expect(writeWatchdogPaneActivityCall).toBeDefined();
+    if (!writeWatchdogPaneActivityCall) {
+      throw new Error("expected writeWatchdogPaneActivity to be called once");
+    }
+    const [writeWatchdogPaneActivityInput] = writeWatchdogPaneActivityCall;
+    expect(writeWatchdogPaneActivityInput.runtimeDir).toBe("/tmp/runtime");
+    expect(writeWatchdogPaneActivityInput.bubbleId).toBe(
+      "b_watchdog_defaults_01"
+    );
+    expect(writeWatchdogPaneActivityInput.record.bubble_id).toBe(
+      "b_watchdog_defaults_01"
+    );
+    expect(writeWatchdogPaneActivityInput.record.session_name).toBe(
+      "pf-watchdog-defaults"
+    );
+    expect(writeWatchdogPaneActivityInput.record.target_pane).toBe(
+      "pf-watchdog-defaults:0.2"
+    );
+    expect(writeWatchdogPaneActivityInput.record.last_sample_status).toBe(
+      "sampled"
+    );
     expect(appendWatchdogTrace).toHaveBeenCalledTimes(1);
   });
 });
