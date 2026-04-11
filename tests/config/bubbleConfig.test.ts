@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  BUBBLE_EXECUTOR_INVALID,
+  assertValidBubbleConfigRemoteReferences,
   assertCreateReviewArtifactType,
   assertPairflowCommandProfile,
   INVALID_REVIEW_ARTIFACT_TYPE_OPTION,
@@ -10,6 +12,7 @@ import {
   parseToml,
   REVIEW_ARTIFACT_TYPE_AUTO_REMOVED,
   renderBubbleConfigToml,
+  validateBubbleConfigRemoteReferences,
   validateBubbleConfig
 } from "../../src/config/bubbleConfig.js";
 
@@ -97,6 +100,30 @@ describe("bubble config schema", () => {
     expect(rendered).toContain('lint = "pnpm lint"');
     expect(rendered).toContain('validation_required = ["lint", "typecheck", "test"]');
     expect(rendered).toContain("validation_required_explicit = false");
+  });
+
+  it("parses and roundtrips optional [executor] metadata", () => {
+    const config = parseBubbleConfigToml(`${baseToml}
+[executor]
+type = "ssh"
+remote = "homelab"
+`);
+
+    expect(config.executor).toEqual({
+      type: "ssh",
+      remote: "homelab"
+    });
+
+    const rendered = renderBubbleConfigToml(config);
+    expect(rendered).toContain("[executor]");
+    expect(rendered).toContain('type = "ssh"');
+    expect(rendered).toContain('remote = "homelab"');
+
+    const reparsed = parseBubbleConfigToml(rendered);
+    expect(reparsed.executor).toEqual({
+      type: "ssh",
+      remote: "homelab"
+    });
   });
 
   it("applies doc_contract_gates defaults when sections are omitted", () => {
@@ -263,6 +290,206 @@ round_gate_applies_after = -1
       return;
     }
     expect(result.errors.some((error) => error.path === "quality_mode")).toBe(true);
+  });
+
+  it("rejects unsupported executor metadata and inline remote duplication", () => {
+    const result = validateBubbleConfig({
+      id: "b_test_01",
+      repo_path: "/tmp/repo",
+      base_branch: "main",
+      bubble_branch: "bubble/b_test_01",
+      agents: {
+        implementer: "codex",
+        reviewer: "claude"
+      },
+      commands: {
+        test: "pnpm test",
+        typecheck: "pnpm typecheck"
+      },
+      notifications: {
+        enabled: true
+      },
+      executor: {
+        type: "docker",
+        remote: "homelab",
+        host: "ssh-host"
+      }
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) {
+      return;
+    }
+    expect(
+      result.errors.some(
+        (error) =>
+          error.path === "executor.type"
+          && error.message.includes(BUBBLE_EXECUTOR_INVALID)
+      )
+    ).toBe(true);
+    expect(
+      result.errors.some(
+        (error) =>
+          error.path === "executor.host"
+          && error.message.includes("Inline remote host details are not allowed")
+      )
+    ).toBe(true);
+  });
+
+  it("rejects unknown extra fields in [executor]", () => {
+    const result = validateBubbleConfig({
+      id: "b_test_01",
+      repo_path: "/tmp/repo",
+      base_branch: "main",
+      bubble_branch: "bubble/b_test_01",
+      agents: {
+        implementer: "codex",
+        reviewer: "claude"
+      },
+      commands: {
+        test: "pnpm test",
+        typecheck: "pnpm typecheck"
+      },
+      notifications: {
+        enabled: true
+      },
+      executor: {
+        type: "ssh",
+        remote: "homelab",
+        profile: "remote-dev"
+      }
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) {
+      return;
+    }
+    expect(
+      result.errors.some(
+        (error) =>
+          error.path === "executor.profile"
+          && error.message.includes("Unknown executor field")
+      )
+    ).toBe(true);
+  });
+
+  it("cross-validates executor.remote against the global remotes map", () => {
+    const bubbleConfig = parseBubbleConfigToml(`${baseToml}
+[executor]
+type = "ssh"
+remote = "homelab"
+`);
+
+    const result = validateBubbleConfigRemoteReferences({
+      bubbleConfig,
+      globalConfig: {
+        remotes: {
+          workstation: {
+            host: "office-ws",
+            repo_base: "/data/repos"
+          }
+        }
+      }
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) {
+      return;
+    }
+    expect(result.errors).toEqual([
+      {
+        path: "executor.remote",
+        message:
+          `${BUBBLE_EXECUTOR_INVALID}: Remote "homelab" is not defined in the global [remotes.<name>] config`
+      }
+    ]);
+  });
+
+  it("fails remote cross-validation when the global remotes map is absent", () => {
+    const bubbleConfig = parseBubbleConfigToml(`${baseToml}
+[executor]
+type = "ssh"
+remote = "homelab"
+`);
+
+    const result = validateBubbleConfigRemoteReferences({
+      bubbleConfig,
+      globalConfig: {}
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) {
+      return;
+    }
+    expect(result.errors).toEqual([
+      {
+        path: "executor.remote",
+        message:
+          `${BUBBLE_EXECUTOR_INVALID}: Remote "homelab" is not defined in the global [remotes.<name>] config`
+      }
+    ]);
+  });
+
+  it("accepts executor.remote when the global remotes map contains the alias", () => {
+    const bubbleConfig = parseBubbleConfigToml(`${baseToml}
+[executor]
+type = "ssh"
+remote = "homelab"
+`);
+
+    expect(
+      assertValidBubbleConfigRemoteReferences({
+        bubbleConfig,
+        globalConfig: {
+          remotes: {
+            homelab: {
+              host: "homelab",
+              repo_base: "~/repos"
+            }
+          }
+        }
+      })
+    ).toEqual(bubbleConfig);
+  });
+
+  it("cross-validates executor.remote through parseBubbleConfigToml when globalConfig is supplied", () => {
+    expect(
+      parseBubbleConfigToml(`${baseToml}
+[executor]
+type = "ssh"
+remote = "homelab"
+`, {
+        globalConfig: {
+          remotes: {
+            homelab: {
+              host: "homelab",
+              repo_base: "~/repos"
+            }
+          }
+        }
+      })
+    ).toMatchObject({
+      executor: {
+        type: "ssh",
+        remote: "homelab"
+      }
+    });
+  });
+
+  it("fails parseBubbleConfigToml when supplied globalConfig is missing executor.remote", () => {
+    try {
+      parseBubbleConfigToml(`${baseToml}
+[executor]
+type = "ssh"
+remote = "homelab"
+`, {
+        globalConfig: {}
+      });
+      throw new Error("Expected parseBubbleConfigToml to throw.");
+    } catch (error) {
+      expect(error).toBeInstanceOf(Error);
+      expect((error as Error).message).toBe("Invalid bubble config remote references");
+    }
   });
 
   it("rejects unsupported reviewer context mode", () => {

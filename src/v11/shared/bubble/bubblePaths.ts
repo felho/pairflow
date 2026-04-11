@@ -6,6 +6,8 @@ export interface BubblePaths {
   bubblesRoot: string;
   bubbleDir: string;
   bubbleTomlPath: string;
+  remotePointerPath: string;
+  remoteStateCachePath: string;
   statePath: string;
   transcriptPath: string;
   inboxPath: string;
@@ -47,6 +49,8 @@ export function getBubblePaths(repoPathInput: string, bubbleId: string): BubbleP
     bubblesRoot,
     bubbleDir,
     bubbleTomlPath: join(bubbleDir, "bubble.toml"),
+    remotePointerPath: join(bubbleDir, "remote.json"),
+    remoteStateCachePath: join(bubbleDir, "state-cache.json"),
     statePath: join(bubbleDir, "state.json"),
     transcriptPath: join(bubbleDir, "transcript.ndjson"),
     inboxPath: join(bubbleDir, "inbox.ndjson"),

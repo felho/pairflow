@@ -43,6 +43,10 @@ export const pairflowCommandProfiles = ["external", "self_host"] as const;
 
 export type PairflowCommandProfile = (typeof pairflowCommandProfiles)[number];
 
+export const bubbleExecutorTypes = ["ssh"] as const;
+
+export type BubbleExecutorType = (typeof bubbleExecutorTypes)[number];
+
 export const reviewArtifactTypes = ["code", "document"] as const;
 
 export type ReviewArtifactType = (typeof reviewArtifactTypes)[number];
@@ -152,6 +156,56 @@ export interface BubbleDocContractGatesConfig {
   parse_warning?: string;
 }
 
+export interface PairflowRemoteHostConfig {
+  host: string;
+  repo_base: string;
+  user?: string;
+  pairflow_command?: string;
+  default_port_forwards?: number[];
+}
+
+export interface BubbleExecutorConfig {
+  type: BubbleExecutorType;
+  remote: string;
+}
+
+export const bubbleRemotePointerKinds = [
+  "created",
+  "started"
+] as const;
+
+export type BubbleRemotePointerKind = (typeof bubbleRemotePointerKinds)[number];
+
+interface BubbleRemotePointerBase {
+  host: string;
+  portForwards?: number[];
+}
+
+export interface BubbleRemotePointerCreated extends BubbleRemotePointerBase {
+  kind: "created";
+}
+
+export interface BubbleRemotePointerStarted extends BubbleRemotePointerBase {
+  kind: "started";
+  instanceId: string;
+  remoteClonePath: string;
+  tmuxSession: string;
+  startedAt: string;
+}
+
+export type BubbleRemotePointer =
+  | BubbleRemotePointerCreated
+  | BubbleRemotePointerStarted;
+
+export interface BubbleRemoteStateCache {
+  lastCheckedAt: string;
+  state: BubbleLifecycleState;
+  round: number;
+  maxRounds: number;
+  implementerStatus?: string;
+  reviewerStatus?: string;
+}
+
 export interface BubbleIdeationConfig {
   mode: boolean;
   task_pending: boolean;
@@ -209,6 +263,7 @@ export interface BubbleConfig {
   local_overlay?: BubbleLocalOverlayConfig;
   doc_contract_gates: BubbleDocContractGatesConfig;
   ideation?: BubbleIdeationConfig;
+  executor?: BubbleExecutorConfig;
 }
 
 export interface RoundRoleHistoryEntry {
@@ -340,6 +395,44 @@ export function isReviewArtifactType(value: unknown): value is ReviewArtifactTyp
   return (
     typeof value === "string" &&
     (reviewArtifactTypes as readonly string[]).includes(value)
+  );
+}
+
+export function isBubbleExecutorType(value: unknown): value is BubbleExecutorType {
+  return (
+    typeof value === "string" &&
+    (bubbleExecutorTypes as readonly string[]).includes(value)
+  );
+}
+
+export function isBubbleRemotePointerKind(
+  value: unknown
+): value is BubbleRemotePointerKind {
+  return (
+    typeof value === "string" &&
+    (bubbleRemotePointerKinds as readonly string[]).includes(value)
+  );
+}
+
+export function isBubbleRemotePointerCreated(
+  value: unknown
+): value is BubbleRemotePointerCreated {
+  return (
+    typeof value === "object"
+    && value !== null
+    && "kind" in value
+    && value.kind === "created"
+  );
+}
+
+export function isBubbleRemotePointerStarted(
+  value: unknown
+): value is BubbleRemotePointerStarted {
+  return (
+    typeof value === "object"
+    && value !== null
+    && "kind" in value
+    && value.kind === "started"
   );
 }
 
