@@ -61,6 +61,10 @@ This skill exists to avoid lifecycle mistakes (wrong command in wrong state, los
 14. If runtime is unhealthy (agent pane unresponsive, tmux/session mismatch, token/login refresh needed), prefer `pairflow bubble restart --id <id> [--repo <path>]` over manual tmux kill/start steps.
 15. `RUNNING round=0` ideation state is a valid hold state. Do not auto-kickoff. Exception: if the user asks for a loop action (`pass`/`converged`) while still in round-0 ideation, run kickoff first because loop actions require an active round.
 16. Pre-kickoff manual preparation in the bubble worktree is allowed when explicitly requested by the user. In this pattern, kickoff text should summarize already-applied work and define expected first handoff behavior.
+17. `ReviewBubble` should explain findings in business-technical language by default, not just reviewer shorthand:
+  - explain the technical issue,
+  - explain why it matters in practical terms,
+  - state whether it is blocking now or only future hardening debt.
 
 ## Execution Modes (Mandatory)
 
@@ -183,6 +187,7 @@ Use ReviewBubble (deep mode default)
 -> optional cached mode: `--meta-review-source cached` (load Pairflow meta-review snapshot only)
 -> file-by-file changes
 -> findings labeled by origin (`[Bubble]`, `[MetaReview]`)
+-> findings explained in business-technical language by default
 -> validation evidence summary
 -> explicit approve/rework recommendation
 ```

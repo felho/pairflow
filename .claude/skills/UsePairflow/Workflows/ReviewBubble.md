@@ -39,6 +39,13 @@ MESSAGE: extracted from `--message` (required when `DECIDE=rework`)
 - Default to `deep` explanation unless user explicitly asks short format.
 - Always inspect state before any approval/rework command.
 - Include evidence summary and distinguish hard evidence from soft statements.
+- In both `deep` and `standard` modes, explain findings in business-technical language by default:
+  - State clearly whether the issue is a blocker now, an advisory hardening item, or a future-maintenance concern.
+  - For each non-trivial finding, explain both:
+    - the technical meaning ("what the code is doing / where the edge is"), and
+    - the practical meaning ("why the user, operator, or future delivery should care").
+  - Prefer plain impact language such as "does not break current behavior", "raises future maintenance cost", "can mislead diagnostics", "weakens contract clarity", or "can cause downstream misuse later".
+  - Do not assume the reader wants raw code-review shorthand; convert terse reviewer language into understandable decision language.
 - In the findings section, label every item by origin:
   - `[Bubble]` when the issue comes from bubble transcript/tool output (for example reviewer findings).
   - `[MetaReview]` when the issue comes from meta-reviewer output (cached snapshot or fresh run report).
@@ -104,12 +111,17 @@ pairflow bubble meta-review last-report --id <BUBBLE_ID> --repo <REPO_PATH> --ve
   1. Goal and scope.
   2. High-level solution.
   3. File-by-file rationale.
-  4. Findings (explicitly labeled `[Bubble]` or `[MetaReview]`).
-  5. Behavior/risk and tradeoffs.
-  6. Validation and evidence quality.
-  7. Residual risks/open questions.
-  8. Recommendation (`approve` or `rework`) with reason.
+  4. Findings (explicitly labeled `[Bubble]` or `[MetaReview]`), with technical meaning + business-technical meaning for each material item.
+  5. Plain-language decision readout:
+     - what is actually wrong,
+     - what is only technical debt,
+     - why the recommendation is still `approve` or `rework`.
+  6. Behavior/risk and tradeoffs.
+  7. Validation and evidence quality.
+  8. Residual risks/open questions.
+  9. Recommendation (`approve` or `rework`) with reason.
 - If `MODE=standard`, provide concise version of the same structure.
+  - Still include a short plain-language explanation for findings and recommendation; brevity is allowed, but reviewer shorthand alone is not.
 
 5. Optionally execute decision.
 - If `DECIDE=none` -> skip commands and return recommendation only.
@@ -147,6 +159,24 @@ Review summary:
 - Recommendation: <APPROVE/REWORK + WHY>
 - Decision executed: <none/approve/rework>
 - Post-decision state: <STATE_AFTER or n/a>
+```
+
+Recommended deep-review finding format:
+
+```text
+- [MetaReview][P2] <short finding title>
+  Technical meaning: <what the code/path/contract issue actually is>
+  Practical meaning: <why it matters in business-technical language>
+  Decision weight: <blocker now | advisory only | future hardening>
+```
+
+Recommended recommendation format:
+
+```text
+Recommendation:
+- approve|rework
+- Why this is not blocking now: <plain-language rationale>
+- What should be cleaned up later: <plain-language debt summary>
 ```
 
 Finding label example:
