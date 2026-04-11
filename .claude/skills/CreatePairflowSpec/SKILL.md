@@ -41,6 +41,34 @@ Override policy:
 2. `plan_ref` must not be `null`.
 3. L1 must explicitly capture the changed interface contract and test coverage.
 
+## Control-Model Readiness Gate (Mandatory)
+
+Before drafting or refining a PRD, Plan, or Task for implementation-oriented work, run the `Control-Model Readiness Gate`.
+
+Use `references/Control-Model-Readiness-Gate.md`.
+
+This gate is especially important when:
+1. a user-visible surface depends on multiple underlying sources,
+2. a canonical source-of-truth is introduced, clarified, or cut over,
+3. missing data could tempt heuristic fallback,
+4. state/control truth and document/resource truth are different things.
+
+Minimum required answers when applicable:
+1. `business_invariant` (what domain rule must remain true throughout)
+2. `control_model` (which source decides whether something should exist / happen / be shown)
+3. `read_path_rule` (where the system is allowed to load or show the thing from)
+4. `forbidden_fallback` (which alternative sources must not be used as fallback truth)
+5. `missing_data_rule` (what happens if the thing is expected but the allowed read path has no data)
+6. `phase_boundary` (which phase closes contract, surfacing, consume, and activation)
+
+Policy:
+1. If the gate is `NOT_READY`, do not silently continue to an implementable Plan or Task.
+2. Ask focused blocker questions if the missing control-model decision is not clearly recoverable from the available context.
+3. Rewrite the higher-level artifact first only when the required control-model information is already clearly recoverable from existing references, code, or explicit prior decisions, but is not yet written down in the artifact.
+4. Never invent a control model, fallback rule, or missing-data behavior just to make the artifact look implementable.
+5. Do not convert missing control-model decisions into clever technical seams or fallback heuristics.
+6. For authority/read-model/public-consume work, the control model must be explicit before payload/UI/runtime sequencing is finalized.
+
 ## Complexity-Risk Gate (Mandatory)
 
 Before drafting implementation-oriented Plan or Task artifacts, run the `Complexity Risk Gate`.
@@ -73,6 +101,10 @@ Policy:
 7. Identifier discipline first: cross-reference IDs must be canonical, exact-match, and auditable.
 8. Split before implementation when boundary risk is high; do not use a single task to carry foundation, delivery, and activation together.
 9. New canonical authority boundaries should be specified before new behavior is attached to them.
+10. Control model before seam design: settle what controls the decision before designing selectors, route bridges, or UI consume.
+11. Missing-data behavior must be explicit: decide fail-closed vs unavailable vs hard error before surfacing or activation work.
+12. Forbidden fallbacks should be named, not implied.
+13. If a spec says what the product wants but not what controls it, the artifact is not ready.
 
 ## Minimum Contract Rules
 
@@ -96,12 +128,21 @@ Policy:
    - authority/source-of-truth note when applicable.
 12. High-risk scopes (`4+`) should prefer an explicit Plan even if work type would otherwise allow task-only.
 13. Very high-risk scopes (`8+` or hard-stop) must not be emitted as direct feature-delivery tasks without an explicit foundation phase.
+14. For Plans with authority/read-model/public-consume relevance, a control-model section is mandatory. It must explicitly state:
+   - business invariant,
+   - control model,
+   - read-path rule,
+   - forbidden fallback,
+   - missing-data rule.
+15. For Tasks with authority/read-model/public-consume relevance, the task must either inherit or restate those same control-model clauses explicitly enough for implementation.
+16. If any of those control-model clauses are missing and materially affect correctness, the artifact must remain blocked until clarified.
 
 ## Templates and References
 
 - Task template: `Templates/task-template.md`
 - Plan template: `Templates/plan-template.md`
 - PRD template: `Templates/prd-template.md`
+- Control-model readiness gate: `references/Control-Model-Readiness-Gate.md`
 - L1 boundaries checklist: `references/L1-Contract-Boundaries.md`
 - Reviewer tags snippet: `references/Reviewer-Guidelines.md`
 - Complexity risk gate: `references/Complexity-Risk-Gate.md`

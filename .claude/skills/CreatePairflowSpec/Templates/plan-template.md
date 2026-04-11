@@ -14,6 +14,15 @@ owners:
 
 <What this plan delivers and what success means.>
 
+## Guiding Principles
+
+1. Business invariant: <What must remain true from the business/domain perspective.>
+2. Control model: <Which source decides whether something should exist, happen, or be shown.>
+3. Read-path rule: <Where the system may read the thing from. If N/A, say N/A.>
+4. Forbidden fallback: <Which tempting alternative sources must not be used. If N/A, say N/A.>
+5. Missing-data rule: <What happens if the thing is expected but missing.>
+6. Phase boundary note: <Which phase owns contract closure vs surfacing vs consume vs activation.>
+
 ## Complexity / Split Rationale
 
 1. `risk_score`: `<0-12>`

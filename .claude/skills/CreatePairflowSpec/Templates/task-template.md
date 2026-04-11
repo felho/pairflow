@@ -21,6 +21,15 @@ owners:
 
 <1-3 lines>
 
+### Domain / Control Model
+
+1. Business invariant: <What must remain true from the business/domain perspective. If N/A, say N/A.>
+2. Control model: <Which source decides whether something should exist, happen, or be shown. If N/A, say N/A.>
+3. Read-path rule: <Where the implementation may read the thing from. If N/A, say N/A.>
+4. Forbidden fallback: <Which sources must not be used as fallback truth. If N/A, say N/A.>
+5. Missing-data rule: <What happens if the thing is expected but missing. If N/A, say N/A.>
+6. Phase boundary: <What this task owns vs what successor tasks own. If N/A, say N/A.>
+
 ### In Scope
 
 1. <item>

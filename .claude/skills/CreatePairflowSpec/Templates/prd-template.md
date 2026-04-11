@@ -17,6 +17,17 @@ owners:
 
 <Measurable goal in 1-3 lines.>
 
+## Business Invariants
+
+1. <What must remain true from the business/domain perspective.>
+
+## Control Model
+
+1. State/control owner: <Which source decides whether something should exist, happen, or be shown.>
+2. Read-path rule: <Where the system may read the thing from. If N/A, say N/A.>
+3. Forbidden fallback: <Which tempting alternative sources must not be used. If N/A, say N/A.>
+4. Missing-data rule: <What happens if the thing is expected but missing.>
+
 ## In Scope
 
 1. <item>
