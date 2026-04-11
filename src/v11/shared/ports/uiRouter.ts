@@ -61,6 +61,9 @@ export interface UiBubbleListEntry {
     latestSummary: string | null;
     latestReportRef: string | null;
     latestUpdatedAt: string | null;
+    latestRoute: string | null;
+    latestRouteReasonCode: string | null;
+    latestRouteObservedAt: string | null;
     runtimeDelivery: {
       status: MetaReviewRuntimeDeliveryStatus;
       reasonCode: string | null;

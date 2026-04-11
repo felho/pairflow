@@ -10,6 +10,7 @@ import {
 import { readRuntimeSessionsRegistry } from "../runtimeSessions/runtimeSessionsDefaults.js";
 import { readWatchdogPaneActivity } from "../watchdog/watchdogPaneActivityDefaults.js";
 import { inspectStateSnapshot } from "../state/stateStoreDefaults.js";
+import { readTranscriptEnvelopes } from "../transcript/transcriptDependencyDefaults.js";
 
 export const listCommandDefaults = {
   RepoResolutionError,
@@ -18,6 +19,7 @@ export const listCommandDefaults = {
   normalizeRepoPath,
   readBubbleTomlArtifact,
   readRuntimeSessionsRegistry,
+  readTranscriptEnvelopes,
   readWatchdogPaneActivity,
   resolveRepoPath
 } as const;

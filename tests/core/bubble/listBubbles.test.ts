@@ -10,6 +10,7 @@ import {
   BubbleListErrorV11 as BubbleListError,
   listBubblesV11 as listBubbles
 } from "../../../src/v11/application/list/emitListV11.js";
+import { appendProtocolEnvelope } from "../../../src/v11/infrastructure/artifact/transcript/transcriptStore.js";
 import { upsertRuntimeSession } from "../../../src/v11/infrastructure/executor/sessionRuntime/runtimeSessionsRegistry.js";
 import { metaReviewExecutionContextToRunningContext } from "../../../src/v11/shared/state/executionContext.js";
 import { applyStateTransition } from "../../../src/v11/domain/state/machine.js";
@@ -234,6 +235,51 @@ describe("listBubbles", () => {
       severity: "critical",
       label: "No session"
     });
+  });
+
+  it("surfaces latest meta-review gate route in list projection", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await createBubble({
+      id: "b_list_meta_route_01",
+      repoPath,
+      baseBranch: "main",
+      reviewArtifactType: "code",
+      task: "List meta-review route",
+      cwd: repoPath
+    });
+    const lockPath = join(bubble.paths.locksDir, `${bubble.bubbleId}.lock`);
+
+    await appendProtocolEnvelope({
+      transcriptPath: bubble.paths.transcriptPath,
+      mirrorPaths: [bubble.paths.inboxPath],
+      lockPath,
+      now: new Date("2026-02-22T18:46:00.000Z"),
+      envelope: {
+        bubble_id: bubble.bubbleId,
+        sender: "orchestrator",
+        recipient: "human",
+        type: "APPROVAL_REQUEST",
+        round: 0,
+        payload: {
+          summary: "Meta-review route reached human gate.",
+          metadata: {
+            actor: "meta-reviewer",
+            actor_agent: "codex",
+            latest_recommendation: "approve",
+            meta_review_gate_route: "human_gate_approve"
+          }
+        },
+        refs: []
+      }
+    });
+
+    const listed = await listBubbles({ repoPath });
+
+    expect(listed.bubbles[0]?.metaReview.latestRoute).toBe("human_gate_approve");
+    expect(listed.bubbles[0]?.metaReview.latestRouteReasonCode).toBeNull();
+    expect(listed.bubbles[0]?.metaReview.latestRouteObservedAt).toBe(
+      "2026-02-22T18:46:00.000Z"
+    );
   });
 
   it("does not surface runtime-mismatch attention during PREPARING_WORKSPACE", async () => {
