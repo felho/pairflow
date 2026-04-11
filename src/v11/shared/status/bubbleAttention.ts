@@ -6,6 +6,9 @@ import type { ReadWatchdogPaneActivityResult } from "../watchdog/watchdogPaneAct
 import type { WatchdogStatus } from "../watchdog/watchdogStatus.js";
 
 const quietPaneThresholdSeconds = 5 * 60;
+const stalePreparingWorkspaceThresholdSeconds = 5 * 60;
+const stalePreparingWorkspaceDetail =
+  "This bubble is not resumable. Delete it and create a new bubble.";
 
 const runtimeExpectedStates = new Set<BubbleLifecycleState>([
   "RUNNING",
@@ -46,7 +49,7 @@ export function resolveBubbleAttention(input: {
   state: BubbleLifecycleState;
   runtimeSession: RuntimeSessionRecord | null;
   stateValidation: StateValidationDiagnostics | null;
-  watchdog: Pick<WatchdogStatus, "expired" | "monitored">;
+  watchdog: Pick<WatchdogStatus, "expired" | "monitored" | "referenceTimestamp">;
   paneActivityRead: ReadWatchdogPaneActivityResult;
   now: Date;
 }): UiBubbleAttention | null {
@@ -80,6 +83,24 @@ export function resolveBubbleAttention(input: {
       label: "Runtime mismatch",
       detail: "A runtime session is still registered outside the active runtime states."
     };
+  }
+
+  if (input.state === "PREPARING_WORKSPACE" && input.runtimeSession === null) {
+    const preparingSeconds = resolveElapsedSeconds(
+      input.watchdog.referenceTimestamp,
+      input.now
+    );
+    if (
+      preparingSeconds !== null
+      && preparingSeconds >= stalePreparingWorkspaceThresholdSeconds
+    ) {
+      return {
+        code: "startup_incomplete",
+        severity: "warning",
+        label: "Startup incomplete",
+        detail: stalePreparingWorkspaceDetail
+      };
+    }
   }
 
   if (input.paneActivityRead.status === "ok") {

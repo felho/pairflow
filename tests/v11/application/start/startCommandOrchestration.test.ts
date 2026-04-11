@@ -106,6 +106,15 @@ describe("startCommandOrchestration", () => {
     expect(resolveStartBubbleMode("COMMITTED")).toBe("resume");
   });
 
+  it("rejects PREPARING_WORKSPACE as incomplete non-resumable startup", () => {
+    expect(() => resolveStartBubbleMode("PREPARING_WORKSPACE")).toThrow(
+      StartBubbleError
+    );
+    expect(() => resolveStartBubbleMode("PREPARING_WORKSPACE")).toThrow(
+      "bubble start rejected: state PREPARING_WORKSPACE indicates an incomplete startup. This bubble is not resumable with `pairflow bubble start` and must not be treated as running. Delete this incomplete bubble with `pairflow bubble delete --id <id> --force`, then create a new bubble."
+    );
+  });
+
   it("throws StartBubbleError for unsupported states", () => {
     expect(() => resolveStartBubbleMode("FAILED")).toThrow(StartBubbleError);
     expect(() => resolveStartBubbleMode("FAILED")).toThrow(

@@ -4,7 +4,10 @@ import type {
   StartBubbleDependencies,
   StartBubbleResult
 } from "./startCommandContract.js";
-import { createStartBubbleError } from "./startCommandRuntime.js";
+import {
+  buildPreparingWorkspaceStartRejectMessage,
+  createStartBubbleError
+} from "./startCommandRuntime.js";
 import {
   readReviewerBriefArtifact as defaultReadReviewerBriefArtifact,
   readReviewerFocusArtifact as defaultReadReviewerFocusArtifact
@@ -148,6 +151,9 @@ export async function resolveStartBubbleDependencies(
 export function resolveStartBubbleMode(currentState: string): StartBubbleMode {
   if (currentState === "CREATED") {
     return "fresh";
+  }
+  if (currentState === "PREPARING_WORKSPACE") {
+    throw createStartBubbleError(buildPreparingWorkspaceStartRejectMessage());
   }
   if (resumableRuntimeStates.has(currentState)) {
     return "resume";
