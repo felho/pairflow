@@ -253,11 +253,13 @@ export {
 } from "./cli/commands/repo/remove.js";
 export {
   TOML_PARSER_LIMITATIONS,
+  assertValidBubbleConfigRemoteReferences,
   renderBubbleConfigToml,
   assertValidBubbleConfig,
   parseBubbleConfigToml,
   parseToml,
   parseWatchdogTimeoutMinutes,
+  validateBubbleConfigRemoteReferences,
   validateBubbleConfig
 } from "./config/bubbleConfig.js";
 export {
@@ -275,6 +277,12 @@ export {
   validatePairflowRepoConfig
 } from "./config/repoConfig.js";
 export {
+  isBubbleExecutorType,
+  isBubbleRemotePointerCreated,
+  isBubbleRemotePointerKind,
+  isBubbleRemotePointerStarted
+} from "./types/bubble.js";
+export {
   SchemaValidationError,
   assertValidation,
   isInteger,
@@ -284,6 +292,15 @@ export {
   validationFail,
   validationOk
 } from "./v11/shared/validation/primitives.js";
+export {
+  RemoteArtifactIoError,
+  readRemotePointer,
+  readRemoteStateCache,
+  validateRemotePointer,
+  validateRemoteStateCache,
+  writeRemotePointer,
+  writeRemoteStateCache
+} from "./v11/infrastructure/artifact/bubble/remoteExecutionArtifacts.js";
 export {
   assertValidBubbleStateSnapshot,
   validateBubbleStateSnapshot
@@ -583,8 +600,16 @@ export type {
   BubbleAgentsConfig,
   BubbleCommandsConfig,
   BubbleConfig,
+  BubbleExecutorConfig,
+  BubbleExecutorType,
+  BubbleRemotePointer,
+  BubbleRemotePointerCreated,
+  BubbleRemotePointerKind,
+  BubbleRemotePointerStarted,
+  BubbleRemoteStateCache,
   BubbleLifecycleState,
   BubbleNotificationsConfig,
+  PairflowRemoteHostConfig,
   BubbleReworkIntentRecord,
   BubbleStateSnapshot,
   AgentName,

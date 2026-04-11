@@ -28,6 +28,7 @@ import {
   isCreateReviewArtifactType,
   isAgentName,
   isAttachLauncher,
+  isBubbleExecutorType,
   isLocalOverlayMode,
   isPairflowCommandProfile,
   isQualityMode,
@@ -38,6 +39,7 @@ import {
   type BubbleConfig,
   type CreateReviewArtifactType
 } from "../types/bubble.js";
+import type { PairflowGlobalConfig } from "./pairflowConfig.js";
 import { IDEATION_METADATA_PARSE_WARNING } from "../v11/shared/ideation/ideationReasonCodes.js";
 
 export const TOML_PARSER_LIMITATIONS = [
@@ -59,6 +61,8 @@ export const DEPENDENCY_FAIL_REPO_REGISTRY_REGISTER =
   "DEPENDENCY_FAIL_REPO_REGISTRY_REGISTER" as const;
 export const SEVERITY_GATE_ROUND_INVALID =
   "SEVERITY_GATE_ROUND_INVALID" as const;
+export const BUBBLE_EXECUTOR_INVALID =
+  "BUBBLE_EXECUTOR_INVALID" as const;
 
 function formatCreateReviewArtifactTypeError(
   reasonCode:
@@ -636,6 +640,13 @@ export function validateBubbleConfig(input: unknown): ValidationResult<BubbleCon
     errors,
     false
   );
+  const executor = readObject(
+    input,
+    "executor",
+    "executor",
+    errors,
+    false
+  );
 
   const implementer = agents
     ? readString(agents, "implementer", "agents.implementer", errors, true)
@@ -850,6 +861,63 @@ export function validateBubbleConfig(input: unknown): ValidationResult<BubbleCon
     ideationTaskPending = false;
   }
 
+  let validatedExecutor: BubbleConfig["executor"] | undefined;
+  if (executor !== undefined) {
+    const allowedKeys = new Set(["type", "remote"]);
+    for (const key of Object.keys(executor)) {
+      if (allowedKeys.has(key)) {
+        continue;
+      }
+
+      const duplicationKeys = new Set([
+        "host",
+        "user",
+        "repo_base",
+        "pairflow_command",
+        "default_port_forwards"
+      ]);
+      errors.push({
+        path: `executor.${key}`,
+        message: duplicationKeys.has(key)
+          ? `${BUBBLE_EXECUTOR_INVALID}: Inline remote host details are not allowed in [executor]; use [remotes.<name>] in the global config and keep only executor.remote in bubble.toml.`
+          : `${BUBBLE_EXECUTOR_INVALID}: Unknown executor field "${key}"`
+      });
+    }
+
+    const executorType = readString(
+      executor,
+      "type",
+      "executor.type",
+      errors,
+      true
+    );
+    const executorRemote = readString(
+      executor,
+      "remote",
+      "executor.remote",
+      errors,
+      true
+    );
+
+    if (executorType !== undefined && !isBubbleExecutorType(executorType)) {
+      errors.push({
+        path: "executor.type",
+        message: `${BUBBLE_EXECUTOR_INVALID}: Must be "ssh" when [executor] is present`
+      });
+    }
+
+    if (
+      executorType !== undefined
+      && executorRemote !== undefined
+      && isBubbleExecutorType(executorType)
+    ) {
+      validatedExecutor = {
+        type: executorType,
+        remote: executorRemote
+      };
+    }
+  }
+
   if (errors.length > 0) {
     return validationFail(errors);
   }
@@ -961,7 +1029,10 @@ export function validateBubbleConfig(input: unknown): ValidationResult<BubbleCon
             }
           }
         : {}
-    )
+    ),
+    ...(validatedExecutor !== undefined
+      ? { executor: validatedExecutor }
+      : {})
   };
 
   if (openCommand !== undefined) {
@@ -976,9 +1047,59 @@ export function assertValidBubbleConfig(input: unknown): BubbleConfig {
   return assertValidation(result, "Invalid bubble config");
 }
 
-export function parseBubbleConfigToml(input: string): BubbleConfig {
+export function validateBubbleConfigRemoteReferences(input: {
+  bubbleConfig: BubbleConfig;
+  globalConfig: PairflowGlobalConfig;
+}): ValidationResult<BubbleConfig> {
+  const executor = input.bubbleConfig.executor;
+  if (executor === undefined) {
+    return validationOk(input.bubbleConfig);
+  }
+
+  const remotes = input.globalConfig.remotes;
+  if (
+    remotes === undefined
+    || !Object.prototype.hasOwnProperty.call(remotes, executor.remote)
+  ) {
+    return validationFail([
+      {
+        path: "executor.remote",
+        message: `${BUBBLE_EXECUTOR_INVALID}: Remote "${executor.remote}" is not defined in the global [remotes.<name>] config`
+      }
+    ]);
+  }
+
+  return validationOk(input.bubbleConfig);
+}
+
+export function assertValidBubbleConfigRemoteReferences(input: {
+  bubbleConfig: BubbleConfig;
+  globalConfig: PairflowGlobalConfig;
+}): BubbleConfig {
+  return assertValidation(
+    validateBubbleConfigRemoteReferences(input),
+    "Invalid bubble config remote references"
+  );
+}
+
+export interface ParseBubbleConfigTomlOptions {
+  globalConfig?: PairflowGlobalConfig;
+}
+
+export function parseBubbleConfigToml(
+  input: string,
+  options?: ParseBubbleConfigTomlOptions
+): BubbleConfig {
   const parsed = parseToml(input);
-  return assertValidBubbleConfig(parsed);
+  const bubbleConfig = assertValidBubbleConfig(parsed);
+  if (options?.globalConfig === undefined) {
+    return bubbleConfig;
+  }
+
+  return assertValidBubbleConfigRemoteReferences({
+    bubbleConfig,
+    globalConfig: options.globalConfig
+  });
 }
 
 export function parseWatchdogTimeoutMinutes(input: unknown): number {
@@ -1032,6 +1153,7 @@ export function renderBubbleConfigToml(config: BubbleConfig): string {
   };
   const docContractGates = config.doc_contract_gates;
   const ideation = config.ideation;
+  const executor = config.executor;
   const lines: Array<string | undefined> = [
     `id = ${tomlString(config.id)}`,
     config.bubble_instance_id
@@ -1056,6 +1178,14 @@ export function renderBubbleConfigToml(config: BubbleConfig): string {
     config.open_command
       ? `open_command = ${tomlString(config.open_command)}`
       : undefined,
+    ...(executor !== undefined
+      ? [
+          "",
+          "[executor]",
+          `type = ${tomlString(executor.type)}`,
+          `remote = ${tomlString(executor.remote)}`
+        ]
+      : []),
     "",
     "[agents]",
     `implementer = ${tomlString(config.agents.implementer)}`,

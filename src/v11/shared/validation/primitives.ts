@@ -77,6 +77,46 @@ export function isInteger(value: unknown): value is number {
   return typeof value === "number" && Number.isInteger(value);
 }
 
+export function isValidTcpPort(value: unknown): value is number {
+  return isInteger(value) && value >= 1 && value <= 65535;
+}
+
+export function validateTcpPortList(input: {
+  value: unknown;
+  path: string;
+  errors: ValidationError[];
+  invalidArrayMessage: string;
+  invalidEntryMessage: string;
+}): number[] | undefined {
+  if (input.value === undefined) {
+    return undefined;
+  }
+
+  if (!Array.isArray(input.value)) {
+    input.errors.push({
+      path: input.path,
+      message: input.invalidArrayMessage
+    });
+    return undefined;
+  }
+
+  const ports: number[] = [];
+  let hasEntryError = false;
+  input.value.forEach((entry, index) => {
+    if (!isValidTcpPort(entry)) {
+      hasEntryError = true;
+      input.errors.push({
+        path: `${input.path}[${index}]`,
+        message: input.invalidEntryMessage
+      });
+      return;
+    }
+    ports.push(entry);
+  });
+
+  return hasEntryError ? undefined : ports;
+}
+
 export function isIsoTimestamp(value: unknown): value is string {
   if (typeof value !== "string") {
     return false;

@@ -9,6 +9,7 @@ import {
   loadPairflowGlobalConfig,
   parsePairflowGlobalConfigToml,
   resolvePairflowGlobalConfigPath,
+  validateRemoteDefaultPortForwards,
   validatePairflowGlobalConfig
 } from "../../src/config/pairflowConfig.js";
 
@@ -53,6 +54,74 @@ open_command = "code --reuse-window {{worktree_path}}"
     expect(parsed).toEqual({});
   });
 
+  it("parses remote host definitions from [remotes.<name>] sections", () => {
+    const parsed = parsePairflowGlobalConfigToml(`
+attach_launcher = "copy"
+
+[remotes.homelab]
+host = "homelab"
+repo_base = "~/repos"
+
+[remotes.workstation]
+host = "office-ws"
+user = "dev"
+repo_base = "/data/repos"
+pairflow_command = "pairflow-dev"
+default_port_forwards = [3000, 5173, 8080]
+`);
+
+    expect(parsed.attach_launcher).toBe("copy");
+    expect(parsed.remotes).toEqual({
+      homelab: {
+        host: "homelab",
+        repo_base: "~/repos"
+      },
+      workstation: {
+        host: "office-ws",
+        user: "dev",
+        repo_base: "/data/repos",
+        pairflow_command: "pairflow-dev",
+        default_port_forwards: [3000, 5173, 8080]
+      }
+    });
+  });
+
+  it("rejects top-level keys that appear after a [remotes.<name>] section", () => {
+    try {
+      parsePairflowGlobalConfigToml(`
+[remotes.homelab]
+host = "homelab"
+repo_base = "~/repos"
+
+open_command = "cursor {{worktree_path}}"
+`);
+      throw new Error("Expected parsePairflowGlobalConfigToml to throw.");
+    } catch (error) {
+      expect(error).toBeInstanceOf(SchemaValidationError);
+      expect((error as SchemaValidationError).errors[0]?.message).toMatch(
+        /Key "open_command".*not valid inside \[remotes\.homelab\]/u
+      );
+    }
+  });
+
+  it("rejects unknown keys after a [remotes.<name>] section instead of routing them into the remote map", () => {
+    try {
+      parsePairflowGlobalConfigToml(`
+[remotes.homelab]
+host = "homelab"
+repo_base = "~/repos"
+
+future_root_key = "value"
+`);
+      throw new Error("Expected parsePairflowGlobalConfigToml to throw.");
+    } catch (error) {
+      expect(error).toBeInstanceOf(SchemaValidationError);
+      expect((error as SchemaValidationError).errors[0]?.message).toMatch(
+        /Key "future_root_key".*not valid inside \[remotes\.homelab\]/u
+      );
+    }
+  });
+
   it("rejects unsupported attach launcher values", () => {
     const result = validatePairflowGlobalConfig({
       attach_launcher: "wezterm"
@@ -81,7 +150,7 @@ open_command = "code --reuse-window {{worktree_path}}"
     );
   });
 
-  it("rejects TOML sections in global config", () => {
+  it("rejects unsupported global config sections", () => {
     try {
       parsePairflowGlobalConfigToml(`
 [ui]
@@ -91,7 +160,7 @@ open_command = "code --reuse-window {{worktree_path}}"
     } catch (error) {
       expect(error).toBeInstanceOf(SchemaValidationError);
       expect((error as SchemaValidationError).errors[0]?.message).toMatch(
-        /sections are not supported in global config/u
+        /PAIRFLOW_REMOTE_CONFIG_PARSE_ERROR.*only \[remotes\.<name>\] is supported/u
       );
     }
   });
@@ -123,6 +192,202 @@ open_command = "cursor {{worktree_path}}"
         /Duplicate TOML key "open_command"/u
       );
     }
+  });
+
+  it("rejects duplicate [remotes.<name>] section headers", () => {
+    try {
+      parsePairflowGlobalConfigToml(`
+[remotes.homelab]
+host = "homelab"
+repo_base = "~/repos"
+
+[remotes.homelab]
+host = "other"
+repo_base = "/data/repos"
+`);
+      throw new Error("Expected parsePairflowGlobalConfigToml to throw.");
+    } catch (error) {
+      expect(error).toBeInstanceOf(SchemaValidationError);
+      expect((error as SchemaValidationError).errors[0]?.message).toMatch(
+        /Duplicate TOML section \[remotes\.homelab\]/u
+      );
+    }
+  });
+
+  it("preserves detailed quoted-string parse diagnostics", () => {
+    try {
+      parsePairflowGlobalConfigToml(`
+open_command = "unterminated
+`);
+      throw new Error("Expected parsePairflowGlobalConfigToml to throw.");
+    } catch (error) {
+      expect(error).toBeInstanceOf(SchemaValidationError);
+      expect((error as SchemaValidationError).errors[0]?.message).toMatch(
+        /Invalid quoted string at line 2: .+/u
+      );
+    }
+  });
+
+  it("rejects invalid remote host configs", () => {
+    const result = validatePairflowGlobalConfig({
+      remotes: {
+        broken: {
+          host: "ssh-host",
+          repo_base: "",
+          default_port_forwards: [3000, "bad"]
+        }
+      }
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) {
+      return;
+    }
+    expect(
+      result.errors.some(
+        (error) =>
+          error.path === "remotes.broken.repo_base"
+          && error.message.includes("PAIRFLOW_REMOTE_CONFIG_INVALID")
+      )
+    ).toBe(true);
+    expect(
+      result.errors.some(
+        (error) => error.path === "remotes.broken.default_port_forwards[1]"
+      )
+    ).toBe(true);
+  });
+
+  it("fails closed when default_port_forwards contains any invalid entry", () => {
+    const errors: Array<{ path: string; message: string }> = [];
+    const result = validateRemoteDefaultPortForwards(
+      [3000, "bad", 8080],
+      "remotes.homelab.default_port_forwards",
+      errors
+    );
+
+    expect(result).toBeUndefined();
+    expect(errors).toEqual([
+      {
+        path: "remotes.homelab.default_port_forwards[1]",
+        message:
+          "PAIRFLOW_REMOTE_CONFIG_INVALID: Must be an integer in range 1..65535"
+      }
+    ]);
+  });
+
+  it("returns normalized default_port_forwards only when every entry is valid", () => {
+    const errors: Array<{ path: string; message: string }> = [];
+    const result = validateRemoteDefaultPortForwards(
+      [3000, 5173, 8080],
+      "remotes.homelab.default_port_forwards",
+      errors
+    );
+
+    expect(result).toEqual([3000, 5173, 8080]);
+    expect(errors).toEqual([]);
+  });
+
+  it("documents that remote sections remain active until another header appears", () => {
+    try {
+      parsePairflowGlobalConfigToml(`
+[remotes.homelab]
+host = "homelab"
+repo_base = "~/repos"
+
+open_command = "cursor {{worktree_path}}"
+`);
+      throw new Error("Expected parsePairflowGlobalConfigToml to throw.");
+    } catch (error) {
+      expect(error).toBeInstanceOf(SchemaValidationError);
+      expect((error as SchemaValidationError).errors).toEqual([
+        {
+          path: "$",
+          message:
+            'PAIRFLOW_REMOTE_CONFIG_PARSE_ERROR: Key "open_command" at line 6 is not valid inside [remotes.homelab]'
+        }
+      ]);
+    }
+  });
+
+  it("rejects forwarded ports above the TCP range upper bound", () => {
+    const result = validatePairflowGlobalConfig({
+      remotes: {
+        host1: {
+          host: "ssh-host",
+          repo_base: "/repos",
+          default_port_forwards: [65536]
+        }
+      }
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) {
+      return;
+    }
+    expect(result.errors).toEqual([
+      {
+        path: "remotes.host1.default_port_forwards[0]",
+        message:
+          "PAIRFLOW_REMOTE_CONFIG_INVALID: Must be an integer in range 1..65535"
+      }
+    ]);
+  });
+
+  it("rejects invalid remote alias keys on the programmatic validator path", () => {
+    const result = validatePairflowGlobalConfig({
+      remotes: {
+        "bad name": {
+          host: "ssh-host",
+          repo_base: "/repos"
+        }
+      }
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) {
+      return;
+    }
+    expect(result.errors).toEqual([
+      {
+        path: "remotes.bad name",
+        message:
+          "PAIRFLOW_REMOTE_CONFIG_INVALID: Remote alias must match ^[A-Za-z0-9_-]+$"
+      }
+    ]);
+  });
+
+  it("does not wrap unexpected internal parser exceptions as schema failures", () => {
+    try {
+      parsePairflowGlobalConfigToml({} as never);
+      throw new Error("Expected parsePairflowGlobalConfigToml to throw.");
+    } catch (error) {
+      expect(error).toBeInstanceOf(TypeError);
+      expect(error).not.toBeInstanceOf(SchemaValidationError);
+    }
+  });
+
+  it("rejects unknown fields inside remote host configs", () => {
+    const result = validatePairflowGlobalConfig({
+      remotes: {
+        homelab: {
+          host: "homelab",
+          repo_base: "~/repos",
+          shell: "zsh"
+        }
+      }
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) {
+      return;
+    }
+    expect(
+      result.errors.some(
+        (error) =>
+          error.path === "remotes.homelab.shell"
+          && error.message.includes("Unknown remote config field")
+      )
+    ).toBe(true);
   });
 
   it("loads empty config when file does not exist", async () => {
