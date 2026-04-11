@@ -55,10 +55,12 @@ owners:
 2. A korrigalt Complexity Risk Gate mellett a dokumentum sajat maga mondta ki, hogy `single-task allowed: no`.
 3. Ebbol az kovetkezik, hogy az umbrella removal scope nem maradhat egyetlen vegrehajthato task, ha a kisebb bounded delivery szeletek nincsenek explicitten definialva.
 4. A helyes replacement split:
+   - `plans/tasks/actor-runtime-interface-meta-review-cached-current-round-authority-and-runtime-consumer-cutover-phaseE.md`
    - `plans/tasks/actor-runtime-interface-meta-review-cached-cli-read-stack-removal-phaseE.md`
    - `plans/tasks/actor-runtime-interface-meta-review-cached-workflow-ui-cleanup-phaseE.md`
    - `plans/tasks/actor-runtime-interface-meta-review-cached-active-docs-cleanup-phaseE.md`
-5. A ket foundation task tovabbra is kotelezo precondition:
+5. A harom foundation task tovabbra is kotelezo precondition:
+   - `plans/tasks/actor-runtime-interface-meta-review-cached-current-round-authority-and-runtime-consumer-cutover-phaseE.md`
    - `plans/tasks/actor-runtime-interface-meta-review-cached-state-shape-and-persistence-decoupling-phaseE.md`
    - `plans/tasks/actor-runtime-interface-meta-review-cached-approval-and-projection-consumer-cutover-phaseE.md`
 

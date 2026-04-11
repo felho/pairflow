@@ -125,7 +125,7 @@ Torolje a cached meta-review public CLI namespace-et es a hozza tartozo cached r
 
 | Type | Items | Priority | Timing |
 |---|---|---|---|
-| must-use | `plans/tasks/actor-runtime-interface-meta-review-cached-state-shape-and-persistence-decoupling-phaseE.md` | P1 | required-now |
+| must-use | `plans/tasks/actor-runtime-interface-meta-review-cached-current-round-authority-and-runtime-consumer-cutover-phaseE.md` | P1 | required-now |
 | must-use | `plans/tasks/actor-runtime-interface-meta-review-cached-approval-and-projection-consumer-cutover-phaseE.md` | P1 | required-now |
 | must-not-use | `pairflow bubble meta-review` placeholder help text | P1 | required-now |
 | must-not-use | retained cached read-model exports/types after route removal | P1 | required-now |

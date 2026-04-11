@@ -34,15 +34,17 @@ owners:
    - a repo-local docs es skill workflowk nem ugy beszelnek a rendszerrol, mintha ez a feature ma is letezne.
 4. A fenti scope nem egyetlen delivery szeletben viheto le, mert a jelenlegi tree-ben a cached snapshot mezok egy resze meg approval/gate/status/list control-pathokba van bekotve.
 5. A plan alatt aktivalt uj, kotott sorrendu Phase E follow-up taskok:
-   - `plans/tasks/actor-runtime-interface-meta-review-cached-state-shape-and-persistence-decoupling-phaseE.md`
+   - `plans/tasks/actor-runtime-interface-meta-review-cached-current-round-authority-and-runtime-consumer-cutover-phaseE.md`
    - `plans/tasks/actor-runtime-interface-meta-review-cached-approval-and-projection-consumer-cutover-phaseE.md`
    - `plans/tasks/actor-runtime-interface-meta-review-cached-cli-read-stack-removal-phaseE.md`
+   - `plans/tasks/actor-runtime-interface-meta-review-cached-state-shape-and-persistence-decoupling-phaseE.md`
    - `plans/tasks/actor-runtime-interface-meta-review-cached-workflow-ui-cleanup-phaseE.md`
    - `plans/tasks/actor-runtime-interface-meta-review-cached-active-docs-cleanup-phaseE.md`
 6. A vegrehajtasi sorrend kotelezo:
-   - eloszor foundation/refactor: cached state shape es persistence decoupling,
+   - eloszor foundation/refactor: current-round authority/runtime consumer cutover,
    - utana foundation/refactor: approval es projection consumer cutover,
    - utana delivery/removal: CLI/read-model public surface torlese,
+   - utana foundation/removal: cached state shape es persistence physical field removal,
    - utana delivery/removal: repo-local workflow es UI copied prompt cleanup,
    - vegul delivery/removal: active docs cleanup es superseded traceability update.
 7. Ez a direction update supersedalja a korabbi "retained read-only projection maradhat" interim dontest, de nem valtoztat a plan eredeti fo celjan: a canonical actor runtime boundary tovabbi szerepsemleges tisztitasan.
@@ -86,19 +88,20 @@ Ez a plan discovery- es preparation-jellegu. Nem celja a Phase 4 vagy Phase 5 le
 ## Full Cached-Surface Removal Checkpoint (2026-04-11)
 
 1. A 2026-04-10 retained-read-surface dontes historical interim checkpointte valt; mar nem tekintendo aktualis target end-state-nek.
-2. A jelenlegi aktiv problemat ot kotott sorrendu szeletre kell bontani:
-   - foundation 1: cached state shape es persistence decoupling,
+2. A jelenlegi aktiv problemat hat kotott sorrendu szeletre kell bontani:
+   - foundation 1: current-round authority es hidden runtime consumer cutover,
    - foundation 2: approval es projection consumer cutover,
    - delivery 1: cached CLI/read-stack public surface removal,
+   - foundation 3: cached state shape es persistence physical field removal,
    - delivery 2: workflow/UI consume cleanup,
    - delivery 3: active docs cleanup es superseded traceability update.
-3. A ket foundation szelet addig nem hagyhato ki, amig az approval override, a status/list projection vagy a state schema meg `last_autonomous_*` mezokre epul.
-4. A harom delivery szeletben nincs backward compatibility budget:
+3. Az elso harom kodszelet addig nem hagyhato ki, amig barmely hidden runtime seam, approval override, status/list projection vagy retained read-stack meg `last_autonomous_*` mezokre epul.
+4. A ket cleanup delivery szeletben nincs backward compatibility budget:
    - nincs removed-command shim,
    - nincs CLI help reminder,
    - nincs skill guidance, amely a `cached` modra vagy a `last-report` / `status` commandokra hivatkozik,
    - nincs UI prompt, amely `--meta-review-source=cached` kapcsolot masol.
-5. A plan aktualis kovetkezo implementacios targetje ezentul nem a historical operator-read-surface closure task vagy az umbrella removal task, hanem a ket uj foundation task es az azokat koveto harom replacement delivery task a fenti sorrendben.
+5. A plan aktualis kovetkezo implementacios targetje ezentul nem a historical operator-read-surface closure task vagy az umbrella removal task, hanem az uj current-round authority foundation task, majd az azt koveto Phase E replacement lanc a fenti sorrendben.
 
 ## Decision Baseline
 

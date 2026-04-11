@@ -4,8 +4,9 @@ artifact_id: task_actor_runtime_interface_meta_review_cached_state_decoupling_ph
 title: "Actor Runtime Interface Meta-Review Cached State Decoupling (Phase E)"
 status: superseded
 phase: phaseE
-superseded_reason: "The original combined foundation task mixed state-shape/persistence work with approval/projection consumer cutover, which was judged too broad and loop-prone for direct implementation. It was split into two narrower foundation tasks."
+superseded_reason: "The original combined foundation task mixed current-round runtime authority refactor, state-shape/persistence removal, and approval/projection consumer cutover. That proved too broad and loop-prone, so the scope was split into three narrower foundation tasks."
 superseded_by:
+  - plans/tasks/actor-runtime-interface-meta-review-cached-current-round-authority-and-runtime-consumer-cutover-phaseE.md
   - plans/tasks/actor-runtime-interface-meta-review-cached-state-shape-and-persistence-decoupling-phaseE.md
   - plans/tasks/actor-runtime-interface-meta-review-cached-approval-and-projection-consumer-cutover-phaseE.md
 target_files:
@@ -41,19 +42,20 @@ owners:
    - status/list consumer projection cleanupot.
 3. Ez a kombinacio magas loop-rizikot jelentett volna, mert a canonical source-of-truth cutover es a consumer cutover ugyanabban a taskban keveredett.
 4. A helyes replacement split:
+   - `plans/tasks/actor-runtime-interface-meta-review-cached-current-round-authority-and-runtime-consumer-cutover-phaseE.md`
    - `plans/tasks/actor-runtime-interface-meta-review-cached-state-shape-and-persistence-decoupling-phaseE.md`
    - `plans/tasks/actor-runtime-interface-meta-review-cached-approval-and-projection-consumer-cutover-phaseE.md`
-5. A cached-surface removal delivery task csak ez utan a ket foundation task utan hajthato vegre.
+5. A cached-surface removal delivery task csak ez utan a harom foundation task utan hajthato vegre.
 
 ## Historical Scope Summary
 
 1. A historical combined task celja az volt, hogy a cached meta-review state/control-path dependence egyben szunjon meg.
 2. Ez a cel tovabbra is ervenyes, de vegrehajtasi szempontbol tul nagy szeletnek bizonyult.
-3. Ez a dokumentum ezentul csak traceability artifact; az aktiv implementation authority a ket replacement taskban van.
+3. Ez a dokumentum ezentul csak traceability artifact; az aktiv implementation authority a harom replacement taskban van.
 
 ## Review Control
 
-1. Ha a ket replacement task kozul barmelyik ujra vegyes foundation+consumer scope-ba kezd terjeszkedni, azt ujabb split triggerkent kell kezelni.
+1. Ha a harom replacement task kozul barmelyik ujra vegyes foundation+consumer scope-ba kezd terjeszkedni, azt ujabb split triggerkent kell kezelni.
 
 ## Spec Lock
 
