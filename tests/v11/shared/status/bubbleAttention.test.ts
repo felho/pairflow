@@ -119,7 +119,7 @@ describe("v11 status bubbleAttention", () => {
     expect(attention).toBeNull();
   });
 
-  it("surfaces quiet-pane attention after five quiet minutes", () => {
+  it("surfaces quiet-pane attention after three quiet minutes", () => {
     const attention = resolveBubbleAttention({
       state: "RUNNING",
       runtimeSession: {
@@ -139,7 +139,7 @@ describe("v11 status bubbleAttention", () => {
         status: "ok",
         record: {
           bubble_id: "b_status_attention_02",
-          sampled_at: "2026-02-22T18:29:50.000Z",
+          sampled_at: "2026-02-22T18:22:50.000Z",
           pane_hash: "hash-quiet",
           last_changed_at: "2026-02-22T18:20:00.000Z",
           session_name: "pf-b_status_attention_02",
@@ -147,13 +147,13 @@ describe("v11 status bubbleAttention", () => {
           last_sample_status: "sampled"
         }
       },
-      now: new Date("2026-02-22T18:30:00.000Z")
+      now: new Date("2026-02-22T18:23:00.000Z")
     });
 
     expect(attention).toMatchObject({
       code: "quiet_pane",
       severity: "warning",
-      label: "Quiet 10m"
+      label: "Quiet 3m"
     });
   });
 });

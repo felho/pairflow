@@ -356,7 +356,7 @@ describe("listBubbles", () => {
     });
   });
 
-  it("surfaces quiet-pane attention after five quiet minutes", async () => {
+  it("surfaces quiet-pane attention after three quiet minutes", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({
       repoPath,
@@ -371,14 +371,14 @@ describe("listBubbles", () => {
       repoPath,
       worktreePath: bubble.paths.worktreePath,
       tmuxSessionName: "pf-b_list_attention_quiet_01",
-      now: new Date("2026-02-22T18:30:00.000Z")
+      now: new Date("2026-02-22T18:23:00.000Z")
     });
     await writeWatchdogPaneActivity({
       runtimeDir: bubble.paths.runtimeDir,
       bubbleId: bubble.bubbleId,
       record: {
         bubble_id: bubble.bubbleId,
-        sampled_at: "2026-02-22T18:29:50.000Z",
+        sampled_at: "2026-02-22T18:22:50.000Z",
         pane_hash: "hash-quiet",
         last_changed_at: "2026-02-22T18:20:00.000Z",
         session_name: "pf-b_list_attention_quiet_01",
@@ -389,13 +389,13 @@ describe("listBubbles", () => {
 
     const listed = await listBubbles({
       repoPath,
-      now: new Date("2026-02-22T18:30:00.000Z")
+      now: new Date("2026-02-22T18:23:00.000Z")
     });
 
     expect(listed.bubbles[0]?.attention).toMatchObject({
       code: "quiet_pane",
       severity: "warning",
-      label: "Quiet 10m"
+      label: "Quiet 3m"
     });
   });
 

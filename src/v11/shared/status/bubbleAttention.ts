@@ -5,7 +5,7 @@ import type { StateValidationDiagnostics } from "../ports/stateSnapshots.js";
 import type { ReadWatchdogPaneActivityResult } from "../watchdog/watchdogPaneActivityStore.js";
 import type { WatchdogStatus } from "../watchdog/watchdogStatus.js";
 
-const quietPaneThresholdSeconds = 5 * 60;
+const quietPaneThresholdSeconds = 3 * 60;
 const stalePreparingWorkspaceThresholdSeconds = 5 * 60;
 const stalePreparingWorkspaceDetail =
   "This bubble is not resumable. Delete it and create a new bubble.";
@@ -36,7 +36,7 @@ function resolveElapsedSeconds(
 }
 
 function formatQuietMinutes(seconds: number): number {
-  return Math.max(5, Math.floor(seconds / 60));
+  return Math.max(3, Math.floor(seconds / 60));
 }
 
 export function isRuntimeSessionExpectedState(
