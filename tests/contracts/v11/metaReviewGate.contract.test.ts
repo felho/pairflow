@@ -49,10 +49,6 @@ function parseGateAliasSourcesFromManifest(manifestRaw: string): string[] {
     .sort();
 }
 
-async function readRepoFile(relativePath: string): Promise<string> {
-  return readFile(resolve(process.cwd(), relativePath), "utf8");
-}
-
 describe("v11 metaReviewGate contract harness", () => {
   it("loads seed contract case metadata", async () => {
     const casePath = resolve(
@@ -106,42 +102,6 @@ describe("v11 metaReviewGate contract harness", () => {
     const gateAliasSources = parseGateAliasSourcesFromManifest(manifestRaw);
 
     expect(gateAliasSources).toEqual(gateAliasExpectedSourcesSorted);
-  });
-
-  it("guards the recover route as fully removed from the public contract surface", async () => {
-    expect(metaReviewGateCaseSources.some((source) => source.includes("recover"))).toBe(
-      false
-    );
-
-    const [
-      manifestRaw,
-      cliOptionTypes,
-      cliHelp,
-      sharedContractBarrel,
-      applicationContractBarrel,
-      gateEmitFacade,
-      gateCommandApi,
-      gateCommandRuntime
-    ] = await Promise.all([
-      readRepoFile("tests/contracts/v11/corpus/manifest.json"),
-      readRepoFile("src/v11/application/metaReview/metaReviewCliOptionTypes.ts"),
-      readRepoFile("src/v11/application/metaReview/metaReviewCliOptions.ts"),
-      readRepoFile("src/v11/shared/metaReviewGate/metaReviewGateCommandContract.ts"),
-      readRepoFile("src/v11/application/metaReviewGate/metaReviewGateCommandContract.ts"),
-      readRepoFile("src/v11/application/metaReviewGate/emitMetaReviewGateV11.ts"),
-      readRepoFile("src/v11/shared/metaReviewGate/metaReviewGateCommandApi.ts"),
-      readRepoFile("src/v11/shared/metaReviewGate/metaReviewGateCommandRuntime.ts")
-    ]);
-
-    expect(manifestRaw).not.toContain("meta-review-gate-recover");
-    expect(manifestRaw).not.toContain("gate-recover");
-    expect(cliOptionTypes).not.toContain('command: "recover"');
-    expect(cliHelp).not.toContain("pairflow bubble meta-review recover");
-    expect(sharedContractBarrel).not.toContain("RecoverMetaReviewGateFromSnapshot");
-    expect(applicationContractBarrel).not.toContain("RecoverMetaReviewGateFromSnapshot");
-    expect(gateEmitFacade).not.toContain("recoverMetaReviewGateFromSnapshotV11");
-    expect(gateCommandApi).not.toContain("recoverMetaReviewGateFromSnapshot");
-    expect(gateCommandRuntime).not.toContain("recoverMetaReviewGateFromSnapshot");
   });
 
   it(

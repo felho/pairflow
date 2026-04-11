@@ -35,11 +35,6 @@ export function parseMetaReviewSubcommand(
       "`pairflow bubble meta-review run` was removed. Use canonical `pairflow agent emit --kind meta_review_result ...` for actor writes. Retained operator commands: status, last-report."
     );
   }
-  if (value === "recover") {
-    return invalidMetaReviewCliOptions(
-      "`pairflow bubble meta-review recover` is no longer supported. Use `pairflow bubble restart --id <id>` to recover runtime state or trigger a fresh meta-review run through the normal workflow. Read-only commands: status, last-report."
-    );
-  }
   if (value === "status" || value === "last-report") {
     return value;
   }

@@ -1103,7 +1103,7 @@ describe("runBubbleWatchdog", () => {
     const bubble = await setupRunningBubbleFixture({
       repoPath,
       bubbleId: "b_watchdog_meta_conflict_01",
-      task: "Watchdog meta-review recover conflict (pre-timeout)",
+      task: "Watchdog meta-review route conflict (pre-timeout)",
       startedAt: "2026-02-22T12:00:00.000Z"
     });
     await moveToMetaReviewRunning({
@@ -1160,7 +1160,7 @@ describe("runBubbleWatchdog", () => {
     const bubble = await setupRunningBubbleFixture({
       repoPath,
       bubbleId: "b_watchdog_meta_conflict_02",
-      task: "Watchdog meta-review recover conflict (timeout)",
+      task: "Watchdog meta-review route conflict (timeout)",
       startedAt: "2026-02-22T12:00:00.000Z"
     });
     await moveToMetaReviewRunning({

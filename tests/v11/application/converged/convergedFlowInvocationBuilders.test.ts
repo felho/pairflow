@@ -157,7 +157,6 @@ describe("convergedFlowInvocationBuilders", () => {
     expect(dependencies.emitBubbleNotification).toBeTypeOf("function");
     expect("emitTmuxDeliveryNotification" in dependencies).toBe(false);
     expect("applyMetaReviewGateOnConvergence" in dependencies).toBe(false);
-    expect("recoverMetaReviewGateFromSnapshot" in dependencies).toBe(false);
   });
 
   it("omits optional dependency overrides when explicitly undefined", () => {
@@ -207,7 +206,6 @@ describe("convergedFlowInvocationBuilders", () => {
     });
 
     expect("applyMetaReviewGateOnConvergence" in dependencies).toBe(false);
-    expect("recoverMetaReviewGateFromSnapshot" in dependencies).toBe(false);
     expect("emitTmuxDeliveryNotification" in dependencies).toBe(false);
     expect("emitBubbleNotification" in dependencies).toBe(false);
   });
@@ -232,7 +230,6 @@ describe("convergedFlowInvocationBuilders", () => {
     expect(dependencies.emitBubbleNotification).toBeTypeOf("function");
     expect("emitTmuxDeliveryNotification" in dependencies).toBe(false);
     expect("applyMetaReviewGateOnConvergence" in dependencies).toBe(false);
-    expect("recoverMetaReviewGateFromSnapshot" in dependencies).toBe(false);
   });
 
   it("builds default execution and gate-delivery dependencies", () => {
@@ -299,7 +296,6 @@ describe("convergedFlowInvocationBuilders", () => {
     expect(invocation.flowDependencies.emitBubbleNotification).toBeTypeOf("function");
     expect("emitTmuxDeliveryNotification" in invocation.flowDependencies).toBe(false);
     expect("applyMetaReviewGateOnConvergence" in invocation.flowDependencies).toBe(false);
-    expect("recoverMetaReviewGateFromSnapshot" in invocation.flowDependencies).toBe(false);
   });
 
   it("omits optional dependency overrides in command flow invocation when explicitly undefined", () => {
@@ -317,7 +313,6 @@ describe("convergedFlowInvocationBuilders", () => {
     });
 
     expect("applyMetaReviewGateOnConvergence" in invocation.flowDependencies).toBe(false);
-    expect("recoverMetaReviewGateFromSnapshot" in invocation.flowDependencies).toBe(false);
     expect("emitTmuxDeliveryNotification" in invocation.flowDependencies).toBe(false);
     expect("emitBubbleNotification" in invocation.flowDependencies).toBe(false);
   });

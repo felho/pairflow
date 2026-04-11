@@ -29,7 +29,6 @@ import {
 import {
   MetaReviewGateErrorV11 as MetaReviewGateError,
 } from "../../../src/v11/application/metaReviewGate/emitMetaReviewGateV11.js";
-import { recoverMetaReviewGateFromSnapshot } from "../../../src/v11/shared/metaReviewGate/metaReviewGateUnsupportedRecovery.js";
 import {
   type LoadedStateSnapshot,
   StateStoreConflictError,
@@ -4798,25 +4797,6 @@ describe("meta-review reads", () => {
     expect(after.state.state).toBe("READY_FOR_HUMAN_APPROVAL");
     expect(after.state.meta_review?.sticky_human_gate).toBe(true);
     expect(after.state.meta_review?.last_autonomous_recommendation).toBe("approve");
-  });
-
-  it("fails closed for retained recover entrypoints", async () => {
-    const repoPath = await createTempRepo();
-    const bubble = await setupRunningBubbleFixture({
-      repoPath,
-      bubbleId: "b_meta_recover_removed_01",
-      task: "Meta recover removed"
-    });
-
-    await expect(
-      recoverMetaReviewGateFromSnapshot({
-        bubbleId: bubble.bubbleId,
-        repoPath,
-        now: new Date("2026-03-08T12:37:00.000Z")
-      })
-    ).rejects.toMatchObject({
-      reasonCode: "META_REVIEW_GATE_TRANSITION_INVALID"
-    });
   });
 
   it("accepts submit when live meta-review ownership is absent but execution_context remains valid", async () => {

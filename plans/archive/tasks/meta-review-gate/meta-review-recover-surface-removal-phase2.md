@@ -2,7 +2,7 @@
 artifact_type: task
 artifact_id: task_meta_review_recover_surface_removal_phase2_v1
 title: "Meta-Review Recover Surface Removal (Phase 2)"
-status: implementable
+status: completed
 phase: phase2
 target_files:
   - src/v11/application/metaReview/metaReviewCliDispatcher.ts
@@ -26,7 +26,7 @@ target_files:
   - tests/contracts/v11/metaReviewGate.contract.runner.ts
   - tests/v11/application/metaReview/metaReviewCliEntrypointParity.test.ts
 prd_ref: null
-plan_ref: plans/meta-review-recover-and-reconcile-removal-plan-v1.md
+plan_ref: plans/archive/plans/meta-review-recover-and-reconcile-removal-plan-v1.md
 system_context_ref: docs/pairflow-initial-design.md
 owners:
   - "felho"
@@ -103,9 +103,9 @@ Tavolitsa el a public/operator `pairflow bubble meta-review recover` surface-t, 
 
 Phase 2 nem kezdodhet meg, es a task nem tekintheto nyitottnak, amig az alabbi allitasok mindegyike nem igaz:
 
-1. a Phase 1 mar explicitten kijelolte a public/shared overlap fajlokat es azok Phase 1 runtime-only ownershipet a `Cross-Phase Overlap Ledger` szintjen: `plans/tasks/meta-review-gate/meta-review-recover-runtime-removal-phase1.md`,
-2. a Phase 1 mar explicitten kimondja a `Phase 1 -> Phase 2 Transition Gate` szakaszban, hogy nincs accepted retained public/operator recover koztes allapot; legfeljebb nem-public residualis overlap maradhat fajlszinten: `plans/tasks/meta-review-gate/meta-review-recover-runtime-removal-phase1.md`,
-3. a Phase 1 validation/evidence contract mar kimondja a `Validation / Evidence Matrix` es a `must-use` dependency rows alatt, hogy a replay-kepes recover runtime, a `recoverMetaReviewGateFromSnapshot` seam es a `finishIncompleteActorResult` reconcile kernel eltunt a belso grafbol: `plans/tasks/meta-review-gate/meta-review-recover-runtime-removal-phase1.md`,
+1. a Phase 1 mar explicitten kijelolte a public/shared overlap fajlokat es azok Phase 1 runtime-only ownershipet a `Cross-Phase Overlap Ledger` szintjen: `plans/archive/tasks/meta-review-gate/meta-review-recover-runtime-removal-phase1.md`,
+2. a Phase 1 mar explicitten kimondja a `Phase 1 -> Phase 2 Transition Gate` szakaszban, hogy nincs accepted retained public/operator recover koztes allapot; legfeljebb nem-public residualis overlap maradhat fajlszinten: `plans/archive/tasks/meta-review-gate/meta-review-recover-runtime-removal-phase1.md`,
+3. a Phase 1 validation/evidence contract mar kimondja a `Validation / Evidence Matrix` es a `must-use` dependency rows alatt, hogy a replay-kepes recover runtime, a `recoverMetaReviewGateFromSnapshot` seam es a `finishIncompleteActorResult` reconcile kernel eltunt a belso grafbol: `plans/archive/tasks/meta-review-gate/meta-review-recover-runtime-removal-phase1.md`,
 4. a Phase 2 ebbol a baseline-bol indulva kizarolag a parser/render/help/docs/export teljes public/operator torleset vegzi el.
 
 ### Cross-Phase Overlap Ledger

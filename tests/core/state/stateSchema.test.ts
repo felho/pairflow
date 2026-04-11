@@ -214,7 +214,7 @@ describe("state schema", () => {
     expect(result.ok).toBe(true);
   });
 
-  it("rejects RUNNING meta-review recovery snapshots that only persist nested execution_context authority", () => {
+  it("rejects RUNNING meta-review snapshots that only persist nested execution_context authority", () => {
     const result = validateBubbleStateSnapshot({
       bubble_id: "b_test_meta_state_03c",
       state: "RUNNING",

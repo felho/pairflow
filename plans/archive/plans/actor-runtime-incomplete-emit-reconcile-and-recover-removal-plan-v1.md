@@ -2,7 +2,7 @@
 artifact_type: plan
 artifact_id: plan_actor_runtime_incomplete_emit_reconcile_and_recover_removal_v1
 title: "Actor Runtime Incomplete Emit Reconcile And Recover Removal"
-status: draft
+status: completed
 prd_ref: null
 owners:
   - "felho"
@@ -23,6 +23,15 @@ Siker eseten:
 2. nincs meta-review-specifikus recovery-identitas a canonical belso kernelben,
 3. a normal submit/finalize flow nem "recovery" fogalommal van modellezve,
 4. es a megmarado szerepspecifikus kulonbsegek mar csak policy/route adapter szinten latszanak.
+
+## Closure Note (2026-04-11)
+
+1. A public meta-review recover surface es a kapcsolodo internal seam-ek a jelen tree-ben mar nem reszei a live rendszernek.
+2. A plan altal lefedett munka a kovetkezo archival-only artifactekben zart le:
+   - `plans/archive/plans/meta-review-recover-and-reconcile-removal-plan-v1.md`
+   - `plans/archive/tasks/meta-review-gate/meta-review-recover-runtime-removal-phase1.md`
+   - `plans/archive/tasks/meta-review-gate/meta-review-recover-surface-removal-phase2.md`
+3. Ez a plan lezart historical trace marad; aktiv implementacios authorityja nincs.
 
 ## Complexity / Split Rationale
 

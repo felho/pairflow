@@ -119,7 +119,7 @@ Pain points:
 
 Review execution engine:
 1. The review computation must reuse the existing `UsePairflow/ReviewBubble` workflow logic.
-2. Pairflow CLI covers canonical result submission and cached retrieval; restart or fresh rerun recovery remains outside the public meta-review subcommand surface.
+2. Pairflow CLI covers canonical result submission and cached retrieval; runtime remediation uses `pairflow bubble restart --id <id>` or a fresh meta-review run outside the meta-review subcommand surface.
 3. Cached retrieval commands (`status`, `last-report`) do not execute a new review; they only read persisted latest autonomous output.
 
 Boundary contract (skill vs Pairflow CLI):
@@ -137,7 +137,7 @@ Boundary contract (skill vs Pairflow CLI):
 Rules:
 1. Pairflow CLI command set is intentionally minimal: one canonical actor write command (`agent emit --kind meta_review_result`) and two retrieval commands (`status`, `last-report`).
 2. Public operator `meta-review run` is removed; autonomous review execution happens outside the public operator CLI and submits results through the canonical actor emit path.
-3. Public operator `meta-review recover` is removed; supported remediation is `pairflow bubble restart --id <id>` or a fresh meta-review run through the active workflow.
+3. Supported operator remediation is `pairflow bubble restart --id <id>` or a fresh meta-review run through the active workflow.
 4. Retrieval commands must be non-generative and near-constant-cost.
 
 Reviewer output payload contract:
@@ -226,7 +226,7 @@ Requirements:
 Behavioral requirement:
 1. `meta-review status` and `meta-review last-report` must be cheap and non-generative.
 2. Retrieval commands are read-only by contract: no mutation of canonical snapshot, counters, or lifecycle state.
-3. Removed public `meta-review recover` invocations must fail fast as unsupported and must not reroute automatically.
+3. Unknown extra meta-review subcommands must fail fast and must not reroute automatically.
 4. If convergence gate execution partially fails after persisting snapshot/run result, supported remediation is `restart` or a fresh meta-review rerun rather than a public snapshot replay command.
 
 ## Meta-Reviewer Pane Requirement

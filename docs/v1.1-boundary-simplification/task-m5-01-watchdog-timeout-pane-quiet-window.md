@@ -130,7 +130,7 @@ Constraint: a watchdog pane-activity feature nem irhat bubble state-et, ha nincs
 | Timeout utan az utolso pane-valtozas ota eltelt ido elerte a 10 percet | pane-activity record | result | standard watchdog eszkalacio a meglevo HUMAN_QUESTION pathon | existing `escalated` | info | P1 | required-now |
 | Timeout lejart, de a pane az utolso 10 percben valtozott | pane-activity record | result | no-op, bubble marad RUNNING | existing `not_expired` vagy mas meglovo no-op reason; ne vezess be uj public stringet kenyszer nelkul | info | P1 | required-now |
 | Pane-activity record JSON hibas/olvashatatlan, de uj minta veheto | runtime FS | fallback | record ujraepitese friss mintabol; ugyanabban a runban nincs azonnali quiet-window eszkalacio | existing no-op reason | warn | P2 | required-now |
-| Meta-review special route ervenyes | recoverMetaReviewGateFromSnapshot | result | a meglevo meta-review watchdog routing szerzodese valtozatlan | existing meta-review reason flow | info | P1 | required-now |
+| Meta-review special route ervenyes | meglevo meta-review watchdog routing | result | a meglevo meta-review watchdog routing szerzodese valtozatlan | existing meta-review reason flow | info | P1 | required-now |
 
 ### 5) Dependency Constraints
 
@@ -159,7 +159,7 @@ Constraint: a watchdog pane-activity feature nem irhat bubble state-et, ha nincs
 | T7 | raw pane diff resets quiet window | ket egymas utani minta kozott a nyers pane text barmiben valtozik | watchdog mintat frissit | `last_changed_at` az uj mintavetel idejere all | P1 | required-now | raw-hash semantics |
 | T8 | no prior record at first expired run | timeout mar lejart, de nincs elozo record, pane olvashato | watchdog fut | friss mintat seedel, de ugyanebben a runban nem eszkalal quiet-window hianyaban | P1 | required-now | safe first-run bootstrap |
 | T8b | corrupt record rebuild at expired run | timeout mar lejart, a pane-activity record JSON-hibas/olvashatatlan, de a pane olvashato | watchdog fut | friss mintabol ujraepiti a recordot, es ugyanebben a runban nem eszkalal pusztan quiet-window alapon | P1 | required-now | corrupt-record rebuild path is explicit |
-| T9 | meta-review route unchanged | `META_REVIEW_RUNNING` expired scenario | watchdog fut | a meglevo meta-review recovery route tovabbra is elsobbseget elvez | P1 | required-now | scope isolation |
+| T9 | meta-review route unchanged | `META_REVIEW_RUNNING` expired scenario | watchdog fut | a meglevo meta-review-specific timeout route tovabbra is elsobbseget elvez | P1 | required-now | scope isolation |
 | T10 | contract corpus updated | watchdog contract cases futnak | `pnpm test` contract suite | a regi `running_expired` azonnali-eszkalacio expectation helyett a quiet-window szerinti case-ek zoldre futnak | P1 | required-now | contract source-of-truth sync |
 
 ## L2 - Implementation Notes (Optional)

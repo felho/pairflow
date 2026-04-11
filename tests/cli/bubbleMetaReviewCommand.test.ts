@@ -36,7 +36,7 @@ afterEach(async () => {
   );
 });
 
-async function expectRejectedUnsupportedRecover(
+async function expectRejectedUnknownSubcommand(
   promise: Promise<unknown>
 ): Promise<void> {
   let thrown: unknown;
@@ -51,8 +51,7 @@ async function expectRejectedUnsupportedRecover(
     throw new Error("Expected MetaReviewError.");
   }
   expect(thrown.reasonCode).toBe("META_REVIEW_SCHEMA_INVALID");
-  expect(thrown.message).toContain("pairflow bubble meta-review recover");
-  expect(thrown.message).toContain("no longer supported");
+  expect(thrown.message).toContain("Unknown meta-review subcommand");
 }
 
 describe("parseBubbleMetaReviewCommandOptions", () => {
@@ -109,9 +108,6 @@ describe("parseBubbleMetaReviewCommandOptions", () => {
     expect(getBubbleMetaReviewHelpText()).toContain(
       "pairflow bubble restart --id <id>"
     );
-    expect(getBubbleMetaReviewHelpText()).not.toContain(
-      "pairflow bubble meta-review recover"
-    );
     expect(getBubbleMetaReviewHelpText()).toContain(
       "`pairflow bubble meta-review run` was removed"
     );
@@ -141,14 +137,14 @@ describe("parseBubbleMetaReviewCommandOptions", () => {
     ).toThrow(/pairflow agent emit --kind meta_review_result/u);
   });
 
-  it("rejects removed recover subcommand with explicit restart guidance", () => {
+  it("rejects unknown subcommands consistently", () => {
     expect(() =>
       parseBubbleMetaReviewCommandOptions([
-        "recover",
+        "resume",
         "--id",
-        "b_meta_cli_recover_01"
+        "b_meta_cli_unknown_01"
       ])
-    ).toThrow(/pairflow bubble meta-review recover` is no longer supported/u);
+    ).toThrow(/Unknown meta-review subcommand/u);
   });
 
   it("rejects removed run subcommand even when --depth is present", () => {
@@ -256,7 +252,7 @@ describe("runBubbleMetaReviewCommand", () => {
     expect(result).toBeNull();
   });
 
-  it("routes status/last-report and rejects removed recover at parse boundary", async () => {
+  it("routes status/last-report and rejects unknown subcommands at parse boundary", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({
       repoPath,
@@ -284,9 +280,9 @@ describe("runBubbleMetaReviewCommand", () => {
     expect(reportResult).not.toBeNull();
     expect(reportResult?.command).toBe("last-report");
 
-    await expectRejectedUnsupportedRecover(
+    await expectRejectedUnknownSubcommand(
       runBubbleMetaReviewCommand([
-        "recover",
+        "resume",
         "--id",
         bubble.bubbleId,
         "--repo",
@@ -295,19 +291,19 @@ describe("runBubbleMetaReviewCommand", () => {
     );
   });
 
-  it("does not mutate state when removed recover is invoked", async () => {
+  it("does not mutate state when an unknown subcommand is invoked", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({
       repoPath,
-      bubbleId: "b_meta_cli_recover_persist_01",
-      task: "CLI removed recover boundary"
+      bubbleId: "b_meta_cli_unknown_persist_01",
+      task: "CLI unknown subcommand boundary"
     });
 
     const before = await readStateSnapshot(bubble.paths.statePath);
 
-    await expectRejectedUnsupportedRecover(
+    await expectRejectedUnknownSubcommand(
       runBubbleMetaReviewCommand([
-        "recover",
+        "resume",
         "--id",
         bubble.bubbleId,
         "--repo",

@@ -2,7 +2,7 @@
 artifact_type: plan
 artifact_id: plan_meta_review_recover_and_reconcile_removal_v1
 title: "Meta-Review Recover And Reconcile Removal"
-status: draft
+status: completed
 prd_ref: null
 owners:
   - "felho"
@@ -19,6 +19,13 @@ Siker eseten:
 2. nincs retained `recoverMetaReviewGateFromSnapshot(...)` runtime dependency a normal submit / watchdog / converged flowkban,
 3. nincs public `pairflow bubble meta-review recover` command,
 4. a tamogatott remediation explicitten `restart` vagy uj meta-review futtatas.
+
+## Closure Note (2026-04-11)
+
+1. A public meta-review subcommand surface ma mar csak a canonical submit + read-only projection parra szukul.
+2. A replay-driven internal recover seam es a generic incomplete-emit reconcile kernel mar nincs bekotve a normal submit / watchdog / converged flowkba.
+3. A korabbi unsupported tombstone helper es a hozza tartozo tipusmaradvanyok is el lettek tavolitva a jelen tree-bol.
+4. A plan lezart, a vegeredmeny archival-only dokumentaciokent marad meg.
 
 ## Complexity / Split Rationale
 
@@ -47,13 +54,13 @@ Siker eseten:
 
 ## Task List
 
-1. `plans/tasks/meta-review-gate/meta-review-recover-runtime-removal-phase1.md`
-2. `plans/tasks/meta-review-gate/meta-review-recover-surface-removal-phase2.md`
+1. `plans/archive/tasks/meta-review-gate/meta-review-recover-runtime-removal-phase1.md`
+2. `plans/archive/tasks/meta-review-gate/meta-review-recover-surface-removal-phase2.md`
 
 ## Dependencies
 
 1. [docs/pairflow-initial-design.md](/Users/felho/dev/pairflow/docs/pairflow-initial-design.md)
-2. [plans/actor-runtime-incomplete-emit-reconcile-and-recover-removal-plan-v1.md](/Users/felho/dev/pairflow/plans/actor-runtime-incomplete-emit-reconcile-and-recover-removal-plan-v1.md)
+2. [plans/archive/plans/actor-runtime-incomplete-emit-reconcile-and-recover-removal-plan-v1.md](/Users/felho/dev/pairflow/plans/archive/plans/actor-runtime-incomplete-emit-reconcile-and-recover-removal-plan-v1.md)
 3. [docs/meta-review-gate-prd.md](/Users/felho/dev/pairflow/docs/meta-review-gate-prd.md)
 
 ## Risks and Mitigations

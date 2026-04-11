@@ -184,7 +184,7 @@ Run each command from the release worktree root and capture the command, timesta
    bubble is stuck in `RUNNING` after snapshot persistence or pane/runtime loss.
    Expected markers:
    runtime restart completes without command-profile fallback errors
-   no implicit `bubble meta-review recover` reroute is suggested or required
+   no implicit snapshot replay reroute is suggested or required
    follow-up `bubble meta-review status` / `last-report` remains consistent with current-round freshness rules
 
 8. `<pairflow-command> metrics report --from <iso-from> --to <iso-to>`

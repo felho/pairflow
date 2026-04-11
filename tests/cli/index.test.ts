@@ -680,14 +680,14 @@ describe("runCli", () => {
     ]);
   });
 
-  it("renders removed meta-review recover as explicit invalid subcommand", async () => {
-    const repoPath = await mkdtemp(join(tmpdir(), "pairflow-cli-meta-review-json-recover-"));
+  it("renders unknown meta-review subcommands as schema-invalid errors", async () => {
+    const repoPath = await mkdtemp(join(tmpdir(), "pairflow-cli-meta-review-json-unknown-"));
     tempDirs.push(repoPath);
     await initGitRepository(repoPath);
     const exitCode = await runCli([
       "bubble",
       "meta-review",
-      "recover",
+      "resume",
       "--id",
       "b_meta_review_cli_json_05",
       "--repo",
@@ -700,8 +700,7 @@ describe("runCli", () => {
     const stderrText = stderrSpy.mock.calls.map((call) => String(call[0])).join("");
     expect(stdoutText).toBe("");
     expect(stderrText).toContain("reason_code=META_REVIEW_SCHEMA_INVALID");
-    expect(stderrText).toContain("pairflow bubble meta-review recover");
-    expect(stderrText).toContain("no longer supported");
+    expect(stderrText).toContain("Unknown meta-review subcommand");
   });
 
   it("prints registry-backed unknown command support list", async () => {

@@ -2,7 +2,7 @@
 artifact_type: task
 artifact_id: task_meta_review_recover_runtime_removal_phase1_v1
 title: "Meta-Review Recover Runtime Removal (Phase 1)"
-status: implementable
+status: completed
 phase: phase1
 target_files:
   - src/v11/shared/metaReview/metaReviewCommandSubmitRouting.ts
@@ -45,7 +45,7 @@ target_files:
   - tests/v11/application/converged/convergedFlowInvocationBuilders.test.ts
   - tests/v11/application/reconcile/finishIncompleteActorResult.test.ts
 prd_ref: null
-plan_ref: plans/meta-review-recover-and-reconcile-removal-plan-v1.md
+plan_ref: plans/archive/plans/meta-review-recover-and-reconcile-removal-plan-v1.md
 system_context_ref: docs/pairflow-initial-design.md
 owners:
   - "felho"

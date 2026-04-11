@@ -129,22 +129,6 @@ export interface ApplyMetaReviewGateOnConvergenceDependencies {
   readFile?: MetaReviewArtifactReadPort;
 }
 
-export interface RecoverMetaReviewGateFromSnapshotInput {
-  bubbleId: string;
-  refs?: string[];
-  summary?: string;
-  repoPath?: string;
-  cwd?: string;
-  now?: Date;
-  runResult?: MetaReviewResult;
-}
-
-export interface RecoverMetaReviewGateFromSnapshotDependencies {
-  resolveBubbleById?: ResolveBubbleByIdPort;
-  readStateSnapshot?: ReadStateSnapshotPort;
-  readFile?: MetaReviewArtifactReadPort;
-}
-
 export interface MetaReviewGateResult {
   bubbleId: string;
   route: MetaReviewGateRoute;
