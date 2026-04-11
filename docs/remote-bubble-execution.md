@@ -57,7 +57,7 @@ Pairflow bubbles currently run on the user's local machine. When the laptop is c
 └────────────────────────────────────────────────────────┘
 ```
 
-**Flat clone per bubble.** Each remote bubble gets its own independent `git clone`. No shared repo, no worktrees linking back to a common `.git`. This means bubbles have zero overlap: deleting one bubble's clone has no effect on any other bubble. The trade-off is a full clone per bubble (~3-8 seconds for a typical repo), which is negligible compared to bootstrap time (pnpm install, build, etc.).
+**Flat clone per bubble.** Each remote bubble gets its own independent `git clone`. No shared repo, no worktrees linking back to a common `.git`. This means bubbles have zero overlap: deleting one bubble's clone has no effect on any other bubble. The trade-off is a full clone per bubble (~3-8 seconds for a typical repo), which is negligible compared to bootstrap time (pnpm install, build, etc.). This topology is also intentionally sandbox-friendly: a future containerized or jailed runtime can mount the entire clone as a single isolated workspace root without any shared `.git` coupling to other bubbles.
 
 ### Key decisions
 
@@ -112,6 +112,17 @@ Claude Code and Codex authenticate via OAuth on the remote host. The `claude aut
 
 The laptop must be able to SSH into the remote host. How you achieve this depends on your network setup — LAN, VPN, mesh networking, etc. See [Personal Network Setup Guide](remote-bubble-personal-setup.md) for examples.
 
+### 4.4 Local-only overlays and secrets
+
+Only committed repository content is guaranteed to appear in the remote clone. Gitignored local-only files such as `.env.local`, `.env.production`, or similar machine-specific overlays are **not** automatically copied to the remote by this design.
+
+This is deliberate:
+- it avoids silently creating a secret-replication contract,
+- it keeps remote secret provisioning a separate operational concern,
+- it stays compatible with future sandbox/container runtimes where secrets should arrive via a dedicated injection mechanism rather than ad-hoc file copy.
+
+If a remote bubble needs local-only secrets or environment-specific files, the user must provision them on the remote host explicitly.
+
 ---
 
 ## 5. Configuration
@@ -162,11 +173,28 @@ When a bubble is created with `--remote`, the executor config is stored in `conf
 }
 ```
 
+The `executor` object is intentionally extensible. In this design it uses the minimal `{ type: "ssh", remote: "<host>" }` shape, but the `type` field exists specifically so future runtime kinds (containerized, sandboxed, cloud-backed, etc.) can add executor-specific fields without redefining the top-level bubble config contract.
+
 ### 5.3 Remote pointer file (pointer only)
 
 **File:** `.pairflow/bubbles/<id>/remote.json`
 
 Created on `bubble create --remote`, updated on `bubble start`. This file is a **pointer** — it identifies where the remote bubble lives. It does NOT cache state.
+
+Two shapes exist:
+- **Created, not started yet:** minimal pointer with `host` and static settings only
+- **Started:** full pointer with `instanceId`, `remoteClonePath`, `tmuxSession`, `startedAt`
+
+Created shape:
+
+```json
+{
+  "host": "myserver",
+  "portForwards": [3000]
+}
+```
+
+Started shape:
 
 ```json
 {
@@ -185,7 +213,7 @@ The `instanceId` distinguishes this start from a potential re-start of the same 
 
 **File:** `.pairflow/bubbles/<id>/state-cache.json`
 
-Updated on every `status` call. This is the **single cache authority** for remote state. The `bubble list` command reads from this file, not from `remote.json`.
+Initialized on `bubble start`, then updated on every `status` call. This is the **single cache authority** for remote state. The `bubble list` command reads from this file, not from `remote.json`.
 
 ```json
 {
@@ -226,6 +254,12 @@ pairflow bubble start --id <bubbleId>
   │
   ├─ Read config.json → detect executor.type === "ssh"
   ├─ Load remote host config from config.toml
+  ├─ Validate repo has `origin`
+  │   └─ Else: Error: remote bubble requires a git origin URL. Run `git remote add origin <url>` first.
+  ├─ Validate local base branch has no uncommitted changes
+  │   └─ Else: Error: you have uncommitted changes on `<baseBranch>`. Commit or stash first.
+  ├─ SSH: pairflow --version
+  │   └─ Warn if remote Pairflow version differs from local version
   │
   ├─ STEP 1: Push base branch to origin (if needed)
   │   └─ git push origin <baseBranch>
@@ -239,15 +273,23 @@ pairflow bubble start --id <bubbleId>
   │   ├─ scp .pairflow/bubbles/<id>/config.json → remote clone
   │   ├─ scp task artifact → remote clone
   │   └─ scp reviewer-brief, reviewer-focus (if present) → remote clone
+  │      (Gitignored local-only overlays such as `.env.local` are NOT copied.
+  │       If the app needs them, they must already exist on the remote.)
   │
   ├─ STEP 4: Start on remote
   │   └─ SSH: cd ~/repos/<project>--<bubbleId> && pairflow bubble start --id <bubbleId> --no-attach
   │       (The clone IS the working directory — no worktree creation.
-  │        The remote start runs: overlay sync, tmux launch, agent startup.
+  │        Bubble branch creation is described in §7.3.
+  │        The remote start then runs: overlay sync, tmux launch, agent startup.
   │        This requires a remote-aware start mode that skips worktree
   │        creation and uses the clone root as the workspace directly.)
   │
-  ├─ STEP 5: Update local pointer
+  ├─ STEP 5: Initialize local state cache
+  │   └─ Write state-cache.json: { lastCheckedAt: now, state: "RUNNING", round: 1? }
+  │      (Initial optimistic cache from start result; first explicit `status`
+  │       call refreshes it from remote authority.)
+  │
+  ├─ STEP 6: Update local pointer
   │   └─ Write remote.json: { instanceId, remoteClonePath, tmuxSession, startedAt }
   │
   └─ Print summary with attach/status commands
@@ -259,9 +301,16 @@ pairflow bubble start --id <bubbleId>
 pairflow bubble status --id <bubbleId>
   │
   ├─ Detect remote bubble (remote.json exists)
-  ├─ SSH: pairflow bubble status --id <bubbleId> --repo <remoteClonePath> --json
-  ├─ Cache response locally → state-cache.json (single cache authority)
-  └─ Display (re-run SSH for text output, or render locally from JSON)
+  ├─ If remoteClonePath is missing (created, not started):
+  │   └─ Render local CREATED status from config + remote pointer (no SSH)
+  ├─ Else:
+  │   ├─ SSH: pairflow bubble status --id <bubbleId> --repo <remoteClonePath> --json
+  │   ├─ If SSH succeeds but the runtime session is missing (e.g. remote reboot):
+  │   │   └─ Report: bubble stopped unexpectedly; persisted state is preserved on disk,
+  │   │      but the runtime is no longer active. Restart with
+  │   │      `pairflow bubble start --id <bubbleId>`.
+  │   ├─ Cache response locally → state-cache.json (single cache authority)
+  │   └─ Display (re-run SSH for text output, or render locally from JSON)
 ```
 
 ### 6.4 `pairflow bubble attach --id <bubbleId>`
@@ -270,6 +319,8 @@ pairflow bubble status --id <bubbleId>
 pairflow bubble attach --id <bubbleId> [--port-forward <port>...]
   │
   ├─ Detect remote bubble
+  ├─ If remoteClonePath / tmuxSession is missing (created, not started):
+  │   └─ Error: remote bubble is not started yet; run `pairflow bubble start --id <bubbleId>` first
   ├─ Load remote config + port forwards
   ├─ Build SSH command:
   │   ssh -t \
@@ -290,6 +341,8 @@ All follow the same routing pattern:
 pairflow bubble <command> --id <bubbleId> [args]
   │
   ├─ Detect remote bubble
+  ├─ If remoteClonePath is missing (created, not started):
+  │   └─ Error: remote bubble is not started yet; only `status` and `start` are valid before remote start
   └─ SSH: cd <remoteClonePath> && pairflow bubble <command> --id <bubbleId> [args]
 ```
 
@@ -302,11 +355,14 @@ pairflow bubble list
   │
   ├─ Scan local .pairflow/bubbles/ (existing logic)
   ├─ For each bubble, check if remote.json exists
-  ├─ For remote bubbles: use state-cache.json (no SSH call)
+  ├─ For remote bubbles with state-cache.json: use cached state (no SSH call)
+  ├─ For remote bubbles without state-cache.json yet:
+  │   └─ Display as CREATED (remote, not started)
   └─ Display with location column
 
   ID              STATE                  ROUND   LOCATION
   feature-auth    RUNNING (round 2/8)    2/8     myserver (remote)
+  doc-review      CREATED                -       myserver (remote, not started)
   fix-login       WAITING_HUMAN          3/8     local
   refactor-db     DONE                   -       local
 ```
@@ -349,7 +405,19 @@ git push origin <baseBranch>
 ssh remote "git clone <originUrl> ~/repos/<project>--<bubbleId>"
 ```
 
-### 7.3 Post-completion sync
+If the repo has no `origin`, remote start fails fast with an actionable error. Likewise, if the local working tree on `<baseBranch>` has uncommitted changes, remote start stops before pushing and tells the user to commit or stash first. Remote execution only begins from a committed, pushable base branch.
+
+### 7.3 Bubble branch creation
+
+After the remote clone is created, the remote-aware start flow creates the bubble branch from `<baseBranch>` inside that clone and switches to it before any agent work begins.
+
+```bash
+ssh remote "cd ~/repos/<project>--<bubbleId> && git checkout -b <bubbleBranch> <baseBranch>"
+```
+
+This branch is the branch later merged by `pairflow bubble merge`.
+
+### 7.4 Post-completion sync
 
 After a remote bubble completes (DONE state), the changes are on the remote's bubble branch. To get them back:
 
@@ -358,7 +426,7 @@ After a remote bubble completes (DONE state), the changes are on the remote's bu
 pairflow bubble merge --id <bubbleId>
 # → SSH: merge bubble branch to base branch on remote
 # → SSH: git push origin <baseBranch>
-# → prints: "Merged. Run `git pull origin main` to update your local checkout."
+# → prints: "Merged. Run `git pull origin <baseBranch>` to update your local checkout."
 ```
 
 The merge command does NOT automatically modify the laptop's local checkout. The user pulls explicitly when ready. This keeps the remote executor adapter from reaching into the user's local working directory.
@@ -469,6 +537,7 @@ See [§14 V2 Extraction Seams](#14-v2-extraction-seams) for where and how V2 wil
 - **Push notifications.** V2 Channel Adapters (Slack, webhook) for WAITING_HUMAN events.
 - **Persistent status sync.** Background daemon or cron job that periodically caches remote state for instant `bubble list` display.
 - **Multi-remote orchestration.** Running different bubbles on different remotes, or load-balancing across hosts.
+- **Stale clone cleanup.** Optional auto-cleanup for `DONE` / `CANCELLED` remote bubbles older than a configured age to reclaim disk space on the remote host.
 
 ---
 
@@ -477,6 +546,8 @@ See [§14 V2 Extraction Seams](#14-v2-extraction-seams) for where and how V2 wil
 This design does not implement command-level idempotency (op_id, resume tokens). Recovery relies on manual inspection: SSH back in, check state, retry if needed. This is acceptable for a single-user tool where the operator is the user. V2 will formalize this with the relay() contract.
 
 **Important distinction:** The Pairflow state machine already prevents invalid double-transitions (e.g., you cannot approve an already-approved bubble). However, this is not the same as command-level idempotency. Commands like `start`, `merge`, and repo sync have side effects (git clone, tmux launch, bootstrap scripts) that can be left in a partially completed state if SSH drops mid-execution.
+
+Another important distinction: runtime liveness is separate from persisted state. A remote reboot can kill the tmux session and all agents while leaving `state.json`, transcripts, and artifacts intact on disk. This is not a transport failure; it is a runtime-loss scenario with preserved persisted state.
 
 ### Recovery matrix
 
@@ -488,7 +559,9 @@ Since each bubble has its own independent clone, recovery never risks affecting 
 | `start` (step 2: clone on remote) | git clone | Partial clone directory | `rm -rf ~/repos/<project>--<bubbleId>` → retry (safe — independent clone, no other bubble affected) |
 | `start` (step 3: config sync) | scp | Missing config files on remote | Retry start — scp overwrites |
 | `start` (step 4: remote start) | overlay sync / tmux launch / agent startup | Partial tmux session | SSH → `tmux kill-session -t pf-<bubbleId>` → retry start on remote |
-| `start` (step 5: local pointer) | writing remote.json | Remote is running, local doesn't know | SSH → `pairflow bubble status` → manually write remote.json, or retry start (will detect existing session) |
+| `start` (step 5: initial cache) | writing state-cache.json | Remote is running, cache missing locally | SSH → `pairflow bubble status` → regenerate state-cache.json |
+| `start` (step 6: local pointer) | writing remote.json | Remote is running, local doesn't know where it lives | SSH → `pairflow bubble status` → manually write remote.json, or retry start (will detect existing session) |
+| remote host reboot / unexpected restart | tmux session and agents disappear | Persisted bubble state remains on disk, but runtime is gone; local cache may still show `RUNNING` | SSH → verify clone still exists → `pairflow bubble status`; if runtime session is missing, report preserved state and restart with `pairflow bubble start --id <bubbleId>` |
 | `status` | reading JSON | No side effects | Retry — read-only operation |
 | `attach` | SSH tunnel setup | No side effects on remote | Retry — SSH reconnect |
 | `approve` | state transition | State may or may not have transitioned | SSH → `pairflow bubble status --json` → check actual state |
@@ -502,6 +575,12 @@ For any interrupted command:
 2. `pairflow bubble status --id <bubbleId> --json` on the remote — see actual state
 3. Decide: retry the command, or manually complete the interrupted step
 4. Update local `remote.json` if the pointer is stale
+
+For remote reboot specifically:
+1. Re-establish SSH access to the host
+2. Check whether `~/repos/<project>--<bubbleId>` still exists
+3. If persisted bubble state is present but the tmux session is gone, treat it as runtime-loss with preserved state
+4. Re-run `pairflow bubble start --id <bubbleId>` to re-create the runtime on top of the preserved repo and bubble state
 
 ---
 
@@ -578,6 +657,7 @@ When V2 work begins, these are the specific points where the remote execution co
 - SSH connection between laptop and remote — encrypted, key-authenticated
 - OAuth tokens on the remote — stored by Claude Code's credential manager, auto-refreshing
 - Git SSH keys on the remote — standard GitHub/GitLab access
+- Repo working copy on the remote — including whatever files the checked-out repo and bootstrap flow materialize there
 
 ### What is NOT exposed
 
@@ -590,3 +670,5 @@ When V2 work begins, these are the specific points where the remote execution co
 - Securing SSH access (key-based auth, no password login)
 - Keeping the remote host updated
 - Network connectivity security (VPN, mesh networking, etc.) — see [Personal Network Setup Guide](remote-bubble-personal-setup.md)
+- If the remote host is compromised: revoke Claude/Codex OAuth sessions from the relevant account settings, rotate Git credentials as needed, and re-authenticate on a clean host
+- Understanding that repo-local secrets or generated `.env` files present in the remote clone remain on remote disk until the bubble is cleaned up
