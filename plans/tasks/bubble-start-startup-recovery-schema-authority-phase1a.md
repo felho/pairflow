@@ -77,6 +77,16 @@ Lezarni a canonical `startup_recovery` type/schema/read authorityt ugy, hogy a k
    - persisted state validation contract,
    - inspection/read compatibility contract.
 
+### Phase Boundary Ledger
+
+| Decision Surface | Owner Artifact | This Task Locks | Forbidden Overreach |
+|---|---|---|---|
+| `startup_recovery` active shape es lifecycle validity | ez a task | exact active-vs-archival split, exact literal families, missing-only vs fail-closed matrix | first persisted baseline authoring vagy mutation-seam kivalasztasa |
+| first fresh `CREATED -> PREPARING_WORKSPACE` persisted descriptor write | `plans/tasks/bubble-start-startup-recovery-write-boundary-phase1a.md` | ez a task csak azt mondja ki, milyen shape valid, nem azt, hogy mikor/hol authoralodik eloszor | baseline mezokeszlet vagy presence rule authoring ownership behuzasa ide |
+| fresh success-path `RUNNING` write retention | `plans/tasks/bubble-start-startup-recovery-write-boundary-phase1a.md` | ez a task csak a negativ validity boundaryt zarja le: active descriptor tilos `RUNNING` alatt | clear-vs-archive default vagy success-path persistence strategy eldontese |
+| startup-recovery reason-code namespace | ez a task | reason-code mezok Phase 1A-ban csak schema-level token-family boundarykent vannak lezarva, precedence rule-lal egyutt | producer semantics, operator taxonomy vagy downstream subcode roadmap ownership behuzasa ide |
+| retry/failure-policy semantics | jelenlegi planon kivul | Phase 1A-ban csak token-family closure maradhat, routing jelentessel vagy producer rules nelkul | routing, admission, cleanup, commit-gate roadmap visszahozasa |
+
 ### Complexity Risk Gate
 
 1. `authority_risk`: `2`
@@ -105,27 +115,38 @@ Lezarni a canonical `startup_recovery` type/schema/read authorityt ugy, hogy a k
 
 | Contract | Current | Target | Required Fields | Optional Fields | Compatibility | Priority | Timing |
 |---|---|---|---|---|---|---|---|
-| `startup_recovery` active shape | implicit/partial | explicit typed authority block | `stage`, `ownership_confidence`, `runtime_session_status`, `worktree_status`, `tmux_status`, `updated_at` | `attempt_id`, `next_start_policy`, `retry_reason_code`, `tmux_session_name` csak akkor, ha a `tmux_status` named-session identityt allit | internal contract hardening | P1 | required-now |
+| `startup_recovery` active shape | implicit/partial | explicit typed authority block | `stage=preparing_workspace`, `ownership_confidence`, `runtime_session_status`, `worktree_status`, `tmux_status`, `updated_at` | `attempt_id`, `next_start_policy`, `retry_reason_code`, `tmux_session_name` csak akkor, ha `tmux_status=named_session` | internal contract hardening | P1 | required-now |
 | `startup_recovery` archival shape | unspecified | explicit archival-only marker | `archived=true` | `archived_from_attempt_id`, `archived_at`, `reason_code` | internal contract hardening | P1 | required-now |
 | Legacy compatibility | ad hoc | explicit matrix | `CREATED`/`RUNNING` missing-block compatibility, `PREPARING_WORKSPACE` fail-closed | diagnostics | internal contract hardening | P1 | required-now |
 
 Implementation notes:
 
-1. A `next_start_policy` es `retry_reason_code` Phase 1A-schema-authorityban csak token-family closure; producer/consumer semanticsuk es persisted presence rule-juk kulon downstream ownership.
+1. A `next_start_policy` es `retry_reason_code` Phase 1A-schema-authorityban csak token-family closure; active descriptorban csak optional field-classificationt zarunk le, mig producer/consumer semanticsuk, routing jelentésuk es persisted presence rule-juk kulon downstream ownership.
 2. Az `attempt_id` ebben a slice-ban retained optional identity field; canonical sourcea es first-write kotelezosege a `1A-write-boundary` task ownershipe.
-3. Az archival-only alak nem tartalmazhat active routing authorityt vagy live ownership claimet.
+3. A `tmux_session_name` csak akkor maradhat persisted optional mezo, ha az alak active descriptor es `tmux_status=named_session`; minden mas esetben tiltott.
+4. Az archival-only alak nem tartalmazhat active routing authorityt vagy live ownership claimet.
+5. Archival-only alakban active-shape mezok (`stage`, `attempt_id`, `ownership_confidence`, `runtime_session_status`, `worktree_status`, `tmux_status`, `tmux_session_name`, `updated_at`, `next_start_policy`, `retry_reason_code`) nem maradhatnak retained mezok.
+6. Phase 1A nem enged meg alternativ active `stage` literalokat; az active descriptor egyetlen canonical stage-e `preparing_workspace`.
+7. A vocabulary-closure tablazat exact uniont csak ott allit, ahol ezt a sor explicit kimondja; `retry_reason_code` es `reason_code` eseteben Phase 1A tovabbra is csak token-family closure-t rogzit.
 
 ### 2.1) Vocabulary Authority Closure
 
 | Field | Phase 1A-schema-authority Closure | Downstream Consumer |
 |---|---|---|
-| `stage` | canonical literal family explicit; nem maradhat free-form string | `1A-write-boundary` |
-| `next_start_policy` | canonical token-family explicit (`rollback`, `retry`, `preserve_for_recovery` minimum csalad) | jelenlegi planon kivul |
-| `ownership_confidence` | canonical literal family explicit; minimum coarse class szinten `authoritative`, `observed`, `ambiguous` vagy exact ekvivalens union | `1A-write-boundary` |
-| `runtime_session_status` | canonical literal family explicit; minimum `absent`, `live`, `ambiguous` osztaly | `1A-write-boundary` |
-| `worktree_status` | canonical literal family explicit; minimum `absent`, `partial`, `ready` osztaly | `1A-write-boundary` |
-| `tmux_status` | canonical literal family explicit; minimum `absent`, `named_session`, `ambiguous` osztaly | `1A-write-boundary` |
-| `retry_reason_code` | canonical reason-code token family; nem free-form operator szoveg | jelenlegi planon kivul |
+| `stage` | exact active literal: `preparing_workspace`; archival-only alakban `stage` nem maradhat retained mezo | `1A-write-boundary` |
+| `attempt_id` | optional csak active descriptorban; archival-only alakban nem retained mezo; canonical source/presence ownership planon kivul | `1A-write-boundary` |
+| `next_start_policy` | exact token family active descriptor optional fieldjekent: `rollback`, `retry`, `preserve_for_recovery`; archival-only alakban tiltott, producer/presence/routing ownership tovabbra is planon kivul | jelenlegi planon kivul |
+| `ownership_confidence` | exact literal family: `authoritative`, `observed`, `ambiguous`; archival-only alakban tiltott | `1A-write-boundary` |
+| `runtime_session_status` | exact literal family: `absent`, `live`, `ambiguous`; archival-only alakban tiltott | `1A-write-boundary` |
+| `worktree_status` | exact literal family: `absent`, `partial`, `ready`; archival-only alakban tiltott | `1A-write-boundary` |
+| `tmux_status` | exact literal family: `absent`, `named_session`, `ambiguous`; archival-only alakban tiltott | `1A-write-boundary` |
+| `tmux_session_name` | optional csak active descriptorban es csak `tmux_status=named_session` mellett; minden mas alakban tiltott | `1A-write-boundary` |
+| `updated_at` | required active-descriptor timestamp field; archival-only alakban nem retained mezo; timestamp source/clock ownership planon kivul | `1A-write-boundary` |
+| `retry_reason_code` | canonical reason-code token family only; active descriptor optional fieldjekent megengedett, archival-only alakban tiltott; nem free-form operator szoveg, de Phase 1A nem allit exact uniont | jelenlegi planon kivul |
+| `archived` | archival-only exact literal: `true`; active descriptorban tiltott | `1A-write-boundary` success-path writer |
+| `archived_from_attempt_id` | optional archival-only identity link; active descriptorban tiltott | `1A-write-boundary` success-path writer |
+| `archived_at` | optional archival-only timestamp; active descriptorban tiltott | `1A-write-boundary` success-path writer |
+| `reason_code` | archival-only canonical reason-code token family only; active descriptorban tiltott es nem free-form operator szoveg, de Phase 1A nem allit exact uniont | jelenlegi planon kivul |
 
 ### 2.2) Lifecycle Invariant Matrix
 
@@ -133,7 +154,7 @@ Implementation notes:
 |---|---|---|---|---|
 | `CREATED` | missing block only | active block, archival-only block | nincs committed startup recovery authority | `1A-write-boundary` a first write elott ezt tekinti baseline-nak |
 | `PREPARING_WORKSPACE` | explicit active descriptor only | missing block, archival-only block | partial startup authority csak explicit canonical descriptorral ertelmezheto | `1A-write-boundary` |
-| `RUNNING` | missing block vagy minimal archival-only marker | active block | startup recovery mar nem aktiv authority | `1A-write-boundary` success-path writer |
+| `RUNNING` | missing block vagy archival-only marker pontosan `archived=true` es opcionális `archived_from_attempt_id`, `archived_at`, `reason_code` mezőkkel | active block vagy barmely active-shape retained mezo | startup recovery mar nem aktiv authority; retained blokk legfeljebb explicit archival-only lehet | `1A-write-boundary` success-path writer |
 
 ### 2.3) Legacy Compatibility Matrix
 
@@ -149,6 +170,7 @@ Implementation notes:
 |---|---|---|---|---|---|
 | state schema | canonical descriptor fields, literal families, lifecycle invariants | routing-policy, cleanup-policy vagy write-seam behavior smuggling schema layerbe | validity authority only | P1 | required-now |
 | inspection/read path | compatibility classification, fail-closed invalid-state diagnosis | authority synthesis tmux/registry/worktree residue alapjan | read path nem producer | P1 | required-now |
+| vocabulary closure | explicit literal-family es conditional-field enforcement | aliasositas, future-stage placeholder, "equivalent" value acceptance | schema layer csak a jelen task altal tenylegesen lezart nameseteket zarja | P1 | required-now |
 
 Constraint: ez a task nem valaszthat concrete persistence authoring seamet.
 
@@ -156,12 +178,15 @@ Constraint: ez a task nem valaszthat concrete persistence authoring seamet.
 
 | Trigger | Dependency (if any) | Behavior (`throw|result|fallback`) | Fallback Value/Action | Reason Code | Log Level | Priority | Timing |
 |---|---|---|---|---|---|---|---|
+| barmely snapshot a jelen task altal explicitten lezart literal-familyt vagy conditional optionality-t megszeg | state snapshot | throw | schema validation fail-closed; ha ugyanabban a snapshotban lifecycle-shape sertessel egyutt jelenik meg, a vocabulary violation kap reason-code elsobbseget, es ez a precedence a retained lifecycle-invalid taxonomy folott is ervenyes | `START_RECOVERY_VOCABULARY_INVALID` | warn | P1 | required-now |
 | `CREATED` snapshot active vagy archival-only descriptorral | state snapshot | throw | schema validation fail-closed | `START_CREATED_CONTRACT_INVALID` | warn | P1 | required-now |
 | `CREATED` snapshot malformed `startup_recovery` blockkal | state snapshot | throw | schema validation fail-closed | `START_CREATED_CONTRACT_INVALID` | warn | P1 | required-now |
 | `PREPARING_WORKSPACE` snapshot descriptor nelkul | state snapshot | throw | schema validation fail-closed | `START_PREPARING_CONTRACT_MISSING` | warn | P1 | required-now |
 | `PREPARING_WORKSPACE` snapshot malformed descriptorral | state snapshot | throw | schema validation fail-closed | `START_PREPARING_CONTRACT_INVALID` | warn | P1 | required-now |
-| `RUNNING` snapshot active descriptorral | state snapshot | throw | schema validation fail-closed | `START_RUNNING_CONTRACT_INVALID` | warn | P1 | required-now |
-| `RUNNING` snapshot malformed active descriptorral | state snapshot | throw | schema validation fail-closed | `START_RUNNING_CONTRACT_INVALID` | warn | P1 | required-now |
+| `PREPARING_WORKSPACE` snapshot archival-only descriptorral | state snapshot | throw | schema validation fail-closed | `START_PREPARING_CONTRACT_INVALID` | warn | P1 | required-now |
+| `RUNNING` snapshot active descriptorral | state snapshot | throw | schema validation fail-closed; shared `RUNNING` reason code indokolt, mert a persisted blokk meg mindig aktiv startup authorityt allit | `START_RUNNING_CONTRACT_INVALID` | warn | P1 | required-now |
+| `RUNNING` snapshot malformed active descriptorral | state snapshot | throw | schema validation fail-closed; shared `RUNNING` reason code indokolt, mert a retained blokk active-shape contractot sert | `START_RUNNING_CONTRACT_INVALID` | warn | P1 | required-now |
+| `RUNNING` snapshot malformed archival-only descriptorral | state snapshot | throw | schema validation fail-closed; shared `RUNNING` reason code indokolt, mert a retained blokk nem canonical archival-only alak | `START_RUNNING_CONTRACT_INVALID` | warn | P1 | required-now |
 | legacy `CREATED` / `RUNNING` snapshot missing descriptorral | state snapshot | result | compatibility retained, no descriptor synthesis | `N/A` | info | P1 | required-now |
 
 ### 5) Dependency Constraints
@@ -173,14 +198,15 @@ Constraint: ez a task nem valaszthat concrete persistence authoring seamet.
 | must-not-use | inferred descriptor synthesis tmux/registry/worktree alapjan | P1 | required-now |
 | must-not-use | concrete persistence seam, mutation plumbing vagy first-write baseline ownership visszahuzasa ebbe a taskba | P1 | required-now |
 | must-not-use | retry routing, failure-policy persistence vagy commit-gate semantics roadmapkent valo visszacsempeszese ebbe a taskba | P1 | required-now |
+| must-not-use | alternative active-stage literalok, aliasolt status tokenek vagy extra future placeholder unionok | P1 | required-now |
 
 ### 6) Test Matrix
 
 | ID | Scenario | Given | When | Then | Priority | Timing | Evidence |
 |---|---|---|---|---|---|---|---|
-| T1 | typed descriptor + vocabulary closure | active es archival peldak | type/schema load | canonical fields, literal families es optionality rules explicitten ellenorizhetok | P1 | required-now | `tests/core/state/stateSchema.test.ts`, `tests/v11/shared/state/stateSchema.test.ts` |
-| T2 | lifecycle invariants | `CREATED`, `PREPARING_WORKSPACE`, `RUNNING` snapshots | schema validation fut | csak a Phase 1A-schema-authority altal engedett alakok validak | P1 | required-now | `tests/core/state/stateSchema.test.ts`, `tests/v11/shared/state/stateSchema.test.ts` |
-| T3 | legacy compatibility inspect/read | hianyzo vagy malformed descriptoros snapshot | inspect/read fut | `CREATED`/`RUNNING` kompatibilis marad, `PREPARING_WORKSPACE` fail-closed marad | P1 | required-now | `tests/core/state/stateStore.test.ts`, `tests/v11/infrastructure/state/stateStore.test.ts` |
+| T1 | typed descriptor + vocabulary closure | active es archival peldak | type/schema load | canonical fields, explicit literal-family rows es optionality rules ellenorizhetok; alias vagy extra literal nem valid ott, ahol a task exact familyt zar le; `tmux_session_name` csak `tmux_status=named_session` mellett megengedett, `updated_at` active-shape required field, es archival-only tiltasok a 2.1 tablazat minden erintett soraban ellenorizhetok | P1 | required-now | `tests/core/state/stateSchema.test.ts`, `tests/v11/shared/state/stateSchema.test.ts` |
+| T2 | lifecycle invariants | `CREATED`, `PREPARING_WORKSPACE`, `RUNNING` snapshots, kulon a `PREPARING_WORKSPACE` archival-only es a `RUNNING` canonical archival-only retained esetekkel | schema validation fut | csak a Phase 1A-schema-authority altal engedett alakok validak; `PREPARING_WORKSPACE` archival-only fail-closed, mig `RUNNING` alatt csak explicit archival-only marker vagy missing block valid | P1 | required-now | `tests/core/state/stateSchema.test.ts`, `tests/v11/shared/state/stateSchema.test.ts` |
+| T3 | legacy compatibility inspect/read | hianyzo vagy malformed descriptoros snapshot, kulon a `RUNNING` malformed archival-only es a vocabulary-precedence egyuttsertes esetevel | inspect/read fut | missing-only kompatibilitas `CREATED`/`RUNNING` alatt retained; malformed descriptorok es `PREPARING_WORKSPACE` missing/malformed allapot fail-closed klasszifikacioval maradnak explicittek; ha vocabulary es lifecycle invaliditas egyszerre all fenn, `START_RECOVERY_VOCABULARY_INVALID` nyer; evidence az `inspectStateSnapshot(...)` boundaryt hivo `tests/core/state/stateStore.test.ts` es `tests/v11/infrastructure/state/stateStore.test.ts` surface-on jelenik meg | P1 | required-now | `tests/core/state/stateStore.test.ts`, `tests/v11/infrastructure/state/stateStore.test.ts` |
 
 Validation note:
 
@@ -188,11 +214,12 @@ Validation note:
 
 ## Acceptance Criteria
 
-1. AC1: A canonical `startup_recovery` schema explicit active es archival-only alakra van bontva, es a mezo minimum keszlete nem kovetkeztetheto ki call-site-okbol.
+1. AC1: A canonical `startup_recovery` schema explicit active es archival-only alakra van bontva, es az active shape exact mezokeszlete valamint literal-unionje nem kovetkeztetheto ki call-site-okbol.
 2. AC2: A lifecycle invariant matrix egyertelmuen kimondja, hogy `CREATED` csak missing blockkal, `PREPARING_WORKSPACE` csak active descriptorral, `RUNNING` pedig csak missing vagy archival-only alakkal valid.
 3. AC3: A legacy compatibility matrix explicit, es tiltja a missing `startup_recovery` blokk inferred visszaszintetizalasat side effectekbol.
-4. AC4: A descriptor vocabulary authority explicit, de a concrete first-write presence rule ownership mar a `1A-write-boundary` taskhoz van kotve.
+4. AC4: A descriptor vocabulary authority explicit es normativ, de a concrete first-write presence rule ownership mar a `1A-write-boundary` taskhoz van kotve.
 5. AC5: Inspection/read-path szinten nincs residual ambiguity arrol, hogy mely malformed vagy missing allapot kompatibilis es melyik fail-closed.
+6. AC6: A phase-boundary ledger explicitten kizárja, hogy a schema-authority task visszahuzza magahoz a write seam, success-path retention default vagy retry/failure-policy ownershipot.
 
 ### Acceptance Traceability
 
@@ -201,8 +228,9 @@ Validation note:
 | AC1 | CS1, CS2 | T1 |
 | AC2 | CS2, CS3 | T2 |
 | AC3 | CS4 | T3 |
-| AC4 | `Data and Interface Contract`, `Vocabulary Authority Closure`, `must-use`/`must-not-use` rows | document review |
+| AC4 | CS1, CS2, `Data and Interface Contract`, `Vocabulary Authority Closure` | T1 + document review |
 | AC5 | CS4, Error Contract rows | T3 |
+| AC6 | `Phase Boundary Ledger`, `Out of Scope`, `must-not-use` rows | document review |
 
 ## L2 - Implementation Notes (Optional)
 
