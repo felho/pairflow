@@ -27,7 +27,8 @@ Sikernek az szamit, ha a remote bubble a create -> start -> status/list/attach -
 2. A bubble config es a start flow local/worktree alapfeltezesekre epul; a live start/runtime surface ma `worktreePath` + local `tmux` session topologiat var.
 3. A jelenlegi bubble lifecycle commandok (`create`, `start`, `status`, `list`, `attach`, `merge`, `delete`) nem ismernek remote pointer/cache authorityt vagy SSH transport seamet.
 4. A workspace/runtime infrastrukura ma worktree-centrikus; a remote design ezzel szemben flat clone-per-bubble topologiat ker.
-5. Emiatt ez a scope nem kezelheto egyetlen delivery taskkent: elobb contract/foundation szeletek kellenek, aztan a remote activation.
+5. Jelenleg nincs targetenkenti Pairflow sync/update hook; ha a remote hoston mas install/update mechanizmus kell, azt a kodbase nem tudja explicit start-time seamkent kezelni.
+6. Emiatt ez a scope nem kezelheto egyetlen delivery taskkent: elobb contract/foundation szeletek kellenek, aztan a remote activation.
 
 ## Decision Baseline
 
@@ -41,7 +42,8 @@ Sikernek az szamit, ha a remote bubble a create -> start -> status/list/attach -
 6. A remote merge flow nem modositja automatikusan a laptop lokal checkoutjat; legfeljebb explicit `git pull origin <baseBranch>` hintet ad.
 7. A failure/recovery szemantika ebben a milestone-ban manual recoveryre epul; nincs op_id, nincs resume token.
 8. A V2 extraction seam-eket mar most tisztan kell tartani, hogy a mostani adapter ne egjen bele vegleges boundarykent.
-9. A remote feature minden fazisa kotelezoen megfelel a [sandbox compatibility gate](/Users/felho/dev/pairflow/docs/architecture/sandbox-compatibility-gate.md) policy-nak; a cel nem a mostani sandboxing, hanem a kesobbi sandbox/runtime wrapper irany nyitva tartasa.
+9. A remote Pairflow verzioelteres V1-ben best-effort operacios kerdes, nem hard compatibility gate: uj remote `start` elott lehet target-specifikus sync hookot futtatni, de a mar futó bubble runtime-jat nem kell a laptop aktualis buildjehez kotni.
+10. A remote feature minden fazisa kotelezoen megfelel a [sandbox compatibility gate](/Users/felho/dev/pairflow/docs/architecture/sandbox-compatibility-gate.md) policy-nak; a cel nem a mostani sandboxing, hanem a kesobbi sandbox/runtime wrapper irany nyitva tartasa.
 
 ## Complexity / Split Rationale
 
@@ -98,7 +100,7 @@ Sikernek az szamit, ha a remote bubble a create -> start -> status/list/attach -
 |---|---|---|---|---|---|
 | Phase 1A | Remote config + pointer/cache authority foundation | latest remote execution design decisions, existing `pairflowConfig` / `bubbleConfig` contract | `[remotes]` config schema, bubble executor metadata contract, `remote.json` / `state-cache.json` schema + `CREATED` vs `STARTED` gating | S-M | remote config es local artifact contract explicit, parser/validator szinten zart, runtime activation nelkul |
 | Phase 1B | Remote workspace/start seam foundation | Phase 1A contract, current start/worktree/tmux topology | remote-aware start seam, clone-root workspace mode, bubble branch creation contract, local-vs-remote start dependency boundary | M | a start/runtime code tud clone-root workspace-ben futni ugy, hogy a local worktree behavior nem regresszal |
-| Phase 2A | Remote create/start provisioning delivery | Phase 1A-1B | `bubble create --remote`, SSH/SCP transport helpers, per-bubble clone provisioning, remote start orchestration, local pointer/cache init | M | remote bubble create+start end-to-end vegigmegy deterministic local artifact update-tel |
+| Phase 2A | Remote create/start provisioning delivery | Phase 1A-1B | `bubble create --remote`, SSH/SCP transport helpers, per-bubble clone provisioning, remote start orchestration, optional target-specific Pairflow sync hook, local pointer/cache init | M | remote bubble create+start end-to-end vegigmegy deterministic local artifact update-tel es a remote Pairflow update best-effort start-time seamkent kezelheto |
 | Phase 2B | Remote read/operator surfaces | Phase 2A | remote `status`, `list`, `attach`, cache refresh, pre-start gating, port-forward attach orchestration | M | a user tud remote bubble-t statusolni, listazni es attach-olni ambiguity nelkul |
 | Phase 3A | Remote lifecycle command routing | Phase 2B | generic remote router `approve/rework/commit/merge/clean/delete`, merge push semantics, remote cleanup boundary | M | a mandatory close order remote bubble-re is vegigviheto, local checkout implicit modositasa nelkul |
 | Phase 3B | Recovery, diagnostics, docs and rollout closure | Phase 3A | SSH/error normalization, recovery guidance, operator help/docs, regression/validation closure | S-M | failure semantics explicit, diagnostics actionable, rollout-ready acceptance matrix lezarva |
@@ -109,7 +111,7 @@ Sikernek az szamit, ha a remote bubble a create -> start -> status/list/attach -
 |---|---|---|---|---|
 | 1 | `plans/tasks/remote-bubble-execution-config-and-pointer-authority-phase1a.md` | Phase 1A | S | Lezarja a global remotes configot, bubble executor metadata-t, `remote.json` es `state-cache.json` authorityt, valamint a `CREATED` vs `STARTED` gate-et |
 | 2 | `plans/tasks/remote-bubble-execution-clone-workspace-start-foundation-phase1b.md` | Phase 1B | M | Kulon kezeli a worktree-centric start/runtime surface remote-aware atalakitasat, beleertve a clone-root workspace modot es a bubble branch authoring seamet |
-| 3 | `plans/tasks/remote-bubble-execution-create-and-start-provisioning-phase2a.md` | Phase 2A | M | A config/seam foundationre epiti a tenyleges SSH clone/sync/start orchestrationt es a local pointer/cache initializationt |
+| 3 | `plans/tasks/remote-bubble-execution-create-and-start-provisioning-phase2a.md` | Phase 2A | M | A config/seam foundationre epiti a tenyleges SSH clone/sync/start orchestrationt, beleertve az optional target-specifikus Pairflow sync hookot es a local pointer/cache initializationt |
 | 4 | `plans/tasks/remote-bubble-execution-status-list-attach-phase2b.md` | Phase 2B | M | Kulon read-model es operatori consume task: `status`, `list`, `attach`, cache freshness, pre-start error semantics |
 | 5 | `plans/tasks/remote-bubble-execution-lifecycle-routing-and-cleanup-phase3a.md` | Phase 3A | M-L | A generic remote command routingot, merge boundaryt es cleanup semantics-et egyutt zarja le, de mar stabil foundationre epit |
 | 6 | `plans/tasks/remote-bubble-execution-recovery-docs-and-rollout-validation-phase3b.md` | Phase 3B | S-M | A manual recovery matrixet, SSH/error normalizationt, help/docs parityt es rollout validationt kulon, activation utani closure taskkent viszi |
@@ -129,7 +131,9 @@ Sikernek az szamit, ha a remote bubble a create -> start -> status/list/attach -
 3. Phase 2A ownership:
    - SSH/SCP helper layer
    - remote create/start orchestration
+   - optional target-level Pairflow sync hook pre-start seam
    - initial local pointer/cache write
+   - no hard compatibility gate es no running-bubble auto-update
    - no read projection consume beyond start result
 4. Phase 2B ownership:
    - `status`, `list`, `attach`
@@ -181,13 +185,16 @@ Sikernek az szamit, ha a remote bubble a create -> start -> status/list/attach -
 3. Risk: pointer/cache drift ujra megjelenik `status` / `list` / `attach` consume kozott.
    Mitigation: egyetlen cache authority (`state-cache.json`), pointer-only `remote.json`, explicit created-vs-started gating.
 
-4. Risk: a lifecycle remote router tul koran belekeveri a merge/local checkout policyt.
+4. Risk: a remote Pairflow update tul eros compatibility policyva no, es folosleges operatori blokkot vagy runtime churnt okoz.
+   Mitigation: V1-ben a sync hook start-time, target-specifikus, best-effort seam marad; nincs bubble-szintu runtime pinning es nincs kotelezo exact-match gate.
+
+5. Risk: a lifecycle remote router tul koran belekeveri a merge/local checkout policyt.
    Mitigation: Phase 3A explicit non-goal, hogy local checkoutot automatikusan modositson.
 
-5. Risk: SSH drop es partial side effect review-loopot okoz.
+6. Risk: SSH drop es partial side effect review-loopot okoz.
    Mitigation: ebben a scope-ban manual recovery + explicit diagnostics; nincs premature op_id/idempotency vallalas.
 
-6. Risk: a taskok tul nagyra nonek es osszefolynak.
+7. Risk: a taskok tul nagyra nonek es osszefolynak.
    Mitigation: band-policy (`S/M/M-L`) es fazis-hatarok; authority-moving es activation feladat nem mehet ugyanabba a taskba.
 
 ## Validation Strategy
@@ -204,6 +211,7 @@ Sikernek az szamit, ha a remote bubble a create -> start -> status/list/attach -
    - sandbox gate check: start/attach/cleanup fogalmak runtime seamkent maradnak
 3. Phase 2A:
    - orchestration tests SSH/SCP helper invocationsra
+   - optional `pairflow_sync_command` hook invoke/skip/fail-soft coverage
    - create/start local artifact update tests
    - dependency-injected remote command tests a full network E2E helyett
    - sandbox gate check: a remote start orchestration wrapper-ready marad

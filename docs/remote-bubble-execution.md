@@ -15,7 +15,7 @@ Pairflow bubbles currently run on the user's local machine. When the laptop is c
 
 ## 2. Design Principles
 
-1. **Same Pairflow, different machine.** The remote server runs the exact same Pairflow binary. No fork, no "remote edition." The laptop becomes a thin client.
+1. **Same Pairflow workflow, target-specific install.** The remote server runs Pairflow itself, but V1 does not require exact build equality with the laptop. Instead, remote start may use an optional target-specific sync/update hook before launch. The laptop remains a thin client; the remote remains the execution host.
 2. **State lives where execution happens (operational).** Bubble state (state.json, transcript.ndjson, artifacts/) lives on the remote. The laptop keeps a lightweight pointer + cached state for UI display. The remote is the **operational** source of truth for the duration of this design — not the long-term architectural source of truth. See [§13 Temporary Architectural Debt](#13-temporary-architectural-debt) for the distinction.
 3. **SSH is the transport.** No custom protocols, no daemons, no message queues. Plain SSH — battle-tested, encrypted, universally available. Network connectivity (VPN, mesh networking, etc.) is the user's responsibility. See [Personal Network Setup Guide](remote-bubble-personal-setup.md) for examples.
 4. **Incremental adoption.** Every existing bubble command keeps working locally. Remote is opt-in per bubble via `--remote <host>`.
@@ -142,6 +142,7 @@ host = "myserver"                      # SSH host (can be ~/.ssh/config alias)
 user = "myuser"                        # SSH user (optional, defaults to current user)
 repo_base = "~/repos"                  # where repos are cloned on the remote
 pairflow_command = "pairflow"          # pairflow binary on remote (optional, default: "pairflow")
+pairflow_sync_command = "~/bin/pairflow-sync" # optional best-effort update hook run before remote start
 default_port_forwards = [3000, 8080]   # ports forwarded on attach (optional)
 ```
 
@@ -156,8 +157,11 @@ repo_base = "~/repos"
 host = "office-ws"
 user = "dev"
 repo_base = "/data/repos"
+pairflow_sync_command = "cd ~/src/pairflow && git pull --ff-only && pnpm install --frozen-lockfile && pnpm build"
 default_port_forwards = [3000, 5173, 8080]
 ```
+
+`pairflow_sync_command` is intentionally opaque and target-specific. Pairflow only knows that it may run a single best-effort pre-start command on the target before remote bubble startup. It does not standardize the remote package manager, install layout, or update strategy.
 
 ### 5.2 Per-bubble remote config
 
@@ -258,8 +262,11 @@ pairflow bubble start --id <bubbleId>
   │   └─ Else: Error: remote bubble requires a git origin URL. Run `git remote add origin <url>` first.
   ├─ Validate local base branch has no uncommitted changes
   │   └─ Else: Error: you have uncommitted changes on `<baseBranch>`. Commit or stash first.
+  ├─ If pairflow_sync_command is configured:
+  │   ├─ SSH: run the configured sync/update hook once
+  │   └─ If it fails: warn and continue (best-effort only; no hard block in V1)
   ├─ SSH: pairflow --version
-  │   └─ Warn if remote Pairflow version differs from local version
+  │   └─ Diagnostic only; version drift may be shown, but it is not a hard compatibility gate
   │
   ├─ STEP 1: Push base branch to origin (if needed)
   │   └─ git push origin <baseBranch>
@@ -292,8 +299,10 @@ pairflow bubble start --id <bubbleId>
   ├─ STEP 6: Update local pointer
   │   └─ Write remote.json: { instanceId, remoteClonePath, tmuxSession, startedAt }
   │
-  └─ Print summary with attach/status commands
+  └─ Print summary with attach/status commands (+ sync warning if the optional hook failed)
 ```
+
+This design deliberately does **not** auto-update Pairflow for already running remote bubbles. The optional sync hook is a start-time provisioning seam only.
 
 ### 6.3 `pairflow bubble status --id <bubbleId>`
 
