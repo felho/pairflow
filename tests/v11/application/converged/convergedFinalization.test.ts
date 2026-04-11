@@ -344,8 +344,8 @@ describe("finalizeConvergedFlow", () => {
           },
           state: {
             meta_review: {
-              last_autonomous_recommendation: "approve",
-              last_autonomous_status: "ok"
+              last_autonomous_recommendation: "rework",
+              last_autonomous_status: "error"
             }
           }
         } as never,
@@ -393,6 +393,10 @@ describe("finalizeConvergedFlow", () => {
     expect(emittedEvents[0]?.metadata.advisory_findings_open_total).toBe(5);
     expect(emittedEvents[1]?.eventType).toBe("bubble_meta_review_routed");
     expect(emittedEvents[1]?.metadata.advisory_findings_open_total).toBe(5);
+    expect(emittedEvents[1]?.metadata.recommendation).toBe("approve");
+    expect(emittedEvents[1]?.metadata.run_status).toBe("success");
+    expect(emittedEvents[2]?.eventType).toBe("bubble_meta_review_human_gate_reached");
+    expect(emittedEvents[2]?.metadata.recommendation).toBe("approve");
     expect(emittedEvents[0]?.metadata.advisory_findings_open_total).not.toBe(1);
     expect(emittedEvents[1]?.metadata.advisory_findings_open_total).not.toBe(9);
     expect(

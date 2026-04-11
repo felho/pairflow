@@ -2,10 +2,6 @@ import type {
   BubbleExecutionContext,
   BubbleMetaReviewSnapshotState
 } from "../../../types/bubble.js";
-import {
-  executionContextsEqual,
-  metaReviewExecutionContextToRunningContext
-} from "./executionContext.js";
 import type { ValidationError } from "../validation/primitives.js";
 
 export interface BubbleStateAuthorityValidationInput {
@@ -38,17 +34,11 @@ function hasAllActiveFields(input: BubbleStateAuthorityValidationInput): boolean
 export function isMetaReviewAuthorityActive(
   input: BubbleStateAuthorityValidationInput
 ): boolean {
-  const mirroredMetaReviewExecutionContext =
-    metaReviewExecutionContextToRunningContext(
-      input.metaReview?.execution_context ?? null
-    );
-
   return (
     input.state === "RUNNING" &&
     (
       input.activeRole === "meta_reviewer" ||
-      input.executionContext?.active_role === "meta_reviewer" ||
-      mirroredMetaReviewExecutionContext !== null
+      input.executionContext?.active_role === "meta_reviewer"
     )
   );
 }
@@ -150,18 +140,12 @@ export function validateMetaReviewAuthority(
   }
 
   validateMetaReviewExecutionMirror(input);
-  validateMetaReviewSnapshotAuthority(input);
   validateMetaReviewActiveOwnership(input);
 }
 
 function validateMetaReviewExecutionMirror(
   input: BubbleStateAuthorityValidationInput
 ): void {
-  const mirroredMetaReviewExecutionContext =
-    metaReviewExecutionContextToRunningContext(
-      input.metaReview?.execution_context ?? null
-    );
-
   if (input.executionContext === null) {
     input.errors.push({
       path: "execution_context",
@@ -169,17 +153,6 @@ function validateMetaReviewExecutionMirror(
         "RUNNING meta-review state requires canonical execution_context authority"
     });
     return;
-  }
-
-  if (
-    mirroredMetaReviewExecutionContext !== null &&
-    !executionContextsEqual(input.executionContext, mirroredMetaReviewExecutionContext)
-  ) {
-    input.errors.push({
-      path: "execution_context",
-      message:
-        "execution_context must match meta_review.execution_context while meta-review authority is active"
-    });
   }
 
   if (input.executionContext.active_role !== "meta_reviewer") {
@@ -195,51 +168,9 @@ function validateMetaReviewExecutionMirror(
   }
 }
 
-function validateMetaReviewSnapshotAuthority(
-  input: BubbleStateAuthorityValidationInput
-): void {
-  if (
-    input.metaReview === undefined ||
-    input.metaReview.execution_context === undefined ||
-    input.metaReview.execution_context === null
-  ) {
-    input.errors.push({
-      path: "meta_review.execution_context",
-      message:
-        "RUNNING meta-review state requires canonical meta_review.execution_context authority"
-    });
-    return;
-  }
-
-  if (
-    input.validatedRound !== null &&
-    input.metaReview.execution_context.round !== input.validatedRound
-  ) {
-    input.errors.push({
-      path: "meta_review.execution_context.round",
-      message: `Must match state.round (${String(input.validatedRound)}) while meta-review authority is active`
-    });
-  }
-}
-
 function validateMetaReviewActiveOwnership(
   input: BubbleStateAuthorityValidationInput
 ): void {
-  const metaReviewHasRunSnapshot =
-    input.metaReview !== undefined &&
-    input.metaReview.last_autonomous_status !== null &&
-    input.metaReview.last_autonomous_recommendation !== null &&
-    input.metaReview.last_autonomous_updated_at !== null;
-
-  if (!hasAllActiveFields(input) && !metaReviewHasRunSnapshot) {
-    input.errors.push({
-      path: "active_*",
-      message:
-        "RUNNING meta-review state requires active_agent, active_role, and active_since unless recovering from an existing meta-review snapshot"
-    });
-    return;
-  }
-
   if (!hasAllActiveFields(input)) {
     return;
   }

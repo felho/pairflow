@@ -2,7 +2,8 @@ import type { PairflowCommandPathAssessment } from "../../shared/ports/pairflowC
 import { type emitBubbleLifecycleEventBestEffort } from "../../../v11/shared/metrics/bubbleEvents.js";
 import {
   buildConvergedEventMetadata,
-  buildMetaReviewRoutedMetadata
+  buildMetaReviewRoutedMetadata,
+  resolveMetaReviewRouteRecommendation
 } from "./convergedFinalizationMetadata.js";
 import type {
   FinalizeConvergedFlowInput,
@@ -129,8 +130,7 @@ async function emitOptionalMetaReviewEvents(input: {
         gate_route: input.flow.gateResult.route,
         recommendation:
           input.flow.gateResult.metaReviewRun?.recommendation ??
-          input.flow.gateResult.state.meta_review?.last_autonomous_recommendation ??
-          "inconclusive",
+          resolveMetaReviewRouteRecommendation({ route: input.flow.gateResult.route }),
         blocking_reason_codes: JSON.stringify(input.blockingReasonCodes)
       },
       now: input.flow.now

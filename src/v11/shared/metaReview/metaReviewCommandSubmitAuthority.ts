@@ -128,3 +128,77 @@ export async function assertMetaReviewSubmitterAuthority(input: {
   });
   void sessions[input.bubbleId]?.metaReviewerPane;
 }
+
+export function assertMetaReviewSubmitStaleGuard(input: {
+  bubbleId: string;
+  executionContext: ReturnType<typeof assertActiveMetaReviewExecutionContext>;
+  stateFingerprint: string;
+  expectedHandoffId?: string;
+  expectedRole?: "implementer" | "reviewer" | "meta_reviewer";
+  expectedRound?: number;
+  expectedStateFingerprint?: string;
+}): void {
+  if (
+    input.expectedHandoffId !== undefined &&
+    input.executionContext.handoff_id !== input.expectedHandoffId
+  ) {
+    throw new MetaReviewError({
+      reasonCode: "META_REVIEW_STATE_INVALID",
+      message:
+        `meta-review submit rejected: canonical handoff mismatch (expected ${input.expectedHandoffId}, active ${input.executionContext.handoff_id}).`,
+      context: {
+        source: "assert_meta_review_submit_stale_guard",
+        reason: "handoff_id_mismatch",
+        bubbleId: input.bubbleId
+      }
+    });
+  }
+
+  if (
+    input.expectedRole !== undefined &&
+    input.executionContext.active_role !== input.expectedRole
+  ) {
+    throw new MetaReviewError({
+      reasonCode: "META_REVIEW_STATE_INVALID",
+      message:
+        `meta-review submit rejected: canonical role mismatch (expected ${input.expectedRole}, active ${input.executionContext.active_role}).`,
+      context: {
+        source: "assert_meta_review_submit_stale_guard",
+        reason: "active_role_mismatch",
+        bubbleId: input.bubbleId
+      }
+    });
+  }
+
+  if (
+    input.expectedRound !== undefined &&
+    input.executionContext.round !== input.expectedRound
+  ) {
+    throw new MetaReviewError({
+      reasonCode: "META_REVIEW_STATE_INVALID",
+      message:
+        `meta-review submit rejected: canonical round mismatch (expected ${String(input.expectedRound)}, active ${String(input.executionContext.round)}).`,
+      context: {
+        source: "assert_meta_review_submit_stale_guard",
+        reason: "round_mismatch",
+        bubbleId: input.bubbleId
+      }
+    });
+  }
+
+  if (
+    input.expectedStateFingerprint !== undefined &&
+    input.stateFingerprint !== input.expectedStateFingerprint
+  ) {
+    throw new MetaReviewError({
+      reasonCode: "META_REVIEW_STATE_INVALID",
+      message:
+        "meta-review submit rejected: canonical state fingerprint mismatch.",
+      context: {
+        source: "assert_meta_review_submit_stale_guard",
+        reason: "state_fingerprint_mismatch",
+        bubbleId: input.bubbleId
+      }
+    });
+  }
+}

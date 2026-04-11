@@ -17,7 +17,7 @@ import {
 } from "./metaReviewRuntimeParity.js";
 import {
   assertActiveMetaReviewExecutionContext,
-  assertMetaReviewExecutionWindowActive,
+  assertMetaReviewSubmitStaleGuard,
   assertMetaReviewSubmitterAuthority
 } from "./metaReviewCommandSubmitAuthority.js";
 import {
@@ -251,6 +251,26 @@ export async function prepareMetaReviewSubmitContext(input: {
     state: loadedState.state,
     ...(input.dependencies.now !== undefined ? { now: input.now } : {})
   });
+  const executionContext = assertActiveMetaReviewExecutionContext(
+    loadedState.state
+  );
+  assertMetaReviewSubmitStaleGuard({
+    bubbleId: resolved.bubbleId,
+    executionContext,
+    stateFingerprint: loadedState.fingerprint,
+    ...(input.submitInput.expectedHandoffId !== undefined
+      ? { expectedHandoffId: input.submitInput.expectedHandoffId }
+      : {}),
+    ...(input.submitInput.expectedRole !== undefined
+      ? { expectedRole: input.submitInput.expectedRole }
+      : {}),
+    ...(input.submitInput.expectedRound !== undefined
+      ? { expectedRound: input.submitInput.expectedRound }
+      : {}),
+    ...(input.submitInput.expectedStateFingerprint !== undefined
+      ? { expectedStateFingerprint: input.submitInput.expectedStateFingerprint }
+      : {})
+  });
 
   const validated = resolveValidatedSubmitShape({
     submitInput: input.submitInput,
@@ -279,16 +299,6 @@ export async function prepareMetaReviewSubmitContext(input: {
     summary: validated.summary,
     reportJson: canonicalReportJson
   });
-  const executionContext = assertActiveMetaReviewExecutionContext(
-    loadedState.state
-  );
-  if (input.dependencies.now !== undefined) {
-    assertMetaReviewExecutionWindowActive({
-      bubbleId: resolved.bubbleId,
-      executionContext,
-      now: input.now
-    });
-  }
 
   return {
     resolved,

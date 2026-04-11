@@ -58,6 +58,7 @@ export interface PersistHumanGateRouteInput {
   parityMetadata?: FindingsParityMetadata | null;
   findings?: MetaReviewGateAdvisoryFinding[];
   fallbackRecommendation?: MetaReviewRecommendation;
+  fallbackReworkTargetMessage?: string | null;
   targetState?: "READY_FOR_HUMAN_APPROVAL";
   stickyHumanGate?: boolean;
   rollbackStateOnAppendFailure?: BubbleStateSnapshot;
@@ -98,7 +99,8 @@ export async function persistHumanGateRoute(
     ...(input.fallbackRecommendation !== undefined
       ? {
           fallbackRecommendation: input.fallbackRecommendation,
-          fallbackSummary: input.summary
+          fallbackSummary: input.summary,
+          fallbackReworkTargetMessage: input.fallbackReworkTargetMessage
         }
       : {})
   });

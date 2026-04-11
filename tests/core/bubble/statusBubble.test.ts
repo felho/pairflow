@@ -203,11 +203,6 @@ describe("getBubbleStatus", () => {
         path: "execution_context",
         message:
           "RUNNING meta-review state requires canonical execution_context authority"
-      },
-      {
-        path: "meta_review.execution_context",
-        message:
-          "RUNNING meta-review state requires canonical meta_review.execution_context authority"
       }
     ]);
   });
