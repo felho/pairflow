@@ -4,11 +4,10 @@ artifact_id: task_actor_runtime_interface_meta_review_operator_read_surface_clos
 title: "Actor Runtime Interface Meta-Review Operator Read Surface Closure (Phase E)"
 status: superseded
 phase: phaseE
-superseded_reason: "The remaining bounded current-tree Phase E meta-review follow-up work was closed by the archived inconclusive human-gate and approve-advisory guidance tasks, while the unresolved residual direction now belongs to the separate recovery/reconcile draft rather than an immediate read-surface closure slice."
+superseded_reason: "The remaining bounded current-tree Phase E meta-review follow-up work was closed by the archived inconclusive human-gate and approve-advisory guidance tasks; the earlier recovery/reconcile direction was later removed from code and is no longer a planned follow-up."
 superseded_by:
   - plans/archive/tasks/actor-runtime-interface-meta-review-submit-inconclusive-human-gate-phaseE.md
   - plans/archive/tasks/actor-runtime-interface-meta-review-approve-advisory-guidance-hardening-phaseE.md
-  - plans/tasks/actor-runtime-interface-meta-review-recovery-reconcile-refactor-draft.md
 target_files:
   - src/core/bubble/metaReview.ts
   - src/v11/application/metaReview/metaReviewCliDispatcher.ts
@@ -36,7 +35,7 @@ owners:
 3. A ket current-tree meta-review follow-up task, amely a retained submit/prompt/gate seamsen meg legitim bounded implementation target volt, mar le van zarva es archiválva:
    - `plans/archive/tasks/actor-runtime-interface-meta-review-submit-inconclusive-human-gate-phaseE.md`
    - `plans/archive/tasks/actor-runtime-interface-meta-review-approve-advisory-guidance-hardening-phaseE.md`
-4. A `recover` iranya viszont tovabbra is csak draft szinten van rogzitve (`plans/tasks/actor-runtime-interface-meta-review-recovery-reconcile-refactor-draft.md`), es a plan direction-change checkpointje alapjan ezert a read-surface closure nem tekintheto automatikusan kovetkezo aktiv implementation targetnek.
+4. A korabban felmerult meta-review-specific `recover` / `reconcile` irany mar nincs a jelenlegi tree-ben es nem resze a tovabbi planned follow-upnak, ezert a read-surface closure sem tekintheto automatikusan kovetkezo aktiv implementation targetnek.
 5. Emiatt a task statusza `superseded`, es a jelen checkpointban mar nem promotion-, hanem lezart re-evaluation artifactkent kezelendo.
 
 ## Superseded Decision (2026-04-10)
@@ -46,13 +45,13 @@ owners:
 3. A current-tree meta-review follow-up scope erdemi reszet a ket archivalt task zarta le:
    - `actor-runtime-interface-meta-review-submit-inconclusive-human-gate-phaseE`
    - `actor-runtime-interface-meta-review-approve-advisory-guidance-hardening-phaseE`
-4. A megmarado nyitott irany mar nem read-surface closure taskkent, hanem a kulon `recover` / `reconcile` draft alatt ertelmezheto tovabb.
+4. Nincs tovabbi meta-review-specific recovery follow-up, amely ezt a taskot ujra aktiv implementation targette tenne.
 5. Ez a dokumentum ezentul historical traceability artifact; immediate implementation authorityja nincs.
 
 ## Executive Summary
 
 1. Ez a task a `plans/archive/tasks/actor-runtime-interface-meta-review-operator-projection-cleanup-phaseE.md` parent task megmaradt, meg nem zart read-surface szeletet kuloniti el bounded implementation taskkent.
-2. A `recover` snapshot-route replay closure mar lezart upstream scope; ebben a taskban a retained `status` es `last-report` projection-only semantics, a renderer freshness/parity boundary, valamint a retained `run` non-regression guard explicit lezárasa a cel.
+2. A mar lezart upstream scope utan ebben a taskban a retained `status` es `last-report` projection-only semantics, a renderer freshness/parity boundary, valamint a retained `run` non-regression guard explicit lezárasa volt a cel.
 3. A task csak akkor sikeres, ha a read surface se kodban, se CLI szovegben nem sugall canonical actor authorityt vagy current-round acceptance-t stale/historical projectionbol.
 4. `README.md` es `docs/pairflow-initial-design.md` csak akkor touched, ha bizonyithato user-visible operator semantics delta tortenik; ellenkezo esetben explicit `T9` docs-omission closure kell a primary artifact + completion artifact paron.
 5. Jelen checkpoint-olvasatban ez a task nem aktiv delivery slice, hanem superseded historical artifact; az implementation contract mar nem tekintheto aktivnak.

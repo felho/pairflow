@@ -14,12 +14,12 @@ owners:
 
 1. `src/core/**` is already gone from the checked-out tree, so the original closure dependency on residual core retirement is historical context rather than a current blocker.
 2. The docs-only Phase A-D deliverables referenced by this plan are already checked in.
-3. The remaining live scope is the still-open Phase E retained cleanup and any later actor-runtime implementation follow-up, not the production of the A-D planning artifacts themselves.
+3. The remaining live scope is the still-open generic actor-runtime implementation follow-up after the A-D planning artifacts, not the production of the A-D planning artifacts themselves.
 4. The narrow Phase E meta-review follow-up tasks that were active in the 2026-04-10 checkpoint discussion are now both completed and archived:
    - `plans/archive/tasks/actor-runtime-interface-meta-review-submit-inconclusive-human-gate-phaseE.md`
    - `plans/archive/tasks/actor-runtime-interface-meta-review-approve-advisory-guidance-hardening-phaseE.md`
-5. The public operator `pairflow bubble meta-review run` surface is already removed in the current tree; the retained operator subtree is `status | last-report | recover`.
-6. The `recover` direction is still only captured as a draft refactor artifact, so the next correct step is an explicit checkpoint re-evaluation, not automatic activation of another read-surface cleanup slice.
+5. The public operator `pairflow bubble meta-review run` surface is already removed in the current tree; the retained operator subtree is `status | last-report`.
+6. The earlier meta-review-specific `recover` / `reconcile` direction is no longer a live follow-up under this plan; that hole was removed from the code, and no recovery-specific implementation slice remains active here.
 7. As of this checkpoint, `plans/tasks/actor-runtime-interface-meta-review-operator-read-surface-closure-phaseE.md` should be treated as a superseded historical artifact, not the default next active implementation target.
 
 ## Objective
@@ -37,26 +37,26 @@ Ez a plan discovery- es preparation-jellegu. Nem celja a Phase 4 vagy Phase 5 le
 1. A retained meta-review operator cleanup Phase E lane-en a `bubble meta-review run|status|last-report|recover` subtree eredetileg egyben kezelt cleanup-target volt.
 2. A 2026-04-05-i review/implementation tapasztalat alapjan ez a framing nem bizonyult eleg stabilnak: a lane tobb, egymast erosito P1 regresszioba futott, es a valos blast radius nagyobbnak latszik egy egyszeru retained operator cleanupnal.
 3. Ideiglenes iranyvaltas:
-   - a `status` es `last-report` retained olvaso/operator surface most tudatosan befagyasztva marad, es nem nyitunk rajta uj implementacios szeletet addig, amig a `run` removal es a `recover` refaktor le nem zarul,
+   - a `status` es `last-report` retained olvaso/operator surface most tudatosan befagyasztva marad, es nem nyitunk rajta uj implementacios szeletet addig, amig a `run` removal le nem zarul,
    - a public `meta-review run` kivezetese kulon bounded taskkent kezelendo,
-   - a `recover` iranyat kulon recovery/reconcile refaktor draftban kell ujragondolni.
+   - a meta-review-specific `recover` irany kesobbi ujraertekelest igenyelt.
 4. A jelenlegi munkahipotézis szerint ez jobban illeszkedik a plan eredeti celjahoz is, mert csokkenti a retained role-specifikus operator surface-et, mikozben kozelebb visz egy kozosebb actor emit / reconcile kernelhez.
-5. A `run` removal es a `recover` refaktor utan explicit decision checkpoint kovetkezik: tudatosan ujra kell nezni, maradt-e barmilyen indokolt tovabbi munka a `status` / `last-report` korul, vagy azok valtozatlanul retained maradhatnak.
+5. A `run` removal utan explicit decision checkpoint kovetkezik: tudatosan ujra kell nezni, maradt-e barmilyen indokolt tovabbi munka a `status` / `last-report` korul, vagy azok valtozatlanul retained maradhatnak.
 6. Ennek megfeleloen a korabbi egyben kezelt Phase E operator cleanup task historical parent artifactkent marad meg, de nem tekintendo a jelenlegi legjobb aktiv implementation targetnek.
 7. Ettol fuggetlenul egy szukebb, jelen tree-re ujragroundolt Phase E follow-up legitim marad: az approve-advisory guidance/parity hardening a live `v11` submit/prompt/diagnostics seamsen.
 
 ## Checkpoint Status (2026-04-10)
 
-1. A `run` removal precondition mar teljesult a jelenlegi tree-ben: a retained public operator help mar csak `status | last-report | recover` commandokat mutat, es a removed `run` pathra explicit fail-closed guidance van.
+1. A `run` removal precondition mar teljesult a jelenlegi tree-ben: a retained public operator help mar csak `status | last-report` commandokat mutat, es a removed `run` pathra explicit fail-closed guidance van.
 2. A ket szuk, current-tree Phase E meta-review follow-up task, amelyet ez a plan a direction change utan legitim bounded targetkent kezelt, le van zárva es archiválva:
    - `actor-runtime-interface-meta-review-submit-inconclusive-human-gate-phaseE`
    - `actor-runtime-interface-meta-review-approve-advisory-guidance-hardening-phaseE`
-3. A `recover` refaktor viszont tovabbra sem implementalt Phase E task, hanem draft iranyrogzites; a jelenlegi rendszerben a recovery mogotti reconcile/route-application kepesseg meg mindig reszben shared engine szerepet tolt be.
+3. A korabban felmerult meta-review-specific `recover` / `reconcile` irany a jelenlegi tree-ben mar nem aktiv implementacios track: a code path el lett tavolitva, es a plan alatt nem marad hozza kulon follow-up task.
 4. Emiatt a direction-change checkpoint eredmenye most az, hogy az `operator-read-surface-closure` task superseded allapotba keruljon, es ne legyen automatikusan aktiv implementation target.
 5. A kovetkezo helyes docs/decision lepes:
-   - explicitten ujraertekelni, maradt-e konkret user-visible vagy contract-level residual delta a retained `status` / `last-report` feluleten, amely a `recover` refaktor lezárása nelkul is vedheto,
-   - vagy kimondani, hogy a task megmarad draft/superseded candidate allapotban addig, amig a `recover` iranybol nem lesz implementalhato, canonical follow-up.
-6. A jelen checkpoint alapjan a task superseded allapotba kerul: a retained read-surface closure nem marad aktiv Phase E task, es a tovabbi nyitott irany a kulon `recover` / `reconcile` draft alatt ertelmezendo.
+   - explicitten kimondani, hogy a retained `status` / `last-report` felulet jelen allapotban read-only operator projectionkent maradhat,
+   - es rogziteni, hogy nincs tovabbi meta-review recovery-specifikus follow-up ezen a planon belul.
+6. A jelen checkpoint alapjan a task superseded allapotba kerul: a retained read-surface closure nem marad aktiv Phase E task, es a tovabbi nyitott iranyok mar nem meta-review recovery lane-kent ertelmezendok.
 
 ## Decision Baseline
 
