@@ -1,6 +1,5 @@
 import type {
   MetaReviewArtifactReadPort,
-  MetaReviewArtifactWritePort
 } from "../metaReview/metaReviewArtifactIo.js";
 import type { MetaReviewGateTmuxRunner } from "./metaReviewGateTmuxCapabilities.js";
 import type { ResolveBubbleByIdPort } from "../ports/bubbleLookup.js";
@@ -19,9 +18,6 @@ import type {
   MetaReviewResult
 } from "../metaReview/metaReviewTypes.js";
 import type { ProtocolEnvelope } from "../../../types/protocol.js";
-import type {
-  FinishIncompleteActorResultPort
-} from "../reconcile/finishIncompleteActorResultPort.js";
 
 export type MetaReviewGateRoute =
   | "meta_review_running"
@@ -146,14 +142,7 @@ export interface RecoverMetaReviewGateFromSnapshotInput {
 export interface RecoverMetaReviewGateFromSnapshotDependencies {
   resolveBubbleById?: ResolveBubbleByIdPort;
   readStateSnapshot?: ReadStateSnapshotPort;
-  writeStateSnapshot?: WriteStateSnapshotPort;
-  appendProtocolEnvelope?: AppendProtocolEnvelopePort;
-  readTranscriptEnvelopes?: ReadTranscriptEnvelopesPort;
-  setMetaReviewerPaneBinding?: SetMetaReviewerPaneBindingPort;
   readFile?: MetaReviewArtifactReadPort;
-  writeFile?: MetaReviewArtifactWritePort;
-  sleepForRetryMs?: (delayMs: number) => Promise<void>;
-  finishIncompleteActorResult?: FinishIncompleteActorResultPort;
 }
 
 export interface MetaReviewGateResult {

@@ -27,9 +27,14 @@ export async function submitMetaReviewResult(
 ): Promise<MetaReviewSubmitResult> {
   const readState = dependencies.readStateSnapshot ?? readStateSnapshot;
   const writeState = dependencies.writeStateSnapshot ?? writeStateSnapshot;
+  const resolvedDependencies: MetaReviewCommandDependencies = {
+    ...dependencies,
+    readStateSnapshot: readState,
+    writeStateSnapshot: writeState
+  };
   const prepared = await prepareMetaReviewSubmitContext({
     submitInput: input,
-    dependencies,
+    dependencies: resolvedDependencies,
     now: dependencies.now ?? new Date()
   });
 
@@ -85,14 +90,16 @@ export async function submitMetaReviewResult(
     resolved: prepared.resolved,
     repoPath: prepared.resolved.repoPath,
     now: prepared.now,
+    refs: input.refs ?? [],
     canonicalRunResult,
-    dependencies
+    dependencies: resolvedDependencies
   });
 
   return finalizeMetaReviewSubmitResult({
     resolved: prepared.resolved,
     routed,
-    dependencies,
+    dependencies: resolvedDependencies,
+    reportRound: input.round,
     canonicalRunResult,
     canonicalReportJson: prepared.canonicalReportJson
   });

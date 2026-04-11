@@ -4,7 +4,6 @@ import type {
   ProtocolEnvelope
 } from "../../../types/protocol.js";
 import type { MetaReviewGateRoute } from "../metaReviewGate/metaReviewGateTypes.js";
-import type { recoverMetaReviewGateFromSnapshot } from "../metaReviewGate/metaReviewGateRecovery.js";
 import type {
   MetaReviewDeliveryEmitter,
   MetaReviewDeliveryMessageRefBuilder
@@ -61,7 +60,6 @@ export interface MetaReviewCommandDependencies {
   writeFile?: MetaReviewArtifactWritePort;
   now?: Date;
   randomUUID?: () => string;
-  recoverMetaReviewGateFromSnapshot?: typeof recoverMetaReviewGateFromSnapshot;
 }
 
 export type MetaReviewSubmitResult = Omit<

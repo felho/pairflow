@@ -80,8 +80,6 @@ export interface BuildConvergedFlowDependenciesInput {
     ResolveReviewerTestExecutionDirectivePort | undefined;
   applyMetaReviewGateOnConvergence?:
     RunConvergedFlowDependencies["applyMetaReviewGateOnConvergence"];
-  recoverMetaReviewGateFromSnapshot?:
-    RunConvergedFlowDependencies["recoverMetaReviewGateFromSnapshot"];
   emitTmuxDeliveryNotification?:
     RunConvergedFlowDependencies["emitTmuxDeliveryNotification"];
   emitBubbleNotification?:
@@ -125,12 +123,6 @@ export function buildConvergedFlowDependencies(
             input.applyMetaReviewGateOnConvergence
         }
       : {}),
-    ...(input.recoverMetaReviewGateFromSnapshot !== undefined
-      ? {
-          recoverMetaReviewGateFromSnapshot:
-            input.recoverMetaReviewGateFromSnapshot
-        }
-      : {}),
     ...(input.emitTmuxDeliveryNotification !== undefined
       ? { emitTmuxDeliveryNotification: input.emitTmuxDeliveryNotification }
       : {}),
@@ -143,8 +135,6 @@ export function buildConvergedFlowDependencies(
 export interface BuildDefaultConvergedFlowDependenciesInput {
   applyMetaReviewGateOnConvergence?:
     RunConvergedFlowDependencies["applyMetaReviewGateOnConvergence"];
-  recoverMetaReviewGateFromSnapshot?:
-    RunConvergedFlowDependencies["recoverMetaReviewGateFromSnapshot"];
   emitTmuxDeliveryNotification?:
     RunConvergedFlowDependencies["emitTmuxDeliveryNotification"];
   emitBubbleNotification?:
@@ -166,7 +156,6 @@ export function buildDefaultConvergedFlowDependencies(
     resolveReviewerTestExecutionDirective:
       input.resolveReviewerTestExecutionDirective,
     applyMetaReviewGateOnConvergence: input.applyMetaReviewGateOnConvergence,
-    recoverMetaReviewGateFromSnapshot: input.recoverMetaReviewGateFromSnapshot,
     emitTmuxDeliveryNotification: input.emitTmuxDeliveryNotification,
     emitBubbleNotification: input.emitBubbleNotification,
     ...(input.readTranscriptEnvelopes !== undefined

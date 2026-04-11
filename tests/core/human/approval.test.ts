@@ -20,12 +20,12 @@ import {
 } from "../../../src/v11/application/approval/emitApprovalV11.js";
 import {
   getMetaReviewLastReportV11 as getMetaReviewLastReport,
-  getMetaReviewStatusV11 as getMetaReviewStatus
+  getMetaReviewStatusV11 as getMetaReviewStatus,
+  submitMetaReviewResultV11 as submitMetaReviewResult
 } from "../../../src/v11/application/metaReview/emitMetaReviewV11.js";
 import {
   applyMetaReviewGateOnConvergenceV11 as applyMetaReviewGateOnConvergence,
-  MetaReviewGateErrorV11 as MetaReviewGateError,
-  recoverMetaReviewGateFromSnapshotV11 as recoverMetaReviewGateFromSnapshot
+  MetaReviewGateErrorV11 as MetaReviewGateError
 } from "../../../src/v11/application/metaReviewGate/emitMetaReviewGateV11.js";
 import { createBubble } from "../../../src/v11/application/create/createBubble.js";
 import {
@@ -102,46 +102,24 @@ async function setupReadyForHumanApprovalBubble(repoPath: string, bubbleId: stri
       })
   });
 
-  const loaded = await readStateSnapshot(bubble.paths.statePath);
-  const updatedAt = "2026-02-22T12:04:00.000Z";
-  await writeStateSnapshot(
-    bubble.paths.statePath,
+  await submitMetaReviewResult(
     {
-      ...loaded.state,
-      meta_review: {
-        ...(loaded.state.meta_review ?? {
-          last_autonomous_run_id: null,
-          last_autonomous_status: null,
-          last_autonomous_recommendation: null,
-          last_autonomous_summary: null,
-          last_autonomous_report_ref: null,
-          last_autonomous_rework_target_message: null,
-          last_autonomous_updated_at: null,
-          auto_rework_count: 0,
-          auto_rework_limit: 5,
-          sticky_human_gate: false
-        }),
-        last_autonomous_run_id: null,
-        last_autonomous_status: "inconclusive",
-        last_autonomous_recommendation: "inconclusive",
-        last_autonomous_summary: "Autonomous review inconclusive; route to human gate.",
-        last_autonomous_report_ref: "artifacts/meta-review-last.json",
-        last_autonomous_rework_target_message: null,
-        last_autonomous_updated_at: updatedAt
+      bubbleId: bubble.bubbleId,
+      repoPath,
+      round: 2,
+      recommendation: "inconclusive",
+      summary: "Autonomous review inconclusive; route to human gate.",
+      report_json: {
+        findings_claim_state: "unknown",
+        findings_claim_source: "meta_review_artifact",
+        findings_count: 0
       }
     },
     {
-      expectedFingerprint: loaded.fingerprint,
-      expectedState: "RUNNING"
+      now: new Date("2026-02-22T12:04:01.000Z"),
+      readRuntimeSessionsRegistry: async () => ({})
     }
   );
-
-  await recoverMetaReviewGateFromSnapshot({
-    bubbleId: bubble.bubbleId,
-    repoPath,
-    summary: "Ready for approval",
-    now: new Date("2026-02-22T12:04:01.000Z")
-  });
 
   const recoveredState = await readStateSnapshot(bubble.paths.statePath);
   const transcript = await readTranscriptEnvelopes(bubble.paths.transcriptPath);
@@ -1528,45 +1506,36 @@ describe("approval decisions", () => {
     expect(gate.route).toBe("meta_review_running");
 
     const gatedState = await readStateSnapshot(bubble.paths.statePath);
-    await writeStateSnapshot(
-      bubble.paths.statePath,
+    const submitted = await submitMetaReviewResult(
       {
-        ...gatedState.state,
-        meta_review: {
-          ...(gatedState.state.meta_review ?? {
-            last_autonomous_run_id: null,
-            last_autonomous_status: null,
-            last_autonomous_recommendation: null,
-            last_autonomous_summary: null,
-            last_autonomous_report_ref: null,
-            last_autonomous_rework_target_message: null,
-            last_autonomous_updated_at: null,
-            auto_rework_count: 0,
-            auto_rework_limit: 5,
-            sticky_human_gate: false
-          }),
-          last_autonomous_run_id: "run_sticky_parity_override_01",
-          last_autonomous_status: "success",
-          last_autonomous_recommendation: "approve",
-          last_autonomous_summary: "Fresh current-round meta-review preserved parity metadata.",
-          last_autonomous_report_ref: "artifacts/meta-review-last.json",
-          last_autonomous_updated_at: "2026-02-22T12:06:01.500Z"
+        bubbleId: bubble.bubbleId,
+        repoPath,
+        round: gatedState.state.round,
+        recommendation: "approve",
+        summary: "Fresh current-round meta-review preserved parity metadata.",
+        report_json: {
+          findings_claim_state: "open_findings",
+          findings_claim_source: "meta_review_artifact",
+          findings_count: 2,
+          findings_claimed_open_total: 2,
+          findings_artifact_open_total: 1,
+          findings_blocking_open_total: 0,
+          findings_advisory_open_total: 2,
+          findings_artifact_status: "available",
+          findings_digest_sha256:
+            "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          meta_review_run_id: "run_sticky_parity_override_01",
+          findings_parity_status: "guard_failed"
         }
       },
       {
-        expectedFingerprint: gatedState.fingerprint,
-        expectedState: "RUNNING"
+        randomUUID: () => "run_sticky_parity_override_01",
+        now: new Date("2026-02-22T12:06:01.600Z"),
+        readRuntimeSessionsRegistry: async () => ({})
       }
     );
-
-    const recovered = await recoverMetaReviewGateFromSnapshot({
-      bubbleId: bubble.bubbleId,
-      repoPath,
-      summary: "Converged for sticky bypass parity override.",
-      now: new Date("2026-02-22T12:06:01.600Z")
-    });
-    expect(recovered.route).toBe("human_gate_dispatch_failed");
-    expect(recovered.gateEnvelope.payload.metadata).toMatchObject({
+    expect(submitted.gate_route).toBe("human_gate_dispatch_failed");
+    expect(submitted.report_json).toMatchObject({
       findings_parity_status: "guard_failed",
       meta_review_run_id: "run_sticky_parity_override_01"
     });

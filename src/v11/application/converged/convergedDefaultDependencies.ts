@@ -1,6 +1,5 @@
 import {
-  applyMetaReviewGateOnConvergenceV11 as applyMetaReviewGateOnConvergence,
-  recoverMetaReviewGateFromSnapshotV11 as recoverMetaReviewGateFromSnapshot
+  applyMetaReviewGateOnConvergenceV11 as applyMetaReviewGateOnConvergence
 } from "../metaReviewGate/emitMetaReviewGateV11.js";
 import { convergedDependencyDefaults } from "./convergedDependencyDefaults.js";
 import { emitBubbleLifecycleEventBestEffort } from "../../shared/metrics/bubbleEvents.js";
@@ -22,8 +21,6 @@ export interface ResolvedConvergedExecutionDependencies {
   appendProtocolEnvelope: AppendProtocolEnvelopePort;
   applyMetaReviewGateOnConvergence:
     NonNullable<RunConvergedFlowDependencies["applyMetaReviewGateOnConvergence"]>;
-  recoverMetaReviewGateFromSnapshot:
-    NonNullable<RunConvergedFlowDependencies["recoverMetaReviewGateFromSnapshot"]>;
   emitTmuxDeliveryNotification: EmitTmuxDeliveryNotificationPort;
   emitBubbleNotification: EmitBubbleNotificationPort;
   resolveDeliveryMessageRef: ResolveDeliveryMessageRefPort;
@@ -33,8 +30,6 @@ export interface BuildDefaultConvergedExecutionDependenciesInput {
   appendProtocolEnvelope?: AppendProtocolEnvelopePort | undefined;
   applyMetaReviewGateOnConvergence?:
     RunConvergedFlowDependencies["applyMetaReviewGateOnConvergence"];
-  recoverMetaReviewGateFromSnapshot?:
-    RunConvergedFlowDependencies["recoverMetaReviewGateFromSnapshot"];
   emitTmuxDeliveryNotification?:
     RunConvergedFlowDependencies["emitTmuxDeliveryNotification"];
   emitBubbleNotification?:
@@ -52,9 +47,6 @@ export function buildDefaultConvergedExecutionDependencies(
     applyMetaReviewGateOnConvergence:
       input.applyMetaReviewGateOnConvergence ??
       applyMetaReviewGateOnConvergence,
-    recoverMetaReviewGateFromSnapshot:
-      input.recoverMetaReviewGateFromSnapshot ??
-      recoverMetaReviewGateFromSnapshot,
     emitTmuxDeliveryNotification:
       input.emitTmuxDeliveryNotification ??
       convergedDependencyDefaults.execution.emitTmuxDeliveryNotification,

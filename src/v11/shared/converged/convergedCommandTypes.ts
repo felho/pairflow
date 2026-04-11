@@ -8,8 +8,7 @@ import type {
 } from "../delivery/tmuxDeliveryContract.js";
 import type { ProtocolEnvelope } from "../../../types/protocol.js";
 import type {
-  applyMetaReviewGateOnConvergence,
-  recoverMetaReviewGateFromSnapshot
+  applyMetaReviewGateOnConvergence
 } from "../metaReviewGate/metaReviewGateCommandApi.js";
 import type { MetaReviewGateRoute } from "../metaReviewGate/metaReviewGateCommandContract.js";
 import type {
@@ -53,7 +52,6 @@ export interface EmitConvergedDependencies {
   ) => Promise<EmitTmuxDeliveryNotificationResult>;
   emitBubbleNotification?: EmitBubbleNotification;
   applyMetaReviewGateOnConvergence?: typeof applyMetaReviewGateOnConvergence;
-  recoverMetaReviewGateFromSnapshot?: typeof recoverMetaReviewGateFromSnapshot;
   resolveReviewerTestExecutionDirective?:
     ResolveReviewerTestExecutionDirectivePort;
 }

@@ -2,9 +2,6 @@ import {
   computeWatchdogStatus,
   type WatchdogStatus
 } from "../../shared/watchdog/watchdogStatus.js";
-import {
-  recoverMetaReviewGateFromSnapshotV11 as recoverMetaReviewGateFromSnapshot
-} from "../metaReviewGate/emitMetaReviewGateV11.js";
 import { maybeApplyPendingReworkIntent } from "./watchdogPendingReworkIntent.js";
 import { sampleWatchdogPaneActivity } from "./watchdogPaneActivitySampler.js";
 import type { AppendWatchdogTracePort } from "../../shared/ports/watchdogTrace.js";
@@ -51,8 +48,6 @@ export async function runBubbleWatchdog(
     watchdogCommandDefaults.appendProtocolEnvelope;
   const writeState =
     dependencies.writeStateSnapshot ?? watchdogCommandDefaults.writeStateSnapshot;
-  const recoverMetaReviewRoute =
-    dependencies.recoverMetaReviewGateFromSnapshot ?? recoverMetaReviewGateFromSnapshot;
   const loadedState = await readState(resolved.bubblePaths.statePath);
   const state = loadedState.state;
   const emitDelivery =
@@ -91,7 +86,6 @@ export async function runBubbleWatchdog(
     readState,
     appendEnvelope,
     writeState,
-    recoverMetaReviewRoute,
     loadedState,
     state,
     emitDelivery,

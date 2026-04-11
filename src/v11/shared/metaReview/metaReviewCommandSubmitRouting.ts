@@ -2,6 +2,7 @@ import type { ResolveBubbleByIdPort } from "../ports/bubbleLookup.js";
 import {
   executeImplementerHandoffDelivery
 } from "../delivery/implementerHandoffDelivery.js";
+import { appendProtocolEnvelope } from "../transcript/transcriptDependencyDefaults.js";
 import { MetaReviewError } from "./metaReviewError.js";
 import {
   toMetaReviewError
@@ -12,53 +13,51 @@ import type {
   MetaReviewSubmitResult
 } from "./metaReviewCommandContract.js";
 import type {
-  RecoverMetaReviewGateFromSnapshotDependencies
+  MetaReviewGateResult
 } from "../metaReviewGate/metaReviewGateCommandApi.js";
-import type {
-  recoverMetaReviewGateFromSnapshot
-} from "../metaReviewGate/metaReviewGateRecovery.js";
-
-type RecoverMetaReviewGateFromSnapshotFn = typeof recoverMetaReviewGateFromSnapshot;
+import { finalizeCurrentRunMetaReviewGate } from "../metaReviewGate/metaReviewGateCurrentRunFinalization.js";
 type ResolvedBubble = Awaited<ReturnType<ResolveBubbleByIdPort>>;
 
-async function resolveMetaReviewGateRecoveryExecutor(
-  dependencies: MetaReviewCommandDependencies
-): Promise<RecoverMetaReviewGateFromSnapshotFn> {
-  if (dependencies.recoverMetaReviewGateFromSnapshot !== undefined) {
-    return dependencies.recoverMetaReviewGateFromSnapshot;
+async function syncFinalizedSubmitReportArtifact(input: {
+  resolved: ResolvedBubble;
+  dependencies: MetaReviewCommandDependencies;
+  reportRound: number;
+  finalizedRunResult: MetaReviewResult;
+  reportJson: Record<string, unknown>;
+}): Promise<void> {
+  if (input.dependencies.writeFile === undefined) {
+    return;
   }
-  const module = await import("../metaReviewGate/metaReviewGateRecovery.js");
-  return module.recoverMetaReviewGateFromSnapshot;
-}
-
-function buildMetaReviewGateRecoveryDependencies(
-  dependencies: MetaReviewCommandDependencies
-): RecoverMetaReviewGateFromSnapshotDependencies {
-  const resolved: RecoverMetaReviewGateFromSnapshotDependencies = {};
-  if (dependencies.resolveBubbleById !== undefined) {
-    resolved.resolveBubbleById = dependencies.resolveBubbleById;
+  const payload = {
+    bubble_id: input.resolved.bubbleId,
+    ...(input.finalizedRunResult.run_id !== undefined
+      ? { run_id: input.finalizedRunResult.run_id }
+      : {}),
+    round: input.reportRound,
+    generated_at: input.finalizedRunResult.updated_at,
+    status: input.finalizedRunResult.status,
+    recommendation: input.finalizedRunResult.recommendation,
+    summary: input.finalizedRunResult.summary,
+    report_ref: input.finalizedRunResult.report_ref,
+    report_json_ref: input.finalizedRunResult.report_ref,
+    rework_target_message: input.finalizedRunResult.rework_target_message,
+    warnings: input.finalizedRunResult.warnings,
+    report_json: input.reportJson
+  };
+  try {
+    await input.dependencies.writeFile(
+      input.resolved.bubblePaths.metaReviewLastJsonArtifactPath,
+      `${JSON.stringify(payload, null, 2)}\n`,
+      "utf8"
+    );
+  } catch {
+    // Canonical artifact was already written earlier; keep routing outcome authoritative.
   }
-  if (dependencies.readStateSnapshot !== undefined) {
-    resolved.readStateSnapshot = dependencies.readStateSnapshot;
-  }
-  if (dependencies.writeStateSnapshot !== undefined) {
-    resolved.writeStateSnapshot = dependencies.writeStateSnapshot;
-  }
-  if (dependencies.appendProtocolEnvelope !== undefined) {
-    resolved.appendProtocolEnvelope = dependencies.appendProtocolEnvelope;
-  }
-  if (dependencies.readFile !== undefined) {
-    resolved.readFile = dependencies.readFile;
-  }
-  if (dependencies.writeFile !== undefined) {
-    resolved.writeFile = dependencies.writeFile;
-  }
-  return resolved;
 }
 
 async function emitSubmitAutoReworkDelivery(input: {
   resolved: ResolvedBubble;
-  routed: Awaited<ReturnType<RecoverMetaReviewGateFromSnapshotFn>>;
+  routed: MetaReviewGateResult;
   dependencies: MetaReviewCommandDependencies;
 }): Promise<void> {
   if (input.routed.route !== "auto_rework") {
@@ -102,24 +101,45 @@ export async function recoverMetaReviewSubmitRoute(input: {
   resolved: ResolvedBubble;
   repoPath: string;
   now: Date;
+  refs: string[];
   canonicalRunResult: MetaReviewResult;
   dependencies: MetaReviewCommandDependencies;
-}): Promise<Awaited<ReturnType<RecoverMetaReviewGateFromSnapshotFn>>> {
+}): Promise<MetaReviewGateResult> {
   try {
-    const recoverMetaReviewRoute =
-      await resolveMetaReviewGateRecoveryExecutor(input.dependencies);
-    return await recoverMetaReviewRoute(
-      {
-        bubbleId: input.resolved.bubbleId,
-        repoPath: input.repoPath,
-        cwd: input.resolved.bubblePaths.worktreePath,
-        now: input.now,
-        summary:
-          "Meta-review submit completed; applying gate route from canonical snapshot.",
-        runResult: input.canonicalRunResult
-      },
-      buildMetaReviewGateRecoveryDependencies(input.dependencies)
+    if (input.dependencies.readStateSnapshot === undefined) {
+      throw new MetaReviewError(
+        "META_REVIEW_GATE_RUN_FAILED",
+        "meta-review submit could not reload canonical state before gate finalization."
+      );
+    }
+    if (input.dependencies.writeStateSnapshot === undefined) {
+      throw new MetaReviewError(
+        "META_REVIEW_GATE_RUN_FAILED",
+        "meta-review submit could not persist gate finalization state."
+      );
+    }
+    if (input.dependencies.readFile === undefined) {
+      throw new MetaReviewError(
+        "META_REVIEW_GATE_RUN_FAILED",
+        "meta-review submit artifact read capability is unavailable for gate finalization."
+      );
+    }
+    const loaded = await input.dependencies.readStateSnapshot(
+      input.resolved.bubblePaths.statePath
     );
+    return await finalizeCurrentRunMetaReviewGate({
+      resolved: input.resolved,
+      loaded,
+      now: input.now,
+      refs: input.refs,
+      summary:
+        "Meta-review submit completed; finalizing gate route from canonical current-run result.",
+      runResult: input.canonicalRunResult,
+      readFileFn: input.dependencies.readFile,
+      appendEnvelope:
+        input.dependencies.appendProtocolEnvelope ?? appendProtocolEnvelope,
+      writeState: input.dependencies.writeStateSnapshot
+    });
   } catch (error) {
     throw toMetaReviewError(error);
   }
@@ -127,8 +147,9 @@ export async function recoverMetaReviewSubmitRoute(input: {
 
 export async function finalizeMetaReviewSubmitResult(input: {
   resolved: ResolvedBubble;
-  routed: Awaited<ReturnType<RecoverMetaReviewGateFromSnapshotFn>>;
+  routed: MetaReviewGateResult;
   dependencies: MetaReviewCommandDependencies;
+  reportRound: number;
   canonicalRunResult: MetaReviewResult;
   canonicalReportJson: Record<string, unknown>;
 }): Promise<MetaReviewSubmitResult> {
@@ -139,6 +160,14 @@ export async function finalizeMetaReviewSubmitResult(input: {
   });
 
   const finalizedRunResult = input.routed.metaReviewRun ?? input.canonicalRunResult;
+  const finalizedReportJson = finalizedRunResult.report_json ?? input.canonicalReportJson;
+  await syncFinalizedSubmitReportArtifact({
+    resolved: input.resolved,
+    dependencies: input.dependencies,
+    reportRound: input.reportRound,
+    finalizedRunResult,
+    reportJson: finalizedReportJson
+  });
   return {
     bubbleId: input.resolved.bubbleId,
     status: finalizedRunResult.status,
@@ -149,7 +178,7 @@ export async function finalizeMetaReviewSubmitResult(input: {
     updated_at: finalizedRunResult.updated_at,
     lifecycle_state: input.routed.state.state,
     warnings: finalizedRunResult.warnings,
-    report_json: finalizedRunResult.report_json ?? input.canonicalReportJson,
+    report_json: finalizedReportJson,
     gate_route: input.routed.route,
     gate_sequence: input.routed.gateSequence,
     gate_envelope_type: input.routed.gateEnvelope.type,

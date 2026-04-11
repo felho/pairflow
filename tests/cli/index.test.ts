@@ -680,7 +680,7 @@ describe("runCli", () => {
     ]);
   });
 
-  it("renders meta-review recover as JSON through runCli", async () => {
+  it("renders meta-review recover failure through runCli", async () => {
     const repoPath = await mkdtemp(join(tmpdir(), "pairflow-cli-meta-review-json-recover-"));
     tempDirs.push(repoPath);
     await initGitRepository(repoPath);
@@ -778,18 +778,12 @@ describe("runCli", () => {
       "--json"
     ]);
 
-    expect(exitCode).toBe(0);
+    expect(exitCode).toBe(1);
     const stdoutText = stdoutSpy.mock.calls.map((call) => String(call[0])).join("");
-    const parsed = JSON.parse(stdoutText) as {
-      bubbleId: string;
-      route: string;
-      gateEnvelope: { type: string };
-      state: { state: string };
-    };
-    expect(parsed.bubbleId).toBe(bubble.bubbleId);
-    expect(parsed.route).toBe("human_gate_approve");
-    expect(parsed.gateEnvelope.type).toBe("APPROVAL_REQUEST");
-    expect(parsed.state.state).toBe("READY_FOR_HUMAN_APPROVAL");
+    const stderrText = stderrSpy.mock.calls.map((call) => String(call[0])).join("");
+    expect(stdoutText).toBe("");
+    expect(stderrText).toContain("reason_code=META_REVIEW_GATE_RUN_FAILED");
+    expect(stderrText).toContain("META_REVIEW_GATE_TRANSITION_INVALID");
   });
 
   it("prints registry-backed unknown command support list", async () => {

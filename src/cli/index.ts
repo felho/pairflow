@@ -70,7 +70,6 @@ import {
   getBubbleMetaReviewHelpText,
   parseBubbleMetaReviewCommandOptions,
   renderMetaReviewLastReportText,
-  renderMetaReviewRecoverText,
   renderMetaReviewSubmitText,
   renderMetaReviewStatusText,
   runBubbleMetaReviewCommand
@@ -722,10 +721,6 @@ async function handleBubbleMetaReviewCommand(args: string[]): Promise<number> {
         process.stdout.write(`${JSON.stringify(result.lastReport, null, 2)}\n`);
         return 0;
       }
-      if (result.command === "recover") {
-        process.stdout.write(`${JSON.stringify(result.recover, null, 2)}\n`);
-        return 0;
-      }
     }
 
     if (result.command === "status") {
@@ -740,13 +735,6 @@ async function handleBubbleMetaReviewCommand(args: string[]): Promise<number> {
       );
       return 0;
     }
-    if (result.command === "recover") {
-      process.stdout.write(
-        `${renderMetaReviewRecoverText(result.recover)}\n`
-      );
-      return 0;
-    }
-
     process.stderr.write("Unexpected meta-review command result.\n");
     return 1;
   } catch (error) {

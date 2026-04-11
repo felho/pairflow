@@ -1,4 +1,4 @@
-import { readFile, writeFile } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
 
 import { buildAgentCommand } from "../../shared/command/agentCommand.js";
 import { resolveBubbleById } from "../../shared/bubbleLookup/bubbleLookupDefaults.js";
@@ -21,8 +21,7 @@ import {
   submitTmuxPaneInput
 } from "../../infrastructure/channel/tmux/tmuxInput.js";
 import type {
-  ApplyMetaReviewGateOnConvergenceDependencies,
-  RecoverMetaReviewGateFromSnapshotDependencies
+  ApplyMetaReviewGateOnConvergenceDependencies
 } from "../../shared/metaReviewGate/metaReviewGateCommandContract.js";
 import type {
   NotifyMetaReviewerSubmissionRequestDependencies,
@@ -61,8 +60,6 @@ type MetaReviewGateDependencyDefaults = {
     NonNullable<
       NotifyMetaReviewerSubmissionRequestDependencies["submitTmuxPaneInput"]
     >;
-  writeFile:
-    NonNullable<RecoverMetaReviewGateFromSnapshotDependencies["writeFile"]>;
   writeStateSnapshot:
     NonNullable<ApplyMetaReviewGateOnConvergenceDependencies["writeStateSnapshot"]>;
 };
@@ -80,6 +77,5 @@ export const metaReviewGateDependencyDefaults = {
   sendAndSubmitTmuxPaneMessage,
   setMetaReviewerPaneBinding,
   submitTmuxPaneInput,
-  writeFile,
   writeStateSnapshot
 } as const satisfies MetaReviewGateDependencyDefaults;

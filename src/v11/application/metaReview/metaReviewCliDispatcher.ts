@@ -48,15 +48,14 @@ async function runMetaReviewRecoverSnapshotReplayCommand(input: {
   options: Extract<BubbleMetaReviewExecutableCommandOptions, { command: "recover" }>;
   cwd: string;
 }): Promise<BubbleMetaReviewCommandResult> {
-  const recover = await recoverMetaReviewGateFromSnapshot({
+  await recoverMetaReviewGateFromSnapshot({
     bubbleId: input.options.id,
     ...toRepoPathOption(input.options.repo),
     cwd: input.cwd
   });
-  return {
-    command: "recover",
-    recover
-  };
+  throw new Error(
+    "META_REVIEW_RECOVER_UNEXPECTED_SUCCESS: retained recover is expected to fail closed."
+  );
 }
 
 export async function dispatchMetaReviewCommand(input: {

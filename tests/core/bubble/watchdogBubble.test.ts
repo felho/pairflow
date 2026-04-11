@@ -6,7 +6,6 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { createBubble } from "../../../src/v11/application/create/createBubble.js";
-import { MetaReviewGateErrorV11 as MetaReviewGateError } from "../../../src/v11/application/metaReviewGate/emitMetaReviewGateV11.js";
 import {
   emitAskHumanFromWorkspaceV11 as emitAskHumanFromWorkspace
 } from "../../../src/v11/application/askHuman/emitAskHumanV11.js";
@@ -475,7 +474,7 @@ describe("runBubbleWatchdog", () => {
     expect(result.state.state).toBe("CREATED");
   });
 
-  it("routes RUNNING meta-review authority timeout to READY_FOR_HUMAN_APPROVAL with APPROVAL_REQUEST", async () => {
+  it("routes RUNNING meta-review authority timeout to WAITING_HUMAN with HUMAN_QUESTION", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({
       repoPath,
@@ -497,16 +496,16 @@ describe("runBubbleWatchdog", () => {
 
     expect(result.escalated).toBe(true);
     expect(result.reason).toBe("escalated");
-    expect(result.state.state).toBe("READY_FOR_HUMAN_APPROVAL");
-    expect(result.envelope?.type).toBe("APPROVAL_REQUEST");
-    const summary = result.envelope?.payload.summary;
-    expect(typeof summary).toBe("string");
-    expect(summary).toContain("META_REVIEW_GATE_RUN_FAILED");
+    expect(result.state.state).toBe("WAITING_HUMAN");
+    expect(result.envelope?.type).toBe("HUMAN_QUESTION");
+    const question = result.envelope?.payload.question;
+    expect(typeof question).toBe("string");
+    expect(question).toContain("restart or re-run meta-review");
 
     const transcript = await readTranscriptEnvelopes(bubble.paths.transcriptPath);
-    expect(transcript.at(-1)?.type).toBe("APPROVAL_REQUEST");
+    expect(transcript.at(-1)?.type).toBe("HUMAN_QUESTION");
     const inbox = await readTranscriptEnvelopes(bubble.paths.inboxPath);
-    expect(inbox.at(-1)?.type).toBe("APPROVAL_REQUEST");
+    expect(inbox.at(-1)?.type).toBe("HUMAN_QUESTION");
   });
 
   it("keeps RUNNING meta-review authority before deadline even when runtime delivery failed", async () => {
@@ -559,22 +558,14 @@ describe("runBubbleWatchdog", () => {
       }
     );
 
-    let recoverCalled = false;
     const result = await runBubbleWatchdog(
       {
         bubbleId: bubble.bubbleId,
         cwd: repoPath,
         now: new Date("2026-02-22T12:04:45.000Z")
-      },
-      {
-        recoverMetaReviewGateFromSnapshot: async () => {
-          recoverCalled = true;
-          throw new Error("recover should not be called before deadline");
-        }
       }
     );
 
-    expect(recoverCalled).toBe(false);
     expect(result.escalated).toBe(false);
     expect(result.reason).toBe("not_expired");
     expect(result.state.state).toBe("RUNNING");
@@ -661,8 +652,8 @@ describe("runBubbleWatchdog", () => {
 
     expect(result.escalated).toBe(true);
     expect(result.reason).toBe("escalated");
-    expect(result.state.state).toBe("READY_FOR_HUMAN_APPROVAL");
-    expect(result.envelope?.type).toBe("APPROVAL_REQUEST");
+    expect(result.state.state).toBe("WAITING_HUMAN");
+    expect(result.envelope?.type).toBe("HUMAN_QUESTION");
   });
 
   it("routes timeout from the original execution-context deadline after restart/rebind activity", async () => {
@@ -724,11 +715,11 @@ describe("runBubbleWatchdog", () => {
 
     expect(result.escalated).toBe(true);
     expect(result.reason).toBe("escalated");
-    expect(result.state.state).toBe("READY_FOR_HUMAN_APPROVAL");
-    expect(result.envelope?.type).toBe("APPROVAL_REQUEST");
+    expect(result.state.state).toBe("WAITING_HUMAN");
+    expect(result.envelope?.type).toBe("HUMAN_QUESTION");
   });
 
-  it("deactivates meta-reviewer pane binding when watchdog routes meta-review timeout", async () => {
+  it("does not rely on pane-binding mutation when watchdog routes meta-review timeout", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({
       repoPath,
@@ -766,7 +757,7 @@ describe("runBubbleWatchdog", () => {
     const sessions = await readRuntimeSessionsRegistry(bubble.paths.sessionsPath, {
       allowMissing: false
     });
-    expect(sessions[bubble.bubbleId]?.metaReviewerPane?.active).toBe(false);
+    expect(sessions[bubble.bubbleId]?.metaReviewerPane?.active).toBe(true);
   });
 
   it("does not route canonical RUNNING meta-review submit snapshot before timeout expiry", async () => {
@@ -1102,9 +1093,9 @@ describe("runBubbleWatchdog", () => {
 
     expect(result.escalated).toBe(true);
     expect(result.reason).toBe("escalated");
-    expect(result.state.state).toBe("READY_FOR_HUMAN_APPROVAL");
-    expect(result.envelope?.type).toBe("APPROVAL_REQUEST");
-    expect(result.envelope?.payload.summary).toContain("META_REVIEW_GATE_RUN_FAILED");
+    expect(result.state.state).toBe("WAITING_HUMAN");
+    expect(result.envelope?.type).toBe("HUMAN_QUESTION");
+    expect(result.envelope?.payload.question).toContain("restart or re-run meta-review");
   });
 
   it("does not fail watchdog cycle when meta-review routing sees state conflict before timeout", async () => {
@@ -1153,21 +1144,11 @@ describe("runBubbleWatchdog", () => {
       }
     );
 
-    const result = await runBubbleWatchdog(
-      {
-        bubbleId: bubble.bubbleId,
-        cwd: repoPath,
-        now: new Date("2026-02-22T12:02:00.000Z")
-      },
-      {
-        recoverMetaReviewGateFromSnapshot: async () => {
-          throw new MetaReviewGateError(
-            "META_REVIEW_GATE_STATE_CONFLICT",
-            "simulated conflict before timeout"
-          );
-        }
-      }
-    );
+    const result = await runBubbleWatchdog({
+      bubbleId: bubble.bubbleId,
+      cwd: repoPath,
+      now: new Date("2026-02-22T12:02:00.000Z")
+    });
 
     expect(result.escalated).toBe(false);
     expect(result.reason).toBe("not_expired");
@@ -1196,36 +1177,15 @@ describe("runBubbleWatchdog", () => {
       activeSince: null,
       lastCommandAt: "2026-02-22T14:00:00.000Z"
     });
-    let readCount = 0;
+    expect(progressed.state).toBe("READY_FOR_HUMAN_APPROVAL");
+    const result = await runBubbleWatchdog({
+      bubbleId: bubble.bubbleId,
+      cwd: repoPath,
+      now: new Date("2026-02-22T14:00:00.000Z")
+    });
 
-    const result = await runBubbleWatchdog(
-      {
-        bubbleId: bubble.bubbleId,
-        cwd: repoPath,
-        now: new Date("2026-02-22T14:00:00.000Z")
-      },
-      {
-        readStateSnapshot: async () => {
-          readCount += 1;
-          if (readCount === 1) {
-            return loaded;
-          }
-          return {
-            fingerprint: "fp_progressed",
-            state: progressed
-          };
-        },
-        recoverMetaReviewGateFromSnapshot: async () => {
-          throw new MetaReviewGateError(
-            "META_REVIEW_GATE_STATE_CONFLICT",
-            "simulated timeout conflict"
-          );
-        }
-      }
-    );
-
-    expect(result.escalated).toBe(false);
-    expect(result.reason).toBe("state_not_running");
-    expect(result.state.state).toBe("READY_FOR_HUMAN_APPROVAL");
+    expect(result.escalated).toBe(true);
+    expect(result.reason).toBe("escalated");
+    expect(result.state.state).toBe("WAITING_HUMAN");
   });
 });
