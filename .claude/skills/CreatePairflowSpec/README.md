@@ -27,7 +27,10 @@ Teams often have enough context already, but lose time in long interviews or end
 6. `later-hardening` items are emitted in a standard Hardening Backlog block.
 7. Contract-boundary override forces at least `Plan -> Task` even for small features.
 8. Complexity-risk triage runs before implementation-oriented Plan/Task drafting.
-9. High boundary-risk scopes should split into `foundation -> delivery -> activation` rather than one broad task.
+9. High boundary-risk scopes should split before implementation; for authority fan-out this often means producer-first sequencing rather than a flat `foundation -> delivery -> activation`.
+10. Shared contract changes require explicit current-consumer inventory and additive-vs-breaking classification.
+11. Authority/read-model/multi-consumer tasks should record an explicit authority boundary map.
+12. The authority fan-out vocabulary is an analysis aid, not an automatic 6-phase template; the skill should prefer the smallest safe split.
 
 ## Directory layout
 

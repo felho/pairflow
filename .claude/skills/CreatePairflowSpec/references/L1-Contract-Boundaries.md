@@ -13,11 +13,15 @@ L1 categories:
 4. Error/fallback behavior
 5. Dependency constraints
 6. Test matrix
+7. Shared contract compatibility when a shared interface/result shape changes
+8. Authority boundary map when authority/read-model/multi-consumer work is in scope
 
 Required clarifications inside L1:
 1. Mark required vs optional fields for changed input/output contracts.
 2. Record exact public entry signature for each changed call-site.
 3. Pure-by-default rule: if allowed side effects are not listed, implementation is pure.
 4. If dependencies exist, include explicit dependency-failure fallback behavior.
+5. If a shared interface/result shape changes, inventory current consumers and classify additive vs breaking behavior.
+6. If authority fan-out exists, state which consume families are in scope vs explicitly out of scope.
 
 Any item not crossing these boundaries should default to `later-hardening`.

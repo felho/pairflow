@@ -16,6 +16,12 @@ Estimate risk from boundary spread:
 5. whether the task depends on unfinished prerequisite milestones,
 6. whether the task tries to close too many distinct acceptance goals at once.
 
+For authority-heavy scopes, also inspect consume families:
+1. internal execution consumers,
+2. workflow/orchestration consumers,
+3. read-model consumers,
+4. cleanup/recovery consumers.
+
 ## Risk Axes
 
 Score each axis `0|1|2`.
@@ -82,7 +88,7 @@ Score:
 
 ## Score Interpretation
 
-- `0-4`: single task/bubble is usually acceptable
+- `0-4`: single task is usually acceptable
 - `5-7`: split strongly recommended
 - `8-12`: mandatory refactor-first split
 
@@ -101,6 +107,7 @@ Do not keep the scope as a single implementation task if any of the following is
 3. The task activates behavior that explicitly depends on unfinished milestone work.
 4. The task relies on multiple competing authority paths for the same decision.
 5. The task mixes contract cutover and UI consume cutover while the primary consumer depends on fragile identity matching.
+6. The same authority touches 3 or more consume families. In this case, `foundation -> delivery -> activation` is not a sufficient default split; producer-first plus consumer-family split is mandatory.
 
 ## Escalation Rules Below Hard-Stop
 
@@ -119,6 +126,20 @@ Prefer this split order:
 2. `feature delivery`
 3. `activation` or `rollout`
 
+When authority fan-out is present across 3 or more consume families, prefer this split vocabulary instead:
+1. `persisted authority` (if needed)
+2. `authority producer`
+3. `consumer-family alignment`
+4. `activation`
+5. `read-model`
+6. `cleanup/rollout`
+
+This is not a mandatory phase count.
+Use it to decide what must be separated, then collapse adjacent closures when:
+1. the same bounded code change closes them,
+2. they share the same consumers,
+3. they do not introduce a separate compatibility or read-model risk.
+
 If the task includes future milestone-gated behavior:
 1. document the contract now,
 2. keep activation in a later task,
@@ -133,8 +154,18 @@ When risk score is `4+`, the spec should explicitly capture:
 4. `identity_join_risk`
 5. `feature_activation`
 6. `prerequisite_boundaries`
-7. split decision:
+7. `authority_fanout` (which consume families are affected)
+8. split decision:
    - `single-task allowed: yes|no`
    - if `no`, specify `foundation / delivery / activation`
+
+If authority fan-out is the reason for the split, do not stop at the generic three-way label. State whether the split is:
+- `authority producer`
+- `consumer-family alignment`
+- `activation`
+- `read-model`
+- `cleanup/rollout`
+
+Also state whether any of these closures are intentionally collapsed into one bounded phase/task, and why that collapse is safe.
 
 When risk score is `8+`, do not write the task as if it were direct feature delivery unless the user explicitly asks for a knowingly high-risk bundle.

@@ -28,7 +28,22 @@ owners:
 3. Read-path rule: <Where the implementation may read the thing from. If N/A, say N/A.>
 4. Forbidden fallback: <Which sources must not be used as fallback truth. If N/A, say N/A.>
 5. Missing-data rule: <What happens if the thing is expected but missing. If N/A, say N/A.>
-6. Phase boundary: <What this task owns vs what successor tasks own. If N/A, say N/A.>
+6. Phase boundary:
+   - contract closure: <owned here or successor>
+   - producer closure: <owned here or successor>
+   - internal execution closure: <owned here or successor>
+   - workflow/orchestration closure: <owned here or successor>
+   - read-model closure: <owned here or successor>
+   - activation closure: <owned here or successor>
+   - cleanup/recovery closure: <owned here or successor>
+
+### Authority Boundary Map
+
+1. Authority producer: <What produces canonical authority in or before this task. If N/A, say N/A.>
+2. Stored authority: <What persists the authority. If N/A, say N/A.>
+3. In-scope consumers: <Which consume families this task is allowed to align. If N/A, say N/A.>
+4. Explicit out-of-scope consumers: <Which consume families must not be pulled in. If N/A, say N/A.>
+5. Export surfaces closed in this phase: <yes|no + what exactly. If N/A, say N/A.>
 
 ### In Scope
 
@@ -79,7 +94,13 @@ owners:
 | Read-path rule | <explicit rule or `N/A`> | <where implementation may read from> | P1 | required-now |
 | Forbidden fallback | <explicit rule or `N/A`> | <what must not be used as fallback truth> | P1 | required-now |
 | Missing-data rule | <explicit rule or `N/A`> | <fail-closed/unavailable/error behavior> | P1 | required-now |
-| Phase boundary | <explicit rule or `N/A`> | <what this task owns vs successor tasks> | P2 | required-now |
+| Phase boundary | <explicit rule or `N/A`> | <what this task owns vs successor tasks across contract/producer/consume/activation/cleanup> | P2 | required-now |
+
+### 0a) Shared Contract Compatibility (if applicable)
+
+| Shared Contract | Current Consumers | Change Type (`additive|breaking|N/A`) | This Task Action | Deferred Alignment |
+|---|---|---|---|---|
+| <path/interface/result-shape> | <list or `N/A`> | <type> | <what this task does> | <successor task or `N/A`> |
 
 ### 1) Call-site Matrix
 
@@ -143,6 +164,8 @@ Use this section to track non-blocking review items (`later-hardening`) that sho
 3. After round 2, new `required-now` is allowed only for evidence-backed `P0/P1`.
 4. Items outside L1 blocker scope must be tagged `later-hardening`.
 5. If `contract_boundary_override=yes`, `plan_ref` is mandatory and must align with L1 contract rows.
+6. If a shared contract changes, current-consumer inventory and additive-vs-breaking classification are mandatory.
+7. If an authority fan-out exists, the authority boundary map must stay consistent with the bounded task scope.
 
 ## Spec Lock
 

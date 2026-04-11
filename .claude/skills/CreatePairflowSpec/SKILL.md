@@ -59,7 +59,14 @@ Minimum required answers when applicable:
 3. `read_path_rule` (where the system is allowed to load or show the thing from)
 4. `forbidden_fallback` (which alternative sources must not be used as fallback truth)
 5. `missing_data_rule` (what happens if the thing is expected but the allowed read path has no data)
-6. `phase_boundary` (which phase closes contract, surfacing, consume, and activation)
+6. `phase_boundary`:
+   - `contract_closure`
+   - `producer_closure`
+   - `internal_execution_closure`
+   - `workflow_orchestration_closure`
+   - `read_model_closure`
+   - `activation_closure`
+   - `cleanup_recovery_closure`
 
 Policy:
 1. If the gate is `NOT_READY`, do not silently continue to an implementable Plan or Task.
@@ -67,7 +74,45 @@ Policy:
 3. Rewrite the higher-level artifact first only when the required control-model information is already clearly recoverable from existing references, code, or explicit prior decisions, but is not yet written down in the artifact.
 4. Never invent a control model, fallback rule, or missing-data behavior just to make the artifact look implementable.
 5. Do not convert missing control-model decisions into clever technical seams or fallback heuristics.
-6. For authority/read-model/public-consume work, the control model must be explicit before payload/UI/runtime sequencing is finalized.
+6. For authority/read-model/multi-consumer work, the control model must be explicit before payload/UI/runtime sequencing is finalized.
+
+## Authority Fan-out Scan (Mandatory)
+
+Before drafting implementation-oriented Plan or Task artifacts, run an `Authority Fan-out Scan` when any of the following is true:
+1. `authority_risk >= 1`
+2. `identity_join_risk >= 1`
+3. a shared interface/result shape is changing
+4. a canonical authority is consumed by multiple surfaces or roles
+
+The scan must explicitly inventory the relevant generic authority buckets, either with these names or with an explicitly mapped project-local equivalent:
+1. `authority_producer`
+2. `persisted_authority`
+3. `internal_execution_consumers`
+4. `workflow_orchestration_consumers`
+5. `read_model_consumers`
+6. `cleanup_recovery_consumers`
+
+Bucket intent:
+1. `internal_execution_consumers`: runtime/execution paths that act on the authority.
+2. `workflow_orchestration_consumers`: orchestration, state-machine, routing, or decision-flow consumers.
+3. `read_model_consumers`: projections, reports, UI/API reads, or other consumer-facing views.
+4. `cleanup_recovery_consumers`: teardown, rollback, migration, cleanup, or recovery paths.
+
+Policy:
+1. Do not treat the scope as a single entrypoint-specific or feature task when the same authority fans out into multiple consume families.
+2. Use the scan to decide whether the split must be:
+   - `producer`
+   - `consumer family alignment`
+   - `activation`
+   - `read-model`
+   - `cleanup`
+   instead of the simpler `foundation -> delivery -> activation`.
+3. Treat these closure types as an analysis checklist, not as an automatic 6-phase template.
+4. Prefer the smallest safe split:
+   - collapse adjacent closures when they are owned by the same code path, touch the same consumers, and do not introduce a distinct compatibility/read-model risk,
+   - keep closures separate only when they cross a real boundary.
+5. If the scan reveals three or more consume families, producer-first sequencing is mandatory, but not necessarily six separate phases.
+6. The output artifact may rename these buckets into domain-specific terms, but the generic-to-local mapping must remain explicit and auditable.
 
 ## Complexity-Risk Gate (Mandatory)
 
@@ -89,6 +134,17 @@ Policy:
 5. If the task introduces a canonical source-of-truth and also activates runtime behavior, default to `foundation -> delivery -> activation`.
 6. If future milestone-gated behavior is involved, document the contract now but keep activation in a later task.
 7. If the task changes a public contract or UI consume while correct behavior depends on fragile identity matching across seams, default to split even below the top score band.
+8. If the same authority touches three or more consume families, default split vocabulary is:
+   - `persisted authority` (if needed)
+   - `authority producer`
+   - `consumer-family alignment`
+   - `activation`
+   - `read-model`
+   - `cleanup/rollout`
+9. The vocabulary above is not a mandatory phase count. Collapse phases/tasks when:
+   - `persisted authority` and `authority producer` are closed by the same bounded change,
+   - `activation` and `read-model` do not carry separate read-model or compatibility risk,
+   - `cleanup/rollout` does not touch shared consumer contracts.
 
 ## Core Principles
 
@@ -105,6 +161,9 @@ Policy:
 11. Missing-data behavior must be explicit: decide fail-closed vs unavailable vs hard error before surfacing or activation work.
 12. Forbidden fallbacks should be named, not implied.
 13. If a spec says what the product wants but not what controls it, the artifact is not ready.
+14. Authority producer before consumer alignment: the phase that creates canonical authority should be separated from the phases that consume it when fan-out exists.
+15. Shared contract changes require explicit consumer inventory and additive-vs-breaking classification before task scope is finalized.
+16. Use minimum viable sequencing: separate closures by real boundary, not by template zeal.
 
 ## Minimum Contract Rules
 
@@ -128,14 +187,30 @@ Policy:
    - authority/source-of-truth note when applicable.
 12. High-risk scopes (`4+`) should prefer an explicit Plan even if work type would otherwise allow task-only.
 13. Very high-risk scopes (`8+` or hard-stop) must not be emitted as direct feature-delivery tasks without an explicit foundation phase.
-14. For Plans with authority/read-model/public-consume relevance, a control-model section is mandatory. It must explicitly state:
+14. When authority/read-model/multi-consumer work is in scope, the artifact must record an `Authority Fan-out Scan` or an equivalent explicit inventory.
+15. When a shared interface/result shape changes, the artifact must record:
+   - current consumers,
+   - additive vs breaking decision,
+   - whether alignment happens now or in a successor task.
+16. Plans with authority/read-model/multi-consumer relevance must include a `Phase Ownership Grid` capturing:
+   - dominant boundary,
+   - produced authority,
+   - consuming surfaces,
+   - forbidden co-mingling.
+17. For Plans with authority/read-model/multi-consumer relevance, a control-model section is mandatory. It must explicitly state:
    - business invariant,
    - control model,
    - read-path rule,
    - forbidden fallback,
    - missing-data rule.
-15. For Tasks with authority/read-model/public-consume relevance, the task must either inherit or restate those same control-model clauses explicitly enough for implementation.
-16. If any of those control-model clauses are missing and materially affect correctness, the artifact must remain blocked until clarified.
+18. For Tasks with authority/read-model/multi-consumer relevance, the task must either inherit or restate those same control-model clauses explicitly enough for implementation.
+19. Tasks with authority/read-model/multi-consumer relevance should include an `Authority Boundary Map` capturing:
+   - authority producer,
+   - stored authority,
+   - in-scope consumers,
+   - explicit out-of-scope consumers,
+   - whether export surfaces are closed in this phase.
+20. If any of those control-model clauses are missing and materially affect correctness, the artifact must remain blocked until clarified.
 
 ## Templates and References
 

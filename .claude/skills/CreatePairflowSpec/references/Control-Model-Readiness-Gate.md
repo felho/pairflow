@@ -52,13 +52,15 @@ For affected scopes, the artifact author must explicitly answer these questions.
      - hard error,
      - or another clearly bounded behavior.
 
-6. `phase_boundary` (which phase closes contract, surfacing, consume, and activation)
+6. `phase_boundary` (which phase closes contract, producer, consume, activation, and cleanup)
    - Which phase owns:
-     - domain/control contract,
-     - surfacing/payload cutover,
-     - UI/API consume cutover,
-     - legacy removal,
-     - runtime activation?
+     - `contract_closure`,
+     - `producer_closure`,
+     - `internal_execution_closure`,
+     - `workflow_orchestration_closure`,
+     - `read_model_closure`,
+     - `activation_closure`,
+     - `cleanup_recovery_closure`?
 
 ## Applicability Rules
 
@@ -88,6 +90,14 @@ That section must capture:
 3. read-path rule
 4. forbidden fallback
 5. missing-data rule
+6. detailed phase boundary ownership:
+   - contract closure
+   - producer closure
+   - internal execution closure
+   - workflow/orchestration closure
+   - read-model closure
+   - activation closure
+   - cleanup/recovery closure
 
 If these are not stable enough yet, the plan should stop and request clarification instead of pretending that the phase split is implementation-ready.
 
@@ -109,6 +119,14 @@ Do not rely on vague references like:
 
 unless the concrete rule is already written in a referenced artifact and is directly usable.
 
+When authority/read-model/runtime sequencing is involved, the task should also say whether it is:
+1. producing authority,
+2. aligning internal execution consumers,
+3. aligning workflow/orchestration consumers,
+4. aligning read-model consumers,
+5. activating behavior,
+6. or closing cleanup/recovery.
+
 ## Readiness Decision
 
 Use this outcome:
@@ -121,7 +139,13 @@ All of the following are true:
 3. The allowed read-path is explicit.
 4. Forbidden fallback sources are explicit.
 5. Missing-data behavior is explicit.
-6. Phase/task ownership boundaries are explicit enough to avoid cross-seam drift.
+6. Phase/task ownership boundaries are explicit enough to avoid cross-seam drift across:
+   - producer,
+   - internal execution,
+   - workflow/orchestration,
+   - read-model,
+   - activation,
+   - cleanup/recovery.
 
 ### `NOT_READY`
 
@@ -131,6 +155,7 @@ If any of the following is true:
 3. Missing-data handling is ambiguous.
 4. The spec leaves room for heuristic fallback without naming it as forbidden.
 5. A phase/task is trying to solve route/UI/runtime questions before control-model ownership is settled.
+6. A phase/task is trying to solve producer closure and multiple consumer-family closures in one step without saying so explicitly.
 
 ## Mandatory Escalation Behavior
 
@@ -139,6 +164,7 @@ If the gate is `NOT_READY`:
 2. Ask focused blocker questions if the missing control-model decision is not clearly recoverable from the available context.
 3. Rewrite the artifact to add the missing control-model section first only when the required control-model information is already clearly recoverable from existing references, code, or explicit prior decisions, but is not yet written down.
 4. Never invent a control model, fallback rule, or missing-data behavior just to make the artifact look implementable.
+5. Never compress `phase_boundary` into a single vague sentence when the sequencing depends on producer vs consumer-family closure.
 
 The skill must be proactive here:
 - do not silently continue just because enough technical detail exists to draft something,

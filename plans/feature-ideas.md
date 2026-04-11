@@ -5,3 +5,8 @@
 - https://github.com/vladikk/modularity --> check this
 - https://claude.com/plugins/superpowers --> check this
 - Add to prompts "I love you" :D
+- "7. Bevezetnék egy Review Loop Escalation Rule-t.
+  Ha: - ugyanaz a task 2 körnél többször kap új P1 required-now findinget, - vagy a findingok új consumer-familykből jönnek,
+  - akkor a skill ne refine-olja tovább a taskot,
+  - hanem automatikusan javasoljon plan/sequencing reset-et."
+- And in general we added a lot of advanced logic to the CreatePairflowSpec skill, some of those are verify-able, so it would be nice to be checked by pairflow.
