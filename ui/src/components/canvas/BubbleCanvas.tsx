@@ -324,7 +324,7 @@ function BubbleCard(props: BubbleCardProps): JSX.Element {
             : props.bubble.state === "RUNNING"
               ? `${props.bubble.activeRole ?? "agent"} working`
             : props.bubble.state === "READY_FOR_HUMAN_APPROVAL"
-                ? `Waiting for human decision after meta-reviewer recommendation (${props.bubble.metaReview.latestRecommendation ?? "unknown"}).`
+                ? "Waiting for human decision after meta-reviewer handoff."
               : props.bubble.state === "WAITING_HUMAN"
                 ? "Waiting for human input."
                 : props.bubble.state === "DONE"

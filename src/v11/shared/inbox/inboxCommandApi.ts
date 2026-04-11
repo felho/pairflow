@@ -121,10 +121,7 @@ export async function getBubbleInbox(
   }
 
   const canonicalPendingApprovalSignal = resolveCanonicalPendingApprovalSignal({
-    bubbleId: resolved.bubbleId,
-    state: state.state,
     round: state.round,
-    metaReview: state.meta_review,
     envelopes: inbox
   });
   const canonicalPendingApproval = canonicalPendingApprovalSignal === undefined

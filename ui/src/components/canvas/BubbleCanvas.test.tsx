@@ -183,7 +183,7 @@ describe("BubbleCanvas", () => {
     expect(screen.getByText("Failed — manual intervention needed.")).toBeInTheDocument();
     expect(
       screen.getByText(
-        /Waiting for human decision after meta-reviewer recommendation/u
+        "Waiting for human decision after meta-reviewer handoff."
       )
     ).toBeInTheDocument();
   });

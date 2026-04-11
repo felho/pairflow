@@ -2,9 +2,7 @@ import { resolveActiveMetaReviewRuntimeDelivery } from "../metaReview/metaReview
 import { isMetaReviewExecutionContextActiveState } from "../metaReview/metaReviewExecutionContext.js";
 import type {
   BubbleExecutionContext,
-  MetaReviewRuntimeDeliveryStatus,
-  MetaReviewRecommendation,
-  MetaReviewRunStatus
+  MetaReviewRuntimeDeliveryStatus
 } from "../../../types/bubble.js";
 import type { ProtocolEnvelope } from "../../../types/protocol.js";
 import type { MetaReviewGateRoute } from "../metaReviewGate/metaReviewGateTypes.js";
@@ -37,11 +35,6 @@ export interface StatusPaneActivityView {
 export interface StatusMetaReviewView {
   actor: "meta-reviewer";
   authorityActive: boolean;
-  latestRecommendation: MetaReviewRecommendation | null;
-  latestStatus: MetaReviewRunStatus | null;
-  latestSummary: string | null;
-  latestReportRef: string | null;
-  latestUpdatedAt: string | null;
   latestRoute: MetaReviewGateRoute | null;
   latestRouteReasonCode: string | null;
   latestRouteObservedAt: string | null;
@@ -161,11 +154,6 @@ export function buildStatusMetaReviewView(
 ) : {
   actor: "meta-reviewer";
   authorityActive: boolean;
-  latestRecommendation: MetaReviewRecommendation | null;
-  latestStatus: MetaReviewRunStatus | null;
-  latestSummary: string | null;
-  latestReportRef: string | null;
-  latestUpdatedAt: string | null;
   latestRoute: MetaReviewGateRoute | null;
   latestRouteReasonCode: string | null;
   latestRouteObservedAt: string | null;
@@ -186,12 +174,6 @@ export function buildStatusMetaReviewView(
   return {
     actor: "meta-reviewer" as const,
     authorityActive: isMetaReviewExecutionContextActiveState(state),
-    latestRecommendation:
-      state.meta_review?.last_autonomous_recommendation ?? null,
-    latestStatus: state.meta_review?.last_autonomous_status ?? null,
-    latestSummary: state.meta_review?.last_autonomous_summary ?? null,
-    latestReportRef: state.meta_review?.last_autonomous_report_ref ?? null,
-    latestUpdatedAt: state.meta_review?.last_autonomous_updated_at ?? null,
     latestRoute: route?.route ?? null,
     latestRouteReasonCode: route?.reasonCode ?? null,
     latestRouteObservedAt: route?.observedAt ?? null,

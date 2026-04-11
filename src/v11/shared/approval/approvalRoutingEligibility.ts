@@ -1,11 +1,13 @@
 import type { BubbleStateSnapshot, MetaReviewRecommendation } from "../../../types/bubble.js";
 import {
   deliveryTargetRoleMetadataKey,
+  type ProtocolEnvelope,
   type ApprovalDecision
 } from "../../../types/protocol.js";
 import {
   hasParityInconsistencyMetadata,
-  readApprovalTranscriptContext
+  readApprovalTranscriptContext,
+  resolveApprovalRecommendationFromRequest
 } from "./approvalTranscriptContext.js";
 import type { ReadTranscriptEnvelopesPort } from "../ports/transcript.js";
 export {
@@ -77,26 +79,19 @@ export function assertApprovalDecisionEligibility(
 }
 
 function resolveLatestApprovalRecommendation(
-  state: BubbleStateSnapshot,
+  latestRoundApprovalRequest: ProtocolEnvelope | undefined,
   createError: PairflowCreateCommandError
 ): MetaReviewRecommendation {
-  const recommendation = state.meta_review?.last_autonomous_recommendation ?? null;
-  if (
-    recommendation === "approve" ||
-    recommendation === "rework" ||
-    recommendation === "inconclusive"
-  ) {
+  const recommendation = resolveApprovalRecommendationFromRequest(
+    latestRoundApprovalRequest
+  );
+  if (recommendation !== undefined) {
     return recommendation;
-  }
-  const stickyHumanGateRoute =
-    state.meta_review?.sticky_human_gate === true &&
-    state.state === canonicalHumanApprovalState;
-  if (stickyHumanGateRoute) {
-    return "inconclusive";
   }
   throw createError({
     reasonCode: APPROVAL_RECOMMENDATION_UNAVAILABLE,
-    message: "latest autonomous recommendation is unavailable at approval time.",
+    message:
+      "latest current-round approval request recommendation is unavailable at approval time.",
     context: {
       command_name: "approval"
     }
@@ -121,7 +116,7 @@ export async function resolveApprovalDecisionMetadata(
     }
   );
   const recommendationAtDecision = resolveLatestApprovalRecommendation(
-    input.state,
+    transcriptContext.latestRoundApprovalRequest,
     input.createError
   );
   metadata.recommendation_at_decision = recommendationAtDecision;

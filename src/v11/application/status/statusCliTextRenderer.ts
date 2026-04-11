@@ -43,7 +43,7 @@ function formatRuntimeDeliveryText(status: BubbleStatusView): string {
 }
 
 function formatMetaReviewText(status: BubbleStatusView): string {
-  return `Meta-review: status=${status.metaReview.latestStatus ?? "-"} recommendation=${status.metaReview.latestRecommendation ?? "-"} route=${status.metaReview.latestRoute ?? "-"}${status.metaReview.latestRouteReasonCode !== null ? ` reason=${status.metaReview.latestRouteReasonCode}` : ""} updated=${status.metaReview.latestUpdatedAt ?? "-"} route_at=${status.metaReview.latestRouteObservedAt ?? "-"} report=${status.metaReview.latestReportRef ?? "-"}`;
+  return `Meta-review: authority=${status.metaReview.authorityActive ? "active" : "inactive"} route=${status.metaReview.latestRoute ?? "-"}${status.metaReview.latestRouteReasonCode !== null ? ` reason=${status.metaReview.latestRouteReasonCode}` : ""} route_at=${status.metaReview.latestRouteObservedAt ?? "-"}`;
 }
 
 function formatPaneActivityText(status: BubbleStatusView): string {

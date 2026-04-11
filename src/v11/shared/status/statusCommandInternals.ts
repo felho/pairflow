@@ -34,15 +34,12 @@ export function countPendingHumanQuestions(envelopes: ProtocolEnvelope[]): numbe
 }
 
 export function resolvePendingApprovalCount(
-  resolved: ResolvedBubbleStatusContext,
+  _resolved: ResolvedBubbleStatusContext,
   state: BubbleStatusState,
   inbox: ProtocolEnvelope[]
 ): number {
   return resolveCanonicalPendingApprovalSignal({
-    bubbleId: resolved.bubbleId,
-    state: state.state,
     round: state.round,
-    metaReview: state.meta_review,
     envelopes: inbox
   }) === undefined
     ? 0

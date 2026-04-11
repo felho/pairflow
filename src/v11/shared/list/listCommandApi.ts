@@ -6,7 +6,6 @@ import { getBubblePaths } from "../bubble/bubblePaths.js";
 import { isMetaReviewExecutionContextActiveState } from "../metaReview/metaReviewExecutionContext.js";
 import { resolveActiveMetaReviewRuntimeDelivery } from "../metaReview/metaReviewSnapshot.js";
 import { resolveBubbleAttention } from "../status/bubbleAttention.js";
-import { resolveLatestMetaReviewRoute } from "../status/statusCommandViewProjection.js";
 import { computeWatchdogStatus } from "../watchdog/watchdogStatus.js";
 import type { BubbleLifecycleState } from "../../../types/bubble.js";
 import type {
@@ -127,15 +126,12 @@ async function buildBubbleListEntry(input: {
   nonRuntimeState: boolean;
 }> {
   const bubblePaths = getBubblePaths(input.repoPath, input.bubbleId);
-  const [bubbleToml, stateLoaded, paneActivityRead, transcript] = await Promise.all([
+  const [bubbleToml, stateLoaded, paneActivityRead] = await Promise.all([
     listCommandDefaults.readBubbleTomlArtifact(bubblePaths.bubbleTomlPath),
     listCommandDefaults.inspectStateSnapshot(bubblePaths.statePath),
     listCommandDefaults.readWatchdogPaneActivity({
       runtimeDir: bubblePaths.runtimeDir,
       bubbleId: input.bubbleId
-    }),
-    listCommandDefaults.readTranscriptEnvelopes(bubblePaths.transcriptPath, {
-      allowMissing: true
     })
   ]);
 
@@ -165,7 +161,6 @@ async function buildBubbleListEntry(input: {
     executionContext: stateLoaded.state.meta_review?.execution_context,
     runtimeDelivery: stateLoaded.state.meta_review?.runtime_delivery
   });
-  const latestRoute = resolveLatestMetaReviewRoute(transcript);
   const watchdog =
     stateLoaded.stateValidation === null
       ? computeWatchdogStatus(
@@ -208,17 +203,6 @@ async function buildBubbleListEntry(input: {
       metaReview: {
         actor: "meta-reviewer",
         authorityActive: isMetaReviewExecutionContextActiveState(stateLoaded.state),
-        latestRecommendation:
-          stateLoaded.state.meta_review?.last_autonomous_recommendation ?? null,
-        latestStatus: stateLoaded.state.meta_review?.last_autonomous_status ?? null,
-        latestSummary: stateLoaded.state.meta_review?.last_autonomous_summary ?? null,
-        latestReportRef:
-          stateLoaded.state.meta_review?.last_autonomous_report_ref ?? null,
-        latestUpdatedAt:
-          stateLoaded.state.meta_review?.last_autonomous_updated_at ?? null,
-        latestRoute: latestRoute?.route ?? null,
-        latestRouteReasonCode: latestRoute?.reasonCode ?? null,
-        latestRouteObservedAt: latestRoute?.observedAt ?? null,
         runtimeDelivery:
           activeRuntimeDelivery === null
             ? null

@@ -237,7 +237,7 @@ describe("listBubbles", () => {
     });
   });
 
-  it("surfaces latest meta-review gate route in list projection", async () => {
+  it("keeps list projection narrowed to live authority/runtime meta-review fields", async () => {
     const repoPath = await createTempRepo();
     const bubble = await createBubble({
       id: "b_list_meta_route_01",
@@ -275,11 +275,12 @@ describe("listBubbles", () => {
 
     const listed = await listBubbles({ repoPath });
 
-    expect(listed.bubbles[0]?.metaReview.latestRoute).toBe("human_gate_approve");
-    expect(listed.bubbles[0]?.metaReview.latestRouteReasonCode).toBeNull();
-    expect(listed.bubbles[0]?.metaReview.latestRouteObservedAt).toBe(
-      "2026-02-22T18:46:00.000Z"
-    );
+    expect(listed.bubbles[0]?.metaReview).toEqual({
+      actor: "meta-reviewer",
+      authorityActive: false,
+      runtimeDelivery: null
+    });
+    expect(listed.bubbles[0]?.metaReview).not.toHaveProperty("latestRoute");
   });
 
   it("does not surface runtime-mismatch attention during PREPARING_WORKSPACE", async () => {

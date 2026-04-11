@@ -40,6 +40,24 @@ function createReadyForHumanApprovalState() {
 
 function createFlowDependencies(nowIso: string) {
   const state = createReadyForHumanApprovalState();
+  const approvalRequest = [
+    {
+      id: "msg_approval_request_001",
+      ts: "2026-03-20T10:00:00.000Z",
+      bubble_id: state.bubble_id,
+      sender: "orchestrator",
+      recipient: "human",
+      type: "APPROVAL_REQUEST",
+      round: state.round,
+      payload: {
+        summary: "Approval summary",
+        metadata: {
+          latest_recommendation: "approve"
+        }
+      },
+      refs: []
+    } as const
+  ];
   const emittedDeliveries: Array<{
     bubbleId: string;
     messageRef?: string;
@@ -106,7 +124,7 @@ function createFlowDependencies(nowIso: string) {
         state,
         fingerprint: "fp_state_01"
       })),
-      readTranscriptEnvelopes: vi.fn(async () => []),
+      readTranscriptEnvelopes: vi.fn(async () => approvalRequest),
       appendProtocolEnvelope,
       applyStateTransition,
       writeStateSnapshot: vi.fn(async (_path: string, nextState: unknown) => ({

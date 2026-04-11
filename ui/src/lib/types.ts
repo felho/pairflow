@@ -151,21 +151,11 @@ export interface UiBubbleTranscriptSummary {
   lastMessageId: string | null;
 }
 
-export type MetaReviewRecommendation = "rework" | "approve" | "inconclusive";
-export type MetaReviewRunStatus = "success" | "error" | "inconclusive";
 export type MetaReviewRuntimeDeliveryStatus = "confirmed" | "uncertain" | "failed";
 
 export interface UiBubbleMetaReviewSummary {
   actor: "meta-reviewer";
   authorityActive: boolean;
-  latestRecommendation: MetaReviewRecommendation | null;
-  latestStatus: MetaReviewRunStatus | null;
-  latestSummary: string | null;
-  latestReportRef: string | null;
-  latestUpdatedAt: string | null;
-  latestRoute: string | null;
-  latestRouteReasonCode: string | null;
-  latestRouteObservedAt: string | null;
   runtimeDelivery: {
     status: MetaReviewRuntimeDeliveryStatus;
     reasonCode: string | null;

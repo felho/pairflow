@@ -18,6 +18,19 @@ import {
   resolveBubbleAttention
 } from "../../../shared/status/bubbleAttention.js";
 
+function presentMetaReviewSummary(
+  metaReview: Pick<
+    UiBubbleSummary["metaReview"],
+    "actor" | "authorityActive" | "runtimeDelivery"
+  >
+): UiBubbleSummary["metaReview"] {
+  return {
+    actor: metaReview.actor,
+    authorityActive: metaReview.authorityActive,
+    runtimeDelivery: metaReview.runtimeDelivery
+  };
+}
+
 export function isRuntimeSessionExpected(state: BubbleLifecycleState): boolean {
   return isRuntimeSessionExpectedState(state);
 }
@@ -57,7 +70,7 @@ export function presentBubbleSummaryFromListEntry(
       entry.stateValidation
     ),
     attention: entry.attention,
-    metaReview: entry.metaReview
+    metaReview: presentMetaReviewSummary(entry.metaReview)
   };
 }
 
@@ -140,7 +153,7 @@ export function presentBubbleDetail(input: {
               },
       now: new Date()
     }),
-    metaReview: input.status.metaReview,
+    metaReview: presentMetaReviewSummary(input.status.metaReview),
     watchdog: input.status.watchdog,
     pendingInboxItems: input.status.pendingInboxItems,
     inbox: {
