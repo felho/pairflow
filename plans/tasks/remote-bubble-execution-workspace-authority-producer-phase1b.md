@@ -2,7 +2,7 @@
 artifact_type: task
 artifact_id: task_remote_bubble_execution_workspace_authority_producer_phase1b_v1
 title: "Remote Bubble Execution Workspace Authority Producer (Phase 1B)"
-status: draft
+status: implementable
 phase: phase1b-workspace-authority-producer
 target_files:
   - src/v11/shared/ports/worktreeWorkspace.ts
@@ -11,6 +11,7 @@ target_files:
   - src/v11/infrastructure/executor/sessionRuntime/runtimeSessionsRegistry.ts
   - src/v11/infrastructure/executor/sessionRuntime/runtimeSessionsRegistryDocument.ts
   - src/v11/defaults/start/startBubbleDefaults.ts
+  - src/v11/application/start/startCommandApi.ts
   - src/v11/application/start/startCommandContract.ts
   - src/v11/application/start/startCommandOrchestration.ts
   - src/v11/application/start/startCommandFlows.ts
@@ -37,9 +38,12 @@ owners:
 4. `src/v11/application/start/startCommandSession.ts` a runtime session ownershipot bootstrap elott claimeli a statikus `bubblePaths.worktreePath`-tal, es ma nincs explicit post-bootstrap finalize/update lepes ugyanarra a session recordra.
 5. `src/v11/application/start/startCommandCleanup.ts` rollback eseten a cleanup targetet a statikus `bubblePaths.worktreePath`-bol vezeti le, nem a frissen eloallitott workspace authoritybol.
 6. `src/v11/application/start/startCommandTmuxLaunch.ts`, a prompt/runtime helper-ek, a `src/cli/index.ts`, valamint a `src/v11/shared/status/**` retegek tovabbra is `worktreePath` consume-ra ulnek; ezek mar consumer-alignment teruletek, nem producer closure.
-7. `src/v11/shared/ports/runtimeSessions.ts` es `src/v11/infrastructure/executor/sessionRuntime/runtimeSessionsRegistry*.ts` jelenleg csak `worktreePath` mezot hordoznak; nincs additive workspace-authority mezofamilia, es nincs shared porton keresztuli post-claim finalize/update seam.
-8. A cleanup port jelenlegi return shape-je (`removedWorktree`, `removedBranch`) delete/merge flowk altal tenylegesen hasznalt shared contract; ezt a task nem torheti meg foundation-cimke alatt.
-9. A `pairflow_command_profile="self_host"` ma a worktree-local `dist/cli/index.js` wiringra epit a start tmux/prompt oldalon; clone topologyval kapcsolatos ervenyesitesi boundary nincs explicit fail-closed modon lezarva.
+7. `src/v11/shared/ports/runtimeSessions.ts` jelenleg csak claim/remove/read contractot exportal, a `RuntimeSessionRecord` csak `worktreePath`-ot hordoz, es nincs explicit shared finalize/update port ugyanannak a session recordnak a bootstrap utani authority-frissitesere.
+8. `src/v11/infrastructure/executor/sessionRuntime/runtimeSessionsRegistry.ts` mar tartalmaz `upsertRuntimeSession(...)` persistence helper-t, de ez ma infra-local segedfuggveny; a `runtimeSessionsRegistryDocument.ts` parser/serializer tovabbra is worktree-centric rekordokra van zarva.
+9. `src/v11/application/start/startCommandApi.ts` a retained start entrypoint, amely ma tenylegesen osszefuzi a pre-claim ownership szerzest, a `runFreshStartFlow(...)` / `runResumeStartFlow(...)` routingot, a failed-start cleanupot es a returned start metadata shape-et; ha ez a file nincs task ownershipben, a producer seam end-to-end closureje nem implementalhato sajat scope-on belul.
+10. A cleanup port jelenlegi return shape-je (`removedWorktree`, `removedBranch`) delete/merge flowk altal tenylegesen hasznalt shared contract; ezt a task nem torheti meg foundation-cimke alatt.
+11. A jelenlegi teszt evidence-surface mar kijeloli a producer-only lezaras helyet: `tests/core/workspace/worktreeManager.test.ts` a bootstrap/cleanup contractot, `tests/core/runtime/sessionsRegistry.test.ts` a claim/upsert/parse kompatibilitast, `tests/core/bubble/startBubble.test.ts` pedig a claim-before-bootstrap, `commands.bootstrap`, failed-start cleanup, stale-session reclaim es `self_host` wiring viselkedeset fedi.
+12. A `pairflow_command_profile="self_host"` ma a worktree-local `dist/cli/index.js` wiringra epit a start tmux/prompt oldalon; clone topologyval kapcsolatos ervenyesitesi boundary nincs explicit fail-closed modon lezarva.
 
 ## Implementation Target Decision
 
@@ -178,13 +182,14 @@ Ez a task szandekosan nem oldja meg a bubble-loop, tmux/pane, status/CLI vagy cl
 |---|---|---|---|---|---|---|---|---|
 | CS1 | `src/v11/shared/ports/worktreeWorkspace.ts` | bootstrap workspace port | `BootstrapWorktreeWorkspacePort(input: { repoPath: string; baseBranch: string; bubbleBranch: string; worktreePath: string; workMode?: "worktree" | "clone"; localOverlay?: LocalOverlayConfig }) -> Promise<{ repoPath: string; baseRef: string; bubbleBranch: string; worktreePath: string; workspaceKind: "worktree" | "clone_root"; branchPrepared: boolean }>` | shared workspace contract | additive producer contract; `worktreePath` compatibility alias marad, de explicit authoritative workspace targette valik | P1 | required-now | T1, T2 |
 | CS2 | `src/v11/infrastructure/workspace/worktreeManager.ts` | `bootstrapWorktreeWorkspace(...)`, `cleanupWorktreeWorkspace(...)` | existing exported functions | local default implementation | `worktree` modban explicit producer metadata, `clone` modban actionable fail-closed, cleanup input/output kompatibilis marad | P1 | required-now | T1, T2 |
-| CS3 | `src/v11/shared/ports/runtimeSessions.ts` | runtime session shared contract | `ClaimRuntimeSessionInput`, `RuntimeSessionRecord`, `UpsertRuntimeSessionPort` | shared runtime authority contract | pre-claim + post-bootstrap finalize/update ugyanazon registryre additive mezokkel mukodik | P1 | required-now | T3, T4 |
-| CS4 | `src/v11/infrastructure/executor/sessionRuntime/runtimeSessionsRegistry.ts`, `runtimeSessionsRegistryDocument.ts` | `upsertRuntimeSession(...)`, parser/serializer | existing infrastructure seam | runtime session persistence | optional authoritative workspace mezok parse/serialize kompatibilisen, existing records retained | P1 | required-now | T3, T4 |
-| CS5 | `src/v11/application/start/startCommandContract.ts`, `startCommandOrchestration.ts`, `src/v11/defaults/start/startBubbleDefaults.ts` | start dependency contract and default wiring | existing start dependency resolution | producer dependency boundary | start flow explicit finalize/update dependencyt kap anelkul, hogy direct infra import smuggle-olodna be | P1 | required-now | T3 |
+| CS3 | `src/v11/shared/ports/runtimeSessions.ts` | runtime session shared contract | retain `ClaimRuntimeSessionInput` / `RuntimeSessionRecord`; add `FinalizeRuntimeSessionWorkspaceInput = { sessionsPath: string; bubbleId: string; repoPath: string; worktreePath: string; tmuxSessionName: string; workspacePath?: string; workspaceKind?: "worktree" | "clone_root"; now?: Date; lockTimeoutMs?: number }` and `FinalizeRuntimeSessionWorkspacePort(input: FinalizeRuntimeSessionWorkspaceInput) -> Promise<RuntimeSessionRecord>` | shared runtime authority contract | pre-claim + post-bootstrap finalize/update ugyanazon registryre additive mezokkel mukodik, anelkul hogy masodik ownership claim indulna | P1 | required-now | T3, T6 |
+| CS4 | `src/v11/infrastructure/executor/sessionRuntime/runtimeSessionsRegistry.ts`, `runtimeSessionsRegistryDocument.ts` | `upsertRuntimeSession(...)`, parser/serializer | existing infrastructure seam | runtime session persistence | az existing `upsertRuntimeSession(...)` maradjon a default finalize/update implementation alapja; optional authoritative workspace mezok parse/serialize kompatibilisen, existing records retained | P1 | required-now | T3, T6 |
+| CS5 | `src/v11/application/start/startCommandContract.ts`, `startCommandOrchestration.ts`, `src/v11/defaults/start/startBubbleDefaults.ts` | start dependency contract and default wiring | existing start dependency resolution + new finalize/update dependency | producer dependency boundary | start flow explicit `finalizeRuntimeSessionWorkspace` dependencyt kap anelkul, hogy direct infra import smuggle-olodna be | P1 | required-now | T3 |
 | CS6 | `src/v11/application/start/startCommandSession.ts` | runtime session ownership helpers | existing ownership claim layer -> claim + finalize/update helper pair | start producer seam | pre-claim megmarad, stale-record remove+reclaim csak ownership szerzesre marad, authoritative workspace update kulon explicit finalize lepes | P1 | required-now | T3, T4 |
-| CS7 | `src/v11/application/start/startCommandFlows.ts` | `runFreshStartFlow(...)` | `runFreshStartFlow(...) -> Promise<FreshStartResult>` | fresh-start producer flow | bootstrap resultet elmenti, `commands.bootstrap`-nak mar az authoritative pathot adja, finalize/update-olja a runtime sessiont, es explicit `clone`/`self_host` fail-closed guardot alkalmaz | P1 | required-now | T3, T5, T6 |
+| CS7 | `src/v11/application/start/startCommandFlows.ts` | `runFreshStartFlow(...)` | `runFreshStartFlow(...) -> Promise<FreshStartResult>` | fresh-start producer flow | bootstrap resultet elmenti, `commands.bootstrap`-nak mar az authoritative pathot adja, finalize/update-olja a runtime sessiont, es explicit `clone`/`self_host` fail-closed guardot alkalmaz | P1 | required-now | T3, T4, T5 |
 | CS8 | `src/v11/application/start/startCommandCleanup.ts` | `cleanupFailedStart(...)` | existing rollback helper | fresh-start rollback path | ha van bootstrapolt workspace authority, a cleanup ezt hasznalja; nincs statikus bubble path fallback | P1 | required-now | T4 |
-| CS9 | `tests/core/workspace/worktreeManager.test.ts`, `tests/core/runtime/sessionsRegistry.test.ts`, `tests/v11/application/start/startCommandOrchestration.test.ts`, `tests/core/bubble/startBubble.test.ts` | regression + producer tests | unit/integration tests | validation surface | explicit producer-only closure, additive compatibility, clone/self_host fail-closed | P1 | required-now | T1-T6 |
+| CS9 | `src/v11/application/start/startCommandApi.ts` | `startBubble(...)` | `startBubble(input: StartBubbleInput, dependencies?: StartBubbleDependencies) -> Promise<StartBubbleResult>` | retained start entrypoint | ez a retained Phase 1B entrypoint a producer seam end-to-end threading ownershipje: osszefuzi a pre-claim ownershipot, a `runFreshStartFlow(...)` / resume routingot, a bootstrap-result authority capture-t, a failed-start `cleanupFailedStart(...)` hivasat es a returned start metadata shape-et, anelkul hogy tmux/status/read-model consume ownershipet behuzna | P1 | required-now | T3, T4, T5 |
+| CS10 | `tests/core/workspace/worktreeManager.test.ts`, `tests/core/runtime/sessionsRegistry.test.ts`, `tests/v11/application/start/startCommandOrchestration.test.ts`, `tests/core/bubble/startBubble.test.ts` | regression + producer tests | unit/integration tests | validation surface | explicit producer-only closure, additive compatibility, clone/self_host fail-closed | P1 | required-now | T1-T6 |
 
 ### 2) Data and Interface Contract
 
@@ -251,6 +256,14 @@ Constraint: ha itt nincs explicit engedelyezett tmux/status/CLI consumer cutover
 | T5 | clone + self_host fail-closed | bubble config `work_mode="clone"` es `pairflow_command_profile="self_host"` | fresh start flow fut | explicit unsupported error keletkezik tmux launch es remote activation nelkul | P1 | required-now | `tests/core/bubble/startBubble.test.ts` |
 | T6 | additive runtime session compatibility | letezo registry rekordok csak `worktreePath`-ot hordoznak, uj rekord optional workspace authority mezokkel jon | parse/upsert/read fut | regi rekordok tovabbra is olvashatok, uj optional mezok persistalodnak, es a shared consumer-ek szamara a `worktreePath` compatibility megmarad | P1 | required-now | `tests/core/runtime/sessionsRegistry.test.ts` |
 
+Evidence surface rationale:
+
+1. `tests/core/workspace/worktreeManager.test.ts` mar most is a bootstrap/cleanup contract es a side-effect boundary kanonikus unit surface-e; az uj `workMode` / `workspaceKind` / `branchPrepared` coverage-nek itt kell megjelennie.
+2. `tests/core/runtime/sessionsRegistry.test.ts` mar most is claim/upsert/read/remove parse-write kompatibilitast ved; az additive workspace authority mezok es a legacy rekord-kompatibilitas ide tartozik.
+3. `tests/core/bubble/startBubble.test.ts` mar bizonyitja a fresh-start producer flow kritikus sorrendjeit: ownership claim bootstrap elott, `commands.bootstrap` futtatasi pontja, failed-start cleanup, stale runtime reclaim, valamint `self_host` start wiring.
+4. `src/v11/application/start/startCommandApi.ts` retained entrypoint ownershipet a `tests/core/bubble/startBubble.test.ts` fedi end-to-end jelleggel; ez bizonyitja, hogy a producer seam threading nem csak helper-szinten, hanem a teljes start entrypointon belul is koherens marad.
+5. `tests/v11/application/start/startCommandOrchestration.test.ts` csak wiring-szintu bizonyitek: itt a new finalize/update dependency resolutiont kell ellenorizni, nem az end-to-end startup flowt.
+
 ## L2 - Implementation Notes (Optional)
 
 1. [later-hardening] Ha a `workspacePath` terminology kesobb user-facing consume-ba is bekerul, kulon taskban lehet fokozatosan atvezetni a `worktreePath` aliasrol.
@@ -273,6 +286,7 @@ Constraint: ha itt nincs explicit engedelyezett tmux/status/CLI consumer cutover
 4. P1 regresszio, ha a runtime authority finalize/update helyett ujabb ownership claim, remove+reclaim vagy statikus bubble path fallback lesz az authoritative update mechanizmus.
 5. P1 regresszio, ha `clone` vagy `clone+self_host` csendesen tovabbfut local default bootstrap mellett.
 6. P1 regresszio, ha a task Phase 1B-ben bubble-loop, read-model vagy remote activation ownershipet csusztat be.
+7. P1 regresszio, ha a retained `src/v11/application/start/startCommandApi.ts` entrypoint nem tartja egyben a producer seam end-to-end threading ownershipjet a pre-claim, fresh/resume routing, bootstrap-result authority capture, failed-start cleanup es returned start metadata kozott.
 
 ## Spec Lock
 
@@ -283,4 +297,5 @@ Mark task as `IMPLEMENTABLE` when all `P0/P1 + required-now` items are closed, a
 3. a fresh-start runtime session ownership flow pre-claim + post-bootstrap finalize/update seammel mukodik,
 4. a `commands.bootstrap` es a rollback cleanup mar a bootstrap-result authorityt hasznalja,
 5. a `self_host` + clone topology explicit fail-closed,
-6. a shared workspace es runtime session contractok additivek maradnak, es a delete/merge/list/ui fogyasztok Phase 1B-ben nem kenyszerulnek consumer cutoverre.
+6. a retained `src/v11/application/start/startCommandApi.ts` entrypoint explicitten a Phase 1B producer seam end-to-end threading ownershipjet hordozza, anelkul hogy tmux/status/read-model consumer scope-ot huzna be,
+7. a shared workspace es runtime session contractok additivek maradnak, es a delete/merge/list/ui fogyasztok Phase 1B-ben nem kenyszerulnek consumer cutoverre.
