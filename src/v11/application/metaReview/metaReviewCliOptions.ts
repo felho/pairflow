@@ -12,13 +12,13 @@ export type {
 export function getBubbleMetaReviewHelpText(): string {
   return [
     "Usage:",
-    "  Operator projection/recovery commands:",
+    "  Operator projection/fail-closed recover commands:",
     "  pairflow bubble meta-review status --id <id> [--repo <path>] [--json] [--verbose]",
     "  pairflow bubble meta-review last-report --id <id> [--repo <path>] [--json] [--verbose]",
     "  pairflow bubble meta-review recover --id <id> [--repo <path>] [--json]",
     "  Canonical actor submit:",
     `  ${buildMetaReviewSubmitUsageLine()}`,
-    "  `status` and `last-report` are read-only projections; `recover` replays persisted snapshot routing only.",
+    "  `status` and `last-report` are read-only projections; retained `recover` is an unsupported fail-closed operator surface and does not replay persisted snapshot routing.",
     "  `pairflow bubble meta-review run` was removed; there is no operator live-run replacement.",
     "  Legacy `pairflow bubble meta-review submit` was removed; use the canonical actor emit command above.",
     "",

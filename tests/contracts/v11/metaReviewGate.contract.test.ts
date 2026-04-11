@@ -82,7 +82,10 @@ describe("v11 metaReviewGate contract harness", () => {
       for (const casePath of casePaths) {
         const caseDef = await readContractCase(casePath);
         const run = await runMetaReviewGateContractCase(caseDef);
-        expect(run.v11?.status).toBe("ok");
+        expect(run.v11?.status).toBe(caseDef.expected.status);
+        if (caseDef.expected.reasonCode !== undefined) {
+          expect(run.v11?.reasonCode).toBe(caseDef.expected.reasonCode);
+        }
       }
     }
   );

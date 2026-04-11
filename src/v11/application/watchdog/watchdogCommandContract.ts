@@ -12,9 +12,6 @@ import type {
 import type { ReadRuntimeSessionsRegistryPort } from "../../shared/ports/runtimeSessions.js";
 import type { TmuxRunner } from "../../shared/ports/tmuxSessions.js";
 import type {
-  recoverMetaReviewGateFromSnapshot
-} from "../../shared/metaReviewGate/metaReviewGateCommandApi.js";
-import type {
   ReadWatchdogPaneActivityPort,
   WriteWatchdogPaneActivityPort
 } from "../../shared/ports/watchdogPaneActivity.js";
@@ -39,7 +36,6 @@ export interface BubbleWatchdogDependencies {
   emitBubbleNotification?: EmitBubbleNotificationPort;
   readStateSnapshot?: ReadStateSnapshotPort;
   writeStateSnapshot?: WriteStateSnapshotPort;
-  recoverMetaReviewGateFromSnapshot?: typeof recoverMetaReviewGateFromSnapshot;
   readWatchdogPaneActivity?: ReadWatchdogPaneActivityPort;
   writeWatchdogPaneActivity?: WriteWatchdogPaneActivityPort;
   appendWatchdogTrace?: AppendWatchdogTracePort;

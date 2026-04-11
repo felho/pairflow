@@ -467,9 +467,6 @@ describe("emitConvergedFromWorkspace", () => {
             last_command_at: "2026-02-22T09:04:00.000Z"
           }
         }),
-        recoverMetaReviewGateFromSnapshot: async () => {
-          throw new Error("recoverMetaReviewGateFromSnapshot should not be called");
-        }
       }
     );
 
@@ -544,9 +541,6 @@ describe("emitConvergedFromWorkspace", () => {
             last_command_at: "2026-02-22T09:04:30.000Z"
           }
         }),
-        recoverMetaReviewGateFromSnapshot: async () => {
-          throw new Error("recoverMetaReviewGateFromSnapshot should not be called");
-        },
         emitTmuxDeliveryNotification: (input) => {
           deliveries.push(input.envelope.recipient);
           return Promise.resolve({
@@ -663,9 +657,6 @@ describe("emitConvergedFromWorkspace", () => {
             last_command_at: "2026-02-22T09:10:20.000Z"
           }
         }),
-        recoverMetaReviewGateFromSnapshot: async () => {
-          throw new Error("recoverMetaReviewGateFromSnapshot should not be called");
-        },
         emitTmuxDeliveryNotification: async () => ({
           delivered: true,
           sessionName: "pf-b_converged_policy_diag_01",
@@ -741,9 +732,6 @@ describe("emitConvergedFromWorkspace", () => {
             last_command_at: "2026-02-22T09:04:31.000Z"
           }
         }),
-        recoverMetaReviewGateFromSnapshot: async () => {
-          throw new Error("recoverMetaReviewGateFromSnapshot should not be called");
-        },
         emitTmuxDeliveryNotification: (input) => {
           calls.push({
             recipient: input.envelope.recipient,
@@ -855,9 +843,6 @@ describe("emitConvergedFromWorkspace", () => {
             message: "ok"
           });
         },
-        recoverMetaReviewGateFromSnapshot: async () => {
-          throw new Error("recoverMetaReviewGateFromSnapshot should not be called");
-        }
       }
     );
 
@@ -870,86 +855,84 @@ describe("emitConvergedFromWorkspace", () => {
     });
   });
 
-  it("recovers from gate-routing failure by replaying route from RUNNING meta-review snapshot", async () => {
+  it("fails closed when gate routing crashes after partial state write", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupConvergedCandidateBubble(repoPath, "b_converged_recover_01");
 
-    const result = await emitConvergedFromWorkspace(
-      {
-        summary: "Recover from partial gate failure.",
-        cwd: bubble.paths.worktreePath,
-        now: new Date("2026-02-22T09:04:45.000Z")
-      },
-      {
-        applyMetaReviewGateOnConvergence: async () => {
-          const loaded = await readStateSnapshot(bubble.paths.statePath);
-          const executionContext = buildMetaReviewExecutionContext({
-            bubbleId: bubble.bubbleId,
-            round: loaded.state.round,
-            startedAt: "2026-02-22T09:04:40.000Z",
-            watchdogTimeoutMinutes: 60,
-            attempt: 1
-          });
-          await writeStateSnapshot(
-            bubble.paths.statePath,
-            {
-              ...loaded.state,
-              state: "RUNNING",
-              active_agent: "codex",
-              active_role: "meta_reviewer",
-              active_since: "2026-02-22T09:04:40.000Z",
-              execution_context:
-                metaReviewExecutionContextToRunningContext(executionContext),
-              meta_review: {
-                execution_context: executionContext,
-                last_autonomous_run_id: "run_converged_recover_01",
-                last_autonomous_status: "success",
-                last_autonomous_recommendation: "approve",
-                last_autonomous_summary: "Recovered summary from snapshot.",
-                last_autonomous_report_ref: "artifacts/meta-review-last.json",
-                last_autonomous_rework_target_message: null,
-                last_autonomous_updated_at: "2026-02-22T09:04:45.000Z",
-                auto_rework_count: 0,
-                auto_rework_limit: 5,
-                sticky_human_gate: false
-              }
-            },
-            {
-              expectedFingerprint: loaded.fingerprint,
-              expectedState: "RUNNING"
-            }
-          );
-          await writeFile(
-            bubble.paths.metaReviewLastJsonArtifactPath,
-            `${JSON.stringify(
+    await expect(
+      emitConvergedFromWorkspace(
+        {
+          summary: "Recover from partial gate failure.",
+          cwd: bubble.paths.worktreePath,
+          now: new Date("2026-02-22T09:04:45.000Z")
+        },
+        {
+          applyMetaReviewGateOnConvergence: async () => {
+            const loaded = await readStateSnapshot(bubble.paths.statePath);
+            const executionContext = buildMetaReviewExecutionContext({
+              bubbleId: bubble.bubbleId,
+              round: loaded.state.round,
+              startedAt: "2026-02-22T09:04:40.000Z",
+              watchdogTimeoutMinutes: 60,
+              attempt: 1
+            });
+            await writeStateSnapshot(
+              bubble.paths.statePath,
               {
-                bubble_id: bubble.bubbleId,
-                run_id: "run_converged_recover_01",
-                report_json: {
-                  findings_claim_state: "clean",
-                  findings_claim_source: "meta_review_artifact",
-                  findings_count: 0,
-                  findings_claimed_open_total: 0,
-                  findings_blocking_open_total: 0,
-                  findings_advisory_open_total: 0
+                ...loaded.state,
+                state: "RUNNING",
+                active_agent: "codex",
+                active_role: "meta_reviewer",
+                active_since: "2026-02-22T09:04:40.000Z",
+                execution_context:
+                  metaReviewExecutionContextToRunningContext(executionContext),
+                meta_review: {
+                  execution_context: executionContext,
+                  last_autonomous_run_id: "run_converged_recover_01",
+                  last_autonomous_status: "success",
+                  last_autonomous_recommendation: "approve",
+                  last_autonomous_summary: "Recovered summary from snapshot.",
+                  last_autonomous_report_ref: "artifacts/meta-review-last.json",
+                  last_autonomous_rework_target_message: null,
+                  last_autonomous_updated_at: "2026-02-22T09:04:45.000Z",
+                  auto_rework_count: 0,
+                  auto_rework_limit: 5,
+                  sticky_human_gate: false
                 }
               },
-              null,
-              2
-            )}\n`,
-            "utf8"
-          );
-          throw new Error("simulated gate crash after snapshot write");
+              {
+                expectedFingerprint: loaded.fingerprint,
+                expectedState: "RUNNING"
+              }
+            );
+            await writeFile(
+              bubble.paths.metaReviewLastJsonArtifactPath,
+              `${JSON.stringify(
+                {
+                  bubble_id: bubble.bubbleId,
+                  run_id: "run_converged_recover_01",
+                  report_json: {
+                    findings_claim_state: "clean",
+                    findings_claim_source: "meta_review_artifact",
+                    findings_count: 0,
+                    findings_claimed_open_total: 0,
+                    findings_blocking_open_total: 0,
+                    findings_advisory_open_total: 0
+                  }
+                },
+                null,
+                2
+              )}\n`,
+              "utf8"
+            );
+            throw new Error("simulated gate crash after snapshot write");
+          }
         }
-      }
-    );
-
-    expect(result.gateRoute).toBe("human_gate_approve");
-    expect(result.approvalRequestEnvelope.type).toBe("APPROVAL_REQUEST");
-    expect(result.state.state).toBe("READY_FOR_HUMAN_APPROVAL");
+      )
+    ).rejects.toThrow(/simulated gate crash after snapshot write/u);
 
     const finalState = await readStateSnapshot(bubble.paths.statePath);
-    expect(finalState.state.state).toBe("READY_FOR_HUMAN_APPROVAL");
+    expect(finalState.state.state).toBe("RUNNING");
   });
 
   it("writes CONVERGENCE + APPROVAL_REQUEST and moves RUNNING -> READY_FOR_HUMAN_APPROVAL when meta-review run fails", async () => {

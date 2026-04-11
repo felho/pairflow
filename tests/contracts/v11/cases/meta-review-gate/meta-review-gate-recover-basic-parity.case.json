@@ -8,11 +8,8 @@
     "refs": []
   },
   "expected": {
-    "status": "ok",
-    "gateRoute": "human_gate_run_failed",
-    "stateSubset": {
-      "state": "READY_FOR_HUMAN_APPROVAL"
-    }
+    "status": "error",
+    "reasonCode": "META_REVIEW_GATE_TRANSITION_INVALID"
   },
   "tags": [
     "seed",

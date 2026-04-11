@@ -202,7 +202,6 @@ describe("convergedFlowInvocationBuilders", () => {
           state: {}
         }) as never,
       applyMetaReviewGateOnConvergence: undefined,
-      recoverMetaReviewGateFromSnapshot: undefined,
       emitTmuxDeliveryNotification: undefined,
       emitBubbleNotification: undefined
     });
@@ -245,7 +244,6 @@ describe("convergedFlowInvocationBuilders", () => {
     expect(executionDependencies.emitBubbleNotification).toBeTypeOf("function");
     expect(executionDependencies.resolveDeliveryMessageRef).toBeTypeOf("function");
     expect(executionDependencies.applyMetaReviewGateOnConvergence).toBeTypeOf("function");
-    expect(executionDependencies.recoverMetaReviewGateFromSnapshot).toBeTypeOf("function");
     expect(gateDeliveryDependencies.emitTmuxDeliveryNotification).toBeTypeOf("function");
     expect(gateDeliveryDependencies.resolveDeliveryMessageRef).toBeTypeOf("function");
   });
@@ -313,7 +311,6 @@ describe("convergedFlowInvocationBuilders", () => {
       resolveMetaReviewRolloutBlockingReasonCodes: () => [],
       dependencies: {
         applyMetaReviewGateOnConvergence: undefined,
-        recoverMetaReviewGateFromSnapshot: undefined,
         emitTmuxDeliveryNotification: undefined,
         emitBubbleNotification: undefined
       }

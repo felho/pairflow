@@ -192,8 +192,8 @@ export function appendMetaReviewLastReportVerboseLines(
 
 export function buildMetaReviewRecoverText(result: MetaReviewGateResult): string[] {
   return [
-    `Meta-review recovery for ${result.bubbleId}: route=${result.route}`,
-    "Recovery mode: snapshot-route replay only (no live rerun, no operator-origin submit authority)",
+    `Retained meta-review recover surface for ${result.bubbleId}: route=${result.route}`,
+    "Operator semantics: unsupported fail-closed recovery surface (successful output here is diagnostic-only and does not imply supported snapshot replay)",
     `Gate envelope: ${result.gateEnvelope.type} ${result.gateEnvelope.id}`,
     `Lifecycle state: ${result.state.state}`
   ];

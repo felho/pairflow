@@ -1,7 +1,8 @@
 import type { BubbleStateSnapshot } from "../../../types/bubble.js";
 import type { BubbleWatchdogResult } from "./watchdogCommandContract.js";
 import { executeWatchdogEscalationMutation } from "../../shared/watchdog/watchdogEscalationMutation.js";
-import type { recoverMetaReviewGateFromSnapshot } from "../../shared/metaReviewGate/metaReviewGateCommandApi.js";
+import { clearLiveMetaReviewSnapshot } from "../../shared/metaReview/metaReviewSnapshot.js";
+import { assertValidBubbleStateSnapshot } from "../../shared/state/stateSchema.js";
 import type { ResolvedBubbleById } from "../../shared/ports/bubbleLookup.js";
 import type { EmitBubbleNotificationPort } from "../../shared/ports/notifications.js";
 import type {
@@ -25,7 +26,6 @@ export interface WatchdogRuntimeContext {
   readState: ReadStateSnapshotPort;
   appendEnvelope: AppendProtocolEnvelopePort;
   writeState: WriteStateSnapshotPort;
-  recoverMetaReviewRoute: typeof recoverMetaReviewGateFromSnapshot;
   loadedState: LoadedStateSnapshot;
   state: BubbleStateSnapshot;
   emitDelivery: EmitTmuxDeliveryNotificationPort;
@@ -93,6 +93,72 @@ export async function escalateRunningWatchdog(
     })
   });
   // Optional UX signal; never block protocol/state progression on notification failure.
+  void context.emitNotification(context.resolved.bubbleConfig, "waiting-human");
+
+  return {
+    bubbleId: context.resolved.bubbleId,
+    escalated: true,
+    reason: "escalated",
+    state: written.state,
+    envelope: appended.envelope,
+    sequence: appended.sequence
+  };
+}
+
+export async function escalateMetaReviewWatchdog(
+  context: WatchdogRuntimeContext
+): Promise<BubbleWatchdogResult> {
+  const question =
+    `Watchdog timeout: meta-review submit did not complete within ${context.resolved.bubbleConfig.watchdog_timeout_minutes} minutes. ` +
+    `Please intervene and restart or re-run meta-review for bubble ${context.resolved.bubbleId}.`;
+  const appended = await context.appendEnvelope({
+    transcriptPath: context.resolved.bubblePaths.transcriptPath,
+    mirrorPaths: [context.resolved.bubblePaths.inboxPath],
+    lockPath: `${context.resolved.bubblePaths.locksDir}/${context.resolved.bubbleId}.lock`,
+    now: context.now,
+    envelope: {
+      bubble_id: context.resolved.bubbleId,
+      sender: "orchestrator",
+      recipient: "human",
+      type: "HUMAN_QUESTION",
+      round: context.state.round,
+      payload: {
+        question
+      },
+      refs: []
+    }
+  });
+
+  const nextState = assertValidBubbleStateSnapshot({
+    ...context.state,
+    state: "WAITING_HUMAN",
+    active_agent: null,
+    active_role: null,
+    active_since: null,
+    execution_context: null,
+    last_command_at: context.nowIso,
+    meta_review: clearLiveMetaReviewSnapshot(context.state.meta_review)
+  });
+  const written = await context.writeState(
+    context.resolved.bubblePaths.statePath,
+    nextState,
+    {
+      expectedFingerprint: context.loadedState.fingerprint,
+      expectedState: "RUNNING"
+    }
+  );
+
+  void context.emitDelivery({
+    bubbleId: context.resolved.bubbleId,
+    bubbleConfig: context.resolved.bubbleConfig,
+    sessionsPath: context.resolved.bubblePaths.sessionsPath,
+    envelope: appended.envelope,
+    messageRef: context.resolveDeliveryMessageRef({
+      bubbleId: context.resolved.bubbleId,
+      sessionsPath: context.resolved.bubblePaths.sessionsPath,
+      envelope: appended.envelope
+    })
+  });
   void context.emitNotification(context.resolved.bubbleConfig, "waiting-human");
 
   return {

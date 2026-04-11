@@ -9,8 +9,7 @@ import type { ResolveReviewerTestExecutionDirectivePort } from "../../shared/por
 import type { SummaryVerifierConsistencyGateDecisionRecord } from "../../../v11/shared/reviewer/summaryVerifierConsistencyGate.js";
 import type { ConvergedStructuredFinding } from "../../shared/converged/convergedCommandTypes.js";
 import type {
-  applyMetaReviewGateOnConvergence,
-  recoverMetaReviewGateFromSnapshot
+  applyMetaReviewGateOnConvergence
 } from "../../shared/metaReviewGate/metaReviewGateCommandApi.js";
 import type { MetaReviewGateRoute } from "../../shared/metaReviewGate/metaReviewGateCommandContract.js";
 import type {
@@ -26,7 +25,6 @@ export interface ExecuteConvergedExecutionDependencies {
   emitTmuxDeliveryNotification?: EmitTmuxDeliveryNotificationPort;
   emitBubbleNotification?: EmitBubbleNotificationPort;
   applyMetaReviewGateOnConvergence?: typeof applyMetaReviewGateOnConvergence;
-  recoverMetaReviewGateFromSnapshot?: typeof recoverMetaReviewGateFromSnapshot;
 }
 
 export interface RunConvergedFlowInput {

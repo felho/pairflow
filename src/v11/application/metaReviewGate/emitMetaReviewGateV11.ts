@@ -22,7 +22,6 @@ import type {
 import { notifyMetaReviewerSubmissionRequest } from "./metaReviewGateNotify.js";
 import { resolveMetaReviewerPaneWarning } from "./metaReviewGatePaneBinding.js";
 import { resolveMetaReviewGateDependencyDefaults } from "./metaReviewGateDependencyDefaults.js";
-import { finishIncompleteActorResult } from "../reconcile/finishIncompleteActorResult.js";
 
 let metaReviewGateDependencyDefaultsPromise:
   | Promise<Awaited<ReturnType<typeof resolveMetaReviewGateDependencyDefaults>>>
@@ -108,40 +107,6 @@ async function withMetaReviewGateApplyDefaults(
   };
 }
 
-async function withMetaReviewGateRecoveryDefaults(
-  dependencies: RecoverMetaReviewGateFromSnapshotDependencies = {}
-): Promise<RecoverMetaReviewGateFromSnapshotDependencies> {
-  const defaults = await loadMetaReviewGateDependencyDefaults();
-  return {
-    appendProtocolEnvelope:
-      dependencies.appendProtocolEnvelope
-      ?? defaults.appendProtocolEnvelope,
-    readStateSnapshot:
-      dependencies.readStateSnapshot
-      ?? defaults.readStateSnapshot,
-    readTranscriptEnvelopes:
-      dependencies.readTranscriptEnvelopes
-      ?? defaults.readTranscriptEnvelopes,
-    resolveBubbleById:
-      dependencies.resolveBubbleById
-      ?? defaults.resolveBubbleById,
-    setMetaReviewerPaneBinding:
-      dependencies.setMetaReviewerPaneBinding
-      ?? defaults.setMetaReviewerPaneBinding,
-    writeStateSnapshot:
-      dependencies.writeStateSnapshot
-      ?? defaults.writeStateSnapshot,
-    readFile: dependencies.readFile ?? defaults.readFile,
-    writeFile: dependencies.writeFile ?? defaults.writeFile,
-    finishIncompleteActorResult:
-      dependencies.finishIncompleteActorResult
-      ?? finishIncompleteActorResult,
-    ...(dependencies.sleepForRetryMs !== undefined
-      ? { sleepForRetryMs: dependencies.sleepForRetryMs }
-      : {})
-  };
-}
-
 export {
   asMetaReviewGateError as asMetaReviewGateErrorV11,
   MetaReviewGateError as MetaReviewGateErrorV11,
@@ -180,8 +145,5 @@ export async function recoverMetaReviewGateFromSnapshotV11(
   input: RecoverMetaReviewGateFromSnapshotInput,
   dependencies: RecoverMetaReviewGateFromSnapshotDependencies = {}
 ): Promise<MetaReviewGateResult> {
-  return recoverMetaReviewGateFromSnapshot(
-    input,
-    await withMetaReviewGateRecoveryDefaults(dependencies)
-  );
+  return recoverMetaReviewGateFromSnapshot(input, dependencies);
 }

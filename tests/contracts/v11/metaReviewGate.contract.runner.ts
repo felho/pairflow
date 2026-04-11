@@ -20,15 +20,17 @@ import type {
 import type { SetMetaReviewerPaneBindingResult } from "../../../src/v11/infrastructure/channel/tmux/metaReviewerPaneBinding.js";
 import type { ContractCase, ContractCaseExpected } from "./schema.js";
 import { DEFAULT_META_REVIEW_AUTO_REWORK_LIMIT } from "../../../src/types/bubble.js";
+import { MetaReviewGateError } from "../../../src/v11/shared/metaReviewGate/metaReviewGateTypes.js";
 
 export interface MetaReviewGateContractOutput {
-  status: "ok";
-  gateRoute: string;
-  envelopeType: string;
-  envelopePayload: Record<string, unknown>;
+  status: "ok" | "error";
+  reasonCode: string | null;
+  gateRoute: string | null;
+  envelopeType: string | null;
+  envelopePayload: Record<string, unknown> | null;
   stateSubset: {
     state: string;
-  };
+  } | null;
 }
 
 export interface MetaReviewGateContractRunResult {
@@ -356,12 +358,26 @@ function normalizeMetaReviewGateResult(
       : {};
   return {
     status: "ok",
+    reasonCode: null,
     gateRoute: result.route,
     envelopeType: result.gateEnvelope.type,
     envelopePayload,
     stateSubset: {
       state: result.state.state
     }
+  };
+}
+
+function normalizeMetaReviewGateError(
+  error: MetaReviewGateError
+): MetaReviewGateContractOutput {
+  return {
+    status: "error",
+    reasonCode: error.reasonCode,
+    gateRoute: null,
+    envelopeType: null,
+    envelopePayload: null,
+    stateSubset: null
   };
 }
 
@@ -445,6 +461,14 @@ function assertContractExpectedSubset(input: {
     );
   }
   if (
+    input.expected.reasonCode !== undefined &&
+    input.output.reasonCode !== input.expected.reasonCode
+  ) {
+    throw new Error(
+      `${input.label}: reasonCode mismatch (expected=${input.expected.reasonCode}, actual=${input.output.reasonCode})`
+    );
+  }
+  if (
     input.expected.gateRoute !== undefined &&
     input.output.gateRoute !== input.expected.gateRoute
   ) {
@@ -455,10 +479,10 @@ function assertContractExpectedSubset(input: {
   const expectedState = input.expected.stateSubset?.state;
   if (
     typeof expectedState === "string" &&
-    input.output.stateSubset.state !== expectedState
+    input.output.stateSubset?.state !== expectedState
   ) {
     throw new Error(
-      `${input.label}: stateSubset.state mismatch (expected=${expectedState}, actual=${input.output.stateSubset.state})`
+      `${input.label}: stateSubset.state mismatch (expected=${expectedState}, actual=${input.output.stateSubset?.state ?? "undefined"})`
     );
   }
   if (
@@ -470,6 +494,9 @@ function assertContractExpectedSubset(input: {
     );
   }
   if (input.expected.envelopePayloadSubset !== undefined) {
+    if (input.output.envelopePayload === null) {
+      throw new Error(`${input.label}: missing envelopePayload for subset assertion`);
+    }
     assertRecordSubset({
       actual: input.output.envelopePayload,
       expected: input.expected.envelopePayloadSubset,
@@ -700,13 +727,20 @@ async function executeMetaReviewGateCase(input: {
         });
       }
 
-      result = await input.recoverExecutor({
-        bubbleId: bubble.bubbleId,
-        repoPath,
-        refs: caseInput.refs,
-        now: new Date("2026-03-19T10:04:00.000Z"),
-        runResult
-      });
+      try {
+        result = await input.recoverExecutor({
+          bubbleId: bubble.bubbleId,
+          repoPath,
+          refs: caseInput.refs,
+          now: new Date("2026-03-19T10:04:00.000Z"),
+          runResult
+        });
+      } catch (error) {
+        if (error instanceof MetaReviewGateError) {
+          return normalizeMetaReviewGateError(error);
+        }
+        throw error;
+      }
     }
 
     return normalizeMetaReviewGateResult(result);

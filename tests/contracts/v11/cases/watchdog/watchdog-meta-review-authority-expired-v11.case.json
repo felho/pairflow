@@ -13,7 +13,7 @@
     "reasonCode": "WATCHDOG_EVALUATED",
     "commandReason": "escalated",
     "stateSubset": {
-      "state": "READY_FOR_HUMAN_APPROVAL"
+      "state": "WAITING_HUMAN"
     }
   },
   "tags": ["seed", "m0", "watchdog", "v11", "guard-path"]

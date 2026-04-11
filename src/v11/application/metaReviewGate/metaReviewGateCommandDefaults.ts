@@ -1,4 +1,4 @@
-import { readFile, writeFile } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
 
 import { metaReviewGateDependencyDefaults as metaReviewGateDependencyDefaultsV11 } from "../../defaults/metaReviewGate/metaReviewGateCommandDefaults.js";
 import {
@@ -10,8 +10,7 @@ import {
   writeStateSnapshot
 } from "../../shared/state/stateStoreDefaults.js";
 import type {
-  ApplyMetaReviewGateOnConvergenceDependencies,
-  RecoverMetaReviewGateFromSnapshotDependencies
+  ApplyMetaReviewGateOnConvergenceDependencies
 } from "../../shared/metaReviewGate/metaReviewGateCommandContract.js";
 import type {
   NotifyMetaReviewerSubmissionRequestDependencies,
@@ -50,8 +49,6 @@ export interface MetaReviewGateDependencyDefaults {
     NonNullable<
       NotifyMetaReviewerSubmissionRequestDependencies["submitTmuxPaneInput"]
     >;
-  writeFile:
-    NonNullable<RecoverMetaReviewGateFromSnapshotDependencies["writeFile"]>;
   writeStateSnapshot:
     NonNullable<ApplyMetaReviewGateOnConvergenceDependencies["writeStateSnapshot"]>;
 }
@@ -69,7 +66,6 @@ export async function loadMetaReviewGateDependencyDefaults(): Promise<
     readFile,
     readTranscriptEnvelopes,
     readStateSnapshot,
-    writeFile,
     writeStateSnapshot
   });
   return metaReviewGateDependencyDefaultsPromise;

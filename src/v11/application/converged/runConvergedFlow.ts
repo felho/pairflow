@@ -31,12 +31,6 @@ function buildExecutionDependencies(
             dependencies.applyMetaReviewGateOnConvergence
         }
       : {}),
-    ...(dependencies.recoverMetaReviewGateFromSnapshot !== undefined
-      ? {
-          recoverMetaReviewGateFromSnapshot:
-            dependencies.recoverMetaReviewGateFromSnapshot
-        }
-      : {}),
     ...(dependencies.emitTmuxDeliveryNotification !== undefined
       ? {
           emitTmuxDeliveryNotification:

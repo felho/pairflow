@@ -466,7 +466,6 @@ async function executeWatchdogCase(input: {
       scenario: parsedInput.scenario
     });
 
-    let recoverCalled = false;
     const scenarioDependencies = buildWatchdogScenarioDependencies(
       parsedInput.scenario
     );
@@ -476,54 +475,8 @@ async function executeWatchdogCase(input: {
         cwd: repoPath,
         now: new Date("2026-03-20T12:45:00.000Z")
       },
-      parsedInput.scenario === "meta_review_authority_expired"
-      || parsedInput.scenario === "meta_review_authority_expired_after_rebind"
-        ? {
-            recoverMetaReviewGateFromSnapshot: async () => {
-              recoverCalled = true;
-              const latest = await readStateSnapshot(bubble.paths.statePath);
-              return {
-                bubbleId: bubble.bubbleId,
-                route: "human_gate_run_failed",
-                state: {
-                  ...latest.state,
-                  state: "READY_FOR_HUMAN_APPROVAL",
-                  active_agent: null,
-                  active_role: null,
-                  active_since: null,
-                  last_command_at: "2026-03-20T12:45:00.000Z"
-                },
-                gateEnvelope: {
-                  id: "evt_meta_review_recover_seed",
-                  ts: "2026-03-20T12:45:00.000Z",
-                  bubble_id: bubble.bubbleId,
-                  sender: "orchestrator",
-                  recipient: "human",
-                  type: "HUMAN_QUESTION",
-                  round: latest.state.round,
-                  payload: {
-                    question: "Meta-review route recovered by watchdog contract fixture."
-                  },
-                  refs: []
-                },
-                gateSequence: 1
-              };
-            },
-            ...(scenarioDependencies ?? {})
-          }
-        : scenarioDependencies
+      scenarioDependencies
     );
-    if (
-      (
-        parsedInput.scenario === "meta_review_authority_expired"
-        || parsedInput.scenario === "meta_review_authority_expired_after_rebind"
-      )
-      && !recoverCalled
-    ) {
-      throw new Error(
-        `watchdog contract case=${input.caseDef.id}: expected meta-review recovery dependency to be invoked.`
-      );
-    }
     return normalizeWatchdogResult(result);
   } finally {
     await rm(repoPath, { recursive: true, force: true });

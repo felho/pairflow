@@ -33,7 +33,7 @@ export function parseMetaReviewSubcommand(
   }
   if (value === "run") {
     return invalidMetaReviewCliOptions(
-      "`pairflow bubble meta-review run` was removed. Use canonical `pairflow agent emit --kind meta_review_result ...` for actor writes. Retained operator commands: status, last-report, recover."
+      "`pairflow bubble meta-review run` was removed. Use canonical `pairflow agent emit --kind meta_review_result ...` for actor writes. Retained operator commands: status, last-report, recover (fail-closed/unsupported)."
     );
   }
   if (
@@ -132,7 +132,7 @@ export function assertSubmitOnlyOptionsAllowed(
 export function assertDepthOptionRemoved(depth: string | undefined): void {
   if (depth !== undefined) {
     invalidMetaReviewCliOptions(
-      "`--depth` is no longer supported because `pairflow bubble meta-review run` was removed. Retained operator commands: status, last-report, recover."
+      "`--depth` is no longer supported because `pairflow bubble meta-review run` was removed. Retained operator commands: status, last-report, recover (fail-closed/unsupported)."
     );
   }
 }

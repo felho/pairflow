@@ -41,8 +41,6 @@ export interface ExecuteConvergedExecutionDependencies {
   appendProtocolEnvelope?: AppendProtocolEnvelopePort;
   applyMetaReviewGateOnConvergence?:
     ResolvedConvergedExecutionDependencies["applyMetaReviewGateOnConvergence"];
-  recoverMetaReviewGateFromSnapshot?:
-    ResolvedConvergedExecutionDependencies["recoverMetaReviewGateFromSnapshot"];
   emitTmuxDeliveryNotification?: EmitTmuxDeliveryNotificationPort;
   emitBubbleNotification?: EmitBubbleNotificationPort;
   resolveDeliveryMessageRef?: ResolveDeliveryMessageRefPort;
@@ -57,8 +55,6 @@ export interface ExecuteConvergedExecutionResult {
 interface ResolvedExecutionDependencies {
   appendEnvelope: AppendProtocolEnvelopePort;
   applyGate: ResolvedConvergedExecutionDependencies["applyMetaReviewGateOnConvergence"];
-  recoverGate:
-    ResolvedConvergedExecutionDependencies["recoverMetaReviewGateFromSnapshot"];
   emitDelivery: EmitTmuxDeliveryNotificationPort;
   emitNotification: EmitBubbleNotificationPort;
   resolveMessageRef: ResolveDeliveryMessageRefPort;
@@ -71,7 +67,6 @@ function resolveExecutionDependencies(
   return {
     appendEnvelope: resolved.appendProtocolEnvelope,
     applyGate: resolved.applyMetaReviewGateOnConvergence,
-    recoverGate: resolved.recoverMetaReviewGateFromSnapshot,
     emitDelivery: resolved.emitTmuxDeliveryNotification,
     emitNotification: resolved.emitBubbleNotification,
     resolveMessageRef: resolved.resolveDeliveryMessageRef
@@ -115,35 +110,19 @@ async function appendConvergenceEnvelope(
   });
 }
 
-async function applyMetaReviewGateWithRecovery(
+async function applyMetaReviewGate(
   input: ExecuteConvergedExecutionInput,
-  applyGate: ResolvedExecutionDependencies["applyGate"],
-  recoverGate: ResolvedExecutionDependencies["recoverGate"]
+  applyGate: ResolvedExecutionDependencies["applyGate"]
 ): Promise<Awaited<ReturnType<ResolvedExecutionDependencies["applyGate"]>>> {
-  try {
-    return await applyGate({
-      bubbleId: input.resolved.bubbleId,
-      summary: input.summary,
-      refs: input.refs,
-      ...(input.findings !== undefined ? { findings: input.findings } : {}),
-      repoPath: input.resolved.repoPath,
-      cwd: input.resolved.bubblePaths.worktreePath,
-      now: input.now
-    });
-  } catch (error) {
-    try {
-      return await recoverGate({
-        bubbleId: input.resolved.bubbleId,
-        summary: input.summary,
-        refs: input.refs,
-        repoPath: input.resolved.repoPath,
-        cwd: input.resolved.bubblePaths.worktreePath,
-        now: input.now
-      });
-    } catch {
-      throw error;
-    }
-  }
+  return applyGate({
+    bubbleId: input.resolved.bubbleId,
+    summary: input.summary,
+    refs: input.refs,
+    ...(input.findings !== undefined ? { findings: input.findings } : {}),
+    repoPath: input.resolved.repoPath,
+    cwd: input.resolved.bubblePaths.worktreePath,
+    now: input.now
+  });
 }
 export async function executeConvergedExecution(
   input: ExecuteConvergedExecutionInput,
@@ -154,10 +133,9 @@ export async function executeConvergedExecution(
     input,
     resolvedDependencies.appendEnvelope
   );
-  const gateResult = await applyMetaReviewGateWithRecovery(
+  const gateResult = await applyMetaReviewGate(
     input,
-    resolvedDependencies.applyGate,
-    resolvedDependencies.recoverGate
+    resolvedDependencies.applyGate
   );
   const delivery = await executeGateDelivery({
     resolved: input.resolved,
