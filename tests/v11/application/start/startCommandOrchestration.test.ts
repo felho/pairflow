@@ -19,6 +19,7 @@ import {
   resolveStartBubbleDependencies,
   resolveStartBubbleMode
 } from "../../../../src/v11/application/start/startCommandOrchestration.js";
+import { buildWorktreeBootstrapResult } from "../../../helpers/worktreeBootstrapResult.js";
 
 describe("startCommandOrchestration", () => {
   it("resolves default dependencies when no override is provided", async () => {
@@ -44,12 +45,13 @@ describe("startCommandOrchestration", () => {
 
   it("prefers explicit dependency overrides", async () => {
     const overrides = {
-      bootstrapWorktreeWorkspace: vi.fn(async () => ({
-        repoPath: "repo",
-        baseRef: "refs/heads/main",
-        bubbleBranch: "bubble",
-        worktreePath: "worktree"
-      })),
+      bootstrapWorktreeWorkspace: vi.fn(async () =>
+        buildWorktreeBootstrapResult({
+          repoPath: "repo",
+          bubbleBranch: "bubble",
+          worktreePath: "worktree"
+        })
+      ),
       cleanupWorktreeWorkspace: vi.fn(async () => ({
         repoPath: "repo",
         bubbleBranch: "bubble",

@@ -20,6 +20,7 @@ import {
 } from "../../../src/v11/infrastructure/executor/sessionRuntime/runtimeSessionsRegistry.js";
 import { initGitRepository } from "../../helpers/git.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
+import { buildWorktreeBootstrapResult } from "../../helpers/worktreeBootstrapResult.js";
 
 const tempDirs: string[] = [];
 
@@ -318,12 +319,13 @@ describe("reconcileRuntimeSessions", () => {
       {
         bootstrapWorktreeWorkspace: () => {
           bootstrapCalled = true;
-          return Promise.resolve({
-            repoPath,
-            baseRef: "refs/heads/main",
-            bubbleBranch: bubble.config.bubble_branch,
-            worktreePath: bubble.paths.worktreePath
-          });
+          return Promise.resolve(
+            buildWorktreeBootstrapResult({
+              repoPath,
+              bubbleBranch: bubble.config.bubble_branch,
+              worktreePath: bubble.paths.worktreePath
+            })
+          );
         },
         launchBubbleTmuxSession: () =>
           Promise.resolve({ sessionName: "pf-b_reconcile_04" })

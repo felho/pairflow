@@ -1,0 +1,27 @@
+{
+  "id": "start-clone-not-activated-resume-ready-for-human-approval-v11",
+  "command": "start",
+  "mode": "v11",
+  "description": "Start contract case for explicit fail-closed rejection when work_mode=clone is not activated on a READY_FOR_HUMAN_APPROVAL resumable bubble.",
+  "input": {
+    "fixture": {
+      "scenario": "clone_not_activated_resume",
+      "resumeState": "READY_FOR_HUMAN_APPROVAL"
+    }
+  },
+  "expected": {
+    "status": "error",
+    "reasonCode": "WORKSPACE_MODE_CLONE_NOT_ACTIVATED",
+    "stateSubset": {
+      "state": "READY_FOR_HUMAN_APPROVAL"
+    }
+  },
+  "tags": [
+    "seed",
+    "m0",
+    "start",
+    "v11",
+    "error-path",
+    "resume"
+  ]
+}

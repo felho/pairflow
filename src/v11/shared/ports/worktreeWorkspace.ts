@@ -1,4 +1,9 @@
-import type { LocalOverlayMode } from "../../../types/bubble.js";
+import type {
+  LocalOverlayMode,
+  WorkMode
+} from "../../../types/bubble.js";
+
+export type WorkspaceKind = WorkMode;
 
 export interface WorktreeBootstrapInput {
   repoPath: string;
@@ -13,6 +18,8 @@ export interface WorktreeBootstrapResult {
   baseRef: string;
   bubbleBranch: string;
   worktreePath: string;
+  workspaceKind: WorkspaceKind;
+  branchPrepared: boolean;
 }
 
 export interface WorktreeCleanupInput {

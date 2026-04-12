@@ -48,6 +48,8 @@ describe("bootstrapWorktreeWorkspace", () => {
 
     expect(result.baseRef).toBe("refs/heads/main");
     expect(result.worktreePath).toBe(worktreePath);
+    expect(result.workspaceKind).toBe("worktree");
+    expect(result.branchPrepared).toBe(true);
 
     const branchCheck = await runGit(
       repoPath,

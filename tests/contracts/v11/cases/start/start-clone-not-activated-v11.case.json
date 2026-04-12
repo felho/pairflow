@@ -1,0 +1,25 @@
+{
+  "id": "start-clone-not-activated-v11",
+  "command": "start",
+  "mode": "v11",
+  "description": "Start contract case for explicit fail-closed rejection when work_mode=clone is not activated.",
+  "input": {
+    "fixture": {
+      "scenario": "clone_not_activated"
+    }
+  },
+  "expected": {
+    "status": "error",
+    "reasonCode": "WORKSPACE_MODE_CLONE_NOT_ACTIVATED",
+    "stateSubset": {
+      "state": "CREATED"
+    }
+  },
+  "tags": [
+    "seed",
+    "m0",
+    "start",
+    "v11",
+    "error-path"
+  ]
+}

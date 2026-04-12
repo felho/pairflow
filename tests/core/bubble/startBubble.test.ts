@@ -3,8 +3,9 @@ import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
 import { spawn } from "node:child_process";
 
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { renderBubbleConfigToml } from "../../../src/config/bubbleConfig.js";
 import { createBubble } from "../../../src/v11/application/create/createBubble.js";
 import { buildMetaReviewExecutionContext } from "../../../src/v11/shared/metaReview/metaReviewExecutionContext.js";
 import {
@@ -16,7 +17,12 @@ import {
   startBubbleV11 as startBubble,
   StartBubbleErrorV11 as StartBubbleError
 } from "../../../src/v11/application/start/emitStartV11.js";
+import {
+  startBubble as startBubblePublicApi,
+  StartBubbleError as PublicStartBubbleError
+} from "../../../src/index.js";
 import { upsertRuntimeSession } from "../../../src/v11/infrastructure/executor/sessionRuntime/runtimeSessionsRegistry.js";
+import { BubbleLookupError } from "../../../src/v11/infrastructure/executor/workspace/bubbleLookup.js";
 import {
   REVIEWER_COMMAND_GATE_FORBIDDEN,
   REVIEWER_COMMAND_GATE_REQ_A,
@@ -41,11 +47,13 @@ import type { BubbleStateSnapshot } from "../../../src/types/bubble.js";
 import { initGitRepository } from "../../helpers/git.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
 import { writeEvidenceLog } from "../../helpers/evidence.js";
+import { buildWorktreeBootstrapResult } from "../../helpers/worktreeBootstrapResult.js";
 import {
   reviewerPolicySnapshotFileName,
   reviewerPolicySnapshotUnavailableReasonCode
 } from "../../../src/v11/application/start/startCommandContext.js";
 import { buildResumedState } from "../../../src/v11/application/start/startCommandFlows.js";
+import { startCommandContextDefaults } from "../../../src/v11/application/start/startCommandDependencyDefaults.js";
 
 const tempDirs: string[] = [];
 
@@ -207,12 +215,13 @@ describe("startBubble", () => {
       },
       {
         bootstrapWorktreeWorkspace: () =>
-          Promise.resolve({
-            repoPath,
-            baseRef: "refs/heads/main",
-            bubbleBranch: created.config.bubble_branch,
-            worktreePath: created.paths.worktreePath
-          }),
+          Promise.resolve(
+            buildWorktreeBootstrapResult({
+              repoPath,
+              bubbleBranch: created.config.bubble_branch,
+              worktreePath: created.paths.worktreePath
+            })
+          ),
         launchBubbleTmuxSession: (input) => {
           capturedKickoff = input.implementerKickoffMessage;
           implementerCommand = input.implementerCommand;
@@ -291,12 +300,13 @@ describe("startBubble", () => {
             mode: "symlink",
             entries: [".claude", ".mcp.json", ".env.local", ".env.production"]
           });
-          return Promise.resolve({
-            repoPath,
-            baseRef: "refs/heads/main",
-            bubbleBranch: created.config.bubble_branch,
-            worktreePath: created.paths.worktreePath
-          });
+          return Promise.resolve(
+            buildWorktreeBootstrapResult({
+              repoPath,
+              bubbleBranch: created.config.bubble_branch,
+              worktreePath: created.paths.worktreePath
+            })
+          );
         },
         launchBubbleTmuxSession: (input) => {
           calls.push("launch");
@@ -508,6 +518,321 @@ describe("startBubble", () => {
     await assertBashParses(reviewerCommand);
   });
 
+  it("rejects clone-mode fresh start before runtime mutation", async () => {
+    const repoPath = await createTempRepo();
+    const created = await createBubble({
+      id: "b_start_clone_01",
+      repoPath,
+      baseBranch: "main",
+      reviewArtifactType: "code",
+      task: "Clone mode remains fail-closed",
+      cwd: repoPath
+    });
+
+    await writeFile(
+      created.paths.bubbleTomlPath,
+      renderBubbleConfigToml({
+        ...created.config,
+        work_mode: "clone"
+      }),
+      "utf8"
+    );
+
+    let claimCalled = false;
+    let bootstrapCalled = false;
+    let launchCalled = false;
+    let removeCalled = false;
+
+    const thrown = await startBubble(
+      {
+        bubbleId: created.bubbleId,
+        cwd: repoPath,
+        now: new Date("2026-02-22T13:01:00.000Z")
+      },
+      {
+        claimRuntimeSession: () => {
+          claimCalled = true;
+          return Promise.resolve({
+            claimed: true,
+            record: {
+              bubbleId: created.bubbleId,
+              repoPath,
+              worktreePath: created.paths.worktreePath,
+              tmuxSessionName: "pf-b_start_clone_01",
+              updatedAt: "2026-02-22T13:01:00.000Z"
+            }
+          });
+        },
+        bootstrapWorktreeWorkspace: () => {
+          bootstrapCalled = true;
+          return Promise.resolve(
+            buildWorktreeBootstrapResult({
+              repoPath,
+              bubbleBranch: created.config.bubble_branch,
+              worktreePath: created.paths.worktreePath
+            })
+          );
+        },
+        launchBubbleTmuxSession: () => {
+          launchCalled = true;
+          return Promise.resolve({ sessionName: "pf-b_start_clone_01" });
+        },
+        removeRuntimeSession: () => {
+          removeCalled = true;
+          return Promise.resolve(true);
+        }
+      }
+    ).then(
+      () => null,
+      (error: unknown) => error
+    );
+
+    expect(thrown).toBeInstanceOf(StartBubbleError);
+    expect((thrown as StartBubbleError).reasonCode).toBe(
+      "WORKSPACE_MODE_CLONE_NOT_ACTIVATED"
+    );
+    expect((thrown as StartBubbleError).context).toMatchObject({
+      bubble_id: created.bubbleId,
+      work_mode: "clone"
+    });
+    expect((thrown as StartBubbleError).message).toContain(
+      "work_mode=clone is not activated in this phase"
+    );
+    expect(claimCalled).toBe(false);
+    expect(bootstrapCalled).toBe(false);
+    expect(launchCalled).toBe(false);
+    expect(removeCalled).toBe(false);
+
+    const loaded = await readStateSnapshot(created.paths.statePath);
+    expect(loaded.state.state).toBe("CREATED");
+  });
+
+  it("rejects clone-mode start before reviewer policy snapshot side effects", async () => {
+    const repoPath = await createTempRepo();
+    const created = await createBubble({
+      id: "b_start_clone_guard_01",
+      repoPath,
+      baseBranch: "main",
+      reviewArtifactType: "code",
+      task: "Clone guard must run before side effects",
+      cwd: repoPath
+    });
+
+    await writeFile(
+      created.paths.bubbleTomlPath,
+      renderBubbleConfigToml({
+        ...created.config,
+        work_mode: "clone"
+      }),
+      "utf8"
+    );
+    await mkdir(
+      join(created.paths.artifactsDir, reviewerPolicySnapshotFileName),
+      { recursive: true }
+    );
+
+    const thrown = await startBubble({
+      bubbleId: created.bubbleId,
+      cwd: repoPath,
+      now: new Date("2026-02-22T13:01:30.000Z")
+    }).then(
+      () => null,
+      (error: unknown) => error
+    );
+
+    expect(thrown).toBeInstanceOf(StartBubbleError);
+    expect((thrown as StartBubbleError).reasonCode).toBe(
+      "WORKSPACE_MODE_CLONE_NOT_ACTIVATED"
+    );
+    expect((thrown as StartBubbleError).message).toContain(
+      "The bubble state remains unchanged."
+    );
+
+    const loaded = await readStateSnapshot(created.paths.statePath);
+    expect(loaded.state.state).toBe("CREATED");
+  });
+
+  it("rejects clone-mode resume across resumable states before resume side effects", async () => {
+    const repoPath = await createTempRepo();
+    const resumableStates = [
+      "RUNNING",
+      "WAITING_HUMAN",
+      "READY_FOR_HUMAN_APPROVAL",
+      "APPROVED_FOR_COMMIT",
+      "COMMITTED"
+    ] as const;
+
+    for (const stateValue of resumableStates) {
+      const bubble = await setupRunningBubbleFixture({
+        repoPath,
+        bubbleId: `b_start_clone_resume_${stateValue.toLowerCase()}`,
+        task: `Clone resume ${stateValue}`
+      });
+
+      await writeFile(
+        bubble.paths.bubbleTomlPath,
+        renderBubbleConfigToml({
+          ...bubble.config,
+          work_mode: "clone"
+        }),
+        "utf8"
+      );
+
+      if (stateValue !== "RUNNING") {
+        await updateBubbleState(bubble.paths.statePath, (current) => ({
+          ...current,
+          state: stateValue
+        }));
+      }
+
+      let summaryCalled = false;
+      let launchCalled = false;
+
+      const thrown = await startBubble(
+        {
+          bubbleId: bubble.bubbleId,
+          cwd: repoPath,
+          now: new Date("2026-02-23T09:06:30.000Z")
+        },
+        {
+          buildResumeTranscriptSummary: () => {
+            summaryCalled = true;
+            return Promise.resolve(`resume-summary: state=${stateValue}`);
+          },
+          launchBubbleTmuxSession: () => {
+            launchCalled = true;
+            return Promise.resolve({
+              sessionName: `pf-b_start_clone_resume_${stateValue.toLowerCase()}`
+            });
+          }
+        }
+      ).then(
+        () => null,
+        (error: unknown) => error
+      );
+
+      expect(thrown).toBeInstanceOf(StartBubbleError);
+      expect((thrown as StartBubbleError).reasonCode).toBe(
+        "WORKSPACE_MODE_CLONE_NOT_ACTIVATED"
+      );
+      expect(summaryCalled).toBe(false);
+      expect(launchCalled).toBe(false);
+
+      const loaded = await readStateSnapshot(bubble.paths.statePath);
+      expect(loaded.state.state).toBe(stateValue);
+    }
+  });
+
+  it("normalizes missing-bubble lookup errors on the public start export before clone preflight", async () => {
+    const repoPath = await createTempRepo();
+
+    const thrown = await startBubblePublicApi({
+      bubbleId: "missing_clone_guard_bubble",
+      repoPath,
+      now: new Date("2026-02-23T09:07:30.000Z")
+    }).then(
+      () => null,
+      (error: unknown) => error
+    );
+
+    expect(thrown).toBeInstanceOf(PublicStartBubbleError);
+    expect(thrown).toBeInstanceOf(StartBubbleError);
+    expect(thrown).not.toBeInstanceOf(BubbleLookupError);
+    expect((thrown as PublicStartBubbleError).name).toBe("StartBubbleError");
+    expect((thrown as PublicStartBubbleError).message).toContain(
+      "Bubble missing_clone_guard_bubble does not exist in repository"
+    );
+  });
+
+  it("preserves non-startable state errors for clone bubbles on the public start export", async () => {
+    const repoPath = await createTempRepo();
+    const created = await createBubble({
+      id: "b_start_clone_failed_01",
+      repoPath,
+      baseBranch: "main",
+      reviewArtifactType: "code",
+      task: "Clone preflight must not mask state-not-startable",
+      cwd: repoPath
+    });
+
+    await writeFile(
+      created.paths.bubbleTomlPath,
+      renderBubbleConfigToml({
+        ...created.config,
+        work_mode: "clone"
+      }),
+      "utf8"
+    );
+    await updateBubbleState(created.paths.statePath, (current) => ({
+      ...current,
+      state: "FAILED",
+      active_agent: null,
+      active_role: null,
+      active_since: null,
+      execution_context: null
+    }));
+
+    const thrown = await startBubblePublicApi({
+      bubbleId: created.bubbleId,
+      repoPath,
+      now: new Date("2026-02-23T09:08:00.000Z")
+    }).then(
+      () => null,
+      (error: unknown) => error
+    );
+
+    expect(thrown).toBeInstanceOf(PublicStartBubbleError);
+    expect((thrown as PublicStartBubbleError).reasonCode).toBe(
+      "START_STATE_NOT_STARTABLE"
+    );
+    expect((thrown as PublicStartBubbleError).message).toContain(
+      "bubble start requires state CREATED or resumable runtime state (current: FAILED)."
+    );
+    expect((thrown as PublicStartBubbleError).message).not.toContain(
+      "WORKSPACE_MODE_CLONE_NOT_ACTIVATED"
+    );
+  });
+
+  it("reuses preflight bubble resolution for non-clone start", async () => {
+    const repoPath = await createTempRepo();
+    const created = await createBubble({
+      id: "b_start_lookup_once_01",
+      repoPath,
+      baseBranch: "main",
+      reviewArtifactType: "code",
+      task: "Non-clone start should resolve bubble only once",
+      cwd: repoPath
+    });
+
+    const resolveSpy = vi.spyOn(startCommandContextDefaults, "resolveBubbleById");
+    try {
+      const result = await startBubble(
+        {
+          bubbleId: created.bubbleId,
+          cwd: repoPath,
+          now: new Date("2026-02-23T09:08:30.000Z")
+        },
+        {
+          bootstrapWorktreeWorkspace: () =>
+            Promise.resolve(
+              buildWorktreeBootstrapResult({
+                repoPath,
+                bubbleBranch: created.config.bubble_branch,
+                worktreePath: created.paths.worktreePath
+              })
+            ),
+          launchBubbleTmuxSession: () =>
+            Promise.resolve({ sessionName: "pf-b_start_lookup_once_01" })
+        }
+      );
+
+      expect(result.state.state).toBe("RUNNING");
+      expect(resolveSpy).toHaveBeenCalledTimes(1);
+    } finally {
+      resolveSpy.mockRestore();
+    }
+  });
+
   it("runs configured commands.bootstrap before tmux launch", async () => {
     const repoPath = await createTempRepo();
     const created = await createBubble({
@@ -530,12 +855,13 @@ describe("startBubble", () => {
       {
         bootstrapWorktreeWorkspace: () => {
           callOrder.push("workspace");
-          return Promise.resolve({
-            repoPath,
-            baseRef: "refs/heads/main",
-            bubbleBranch: created.config.bubble_branch,
-            worktreePath: created.paths.worktreePath
-          });
+          return Promise.resolve(
+            buildWorktreeBootstrapResult({
+              repoPath,
+              bubbleBranch: created.config.bubble_branch,
+              worktreePath: created.paths.worktreePath
+            })
+          );
         },
         runWorktreeBootstrapCommand: async (input) => {
           callOrder.push("commands.bootstrap");
@@ -588,12 +914,13 @@ describe("startBubble", () => {
       },
       {
         bootstrapWorktreeWorkspace: () =>
-          Promise.resolve({
-            repoPath,
-            baseRef: "refs/heads/main",
-            bubbleBranch: created.config.bubble_branch,
-            worktreePath: created.paths.worktreePath
-          }),
+          Promise.resolve(
+            buildWorktreeBootstrapResult({
+              repoPath,
+              bubbleBranch: created.config.bubble_branch,
+              worktreePath: created.paths.worktreePath
+            })
+          ),
         runWorktreeBootstrapCommand: () =>
           Promise.reject(new Error("bootstrap command failed")),
         launchBubbleTmuxSession: () => {
@@ -681,12 +1008,13 @@ describe("startBubble", () => {
       },
       {
         bootstrapWorktreeWorkspace: () =>
-          Promise.resolve({
-            repoPath,
-            baseRef: "refs/heads/main",
-            bubbleBranch: created.config.bubble_branch,
-            worktreePath: created.paths.worktreePath
-          }),
+          Promise.resolve(
+            buildWorktreeBootstrapResult({
+              repoPath,
+              bubbleBranch: created.config.bubble_branch,
+              worktreePath: created.paths.worktreePath
+            })
+          ),
         launchBubbleTmuxSession: (input) => {
           implementerCommand = input.implementerCommand;
           implementerKickoffMessage = input.implementerKickoffMessage;
@@ -777,12 +1105,13 @@ describe("startBubble", () => {
       },
       {
         bootstrapWorktreeWorkspace: () =>
-          Promise.resolve({
-            repoPath,
-            baseRef: "refs/heads/main",
-            bubbleBranch: created.config.bubble_branch,
-            worktreePath: created.paths.worktreePath
-          }),
+          Promise.resolve(
+            buildWorktreeBootstrapResult({
+              repoPath,
+              bubbleBranch: created.config.bubble_branch,
+              worktreePath: created.paths.worktreePath
+            })
+          ),
         launchBubbleTmuxSession: (input) => {
           reviewerCommand = input.reviewerCommand;
           return Promise.resolve({ sessionName: "pf-b_start_reviewer_brief_01" });
@@ -830,12 +1159,13 @@ describe("startBubble", () => {
       },
       {
         bootstrapWorktreeWorkspace: () =>
-          Promise.resolve({
-            repoPath,
-            baseRef: "refs/heads/main",
-            bubbleBranch: created.config.bubble_branch,
-            worktreePath: created.paths.worktreePath
-          }),
+          Promise.resolve(
+            buildWorktreeBootstrapResult({
+              repoPath,
+              bubbleBranch: created.config.bubble_branch,
+              worktreePath: created.paths.worktreePath
+            })
+          ),
         launchBubbleTmuxSession: (input) => {
           reviewerCommand = input.reviewerCommand;
           return Promise.resolve({ sessionName: "pf-b_start_reviewer_focus_01" });
@@ -885,12 +1215,13 @@ describe("startBubble", () => {
       },
       {
         bootstrapWorktreeWorkspace: () =>
-          Promise.resolve({
-            repoPath,
-            baseRef: "refs/heads/main",
-            bubbleBranch: created.config.bubble_branch,
-            worktreePath: created.paths.worktreePath
-          }),
+          Promise.resolve(
+            buildWorktreeBootstrapResult({
+              repoPath,
+              bubbleBranch: created.config.bubble_branch,
+              worktreePath: created.paths.worktreePath
+            })
+          ),
         launchBubbleTmuxSession: (input) => {
           reviewerCommand = input.reviewerCommand;
           return Promise.resolve({ sessionName: "pf-b_start_reviewer_focus_absent_01" });
@@ -948,12 +1279,13 @@ describe("startBubble", () => {
       },
       {
         bootstrapWorktreeWorkspace: () =>
-          Promise.resolve({
-            repoPath,
-            baseRef: "refs/heads/main",
-            bubbleBranch: created.config.bubble_branch,
-            worktreePath: created.paths.worktreePath
-          }),
+          Promise.resolve(
+            buildWorktreeBootstrapResult({
+              repoPath,
+              bubbleBranch: created.config.bubble_branch,
+              worktreePath: created.paths.worktreePath
+            })
+          ),
         launchBubbleTmuxSession: (input) => {
           reviewerCommand = input.reviewerCommand;
           return Promise.resolve({ sessionName: "pf-b_start_reviewer_focus_invalid_01" });
@@ -999,12 +1331,13 @@ describe("startBubble", () => {
       },
       {
         bootstrapWorktreeWorkspace: () =>
-          Promise.resolve({
-            repoPath,
-            baseRef: "refs/heads/main",
-            bubbleBranch: created.config.bubble_branch,
-            worktreePath: created.paths.worktreePath
-          }),
+          Promise.resolve(
+            buildWorktreeBootstrapResult({
+              repoPath,
+              bubbleBranch: created.config.bubble_branch,
+              worktreePath: created.paths.worktreePath
+            })
+          ),
         launchBubbleTmuxSession: (input) => {
           reviewerCommand = input.reviewerCommand;
           return Promise.resolve({ sessionName: "pf-b_start_reviewer_brief_unreadable_01" });
@@ -1054,12 +1387,13 @@ describe("startBubble", () => {
       },
       {
         bootstrapWorktreeWorkspace: () =>
-          Promise.resolve({
-            repoPath,
-            baseRef: "refs/heads/main",
-            bubbleBranch: created.config.bubble_branch,
-            worktreePath: created.paths.worktreePath
-          }),
+          Promise.resolve(
+            buildWorktreeBootstrapResult({
+              repoPath,
+              bubbleBranch: created.config.bubble_branch,
+              worktreePath: created.paths.worktreePath
+            })
+          ),
         launchBubbleTmuxSession: () =>
           Promise.resolve({ sessionName: "pf-b_start_policy_snapshot_overwrite_01" }),
         claimRuntimeSession: (input) =>
@@ -1155,12 +1489,13 @@ describe("startBubble", () => {
         },
         {
           bootstrapWorktreeWorkspace: () =>
-            Promise.resolve({
-              repoPath,
-              baseRef: "refs/heads/main",
-              bubbleBranch: created.config.bubble_branch,
-              worktreePath: created.paths.worktreePath
-            }),
+            Promise.resolve(
+              buildWorktreeBootstrapResult({
+                repoPath,
+                bubbleBranch: created.config.bubble_branch,
+                worktreePath: created.paths.worktreePath
+              })
+            ),
           launchBubbleTmuxSession: () =>
             Promise.reject(
               new StartBubbleError({
@@ -1223,12 +1558,13 @@ describe("startBubble", () => {
       },
       {
         bootstrapWorktreeWorkspace: () =>
-          Promise.resolve({
-            repoPath,
-            baseRef: "refs/heads/main",
-            bubbleBranch: created.config.bubble_branch,
-            worktreePath: created.paths.worktreePath
-          }),
+          Promise.resolve(
+            buildWorktreeBootstrapResult({
+              repoPath,
+              bubbleBranch: created.config.bubble_branch,
+              worktreePath: created.paths.worktreePath
+            })
+          ),
         launchBubbleTmuxSession: () => Promise.reject(injectedError),
         cleanupWorktreeWorkspace: () =>
           Promise.resolve({
@@ -1309,12 +1645,13 @@ describe("startBubble", () => {
           bootstrapWorktreeWorkspace: () =>
             {
               bootstrapCalled = true;
-              return Promise.resolve({
-                repoPath,
-                baseRef: "refs/heads/main",
-                bubbleBranch: created.config.bubble_branch,
-                worktreePath: created.paths.worktreePath
-              });
+              return Promise.resolve(
+                buildWorktreeBootstrapResult({
+                  repoPath,
+                  bubbleBranch: created.config.bubble_branch,
+                  worktreePath: created.paths.worktreePath
+                })
+              );
             },
           launchBubbleTmuxSession: () =>
             Promise.resolve({ sessionName: "pf-b_start_021" }),
@@ -1375,12 +1712,13 @@ describe("startBubble", () => {
         },
         {
           bootstrapWorktreeWorkspace: () =>
-            Promise.resolve({
-              repoPath,
-              baseRef: "refs/heads/main",
-              bubbleBranch: created.config.bubble_branch,
-              worktreePath: created.paths.worktreePath
-            }),
+            Promise.resolve(
+              buildWorktreeBootstrapResult({
+                repoPath,
+                bubbleBranch: created.config.bubble_branch,
+                worktreePath: created.paths.worktreePath
+              })
+            ),
           launchBubbleTmuxSession: () =>
             Promise.reject(new Error("tmux unavailable")),
           cleanupWorktreeWorkspace: () => {
@@ -1422,12 +1760,13 @@ describe("startBubble", () => {
       },
       {
         bootstrapWorktreeWorkspace: () =>
-          Promise.resolve({
-            repoPath,
-            baseRef: "refs/heads/main",
-            bubbleBranch: created.config.bubble_branch,
-            worktreePath: created.paths.worktreePath
-          }),
+          Promise.resolve(
+            buildWorktreeBootstrapResult({
+              repoPath,
+              bubbleBranch: created.config.bubble_branch,
+              worktreePath: created.paths.worktreePath
+            })
+          ),
         launchBubbleTmuxSession: (input) => {
           statusCommand = input.statusCommand;
           return Promise.resolve({ sessionName: "pf-b_start_03" });
@@ -1491,12 +1830,13 @@ describe("startBubble", () => {
       },
       {
         bootstrapWorktreeWorkspace: () =>
-          Promise.resolve({
-            repoPath,
-            baseRef: "refs/heads/main",
-            bubbleBranch: created.config.bubble_branch,
-            worktreePath: created.paths.worktreePath
-          }),
+          Promise.resolve(
+            buildWorktreeBootstrapResult({
+              repoPath,
+              bubbleBranch: created.config.bubble_branch,
+              worktreePath: created.paths.worktreePath
+            })
+          ),
         launchBubbleTmuxSession: (input) => {
           statusCommand = input.statusCommand;
           implementerCommand = input.implementerCommand;
@@ -1548,12 +1888,13 @@ describe("startBubble", () => {
       {
         bootstrapWorktreeWorkspace: () => {
           bootstrapCalled = true;
-          return Promise.resolve({
-            repoPath,
-            baseRef: "refs/heads/main",
-            bubbleBranch: bubble.config.bubble_branch,
-            worktreePath: bubble.paths.worktreePath
-          });
+          return Promise.resolve(
+            buildWorktreeBootstrapResult({
+              repoPath,
+              bubbleBranch: bubble.config.bubble_branch,
+              worktreePath: bubble.paths.worktreePath
+            })
+          );
         },
         buildResumeTranscriptSummary: (input) => {
           summaryPath = input.transcriptPath;
@@ -2486,12 +2827,13 @@ describe("startBubble", () => {
           isTmuxSessionAlive: () => Promise.resolve(true),
           bootstrapWorktreeWorkspace: () => {
             bootstrapCalled = true;
-            return Promise.resolve({
-              repoPath,
-              baseRef: "refs/heads/main",
-              bubbleBranch: created.config.bubble_branch,
-              worktreePath: created.paths.worktreePath
-            });
+            return Promise.resolve(
+              buildWorktreeBootstrapResult({
+                repoPath,
+                bubbleBranch: created.config.bubble_branch,
+                worktreePath: created.paths.worktreePath
+              })
+            );
           }
         }
       )
@@ -2531,12 +2873,13 @@ describe("startBubble", () => {
       {
         isTmuxSessionAlive: () => Promise.resolve(false),
         bootstrapWorktreeWorkspace: () =>
-          Promise.resolve({
-            repoPath,
-            baseRef: "refs/heads/main",
-            bubbleBranch: created.config.bubble_branch,
-            worktreePath: created.paths.worktreePath
-          }),
+          Promise.resolve(
+            buildWorktreeBootstrapResult({
+              repoPath,
+              bubbleBranch: created.config.bubble_branch,
+              worktreePath: created.paths.worktreePath
+            })
+          ),
         launchBubbleTmuxSession: () =>
           Promise.resolve({ sessionName: "pf-b_start_05" })
       }

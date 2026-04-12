@@ -1,3 +1,5 @@
+import type { WorkspaceKind } from "./worktreeWorkspace.js";
+
 export interface RuntimeMetaReviewerPaneBinding {
   role: "meta-reviewer";
   paneIndex: number;
@@ -9,6 +11,8 @@ export interface RuntimeSessionRecord {
   bubbleId: string;
   repoPath: string;
   worktreePath: string;
+  workspacePath?: string;
+  workspaceKind?: WorkspaceKind;
   tmuxSessionName: string;
   updatedAt: string;
   metaReviewerPane?: RuntimeMetaReviewerPaneBinding;
@@ -25,6 +29,8 @@ export interface ClaimRuntimeSessionInput {
   bubbleId: string;
   repoPath: string;
   worktreePath: string;
+  workspacePath?: string;
+  workspaceKind?: WorkspaceKind;
   tmuxSessionName: string;
   now?: Date;
   lockTimeoutMs?: number;

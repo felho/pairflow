@@ -1,0 +1,26 @@
+{
+  "id": "start-clone-state-not-startable-v11",
+  "command": "start",
+  "mode": "v11",
+  "description": "Seed start v11 contract case for clone bubbles preserving START_STATE_NOT_STARTABLE when the lifecycle state itself cannot be started.",
+  "input": {
+    "fixture": {
+      "scenario": "clone_state_not_startable"
+    }
+  },
+  "expected": {
+    "status": "error",
+    "reasonCode": "START_STATE_NOT_STARTABLE",
+    "stateSubset": {
+      "state": "FAILED"
+    }
+  },
+  "tags": [
+    "seed",
+    "m0",
+    "start",
+    "v11",
+    "error-path",
+    "clone"
+  ]
+}

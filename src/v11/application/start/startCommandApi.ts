@@ -6,9 +6,11 @@ import type {
 } from "./startCommandContract.js";
 import {
   mapStartBubbleResult,
-  resolveStartBubbleDependencies
+  resolveStartBubbleDependencies,
+  resolveStartBubbleMode
 } from "./startCommandOrchestration.js";
 import {
+  buildCloneWorkspaceModeStartRejectMessage,
   buildStartupIncompleteStartFailureMessage,
   StartBubbleError,
   throwAsStartBubbleError
@@ -22,9 +24,11 @@ import {
 import { isTmuxSessionAliveDefault, runWorktreeBootstrapCommandDefault } from "./startCommandDefaults.js";
 import {
   loadStartExecutionContext,
+  type ResolvedStartBubble,
   type StartExecutionContext
 } from "./startCommandContext.js";
 import { claimRuntimeSessionOwnership } from "./startCommandSession.js";
+import { startCommandContextDefaults } from "./startCommandDependencyDefaults.js";
 
 export type {
   StartBubbleDependencies,
@@ -33,12 +37,25 @@ export type {
 } from "./startCommandContract.js";
 export { StartBubbleError };
 
+function resolveStartBubbleLookupInput(input: StartBubbleInput): {
+  bubbleId: string;
+  repoPath?: string;
+  cwd?: string;
+} {
+  return {
+    bubbleId: input.bubbleId,
+    ...(input.repoPath !== undefined ? { repoPath: input.repoPath } : {}),
+    ...(input.cwd !== undefined ? { cwd: input.cwd } : {})
+  };
+}
+
 async function loadExecutionContextOrThrow(
   input: StartBubbleInput,
   deps: Pick<
     Awaited<ReturnType<typeof resolveStartBubbleDependencies>>,
     "readReviewerBriefArtifact" | "readReviewerFocusArtifact"
-  >
+  >,
+  resolved?: ResolvedStartBubble
 ): Promise<StartExecutionContext> {
   try {
     return await loadStartExecutionContext(input, {
@@ -46,6 +63,8 @@ async function loadExecutionContextOrThrow(
         deps.readReviewerBriefArtifact,
       readReviewerFocusArtifact:
         deps.readReviewerFocusArtifact
+    }, {
+      ...(resolved !== undefined ? { resolved } : {})
     });
   } catch (error) {
     if (error instanceof StartBubbleError) {
@@ -76,6 +95,43 @@ async function claimRuntimeSessionOwnershipOrThrow(input: {
       `Failed to acquire runtime session ownership for bubble ${input.context.resolved.bubbleId}: ${message}`
     );
   }
+}
+
+async function resolveStartBubblePreflightOrThrow(
+  input: StartBubbleInput
+): Promise<ResolvedStartBubble> {
+  let resolved: Awaited<
+    ReturnType<typeof startCommandContextDefaults.resolveBubbleById>
+  >;
+  try {
+    resolved = await startCommandContextDefaults.resolveBubbleById(
+      resolveStartBubbleLookupInput(input)
+    );
+  } catch (error) {
+    throwAsStartBubbleError(error);
+  }
+  if (resolved.bubbleConfig.work_mode === "clone") {
+    try {
+      resolveStartBubbleMode(
+        (
+          await startCommandContextDefaults.readStateSnapshot(
+            resolved.bubblePaths.statePath
+          )
+        ).state.state
+      );
+    } catch (error) {
+      throwAsStartBubbleError(error);
+    }
+    throw new StartBubbleError({
+      reasonCode: "WORKSPACE_MODE_CLONE_NOT_ACTIVATED",
+      message: buildCloneWorkspaceModeStartRejectMessage(),
+      context: {
+        bubble_id: resolved.bubbleId,
+        work_mode: resolved.bubbleConfig.work_mode
+      }
+    });
+  }
+  return resolved;
 }
 
 async function runStartFlow(input: {
@@ -142,14 +198,6 @@ function throwStartFailure(input: {
 }): never {
   const message = input.error instanceof Error ? input.error.message : String(input.error);
   if (input.context.startMode === "fresh" && input.freshProgress.preparingState !== null) {
-    const reasonCode = "START_STARTUP_INCOMPLETE";
-    const context = {
-      command_name: "start",
-      bubble_id: input.context.resolved.bubbleId,
-      start_mode: input.context.startMode
-    };
-    void reasonCode;
-    void context;
     throw rewriteStartupIncompleteError({
       bubbleId: input.context.resolved.bubbleId,
       message,
@@ -179,12 +227,13 @@ export async function startBubble(
   input: StartBubbleInput,
   dependencies: StartBubbleDependencies = {}
 ): Promise<StartBubbleResult> {
+  const resolved = await resolveStartBubblePreflightOrThrow(input);
   const deps = await resolveStartBubbleDependencies({
     dependencies,
     runWorktreeBootstrapCommandDefault,
     isTmuxSessionAliveDefault
   });
-  const context = await loadExecutionContextOrThrow(input, deps);
+  const context = await loadExecutionContextOrThrow(input, deps, resolved);
   await claimRuntimeSessionOwnershipOrThrow({
     context,
     deps

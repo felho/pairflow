@@ -11,7 +11,8 @@ import {
   removeRuntimeSessions,
   RuntimeSessionsRegistryError,
   RuntimeSessionsRegistryLockError,
-  upsertRuntimeSession
+  upsertRuntimeSession,
+  writeRuntimeSessionsRegistry
 } from "../../../src/v11/infrastructure/executor/sessionRuntime/runtimeSessionsRegistry.js";
 import { setMetaReviewerPaneBinding } from "../../../src/v11/infrastructure/channel/tmux/metaReviewerPaneBinding.js";
 import { runtimePaneIndices } from "../../../src/v11/infrastructure/channel/tmux/tmuxManager.js";
@@ -121,6 +122,147 @@ describe("sessionsRegistry", () => {
       allowMissing: false
     });
     expect(afterRemove).toEqual({});
+  });
+
+  it("accepts legacy runtime session records without workspace authority fields", async () => {
+    const root = await createTempDir();
+    const sessionsPath = join(root, "runtime", "sessions.json");
+    await mkdir(join(root, "runtime"), { recursive: true });
+    await writeFile(
+      sessionsPath,
+      `${JSON.stringify(
+        {
+          b_sessions_legacy: {
+            bubbleId: "b_sessions_legacy",
+            repoPath: "/repo/path",
+            worktreePath: "/repo/.pairflow-worktrees/b_sessions_legacy",
+            tmuxSessionName: "pf-b_sessions_legacy",
+            updatedAt: "2026-02-22T16:01:00.000Z"
+          }
+        },
+        null,
+        2
+      )}\n`,
+      "utf8"
+    );
+
+    const loaded = await readRuntimeSessionsRegistry(sessionsPath, {
+      allowMissing: false
+    });
+    expect(loaded.b_sessions_legacy).toEqual({
+      bubbleId: "b_sessions_legacy",
+      repoPath: "/repo/path",
+      worktreePath: "/repo/.pairflow-worktrees/b_sessions_legacy",
+      tmuxSessionName: "pf-b_sessions_legacy",
+      updatedAt: "2026-02-22T16:01:00.000Z"
+    });
+
+    await writeRuntimeSessionsRegistry(sessionsPath, loaded);
+    const persistedRaw = await readFile(sessionsPath, "utf8");
+    expect(persistedRaw).not.toContain("\"workspaceKind\"");
+    expect(persistedRaw).not.toContain("\"workspacePath\"");
+  });
+
+  it("roundtrips additive workspace authority fields", async () => {
+    const root = await createTempDir();
+    const sessionsPath = join(root, "runtime", "sessions.json");
+
+    await upsertRuntimeSession({
+      sessionsPath,
+      bubbleId: "b_sessions_workspace_01",
+      repoPath: "/repo/path",
+      worktreePath: "/repo/.pairflow-worktrees/b_sessions_workspace_01",
+      workspacePath: "/repo/.pairflow-worktrees/b_sessions_workspace_01",
+      workspaceKind: "worktree",
+      tmuxSessionName: "pf-b_sessions_workspace_01",
+      now: new Date("2026-02-22T16:02:00.000Z")
+    });
+
+    const loaded = await readRuntimeSessionsRegistry(sessionsPath, {
+      allowMissing: false
+    });
+    expect(loaded.b_sessions_workspace_01?.workspacePath).toBe(
+      "/repo/.pairflow-worktrees/b_sessions_workspace_01"
+    );
+    expect(loaded.b_sessions_workspace_01?.workspaceKind).toBe("worktree");
+
+    const persistedRaw = await readFile(sessionsPath, "utf8");
+    expect(persistedRaw).toContain("\"workspacePath\"");
+    expect(persistedRaw).toContain("\"workspaceKind\": \"worktree\"");
+  });
+
+  it("rejects invalid workspace kind when reading persisted runtime sessions", async () => {
+    const root = await createTempDir();
+    const sessionsPath = join(root, "runtime", "sessions.json");
+    await mkdir(join(root, "runtime"), { recursive: true });
+    await writeFile(
+      sessionsPath,
+      `${JSON.stringify(
+        {
+          b_sessions_invalid_workspace_kind: {
+            bubbleId: "b_sessions_invalid_workspace_kind",
+            repoPath: "/repo/path",
+            worktreePath:
+              "/repo/.pairflow-worktrees/b_sessions_invalid_workspace_kind",
+            workspaceKind: "invalid",
+            tmuxSessionName: "pf-b_sessions_invalid_workspace_kind",
+            updatedAt: "2026-02-22T16:03:00.000Z"
+          }
+        },
+        null,
+        2
+      )}\n`,
+      "utf8"
+    );
+
+    await expect(
+      readRuntimeSessionsRegistry(sessionsPath, {
+        allowMissing: false
+      })
+    ).rejects.toMatchObject({
+      name: "RuntimeSessionsRegistryError",
+      context: {
+        fieldName: "workspaceKind",
+        reason: "invalid_workspace_kind"
+      }
+    });
+  });
+
+  it("rejects null workspace kind with dedicated diagnostic", async () => {
+    const root = await createTempDir();
+    const sessionsPath = join(root, "runtime", "sessions.json");
+    await mkdir(join(root, "runtime"), { recursive: true });
+    await writeFile(
+      sessionsPath,
+      `${JSON.stringify(
+        {
+          b_sessions_null_workspace_kind: {
+            bubbleId: "b_sessions_null_workspace_kind",
+            repoPath: "/repo/path",
+            worktreePath:
+              "/repo/.pairflow-worktrees/b_sessions_null_workspace_kind",
+            workspaceKind: null,
+            tmuxSessionName: "pf-b_sessions_null_workspace_kind",
+            updatedAt: "2026-02-22T16:04:00.000Z"
+          }
+        },
+        null,
+        2
+      )}\n`,
+      "utf8"
+    );
+
+    await expect(
+      readRuntimeSessionsRegistry(sessionsPath, {
+        allowMissing: false
+      })
+    ).rejects.toMatchObject({
+      name: "RuntimeSessionsRegistryError",
+      context: {
+        fieldName: "workspaceKind",
+        reason: "workspace_kind_null"
+      }
+    });
   });
 
   it("tracks meta-reviewer pane binding for existing runtime sessions", async () => {

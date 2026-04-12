@@ -13,7 +13,14 @@ const execFileAsync = promisify(execFile);
 const startCaseSources = [
   "tests/contracts/v11/cases/start/start-basic-v11.case.json",
   "tests/contracts/v11/cases/start/start-state-not-startable-v11.case.json",
+  "tests/contracts/v11/cases/start/start-clone-state-not-startable-v11.case.json",
   "tests/contracts/v11/cases/start/start-bootstrap-fails-cleanup-v11.case.json",
+  "tests/contracts/v11/cases/start/start-clone-not-activated-v11.case.json",
+  "tests/contracts/v11/cases/start/start-clone-not-activated-resume-v11.case.json",
+  "tests/contracts/v11/cases/start/start-clone-not-activated-resume-waiting-human-v11.case.json",
+  "tests/contracts/v11/cases/start/start-clone-not-activated-resume-ready-for-human-approval-v11.case.json",
+  "tests/contracts/v11/cases/start/start-clone-not-activated-resume-approved-for-commit-v11.case.json",
+  "tests/contracts/v11/cases/start/start-clone-not-activated-resume-committed-v11.case.json",
   "tests/contracts/v11/cases/start/start-stale-session-reclaim-v11.case.json"
 ] as const;
 
