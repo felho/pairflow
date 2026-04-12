@@ -25,6 +25,7 @@ import {
 import { readStateSnapshot, writeStateSnapshot } from "../../../src/v11/infrastructure/state/stateStore.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
 import { initGitRepository } from "../../helpers/git.js";
+import { buildWorktreeBootstrapResult } from "../../helpers/worktreeBootstrapResult.js";
 
 const tempDirs: string[] = [];
 
@@ -79,12 +80,13 @@ describe("restart recovery", () => {
       {
         bootstrapWorktreeWorkspace: () => {
           bootstrapCalled = true;
-          return Promise.resolve({
-            repoPath,
-            baseRef: "refs/heads/main",
-            bubbleBranch: bubble.config.bubble_branch,
-            worktreePath: bubble.paths.worktreePath
-          });
+          return Promise.resolve(
+            buildWorktreeBootstrapResult({
+              repoPath,
+              bubbleBranch: bubble.config.bubble_branch,
+              worktreePath: bubble.paths.worktreePath
+            })
+          );
         },
         launchBubbleTmuxSession: () =>
           Promise.resolve({ sessionName: "pf-b_restart_01" })
@@ -181,12 +183,13 @@ describe("restart recovery", () => {
       },
       {
         bootstrapWorktreeWorkspace: () =>
-          Promise.resolve({
-            repoPath,
-            baseRef: "refs/heads/main",
-            bubbleBranch: bubble.config.bubble_branch,
-            worktreePath: bubble.paths.worktreePath
-          }),
+          Promise.resolve(
+            buildWorktreeBootstrapResult({
+              repoPath,
+              bubbleBranch: bubble.config.bubble_branch,
+              worktreePath: bubble.paths.worktreePath
+            })
+          ),
         launchBubbleTmuxSession: (input) => {
           launchInput = {
             implementerCommand: input.implementerCommand,
@@ -255,12 +258,13 @@ describe("restart recovery", () => {
       },
       {
         bootstrapWorktreeWorkspace: () =>
-          Promise.resolve({
-            repoPath,
-            baseRef: "refs/heads/main",
-            bubbleBranch: bubble.config.bubble_branch,
-            worktreePath: bubble.paths.worktreePath
-          }),
+          Promise.resolve(
+            buildWorktreeBootstrapResult({
+              repoPath,
+              bubbleBranch: bubble.config.bubble_branch,
+              worktreePath: bubble.paths.worktreePath
+            })
+          ),
         launchBubbleTmuxSession: () =>
           Promise.resolve({ sessionName: "pf-b_restart_meta_02" })
       }
@@ -305,12 +309,13 @@ describe("restart recovery", () => {
       },
       {
         bootstrapWorktreeWorkspace: () =>
-          Promise.resolve({
-            repoPath,
-            baseRef: "refs/heads/main",
-            bubbleBranch: bubble.config.bubble_branch,
-            worktreePath: bubble.paths.worktreePath
-          }),
+          Promise.resolve(
+            buildWorktreeBootstrapResult({
+              repoPath,
+              bubbleBranch: bubble.config.bubble_branch,
+              worktreePath: bubble.paths.worktreePath
+            })
+          ),
         launchBubbleTmuxSession: () =>
           Promise.resolve({ sessionName: "pf-b_restart_impl_01" })
       }
@@ -413,12 +418,13 @@ describe("restart recovery", () => {
       },
       {
         bootstrapWorktreeWorkspace: () =>
-          Promise.resolve({
-            repoPath,
-            baseRef: "refs/heads/main",
-            bubbleBranch: bubble.config.bubble_branch,
-            worktreePath: bubble.paths.worktreePath
-          }),
+          Promise.resolve(
+            buildWorktreeBootstrapResult({
+              repoPath,
+              bubbleBranch: bubble.config.bubble_branch,
+              worktreePath: bubble.paths.worktreePath
+            })
+          ),
         launchBubbleTmuxSession: () =>
           Promise.resolve({ sessionName: "pf-b_restart_reviewer_01" })
       }

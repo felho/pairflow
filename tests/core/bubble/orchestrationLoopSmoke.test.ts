@@ -17,6 +17,7 @@ import { readStateSnapshot } from "../../../src/v11/infrastructure/state/stateSt
 import type { ProtocolEnvelope } from "../../../src/types/protocol.js";
 import { initGitRepository } from "../../helpers/git.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
+import { buildWorktreeBootstrapResult } from "../../helpers/worktreeBootstrapResult.js";
 
 const tempDirs: string[] = [];
 
@@ -77,12 +78,13 @@ describe("bubble orchestration loop smoke", () => {
             bubbleBranch: input.bubbleBranch,
             worktreePath: input.worktreePath
           });
-          return Promise.resolve({
-            repoPath: input.repoPath,
-            baseRef: "refs/heads/main",
-            bubbleBranch: input.bubbleBranch,
-            worktreePath: input.worktreePath
-          });
+          return Promise.resolve(
+            buildWorktreeBootstrapResult({
+              repoPath: input.repoPath,
+              bubbleBranch: input.bubbleBranch,
+              worktreePath: input.worktreePath
+            })
+          );
         },
         launchBubbleTmuxSession: (input) => {
           startupLaunch = {

@@ -18,6 +18,8 @@ import { createStartBubbleError } from "./startCommandRuntime.js";
 
 export type StartLoadedState =
   Awaited<ReturnType<typeof startCommandContextDefaults.readStateSnapshot>>;
+export type ResolvedStartBubble =
+  Awaited<ReturnType<typeof startCommandContextDefaults.resolveBubbleById>>;
 export const reviewerPolicySnapshotFileName = "reviewer-policy-snapshot.md";
 export const reviewerPolicySnapshotUnavailableReasonCode =
   "REVIEWER_POLICY_SNAPSHOT_UNAVAILABLE";
@@ -81,8 +83,7 @@ async function ensureReviewerPolicySnapshot(
 }
 
 export interface StartExecutionContext {
-  resolved:
-    Awaited<ReturnType<typeof startCommandContextDefaults.resolveBubbleById>>;
+  resolved: ResolvedStartBubble;
   now: Date;
   nowIso: string;
   bubbleIdentity:
@@ -103,13 +104,18 @@ export async function loadStartExecutionContext(
   dependencies: {
     readReviewerBriefArtifact: ReadReviewerBriefArtifactPort;
     readReviewerFocusArtifact: ReadReviewerFocusArtifactPort;
-  }
+  },
+  options: {
+    resolved?: ResolvedStartBubble;
+  } = {}
 ): Promise<StartExecutionContext> {
-  const resolved = await startCommandContextDefaults.resolveBubbleById({
-    bubbleId: input.bubbleId,
-    ...(input.repoPath !== undefined ? { repoPath: input.repoPath } : {}),
-    ...(input.cwd !== undefined ? { cwd: input.cwd } : {})
-  });
+  const resolved =
+    options.resolved
+    ?? await startCommandContextDefaults.resolveBubbleById({
+      bubbleId: input.bubbleId,
+      ...(input.repoPath !== undefined ? { repoPath: input.repoPath } : {}),
+      ...(input.cwd !== undefined ? { cwd: input.cwd } : {})
+    });
   const now = input.now ?? new Date();
   const nowIso = now.toISOString();
   const bubbleIdentity =

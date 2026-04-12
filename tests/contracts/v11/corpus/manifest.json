@@ -201,9 +201,51 @@
       "kind": "seed_case"
     },
     {
+      "id": "start-clone-state-not-startable-v11",
+      "command": "start",
+      "source": "tests/contracts/v11/cases/start/start-clone-state-not-startable-v11.case.json",
+      "kind": "seed_case"
+    },
+    {
       "id": "start-bootstrap-fails-cleanup-v11",
       "command": "start",
       "source": "tests/contracts/v11/cases/start/start-bootstrap-fails-cleanup-v11.case.json",
+      "kind": "seed_case"
+    },
+    {
+      "id": "start-clone-not-activated-v11",
+      "command": "start",
+      "source": "tests/contracts/v11/cases/start/start-clone-not-activated-v11.case.json",
+      "kind": "seed_case"
+    },
+    {
+      "id": "start-clone-not-activated-resume-v11",
+      "command": "start",
+      "source": "tests/contracts/v11/cases/start/start-clone-not-activated-resume-v11.case.json",
+      "kind": "seed_case"
+    },
+    {
+      "id": "start-clone-not-activated-resume-waiting-human-v11",
+      "command": "start",
+      "source": "tests/contracts/v11/cases/start/start-clone-not-activated-resume-waiting-human-v11.case.json",
+      "kind": "seed_case"
+    },
+    {
+      "id": "start-clone-not-activated-resume-ready-for-human-approval-v11",
+      "command": "start",
+      "source": "tests/contracts/v11/cases/start/start-clone-not-activated-resume-ready-for-human-approval-v11.case.json",
+      "kind": "seed_case"
+    },
+    {
+      "id": "start-clone-not-activated-resume-approved-for-commit-v11",
+      "command": "start",
+      "source": "tests/contracts/v11/cases/start/start-clone-not-activated-resume-approved-for-commit-v11.case.json",
+      "kind": "seed_case"
+    },
+    {
+      "id": "start-clone-not-activated-resume-committed-v11",
+      "command": "start",
+      "source": "tests/contracts/v11/cases/start/start-clone-not-activated-resume-committed-v11.case.json",
       "kind": "seed_case"
     },
     {

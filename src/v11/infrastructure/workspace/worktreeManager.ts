@@ -92,7 +92,9 @@ export const bootstrapWorktreeWorkspace: BootstrapWorktreeWorkspacePort = async 
     repoPath,
     baseRef,
     bubbleBranch: input.bubbleBranch,
-    worktreePath
+    worktreePath,
+    workspaceKind: "worktree",
+    branchPrepared: true
   };
 };
 

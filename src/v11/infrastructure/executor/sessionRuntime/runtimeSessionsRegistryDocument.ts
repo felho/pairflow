@@ -3,6 +3,8 @@ import type {
   RuntimeSessionRecord,
   RuntimeSessionsRegistry
 } from "../../../shared/ports/runtimeSessions.js";
+import { workModes } from "../../../../types/bubble.js";
+import type { WorkspaceKind } from "../../../shared/ports/worktreeWorkspace.js";
 import {
   toRuntimeSessionsRegistryError
 } from "./runtimeSessionsRegistryErrors.js";
@@ -32,6 +34,52 @@ function requireNonEmptyString(value: unknown, fieldName: string): string {
     });
   }
   return trimmed;
+}
+
+function parseOptionalNonEmptyString(
+  value: unknown,
+  fieldName: string
+): string | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+  return requireNonEmptyString(value, fieldName);
+}
+
+function parseWorkspaceKind(
+  value: unknown,
+  bubbleId: string
+): WorkspaceKind | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+  if (value === null) {
+    throw toRuntimeSessionsRegistryError({
+      message: "runtime session workspaceKind cannot be null.",
+      context: {
+        bubbleId,
+        fieldName: "workspaceKind",
+        reason: "workspace_kind_null"
+      }
+    });
+  }
+  const workspaceKind = requireNonEmptyString(
+    value,
+    "runtime session workspaceKind"
+  );
+  if (!(workModes as readonly string[]).includes(workspaceKind)) {
+    throw toRuntimeSessionsRegistryError({
+      message:
+        `runtime session workspaceKind must be one of ${workModes.join(", ")} ` +
+        `(found ${workspaceKind}).`,
+      context: {
+        bubbleId,
+        fieldName: "workspaceKind",
+        reason: "invalid_workspace_kind"
+      }
+    });
+  }
+  return workspaceKind as WorkspaceKind;
 }
 
 function parseMetaReviewerPaneBinding(
@@ -123,6 +171,11 @@ function parseSessionRecord(
     value.worktreePath,
     "runtime session worktreePath"
   );
+  const workspacePath = parseOptionalNonEmptyString(
+    value.workspacePath,
+    "runtime session workspacePath"
+  );
+  const workspaceKind = parseWorkspaceKind(value.workspaceKind, bubbleId);
   const tmuxSessionName = requireNonEmptyString(
     value.tmuxSessionName,
     "runtime session tmuxSessionName"
@@ -130,7 +183,7 @@ function parseSessionRecord(
   const updatedAt = requireNonEmptyString(value.updatedAt, "runtime session updatedAt");
   const metaReviewerPane = parseMetaReviewerPaneBinding(
     value.metaReviewerPane,
-    bubbleIdFromKey
+    bubbleId
   );
 
   if (bubbleId !== bubbleIdFromKey) {
@@ -148,6 +201,8 @@ function parseSessionRecord(
     bubbleId,
     repoPath,
     worktreePath,
+    ...(workspacePath !== undefined ? { workspacePath } : {}),
+    ...(workspaceKind !== undefined ? { workspaceKind } : {}),
     tmuxSessionName,
     updatedAt,
     ...(metaReviewerPane !== undefined ? { metaReviewerPane } : {})
@@ -202,18 +257,38 @@ export function buildSessionRecord(input: {
   bubbleId: string;
   repoPath: string;
   worktreePath: string;
+  workspacePath?: string;
+  workspaceKind?: WorkspaceKind;
   tmuxSessionName: string;
   metaReviewerPane?: RuntimeMetaReviewerPaneBinding;
   now?: Date | undefined;
 }): RuntimeSessionRecord {
-  return {
-    bubbleId: requireNonEmptyString(input.bubbleId, "bubbleId"),
+  const bubbleId = requireNonEmptyString(input.bubbleId, "bubbleId");
+  const record: RuntimeSessionRecord = {
+    bubbleId,
     repoPath: requireNonEmptyString(input.repoPath, "repoPath"),
     worktreePath: requireNonEmptyString(input.worktreePath, "worktreePath"),
     tmuxSessionName: requireNonEmptyString(input.tmuxSessionName, "tmuxSessionName"),
     updatedAt: (input.now ?? new Date()).toISOString(),
-    ...(input.metaReviewerPane !== undefined
-      ? { metaReviewerPane: input.metaReviewerPane }
-      : {})
   };
+
+  if (input.workspacePath !== undefined) {
+    record.workspacePath = requireNonEmptyString(
+      input.workspacePath,
+      "workspacePath"
+    );
+  }
+
+  if (input.workspaceKind !== undefined) {
+    const workspaceKind = parseWorkspaceKind(input.workspaceKind, bubbleId);
+    if (workspaceKind !== undefined) {
+      record.workspaceKind = workspaceKind;
+    }
+  }
+
+  if (input.metaReviewerPane !== undefined) {
+    record.metaReviewerPane = input.metaReviewerPane;
+  }
+
+  return record;
 }

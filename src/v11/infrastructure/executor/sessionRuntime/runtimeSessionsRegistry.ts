@@ -29,6 +29,7 @@ import type {
   RuntimeSessionRecord,
   RuntimeSessionsRegistry
 } from "../../../shared/ports/runtimeSessions.js";
+import type { WorkspaceKind } from "../../../shared/ports/worktreeWorkspace.js";
 
 export type {
   ClaimRuntimeSessionInput,
@@ -55,6 +56,8 @@ export interface UpsertRuntimeSessionInput {
   bubbleId: string;
   repoPath: string;
   worktreePath: string;
+  workspacePath?: string;
+  workspaceKind?: WorkspaceKind;
   tmuxSessionName: string;
   now?: Date;
   lockTimeoutMs?: number;
