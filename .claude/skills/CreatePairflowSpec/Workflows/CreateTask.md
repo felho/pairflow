@@ -42,7 +42,9 @@ Create or refine a Pairflow task file using `L0 -> L1 -> L2`.
    - canonical source-of-truth candidates,
    - business invariant and control model,
    - allowed read-path and missing-data rule,
+   - allowed deterministic resolution paths inside the same authority chain,
    - forbidden fallback sources,
+   - existing baseline canonicalization/finalize/reconciliation paths that may need preservation,
    - affected surfaces,
    - authority producer and consumer families,
    - shared contract consumers and compatibility risk,
@@ -68,8 +70,9 @@ Extract or confirm:
 2. `control_model`
 3. `read_path_rule`
 4. `forbidden_fallback`
-5. `missing_data_rule`
-6. `phase_boundary`:
+5. `allowed_resolution_path`
+6. `missing_data_rule`
+7. `phase_boundary`:
    - `contract_closure`
    - `producer_closure`
    - `internal_execution_closure`
@@ -84,6 +87,11 @@ Policy:
 3. Route back to plan refinement first only when the needed control-model information is already clearly recoverable from existing references, code, or explicit prior decisions, but is not yet written down in the higher-level artifact.
 4. Never invent a control model, fallback rule, or missing-data behavior just to make the task look implementable.
 5. Do not transform missing control-model decisions into selector ladders, route-local heuristics, or UI fallbacks.
+6. If the task refines an existing runtime authority/resolution path, explicitly classify the current behavior as:
+   - preserved baseline behavior,
+   - intentionally replaced behavior,
+   - or explicitly forbidden behavior.
+7. Do not let `forbidden_fallback` wording accidentally ban deterministic same-authority resolution paths unless the referenced artifact or task says so explicitly.
 
 ### 1b) Run the Authority Fan-out Scan
 
@@ -208,6 +216,7 @@ Required blockers for Task output:
    - `control_model`
    - `read_path_rule`
    - `forbidden_fallback`
+   - `allowed_resolution_path`
    - `missing_data_rule`
    - `phase_boundary`
 10. If any control-model blocker is missing and correctness depends on it, the task is not ready. Ask focused blocker questions instead of drafting around the gap.
@@ -215,6 +224,11 @@ Required blockers for Task output:
    - current consumers inventory,
    - additive vs breaking decision,
    - explicit alignment ownership.
+12. If the task refines or replaces an existing canonicalization/resolution path, blockers also include:
+   - `must_preserve_behaviors`,
+   - `allowed_resolution_paths`,
+   - `forbidden_regression_interpretations`,
+   - `replacement_proof_required_if_removed`.
 
 If blockers exist, ask only focused questions for those blockers.
 
@@ -226,6 +240,7 @@ If blockers exist, ask only focused questions for those blockers.
 4. Include complexity-risk outcome and split decision.
 5. If applicable, keep the L0 control-model summary short, then restate it concretely in a dedicated L1 domain/control contract section.
 6. If applicable, include an `Authority Boundary Map` and use it to say what this task intentionally does not close.
+7. If the task touches an existing runtime authority/resolution path, include a `Baseline Preservation` section and say explicitly what is preserved vs intentionally replaced.
 
 ### 5) L1 pass
 
@@ -238,6 +253,7 @@ Fill each section or mark `N/A`:
 6. Dependency constraints
 7. Test matrix (at least one golden path and one invalid case)
 8. Shared contract compatibility (required when a shared interface/result shape changes; otherwise `N/A`)
+9. Baseline preservation (required when an existing canonicalization/resolution path is refined or replaced; otherwise `N/A`)
 
 Rules:
 1. `target_files` must align with call-site matrix.
@@ -250,6 +266,10 @@ Rules:
 8. If the control-model gate applied, L1 must make the allowed read-path, forbidden fallbacks, and missing-data behavior concrete enough for implementation.
 9. If the authority fan-out scan applied, L1 must keep producer closure and consumer-family closure separated unless the artifact explicitly documents why they are inseparable.
 10. If the shared contract compatibility gate applied, L1 must make additive vs breaking behavior explicit and name any out-of-scope consumers.
+11. If baseline-preservation applies, L1 must distinguish:
+   - forbidden heuristic fallbacks,
+   - allowed deterministic same-authority resolution paths,
+   - and any exact replacement path that justifies removing a current behavior.
 
 ### 5a) Consistency Gate (mandatory before L2)
 

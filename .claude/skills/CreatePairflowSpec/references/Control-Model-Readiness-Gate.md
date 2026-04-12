@@ -44,7 +44,11 @@ For affected scopes, the artifact author must explicitly answer these questions.
    - Which tempting alternative sources must not be used as fallback truth?
    - This should forbid the "smart but wrong" read-paths.
 
-5. `missing_data_rule` (what happens if the thing is expected but the allowed read path has no data)
+5. `allowed_resolution_path` (which deterministic resolution or reconciliation paths are allowed inside the same authority chain)
+   - Which resolution paths are explicitly allowed when the primary read path is not yet materialized but authority is still known?
+   - This should prevent reviewers from treating every fallback as forbidden when some same-authority path is intentionally valid.
+
+6. `missing_data_rule` (what happens if the thing is expected but the allowed read path has no data)
    - If the thing is expected but the read-path source has no data, what happens?
    - Required choices:
      - fail closed,
@@ -52,7 +56,7 @@ For affected scopes, the artifact author must explicitly answer these questions.
      - hard error,
      - or another clearly bounded behavior.
 
-6. `phase_boundary` (which phase closes contract, producer, consume, activation, and cleanup)
+7. `phase_boundary` (which phase closes contract, producer, consume, activation, and cleanup)
    - Which phase owns:
      - `contract_closure`,
      - `producer_closure`,
@@ -74,6 +78,7 @@ At minimum, capture:
 If the feature affects user-visible reads or documents/resources, also capture:
 4. `read_path_rule`
 5. `forbidden_fallback`
+6. `allowed_resolution_path` when deterministic same-authority resolution matters
 
 ### For Plan
 
@@ -89,8 +94,9 @@ That section must capture:
 2. control model
 3. read-path rule
 4. forbidden fallback
-5. missing-data rule
-6. detailed phase boundary ownership:
+5. allowed resolution path
+6. missing-data rule
+7. detailed phase boundary ownership:
    - contract closure
    - producer closure
    - internal execution closure
@@ -126,6 +132,9 @@ When authority/read-model/runtime sequencing is involved, the task should also s
 4. aligning read-model consumers,
 5. activating behavior,
 6. or closing cleanup/recovery.
+7. preserving an existing deterministic resolution path,
+8. intentionally replacing it,
+9. or explicitly forbidding it.
 
 ## Readiness Decision
 
@@ -138,8 +147,9 @@ All of the following are true:
 2. The control model is explicit.
 3. The allowed read-path is explicit.
 4. Forbidden fallback sources are explicit.
-5. Missing-data behavior is explicit.
-6. Phase/task ownership boundaries are explicit enough to avoid cross-seam drift across:
+5. Allowed resolution paths are explicit when needed.
+6. Missing-data behavior is explicit.
+7. Phase/task ownership boundaries are explicit enough to avoid cross-seam drift across:
    - producer,
    - internal execution,
    - workflow/orchestration,
@@ -154,8 +164,9 @@ If any of the following is true:
 2. The artifact names multiple candidate sources, but does not say which one is authoritative for state vs read.
 3. Missing-data handling is ambiguous.
 4. The spec leaves room for heuristic fallback without naming it as forbidden.
-5. A phase/task is trying to solve route/UI/runtime questions before control-model ownership is settled.
-6. A phase/task is trying to solve producer closure and multiple consumer-family closures in one step without saying so explicitly.
+5. The spec forbids a fallback class but does not say which deterministic same-authority resolution paths remain allowed.
+6. A phase/task is trying to solve route/UI/runtime questions before control-model ownership is settled.
+7. A phase/task is trying to solve producer closure and multiple consumer-family closures in one step without saying so explicitly.
 
 ## Mandatory Escalation Behavior
 
@@ -165,6 +176,7 @@ If the gate is `NOT_READY`:
 3. Rewrite the artifact to add the missing control-model section first only when the required control-model information is already clearly recoverable from existing references, code, or explicit prior decisions, but is not yet written down.
 4. Never invent a control model, fallback rule, or missing-data behavior just to make the artifact look implementable.
 5. Never compress `phase_boundary` into a single vague sentence when the sequencing depends on producer vs consumer-family closure.
+6. Never treat a preserved deterministic same-authority resolution path as a forbidden fallback unless the artifact says so explicitly.
 
 The skill must be proactive here:
 - do not silently continue just because enough technical detail exists to draft something,
@@ -178,5 +190,6 @@ When asking questions, prefer forms like:
 2. "If X is expected but missing from Y, should the system fail closed, show unavailable, or try another source?"
 3. "Which sources are explicitly forbidden as fallback for X?"
 4. "Is this phase only closing the control model, or also surfacing/consume/activation?"
+5. "If the primary path is not yet materialized, which deterministic same-authority resolution path is still allowed?"
 
 Keep the questions minimal, but do not skip them when the gate is not ready.

@@ -58,8 +58,9 @@ Minimum required answers when applicable:
 2. `control_model` (which source decides whether something should exist / happen / be shown)
 3. `read_path_rule` (where the system is allowed to load or show the thing from)
 4. `forbidden_fallback` (which alternative sources must not be used as fallback truth)
-5. `missing_data_rule` (what happens if the thing is expected but the allowed read path has no data)
-6. `phase_boundary`:
+5. `allowed_resolution_path` (which resolution or reconciliation paths are explicitly allowed inside the same authority chain)
+6. `missing_data_rule` (what happens if the thing is expected but the allowed read path has no data)
+7. `phase_boundary`:
    - `contract_closure`
    - `producer_closure`
    - `internal_execution_closure`
@@ -75,6 +76,11 @@ Policy:
 4. Never invent a control model, fallback rule, or missing-data behavior just to make the artifact look implementable.
 5. Do not convert missing control-model decisions into clever technical seams or fallback heuristics.
 6. For authority/read-model/multi-consumer work, the control model must be explicit before payload/UI/runtime sequencing is finalized.
+7. If the current code contains a known canonicalization, finalize, or reconciliation path that the new work depends on, record whether it is:
+   - preserved baseline behavior,
+   - intentionally replaced behavior,
+   - or explicitly forbidden behavior.
+8. Do not let "forbidden fallback" wording accidentally ban a deterministic same-authority resolution path unless the artifact says so explicitly.
 
 ## Authority Fan-out Scan (Mandatory)
 
@@ -164,6 +170,8 @@ Policy:
 14. Authority producer before consumer alignment: the phase that creates canonical authority should be separated from the phases that consume it when fan-out exists.
 15. Shared contract changes require explicit consumer inventory and additive-vs-breaking classification before task scope is finalized.
 16. Use minimum viable sequencing: separate closures by real boundary, not by template zeal.
+17. Baseline-preservation before cleanup: when a task refines an existing runtime path, explicitly record which current behaviors must survive unchanged unless the task authorizes a replacement.
+18. If a task forbids a heuristic, also state the allowed deterministic resolution paths so reviewers do not "tighten" the code into a regression.
 
 ## Minimum Contract Rules
 
@@ -211,6 +219,12 @@ Policy:
    - explicit out-of-scope consumers,
    - whether export surfaces are closed in this phase.
 20. If any of those control-model clauses are missing and materially affect correctness, the artifact must remain blocked until clarified.
+21. Tasks that refine or replace an existing canonicalization/resolution path must include a `Baseline Preservation` section with:
+   - `must_preserve_behaviors`,
+   - `allowed_resolution_paths`,
+   - `forbidden_regression_interpretations`,
+   - `replacement_proof_required_if_removed`.
+22. If a current behavior is being removed, the artifact must identify the exact replacement path and the equivalence or intentional-difference proof expected from validation.
 
 ## Templates and References
 

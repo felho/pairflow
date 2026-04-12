@@ -10,3 +10,15 @@
   - akkor a skill ne refine-olja tovább a taskot,
   - hanem automatikusan javasoljon plan/sequencing reset-et."
 - And in general we added a lot of advanced logic to the CreatePairflowSpec skill, some of those are verify-able, so it would be nice to be checked by pairflow.
+- Add a "Baseline Preservation + Unauthorized Removal Audit" track across spec + review:
+  - In CreatePairflowSpec, task/plan artifacts should explicitly record:
+    - must-preserve baseline behaviors,
+    - allowed deterministic resolution paths,
+    - forbidden regression interpretations,
+    - replacement proof required if a current path is removed.
+  - In ReviewBubble/meta-review, add a mandatory removed-behavior audit:
+    - list removed branches/fallbacks/finalize paths/recovery paths,
+    - check whether the task/spec explicitly authorized the removal,
+    - if the task/spec is silent, classify as regression candidate instead of assuming "tightening",
+    - compare bubble diff against main/baseline when canonicalization or recovery logic changes.
+  - This should specifically catch the failure mode where a reviewer removes a real baseline path because it superficially looks like a forbidden heuristic fallback.

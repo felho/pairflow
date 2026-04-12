@@ -32,6 +32,8 @@ At minimum, try to extract:
 If applicable, also extract:
 4. `read_path_rule`
 5. `forbidden_fallback`
+6. `allowed_resolution_path`
+7. `baseline-preservation note` when an existing user-visible/runtime behavior must stay intact unless intentionally replaced
 
 If these are materially needed for the PRD but not recoverable from context, ask focused blocker questions before drafting implementation-oriented downstream structure.
 
@@ -49,6 +51,7 @@ Ask only for blocker missing fields:
 3. rollout constraints
 4. control-model ownership if the feature depends on multiple truths or read paths
 5. missing-data behavior if it materially changes product behavior
+6. whether a current deterministic/runtime behavior is meant to be preserved or intentionally replaced
 
 ### 4) Validate PRD quality
 
@@ -57,6 +60,7 @@ Ask only for blocker missing fields:
 3. Risks and rollout are explicit.
 4. If authority/read-model/user-visible behavior is in scope, the PRD must not leave the control model ambiguous.
 5. If missing-data handling matters, the PRD must not leave fail-closed vs fallback behavior implicit.
+6. If the PRD forbids a fallback class, it should also clarify the allowed deterministic resolution path when that distinction materially affects implementation.
 
 ### 5) Finalize
 

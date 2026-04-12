@@ -27,8 +27,9 @@ owners:
 2. Control model: <Which source decides whether something should exist, happen, or be shown. If N/A, say N/A.>
 3. Read-path rule: <Where the implementation may read the thing from. If N/A, say N/A.>
 4. Forbidden fallback: <Which sources must not be used as fallback truth. If N/A, say N/A.>
-5. Missing-data rule: <What happens if the thing is expected but missing. If N/A, say N/A.>
-6. Phase boundary:
+5. Allowed resolution path: <Which deterministic resolution/reconciliation paths are allowed inside the same authority chain. If N/A, say N/A.>
+6. Missing-data rule: <What happens if the thing is expected but missing. If N/A, say N/A.>
+7. Phase boundary:
    - contract closure: <owned here or successor>
    - producer closure: <owned here or successor>
    - internal execution closure: <owned here or successor>
@@ -44,6 +45,15 @@ owners:
 3. In-scope consumers: <Which consume families this task is allowed to align. If N/A, say N/A.>
 4. Explicit out-of-scope consumers: <Which consume families must not be pulled in. If N/A, say N/A.>
 5. Export surfaces closed in this phase: <yes|no + what exactly. If N/A, say N/A.>
+
+### Baseline Preservation
+
+Include this section when the task refines or replaces an existing canonicalization, finalize, or reconciliation path. Otherwise say `N/A`.
+
+1. Must-preserve behaviors: <List concrete current behaviors that must survive unchanged, or `N/A`.>
+2. Allowed resolution paths: <List deterministic same-authority paths that are allowed, or `N/A`.>
+3. Forbidden regression interpretations: <What reviewers/implementers must not "tighten" away, or `N/A`.>
+4. Replacement proof required if removed: <What exact replacement/equivalence evidence is required, or `N/A`.>
 
 ### In Scope
 
@@ -93,6 +103,7 @@ owners:
 | Control model | <explicit rule or `N/A`> | <what is allowed to decide existence/state/visibility> | P1 | required-now |
 | Read-path rule | <explicit rule or `N/A`> | <where implementation may read from> | P1 | required-now |
 | Forbidden fallback | <explicit rule or `N/A`> | <what must not be used as fallback truth> | P1 | required-now |
+| Allowed resolution path | <explicit rule or `N/A`> | <which deterministic same-authority paths remain valid> | P1 | required-now |
 | Missing-data rule | <explicit rule or `N/A`> | <fail-closed/unavailable/error behavior> | P1 | required-now |
 | Phase boundary | <explicit rule or `N/A`> | <what this task owns vs successor tasks across contract/producer/consume/activation/cleanup> | P2 | required-now |
 
@@ -101,6 +112,12 @@ owners:
 | Shared Contract | Current Consumers | Change Type (`additive|breaking|N/A`) | This Task Action | Deferred Alignment |
 |---|---|---|---|---|
 | <path/interface/result-shape> | <list or `N/A`> | <type> | <what this task does> | <successor task or `N/A`> |
+
+### 0b) Baseline Preservation (if applicable)
+
+| Current Behavior | Preserve/Replace/Forbid | Required Proof | Priority | Timing |
+|---|---|---|---|---|
+| <current deterministic path or `N/A`> | <preserve|replace|forbid> | <equivalence/replacement evidence or `N/A`> | P1 | required-now |
 
 ### 1) Call-site Matrix
 
@@ -166,6 +183,7 @@ Use this section to track non-blocking review items (`later-hardening`) that sho
 5. If `contract_boundary_override=yes`, `plan_ref` is mandatory and must align with L1 contract rows.
 6. If a shared contract changes, current-consumer inventory and additive-vs-breaking classification are mandatory.
 7. If an authority fan-out exists, the authority boundary map must stay consistent with the bounded task scope.
+8. If baseline behavior is removed or replaced, the task must name the exact replacement path and the proof expected from validation.
 
 ## Spec Lock
 

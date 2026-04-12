@@ -30,7 +30,16 @@ Include this section only when the feature depends on multiple truths, authority
 1. State/control owner: <Which source decides whether something should exist, happen, or be shown.>
 2. Read-path rule: <Where the system may read the thing from. If N/A, say N/A.>
 3. Forbidden fallback: <Which tempting alternative sources must not be used. If N/A, say N/A.>
-4. Missing-data rule: <What happens if the thing is expected but missing.>
+4. Allowed resolution path: <Which deterministic same-authority resolution/reconciliation paths remain allowed. If N/A, say N/A.>
+5. Missing-data rule: <What happens if the thing is expected but missing.>
+
+## Baseline Preservation
+
+Include this section only when the feature intentionally preserves or replaces an existing user-visible/runtime behavior that downstream plan/task artifacts must not misinterpret. Otherwise omit it.
+
+1. Must-preserve current behaviors: <List concrete baseline behaviors.>
+2. Explicitly replaced behaviors: <List only if intentional.>
+3. Replacement expectation: <What must be proven if a baseline behavior is removed.>
 
 ## In Scope
 

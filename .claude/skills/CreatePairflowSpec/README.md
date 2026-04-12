@@ -31,6 +31,8 @@ Teams often have enough context already, but lose time in long interviews or end
 10. Shared contract changes require explicit current-consumer inventory and additive-vs-breaking classification.
 11. Authority/read-model/multi-consumer tasks should record an explicit authority boundary map.
 12. The authority fan-out vocabulary is an analysis aid, not an automatic 6-phase template; the skill should prefer the smallest safe split.
+13. Tasks that refine existing runtime/canonicalization paths should record baseline-preservation rules so review tightening cannot silently remove required behavior.
+14. If a spec forbids fallback heuristics, it should also say which deterministic same-authority resolution paths remain allowed.
 
 ## Directory layout
 

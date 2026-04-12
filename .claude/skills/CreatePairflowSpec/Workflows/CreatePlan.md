@@ -16,6 +16,7 @@ Create or refine a Pairflow plan document from known context with minimal follow
 2. If `TARGET_PATH` exists, use it as baseline.
 3. Extract known phases, dependencies, validation needs.
 4. Extract likely authority producers, persisted authority artifacts, and consumer families when the scope touches authority/read-model/runtime work.
+5. Extract any current baseline runtime/canonicalization behaviors that downstream tasks may accidentally remove unless the plan makes preservation or replacement explicit.
 
 ### 1a) Run the Control-Model Readiness Gate
 
@@ -30,8 +31,9 @@ Try to extract:
 2. `control_model`
 3. `read_path_rule`
 4. `forbidden_fallback`
-5. `missing_data_rule`
-6. `phase_boundary`:
+5. `allowed_resolution_path`
+6. `missing_data_rule`
+7. `phase_boundary`:
    - `contract_closure`
    - `producer_closure`
    - `internal_execution_closure`
@@ -41,6 +43,7 @@ Try to extract:
    - `cleanup_recovery_closure`
 
 If these are not stable enough yet, stop and ask focused blocker questions before finalizing an implementation-ready phase split.
+If the plan refines an existing runtime path, also classify whether the baseline behavior is preserved, intentionally replaced, or explicitly forbidden.
 
 ### 1b) Run the Authority Fan-out Scan
 
@@ -107,6 +110,7 @@ Use `references/Complexity-Risk-Gate.md` when the plan is implementation-oriente
 2. Fill objective, guiding principles/control model, phase breakdown, and task list from known data.
 3. Reflect split rationale from the complexity-risk gate and the authority fan-out scan.
 4. Include a `Phase Ownership Grid` when authority/read-model/multi-consumer work is in scope.
+5. Include `Baseline Preservation Notes` when the plan touches an existing canonicalization, finalize, or reconciliation path that later tasks might otherwise "tighten" into a regression.
 
 ### 3) Gap-only questions
 
@@ -132,6 +136,8 @@ Ask only if blocker data is missing:
 10. If a shared contract is changing, the plan must say whether compatibility is additive or whether a dedicated alignment task is required.
 11. If three or more consume families are affected by the same authority, the plan must not collapse them into a single producer task unless there is explicit evidence that the consume surfaces are truly inseparable.
 12. The plan must also not explode them into separate phases without evidence; if two closures share ownership and risk profile, the plan should merge them.
+13. If the scope refines an existing runtime/canonicalization path, the plan must say whether baseline behavior is preserved, intentionally replaced, or explicitly forbidden.
+14. If baseline behavior is removed, the plan must identify the replacement mechanism and the proof expected from downstream validation.
 
 ### 5) Finalize
 

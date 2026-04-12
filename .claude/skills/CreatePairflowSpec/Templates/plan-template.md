@@ -20,8 +20,9 @@ owners:
 2. Control model: <Which source decides whether something should exist, happen, or be shown.>
 3. Read-path rule: <Where the system may read the thing from. If N/A, say N/A.>
 4. Forbidden fallback: <Which tempting alternative sources must not be used. If N/A, say N/A.>
-5. Missing-data rule: <What happens if the thing is expected but missing.>
-6. Phase boundary note:
+5. Allowed resolution path: <Which deterministic same-authority resolution/reconciliation paths are allowed. If N/A, say N/A.>
+6. Missing-data rule: <What happens if the thing is expected but missing.>
+7. Phase boundary note:
    - contract closure: <phase>
    - producer closure: <phase>
    - internal execution closure: <phase>
@@ -29,6 +30,14 @@ owners:
    - read-model closure: <phase>
    - activation closure: <phase>
    - cleanup/recovery closure: <phase>
+
+## Baseline Preservation Notes
+
+Include this section when the plan refines or replaces an existing canonicalization, finalize, or reconciliation path. Otherwise say `N/A`.
+
+1. Preserved baseline behaviors: <List or `N/A`.>
+2. Intentionally replaced behaviors: <List or `N/A`.>
+3. Replacement proof expected from downstream tasks/evidence: <List or `N/A`.>
 
 ## Authority Fan-out Scan
 

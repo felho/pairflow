@@ -41,6 +41,13 @@ MESSAGE: extracted from `--message` (required when `DECIDE=rework`)
   - `[Bubble]` when the issue comes from bubble transcript/tool output (for example reviewer findings).
   - `[MetaReview]` when the issue comes from meta-reviewer output already present in bubble context.
 - Never present unlabeled findings in review output.
+- Mandatory regression-vs-tightening audit:
+  - identify any removed branch, fallback, finalize path, canonicalization step, or recovery path in the diff,
+  - state whether that removal is explicitly authorized by the task/spec,
+  - if the task/spec is silent, treat the removal as a regression candidate rather than assuming it is a legitimate tightening,
+  - when a reviewer rationale says "heuristic fallback" or "tighten resolver", verify whether the removed code was actually a deterministic same-authority resolution path.
+- If the task/spec includes baseline-preservation language, the review must check conformance against it explicitly.
+- If the task/spec does not include enough baseline-preservation language to judge a removed behavior safely, call that out as a spec-quality gap instead of silently approving the code change.
 - For rework, message must be specific, evidence-backed, actionable, and verifiable.
 - Review path contract:
   - run the review directly from task/worktree/transcript context,
@@ -92,6 +99,14 @@ pairflow bubble inbox --id <BUBBLE_ID> --repo <REPO_PATH>
   - `<BUBBLE_WORKTREE>/.pairflow/evidence/test.log`
 - Read transcript tail for latest reviewer findings and convergence context.
 - Build a short candidate finding list from bubble transcript-origin items (`[Bubble]`) plus any meta-reviewer-origin items already present in transcript/artifacts (`[MetaReview]`) so final reporting can clearly separate sources.
+- Explicitly compare:
+  - task/spec allowed resolution paths,
+  - current main-branch or baseline behavior when relevant,
+  - removed or tightened paths in the bubble diff.
+- If a bubble removes a current behavior that existed on `main`, classify it as one of:
+  - explicitly authorized replacement,
+  - ambiguous removal needing clarification,
+  - unauthorized removal regression candidate.
 
 4. Build review narrative.
 - If `MODE=deep`, include:
@@ -99,14 +114,18 @@ pairflow bubble inbox --id <BUBBLE_ID> --repo <REPO_PATH>
   2. High-level solution.
   3. File-by-file rationale.
   4. Findings (explicitly labeled `[Bubble]` or `[MetaReview]`), with technical meaning + business-technical meaning for each material item.
-  5. Plain-language decision readout:
+  5. Removed-behavior audit:
+     - what existing behavior was removed or tightened,
+     - whether the task/spec explicitly authorized that,
+     - whether the replacement path is proven equivalent.
+  6. Plain-language decision readout:
      - what is actually wrong,
      - what is only technical debt,
      - why the recommendation is still `approve` or `rework`.
-  6. Behavior/risk and tradeoffs.
-  7. Validation and evidence quality.
-  8. Residual risks/open questions.
-  9. Recommendation (`approve` or `rework`) with reason.
+  7. Behavior/risk and tradeoffs.
+  8. Validation and evidence quality.
+  9. Residual risks/open questions.
+  10. Recommendation (`approve` or `rework`) with reason.
 - If `MODE=standard`, provide concise version of the same structure.
   - Still include a short plain-language explanation for findings and recommendation; brevity is allowed, but reviewer shorthand alone is not.
 
@@ -154,6 +173,17 @@ Recommended deep-review finding format:
   Technical meaning: <what the code/path/contract issue actually is>
   Practical meaning: <why it matters in business-technical language>
   Decision weight: <blocker now | advisory only | future hardening>
+```
+
+Recommended unauthorized-removal finding format:
+
+```text
+- [MetaReview][P1] Unauthorized removal regression candidate: <short title>
+  Removed behavior: <what existing path/branch/fallback/finalize behavior disappeared>
+  Spec status: <explicitly authorized | ambiguous | not authorized>
+  Technical meaning: <why the removed path was materially different from a forbidden heuristic>
+  Practical meaning: <what can now break in runtime/business flow>
+  Decision weight: blocker now
 ```
 
 Recommended recommendation format:
