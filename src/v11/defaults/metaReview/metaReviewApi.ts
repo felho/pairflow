@@ -10,7 +10,6 @@ import {
   MetaReviewError,
   type MetaReviewErrorReasonCode
 } from "../../shared/metaReview/metaReviewError.js";
-import { asMetaReviewError as throwAsMetaReviewError } from "../../shared/metaReview/metaReviewCommandErrorMapping.js";
 import { resolveMetaReviewRunnerMode } from "../../shared/metaReview/liveRun/metaReviewLiveRunnerConfig.js";
 import {
   runMetaReview as runMetaReviewShared
@@ -27,12 +26,9 @@ import type {
 
 export type {
   MetaReviewDepth,
-  MetaReviewLastReportView,
   MetaReviewLiveRunnerInput,
-  MetaReviewReadInput,
   MetaReviewReviewerVerdict,
   MetaReviewRunWarning,
-  MetaReviewStatusView,
   MetaReviewSubmitInput,
   MetaReviewSubmitResult
 } from "../../shared/metaReview/liveRun/metaReviewLiveRunContract.js";
@@ -42,8 +38,6 @@ export {
   parseMetaReviewRunnerOutput
 } from "../../shared/metaReview/liveRun/metaReviewLiveRunner.js";
 export {
-  getMetaReviewLastReportV11 as getMetaReviewLastReport,
-  getMetaReviewStatusV11 as getMetaReviewStatus,
   submitMetaReviewResultV11 as submitMetaReviewResult,
   toMetaReviewErrorV11 as toMetaReviewError
 } from "../../application/metaReview/emitMetaReviewV11.js";
@@ -90,8 +84,4 @@ export async function runMetaReview(
     ...dependencies,
     runLiveReview
   });
-}
-
-export function asMetaReviewError(error: unknown): never {
-  return throwAsMetaReviewError(error);
 }

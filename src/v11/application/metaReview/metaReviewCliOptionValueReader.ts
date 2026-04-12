@@ -4,24 +4,9 @@ import {
   parseRequiredSubmitText as parseRequiredSubmitTextValue,
   parseSubmitRecommendation as parseSubmitRecommendationValue,
   parseSubmitReportJson as parseSubmitReportJsonValue,
-  parseSubmitRound as parseSubmitRoundValue,
-  readBooleanOption as readBooleanOptionValue,
-  readStringOption as readStringOptionValue
+  parseSubmitRound as parseSubmitRoundValue
 } from "./metaReviewCliValueParsers.js";
 import type { MetaReviewSubmissionPayload } from "../../../types/protocol.js";
-
-export interface ParsedMetaReviewOptionValues {
-  id: string;
-  repo: string | undefined;
-  depth: string | undefined;
-  round: string | undefined;
-  recommendation: string | undefined;
-  summary: string | undefined;
-  reworkTargetMessage: string | undefined;
-  reportJson: string | undefined;
-  json: boolean;
-  verbose: boolean;
-}
 
 function invalidMetaReviewCliOptions(message: string): never {
   throw new MetaReviewError(
@@ -70,75 +55,4 @@ export function parseRequiredSubmitReportJson(
     );
   }
   return parseSubmitReportJsonValue(value, invalidMetaReviewCliOptions);
-}
-
-function readStringOption(
-  values: Record<string, unknown>,
-  key:
-    | "id"
-    | "repo"
-    | "depth"
-    | "round"
-    | "recommendation"
-    | "summary"
-    | "rework-target-message"
-    | "report-json",
-  errorMessage: string
-): string | undefined {
-  return readStringOptionValue(
-    values,
-    key,
-    errorMessage,
-    invalidMetaReviewCliOptions
-  );
-}
-
-function readBooleanOption(
-  values: Record<string, unknown>,
-  key: "json" | "verbose",
-  errorMessage: string
-): boolean | undefined {
-  return readBooleanOptionValue(
-    values,
-    key,
-    errorMessage,
-    invalidMetaReviewCliOptions
-  );
-}
-
-export function parseMetaReviewCliOptionValues(
-  values: Record<string, unknown>
-): ParsedMetaReviewOptionValues {
-  const id = readStringOption(values, "id", "Invalid --id value.");
-  if (id === undefined) {
-    return invalidMetaReviewCliOptions("Missing required option: --id");
-  }
-  if (id.trim().length === 0) {
-    return invalidMetaReviewCliOptions("Invalid --id value. Must be non-empty.");
-  }
-
-  return {
-    id,
-    repo: readStringOption(values, "repo", "Invalid --repo value."),
-    depth: readStringOption(values, "depth", "Invalid --depth value."),
-    round: readStringOption(values, "round", "Invalid --round value."),
-    recommendation: readStringOption(
-      values,
-      "recommendation",
-      "Invalid --recommendation value."
-    ),
-    summary: readStringOption(values, "summary", "Invalid --summary value."),
-    reworkTargetMessage: readStringOption(
-      values,
-      "rework-target-message",
-      "Invalid --rework-target-message value."
-    ),
-    reportJson: readStringOption(values, "report-json", "Invalid --report-json value."),
-    json: readBooleanOption(values, "json", "Invalid --json value.") ?? false,
-    verbose: readBooleanOption(values, "verbose", "Invalid --verbose value.") ?? false
-  };
-}
-
-export function invalidMetaReviewCliOptionsWithContext(message: string): never {
-  return invalidMetaReviewCliOptions(message);
 }

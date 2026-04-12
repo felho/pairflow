@@ -10,9 +10,6 @@ const cliEntrypointParityTestsByCommand: Record<string, readonly string[]> = {
   inbox: ["tests/v11/application/inbox/inboxCliEntrypointParity.test.ts"],
   kickoff: ["tests/v11/application/kickoff/kickoffCliEntrypointParity.test.ts"],
   list: ["tests/v11/application/list/listCliEntrypointParity.test.ts"],
-  metaReview: [
-    "tests/v11/application/metaReview/metaReviewCliEntrypointParity.test.ts"
-  ],
   open: ["tests/v11/application/open/openCliEntrypointParity.test.ts"],
   reconcile: [
     "tests/v11/application/reconcile/reconcileCliEntrypointParity.test.ts"
@@ -29,7 +26,6 @@ const directBubbleCliShimCommands = [
   "inbox",
   "kickoff",
   "list",
-  "metaReview",
   "open",
   "reconcile",
   "restart",

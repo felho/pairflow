@@ -21,21 +21,12 @@ import type {
   WriteStateSnapshotPort
 } from "../ports/stateSnapshots.js";
 
-export type {
-  MetaReviewDepth,
-  MetaReviewLastReportView,
-  MetaReviewResult,
-  MetaReviewRunWarning,
-  MetaReviewStatusView
-} from "./metaReviewTypes.js";
+export type { MetaReviewDepth, MetaReviewResult, MetaReviewRunWarning } from "./metaReviewTypes.js";
 
-export interface MetaReviewReadInput {
+export interface MetaReviewSubmitInput {
   bubbleId: string;
   repoPath?: string;
   cwd?: string;
-}
-
-export interface MetaReviewSubmitInput extends MetaReviewReadInput {
   round: number;
   recommendation: MetaReviewSubmissionPayload["recommendation"];
   summary: string;
