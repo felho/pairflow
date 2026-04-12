@@ -191,23 +191,22 @@ Az explicit control-model dontesek most visszanyerhetok a designbol es a review-
 
 ## Active Task
 
-1. `plans/tasks/remote-bubble-execution/phase1b1-workspace-authority-contract-foundation.md`
+1. `plans/tasks/remote-bubble-execution/phase1b2-workspace-authority-producer-foundation.md`
 
 ## Planned Next Tasks (Do Not Materialize Yet)
 
-1. `plans/tasks/remote-bubble-execution/phase1b2-workspace-authority-producer-foundation.md`
-2. `plans/tasks/remote-bubble-execution/phase1c1-start-tmux-launch-authority-alignment.md`
-3. `plans/tasks/remote-bubble-execution/phase1c2-runtime-delivery-and-reviewer-context-alignment.md`
-4. `plans/tasks/remote-bubble-execution/phase1d-bubble-loop-consume-alignment.md`
-5. `plans/tasks/remote-bubble-execution/phase2a-local-clone-topology-activation.md`
-6. `plans/tasks/remote-bubble-execution/phase2b-remote-create-write-path-enablement.md`
-7. `plans/tasks/remote-bubble-execution/phase2c-remote-sync-hook-contract-foundation.md`
-8. `plans/tasks/remote-bubble-execution/phase2d-remote-ssh-start-activation.md`
-9. `plans/tasks/remote-bubble-execution/phase2e-remote-status-and-list-read-model.md`
-10. `plans/tasks/remote-bubble-execution/phase2f-remote-attach-consume.md`
-11. `plans/tasks/remote-bubble-execution/phase3a-remote-approval-and-rework-routing.md`
-12. `plans/tasks/remote-bubble-execution/phase3b-remote-commit-merge-delete-cleanup.md`
-13. `plans/tasks/remote-bubble-execution/phase3c-recovery-diagnostics-and-rollout.md`
+1. `plans/tasks/remote-bubble-execution/phase1c1-start-tmux-launch-authority-alignment.md`
+2. `plans/tasks/remote-bubble-execution/phase1c2-runtime-delivery-and-reviewer-context-alignment.md`
+3. `plans/tasks/remote-bubble-execution/phase1d-bubble-loop-consume-alignment.md`
+4. `plans/tasks/remote-bubble-execution/phase2a-local-clone-topology-activation.md`
+5. `plans/tasks/remote-bubble-execution/phase2b-remote-create-write-path-enablement.md`
+6. `plans/tasks/remote-bubble-execution/phase2c-remote-sync-hook-contract-foundation.md`
+7. `plans/tasks/remote-bubble-execution/phase2d-remote-ssh-start-activation.md`
+8. `plans/tasks/remote-bubble-execution/phase2e-remote-status-and-list-read-model.md`
+9. `plans/tasks/remote-bubble-execution/phase2f-remote-attach-consume.md`
+10. `plans/tasks/remote-bubble-execution/phase3a-remote-approval-and-rework-routing.md`
+11. `plans/tasks/remote-bubble-execution/phase3b-remote-commit-merge-delete-cleanup.md`
+12. `plans/tasks/remote-bubble-execution/phase3c-recovery-diagnostics-and-rollout.md`
 
 ## Dependencies
 
