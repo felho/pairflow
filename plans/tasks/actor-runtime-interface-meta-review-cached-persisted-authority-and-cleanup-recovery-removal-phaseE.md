@@ -56,6 +56,20 @@ owners:
 
 # Task: Actor Runtime Interface Meta-Review Cached Persisted Authority and Cleanup-Recovery Removal (Phase E)
 
+Target file interpretation:
+1. A `target_files` lista a primer ownership seam-eket rogziti, nem teljes file-by-file closure inventory.
+2. A reszletes implementation closure es a kapcsolodo currently-known consumer inventory authoritative listaja a lenti L1 call-site matrixben marad.
+3. A predecessor es successor boundaries tovabbra is a 2026-04-12-es plan resequencing szerint kotelezoek; ez a task nem huzhat vissza public read-model vagy repo-surface cleanup scope-ot.
+
+## Current Codebase Check (2026-04-12)
+
+1. A jelenlegi tree-ben a `BubbleMetaReviewSnapshotState` canonical persisted shape-je meg mindig tartalmazza a teljes `last_autonomous_*` blokkot a `src/types/bubble.ts`, `src/v11/domain/state/initialState.ts`, `src/v11/shared/metaReview/metaReviewSnapshot.ts` es `src/v11/shared/metaReviewGate/metaReviewGateSnapshotHelpers.ts` seamjeiben.
+2. A writer pathok kozul a `src/v11/shared/metaReview/metaReviewCommandSubmitPersistence.ts` es a `src/v11/shared/metaReview/liveRun/metaReviewLiveRunPersistence.ts` ma meg cached last-run scalarokat irnak vissza a canonical state-be, tehat a persisted authority fizikai szukitese tenylegesen meg elottunk allo closure.
+3. A cleanup/recovery familyben a `src/v11/shared/metaReviewGate/metaReviewGateSnapshotHelpers.ts`, `metaReviewGateRunResultArtifacts.ts` es `metaReviewGateStateHelpers.ts` ma meg a removed scalarokbol epit snapshotot vagy run-result fallbackot, igy ez a task valoban ugyanazt a reduced shared shape-et owns-olja a helper family oldalrol is.
+4. Az inspect/load seam a `src/v11/infrastructure/state/stateSnapshotInspection.ts` file-ban jelenleg tolerant legacy inputot olvas be ugy, hogy kozben vissza is teszi a `last_autonomous_*` mezoket az inspectable outputba; ezt a tasknak explicit input-tolerancia + reduced-output modellre kell szukitenie.
+5. A direct in-repo consumers kozul a listed `tests/**` contract/core/v11 fixturek es a `tests/cli/agentEmitCommand.test.ts` ma meg sok helyen seedelik vagy ellenorzik a cached scalar blokkot, ezert a consumer alignment ennek a tasknak kotelezo resze, nem kulon follow-up.
+6. A `plans/actor-runtime-interface-discovery-and-migration-plan-v1.md` 2026-04-12-es resequencingje szerint ez a replacement lane Phase E4 persisted-authority + cleanup/recovery closure szelete; a public read-model closure Phase E3-ban, a repo-surface wording cleanup Phase E5-ben marad.
+
 ## L0 - Policy
 
 ### Goal
@@ -153,6 +167,32 @@ Szukitse le fizikailag a persisted `state.meta_review` shape-et a megmarado live
 |---|---|---|---|---|
 | `BubbleMetaReviewSnapshotState` | type/schema/writer seams, cleanup/recovery helpers, in-repo fixture/test consumers | breaking | align all currently-known in-repo consumers in this task | N/A |
 | Inspectable state normalization | state store inspection es diagnostics tests | breaking | keep legacy input tolerance, remove reduced-output rehydration | N/A |
+
+### 0b) Sequencing / Closure Order
+
+| Step | Why this order is mandatory | Owned here | Must stay deferred |
+|---|---|---|---|
+| 1. Canonical shape reduction | A shared persisted contractot kell eloszor leszokiteni, kulonben a writer/helper cleanup tovabbra is a removed scalar truthre epul. | `src/types/bubble.ts`, `src/v11/domain/state/initialState.ts`, `src/v11/shared/state/stateSchemaMetaReview*.ts`, `src/v11/shared/metaReview/metaReviewSnapshot.ts` | public read-model removal, repo-surface wording cleanup |
+| 2. Writer seam closure | A reduced type/schema utan a submit/live-run writer pathok mar nem irhatnak vissza removed scalarokat. | `src/v11/shared/metaReview/metaReviewCommandSubmitPersistence.ts`, `src/v11/shared/metaReview/liveRun/metaReviewLiveRunPersistence.ts` | repo-local docs/UI cleanup |
+| 3. Cleanup/recovery and inspection detachment | A helper family csak a reduced shape-re vagy explicit current-run artifact inputra allhat at, ha a canonical writer mar bezarta a persisted fallbackot. | `src/v11/shared/metaReviewGate/**`, `src/v11/infrastructure/state/stateSnapshotInspection.ts` | public CLI/read-model pathok |
+| 4. Direct consumer alignment + regression lock | A shared shape valtozas utan a currently-known tests/fixtures explicit zarasa kell, kulonben residual compatibility sink marad. | listed `tests/**`, `tests/cli/agentEmitCommand.test.ts` | repo-surface traceability cleanup |
+
+Normative sequencing rules:
+
+1. Elobb a canonical type/default/schema/write surface szukuljon le, es csak utana zarhat a cleanup/recovery helper family.
+2. Legacy input tolerance kizarolag explicit inspect/load seam-ben maradhat; helper-level vagy persisted-output rehydration nem engedett.
+3. Explicit current-run artifact input atveheti a removed scalarok szerepet recovery synthesisben, de ezt nem szabad uj cached persisted state-kent visszairni.
+4. Direct consumer alignment nem vezethet uj pseudo-canonical wrapperhez, test-only normalize bridge-hez vagy dual-write atmeneti shape-hez.
+
+### 0c) Traceability Lock
+
+| Source | Binding requirement for this task | Why it matters |
+|---|---|---|
+| `plans/actor-runtime-interface-discovery-and-migration-plan-v1.md` Remaining Phase E Resequencing Update | Ez a task a replacement lane Phase E4 persisted authority + cleanup/recovery closure szelete. | Megakadalyozza, hogy a task public read-model vagy repo-surface cleanupba csusszon. |
+| `plans/tasks/actor-runtime-interface-meta-review-cached-public-read-model-removal-phaseE.md` | Phase E3 predecessor: a public cached read/export surface closure kulon boundary marad, es ennek mar elobb be kell zarulnia. | A current task nem tarthat vissza CLI/read-model cleanup ownershipot. |
+| `plans/archive/tasks/actor-runtime-interface-meta-review-cached-current-round-authority-and-runtime-consumer-cutover-phaseE.md` | Pre-Phase E4 archived prereq: a live authority/runtime producer cutover mar lezart foundation. | A reduced persisted shape nem irhatja ujra a live authority control modellt. |
+| `plans/archive/tasks/actor-runtime-interface-meta-review-cached-approval-and-projection-consumer-cutover-phaseE.md` | Pre-Phase E4 archived prereq: az approval/status/list/UI source-of-truth cutover mar lezart consumer-side foundation. | Ez a task csak residual shared-shape consumers alignmentjet owns-olja, nem a lezart projection boundaryt. |
+| `plans/tasks/actor-runtime-interface-meta-review-cached-repo-surface-cleanup-phaseE.md` | Phase E5 successor: a cached wording/traceability/docs cleanup csak a runtime/state closure utan kovetkezhet. | A jelen task summaryja nem moshatja egybe a runtime/state closure-t a repo-surface cleanup-fel. |
 
 ### 1) Call-site Matrix
 
