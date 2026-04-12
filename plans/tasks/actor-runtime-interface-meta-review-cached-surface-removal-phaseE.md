@@ -6,9 +6,8 @@ status: superseded
 phase: phaseE
 superseded_reason: "The original delivery/removal task still mixed three distinct execution slices (CLI/read-stack removal, workflow+UI cleanup, active docs cleanup). After the risk gate was corrected to `single-task allowed: no`, the bounded implementation path is an explicit three-task split rather than one umbrella task."
 superseded_by:
-  - plans/tasks/actor-runtime-interface-meta-review-cached-cli-read-stack-removal-phaseE.md
-  - plans/tasks/actor-runtime-interface-meta-review-cached-workflow-ui-cleanup-phaseE.md
-  - plans/tasks/actor-runtime-interface-meta-review-cached-active-docs-cleanup-phaseE.md
+  - plans/tasks/actor-runtime-interface-meta-review-cached-public-read-model-removal-phaseE.md
+  - plans/tasks/actor-runtime-interface-meta-review-cached-repo-surface-cleanup-phaseE.md
 target_files:
   - .claude/skills/UsePairflow/SKILL.md
   - .claude/skills/UsePairflow/Workflows/ReviewBubble.md
@@ -55,14 +54,14 @@ owners:
 2. A korrigalt Complexity Risk Gate mellett a dokumentum sajat maga mondta ki, hogy `single-task allowed: no`.
 3. Ebbol az kovetkezik, hogy az umbrella removal scope nem maradhat egyetlen vegrehajthato task, ha a kisebb bounded delivery szeletek nincsenek explicitten definialva.
 4. A helyes replacement split:
-   - `plans/tasks/actor-runtime-interface-meta-review-cached-current-round-authority-and-runtime-consumer-cutover-phaseE.md`
-   - `plans/tasks/actor-runtime-interface-meta-review-cached-cli-read-stack-removal-phaseE.md`
-   - `plans/tasks/actor-runtime-interface-meta-review-cached-workflow-ui-cleanup-phaseE.md`
-   - `plans/tasks/actor-runtime-interface-meta-review-cached-active-docs-cleanup-phaseE.md`
+   - `plans/archive/tasks/actor-runtime-interface-meta-review-cached-current-round-authority-and-runtime-consumer-cutover-phaseE.md`
+   - `plans/tasks/actor-runtime-interface-meta-review-cached-public-read-model-removal-phaseE.md`
+   - `plans/tasks/actor-runtime-interface-meta-review-cached-persisted-authority-and-cleanup-recovery-removal-phaseE.md`
+   - `plans/tasks/actor-runtime-interface-meta-review-cached-repo-surface-cleanup-phaseE.md`
 5. A harom foundation task tovabbra is kotelezo precondition:
-   - `plans/tasks/actor-runtime-interface-meta-review-cached-current-round-authority-and-runtime-consumer-cutover-phaseE.md`
-   - `plans/tasks/actor-runtime-interface-meta-review-cached-state-shape-and-persistence-decoupling-phaseE.md`
-   - `plans/tasks/actor-runtime-interface-meta-review-cached-approval-and-projection-consumer-cutover-phaseE.md`
+   - `plans/archive/tasks/actor-runtime-interface-meta-review-cached-current-round-authority-and-runtime-consumer-cutover-phaseE.md`
+   - `plans/archive/tasks/actor-runtime-interface-meta-review-cached-approval-and-projection-consumer-cutover-phaseE.md`
+   - `plans/tasks/actor-runtime-interface-meta-review-cached-persisted-authority-and-cleanup-recovery-removal-phaseE.md`
 
 ## Historical Scope Summary
 

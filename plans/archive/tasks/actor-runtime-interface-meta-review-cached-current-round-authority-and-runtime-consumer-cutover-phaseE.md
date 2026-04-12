@@ -128,7 +128,7 @@ Valtsa ki a cached `last_autonomous_*` allapotfuggosegeket reviewer-parity meta-
 | Same-round duplicate suppression | yes | stale-state reread/fail-closed without cached snapshot window | N/A |
 | Hidden runtime consumers (`gate`, `recovered result`, `converged telemetry`) | yes | explicit input / artifact / route-derived fallback, no hidden cached reads | N/A |
 | Approval source-of-truth and status/list projection | no | do not solve in this slice | `plans/tasks/actor-runtime-interface-meta-review-cached-approval-and-projection-consumer-cutover-phaseE.md` |
-| Physical `last_autonomous_*` field removal and writer cleanup | no | cached fields may remain inert only until follow-up lands | `plans/tasks/actor-runtime-interface-meta-review-cached-state-shape-and-persistence-decoupling-phaseE.md` |
+| Physical `last_autonomous_*` field removal and cleanup/recovery closure | no | cached fields may remain inert only until follow-up lands | `plans/tasks/actor-runtime-interface-meta-review-cached-persisted-authority-and-cleanup-recovery-removal-phaseE.md` |
 
 ### 1) Call-site Matrix
 

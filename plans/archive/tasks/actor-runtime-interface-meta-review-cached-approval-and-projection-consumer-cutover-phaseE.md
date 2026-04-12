@@ -144,8 +144,8 @@ Allitsa at az approval es projection consumer seams-t a cached state helyett exp
 | Canonical pending approval read-path consumer cutover | yes | inbox/status pending approval surface current-round human approval requestre tamaszkodik; ujabb cached snapshot nem irhatja felul a transcript approval itemet es nem hozhat letre szintetikus approval summary-t a belso consumer pathon | N/A |
 | Status/list/UI presenter/UI summary/status CLI/browser UI meta-review projection tightening | yes | cached last-run mezok kikerulnek a consumer contractbol, es egy kozos narrowed `metaReview` shape vegig konzisztens marad a `UiBubbleSummary` / `UiBubbleDetail` export boundary-n es a browser-side consume retegen is, nem csak a status/list projection type-szinten. A status projection route mezoi status-only diagnosztikak: a presenter/UI export boundary-n ezeket explicit, dokumentalt es tesztelt field-dropkent kell kezelni, nem veletlen shape-veszteskent. | N/A |
 | Live authority/runtime producer seams | no | csak a mar leszallitott authority/runtime input fogyasztasa | `plans/archive/tasks/actor-runtime-interface-meta-review-cached-current-round-authority-and-runtime-consumer-cutover-phaseE.md` |
-| Cached field physical removal es writer cleanup | no | cached mezok atmenetileg inert retentionben maradhatnak | `plans/tasks/actor-runtime-interface-meta-review-cached-state-shape-and-persistence-decoupling-phaseE.md` |
-| Public cached read-stack removal | no | retained operator/read stack kulon removal taskban zarando | `plans/tasks/actor-runtime-interface-meta-review-cached-cli-read-stack-removal-phaseE.md` |
+| Cached field physical removal es cleanup/recovery closure | no | cached mezok atmenetileg inert retentionben maradhatnak | `plans/tasks/actor-runtime-interface-meta-review-cached-persisted-authority-and-cleanup-recovery-removal-phaseE.md` |
+| Public cached read-stack removal | no | retained operator/read stack kulon removal taskban zarando | `plans/tasks/actor-runtime-interface-meta-review-cached-public-read-model-removal-phaseE.md` |
 
 ### 1) Call-site Matrix
 
