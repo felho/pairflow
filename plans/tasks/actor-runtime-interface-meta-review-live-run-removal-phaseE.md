@@ -56,6 +56,25 @@ Target file interpretation:
    - resume guidance: `src/v11/application/start/startCommandResumeKickoffMessageBuilders.ts`
 4. A live-run subsystem kulon prompt/schema/parser/env-mode/child-process/tmux-scrollback infrastruktúrát tart fenn olyan capabilityre, amely first-principles alapon nem szukseges a canonical authority + submit modellhez.
 5. A `tests/core/bubble/metaReview.test.ts` ma egyszerre fed le surviving canonical submit behavior-t es torlendo live-run behavior-t; a tasknak ezt a ket reteget szet kell valasztania, es a live-run specifikus coverage-et teljesen el kell tavolitania.
+6. A 2026-04-12-es explicit `rg` snapshot az acceptance regex tenyleges current-tree talalatait mutatja, es ezek a live-run-owned vagy kozvetlen live-run-coupled seam-ekre korlatozodnak:
+   - `src/v11/defaults/metaReview/metaReviewApi.ts`
+   - `src/v11/shared/metaReview/metaReviewDependencyDefaults.ts`
+   - `src/v11/shared/metaReview/liveRun/metaReviewLiveRunContract.ts`
+   - `src/v11/shared/metaReview/liveRun/metaReviewLiveRunPorts.ts`
+   - `src/v11/shared/metaReview/liveRun/metaReviewLiveRunExecution.ts`
+   - `src/v11/shared/metaReview/liveRun/metaReviewLiveRunRuntime.ts`
+   - `src/v11/shared/metaReview/liveRun/metaReviewLiveRunPersistence.ts`
+   - `src/v11/shared/metaReview/liveRun/metaReviewLiveRunApprovalRefresh.ts`
+   - `src/v11/shared/metaReview/liveRun/metaReviewLiveRunner.ts`
+   - `src/v11/shared/metaReview/liveRun/metaReviewLiveRunnerConfig.ts`
+   - `src/v11/shared/metaReview/liveRun/metaReviewLiveRunnerParsing.ts`
+   - `src/v11/shared/metaReview/liveRun/metaReviewLiveRunnerPrompt.ts`
+   - `src/v11/shared/metaReview/liveRun/metaReviewLiveRunnerReport.ts`
+   - `src/v11/infrastructure/channel/tmux/metaReviewLiveRunnerPane.ts`
+   - `src/v11/infrastructure/executor/sessionRuntime/metaReviewLiveRunnerRuntime.ts`
+   - `tests/core/bubble/metaReview.test.ts`
+7. Ez a snapshot illusztrativ hitlista, nem teljes ownership inventory: a removal teljes authoritative feluletet tovabbra is a `target_files`, a `Call-site Matrix`, es a kapcsolodo L1 contract tablazatok rogzitik.
+8. A snapshot nem mutat surviving gate/submit ownership lane-beli retained production consumer-t a torlendo live-run nevekre; ez a szelet bounded removal cleanup, nem ujabb architecture discovery vagy replacement design.
 
 ## L0 - Policy
 
@@ -190,12 +209,14 @@ Normative sequencing rules:
 1. Nem eleg a facade-ot kivenni; a runner stack es a kapcsolodo tests is ugyanebben a taskban torlendo.
 2. Nem maradhat olyan type/export, amely csak azert el, mert korabban a live-run hasznalta.
 3. Nem szabad a live-run removal utan uj `metaReviewRuntime` vagy hasonlo adapterrel visszacsempeszni ugyanazt a capabilityt.
+4. Az explicit `rg=0` proof szukseges, de nem elegseges; a named owned file/folder seam-eknek torlesi diffben is el kell tunniuk.
 
 ### 0c) Traceability Lock
 
 | Source | Binding requirement for this task | Why it matters |
 |---|---|---|
 | `plans/actor-runtime-interface-discovery-and-migration-plan-v1.md` Decision Baseline | A meta-review nem special-case subsystem, hanem role projection ugyanazon canonical actor modellben. | Ez tiltja a kulon central live-run subsystem fenntartasat. |
+| `plans/actor-runtime-interface-discovery-and-migration-plan-v1.md` Phase E lane-guard note | Ez a task csak internal live-run removal lane lehet; nem nyithatja ujra a public cached read-model, a persisted authority + cleanup/recovery, vagy a repo-surface cleanup tracket. | Megakadalyozza a Phase E closurek visszakevereset. |
 | `src/v11/shared/metaReview/metaReviewExecutionContext.ts` | A surviving authority modell a `meta_review_result` awaited outputon marad. | Ez a removal baseline-je. |
 | `src/v11/application/actorProtocol/actorProtocolEmitters.ts` | A canonical submit ut nem serulhet. | Ez a must-preserve path. |
 | `src/v11/application/start/startCommandResumeKickoffMessageBuilders.ts` | A resume flow mar most is submit-alapu. | Bizonyitja, hogy nincs uj replacementre szukseg. |
@@ -265,6 +286,7 @@ Pass condition:
 1. Exit code `1` / zero matches.
 2. Nincs kivetel vagy allowlist.
 3. Nincs "temporary" renamed symbol, amely nyilvanvalo live-run ballastot hordoz tovabb.
+4. A `T1-T3` szerinti production diffben a named live-run file/folder seam-ek tenylegesen torlodnek, es a `T4` szerinti test diff kivezeti a live-run-specifikus coverage-et; az `rg=0` eredmeny nem legitimal retained stubot vagy compatibility tombstone-t.
 
 ## L2 - Implementation Notes (Optional)
 
