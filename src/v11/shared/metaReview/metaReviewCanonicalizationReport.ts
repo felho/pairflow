@@ -8,8 +8,6 @@ import {
 } from "../metaReviewGate/metaReviewGateFindingsSplit.js";
 import { isNonEmptyString } from "../validation/primitives.js";
 
-export const CANONICAL_META_REVIEW_REPORT_REF = "artifacts/meta-review-last.json";
-
 function resolveClaimStateFromRecommendation(
   recommendation: MetaReviewRecommendation
 ): "clean" | "open_findings" | "unknown" {
@@ -125,14 +123,8 @@ function resolveFindingsArtifactRef(input: {
   const findingsArtifactRefFromInput = isNonEmptyString(input.base.findings_artifact_ref)
     ? input.base.findings_artifact_ref.trim()
     : null;
-  if (
-    input.recommendation === "rework" &&
-    (
-      findingsArtifactRefFromInput === null ||
-      findingsArtifactRefFromInput === CANONICAL_META_REVIEW_REPORT_REF
-    )
-  ) {
-    return CANONICAL_META_REVIEW_REPORT_REF;
+  if (input.recommendation === "rework" && findingsArtifactRefFromInput === null) {
+    return null;
   }
   return findingsArtifactRefFromInput;
 }

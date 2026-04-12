@@ -1,4 +1,3 @@
-import { createHash } from "node:crypto";
 import { chmod, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -602,27 +601,6 @@ describe("runBubbleWatchdog", () => {
         expectedState: "RUNNING"
       }
     );
-    await writeFile(
-      bubble.paths.metaReviewLastJsonArtifactPath,
-      `${JSON.stringify(
-        {
-          bubble_id: bubble.bubbleId,
-          run_id: "run_watchdog_meta_submit_01",
-          report_json: {
-            findings_claim_state: "clean",
-            findings_claim_source: "meta_review_artifact",
-            findings_count: 0,
-            findings_claimed_open_total: 0,
-            findings_blocking_open_total: 0,
-            findings_advisory_open_total: 0
-          }
-        },
-        null,
-        2
-      )}\n`,
-      "utf8"
-    );
-
     const result = await runBubbleWatchdog({
       bubbleId: bubble.bubbleId,
       cwd: repoPath,
@@ -764,27 +742,6 @@ describe("runBubbleWatchdog", () => {
         expectedState: "RUNNING"
       }
     );
-    await writeFile(
-      bubble.paths.metaReviewLastJsonArtifactPath,
-      `${JSON.stringify(
-        {
-          bubble_id: bubble.bubbleId,
-          run_id: "run_watchdog_meta_submit_01",
-          report_json: {
-            findings_claim_state: "clean",
-            findings_claim_source: "meta_review_artifact",
-            findings_count: 0,
-            findings_claimed_open_total: 0,
-            findings_blocking_open_total: 0,
-            findings_advisory_open_total: 0
-          }
-        },
-        null,
-        2
-      )}\n`,
-      "utf8"
-    );
-
     const result = await runBubbleWatchdog({
       bubbleId: bubble.bubbleId,
       cwd: repoPath,
@@ -829,8 +786,6 @@ describe("runBubbleWatchdog", () => {
         expectedState: "RUNNING"
       }
     );
-    const runId = "run_watchdog_meta_submit_rework_01";
-    const findingsRef = "artifacts/rework-findings.json";
     const findingsRaw = `${JSON.stringify(
       {
         open_total: 1,
@@ -847,37 +802,6 @@ describe("runBubbleWatchdog", () => {
     await writeFile(
       join(bubble.paths.artifactsDir, "rework-findings.json"),
       findingsRaw,
-      "utf8"
-    );
-    const findingsDigest = createHash("sha256")
-      .update(findingsRaw, "utf8")
-      .digest("hex");
-
-    await writeFile(
-      bubble.paths.metaReviewLastJsonArtifactPath,
-      `${JSON.stringify(
-        {
-          bubble_id: bubble.bubbleId,
-          run_id: runId,
-          recommendation: "rework",
-          summary: "Canonical rework snapshot for watchdog routing.",
-          report_ref: "artifacts/meta-review-last.json",
-          report_json: {
-            findings_claim_state: "open_findings",
-            findings_claim_source: "meta_review_artifact",
-            findings_count: 1,
-            findings_claimed_open_total: 1,
-            findings_blocking_open_total: 1,
-            findings_advisory_open_total: 0,
-            findings_artifact_ref: findingsRef,
-            meta_review_run_id: runId,
-            findings_digest_sha256: findingsDigest,
-            findings_artifact_status: "available"
-          }
-        },
-        null,
-        2
-      )}\n`,
       "utf8"
     );
 

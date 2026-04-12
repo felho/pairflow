@@ -117,7 +117,6 @@ describe("state store", () => {
           last_autonomous_status: "success",
           last_autonomous_recommendation: "approve",
           last_autonomous_summary: "Legacy fields should be stripped",
-          last_autonomous_report_ref: "artifacts/meta-review-last.json",
           last_autonomous_rework_target_message: null,
           last_autonomous_updated_at: "2026-03-08T10:01:00.000Z",
           auto_rework_count: 1,

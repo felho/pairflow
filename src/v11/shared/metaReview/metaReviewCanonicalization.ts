@@ -1,7 +1,6 @@
 import { isNonEmptyString } from "../validation/primitives.js";
 
 export {
-  CANONICAL_META_REVIEW_REPORT_REF,
   resolveCanonicalMetaReviewReportJson
 } from "./metaReviewCanonicalizationReport.js";
 

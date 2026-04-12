@@ -1,4 +1,4 @@
-import { readFile, writeFile } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
 
 import {
   MetaReviewError,
@@ -38,7 +38,6 @@ async function withMetaReviewDefaults(
   const metaReviewDefaults = await loadMetaReviewDefaults();
   return {
     readFile,
-    writeFile,
     emitDeliveryNotification: metaReviewDefaults.emitTmuxDeliveryNotification,
     buildDeliveryMessageRef: metaReviewDefaults.resolveDeliveryMessageRef,
     ...dependencies

@@ -494,7 +494,7 @@ describe("emitActorProtocolV11 wrappers", () => {
         report_json: buildApproveMetaReviewReportJson(
           "meta-review-wrapper-approve-parity"
         ),
-        refs: ["artifacts/meta-review-last.json"]
+        refs: []
       },
       authoritativeContext
     });

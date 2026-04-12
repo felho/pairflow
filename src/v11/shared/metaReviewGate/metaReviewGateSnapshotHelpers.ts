@@ -2,13 +2,10 @@ import {
   DEFAULT_META_REVIEW_AUTO_REWORK_LIMIT,
   type BubbleMetaReviewSnapshotState
 } from "../../../types/bubble.js";
-import type { MetaReviewResult } from "../metaReview/metaReviewTypes.js";
 import {
   resolveFindingsParityMetadataForEnvelope as resolveFindingsParityMetadataForEnvelopeFromProtocol,
   type FindingsParityMetadata
 } from "../../../types/protocol.js";
-
-export const metaReviewFallbackReportRef = "artifacts/meta-review-last.json";
 export const metaReviewerAgent = "codex";
 
 export function normalizeMetaReviewSnapshot(
@@ -35,7 +32,9 @@ export function normalizeMetaReviewSnapshot(
 
 export function buildHumanGateSummary(input: {
   convergenceSummary: string;
-  metaReviewRun?: MetaReviewResult;
+  metaReviewRun?: {
+    summary: string | null;
+  };
   fallbackReason?: string;
 }): string {
   if (input.fallbackReason !== undefined) {

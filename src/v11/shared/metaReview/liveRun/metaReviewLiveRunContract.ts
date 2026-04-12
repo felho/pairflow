@@ -47,10 +47,14 @@ export interface MetaReviewLiveRunnerInput {
   now: Date;
 }
 
-export interface MetaReviewDependencies extends MetaReviewCommandDependenciesV11 {
+export interface MetaReviewDependencies {
+  resolveBubbleById?: MetaReviewCommandDependenciesV11["resolveBubbleById"];
+  readStateSnapshot?: MetaReviewCommandDependenciesV11["readStateSnapshot"];
+  writeStateSnapshot?: MetaReviewCommandDependenciesV11["writeStateSnapshot"];
+  appendProtocolEnvelope?: MetaReviewCommandDependenciesV11["appendProtocolEnvelope"];
+  now?: MetaReviewCommandDependenciesV11["now"];
+  randomUUID?: MetaReviewCommandDependenciesV11["randomUUID"];
   runLiveReview?: (
     input: MetaReviewLiveRunnerInput
   ) => Promise<MetaReviewLiveRunnerOutput>;
-  removeFile?: (artifactPath: string) => Promise<void>;
-  allowMetaReviewRunningState?: boolean;
 }

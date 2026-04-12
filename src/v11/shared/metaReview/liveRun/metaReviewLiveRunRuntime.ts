@@ -3,13 +3,8 @@ import {
   refreshMetaReviewApprovalRequest
 } from "./metaReviewLiveRunApprovalRefresh.js";
 import {
-  CANONICAL_META_REVIEW_REPORT_REF,
   resolveCanonicalMetaReviewReportJson
-} from "./metaReviewLiveRunReport.js";
-import {
-  buildMetaReviewLastJsonArtifactPayload,
-  persistMetaReviewLastJsonArtifact
-} from "./metaReviewLiveRunArtifacts.js";
+} from "../metaReviewCanonicalization.js";
 import {
   buildMetaReviewRunResult,
   buildNextMetaReviewStateSnapshot,
@@ -59,35 +54,8 @@ export async function runMetaReview(
     writeStateFn: ports.writeState
   });
 
-  const reportPayload = buildMetaReviewLastJsonArtifactPayload({
-    bubbleId: resolved.bubbleId,
-    runId: execution.runId,
-    round: written.state.round,
-    generatedAt: execution.updatedAt,
-    depth: execution.depth,
-    status: execution.status,
-    recommendation: execution.recommendation,
-    summary: execution.summary,
-    reportRef: CANONICAL_META_REVIEW_REPORT_REF,
-    reworkTargetMessage: execution.reworkTargetMessage,
-    warnings: execution.warnings,
-    canonicalReportJson
-  });
-
-  const { artifactBackup, writeWarning } =
-    await persistMetaReviewLastJsonArtifact({
-      artifactPath: resolved.bubblePaths.metaReviewLastJsonArtifactPath,
-      reportPayload,
-      readFileFn: ports.readFileFn,
-      writeFileFn: ports.writeFileFn
-    });
-  if (writeWarning !== null) {
-    execution.warnings.push(writeWarning);
-  }
-
   await refreshMetaReviewApprovalRequest({
     bubbleId: resolved.bubbleId,
-    artifactBackup,
     statePath: resolved.bubblePaths.statePath,
     state: written.state.state,
     round: written.state.round,
@@ -101,11 +69,7 @@ export async function runMetaReview(
     written,
     now: ports.now,
     appendEnvelope: ports.appendEnvelope,
-    writeFileFn: ports.writeFileFn,
-    writeStateFn: ports.writeState,
-    ...(dependencies.removeFile !== undefined
-      ? { removeFileFn: dependencies.removeFile }
-      : {})
+    writeStateFn: ports.writeState
   });
 
   return buildMetaReviewRunResult({
@@ -114,7 +78,6 @@ export async function runMetaReview(
     status: execution.status,
     recommendation: execution.recommendation,
     summary: execution.summary,
-    reportRef: CANONICAL_META_REVIEW_REPORT_REF,
     reworkTargetMessage: execution.reworkTargetMessage,
     updatedAt: execution.updatedAt,
     warnings: execution.warnings,

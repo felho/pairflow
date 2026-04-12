@@ -1,12 +1,11 @@
 import { createHash } from "node:crypto";
-import { mkdtemp, readFile, rm, writeFile as writeFileFs } from "node:fs/promises";
+import { mkdtemp, rm, writeFile as writeFileFs } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
 import { getBubbleInboxV11 as getBubbleInbox } from "../../../src/v11/application/inbox/emitInboxV11.js";
-import { getBubblePaths } from "../../../src/v11/infrastructure/artifact/bubble/paths.js";
 import { getBubbleStatusV11 as getBubbleStatus } from "../../../src/v11/application/status/emitStatusV11.js";
 import {
   extractMetaReviewDelimitedBlock,
@@ -95,21 +94,8 @@ async function appendReviewerSnapshot(input: {
   });
 }
 
-describe("meta-review paths", () => {
-  it("exposes rolling artifact paths", () => {
-    const paths = getBubblePaths("/tmp/repo", "b_meta_review_path_01");
-
-    expect(paths.metaReviewLastJsonArtifactPath).toBe(
-      "/tmp/repo/.pairflow/bubbles/b_meta_review_path_01/artifacts/meta-review-last.json"
-    );
-    expect(paths.metaReviewLastJsonArtifactPath).toBe(
-      "/tmp/repo/.pairflow/bubbles/b_meta_review_path_01/artifacts/meta-review-last.json"
-    );
-  });
-});
-
 describe("meta-review run", () => {
-  it("persists canonical snapshot and rolling artifacts on successful run", async () => {
+  it("persists canonical snapshot on successful run", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({
       repoPath,
@@ -151,29 +137,10 @@ describe("meta-review run", () => {
       auto_rework_limit: 5,
       sticky_human_gate: false
     });
-
-    const reportJson = JSON.parse(
-      await readFile(bubble.paths.metaReviewLastJsonArtifactPath, "utf8")
-    ) as {
-      recommendation: string;
-      report_ref: string;
-      report_json?: {
-        findings_claim_state?: string;
-        findings_claim_source?: string;
-      };
-    };
-    const reportArtifactRaw = await readFile(
-      bubble.paths.metaReviewLastJsonArtifactPath,
-      "utf8"
-    );
-
-    expect(reportJson.recommendation).toBe("rework");
-    expect(reportJson.report_ref).toBe("artifacts/meta-review-last.json");
-    expect(reportJson.report_json).toMatchObject({
+    expect(result.report_json).toMatchObject({
       findings_claim_state: "open_findings",
       findings_claim_source: "meta_review_artifact"
     });
-    expect(reportArtifactRaw).toContain("Fix deterministic drift");
   });
 
   it("falls back to error/inconclusive when live runner fails", async () => {
@@ -359,15 +326,9 @@ describe("meta-review run", () => {
     const loaded = await readStateSnapshot(bubble.paths.statePath);
     expect(loaded.state.meta_review).not.toHaveProperty("last_autonomous_run_id");
 
-    const reportArtifactRaw = await readFile(
-      bubble.paths.metaReviewLastJsonArtifactPath,
-      "utf8"
-    );
-    expect(reportArtifactRaw).toContain("Second snapshot");
-    expect(reportArtifactRaw).not.toContain("First snapshot");
   });
 
-  it("returns CAS conflict error and skips artifact writes when snapshot write fails", async () => {
+  it("returns CAS conflict error when snapshot write fails", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({
       repoPath,
@@ -399,46 +360,6 @@ describe("meta-review run", () => {
 
     const after = await readStateSnapshot(bubble.paths.statePath);
     expect(after.fingerprint).toBe(before.fingerprint);
-
-    await expect(
-      readFile(bubble.paths.metaReviewLastJsonArtifactPath, "utf8")
-    ).rejects.toMatchObject({ code: "ENOENT" });
-    await expect(
-      readFile(bubble.paths.metaReviewLastJsonArtifactPath, "utf8")
-    ).rejects.toMatchObject({ code: "ENOENT" });
-  });
-
-  it("returns success with artifact warning when rolling artifact writes fail", async () => {
-    const repoPath = await createTempRepo();
-    const bubble = await setupRunningBubbleFixture({
-      repoPath,
-      bubbleId: "b_meta_run_06",
-      task: "Meta run artifact warning"
-    });
-
-    const result = await runMetaReview(
-      {
-        bubbleId: bubble.bubbleId,
-        repoPath
-      },
-      {
-        runLiveReview: async () => ({
-          recommendation: "approve",
-          summary: "State is canonical",
-        }),
-        writeFile: async () => {
-          throw new Error("artifact write blocked");
-        }
-      }
-    );
-
-    expect(result.status).toBe("success");
-    expect(result.warnings.map((entry) => entry.reason_code)).toContain(
-      "META_REVIEW_ARTIFACT_WRITE_WARNING"
-    );
-
-    const loaded = await readStateSnapshot(bubble.paths.statePath);
-    expect(loaded.state.meta_review).not.toHaveProperty("last_autonomous_summary");
   });
 
   it("refreshes the effective human approval context after a successful rerun", async () => {
@@ -464,7 +385,7 @@ describe("meta-review run", () => {
         payload: {
           summary: "META_REVIEW_GATE_RUN_FAILED: stale timeout"
         },
-        refs: ["artifacts/meta-review-last.json"]
+        refs: []
       }
     });
 
@@ -615,7 +536,7 @@ describe("meta-review run", () => {
             findings_advisory_open_total: 2
           }
         },
-        refs: ["artifacts/meta-review-last.json"]
+        refs: []
       }
     });
 
@@ -901,33 +822,6 @@ describe("meta-review run", () => {
       }
     );
     const beforeRun = await readStateSnapshot(bubble.paths.statePath);
-    const previousJsonArtifact = JSON.stringify(
-      {
-        bubble_id: bubble.bubbleId,
-        run_id: "run_meta_pre_refresh_append_fail_01",
-        round: beforeRun.state.round,
-        generated_at: "2026-03-08T11:41:00.000Z",
-        status: "success",
-        recommendation: "approve",
-        summary: "Pre-refresh state",
-        report_ref: "artifacts/meta-review-last.json",
-        report_json_ref: "artifacts/meta-review-last.json",
-        rework_target_message: null,
-        warnings: [],
-        report_json: {
-          findings_claim_state: "clean",
-          findings_claim_source: "meta_review_artifact",
-          findings_count: 0
-        }
-      },
-      null,
-      2
-    );
-    await writeFileFs(
-      bubble.paths.metaReviewLastJsonArtifactPath,
-      `${previousJsonArtifact}\n`,
-      "utf8"
-    );
 
     let thrown: unknown;
     try {
@@ -960,9 +854,6 @@ describe("meta-review run", () => {
 
     const afterFailedRun = await readStateSnapshot(bubble.paths.statePath);
     expect(afterFailedRun.state).toEqual(beforeRun.state);
-    await expect(
-      readFile(bubble.paths.metaReviewLastJsonArtifactPath, "utf8")
-    ).resolves.toBe(`${previousJsonArtifact}\n`);
 
     const transcript = await readTranscriptEnvelopes(
       bubble.paths.transcriptPath,
@@ -2354,12 +2245,6 @@ describe("meta-review submit", () => {
       auto_rework_limit: DEFAULT_META_REVIEW_AUTO_REWORK_LIMIT,
       sticky_human_gate: true
     });
-    const reportArtifact = JSON.parse(
-      await readFile(bubble.paths.metaReviewLastJsonArtifactPath, "utf8")
-    ) as {
-      round?: number;
-    };
-    expect(reportArtifact.round).toBe(1);
   });
 
   it("accepts advisory-only approve submit and preserves split metadata when artifact open total is absent", async () => {
@@ -2419,20 +2304,6 @@ describe("meta-review submit", () => {
       findings_parity_status: null
     });
 
-    const reportJsonArtifact = JSON.parse(
-      await readFile(bubble.paths.metaReviewLastJsonArtifactPath, "utf8")
-    ) as {
-      report_json?: Record<string, unknown>;
-    };
-    expect(reportJsonArtifact.report_json).toMatchObject({
-      findings_claim_state: "open_findings",
-      findings_count: 2,
-      findings_claimed_open_total: 2,
-      findings_blocking_open_total: 0,
-      findings_advisory_open_total: 2,
-      findings_artifact_open_total: null,
-      findings_parity_status: null
-    });
   });
 
   it("accepts advisory-only approve submit when summary only asserts no P0/P1 findings", async () => {
@@ -2576,24 +2447,12 @@ describe("meta-review submit", () => {
       "artifact://meta-review/rework-01",
       "artifact://findings/rework-01"
     ]);
-    const reportJson = JSON.parse(
-      await readFile(bubble.paths.metaReviewLastJsonArtifactPath, "utf8")
-    ) as {
-      run_id?: string;
-      report_json?: {
-        findings_count?: number;
-        findings_claim_state?: string;
-        meta_review_run_id?: string;
-        findings_artifact_ref?: string;
-      };
-    };
-    expect(reportJson.run_id).toBe("run_meta_submit_02");
-    expect(reportJson.report_json?.findings_claim_state).toBe("open_findings");
-    expect(reportJson.report_json?.findings_count).toBe(1);
-    expect(reportJson.report_json?.meta_review_run_id).toBe(
+    expect(result.report_json?.findings_claim_state).toBe("open_findings");
+    expect(result.report_json?.findings_count).toBe(1);
+    expect(result.report_json?.meta_review_run_id).toBe(
       "run_meta_submit_02"
     );
-    expect(reportJson.report_json?.findings_artifact_ref).toBe(findingsArtifactRef);
+    expect(result.report_json?.findings_artifact_ref).toBe(findingsArtifactRef);
   });
 
   it("derives rework artifact open_total from blocking findings and auto-reworks", async () => {
@@ -2662,15 +2521,7 @@ describe("meta-review submit", () => {
     expect(result.gate_route).toBe("auto_rework");
     expect(result.lifecycle_state).toBe("RUNNING");
 
-    const reportJson = JSON.parse(
-      await readFile(bubble.paths.metaReviewLastJsonArtifactPath, "utf8")
-    ) as {
-      report_json?: {
-        findings_artifact_open_total?: number | null;
-        findings_parity_status?: string | null;
-      };
-    };
-    expect(reportJson.report_json).toMatchObject({
+    expect(result.report_json).toMatchObject({
       findings_artifact_open_total: 2,
       findings_parity_status: "ok"
     });

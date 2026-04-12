@@ -14,7 +14,6 @@ import {
 import { clearLiveMetaReviewSnapshot } from "../metaReview/metaReviewSnapshot.js";
 export {
   buildHumanGateSummary,
-  metaReviewFallbackReportRef,
   metaReviewerAgent,
   normalizeMetaReviewSnapshot,
   resolveFindingsParityMetadataForEnvelope

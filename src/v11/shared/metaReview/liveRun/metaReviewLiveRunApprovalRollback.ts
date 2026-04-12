@@ -1,8 +1,9 @@
 import {
   type LoadedStateSnapshot
 } from "../../ports/stateSnapshots.js";
-import { MetaReviewError } from "../metaReviewError.js";
-import type { MetaReviewDependencies } from "./metaReviewLiveRunContract.js";
+import type {
+  WriteStateSnapshotPort
+} from "../../ports/stateSnapshots.js";
 import { isNamedError } from "../../errors/namedError.js";
 
 type GateReasonCode =
@@ -15,54 +16,21 @@ type RollbackReasonCode =
   | "META_REVIEW_GATE_REFRESH_APPROVAL_ROLLBACK_STATE_CONFLICT"
   | "META_REVIEW_GATE_REFRESH_APPROVAL_ROLLBACK_TRANSITION_INVALID";
 
-type ArtifactRestoreReasonCode =
-  | "META_REVIEW_GATE_REFRESH_APPROVAL_ARTIFACT_RESTORE_NOT_ATTEMPTED"
-  | "META_REVIEW_GATE_REFRESH_APPROVAL_ARTIFACT_RESTORE_APPLIED"
-  | "META_REVIEW_GATE_REFRESH_APPROVAL_ARTIFACT_RESTORE_FAILED";
-
-export interface RollingArtifactBackupEntry {
-  artifactPath: string;
-  existed: boolean;
-  contents: string | null;
-}
-
 export interface ApprovalRefreshRollbackContext {
   gateReasonCode: GateReasonCode;
   rollbackReasonCode: RollbackReasonCode;
   rollbackContext: string;
-  artifactRestoreReasonCode: ArtifactRestoreReasonCode;
-  artifactRestoreContext: string;
-}
-
-export async function restoreRollingArtifactBackup(
-  artifactBackup: RollingArtifactBackupEntry[],
-  writeFileFn: NonNullable<MetaReviewDependencies["writeFile"]>,
-  removeFileFn: NonNullable<MetaReviewDependencies["removeFile"]>
-): Promise<void> {
-  await Promise.all(
-    artifactBackup.map((artifact) =>
-      artifact.existed
-        ? writeFileFn(artifact.artifactPath, artifact.contents ?? "", "utf8")
-        : removeFileFn(artifact.artifactPath)
-    )
-  );
 }
 
 export async function resolveApprovalRefreshRollbackContext(input: {
   statePath: string;
   loadedState: LoadedStateSnapshot;
   written: LoadedStateSnapshot;
-  artifactBackup: RollingArtifactBackupEntry[];
-  writeStateFn: NonNullable<MetaReviewDependencies["writeStateSnapshot"]>;
-  writeFileFn: NonNullable<MetaReviewDependencies["writeFile"]>;
-  removeFileFn?: NonNullable<MetaReviewDependencies["removeFile"]>;
+  writeStateFn: WriteStateSnapshotPort;
 }): Promise<ApprovalRefreshRollbackContext> {
   let rollbackReasonCode: RollbackReasonCode =
     "META_REVIEW_GATE_REFRESH_APPROVAL_ROLLBACK_NOT_ATTEMPTED";
   let rollbackContext = "rollback_outcome=not_attempted";
-  let artifactRestoreReasonCode: ArtifactRestoreReasonCode =
-    "META_REVIEW_GATE_REFRESH_APPROVAL_ARTIFACT_RESTORE_NOT_ATTEMPTED";
-  let artifactRestoreContext = "artifact_restore_outcome=not_attempted";
   let gateReasonCode: GateReasonCode = "META_REVIEW_GATE_TRANSITION_INVALID";
 
   try {
@@ -86,45 +54,10 @@ export async function resolveApprovalRefreshRollbackContext(input: {
     }
   }
 
-  if (rollbackReasonCode === "META_REVIEW_GATE_REFRESH_APPROVAL_ROLLBACK_APPLIED") {
-    try {
-      if (input.removeFileFn === undefined) {
-        throw new MetaReviewError({
-          reasonCode: "META_REVIEW_UNKNOWN_ERROR",
-          message: "meta-review artifact delete capability is unavailable.",
-          context: {
-            source: "meta_review_live_run_approval_rollback",
-            statePath: input.statePath,
-            reason: "artifact_delete_capability_unavailable"
-          }
-        });
-      }
-      await restoreRollingArtifactBackup(
-        input.artifactBackup,
-        input.writeFileFn,
-        input.removeFileFn
-      );
-      artifactRestoreReasonCode =
-        "META_REVIEW_GATE_REFRESH_APPROVAL_ARTIFACT_RESTORE_APPLIED";
-      artifactRestoreContext = "artifact_restore_outcome=applied";
-    } catch (artifactRestoreError) {
-      const artifactRestoreReason =
-        artifactRestoreError instanceof Error
-          ? artifactRestoreError.message
-          : String(artifactRestoreError);
-      artifactRestoreReasonCode =
-        "META_REVIEW_GATE_REFRESH_APPROVAL_ARTIFACT_RESTORE_FAILED";
-      artifactRestoreContext =
-        `artifact_restore_outcome=failed artifact_restore_error=${artifactRestoreReason}`;
-    }
-  }
-
   return {
     gateReasonCode,
     rollbackReasonCode,
-    rollbackContext,
-    artifactRestoreReasonCode,
-    artifactRestoreContext
+    rollbackContext
   };
 }
 
@@ -134,8 +67,6 @@ export function buildApprovalRefreshFailureMessage(input: {
   rollbackReasonCode: RollbackReasonCode;
   rollbackTargetState: string;
   rollbackContext: string;
-  artifactRestoreReasonCode: ArtifactRestoreReasonCode;
-  artifactRestoreContext: string;
 }): string {
-  return `${input.gateReasonCode}: approval refresh append failed after state/artifact writes (append_error=${input.appendReason}; rollback_reason_code=${input.rollbackReasonCode}; rollback_target_state=${input.rollbackTargetState}; ${input.rollbackContext}; artifact_restore_reason_code=${input.artifactRestoreReasonCode}; ${input.artifactRestoreContext}).`;
+  return `${input.gateReasonCode}: approval refresh append failed after state update (append_error=${input.appendReason}; rollback_reason_code=${input.rollbackReasonCode}; rollback_target_state=${input.rollbackTargetState}; ${input.rollbackContext}).`;
 }

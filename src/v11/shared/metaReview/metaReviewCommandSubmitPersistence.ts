@@ -1,8 +1,4 @@
 import type { LoadedStateSnapshot } from "../ports/stateSnapshots.js";
-import {
-  CANONICAL_META_REVIEW_REPORT_REF
-} from "./metaReviewCanonicalization.js";
-import { normalizeStringList } from "../normalization/stringNormalization.js";
 import { normalizeMetaReviewSnapshot } from "./metaReviewSnapshot.js";
 import { MetaReviewError } from "./metaReviewError.js";
 import { toMetaReviewExecutionContext } from "../state/executionContext.js";
@@ -15,8 +11,7 @@ import {
   assertMetaReviewSubmitStaleGuard
 } from "./metaReviewCommandSubmitAuthority.js";
 import type {
-  MetaReviewArtifactReadPort,
-  MetaReviewArtifactWritePort
+  MetaReviewArtifactReadPort
 } from "./metaReviewArtifactIo.js";
 import type {
   BubbleExecutionContext,
@@ -48,7 +43,6 @@ export function buildCanonicalSubmitRunResult(input: {
     status: input.status,
     recommendation: input.recommendation,
     summary: input.summary,
-    report_ref: CANONICAL_META_REVIEW_REPORT_REF,
     rework_target_message: input.reworkTargetMessage,
     updated_at: input.updatedAt,
     warnings: [...input.warnings],
@@ -127,63 +121,6 @@ export async function writeCanonicalSubmitState(input: {
     }
     throw error;
   }
-}
-
-export async function writeCanonicalSubmitReportArtifact(input: {
-  resolved: Awaited<ReturnType<NonNullable<MetaReviewCommandDependencies["resolveBubbleById"]>>>;
-  submitInput: MetaReviewSubmitInput;
-  runId: string;
-  updatedAt: string;
-  status: MetaReviewRunStatus;
-  recommendation: MetaReviewRecommendation;
-  summary: string;
-  reworkTargetMessage: string | null;
-  canonicalReportJson: Record<string, unknown>;
-  writeFileFn: MetaReviewArtifactWritePort;
-}): Promise<MetaReviewRunWarning[]> {
-  const warnings: MetaReviewRunWarning[] = [];
-  const reportPayload = {
-    bubble_id: input.resolved.bubbleId,
-    run_id: input.runId,
-    round: input.submitInput.round,
-    generated_at: input.updatedAt,
-    status: input.status,
-    recommendation: input.recommendation,
-    summary: input.summary,
-    report_ref: CANONICAL_META_REVIEW_REPORT_REF,
-    report_json_ref: CANONICAL_META_REVIEW_REPORT_REF,
-    refs: normalizeStringList(input.submitInput.refs ?? []),
-    rework_target_message: input.reworkTargetMessage,
-    warnings,
-    report_json: input.canonicalReportJson
-  };
-
-  const artifactWrites = await Promise.allSettled([
-    input.writeFileFn(
-      input.resolved.bubblePaths.metaReviewLastJsonArtifactPath,
-      `${JSON.stringify(reportPayload, null, 2)}\n`,
-      "utf8"
-    )
-  ]);
-
-  const failedArtifactWrites = artifactWrites.filter(
-    (result): result is PromiseRejectedResult => result.status === "rejected"
-  );
-  if (failedArtifactWrites.length > 0) {
-    const message = failedArtifactWrites
-      .map((result) =>
-        result.reason instanceof Error
-          ? result.reason.message
-          : String(result.reason)
-      )
-      .join("; ");
-    warnings.push({
-      reason_code: "META_REVIEW_ARTIFACT_WRITE_WARNING",
-      message
-    });
-  }
-
-  return warnings;
 }
 
 export async function assertSubmitReworkFindingsArtifactContract(input: {

@@ -18,43 +18,6 @@ import type {
 import { finalizeCurrentRunMetaReviewGate } from "../metaReviewGate/metaReviewGateCurrentRunFinalization.js";
 type ResolvedBubble = Awaited<ReturnType<ResolveBubbleByIdPort>>;
 
-async function syncFinalizedSubmitReportArtifact(input: {
-  resolved: ResolvedBubble;
-  dependencies: MetaReviewCommandDependencies;
-  reportRound: number;
-  finalizedRunResult: MetaReviewResult;
-  reportJson: Record<string, unknown>;
-}): Promise<void> {
-  if (input.dependencies.writeFile === undefined) {
-    return;
-  }
-  const payload = {
-    bubble_id: input.resolved.bubbleId,
-    ...(input.finalizedRunResult.run_id !== undefined
-      ? { run_id: input.finalizedRunResult.run_id }
-      : {}),
-    round: input.reportRound,
-    generated_at: input.finalizedRunResult.updated_at,
-    status: input.finalizedRunResult.status,
-    recommendation: input.finalizedRunResult.recommendation,
-    summary: input.finalizedRunResult.summary,
-    report_ref: input.finalizedRunResult.report_ref,
-    report_json_ref: input.finalizedRunResult.report_ref,
-    rework_target_message: input.finalizedRunResult.rework_target_message,
-    warnings: input.finalizedRunResult.warnings,
-    report_json: input.reportJson
-  };
-  try {
-    await input.dependencies.writeFile(
-      input.resolved.bubblePaths.metaReviewLastJsonArtifactPath,
-      `${JSON.stringify(payload, null, 2)}\n`,
-      "utf8"
-    );
-  } catch {
-    // Canonical artifact was already written earlier; keep routing outcome authoritative.
-  }
-}
-
 async function emitSubmitAutoReworkDelivery(input: {
   resolved: ResolvedBubble;
   routed: MetaReviewGateResult;
@@ -169,7 +132,6 @@ export async function finalizeMetaReviewSubmitResult(input: {
   resolved: ResolvedBubble;
   routed: MetaReviewGateResult;
   dependencies: MetaReviewCommandDependencies;
-  reportRound: number;
   canonicalRunResult: MetaReviewResult;
   canonicalReportJson: Record<string, unknown>;
 }): Promise<MetaReviewSubmitResult> {
@@ -181,19 +143,11 @@ export async function finalizeMetaReviewSubmitResult(input: {
 
   const finalizedRunResult = input.routed.metaReviewRun ?? input.canonicalRunResult;
   const finalizedReportJson = finalizedRunResult.report_json ?? input.canonicalReportJson;
-  await syncFinalizedSubmitReportArtifact({
-    resolved: input.resolved,
-    dependencies: input.dependencies,
-    reportRound: input.reportRound,
-    finalizedRunResult,
-    reportJson: finalizedReportJson
-  });
   return {
     bubbleId: input.resolved.bubbleId,
     status: finalizedRunResult.status,
     recommendation: finalizedRunResult.recommendation,
     summary: finalizedRunResult.summary,
-    report_ref: finalizedRunResult.report_ref,
     rework_target_message: finalizedRunResult.rework_target_message,
     updated_at: finalizedRunResult.updated_at,
     lifecycle_state: input.routed.state.state,

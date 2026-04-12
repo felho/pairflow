@@ -202,7 +202,7 @@ async function seedReadyForHumanApprovalState(input: {
           latest_recommendation: "approve"
         }
       },
-      refs: ["artifacts/meta-review-last.json"]
+      refs: []
     }
   });
   return bubble;

@@ -23,7 +23,6 @@ export {
 export {
   buildHumanGateSummary,
   incrementAutoReworkCount,
-  metaReviewFallbackReportRef,
   metaReviewerAgent,
   metaReviewGateAutoReworkRetryRunIdentityInvariantReasonCode,
   normalizeMetaReviewSnapshot,

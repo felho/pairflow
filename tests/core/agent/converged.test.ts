@@ -898,26 +898,6 @@ describe("emitConvergedFromWorkspace", () => {
                 expectedState: "RUNNING"
               }
             );
-            await writeFile(
-              bubble.paths.metaReviewLastJsonArtifactPath,
-              `${JSON.stringify(
-                {
-                  bubble_id: bubble.bubbleId,
-                  run_id: "run_converged_recover_01",
-                  report_json: {
-                    findings_claim_state: "clean",
-                    findings_claim_source: "meta_review_artifact",
-                    findings_count: 0,
-                    findings_claimed_open_total: 0,
-                    findings_blocking_open_total: 0,
-                    findings_advisory_open_total: 0
-                  }
-                },
-                null,
-                2
-              )}\n`,
-              "utf8"
-            );
             throw new Error("simulated gate crash after snapshot write");
           }
         }

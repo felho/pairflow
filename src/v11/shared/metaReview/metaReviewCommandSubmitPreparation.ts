@@ -41,7 +41,6 @@ export interface PreparedMetaReviewSubmitContext {
   resolved: Awaited<ReturnType<typeof metaReviewCommandSubmitDefaults.resolveBubbleById>>;
   loadedState: Awaited<ReturnType<typeof metaReviewCommandSubmitDefaults.readStateSnapshot>>;
   readFileFn: NonNullable<MetaReviewCommandDependencies["readFile"]>;
-  writeFileFn: NonNullable<MetaReviewCommandDependencies["writeFile"]>;
   recommendation: MetaReviewSubmitInput["recommendation"];
   status: ReturnType<typeof resolveSubmitRunStatus>;
   summary: string;
@@ -71,24 +70,6 @@ function resolveMetaReviewArtifactReadPort(
       source: "meta_review_command_submit_preparation",
       bubbleId,
       reason: "artifact_read_capability_unavailable"
-    }
-  });
-}
-
-function resolveMetaReviewArtifactWritePort(
-  bubbleId: string,
-  dependencies: MetaReviewCommandDependencies
-): NonNullable<MetaReviewCommandDependencies["writeFile"]> {
-  if (dependencies.writeFile !== undefined) {
-    return dependencies.writeFile;
-  }
-  throw new MetaReviewError({
-    reasonCode: "META_REVIEW_UNKNOWN_ERROR",
-    message: "meta-review artifact write capability is unavailable.",
-    context: {
-      source: "meta_review_command_submit_preparation",
-      bubbleId,
-      reason: "artifact_write_capability_unavailable"
     }
   });
 }
@@ -229,10 +210,6 @@ export async function prepareMetaReviewSubmitContext(input: {
     input.submitInput.bubbleId,
     input.dependencies
   );
-  const writeFileFn = resolveMetaReviewArtifactWritePort(
-    input.submitInput.bubbleId,
-    input.dependencies
-  );
   const randomUuidFn = input.dependencies.randomUUID ?? randomUUID;
 
   const resolved = await resolveBubble({
@@ -304,7 +281,6 @@ export async function prepareMetaReviewSubmitContext(input: {
     resolved,
     loadedState,
     readFileFn,
-    writeFileFn,
     recommendation: validated.recommendation,
     status: validated.status,
     summary: validated.summary,

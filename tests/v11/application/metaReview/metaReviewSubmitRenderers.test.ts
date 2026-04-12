@@ -10,7 +10,6 @@ describe("metaReviewSubmitRenderers", () => {
       status: "success",
       recommendation: "rework",
       summary: "Two findings remain open.",
-      report_ref: "artifacts/meta-review-last.json",
       rework_target_message: "Fix the retained read export boundary.",
       updated_at: "2026-04-12T08:00:00.000Z",
       warnings: [{ reason_code: "META_REVIEWER_PANE_UNAVAILABLE", message: "ignored in text output" }],
@@ -32,7 +31,6 @@ describe("metaReviewSubmitRenderers", () => {
       "Gate route: auto_rework",
       "Lifecycle state: RUNNING",
       "Summary: Two findings remain open.",
-      "Report ref: artifacts/meta-review-last.json",
       "Rework target: Fix the retained read export boundary.",
       "Findings parity: claimed=2, artifact=2, status=match",
       "Warnings: META_REVIEWER_PANE_UNAVAILABLE"

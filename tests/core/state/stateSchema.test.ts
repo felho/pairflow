@@ -225,7 +225,6 @@ describe("state schema", () => {
         last_autonomous_status: "success",
         last_autonomous_recommendation: "approve",
         last_autonomous_summary: "Recovered snapshot",
-        last_autonomous_report_ref: "artifacts/meta-review-last.json",
         last_autonomous_rework_target_message: null,
         last_autonomous_updated_at: "2026-03-08T10:01:00.000Z",
         auto_rework_count: 0,
@@ -268,7 +267,6 @@ describe("state schema", () => {
         last_autonomous_status: "success",
         last_autonomous_recommendation: "approve",
         last_autonomous_summary: "Recovered snapshot",
-        last_autonomous_report_ref: "artifacts/meta-review-last.json",
         last_autonomous_rework_target_message: null,
         last_autonomous_updated_at: "2026-03-08T10:01:00.000Z",
         auto_rework_count: 0,
@@ -718,7 +716,6 @@ describe("state schema", () => {
         last_autonomous_status: "success",
         last_autonomous_recommendation: "rework",
         last_autonomous_summary: "Needs fixes",
-        last_autonomous_report_ref: "artifacts/meta-review-last.json",
         last_autonomous_rework_target_message: "Fix unstable validation logic",
         last_autonomous_updated_at: "2026-03-08T10:01:00.000Z",
         auto_rework_count: 1,
@@ -751,7 +748,6 @@ describe("state schema", () => {
         last_autonomous_status: "success",
         last_autonomous_recommendation: "rework",
         last_autonomous_summary: null,
-        last_autonomous_report_ref: "artifacts/meta-review-last.json",
         last_autonomous_rework_target_message: "",
         last_autonomous_updated_at: "bad-ts",
         auto_rework_count: -1,
@@ -796,7 +792,6 @@ describe("state schema", () => {
         last_autonomous_status: "error",
         last_autonomous_recommendation: "approve",
         last_autonomous_summary: "Mismatch",
-        last_autonomous_report_ref: "artifacts/meta-review-last.json",
         last_autonomous_rework_target_message: null,
         last_autonomous_updated_at: "2026-03-08T10:01:00.000Z",
         auto_rework_count: 1,
@@ -829,7 +824,6 @@ describe("state schema", () => {
         last_autonomous_status: "inconclusive",
         last_autonomous_recommendation: "approve",
         last_autonomous_summary: "Mismatch",
-        last_autonomous_report_ref: "artifacts/meta-review-last.json",
         last_autonomous_rework_target_message: null,
         last_autonomous_updated_at: "2026-03-08T10:01:00.000Z",
         auto_rework_count: 1,
@@ -862,7 +856,6 @@ describe("state schema", () => {
         last_autonomous_status: "success",
         last_autonomous_recommendation: "rework",
         last_autonomous_summary: "Needs action",
-        last_autonomous_report_ref: "artifacts/meta-review-last.json",
         last_autonomous_rework_target_message: "",
         last_autonomous_updated_at: "2026-03-08T10:01:00.000Z",
         auto_rework_count: 1,
@@ -895,74 +888,7 @@ describe("state schema", () => {
         last_autonomous_status: "success",
         last_autonomous_recommendation: "rework",
         last_autonomous_summary: "Needs action",
-        last_autonomous_report_ref: "artifacts/meta-review-last.json",
         last_autonomous_rework_target_message: { message: "bad" },
-        last_autonomous_updated_at: "2026-03-08T10:01:00.000Z",
-        auto_rework_count: 1,
-        auto_rework_limit: 5,
-        sticky_human_gate: false
-      }
-    });
-
-    expect(result.ok).toBe(true);
-    if (!result.ok) {
-      return;
-    }
-    expectCanonicalMetaReviewSnapshot(result.value.meta_review, {
-      auto_rework_count: 1
-    });
-  });
-
-  it("ignores legacy unsafe meta-review report_ref values", () => {
-    const result = validateBubbleStateSnapshot({
-      bubble_id: "b_test_meta_03d",
-      state: "WAITING_HUMAN",
-      round: 2,
-      active_agent: "codex",
-      active_since: "2026-03-08T10:00:00.000Z",
-      active_role: "reviewer",
-      round_role_history: [],
-      last_command_at: "2026-03-08T10:01:00.000Z",
-      meta_review: {
-        last_autonomous_run_id: "run_meta_03d",
-        last_autonomous_status: "success",
-        last_autonomous_recommendation: "approve",
-        last_autonomous_summary: "Looks fine",
-        last_autonomous_report_ref: "../outside.md",
-        last_autonomous_rework_target_message: null,
-        last_autonomous_updated_at: "2026-03-08T10:01:00.000Z",
-        auto_rework_count: 1,
-        auto_rework_limit: 5,
-        sticky_human_gate: false
-      }
-    });
-
-    expect(result.ok).toBe(true);
-    if (!result.ok) {
-      return;
-    }
-    expectCanonicalMetaReviewSnapshot(result.value.meta_review, {
-      auto_rework_count: 1
-    });
-  });
-
-  it("ignores legacy meta-review report_ref values with null byte", () => {
-    const result = validateBubbleStateSnapshot({
-      bubble_id: "b_test_meta_03e",
-      state: "WAITING_HUMAN",
-      round: 2,
-      active_agent: "codex",
-      active_since: "2026-03-08T10:00:00.000Z",
-      active_role: "reviewer",
-      round_role_history: [],
-      last_command_at: "2026-03-08T10:01:00.000Z",
-      meta_review: {
-        last_autonomous_run_id: "run_meta_03e",
-        last_autonomous_status: "success",
-        last_autonomous_recommendation: "approve",
-        last_autonomous_summary: "Looks fine",
-        last_autonomous_report_ref: "artifacts/meta-review-last.json\u0000tmp",
-        last_autonomous_rework_target_message: null,
         last_autonomous_updated_at: "2026-03-08T10:01:00.000Z",
         auto_rework_count: 1,
         auto_rework_limit: 5,
@@ -994,7 +920,6 @@ describe("state schema", () => {
         last_autonomous_status: null,
         last_autonomous_recommendation: null,
         last_autonomous_summary: "unexpected summary",
-        last_autonomous_report_ref: "artifacts/meta-review-last.json",
         last_autonomous_rework_target_message: "advisory",
         last_autonomous_updated_at: "2026-03-08T10:01:00.000Z",
         auto_rework_count: 0,
@@ -1025,38 +950,6 @@ describe("state schema", () => {
         last_autonomous_status: "success",
         last_autonomous_recommendation: "approve",
         last_autonomous_summary: "Approved",
-        last_autonomous_report_ref: "artifacts/meta-review-last.json",
-        last_autonomous_rework_target_message: null,
-        last_autonomous_updated_at: "2026-03-08T10:01:00.000Z",
-        auto_rework_count: 0,
-        auto_rework_limit: 5,
-        sticky_human_gate: false
-      }
-    });
-
-    expect(result.ok).toBe(true);
-    if (!result.ok) {
-      return;
-    }
-    expectCanonicalMetaReviewSnapshot(result.value.meta_review);
-  });
-
-  it("ignores legacy run snapshots without report_ref when status/recommendation are set", () => {
-    const result = validateBubbleStateSnapshot({
-      bubble_id: "b_test_meta_05b",
-      state: "WAITING_HUMAN",
-      round: 2,
-      active_agent: "codex",
-      active_since: "2026-03-08T10:00:00.000Z",
-      active_role: "reviewer",
-      round_role_history: [],
-      last_command_at: "2026-03-08T10:01:00.000Z",
-      meta_review: {
-        last_autonomous_run_id: "run_meta_05b",
-        last_autonomous_status: "success",
-        last_autonomous_recommendation: "approve",
-        last_autonomous_summary: "Approved",
-        last_autonomous_report_ref: null,
         last_autonomous_rework_target_message: null,
         last_autonomous_updated_at: "2026-03-08T10:01:00.000Z",
         auto_rework_count: 0,
@@ -1087,7 +980,6 @@ describe("state schema", () => {
         last_autonomous_status: null,
         last_autonomous_recommendation: "approve",
         last_autonomous_summary: null,
-        last_autonomous_report_ref: null,
         last_autonomous_rework_target_message: null,
         last_autonomous_updated_at: null,
         auto_rework_count: 0,
@@ -1118,7 +1010,6 @@ describe("state schema", () => {
         last_autonomous_status: "error",
         last_autonomous_recommendation: "invalid-recommendation",
         last_autonomous_summary: "Enum invalid",
-        last_autonomous_report_ref: "artifacts/meta-review-last.json",
         last_autonomous_rework_target_message: null,
         last_autonomous_updated_at: null,
         auto_rework_count: 0,

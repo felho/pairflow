@@ -71,7 +71,6 @@ export function buildMetaReviewRunResult(input: {
   status: MetaReviewRunStatus;
   recommendation: MetaReviewRecommendation;
   summary: string | null;
-  reportRef: string;
   reworkTargetMessage: string | null;
   updatedAt: string;
   warnings: MetaReviewRunWarning[];
@@ -83,7 +82,6 @@ export function buildMetaReviewRunResult(input: {
     status: input.status,
     recommendation: input.recommendation,
     summary: input.summary,
-    report_ref: input.reportRef,
     rework_target_message: input.reworkTargetMessage,
     updated_at: input.updatedAt,
     warnings: input.warnings,

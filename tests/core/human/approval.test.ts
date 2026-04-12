@@ -1,4 +1,4 @@
-import { mkdtemp, rm, writeFile as writeFileFs } from "node:fs/promises";
+import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -448,7 +448,7 @@ describe("approval decisions", () => {
             findings_parity_status: "guard_failed"
           }
         },
-        refs: ["artifacts/meta-review-last.json"]
+        refs: []
       }
     });
 
@@ -524,7 +524,7 @@ describe("approval decisions", () => {
             actor_agent: "codex"
           }
         },
-        refs: ["artifacts/meta-review-last.json"]
+        refs: []
       }
     });
 
@@ -597,7 +597,7 @@ describe("approval decisions", () => {
             actor_agent: "codex"
           }
         },
-        refs: ["artifacts/meta-review-last.json"]
+        refs: []
       }
     });
 
@@ -721,7 +721,7 @@ describe("approval decisions", () => {
         payload: {
           summary: "META_REVIEW_GATE_RUN_FAILED: historical gate failure"
         },
-        refs: ["artifacts/meta-review-last.json"]
+        refs: []
       }
     });
 
@@ -980,7 +980,7 @@ describe("approval decisions", () => {
             latest_recommendation: "approve"
           }
         },
-        refs: ["artifacts/meta-review-last.json"]
+        refs: []
       }
     });
 
@@ -1042,7 +1042,7 @@ describe("approval decisions", () => {
             findings_parity_status: "guard_failed"
           }
         },
-        refs: ["artifacts/meta-review-last.json"]
+        refs: []
       }
     });
 
@@ -1125,7 +1125,7 @@ describe("approval decisions", () => {
             findings_parity_status: "ok"
           }
         },
-        refs: ["artifacts/meta-review-last.json"]
+        refs: []
       }
     });
 
@@ -1200,7 +1200,7 @@ describe("approval decisions", () => {
             approval_summary_consistency_status: "mismatch"
           }
         },
-        refs: ["artifacts/meta-review-last.json"]
+        refs: []
       }
     });
 
@@ -1285,7 +1285,7 @@ describe("approval decisions", () => {
             findings_parity_status: "guard_failed"
           }
         },
-        refs: ["artifacts/meta-review-last.json"]
+        refs: []
       }
     });
 
@@ -1339,31 +1339,6 @@ describe("approval decisions", () => {
         expectedState: "RUNNING"
       }
     );
-    await writeFileFs(
-      bubble.paths.metaReviewLastJsonArtifactPath,
-      `${JSON.stringify(
-        {
-          bubble_id: bubble.bubbleId,
-          run_id: "run_sticky_parity_override_01",
-          report_json: {
-            findings_count: 2,
-            findings_claimed_open_total: 2,
-            findings_artifact_open_total: 1,
-            findings_blocking_open_total: 0,
-            findings_advisory_open_total: 2,
-            findings_artifact_status: "available",
-            findings_digest_sha256:
-              "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
-            meta_review_run_id: "run_sticky_parity_override_01",
-            findings_parity_status: "guard_failed"
-          }
-        },
-        null,
-        2
-      )}\n`,
-      "utf8"
-    );
-
     const gate = await applyMetaReviewGateOnConvergence({
       bubbleId: bubble.bubbleId,
       repoPath,

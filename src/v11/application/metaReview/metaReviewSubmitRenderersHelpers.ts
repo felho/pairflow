@@ -8,7 +8,6 @@ interface MetaReviewRenderedResultLike {
   lifecycle_state: string;
   gate_route?: string;
   summary: string | null;
-  report_ref: string;
   run_id?: string;
   rework_target_message: string | null;
   report_json?: Record<string, unknown> | null;
@@ -79,8 +78,7 @@ export function buildMetaReviewSubmitHeaderLines(
   const lines = [
     `Meta-review submit for ${result.bubbleId}: status=${result.status}, recommendation=${result.recommendation}`,
     `Updated: ${result.updated_at}`,
-    `Summary: ${result.summary ?? "-"}`,
-    `Report ref: ${result.report_ref}`
+    `Summary: ${result.summary ?? "-"}`
   ];
   if (typeof result.gate_route === "string") {
     lines.splice(2, 0, `Gate route: ${result.gate_route}`);

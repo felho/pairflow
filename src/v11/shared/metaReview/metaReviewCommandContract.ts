@@ -9,8 +9,7 @@ import type {
   MetaReviewDeliveryMessageRefBuilder
 } from "./metaReviewDeliveryCapabilities.js";
 import type {
-  MetaReviewArtifactReadPort,
-  MetaReviewArtifactWritePort
+  MetaReviewArtifactReadPort
 } from "./metaReviewArtifactIo.js";
 import type { MetaReviewResult } from "./metaReviewTypes.js";
 import type { AppendProtocolEnvelopePort } from "../ports/transcript.js";
@@ -48,7 +47,6 @@ export interface MetaReviewCommandDependencies {
   emitDeliveryNotification?: MetaReviewDeliveryEmitter;
   buildDeliveryMessageRef?: MetaReviewDeliveryMessageRefBuilder;
   readFile?: MetaReviewArtifactReadPort;
-  writeFile?: MetaReviewArtifactWritePort;
   now?: Date;
   randomUUID?: () => string;
 }

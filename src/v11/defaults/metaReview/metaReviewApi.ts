@@ -1,5 +1,3 @@
-import { readFile, rm, writeFile } from "node:fs/promises";
-
 import {
   clearLiveMetaReviewSnapshot,
   normalizeMetaReviewSnapshot,
@@ -72,13 +70,6 @@ export async function runMetaReview(
     });
 
   return runMetaReviewShared(input, {
-    readFile: dependencies.readFile ?? readFile,
-    writeFile: dependencies.writeFile ?? writeFile,
-    removeFile:
-      dependencies.removeFile ??
-      (async (artifactPath: string) => {
-        await rm(artifactPath, { force: true });
-      }),
     ...dependencies,
     runLiveReview
   });

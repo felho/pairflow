@@ -5,7 +5,6 @@ import {
 import {
   assertSubmitReworkFindingsArtifactContract,
   buildCanonicalSubmitRunResult,
-  writeCanonicalSubmitReportArtifact,
   writeCanonicalSubmitState
 } from "./metaReviewCommandSubmitPersistence.js";
 import {
@@ -53,19 +52,6 @@ export async function submitMetaReviewResult(
     executionContext: prepared.executionContext
   });
 
-  const warnings = await writeCanonicalSubmitReportArtifact({
-    resolved: prepared.resolved,
-    submitInput: input,
-    runId: prepared.runId,
-    updatedAt: prepared.now.toISOString(),
-    status: prepared.status,
-    recommendation: prepared.recommendation,
-    summary: prepared.summary,
-    reworkTargetMessage: prepared.reworkTargetMessage,
-    canonicalReportJson: prepared.canonicalReportJson,
-    writeFileFn: prepared.writeFileFn
-  });
-
   const canonicalRunResult = buildCanonicalSubmitRunResult({
     bubbleId: prepared.resolved.bubbleId,
     runId: prepared.runId,
@@ -74,7 +60,7 @@ export async function submitMetaReviewResult(
     summary: prepared.summary,
     reworkTargetMessage: prepared.reworkTargetMessage,
     updatedAt: prepared.now.toISOString(),
-    warnings,
+    warnings: [],
     reportJson: prepared.canonicalReportJson
   });
 
@@ -99,7 +85,6 @@ export async function submitMetaReviewResult(
     resolved: prepared.resolved,
     routed,
     dependencies: resolvedDependencies,
-    reportRound: input.round,
     canonicalRunResult,
     canonicalReportJson: prepared.canonicalReportJson
   });

@@ -17,7 +17,6 @@ import {
   buildApprovalRefreshFailureMessage,
   resolveApprovalRefreshRollbackContext
 } from "./metaReviewLiveRunApprovalRollback.js";
-import { CANONICAL_META_REVIEW_REPORT_REF } from "./metaReviewLiveRunReport.js";
 import { MetaReviewError } from "../metaReviewError.js";
 import type {
   MetaReviewRecommendation
@@ -38,11 +37,6 @@ function resolveApprovalRefreshRoute(
 
 export async function refreshMetaReviewApprovalRequest(input: {
   bubbleId: string;
-  artifactBackup: {
-    artifactPath: string;
-    existed: boolean;
-    contents: string | null;
-  }[];
   statePath: string;
   state: string;
   round: number;
@@ -56,8 +50,6 @@ export async function refreshMetaReviewApprovalRequest(input: {
   written: LoadedStateSnapshot;
   now: Date;
   appendEnvelope: NonNullable<MetaReviewDependencies["appendProtocolEnvelope"]>;
-  writeFileFn: NonNullable<MetaReviewDependencies["writeFile"]>;
-  removeFileFn?: NonNullable<MetaReviewDependencies["removeFile"]>;
   writeStateFn: NonNullable<MetaReviewDependencies["writeStateSnapshot"]>;
 }): Promise<void> {
   if (!shouldRefreshApprovalRequest(input.state)) {
@@ -93,7 +85,7 @@ export async function refreshMetaReviewApprovalRequest(input: {
       round: input.written.state.round,
       summary: approvalSummary,
       route: resolveApprovalRefreshRoute(input.recommendation),
-      refs: [CANONICAL_META_REVIEW_REPORT_REF],
+      refs: [],
       recommendation: input.recommendation,
       parityMetadata: parity,
       ...(latestReviewerSnapshot !== undefined
@@ -108,12 +100,7 @@ export async function refreshMetaReviewApprovalRequest(input: {
       statePath: input.statePath,
       loadedState: input.loadedState,
       written: input.written,
-      artifactBackup: input.artifactBackup,
-      writeStateFn: input.writeStateFn,
-      writeFileFn: input.writeFileFn,
-      ...(input.removeFileFn !== undefined
-        ? { removeFileFn: input.removeFileFn }
-        : {})
+      writeStateFn: input.writeStateFn
     });
     throw new MetaReviewError(
       "META_REVIEW_GATE_RUN_FAILED",
@@ -122,9 +109,7 @@ export async function refreshMetaReviewApprovalRequest(input: {
         appendReason,
         rollbackReasonCode: rollbackContext.rollbackReasonCode,
         rollbackTargetState: input.loadedState.state.state,
-        rollbackContext: rollbackContext.rollbackContext,
-        artifactRestoreReasonCode: rollbackContext.artifactRestoreReasonCode,
-        artifactRestoreContext: rollbackContext.artifactRestoreContext
+        rollbackContext: rollbackContext.rollbackContext
       })
     );
   }

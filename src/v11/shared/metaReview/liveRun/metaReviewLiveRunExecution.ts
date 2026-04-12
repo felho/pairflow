@@ -1,6 +1,6 @@
 import { isMetaReviewExecutionContextActiveState } from "../metaReviewExecutionContext.js";
 import { MetaReviewError } from "../metaReviewError.js";
-import { normalizeOptionalText } from "./metaReviewLiveRunReport.js";
+import { normalizeOptionalText } from "../metaReviewCanonicalization.js";
 import {
   assertRunPayloadInvariants,
   formatRunnerFailure,
@@ -32,12 +32,10 @@ export interface ExecutedMetaReviewLiveRun {
 }
 
 function assertMetaReviewRunningStateAllowed(
-  loadedState: LoadedStateSnapshot,
-  allowMetaReviewRunningState: boolean | undefined
+  loadedState: LoadedStateSnapshot
 ): void {
   if (
-    isMetaReviewExecutionContextActiveState(loadedState.state) &&
-    allowMetaReviewRunningState !== true
+    isMetaReviewExecutionContextActiveState(loadedState.state)
   ) {
     throw new MetaReviewError({
       reasonCode: "META_REVIEW_STATE_INVALID",
@@ -56,13 +54,9 @@ export async function executeMetaReviewLiveRun(input: {
   depth: MetaReviewDepth;
   resolved: Awaited<ReturnType<ResolvedMetaReviewLiveRunPorts["resolveBubble"]>>;
   ports: ResolvedMetaReviewLiveRunPorts;
-  allowMetaReviewRunningState?: boolean;
 }): Promise<ExecutedMetaReviewLiveRun> {
   const loadedState = await input.ports.readState(input.resolved.bubblePaths.statePath);
-  assertMetaReviewRunningStateAllowed(
-    loadedState,
-    input.allowMetaReviewRunningState
-  );
+  assertMetaReviewRunningStateAllowed(loadedState);
 
   const runId = input.ports.makeUuid();
   const updatedAt = input.ports.now.toISOString();
