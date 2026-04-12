@@ -10,7 +10,7 @@ owners:
 
 # Plan: Actor Runtime Interface Discovery and Migration Preparation
 
-## Current Codebase Check (2026-04-10)
+## Current Codebase Check (2026-04-12)
 
 1. `src/core/**` is already gone from the checked-out tree, so the original closure dependency on residual core retirement is historical context rather than a current blocker.
 2. The docs-only Phase A-D deliverables referenced by this plan are already checked in.
@@ -18,13 +18,14 @@ owners:
 4. The narrow Phase E meta-review follow-up tasks that were active in the 2026-04-10 checkpoint discussion are now both completed and archived:
    - `plans/archive/tasks/actor-runtime-interface-meta-review-submit-inconclusive-human-gate-phaseE.md`
    - `plans/archive/tasks/actor-runtime-interface-meta-review-approve-advisory-guidance-hardening-phaseE.md`
-5. The public operator `pairflow bubble meta-review run` surface is already removed in the current tree; the retained operator subtree is `status | last-report`.
-6. The earlier meta-review-specific `recover` / `reconcile` direction is no longer a live follow-up under this plan; that hole was removed from the code, and no recovery-specific implementation slice remains active here.
-7. As of this checkpoint, `plans/tasks/actor-runtime-interface-meta-review-operator-read-surface-closure-phaseE.md` should be treated as a superseded historical artifact, not the default next active implementation target.
+5. A public `pairflow bubble meta-review status|last-report` read-model surface ebben a tree-ben meg mindig explicit predecessor-owned boundary; a repo-surface cleanup nem irhatja at a README/operator wordingot addig, amig a `plans/tasks/actor-runtime-interface-meta-review-cached-public-read-model-removal-phaseE.md` task le nem zarul.
+6. A persisted authority + cleanup/recovery removal szelet a jelenlegi tree-ben mar lezart archivalt predecessor:
+   - `plans/archive/tasks/actor-runtime-interface-meta-review-cached-persisted-authority-and-cleanup-recovery-removal-phaseE.md`
+7. Az aktiv repo-surface guidance mar csak a surviving direct review contractot es a 2026-04-12-es replacement tasklancot mutathatja; a korabbi `operator-read-surface-closure` es negy-taskos remaining split historical-only artifact.
 
 ## Remaining Phase E Resequencing Update (2026-04-12)
 
-1. A 2026-04-11-es megmaradt aktiv tasklanc (`cached-cli-read-stack-removal`, `cached-state-shape-and-persistence-decoupling`, `cached-workflow-ui-cleanup`, `cached-active-docs-cleanup`) torlendo es replacement taskokra cserelendo.
+1. A 2026-04-11-es megmaradt aktiv tasklanc (`cached-cli-read-stack-removal`, `cached-state-shape-and-persistence-decoupling`, `cached-workflow-ui-cleanup`, `cached-active-docs-cleanup`) mar historical-only; az aktiv replacement sorrend az alatti uj tasklanc.
 2. A torles oka nem ujabb izolalt P1 hiany, hanem rossz szeleteles:
    - a megmaradt munka egyszerre erintette a public read-model closure-t,
    - a persisted authority + cleanup/recovery closure-t,
@@ -53,7 +54,7 @@ owners:
 4. Forbidden fallback:
    - no persisted `last_autonomous_*` fallback truth,
    - no retained `bubble meta-review` compatibility wrapper,
-   - no `--meta-review-source=cached` or stale task-reference fallback az aktiv docs/prompt surface-en.
+   - no removed cached source-mode wording or stale task-reference fallback az aktiv docs/prompt surface-en.
 5. Missing-data rule:
    - runtime/read-model oldalon fail-closed vagy explicit absence/unavailable viselkedes marad,
    - docs/prompt oldalon a removed capability egyszeruen elhagyando, nem legacy alternativaval potlando.
@@ -171,8 +172,8 @@ Ez a plan discovery- es preparation-jellegu. Nem celja a Phase 4 vagy Phase 5 le
    - nincs removed-command shim,
    - nincs CLI help reminder,
    - nincs skill guidance, amely a `cached` modra vagy a `last-report` / `status` commandokra hivatkozik,
-   - nincs UI prompt, amely `--meta-review-source=cached` kapcsolot masol.
-5. A plan aktualis kovetkezo implementacios targetje ezentul nem a historical operator-read-surface closure task vagy az umbrella removal task, hanem az uj reviewer-parity authority foundation task, majd az azt koveto Phase E replacement lanc a fenti sorrendben.
+   - nincs UI prompt, amely removed cached source-mode kapcsolot masol.
+5. Ez a checkpoint mar historical context: a jelenlegi aktiv Phase E sequencinget a 2026-04-12-es replacement lanc rogzitette, amelyben az E3 public read-model closure marad az elo prerequisite, az E4 archived, az E5 pedig repo-surface cleanup.
 
 ## Decision Baseline
 

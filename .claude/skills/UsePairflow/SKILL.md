@@ -32,16 +32,8 @@ This skill exists to avoid lifecycle mistakes (wrong command in wrong state, los
 
 - `Bubble` source means findings from the bubble loop context (reviewer/implementer transcript and related runtime artifacts).
 - `MetaReview` source means findings from the meta-reviewer layer.
-- `ReviewBubble` has two source modes:
-  - `fresh`: independent Codex meta-review now.
-  - `cached`: render previously produced Pairflow meta-review snapshot.
-
-### Mode Matrix
-
-| `--meta-review-source` | Runs new review now | Uses `pairflow bubble meta-review *` | Primary source |
-|---|---|---|---|
-| `fresh` (default) | yes | no | independent Codex meta-review output |
-| `cached` | no | yes (`status`, `last-report`) | latest Pairflow meta-review snapshot |
+- `ReviewBubble` always runs the surviving direct review path from bubble worktree/task/transcript context.
+- Existing meta-reviewer artifacts can still be cited as `[MetaReview]`, but there is no operator-facing source-mode selector.
 
 ## Core Principles
 
@@ -53,10 +45,10 @@ This skill exists to avoid lifecycle mistakes (wrong command in wrong state, los
 6. For any bubble message payload (`reply`, `request-rework`, `ask-human`), use shell-safe message passing. Never inline raw text containing backticks or `$` directly in `--message "..."`.
 7. For bubble creation, always include `--review-artifact-type <document|code>` in `pairflow bubble create`.
 8. For implementation bubbles (`review_artifact_type=code`), `CloseBubble` includes mandatory post-merge completion: README/docs/progress check + required updates + task archival under `plans/archive/tasks/` with mirrored relative path.
-9. In `ReviewBubble` outputs, every finding must include source label: `[Bubble]` (from bubble transcript/tool output, e.g. reviewer findings) or `[MetaReview]` (from meta-reviewer output: cached snapshot or fresh run report).
-10. For `ReviewBubble`, use explicit `--meta-review-source fresh|cached` (default: `fresh`). `fresh` runs an independent Codex meta-review (no Pairflow meta-review command calls), while `cached` loads latest Pairflow meta-review snapshot (`meta-review status` + `meta-review last-report`).
-11. Hard rule: in `fresh` mode, never call `pairflow bubble meta-review *`; in `cached` mode, never run a new review.
-12. Decision separation: `--decide approve|rework` controls lifecycle action only (`bubble approve` / `bubble request-rework`) and is independent from meta-review source mode.
+9. In `ReviewBubble` outputs, every finding must include source label: `[Bubble]` (from bubble transcript/tool output, e.g. reviewer findings) or `[MetaReview]` (from meta-reviewer artifacts already present in bubble context).
+10. `ReviewBubble` uses the surviving direct review contract only; do not expose or suggest any removed source-selection flag.
+11. Hard rule: do not route `ReviewBubble` through `pairflow bubble meta-review *` read-model commands as an operator source-selection path.
+12. Decision separation: `--decide approve|rework` controls lifecycle action only (`bubble approve` / `bubble request-rework`) and is independent from review content gathering.
 13. Ideation lifecycle is explicit: if a bubble was created with `--ideation`, run `pairflow bubble kickoff` before any `pass`/`converged` loop command.
 14. If runtime is unhealthy (agent pane unresponsive, tmux/session mismatch, token/login refresh needed), prefer `pairflow bubble restart --id <id> [--repo <path>]` over manual tmux kill/start steps.
 15. `RUNNING round=0` ideation state is a valid hold state. Do not auto-kickoff. Exception: if the user asks for a loop action (`pass`/`converged`) while still in round-0 ideation, run kickoff first because loop actions require an active round.
@@ -183,8 +175,7 @@ If state is WAITING_HUMAN or RUNNING:
 
 ```
 Use ReviewBubble (deep mode default)
--> default: fresh independent Codex meta-review (no Pairflow meta-review command calls)
--> optional cached mode: `--meta-review-source cached` (load Pairflow meta-review snapshot only)
+-> direct Codex review from bubble worktree/task/transcript context
 -> file-by-file changes
 -> findings labeled by origin (`[Bubble]`, `[MetaReview]`)
 -> findings explained in business-technical language by default
@@ -192,14 +183,10 @@ Use ReviewBubble (deep mode default)
 -> explicit approve/rework recommendation
 ```
 
-**Example 6: Explicit source selection**
+**Example 6: Direct review invocation**
 
 ```
-Fresh:
-ReviewBubble --id <id> --meta-review-source fresh --mode deep --decide none
-
-Cached:
-ReviewBubble --id <id> --meta-review-source cached --mode deep --decide none
+ReviewBubble --id <id> --mode deep --decide none
 ```
 
 **Example 4: Cancelled bubble but work is valuable**
