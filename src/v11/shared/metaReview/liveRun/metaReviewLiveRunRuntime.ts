@@ -47,13 +47,9 @@ export async function runMetaReview(
 
   const nextState = buildNextMetaReviewStateSnapshot({
     loadedState: execution.loadedState,
-    runId: execution.runId,
-    status: execution.status,
-    recommendation: execution.recommendation,
-    summary: execution.summary,
-    reworkTargetMessage: execution.reworkTargetMessage,
-    updatedAt: execution.updatedAt,
-    reportRef: CANONICAL_META_REVIEW_REPORT_REF
+    stickyHumanGate:
+      execution.loadedState.state.state === "READY_FOR_HUMAN_APPROVAL"
+      && execution.status === "success"
   });
 
   const written = await persistMetaReviewStateSnapshot({

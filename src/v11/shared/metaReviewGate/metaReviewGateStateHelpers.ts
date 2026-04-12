@@ -2,27 +2,21 @@ import { applyStateTransition } from "../../domain/state/machine.js";
 import { assertValidBubbleStateSnapshot } from "../../shared/state/stateSchema.js";
 import {
   type BubbleStateSnapshot,
-  type MetaReviewRecommendation,
-  type MetaReviewRunStatus
+  type MetaReviewRecommendation
 } from "../../../types/bubble.js";
-import type { MetaReviewResult } from "../metaReview/metaReviewTypes.js";
 import {
   MetaReviewGateError,
   type MetaReviewGateRoute
 } from "./metaReviewGateTypes.js";
 import {
-  buildHydratedMetaReviewSnapshotFromRunResult,
-  metaReviewFallbackReportRef,
   normalizeMetaReviewSnapshot
 } from "./metaReviewGateSnapshotHelpers.js";
 import { clearLiveMetaReviewSnapshot } from "../metaReview/metaReviewSnapshot.js";
 export {
   buildHumanGateSummary,
-  buildHydratedMetaReviewSnapshotFromRunResult,
   metaReviewFallbackReportRef,
   metaReviewerAgent,
   normalizeMetaReviewSnapshot,
-  resolveCanonicalMetaReviewRunId,
   resolveFindingsParityMetadataForEnvelope
 } from "./metaReviewGateSnapshotHelpers.js";
 const metaReviewGateAutoReworkRetryRoundInvariantReasonCode =
@@ -39,10 +33,6 @@ export function transitionToGateState(input: {
   nowIso: string;
   targetState: "READY_FOR_HUMAN_APPROVAL";
   stickyHumanGate: boolean;
-  metaReviewRun?: MetaReviewResult;
-  fallbackRecommendation?: MetaReviewRecommendation;
-  fallbackSummary?: string;
-  fallbackReworkTargetMessage?: string | null;
 }): BubbleStateSnapshot {
   const transitioned =
     input.current.state === input.targetState
@@ -64,45 +54,10 @@ export function transitionToGateState(input: {
         });
 
   const metaReview = clearLiveMetaReviewSnapshot(transitioned.meta_review);
-  const shouldHydrateFromRunResult = input.metaReviewRun !== undefined;
-  const runResult = input.metaReviewRun;
-  const shouldHydrateFallbackRecommendation =
-    input.fallbackRecommendation !== undefined;
-  const fallbackRecommendation: MetaReviewRecommendation =
-    input.fallbackRecommendation ?? "inconclusive";
-  const fallbackStatus: MetaReviewRunStatus =
-    fallbackRecommendation === "inconclusive" ? "error" : "success";
-  const fallbackReworkTargetMessage =
-    fallbackRecommendation === "rework"
-      ? (
-          typeof input.fallbackReworkTargetMessage === "string" &&
-          input.fallbackReworkTargetMessage.trim().length > 0
-            ? input.fallbackReworkTargetMessage
-            : "Meta-review gate fallback rework target unavailable."
-        )
-      : null;
   return {
     ...transitioned,
     meta_review: {
       ...metaReview,
-      ...(shouldHydrateFromRunResult && runResult !== undefined
-        ? buildHydratedMetaReviewSnapshotFromRunResult({
-            metaReview,
-            runResult
-          })
-        : shouldHydrateFallbackRecommendation
-        ? {
-            last_autonomous_run_id: null,
-            last_autonomous_status: fallbackStatus,
-            last_autonomous_recommendation: fallbackRecommendation,
-            last_autonomous_summary:
-              input.fallbackSummary ??
-              `Meta-review gate fallback recommendation: ${fallbackRecommendation}.`,
-            last_autonomous_report_ref: metaReviewFallbackReportRef,
-            last_autonomous_rework_target_message: fallbackReworkTargetMessage,
-            last_autonomous_updated_at: input.nowIso
-          }
-        : {}),
       sticky_human_gate: input.stickyHumanGate
     }
   };

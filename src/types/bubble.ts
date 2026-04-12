@@ -322,13 +322,6 @@ export interface BubbleMetaReviewRuntimeDeliveryState {
 export interface BubbleMetaReviewSnapshotState {
   execution_context?: BubbleMetaReviewExecutionContext | null;
   runtime_delivery?: BubbleMetaReviewRuntimeDeliveryState | null;
-  last_autonomous_run_id: string | null;
-  last_autonomous_status: MetaReviewRunStatus | null;
-  last_autonomous_recommendation: MetaReviewRecommendation | null;
-  last_autonomous_summary: string | null;
-  last_autonomous_report_ref: string | null;
-  last_autonomous_rework_target_message: string | null;
-  last_autonomous_updated_at: string | null;
   auto_rework_count: number;
   auto_rework_limit: number;
   sticky_human_gate: boolean;

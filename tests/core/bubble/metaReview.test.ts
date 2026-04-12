@@ -10,7 +10,6 @@ import { getBubblePaths } from "../../../src/v11/infrastructure/artifact/bubble/
 import { getBubbleStatusV11 as getBubbleStatus } from "../../../src/v11/application/status/emitStatusV11.js";
 import {
   extractMetaReviewDelimitedBlock,
-  hasCanonicalSubmitForActiveMetaReviewRound,
   MetaReviewError,
   resolveActiveMetaReviewRuntimeDelivery,
   parseMetaReviewRunnerOutput,
@@ -38,6 +37,7 @@ import {
 import { applyStateTransition } from "../../../src/v11/domain/state/machine.js";
 import { SchemaValidationError } from "../../../src/v11/shared/validation/primitives.js";
 import type { Finding } from "../../../src/types/findings.js";
+import { DEFAULT_META_REVIEW_AUTO_REWORK_LIMIT } from "../../../src/types/bubble.js";
 import { deliveryTargetRoleMetadataKey } from "../../../src/types/protocol.js";
 import { initGitRepository } from "../../helpers/git.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
@@ -147,14 +147,6 @@ describe("meta-review run", () => {
     expect(loaded.state.meta_review).toEqual({
       execution_context: null,
       runtime_delivery: null,
-      last_autonomous_run_id: "run_meta_01",
-      last_autonomous_status: "success",
-      last_autonomous_recommendation: "rework",
-      last_autonomous_summary: "Found deterministic drift",
-      last_autonomous_report_ref: "artifacts/meta-review-last.json",
-      last_autonomous_rework_target_message:
-        "Fix deterministic drift in command routing",
-      last_autonomous_updated_at: "2026-03-08T11:00:00.000Z",
       auto_rework_count: 0,
       auto_rework_limit: 5,
       sticky_human_gate: false
@@ -213,11 +205,8 @@ describe("meta-review run", () => {
     );
 
     const loaded = await readStateSnapshot(bubble.paths.statePath);
-    expect(loaded.state.meta_review?.last_autonomous_status).toBe("error");
-    expect(loaded.state.meta_review?.last_autonomous_recommendation).toBe(
-      "inconclusive"
-    );
-    expect(loaded.state.meta_review?.last_autonomous_summary).toContain(
+    expect(loaded.state.meta_review).not.toHaveProperty("last_autonomous_status");
+    expect(result.summary).toContain(
       "adapter unavailable"
     );
   });
@@ -285,11 +274,8 @@ describe("meta-review run", () => {
     expect(hasStructuredRunnerWarning).toBe(true);
 
     const loaded = await readStateSnapshot(bubble.paths.statePath);
-    expect(loaded.state.meta_review?.last_autonomous_status).toBe("error");
-    expect(loaded.state.meta_review?.last_autonomous_recommendation).toBe(
-      "inconclusive"
-    );
-    expect(loaded.state.meta_review?.last_autonomous_summary).toContain(
+    expect(loaded.state.meta_review).not.toHaveProperty("last_autonomous_status");
+    expect(result.summary).toContain(
       "META_REVIEW_SCHEMA_INVALID_COMBINATION"
     );
   });
@@ -371,10 +357,7 @@ describe("meta-review run", () => {
     );
 
     const loaded = await readStateSnapshot(bubble.paths.statePath);
-    expect(loaded.state.meta_review?.last_autonomous_run_id).toBe("run_meta_04_2");
-    expect(loaded.state.meta_review?.last_autonomous_summary).toBe(
-      "Second snapshot"
-    );
+    expect(loaded.state.meta_review).not.toHaveProperty("last_autonomous_run_id");
 
     const reportArtifactRaw = await readFile(
       bubble.paths.metaReviewLastJsonArtifactPath,
@@ -455,9 +438,7 @@ describe("meta-review run", () => {
     );
 
     const loaded = await readStateSnapshot(bubble.paths.statePath);
-    expect(loaded.state.meta_review?.last_autonomous_summary).toBe(
-      "State is canonical"
-    );
+    expect(loaded.state.meta_review).not.toHaveProperty("last_autonomous_summary");
   });
 
   it("refreshes the effective human approval context after a successful rerun", async () => {
@@ -500,13 +481,6 @@ describe("meta-review run", () => {
         last_command_at: "2026-03-08T11:31:00.000Z",
         meta_review: {
           ...loaded.state.meta_review!,
-          last_autonomous_run_id: "run_meta_stale",
-          last_autonomous_status: "error",
-          last_autonomous_recommendation: "inconclusive",
-          last_autonomous_summary: "META_REVIEW_GATE_RUN_FAILED: stale timeout",
-          last_autonomous_report_ref: "artifacts/meta-review-last.json",
-          last_autonomous_rework_target_message: null,
-          last_autonomous_updated_at: "2026-03-08T11:31:00.000Z"
         }
       },
       {
@@ -570,9 +544,8 @@ describe("meta-review run", () => {
     const after = await readStateSnapshot(bubble.paths.statePath);
 
     expect(after.state.state).toBe("READY_FOR_HUMAN_APPROVAL");
-    expect(after.state.meta_review?.last_autonomous_recommendation).toBe("approve");
-    expect(after.state.meta_review?.last_autonomous_summary).toBe(
-      "Recovered approve recommendation"
+    expect(after.state.meta_review).not.toHaveProperty(
+      "last_autonomous_recommendation"
     );
 
     const lastTranscriptMessage = transcript.at(-1);
@@ -658,15 +631,7 @@ describe("meta-review run", () => {
         active_since: null,
         last_command_at: "2026-03-08T11:59:00.000Z",
         meta_review: {
-          ...loaded.state.meta_review!,
-          last_autonomous_run_id: "run_meta_r10_stale_snapshot",
-          last_autonomous_status: "success",
-          last_autonomous_recommendation: "approve",
-          last_autonomous_summary:
-            "Meta-review R10: approve javasolt, 4 advisory finding nyitott.",
-          last_autonomous_report_ref: "artifacts/meta-review-last.json",
-          last_autonomous_rework_target_message: null,
-          last_autonomous_updated_at: "2026-03-08T11:50:00.000Z"
+          ...loaded.state.meta_review!
         }
       },
       {
@@ -696,8 +661,7 @@ describe("meta-review run", () => {
 
     const after = await readStateSnapshot(bubble.paths.statePath);
     expect(after.state.state).toBe("READY_FOR_HUMAN_APPROVAL");
-    expect(after.state.meta_review?.last_autonomous_summary).toBe(refreshedSummary);
-    expect(after.state.meta_review?.last_autonomous_summary).not.toContain("R10");
+    expect(after.state.meta_review).not.toHaveProperty("last_autonomous_summary");
 
     const transcript = await readTranscriptEnvelopes(
       bubble.paths.transcriptPath,
@@ -929,13 +893,6 @@ describe("meta-review run", () => {
         last_command_at: "2026-03-08T11:41:00.000Z",
         meta_review: {
           ...loaded.state.meta_review!,
-          last_autonomous_run_id: "run_meta_pre_refresh_append_fail_01",
-          last_autonomous_status: "success",
-          last_autonomous_recommendation: "approve",
-          last_autonomous_summary: "Pre-refresh state",
-          last_autonomous_report_ref: "artifacts/meta-review-last.json",
-          last_autonomous_rework_target_message: null,
-          last_autonomous_updated_at: "2026-03-08T11:41:00.000Z"
         }
       },
       {
@@ -1037,13 +994,6 @@ describe("meta-review run", () => {
         last_command_at: "2026-03-08T11:46:00.000Z",
         meta_review: {
           ...loaded.state.meta_review!,
-          last_autonomous_run_id: "run_meta_pre_refresh_append_fail_rollback_01",
-          last_autonomous_status: "success",
-          last_autonomous_recommendation: "approve",
-          last_autonomous_summary: "Pre-refresh rollback-failure state",
-          last_autonomous_report_ref: "artifacts/meta-review-last.json",
-          last_autonomous_rework_target_message: null,
-          last_autonomous_updated_at: "2026-03-08T11:46:00.000Z"
         }
       },
       {
@@ -1277,128 +1227,6 @@ describe("meta-review submit", () => {
     }
     return reportJson;
   }
-
-  it("requires report_ref for canonical submit detection in active meta-review window", async () => {
-    const repoPath = await createTempRepo();
-    const bubble = await setupRunningBubbleFixture({
-      repoPath,
-      bubbleId: "b_meta_submit_helper_01",
-      task: "Meta submit canonical helper report_ref requirement"
-    });
-    await writeMetaReviewRunningState({
-      statePath: bubble.paths.statePath,
-      activeAgent: "codex",
-      activeRole: "meta_reviewer",
-      nowIso: "2026-03-09T09:05:00.000Z"
-    });
-    const loaded = await readStateSnapshot(bubble.paths.statePath);
-
-    expect(
-      hasCanonicalSubmitForActiveMetaReviewRound({
-        state: loaded.state,
-        snapshot: {
-          last_autonomous_run_id: null,
-          last_autonomous_status: "success",
-          last_autonomous_recommendation: "approve",
-          last_autonomous_summary: "Structured submit with missing report_ref.",
-          last_autonomous_report_ref: null,
-          last_autonomous_rework_target_message: null,
-          last_autonomous_updated_at: "2026-03-09T09:06:00.000Z",
-          auto_rework_count: 0,
-          auto_rework_limit: 5,
-          sticky_human_gate: false
-        }
-      })
-    ).toBe(false);
-  });
-
-  it("does not treat canonical submit as active-window match when execution context is missing", async () => {
-    const repoPath = await createTempRepo();
-    const bubble = await setupRunningBubbleFixture({
-      repoPath,
-      bubbleId: "b_meta_submit_helper_02",
-      task: "Meta submit canonical helper requires active_since"
-    });
-    await writeMetaReviewRunningState({
-      statePath: bubble.paths.statePath,
-      activeAgent: "codex",
-      activeRole: "meta_reviewer",
-      nowIso: "2026-03-09T09:10:00.000Z"
-    });
-    const loaded = await readStateSnapshot(bubble.paths.statePath);
-
-    expect(
-      hasCanonicalSubmitForActiveMetaReviewRound({
-        state: {
-          ...loaded.state,
-          execution_context: null,
-          meta_review: {
-            ...loaded.state.meta_review!,
-            execution_context: null
-          }
-        },
-        snapshot: {
-          last_autonomous_run_id: null,
-          last_autonomous_status: "success",
-          last_autonomous_recommendation: "approve",
-          last_autonomous_summary: "Structured submit snapshot.",
-          last_autonomous_report_ref: "artifacts/meta-review-last.json",
-          last_autonomous_rework_target_message: null,
-          last_autonomous_updated_at: "2026-03-09T09:10:10.000Z",
-          auto_rework_count: 0,
-          auto_rework_limit: 5,
-          sticky_human_gate: false
-        }
-      })
-    ).toBe(false);
-  });
-
-  it("does not treat canonical submit as active-window match when execution context is invalid", async () => {
-    const repoPath = await createTempRepo();
-    const bubble = await setupRunningBubbleFixture({
-      repoPath,
-      bubbleId: "b_meta_submit_helper_03",
-      task: "Meta submit canonical helper rejects invalid active_since"
-    });
-    await writeMetaReviewRunningState({
-      statePath: bubble.paths.statePath,
-      activeAgent: "codex",
-      activeRole: "meta_reviewer",
-      nowIso: "2026-03-09T09:12:00.000Z"
-    });
-    const loaded = await readStateSnapshot(bubble.paths.statePath);
-
-    expect(
-      hasCanonicalSubmitForActiveMetaReviewRound({
-        state: {
-          ...loaded.state,
-          execution_context: {
-            ...loaded.state.execution_context!,
-            started_at: "not-a-timestamp"
-          },
-          meta_review: {
-            ...loaded.state.meta_review!,
-            execution_context: {
-              ...loaded.state.meta_review!.execution_context!,
-              started_at: "not-a-timestamp"
-            }
-          }
-        },
-        snapshot: {
-          last_autonomous_run_id: null,
-          last_autonomous_status: "success",
-          last_autonomous_recommendation: "approve",
-          last_autonomous_summary: "Structured submit snapshot.",
-          last_autonomous_report_ref: "artifacts/meta-review-last.json",
-          last_autonomous_rework_target_message: null,
-          last_autonomous_updated_at: "2026-03-09T09:12:10.000Z",
-          auto_rework_count: 0,
-          auto_rework_limit: 5,
-          sticky_human_gate: false
-        }
-      })
-    ).toBe(false);
-  });
 
   it("rejects submit when report_json is missing", async () => {
     const repoPath = await createTempRepo();
@@ -2519,13 +2347,12 @@ describe("meta-review submit", () => {
 
     const loaded = await readStateSnapshot(bubble.paths.statePath);
     expect(loaded.state.state).toBe("READY_FOR_HUMAN_APPROVAL");
-    expect(loaded.state.meta_review).toMatchObject({
-      last_autonomous_run_id: "run_meta_submit_01",
-      last_autonomous_status: "success",
-      last_autonomous_recommendation: "approve",
-      last_autonomous_summary: "Looks good after final review.",
-      last_autonomous_report_ref: "artifacts/meta-review-last.json",
-      last_autonomous_rework_target_message: null
+    expect(loaded.state.meta_review).toStrictEqual({
+      execution_context: null,
+      runtime_delivery: null,
+      auto_rework_count: 0,
+      auto_rework_limit: DEFAULT_META_REVIEW_AUTO_REWORK_LIMIT,
+      sticky_human_gate: true
     });
     const reportArtifact = JSON.parse(
       await readFile(bubble.paths.metaReviewLastJsonArtifactPath, "utf8")
@@ -2665,7 +2492,7 @@ describe("meta-review submit", () => {
     });
 
     const loaded = await readStateSnapshot(bubble.paths.statePath);
-    expect(loaded.state.meta_review?.last_autonomous_summary).toBe(summary);
+    expect(loaded.state.meta_review).not.toHaveProperty("last_autonomous_summary");
   });
 
   it("accepts structured rework submit when explicit same-run run-link is valid", async () => {
@@ -2897,11 +2724,18 @@ describe("meta-review submit", () => {
     const loaded = await readStateSnapshot(bubble.paths.statePath);
     expect(loaded.state.state).toBe("RUNNING");
     expect(loaded.state.meta_review).toMatchObject({
-      last_autonomous_run_id: "run_meta_submit_route_fail_01",
-      last_autonomous_recommendation: "approve",
-      last_autonomous_summary:
-        "Canonical snapshot should persist before route failure."
+      execution_context: {
+        round: 1,
+        handoff_id: "meta_review:b_meta_submit_route_fail_01:round:1:attempt:1",
+        started_at: "2026-03-09T09:21:30.000Z",
+        attempt: 1
+      },
+      runtime_delivery: null,
+      auto_rework_count: 0,
+      auto_rework_limit: DEFAULT_META_REVIEW_AUTO_REWORK_LIMIT,
+      sticky_human_gate: false
     });
+    expect(loaded.state.meta_review).not.toHaveProperty("last_autonomous_run_id");
   });
 
   it("routes inconclusive submit to human approval after canonical snapshot persist", async () => {
@@ -2952,12 +2786,12 @@ describe("meta-review submit", () => {
 
     const loaded = await readStateSnapshot(bubble.paths.statePath);
     expect(loaded.state.state).toBe("READY_FOR_HUMAN_APPROVAL");
-    expect(loaded.state.meta_review).toMatchObject({
-      last_autonomous_run_id: "run_meta_submit_inconclusive_01",
-      last_autonomous_status: "success",
-      last_autonomous_recommendation: "inconclusive",
-      last_autonomous_summary: "Needs human interpretation.",
-      last_autonomous_rework_target_message: null
+    expect(loaded.state.meta_review).toStrictEqual({
+      execution_context: null,
+      runtime_delivery: null,
+      auto_rework_count: 0,
+      auto_rework_limit: DEFAULT_META_REVIEW_AUTO_REWORK_LIMIT,
+      sticky_human_gate: true
     });
 
     const transcript = await readTranscriptEnvelopes(
@@ -3573,12 +3407,7 @@ describe("meta-review submit", () => {
     });
 
     const after = await readStateSnapshot(bubble.paths.statePath);
-    expect(after.state.meta_review?.last_autonomous_run_id).toBe(
-      "run_meta_submit_04d"
-    );
-    expect(after.state.meta_review?.last_autonomous_summary).toBe(
-      "First submit should succeed."
-    );
+    expect(after.state.meta_review).not.toHaveProperty("last_autonomous_run_id");
   });
 
   it("rejects structured submit when expected_state_fingerprint is stale even if handoff authority is unchanged", async () => {
@@ -3802,9 +3631,7 @@ describe("meta-review submit", () => {
     });
 
     const after = await readStateSnapshot(bubble.paths.statePath);
-    expect(after.state.meta_review?.last_autonomous_run_id).toBe(
-      "run_meta_submit_duplicate_malformed_precedence_01"
-    );
+    expect(after.state.meta_review).not.toHaveProperty("last_autonomous_run_id");
   });
 
   it("classifies same-run duplicate on CAS conflict even after lifecycle left RUNNING meta-review authority", async () => {
@@ -3821,7 +3648,6 @@ describe("meta-review submit", () => {
       nowIso: "2026-03-09T09:49:00.000Z"
     });
 
-    const runId = "run_meta_submit_dup_02";
     const runtimeSessions = {
       [bubble.bubbleId]: {
         bubbleId: bubble.bubbleId,
@@ -3870,25 +3696,11 @@ describe("meta-review submit", () => {
                   execution_context: null,
                   meta_review: {
                     ...(current.state.meta_review ?? {
-                      last_autonomous_run_id: null,
-                      last_autonomous_status: null,
-                      last_autonomous_recommendation: null,
-                      last_autonomous_summary: null,
-                      last_autonomous_report_ref: null,
-                      last_autonomous_rework_target_message: null,
-                      last_autonomous_updated_at: null,
                       auto_rework_count: 0,
                       auto_rework_limit: 5,
                       sticky_human_gate: false
                     }),
                     execution_context: null,
-                    last_autonomous_run_id: runId,
-                    last_autonomous_status: "success",
-                    last_autonomous_recommendation: "approve",
-                    last_autonomous_summary: "Concurrent submit already routed gate.",
-                    last_autonomous_report_ref: "artifacts/meta-review-last.json",
-                    last_autonomous_rework_target_message: null,
-                    last_autonomous_updated_at: "2026-03-09T09:49:09.000Z"
                   }
                 },
                 {
@@ -3908,10 +3720,7 @@ describe("meta-review submit", () => {
 
     const after = await readStateSnapshot(bubble.paths.statePath);
     expect(after.state.state).toBe("READY_FOR_HUMAN_APPROVAL");
-    expect(after.state.meta_review?.last_autonomous_run_id).toBe(runId);
-    expect(after.state.meta_review?.last_autonomous_summary).toBe(
-      "Concurrent submit already routed gate."
-    );
+    expect(after.state.meta_review).not.toHaveProperty("last_autonomous_run_id");
   });
 
   it("rejects stale round submit and does not mutate snapshot", async () => {

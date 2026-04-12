@@ -75,14 +75,7 @@ export async function writeCanonicalSubmitState(input: {
   );
   const nextMetaReview = {
     ...previousMetaReview,
-    execution_context: toMetaReviewExecutionContext(input.executionContext),
-    last_autonomous_run_id: input.runId,
-    last_autonomous_status: input.status,
-    last_autonomous_recommendation: input.recommendation,
-    last_autonomous_summary: input.summary,
-    last_autonomous_report_ref: CANONICAL_META_REVIEW_REPORT_REF,
-    last_autonomous_rework_target_message: input.reworkTargetMessage,
-    last_autonomous_updated_at: input.updatedAt
+    execution_context: toMetaReviewExecutionContext(input.executionContext)
   };
 
   const nextState: BubbleStateSnapshot = {

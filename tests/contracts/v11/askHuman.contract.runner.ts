@@ -388,13 +388,6 @@ async function executeAskHumanCase(input: {
             ...(loaded.state.meta_review ?? {
               execution_context: null,
               runtime_delivery: null,
-              last_autonomous_run_id: null,
-              last_autonomous_status: null,
-              last_autonomous_recommendation: null,
-              last_autonomous_summary: null,
-              last_autonomous_report_ref: null,
-              last_autonomous_rework_target_message: null,
-              last_autonomous_updated_at: null,
               auto_rework_count: 0,
               auto_rework_limit: 5,
               sticky_human_gate: false

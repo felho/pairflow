@@ -119,7 +119,7 @@ async function setupReadyForHumanApprovalBubble(repoPath: string, bubbleId: stri
     }
   );
 
-  const recoveredState = await readStateSnapshot(bubble.paths.statePath);
+  await readStateSnapshot(bubble.paths.statePath);
   const transcript = await readTranscriptEnvelopes(bubble.paths.transcriptPath);
   const gateEnvelope = transcript.at(-1);
   expect(gateEnvelope?.type).toBe("APPROVAL_REQUEST");
@@ -130,9 +130,7 @@ async function setupReadyForHumanApprovalBubble(repoPath: string, bubbleId: stri
       actor_agent: "codex",
       latest_recommendation: "inconclusive"
     });
-    expect(gateEnvelope.payload.metadata?.latest_recommendation).toBe(
-      recoveredState.state.meta_review?.last_autonomous_recommendation
-    );
+    expect(gateEnvelope.payload.metadata?.latest_recommendation).toBe("inconclusive");
   }
 
   return bubble;
@@ -367,13 +365,6 @@ describe("approval decisions", () => {
     expect(result.state.state).toBe("RUNNING");
     expect(result.state.meta_review).toMatchObject({
       sticky_human_gate: false,
-      last_autonomous_run_id: null,
-      last_autonomous_status: null,
-      last_autonomous_recommendation: null,
-      last_autonomous_summary: null,
-      last_autonomous_report_ref: null,
-      last_autonomous_rework_target_message: null,
-      last_autonomous_updated_at: null
     });
 
   });
@@ -424,23 +415,10 @@ describe("approval decisions", () => {
         ...legacyReadyState,
         meta_review: {
           ...(legacyReadyState.meta_review ?? {
-            last_autonomous_run_id: null,
-            last_autonomous_status: null,
-            last_autonomous_recommendation: null,
-            last_autonomous_summary: null,
-            last_autonomous_report_ref: null,
-            last_autonomous_rework_target_message: null,
-            last_autonomous_updated_at: null,
             auto_rework_count: 0,
             auto_rework_limit: 5,
             sticky_human_gate: false
           }),
-          last_autonomous_run_id: "run_human_gate_parity_override_01",
-          last_autonomous_status: "success",
-          last_autonomous_recommendation: "approve",
-          last_autonomous_summary: "Human-gate parity guard.",
-          last_autonomous_report_ref: "artifacts/meta-review-last.json",
-          last_autonomous_updated_at: "2026-02-22T12:03:59.000Z"
         }
       },
       {
@@ -514,25 +492,11 @@ describe("approval decisions", () => {
         ...legacyReadyState,
         meta_review: {
           ...(legacyReadyState.meta_review ?? {
-            last_autonomous_run_id: null,
-            last_autonomous_status: null,
-            last_autonomous_recommendation: null,
-            last_autonomous_summary: null,
-            last_autonomous_report_ref: null,
-            last_autonomous_rework_target_message: null,
-            last_autonomous_updated_at: null,
             auto_rework_count: 0,
             auto_rework_limit: 5,
             sticky_human_gate: false
           }),
           sticky_human_gate: true,
-          last_autonomous_run_id: null,
-          last_autonomous_status: null,
-          last_autonomous_recommendation: null,
-          last_autonomous_summary: null,
-          last_autonomous_report_ref: null,
-          last_autonomous_rework_target_message: null,
-          last_autonomous_updated_at: null
         }
       },
       {
@@ -601,25 +565,11 @@ describe("approval decisions", () => {
         ...legacyReadyState,
         meta_review: {
           ...(legacyReadyState.meta_review ?? {
-            last_autonomous_run_id: null,
-            last_autonomous_status: null,
-            last_autonomous_recommendation: null,
-            last_autonomous_summary: null,
-            last_autonomous_report_ref: null,
-            last_autonomous_rework_target_message: null,
-            last_autonomous_updated_at: null,
             auto_rework_count: 0,
             auto_rework_limit: 5,
             sticky_human_gate: false
           }),
           sticky_human_gate: true,
-          last_autonomous_run_id: null,
-          last_autonomous_status: null,
-          last_autonomous_recommendation: null,
-          last_autonomous_summary: null,
-          last_autonomous_report_ref: null,
-          last_autonomous_rework_target_message: null,
-          last_autonomous_updated_at: null
         }
       },
       {
@@ -692,13 +642,6 @@ describe("approval decisions", () => {
       ...loaded.state,
       meta_review: {
         ...loaded.state.meta_review,
-        last_autonomous_status: null,
-        last_autonomous_recommendation: null,
-        last_autonomous_summary: null,
-        last_autonomous_report_ref: null,
-        last_autonomous_run_id: null,
-        last_autonomous_updated_at: null,
-        last_autonomous_rework_target_message: null
       }
     };
     await writeStateSnapshot(bubble.paths.statePath, missingRecommendationState, {
@@ -751,25 +694,11 @@ describe("approval decisions", () => {
         round: loaded.state.round + 1,
         meta_review: {
           ...(loaded.state.meta_review ?? {
-            last_autonomous_run_id: null,
-            last_autonomous_status: null,
-            last_autonomous_recommendation: null,
-            last_autonomous_summary: null,
-            last_autonomous_report_ref: null,
-            last_autonomous_rework_target_message: null,
-            last_autonomous_updated_at: null,
             auto_rework_count: 0,
             auto_rework_limit: 5,
             sticky_human_gate: false
           }),
           sticky_human_gate: true,
-          last_autonomous_status: null,
-          last_autonomous_recommendation: null,
-          last_autonomous_summary: null,
-          last_autonomous_report_ref: null,
-          last_autonomous_run_id: null,
-          last_autonomous_updated_at: null,
-          last_autonomous_rework_target_message: null
         }
       },
       {
@@ -942,13 +871,6 @@ describe("approval decisions", () => {
         ...afterFailedGate.state,
         meta_review: {
           ...afterFailedGate.state.meta_review,
-          last_autonomous_status: null,
-          last_autonomous_recommendation: null,
-          last_autonomous_summary: null,
-          last_autonomous_run_id: null,
-          last_autonomous_report_ref: null,
-          last_autonomous_updated_at: null,
-          last_autonomous_rework_target_message: null
         }
       },
       {
@@ -1032,12 +954,6 @@ describe("approval decisions", () => {
       ...loaded.state,
       meta_review: {
         ...loaded.state.meta_review,
-        last_autonomous_status: "success" as const,
-        last_autonomous_recommendation: "approve" as const,
-        last_autonomous_summary: "Autonomous gate approved.",
-        last_autonomous_report_ref: "artifacts/meta-review-last.json",
-        last_autonomous_run_id: "run_approve_path_01",
-        last_autonomous_updated_at: "2026-02-22T12:04:59.000Z"
       }
     };
     await writeStateSnapshot(bubble.paths.statePath, approveRecommendationState, {
@@ -1097,10 +1013,6 @@ describe("approval decisions", () => {
         ...loaded.state,
         meta_review: {
           ...loaded.state.meta_review,
-          last_autonomous_status: "success",
-          last_autonomous_recommendation: "approve",
-          last_autonomous_summary: "Autonomous gate approve with parity guard warning.",
-          last_autonomous_updated_at: "2026-02-22T12:05:30.000Z"
         }
       },
       {
@@ -1182,10 +1094,6 @@ describe("approval decisions", () => {
         ...loaded.state,
         meta_review: {
           ...loaded.state.meta_review,
-          last_autonomous_status: "success",
-          last_autonomous_recommendation: "approve",
-          last_autonomous_summary: "Autonomous approve with count mismatch parity metadata.",
-          last_autonomous_updated_at: "2026-02-22T12:05:35.000Z"
         }
       },
       {
@@ -1260,10 +1168,6 @@ describe("approval decisions", () => {
         ...loaded.state,
         meta_review: {
           ...loaded.state.meta_review,
-          last_autonomous_status: "success",
-          last_autonomous_recommendation: "approve",
-          last_autonomous_summary: "Autonomous approve with summary-consistency mismatch metadata.",
-          last_autonomous_updated_at: "2026-02-22T12:05:39.000Z"
         }
       },
       {
@@ -1423,24 +1327,11 @@ describe("approval decisions", () => {
         ...loaded.state,
         meta_review: {
           ...(loaded.state.meta_review ?? {
-            last_autonomous_run_id: null,
-            last_autonomous_status: null,
-            last_autonomous_recommendation: null,
-            last_autonomous_summary: null,
-            last_autonomous_report_ref: null,
-            last_autonomous_rework_target_message: null,
-            last_autonomous_updated_at: null,
             auto_rework_count: 0,
             auto_rework_limit: 5,
             sticky_human_gate: false
           }),
           sticky_human_gate: true,
-          last_autonomous_run_id: "run_sticky_parity_override_01",
-          last_autonomous_status: "success",
-          last_autonomous_recommendation: "approve",
-          last_autonomous_summary: "Sticky bypass should preserve parity metadata.",
-          last_autonomous_report_ref: "artifacts/meta-review-last.json",
-          last_autonomous_updated_at: "2026-02-22T12:06:00.000Z"
         }
       },
       {

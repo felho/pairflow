@@ -22,14 +22,12 @@ export {
 } from "./metaReviewGateHumanGatePersistence.js";
 export {
   buildHumanGateSummary,
-  buildHydratedMetaReviewSnapshotFromRunResult,
   incrementAutoReworkCount,
   metaReviewFallbackReportRef,
   metaReviewerAgent,
   metaReviewGateAutoReworkRetryRunIdentityInvariantReasonCode,
   normalizeMetaReviewSnapshot,
   resolveAutoReworkRetryInvariantViolation,
-  resolveCanonicalMetaReviewRunId,
   resolveDefaultStickyHumanGateForRoute,
   resolveFindingsParityMetadataForEnvelope,
   resolveHumanGateRoute,

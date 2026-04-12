@@ -22,7 +22,6 @@ import {
 } from "../../../types/protocol.js";
 import {
   buildHumanGateSummary,
-  buildHydratedMetaReviewSnapshotFromRunResult,
   buildGateLockPath,
   incrementAutoReworkCount,
   normalizeMetaReviewSnapshot,
@@ -397,10 +396,7 @@ async function dispatchAutoRework(input: {
 
     const hydratedMetaReview = incrementAutoReworkCount({
       ...resumedWritten.state,
-      meta_review: buildHydratedMetaReviewSnapshotFromRunResult({
-        metaReview: normalizeMetaReviewSnapshot(resumedWritten.state.meta_review),
-        runResult: input.runResultForRouting
-      })
+      meta_review: normalizeMetaReviewSnapshot(resumedWritten.state.meta_review)
     }).meta_review;
     const hydratedResumed: BubbleStateSnapshot = {
       ...resumedWritten.state,
@@ -436,10 +432,7 @@ async function dispatchAutoRework(input: {
       ...restoredReady,
       round: input.finalizeInput.loaded.state.round,
       round_role_history: input.finalizeInput.loaded.state.round_role_history,
-      meta_review: buildHydratedMetaReviewSnapshotFromRunResult({
-        metaReview: normalizeMetaReviewSnapshot(restoredReady.meta_review),
-        runResult: input.runResultForRouting
-      })
+      meta_review: normalizeMetaReviewSnapshot(restoredReady.meta_review)
     };
     let readyLoaded: LoadedStateSnapshot;
     try {

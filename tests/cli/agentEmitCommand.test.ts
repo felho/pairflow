@@ -529,13 +529,6 @@ describe("runAgentEmitCommand", () => {
             observed_for_handoff_id: metaReviewExecutionContext.handoff_id,
             observed_for_round: loaded.state.round
           },
-          last_autonomous_run_id: "run_meta_contract_prev_recovery_01",
-          last_autonomous_status: "error",
-          last_autonomous_recommendation: "inconclusive",
-          last_autonomous_summary: "Previous recovery snapshot.",
-          last_autonomous_report_ref: "artifacts/meta-review-last.json",
-          last_autonomous_rework_target_message: null,
-          last_autonomous_updated_at: "2026-03-24T10:33:00.000Z"
         }
       },
       {
@@ -578,5 +571,13 @@ describe("runAgentEmitCommand", () => {
     expect(result.meta_review_result.summary).toBe(
       "Canonical recovery submit remains allowed."
     );
+    const after = await readStateSnapshot(bubble.paths.statePath);
+    expect(after.state.meta_review).toEqual({
+      execution_context: null,
+      runtime_delivery: null,
+      auto_rework_count: 0,
+      auto_rework_limit: 5,
+      sticky_human_gate: true
+    });
   });
 });

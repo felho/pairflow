@@ -1,10 +1,6 @@
 import { isAbsolute, relative, resolve } from "node:path";
 
-import type {
-  BubbleMetaReviewSnapshotState,
-  BubbleStateSnapshot,
-  MetaReviewRunStatus
-} from "../../../types/bubble.js";
+import type { BubbleStateSnapshot } from "../../../types/bubble.js";
 import type { MetaReviewArtifactWritePort } from "../metaReview/metaReviewArtifactIo.js";
 import type { MetaReviewResult, MetaReviewRunWarning } from "../metaReview/metaReviewTypes.js";
 import {
@@ -37,40 +33,6 @@ function resolveRecoveredReportRef(input: {
     return metaReviewFallbackReportRef;
   }
   return reportRef;
-}
-
-export function synthesizeMetaReviewRunResultFromSnapshot(input: {
-  bubbleId: string;
-  nowIso: string;
-  snapshot: BubbleMetaReviewSnapshotState;
-  fallbackSummary: string;
-}): MetaReviewResult {
-  const recommendation = input.snapshot.last_autonomous_recommendation ?? "inconclusive";
-  const status: MetaReviewRunStatus =
-    input.snapshot.last_autonomous_status ?? "error";
-  const summary = input.snapshot.last_autonomous_summary ?? input.fallbackSummary;
-  const reportRef =
-    input.snapshot.last_autonomous_report_ref ?? metaReviewFallbackReportRef;
-  const runId =
-    input.snapshot.last_autonomous_run_id === null
-      ? undefined
-      : input.snapshot.last_autonomous_run_id;
-  const updatedAt = input.snapshot.last_autonomous_updated_at ?? input.nowIso;
-  const reworkTargetMessage = recommendation === "rework"
-    ? (input.snapshot.last_autonomous_rework_target_message ?? null)
-    : null;
-
-  return {
-    bubble_id: input.bubbleId,
-    status,
-    recommendation,
-    summary,
-    report_ref: reportRef,
-    rework_target_message: reworkTargetMessage,
-    updated_at: updatedAt,
-    warnings: [],
-    ...(runId !== undefined ? { run_id: runId } : {})
-  };
 }
 
 export function synthesizeMetaReviewRunFailure(input: {

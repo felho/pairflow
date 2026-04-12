@@ -70,10 +70,7 @@ describe("approvalRoutingEligibility", () => {
         decision: "approve",
         state: {
           state: "READY_FOR_HUMAN_APPROVAL",
-          round: 3,
-          meta_review: {
-            last_autonomous_recommendation: "rework"
-          }
+          round: 3
         } as never,
         transcriptPath: "/tmp/transcript.ndjson",
         round: 3,
@@ -89,10 +86,7 @@ describe("approvalRoutingEligibility", () => {
         decision: "approve",
         state: {
           state: "READY_FOR_HUMAN_APPROVAL",
-          round: 3,
-          meta_review: {
-            last_autonomous_recommendation: "approve"
-          }
+          round: 3
         } as never,
         transcriptPath: "/tmp/transcript.ndjson",
         round: 3,
@@ -108,10 +102,7 @@ describe("approvalRoutingEligibility", () => {
         decision: "approve",
         state: {
           state: "READY_FOR_HUMAN_APPROVAL",
-          round: 3,
-          meta_review: {
-            last_autonomous_recommendation: "approve"
-          }
+          round: 3
         } as never,
         transcriptPath: "/tmp/transcript.ndjson",
         round: 3,
@@ -129,10 +120,7 @@ describe("approvalRoutingEligibility", () => {
       decision: "approve",
       state: {
         state: "READY_FOR_HUMAN_APPROVAL",
-        round: 2,
-        meta_review: {
-          last_autonomous_recommendation: "inconclusive"
-        }
+        round: 2
       } as never,
       transcriptPath: "/tmp/transcript.ndjson",
         round: 2,
@@ -154,10 +142,7 @@ describe("approvalRoutingEligibility", () => {
       decision: "approve",
       state: {
         state: "READY_FOR_HUMAN_APPROVAL",
-        round: 2,
-        meta_review: {
-          last_autonomous_recommendation: "approve"
-        }
+        round: 2
       } as never,
       transcriptPath: "/tmp/transcript.ndjson",
       round: 2,
@@ -184,10 +169,7 @@ describe("approvalRoutingEligibility", () => {
         decision: "approve",
         state: {
           state: "READY_FOR_HUMAN_APPROVAL",
-          round: 2,
-          meta_review: {
-            last_autonomous_recommendation: "approve"
-          }
+          round: 2
         } as never,
         transcriptPath: "/tmp/transcript.ndjson",
         round: 2,
@@ -203,10 +185,7 @@ describe("approvalRoutingEligibility", () => {
       decision: "approve",
       state: {
         state: "READY_FOR_HUMAN_APPROVAL",
-        round: 2,
-        meta_review: {
-          last_autonomous_recommendation: "approve"
-        }
+        round: 2
       } as never,
       transcriptPath: "/tmp/transcript.ndjson",
       round: 2,
@@ -250,10 +229,7 @@ describe("approvalRoutingEligibility", () => {
         decision: "approve",
         state: {
           state: "READY_FOR_HUMAN_APPROVAL",
-          round: 3,
-          meta_review: {
-            last_autonomous_recommendation: "approve"
-          }
+          round: 3
         } as never,
         transcriptPath: "/tmp/transcript.ndjson",
         round: 3,

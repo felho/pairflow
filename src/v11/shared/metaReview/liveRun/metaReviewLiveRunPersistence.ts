@@ -25,13 +25,7 @@ import { isNamedError } from "../../errors/namedError.js";
 
 export function buildNextMetaReviewStateSnapshot(input: {
   loadedState: LoadedStateSnapshot;
-  runId: string;
-  status: MetaReviewRunStatus;
-  recommendation: MetaReviewRecommendation;
-  summary: string | null;
-  reworkTargetMessage: string | null;
-  updatedAt: string;
-  reportRef: string;
+  stickyHumanGate: boolean;
 }): BubbleStateSnapshot {
   const previousMetaReview = normalizeMetaReviewSnapshot(
     input.loadedState.state.meta_review
@@ -39,18 +33,7 @@ export function buildNextMetaReviewStateSnapshot(input: {
   const lifecycleBaseState = input.loadedState.state;
   const nextMetaReview: BubbleMetaReviewSnapshotState = {
     ...previousMetaReview,
-    execution_context: previousMetaReview.execution_context ?? null,
-    last_autonomous_run_id: input.runId,
-    last_autonomous_status: input.status,
-    last_autonomous_recommendation: input.recommendation,
-    last_autonomous_summary: input.summary,
-    last_autonomous_report_ref: input.reportRef,
-    last_autonomous_rework_target_message: input.reworkTargetMessage,
-    last_autonomous_updated_at: input.updatedAt,
-    ...(input.loadedState.state.state === "READY_FOR_HUMAN_APPROVAL"
-    && input.status === "success"
-      ? { sticky_human_gate: true }
-      : {})
+    sticky_human_gate: input.stickyHumanGate
   };
 
   return {

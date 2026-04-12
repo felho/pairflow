@@ -16,6 +16,7 @@ import { metaReviewExecutionContextToRunningContext } from "../../../src/v11/sha
 import { readStateSnapshot, writeStateSnapshot } from "../../../src/v11/infrastructure/state/stateStore.js";
 import { parseRequiredSubmitReportJson } from "../../../src/v11/application/metaReview/metaReviewCliOptionValueReader.js";
 import type { Finding } from "../../../src/types/findings.js";
+import { DEFAULT_META_REVIEW_AUTO_REWORK_LIMIT } from "../../../src/types/bubble.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
 import { initGitRepository } from "../../helpers/git.js";
 
@@ -329,11 +330,13 @@ describe("v11 meta-review submit contract", () => {
     const loaded = await readStateSnapshot(bubble.paths.statePath);
     expect(loaded.state.state).toBe("READY_FOR_HUMAN_APPROVAL");
     expect(loaded.state.meta_review).toMatchObject({
-      last_autonomous_run_id: "run_meta_contract_submit_approve_advisory_01",
-      last_autonomous_status: "success",
-      last_autonomous_recommendation: "approve",
-      last_autonomous_summary: "2 advisory findings remain open."
+      execution_context: null,
+      runtime_delivery: null,
+      auto_rework_count: 0,
+      auto_rework_limit: DEFAULT_META_REVIEW_AUTO_REWORK_LIMIT,
+      sticky_human_gate: true
     });
+    expect(loaded.state.meta_review).not.toHaveProperty("last_autonomous_run_id");
 
     const transcript = await readTranscriptEnvelopes(
       bubble.paths.transcriptPath,
@@ -406,12 +409,13 @@ describe("v11 meta-review submit contract", () => {
     const loaded = await readStateSnapshot(bubble.paths.statePath);
     expect(loaded.state.state).toBe("READY_FOR_HUMAN_APPROVAL");
     expect(loaded.state.meta_review).toMatchObject({
-      last_autonomous_run_id: "run_meta_contract_submit_inconclusive_01",
-      last_autonomous_status: "success",
-      last_autonomous_recommendation: "inconclusive",
-      last_autonomous_summary: "Needs human interpretation before approval."
+      execution_context: null,
+      runtime_delivery: null,
+      auto_rework_count: 0,
+      auto_rework_limit: DEFAULT_META_REVIEW_AUTO_REWORK_LIMIT,
+      sticky_human_gate: true
     });
-    expect(loaded.state.meta_review?.last_autonomous_rework_target_message).toBeNull();
+    expect(loaded.state.meta_review).not.toHaveProperty("last_autonomous_run_id");
 
     const transcript = await readTranscriptEnvelopes(
       bubble.paths.transcriptPath,
@@ -607,13 +611,6 @@ describe("v11 meta-review submit contract", () => {
               `meta_review:${loaded.state.bubble_id}:round:${loaded.state.round}:attempt:1`,
             observed_for_round: loaded.state.round
           },
-          last_autonomous_run_id: "run_meta_contract_prev_recovery_01",
-          last_autonomous_status: "error",
-          last_autonomous_recommendation: "inconclusive",
-          last_autonomous_summary: "Previous recovery snapshot.",
-          last_autonomous_report_ref: "artifacts/meta-review-last.json",
-          last_autonomous_rework_target_message: null,
-          last_autonomous_updated_at: "2026-03-24T10:33:00.000Z"
         }
       },
       {

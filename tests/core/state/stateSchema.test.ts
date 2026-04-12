@@ -9,6 +9,26 @@ import {
 import { createInitialBubbleState } from "../../../src/v11/domain/state/initialState.js";
 import { validateBubbleStateSnapshot } from "../../../src/v11/shared/state/stateSchema.js";
 
+function expectCanonicalMetaReviewSnapshot(
+  actual: unknown,
+  overrides: {
+    execution_context?: unknown;
+    runtime_delivery?: unknown;
+    auto_rework_count?: number;
+    auto_rework_limit?: number;
+    sticky_human_gate?: boolean;
+  } = {}
+): void {
+  expect(actual).toEqual({
+    execution_context: null,
+    runtime_delivery: null,
+    auto_rework_count: 0,
+    auto_rework_limit: 5,
+    sticky_human_gate: false,
+    ...overrides
+  });
+}
+
 describe("state schema", () => {
   it("initial state contains deterministic meta-review defaults", () => {
     const state = createInitialBubbleState("b_test_init_meta_01");
@@ -16,13 +36,6 @@ describe("state schema", () => {
     expect(state.meta_review).toEqual({
       execution_context: null,
       runtime_delivery: null,
-      last_autonomous_run_id: null,
-      last_autonomous_status: null,
-      last_autonomous_recommendation: null,
-      last_autonomous_summary: null,
-      last_autonomous_report_ref: null,
-      last_autonomous_rework_target_message: null,
-      last_autonomous_updated_at: null,
       auto_rework_count: 0,
       auto_rework_limit: 5,
       sticky_human_gate: false
@@ -56,6 +69,9 @@ describe("state schema", () => {
     });
 
     expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value.meta_review).toBeUndefined();
+    }
   });
 
   it("accepts phase-2 lifecycle states", () => {
@@ -85,13 +101,6 @@ describe("state schema", () => {
           watchdogTimeoutMinutes: 60,
           attempt: 1
         }),
-        last_autonomous_run_id: null,
-        last_autonomous_status: null,
-        last_autonomous_recommendation: null,
-        last_autonomous_summary: null,
-        last_autonomous_report_ref: null,
-        last_autonomous_rework_target_message: null,
-        last_autonomous_updated_at: null,
         auto_rework_count: 0,
         auto_rework_limit: 5,
         sticky_human_gate: false
@@ -127,8 +136,21 @@ describe("state schema", () => {
         deadline_at: "2026-03-08T11:00:00.000Z",
         attempt: 1
       });
+      expectCanonicalMetaReviewSnapshot(metaRunning.value.meta_review, {
+        execution_context: {
+          handoff_id: "meta_review:b_test_meta_state_01:round:2:attempt:1",
+          round: 2,
+          awaited_output_type: "meta_review_result",
+          started_at: "2026-03-08T10:00:00.000Z",
+          deadline_at: "2026-03-08T11:00:00.000Z",
+          attempt: 1
+        }
+      });
     }
     expect(humanGate.ok).toBe(true);
+    if (humanGate.ok) {
+      expect(humanGate.value.meta_review).toBeUndefined();
+    }
   });
 
   it.each([
@@ -213,6 +235,14 @@ describe("state schema", () => {
     });
 
     expect(result.ok).toBe(true);
+    if (!result.ok) {
+      return;
+    }
+    expectCanonicalMetaReviewSnapshot(result.value.meta_review, {
+      execution_context: toMetaReviewExecutionContext(
+        metaReviewExecutionContextToRunningContext(executionContext)
+      )
+    });
   });
 
   it("rejects RUNNING snapshots that only persist nested meta_review.execution_context without canonical authority", () => {
@@ -286,13 +316,6 @@ describe("state schema", () => {
           watchdogTimeoutMinutes: 60,
           attempt: 1
         }),
-        last_autonomous_run_id: null,
-        last_autonomous_status: null,
-        last_autonomous_recommendation: null,
-        last_autonomous_summary: null,
-        last_autonomous_report_ref: null,
-        last_autonomous_rework_target_message: null,
-        last_autonomous_updated_at: null,
         auto_rework_count: 0,
         auto_rework_limit: 5,
         sticky_human_gate: false
@@ -303,9 +326,9 @@ describe("state schema", () => {
     if (!result.ok) {
       return;
     }
-    expect(result.value.meta_review?.execution_context).toEqual(
-      toMetaReviewExecutionContext(result.value.execution_context)
-    );
+    expectCanonicalMetaReviewSnapshot(result.value.meta_review, {
+      execution_context: toMetaReviewExecutionContext(result.value.execution_context)
+    });
   });
 
   it("rejects RUNNING meta-review authority when active ownership role is not meta_reviewer", () => {
@@ -333,13 +356,6 @@ describe("state schema", () => {
           watchdogTimeoutMinutes: 60,
           attempt: 1
         }),
-        last_autonomous_run_id: null,
-        last_autonomous_status: null,
-        last_autonomous_recommendation: null,
-        last_autonomous_summary: null,
-        last_autonomous_report_ref: null,
-        last_autonomous_rework_target_message: null,
-        last_autonomous_updated_at: null,
         auto_rework_count: 0,
         auto_rework_limit: 5,
         sticky_human_gate: false
@@ -502,13 +518,6 @@ describe("state schema", () => {
           watchdogTimeoutMinutes: 30,
           attempt: 1
         }),
-        last_autonomous_run_id: null,
-        last_autonomous_status: null,
-        last_autonomous_recommendation: null,
-        last_autonomous_summary: null,
-        last_autonomous_report_ref: null,
-        last_autonomous_rework_target_message: null,
-        last_autonomous_updated_at: null,
         auto_rework_count: 0,
         auto_rework_limit: 5,
         sticky_human_gate: false
@@ -719,6 +728,12 @@ describe("state schema", () => {
     });
 
     expect(result.ok).toBe(true);
+    if (!result.ok) {
+      return;
+    }
+    expectCanonicalMetaReviewSnapshot(result.value.meta_review, {
+      auto_rework_count: 1
+    });
   });
 
   it("rejects invalid meta-review snapshot values with field-level paths", () => {
@@ -751,23 +766,22 @@ describe("state schema", () => {
     }
     expect(
       result.errors.some(
-        (error) =>
-          error.path === "meta_review.last_autonomous_rework_target_message"
-      )
-    ).toBe(true);
-    expect(
-      result.errors.some(
         (error) => error.path === "meta_review.auto_rework_count"
       )
     ).toBe(true);
     expect(
       result.errors.some(
-        (error) => error.path === "meta_review.last_autonomous_updated_at"
+        (error) => error.path === "meta_review.auto_rework_limit"
+      )
+    ).toBe(true);
+    expect(
+      result.errors.some(
+        (error) => error.path === "meta_review.sticky_human_gate"
       )
     ).toBe(true);
   });
 
-  it("rejects invalid meta-review status/recommendation combinations", () => {
+  it("ignores legacy meta-review status/recommendation combinations", () => {
     const result = validateBubbleStateSnapshot({
       bubble_id: "b_test_meta_03",
       state: "WAITING_HUMAN",
@@ -791,18 +805,16 @@ describe("state schema", () => {
       }
     });
 
-    expect(result.ok).toBe(false);
-    if (result.ok) {
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
       return;
     }
-    expect(
-      result.errors.some(
-        (error) => error.path === "meta_review.last_autonomous_recommendation"
-      )
-    ).toBe(true);
+    expectCanonicalMetaReviewSnapshot(result.value.meta_review, {
+      auto_rework_count: 1
+    });
   });
 
-  it("rejects status=inconclusive when recommendation is not inconclusive", () => {
+  it("ignores legacy status=inconclusive snapshots with non-inconclusive recommendation", () => {
     const result = validateBubbleStateSnapshot({
       bubble_id: "b_test_meta_03b",
       state: "WAITING_HUMAN",
@@ -826,18 +838,16 @@ describe("state schema", () => {
       }
     });
 
-    expect(result.ok).toBe(false);
-    if (result.ok) {
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
       return;
     }
-    expect(
-      result.errors.some(
-        (error) => error.path === "meta_review.last_autonomous_recommendation"
-      )
-    ).toBe(true);
+    expectCanonicalMetaReviewSnapshot(result.value.meta_review, {
+      auto_rework_count: 1
+    });
   });
 
-  it("emits a single deterministic error for empty rework target message", () => {
+  it("ignores legacy empty rework target message fields", () => {
     const result = validateBubbleStateSnapshot({
       bubble_id: "b_test_meta_03c",
       state: "WAITING_HUMAN",
@@ -861,20 +871,16 @@ describe("state schema", () => {
       }
     });
 
-    expect(result.ok).toBe(false);
-    if (result.ok) {
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
       return;
     }
-
-    const reworkMessageErrors = result.errors.filter(
-      (error) =>
-        error.path === "meta_review.last_autonomous_rework_target_message"
-    );
-    expect(reworkMessageErrors).toHaveLength(1);
-    expect(reworkMessageErrors[0]?.message).toContain("recommendation is rework");
+    expectCanonicalMetaReviewSnapshot(result.value.meta_review, {
+      auto_rework_count: 1
+    });
   });
 
-  it("retains type-validation error for non-string rework target message", () => {
+  it("ignores legacy non-string rework target message fields", () => {
     const result = validateBubbleStateSnapshot({
       bubble_id: "b_test_meta_03c_type",
       state: "WAITING_HUMAN",
@@ -898,22 +904,16 @@ describe("state schema", () => {
       }
     });
 
-    expect(result.ok).toBe(false);
-    if (result.ok) {
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
       return;
     }
-
-    const reworkMessageErrors = result.errors.filter(
-      (error) =>
-        error.path === "meta_review.last_autonomous_rework_target_message"
-    );
-    expect(reworkMessageErrors).toHaveLength(1);
-    expect(reworkMessageErrors[0]?.message).toContain(
-      "Must be null or a non-empty string"
-    );
+    expectCanonicalMetaReviewSnapshot(result.value.meta_review, {
+      auto_rework_count: 1
+    });
   });
 
-  it("rejects unsafe meta-review report_ref values", () => {
+  it("ignores legacy unsafe meta-review report_ref values", () => {
     const result = validateBubbleStateSnapshot({
       bubble_id: "b_test_meta_03d",
       state: "WAITING_HUMAN",
@@ -937,18 +937,16 @@ describe("state schema", () => {
       }
     });
 
-    expect(result.ok).toBe(false);
-    if (result.ok) {
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
       return;
     }
-    expect(
-      result.errors.some(
-        (error) => error.path === "meta_review.last_autonomous_report_ref"
-      )
-    ).toBe(true);
+    expectCanonicalMetaReviewSnapshot(result.value.meta_review, {
+      auto_rework_count: 1
+    });
   });
 
-  it("rejects meta-review report_ref values with null byte", () => {
+  it("ignores legacy meta-review report_ref values with null byte", () => {
     const result = validateBubbleStateSnapshot({
       bubble_id: "b_test_meta_03e",
       state: "WAITING_HUMAN",
@@ -972,18 +970,16 @@ describe("state schema", () => {
       }
     });
 
-    expect(result.ok).toBe(false);
-    if (result.ok) {
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
       return;
     }
-    expect(
-      result.errors.some(
-        (error) => error.path === "meta_review.last_autonomous_report_ref"
-      )
-    ).toBe(true);
+    expectCanonicalMetaReviewSnapshot(result.value.meta_review, {
+      auto_rework_count: 1
+    });
   });
 
-  it("rejects no-run snapshots when run-specific fields are populated", () => {
+  it("ignores legacy no-run snapshots when deprecated run-specific fields are populated", () => {
     const result = validateBubbleStateSnapshot({
       bubble_id: "b_test_meta_04",
       state: "WAITING_HUMAN",
@@ -1007,31 +1003,11 @@ describe("state schema", () => {
       }
     });
 
-    expect(result.ok).toBe(false);
-    if (result.ok) {
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
       return;
     }
-    expect(
-      result.errors.some(
-        (error) => error.path === "meta_review.last_autonomous_run_id"
-      )
-    ).toBe(true);
-    expect(
-      result.errors.some(
-        (error) => error.path === "meta_review.last_autonomous_report_ref"
-      )
-    ).toBe(true);
-    expect(
-      result.errors.some(
-        (error) => error.path === "meta_review.last_autonomous_summary"
-      )
-    ).toBe(true);
-    expect(
-      result.errors.some(
-        (error) =>
-          error.path === "meta_review.last_autonomous_rework_target_message"
-      )
-    ).toBe(true);
+    expectCanonicalMetaReviewSnapshot(result.value.meta_review);
   });
 
   it("accepts run snapshots without run_id when status/recommendation are set", () => {
@@ -1059,9 +1035,13 @@ describe("state schema", () => {
     });
 
     expect(result.ok).toBe(true);
+    if (!result.ok) {
+      return;
+    }
+    expectCanonicalMetaReviewSnapshot(result.value.meta_review);
   });
 
-  it("rejects run snapshots without report_ref when status/recommendation are set", () => {
+  it("ignores legacy run snapshots without report_ref when status/recommendation are set", () => {
     const result = validateBubbleStateSnapshot({
       bubble_id: "b_test_meta_05b",
       state: "WAITING_HUMAN",
@@ -1085,18 +1065,14 @@ describe("state schema", () => {
       }
     });
 
-    expect(result.ok).toBe(false);
-    if (result.ok) {
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
       return;
     }
-    expect(
-      result.errors.some(
-        (error) => error.path === "meta_review.last_autonomous_report_ref"
-      )
-    ).toBe(true);
+    expectCanonicalMetaReviewSnapshot(result.value.meta_review);
   });
 
-  it("emits mismatch-only co-occurrence error for partially-null status/recommendation", () => {
+  it("ignores partially-null legacy status/recommendation pairs", () => {
     const result = validateBubbleStateSnapshot({
       bubble_id: "b_test_meta_05c",
       state: "WAITING_HUMAN",
@@ -1120,30 +1096,14 @@ describe("state schema", () => {
       }
     });
 
-    expect(result.ok).toBe(false);
-    if (result.ok) {
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
       return;
     }
-    expect(
-      result.errors.some(
-        (error) =>
-          error.path === "meta_review" &&
-          error.message.includes("must both be null or both be set")
-      )
-    ).toBe(true);
-    expect(
-      result.errors.some(
-        (error) => error.path === "meta_review.last_autonomous_run_id"
-      )
-    ).toBe(false);
-    expect(
-      result.errors.some(
-        (error) => error.path === "meta_review.last_autonomous_updated_at"
-      )
-    ).toBe(false);
+    expectCanonicalMetaReviewSnapshot(result.value.meta_review);
   });
 
-  it("does not emit co-occurrence errors when enum values are individually invalid", () => {
+  it("ignores invalid legacy enum values on deprecated meta-review fields", () => {
     const result = validateBubbleStateSnapshot({
       bubble_id: "b_test_meta_06",
       state: "WAITING_HUMAN",
@@ -1167,26 +1127,10 @@ describe("state schema", () => {
       }
     });
 
-    expect(result.ok).toBe(false);
-    if (result.ok) {
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
       return;
     }
-    expect(
-      result.errors.some(
-        (error) =>
-          error.path === "meta_review.last_autonomous_recommendation" &&
-          error.message === "Must be null or one of: rework, approve, inconclusive"
-      )
-    ).toBe(true);
-    expect(
-      result.errors.some(
-        (error) => error.message.includes("Must be inconclusive when")
-      )
-    ).toBe(false);
-    expect(
-      result.errors.some(
-        (error) => error.message.includes("must both be null or both be set")
-      )
-    ).toBe(false);
+    expectCanonicalMetaReviewSnapshot(result.value.meta_review);
   });
 });
