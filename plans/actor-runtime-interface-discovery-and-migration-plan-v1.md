@@ -2,7 +2,7 @@
 artifact_type: plan
 artifact_id: plan_actor_runtime_interface_discovery_and_migration_v1
 title: "Actor Runtime Interface Discovery and Migration Preparation"
-status: in_progress
+status: completed
 prd_ref: null
 owners:
   - "felho"
@@ -10,117 +10,94 @@ owners:
 
 # Plan: Actor Runtime Interface Discovery and Migration Preparation
 
-## Current Codebase Check (2026-04-12)
+## Current Codebase Check (2026-04-13)
 
-1. `src/core/**` is already gone from the checked-out tree, so the original closure dependency on residual core retirement is historical context rather than a current blocker.
-2. The docs-only Phase A-D deliverables referenced by this plan are already checked in.
-3. The remaining live scope is the still-open generic actor-runtime implementation follow-up after the A-D planning artifacts, not the production of the A-D planning artifacts themselves.
-4. The narrow Phase E meta-review follow-up tasks that were active in the 2026-04-10 checkpoint discussion are now both completed and archived:
-   - `plans/archive/tasks/actor-runtime-interface-meta-review-submit-inconclusive-human-gate-phaseE.md`
-   - `plans/archive/tasks/actor-runtime-interface-meta-review-approve-advisory-guidance-hardening-phaseE.md`
-5. A public `pairflow bubble meta-review status|last-report` read-model surface ebben a tree-ben meg mindig explicit predecessor-owned boundary; a repo-surface cleanup nem irhatja at a README/operator wordingot addig, amig a `plans/tasks/actor-runtime-interface-meta-review-cached-public-read-model-removal-phaseE.md` task le nem zarul.
-6. A persisted authority + cleanup/recovery removal szelet a jelenlegi tree-ben mar lezart archivalt predecessor:
-   - `plans/archive/tasks/actor-runtime-interface-meta-review-cached-persisted-authority-and-cleanup-recovery-removal-phaseE.md`
-7. Az aktiv repo-surface guidance mar csak a surviving direct review contractot es a 2026-04-12-es replacement tasklancot mutathatja; a korabbi `operator-read-surface-closure` es negy-taskos remaining split historical-only artifact.
-8. Phase E lane-guard note: a current tree-ben ettol fuggetlenul maradt egy kulon internal meta-review live-run runtime stack; ezt a bounded removal-seam-et a `plans/tasks/actor-runtime-interface-meta-review-live-run-removal-phaseE.md` task kezeli, es ez nem terjeszti ki a scope-ot a kulon kezelt public cached read-model lane-re, a lezart persisted authority + cleanup/recovery lane-re, vagy a repo-surface cleanup lane-re.
+1. `src/core/**` mar nincs a checked-out tree-ben; az eredeti residual-core retirement blokkolo kontextus historical-only.
+2. A plan sajat docs-only A-D deliverable-jei checked-in allapotban megvannak:
+   - `plans/tasks/actor-runtime-interface-behavior-inventory-phaseA-inventory.md`
+   - `plans/tasks/actor-runtime-interface-capability-contract-phaseB-draft.md`
+   - `plans/tasks/actor-runtime-interface-scenario-simulation-phaseC-matrix.md`
+   - `plans/tasks/actor-runtime-interface-migration-spine-phaseD-plan.md`
+3. A korabbi meta-review cached public read-model, persisted-authority/cleanup, repo-surface es live-run closurek mar historical context:
+   - a public `bubble meta-review` namespace removed, a current CLI generic unknown-commandra zar [tests/cli/index.test.ts szerint],
+   - a repo-surface wording mar a surviving `bubble status` / `bubble restart` / `agent emit --kind meta_review_result` contractot koveti,
+   - a kulon internal meta-review live-run runtime stack mar nem aktiv current-tree blocker.
+4. Emiatt ez a plan mar nem owns-olja a 2026-04-12-es meta-review cleanup resequencinget mint elo implementation programot; az a blokk historical traceabilitykent relevans, de nem current-state statusjelenteskent.
+5. A fennmarado live scope mar nem a discovery artifactok eloallitasa, hanem a generic actor-runtime implementation follow-up:
+   - execution-scoped authority boundary konkretizalasa,
+   - typed delivery / launch ack boundary,
+   - implementer pilot cutover,
+   - reviewer + meta-reviewer rollout es retained adapter cleanup.
+6. Ennek a remaining implementation sequencingnek a current-tree anchorja:
+   - `plans/tasks/actor-runtime-interface-pilot-cutover-phaseE.md`
 
-## Remaining Phase E Resequencing Update (2026-04-12)
+## Discovery Closure Status (2026-04-13)
 
-1. A 2026-04-11-es megmaradt aktiv tasklanc (`cached-cli-read-stack-removal`, `cached-state-shape-and-persistence-decoupling`, `cached-workflow-ui-cleanup`, `cached-active-docs-cleanup`) mar historical-only; az aktiv replacement sorrend az alatti uj tasklanc.
-2. A torles oka nem ujabb izolalt P1 hiany, hanem rossz szeleteles:
-   - a megmaradt munka egyszerre erintette a public read-model closure-t,
-   - a persisted authority + cleanup/recovery closure-t,
-   - es a repo-surface wording/traceability cleanupot.
-3. A ket archived prereq tovabbra is ervenyes lezart closure:
-   - `plans/archive/tasks/actor-runtime-interface-meta-review-cached-current-round-authority-and-runtime-consumer-cutover-phaseE.md`
-   - `plans/archive/tasks/actor-runtime-interface-meta-review-cached-approval-and-projection-consumer-cutover-phaseE.md`
-4. A replacement remaining tasklanc jelenlegi allapota:
-   - aktiv: `plans/tasks/actor-runtime-interface-meta-review-cached-public-read-model-removal-phaseE.md`
-   - lezart/archivalt predecessor: `plans/archive/tasks/actor-runtime-interface-meta-review-cached-persisted-authority-and-cleanup-recovery-removal-phaseE.md`
-   - lezart/archivalt successor: `plans/archive/tasks/actor-runtime-interface-meta-review-cached-repo-surface-cleanup-phaseE.md`
-5. A vegrehajtasi sorrend kotelezo:
-   - eloszor read-model closure: public cached CLI/read/export surface torlese,
-   - utana persisted authority + cleanup/recovery closure: reduced state shape, writer cleanup, inspection/recovery consumer alignment,
-   - vegul repo-surface cleanup: workflow/docs/copied prompt wording es traceability cleanup.
-6. Ez a resequencing supersedalja a korabbi negy-taskos remaining splitet, de nem irja felul a plan eredeti fo celjat: a canonical actor runtime boundary tovabbi szerepsemleges tisztitasat.
+1. A plan eredeti discovery/preparation objective-je teljesult: a current-state inventory, a capability-first target contract, a scenario matrix es a migration spine kulon checked-in artifactkent letezik.
+2. A plan statusza emiatt `completed`: ez a dokumentum discovery-parent artifact marad, nem a fennmarado implementation munka allapotkoveto taskja.
+3. A kovetkezo implementacios fazis nem egyetlen bundled taskkent nyithato:
+   - a kód ma ugyan tartalmaz korai wrapper-elemeket (`actorProtocolV11`, `actorEmitContext`),
+   - de nincs meg a Phase B-ben leirt execution-scoped `execution_id` / capability-shape,
+   - nincs meg a typed `accepted|running|rejected|failed_to_start` delivery/launch ack boundary,
+   - es a runtime tovabbra is retained tmux topologyra epul.
 
-## Remaining Phase E Control Model (2026-04-12)
+## Post-Discovery Implementation Control Model (2026-04-13)
 
-1. Business invariant: a cached meta-review functionality a Phase E vegen sem runtime decision source-kent, sem publikus/operatori read surface-kent, sem aktiv repo-local guidancekent nem maradhat.
-2. Control model: a surviving meta-review allapotot a live current-round authority, a transcript-derived current approval/request context es az explicit current-run artifactok dontik el; a persisted `last_autonomous_*` blokk historical transitional adat, nem source-of-truth.
-3. Read-path rule:
-   - current runtime/orchestration dontes csak a mar lezart live authority/transcript contractokra epulhet,
-   - public operator read pathkent nem maradhat `bubble meta-review status|last-report`,
-   - repo-local docs/prompt surfaces csak a surviving review contractot nevezhetik meg.
+1. Business invariant: az `implementer`, `reviewer` es `meta_reviewer` ugyanazon actor-runtime boundaryn kell hogy fusson; szerepnev alapjan nem maradhat kulon runtime truth vagy special-case subsystem.
+2. Control model: a canonical actor write authority tovabbra is explicit execution-contexthez kotott; a jovobeli Phase E munkanak ezt kell execution-scoped boundaryve erositenie, nem uj authorityforrast bevezetnie.
+3. Read-path rule: actor authorityt es workflow-step truthot csak a canonical state/execution-context + actor-protocol path olvashat; a prompt, a tmux pane allapot, a marker-lathatosag vagy operatori megfigyeles nem kontrollforras.
 4. Forbidden fallback:
-   - no persisted `last_autonomous_*` fallback truth,
-   - no retained `bubble meta-review` compatibility wrapper,
-   - no removed cached source-mode wording or stale task-reference fallback az aktiv docs/prompt surface-en.
-5. Missing-data rule:
-   - runtime/read-model oldalon fail-closed vagy explicit absence/unavailable viselkedes marad,
-   - docs/prompt oldalon a removed capability egyszeruen elhagyando, nem legacy alternativaval potlando.
-6. Phase boundary note:
-   - contract closure: ez a 2026-04-12 plan update
-   - producer closure: archived current-round authority task
-   - internal execution closure: persisted authority + cleanup/recovery removal task
-   - workflow/orchestration closure: archived approval/projection task
-   - read_model_closure: public read-model removal task
-   - activation closure: N/A
-   - cleanup_recovery_closure: persisted authority + cleanup/recovery removal task, majd repo-surface cleanup docs szinten
+   - nincs tmux/pane-derived authority fallback,
+   - nincs prompt-visible text mint ack truth,
+   - nincs role-specifikus uj actor API a generic boundary helyett,
+   - nincs “pilot convenience” celu egy-taskos bundled cutover.
+5. Allowed resolution path:
+   - a jelenlegi deterministic same-authority path (`state.execution_context` + `handoff_id` + optional guards) preserved baseline marad, amig az explicit execution-scoped replacement boundary meg nem erkezik,
+   - restart/recovery tovabbra is explicit uj execution-contexten mehet, nem implicit pane allapoton.
+6. Missing-data rule:
+   - authority hiany vagy mismatch -> fail-closed,
+   - delivery/launch ack hiany -> explicit runtime-level unavailable/failure allapot,
+   - nincs pane-lathatosagbol visszakovetkeztetett “valoszinuleg accepted” fallback.
+7. Phase boundary:
+   - contract closure: `plans/tasks/actor-runtime-interface-pilot-cutover-phaseE.md` successor splitje
+   - producer closure: successor task (execution authority foundation)
+   - internal execution closure: successor task (delivery/ack boundary)
+   - workflow/orchestration closure: successor task (implementer pilot cutover)
+   - read-model closure: csak minimalis fallout, ahol a pilot boundary explicit status/diagnostics valtozast kenyszerit
+   - activation closure: successor task (implementer pilot cutover)
+   - cleanup/recovery_closure: successor task (reviewer + meta-reviewer rollout / retained adapter cleanup)
 
-## Remaining Phase E Authority Fan-out Scan (2026-04-12)
+## Post-Discovery Authority Fan-out Scan (2026-04-13)
 
-1. Authority producer:
-   - archived reviewer-parity authority/runtime producer cutover
-2. Persisted authority:
-   - `state.meta_review.last_autonomous_*` es a hozza kapcsolt writer/schema/default/inspection shape
-3. Internal execution consumers:
-   - submit/live-run persistence
-   - shared snapshot/default helpers
-4. Workflow/orchestration consumers:
-   - approval/projection source-of-truth mar archived prereqben le van zarva
-   - remaining live workflow munka mar nincs ebben a lane-ben
-5. Read-model consumers:
-   - public `bubble meta-review` CLI subtree
-   - retained read-model exports/types/tests
-6. Cleanup/recovery consumers:
-   - metaReviewGate recovery/snapshot helper family
-   - inspectable state normalization
-   - a reduced shared shape-re epulo in-repo fixture/test consumers
-7. Collapse notes:
-   - a public read-model closure kulon marad, mert kulon breaking public/export boundary
-   - a persisted authority es cleanup/recovery closure egy taskba vonhato, mert ugyanazt a reduced shared shape-et zarja le
-   - a workflow/UI docs es active docs cleanup egy taskba vonhato, mert mar csak repo-surface wording/traceability risk marad
+1. `authority_producer`
+   - `state.execution_context`
+   - start/resume mutation helpers
+   - actor emit context materialization
+2. `persisted_authority`
+   - bubble state snapshot fingerprint + execution context fields
+3. `internal_execution_consumers`
+   - `actorProtocolV11`
+   - `agent emit` input contract
+   - runtime delivery / tmux delivery confirmation
+   - restart/recovery helpers
+4. `workflow_orchestration_consumers`
+   - pass / convergence / ask-human / meta-review submit flows
+   - pilot cutover rollout guardok
+5. `read_model_consumers`
+   - status / diagnostics only where explicit ack or execution identity eventually megjelenik
+6. `cleanup_recovery_consumers`
+   - restart / watchdog / retained adapter cleanup
+7. Split note:
+   - ez a fan-out mar nem engedi a fennmarado implementation scope-ot egyetlen Phase E delivery taskba osszecsukni.
 
-## Remaining Phase E Complexity / Split Rationale (2026-04-12)
-
-1. `risk_score`: `8`
-2. Why a plan is needed:
-   - authority/read-model multi-consumer scope
-   - archived prereq-ek utan is harom kulon closure-csalad maradt
-   - a korabbi remaining tasklanc review-loopot termelt a closurek keverese miatt
-3. Split decision:
-   - public read-model removal
-   - persisted authority + cleanup/recovery removal
-   - repo-surface cleanup
-4. Milestone-gated behavior to defer:
-   - N/A; ez mar cleanup/removal sequencing, nem uj runtime activation
-
-## Remaining Phase E Breakdown (2026-04-12)
-
-| Phase | Goal | Inputs | Outputs | Exit Criteria |
-|---|---|---|---|---|
-| Phase E3 | Public cached read-model closure | archived authority + approval/projection prereq-ek, current public CLI/read exports | removed public `bubble meta-review` surface, intact canonical actor emit path | nincs public cached subtree, nincs retained read export |
-| Phase E4 | Persisted authority es cleanup/recovery closure | Phase E3 output, archived prereq-ek, current reduced control model | reduced `meta_review` shape, writer/schema/helper alignment, legacy-input tolerance reduced outputtal | canonical persisted output mar nem hordoz `last_autonomous_*` mezoket |
-| Phase E5 | Repo-surface cleanup | Phase E3-E4 output, current repo-local docs/prompt surfaces | cached-mode es deleted-task wording cleanup, aligned active docs traceability | aktiv docs/prompt surface csak surviving contractot es uj tasklancot mutat |
-
-## Remaining Phase E Ownership Grid (2026-04-12)
+## Post-Discovery Ownership Grid (2026-04-13)
 
 | Phase | Dominant Boundary | Produced Authority | Consuming Surfaces | Forbidden Co-mingling |
 |---|---|---|---|---|
-| Phase E3 | read-model removal | N/A | public CLI, retained read exports, read-model tests | persisted authority shape es docs cleanup ne csusszon ide |
-| Phase E4 | persisted authority + cleanup/recovery | reduced canonical `meta_review` shape | writer/schema/defaults, recovery/inspection helpers, in-repo shape consumers | public read-model removal es repo wording cleanup ne keveredjen ide |
-| Phase E5 | cleanup/rollout docs surface | N/A | repo-local workflow/docs, copied prompts, historical traceability | runtime/state/read-model kodmunka ne csusszon ide |
+| Phase E1 | execution authority foundation | explicit execution-scoped actor authority | actor input contract, authority materialization, state validation | delivery/ack activation vagy pilot rollout ne csusszon ide |
+| Phase E2 | delivery / launch ack boundary | typed runtime ack semantics | delivery adapter, restart/recovery, watchdog, diagnostics fallout | role rollout vagy adapter cleanup ne csusszon ide |
+| Phase E3 | implementer pilot activation | implementer runtime parity az uj boundaryn | implementer actor path, pilot orchestration, minimal fallout consumers | reviewer/meta-reviewer rollout es broad cleanup ne csusszon ide |
+| Phase E4 | multi-role rollout + retained adapter cleanup | shared role-neutral runtime boundary active all rolesra | reviewer, meta-reviewer, retained tmux/operator adapterek cleanupja | uj contract-foundation munka ne csusszon vissza ide |
 
 ## Objective
 
@@ -174,7 +151,7 @@ Ez a plan discovery- es preparation-jellegu. Nem celja a Phase 4 vagy Phase 5 le
    - nincs CLI help reminder,
    - nincs skill guidance, amely a `cached` modra vagy a `last-report` / `status` commandokra hivatkozik,
    - nincs UI prompt, amely removed cached source-mode kapcsolot masol.
-5. Ez a checkpoint mar historical context: a jelenlegi aktiv Phase E sequencinget a 2026-04-12-es replacement lanc rogzitette, amelyben az E3 public read-model closure marad az elo prerequisite, az E4 archived, az E5 pedig repo-surface cleanup.
+5. Ez a checkpoint mar historical context: a 2026-04-12-es replacement lancot dokumentalja, de a current-tree remaining implementation sequencinget mar a `plans/tasks/actor-runtime-interface-pilot-cutover-phaseE.md` anchor task rogzitette.
 
 ## Decision Baseline
 
@@ -404,7 +381,7 @@ Ez a plan discovery- es preparation-jellegu. Nem celja a Phase 4 vagy Phase 5 le
 2. `plans/tasks/actor-runtime-interface-capability-contract-phaseB.md`
 3. `plans/tasks/actor-runtime-interface-scenario-simulation-phaseC.md`
 4. `plans/tasks/actor-runtime-interface-migration-spine-phaseD.md`
-5. `plans/tasks/actor-runtime-interface-pilot-cutover-phaseE.md` (kesobbi task, csak Phase 5 utan)
+5. `plans/tasks/actor-runtime-interface-pilot-cutover-phaseE.md` (2026-04-13-tol a remaining implementation sequencing anchorja; nem single-task bundled delivery)
 
 ## Dependencies
 
