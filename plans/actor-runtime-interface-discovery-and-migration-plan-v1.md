@@ -22,6 +22,7 @@ owners:
 6. A persisted authority + cleanup/recovery removal szelet a jelenlegi tree-ben mar lezart archivalt predecessor:
    - `plans/archive/tasks/actor-runtime-interface-meta-review-cached-persisted-authority-and-cleanup-recovery-removal-phaseE.md`
 7. Az aktiv repo-surface guidance mar csak a surviving direct review contractot es a 2026-04-12-es replacement tasklancot mutathatja; a korabbi `operator-read-surface-closure` es negy-taskos remaining split historical-only artifact.
+8. Phase E lane-guard note: a current tree-ben ettol fuggetlenul maradt egy kulon internal meta-review live-run runtime stack; ezt a bounded removal-seam-et a `plans/tasks/actor-runtime-interface-meta-review-live-run-removal-phaseE.md` task kezeli, es ez nem terjeszti ki a scope-ot a kulon kezelt public cached read-model lane-re, a lezart persisted authority + cleanup/recovery lane-re, vagy a repo-surface cleanup lane-re.
 
 ## Remaining Phase E Resequencing Update (2026-04-12)
 
