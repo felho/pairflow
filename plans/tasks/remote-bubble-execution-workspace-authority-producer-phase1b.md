@@ -58,9 +58,21 @@ owners:
 3. A task nem zar le consumer-family migrationt:
    - nem valt at bubble-loop consume-ra,
    - nem valt at tmux/pane delivery consume-ra,
+   - nem valt at resume/restart prompt vagy kickoff consume-ra,
    - nem valt at status/CLI/read-model consume-ra,
    - nem mozditja meg a delete/merge cleanup interpretationt.
 4. A Phase 1B celja az, hogy a canonical workspace authority explicit legyen es a runtime session registry mar tudja fogadni, de a legtobb downstream consumer tovabbra is a kesobbi fazis ownershipje maradjon.
+
+### Target File Interpretation (Strict)
+
+1. A `target_files` frontmatter allowlist, nem blanket engedely a teljes start/status/tmux feluletre.
+2. Mixed-ownership file-ban csak a producer seamhez tartozo resz szerkesztheto:
+   - `startCommandApi.ts`: retained Phase 1B entrypoint threading, nem resume/restart prompt shaping.
+   - `startCommandFlows.ts`: fresh-start producer path, nem resume kickoff vagy tmux delivery consume.
+   - `startCommandOrchestration.ts` / `startCommandContract.ts` / `startBubbleDefaults.ts`: dependency es fail-closed producer wiring, nem operator/read-model routing.
+   - `tests/core/bubble/startBubble.test.ts`: fresh-start producer assertions, nem resume/restart prompt projection vagy pane-delivery assertions.
+3. Az, hogy egy shared port vagy retained start file szerepel a target listaban, nem ad felhatalmazast downstream consumer family-k (`startCommandResume*`, `startCommandTmuxLaunch.ts`, `src/v11/shared/status/**`, `src/cli/commands/bubble/{resume,restart,status,list,open}.ts`) modositasara.
+4. Ha egy legitim producer valtoztatas consumer-call-site modositast igenyelne, az itt blocker: a Phase 1B specet nem szabad implicit Phase 1C/1D/2B scope-ra tagitani; kulon replanning kell.
 
 ## L0 - Policy
 
@@ -110,12 +122,15 @@ Ez a task szandekosan nem oldja meg a bubble-loop, tmux/pane, status/CLI vagy cl
 
 ### Out of Scope
 
-1. Tmux/session pane delivery consume, prompt wiring, status-pane command cwd vagy agent startup prompt cutover.
+1. Tmux/session pane delivery consume, prompt wiring, status-pane command cwd, agent startup prompt cutover, vagy barmilyen resume/restart prompt consume.
 2. `StartBubbleResult`, CLI start output, status/list/read-model wording vagy `worktree` elnevezes operator-level cseréje.
 3. Bubble-loop consume migration (`pass`, `converged`, `ask-human`, `meta_review_result`).
 4. Remote SSH clone/sync/start activation.
 5. Delete/merge cleanup contract interpretation vagy result-shape breaking valtoztatasa.
 6. A teljes `worktreePath` mezocsalad atnevezese `workspacePath`-ra a kodbazisban.
+7. `src/v11/application/start/startCommandResume*`, `startCommandPromptRuntime.ts`, `startCommandPrompts.ts`, `startCommandImplementerPrompts.ts`, `startCommandTmuxLaunch.ts` vagy a kapcsolodo kickoff-message/projection logika modositasa.
+8. `src/v11/shared/status/**`, `src/v11/application/status/**`, `src/cli/index.ts`, valamint `src/cli/commands/bubble/{resume,restart,status,list,open}.ts` consume- vagy wording-modositasa.
+9. Olyan teszt- vagy evidence-bovites, amely resume/restart prompt, tmux pane binding, status/list/attach read-model vagy operator-facing CLI consume parityt bizonyitana.
 
 ### Safety Defaults
 
@@ -176,6 +191,17 @@ Ez a task szandekosan nem oldja meg a bubble-loop, tmux/pane, status/CLI vagy cl
 | `src/v11/shared/ports/worktreeWorkspace.ts` | start fresh-start, delete finalization, merge finalization, workspace tests/helpers/contract runners | additive | `workMode`, `workspaceKind`, `branchPrepared` explicit closure; `worktreePath` es cleanup result reporting retained | delete/merge consume interpretation es user-facing wording successor taskokban |
 | `src/v11/shared/ports/runtimeSessions.ts` | start, list/ui/reconcile/watchdog/restart flows, many runtime tests | additive | optional authoritative workspace mezok + finalize/update port bevezetese; existing `worktreePath` retained | tmux/runtime consume alignment (Phase 1D), read-model consumers (Phase 2B) |
 
+### 0b) Forbidden Consumer Family Matrix
+
+| Family | Files / Surfaces | Why Forbidden In Phase 1B | Successor Phase |
+|---|---|---|---|
+| Bubble-loop consume | `src/v11/application/pass/**`, `converged/**`, `askHuman/**`, actor protocol emit/consume surfaces | producer contract utan jon; canonical actor context consume nem Phase 1B ownership | Phase 1C |
+| Resume/restart prompt consume | `src/v11/application/start/startCommandResume*`, `startCommandPromptRuntime.ts`, `startCommandPrompts.ts`, `startCommandImplementerPrompts.ts`, `startCommandTmuxLaunch.ts` | ezek mar pane/prompt consumer behavior-t zarjak le, nem producer contractot | Phase 1D |
+| Tmux pane delivery/runtime binding | `src/v11/infrastructure/channel/tmux/**` | runtime delivery consume ugyanazt az authorityt hasznalja majd, de nem ebben a producer taskban all at | Phase 1D |
+| Status/list/attach read-model | `src/v11/shared/status/**`, `src/v11/application/status/**`, `src/cli/index.ts`, `src/cli/commands/bubble/{status,list,open}.ts` | operator-facing projection es wording csak a remote activation utan zarhato le | Phase 2B |
+| Resume/restart operator routing | `src/cli/commands/bubble/{resume,restart}.ts`, watchdog/reconcile runtime recovery surfaces | restart/resume consume nem keverheto a fresh-start producer closure-rel | Phase 1D / 3B |
+| Consumer-side evidence | resume/restart prompt tests, tmux pane binding tests, status/list/read-model tests | ilyen evidence Phase 1B-ben scope-tevesztett parity claimet jelentene | successor task szerint |
+
 ### 1) Call-site Matrix
 
 | ID | File | Function/Entry | Exact Signature (args -> return) | Insertion Point | Expected Behavior | Priority | Timing | Evidence |
@@ -189,7 +215,7 @@ Ez a task szandekosan nem oldja meg a bubble-loop, tmux/pane, status/CLI vagy cl
 | CS7 | `src/v11/application/start/startCommandFlows.ts` | `runFreshStartFlow(...)` | `runFreshStartFlow(...) -> Promise<FreshStartResult>` | fresh-start producer flow | bootstrap resultet elmenti, `commands.bootstrap`-nak mar az authoritative pathot adja, finalize/update-olja a runtime sessiont, es explicit `clone`/`self_host` fail-closed guardot alkalmaz | P1 | required-now | T3, T4, T5 |
 | CS8 | `src/v11/application/start/startCommandCleanup.ts` | `cleanupFailedStart(...)` | existing rollback helper | fresh-start rollback path | ha van bootstrapolt workspace authority, a cleanup ezt hasznalja; nincs statikus bubble path fallback | P1 | required-now | T4 |
 | CS9 | `src/v11/application/start/startCommandApi.ts` | `startBubble(...)` | `startBubble(input: StartBubbleInput, dependencies?: StartBubbleDependencies) -> Promise<StartBubbleResult>` | retained start entrypoint | ez a retained Phase 1B entrypoint a producer seam end-to-end threading ownershipje: osszefuzi a pre-claim ownershipot, a `runFreshStartFlow(...)` / resume routingot, a bootstrap-result authority capture-t, a failed-start `cleanupFailedStart(...)` hivasat es a returned start metadata shape-et, anelkul hogy tmux/status/read-model consume ownershipet behuzna | P1 | required-now | T3, T4, T5 |
-| CS10 | `tests/core/workspace/worktreeManager.test.ts`, `tests/core/runtime/sessionsRegistry.test.ts`, `tests/v11/application/start/startCommandOrchestration.test.ts`, `tests/core/bubble/startBubble.test.ts` | regression + producer tests | unit/integration tests | validation surface | explicit producer-only closure, additive compatibility, clone/self_host fail-closed | P1 | required-now | T1-T6 |
+| CS10 | `tests/core/workspace/worktreeManager.test.ts`, `tests/core/runtime/sessionsRegistry.test.ts`, `tests/v11/application/start/startCommandOrchestration.test.ts`, `tests/core/bubble/startBubble.test.ts` | regression + producer tests | unit/integration tests | validation surface | explicit producer-only closure, additive compatibility, clone/self_host fail-closed; mixed test filesben csak fresh-start producer assertions mozoghatnak | P1 | required-now | T1-T6 |
 
 ### 2) Data and Interface Contract
 
@@ -264,6 +290,14 @@ Evidence surface rationale:
 4. `src/v11/application/start/startCommandApi.ts` retained entrypoint ownershipet a `tests/core/bubble/startBubble.test.ts` fedi end-to-end jelleggel; ez bizonyitja, hogy a producer seam threading nem csak helper-szinten, hanem a teljes start entrypointon belul is koherens marad.
 5. `tests/v11/application/start/startCommandOrchestration.test.ts` csak wiring-szintu bizonyitek: itt a new finalize/update dependency resolutiont kell ellenorizni, nem az end-to-end startup flowt.
 
+### 6a) Test and Evidence Guard
+
+1. Phase 1B-ben csak a T1-T6 producer evidence szamit lezaro bizonyiteknak; consumer-cutover evidence nem helyettesitheti ezeket.
+2. `tests/core/bubble/startBubble.test.ts` erintese eseten csak fresh-start producer blokkok bovithetoek: claim-before-bootstrap, bootstrap authority propagate, finalize/update, cleanup target, clone/self_host fail-closed. Resume kickoff, reviewer-focus injection, prompt projection, tmux launch, es restart/reconcile behavior maradjon erintetlen.
+3. `tests/v11/application/start/startCommandOrchestration.test.ts` csak dependency-resolution es fresh-vs-resume mode boundary szinten hasznalhato; nem nyithat resume prompt vagy operator routing assertionset.
+4. `tests/core/runtime/sessionsRegistry.test.ts` csak additive parse/write kompatibilitasra szolgalhat; restart/watchdog/list UI consume kovetelmenyt nem szabad ide behuzni.
+5. Ha a validaciohoz olyan uj teszt kellene, amelynek primer assertion surface-e tmux pane binding, resume prompt text, `status --json`, `list`, `attach`, vagy CLI wording, az Phase 1B-ben nem engedelyezett, hanem replanning trigger.
+
 ## L2 - Implementation Notes (Optional)
 
 1. [later-hardening] Ha a `workspacePath` terminology kesobb user-facing consume-ba is bekerul, kulon taskban lehet fokozatosan atvezetni a `worktreePath` aliasrol.
@@ -287,6 +321,7 @@ Evidence surface rationale:
 5. P1 regresszio, ha `clone` vagy `clone+self_host` csendesen tovabbfut local default bootstrap mellett.
 6. P1 regresszio, ha a task Phase 1B-ben bubble-loop, read-model vagy remote activation ownershipet csusztat be.
 7. P1 regresszio, ha a retained `src/v11/application/start/startCommandApi.ts` entrypoint nem tartja egyben a producer seam end-to-end threading ownershipjet a pre-claim, fresh/resume routing, bootstrap-result authority capture, failed-start cleanup es returned start metadata kozott.
+8. P1 regresszio, ha a `target_files` lista mixed-ownership file-jait blanket engedelynek ertelmezi valaki, es resume/restart/tmux/status consumer call-siteokat vagy ezek tesztjeit megnyitja.
 
 ## Spec Lock
 
@@ -298,4 +333,5 @@ Mark task as `IMPLEMENTABLE` when all `P0/P1 + required-now` items are closed, a
 4. a `commands.bootstrap` es a rollback cleanup mar a bootstrap-result authorityt hasznalja,
 5. a `self_host` + clone topology explicit fail-closed,
 6. a retained `src/v11/application/start/startCommandApi.ts` entrypoint explicitten a Phase 1B producer seam end-to-end threading ownershipjet hordozza, anelkul hogy tmux/status/read-model consumer scope-ot huzna be,
-7. a shared workspace es runtime session contractok additivek maradnak, es a delete/merge/list/ui fogyasztok Phase 1B-ben nem kenyszerulnek consumer cutoverre.
+7. a shared workspace es runtime session contractok additivek maradnak, es a delete/merge/list/ui fogyasztok Phase 1B-ben nem kenyszerulnek consumer cutoverre,
+8. mixed-ownership target file vagy teszt erintese eseten is bizonyithato, hogy a valtozas csak fresh-start producer sub-scope-ra korlatozodott, es nem nyitott resume/restart, tmux/pane vagy status/read-model consume parityt.
