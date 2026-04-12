@@ -55,7 +55,6 @@ export interface FinalizeConvergedFlowDependencies {
   emitBubbleLifecycleEventBestEffort?: typeof emitBubbleLifecycleEventBestEffort;
   resolveMetaReviewRolloutBlockingReasonCodes: (input: {
     gateRoute: MetaReviewGateRoute;
-    metaReviewWarnings: Array<{ reason_code: string }>;
     commandPathStatus: PairflowCommandPathAssessment;
   }) => string[];
   activeEntrypoint?: string;

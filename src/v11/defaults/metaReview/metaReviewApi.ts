@@ -7,33 +7,13 @@ import {
   MetaReviewError,
   type MetaReviewErrorReasonCode
 } from "../../shared/metaReview/metaReviewError.js";
-import { resolveMetaReviewRunnerMode } from "../../shared/metaReview/liveRun/metaReviewLiveRunnerConfig.js";
-import {
-  runMetaReview as runMetaReviewShared
-} from "../../shared/metaReview/liveRun/metaReviewLiveRunRuntime.js";
-import {
-  runCodexAgentLiveReview,
-  runCodexPaneLiveReview
-} from "../../infrastructure/executor/sessionRuntime/metaReviewLiveRunnerRuntime.js";
-import type {
-  MetaReviewDependencies,
-  MetaReviewResult,
-  MetaReviewRunInput
-} from "../../shared/metaReview/liveRun/metaReviewLiveRunContract.js";
-
+export type { MetaReviewErrorReasonCode };
 export type {
-  MetaReviewDepth,
-  MetaReviewLiveRunnerInput,
-  MetaReviewReviewerVerdict,
-  MetaReviewRunWarning,
+  MetaReviewCommandDependencies,
   MetaReviewSubmitInput,
   MetaReviewSubmitResult
-} from "../../shared/metaReview/liveRun/metaReviewLiveRunContract.js";
-export type { MetaReviewErrorReasonCode };
-export {
-  extractMetaReviewDelimitedBlock,
-  parseMetaReviewRunnerOutput
-} from "../../shared/metaReview/liveRun/metaReviewLiveRunner.js";
+} from "../../shared/metaReview/metaReviewCommandContract.js";
+
 export {
   submitMetaReviewResultV11 as submitMetaReviewResult,
   toMetaReviewErrorV11 as toMetaReviewError
@@ -44,33 +24,3 @@ export {
   normalizeMetaReviewSnapshot,
   resolveActiveMetaReviewRuntimeDelivery
 };
-
-export async function runMetaReview(
-  input: MetaReviewRunInput,
-  dependencies: MetaReviewDependencies = {}
-): Promise<MetaReviewResult> {
-  const runLiveReview =
-    dependencies.runLiveReview ??
-    (async (liveInput) => {
-      const mode = resolveMetaReviewRunnerMode();
-      if (mode === "unavailable") {
-        throw new MetaReviewError({
-          reasonCode: "META_REVIEW_UNKNOWN_ERROR",
-          message: "Meta-review runner adapter is unavailable.",
-          context: {
-            source: "meta_review_api",
-            reason: "runner_adapter_unavailable"
-          }
-        });
-      }
-      if (mode === "agent") {
-        return runCodexAgentLiveReview(liveInput);
-      }
-      return runCodexPaneLiveReview(liveInput);
-    });
-
-  return runMetaReviewShared(input, {
-    ...dependencies,
-    runLiveReview
-  });
-}

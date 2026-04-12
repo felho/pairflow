@@ -7,7 +7,6 @@ describe("convergedRolloutBlockingReasonResolver", () => {
   it("delegates stale self_host command path to v11 resolver", () => {
     const input = {
       gateRoute: "human_gate_approve" as const,
-      metaReviewWarnings: [],
       commandPathStatus: {
         status: "stale" as const,
         reasonCode: "PAIRFLOW_COMMAND_PATH_STALE" as const,
@@ -29,7 +28,6 @@ describe("convergedRolloutBlockingReasonResolver", () => {
   it("delegates external missing command path to v11 resolver", () => {
     const input = {
       gateRoute: "human_gate_approve" as const,
-      metaReviewWarnings: [],
       commandPathStatus: {
         status: "missing" as const,
         reasonCode: "PAIRFLOW_COMMAND_EXTERNAL_UNAVAILABLE" as const,

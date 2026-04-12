@@ -291,7 +291,6 @@ describe("emitConvergedFromWorkspace", () => {
   it("adds PAIRFLOW_COMMAND_PATH_STALE blocking reason only for self_host stale command-path status", () => {
     const externalCodes = resolveMetaReviewRolloutBlockingReasonCodes({
       gateRoute: "human_gate_approve",
-      metaReviewWarnings: [],
       commandPathStatus: {
         status: "external",
         profile: "external",
@@ -307,7 +306,6 @@ describe("emitConvergedFromWorkspace", () => {
 
     const selfHostCodes = resolveMetaReviewRolloutBlockingReasonCodes({
       gateRoute: "human_gate_approve",
-      metaReviewWarnings: [],
       commandPathStatus: {
         status: "stale",
         reasonCode: "PAIRFLOW_COMMAND_PATH_STALE",
@@ -324,7 +322,6 @@ describe("emitConvergedFromWorkspace", () => {
 
     const externalMismatchCodes = resolveMetaReviewRolloutBlockingReasonCodes({
       gateRoute: "human_gate_approve",
-      metaReviewWarnings: [],
       commandPathStatus: {
         status: "external",
         profile: "external",
@@ -341,7 +338,6 @@ describe("emitConvergedFromWorkspace", () => {
 
     const externalUnavailableCodes = resolveMetaReviewRolloutBlockingReasonCodes({
       gateRoute: "human_gate_approve",
-      metaReviewWarnings: [],
       commandPathStatus: {
         status: "missing",
         reasonCode: "PAIRFLOW_COMMAND_EXTERNAL_UNAVAILABLE",
@@ -360,7 +356,6 @@ describe("emitConvergedFromWorkspace", () => {
 
     const guardedExternalUnavailableCodes = resolveMetaReviewRolloutBlockingReasonCodes({
       gateRoute: "human_gate_approve",
-      metaReviewWarnings: [],
       commandPathStatus: {
         status: "missing",
         reasonCode: "PAIRFLOW_COMMAND_EXTERNAL_UNAVAILABLE",
@@ -379,7 +374,6 @@ describe("emitConvergedFromWorkspace", () => {
 
     const selfHostUnresolvedCodes = resolveMetaReviewRolloutBlockingReasonCodes({
       gateRoute: "human_gate_approve",
-      metaReviewWarnings: [],
       commandPathStatus: {
         status: "unknown",
         reasonCode: "PAIRFLOW_COMMAND_PATH_UNRESOLVED",

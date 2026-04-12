@@ -45,7 +45,6 @@ export async function finalizeConvergedFlow(
   });
   const blockingReasonCodes = dependencies.resolveMetaReviewRolloutBlockingReasonCodes({
     gateRoute: input.gateResult.route,
-    metaReviewWarnings: input.gateResult.metaReviewRun?.warnings ?? [],
     commandPathStatus
   });
   await emitConvergedFinalizationEvents({

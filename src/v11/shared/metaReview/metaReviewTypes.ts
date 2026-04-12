@@ -3,12 +3,8 @@ import type {
   MetaReviewRunStatus
 } from "../../../types/bubble.js";
 
-export type MetaReviewDepth = "standard" | "deep";
-
 export interface MetaReviewRunWarning {
-  reason_code:
-    | "META_REVIEW_RUNNER_ERROR"
-    | "META_REVIEWER_PANE_UNAVAILABLE";
+  reason_code: string;
   message: string;
 }
 

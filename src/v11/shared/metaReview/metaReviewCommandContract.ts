@@ -20,7 +20,7 @@ import type {
   WriteStateSnapshotPort
 } from "../ports/stateSnapshots.js";
 
-export type { MetaReviewDepth, MetaReviewResult, MetaReviewRunWarning } from "./metaReviewTypes.js";
+export type { MetaReviewResult, MetaReviewRunWarning } from "./metaReviewTypes.js";
 
 export interface MetaReviewSubmitInput {
   bubbleId: string;

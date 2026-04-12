@@ -3,10 +3,9 @@ import { describe, expect, it } from "vitest";
 import { resolveMetaReviewRolloutBlockingReasonCodesV11 } from "../../../../src/v11/application/converged/metaReviewRolloutBlockingReasonCodes.js";
 
 describe("resolveMetaReviewRolloutBlockingReasonCodesV11", () => {
-  it("includes stale and meta-review warning codes", () => {
+  it("includes rollout-blocking gate and command-path codes", () => {
     const codes = resolveMetaReviewRolloutBlockingReasonCodesV11({
       gateRoute: "human_gate_run_failed",
-      metaReviewWarnings: [{ reason_code: "META_REVIEW_RUNNER_ERROR" }],
       commandPathStatus: {
         status: "stale",
         reasonCode: "PAIRFLOW_COMMAND_PATH_STALE",
@@ -22,7 +21,6 @@ describe("resolveMetaReviewRolloutBlockingReasonCodesV11", () => {
 
     expect(codes).toEqual([
       "META_REVIEW_GATE_RUN_FAILED",
-      "META_REVIEW_RUNNER_ERROR",
       "PAIRFLOW_COMMAND_PATH_STALE"
     ]);
   });
@@ -30,7 +28,6 @@ describe("resolveMetaReviewRolloutBlockingReasonCodesV11", () => {
   it("ignores stale code for external profile when command path is a non-blocking mismatch diagnostic", () => {
     const codes = resolveMetaReviewRolloutBlockingReasonCodesV11({
       gateRoute: "human_gate_approve",
-      metaReviewWarnings: [],
       commandPathStatus: {
         status: "external",
         profile: "external",
@@ -50,7 +47,6 @@ describe("resolveMetaReviewRolloutBlockingReasonCodesV11", () => {
   it("includes external-unavailable code only for external profile", () => {
     const externalCodes = resolveMetaReviewRolloutBlockingReasonCodesV11({
       gateRoute: "human_gate_approve",
-      metaReviewWarnings: [],
       commandPathStatus: {
         status: "missing",
         reasonCode: "PAIRFLOW_COMMAND_EXTERNAL_UNAVAILABLE",
@@ -67,7 +63,6 @@ describe("resolveMetaReviewRolloutBlockingReasonCodesV11", () => {
 
     const selfHostCodes = resolveMetaReviewRolloutBlockingReasonCodesV11({
       gateRoute: "human_gate_approve",
-      metaReviewWarnings: [],
       commandPathStatus: {
         status: "missing",
         reasonCode: "PAIRFLOW_COMMAND_EXTERNAL_UNAVAILABLE",
@@ -81,5 +76,24 @@ describe("resolveMetaReviewRolloutBlockingReasonCodesV11", () => {
       }
     });
     expect(selfHostCodes).not.toContain("PAIRFLOW_COMMAND_EXTERNAL_UNAVAILABLE");
+  });
+
+  it("includes rework-dispatch-failed blocking code for the dispatch-failed gate route", () => {
+    const codes = resolveMetaReviewRolloutBlockingReasonCodesV11({
+      gateRoute: "human_gate_dispatch_failed",
+      commandPathStatus: {
+        status: "external",
+        profile: "external",
+        localEntrypoint: "/tmp/w/dist/cli/index.js",
+        activeEntrypoint: "/usr/local/lib/node_modules/pairflow/dist/cli/index.js",
+        localEntrypointExists: true,
+        externalPairflowAvailable: true,
+        pinnedCommand: "pairflow",
+        entrypointConsistency: "consistent",
+        message: "external"
+      }
+    });
+
+    expect(codes).toContain("META_REVIEW_GATE_REWORK_DISPATCH_FAILED");
   });
 });
