@@ -7,39 +7,24 @@ phase: phaseE
 target_files:
   - src/cli/index.ts
   - src/cli/commands/bubble/metaReview.ts
+  - src/v11/application/metaReview/metaReviewCliCommand.ts
   - src/v11/application/metaReview/metaReviewCliOptions.ts
   - src/v11/application/metaReview/metaReviewCliDispatcher.ts
-  - src/v11/application/metaReview/metaReviewCliTypes.ts
-  - src/v11/application/metaReview/metaReviewCliRenderers.ts
-  - src/v11/application/metaReview/metaReviewCliRenderersHelpers.ts
-  - src/v11/application/metaReview/metaReviewCliOptionParser.ts
-  - src/v11/application/metaReview/metaReviewCliOptionParserHelpers.ts
-  - src/v11/application/metaReview/metaReviewCliOptionTypes.ts
   - src/v11/application/metaReview/metaReviewCliOptionValueReader.ts
-  - src/v11/application/metaReview/metaReviewCliValueParsers.ts
-  - src/v11/application/metaReview/metaReviewCliCommand.ts
-  - src/v11/application/metaReview/metaReviewCommandContract.ts
   - src/v11/application/metaReview/emitMetaReviewV11.ts
   - src/v11/defaults/metaReview/metaReviewApi.ts
   - src/v11/shared/metaReview/metaReviewCommandApi.ts
-  - src/v11/shared/metaReview/metaReviewCommandContract.ts
-  - src/v11/shared/metaReview/metaReviewCommandReadArtifacts.ts
-  - src/v11/shared/metaReview/metaReviewCommandReadFreshness.ts
   - src/v11/shared/metaReview/metaReviewCommandReadProjection.ts
   - src/v11/shared/metaReview/metaReviewCommandReadRuntime.ts
-  - src/v11/shared/metaReview/metaReviewCommandRuntime.ts
   - src/v11/shared/metaReview/metaReviewSubmitGuidance.ts
-  - src/v11/shared/metaReview/liveRun/metaReviewLiveRunContract.ts
   - src/v11/shared/metaReview/metaReviewTypes.ts
-  - tests/cli/index.test.ts
   - tests/cli/bubbleMetaReviewCommand.test.ts
+  - tests/cli/index.test.ts
   - tests/cli/agentEmitCommand.test.ts
   - tests/contracts/v11/metaReviewSubmitCoverage.test.ts
   - tests/core/bubble/metaReview.test.ts
   - tests/core/human/approval.test.ts
   - tests/core/runtime/metaReviewSubmitGuidance.test.ts
-  - tests/v11/application/metaReview/metaReviewCliEntrypointParity.test.ts
-  - tests/v11/shared/metaReview/metaReviewCommandReadArtifacts.test.ts
 prd_ref: null
 plan_ref: plans/actor-runtime-interface-discovery-and-migration-plan-v1.md
 system_context_ref: docs/pairflow-initial-design.md
@@ -48,6 +33,18 @@ owners:
 ---
 
 # Task: Actor Runtime Interface Meta-Review Cached Public Read-Model Removal (Phase E)
+
+Target file interpretation:
+1. A `target_files` lista a primer ownership seam-eket rogziti, nem teljes file-by-file closure inventory.
+2. A reszletes implementation closure es a kapcsolodo secondary/helper file-ok authoritative listaja a lenti L1 call-site matrixben marad.
+
+## Current Codebase Check (2026-04-12)
+
+1. A jelenlegi tree-ben a public cached operator subtree meg mindig el a `src/cli/index.ts` es a `src/cli/commands/bubble/metaReview.ts` route/export seamen keresztul, mikozben a `run` path mar korabban el lett tavolitva; a megmaradt public felulet `status | last-report`.
+2. A `src/v11/application/metaReview/**` folder ma egyszerre tartalmaz torlendo public cached read CLI stackot es retained canonical submit parser/helper elemeket, ezert a public read removal sorrendjet explicitten kulon kell valasztani a megmarado `agent emit --kind meta_review_result` seamtol.
+3. A shared/defaults retained read surface ma meg aktiv export boundarykent el a `src/v11/defaults/metaReview/metaReviewApi.ts`, `src/v11/shared/metaReview/metaReviewCommandApi.ts`, `src/v11/shared/metaReview/metaReviewCommandContract.ts`, `src/v11/shared/metaReview/metaReviewCommandReadRuntime.ts`, `src/v11/shared/metaReview/metaReviewCommandReadProjection.ts` es `src/v11/shared/metaReview/metaReviewTypes.ts` file-okban.
+4. A direct regression consumers kozul a `tests/core/bubble/metaReview.test.ts` es a `tests/core/human/approval.test.ts` ma meg kozvetlenul hivja a retained `getMetaReviewStatus|getMetaReviewLastReport` read pathokat, tehat ez a task nem csak CLI route cleanup, hanem explicit direct read-consumer cleanup is.
+5. A `plans/actor-runtime-interface-discovery-and-migration-plan-v1.md` 2026-04-12-es resequencingje szerint ez a slice csak a public read-model/export closure-t owns-olja; a persisted `last_autonomous_*` shape removal es a repo-surface wording cleanup kulon successor taskban marad.
 
 ## L0 - Policy
 
@@ -73,10 +70,10 @@ Torolje a public `pairflow bubble meta-review` cached read-model surface-et es a
 
 ### Authority Boundary Map
 
-1. Authority producer: a live meta-review authority producer cutover mar archived prereqben le van zarva.
+1. Authority producer: a live meta-review authority producer cutover mar archived prereqben le van zarva (`plans/archive/tasks/actor-runtime-interface-meta-review-cached-current-round-authority-and-runtime-consumer-cutover-phaseE.md`).
 2. Stored authority: a persisted `state.meta_review.last_autonomous_*` shape ideiglenesen meg letezhet, de ez a task nem owns-olja a fizikai torleset.
 3. In-scope consumers: public CLI routing/help, retained application/shared read-model exports, direct read-model tests.
-4. Explicit out-of-scope consumers: persisted authority shape, cleanup/recovery helpers, repo-local workflow/docs/UI prompt surfaces.
+4. Explicit out-of-scope consumers: persisted authority shape, cleanup/recovery helpers, repo-local workflow/docs/UI prompt surfaces, valamint az approval/status/list/UI source-of-truth cutover, amelyet az archived consumer-cutover prereq zart le (`plans/archive/tasks/actor-runtime-interface-meta-review-cached-approval-and-projection-consumer-cutover-phaseE.md`).
 5. Export surfaces closed in this phase: yes; a public cached read-model export surfaces teljesen bezarandoak.
 
 ### In Scope
@@ -146,13 +143,38 @@ Torolje a public `pairflow bubble meta-review` cached read-model surface-et es a
 | Shared submit-parser seam (`metaReviewCliOptionValueReader.ts`, `metaReviewCliValueParsers.ts`) | canonical actor emit parse path, submit coverage tests | breaking to removed public path, retained for canonical submit | detach removed read-model use while preserving submit behavior | N/A |
 | Retained read exports (`MetaReviewStatusView`, `MetaReviewLastReportView`, read APIs) | defaults facade, live-run facade, read-model tests, direct core test consumers | breaking | remove exports and update direct consumers in-scope | N/A |
 
+### 0b) Sequencing / Closure Order
+
+| Step | Why this order is mandatory | Owned here | Must stay deferred |
+|---|---|---|---|
+| 1. Public CLI subtree removal | A public operator contract megszuntetese a top-level blast-radius boundary; ezt kell eloszor bezarni. | `src/cli/index.ts`, `src/cli/commands/bubble/metaReview.ts`, CLI help/parser/dispatch tests | persisted state shape, cleanup/recovery |
+| 2. Application/shared cached read stack detachment | A public route utan a retained read/export seams mar nem maradhatnak aktiv secondary surface-kent. | `src/v11/application/metaReview/**` cached read helpers, `src/v11/shared/metaReview/metaReviewCommandRead*`, retained read view/export contract | canonical actor emit submit path |
+| 3. Direct consumer cleanup + regression lock | A detached read-model boundary utan a direct consumer/test importok explicit closure kell, kulonben residual compatibility sink marad. | direct tests/import cleanup, unknown-command coverage, submit parity coverage | repo-local docs/UI wording cleanup |
+| 4. Successor handoff boundary | A Phase E remaining lane csak akkor stabil, ha a successor taskok nem keverednek vissza ebbe a slice-ba. | pass summary explicitten kimondja a closed read-model scope-ot | `last_autonomous_*` physical removal, cleanup/recovery helpers, repo-surface cleanup |
+
+Normative sequencing rules:
+
+1. Elobb a public `bubble meta-review` subtree tunjon el, es csak utana zarnak a retained read exports.
+2. A `metaReviewCliOptionValueReader.ts` es `metaReviewCliValueParsers.ts` retained szerepe csak a canonical `agent emit --kind meta_review_result` parse/seam lehet.
+3. Direct consumer cleanup nem vezethet vissza sem dedicated compatibility wrapperhez, sem uj "temporary" read facade-hoz.
+4. A successor taskok scope-jat nem szabad "follow-up cleanup" cimen reszben visszahuzni ebbe a taskba.
+
+### 0c) Traceability Lock
+
+| Source | Binding requirement for this task | Why it matters |
+|---|---|---|
+| `plans/actor-runtime-interface-discovery-and-migration-plan-v1.md` Remaining Phase E Resequencing Update | Ez a task a replacement remaining tasklanc Phase E3 read-model closure szelete. | Megakadalyozza, hogy a task persisted-authority vagy repo-surface cleanupba csusszon. |
+| `plans/archive/tasks/actor-runtime-interface-meta-review-cached-current-round-authority-and-runtime-consumer-cutover-phaseE.md` | A live authority/runtime producer mar lezart prereq; ezt nem lehet ujranyitni. | A public read removal nem irhatja at a canonical authority kontrollmodellt. |
+| `plans/archive/tasks/actor-runtime-interface-meta-review-cached-approval-and-projection-consumer-cutover-phaseE.md` | Az approval/projection source-of-truth cutover mar lezart prereq. | A task csak residual direct read-consumer cleanupot owns-olhat, nem a mar lezart approval/list/status/UI cutovert. |
+| `src/cli/commands/agent/emit.ts` + `src/v11/shared/metaReview/metaReviewSubmitGuidance.ts` | A canonical `agent emit --kind meta_review_result` usage line es parse contract valtozatlanul tul kell elje a cleanupot. | Ez a surviving public contract. |
+
 ### 1) Call-site Matrix
 
 | ID | File | Function/Entry | Exact Signature (args -> return) | Insertion Point | Expected Behavior | Priority | Timing | Evidence |
 |---|---|---|---|---|---|---|---|---|
 | CS1 | `src/cli/index.ts`, `src/cli/commands/bubble/metaReview.ts` | top-level CLI routing/export | CLI args -> exit code | public CLI entrypoint | A `bubble meta-review` namespace teljesen tunjon el a public CLI-bol. | P1 | required-now | CLI diff + tests |
 | CS2 | `src/v11/application/metaReview/metaReviewCliOptions.ts`, `metaReviewCliDispatcher.ts`, `metaReviewCliTypes.ts`, `metaReviewCliRenderers*.ts`, `metaReviewCliOptionParser*.ts`, `metaReviewCliCommand.ts` | application cached read CLI stack | parser/help/render/dispatch helpers -> no public cached read flow | application meta-review read stack | A cached read branches torlodjenek; a shared submit parser helpers retained role-ban maradjanak. | P1 | required-now | build + tests |
-| CS3 | `src/v11/application/metaReview/metaReviewCommandContract.ts`, `src/v11/application/metaReview/emitMetaReviewV11.ts`, `src/v11/defaults/metaReview/metaReviewApi.ts`, `src/v11/shared/metaReview/metaReviewCommand*.ts`, `src/v11/shared/metaReview/liveRun/metaReviewLiveRunContract.ts`, `src/v11/shared/metaReview/metaReviewTypes.ts` | retained read export surfaces | read APIs/types -> detached or removed | shared/defaults export seam | Retained `getMetaReviewStatus|getMetaReviewLastReport` es view type export ne maradjon aktiv boundary. | P1 | required-now | import diff + tests |
+| CS3 | `src/v11/application/metaReview/metaReviewCommandContract.ts`, `src/v11/application/metaReview/emitMetaReviewV11.ts`, `src/v11/defaults/metaReview/metaReviewApi.ts`, `src/v11/shared/metaReview/metaReviewCommand*.ts`, `src/v11/shared/metaReview/liveRun/metaReviewLiveRunContract.ts`, `src/v11/shared/metaReview/metaReviewTypes.ts` | retained read export surfaces | read APIs/types -> detached or removed | shared/defaults export seam | Retained `getMetaReviewStatus|getMetaReviewLastReport` es view type export ne maradjon aktiv boundary; a retained submit parser/public emit path maradjon compile-safe. | P1 | required-now | import diff + tests |
 | CS4 | `src/v11/shared/metaReview/metaReviewSubmitGuidance.ts`, `tests/cli/agentEmitCommand.test.ts`, `tests/contracts/v11/metaReviewSubmitCoverage.test.ts`, `tests/core/runtime/metaReviewSubmitGuidance.test.ts` | canonical submit guidance + actor emit path | shared guidance/parser -> preserved canonical submit path | submit seam | A cleanup nem regresszalhatja a `pairflow agent emit --kind meta_review_result` parse/submit viselkedest. | P1 | required-now | tests |
 | CS5 | `tests/cli/index.test.ts`, `tests/cli/bubbleMetaReviewCommand.test.ts`, `tests/core/bubble/metaReview.test.ts`, `tests/core/human/approval.test.ts`, `tests/v11/application/metaReview/metaReviewCliEntrypointParity.test.ts`, `tests/v11/shared/metaReview/metaReviewCommandReadArtifacts.test.ts` | regression coverage | tests -> tests | public read-model regression surface | A removed public namespace, generic unknown-command viselkedes, retained export closure es a direct core read-consumer cleanup explicit coverage alatt alljon. | P1 | required-now | automated tests |
 
@@ -205,15 +227,32 @@ Constraint: if no allowed side effects are listed above, implementation must be 
 | T5 | CLI read-stack tests updated to removed surface | current CLI read tests retained surface-re epulnek | new test matrix fut | read-stack coverage removed surface-re vagy detached seamre all at | P1 | required-now | automated test |
 | T6 | Actor emit path remains healthy after read-stack removal | CLI/application cleanup megtortent | `tests/cli/agentEmitCommand.test.ts` fut | canonical actor emit submit path tovabbra is zold | P1 | required-now | automated test |
 
+Normative test notes:
+
+1. `T1-T2` explicitten a removed public namespace boundaryt bizonyitja; ezeket nem lehet csak belso helper tesztekkel kivaltani.
+2. `T3` es `T6` kulon closure-pontok: a canonical submit parser seam megmaradasat nem eleg csak build-del inferalni.
+3. `T4-T5` akkor tekintheto zartra, ha nincs direct core/test consumer, amely retained read exportot tart eletben workaroundon vagy temporary facade-on keresztul.
+
 ## L2 - Implementation Notes (Optional)
 
 1. [later-hardening] Ha a meta-review application folderben residual empty file group marad, kulon hygiene cleanup nyithato.
+2. [implementation note] Ha a retained submit parser helper fizikailag ugyanabban a folderben marad, ownership-comment vagy file-level naming tisztitas csak kulon hygiene follow-upban nyithato; ebben a taskban a behavior closure az elsodleges.
+
+## Assumptions
+
+1. A canonical `pairflow agent emit --kind meta_review_result` path tovabbra is ugyanazt a parser/helper csaladot hasznalja, mint a jelenlegi tree-ben.
+2. A direct test consumers cleanupja megteheto anelkul, hogy a mar archived approval/projection cutover semanticsat ujranyitna.
+
+## Open Questions
+
+1. Nincs ismert blocker open question; incidental file-level cleanup meg felmerulhet implementation kozben, de ez nem valtoztatja meg a task boundaryt.
 
 ## Hardening Backlog (Optional)
 
 | ID | Item | Layer | Priority | Timing | Source | Proposed Action |
 |---|---|---|---|---|---|---|
-| H1 | residual folder hygiene a public read-model removal utan | L2 | P2 | later-hardening | task authoring | kulon hygiene follow-up, csak a primary removal utan |
+| H1 | residual empty-file or folder hygiene a public read-model removal utan | L2 | P2 | later-hardening | task authoring | kulon hygiene follow-up, csak a primary removal utan |
+| H2 | residual `metaReview` application folder naming/hygiene fallout a public read-model closure utan | L2 | P3 | later-hardening | human rework 2026-04-12 | csak a primary removal merge utan erdemes szukitett naming/hygiene follow-upkent kezelni; nem required-now scope |
 
 ## Review Control
 
