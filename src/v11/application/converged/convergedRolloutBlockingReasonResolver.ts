@@ -6,7 +6,6 @@ import { type MetaReviewGateRoute } from "../../shared/metaReviewGate/metaReview
 
 export interface ResolveConvergedRolloutBlockingReasonCodesInput {
   gateRoute: MetaReviewGateRoute;
-  metaReviewWarnings: Array<{ reason_code: string }>;
   commandPathStatus: PairflowCommandPathAssessment;
 }
 

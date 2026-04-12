@@ -40,7 +40,6 @@ export interface RunConvergedFlowInput {
   createError: PairflowCreateCommandError;
   resolveMetaReviewRolloutBlockingReasonCodes: (input: {
     gateRoute: MetaReviewGateRoute;
-    metaReviewWarnings: Array<{ reason_code: string }>;
     commandPathStatus: PairflowCommandPathAssessment;
   }) => string[];
 }

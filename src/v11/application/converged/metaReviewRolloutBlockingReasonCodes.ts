@@ -3,7 +3,6 @@ import type { PairflowCommandPathAssessment } from "../../shared/ports/pairflowC
 
 export interface ResolveMetaReviewRolloutBlockingReasonCodesInput {
   gateRoute: MetaReviewGateRoute;
-  metaReviewWarnings: Array<{ reason_code: string }>;
   commandPathStatus: PairflowCommandPathAssessment;
 }
 
@@ -38,11 +37,5 @@ export function resolveMetaReviewRolloutBlockingReasonCodesV11(
   ) {
     codes.add("PAIRFLOW_COMMAND_EXTERNAL_UNAVAILABLE");
   }
-  for (const warning of input.metaReviewWarnings) {
-    if (warning.reason_code === "META_REVIEW_RUNNER_ERROR") {
-      codes.add("META_REVIEW_RUNNER_ERROR");
-    }
-  }
-
   return [...codes].sort((left, right) => left.localeCompare(right));
 }

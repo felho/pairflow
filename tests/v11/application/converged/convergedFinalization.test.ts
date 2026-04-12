@@ -68,7 +68,7 @@ describe("finalizeConvergedFlow", () => {
           metaReviewRun: {
             recommendation: "approve",
             status: "ok",
-            warnings: [{ reason_code: "META_REVIEW_RUNNER_ERROR" }]
+            warnings: [{ reason_code: "META_REVIEW_WARNING_SAMPLE" }]
           }
         } as never,
         summaryVerifierGateDecision: {
@@ -412,5 +412,114 @@ describe("finalizeConvergedFlow", () => {
       (result.approvalRequestEnvelope as { payload?: { metadata?: { advisory_findings_open_total?: unknown } } })
         .payload?.metadata?.advisory_findings_open_total
     ).toBe(9);
+  });
+
+  it("falls back to route-derived metadata when metaReviewRun is absent", async () => {
+    const emittedEvents: Array<{ eventType: string; metadata: Record<string, unknown> }> = [];
+
+    await finalizeConvergedFlow(
+      {
+        resolved: {
+          bubbleId: "b_final_004",
+          repoPath: "/repo",
+          bubblePaths: {
+            worktreePath: "/repo/worktree"
+          },
+          bubbleConfig: {
+            pairflow_command_profile: "external"
+          }
+        } as never,
+        bubbleIdentity: {
+          bubbleInstanceId: "bi_final_004"
+        } as never,
+        state: {
+          round: 4
+        } as never,
+        summary: "Dispatch fallback summary",
+        refs: [],
+        now: new Date("2026-03-19T12:30:00.000Z"),
+        convergence: {
+          sequence: 60,
+          envelope: {
+            id: "env_conv_final_4",
+            payload: {
+              summary: "Dispatch fallback summary"
+            }
+          }
+        } as never,
+        gateResult: {
+          route: "human_gate_dispatch_failed",
+          gateSequence: 61,
+          gateEnvelope: {
+            id: "env_gate_final_4",
+            type: "APPROVAL_REQUEST"
+          },
+          state: {
+            meta_review: {
+              execution_context: null,
+              runtime_delivery: null,
+              auto_rework_count: 0,
+              auto_rework_limit: 5,
+              sticky_human_gate: false
+            }
+          }
+        } as never,
+        summaryVerifierGateDecision: {
+          gate_decision: "not_applicable",
+          reason_code: "not_applicable_non_docs",
+          review_artifact_type: "code",
+          claim_classes_detected: "none",
+          verifier_status: "trusted",
+          matched_claim_triggers: []
+        },
+        specLockState: {
+          state: "IMPLEMENTABLE",
+          open_blocker_count: 0,
+          open_required_now_count: 0
+        },
+        roundGateState: {
+          applies: false,
+          violated: false,
+          round: 4
+        }
+      },
+      {
+        assessPairflowCommandPath: () => ({
+          status: "external",
+          profile: "external",
+          localEntrypoint: "/repo/worktree/dist/cli/index.js",
+          activeEntrypoint: "/usr/local/bin/pairflow",
+          localEntrypointExists: true,
+          externalPairflowAvailable: true,
+          pinnedCommand: "pairflow",
+          entrypointConsistency: "consistent",
+          message: "external"
+        }),
+        resolveMetaReviewRolloutBlockingReasonCodes: () => [
+          "META_REVIEW_GATE_REWORK_DISPATCH_FAILED"
+        ],
+        emitBubbleLifecycleEventBestEffort: async (event) => {
+          emittedEvents.push({
+            eventType: event.eventType,
+            metadata: event.metadata
+          });
+        }
+      }
+    );
+
+    expect(emittedEvents.map((entry) => entry.eventType)).toEqual([
+      "bubble_converged",
+      "bubble_meta_review_routed",
+      "bubble_meta_review_human_gate_reached",
+      "bubble_meta_review_rollout_blocked"
+    ]);
+    expect(emittedEvents[0]?.metadata.meta_review_warning_reason_codes).toBe("[]");
+    expect(emittedEvents[1]?.metadata.warning_reason_codes).toBe("[]");
+    expect(emittedEvents[1]?.metadata.recommendation).toBe("inconclusive");
+    expect(emittedEvents[1]?.metadata.run_status).toBe("error");
+    expect(emittedEvents[2]?.metadata.recommendation).toBe("inconclusive");
+    expect(emittedEvents[3]?.metadata.blocking_reason_codes).toBe(
+      "[\"META_REVIEW_GATE_REWORK_DISPATCH_FAILED\"]"
+    );
   });
 });
