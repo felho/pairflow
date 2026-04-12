@@ -33,10 +33,10 @@ owners:
 3. A ket archived prereq tovabbra is ervenyes lezart closure:
    - `plans/archive/tasks/actor-runtime-interface-meta-review-cached-current-round-authority-and-runtime-consumer-cutover-phaseE.md`
    - `plans/archive/tasks/actor-runtime-interface-meta-review-cached-approval-and-projection-consumer-cutover-phaseE.md`
-4. A replacement remaining tasklanc:
-   - `plans/tasks/actor-runtime-interface-meta-review-cached-public-read-model-removal-phaseE.md`
-   - `plans/tasks/actor-runtime-interface-meta-review-cached-persisted-authority-and-cleanup-recovery-removal-phaseE.md`
-   - `plans/tasks/actor-runtime-interface-meta-review-cached-repo-surface-cleanup-phaseE.md`
+4. A replacement remaining tasklanc jelenlegi allapota:
+   - aktiv: `plans/tasks/actor-runtime-interface-meta-review-cached-public-read-model-removal-phaseE.md`
+   - lezart/archivalt predecessor: `plans/archive/tasks/actor-runtime-interface-meta-review-cached-persisted-authority-and-cleanup-recovery-removal-phaseE.md`
+   - lezart/archivalt successor: `plans/archive/tasks/actor-runtime-interface-meta-review-cached-repo-surface-cleanup-phaseE.md`
 5. A vegrehajtasi sorrend kotelezo:
    - eloszor read-model closure: public cached CLI/read/export surface torlese,
    - utana persisted authority + cleanup/recovery closure: reduced state shape, writer cleanup, inspection/recovery consumer alignment,
