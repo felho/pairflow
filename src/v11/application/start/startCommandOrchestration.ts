@@ -153,14 +153,27 @@ export function resolveStartBubbleMode(currentState: string): StartBubbleMode {
     return "fresh";
   }
   if (currentState === "PREPARING_WORKSPACE") {
-    throw createStartBubbleError(buildPreparingWorkspaceStartRejectMessage());
+    throw createStartBubbleError({
+      reasonCode: "START_STATE_NOT_STARTABLE",
+      message: buildPreparingWorkspaceStartRejectMessage(),
+      context: {
+        command_name: "start",
+        current_state: currentState
+      }
+    });
   }
   if (resumableRuntimeStates.has(currentState)) {
     return "resume";
   }
-  throw createStartBubbleError(
-    `bubble start requires state CREATED or resumable runtime state (current: ${currentState}).`
-  );
+  throw createStartBubbleError({
+    reasonCode: "START_STATE_NOT_STARTABLE",
+    message:
+      `bubble start requires state CREATED or resumable runtime state (current: ${currentState}).`,
+    context: {
+      command_name: "start",
+      current_state: currentState
+    }
+  });
 }
 
 export function mapStartBubbleResult(input: {

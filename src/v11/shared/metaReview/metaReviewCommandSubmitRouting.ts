@@ -107,22 +107,42 @@ export async function recoverMetaReviewSubmitRoute(input: {
 }): Promise<MetaReviewGateResult> {
   try {
     if (input.dependencies.readStateSnapshot === undefined) {
-      throw new MetaReviewError(
-        "META_REVIEW_GATE_RUN_FAILED",
-        "meta-review submit could not reload canonical state before gate finalization."
-      );
+      throw new MetaReviewError({
+        reasonCode: "META_REVIEW_GATE_RUN_FAILED",
+        message:
+          "meta-review submit could not reload canonical state before gate finalization.",
+        context: {
+          source: "recoverMetaReviewSubmitRoute",
+          bubbleId: input.resolved.bubbleId,
+          statePath: input.resolved.bubblePaths.statePath,
+          reason: "readStateSnapshot_unavailable"
+        }
+      });
     }
     if (input.dependencies.writeStateSnapshot === undefined) {
-      throw new MetaReviewError(
-        "META_REVIEW_GATE_RUN_FAILED",
-        "meta-review submit could not persist gate finalization state."
-      );
+      throw new MetaReviewError({
+        reasonCode: "META_REVIEW_GATE_RUN_FAILED",
+        message: "meta-review submit could not persist gate finalization state.",
+        context: {
+          source: "recoverMetaReviewSubmitRoute",
+          bubbleId: input.resolved.bubbleId,
+          statePath: input.resolved.bubblePaths.statePath,
+          reason: "writeStateSnapshot_unavailable"
+        }
+      });
     }
     if (input.dependencies.readFile === undefined) {
-      throw new MetaReviewError(
-        "META_REVIEW_GATE_RUN_FAILED",
-        "meta-review submit artifact read capability is unavailable for gate finalization."
-      );
+      throw new MetaReviewError({
+        reasonCode: "META_REVIEW_GATE_RUN_FAILED",
+        message:
+          "meta-review submit artifact read capability is unavailable for gate finalization.",
+        context: {
+          source: "recoverMetaReviewSubmitRoute",
+          bubbleId: input.resolved.bubbleId,
+          statePath: input.resolved.bubblePaths.statePath,
+          reason: "readFile_unavailable"
+        }
+      });
     }
     const loaded = await input.dependencies.readStateSnapshot(
       input.resolved.bubblePaths.statePath

@@ -1,29 +1,23 @@
 import { readFile, writeFile } from "node:fs/promises";
 
 import type {
-  BubbleLifecycleState,
   BubbleRemotePointer,
-  BubbleRemotePointerKind,
   BubbleRemoteStateCache
-} from "../../../../types/bubble.js";
-import {
-  isBubbleLifecycleState,
-  isBubbleRemotePointerKind
 } from "../../../../types/bubble.js";
 import {
   SchemaValidationError,
   assertValidation,
-  isInteger,
-  isIsoTimestamp,
-  isNonEmptyString,
-  isRecord,
-  validateTcpPortList,
-  validationFail,
-  validationOk,
   type SchemaValidationErrorContext,
-  type ValidationError,
-  type ValidationResult
+  type ValidationError
 } from "../../../shared/validation/primitives.js";
+import {
+  validateRemotePointer,
+  validateRemoteStateCache
+} from "./remoteExecutionArtifactValidation.js";
+export {
+  validateRemotePointer,
+  validateRemoteStateCache
+} from "./remoteExecutionArtifactValidation.js";
 
 const REMOTE_POINTER_INVALID = "REMOTE_POINTER_INVALID";
 const REMOTE_STATE_CACHE_INVALID = "REMOTE_STATE_CACHE_INVALID";
@@ -35,6 +29,11 @@ type RemoteArtifactIoErrorCode =
   | typeof REMOTE_ARTIFACT_PARENT_DIR_MISSING
   | typeof REMOTE_ARTIFACT_READ_FAILED
   | typeof REMOTE_ARTIFACT_WRITE_FAILED;
+
+interface RemoteArtifactIoErrorContext {
+  source?: string;
+  errno?: string | null;
+}
 
 type JsonArtifactReadResult =
   | {
@@ -49,12 +48,14 @@ export class RemoteArtifactIoError extends Error {
   public readonly code: RemoteArtifactIoErrorCode;
   public readonly operation: "read" | "write";
   public readonly artifactPath: string;
+  public readonly context: RemoteArtifactIoErrorContext | undefined;
   public readonly cause: unknown;
 
   public constructor(input: {
     code: RemoteArtifactIoErrorCode;
     operation: "read" | "write";
     artifactPath: string;
+    context?: RemoteArtifactIoErrorContext;
     cause: unknown;
   }) {
     const reason =
@@ -66,288 +67,9 @@ export class RemoteArtifactIoError extends Error {
     this.code = input.code;
     this.operation = input.operation;
     this.artifactPath = input.artifactPath;
+    this.context = input.context;
     this.cause = input.cause;
   }
-}
-
-function validatePortForwards(
-  value: unknown,
-  path: string,
-  errors: ValidationError[]
-): number[] | undefined {
-  return validateTcpPortList({
-    value,
-    path,
-    errors,
-    invalidArrayMessage: "Must be an array of integers in range 1..65535",
-    invalidEntryMessage: "Must be an integer in range 1..65535"
-  });
-}
-
-export function validateRemotePointer(
-  input: unknown
-): ValidationResult<BubbleRemotePointer> {
-  const errors: ValidationError[] = [];
-  if (!isRecord(input)) {
-    return validationFail([
-      {
-        path: "$",
-        message: "Remote pointer must be an object"
-      }
-    ]);
-  }
-
-  const allowedKeys = new Set([
-    "kind",
-    "host",
-    "portForwards",
-    "instanceId",
-    "remoteClonePath",
-    "tmuxSession",
-    "startedAt"
-  ]);
-  for (const key of Object.keys(input)) {
-    if (!allowedKeys.has(key)) {
-      errors.push({
-        path: key,
-        message: "Unknown remote pointer field"
-      });
-    }
-  }
-
-  const host = input.host;
-  if (!isNonEmptyString(host)) {
-    errors.push({
-      path: "host",
-      message: "Must be a non-empty string"
-    });
-  }
-
-  const kind = input.kind;
-  if (!isBubbleRemotePointerKind(kind)) {
-    errors.push({
-      path: "kind",
-      message: "Must be one of: created, started"
-    });
-  }
-
-  const portForwards = validatePortForwards(
-    input.portForwards,
-    "portForwards",
-    errors
-  );
-
-  const startedFieldNames = [
-    "instanceId",
-    "remoteClonePath",
-    "tmuxSession",
-    "startedAt"
-  ] as const;
-  const startedFieldValues = {
-    instanceId: input.instanceId,
-    remoteClonePath: input.remoteClonePath,
-    tmuxSession: input.tmuxSession,
-    startedAt: input.startedAt
-  };
-  const pointerKind = kind as BubbleRemotePointerKind | undefined;
-  if (pointerKind === "created") {
-    for (const field of startedFieldNames) {
-      if (startedFieldValues[field] !== undefined) {
-        errors.push({
-          path: field,
-          message: "Created remote pointer must not include started-only fields"
-        });
-      }
-    }
-  }
-  if (pointerKind === "started") {
-    const missingStartedFields = startedFieldNames.filter(
-      (field) => startedFieldValues[field] === undefined
-    );
-    if (missingStartedFields.length > 0) {
-      errors.push({
-        path: "kind",
-        message:
-          "Started remote pointer requires instanceId, remoteClonePath, tmuxSession, and startedAt"
-      });
-    }
-  }
-
-  if (
-    input.instanceId !== undefined
-    && !isNonEmptyString(input.instanceId)
-  ) {
-    errors.push({
-      path: "instanceId",
-      message: "Must be a non-empty string"
-    });
-  }
-  if (
-    input.remoteClonePath !== undefined
-    && !isNonEmptyString(input.remoteClonePath)
-  ) {
-    errors.push({
-      path: "remoteClonePath",
-      message: "Must be a non-empty string"
-    });
-  }
-  if (
-    input.tmuxSession !== undefined
-    && !isNonEmptyString(input.tmuxSession)
-  ) {
-    errors.push({
-      path: "tmuxSession",
-      message: "Must be a non-empty string"
-    });
-  }
-  if (
-    input.startedAt !== undefined
-    && !isIsoTimestamp(input.startedAt)
-  ) {
-    errors.push({
-      path: "startedAt",
-      message: "Must be an ISO timestamp"
-    });
-  }
-
-  if (errors.length > 0) {
-    return validationFail(errors);
-  }
-
-  if (pointerKind === "started") {
-    return validationOk({
-      kind: "started",
-      host: (host as string).trim(),
-      instanceId: (input.instanceId as string).trim(),
-      remoteClonePath: (input.remoteClonePath as string).trim(),
-      tmuxSession: (input.tmuxSession as string).trim(),
-      startedAt: input.startedAt as string,
-      ...(portForwards !== undefined ? { portForwards } : {})
-    });
-  }
-
-  return validationOk({
-    kind: "created",
-    host: (host as string).trim(),
-    ...(portForwards !== undefined ? { portForwards } : {})
-  });
-}
-
-export function validateRemoteStateCache(
-  input: unknown
-): ValidationResult<BubbleRemoteStateCache> {
-  const errors: ValidationError[] = [];
-  if (!isRecord(input)) {
-    return validationFail([
-      {
-        path: "$",
-        message: "Remote state cache must be an object"
-      }
-    ]);
-  }
-
-  const allowedKeys = new Set([
-    "lastCheckedAt",
-    "state",
-    "round",
-    "maxRounds",
-    "implementerStatus",
-    "reviewerStatus"
-  ]);
-  const forbiddenPointerKeys = new Set([
-    "host",
-    "instanceId",
-    "remoteClonePath",
-    "tmuxSession",
-    "startedAt",
-    "portForwards"
-  ]);
-  for (const key of Object.keys(input)) {
-    if (forbiddenPointerKeys.has(key)) {
-      errors.push({
-        path: key,
-        message: "Pointer fields are not allowed in state-cache.json"
-      });
-      continue;
-    }
-    if (!allowedKeys.has(key)) {
-      errors.push({
-        path: key,
-        message: "Unknown remote state cache field"
-      });
-    }
-  }
-
-  const lastCheckedAt = input.lastCheckedAt;
-  if (!isIsoTimestamp(lastCheckedAt)) {
-    errors.push({
-      path: "lastCheckedAt",
-      message: "Must be an ISO timestamp"
-    });
-  }
-
-  const state = input.state;
-  if (!isBubbleLifecycleState(state)) {
-    errors.push({
-      path: "state",
-      message: "Must be a valid bubble lifecycle state"
-    });
-  }
-
-  const round = input.round;
-  if (!isInteger(round) || round < 0) {
-    errors.push({
-      path: "round",
-      message: "Must be an integer >= 0"
-    });
-  }
-
-  const maxRounds = input.maxRounds;
-  if (!isInteger(maxRounds) || maxRounds <= 0) {
-    errors.push({
-      path: "maxRounds",
-      message: "Must be a positive integer"
-    });
-  }
-
-  const implementerStatus = input.implementerStatus;
-  if (
-    implementerStatus !== undefined
-    && !isNonEmptyString(implementerStatus)
-  ) {
-    errors.push({
-      path: "implementerStatus",
-      message: "Must be a non-empty string"
-    });
-  }
-
-  const reviewerStatus = input.reviewerStatus;
-  if (
-    reviewerStatus !== undefined
-    && !isNonEmptyString(reviewerStatus)
-  ) {
-    errors.push({
-      path: "reviewerStatus",
-      message: "Must be a non-empty string"
-    });
-  }
-
-  if (errors.length > 0) {
-    return validationFail(errors);
-  }
-
-  return validationOk({
-    lastCheckedAt: lastCheckedAt as string,
-    state: state as BubbleLifecycleState,
-    round: round as number,
-    maxRounds: maxRounds as number,
-    ...(implementerStatus !== undefined
-      ? { implementerStatus: (implementerStatus as string).trim() }
-      : {}),
-    ...(reviewerStatus !== undefined
-      ? { reviewerStatus: (reviewerStatus as string).trim() }
-      : {})
-  });
 }
 
 function toSchemaValidationError(
@@ -370,6 +92,10 @@ async function readJsonArtifact(path: string): Promise<JsonArtifactReadResult> {
       code: REMOTE_ARTIFACT_READ_FAILED,
       operation: "read",
       artifactPath: path,
+      context: {
+        source: "readJsonArtifact",
+        errno: error.code ?? null
+      },
       cause: error
     });
   });
@@ -406,6 +132,10 @@ async function writeJsonArtifact(path: string, value: unknown): Promise<void> {
       code,
       operation: "write",
       artifactPath: path,
+      context: {
+        source: "writeJsonArtifact",
+        errno: (error as NodeJS.ErrnoException).code ?? null
+      },
       cause: error
     });
   }

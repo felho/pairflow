@@ -105,10 +105,7 @@ export function resolveMetaReviewRouteRecommendation(input: {
     case "meta_review_running":
       return "inconclusive";
   }
-  const unreachable: never = input.route;
-  throw new Error(
-    `CONVERGED_META_REVIEW_ROUTE_UNEXPECTED: recommendation fallback is undefined for route=${String(unreachable)}.`
-  );
+  return throwUnexpectedMetaReviewRoute(input.route, "recommendation");
 }
 
 export function resolveMetaReviewRouteStatus(input: {
@@ -127,9 +124,20 @@ export function resolveMetaReviewRouteStatus(input: {
     case "human_gate_inconclusive":
       return "success";
   }
-  const unreachable: never = input.route;
+  return throwUnexpectedMetaReviewRoute(input.route, "status");
+}
+
+function throwUnexpectedMetaReviewRoute(
+  route: never,
+  source: "recommendation" | "status"
+): never {
+  const reasonCode = "CONVERGED_META_REVIEW_ROUTE_UNEXPECTED";
+  const context = {
+    source,
+    route: String(route)
+  };
   throw new Error(
-    `CONVERGED_META_REVIEW_ROUTE_UNEXPECTED: status fallback is undefined for route=${String(unreachable)}.`
+    `${reasonCode}: ${source} fallback is undefined for route=${String(route)} context=${JSON.stringify(context)}`
   );
 }
 

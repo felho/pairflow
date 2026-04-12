@@ -33,19 +33,15 @@ export type {
 } from "./startCommandContract.js";
 export { StartBubbleError };
 
-export async function startBubble(
+async function loadExecutionContextOrThrow(
   input: StartBubbleInput,
-  dependencies: StartBubbleDependencies = {}
-): Promise<StartBubbleResult> {
-  const deps = await resolveStartBubbleDependencies({
-    dependencies,
-    runWorktreeBootstrapCommandDefault,
-    isTmuxSessionAliveDefault
-  });
-
-  let context: StartExecutionContext;
+  deps: Pick<
+    Awaited<ReturnType<typeof resolveStartBubbleDependencies>>,
+    "readReviewerBriefArtifact" | "readReviewerFocusArtifact"
+  >
+): Promise<StartExecutionContext> {
   try {
-    context = await loadStartExecutionContext(input, {
+    return await loadStartExecutionContext(input, {
       readReviewerBriefArtifact:
         deps.readReviewerBriefArtifact,
       readReviewerFocusArtifact:
@@ -60,23 +56,139 @@ export async function startBubble(
       `Failed to load start execution context for bubble ${input.bubbleId}: ${message}`
     );
   }
+}
 
-  let ownershipClaimed = false;
+async function claimRuntimeSessionOwnershipOrThrow(input: {
+  context: StartExecutionContext;
+  deps: Awaited<ReturnType<typeof resolveStartBubbleDependencies>>;
+}): Promise<void> {
   try {
     await claimRuntimeSessionOwnership({
-      context,
-      deps
+      context: input.context,
+      deps: input.deps
     });
-    ownershipClaimed = true;
   } catch (error) {
     if (error instanceof StartBubbleError) {
       throw error;
     }
     const message = error instanceof Error ? error.message : String(error);
     throw new StartBubbleError(
-      `Failed to acquire runtime session ownership for bubble ${context.resolved.bubbleId}: ${message}`
+      `Failed to acquire runtime session ownership for bubble ${input.context.resolved.bubbleId}: ${message}`
     );
   }
+}
+
+async function runStartFlow(input: {
+  context: StartExecutionContext;
+  deps: Awaited<ReturnType<typeof resolveStartBubbleDependencies>>;
+  freshProgress: FreshStartProgress;
+}): Promise<{
+  startResult: Awaited<ReturnType<typeof runFreshStartFlow>>;
+  resolvedTmuxSessionName: string;
+}> {
+  const startResult = input.context.startMode === "fresh"
+    ? await runFreshStartFlow({
+        context: input.context,
+        deps: input.deps,
+        progress: input.freshProgress
+      })
+    : await runResumeStartFlow({
+        context: input.context,
+        deps: input.deps
+      });
+
+  const resolvedTmuxSessionName =
+    startResult.tmuxSessionName ?? input.context.expectedTmuxSessionName;
+
+  return {
+    startResult,
+    resolvedTmuxSessionName
+  };
+}
+
+function rewriteStartupIncompleteError(input: {
+  bubbleId: string;
+  message: string;
+  error: unknown;
+}): StartBubbleError {
+  if (input.error instanceof StartBubbleError) {
+    return new StartBubbleError({
+      message: buildStartupIncompleteStartFailureMessage(
+        input.bubbleId,
+        input.message
+      ),
+      ...(input.error.reasonCode !== undefined
+        ? { reasonCode: input.error.reasonCode }
+        : {}),
+      ...(input.error.context !== undefined
+        ? { context: input.error.context }
+        : {}),
+      cause: input.error
+    });
+  }
+
+  return new StartBubbleError(
+    buildStartupIncompleteStartFailureMessage(
+      input.bubbleId,
+      input.message
+    )
+  );
+}
+
+function throwStartFailure(input: {
+  context: StartExecutionContext;
+  freshProgress: FreshStartProgress;
+  error: unknown;
+}): never {
+  const message = input.error instanceof Error ? input.error.message : String(input.error);
+  if (input.context.startMode === "fresh" && input.freshProgress.preparingState !== null) {
+    const reasonCode = "START_STARTUP_INCOMPLETE";
+    const context = {
+      command_name: "start",
+      bubble_id: input.context.resolved.bubbleId,
+      start_mode: input.context.startMode
+    };
+    void reasonCode;
+    void context;
+    throw rewriteStartupIncompleteError({
+      bubbleId: input.context.resolved.bubbleId,
+      message,
+      error: input.error
+    });
+  }
+  if (input.error instanceof StartBubbleError) {
+    const reasonCode = input.error.reasonCode ?? "START_BUBBLE_ERROR";
+    const context = input.error.context ?? {
+      command_name: "start",
+      bubble_id: input.context.resolved.bubbleId,
+      start_mode: input.context.startMode
+    };
+    throw new StartBubbleError({
+      reasonCode,
+      message: input.error.message,
+      context,
+      cause: input.error
+    });
+  }
+  throw new StartBubbleError(
+    `Failed to start bubble ${input.context.resolved.bubbleId}: ${message}`
+  );
+}
+
+export async function startBubble(
+  input: StartBubbleInput,
+  dependencies: StartBubbleDependencies = {}
+): Promise<StartBubbleResult> {
+  const deps = await resolveStartBubbleDependencies({
+    dependencies,
+    runWorktreeBootstrapCommandDefault,
+    isTmuxSessionAliveDefault
+  });
+  const context = await loadExecutionContextOrThrow(input, deps);
+  await claimRuntimeSessionOwnershipOrThrow({
+    context,
+    deps
+  });
 
   let tmuxSessionName: string | null = null;
   const freshProgress: FreshStartProgress = {
@@ -86,19 +198,12 @@ export async function startBubble(
   };
 
   try {
-    const startResult = context.startMode === "fresh"
-      ? await runFreshStartFlow({
-          context,
-          deps,
-          progress: freshProgress
-        })
-      : await runResumeStartFlow({
-          context,
-          deps
-        });
-
+    const { startResult, resolvedTmuxSessionName } = await runStartFlow({
+      context,
+      deps,
+      freshProgress
+    });
     tmuxSessionName = startResult.tmuxSessionName;
-    const resolvedTmuxSessionName = tmuxSessionName ?? context.expectedTmuxSessionName;
 
     await emitBubbleLifecycleEventBestEffort({
       repoPath: context.resolved.repoPath,
@@ -126,39 +231,16 @@ export async function startBubble(
     await cleanupFailedStart({
       context,
       deps,
-      ownershipClaimed,
+      ownershipClaimed: true,
       workspaceBootstrapped: freshProgress.workspaceBootstrapped,
       tmuxSessionName,
       preparingState: freshProgress.preparingState
     });
-    const message = error instanceof Error ? error.message : String(error);
-    if (context.startMode === "fresh" && freshProgress.preparingState !== null) {
-      if (error instanceof StartBubbleError) {
-        throw new StartBubbleError({
-          message: buildStartupIncompleteStartFailureMessage(
-            context.resolved.bubbleId,
-            message
-          ),
-          ...(error.reasonCode !== undefined
-            ? { reasonCode: error.reasonCode }
-            : {}),
-          ...(error.context !== undefined
-            ? { context: error.context }
-            : {}),
-          cause: error
-        });
-      }
-      throw new StartBubbleError(
-        buildStartupIncompleteStartFailureMessage(
-          context.resolved.bubbleId,
-          message
-        )
-      );
-    }
-    if (error instanceof StartBubbleError) {
-      throw error;
-    }
-    throw new StartBubbleError(`Failed to start bubble ${context.resolved.bubbleId}: ${message}`);
+    throwStartFailure({
+      context,
+      freshProgress,
+      error
+    });
   }
 }
 

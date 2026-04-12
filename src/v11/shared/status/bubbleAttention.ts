@@ -45,23 +45,24 @@ export function isRuntimeSessionExpectedState(
   return runtimeExpectedStates.has(state);
 }
 
-export function resolveBubbleAttention(input: {
+function resolveStateValidationAttention(
+  stateValidation: StateValidationDiagnostics | null
+): UiBubbleAttention | null {
+  if (stateValidation === null) {
+    return null;
+  }
+  return {
+    code: "state_invalid",
+    severity: "critical",
+    label: "Invalid state",
+    detail: "State snapshot validation failed and requires attention."
+  };
+}
+
+function resolveRuntimeAttention(input: {
   state: BubbleLifecycleState;
   runtimeSession: RuntimeSessionRecord | null;
-  stateValidation: StateValidationDiagnostics | null;
-  watchdog: Pick<WatchdogStatus, "expired" | "monitored" | "referenceTimestamp">;
-  paneActivityRead: ReadWatchdogPaneActivityResult;
-  now: Date;
 }): UiBubbleAttention | null {
-  if (input.stateValidation !== null) {
-    return {
-      code: "state_invalid",
-      severity: "critical",
-      label: "Invalid state",
-      detail: "State snapshot validation failed and requires attention."
-    };
-  }
-
   const runtimeExpected = isRuntimeSessionExpectedState(input.state);
   if (runtimeExpected && input.runtimeSession === null) {
     return {
@@ -71,7 +72,6 @@ export function resolveBubbleAttention(input: {
       detail: "Runtime session is expected for the current lifecycle state, but none is registered."
     };
   }
-
   if (
     !runtimeExpected
     && input.runtimeSession !== null
@@ -84,47 +84,37 @@ export function resolveBubbleAttention(input: {
       detail: "A runtime session is still registered outside the active runtime states."
     };
   }
+  return null;
+}
 
-  if (input.state === "PREPARING_WORKSPACE" && input.runtimeSession === null) {
-    const preparingSeconds = resolveElapsedSeconds(
-      input.watchdog.referenceTimestamp,
-      input.now
-    );
-    if (
-      preparingSeconds !== null
-      && preparingSeconds >= stalePreparingWorkspaceThresholdSeconds
-    ) {
-      return {
-        code: "startup_incomplete",
-        severity: "warning",
-        label: "Startup incomplete",
-        detail: stalePreparingWorkspaceDetail
-      };
-    }
+function resolvePreparingWorkspaceAttention(input: {
+  state: BubbleLifecycleState;
+  runtimeSession: RuntimeSessionRecord | null;
+  referenceTimestamp: string | null | undefined;
+  now: Date;
+}): UiBubbleAttention | null {
+  if (input.state !== "PREPARING_WORKSPACE" || input.runtimeSession !== null) {
+    return null;
   }
-
-  if (input.paneActivityRead.status === "ok") {
-    const lastSampleStatus = input.paneActivityRead.record.last_sample_status ?? null;
-    if (lastSampleStatus === "no_session") {
-      return {
-        code: "no_session",
-        severity: "critical",
-        label: "No session",
-        detail: "Active pane sampling could not find a live runtime session."
-      };
-    }
-
-    if (lastSampleStatus === "pane_unreadable") {
-      return {
-        code: "pane_unreadable",
-        severity: "warning",
-        label: "Pane unreadable",
-        detail: "Active pane sampling could not read the target tmux pane."
-      };
-    }
+  const preparingSeconds = resolveElapsedSeconds(input.referenceTimestamp, input.now);
+  if (
+    preparingSeconds === null
+    || preparingSeconds < stalePreparingWorkspaceThresholdSeconds
+  ) {
+    return null;
   }
+  return {
+    code: "startup_incomplete",
+    severity: "warning",
+    label: "Startup incomplete",
+    detail: stalePreparingWorkspaceDetail
+  };
+}
 
-  if (input.paneActivityRead.status === "invalid") {
+function resolvePaneSamplingAttention(
+  paneActivityRead: ReadWatchdogPaneActivityResult
+): UiBubbleAttention | null {
+  if (paneActivityRead.status === "invalid") {
     return {
       code: "pane_activity_invalid",
       severity: "warning",
@@ -132,16 +122,50 @@ export function resolveBubbleAttention(input: {
       detail: "Watchdog pane activity record is invalid and should be rebuilt."
     };
   }
-
-  if (input.watchdog.expired) {
-    return {
-      code: "watchdog_expired",
-      severity: "critical",
-      label: "Watchdog expired",
-      detail: "The watchdog deadline passed without observed protocol activity."
-    };
+  if (paneActivityRead.status !== "ok") {
+    return null;
   }
 
+  const lastSampleStatus = paneActivityRead.record.last_sample_status ?? null;
+  if (lastSampleStatus === "no_session") {
+    return {
+      code: "no_session",
+      severity: "critical",
+      label: "No session",
+      detail: "Active pane sampling could not find a live runtime session."
+    };
+  }
+  if (lastSampleStatus === "pane_unreadable") {
+    return {
+      code: "pane_unreadable",
+      severity: "warning",
+      label: "Pane unreadable",
+      detail: "Active pane sampling could not read the target tmux pane."
+    };
+  }
+  return null;
+}
+
+function resolveWatchdogAttention(
+  watchdog: Pick<WatchdogStatus, "expired">
+): UiBubbleAttention | null {
+  if (!watchdog.expired) {
+    return null;
+  }
+  return {
+    code: "watchdog_expired",
+    severity: "critical",
+    label: "Watchdog expired",
+    detail: "The watchdog deadline passed without observed protocol activity."
+  };
+}
+
+function resolveQuietPaneAttention(input: {
+  state: BubbleLifecycleState;
+  watchdog: Pick<WatchdogStatus, "monitored">;
+  paneActivityRead: ReadWatchdogPaneActivityResult;
+  now: Date;
+}): UiBubbleAttention | null {
   if (
     input.state !== "RUNNING"
     || !input.watchdog.monitored
@@ -166,4 +190,35 @@ export function resolveBubbleAttention(input: {
     label: `Quiet ${quietMinutes}m`,
     detail: `No pane activity was observed for ${quietMinutes} minute${quietMinutes === 1 ? "" : "s"}.`
   };
+}
+
+export function resolveBubbleAttention(input: {
+  state: BubbleLifecycleState;
+  runtimeSession: RuntimeSessionRecord | null;
+  stateValidation: StateValidationDiagnostics | null;
+  watchdog: Pick<WatchdogStatus, "expired" | "monitored" | "referenceTimestamp">;
+  paneActivityRead: ReadWatchdogPaneActivityResult;
+  now: Date;
+}): UiBubbleAttention | null {
+  return (
+    resolveStateValidationAttention(input.stateValidation)
+    ?? resolveRuntimeAttention({
+      state: input.state,
+      runtimeSession: input.runtimeSession
+    })
+    ?? resolvePreparingWorkspaceAttention({
+      state: input.state,
+      runtimeSession: input.runtimeSession,
+      referenceTimestamp: input.watchdog.referenceTimestamp,
+      now: input.now
+    })
+    ?? resolvePaneSamplingAttention(input.paneActivityRead)
+    ?? resolveWatchdogAttention(input.watchdog)
+    ?? resolveQuietPaneAttention({
+      state: input.state,
+      watchdog: input.watchdog,
+      paneActivityRead: input.paneActivityRead,
+      now: input.now
+    })
+  );
 }

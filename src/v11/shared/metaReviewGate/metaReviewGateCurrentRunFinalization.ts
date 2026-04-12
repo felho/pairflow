@@ -1,7 +1,3 @@
-import { applyStateTransition } from "../../domain/state/machine.js";
-import { buildRunningExecutionContext } from "../../shared/state/executionContext.js";
-import { assertValidBubbleStateSnapshot } from "../../shared/state/stateSchema.js";
-import { clearLiveMetaReviewSnapshot } from "../metaReview/metaReviewSnapshot.js";
 import type { MetaReviewArtifactReadPort } from "../metaReview/metaReviewArtifactIo.js";
 import type { MetaReviewResult } from "../metaReview/metaReviewTypes.js";
 import type {
@@ -11,28 +7,21 @@ import type {
   LoadedStateSnapshot,
   WriteStateSnapshotPort
 } from "../ports/stateSnapshots.js";
-import { isNamedError } from "../errors/namedError.js";
 import type {
-  AgentName,
   BubbleStateSnapshot
 } from "../../../types/bubble.js";
 import {
-  deliveryTargetRoleMetadataKey,
   type FindingsParityMetadata
 } from "../../../types/protocol.js";
 import {
   buildHumanGateSummary,
   buildGateLockPath,
-  incrementAutoReworkCount,
   normalizeMetaReviewSnapshot,
-  resolveFindingsParityMetadataForEnvelope,
   resolveHumanGateRoute,
   persistHumanGateRoute
 } from "./metaReviewGateShared.js";
-import {
-  MetaReviewGateError,
-  type MetaReviewGateResult
-} from "./metaReviewGateTypes.js";
+import { type MetaReviewGateResult } from "./metaReviewGateTypes.js";
+import { dispatchAutoRework } from "./metaReviewGateAutoRework.js";
 import { validateStructuredMetaReviewPositiveClaim } from "./metaReviewGateFindingsValidation.js";
 import { resolveFindingsParityMetadataFromReportJson } from "./metaReviewGateFindingsMetadata.js";
 
@@ -148,28 +137,6 @@ async function resolveCurrentRunParity(input: {
       diagnostics: parity.diagnostics
     })
   };
-}
-
-function toGateConflictError(error: unknown): MetaReviewGateError {
-  const message = error instanceof Error ? error.message : String(error);
-  return new MetaReviewGateError(
-    "META_REVIEW_GATE_STATE_CONFLICT",
-    `META_REVIEW_GATE_STATE_CONFLICT: ${message}`,
-    {
-      stageReasonCode: "META_REVIEW_GATE_STATE_CONFLICT"
-    }
-  );
-}
-
-function toGateTransitionError(error: unknown): MetaReviewGateError {
-  const message = error instanceof Error ? error.message : String(error);
-  return new MetaReviewGateError(
-    "META_REVIEW_GATE_TRANSITION_INVALID",
-    `META_REVIEW_GATE_TRANSITION_INVALID: ${message}`,
-    {
-      stageReasonCode: "META_REVIEW_GATE_TRANSITION_INVALID"
-    }
-  );
 }
 
 async function persistRunFailedHumanRoute(
@@ -289,181 +256,6 @@ async function persistResolvedHumanRoute(input: {
   });
 }
 
-async function dispatchAutoRework(input: {
-  finalizeInput: FinalizeCurrentRunMetaReviewGateInput;
-  snapshot: ReturnType<typeof normalizeMetaReviewSnapshot>;
-  runResultForRouting: MetaReviewResult;
-  parityMetadata: FindingsParityMetadata | null;
-}): Promise<MetaReviewGateResult> {
-  const reworkMessage = input.runResultForRouting.rework_target_message;
-  if (reworkMessage === null || reworkMessage.trim().length === 0) {
-    return persistDispatchFailedHumanRoute({
-      finalizeInput: input.finalizeInput,
-      loaded: input.finalizeInput.loaded,
-      expectedState: "RUNNING",
-      runResultForRouting: input.runResultForRouting,
-      parityMetadata: input.parityMetadata,
-      fallbackReason:
-        "META_REVIEW_GATE_REWORK_DISPATCH_FAILED: missing rework target message for autonomous dispatch",
-      rollbackStateOnAppendFailure: input.finalizeInput.loaded.state
-    });
-  }
-
-  const nowIso = input.finalizeInput.now.toISOString();
-  const nextRound = input.finalizeInput.loaded.state.round + 1;
-  const resumed = assertValidBubbleStateSnapshot({
-    ...input.finalizeInput.loaded.state,
-    state: "RUNNING",
-    round: nextRound,
-    active_agent: input.finalizeInput.resolved.bubbleConfig.agents.implementer,
-    active_role: "implementer",
-    execution_context: buildRunningExecutionContext({
-      bubbleId: input.finalizeInput.loaded.state.bubble_id,
-      round: nextRound,
-      activeRole: "implementer",
-      startedAt: nowIso,
-      watchdogTimeoutMinutes:
-        input.finalizeInput.resolved.bubbleConfig.watchdog_timeout_minutes
-    }),
-    active_since: nowIso,
-    last_command_at: nowIso,
-    round_role_history: [
-      ...input.finalizeInput.loaded.state.round_role_history,
-      {
-        round: nextRound,
-        implementer: input.finalizeInput.resolved.bubbleConfig.agents.implementer,
-        reviewer: input.finalizeInput.resolved.bubbleConfig.agents.reviewer,
-        switched_at: nowIso
-      }
-    ],
-    meta_review: clearLiveMetaReviewSnapshot(
-      input.finalizeInput.loaded.state.meta_review
-    )
-  });
-
-  let resumedWritten: LoadedStateSnapshot;
-  try {
-    resumedWritten = await input.finalizeInput.writeState(
-      input.finalizeInput.resolved.bubblePaths.statePath,
-      resumed,
-      {
-        expectedFingerprint: input.finalizeInput.loaded.fingerprint,
-        expectedState: "RUNNING"
-      }
-    );
-  } catch (error) {
-    if (isNamedError(error, "StateStoreConflictError")) {
-      throw toGateConflictError(error);
-    }
-    throw toGateTransitionError(error);
-  }
-
-  try {
-    const dispatched = await input.finalizeInput.appendEnvelope({
-      transcriptPath: input.finalizeInput.resolved.bubblePaths.transcriptPath,
-      mirrorPaths: [input.finalizeInput.resolved.bubblePaths.inboxPath],
-      lockPath: buildGateLockPath({
-        locksDir: input.finalizeInput.resolved.bubblePaths.locksDir,
-        bubbleId: input.finalizeInput.resolved.bubbleId
-      }),
-      now: input.finalizeInput.now,
-        envelope: {
-        bubble_id: input.finalizeInput.resolved.bubbleId,
-        sender: "orchestrator",
-        recipient:
-          input.finalizeInput.resolved.bubbleConfig.agents.implementer as AgentName,
-        type: "APPROVAL_DECISION",
-        // The resumed RUNNING state is already persisted on the next round,
-        // so transcript authority must use that same round for later observation reconciliation.
-        round: resumedWritten.state.round,
-        payload: {
-          decision: "rework",
-          message: reworkMessage,
-          metadata: {
-            [deliveryTargetRoleMetadataKey]: "implementer",
-            actor: "meta-reviewer",
-            actor_agent: "codex",
-            recommendation: input.runResultForRouting.recommendation,
-            ...(input.runResultForRouting.run_id !== undefined
-              ? { run_id: input.runResultForRouting.run_id }
-              : {}),
-            ...resolveFindingsParityMetadataForEnvelope(input.parityMetadata)
-          }
-        },
-        refs: input.finalizeInput.refs
-      }
-    });
-
-    const hydratedMetaReview = incrementAutoReworkCount({
-      ...resumedWritten.state,
-      meta_review: normalizeMetaReviewSnapshot(resumedWritten.state.meta_review)
-    }).meta_review;
-    const hydratedResumed: BubbleStateSnapshot = {
-      ...resumedWritten.state,
-      meta_review: normalizeMetaReviewSnapshot(hydratedMetaReview)
-    };
-    const written = await input.finalizeInput.writeState(
-      input.finalizeInput.resolved.bubblePaths.statePath,
-      hydratedResumed,
-      {
-        expectedFingerprint: resumedWritten.fingerprint,
-        expectedState: "RUNNING"
-      }
-    );
-
-    return {
-      bubbleId: input.finalizeInput.resolved.bubbleId,
-      route: "auto_rework",
-      gateSequence: dispatched.sequence,
-      gateEnvelope: dispatched.envelope,
-      state: written.state,
-      metaReviewRun: input.runResultForRouting
-    };
-  } catch (error) {
-    const appendReason = error instanceof Error ? error.message : String(error);
-    const restoredReady = applyStateTransition(resumedWritten.state, {
-      to: "READY_FOR_HUMAN_APPROVAL",
-      activeAgent: null,
-      activeRole: null,
-      activeSince: null,
-      lastCommandAt: nowIso
-    });
-    const restoredState: BubbleStateSnapshot = {
-      ...restoredReady,
-      round: input.finalizeInput.loaded.state.round,
-      round_role_history: input.finalizeInput.loaded.state.round_role_history,
-      meta_review: normalizeMetaReviewSnapshot(restoredReady.meta_review)
-    };
-    let readyLoaded: LoadedStateSnapshot;
-    try {
-      readyLoaded = await input.finalizeInput.writeState(
-        input.finalizeInput.resolved.bubblePaths.statePath,
-        restoredState,
-        {
-          expectedFingerprint: resumedWritten.fingerprint,
-          expectedState: "RUNNING"
-        }
-      );
-    } catch (restoreError) {
-      if (isNamedError(restoreError, "StateStoreConflictError")) {
-        throw toGateConflictError(restoreError);
-      }
-      throw toGateTransitionError(restoreError);
-    }
-
-    return persistDispatchFailedHumanRoute({
-      finalizeInput: input.finalizeInput,
-      loaded: readyLoaded,
-      expectedState: "READY_FOR_HUMAN_APPROVAL",
-      runResultForRouting: input.runResultForRouting,
-      parityMetadata: input.parityMetadata,
-      fallbackReason:
-        `META_REVIEW_GATE_REWORK_DISPATCH_FAILED: append_error=${appendReason}`,
-      rollbackStateOnAppendFailure: readyLoaded.state
-    });
-  }
-}
-
 export async function finalizeCurrentRunMetaReviewGate(
   input: FinalizeCurrentRunMetaReviewGateInput
 ): Promise<MetaReviewGateResult> {
@@ -509,9 +301,13 @@ export async function finalizeCurrentRunMetaReviewGate(
   ) {
     return dispatchAutoRework({
       finalizeInput: input,
-      snapshot,
       runResultForRouting: parity.runResultForRouting,
-      parityMetadata: parity.parityMetadata
+      parityMetadata: parity.parityMetadata,
+      persistDispatchFailedHumanRoute: (dispatchInput) =>
+        persistDispatchFailedHumanRoute({
+          finalizeInput: input,
+          ...dispatchInput
+        })
     });
   }
 
