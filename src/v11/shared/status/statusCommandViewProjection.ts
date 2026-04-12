@@ -4,21 +4,8 @@ import type {
   BubbleExecutionContext,
   MetaReviewRuntimeDeliveryStatus
 } from "../../../types/bubble.js";
-import type { ProtocolEnvelope } from "../../../types/protocol.js";
-import type { MetaReviewGateRoute } from "../metaReviewGate/metaReviewGateTypes.js";
 import type { ReadWatchdogPaneActivityResult } from "../watchdog/watchdogPaneActivityStore.js";
 import type { BubbleStatusState } from "./statusCommandTypes.js";
-
-const metaReviewHumanGateRoutes = new Set<
-  Exclude<MetaReviewGateRoute, "meta_review_running" | "auto_rework">
->([
-  "human_gate_sticky_bypass",
-  "human_gate_approve",
-  "human_gate_budget_exhausted",
-  "human_gate_inconclusive",
-  "human_gate_run_failed",
-  "human_gate_dispatch_failed"
-]);
 
 export interface StatusPaneActivityView {
   readStatus: ReadWatchdogPaneActivityResult["status"];
@@ -35,9 +22,6 @@ export interface StatusPaneActivityView {
 export interface StatusMetaReviewView {
   actor: "meta-reviewer";
   authorityActive: boolean;
-  latestRoute: MetaReviewGateRoute | null;
-  latestRouteReasonCode: string | null;
-  latestRouteObservedAt: string | null;
   runtimeDelivery: {
     status: MetaReviewRuntimeDeliveryStatus;
     reasonCode: string | null;
@@ -56,49 +40,6 @@ export interface StatusExecutionContextView {
   startedAt: string;
   deadlineAt: string;
   attempt: number;
-}
-
-export function resolveLatestMetaReviewRoute(transcript: ProtocolEnvelope[]): {
-  route: MetaReviewGateRoute;
-  reasonCode: string | null;
-  observedAt: string;
-} | null {
-  for (let index = transcript.length - 1; index >= 0; index -= 1) {
-    const envelope = transcript[index]!;
-    const metadata = envelope.payload.metadata;
-    if (
-      envelope.type === "APPROVAL_REQUEST" &&
-      envelope.sender === "orchestrator" &&
-      envelope.recipient === "human" &&
-      metadata?.actor === "meta-reviewer"
-    ) {
-      const route = metadata.meta_review_gate_route;
-      if (typeof route === "string" && metaReviewHumanGateRoutes.has(route as never)) {
-        const reasonCode =
-          typeof metadata.meta_review_gate_reason_code === "string"
-            ? metadata.meta_review_gate_reason_code
-            : null;
-        return {
-          route: route as Exclude<MetaReviewGateRoute, "meta_review_running" | "auto_rework">,
-          reasonCode,
-          observedAt: envelope.ts
-        };
-      }
-    }
-    if (
-      envelope.type === "APPROVAL_DECISION" &&
-      envelope.sender === "orchestrator" &&
-      envelope.payload.decision === "rework" &&
-      metadata?.actor === "meta-reviewer"
-    ) {
-      return {
-        route: "auto_rework",
-        reasonCode: null,
-        observedAt: envelope.ts
-      };
-    }
-  }
-  return null;
 }
 
 function resolveElapsedSeconds(value: string | null, now: Date): number | null {
@@ -149,14 +90,10 @@ export function buildStatusPaneActivityView(
 }
 
 export function buildStatusMetaReviewView(
-  state: BubbleStatusState,
-  transcript: ProtocolEnvelope[]
+  state: BubbleStatusState
 ) : {
   actor: "meta-reviewer";
   authorityActive: boolean;
-  latestRoute: MetaReviewGateRoute | null;
-  latestRouteReasonCode: string | null;
-  latestRouteObservedAt: string | null;
   runtimeDelivery: {
     status: MetaReviewRuntimeDeliveryStatus;
     reasonCode: string | null;
@@ -170,13 +107,9 @@ export function buildStatusMetaReviewView(
     executionContext: state.meta_review?.execution_context,
     runtimeDelivery: state.meta_review?.runtime_delivery
   });
-  const route = resolveLatestMetaReviewRoute(transcript);
   return {
     actor: "meta-reviewer" as const,
     authorityActive: isMetaReviewExecutionContextActiveState(state),
-    latestRoute: route?.route ?? null,
-    latestRouteReasonCode: route?.reasonCode ?? null,
-    latestRouteObservedAt: route?.observedAt ?? null,
     runtimeDelivery:
       activeRuntimeDelivery === null
         ? null

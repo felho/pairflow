@@ -140,7 +140,7 @@ export function buildBubbleStatusView({
       lastMessageTs: lastMessage?.ts ?? null,
       lastMessageId: lastMessage?.id ?? null
     },
-    metaReview: buildStatusMetaReviewView(state, transcript),
+    metaReview: buildStatusMetaReviewView(state),
     commandPath: toStatusCommandPathView(resolved),
     accuracy_critical: accuracyCritical,
     last_review_verification: verificationStatus,

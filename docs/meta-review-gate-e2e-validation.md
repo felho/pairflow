@@ -41,7 +41,7 @@ Record every executed command with timestamp and raw marker lines.
 | `pnpm typecheck` |  | `exit=0`, `.pairflow/evidence/typecheck.log` |  |
 | `pnpm test` |  | `exit=0`, `.pairflow/evidence/test.log` |  |
 | `<pairflow-command> bubble status --id <bubble-id> --repo <repo-path>` |  | `profile=external -> Command path: external`, no `PAIRFLOW_COMMAND_EXTERNAL_UNAVAILABLE`, no `PAIRFLOW_COMMAND_PATH_STALE`; `profile=self_host -> Command path: worktree_local`, no `PAIRFLOW_COMMAND_PATH_STALE` |  |
-| `<pairflow-command> bubble meta-review status --id <bubble-id> --repo <repo-path> --verbose` |  | `Auto rework:`, `Sticky human gate:` |  |
+| `<pairflow-command> bubble status --id <bubble-id> --repo <repo-path> --json` |  | active `executionContext` is present when authority is active; meta-review diagnostics remain observational only |  |
 | `<pairflow-command> bubble restart --id <bubble-id> --repo <repo-path>` |  | restart completes without authority/profile fallback errors; follow-up projection commands remain current-round consistent |  |
 | `<pairflow-command> metrics report --from <iso-from> --to <iso-to>` |  | `meta_review_rollout.route_counts`, `rollout_blocked_events: 0`, `meta_review_rollout.pairflow_command_external_unavailable_count: 0`, `meta_review_rollout.pairflow_command_path_stale_count: 0` |  |
 

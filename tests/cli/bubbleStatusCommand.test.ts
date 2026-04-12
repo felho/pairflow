@@ -153,9 +153,6 @@ describe("renderBubbleStatusText", () => {
       metaReview: {
         actor: "meta-reviewer",
         authorityActive: true,
-        latestRoute: null,
-        latestRouteReasonCode: null,
-        latestRouteObservedAt: null,
         runtimeDelivery: null
       },
       commandPath: {
@@ -253,7 +250,7 @@ describe("renderBubbleStatusText", () => {
       "pinned=node '/tmp/worktree/dist/cli/index.js'"
     );
     expect(rendered).toContain(
-      "Meta-review: authority=active route=-"
+      "Meta-review: authority=active"
     );
     expect(rendered).toContain("Bubble start: 2026-02-22T11:58:00.000Z");
     expect(rendered).toContain(
@@ -289,9 +286,6 @@ describe("renderBubbleStatusText", () => {
         metaReview: {
           actor: "meta-reviewer",
           authorityActive: false,
-          latestRoute: "human_gate_dispatch_failed",
-          latestRouteReasonCode: null,
-          latestRouteObservedAt: "2026-02-22T12:05:10.000Z",
           runtimeDelivery: {
             status: "uncertain",
             reasonCode: "META_REVIEW_REQUEST_DELIVERY_UNCONFIRMED",
@@ -305,35 +299,9 @@ describe("renderBubbleStatusText", () => {
     );
 
     expect(rendered).toContain("Meta-review runtime delivery: uncertain");
-    expect(rendered).toContain(
-      "Meta-review: authority=inactive route=human_gate_dispatch_failed"
-    );
+    expect(rendered).toContain("Meta-review: authority=inactive");
     expect(rendered).toContain("reason=META_REVIEW_REQUEST_DELIVERY_UNCONFIRMED");
     expect(rendered).toContain("message=pane delivery not confirmed");
-  });
-
-  it("renders routed inconclusive review as success in text mode", () => {
-    const rendered = renderBubbleStatusText(
-      createStatusView({
-        state: "READY_FOR_HUMAN_APPROVAL",
-        activeAgent: null,
-        activeRole: null,
-        activeSince: null,
-        executionContext: null,
-        metaReview: {
-          actor: "meta-reviewer",
-          authorityActive: false,
-          latestRoute: "human_gate_inconclusive",
-          latestRouteReasonCode: null,
-          latestRouteObservedAt: "2026-02-22T12:05:10.000Z",
-          runtimeDelivery: null
-        }
-      })
-    );
-
-    expect(rendered).toContain(
-      "Meta-review: authority=inactive route=human_gate_inconclusive"
-    );
   });
 });
 
@@ -396,9 +364,6 @@ describe("renderBubbleStatusTable", () => {
       metaReview: {
         actor: "meta-reviewer",
         authorityActive: false,
-        latestRoute: null,
-        latestRouteReasonCode: null,
-        latestRouteObservedAt: null,
         runtimeDelivery: null
       },
       commandPath: {
@@ -445,7 +410,7 @@ describe("renderBubbleStatusTable", () => {
     expect(rendered).toContain("| Inbox");
     expect(rendered).toContain("| Meta-review");
     expect(rendered).toContain("authority=inactive");
-    expect(rendered).toContain("route=- | runtime_delivery=-");
+    expect(rendered).toContain("runtime_delivery=-");
     expect(rendered).toContain("| Review");
     expect(rendered).toContain("| Gates");
     expect(rendered).toContain("| Transcript");
@@ -468,29 +433,6 @@ describe("renderBubbleStatusTable", () => {
     const inboxIndex = rendered.indexOf("| Inbox");
     const metaReviewIndex = rendered.indexOf("| Meta-review");
     expect(metaReviewIndex).toBeGreaterThan(inboxIndex);
-  });
-
-  it("renders routed inconclusive review as success in table mode", () => {
-    const rendered = renderBubbleStatusTable(
-      createStatusView({
-        state: "READY_FOR_HUMAN_APPROVAL",
-        activeAgent: null,
-        activeRole: null,
-        activeSince: null,
-        executionContext: null,
-        metaReview: {
-          actor: "meta-reviewer",
-          authorityActive: false,
-          latestRoute: "human_gate_inconclusive",
-          latestRouteReasonCode: null,
-          latestRouteObservedAt: "2026-03-08T21:29:00.000Z",
-          runtimeDelivery: null
-        }
-      })
-    );
-
-    expect(rendered).toContain("authority=inactive");
-    expect(rendered).toContain("route=human_gate_inconclusive | runtime_delivery=-");
   });
 
   it("adds escalation section when watchdog is expired", () => {
@@ -564,9 +506,6 @@ describe("renderBubbleStatusTable", () => {
         metaReview: {
           actor: "meta-reviewer",
           authorityActive: false,
-          latestRoute: "human_gate_dispatch_failed",
-          latestRouteReasonCode: null,
-          latestRouteObservedAt: "2026-03-08T21:29:05.000Z",
           runtimeDelivery: {
             status: "failed",
             reasonCode: "META_REVIEW_REQUEST_DELIVERY_FAILED",
@@ -582,7 +521,7 @@ describe("renderBubbleStatusTable", () => {
     expect(rendered).toContain("| Meta-review");
     expect(rendered).toContain("authority=inactive");
     expect(rendered).toContain(
-      "route=human_gate_dispatch_failed | runtime_delivery=failed/META_REVIEW_REQUEST_DELIVERY_FAILED"
+      "runtime_delivery=failed/META_REVIEW_REQUEST_DELIVERY_FAILED"
     );
     expect(rendered).toContain(
       formatLocalTableTimestamp("2026-03-08T21:29:10.000Z")

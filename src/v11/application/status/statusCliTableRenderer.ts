@@ -95,11 +95,10 @@ export function renderBubbleStatusTable(
       ? green("valid")
       : bold(red("invalid"));
   const commandPathSummary = formatCommandPath(status.commandPath);
-  const metaReviewRoute = `${status.metaReview.latestRoute ?? "-"}${status.metaReview.latestRouteReasonCode !== null ? `/${status.metaReview.latestRouteReasonCode}` : ""}`;
   const metaReviewSecondLine =
     status.metaReview.runtimeDelivery === null
-      ? `route=${metaReviewRoute} | runtime_delivery=-`
-      : `route=${metaReviewRoute} | runtime_delivery=${status.metaReview.runtimeDelivery.status}${status.metaReview.runtimeDelivery.reasonCode !== null ? `/${status.metaReview.runtimeDelivery.reasonCode}` : ""} @ ${dim(formatTableTimestamp(status.metaReview.runtimeDelivery.observedAt))}`;
+      ? "runtime_delivery=-"
+      : `runtime_delivery=${status.metaReview.runtimeDelivery.status}${status.metaReview.runtimeDelivery.reasonCode !== null ? `/${status.metaReview.runtimeDelivery.reasonCode}` : ""} @ ${dim(formatTableTimestamp(status.metaReview.runtimeDelivery.observedAt))}`;
   const runtimeSummary = status.watchdog.monitored
     ? `last ${dim(formatClockTimestamp(status.paneActivity.lastChangedAt))} | age=${dim(formatElapsedSeconds(status.paneActivity.sinceLastChangedSeconds))} | watchdog ${green("on")} ${status.watchdog.timeoutMinutes}m rem=${formatWatchdogRemaining(status.watchdog)}`
     : `inactive | last observed ${dim(formatClockTimestamp(status.paneActivity.lastChangedAt))} | watchdog ${dim("off")} ${status.watchdog.timeoutMinutes}m rem=${formatWatchdogRemaining(status.watchdog)}`;

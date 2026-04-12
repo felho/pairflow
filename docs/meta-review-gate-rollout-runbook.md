@@ -71,7 +71,7 @@ Operator interpretation must follow these invariants:
 
 1. Each newly converged round requires a fresh meta-review run before the bubble is treated as ready for new human approval attention.
 2. Prior-round meta-review output is historical only after round increment; it must not be treated as active/current-round gate authority.
-3. After round increment and before a fresh current-round run exists, `bubble meta-review status` / `last-report` must be interpreted as pending/none for the current round.
+3. After round increment and before a fresh current-round run exists, `bubble status --json` must be interpreted from the active authority snapshot plus diagnostics only; operators must not infer a fresh current-round result from stale historical context.
 4. `sticky_human_gate` is not a cross-round bypass signal in this rollout phase; on round increment it is cleared from live state.
 5. If prior-round details are needed for diagnosis, use transcript and persisted historical artifacts rather than current-round status surfaces.
 
@@ -165,19 +165,11 @@ Run each command from the release worktree root and capture the command, timesta
    no `PAIRFLOW_COMMAND_PATH_STALE`
    lifecycle/report data renders without fallback errors
 
-5. `<pairflow-command> bubble meta-review status --id <bubble-id> --repo <repo-path> --verbose`
+5. `<pairflow-command> bubble status --id <bubble-id> --repo <repo-path> --json`
    Expected markers:
-   `Auto rework:`
-   `Sticky human gate:`
-   current-round status renders without presenting prior-round recommendation/report or sticky carry-over as active
-   if no fresh current-round run exists after round increment, output shows pending/none semantics for the current round (`has_run=no`, recommendation/report ref absent, `Sticky human gate: no`)
-   if a fresh current-round run exists, the visible summary/report ref corresponds to the current round
-
-6. `<pairflow-command> bubble meta-review last-report --id <bubble-id> --repo <repo-path> --verbose`
-   Expected markers:
-   after round increment and before a fresh current-round run, output shows pending/none or explicit no-current-round-report semantics (`has_report=no`, report ref absent)
-   prior-round report is not rendered as the current-round last report
-   after a fresh current-round run, the visible report ref corresponds to the current round
+   active `executionContext` remains the only authority source
+   meta-review diagnostics appear only as observational fields (`authorityActive`, optional `runtimeDelivery`)
+   no separate cached status/report surface is required for current-round decisions
 
 7. `<pairflow-command> bubble restart --id <bubble-id> --repo <repo-path>`
    Preconditions:
@@ -185,7 +177,7 @@ Run each command from the release worktree root and capture the command, timesta
    Expected markers:
    runtime restart completes without command-profile fallback errors
    no implicit snapshot replay reroute is suggested or required
-   follow-up `bubble meta-review status` / `last-report` remains consistent with current-round freshness rules
+   follow-up `bubble status --json` remains consistent with current-round authority and diagnostics
 
 8. `<pairflow-command> metrics report --from <iso-from> --to <iso-to>`
    Expected markers:

@@ -86,9 +86,10 @@ This skill exists to avoid lifecycle mistakes (wrong command in wrong state, los
 - `RUNNING` (active round, typically `round>=1`) -> no approve/rework yet; use normal loop commands (`pass`, `converged`) in agent panes
 - Runtime-health issue in non-final active states (for example stalled pane, refreshed agent login/session) -> `pairflow bubble restart --id <id> [--repo <path>]`
 - `WAITING_HUMAN` -> use `pairflow bubble reply` (NOT `bubble request-rework`)
-- `META_REVIEW_RUNNING` -> if gate appears stuck after snapshot persisted, use `pairflow bubble meta-review recover` (no new review run; snapshot-route replay only)
+- `META_REVIEW_RUNNING` -> inspect `pairflow bubble status --id <id> --json`; if gate appears stuck or runtime is unhealthy, use `pairflow bubble restart --id <id> [--repo <path>]`
 - `READY_FOR_HUMAN_APPROVAL` (legacy compatible: `READY_FOR_APPROVAL`) -> choose `pairflow bubble approve` OR `pairflow bubble request-rework`
-  - If latest autonomous recommendation is `rework` or `inconclusive`, `approve` requires `--override-non-approve --override-reason "<reason>"`.
+  - `pairflow bubble approve` enforces override requirements from transcript context.
+  - If approve fails with `APPROVAL_OVERRIDE_REQUIRED` or `APPROVAL_PARITY_OVERRIDE_REQUIRED`, rerun only with explicit human justification via `--override-non-approve --override-reason "<reason>"`.
 - `APPROVED_FOR_COMMIT` -> `pairflow bubble commit --auto`
 - `DONE` -> `pairflow bubble merge`
 - `CANCELLED` with needed changes -> recovery workflow (manual git path from bubble worktree)

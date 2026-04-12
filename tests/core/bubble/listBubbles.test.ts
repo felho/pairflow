@@ -280,7 +280,6 @@ describe("listBubbles", () => {
       authorityActive: false,
       runtimeDelivery: null
     });
-    expect(listed.bubbles[0]?.metaReview).not.toHaveProperty("latestRoute");
   });
 
   it("does not surface runtime-mismatch attention during PREPARING_WORKSPACE", async () => {

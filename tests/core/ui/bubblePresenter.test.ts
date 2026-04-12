@@ -120,9 +120,6 @@ describe("bubblePresenter", () => {
         metaReview: {
           actor: "meta-reviewer",
           authorityActive: false,
-          latestRoute: "human_gate_approve",
-          latestRouteReasonCode: null,
-          latestRouteObservedAt: "2026-02-24T12:00:30.000Z",
           runtimeDelivery: null
         },
         commandPath: {

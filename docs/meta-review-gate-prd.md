@@ -119,8 +119,8 @@ Pain points:
 
 Review execution engine:
 1. The review computation must reuse the existing `UsePairflow/ReviewBubble` workflow logic.
-2. Pairflow CLI covers canonical result submission and cached retrieval; runtime remediation uses `pairflow bubble restart --id <id>` or a fresh meta-review run outside the meta-review subcommand surface.
-3. Cached retrieval commands (`status`, `last-report`) do not execute a new review; they only read persisted latest autonomous output.
+2. Pairflow CLI covers canonical result submission plus generic bubble inspection; runtime remediation uses `pairflow bubble restart --id <id>` or a fresh meta-review run outside any dedicated meta-review subcommand surface.
+3. `pairflow bubble status --json` is the operator inspection surface for current authority plus non-authority diagnostics.
 
 Boundary contract (skill vs Pairflow CLI):
 1. Skill/workflow layer is compute-only: it produces structured review output (`recommendation`, `summary`, findings, detailed report body/refs, and rework target message when applicable).
@@ -132,13 +132,11 @@ Boundary contract (skill vs Pairflow CLI):
 | Command | Trigger | Side Effects | Expected Output | Primary Use |
 |---|---|---|---|---|
 | `agent emit --kind meta_review_result` | Structured actor submission | Allowed (`request-rework`, state updates) | Full report + recommendation + rework target message (if `rework`) | Canonical autonomous gate write path in production flow |
-| `meta-review status` | User command | None | Cached latest autonomous recommendation + counters | Low-cost decision/status retrieval |
-| `meta-review last-report` | User command | None | Cached latest autonomous report summary/reference | Low-cost report retrieval |
 Rules:
-1. Pairflow CLI command set is intentionally minimal: one canonical actor write command (`agent emit --kind meta_review_result`) and two retrieval commands (`status`, `last-report`).
-2. Public operator `meta-review run` is removed; autonomous review execution happens outside the public operator CLI and submits results through the canonical actor emit path.
+1. Pairflow CLI command set is intentionally minimal: one canonical actor write command (`agent emit --kind meta_review_result`) plus generic bubble inspection and restart commands.
+2. Public operator `bubble meta-review` subcommands are removed; autonomous review execution happens outside the public operator CLI and submits results through the canonical actor emit path.
 3. Supported operator remediation is `pairflow bubble restart --id <id>` or a fresh meta-review run through the active workflow.
-4. Retrieval commands must be non-generative and near-constant-cost.
+4. Operator inspection must remain non-generative and near-constant-cost.
 
 Reviewer output payload contract:
 1. Every autonomous live review submitted through the canonical actor path must produce a detailed human-readable report artifact/body.
@@ -214,18 +212,16 @@ Requirements:
 1. `pairflow agent emit --kind meta_review_result --repo <path> --bubble-id <id> --handoff-id <id> --round <n> --recommendation approve|rework|inconclusive --summary <text> [--rework-target-message <text>] --report-json <json> [--ref <artifact-path>]...`
    - Canonical autonomous review result submission path.
    - CLI must persist returned review output before applying any lifecycle action.
-2. `pairflow bubble meta-review status --id <id> [--json] [--verbose]`
-   - Returns cached latest autonomous recommendation snapshot and counters only (no new run).
+2. `pairflow bubble status --id <id> [--json]`
+   - Returns the current lifecycle snapshot, active authority fields, and non-authority diagnostics.
    - Default output should be compact for quick operator checks.
-3. `pairflow bubble meta-review last-report --id <id>`
-   - Returns the latest stored report reference/content summary.
-4. `pairflow bubble restart --id <id>`
+3. `pairflow bubble restart --id <id>`
    - Supported operator remediation when a bubble is stuck after snapshot persistence.
    - Restores runtime execution instead of exposing a public snapshot replay subcommand.
 
 Behavioral requirement:
-1. `meta-review status` and `meta-review last-report` must be cheap and non-generative.
-2. Retrieval commands are read-only by contract: no mutation of canonical snapshot, counters, or lifecycle state.
+1. `bubble status` inspection must be cheap and non-generative.
+2. Inspection commands are read-only by contract: no mutation of canonical snapshot, counters, or lifecycle state.
 3. Unknown extra meta-review subcommands must fail fast and must not reroute automatically.
 4. If convergence gate execution partially fails after persisting snapshot/run result, supported remediation is `restart` or a fresh meta-review rerun rather than a public snapshot replay command.
 

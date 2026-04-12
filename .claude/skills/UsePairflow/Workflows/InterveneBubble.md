@@ -49,10 +49,6 @@ TASK_FILE: extracted from `--task-file` argument (optional; only for ideation ki
 pairflow bubble status --id <BUBBLE_ID> --repo <REPO_PATH> --json
 pairflow bubble inbox --id <BUBBLE_ID> --repo <REPO_PATH>
 ```
-- If state is `READY_FOR_HUMAN_APPROVAL` (or legacy `READY_FOR_APPROVAL`), also load cached autonomous recommendation for approve override decisions:
-```bash
-pairflow bubble meta-review status --id <BUBBLE_ID> --repo <REPO_PATH> --verbose
-```
 - If state is `RUNNING`, check whether this is an ideation-pending bubble (`round=0` + `ideation.task_pending=true`) from:
 ```bash
 cat <REPO_PATH>/.pairflow/bubbles/<BUBBLE_ID>/bubble.toml
@@ -79,13 +75,13 @@ cat <REPO_PATH>/.pairflow/bubbles/<BUBBLE_ID>/bubble.toml
   ```bash
   pairflow bubble reply --id <BUBBLE_ID> --repo <REPO_PATH> --message "<MESSAGE>"
   ```
-- If state is `META_REVIEW_RUNNING` -> route to `TroubleshootBubble` and prefer `pairflow bubble meta-review recover --id <BUBBLE_ID> --repo <REPO_PATH>` when snapshot replay preconditions are satisfied.
+- If state is `META_REVIEW_RUNNING` -> route to `TroubleshootBubble` and prefer canonical inspection/restart (`pairflow bubble status --json`, `pairflow bubble restart`) when routing/runtime is stuck.
 - If state is `READY_FOR_HUMAN_APPROVAL` (or legacy `READY_FOR_APPROVAL`) and user intent is explicit approve -> run:
-  - If latest autonomous recommendation is `approve` (or missing):
+  - First attempt clean approve:
     ```bash
     pairflow bubble approve --id <BUBBLE_ID> --repo <REPO_PATH>
     ```
-  - If latest autonomous recommendation is `rework` or `inconclusive`:
+  - If approve fails with `APPROVAL_OVERRIDE_REQUIRED` or `APPROVAL_PARITY_OVERRIDE_REQUIRED` and the operator still intends to approve, rerun with explicit human justification:
     ```bash
     pairflow bubble approve --id <BUBBLE_ID> --repo <REPO_PATH> --override-non-approve --override-reason "<concise human justification>"
     ```

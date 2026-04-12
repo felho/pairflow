@@ -259,7 +259,7 @@ describe("getBubbleStatus", () => {
     expect(status.transcript.lastMessageType).toBe("APPROVAL_REQUEST");
   });
 
-  it("surfaces latest meta-review gate route from transcript metadata", async () => {
+  it("does not surface transcript-derived meta-review route metadata", async () => {
     const repoPath = await createTempRepo();
     const bubble = await createBubble({
       id: "b_status_meta_route_01",
@@ -300,11 +300,11 @@ describe("getBubbleStatus", () => {
       cwd: repoPath
     });
 
-    expect(status.metaReview.latestRoute).toBe("human_gate_dispatch_failed");
-    expect(status.metaReview.latestRouteReasonCode).toBeNull();
-    expect(status.metaReview.latestRouteObservedAt).toBe(
-      "2026-02-22T14:14:00.000Z"
-    );
+    expect(status.metaReview).toStrictEqual({
+      actor: "meta-reviewer",
+      authorityActive: false,
+      runtimeDelivery: null
+    });
   });
 
   it("reports accuracy-critical missing verification gate status", async () => {

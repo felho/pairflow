@@ -651,14 +651,14 @@ The restart is safe because:
 - `bubble start` detects an existing bubble in a runtime state and reattaches instead of bootstrapping from scratch
 - Resume start injects bounded transcript/state context into both agent panes; in `RUNNING` it sends kickoff to the currently active role pane
 
-If the bubble stays in `RUNNING` with active meta-review authority after restart (for example, autonomous meta-review already persisted snapshot data but routing did not finish), recover deterministically from the stored snapshot:
+If the bubble stays in `RUNNING` with active meta-review authority after restart (for example, autonomous meta-review already persisted snapshot data but routing did not finish), inspect the canonical status snapshot and restart the runtime rather than relying on a separate meta-review recovery command:
 
 ```bash
-pairflow bubble meta-review recover --id feat_login --repo .
 pairflow bubble status --id feat_login --repo . --json
+pairflow bubble restart --id feat_login --repo .
 ```
 
-`meta-review recover` does not run a new review. It replays routing from the latest persisted autonomous snapshot and routes to `RUNNING` or `READY_FOR_HUMAN_APPROVAL` with the preserved diagnostics for the current round.
+`bubble status --json` shows the active authority snapshot plus non-authority meta-review diagnostics. If routing still has not completed, use `bubble restart` or continue the active workflow; there is no public `bubble meta-review recover` subcommand.
 
 ### Scenario 8: Stopping or cancelling a bubble
 
@@ -781,7 +781,7 @@ CREATED -> PREPARING_WORKSPACE -> RUNNING <-> WAITING_HUMAN
 RUNNING --reviewer convergence with sticky_human_gate=false--> RUNNING (meta-review authority active)
 RUNNING --autonomous rework dispatch--> RUNNING
 RUNNING --human decision required--> READY_FOR_HUMAN_APPROVAL
-RUNNING --snapshot route recovery (`meta-review recover`)--> RUNNING | READY_FOR_HUMAN_APPROVAL
+RUNNING --restart / workflow-driven recovery--> RUNNING | READY_FOR_HUMAN_APPROVAL
 READY_FOR_HUMAN_APPROVAL --approve--> APPROVED_FOR_COMMIT
 READY_FOR_HUMAN_APPROVAL --request-rework--> RUNNING
 APPROVED_FOR_COMMIT -> COMMITTED -> DONE
@@ -821,11 +821,7 @@ Ideation note:
 | `bubble merge --id <id> [--repo <path>] [--push] [--delete-remote]` | Merge bubble branch and clean up |
 | `bubble reconcile [--repo <path>] [--dry-run] [--json]` | Clean up stale sessions |
 | `bubble watchdog --id <id> [--repo <path>] [--json]` | Check for stuck agents |
-| `bubble meta-review status --id <id> [--repo <path>] [--json] [--verbose]` | Read latest cached meta-review snapshot/status |
-| `bubble meta-review last-report --id <id> [--repo <path>] [--json] [--verbose]` | Read latest cached meta-review report |
-| `bubble meta-review recover --id <id> [--repo <path>] [--json]` | Recover routing from the latest meta-review snapshot when bubble is stuck in `RUNNING` with active meta-review authority |
-
-`bubble meta-review` is now a projection/recovery-only operator surface. Autonomous meta-review results are submitted through the canonical actor channel: `pairflow agent emit --kind meta_review_result ...`.
+Autonomous meta-review results are submitted through the canonical actor channel: `pairflow agent emit --kind meta_review_result ...`. Operator inspection uses `bubble status` / `bubble restart`; there is no public `bubble meta-review` subcommand family.
 
 #### Repo registry
 

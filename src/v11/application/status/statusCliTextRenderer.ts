@@ -43,7 +43,7 @@ function formatRuntimeDeliveryText(status: BubbleStatusView): string {
 }
 
 function formatMetaReviewText(status: BubbleStatusView): string {
-  return `Meta-review: authority=${status.metaReview.authorityActive ? "active" : "inactive"} route=${status.metaReview.latestRoute ?? "-"}${status.metaReview.latestRouteReasonCode !== null ? ` reason=${status.metaReview.latestRouteReasonCode}` : ""} route_at=${status.metaReview.latestRouteObservedAt ?? "-"}`;
+  return `Meta-review: authority=${status.metaReview.authorityActive ? "active" : "inactive"}`;
 }
 
 function formatPaneActivityText(status: BubbleStatusView): string {

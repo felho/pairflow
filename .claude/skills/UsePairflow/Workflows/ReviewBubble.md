@@ -133,11 +133,11 @@ pairflow bubble inbox --id <BUBBLE_ID> --repo <REPO_PATH>
 - If `DECIDE=none` -> skip commands and return recommendation only.
 - If `DECIDE` is `approve` or `rework` and state is neither `READY_FOR_HUMAN_APPROVAL` nor legacy `READY_FOR_APPROVAL` -> STOP and report: `"Error: approve/request-rework allowed only in READY_FOR_HUMAN_APPROVAL (legacy READY_FOR_APPROVAL). Current state: {state}."`
 - If `DECIDE=approve` and state is approval-ready:
-  - If latest autonomous recommendation is `approve` (or missing), run:
+  - First attempt clean approve:
     ```bash
     pairflow bubble approve --id <BUBBLE_ID> --repo <REPO_PATH>
     ```
-  - If latest autonomous recommendation is `rework` or `inconclusive`, run override approve:
+  - If approve fails with `APPROVAL_OVERRIDE_REQUIRED` or `APPROVAL_PARITY_OVERRIDE_REQUIRED`, rerun only when the human decision is still approve and you can provide a concise explicit justification:
     ```bash
     pairflow bubble approve --id <BUBBLE_ID> --repo <REPO_PATH> --override-non-approve --override-reason "<concise human justification>"
     ```
