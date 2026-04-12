@@ -888,13 +888,6 @@ describe("emitConvergedFromWorkspace", () => {
                   metaReviewExecutionContextToRunningContext(executionContext),
                 meta_review: {
                   execution_context: executionContext,
-                  last_autonomous_run_id: "run_converged_recover_01",
-                  last_autonomous_status: "success",
-                  last_autonomous_recommendation: "approve",
-                  last_autonomous_summary: "Recovered summary from snapshot.",
-                  last_autonomous_report_ref: "artifacts/meta-review-last.json",
-                  last_autonomous_rework_target_message: null,
-                  last_autonomous_updated_at: "2026-02-22T09:04:45.000Z",
                   auto_rework_count: 0,
                   auto_rework_limit: 5,
                   sticky_human_gate: false

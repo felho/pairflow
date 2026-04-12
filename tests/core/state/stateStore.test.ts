@@ -1,4 +1,4 @@
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -95,6 +95,78 @@ describe("state store", () => {
     ).rejects.toBeInstanceOf(StateStoreConflictError);
   });
 
+  it("supports CAS writes after inspect strips legacy meta-review fields", async () => {
+    const dir = await createTempDir();
+    const statePath = join(dir, "state.json");
+
+    await writeFile(
+      statePath,
+      `${JSON.stringify({
+        bubble_id: "b_store_legacy_meta_strip_01",
+        state: "WAITING_HUMAN",
+        round: 2,
+        active_agent: "codex",
+        active_since: "2026-03-08T10:00:00.000Z",
+        active_role: "reviewer",
+        round_role_history: [],
+        last_command_at: "2026-03-08T10:01:00.000Z",
+        meta_review: {
+          execution_context: null,
+          runtime_delivery: null,
+          last_autonomous_run_id: "run_meta_strip_01",
+          last_autonomous_status: "success",
+          last_autonomous_recommendation: "approve",
+          last_autonomous_summary: "Legacy fields should be stripped",
+          last_autonomous_report_ref: "artifacts/meta-review-last.json",
+          last_autonomous_rework_target_message: null,
+          last_autonomous_updated_at: "2026-03-08T10:01:00.000Z",
+          auto_rework_count: 1,
+          auto_rework_limit: 5,
+          sticky_human_gate: false
+        }
+      }, null, 2)}\n`,
+      "utf8"
+    );
+
+    const inspected = await inspectStateSnapshot(statePath);
+
+    expect(inspected.stateValidation).toBeNull();
+    expect(inspected.state.meta_review).toEqual({
+      execution_context: null,
+      runtime_delivery: null,
+      auto_rework_count: 1,
+      auto_rework_limit: 5,
+      sticky_human_gate: false
+    });
+
+    const written = await writeStateSnapshot(
+      statePath,
+      {
+        ...inspected.state,
+        meta_review: {
+          ...inspected.state.meta_review!,
+          sticky_human_gate: true
+        }
+      },
+      {
+        expectedFingerprint: inspected.fingerprint,
+        expectedState: "WAITING_HUMAN"
+      }
+    );
+
+    expect(written.state.meta_review).toEqual({
+      execution_context: null,
+      runtime_delivery: null,
+      auto_rework_count: 1,
+      auto_rework_limit: 5,
+      sticky_human_gate: true
+    });
+
+    const rawState = await readFile(statePath, "utf8");
+    expect(rawState).not.toContain("last_autonomous_run_id");
+    expect(rawState).toContain('"sticky_human_gate": true');
+  });
+
   it("rejects writes when state lock cannot be acquired in time", async () => {
     const dir = await createTempDir();
     const statePath = join(dir, "state.json");
@@ -137,13 +209,8 @@ describe("state store", () => {
         round_role_history: [],
         last_command_at: "2026-03-08T10:01:00.000Z",
         meta_review: {
-          last_autonomous_run_id: null,
-          last_autonomous_status: null,
-          last_autonomous_recommendation: null,
-          last_autonomous_summary: null,
-          last_autonomous_report_ref: null,
-          last_autonomous_rework_target_message: null,
-          last_autonomous_updated_at: null,
+          execution_context: null,
+          runtime_delivery: null,
           auto_rework_count: 0,
           auto_rework_limit: 5,
           sticky_human_gate: false
@@ -198,13 +265,6 @@ describe("state store", () => {
             observed_for_handoff_id: "handoff_meta_01",
             observed_for_round: 2
           },
-          last_autonomous_run_id: null,
-          last_autonomous_status: null,
-          last_autonomous_recommendation: null,
-          last_autonomous_summary: null,
-          last_autonomous_report_ref: null,
-          last_autonomous_rework_target_message: null,
-          last_autonomous_updated_at: null,
           auto_rework_count: 0,
           auto_rework_limit: 5,
           sticky_human_gate: false

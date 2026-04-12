@@ -543,13 +543,6 @@ describe("runBubbleWatchdog", () => {
             message: "meta-reviewer pane exited after durable kickoff",
             observedAt: "2026-02-22T12:04:30.000Z"
           }),
-          last_autonomous_run_id: "run_watchdog_before_deadline_01",
-          last_autonomous_status: "error",
-          last_autonomous_recommendation: "inconclusive",
-          last_autonomous_summary: "Runtime delivery failed after durable kickoff.",
-          last_autonomous_report_ref: "artifacts/meta-review-last.json",
-          last_autonomous_rework_target_message: null,
-          last_autonomous_updated_at: "2026-02-22T12:04:30.000Z"
         }
       },
       {
@@ -598,24 +591,10 @@ describe("runBubbleWatchdog", () => {
         active_since: null,
         meta_review: {
           ...(running.state.meta_review ?? {
-            last_autonomous_run_id: null,
-            last_autonomous_status: null,
-            last_autonomous_recommendation: null,
-            last_autonomous_summary: null,
-            last_autonomous_report_ref: null,
-            last_autonomous_rework_target_message: null,
-            last_autonomous_updated_at: null,
             auto_rework_count: 0,
             auto_rework_limit: 5,
             sticky_human_gate: false
           }),
-          last_autonomous_run_id: null,
-          last_autonomous_status: "success",
-          last_autonomous_recommendation: "inconclusive",
-          last_autonomous_summary: "Recovered meta-review snapshot prior to timeout route.",
-          last_autonomous_report_ref: "artifacts/meta-review-last.json",
-          last_autonomous_rework_target_message: null,
-          last_autonomous_updated_at: "2026-02-22T12:00:30.000Z"
         }
       },
       {
@@ -692,13 +671,6 @@ describe("runBubbleWatchdog", () => {
             message: "meta-reviewer pane did not confirm structured submit request delivery",
             observedAt: "2026-02-22T12:59:30.000Z"
           }),
-          last_autonomous_run_id: "run_watchdog_rebind_01",
-          last_autonomous_status: "error",
-          last_autonomous_recommendation: "inconclusive",
-          last_autonomous_summary: "Runtime delivery still uncertain after restart/rebind.",
-          last_autonomous_report_ref: "artifacts/meta-review-last.json",
-          last_autonomous_rework_target_message: null,
-          last_autonomous_updated_at: "2026-02-22T12:59:30.000Z"
         }
       },
       {
@@ -781,24 +753,10 @@ describe("runBubbleWatchdog", () => {
         ...running.state,
         meta_review: {
           ...(running.state.meta_review ?? {
-            last_autonomous_run_id: null,
-            last_autonomous_status: null,
-            last_autonomous_recommendation: null,
-            last_autonomous_summary: null,
-            last_autonomous_report_ref: null,
-            last_autonomous_rework_target_message: null,
-            last_autonomous_updated_at: null,
             auto_rework_count: 0,
             auto_rework_limit: 5,
             sticky_human_gate: false
           }),
-          last_autonomous_run_id: null,
-          last_autonomous_status: "success",
-          last_autonomous_recommendation: "approve",
-          last_autonomous_summary: "Canonical structured submit captured.",
-          last_autonomous_report_ref: "artifacts/meta-review-last.json",
-          last_autonomous_rework_target_message: null,
-          last_autonomous_updated_at: "2026-02-22T12:01:00.000Z"
         }
       },
       {
@@ -860,24 +818,10 @@ describe("runBubbleWatchdog", () => {
         ...running.state,
         meta_review: {
           ...(running.state.meta_review ?? {
-            last_autonomous_run_id: null,
-            last_autonomous_status: null,
-            last_autonomous_recommendation: null,
-            last_autonomous_summary: null,
-            last_autonomous_report_ref: null,
-            last_autonomous_rework_target_message: null,
-            last_autonomous_updated_at: null,
             auto_rework_count: 0,
             auto_rework_limit: 5,
             sticky_human_gate: false
           }),
-          last_autonomous_run_id: null,
-          last_autonomous_status: "success",
-          last_autonomous_recommendation: "rework",
-          last_autonomous_summary: "Canonical structured submit captured for rework.",
-          last_autonomous_report_ref: "artifacts/meta-review-last.json",
-          last_autonomous_rework_target_message: "Fix parity mismatch before next pass.",
-          last_autonomous_updated_at: "2026-02-22T12:01:00.000Z"
         }
       },
       {
@@ -1001,24 +945,10 @@ describe("runBubbleWatchdog", () => {
         ...running.state,
         meta_review: {
           ...(running.state.meta_review ?? {
-            last_autonomous_run_id: null,
-            last_autonomous_status: null,
-            last_autonomous_recommendation: null,
-            last_autonomous_summary: null,
-            last_autonomous_report_ref: null,
-            last_autonomous_rework_target_message: null,
-            last_autonomous_updated_at: null,
             auto_rework_count: 0,
             auto_rework_limit: 5,
             sticky_human_gate: false
           }),
-          last_autonomous_run_id: null,
-          last_autonomous_status: "success",
-          last_autonomous_recommendation: "approve",
-          last_autonomous_summary: "Structured submit exists but predates active window.",
-          last_autonomous_report_ref: "artifacts/meta-review-last.json",
-          last_autonomous_rework_target_message: null,
-          last_autonomous_updated_at: "2026-02-22T11:59:59.000Z"
         }
       },
       {
@@ -1059,24 +989,10 @@ describe("runBubbleWatchdog", () => {
         ...running.state,
         meta_review: {
           ...(running.state.meta_review ?? {
-            last_autonomous_run_id: null,
-            last_autonomous_status: null,
-            last_autonomous_recommendation: null,
-            last_autonomous_summary: null,
-            last_autonomous_report_ref: null,
-            last_autonomous_rework_target_message: null,
-            last_autonomous_updated_at: null,
             auto_rework_count: 0,
             auto_rework_limit: 5,
             sticky_human_gate: false
           }),
-          last_autonomous_run_id: null,
-          last_autonomous_status: "success",
-          last_autonomous_recommendation: "approve",
-          last_autonomous_summary: "Stale previous-round submit snapshot.",
-          last_autonomous_report_ref: "artifacts/meta-review-last.json",
-          last_autonomous_rework_target_message: null,
-          last_autonomous_updated_at: "2026-02-22T11:59:59.000Z"
         }
       },
       {
@@ -1118,24 +1034,10 @@ describe("runBubbleWatchdog", () => {
         ...running.state,
         meta_review: {
           ...(running.state.meta_review ?? {
-            last_autonomous_run_id: null,
-            last_autonomous_status: null,
-            last_autonomous_recommendation: null,
-            last_autonomous_summary: null,
-            last_autonomous_report_ref: null,
-            last_autonomous_rework_target_message: null,
-            last_autonomous_updated_at: null,
             auto_rework_count: 0,
             auto_rework_limit: 5,
             sticky_human_gate: false
           }),
-          last_autonomous_run_id: null,
-          last_autonomous_status: "success",
-          last_autonomous_recommendation: "approve",
-          last_autonomous_summary: "Canonical submit is present in active window.",
-          last_autonomous_report_ref: "artifacts/meta-review-last.json",
-          last_autonomous_rework_target_message: null,
-          last_autonomous_updated_at: "2026-02-22T12:01:00.000Z"
         }
       },
       {

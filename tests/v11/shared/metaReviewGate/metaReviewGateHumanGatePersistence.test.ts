@@ -33,13 +33,6 @@ function createLoadedRunningState(): LoadedStateSnapshot {
         attempt: 1
       },
       runtime_delivery: null,
-      last_autonomous_run_id: null,
-      last_autonomous_status: null,
-      last_autonomous_recommendation: null,
-      last_autonomous_summary: null,
-      last_autonomous_report_ref: null,
-      last_autonomous_rework_target_message: null,
-      last_autonomous_updated_at: null,
       auto_rework_count: 0,
       auto_rework_limit: 5,
       sticky_human_gate: false
@@ -53,7 +46,43 @@ function createLoadedRunningState(): LoadedStateSnapshot {
 }
 
 describe("persistHumanGateRoute", () => {
-  it("threads fallbackReworkTargetMessage into the staged fallback snapshot", async () => {
+  it("requires a recommendation source for human-gate persistence", async () => {
+    const loaded = createLoadedRunningState();
+
+    await expect(
+      persistHumanGateRoute({
+        appendEnvelope: async ({ envelope }) => ({
+          envelope: {
+            ...envelope,
+            id: "env_meta_gate_human_route_missing_recommendation",
+            ts: "2026-03-22T11:05:00.000Z"
+          },
+          sequence: 7,
+          mirrorWriteFailures: []
+        }),
+        writeState: async (_statePath, state) => ({
+          fingerprint: "written-fingerprint",
+          state
+        }),
+        statePath: "/tmp/b_meta_gate_human_route_01/state.json",
+        transcriptPath: "/tmp/b_meta_gate_human_route_01/transcript.ndjson",
+        inboxPath: "/tmp/b_meta_gate_human_route_01/inbox.ndjson",
+        lockPath: "/tmp/b_meta_gate_human_route_01/locks/gate.lock",
+        now: new Date("2026-03-22T11:05:00.000Z"),
+        nowIso: "2026-03-22T11:05:00.000Z",
+        bubbleId: loaded.state.bubble_id,
+        summary: "Missing recommendation source should fail closed.",
+        refs: [],
+        loaded,
+        expectedState: "RUNNING",
+        route: "human_gate_budget_exhausted"
+      })
+    ).rejects.toMatchObject({
+      reasonCode: "META_REVIEW_GATE_TRANSITION_INVALID"
+    });
+  });
+
+  it("does not persist fallback-only recommendation state on the staged canonical snapshot", async () => {
     const loaded = createLoadedRunningState();
     const writes: BubbleStateSnapshot[] = [];
 
@@ -85,17 +114,24 @@ describe("persistHumanGateRoute", () => {
       refs: [],
       loaded,
       expectedState: "RUNNING",
-      route: "human_gate_budget_exhausted",
-      fallbackRecommendation: "rework",
-      fallbackReworkTargetMessage: "Address the remaining reviewer-parity drift."
+      route: "human_gate_inconclusive",
+      fallbackRecommendation: "inconclusive"
     });
 
     expect(writes).toHaveLength(1);
-    expect(
-      writes[0]?.meta_review?.last_autonomous_rework_target_message
-    ).toBe("Address the remaining reviewer-parity drift.");
-    expect(result.state.meta_review?.last_autonomous_rework_target_message).toBe(
-      "Address the remaining reviewer-parity drift."
-    );
+    expect(writes[0]?.meta_review).toStrictEqual({
+      execution_context: null,
+      runtime_delivery: null,
+      auto_rework_count: 0,
+      auto_rework_limit: 5,
+      sticky_human_gate: true
+    });
+    expect(result.state.meta_review).toStrictEqual({
+      execution_context: null,
+      runtime_delivery: null,
+      auto_rework_count: 0,
+      auto_rework_limit: 5,
+      sticky_human_gate: true
+    });
   });
 });

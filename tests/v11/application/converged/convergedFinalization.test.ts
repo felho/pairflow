@@ -58,8 +58,11 @@ describe("finalizeConvergedFlow", () => {
           },
           state: {
             meta_review: {
-              last_autonomous_recommendation: "approve",
-              last_autonomous_status: "ok"
+              execution_context: null,
+              runtime_delivery: null,
+              auto_rework_count: 0,
+              auto_rework_limit: 5,
+              sticky_human_gate: false
             }
           },
           metaReviewRun: {
@@ -162,8 +165,11 @@ describe("finalizeConvergedFlow", () => {
       },
       state: {
         meta_review: {
-          last_autonomous_recommendation: "approve",
-          last_autonomous_status: "ok"
+          execution_context: null,
+          runtime_delivery: null,
+          auto_rework_count: 0,
+          auto_rework_limit: 5,
+          sticky_human_gate: false
         }
       },
       delivery: {
@@ -344,8 +350,11 @@ describe("finalizeConvergedFlow", () => {
           },
           state: {
             meta_review: {
-              last_autonomous_recommendation: "rework",
-              last_autonomous_status: "error"
+              execution_context: null,
+              runtime_delivery: null,
+              auto_rework_count: 1,
+              auto_rework_limit: 5,
+              sticky_human_gate: false
             }
           }
         } as never,

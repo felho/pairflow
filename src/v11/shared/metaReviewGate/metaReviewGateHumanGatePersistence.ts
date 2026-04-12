@@ -58,7 +58,6 @@ export interface PersistHumanGateRouteInput {
   parityMetadata?: FindingsParityMetadata | null;
   findings?: MetaReviewGateAdvisoryFinding[];
   fallbackRecommendation?: MetaReviewRecommendation;
-  fallbackReworkTargetMessage?: string | null;
   targetState?: "READY_FOR_HUMAN_APPROVAL";
   stickyHumanGate?: boolean;
   rollbackStateOnAppendFailure?: BubbleStateSnapshot;
@@ -67,6 +66,18 @@ export interface PersistHumanGateRouteInput {
 function assertPersistHumanGateRouteInput(
   input: PersistHumanGateRouteInput
 ): void {
+  if (
+    input.metaReviewRun === undefined &&
+    input.fallbackRecommendation === undefined
+  ) {
+    throw new MetaReviewGateError(
+      "META_REVIEW_GATE_TRANSITION_INVALID",
+      "META_REVIEW_GATE_TRANSITION_INVALID: persistHumanGateRoute requires metaReviewRun or fallbackRecommendation.",
+      {
+        stageReasonCode: "META_REVIEW_GATE_TRANSITION_INVALID"
+      }
+    );
+  }
   if (
     input.metaReviewRun !== undefined &&
     input.fallbackRecommendation !== undefined
@@ -92,17 +103,7 @@ export async function persistHumanGateRoute(
     current: input.loaded.state,
     nowIso: input.nowIso,
     targetState,
-    stickyHumanGate,
-    ...(input.metaReviewRun !== undefined
-      ? { metaReviewRun: input.metaReviewRun }
-      : {}),
-    ...(input.fallbackRecommendation !== undefined
-      ? {
-          fallbackRecommendation: input.fallbackRecommendation,
-          fallbackSummary: input.summary,
-          fallbackReworkTargetMessage: input.fallbackReworkTargetMessage
-        }
-      : {})
+    stickyHumanGate
   });
 
   const recommendation = resolveHumanGateRecommendation({

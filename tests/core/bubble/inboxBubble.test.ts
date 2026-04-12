@@ -316,13 +316,6 @@ describe("getBubbleInbox", () => {
         round: 1,
         meta_review: {
           ...loaded.state.meta_review!,
-          last_autonomous_run_id: "run_meta_newer",
-          last_autonomous_status: "success",
-          last_autonomous_recommendation: "approve",
-          last_autonomous_summary: "Fresh approve summary",
-          last_autonomous_report_ref: "artifacts/meta-review-last.json",
-          last_autonomous_rework_target_message: null,
-          last_autonomous_updated_at: "2026-02-22T10:15:00.000Z"
         }
       },
       {
@@ -362,13 +355,6 @@ describe("getBubbleInbox", () => {
         round: 1,
         meta_review: {
           ...loaded.state.meta_review!,
-          last_autonomous_run_id: "run_meta_only_cached",
-          last_autonomous_status: "success",
-          last_autonomous_recommendation: "approve",
-          last_autonomous_summary: "Cached approval summary only",
-          last_autonomous_report_ref: "artifacts/meta-review-last.json",
-          last_autonomous_rework_target_message: null,
-          last_autonomous_updated_at: "2026-02-22T10:15:00.000Z"
         }
       },
       {

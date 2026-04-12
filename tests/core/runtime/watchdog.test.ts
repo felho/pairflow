@@ -24,13 +24,6 @@ function createState(partial: Partial<BubbleStateSnapshot>): BubbleStateSnapshot
     meta_review: {
       execution_context: null,
       runtime_delivery: null,
-      last_autonomous_run_id: null,
-      last_autonomous_status: null,
-      last_autonomous_recommendation: null,
-      last_autonomous_summary: null,
-      last_autonomous_report_ref: null,
-      last_autonomous_rework_target_message: null,
-      last_autonomous_updated_at: null,
       auto_rework_count: 0,
       auto_rework_limit: 5,
       sticky_human_gate: false
@@ -102,13 +95,6 @@ describe("computeWatchdogStatus", () => {
             watchdogTimeoutMinutes: 5,
             attempt: 1
           }),
-          last_autonomous_run_id: null,
-          last_autonomous_status: null,
-          last_autonomous_recommendation: null,
-          last_autonomous_summary: null,
-          last_autonomous_report_ref: null,
-          last_autonomous_rework_target_message: null,
-          last_autonomous_updated_at: null,
           auto_rework_count: 0,
           auto_rework_limit: 5,
           sticky_human_gate: false
@@ -131,13 +117,6 @@ describe("computeWatchdogStatus", () => {
             watchdogTimeoutMinutes: 5,
             attempt: 1
           }),
-          last_autonomous_run_id: null,
-          last_autonomous_status: null,
-          last_autonomous_recommendation: null,
-          last_autonomous_summary: null,
-          last_autonomous_report_ref: null,
-          last_autonomous_rework_target_message: null,
-          last_autonomous_updated_at: null,
           auto_rework_count: 0,
           auto_rework_limit: 5,
           sticky_human_gate: false
@@ -209,13 +188,6 @@ describe("computeWatchdogStatus", () => {
             observed_for_handoff_id: executionContext.handoff_id,
             observed_for_round: executionContext.round
           },
-          last_autonomous_run_id: null,
-          last_autonomous_status: "error",
-          last_autonomous_recommendation: "inconclusive",
-          last_autonomous_summary: "Runtime delivery failed after durable kickoff.",
-          last_autonomous_report_ref: "artifacts/meta-review-last.json",
-          last_autonomous_rework_target_message: null,
-          last_autonomous_updated_at: "2026-02-22T12:04:30.000Z",
           auto_rework_count: 0,
           auto_rework_limit: 5,
           sticky_human_gate: false
@@ -258,13 +230,6 @@ describe("computeWatchdogStatus", () => {
             observed_for_handoff_id: executionContext.handoff_id,
             observed_for_round: executionContext.round
           },
-          last_autonomous_run_id: null,
-          last_autonomous_status: "error",
-          last_autonomous_recommendation: "inconclusive",
-          last_autonomous_summary: "Runtime delivery still uncertain after restart.",
-          last_autonomous_report_ref: "artifacts/meta-review-last.json",
-          last_autonomous_rework_target_message: null,
-          last_autonomous_updated_at: "2026-02-22T12:04:45.000Z",
           auto_rework_count: 0,
           auto_rework_limit: 5,
           sticky_human_gate: false

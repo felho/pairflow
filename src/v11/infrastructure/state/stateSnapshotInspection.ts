@@ -12,8 +12,6 @@ import {
   isBubbleExecutionContextAwaitedOutputType,
   isBubbleLifecycleState,
   isMetaReviewExecutionContextAwaitedOutputType,
-  isMetaReviewRecommendation,
-  isMetaReviewRunStatus,
   isMetaReviewRuntimeDeliveryStatus,
   isReworkIntentStatus,
   type BubbleExecutionContext,
@@ -114,13 +112,6 @@ function normalizeInspectableMetaReviewSnapshot(
     return {
       execution_context: null,
       runtime_delivery: null,
-      last_autonomous_run_id: null,
-      last_autonomous_status: null,
-      last_autonomous_recommendation: null,
-      last_autonomous_summary: null,
-      last_autonomous_report_ref: null,
-      last_autonomous_rework_target_message: null,
-      last_autonomous_updated_at: null,
       auto_rework_count: 0,
       auto_rework_limit: DEFAULT_META_REVIEW_AUTO_REWORK_LIMIT,
       sticky_human_gate: false
@@ -130,13 +121,6 @@ function normalizeInspectableMetaReviewSnapshot(
   return {
     execution_context: normalizeInspectableMetaReviewExecutionContext(value.execution_context),
     runtime_delivery: normalizeInspectableMetaReviewRuntimeDelivery(value.runtime_delivery),
-    last_autonomous_run_id: isNonEmptyString(value.last_autonomous_run_id) ? value.last_autonomous_run_id.trim() : null,
-    last_autonomous_status: isMetaReviewRunStatus(value.last_autonomous_status) ? value.last_autonomous_status : null,
-    last_autonomous_recommendation: isMetaReviewRecommendation(value.last_autonomous_recommendation) ? value.last_autonomous_recommendation : null,
-    last_autonomous_summary: typeof value.last_autonomous_summary === "string" ? value.last_autonomous_summary : null,
-    last_autonomous_report_ref: typeof value.last_autonomous_report_ref === "string" ? value.last_autonomous_report_ref : null,
-    last_autonomous_rework_target_message: typeof value.last_autonomous_rework_target_message === "string" ? value.last_autonomous_rework_target_message : null,
-    last_autonomous_updated_at: typeof value.last_autonomous_updated_at === "string" ? value.last_autonomous_updated_at : null,
     auto_rework_count: isInteger(value.auto_rework_count) && value.auto_rework_count >= 0 ? value.auto_rework_count : 0,
     auto_rework_limit: isInteger(value.auto_rework_limit) && value.auto_rework_limit >= 1 ? value.auto_rework_limit : DEFAULT_META_REVIEW_AUTO_REWORK_LIMIT,
     sticky_human_gate: value.sticky_human_gate === true
@@ -203,6 +187,9 @@ function coerceInspectableBubbleStateSnapshot(value: unknown): BubbleStateSnapsh
         return normalized === null ? [] : [normalized];
       })
     : [];
+  const normalizedMetaReview = normalizeInspectableMetaReviewSnapshot(
+    value.meta_review
+  );
 
   return {
     bubble_id: value.bubble_id.trim(),
@@ -216,8 +203,8 @@ function coerceInspectableBubbleStateSnapshot(value: unknown): BubbleStateSnapsh
     last_command_at: typeof value.last_command_at === "string" ? value.last_command_at : null,
     pending_rework_intent: normalizeInspectableReworkIntentRecord(value.pending_rework_intent),
     rework_intent_history: reworkIntentHistory,
-    ...(normalizeInspectableMetaReviewSnapshot(value.meta_review) !== undefined
-      ? { meta_review: normalizeInspectableMetaReviewSnapshot(value.meta_review)! }
+    ...(normalizedMetaReview !== undefined
+      ? { meta_review: normalizedMetaReview }
       : {})
   };
 }

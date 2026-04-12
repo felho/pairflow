@@ -28,13 +28,6 @@ function createLoadedRunningState(
           observed_for_handoff_id: "meta_review:b_meta_gate_stage_01:round:4:attempt:2",
           observed_for_round: 4
         },
-        last_autonomous_run_id: "run_prev",
-        last_autonomous_status: "success",
-        last_autonomous_recommendation: "rework",
-        last_autonomous_summary: "Need another pass",
-        last_autonomous_report_ref: "artifacts/meta-review-last.json",
-        last_autonomous_rework_target_message: "Address open findings",
-        last_autonomous_updated_at: "2026-03-19T10:00:00.000Z",
         auto_rework_count: 2,
         auto_rework_limit: 5,
         sticky_human_gate: false
@@ -87,13 +80,7 @@ describe("stageMetaReviewRunningState", () => {
     });
     expect(result.state.meta_review?.auto_rework_count).toBe(2);
     expect(result.state.meta_review?.runtime_delivery).toBeNull();
-    expect(result.state.meta_review?.last_autonomous_run_id).toBeNull();
-    expect(result.state.meta_review?.last_autonomous_status).toBeNull();
-    expect(result.state.meta_review?.last_autonomous_recommendation).toBeNull();
-    expect(result.state.meta_review?.last_autonomous_summary).toBeNull();
-    expect(result.state.meta_review?.last_autonomous_report_ref).toBeNull();
-    expect(result.state.meta_review?.last_autonomous_rework_target_message).toBeNull();
-    expect(result.state.meta_review?.last_autonomous_updated_at).toBeNull();
+    expect(result.state.meta_review).not.toHaveProperty("last_autonomous_run_id");
     expect(result.state.meta_review?.sticky_human_gate).toBe(false);
   });
 
@@ -130,13 +117,6 @@ describe("stageMetaReviewRunningState", () => {
         attempt: 1
       },
       runtime_delivery: null,
-      last_autonomous_run_id: null,
-      last_autonomous_status: null,
-      last_autonomous_recommendation: null,
-      last_autonomous_summary: null,
-      last_autonomous_report_ref: null,
-      last_autonomous_rework_target_message: null,
-      last_autonomous_updated_at: null,
       auto_rework_count: 0,
       auto_rework_limit: 5,
       sticky_human_gate: false

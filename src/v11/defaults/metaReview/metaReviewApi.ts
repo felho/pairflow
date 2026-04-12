@@ -2,7 +2,6 @@ import { readFile, rm, writeFile } from "node:fs/promises";
 
 import {
   clearLiveMetaReviewSnapshot,
-  hasCanonicalSubmitForActiveMetaReviewRound,
   normalizeMetaReviewSnapshot,
   resolveActiveMetaReviewRuntimeDelivery
 } from "../../shared/metaReview/metaReviewSnapshot.js";
@@ -43,7 +42,6 @@ export {
 } from "../../application/metaReview/emitMetaReviewV11.js";
 export {
   clearLiveMetaReviewSnapshot,
-  hasCanonicalSubmitForActiveMetaReviewRound,
   MetaReviewError,
   normalizeMetaReviewSnapshot,
   resolveActiveMetaReviewRuntimeDelivery

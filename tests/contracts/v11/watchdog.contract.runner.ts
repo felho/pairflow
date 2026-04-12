@@ -274,13 +274,6 @@ async function seedWaitingHumanState(input: {
             observed_for_handoff_id: executionContext.handoff_id,
             observed_for_round: executionContext.round
           },
-          last_autonomous_run_id: "run_watchdog_before_deadline_contract_01",
-          last_autonomous_status: "error",
-          last_autonomous_recommendation: "inconclusive",
-          last_autonomous_summary: "Runtime delivery failed after durable kickoff.",
-          last_autonomous_report_ref: "artifacts/meta-review-last.json",
-          last_autonomous_rework_target_message: null,
-          last_autonomous_updated_at: "2026-03-20T12:44:30.000Z"
         }
       },
       {
@@ -323,13 +316,6 @@ async function seedWaitingHumanState(input: {
             observed_for_handoff_id: executionContext.handoff_id,
             observed_for_round: executionContext.round
           },
-          last_autonomous_run_id: "run_watchdog_rebind_contract_01",
-          last_autonomous_status: "error",
-          last_autonomous_recommendation: "inconclusive",
-          last_autonomous_summary: "Runtime delivery remained uncertain after restart/rebind.",
-          last_autonomous_report_ref: "artifacts/meta-review-last.json",
-          last_autonomous_rework_target_message: null,
-          last_autonomous_updated_at: "2026-03-20T12:44:30.000Z"
         }
       },
       {
