@@ -1,5 +1,1 @@
-export type {
-  MetaReviewLastReportView,
-  MetaReviewStatusView,
-  MetaReviewSubmitResult
-} from "../../shared/metaReview/metaReviewCommandContract.js";
+export type { MetaReviewSubmitResult } from "../../shared/metaReview/metaReviewCommandContract.js";

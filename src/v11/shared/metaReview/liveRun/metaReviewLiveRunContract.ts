@@ -4,16 +4,13 @@ import type {
 } from "../../../../types/bubble.js";
 import type {
   MetaReviewCommandDependencies as MetaReviewCommandDependenciesV11,
-  MetaReviewReadInput as MetaReviewReadInputV11,
   MetaReviewSubmitInput as MetaReviewSubmitInputV11,
   MetaReviewSubmitResult as MetaReviewSubmitResultV11
 } from "../metaReviewCommandContract.js";
 import type {
   MetaReviewDepth as MetaReviewDepthV11,
-  MetaReviewLastReportView as MetaReviewLastReportViewV11,
   MetaReviewResult as MetaReviewResultV11,
-  MetaReviewRunWarning as MetaReviewRunWarningV11,
-  MetaReviewStatusView as MetaReviewStatusViewV11
+  MetaReviewRunWarning as MetaReviewRunWarningV11
 } from "../metaReviewTypes.js";
 import type { MetaReviewReviewerVerdict as MetaReviewReviewerVerdictV11 } from "../../../domain/metaReview/metaReviewReviewerVerdict.js";
 
@@ -26,15 +23,15 @@ export interface MetaReviewLiveRunnerOutput {
 
 export type MetaReviewDepth = MetaReviewDepthV11;
 export type MetaReviewReviewerVerdict = MetaReviewReviewerVerdictV11;
-export type MetaReviewStatusView = MetaReviewStatusViewV11;
-export type MetaReviewLastReportView = MetaReviewLastReportViewV11;
 export type MetaReviewResult = MetaReviewResultV11;
 export type MetaReviewRunWarning = MetaReviewRunWarningV11;
 export type MetaReviewSubmitResult = MetaReviewSubmitResultV11;
-export type MetaReviewReadInput = MetaReviewReadInputV11;
 export type MetaReviewSubmitInput = MetaReviewSubmitInputV11;
 
-export interface MetaReviewRunInput extends MetaReviewReadInput {
+export interface MetaReviewRunInput {
+  bubbleId: string;
+  repoPath?: string;
+  cwd?: string;
   depth?: MetaReviewDepth;
 }
 

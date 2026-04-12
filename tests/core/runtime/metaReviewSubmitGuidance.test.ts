@@ -6,7 +6,7 @@ import {
   buildMetaReviewSubmitCommandTemplate,
   buildMetaReviewSubmitUsageLine
 } from "../../../src/v11/shared/metaReview/metaReviewSubmitGuidance.js";
-import { getBubbleMetaReviewHelpText } from "../../../src/v11/application/metaReview/metaReviewCliOptions.js";
+import { getAgentEmitHelpText } from "../../../src/cli/commands/agent/emit.js";
 import { buildMetaReviewerStartupPrompt } from "../../../src/v11/application/start/startCommandPrompts.js";
 
 describe("metaReviewSubmitGuidance", () => {
@@ -28,10 +28,13 @@ describe("metaReviewSubmitGuidance", () => {
     expect(prompt).toContain("Do not emit alias severities such as `blocking` or `advisory`");
   });
 
-  it("keeps CLI help aligned with the shared submit usage line", () => {
-    const helpText = getBubbleMetaReviewHelpText();
+  it("keeps agent emit help aligned with the shared submit usage line", () => {
+    const helpText = getAgentEmitHelpText();
+    const submitUsageLine = helpText.split("\n").find((line) =>
+      line.includes("meta_review_result")
+    );
 
-    expect(helpText).toContain(buildMetaReviewSubmitUsageLine());
+    expect(submitUsageLine).toBe(`  ${buildMetaReviewSubmitUsageLine()}`);
     expect(helpText).not.toContain("--report-markdown");
   });
 

@@ -19,8 +19,6 @@ import {
   ApprovalCommandErrorV11 as ApprovalCommandError
 } from "../../../src/v11/application/approval/emitApprovalV11.js";
 import {
-  getMetaReviewLastReportV11 as getMetaReviewLastReport,
-  getMetaReviewStatusV11 as getMetaReviewStatus,
   submitMetaReviewResultV11 as submitMetaReviewResult
 } from "../../../src/v11/application/metaReview/emitMetaReviewV11.js";
 import {
@@ -378,18 +376,6 @@ describe("approval decisions", () => {
       last_autonomous_updated_at: null
     });
 
-    const status = await getMetaReviewStatus({
-      bubbleId: bubble.bubbleId,
-      repoPath
-    });
-    const lastReport = await getMetaReviewLastReport({
-      bubbleId: bubble.bubbleId,
-      repoPath
-    });
-    expect(status.has_run).toBe(false);
-    expect(status.sticky_human_gate).toBe(false);
-    expect(lastReport.has_report).toBe(false);
-    expect(lastReport.report_ref).toBeNull();
   });
 
   it("rejects approval when READY_FOR_HUMAN_APPROVAL lacks meta-review recommendation context", async () => {

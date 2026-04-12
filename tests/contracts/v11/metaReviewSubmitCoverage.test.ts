@@ -5,7 +5,6 @@ import { createHash } from "node:crypto";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { parseBubbleMetaReviewCommandOptions } from "../../../src/cli/commands/bubble/metaReview.js";
 import { submitMetaReviewResultV11 as submitMetaReviewResult } from "../../../src/v11/application/metaReview/emitMetaReviewV11.js";
 import { buildMetaReviewExecutionContext } from "../../../src/v11/shared/metaReview/metaReviewExecutionContext.js";
 import { MetaReviewError } from "../../../src/v11/shared/metaReview/metaReviewError.js";
@@ -155,60 +154,6 @@ describe("v11 meta-review submit contract", () => {
     }
     expect(thrown.reasonCode).toBe("META_REVIEW_SCHEMA_INVALID");
     expect(thrown.message).toContain("Missing required option: --report-json");
-  });
-
-  it("rejects submit command when --report-json is missing", () => {
-    let thrown: unknown;
-    try {
-      parseBubbleMetaReviewCommandOptions([
-        "submit",
-        "--id",
-        "b_meta_contract_missing_report_json_01",
-        "--round",
-        "1",
-        "--recommendation",
-        "approve",
-        "--summary",
-        "Contract submit payload without report_json"
-      ]);
-    } catch (error) {
-      thrown = error;
-    }
-
-    expect(thrown).toBeInstanceOf(MetaReviewError);
-    if (!(thrown instanceof MetaReviewError)) {
-      throw new Error("Expected MetaReviewError for missing --report-json.");
-    }
-    expect(thrown.message).toContain("was removed");
-    expect(thrown.message).toContain("pairflow agent emit --kind meta_review_result");
-  });
-
-  it("rejects submit command when --report-json is not a JSON object", () => {
-    let thrown: unknown;
-    try {
-      parseBubbleMetaReviewCommandOptions([
-        "submit",
-        "--id",
-        "b_meta_contract_invalid_report_json_01",
-        "--round",
-        "1",
-        "--recommendation",
-        "approve",
-        "--summary",
-        "Contract submit payload with invalid report_json shape",
-        "--report-json",
-        "[]"
-      ]);
-    } catch (error) {
-      thrown = error;
-    }
-
-    expect(thrown).toBeInstanceOf(MetaReviewError);
-    if (!(thrown instanceof MetaReviewError)) {
-      throw new Error("Expected MetaReviewError for invalid --report-json shape.");
-    }
-    expect(thrown.message).toContain("was removed");
-    expect(thrown.message).toContain("pairflow agent emit --kind meta_review_result");
   });
 
   it("rejects summary/structured mismatch on submit", async () => {

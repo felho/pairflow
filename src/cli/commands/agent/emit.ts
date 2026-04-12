@@ -20,6 +20,9 @@ import {
   parseSubmitRecommendation,
   parseSubmitRound
 } from "../../../v11/application/metaReview/metaReviewCliOptionValueReader.js";
+import {
+  buildMetaReviewSubmitUsageLine
+} from "../../../v11/shared/metaReview/metaReviewSubmitGuidance.js";
 import { emitActorProtocolFromWorkspaceV11 } from "../../../v11/application/actorProtocol/emitActorProtocolV11.js";
 import {
   resolveActorEmitContextByBubbleId
@@ -264,7 +267,7 @@ export function getAgentEmitHelpText(): string {
     '  pairflow agent emit --kind pass --repo <path> --bubble-id <id> --handoff-id <id> --summary "<text>" [--ref <artifact-path>]... [--intent <task|review|fix_request>] [--finding <P0|P1|P2|P3:Title[|ref1,ref2]>]... [--no-findings]',
     '  pairflow agent emit --kind human_question --repo <path> --bubble-id <id> --handoff-id <id> --question "<text>" [--ref <artifact-path>]...',
     '  pairflow agent emit --kind convergence --repo <path> --bubble-id <id> --handoff-id <id> --summary "<text>" [--ref <artifact-path>]... [--finding <P2|P3:Title[|ref1,ref2]>]...',
-    '  pairflow agent emit --kind meta_review_result --repo <path> --bubble-id <id> --handoff-id <id> --round <n> --recommendation approve|rework|inconclusive --summary "<text>" [--rework-target-message "<text>"] --report-json <json> [--ref <artifact-path>]...',
+    `  ${buildMetaReviewSubmitUsageLine()}`,
     "",
     "Common options:",
     "  --kind <value>                 Required actor output kind",
