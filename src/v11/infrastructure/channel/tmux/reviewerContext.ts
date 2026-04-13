@@ -6,6 +6,7 @@ import {
   type TmuxRunner
 } from "./tmuxManager.js";
 import { buildAgentCommand } from "../../../shared/command/agentCommand.js";
+import { resolveRuntimeSessionWorkspaceAuthority } from "../../../shared/runtimeSessionWorkspaceAuthority.js";
 import type {
   RefreshReviewerContextInput,
   RefreshReviewerContextResult
@@ -29,14 +30,19 @@ export async function refreshReviewerContext(
   const readSessions = input.readSessionsRegistry ?? readRuntimeSessionsRegistry;
 
   let sessionName: string | undefined;
-  let worktreePath: string | undefined;
+  let workspacePath: string | undefined;
   try {
     const sessions = await readSessions(input.sessionsPath, {
       allowMissing: true
     });
     const record = sessions[input.bubbleId];
     sessionName = record?.tmuxSessionName;
-    worktreePath = record?.worktreePath;
+    const workspaceAuthority = resolveRuntimeSessionWorkspaceAuthority({
+      runtimeSessionRecord: record
+    });
+    if (workspaceAuthority.status === "resolved") {
+      workspacePath = workspaceAuthority.authority.workspacePath;
+    }
   } catch {
     return {
       refreshed: false,
@@ -44,7 +50,7 @@ export async function refreshReviewerContext(
     };
   }
 
-  if (sessionName === undefined || worktreePath === undefined) {
+  if (sessionName === undefined || workspacePath === undefined) {
     return {
       refreshed: false,
       reason: "no_runtime_session"
@@ -55,7 +61,7 @@ export async function refreshReviewerContext(
   const reviewerCommand = buildAgentCommand({
     agentName: input.bubbleConfig.agents.reviewer,
     bubbleId: input.bubbleId,
-    worktreePath,
+    workspacePath,
     pairflowCommandProfile: input.bubbleConfig.pairflow_command_profile,
     startupPrompt: input.reviewerStartupPrompt
   });
@@ -64,7 +70,7 @@ export async function refreshReviewerContext(
     await respawnTmuxPaneCommand({
       sessionName,
       paneIndex: runtimePaneIndices.reviewer,
-      cwd: worktreePath,
+      cwd: workspacePath,
       command: reviewerCommand,
       runner
     });
