@@ -78,4 +78,36 @@ describe("v11 shared state schema", () => {
 
     expect(result.ok).toBe(true);
   });
+
+  it("rejects pre-E1 execution authority snapshots without execution_id under the v11 shared schema", () => {
+    const result = validateBubbleStateSnapshot({
+      bubble_id: "b_v11_state_schema_04",
+      state: "RUNNING",
+      round: 2,
+      active_agent: "codex",
+      active_since: "2026-04-06T10:00:00.000Z",
+      active_role: "implementer",
+      execution_context: {
+        active_role: "implementer",
+        awaited_output_type: "pass_result",
+        handoff_id: "implementer:b_v11_state_schema_04:round:2:attempt:1",
+        round: 2,
+        started_at: "2026-04-06T10:00:00.000Z",
+        deadline_at: "2026-04-06T10:30:00.000Z",
+        attempt: 1
+      },
+      round_role_history: [],
+      last_command_at: "2026-04-06T10:01:00.000Z"
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) {
+      return;
+    }
+    expect(result.errors).toContainEqual({
+      path: "execution_context.execution_id",
+      message:
+        "ACTOR_EMIT_CONTEXT_PRE_E1_EXECUTION_ID_MISSING: pre-E1 execution_context snapshots without execution_id are unsupported"
+    });
+  });
 });

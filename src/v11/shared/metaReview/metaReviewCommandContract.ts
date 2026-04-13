@@ -22,7 +22,7 @@ import type {
 
 export type { MetaReviewResult, MetaReviewRunWarning } from "./metaReviewTypes.js";
 
-export interface MetaReviewSubmitInput {
+export type MetaReviewSubmitInput = {
   bubbleId: string;
   repoPath?: string;
   cwd?: string;
@@ -32,11 +32,22 @@ export interface MetaReviewSubmitInput {
   rework_target_message?: string | null;
   report_json: Record<string, unknown>;
   refs?: string[];
-  expectedHandoffId?: string;
-  expectedRole?: "implementer" | "reviewer" | "meta_reviewer";
-  expectedRound?: number;
-  expectedStateFingerprint?: string;
-}
+} & (
+  | {
+      expectedHandoffId?: undefined;
+      expectedExecutionId?: undefined;
+      expectedRole?: "implementer" | "reviewer" | "meta_reviewer";
+      expectedRound?: number;
+      expectedStateFingerprint?: string;
+    }
+  | {
+      expectedHandoffId: string;
+      expectedExecutionId: string;
+      expectedRole?: "implementer" | "reviewer" | "meta_reviewer";
+      expectedRound?: number;
+      expectedStateFingerprint?: string;
+    }
+);
 
 export interface MetaReviewCommandDependencies {
   resolveBubbleById?: ResolveBubbleByIdPort;

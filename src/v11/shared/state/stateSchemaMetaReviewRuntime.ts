@@ -60,7 +60,7 @@ export function validateMetaReviewExecutionContext(
   pathPrefix: string,
   errors: ValidationError[]
 ): BubbleMetaReviewExecutionContext | null {
-  if (input === null) {
+  if (input === null || input === undefined) {
     return null;
   }
 
@@ -77,6 +77,22 @@ export function validateMetaReviewExecutionContext(
     errors.push({
       path: `${pathPrefix}.handoff_id`,
       message: "Must be a non-empty string"
+    });
+  }
+
+  const hasExecutionId = Object.hasOwn(input, "execution_id");
+  const executionId = input.execution_id;
+  if (!hasExecutionId) {
+    errors.push({
+      path: `${pathPrefix}.execution_id`,
+      message:
+        "ACTOR_EMIT_CONTEXT_PRE_E1_EXECUTION_ID_MISSING: pre-E1 meta_review.execution_context snapshots without execution_id are unsupported"
+    });
+  } else if (!isNonEmptyString(executionId)) {
+    errors.push({
+      path: `${pathPrefix}.execution_id`,
+      message:
+        "ACTOR_EMIT_CONTEXT_EXECUTION_ID_MISSING: Must be a non-empty string"
     });
   }
 
@@ -115,6 +131,7 @@ export function validateMetaReviewExecutionContext(
 
   if (
     !isNonEmptyString(handoffId) ||
+    !isNonEmptyString(executionId) ||
     !isInteger(round) ||
     round < 1 ||
     !isMetaReviewExecutionContextAwaitedOutputType(awaitedOutputType) ||
@@ -127,6 +144,7 @@ export function validateMetaReviewExecutionContext(
 
   return {
     handoff_id: handoffId,
+    execution_id: executionId,
     round,
     awaited_output_type: awaitedOutputType,
     started_at: validatedTimestamps.startedAt,

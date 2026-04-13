@@ -119,7 +119,7 @@ describe("state schema", () => {
 
     expect(metaRunning.ok).toBe(true);
     if (metaRunning.ok) {
-      expect(metaRunning.value.execution_context).toEqual({
+      expect(metaRunning.value.execution_context).toMatchObject({
         active_role: "meta_reviewer",
         awaited_output_type: "meta_review_result",
         handoff_id: "meta_review:b_test_meta_state_01:round:2:attempt:1",
@@ -128,7 +128,10 @@ describe("state schema", () => {
         deadline_at: "2026-03-08T11:00:00.000Z",
         attempt: 1
       });
-      expect(metaRunning.value.meta_review?.execution_context).toEqual({
+      expect(metaRunning.value.execution_context?.execution_id).toMatch(
+        /^exec_[0-9a-f]{24}$/u
+      );
+      expect(metaRunning.value.meta_review?.execution_context).toMatchObject({
         handoff_id: "meta_review:b_test_meta_state_01:round:2:attempt:1",
         round: 2,
         awaited_output_type: "meta_review_result",
@@ -136,9 +139,13 @@ describe("state schema", () => {
         deadline_at: "2026-03-08T11:00:00.000Z",
         attempt: 1
       });
+      expect(metaRunning.value.meta_review?.execution_context?.execution_id).toBe(
+        metaRunning.value.execution_context?.execution_id
+      );
       expectCanonicalMetaReviewSnapshot(metaRunning.value.meta_review, {
         execution_context: {
           handoff_id: "meta_review:b_test_meta_state_01:round:2:attempt:1",
+          execution_id: metaRunning.value.execution_context?.execution_id,
           round: 2,
           awaited_output_type: "meta_review_result",
           started_at: "2026-03-08T10:00:00.000Z",
@@ -241,6 +248,38 @@ describe("state schema", () => {
       execution_context: toMetaReviewExecutionContext(
         metaReviewExecutionContextToRunningContext(executionContext)
       )
+    });
+  });
+
+  it("rejects pre-E1 execution_context snapshots without execution_id", () => {
+    const result = validateBubbleStateSnapshot({
+      bubble_id: "b_test_pre_e1_exec_ctx_01",
+      state: "RUNNING",
+      round: 2,
+      active_agent: "codex",
+      active_since: "2026-03-08T10:00:00.000Z",
+      active_role: "implementer",
+      execution_context: {
+        active_role: "implementer",
+        awaited_output_type: "pass_result",
+        handoff_id: "implementer:b_test_pre_e1_exec_ctx_01:round:2:attempt:1",
+        round: 2,
+        started_at: "2026-03-08T10:00:00.000Z",
+        deadline_at: "2026-03-08T10:30:00.000Z",
+        attempt: 1
+      },
+      round_role_history: [],
+      last_command_at: "2026-03-08T10:01:00.000Z"
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) {
+      return;
+    }
+    expect(result.errors).toContainEqual({
+      path: "execution_context.execution_id",
+      message:
+        "ACTOR_EMIT_CONTEXT_PRE_E1_EXECUTION_ID_MISSING: pre-E1 execution_context snapshots without execution_id are unsupported"
     });
   });
 

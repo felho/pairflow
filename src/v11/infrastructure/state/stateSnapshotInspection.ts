@@ -27,6 +27,7 @@ import {
   isIsoTimestamp,
   isNonEmptyString,
   isRecord,
+  SchemaValidationError,
   type ValidationError
 } from "../../shared/validation/primitives.js";
 
@@ -41,22 +42,70 @@ export interface InspectedStateSnapshot {
   stateValidation: StateValidationDiagnostics | null;
 }
 
+const inspectStatePreE1ExecutionAuthorityRejectedReasonCode =
+  "INSPECT_STATE_PRE_E1_EXECUTION_AUTHORITY_REJECTED";
+
 export function fingerprintState(state: BubbleStateSnapshot): string {
   const normalized = JSON.stringify(state);
   return createHash("sha256").update(normalized).digest("hex");
+}
+
+function hasPreE1ExecutionAuthorityShape(value: unknown): boolean {
+  return isRecord(value) && !Object.hasOwn(value, "execution_id");
+}
+
+function hasFailClosedPreE1Authority(input: unknown): boolean {
+  if (!isRecord(input)) {
+    return false;
+  }
+
+  if (hasPreE1ExecutionAuthorityShape(input.execution_context)) {
+    return true;
+  }
+
+  if (!isRecord(input.meta_review)) {
+    return false;
+  }
+
+  return hasPreE1ExecutionAuthorityShape(input.meta_review.execution_context);
+}
+
+function throwPreE1ExecutionAuthorityInspectionError(
+  errors: ValidationError[]
+): never {
+  const firstAuthorityError =
+    errors.find((error) =>
+      error.message.startsWith(
+        "ACTOR_EMIT_CONTEXT_PRE_E1_EXECUTION_ID_MISSING"
+      )
+    ) ?? errors[0];
+
+  throw new SchemaValidationError({
+    message:
+      `${inspectStatePreE1ExecutionAuthorityRejectedReasonCode}: inspection rejected a pre-E1 execution authority snapshot; fresh authority remint is required.`,
+    errors,
+    context: {
+      source: "assert_validation",
+      errorCount: errors.length,
+      firstErrorPath: firstAuthorityError?.path
+    }
+  });
 }
 
 function normalizeInspectableMetaReviewExecutionContext(
   value: unknown
 ): BubbleMetaReviewExecutionContext | null {
   if (value === undefined || value === null || !isRecord(value)) return null;
+  if (!Object.hasOwn(value, "execution_id")) return null;
   if (!isNonEmptyString(value.handoff_id)) return null;
+  if (!isNonEmptyString(value.execution_id)) return null;
   if (!isInteger(value.round) || value.round <= 0) return null;
   if (!isMetaReviewExecutionContextAwaitedOutputType(value.awaited_output_type)) return null;
   if (!isIsoTimestamp(value.started_at) || !isIsoTimestamp(value.deadline_at)) return null;
   if (!isInteger(value.attempt) || value.attempt <= 0) return null;
   return {
     handoff_id: value.handoff_id,
+    execution_id: value.execution_id,
     round: value.round,
     awaited_output_type: value.awaited_output_type,
     started_at: value.started_at,
@@ -69,7 +118,9 @@ function normalizeInspectableExecutionContext(
   value: unknown
 ): BubbleExecutionContext | null {
   if (value === undefined || value === null || !isRecord(value)) return null;
+  if (!Object.hasOwn(value, "execution_id")) return null;
   if (!isAgentRole(value.active_role) || !isNonEmptyString(value.handoff_id)) return null;
+  if (!isNonEmptyString(value.execution_id)) return null;
   if (!isInteger(value.round) || value.round <= 0) return null;
   if (!isBubbleExecutionContextAwaitedOutputType(value.awaited_output_type)) return null;
   if (!isIsoTimestamp(value.started_at) || !isIsoTimestamp(value.deadline_at)) return null;
@@ -77,6 +128,7 @@ function normalizeInspectableExecutionContext(
   return {
     active_role: value.active_role,
     handoff_id: value.handoff_id,
+    execution_id: value.execution_id,
     round: value.round,
     awaited_output_type: value.awaited_output_type,
     started_at: value.started_at,
@@ -219,6 +271,10 @@ async function loadStateSnapshot(statePath: string): Promise<InspectedStateSnaps
       fingerprint: fingerprintState(result.value),
       stateValidation: null
     };
+  }
+
+  if (hasFailClosedPreE1Authority(parsed)) {
+    throwPreE1ExecutionAuthorityInspectionError(result.errors);
   }
 
   const inspectable = coerceInspectableBubbleStateSnapshot(parsed);

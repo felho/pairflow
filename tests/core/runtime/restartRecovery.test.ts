@@ -283,9 +283,11 @@ describe("restart recovery", () => {
     });
     const beforeRestart = await readStateSnapshot(bubble.paths.statePath);
     const oldHandoffId = beforeRestart.state.execution_context?.handoff_id;
+    const oldExecutionId = beforeRestart.state.execution_context?.execution_id;
     expect(oldHandoffId).toBe(
       "implementer:b_restart_impl_01:round:1:attempt:1"
     );
+    expect(oldExecutionId).toBeDefined();
 
     await upsertRuntimeSession({
       sessionsPath: bubble.paths.sessionsPath,
@@ -325,6 +327,8 @@ describe("restart recovery", () => {
       "implementer:b_restart_impl_01:round:1:attempt:2"
     );
     expect(restarted.state.execution_context?.attempt).toBe(2);
+    expect(restarted.state.execution_context?.execution_id).toBeDefined();
+    expect(restarted.state.execution_context?.execution_id).not.toBe(oldExecutionId);
 
     await expect(
       runAgentEmitCommand([
@@ -336,6 +340,8 @@ describe("restart recovery", () => {
         bubble.bubbleId,
         "--handoff-id",
         String(oldHandoffId),
+        "--execution-id",
+        String(oldExecutionId),
         "--question",
         "Is the stale authority still valid?"
       ])
@@ -350,6 +356,8 @@ describe("restart recovery", () => {
       bubble.bubbleId,
       "--handoff-id",
       "implementer:b_restart_impl_01:round:1:attempt:2",
+      "--execution-id",
+      String(restarted.state.execution_context?.execution_id),
       "--question",
       "Use the fresh post-restart authority."
     ]);
@@ -435,6 +443,9 @@ describe("restart recovery", () => {
       "reviewer:b_restart_reviewer_01:round:1:attempt:2"
     );
     expect(restarted.state.execution_context?.attempt).toBe(2);
+    expect(restarted.state.execution_context?.execution_id).not.toBe(
+      reviewerExecutionContext.execution_id
+    );
 
     await expect(
       runAgentEmitCommand([
@@ -446,6 +457,8 @@ describe("restart recovery", () => {
         bubble.bubbleId,
         "--handoff-id",
         reviewerExecutionContext.handoff_id,
+        "--execution-id",
+        reviewerExecutionContext.execution_id,
         "--summary",
         "Is the stale reviewer authority still valid?",
         "--no-findings"
@@ -461,6 +474,8 @@ describe("restart recovery", () => {
       bubble.bubbleId,
       "--handoff-id",
       "reviewer:b_restart_reviewer_01:round:1:attempt:2",
+      "--execution-id",
+      String(restarted.state.execution_context?.execution_id),
       "--summary",
       "Use the fresh reviewer authority after resume.",
       "--no-findings"

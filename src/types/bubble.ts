@@ -293,6 +293,7 @@ export interface BubbleReworkIntentRecord {
 
 export interface BubbleMetaReviewExecutionContext {
   handoff_id: string;
+  execution_id: string;
   round: number;
   awaited_output_type: MetaReviewExecutionContextAwaitedOutputType;
   started_at: string;
@@ -304,6 +305,7 @@ export interface BubbleExecutionContext {
   active_role: AgentRole;
   awaited_output_type: BubbleExecutionContextAwaitedOutputType;
   handoff_id: string;
+  execution_id: string;
   round: number;
   started_at: string;
   deadline_at: string;

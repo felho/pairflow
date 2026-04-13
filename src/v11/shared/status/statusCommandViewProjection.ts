@@ -36,6 +36,7 @@ export interface StatusExecutionContextView {
   activeRole: BubbleExecutionContext["active_role"];
   awaitedOutputType: BubbleExecutionContext["awaited_output_type"];
   handoffId: string;
+  executionId: string;
   round: number;
   startedAt: string;
   deadlineAt: string;
@@ -133,6 +134,7 @@ export function buildStatusExecutionContextView(
         activeRole: executionContext.active_role,
         awaitedOutputType: executionContext.awaited_output_type,
         handoffId: executionContext.handoff_id,
+        executionId: executionContext.execution_id,
         round: executionContext.round,
         startedAt: executionContext.started_at,
         deadlineAt: executionContext.deadline_at,

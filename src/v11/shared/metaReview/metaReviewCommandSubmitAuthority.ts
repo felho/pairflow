@@ -134,6 +134,7 @@ export function assertMetaReviewSubmitStaleGuard(input: {
   executionContext: ReturnType<typeof assertActiveMetaReviewExecutionContext>;
   stateFingerprint: string;
   expectedHandoffId?: string;
+  expectedExecutionId?: string;
   expectedRole?: "implementer" | "reviewer" | "meta_reviewer";
   expectedRound?: number;
   expectedStateFingerprint?: string;
@@ -149,6 +150,22 @@ export function assertMetaReviewSubmitStaleGuard(input: {
       context: {
         source: "assert_meta_review_submit_stale_guard",
         reason: "handoff_id_mismatch",
+        bubbleId: input.bubbleId
+      }
+    });
+  }
+
+  if (
+    input.expectedExecutionId !== undefined &&
+    input.executionContext.execution_id !== input.expectedExecutionId
+  ) {
+    throw new MetaReviewError({
+      reasonCode: "META_REVIEW_STATE_INVALID",
+      message:
+        `meta-review submit rejected: canonical execution mismatch (expected ${input.expectedExecutionId}, active ${input.executionContext.execution_id}).`,
+      context: {
+        source: "assert_meta_review_submit_stale_guard",
+        reason: "execution_id_mismatch",
         bubbleId: input.bubbleId
       }
     });

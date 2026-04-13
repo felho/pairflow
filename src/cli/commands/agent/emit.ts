@@ -55,6 +55,10 @@ export type ParsedAgentEmitCommandOptions =
 
 const agentEmitOptionsInvalidReasonCode = "ACTOR_EMIT_OPTIONS_INVALID";
 const agentEmitFindingsInvalidReasonCode = "ACTOR_EMIT_FINDINGS_INVALID";
+const agentEmitInputExecutionIdMissingReasonCode =
+  "ACTOR_EMIT_INPUT_EXECUTION_ID_MISSING";
+const agentEmitForbiddenExecutionIdDerivationReasonCode =
+  "ACTOR_EMIT_FORBIDDEN_EXECUTION_ID_DERIVATION";
 
 const agentEmitParseOptions = {
   kind: {
@@ -67,6 +71,9 @@ const agentEmitParseOptions = {
     type: "string"
   },
   "handoff-id": {
+    type: "string"
+  },
+  "execution-id": {
     type: "string"
   },
   "expected-role": {
@@ -239,6 +246,7 @@ function buildCommonInput(values: Record<string, unknown>): Omit<
     values["handoff-id"] as string | undefined,
     "--handoff-id"
   );
+  const executionId = parseRequiredExecutionId(values, handoffId);
   const expectedRole = parseAgentRole(values["expected-role"] as string | undefined);
   const expectedRound = parseOptionalPositiveInteger(
     values["expected-round"] as string | undefined,
@@ -252,6 +260,7 @@ function buildCommonInput(values: Record<string, unknown>): Omit<
     repo,
     bubble_id: bubbleId,
     handoff_id: handoffId,
+    execution_id: executionId,
     refs,
     ...(expectedRole !== undefined ? { expected_role: expectedRole } : {}),
     ...(expectedRound !== undefined ? { expected_round: expectedRound } : {}),
@@ -261,12 +270,36 @@ function buildCommonInput(values: Record<string, unknown>): Omit<
   };
 }
 
+function parseRequiredExecutionId(
+  values: Record<string, unknown>,
+  handoffId: string
+): string {
+  const executionId = values["execution-id"] as string | undefined;
+  if (executionId === undefined) {
+    throw new Error(
+      `${agentEmitInputExecutionIdMissingReasonCode}: Missing required option: --execution-id (handoff_id cannot be used to derive execution_id).`
+    );
+  }
+  const normalizedExecutionId = executionId.trim();
+  if (normalizedExecutionId.length === 0) {
+    throw new Error(
+      `${agentEmitForbiddenExecutionIdDerivationReasonCode}: --execution-id must be a non-empty explicit execution authority token; handoff_id cannot be used as a substitute.`
+    );
+  }
+  if (normalizedExecutionId === handoffId) {
+    throw new Error(
+      `${agentEmitForbiddenExecutionIdDerivationReasonCode}: --execution-id must not equal --handoff-id; inferred execution authority is forbidden.`
+    );
+  }
+  return normalizedExecutionId;
+}
+
 export function getAgentEmitHelpText(): string {
   return [
     "Usage:",
-    '  pairflow agent emit --kind pass --repo <path> --bubble-id <id> --handoff-id <id> --summary "<text>" [--ref <artifact-path>]... [--intent <task|review|fix_request>] [--finding <P0|P1|P2|P3:Title[|ref1,ref2]>]... [--no-findings]',
-    '  pairflow agent emit --kind human_question --repo <path> --bubble-id <id> --handoff-id <id> --question "<text>" [--ref <artifact-path>]...',
-    '  pairflow agent emit --kind convergence --repo <path> --bubble-id <id> --handoff-id <id> --summary "<text>" [--ref <artifact-path>]... [--finding <P2|P3:Title[|ref1,ref2]>]...',
+    '  pairflow agent emit --kind pass --repo <path> --bubble-id <id> --handoff-id <id> --execution-id <id> --summary "<text>" [--ref <artifact-path>]... [--intent <task|review|fix_request>] [--finding <P0|P1|P2|P3:Title[|ref1,ref2]>]... [--no-findings]',
+    '  pairflow agent emit --kind human_question --repo <path> --bubble-id <id> --handoff-id <id> --execution-id <id> --question "<text>" [--ref <artifact-path>]...',
+    '  pairflow agent emit --kind convergence --repo <path> --bubble-id <id> --handoff-id <id> --execution-id <id> --summary "<text>" [--ref <artifact-path>]... [--finding <P2|P3:Title[|ref1,ref2]>]...',
     `  ${buildMetaReviewSubmitUsageLine()}`,
     "",
     "Common options:",
@@ -274,6 +307,7 @@ export function getAgentEmitHelpText(): string {
     "  --repo <path>                  Required repository path",
     "  --bubble-id <id>               Required bubble id",
     "  --handoff-id <id>              Required canonical handoff id",
+    "  --execution-id <id>            Required canonical execution-scoped id",
     "  --ref <path>                   Optional artifact reference (repeatable)",
     "  --expected-role <value>        Optional guard: implementer|reviewer|meta_reviewer",
     "  --expected-round <n>           Optional guard: active round",

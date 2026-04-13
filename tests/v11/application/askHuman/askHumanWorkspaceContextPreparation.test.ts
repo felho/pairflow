@@ -103,6 +103,7 @@ describe("prepareAskHumanWorkspaceContext", () => {
         repo: "/repo",
         bubble_id: "b_ask_human_02",
         handoff_id: "reviewer:b_ask_human_02:round:4:attempt:1",
+        execution_id: "exec_ask_human_02_round4",
         expected_role: "reviewer",
         expected_round: 4,
         expected_state_fingerprint: "fp_running_02",
@@ -119,6 +120,7 @@ describe("prepareAskHumanWorkspaceContext", () => {
         loaded_state: loadedState,
         execution_context: {
           handoff_id: "reviewer:b_ask_human_02:round:4:attempt:1",
+          execution_id: "exec_ask_human_02_round4",
           round: 4
         } as never
       },

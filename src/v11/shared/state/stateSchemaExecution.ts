@@ -87,6 +87,22 @@ export function validateExecutionContext(
     });
   }
 
+  const hasExecutionId = Object.hasOwn(input, "execution_id");
+  const executionId = input.execution_id;
+  if (!hasExecutionId) {
+    errors.push({
+      path: `${pathPrefix}.execution_id`,
+      message:
+        "ACTOR_EMIT_CONTEXT_PRE_E1_EXECUTION_ID_MISSING: pre-E1 execution_context snapshots without execution_id are unsupported"
+    });
+  } else if (!isNonEmptyString(executionId)) {
+    errors.push({
+      path: `${pathPrefix}.execution_id`,
+      message:
+        "ACTOR_EMIT_CONTEXT_EXECUTION_ID_MISSING: Must be a non-empty string"
+    });
+  }
+
   const round = input.round;
   if (!isInteger(round) || round < 1) {
     errors.push({
@@ -123,6 +139,7 @@ export function validateExecutionContext(
   if (
     !isAgentRole(activeRole) ||
     !isNonEmptyString(handoffId) ||
+    !isNonEmptyString(executionId) ||
     !isInteger(round) ||
     round < 1 ||
     !isBubbleExecutionContextAwaitedOutputType(awaitedOutputType) ||
@@ -136,6 +153,7 @@ export function validateExecutionContext(
   return {
     active_role: activeRole,
     handoff_id: handoffId,
+    execution_id: executionId,
     round,
     awaited_output_type: awaitedOutputType,
     started_at: validatedTimestamps.startedAt,

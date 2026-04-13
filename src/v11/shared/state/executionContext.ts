@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+
 import type {
   AgentRole,
   BubbleExecutionContext,
@@ -42,6 +44,27 @@ function buildExecutionContextHandoffId(input: {
   return `${input.activeRole}:${input.bubbleId}:round:${input.round}:attempt:${input.attempt}`;
 }
 
+function buildExecutionContextId(input: {
+  bubbleId: string;
+  activeRole: AgentRole;
+  awaitedOutputType: BubbleExecutionContextAwaitedOutputType;
+  round: number;
+  attempt: number;
+  startedAt: string;
+  deadlineAt: string;
+}): string {
+  const payload = JSON.stringify({
+    bubbleId: input.bubbleId,
+    activeRole: input.activeRole,
+    awaitedOutputType: input.awaitedOutputType,
+    round: input.round,
+    attempt: input.attempt,
+    startedAt: input.startedAt,
+    deadlineAt: input.deadlineAt
+  });
+  return `exec_${createHash("sha256").update(payload).digest("hex").slice(0, 24)}`;
+}
+
 export function buildRunningExecutionContext(
   input: RunningExecutionContextInput
 ): BubbleExecutionContext {
@@ -73,18 +96,29 @@ export function buildRunningExecutionContext(
       `running execution context requires attempt >= 1: ${String(attempt)}`
     );
   }
+  const awaitedOutputType = resolveAwaitedOutputTypeForRole(input.activeRole);
+  const deadlineAt = new Date(startedAtMs + watchdogTimeoutMs).toISOString();
   return {
     active_role: input.activeRole,
-    awaited_output_type: resolveAwaitedOutputTypeForRole(input.activeRole),
+    awaited_output_type: awaitedOutputType,
     handoff_id: buildExecutionContextHandoffId({
       bubbleId: input.bubbleId,
       activeRole: input.activeRole,
       round: input.round,
       attempt
     }),
+    execution_id: buildExecutionContextId({
+      bubbleId: input.bubbleId,
+      activeRole: input.activeRole,
+      awaitedOutputType,
+      round: input.round,
+      attempt,
+      startedAt: input.startedAt,
+      deadlineAt
+    }),
     round: input.round,
     started_at: input.startedAt,
-    deadline_at: new Date(startedAtMs + watchdogTimeoutMs).toISOString(),
+    deadline_at: deadlineAt,
     attempt
   };
 }
@@ -105,7 +139,7 @@ export function buildRestartedExecutionContext(
   }
   if (input.previousExecutionContext.awaited_output_type !== awaitedOutputType) {
     throw new RangeError(
-      "restarted execution context requires matching awaited output type."
+      `restarted execution context requires matching awaited output type: ${input.previousExecutionContext.awaited_output_type} !== ${awaitedOutputType}`
     );
   }
 
@@ -133,6 +167,7 @@ export function toMetaReviewExecutionContext(
 
   return {
     handoff_id: executionContext.handoff_id,
+    execution_id: executionContext.execution_id,
     round: executionContext.round,
     awaited_output_type: executionContext.awaited_output_type,
     started_at: executionContext.started_at,
@@ -152,6 +187,7 @@ export function metaReviewExecutionContextToRunningContext(
     active_role: "meta_reviewer",
     awaited_output_type: executionContext.awaited_output_type,
     handoff_id: executionContext.handoff_id,
+    execution_id: executionContext.execution_id,
     round: executionContext.round,
     started_at: executionContext.started_at,
     deadline_at: executionContext.deadline_at,
@@ -175,6 +211,7 @@ export function executionContextsEqual(
     left.active_role === right.active_role
     && left.awaited_output_type === right.awaited_output_type
     && left.handoff_id === right.handoff_id
+    && left.execution_id === right.execution_id
     && left.round === right.round
     && left.started_at === right.started_at
     && left.deadline_at === right.deadline_at

@@ -118,6 +118,20 @@ export function validateActiveMetaReviewExecutionContext(
     });
   }
 
+  if (!Object.hasOwn(executionContext, "execution_id")) {
+    errors.push({
+      path: `${runningExecutionContextPath}.execution_id`,
+      message:
+        "ACTOR_EMIT_CONTEXT_PRE_E1_EXECUTION_ID_MISSING: pre-E1 execution_context snapshots without execution_id are unsupported"
+    });
+  } else if (!isNonEmptyString(executionContext.execution_id)) {
+    errors.push({
+      path: `${runningExecutionContextPath}.execution_id`,
+      message:
+        "ACTOR_EMIT_CONTEXT_EXECUTION_ID_MISSING: Must be a non-empty string"
+    });
+  }
+
   if (!isInteger(executionContext.round) || executionContext.round < 1) {
     errors.push({
       path: `${runningExecutionContextPath}.round`,

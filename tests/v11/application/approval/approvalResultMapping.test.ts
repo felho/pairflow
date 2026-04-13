@@ -103,30 +103,39 @@ describe("approvalResultMapping", () => {
       sticky_human_gate: false
     });
     expect(next.meta_review).not.toHaveProperty("last_autonomous_run_id");
-    expect(transitions).toEqual([
-      {
-        to: "RUNNING",
+    expect(transitions).toHaveLength(1);
+    expect(transitions[0]).toMatchObject({
+      to: "RUNNING",
+      round: 3,
+      activeAgent: "codex",
+      activeRole: "implementer",
+      executionContext: {
+        active_role: "implementer",
+        awaited_output_type: "pass_result",
+        handoff_id: "implementer:b_approval_03:round:3:attempt:1",
         round: 3,
-        activeAgent: "codex",
-        activeRole: "implementer",
-        executionContext: {
-          active_role: "implementer",
-          awaited_output_type: "pass_result",
-          handoff_id: "implementer:b_approval_03:round:3:attempt:1",
-          round: 3,
-          started_at: "2026-03-19T22:00:00.000Z",
-          deadline_at: "2026-03-19T23:00:00.000Z",
-          attempt: 1
-        },
-        activeSince: "2026-03-19T22:00:00.000Z",
-        lastCommandAt: "2026-03-19T22:00:00.000Z",
-        appendRoundRoleEntry: {
-          round: 3,
-          implementer: "codex",
-          reviewer: "claude",
-          switched_at: "2026-03-19T22:00:00.000Z"
-        }
+        started_at: "2026-03-19T22:00:00.000Z",
+        deadline_at: "2026-03-19T23:00:00.000Z",
+        attempt: 1
+      },
+      activeSince: "2026-03-19T22:00:00.000Z",
+      lastCommandAt: "2026-03-19T22:00:00.000Z",
+      appendRoundRoleEntry: {
+        round: 3,
+        implementer: "codex",
+        reviewer: "claude",
+        switched_at: "2026-03-19T22:00:00.000Z"
       }
-    ]);
+    });
+    const firstTransition = transitions[0] as
+      | { executionContext: { execution_id: string } }
+      | undefined;
+    expect(firstTransition).toBeDefined();
+    if (firstTransition === undefined) {
+      throw new Error("Expected one transition.");
+    }
+    expect(firstTransition.executionContext.execution_id).toMatch(
+      /^exec_[0-9a-f]{24}$/u
+    );
   });
 });

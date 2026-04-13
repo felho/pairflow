@@ -31,7 +31,7 @@ function formatExecutionContextText(status: BubbleStatusView): string {
   if (context === null) {
     return "Execution context: -";
   }
-  return `Execution context: role=${context.activeRole} awaited=${context.awaitedOutputType} handoff=${context.handoffId} round=${context.round} attempt=${context.attempt} started=${context.startedAt} deadline=${context.deadlineAt}`;
+  return `Execution context: role=${context.activeRole} awaited=${context.awaitedOutputType} handoff=${context.handoffId} execution=${context.executionId} round=${context.round} attempt=${context.attempt} started=${context.startedAt} deadline=${context.deadlineAt}`;
 }
 
 function formatRuntimeDeliveryText(status: BubbleStatusView): string {

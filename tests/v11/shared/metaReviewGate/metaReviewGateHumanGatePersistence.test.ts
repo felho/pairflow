@@ -16,6 +16,7 @@ function createLoadedRunningState(): LoadedStateSnapshot {
       active_role: "meta_reviewer",
       awaited_output_type: "meta_review_result",
       handoff_id: "meta_review:b_meta_gate_human_route_01:round:4:attempt:1",
+      execution_id: "exec_meta_gate_human_route_01",
       round: 4,
       started_at: "2026-03-22T11:00:00.000Z",
       deadline_at: "2026-03-22T11:30:00.000Z",
@@ -26,6 +27,7 @@ function createLoadedRunningState(): LoadedStateSnapshot {
     meta_review: {
       execution_context: {
         handoff_id: "meta_review:b_meta_gate_human_route_01:round:4:attempt:1",
+        execution_id: "exec_meta_gate_human_route_01",
         round: 4,
         awaited_output_type: "meta_review_result",
         started_at: "2026-03-22T11:00:00.000Z",

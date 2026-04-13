@@ -70,7 +70,7 @@ describe("stageMetaReviewRunningState", () => {
       expectedState: "RUNNING"
     });
     expect(result.state.state).toBe("RUNNING");
-    expect(result.state.meta_review?.execution_context).toEqual({
+    expect(result.state.meta_review?.execution_context).toMatchObject({
       handoff_id: "meta_review:b_meta_gate_stage_01:round:4:attempt:3",
       round: 4,
       awaited_output_type: "meta_review_result",
@@ -78,6 +78,9 @@ describe("stageMetaReviewRunningState", () => {
       deadline_at: "2026-03-19T10:18:30.000Z",
       attempt: 3
     });
+    expect(result.state.meta_review?.execution_context?.execution_id).toMatch(
+      /^exec_[0-9a-f]{24}$/u
+    );
     expect(result.state.meta_review?.auto_rework_count).toBe(2);
     expect(result.state.meta_review?.runtime_delivery).toBeNull();
     expect(result.state.meta_review).not.toHaveProperty("last_autonomous_run_id");
@@ -107,7 +110,7 @@ describe("stageMetaReviewRunningState", () => {
       })
     });
 
-    expect(result.state.meta_review).toEqual({
+    expect(result.state.meta_review).toMatchObject({
       execution_context: {
         handoff_id: "meta_review:b_meta_gate_stage_01:round:4:attempt:1",
         round: 4,
@@ -121,5 +124,8 @@ describe("stageMetaReviewRunningState", () => {
       auto_rework_limit: 5,
       sticky_human_gate: false
     });
+    expect(result.state.meta_review?.execution_context?.execution_id).toMatch(
+      /^exec_[0-9a-f]{24}$/u
+    );
   });
 });
