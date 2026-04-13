@@ -26,12 +26,14 @@ Sikernek most nem az szamit, hogy minel hamarabb legyen egy "majdnem remote" sta
 2. Emiatt a bubble review koronkent mindig egy uj seamet tette correctness-critical-le:
    - eloszor a clone guard tul eros volt,
    - utana az operator-facing output tul koran mozdult,
-   - vegul a clone-success path mar sikeres lett volna ugy, hogy a tmux/runtime consume meg mindig a statikus worktree pathra ult.
+   - vegul a clone-success path mar sikeres lett volna ugy, hogy a tmux/runtime consume meg mindig a statikus worktree pathra ult,
+   - es amikor a clone-topology tenylegesen aktivodni kezdett, kiderult, hogy a local lifecycle cleanup family (`commit` / `merge` / `delete`) meg nincs ugyanarra a topology-modelre zarva.
 3. Ez pontosan az a hard-stop minta, amit a skill Complexity Risk Gate tilt:
    - uj canonical authority,
    - tobb consume-surface,
    - runtime activation ugyanabban a taskban.
-4. A reset lenyege: a "clone-topology can succeed" allapot kulon activation fazisba kerul. Addig minden clone-start explicit fail-closed marad.
+4. A reset lenyege: a "clone-topology can succeed" allapot kulon activation fazisba kerul, de csak azutan, hogy a local lifecycle cleanup consume is lezart.
+5. Addig minden clone-start explicit fail-closed marad.
 
 ## Control-Model Readiness Result
 
@@ -43,7 +45,7 @@ Az explicit control-model dontesek most visszanyerhetok a designbol es a review-
 3. `read_path_rule`: activation elott a rendszer nem olvashat vagy engedelyezhet clone-root runtimeot csak attol, hogy egy producer seam mar kepes lenne ilyet eloallitani.
 4. `forbidden_fallback`: custom bootstrap success, statikus `bubblePaths.worktreePath`, illetve operator-facing output nem hasznalhato rejtett runtime truthkent a korai fazisokban.
 5. `missing_data_rule`: ha az adott fazisban a canonical authority vagy a consume-alignment nincs kesz, a viselkedes fail-closed marad.
-6. `phase_boundary`: contract -> producer -> runtime consume -> bubble-loop consume -> activation -> read-model -> cleanup -> recovery.
+6. `phase_boundary`: contract -> producer -> runtime consume -> bubble-loop consume -> local lifecycle cleanup -> activation -> operator write -> remote pre-start contract -> remote start -> read-model -> mutation routing -> remote cleanup -> recovery.
 
 ## Guiding Principles
 
@@ -54,6 +56,7 @@ Az explicit control-model dontesek most visszanyerhetok a designbol es a review-
    - producer fazisban a canonical authority eloreallithato es tarolhato, de activation meg tilos,
    - runtime consume fazisban a start/tmux/runtime reteg mar csak canonical authorityt olvashat,
    - bubble-loop consume fazisban az actor-protocol oldali muveletek is erre allnak at,
+   - local lifecycle cleanup fazisban a local `commit` / `merge` / `delete` family is ugyanarra a topology-truthra zarul,
    - operator read-model csak a runtime activation utan valthat.
 4. Forbidden fallback:
    - activation elott tilos custom bootstrap injectionnel clone-success pathot nyitni,
@@ -67,7 +70,8 @@ Az explicit control-model dontesek most visszanyerhetok a designbol es a review-
    - `contract_foundation`: additive contract closure, zero uj runtime behavior,
    - `producer_foundation`: canonical authority eloallitasa es tarolasa, de tovabbra sincs clone activation,
    - `internal_consume_alignment`: runtime es bubble-loop consume atallitas a canonical authorityra,
-   - `runtime_activation`: csak ez utan engedheto a clone-success path,
+   - `local_cleanup_alignment`: a local lifecycle cleanup family ugyanarra a topology-modelre zarul a runtime activation elott,
+   - `runtime_activation`: csak ezutan engedheto a clone-success path,
    - `operator_write_enablement`: local create/write exposure runtime activation nelkul,
    - target-level pre-start hook contract szinten kulon zarul a remote start activation elott,
    - `operator_read_model`: user-facing consume kesobb,
@@ -82,6 +86,7 @@ Az explicit control-model dontesek most visszanyerhetok a designbol es a review-
 | `contract_foundation` | type/schema/persistence contract closure | additive fieldek, parser/serializer, explicit fail-closed guards | uj successful runtime topology |
 | `producer_foundation` | canonical authority producer seam | bootstrap/finalize/rollback producer wiring | tmux, actor loop, operator consume cutover |
 | `internal_consume_alignment` | non-operator runtime consume alignment | tmux/runtime/bubble-loop canonical consume | SSH remote activation, operator wording |
+| `local_cleanup_alignment` | local lifecycle cleanup consume alignment | local `commit` / `merge` / `delete` topology closure a clone activation elott | remote routing, operator read-model, activation ugyanebben a taskban |
 | `operator_write_enablement` | local config/create path exposure without runtime start | `bubble create --remote`, local persistence, pointer init | remote start/status/list/attach activation ugyanebben a taskban |
 | `runtime_activation` | previously blocked behavior bekapcsolasa | clone-success engedelyezese stabil consume-ekre epitve | uj authority contract vagy user-facing read-model cutover ugyanebben a taskban |
 | `operator_read_model` | status/list/attach projection | read-model, diagnostics, wording | underlying runtime authority mozgatasa |
@@ -108,6 +113,7 @@ Az explicit control-model dontesek most visszanyerhetok a designbol es a review-
    - `contract_foundation`
    - `producer_foundation`
    - `internal_consume_alignment`
+   - `local_cleanup_alignment`
    - `operator_write_enablement`
    - `runtime_activation`
    - `operator_read_model`
@@ -115,7 +121,7 @@ Az explicit control-model dontesek most visszanyerhetok a designbol es a review-
    - `cleanup_routing`
    - `recovery_rollout`
 5. Milestone-gated behavior to defer:
-   - barmilyen successful clone-topology start Phase 2A elott,
+   - barmilyen successful clone-topology start a local cleanup alignment elott,
    - remote SSH start/status/list/read-model consume a local runtime alignment elott,
    - `bubble create --remote` local write-path exposure es a tenyleges remote start activation ugyanabban a taskban,
    - a `pairflow_sync_command` config-contract es a hook tenyleges consume/execute ugyanabban a taskban,
@@ -133,40 +139,45 @@ Az explicit control-model dontesek most visszanyerhetok a designbol es a review-
 | Phase 1C1 | `internal_consume_alignment` | Start/tmux launch authority alignment | Phase 1B2 | fresh/resume tmux launch canonical workspace consume-ja | a tmux session/pane inditas mar nem statikus worktree fallbackra ul |
 | Phase 1C2 | `internal_consume_alignment` | Runtime delivery and reviewer-context alignment | Phase 1C1 | delivery targeting, reviewer refresh/context, runtime readers canonical consume-ja | nincs critical runtime delivery/reviewer consumer statikus worktree fallbackon |
 | Phase 1D | `internal_consume_alignment` | Bubble-loop consume alignment | Phase 1C2 | `pass`, `converged`, `ask-human`, `meta_review_result` canonical workspace consume-ja | bubble loop sem hasznal statikus workspace fallbackot |
-| Phase 2A | `runtime_activation` | Local clone-topology activation gate | Phase 1C2-1D | clone-success local start injected/remote-capable bootstrap mellett, end-to-end canonical runtime consume-val | clone-start mar nem tud ket workspace-azonossag kozt szetszakadni |
+| Phase 1E | `local_cleanup_alignment` | Local clone lifecycle cleanup alignment | Phase 1D | local `commit` / `merge` / `delete` topology consume-ja es source-branch ownership closure clone-mode alatt | a local lifecycle family nem feltetelez worktree-topologyt, es clone bubble nem hagy inkonzisztens local branch/workspace cleanupot maga utan |
+| Phase 2A | `runtime_activation` | Local clone-topology activation gate | Phase 1E | clone-success local start injected/remote-capable bootstrap mellett, end-to-end canonical runtime consume-val | clone-start mar nem tud ket workspace-azonossag kozt szetszakadni, es a bubble vegigviheto a local lifecycle familyben is |
 | Phase 2B | `operator_write_enablement` | Remote create write-path exposure | Phase 2A | `bubble create --remote`, local executor persistence, `remote.json` created-pointer init | remote bubble local configkent letrehozhato, de runtime start meg nincs aktivalva |
 | Phase 2C | `contract_foundation` | Remote pre-start sync hook contract closure | Phase 2B | `pairflow_sync_command` global remote config contract, parser/validator/tests | a remote start activation mar explicit config-contractrol olvashatja a hookot, de meg nem futtatja |
 | Phase 2D | `runtime_activation` | Remote SSH start activation | Phase 2C | SSH clone/start orchestration, optional best-effort sync-hook consume, created->started pointer transition, state-cache init | remote bubble start tenylegesen megy stabil local modelre epitve, a sync hook pedig fail-soft operational seam marad |
 | Phase 2E | `operator_read_model` | Remote status/list projection | Phase 2D | status/list read-model, cache freshness, remote runtime wording | user-facing read-model mar a remote runtimeot irja le, attach nelkul is konzisztensen |
 | Phase 2F | `operator_read_model` | Remote attach consume | Phase 2E | attach wording, launcher consume, port-forward projection | az attach surface is a remote runtime modelre ul |
 | Phase 3A | `mutation_routing` | Remote approval/rework routing | Phase 2F | approval/rework command routing stabil remote runtimeon | operator mutation routing mar nem local-only runtimeot feltetelez |
-| Phase 3B | `cleanup_routing` | Remote commit/merge/delete cleanup alignment | Phase 3A | remote commit/merge/delete cleanup consume | cleanup is ugyanarra az authority modelre ul |
+| Phase 3B | `cleanup_routing` | Remote commit/merge/delete cleanup routing | Phase 3A | remote command routing a mar lezart local lifecycle cleanup familyre | a remote cleanup/routing ugyanarra a topology-modelre ul, de nem nyit uj local cleanup semantics-et |
 | Phase 3C | `recovery_rollout` | Recovery, docs, rollout closure | Phase 3B | diagnostics, reboot recovery guidance, docs, manual smoke evidence | failure semantics es rollout evidence lezarhato |
 
 ## Re-Simulation Check
 
-1. `Phase 1B1 -> Phase 1B2 -> Phase 1C1 -> Phase 1C2 -> Phase 1D -> Phase 2A` sorrendben a local clone-topology activation correctness szempontbol stabil:
+1. `Phase 1B1 -> Phase 1B2 -> Phase 1C1 -> Phase 1C2 -> Phase 1D -> Phase 1E -> Phase 2A` sorrendben a local clone-topology activation correctness szempontbol stabil:
    - a contract kulon zarul,
    - a producer kulon zarul,
    - a critical runtime consume kulon all at,
+   - a local lifecycle cleanup consume kulon zarul,
    - es csak ezutan nyilik meg a clone-success path.
-2. A korabbi `Phase 2B` tul nagy volt, mert ugyanabban a szeletben akarta kitenni a remote create write-pathot es a tenyleges SSH start activationt.
-3. A write-model exposure (`bubble create --remote`) nem ugyanaz a kockazati osztaly, mint a remote runtime activation:
+2. A mostani bubble review azt is bizonyitotta, hogy a cleanup consumer family nem halaszthato teljesen a remote routing vegeig:
+   - a local clone activation mar onmagaban erinti a branch-ownership, commit-sync es workspace-cleanup semantics-et,
+   - vagyis a `cleanup` bucketnek van egy local prerequisite closure-ja is, nem csak egy kesoi remote routing closure-ja.
+3. A korabbi `Phase 2B` tul nagy volt, mert ugyanabban a szeletben akarta kitenni a remote create write-pathot es a tenyleges SSH start activationt.
+4. A write-model exposure (`bubble create --remote`) nem ugyanaz a kockazati osztaly, mint a remote runtime activation:
    - az elobbi local config/persistence surface,
    - az utobbi SSH/runtime/orchestration surface.
-4. A remote write-model exposure es a remote start activation tovabbra is kulon marad; ez csokkenti a review-loop kockazatot.
-5. A `pairflow_sync_command` nem marad scope-on kivul, de nem tekintheto retained prerequisite-nek sem:
+5. A remote write-model exposure es a remote start activation tovabbra is kulon marad; ez csokkenti a review-loop kockazatot.
+6. A `pairflow_sync_command` nem marad scope-on kivul, de nem tekintheto retained prerequisite-nek sem:
    - a design doc mar emliti,
    - de a Phase 1A-ban leszallitott global config contractban ez a mező jelenleg nincs jelen.
-6. Emiatt a hook egy kulon, kicsi `contract_foundation` fazist kap a remote start activation elott.
-7. Kovetkezmeny:
+7. Emiatt a hook egy kulon, kicsi `contract_foundation` fazist kap a remote start activation elott.
+8. Kovetkezmeny:
    - `Phase 1A` elegendo retained baseline a `Phase 1B1`-tol `Phase 2B`-ig vezeto lanchoz,
    - a sync hook closure explicit `Phase 2C`,
    - es csak ezutan johet a `Phase 2D` remote start activation.
 
 ## Task Deliverability Simulation (Round 2)
 
-1. `Phase 1B1`, `1B2`, `2B`, `2C` tovabbra is elegge szukek ahhoz, hogy kulon taskkent vallalhatok legyenek.
+1. `Phase 1B1`, `1B2`, `1E`, `2B`, `2C` tovabbra is elegge szukek ahhoz, hogy kulon taskkent vallalhatok legyenek.
 2. A korabbi egyben kezelt `Phase 1C` tul szeles volt:
    - egy taskba esett volna a tmux launch authority cutover,
    - a runtime delivery targeting,
@@ -180,7 +191,11 @@ Az explicit control-model dontesek most visszanyerhetok a designbol es a review-
    - az approval/rework routing kulon operator-mutation problema,
    - a commit/merge/delete mar shared cleanup consume es git/lifecycle mutation problema.
    Emiatt a lifecycle vegfazis `3A mutation_routing` + `3B cleanup_routing` + `3C recovery_rollout` alakra valt.
-5. A jelenlegi plan mellett a megmaradt taskok egyike sem latszik olyan meretu bundle-nek, amely nyilvanvaloan ujra egy bubble-ben akarna foundationt, operator consume-ot es activationt egyszerre leszallitani.
+5. A korabbi `Phase 2A` tul optimista volt, mert valojaban ket consume family closurejat akarta implicit egy bubble-ben lezartnak tekinteni:
+   - a start/runtime activation familyt,
+   - es a local lifecycle cleanup familyt.
+   Emiatt a sorrend most ugy valtozik, hogy a `Phase 1E` kulon lezarja a local cleanup consume-ot, a `Phase 2A` pedig ezutan mar tenyleg csak activation task marad.
+6. A jelenlegi plan mellett a megmaradt taskok egyike sem latszik olyan meretu bundle-nek, amely nyilvanvaloan ujra egy bubble-ben akarna foundationt, operator consume-ot es activationt egyszerre leszallitani.
 
 ## Task Issuance Policy
 
@@ -191,18 +206,21 @@ Az explicit control-model dontesek most visszanyerhetok a designbol es a review-
 
 ## Active Task
 
-1. `plans/tasks/remote-bubble-execution/phase2a-local-clone-topology-activation.md`
+1. `N/A`
+2. A kovetkezo helyes taskkiadas a `Phase 1E` local cleanup alignment task lesz; a korabbi `phase2a-local-clone-topology-activation` bubble superseded.
 
 ## Planned Next Tasks (Do Not Materialize Yet)
 
-1. `plans/tasks/remote-bubble-execution/phase2b-remote-create-write-path-enablement.md`
-2. `plans/tasks/remote-bubble-execution/phase2c-remote-sync-hook-contract-foundation.md`
-3. `plans/tasks/remote-bubble-execution/phase2d-remote-ssh-start-activation.md`
-4. `plans/tasks/remote-bubble-execution/phase2e-remote-status-and-list-read-model.md`
-5. `plans/tasks/remote-bubble-execution/phase2f-remote-attach-consume.md`
-6. `plans/tasks/remote-bubble-execution/phase3a-remote-approval-and-rework-routing.md`
-7. `plans/tasks/remote-bubble-execution/phase3b-remote-commit-merge-delete-cleanup.md`
-8. `plans/tasks/remote-bubble-execution/phase3c-recovery-diagnostics-and-rollout.md`
+1. `plans/tasks/remote-bubble-execution/phase1e-local-clone-lifecycle-cleanup-alignment.md`
+2. `plans/tasks/remote-bubble-execution/phase2a-local-clone-topology-activation.md`
+3. `plans/tasks/remote-bubble-execution/phase2b-remote-create-write-path-enablement.md`
+4. `plans/tasks/remote-bubble-execution/phase2c-remote-sync-hook-contract-foundation.md`
+5. `plans/tasks/remote-bubble-execution/phase2d-remote-ssh-start-activation.md`
+6. `plans/tasks/remote-bubble-execution/phase2e-remote-status-and-list-read-model.md`
+7. `plans/tasks/remote-bubble-execution/phase2f-remote-attach-consume.md`
+8. `plans/tasks/remote-bubble-execution/phase3a-remote-approval-and-rework-routing.md`
+9. `plans/tasks/remote-bubble-execution/phase3b-remote-commit-merge-delete-cleanup.md`
+10. `plans/tasks/remote-bubble-execution/phase3c-recovery-diagnostics-and-rollout.md`
 
 ## Dependencies
 
@@ -215,27 +233,30 @@ Az explicit control-model dontesek most visszanyerhetok a designbol es a review-
    - runtime session registry: `src/v11/shared/ports/runtimeSessions.ts`, `src/v11/infrastructure/executor/sessionRuntime/**`
    - tmux/runtime consume: `src/v11/infrastructure/channel/tmux/**`
    - bubble-loop consume: `src/v11/application/pass/**`, `src/v11/application/converged/**`, `src/v11/application/askHuman/**`
+   - local lifecycle cleanup consume: `src/v11/application/commit/**`, `src/v11/application/merge/**`, `src/v11/application/delete/**`, `src/v11/infrastructure/workspace/**`
    - operator read-model: `src/v11/shared/status/**`, `src/v11/application/status/**`, `src/cli/index.ts`
-   - cleanup consumers: `src/v11/application/delete/**`, `src/v11/application/merge/**`
+   - remote cleanup/routing consumers: `src/v11/application/delete/**`, `src/v11/application/merge/**`
 
 ## Risks and Mitigations
 
 1. Risk: a foundation task ujra activationbe csuszik.
    Mitigation: Phase 1B1 es 1B2 explicit policyja, hogy clone-success tilos; ezt testben is rogziteni kell.
 2. Risk: a producer fazis utan valaki "mar majdnem mukodik" alapon megnyitna a clone startot.
-   Mitigation: Activation csak Phase 2A-ban; a plan explicit forbidden fallbackkent nevezi meg a custom-bootstrap success utvonalat.
-3. Risk: a tmux/runtime alignmentet tech debtnek tekintik es kihagyjak.
-   Mitigation: Phase 2A prerequisite-je Phase 1C1-1D; activation nelkul nincs remote feature.
-4. Risk: az operator read-model ujra tul koran mozog.
+   Mitigation: Activation csak Phase 2A-ban, es a plan explicit forbidden fallbackkent nevezi meg a custom-bootstrap success utvonalat.
+3. Risk: a local lifecycle cleanup consume rejtetten megint kimaradna az activation prerequisite-jei kozul.
+   Mitigation: kulon `Phase 1E local_cleanup_alignment`; activation nelkul nincs remote feature, de cleanup-closure nelkul sincs local clone success.
+4. Risk: a tmux/runtime alignmentet tech debtnek tekintik es kihagyjak.
+   Mitigation: Phase 2A prerequisite-je Phase 1C1-1E; activation nelkul nincs remote feature.
+5. Risk: az operator read-model ujra tul koran mozog.
    Mitigation: kulon `operator_read_model` kind, Phase 2D utan.
-5. Risk: tul sok jovo-task keletkezik egyszerre.
+6. Risk: tul sok jovo-task keletkezik egyszerre.
    Mitigation: csak egy aktiv task lehet a repo-ban.
-6. Risk: a design doc-ban szereplo `pairflow_sync_command` implicit Phase 1A prerequisite-kent visszaszivarog a remote activation scope-ba.
+7. Risk: a design doc-ban szereplo `pairflow_sync_command` implicit Phase 1A prerequisite-kent visszaszivarog a remote activation scope-ba.
    Mitigation: a plan ezt nem retained baseline-kent kezeli; kulon `Phase 2C contract_foundation` zarja le a hook config-contractot a remote start activation elott.
-7. Risk: a sync hook consume/execute ugyanabba a taskba csuszik vissza a config-contracttal.
+8. Risk: a sync hook consume/execute ugyanabba a taskba csuszik vissza a config-contracttal.
    Mitigation: `Phase 2C` csak schema/parser/test closure; a hook tenyleges best-effort futtatasa csak `Phase 2D` ownership.
-8. Risk: a consume- vagy lifecycle-fazisok ujra tul szeles bubble-kent materializalodnak.
-   Mitigation: a plan explicit tovabbi splitet rögzit `1C1/1C2`, `2E/2F`, `3A/3B/3C` szinten.
+9. Risk: a consume- vagy lifecycle-fazisok ujra tul szeles bubble-kent materializalodnak.
+   Mitigation: a plan explicit tovabbi splitet rögzit `1C1/1C2`, `1E/2A`, `2E/2F`, `3A/3B/3C` szinten.
 
 ## Validation Strategy
 
@@ -254,24 +275,27 @@ Az explicit control-model dontesek most visszanyerhetok a designbol es a review-
    - runtime delivery targeting es reviewer-context canonical consume tests.
 5. Phase 1D:
    - bubble-loop authority consume tests.
-6. Phase 2A:
+6. Phase 1E:
+   - local clone lifecycle cleanup contract tests,
+   - clone-mode commit / merge / delete topology and branch-ownership proofok.
+7. Phase 2A:
    - end-to-end local clone-topology activation tests custom/remote-capable bootstrap mellett.
-7. Phase 2B:
+8. Phase 2B:
    - `bubble create --remote` local persistence/write-path tests.
-8. Phase 2C:
+9. Phase 2C:
    - `pairflow_sync_command` global config parser/validator tests.
-9. Phase 2D:
+10. Phase 2D:
    - remote SSH start orchestration tests injected dependencies mellett,
    - optional sync-hook invoke/skip/fail-soft tests.
-10. Phase 2E:
+11. Phase 2E:
    - `status`, `list` projection tests.
-11. Phase 2F:
+12. Phase 2F:
    - remote attach command/launcher/forwarding projection tests.
-12. Phase 3A:
+13. Phase 3A:
    - remote approval/rework routing tests.
-13. Phase 3B:
-   - remote commit/merge/delete cleanup contract tests.
-14. Phase 3C:
+14. Phase 3B:
+   - remote commit/merge/delete cleanup routing tests a lezart local lifecycle baseline-en.
+15. Phase 3C:
    - recovery diagnostics tests,
    - legalabb egy manual remote smoke.
 
@@ -281,3 +305,4 @@ Az explicit control-model dontesek most visszanyerhetok a designbol es a review-
 2. A remote V1 tovabbra is CLI-over-SSH adapter marad.
 3. A review-loop koltsege jelenleg nagyobb, mint a szigorubb, egy-taskos sequencing lassitasa.
 4. A `pairflow_sync_command` jelenleg design-doc szinten letezik, de nem tekintheto leszallitott Phase 1A config-contractnak; ezt a plan kulon `Phase 2C`-ben zarja le.
+5. A local clone lifecycle cleanup consume nincs meg lezárva a jelenlegi Phase 1D utani baseline-ban; ezt nem szabad a kesoi remote cleanup routinggal osszemosni.
