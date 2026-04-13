@@ -97,7 +97,7 @@ Allowed transitions:
 RUNNING turn tracking (required):
 1. `state.json` must track `active_agent` (`claude` | `codex`) and `active_since` timestamp.
 2. `state.json` must track round-role metadata: `active_role` (`implementer` | `reviewer`) and `round_role_history`.
-3. Active autonomous work must persist a canonical top-level `execution_context` authority block with `active_role`, `handoff_id`, `round`, `awaited_output_type`, `started_at`, `deadline_at`, and `attempt`.
+3. Active autonomous work must persist a canonical top-level `execution_context` authority block with `active_role`, `handoff_id`, `execution_id`, `round`, `awaited_output_type`, `started_at`, `deadline_at`, and `attempt`.
 4. `active_role` remains a lifecycle/status mirror, but authority belongs to `execution_context.active_role`.
 5. The status pane shows high-level state, active turn owner, active role, and meta-review diagnostics when present.
 6. Liveness watchdog uses canonical `execution_context.started_at` / `deadline_at` whenever an active execution context exists; runtime activity remains observational.
@@ -106,7 +106,7 @@ RUNNING turn tracking (required):
 Meta-review authority while lifecycle remains `RUNNING`:
 1. `RUNNING` must persist the same canonical top-level `execution_context` authority used by generic `RUNNING`.
 2. `meta_review.execution_context` may remain as a cached diagnostic mirror, but it is no longer a separate primary authority source.
-3. The active meta-review execution context contains `active_role=meta_reviewer`, `handoff_id`, `round`, `awaited_output_type=meta_review_result`, `started_at`, `deadline_at`, and `attempt`.
+3. The active meta-review execution context contains `active_role=meta_reviewer`, `handoff_id`, `execution_id`, `round`, `awaited_output_type=meta_review_result`, `started_at`, `deadline_at`, and `attempt`.
 4. `pairflow agent emit --kind meta_review_result` is the canonical success-path handoff command. A successful submit validates the active execution context, persists the canonical result, applies the gate route, advances lifecycle state, and closes meta-reviewer ownership in the same command flow.
 5. A submit that cannot produce a routeable normal handoff must fail closed as a typed submit error; a canonical snapshot alone is not a successful handoff.
 6. The watchdog is not the normal success-path router for canonical meta-review submits before timeout expiry.
@@ -337,12 +337,12 @@ Human/operator commands:
 13. `pairflow bubble watchdog --id <id>` (runs timeout + pane-quiet-window check and escalates to `WAITING_HUMAN` when the standard `RUNNING` dead-signal gate is met)
 
 Agent-facing commands (invoked from inside agent sessions):
-1. `pairflow agent emit --kind pass --repo <path> --bubble-id <id> --handoff-id <id> --summary "<text>" [--ref <artifact-path>]... [--intent <task|review|fix_request>] [--finding <P0|P1|P2|P3:Title>]... [--no-findings]`
-2. `pairflow agent emit --kind human_question --repo <path> --bubble-id <id> --handoff-id <id> --question "<text>"`
-3. `pairflow agent emit --kind convergence --repo <path> --bubble-id <id> --handoff-id <id> --summary "<text>"`
+1. `pairflow agent emit --kind pass --repo <path> --bubble-id <id> --handoff-id <id> --execution-id <id> --summary "<text>" [--ref <artifact-path>]... [--intent <task|review|fix_request>] [--finding <P0|P1|P2|P3:Title>]... [--no-findings]`
+2. `pairflow agent emit --kind human_question --repo <path> --bubble-id <id> --handoff-id <id> --execution-id <id> --question "<text>"`
+3. `pairflow agent emit --kind convergence --repo <path> --bubble-id <id> --handoff-id <id> --execution-id <id> --summary "<text>"`
 4. Ideation pending guard: `pass` and `converged` are rejected while bubble is `RUNNING` at `round=0` with `ideation.task_pending=true`.
-5. Direct `agent emit` requires an explicit authority snapshot. `pairflow bubble status --id <id> --repo <path> --json` must surface the active `executionContext`, including `handoffId`, so agents or operators can copy the current authority values without reading state files directly.
-6. Implementer restart recovery advances authority to a fresh `executionContext.attempt`/`handoffId`. Any pre-restart implementer handoff becomes stale and must be refreshed from a new `bubble status --json` snapshot before direct `agent emit`.
+5. Direct `agent emit` requires an explicit authority snapshot. `pairflow bubble status --id <id> --repo <path> --json` must surface the active `executionContext`, including both `handoffId` and `executionId`, so agents or operators can copy the current authority values without reading state files directly.
+6. Implementer restart recovery advances authority to a fresh `executionContext.attempt`/`handoffId`/`executionId`. Any pre-restart implementer authority snapshot becomes stale and must be refreshed from a new `bubble status --json` snapshot before direct `agent emit`.
 
 Canonical pass emit reference rules:
 1. `--ref` is optional and repeatable (`0..N`).

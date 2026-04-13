@@ -399,12 +399,12 @@ pairflow bubble merge --id <id> --repo <repo> --push --delete-remote
 Agent-side commands from the bubble worktree:
 
 ```bash
-pairflow agent emit --kind pass --repo /path/to/repo --bubble-id <id> --handoff-id <handoff-id> --summary "<handoff>" [--ref ...] [--finding ... | --no-findings]
-pairflow agent emit --kind human_question --repo /path/to/repo --bubble-id <id> --handoff-id <handoff-id> --question "<question>" [--ref ...]
-pairflow agent emit --kind convergence --repo /path/to/repo --bubble-id <id> --handoff-id <handoff-id> --summary "<convergence summary>" [--ref ...]
+pairflow agent emit --kind pass --repo /path/to/repo --bubble-id <id> --handoff-id <handoff-id> --execution-id <execution-id> --summary "<handoff>" [--ref ...] [--finding ... | --no-findings]
+pairflow agent emit --kind human_question --repo /path/to/repo --bubble-id <id> --handoff-id <handoff-id> --execution-id <execution-id> --question "<question>" [--ref ...]
+pairflow agent emit --kind convergence --repo /path/to/repo --bubble-id <id> --handoff-id <handoff-id> --execution-id <execution-id> --summary "<convergence summary>" [--ref ...]
 ```
 
-Direct `pairflow agent emit` requires the active authority snapshot. Resolve it first with `pairflow bubble status --id <id> --repo /path/to/repo --json` and copy `executionContext.handoffId` from the JSON output. If no current handoff is available yet, refresh status and wait for the orchestrated handoff instead of guessing context.
+Direct `pairflow agent emit` requires the active authority snapshot. Resolve it first with `pairflow bubble status --id <id> --repo /path/to/repo --json` and copy both `executionContext.handoffId` and `executionContext.executionId` from the JSON output. If no current handoff is available yet, refresh status and wait for the orchestrated handoff instead of guessing context.
 
 ---
 
@@ -445,9 +445,9 @@ By default, reviewer context mode is **fresh**: when the implementer hands off (
 ```bash
 # 3. Implementer finishes first pass, hands off to reviewer
 pairflow bubble status --id feat_login --repo /path/to/myapp --json
-#    → copy executionContext.handoffId from the JSON output
+#    → copy executionContext.handoffId and executionContext.executionId from the JSON output
 
-pairflow agent emit --kind pass --repo /path/to/myapp --bubble-id feat_login --handoff-id <handoff-id> \
+pairflow agent emit --kind pass --repo /path/to/myapp --bubble-id feat_login --handoff-id <handoff-id> --execution-id <execution-id> \
   --summary "Login form implemented with email regex validation; validation run: lint/typecheck/test" \
   --ref .pairflow/evidence/lint.log \
   --ref .pairflow/evidence/typecheck.log \
@@ -455,9 +455,9 @@ pairflow agent emit --kind pass --repo /path/to/myapp --bubble-id feat_login --h
 
 # 4. Reviewer reviews and sends feedback back
 pairflow bubble status --id feat_login --repo /path/to/myapp --json
-#    → refresh executionContext.handoffId; do this before every direct agent emit
+#    → refresh executionContext.handoffId and executionContext.executionId; do this before every direct agent emit
 
-pairflow agent emit --kind pass --repo /path/to/myapp --bubble-id feat_login --handoff-id <handoff-id> \
+pairflow agent emit --kind pass --repo /path/to/myapp --bubble-id feat_login --handoff-id <handoff-id> --execution-id <execution-id> \
   --summary "Missing: password strength indicator, error messages not i18n-ready" \
   --finding "P1:Password strength indicator missing|artifact://review/password-strength-proof.md" \
   --finding "P2:i18n error keys missing"
@@ -470,9 +470,9 @@ pairflow agent emit --kind pass --repo /path/to/myapp --bubble-id feat_login --h
 
 # 5. Implementer fixes issues, hands off again
 pairflow bubble status --id feat_login --repo /path/to/myapp --json
-#    → refresh executionContext.handoffId again; the previous handoff changed authority
+#    → refresh executionContext.handoffId and executionContext.executionId again; the previous handoff changed authority
 
-pairflow agent emit --kind pass --repo /path/to/myapp --bubble-id feat_login --handoff-id <handoff-id> \
+pairflow agent emit --kind pass --repo /path/to/myapp --bubble-id feat_login --handoff-id <handoff-id> --execution-id <execution-id> \
   --summary "Added password strength meter and i18n error keys; reran lint/typecheck/test" \
   --ref .pairflow/evidence/lint.log \
   --ref .pairflow/evidence/typecheck.log \
@@ -483,9 +483,9 @@ pairflow agent emit --kind pass --repo /path/to/myapp --bubble-id feat_login --h
 
 # 6. Reviewer is satisfied — signals convergence
 pairflow bubble status --id feat_login --repo /path/to/myapp --json
-#    → refresh executionContext.handoffId again before convergence
+#    → refresh executionContext.handoffId and executionContext.executionId again before convergence
 
-pairflow agent emit --kind convergence --repo /path/to/myapp --bubble-id feat_login --handoff-id <handoff-id> \
+pairflow agent emit --kind convergence --repo /path/to/myapp --bubble-id feat_login --handoff-id <handoff-id> --execution-id <execution-id> \
   --summary "All review criteria met, code is clean"
 #    → State remains RUNNING while autonomous meta-review authority completes
 #    → An approval request appears in your inbox
@@ -517,11 +517,11 @@ Sometimes an agent needs clarification. This pauses the flow until you respond.
 ```bash
 # Agent hits an ambiguity and asks you
 pairflow bubble status --id feat_login --repo /path/to/myapp --json
-#    → refresh executionContext.handoffId before direct human_question emit
+#    → refresh executionContext.handoffId and executionContext.executionId before direct human_question emit
 #    → after a bubble restart/recovery, refresh again; implementer authority
 #      advances to a new `attempt`, and the pre-restart handoff becomes stale
 
-pairflow agent emit --kind human_question --repo /path/to/myapp --bubble-id feat_login --handoff-id <handoff-id> \
+pairflow agent emit --kind human_question --repo /path/to/myapp --bubble-id feat_login --handoff-id <handoff-id> --execution-id <execution-id> \
   --question "Should password validation happen server-side too, or client-only?"
 #    → State becomes WAITING_HUMAN
 
@@ -849,16 +849,16 @@ The registry is stored at `~/.pairflow/repos.json` (override with `PAIRFLOW_REPO
 
 #### Agent-facing commands
 
-Canonical actor emission uses explicit authority (`--repo`, `--bubble-id`, `--handoff-id`). Resolve the active snapshot first with `pairflow bubble status --id <id> --repo <path> --json`, then copy `executionContext.handoffId` from the JSON output.
+Canonical actor emission uses explicit authority (`--repo`, `--bubble-id`, `--handoff-id`, `--execution-id`). Resolve the active snapshot first with `pairflow bubble status --id <id> --repo <path> --json`, then copy both `executionContext.handoffId` and `executionContext.executionId` from the JSON output.
 
 | Command | Description |
 |---------|-------------|
-| `agent emit --kind pass --repo <path> --bubble-id <id> --handoff-id <id> --summary <text> [--ref <path>]... [--intent <task\|review\|fix_request>] [--finding <P0\|P1\|P2\|P3:Title>]... [--no-findings]` | Canonical pass emit (reviewer must declare findings explicitly; in `accuracy-critical` bubbles reviewer PASS requires `--ref` to `review-verification-input.json`) |
-| `agent emit --kind human_question --repo <path> --bubble-id <id> --handoff-id <id> --question <text> [--ref <path>]...` | Canonical human-question emit |
-| `agent emit --kind convergence --repo <path> --bubble-id <id> --handoff-id <id> --summary <text> [--ref <path>]...` | Canonical convergence emit (reviewer only) |
-| `agent emit --kind meta_review_result --repo <path> --bubble-id <id> --handoff-id <id> --round <n> --recommendation approve\|rework\|inconclusive --summary <text> --report-json <json> [--ref <path>]...` | Canonical meta-review submit |
+| `agent emit --kind pass --repo <path> --bubble-id <id> --handoff-id <id> --execution-id <id> --summary <text> [--ref <path>]... [--intent <task\|review\|fix_request>] [--finding <P0\|P1\|P2\|P3:Title>]... [--no-findings]` | Canonical pass emit (reviewer must declare findings explicitly; in `accuracy-critical` bubbles reviewer PASS requires `--ref` to `review-verification-input.json`) |
+| `agent emit --kind human_question --repo <path> --bubble-id <id> --handoff-id <id> --execution-id <id> --question <text> [--ref <path>]...` | Canonical human-question emit |
+| `agent emit --kind convergence --repo <path> --bubble-id <id> --handoff-id <id> --execution-id <id> --summary <text> [--ref <path>]...` | Canonical convergence emit (reviewer only) |
+| `agent emit --kind meta_review_result --repo <path> --bubble-id <id> --handoff-id <id> --execution-id <id> --round <n> --recommendation approve\|rework\|inconclusive --summary <text> --report-json <json> [--ref <path>]...` | Canonical meta-review submit |
 
-Actor emits must always use explicit repo, bubble, and handoff authority from the current status snapshot.
+Actor emits must always use explicit repo, bubble, handoff, and execution authority from the current status snapshot.
 
 ---
 
