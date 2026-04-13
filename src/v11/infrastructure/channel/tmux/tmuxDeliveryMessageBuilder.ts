@@ -167,17 +167,17 @@ export function buildTmuxDeliveryMessage(input: {
   envelope: ProtocolEnvelope;
   messageRef: string;
   bubbleConfig: BubbleConfig;
-  worktreePath?: string;
+  workspacePath?: string;
   reviewerTestDirective?: ReviewerTestExecutionDirective;
   reviewerBrief?: string;
   reviewerFocus?: ReviewerFocusExtractionResult;
   recipientRole: DeliveryMessageRecipientRole;
 }): string {
   const actorLabel = resolvePayloadActor(input.envelope);
-  const worktreeHint =
-    input.worktreePath === undefined
-      ? "Run pairflow commands from the bubble worktree root."
-      : `Run pairflow commands from worktree: ${input.worktreePath}. ${buildPairflowCommandGuidance(input.worktreePath, input.bubbleConfig.pairflow_command_profile)}`;
+  const workspaceHint =
+    input.workspacePath === undefined
+      ? "Run pairflow commands from the active workspace root."
+      : `Run pairflow commands from workspace root: ${input.workspacePath}. ${buildPairflowCommandGuidance(input.workspacePath, input.bubbleConfig.pairflow_command_profile)}`;
 
   let action = "Continue protocol from this event.";
   if (input.recipientRole === "implementer") {
@@ -212,5 +212,5 @@ export function buildTmuxDeliveryMessage(input: {
     action = "Check inbox/status and continue human orchestration flow.";
   }
 
-  return `# [pairflow] r${input.envelope.round} ${input.envelope.type} ${input.envelope.sender}->${input.envelope.recipient} msg=${input.envelope.id} ref=${input.messageRef}. Action: ${action} ${worktreeHint}`;
+  return `# [pairflow] r${input.envelope.round} ${input.envelope.type} ${input.envelope.sender}->${input.envelope.recipient} msg=${input.envelope.id} ref=${input.messageRef}. Action: ${action} ${workspaceHint}`;
 }

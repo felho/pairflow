@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { refreshReviewerContext } from "../../../src/v11/infrastructure/channel/tmux/reviewerContext.js";
 import type { BubbleConfig } from "../../../src/types/bubble.js";
+import type { RuntimeSessionRecord } from "../../../src/v11/shared/ports/runtimeSessions.js";
 import type { TmuxRunResult, TmuxRunner } from "../../../src/v11/shared/ports/tmuxSessions.js";
 import { shellQuote } from "../../../src/v11/shared/foundation/shellQuote.js";
 
@@ -45,8 +46,21 @@ function extractBashLcScript(command: string): string {
   return quotedScript.slice(1, -1).replace(/'\\''/gu, "'");
 }
 
+function createRuntimeSessionRecord(
+  overrides: Partial<RuntimeSessionRecord> = {}
+): RuntimeSessionRecord {
+  return {
+    bubbleId: "b_reviewer_ctx_01",
+    repoPath: "/tmp/repo",
+    worktreePath: "/tmp/worktree",
+    tmuxSessionName: "pf-b_reviewer_ctx_01",
+    updatedAt: "2026-02-23T10:00:00.000Z",
+    ...overrides
+  };
+}
+
 describe("refreshReviewerContext", () => {
-  it("respawns reviewer pane when runtime session exists", async () => {
+  it("respawns reviewer pane using explicit canonical workspace authority", async () => {
     const calls: string[][] = [];
     const runner: TmuxRunner = (args): Promise<TmuxRunResult> => {
       calls.push(args);
@@ -65,14 +79,11 @@ describe("refreshReviewerContext", () => {
       runner,
       readSessionsRegistry: () =>
         Promise.resolve({
-        b_reviewer_ctx_01: {
-          bubbleId: "b_reviewer_ctx_01",
-          repoPath: "/tmp/repo",
-          worktreePath: "/tmp/worktree",
-          tmuxSessionName: "pf-b_reviewer_ctx_01",
-          updatedAt: "2026-02-23T10:00:00.000Z"
-        }
-      })
+          b_reviewer_ctx_01: createRuntimeSessionRecord({
+            workspacePath: "/tmp/runtime-workspace",
+            workspaceKind: "worktree"
+          })
+        })
     });
 
     expect(result).toEqual({
@@ -80,9 +91,42 @@ describe("refreshReviewerContext", () => {
     });
     expect(calls[0]?.[0]).toBe("respawn-pane");
     expect(calls[0]?.[3]).toBe("pf-b_reviewer_ctx_01:0.2");
+    expect(calls[0]?.[5]).toBe("/tmp/runtime-workspace");
     expect(calls[0]?.join(" ")).toContain(
       "Reviewer brief (persisted artifact `reviewer-brief.md`): Verify each claim."
     );
+    const reviewerCommand = calls[0]?.[6];
+    expect(typeof reviewerCommand).toBe("string");
+    const script = extractBashLcScript(reviewerCommand as string);
+    expect(script).toContain(`if ! cd ${shellQuote("/tmp/runtime-workspace")}; then`);
+  });
+
+  it("preserves legacy worktree compatibility when explicit workspace authority is absent", async () => {
+    const calls: string[][] = [];
+    const runner: TmuxRunner = (args): Promise<TmuxRunResult> => {
+      calls.push(args);
+      return Promise.resolve({
+        stdout: "",
+        stderr: "",
+        exitCode: 0
+      });
+    };
+
+    const result = await refreshReviewerContext({
+      bubbleId: "b_reviewer_ctx_01",
+      bubbleConfig: baseConfig,
+      sessionsPath: "/tmp/repo/.pairflow/runtime/sessions.json",
+      runner,
+      readSessionsRegistry: () =>
+        Promise.resolve({
+          b_reviewer_ctx_01: createRuntimeSessionRecord()
+        })
+    });
+
+    expect(result).toEqual({
+      refreshed: true
+    });
+    expect(calls[0]?.[5]).toBe("/tmp/worktree");
     const reviewerCommand = calls[0]?.[6];
     expect(typeof reviewerCommand).toBe("string");
     const script = extractBashLcScript(reviewerCommand as string);
@@ -101,6 +145,68 @@ describe("refreshReviewerContext", () => {
       refreshed: false,
       reason: "no_runtime_session"
     });
+  });
+
+  it("fails closed when runtime workspace authority is missing", async () => {
+    const calls: string[][] = [];
+    const runner: TmuxRunner = (args): Promise<TmuxRunResult> => {
+      calls.push(args);
+      return Promise.resolve({
+        stdout: "",
+        stderr: "",
+        exitCode: 0
+      });
+    };
+
+    const result = await refreshReviewerContext({
+      bubbleId: "b_reviewer_ctx_01",
+      bubbleConfig: baseConfig,
+      sessionsPath: "/tmp/repo/.pairflow/runtime/sessions.json",
+      runner,
+      readSessionsRegistry: () =>
+        Promise.resolve({
+          b_reviewer_ctx_01: createRuntimeSessionRecord({
+            worktreePath: "   "
+          })
+        })
+    });
+
+    expect(result).toEqual({
+      refreshed: false,
+      reason: "no_runtime_session"
+    });
+    expect(calls).toHaveLength(0);
+  });
+
+  it("forbids clone-only legacy worktree fallback during reviewer refresh", async () => {
+    const calls: string[][] = [];
+    const runner: TmuxRunner = (args): Promise<TmuxRunResult> => {
+      calls.push(args);
+      return Promise.resolve({
+        stdout: "",
+        stderr: "",
+        exitCode: 0
+      });
+    };
+
+    const result = await refreshReviewerContext({
+      bubbleId: "b_reviewer_ctx_01",
+      bubbleConfig: baseConfig,
+      sessionsPath: "/tmp/repo/.pairflow/runtime/sessions.json",
+      runner,
+      readSessionsRegistry: () =>
+        Promise.resolve({
+          b_reviewer_ctx_01: createRuntimeSessionRecord({
+            workspaceKind: "clone"
+          })
+        })
+    });
+
+    expect(result).toEqual({
+      refreshed: false,
+      reason: "no_runtime_session"
+    });
+    expect(calls).toHaveLength(0);
   });
 
   it("uses self_host bootstrap wrapper when reviewer context refresh runs under self_host profile", async () => {
@@ -124,13 +230,10 @@ describe("refreshReviewerContext", () => {
       runner,
       readSessionsRegistry: () =>
         Promise.resolve({
-          b_reviewer_ctx_01: {
-            bubbleId: "b_reviewer_ctx_01",
-            repoPath: "/tmp/repo",
-            worktreePath: "/tmp/worktree",
-            tmuxSessionName: "pf-b_reviewer_ctx_01",
-            updatedAt: "2026-02-23T10:00:00.000Z"
-          }
+          b_reviewer_ctx_01: createRuntimeSessionRecord({
+            workspacePath: "/tmp/runtime-workspace",
+            workspaceKind: "worktree"
+          })
         })
     });
 

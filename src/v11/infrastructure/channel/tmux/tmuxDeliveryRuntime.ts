@@ -1,4 +1,5 @@
 import type { readRuntimeSessionsRegistry } from "../../executor/sessionRuntime/runtimeSessionsRegistry.js";
+import { resolveRuntimeSessionWorkspaceAuthority } from "../../../shared/runtimeSessionWorkspaceAuthority.js";
 import {
   confirmTmuxPaneMarkerSubmission,
   maybeAcceptClaudeTrustPrompt,
@@ -30,24 +31,27 @@ interface EmitTmuxDeliveryNotificationResult {
 
 export interface DeliverySessionContext {
   sessionName?: string;
-  worktreePath?: string;
+  workspacePath?: string;
 }
 
 export async function readDeliverySessionContext(input: {
   bubbleId: string;
   sessionsPath: string;
   readSessions: typeof readRuntimeSessionsRegistry;
-}): Promise<DeliverySessionContext | undefined> {
+}): Promise<DeliverySessionContext> {
   const sessions = await input.readSessions(input.sessionsPath, {
     allowMissing: true
   });
   const record = sessions[input.bubbleId];
+  const workspaceAuthority = resolveRuntimeSessionWorkspaceAuthority({
+    runtimeSessionRecord: record
+  });
   return {
     ...(record?.tmuxSessionName !== undefined
       ? { sessionName: record.tmuxSessionName }
       : {}),
-    ...(record?.worktreePath !== undefined
-      ? { worktreePath: record.worktreePath }
+    ...(workspaceAuthority.status === "resolved"
+      ? { workspacePath: workspaceAuthority.authority.workspacePath }
       : {})
   };
 }

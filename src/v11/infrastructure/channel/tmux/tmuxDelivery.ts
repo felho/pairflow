@@ -61,12 +61,12 @@ export async function emitTmuxDeliveryNotification(
     input.envelope,
     input.bubbleConfig
   );
-  const buildMessage = (worktreePath: string | undefined): string =>
+  const buildMessage = (workspacePath: string | undefined): string =>
     buildTmuxDeliveryMessage({
       envelope: input.envelope,
       messageRef,
       bubbleConfig: input.bubbleConfig,
-      ...(worktreePath !== undefined ? { worktreePath } : {}),
+      ...(workspacePath !== undefined ? { workspacePath } : {}),
       ...(input.reviewerTestDirective !== undefined
         ? { reviewerTestDirective: input.reviewerTestDirective }
         : {}),
@@ -81,15 +81,15 @@ export async function emitTmuxDeliveryNotification(
   const readSessions = input.readSessionsRegistry ?? readRuntimeSessionsRegistry;
 
   let sessionName: string | undefined;
-  let worktreePath: string | undefined;
+  let workspacePath: string | undefined;
   try {
     const sessionContext = await readDeliverySessionContext({
       bubbleId: input.bubbleId,
       sessionsPath: input.sessionsPath,
       readSessions
     });
-    sessionName = sessionContext?.sessionName;
-    worktreePath = sessionContext?.worktreePath;
+    sessionName = sessionContext.sessionName;
+    workspacePath = sessionContext.workspacePath;
   } catch {
     const message = buildMessage(undefined);
     return createDeliveryFailureResult({
@@ -99,7 +99,7 @@ export async function emitTmuxDeliveryNotification(
     });
   }
 
-  if (sessionName === undefined) {
+  if (sessionName === undefined || workspacePath === undefined) {
     const message = buildMessage(undefined);
     return createDeliveryFailureResult({
       reason: "no_runtime_session",
@@ -112,7 +112,7 @@ export async function emitTmuxDeliveryNotification(
 
   const targetPaneIndex = targetResolution.targetPaneIndex;
   if (targetPaneIndex === undefined) {
-    const message = buildMessage(worktreePath);
+    const message = buildMessage(workspacePath);
     return createDeliveryFailureResult({
       reason: "unsupported_recipient",
       message,
@@ -124,7 +124,7 @@ export async function emitTmuxDeliveryNotification(
   }
 
   const targetPane = `${sessionName}:0.${targetPaneIndex}`;
-  const message = buildMessage(worktreePath);
+  const message = buildMessage(workspacePath);
   const runner = input.runner ?? runTmux;
   const deliveryFailure = await attemptTmuxDelivery({
     runner,

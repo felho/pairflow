@@ -19,7 +19,10 @@ import {
   REVIEWER_COMMAND_GATE_REQ_E,
   REVIEWER_COMMAND_GATE_REQ_F
 } from "../../../src/v11/shared/reviewer/reviewerCommandGateGuidance.js";
-import type { RuntimeSessionsRegistry } from "../../../src/v11/shared/ports/runtimeSessions.js";
+import type {
+  RuntimeSessionRecord,
+  RuntimeSessionsRegistry
+} from "../../../src/v11/shared/ports/runtimeSessions.js";
 import {
   runtimePaneIndices,
   type TmuxRunResult,
@@ -77,14 +80,17 @@ function createEnvelope(overrides: Partial<ProtocolEnvelope> = {}): ProtocolEnve
   };
 }
 
-function createRegistry(): RuntimeSessionsRegistry {
+function createRegistry(
+  overrides: Partial<RuntimeSessionRecord> = {}
+): RuntimeSessionsRegistry {
   return {
     b_delivery_01: {
       bubbleId: "b_delivery_01",
       repoPath: "/tmp/repo",
       worktreePath: "/tmp/worktree",
       tmuxSessionName: "pf-b_delivery_01",
-      updatedAt: "2026-02-22T12:00:00.000Z"
+      updatedAt: "2026-02-22T12:00:00.000Z",
+      ...overrides
     }
   };
 }
@@ -613,7 +619,7 @@ describe("emitTmuxDeliveryNotification", () => {
     expect(messageCall?.[4]).not.toContain(REVIEWER_COMMAND_GATE_REQ_E);
     expectNoForbiddenReviewerCommandGateTokens(messageCall?.[4]);
     expect(messageCall?.[4]).toContain(
-      "Run pairflow commands from worktree: /tmp/worktree."
+      "Run pairflow commands from workspace root: /tmp/worktree."
     );
     // Message must NOT embed CR/LF — Enter is sent as a separate tmux command.
     expect(messageCall?.[4]).not.toMatch(/[\r\n]$/);
@@ -1989,6 +1995,93 @@ describe("emitTmuxDeliveryNotification", () => {
     );
   });
 
+  it("uses explicit canonical workspace authority for delivery guidance", async () => {
+    const calls: string[][] = [];
+    const runner: TmuxRunner = (args): Promise<TmuxRunResult> => {
+      calls.push(args);
+      if (args[0] === "capture-pane") {
+        return Promise.resolve({
+          stdout:
+            "# [pairflow] r1 PASS codex->claude msg=msg_20260222_101 ref=artifact://handoff.md.",
+          stderr: "",
+          exitCode: 0
+        });
+      }
+      return Promise.resolve({
+        stdout: "",
+        stderr: "",
+        exitCode: 0
+      });
+    };
+
+    const result = await emitTmuxDeliveryNotification({
+      bubbleId: "b_delivery_01",
+      bubbleConfig: baseConfig,
+      sessionsPath: "/tmp/repo/.pairflow/runtime/sessions.json",
+      envelope: createEnvelope(),
+      runner,
+      readSessionsRegistry: () =>
+        Promise.resolve(
+          createRegistry({
+            workspacePath: "/tmp/runtime-workspace",
+            workspaceKind: "worktree"
+          })
+        )
+    });
+
+    expect(result.delivered).toBe(true);
+    expect(result.message).toContain(
+      "Run pairflow commands from workspace root: /tmp/runtime-workspace."
+    );
+    expect(result.message).not.toContain(
+      "Run pairflow commands from workspace root: /tmp/worktree."
+    );
+  });
+
+  it("preserves legacy worktree no-split delivery success when explicit workspace authority is absent", async () => {
+    const calls: string[][] = [];
+    const runner: TmuxRunner = (args): Promise<TmuxRunResult> => {
+      calls.push(args);
+      if (args[0] === "capture-pane") {
+        return Promise.resolve({
+          stdout:
+            "# [pairflow] r1 PASS codex->claude msg=msg_20260222_101 ref=artifact://handoff.md.",
+          stderr: "",
+          exitCode: 0
+        });
+      }
+      return Promise.resolve({
+        stdout: "",
+        stderr: "",
+        exitCode: 0
+      });
+    };
+
+    const result = await emitTmuxDeliveryNotification({
+      bubbleId: "b_delivery_01",
+      bubbleConfig: baseConfig,
+      sessionsPath: "/tmp/repo/.pairflow/runtime/sessions.json",
+      envelope: createEnvelope(),
+      runner,
+      readSessionsRegistry: () => Promise.resolve(createRegistry())
+    });
+
+    expect(result.delivered).toBe(true);
+    expect(result.message).toContain(
+      "Run pairflow commands from workspace root: /tmp/worktree."
+    );
+    const messageCall = calls.find(
+      (call) =>
+        call[0] === "send-keys" &&
+        call[2] === "pf-b_delivery_01:0.2" &&
+        call[3] === "-l" &&
+        call[4]?.includes("# [pairflow] r1 PASS codex->claude")
+    );
+    expect(messageCall?.[4]).toContain(
+      "Run pairflow commands from workspace root: /tmp/worktree."
+    );
+  });
+
   it("returns no_runtime_session when registry has no entry", async () => {
     const calls: string[][] = [];
     const runner: TmuxRunner = (args): Promise<TmuxRunResult> => {
@@ -2017,7 +2110,77 @@ describe("emitTmuxDeliveryNotification", () => {
       "# [pairflow] r1 PASS codex->claude msg=msg_20260222_101 ref=artifact://handoff.md."
     );
     expect(result.message).toContain(
-      "Run pairflow commands from the bubble worktree root."
+      "Run pairflow commands from the active workspace root."
+    );
+    expect(calls).toHaveLength(0);
+  });
+
+  it("fails closed when runtime workspace authority is missing", async () => {
+    const calls: string[][] = [];
+    const runner: TmuxRunner = (args): Promise<TmuxRunResult> => {
+      calls.push(args);
+      return Promise.resolve({
+        stdout: "",
+        stderr: "",
+        exitCode: 0
+      });
+    };
+
+    const result = await emitTmuxDeliveryNotification({
+      bubbleId: "b_delivery_01",
+      bubbleConfig: baseConfig,
+      sessionsPath: "/tmp/repo/.pairflow/runtime/sessions.json",
+      envelope: createEnvelope(),
+      runner,
+      readSessionsRegistry: () =>
+        Promise.resolve(
+          createRegistry({
+            worktreePath: "   "
+          })
+        )
+    });
+
+    expect(result).toMatchObject({
+      delivered: false,
+      reason: "no_runtime_session"
+    });
+    expect(result.message).toContain(
+      "Run pairflow commands from the active workspace root."
+    );
+    expect(calls).toHaveLength(0);
+  });
+
+  it("forbids clone-only legacy worktree fallback during delivery", async () => {
+    const calls: string[][] = [];
+    const runner: TmuxRunner = (args): Promise<TmuxRunResult> => {
+      calls.push(args);
+      return Promise.resolve({
+        stdout: "",
+        stderr: "",
+        exitCode: 0
+      });
+    };
+
+    const result = await emitTmuxDeliveryNotification({
+      bubbleId: "b_delivery_01",
+      bubbleConfig: baseConfig,
+      sessionsPath: "/tmp/repo/.pairflow/runtime/sessions.json",
+      envelope: createEnvelope(),
+      runner,
+      readSessionsRegistry: () =>
+        Promise.resolve(
+          createRegistry({
+            workspaceKind: "clone"
+          })
+        )
+    });
+
+    expect(result).toMatchObject({
+      delivered: false,
+      reason: "no_runtime_session"
+    });
+    expect(result.message).toContain(
+      "Run pairflow commands from the active workspace root."
     );
     expect(calls).toHaveLength(0);
   });
@@ -2077,7 +2240,7 @@ describe("emitTmuxDeliveryNotification", () => {
       "# [pairflow] r1 PASS codex->claude msg=msg_20260222_101 ref=artifact://handoff.md."
     );
     expect(result.message).toContain(
-      "Run pairflow commands from the bubble worktree root."
+      "Run pairflow commands from the active workspace root."
     );
   });
 
@@ -2104,7 +2267,7 @@ describe("emitTmuxDeliveryNotification", () => {
       "# [pairflow] r1 PASS codex->claude msg=msg_20260222_101 ref=artifact://handoff.md."
     );
     expect(result.message).toContain(
-      "Run pairflow commands from worktree: /tmp/worktree."
+      "Run pairflow commands from workspace root: /tmp/worktree."
     );
   });
 
