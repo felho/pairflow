@@ -76,7 +76,8 @@ export interface ResolveMetaReviewerPaneWarningInput {
   buildAgentCommand?: (input: {
     agentName: "codex";
     bubbleId: string;
-    worktreePath: string;
+    workspacePath?: string;
+    worktreePath?: string;
     pairflowCommandProfile?: PairflowCommandProfile;
     startupPrompt?: string | undefined;
   }) => string;

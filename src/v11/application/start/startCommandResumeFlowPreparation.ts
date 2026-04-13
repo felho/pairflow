@@ -20,6 +20,7 @@ export interface PreparedResumeLaunchInput {
 export async function prepareResumeLaunchInput(input: {
   context: StartExecutionContext;
   deps: ResolvedStartBubbleDependencies;
+  launchWorkspacePath: string;
 }): Promise<PreparedResumeLaunchInput> {
   let transcriptSummary: string;
   try {
@@ -41,7 +42,7 @@ export async function prepareResumeLaunchInput(input: {
         artifactPath: resolveReviewerTestEvidenceArtifactPath(
           input.context.resolved.bubblePaths.artifactsDir
         ),
-        worktreePath: input.context.resolved.bubblePaths.worktreePath,
+        workspacePath: input.launchWorkspacePath,
         reviewArtifactType: input.context.resolved.bubbleConfig.review_artifact_type
       })
         .then((directive) => formatReviewerTestExecutionDirective(directive))
@@ -50,7 +51,7 @@ export async function prepareResumeLaunchInput(input: {
 
   const resumeKickoffResolution = resolveResumeKickoffMessages({
     bubbleId: input.context.resolved.bubbleId,
-    worktreePath: input.context.resolved.bubblePaths.worktreePath,
+    workspacePath: input.launchWorkspacePath,
     taskArtifactPath: input.context.resolved.bubblePaths.taskArtifactPath,
     reviewArtifactType: input.context.resolved.bubbleConfig.review_artifact_type,
     pairflowCommandProfile: input.context.resolved.bubbleConfig.pairflow_command_profile,

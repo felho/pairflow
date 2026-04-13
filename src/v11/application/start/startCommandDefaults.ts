@@ -25,7 +25,7 @@ export async function runWorktreeBootstrapCommandDefault(
     exitCode: number;
   }>((resolvePromise, rejectPromise) => {
     const child = spawn("bash", ["-lc", command], {
-      cwd: input.worktreePath,
+      cwd: input.workspacePath,
       stdio: ["ignore", "pipe", "pipe"]
     });
 
@@ -60,6 +60,7 @@ export async function runWorktreeBootstrapCommandDefault(
   const errorContext = {
     bubble_id: input.bubbleId,
     command_name: "start",
+    workspace_path: input.workspacePath,
     worktree_path: input.worktreePath,
     bootstrap_command: command,
     exit_code: result.exitCode
@@ -67,6 +68,7 @@ export async function runWorktreeBootstrapCommandDefault(
   const details: string[] = [
     `Configured commands.bootstrap failed for bubble ${input.bubbleId} (exit ${result.exitCode}).`,
     `Command: ${command}`,
+    `Workspace: ${input.workspacePath}`,
     `Worktree: ${input.worktreePath}`,
     `context: ${JSON.stringify(errorContext)}`
   ];
@@ -77,7 +79,7 @@ export async function runWorktreeBootstrapCommandDefault(
     details.push(`stdout: ${stdoutSummary}`);
   }
   details.push(
-    `context bubble_id=${input.bubbleId} command_name=start worktree_path=${input.worktreePath}`
+    `context bubble_id=${input.bubbleId} command_name=start workspace_path=${input.workspacePath} worktree_path=${input.worktreePath}`
   );
   throw new StartBubbleError(details.join(" "));
 }

@@ -23,7 +23,7 @@ export type TmuxRunner = (
 
 export interface LaunchBubbleTmuxSessionInput {
   bubbleId: string;
-  worktreePath: string;
+  workspacePath: string;
   statusCommand: string;
   implementerCommand: string;
   reviewerCommand: string;

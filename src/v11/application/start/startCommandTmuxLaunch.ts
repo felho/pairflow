@@ -28,14 +28,15 @@ export async function launchFreshTmuxSession(input: {
   context: StartExecutionContext;
   deps: ResolvedStartBubbleDependencies;
   ideationPending: boolean;
+  launchWorkspacePath: string;
 }): Promise<{ sessionName: string }> {
   return input.deps.launchTmux({
     bubbleId: input.context.resolved.bubbleId,
-    worktreePath: input.context.resolved.bubblePaths.worktreePath,
+    workspacePath: input.launchWorkspacePath,
     statusCommand: buildStatusPaneCommand(
       input.context.resolved.bubbleId,
       input.context.resolved.repoPath,
-      input.context.resolved.bubblePaths.worktreePath,
+      input.launchWorkspacePath,
       input.context.resolved.bubbleConfig.pairflow_command_profile
     ),
     statusPaneLabel: buildStatusPaneLabel(input.context.resolved.bubbleId),
@@ -52,12 +53,12 @@ export async function launchFreshTmuxSession(input: {
     implementerCommand: buildAgentCommand({
       agentName: input.context.resolved.bubbleConfig.agents.implementer,
       bubbleId: input.context.resolved.bubbleId,
-      worktreePath: input.context.resolved.bubblePaths.worktreePath,
+      workspacePath: input.launchWorkspacePath,
       pairflowCommandProfile: input.context.resolved.bubbleConfig.pairflow_command_profile,
       startupPrompt: buildImplementerStartupPrompt({
         bubbleId: input.context.resolved.bubbleId,
         repoPath: input.context.resolved.repoPath,
-        worktreePath: input.context.resolved.bubblePaths.worktreePath,
+        workspacePath: input.launchWorkspacePath,
         taskArtifactPath: input.context.resolved.bubblePaths.taskArtifactPath,
         donePackagePath: input.context.donePackagePath,
         reviewArtifactType: input.context.resolved.bubbleConfig.review_artifact_type,
@@ -68,12 +69,12 @@ export async function launchFreshTmuxSession(input: {
     reviewerCommand: buildAgentCommand({
       agentName: input.context.resolved.bubbleConfig.agents.reviewer,
       bubbleId: input.context.resolved.bubbleId,
-      worktreePath: input.context.resolved.bubblePaths.worktreePath,
+      workspacePath: input.launchWorkspacePath,
       pairflowCommandProfile: input.context.resolved.bubbleConfig.pairflow_command_profile,
       startupPrompt: buildReviewerStartupPrompt({
         bubbleId: input.context.resolved.bubbleId,
         repoPath: input.context.resolved.repoPath,
-        worktreePath: input.context.resolved.bubblePaths.worktreePath,
+        workspacePath: input.launchWorkspacePath,
         taskArtifactPath: input.context.resolved.bubblePaths.taskArtifactPath,
         policySnapshotPathAbs: input.context.policySnapshotPathAbs,
         pairflowCommandProfile: input.context.resolved.bubbleConfig.pairflow_command_profile,
@@ -89,12 +90,12 @@ export async function launchFreshTmuxSession(input: {
     metaReviewerCommand: buildAgentCommand({
       agentName: "codex",
       bubbleId: input.context.resolved.bubbleId,
-      worktreePath: input.context.resolved.bubblePaths.worktreePath,
+      workspacePath: input.launchWorkspacePath,
       pairflowCommandProfile: input.context.resolved.bubbleConfig.pairflow_command_profile,
       startupPrompt: buildMetaReviewerStartupPrompt({
         bubbleId: input.context.resolved.bubbleId,
         repoPath: input.context.resolved.repoPath,
-        worktreePath: input.context.resolved.bubblePaths.worktreePath,
+        workspacePath: input.launchWorkspacePath,
         taskArtifactPath: input.context.resolved.bubblePaths.taskArtifactPath,
         pairflowCommandProfile: input.context.resolved.bubbleConfig.pairflow_command_profile
       })
@@ -102,13 +103,13 @@ export async function launchFreshTmuxSession(input: {
     implementerKickoffMessage: input.ideationPending
       ? buildImplementerIdeationKickoffMessage({
           bubbleId: input.context.resolved.bubbleId,
-          worktreePath: input.context.resolved.bubblePaths.worktreePath,
+          workspacePath: input.launchWorkspacePath,
           taskArtifactPath: input.context.resolved.bubblePaths.taskArtifactPath,
           pairflowCommandProfile: input.context.resolved.bubbleConfig.pairflow_command_profile
         })
       : buildImplementerKickoffMessage({
           bubbleId: input.context.resolved.bubbleId,
-          worktreePath: input.context.resolved.bubblePaths.worktreePath,
+          workspacePath: input.launchWorkspacePath,
           taskArtifactPath: input.context.resolved.bubblePaths.taskArtifactPath,
           reviewArtifactType: input.context.resolved.bubbleConfig.review_artifact_type,
           pairflowCommandProfile: input.context.resolved.bubbleConfig.pairflow_command_profile
@@ -119,6 +120,7 @@ export async function launchFreshTmuxSession(input: {
 export async function launchResumeTmuxSession(input: {
   context: StartExecutionContext;
   deps: ResolvedStartBubbleDependencies;
+  launchWorkspacePath: string;
   transcriptSummary: string;
   reviewerTestDirectiveLine?: string;
   kickoffDiagnostic?: string;
@@ -129,11 +131,11 @@ export async function launchResumeTmuxSession(input: {
 }): Promise<{ sessionName: string }> {
   return input.deps.launchTmux({
     bubbleId: input.context.resolved.bubbleId,
-    worktreePath: input.context.resolved.bubblePaths.worktreePath,
+    workspacePath: input.launchWorkspacePath,
     statusCommand: buildStatusPaneCommand(
       input.context.resolved.bubbleId,
       input.context.resolved.repoPath,
-      input.context.resolved.bubblePaths.worktreePath,
+      input.launchWorkspacePath,
       input.context.resolved.bubbleConfig.pairflow_command_profile
     ),
     statusPaneLabel: buildStatusPaneLabel(input.context.resolved.bubbleId),
@@ -150,12 +152,12 @@ export async function launchResumeTmuxSession(input: {
     implementerCommand: buildAgentCommand({
       agentName: input.context.resolved.bubbleConfig.agents.implementer,
       bubbleId: input.context.resolved.bubbleId,
-      worktreePath: input.context.resolved.bubblePaths.worktreePath,
+      workspacePath: input.launchWorkspacePath,
       pairflowCommandProfile: input.context.resolved.bubbleConfig.pairflow_command_profile,
       startupPrompt: buildResumeImplementerStartupPrompt({
         bubbleId: input.context.resolved.bubbleId,
         repoPath: input.context.resolved.repoPath,
-        worktreePath: input.context.resolved.bubblePaths.worktreePath,
+        workspacePath: input.launchWorkspacePath,
         taskArtifactPath: input.context.resolved.bubblePaths.taskArtifactPath,
         donePackagePath: input.context.donePackagePath,
         reviewArtifactType: input.context.resolved.bubbleConfig.review_artifact_type,
@@ -168,12 +170,12 @@ export async function launchResumeTmuxSession(input: {
     reviewerCommand: buildAgentCommand({
       agentName: input.context.resolved.bubbleConfig.agents.reviewer,
       bubbleId: input.context.resolved.bubbleId,
-      worktreePath: input.context.resolved.bubblePaths.worktreePath,
+      workspacePath: input.launchWorkspacePath,
       pairflowCommandProfile: input.context.resolved.bubbleConfig.pairflow_command_profile,
       startupPrompt: buildResumeReviewerStartupPrompt({
         bubbleId: input.context.resolved.bubbleId,
         repoPath: input.context.resolved.repoPath,
-        worktreePath: input.context.resolved.bubblePaths.worktreePath,
+        workspacePath: input.launchWorkspacePath,
         taskArtifactPath: input.context.resolved.bubblePaths.taskArtifactPath,
         policySnapshotPathAbs: input.context.policySnapshotPathAbs,
         pairflowCommandProfile: input.context.resolved.bubbleConfig.pairflow_command_profile,
@@ -195,12 +197,12 @@ export async function launchResumeTmuxSession(input: {
     metaReviewerCommand: buildAgentCommand({
       agentName: "codex",
       bubbleId: input.context.resolved.bubbleId,
-      worktreePath: input.context.resolved.bubblePaths.worktreePath,
+      workspacePath: input.launchWorkspacePath,
       pairflowCommandProfile: input.context.resolved.bubbleConfig.pairflow_command_profile,
       startupPrompt: buildResumeMetaReviewerStartupPrompt({
         bubbleId: input.context.resolved.bubbleId,
         repoPath: input.context.resolved.repoPath,
-        worktreePath: input.context.resolved.bubblePaths.worktreePath,
+        workspacePath: input.launchWorkspacePath,
         taskArtifactPath: input.context.resolved.bubblePaths.taskArtifactPath,
         pairflowCommandProfile: input.context.resolved.bubbleConfig.pairflow_command_profile,
         state: input.context.loadedState.state,

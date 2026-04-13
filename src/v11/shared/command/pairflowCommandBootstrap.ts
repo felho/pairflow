@@ -8,20 +8,20 @@ import {
 } from "./pairflowCommandPathAssessment.js";
 
 export function buildPinnedPairflowCommand(
-  worktreePath: string,
+  workspacePath: string,
   profile: PairflowCommandProfile = "external"
 ): string {
   if (profile === "external") {
     return "pairflow";
   }
-  return `node ${shellQuote(resolveWorktreePairflowEntrypoint(worktreePath))}`;
+  return `node ${shellQuote(resolveWorktreePairflowEntrypoint(workspacePath))}`;
 }
 
 export function buildPairflowCommandBootstrap(
-  worktreePath: string,
+  workspacePath: string,
   profile: PairflowCommandProfile = "external"
 ): string[] {
-  const resolvedWorktree = resolve(worktreePath.trim());
+  const resolvedWorktree = resolve(workspacePath.trim());
   const localEntrypoint = resolveWorktreePairflowEntrypoint(resolvedWorktree);
   const wrapperDir = resolve(resolvedWorktree, ".pairflow", "bin");
   const resolvedExternalCommand =
@@ -96,10 +96,10 @@ export function buildPairflowCommandBootstrap(
 }
 
 export function buildPairflowCommandGuidance(
-  worktreePath: string,
+  workspacePath: string,
   profile: PairflowCommandProfile = "external"
 ): string {
-  const localEntrypoint = resolveWorktreePairflowEntrypoint(worktreePath);
+  const localEntrypoint = resolveWorktreePairflowEntrypoint(workspacePath);
   if (profile === "external") {
     return [
       "Default command profile is `external`; Pairflow commands are resolved from PATH.",

@@ -5,7 +5,8 @@ import { buildPairflowCommandBootstrap } from "./pairflowCommandBootstrap.js";
 export interface BuildAgentCommandInput {
   agentName: AgentName;
   bubbleId: string;
-  worktreePath: string;
+  workspacePath?: string;
+  worktreePath?: string;
   pairflowCommandProfile?: PairflowCommandProfile;
   startupPrompt?: string | undefined;
 }
@@ -32,22 +33,22 @@ function buildAgentLaunchCommand(
 export function buildAgentCommand(input: BuildAgentCommandInput): string {
   const agentName = input.agentName;
   const bubbleId = input.bubbleId;
-  const worktreePath = input.worktreePath.trim();
-  if (worktreePath.length === 0) {
-    throw new Error(`Worktree path is required to build agent command for bubble ${bubbleId}.`);
+  const workspacePath = (input.workspacePath ?? input.worktreePath ?? "").trim();
+  if (workspacePath.length === 0) {
+    throw new Error(`Workspace path is required to build agent command for bubble ${bubbleId}.`);
   }
   const missingBinaryMessage = `${agentName} CLI not found in PATH for bubble ${bubbleId}. Install it or configure agent command mapping.`;
-  const worktreePinningMessage = `Failed to pin agent root to worktree ${worktreePath} for bubble ${bubbleId}.`;
+  const worktreePinningMessage = `Failed to pin agent root to workspace ${workspacePath} for bubble ${bubbleId}.`;
   const launchCommand = buildAgentLaunchCommand(agentName, input.startupPrompt);
   const pairflowBootstrap = buildPairflowCommandBootstrap(
-    worktreePath,
+    workspacePath,
     input.pairflowCommandProfile ?? "external"
   );
   const agentExitedMessage =
     `${agentName} exited (code $agent_exit_code). Dropping to interactive shell.`;
   const script = [
     "set +e",
-    `if ! cd ${shellQuote(worktreePath)}; then`,
+    `if ! cd ${shellQuote(workspacePath)}; then`,
     `  printf '%s\\n' ${shellQuote(worktreePinningMessage)}`,
     "  exec bash -i",
     "fi",

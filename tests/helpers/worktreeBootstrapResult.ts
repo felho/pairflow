@@ -12,6 +12,7 @@ export function buildWorktreeBootstrapResult(input: {
     baseRef: input.baseRef ?? "refs/heads/main",
     bubbleBranch: input.bubbleBranch,
     worktreePath: input.worktreePath,
+    workspacePath: input.worktreePath,
     workspaceKind: "worktree",
     branchPrepared: input.branchPrepared ?? true
   };

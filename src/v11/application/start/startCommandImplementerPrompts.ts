@@ -1,6 +1,10 @@
 import {
   buildPairflowCommandGuidance
 } from "./startCommandPromptRuntime.js";
+import {
+  buildLaunchWorkspaceCommandScopeLine,
+  buildRepositoryLaunchWorkspaceLine
+} from "./startCommandWorkspacePromptLines.js";
 import type {
   PairflowCommandProfile,
   ReviewArtifactType
@@ -16,7 +20,7 @@ function buildCanonicalActorEmitLookupGuidance(input: {
 export function buildImplementerStartupPrompt(input: {
   bubbleId: string;
   repoPath: string;
-  worktreePath: string;
+  workspacePath: string;
   taskArtifactPath: string;
   donePackagePath: string;
   reviewArtifactType: ReviewArtifactType;
@@ -31,7 +35,10 @@ export function buildImplementerStartupPrompt(input: {
       "Do not read task files, scan the repository, or search for kickoff sources.",
       "Do not run lifecycle/protocol commands (`pairflow bubble kickoff`, `pairflow agent emit`) unless explicit human instruction arrives.",
       "Wait for explicit human instruction that contains a concrete kickoff task.",
-      `Repository: ${input.repoPath}. Worktree: ${input.worktreePath}.`
+      buildRepositoryLaunchWorkspaceLine({
+        repoPath: input.repoPath,
+        workspacePath: input.workspacePath
+      })
     ].join(" ");
   }
 
@@ -41,16 +48,19 @@ export function buildImplementerStartupPrompt(input: {
   return [
     `Pairflow implementer start for bubble ${input.bubbleId}.`,
     `Read task: ${input.taskArtifactPath}.`,
-    "Implement in this worktree and run relevant validation before handoff.",
-    `Execute pairflow commands from this worktree path only: ${input.worktreePath}.`,
+    "Implement in this launch workspace and run relevant validation before handoff.",
+    buildLaunchWorkspaceCommandScopeLine(input.workspacePath),
     buildPairflowCommandGuidance(
-      input.worktreePath,
+      input.workspacePath,
       input.pairflowCommandProfile
     ),
     evidenceHandoffGuidance,
     `Keep done package updated at: ${input.donePackagePath}.`,
     "Done package should summarize changes + validation results for final commit handoff.",
-    `Repository: ${input.repoPath}. Worktree: ${input.worktreePath}.`,
+    buildRepositoryLaunchWorkspaceLine({
+      repoPath: input.repoPath,
+      workspacePath: input.workspacePath
+    }),
     buildCanonicalActorEmitLookupGuidance({
       bubbleId: input.bubbleId,
       repoPath: input.repoPath
@@ -62,7 +72,7 @@ export function buildImplementerStartupPrompt(input: {
 
 export function buildImplementerKickoffMessage(input: {
   bubbleId: string;
-  worktreePath: string;
+  workspacePath: string;
   taskArtifactPath: string;
   reviewArtifactType: ReviewArtifactType;
   pairflowCommandProfile: PairflowCommandProfile;
@@ -70,9 +80,9 @@ export function buildImplementerKickoffMessage(input: {
   return [
     `# [pairflow] bubble=${input.bubbleId} kickoff.`,
     `Read task file now: ${input.taskArtifactPath}.`,
-    "Start implementation immediately in this worktree.",
+    "Start implementation immediately in this launch workspace (Phase 1C1 no-split worktree root).",
     buildPairflowCommandGuidance(
-      input.worktreePath,
+      input.workspacePath,
       input.pairflowCommandProfile
     ),
     buildImplementerEvidenceHandoffGuidance(input.reviewArtifactType),
@@ -86,7 +96,7 @@ export function buildImplementerKickoffMessage(input: {
 
 export function buildImplementerIdeationKickoffMessage(input: {
   bubbleId: string;
-  worktreePath: string;
+  workspacePath: string;
   taskArtifactPath: string;
   pairflowCommandProfile: PairflowCommandProfile;
 }): string {

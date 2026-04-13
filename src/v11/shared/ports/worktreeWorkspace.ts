@@ -18,6 +18,7 @@ export interface WorktreeBootstrapResult {
   baseRef: string;
   bubbleBranch: string;
   worktreePath: string;
+  workspacePath: string;
   workspaceKind: WorkspaceKind;
   branchPrepared: boolean;
 }
