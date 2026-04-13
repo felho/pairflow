@@ -191,19 +191,17 @@ Az explicit control-model dontesek most visszanyerhetok a designbol es a review-
 
 ## Active Task
 
-1. `plans/tasks/remote-bubble-execution/phase1c1-start-tmux-launch-authority-alignment.md`
+1. `plans/tasks/remote-bubble-execution/phase1d-bubble-loop-consume-alignment.md`
 
 ## Planned Next Tasks (Do Not Materialize Yet)
 
-1. `plans/tasks/remote-bubble-execution/phase1c2-runtime-delivery-and-reviewer-context-alignment.md`
-2. `plans/tasks/remote-bubble-execution/phase1d-bubble-loop-consume-alignment.md`
-3. `plans/tasks/remote-bubble-execution/phase2a-local-clone-topology-activation.md`
-4. `plans/tasks/remote-bubble-execution/phase2b-remote-create-write-path-enablement.md`
-5. `plans/tasks/remote-bubble-execution/phase2c-remote-sync-hook-contract-foundation.md`
-6. `plans/tasks/remote-bubble-execution/phase2d-remote-ssh-start-activation.md`
-7. `plans/tasks/remote-bubble-execution/phase2e-remote-status-and-list-read-model.md`
-8. `plans/tasks/remote-bubble-execution/phase2f-remote-attach-consume.md`
-9. `plans/tasks/remote-bubble-execution/phase3a-remote-approval-and-rework-routing.md`
+1. `plans/tasks/remote-bubble-execution/phase2a-local-clone-topology-activation.md`
+2. `plans/tasks/remote-bubble-execution/phase2b-remote-create-write-path-enablement.md`
+3. `plans/tasks/remote-bubble-execution/phase2c-remote-sync-hook-contract-foundation.md`
+4. `plans/tasks/remote-bubble-execution/phase2d-remote-ssh-start-activation.md`
+5. `plans/tasks/remote-bubble-execution/phase2e-remote-status-and-list-read-model.md`
+6. `plans/tasks/remote-bubble-execution/phase2f-remote-attach-consume.md`
+7. `plans/tasks/remote-bubble-execution/phase3a-remote-approval-and-rework-routing.md`
 10. `plans/tasks/remote-bubble-execution/phase3b-remote-commit-merge-delete-cleanup.md`
 11. `plans/tasks/remote-bubble-execution/phase3c-recovery-diagnostics-and-rollout.md`
 
