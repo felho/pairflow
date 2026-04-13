@@ -1,7 +1,44 @@
 import type {
+  RuntimeSessionRecord
+} from "../../shared/ports/runtimeSessions.js";
+import type {
   ResolveMetaReviewerPaneWarning
 } from "../../shared/metaReviewGate/metaReviewGateTypes.js";
+import {
+  resolveRuntimeSessionWorkspaceAuthority
+} from "../../shared/runtimeSessionWorkspaceAuthority.js";
 import { buildMetaReviewerStartupPrompt } from "../start/startCommandPrompts.js";
+
+function resolveMetaReviewerWorkspaceAuthority(input: {
+  bubbleId: string;
+  runtimeSessionRecord: RuntimeSessionRecord;
+}):
+  | {
+    status: "resolved";
+    workspacePath: string;
+  }
+  | {
+    status: "failed";
+    message: string;
+  } {
+  const resolution = resolveRuntimeSessionWorkspaceAuthority({
+    runtimeSessionRecord: input.runtimeSessionRecord
+  });
+  if (resolution.status === "resolved") {
+    return {
+      status: "resolved",
+      workspacePath: resolution.authority.workspacePath
+    };
+  }
+
+  return {
+    status: "failed",
+    message:
+      resolution.reason === "legacy_clone_fallback_forbidden"
+        ? `Bubble ${input.bubbleId} cannot bind meta-review pane because runtime session only retained a clone-mode worktree reference without canonical workspace authority.`
+        : `Bubble ${input.bubbleId} cannot bind meta-review pane because runtime workspace authority is empty.`
+  };
+}
 
 export const resolveMetaReviewerPaneWarning: ResolveMetaReviewerPaneWarning = async (
   input
@@ -68,15 +105,30 @@ export const resolveMetaReviewerPaneWarning: ResolveMetaReviewerPaneWarning = as
   shouldDeactivate = true;
   const paneIndex = bindStart.record.metaReviewerPane?.paneIndex ?? 3;
   const targetPane = `${bindStart.record.tmuxSessionName}:0.${paneIndex}`;
+  const workspaceAuthority = resolveMetaReviewerWorkspaceAuthority({
+    bubbleId: input.bubbleId,
+    runtimeSessionRecord: bindStart.record
+  });
+  if (workspaceAuthority.status !== "resolved") {
+    return {
+      delivery: {
+        status: "failed",
+        reasonCode: "META_REVIEWER_PANE_UNAVAILABLE",
+        message: `META_REVIEWER_PANE_UNAVAILABLE: ${workspaceAuthority.message}`
+      },
+      shouldDeactivate
+    };
+  }
+  const workspacePath = workspaceAuthority.workspacePath;
   const metaReviewerCommand = input.buildAgentCommand({
     agentName: "codex",
     bubbleId: input.bubbleId,
-    worktreePath: bindStart.record.worktreePath,
+    workspacePath,
     pairflowCommandProfile: input.pairflowCommandProfile,
     startupPrompt: buildMetaReviewerStartupPrompt({
       bubbleId: input.bubbleId,
       repoPath: bindStart.record.repoPath,
-      worktreePath: bindStart.record.worktreePath,
+      workspacePath,
       taskArtifactPath: input.taskArtifactPath,
       pairflowCommandProfile: input.pairflowCommandProfile
     })
@@ -85,7 +137,7 @@ export const resolveMetaReviewerPaneWarning: ResolveMetaReviewerPaneWarning = as
     await input.respawnTmuxPaneCommand({
       sessionName: bindStart.record.tmuxSessionName,
       paneIndex,
-      cwd: bindStart.record.worktreePath,
+      cwd: workspacePath,
       command: metaReviewerCommand,
       runner: input.runTmuxRunner
     });

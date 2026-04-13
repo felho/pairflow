@@ -31,12 +31,16 @@ import {
   buildResumeContextLine,
   joinPromptLines
 } from "./startCommandResumePromptShared.js";
+import {
+  buildLaunchWorkspaceCommandScopeLine,
+  buildRepositoryLaunchWorkspaceLine
+} from "./startCommandWorkspacePromptLines.js";
 export { buildResumeImplementerStartupPrompt } from "./startCommandResumeImplementerPrompt.js";
 
 export function buildResumeMetaReviewerStartupPrompt(input: {
   bubbleId: string;
   repoPath: string;
-  worktreePath: string;
+  workspacePath: string;
   taskArtifactPath: string;
   pairflowCommandProfile: PairflowCommandProfile;
   state: BubbleStateSnapshot;
@@ -49,11 +53,14 @@ export function buildResumeMetaReviewerStartupPrompt(input: {
     "Stay idle until orchestration signals a meta-review run.",
     "When signaled, return result only through structured Pairflow submit command (no pane marker output parsing).",
     buildPairflowCommandGuidance(
-      input.worktreePath,
+      input.workspacePath,
       input.pairflowCommandProfile
     ),
     `Task: ${input.taskArtifactPath}.`,
-    `Repository: ${input.repoPath}. Worktree: ${input.worktreePath}.`,
+    buildRepositoryLaunchWorkspaceLine({
+      repoPath: input.repoPath,
+      workspacePath: input.workspacePath
+    }),
     `State snapshot: ${buildResumeContextLine(input.state)}.`,
     `Transcript context: ${input.transcriptSummary}`
   ];
@@ -64,7 +71,7 @@ export function buildResumeMetaReviewerStartupPrompt(input: {
 export function buildResumeReviewerStartupPrompt(input: {
   bubbleId: string;
   repoPath: string;
-  worktreePath: string;
+  workspacePath: string;
   taskArtifactPath: string;
   policySnapshotPathAbs: string;
   pairflowCommandProfile: PairflowCommandProfile;
@@ -86,9 +93,13 @@ export function buildResumeReviewerStartupPrompt(input: {
   const lines = [
     `Pairflow reviewer resume for bubble ${input.bubbleId}.`,
     `Task: ${input.taskArtifactPath}.`,
-    `Repository: ${input.repoPath}. Worktree: ${input.worktreePath}.`,
+    buildRepositoryLaunchWorkspaceLine({
+      repoPath: input.repoPath,
+      workspacePath: input.workspacePath
+    }),
+    buildLaunchWorkspaceCommandScopeLine(input.workspacePath),
     buildPairflowCommandGuidance(
-      input.worktreePath,
+      input.workspacePath,
       input.pairflowCommandProfile
     ),
     `State snapshot: ${buildResumeContextLine(input.state)}.`,

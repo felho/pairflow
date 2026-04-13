@@ -73,7 +73,8 @@ export interface VerifyImplementerTestEvidenceInput {
 
 export interface ResolveReviewerTestExecutionDirectiveInput {
   artifactPath: string;
-  worktreePath: string;
+  workspacePath?: string;
+  worktreePath?: string;
   reviewArtifactType?: ReviewArtifactType;
 }
 

@@ -14,7 +14,7 @@ describe("metaReviewSubmitGuidance", () => {
     const prompt = buildMetaReviewerStartupPrompt({
       bubbleId: "bubble_demo",
       repoPath: "/tmp/repo",
-      worktreePath: "/tmp/repo/.pairflow-worktrees/bubble_demo",
+      workspacePath: "/tmp/repo/.pairflow-worktrees/bubble_demo",
       taskArtifactPath: "/tmp/repo/.pairflow/bubbles/bubble_demo/artifacts/task.md",
       pairflowCommandProfile: "external"
     });

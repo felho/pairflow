@@ -3,6 +3,10 @@ import {
   launchFreshTmuxSession,
   launchResumeTmuxSession
 } from "./startCommandTmuxLaunch.js";
+import {
+  resolveFreshLaunchWorkspace,
+  resolveResumeLaunchWorkspace
+} from "./startCommandLaunchWorkspace.js";
 import type { BubbleStateSnapshot } from "../../../types/bubble.js";
 import type { ResolvedStartBubbleDependencies } from "./startCommandOrchestration.js";
 import type { StartExecutionContext } from "./startCommandContext.js";
@@ -32,6 +36,25 @@ export interface FreshStartProgress {
   preparingFingerprint: string | null;
 }
 
+async function persistFreshLaunchWorkspaceAuthority(input: {
+  context: StartExecutionContext;
+  deps: ResolvedStartBubbleDependencies;
+  launchWorkspace: ReturnType<typeof resolveFreshLaunchWorkspace>;
+}): Promise<void> {
+  input.context.runtimeSessionRecord = await input.deps.upsertSession({
+    sessionsPath: input.context.resolved.bubblePaths.sessionsPath,
+    bubbleId: input.context.resolved.bubbleId,
+    repoPath: input.context.resolved.repoPath,
+    worktreePath: input.context.resolved.bubblePaths.worktreePath,
+    workspacePath: input.launchWorkspace.workspacePath,
+    workspaceKind: input.launchWorkspace.workspaceKind,
+    tmuxSessionName:
+      input.context.runtimeSessionRecord?.tmuxSessionName
+      ?? input.context.expectedTmuxSessionName,
+    now: input.context.now
+  });
+}
+
 export async function runFreshStartFlow(input: {
   context: StartExecutionContext;
   deps: ResolvedStartBubbleDependencies;
@@ -46,7 +69,7 @@ export async function runFreshStartFlow(input: {
   input.progress.preparingState = preparingWritten.state;
   input.progress.preparingFingerprint = preparingWritten.fingerprint;
 
-  await input.deps.bootstrap({
+  const bootstrapResult = await input.deps.bootstrap({
     repoPath: input.context.resolved.repoPath,
     baseBranch: input.context.resolved.bubbleConfig.base_branch,
     bubbleBranch: input.context.resolved.bubbleConfig.bubble_branch,
@@ -54,6 +77,15 @@ export async function runFreshStartFlow(input: {
     localOverlay: input.context.resolved.bubbleConfig.local_overlay
   });
   input.progress.workspaceBootstrapped = true;
+  const launchWorkspace = resolveFreshLaunchWorkspace({
+    bubbleId: input.context.resolved.bubbleId,
+    bootstrapResult
+  });
+  await persistFreshLaunchWorkspaceAuthority({
+    context: input.context,
+    deps: input.deps,
+    launchWorkspace
+  });
 
   if (
     input.context.resolved.bubbleConfig.commands.bootstrap !== undefined
@@ -61,6 +93,7 @@ export async function runFreshStartFlow(input: {
   ) {
     await input.deps.runWorktreeBootstrapCommand({
       bubbleId: input.context.resolved.bubbleId,
+      workspacePath: launchWorkspace.workspacePath,
       worktreePath: input.context.resolved.bubblePaths.worktreePath,
       command: input.context.resolved.bubbleConfig.commands.bootstrap
     });
@@ -75,7 +108,8 @@ export async function runFreshStartFlow(input: {
   const tmux = await launchFreshTmuxSession({
     context: input.context,
     deps: input.deps,
-    ideationPending
+    ideationPending,
+    launchWorkspacePath: launchWorkspace.workspacePath
   });
 
   const written = await executeStartRunningMutation({
@@ -102,16 +136,24 @@ export async function runResumeStartFlow(input: {
   context: StartExecutionContext;
   deps: ResolvedStartBubbleDependencies;
 }): Promise<ResumeStartResult> {
+  const launchWorkspace = resolveResumeLaunchWorkspace({
+    bubbleId: input.context.resolved.bubbleId,
+    runtimeSessionRecord: input.context.runtimeSessionRecord
+  });
   const {
     transcriptSummary,
     reviewerTestDirectiveLine,
     kickoffDiagnostic,
     resumeKickoffMessages
-  } = await prepareResumeLaunchInput(input);
+  } = await prepareResumeLaunchInput({
+    ...input,
+    launchWorkspacePath: launchWorkspace.workspacePath
+  });
 
   const tmux = await launchResumeTmuxSession({
     context: input.context,
     deps: input.deps,
+    launchWorkspacePath: launchWorkspace.workspacePath,
     transcriptSummary,
     ...(reviewerTestDirectiveLine !== undefined
       ? { reviewerTestDirectiveLine }

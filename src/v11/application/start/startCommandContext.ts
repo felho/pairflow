@@ -8,6 +8,7 @@ import {
   reviewerSeverityOntologyFullMarkdown,
   reviewerSeverityOntologySourceDoc
 } from "../../shared/reviewer/reviewerSeverityOntology.generated.js";
+import type { RuntimeSessionRecord } from "../../shared/ports/runtimeSessions.js";
 import type { StartBubbleInput } from "./startCommandContract.js";
 import type {
   ReadReviewerBriefArtifactPort,
@@ -95,6 +96,7 @@ export interface StartExecutionContext {
   expectedTmuxSessionName: string;
   donePackagePath: string;
   policySnapshotPathAbs: string;
+  runtimeSessionRecord?: RuntimeSessionRecord;
   reviewerBriefText?: string;
   reviewerFocus?: ReviewerFocusExtractionResult;
 }

@@ -8,6 +8,7 @@ import type {
 } from "../../shared/ports/tmuxSessions.js";
 import type {
   ClaimRuntimeSessionPort,
+  UpsertRuntimeSessionPort,
   RemoveRuntimeSessionPort
 } from "../../shared/ports/runtimeSessions.js";
 import type { WriteStateSnapshotPort } from "../../shared/ports/stateSnapshots.js";
@@ -37,6 +38,7 @@ export interface StartBubbleResult {
 
 export interface RunWorktreeBootstrapCommandInput {
   bubbleId: string;
+  workspacePath: string;
   worktreePath: string;
   command: string;
 }
@@ -51,6 +53,7 @@ export interface StartBubbleDependencies {
   terminateBubbleTmuxSession?: TerminateBubbleTmuxSessionPort;
   isTmuxSessionAlive?: ((sessionName: string) => Promise<boolean>) | undefined;
   claimRuntimeSession?: ClaimRuntimeSessionPort;
+  upsertRuntimeSession?: UpsertRuntimeSessionPort;
   removeRuntimeSession?: RemoveRuntimeSessionPort;
   writeStateSnapshot?: WriteStateSnapshotPort;
   buildResumeTranscriptSummary?: typeof buildResumeTranscriptSummary;

@@ -59,11 +59,22 @@ export class TmuxSessionExistsError extends Error {
 
 export { buildBubbleTmuxSessionName } from "../../../shared/bubble/tmuxSessionName.js";
 
+function resolveLaunchWorkspacePath(input: LaunchBubbleTmuxSessionInput): string {
+  const workspacePath = input.workspacePath.trim();
+  if (workspacePath.length === 0) {
+    throw new Error(
+      `TMUX_LAUNCH_WORKSPACE_REQUIRED: context operation_id=launch_bubble_tmux_session bubble_id=${input.bubbleId}.`
+    );
+  }
+  return workspacePath;
+}
+
 export const launchBubbleTmuxSession: LaunchBubbleTmuxSessionPort = async (
   input: LaunchBubbleTmuxSessionInput
 ): Promise<LaunchBubbleTmuxSessionResult> => {
   const runner = input.runner ?? runTmux;
   const sessionName = buildBubbleTmuxSessionName(input.bubbleId);
+  const workspacePath = resolveLaunchWorkspacePath(input);
   const statusPaneHeight = 13;
   const tmuxPaneSeparators = 4;
   const metaReviewerCommand = input.metaReviewerCommand ?? input.reviewerCommand;
@@ -86,13 +97,13 @@ export const launchBubbleTmuxSession: LaunchBubbleTmuxSessionPort = async (
     "-s",
     sessionName,
     "-c",
-    input.worktreePath,
+    workspacePath,
     input.statusCommand
   ]);
   const layout = await launchBubbleTmuxSessionLayout({
     runner,
     sessionName,
-    worktreePath: input.worktreePath,
+    workspacePath,
     statusPaneLabel,
     implementerPaneLabel,
     reviewerPaneLabel,

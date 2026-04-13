@@ -7,7 +7,7 @@ import {
 export interface LaunchBubbleTmuxSessionLayoutInput {
   runner: TmuxRunner;
   sessionName: string;
-  worktreePath: string;
+  workspacePath: string;
   statusPaneLabel: string;
   implementerPaneLabel: string;
   reviewerPaneLabel: string;
@@ -56,7 +56,7 @@ export async function launchBubbleTmuxSessionLayout(
     "-t",
     statusPane,
     "-c",
-    input.worktreePath,
+    input.workspacePath,
     input.implementerCommand
   ];
   const implementerSplit = await input.runner(implementerSplitCommand);
@@ -79,7 +79,7 @@ export async function launchBubbleTmuxSessionLayout(
     "-p",
     "50",
     "-c",
-    input.worktreePath,
+    input.workspacePath,
     input.reviewerCommand
   ];
   const reviewerSplit = await input.runner(reviewerSplitCommand);
@@ -95,7 +95,7 @@ export async function launchBubbleTmuxSessionLayout(
     "-p",
     "50",
     "-c",
-    input.worktreePath,
+    input.workspacePath,
     input.metaReviewerCommand
   ];
   const metaReviewerSplit = await input.runner(metaReviewerSplitCommand);

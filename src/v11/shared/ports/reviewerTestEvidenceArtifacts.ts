@@ -8,7 +8,8 @@ import type {
 
 export interface ResolveReviewerTestExecutionDirectiveFromArtifactInput {
   artifact: ReviewerTestEvidenceArtifact;
-  worktreePath: string;
+  workspacePath?: string;
+  worktreePath?: string;
   reviewArtifactType?: ReviewArtifactType;
 }
 

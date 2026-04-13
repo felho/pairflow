@@ -63,7 +63,7 @@ describe("startCommandResumeKickoffMessageBuilders", () => {
   it("renders findings projection kickoff text with blocker-pass requirement in round>=2", () => {
     const message = buildResumeReviewerKickoffMessage({
       bubbleId: "b_start_resume_projection_01",
-      worktreePath: "/tmp/worktree",
+      workspacePath: "/tmp/worktree",
       round: 2,
       reviewArtifactType: "document",
       pairflowCommandProfile: "external",
@@ -72,7 +72,7 @@ describe("startCommandResumeKickoffMessageBuilders", () => {
 
     expect(message).toContain("resume kickoff (reviewer)");
     expect(message).toContain(
-      "Before direct canonical emit, refresh actor authority from this worktree with `pairflow bubble status --id b_start_resume_projection_01 --json`"
+      "Before direct canonical emit, refresh actor authority from this launch workspace with `pairflow bubble status --id b_start_resume_projection_01 --json`"
     );
     expect(message).toContain(
       "If blocker findings remain under current scope policy, keep using `pairflow agent emit --kind pass ... --finding ...`."
@@ -85,7 +85,7 @@ describe("startCommandResumeKickoffMessageBuilders", () => {
   it("renders round<=1 kickoff with pass-only explicit findings declaration line", () => {
     const message = buildResumeReviewerKickoffMessage({
       bubbleId: "b_start_resume_projection_02",
-      worktreePath: "/tmp/worktree",
+      workspacePath: "/tmp/worktree",
       round: 1,
       reviewArtifactType: "document",
       pairflowCommandProfile: "external",

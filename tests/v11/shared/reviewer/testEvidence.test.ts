@@ -1725,6 +1725,55 @@ describe("reviewer test evidence verification", () => {
     expect(directive.verification_status).toBe("trusted");
   });
 
+  it("accepts workspacePath as canonical wrapper input for directive resolution", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_test_evidence_workspace_wrapper_01",
+      task: "Workspace authority wrapper coverage"
+    });
+
+    const evidenceLogPath = await writeEvidenceLog(
+      bubble.paths.worktreePath,
+      "workspace-wrapper-evidence.log",
+      "pnpm typecheck exit=0 found 0 errors\npnpm test exit=0 406 tests passed\n",
+    );
+
+    const artifact = await verifyImplementerTestEvidence({
+      bubbleId: bubble.bubbleId,
+      bubbleConfig: bubble.config,
+      worktreePath: bubble.paths.worktreePath,
+      repoPath,
+      envelope: {
+        id: "msg_workspace_wrap_001",
+        ts: "2026-02-27T12:00:00.000Z",
+        bubble_id: bubble.bubbleId,
+        sender: bubble.config.agents.implementer,
+        recipient: bubble.config.agents.reviewer,
+        type: "PASS",
+        round: 1,
+        payload: {
+          summary: "Validation complete"
+        },
+        refs: [evidenceLogPath]
+      }
+    });
+    const artifactPath = resolveReviewerTestEvidenceArtifactPath(
+      bubble.paths.artifactsDir
+    );
+    await writeReviewerTestEvidenceArtifact(artifactPath, artifact);
+    await writeFile(join(bubble.paths.worktreePath, "workspace-wrapper-change.txt"), "x\n", "utf8");
+
+    const directive = await resolveReviewerTestExecutionDirective({
+      artifactPath,
+      workspacePath: bubble.paths.worktreePath
+    });
+
+    expect(directive.skip_full_rerun).toBe(false);
+    expect(directive.reason_code).toBe("evidence_stale");
+    expect(directive.verification_status).toBe("untrusted");
+  });
+
   it("returns docs-only skip directive when artifact is missing through wrapper API", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({

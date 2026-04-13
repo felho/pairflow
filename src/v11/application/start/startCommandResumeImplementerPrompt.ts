@@ -12,11 +12,15 @@ import {
   buildResumeContextLine,
   joinPromptLines
 } from "./startCommandResumePromptShared.js";
+import {
+  buildLaunchWorkspaceCommandScopeLine,
+  buildRepositoryLaunchWorkspaceLine
+} from "./startCommandWorkspacePromptLines.js";
 
 function buildIdeationPendingPromptLines(input: {
   bubbleId: string;
   repoPath: string;
-  worktreePath: string;
+  workspacePath: string;
   state: BubbleStateSnapshot;
   transcriptSummary: string;
   kickoffDiagnostic?: string;
@@ -30,7 +34,10 @@ function buildIdeationPendingPromptLines(input: {
     "Do not read task files, scan the repository, or search for kickoff sources.",
     "Do not run lifecycle/protocol commands (`pairflow bubble kickoff`, `pairflow agent emit`) unless explicit human instruction arrives.",
     "Wait for explicit human instruction that contains a concrete kickoff task.",
-    `Repository: ${input.repoPath}. Worktree: ${input.worktreePath}.`
+    buildRepositoryLaunchWorkspaceLine({
+      repoPath: input.repoPath,
+      workspacePath: input.workspacePath
+    })
   ];
   appendKickoffDiagnosticLine(lines, input.kickoffDiagnostic);
   return lines;
@@ -50,7 +57,7 @@ function resolveImplementerRoleInstruction(state: BubbleStateSnapshot): string {
 export function buildResumeImplementerStartupPrompt(input: {
   bubbleId: string;
   repoPath: string;
-  worktreePath: string;
+  workspacePath: string;
   taskArtifactPath: string;
   donePackagePath: string;
   reviewArtifactType: ReviewArtifactType;
@@ -72,12 +79,15 @@ export function buildResumeImplementerStartupPrompt(input: {
     `Pairflow implementer resume for bubble ${input.bubbleId}.`,
     `Task: ${input.taskArtifactPath}.`,
     `Done package: ${input.donePackagePath}.`,
-    `Execute pairflow commands from this worktree path only: ${input.worktreePath}.`,
+    buildLaunchWorkspaceCommandScopeLine(input.workspacePath),
     buildPairflowCommandGuidance(
-      input.worktreePath,
+      input.workspacePath,
       input.pairflowCommandProfile
     ),
-    `Repository: ${input.repoPath}. Worktree: ${input.worktreePath}.`,
+    buildRepositoryLaunchWorkspaceLine({
+      repoPath: input.repoPath,
+      workspacePath: input.workspacePath
+    }),
     `State snapshot: ${buildResumeContextLine(input.state)}.`,
     `Transcript context: ${input.transcriptSummary}`,
     ...(evidenceHandoffGuidance !== undefined

@@ -29,6 +29,11 @@ import type {
   PairflowCommandProfile,
   ReviewArtifactType
 } from "../../../types/bubble.js";
+import {
+  buildLaunchWorkspaceCommandScopeLine,
+  buildRepositoryLaunchWorkspaceLine,
+  buildRepoLaunchWorkspaceTaskLine
+} from "./startCommandWorkspacePromptLines.js";
 export {
   buildImplementerEvidenceHandoffGuidance,
   buildImplementerIdeationKickoffMessage,
@@ -39,19 +44,19 @@ export {
 export function buildStatusPaneCommand(
   bubbleId: string,
   repoPath: string,
-  worktreePath: string,
+  workspacePath: string,
   pairflowCommandProfile: PairflowCommandProfile
 ): string {
-  const displayWorktreePath = formatStatusPaneWorktreePath(worktreePath);
+  const displayWorkspacePath = formatStatusPaneLaunchWorkspacePath(workspacePath);
   const pairflowCommand = buildPinnedPairflowCommand(
-    worktreePath,
+    workspacePath,
     pairflowCommandProfile
   );
   const watchdogCommand = `${pairflowCommand} bubble watchdog --id ${shellQuote(bubbleId)} --repo ${shellQuote(repoPath)} >/dev/null 2>&1 || true`;
   const statusCommand = `${pairflowCommand} bubble status --id ${shellQuote(bubbleId)} --repo ${shellQuote(repoPath)}`;
   const statusSignatureCommand = `${pairflowCommand} bubble status --id ${shellQuote(bubbleId)} --repo ${shellQuote(repoPath)} --json`;
   const paneSizeSignatureCommand = "if [ -n \"${TMUX_PANE:-}\" ]; then tmux display-message -p -t \"$TMUX_PANE\" '#{pane_width}x#{pane_height}' 2>/dev/null || true; fi";
-  const worktreeLine = shellQuote(displayWorktreePath);
+  const workspaceLine = shellQuote(displayWorkspacePath);
   const loopScript = [
     "set +e",
     "unset NO_COLOR",
@@ -69,7 +74,7 @@ export function buildStatusPaneCommand(
     "    printf '__status_json_exit__=%s\\n' \"$status_json_exit\"",
     `    ${paneSizeSignatureCommand}`,
     "    printf '__heartbeat_bucket__=%s\\n' \"$heartbeat_bucket\"",
-    `    printf '%s\\n' ${worktreeLine}`,
+    `    printf '%s\\n' ${workspaceLine}`,
     "  )",
     "  if [ \"$next_signature\" != \"$prev_signature\" ]; then",
     "    printf '\\033[H'",
@@ -78,7 +83,7 @@ export function buildStatusPaneCommand(
     "    if [ \"$status_text_exit\" -ne 0 ]; then",
     "      printf 'status pane render error (exit %s)\\n' \"$status_text_exit\"",
     "    fi",
-    `    printf '%s\\n' ${worktreeLine}`,
+    `    printf '%s\\n' ${workspaceLine}`,
     "    printf '\\033[J'",
     "    prev_signature=\"$next_signature\"",
     "  fi",
@@ -88,21 +93,21 @@ export function buildStatusPaneCommand(
   return `bash -lc ${shellQuote(loopScript)}`;
 }
 
-function formatStatusPaneWorktreePath(worktreePath: string): string {
+function formatStatusPaneLaunchWorkspacePath(workspacePath: string): string {
   const homePath = homedir();
   if (homePath.length === 0) {
-    return worktreePath;
+    return workspacePath;
   }
-  if (worktreePath === homePath) {
+  if (workspacePath === homePath) {
     return "~";
   }
   if (
-    worktreePath.startsWith(`${homePath}/`) ||
-    worktreePath.startsWith(`${homePath}\\`)
+    workspacePath.startsWith(`${homePath}/`) ||
+    workspacePath.startsWith(`${homePath}\\`)
   ) {
-    return `~${worktreePath.slice(homePath.length)}`;
+    return `~${workspacePath.slice(homePath.length)}`;
   }
-  return worktreePath;
+  return workspacePath;
 }
 
 function buildCanonicalActorEmitLookupGuidance(input: {
@@ -115,7 +120,7 @@ function buildCanonicalActorEmitLookupGuidance(input: {
 export function buildMetaReviewerStartupPrompt(input: {
   bubbleId: string;
   repoPath: string;
-  worktreePath: string;
+  workspacePath: string;
   taskArtifactPath: string;
   pairflowCommandProfile: PairflowCommandProfile;
 }): string {
@@ -133,18 +138,21 @@ export function buildMetaReviewerStartupPrompt(input: {
       repoPath: input.repoPath
     }),
     buildPairflowCommandGuidance(
-      input.worktreePath,
+      input.workspacePath,
       input.pairflowCommandProfile
     ),
     `Task: ${input.taskArtifactPath}.`,
-    `Repository: ${input.repoPath}. Worktree: ${input.worktreePath}.`
+    buildRepositoryLaunchWorkspaceLine({
+      repoPath: input.repoPath,
+      workspacePath: input.workspacePath
+    })
   ].join(" ");
 }
 
 export function buildReviewerStartupPrompt(input: {
   bubbleId: string;
   repoPath: string;
-  worktreePath: string;
+  workspacePath: string;
   taskArtifactPath: string;
   policySnapshotPathAbs: string;
   reviewArtifactType: ReviewArtifactType;
@@ -182,13 +190,17 @@ export function buildReviewerStartupPrompt(input: {
     }),
     buildReviewerFindingsPassInstruction(input.reviewArtifactType),
     ...buildReviewerCanonicalCommandGateLines(),
-    "Execute pairflow commands directly from this worktree (do not ask for confirmation first).",
+    buildLaunchWorkspaceCommandScopeLine(input.workspacePath),
     buildPairflowCommandGuidance(
-      input.worktreePath,
+      input.workspacePath,
       input.pairflowCommandProfile
     ),
     "Never edit transcript/inbox/state files manually.",
-    `Repo: ${input.repoPath}. Worktree: ${input.worktreePath}. Task: ${input.taskArtifactPath}.`
+    buildRepoLaunchWorkspaceTaskLine({
+      repoPath: input.repoPath,
+      workspacePath: input.workspacePath,
+      taskArtifactPath: input.taskArtifactPath
+    })
   ].join(" ");
 }
 

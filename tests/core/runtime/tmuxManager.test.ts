@@ -76,7 +76,7 @@ describe("launchBubbleTmuxSession", () => {
 
     const result = await launchBubbleTmuxSession({
       bubbleId: "b_start_01",
-      worktreePath: "/tmp/worktree",
+      workspacePath: "/tmp/worktree",
       statusCommand: "pairflow bubble status --id b_start_01",
       implementerCommand: "codex",
       reviewerCommand: "claude",
@@ -239,7 +239,7 @@ describe("launchBubbleTmuxSession", () => {
 
     await launchBubbleTmuxSession({
       bubbleId: "b_start_kickoff",
-      worktreePath: "/tmp/worktree",
+      workspacePath: "/tmp/worktree",
       statusCommand: "status",
       implementerCommand: "codex",
       reviewerCommand: "claude",
@@ -340,7 +340,7 @@ describe("launchBubbleTmuxSession", () => {
 
     const launchPromise = launchBubbleTmuxSession({
       bubbleId: "b_start_kickoff_retry",
-      worktreePath: "/tmp/worktree",
+      workspacePath: "/tmp/worktree",
       statusCommand: "status",
       implementerCommand: "codex",
       reviewerCommand: "claude",
@@ -374,7 +374,7 @@ describe("launchBubbleTmuxSession", () => {
 
     await launchBubbleTmuxSession({
       bubbleId: "b_start_kickoff_reviewer",
-      worktreePath: "/tmp/worktree",
+      workspacePath: "/tmp/worktree",
       statusCommand: "status",
       implementerCommand: "codex",
       reviewerCommand: "claude",
@@ -438,7 +438,7 @@ describe("launchBubbleTmuxSession", () => {
 
     const result = await launchBubbleTmuxSession({
       bubbleId: "b_start_kickoff_fail",
-      worktreePath: "/tmp/worktree",
+      workspacePath: "/tmp/worktree",
       statusCommand: "status",
       implementerCommand: "codex",
       reviewerCommand: "claude",
@@ -473,7 +473,7 @@ describe("launchBubbleTmuxSession", () => {
 
     const launchPromise = launchBubbleTmuxSession({
       bubbleId: "b_start_submit_prompt",
-      worktreePath: "/tmp/worktree",
+      workspacePath: "/tmp/worktree",
       statusCommand: "status",
       implementerCommand: "codex 'seeded prompt'",
       reviewerCommand: "claude",
@@ -515,13 +515,28 @@ describe("launchBubbleTmuxSession", () => {
     await expect(
       launchBubbleTmuxSession({
         bubbleId: "b_start_02",
-        worktreePath: "/tmp/worktree",
+        workspacePath: "/tmp/worktree",
         statusCommand: "status",
         implementerCommand: "codex",
         reviewerCommand: "claude",
         runner
       })
     ).rejects.toBeInstanceOf(TmuxSessionExistsError);
+  });
+
+  it("fails closed when canonical workspacePath is empty", async () => {
+    await expect(
+      launchBubbleTmuxSession({
+        bubbleId: "b_start_missing_workspace",
+        workspacePath: "   ",
+        statusCommand: "status",
+        implementerCommand: "codex",
+        reviewerCommand: "claude",
+        runner: vi.fn()
+      })
+    ).rejects.toThrow(
+      "TMUX_LAUNCH_WORKSPACE_REQUIRED: context operation_id=launch_bubble_tmux_session bubble_id=b_start_missing_workspace."
+    );
   });
 });
 

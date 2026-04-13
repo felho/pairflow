@@ -240,7 +240,12 @@ export async function resolveReviewerTestExecutionDirective(
 
     return resolveReviewerTestExecutionDirectiveFromArtifact({
       artifact,
-      worktreePath: input.worktreePath,
+      ...(input.workspacePath !== undefined
+        ? { workspacePath: input.workspacePath }
+        : {}),
+      ...(input.worktreePath !== undefined
+        ? { worktreePath: input.worktreePath }
+        : {}),
       ...(input.reviewArtifactType !== undefined
         ? { reviewArtifactType: input.reviewArtifactType }
         : {})
@@ -261,6 +266,19 @@ export async function resolveReviewerTestExecutionDirective(
       verification_status: "untrusted"
     };
   }
+}
+
+function resolveDirectiveWorkspacePath(input: {
+  workspacePath?: string;
+  worktreePath?: string;
+}): string {
+  const workspacePath = (input.workspacePath ?? input.worktreePath ?? "").trim();
+  if (workspacePath.length === 0) {
+    throw new Error(
+      "REVIEWER_TEST_DIRECTIVE_WORKSPACE_REQUIRED: workspacePath or worktreePath is required."
+    );
+  }
+  return workspacePath;
 }
 
 export async function resolveReviewerTestExecutionDirectiveFromArtifact(
@@ -294,7 +312,7 @@ export async function resolveReviewerTestExecutionDirectiveFromArtifact(
     );
   }
 
-  const current = await readWorktreeFingerprint(input.worktreePath);
+  const current = await readWorktreeFingerprint(resolveDirectiveWorkspacePath(input));
   const freshness = compareFingerprint(input.artifact, current);
   if (freshness.stale) {
     return {

@@ -93,6 +93,7 @@ export const bootstrapWorktreeWorkspace: BootstrapWorktreeWorkspacePort = async 
     baseRef,
     bubbleBranch: input.bubbleBranch,
     worktreePath,
+    workspacePath: worktreePath,
     workspaceKind: "worktree",
     branchPrepared: true
   };

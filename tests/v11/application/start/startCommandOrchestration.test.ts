@@ -11,6 +11,7 @@ import {
 } from "../../../../src/v11/infrastructure/channel/tmux/tmuxManager.js";
 import {
   claimRuntimeSession,
+  upsertRuntimeSession,
   removeRuntimeSession
 } from "../../../../src/v11/infrastructure/executor/sessionRuntime/runtimeSessionsRegistry.js";
 import { StartBubbleError } from "../../../../src/v11/application/start/startCommandRuntime.js";
@@ -39,6 +40,7 @@ describe("startCommandOrchestration", () => {
     expect(resolved.terminateTmux).toBe(terminateBubbleTmuxSession);
     expect(resolved.isTmuxSessionAlive).toBe(isTmuxSessionAliveDefault);
     expect(resolved.claimSession).toBe(claimRuntimeSession);
+    expect(resolved.upsertSession).toBe(upsertRuntimeSession);
     expect(resolved.removeSession).toBe(removeRuntimeSession);
     expect(resolved.buildResumeSummary).toBe(buildResumeTranscriptSummary);
   });
@@ -78,6 +80,15 @@ describe("startCommandOrchestration", () => {
           updatedAt: "2026-03-19T00:00:00.000Z"
         }
       })),
+      upsertRuntimeSession: vi.fn(async () => ({
+        bubbleId: "bubble",
+        repoPath: "repo",
+        worktreePath: "worktree",
+        workspacePath: "workspace",
+        workspaceKind: "worktree" as const,
+        tmuxSessionName: "pf-bubble",
+        updatedAt: "2026-03-19T00:00:00.000Z"
+      })),
       removeRuntimeSession: vi.fn(async () => true),
       buildResumeTranscriptSummary: vi.fn(async () => "summary")
     };
@@ -98,6 +109,7 @@ describe("startCommandOrchestration", () => {
     expect(resolved.terminateTmux).toBe(overrides.terminateBubbleTmuxSession);
     expect(resolved.isTmuxSessionAlive).toBe(overrides.isTmuxSessionAlive);
     expect(resolved.claimSession).toBe(overrides.claimRuntimeSession);
+    expect(resolved.upsertSession).toBe(overrides.upsertRuntimeSession);
     expect(resolved.removeSession).toBe(overrides.removeRuntimeSession);
     expect(resolved.buildResumeSummary).toBe(overrides.buildResumeTranscriptSummary);
   });

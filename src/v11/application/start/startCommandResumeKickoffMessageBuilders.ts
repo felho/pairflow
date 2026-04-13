@@ -15,7 +15,7 @@ export function formatResumeStateValue(value: string | number | null): string {
 }
 
 function buildResumeCanonicalActorEmitLookupGuidance(bubbleId: string): string {
-  return `Before direct canonical emit, refresh actor authority from this worktree with \`pairflow bubble status --id ${bubbleId} --json\` and copy the current \`executionContext.handoffId\`. Repeat this before each emit because authority can change after every successful handoff, convergence, meta-review transition, or human reply.`;
+  return `Before direct canonical emit, refresh actor authority from this launch workspace with \`pairflow bubble status --id ${bubbleId} --json\` and copy the current \`executionContext.handoffId\`. Repeat this before each emit because authority can change after every successful handoff, convergence, meta-review transition, or human reply.`;
 }
 
 export function inferResumeReviewerProjectionVariant(input: {
@@ -45,7 +45,7 @@ export function inferResumeReviewerProjectionVariant(input: {
 
 export function buildResumeImplementerKickoffMessage(input: {
   bubbleId: string;
-  worktreePath: string;
+  workspacePath: string;
   taskArtifactPath: string;
   round: number;
   reviewArtifactType: ReviewArtifactType;
@@ -66,7 +66,7 @@ export function buildResumeImplementerKickoffMessage(input: {
     `State is RUNNING at round ${input.round}.`,
     `Re-open task context: ${input.taskArtifactPath}.`,
     buildPairflowCommandGuidance(
-      input.worktreePath,
+      input.workspacePath,
       input.pairflowCommandProfile
     ),
     buildResumeCanonicalActorEmitLookupGuidance(input.bubbleId),
@@ -77,7 +77,7 @@ export function buildResumeImplementerKickoffMessage(input: {
 
 export function buildResumeReviewerKickoffMessage(input: {
   bubbleId: string;
-  worktreePath: string;
+  workspacePath: string;
   round: number;
   reviewArtifactType: ReviewArtifactType;
   pairflowCommandProfile: PairflowCommandProfile;
@@ -98,7 +98,7 @@ export function buildResumeReviewerKickoffMessage(input: {
     `# [pairflow] bubble=${input.bubbleId} resume kickoff (reviewer).`,
     `State is RUNNING at round ${input.round}.`,
     buildPairflowCommandGuidance(
-      input.worktreePath,
+      input.workspacePath,
       input.pairflowCommandProfile
     ),
     buildResumeCanonicalActorEmitLookupGuidance(input.bubbleId),
@@ -112,7 +112,7 @@ export function buildResumeReviewerKickoffMessage(input: {
 
 export function buildResumeMetaReviewerKickoffMessage(input: {
   bubbleId: string;
-  worktreePath: string;
+  workspacePath: string;
   round: number;
   pairflowCommandProfile: PairflowCommandProfile;
 }): string {
@@ -120,7 +120,7 @@ export function buildResumeMetaReviewerKickoffMessage(input: {
     `# [pairflow] bubble=${input.bubbleId} resume kickoff (meta-reviewer).`,
     `State is RUNNING with active meta-review authority at round ${input.round}.`,
     buildPairflowCommandGuidance(
-      input.worktreePath,
+      input.workspacePath,
       input.pairflowCommandProfile
     ),
     buildResumeCanonicalActorEmitLookupGuidance(input.bubbleId),

@@ -62,6 +62,23 @@ describe("buildAgentCommand", () => {
     await assertBashParses(command);
   });
 
+  it("prefers workspacePath as the canonical agent root when provided", async () => {
+    const workspacePath = "/tmp/pairflow-workspace/canonical";
+    const command = buildAgentCommand({
+      agentName: "codex",
+      bubbleId: "b_agent_cmd_workspace_01",
+      workspacePath,
+      worktreePath: "/tmp/pairflow-workspace/legacy",
+      startupPrompt: "Prompt"
+    });
+    const script = extractBashLcScript(command);
+
+    expect(script).toContain(`if ! cd ${shellQuote(workspacePath)}; then`);
+    expect(script).toContain(`export PAIRFLOW_WORKTREE_ROOT=${shellQuote(workspacePath)}`);
+    expect(script).not.toContain("/tmp/pairflow-workspace/legacy");
+    await assertBashParses(command);
+  });
+
   it("builds self_host profile bootstrap when explicitly selected", async () => {
     const worktreePath = "/tmp/pairflow-worktree/claude";
     const command = buildAgentCommand({
@@ -90,6 +107,6 @@ describe("buildAgentCommand", () => {
         bubbleId: "b_agent_cmd_invalid_01",
         worktreePath: "   "
       })
-    ).toThrow("Worktree path is required");
+    ).toThrow("Workspace path is required");
   });
 });

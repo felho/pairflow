@@ -33,6 +33,8 @@ interface StartBubbleDependencyDefaults {
     NonNullable<StartBubbleDependencies["terminateBubbleTmuxSession"]>;
   claimRuntimeSession:
     NonNullable<StartBubbleDependencies["claimRuntimeSession"]>;
+  upsertRuntimeSession:
+    NonNullable<StartBubbleDependencies["upsertRuntimeSession"]>;
   removeRuntimeSession:
     NonNullable<StartBubbleDependencies["removeRuntimeSession"]>;
   writeStateSnapshot:
@@ -57,6 +59,8 @@ async function loadStartBubbleDependencyDefaults(): Promise<StartBubbleDependenc
       startBubbleDependencyDefaults.terminateBubbleTmuxSession,
     claimRuntimeSession:
       startBubbleDependencyDefaults.claimRuntimeSession,
+    upsertRuntimeSession:
+      startBubbleDependencyDefaults.upsertRuntimeSession,
     removeRuntimeSession:
       startBubbleDependencyDefaults.removeRuntimeSession,
     writeStateSnapshot:
@@ -85,6 +89,7 @@ export interface ResolvedStartBubbleDependencies {
     NonNullable<StartBubbleDependencies["terminateBubbleTmuxSession"]>;
   isTmuxSessionAlive: NonNullable<StartBubbleDependencies["isTmuxSessionAlive"]>;
   claimSession: NonNullable<StartBubbleDependencies["claimRuntimeSession"]>;
+  upsertSession: NonNullable<StartBubbleDependencies["upsertRuntimeSession"]>;
   removeSession: NonNullable<StartBubbleDependencies["removeRuntimeSession"]>;
   writeState: NonNullable<StartBubbleDependencies["writeStateSnapshot"]>;
   buildResumeSummary:
@@ -129,6 +134,9 @@ export async function resolveStartBubbleDependencies(
     claimSession:
       dependencies.claimRuntimeSession
       ?? startBubbleDependencyDefaults.claimRuntimeSession,
+    upsertSession:
+      dependencies.upsertRuntimeSession
+      ?? startBubbleDependencyDefaults.upsertRuntimeSession,
     removeSession:
       dependencies.removeRuntimeSession
       ?? startBubbleDependencyDefaults.removeRuntimeSession,

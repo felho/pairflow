@@ -82,7 +82,7 @@ async function claimRuntimeSessionOwnershipOrThrow(input: {
   deps: Awaited<ReturnType<typeof resolveStartBubbleDependencies>>;
 }): Promise<void> {
   try {
-    await claimRuntimeSessionOwnership({
+    input.context.runtimeSessionRecord = await claimRuntimeSessionOwnership({
       context: input.context,
       deps: input.deps
     });

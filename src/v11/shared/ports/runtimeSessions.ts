@@ -41,6 +41,18 @@ export interface ClaimRuntimeSessionResult {
   record: RuntimeSessionRecord;
 }
 
+export interface UpsertRuntimeSessionInput {
+  sessionsPath: string;
+  bubbleId: string;
+  repoPath: string;
+  worktreePath: string;
+  workspacePath?: string;
+  workspaceKind?: WorkspaceKind;
+  tmuxSessionName: string;
+  now?: Date;
+  lockTimeoutMs?: number;
+}
+
 export interface RemoveRuntimeSessionInput {
   sessionsPath: string;
   bubbleId: string;
@@ -80,6 +92,10 @@ export type ReadRuntimeSessionsRegistryPort = (
 export type ClaimRuntimeSessionPort = (
   input: ClaimRuntimeSessionInput
 ) => Promise<ClaimRuntimeSessionResult>;
+
+export type UpsertRuntimeSessionPort = (
+  input: UpsertRuntimeSessionInput
+) => Promise<RuntimeSessionRecord>;
 
 export type RemoveRuntimeSessionPort = (
   input: RemoveRuntimeSessionInput
