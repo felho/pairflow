@@ -11,7 +11,7 @@ const metaReviewSubmitAdvisoryOnlyCorrectionNote =
   "Valid correction for advisory-only reviewer-snapshot conflicts: keep recommendation=approve, do not switch to inconclusive, and re-emit advisory-only approve metadata (findings_claim_state=open_findings; findings_blocking_open_total=0; findings_advisory_open_total>0).";
 
 export function buildMetaReviewSubmitUsageLine(): string {
-  return "pairflow agent emit --kind meta_review_result --repo <path> --bubble-id <id> --handoff-id <id> --round <n> --recommendation approve|rework|inconclusive --summary <text> [--rework-target-message <text>] --report-json <json> [--ref <artifact-path>]...";
+  return "pairflow agent emit --kind meta_review_result --repo <path> --bubble-id <id> --handoff-id <id> --execution-id <id> --round <n> --recommendation approve|rework|inconclusive --summary <text> [--rework-target-message <text>] --report-json <json> [--ref <artifact-path>]...";
 }
 
 export function buildMetaReviewSubmitCommandTemplate(input?: {
@@ -20,7 +20,7 @@ export function buildMetaReviewSubmitCommandTemplate(input?: {
 }): string {
   const bubbleId = input?.bubbleId ?? "<id>";
   const round = input?.round === undefined ? "<n>" : String(input.round);
-  return `pairflow agent emit --kind meta_review_result --repo <repo> --bubble-id ${bubbleId} --handoff-id <handoff-id> --round ${round} --recommendation <approve|rework|inconclusive> --summary "<summary>" [--rework-target-message "<message>"] --report-json '${metaReviewSubmitReportJsonParityFields}'`;
+  return `pairflow agent emit --kind meta_review_result --repo <repo> --bubble-id ${bubbleId} --handoff-id <handoff-id> --execution-id <execution-id> --round ${round} --recommendation <approve|rework|inconclusive> --summary "<summary>" [--rework-target-message "<message>"] --report-json '${metaReviewSubmitReportJsonParityFields}'`;
 }
 
 export function buildMetaReviewSubmitApproveParityNote(): string {

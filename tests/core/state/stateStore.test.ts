@@ -250,6 +250,7 @@ describe("state store", () => {
         meta_review: {
           execution_context: {
             handoff_id: "meta_review:b_store_runtime_delivery_01:round:2:attempt:1",
+            execution_id: "exec_store_runtime_delivery_01",
             round: 2,
             awaited_output_type: "meta_review_result",
             started_at: "2026-03-08T10:00:00.000Z",
@@ -284,6 +285,7 @@ describe("state store", () => {
     });
     expect(inspected.state.meta_review?.execution_context).toEqual({
       handoff_id: "meta_review:b_store_runtime_delivery_01:round:2:attempt:1",
+      execution_id: "exec_store_runtime_delivery_01",
       round: 2,
       awaited_output_type: "meta_review_result",
       started_at: "2026-03-08T10:00:00.000Z",
@@ -302,6 +304,101 @@ describe("state store", () => {
           "RUNNING meta-review state requires canonical execution_context authority"
       }
     ]);
+  });
+
+  it("fails closed when inspect encounters pre-E1 execution authority snapshots", async () => {
+    const dir = await createTempDir();
+    const statePath = join(dir, "state.json");
+
+    await writeFile(
+      statePath,
+      `${JSON.stringify({
+        bubble_id: "b_store_pre_e1_inspect_01",
+        state: "RUNNING",
+        round: 2,
+        active_agent: "codex",
+        active_since: "2026-03-08T10:00:00.000Z",
+        active_role: "implementer",
+        execution_context: {
+          active_role: "implementer",
+          handoff_id: "implementer:b_store_pre_e1_inspect_01:round:2:attempt:1",
+          round: 2,
+          awaited_output_type: "pass_result",
+          started_at: "2026-03-08T10:00:00.000Z",
+          deadline_at: "2026-03-08T10:30:00.000Z",
+          attempt: 1
+        },
+        round_role_history: [],
+        last_command_at: "2026-03-08T10:01:00.000Z"
+      }, null, 2)}\n`,
+      "utf8"
+    );
+
+    await expect(inspectStateSnapshot(statePath)).rejects.toSatisfy((error) => {
+      expect(error).toMatchObject({
+        name: "SchemaValidationError",
+        message:
+          "INSPECT_STATE_PRE_E1_EXECUTION_AUTHORITY_REJECTED: inspection rejected a pre-E1 execution authority snapshot; fresh authority remint is required."
+      });
+      expect((error as { errors: { path: string; message: string }[] }).errors)
+        .toContainEqual({
+          path: "execution_context.execution_id",
+          message:
+            "ACTOR_EMIT_CONTEXT_PRE_E1_EXECUTION_ID_MISSING: pre-E1 execution_context snapshots without execution_id are unsupported"
+        });
+      return true;
+    });
+  });
+
+  it("fails closed with explicit inspection diagnostics for pre-E1 nested meta-review authority snapshots", async () => {
+    const dir = await createTempDir();
+    const statePath = join(dir, "state.json");
+
+    await writeFile(
+      statePath,
+      `${JSON.stringify({
+        bubble_id: "b_store_pre_e1_nested_inspect_01",
+        state: "READY_FOR_HUMAN_APPROVAL",
+        round: 2,
+        active_agent: null,
+        active_since: null,
+        active_role: null,
+        execution_context: null,
+        round_role_history: [],
+        last_command_at: "2026-03-08T10:01:00.000Z",
+        meta_review: {
+          execution_context: {
+            handoff_id:
+              "meta_review:b_store_pre_e1_nested_inspect_01:round:2:attempt:1",
+            round: 2,
+            awaited_output_type: "meta_review_result",
+            started_at: "2026-03-08T10:00:00.000Z",
+            deadline_at: "2026-03-08T11:00:00.000Z",
+            attempt: 1
+          },
+          runtime_delivery: null,
+          auto_rework_count: 0,
+          auto_rework_limit: 5,
+          sticky_human_gate: false
+        }
+      }, null, 2)}\n`,
+      "utf8"
+    );
+
+    await expect(inspectStateSnapshot(statePath)).rejects.toSatisfy((error) => {
+      expect(error).toMatchObject({
+        name: "SchemaValidationError",
+        message:
+          "INSPECT_STATE_PRE_E1_EXECUTION_AUTHORITY_REJECTED: inspection rejected a pre-E1 execution authority snapshot; fresh authority remint is required."
+      });
+      expect((error as { errors: { path: string; message: string }[] }).errors)
+        .toContainEqual({
+          path: "meta_review.execution_context.execution_id",
+          message:
+            "ACTOR_EMIT_CONTEXT_PRE_E1_EXECUTION_ID_MISSING: pre-E1 meta_review.execution_context snapshots without execution_id are unsupported"
+        });
+      return true;
+    });
   });
 
   it("preserves round role and rework intent diagnostics in inspect fallback snapshots", async () => {

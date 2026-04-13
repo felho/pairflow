@@ -6,6 +6,7 @@ import {
   normalizeMetaReviewSnapshot,
   resolveActiveMetaReviewRuntimeDelivery
 } from "../../../../src/v11/shared/metaReview/metaReviewSnapshot.js";
+import { validateMetaReviewSnapshot } from "../../../../src/v11/shared/state/stateSchemaMetaReview.js";
 import { DEFAULT_META_REVIEW_AUTO_REWORK_LIMIT } from "../../../../src/types/bubble.js";
 
 describe("metaReviewSnapshot", () => {
@@ -108,5 +109,33 @@ describe("metaReviewSnapshot", () => {
         }
       })
     ).toBeNull();
+  });
+
+  it("rejects pre-E1 nested execution_context snapshots without execution_id", () => {
+    const errors: { path: string; message: string }[] = [];
+    const result = validateMetaReviewSnapshot(
+      {
+        execution_context: {
+          handoff_id: "meta_review:b_meta_snapshot_02:round:2:attempt:1",
+          round: 2,
+          awaited_output_type: "meta_review_result",
+          started_at: "2026-03-08T12:40:00.000Z",
+          deadline_at: "2026-03-08T13:40:00.000Z",
+          attempt: 1
+        },
+        runtime_delivery: null,
+        auto_rework_count: 0,
+        auto_rework_limit: DEFAULT_META_REVIEW_AUTO_REWORK_LIMIT,
+        sticky_human_gate: false
+      },
+      errors
+    );
+
+    expect(result).toBeUndefined();
+    expect(errors).toContainEqual({
+      path: "meta_review.execution_context.execution_id",
+      message:
+        "ACTOR_EMIT_CONTEXT_PRE_E1_EXECUTION_ID_MISSING: pre-E1 meta_review.execution_context snapshots without execution_id are unsupported"
+    });
   });
 });

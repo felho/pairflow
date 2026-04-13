@@ -232,6 +232,7 @@ describe("v11 meta-review submit contract", () => {
             findings_count: 0
           },
           expectedHandoffId: executionContext.handoff_id,
+          expectedExecutionId: executionContext.execution_id,
           expectedRole: executionContext.active_role,
           expectedRound: executionContext.round,
           expectedStateFingerprint: loaded.fingerprint
@@ -553,6 +554,7 @@ describe("v11 meta-review submit contract", () => {
             findings_count: 0
           },
           expectedHandoffId: originalExecutionContext.handoff_id,
+          expectedExecutionId: originalExecutionContext.execution_id,
           expectedRole: originalExecutionContext.active_role,
           expectedRound: originalExecutionContext.round
         },
@@ -562,6 +564,61 @@ describe("v11 meta-review submit contract", () => {
       )
     ).rejects.toMatchObject({
       reasonCode: "META_REVIEW_STATE_INVALID"
+    });
+  });
+
+  it("rejects submit contract when only expected execution authority is stale", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_meta_contract_submit_exec_stale_01",
+      task: "Contract: stale execution_id guard"
+    });
+    await writeMetaReviewRunningState({
+      statePath: bubble.paths.statePath,
+      activeAgent: "codex",
+      activeRole: "meta_reviewer",
+      nowIso: "2026-03-24T10:34:00.000Z"
+    });
+
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    const executionContext = loaded.state.execution_context ?? null;
+    if (executionContext === null) {
+      throw new Error("Expected canonical execution_context for stale guard.");
+    }
+
+    await expect(
+      submitMetaReviewResult(
+        {
+          bubbleId: bubble.bubbleId,
+          repoPath,
+          round: 1,
+          recommendation: "approve",
+          summary: "Execution-id mismatch should reject at submit stale guard.",
+          report_json: {
+            findings_claim_state: "clean",
+            findings_claim_source: "meta_review_artifact",
+            findings_count: 0
+          },
+          expectedHandoffId: executionContext.handoff_id,
+          expectedExecutionId: `${executionContext.execution_id}_stale`,
+          expectedRole: executionContext.active_role,
+          expectedRound: executionContext.round,
+          expectedStateFingerprint: loaded.fingerprint
+        },
+        {
+          readRuntimeSessionsRegistry: async () =>
+            buildActiveMetaReviewerSession({
+              bubbleId: bubble.bubbleId,
+              repoPath,
+              worktreePath: bubble.paths.worktreePath
+            })
+        }
+      )
+    ).rejects.toMatchObject({
+      reasonCode: "META_REVIEW_STATE_INVALID",
+      message:
+        `meta-review submit rejected: canonical execution mismatch (expected ${executionContext.execution_id}_stale, active ${executionContext.execution_id}).`
     });
   });
 

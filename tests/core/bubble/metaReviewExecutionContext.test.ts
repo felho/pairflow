@@ -47,15 +47,15 @@ function createMetaReviewRunningState(
 
 describe("validateActiveMetaReviewExecutionContext", () => {
   it("builds canonical execution context from valid inputs", () => {
-    expect(
-      buildMetaReviewExecutionContext({
-        bubbleId: "b_meta_execctx_test_01",
-        round: 2,
-        startedAt: "2026-03-08T10:00:00.000Z",
-        watchdogTimeoutMinutes: 30,
-        attempt: 1
-      })
-    ).toEqual({
+    const executionContext = buildMetaReviewExecutionContext({
+      bubbleId: "b_meta_execctx_test_01",
+      round: 2,
+      startedAt: "2026-03-08T10:00:00.000Z",
+      watchdogTimeoutMinutes: 30,
+      attempt: 1
+    });
+
+    expect(executionContext).toMatchObject({
       handoff_id: "meta_review:b_meta_execctx_test_01:round:2:attempt:1",
       round: 2,
       awaited_output_type: "meta_review_result",
@@ -63,6 +63,7 @@ describe("validateActiveMetaReviewExecutionContext", () => {
       deadline_at: "2026-03-08T10:30:00.000Z",
       attempt: 1
     });
+    expect(executionContext.execution_id).toMatch(/^exec_[0-9a-f]{24}$/u);
   });
 
   it("rejects invalid builder inputs before constructing a broken deadline", () => {
@@ -157,6 +158,7 @@ describe("validateActiveMetaReviewExecutionContext", () => {
         execution_context: {
           ...createMetaReviewRunningState().execution_context!,
           handoff_id: "",
+          execution_id: "",
           round: 3,
           awaited_output_type:
             "review_result" as unknown as "meta_review_result",
@@ -167,6 +169,7 @@ describe("validateActiveMetaReviewExecutionContext", () => {
           ...createMetaReviewRunningState().meta_review!,
           execution_context: {
             handoff_id: "",
+            execution_id: "",
             round: 3,
             awaited_output_type:
               "review_result" as unknown as "meta_review_result",
@@ -189,6 +192,11 @@ describe("validateActiveMetaReviewExecutionContext", () => {
         message: "Must be a non-empty string"
       },
       {
+        path: "execution_context.execution_id",
+        message:
+          "ACTOR_EMIT_CONTEXT_EXECUTION_ID_MISSING: Must be a non-empty string"
+      },
+      {
         path: "execution_context.round",
         message: "Must match state.round (2) while meta-review authority is active"
       },
@@ -203,6 +211,36 @@ describe("validateActiveMetaReviewExecutionContext", () => {
       {
         path: "execution_context.deadline_at",
         message: "Must be >= started_at"
+      }
+    ]);
+  });
+
+  it("rejects pre-E1 active meta-review authority snapshots without execution_id", () => {
+    const executionContext = createMetaReviewRunningState().execution_context;
+    if (executionContext === null || executionContext === undefined) {
+      throw new Error("Expected execution_context.");
+    }
+
+    const preE1ExecutionContext = { ...executionContext };
+    delete (preE1ExecutionContext as { execution_id?: string }).execution_id;
+    const result = validateActiveMetaReviewExecutionContext(
+      createMetaReviewRunningState({
+        execution_context: preE1ExecutionContext as NonNullable<
+          BubbleStateSnapshot["execution_context"]
+        >
+      })
+    );
+
+    expect(result.ok).toBe(false);
+    if (result.ok) {
+      return;
+    }
+
+    expect(result.errors).toEqual([
+      {
+        path: "execution_context.execution_id",
+        message:
+          "ACTOR_EMIT_CONTEXT_PRE_E1_EXECUTION_ID_MISSING: pre-E1 execution_context snapshots without execution_id are unsupported"
       }
     ]);
   });

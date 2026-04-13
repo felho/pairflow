@@ -95,6 +95,9 @@ export async function writeCanonicalSubmitState(input: {
         ...(input.submitInput.expectedHandoffId !== undefined
           ? { expectedHandoffId: input.submitInput.expectedHandoffId }
           : {}),
+        ...(input.submitInput.expectedExecutionId !== undefined
+          ? { expectedExecutionId: input.submitInput.expectedExecutionId }
+          : {}),
         ...(input.submitInput.expectedRole !== undefined
           ? { expectedRole: input.submitInput.expectedRole }
           : {}),

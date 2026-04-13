@@ -187,6 +187,7 @@ describe("passWorkspaceContextPreparation", () => {
           repo: "/repo",
           bubble_id: "b_pass_ctx_03",
           handoff_id: "implementer:b_pass_ctx_03:round:2:attempt:1",
+          execution_id: "exec_pass_ctx_03_round2",
           expected_role: "implementer",
           expected_round: 2,
           expected_state_fingerprint: "fp_ctx_03",
@@ -215,6 +216,7 @@ describe("passWorkspaceContextPreparation", () => {
           } as never,
           execution_context: {
             handoff_id: "implementer:b_pass_ctx_03:round:2:attempt:1",
+            execution_id: "exec_pass_ctx_03_round2",
             round: 2
           } as never
         },

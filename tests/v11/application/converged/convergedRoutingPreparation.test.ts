@@ -312,6 +312,7 @@ describe("prepareConvergedRouting", () => {
           repo: "/repo",
           bubble_id: "b_conv_ctx_01",
           handoff_id: "reviewer:b_conv_ctx_01:round:3:attempt:1",
+          execution_id: "exec_conv_ctx_01_round3",
           expected_role: "reviewer",
           expected_round: 3,
           expected_state_fingerprint: "fp_conv_ctx_01",
@@ -342,6 +343,7 @@ describe("prepareConvergedRouting", () => {
           } as never,
           execution_context: {
             handoff_id: "reviewer:b_conv_ctx_01:round:3:attempt:1",
+            execution_id: "exec_conv_ctx_01_round3",
             round: 3
           } as never
         },

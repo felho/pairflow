@@ -210,6 +210,7 @@ export interface ActorEmitBaseInput {
   repo: string;
   bubble_id: string;
   handoff_id: string;
+  execution_id: string;
   refs?: string[];
   expected_role?: AgentRole;
   expected_round?: number;

@@ -179,6 +179,7 @@ describe("emitActorProtocolV11 wrappers", () => {
         repo: repoPath,
         bubble_id: bubble.bubbleId,
         handoff_id: authoritativeContext.handoff_id,
+        execution_id: authoritativeContext.execution_id,
         summary: "Wrapper direct pass"
       },
       authoritativeContext
@@ -211,6 +212,7 @@ describe("emitActorProtocolV11 wrappers", () => {
         repo: repoPath,
         bubble_id: bubble.bubbleId,
         handoff_id: authoritativeContext.handoff_id,
+        execution_id: authoritativeContext.execution_id,
         question: "Need human input from direct wrapper?"
       },
       authoritativeContext
@@ -250,6 +252,7 @@ describe("emitActorProtocolV11 wrappers", () => {
         repo: repoPath,
         bubble_id: bubble.bubbleId,
         handoff_id: authoritativeContext.handoff_id,
+        execution_id: authoritativeContext.execution_id,
         question: "Need human input with refs?",
         refs: ["artifact://pilot/refs.md"]
       },
@@ -284,6 +287,7 @@ describe("emitActorProtocolV11 wrappers", () => {
           repo: repoPath,
           bubble_id: bubble.bubbleId,
           handoff_id: authoritativeContext.handoff_id,
+          execution_id: authoritativeContext.execution_id,
           summary: "Should reject"
         },
         authoritativeContext: {
@@ -305,12 +309,14 @@ describe("emitActorProtocolV11 wrappers", () => {
           repo: "/repo",
           bubble_id: "b_actor_protocol_01",
           handoff_id: "implementer:b_actor_protocol_01:round:2:attempt:1",
+          execution_id: "exec_actor_protocol_01_round2",
           question: "Need input"
         },
         authoritativeContext: {
           repo: "/repo",
           bubble_id: "b_actor_protocol_01",
           handoff_id: "implementer:b_actor_protocol_01:round:1:attempt:1",
+          execution_id: "exec_actor_protocol_01_round1",
           expected_role: "implementer",
           expected_round: 1,
           expected_state_fingerprint: "fp_actor_protocol_01",
@@ -321,6 +327,65 @@ describe("emitActorProtocolV11 wrappers", () => {
         }
       })
     ).rejects.toThrow(/Canonical actor emit handoff mismatch/u);
+  });
+
+  it("rejects direct wrapper calls when execution-scoped authority mismatches", async () => {
+    await expect(
+      actorProtocolModule.emitImplementerPilotActorProtocolV11({
+        input: {
+          kind: "human_question",
+          repo: "/repo",
+          bubble_id: "b_actor_protocol_exec_01",
+          handoff_id: "implementer:b_actor_protocol_exec_01:round:2:attempt:1",
+          execution_id: "exec_actor_protocol_exec_01_input",
+          question: "Need input"
+        },
+        authoritativeContext: {
+          repo: "/repo",
+          bubble_id: "b_actor_protocol_exec_01",
+          handoff_id: "implementer:b_actor_protocol_exec_01:round:2:attempt:1",
+          execution_id: "exec_actor_protocol_exec_01_context",
+          expected_role: "implementer",
+          expected_round: 2,
+          expected_state_fingerprint: "fp_actor_protocol_exec_01",
+          worktree_path: "/repo/.pairflow/worktrees/b_actor_protocol_exec_01",
+          resolved: {} as never,
+          loaded_state: {} as never,
+          execution_context: {} as never
+        }
+      })
+    ).rejects.toThrow(/Canonical actor emit execution mismatch/u);
+  });
+
+  it("rejects direct wrapper calls that reuse handoff_id as execution_id", async () => {
+    await expect(
+      actorProtocolModule.emitImplementerPilotActorProtocolV11({
+        input: {
+          kind: "human_question",
+          repo: "/repo",
+          bubble_id: "b_actor_protocol_exec_02",
+          handoff_id: "implementer:b_actor_protocol_exec_02:round:2:attempt:1",
+          execution_id: "implementer:b_actor_protocol_exec_02:round:2:attempt:1",
+          question: "Need input"
+        },
+        authoritativeContext: {
+          repo: "/repo",
+          bubble_id: "b_actor_protocol_exec_02",
+          handoff_id: "implementer:b_actor_protocol_exec_02:round:2:attempt:1",
+          execution_id: "exec_actor_protocol_exec_02_context",
+          expected_role: "implementer",
+          expected_round: 2,
+          expected_state_fingerprint: "fp_actor_protocol_exec_02",
+          worktree_path: "/repo/.pairflow/worktrees/b_actor_protocol_exec_02",
+          resolved: {} as never,
+          loaded_state: {} as never,
+          execution_context: {} as never
+        }
+      })
+    ).rejects.toMatchObject({
+      name: "ActorEmitContextError",
+      reasonCode: "ACTOR_EMIT_FORBIDDEN_EXECUTION_ID_DERIVATION"
+    } satisfies Partial<ActorEmitContextError>);
   });
 
   it("routes direct reviewer wrapper pass calls through canonical reviewer authority", async () => {
@@ -348,6 +413,7 @@ describe("emitActorProtocolV11 wrappers", () => {
         repo: repoPath,
         bubble_id: bubble.bubbleId,
         handoff_id: authoritativeContext.handoff_id,
+        execution_id: authoritativeContext.execution_id,
         summary: "Reviewer wrapper pass",
         no_findings: true
       },
@@ -381,6 +447,7 @@ describe("emitActorProtocolV11 wrappers", () => {
           repo: repoPath,
           bubble_id: bubble.bubbleId,
           handoff_id: authoritativeContext.handoff_id,
+        execution_id: authoritativeContext.execution_id,
           summary: "Should reject"
         },
         authoritativeContext
@@ -410,6 +477,7 @@ describe("emitActorProtocolV11 wrappers", () => {
           repo: repoPath,
           bubble_id: bubble.bubbleId,
           handoff_id: authoritativeContext.handoff_id,
+        execution_id: authoritativeContext.execution_id,
           summary: "Should reject reviewer convergence"
         },
         authoritativeContext
@@ -447,6 +515,7 @@ describe("emitActorProtocolV11 wrappers", () => {
         repo: repoPath,
         bubble_id: bubble.bubbleId,
         handoff_id: authoritativeContext.handoff_id,
+        execution_id: authoritativeContext.execution_id,
         summary: "Reviewer wrapper convergence",
         findings: [
           {
@@ -488,6 +557,7 @@ describe("emitActorProtocolV11 wrappers", () => {
         repo: repoPath,
         bubble_id: bubble.bubbleId,
         handoff_id: authoritativeContext.handoff_id,
+        execution_id: authoritativeContext.execution_id,
         round: authoritativeContext.expected_round,
         recommendation: "approve",
         summary: "Meta-review wrapper approve parity",
@@ -534,6 +604,7 @@ describe("emitActorProtocolV11 wrappers", () => {
         repo: repoPath,
         bubble_id: bubble.bubbleId,
         handoff_id: authoritativeContext.handoff_id,
+        execution_id: authoritativeContext.execution_id,
         round: authoritativeContext.expected_round,
         recommendation: "inconclusive",
         summary: "Meta-review wrapper inconclusive parity",
@@ -575,6 +646,7 @@ describe("emitActorProtocolV11 wrappers", () => {
           repo: repoPath,
           bubble_id: bubble.bubbleId,
           handoff_id: authoritativeContext.handoff_id,
+        execution_id: authoritativeContext.execution_id,
           round: authoritativeContext.expected_round,
           recommendation: "approve",
           summary: "Should reject meta-review authority mismatch",
@@ -624,6 +696,7 @@ describe("emitActorProtocolV11 wrappers", () => {
         repo: repoPath,
         bubble_id: bubble.bubbleId,
         handoff_id: authoritativeContext.handoff_id,
+        execution_id: authoritativeContext.execution_id,
         round: authoritativeContext.expected_round,
         recommendation: "approve",
         summary: "Meta-review wrapper recovery parity",
@@ -674,6 +747,7 @@ describe("emitActorProtocolV11 wrappers", () => {
           repo: repoPath,
           bubble_id: bubble.bubbleId,
           handoff_id: authoritativeContext.handoff_id,
+        execution_id: authoritativeContext.execution_id,
           round: authoritativeContext.expected_round,
           recommendation: "approve",
           summary: "Should reject non-codex live meta-review authority",
@@ -711,6 +785,7 @@ describe("emitActorProtocolV11 wrappers", () => {
         repo: repoPath,
         bubble_id: bubble.bubbleId,
         handoff_id: authoritativeContext.handoff_id,
+        execution_id: authoritativeContext.execution_id,
         question: "Should outer dispatcher use the wrapper?",
         refs: ["artifact://dispatch/ref.md"]
       },
@@ -756,6 +831,7 @@ describe("emitActorProtocolV11 wrappers", () => {
         repo: repoPath,
         bubble_id: bubble.bubbleId,
         handoff_id: authoritativeContext.handoff_id,
+        execution_id: authoritativeContext.execution_id,
         summary: "Should outer dispatcher use the reviewer wrapper?",
         no_findings: true
       },
@@ -803,6 +879,7 @@ describe("emitActorProtocolV11 wrappers", () => {
         repo: repoPath,
         bubble_id: bubble.bubbleId,
         handoff_id: authoritativeContext.handoff_id,
+        execution_id: authoritativeContext.execution_id,
         summary: "Should outer dispatcher use the reviewer convergence wrapper?",
         findings: [
           {
@@ -851,6 +928,7 @@ describe("emitActorProtocolV11 wrappers", () => {
         repo: repoPath,
         bubble_id: bubble.bubbleId,
         handoff_id: authoritativeContext.handoff_id,
+        execution_id: authoritativeContext.execution_id,
         round: authoritativeContext.expected_round,
         recommendation: "approve",
         summary: "Should outer dispatcher use the meta-reviewer wrapper?",
@@ -891,6 +969,7 @@ describe("emitActorProtocolV11 wrappers", () => {
           repo: repoPath,
           bubble_id: bubble.bubbleId,
           handoff_id: authoritativeContext.handoff_id,
+        execution_id: authoritativeContext.execution_id,
           round: authoritativeContext.expected_round,
           recommendation: "approve",
           summary: "Should reject wrong-role outer-dispatch meta-review submit",
@@ -930,6 +1009,7 @@ describe("emitActorProtocolV11 wrappers", () => {
           repo: repoPath,
           bubble_id: bubble.bubbleId,
           handoff_id: authoritativeContext.handoff_id,
+        execution_id: authoritativeContext.execution_id,
           summary: "Should reject pass under meta-reviewer authority"
         },
         authoritativeContext
@@ -966,6 +1046,7 @@ describe("emitActorProtocolV11 wrappers", () => {
           repo: repoPath,
           bubble_id: bubble.bubbleId,
           handoff_id: authoritativeContext.handoff_id,
+        execution_id: authoritativeContext.execution_id,
           summary: "Should reject convergence under meta-reviewer authority"
         },
         authoritativeContext

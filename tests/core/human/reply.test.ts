@@ -78,7 +78,7 @@ describe("emitHumanReply", () => {
     expect(state.state.active_role).toBe("implementer");
     expect(state.state.active_since).toBe(now.toISOString());
     expect(state.state.last_command_at).toBe(now.toISOString());
-    expect(state.state.execution_context).toEqual({
+    expect(state.state.execution_context).toMatchObject({
       active_role: "implementer",
       awaited_output_type: "pass_result",
       handoff_id: `implementer:${bubble.bubbleId}:round:1:attempt:1`,
@@ -89,6 +89,9 @@ describe("emitHumanReply", () => {
       ).toISOString(),
       attempt: 1
     });
+    expect(state.state.execution_context?.execution_id).toMatch(
+      /^exec_[0-9a-f]{24}$/u
+    );
 
     const transcript = await readTranscriptEnvelopes(bubble.paths.transcriptPath);
     expect(transcript.map((entry) => entry.type)).toEqual([
@@ -218,7 +221,7 @@ describe("emitHumanReply", () => {
     expect(deliveries).toEqual(["reviewer"]);
 
     const state = await readStateSnapshot(bubble.paths.statePath);
-    expect(state.state.execution_context).toEqual({
+    expect(state.state.execution_context).toMatchObject({
       active_role: "reviewer",
       awaited_output_type: "pass_result",
       handoff_id: `reviewer:${bubble.bubbleId}:round:1:attempt:1`,
@@ -230,6 +233,9 @@ describe("emitHumanReply", () => {
       ).toISOString(),
       attempt: 1
     });
+    expect(state.state.execution_context?.execution_id).toMatch(
+      /^exec_[0-9a-f]{24}$/u
+    );
   });
 
   it("rejects reply when bubble is not WAITING_HUMAN", async () => {

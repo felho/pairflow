@@ -2038,7 +2038,7 @@ describe("startBubble", () => {
     expect(result.state.state).toBe("RUNNING");
     expect(result.state.active_since).toBe("2026-02-23T09:00:00.000Z");
     expect(result.state.last_command_at).toBe("2026-02-23T09:00:00.000Z");
-    expect(result.state.execution_context).toEqual({
+    expect(result.state.execution_context).toMatchObject({
       active_role: "implementer",
       awaited_output_type: "pass_result",
       handoff_id: `implementer:${bubble.bubbleId}:round:1:attempt:2`,
@@ -2047,6 +2047,9 @@ describe("startBubble", () => {
       deadline_at: "2026-02-23T09:30:00.000Z",
       attempt: 2
     });
+    expect(result.state.execution_context?.execution_id).toMatch(
+      /^exec_[0-9a-f]{24}$/u
+    );
   });
 
   it("skips reviewer focus injection in resume mode when reviewer-focus artifact is schema-invalid", async () => {
@@ -2703,7 +2706,7 @@ describe("startBubble", () => {
 
     expect(result.state.active_since).toBe("2026-02-23T09:07:30.000Z");
     expect(result.state.last_command_at).toBe("2026-02-23T09:07:30.000Z");
-    expect(result.state.execution_context).toEqual({
+    expect(result.state.execution_context).toMatchObject({
       active_role: "meta_reviewer",
       awaited_output_type: "meta_review_result",
       handoff_id: `meta_review:${bubble.bubbleId}:round:1:attempt:1`,
@@ -2712,7 +2715,10 @@ describe("startBubble", () => {
       deadline_at: "2026-02-21T13:00:00.000Z",
       attempt: 1
     });
-    expect(result.state.meta_review?.execution_context).toEqual({
+    expect(result.state.execution_context?.execution_id).toMatch(
+      /^exec_[0-9a-f]{24}$/u
+    );
+    expect(result.state.meta_review?.execution_context).toMatchObject({
       handoff_id: `meta_review:${bubble.bubbleId}:round:1:attempt:1`,
       round: 1,
       awaited_output_type: "meta_review_result",
@@ -2720,6 +2726,9 @@ describe("startBubble", () => {
       deadline_at: "2026-02-21T13:00:00.000Z",
       attempt: 1
     });
+    expect(result.state.meta_review?.execution_context?.execution_id).toBe(
+      result.state.execution_context?.execution_id
+    );
   });
 
   it("keeps resume start robust when injected summary builder throws", async () => {

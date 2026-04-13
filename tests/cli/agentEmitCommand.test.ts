@@ -91,6 +91,8 @@ describe("parseAgentEmitCommandOptions", () => {
       "b_agent_emit_meta_01",
       "--handoff-id",
       "meta_review:b_agent_emit_meta_01:round:2:attempt:1",
+      "--execution-id",
+      "exec_b_agent_emit_meta_01_round2",
       "--round",
       "2",
       "--recommendation",
@@ -129,6 +131,8 @@ describe("parseAgentEmitCommandOptions", () => {
       "b_agent_emit_pass_parse_01",
       "--handoff-id",
       "implementer:b_agent_emit_pass_parse_01:round:1:attempt:1",
+      "--execution-id",
+      "exec_b_agent_emit_pass_parse_01_round1",
       "--expected-role",
       "implementer",
       "--expected-round",
@@ -155,6 +159,7 @@ describe("parseAgentEmitCommandOptions", () => {
       repo: "/tmp/repo",
       bubble_id: "b_agent_emit_pass_parse_01",
       handoff_id: "implementer:b_agent_emit_pass_parse_01:round:1:attempt:1",
+      execution_id: "exec_b_agent_emit_pass_parse_01_round1",
       expected_role: "implementer",
       expected_round: 1,
       expected_state_fingerprint: "fp_pass_01",
@@ -187,6 +192,8 @@ describe("parseAgentEmitCommandOptions", () => {
       "b_agent_emit_human_parse_01",
       "--handoff-id",
       "reviewer:b_agent_emit_human_parse_01:round:1:attempt:1",
+      "--execution-id",
+      "exec_b_agent_emit_human_parse_01_round1",
       "--question",
       "Need product input on the fallback copy",
       "--ref",
@@ -203,6 +210,7 @@ describe("parseAgentEmitCommandOptions", () => {
       repo: "/tmp/repo",
       bubble_id: "b_agent_emit_human_parse_01",
       handoff_id: "reviewer:b_agent_emit_human_parse_01:round:1:attempt:1",
+      execution_id: "exec_b_agent_emit_human_parse_01_round1",
       question: "Need product input on the fallback copy",
       refs: [".pairflow/evidence/test.log"]
     });
@@ -218,6 +226,8 @@ describe("parseAgentEmitCommandOptions", () => {
       "b_agent_emit_convergence_parse_01",
       "--handoff-id",
       "reviewer:b_agent_emit_convergence_parse_01:round:2:attempt:1",
+      "--execution-id",
+      "exec_b_agent_emit_convergence_parse_01_round2",
       "--summary",
       "Review converged with one non-blocking follow-up",
       "--finding",
@@ -234,6 +244,7 @@ describe("parseAgentEmitCommandOptions", () => {
       repo: "/tmp/repo",
       bubble_id: "b_agent_emit_convergence_parse_01",
       handoff_id: "reviewer:b_agent_emit_convergence_parse_01:round:2:attempt:1",
+      execution_id: "exec_b_agent_emit_convergence_parse_01_round2",
       summary: "Review converged with one non-blocking follow-up",
       refs: []
     });
@@ -260,6 +271,8 @@ describe("parseAgentEmitCommandOptions", () => {
         "b_agent_emit_float_round_01",
         "--handoff-id",
         "implementer:b_agent_emit_float_round_01:round:1:attempt:1",
+        "--execution-id",
+        "exec_b_agent_emit_float_round_01_round1",
         "--expected-round",
         "2.5",
         "--summary",
@@ -270,7 +283,7 @@ describe("parseAgentEmitCommandOptions", () => {
     );
   });
 
-  it("rejects unknown target-authority override options", () => {
+  it("rejects missing execution_id instead of deriving it from handoff_id", () => {
     expect(() =>
       parseAgentEmitCommandOptions([
         "--kind",
@@ -282,12 +295,31 @@ describe("parseAgentEmitCommandOptions", () => {
         "--handoff-id",
         "implementer:b_agent_emit_override_01:round:1:attempt:1",
         "--summary",
-        "Should fail",
-        "--execution-id",
-        "exec_123"
+        "Should fail"
       ])
     ).toThrow(
-      "ACTOR_EMIT_OPTIONS_INVALID: Unknown option '--execution-id'"
+      "ACTOR_EMIT_INPUT_EXECUTION_ID_MISSING: Missing required option: --execution-id (handoff_id cannot be used to derive execution_id)."
+    );
+  });
+
+  it("rejects execution_id values that reuse the handoff_id authority token", () => {
+    expect(() =>
+      parseAgentEmitCommandOptions([
+        "--kind",
+        "pass",
+        "--repo",
+        "/tmp/repo",
+        "--bubble-id",
+        "b_agent_emit_override_02",
+        "--handoff-id",
+        "implementer:b_agent_emit_override_02:round:1:attempt:1",
+        "--execution-id",
+        "implementer:b_agent_emit_override_02:round:1:attempt:1",
+        "--summary",
+        "Should fail"
+      ])
+    ).toThrow(
+      "ACTOR_EMIT_FORBIDDEN_EXECUTION_ID_DERIVATION: --execution-id must not equal --handoff-id; inferred execution authority is forbidden."
     );
   });
 });
@@ -302,7 +334,9 @@ describe("runAgentEmitCommand", () => {
     });
     const loadedState = await readStateSnapshot(bubble.paths.statePath);
     const handoffId = loadedState.state.execution_context?.handoff_id;
+    const executionId = loadedState.state.execution_context?.execution_id;
     expect(handoffId).toBeDefined();
+    expect(executionId).toBeDefined();
 
     const result = await runAgentEmitCommand([
       "--kind",
@@ -313,6 +347,8 @@ describe("runAgentEmitCommand", () => {
       bubble.bubbleId,
       "--handoff-id",
       String(handoffId),
+      "--execution-id",
+      String(executionId),
       "--summary",
       "Implemented canonical pass"
     ]);
@@ -335,7 +371,9 @@ describe("runAgentEmitCommand", () => {
     });
     const loadedState = await readStateSnapshot(bubble.paths.statePath);
     const handoffId = loadedState.state.execution_context?.handoff_id;
+    const executionId = loadedState.state.execution_context?.execution_id;
     expect(handoffId).toBeDefined();
+    expect(executionId).toBeDefined();
 
     await runAgentEmitCommand([
       "--kind",
@@ -346,6 +384,8 @@ describe("runAgentEmitCommand", () => {
       bubble.bubbleId,
       "--handoff-id",
       String(handoffId),
+      "--execution-id",
+      String(executionId),
       "--summary",
       "First canonical pass"
     ]);
@@ -366,6 +406,8 @@ describe("runAgentEmitCommand", () => {
         bubble.bubbleId,
         "--handoff-id",
         String(handoffId),
+        "--execution-id",
+        String(executionId),
         "--summary",
         "Duplicate canonical pass"
       ])
@@ -395,7 +437,9 @@ describe("runAgentEmitCommand", () => {
 
     const loadedState = await readStateSnapshot(bubble.paths.statePath);
     const handoffId = loadedState.state.execution_context?.handoff_id;
+    const executionId = loadedState.state.execution_context?.execution_id;
     expect(handoffId).toBeDefined();
+    expect(executionId).toBeDefined();
 
     await runAgentEmitCommand([
       "--kind",
@@ -406,6 +450,8 @@ describe("runAgentEmitCommand", () => {
       bubble.bubbleId,
       "--handoff-id",
       String(handoffId),
+      "--execution-id",
+      String(executionId),
       "--summary",
       "First canonical reviewer pass",
       "--no-findings"
@@ -428,6 +474,8 @@ describe("runAgentEmitCommand", () => {
         bubble.bubbleId,
         "--handoff-id",
         String(handoffId),
+        "--execution-id",
+        String(executionId),
         "--summary",
         "Duplicate canonical reviewer pass",
         "--no-findings"
@@ -458,6 +506,7 @@ describe("runAgentEmitCommand", () => {
         repo: repoPath,
         bubble_id: bubble.bubbleId,
         handoff_id: "reviewer:b_agent_emit_conv_guard_01:round:1:attempt:1",
+        execution_id: "exec_agent_emit_conv_guard_01",
         expected_role: "reviewer",
         expected_round: 1,
         expected_state_fingerprint: "fp_conv_guard_01",
@@ -482,6 +531,8 @@ describe("runAgentEmitCommand", () => {
         bubble.bubbleId,
         "--handoff-id",
         "reviewer:b_agent_emit_conv_guard_01:round:1:attempt:1",
+        "--execution-id",
+        "exec_agent_emit_conv_guard_01",
         "--summary",
         "Review converged cleanly"
       ])
@@ -546,6 +597,8 @@ describe("runAgentEmitCommand", () => {
       bubble.bubbleId,
       "--handoff-id",
       metaReviewExecutionContext.handoff_id,
+      "--execution-id",
+      metaReviewExecutionContext.execution_id,
       "--expected-role",
       "meta_reviewer",
       "--expected-round",

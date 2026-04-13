@@ -57,6 +57,7 @@ export function assertActorEmitInputMatchesContext(input: {
   assertActorEmitContextMatches({
     context,
     handoffId: actorInput.handoff_id,
+    executionId: actorInput.execution_id,
     ...(actorInput.expected_role !== undefined
       ? { expectedRole: actorInput.expected_role }
       : {}),
@@ -143,6 +144,7 @@ export async function emitMetaReviewActorResultV11(input: {
       bubbleId: actorInput.bubble_id,
       repoPath: actorInput.repo,
       cwd: context.worktree_path,
+      expectedExecutionId: context.execution_id,
       round: actorInput.round,
       recommendation: actorInput.recommendation,
       summary: actorInput.summary,

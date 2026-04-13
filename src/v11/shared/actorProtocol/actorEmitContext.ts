@@ -7,7 +7,12 @@ import { resolveBubbleFromWorkspaceCwd } from "../../defaults/workspace/workspac
 
 export type ActorEmitContextErrorReasonCode =
   | "ACTOR_EMIT_COMPAT_ADAPTER_INVALID"
-  | "ACTOR_EMIT_CONTEXT_INVALID";
+  | "ACTOR_EMIT_CONTEXT_INVALID"
+  | "ACTOR_EMIT_CONTEXT_MISSING_EXECUTION_CONTEXT"
+  | "ACTOR_EMIT_CONTEXT_PRE_E1_EXECUTION_ID_MISSING"
+  | "ACTOR_EMIT_CONTEXT_EXECUTION_ID_MISSING"
+  | "ACTOR_EMIT_INPUT_EXECUTION_ID_MISSING"
+  | "ACTOR_EMIT_FORBIDDEN_EXECUTION_ID_DERIVATION";
 
 export interface ActorEmitContextErrorContext {
   route?: string | undefined;
@@ -49,6 +54,7 @@ export interface ActorEmitContextSnapshot {
   repo: string;
   bubble_id: string;
   handoff_id: string;
+  execution_id: string;
   expected_role: AgentRole;
   expected_round: number;
   expected_state_fingerprint: string;
@@ -75,6 +81,31 @@ function assertExecutionContext(
   return state.execution_context;
 }
 
+function assertExecutionContextHasExecutionId(
+  executionContext: BubbleExecutionContext
+): string {
+  const executionContextRecord = executionContext as BubbleExecutionContext & {
+    execution_id?: unknown;
+  };
+  const hasExecutionId = Object.hasOwn(executionContextRecord, "execution_id");
+  if (!hasExecutionId) {
+    throw new ActorEmitContextError(
+      "ACTOR_EMIT_CONTEXT_PRE_E1_EXECUTION_ID_MISSING",
+      "ACTOR_EMIT_CONTEXT_PRE_E1_EXECUTION_ID_MISSING: persisted execution_context is missing execution_id; fresh authority remint required."
+    );
+  }
+  if (
+    typeof executionContextRecord.execution_id !== "string"
+    || executionContextRecord.execution_id.trim().length === 0
+  ) {
+    throw new ActorEmitContextError(
+      "ACTOR_EMIT_CONTEXT_EXECUTION_ID_MISSING",
+      "ACTOR_EMIT_CONTEXT_EXECUTION_ID_MISSING: canonical execution_context requires a non-empty execution_id."
+    );
+  }
+  return executionContextRecord.execution_id;
+}
+
 function buildActorEmitContextSnapshot(input: {
   resolved: ResolvedBubbleById;
   loadedState: LoadedStateSnapshot;
@@ -82,8 +113,11 @@ function buildActorEmitContextSnapshot(input: {
 }): ActorEmitContextSnapshot {
   const executionContext = assertExecutionContext(
     input.loadedState.state,
-    input.reasonCode
+    input.reasonCode === "ACTOR_EMIT_COMPAT_ADAPTER_INVALID"
+      ? input.reasonCode
+      : "ACTOR_EMIT_CONTEXT_MISSING_EXECUTION_CONTEXT"
   );
+  const executionId = assertExecutionContextHasExecutionId(executionContext);
   const liveRole = input.loadedState.state.active_role;
   if (
     liveRole !== null &&
@@ -100,6 +134,7 @@ function buildActorEmitContextSnapshot(input: {
     repo: input.resolved.repoPath,
     bubble_id: input.resolved.bubbleId,
     handoff_id: executionContext.handoff_id,
+    execution_id: executionId,
     expected_role: executionContext.active_role,
     expected_round: executionContext.round,
     expected_state_fingerprint: input.loadedState.fingerprint,
@@ -158,14 +193,36 @@ export async function resolveActorEmitContextByBubbleId(input: {
 export function assertActorEmitContextMatches(input: {
   context: ActorEmitContextSnapshot;
   handoffId: string;
+  executionId: string;
   expectedRole?: AgentRole;
   expectedRound?: number;
   expectedStateFingerprint?: string;
 }): void {
+  if (input.executionId.trim().length === 0) {
+    throw new ActorEmitContextError(
+      "ACTOR_EMIT_FORBIDDEN_EXECUTION_ID_DERIVATION",
+      "ACTOR_EMIT_FORBIDDEN_EXECUTION_ID_DERIVATION: canonical actor emit requires an explicit execution_id; handoff_id cannot be used as a substitute."
+    );
+  }
+
+  if (input.executionId === input.handoffId) {
+    throw new ActorEmitContextError(
+      "ACTOR_EMIT_FORBIDDEN_EXECUTION_ID_DERIVATION",
+      "ACTOR_EMIT_FORBIDDEN_EXECUTION_ID_DERIVATION: execution_id must not be derived from or reused as handoff_id."
+    );
+  }
+
   if (input.context.handoff_id !== input.handoffId) {
     throw new ActorEmitContextError(
       "ACTOR_EMIT_CONTEXT_INVALID",
       `Canonical actor emit handoff mismatch: expected ${input.handoffId}, active ${input.context.handoff_id}.`
+    );
+  }
+
+  if (input.context.execution_id !== input.executionId) {
+    throw new ActorEmitContextError(
+      "ACTOR_EMIT_CONTEXT_INVALID",
+      `Canonical actor emit execution mismatch: expected ${input.executionId}, active ${input.context.execution_id}.`
     );
   }
 
