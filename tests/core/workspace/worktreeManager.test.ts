@@ -26,6 +26,18 @@ async function createWorktreePath(name: string): Promise<string> {
   return join(root, name);
 }
 
+async function createCloneWorkspace(input: {
+  repoPath: string;
+  worktreePath: string;
+  bubbleBranch: string;
+}): Promise<void> {
+  await runGit(input.repoPath, ["branch", input.bubbleBranch, "main"]);
+  await runGit(input.repoPath, ["clone", input.repoPath, input.worktreePath]);
+  await runGit(input.worktreePath, ["config", "user.email", "pairflow@example.test"]);
+  await runGit(input.worktreePath, ["config", "user.name", "Pairflow Test"]);
+  await runGit(input.worktreePath, ["checkout", input.bubbleBranch]);
+}
+
 afterEach(async () => {
   await Promise.all(
     tempDirs.splice(0).map((path) =>
@@ -237,5 +249,106 @@ describe("cleanupWorktreeWorkspace", () => {
 
     expect(result.removedWorktree).toBe(false);
     expect(result.removedBranch).toBe(false);
+  });
+
+  it("removes clone workspace and source branch when ownership proof matches", async () => {
+    const repoPath = await createGitRepo();
+    const worktreePath = await createWorktreePath("b_clone_owned");
+
+    await createCloneWorkspace({
+      repoPath,
+      worktreePath,
+      bubbleBranch: "bubble/b_clone_owned"
+    });
+
+    const result = await cleanupWorktreeWorkspace({
+      repoPath,
+      bubbleBranch: "bubble/b_clone_owned",
+      worktreePath
+    });
+
+    expect(result.removedWorktree).toBe(true);
+    expect(result.removedBranch).toBe(true);
+    await expect(lstat(worktreePath)).rejects.toMatchObject({
+      code: "ENOENT"
+    });
+  });
+
+  it("keeps source branch when clone workspace ownership proof is unclear", async () => {
+    const repoPath = await createGitRepo();
+    const worktreePath = await createWorktreePath("b_clone_unowned");
+
+    await createCloneWorkspace({
+      repoPath,
+      worktreePath,
+      bubbleBranch: "bubble/b_clone_unowned"
+    });
+    await runGit(repoPath, ["checkout", "bubble/b_clone_unowned"]);
+    await writeFile(join(repoPath, "source-diverged.txt"), "source moved\n", "utf8");
+    await runGit(repoPath, ["add", "source-diverged.txt"]);
+    await runGit(repoPath, ["commit", "-m", "feat(source): move branch"]);
+    await runGit(repoPath, ["checkout", "main"]);
+
+    const result = await cleanupWorktreeWorkspace({
+      repoPath,
+      bubbleBranch: "bubble/b_clone_unowned",
+      worktreePath
+    });
+
+    expect(result.removedWorktree).toBe(true);
+    expect(result.removedBranch).toBe(false);
+    const branchCheck = await runGit(
+      repoPath,
+      ["show-ref", "--verify", "--quiet", "refs/heads/bubble/b_clone_unowned"],
+      true
+    );
+    expect(branchCheck.exitCode).toBe(0);
+  });
+
+  it("accepts clone branch ownership after a post-bootstrap clone commit is synced back to the source branch", async () => {
+    const repoPath = await createGitRepo();
+    const worktreePath = await createWorktreePath("b_clone_post_commit_owned");
+    const bubbleBranch = "bubble/b_clone_post_commit_owned";
+
+    await createCloneWorkspace({
+      repoPath,
+      worktreePath,
+      bubbleBranch
+    });
+    await writeFile(join(worktreePath, "clone-owned.txt"), "owned after sync\n", "utf8");
+    await runGit(worktreePath, ["add", "clone-owned.txt"]);
+    await runGit(worktreePath, ["commit", "-m", "feat(clone): owned after sync"]);
+    await runGit(worktreePath, ["push", repoPath, `HEAD:refs/heads/${bubbleBranch}`]);
+
+    const result = await cleanupWorktreeWorkspace({
+      repoPath,
+      bubbleBranch,
+      worktreePath
+    });
+
+    expect(result.removedWorktree).toBe(true);
+    expect(result.removedBranch).toBe(true);
+  });
+
+  it("accepts detached clone HEAD ownership when the local and source bubble refs still match", async () => {
+    const repoPath = await createGitRepo();
+    const worktreePath = await createWorktreePath("b_clone_detached_owned");
+    const bubbleBranch = "bubble/b_clone_detached_owned";
+
+    await createCloneWorkspace({
+      repoPath,
+      worktreePath,
+      bubbleBranch
+    });
+    await runGit(worktreePath, ["checkout", "--detach"]);
+
+    const result = await cleanupWorktreeWorkspace({
+      repoPath,
+      bubbleBranch,
+      worktreePath
+    });
+
+    expect(result.removedWorktree).toBe(true);
+    expect(result.removedBranch).toBe(true);
   });
 });

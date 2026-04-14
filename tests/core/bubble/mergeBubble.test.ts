@@ -4,6 +4,7 @@ import { join } from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
+import { renderBubbleConfigToml } from "../../../src/config/bubbleConfig.js";
 import { createBubble } from "../../../src/v11/application/create/createBubble.js";
 import {
   BubbleMergeErrorV11 as BubbleMergeError,
@@ -69,6 +70,26 @@ async function setupDoneBubble(repoPath: string, bubbleId: string) {
     }
   );
 
+  return bubble;
+}
+
+async function convertDoneBubbleToClone(
+  repoPath: string,
+  bubble: Awaited<ReturnType<typeof setupDoneBubble>>
+) {
+  await writeFile(
+    bubble.paths.bubbleTomlPath,
+    renderBubbleConfigToml({
+      ...bubble.config,
+      work_mode: "clone"
+    }),
+    "utf8"
+  );
+  await runGit(repoPath, ["worktree", "remove", "--force", bubble.paths.worktreePath]);
+  await runGit(repoPath, ["clone", repoPath, bubble.paths.worktreePath]);
+  await runGit(bubble.paths.worktreePath, ["config", "user.email", "pairflow@example.test"]);
+  await runGit(bubble.paths.worktreePath, ["config", "user.name", "Pairflow Test"]);
+  await runGit(bubble.paths.worktreePath, ["checkout", bubble.config.bubble_branch]);
   return bubble;
 }
 
@@ -179,5 +200,61 @@ describe("mergeBubble", () => {
       true
     );
     expect(remoteBubble.stdout.trim()).toBe("");
+  });
+
+  it("merges clone-mode bubbles from the source repo branch and removes the owned clone workspace", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await convertDoneBubbleToClone(
+      repoPath,
+      await setupDoneBubble(repoPath, "b_merge_clone_01")
+    );
+
+    const result = await mergeBubble(
+      {
+        bubbleId: bubble.bubbleId,
+        cwd: repoPath,
+        now: new Date("2026-02-23T10:10:00.000Z")
+      },
+      {
+        terminateBubbleTmuxSession: (input) =>
+          Promise.resolve({
+            sessionName: `pf-${input.bubbleId ?? "unknown"}`,
+            existed: false
+          })
+      }
+    );
+
+    expect(result.baseBranch).toBe("main");
+    expect(result.bubbleBranch).toBe(bubble.config.bubble_branch);
+    expect(result.removedWorktree).toBe(true);
+    expect(result.removedBubbleBranch).toBe(true);
+
+    await expect(stat(bubble.paths.worktreePath)).rejects.toMatchObject({
+      code: "ENOENT"
+    });
+
+    const featureContent = await runGit(repoPath, ["show", "HEAD:feature.txt"]);
+    expect(featureContent.stdout.trim()).toBe("b_merge_clone_01");
+  });
+
+  it("fails closed for clone-mode merge when the source repo bubble branch is missing", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await convertDoneBubbleToClone(
+      repoPath,
+      await setupDoneBubble(repoPath, "b_merge_clone_missing_branch_01")
+    );
+
+    await runGit(repoPath, ["branch", "-D", bubble.config.bubble_branch]);
+
+    await expect(
+      mergeBubble({
+        bubbleId: bubble.bubbleId,
+        cwd: repoPath,
+        now: new Date("2026-02-23T10:11:00.000Z")
+      })
+    ).rejects.toBeInstanceOf(BubbleMergeError);
+
+    const workspaceStats = await stat(bubble.paths.worktreePath);
+    expect(workspaceStats.isDirectory()).toBe(true);
   });
 });
