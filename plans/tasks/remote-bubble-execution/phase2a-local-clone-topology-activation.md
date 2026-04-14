@@ -111,6 +111,16 @@ Aktivalni a local clone-topology start/resume pathot ugy, hogy a bubble friss st
    - remote SSH start closure: successor-only, Phase 2D,
    - operator read-model es remote mutation routing: successor-only.
 
+### Activation Boundary Decision Table
+
+| Path | Required Inputs | Allowed Authority Source | Must Stay Closed | Fail-Closed Rule | Evidence |
+| --- | --- | --- | --- | --- | --- |
+| local fresh start, `work_mode=clone` | startable state, topology-aware bootstrap, explicit clone `workspacePath` + `workspaceKind` | `bootstrapWorktreeWorkspace(...)` resultje | remote pointer/cache/config, `pairflow_sync_command`, remote executor/start surfaces | explicit clone authority nelkul nincs launch vagy RUNNING | T1, T2, T4, T7, T10 |
+| local resume, `work_mode=clone` | resumable state, explicit persisted clone authority | runtime session `workspacePath` + `workspaceKind=clone` | `worktreePath` clone fallbackkent, remote read/write surfaces | authority-hiany vagy legacy fallback eseten nincs relaunch | T3, T5, T10 |
+| local fresh/resume, `work_mode=worktree` | retained baseline inputs | retained worktree authority chain | clone-only producer/consumer semantics | semmilyen clone activation nem regresszalhatja a worktree pathot | T6 |
+| non-startable state barmely topologyban | bubble state gate | `N/A`, mert a state gate megelozi az activationt | barmilyen topology-specifikus success path | `START_STATE_NOT_STARTABLE` retained marad | T9 |
+| barmilyen remote/config nyom jelenlete local bubble mellett | remote config files, future executor metadata vagy plan hivatkozasok csak ambient contextkent | tovabbra is a local start-time authority source | remote create/start/status/list/attach es sync-hook consume | remote metadata jelenlete nem nyithat local Phase 2A-ban uj execution pathot | T8, T10 |
+
 ### Authority Boundary Map
 
 1. `authority_producer`
@@ -255,10 +265,18 @@ Aktivalni a local clone-topology start/resume pathot ugy, hogy a bubble friss st
 
 | Path Class | Source Of Truth | Allowed Executable Root | Retained Bubble Path | Forbidden Shortcut | Evidence |
 | --- | --- | --- | --- | --- | --- |
-| clone fresh start | `bootstrapWorktreeWorkspace(...)` explicit `workspacePath` + `workspaceKind=clone` | bootstrap result `workspacePath` | `bubblePaths.worktreePath` traceability/cleanup rootkent retained maradhat | global clone reject vagy implicit worktree bootstrap | T1, T2, T7 |
-| clone resume | runtime session explicit clone authority | resolved runtime `workspacePath` | retained `worktreePath` | legacy clone fallback explicit `workspacePath` nelkul | T3, T5 |
+| clone fresh start | `bootstrapWorktreeWorkspace(...)` explicit `workspacePath` + `workspaceKind=clone` | bootstrap result `workspacePath` | `bubblePaths.worktreePath` traceability/cleanup rootkent retained maradhat | global clone reject vagy implicit worktree bootstrap | T1, T2, T7, T10 |
+| clone resume | runtime session explicit clone authority | resolved runtime `workspacePath` | retained `worktreePath` | legacy clone fallback explicit `workspacePath` nelkul | T3, T5, T10 |
 | worktree fresh/resume | retained worktree authority chain | retained worktree `workspacePath` | `bubblePaths.worktreePath` | clone activation miatti regresszio | T6 |
-| remote/operator surfaces | successor taskok authority chainje | `N/A` | `N/A` | local activation taskban barmilyen remote consume | T8 |
+| remote/operator surfaces | successor taskok authority chainje | `N/A` | `N/A` | local activation taskban barmilyen remote consume vagy future executor metadata consume | T8, T10 |
+
+### 0d) Negative Implementation Proof
+
+| Forbidden Shortcut | Why It Is Wrong In This Phase | Required Review Proof | Priority | Timing |
+| --- | --- | --- | --- | --- |
+| clone success olyan kodaggal, amely `remote.json`, `state-cache.json`, remote executor config, future executor metadata vagy sync-hook beallitas alapjan valaszt execution rootot | a Phase 2A kizárólag local start/resume activation; remote metadata nem lehet authority source | diff review + import/path audit annak bizonyitasara, hogy a start path nem olvas remote pointer/cache/sync-hook/future-executor-metadata feluletet | P1 | required-now |
+| clone resume olyan success pathon, amely explicit persisted authority helyett retained `worktreePath`-ra esik vissza | a review-loop fo regresszios forrasa a rejtett masodlagos executable truth | code-path proof vagy teszt, hogy legacy fallback tovabbra is hard error | P1 | required-now |
+| worktree-mode baseline barmilyen indirekt regresszioja clone activation mellekhatasakent | a task csak additive clone activationt vallalhat, nem shared start regressziot | retained worktree success proof a start/core/contract matrixban | P1 | required-now |
 
 ### 1) Call-site Matrix
 
@@ -325,6 +343,7 @@ Aktivalni a local clone-topology start/resume pathot ugy, hogy a bubble friss st
 | T7 | workspace bootstrap produces real clone topology for activation | local clone fresh start producer seam | `bootstrapWorktreeWorkspace(...)` clone mode-ban fut | a workspace git clone-kent jon letre, nem registered worktreekent; a returned authority explicit `workspaceKind=clone` | P1 | required-now | `tests/core/workspace/worktreeManager.test.ts` |
 | T8 | remote/operator surfaces remain out of scope | a repo tartalmaz remote plan nyomokat es config contractot | a Phase 2A implementation lefut | nincs remote pointer/cache/create/status/list/attach vagy sync-hook consume valtozas | P1 | required-now | target-file precision + diff review |
 | T9 | non-startable state gate still wins for clone bubbles | bubble `work_mode=clone`, de state nem startolhato | `startBubble(...)` fut | a retained `START_STATE_NOT_STARTABLE` family ervenyesul; clone activation nem maszkolhatja az allapot-gate-et | P1 | required-now | `tests/core/bubble/startBubble.test.ts`, `tests/contracts/v11/start.contract.runner.ts` |
+| T10 | remote metadata cannot become local activation authority | clone-mode local bubble mellett remote plan/config nyomok vagy future executor metadata is jelen lehet a repoban | `startBubble(...)` fresh vagy resume pathja fut | a local start path csak bootstrap/runtime-session authorityt hasznal; nincs remote pointer/cache/sync-hook read es nincs metadata-triggerelt alternate branch | P1 | required-now | `src/v11/application/start/startCommandApi.ts`, `src/v11/application/start/startCommandFlows.ts`, `src/v11/application/start/startCommandLaunchWorkspace.ts`, `src/v11/infrastructure/workspace/worktreeManager.ts` diff/import audit |
 
 ## L2 - Implementation Notes (Optional)
 
@@ -337,6 +356,15 @@ Aktivalni a local clone-topology start/resume pathot ugy, hogy a bubble friss st
 | --- | --- | --- | --- | --- | --- | --- |
 | H1 | explicit local clone bootstrap recovery/runbook | L2 | P2 | later-hardening | Phase 2A successor boundary | lezarni Phase 3C recovery taskban |
 
+## Completion Summary Contract (Implementer Artifact Only)
+
+1. A Pairflow done-package-nek explicitten ki kell mondania, hogy a primary artifact ez a taskfajl volt, es a refinement in-place tortent.
+2. A done-package-nek rogzítenie kell a Phase 2A boundaryt:
+   - local `work_mode=clone` fresh/resume activation pontositva lett,
+   - remote create/start/status/list/attach, remote mutation routing es `pairflow_sync_command` tovabbra is out-of-scope maradt.
+3. Ha a plan fajl nem valtozik, a done-package-nek ezt explicit scope-containment allitaskent ki kell mondania.
+4. Docs-only PASS esetben a done-package-nek egyertelmuen allitania kell, hogy runtime checks szandekosan nem futottak ebben a korben.
+
 ## Review Control
 
 1. Every finding must include: `priority`, `timing`, `layer`, `evidence`.
@@ -344,6 +372,7 @@ Aktivalni a local clone-topology start/resume pathot ugy, hogy a bubble friss st
 3. After round 2, new `required-now` is allowed only for evidence-backed `P0/P1`.
 4. Items outside L1 blocker scope must be tagged `later-hardening`.
 5. Ha a local clone activation explicit canonical workspace authority nelkul sikeresnek latszik, a review defaultja `rework`.
+6. Implementer PASS summary csak a primary artifact + done-package altal igazolt allitasokat ismetelheti; ha tobbet allit, az review-visible scope problema.
 
 ## Spec Lock
 
