@@ -45,7 +45,9 @@ Ennek tipikus okai:
 1. a task `Test Matrix` nincs machine-readable modon osztalyozva boundary-szempontbol,
 2. az evidence rendszer log-szintu command proofot tud, de nem tudja, hogy melyik konkret boundary-eset lett bizonyitva,
 3. a meta-review gate nem ellenorzi, hogy a taskban megjelolt required-now negative/baseline proofok valoban le vannak-e fedve,
-4. a reviewer sokszor csak a diffbol es a transcriptbol rekonstruálja a hianyzo negativ matrixot.
+4. a reviewer sokszor csak a diffbol es a transcriptbol rekonstruálja a hianyzo negativ matrixot,
+5. a rendszer nem kulonbozteti meg eleg elesen azt az esetet, amikor a reviewer ugyan megtalal egy explicit contract-sertest, de azt nem blocker szintre minositi,
+6. shared authority-chain valtozasnal a review tul konnyen elfogad entrypoint-local closure-t akkor is, ha ugyanaz a tiltott fallback mas consumeren vagy shared helperen keresztul tovabbra is elerheto.
 
 ## Current-System Baseline
 
@@ -75,6 +77,11 @@ Kovetkezmeny:
    - utana evidence artifact,
    - utana gate enforcement,
    - vegul optional telemetry es workflow tuning.
+8. Ha a task explicit `forbidden_fallback` vagy explicit authority-contractot mond ki, akkor az ezzel ellentetes retained shared-path nem minositheto egyszeru hardeningnek csak azert, mert a szukebb happy path zold.
+9. Boundary closure-t nem entrypointonkent, hanem a row altal megkovetelt closure scope szerint kell megitelni:
+   - `entrypoint_local`
+   - `consumer_family`
+   - `shared_authority_chain`
 
 ## Guiding Principles
 
@@ -85,6 +92,8 @@ Kovetkezmeny:
 5. A gate ne kenyszeritse ugyanazt a bizonyitekot tobb helyen szovegesen ujrafogalmazni.
 6. A retained baseline-eket ugyanugy explicit proofkent kell kezelni, mint az uj happy pathokat.
 7. Az elso rollout ne koveteljen teljes framework-rewrite-ot vagy uj altalanos policy engine-t.
+8. Ha egy review mar feltart egy explicit task-contracttal ellentetes shared-pathot, az alapertelmezetten blocker-jellegu finding, nem "kesobbi szigoritas", kiveve ha a task maga kifejezetten engedi azt az utat.
+9. Shared authority/fallback taskoknal a review kerdese nem csak az, hogy "van-e proof a rowra", hanem az is, hogy "a row teljes closure scope-ja zarva van-e".
 
 ## Conceptual Clarification: Boundary Assertions
 
@@ -128,6 +137,23 @@ A masodik allitas mar explicitten ved a rossz, de latszolag mukodo megoldasok el
    - mely uj viselkedes nyilhat meg most, es melyik export/remote/operator surface marad zarva.
 5. `baseline_preservation`
    - mely jelenlegi deterministic viselkedesnek kell tulenie a valtozast.
+
+### Closure scope
+
+Nem minden boundary assertion ugyanakkora closure-teret fed le. Ezt erdemes explicitten nevezni, kulonben a review konnyen tul koran kimondja, hogy a row "lezarult".
+
+Javasolt minimum vocabulary:
+1. `entrypoint_local`
+   - a row egy konkret belepesi pont vagy flow lokalis viselkedeset zarja.
+2. `consumer_family`
+   - a row egy azonos tipusu consume csaladra ervenyes.
+3. `shared_authority_chain`
+   - a row ugyanannak az authority- vagy fallback-szabalynak minden relevans shared producer/helper/consumer utjat le akarja zarni.
+
+Review consequence:
+1. ha a row closure scope-ja `shared_authority_chain`, akkor nem eleg egyetlen start-path vagy flow zoldre hozasa,
+2. ilyenkor a retained shared helper, mas consume csalad vagy mas resume/recovery ut tovabbi engedekenysege ugyanannak a rownak a nyitva maradasat jelenti,
+3. vagyis a row nem "uj findinggal" nyilik meg kesobb, hanem valojaban sosem zarult le.
 
 ### Practical review consequence
 
@@ -177,6 +203,32 @@ Ennek a konkret haszna:
    - keruljon ra explicit teszt,
    - es csak ezutan menjen tovabb az approval.
 
+### Concrete lesson from the follow-up review
+
+A kesobbi review-korben viszont kiderult egy fontos hiany a fenti manualis hasznalatban.
+
+A konkret eset roviden:
+1. a task explicit szabaly volt, hogy clone `resume` csak explicit persisted runtime authoritybol mehet,
+2. tiltott volt a clone authority path-alapu visszakovetkeztetese, ha a persisted `workspaceKind` hianyzik,
+3. a start-path szukitese es egy lokalis negative teszt utan ugy tunhetett, hogy a blokkolo sor lezarult,
+4. de a shared resolver tovabbra is kepes maradt `workspacePath != worktreePath` alapjan `clone` authorityt visszaepiteni,
+5. es ezt a viselkedest a tesztek reszben meg jo viselkedeskent is rogzitettek.
+
+Mi volt ebben a review-loop tanulsag:
+1. a problema mar nem "rejtett" volt, mert a shared resolver mint potencialis regresszios hely lathato volt,
+2. a hiba inkabb az volt, hogy a megtalalt shared-contract sertest nem eleg eros severityvel kezeltuk,
+3. vagyis a review implicit modon entrypoint-local closure-t fogadott el ott, ahol valojaban `shared_authority_chain` closure kellett volna.
+
+Mit kellett volna a matrixnak kimondania:
+1. a `clone resume fail-closed, ha a runtime session shape hianyos` sor closure scope-ja nem `entrypoint_local`, hanem `shared_authority_chain`,
+2. a row addig nyitott, amig barmely shared helper vagy consume csalad ugyanazt a tiltott clone fallbackot megengedi,
+3. ha a diffben marad olyan kodut, amely a task explicit `forbidden_fallback` szabalyat tovabbra is lehetove teszi, az blocker marad akkor is, ha a szukebb start-flow zold.
+
+Ennek a tervre forditott kovetkezmenye:
+1. a boundary-matrix rendszernek nem csak a hianyzo proofot kell kezelnie,
+2. hanem a "found but underweighted contract violation" mintazatot is,
+3. kulonosen authority/fail-closed worknel, ahol ugyanaz a szabaly shared helperen es tobb consume csaladon keresztul sugarzik szet.
+
 ### Design implication for the future system
 
 Ha a Pairflow ezt formalizalja:
@@ -198,9 +250,11 @@ Varhato uj mezok vagy ekvivalens jelolesek:
 3. `required_for`: pl. `implementer | reviewer | meta_review_gate`
 4. `proof_kind`: pl. `unit | contract | integration`
 5. `failure_weight`: `blocking | advisory`
+6. `closure_scope`: `entrypoint_local | consumer_family | shared_authority_chain`
 
 Elvart eredmeny:
 1. a task mar machine-auditable modon ki tudja mondani, melyik bizonyitek approval-blocker.
+2. a task ki tudja mondani azt is, hogy az adott row milyen closure scope-on belul tekintheto zartnak.
 
 ### 2. Evidence Artifact Layer
 
@@ -217,6 +271,7 @@ Minimum tartalom:
 4. `refs`
 5. `required_now`
 6. `covers_changed_boundary`
+7. `closure_scope`
 
 Elvart eredmeny:
 1. a rendszer ne csak azt tudja, hogy "futott a test", hanem azt is, hogy a task melyik boundary-allitasara van bizonyitek.
@@ -229,7 +284,8 @@ Cel:
 Elvart gate viselkedes:
 1. a taskbol kigyujtjuk a kotelezo boundary row-kat,
 2. az artifactbol ellenorizzuk a proof statuszt,
-3. ha barmelyik blokkolo boundary-proof hianyzik vagy nincs pass allapotban, approval nem mehet tovabb.
+3. ellenorizzuk, hogy a bizonyitek a row elvart closure scope-jara vonatkozik-e, nem csak egy szukebb lokalis utra,
+4. ha barmelyik blokkolo boundary-proof hianyzik, nincs pass allapotban, vagy nem zarja le a row teljes closure scope-jat, approval nem mehet tovabb.
 
 ### 4. Workflow And Rollout Layer
 
@@ -274,12 +330,14 @@ Elvart eredmeny:
    Mitigation: a matrix parity csak egy plusz blocker-szuro legyen, ne teljes approval-helyettesito.
 3. Risk: nehez lesz automatikusan megmondani, hogy egy test valoban a megfelelo boundary-t bizonyitja.
    Mitigation: MVP-ben explicit task-row -> artifact-row mapping, nem automatikus kovetkeztetes.
-4. Open question: melyik workflow pont generalja a boundary artifactot:
+4. Risk: a rendszer ugyan jobban latja a boundary-row proofokat, de tovabbra is alulsulyozhatja a mar megtalalt shared-contract sertest.
+   Mitigation: explicit policy kell arra, hogy a task `forbidden_fallback` vagy explicit authority-contract megsértese retained shared-pathon blocker maradjon, ne valjon advisory jellegu "kesobbi tighteningge".
+5. Open question: melyik workflow pont generalja a boundary artifactot:
    - implementer pass,
    - reviewer verification,
    - vagy kulon gate-preparation lepés?
-5. Open question: mennyire kell ezt a docs-only es code bubble-k kozott differencialni.
-6. Open question: mely boundary work tipusokra legyen Phase 1 rolloutban kotelezo:
+6. Open question: mennyire kell ezt a docs-only es code bubble-k kozott differencialni.
+7. Open question: mely boundary work tipusokra legyen Phase 1 rolloutban kotelezo:
    - authority,
    - fallback,
    - missing-data,
