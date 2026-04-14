@@ -150,11 +150,11 @@ Current-tree sequencing anchor keszitese a discovery utan megmaradt actor-runtim
 |---|---|---|---|---|
 | Business invariant | Minden role ugyanarra a runtime boundaryre all ra. | Nem maradhat szerep-specifikus special-case activation task a foundation elott. | P1 | required-now |
 | Control model | Authority truth explicit execution-contextbol jon. | A sequencing elso lepesenek ezt kell formalizalnia. | P1 | required-now |
-| Read-path rule | Ack truth explicit runtime boundaryrol jon, nem tmux-bol. | A typed ack task kulon closure marad. | P1 | required-now |
+| Read-path rule | Ack truth explicit runtime boundaryrol jon, nem tmux-bol. | A typed ack producer closure es a consume-family fallout kulon closure marad. | P1 | required-now |
 | Forbidden fallback | Nincs pane-derived authority vagy success fallback. | A pilot task nem epithet heuristic acceptance-re. | P1 | required-now |
 | Allowed resolution path | A jelenlegi deterministic same-authority path preserved baseline. | Az E1 replacement csak explicit proof mellett cserelheti le. | P1 | required-now |
 | Missing-data rule | Hianyzo authority vagy ack fail-closed / explicit unavailable. | A sequencing nem enged bundled shortcutot. | P1 | required-now |
-| Phase boundary | Foundation -> ack -> pilot -> multi-role cleanup. | A successor split kotelezo. | P1 | required-now |
+| Phase boundary | Foundation -> ack producer/contract -> runtime consumer alignment -> persisted/read-model fallout -> pilot -> multi-role cleanup. | A successor split kotelezo. | P1 | required-now |
 
 ### 0a) Shared Contract Compatibility
 
@@ -179,32 +179,36 @@ Current-tree sequencing anchor keszitese a discovery utan megmaradt actor-runtim
 | Step | Successor File | Dominant Boundary | Why it must be separate | Must not include |
 |---|---|---|---|---|
 | `E1` | `plans/tasks/actor-runtime-interface-execution-authority-foundation-phaseE1.md` | execution-scoped authority contract | A canonical authority shape formalizalasa megelőzi az osszes consume/activation munkat. | delivery/ack activation, pilot rollout |
-| `E2` | `plans/tasks/actor-runtime-interface-delivery-ack-boundary-phaseE2.md` | typed delivery / launch ack boundary | A runtime acceptance truth kulon seam; ezt nem szabad a pilot actor aktivalassal osszecsomagolni. | implementer pilot activation, broad cleanup |
-| `E3` | `plans/tasks/actor-runtime-interface-implementer-pilot-cutover-phaseE3.md` | implementer pilot rollout | Az elso aktivacio kulon parity gate-et igenyel a stabil foundation + ack boundary folott. | reviewer/meta-reviewer rollout, full adapter cleanup |
+| `E2a` | planned successor task artifact (to be opened separately) | typed delivery / launch producer + shared contract closure | A runtime acceptance truth producer seamje kulon closure; ezt nem szabad consumer rollouttal vagy pilot aktivalassal osszecsomagolni. | runtime/orchestration consume fallout, persisted diagnostics, implementer pilot |
+| `E2b` | planned successor task artifact (to be opened separately) | direct runtime/orchestration consumer alignment | A lezart typed ack contract consume-family atallasa kulon compatibility closure; ezt nem szabad a producer semanticszel vagy read-model fallouttal osszemosni. | producer semantics reopen, persisted diagnostics/read-model fallout, implementer pilot |
+| `E2c` | planned successor task artifact (to be opened separately) | persisted diagnostics + meta-review + read-model fallout | A persisted/projection/status fallout kulon read-model closure; itt mar nem szabad uj ack truthot definialni. | producer contract ujranyitasa, implementer pilot, multi-role cleanup |
+| `E3` | `plans/tasks/actor-runtime-interface-implementer-pilot-cutover-phaseE3.md` | implementer pilot rollout | Az elso aktivacio kulon parity gate-et igenyel a stabil foundation + ack closurek folott. | reviewer/meta-reviewer rollout, full adapter cleanup |
 | `E4` | `plans/tasks/actor-runtime-interface-reviewer-meta-rollout-and-adapter-cleanup-phaseE4.md` | multi-role rollout + retained cleanup | A policy-heavy role-ok es a retained adapter cleanup csak a pilot utan vedheto. | uj authority foundation vagy uj ack contract |
 
 Normative sequencing rules:
 
-1. `E1` merge nelkul `E2` nem nyithato implementacios taskkent.
-2. `E2` merge nelkul `E3` csak historical spike lehetne, canonical pilot nem.
-3. `E3` merge nelkul `E4` nem nyithat retained cleanupot role-neutral completion claim mellett.
-4. Ha current-tree implementation kozben minimalis status/diagnostics fallout jelenik meg, azt az eppen aktiv successor task owns-olja, nem uj bundled cleanup task.
+1. `E1` merge nelkul `E2a` nem nyithato implementacios taskkent.
+2. `E2a` merge nelkul `E2b` nem owns-olhat consume-family alignmentet canonical truth claim mellett.
+3. `E2b` merge nelkul `E2c` nem allithat persisted/meta-review/status closuret lezart runtime boundaryre hivatkozva.
+4. `E2c` merge nelkul `E3` csak historical spike lehetne, canonical pilot nem.
+5. `E3` merge nelkul `E4` nem nyithat retained cleanupot role-neutral completion claim mellett.
+6. Ha current-tree implementation kozben minimalis status/diagnostics fallout jelenik meg, azt az eppen aktiv successor task owns-olja, nem uj bundled cleanup task.
 
 ### 0d) Sequencing Simulation
 
 | Simulation ID | Starting Point | Attempted Move | Expected Result | Why this proves the split |
 |---|---|---|---|---|
-| `SIM1_HAPPY_PATH` | current tree: state-derived authority, tmux delivery confirm, no typed ack boundary | `E1 -> E2 -> E3 -> E4` sorrendben haladunk | minden lepes a kovetkezo egyetlen valos blokkolo prereqjet zarja le: authority -> ack -> pilot -> multi-role cleanup | Ez a sorrend koveti a current-tree boundary spreadet, es nem kever foundation + activation + cleanup closureket. |
-| `SIM2_SKIP_E1` | current tree-ben nincs explicit `execution_id` / emit-capability shape | kozvetlenul `E2`-t vagy `E3`-at probaljuk nyitni | a task review-loopba csuszik, mert az ack vagy pilot tasknak sajat authority-shape dontest kellene hoznia | Bizonyitja, hogy az authority foundation nem optional hygiene, hanem producer-first prerequisite. |
-| `SIM3_SKIP_E2` | `E1` utan mar van explicit authority shape, de a runtime acceptance meg mindig tmux-confirmation/best-effort | kozvetlen implementer pilot `E3` | a pilot task kenytelen lenne sajat maga definialni, mi szamit `accepted` / `running` truthnak, vagy visszacsuszik pane-derived heuristikara | Bizonyitja, hogy a typed delivery/launch ack boundary kulon closure, nem a pilot mellektermeke. |
-| `SIM4_BUNDLE_E1_E3` | current tree high-risk fan-out | authority foundation + implementer pilot egy taskban | contract + activation coupling jelenik meg ugyanabban a taskban; a review egyszerre vitatna a shape-et es a runtime rolloutot | Bizonyitja, hogy a bundled pilot task a Complexity Risk Gate szerint tiltott. |
+| `SIM1_HAPPY_PATH` | current tree: state-derived authority, tmux delivery confirm, no typed ack boundary | `E1 -> E2a -> E2b -> E2c -> E3 -> E4` sorrendben haladunk | minden lepes a kovetkezo egyetlen valos blokkolo prereqjet zarja le: authority -> producer ack truth -> consume-family alignment -> persisted/read-model fallout -> pilot -> multi-role cleanup | Ez a sorrend koveti a current-tree boundary spreadet, es nem kever producer closuret a downstream rollouttal. |
+| `SIM2_SKIP_E1` | current tree-ben nincs explicit `execution_id` / emit-capability shape | kozvetlenul `E2a`, `E2b` vagy `E3` nyitas | a task review-loopba csuszik, mert az ack vagy pilot tasknak sajat authority-shape dontest kellene hoznia | Bizonyitja, hogy az authority foundation nem optional hygiene, hanem producer-first prerequisite. |
+| `SIM3_SKIP_E2A` | `E1` utan mar van explicit authority shape, de a runtime acceptance meg mindig tmux-confirmation/best-effort | kozvetlen consume-family alignment vagy implementer pilot | a consumer task kenytelen lenne sajat maga definialni, mi szamit `accepted` / `running` truthnak, vagy visszacsuszik pane-derived heuristikara | Bizonyitja, hogy a typed delivery/launch producer boundary kulon closure, nem a consume rollout mellektermeke. |
+| `SIM4_BUNDLE_E2A_E2C` | current tree high-risk fan-out | producer contract + persisted/status/meta-review fallout egy taskban | ugyanabban a taskban vitatnank a canonical ack truthot es annak read-model projectionjet | Bizonyitja, hogy a closure-budget gate tiltja a producer + read-model bundled closuret. |
 | `SIM5_OPEN_E4_EARLY` | implementer pilot meg nincs parityval lezárva | reviewer/meta-reviewer rollout + retained adapter cleanup korai nyitasa | a task nem tudja kulon valasztani, hogy reviewer/meta-review drift vagy foundation/ack hiba okozza a regressziot | Bizonyitja, hogy a policy-heavy role rollout es a retained cleanup csak a pilot utan vedheto. |
 
 Simulation readout:
 
 1. A current tree-ben a legerosebb bizonyitott foundation gap az authority-shape hianya (`execution_id` / capability-level authority nincs a canonical actor inputban).
-2. A legerosebb bizonyitott consume gap az ack-truth hianya (tmux delivery confirm meg best-effort runtime signal, nem typed runtime boundary).
-3. Emiatt az elso aktivacios lepes csak implementer pilot lehet, es csak azutan, hogy a ket foundation closure mar kulon lezart.
+2. A legerosebb bizonyitott consume gap az ack-truth hianya (tmux delivery confirm meg best-effort runtime signal, nem typed runtime boundary), es ennek falloutja legalabb ket consume-familyre terjed.
+3. Emiatt az elso aktivacios lepes csak implementer pilot lehet, es csak azutan, hogy a producer truth, a direct consume-family alignment es a persisted/read-model fallout closure mar kulon lezart.
 4. Reviewer + meta-reviewer rolloutot a simulation csak `E4`-ben engedi, mert ott mar a piloton bizonyitott foundationre lehet epiteni, nem elmeleti contractra.
 
 ### 1) Call-site Matrix
@@ -218,7 +222,7 @@ Simulation readout:
 
 | Contract | Current | Target | Required Fields | Optional Fields | Compatibility | Priority | Timing |
 |---|---|---|---|---|---|---|---|
-| Remaining-work ownership | implicit / stale parent-plan prose | explicit successor split | phase id, boundary, successor file, must-not-include | rationale note | docs-only | P1 | required-now |
+| Remaining-work ownership | implicit / stale parent-plan prose | explicit successor split | phase id, boundary, successor artifact, must-not-include | rationale note | docs-only | P1 | required-now |
 | Current-tree gap summary | szetszort code evidence | sequencing-ready synthesis | authority gap, ack gap, activation gap, cleanup gap | code refs | docs-only | P1 | required-now |
 
 ### 3) Side Effects Contract
@@ -257,7 +261,7 @@ Constraint:
 |---|---|---|---|---|---|---|---|
 | T1 | parent plan no longer reports removed surfaces as live current blockers | stale plan top section exists | docs review fut | a current-state summary mar nem allit public `bubble meta-review` vagy live-run residue-t current blockernek | P1 | required-now | doc review |
 | T2 | sequencing anchor exists | parent plan item 5 hivatkozik a Phase E taskra | docs review fut | letezik a checked-in `plans/tasks/actor-runtime-interface-pilot-cutover-phaseE.md` artifact | P1 | required-now | doc review |
-| T3 | split is explicit | remaining scope authority + ack + pilot + cleanup fan-outot erint | docs review fut | a task explicit `E1-E4` successor splitet ad | P1 | required-now | doc review |
+| T3 | split is explicit | remaining scope authority + ack + pilot + cleanup fan-outot erint | docs review fut | a task explicit `E1, E2a, E2b, E2c, E3, E4` successor splitet ad | P1 | required-now | doc review |
 | T4 | current-tree code evidence is reflected | actor wrapper + tmux delivery + missing typed ack ma is current codeben latszik | docs review fut | a sequencing ezeket named current gapskent rogzíti | P1 | required-now | doc review |
 | T5 | bundled Phase E task is explicitly forbidden | high-risk scope maradt hatra | docs review fut | a task kimondja, hogy a maradek implementation nem viheto egy taskban | P1 | required-now | doc review |
 
@@ -270,12 +274,12 @@ Constraint:
 
 | ID | Item | Layer | Priority | Timing | Source | Proposed Action |
 |---|---|---|---|---|---|---|
-| H1 | successor task files explicit kidolgozasa | L2 | P2 | later-hardening | sequencing anchor | Nyisd meg az `E1-E4` taskokat kulon implementable artifactkent |
+| H1 | successor task files explicit kidolgozasa | L2 | P2 | later-hardening | sequencing anchor | Nyisd meg az `E1, E2a, E2b, E2c, E3, E4` taskokat kulon implementable artifactkent |
 
 ## Review Control
 
 1. Every finding must include: `priority`, `timing`, `layer`, `evidence`.
-2. Ne fogadjunk el olyan follow-upot, amely a sequencing anchorra hivatkozva megis egy taskban akarja vinni az authority + ack + pilot + cleanup scope-ot.
+2. Ne fogadjunk el olyan follow-upot, amely a sequencing anchorra hivatkozva megis egy taskban akarja vinni az authority + ack producer + consume fallout + pilot + cleanup scope-ot.
 3. A current-tree code-read priorityje magasabb, mint a historical task prose-e.
 
 ## Spec Lock
@@ -284,5 +288,5 @@ Task allapot `completed`, ha:
 
 1. a parent plan current-state es statusz allitasa current-tree igazsagra van allitva;
 2. a Phase E sequencing anchor file checked-in allapotban letezik;
-3. az `E1-E4` successor split explicit boundary-kkel es must-not-include guardokkal rogzitett;
+3. az `E1, E2a, E2b, E2c, E3, E4` successor split explicit boundary-kkel es must-not-include guardokkal rogzitett;
 4. a sequencing current-tree code evidence-re epul, nem historical stale statuszra.

@@ -25,11 +25,33 @@ owners:
 4. Emiatt ez a plan mar nem owns-olja a 2026-04-12-es meta-review cleanup resequencinget mint elo implementation programot; az a blokk historical traceabilitykent relevans, de nem current-state statusjelenteskent.
 5. A fennmarado live scope mar nem a discovery artifactok eloallitasa, hanem a generic actor-runtime implementation follow-up:
    - execution-scoped authority boundary konkretizalasa,
-   - typed delivery / launch ack boundary,
+   - typed delivery / launch ack producer + contract closure,
+   - direct runtime/orchestration consumer alignment,
+   - persisted diagnostics / meta-review / read-model fallout closure,
    - implementer pilot cutover,
    - reviewer + meta-reviewer rollout es retained adapter cleanup.
 6. Ennek a remaining implementation sequencingnek a current-tree anchorja:
    - `plans/tasks/actor-runtime-interface-pilot-cutover-phaseE.md`
+
+## Closure-Budget Resequencing Note (2026-04-14)
+
+1. A korabbi `plans/tasks/actor-runtime-interface-delivery-ack-boundary-phaseE2.md` artifact retired/superseded allapotba kerult, es a file torolve lett.
+2. A current-tree read alapjan ez az E2 scope nem maradhatott egy bounded implementation slice:
+   - ugyanabban a taskban jelent meg az `authority_producer`,
+   - a `shared_contract`,
+   - a `workflow_orchestration_consumers`,
+   - a `read_model_consumers`,
+   - a `persisted_authority_or_schema`,
+   - es a `cleanup_recovery_consumers` fallout.
+3. Ez a closure-budget gate szerint sequencing-failure jelolt: producer boundary, shared contract alignment es status/CLI/meta-review fallout nem zarhato ugyanabban a taskban.
+4. Emiatt a remaining implementation sequencing mar nem `E1 -> E2 -> E3 -> E4`, hanem:
+   - `E1` execution authority foundation,
+   - `E2a` delivery/launch producer + shared contract closure,
+   - `E2b` direct runtime/orchestration consumer alignment,
+   - `E2c` persisted diagnostics / meta-review / read-model fallout closure,
+   - `E3` implementer pilot activation,
+   - `E4` multi-role rollout + retained adapter cleanup.
+5. A split a current-tree authority fan-outot koveti, nem a repo technikai retegeit: elobb a producer truth zarul, utana a consume-family alignment, es csak ezutan nyithato aktiv pilot rollout.
 
 ## Discovery Closure Status (2026-04-13)
 
@@ -94,10 +116,12 @@ owners:
 
 | Phase | Dominant Boundary | Produced Authority | Consuming Surfaces | Forbidden Co-mingling |
 |---|---|---|---|---|
-| Phase E1 | execution authority foundation | explicit execution-scoped actor authority | actor input contract, authority materialization, state validation | delivery/ack activation vagy pilot rollout ne csusszon ide |
-| Phase E2 | delivery / launch ack boundary | typed runtime ack semantics | delivery adapter, restart/recovery, watchdog, diagnostics fallout | role rollout vagy adapter cleanup ne csusszon ide |
-| Phase E3 | implementer pilot activation | implementer runtime parity az uj boundaryn | implementer actor path, pilot orchestration, minimal fallout consumers | reviewer/meta-reviewer rollout es broad cleanup ne csusszon ide |
-| Phase E4 | multi-role rollout + retained adapter cleanup | shared role-neutral runtime boundary active all rolesra | reviewer, meta-reviewer, retained tmux/operator adapterek cleanupja | uj contract-foundation munka ne csusszon vissza ide |
+| Phase E1 | execution authority foundation | explicit execution-scoped actor authority | actor input contract, authority materialization, state validation | delivery/ack closure vagy pilot rollout ne csusszon ide |
+| Phase E2a | delivery / launch producer + contract closure | typed runtime ack semantics a producer seam-en | delivery adapter, launch/runtime contract source of truth | downstream consumer rollout, persisted diagnostics, pilot activation ne csusszon ide |
+| Phase E2b | direct runtime/orchestration consumer alignment | closed typed ack semantics a direct consume familynek | kickoff, pass/converged, ask-human, watchdog, retry/restart orchestration | persisted diagnostics/read-model fallout, pilot activation, broad cleanup ne csusszon ide |
+| Phase E2c | persisted diagnostics + meta-review + read-model fallout | persisted/projection alignment a lezart ack contracton | state snapshot inspection, meta-review runtime projection, status/list/CLI fallout | producer semantics ujranyitasa vagy implementer pilot activation ne csusszon ide |
+| Phase E3 | implementer pilot activation | implementer runtime parity az uj authority + ack boundaryn | implementer actor path, pilot orchestration, minimal activation fallout | reviewer/meta-reviewer rollout es broad cleanup ne csusszon ide |
+| Phase E4 | multi-role rollout + retained adapter cleanup | shared role-neutral runtime boundary active all rolesra | reviewer, meta-reviewer, retained tmux/operator adapterek cleanupja | uj authority foundation vagy uj ack contract munka ne csusszon vissza ide |
 
 ## Objective
 
