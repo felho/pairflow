@@ -86,6 +86,105 @@ Kovetkezmeny:
 6. A retained baseline-eket ugyanugy explicit proofkent kell kezelni, mint az uj happy pathokat.
 7. Az elso rollout ne koveteljen teljes framework-rewrite-ot vagy uj altalanos policy engine-t.
 
+## Conceptual Clarification: Boundary Assertions
+
+### Why this needs explicit naming
+
+1. A review loopban sok task nem azert csuszik szet, mert a happy path nincs implementalva, hanem azert, mert egy implicit mellekag vagy fallback kesobb derul ki.
+2. Emiatt fontos kulon megnevezni, hogy mit ertunk `boundary assertion` alatt, kulonben a rendszer ujra visszacsuszik az altalanos "feature works" gondolkodasba.
+
+### Working definition
+
+`Boundary assertion` = olyan task-szabaly, amely nem csak azt mondja meg, hogy minek kell mukodnie, hanem azt is, hogy hol van a helyes es a helytelen viselkedes hatara.
+
+Tipikus alakja:
+1. mi a megengedett / canonical ut,
+2. mi a tiltott fallback vagy tiltott resolution path,
+3. mi a missing-data viselkedes,
+4. mi az a retained baseline, ami kozben nem torhet el.
+
+Maskepp:
+1. a sima acceptance criterion azt mondja: `mi legyen kesz`,
+2. a boundary assertion azt mondja: `mi csak milyen feltetelekkel lehet helyes`.
+
+### Why this is different from a generic acceptance criterion
+
+Pelda:
+1. gyenge allitas: `clone resume mukodjon`
+2. eros boundary allitas: `clone resume csak explicit persisted authoritybol mukodhet; tiltott fallback nincs; authority-hiany eseten fail-closed; worktree baseline valtozatlan`
+
+Az elso allitas mellett a rendszer meg mindig "veletlenul helyes" lehet egy tiltott fallbackon keresztul.
+A masodik allitas mar explicitten ved a rossz, de latszolag mukodo megoldasok ellen.
+
+### Typical boundary-assertion classes
+
+1. `source_of_truth`
+   - melyik forras donthet canonical modon.
+2. `forbidden_fallback`
+   - melyik retained vagy implicit forras nem hasznalhato masodlagos truthkent.
+3. `missing_data`
+   - mi tortenik, ha a canonical pathon vart adat hianyzik.
+4. `activation`
+   - mely uj viselkedes nyilhat meg most, es melyik export/remote/operator surface marad zarva.
+5. `baseline_preservation`
+   - mely jelenlegi deterministic viselkedesnek kell tulenie a valtozast.
+
+### Practical review consequence
+
+Ennek a plannek a lenyege nem az, hogy "tobb tesztet" kerjen, hanem az, hogy a review fo kerdese ez legyen:
+1. mely boundary assertionre van explicit proof,
+2. melyikre nincs,
+3. melyik nyitott assertion blokkolo,
+4. es a kovetkezo kor egyetlen nyitott assertiont zarjon le, ne egy diffuz "review-old meg ami meg rossz" csomagot.
+
+### Manual use before system enforcement
+
+Ez a megkozelites mar a rendszerformalizalas elott is hasznalhato kezzel.
+
+Kezifegyelem szinten a workflow:
+1. a taskbol kiemeljuk a kritikus boundary assertionoket,
+2. ezeket kis matrixszá alakitjuk (`positive`, `negative`, `baseline`),
+3. megjeloljuk, melyik `required-now` es melyik `blocking`,
+4. a review nem altalanos diff-olvasas lesz, hanem azt kerdezi:
+   - van-e proof erre a sorra,
+   - ha nincs, akkor a kovetkezo rework kizárólag ezt a sort zarja le.
+
+### Worked example from the 2026-04-14 review discussion
+
+Az authority/fail-closed jellegu remote-bubble-execution start/resume tasknal a beszelgetes soran a kovetkezo kezileg hasznosithato matrix rajzolodott ki:
+1. `positive`
+   - clone fresh start mukodik explicit bootstrap authorityval
+2. `positive`
+   - clone resume mukodik explicit persisted runtime authorityval
+3. `negative`
+   - clone resume fail-closed, ha a runtime session shape hianyos
+4. `negative`
+   - clone resume fail-closed, ha nincs persisted runtime session authority egyaltalan
+5. `baseline`
+   - worktree mode retained baseline nem regresszal
+
+A review loopban a tenyleges nyitott blokkolo sor vegul ez volt:
+1. `T-clone-resume-missing-runtime-session`
+2. class: `negative`
+3. boundary: `authority`
+4. required-now: `yes`
+5. failure-weight: `blocking`
+
+Ennek a konkret haszna:
+1. a kovetkezo kor nem altalanos "meg egy review" lett,
+2. hanem egy szuk rework:
+   - tilos legyen clone `resume` authorityt visszaepiteni hianyzo runtime session eseten,
+   - keruljon ra explicit teszt,
+   - es csak ezutan menjen tovabb az approval.
+
+### Design implication for the future system
+
+Ha a Pairflow ezt formalizalja:
+1. a task nem csak acceptance criteria halmaz lesz, hanem boundary-proof source-of-truth is,
+2. a reviewer nem a diffbol fogja ujra es ujra kitalalni a hianyzo negative matrixot,
+3. a meta-review gate explicit parity-checket tud futtatni a task-rows es az evidence artifact kozt,
+4. es a review loop diffuz hibavadászat helyett egyre inkabb bizonyitasi discipline-ne valik.
+
 ## High-Level Architecture Direction
 
 ### 1. Spec Contract Layer
