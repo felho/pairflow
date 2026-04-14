@@ -74,7 +74,7 @@ owners:
 ### In Scope
 
 1. Producer-owned typed delivery ack contract bevezetese a tmux delivery seam-en.
-2. Producer-owned typed launch ack contract bevezetese a tmux session launch seam-en.
+2. Producer-owned typed launch ack truth + shared `tmuxSessions` launch contract bevezetese a tmux session launch seam-en.
 3. Shared contractok es portok additive/compatibility-preserving kiegeszitese, hogy a jelenlegi consume helyek ne torjenek azonnal.
 4. Producer-local mapper/helper bevezetese, amely ugyanabbrol a canonical truthrol kepezi a legacy surface-eket.
 5. A direct producer tesztek frissitese a canonical typed ack + compatibility parity bizonyitasara.
@@ -96,7 +96,7 @@ owners:
 1. `contract_boundary_override`: `yes`
 2. Impacted contracts:
    - shared runtime delivery result contract (`tmuxDeliveryContract` / `tmuxDelivery` port),
-   - shared tmux session launch result contract (`tmuxSessions` port),
+   - shared tmux session launch result contract (`tmuxSessions` port) mint explicit launch-side closure target,
    - producer-local compatibility adapterek a jelenlegi workflow consume helyek vedelmere.
 
 ### Complexity Risk Gate
@@ -120,9 +120,10 @@ owners:
    - canonical source: producer-local tmux execution result + registry/workspace resolution + explicit marker confirmation
    - forbidden secondary sources: pane capture mint success-bizonyitek, watchdog liveness, CLI/status diagnostics
 12. Closure-budget triage:
-   - closure buckets touched: `shared_contract`, `internal_execution_consumers`
-   - intentionally collapsed closures: `shared_contract` + producer-local internal adapterek, mert ugyanazok a tmux producer file-ok owns-oljak oket, es nincs kulon read-model risk
+   - closure buckets touched: `producer`, `shared_contract`, `producer_local_compatibility`
+   - intentionally collapsed closures: `producer` + `shared_contract` + `producer_local_compatibility`, mert ugyanaz a tmux producer slice owns-olja a canonical truthot, a shared port formalizalast es a legacy projectiont, es nincs kulon consumer/read-model closure ebben a taskban
    - explicitly deferred closures: `workflow_orchestration_consumers`, `read_model_consumers`, `persisted_authority_or_schema`, `cleanup_recovery_consumers`
+   - success-claim boundary: az `E2a` evidence csak canonical producer truth + shared launch-port closure + producer-local compatibility parity closure-t claimelhet; downstream consume-family vagy persisted/read-model closure-t nem
 
 ## L1 - Change Contract
 
@@ -143,7 +144,7 @@ owners:
 | Shared Contract | Current Consumers | Change Type (`additive|breaking|N/A`) | This Task Action | Deferred Alignment |
 |---|---|---|---|---|
 | `EmitTmuxDeliveryNotificationResult` (`src/v11/shared/delivery/tmuxDeliveryContract.ts`) | kickoff, pass/reviewer delivery, approval/reply, converged gate, watchdog, direct runtime tests | additive | canonical typed delivery ack shape bevezetese plus producer-local compatibility mapper; a legacy `delivered` surface megmarad derivalt projectionkent | `E2b`, `E2c` |
-| `LaunchBubbleTmuxSessionResult` (`src/v11/shared/ports/tmuxSessions.ts`) | start orchestration, start tests, tmuxManager direct tests | additive | canonical typed launch ack shape vagy producer-local detailed helper bevezetese; a jelenlegi `sessionName` success surface adapterkent megmarad | `E2b` |
+| `LaunchBubbleTmuxSessionResult` (`src/v11/shared/ports/tmuxSessions.ts`) | start orchestration, start tests, tmuxManager direct tests | additive | canonical typed launch ack shape explicit bevezetese a shared porton; a jelenlegi `sessionName` success surface adapterkent megmarad | `E2b` |
 
 ### 0b) Baseline Preservation
 
@@ -153,6 +154,16 @@ owners:
 | tmux launch ma success esetben `sessionName`-et ad, hiba eseten throw-ol | preserve (temporary compatibility) | direct runtime tests bizonyitsak, hogy a wrapper a canonical launch ackbol vezeti le a success/throw surface-et | P1 | required-now |
 | pane marker / pane activity ma best-effort runtime signal | preserve csak observabilitykent | producer code review + tests bizonyitsak, hogy ez nem valik canonical success truth-ta | P1 | required-now |
 
+### 0c) Successor Handoff Boundary
+
+| Boundary Slice | Closed Here | Must Stay Deferred | Exit Rule |
+|---|---|---|---|
+| canonical delivery producer truth | yes | downstream runtime/orchestration consume rewrite | PASS vagy done-package summary csak a producer-owned delivery typed ack truth closure-t claimelheti |
+| canonical launch producer truth + shared `tmuxSessions` port closure | yes | downstream launch/runtime consume alignment | az `E2a` launch closure csak akkor szamit teljesnek, ha a shared porton is explicit a canonical typed launch ack; producer-local helper onmagaban nem eleg |
+| producer-local legacy compatibility mapping | yes | legacy field removal, downstream consumer migration, wider projection cleanup | `delivered` / `sessionName` compatibility megmarad, removal trigger tovabbra is successor-owned |
+| direct runtime/orchestration consume-family alignment | no | `E2b` | ha a diff consumer oldali truth-atallast igenyelne, a scope mar nem `E2a` |
+| persisted diagnostics, meta-review, status/list/read-model fallout | no | `E2c` | sem spec, sem handoff summary nem allithat ilyen closure-t ebben a taskban |
+
 ### 1) Call-site Matrix
 
 | ID | File | Function/Entry | Exact Signature (args -> return) | Insertion Point | Expected Behavior | Priority | Timing | Evidence |
@@ -160,8 +171,8 @@ owners:
 | CS1 | `src/v11/shared/delivery/tmuxDeliveryContract.ts` | delivery contract exports | type/interface exports -> shared contract | delivery result exportok | Vezessen be canonical typed delivery ack vocabularyt es compatibility map alapot. | P1 | required-now | code diff |
 | CS2 | `src/v11/infrastructure/channel/tmux/tmuxDeliveryRuntime.ts` | `attemptTmuxDelivery` | `(input) -> Promise<typed delivery ack>` vagy equivalent canonical helper | confirmation/failure return path | A marker confirm es tmux send eredmeny canonical typed ackka alakuljon. | P1 | required-now | tests/core/runtime/tmuxDelivery.test.ts |
 | CS3 | `src/v11/infrastructure/channel/tmux/tmuxDelivery.ts` | `emitTmuxDeliveryNotification` | `(input: EmitTmuxDeliveryNotificationInput) -> Promise<EmitTmuxDeliveryNotificationResult>` | final success/failure mapping | A public legacy result a canonical typed ackbol legyen derivalt ugyanitt. | P1 | required-now | tests/core/runtime/tmuxDelivery.test.ts |
-| CS4 | `src/v11/shared/ports/tmuxSessions.ts` | launch port exports | type/interface exports -> shared port | launch result exportok | A launch producer canonical typed ack shape-je itt legyen formalizalhato additive modon. | P1 | required-now | code diff |
-| CS5 | `src/v11/infrastructure/channel/tmux/tmuxManager.ts` | `launchBubbleTmuxSession` | `(input: LaunchBubbleTmuxSessionInput) -> Promise<LaunchBubbleTmuxSessionResult>` plus canonical helper if needed | tmux new-session / layout / seed path | A producer oldalon letezo canonical launch ackbol menjen a legacy wrapper surface. | P1 | required-now | tests/core/runtime/tmuxManager.test.ts |
+| CS4 | `src/v11/shared/ports/tmuxSessions.ts` | launch port exports | type/interface exports -> shared port | launch result exportok | A canonical typed launch ack shape-je itt legyen formalizalva additive modon mint explicit shared launch-side closure target. | P1 | required-now | code diff |
+| CS5 | `src/v11/infrastructure/channel/tmux/tmuxManager.ts` | `launchBubbleTmuxSession` | `(input: LaunchBubbleTmuxSessionInput) -> Promise<LaunchBubbleTmuxSessionResult>` | tmux new-session / layout / seed path | A producer oldalon letezo canonical launch ack a CS4-ben formalizalt shared port shape-re alljon ra, es ebbol menjen a legacy wrapper surface. | P1 | required-now | tests/core/runtime/tmuxManager.test.ts |
 
 ### 2) Data and Interface Contract
 
@@ -169,8 +180,9 @@ owners:
 |---|---|---|---|---|---|---|---|
 | Delivery ack canonical contract | flat legacy result: `delivered`, `message`, optional `reason`, `sessionName`, `targetPaneIndex` | uj canonical typed delivery ack result vagy equivalent shared shape | `status` (`accepted|rejected`), `message` | `reason`, `sessionName`, `targetPaneIndex`, `deliveryTargetReasonCode` | additive via producer-local compatibility mapping | P1 | required-now |
 | Delivery legacy compatibility surface | `EmitTmuxDeliveryNotificationResult` current consumers hasznaljak | tovabbra is elerheto, de canonical typed result projectionje | `delivered`, `message` | `reason`, `sessionName`, `targetPaneIndex`, `deliveryTargetReasonCode` | backward-compatible in this task | P1 | required-now |
-| Launch ack canonical contract | success-only shared result `sessionName`; failure throw path | uj canonical typed launch ack result vagy equivalent detailed helper | `status` (`running|failed_to_start`) | `sessionName`, `reason_code`, `error_message` | additive via wrapper compatibility | P1 | required-now |
+| Launch ack canonical contract | success-only shared result `sessionName`; failure throw path | uj canonical typed launch ack contract a shared `tmuxSessions` porton | `status` (`running|failed_to_start`) | `sessionName`, `reason_code`, `error_message` | additive via wrapper compatibility | P1 | required-now |
 | Launch legacy compatibility surface | `LaunchBubbleTmuxSessionResult` csak `sessionName` successen, failure throw | valtozatlan public wrapper surface az `E2b` consume alignmentig | `sessionName` successen | `N/A` | backward-compatible in this task | P1 | required-now |
+| Compatibility ownership boundary | downstream consumers ma legacy surface-eket hasznalnak | typed ack producer-local mapper owns-olja a parityt az `E2b` consume alignmentig | producer-owned canonical ack -> legacy projection | nincs uj downstream field/token kovetelmeny ebben a taskban | backward-compatible in this task | P1 | required-now |
 
 ### 3) Side Effects Contract
 
@@ -231,13 +243,16 @@ owners:
 2. Ne fogadjunk el olyan follow-upot, amely az `E2a` taskba workflow consume alignmentet vagy status/read-model falloutot huzna be.
 3. A compatibility-preserving producer mapper kotelezo; downstream consumer torest nem szabad az `E2a`-ban "majd a call-site-ok kovetik" jelleggel bent hagyni.
 4. Ha a typed ack shape csak breaking modon lenne bevezetheto, a task nem implementalhato ebben a scope-ban, es vissza kell menni plan refinementre.
+5. PASS/done-package summary nem claimelhet `E2b` vagy `E2c` closure-t; ha a valtozas ehhez consumer-, status-, meta-review- vagy persisted-fallout alignmentet igenyelne, a scope hibasan lett osszevonva.
+6. Launch-oldalon nem maradhat `shared port contract` vs `producer-local helper` alternative closure-nyelv; az `E2a` closure targetje a shared `tmuxSessions` port explicitalasa.
 
 ## Spec Lock
 
 Mark task as `IMPLEMENTABLE` when:
 
 1. a canonical typed delivery ack producer-shape explicit es code-levelen bevezetett;
-2. a canonical typed launch ack producer-shape explicit es code-levelen bevezetett vagy equivalent detailed helperrel bizonyitott;
+2. a canonical typed launch ack shape explicit es code-levelen bevezetett a shared `tmuxSessions` porton;
 3. a legacy `delivered` es launch success/throw surface ugyanebbol a canonical truthbol van derivalt;
 4. direct runtime tesztek bizonyitjak a typed ack + compatibility parityt;
-5. nincs workflow/read-model/persisted fallout behuzva ebbe a taskba.
+5. nincs workflow/read-model/persisted fallout behuzva ebbe a taskba;
+6. a handoff summary explicitten producer + shared launch-port + producer-local compatibility closure-kent irja le az eredmenyt, es nem sugallja az `E2b`/`E2c` successor closure-t.
