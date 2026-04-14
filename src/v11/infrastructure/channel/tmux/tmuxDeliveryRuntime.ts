@@ -1,33 +1,18 @@
 import type { readRuntimeSessionsRegistry } from "../../executor/sessionRuntime/runtimeSessionsRegistry.js";
 import { resolveRuntimeSessionWorkspaceAuthority } from "../../../shared/runtimeSessionWorkspaceAuthority.js";
+import type {
+  DeliveryTargetReasonCode,
+  EmitTmuxDeliveryNotificationResult,
+  TmuxDeliveryAck,
+  TmuxDeliveryAckReasonCode,
+  TmuxDeliveryFailureReason
+} from "../../../shared/delivery/tmuxDeliveryContract.js";
 import {
   confirmTmuxPaneMarkerSubmission,
   maybeAcceptClaudeTrustPrompt,
   sendAndSubmitTmuxPaneMessage
 } from "./tmuxInput.js";
 import type { TmuxRunner } from "./tmuxManager.js";
-
-type TmuxDeliveryFailureReason =
-  | "no_runtime_session"
-  | "unsupported_recipient"
-  | "registry_read_failed"
-  | "delivery_unconfirmed"
-  | "tmux_send_failed";
-
-type DeliveryTargetReasonCode =
-  | "DELIVERY_TARGET_ROLE_ABSENT"
-  | "DELIVERY_TARGET_ROLE_INVALID"
-  | "DELIVERY_TARGET_ROLE_UNMAPPED"
-  | "DELIVERY_TARGET_REGISTRY_READ_FAILED";
-
-interface EmitTmuxDeliveryNotificationResult {
-  delivered: boolean;
-  sessionName?: string;
-  targetPaneIndex?: number;
-  message: string;
-  reason?: TmuxDeliveryFailureReason;
-  deliveryTargetReasonCode?: DeliveryTargetReasonCode;
-}
 
 export interface DeliverySessionContext {
   sessionName?: string;
@@ -56,19 +41,80 @@ export async function readDeliverySessionContext(input: {
   };
 }
 
-export function createDeliveryFailureResult(input: {
+export function projectTmuxDeliveryAckToLegacyResult(
+  ack: TmuxDeliveryAck
+): EmitTmuxDeliveryNotificationResult {
+  if (ack.status === "accepted") {
+    return {
+      delivered: true,
+      sessionName: ack.sessionName,
+      targetPaneIndex: ack.targetPaneIndex,
+      message: ack.message,
+      ...(ack.deliveryTargetReasonCode !== undefined
+        ? { deliveryTargetReasonCode: ack.deliveryTargetReasonCode }
+        : {})
+    };
+  }
+
+  return {
+    delivered: false,
+    ...(ack.sessionName !== undefined ? { sessionName: ack.sessionName } : {}),
+    ...(ack.targetPaneIndex !== undefined ? { targetPaneIndex: ack.targetPaneIndex } : {}),
+    message: ack.message,
+    reason: ack.reason,
+    reason_code: ack.reason_code,
+    ...(ack.deliveryTargetReasonCode !== undefined
+      ? { deliveryTargetReasonCode: ack.deliveryTargetReasonCode }
+      : {})
+  };
+}
+
+function resolveTmuxDeliveryAckReasonCode(
+  reason: TmuxDeliveryFailureReason
+): TmuxDeliveryAckReasonCode {
+  switch (reason) {
+    case "no_runtime_session":
+    case "registry_read_failed":
+      return "DELIVERY_ACK_RUNTIME_SESSION_UNAVAILABLE";
+    case "unsupported_recipient":
+      return "DELIVERY_ACK_TARGET_UNSUPPORTED";
+    case "delivery_unconfirmed":
+    case "tmux_send_failed":
+      return "DELIVERY_ACK_REJECTED";
+  }
+}
+
+export function createRejectedTmuxDeliveryAck(input: {
   reason: TmuxDeliveryFailureReason;
   message: string;
   deliveryTargetReasonCode?: DeliveryTargetReasonCode;
   sessionName?: string;
   targetPaneIndex?: number;
-}): EmitTmuxDeliveryNotificationResult {
+}): TmuxDeliveryAck {
   return {
-    delivered: false,
+    status: "rejected",
     ...(input.sessionName !== undefined ? { sessionName: input.sessionName } : {}),
     ...(input.targetPaneIndex !== undefined ? { targetPaneIndex: input.targetPaneIndex } : {}),
     message: input.message,
     reason: input.reason,
+    reason_code: resolveTmuxDeliveryAckReasonCode(input.reason),
+    ...(input.deliveryTargetReasonCode !== undefined
+      ? { deliveryTargetReasonCode: input.deliveryTargetReasonCode }
+      : {})
+  };
+}
+
+export function createAcceptedTmuxDeliveryAck(input: {
+  message: string;
+  sessionName: string;
+  targetPaneIndex: number;
+  deliveryTargetReasonCode?: DeliveryTargetReasonCode;
+}): TmuxDeliveryAck {
+  return {
+    status: "accepted",
+    sessionName: input.sessionName,
+    targetPaneIndex: input.targetPaneIndex,
+    message: input.message,
     ...(input.deliveryTargetReasonCode !== undefined
       ? { deliveryTargetReasonCode: input.deliveryTargetReasonCode }
       : {})
@@ -91,7 +137,7 @@ export async function attemptTmuxDelivery(input: {
   sessionName: string;
   targetPaneIndex: number;
   deliveryTargetReasonCode?: DeliveryTargetReasonCode;
-}): Promise<EmitTmuxDeliveryNotificationResult | undefined> {
+}): Promise<TmuxDeliveryAck> {
   try {
     if ((input.initialDelayMs ?? 0) > 0) {
       await sleep(input.initialDelayMs as number);
@@ -107,19 +153,26 @@ export async function attemptTmuxDelivery(input: {
       ...(input.deliveryAttempts !== undefined ? { attempts: input.deliveryAttempts } : {})
     });
     if (confirmed) {
-      return undefined;
+      return createAcceptedTmuxDeliveryAck({
+        message: input.message,
+        sessionName: input.sessionName,
+        targetPaneIndex: input.targetPaneIndex,
+        ...(input.deliveryTargetReasonCode !== undefined
+          ? { deliveryTargetReasonCode: input.deliveryTargetReasonCode }
+          : {})
+      });
     }
-    return createDeliveryFailureResult({
+    return createRejectedTmuxDeliveryAck({
       reason: "delivery_unconfirmed",
       message: input.message,
       sessionName: input.sessionName,
       targetPaneIndex: input.targetPaneIndex,
       ...(input.deliveryTargetReasonCode !== undefined
         ? { deliveryTargetReasonCode: input.deliveryTargetReasonCode }
-        : {})
+      : {})
     });
   } catch {
-    return createDeliveryFailureResult({
+    return createRejectedTmuxDeliveryAck({
       reason: "tmux_send_failed",
       message: input.message,
       sessionName: input.sessionName,

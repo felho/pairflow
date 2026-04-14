@@ -7,6 +7,11 @@ import {
   retryStuckAgentInput
 } from "../../../src/v11/infrastructure/channel/tmux/tmuxDelivery.js";
 import {
+  createAcceptedTmuxDeliveryAck,
+  createRejectedTmuxDeliveryAck,
+  projectTmuxDeliveryAckToLegacyResult
+} from "../../../src/v11/infrastructure/channel/tmux/tmuxDeliveryRuntime.js";
+import {
   buildMetaReviewSubmitApproveParityNote,
   buildMetaReviewSubmitCommandTemplate
 } from "../../../src/v11/shared/metaReview/metaReviewSubmitGuidance.js";
@@ -135,6 +140,166 @@ function expectReviewerValidationClaimGuardrails(text: string | undefined): void
     "If a command evidence source is missing or ambiguous, report `unknown` or `not-run` for that command and do not claim `pass`."
   );
 }
+
+describe("tmux delivery canonical ack helpers", () => {
+  it("projects every canonical delivery ack union member to matching legacy compatibility", () => {
+    const canonicalCases = [
+      {
+        title: "accepted",
+        ack: createAcceptedTmuxDeliveryAck({
+          sessionName: "pf-b_delivery_01",
+          targetPaneIndex: 2,
+          message: "handoff delivered",
+          deliveryTargetReasonCode: "DELIVERY_TARGET_ROLE_INVALID"
+        }),
+        expectedAck: {
+          status: "accepted",
+          sessionName: "pf-b_delivery_01",
+          targetPaneIndex: 2,
+          message: "handoff delivered",
+          deliveryTargetReasonCode: "DELIVERY_TARGET_ROLE_INVALID"
+        },
+        expectedLegacy: {
+          delivered: true,
+          sessionName: "pf-b_delivery_01",
+          targetPaneIndex: 2,
+          message: "handoff delivered",
+          deliveryTargetReasonCode: "DELIVERY_TARGET_ROLE_INVALID"
+        }
+      },
+      {
+        title: "no_runtime_session",
+        ack: createRejectedTmuxDeliveryAck({
+          reason: "no_runtime_session",
+          message: "handoff blocked 0",
+          sessionName: "pf-b_delivery_01",
+          targetPaneIndex: 2
+        }),
+        expectedAck: {
+          status: "rejected",
+          reason: "no_runtime_session",
+          reason_code: "DELIVERY_ACK_RUNTIME_SESSION_UNAVAILABLE",
+          sessionName: "pf-b_delivery_01",
+          targetPaneIndex: 2,
+          message: "handoff blocked 0"
+        },
+        expectedLegacy: {
+          delivered: false,
+          sessionName: "pf-b_delivery_01",
+          targetPaneIndex: 2,
+          message: "handoff blocked 0",
+          reason: "no_runtime_session",
+          reason_code: "DELIVERY_ACK_RUNTIME_SESSION_UNAVAILABLE"
+        }
+      },
+      {
+        title: "registry_read_failed",
+        ack: createRejectedTmuxDeliveryAck({
+          reason: "registry_read_failed",
+          message: "handoff blocked 1"
+        }),
+        expectedAck: {
+          status: "rejected",
+          reason: "registry_read_failed",
+          reason_code: "DELIVERY_ACK_RUNTIME_SESSION_UNAVAILABLE",
+          message: "handoff blocked 1"
+        },
+        expectedLegacy: {
+          delivered: false,
+          message: "handoff blocked 1",
+          reason: "registry_read_failed",
+          reason_code: "DELIVERY_ACK_RUNTIME_SESSION_UNAVAILABLE"
+        }
+      },
+      {
+        title: "unsupported_recipient",
+        ack: createRejectedTmuxDeliveryAck({
+          reason: "unsupported_recipient",
+          message: "handoff blocked 2",
+          sessionName: "pf-b_delivery_01",
+          targetPaneIndex: 2,
+          deliveryTargetReasonCode: "DELIVERY_TARGET_ROLE_UNMAPPED"
+        }),
+        expectedAck: {
+          status: "rejected",
+          reason: "unsupported_recipient",
+          reason_code: "DELIVERY_ACK_TARGET_UNSUPPORTED",
+          sessionName: "pf-b_delivery_01",
+          targetPaneIndex: 2,
+          message: "handoff blocked 2",
+          deliveryTargetReasonCode: "DELIVERY_TARGET_ROLE_UNMAPPED"
+        },
+        expectedLegacy: {
+          delivered: false,
+          sessionName: "pf-b_delivery_01",
+          targetPaneIndex: 2,
+          message: "handoff blocked 2",
+          reason: "unsupported_recipient",
+          reason_code: "DELIVERY_ACK_TARGET_UNSUPPORTED",
+          deliveryTargetReasonCode: "DELIVERY_TARGET_ROLE_UNMAPPED"
+        }
+      },
+      {
+        title: "delivery_unconfirmed",
+        ack: createRejectedTmuxDeliveryAck({
+          reason: "delivery_unconfirmed",
+          message: "handoff blocked 3",
+          sessionName: "pf-b_delivery_01",
+          targetPaneIndex: 2
+        }),
+        expectedAck: {
+          status: "rejected",
+          reason: "delivery_unconfirmed",
+          reason_code: "DELIVERY_ACK_REJECTED",
+          sessionName: "pf-b_delivery_01",
+          targetPaneIndex: 2,
+          message: "handoff blocked 3"
+        },
+        expectedLegacy: {
+          delivered: false,
+          sessionName: "pf-b_delivery_01",
+          targetPaneIndex: 2,
+          message: "handoff blocked 3",
+          reason: "delivery_unconfirmed",
+          reason_code: "DELIVERY_ACK_REJECTED"
+        }
+      },
+      {
+        title: "tmux_send_failed",
+        ack: createRejectedTmuxDeliveryAck({
+          reason: "tmux_send_failed",
+          message: "handoff blocked 4",
+          sessionName: "pf-b_delivery_01",
+          targetPaneIndex: 2
+        }),
+        expectedAck: {
+          status: "rejected",
+          reason: "tmux_send_failed",
+          reason_code: "DELIVERY_ACK_REJECTED",
+          sessionName: "pf-b_delivery_01",
+          targetPaneIndex: 2,
+          message: "handoff blocked 4"
+        },
+        expectedLegacy: {
+          delivered: false,
+          sessionName: "pf-b_delivery_01",
+          targetPaneIndex: 2,
+          message: "handoff blocked 4",
+          reason: "tmux_send_failed",
+          reason_code: "DELIVERY_ACK_REJECTED"
+        }
+      }
+    ] as const;
+
+    for (const canonicalCase of canonicalCases) {
+      expect(canonicalCase.ack, canonicalCase.title).toEqual(canonicalCase.expectedAck);
+      expect(
+        projectTmuxDeliveryAckToLegacyResult(canonicalCase.ack),
+        canonicalCase.title
+      ).toEqual(canonicalCase.expectedLegacy);
+    }
+  });
+});
 
 describe("emitTmuxDeliveryNotification", () => {
   it("mentions meta-reviewer gate context for approval requests tagged with actor metadata", async () => {
@@ -730,6 +895,7 @@ describe("emitTmuxDeliveryNotification", () => {
       "Implementer handoff received. Run a fresh review now."
     );
     expect(result).not.toHaveProperty("reason");
+    expect(result).not.toHaveProperty("reason_code");
     expect(Object.keys(result).sort()).toEqual([
       "delivered",
       "message",
@@ -2104,7 +2270,8 @@ describe("emitTmuxDeliveryNotification", () => {
 
     expect(result).toMatchObject({
       delivered: false,
-      reason: "no_runtime_session"
+      reason: "no_runtime_session",
+      reason_code: "DELIVERY_ACK_RUNTIME_SESSION_UNAVAILABLE"
     });
     expect(result.message).toContain(
       "# [pairflow] r1 PASS codex->claude msg=msg_20260222_101 ref=artifact://handoff.md."
@@ -2142,7 +2309,8 @@ describe("emitTmuxDeliveryNotification", () => {
 
     expect(result).toMatchObject({
       delivered: false,
-      reason: "no_runtime_session"
+      reason: "no_runtime_session",
+      reason_code: "DELIVERY_ACK_RUNTIME_SESSION_UNAVAILABLE"
     });
     expect(result.message).toContain(
       "Run pairflow commands from the active workspace root."
@@ -2177,7 +2345,8 @@ describe("emitTmuxDeliveryNotification", () => {
 
     expect(result).toMatchObject({
       delivered: false,
-      reason: "no_runtime_session"
+      reason: "no_runtime_session",
+      reason_code: "DELIVERY_ACK_RUNTIME_SESSION_UNAVAILABLE"
     });
     expect(result.message).toContain(
       "Run pairflow commands from the active workspace root."
@@ -2215,6 +2384,7 @@ describe("emitTmuxDeliveryNotification", () => {
       expect(result).toMatchObject({
         delivered: false,
         reason: "unsupported_recipient",
+        reason_code: "DELIVERY_ACK_TARGET_UNSUPPORTED",
         deliveryTargetReasonCode: "DELIVERY_TARGET_ROLE_UNMAPPED"
       });
     } finally {
@@ -2234,6 +2404,7 @@ describe("emitTmuxDeliveryNotification", () => {
     expect(result).toMatchObject({
       delivered: false,
       reason: "registry_read_failed",
+      reason_code: "DELIVERY_ACK_RUNTIME_SESSION_UNAVAILABLE",
       deliveryTargetReasonCode: "DELIVERY_TARGET_REGISTRY_READ_FAILED"
     });
     expect(result.message).toContain(
@@ -2261,7 +2432,8 @@ describe("emitTmuxDeliveryNotification", () => {
       delivered: false,
       sessionName: "pf-b_delivery_01",
       targetPaneIndex: 2,
-      reason: "tmux_send_failed"
+      reason: "tmux_send_failed",
+      reason_code: "DELIVERY_ACK_REJECTED"
     });
     expect(result.message).toContain(
       "# [pairflow] r1 PASS codex->claude msg=msg_20260222_101 ref=artifact://handoff.md."
@@ -2308,7 +2480,8 @@ describe("emitTmuxDeliveryNotification", () => {
       delivered: false,
       sessionName: "pf-b_delivery_01",
       targetPaneIndex: 2,
-      reason: "tmux_send_failed"
+      reason: "tmux_send_failed",
+      reason_code: "DELIVERY_ACK_REJECTED"
     });
     expect(
       calls.some(
@@ -2510,6 +2683,7 @@ describe("emitTmuxDeliveryNotification", () => {
     expect(result).toMatchObject({
       delivered: false,
       reason: "delivery_unconfirmed",
+      reason_code: "DELIVERY_ACK_REJECTED",
       sessionName: "pf-b_delivery_01",
       targetPaneIndex: 2
     });

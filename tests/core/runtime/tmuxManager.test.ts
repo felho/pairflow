@@ -3,8 +3,10 @@ import { describe, expect, it, vi } from "vitest";
 import {
   buildBubbleTmuxSessionName,
   launchBubbleTmuxSession,
+  launchBubbleTmuxSessionAck,
   respawnTmuxPaneCommand,
   terminateBubbleTmuxSession,
+  TmuxCommandError,
   TmuxSessionExistsError,
   type TmuxRunResult,
   type TmuxRunner
@@ -54,7 +56,263 @@ describe("buildBubbleTmuxSessionName", () => {
   });
 });
 
+describe("launchBubbleTmuxSessionAck", () => {
+  it("returns canonical running ack on successful launch", async () => {
+    const runner: TmuxRunner = (args: string[]) =>
+      Promise.resolve({
+        stdout: buildSplitPaneStdout(args),
+        stderr: "",
+        exitCode: args[0] === "has-session" ? 1 : 0
+      });
+
+    const ack = await launchBubbleTmuxSessionAck({
+      bubbleId: "b_start_ack",
+      workspacePath: "/tmp/worktree",
+      statusCommand: "status",
+      implementerCommand: "codex",
+      reviewerCommand: "claude",
+      runner
+    });
+
+    expect(ack).toEqual({
+      status: "running",
+      sessionName: "pf-b_start_ack"
+    });
+  });
+
+  it("returns canonical failed_to_start ack for session-exists failures", async () => {
+    const runner: TmuxRunner = () =>
+      Promise.resolve({
+        stdout: "",
+        stderr: "",
+        exitCode: 0
+      });
+
+    const ack = await launchBubbleTmuxSessionAck({
+      bubbleId: "b_start_exists",
+      workspacePath: "/tmp/worktree",
+      statusCommand: "status",
+      implementerCommand: "codex",
+      reviewerCommand: "claude",
+      runner
+    });
+
+    expect(ack).toEqual({
+      status: "failed_to_start",
+      reason_code: "LAUNCH_ACK_SESSION_EXISTS",
+      failure_kind: "session_exists",
+      error_message: "tmux session already exists: pf-b_start_exists",
+      sessionName: "pf-b_start_exists"
+    });
+  });
+
+  it("returns canonical failed_to_start ack when workspace authority is missing", async () => {
+    const ack = await launchBubbleTmuxSessionAck({
+      bubbleId: "b_start_missing_workspace_ack",
+      workspacePath: "   ",
+      statusCommand: "status",
+      implementerCommand: "codex",
+      reviewerCommand: "claude",
+      runner: vi.fn()
+    });
+
+    expect(ack).toEqual({
+      status: "failed_to_start",
+      reason_code: "LAUNCH_ACK_WORKSPACE_REQUIRED",
+      failure_kind: "workspace_required",
+      error_message:
+        "TMUX_LAUNCH_WORKSPACE_REQUIRED: context operation_id=launch_bubble_tmux_session bubble_id=b_start_missing_workspace_ack."
+    });
+  });
+
+  it("returns canonical failed_to_start ack when tmux launch commands fail", async () => {
+    const runner: TmuxRunner = (args: string[]) => {
+      if (args[0] === "has-session") {
+        return Promise.resolve({
+          stdout: "",
+          stderr: "",
+          exitCode: 1
+        });
+      }
+
+      if (args[0] === "new-session") {
+        return Promise.reject(new Error("tmux new-session failed"));
+      }
+
+      return Promise.resolve({
+        stdout: "",
+        stderr: "",
+        exitCode: 0
+      });
+    };
+
+    const ack = await launchBubbleTmuxSessionAck({
+      bubbleId: "b_start_tmux_fail_ack",
+      workspacePath: "/tmp/worktree",
+      statusCommand: "status",
+      implementerCommand: "codex",
+      reviewerCommand: "claude",
+      runner
+    });
+
+    expect(ack).toEqual({
+      status: "failed_to_start",
+      reason_code: "LAUNCH_ACK_TMUX_COMMAND_FAILED",
+      failure_kind: "tmux_command_failed",
+      error_message: "tmux new-session failed",
+      sessionName: "pf-b_start_tmux_fail_ack"
+    });
+  });
+
+  it("converts has-session transport failures into canonical failed_to_start ack", async () => {
+    const bubbleId = "b_start_has_session_transport_fail_ack";
+    const ack = await launchBubbleTmuxSessionAck({
+      bubbleId,
+      workspacePath: "/tmp/worktree",
+      statusCommand: "status",
+      implementerCommand: "codex",
+      reviewerCommand: "claude",
+      runner: () => Promise.reject(new Error("tmux has-session transport failed"))
+    });
+
+    expect(ack).toEqual({
+      status: "failed_to_start",
+      reason_code: "LAUNCH_ACK_TMUX_COMMAND_FAILED",
+      failure_kind: "tmux_command_failed",
+      error_message: "tmux has-session transport failed",
+      sessionName: buildBubbleTmuxSessionName(bubbleId)
+    });
+  });
+
+  it("converts has-session non-1 exit failures into canonical failed_to_start ack", async () => {
+    const bubbleId = "b_start_has_session_exit_fail_ack";
+    const sessionName = buildBubbleTmuxSessionName(bubbleId);
+    const ack = await launchBubbleTmuxSessionAck({
+      bubbleId,
+      workspacePath: "/tmp/worktree",
+      statusCommand: "status",
+      implementerCommand: "codex",
+      reviewerCommand: "claude",
+      runner: () =>
+        Promise.resolve({
+          stdout: "",
+          stderr: "can't connect to tmux server",
+          exitCode: 2
+        })
+    });
+
+    expect(ack).toEqual({
+      status: "failed_to_start",
+      reason_code: "LAUNCH_ACK_TMUX_COMMAND_FAILED",
+      failure_kind: "tmux_command_failed",
+      error_message:
+        `tmux command failed (exit 2): tmux has-session -t ${sessionName}\ncan't connect to tmux server`,
+      sessionName
+    });
+  });
+
+  it("does not flatten internal pane-id parse invariants into tmux startup failure ack", async () => {
+    await expect(() =>
+      launchBubbleTmuxSessionAck({
+        bubbleId: "b_start_parse_failure_ack",
+        workspacePath: "/tmp/worktree",
+        statusCommand: "status",
+        implementerCommand: "codex",
+        reviewerCommand: "claude",
+        runner: (args: string[]) =>
+          Promise.resolve({
+            stdout:
+              args[0] === "has-session"
+                ? ""
+                : args[0] === "split-window"
+                  ? "not-a-pane-id\n"
+                  : "",
+            stderr: "",
+            exitCode: args[0] === "has-session" ? 1 : 0
+          })
+      })
+    ).rejects.toThrow("TMUX_PANE_ID_PARSE_FAILED:");
+  });
+});
+
 describe("launchBubbleTmuxSession", () => {
+  it("throws fail-closed when has-session transport failure is projected through the legacy wrapper", async () => {
+    const bubbleId = "b_start_has_session_transport_fail_ack";
+    await expect(() =>
+      launchBubbleTmuxSession({
+        bubbleId,
+        workspacePath: "/tmp/worktree",
+        statusCommand: "status",
+        implementerCommand: "codex",
+        reviewerCommand: "claude",
+        runner: () => Promise.reject(new Error("tmux has-session transport failed"))
+      })
+    ).rejects.toThrow("tmux has-session transport failed");
+  });
+
+  it("throws fail-closed when has-session returns a non-1 tmux failure exit code", async () => {
+    const bubbleId = "b_start_has_session_exit_fail_ack";
+    const sessionName = buildBubbleTmuxSessionName(bubbleId);
+    try {
+      await launchBubbleTmuxSession({
+        bubbleId,
+        workspacePath: "/tmp/worktree",
+        statusCommand: "status",
+        implementerCommand: "codex",
+        reviewerCommand: "claude",
+        runner: () =>
+          Promise.resolve({
+            stdout: "",
+            stderr: "can't connect to tmux server",
+            exitCode: 2
+          })
+      });
+      throw new Error("expected launchBubbleTmuxSession to reject");
+    } catch (error) {
+      expect(error).toBeInstanceOf(TmuxCommandError);
+      expect((error as Error).message).toBe(
+        `tmux command failed (exit 2): tmux has-session -t ${sessionName}\ncan't connect to tmux server`
+      );
+    }
+  });
+
+  it("preserves original tmux command errors through the legacy wrapper", async () => {
+    const tmuxError = new TmuxCommandError(
+      ["new-session", "-d", "-s", "pf-b_start_tmux_command_error"],
+      1,
+      "tmux new-session failed"
+    );
+
+    await expect(() =>
+      launchBubbleTmuxSession({
+        bubbleId: "b_start_tmux_command_error",
+        workspacePath: "/tmp/worktree",
+        statusCommand: "status",
+        implementerCommand: "codex",
+        reviewerCommand: "claude",
+        runner: (args: string[]) => {
+          if (args[0] === "has-session") {
+            return Promise.resolve({
+              stdout: "",
+              stderr: "",
+              exitCode: 1
+            });
+          }
+
+          if (args[0] === "new-session") {
+            return Promise.reject(tmuxError);
+          }
+
+          return Promise.resolve({
+            stdout: "",
+            stderr: "",
+            exitCode: 0
+          });
+        }
+      })
+    ).rejects.toBe(tmuxError);
+  });
+
   it("creates a 4-pane session layout", async () => {
     const calls: Array<{ args: string[]; allowFailure: boolean }> = [];
 

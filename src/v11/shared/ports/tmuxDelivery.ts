@@ -12,6 +12,9 @@ export type {
   ResolveDeliveryMessageRefInput,
   RetryStuckAgentInputOptions,
   RetryStuckAgentInputResult,
+  TmuxDeliveryAck,
+  TmuxDeliveryAckReasonCode,
+  TmuxDeliveryAckStatus,
   TmuxDeliveryFailureReason
 } from "../delivery/tmuxDeliveryContract.js";
 
