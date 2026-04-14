@@ -108,6 +108,15 @@ Do not keep the scope as a single implementation task if any of the following is
 4. The task relies on multiple competing authority paths for the same decision.
 5. The task mixes contract cutover and UI consume cutover while the primary consumer depends on fragile identity matching.
 6. The same authority touches 3 or more consume families. In this case, `foundation -> delivery -> activation` is not a sufficient default split; producer-first plus consumer-family split is mandatory.
+7. The same bounded slice would change:
+   - the authority producer,
+   - a shared contract/result shape,
+   - and any two of these fallout families:
+     - internal execution consumers
+     - workflow/orchestration consumers
+     - read-model consumers
+     - cleanup/recovery consumers
+8. The same bounded slice would change persisted authority/schema together with shared-contract migration and read-model/status/CLI fallout.
 
 ## Escalation Rules Below Hard-Stop
 
@@ -165,6 +174,12 @@ If authority fan-out is the reason for the split, do not stop at the generic thr
 - `activation`
 - `read-model`
 - `cleanup/rollout`
+
+Also record closure-budget triage when authority/runtime/read-model/shared-contract work is in scope:
+1. which closure buckets are touched,
+2. which adjacent closures are intentionally collapsed,
+3. why the collapse is safe,
+4. which closures are explicitly deferred.
 
 Also state whether any of these closures are intentionally collapsed into one bounded phase/task, and why that collapse is safe.
 

@@ -58,6 +58,10 @@ Include this section when the plan refines or replaces an existing canonicalizat
    - `<minimum viable split for this scope; may be 3, 4, 5, or more phases/tasks>`
 4. Milestone-gated behavior to defer:
    - `<text or N/A>`
+5. Closure-budget triage:
+   - closure buckets touched: `<list or N/A>`
+   - intentionally collapsed closures: `<list + why safe, or N/A>`
+   - explicitly deferred closures: `<list or N/A>`
 
 ## Phase Breakdown
 

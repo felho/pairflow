@@ -92,6 +92,10 @@ Include this section when the task refines or replaces an existing canonicalizat
 11. Authority/source-of-truth note:
    - canonical source: `<text>`
    - forbidden secondary sources: `<text>`
+12. Closure-budget triage:
+   - closure buckets touched: `<list or N/A>`
+   - intentionally collapsed closures: `<list + why safe, or N/A>`
+   - explicitly deferred closures: `<list or N/A>`
 
 ## L1 - Change Contract
 

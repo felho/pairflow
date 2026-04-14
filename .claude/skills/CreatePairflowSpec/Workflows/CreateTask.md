@@ -144,6 +144,29 @@ Policy:
    - route back to plan refinement.
 3. Do not let a foundation task smuggle in downstream consumer alignment just because the changed contract is shared.
 
+### 1c.1) Run the Closure-Budget Gate
+
+Run this gate when the task touches authority/runtime/read-model/shared-contract work.
+
+Count whether the bounded task materially changes:
+1. `authority_producer`
+2. `shared_contract`
+3. `internal_execution_consumers`
+4. `workflow_orchestration_consumers`
+5. `read_model_consumers`
+6. `persisted_authority_or_schema`
+7. `cleanup_recovery_consumers`
+
+Policy:
+1. If `authority_producer` + `shared_contract` + any two consumer buckets appear together, do not finalize as one bounded task by default.
+2. If `persisted_authority_or_schema` changes in the same task as `shared_contract` and two or more consumer buckets, route back to plan refinement.
+3. If the task would close producer boundary, shared contract alignment, and status/CLI/read-model fallout together, treat that as a sequencing failure candidate and split before drafting L1.
+4. A bounded task may still own adjacent closures only if the artifact can explicitly prove:
+   - the same bounded code path closes them,
+   - the same consumer family owns the fallout,
+   - and no separate compatibility or diagnostics risk exists.
+5. If that proof is not available from the loaded context, do not guess; route back to `CreatePlan`.
+
 ### 1d) Run the Complexity-Risk Gate
 
 Use `references/Complexity-Risk-Gate.md`.
@@ -174,6 +197,7 @@ Policy:
 6. If public consume correctness depends on multi-seam identity matching, prefer splitting `authority/read-model parity` from `payload/UI consume cutover`.
 7. If the authority fan-out scan reveals three or more consume families, producer closure and consumer-family closure should not remain in the same bounded task by default.
 8. But do not split adjacent closures into separate tasks just to mirror the vocabulary; merge them when they are genuinely one bounded change with the same consumers and no separate compatibility/read-model risk.
+9. If the Closure-Budget Gate says the task is too wide, the task must not be written as direct feature-delivery even if the risk score alone looks borderline acceptable.
 
 ### 2) Build draft immediately
 
@@ -229,6 +253,11 @@ Required blockers for Task output:
    - `allowed_resolution_paths`,
    - `forbidden_regression_interpretations`,
    - `replacement_proof_required_if_removed`.
+13. If authority/runtime/read-model/shared-contract work is in scope, blockers also include closure-budget triage:
+   - closure buckets touched,
+   - collapsed closures,
+   - deferred closures,
+   - why the remaining bounded task is safe.
 
 If blockers exist, ask only focused questions for those blockers.
 
@@ -238,9 +267,10 @@ If blockers exist, ask only focused questions for those blockers.
 2. Confirm safety default behavior.
 3. Keep this section short and policy-level.
 4. Include complexity-risk outcome and split decision.
-5. If applicable, keep the L0 control-model summary short, then restate it concretely in a dedicated L1 domain/control contract section.
-6. If applicable, include an `Authority Boundary Map` and use it to say what this task intentionally does not close.
-7. If the task touches an existing runtime authority/resolution path, include a `Baseline Preservation` section and say explicitly what is preserved vs intentionally replaced.
+5. Include closure-budget outcome when applicable.
+6. If applicable, keep the L0 control-model summary short, then restate it concretely in a dedicated L1 domain/control contract section.
+7. If applicable, include an `Authority Boundary Map` and use it to say what this task intentionally does not close.
+8. If the task touches an existing runtime authority/resolution path, include a `Baseline Preservation` section and say explicitly what is preserved vs intentionally replaced.
 
 ### 5) L1 pass
 
@@ -254,6 +284,7 @@ Fill each section or mark `N/A`:
 7. Test matrix (at least one golden path and one invalid case)
 8. Shared contract compatibility (required when a shared interface/result shape changes; otherwise `N/A`)
 9. Baseline preservation (required when an existing canonicalization/resolution path is refined or replaced; otherwise `N/A`)
+10. Closure-budget summary (required when authority/runtime/read-model/shared-contract work is in scope; otherwise `N/A`)
 
 Rules:
 1. `target_files` must align with call-site matrix.
