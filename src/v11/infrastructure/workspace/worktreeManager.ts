@@ -1,4 +1,4 @@
-import { mkdir } from "node:fs/promises";
+import { mkdir, rm } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 
 import {
@@ -38,6 +38,84 @@ export type {
   WorktreeCleanupInput,
   WorktreeCleanupResult
 } from "../../shared/ports/worktreeWorkspace.js";
+
+type CleanupWorkspaceKind = "registered-worktree" | "clone" | "none";
+
+async function isGitWorkspace(path: string): Promise<boolean> {
+  try {
+    const insideWorktree = await runGit(["rev-parse", "--is-inside-work-tree"], {
+      cwd: path,
+      allowFailure: true
+    });
+    return insideWorktree.exitCode === 0 && insideWorktree.stdout.trim() === "true";
+  } catch {
+    return false;
+  }
+}
+
+async function resolveCleanupWorkspaceKind(
+  repoPath: string,
+  worktreePath: string
+): Promise<CleanupWorkspaceKind> {
+  if (await isWorktreeRegistered(repoPath, worktreePath)) {
+    return "registered-worktree";
+  }
+
+  if (await isGitWorkspace(worktreePath)) {
+    return "clone";
+  }
+
+  return "none";
+}
+
+async function hasCloneBranchOwnership(input: {
+  repoPath: string;
+  worktreePath: string;
+  bubbleBranch: string;
+}): Promise<boolean> {
+  const cloneHead = await runGit(["rev-parse", "HEAD"], {
+    cwd: input.worktreePath,
+    allowFailure: true
+  });
+  if (cloneHead.exitCode !== 0) {
+    return false;
+  }
+
+  const cloneBranch = await runGit(
+    ["rev-parse", "--verify", `refs/heads/${input.bubbleBranch}`],
+    {
+      cwd: input.worktreePath,
+      allowFailure: true
+    }
+  );
+  if (cloneBranch.exitCode !== 0) {
+    return false;
+  }
+
+  const sourceBranch = await runGit(
+    ["rev-parse", "--verify", `refs/heads/${input.bubbleBranch}`],
+    {
+      cwd: input.repoPath,
+      allowFailure: true
+    }
+  );
+  if (sourceBranch.exitCode !== 0) {
+    return false;
+  }
+
+  const cloneHeadSha = cloneHead.stdout.trim();
+  const cloneBranchSha = cloneBranch.stdout.trim();
+  const sourceBranchSha = sourceBranch.stdout.trim();
+  if (
+    cloneHeadSha.length === 0
+    || cloneBranchSha.length === 0
+    || sourceBranchSha.length === 0
+  ) {
+    return false;
+  }
+
+  return cloneHeadSha === cloneBranchSha && cloneBranchSha === sourceBranchSha;
+}
 
 export const bootstrapWorktreeWorkspace: BootstrapWorktreeWorkspacePort = async (
   input: WorktreeBootstrapInput
@@ -107,16 +185,31 @@ export const cleanupWorktreeWorkspace: CleanupWorktreeWorkspacePort = async (
 
   await assertGitRepositoryForCleanup(repoPath);
 
+  const workspaceKind = await resolveCleanupWorkspaceKind(repoPath, worktreePath);
+  const canRemoveBranch =
+    workspaceKind === "registered-worktree"
+      ? true
+      : workspaceKind === "clone"
+        ? await hasCloneBranchOwnership({
+          repoPath,
+          worktreePath,
+          bubbleBranch: input.bubbleBranch
+        })
+        : false;
+
   let removedWorktree = false;
-  if (await isWorktreeRegistered(repoPath, worktreePath)) {
+  if (workspaceKind === "registered-worktree") {
     await runGit(["worktree", "remove", "--force", worktreePath], {
       cwd: repoPath
     });
     removedWorktree = true;
+  } else if (workspaceKind === "clone") {
+    await rm(worktreePath, { recursive: true, force: true });
+    removedWorktree = true;
   }
 
   let removedBranch = false;
-  if (await branchExists(repoPath, input.bubbleBranch)) {
+  if (canRemoveBranch && await branchExists(repoPath, input.bubbleBranch)) {
     await runGit(["branch", "-D", input.bubbleBranch], {
       cwd: repoPath
     });

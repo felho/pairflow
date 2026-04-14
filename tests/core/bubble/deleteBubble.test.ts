@@ -28,7 +28,7 @@ import {
 } from "../../../src/v11/infrastructure/state/stateStore.js";
 import type { ArchiveIndexDocument, ArchiveManifest } from "../../../src/types/archive.js";
 import { branchExists } from "../../../src/v11/infrastructure/workspace/git.js";
-import { initGitRepository } from "../../helpers/git.js";
+import { initGitRepository, runGit } from "../../helpers/git.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
 
 const tempDirs: string[] = [];
@@ -44,6 +44,26 @@ async function createTempRepo(prefix = "pairflow-delete-bubble-"): Promise<strin
   const root = await createTempDir(prefix);
   await initGitRepository(root);
   return root;
+}
+
+async function convertRunningBubbleToClone(
+  repoPath: string,
+  bubble: Awaited<ReturnType<typeof setupRunningBubbleFixture>>
+) {
+  await writeFile(
+    bubble.paths.bubbleTomlPath,
+    renderBubbleConfigToml({
+      ...bubble.config,
+      work_mode: "clone"
+    }),
+    "utf8"
+  );
+  await runGit(repoPath, ["worktree", "remove", "--force", bubble.paths.worktreePath]);
+  await runGit(repoPath, ["clone", repoPath, bubble.paths.worktreePath]);
+  await runGit(bubble.paths.worktreePath, ["config", "user.email", "pairflow@example.test"]);
+  await runGit(bubble.paths.worktreePath, ["config", "user.name", "Pairflow Test"]);
+  await runGit(bubble.paths.worktreePath, ["checkout", bubble.config.bubble_branch]);
+  return bubble;
 }
 
 beforeEach(async () => {
@@ -383,6 +403,116 @@ describe("deleteBubble", () => {
       allowMissing: true
     });
     expect(sessions[bubble.bubbleId]).toBeUndefined();
+  });
+
+  it("force deletes clone workspace and removes the owned source branch", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await convertRunningBubbleToClone(
+      repoPath,
+      await setupRunningBubbleFixture({
+        repoPath,
+        bubbleId: "b_delete_clone_owned_01",
+        task: "Delete owned clone workspace"
+      })
+    );
+    await runGit(bubble.paths.worktreePath, ["checkout", "--detach"]);
+
+    const result = await deleteBubble(
+      {
+        bubbleId: bubble.bubbleId,
+        cwd: repoPath,
+        force: true
+      },
+      {
+        runTmux: vi.fn(() =>
+          Promise.resolve({
+            stdout: "",
+            stderr: "no session",
+            exitCode: 1
+          })
+        ),
+        stopBubble: vi.fn(async () => ({
+          bubbleId: bubble.bubbleId,
+          state: {
+            bubble_id: bubble.bubbleId,
+            state: "CANCELLED" as const,
+            round: 1,
+            active_agent: null,
+            active_role: null,
+            active_since: null,
+            last_command_at: "2026-02-25T10:05:30.000Z",
+            round_role_history: []
+          },
+          tmuxSessionName: `pf-${bubble.bubbleId}`,
+          tmuxSessionExisted: false,
+          runtimeSessionRemoved: false
+        }))
+      }
+    );
+
+    expect(result.deleted).toBe(true);
+    expect(result.removedWorktree).toBe(true);
+    expect(result.removedBubbleBranch).toBe(true);
+    await expect(stat(bubble.paths.worktreePath)).rejects.toMatchObject({
+      code: "ENOENT"
+    });
+    await expect(branchExists(repoPath, bubble.config.bubble_branch)).resolves.toBe(false);
+  });
+
+  it("keeps the source branch when clone cleanup cannot prove ownership", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await convertRunningBubbleToClone(
+      repoPath,
+      await setupRunningBubbleFixture({
+        repoPath,
+        bubbleId: "b_delete_clone_unowned_01",
+        task: "Delete clone with retained source branch"
+      })
+    );
+
+    await runGit(repoPath, ["checkout", bubble.config.bubble_branch]);
+    await writeFile(join(repoPath, "source-diverged.txt"), "source branch moved\n", "utf8");
+    await runGit(repoPath, ["add", "source-diverged.txt"]);
+    await runGit(repoPath, ["commit", "-m", "feat(source): diverged before delete"]);
+    await runGit(repoPath, ["checkout", "main"]);
+
+    const result = await deleteBubble(
+      {
+        bubbleId: bubble.bubbleId,
+        cwd: repoPath,
+        force: true
+      },
+      {
+        runTmux: vi.fn(() =>
+          Promise.resolve({
+            stdout: "",
+            stderr: "no session",
+            exitCode: 1
+          })
+        ),
+        stopBubble: vi.fn(async () => ({
+          bubbleId: bubble.bubbleId,
+          state: {
+            bubble_id: bubble.bubbleId,
+            state: "CANCELLED" as const,
+            round: 1,
+            active_agent: null,
+            active_role: null,
+            active_since: null,
+            last_command_at: "2026-02-25T10:05:30.000Z",
+            round_role_history: []
+          },
+          tmuxSessionName: `pf-${bubble.bubbleId}`,
+          tmuxSessionExisted: false,
+          runtimeSessionRemoved: false
+        }))
+      }
+    );
+
+    expect(result.deleted).toBe(true);
+    expect(result.removedWorktree).toBe(true);
+    expect(result.removedBubbleBranch).toBe(false);
+    await expect(branchExists(repoPath, bubble.config.bubble_branch)).resolves.toBe(true);
   });
 
   it("falls back to remove runtime session when stop reports runtimeSessionRemoved=false", async () => {
