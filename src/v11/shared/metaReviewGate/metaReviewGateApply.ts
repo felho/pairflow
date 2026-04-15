@@ -1,6 +1,9 @@
 import type { LoadedStateSnapshot } from "../ports/stateSnapshots.js";
 import type { BubbleMetaReviewRuntimeDeliveryState } from "../../../types/bubble.js";
 import {
+  buildMetaReviewRuntimeDeliveryCorrelation
+} from "../metaReview/metaReviewSnapshot.js";
+import {
   stageMetaReviewRunningState,
   throwMetaReviewRunningStageFailure
 } from "./metaReviewGateApplyHelpers.js";
@@ -15,6 +18,7 @@ import type {
   ApplyMetaReviewGateOnConvergenceInput,
   MetaReviewGateResult
 } from "./metaReviewGateTypes.js";
+import { MetaReviewGateError } from "./metaReviewGateTypes.js";
 
 export async function applyMetaReviewGateOnConvergence(
   input: ApplyMetaReviewGateOnConvergenceInput,
@@ -67,13 +71,25 @@ export async function applyMetaReviewGateOnConvergence(
     await context.deactivateMetaReviewerPane();
   }
   const executionContext = kickoffResult.state.meta_review?.execution_context ?? null;
+  if (executionContext === null) {
+    throw new MetaReviewGateError(
+      "META_REVIEW_GATE_TRANSITION_INVALID",
+      "META_REVIEW_GATE_EXECUTION_CONTEXT_MISSING: runtime delivery observation requires active meta-review execution_context authority",
+      {
+        bubbleId: context.resolved.bubbleId,
+        round: kickoffResult.state.round,
+        stageReasonCode: "META_REVIEW_GATE_EXECUTION_CONTEXT_MISSING"
+      }
+    );
+  }
+  const correlation = buildMetaReviewRuntimeDeliveryCorrelation(executionContext);
   const runtimeDelivery: BubbleMetaReviewRuntimeDeliveryState = {
     status: paneBinding.delivery.status,
     reason_code: paneBinding.delivery.reasonCode,
     message: paneBinding.delivery.message,
     observed_at: context.nowIso,
-    observed_for_handoff_id: executionContext?.handoff_id ?? null,
-    observed_for_round: executionContext?.round ?? kickoffResult.state.round
+    observed_for_handoff_id: correlation.observedForHandoffId,
+    observed_for_round: correlation.observedForRound
   };
   let observedState: LoadedStateSnapshot;
   try {

@@ -306,6 +306,154 @@ describe("state store", () => {
     ]);
   });
 
+  it("fails closed for partially correlated runtime_delivery in inspect fallback snapshots", async () => {
+    const dir = await createTempDir();
+    const statePath = join(dir, "state.json");
+
+    await writeFile(
+      statePath,
+      `${JSON.stringify({
+        bubble_id: "b_store_runtime_delivery_partial_01",
+        state: "RUNNING",
+        round: 2,
+        active_agent: "codex",
+        active_since: "2026-03-08T10:00:00.000Z",
+        active_role: "meta_reviewer",
+        round_role_history: [],
+        last_command_at: 42,
+        meta_review: {
+          execution_context: {
+            handoff_id: "meta_review:b_store_runtime_delivery_partial_01:round:2:attempt:1",
+            execution_id: "exec_store_runtime_delivery_partial_01",
+            round: 2,
+            awaited_output_type: "meta_review_result",
+            started_at: "2026-03-08T10:00:00.000Z",
+            deadline_at: "2026-03-08T11:00:00.000Z",
+            attempt: 1
+          },
+          runtime_delivery: {
+            status: "uncertain",
+            reason_code: "META_REVIEW_REQUEST_DELIVERY_UNCONFIRMED",
+            message: "handoff delivery not confirmed",
+            observed_at: "2026-03-08T10:01:00.000Z",
+            observed_for_handoff_id: "handoff_meta_01",
+            observed_for_round: null
+          },
+          auto_rework_count: 0,
+          auto_rework_limit: 5,
+          sticky_human_gate: false
+        }
+      }, null, 2)}\n`,
+      "utf8"
+    );
+
+    const inspected = await inspectStateSnapshot(statePath);
+
+    expect(inspected.state.meta_review?.runtime_delivery).toEqual({
+      status: "uncertain",
+      reason_code: "META_REVIEW_REQUEST_DELIVERY_UNCONFIRMED",
+      message: "handoff delivery not confirmed",
+      observed_at: "2026-03-08T10:01:00.000Z",
+      observed_for_handoff_id: null,
+      observed_for_round: null
+    });
+    expect(inspected.stateValidation?.errors).toEqual([
+      {
+        path: "last_command_at",
+        message: "Must be null or a valid ISO timestamp"
+      },
+      {
+        path: "meta_review.runtime_delivery.observed_for_handoff_id",
+        message:
+          "Must be null when observed_for_round is null, and provided together when correlation is claimed"
+      },
+      {
+        path: "meta_review.runtime_delivery.observed_for_round",
+        message:
+          "Must be null when observed_for_handoff_id is null, and provided together when correlation is claimed"
+      },
+      {
+        path: "execution_context",
+        message:
+          "RUNNING meta-review state requires canonical execution_context authority"
+      }
+    ]);
+  });
+
+  it("fails closed for reverse-direction partial runtime_delivery in inspect fallback snapshots", async () => {
+    const dir = await createTempDir();
+    const statePath = join(dir, "state.json");
+
+    await writeFile(
+      statePath,
+      `${JSON.stringify({
+        bubble_id: "b_store_runtime_delivery_partial_02",
+        state: "RUNNING",
+        round: 2,
+        active_agent: "codex",
+        active_since: "2026-03-08T10:00:00.000Z",
+        active_role: "meta_reviewer",
+        round_role_history: [],
+        last_command_at: 42,
+        meta_review: {
+          execution_context: {
+            handoff_id: "meta_review:b_store_runtime_delivery_partial_02:round:2:attempt:1",
+            execution_id: "exec_store_runtime_delivery_partial_02",
+            round: 2,
+            awaited_output_type: "meta_review_result",
+            started_at: "2026-03-08T10:00:00.000Z",
+            deadline_at: "2026-03-08T11:00:00.000Z",
+            attempt: 1
+          },
+          runtime_delivery: {
+            status: "uncertain",
+            reason_code: "META_REVIEW_REQUEST_DELIVERY_UNCONFIRMED",
+            message: "handoff delivery not confirmed",
+            observed_at: "2026-03-08T10:01:00.000Z",
+            observed_for_handoff_id: null,
+            observed_for_round: 2
+          },
+          auto_rework_count: 0,
+          auto_rework_limit: 5,
+          sticky_human_gate: false
+        }
+      }, null, 2)}\n`,
+      "utf8"
+    );
+
+    const inspected = await inspectStateSnapshot(statePath);
+
+    expect(inspected.state.meta_review?.runtime_delivery).toEqual({
+      status: "uncertain",
+      reason_code: "META_REVIEW_REQUEST_DELIVERY_UNCONFIRMED",
+      message: "handoff delivery not confirmed",
+      observed_at: "2026-03-08T10:01:00.000Z",
+      observed_for_handoff_id: null,
+      observed_for_round: null
+    });
+    expect(inspected.stateValidation?.errors).toEqual([
+      {
+        path: "last_command_at",
+        message: "Must be null or a valid ISO timestamp"
+      },
+      {
+        path: "meta_review.runtime_delivery.observed_for_handoff_id",
+        message:
+          "Must be null when observed_for_round is null, and provided together when correlation is claimed"
+      },
+      {
+        path: "meta_review.runtime_delivery.observed_for_round",
+        message:
+          "Must be null when observed_for_handoff_id is null, and provided together when correlation is claimed"
+      },
+      {
+        path: "execution_context",
+        message:
+          "RUNNING meta-review state requires canonical execution_context authority"
+      }
+    ]);
+  });
+
   it("fails closed when inspect encounters pre-E1 execution authority snapshots", async () => {
     const dir = await createTempDir();
     const statePath = join(dir, "state.json");

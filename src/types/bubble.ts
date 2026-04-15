@@ -313,6 +313,9 @@ export interface BubbleExecutionContext {
 }
 
 export interface BubbleMetaReviewRuntimeDeliveryState {
+  // Observability-only diagnostic block. It must never become canonical
+  // submit/approval authority and is only active when same-authority
+  // correlation fields match the current meta-review execution context.
   status: MetaReviewRuntimeDeliveryStatus;
   reason_code: string | null;
   message: string;

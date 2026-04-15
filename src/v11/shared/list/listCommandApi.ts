@@ -4,7 +4,7 @@ import { parseBubbleConfigToml } from "../../../config/bubbleConfig.js";
 import { isNamedError } from "../errors/namedError.js";
 import { getBubblePaths } from "../bubble/bubblePaths.js";
 import { isMetaReviewExecutionContextActiveState } from "../metaReview/metaReviewExecutionContext.js";
-import { resolveActiveMetaReviewRuntimeDelivery } from "../metaReview/metaReviewSnapshot.js";
+import { projectActiveMetaReviewRuntimeDelivery } from "../metaReview/metaReviewSnapshot.js";
 import { resolveBubbleAttention } from "../status/bubbleAttention.js";
 import { computeWatchdogStatus } from "../watchdog/watchdogStatus.js";
 import type { BubbleLifecycleState } from "../../../types/bubble.js";
@@ -157,7 +157,7 @@ async function buildBubbleListEntry(input: {
     runtimeSession !== null &&
     stateLoaded.stateValidation === null &&
     !runtimeSessionExpectedStates.has(stateLoaded.state.state);
-  const activeRuntimeDelivery = resolveActiveMetaReviewRuntimeDelivery({
+  const runtimeDelivery = projectActiveMetaReviewRuntimeDelivery({
     executionContext: stateLoaded.state.meta_review?.execution_context,
     runtimeDelivery: stateLoaded.state.meta_review?.runtime_delivery
   });
@@ -203,17 +203,7 @@ async function buildBubbleListEntry(input: {
       metaReview: {
         actor: "meta-reviewer",
         authorityActive: isMetaReviewExecutionContextActiveState(stateLoaded.state),
-        runtimeDelivery:
-          activeRuntimeDelivery === null
-            ? null
-            : {
-                status: activeRuntimeDelivery.status,
-                reasonCode: activeRuntimeDelivery.reason_code,
-                message: activeRuntimeDelivery.message,
-                observedAt: activeRuntimeDelivery.observed_at,
-                observedForHandoffId: activeRuntimeDelivery.observed_for_handoff_id,
-                observedForRound: activeRuntimeDelivery.observed_for_round
-              }
+        runtimeDelivery
       }
     },
     hasRuntimeSession: runtimeSession !== null,

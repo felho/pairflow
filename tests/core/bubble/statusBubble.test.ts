@@ -11,8 +11,14 @@ import { emitHumanReplyV11 as emitHumanReply } from "../../../src/v11/applicatio
 import { getBubbleStatusV11 as getBubbleStatus } from "../../../src/v11/application/status/emitStatusV11.js";
 import { resolveDocContractGateArtifactPath } from "../../../src/v11/defaults/gates/docContractGateArtifactDefaults.js";
 import { appendProtocolEnvelope } from "../../../src/v11/infrastructure/artifact/transcript/transcriptStore.js";
+import {
+  readStateSnapshot,
+  writeStateSnapshot
+} from "../../../src/v11/infrastructure/state/stateStore.js";
 import { writeWatchdogPaneActivity } from "../../../src/v11/infrastructure/artifact/watchdog/watchdogPaneActivityStore.js";
+import { buildMetaReviewExecutionContext } from "../../../src/v11/shared/metaReview/metaReviewExecutionContext.js";
 import { resolveWorktreePairflowEntrypoint } from "../../../src/v11/shared/command/pairflowCommandPathAssessment.js";
+import { metaReviewExecutionContextToRunningContext } from "../../../src/v11/shared/state/executionContext.js";
 import { initGitRepository } from "../../helpers/git.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
 
@@ -303,6 +309,235 @@ describe("getBubbleStatus", () => {
     expect(status.metaReview).toStrictEqual({
       actor: "meta-reviewer",
       authorityActive: false,
+      runtimeDelivery: null
+    });
+  });
+
+  it("drops stale meta-review runtime delivery from status projection", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_status_runtime_delivery_stale_01",
+      task: "Status stale runtime delivery"
+    });
+
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    const executionContext = buildMetaReviewExecutionContext({
+      bubbleId: bubble.bubbleId,
+      round: loaded.state.round,
+      startedAt: "2026-02-22T14:20:00.000Z",
+      watchdogTimeoutMinutes: 60,
+      attempt: 1
+    });
+    await writeStateSnapshot(
+      bubble.paths.statePath,
+      {
+        ...loaded.state,
+        state: "RUNNING",
+        active_agent: "codex",
+        active_role: "meta_reviewer",
+        active_since: "2026-02-22T14:20:00.000Z",
+        last_command_at: "2026-02-22T14:20:00.000Z",
+        execution_context: metaReviewExecutionContextToRunningContext(executionContext),
+        meta_review: {
+          ...loaded.state.meta_review!,
+          execution_context: executionContext,
+          runtime_delivery: {
+            status: "failed",
+            reason_code: "META_REVIEW_REQUEST_DELIVERY_FAILED",
+            message: "tmux send failed",
+            observed_at: "2026-02-22T14:20:05.000Z",
+            observed_for_handoff_id: `${executionContext.handoff_id}_stale`,
+            observed_for_round: executionContext.round
+          }
+        }
+      },
+      {
+        expectedFingerprint: loaded.fingerprint,
+        expectedState: "RUNNING"
+      }
+    );
+
+    const status = await getBubbleStatus({
+      bubbleId: bubble.bubbleId,
+      cwd: repoPath
+    });
+
+    expect(status.metaReview).toStrictEqual({
+      actor: "meta-reviewer",
+      authorityActive: true,
+      runtimeDelivery: null
+    });
+  });
+
+  it("surfaces active meta-review runtime delivery from status projection", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_status_runtime_delivery_active_01",
+      task: "Status active runtime delivery"
+    });
+
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    const executionContext = buildMetaReviewExecutionContext({
+      bubbleId: bubble.bubbleId,
+      round: loaded.state.round,
+      startedAt: "2026-02-22T14:20:00.000Z",
+      watchdogTimeoutMinutes: 60,
+      attempt: 1
+    });
+    await writeStateSnapshot(
+      bubble.paths.statePath,
+      {
+        ...loaded.state,
+        state: "RUNNING",
+        active_agent: "codex",
+        active_role: "meta_reviewer",
+        active_since: "2026-02-22T14:20:00.000Z",
+        last_command_at: "2026-02-22T14:20:00.000Z",
+        execution_context: metaReviewExecutionContextToRunningContext(executionContext),
+        meta_review: {
+          ...loaded.state.meta_review!,
+          execution_context: executionContext,
+          runtime_delivery: {
+            status: "failed",
+            reason_code: "META_REVIEW_REQUEST_DELIVERY_FAILED",
+            message: "tmux send failed",
+            observed_at: "2026-02-22T14:20:05.000Z",
+            observed_for_handoff_id: executionContext.handoff_id,
+            observed_for_round: executionContext.round
+          }
+        }
+      },
+      {
+        expectedFingerprint: loaded.fingerprint,
+        expectedState: "RUNNING"
+      }
+    );
+
+    const status = await getBubbleStatus({
+      bubbleId: bubble.bubbleId,
+      cwd: repoPath
+    });
+
+    expect(status.metaReview).toStrictEqual({
+      actor: "meta-reviewer",
+      authorityActive: true,
+      runtimeDelivery: {
+        status: "failed",
+        reasonCode: "META_REVIEW_REQUEST_DELIVERY_FAILED",
+        message: "tmux send failed",
+        observedAt: "2026-02-22T14:20:05.000Z",
+        observedForHandoffId: executionContext.handoff_id,
+        observedForRound: executionContext.round
+      }
+    });
+  });
+
+  it("drops partially correlated meta-review runtime delivery from status projection", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_status_runtime_delivery_partial_01",
+      task: "Status partial runtime delivery"
+    });
+
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    const executionContext = buildMetaReviewExecutionContext({
+      bubbleId: bubble.bubbleId,
+      round: loaded.state.round,
+      startedAt: "2026-02-22T14:20:00.000Z",
+      watchdogTimeoutMinutes: 60,
+      attempt: 1
+    });
+    await writeFile(
+      bubble.paths.statePath,
+      `${JSON.stringify({
+        ...loaded.state,
+        state: "RUNNING",
+        active_agent: "codex",
+        active_role: "meta_reviewer",
+        active_since: "2026-02-22T14:20:00.000Z",
+        last_command_at: "2026-02-22T14:20:00.000Z",
+        execution_context: metaReviewExecutionContextToRunningContext(executionContext),
+        meta_review: {
+          ...loaded.state.meta_review!,
+          execution_context: executionContext,
+          runtime_delivery: {
+            status: "failed",
+            reason_code: "META_REVIEW_REQUEST_DELIVERY_FAILED",
+            message: "tmux send failed",
+            observed_at: "2026-02-22T14:20:05.000Z",
+            observed_for_handoff_id: null,
+            observed_for_round: executionContext.round
+          }
+        }
+      }, null, 2)}\n`,
+      "utf8"
+    );
+
+    const status = await getBubbleStatus({
+      bubbleId: bubble.bubbleId,
+      cwd: repoPath
+    });
+
+    expect(status.metaReview).toStrictEqual({
+      actor: "meta-reviewer",
+      authorityActive: true,
+      runtimeDelivery: null
+    });
+  });
+
+  it("drops reverse-direction partially correlated meta-review runtime delivery from status projection", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_status_runtime_delivery_partial_reverse_01",
+      task: "Status reverse partial runtime delivery"
+    });
+
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    const executionContext = buildMetaReviewExecutionContext({
+      bubbleId: bubble.bubbleId,
+      round: loaded.state.round,
+      startedAt: "2026-02-22T14:20:00.000Z",
+      watchdogTimeoutMinutes: 60,
+      attempt: 1
+    });
+    await writeFile(
+      bubble.paths.statePath,
+      `${JSON.stringify({
+        ...loaded.state,
+        state: "RUNNING",
+        active_agent: "codex",
+        active_role: "meta_reviewer",
+        active_since: "2026-02-22T14:20:00.000Z",
+        last_command_at: "2026-02-22T14:20:00.000Z",
+        execution_context: metaReviewExecutionContextToRunningContext(executionContext),
+        meta_review: {
+          ...loaded.state.meta_review!,
+          execution_context: executionContext,
+          runtime_delivery: {
+            status: "failed",
+            reason_code: "META_REVIEW_REQUEST_DELIVERY_FAILED",
+            message: "tmux send failed",
+            observed_at: "2026-02-22T14:20:05.000Z",
+            observed_for_handoff_id: executionContext.handoff_id,
+            observed_for_round: null
+          }
+        }
+      }, null, 2)}\n`,
+      "utf8"
+    );
+
+    const status = await getBubbleStatus({
+      bubbleId: bubble.bubbleId,
+      cwd: repoPath
+    });
+
+    expect(status.metaReview).toStrictEqual({
+      actor: "meta-reviewer",
+      authorityActive: true,
       runtimeDelivery: null
     });
   });

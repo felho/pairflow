@@ -2,13 +2,10 @@ import type { DeleteBubbleResult } from "../../../contracts/deleteBubble.js";
 import type {
   BubbleLifecycleState,
   AttachLauncher,
-  BubbleStateSnapshot,
-  MetaReviewRuntimeDeliveryStatus
+  BubbleStateSnapshot
 } from "../../../types/bubble.js";
-import type {
-  UiBubbleAttention,
-  UiTimelineEntry
-} from "../../../types/ui.js";
+import type { UiTimelineEntry } from "../../../types/ui.js";
+import type { BubbleListEntry } from "../list/listCommandContract.js";
 import type { ProtocolEnvelope } from "../../../types/protocol.js";
 import type {
   BubbleInboxInput,
@@ -22,10 +19,8 @@ import type {
   EmitTmuxDeliveryNotificationResult
 } from "./tmuxDelivery.js";
 import type {
-  ReadRuntimeSessionsRegistryPort,
-  RuntimeSessionRecord
+  ReadRuntimeSessionsRegistryPort
 } from "./runtimeSessions.js";
-import type { StateValidationDiagnostics } from "./stateSnapshots.js";
 import type {
   PassValidationRecoveryMarkerPersistWarning
 } from "./passValidationRecovery.js";
@@ -38,32 +33,7 @@ export interface UiBubbleListInput {
 
 export type UiBubbleListStateCounts = Record<BubbleLifecycleState, number>;
 
-export interface UiBubbleListEntry {
-  bubbleId: string;
-  repoPath: string;
-  worktreePath: string;
-  state: BubbleLifecycleState;
-  round: number;
-  activeAgent: string | null;
-  activeRole: string | null;
-  activeSince: string | null;
-  lastCommandAt: string | null;
-  stateValidation: StateValidationDiagnostics | null;
-  runtimeSession: RuntimeSessionRecord | null;
-  attention: UiBubbleAttention | null;
-  metaReview: {
-    actor: "meta-reviewer";
-    authorityActive: boolean;
-    runtimeDelivery: {
-      status: MetaReviewRuntimeDeliveryStatus;
-      reasonCode: string | null;
-      message: string;
-      observedAt: string;
-      observedForHandoffId: string | null;
-      observedForRound: number | null;
-    } | null;
-  };
-}
+export type UiBubbleListEntry = BubbleListEntry;
 
 export interface UiBubbleListView {
   repoPath: string;

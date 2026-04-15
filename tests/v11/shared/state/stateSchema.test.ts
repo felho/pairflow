@@ -79,6 +79,108 @@ describe("v11 shared state schema", () => {
     expect(result.ok).toBe(true);
   });
 
+  it("rejects partially correlated meta-review runtime-delivery diagnostics", () => {
+    const executionContext = buildMetaReviewExecutionContext({
+      bubbleId: "b_v11_state_schema_03b",
+      round: 2,
+      startedAt: "2026-04-06T10:00:00.000Z",
+      watchdogTimeoutMinutes: 60,
+      attempt: 1
+    });
+
+    const result = validateBubbleStateSnapshot({
+      bubble_id: "b_v11_state_schema_03b",
+      state: "RUNNING",
+      round: 2,
+      active_agent: "codex",
+      active_since: "2026-04-06T10:00:00.000Z",
+      active_role: "meta_reviewer",
+      execution_context: metaReviewExecutionContextToRunningContext(executionContext),
+      round_role_history: [],
+      last_command_at: "2026-04-06T10:01:00.000Z",
+      meta_review: {
+        execution_context: executionContext,
+        runtime_delivery: {
+          status: "uncertain",
+          reason_code: "META_REVIEW_REQUEST_DELIVERY_UNCONFIRMED",
+          message: "pane delivery not confirmed",
+          observed_at: "2026-04-06T10:01:00.000Z",
+          observed_for_handoff_id: executionContext.handoff_id,
+          observed_for_round: null
+        },
+        auto_rework_count: 0,
+        auto_rework_limit: 5,
+        sticky_human_gate: false
+      }
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) {
+      return;
+    }
+    expect(result.errors).toContainEqual({
+      path: "meta_review.runtime_delivery.observed_for_handoff_id",
+      message:
+        "Must be null when observed_for_round is null, and provided together when correlation is claimed"
+    });
+    expect(result.errors).toContainEqual({
+      path: "meta_review.runtime_delivery.observed_for_round",
+      message:
+        "Must be null when observed_for_handoff_id is null, and provided together when correlation is claimed"
+    });
+  });
+
+  it("rejects reverse-direction partial meta-review runtime-delivery diagnostics", () => {
+    const executionContext = buildMetaReviewExecutionContext({
+      bubbleId: "b_v11_state_schema_03c",
+      round: 2,
+      startedAt: "2026-04-06T10:00:00.000Z",
+      watchdogTimeoutMinutes: 60,
+      attempt: 1
+    });
+
+    const result = validateBubbleStateSnapshot({
+      bubble_id: "b_v11_state_schema_03c",
+      state: "RUNNING",
+      round: 2,
+      active_agent: "codex",
+      active_since: "2026-04-06T10:00:00.000Z",
+      active_role: "meta_reviewer",
+      execution_context: metaReviewExecutionContextToRunningContext(executionContext),
+      round_role_history: [],
+      last_command_at: "2026-04-06T10:01:00.000Z",
+      meta_review: {
+        execution_context: executionContext,
+        runtime_delivery: {
+          status: "uncertain",
+          reason_code: "META_REVIEW_REQUEST_DELIVERY_UNCONFIRMED",
+          message: "pane delivery not confirmed",
+          observed_at: "2026-04-06T10:01:00.000Z",
+          observed_for_handoff_id: null,
+          observed_for_round: executionContext.round
+        },
+        auto_rework_count: 0,
+        auto_rework_limit: 5,
+        sticky_human_gate: false
+      }
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) {
+      return;
+    }
+    expect(result.errors).toContainEqual({
+      path: "meta_review.runtime_delivery.observed_for_handoff_id",
+      message:
+        "Must be null when observed_for_round is null, and provided together when correlation is claimed"
+    });
+    expect(result.errors).toContainEqual({
+      path: "meta_review.runtime_delivery.observed_for_round",
+      message:
+        "Must be null when observed_for_handoff_id is null, and provided together when correlation is claimed"
+    });
+  });
+
   it("rejects pre-E1 execution authority snapshots without execution_id under the v11 shared schema", () => {
     const result = validateBubbleStateSnapshot({
       bubble_id: "b_v11_state_schema_04",
