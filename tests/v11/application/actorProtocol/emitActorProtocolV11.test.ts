@@ -9,6 +9,7 @@ import {
 } from "../../../../src/v11/shared/actorProtocol/actorEmitContext.js";
 import type { AgentName } from "../../../../src/types/bubble.js";
 import type {
+  ActorEmitContextSnapshot,
   ActorEmitContextError
 } from "../../../../src/v11/shared/actorProtocol/actorEmitContext.js";
 import {
@@ -149,6 +150,77 @@ function buildInconclusiveMetaReviewReportJson(runId: string): {
     findings_claim_source: "meta_review_artifact",
     findings_count: 0,
     meta_review_run_id: runId
+  };
+}
+
+function buildSyntheticAuthoritativeContext(input: {
+  repo?: string;
+  bubbleId: string;
+  handoffId: string;
+  executionId: string;
+  expectedRole: "implementer" | "reviewer" | "meta_reviewer";
+  expectedRound: number;
+  fingerprint: string;
+  worktreePath?: string;
+}): ActorEmitContextSnapshot {
+  const repo = input.repo ?? "/repo";
+  const worktreePath =
+    input.worktreePath ?? `${repo}/.pairflow/worktrees/${input.bubbleId}`;
+
+  return {
+    repo,
+    bubble_id: input.bubbleId,
+    handoff_id: input.handoffId,
+    execution_id: input.executionId,
+    expected_role: input.expectedRole,
+    expected_round: input.expectedRound,
+    expected_state_fingerprint: input.fingerprint,
+    worktree_path: worktreePath,
+    resolved: {
+      bubbleId: input.bubbleId,
+      repoPath: repo,
+      bubblePaths: {
+        statePath: `${repo}/.pairflow/bubbles/${input.bubbleId}/state.json`,
+        worktreePath
+      },
+      bubbleConfig: {
+        id: input.bubbleId,
+        agents: {
+          implementer: "codex",
+          reviewer: "claude"
+        }
+      }
+    } as never,
+    loaded_state: {
+      fingerprint: input.fingerprint,
+      state: {
+        bubble_id: input.bubbleId,
+        state: "RUNNING",
+        round: input.expectedRound,
+        active_agent:
+          input.expectedRole === "implementer"
+            ? "codex"
+            : input.expectedRole === "reviewer"
+              ? "claude"
+              : "codex",
+        active_role: input.expectedRole,
+        active_since: "2026-03-25T10:00:00.000Z",
+        round_role_history: [],
+        last_command_at: "2026-03-25T10:00:00.000Z",
+        execution_context: {
+          handoff_id: input.handoffId,
+          execution_id: input.executionId,
+          round: input.expectedRound,
+          active_role: input.expectedRole
+        }
+      }
+    } as never,
+    execution_context: {
+      handoff_id: input.handoffId,
+      execution_id: input.executionId,
+      round: input.expectedRound,
+      active_role: input.expectedRole
+    } as never
   };
 }
 
@@ -312,19 +384,14 @@ describe("emitActorProtocolV11 wrappers", () => {
           execution_id: "exec_actor_protocol_01_round2",
           question: "Need input"
         },
-        authoritativeContext: {
-          repo: "/repo",
-          bubble_id: "b_actor_protocol_01",
-          handoff_id: "implementer:b_actor_protocol_01:round:1:attempt:1",
-          execution_id: "exec_actor_protocol_01_round1",
-          expected_role: "implementer",
-          expected_round: 1,
-          expected_state_fingerprint: "fp_actor_protocol_01",
-          worktree_path: "/repo/.pairflow/worktrees/b_actor_protocol_01",
-          resolved: {} as never,
-          loaded_state: {} as never,
-          execution_context: {} as never
-        }
+        authoritativeContext: buildSyntheticAuthoritativeContext({
+          bubbleId: "b_actor_protocol_01",
+          handoffId: "implementer:b_actor_protocol_01:round:1:attempt:1",
+          executionId: "exec_actor_protocol_01_round1",
+          expectedRole: "implementer",
+          expectedRound: 1,
+          fingerprint: "fp_actor_protocol_01"
+        }) as never
       })
     ).rejects.toThrow(/Canonical actor emit handoff mismatch/u);
   });
@@ -340,19 +407,14 @@ describe("emitActorProtocolV11 wrappers", () => {
           execution_id: "exec_actor_protocol_exec_01_input",
           question: "Need input"
         },
-        authoritativeContext: {
-          repo: "/repo",
-          bubble_id: "b_actor_protocol_exec_01",
-          handoff_id: "implementer:b_actor_protocol_exec_01:round:2:attempt:1",
-          execution_id: "exec_actor_protocol_exec_01_context",
-          expected_role: "implementer",
-          expected_round: 2,
-          expected_state_fingerprint: "fp_actor_protocol_exec_01",
-          worktree_path: "/repo/.pairflow/worktrees/b_actor_protocol_exec_01",
-          resolved: {} as never,
-          loaded_state: {} as never,
-          execution_context: {} as never
-        }
+        authoritativeContext: buildSyntheticAuthoritativeContext({
+          bubbleId: "b_actor_protocol_exec_01",
+          handoffId: "implementer:b_actor_protocol_exec_01:round:2:attempt:1",
+          executionId: "exec_actor_protocol_exec_01_context",
+          expectedRole: "implementer",
+          expectedRound: 2,
+          fingerprint: "fp_actor_protocol_exec_01"
+        }) as never
       })
     ).rejects.toThrow(/Canonical actor emit execution mismatch/u);
   });
@@ -368,23 +430,52 @@ describe("emitActorProtocolV11 wrappers", () => {
           execution_id: "implementer:b_actor_protocol_exec_02:round:2:attempt:1",
           question: "Need input"
         },
-        authoritativeContext: {
-          repo: "/repo",
-          bubble_id: "b_actor_protocol_exec_02",
-          handoff_id: "implementer:b_actor_protocol_exec_02:round:2:attempt:1",
-          execution_id: "exec_actor_protocol_exec_02_context",
-          expected_role: "implementer",
-          expected_round: 2,
-          expected_state_fingerprint: "fp_actor_protocol_exec_02",
-          worktree_path: "/repo/.pairflow/worktrees/b_actor_protocol_exec_02",
-          resolved: {} as never,
-          loaded_state: {} as never,
-          execution_context: {} as never
-        }
+        authoritativeContext: buildSyntheticAuthoritativeContext({
+          bubbleId: "b_actor_protocol_exec_02",
+          handoffId: "implementer:b_actor_protocol_exec_02:round:2:attempt:1",
+          executionId: "exec_actor_protocol_exec_02_context",
+          expectedRole: "implementer",
+          expectedRound: 2,
+          fingerprint: "fp_actor_protocol_exec_02"
+        }) as never
       })
     ).rejects.toMatchObject({
       name: "ActorEmitContextError",
       reasonCode: "ACTOR_EMIT_FORBIDDEN_EXECUTION_ID_DERIVATION"
+    } satisfies Partial<ActorEmitContextError>);
+  });
+
+  it("rejects direct implementer wrapper calls when snapshot integrity is incoherent", async () => {
+    const authoritativeContext = buildSyntheticAuthoritativeContext({
+      bubbleId: "b_actor_protocol_integrity_impl_01",
+      handoffId: "implementer:b_actor_protocol_integrity_impl_01:round:2:attempt:1",
+      executionId: "exec_actor_protocol_integrity_impl_01",
+      expectedRole: "implementer",
+      expectedRound: 2,
+      fingerprint: "fp_actor_protocol_integrity_impl_01"
+    });
+
+    await expect(
+      actorProtocolModule.emitImplementerPilotActorProtocolV11({
+        input: {
+          kind: "human_question",
+          repo: "/repo",
+          bubble_id: "b_actor_protocol_integrity_impl_01",
+          handoff_id: "implementer:b_actor_protocol_integrity_impl_01:round:2:attempt:1",
+          execution_id: "exec_actor_protocol_integrity_impl_01",
+          question: "Need input"
+        },
+        authoritativeContext: {
+          ...authoritativeContext,
+          resolved: {
+            ...authoritativeContext.resolved,
+            repoPath: "/repo-other"
+          }
+        }
+      })
+    ).rejects.toMatchObject({
+      name: "ActorEmitContextError",
+      reasonCode: "ACTOR_EMIT_CONTEXT_INVALID"
     } satisfies Partial<ActorEmitContextError>);
   });
 
@@ -481,6 +572,41 @@ describe("emitActorProtocolV11 wrappers", () => {
           summary: "Should reject reviewer convergence"
         },
         authoritativeContext
+      })
+    ).rejects.toMatchObject({
+      name: "ActorEmitContextError",
+      reasonCode: "ACTOR_EMIT_CONTEXT_INVALID"
+    } satisfies Partial<ActorEmitContextError>);
+  });
+
+  it("rejects direct reviewer wrapper calls when snapshot integrity is incoherent", async () => {
+    const authoritativeContext = buildSyntheticAuthoritativeContext({
+      bubbleId: "b_actor_protocol_integrity_reviewer_01",
+      handoffId: "reviewer:b_actor_protocol_integrity_reviewer_01:round:2:attempt:1",
+      executionId: "exec_actor_protocol_integrity_reviewer_01",
+      expectedRole: "reviewer",
+      expectedRound: 2,
+      fingerprint: "fp_actor_protocol_integrity_reviewer_01"
+    });
+
+    await expect(
+      actorProtocolModule.emitReviewerActorProtocolV11({
+        input: {
+          kind: "pass",
+          repo: "/repo",
+          bubble_id: "b_actor_protocol_integrity_reviewer_01",
+          handoff_id: "reviewer:b_actor_protocol_integrity_reviewer_01:round:2:attempt:1",
+          execution_id: "exec_actor_protocol_integrity_reviewer_01",
+          summary: "Should reject incoherent reviewer snapshot",
+          no_findings: true
+        },
+        authoritativeContext: {
+          ...authoritativeContext,
+          loaded_state: {
+            ...authoritativeContext.loaded_state,
+            fingerprint: "fp_actor_protocol_integrity_reviewer_01_other"
+          }
+        }
       })
     ).rejects.toMatchObject({
       name: "ActorEmitContextError",
@@ -662,6 +788,45 @@ describe("emitActorProtocolV11 wrappers", () => {
     } satisfies Partial<ActorEmitContextError>);
   });
 
+  it("rejects direct meta-review wrapper calls when snapshot integrity is incoherent", async () => {
+    const authoritativeContext = buildSyntheticAuthoritativeContext({
+      bubbleId: "b_actor_protocol_integrity_meta_01",
+      handoffId: "meta_review:b_actor_protocol_integrity_meta_01:round:2:attempt:1",
+      executionId: "exec_actor_protocol_integrity_meta_01",
+      expectedRole: "meta_reviewer",
+      expectedRound: 2,
+      fingerprint: "fp_actor_protocol_integrity_meta_01"
+    });
+
+    await expect(
+      actorProtocolModule.emitMetaReviewerActorProtocolV11({
+        input: {
+          kind: "meta_review_result",
+          repo: "/repo",
+          bubble_id: "b_actor_protocol_integrity_meta_01",
+          handoff_id: "meta_review:b_actor_protocol_integrity_meta_01:round:2:attempt:1",
+          execution_id: "exec_actor_protocol_integrity_meta_01",
+          round: 2,
+          recommendation: "approve",
+          summary: "Should reject incoherent meta snapshot",
+          report_json: buildApproveMetaReviewReportJson(
+            "meta-review-wrapper-integrity-reject"
+          )
+        },
+        authoritativeContext: {
+          ...authoritativeContext,
+          resolved: {
+            ...authoritativeContext.resolved,
+            bubbleId: "b_actor_protocol_integrity_meta_01_other"
+          }
+        }
+      })
+    ).rejects.toMatchObject({
+      name: "ActorEmitContextError",
+      reasonCode: "ACTOR_EMIT_CONTEXT_INVALID"
+    } satisfies Partial<ActorEmitContextError>);
+  });
+
   it("accepts direct meta-review wrapper calls when recovery keeps execution authority but clears live ownership", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({
@@ -793,6 +958,18 @@ describe("emitActorProtocolV11 wrappers", () => {
     });
 
     expect(wrapperSpy).toHaveBeenCalledOnce();
+    expect(wrapperSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        authoritativeContext,
+        input: expect.objectContaining({
+          kind: "human_question",
+          bubble_id: bubble.bubbleId,
+          handoff_id: authoritativeContext.handoff_id,
+          execution_id: authoritativeContext.execution_id
+        })
+      }),
+      {}
+    );
     expect(result.kind).toBe("human_question");
     if (result.kind !== "human_question") {
       throw new Error("Expected human_question result.");
@@ -800,6 +977,58 @@ describe("emitActorProtocolV11 wrappers", () => {
     expect(result.human_question.envelope.refs).toEqual([
       "artifact://dispatch/ref.md"
     ]);
+  });
+
+  it("preserves reviewer human_question via the retained outer-dispatch baseline", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_actor_protocol_dispatch_reviewer_human_01",
+      task: "Outer dispatcher should preserve reviewer human_question baseline"
+    });
+    await switchFixtureToReviewerAuthority({
+      repoPath,
+      bubbleId: bubble.bubbleId,
+      statePath: bubble.paths.statePath,
+      reviewer: bubble.config.agents.reviewer,
+      watchdogTimeoutMinutes: bubble.config.watchdog_timeout_minutes
+    });
+    const authoritativeContext = await resolveActorEmitContextByBubbleId({
+      bubbleId: bubble.bubbleId,
+      repoPath
+    });
+    const reviewerWrapperSpy = vi.spyOn(
+      actorProtocolModule.reviewerActorProtocolV11,
+      "emit"
+    );
+    const implementerWrapperSpy = vi.spyOn(
+      actorProtocolModule.implementerPilotActorProtocolV11,
+      "emit"
+    );
+
+    const result = await actorProtocolModule.emitActorProtocolFromWorkspaceV11({
+      input: {
+        kind: "human_question",
+        repo: repoPath,
+        bubble_id: bubble.bubbleId,
+        handoff_id: authoritativeContext.handoff_id,
+        execution_id: authoritativeContext.execution_id,
+        question: "Should reviewer human_question baseline stay available?",
+        refs: ["artifact://dispatch/reviewer-human.md"]
+      },
+      authoritativeContext
+    });
+
+    expect(reviewerWrapperSpy).not.toHaveBeenCalled();
+    expect(implementerWrapperSpy).not.toHaveBeenCalled();
+    expect(result.kind).toBe("human_question");
+    if (result.kind !== "human_question") {
+      throw new Error("Expected human_question result.");
+    }
+    expect(result.human_question.envelope.refs).toEqual([
+      "artifact://dispatch/reviewer-human.md"
+    ]);
+    expect(result.human_question.state.state).toBe("WAITING_HUMAN");
   });
 
   it("routes reviewer pass through the Phase E wrapper from the outer dispatcher", async () => {
@@ -839,6 +1068,18 @@ describe("emitActorProtocolV11 wrappers", () => {
     });
 
     expect(wrapperSpy).toHaveBeenCalledOnce();
+    expect(wrapperSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        authoritativeContext,
+        input: expect.objectContaining({
+          kind: "pass",
+          bubble_id: bubble.bubbleId,
+          handoff_id: authoritativeContext.handoff_id,
+          execution_id: authoritativeContext.execution_id
+        })
+      }),
+      {}
+    );
     expect(result.kind).toBe("pass");
     if (result.kind !== "pass") {
       throw new Error("Expected pass result.");
@@ -892,6 +1133,18 @@ describe("emitActorProtocolV11 wrappers", () => {
     });
 
     expect(wrapperSpy).toHaveBeenCalledOnce();
+    expect(wrapperSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        authoritativeContext,
+        input: expect.objectContaining({
+          kind: "convergence",
+          bubble_id: bubble.bubbleId,
+          handoff_id: authoritativeContext.handoff_id,
+          execution_id: authoritativeContext.execution_id
+        })
+      }),
+      {}
+    );
     expect(result.kind).toBe("convergence");
     if (result.kind !== "convergence") {
       throw new Error("Expected convergence result.");
@@ -940,6 +1193,18 @@ describe("emitActorProtocolV11 wrappers", () => {
     });
 
     expect(wrapperSpy).toHaveBeenCalledOnce();
+    expect(wrapperSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        authoritativeContext,
+        input: expect.objectContaining({
+          kind: "meta_review_result",
+          bubble_id: bubble.bubbleId,
+          handoff_id: authoritativeContext.handoff_id,
+          execution_id: authoritativeContext.execution_id
+        })
+      }),
+      {}
+    );
     expect(result.kind).toBe("meta_review_result");
     if (result.kind !== "meta_review_result") {
       throw new Error("Expected meta_review_result.");
@@ -1019,6 +1284,38 @@ describe("emitActorProtocolV11 wrappers", () => {
       reasonCode: "ACTOR_EMIT_CONTEXT_INVALID",
       message:
         "ACTOR_EMIT_CONTEXT_INVALID: meta_reviewer authority only supports meta_review_result emits."
+    } satisfies Partial<ActorEmitContextError>);
+  });
+
+  it("rejects convergence from the outer dispatcher when authority is implementer", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_actor_protocol_dispatch_impl_convergence_reject_01",
+      task: "Outer dispatcher should reject convergence under implementer authority"
+    });
+    const authoritativeContext = await resolveActorEmitContextByBubbleId({
+      bubbleId: bubble.bubbleId,
+      repoPath
+    });
+
+    await expect(
+      actorProtocolModule.emitActorProtocolFromWorkspaceV11({
+        input: {
+          kind: "convergence",
+          repo: repoPath,
+          bubble_id: bubble.bubbleId,
+          handoff_id: authoritativeContext.handoff_id,
+          execution_id: authoritativeContext.execution_id,
+          summary: "Should reject convergence under implementer authority"
+        },
+        authoritativeContext
+      })
+    ).rejects.toMatchObject({
+      name: "ActorEmitContextError",
+      reasonCode: "ACTOR_EMIT_CONTEXT_INVALID",
+      message:
+        "ACTOR_EMIT_CONTEXT_INVALID: implementer authority does not support convergence via outer dispatcher fallback."
     } satisfies Partial<ActorEmitContextError>);
   });
 

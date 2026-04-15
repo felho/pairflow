@@ -322,6 +322,27 @@ describe("parseAgentEmitCommandOptions", () => {
       "ACTOR_EMIT_FORBIDDEN_EXECUTION_ID_DERIVATION: --execution-id must not equal --handoff-id; inferred execution authority is forbidden."
     );
   });
+
+  it("rejects explicit target-authority override flags on the public emit surface", () => {
+    expect(() =>
+      parseAgentEmitCommandOptions([
+        "--kind",
+        "pass",
+        "--repo",
+        "/tmp/repo",
+        "--bubble-id",
+        "b_agent_emit_override_03",
+        "--handoff-id",
+        "implementer:b_agent_emit_override_03:round:1:attempt:1",
+        "--execution-id",
+        "exec_b_agent_emit_override_03_round1",
+        "--summary",
+        "Should fail",
+        "--target-authority",
+        "reviewer"
+      ])
+    ).toThrow(/ACTOR_EMIT_OPTIONS_INVALID: Unknown option '--target-authority'/u);
+  });
 });
 
 describe("runAgentEmitCommand", () => {
@@ -511,14 +532,37 @@ describe("runAgentEmitCommand", () => {
         expected_round: 1,
         expected_state_fingerprint: "fp_conv_guard_01",
         worktree_path: bubble.paths.worktreePath,
-        resolved: {} as never,
+        resolved: {
+          bubbleId: bubble.bubbleId,
+          repoPath,
+          bubblePaths: {
+            statePath: bubble.paths.statePath,
+            worktreePath: bubble.paths.worktreePath
+          },
+          bubbleConfig: bubble.config
+        } as never,
         loaded_state: {
           fingerprint: "fp_conv_guard_01",
           state: {
-            active_agent: null
+            bubble_id: bubble.bubbleId,
+            state: "RUNNING",
+            round: 1,
+            active_agent: null,
+            active_role: "reviewer",
+            execution_context: {
+              handoff_id: "reviewer:b_agent_emit_conv_guard_01:round:1:attempt:1",
+              execution_id: "exec_agent_emit_conv_guard_01",
+              round: 1,
+              active_role: "reviewer"
+            }
           }
         } as never,
-        execution_context: {} as never
+        execution_context: {
+          handoff_id: "reviewer:b_agent_emit_conv_guard_01:round:1:attempt:1",
+          execution_id: "exec_agent_emit_conv_guard_01",
+          round: 1,
+          active_role: "reviewer"
+        } as never
       });
 
     await expect(

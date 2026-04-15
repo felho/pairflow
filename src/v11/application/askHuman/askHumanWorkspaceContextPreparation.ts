@@ -1,3 +1,6 @@
+import {
+  assertActorEmitContextSnapshotIntegrity
+} from "../../shared/actorProtocol/actorEmitContext.js";
 import type {
   PreparedAskHumanWorkspaceContext,
   PrepareAskHumanWorkspaceContextInput
@@ -6,6 +9,10 @@ import type {
 export async function prepareAskHumanWorkspaceContext(
   input: PrepareAskHumanWorkspaceContextInput
 ): Promise<PreparedAskHumanWorkspaceContext> {
+  if (input.authoritativeContext !== undefined) {
+    assertActorEmitContextSnapshotIntegrity(input.authoritativeContext);
+  }
+
   const authoritativeResolved: PreparedAskHumanWorkspaceContext["resolved"] | undefined =
     input.authoritativeContext === undefined
       ? undefined

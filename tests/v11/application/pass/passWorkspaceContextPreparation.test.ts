@@ -209,15 +209,24 @@ describe("passWorkspaceContextPreparation", () => {
           } as never,
           loaded_state: {
             state: {
+              bubble_id: "b_pass_ctx_03",
               state: "RUNNING",
-              round: 2
+              round: 2,
+              active_role: "implementer",
+              execution_context: {
+                handoff_id: "implementer:b_pass_ctx_03:round:2:attempt:1",
+                execution_id: "exec_pass_ctx_03_round2",
+                round: 2,
+                active_role: "implementer"
+              }
             },
             fingerprint: "fp_ctx_03"
           } as never,
           execution_context: {
             handoff_id: "implementer:b_pass_ctx_03:round:2:attempt:1",
             execution_id: "exec_pass_ctx_03_round2",
-            round: 2
+            round: 2,
+            active_role: "implementer"
           } as never
         },
         createError: (message: PairflowCommandErrorInput) =>
@@ -266,5 +275,149 @@ describe("passWorkspaceContextPreparation", () => {
     expect(prepared.loadedState.fingerprint).toBe("fp_ctx_03");
     expect(prepared.state.round).toBe(2);
     expect(prepared.resolved.cwd).toBe("/repo/.pairflow/worktrees/b_pass_ctx_03");
+  });
+
+  it("rejects incoherent authoritative context snapshots before any workspace fallback", async () => {
+    let resolveBubbleCalls = 0;
+    let readStateCalls = 0;
+
+    await expect(
+      preparePassWorkspaceContext(
+        {
+          now: new Date("2026-03-19T22:06:00.000Z"),
+          nowIso: "2026-03-19T22:06:00.000Z",
+          authoritativeContext: {
+            repo: "/repo",
+            bubble_id: "b_pass_ctx_04",
+            handoff_id: "implementer:b_pass_ctx_04:round:2:attempt:1",
+            execution_id: "exec_pass_ctx_04_round2",
+            expected_role: "implementer",
+            expected_round: 2,
+            expected_state_fingerprint: "fp_ctx_04",
+            worktree_path: "/repo/.pairflow/worktrees/b_pass_ctx_04",
+            resolved: {
+              bubbleId: "b_pass_ctx_04_conflict",
+              repoPath: "/repo",
+              bubblePaths: {
+                statePath: "/repo/.pairflow/bubbles/b_pass_ctx_04/state.json",
+                worktreePath: "/repo/.pairflow/worktrees/b_pass_ctx_04"
+              },
+              bubbleConfig: {
+                id: "b_pass_ctx_04",
+                agents: {
+                  implementer: "codex",
+                  reviewer: "claude"
+                }
+              }
+            } as never,
+            loaded_state: {
+              state: {
+                bubble_id: "b_pass_ctx_04",
+                state: "RUNNING",
+                round: 2,
+                active_role: "implementer",
+                execution_context: {
+                  handoff_id: "implementer:b_pass_ctx_04:round:2:attempt:1",
+                  execution_id: "exec_pass_ctx_04_round2",
+                  round: 2,
+                  active_role: "implementer"
+                }
+              },
+              fingerprint: "fp_ctx_04"
+            } as never,
+            execution_context: {
+              handoff_id: "implementer:b_pass_ctx_04:round:2:attempt:1",
+              execution_id: "exec_pass_ctx_04_round2",
+              round: 2,
+              active_role: "implementer"
+            } as never
+          },
+          createError: (message: PairflowCommandErrorInput) =>
+            new SyntheticPassCommandError(toErrorMessage(message))
+        },
+        {
+          resolveBubbleFromWorkspaceCwd: async () => {
+            resolveBubbleCalls += 1;
+            throw new Error("resolveBubbleFromWorkspaceCwd should not run");
+          },
+          ensureBubbleInstanceIdForMutation: async () => {
+            throw new Error("ensureBubbleInstanceIdForMutation should not run");
+          },
+          readStateSnapshot: async () => {
+            readStateCalls += 1;
+            throw new Error("readStateSnapshot should not run");
+          }
+        }
+      )
+    ).rejects.toMatchObject({
+      name: "ActorEmitContextError",
+      reasonCode: "ACTOR_EMIT_CONTEXT_INVALID",
+      message:
+        "Canonical actor emit resolved bubble mismatch: expected b_pass_ctx_04, resolved b_pass_ctx_04_conflict."
+    });
+
+    expect(resolveBubbleCalls).toBe(0);
+    expect(readStateCalls).toBe(0);
+  });
+
+  it("normalizes missing execution_id in authoritative snapshot state to ACTOR_EMIT_CONTEXT_INVALID", async () => {
+    await expect(
+      preparePassWorkspaceContext(
+        {
+          now: new Date("2026-03-19T22:07:00.000Z"),
+          nowIso: "2026-03-19T22:07:00.000Z",
+          authoritativeContext: {
+            repo: "/repo",
+            bubble_id: "b_pass_ctx_05",
+            handoff_id: "implementer:b_pass_ctx_05:round:2:attempt:1",
+            execution_id: "exec_pass_ctx_05_round2",
+            expected_role: "implementer",
+            expected_round: 2,
+            expected_state_fingerprint: "fp_ctx_05",
+            worktree_path: "/repo/.pairflow/worktrees/b_pass_ctx_05",
+            resolved: {
+              bubbleId: "b_pass_ctx_05",
+              repoPath: "/repo",
+              bubblePaths: {
+                statePath: "/repo/.pairflow/bubbles/b_pass_ctx_05/state.json",
+                worktreePath: "/repo/.pairflow/worktrees/b_pass_ctx_05"
+              },
+              bubbleConfig: {
+                id: "b_pass_ctx_05",
+                agents: {
+                  implementer: "codex",
+                  reviewer: "claude"
+                }
+              }
+            } as never,
+            loaded_state: {
+              state: {
+                bubble_id: "b_pass_ctx_05",
+                state: "RUNNING",
+                round: 2,
+                active_role: "implementer",
+                execution_context: {
+                  handoff_id: "implementer:b_pass_ctx_05:round:2:attempt:1",
+                  round: 2,
+                  active_role: "implementer"
+                }
+              },
+              fingerprint: "fp_ctx_05"
+            } as never,
+            execution_context: {
+              handoff_id: "implementer:b_pass_ctx_05:round:2:attempt:1",
+              execution_id: "exec_pass_ctx_05_round2",
+              round: 2,
+              active_role: "implementer"
+            } as never
+          },
+          createError: (message: PairflowCommandErrorInput) =>
+            new SyntheticPassCommandError(toErrorMessage(message))
+        }
+      )
+    ).rejects.toMatchObject({
+      name: "ActorEmitContextError",
+      reasonCode: "ACTOR_EMIT_CONTEXT_INVALID"
+    });
   });
 });

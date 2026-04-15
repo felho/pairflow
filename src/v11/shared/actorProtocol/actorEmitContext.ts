@@ -321,3 +321,152 @@ export function assertActorEmitContextMatches(input: {
     });
   }
 }
+
+export function assertActorEmitContextSnapshotIntegrity(
+  context: ActorEmitContextSnapshot
+): void {
+  const mismatchRoute = "assert_actor_emit_context_snapshot_integrity";
+  const state = context.loaded_state.state;
+
+  if (state.bubble_id !== context.bubble_id) {
+    throw new ActorEmitContextError({
+      reasonCode: "ACTOR_EMIT_CONTEXT_INVALID",
+      message:
+        `Canonical actor emit snapshot bubble mismatch: expected ${context.bubble_id}, loaded ${state.bubble_id}.`,
+      context: {
+        route: mismatchRoute,
+        expectedAuthority: context.bubble_id,
+        receivedKind: state.bubble_id
+      }
+    });
+  }
+
+  if (context.resolved.bubbleId !== context.bubble_id) {
+    throw new ActorEmitContextError({
+      reasonCode: "ACTOR_EMIT_CONTEXT_INVALID",
+      message:
+        `Canonical actor emit resolved bubble mismatch: expected ${context.bubble_id}, resolved ${context.resolved.bubbleId}.`,
+      context: {
+        route: mismatchRoute,
+        expectedAuthority: context.bubble_id,
+        receivedKind: context.resolved.bubbleId
+      }
+    });
+  }
+
+  if (context.resolved.repoPath !== context.repo) {
+    throw new ActorEmitContextError({
+      reasonCode: "ACTOR_EMIT_CONTEXT_INVALID",
+      message:
+        `Canonical actor emit repo mismatch: expected ${context.repo}, resolved ${context.resolved.repoPath}.`,
+      context: {
+        route: mismatchRoute,
+        expectedAuthority: context.repo,
+        receivedKind: context.resolved.repoPath
+      }
+    });
+  }
+
+  if (context.resolved.bubblePaths.worktreePath !== context.worktree_path) {
+    throw new ActorEmitContextError({
+      reasonCode: "ACTOR_EMIT_CONTEXT_INVALID",
+      message:
+        `Canonical actor emit worktree mismatch: expected ${context.worktree_path}, resolved ${context.resolved.bubblePaths.worktreePath}.`,
+      context: {
+        route: mismatchRoute,
+        expectedAuthority: context.worktree_path,
+        receivedKind: context.resolved.bubblePaths.worktreePath
+      }
+    });
+  }
+
+  if (context.loaded_state.fingerprint !== context.expected_state_fingerprint) {
+    throw new ActorEmitContextError({
+      reasonCode: "ACTOR_EMIT_CONTEXT_INVALID",
+      message:
+        `Canonical actor emit fingerprint mismatch: expected ${context.expected_state_fingerprint}, loaded ${context.loaded_state.fingerprint}.`,
+      context: {
+        route: mismatchRoute,
+        expectedAuthority: context.expected_state_fingerprint,
+        receivedKind: context.loaded_state.fingerprint
+      }
+    });
+  }
+
+  const executionContext = assertExecutionContext(
+    state,
+    "ACTOR_EMIT_CONTEXT_INVALID"
+  );
+  let executionId: string;
+  try {
+    executionId = assertExecutionContextHasExecutionId(executionContext);
+  } catch (error) {
+    if (error instanceof ActorEmitContextError) {
+      throw new ActorEmitContextError({
+        reasonCode: "ACTOR_EMIT_CONTEXT_INVALID",
+        message:
+          `${error.message} (snapshot integrity route requires ACTOR_EMIT_CONTEXT_INVALID normalization).`,
+        context: {
+          route: mismatchRoute,
+          expectedAuthority: "execution_id",
+          receivedKind:
+            error.context?.receivedKind
+            ?? executionContext.active_role
+        }
+      });
+    }
+    throw error;
+  }
+
+  if (executionContext.handoff_id !== context.handoff_id) {
+    throw new ActorEmitContextError({
+      reasonCode: "ACTOR_EMIT_CONTEXT_INVALID",
+      message:
+        `Canonical actor emit snapshot handoff mismatch: expected ${context.handoff_id}, loaded ${executionContext.handoff_id}.`,
+      context: {
+        route: mismatchRoute,
+        expectedAuthority: context.handoff_id,
+        receivedKind: executionContext.handoff_id
+      }
+    });
+  }
+
+  if (executionId !== context.execution_id) {
+    throw new ActorEmitContextError({
+      reasonCode: "ACTOR_EMIT_CONTEXT_INVALID",
+      message:
+        `Canonical actor emit snapshot execution mismatch: expected ${context.execution_id}, loaded ${executionId}.`,
+      context: {
+        route: mismatchRoute,
+        expectedAuthority: context.execution_id,
+        receivedKind: executionId
+      }
+    });
+  }
+
+  if (executionContext.round !== context.expected_round) {
+    throw new ActorEmitContextError({
+      reasonCode: "ACTOR_EMIT_CONTEXT_INVALID",
+      message:
+        `Canonical actor emit snapshot round mismatch: expected ${context.expected_round}, loaded ${String(executionContext.round)}.`,
+      context: {
+        route: mismatchRoute,
+        expectedAuthority: String(context.expected_round),
+        receivedKind: String(executionContext.round)
+      }
+    });
+  }
+
+  if (executionContext.active_role !== context.expected_role) {
+    throw new ActorEmitContextError({
+      reasonCode: "ACTOR_EMIT_CONTEXT_INVALID",
+      message:
+        `Canonical actor emit snapshot role mismatch: expected ${context.expected_role}, loaded ${executionContext.active_role}.`,
+      context: {
+        route: mismatchRoute,
+        expectedAuthority: context.expected_role,
+        receivedKind: executionContext.active_role
+      }
+    });
+  }
+}

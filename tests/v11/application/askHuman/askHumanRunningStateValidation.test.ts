@@ -32,6 +32,22 @@ describe("askHumanRunningStateValidation", () => {
     ).not.toThrow();
   });
 
+  it("preserves reviewer-origin human-question baseline while RUNNING", () => {
+    expect(() =>
+      assertAskHumanRunningState(
+        {
+          state: "RUNNING",
+          round: 2,
+          active_agent: "claude",
+          active_role: "reviewer",
+          active_since: "2026-02-21T12:00:00.000Z"
+        } as never,
+        (message: PairflowCommandErrorInput) =>
+          new AskHumanRunningStateValidationError(toErrorMessage(message))
+      )
+    ).not.toThrow();
+  });
+
   it("rejects invalid RUNNING constraints with preserved messages", () => {
     expect(() =>
       assertAskHumanRunningState(
