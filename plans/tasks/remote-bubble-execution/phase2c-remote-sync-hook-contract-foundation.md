@@ -35,6 +35,20 @@ owners:
    - parser/validator/test szinten,
    - consume/execute ownership tovabbra is successor-only `Phase 2D`.
 
+## Parent Plan Fit / Stable Sequencing
+
+1. A task a parent plan `Phase 2B -> Phase 2C -> Phase 2D` sorrendjet valtozatlanul orokli:
+   - `Phase 2B` ownershipa a remote create write-path exposure es a created-pointer persistence lezárása,
+   - `Phase 2C` ownershipa kizarolag a sync-hook config-contract closure,
+   - `Phase 2D` ownershipa tovabbra is kulon a remote SSH start activationnel es a hook consume/invoke szemantikaval.
+2. Ez a task nem nyit uj sequencinget a parent planhoz kepest:
+   - nem mozditja elore a remote start activationt,
+   - nem hoz be uj operator read-model vagy cleanup routing scope-ot,
+   - nem materializalja elore a `Phase 2D+` utodtaskok barmelyiket.
+3. Remaining-task viability explicit:
+   - a `Phase 2D` tovabbra is szuk activation task marad, mert a hook itt csak validalt config-contractkent jelenik meg,
+   - a `Phase 2E`/`2F` read-model consume, illetve a `Phase 3A`/`3B`/`3C` mutation/cleanup/recovery scope erintetlen marad.
+
 ## Implementation Target Decision
 
 1. `implementable_now`: `yes`
@@ -51,6 +65,10 @@ owners:
 4. A `pairflow_sync_command` ebben a fazisban opaque string contract:
    - Pairflow nem ertelmezi package managerre, repo layoutra vagy exit-code policyre bontva,
    - csak azt zarjuk le, hogy a global configban optional, non-empty stringkent letezhet.
+5. Design-doc fit:
+   - a `docs/remote-bubble-execution.md` a sync-hook config-surface es az opaque target-specific string jelleg design baseline-ja,
+   - ez a task ebbol csak a config-contract inheritance-et orokli,
+   - a hook consume/invoke/warn/continue szemantika tovabbra is successor-only `Phase 2D`.
 
 ## L0 - Policy
 
@@ -77,6 +95,7 @@ Lezarni a remote pre-start sync hook minimal config-contractjat ugy, hogy a keso
    - owned here: global config contract closure, parser, validator, type shape, tests,
    - explicit successor `Phase 2D`: optional hook consume/invoke/skip/fail-soft operational semantics,
    - explicit out-of-scope successors: status/list/attach/read-model es lifecycle routing.
+8. Design-doc containment rule: a `docs/remote-bubble-execution.md` ebben a fazisban csak a hook config-surface letezesenek es target-specific opaque-string jellegenek baseline-ja; a remote start-flowban szereplo invoke/warn/continue narrative tovabbra sem proof surface ehhez a taskhoz.
 
 ### Authority Boundary Map
 
@@ -134,6 +153,7 @@ Lezarni a remote pre-start sync hook minimal config-contractjat ugy, hogy a keso
 3. Bubble-level hook override.
 4. SSH transport, shell escaping, quoting strategy, exit-code mapping.
 5. `status`, `list`, `attach`, approval, cleanup vagy recovery consume.
+6. Az elozo pontban tiltott operator-visible surfaces barmelyiken olyan wording vagy start-result reporting, amely hook execution outcome-ot reportal, warningol vagy inferal.
 
 ### Safety Defaults
 
@@ -211,7 +231,7 @@ Lezarni a remote pre-start sync hook minimal config-contractjat ugy, hogy a keso
 |---|---|---|---|---|---|---|---|
 | T1 | parser accepts remote sync hook field | `[remotes.homelab]` with quoted `pairflow_sync_command` | parse global TOML | parsed remote object hordozza a mezőt | P1 | required-now | `tests/config/pairflowConfig.test.ts` |
 | T2 | validator rejects whitespace-only sync hook | programmatic config object with `"   "` | validate global config | `PAIRFLOW_REMOTE_CONFIG_INVALID` jellegu hiba a `remotes.<alias>.pairflow_sync_command` pathon | P1 | required-now | `tests/config/pairflowConfig.test.ts` |
-| T3 | validator normalizes opaque hook string | programmatic config object with surrounding whitespace | validate global config | trimelt string jelenik meg a validated configban | P1 | required-now | `tests/config/pairflowConfig.test.ts` |
+| T3 | validator normalizes opaque hook string | programmatic config object with leading/trailing whitespace | validate global config | csak a leading/trailing whitespace trimelt string jelenik meg a validated configban; a belso opaque command content valtozatlan marad | P1 | required-now | `tests/config/pairflowConfig.test.ts` |
 | T4 | missing hook remains explicit absence | remote definition without field | parse/validate config | nincs `pairflow_sync_command`, es ez valid allapot | P1 | required-now | `tests/config/pairflowConfig.test.ts` |
 | T5 | unknown remote fields still reject despite new allowlist entry | remote definition with unrelated future field | validate config | tovabbra is unknown-field hiba, a task csak a sync-hook fieldet authorizalja | P1 | required-now | `tests/config/pairflowConfig.test.ts` |
 | T6 | load path preserves optional sync hook contract | temp `config.toml` with `[remotes.homelab].pairflow_sync_command` | `loadPairflowGlobalConfig(path)` | a loaded config trimelt optional `pairflow_sync_command` mezot ad vissza a validated remote objectben | P1 | required-now | `tests/config/pairflowConfig.test.ts` |
@@ -220,7 +240,7 @@ Lezarni a remote pre-start sync hook minimal config-contractjat ugy, hogy a keso
 
 1. A `pairflow_sync_command` ugyanabba az allowlist/parse/validate/normalize mintaba keruljon, mint a meglevo optional remote string mezok, de ne vezessen be shell-level ertelmezest.
 2. A field csak remote sectionben legyen legalis; ne nyisson uj top-level global key contractot.
-3. A success pathon trimelt string keruljon a validated configba.
+3. A success pathon csak leading/trailing whitespace-trimelt string keruljon a validated configba; a belso opaque command content nem normalizalhato tovabb.
 4. A field absence semantics maradjon explicit optional, ne sentinel stringgel legyen kodolva.
 
 ### 4) Must-Use / Must-Not-Use
@@ -228,7 +248,7 @@ Lezarni a remote pre-start sync hook minimal config-contractjat ugy, hogy a keso
 | Type | Reference / Surface | Priority | Timing |
 |---|---|---|---|
 | must-use | `plans/remote-bubble-execution-contract-and-phasing-plan-v2.md` | P1 | required-now |
-| must-use | `docs/remote-bubble-execution.md` sync-hook wording mint design baseline | P2 | required-now |
+| must-use | `docs/remote-bubble-execution.md` mint a sync-hook config-surface es opaque target-specific wording baseline-ja | P2 | required-now |
 | must-not-use | `start/**` consume/invoke behavior | P1 | required-now |
 | must-not-use | `pairflow_command` alapju implicit hook fallback | P1 | required-now |
 | must-not-use | bubble-local vagy runtime-derived sync hook source | P1 | required-now |
