@@ -79,6 +79,7 @@ owners:
    - `src/v11/infrastructure/artifact/bubble/remoteExecutionArtifacts.ts`
    - barmely `start/**`, `status/**`, `list/**`, `attach/**`, `commit/**`, `merge/**`, `delete/**` consumer
 6. Ha a megoldas uj shared/defaults wiringot nyitna csak azert, hogy a create write-path mukodjon, azt review-ban scope-driftkent kell kezelni, hacsak nincs ra evidence-backed compile-only kenyszer.
+7. Review veto rule: pusztan azert, mert egy frozen-by-default file vagy downstream runtime consumer megnyitasa "egyszerubbnek tunik", a patch meg mindig scope-driftnek szamit; elfogadhato kivetel csak explicit compile-only vagy type-boundary kenyszer.
 
 ## L0 - Policy
 
@@ -167,6 +168,7 @@ Lezarni a remote bubble local create write-pathjat ugy, hogy a felhasznalo `pair
 2. Ha a create scaffold egy resze mar kiirodott, de a `remote.json` created-pointer write elbukik, a command teljes kimenete tovabbra is failure; a bubble nem tekintheto ervenyes remote-created bubble-nek pusztan a megmaradt `bubble.toml` vagy mas scaffold artifact miatt.
 3. Phase 2B-ben a `remote.json` write failure utan nincs uj, required-now rollback vagy partial-scaffold cleanup kovetelmeny; a fail-closed contract ebben a fazisban a terminalis command failure es a success-claim tiltasa, nem pedig a mar kiirt scaffold artifactok visszabontasa.
 4. A `remote.json(kind=\"created\")` onmagaban sem jelent runtime readiness-t; start/read-model/attach semantics tovabbra is successor phase ownership.
+5. Elfogadhatatlan success-claim pelda ebben a fazisban barmely olyan wording, amely a bubble-t "started", "reachable" vagy "attachable" remote runtimekent allitja be; a maximum megengedett claim a persisted remote-created authority.
 
 ### Contract Boundary / Blast Radius
 
@@ -212,6 +214,7 @@ Lezarni a remote bubble local create write-pathjat ugy, hogy a felhasznalo `pair
 | Forbidden fallback | tilos runtime vagy cache alapu remote authority | invalid remote create nem eshet vissza local bubble create-ra | P1 | required-now |
 | Allowed resolution path | alias lookup utan executor + created pointer persistalhato | create path determinisztikus, probe-mentes marad | P1 | required-now |
 | Missing-data rule | unknown alias vagy global config load/validate hiba eseten fail-closed | nincs partial success es nincs remote.json/state-cache maradvanyra epitett success claim | P1 | required-now |
+| Success-claim boundary | create siker legfeljebb persisted remote-created authorityt allithat | nincs started/reachable/attachable runtime-claim | P2 | required-now |
 | Phase boundary | ez a task csak create write-path; runtime/read-model tovabbra is successor | ne nyisson Phase 2C/2D/2E scope-ot | P2 | required-now |
 
 ### 0a) Shared Contract Compatibility
@@ -316,6 +319,12 @@ Implementation notes:
 | T7 | remote create does not initialize started runtime artifacts | valid remote create input | create bubble | nincs `state-cache.json`, nincs started-pointer field, nincs runtime activation side effect | P1 | required-now | `tests/core/bubble/createBubble.test.ts` |
 | T8 | created pointer payload alias-resolved and created-only | valid alias with `host` and optional `default_port_forwards` | create bubble | `remote.json.host` a global config `host` erteket kapja, `portForwards` csak a configbol johet, alias string vagy path nem szivarog pointer mezobe | P1 | required-now | `tests/core/bubble/createBubble.test.ts` |
 | T9 | remote pointer write failure is terminal | valid remote create input, de `writeRemotePointer(...)` hibat dob | create bubble | a command failure-rel zarul, nincs success result, nincs `state-cache.json`, es a review nem fogadhat el `executor`-only partial success interpretationt | P1 | required-now | `tests/core/bubble/createBubble.test.ts`, `tests/v11/application/create/createCliRunner.test.ts` |
+
+Acceptance notes:
+
+1. A review nem fogadhat el parser-only coverage-t: legalabb egy persistence-level tesztnek tenylegesen ellenoriznie kell a kiirt `bubble.toml` `executor` blokkot es a `remote.json` payloadot.
+2. T3/T4/T7/T8 egyutt artifact-szintu allitasokat kell adjon: local create eseten explicit assert legyen az `executor` es `remote.json` hianya, remote create eseten pedig a `remote.json` jelenlete mellett a `state-cache.json` hianya is.
+3. T5/T6 nem elegedhet meg azzal, hogy "hiba tortent"; a fail-closed viselkedesnek azt is bizonyitania kell, hogy nincs fallback-to-local success path es nincs runtime-ready success-claim.
 
 ## L2 - Implementation Notes (Optional)
 
