@@ -161,6 +161,7 @@ export interface PairflowRemoteHostConfig {
   repo_base: string;
   user?: string;
   pairflow_command?: string;
+  pairflow_sync_command?: string;
   default_port_forwards?: number[];
 }
 

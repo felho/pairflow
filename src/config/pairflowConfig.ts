@@ -32,6 +32,7 @@ const REMOTE_CONFIG_KEYS = new Set([
   "repo_base",
   "user",
   "pairflow_command",
+  "pairflow_sync_command",
   "default_port_forwards"
 ]);
 const REMOTE_ALIAS_PATTERN = /^[A-Za-z0-9_-]+$/u;
@@ -391,15 +392,8 @@ export function validatePairflowGlobalConfig(
           continue;
         }
 
-        const allowedKeys = new Set([
-          "host",
-          "repo_base",
-          "user",
-          "pairflow_command",
-          "default_port_forwards"
-        ]);
         for (const key of Object.keys(remoteValue)) {
-          if (!allowedKeys.has(key)) {
+          if (!REMOTE_CONFIG_KEYS.has(key)) {
             errors.push({
               path: `${remotePath}.${key}`,
               message: `${PAIRFLOW_REMOTE_CONFIG_INVALID}: Unknown remote config field "${key}"`
@@ -411,6 +405,7 @@ export function validatePairflowGlobalConfig(
         const repoBase = remoteValue.repo_base;
         const user = remoteValue.user;
         const pairflowCommand = remoteValue.pairflow_command;
+        const pairflowSyncCommand = remoteValue.pairflow_sync_command;
         const defaultPortForwards = remoteValue.default_port_forwards;
 
         if (!isNonEmptyString(host)) {
@@ -444,6 +439,16 @@ export function validatePairflowGlobalConfig(
           });
         }
 
+        if (
+          pairflowSyncCommand !== undefined
+          && !isNonEmptyString(pairflowSyncCommand)
+        ) {
+          errors.push({
+            path: `${remotePath}.pairflow_sync_command`,
+            message: `${PAIRFLOW_REMOTE_CONFIG_INVALID}: Must be a non-empty string`
+          });
+        }
+
         let validatedDefaultPortForwards: number[] | undefined;
         if (defaultPortForwards !== undefined) {
           validatedDefaultPortForwards = validateRemoteDefaultPortForwards(
@@ -460,6 +465,11 @@ export function validatePairflowGlobalConfig(
             ...(user !== undefined ? { user: (user as string).trim() } : {}),
             ...(pairflowCommand !== undefined
               ? { pairflow_command: (pairflowCommand as string).trim() }
+              : {}),
+            ...(pairflowSyncCommand !== undefined
+              ? {
+                  pairflow_sync_command: (pairflowSyncCommand as string).trim()
+                }
               : {}),
             ...(validatedDefaultPortForwards !== undefined
               ? { default_port_forwards: validatedDefaultPortForwards }
