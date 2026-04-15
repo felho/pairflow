@@ -8,6 +8,9 @@ import type {
 import {
   IDEATION_PASS_BLOCKED
 } from "../../shared/ideation/ideationReasonCodes.js";
+import {
+  assertActorEmitContextSnapshotIntegrity
+} from "../../shared/actorProtocol/actorEmitContext.js";
 import type { ActorEmitContextSnapshot } from "../../shared/actorProtocol/actorEmitContext.js";
 import type { AgentName, BubbleStateSnapshot } from "../../../types/bubble.js";
 import {
@@ -59,6 +62,10 @@ export async function preparePassWorkspaceContext(
   const resolveIdeation =
     dependencies.resolveIdeationMetadata ?? resolveV11IdeationMetadata;
   const resolveHandoff = dependencies.resolvePassHandoff ?? resolvePassHandoff;
+
+  if (input.authoritativeContext !== undefined) {
+    assertActorEmitContextSnapshotIntegrity(input.authoritativeContext);
+  }
 
   const authoritativeResolved: ResolvedBubbleWorkspace | undefined =
     input.authoritativeContext === undefined

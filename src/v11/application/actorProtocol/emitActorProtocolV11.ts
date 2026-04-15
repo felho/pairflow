@@ -1,6 +1,7 @@
 import type { AgentName } from "../../../types/bubble.js";
 import {
   ActorEmitContextError,
+  assertActorEmitContextSnapshotIntegrity,
 } from "../../shared/actorProtocol/actorEmitContext.js";
 import type {
   ActorEmitContextSnapshot
@@ -78,6 +79,7 @@ export async function emitImplementerPilotActorProtocolV11(
   { kind: "pass" } | { kind: "human_question" }
 >> {
   const { input, authoritativeContext: context } = resolvedInput;
+  assertActorEmitContextSnapshotIntegrity(context);
   assertActorEmitInputMatchesContext({
     actorInput: input,
     authoritativeContext: context
@@ -137,6 +139,7 @@ export async function emitReviewerActorProtocolV11(
   { kind: "pass" } | { kind: "convergence" }
 >> {
   const { input, authoritativeContext: context } = resolvedInput;
+  assertActorEmitContextSnapshotIntegrity(context);
   assertActorEmitInputMatchesContext({
     actorInput: input,
     authoritativeContext: context
@@ -201,6 +204,7 @@ export async function emitMetaReviewerActorProtocolV11(
 >> {
   void dependencies;
   const { input, authoritativeContext: context } = resolvedInput;
+  assertActorEmitContextSnapshotIntegrity(context);
   assertActorEmitInputMatchesContext({
     actorInput: input,
     authoritativeContext: context
@@ -254,8 +258,6 @@ async function emitActorProtocolViaAuthorityWrappers(
 
 async function emitActorProtocolViaFallbackRouting(
   resolvedInput: ResolvedActorEmitInputV11
-  ,
-  dependencies: ActorProtocolDependencies = {}
 ): Promise<ActorEmitResultV11> {
   const { input, authoritativeContext: context } = resolvedInput;
   if (context.expected_role === "meta_reviewer") {
@@ -265,48 +267,29 @@ async function emitActorProtocolViaFallbackRouting(
     );
   }
 
-  if (input.kind === "pass") {
-    return emitPassActorResultV11({
-      actorInput: input,
-      authoritativeContext: context,
-      ...(dependencies.pass !== undefined
-        ? { dependencies: dependencies.pass }
-        : {})
-    });
-  }
-
-  if (input.kind === "human_question") {
+  // Explicit retained baseline: reviewer-origin human_question remains allowed
+  // outside the implementer pilot wrapper, but all other wrapper mismatches fail closed.
+  if (
+    context.expected_role === "reviewer"
+    && input.kind === "human_question"
+  ) {
     return emitHumanQuestionActorResultV11({
       actorInput: input,
       authoritativeContext: context
     });
   }
 
-  if (input.kind === "convergence") {
-    return emitConvergenceActorResultV11({
-      actorInput: input,
-      authoritativeContext: context
-    });
-  }
-
-  if (input.kind === "meta_review_result") {
-    throw new ActorEmitContextError({
-      reasonCode: "ACTOR_EMIT_CONTEXT_INVALID",
-      message:
-        "ACTOR_EMIT_CONTEXT_INVALID: meta-reviewer wrapper requires meta_reviewer authority.",
-      context: {
-        route: "emitActorProtocolViaAuthorityWrappers",
-        expectedAuthority: "meta_reviewer",
-        receivedKind: String(input.kind)
-      }
-    });
-  }
-
   throw new ActorEmitContextError({
     reasonCode: "ACTOR_EMIT_CONTEXT_INVALID",
-    message: "ACTOR_EMIT_CONTEXT_INVALID: unsupported actor emit kind.",
+    message:
+      `ACTOR_EMIT_CONTEXT_INVALID: ${context.expected_role} authority does not support ${input.kind} via outer dispatcher fallback.`,
     context: {
-      route: "emitActorProtocolViaAuthorityWrappers"
+      route: "emitActorProtocolViaFallbackRouting",
+      expectedAuthority:
+        context.expected_role === "reviewer"
+          ? "reviewer human_question baseline"
+          : `${context.expected_role} authority wrapper`,
+      receivedKind: String(input.kind)
     }
   });
 }
@@ -315,6 +298,7 @@ export async function emitActorProtocolFromWorkspaceV11(
   resolvedInput: ResolvedActorEmitInputV11,
   dependencies: ActorProtocolDependencies = {}
 ): Promise<ActorEmitResultV11> {
+  assertActorEmitContextSnapshotIntegrity(resolvedInput.authoritativeContext);
   assertActorEmitInputMatchesContext({
     actorInput: resolvedInput.input,
     authoritativeContext: resolvedInput.authoritativeContext
@@ -327,5 +311,5 @@ export async function emitActorProtocolFromWorkspaceV11(
   if (routedResult !== null) {
     return routedResult;
   }
-  return emitActorProtocolViaFallbackRouting(resolvedInput, dependencies);
+  return emitActorProtocolViaFallbackRouting(resolvedInput);
 }
