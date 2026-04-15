@@ -2,7 +2,7 @@
 artifact_type: task
 artifact_id: task_actor_runtime_interface_phaseE2b_direct_runtime_orchestration_consumer_alignment_v1
 title: "Actor Runtime Interface Direct Runtime and Orchestration Consumer Alignment (Phase E2b)"
-status: implementable
+status: completed
 phase: phaseE2b
 target_files:
   - src/v11/shared/kickoff/kickoffResultBuilders.ts
@@ -64,6 +64,12 @@ Target file interpretation:
 1. A `target_files` lista a direct consume-family ownership seam-eket rogziti, nem a teljes helper-halozatot.
 2. Az esetlegesen szukseges secondary/helper file-ok authoritative listaja az L1 call-site matrixben marad.
 3. A bizonyitasra szolgalo tesztfeluleteknek, ha current-tree proof surface-kent szuksegesek, a `target_files` frontmatterben is szerepelniuk kell; az L1 test matrix `T1`-`T8` sorai ezek kozul az authoritative minimalis required-now automated proof sort nevezik meg. A `T9` kulon, review-evidence alapú boundary-or bizonyitasi sor: nem uj tesztfeluletet nevez meg, hanem azt vedeti vissza, hogy a handoff/approval osszegzes ne claimeljen `E2c` read-model vagy mas successor closure-t. Ez a dokumentumban azt jelenti, hogy a `target_files` proof-surface inventoryjan belul a `T1`-`T8` matrix a kotelezo required-now minimum automated bizonyitasi reszhalmaz, mig a `T9` a kotelezo approval-traceability boundary guard.
+
+## Completion Update (2026-04-15)
+
+1. Ez a task current-tree allapotban lezart: a `bubble/impl-e2b-consume` valtozassor a `b72242cc3e63a2316738f5e131f81aefcb0ff4c8` merge commitban landolt.
+2. A merged diff a kickoff, ask-human, pass/converged, watchdog, start/restart direct consume-family seam-eket es a hozzajuk tartozo targeted/contract test proof surface-eket erinti.
+3. A closure claim tovabbra is szuk marad: ez a task direct runtime/orchestration consumer alignmentet zar, es nem claimel `E2c` persisted diagnostics / meta-review / read-model fallout vagy `E3` pilot activation closure-t.
 
 ## Current Codebase Check (2026-04-14)
 

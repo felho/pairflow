@@ -2,7 +2,7 @@
 artifact_type: task
 artifact_id: task_actor_runtime_interface_phaseE2a_delivery_ack_producer_contract_v1
 title: "Actor Runtime Interface Delivery Ack Producer and Contract Closure (Phase E2a)"
-status: draft
+status: completed
 phase: phaseE2a
 target_files:
   - "src/v11/shared/delivery/tmuxDeliveryContract.ts"

@@ -16,6 +16,16 @@ owners:
 
 # Task: Actor Runtime Interface Pilot Cutover Sequencing (Phase E)
 
+## Current Tree Progress Update (2026-04-15)
+
+1. Az eredeti sequencing proof sorrendje ervenyben maradt, de a current tree kozben mar lezarta az elso harom predecessor closure-t:
+   - `E1` execution-scoped authority foundation,
+   - `E2a` delivery / launch producer + shared contract closure,
+   - `E2b` direct runtime/orchestration consumer alignment.
+2. Az `E2b` consume-family alignment a `b72242cc3e63a2316738f5e131f81aefcb0ff4c8` merge-ben zart, es a relevant code/test diff a kickoff, ask-human, pass/converged, watchdog, start/restart seam-eket erinti.
+3. Emiatt ez a sequencing artifact current-tree olvasatban mar nem `E1` megnyitasat irja elo kovetkezo aktiv lepeskent, hanem azt rogziti, hogy a remaining open successor mar `E2c`.
+4. A sequencing logika ettol nem valtozik: `E2c` tovabbra sem csuszhat vissza producer-contract vagy pilot-activation workbe, es `E3`/`E4` csak utana nyithato.
+
 ## L0 - Policy
 
 ### Goal
@@ -178,9 +188,9 @@ Current-tree sequencing anchor keszitese a discovery utan megmaradt actor-runtim
 
 | Step | Successor File | Dominant Boundary | Why it must be separate | Must not include |
 |---|---|---|---|---|
-| `E1` | `plans/tasks/actor-runtime-interface-execution-authority-foundation-phaseE1.md` | execution-scoped authority contract | A canonical authority shape formalizalasa megelőzi az osszes consume/activation munkat. | delivery/ack activation, pilot rollout |
-| `E2a` | `plans/tasks/actor-runtime-interface-delivery-ack-producer-contract-phaseE2a.md` | typed delivery / launch producer + shared contract closure | A runtime acceptance truth producer seamje kulon closure; ezt nem szabad consumer rollouttal vagy pilot aktivalassal osszecsomagolni. | runtime/orchestration consume fallout, persisted diagnostics, implementer pilot |
-| `E2b` | planned successor task artifact (to be opened separately) | direct runtime/orchestration consumer alignment | A lezart typed ack contract consume-family atallasa kulon compatibility closure; ezt nem szabad a producer semanticszel vagy read-model fallouttal osszemosni. | producer semantics reopen, persisted diagnostics/read-model fallout, implementer pilot |
+| `E1` | `plans/archive/tasks/actor-runtime-interface-execution-authority-foundation-phaseE1.md` | execution-scoped authority contract | A canonical authority shape formalizalasa megelőzi az osszes consume/activation munkat. | delivery/ack activation, pilot rollout |
+| `E2a` | `plans/archive/tasks/actor-runtime-interface-delivery-ack-producer-contract-phaseE2a.md` | typed delivery / launch producer + shared contract closure | A runtime acceptance truth producer seamje kulon closure; ezt nem szabad consumer rollouttal vagy pilot aktivalassal osszecsomagolni. | runtime/orchestration consume fallout, persisted diagnostics, implementer pilot |
+| `E2b` | `plans/tasks/actor-runtime-interface-direct-runtime-orchestration-consumer-alignment-phaseE2b.md` | direct runtime/orchestration consumer alignment | A lezart typed ack contract consume-family atallasa kulon compatibility closure; ezt nem szabad a producer semanticszel vagy read-model fallouttal osszemosni. | producer semantics reopen, persisted diagnostics/read-model fallout, implementer pilot |
 | `E2c` | planned successor task artifact (to be opened separately) | persisted diagnostics + meta-review + read-model fallout | A persisted/projection/status fallout kulon read-model closure; itt mar nem szabad uj ack truthot definialni. | producer contract ujranyitasa, implementer pilot, multi-role cleanup |
 | `E3` | `plans/tasks/actor-runtime-interface-implementer-pilot-cutover-phaseE3.md` | implementer pilot rollout | Az elso aktivacio kulon parity gate-et igenyel a stabil foundation + ack closurek folott. | reviewer/meta-reviewer rollout, full adapter cleanup |
 | `E4` | `plans/tasks/actor-runtime-interface-reviewer-meta-rollout-and-adapter-cleanup-phaseE4.md` | multi-role rollout + retained cleanup | A policy-heavy role-ok es a retained adapter cleanup csak a pilot utan vedheto. | uj authority foundation vagy uj ack contract |
@@ -206,10 +216,10 @@ Normative sequencing rules:
 
 Simulation readout:
 
-1. A current tree-ben a legerosebb bizonyitott foundation gap az authority-shape hianya (`execution_id` / capability-level authority nincs a canonical actor inputban).
-2. A legerosebb bizonyitott consume gap az ack-truth hianya (tmux delivery confirm meg best-effort runtime signal, nem typed runtime boundary), es ennek falloutja legalabb ket consume-familyre terjed.
-3. Emiatt az elso aktivacios lepes csak implementer pilot lehet, es csak azutan, hogy a producer truth, a direct consume-family alignment es a persisted/read-model fallout closure mar kulon lezart.
-4. Reviewer + meta-reviewer rolloutot a simulation csak `E4`-ben engedi, mert ott mar a piloton bizonyitott foundationre lehet epiteni, nem elmeleti contractra.
+1. A current tree-ben a foundation gap es a producer/direct-consume prereq closurek mar nem nyitottak: az explicit `execution_id` authority-shape, a typed delivery/launch ack producer seam es a direct runtime/orchestration consume alignment mar merged.
+2. A legerosebb fennmarado nyitott gap ma a persisted diagnostics / meta-review / read-model fallout closure (`E2c`), vagyis az a consume-family, amely mar lezart runtime truthra epulhet, de nem nyithatja ujra a producer semanticszet.
+3. Emiatt az elso megmaradt aktivacios lepes tovabbra is csak implementer pilot lehet, es csak azutan, hogy az `E2c` closure mar kulon lezart.
+4. Reviewer + meta-reviewer rolloutot a simulation tovabbra is csak `E4`-ben engedi, mert ott mar a piloton bizonyitott foundationre lehet epiteni, nem elmeleti contractra.
 
 ### 1) Call-site Matrix
 
@@ -274,7 +284,7 @@ Constraint:
 
 | ID | Item | Layer | Priority | Timing | Source | Proposed Action |
 |---|---|---|---|---|---|---|
-| H1 | successor task files explicit kidolgozasa | L2 | P2 | later-hardening | sequencing anchor | Nyisd meg az `E1, E2a, E2b, E2c, E3, E4` taskokat kulon implementable artifactkent |
+| H1 | remaining successor task files explicit kidolgozasa | L2 | P2 | later-hardening | sequencing anchor | Nyisd meg az `E2c, E3, E4` taskokat kulon implementable artifactkent, es a lezart `E1`/`E2a`/`E2b` artifactokat current-tree traceability szerint tartsd karban |
 
 ## Review Control
 

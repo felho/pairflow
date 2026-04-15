@@ -2,7 +2,7 @@
 artifact_type: task
 artifact_id: task_actor_runtime_interface_execution_authority_foundation_phaseE1_v1
 title: "Actor Runtime Interface Execution Authority Foundation (Phase E1)"
-status: draft
+status: completed
 phase: phaseE1
 target_files:
   - src/cli/commands/agent/emit.ts

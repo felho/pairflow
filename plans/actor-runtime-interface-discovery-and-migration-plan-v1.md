@@ -23,14 +23,15 @@ owners:
    - a repo-surface wording mar a surviving `bubble status` / `bubble restart` / `agent emit --kind meta_review_result` contractot koveti,
    - a kulon internal meta-review live-run runtime stack mar nem aktiv current-tree blocker.
 4. Emiatt ez a plan mar nem owns-olja a 2026-04-12-es meta-review cleanup resequencinget mint elo implementation programot; az a blokk historical traceabilitykent relevans, de nem current-state statusjelenteskent.
-5. A fennmarado live scope mar nem a discovery artifactok eloallitasa, hanem a generic actor-runtime implementation follow-up:
-   - execution-scoped authority boundary konkretizalasa,
-   - typed delivery / launch ack producer + contract closure,
-   - direct runtime/orchestration consumer alignment,
-   - persisted diagnostics / meta-review / read-model fallout closure,
-   - implementer pilot cutover,
-   - reviewer + meta-reviewer rollout es retained adapter cleanup.
-6. Ennek a remaining implementation sequencingnek a current-tree anchorja:
+5. A 2026-04-15-os current tree alapjan az actor-runtime implementation follow-up elso harom closureja mar merged allapotban van:
+   - `E1` execution-scoped authority foundation: az explicit `execution_id` canonical authority resze a persisted `execution_context` shape-nak, a schema enforcementnek es a canonical actor emit pathnak.
+   - `E2a` typed delivery / launch ack producer + shared contract closure: a producer/shared port seam explicit `accepted|rejected` es `running|failed_to_start` vocabularyt ad.
+   - `E2b` direct runtime/orchestration consumer alignment: a kickoff, ask-human, pass/converged, watchdog, start/restart consume-family mar ugyanennek a typed ack truthnak a same-authority consume/projection nyelven all ra; ez a `b72242cc3e63a2316738f5e131f81aefcb0ff4c8` merge-ben zarult.
+6. Emiatt a fennmarado live scope ma mar:
+   - `E2c` persisted diagnostics / meta-review / read-model fallout closure,
+   - `E3` implementer pilot cutover,
+   - `E4` reviewer + meta-reviewer rollout es retained adapter cleanup.
+7. Ennek a remaining implementation sequencingnek a current-tree anchorja tovabbra is:
    - `plans/tasks/actor-runtime-interface-pilot-cutover-phaseE.md`
 
 ## Closure-Budget Resequencing Note (2026-04-14)
@@ -57,11 +58,11 @@ owners:
 
 1. A plan eredeti discovery/preparation objective-je teljesult: a current-state inventory, a capability-first target contract, a scenario matrix es a migration spine kulon checked-in artifactkent letezik.
 2. A plan statusza emiatt `completed`: ez a dokumentum discovery-parent artifact marad, nem a fennmarado implementation munka allapotkoveto taskja.
-3. A kovetkezo implementacios fazis nem egyetlen bundled taskkent nyithato:
-   - a kód ma ugyan tartalmaz korai wrapper-elemeket (`actorProtocolV11`, `actorEmitContext`),
-   - de nincs meg a Phase B-ben leirt execution-scoped `execution_id` / capability-shape,
-   - nincs meg a typed `accepted|running|rejected|failed_to_start` delivery/launch ack boundary,
-   - es a runtime tovabbra is retained tmux topologyra epul.
+3. A discovery utani implementation tovabbra sem viheto egyetlen bundled taskban, de a current tree mar lezarta az elso harom predecessor closure-t:
+   - megvan a Phase B-ben eloirt explicit execution-scoped `execution_id` authority-shape a canonical actor input pathon,
+   - megvan a typed `accepted|running|rejected|failed_to_start` delivery/launch ack boundary a producer/shared port seam-en,
+   - es megvan a direct runtime/orchestration consume-family alignment ugyanennek a canonical truthnak a menten.
+4. Emiatt a remaining open implementation scope mar nem authority- vagy direct-consume foundationnel kezdodik, hanem a persisted diagnostics / meta-review / read-model fallout closure-nal (`E2c`), amit majd a pilot activation (`E3`) es a multi-role rollout / retained adapter cleanup (`E4`) kovet.
 
 ## Post-Discovery Implementation Control Model (2026-04-13)
 
