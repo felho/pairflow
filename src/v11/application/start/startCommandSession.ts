@@ -1,5 +1,8 @@
 import type { RuntimeSessionRecord } from "../../shared/ports/runtimeSessions.js";
 import type { WorkspaceKind } from "../../shared/ports/worktreeWorkspace.js";
+import {
+  resolveRuntimeSessionWorkspaceAuthority
+} from "../../shared/runtimeSessionWorkspaceAuthority.js";
 import type { ResolvedStartBubbleDependencies } from "./startCommandOrchestration.js";
 import type { StartExecutionContext } from "./startCommandContext.js";
 import { StartBubbleError } from "./startCommandRuntime.js";
@@ -24,51 +27,89 @@ function resolveInitialRuntimeLaunchWorkspaceAuthority(input: {
   };
 }
 
-function inferPersistedLaunchWorkspaceKind(
-  record: RuntimeSessionRecord
-): WorkspaceKind | undefined {
-  const workspacePath = record.workspacePath?.trim();
-  if ((workspacePath?.length ?? 0) > 0) {
-    return record.workspaceKind
-      ?? (workspacePath === record.worktreePath.trim() ? "worktree" : "clone");
-  }
-  return undefined;
+async function readPersistedRuntimeSessionRecord(input: {
+  context: StartExecutionContext;
+  deps: ResolvedStartBubbleDependencies;
+}): Promise<RuntimeSessionRecord | undefined> {
+  const registry = await input.deps.readSessions(
+    input.context.resolved.bubblePaths.sessionsPath,
+    { allowMissing: true }
+  );
+  return registry[input.context.resolved.bubbleId];
 }
 
 function resolveRetryRuntimeLaunchWorkspaceAuthority(input: {
-  startMode: StartExecutionContext["startMode"];
-  initialWorkspaceAuthority: {
-    workspacePath?: string;
-    workspaceKind?: WorkspaceKind;
-  };
+  bubbleId: string;
+  requestedWorkspaceKind: WorkspaceKind;
   existingRecord: RuntimeSessionRecord;
 }): {
   workspacePath?: string;
   workspaceKind?: WorkspaceKind;
 } {
-  const persistedWorkspacePath = input.existingRecord.workspacePath?.trim();
-  const persistedWorkspaceKind = inferPersistedLaunchWorkspaceKind(
-    input.existingRecord
-  );
-  if (
-    (persistedWorkspacePath?.length ?? 0) > 0
-    && persistedWorkspaceKind !== undefined
-  ) {
-    return {
-      workspacePath: persistedWorkspacePath!,
-      workspaceKind: persistedWorkspaceKind
-    };
+  const resolution = resolveRuntimeSessionWorkspaceAuthority({
+    runtimeSessionRecord: input.existingRecord
+  });
+  if (resolution.status !== "resolved") {
+    throw new StartBubbleError({
+      reasonCode: "START_LAUNCH_WORKSPACE_UNAVAILABLE",
+      message:
+        `Bubble ${input.bubbleId} cannot reclaim stale runtime session because runtime session canonical workspace authority is missing.`,
+      context: {
+        bubble_id: input.bubbleId,
+        authority_source: "runtime_session",
+        authority_resolution: resolution.reason,
+        reclaim_reason: "stale_session_retry"
+      }
+    });
   }
-  if (input.startMode === "fresh") {
-    return {};
+
+  if (resolution.authority.workspaceKind !== input.requestedWorkspaceKind) {
+    throw new StartBubbleError({
+      reasonCode: "START_LAUNCH_WORKSPACE_UNAVAILABLE",
+      message:
+        input.requestedWorkspaceKind === "clone"
+          ? `Bubble ${input.bubbleId} cannot reclaim stale runtime session because clone resume requires explicit clone canonical workspace authority.`
+          : `Bubble ${input.bubbleId} cannot reclaim stale runtime session because runtime session workspace kind ${resolution.authority.workspaceKind} `
+            + `does not match requested ${input.requestedWorkspaceKind}.`,
+      context: {
+        bubble_id: input.bubbleId,
+        authority_source: "runtime_session",
+        authority_resolution: "workspace_kind_mismatch",
+        requested_workspace_kind: input.requestedWorkspaceKind,
+        actual_workspace_kind: resolution.authority.workspaceKind,
+        reclaim_reason: "stale_session_retry"
+      }
+    });
   }
-  return input.initialWorkspaceAuthority;
+
+  return {
+    workspacePath: resolution.authority.workspacePath,
+    workspaceKind: resolution.authority.workspaceKind
+  };
 }
 
 export async function claimRuntimeSessionOwnership(input: {
   context: StartExecutionContext;
   deps: ResolvedStartBubbleDependencies;
 }): Promise<RuntimeSessionRecord> {
+  const cloneResumeRequiresPersistedAuthority =
+    input.context.startMode === "resume"
+    && input.context.resolved.bubbleConfig.work_mode === "clone";
+  if (cloneResumeRequiresPersistedAuthority) {
+    const existingRecord = await readPersistedRuntimeSessionRecord(input);
+    if (existingRecord === undefined) {
+      throw new StartBubbleError({
+        reasonCode: "START_LAUNCH_WORKSPACE_UNAVAILABLE",
+        message:
+          `Bubble ${input.context.resolved.bubbleId} cannot resume tmux because clone resume requires persisted runtime session canonical workspace authority.`,
+        context: {
+          bubble_id: input.context.resolved.bubbleId,
+          authority_source: "runtime_session",
+          authority_resolution: "runtime_session_missing"
+        }
+      });
+    }
+  }
   const initialWorkspaceAuthority = resolveInitialRuntimeLaunchWorkspaceAuthority({
     startMode: input.context.startMode,
     launchWorkspacePath: input.context.resolved.bubblePaths.worktreePath,
@@ -88,6 +129,25 @@ export async function claimRuntimeSessionOwnership(input: {
     tmuxSessionName: input.context.expectedTmuxSessionName,
     now: input.context.now
   });
+  if (
+    firstClaim.claimed
+    && cloneResumeRequiresPersistedAuthority
+  ) {
+    await input.deps.removeSession({
+      sessionsPath: input.context.resolved.bubblePaths.sessionsPath,
+      bubbleId: input.context.resolved.bubbleId
+    }).catch(() => undefined);
+    throw new StartBubbleError({
+      reasonCode: "START_LAUNCH_WORKSPACE_UNAVAILABLE",
+      message:
+        `Bubble ${input.context.resolved.bubbleId} cannot resume tmux because clone resume requires persisted runtime session canonical workspace authority.`,
+      context: {
+        bubble_id: input.context.resolved.bubbleId,
+        authority_source: "runtime_session",
+        authority_resolution: "runtime_session_missing"
+      }
+    });
+  }
   let ownershipClaimed = firstClaim.claimed;
   let ownedRecord = firstClaim.record;
   if (!ownershipClaimed) {
@@ -95,11 +155,20 @@ export async function claimRuntimeSessionOwnership(input: {
       firstClaim.record.tmuxSessionName
     );
     if (!sessionAlive) {
-      const retryWorkspaceAuthority = resolveRetryRuntimeLaunchWorkspaceAuthority({
-        startMode: input.context.startMode,
-        initialWorkspaceAuthority,
-        existingRecord: firstClaim.record
-      });
+      let retryWorkspaceAuthority;
+      try {
+        retryWorkspaceAuthority = resolveRetryRuntimeLaunchWorkspaceAuthority({
+          bubbleId: input.context.resolved.bubbleId,
+          requestedWorkspaceKind: input.context.resolved.bubbleConfig.work_mode,
+          existingRecord: firstClaim.record
+        });
+      } catch (error) {
+        await input.deps.removeSession({
+          sessionsPath: input.context.resolved.bubblePaths.sessionsPath,
+          bubbleId: input.context.resolved.bubbleId
+        }).catch(() => undefined);
+        throw error;
+      }
       await input.deps.removeSession({
         sessionsPath: input.context.resolved.bubblePaths.sessionsPath,
         bubbleId: input.context.resolved.bubbleId

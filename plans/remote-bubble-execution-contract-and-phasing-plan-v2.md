@@ -278,6 +278,7 @@ Az explicit control-model dontesek most visszanyerhetok a designbol es a review-
    - clone-mode commit / merge / delete topology and branch-ownership proofok.
 7. Phase 2A:
    - end-to-end local clone-topology activation tests custom/remote-capable bootstrap mellett.
+   - retained runtime-session worktree fallback kivezetese, mert az aktiv approval-gate bubble-ok mar explicit workspace authorityval futnak.
 8. Phase 2B:
    - `bubble create --remote` local persistence/write-path tests.
 9. Phase 2C:

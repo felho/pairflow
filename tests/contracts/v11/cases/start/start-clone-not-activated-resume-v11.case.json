@@ -2,16 +2,16 @@
   "id": "start-clone-not-activated-resume-v11",
   "command": "start",
   "mode": "v11",
-  "description": "Start contract case for explicit fail-closed rejection when work_mode=clone is not activated on a resumable bubble.",
+  "description": "Start contract case for successful clone resume activation on a RUNNING bubble with persisted canonical workspace authority.",
   "input": {
     "fixture": {
-      "scenario": "clone_not_activated_resume",
+      "scenario": "clone_activated_resume",
       "resumeState": "RUNNING"
     }
   },
   "expected": {
-    "status": "error",
-    "reasonCode": "WORKSPACE_MODE_CLONE_NOT_ACTIVATED",
+    "status": "ok",
+    "reasonCode": "STARTED",
     "stateSubset": {
       "state": "RUNNING"
     }
@@ -21,7 +21,7 @@
     "m0",
     "start",
     "v11",
-    "error-path",
+    "success-path",
     "resume"
   ]
 }

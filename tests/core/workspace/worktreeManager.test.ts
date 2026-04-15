@@ -2,7 +2,8 @@ import { lstat, mkdir, mkdtemp, readFile, readlink, rm, writeFile } from "node:f
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import type * as FsPromisesModule from "node:fs/promises";
 
 import {
   WorkspaceBootstrapError,
@@ -55,7 +56,8 @@ describe("bootstrapWorktreeWorkspace", () => {
       repoPath,
       baseBranch: "main",
       bubbleBranch: "bubble/b_1",
-      worktreePath
+      worktreePath,
+      workspaceKind: "worktree"
     });
 
     expect(result.baseRef).toBe("refs/heads/main");
@@ -75,6 +77,62 @@ describe("bootstrapWorktreeWorkspace", () => {
     expect(headBranch.stdout.trim()).toBe("bubble/b_1");
   });
 
+  it("creates bubble branch and clone workspace when clone topology is requested", async () => {
+    const repoPath = await createGitRepo();
+    const worktreePath = await createWorktreePath("b_clone_bootstrap");
+    const bootstrapInput = {
+      repoPath,
+      baseBranch: "main",
+      bubbleBranch: "bubble/b_clone_bootstrap",
+      worktreePath,
+      workspaceKind: "clone" as const
+    };
+
+    const result = await bootstrapWorktreeWorkspace(bootstrapInput);
+
+    expect(result.baseRef).toBe("refs/heads/main");
+    expect(result.worktreePath).toBe(worktreePath);
+    expect(result.workspacePath).toBe(worktreePath);
+    expect(result.workspaceKind).toBe("clone");
+    expect(result.branchPrepared).toBe(true);
+
+    const branchCheck = await runGit(
+      repoPath,
+      ["show-ref", "--verify", "--quiet", "refs/heads/bubble/b_clone_bootstrap"],
+      true
+    );
+    expect(branchCheck.exitCode).toBe(0);
+
+    const headBranch = await runGit(worktreePath, ["rev-parse", "--abbrev-ref", "HEAD"]);
+    expect(headBranch.stdout.trim()).toBe("bubble/b_clone_bootstrap");
+
+    const registeredWorktrees = await runGit(repoPath, ["worktree", "list", "--porcelain"]);
+    expect(registeredWorktrees.stdout).not.toContain(`worktree ${worktreePath}`);
+  });
+
+  it("rejects bootstrap when workspaceKind is missing", async () => {
+    const repoPath = await createGitRepo();
+    const worktreePath = await createWorktreePath("b_missing_workspace_kind");
+    const bubbleBranch = "bubble/b_missing_workspace_kind";
+
+    await expect(
+      bootstrapWorktreeWorkspace({
+        repoPath,
+        baseBranch: "main",
+        bubbleBranch,
+        worktreePath,
+        workspaceKind: undefined as never
+      })
+    ).rejects.toThrow(/workspaceKind/u);
+
+    const branchCheck = await runGit(
+      repoPath,
+      ["show-ref", "--verify", "--quiet", `refs/heads/${bubbleBranch}`],
+      true
+    );
+    expect(branchCheck.exitCode).not.toBe(0);
+  });
+
   it("rejects when bubble branch already exists", async () => {
     const repoPath = await createGitRepo();
     const worktreePath = await createWorktreePath("b_exists");
@@ -85,7 +143,8 @@ describe("bootstrapWorktreeWorkspace", () => {
         repoPath,
         baseBranch: "main",
         bubbleBranch: "bubble/b_exists",
-        worktreePath
+        worktreePath,
+        workspaceKind: "worktree"
       })
     ).rejects.toBeInstanceOf(WorkspaceBootstrapError);
   });
@@ -99,7 +158,8 @@ describe("bootstrapWorktreeWorkspace", () => {
         repoPath,
         baseBranch: "does-not-exist",
         bubbleBranch: "bubble/b_missing_base",
-        worktreePath
+        worktreePath,
+        workspaceKind: "worktree"
       })
     ).rejects.toThrow(/Base branch not found/u);
   });
@@ -114,7 +174,8 @@ describe("bootstrapWorktreeWorkspace", () => {
         repoPath,
         baseBranch: "v1.0.0",
         bubbleBranch: "bubble/b_from_tag",
-        worktreePath
+        worktreePath,
+        workspaceKind: "worktree"
       })
     ).rejects.toThrow(/Tags are not supported for --base/u);
   });
@@ -130,7 +191,8 @@ describe("bootstrapWorktreeWorkspace", () => {
         repoPath,
         baseBranch: "main",
         bubbleBranch: "bubble/b_exists_path",
-        worktreePath
+        worktreePath,
+        workspaceKind: "worktree"
       })
     ).rejects.toThrow(/Path already exists/u);
   });
@@ -146,7 +208,8 @@ describe("bootstrapWorktreeWorkspace", () => {
       repoPath,
       baseBranch: "main",
       bubbleBranch: "bubble/b_overlay_default",
-      worktreePath
+      worktreePath,
+      workspaceKind: "worktree"
     });
 
     const claudeStats = await lstat(join(worktreePath, ".claude"));
@@ -170,6 +233,7 @@ describe("bootstrapWorktreeWorkspace", () => {
       baseBranch: "main",
       bubbleBranch: "bubble/b_overlay_copy",
       worktreePath,
+      workspaceKind: "worktree",
       localOverlay: {
         enabled: true,
         mode: "copy",
@@ -191,6 +255,7 @@ describe("bootstrapWorktreeWorkspace", () => {
       baseBranch: "main",
       bubbleBranch: "bubble/b_overlay_existing",
       worktreePath,
+      workspaceKind: "worktree",
       localOverlay: {
         enabled: true,
         mode: "symlink",
@@ -203,6 +268,250 @@ describe("bootstrapWorktreeWorkspace", () => {
     expect(readmeStats.isSymbolicLink()).toBe(false);
     expect(await readFile(readmePath, "utf8")).toBe("# Pairflow\n");
   });
+
+  it("fails bootstrap when git cleanup exits non-zero after a bootstrap error", async () => {
+    vi.resetModules();
+    const repoPath = await createGitRepo();
+    const worktreePath = await createWorktreePath("b_partial_cleanup_failure");
+
+    const runGitMock = vi.fn(async (args: string[]) => {
+      if (args[0] === "branch" && args[1] === "-D") {
+        return {
+          stdout: "",
+          stderr: "simulated branch cleanup failure\n",
+          exitCode: 1
+        };
+      }
+
+      return {
+        stdout: "",
+        stderr: "",
+        exitCode: 0
+      };
+    });
+
+    const branchExistsMock = vi.fn(async (_repoPath: string, branch: string) =>
+      branch === "main"
+    );
+
+    const GitCommandErrorMock = class GitCommandError extends Error {
+      public readonly args: string[];
+      public readonly exitCode: number;
+      public readonly stderr: string;
+
+      public constructor(args: string[], exitCode: number, stderr: string) {
+        super(
+          `Git command failed (exit ${exitCode}): git ${args.join(" ")}\n${stderr.trim()}`
+        );
+        this.name = "GitCommandError";
+        this.args = args;
+        this.exitCode = exitCode;
+        this.stderr = stderr;
+      }
+    };
+
+    vi.doMock("../../../src/v11/infrastructure/workspace/git.js", () => ({
+      GitCommandError: GitCommandErrorMock,
+      GitRepositoryError: class GitRepositoryError extends Error {},
+      assertGitRepository: vi.fn(async () => undefined),
+      branchExists: branchExistsMock,
+      refExists: vi.fn(async () => false),
+      runGit: runGitMock
+    }));
+
+    vi.doMock(
+      "../../../src/v11/infrastructure/workspace/worktreeManagerOverlay.js",
+      () => ({
+        syncLocalOverlayEntries: vi.fn(async () => {
+          throw new Error("SIMULATED_SYNC_FAILURE");
+        })
+      })
+    );
+
+    try {
+      const {
+        bootstrapWorktreeWorkspace: bootstrapWithMocks,
+        WorkspaceBootstrapError: WorkspaceBootstrapErrorWithMocks
+      } = await import("../../../src/v11/infrastructure/workspace/worktreeManager.js");
+
+      await expect(
+        bootstrapWithMocks({
+          repoPath,
+          baseBranch: "main",
+          bubbleBranch: "bubble/b_partial_cleanup_failure",
+          worktreePath,
+          workspaceKind: "worktree"
+        })
+      ).rejects.toSatisfy((error: unknown) => {
+        expect(error).toBeInstanceOf(WorkspaceBootstrapErrorWithMocks);
+        expect(error).toBeInstanceOf(Error);
+        expect((error as Error).message).toContain(
+          "cleanup did not fully complete"
+        );
+        expect((error as Error).cause).toBeInstanceOf(AggregateError);
+        return true;
+      });
+
+      expect(runGitMock).toHaveBeenCalledWith(
+        ["worktree", "add", worktreePath, "bubble/b_partial_cleanup_failure"],
+        {
+          cwd: repoPath
+        }
+      );
+      expect(runGitMock).toHaveBeenCalledWith(
+        ["worktree", "remove", "--force", worktreePath],
+        {
+          cwd: repoPath,
+          allowFailure: true
+        }
+      );
+      expect(runGitMock).toHaveBeenCalledWith(
+        ["branch", "-D", "bubble/b_partial_cleanup_failure"],
+        {
+          cwd: repoPath,
+          allowFailure: true
+        }
+      );
+    } finally {
+      vi.doUnmock("../../../src/v11/infrastructure/workspace/git.js");
+      vi.doUnmock(
+        "../../../src/v11/infrastructure/workspace/worktreeManagerOverlay.js"
+      );
+      vi.resetModules();
+    }
+  });
+
+  it("fails clone bootstrap when branch cleanup exits non-zero after a bootstrap error", async () => {
+    vi.resetModules();
+    const repoPath = await createGitRepo();
+    const worktreePath = await createWorktreePath("b_clone_partial_cleanup_failure");
+
+    const runGitMock = vi.fn(async (args: string[]) => {
+      if (args[0] === "branch" && args[1] === "-D") {
+        return {
+          stdout: "",
+          stderr: "simulated branch cleanup failure\n",
+          exitCode: 1
+        };
+      }
+
+      return {
+        stdout: "",
+        stderr: "",
+        exitCode: 0
+      };
+    });
+    const rmMock = vi.fn(async () => undefined);
+
+    const branchExistsMock = vi.fn(async (_repoPath: string, branch: string) =>
+      branch === "main"
+    );
+
+    const GitCommandErrorMock = class GitCommandError extends Error {
+      public readonly args: string[];
+      public readonly exitCode: number;
+      public readonly stderr: string;
+
+      public constructor(args: string[], exitCode: number, stderr: string) {
+        super(
+          `Git command failed (exit ${exitCode}): git ${args.join(" ")}\n${stderr.trim()}`
+        );
+        this.name = "GitCommandError";
+        this.args = args;
+        this.exitCode = exitCode;
+        this.stderr = stderr;
+      }
+    };
+
+    vi.doMock("node:fs/promises", async () => {
+      const actual = await vi.importActual<typeof FsPromisesModule>(
+        "node:fs/promises"
+      );
+      return {
+        ...actual,
+        rm: rmMock
+      };
+    });
+
+    vi.doMock("../../../src/v11/infrastructure/workspace/git.js", () => ({
+      GitCommandError: GitCommandErrorMock,
+      GitRepositoryError: class GitRepositoryError extends Error {},
+      assertGitRepository: vi.fn(async () => undefined),
+      branchExists: branchExistsMock,
+      refExists: vi.fn(async () => false),
+      runGit: runGitMock
+    }));
+
+    vi.doMock(
+      "../../../src/v11/infrastructure/workspace/worktreeManagerOverlay.js",
+      () => ({
+        syncLocalOverlayEntries: vi.fn(async () => {
+          throw new Error("SIMULATED_SYNC_FAILURE");
+        })
+      })
+    );
+
+    try {
+      const {
+        bootstrapWorktreeWorkspace: bootstrapWithMocks,
+        WorkspaceBootstrapError: WorkspaceBootstrapErrorWithMocks
+      } = await import("../../../src/v11/infrastructure/workspace/worktreeManager.js");
+      const cloneBootstrapInput = {
+        repoPath,
+        baseBranch: "main",
+        bubbleBranch: "bubble/b_clone_partial_cleanup_failure",
+        worktreePath,
+        workspaceKind: "clone" as const
+      };
+
+      await expect(
+        bootstrapWithMocks(cloneBootstrapInput)
+      ).rejects.toSatisfy((error: unknown) => {
+        expect(error).toBeInstanceOf(WorkspaceBootstrapErrorWithMocks);
+        expect(error).toBeInstanceOf(Error);
+        expect((error as Error).message).toContain(
+          "cleanup did not fully complete"
+        );
+        expect((error as Error).cause).toBeInstanceOf(AggregateError);
+        return true;
+      });
+
+      expect(runGitMock).toHaveBeenCalledWith(
+        ["clone", repoPath, worktreePath],
+        {
+          cwd: repoPath
+        }
+      );
+      expect(runGitMock).toHaveBeenCalledWith(
+        ["checkout", "--track", "origin/bubble/b_clone_partial_cleanup_failure"],
+        {
+          cwd: worktreePath
+        }
+      );
+      expect(rmMock).toHaveBeenCalledWith(worktreePath, {
+        recursive: true,
+        force: true
+      });
+      expect(runGitMock).toHaveBeenCalledWith(
+        ["branch", "-D", "bubble/b_clone_partial_cleanup_failure"],
+        {
+          cwd: repoPath,
+          allowFailure: true
+        }
+      );
+      expect(runGitMock).not.toHaveBeenCalledWith(
+        ["worktree", "remove", "--force", worktreePath],
+        expect.anything()
+      );
+    } finally {
+      vi.doUnmock("node:fs/promises");
+      vi.doUnmock("../../../src/v11/infrastructure/workspace/git.js");
+      vi.doUnmock(
+        "../../../src/v11/infrastructure/workspace/worktreeManagerOverlay.js"
+      );
+      vi.resetModules();
+    }
+  });
 });
 
 describe("cleanupWorktreeWorkspace", () => {
@@ -214,7 +523,8 @@ describe("cleanupWorktreeWorkspace", () => {
       repoPath,
       baseBranch: "main",
       bubbleBranch: "bubble/b_cleanup_1",
-      worktreePath
+      worktreePath,
+      workspaceKind: "worktree"
     });
 
     const result = await cleanupWorktreeWorkspace({

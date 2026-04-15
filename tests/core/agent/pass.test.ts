@@ -250,7 +250,8 @@ describe("emitPassFromWorkspace", { timeout: 20_000 }, () => {
       repoPath,
       baseBranch: "main",
       bubbleBranch: bubble.config.bubble_branch,
-      worktreePath: bubble.paths.worktreePath
+      worktreePath: bubble.paths.worktreePath,
+      workspaceKind: "worktree"
     });
     const loaded = await readStateSnapshot(bubble.paths.statePath);
     await writeStateSnapshot(
@@ -296,7 +297,8 @@ describe("emitPassFromWorkspace", { timeout: 20_000 }, () => {
       repoPath,
       baseBranch: "main",
       bubbleBranch: bubble.config.bubble_branch,
-      worktreePath: bubble.paths.worktreePath
+      worktreePath: bubble.paths.worktreePath,
+      workspaceKind: "worktree"
     });
     await writeFile(
       bubble.paths.bubbleTomlPath,
@@ -5767,7 +5769,8 @@ present`,
       repoPath,
       baseBranch: "main",
       bubbleBranch: bubble.config.bubble_branch,
-      worktreePath: bubble.paths.worktreePath
+      worktreePath: bubble.paths.worktreePath,
+      workspaceKind: "worktree"
     });
 
     await expect(

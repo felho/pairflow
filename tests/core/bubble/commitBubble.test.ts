@@ -168,7 +168,8 @@ describe("commitBubble", () => {
       repoPath,
       baseBranch: "main",
       bubbleBranch: bubble.config.bubble_branch,
-      worktreePath: bubble.paths.worktreePath
+      worktreePath: bubble.paths.worktreePath,
+      workspaceKind: "worktree"
     });
 
     await expect(

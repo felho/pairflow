@@ -10,6 +10,7 @@ export interface WorktreeBootstrapInput {
   baseBranch: string;
   bubbleBranch: string;
   worktreePath: string;
+  workspaceKind: WorkspaceKind;
   localOverlay?: LocalOverlayConfig | undefined;
 }
 

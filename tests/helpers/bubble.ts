@@ -102,7 +102,8 @@ async function setupRunningBubbleFixtureWithOverride(
     repoPath: input.repoPath,
     baseBranch: "main",
     bubbleBranch: created.config.bubble_branch,
-    worktreePath: created.paths.worktreePath
+    worktreePath: created.paths.worktreePath,
+    workspaceKind: "worktree"
   });
 
   const loaded = await readStateSnapshot(created.paths.statePath);

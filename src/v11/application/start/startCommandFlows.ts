@@ -17,6 +17,8 @@ import {
   executeStartRunningMutation,
   type StartLoadedStateSnapshot
 } from "../../shared/start/startStateMutation.js";
+import type { WorktreeBootstrapResult } from "../../shared/ports/worktreeWorkspace.js";
+import { createStartBubbleError } from "./startCommandRuntime.js";
 
 type StartWrittenState = StartLoadedStateSnapshot;
 
@@ -55,6 +57,82 @@ async function persistFreshLaunchWorkspaceAuthority(input: {
   });
 }
 
+function assertBootstrapWorkspaceMatchesRequestedMode(input: {
+  bubbleId: string;
+  requestedWorkspaceKind: StartExecutionContext["resolved"]["bubbleConfig"]["work_mode"];
+  launchWorkspace: ReturnType<typeof resolveFreshLaunchWorkspace>;
+}): void {
+  if (input.launchWorkspace.workspaceKind !== input.requestedWorkspaceKind) {
+    throw createStartBubbleError({
+      reasonCode: "START_LAUNCH_WORKSPACE_UNAVAILABLE",
+      message:
+        `Bubble ${input.bubbleId} bootstrap returned workspace kind ${input.launchWorkspace.workspaceKind}, `
+        + `but start requested ${input.requestedWorkspaceKind}.`,
+      context: {
+        bubble_id: input.bubbleId,
+        requested_workspace_kind: input.requestedWorkspaceKind,
+        actual_workspace_kind: input.launchWorkspace.workspaceKind,
+        authority_source: "bootstrap_result"
+      }
+    });
+  }
+}
+
+function assertResumeWorkspaceMatchesRequestedMode(input: {
+  bubbleId: string;
+  requestedWorkspaceKind: StartExecutionContext["resolved"]["bubbleConfig"]["work_mode"];
+  launchWorkspace: ReturnType<typeof resolveResumeLaunchWorkspace>;
+}): void {
+  if (input.launchWorkspace.workspaceKind === input.requestedWorkspaceKind) {
+    return;
+  }
+
+  if (input.requestedWorkspaceKind === "clone") {
+    throw createStartBubbleError({
+      reasonCode: "START_LAUNCH_WORKSPACE_UNAVAILABLE",
+      message:
+        `Bubble ${input.bubbleId} cannot resume tmux because clone resume requires explicit clone canonical workspace authority in runtime session state.`,
+      context: {
+        bubble_id: input.bubbleId,
+        requested_workspace_kind: input.requestedWorkspaceKind,
+        actual_workspace_kind: input.launchWorkspace.workspaceKind,
+        authority_source: "runtime_session",
+        authority_resolution: "workspace_kind_mismatch"
+      }
+    });
+  }
+
+  throw createStartBubbleError({
+    reasonCode: "START_LAUNCH_WORKSPACE_UNAVAILABLE",
+    message:
+      `Bubble ${input.bubbleId} cannot resume tmux because runtime session workspace kind ${input.launchWorkspace.workspaceKind} `
+      + `does not match requested ${input.requestedWorkspaceKind}.`,
+    context: {
+      bubble_id: input.bubbleId,
+      requested_workspace_kind: input.requestedWorkspaceKind,
+      actual_workspace_kind: input.launchWorkspace.workspaceKind,
+      authority_source: "runtime_session",
+      authority_resolution: "workspace_kind_mismatch"
+    }
+  });
+}
+
+async function bootstrapFreshWorkspace(input: {
+  context: StartExecutionContext;
+  deps: ResolvedStartBubbleDependencies;
+}): Promise<WorktreeBootstrapResult> {
+  const bootstrapInput = {
+    repoPath: input.context.resolved.repoPath,
+    baseBranch: input.context.resolved.bubbleConfig.base_branch,
+    bubbleBranch: input.context.resolved.bubbleConfig.bubble_branch,
+    worktreePath: input.context.resolved.bubblePaths.worktreePath,
+    localOverlay: input.context.resolved.bubbleConfig.local_overlay,
+    workspaceKind: input.context.resolved.bubbleConfig.work_mode
+  };
+
+  return input.deps.bootstrap(bootstrapInput);
+}
+
 export async function runFreshStartFlow(input: {
   context: StartExecutionContext;
   deps: ResolvedStartBubbleDependencies;
@@ -69,17 +147,16 @@ export async function runFreshStartFlow(input: {
   input.progress.preparingState = preparingWritten.state;
   input.progress.preparingFingerprint = preparingWritten.fingerprint;
 
-  const bootstrapResult = await input.deps.bootstrap({
-    repoPath: input.context.resolved.repoPath,
-    baseBranch: input.context.resolved.bubbleConfig.base_branch,
-    bubbleBranch: input.context.resolved.bubbleConfig.bubble_branch,
-    worktreePath: input.context.resolved.bubblePaths.worktreePath,
-    localOverlay: input.context.resolved.bubbleConfig.local_overlay
-  });
+  const bootstrapResult = await bootstrapFreshWorkspace(input);
   input.progress.workspaceBootstrapped = true;
   const launchWorkspace = resolveFreshLaunchWorkspace({
     bubbleId: input.context.resolved.bubbleId,
     bootstrapResult
+  });
+  assertBootstrapWorkspaceMatchesRequestedMode({
+    bubbleId: input.context.resolved.bubbleId,
+    requestedWorkspaceKind: input.context.resolved.bubbleConfig.work_mode,
+    launchWorkspace
   });
   await persistFreshLaunchWorkspaceAuthority({
     context: input.context,
@@ -139,6 +216,11 @@ export async function runResumeStartFlow(input: {
   const launchWorkspace = resolveResumeLaunchWorkspace({
     bubbleId: input.context.resolved.bubbleId,
     runtimeSessionRecord: input.context.runtimeSessionRecord
+  });
+  assertResumeWorkspaceMatchesRequestedMode({
+    bubbleId: input.context.resolved.bubbleId,
+    requestedWorkspaceKind: input.context.resolved.bubbleConfig.work_mode,
+    launchWorkspace
   });
   const {
     transcriptSummary,

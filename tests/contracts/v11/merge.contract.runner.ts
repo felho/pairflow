@@ -220,7 +220,8 @@ async function setupDoneBubble(repoPath: string, bubbleId: string) {
     repoPath,
     baseBranch: "main",
     bubbleBranch: bubble.config.bubble_branch,
-    worktreePath: bubble.paths.worktreePath
+    worktreePath: bubble.paths.worktreePath,
+    workspaceKind: "worktree"
   });
 
   await writeFile(
@@ -306,7 +307,8 @@ async function setupDoneBubbleWithConflict(repoPath: string, bubbleId: string) {
     repoPath,
     baseBranch: "main",
     bubbleBranch: bubble.config.bubble_branch,
-    worktreePath: bubble.paths.worktreePath
+    worktreePath: bubble.paths.worktreePath,
+    workspaceKind: "worktree"
   });
 
   await writeFile(join(bubble.paths.worktreePath, "conflict.txt"), "base-line\n", "utf8");

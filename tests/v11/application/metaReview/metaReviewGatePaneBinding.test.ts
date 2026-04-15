@@ -111,7 +111,7 @@ describe("metaReviewGatePaneBinding", () => {
     expect(notifySubmissionRequest).not.toHaveBeenCalled();
   });
 
-  it("uses legacy runtime worktree authority when workspacePath is absent", async () => {
+  it("fails closed when runtime workspace authority is absent", async () => {
     const buildAgentCommand = vi.fn(() => "codex meta-review");
     const notifySubmissionRequest = vi.fn(async () => ({
       status: "confirmed" as const,
@@ -149,19 +149,21 @@ describe("metaReviewGatePaneBinding", () => {
       pairflowCommandProfile: "external"
     });
 
-    expect(result.shouldDeactivate).toBe(true);
-    expect(buildAgentCommand).toHaveBeenCalledWith(expect.objectContaining({
-      workspacePath: "/legacy/worktree"
-    }));
-    expect(respawnTmuxPaneCommand).toHaveBeenCalledWith(expect.objectContaining({
-      cwd: "/legacy/worktree"
-    }));
-    expect(notifySubmissionRequest).toHaveBeenCalledWith(expect.objectContaining({
-      targetPane: "pf-b_meta_review_gate_legacy_workspace:0.3"
-    }), expect.any(Object));
+    expect(result).toEqual({
+      delivery: {
+        status: "failed",
+        reasonCode: "META_REVIEWER_PANE_UNAVAILABLE",
+        message:
+          "META_REVIEWER_PANE_UNAVAILABLE: Bubble b_meta_review_gate_legacy_workspace cannot bind meta-review pane because runtime workspace authority is empty."
+      },
+      shouldDeactivate: true
+    });
+    expect(buildAgentCommand).not.toHaveBeenCalled();
+    expect(respawnTmuxPaneCommand).not.toHaveBeenCalled();
+    expect(notifySubmissionRequest).not.toHaveBeenCalled();
   });
 
-  it("fails closed when only clone-mode worktree fallback is available", async () => {
+  it("fails closed when clone-mode session has no canonical workspace authority", async () => {
     const notifySubmissionRequest = vi.fn(async () => ({
       status: "confirmed" as const,
       reasonCode: null,
@@ -204,7 +206,7 @@ describe("metaReviewGatePaneBinding", () => {
         status: "failed",
         reasonCode: "META_REVIEWER_PANE_UNAVAILABLE",
         message:
-          "META_REVIEWER_PANE_UNAVAILABLE: Bubble b_meta_review_gate_clone_fallback_forbidden cannot bind meta-review pane because runtime session only retained a clone-mode worktree reference without canonical workspace authority."
+          "META_REVIEWER_PANE_UNAVAILABLE: Bubble b_meta_review_gate_clone_fallback_forbidden cannot bind meta-review pane because runtime workspace authority is empty."
       },
       shouldDeactivate: true
     });
