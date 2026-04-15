@@ -11,6 +11,9 @@ import {
   isRecord,
   type ValidationError
 } from "../validation/primitives.js";
+import {
+  normalizeMetaReviewRuntimeDeliveryCorrelation
+} from "../metaReview/metaReviewSnapshot.js";
 
 function validateMetaReviewExecutionContextTimestamps(input: {
   pathPrefix: string;
@@ -158,7 +161,7 @@ export function validateMetaReviewRuntimeDelivery(
   pathPrefix: string,
   errors: ValidationError[]
 ): BubbleMetaReviewRuntimeDeliveryState | null {
-  if (input === null) {
+  if (input === null || input === undefined) {
     return null;
   }
 
@@ -179,12 +182,14 @@ export function validateMetaReviewRuntimeDelivery(
   }
 
   const reasonCode = input.reason_code;
+  const errorsBeforeReasonCodeValidation = errors.length;
   if (!(reasonCode === null || isNonEmptyString(reasonCode))) {
     errors.push({
       path: `${pathPrefix}.reason_code`,
       message: "Must be null or a non-empty string"
     });
   }
+  const reasonCodeValid = errors.length === errorsBeforeReasonCodeValidation;
 
   const message = input.message;
   if (!isNonEmptyString(message)) {
@@ -203,12 +208,17 @@ export function validateMetaReviewRuntimeDelivery(
     });
   }
 
+  const errorsBeforeObservedTargetValidation = errors.length;
   const observedTarget = validateObservedTargetFields(input, pathPrefix, errors);
+  const observedTargetValid =
+    errors.length === errorsBeforeObservedTargetValidation;
 
   if (
     !isMetaReviewRuntimeDeliveryStatus(status) ||
+    !reasonCodeValid ||
     !isNonEmptyString(message) ||
-    !observedAtValid
+    !observedAtValid ||
+    !observedTargetValid
   ) {
     return null;
   }
@@ -259,12 +269,36 @@ function validateObservedTargetFields(
     });
   }
 
-  return {
+  const normalized = normalizeMetaReviewRuntimeDeliveryCorrelation({
     observedForHandoffId:
       isNonEmptyString(observedForHandoffId) ? observedForHandoffId : null,
     observedForRound:
       isInteger(observedForRound) && observedForRound >= 1
         ? observedForRound
         : null
+  });
+  const hasPartialCorrelation =
+    normalized.observedForHandoffId === null &&
+    normalized.observedForRound === null &&
+    (
+      isNonEmptyString(observedForHandoffId) ||
+      (isInteger(observedForRound) && observedForRound >= 1)
+    );
+  if (hasPartialCorrelation) {
+    errors.push({
+      path: `${pathPrefix}.observed_for_handoff_id`,
+      message:
+        "Must be null when observed_for_round is null, and provided together when correlation is claimed"
+    });
+    errors.push({
+      path: `${pathPrefix}.observed_for_round`,
+      message:
+        "Must be null when observed_for_handoff_id is null, and provided together when correlation is claimed"
+    });
+  }
+
+  return {
+    observedForHandoffId: normalized.observedForHandoffId,
+    observedForRound: normalized.observedForRound
   };
 }

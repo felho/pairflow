@@ -1,8 +1,10 @@
 import type { RuntimeSessionRecord } from "../ports/runtimeSessions.js";
 import type { StateValidationDiagnostics } from "../ports/stateSnapshots.js";
 import type {
-  BubbleLifecycleState,
-  MetaReviewRuntimeDeliveryStatus
+  ActiveMetaReviewRuntimeDeliveryView
+} from "../metaReview/metaReviewSnapshot.js";
+import type {
+  BubbleLifecycleState
 } from "../../../types/bubble.js";
 import type { UiBubbleAttention } from "../../../types/ui.js";
 
@@ -28,14 +30,7 @@ export interface BubbleListEntry {
   metaReview: {
     actor: "meta-reviewer";
     authorityActive: boolean;
-    runtimeDelivery: {
-      status: MetaReviewRuntimeDeliveryStatus;
-      reasonCode: string | null;
-      message: string;
-      observedAt: string;
-      observedForHandoffId: string | null;
-      observedForRound: number | null;
-    } | null;
+    runtimeDelivery: ActiveMetaReviewRuntimeDeliveryView | null;
   };
 }
 

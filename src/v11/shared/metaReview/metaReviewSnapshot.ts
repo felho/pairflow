@@ -5,6 +5,20 @@ import type {
   BubbleMetaReviewSnapshotState
 } from "../../../types/bubble.js";
 
+export interface ActiveMetaReviewRuntimeDeliveryView {
+  status: BubbleMetaReviewRuntimeDeliveryState["status"];
+  reasonCode: string | null;
+  message: string;
+  observedAt: string;
+  observedForHandoffId: string;
+  observedForRound: number;
+}
+
+export interface MetaReviewRuntimeDeliveryCorrelation {
+  observedForHandoffId: string | null;
+  observedForRound: number | null;
+}
+
 export function normalizeMetaReviewSnapshot(
   snapshot: BubbleMetaReviewSnapshotState | undefined
 ): BubbleMetaReviewSnapshotState {
@@ -39,6 +53,43 @@ export function clearLiveMetaReviewSnapshot(
   };
 }
 
+export function buildMetaReviewRuntimeDeliveryCorrelation(
+  executionContext: BubbleMetaReviewExecutionContext | null | undefined
+): MetaReviewRuntimeDeliveryCorrelation {
+  if (executionContext === null || executionContext === undefined) {
+    return {
+      observedForHandoffId: null,
+      observedForRound: null
+    };
+  }
+
+  return {
+    observedForHandoffId: executionContext.handoff_id,
+    observedForRound: executionContext.round
+  };
+}
+
+export function normalizeMetaReviewRuntimeDeliveryCorrelation(input: {
+  observedForHandoffId: string | null | undefined;
+  observedForRound: number | null | undefined;
+}): MetaReviewRuntimeDeliveryCorrelation {
+  const observedForHandoffId = input.observedForHandoffId ?? null;
+  const observedForRound = input.observedForRound ?? null;
+  if (
+    (observedForHandoffId === null) !== (observedForRound === null)
+  ) {
+    return {
+      observedForHandoffId: null,
+      observedForRound: null
+    };
+  }
+
+  return {
+    observedForHandoffId,
+    observedForRound
+  };
+}
+
 export function resolveActiveMetaReviewRuntimeDelivery(input: {
   executionContext: BubbleMetaReviewExecutionContext | null | undefined;
   runtimeDelivery: BubbleMetaReviewRuntimeDeliveryState | null | undefined;
@@ -48,19 +99,48 @@ export function resolveActiveMetaReviewRuntimeDelivery(input: {
   if (executionContext === null || runtimeDelivery === null) {
     return null;
   }
+  const correlation = normalizeMetaReviewRuntimeDeliveryCorrelation({
+    observedForHandoffId: runtimeDelivery.observed_for_handoff_id,
+    observedForRound: runtimeDelivery.observed_for_round
+  });
   if (
-    runtimeDelivery.observed_for_handoff_id === null ||
-    runtimeDelivery.observed_for_round === null
+    correlation.observedForHandoffId === null ||
+    correlation.observedForRound === null
   ) {
     return null;
   }
   if (
-    runtimeDelivery.observed_for_handoff_id !== executionContext.handoff_id
+    correlation.observedForHandoffId !== executionContext.handoff_id
   ) {
     return null;
   }
-  if (runtimeDelivery.observed_for_round !== executionContext.round) {
+  if (correlation.observedForRound !== executionContext.round) {
     return null;
   }
   return runtimeDelivery;
+}
+
+export function projectActiveMetaReviewRuntimeDelivery(input: {
+  executionContext: BubbleMetaReviewExecutionContext | null | undefined;
+  runtimeDelivery: BubbleMetaReviewRuntimeDeliveryState | null | undefined;
+}): ActiveMetaReviewRuntimeDeliveryView | null {
+  const activeRuntimeDelivery = resolveActiveMetaReviewRuntimeDelivery(input);
+  if (activeRuntimeDelivery === null) {
+    return null;
+  }
+
+  const observedForHandoffId = activeRuntimeDelivery.observed_for_handoff_id;
+  const observedForRound = activeRuntimeDelivery.observed_for_round;
+  if (observedForHandoffId === null || observedForRound === null) {
+    return null;
+  }
+
+  return {
+    status: activeRuntimeDelivery.status,
+    reasonCode: activeRuntimeDelivery.reason_code,
+    message: activeRuntimeDelivery.message,
+    observedAt: activeRuntimeDelivery.observed_at,
+    observedForHandoffId,
+    observedForRound
+  };
 }

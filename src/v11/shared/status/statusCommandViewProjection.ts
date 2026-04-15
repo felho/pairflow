@@ -1,8 +1,10 @@
-import { resolveActiveMetaReviewRuntimeDelivery } from "../metaReview/metaReviewSnapshot.js";
+import {
+  projectActiveMetaReviewRuntimeDelivery,
+  type ActiveMetaReviewRuntimeDeliveryView
+} from "../metaReview/metaReviewSnapshot.js";
 import { isMetaReviewExecutionContextActiveState } from "../metaReview/metaReviewExecutionContext.js";
 import type {
-  BubbleExecutionContext,
-  MetaReviewRuntimeDeliveryStatus
+  BubbleExecutionContext
 } from "../../../types/bubble.js";
 import type { ReadWatchdogPaneActivityResult } from "../watchdog/watchdogPaneActivityStore.js";
 import type { BubbleStatusState } from "./statusCommandTypes.js";
@@ -22,14 +24,7 @@ export interface StatusPaneActivityView {
 export interface StatusMetaReviewView {
   actor: "meta-reviewer";
   authorityActive: boolean;
-  runtimeDelivery: {
-    status: MetaReviewRuntimeDeliveryStatus;
-    reasonCode: string | null;
-    message: string;
-    observedAt: string;
-    observedForHandoffId: string | null;
-    observedForRound: number | null;
-  } | null;
+  runtimeDelivery: ActiveMetaReviewRuntimeDeliveryView | null;
 }
 
 export interface StatusExecutionContextView {
@@ -95,33 +90,16 @@ export function buildStatusMetaReviewView(
 ) : {
   actor: "meta-reviewer";
   authorityActive: boolean;
-  runtimeDelivery: {
-    status: MetaReviewRuntimeDeliveryStatus;
-    reasonCode: string | null;
-    message: string;
-    observedAt: string;
-    observedForHandoffId: string | null;
-    observedForRound: number | null;
-  } | null;
+  runtimeDelivery: ActiveMetaReviewRuntimeDeliveryView | null;
 } {
-  const activeRuntimeDelivery = resolveActiveMetaReviewRuntimeDelivery({
+  const runtimeDelivery = projectActiveMetaReviewRuntimeDelivery({
     executionContext: state.meta_review?.execution_context,
     runtimeDelivery: state.meta_review?.runtime_delivery
   });
   return {
     actor: "meta-reviewer" as const,
     authorityActive: isMetaReviewExecutionContextActiveState(state),
-    runtimeDelivery:
-      activeRuntimeDelivery === null
-        ? null
-        : {
-            status: activeRuntimeDelivery.status,
-            reasonCode: activeRuntimeDelivery.reason_code,
-            message: activeRuntimeDelivery.message,
-            observedAt: activeRuntimeDelivery.observed_at,
-            observedForHandoffId: activeRuntimeDelivery.observed_for_handoff_id,
-            observedForRound: activeRuntimeDelivery.observed_for_round
-          }
+    runtimeDelivery
   };
 }
 

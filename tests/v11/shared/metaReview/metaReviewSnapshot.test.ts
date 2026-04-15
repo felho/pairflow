@@ -2,11 +2,14 @@ import { describe, expect, it } from "vitest";
 
 import { buildMetaReviewExecutionContext } from "../../../../src/v11/shared/metaReview/metaReviewExecutionContext.js";
 import {
+  buildMetaReviewRuntimeDeliveryCorrelation,
   clearLiveMetaReviewSnapshot,
   normalizeMetaReviewSnapshot,
+  projectActiveMetaReviewRuntimeDelivery,
   resolveActiveMetaReviewRuntimeDelivery
 } from "../../../../src/v11/shared/metaReview/metaReviewSnapshot.js";
 import { validateMetaReviewSnapshot } from "../../../../src/v11/shared/state/stateSchemaMetaReview.js";
+import { validateMetaReviewRuntimeDelivery } from "../../../../src/v11/shared/state/stateSchemaMetaReviewRuntime.js";
 import { DEFAULT_META_REVIEW_AUTO_REWORK_LIMIT } from "../../../../src/types/bubble.js";
 
 describe("metaReviewSnapshot", () => {
@@ -109,6 +112,147 @@ describe("metaReviewSnapshot", () => {
         }
       })
     ).toBeNull();
+  });
+
+  it("normalizes producer correlation to a null/null pair when no active meta-review authority exists", () => {
+    expect(buildMetaReviewRuntimeDeliveryCorrelation(null)).toEqual({
+      observedForHandoffId: null,
+      observedForRound: null
+    });
+  });
+
+  it("builds producer correlation from the active meta-review authority", () => {
+    const executionContext = buildMetaReviewExecutionContext({
+      bubbleId: "b_meta_runtime_delivery_03",
+      round: 4,
+      startedAt: "2026-03-08T12:40:00.000Z",
+      watchdogTimeoutMinutes: 60,
+      attempt: 2
+    });
+
+    expect(
+      buildMetaReviewRuntimeDeliveryCorrelation(executionContext)
+    ).toEqual({
+      observedForHandoffId: executionContext.handoff_id,
+      observedForRound: executionContext.round
+    });
+  });
+
+  it("fails closed for partially correlated runtime delivery snapshots", () => {
+    const executionContext = buildMetaReviewExecutionContext({
+      bubbleId: "b_meta_runtime_delivery_02",
+      round: 3,
+      startedAt: "2026-03-08T12:40:00.000Z",
+      watchdogTimeoutMinutes: 60,
+      attempt: 1
+    });
+
+    expect(
+      projectActiveMetaReviewRuntimeDelivery({
+        executionContext,
+        runtimeDelivery: {
+          status: "failed",
+          reason_code: "META_REVIEW_REQUEST_DELIVERY_FAILED",
+          message: "tmux send failed",
+          observed_at: "2026-03-08T12:41:00.000Z",
+          observed_for_handoff_id: executionContext.handoff_id,
+          observed_for_round: null
+        }
+      })
+    ).toBeNull();
+
+    expect(
+      projectActiveMetaReviewRuntimeDelivery({
+        executionContext,
+        runtimeDelivery: {
+          status: "failed",
+          reason_code: "META_REVIEW_REQUEST_DELIVERY_FAILED",
+          message: "tmux send failed",
+          observed_at: "2026-03-08T12:41:00.000Z",
+          observed_for_handoff_id: null,
+          observed_for_round: executionContext.round
+        }
+      })
+    ).toBeNull();
+  });
+
+  it("treats undefined runtime delivery input as absent", () => {
+    const errors: { path: string; message: string }[] = [];
+
+    expect(
+      validateMetaReviewRuntimeDelivery(
+        undefined,
+        "meta_review.runtime_delivery",
+        errors
+      )
+    ).toBeNull();
+    expect(errors).toEqual([]);
+  });
+
+  it("returns null when runtime delivery correlation validation records errors", () => {
+    const executionContext = buildMetaReviewExecutionContext({
+      bubbleId: "b_meta_runtime_delivery_04",
+      round: 2,
+      startedAt: "2026-03-08T12:40:00.000Z",
+      watchdogTimeoutMinutes: 60,
+      attempt: 1
+    });
+    const errors: { path: string; message: string }[] = [];
+
+    expect(
+      validateMetaReviewRuntimeDelivery(
+        {
+          status: "failed",
+          reason_code: "META_REVIEW_REQUEST_DELIVERY_FAILED",
+          message: "tmux send failed",
+          observed_at: "2026-03-08T12:41:00.000Z",
+          observed_for_handoff_id: executionContext.handoff_id,
+          observed_for_round: null
+        },
+        "meta_review.runtime_delivery",
+        errors
+      )
+    ).toBeNull();
+    expect(errors).toContainEqual({
+      path: "meta_review.runtime_delivery.observed_for_handoff_id",
+      message:
+        "Must be null when observed_for_round is null, and provided together when correlation is claimed"
+    });
+    expect(errors).toContainEqual({
+      path: "meta_review.runtime_delivery.observed_for_round",
+      message:
+        "Must be null when observed_for_handoff_id is null, and provided together when correlation is claimed"
+    });
+  });
+
+  it("returns null when runtime delivery reason_code validation records errors", () => {
+    const executionContext = buildMetaReviewExecutionContext({
+      bubbleId: "b_meta_runtime_delivery_05",
+      round: 2,
+      startedAt: "2026-03-08T12:40:00.000Z",
+      watchdogTimeoutMinutes: 60,
+      attempt: 1
+    });
+    const errors: { path: string; message: string }[] = [];
+
+    expect(
+      validateMetaReviewRuntimeDelivery(
+        {
+          status: "failed",
+          reason_code: 0,
+          message: "tmux send failed",
+          observed_at: "2026-03-08T12:41:00.000Z",
+          observed_for_handoff_id: executionContext.handoff_id,
+          observed_for_round: executionContext.round
+        },
+        "meta_review.runtime_delivery",
+        errors
+      )
+    ).toBeNull();
+    expect(errors).toContainEqual({
+      path: "meta_review.runtime_delivery.reason_code",
+      message: "Must be null or a non-empty string"
+    });
   });
 
   it("rejects pre-E1 nested execution_context snapshots without execution_id", () => {

@@ -6,6 +6,9 @@ import {
   validateBubbleStateSnapshot
 } from "../../shared/state/stateSchema.js";
 import {
+  normalizeMetaReviewRuntimeDeliveryCorrelation
+} from "../../shared/metaReview/metaReviewSnapshot.js";
+import {
   DEFAULT_META_REVIEW_AUTO_REWORK_LIMIT,
   isAgentName,
   isAgentRole,
@@ -144,15 +147,28 @@ function normalizeInspectableMetaReviewRuntimeDelivery(
   if (!isMetaReviewRuntimeDeliveryStatus(value.status)) return null;
   if (value.reason_code !== null && !isNonEmptyString(value.reason_code)) return null;
   if (!isNonEmptyString(value.message) || !isIsoTimestamp(value.observed_at)) return null;
-  if (value.observed_for_handoff_id !== null && !isNonEmptyString(value.observed_for_handoff_id)) return null;
-  if (value.observed_for_round !== null && (!isInteger(value.observed_for_round) || value.observed_for_round <= 0)) return null;
+  if (value.observed_for_handoff_id !== null && value.observed_for_handoff_id !== undefined && !isNonEmptyString(value.observed_for_handoff_id)) return null;
+  if (value.observed_for_round !== null && value.observed_for_round !== undefined && (!isInteger(value.observed_for_round) || value.observed_for_round <= 0)) return null;
+  const correlation = normalizeMetaReviewRuntimeDeliveryCorrelation({
+    observedForHandoffId:
+      isNonEmptyString(value.observed_for_handoff_id)
+        ? value.observed_for_handoff_id
+        : null,
+    observedForRound:
+      isInteger(value.observed_for_round) && value.observed_for_round > 0
+        ? value.observed_for_round
+        : null
+  });
+  // Inspect fallback keeps malformed diagnostic snapshots non-authoritative:
+  // partially correlated persisted fields are normalized to null/null so
+  // downstream readers never see a synthetic active projection.
   return {
     status: value.status,
     reason_code: value.reason_code,
     message: value.message,
     observed_at: value.observed_at,
-    observed_for_handoff_id: value.observed_for_handoff_id,
-    observed_for_round: value.observed_for_round
+    observed_for_handoff_id: correlation.observedForHandoffId,
+    observed_for_round: correlation.observedForRound
   };
 }
 
