@@ -114,6 +114,19 @@ Lezarni a remote bubble local create write-pathjat ugy, hogy a felhasznalo `pair
 4. Explicit out-of-scope consumers: `start`, `status`, `list`, `attach`, runtime session/tmux consumers, approval/cleanup routing.
 5. Export surfaces closed in this phase: `no`; csak a local create write-path zarul le.
 
+### Bounded Task Shape
+
+1. `primary_task_shape`: `authority_producer`
+2. `secondary_adjacent_shape`: `none`
+3. Shape rationale:
+   - ez a fazis a canonical remote-create authority write-pathjat zarja le,
+   - a CLI parse/validation es a create orchestration csak ugyanennek a bounded producer pathnak az input/persistence seams-je,
+   - nincs kulon runtime activation, read-model consume, cleanup/recovery vagy coordination ownership.
+4. Explicitly deferred shapes:
+   - `fail_closed_hardening`: a retained no-fallback / no-success-claim baseline-en tul
+   - `coordination_concurrency_hardening`
+   - `activation_or_read_model` (`Phase 2D`, `Phase 2E`, `Phase 2F`)
+
 ### Baseline Preservation
 
 1. Must-preserve behaviors:
@@ -129,6 +142,26 @@ Lezarni a remote bubble local create write-pathjat ugy, hogy a felhasznalo `pair
    - a create task nem irhat `state-cache.json`-t pusztan azert, mert remote bubble keszul
 4. Replacement proof required if removed:
    - ha a created-pointer write-path kikerulne, successor tasknak explicit alternativ persisted create-time remote authorityt kell bizonyitania ugyanilyen fail-closed semantics-szal
+
+### Precondition and Side-Effect Boundary
+
+1. Remote-specific preconditions, amelyeknek teljesulniuk kell minden remote-specific side effect elott:
+   - a `--remote` alias trim utan nem ures,
+   - a global Pairflow config betoltheto es validalhato,
+   - az alias exact match-kent letezik a `[remotes]` mapban.
+2. Forbidden early side effects a fenti preconditionok elott:
+   - `[executor]` persistence a `bubble.toml`-ba,
+   - `remote.json` created-pointer write,
+   - barmilyen remote-only artifact parent-dir/lock/supplementary scaffold side effect, amely csak a remote mode miatt jonne letre,
+   - `state-cache.json` init,
+   - started-pointer mezok vagy SSH probe.
+3. Invalid/precondition-failure semantics:
+   - zero remote-specific side effect,
+   - nincs fallback-to-local success path,
+   - nincs olyan partial success interpretation, amely a maradek scaffoldbol ervenyes remote-created bubble-t inferal.
+4. Post-precondition bounded failure semantics:
+   - ha a retained standard create scaffold mar kiirodott, de a `remote.json` write kesobb elbukik, a command terminal failure-rel zarul,
+   - ebben a fazisban a rollback-hardening tovabbra is deferred; a required-now boundary a success-claim tiltasa, nem a mar kiirt scaffold visszabontasa.
 
 ### In Scope
 
@@ -201,6 +234,10 @@ Lezarni a remote bubble local create write-pathjat ugy, hogy a felhasznalo `pair
    - closure buckets touched: `authority_producer`, `workflow_orchestration_consumers`, `persisted_authority_or_schema`
    - intentionally collapsed closures: producer + create orchestration, mert ugyanaz a bounded create code path ownershipe es nincs kulon runtime/read-model fallout
    - explicitly deferred closures: `internal_execution_consumers`, `read_model_consumers`, `cleanup_recovery_consumers`
+13. Bounded-task-shape note:
+   - primary shape: `authority_producer`
+   - no secondary shape claimed
+   - deferred concerns: `fail_closed_hardening` a retained no-fallback boundaryn tul, `coordination_concurrency_hardening`, `activation_or_read_model`
 
 ## L1 - Change Contract
 
@@ -232,6 +269,7 @@ Lezarni a remote bubble local create write-pathjat ugy, hogy a felhasznalo `pair
 | local create path executor nelkul mukodik | preserve | T3 bizonyitja, hogy `--remote` nelkul nincs `executor` es nincs `remote.json` | P1 | required-now |
 | create bubble scaffold es state initialization | preserve | T3/T4 bizonyitja, hogy a standard scaffold marad | P1 | required-now |
 | remote create nem ir started pointert vagy cache-t | preserve-forbid hybrid | T4/T5/T7 bizonyitja a created-only pointert es `state-cache.json` hianyat | P1 | required-now |
+| invalid remote precondition fail-closed marad remote-specific side effect nelkul | preserve-forbid hybrid | T2/T5/T6/T10 bizonyitja, hogy nincs `executor`, nincs `remote.json`, nincs local fallback success | P1 | required-now |
 
 ### 0c) Target File Discipline
 
@@ -279,6 +317,7 @@ Implementation notes:
 |---|---|---|---|---|---|
 | CLI parse/help | `--remote` parse + help text | implicit remote mode inference mas flagbol | a remote mode csak explicit operator input lehet | P1 | required-now |
 | global config read | Pairflow global config betoltese remote create idoben | SSH probe vagy host connectivity check | config lookup, nem runtime health-check | P1 | required-now |
+| remote precondition ordering | alias validation + config load + exact lookup minden remote write elott | remote-specific artifact write precondition failure elott | invalid remote create nem hagyhat remote-specific side effectet maga utan | P1 | required-now |
 | bubble config persistence | `bubble.toml` remote executor metadata-val irasa | inline host/user/path duplikacio | retained Phase 1A executor contract consume | P1 | required-now |
 | local artifact persistence | created-shape `remote.json` irasa | `state-cache.json` init, started-pointer write | create only, no runtime activation | P1 | required-now |
 | lifecycle state | local `CREATED` state scaffold retained | remote runtime state transition | remote create nem valthat `PREPARING_WORKSPACE` vagy `RUNNING` allapotba | P1 | required-now |
@@ -315,16 +354,18 @@ Implementation notes:
 | T3 | local create compatibility retained | standard local create input `--remote` nelkul | create bubble | nincs `executor`, nincs `remote.json`, a jelenlegi local scaffold retained | P1 | required-now | `tests/core/bubble/createBubble.test.ts` |
 | T4 | remote create persists executor and created pointer | valid global config alias + remote create input | create bubble | `bubble.toml` explicit `[executor]` sectiont kap, `remote.json` letrejon `kind=\"created\"`, `host`, optional `portForwards` mezokkel, state `CREATED` marad | P1 | required-now | `tests/core/bubble/createBubble.test.ts` |
 | T5 | remote alias lookup is exact and fail-closed | global config contains/does-not-contain named alias | create flow build/persist | csak definialt alias fogadhato el; unknown alias eseten `BUBBLE_EXECUTOR_INVALID`, nincs host/path inference, nincs case-folding/normalization heuristic, es nincs local fallback | P1 | required-now | `tests/v11/application/create/createCliRunHelpers.test.ts`, `tests/core/bubble/createBubble.test.ts` |
-| T6 | global config load failure is fail-closed | remote create input mellett a global Pairflow config load/parse/validate hibaval all meg | create flow build/persist | explicit `PAIRFLOW_REMOTE_CONFIG_INVALID` vagy azzal egyenerteku parse/load failure surface, nincs local fallback es nincs create success | P1 | required-now | `tests/v11/application/create/createCliRunHelpers.test.ts`, `tests/v11/application/create/createCliRunner.test.ts` |
+| T6 | global config load failure is fail-closed | remote create input mellett a global Pairflow config load/parse/validate hibaval all meg | create flow build/persist | explicit `PAIRFLOW_REMOTE_CONFIG_INVALID` vagy azzal egyenerteku parse/load failure surface, nincs local fallback es nincs create success | P1 | required-now | `tests/v11/application/create/createCliRunner.test.ts`, `tests/core/bubble/createBubble.test.ts` |
 | T7 | remote create does not initialize started runtime artifacts | valid remote create input | create bubble | nincs `state-cache.json`, nincs started-pointer field, nincs runtime activation side effect | P1 | required-now | `tests/core/bubble/createBubble.test.ts` |
 | T8 | created pointer payload alias-resolved and created-only | valid alias with `host` and optional `default_port_forwards` | create bubble | `remote.json.host` a global config `host` erteket kapja, `portForwards` csak a configbol johet, alias string vagy path nem szivarog pointer mezobe | P1 | required-now | `tests/core/bubble/createBubble.test.ts` |
 | T9 | remote pointer write failure is terminal | valid remote create input, de `writeRemotePointer(...)` hibat dob | create bubble | a command failure-rel zarul, nincs success result, nincs `state-cache.json`, es a review nem fogadhat el `executor`-only partial success interpretationt | P1 | required-now | `tests/core/bubble/createBubble.test.ts`, `tests/v11/application/create/createCliRunner.test.ts` |
+| T10 | remote precondition failure leaves zero remote-specific side effects | unknown alias vagy global config load failure remote create mellett | create bubble | nincs `[executor]`, nincs `remote.json`, nincs `state-cache.json`, es nincs local fallback success | P1 | required-now | `tests/core/bubble/createBubble.test.ts`, `tests/v11/application/create/createCliRunner.test.ts` |
 
 Acceptance notes:
 
 1. A review nem fogadhat el parser-only coverage-t: legalabb egy persistence-level tesztnek tenylegesen ellenoriznie kell a kiirt `bubble.toml` `executor` blokkot es a `remote.json` payloadot.
 2. T3/T4/T7/T8 egyutt artifact-szintu allitasokat kell adjon: local create eseten explicit assert legyen az `executor` es `remote.json` hianya, remote create eseten pedig a `remote.json` jelenlete mellett a `state-cache.json` hianya is.
 3. T5/T6 nem elegedhet meg azzal, hogy "hiba tortent"; a fail-closed viselkedesnek azt is bizonyitania kell, hogy nincs fallback-to-local success path es nincs runtime-ready success-claim.
+4. T2/T5/T6/T10 egyutt explicit precondition-ordering proofot kell adjon: invalid remote input vagy config hiba remote-specific artifact write elott all meg.
 
 ## L2 - Implementation Notes (Optional)
 

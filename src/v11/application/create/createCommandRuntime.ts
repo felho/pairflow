@@ -2,6 +2,7 @@ import { readFile, stat, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
 import {
+  BUBBLE_EXECUTOR_INVALID,
   assertCreateReviewArtifactType,
   assertValidBubbleConfig
 } from "../../../config/bubbleConfig.js";
@@ -19,6 +20,7 @@ import type {
   AgentName,
   BubbleConfig,
   CreateReviewArtifactType,
+  PairflowRemoteHostConfig,
   PairflowCommandProfile
 } from "../../../types/bubble.js";
 import { GitRepositoryError } from "../../shared/ports/gitRepository.js";
@@ -27,9 +29,12 @@ import { isNonEmptyString } from "../../shared/validation/primitives.js";
 import type { ResolvedTaskInput } from "./createCommandContract.js";
 
 export class BubbleCreateError extends Error {
-  public constructor(message: string) {
+  public override cause?: unknown;
+
+  public constructor(message: string, options?: { cause?: unknown }) {
     super(message);
     this.name = "BubbleCreateError";
+    this.cause = options?.cause;
   }
 }
 
@@ -58,6 +63,7 @@ export interface CreateBubbleConfigInput {
   bootstrapCommand?: string;
   openCommand?: string;
   pairflowCommandProfile?: PairflowCommandProfile;
+  executorRemote?: string;
 }
 
 export function validateBubbleId(id: string): void {
@@ -279,6 +285,14 @@ export function buildBubbleConfig(input: CreateBubbleConfigInput): BubbleConfig 
     ...(input.openCommand !== undefined
       ? { open_command: input.openCommand }
       : {}),
+    ...(input.executorRemote !== undefined
+      ? {
+          executor: {
+            type: "ssh",
+            remote: input.executorRemote
+          }
+        }
+      : {}),
     agents: {
       implementer: input.implementer ?? "codex",
       reviewer: input.reviewer ?? "claude"
@@ -308,6 +322,46 @@ export function buildBubbleConfig(input: CreateBubbleConfigInput): BubbleConfig 
         }
       : {})
   });
+}
+
+export function normalizeCreateRemoteAlias(remote: string | undefined): string | undefined {
+  if (remote === undefined) {
+    return undefined;
+  }
+
+  const normalizedRemote = remote.trim();
+  if (normalizedRemote.length === 0) {
+    throw toBubbleCreateError({
+      message: "Remote alias cannot be empty.",
+      context: { remote }
+    });
+  }
+
+  return normalizedRemote;
+}
+
+export function resolveCreateRemoteAlias(input: {
+  remoteAlias: string;
+  remotes: Record<string, PairflowRemoteHostConfig> | undefined;
+}): {
+  host: string;
+  portForwards?: number[];
+} {
+  const remote = input.remotes?.[input.remoteAlias];
+  if (remote === undefined) {
+    throw toBubbleCreateError({
+      message:
+        `${BUBBLE_EXECUTOR_INVALID}: Remote "${input.remoteAlias}" is not defined in the global [remotes.<name>] config`,
+      context: { remoteAlias: input.remoteAlias }
+    });
+  }
+
+  return {
+    host: remote.host,
+    ...(remote.default_port_forwards !== undefined
+      ? { portForwards: remote.default_port_forwards }
+      : {})
+  };
 }
 
 export function resolveCreateReviewArtifactType(
@@ -365,16 +419,18 @@ export async function ensureBubbleDoesNotExist(bubbleDir: string): Promise<void>
 
 export async function ensureRuntimeSessionFile(
   sessionsPath: string
-): Promise<void> {
+): Promise<boolean> {
   try {
     await writeFile(sessionsPath, "{}\n", {
       encoding: "utf8",
       flag: "wx"
     });
+    return true;
   } catch (error) {
     const typedError = error as NodeJS.ErrnoException;
     if (typedError.code !== "EEXIST") {
       throw error;
     }
+    return false;
   }
 }
