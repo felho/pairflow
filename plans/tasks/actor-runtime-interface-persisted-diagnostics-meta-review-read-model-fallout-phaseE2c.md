@@ -52,6 +52,14 @@ Target file interpretation:
 5. A design doc explicit current policyje szerint a `meta_review.runtime_delivery` nem authority, hanem observability-only diagnostic block, amely csak akkor surfacelheto, ha correlation fields alapjan meg mindig az aktiv execution contexthez tartozik (`docs/pairflow-initial-design.md` meta-review authority szakasz, kulonosen a 9-14. pontok).
 6. Emiatt a fennmarado `E2c` scope mar nem generic runtime ack producer munka, hanem a persisted diagnostic producer + meta-review projection + status/list/UI read-model fallout closure ugyanazon same-authority chainen belul.
 
+### Assumption Lock
+
+1. Ez a task arra a current-tree baseline-ra epul, hogy az `E1`, `E2a` es `E2b` mar merged predecessor, es ezek authority/producer/direct-consume dontesei nem revisitalhatok itt.
+2. A `meta_review.runtime_delivery` surface current-tree retained diagnostic surface; az `E2c` ezt a current-tree baseline-on lockolja es szukiti, es ebben a taskban nem nevezi at uj canonical runtime contractta.
+3. Ha implementacio kozben kiderul, hogy a listed target/read-model consumers valamelyike megis generic runtime ack truthra tamaszkodik, az `PHASEE2C_SCOPE_BREACH`-kent kezelendo es visszadelegalando predecessor/successor taskba, nem local reinterpretation.
+4. Az `E3`/`E4` successorok ownershipje valtozatlan: pilot activation, broad rollout, retained adapter cleanup es remove-trigger execution nem hozhato elore pusztan azert, mert ugyanazt a diagnostic blokkot olvassak.
+5. A task csak a current plan/task traceabilityban nevezett surfacesre tamaszkodhat; ad hoc uj public status/list/UI truth source nem vezetheto be "compatibility" indokkal.
+
 ## L0 - Policy
 
 ### Goal
@@ -154,6 +162,14 @@ Target file interpretation:
 2. A tasknak preferalnia kell a semantic alignmentet a vocabulary churn helyett; ne vezessen be uj status tokeneket, ha a current design explicitten non-authority diagnostic blockot ir elo.
 3. A read-model surfaces ne dobjanak hibara stale diagnostic miatt; stale esetben projection-null a preferalt fail-closed read-model viselkedes.
 
+### Success Criteria
+
+1. Az implementalo a dokumentumbol egyertelmuen le tudja vezetni, hogy melyik seam producer/persistence/read-model ownership es melyik mar predecessor vagy meg successor scope.
+2. A task explicitten tiltja, hogy a `confirmed|uncertain|failed` diagnostic statusokbol canonical submit/approval/runtime truth legyen consumer-inventory szintu replacement proof nelkul.
+3. A dependency edges dokumentumszinten eleg szorosak ahhoz, hogy az `E2c` implementacio ne claimelhessen `E2a` producer redesign, `E2b` direct consume reopen, `E3` activation vagy `E4` cleanup closure-t.
+4. A task-level implementability lock explicitten megtartja a `T1`-`T6` implementation proof inventoryt, mikozben a docs-only handoff szabaly kulon csak a jelen pass skip-claim summaryjat korlatozza.
+5. A status/list/UI es inspection seams ugyanarra a same-authority stale-null szabalyra vannak kotve, nem renderer- vagy adapter-local fallbackre.
+
 ### Contract Boundary / Blast Radius
 
 1. `contract_boundary_override`: `yes`
@@ -231,6 +247,16 @@ Normative sequencing rules:
 | `docs/pairflow-initial-design.md` meta-review authority szakasz | `runtime_delivery` observability-only block, active correlation gate-tel. | Ez a control-model baseline. |
 | current code helper: `src/v11/shared/metaReview/metaReviewSnapshot.ts` | Same-authority correlation helper preserved baseline. | Ez a read-path lock, nem ad hoc renderer-local fallback. |
 
+### 0d) Dependency Edge Matrix
+
+| Edge | Direction | Contract owned by this task? | Required handling |
+|---|---|---|---|
+| `E1 -> E2c` | predecessor | no | Az `execution_context` authority truth adopted baseline; nem override-olhato local diagnostic convenience miatt. |
+| `E2a -> E2c` | predecessor | no | Typed delivery/launch producer truth sealed baseline; `runtime_delivery` csak meta-review-specific observational projection lehet. |
+| `E2b -> E2c` | predecessor | no | A direct runtime/orchestration consume closure lezart predecessor baseline; itt csak a persisted diagnostic/read-model fallout harmonizalhato, nem a direct consume semantics ownershipje. |
+| `E2c -> E3` | successor | no | Az implementer pilot activation successor-owned marad; az `E2c` legfeljebb predecessor contextet adhat a stale-null/read-model fallout closure-val. |
+| `E2c -> E4` | successor | no | Broad rollout, retained adapter cleanup es eventual surface removal trigger csak explicit successor ownershipkent emlitheto. |
+
 ### 1) Call-site Matrix
 
 | ID | File | Function/Entry | Exact Signature (args -> return) | Insertion Point | Expected Behavior | Priority | Timing | Evidence |
@@ -247,10 +273,16 @@ Normative sequencing rules:
 
 | Contract | Current | Target | Required Fields | Optional Fields | Compatibility | Priority | Timing |
 |---|---|---|---|---|---|---|---|
-| `BubbleMetaReviewRuntimeDeliveryState` | non-authority diagnostic block, de explicit task-level lock nelkul | explicit observability-only, same-authority-correlated diagnostic block | `status`, `message`, `observed_at` | `reason_code`, `observed_for_handoff_id`, `observed_for_round` | preserve outer shape if possible | P1 | required-now |
+| `BubbleMetaReviewRuntimeDeliveryState` | non-authority diagnostic block, de explicit task-level lock nelkul | explicit observability-only, same-authority-correlated diagnostic block | `status`, `message`, `observed_at` | `reason_code`, `observed_for_handoff_id`, `observed_for_round` | preserve outer shape if possible; backward-compatible reads toleralhatjak a hianyzo correlation field-eket, de uj producer write active-correlation claim mellett koteles mindkettot kitolteni | P1 | required-now |
 | `MetaReviewRuntimeDeliveryObservation` | notify/pane binding observation result | explicit producer contract ugyanarra a persisted diagnostic blockra | `status`, `message` | `reasonCode` | preserve outer shape if possible | P1 | required-now |
 | status/list/UI runtimeDelivery projection | narrowed projection helperrel, de task-level closure nelkul | explicit stale-null read-model rule | `status`, `message`, `observedAt` | `reasonCode`, `observedForHandoffId`, `observedForRound` | preserve outer shape if possible | P1 | required-now |
 | inspection projection | inspectable state loads raw persisted block | inspection respects same-authority/stale semantics | canonical normalized fields | none | internal semantic tightening | P1 | required-now |
+
+Normative correlation-field note:
+
+1. A `observed_for_handoff_id` es `observed_for_round` mezok backward-compatible persisted readekben meg hianyozhatnak, de ez csak legacy tolerancia.
+2. Ha uj meta-review diagnostic producer vagy persistence path aktiv same-authority projectiont claimel, akkor mindket correlation mezot kotelezoen ki kell toltenie.
+3. Hianyzo correlation mezok ilyen uj write mellett contract-breachnek szamitanak, es a read-modelnek tovabbra is stale/null fail-closed viselkedest kell kovetnie.
 
 ### 3) Side Effects Contract
 
@@ -285,6 +317,7 @@ Constraint:
 | must-not-use | raw `state.meta_review.runtime_delivery` read-model projection helper nelkul | P1 | required-now |
 | must-not-use | diagnostic status mint canonical submit/approval authority | P1 | required-now |
 | must-not-use | pilot activation vagy retained adapter cleanup scope | P1 | required-now |
+| must-not-use | renderer-local vagy presenter-local fallback, amely megkeruli a shared same-authority helper baseline-t | P1 | required-now |
 
 ### 6) Test Matrix
 
@@ -296,7 +329,14 @@ Constraint:
 | T4 | status projection surfaces only active correlated runtime delivery | status view matching es stale diagnostic allapotokkal | status command + render fut | stale esetben `runtimeDelivery=null`, aktiv esetben narrowed projection jelenik meg | P1 | required-now | `tests/core/bubble/statusBubble.test.ts`, `tests/cli/bubbleStatusCommand.test.ts` |
 | T5 | list/UI projection stays narrowed and correlation-safe | list bubble fixture runtime-deliveryvel es anelkul | list/UI presenter fut | list/UI ugyanazt a narrowed contractot projekciozza, historical diagnostic nem szivarog | P1 | required-now | `tests/core/bubble/listBubbles.test.ts`, `tests/core/ui/bubblePresenter.test.ts` |
 | T6 | canonical meta-review submit path nem runtime-delivery-authorized | active execution context + missing/failed runtime_delivery | submit/approval coverage fut | submit authority tovabbra is execution-context driven, nem diagnostic-status driven | P1 | required-now | `tests/contracts/v11/metaReviewSubmitCoverage.test.ts`, `tests/core/human/approval.test.ts` |
-| T7 | no `E3` / `E4` closure claim | task diff es handoff summary | review fut | nincs pilot activation vagy rollout/cleanup success claim | P1 | required-now | review evidence |
+| T7 | no `E3` / `E4` closure claim | task diff es handoff summary | review/handoff gate fut | nincs pilot activation vagy rollout/cleanup success claim | P1 | required-now | review evidence |
+
+### 6a) Verification Notes
+
+1. A task docs-only refinement handoffja hasznalhat `skip-claim` summaryt: ez azt jelenti, hogy a handoff nem allitja, hogy runtime checks lefutottak, es nem hivatkozik `.pairflow/evidence/*.log` fajlokra.
+2. A task implementability proofja ettol fuggetlenul a `T1`-`T7` matrixban rogzitett required-now evidence inventoryra epul; ebbol a `T1`-`T6` sorok implementation proof surfaces, a `T7` pedig review/handoff boundary guard.
+3. Ha kesobbi implementacio kozben a proof surface barmely pontja extra testet vagy state-inspection coverage-et igenyel, azt elsodlegesen a `T1`-`T6` implementation proof sorokhoz kell visszakotni; a `T7` tovabbra is summary/boundary ellenorzes marad, nem runtime validation helyettesitoje.
+4. A done-package/PASS summary minimuma docs-only refinement esetben: mit szigoritott a task, mely dependency edge-eket lockolta expliciten, es hogy runtime validationt nem claimel.
 
 ## L2 - Implementation Notes (Optional)
 
@@ -322,7 +362,7 @@ Constraint:
 
 Mark task as `IMPLEMENTABLE` when:
 
-1. a `CS1`-`CS6` seamek explicitten ugyanarra a persisted diagnostic contractra allnak, es a contractot a `T1`-`T6` proof sorok current-tree evidence-e ala tudja tamasztani;
+1. a `CS1`-`CS6` seamek explicitten ugyanarra a persisted diagnostic contractra allnak, es a task a `T1`-`T6` proof sorokat required-now implementation evidence inventorykent rogzit;
 2. a task kimondja, hogy a `meta_review.runtime_delivery` observability-only, non-authority block marad;
 3. a status/list/UI read-path explicit stale-null same-authority rule-t kovet;
 4. a task nem huzza vissza a generic runtime producer/direct consume closure-t, es nem leap-frogol `E3`/`E4` rollout munkaba;
