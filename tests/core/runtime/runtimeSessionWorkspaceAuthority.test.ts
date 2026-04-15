@@ -37,7 +37,7 @@ describe("resolveRuntimeSessionWorkspaceAuthority", () => {
     });
   });
 
-  it("infers worktree workspace kind when canonical workspace path matches the retained worktree path", () => {
+  it("fails closed when canonical workspace path is present but workspaceKind is missing", () => {
     const result = resolveRuntimeSessionWorkspaceAuthority({
       runtimeSessionRecord: {
         bubbleId: "b_runtime_authority_01",
@@ -50,16 +50,12 @@ describe("resolveRuntimeSessionWorkspaceAuthority", () => {
     });
 
     expect(result).toEqual({
-      status: "resolved",
-      authority: {
-        workspacePath: "/tmp/runtime-workspace",
-        workspaceKind: "worktree",
-        source: "workspace_path"
-      }
+      status: "unresolved",
+      reason: "workspace_authority_missing"
     });
   });
 
-  it("infers clone workspace kind when canonical workspace path differs from the retained worktree path", () => {
+  it("fails closed when canonical workspace path differs from the retained worktree path but workspaceKind is missing", () => {
     const result = resolveRuntimeSessionWorkspaceAuthority({
       runtimeSessionRecord: {
         bubbleId: "b_runtime_authority_01",
@@ -72,16 +68,12 @@ describe("resolveRuntimeSessionWorkspaceAuthority", () => {
     });
 
     expect(result).toEqual({
-      status: "resolved",
-      authority: {
-        workspacePath: "/tmp/runtime-workspace",
-        workspaceKind: "clone",
-        source: "workspace_path"
-      }
+      status: "unresolved",
+      reason: "workspace_authority_missing"
     });
   });
 
-  it("resolves legacy worktree no-split authority when explicit workspace authority is absent", () => {
+  it("fails closed when explicit workspace authority is absent", () => {
     const result = resolveRuntimeSessionWorkspaceAuthority({
       runtimeSessionRecord: {
         bubbleId: "b_runtime_authority_01",
@@ -93,12 +85,8 @@ describe("resolveRuntimeSessionWorkspaceAuthority", () => {
     });
 
     expect(result).toEqual({
-      status: "resolved",
-      authority: {
-        workspacePath: "/tmp/worktree",
-        workspaceKind: "worktree",
-        source: "legacy_worktree_fallback"
-      }
+      status: "unresolved",
+      reason: "workspace_authority_missing"
     });
   });
 
@@ -119,7 +107,7 @@ describe("resolveRuntimeSessionWorkspaceAuthority", () => {
     });
   });
 
-  it("forbids clone-only legacy worktree fallback without canonical workspace authority", () => {
+  it("fails closed when workspaceKind is clone but canonical workspace authority is absent", () => {
     const result = resolveRuntimeSessionWorkspaceAuthority({
       runtimeSessionRecord: {
         bubbleId: "b_runtime_authority_01",
@@ -133,7 +121,7 @@ describe("resolveRuntimeSessionWorkspaceAuthority", () => {
 
     expect(result).toEqual({
       status: "unresolved",
-      reason: "legacy_clone_fallback_forbidden"
+      reason: "workspace_authority_missing"
     });
   });
 });

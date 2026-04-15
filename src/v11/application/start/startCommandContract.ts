@@ -7,6 +7,7 @@ import type {
   TerminateBubbleTmuxSessionPort
 } from "../../shared/ports/tmuxSessions.js";
 import type {
+  ReadRuntimeSessionsRegistryPort,
   ClaimRuntimeSessionPort,
   UpsertRuntimeSessionPort,
   RemoveRuntimeSessionPort
@@ -52,6 +53,7 @@ export interface StartBubbleDependencies {
   launchBubbleTmuxSession?: LaunchBubbleTmuxSessionPort;
   terminateBubbleTmuxSession?: TerminateBubbleTmuxSessionPort;
   isTmuxSessionAlive?: ((sessionName: string) => Promise<boolean>) | undefined;
+  readRuntimeSessionsRegistry?: ReadRuntimeSessionsRegistryPort;
   claimRuntimeSession?: ClaimRuntimeSessionPort;
   upsertRuntimeSession?: UpsertRuntimeSessionPort;
   removeRuntimeSession?: RemoveRuntimeSessionPort;

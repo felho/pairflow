@@ -6,11 +6,9 @@ import type {
 } from "./startCommandContract.js";
 import {
   mapStartBubbleResult,
-  resolveStartBubbleDependencies,
-  resolveStartBubbleMode
+  resolveStartBubbleDependencies
 } from "./startCommandOrchestration.js";
 import {
-  buildCloneWorkspaceModeStartRejectMessage,
   buildStartupIncompleteStartFailureMessage,
   StartBubbleError,
   throwAsStartBubbleError
@@ -100,38 +98,13 @@ async function claimRuntimeSessionOwnershipOrThrow(input: {
 async function resolveStartBubblePreflightOrThrow(
   input: StartBubbleInput
 ): Promise<ResolvedStartBubble> {
-  let resolved: Awaited<
-    ReturnType<typeof startCommandContextDefaults.resolveBubbleById>
-  >;
   try {
-    resolved = await startCommandContextDefaults.resolveBubbleById(
+    return await startCommandContextDefaults.resolveBubbleById(
       resolveStartBubbleLookupInput(input)
     );
   } catch (error) {
     throwAsStartBubbleError(error);
   }
-  if (resolved.bubbleConfig.work_mode === "clone") {
-    try {
-      resolveStartBubbleMode(
-        (
-          await startCommandContextDefaults.readStateSnapshot(
-            resolved.bubblePaths.statePath
-          )
-        ).state.state
-      );
-    } catch (error) {
-      throwAsStartBubbleError(error);
-    }
-    throw new StartBubbleError({
-      reasonCode: "WORKSPACE_MODE_CLONE_NOT_ACTIVATED",
-      message: buildCloneWorkspaceModeStartRejectMessage(),
-      context: {
-        bubble_id: resolved.bubbleId,
-        work_mode: resolved.bubbleConfig.work_mode
-      }
-    });
-  }
-  return resolved;
 }
 
 async function runStartFlow(input: {

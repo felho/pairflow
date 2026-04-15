@@ -4,7 +4,7 @@ import type { WorkspaceKind } from "./ports/worktreeWorkspace.js";
 export interface RuntimeSessionWorkspaceAuthority {
   workspacePath: string;
   workspaceKind: WorkspaceKind;
-  source: "workspace_path" | "legacy_worktree_fallback";
+  source: "workspace_path";
 }
 
 export type RuntimeSessionWorkspaceAuthorityResolution =
@@ -14,18 +14,8 @@ export type RuntimeSessionWorkspaceAuthorityResolution =
   }
   | {
     status: "unresolved";
-    reason:
-      | "runtime_session_missing"
-      | "workspace_authority_missing"
-      | "legacy_clone_fallback_forbidden";
+    reason: "runtime_session_missing" | "workspace_authority_missing";
   };
-
-function inferWorkspaceKindFromPaths(input: {
-  workspacePath: string;
-  worktreePath: string;
-}): WorkspaceKind {
-  return input.workspacePath === input.worktreePath ? "worktree" : "clone";
-}
 
 export function resolveRuntimeSessionWorkspaceAuthority(input: {
   runtimeSessionRecord: RuntimeSessionRecord | undefined;
@@ -38,33 +28,8 @@ export function resolveRuntimeSessionWorkspaceAuthority(input: {
     };
   }
 
-  const worktreePath = runtimeSessionRecord.worktreePath.trim();
   const workspacePath = runtimeSessionRecord.workspacePath?.trim();
-
-  if ((workspacePath?.length ?? 0) > 0) {
-    return {
-      status: "resolved",
-      authority: {
-        workspacePath: workspacePath!,
-        workspaceKind:
-          runtimeSessionRecord.workspaceKind
-          ?? inferWorkspaceKindFromPaths({
-            workspacePath: workspacePath!,
-            worktreePath
-          }),
-        source: "workspace_path"
-      }
-    };
-  }
-
-  if (runtimeSessionRecord.workspaceKind === "clone") {
-    return {
-      status: "unresolved",
-      reason: "legacy_clone_fallback_forbidden"
-    };
-  }
-
-  if (worktreePath.length === 0) {
+  if ((workspacePath?.length ?? 0) === 0 || runtimeSessionRecord.workspaceKind === undefined) {
     return {
       status: "unresolved",
       reason: "workspace_authority_missing"
@@ -74,9 +39,9 @@ export function resolveRuntimeSessionWorkspaceAuthority(input: {
   return {
     status: "resolved",
     authority: {
-      workspacePath: worktreePath,
-      workspaceKind: "worktree",
-      source: "legacy_worktree_fallback"
+      workspacePath: workspacePath!,
+      workspaceKind: runtimeSessionRecord.workspaceKind,
+      source: "workspace_path"
     }
   };
 }

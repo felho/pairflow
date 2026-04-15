@@ -2,17 +2,17 @@
   "id": "start-clone-not-activated-v11",
   "command": "start",
   "mode": "v11",
-  "description": "Start contract case for explicit fail-closed rejection when work_mode=clone is not activated.",
+  "description": "Start contract case for successful fresh local clone activation when canonical workspace authority is explicit.",
   "input": {
     "fixture": {
-      "scenario": "clone_not_activated"
+      "scenario": "clone_activated"
     }
   },
   "expected": {
-    "status": "error",
-    "reasonCode": "WORKSPACE_MODE_CLONE_NOT_ACTIVATED",
+    "status": "ok",
+    "reasonCode": "STARTED",
     "stateSubset": {
-      "state": "CREATED"
+      "state": "RUNNING"
     }
   },
   "tags": [
@@ -20,6 +20,6 @@
     "m0",
     "start",
     "v11",
-    "error-path"
+    "success-path"
   ]
 }

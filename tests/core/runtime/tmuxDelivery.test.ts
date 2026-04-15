@@ -80,17 +80,36 @@ function createEnvelope(overrides: Partial<ProtocolEnvelope> = {}): ProtocolEnve
   };
 }
 
+type RuntimeSessionRecordOverrides = {
+  [Key in keyof RuntimeSessionRecord]?: RuntimeSessionRecord[Key] | undefined;
+};
+
 function createRegistry(
-  overrides: Partial<RuntimeSessionRecord> = {}
+  overrides: RuntimeSessionRecordOverrides = {}
 ): RuntimeSessionsRegistry {
+  const record = {
+    bubbleId: "b_delivery_01",
+    repoPath: "/tmp/repo",
+    worktreePath: "/tmp/worktree",
+    workspacePath: "/tmp/worktree",
+    workspaceKind: "worktree" as const,
+    tmuxSessionName: "pf-b_delivery_01",
+    updatedAt: "2026-02-22T12:00:00.000Z",
+    ...overrides
+  };
   return {
     b_delivery_01: {
-      bubbleId: "b_delivery_01",
-      repoPath: "/tmp/repo",
-      worktreePath: "/tmp/worktree",
-      tmuxSessionName: "pf-b_delivery_01",
-      updatedAt: "2026-02-22T12:00:00.000Z",
-      ...overrides
+      bubbleId: record.bubbleId ?? "b_delivery_01",
+      repoPath: record.repoPath ?? "/tmp/repo",
+      worktreePath: record.worktreePath ?? "/tmp/worktree",
+      ...(record.workspacePath !== undefined
+        ? { workspacePath: record.workspacePath }
+        : {}),
+      ...(record.workspaceKind !== undefined
+        ? { workspaceKind: record.workspaceKind }
+        : {}),
+      tmuxSessionName: record.tmuxSessionName ?? "pf-b_delivery_01",
+      updatedAt: record.updatedAt ?? "2026-02-22T12:00:00.000Z"
     }
   };
 }
@@ -2038,7 +2057,7 @@ describe("emitTmuxDeliveryNotification", () => {
     );
   });
 
-  it("preserves legacy worktree no-split delivery success when explicit workspace authority is absent", async () => {
+  it("fails closed when explicit workspace authority is absent during delivery", async () => {
     const calls: string[][] = [];
     const runner: TmuxRunner = (args): Promise<TmuxRunResult> => {
       calls.push(args);
@@ -2063,23 +2082,23 @@ describe("emitTmuxDeliveryNotification", () => {
       sessionsPath: "/tmp/repo/.pairflow/runtime/sessions.json",
       envelope: createEnvelope(),
       runner,
-      readSessionsRegistry: () => Promise.resolve(createRegistry())
+      readSessionsRegistry: () =>
+        Promise.resolve(
+          createRegistry({
+            workspacePath: undefined,
+            workspaceKind: undefined
+          })
+        )
     });
 
-    expect(result.delivered).toBe(true);
+    expect(result).toMatchObject({
+      delivered: false,
+      reason: "no_runtime_session"
+    });
     expect(result.message).toContain(
-      "Run pairflow commands from workspace root: /tmp/worktree."
+      "Run pairflow commands from the active workspace root."
     );
-    const messageCall = calls.find(
-      (call) =>
-        call[0] === "send-keys" &&
-        call[2] === "pf-b_delivery_01:0.2" &&
-        call[3] === "-l" &&
-        call[4]?.includes("# [pairflow] r1 PASS codex->claude")
-    );
-    expect(messageCall?.[4]).toContain(
-      "Run pairflow commands from workspace root: /tmp/worktree."
-    );
+    expect(calls).toHaveLength(0);
   });
 
   it("returns no_runtime_session when registry has no entry", async () => {
@@ -2135,7 +2154,9 @@ describe("emitTmuxDeliveryNotification", () => {
       readSessionsRegistry: () =>
         Promise.resolve(
           createRegistry({
-            worktreePath: "   "
+            worktreePath: "   ",
+            workspacePath: undefined,
+            workspaceKind: undefined
           })
         )
     });
@@ -2150,7 +2171,7 @@ describe("emitTmuxDeliveryNotification", () => {
     expect(calls).toHaveLength(0);
   });
 
-  it("forbids clone-only legacy worktree fallback during delivery", async () => {
+  it("fails closed when clone-mode session has no canonical workspace authority during delivery", async () => {
     const calls: string[][] = [];
     const runner: TmuxRunner = (args): Promise<TmuxRunResult> => {
       calls.push(args);
@@ -2170,6 +2191,7 @@ describe("emitTmuxDeliveryNotification", () => {
       readSessionsRegistry: () =>
         Promise.resolve(
           createRegistry({
+            workspacePath: undefined,
             workspaceKind: "clone"
           })
         )

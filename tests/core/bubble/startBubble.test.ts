@@ -44,6 +44,8 @@ import {
 } from "../../../src/v11/shared/reviewer/reviewerSeverityOntology.generated.js";
 import { shellQuote } from "../../../src/v11/shared/foundation/shellQuote.js";
 import type { BubbleStateSnapshot } from "../../../src/types/bubble.js";
+import type { WorktreeBootstrapInput } from "../../../src/v11/shared/ports/worktreeWorkspace.js";
+import type * as WorktreeManagerModule from "../../../src/v11/infrastructure/workspace/worktreeManager.js";
 import { initGitRepository } from "../../helpers/git.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
 import { writeEvidenceLog } from "../../helpers/evidence.js";
@@ -701,92 +703,146 @@ describe("startBubble", () => {
     );
   });
 
-  it("fails closed when fresh bootstrap returns clone workspace authority", async () => {
+  it("accepts fresh bootstrap clone workspace authority when canonical authority is explicit", async () => {
+    vi.resetModules();
     const repoPath = await createTempRepo();
     const created = await createBubble({
       id: "b_start_bootstrap_clone_authority_01",
       repoPath,
       baseBranch: "main",
       reviewArtifactType: "code",
-      task: "Fresh bootstrap clone authority remains fail-closed"
+      task: "Fresh bootstrap clone authority is launched from explicit canonical authority"
     });
 
-    let upsertCalled = false;
+    await writeFile(
+      created.paths.bubbleTomlPath,
+      renderBubbleConfigToml({
+        ...created.config,
+        work_mode: "clone"
+      }),
+      "utf8"
+    );
+
+    let upsertInput:
+      | {
+          workspacePath: string | undefined;
+          workspaceKind: string | undefined;
+        }
+      | undefined;
     let launchCalled = false;
     let cleanupCalled = false;
     let removeCalled = false;
+    let requestedWorkspaceKind: string | undefined;
 
-    const thrown = await startBubble(
-      {
-        bubbleId: created.bubbleId,
-        cwd: repoPath,
-        now: new Date("2026-02-22T14:20:00.000Z")
-      },
-      {
-        bootstrapWorktreeWorkspace: () =>
-          Promise.resolve({
+    try {
+      const actualWorktreeManager =
+        await vi.importActual<typeof WorktreeManagerModule>(
+          "../../../src/v11/infrastructure/workspace/worktreeManager.js"
+        );
+      vi.doMock("../../../src/v11/infrastructure/workspace/worktreeManager.js", () => ({
+        ...actualWorktreeManager,
+        bootstrapWorktreeWorkspace: vi.fn(async (bootstrapInput: WorktreeBootstrapInput) => {
+          requestedWorkspaceKind = bootstrapInput.workspaceKind;
+          return {
             repoPath,
             baseRef: "refs/heads/main",
             bubbleBranch: created.config.bubble_branch,
             worktreePath: created.paths.worktreePath,
             workspacePath: `${created.paths.worktreePath}/../clone-authority`,
-            workspaceKind: "clone",
+            workspaceKind: "clone" as const,
             branchPrepared: true
-          }),
-        claimRuntimeSession: (input) =>
-          Promise.resolve({
-            claimed: true,
-            record: {
+          };
+        })
+      }));
+
+      const { startBubbleV11: startBubbleWithMock } = await import(
+        "../../../src/v11/application/start/emitStartV11.js"
+      );
+
+      const result = await startBubbleWithMock(
+        {
+          bubbleId: created.bubbleId,
+          cwd: repoPath,
+          now: new Date("2026-02-22T14:20:00.000Z")
+        },
+        {
+          claimRuntimeSession: (input) =>
+            Promise.resolve({
+              claimed: true,
+              record: {
+                bubbleId: input.bubbleId,
+                repoPath: input.repoPath,
+                worktreePath: input.worktreePath,
+                tmuxSessionName: input.tmuxSessionName,
+                updatedAt: "2026-02-22T14:20:00.000Z"
+              }
+            }),
+          upsertRuntimeSession: async (input) => {
+            const workspacePath = input.workspacePath;
+            const workspaceKind = input.workspaceKind;
+            upsertInput = {
+              workspacePath,
+              workspaceKind
+            };
+            expect(workspacePath).toBe(`${created.paths.worktreePath}/../clone-authority`);
+            expect(workspaceKind).toBe("clone");
+            return {
               bubbleId: input.bubbleId,
               repoPath: input.repoPath,
               worktreePath: input.worktreePath,
+              workspacePath: workspacePath!,
+              workspaceKind: workspaceKind!,
               tmuxSessionName: input.tmuxSessionName,
               updatedAt: "2026-02-22T14:20:00.000Z"
-            }
-          }),
-        upsertRuntimeSession: async () => {
-          upsertCalled = true;
-          throw new Error("upsert should not run for clone authority");
-        },
-        launchBubbleTmuxSession: async () => {
-          launchCalled = true;
-          return { sessionName: "pf-b_start_bootstrap_clone_authority_01" };
-        },
-        cleanupWorktreeWorkspace: async () => {
-          cleanupCalled = true;
-          return {
-            repoPath,
-            bubbleBranch: created.config.bubble_branch,
-            worktreePath: created.paths.worktreePath,
-            removedWorktree: true,
-            removedBranch: true
-          };
-        },
-        removeRuntimeSession: async () => {
-          removeCalled = true;
-          return true;
+            };
+          },
+          launchBubbleTmuxSession: async (input) => {
+            launchCalled = true;
+            expect(input.workspacePath).toBe(
+              `${created.paths.worktreePath}/../clone-authority`
+            );
+            return { sessionName: "pf-b_start_bootstrap_clone_authority_01" };
+          },
+          cleanupWorktreeWorkspace: async () => {
+            cleanupCalled = true;
+            return {
+              repoPath,
+              bubbleBranch: created.config.bubble_branch,
+              worktreePath: created.paths.worktreePath,
+              removedWorktree: true,
+              removedBranch: true
+            };
+          },
+          removeRuntimeSession: async () => {
+            removeCalled = true;
+            return true;
+          }
         }
-      }
-    ).catch((error: unknown) => error);
+      );
 
-    expect(thrown).toBeInstanceOf(StartBubbleError);
-    expect((thrown as StartBubbleError).reasonCode).toBe(
-      "WORKSPACE_MODE_CLONE_NOT_ACTIVATED"
-    );
-    expect(upsertCalled).toBe(false);
-    expect(launchCalled).toBe(false);
-    expect(cleanupCalled).toBe(true);
-    expect(removeCalled).toBe(true);
+      expect(result.state.state).toBe("RUNNING");
+      expect(upsertInput).toEqual({
+        workspacePath: `${created.paths.worktreePath}/../clone-authority`,
+        workspaceKind: "clone"
+      });
+      expect(requestedWorkspaceKind).toBe("clone");
+      expect(launchCalled).toBe(true);
+      expect(cleanupCalled).toBe(false);
+      expect(removeCalled).toBe(false);
+    } finally {
+      vi.doUnmock("../../../src/v11/infrastructure/workspace/worktreeManager.js");
+      vi.resetModules();
+    }
   });
 
-  it("rejects clone-mode fresh start before runtime mutation", async () => {
+  it("runs clone-mode fresh start through runtime mutation and requests clone bootstrap topology", async () => {
     const repoPath = await createTempRepo();
     const created = await createBubble({
       id: "b_start_clone_01",
       repoPath,
       baseBranch: "main",
       reviewArtifactType: "code",
-      task: "Clone mode remains fail-closed",
+      task: "Clone mode starts successfully from a local clone workspace",
       cwd: repoPath
     });
 
@@ -800,11 +856,11 @@ describe("startBubble", () => {
     );
 
     let claimCalled = false;
-    let bootstrapCalled = false;
     let launchCalled = false;
     let removeCalled = false;
+    let upsertCalled = false;
 
-    const thrown = await startBubble(
+    const result = await startBubble(
       {
         bubbleId: created.bubbleId,
         cwd: repoPath,
@@ -824,18 +880,25 @@ describe("startBubble", () => {
             }
           });
         },
-        bootstrapWorktreeWorkspace: () => {
-          bootstrapCalled = true;
-          return Promise.resolve(
-            buildWorktreeBootstrapResult({
-              repoPath,
-              bubbleBranch: created.config.bubble_branch,
-              worktreePath: created.paths.worktreePath
-            })
-          );
+        upsertRuntimeSession: (input) => {
+          const workspacePath = input.workspacePath;
+          const workspaceKind = input.workspaceKind;
+          upsertCalled = true;
+          expect(workspacePath).toBe(created.paths.worktreePath);
+          expect(workspaceKind).toBe("clone");
+          return Promise.resolve({
+            bubbleId: input.bubbleId,
+            repoPath: input.repoPath,
+            worktreePath: input.worktreePath,
+            workspacePath: workspacePath!,
+            workspaceKind: workspaceKind!,
+            tmuxSessionName: input.tmuxSessionName,
+            updatedAt: "2026-02-22T13:01:00.000Z"
+          });
         },
-        launchBubbleTmuxSession: () => {
+        launchBubbleTmuxSession: (input) => {
           launchCalled = true;
+          expect(input.workspacePath).toBe(created.paths.worktreePath);
           return Promise.resolve({ sessionName: "pf-b_start_clone_01" });
         },
         removeRuntimeSession: () => {
@@ -843,39 +906,27 @@ describe("startBubble", () => {
           return Promise.resolve(true);
         }
       }
-    ).then(
-      () => null,
-      (error: unknown) => error
     );
 
-    expect(thrown).toBeInstanceOf(StartBubbleError);
-    expect((thrown as StartBubbleError).reasonCode).toBe(
-      "WORKSPACE_MODE_CLONE_NOT_ACTIVATED"
-    );
-    expect((thrown as StartBubbleError).context).toMatchObject({
-      bubble_id: created.bubbleId,
-      work_mode: "clone"
-    });
-    expect((thrown as StartBubbleError).message).toContain(
-      "work_mode=clone is not activated in this phase"
-    );
-    expect(claimCalled).toBe(false);
-    expect(bootstrapCalled).toBe(false);
-    expect(launchCalled).toBe(false);
+    expect(result.state.state).toBe("RUNNING");
+    expect(claimCalled).toBe(true);
+    expect(upsertCalled).toBe(true);
+    expect(launchCalled).toBe(true);
     expect(removeCalled).toBe(false);
 
     const loaded = await readStateSnapshot(created.paths.statePath);
-    expect(loaded.state.state).toBe("CREATED");
+    expect(loaded.state.state).toBe("RUNNING");
   });
 
-  it("rejects clone-mode start before reviewer policy snapshot side effects", async () => {
+  it("runs commands.bootstrap from clone canonical workspace authority before tmux launch", async () => {
     const repoPath = await createTempRepo();
     const created = await createBubble({
-      id: "b_start_clone_guard_01",
+      id: "b_start_clone_bootstrap_cmd_01",
       repoPath,
       baseBranch: "main",
       reviewArtifactType: "code",
-      task: "Clone guard must run before side effects",
+      task: "Clone mode runs bootstrap command from canonical authority",
+      bootstrapCommand: "pnpm install --frozen-lockfile && pnpm build",
       cwd: repoPath
     });
 
@@ -887,33 +938,246 @@ describe("startBubble", () => {
       }),
       "utf8"
     );
-    await mkdir(
-      join(created.paths.artifactsDir, reviewerPolicySnapshotFileName),
-      { recursive: true }
+
+    const callOrder: string[] = [];
+
+    await startBubble(
+      {
+        bubbleId: created.bubbleId,
+        cwd: repoPath,
+        now: new Date("2026-02-22T13:03:00.000Z")
+      },
+      {
+        claimRuntimeSession: (input) =>
+          Promise.resolve({
+            claimed: true,
+            record: {
+              bubbleId: input.bubbleId,
+              repoPath: input.repoPath,
+              worktreePath: input.worktreePath,
+              tmuxSessionName: input.tmuxSessionName,
+              updatedAt: "2026-02-22T13:03:00.000Z"
+            }
+          }),
+        runWorktreeBootstrapCommand: async (input) => {
+          callOrder.push("workspace");
+          callOrder.push("commands.bootstrap");
+          expect(input.workspacePath).toBe(created.paths.worktreePath);
+          expect(input.worktreePath).toBe(created.paths.worktreePath);
+        },
+        launchBubbleTmuxSession: (input) => {
+          callOrder.push("launch");
+          expect(input.workspacePath).toBe(created.paths.worktreePath);
+          return Promise.resolve({ sessionName: "pf-b_start_clone_bootstrap_cmd_01" });
+        }
+      }
     );
 
-    const thrown = await startBubble({
-      bubbleId: created.bubbleId,
-      cwd: repoPath,
-      now: new Date("2026-02-22T13:01:30.000Z")
-    }).then(
-      () => null,
-      (error: unknown) => error
+    expect(callOrder).toEqual(["workspace", "commands.bootstrap", "launch"]);
+  });
+
+  it("fails startup when clone bootstrap returns a mismatched workspace kind", async () => {
+    vi.resetModules();
+    const repoPath = await createTempRepo();
+    const created = await createBubble({
+      id: "b_start_clone_workspace_kind_mismatch_01",
+      repoPath,
+      baseBranch: "main",
+      reviewArtifactType: "code",
+      task: "Clone mode must fail closed when bootstrap returns worktree authority",
+      cwd: repoPath
+    });
+
+    await writeFile(
+      created.paths.bubbleTomlPath,
+      renderBubbleConfigToml({
+        ...created.config,
+        work_mode: "clone"
+      }),
+      "utf8"
     );
+
+    let upsertCalled = false;
+    let launchCalled = false;
+    let cleanupCalled = false;
+    const removedSessions: string[] = [];
+    let requestedWorkspaceKind: string | undefined;
+
+    try {
+      const actualWorktreeManager =
+        await vi.importActual<typeof WorktreeManagerModule>(
+          "../../../src/v11/infrastructure/workspace/worktreeManager.js"
+        );
+      vi.doMock("../../../src/v11/infrastructure/workspace/worktreeManager.js", () => ({
+        ...actualWorktreeManager,
+        bootstrapWorktreeWorkspace: vi.fn(async (bootstrapInput: WorktreeBootstrapInput) => {
+          requestedWorkspaceKind = bootstrapInput.workspaceKind;
+          return {
+            repoPath,
+            baseRef: "refs/heads/main",
+            bubbleBranch: created.config.bubble_branch,
+            worktreePath: created.paths.worktreePath,
+            workspacePath: created.paths.worktreePath,
+            workspaceKind: "worktree" as const,
+            branchPrepared: true
+          };
+        })
+      }));
+
+      const {
+        startBubbleV11: startBubbleWithMock,
+        StartBubbleErrorV11: StartBubbleErrorWithMock
+      } = await import("../../../src/v11/application/start/emitStartV11.js");
+
+      const thrown = await startBubbleWithMock(
+        {
+          bubbleId: created.bubbleId,
+          cwd: repoPath,
+          now: new Date("2026-02-22T13:04:00.000Z")
+        },
+        {
+          claimRuntimeSession: (input) =>
+            Promise.resolve({
+              claimed: true,
+              record: {
+                bubbleId: input.bubbleId,
+                repoPath: input.repoPath,
+                worktreePath: input.worktreePath,
+                tmuxSessionName: input.tmuxSessionName,
+                updatedAt: "2026-02-22T13:04:00.000Z"
+              }
+            }),
+          upsertRuntimeSession: async () => {
+            upsertCalled = true;
+            throw new Error("upsert should not run after workspace-kind mismatch");
+          },
+          launchBubbleTmuxSession: async () => {
+            launchCalled = true;
+            return { sessionName: "pf-b_start_clone_workspace_kind_mismatch_01" };
+          },
+          cleanupWorktreeWorkspace: async () => {
+            cleanupCalled = true;
+            return {
+              repoPath,
+              bubbleBranch: created.config.bubble_branch,
+              worktreePath: created.paths.worktreePath,
+              removedWorktree: true,
+              removedBranch: true
+            };
+          },
+          removeRuntimeSession: async (input) => {
+            removedSessions.push(input.bubbleId);
+            return true;
+          }
+        }
+      ).catch((error: unknown) => error);
+
+      expect(thrown).toBeInstanceOf(StartBubbleErrorWithMock);
+      expect((thrown as InstanceType<typeof StartBubbleErrorWithMock>).reasonCode).toBe(
+        "START_LAUNCH_WORKSPACE_UNAVAILABLE"
+      );
+      expect((thrown as Error).message).toContain(
+        "bootstrap returned workspace kind worktree, but start requested clone"
+      );
+      expect(requestedWorkspaceKind).toBe("clone");
+      expect(upsertCalled).toBe(false);
+      expect(launchCalled).toBe(false);
+      expect(cleanupCalled).toBe(true);
+      expect(removedSessions).toEqual([created.bubbleId]);
+
+      const loaded = await readStateSnapshot(created.paths.statePath);
+      expect(loaded.state.state).toBe("FAILED");
+    } finally {
+      vi.doUnmock("../../../src/v11/infrastructure/workspace/worktreeManager.js");
+      vi.resetModules();
+    }
+  });
+
+  it("fails startup when worktree bootstrap returns a mismatched clone workspace kind", async () => {
+    const repoPath = await createTempRepo();
+    const created = await createBubble({
+      id: "b_start_worktree_kind_mismatch_01",
+      repoPath,
+      baseBranch: "main",
+      reviewArtifactType: "code",
+      task: "Worktree mode must fail closed when bootstrap returns clone authority",
+      cwd: repoPath
+    });
+
+    let upsertCalled = false;
+    let launchCalled = false;
+    let cleanupCalled = false;
+    const removedSessions: string[] = [];
+
+    const thrown = await startBubble(
+      {
+        bubbleId: created.bubbleId,
+        cwd: repoPath,
+        now: new Date("2026-02-22T13:05:00.000Z")
+      },
+      {
+        bootstrapWorktreeWorkspace: async () => ({
+          repoPath,
+          baseRef: "refs/heads/main",
+          bubbleBranch: created.config.bubble_branch,
+          worktreePath: created.paths.worktreePath,
+          workspacePath: `${created.paths.worktreePath}/../clone-authority`,
+          workspaceKind: "clone",
+          branchPrepared: true
+        }),
+        claimRuntimeSession: (input) =>
+          Promise.resolve({
+            claimed: true,
+            record: {
+              bubbleId: input.bubbleId,
+              repoPath: input.repoPath,
+              worktreePath: input.worktreePath,
+              tmuxSessionName: input.tmuxSessionName,
+              updatedAt: "2026-02-22T13:05:00.000Z"
+            }
+          }),
+        upsertRuntimeSession: async () => {
+          upsertCalled = true;
+          throw new Error("upsert should not run after workspace-kind mismatch");
+        },
+        launchBubbleTmuxSession: async () => {
+          launchCalled = true;
+          return { sessionName: "pf-b_start_worktree_kind_mismatch_01" };
+        },
+        cleanupWorktreeWorkspace: async () => {
+          cleanupCalled = true;
+          return {
+            repoPath,
+            bubbleBranch: created.config.bubble_branch,
+            worktreePath: created.paths.worktreePath,
+            removedWorktree: true,
+            removedBranch: true
+          };
+        },
+        removeRuntimeSession: async (input) => {
+          removedSessions.push(input.bubbleId);
+          return true;
+        }
+      }
+    ).catch((error: unknown) => error);
 
     expect(thrown).toBeInstanceOf(StartBubbleError);
     expect((thrown as StartBubbleError).reasonCode).toBe(
-      "WORKSPACE_MODE_CLONE_NOT_ACTIVATED"
+      "START_LAUNCH_WORKSPACE_UNAVAILABLE"
     );
-    expect((thrown as StartBubbleError).message).toContain(
-      "The bubble state remains unchanged."
+    expect((thrown as Error).message).toContain(
+      "bootstrap returned workspace kind clone, but start requested worktree"
     );
+    expect(upsertCalled).toBe(false);
+    expect(launchCalled).toBe(false);
+    expect(cleanupCalled).toBe(true);
+    expect(removedSessions).toEqual([created.bubbleId]);
 
     const loaded = await readStateSnapshot(created.paths.statePath);
-    expect(loaded.state.state).toBe("CREATED");
+    expect(loaded.state.state).toBe("FAILED");
   });
 
-  it("rejects clone-mode resume across resumable states before resume side effects", async () => {
+  it("resumes clone-mode bubbles across resumable states from persisted canonical workspace authority", async () => {
     const repoPath = await createTempRepo();
     const resumableStates = [
       "RUNNING",
@@ -946,38 +1210,63 @@ describe("startBubble", () => {
         }));
       }
 
-      let summaryCalled = false;
-      let launchCalled = false;
+      let summaryCalled = 0;
+      let launchCalled = 0;
+      let claimCalls = 0;
+      const cloneWorkspacePath =
+        `${bubble.paths.worktreePath}/../clone-authority-${stateValue.toLowerCase()}`;
 
-      const thrown = await startBubble(
+      const result = await startBubble(
         {
           bubbleId: bubble.bubbleId,
           cwd: repoPath,
           now: new Date("2026-02-23T09:06:30.000Z")
         },
         {
+          readRuntimeSessionsRegistry: async () => ({
+            [bubble.bubbleId]: {
+              bubbleId: bubble.bubbleId,
+              repoPath,
+              worktreePath: bubble.paths.worktreePath,
+              workspacePath: cloneWorkspacePath,
+              workspaceKind: "clone",
+              tmuxSessionName: `pf-b_start_clone_resume_${stateValue.toLowerCase()}`,
+              updatedAt: "2026-02-23T09:06:00.000Z"
+            }
+          }),
+          claimRuntimeSession: () => {
+            claimCalls += 1;
+            return Promise.resolve({
+              claimed: claimCalls > 1,
+              record: {
+                bubbleId: bubble.bubbleId,
+                repoPath,
+                worktreePath: bubble.paths.worktreePath,
+                workspacePath: cloneWorkspacePath,
+                workspaceKind: "clone",
+                tmuxSessionName: `pf-b_start_clone_resume_${stateValue.toLowerCase()}`,
+                updatedAt: "2026-02-23T09:06:00.000Z"
+              }
+            });
+          },
+          isTmuxSessionAlive: () => Promise.resolve(false),
           buildResumeTranscriptSummary: () => {
-            summaryCalled = true;
+            summaryCalled += 1;
             return Promise.resolve(`resume-summary: state=${stateValue}`);
           },
-          launchBubbleTmuxSession: () => {
-            launchCalled = true;
+          launchBubbleTmuxSession: (input) => {
+            launchCalled += 1;
+            expect(input.workspacePath).toBe(cloneWorkspacePath);
             return Promise.resolve({
               sessionName: `pf-b_start_clone_resume_${stateValue.toLowerCase()}`
             });
           }
         }
-      ).then(
-        () => null,
-        (error: unknown) => error
       );
 
-      expect(thrown).toBeInstanceOf(StartBubbleError);
-      expect((thrown as StartBubbleError).reasonCode).toBe(
-        "WORKSPACE_MODE_CLONE_NOT_ACTIVATED"
-      );
-      expect(summaryCalled).toBe(false);
-      expect(launchCalled).toBe(false);
+      expect(result.state.state).toBe(stateValue);
+      expect(summaryCalled).toBe(1);
+      expect(launchCalled).toBe(1);
 
       const loaded = await readStateSnapshot(bubble.paths.statePath);
       expect(loaded.state.state).toBe(stateValue);
@@ -2322,6 +2611,7 @@ describe("startBubble", () => {
       task: "Resume bubble keeps persisted canonical workspace authority"
     });
     const canonicalWorkspacePath = `${bubble.paths.worktreePath}/../canonicalized-worktree`;
+    let claimCalls = 0;
 
     await startBubble(
       {
@@ -2330,9 +2620,21 @@ describe("startBubble", () => {
         now: new Date("2026-02-23T09:11:00.000Z")
       },
       {
-        claimRuntimeSession: (input) =>
-          Promise.resolve({
-            claimed: true,
+        readRuntimeSessionsRegistry: async () => ({
+          [bubble.bubbleId]: {
+            bubbleId: bubble.bubbleId,
+            repoPath,
+            worktreePath: bubble.paths.worktreePath,
+            workspacePath: `${bubble.paths.worktreePath}/../clone-authority`,
+            workspaceKind: "clone",
+            tmuxSessionName: "pf-b_start_resume_clone_workspace_authority_01",
+            updatedAt: "2026-02-23T09:11:00.000Z"
+          }
+        }),
+        claimRuntimeSession: (input) => {
+          claimCalls += 1;
+          return Promise.resolve({
+            claimed: claimCalls > 1,
             record: {
               bubbleId: input.bubbleId,
               repoPath: input.repoPath,
@@ -2342,7 +2644,9 @@ describe("startBubble", () => {
               tmuxSessionName: input.tmuxSessionName,
               updatedAt: "2026-02-23T09:10:00.000Z"
             }
-          }),
+          });
+        },
+        isTmuxSessionAlive: () => Promise.resolve(false),
         buildResumeTranscriptSummary: () => Promise.resolve("resume-summary: workspace-authority"),
         launchBubbleTmuxSession: (input) => {
           const implementerScript = extractBashLcScript(input.implementerCommand);
@@ -2371,26 +2675,47 @@ describe("startBubble", () => {
     );
   });
 
-  it("fails closed when resume runtime session carries clone workspace authority", async () => {
+  it("resumes from persisted clone workspace authority when runtime session is explicit", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({
       repoPath,
       bubbleId: "b_start_resume_clone_workspace_authority_01",
-      task: "Resume clone workspace authority remains fail-closed"
+      task: "Resume clone workspace authority uses the persisted canonical launch workspace"
     });
+    await writeFile(
+      bubble.paths.bubbleTomlPath,
+      renderBubbleConfigToml({
+        ...bubble.config,
+        work_mode: "clone"
+      }),
+      "utf8"
+    );
 
     let launchCalled = false;
+    let claimCalls = 0;
 
-    const thrown = await startBubble(
+    const result = await startBubble(
       {
         bubbleId: bubble.bubbleId,
         cwd: repoPath,
         now: new Date("2026-02-23T09:12:00.000Z")
       },
       {
-        claimRuntimeSession: (input) =>
-          Promise.resolve({
-            claimed: true,
+        readRuntimeSessionsRegistry: async () => ({
+          [bubble.bubbleId]: {
+            bubbleId: bubble.bubbleId,
+            repoPath,
+            worktreePath: bubble.paths.worktreePath,
+            workspacePath: `${bubble.paths.worktreePath}/../clone-authority`,
+            workspaceKind: "clone",
+            tmuxSessionName: "pf-b_start_resume_clone_workspace_authority_01",
+            updatedAt: "2026-02-23T09:11:00.000Z"
+          }
+        }),
+        claimRuntimeSession: (input) => {
+          claimCalls += 1;
+          return Promise.resolve({
+            claimed: claimCalls > 1,
             record: {
               bubbleId: input.bubbleId,
               repoPath: input.repoPath,
@@ -2400,18 +2725,166 @@ describe("startBubble", () => {
               tmuxSessionName: input.tmuxSessionName,
               updatedAt: "2026-02-23T09:11:00.000Z"
             }
-          }),
+          });
+        },
+        isTmuxSessionAlive: () => Promise.resolve(false),
+        launchBubbleTmuxSession: async (input) => {
+          launchCalled = true;
+          expect(input.workspacePath).toBe(`${bubble.paths.worktreePath}/../clone-authority`);
+          return { sessionName: "pf-b_start_resume_clone_workspace_authority_01" };
+        }
+      }
+    );
+
+    expect(result.state.state).toBe("RUNNING");
+    expect(launchCalled).toBe(true);
+  });
+
+  it("fails closed when clone resume only retains worktree fallback without workspacePath", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_start_resume_clone_workspace_missing_path_01",
+      task: "Resume clone workspace authority requires explicit workspacePath"
+    });
+
+    let summaryCalled = false;
+    let launchCalled = false;
+    let removeCalled = false;
+    let claimCalled = false;
+
+    const thrown = await startBubble(
+      {
+        bubbleId: bubble.bubbleId,
+        cwd: repoPath,
+        now: new Date("2026-02-23T09:13:00.000Z")
+      },
+      {
+        readRuntimeSessionsRegistry: async () => ({
+          [bubble.bubbleId]: {
+            bubbleId: bubble.bubbleId,
+            repoPath,
+            worktreePath: bubble.paths.worktreePath,
+            workspaceKind: "clone",
+            tmuxSessionName: "pf-b_start_resume_clone_workspace_missing_path_01",
+            updatedAt: "2026-02-23T09:12:00.000Z"
+          }
+        }),
+        claimRuntimeSession: (input) => {
+          claimCalled = true;
+          return Promise.resolve({
+            claimed: false,
+            record: {
+              bubbleId: input.bubbleId,
+              repoPath: input.repoPath,
+              worktreePath: input.worktreePath,
+              workspaceKind: "clone",
+              tmuxSessionName: input.tmuxSessionName,
+              updatedAt: "2026-02-23T09:12:00.000Z"
+            }
+          });
+        },
+        isTmuxSessionAlive: () => Promise.resolve(false),
+        removeRuntimeSession: async () => {
+          removeCalled = true;
+          return true;
+        },
+        buildResumeTranscriptSummary: async () => {
+          summaryCalled = true;
+          return "resume-summary: should-not-run";
+        },
         launchBubbleTmuxSession: async () => {
           launchCalled = true;
-          return { sessionName: "pf-b_start_resume_clone_workspace_authority_01" };
+          return { sessionName: "pf-b_start_resume_clone_workspace_missing_path_01" };
         }
       }
     ).catch((error: unknown) => error);
 
     expect(thrown).toBeInstanceOf(StartBubbleError);
     expect((thrown as StartBubbleError).reasonCode).toBe(
-      "WORKSPACE_MODE_CLONE_NOT_ACTIVATED"
+      "START_LAUNCH_WORKSPACE_UNAVAILABLE"
     );
+    expect((thrown as Error).message).toContain(
+      "runtime session canonical workspace authority is missing"
+    );
+    expect(claimCalled).toBe(true);
+    expect(removeCalled).toBe(true);
+    expect(summaryCalled).toBe(false);
+    expect(launchCalled).toBe(false);
+  });
+
+  it("fails closed when clone resume has no persisted runtime session authority", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_start_resume_clone_runtime_session_missing_01",
+      task: "Clone resume requires an existing persisted runtime session authority"
+    });
+
+    await writeFile(
+      bubble.paths.bubbleTomlPath,
+      renderBubbleConfigToml({
+        ...bubble.config,
+        work_mode: "clone"
+      }),
+      "utf8"
+    );
+
+    let removeCalled = false;
+    let summaryCalled = false;
+    let launchCalled = false;
+    let claimCalled = false;
+
+    const thrown = await startBubble(
+      {
+        bubbleId: bubble.bubbleId,
+        cwd: repoPath,
+        now: new Date("2026-02-23T09:13:30.000Z")
+      },
+      {
+        readRuntimeSessionsRegistry: async () => ({}),
+        claimRuntimeSession: async () => {
+          claimCalled = true;
+          return {
+            claimed: true,
+            record: {
+              bubbleId: bubble.bubbleId,
+              repoPath,
+              worktreePath: bubble.paths.worktreePath,
+              workspacePath: bubble.paths.worktreePath,
+              workspaceKind: "clone",
+              tmuxSessionName: "pf-b_start_resume_clone_runtime_session_missing_01",
+              updatedAt: "2026-02-23T09:13:30.000Z"
+            }
+          };
+        },
+        removeRuntimeSession: async () => {
+          removeCalled = true;
+          return true;
+        },
+        buildResumeTranscriptSummary: async () => {
+          summaryCalled = true;
+          return "resume-summary: should-not-run-without-runtime-session";
+        },
+        launchBubbleTmuxSession: async () => {
+          launchCalled = true;
+          return {
+            sessionName: "pf-b_start_resume_clone_runtime_session_missing_01"
+          };
+        }
+      }
+    ).catch((error: unknown) => error);
+
+    expect(thrown).toBeInstanceOf(StartBubbleError);
+    expect((thrown as StartBubbleError).reasonCode).toBe(
+      "START_LAUNCH_WORKSPACE_UNAVAILABLE"
+    );
+    expect((thrown as Error).message).toContain(
+      "clone resume requires persisted runtime session canonical workspace authority"
+    );
+    expect(claimCalled).toBe(false);
+    expect(removeCalled).toBe(false);
+    expect(summaryCalled).toBe(false);
     expect(launchCalled).toBe(false);
   });
 
@@ -2466,6 +2939,195 @@ describe("startBubble", () => {
       "pf-b_start_resume_workspace_reclaim_01-stale"
     );
     expect(result.tmuxSessionName).toBe("pf-b_start_resume_workspace_reclaim_01");
+  });
+
+  it("fails stale resume reclaim when explicit workspacePath matches worktreePath but workspaceKind is missing", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_start_resume_workspace_reclaim_worktree_missing_kind_01",
+      task: "Resume reclaim rejects same-path authority without explicit workspaceKind"
+    });
+
+    await upsertRuntimeSession({
+      sessionsPath: bubble.paths.sessionsPath,
+      bubbleId: bubble.bubbleId,
+      repoPath,
+      worktreePath: bubble.paths.worktreePath,
+      workspacePath: bubble.paths.worktreePath,
+      tmuxSessionName: "pf-b_start_resume_workspace_reclaim_worktree_missing_kind_01-stale",
+      now: new Date("2026-02-23T09:21:30.000Z")
+    });
+
+    let removeCalled = false;
+    let summaryCalled = false;
+    let launchCalled = false;
+
+    const thrown = await startBubble(
+      {
+        bubbleId: bubble.bubbleId,
+        cwd: repoPath,
+        now: new Date("2026-02-23T09:22:30.000Z")
+      },
+      {
+        isTmuxSessionAlive: () => Promise.resolve(false),
+        removeRuntimeSession: async () => {
+          removeCalled = true;
+          return true;
+        },
+        buildResumeTranscriptSummary: async () => {
+          summaryCalled = true;
+          return "resume-summary: same-path-worktree-authority";
+        },
+        launchBubbleTmuxSession: async () => {
+          launchCalled = true;
+          return {
+            sessionName: "pf-b_start_resume_workspace_reclaim_worktree_missing_kind_01"
+          };
+        }
+      }
+    ).catch((error: unknown) => error);
+
+    expect(thrown).toBeInstanceOf(StartBubbleError);
+    expect((thrown as StartBubbleError).reasonCode).toBe(
+      "START_LAUNCH_WORKSPACE_UNAVAILABLE"
+    );
+    expect((thrown as Error).message).toContain(
+      "runtime session canonical workspace authority is missing"
+    );
+    expect(removeCalled).toBe(true);
+    expect(summaryCalled).toBe(false);
+    expect(launchCalled).toBe(false);
+  });
+
+  it("fails stale resume reclaim when persisted workspacePath matches worktreePath but workspaceKind is missing", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_start_resume_workspace_reclaim_missing_kind_01",
+      task: "Resume reclaim rejects missing workspaceKind on explicit same-path authority"
+    });
+
+    await writeFile(
+      bubble.paths.bubbleTomlPath,
+      renderBubbleConfigToml({
+        ...bubble.config,
+        work_mode: "clone"
+      }),
+      "utf8"
+    );
+
+    await upsertRuntimeSession({
+      sessionsPath: bubble.paths.sessionsPath,
+      bubbleId: bubble.bubbleId,
+      repoPath,
+      worktreePath: bubble.paths.worktreePath,
+      workspacePath: bubble.paths.worktreePath,
+      tmuxSessionName: "pf-b_start_resume_workspace_reclaim_missing_kind_01-stale",
+      now: new Date("2026-02-23T09:22:00.000Z")
+    });
+
+    let removeCalled = false;
+    let launchCalled = false;
+
+    const thrown = await startBubble(
+      {
+        bubbleId: bubble.bubbleId,
+        cwd: repoPath,
+        now: new Date("2026-02-23T09:23:00.000Z")
+      },
+      {
+        isTmuxSessionAlive: () => Promise.resolve(false),
+        removeRuntimeSession: async () => {
+          removeCalled = true;
+          return true;
+        },
+        buildResumeTranscriptSummary: async () =>
+          "resume-summary: malformed-stale-workspace-authority",
+        launchBubbleTmuxSession: async () => {
+          launchCalled = true;
+          return {
+            sessionName: "pf-b_start_resume_workspace_reclaim_missing_kind_01"
+          };
+        }
+      }
+    ).catch((error: unknown) => error);
+
+    expect(thrown).toBeInstanceOf(StartBubbleError);
+    expect((thrown as StartBubbleError).reasonCode).toBe(
+      "START_LAUNCH_WORKSPACE_UNAVAILABLE"
+    );
+    expect((thrown as Error).message).toContain(
+      "runtime session canonical workspace authority is missing"
+    );
+    expect(removeCalled).toBe(true);
+    expect(launchCalled).toBe(false);
+  });
+
+  it("fails stale resume reclaim when clone runtime session only retains worktree fallback without workspacePath", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_start_resume_workspace_reclaim_clone_missing_path_01",
+      task: "Resume reclaim rejects clone stale session records without explicit workspacePath"
+    });
+
+    await writeFile(
+      bubble.paths.bubbleTomlPath,
+      renderBubbleConfigToml({
+        ...bubble.config,
+        work_mode: "clone"
+      }),
+      "utf8"
+    );
+
+    await upsertRuntimeSession({
+      sessionsPath: bubble.paths.sessionsPath,
+      bubbleId: bubble.bubbleId,
+      repoPath,
+      worktreePath: bubble.paths.worktreePath,
+      workspaceKind: "clone",
+      tmuxSessionName:
+        "pf-b_start_resume_workspace_reclaim_clone_missing_path_01-stale",
+      now: new Date("2026-02-23T09:24:00.000Z")
+    });
+
+    let removeCalled = false;
+    let launchCalled = false;
+
+    const thrown = await startBubble(
+      {
+        bubbleId: bubble.bubbleId,
+        cwd: repoPath,
+        now: new Date("2026-02-23T09:25:00.000Z")
+      },
+      {
+        isTmuxSessionAlive: () => Promise.resolve(false),
+        removeRuntimeSession: async () => {
+          removeCalled = true;
+          return true;
+        },
+        buildResumeTranscriptSummary: async () =>
+          "resume-summary: malformed-stale-clone-authority",
+        launchBubbleTmuxSession: async () => {
+          launchCalled = true;
+          return {
+            sessionName:
+              "pf-b_start_resume_workspace_reclaim_clone_missing_path_01"
+          };
+        }
+      }
+    ).catch((error: unknown) => error);
+
+    expect(thrown).toBeInstanceOf(StartBubbleError);
+    expect((thrown as StartBubbleError).reasonCode).toBe(
+      "START_LAUNCH_WORKSPACE_UNAVAILABLE"
+    );
+    expect((thrown as Error).message).toContain(
+      "runtime session canonical workspace authority is missing"
+    );
+    expect(removeCalled).toBe(true);
+    expect(launchCalled).toBe(false);
   });
 
   it("skips reviewer focus injection in resume mode when reviewer-focus artifact is schema-invalid", async () => {
@@ -3285,6 +3947,8 @@ describe("startBubble", () => {
       bubbleId: created.bubbleId,
       repoPath,
       worktreePath: created.paths.worktreePath,
+      workspacePath: created.paths.worktreePath,
+      workspaceKind: "worktree",
       tmuxSessionName: "pf-b_start_05-stale",
       now: new Date("2026-02-22T20:10:00.000Z")
     });

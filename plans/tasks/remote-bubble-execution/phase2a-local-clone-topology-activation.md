@@ -10,9 +10,17 @@ target_files:
   - src/v11/application/start/startCommandLaunchWorkspace.ts
   - src/v11/application/start/startCommandRuntime.ts
   - src/v11/application/start/startCommandSession.ts
+  - src/v11/application/metaReviewGate/metaReviewGatePaneBinding.ts
+  - src/v11/shared/runtimeSessionWorkspaceAuthority.ts
+  - src/v11/infrastructure/channel/tmux/reviewerContext.ts
+  - src/v11/infrastructure/channel/tmux/tmuxDeliveryRuntime.ts
   - src/v11/infrastructure/workspace/worktreeManager.ts
   - tests/core/bubble/startBubble.test.ts
+  - tests/core/runtime/reviewerContext.test.ts
+  - tests/core/runtime/runtimeSessionWorkspaceAuthority.test.ts
+  - tests/core/runtime/tmuxDelivery.test.ts
   - tests/core/workspace/worktreeManager.test.ts
+  - tests/v11/application/metaReview/metaReviewGatePaneBinding.test.ts
   - tests/v11/application/start/startCommandLaunchWorkspace.test.ts
   - tests/contracts/v11/start.contract.runner.ts
   - tests/contracts/v11/cases/start/start-clone-not-activated-v11.case.json
@@ -43,14 +51,15 @@ owners:
 3. A bootstrap producer seam ugyanakkor megvan, de jelenleg csak registered worktree topologyt allit elo:
    - `src/v11/infrastructure/workspace/worktreeManager.ts` `bootstrapWorktreeWorkspace(...)` ma mindig `git worktree add`-ot hasznal,
    - a visszaadott `WorktreeBootstrapResult` mindig `workspaceKind: "worktree"` es `workspacePath === worktreePath`.
-4. A runtime consume oldali activation prerequisites mar alkalmasak clone authority fogadasara:
+4. A runtime consume oldali activation prerequisites mar alkalmasak explicit authority consume-ra, de a shared runtime authority helperben maradt retained worktree fallbackot ebben a fazisban ki kell vezetni:
    - a runtime session record tud `workspacePath` + `workspaceKind` mezot tarolni,
-   - a `resolveRuntimeSessionWorkspaceAuthority(...)` helper explicit clone authorityt fel tud oldani, ha az tenyleg perzisztalva van,
+   - a `resolveRuntimeSessionWorkspaceAuthority(...)` helpernek csak explicit perzisztalt authorityt szabad feloldania,
    - a tmux / reviewer / bubble-loop family mar a canonical `workspacePath` mezot fogyasztja.
-5. Emiatt a Phase 2A mar tenyleg activation task lehet:
+5. Az aktualis approval-gate bubble allapotok mar explicit runtime authorityval futnak, ezert a retained runtime-session fallback eltavolitasa nem igenyel kulon active-bubble migracios feladatot most.
+6. Emiatt a Phase 2A mar tenyleg activation task lehet:
    - a retained global clone rejectet el kell tavolitani a helyi start/resume pathrol,
    - fresh startnal a bootstrap seamnek valodi clone topologyt kell eloallitani,
-   - resume pathnal ugyanazt a perzisztalt clone authorityt kell tovabbfuttatni,
+   - resume pathnal ugyanazt a perzisztalt authorityt kell tovabbfuttatni, retained runtime fallback nelkul,
    - mindezt ugy, hogy a remote create/start/status/list/attach es a `pairflow_sync_command` tovabbra is successor-only maradjon.
 
 ## Implementation Target Decision
@@ -101,7 +110,7 @@ Aktivalni a local clone-topology start/resume pathot ugy, hogy a bubble friss st
    - local lifecycle cleanup retained Phase 1E contract.
 6. Missing-data rule:
    - ha a clone bootstrap nem ad explicit canonical workspace authorityt, start fail-closed,
-   - ha a clone runtime session csak legacy worktree fallbackot hordoz explicit clone authority nelkul, resume fail-closed,
+   - ha a runtime session nem hordoz explicit canonical workspace authorityt, resume fail-closed topologytol fuggetlenul,
    - ha a clone workspace bootstrap/source prep nem fejezheto be, nincs RUNNING state.
 7. Phase boundary:
    - prerequisite closures: predecessor-owned, Phase 1B1-1E mar lezarta a contract/producer/runtime/bubble-loop/local-cleanup familyt,
@@ -155,7 +164,7 @@ Aktivalni a local clone-topology start/resume pathot ugy, hogy a bubble friss st
 2. Allowed resolution paths:
    - worktree mode: retained registered worktree bootstrap es start,
    - clone mode: explicit clone bootstrap -> persisted clone session authority -> tmux/resume consume,
-   - resume legacy worktree fallback csak worktree topologyra ervenyes.
+   - retained runtime-session fallback nincs.
 3. Forbidden regression interpretations:
    - a local clone activation nem jelent remote create/start supportot,
    - a local clone activation nem autorizalja a `pairflow_sync_command` consume-ot,
