@@ -204,32 +204,38 @@ Az explicit control-model dontesek most visszanyerhetok a designbol es a review-
 3. Superseded, le nem szallitott taskokat nem "patchelunk tovabb", hanem torlunk es uj specet adunk ki.
 4. Ez a policy itt kotelezo, mert a review-loop kockazat a tulelore specifikalt downstream taskoknal magasabb, mint a kesobbi kulon taskkiadas koltsege.
 
-## Current Tree Progress Update (2026-04-15)
+## Current Tree Progress Update (2026-04-16)
 
-1. A `Phase 2B` leszallt es `main`-re merge-olve lett:
-   - a `bubble create --remote` local write-path expose mar implementalt,
-   - a bubble config `[executor]` metadata es a `remote.json(kind="created")` create-time pointer persistence mar baseline,
-   - a remote runtime start tovabbra sincs aktivalva.
-2. A lezart `Phase 2B` task archivalt allapotban mar itt van:
+1. A `Phase 2B` retained baseline tovabbra is lezart es `main`-re merge-olve:
+   - a `bubble create --remote` local write-path expose implementalt,
+   - a bubble config `[executor]` metadata es a `remote.json(kind="created")` create-time pointer persistence baseline,
+   - a remote runtime start tovabbra sem aktiv.
+2. A `Phase 2C` is leszallt es `main`-re merge-olve:
+   - a global `[remotes.<name>]` config contract mar hordozza az optional `pairflow_sync_command` mezot,
+   - parser/validator/load/type closure mar baseline,
+   - a hook consume/invoke ownership tovabbra is successor-only `Phase 2D`.
+3. A lezart taskok archivalt allapotban mar itt vannak:
    - `plans/archive/tasks/remote-bubble-execution/phase2b-remote-create-write-path-enablement.md`
-3. A kovetkezo explicit implementacios fazis most a `Phase 2C`:
-   - a `pairflow_sync_command` global remote config contract closure,
-   - parser/validator/test szinten,
-   - consume/execute ownership tovabbra is successor-only `Phase 2D`.
+   - `plans/archive/tasks/remote-bubble-execution/phase2c-remote-sync-hook-contract-foundation.md`
+4. A kovetkezo explicit implementacios fazis most a `Phase 2D`:
+   - remote SSH start orchestration,
+   - optional `pairflow_sync_command` best-effort consume,
+   - `remote.json` created -> started pointer transition,
+   - local `state-cache.json` init,
+   - mikozben a `status/list/attach` read-model tovabbra is successor-only `Phase 2E/2F`.
 
 ## Active Task
 
-1. `plans/tasks/remote-bubble-execution/phase2c-remote-sync-hook-contract-foundation.md`
-2. A `Phase 2B` archived baseline lett; a jelenlegi egyetlen aktiv implementacios task most a remote pre-start sync hook config-contract closure, consume/execute ownership nelkul.
+1. `plans/tasks/remote-bubble-execution/phase2d-remote-ssh-start-activation.md`
+2. A `Phase 2B` es `Phase 2C` archived baseline lett; a jelenlegi egyetlen aktiv implementacios task most a remote SSH start activation, mikozben a status/list/attach surfaces tovabbra is kulon successor fazisban maradnak.
 
 ## Planned Next Tasks (Do Not Materialize Yet)
 
-1. `plans/tasks/remote-bubble-execution/phase2d-remote-ssh-start-activation.md`
-2. `plans/tasks/remote-bubble-execution/phase2e-remote-status-and-list-read-model.md`
-3. `plans/tasks/remote-bubble-execution/phase2f-remote-attach-consume.md`
-4. `plans/tasks/remote-bubble-execution/phase3a-remote-approval-and-rework-routing.md`
-5. `plans/tasks/remote-bubble-execution/phase3b-remote-commit-merge-delete-cleanup.md`
-6. `plans/tasks/remote-bubble-execution/phase3c-recovery-diagnostics-and-rollout.md`
+1. `plans/tasks/remote-bubble-execution/phase2e-remote-status-and-list-read-model.md`
+2. `plans/tasks/remote-bubble-execution/phase2f-remote-attach-consume.md`
+3. `plans/tasks/remote-bubble-execution/phase3a-remote-approval-and-rework-routing.md`
+4. `plans/tasks/remote-bubble-execution/phase3b-remote-commit-merge-delete-cleanup.md`
+5. `plans/tasks/remote-bubble-execution/phase3c-recovery-diagnostics-and-rollout.md`
 
 ## Dependencies
 
