@@ -191,7 +191,7 @@ Current-tree sequencing anchor keszitese a discovery utan megmaradt actor-runtim
 | `E1` | `plans/archive/tasks/actor-runtime-interface-execution-authority-foundation-phaseE1.md` | execution-scoped authority contract | A canonical authority shape formalizalasa megelőzi az osszes consume/activation munkat. | delivery/ack activation, pilot rollout |
 | `E2a` | `plans/archive/tasks/actor-runtime-interface-delivery-ack-producer-contract-phaseE2a.md` | typed delivery / launch producer + shared contract closure | A runtime acceptance truth producer seamje kulon closure; ezt nem szabad consumer rollouttal vagy pilot aktivalassal osszecsomagolni. | runtime/orchestration consume fallout, persisted diagnostics, implementer pilot |
 | `E2b` | `plans/tasks/actor-runtime-interface-direct-runtime-orchestration-consumer-alignment-phaseE2b.md` | direct runtime/orchestration consumer alignment | A lezart typed ack contract consume-family atallasa kulon compatibility closure; ezt nem szabad a producer semanticszel vagy read-model fallouttal osszemosni. | producer semantics reopen, persisted diagnostics/read-model fallout, implementer pilot |
-| `E2c` | planned successor task artifact (to be opened separately) | persisted diagnostics + meta-review + read-model fallout | A persisted/projection/status fallout kulon read-model closure; itt mar nem szabad uj ack truthot definialni. | producer contract ujranyitasa, implementer pilot, multi-role cleanup |
+| `E2c` | `plans/tasks/actor-runtime-interface-persisted-diagnostics-meta-review-read-model-fallout-phaseE2c.md` | persisted diagnostics + meta-review + read-model fallout | A persisted/projection/status fallout kulon read-model closure; itt mar nem szabad uj ack truthot definialni. | producer contract ujranyitasa, implementer pilot, multi-role cleanup |
 | `E3` | `plans/tasks/actor-runtime-interface-implementer-pilot-cutover-phaseE3.md` | implementer pilot rollout | Az elso aktivacio kulon parity gate-et igenyel a stabil foundation + ack closurek folott. | reviewer/meta-reviewer rollout, full adapter cleanup |
 | `E4` | `plans/tasks/actor-runtime-interface-reviewer-meta-rollout-and-adapter-cleanup-phaseE4.md` | multi-role rollout + retained cleanup | A policy-heavy role-ok es a retained adapter cleanup csak a pilot utan vedheto. | uj authority foundation vagy uj ack contract |
 
@@ -284,7 +284,7 @@ Constraint:
 
 | ID | Item | Layer | Priority | Timing | Source | Proposed Action |
 |---|---|---|---|---|---|---|
-| H1 | remaining successor task files explicit kidolgozasa | L2 | P2 | later-hardening | sequencing anchor | Nyisd meg az `E2c, E3, E4` taskokat kulon implementable artifactkent, es a lezart `E1`/`E2a`/`E2b` artifactokat current-tree traceability szerint tartsd karban |
+| H1 | remaining successor task files explicit kidolgozasa | L2 | P2 | later-hardening | sequencing anchor | Nyisd meg az `E3, E4` taskokat kulon implementable artifactkent, es a lezart `E1`/`E2a`/`E2b`/`E2c` artifactokat current-tree traceability szerint tartsd karban |
 
 ## Review Control
 
