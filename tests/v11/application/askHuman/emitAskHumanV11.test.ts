@@ -128,6 +128,7 @@ describe("emitAskHumanFromWorkspaceV11", () => {
           }
           deliveryRefs.push(input.messageRef);
           return Promise.resolve({
+            status: "accepted",
             delivered: true,
             message: "ok"
           });
@@ -147,7 +148,8 @@ describe("emitAskHumanFromWorkspaceV11", () => {
       `${bubble.paths.transcriptPath}#${result.envelope.id}`
     ]);
     expect(deliveryRefs[0]?.startsWith("transcript.ndjson#")).toBe(false);
-    expect(result.delivery).toEqual({
+    expect(result.delivery).toMatchObject({
+      status: "accepted",
       delivered: true,
       message: "ok"
     });

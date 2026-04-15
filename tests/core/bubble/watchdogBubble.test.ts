@@ -251,17 +251,29 @@ describe("runBubbleWatchdog", () => {
       throw new Error("Expected queued deferred rework result.");
     }
 
-    const result = await runBubbleWatchdog({
-      bubbleId: bubble.bubbleId,
-      cwd: repoPath,
-      now: new Date("2026-02-22T12:13:00.000Z")
-    });
+    const result = await runBubbleWatchdog(
+      {
+        bubbleId: bubble.bubbleId,
+        cwd: repoPath,
+        now: new Date("2026-02-22T12:13:00.000Z")
+      },
+      {
+        emitTmuxDeliveryNotification: () =>
+          Promise.resolve({
+            delivered: false,
+            message: "",
+            reason: "delivery_unconfirmed",
+            reason_code: "DELIVERY_ACK_REJECTED"
+          })
+      }
+    );
 
     expect(result.escalated).toBe(false);
     expect(result.reason).toBe("rework_delivery_failed");
     expect(result.intentId).toBe(queued.intentId);
     expect(result.state.state).toBe("WAITING_HUMAN");
     expect(result.deliveryError).toContain("rerun watchdog");
+    expect(result.deliveryError).toContain("reason_code: DELIVERY_ACK_REJECTED");
 
     const loaded = await readStateSnapshot(bubble.paths.statePath);
     expect(loaded.state.pending_rework_intent).toMatchObject({

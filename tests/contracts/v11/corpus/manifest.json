@@ -249,6 +249,12 @@
       "kind": "seed_case"
     },
     {
+      "id": "start-launch-ack-failed-v11",
+      "command": "start",
+      "source": "tests/contracts/v11/cases/start/start-launch-ack-failed-v11.case.json",
+      "kind": "seed_case"
+    },
+    {
       "id": "start-stale-session-reclaim-v11",
       "command": "start",
       "source": "tests/contracts/v11/cases/start/start-stale-session-reclaim-v11.case.json",

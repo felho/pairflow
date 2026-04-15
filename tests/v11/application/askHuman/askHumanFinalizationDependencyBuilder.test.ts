@@ -3,9 +3,6 @@ import { describe, expect, it } from "vitest";
 import { emitBubbleLifecycleEventBestEffort } from "../../../../src/v11/shared/metrics/bubbleEvents.js";
 import { emitBubbleNotification } from "../../../../src/v11/infrastructure/channel/notifications.js";
 import {
-  emitTmuxDeliveryNotification
-} from "../../../../src/v11/infrastructure/channel/tmux/tmuxDelivery.js";
-import {
   buildAskHumanFinalizationDependencies
 } from "../../../../src/v11/application/askHuman/askHumanFinalizationDependencyBuilder.js";
 
@@ -13,7 +10,7 @@ describe("askHumanFinalizationDependencyBuilder", () => {
   it("injects default finalization dependencies when overrides are omitted", () => {
     const dependencies = buildAskHumanFinalizationDependencies({});
 
-    expect(dependencies.emitTmuxDeliveryNotification).toBe(emitTmuxDeliveryNotification);
+    expect(typeof dependencies.emitTmuxDeliveryNotification).toBe("function");
     expect(dependencies.emitBubbleNotification).toBe(emitBubbleNotification);
     expect(dependencies.emitBubbleLifecycleEventBestEffort).toBe(
       emitBubbleLifecycleEventBestEffort

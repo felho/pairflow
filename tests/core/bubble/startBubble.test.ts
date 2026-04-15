@@ -1792,6 +1792,83 @@ describe("startBubble", () => {
     });
   });
 
+  it("fails closed from explicit launch ack rejection on the default start seam", async () => {
+    const repoPath = await createTempRepo();
+    const created = await createBubble({
+      id: "b_start_launch_ack_01",
+      repoPath,
+      baseBranch: "main",
+      reviewArtifactType: "code",
+      task: "Explicit launch ack rejection should fail closed",
+      cwd: repoPath
+    });
+
+    const thrown = await startBubble(
+      {
+        bubbleId: created.bubbleId,
+        cwd: repoPath,
+        now: new Date("2026-03-23T10:03:30.000Z")
+      },
+      {
+        bootstrapWorktreeWorkspace: () =>
+          Promise.resolve(
+            buildWorktreeBootstrapResult({
+              repoPath,
+              bubbleBranch: created.config.bubble_branch,
+              worktreePath: created.paths.worktreePath
+            })
+          ),
+        launchBubbleTmuxSessionAck: async () => ({
+          status: "failed_to_start",
+          reason_code: "LAUNCH_ACK_TMUX_COMMAND_FAILED",
+          failure_kind: "tmux_command_failed",
+          error_message: "tmux launch rejected in test",
+          sessionName: `pf-${created.bubbleId}`
+        }),
+        cleanupWorktreeWorkspace: () =>
+          Promise.resolve({
+            repoPath,
+            bubbleBranch: created.config.bubble_branch,
+            worktreePath: created.paths.worktreePath,
+            removedBranch: true,
+            removedWorktree: true
+          }),
+        claimRuntimeSession: (input) =>
+          Promise.resolve({
+            claimed: true,
+            record: {
+              bubbleId: input.bubbleId,
+              repoPath: input.repoPath,
+              worktreePath: input.worktreePath,
+              tmuxSessionName: input.tmuxSessionName,
+              updatedAt: "2026-03-23T10:03:30.000Z"
+            }
+          }),
+        removeRuntimeSession: () => Promise.resolve(true)
+      }
+    ).then(
+      () => null,
+      (error: unknown) => error
+    );
+
+    expect(thrown).toBeInstanceOf(StartBubbleError);
+    expect((thrown as StartBubbleError).reasonCode).toBe(
+      "LAUNCH_ACK_TMUX_COMMAND_FAILED"
+    );
+    expect((thrown as StartBubbleError).context).toMatchObject({
+      bubble_id: created.bubbleId,
+      stage: "launch_tmux",
+      failure_kind: "tmux_command_failed",
+      tmux_session_name: `pf-${created.bubbleId}`
+    });
+    expect((thrown as StartBubbleError).message).toContain(
+      `Bubble ${created.bubbleId} startup did not complete.`
+    );
+    expect((thrown as StartBubbleError).message).toContain(
+      "Cause: LAUNCH_ACK_TMUX_COMMAND_FAILED: tmux launch rejected in test"
+    );
+  });
+
   it("preserves StartBubbleError metadata when startup-incomplete catch rewrites the message", async () => {
     const repoPath = await createTempRepo();
     const created = await createBubble({

@@ -4,6 +4,7 @@ import type {
   StartBubbleDependencies,
   StartBubbleResult
 } from "./startCommandContract.js";
+import type { LaunchBubbleTmuxSessionAckPort } from "../../shared/ports/tmuxSessions.js";
 import {
   buildPreparingWorkspaceStartRejectMessage,
   createStartBubbleError
@@ -27,6 +28,8 @@ interface StartBubbleDependencyDefaults {
     NonNullable<StartBubbleDependencies["bootstrapWorktreeWorkspace"]>;
   cleanupWorktreeWorkspace:
     NonNullable<StartBubbleDependencies["cleanupWorktreeWorkspace"]>;
+  launchBubbleTmuxSessionAck:
+    NonNullable<StartBubbleDependencies["launchBubbleTmuxSessionAck"]>;
   launchBubbleTmuxSession:
     NonNullable<StartBubbleDependencies["launchBubbleTmuxSession"]>;
   terminateBubbleTmuxSession:
@@ -53,6 +56,8 @@ async function loadStartBubbleDependencyDefaults(): Promise<StartBubbleDependenc
       startBubbleDependencyDefaults.bootstrapWorktreeWorkspace,
     cleanupWorktreeWorkspace:
       startBubbleDependencyDefaults.cleanupWorktreeWorkspace,
+    launchBubbleTmuxSessionAck:
+      startBubbleDependencyDefaults.launchBubbleTmuxSessionAck,
     launchBubbleTmuxSession:
       startBubbleDependencyDefaults.launchBubbleTmuxSession,
     terminateBubbleTmuxSession:
@@ -84,7 +89,7 @@ export interface ResolvedStartBubbleDependencies {
   cleanup: NonNullable<StartBubbleDependencies["cleanupWorktreeWorkspace"]>;
   runWorktreeBootstrapCommand:
     NonNullable<StartBubbleDependencies["runWorktreeBootstrapCommand"]>;
-  launchTmux: NonNullable<StartBubbleDependencies["launchBubbleTmuxSession"]>;
+  launchTmuxAck: LaunchBubbleTmuxSessionAckPort;
   terminateTmux:
     NonNullable<StartBubbleDependencies["terminateBubbleTmuxSession"]>;
   isTmuxSessionAlive: NonNullable<StartBubbleDependencies["isTmuxSessionAlive"]>;
@@ -97,6 +102,18 @@ export interface ResolvedStartBubbleDependencies {
   readReviewerBriefArtifact: ReadReviewerBriefArtifactPort;
   readReviewerFocusArtifact: ReadReviewerFocusArtifactPort;
   resolveReviewerTestExecutionDirective: ResolveReviewerTestExecutionDirectivePort;
+}
+
+function projectLegacyLaunchPortToAckPort(
+  launchBubbleTmuxSession: NonNullable<StartBubbleDependencies["launchBubbleTmuxSession"]>
+): LaunchBubbleTmuxSessionAckPort {
+  return async (input) => {
+    const result = await launchBubbleTmuxSession(input);
+    return {
+      status: "running",
+      sessionName: result.sessionName
+    };
+  };
 }
 
 export interface ResolveStartBubbleDependenciesInput {
@@ -123,9 +140,15 @@ export async function resolveStartBubbleDependencies(
     runWorktreeBootstrapCommand:
       dependencies.runWorktreeBootstrapCommand
       ?? input.runWorktreeBootstrapCommandDefault,
-    launchTmux:
-      dependencies.launchBubbleTmuxSession
-      ?? startBubbleDependencyDefaults.launchBubbleTmuxSession,
+    launchTmuxAck:
+      dependencies.launchBubbleTmuxSessionAck
+      ?? (
+        dependencies.launchBubbleTmuxSession !== undefined
+          ? projectLegacyLaunchPortToAckPort(
+              dependencies.launchBubbleTmuxSession
+            )
+          : startBubbleDependencyDefaults.launchBubbleTmuxSessionAck
+      ),
     terminateTmux:
       dependencies.terminateBubbleTmuxSession
       ?? startBubbleDependencyDefaults.terminateBubbleTmuxSession,

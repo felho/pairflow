@@ -23,12 +23,11 @@ export interface EmitAskHumanResult {
   state: BubbleStateSnapshot;
   inferredRecipient: "human";
   delivery?: {
+    status: AskHumanEmitTmuxDeliveryNotificationResult["status"];
     delivered: boolean;
     message?: string;
-    reason?: Exclude<
-      AskHumanEmitTmuxDeliveryNotificationResult["reason"],
-      undefined
-    >;
+    reason?: AskHumanEmitTmuxDeliveryNotificationResult["reason"];
+    reason_code?: AskHumanEmitTmuxDeliveryNotificationResult["reason_code"];
     deliveryTargetReasonCode?: AskHumanDeliveryTargetReasonCode;
   };
 }

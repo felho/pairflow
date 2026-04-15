@@ -134,6 +134,7 @@ describe("runConvergedFlow", () => {
               }
             },
             delivery: {
+              status: "accepted",
               delivered: true,
               retried: false
             }
@@ -149,7 +150,7 @@ describe("runConvergedFlow", () => {
             approvalRequestSequence: 42,
             approvalRequestEnvelope: { id: "env_gate_42", type: "APPROVAL_REQUEST" },
             state: { state: "READY_FOR_HUMAN_APPROVAL" },
-            delivery: { delivered: true, retried: false }
+            delivery: { status: "accepted", delivered: true, retried: false }
           } as never;
         }
       }

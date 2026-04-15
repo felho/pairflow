@@ -1,5 +1,6 @@
 import {
   terminateBubbleTmuxSession as terminateBubbleTmuxSessionCanonical,
+  launchBubbleTmuxSessionAck as launchBubbleTmuxSessionAckCanonical,
   launchBubbleTmuxSession as launchBubbleTmuxSessionCanonical
 } from "../../infrastructure/channel/tmux/tmuxManager.js";
 import {
@@ -22,6 +23,7 @@ import type {
   RemoveRuntimeSessionPort
 } from "../../shared/ports/runtimeSessions.js";
 import type {
+  LaunchBubbleTmuxSessionAckPort,
   LaunchBubbleTmuxSessionPort,
   TerminateBubbleTmuxSessionPort
 } from "../../shared/ports/tmuxSessions.js";
@@ -30,6 +32,7 @@ import type { WriteStateSnapshotPort } from "../../shared/ports/stateSnapshots.j
 export interface StartBubbleDependencyDefaults {
   bootstrapWorktreeWorkspace: BootstrapWorktreeWorkspacePort;
   cleanupWorktreeWorkspace: CleanupWorktreeWorkspacePort;
+  launchBubbleTmuxSessionAck: LaunchBubbleTmuxSessionAckPort;
   launchBubbleTmuxSession: LaunchBubbleTmuxSessionPort;
   terminateBubbleTmuxSession: TerminateBubbleTmuxSessionPort;
   claimRuntimeSession: ClaimRuntimeSessionPort;
@@ -44,6 +47,9 @@ export const bootstrapWorktreeWorkspace: BootstrapWorktreeWorkspacePort =
 export const launchBubbleTmuxSession: LaunchBubbleTmuxSessionPort =
   launchBubbleTmuxSessionCanonical;
 
+export const launchBubbleTmuxSessionAck: LaunchBubbleTmuxSessionAckPort =
+  launchBubbleTmuxSessionAckCanonical;
+
 export const claimRuntimeSession: ClaimRuntimeSessionPort =
   claimRuntimeSessionCanonical;
 
@@ -53,6 +59,7 @@ export const upsertRuntimeSession: UpsertRuntimeSessionPort =
 export const startBubbleDependencyDefaults: StartBubbleDependencyDefaults = {
   bootstrapWorktreeWorkspace,
   cleanupWorktreeWorkspace: cleanupWorktreeWorkspaceCanonical,
+  launchBubbleTmuxSessionAck,
   launchBubbleTmuxSession,
   terminateBubbleTmuxSession: terminateBubbleTmuxSessionCanonical,
   claimRuntimeSession,

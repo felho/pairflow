@@ -8,8 +8,10 @@ import type { ProtocolEnvelope } from "../../../types/protocol.js";
 import type { EmitConvergedV11Result as EmitConvergedResult } from "../converged/emitConvergedV11.js";
 
 export interface PassResultDeliveryLike {
+  status: "accepted" | "rejected";
   delivered: boolean;
   reason?: string;
+  reason_code?: string;
   retried: boolean;
 }
 

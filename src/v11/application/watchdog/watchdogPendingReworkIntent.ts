@@ -12,8 +12,15 @@ import type {
 } from "../../shared/ports/stateSnapshots.js";
 import type {
   EmitTmuxDeliveryNotificationPort,
-  ResolveDeliveryMessageRefPort
+  ResolveDeliveryMessageRefPort,
+  TmuxDeliveryAckStatus
 } from "../../shared/ports/tmuxDelivery.js";
+
+function resolveDeliveryStatus(input: {
+  delivered: boolean;
+}): TmuxDeliveryAckStatus {
+  return input.delivered ? "accepted" : "rejected";
+}
 
 export async function maybeApplyPendingReworkIntent(input: {
   now: Date;
@@ -61,14 +68,20 @@ export async function maybeApplyPendingReworkIntent(input: {
     })
   });
 
-  if (!delivery.delivered) {
+  const deliveryStatus = resolveDeliveryStatus({
+    delivered: delivery.delivered
+  });
+  if (deliveryStatus !== "accepted") {
     return {
       bubbleId: input.resolved.bubbleId,
       escalated: false,
       reason: "rework_delivery_failed",
       state: input.state,
       intentId: pendingIntent.intent_id,
-      deliveryError: `Pending rework intent delivery was not confirmed (reason: ${delivery.reason ?? "unknown"}). Ensure runtime session is healthy, then rerun watchdog.`
+      deliveryError:
+        `Pending rework intent delivery was not confirmed ` +
+        `(reason: ${delivery.reason ?? "unknown"}, reason_code: ${delivery.reason_code ?? "unknown"}). ` +
+        "Ensure runtime session is healthy, then rerun watchdog."
     };
   }
 

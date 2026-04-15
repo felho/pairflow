@@ -129,7 +129,203 @@ describe("executeKickoffValidatedFlow", () => {
 
     expect(result.ok).toBe(true);
     expect((result as { delivery?: unknown }).delivery).toMatchObject({
+      status: "accepted",
       delivered: true,
+      retried: false
+    });
+    expect(emitDelivery).toHaveBeenCalledTimes(1);
+  });
+
+  it("preserves explicit rejected delivery ack on successful kickoff activation", async () => {
+    const repoPath = await createTempRepo();
+    const created = await createBubble({
+      id: "b_kickoff_exec_delivery_02",
+      repoPath,
+      baseBranch: "main",
+      reviewArtifactType: "code",
+      ideation: true,
+      cwd: repoPath
+    });
+    const currentState = createRunningState(created.state);
+    const nowIso = "2026-03-20T10:05:00.000Z";
+    const emitDelivery = vi.fn(async () => ({
+      delivered: false,
+      message: "",
+      reason: "delivery_unconfirmed",
+      reason_code: "DELIVERY_ACK_REJECTED"
+    }));
+
+    const dependencies = {
+      resolveBubble: vi.fn(async () => ({})),
+      readState: vi.fn(async () => ({
+        state: currentState,
+        fingerprint: "stable-fingerprint"
+      })),
+      writeState: vi.fn(async (_statePath: string, nextState: BubbleStateSnapshot) => ({
+        state: nextState,
+        fingerprint: "written-fingerprint"
+      })),
+      readFileFn: vi.fn(async (path: string) => {
+        if (path === created.paths.bubbleTomlPath) {
+          return renderBubbleConfigToml(created.config);
+        }
+        return "# Bubble Task\n\nplaceholder\n";
+      }),
+      writeFileFn: vi.fn(async () => undefined),
+      appendEnvelope: vi.fn(async () => ({
+        envelope: {
+          id: "msg_20260320_002",
+          ts: nowIso,
+          bubble_id: created.bubbleId,
+          sender: "orchestrator",
+          recipient: created.config.agents.implementer,
+          type: "TASK",
+          round: 1,
+          payload: {
+            summary: "Kickoff rejected delivery task",
+            metadata: {
+              source: "inline"
+            }
+          },
+          refs: [created.paths.taskArtifactPath]
+        },
+        sequence: 2,
+        mirrorWriteFailures: []
+      })),
+      emitDelivery
+    } as unknown as ResolvedKickoffDependencies;
+
+    const validation = {
+      kind: "prepared",
+      resolved: {
+        bubbleId: created.bubbleId,
+        bubbleConfig: created.config,
+        bubblePaths: created.paths,
+        repoPath
+      },
+      loadedState: {
+        state: currentState,
+        fingerprint: "stable-fingerprint"
+      },
+      state: currentState,
+      markersBefore: {
+        ideation_mode: true,
+        ideation_task_pending: true
+      },
+      task: {
+        content: "Kickoff rejected delivery task",
+        source: "inline"
+      }
+    } as KickoffPreparedValidation;
+
+    const result = await executeKickoffValidatedFlow({
+      validation,
+      now: new Date(nowIso),
+      nowIso
+    }, dependencies);
+
+    expect(result.ok).toBe(true);
+    expect((result as { delivery?: unknown }).delivery).toMatchObject({
+      status: "rejected",
+      delivered: false,
+      reason: "delivery_unconfirmed",
+      reason_code: "DELIVERY_ACK_REJECTED",
+      retried: false
+    });
+    expect(emitDelivery).toHaveBeenCalledTimes(1);
+  });
+
+  it("falls back to rejected tmux-send failure when kickoff delivery emit throws", async () => {
+    const repoPath = await createTempRepo();
+    const created = await createBubble({
+      id: "b_kickoff_exec_delivery_03",
+      repoPath,
+      baseBranch: "main",
+      reviewArtifactType: "code",
+      ideation: true,
+      cwd: repoPath
+    });
+    const currentState = createRunningState(created.state);
+    const nowIso = "2026-03-20T10:10:00.000Z";
+    const emitDelivery = vi.fn(async () => {
+      throw new Error("simulated kickoff delivery failure");
+    });
+
+    const dependencies = {
+      resolveBubble: vi.fn(async () => ({})),
+      readState: vi.fn(async () => ({
+        state: currentState,
+        fingerprint: "stable-fingerprint"
+      })),
+      writeState: vi.fn(async (_statePath: string, nextState: BubbleStateSnapshot) => ({
+        state: nextState,
+        fingerprint: "written-fingerprint"
+      })),
+      readFileFn: vi.fn(async (path: string) => {
+        if (path === created.paths.bubbleTomlPath) {
+          return renderBubbleConfigToml(created.config);
+        }
+        return "# Bubble Task\n\nplaceholder\n";
+      }),
+      writeFileFn: vi.fn(async () => undefined),
+      appendEnvelope: vi.fn(async () => ({
+        envelope: {
+          id: "msg_20260320_003",
+          ts: nowIso,
+          bubble_id: created.bubbleId,
+          sender: "orchestrator",
+          recipient: created.config.agents.implementer,
+          type: "TASK",
+          round: 1,
+          payload: {
+            summary: "Kickoff emit exception task",
+            metadata: {
+              source: "inline"
+            }
+          },
+          refs: [created.paths.taskArtifactPath]
+        },
+        sequence: 3,
+        mirrorWriteFailures: []
+      })),
+      emitDelivery
+    } as unknown as ResolvedKickoffDependencies;
+
+    const validation = {
+      kind: "prepared",
+      resolved: {
+        bubbleId: created.bubbleId,
+        bubbleConfig: created.config,
+        bubblePaths: created.paths,
+        repoPath
+      },
+      loadedState: {
+        state: currentState,
+        fingerprint: "stable-fingerprint"
+      },
+      state: currentState,
+      markersBefore: {
+        ideation_mode: true,
+        ideation_task_pending: true
+      },
+      task: {
+        content: "Kickoff emit exception task",
+        source: "inline"
+      }
+    } as KickoffPreparedValidation;
+
+    const result = await executeKickoffValidatedFlow({
+      validation,
+      now: new Date(nowIso),
+      nowIso
+    }, dependencies);
+
+    expect(result.ok).toBe(true);
+    expect((result as { delivery?: unknown }).delivery).toMatchObject({
+      status: "rejected",
+      delivered: false,
+      reason: "tmux_send_failed",
+      reason_code: "DELIVERY_ACK_REJECTED",
       retried: false
     });
     expect(emitDelivery).toHaveBeenCalledTimes(1);

@@ -65,8 +65,10 @@ export interface EmitConvergedResult {
   approvalRequestEnvelope: ProtocolEnvelope;
   state: BubbleStateSnapshot;
   delivery?: {
+    status: "accepted" | "rejected";
     delivered: boolean;
     reason?: string;
+    reason_code?: string;
     retried: boolean;
   };
 }

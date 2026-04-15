@@ -53,6 +53,7 @@ type StartContractExtendedScenario =
   | "clone_not_activated"
   | "clone_not_activated_resume"
   | "clone_state_not_startable"
+  | "launch_ack_failed"
   | "stale_session_reclaim";
 
 type ResumableStartState =
@@ -118,10 +119,11 @@ function parseStartCaseInput(input: ContractCase["input"]): ParsedStartCaseInput
       scenarioRaw !== "clone_not_activated" &&
       scenarioRaw !== "clone_not_activated_resume" &&
       scenarioRaw !== "clone_state_not_startable" &&
+      scenarioRaw !== "launch_ack_failed" &&
       scenarioRaw !== "stale_session_reclaim"
     ) {
       throw new Error(
-        "start contract input.fixture.scenario must be one of: basic, state_not_startable, bootstrap_fails_cleanup, clone_not_activated, clone_not_activated_resume, clone_state_not_startable, stale_session_reclaim."
+        "start contract input.fixture.scenario must be one of: basic, state_not_startable, bootstrap_fails_cleanup, clone_not_activated, clone_not_activated_resume, clone_state_not_startable, launch_ack_failed, stale_session_reclaim."
       );
     }
     scenario = scenarioRaw ?? "basic";
@@ -418,12 +420,27 @@ async function executeStartCase(input: {
                     worktreePath: bubble.paths.worktreePath
                   })
                 ),
-          launchBubbleTmuxSession: () => {
-            launchCalls += 1;
-            return Promise.resolve({
-              sessionName: `pf-${bubble.bubbleId}`
-            });
-          },
+          ...(parsedInput.scenario === "launch_ack_failed"
+            ? {
+                launchBubbleTmuxSessionAck: () => {
+                  launchCalls += 1;
+                  return Promise.resolve({
+                    status: "failed_to_start" as const,
+                    reason_code: "LAUNCH_ACK_TMUX_COMMAND_FAILED" as const,
+                    failure_kind: "tmux_command_failed" as const,
+                    error_message: "contract launch ack rejected",
+                    sessionName: `pf-${bubble.bubbleId}`
+                  });
+                }
+              }
+            : {
+                launchBubbleTmuxSession: () => {
+                  launchCalls += 1;
+                  return Promise.resolve({
+                    sessionName: `pf-${bubble.bubbleId}`
+                  });
+                }
+              }),
           buildResumeTranscriptSummary: () => {
             resumeSummaryCalls += 1;
             return Promise.resolve("resume-summary: contract");

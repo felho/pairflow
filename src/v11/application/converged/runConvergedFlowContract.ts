@@ -81,8 +81,10 @@ interface ExecuteConvergedExecutionResult {
     };
   };
   delivery?: {
+    status: "accepted" | "rejected";
     delivered: boolean;
     reason?: string;
+    reason_code?: string;
     retried: boolean;
   };
 }
@@ -166,8 +168,10 @@ export interface RunConvergedFlowResult {
   approvalRequestEnvelope: ProtocolEnvelope;
   state: BubbleStateSnapshot;
   delivery?: {
+    status: "accepted" | "rejected";
     delivered: boolean;
     reason?: string;
+    reason_code?: string;
     retried: boolean;
   };
 }

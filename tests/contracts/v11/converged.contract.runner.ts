@@ -504,14 +504,19 @@ function assertConvergedScenarioInvariant(input: {
   if (input.scenario !== "delivery_partial_failure") {
     return;
   }
-  if (input.result.delivery?.delivered !== false) {
+  if (input.result.delivery?.status !== "rejected") {
     throw new Error(
-      `converged contract case=${input.caseId}: delivery_partial_failure expected delivery.delivered=false.`
+      `converged contract case=${input.caseId}: delivery_partial_failure expected delivery.status=rejected (actual=${input.result.delivery?.status ?? "none"}).`
     );
   }
   if (input.result.delivery.reason !== "delivery_unconfirmed") {
     throw new Error(
       `converged contract case=${input.caseId}: delivery_partial_failure expected reason=delivery_unconfirmed (actual=${input.result.delivery.reason ?? "none"}).`
+    );
+  }
+  if (input.result.delivery.reason_code !== "DELIVERY_ACK_REJECTED") {
+    throw new Error(
+      `converged contract case=${input.caseId}: delivery_partial_failure expected reason_code=DELIVERY_ACK_REJECTED (actual=${input.result.delivery.reason_code ?? "none"}).`
     );
   }
 }
@@ -750,7 +755,8 @@ async function executeConvergedCase(input: {
         return Promise.resolve({
           delivered: false,
           message: "delivery failed",
-          reason: "delivery_unconfirmed"
+          reason: "delivery_unconfirmed",
+          reason_code: "DELIVERY_ACK_REJECTED"
         });
       }
       return Promise.resolve({

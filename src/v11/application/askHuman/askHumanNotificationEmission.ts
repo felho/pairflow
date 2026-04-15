@@ -19,9 +19,11 @@ function buildUnexpectedAskHumanDeliveryFailureResult(
       ? error.message.trim()
       : "unknown tmux delivery error";
   return {
+    status: "rejected",
     delivered: false,
     message: `tmux delivery notification failed: ${detail}`,
-    reason: "tmux_send_failed"
+    reason: "tmux_send_failed",
+    reason_code: "DELIVERY_ACK_REJECTED"
   };
 }
 

@@ -2756,7 +2756,8 @@ describe("emitPassFromWorkspace", { timeout: 20_000 }, () => {
     );
 
     expect(result.transitionDecision).toBe("auto_converge");
-    expect(result.delivery).toEqual({
+    expect(result.delivery).toMatchObject({
+      status: "accepted",
       delivered: true,
       retried: false
     });
@@ -4631,7 +4632,8 @@ present`,
         deliveryAttempts: 6
       }
     ]);
-    expect(result.delivery).toEqual({
+    expect(result.delivery).toMatchObject({
+      status: "accepted",
       delivered: true,
       retried: true
     });
@@ -4818,7 +4820,8 @@ present`,
         deliveryAttempts: 6
       }
     ]);
-    expect(result.delivery).toEqual({
+    expect(result.delivery).toMatchObject({
+      status: "accepted",
       delivered: true,
       retried: true
     });

@@ -90,6 +90,7 @@ describe("finalizeConvergedFlow", () => {
           round: 5
         },
         delivery: {
+          status: "accepted",
           delivered: true,
           retried: false
         }
@@ -173,6 +174,7 @@ describe("finalizeConvergedFlow", () => {
         }
       },
       delivery: {
+        status: "accepted",
         delivered: true,
         retried: false
       }

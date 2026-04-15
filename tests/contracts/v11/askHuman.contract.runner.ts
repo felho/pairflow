@@ -415,6 +415,7 @@ async function executeAskHumanCase(input: {
         refKind: classifyDeliveryRefKind(deliveryInput.messageRef)
       });
       return Promise.resolve({
+        status: "accepted",
         delivered: true,
         message: "ok"
       });

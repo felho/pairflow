@@ -6,7 +6,7 @@ import {
   cleanupWorktreeWorkspace
 } from "../../../../src/v11/infrastructure/workspace/worktreeManager.js";
 import {
-  launchBubbleTmuxSession,
+  launchBubbleTmuxSessionAck,
   terminateBubbleTmuxSession
 } from "../../../../src/v11/infrastructure/channel/tmux/tmuxManager.js";
 import {
@@ -36,7 +36,7 @@ describe("startCommandOrchestration", () => {
     expect(resolved.bootstrap).toBe(bootstrapWorktreeWorkspace);
     expect(resolved.cleanup).toBe(cleanupWorktreeWorkspace);
     expect(resolved.runWorktreeBootstrapCommand).toBe(runWorktreeBootstrapCommandDefault);
-    expect(resolved.launchTmux).toBe(launchBubbleTmuxSession);
+    expect(resolved.launchTmuxAck).toBe(launchBubbleTmuxSessionAck);
     expect(resolved.terminateTmux).toBe(terminateBubbleTmuxSession);
     expect(resolved.isTmuxSessionAlive).toBe(isTmuxSessionAliveDefault);
     expect(resolved.claimSession).toBe(claimRuntimeSession);
@@ -105,7 +105,18 @@ describe("startCommandOrchestration", () => {
     expect(resolved.bootstrap).toBe(overrides.bootstrapWorktreeWorkspace);
     expect(resolved.cleanup).toBe(overrides.cleanupWorktreeWorkspace);
     expect(resolved.runWorktreeBootstrapCommand).toBe(overrides.runWorktreeBootstrapCommand);
-    expect(resolved.launchTmux).toBe(overrides.launchBubbleTmuxSession);
+    const ack = await resolved.launchTmuxAck({
+      bubbleId: "bubble",
+      workspacePath: "worktree",
+      statusCommand: "status",
+      implementerCommand: "implementer",
+      reviewerCommand: "reviewer"
+    });
+    expect(ack).toEqual({
+      status: "running",
+      sessionName: "pf-bubble"
+    });
+    expect(overrides.launchBubbleTmuxSession).toHaveBeenCalledTimes(1);
     expect(resolved.terminateTmux).toBe(overrides.terminateBubbleTmuxSession);
     expect(resolved.isTmuxSessionAlive).toBe(overrides.isTmuxSessionAlive);
     expect(resolved.claimSession).toBe(overrides.claimRuntimeSession);

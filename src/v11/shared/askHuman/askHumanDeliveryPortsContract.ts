@@ -1,20 +1,17 @@
 import type { BubbleConfig } from "../../../types/bubble.js";
 import type { ProtocolEnvelope } from "../../../types/protocol.js";
+import type {
+  DeliveryTargetReasonCode,
+  TmuxDeliveryAckReasonCode,
+  TmuxDeliveryAckStatus,
+  TmuxDeliveryFailureReason
+} from "../delivery/tmuxDeliveryContract.js";
 
 export type AskHumanBubbleNotificationKind = "waiting-human" | "converged";
 
-export type AskHumanTmuxDeliveryFailureReason =
-  | "no_runtime_session"
-  | "unsupported_recipient"
-  | "registry_read_failed"
-  | "delivery_unconfirmed"
-  | "tmux_send_failed";
+export type AskHumanTmuxDeliveryFailureReason = TmuxDeliveryFailureReason;
 
-export type AskHumanDeliveryTargetReasonCode =
-  | "DELIVERY_TARGET_ROLE_ABSENT"
-  | "DELIVERY_TARGET_ROLE_INVALID"
-  | "DELIVERY_TARGET_ROLE_UNMAPPED"
-  | "DELIVERY_TARGET_REGISTRY_READ_FAILED";
+export type AskHumanDeliveryTargetReasonCode = DeliveryTargetReasonCode;
 
 export interface AskHumanEmitTmuxDeliveryNotificationInput {
   bubbleId: string;
@@ -25,11 +22,13 @@ export interface AskHumanEmitTmuxDeliveryNotificationInput {
 }
 
 export interface AskHumanEmitTmuxDeliveryNotificationResult {
+  status: TmuxDeliveryAckStatus;
   delivered: boolean;
   sessionName?: string;
   targetPaneIndex?: number;
   message: string;
   reason?: AskHumanTmuxDeliveryFailureReason;
+  reason_code?: TmuxDeliveryAckReasonCode;
   deliveryTargetReasonCode?: AskHumanDeliveryTargetReasonCode;
 }
 

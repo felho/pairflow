@@ -191,6 +191,7 @@ describe("normalPassFlowInvocationBuilders", () => {
       buildPassLifecycleMetricMetadata: () => ({}),
       resolveMostRecentPreviousReviewerPassIsCleanFromMetadata: () => undefined,
       mapPassResultDelivery: () => ({
+        status: "accepted",
         delivered: true,
         retried: false
       }),

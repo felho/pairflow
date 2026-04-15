@@ -3,6 +3,7 @@ import type {
   CleanupWorktreeWorkspacePort
 } from "../../shared/ports/worktreeWorkspace.js";
 import type {
+  LaunchBubbleTmuxSessionAckPort,
   LaunchBubbleTmuxSessionPort,
   TerminateBubbleTmuxSessionPort
 } from "../../shared/ports/tmuxSessions.js";
@@ -49,6 +50,7 @@ export interface StartBubbleDependencies {
   runWorktreeBootstrapCommand?:
     | ((input: RunWorktreeBootstrapCommandInput) => Promise<void>)
     | undefined;
+  launchBubbleTmuxSessionAck?: LaunchBubbleTmuxSessionAckPort;
   launchBubbleTmuxSession?: LaunchBubbleTmuxSessionPort;
   terminateBubbleTmuxSession?: TerminateBubbleTmuxSessionPort;
   isTmuxSessionAlive?: ((sessionName: string) => Promise<boolean>) | undefined;
