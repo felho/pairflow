@@ -13,6 +13,7 @@ import { appendInitialTaskEnvelope } from "../../shared/create/createInitialTask
 import { renderBubbleConfigToml } from "../../../config/bubbleConfig.js";
 import type {
   BubbleConfig,
+  BubbleRemotePointerCreated,
   BubbleStateSnapshot
 } from "../../../types/bubble.js";
 import type {
@@ -21,6 +22,7 @@ import type {
 } from "./createCommandContract.js";
 import { BubbleCreateError, ensureRuntimeSessionFile, renderTaskArtifact } from "./createCommandRuntime.js";
 import type { ReviewerFocusExtractionResult } from "../../../v11/shared/reviewer/reviewerBrief.js";
+import { writeRemotePointer as writeRemotePointerDefault } from "../../infrastructure/artifact/bubble/remoteExecutionArtifacts.js";
 
 export interface CreateBubblePersistenceInput {
   bubbleId: string;
@@ -31,6 +33,7 @@ export interface CreateBubblePersistenceInput {
   task: ResolvedTaskInput;
   reviewerFocus: ReviewerFocusExtractionResult;
   reviewerBrief?: ResolvedTaskInput | undefined;
+  remotePointer?: BubbleRemotePointerCreated | undefined;
   ideationMode: boolean;
   dependencies: BubbleCreateDependencies;
 }
@@ -114,6 +117,11 @@ export async function persistCreatedBubbleArtifacts(
         flag: "wx"
       }
     );
+  }
+  if (input.remotePointer !== undefined) {
+    const writeRemotePointer =
+      input.dependencies.writeRemotePointer ?? writeRemotePointerDefault;
+    await writeRemotePointer(input.paths.remotePointerPath, input.remotePointer);
   }
   await ensureRuntimeSessionFile(input.paths.sessionsPath);
 

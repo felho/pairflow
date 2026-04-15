@@ -31,6 +31,9 @@ export async function runCreateBubbleFlow(
     ...(flowContext.reviewerBrief !== undefined
       ? { reviewerBrief: flowContext.reviewerBrief }
       : {}),
+    ...(flowContext.remotePointer !== undefined
+      ? { remotePointer: flowContext.remotePointer }
+      : {}),
     ideationMode: flowContext.prepared.ideationMode,
     dependencies
   });

@@ -16,5 +16,6 @@ export interface BubbleCreateCommandOptions {
   bootstrapCommand?: string;
   pairflowCommandProfile?: PairflowCommandProfile;
   accuracyCritical?: boolean;
+  remote?: string;
   help: boolean;
 }

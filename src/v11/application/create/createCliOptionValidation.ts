@@ -10,7 +10,14 @@ import {
   toCreateCommandError,
   toCreateCommandReasonCodeError
 } from "./createCliOptionValidationHelpers.js";
-import { MISSING_REVIEW_ARTIFACT_TYPE_OPTION } from "../../../config/bubbleConfig.js";
+import {
+  BUBBLE_EXECUTOR_INVALID,
+  MISSING_REVIEW_ARTIFACT_TYPE_OPTION
+} from "../../../config/bubbleConfig.js";
+import {
+  CREATE_REMOTE_ALIAS_INVALID,
+  parseCreateRemoteAlias
+} from "./createRemoteAlias.js";
 
 export interface BubbleCreateParsedValues {
   id?: string;
@@ -26,6 +33,7 @@ export interface BubbleCreateParsedValues {
   "bootstrap-command"?: string;
   "pairflow-command-profile"?: string;
   "accuracy-critical"?: boolean;
+  remote?: string;
 }
 
 export interface CreateValidationState {
@@ -33,6 +41,22 @@ export interface CreateValidationState {
   isReviewArtifactTypeMissing: boolean;
   reviewArtifactTypeValidationError: string | undefined;
   pairflowCommandProfileValidationError: string | undefined;
+  remoteValidationError: string | undefined;
+}
+
+function parseRemoteAlias(
+  rawRemoteAlias: string | undefined
+): {
+  remote?: string;
+  remoteValidationError?: string;
+} {
+  const { remoteAlias, errorMessage } = parseCreateRemoteAlias(rawRemoteAlias);
+  return {
+    ...(remoteAlias !== undefined ? { remote: remoteAlias } : {}),
+    ...(errorMessage !== undefined
+      ? { remoteValidationError: errorMessage }
+      : {})
+  };
 }
 
 export function collectCreateValidationState(
@@ -51,6 +75,10 @@ export function collectCreateValidationState(
   if (pairflowCommandProfile !== undefined) {
     options.pairflowCommandProfile = pairflowCommandProfile;
   }
+  const { remote, remoteValidationError } = parseRemoteAlias(values.remote);
+  if (remote !== undefined) {
+    options.remote = remote;
+  }
 
   const {
     isReviewArtifactTypeMissing,
@@ -67,7 +95,8 @@ export function collectCreateValidationState(
     missing,
     isReviewArtifactTypeMissing,
     reviewArtifactTypeValidationError,
-    pairflowCommandProfileValidationError
+    pairflowCommandProfileValidationError,
+    remoteValidationError
   };
 }
 
@@ -113,6 +142,9 @@ function formatAlsoMissingOptions(missingOptions: string[]): string {
 }
 
 export function throwMissingCreateOptionsError(state: CreateValidationState): never {
+  // Policy: explicit review artifact ownership is the first create-time contract gate.
+  // When it is missing, surface that requirement before secondary option validation
+  // such as remote alias normalization errors.
   if (state.isReviewArtifactTypeMissing) {
     const otherMissing = state.missing.filter(
       (option) => option !== "--review-artifact-type"
@@ -133,6 +165,12 @@ export function throwMissingCreateOptionsError(state: CreateValidationState): ne
       "PAIRFLOW_COMMAND_PROFILE_INVALID"
     );
   }
+  if (state.remoteValidationError !== undefined) {
+    throw toCreateCommandReasonCodeError(
+      `${state.remoteValidationError}${formatAlsoMissingOptions(state.missing)}`,
+      CREATE_REMOTE_ALIAS_INVALID
+    );
+  }
   throw toCreateCommandError(
     `CREATE_REQUIRED_OPTIONS_MISSING: Missing required options: ${state.missing.join(", ")}`
   );
@@ -151,4 +189,15 @@ export function throwCreateValidationErrors(state: CreateValidationState): void 
       "PAIRFLOW_COMMAND_PROFILE_INVALID"
     );
   }
+  if (state.remoteValidationError !== undefined) {
+    throw toCreateCommandReasonCodeError(
+      state.remoteValidationError,
+      CREATE_REMOTE_ALIAS_INVALID
+    );
+  }
 }
+
+export {
+  BUBBLE_EXECUTOR_INVALID,
+  CREATE_REMOTE_ALIAS_INVALID
+};

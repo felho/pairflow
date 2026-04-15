@@ -22,6 +22,7 @@ export interface BubbleCreateCommandRuntimeOptions {
   bootstrapCommand?: string;
   pairflowCommandProfile?: BubbleCreateInput["pairflowCommandProfile"];
   accuracyCritical?: boolean;
+  remote?: string;
 }
 
 export interface BubbleCreateCommandRuntimeDependencies {
@@ -82,6 +83,7 @@ export function buildCreateBubbleInput(
       ? { pairflowCommandProfile: options.pairflowCommandProfile }
       : {}),
     ...(options.accuracyCritical === true ? { accuracyCritical: true } : {}),
+    ...(options.remote !== undefined ? { remote: options.remote } : {}),
     cwd
   };
   return {

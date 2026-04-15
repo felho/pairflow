@@ -19,6 +19,7 @@ export function prepareCreateBubbleInput(input: {
   baseBranch: string;
   reviewArtifactType: CreateBubbleConfigInput["reviewArtifactType"];
   task: ResolvedTaskInput;
+  executorRemote?: string;
 }): PreparedCreateBubbleInput {
   const bubbleBranch = `bubble/${input.command.id}`;
   const ideationMode = input.command.ideation === true;
@@ -60,6 +61,9 @@ export function prepareCreateBubbleInput(input: {
   }
   if (input.command.pairflowCommandProfile !== undefined) {
     bubbleConfigInput.pairflowCommandProfile = input.command.pairflowCommandProfile;
+  }
+  if (input.executorRemote !== undefined) {
+    bubbleConfigInput.executorRemote = input.executorRemote;
   }
 
   return {

@@ -8,6 +8,7 @@ import {
 } from "../../shared/state/stateSchema.js";
 import type {
   BubbleConfig,
+  BubbleRemotePointerCreated,
   BubbleStateSnapshot
 } from "../../../types/bubble.js";
 import type {
@@ -22,6 +23,7 @@ import {
   ensureBubbleDoesNotExist,
   ensureRepoPathIsGitRepo,
   resolveCreateReviewArtifactType,
+  resolveCreateBubbleRemoteExecution,
   resolveReviewerBriefInput,
   resolveTaskInput,
   validateBubbleId
@@ -38,6 +40,7 @@ export interface CreateBubbleFlowContext {
   task: ResolvedTaskInput;
   reviewerFocus: ReviewerFocusExtractionResult;
   reviewerBrief?: ResolvedTaskInput | undefined;
+  remotePointer?: BubbleRemotePointerCreated | undefined;
   prepared: PreparedCreateBubbleInput;
   config: BubbleConfig;
   state: BubbleStateSnapshot;
@@ -97,13 +100,31 @@ export async function prepareCreateBubbleFlowContext(input: {
     cwd: input.command.cwd ?? process.cwd()
   });
 
+  let remoteExecution:
+    | Awaited<ReturnType<typeof resolveCreateBubbleRemoteExecution>>
+    | undefined;
+  if (input.command.remote !== undefined) {
+    if (input.dependencies.loadPairflowGlobalConfig === undefined) {
+      throw new BubbleCreateError(
+        "Missing required create bubble dependency: loadPairflowGlobalConfig."
+      );
+    }
+    remoteExecution = await resolveCreateBubbleRemoteExecution({
+      remote: input.command.remote,
+      loadPairflowGlobalConfig: input.dependencies.loadPairflowGlobalConfig
+    });
+  }
+
   const prepared = prepareCreateBubbleInput({
     command: input.command,
     createdAt: input.createdAt,
     repoPath,
     baseBranch,
     reviewArtifactType,
-    task
+    task,
+    ...(remoteExecution !== undefined
+      ? { executorRemote: remoteExecution.remoteAlias }
+      : {})
   });
 
   return {
@@ -112,6 +133,9 @@ export async function prepareCreateBubbleFlowContext(input: {
     task,
     reviewerFocus,
     ...(reviewerBrief !== undefined ? { reviewerBrief } : {}),
+    ...(remoteExecution !== undefined
+      ? { remotePointer: remoteExecution.remotePointer }
+      : {}),
     prepared,
     config: buildBubbleConfig(prepared.bubbleConfigInput),
     state: assertValidBubbleStateSnapshot(
