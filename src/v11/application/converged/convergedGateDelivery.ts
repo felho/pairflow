@@ -1,5 +1,7 @@
 import type {
   EmitTmuxDeliveryNotificationResult,
+  TmuxDeliveryAckReasonCode,
+  TmuxDeliveryAckStatus
 } from "../../shared/ports/tmuxDelivery.js";
 import type { applyMetaReviewGateOnConvergence } from "../../shared/metaReviewGate/metaReviewGateCommandApi.js";
 import type { ResolvedBubbleWorkspace } from "../../shared/ports/workspaceResolution.js";
@@ -16,9 +18,18 @@ import {
 } from "./convergedDefaultDependencies.js";
 
 export interface ConvergedDeliveryResult {
+  status: TmuxDeliveryAckStatus;
   delivered: boolean;
   reason?: string;
+  reason_code?: TmuxDeliveryAckReasonCode;
   retried: boolean;
+}
+
+interface NormalizedConvergedDelivery {
+  status: TmuxDeliveryAckStatus;
+  delivered: boolean;
+  reason?: EmitTmuxDeliveryNotificationResult["reason"];
+  reason_code?: TmuxDeliveryAckReasonCode;
 }
 
 function withDeliveryTargetRole(
@@ -42,10 +53,27 @@ function withDeliveryTargetRole(
   };
 }
 
+function normalizeConvergedDelivery(
+  delivery: EmitTmuxDeliveryNotificationResult
+): NormalizedConvergedDelivery {
+  const status: TmuxDeliveryAckStatus =
+    delivery.delivered ? "accepted" : "rejected";
+  return {
+    status,
+    delivered: delivery.delivered,
+    ...(delivery.reason !== undefined ? { reason: delivery.reason } : {}),
+    ...(delivery.reason_code !== undefined
+      ? { reason_code: delivery.reason_code }
+      : {})
+  };
+}
+
 function resolveAggregateConvergedDeliveryReason(
-  deliveries: EmitTmuxDeliveryNotificationResult[]
+  deliveries: NormalizedConvergedDelivery[]
 ): string | undefined {
-  const failedDeliveries = deliveries.filter((delivery) => !delivery.delivered);
+  const failedDeliveries = deliveries.filter(
+    (delivery) => delivery.status === "rejected"
+  );
   if (failedDeliveries.length === 0) {
     return undefined;
   }
@@ -73,17 +101,31 @@ function buildConvergedDelivery(
   deliveries: EmitTmuxDeliveryNotificationResult[],
   retried: boolean
 ): ConvergedDeliveryResult {
-  const failedDeliveryCount = deliveries.filter((delivery) => !delivery.delivered).length;
-  const aggregatedDeliveryReason = resolveAggregateConvergedDeliveryReason(deliveries);
+  const normalizedDeliveries = deliveries.map(normalizeConvergedDelivery);
+  const failedDeliveries = normalizedDeliveries.filter(
+    (delivery) => delivery.status === "rejected"
+  );
+  const failedDeliveryCount = failedDeliveries.length;
+  const aggregatedDeliveryReason =
+    resolveAggregateConvergedDeliveryReason(normalizedDeliveries);
+  const aggregatedReasonCode =
+    failedDeliveryCount > 0
+      ? failedDeliveries.find((delivery) => delivery.reason_code !== undefined)?.reason_code
+      : undefined;
   return failedDeliveryCount === 0
     ? {
+        status: "accepted",
         delivered: true,
         retried
       }
     : {
+        status: "rejected",
         delivered: false,
         ...(aggregatedDeliveryReason !== undefined
           ? { reason: aggregatedDeliveryReason }
+          : {}),
+        ...(aggregatedReasonCode !== undefined
+          ? { reason_code: aggregatedReasonCode }
           : {}),
         retried
       };
@@ -128,7 +170,8 @@ export async function executeGateDelivery(input: {
     }).catch(() => ({
       delivered: false,
       message: "",
-      reason: "tmux_send_failed"
+      reason: "tmux_send_failed",
+      reason_code: "DELIVERY_ACK_REJECTED"
     }));
 
   if (input.gateResult.route === "auto_rework") {

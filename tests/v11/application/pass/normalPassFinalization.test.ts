@@ -54,6 +54,7 @@ describe("finalizeNormalPass", () => {
         },
         resolveMostRecentPreviousReviewerPassIsCleanFromMetadata: () => undefined,
         mapPassResultDelivery: () => ({
+          status: "accepted",
           delivered: true,
           retried: false
         }),
@@ -74,6 +75,7 @@ describe("finalizeNormalPass", () => {
       "compat_write_failed"
     );
     expect(capturedResultInput?.delivery).toEqual({
+      status: "accepted",
       delivered: true,
       retried: false
     });

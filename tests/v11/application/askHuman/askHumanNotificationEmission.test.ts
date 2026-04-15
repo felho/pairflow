@@ -23,6 +23,7 @@ describe("askHumanNotificationEmission", () => {
           calls.push("emitTmuxDeliveryNotification");
           expect(input.messageRef).toBe("transcript-ref#msg_20260221_001");
           return {
+            status: "accepted",
             delivered: true,
             message: "ok"
           };
@@ -47,6 +48,7 @@ describe("askHumanNotificationEmission", () => {
     ]);
     expect(result).toEqual({
       deliveryResult: {
+        status: "accepted",
         delivered: true,
         message: "ok"
       }
@@ -82,9 +84,11 @@ describe("askHumanNotificationEmission", () => {
 
     expect(result).toEqual({
       deliveryResult: {
+        status: "rejected",
         delivered: false,
         message: "tmux delivery notification failed: tmux boom",
-        reason: "tmux_send_failed"
+        reason: "tmux_send_failed",
+        reason_code: "DELIVERY_ACK_REJECTED"
       }
     });
   });
@@ -104,6 +108,7 @@ describe("askHumanNotificationEmission", () => {
       },
       {
         emitTmuxDeliveryNotification: async () => ({
+          status: "accepted",
           delivered: true,
           message: "ok"
         }),
@@ -115,6 +120,7 @@ describe("askHumanNotificationEmission", () => {
 
     expect(result).toEqual({
       deliveryResult: {
+        status: "accepted",
         delivered: true,
         message: "ok"
       }

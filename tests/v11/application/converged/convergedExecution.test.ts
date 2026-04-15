@@ -93,7 +93,8 @@ describe("executeConvergedExecution", () => {
             return {
               delivered: false,
               message: "",
-              reason: "delivery_unconfirmed"
+              reason: "delivery_unconfirmed",
+              reason_code: "DELIVERY_ACK_REJECTED"
             };
           }
           return {
@@ -130,8 +131,10 @@ describe("executeConvergedExecution", () => {
       }
     ]);
     expect(result.delivery).toEqual({
+      status: "rejected",
       delivered: false,
       reason: "partial_delivery_failed",
+      reason_code: "DELIVERY_ACK_REJECTED",
       retried: false
     });
     expect(notifications).toEqual(["converged"]);
@@ -216,7 +219,8 @@ describe("executeConvergedExecution", () => {
             return {
               delivered: false,
               message: "",
-              reason: "delivery_unconfirmed"
+              reason: "delivery_unconfirmed",
+              reason_code: "DELIVERY_ACK_REJECTED"
             };
           }
           return {
@@ -246,8 +250,101 @@ describe("executeConvergedExecution", () => {
       }
     ]);
     expect(result.delivery).toEqual({
+      status: "accepted",
       delivered: true,
       retried: true
+    });
+  });
+
+  it("keeps all-failure aggregate reason priority and reason_code when one delivery throws", async () => {
+    const result = await executeConvergedExecution(
+      {
+        resolved: {
+          bubbleId: "b_exec_003",
+          repoPath: "/repo",
+          bubblePaths: {
+            transcriptPath: "/repo/.pairflow/transcript.ndjson",
+            locksDir: "/repo/.pairflow/locks",
+            sessionsPath: "/repo/.pairflow/sessions.json",
+            worktreePath: "/repo/worktree"
+          },
+          bubbleConfig: {},
+          worktreePath: "/repo/worktree",
+          cwd: "/repo/worktree"
+        } as never,
+        state: {
+          round: 4
+        } as never,
+        reviewer: "claude",
+        implementer: "codex",
+        summary: "converged summary",
+        refs: [],
+        now: new Date("2026-03-19T11:20:00.000Z"),
+        convergencePolicyDiagnostics: [],
+        gatePipelineDiagnostics: []
+      },
+      {
+        appendProtocolEnvelope: async () => ({
+          sequence: 21,
+          envelope: {
+            id: "env_conv_3"
+          }
+        }) as never,
+        applyMetaReviewGateOnConvergence: async () => ({
+          bubbleId: "b_exec_003",
+          route: "human_gate_approve",
+          gateSequence: 22,
+          gateEnvelope: {
+            id: "env_gate_3",
+            ts: "2026-03-19T11:20:01.000Z",
+            bubble_id: "b_exec_003",
+            sender: "orchestrator",
+            recipient: "human",
+            type: "APPROVAL_REQUEST",
+            round: 4,
+            payload: {
+              summary: "approval"
+            },
+            refs: []
+          },
+          state: {}
+        }) as never,
+        emitTmuxDeliveryNotification: async (input) => {
+          if (input.envelope.recipient === "human") {
+            throw new Error("simulated tmux send failure");
+          }
+          if (input.envelope.recipient === "codex") {
+            return {
+              delivered: false,
+              message: "",
+              reason: "delivery_unconfirmed",
+              reason_code: "DELIVERY_ACK_REJECTED"
+            };
+          }
+          return {
+            delivered: false,
+            message: "",
+            reason: "no_runtime_session",
+            reason_code: "DELIVERY_ACK_RUNTIME_SESSION_UNAVAILABLE"
+          };
+        },
+        emitBubbleNotification: () =>
+          Promise.resolve({
+            kind: "converged",
+            attempted: false,
+            delivered: false,
+            soundPath: null,
+            reason: "disabled"
+          })
+      }
+    );
+
+    expect(result.delivery).toEqual({
+      status: "rejected",
+      delivered: false,
+      reason: "delivery_unconfirmed",
+      reason_code: "DELIVERY_ACK_REJECTED",
+      retried: false
     });
   });
 });

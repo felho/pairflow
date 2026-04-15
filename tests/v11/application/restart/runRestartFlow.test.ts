@@ -229,4 +229,31 @@ describe("runRestartFlow", () => {
     expect(removeRuntimeSession).toHaveBeenCalledTimes(1)
     expect(startBubble).toHaveBeenCalledTimes(1)
   })
+
+  it("surfaces start-time launch failures after cleanup without projecting synthetic success", async () => {
+    const terminateBubbleTmuxSession = vi.fn(async () => ({ existed: true }) as never)
+    const removeRuntimeSession = vi.fn(async () => true)
+
+    await expect(
+      runRestartFlow(
+        {
+          bubbleId: "b_restart_01"
+        },
+        createDependencies({
+          terminateBubbleTmuxSession,
+          removeRuntimeSession,
+          startBubble: async () => {
+            throw Object.assign(new Error("tmux launch rejected in test"), {
+              reasonCode: "LAUNCH_ACK_TMUX_COMMAND_FAILED"
+            })
+          }
+        })
+      )
+    ).rejects.toMatchObject({
+      reasonCode: "LAUNCH_ACK_TMUX_COMMAND_FAILED"
+    })
+
+    expect(terminateBubbleTmuxSession).toHaveBeenCalledTimes(1)
+    expect(removeRuntimeSession).toHaveBeenCalledTimes(1)
+  })
 })

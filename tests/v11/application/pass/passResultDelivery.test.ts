@@ -22,6 +22,7 @@ describe("mapPassResultDelivery", () => {
         deliveryRetried: false
       })
     ).toEqual({
+      status: "accepted",
       delivered: true,
       retried: false
     });
@@ -33,13 +34,16 @@ describe("mapPassResultDelivery", () => {
         deliveryResult: {
           delivered: false,
           reason: "delivery_unconfirmed",
+          reason_code: "DELIVERY_ACK_REJECTED",
           message: "not confirmed"
         },
         deliveryRetried: true
       })
     ).toEqual({
+      status: "rejected",
       delivered: false,
       reason: "delivery_unconfirmed",
+      reason_code: "DELIVERY_ACK_REJECTED",
       retried: true
     });
   });

@@ -97,6 +97,7 @@ describe("emitAskHumanFromWorkspace", () => {
           }
           deliveryRefs.push(input.messageRef);
           return Promise.resolve({
+            status: "accepted",
             delivered: true,
             message: "ok"
           });

@@ -55,6 +55,7 @@ describe("finalizeAskHumanFlow", () => {
           callOrder.push("emitTmuxDeliveryNotification");
           expect(input.messageRef).toBe("transcript-ref#msg_20260221_001");
           return {
+            status: "accepted",
             delivered: true,
             message: "ok"
           };
@@ -98,6 +99,7 @@ describe("finalizeAskHumanFlow", () => {
       },
       inferredRecipient: "human",
       delivery: {
+        status: "accepted",
         delivered: true,
         message: "ok"
       }
@@ -159,9 +161,11 @@ describe("finalizeAskHumanFlow", () => {
     );
 
     expect(result.delivery).toEqual({
+      status: "rejected",
       delivered: false,
       message: "tmux delivery notification failed: tmux boom",
-      reason: "tmux_send_failed"
+      reason: "tmux_send_failed",
+      reason_code: "DELIVERY_ACK_REJECTED"
     });
   });
 
@@ -170,6 +174,7 @@ describe("finalizeAskHumanFlow", () => {
     let bubbleNotificationSettled = false;
     let deliveryResolve:
       | ((value: {
+          status: "accepted";
           delivered: boolean;
           message: string;
         }) => void)
@@ -182,6 +187,7 @@ describe("finalizeAskHumanFlow", () => {
       };
     });
     const deliveryPromise = new Promise<{
+      status: "accepted";
       delivered: boolean;
       message: string;
     }>((resolvePromise) => {
@@ -243,12 +249,14 @@ describe("finalizeAskHumanFlow", () => {
     );
 
     deliveryResolve?.({
+      status: "accepted",
       delivered: true,
       message: "ok"
     });
 
     const result = await resultPromise;
     expect(result.delivery).toEqual({
+      status: "accepted",
       delivered: true,
       message: "ok"
     });

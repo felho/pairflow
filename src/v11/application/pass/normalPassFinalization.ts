@@ -68,8 +68,10 @@ export interface FinalizeNormalPassDependencies<TResult> {
     deliveryResult: EmitTmuxDeliveryNotificationResult | undefined;
     deliveryRetried: boolean;
   }) => {
+    status: "accepted" | "rejected";
     delivered: boolean;
     reason?: string;
+    reason_code?: string;
     retried: boolean;
   } | undefined;
   buildNormalPassResult: (input: {
@@ -83,8 +85,10 @@ export interface FinalizeNormalPassDependencies<TResult> {
     repeatCleanTrigger: boolean;
     mostRecentPreviousReviewerCleanPassEnvelope: boolean;
     delivery?: {
+      status: "accepted" | "rejected";
       delivered: boolean;
       reason?: string;
+      reason_code?: string;
       retried: boolean;
     };
     passValidationCompatibilityArtifactWriteFailureReason?: string;

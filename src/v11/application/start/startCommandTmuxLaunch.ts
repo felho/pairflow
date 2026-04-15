@@ -1,4 +1,5 @@
 import { buildAgentCommand } from "./startCommandPromptRuntime.js";
+import { createStartBubbleError } from "./startCommandRuntime.js";
 import {
   buildImplementerIdeationKickoffMessage,
   buildImplementerKickoffMessage,
@@ -24,13 +25,37 @@ function buildStatusPaneLabel(bubbleId: string): string {
   return `[orchestrator/status]-[${bubbleId}]`;
 }
 
+function assertRunningLaunchAck(input: {
+  bubbleId: string;
+  ack: Awaited<ReturnType<ResolvedStartBubbleDependencies["launchTmuxAck"]>>;
+}): { sessionName: string } {
+  if (input.ack.status === "running") {
+    return {
+      sessionName: input.ack.sessionName
+    };
+  }
+
+  throw createStartBubbleError({
+    reasonCode: input.ack.reason_code,
+    message: input.ack.error_message,
+    context: {
+      bubble_id: input.bubbleId,
+      stage: "launch_tmux",
+      failure_kind: input.ack.failure_kind,
+      ...(input.ack.sessionName !== undefined
+        ? { tmux_session_name: input.ack.sessionName }
+        : {})
+    }
+  });
+}
+
 export async function launchFreshTmuxSession(input: {
   context: StartExecutionContext;
   deps: ResolvedStartBubbleDependencies;
   ideationPending: boolean;
   launchWorkspacePath: string;
 }): Promise<{ sessionName: string }> {
-  return input.deps.launchTmux({
+  const ack = await input.deps.launchTmuxAck({
     bubbleId: input.context.resolved.bubbleId,
     workspacePath: input.launchWorkspacePath,
     statusCommand: buildStatusPaneCommand(
@@ -115,6 +140,11 @@ export async function launchFreshTmuxSession(input: {
           pairflowCommandProfile: input.context.resolved.bubbleConfig.pairflow_command_profile
         })
   });
+
+  return assertRunningLaunchAck({
+    bubbleId: input.context.resolved.bubbleId,
+    ack
+  });
 }
 
 export async function launchResumeTmuxSession(input: {
@@ -129,7 +159,7 @@ export async function launchResumeTmuxSession(input: {
     "kickoffDiagnostic"
   >;
 }): Promise<{ sessionName: string }> {
-  return input.deps.launchTmux({
+  const ack = await input.deps.launchTmuxAck({
     bubbleId: input.context.resolved.bubbleId,
     workspacePath: input.launchWorkspacePath,
     statusCommand: buildStatusPaneCommand(
@@ -211,5 +241,10 @@ export async function launchResumeTmuxSession(input: {
       })
     }),
     ...input.resumeKickoffMessages
+  });
+
+  return assertRunningLaunchAck({
+    bubbleId: input.context.resolved.bubbleId,
+    ack
   });
 }

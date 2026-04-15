@@ -483,7 +483,8 @@ describe("emitConvergedFromWorkspace", () => {
       expectedRef
     ]);
     expect(deliveries[0]?.messageRef?.startsWith("transcript.ndjson#")).toBe(false);
-    expect(result.delivery).toEqual({
+    expect(result.delivery).toMatchObject({
+      status: "accepted",
       delivered: true,
       retried: false
     });
@@ -550,7 +551,8 @@ describe("emitConvergedFromWorkspace", () => {
 
     expect(deliveries).toEqual([bubble.config.agents.implementer]);
     expect(result.gateRoute).toBe("auto_rework");
-    expect(result.delivery).toEqual({
+    expect(result.delivery).toMatchObject({
+      status: "accepted",
       delivered: true,
       retried: false
     });
@@ -767,7 +769,8 @@ describe("emitConvergedFromWorkspace", () => {
       deliveryAttempts: 6
     });
     expect(result.gateRoute).toBe("auto_rework");
-    expect(result.delivery).toEqual({
+    expect(result.delivery).toMatchObject({
+      status: "accepted",
       delivered: true,
       retried: true
     });
@@ -844,7 +847,8 @@ describe("emitConvergedFromWorkspace", () => {
 
     expect(result.gateRoute).toBe("meta_review_running");
     expect(result.state.state).toBe("RUNNING");
-    expect(result.delivery).toEqual({
+    expect(result.delivery).toMatchObject({
+      status: "rejected",
       delivered: false,
       reason: "delivery_unconfirmed",
       retried: false

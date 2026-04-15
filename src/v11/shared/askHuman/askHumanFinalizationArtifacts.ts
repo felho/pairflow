@@ -25,12 +25,16 @@ export function buildAskHumanFinalizationResult(
     ...(input.deliveryResult !== undefined
         ? {
           delivery: {
+            status: input.deliveryResult.status,
             delivered: input.deliveryResult.delivered,
             ...(input.deliveryResult.message.length > 0
               ? { message: input.deliveryResult.message }
               : {}),
             ...(input.deliveryResult.reason !== undefined
               ? { reason: input.deliveryResult.reason }
+              : {}),
+            ...(input.deliveryResult.reason_code !== undefined
+              ? { reason_code: input.deliveryResult.reason_code }
               : {}),
             ...(input.deliveryResult.deliveryTargetReasonCode !== undefined
               ? {

@@ -57,9 +57,11 @@ describe("askHumanFinalizationArtifacts", () => {
           state: "WAITING_HUMAN"
         } as never,
         deliveryResult: {
+          status: "rejected",
           delivered: false,
           message: "",
-          reason: "tmux_send_failed"
+          reason: "tmux_send_failed",
+          reason_code: "DELIVERY_ACK_REJECTED"
         }
       })
     ).toEqual({
@@ -73,8 +75,10 @@ describe("askHumanFinalizationArtifacts", () => {
       },
       inferredRecipient: "human",
       delivery: {
+        status: "rejected",
         delivered: false,
-        reason: "tmux_send_failed"
+        reason: "tmux_send_failed",
+        reason_code: "DELIVERY_ACK_REJECTED"
       }
     });
   });

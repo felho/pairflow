@@ -44,6 +44,7 @@ describe("passResultBuilder", () => {
       approvalRequestSequence: 43,
       approvalRequestEnvelope: buildEnvelope("msg_approval"),
       delivery: {
+        status: "accepted",
         delivered: true,
         retried: false
       },
@@ -60,6 +61,7 @@ describe("passResultBuilder", () => {
       repeatCleanTrigger: true,
       mostRecentPreviousReviewerCleanPassEnvelope: true,
       delivery: {
+        status: "accepted",
         delivered: true,
         retried: false
       },

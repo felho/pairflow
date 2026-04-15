@@ -1,0 +1,23 @@
+{
+  "id": "start-launch-ack-failed-v11",
+  "command": "start",
+  "mode": "v11",
+  "description": "Seed start v11 contract case for explicit failed_to_start launch ack fail-closed path.",
+  "input": {
+    "fixture": {
+      "scenario": "launch_ack_failed"
+    }
+  },
+  "expected": {
+    "status": "error",
+    "reasonCode": "LAUNCH_ACK_TMUX_COMMAND_FAILED",
+    "stateSubset": {
+      "state": "FAILED"
+    }
+  },
+  "tags": [
+    "seed",
+    "m0",
+    "start"
+  ]
+}
