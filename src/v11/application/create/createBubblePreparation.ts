@@ -3,10 +3,7 @@ import type {
   BubbleCreateInput,
   ResolvedTaskInput
 } from "./createCommandContract.js";
-import {
-  normalizeCreateRemoteAlias,
-  type CreateBubbleConfigInput
-} from "./createCommandRuntime.js";
+import type { CreateBubbleConfigInput } from "./createCommandRuntime.js";
 
 export interface PreparedCreateBubbleInput {
   bubbleBranch: string;
@@ -63,10 +60,6 @@ export function prepareCreateBubbleInput(input: {
   }
   if (input.command.pairflowCommandProfile !== undefined) {
     bubbleConfigInput.pairflowCommandProfile = input.command.pairflowCommandProfile;
-  }
-  const executorRemote = normalizeCreateRemoteAlias(input.command.remote);
-  if (executorRemote !== undefined) {
-    bubbleConfigInput.executorRemote = executorRemote;
   }
 
   return {

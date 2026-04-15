@@ -4,13 +4,12 @@ export type { BubbleCreateCommandOptions } from "./createCliOptionTypes.js";
 export function getBubbleCreateHelpText(): string {
   return [
     "Usage:",
-    "  pairflow bubble create --id <id> --repo <path> --base <branch> [--remote <alias>] --review-artifact-type <document|code> ((--task <text> | --task-file <path>) | --ideation)",
+    "  pairflow bubble create --id <id> --repo <path> --base <branch> --review-artifact-type <document|code> ((--task <text> | --task-file <path>) | --ideation)",
     "",
     "Options:",
     "  --id <id>             Bubble id (max 40 chars, e.g. b_feature_x_01)",
     "  --repo <path>         Repository path",
     "  --base <branch>       Base branch",
-    "  --remote <alias>      Optional remote executor alias from global [remotes.<name>] config",
     "  --review-artifact-type <document|code>  Required explicit ownership type",
     "  --ideation            Create ideation bubble without task payload (requires explicit kickoff later)",
     "  --task <text>         Inline task text",

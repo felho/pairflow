@@ -33,13 +33,6 @@ export async function emitCreateBubbleLifecycleEvent(input: {
       base_branch: input.config.base_branch,
       bubble_branch: input.config.bubble_branch,
       review_artifact_type: input.config.review_artifact_type,
-      remote_create: input.config.executor !== undefined,
-      ...(input.config.executor !== undefined
-        ? {
-            remote_alias: input.config.executor.remote,
-            remote_executor_type: input.config.executor.type
-          }
-        : {}),
       task_source: input.task.source,
       ideation_mode: input.ideationMode,
       ideation_task_pending: input.ideationMode,

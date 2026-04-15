@@ -13,7 +13,6 @@ export interface BubbleCreateCommandRuntimeOptions {
   id?: string;
   repo?: string;
   base?: string;
-  remote?: string;
   reviewArtifactType?: CreateReviewArtifactType;
   ideation?: boolean;
   task?: string;
@@ -66,7 +65,6 @@ export function buildCreateBubbleInput(
     id: options.id as string,
     repoPath,
     baseBranch: options.base as string,
-    ...(options.remote !== undefined ? { remote: options.remote } : {}),
     reviewArtifactType: options.reviewArtifactType as CreateReviewArtifactType,
     ...(options.ideation === true ? { ideation: true } : {}),
     ...(options.task !== undefined ? { task: options.task } : {}),

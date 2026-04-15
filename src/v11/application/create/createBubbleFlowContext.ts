@@ -1,15 +1,12 @@
 import { resolve } from "node:path";
 
-import { loadPairflowGlobalConfig } from "../../../config/pairflowConfig.js";
 import { getBubblePaths, type BubblePaths } from "../../shared/bubble/bubblePaths.js";
 import type { ReviewerFocusExtractionResult } from "../../../v11/shared/reviewer/reviewerBrief.js";
 import { createInitialBubbleState } from "../../domain/state/initialState.js";
 import {
   assertValidBubbleStateSnapshot
 } from "../../shared/state/stateSchema.js";
-import { SchemaValidationError } from "../../shared/validation/primitives.js";
 import type {
-  BubbleRemotePointerCreated,
   BubbleConfig,
   BubbleStateSnapshot
 } from "../../../types/bubble.js";
@@ -24,7 +21,6 @@ import {
   buildIdeationPlaceholderTaskContent,
   ensureBubbleDoesNotExist,
   ensureRepoPathIsGitRepo,
-  resolveCreateRemoteAlias,
   resolveCreateReviewArtifactType,
   resolveReviewerBriefInput,
   resolveTaskInput,
@@ -42,7 +38,6 @@ export interface CreateBubbleFlowContext {
   task: ResolvedTaskInput;
   reviewerFocus: ReviewerFocusExtractionResult;
   reviewerBrief?: ResolvedTaskInput | undefined;
-  remotePointer?: BubbleRemotePointerCreated;
   prepared: PreparedCreateBubbleInput;
   config: BubbleConfig;
   state: BubbleStateSnapshot;
@@ -110,34 +105,6 @@ export async function prepareCreateBubbleFlowContext(input: {
     reviewArtifactType,
     task
   });
-  const normalizedRemoteAlias = prepared.bubbleConfigInput.executorRemote;
-  const remotePointer =
-    normalizedRemoteAlias === undefined
-      ? undefined
-      : await (async (): Promise<BubbleRemotePointerCreated> => {
-          const loadGlobalConfig =
-            input.dependencies.loadPairflowGlobalConfig ?? loadPairflowGlobalConfig;
-          try {
-            const globalConfig = await loadGlobalConfig();
-            const resolvedRemote = resolveCreateRemoteAlias({
-              remoteAlias: normalizedRemoteAlias,
-              remotes: globalConfig.remotes
-            });
-
-            return {
-              kind: "created",
-              host: resolvedRemote.host,
-              ...(resolvedRemote.portForwards !== undefined
-                ? { portForwards: resolvedRemote.portForwards }
-                : {})
-            };
-          } catch (error) {
-            if (error instanceof SchemaValidationError) {
-              throw new BubbleCreateError(error.message);
-            }
-            throw error;
-          }
-        })();
 
   return {
     repoPath,
@@ -145,7 +112,6 @@ export async function prepareCreateBubbleFlowContext(input: {
     task,
     reviewerFocus,
     ...(reviewerBrief !== undefined ? { reviewerBrief } : {}),
-    ...(remotePointer !== undefined ? { remotePointer } : {}),
     prepared,
     config: buildBubbleConfig(prepared.bubbleConfigInput),
     state: assertValidBubbleStateSnapshot(

@@ -156,36 +156,13 @@ describe("parseBubbleCreateCommandOptions", () => {
     expect(parsed.pairflowCommandProfile).toBe("self_host");
   });
 
-  it("parses optional remote executor alias", () => {
-    const parsed = parseBubbleCreateCommandOptions([
-      "--id",
-      "b_create_remote_01",
-      "--repo",
-      "/tmp/repo",
-      "--base",
-      "main",
-      "--review-artifact-type",
-      "code",
-      "--remote",
-      "homelab",
-      "--task",
-      "Implement X"
-    ]);
-
-    expect(parsed.remote).toBe("homelab");
-  });
-
   it("supports help flag", () => {
     const parsed = parseBubbleCreateCommandOptions(["--help"]);
-    const helpText = getBubbleCreateHelpText();
     expect(parsed.help).toBe(true);
-    expect(helpText).toContain(
-      "pairflow bubble create --id <id> --repo <path> --base <branch> [--remote <alias>] --review-artifact-type <document|code>"
-    );
-    expect(helpText).toContain("Bubble id (max 40 chars");
-    expect(helpText).toContain("--remote <alias>");
-    expect(helpText).toContain("--review-artifact-type <document|code>");
-    expect(helpText).not.toContain("<auto|");
+    expect(getBubbleCreateHelpText()).toContain("pairflow bubble create");
+    expect(getBubbleCreateHelpText()).toContain("Bubble id (max 40 chars");
+    expect(getBubbleCreateHelpText()).toContain("--review-artifact-type <document|code>");
+    expect(getBubbleCreateHelpText()).not.toContain("<auto|");
   });
 
   it("accepts --help even when pairflow command profile is invalid", () => {
@@ -390,64 +367,6 @@ describe("parseBubbleCreateCommandOptions", () => {
     ).toThrow(new RegExp(`^${PAIRFLOW_COMMAND_PROFILE_INVALID}:`, "u"));
   });
 
-  it("throws when remote alias is empty", () => {
-    expect(() =>
-      parseBubbleCreateCommandOptions([
-        "--id",
-        "b_create_invalid_remote_01",
-        "--repo",
-        "/tmp/repo",
-        "--base",
-        "main",
-        "--review-artifact-type",
-        "code",
-        "--remote=",
-        "--task",
-        "Implement X"
-      ])
-    ).toThrow(
-      /--remote must be a non-empty remote alias.*reason_code=CREATE_REMOTE_ALIAS_INVALID/u
-    );
-  });
-
-  it("prioritizes remote alias validation even when review-artifact-type is also missing", () => {
-    expect(() =>
-      parseBubbleCreateCommandOptions([
-        "--id",
-        "b_create_invalid_remote_02",
-        "--repo",
-        "/tmp/repo",
-        "--base",
-        "main",
-        "--remote=",
-        "--task",
-        "Implement X"
-      ])
-    ).toThrow(
-      /--remote must be a non-empty remote alias.*Also missing: --review-artifact-type.*reason_code=CREATE_REMOTE_ALIAS_INVALID/u
-    );
-  });
-
-  it("prioritizes remote alias validation over competing review-artifact-type validation", () => {
-    expect(() =>
-      parseBubbleCreateCommandOptions([
-        "--id",
-        "b_create_invalid_remote_03",
-        "--repo",
-        "/tmp/repo",
-        "--base",
-        "main",
-        "--review-artifact-type",
-        "slides",
-        "--remote=",
-        "--task",
-        "Implement X"
-      ])
-    ).toThrow(
-      /--remote must be a non-empty remote alias.*reason_code=CREATE_REMOTE_ALIAS_INVALID/u
-    );
-  });
-
   it("keeps missing-option context when pairflow command profile is invalid", () => {
     expect(() =>
       parseBubbleCreateCommandOptions([
@@ -616,42 +535,6 @@ describe("parseBubbleCreateCommandOptions", () => {
     expect(createBubbleMock).toHaveBeenCalledWith(
       expect.objectContaining({
         bootstrapCommand: "pnpm install --frozen-lockfile && pnpm build"
-      })
-    );
-  });
-
-  it("forwards remote alias to bubble creation", async () => {
-    const createBubbleResult = {
-      bubbleId: "b_create_remote_forward_01"
-    } as unknown as BubbleCreateResult;
-    const createBubbleMock: NonNullable<
-      BubbleCreateCommandDependencies["createBubble"]
-    > = vi.fn(() => Promise.resolve(createBubbleResult));
-
-    await runBubbleCreateCommand(
-      [
-        "--id",
-        "b_create_remote_forward_01",
-        "--repo",
-        "/tmp/repo",
-        "--base",
-        "main",
-        "--review-artifact-type",
-        "code",
-        "--remote",
-        "homelab",
-        "--task",
-        "Implement X"
-      ],
-      "/tmp",
-      {
-        createBubble: createBubbleMock
-      }
-    );
-
-    expect(createBubbleMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        remote: "homelab"
       })
     );
   });

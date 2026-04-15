@@ -7,7 +7,6 @@ export interface BubbleCreateCommandOptions {
   id?: string;
   repo?: string;
   base?: string;
-  remote?: string;
   reviewArtifactType?: CreateReviewArtifactType;
   ideation?: boolean;
   task?: string;
