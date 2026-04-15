@@ -11,11 +11,12 @@ target_files:
   - src/v11/application/create/createCliOptionValidation.ts
   - src/v11/application/create/createCliOptions.ts
   - src/v11/application/create/createCliRunHelpers.ts
+  - src/v11/application/create/createCliRunner.ts
   - src/v11/application/create/createBubblePreparation.ts
   - src/v11/application/create/createBubbleFlowContext.ts
+  - src/v11/application/create/runCreateBubbleFlow.ts
   - src/v11/application/create/createBubblePersistence.ts
   - src/v11/application/create/createCommandRuntime.ts
-  - src/v11/defaults/create/createBubbleDefaults.ts
   - tests/cli/createCommand.test.ts
   - tests/core/bubble/createBubble.test.ts
   - tests/v11/application/create/createCliRunHelpers.test.ts
@@ -62,6 +63,22 @@ owners:
    - nincs `pairflow_sync_command` consume.
 5. A 2B kimenete egy local bubble, amely remote bubble-kent van konfigurálva, de operativ allapota tovabbra is `CREATED`.
 
+## Target File Discipline
+
+1. A frontmatter `target_files` lista a Phase 2B maximalis elvart edit-surface-e; ettol valo eltereshez a review-ban explicit indoklas kell.
+2. Preferred ownership:
+   - CLI surface: `createCliOptionTypes.ts`, `createCliOptionParser.ts`, `createCliOptionValidation.ts`, `createCliOptions.ts`
+   - input propagation: `createCliRunHelpers.ts`, `createCommandContract.ts`, `createCliRunner.ts`
+   - create-flow orchestration: `createBubblePreparation.ts`, `createBubbleFlowContext.ts`, `runCreateBubbleFlow.ts`
+   - persistence: `createBubblePersistence.ts`
+3. `createCommandRuntime.ts` csak akkor nyithato meg, ha a remote alias validation vagy create-config build maskepp nem zarhato le a fenti seams-en.
+4. Nem elvart edit-surface ebben a fazisban:
+   - `src/config/pairflowConfig.ts`
+   - `src/config/bubbleConfig.ts`
+   - `src/v11/infrastructure/artifact/bubble/remoteExecutionArtifacts.ts`
+   - barmely `start/**`, `status/**`, `list/**`, `attach/**`, `commit/**`, `merge/**`, `delete/**` consumer
+5. Ha a megoldas uj shared/defaults wiringot nyitna csak azert, hogy a create write-path mukodjon, azt review-ban scope-driftkent kell kezelni, hacsak nincs ra evidence-backed compile-only kenyszer.
+
 ## L0 - Policy
 
 ### Goal
@@ -79,15 +96,13 @@ Lezarni a remote bubble local create write-pathjat ugy, hogy a felhasznalo `pair
 3. Read-path rule: a create flow csak a CLI `--remote` inputbol, a global Pairflow config `[remotes]` mapjabol, es a local bubble artifact pathokbol olvashat; runtime sessionbol, `state-cache.json`-bol vagy tmux/allapot projectionbol nem.
 4. Forbidden fallback: tilos remote bubble authorityt visszainferalni `state-cache.json`-bol, runtime session registrybol, tmux sessionbol, worktree pathbol vagy implicit host/path pairingbol.
 5. Allowed resolution path: `--remote <alias>` -> global `[remotes.<alias>]` lookup -> persistalt `[executor]` a `bubble.toml`-ba -> `remote.json` created pointer `{ kind:\"created\", host, portForwards? }`.
-6. Missing-data rule: ha a remote alias hianyzik vagy nincs definialva a global configban, a create fail-closed; nincs local bubble fallback es nincs partial success read-model.
+6. Missing-data rule: ha a remote alias hianyzik vagy nincs definialva a global configban, a create fail-closed; nincs local bubble fallback, nincs partial success read-model, es nincs olyan consume-surface, amely a reszben kiirt artifactokbol remote-ready allapotot inferalhat.
 7. Phase boundary:
-   - contract closure: retained baseline, successor-only modositas tilos
-   - producer closure: owned here
-   - internal execution closure: successor
-   - workflow/orchestration closure: owned here a create pathra
-   - read-model closure: successor
-   - activation closure: successor
-   - cleanup/recovery closure: successor
+   - owned here: `bubble create --remote` CLI exposure, alias propagation, global config lookup, `bubble.toml[executor]` persistence, `remote.json(kind=\"created\")` write
+   - explicit Phase 2C successor: `pairflow_sync_command` config contract
+   - explicit Phase 2D successor: SSH start orchestration, created->started pointer transition, `state-cache.json` init
+   - explicit Phase 2E/2F successor: `status` / `list` / `attach` read-model consume
+   - explicit Phase 3A+ successor: approval, cleanup, merge/delete routing, recovery semantics
 
 ### Authority Boundary Map
 
@@ -141,6 +156,16 @@ Lezarni a remote bubble local create write-pathjat ugy, hogy a felhasznalo `pair
 3. Remote create sikeres kimeneteben csak created-pointer johet letre; started authority nem.
 4. `state-cache.json` create idoben nem johet letre.
 5. A create command nem probalhat SSH reachability checket vagy host-side probe-ot.
+
+### Success / Failure Envelope
+
+1. Phase 2B success csak akkor allithato, ha a create result egyutt bizonyitja:
+   - explicit `bubble.toml[executor]`
+   - explicit `remote.json(kind=\"created\")`
+   - retained local `CREATED` state
+2. Ha a create scaffold egy resze mar kiirodott, de a `remote.json` created-pointer write elbukik, a command teljes kimenete tovabbra is failure; a bubble nem tekintheto ervenyes remote-created bubble-nek pusztan a megmaradt `bubble.toml` vagy mas scaffold artifact miatt.
+3. Phase 2B-ben a `remote.json` write failure utan nincs uj, required-now rollback vagy partial-scaffold cleanup kovetelmeny; a fail-closed contract ebben a fazisban a terminalis command failure es a success-claim tiltasa, nem pedig a mar kiirt scaffold artifactok visszabontasa.
+4. A `remote.json(kind=\"created\")` onmagaban sem jelent runtime readiness-t; start/read-model/attach semantics tovabbra is successor phase ownership.
 
 ### Contract Boundary / Blast Radius
 
@@ -202,7 +227,15 @@ Lezarni a remote bubble local create write-pathjat ugy, hogy a felhasznalo `pair
 |---|---|---|---|---|
 | local create path executor nelkul mukodik | preserve | T3 bizonyitja, hogy `--remote` nelkul nincs `executor` es nincs `remote.json` | P1 | required-now |
 | create bubble scaffold es state initialization | preserve | T3/T4 bizonyitja, hogy a standard scaffold marad | P1 | required-now |
-| remote create nem ir started pointert vagy cache-t | preserve-forbid hybrid | T4/T5/T6 bizonyitja a created-only pointert es `state-cache.json` hianyat | P1 | required-now |
+| remote create nem ir started pointert vagy cache-t | preserve-forbid hybrid | T4/T5/T7 bizonyitja a created-only pointert es `state-cache.json` hianyat | P1 | required-now |
+
+### 0c) Target File Discipline
+
+| Class | Files | Rule | Reason |
+|---|---|---|---|
+| primary | `createCliOptionTypes.ts`, `createCliOptionParser.ts`, `createCliOptionValidation.ts`, `createCliOptions.ts`, `createCliRunHelpers.ts`, `createCommandContract.ts`, `createBubblePreparation.ts`, `createBubbleFlowContext.ts`, `runCreateBubbleFlow.ts`, `createBubblePersistence.ts` | expected edit set | itt zarhato le a CLI -> create-flow -> persistence write-path |
+| conditional | `createCliRunner.ts`, `createCommandRuntime.ts` | csak akkor nyithato, ha a primer seams nem elegendoek | keep the patch narrow es reviewable |
+| frozen-by-default | `src/config/pairflowConfig.ts`, `src/config/bubbleConfig.ts`, `src/v11/infrastructure/artifact/bubble/remoteExecutionArtifacts.ts`, `src/v11/application/start/**`, `src/v11/application/status/**`, `src/v11/application/list/**`, `src/v11/application/attach/**` | semantic edit nem vart ebben a taskban | retained contract vagy successor-owned surface |
 
 ### 1) Call-site Matrix
 
@@ -213,9 +246,9 @@ Lezarni a remote bubble local create write-pathjat ugy, hogy a felhasznalo `pair
 | CS3 | `src/v11/application/create/createCliOptions.ts` / `createCliOptionValidation.ts` | help + validation | help text / validation layer | create CLI UX boundary | a help explicit remote create opciot mutat; invalid/empty remote input fail-closed | P1 | required-now | T1, T2 |
 | CS4 | `src/v11/application/create/createCommandContract.ts` / `createCliRunHelpers.ts` | create input shaping | `buildCreateBubbleInput(options, cwd) -> { repoPath, input }` | CLI-to-command seam | optional remote alias bekerul a `BubbleCreateInput` shape-be | P1 | required-now | T1, T2 |
 | CS5 | `src/v11/application/create/createBubblePreparation.ts` / `createCommandRuntime.ts` | bubble config build path | `prepareCreateBubbleInput(...) -> PreparedCreateBubbleInput`, `buildBubbleConfig(input) -> BubbleConfig` | create producer seam | remote create eseten a config explicit `executor: { type:\"ssh\", remote:<alias> }` metadata-t kap | P1 | required-now | T4, T5 |
-| CS6 | `src/v11/application/create/createBubbleFlowContext.ts` / `src/v11/defaults/create/createBubbleDefaults.ts` | remote config lookup | flow context dependency seam | create orchestration | remote create eseten betolti a global Pairflow configot es fail-closed validalja az alias lookupot | P1 | required-now | T2, T5 |
-| CS7 | `src/v11/application/create/createBubblePersistence.ts` | `persistCreatedBubbleArtifacts(input) -> Promise<ReviewerFocusArtifactPersistResult>` | create persistence seam | after standard artifact writes | remote create eseten `writeRemotePointer(...)`-rel created-shape `remote.json` jon letre; `state-cache.json` tovabbra sem irodik | P1 | required-now | T4, T6 |
-| CS8 | `tests/cli/createCommand.test.ts` / `tests/core/bubble/createBubble.test.ts` / `tests/v11/application/create/*.test.ts` | test surfaces | unit/integration-style tests | existing create verification surfaces | remote create parse, propagation, persistence, es local compatibility explicit coverage | P1 | required-now | T1-T6 |
+| CS6 | `src/v11/application/create/createBubbleFlowContext.ts` / `src/v11/application/create/runCreateBubbleFlow.ts` | remote config lookup | flow context dependency seam | create orchestration | remote create eseten betolti a global Pairflow configot es fail-closed validalja az alias lookupot | P1 | required-now | T2, T5 |
+| CS7 | `src/v11/application/create/createBubblePersistence.ts` | `persistCreatedBubbleArtifacts(input) -> Promise<ReviewerFocusArtifactPersistResult>` | create persistence seam | after standard artifact writes | remote create eseten `writeRemotePointer(...)`-rel created-shape `remote.json` jon letre; `state-cache.json` tovabbra sem irodik | P1 | required-now | T4, T7 |
+| CS8 | `tests/cli/createCommand.test.ts` / `tests/core/bubble/createBubble.test.ts` / `tests/v11/application/create/*.test.ts` | test surfaces | unit/integration-style tests | existing create verification surfaces | remote create parse, propagation, persistence, es local compatibility explicit coverage | P1 | required-now | T1-T9 |
 
 ### 2) Data and Interface Contract
 
@@ -253,7 +286,7 @@ Implementation notes:
 | global config load fails during remote create | global config loader | throw | create fails; no local fallback | `PAIRFLOW_REMOTE_CONFIG_INVALID` or parse/load surface error | error | P1 | required-now |
 | alias missing from global `[remotes]` map | remote alias lookup | throw | create fails closed | `BUBBLE_EXECUTOR_INVALID` | error | P1 | required-now |
 | local create without `--remote` | N/A | fallback | existing local create path | `N/A` | info | P1 | required-now |
-| `remote.json` write fails | `writeRemotePointer` | throw | command fails; no success result | `REMOTE_ARTIFACT_PARENT_DIR_MISSING` or write error surface | warn | P1 | required-now |
+| `remote.json` write fails | `writeRemotePointer` | throw | command fails; no success result | `REMOTE_ARTIFACT_PARENT_DIR_MISSING` or write error surface | error | P1 | required-now |
 | `state-cache.json` would be initialized at create time | N/A | forbid | do not write it | `N/A` | info | P1 | required-now |
 
 ### 5) Dependency Constraints
@@ -273,11 +306,14 @@ Implementation notes:
 | ID | Scenario | Given | When | Then | Priority | Timing | Evidence |
 |---|---|---|---|---|---|---|---|
 | T1 | CLI remote flag parse/help | `bubble create` args with `--remote homelab` | parse + help text read | `remote` beolvasodik, help explicitten mutatja a `--remote <alias>` opciot | P1 | required-now | `tests/cli/createCommand.test.ts` |
-| T2 | invalid remote input reject | remote flag ures/invalid, vagy remote create alias global config nelkul | parse/runner/create flow | fail-closed hiba, nincs create success | P1 | required-now | `tests/cli/createCommand.test.ts`, `tests/v11/application/create/createCliRunner.test.ts` |
+| T2 | invalid remote alias syntax rejects at CLI boundary | remote flag ures vagy create alias format szinten ervenytelen | parse/runner/create flow | fail-fast validation error `CREATE_REMOTE_ALIAS_INVALID`, nincs create success | P1 | required-now | `tests/cli/createCommand.test.ts`, `tests/v11/application/create/createCliRunner.test.ts` |
 | T3 | local create compatibility retained | standard local create input `--remote` nelkul | create bubble | nincs `executor`, nincs `remote.json`, a jelenlegi local scaffold retained | P1 | required-now | `tests/core/bubble/createBubble.test.ts` |
 | T4 | remote create persists executor and created pointer | valid global config alias + remote create input | create bubble | `bubble.toml` explicit `[executor]` sectiont kap, `remote.json` letrejon `kind=\"created\"`, `host`, optional `portForwards` mezokkel, state `CREATED` marad | P1 | required-now | `tests/core/bubble/createBubble.test.ts` |
-| T5 | remote alias lookup is exact and fail-closed | global config contains/does-not-contain named alias | create flow build/persist | csak definialt alias fogadhato el; nincs host/path inference es nincs local fallback | P1 | required-now | `tests/v11/application/create/createCliRunHelpers.test.ts`, `tests/core/bubble/createBubble.test.ts` |
-| T6 | remote create does not initialize started runtime artifacts | valid remote create input | create bubble | nincs `state-cache.json`, nincs started-pointer field, nincs runtime activation side effect | P1 | required-now | `tests/core/bubble/createBubble.test.ts` |
+| T5 | remote alias lookup is exact and fail-closed | global config contains/does-not-contain named alias | create flow build/persist | csak definialt alias fogadhato el; unknown alias eseten `BUBBLE_EXECUTOR_INVALID`, nincs host/path inference es nincs local fallback | P1 | required-now | `tests/v11/application/create/createCliRunHelpers.test.ts`, `tests/core/bubble/createBubble.test.ts` |
+| T6 | global config load failure is fail-closed | remote create input mellett a global Pairflow config load/parse/validate hibaval all meg | create flow build/persist | explicit `PAIRFLOW_REMOTE_CONFIG_INVALID` vagy azzal egyenerteku parse/load failure surface, nincs local fallback es nincs create success | P1 | required-now | `tests/v11/application/create/createCliRunHelpers.test.ts`, `tests/v11/application/create/createCliRunner.test.ts` |
+| T7 | remote create does not initialize started runtime artifacts | valid remote create input | create bubble | nincs `state-cache.json`, nincs started-pointer field, nincs runtime activation side effect | P1 | required-now | `tests/core/bubble/createBubble.test.ts` |
+| T8 | created pointer payload alias-resolved and created-only | valid alias with `host` and optional `default_port_forwards` | create bubble | `remote.json.host` a global config `host` erteket kapja, `portForwards` csak a configbol johet, alias string vagy path nem szivarog pointer mezobe | P1 | required-now | `tests/core/bubble/createBubble.test.ts` |
+| T9 | remote pointer write failure is terminal | valid remote create input, de `writeRemotePointer(...)` hibat dob | create bubble | a command failure-rel zarul, nincs success result, nincs `state-cache.json`, es a review nem fogadhat el `executor`-only partial success interpretationt | P1 | required-now | `tests/core/bubble/createBubble.test.ts`, `tests/v11/application/create/createCliRunner.test.ts` |
 
 ## L2 - Implementation Notes (Optional)
 
@@ -298,6 +334,7 @@ Implementation notes:
 4. A task nem bovithet Phase 2C/2D/2E scope-ra review kozben.
 5. A `--remote` write-path nem csuszhat at runtime activationbe vagy read-model cache inicializalasba.
 6. Ha a review runtime probe-ot vagy started-pointer write-ot kovetelne ebben a taskban, azt out-of-scope-kent kell visszautasitani es successor taskra iranyitani.
+7. Ha a review a `frozen-by-default` surface-ek megnyitasat kerne, azt csak explicit evidence-backed compile-only kenyszer eseten szabad elfogadni.
 
 ## Spec Lock
 
