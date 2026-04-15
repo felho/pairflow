@@ -32,15 +32,15 @@ owners:
 
 1. A current tree-ben az `E1`, `E2a`, `E2b` es `E2c` predecessor closurek mar merged/allapotban lezartak; ez a task a kovetkezo elo implementation target az implementer lane-en.
 2. Emiatt az `E3a` ownershipje szandekosan szuk: wrapper routing, authoritative-context-first bridge, workspace-prep same-authority lock, outer dispatcher fallback policy explicit rogzitese, es a non-implementer `human_question` baseline preserved lockja.
-3. Az `E3b` csak erre a lezart foundationre epithet ra; ott mar nem nyithato ujra sem az authority-shape, sem a wrapper-model dontes.
+3. Az `E3b` es `E3c` csak erre a lezart foundationre epithet ra; ott mar nem nyithato ujra sem az authority-shape, sem a wrapper-model dontes.
 4. Local phase-boundary mirror:
    - `authority_contract_foundation_closure`: historical predecessor `E1`
    - `delivery_launch_producer_closure`: historical predecessor `E2a`
    - `internal_execution_closure`: historical predecessor `E2b`
    - `read_model_diagnostics_fallout_closure`: historical predecessor `E2c`
    - `workflow_orchestration_closure`: current open task (`E3a` implementer wrapper/authority foundation hardening); owned slice = wrapper routing + authoritative-context-first bridge + workspace-prep same-authority lock + outer dispatcher fallback policy explicit rogzitese + non-implementer `human_question` baseline preserved lockja
-   - `activation_closure`: successor task (`E3b` implementer pilot activation); activation/parity closure only, authority- vagy wrapper-shape reopen tiltott
-   - `cleanup_recovery_closure`: successor task (`E4` reviewer + meta-reviewer rollout / retained adapter cleanup)
+   - `activation_closure`: successor task (`E3b` implementer pilot activation); fresh-path activation only, authority- vagy wrapper-shape reopen tiltott
+   - `cleanup_recovery_closure`: successor tasks (`E3c` implementer pilot parity + fail-closed hardening, majd `E4` reviewer + meta-reviewer rollout / retained adapter cleanup)
 5. Review source-of-truth:
    - a jelenlegi bubble worktree docs-allapota a candidate authority,
    - korabbi approval-ready snapshot csak historical context, nem aktiv review baseline.
@@ -51,7 +51,7 @@ owners:
 
 1. Szukitse bounded foundation slice-ra az implementer pilotot ugy, hogy az implementer `pass` es `human_question` canonical wrapper/authority route-ja review-stabil legyen meg az aktiv pilot claim elott.
 2. Tegye explicitte, hogy az implementer emit bridge authoritative-context-first modellen all, es a compat workspace lookup legfeljebb bridge marad, nem alternativ canonical authority.
-3. Keszitse elo az `E3b` activation taskot ugy, hogy ott mar ne kelljen ujra authority- vagy wrapper-shape dontest hozni.
+3. Keszitse elo az `E3b` activation taskot es az `E3c` parity hardening taskot ugy, hogy egyikben se kelljen ujra authority- vagy wrapper-shape dontest hozni.
 4. Rogzitse explicitten, hogy ez a hardening az implementer pilot path ownershipje; nem teheti implementer-only surface-sze a jelenlegi `human_question` / human-gate baseline-t mas role-ok szamara.
 
 ### Domain / Control Model Summary
@@ -72,7 +72,8 @@ owners:
 7. Phase boundary:
    - authority foundation predecessorbol orokolt, de implementer-route hardening itt owned,
    - outer dispatcher fallback routing explicit policy-surface; preserved-baselinekent vagy explicit tightening targetkent kell nevezni, nem maradhat hallgatozo implicit dontes,
-   - runtime activation/parity proof deferred `E3b`,
+   - runtime activation deferred `E3b`,
+   - parity/fail-closed proof deferred `E3c`,
    - reviewer/meta-reviewer rollout deferred `E4`.
 
 ### Authority Boundary Map
@@ -112,7 +113,7 @@ owners:
 1. Ha a foundation hardening es a current compat bridge kozott feszules van, a canonical same-authority path maradjon, es a compat path szukuljon.
 2. Ha az implementer `pass` es implementer-origin `human_question` kulon authority shape-et igenyelne, a task nem ready; ilyen shortcut nem engedelyezett.
 3. Ha a hardening csak ugy lenne elerheto, hogy a jelenlegi non-implementer `human_question` baseline implementer-only surface-sze szukul, a task nem ready; ez kulon successor dontes nelkul regresszio.
-4. Ha valamely activation vagy runtime parity bizonyitas uj authority-shape dontest kenyszeritene, az mar `E3b` blocker, es az `E3a` ownershipje nem bovitheto activation/parity, duplicate-delivery vagy restart-recovery closure iranyaba.
+4. Ha valamely activation vagy runtime parity bizonyitas uj authority-shape dontest kenyszeritene, az mar `E3b`/`E3c` blocker, es az `E3a` ownershipje nem bovitheto activation, duplicate-delivery vagy restart-recovery closure iranyaba.
 
 ### Contract Boundary / Blast Radius
 
@@ -134,7 +135,8 @@ owners:
 7. `risk_score`: `7`
 8. `single-task allowed`: `yes`
 9. Split note:
-   - a runtime activation es parity closure explicitten deferred `E3b`,
+   - a runtime activation closure explicitten deferred `E3b`,
+   - a parity/fail-closed hardening closure explicitten deferred `E3c`,
    - ez a task csak a wrapper/authority foundation hardeninget owns-olja: wrapper routing + authoritative-context-first bridge + workspace-prep same-authority lock + explicit dispatcher policy + non-implementer baseline preservation.
 
 ## L1 - Change Contract
@@ -149,7 +151,7 @@ owners:
 | Missing-data rule | Authority hiany explicit hiba. | Nincs heuristic reroute. | P1 | required-now |
 | Non-implementer baseline | A jelenlegi reviewer/non-implementer `human_question` baseline nem szukulhet neman. | `E3a` nem teheti implementer-only surface-sze a `HUMAN_QUESTION` emitet. | P1 | required-now |
 | Dispatcher policy | Az outer dispatcher fallback routing explicit policy-surface. | Retained vagy tightened statuszat a tasknak ki kell mondania. | P1 | required-now |
-| Phase boundary | `E3a` csak foundation hardeninget owns-ol. | `E3b` nem nyithat ujra authority- vagy wrapper-shape dontest. | P1 | required-now |
+| Phase boundary | `E3a` csak foundation hardeninget owns-ol. | `E3b`/`E3c` nem nyithat ujra authority- vagy wrapper-shape dontest. | P1 | required-now |
 
 ### 1) Call-site Matrix
 
@@ -176,14 +178,14 @@ Normative rules:
 1. A task nem vezethet be uj public CLI opciot explicit target authority megadasara.
 2. Az implementer lane-en a `human_question` nem kaphat kulon authority modellt a `pass`-tol elteroen.
 3. A task nem teheti implementer-only surface-sze a `human_question` emitet; reviewer vagy mas non-implementer same-authority human-gate baseline csak explicit kulon successor taskban modosithato.
-4. Az outer dispatcher fallback routing policyjat explicitten preserved-baselinekent vagy explicit tightening targetkent kell nevezni; nem maradhat neman `E3b`-re tolva.
+4. Az outer dispatcher fallback routing policyjat explicitten preserved-baselinekent vagy explicit tightening targetkent kell nevezni; nem maradhat neman `E3b`-re vagy `E3c`-re tolva.
 5. A task nem claimelhet runtime activation closure-t.
 
 Static successor-lock criteria:
 
 1. Az `E3a` artifactnek explicitten rogzitenie kell, hogy az `E1`-`E2c` predecessor closurek lezart baseline-kent oroklodnek.
 2. Az `E3a` artifactnek explicitten rogzitenie kell, hogy sajat ownershipje wrapper routingra, authoritative-context-first bridge-re, workspace-prep same-authority hardeningre, outer dispatcher fallback policy explicit rogzitesere es a non-implementer `human_question` baseline preserved lockjara szukul.
-3. Az `E3a` artifactnek explicitten rogzitenie kell, hogy az `E3b` mar nem nyithat ujra authority- vagy wrapper-shape dontest, csak activation/parity closuret owns-olhat.
+3. Az `E3a` artifactnek explicitten rogzitenie kell, hogy az `E3b` mar nem nyithat ujra authority- vagy wrapper-shape dontest, csak activation closuret owns-olhat, az `E3c` pedig csak parity/fail-closed hardening closuret.
 
 ### 3) Error and Fallback Contract
 
@@ -193,7 +195,7 @@ Static successor-lock criteria:
 | compat path authority shortcutot igenyelne | throw | route marad explicit bridge | P1 | required-now |
 | non-implementer `human_question` baseline csak implicit szukitessel tarthato fenn | result: a task/spec ebben a formaban nem implementation-ready | nincs local shortcut; preserve-baseline vagy explicit successor-task decision kell | P1 | required-now |
 | dispatcher fallback policy implicit maradna | result: a task/spec ebben a pontban hianyos | a retained vagy tightened statuszt explicitten rogziteni kell | P1 | required-now |
-| activation/parity igeny uj foundation dontest nyitna | result: scope blocker, amelyet nem az `E3a` owns-ol | explicit blocker handoff `E3b`-re vagy uj sequencing dontesre | P1 | required-now |
+| activation/parity igeny uj foundation dontest nyitna | result: scope blocker, amelyet nem az `E3a` owns-ol | explicit blocker handoff `E3b`/`E3c`-re vagy uj sequencing dontesre | P1 | required-now |
 
 ### 4) Test Matrix
 
@@ -214,7 +216,7 @@ Task allapot tovabbra is `implementable`, ha a dokumentum szovege es a bounded i
 3. a `Call-site Matrix` es a `target_files` ugyanazt a bounded seam-setet tukrozi: `src/cli/commands/agent/emit.ts`, `src/v11/shared/actorProtocol/actorEmitContext.ts`, `src/v11/application/actorProtocol/emitActorProtocolV11.ts`, `src/v11/application/actorProtocol/actorProtocolEmitters.ts`, `src/v11/application/pass/passWorkspaceContextPreparation.ts`, `src/v11/application/askHuman/askHumanWorkspaceContextPreparation.ts`, `src/v11/shared/askHuman/askHumanRunningStateValidationChecks.ts`;
 4. az `In Scope` es `Call-site Matrix` explicitten kimondja, hogy az implementer wrapper hardening nem szukitheti neman a non-implementer `human_question` baseline-t, es ezt nemcsak dispatcher-policy, hanem a reviewer/non-implementer `ask-human` running-state role guard explicit baselinejekent is nevesiti;
 5. az `Out of Scope` blokk explicitten felsorolja legalabb ezeket a kizart closureket: duplicate delivery parity; restart recovery parity; tmux ack/provenance containment beyond baseline preservation; implementer pilot activation claim; reviewer/meta-reviewer rollout; reviewer vagy mas non-implementer `human_question` baseline rewrite;
-6. a `Static successor-lock criteria` 3. pontja explicitten kimondja, hogy az `E3b` ownershipje activation/parity closure-re szukul, es nem nyithat ujra authority- vagy wrapper-shape dontest; ezt a `Current Tree Position` local `activation_closure` sora is ugyanigy tukrozi.
+6. a `Static successor-lock criteria` 3. pontja explicitten kimondja, hogy az `E3b` ownershipje activation closure-re, az `E3c` ownershipje pedig parity/fail-closed hardening closure-re szukul, es egyik sem nyithat ujra authority- vagy wrapper-shape dontest; ezt a `Current Tree Position` local successor sorai is ugyanigy tukrozik.
 
 ## L2 - Implementation Notes (Optional)
 
