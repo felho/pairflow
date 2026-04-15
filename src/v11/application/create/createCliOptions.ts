@@ -14,6 +14,7 @@ export function getBubbleCreateHelpText(): string {
     "  --ideation            Create ideation bubble without task payload (requires explicit kickoff later)",
     "  --task <text>         Inline task text",
     "  --task-file <path>    Task input from file",
+    "  --remote <alias>      Configure the bubble for remote execution using a global [remotes.<name>] alias",
     "  --bootstrap-command <cmd>    Optional worktree bootstrap command run by bubble start",
     "  --pairflow-command-profile <external|self_host>  Pairflow CLI command profile (default: external)",
     "  --reviewer-brief <text>      Optional inline reviewer brief",

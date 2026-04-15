@@ -45,6 +45,9 @@ function parseBubbleCreateArgs(args: string[]) {
       "bootstrap-command": {
         type: "string"
       },
+      remote: {
+        type: "string"
+      },
       "pairflow-command-profile": {
         type: "string"
       },

@@ -7,6 +7,7 @@ import {
   PAIRFLOW_COMMAND_PROFILE_INVALID,
   REVIEW_ARTIFACT_TYPE_AUTO_REMOVED
 } from "../../src/config/bubbleConfig.js";
+import { CREATE_REMOTE_ALIAS_INVALID } from "../../src/v11/application/create/createCliOptionValidation.js";
 import {
   IDEATION_TASK_INPUT_CONFLICT,
   IDEATION_TASK_REQUIRED
@@ -156,12 +157,106 @@ describe("parseBubbleCreateCommandOptions", () => {
     expect(parsed.pairflowCommandProfile).toBe("self_host");
   });
 
+  it("parses optional remote alias", () => {
+    const parsed = parseBubbleCreateCommandOptions([
+      "--id",
+      "b_create_remote_01",
+      "--repo",
+      "/tmp/repo",
+      "--base",
+      "main",
+      "--review-artifact-type",
+      "code",
+      "--task",
+      "Implement X",
+      "--remote",
+      "homelab"
+    ]);
+
+    expect(parsed.remote).toBe("homelab");
+  });
+
+  it("normalizes surrounding whitespace for remote alias at the CLI boundary", () => {
+    const parsed = parseBubbleCreateCommandOptions([
+      "--id",
+      "b_create_remote_trimmed_01",
+      "--repo",
+      "/tmp/repo",
+      "--base",
+      "main",
+      "--review-artifact-type",
+      "code",
+      "--task",
+      "Implement X",
+      "--remote",
+      "  homelab  "
+    ]);
+
+    expect(parsed.remote).toBe("homelab");
+  });
+
+  it("rejects empty or whitespace-only remote alias at the CLI boundary", () => {
+    expect(() =>
+      parseBubbleCreateCommandOptions([
+        "--id",
+        "b_create_remote_empty_01",
+        "--repo",
+        "/tmp/repo",
+        "--base",
+        "main",
+        "--review-artifact-type",
+        "code",
+        "--task",
+        "Implement X",
+        "--remote",
+        "   "
+      ])
+    ).toThrow(new RegExp(`^${CREATE_REMOTE_ALIAS_INVALID}:`, "u"));
+  });
+
+  it("prioritizes missing review-artifact-type over secondary remote validation errors", () => {
+    expect(() =>
+      parseBubbleCreateCommandOptions([
+        "--id",
+        "b_create_remote_mixed_invalid_01",
+        "--repo",
+        "/tmp/repo",
+        "--base",
+        "main",
+        "--task",
+        "Implement X",
+        "--remote",
+        "   "
+      ])
+    ).toThrow(new RegExp(`^${MISSING_REVIEW_ARTIFACT_TYPE_OPTION}:`, "u"));
+  });
+
+  it("intentionally keeps remote alias shape validation out of the CLI boundary", () => {
+    const parsed = parseBubbleCreateCommandOptions([
+      "--id",
+      "b_create_remote_shape_policy_01",
+      "--repo",
+      "/tmp/repo",
+      "--base",
+      "main",
+      "--review-artifact-type",
+      "code",
+      "--task",
+      "Implement X",
+      "--remote",
+      "  home lab  "
+    ]);
+
+    expect(parsed.remote).toBe("home lab");
+  });
+
   it("supports help flag", () => {
     const parsed = parseBubbleCreateCommandOptions(["--help"]);
     expect(parsed.help).toBe(true);
     expect(getBubbleCreateHelpText()).toContain("pairflow bubble create");
     expect(getBubbleCreateHelpText()).toContain("Bubble id (max 40 chars");
     expect(getBubbleCreateHelpText()).toContain("--review-artifact-type <document|code>");
+    expect(getBubbleCreateHelpText()).toContain("--remote <alias>");
     expect(getBubbleCreateHelpText()).not.toContain("<auto|");
   });
 
@@ -535,6 +630,78 @@ describe("parseBubbleCreateCommandOptions", () => {
     expect(createBubbleMock).toHaveBeenCalledWith(
       expect.objectContaining({
         bootstrapCommand: "pnpm install --frozen-lockfile && pnpm build"
+      })
+    );
+  });
+
+  it("forwards remote alias to bubble creation", async () => {
+    const createBubbleResult = {
+      bubbleId: "b_create_remote_forward_01"
+    } as unknown as BubbleCreateResult;
+    const createBubbleMock: NonNullable<
+      BubbleCreateCommandDependencies["createBubble"]
+    > = vi.fn(() => Promise.resolve(createBubbleResult));
+
+    await runBubbleCreateCommand(
+      [
+        "--id",
+        "b_create_remote_forward_01",
+        "--repo",
+        "/tmp/repo",
+        "--base",
+        "main",
+        "--review-artifact-type",
+        "code",
+        "--task",
+        "Implement X",
+        "--remote",
+        "homelab"
+      ],
+      "/tmp",
+      {
+        createBubble: createBubbleMock
+      }
+    );
+
+    expect(createBubbleMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        remote: "homelab"
+      })
+    );
+  });
+
+  it("forwards mixed-shape remote alias unchanged after trim to the create boundary", async () => {
+    const createBubbleResult = {
+      bubbleId: "b_create_remote_shape_forward_01"
+    } as unknown as BubbleCreateResult;
+    const createBubbleMock: NonNullable<
+      BubbleCreateCommandDependencies["createBubble"]
+    > = vi.fn(() => Promise.resolve(createBubbleResult));
+
+    await runBubbleCreateCommand(
+      [
+        "--id",
+        "b_create_remote_shape_forward_01",
+        "--repo",
+        "/tmp/repo",
+        "--base",
+        "main",
+        "--review-artifact-type",
+        "code",
+        "--task",
+        "Implement X",
+        "--remote",
+        "  home lab  "
+      ],
+      "/tmp",
+      {
+        createBubble: createBubbleMock
+      }
+    );
+
+    expect(createBubbleMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        remote: "home lab"
       })
     );
   });

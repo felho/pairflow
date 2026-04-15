@@ -2,9 +2,12 @@ import { readFile, stat, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
 import {
+  BUBBLE_EXECUTOR_INVALID,
   assertCreateReviewArtifactType,
   assertValidBubbleConfig
 } from "../../../config/bubbleConfig.js";
+import type { PairflowGlobalConfig } from "../../../config/pairflowConfig.js";
+import { PAIRFLOW_REMOTE_CONFIG_INVALID } from "../../../config/pairflowConfig.js";
 import {
   DEFAULT_DOC_CONTRACT_ROUND_GATE_APPLIES_AFTER,
   DEFAULT_MAX_ROUNDS,
@@ -18,13 +21,20 @@ import {
 import type {
   AgentName,
   BubbleConfig,
+  BubbleRemotePointerCreated,
   CreateReviewArtifactType,
   PairflowCommandProfile
 } from "../../../types/bubble.js";
 import { GitRepositoryError } from "../../shared/ports/gitRepository.js";
 import type { AssertGitRepositoryPort } from "../../shared/ports/gitRepository.js";
-import { isNonEmptyString } from "../../shared/validation/primitives.js";
+import {
+  isNonEmptyString,
+  SchemaValidationError
+} from "../../shared/validation/primitives.js";
 import type { ResolvedTaskInput } from "./createCommandContract.js";
+import {
+  parseCreateRemoteAlias
+} from "./createRemoteAlias.js";
 
 export class BubbleCreateError extends Error {
   public constructor(message: string) {
@@ -58,6 +68,12 @@ export interface CreateBubbleConfigInput {
   bootstrapCommand?: string;
   openCommand?: string;
   pairflowCommandProfile?: PairflowCommandProfile;
+  executorRemote?: string;
+}
+
+export interface ResolvedCreateBubbleRemoteExecution {
+  remoteAlias: string;
+  remotePointer: BubbleRemotePointerCreated;
 }
 
 export function validateBubbleId(id: string): void {
@@ -306,8 +322,82 @@ export function buildBubbleConfig(input: CreateBubbleConfigInput): BubbleConfig 
               : {})
           }
         }
+      : {}),
+    ...(input.executorRemote !== undefined
+      ? {
+          executor: {
+            type: "ssh",
+            remote: input.executorRemote
+          }
+        }
       : {})
   });
+}
+
+export async function resolveCreateBubbleRemoteExecution(input: {
+  remote?: string;
+  loadPairflowGlobalConfig: () => Promise<PairflowGlobalConfig>;
+}): Promise<ResolvedCreateBubbleRemoteExecution | undefined> {
+  const { remoteAlias, errorMessage } = parseCreateRemoteAlias(input.remote);
+  if (remoteAlias === undefined) {
+    if (errorMessage !== undefined) {
+      throw toBubbleCreateError({
+        message: errorMessage,
+        context: { remote: input.remote }
+      });
+    }
+    return undefined;
+  }
+
+  let globalConfig: PairflowGlobalConfig;
+  try {
+    globalConfig = await input.loadPairflowGlobalConfig();
+  } catch (error) {
+    if (error instanceof SchemaValidationError) {
+      const configErrorMessage = error.message.startsWith(
+        `${PAIRFLOW_REMOTE_CONFIG_INVALID}:`
+      )
+        ? error.message
+        : `${PAIRFLOW_REMOTE_CONFIG_INVALID}: ${error.message}`;
+      throw toBubbleCreateError({
+        message: configErrorMessage,
+        context: {
+          remote: remoteAlias,
+          reason: "invalid_global_config"
+        }
+      });
+    }
+
+    const reason = error instanceof Error ? error.message : String(error);
+    throw toBubbleCreateError({
+      message:
+        `Failed to load global Pairflow config for remote bubble create: ${reason}`,
+      context: {
+        remote: remoteAlias,
+        reason: "load_global_config_failed"
+      }
+    });
+  }
+
+  const remoteConfig = globalConfig.remotes?.[remoteAlias];
+  if (remoteConfig === undefined) {
+    throw toBubbleCreateError({
+      message:
+        `${BUBBLE_EXECUTOR_INVALID}: Remote "${remoteAlias}" is not defined in the global [remotes.<name>] config.`,
+      context: { remote: remoteAlias }
+    });
+  }
+
+  return {
+    remoteAlias,
+    remotePointer: {
+      kind: "created",
+      host: remoteConfig.host,
+      ...(remoteConfig.default_port_forwards !== undefined
+        ? { portForwards: remoteConfig.default_port_forwards }
+        : {})
+    }
+  };
 }
 
 export function resolveCreateReviewArtifactType(

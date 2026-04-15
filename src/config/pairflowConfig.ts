@@ -25,7 +25,7 @@ export interface PairflowGlobalConfig {
   remotes?: Record<string, PairflowRemoteHostConfig>;
 }
 
-const PAIRFLOW_REMOTE_CONFIG_INVALID = "PAIRFLOW_REMOTE_CONFIG_INVALID";
+export const PAIRFLOW_REMOTE_CONFIG_INVALID = "PAIRFLOW_REMOTE_CONFIG_INVALID";
 const PAIRFLOW_REMOTE_CONFIG_PARSE_ERROR = "PAIRFLOW_REMOTE_CONFIG_PARSE_ERROR";
 const REMOTE_CONFIG_KEYS = new Set([
   "host",

@@ -8,6 +8,7 @@ import {
   createBubble,
   extractReviewerFocus
 } from "../../../src/v11/application/create/createBubble.js";
+import { SchemaValidationError } from "../../../src/v11/shared/validation/primitives.js";
 import { getBubblePaths } from "../../../src/v11/infrastructure/artifact/bubble/paths.js";
 import {
   INVALID_REVIEW_ARTIFACT_TYPE_OPTION,
@@ -16,6 +17,10 @@ import {
   parseBubbleConfigToml
 } from "../../../src/config/bubbleConfig.js";
 import { resolveDocContractGateArtifactPath } from "../../../src/v11/defaults/gates/docContractGateArtifactDefaults.js";
+import {
+  readRemotePointer,
+  readRemoteStateCache
+} from "../../../src/v11/infrastructure/artifact/bubble/remoteExecutionArtifacts.js";
 import { readTranscriptEnvelopes } from "../../../src/v11/infrastructure/artifact/transcript/transcriptStore.js";
 import { validateBubbleStateSnapshot } from "../../../src/v11/shared/state/stateSchema.js";
 import { initGitRepository } from "../../helpers/git.js";
@@ -72,18 +77,42 @@ async function readMetricsEvents(at: Date): Promise<Record<string, unknown>[]> {
     .map((line) => JSON.parse(line) as Record<string, unknown>);
 }
 
+async function expectRemoteCreateArtifactsAbsent(
+  repoPath: string,
+  bubbleId: string
+): Promise<void> {
+  const paths = getBubblePaths(repoPath, bubbleId);
+  await expect(stat(paths.bubbleDir)).rejects.toMatchObject({
+    code: "ENOENT"
+  });
+  await expect(stat(paths.remotePointerPath)).rejects.toMatchObject({
+    code: "ENOENT"
+  });
+  await expect(stat(paths.remoteStateCachePath)).rejects.toMatchObject({
+    code: "ENOENT"
+  });
+}
+
 describe("createBubble", () => {
   it("creates expected bubble scaffold and default files", async () => {
     const repoPath = await createTempRepo();
+    const loadPairflowGlobalConfig = async () => {
+      throw new Error("local create must not load global config");
+    };
 
-    const result = await createBubble({
-      id: "b_create_01",
-      repoPath,
-      baseBranch: "main",
-      reviewArtifactType: "code",
-      task: "Implement feature X",
-      cwd: repoPath
-    });
+    const result = await createBubble(
+      {
+        id: "b_create_01",
+        repoPath,
+        baseBranch: "main",
+        reviewArtifactType: "code",
+        task: "Implement feature X",
+        cwd: repoPath
+      },
+      {
+        loadPairflowGlobalConfig
+      }
+    );
 
     expect(result.paths.repoPath).toBe(repoPath);
     expect(result.state.state).toBe("CREATED");
@@ -121,10 +150,17 @@ describe("createBubble", () => {
     await expect(stat(result.paths.reviewerBriefArtifactPath)).rejects.toMatchObject({
       code: "ENOENT"
     });
+    await expect(stat(result.paths.remotePointerPath)).rejects.toMatchObject({
+      code: "ENOENT"
+    });
+    await expect(stat(result.paths.remoteStateCachePath)).rejects.toMatchObject({
+      code: "ENOENT"
+    });
     expect(result.reviewerFocusArtifactPersist).toEqual({
       status: "written",
       artifactPath: result.paths.reviewerFocusArtifactPath
     });
+    expect(result.config.executor).toBeUndefined();
 
     const transcript = await readTranscriptEnvelopes(result.paths.transcriptPath);
     expect(transcript).toHaveLength(1);
@@ -136,6 +172,309 @@ describe("createBubble", () => {
 
     const inbox = await readTranscriptEnvelopes(result.paths.inboxPath);
     expect(inbox).toHaveLength(0);
+  });
+
+  it("persists executor metadata and created remote pointer for remote create", async () => {
+    const repoPath = await createTempRepo();
+    const globalConfig = {
+      remotes: {
+        homelab: {
+          host: "builder.internal",
+          repo_base: "~/pairflow",
+          default_port_forwards: [3000, 8080]
+        }
+      }
+    };
+    const loadPairflowGlobalConfig = async () => globalConfig;
+
+    const result = await createBubble(
+      {
+        id: "b_create_remote_01",
+        repoPath,
+        baseBranch: "main",
+        reviewArtifactType: "code",
+        task: "Implement remote create",
+        remote: "homelab",
+        cwd: repoPath
+      },
+      {
+        loadPairflowGlobalConfig
+      }
+    );
+
+    expect(result.state.state).toBe("CREATED");
+    expect(result.config.executor).toEqual({
+      type: "ssh",
+      remote: "homelab"
+    });
+
+    const bubbleToml = await readFile(result.paths.bubbleTomlPath, "utf8");
+    expect(bubbleToml).toContain("[executor]");
+    expect(bubbleToml).toContain('remote = "homelab"');
+    const reparsedConfig = parseBubbleConfigToml(bubbleToml, {
+      globalConfig
+    });
+    expect(reparsedConfig.executor).toEqual({
+      type: "ssh",
+      remote: "homelab"
+    });
+
+    await expect(readRemotePointer(result.paths.remotePointerPath)).resolves.toEqual({
+      kind: "created",
+      host: "builder.internal",
+      portForwards: [3000, 8080]
+    });
+    await expect(readRemoteStateCache(result.paths.remoteStateCachePath)).resolves.toBeNull();
+  });
+
+  it("fails closed when remote alias is missing from global config", async () => {
+    const repoPath = await createTempRepo();
+    const bubbleId = "b_create_remote_missing_01";
+
+    await expect(
+      createBubble(
+        {
+          id: bubbleId,
+          repoPath,
+          baseBranch: "main",
+          reviewArtifactType: "code",
+          task: "Implement remote create",
+          remote: "homelab",
+          cwd: repoPath
+        },
+        {
+          loadPairflowGlobalConfig: async () => ({
+            remotes: {}
+          })
+        }
+      )
+    ).rejects.toThrow(
+      /^BUBBLE_EXECUTOR_INVALID: Remote "homelab" is not defined/u
+    );
+
+    await expectRemoteCreateArtifactsAbsent(repoPath, bubbleId);
+  });
+
+  it("fails closed when remote create uses an alias with different casing than the global config", async () => {
+    const repoPath = await createTempRepo();
+    const bubbleId = "b_create_remote_case_mismatch_01";
+
+    await expect(
+      createBubble(
+        {
+          id: bubbleId,
+          repoPath,
+          baseBranch: "main",
+          reviewArtifactType: "code",
+          task: "Implement remote create",
+          remote: "homelab",
+          cwd: repoPath
+        },
+        {
+          loadPairflowGlobalConfig: async () => ({
+            remotes: {
+              HomeLab: {
+                host: "builder.internal",
+                repo_base: "~/pairflow"
+              }
+            }
+          })
+        }
+      )
+    ).rejects.toThrow(
+      /^BUBBLE_EXECUTOR_INVALID: Remote "homelab" is not defined/u
+    );
+
+    await expectRemoteCreateArtifactsAbsent(repoPath, bubbleId);
+  });
+
+  it("fails closed when remote create is requested without a remotes map in global config", async () => {
+    const repoPath = await createTempRepo();
+    const bubbleId = "b_create_remote_no_remotes_01";
+
+    await expect(
+      createBubble(
+        {
+          id: bubbleId,
+          repoPath,
+          baseBranch: "main",
+          reviewArtifactType: "code",
+          task: "Implement remote create",
+          remote: "homelab",
+          cwd: repoPath
+        },
+        {
+          loadPairflowGlobalConfig: async () => ({})
+        }
+      )
+    ).rejects.toThrow(
+      /^BUBBLE_EXECUTOR_INVALID: Remote "homelab" is not defined/u
+    );
+
+    await expectRemoteCreateArtifactsAbsent(repoPath, bubbleId);
+  });
+
+  it("treats invalid-shape remote aliases as exact-lookup misses instead of CLI pattern failures", async () => {
+    const repoPath = await createTempRepo();
+    const bubbleId = "b_create_remote_shape_lookup_01";
+
+    await expect(
+      createBubble(
+        {
+          id: bubbleId,
+          repoPath,
+          baseBranch: "main",
+          reviewArtifactType: "code",
+          task: "Implement remote create",
+          remote: "home lab",
+          cwd: repoPath
+        },
+        {
+          loadPairflowGlobalConfig: async () => ({
+            remotes: {
+              home_lab: {
+                host: "builder.internal",
+                repo_base: "~/pairflow"
+              }
+            }
+          })
+        }
+      )
+    ).rejects.toThrow(
+      /^BUBBLE_EXECUTOR_INVALID: Remote "home lab" is not defined/u
+    );
+
+    await expectRemoteCreateArtifactsAbsent(repoPath, bubbleId);
+  });
+
+  it("fails closed when the global Pairflow config is invalid during remote create", async () => {
+    const repoPath = await createTempRepo();
+    const bubbleId = "b_create_remote_invalid_config_01";
+
+    await expect(
+      createBubble(
+        {
+          id: bubbleId,
+          repoPath,
+          baseBranch: "main",
+          reviewArtifactType: "code",
+          task: "Implement remote create",
+          remote: "homelab",
+          cwd: repoPath
+        },
+        {
+          loadPairflowGlobalConfig: async () => {
+            throw new SchemaValidationError("Invalid Pairflow global config", [
+              {
+                path: "remotes.homelab.host",
+                message: "Missing required field"
+              }
+            ]);
+          }
+        }
+      )
+    ).rejects.toThrow(/^PAIRFLOW_REMOTE_CONFIG_INVALID:/u);
+
+    await expectRemoteCreateArtifactsAbsent(repoPath, bubbleId);
+  });
+
+  it("fails closed when loading global Pairflow config throws a non-schema error", async () => {
+    const repoPath = await createTempRepo();
+    const bubbleId = "b_create_remote_load_fail_01";
+
+    await expect(
+      createBubble(
+        {
+          id: bubbleId,
+          repoPath,
+          baseBranch: "main",
+          reviewArtifactType: "code",
+          task: "Implement remote create",
+          remote: "homelab",
+          cwd: repoPath
+        },
+        {
+          loadPairflowGlobalConfig: async () => {
+            throw new Error("config file unreadable");
+          }
+        }
+      )
+    ).rejects.toThrow(
+      /Failed to load global Pairflow config for remote bubble create: config file unreadable/u
+    );
+
+    await expectRemoteCreateArtifactsAbsent(repoPath, bubbleId);
+  });
+
+  it("keeps empty remote alias failure reason-code-prefixed on the core create boundary", async () => {
+    const repoPath = await createTempRepo();
+
+    await expect(
+      createBubble(
+        {
+          id: "b_create_remote_blank_01",
+          repoPath,
+          baseBranch: "main",
+          reviewArtifactType: "code",
+          task: "Implement remote create",
+          remote: "   ",
+          cwd: repoPath
+        },
+        {
+          loadPairflowGlobalConfig: async () => ({
+            remotes: {}
+          })
+        }
+      )
+    ).rejects.toThrow(
+      /^CREATE_REMOTE_ALIAS_INVALID: --remote requires a non-empty alias value\./u
+    );
+  });
+
+  it("fails the command when remote pointer persistence fails after scaffold creation", async () => {
+    const repoPath = await createTempRepo();
+    const bubbleId = "b_create_remote_pointer_fail_01";
+    const paths = getBubblePaths(repoPath, bubbleId);
+
+    await expect(
+      createBubble(
+        {
+          id: bubbleId,
+          repoPath,
+          baseBranch: "main",
+          reviewArtifactType: "code",
+          task: "Implement remote create",
+          remote: "homelab",
+          cwd: repoPath
+        },
+        {
+          loadPairflowGlobalConfig: async () => ({
+            remotes: {
+              homelab: {
+                host: "builder.internal",
+                repo_base: "~/pairflow"
+              }
+            }
+          }),
+          writeRemotePointer: async () => {
+            const error = new Error("permission denied") as NodeJS.ErrnoException;
+            error.code = "EACCES";
+            throw error;
+          }
+        }
+      )
+    ).rejects.toMatchObject({
+      code: "EACCES"
+    });
+
+    await expect(stat(paths.bubbleTomlPath)).resolves.toBeDefined();
+    await expect(stat(paths.statePath)).resolves.toBeDefined();
+    await expect(stat(paths.remotePointerPath)).rejects.toMatchObject({
+      code: "ENOENT"
+    });
+    await expect(stat(paths.remoteStateCachePath)).rejects.toMatchObject({
+      code: "ENOENT"
+    });
   });
 
   it("creates ideation bubble scaffold without initial TASK envelope", async () => {

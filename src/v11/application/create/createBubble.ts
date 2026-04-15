@@ -19,6 +19,8 @@ export async function createBubble(
     assertGitRepository:
       dependencies.assertGitRepository ?? createBubbleDefaults.assertGitRepository,
     appendProtocolEnvelope:
-      dependencies.appendProtocolEnvelope ?? createBubbleDefaults.appendProtocolEnvelope
+      dependencies.appendProtocolEnvelope ?? createBubbleDefaults.appendProtocolEnvelope,
+    loadPairflowGlobalConfig:
+      dependencies.loadPairflowGlobalConfig ?? createBubbleDefaults.loadPairflowGlobalConfig
   });
 }
