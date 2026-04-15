@@ -23,13 +23,14 @@ owners:
    - a repo-surface wording mar a surviving `bubble status` / `bubble restart` / `agent emit --kind meta_review_result` contractot koveti,
    - a kulon internal meta-review live-run runtime stack mar nem aktiv current-tree blocker.
 4. Emiatt ez a plan mar nem owns-olja a 2026-04-12-es meta-review cleanup resequencinget mint elo implementation programot; az a blokk historical traceabilitykent relevans, de nem current-state statusjelenteskent.
-5. A 2026-04-15-os current tree alapjan az actor-runtime implementation follow-up elso harom closureja mar merged allapotban van:
+5. A 2026-04-15-os current tree alapjan az actor-runtime implementation follow-up elso negy closureja mar merged allapotban van:
    - `E1` execution-scoped authority foundation: az explicit `execution_id` canonical authority resze a persisted `execution_context` shape-nak, a schema enforcementnek es a canonical actor emit pathnak.
    - `E2a` typed delivery / launch ack producer + shared contract closure: a producer/shared port seam explicit `accepted|rejected` es `running|failed_to_start` vocabularyt ad.
    - `E2b` direct runtime/orchestration consumer alignment: a kickoff, ask-human, pass/converged, watchdog, start/restart consume-family mar ugyanennek a typed ack truthnak a same-authority consume/projection nyelven all ra; ez a `b72242cc3e63a2316738f5e131f81aefcb0ff4c8` merge-ben zarult.
+   - `E2c` persisted diagnostics / meta-review / read-model fallout closure: ez azota lezart es archivalt current-tree predecessor, az archive traceability pathja `plans/archive/tasks/actor-runtime-interface-persisted-diagnostics-meta-review-read-model-fallout-phaseE2c.md`.
 6. Emiatt a fennmarado live scope ma mar:
-   - `E2c` persisted diagnostics / meta-review / read-model fallout closure,
-   - `E3` implementer pilot cutover,
+   - `E3a` implementer wrapper/authority foundation hardening,
+   - `E3b` implementer pilot activation es parity closure,
    - `E4` reviewer + meta-reviewer rollout es retained adapter cleanup.
 7. Ennek a remaining implementation sequencingnek a current-tree anchorja tovabbra is:
    - `plans/tasks/actor-runtime-interface-pilot-cutover-phaseE.md`
@@ -50,7 +51,8 @@ owners:
    - `E2a` delivery/launch producer + shared contract closure,
    - `E2b` direct runtime/orchestration consumer alignment,
    - `E2c` persisted diagnostics / meta-review / read-model fallout closure,
-   - `E3` implementer pilot activation,
+   - `E3a` implementer wrapper/authority foundation hardening,
+   - `E3b` implementer pilot activation,
    - `E4` multi-role rollout + retained adapter cleanup.
 5. A split a current-tree authority fan-outot koveti, nem a repo technikai retegeit: elobb a producer truth zarul, utana a consume-family alignment, es csak ezutan nyithato aktiv pilot rollout.
 
@@ -62,7 +64,7 @@ owners:
    - megvan a Phase B-ben eloirt explicit execution-scoped `execution_id` authority-shape a canonical actor input pathon,
    - megvan a typed `accepted|running|rejected|failed_to_start` delivery/launch ack boundary a producer/shared port seam-en,
    - es megvan a direct runtime/orchestration consume-family alignment ugyanennek a canonical truthnak a menten.
-4. Emiatt a remaining open implementation scope mar nem authority- vagy direct-consume foundationnel kezdodik, hanem a persisted diagnostics / meta-review / read-model fallout closure-nal (`E2c`), amit majd a pilot activation (`E3`) es a multi-role rollout / retained adapter cleanup (`E4`) kovet.
+4. Emiatt a remaining open implementation scope mar nem authority-, direct-consume- vagy persisted/read-model closurevel kezdodik: ezek a predecessor closurek mar megvannak. A nyitott implementacios sor most mar az implementer wrapper/authority foundation hardeninggel (`E3a`) folytatodik, ezt az implementer pilot activation es parity closure (`E3b`) koveti, majd ezutan nyithato a multi-role rollout / retained adapter cleanup (`E4`).
 
 ## Post-Discovery Implementation Control Model (2026-04-13)
 
@@ -85,9 +87,9 @@ owners:
    - contract closure: `plans/tasks/actor-runtime-interface-pilot-cutover-phaseE.md` successor splitje
    - producer closure: successor task (execution authority foundation)
    - internal execution closure: successor task (delivery/ack boundary)
-   - workflow/orchestration closure: successor task (implementer pilot cutover)
+   - workflow/orchestration closure: successor task (`E3a` implementer wrapper/authority foundation hardening)
    - read-model closure: csak minimalis fallout, ahol a pilot boundary explicit status/diagnostics valtozast kenyszerit
-   - activation closure: successor task (implementer pilot cutover)
+   - activation closure: successor task (`E3b` implementer pilot activation)
    - cleanup/recovery_closure: successor task (reviewer + meta-reviewer rollout / retained adapter cleanup)
 
 ## Post-Discovery Authority Fan-out Scan (2026-04-13)
@@ -121,7 +123,8 @@ owners:
 | Phase E2a | delivery / launch producer + contract closure | typed runtime ack semantics a producer seam-en | delivery adapter, launch/runtime contract source of truth | downstream consumer rollout, persisted diagnostics, pilot activation ne csusszon ide |
 | Phase E2b | direct runtime/orchestration consumer alignment | closed typed ack semantics a direct consume familynek | kickoff, pass/converged, ask-human, watchdog, retry/restart orchestration | persisted diagnostics/read-model fallout, pilot activation, broad cleanup ne csusszon ide |
 | Phase E2c | persisted diagnostics + meta-review + read-model fallout | persisted/projection alignment a lezart ack contracton | state snapshot inspection, meta-review runtime projection, status/list/CLI fallout | producer semantics ujranyitasa vagy implementer pilot activation ne csusszon ide |
-| Phase E3 | implementer pilot activation | implementer runtime parity az uj authority + ack boundaryn | implementer actor path, pilot orchestration, minimal activation fallout | reviewer/meta-reviewer rollout es broad cleanup ne csusszon ide |
+| Phase E3a | implementer wrapper/authority foundation hardening | implementer same-authority wrapper route review-stable foundationje | implementer actor path authority bridge-je, wrapper routing, workspace prep hardening | runtime activation claim vagy broad parity closure ne csusszon ide |
+| Phase E3b | implementer pilot activation | implementer runtime parity az uj authority + ack boundaryn | implementer actor path, pilot orchestration, minimal activation fallout | reviewer/meta-reviewer rollout es broad cleanup ne csusszon ide |
 | Phase E4 | multi-role rollout + retained adapter cleanup | shared role-neutral runtime boundary active all rolesra | reviewer, meta-reviewer, retained tmux/operator adapterek cleanupja | uj authority foundation vagy uj ack contract munka ne csusszon vissza ide |
 
 ## Objective
