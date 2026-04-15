@@ -167,6 +167,26 @@ Policy:
    - and no separate compatibility or diagnostics risk exists.
 5. If that proof is not available from the loaded context, do not guess; route back to `CreatePlan`.
 
+### 1c.2) Run the Bounded-Task-Shape Gate
+
+Use `references/Bounded-Task-Shape-Gate.md`.
+
+Classify the bounded task by primary shape:
+1. `contract_or_persisted_authority_foundation`
+2. `authority_producer`
+3. `consumer_family_alignment`
+4. `fail_closed_hardening`
+5. `coordination_concurrency_hardening`
+6. `activation_or_read_model`
+
+Policy:
+1. Default to one primary shape per bounded task.
+2. A secondary shape is allowed only when the artifact can explicitly prove that the same bounded change closes both without adding separate recovery, coordination, or side-effect ordering risk.
+3. If the task introduces a new lock/mutex/lease/idempotency/serialization rule, `coordination_concurrency_hardening` is in scope and must be recorded explicitly.
+4. If the task introduces rollback/retry/cleanup/shared-state-preservation or failure-envelope tightening, `fail_closed_hardening` is in scope and must be recorded explicitly.
+5. If the task changes precondition ordering relative to side effects, record that explicitly and treat it as a split trigger when mixed with producer or shared-contract work.
+6. If the task mixes `authority_producer` with `fail_closed_hardening` or `coordination_concurrency_hardening` without an explicit bounded proof, route back to `CreatePlan`.
+
 ### 1d) Run the Complexity-Risk Gate
 
 Use `references/Complexity-Risk-Gate.md`.
@@ -258,6 +278,12 @@ Required blockers for Task output:
    - collapsed closures,
    - deferred closures,
    - why the remaining bounded task is safe.
+14. If the task modifies an existing mutation flow, blockers also include a `Precondition and Side-Effect Boundary`:
+   - validations that must pass before mutations,
+   - side effects forbidden before those validations pass,
+   - invalid/precondition-failure behavior,
+   - coordination primitives in scope or explicitly deferred.
+15. If the task cannot name a primary bounded-task shape, or mixes producer with fail-closed/coordination work without an explicit bounded proof, the task is not ready.
 
 If blockers exist, ask only focused questions for those blockers.
 
@@ -271,6 +297,8 @@ If blockers exist, ask only focused questions for those blockers.
 6. If applicable, keep the L0 control-model summary short, then restate it concretely in a dedicated L1 domain/control contract section.
 7. If applicable, include an `Authority Boundary Map` and use it to say what this task intentionally does not close.
 8. If the task touches an existing runtime authority/resolution path, include a `Baseline Preservation` section and say explicitly what is preserved vs intentionally replaced.
+9. If the task touches an existing mutation flow, include a `Precondition and Side-Effect Boundary` section.
+10. Record primary bounded-task shape explicitly, and secondary shape only when justified.
 
 ### 5) L1 pass
 
@@ -285,6 +313,7 @@ Fill each section or mark `N/A`:
 8. Shared contract compatibility (required when a shared interface/result shape changes; otherwise `N/A`)
 9. Baseline preservation (required when an existing canonicalization/resolution path is refined or replaced; otherwise `N/A`)
 10. Closure-budget summary (required when authority/runtime/read-model/shared-contract work is in scope; otherwise `N/A`)
+11. Precondition and side-effect boundary (required when an existing mutation flow is modified or coordination primitives are introduced; otherwise `N/A`)
 
 Rules:
 1. `target_files` must align with call-site matrix.
@@ -301,6 +330,7 @@ Rules:
    - forbidden heuristic fallbacks,
    - allowed deterministic same-authority resolution paths,
    - and any exact replacement path that justifies removing a current behavior.
+12. If the task touches a mutable flow, L1 must make explicit which validations occur before any side effect and what invalid/precondition-failure path proves zero-side-effect or bounded-side-effect behavior.
 
 ### 5a) Consistency Gate (mandatory before L2)
 
@@ -330,6 +360,14 @@ Run a document-level consistency gate:
    - the task’s in-scope consumers match the declared authority boundary map,
    - export surfaces claimed as “closed in this phase” are truly in scope,
    - read-model and cleanup consume have not been pulled into a producer task by accident.
+10. Re-check bounded-task shape fit:
+   - the declared primary shape matches the actual L1 contract,
+   - producer work has not silently absorbed fail-closed hardening or coordination work,
+   - any secondary shape is explicitly justified.
+11. Re-check precondition and side-effect ordering:
+   - invalid/precondition-failure behavior is explicit,
+   - forbidden early side effects do not reappear elsewhere in L1,
+   - any new lock/mutex/serialization primitive is reflected in the bounded task shape and test matrix.
 
 ### 6) L2 pass
 

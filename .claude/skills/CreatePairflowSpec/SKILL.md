@@ -14,6 +14,7 @@ Create and refine Pairflow specification artifacts that are implementable by LLM
 | **CreatePRD** | "create prd", "new prd", "draft prd", "write product doc" | `Workflows/CreatePRD.md` |
 | **CreatePlan** | "create plan", "new implementation plan", "phase plan" | `Workflows/CreatePlan.md` |
 | **CreateTask** | "create task", "task file", "task spec", "l0 l1 l2" | `Workflows/CreateTask.md` |
+| **ReviewSpec** | "review plan", "review task", "review spec", "remaining tasks still valid", "route back to plan" | `Workflows/ReviewSpec.md` |
 
 ## Mandatory Work-Type Triage
 
@@ -144,6 +145,38 @@ Policy:
 5. Do not let a task stay broad merely because each individual sub-area looks understandable in isolation.
 6. The output artifact must name the collapsed vs deferred closures explicitly whenever more than two closure buckets are in scope.
 
+## Bounded-Task-Shape Gate (Mandatory)
+
+Before drafting implementation-oriented Plan or Task artifacts for mutable/runtime flows, classify the bounded slice by its primary task shape.
+
+Available shapes:
+1. `contract_or_persisted_authority_foundation`
+2. `authority_producer`
+3. `consumer_family_alignment`
+4. `fail_closed_hardening`
+5. `coordination_concurrency_hardening`
+6. `activation_or_read_model`
+
+Shape intent:
+1. `contract_or_persisted_authority_foundation`: shared contract/schema/config/artifact foundation without downstream activation.
+2. `authority_producer`: the bounded slice writes or produces canonical authority.
+3. `consumer_family_alignment`: existing authority is consumed/aligned by one consumer family.
+4. `fail_closed_hardening`: rollback, retry, cleanup, namespace removal, partial-write handling, or shared-state preservation.
+5. `coordination_concurrency_hardening`: lock/mutex/lease/idempotency/serialization/race-prevention behavior.
+6. `activation_or_read_model`: surfacing, activation, status/list/detail/read-model/UI/API behavior.
+
+Policy:
+1. Default to one primary task shape per bounded task or phase.
+2. A second adjacent shape is allowed only when the artifact explicitly proves:
+   - the same bounded code path closes both,
+   - they preserve the same invariants,
+   - and no separate side-effect ordering, recovery, or coordination risk is introduced.
+3. If a slice introduces a new lock/mutex/lease/idempotency/serialization rule, `coordination_concurrency_hardening` is in scope even if the motivating feature sounds like pure delivery.
+4. If a slice introduces rollback/retry/cleanup/shared-state-preservation work, `fail_closed_hardening` is in scope even if the motivating feature sounds like pure write-path delivery.
+5. If a slice changes precondition ordering relative to side effects, record it explicitly and treat it as a split trigger when mixed with producer or shared-contract work.
+6. If a slice mixes `authority_producer` with `fail_closed_hardening` or `coordination_concurrency_hardening`, treat it as a sequencing failure candidate and split by default.
+7. If the author cannot clearly classify the bounded slice, the artifact is not ready for implementable output yet.
+
 ## Complexity-Risk Gate (Mandatory)
 
 Before drafting implementation-oriented Plan or Task artifacts, run the `Complexity Risk Gate`.
@@ -199,6 +232,8 @@ Policy:
 18. If a task forbids a heuristic, also state the allowed deterministic resolution paths so reviewers do not "tighten" the code into a regression.
 19. Closure-width matters as much as risk score: if producer boundary, shared contract, persistence/schema, and multiple consumer families move together, split before drafting implementation-ready scope.
 20. Do not use a single task to carry producer closure, shared-contract migration, consumer rollout, and diagnostics fallout together unless the user explicitly requests a knowingly high-risk bundle.
+21. For mutable existing flows, planning must make the precondition-before-side-effect boundary explicit; invalid input should not silently create early artifacts, locks, or namespaces unless the artifact explicitly authorizes that behavior.
+22. Locking/concurrency work is not "free hardening" inside a producer task by default; treat it as its own closure unless the artifact proves otherwise.
 
 ## Minimum Contract Rules
 
@@ -257,6 +292,26 @@ Policy:
    - which closures are intentionally collapsed,
    - why that collapse is safe,
    - which closures are explicitly deferred.
+24. Implementation-oriented Plan/Task artifacts for mutable flows must record bounded-task-shape classification explicitly:
+   - primary shape,
+   - secondary shape (if any),
+   - why that mix is safe when present.
+25. Tasks that modify an existing mutation flow must include a `Precondition and Side-Effect Boundary` section capturing:
+   - validations that must pass before side effects,
+   - side effects forbidden before those validations pass,
+   - invalid/precondition-failure behavior,
+   - coordination primitives in scope or explicitly deferred.
+26. If a task changes mutation ordering or introduces coordination primitives, the test matrix must include at least one required-now invalid/precondition-failure scenario proving the expected zero-side-effect or bounded-side-effect behavior.
+27. Spec review is planning-only in this skill:
+   - check plan/task boundaries, viability, and downstream artifact fit,
+   - do not turn it into implementation or code-review workflow.
+28. Task review must load the parent plan when `plan_ref` exists and treat parent-plan fit as mandatory review context, not optional background.
+29. Plan/task review must include a remaining-task viability check:
+   - whether downstream open tasks remain valid as written,
+   - whether a plan/task refinement is needed,
+   - whether a new split task is required,
+   - whether a downstream task became obsolete,
+   - whether phase ordering is invalidated.
 
 ## Templates and References
 
@@ -267,6 +322,8 @@ Policy:
 - L1 boundaries checklist: `references/L1-Contract-Boundaries.md`
 - Reviewer tags snippet: `references/Reviewer-Guidelines.md`
 - Complexity risk gate: `references/Complexity-Risk-Gate.md`
+- Bounded-task-shape gate: `references/Bounded-Task-Shape-Gate.md`
+- Remaining-task viability check: `references/Remaining-Task-Viability-Check.md`
 
 ## Examples
 
@@ -294,4 +351,14 @@ User: "Refine this task to L0/L1/L2"
 -> Reads existing file
 -> Preserves intent, upgrades structure, adds missing contracts
 -> Marks optional items as later-hardening
+```
+
+**Example 4: Review a task against its plan**
+```
+User: "Review this task and tell me whether the remaining tasks are still valid"
+-> Invokes ReviewSpec
+-> Loads the task
+-> Loads parent plan when `plan_ref` exists
+-> Checks bounded-task shape, parent-plan fit, and downstream open tasks
+-> Returns approve/refine/route-back decision plus remaining-task impact
 ```

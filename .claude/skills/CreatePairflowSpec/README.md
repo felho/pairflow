@@ -16,6 +16,7 @@ Teams often have enough context already, but lose time in long interviews or end
 1. PRD documents (`CreatePRD`)
 2. Plan documents (`CreatePlan`)
 3. Task documents with `L0/L1/L2` (`CreateTask`)
+4. Planning/spec review outputs (`ReviewSpec`)
 
 ## Design choices
 
@@ -34,6 +35,8 @@ Teams often have enough context already, but lose time in long interviews or end
 13. Tasks that refine existing runtime/canonicalization paths should record baseline-preservation rules so review tightening cannot silently remove required behavior.
 14. If a spec forbids fallback heuristics, it should also say which deterministic same-authority resolution paths remain allowed.
 15. Planning should also enforce a closure-budget view: producer boundary, shared contract, persistence/schema, and multiple consumer-family fallout should not be silently collapsed into one task.
+16. Planning should classify each bounded phase/task by primary task shape so producer work, fail-closed hardening, and coordination/locking do not get silently merged.
+17. Mutable-flow tasks should make the precondition-before-side-effect boundary explicit, including invalid-input side-effect expectations.
 
 ## Directory layout
 
@@ -44,12 +47,15 @@ CreatePairflowSpec/
 ├── Workflows/
 │   ├── CreatePRD.md
 │   ├── CreatePlan.md
-│   └── CreateTask.md
+│   ├── CreateTask.md
+│   └── ReviewSpec.md
 ├── Templates/
 │   ├── prd-template.md
 │   ├── plan-template.md
 │   └── task-template.md
 ├── references/
+│   ├── Bounded-Task-Shape-Gate.md
+│   ├── Remaining-Task-Viability-Check.md
 │   ├── L1-Contract-Boundaries.md
 │   └── Reviewer-Guidelines.md
 └── Tools/

@@ -16,6 +16,7 @@ L1 categories:
 7. Shared contract compatibility when a shared interface/result shape changes
 8. Authority boundary map when authority/read-model/multi-consumer work is in scope
 9. Baseline-preservation and replacement-proof rules when an existing canonicalization/resolution path is refined or removed
+10. Precondition-before-side-effect boundary when an existing mutation flow is modified or coordination primitives are introduced
 
 Required clarifications inside L1:
 1. Mark required vs optional fields for changed input/output contracts.
@@ -26,5 +27,7 @@ Required clarifications inside L1:
 6. If authority fan-out exists, state which consume families are in scope vs explicitly out of scope.
 7. If a task forbids a fallback class, also record the allowed deterministic same-authority resolution path when that distinction affects correctness.
 8. If a current runtime/canonicalization behavior is removed, record the replacement path and the equivalence or intentional-difference proof required from validation.
+9. If invalid input or an unmet precondition must not create side effects, state that explicitly in L1 instead of leaving it implicit in tests.
+10. If a task introduces locks/mutexes/serialization or rollback/retry semantics, capture that boundary explicitly rather than hiding it as an implementation detail.
 
 Any item not crossing these boundaries should default to `later-hardening`.

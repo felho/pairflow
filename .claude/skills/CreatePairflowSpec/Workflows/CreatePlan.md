@@ -124,6 +124,26 @@ Policy:
 4. Collapsing adjacent closures is allowed only when the plan states why the ownership, compatibility risk, and diagnostics fallout are genuinely shared.
 5. If that proof is weak or implicit, prefer a safer split now rather than relying on later task refinement.
 
+### 1e) Run the Bounded-Task-Shape Gate
+
+Use `references/Bounded-Task-Shape-Gate.md`.
+
+For each candidate phase, classify the primary task shape:
+1. `contract_or_persisted_authority_foundation`
+2. `authority_producer`
+3. `consumer_family_alignment`
+4. `fail_closed_hardening`
+5. `coordination_concurrency_hardening`
+6. `activation_or_read_model`
+
+Policy:
+1. Default each phase to one primary shape.
+2. If a phase mixes `authority_producer` with `fail_closed_hardening` or `coordination_concurrency_hardening`, split by default unless the same bounded change truly closes them with the same invariants and no separate risk.
+3. If a phase adds lock/mutex/lease/idempotency/serialization behavior, treat that as coordination scope even when the feature request is phrased as write-path work.
+4. If a phase adds rollback/retry/cleanup/shared-state-preservation behavior, treat that as fail-closed hardening scope even when the feature request is phrased as write-path work.
+5. If a phase changes precondition ordering relative to side effects, record that explicitly in the plan and do not hide it inside a generic delivery phase.
+6. If the phase shape is ambiguous, stop and re-sequence before finalizing the plan.
+
 ### 2) Draft from template
 
 1. Use `Templates/plan-template.md`.
@@ -132,6 +152,8 @@ Policy:
 4. Include a `Phase Ownership Grid` when authority/read-model/multi-consumer work is in scope.
 5. Include `Baseline Preservation Notes` when the plan touches an existing canonicalization, finalize, or reconciliation path that later tasks might otherwise "tighten" into a regression.
 6. Include closure-budget rationale when the scope would otherwise risk collapsing producer, contract, and multi-family consumer fallout into one slice.
+7. Include `Mutation / Precondition Boundaries` when the plan touches an existing mutation flow or introduces coordination primitives.
+8. Record the primary task shape per phase in the `Phase Ownership Grid`.
 
 ### 3) Gap-only questions
 
@@ -164,6 +186,8 @@ Ask only if blocker data is missing:
    - which closures are intentionally collapsed,
    - why that collapse is safe,
    - which closures are deferred into later phases/tasks.
+16. If the plan touches an existing mutation flow, it must record the precondition-before-side-effect rule and the invalid-input side-effect expectation.
+17. If the plan introduces coordination primitives, rollback/retry, or shared-state-preservation work, the phase split must make that ownership explicit rather than hiding it in a generic delivery phase.
 
 ### 5) Finalize
 

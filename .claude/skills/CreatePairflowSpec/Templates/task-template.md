@@ -55,6 +55,17 @@ Include this section when the task refines or replaces an existing canonicalizat
 3. Forbidden regression interpretations: <What reviewers/implementers must not "tighten" away, or `N/A`.>
 4. Replacement proof required if removed: <What exact replacement/equivalence evidence is required, or `N/A`.>
 
+### Precondition and Side-Effect Boundary
+
+Include this section when the task modifies an existing mutation flow or introduces coordination primitives. Otherwise say `N/A`.
+
+1. Primary bounded task shape: <one of `contract_or_persisted_authority_foundation|authority_producer|consumer_family_alignment|fail_closed_hardening|coordination_concurrency_hardening|activation_or_read_model`>
+2. Secondary shape (if any): <one optional adjacent shape + bounded-proof note, or `N/A`.>
+3. Preconditions that must pass before side effects: <List or `N/A`.>
+4. Side effects forbidden before preconditions pass: <List concrete forbidden early mutations, or `N/A`.>
+5. Invalid/precondition-failure behavior: <zero side effects | bounded side effects + exact rule | `N/A`.>
+6. Coordination primitives in scope: <locks/mutexes/leases/idempotency/serialization or `N/A`.>
+
 ### In Scope
 
 1. <item>
@@ -96,6 +107,10 @@ Include this section when the task refines or replaces an existing canonicalizat
    - closure buckets touched: `<list or N/A>`
    - intentionally collapsed closures: `<list + why safe, or N/A>`
    - explicitly deferred closures: `<list or N/A>`
+13. Bounded-task-shape decision:
+   - primary shape: `<text>`
+   - secondary shape: `<text or N/A>`
+   - why this bounded mix is safe: `<text or N/A>`
 
 ## L1 - Change Contract
 
@@ -122,6 +137,12 @@ Include this section when the task refines or replaces an existing canonicalizat
 | Current Behavior | Preserve/Replace/Forbid | Required Proof | Priority | Timing |
 |---|---|---|---|---|
 | <current deterministic path or `N/A`> | <preserve|replace|forbid> | <equivalence/replacement evidence or `N/A`> | P1 | required-now |
+
+### 0c) Precondition and Side-Effect Boundary (if applicable)
+
+| Case | Must Be Validated Before | Forbidden Early Side Effects | Required Failure Behavior | Priority | Timing |
+|---|---|---|---|---|---|
+| invalid input / unmet precondition | <validation or `N/A`> | <forbidden mutation(s) or `N/A`> | <zero-side-effect or bounded failure rule> | P1 | required-now |
 
 ### 1) Call-site Matrix
 
@@ -164,6 +185,7 @@ Constraint: if no allowed side effects are listed above, implementation must be 
 |---|---|---|---|---|---|---|---|
 | T1 | golden path | <state> | <action> | <expected> | P1 | required-now | <proof> |
 | T2 | invalid input | <state> | <action> | <expected> | P1 | required-now | <proof> |
+| T3 | precondition failure side-effect boundary | <state> | <action> | <no side effects or bounded side effects proven> | P1 | required-now | <proof or `N/A` if section above is N/A> |
 
 ## L2 - Implementation Notes (Optional)
 

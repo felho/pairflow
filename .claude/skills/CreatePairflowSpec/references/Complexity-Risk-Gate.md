@@ -15,6 +15,7 @@ Estimate risk from boundary spread:
 4. whether refactor and feature activation are coupled in the same task,
 5. whether the task depends on unfinished prerequisite milestones,
 6. whether the task tries to close too many distinct acceptance goals at once.
+7. whether coordination/locking or precondition-ordering changes are being smuggled into a producer or delivery slice.
 
 For authority-heavy scopes, also inspect consume families:
 1. internal execution consumers,
@@ -117,6 +118,10 @@ Do not keep the scope as a single implementation task if any of the following is
      - read-model consumers
      - cleanup/recovery consumers
 8. The same bounded slice would change persisted authority/schema together with shared-contract migration and read-model/status/CLI fallout.
+9. The same bounded slice would change producer behavior together with:
+   - rollback/retry/cleanup/shared-state-preservation semantics, or
+   - lock/mutex/lease/idempotency/serialization semantics, or
+   - precondition ordering that determines whether side effects happen before validation.
 
 ## Escalation Rules Below Hard-Stop
 
@@ -182,5 +187,11 @@ Also record closure-budget triage when authority/runtime/read-model/shared-contr
 4. which closures are explicitly deferred.
 
 Also state whether any of these closures are intentionally collapsed into one bounded phase/task, and why that collapse is safe.
+
+For mutable existing flows, also record:
+1. whether invalid/precondition-failure should produce zero side effects,
+2. whether rollback/retry/shared-state-preservation is in the same slice,
+3. whether coordination primitives are introduced,
+4. whether those concerns are intentionally split out of the producer/delivery slice.
 
 When risk score is `8+`, do not write the task as if it were direct feature delivery unless the user explicitly asks for a knowingly high-risk bundle.

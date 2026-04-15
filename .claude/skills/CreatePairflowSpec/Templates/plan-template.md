@@ -49,6 +49,15 @@ Include this section when the plan refines or replaces an existing canonicalizat
 6. Cleanup/recovery consumers: <List or N/A.>
 7. Collapse notes: <Which adjacent closures are intentionally merged, and why that is safe. If N/A, say N/A.>
 
+## Mutation / Precondition Boundaries
+
+Include this section when the plan touches an existing mutation flow or introduces coordination primitives. Otherwise say `N/A`.
+
+1. Precondition-before-side-effect rule: <What must be validated before any artifact write, lock creation, namespace creation, network call, or other mutation.>
+2. Invalid/precondition-failure side-effect expectation: <Usually zero side effects; if not, state the bounded allowed side effects explicitly.>
+3. Coordination primitives by phase: <Which phase owns locks/mutexes/leases/idempotency/serialization, or `N/A`.>
+4. Fail-closed hardening by phase: <Which phase owns rollback/retry/cleanup/shared-state-preservation, or `N/A`.>
+
 ## Complexity / Split Rationale
 
 1. `risk_score`: `<0-12>`
@@ -71,9 +80,9 @@ Include this section when the plan refines or replaces an existing canonicalizat
 
 ## Phase Ownership Grid
 
-| Phase | Dominant Boundary | Produced Authority | Consuming Surfaces | Forbidden Co-mingling |
-|---|---|---|---|---|
-| Phase 1 | <producer|consumer|activation|cleanup> | <text or N/A> | <text> | <what must not be mixed here> |
+| Phase | Dominant Boundary | Primary Task Shape | Produced Authority | Consuming Surfaces | Forbidden Co-mingling |
+|---|---|---|---|---|---|
+| Phase 1 | <producer|consumer|activation|cleanup> | <one primary shape from the bounded-task-shape gate> | <text or N/A> | <text> | <what must not be mixed here> |
 
 ## Task List
 
