@@ -67,6 +67,7 @@ host = "office-ws"
 user = "dev"
 repo_base = "/data/repos"
 pairflow_command = "pairflow-dev"
+pairflow_sync_command = "cd ~/src/pairflow && pnpm build"
 default_port_forwards = [3000, 5173, 8080]
 `);
 
@@ -81,9 +82,83 @@ default_port_forwards = [3000, 5173, 8080]
         user: "dev",
         repo_base: "/data/repos",
         pairflow_command: "pairflow-dev",
+        pairflow_sync_command: "cd ~/src/pairflow && pnpm build",
         default_port_forwards: [3000, 5173, 8080]
       }
     });
+  });
+
+  it("normalizes optional pairflow_sync_command when provided", () => {
+    const result = validatePairflowGlobalConfig({
+      remotes: {
+        workstation: {
+          host: "office-ws",
+          repo_base: "/data/repos",
+          pairflow_sync_command: "  cd ~/src/pairflow && pnpm build  "
+        }
+      }
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
+      return;
+    }
+    expect(result.value).toEqual({
+      remotes: {
+        workstation: {
+          host: "office-ws",
+          repo_base: "/data/repos",
+          pairflow_sync_command: "cd ~/src/pairflow && pnpm build"
+        }
+      }
+    });
+  });
+
+  it("keeps missing pairflow_sync_command as an explicit valid absence", () => {
+    const result = validatePairflowGlobalConfig({
+      remotes: {
+        homelab: {
+          host: "homelab",
+          repo_base: "~/repos"
+        }
+      }
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
+      return;
+    }
+    expect(result.value).toEqual({
+      remotes: {
+        homelab: {
+          host: "homelab",
+          repo_base: "~/repos"
+        }
+      }
+    });
+    expect(
+      Object.hasOwn(result.value.remotes?.homelab ?? {}, "pairflow_sync_command")
+    ).toBe(false);
+  });
+
+  it("rejects whitespace-only pairflow_sync_command on the TOML parse path", () => {
+    try {
+      parsePairflowGlobalConfigToml(`
+[remotes.workstation]
+host = "office-ws"
+repo_base = "/data/repos"
+pairflow_sync_command = "   "
+`);
+      throw new Error("Expected parsePairflowGlobalConfigToml to throw.");
+    } catch (error) {
+      expect(error).toBeInstanceOf(SchemaValidationError);
+      expect((error as SchemaValidationError).errors).toEqual([
+        {
+          path: "remotes.workstation.pairflow_sync_command",
+          message: "PAIRFLOW_REMOTE_CONFIG_INVALID: Must be a non-empty string"
+        }
+      ]);
+    }
   });
 
   it("rejects top-level keys that appear after a [remotes.<name>] section", () => {
@@ -234,6 +309,7 @@ open_command = "unterminated
         broken: {
           host: "ssh-host",
           repo_base: "",
+          pairflow_sync_command: "   ",
           default_port_forwards: [3000, "bad"]
         }
       }
@@ -248,6 +324,13 @@ open_command = "unterminated
         (error) =>
           error.path === "remotes.broken.repo_base"
           && error.message.includes("PAIRFLOW_REMOTE_CONFIG_INVALID")
+      )
+    ).toBe(true);
+    expect(
+      result.errors.some(
+        (error) =>
+          error.path === "remotes.broken.pairflow_sync_command"
+          && error.message === "PAIRFLOW_REMOTE_CONFIG_INVALID: Must be a non-empty string"
       )
     ).toBe(true);
     expect(
@@ -411,6 +494,32 @@ open_command = "cursor {{worktree_path}}"
     expect(loaded).toEqual({
       attach_launcher: "copy",
       open_command: "cursor {{worktree_path}}"
+    });
+  });
+
+  it("loads remote pairflow_sync_command from config.toml and preserves trimmed optional contract", async () => {
+    const dir = await createTempDir();
+    const path = join(dir, "config.toml");
+    await writeFile(
+      path,
+      [
+        '[remotes.workstation]',
+        'host = "office-ws"',
+        'repo_base = "/data/repos"',
+        'pairflow_sync_command = "  cd ~/src/pairflow && pnpm build  "'
+      ].join("\n"),
+      "utf8"
+    );
+
+    const loaded = await loadPairflowGlobalConfig(path);
+    expect(loaded).toEqual({
+      remotes: {
+        workstation: {
+          host: "office-ws",
+          repo_base: "/data/repos",
+          pairflow_sync_command: "cd ~/src/pairflow && pnpm build"
+        }
+      }
     });
   });
 
