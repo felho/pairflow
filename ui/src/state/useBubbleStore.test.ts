@@ -342,10 +342,7 @@ describe("createBubbleStore", () => {
         bubbleId: "b-route-payload",
         repoPath: "/repo-a",
         metaReview: {
-          authorityActive: true,
-          latestRoute: "human_gate_dispatch_failed",
-          latestRouteReasonCode: "META_REVIEW_GATE_RUN_FAILED",
-          latestRouteObservedAt: "2026-02-24T12:42:00.000Z"
+          authorityActive: true
         }
       })
     });
