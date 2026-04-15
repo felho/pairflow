@@ -148,9 +148,11 @@ async function readStateSubsetOrThrow(input: {
     const originalMessage =
       input.originalError instanceof Error
         ? input.originalError.message
-        : input.originalError === undefined
-          ? "unknown"
-          : "non-error thrown";
+        : typeof input.originalError === "string"
+          ? input.originalError
+          : input.originalError === undefined
+            ? "unknown"
+            : "non-error thrown";
     throw new Error(
       `Failed to read state snapshot while handling start contract result for bubble ${input.bubbleId}. Original error: ${originalMessage}`,
       { cause: readError }
