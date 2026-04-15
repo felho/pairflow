@@ -16,6 +16,7 @@ export interface BubbleCreateParsedValues {
   id?: string;
   repo?: string;
   base?: string;
+  remote?: string;
   task?: string;
   ideation?: boolean;
   help?: boolean;
@@ -33,6 +34,7 @@ export interface CreateValidationState {
   isReviewArtifactTypeMissing: boolean;
   reviewArtifactTypeValidationError: string | undefined;
   pairflowCommandProfileValidationError: string | undefined;
+  remoteValidationError: string | undefined;
 }
 
 export function collectCreateValidationState(
@@ -63,11 +65,22 @@ export function collectCreateValidationState(
     options.reviewArtifactType = reviewArtifactType;
   }
 
+  let remoteValidationError: string | undefined;
+  if (values.remote !== undefined) {
+    const remote = values.remote.trim();
+    if (remote.length === 0) {
+      remoteValidationError = "--remote must be a non-empty remote alias";
+    } else {
+      options.remote = remote;
+    }
+  }
+
   return {
     missing,
     isReviewArtifactTypeMissing,
     reviewArtifactTypeValidationError,
-    pairflowCommandProfileValidationError
+    pairflowCommandProfileValidationError,
+    remoteValidationError
   };
 }
 
@@ -113,12 +126,10 @@ function formatAlsoMissingOptions(missingOptions: string[]): string {
 }
 
 export function throwMissingCreateOptionsError(state: CreateValidationState): never {
-  if (state.isReviewArtifactTypeMissing) {
-    const otherMissing = state.missing.filter(
-      (option) => option !== "--review-artifact-type"
-    );
-    throw toCreateCommandError(
-      `${MISSING_REVIEW_ARTIFACT_TYPE_OPTION}: Missing required --review-artifact-type=<document|code> option.${formatAlsoMissingOptions(otherMissing)}`
+  if (state.remoteValidationError !== undefined) {
+    throw toCreateCommandReasonCodeError(
+      `${state.remoteValidationError}${formatAlsoMissingOptions(state.missing)}`,
+      "CREATE_REMOTE_ALIAS_INVALID"
     );
   }
   if (state.reviewArtifactTypeValidationError !== undefined) {
@@ -133,12 +144,26 @@ export function throwMissingCreateOptionsError(state: CreateValidationState): ne
       "PAIRFLOW_COMMAND_PROFILE_INVALID"
     );
   }
+  if (state.isReviewArtifactTypeMissing) {
+    const otherMissing = state.missing.filter(
+      (option) => option !== "--review-artifact-type"
+    );
+    throw toCreateCommandError(
+      `${MISSING_REVIEW_ARTIFACT_TYPE_OPTION}: Missing required --review-artifact-type=<document|code> option.${formatAlsoMissingOptions(otherMissing)}`
+    );
+  }
   throw toCreateCommandError(
     `CREATE_REQUIRED_OPTIONS_MISSING: Missing required options: ${state.missing.join(", ")}`
   );
 }
 
 export function throwCreateValidationErrors(state: CreateValidationState): void {
+  if (state.remoteValidationError !== undefined) {
+    throw toCreateCommandReasonCodeError(
+      state.remoteValidationError,
+      "CREATE_REMOTE_ALIAS_INVALID"
+    );
+  }
   if (state.reviewArtifactTypeValidationError !== undefined) {
     throw toCreateCommandReasonCodeError(
       state.reviewArtifactTypeValidationError,

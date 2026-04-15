@@ -1,5 +1,6 @@
 import type { writeFile } from "node:fs/promises";
 
+import type { PairflowGlobalConfig } from "../../../config/pairflowConfig.js";
 import type { BubblePaths } from "../../shared/bubble/bubblePaths.js";
 import type { AssertGitRepositoryPort } from "../../shared/ports/gitRepository.js";
 import type { AppendProtocolEnvelopePort } from "../../shared/ports/transcript.js";
@@ -16,6 +17,7 @@ export interface BubbleCreateInput {
   id: string;
   repoPath: string;
   baseBranch: string;
+  remote?: string;
   reviewArtifactType: CreateReviewArtifactType;
   ideation?: boolean;
   task?: string;
@@ -57,8 +59,10 @@ export interface BubbleCreateResult {
 
 export interface BubbleCreateDependencies {
   writeReviewerFocusArtifact?: typeof writeFile;
+  writeRemotePointerFile?: typeof writeFile;
   assertGitRepository?: AssertGitRepositoryPort;
   appendProtocolEnvelope?: AppendProtocolEnvelopePort;
+  loadPairflowGlobalConfig?: () => Promise<PairflowGlobalConfig>;
 }
 
 export type CreateBubbleImplementation = (

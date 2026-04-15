@@ -24,6 +24,9 @@ function parseBubbleCreateArgs(args: string[]) {
       base: {
         type: "string"
       },
+      remote: {
+        type: "string"
+      },
       "review-artifact-type": {
         type: "string"
       },
@@ -79,6 +82,7 @@ function buildCreateOptions(values: BubbleCreateParsedValues): BubbleCreateComma
   assignIfDefined(options, "id", values.id);
   assignIfDefined(options, "repo", values.repo);
   assignIfDefined(options, "base", values.base);
+  assignIfDefined(options, "remote", values.remote);
   assignIfDefined(options, "task", values.task);
   assignIfDefined(options, "ideation", values.ideation);
   assignIfDefined(options, "taskFile", values["task-file"]);
