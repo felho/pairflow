@@ -104,6 +104,26 @@ Use `references/Complexity-Risk-Gate.md` when the plan is implementation-oriente
 7. If the authority fan-out scan reveals three or more consume families, the plan should include an explicit `Phase Ownership Grid` and separate producer closure from consumer-family closure where that boundary is real.
 8. The plan should avoid generating extra phases just to mirror the fan-out vocabulary; merged phases are acceptable when the ownership and compatibility boundary is genuinely shared.
 
+### 1d) Run the Closure-Budget Gate
+
+Run this gate when the plan touches authority/runtime/read-model/shared-contract work.
+
+Count whether the plan would otherwise keep these in one bounded phase/task:
+1. `authority_producer`
+2. `shared_contract`
+3. `internal_execution_consumers`
+4. `workflow_orchestration_consumers`
+5. `read_model_consumers`
+6. `persisted_authority_or_schema`
+7. `cleanup_recovery_consumers`
+
+Policy:
+1. If `authority_producer` + `shared_contract` + any two consumer buckets appear together, the plan must not collapse them into one bounded implementation slice by default.
+2. If `persisted_authority_or_schema` changes in the same slice as `shared_contract` and two or more consumer buckets, the plan must split producer closure from downstream fallout.
+3. If the same slice would close producer boundary, shared contract alignment, and status/CLI/read-model fallout together, treat that as a sequencing failure candidate and re-sequence before finalizing the plan.
+4. Collapsing adjacent closures is allowed only when the plan states why the ownership, compatibility risk, and diagnostics fallout are genuinely shared.
+5. If that proof is weak or implicit, prefer a safer split now rather than relying on later task refinement.
+
 ### 2) Draft from template
 
 1. Use `Templates/plan-template.md`.
@@ -111,6 +131,7 @@ Use `references/Complexity-Risk-Gate.md` when the plan is implementation-oriente
 3. Reflect split rationale from the complexity-risk gate and the authority fan-out scan.
 4. Include a `Phase Ownership Grid` when authority/read-model/multi-consumer work is in scope.
 5. Include `Baseline Preservation Notes` when the plan touches an existing canonicalization, finalize, or reconciliation path that later tasks might otherwise "tighten" into a regression.
+6. Include closure-budget rationale when the scope would otherwise risk collapsing producer, contract, and multi-family consumer fallout into one slice.
 
 ### 3) Gap-only questions
 
@@ -138,6 +159,11 @@ Ask only if blocker data is missing:
 12. The plan must also not explode them into separate phases without evidence; if two closures share ownership and risk profile, the plan should merge them.
 13. If the scope refines an existing runtime/canonicalization path, the plan must say whether baseline behavior is preserved, intentionally replaced, or explicitly forbidden.
 14. If baseline behavior is removed, the plan must identify the replacement mechanism and the proof expected from downstream validation.
+15. If authority/runtime/read-model/shared-contract work is in scope, the plan must record closure-budget triage:
+   - closure buckets touched,
+   - which closures are intentionally collapsed,
+   - why that collapse is safe,
+   - which closures are deferred into later phases/tasks.
 
 ### 5) Finalize
 

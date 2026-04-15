@@ -22,3 +22,14 @@
     - if the task/spec is silent, classify as regression candidate instead of assuming "tightening",
     - compare bubble diff against main/baseline when canonicalization or recovery logic changes.
   - This should specifically catch the failure mode where a reviewer removes a real baseline path because it superficially looks like a forbidden heuristic fallback.
+- Implementation-phase process guardrails for long-running bubbles:
+  - Add explicit early abort / re-scope triggers:
+    - if the same task gets repeated new P1 findings across multiple fix rounds,
+    - or if root validation flips from green to red late in the bubble,
+    - stop patching and force sequencing review instead of continuing local fixes.
+  - Track `intervention_count` alongside lifecycle round in bubble health:
+    - direct worktree fix rounds should be visible separately from bubble round,
+    - because a bubble can be "round 11" but operationally already be in a much later recovery state.
+  - Add a mandatory "sequencing failure?" section to deep review/meta-review outputs:
+    - distinguish local implementation bugs from bad task slicing,
+    - call out when producer boundary, shared contract, persistence, and multi-family consumer fallout were packed too tightly into one task.

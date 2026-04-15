@@ -33,6 +33,7 @@ Teams often have enough context already, but lose time in long interviews or end
 12. The authority fan-out vocabulary is an analysis aid, not an automatic 6-phase template; the skill should prefer the smallest safe split.
 13. Tasks that refine existing runtime/canonicalization paths should record baseline-preservation rules so review tightening cannot silently remove required behavior.
 14. If a spec forbids fallback heuristics, it should also say which deterministic same-authority resolution paths remain allowed.
+15. Planning should also enforce a closure-budget view: producer boundary, shared contract, persistence/schema, and multiple consumer-family fallout should not be silently collapsed into one task.
 
 ## Directory layout
 

@@ -120,6 +120,30 @@ Policy:
 5. If the scan reveals three or more consume families, producer-first sequencing is mandatory, but not necessarily six separate phases.
 6. The output artifact may rename these buckets into domain-specific terms, but the generic-to-local mapping must remain explicit and auditable.
 
+## Closure-Budget Gate (Mandatory)
+
+Before drafting implementation-oriented Plan or Task artifacts, run a `Closure-Budget Gate` whenever the scope touches authority/runtime/read-model/shared-contract work.
+
+Count how many of these closure buckets are materially changing in the same bounded artifact:
+1. `authority_producer`
+2. `shared_contract`
+3. `internal_execution_consumers`
+4. `workflow_orchestration_consumers`
+5. `read_model_consumers`
+6. `persisted_authority_or_schema`
+7. `cleanup_recovery_consumers`
+
+Policy:
+1. If `authority_producer` + `shared_contract` + any two consumer buckets appear together, do not keep the scope as one bounded task by default.
+2. If `persisted_authority_or_schema` changes in the same bounded artifact as `shared_contract` and two or more consumer buckets, route to `Plan -> Task` even if the work initially looked task-sized.
+3. If the artifact would simultaneously close producer boundary, shared contract alignment, and read-model/status/CLI fallout, treat that as a sequencing failure candidate and split before drafting implementation-ready output.
+4. A task may own adjacent closures only when the artifact explicitly proves:
+   - the same bounded code path closes them,
+   - the same consumer family owns the fallout,
+   - and no separate compatibility or diagnostics risk is introduced.
+5. Do not let a task stay broad merely because each individual sub-area looks understandable in isolation.
+6. The output artifact must name the collapsed vs deferred closures explicitly whenever more than two closure buckets are in scope.
+
 ## Complexity-Risk Gate (Mandatory)
 
 Before drafting implementation-oriented Plan or Task artifacts, run the `Complexity Risk Gate`.
@@ -151,6 +175,7 @@ Policy:
    - `persisted authority` and `authority producer` are closed by the same bounded change,
    - `activation` and `read-model` do not carry separate read-model or compatibility risk,
    - `cleanup/rollout` does not touch shared consumer contracts.
+10. But do not collapse producer closure, shared-contract migration, and multi-family consumer fallout into one task merely because the code is nearby; this is a planning error, not an implementation optimization.
 
 ## Core Principles
 
@@ -172,6 +197,8 @@ Policy:
 16. Use minimum viable sequencing: separate closures by real boundary, not by template zeal.
 17. Baseline-preservation before cleanup: when a task refines an existing runtime path, explicitly record which current behaviors must survive unchanged unless the task authorizes a replacement.
 18. If a task forbids a heuristic, also state the allowed deterministic resolution paths so reviewers do not "tighten" the code into a regression.
+19. Closure-width matters as much as risk score: if producer boundary, shared contract, persistence/schema, and multiple consumer families move together, split before drafting implementation-ready scope.
+20. Do not use a single task to carry producer closure, shared-contract migration, consumer rollout, and diagnostics fallout together unless the user explicitly requests a knowingly high-risk bundle.
 
 ## Minimum Contract Rules
 
@@ -225,6 +252,11 @@ Policy:
    - `forbidden_regression_interpretations`,
    - `replacement_proof_required_if_removed`.
 22. If a current behavior is being removed, the artifact must identify the exact replacement path and the equivalence or intentional-difference proof expected from validation.
+23. Implementation-oriented artifacts must record closure-budget triage explicitly when authority/runtime/read-model/shared-contract work is in scope:
+   - closure buckets touched,
+   - which closures are intentionally collapsed,
+   - why that collapse is safe,
+   - which closures are explicitly deferred.
 
 ## Templates and References
 

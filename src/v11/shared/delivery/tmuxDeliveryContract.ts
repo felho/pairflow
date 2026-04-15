@@ -29,14 +29,60 @@ export type DeliveryTargetReasonCode =
   | "DELIVERY_TARGET_ROLE_UNMAPPED"
   | "DELIVERY_TARGET_REGISTRY_READ_FAILED";
 
-export interface EmitTmuxDeliveryNotificationResult {
-  delivered: boolean;
+export type TmuxDeliveryAckReasonCode =
+  | "DELIVERY_ACK_RUNTIME_SESSION_UNAVAILABLE"
+  | "DELIVERY_ACK_TARGET_UNSUPPORTED"
+  | "DELIVERY_ACK_REJECTED";
+
+export type TmuxDeliveryAckStatus = "accepted" | "rejected";
+
+export interface AcceptedTmuxDeliveryAck {
+  status: "accepted";
+  sessionName: string;
+  targetPaneIndex: number;
+  message: string;
+  deliveryTargetReasonCode?: DeliveryTargetReasonCode;
+  reason?: never;
+  reason_code?: never;
+}
+
+export interface RejectedTmuxDeliveryAck {
+  status: "rejected";
+  message: string;
+  reason: TmuxDeliveryFailureReason;
+  reason_code: TmuxDeliveryAckReasonCode;
+  sessionName?: string;
+  targetPaneIndex?: number;
+  deliveryTargetReasonCode?: DeliveryTargetReasonCode;
+}
+
+export type TmuxDeliveryAck =
+  | AcceptedTmuxDeliveryAck
+  | RejectedTmuxDeliveryAck;
+
+export interface DeliveredTmuxDeliveryNotificationResult {
+  delivered: true;
   sessionName?: string;
   targetPaneIndex?: number;
   message: string;
+  deliveryTargetReasonCode?: DeliveryTargetReasonCode;
+  reason?: never;
+  reason_code?: never;
+}
+
+export interface RejectedTmuxDeliveryNotificationResult {
+  delivered: false;
+  message: string;
   reason?: TmuxDeliveryFailureReason;
+  reason_code?: TmuxDeliveryAckReasonCode;
+  sessionName?: string;
+  targetPaneIndex?: number;
   deliveryTargetReasonCode?: DeliveryTargetReasonCode;
 }
+
+export type EmitTmuxDeliveryNotificationResult =
+  | DeliveredTmuxDeliveryNotificationResult
+  | RejectedTmuxDeliveryNotificationResult;
 
 export interface ResolveDeliveryMessageRefInput {
   bubbleId: string;

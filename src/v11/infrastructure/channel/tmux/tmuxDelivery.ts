@@ -6,11 +6,10 @@ import {
 } from "./tmuxInput.js";
 import {
   attemptTmuxDelivery,
-  createDeliveryFailureResult,
+  createRejectedTmuxDeliveryAck,
+  projectTmuxDeliveryAckToLegacyResult,
   readDeliverySessionContext
 } from "./tmuxDeliveryRuntime.js";
-import type { ReviewerTestExecutionDirective } from "../../../../v11/shared/reviewer/testEvidence.js";
-import type { ReviewerFocusExtractionResult } from "../../../../v11/shared/reviewer/reviewerBrief.js";
 import {
   buildTmuxDeliveryMessage,
 } from "./tmuxDeliveryMessageBuilder.js";
@@ -21,34 +20,33 @@ import {
 } from "./tmuxDeliveryTargeting.js";
 import type { BubbleConfig } from "../../../../types/bubble.js";
 import type { AgentName } from "../../../../types/bubble.js";
-import type { ProtocolEnvelope } from "../../../../types/protocol.js";
-import type { EmitTmuxDeliveryNotificationResult } from "../../../shared/delivery/tmuxDeliveryContract.js";
+import type {
+  EmitTmuxDeliveryNotificationInput,
+  EmitTmuxDeliveryNotificationResult
+} from "../../../shared/delivery/tmuxDeliveryContract.js";
 
-export interface EmitTmuxDeliveryNotificationInput {
-  bubbleId: string;
-  bubbleConfig: BubbleConfig;
-  sessionsPath: string;
-  envelope: ProtocolEnvelope;
-  reviewerTestDirective?: ReviewerTestExecutionDirective;
-  reviewerBrief?: string;
-  reviewerFocus?: ReviewerFocusExtractionResult;
-  messageRef?: string;
-  initialDelayMs?: number;
-  deliveryAttempts?: number;
+interface EmitTmuxDeliveryNotificationRuntimeDependencies {
   runner?: TmuxRunner;
   readSessionsRegistry?: typeof readRuntimeSessionsRegistry;
 }
 
+export type EmitTmuxDeliveryNotificationRuntimeInput =
+  EmitTmuxDeliveryNotificationInput & EmitTmuxDeliveryNotificationRuntimeDependencies;
+
 export type {
   DeliveryTargetReasonCode,
+  EmitTmuxDeliveryNotificationInput,
   EmitTmuxDeliveryNotificationResult,
   ResolveDeliveryMessageRefInput,
+  TmuxDeliveryAck,
+  TmuxDeliveryAckReasonCode,
+  TmuxDeliveryAckStatus,
   TmuxDeliveryFailureReason
 } from "../../../shared/delivery/tmuxDeliveryContract.js";
 export { buildTranscriptFallbackRef, resolveDeliveryMessageRef } from "./tmuxDeliveryRefs.js";
 
 export async function emitTmuxDeliveryNotification(
-  input: EmitTmuxDeliveryNotificationInput
+  input: EmitTmuxDeliveryNotificationRuntimeInput
 ): Promise<EmitTmuxDeliveryNotificationResult> {
   const messageRef =
     input.messageRef ??
@@ -92,41 +90,41 @@ export async function emitTmuxDeliveryNotification(
     workspacePath = sessionContext.workspacePath;
   } catch {
     const message = buildMessage(undefined);
-    return createDeliveryFailureResult({
+    return projectTmuxDeliveryAckToLegacyResult(createRejectedTmuxDeliveryAck({
       reason: "registry_read_failed",
       message,
       deliveryTargetReasonCode: "DELIVERY_TARGET_REGISTRY_READ_FAILED"
-    });
+    }));
   }
 
   if (sessionName === undefined || workspacePath === undefined) {
     const message = buildMessage(undefined);
-    return createDeliveryFailureResult({
+    return projectTmuxDeliveryAckToLegacyResult(createRejectedTmuxDeliveryAck({
       reason: "no_runtime_session",
       message,
       ...(targetResolution.deliveryTargetReasonCode !== undefined
         ? { deliveryTargetReasonCode: targetResolution.deliveryTargetReasonCode }
         : {})
-    });
+    }));
   }
 
   const targetPaneIndex = targetResolution.targetPaneIndex;
   if (targetPaneIndex === undefined) {
     const message = buildMessage(workspacePath);
-    return createDeliveryFailureResult({
+    return projectTmuxDeliveryAckToLegacyResult(createRejectedTmuxDeliveryAck({
       reason: "unsupported_recipient",
       message,
       sessionName,
       ...(targetResolution.deliveryTargetReasonCode !== undefined
         ? { deliveryTargetReasonCode: targetResolution.deliveryTargetReasonCode }
         : {})
-    });
+    }));
   }
 
   const targetPane = `${sessionName}:0.${targetPaneIndex}`;
   const message = buildMessage(workspacePath);
   const runner = input.runner ?? runTmux;
-  const deliveryFailure = await attemptTmuxDelivery({
+  const deliveryAck = await attemptTmuxDelivery({
     runner,
     targetPane,
     envelopeId: input.envelope.id,
@@ -139,19 +137,7 @@ export async function emitTmuxDeliveryNotification(
       ? { deliveryTargetReasonCode: targetResolution.deliveryTargetReasonCode }
       : {})
   });
-  if (deliveryFailure !== undefined) {
-    return deliveryFailure;
-  }
-
-  return {
-    delivered: true,
-    sessionName,
-    targetPaneIndex,
-    message,
-    ...(targetResolution.deliveryTargetReasonCode !== undefined
-      ? { deliveryTargetReasonCode: targetResolution.deliveryTargetReasonCode }
-      : {})
-  };
+  return projectTmuxDeliveryAckToLegacyResult(deliveryAck);
 }
 
 // ---------------------------------------------------------------------------
