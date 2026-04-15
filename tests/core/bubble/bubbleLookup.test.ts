@@ -46,7 +46,8 @@ describe("resolveBubbleById", () => {
       repoPath,
       baseBranch: "main",
       bubbleBranch: bubble.config.bubble_branch,
-      worktreePath: bubble.paths.worktreePath
+      worktreePath: bubble.paths.worktreePath,
+      workspaceKind: "worktree"
     });
 
     process.env.PAIRFLOW_WORKTREE_ROOT = bubble.paths.worktreePath;

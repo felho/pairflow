@@ -10,6 +10,7 @@ import {
   terminateBubbleTmuxSession
 } from "../../../../src/v11/infrastructure/channel/tmux/tmuxManager.js";
 import {
+  readRuntimeSessionsRegistry,
   claimRuntimeSession,
   upsertRuntimeSession,
   removeRuntimeSession
@@ -39,6 +40,7 @@ describe("startCommandOrchestration", () => {
     expect(resolved.launchTmuxAck).toBe(launchBubbleTmuxSessionAck);
     expect(resolved.terminateTmux).toBe(terminateBubbleTmuxSession);
     expect(resolved.isTmuxSessionAlive).toBe(isTmuxSessionAliveDefault);
+    expect(resolved.readSessions).toBe(readRuntimeSessionsRegistry);
     expect(resolved.claimSession).toBe(claimRuntimeSession);
     expect(resolved.upsertSession).toBe(upsertRuntimeSession);
     expect(resolved.removeSession).toBe(removeRuntimeSession);
@@ -70,6 +72,7 @@ describe("startCommandOrchestration", () => {
         existed: true
       })),
       isTmuxSessionAlive: vi.fn(async () => true),
+      readRuntimeSessionsRegistry: vi.fn(async () => ({})),
       claimRuntimeSession: vi.fn(async () => ({
         claimed: true,
         record: {
@@ -119,6 +122,7 @@ describe("startCommandOrchestration", () => {
     expect(overrides.launchBubbleTmuxSession).toHaveBeenCalledTimes(1);
     expect(resolved.terminateTmux).toBe(overrides.terminateBubbleTmuxSession);
     expect(resolved.isTmuxSessionAlive).toBe(overrides.isTmuxSessionAlive);
+    expect(resolved.readSessions).toBe(overrides.readRuntimeSessionsRegistry);
     expect(resolved.claimSession).toBe(overrides.claimRuntimeSession);
     expect(resolved.upsertSession).toBe(overrides.upsertRuntimeSession);
     expect(resolved.removeSession).toBe(overrides.removeRuntimeSession);

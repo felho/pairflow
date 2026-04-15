@@ -6,10 +6,7 @@ import type {
 import {
   resolveRuntimeSessionWorkspaceAuthority
 } from "../../shared/runtimeSessionWorkspaceAuthority.js";
-import {
-  buildCloneWorkspaceModeStartRejectMessage,
-  createStartBubbleError
-} from "./startCommandRuntime.js";
+import { createStartBubbleError } from "./startCommandRuntime.js";
 
 export interface StartLaunchWorkspace {
   workspacePath: string;
@@ -35,17 +32,6 @@ function requireLaunchWorkspacePath(input: {
         authority_source: input.source,
         has_workspace_path: workspacePath !== undefined && workspacePath.length > 0,
         has_workspace_kind: input.workspaceKind !== undefined
-      }
-    });
-  }
-  if (input.workspaceKind === "clone") {
-    throw createStartBubbleError({
-      reasonCode: "WORKSPACE_MODE_CLONE_NOT_ACTIVATED",
-      message: buildCloneWorkspaceModeStartRejectMessage(),
-      context: {
-        bubble_id: input.bubbleId,
-        authority_source: input.source,
-        workspace_kind: input.workspaceKind
       }
     });
   }
@@ -81,9 +67,7 @@ export function resolveResumeLaunchWorkspace(input: {
     throw createStartBubbleError({
       reasonCode: "START_LAUNCH_WORKSPACE_UNAVAILABLE",
       message:
-        resolution.reason === "legacy_clone_fallback_forbidden"
-          ? `Bubble ${input.bubbleId} cannot resume tmux because runtime session only retained a clone-mode worktree reference without canonical workspace authority.`
-          : `Bubble ${input.bubbleId} cannot resume tmux because runtime session canonical workspace authority is missing.`,
+        `Bubble ${input.bubbleId} cannot resume tmux because runtime session canonical workspace authority is missing.`,
       context: {
         bubble_id: input.bubbleId,
         authority_source: "runtime_session",

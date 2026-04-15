@@ -46,7 +46,8 @@ describe("resolveBubbleFromWorkspaceCwd", () => {
       repoPath,
       baseBranch: "main",
       bubbleBranch: bubble.config.bubble_branch,
-      worktreePath: bubble.paths.worktreePath
+      worktreePath: bubble.paths.worktreePath,
+      workspaceKind: "worktree"
     });
 
     const resolved = await resolveBubbleFromWorkspaceCwd(bubble.paths.worktreePath);
@@ -75,7 +76,8 @@ describe("resolveBubbleFromWorkspaceCwd", () => {
       repoPath,
       baseBranch: "main",
       bubbleBranch: bubble.config.bubble_branch,
-      worktreePath: bubble.paths.worktreePath
+      worktreePath: bubble.paths.worktreePath,
+      workspaceKind: "worktree"
     });
     await runGit(bubble.paths.worktreePath, ["checkout", "--detach"]);
 
@@ -118,7 +120,8 @@ describe("resolveBubbleFromWorkspaceCwd", () => {
       repoPath,
       baseBranch: "main",
       bubbleBranch: bubble.config.bubble_branch,
-      worktreePath: bubble.paths.worktreePath
+      worktreePath: bubble.paths.worktreePath,
+      workspaceKind: "worktree"
     });
 
     process.env.PAIRFLOW_WORKTREE_ROOT = bubble.paths.worktreePath;

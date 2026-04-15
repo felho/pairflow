@@ -101,7 +101,7 @@ describe("refreshReviewerContext", () => {
     expect(script).toContain(`if ! cd ${shellQuote("/tmp/runtime-workspace")}; then`);
   });
 
-  it("preserves legacy worktree compatibility when explicit workspace authority is absent", async () => {
+  it("fails closed when explicit workspace authority is absent", async () => {
     const calls: string[][] = [];
     const runner: TmuxRunner = (args): Promise<TmuxRunResult> => {
       calls.push(args);
@@ -124,13 +124,10 @@ describe("refreshReviewerContext", () => {
     });
 
     expect(result).toEqual({
-      refreshed: true
+      refreshed: false,
+      reason: "no_runtime_session"
     });
-    expect(calls[0]?.[5]).toBe("/tmp/worktree");
-    const reviewerCommand = calls[0]?.[6];
-    expect(typeof reviewerCommand).toBe("string");
-    const script = extractBashLcScript(reviewerCommand as string);
-    expect(script).toContain(`if ! cd ${shellQuote("/tmp/worktree")}; then`);
+    expect(calls).toHaveLength(0);
   });
 
   it("returns no_runtime_session when runtime session is missing", async () => {
@@ -178,7 +175,7 @@ describe("refreshReviewerContext", () => {
     expect(calls).toHaveLength(0);
   });
 
-  it("forbids clone-only legacy worktree fallback during reviewer refresh", async () => {
+  it("fails closed when clone-mode session has no canonical workspace authority", async () => {
     const calls: string[][] = [];
     const runner: TmuxRunner = (args): Promise<TmuxRunResult> => {
       calls.push(args);

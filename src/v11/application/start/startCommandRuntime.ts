@@ -35,14 +35,6 @@ export function buildPreparingWorkspaceStartRejectMessage(): string {
   ].join(" ");
 }
 
-export function buildCloneWorkspaceModeStartRejectMessage(): string {
-  return [
-    "bubble start rejected: work_mode=clone is not activated in this phase.",
-    "Successful clone-topology start and resume are disabled until the producer/consumer activation tasks land.",
-    "The bubble state remains unchanged."
-  ].join(" ");
-}
-
 export function buildStartupIncompleteStartFailureMessage(
   bubbleId: string,
   causeMessage: string

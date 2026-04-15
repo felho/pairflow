@@ -50,8 +50,8 @@ type StartContractScenario = "basic" | "state_not_startable";
 type StartContractExtendedScenario =
   | StartContractScenario
   | "bootstrap_fails_cleanup"
-  | "clone_not_activated"
-  | "clone_not_activated_resume"
+  | "clone_activated"
+  | "clone_activated_resume"
   | "clone_state_not_startable"
   | "launch_ack_failed"
   | "stale_session_reclaim";
@@ -116,14 +116,14 @@ function parseStartCaseInput(input: ContractCase["input"]): ParsedStartCaseInput
       scenarioRaw !== "basic" &&
       scenarioRaw !== "state_not_startable" &&
       scenarioRaw !== "bootstrap_fails_cleanup" &&
-      scenarioRaw !== "clone_not_activated" &&
-      scenarioRaw !== "clone_not_activated_resume" &&
+      scenarioRaw !== "clone_activated" &&
+      scenarioRaw !== "clone_activated_resume" &&
       scenarioRaw !== "clone_state_not_startable" &&
       scenarioRaw !== "launch_ack_failed" &&
       scenarioRaw !== "stale_session_reclaim"
     ) {
       throw new Error(
-        "start contract input.fixture.scenario must be one of: basic, state_not_startable, bootstrap_fails_cleanup, clone_not_activated, clone_not_activated_resume, clone_state_not_startable, launch_ack_failed, stale_session_reclaim."
+        "start contract input.fixture.scenario must be one of: basic, state_not_startable, bootstrap_fails_cleanup, clone_activated, clone_activated_resume, clone_state_not_startable, launch_ack_failed, stale_session_reclaim."
       );
     }
     scenario = scenarioRaw ?? "basic";
@@ -152,7 +152,9 @@ async function readStateSubsetOrThrow(input: {
         ? input.originalError.message
         : typeof input.originalError === "string"
           ? input.originalError
-          : "unknown";
+          : input.originalError === undefined
+            ? "unknown"
+            : "non-error thrown";
     throw new Error(
       `Failed to read state snapshot while handling start contract result for bubble ${input.bubbleId}. Original error: ${originalMessage}`,
       { cause: readError }
@@ -162,15 +164,12 @@ async function readStateSubsetOrThrow(input: {
 
 function assertCloneRejectInvariants(input: {
   scenario: StartContractExtendedScenario;
+  bootstrapCalls: number;
   claimCalls: number;
   launchCalls: number;
   resumeSummaryCalls: number;
 }): void {
-  if (
-    input.scenario !== "clone_not_activated"
-    && input.scenario !== "clone_not_activated_resume"
-    && input.scenario !== "clone_state_not_startable"
-  ) {
+  if (input.scenario !== "clone_state_not_startable") {
     return;
   }
 
@@ -186,13 +185,73 @@ function assertCloneRejectInvariants(input: {
     );
   }
 
-  if (
-    input.scenario === "clone_not_activated_resume"
-    && input.resumeSummaryCalls !== 0
-  ) {
+  if (input.resumeSummaryCalls !== 0) {
     throw new Error(
-      "start contract clone_not_activated_resume scenario expected rejection before resume summary preparation."
+      "start contract clone_state_not_startable scenario expected rejection before resume summary preparation."
     );
+  }
+
+  if (input.bootstrapCalls !== 0) {
+    throw new Error(
+      "start contract clone_state_not_startable scenario expected rejection before workspace bootstrap."
+    );
+  }
+}
+
+function assertCloneActivationInvariants(input: {
+  scenario: StartContractExtendedScenario;
+  bootstrapCalls: number;
+  bootstrapRequestedWorkspaceKind: string | undefined;
+  claimCalls: number;
+  launchCalls: number;
+  upsertCalls: number;
+  upsertWorkspaceKind: string | undefined;
+  resumeSummaryCalls: number;
+}): void {
+  if (input.scenario === "clone_activated") {
+    if (
+      input.bootstrapCalls !== 1
+      || input.claimCalls !== 1
+      || input.launchCalls !== 1
+      || input.upsertCalls !== 1
+    ) {
+      throw new Error(
+        "start contract clone_activated scenario expected clone fresh-start through the shared bootstrapWorktreeWorkspace seam with exactly one bootstrap/claim/upsert/launch."
+      );
+    }
+    if (input.bootstrapRequestedWorkspaceKind !== "clone") {
+      throw new Error(
+        "start contract clone_activated scenario expected bootstrapWorktreeWorkspace request with workspaceKind=clone."
+      );
+    }
+    if (input.upsertWorkspaceKind !== "clone") {
+      throw new Error(
+        "start contract clone_activated scenario expected runtime session persist with workspaceKind=clone."
+      );
+    }
+    if (input.resumeSummaryCalls !== 0) {
+      throw new Error(
+        "start contract clone_activated scenario expected no resume summary preparation."
+      );
+    }
+  }
+
+  if (input.scenario === "clone_activated_resume") {
+    if (
+      input.bootstrapCalls !== 0
+      || input.claimCalls !== 2
+      || input.launchCalls !== 1
+      || input.upsertCalls !== 0
+    ) {
+      throw new Error(
+        "start contract clone_activated_resume scenario expected resume without bootstrap/upsert, with stale-session reclaim and exactly one launch."
+      );
+    }
+    if (input.resumeSummaryCalls !== 1) {
+      throw new Error(
+        "start contract clone_activated_resume scenario expected exactly one resume summary preparation."
+      );
+    }
   }
 }
 
@@ -337,7 +396,7 @@ async function executeStartCase(input: {
     await initGitRepository(repoPath);
     const parsedInput = parseStartCaseInput(input.caseDef.input);
     const bubble =
-      parsedInput.scenario === "clone_not_activated_resume"
+      parsedInput.scenario === "clone_activated_resume"
         ? await setupRunningBubbleFixture({
             repoPath,
             bubbleId: buildStartContractBubbleId(input.caseDef.id),
@@ -352,7 +411,7 @@ async function executeStartCase(input: {
             cwd: repoPath
           });
 
-    if (parsedInput.scenario === "clone_not_activated_resume") {
+    if (parsedInput.scenario === "clone_activated_resume") {
       await setResumeFixtureState({
         statePath: bubble.paths.statePath,
         targetState: parsedInput.resumeState
@@ -382,8 +441,8 @@ async function executeStartCase(input: {
     }
 
     if (
-      parsedInput.scenario === "clone_not_activated"
-      || parsedInput.scenario === "clone_not_activated_resume"
+      parsedInput.scenario === "clone_activated"
+      || parsedInput.scenario === "clone_activated_resume"
       || parsedInput.scenario === "clone_state_not_startable"
     ) {
       await writeFile(
@@ -397,7 +456,11 @@ async function executeStartCase(input: {
     }
 
     let claimCalls = 0;
+    let bootstrapCalls = 0;
+    let bootstrapRequestedWorkspaceKind: string | undefined;
     let launchCalls = 0;
+    let upsertCalls = 0;
+    let upsertWorkspaceKind: string | undefined;
     let resumeSummaryCalls = 0;
     let staleSessionRemoved = false;
     let cleanupSessionRemoved = false;
@@ -410,16 +473,31 @@ async function executeStartCase(input: {
           now: new Date("2026-03-20T12:00:00.000Z")
         },
         {
-          bootstrapWorktreeWorkspace: () =>
-            parsedInput.scenario === "bootstrap_fails_cleanup"
-              ? Promise.reject(new Error("BOOTSTRAP_FAIL_TEST"))
-              : Promise.resolve(
-                  buildWorktreeBootstrapResult({
-                    repoPath,
-                    bubbleBranch: bubble.config.bubble_branch,
-                    worktreePath: bubble.paths.worktreePath
-                  })
-                ),
+          bootstrapWorktreeWorkspace: (bootstrapInput) => {
+            bootstrapCalls += 1;
+            bootstrapRequestedWorkspaceKind = bootstrapInput.workspaceKind;
+            if (parsedInput.scenario === "bootstrap_fails_cleanup") {
+              return Promise.reject(new Error("BOOTSTRAP_FAIL_TEST"));
+            }
+            if (parsedInput.scenario === "clone_activated") {
+              return Promise.resolve({
+                repoPath,
+                baseRef: "refs/heads/main",
+                bubbleBranch: bubble.config.bubble_branch,
+                worktreePath: bubble.paths.worktreePath,
+                workspacePath: bubble.paths.worktreePath,
+                workspaceKind: "clone" as const,
+                branchPrepared: true
+              });
+            }
+            return Promise.resolve(
+              buildWorktreeBootstrapResult({
+                repoPath,
+                bubbleBranch: bubble.config.bubble_branch,
+                worktreePath: bubble.paths.worktreePath
+              })
+            );
+          },
           ...(parsedInput.scenario === "launch_ack_failed"
             ? {
                 launchBubbleTmuxSessionAck: () => {
@@ -445,6 +523,22 @@ async function executeStartCase(input: {
             resumeSummaryCalls += 1;
             return Promise.resolve("resume-summary: contract");
           },
+          readRuntimeSessionsRegistry: () => {
+            if (parsedInput.scenario === "clone_activated_resume") {
+              return Promise.resolve({
+                [bubble.bubbleId]: {
+                  bubbleId: bubble.bubbleId,
+                  repoPath,
+                  worktreePath: bubble.paths.worktreePath,
+                  workspacePath: `${bubble.paths.worktreePath}/../clone-authority-contract`,
+                  workspaceKind: "clone" as const,
+                  tmuxSessionName: `pf-${bubble.bubbleId}`,
+                  updatedAt: "2026-03-20T12:00:00.000Z"
+                }
+              });
+            }
+            return Promise.resolve({});
+          },
           claimRuntimeSession: () => {
             claimCalls += 1;
             if (parsedInput.scenario === "stale_session_reclaim" && claimCalls === 1) {
@@ -454,6 +548,22 @@ async function executeStartCase(input: {
                   bubbleId: bubble.bubbleId,
                   repoPath,
                   worktreePath: bubble.paths.worktreePath,
+                  workspacePath: bubble.paths.worktreePath,
+                  workspaceKind: "worktree" as const,
+                  tmuxSessionName: `pf-${bubble.bubbleId}`,
+                  updatedAt: "2026-03-20T12:00:00.000Z"
+                }
+              });
+            }
+            if (parsedInput.scenario === "clone_activated_resume" && claimCalls === 1) {
+              return Promise.resolve({
+                claimed: false,
+                record: {
+                  bubbleId: bubble.bubbleId,
+                  repoPath,
+                  worktreePath: bubble.paths.worktreePath,
+                  workspacePath: `${bubble.paths.worktreePath}/../clone-authority-contract`,
+                  workspaceKind: "clone" as const,
                   tmuxSessionName: `pf-${bubble.bubbleId}`,
                   updatedAt: "2026-03-20T12:00:00.000Z"
                 }
@@ -465,13 +575,46 @@ async function executeStartCase(input: {
                 bubbleId: bubble.bubbleId,
                 repoPath,
                 worktreePath: bubble.paths.worktreePath,
+                ...(
+                  parsedInput.scenario === "clone_activated_resume"
+                    ? {
+                        workspacePath: `${bubble.paths.worktreePath}/../clone-authority-contract`,
+                        workspaceKind: "clone" as const
+                      }
+                    : parsedInput.scenario === "stale_session_reclaim"
+                      ? {
+                          workspacePath: bubble.paths.worktreePath,
+                          workspaceKind: "worktree" as const
+                        }
+                    : {}
+                ),
                 tmuxSessionName: `pf-${bubble.bubbleId}`,
                 updatedAt: "2026-03-20T12:00:00.000Z"
               }
             });
           },
+          upsertRuntimeSession: (input) => {
+            upsertCalls += 1;
+            upsertWorkspaceKind = input.workspaceKind;
+            return Promise.resolve({
+              bubbleId: input.bubbleId,
+              repoPath: input.repoPath,
+              worktreePath: input.worktreePath,
+              ...(input.workspacePath !== undefined
+                ? { workspacePath: input.workspacePath }
+                : {}),
+              ...(input.workspaceKind !== undefined
+                ? { workspaceKind: input.workspaceKind }
+                : {}),
+              tmuxSessionName: input.tmuxSessionName,
+              updatedAt: "2026-03-20T12:00:00.000Z"
+            });
+          },
           isTmuxSessionAlive: () =>
-            Promise.resolve(parsedInput.scenario !== "stale_session_reclaim"),
+            Promise.resolve(
+              parsedInput.scenario !== "stale_session_reclaim"
+              && parsedInput.scenario !== "clone_activated_resume"
+            ),
           removeRuntimeSession: () => {
             if (parsedInput.scenario === "stale_session_reclaim" && claimCalls === 1) {
               staleSessionRemoved = true;
@@ -491,15 +634,22 @@ async function executeStartCase(input: {
         }
       }
 
-      if (
-        parsedInput.scenario === "clone_not_activated"
-        || parsedInput.scenario === "clone_not_activated_resume"
-        || parsedInput.scenario === "clone_state_not_startable"
-      ) {
+      if (parsedInput.scenario === "clone_state_not_startable") {
         throw new Error(
-          `start contract ${parsedInput.scenario} scenario expected rejection, but start succeeded.`
+          "start contract clone_state_not_startable scenario expected rejection, but start succeeded."
         );
       }
+
+      assertCloneActivationInvariants({
+        scenario: parsedInput.scenario,
+        bootstrapCalls,
+        bootstrapRequestedWorkspaceKind,
+        claimCalls,
+        launchCalls,
+        upsertCalls,
+        upsertWorkspaceKind,
+        resumeSummaryCalls
+      });
 
       return normalizeStartResult(result);
     } catch (error) {
@@ -512,6 +662,7 @@ async function executeStartCase(input: {
       }
       assertCloneRejectInvariants({
         scenario: parsedInput.scenario,
+        bootstrapCalls,
         claimCalls,
         launchCalls,
         resumeSummaryCalls

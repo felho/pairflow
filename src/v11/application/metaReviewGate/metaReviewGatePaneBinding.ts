@@ -34,9 +34,7 @@ function resolveMetaReviewerWorkspaceAuthority(input: {
   return {
     status: "failed",
     message:
-      resolution.reason === "legacy_clone_fallback_forbidden"
-        ? `Bubble ${input.bubbleId} cannot bind meta-review pane because runtime session only retained a clone-mode worktree reference without canonical workspace authority.`
-        : `Bubble ${input.bubbleId} cannot bind meta-review pane because runtime workspace authority is empty.`
+      `Bubble ${input.bubbleId} cannot bind meta-review pane because runtime workspace authority is empty.`
   };
 }
 

@@ -206,19 +206,18 @@ Az explicit control-model dontesek most visszanyerhetok a designbol es a review-
 
 ## Active Task
 
-1. `plans/tasks/remote-bubble-execution/phase2a-local-clone-topology-activation.md`
-2. Ez a jelenlegi egyetlen aktiv implementacios task; a Phase 1E mar archived baseline, es a local clone-topology activation most mar kulon, implementalhato successor taskkent all.
+1. `plans/tasks/remote-bubble-execution/phase2b-remote-create-write-path-enablement.md`
+2. A Phase 2A archived baseline lett; a jelenlegi egyetlen aktiv implementacios task most a remote create write-path exposure, runtime start activation nelkul.
 
 ## Planned Next Tasks (Do Not Materialize Yet)
 
-1. `plans/tasks/remote-bubble-execution/phase2b-remote-create-write-path-enablement.md`
-2. `plans/tasks/remote-bubble-execution/phase2c-remote-sync-hook-contract-foundation.md`
-3. `plans/tasks/remote-bubble-execution/phase2d-remote-ssh-start-activation.md`
-4. `plans/tasks/remote-bubble-execution/phase2e-remote-status-and-list-read-model.md`
-5. `plans/tasks/remote-bubble-execution/phase2f-remote-attach-consume.md`
-6. `plans/tasks/remote-bubble-execution/phase3a-remote-approval-and-rework-routing.md`
-7. `plans/tasks/remote-bubble-execution/phase3b-remote-commit-merge-delete-cleanup.md`
-8. `plans/tasks/remote-bubble-execution/phase3c-recovery-diagnostics-and-rollout.md`
+1. `plans/tasks/remote-bubble-execution/phase2c-remote-sync-hook-contract-foundation.md`
+2. `plans/tasks/remote-bubble-execution/phase2d-remote-ssh-start-activation.md`
+3. `plans/tasks/remote-bubble-execution/phase2e-remote-status-and-list-read-model.md`
+4. `plans/tasks/remote-bubble-execution/phase2f-remote-attach-consume.md`
+5. `plans/tasks/remote-bubble-execution/phase3a-remote-approval-and-rework-routing.md`
+6. `plans/tasks/remote-bubble-execution/phase3b-remote-commit-merge-delete-cleanup.md`
+7. `plans/tasks/remote-bubble-execution/phase3c-recovery-diagnostics-and-rollout.md`
 
 ## Dependencies
 
@@ -278,6 +277,7 @@ Az explicit control-model dontesek most visszanyerhetok a designbol es a review-
    - clone-mode commit / merge / delete topology and branch-ownership proofok.
 7. Phase 2A:
    - end-to-end local clone-topology activation tests custom/remote-capable bootstrap mellett.
+   - retained runtime-session worktree fallback kivezetese, mert az aktiv approval-gate bubble-ok mar explicit workspace authorityval futnak.
 8. Phase 2B:
    - `bubble create --remote` local persistence/write-path tests.
 9. Phase 2C:
