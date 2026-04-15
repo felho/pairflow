@@ -54,6 +54,104 @@ function validateExecutionContextTimestamps(input: {
   };
 }
 
+function validateExecutionContextIdentityFields(input: {
+  value: Record<string, unknown>;
+  pathPrefix: string;
+  errors: ValidationError[];
+}): {
+  activeRole: BubbleExecutionContext["active_role"] | null;
+  handoffId: string | null;
+  executionId: string | null;
+  round: number | null;
+  awaitedOutputType: BubbleExecutionContext["awaited_output_type"] | null;
+} {
+  const activeRoleRaw = input.value.active_role;
+  const activeRole = isAgentRole(activeRoleRaw) ? activeRoleRaw : null;
+  if (activeRole === null) {
+    input.errors.push({
+      path: `${input.pathPrefix}.active_role`,
+      message: "Must be one of: implementer, reviewer, meta_reviewer"
+    });
+  }
+
+  const handoffIdRaw = input.value.handoff_id;
+  const handoffId = isNonEmptyString(handoffIdRaw) ? handoffIdRaw : null;
+  if (handoffId === null) {
+    input.errors.push({
+      path: `${input.pathPrefix}.handoff_id`,
+      message: "Must be a non-empty string"
+    });
+  }
+
+  const hasExecutionId = Object.hasOwn(input.value, "execution_id");
+  const executionIdRaw = input.value.execution_id;
+  const executionId = isNonEmptyString(executionIdRaw) ? executionIdRaw : null;
+  if (!hasExecutionId) {
+    input.errors.push({
+      path: `${input.pathPrefix}.execution_id`,
+      message:
+        "ACTOR_EMIT_CONTEXT_PRE_E1_EXECUTION_ID_MISSING: pre-E1 execution_context snapshots without execution_id are unsupported"
+    });
+  } else if (executionId === null) {
+    input.errors.push({
+      path: `${input.pathPrefix}.execution_id`,
+      message:
+        "ACTOR_EMIT_CONTEXT_EXECUTION_ID_MISSING: Must be a non-empty string"
+    });
+  }
+
+  const roundRaw = input.value.round;
+  const round =
+    isInteger(roundRaw) && roundRaw >= 1
+      ? roundRaw
+      : null;
+  if (round === null) {
+    input.errors.push({
+      path: `${input.pathPrefix}.round`,
+      message: "Must be a positive integer"
+    });
+  }
+
+  const awaitedOutputTypeRaw = input.value.awaited_output_type;
+  const awaitedOutputType =
+    isBubbleExecutionContextAwaitedOutputType(awaitedOutputTypeRaw)
+      ? awaitedOutputTypeRaw
+      : null;
+  if (awaitedOutputType === null) {
+    input.errors.push({
+      path: `${input.pathPrefix}.awaited_output_type`,
+      message: "Must be one of: pass_result, meta_review_result"
+    });
+  }
+
+  return {
+    activeRole,
+    handoffId,
+    executionId,
+    round,
+    awaitedOutputType
+  };
+}
+
+function validateExecutionContextAttempt(input: {
+  value: Record<string, unknown>;
+  pathPrefix: string;
+  errors: ValidationError[];
+}): number | null {
+  const attemptRaw = input.value.attempt;
+  const attempt =
+    isInteger(attemptRaw) && attemptRaw >= 1
+      ? attemptRaw
+      : null;
+  if (attempt === null) {
+    input.errors.push({
+      path: `${input.pathPrefix}.attempt`,
+      message: "Must be an integer >= 1"
+    });
+  }
+  return attempt;
+}
+
 export function validateExecutionContext(
   input: unknown,
   pathPrefix: string,
@@ -71,53 +169,11 @@ export function validateExecutionContext(
     return null;
   }
 
-  const activeRole = input.active_role;
-  if (!isAgentRole(activeRole)) {
-    errors.push({
-      path: `${pathPrefix}.active_role`,
-      message: "Must be one of: implementer, reviewer, meta_reviewer"
-    });
-  }
-
-  const handoffId = input.handoff_id;
-  if (!isNonEmptyString(handoffId)) {
-    errors.push({
-      path: `${pathPrefix}.handoff_id`,
-      message: "Must be a non-empty string"
-    });
-  }
-
-  const hasExecutionId = Object.hasOwn(input, "execution_id");
-  const executionId = input.execution_id;
-  if (!hasExecutionId) {
-    errors.push({
-      path: `${pathPrefix}.execution_id`,
-      message:
-        "ACTOR_EMIT_CONTEXT_PRE_E1_EXECUTION_ID_MISSING: pre-E1 execution_context snapshots without execution_id are unsupported"
-    });
-  } else if (!isNonEmptyString(executionId)) {
-    errors.push({
-      path: `${pathPrefix}.execution_id`,
-      message:
-        "ACTOR_EMIT_CONTEXT_EXECUTION_ID_MISSING: Must be a non-empty string"
-    });
-  }
-
-  const round = input.round;
-  if (!isInteger(round) || round < 1) {
-    errors.push({
-      path: `${pathPrefix}.round`,
-      message: "Must be a positive integer"
-    });
-  }
-
-  const awaitedOutputType = input.awaited_output_type;
-  if (!isBubbleExecutionContextAwaitedOutputType(awaitedOutputType)) {
-    errors.push({
-      path: `${pathPrefix}.awaited_output_type`,
-      message: "Must be one of: pass_result, meta_review_result"
-    });
-  }
+  const identity = validateExecutionContextIdentityFields({
+    value: input,
+    pathPrefix,
+    errors
+  });
 
   const startedAt = input.started_at;
   const deadlineAt = input.deadline_at;
@@ -128,34 +184,30 @@ export function validateExecutionContext(
     errors
   });
 
-  const attempt = input.attempt;
-  if (!isInteger(attempt) || attempt < 1) {
-    errors.push({
-      path: `${pathPrefix}.attempt`,
-      message: "Must be an integer >= 1"
-    });
-  }
+  const attempt = validateExecutionContextAttempt({
+    value: input,
+    pathPrefix,
+    errors
+  });
 
   if (
-    !isAgentRole(activeRole) ||
-    !isNonEmptyString(handoffId) ||
-    !isNonEmptyString(executionId) ||
-    !isInteger(round) ||
-    round < 1 ||
-    !isBubbleExecutionContextAwaitedOutputType(awaitedOutputType) ||
+    identity.activeRole === null ||
+    identity.handoffId === null ||
+    identity.executionId === null ||
+    identity.round === null ||
+    identity.awaitedOutputType === null ||
     validatedTimestamps === null ||
-    !isInteger(attempt) ||
-    attempt < 1
+    attempt === null
   ) {
     return null;
   }
 
   return {
-    active_role: activeRole,
-    handoff_id: handoffId,
-    execution_id: executionId,
-    round,
-    awaited_output_type: awaitedOutputType,
+    active_role: identity.activeRole,
+    handoff_id: identity.handoffId,
+    execution_id: identity.executionId,
+    round: identity.round,
+    awaited_output_type: identity.awaitedOutputType,
     started_at: validatedTimestamps.startedAt,
     deadline_at: validatedTimestamps.deadlineAt,
     attempt

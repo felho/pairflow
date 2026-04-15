@@ -299,7 +299,9 @@ export const launchBubbleTmuxSession: LaunchBubbleTmuxSessionPort = async (
     throw legacyError;
   }
 
-  throw new Error(ack.error_message);
+  throw new Error(
+    `${ack.reason_code}: context operation_id=launch_bubble_tmux_session bubble_id=${input.bubbleId}. ${ack.error_message}`
+  );
 };
 
 function isTmuxMissingSessionError(output: string): boolean {

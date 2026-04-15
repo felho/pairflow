@@ -275,7 +275,7 @@ function resolveDirectiveWorkspacePath(input: {
   const workspacePath = (input.workspacePath ?? input.worktreePath ?? "").trim();
   if (workspacePath.length === 0) {
     throw new Error(
-      "REVIEWER_TEST_DIRECTIVE_WORKSPACE_REQUIRED: workspacePath or worktreePath is required."
+      "REVIEWER_TEST_DIRECTIVE_WORKSPACE_REQUIRED: context operation_id=resolve_reviewer_test_execution_directive workspace_path_or_worktree_path_required."
     );
   }
   return workspacePath;

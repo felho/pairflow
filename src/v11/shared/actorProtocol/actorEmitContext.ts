@@ -72,10 +72,16 @@ function assertExecutionContext(
     state.execution_context === null ||
     state.execution_context === undefined
   ) {
-    throw new ActorEmitContextError(
+    throw new ActorEmitContextError({
       reasonCode,
-      `Active actor authority is unavailable for state ${state.state}; cannot materialize canonical actor emit context.`
-    );
+      message:
+        `Active actor authority is unavailable for state ${state.state}; cannot materialize canonical actor emit context.`,
+      context: {
+        route: "assert_execution_context",
+        expectedAuthority: "execution_context",
+        receivedKind: state.state
+      }
+    });
   }
 
   return state.execution_context;
@@ -89,19 +95,31 @@ function assertExecutionContextHasExecutionId(
   };
   const hasExecutionId = Object.hasOwn(executionContextRecord, "execution_id");
   if (!hasExecutionId) {
-    throw new ActorEmitContextError(
-      "ACTOR_EMIT_CONTEXT_PRE_E1_EXECUTION_ID_MISSING",
-      "ACTOR_EMIT_CONTEXT_PRE_E1_EXECUTION_ID_MISSING: persisted execution_context is missing execution_id; fresh authority remint required."
-    );
+    throw new ActorEmitContextError({
+      reasonCode: "ACTOR_EMIT_CONTEXT_PRE_E1_EXECUTION_ID_MISSING",
+      message:
+        "ACTOR_EMIT_CONTEXT_PRE_E1_EXECUTION_ID_MISSING: persisted execution_context is missing execution_id; fresh authority remint required.",
+      context: {
+        route: "assert_execution_context_has_execution_id",
+        expectedAuthority: "execution_id",
+        receivedKind: "missing"
+      }
+    });
   }
   if (
     typeof executionContextRecord.execution_id !== "string"
     || executionContextRecord.execution_id.trim().length === 0
   ) {
-    throw new ActorEmitContextError(
-      "ACTOR_EMIT_CONTEXT_EXECUTION_ID_MISSING",
-      "ACTOR_EMIT_CONTEXT_EXECUTION_ID_MISSING: canonical execution_context requires a non-empty execution_id."
-    );
+    throw new ActorEmitContextError({
+      reasonCode: "ACTOR_EMIT_CONTEXT_EXECUTION_ID_MISSING",
+      message:
+        "ACTOR_EMIT_CONTEXT_EXECUTION_ID_MISSING: canonical execution_context requires a non-empty execution_id.",
+      context: {
+        route: "assert_execution_context_has_execution_id",
+        expectedAuthority: "execution_id",
+        receivedKind: typeof executionContextRecord.execution_id
+      }
+    });
   }
   return executionContextRecord.execution_id;
 }
@@ -124,10 +142,16 @@ function buildActorEmitContextSnapshot(input: {
     liveRole !== undefined &&
     liveRole !== executionContext.active_role
   ) {
-    throw new ActorEmitContextError(
-      input.reasonCode,
-      `Active actor role is incoherent with execution context (state: ${liveRole}, execution context: ${executionContext.active_role}).`
-    );
+    throw new ActorEmitContextError({
+      reasonCode: input.reasonCode,
+      message:
+        `Active actor role is incoherent with execution context (state: ${liveRole}, execution context: ${executionContext.active_role}).`,
+      context: {
+        route: "build_actor_emit_context_snapshot",
+        expectedAuthority: executionContext.active_role,
+        receivedKind: liveRole
+      }
+    });
   }
 
   return {
@@ -199,60 +223,101 @@ export function assertActorEmitContextMatches(input: {
   expectedStateFingerprint?: string;
 }): void {
   if (input.executionId.trim().length === 0) {
-    throw new ActorEmitContextError(
-      "ACTOR_EMIT_FORBIDDEN_EXECUTION_ID_DERIVATION",
-      "ACTOR_EMIT_FORBIDDEN_EXECUTION_ID_DERIVATION: canonical actor emit requires an explicit execution_id; handoff_id cannot be used as a substitute."
-    );
+    throw new ActorEmitContextError({
+      reasonCode: "ACTOR_EMIT_FORBIDDEN_EXECUTION_ID_DERIVATION",
+      message:
+        "ACTOR_EMIT_FORBIDDEN_EXECUTION_ID_DERIVATION: canonical actor emit requires an explicit execution_id; handoff_id cannot be used as a substitute.",
+      context: {
+        route: "assert_actor_emit_context_matches",
+        expectedAuthority: "execution_id",
+        receivedKind: "empty"
+      }
+    });
   }
 
   if (input.executionId === input.handoffId) {
-    throw new ActorEmitContextError(
-      "ACTOR_EMIT_FORBIDDEN_EXECUTION_ID_DERIVATION",
-      "ACTOR_EMIT_FORBIDDEN_EXECUTION_ID_DERIVATION: execution_id must not be derived from or reused as handoff_id."
-    );
+    throw new ActorEmitContextError({
+      reasonCode: "ACTOR_EMIT_FORBIDDEN_EXECUTION_ID_DERIVATION",
+      message:
+        "ACTOR_EMIT_FORBIDDEN_EXECUTION_ID_DERIVATION: execution_id must not be derived from or reused as handoff_id.",
+      context: {
+        route: "assert_actor_emit_context_matches",
+        expectedAuthority: "distinct_execution_id",
+        receivedKind: "handoff_id_reused"
+      }
+    });
   }
 
   if (input.context.handoff_id !== input.handoffId) {
-    throw new ActorEmitContextError(
-      "ACTOR_EMIT_CONTEXT_INVALID",
-      `Canonical actor emit handoff mismatch: expected ${input.handoffId}, active ${input.context.handoff_id}.`
-    );
+    throw new ActorEmitContextError({
+      reasonCode: "ACTOR_EMIT_CONTEXT_INVALID",
+      message:
+        `Canonical actor emit handoff mismatch: expected ${input.handoffId}, active ${input.context.handoff_id}.`,
+      context: {
+        route: "assert_actor_emit_context_matches",
+        expectedAuthority: input.handoffId,
+        receivedKind: input.context.handoff_id
+      }
+    });
   }
 
   if (input.context.execution_id !== input.executionId) {
-    throw new ActorEmitContextError(
-      "ACTOR_EMIT_CONTEXT_INVALID",
-      `Canonical actor emit execution mismatch: expected ${input.executionId}, active ${input.context.execution_id}.`
-    );
+    throw new ActorEmitContextError({
+      reasonCode: "ACTOR_EMIT_CONTEXT_INVALID",
+      message:
+        `Canonical actor emit execution mismatch: expected ${input.executionId}, active ${input.context.execution_id}.`,
+      context: {
+        route: "assert_actor_emit_context_matches",
+        expectedAuthority: input.executionId,
+        receivedKind: input.context.execution_id
+      }
+    });
   }
 
   if (
     input.expectedRole !== undefined &&
     input.context.expected_role !== input.expectedRole
   ) {
-    throw new ActorEmitContextError(
-      "ACTOR_EMIT_CONTEXT_INVALID",
-      `Canonical actor emit role mismatch: expected ${input.expectedRole}, active ${input.context.expected_role}.`
-    );
+    throw new ActorEmitContextError({
+      reasonCode: "ACTOR_EMIT_CONTEXT_INVALID",
+      message:
+        `Canonical actor emit role mismatch: expected ${input.expectedRole}, active ${input.context.expected_role}.`,
+      context: {
+        route: "assert_actor_emit_context_matches",
+        expectedAuthority: input.expectedRole,
+        receivedKind: input.context.expected_role
+      }
+    });
   }
 
   if (
     input.expectedRound !== undefined &&
     input.context.expected_round !== input.expectedRound
   ) {
-    throw new ActorEmitContextError(
-      "ACTOR_EMIT_CONTEXT_INVALID",
-      `Canonical actor emit round mismatch: expected ${String(input.expectedRound)}, active ${String(input.context.expected_round)}.`
-    );
+    throw new ActorEmitContextError({
+      reasonCode: "ACTOR_EMIT_CONTEXT_INVALID",
+      message:
+        `Canonical actor emit round mismatch: expected ${String(input.expectedRound)}, active ${String(input.context.expected_round)}.`,
+      context: {
+        route: "assert_actor_emit_context_matches",
+        expectedAuthority: String(input.expectedRound),
+        receivedKind: String(input.context.expected_round)
+      }
+    });
   }
 
   if (
     input.expectedStateFingerprint !== undefined &&
     input.context.expected_state_fingerprint !== input.expectedStateFingerprint
   ) {
-    throw new ActorEmitContextError(
-      "ACTOR_EMIT_CONTEXT_INVALID",
-      "Canonical actor emit state fingerprint mismatch."
-    );
+    throw new ActorEmitContextError({
+      reasonCode: "ACTOR_EMIT_CONTEXT_INVALID",
+      message: "Canonical actor emit state fingerprint mismatch.",
+      context: {
+        route: "assert_actor_emit_context_matches",
+        expectedAuthority: input.expectedStateFingerprint,
+        receivedKind: input.context.expected_state_fingerprint
+      }
+    });
   }
 }

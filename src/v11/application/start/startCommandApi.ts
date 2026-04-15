@@ -135,7 +135,7 @@ async function runStartFlow(input: {
   };
 }
 
-function rewriteStartupIncompleteError(input: {
+function toStartupIncompleteError(input: {
   bubbleId: string;
   message: string;
   error: unknown;
@@ -171,7 +171,7 @@ function throwStartFailure(input: {
 }): never {
   const message = input.error instanceof Error ? input.error.message : String(input.error);
   if (input.context.startMode === "fresh" && input.freshProgress.preparingState !== null) {
-    throw rewriteStartupIncompleteError({
+    throw toStartupIncompleteError({
       bubbleId: input.context.resolved.bubbleId,
       message,
       error: input.error

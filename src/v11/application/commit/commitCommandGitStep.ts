@@ -29,7 +29,7 @@ function formatGitFailureDetail(result: {
   return detail.length > 0 ? detail : `git exit code ${result.exitCode}`;
 }
 
-function createCloneSourceSyncError(input: {
+function toCloneSourceSyncError(input: {
   bubbleId: string;
   repoPath: string;
   worktreePath: string;
@@ -146,7 +146,7 @@ async function maybeReuseCommittedCloneHead(input: {
   ).stdout.trim();
 
   if (currentBranch !== bubbleBranch) {
-    throw createCloneSourceSyncError({
+    throw toCloneSourceSyncError({
       bubbleId: resolved.bubbleId,
       repoPath: resolved.repoPath,
       worktreePath,
@@ -226,7 +226,7 @@ async function syncCloneSourceBranch(input: {
     })
   ).stdout.trim();
   if (currentBranch !== bubbleBranch) {
-    throw createCloneSourceSyncError({
+    throw toCloneSourceSyncError({
       bubbleId,
       repoPath,
       worktreePath,
@@ -244,7 +244,7 @@ async function syncCloneSourceBranch(input: {
     runGit: input.runGit
   });
   if (sourceBranchSha === null) {
-    throw createCloneSourceSyncError({
+    throw toCloneSourceSyncError({
       bubbleId,
       repoPath,
       worktreePath,
@@ -265,7 +265,7 @@ async function syncCloneSourceBranch(input: {
     runGit: input.runGit
   });
   if (!safeToMove) {
-    throw createCloneSourceSyncError({
+    throw toCloneSourceSyncError({
       bubbleId,
       repoPath,
       worktreePath,
@@ -289,7 +289,7 @@ async function syncCloneSourceBranch(input: {
     }
   );
   if (push.exitCode !== 0) {
-    throw createCloneSourceSyncError({
+    throw toCloneSourceSyncError({
       bubbleId,
       repoPath,
       worktreePath,

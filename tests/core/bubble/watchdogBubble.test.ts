@@ -187,6 +187,8 @@ describe("runBubbleWatchdog", () => {
       bubbleId: bubble.bubbleId,
       repoPath,
       worktreePath: bubble.paths.worktreePath,
+      workspacePath: bubble.paths.worktreePath,
+      workspaceKind: "worktree",
       tmuxSessionName: "pf-watchdog-rework",
       now: new Date("2026-02-22T12:02:30.000Z")
     });
