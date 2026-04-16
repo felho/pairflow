@@ -150,6 +150,29 @@ Az explicit control-model dontesek most visszanyerhetok a designbol es a review-
 | Phase 3B | `cleanup_routing` | Remote commit/merge/delete cleanup routing | Phase 3A | remote command routing a mar lezart local lifecycle cleanup familyre | a remote cleanup/routing ugyanarra a topology-modelre ul, de nem nyit uj local cleanup semantics-et |
 | Phase 3C | `recovery_rollout` | Recovery, docs, rollout closure | Phase 3B | diagnostics, reboot recovery guidance, docs, manual smoke evidence | failure semantics es rollout evidence lezarhato |
 
+## Progress Update (2026-04-16)
+
+1. `Phase 2D` implementacioja leszallt es merge-elve lett a `main` branchre.
+2. A lezart bounded scope:
+   - remote SSH first-start orchestration,
+   - optional `pairflow_sync_command` best-effort consume,
+   - deterministic same-authority inner-start repo binding a remote clone es a syncelt bubble control-plane kozott,
+   - explicit remote workspace-authority consume a clone rooton,
+   - local `state.json` control-plane reconciliation,
+   - `remote.json(kind="created") -> remote.json(kind="started")` pointer-atmenet,
+   - explicit `state-cache.json` init remote confirmation alapjan,
+   - remote `--attach` explicit reject.
+3. A Phase 2D task dokumentum archiválható, mert a bounded activation closure mar nem nyitott implementacios feladat.
+4. A kovetkezo aktiv, meg nem leszallitott fazis a terv szerint a `Phase 2E`:
+   - remote `status/list` read-model consume,
+   - cache freshness/read-model wording,
+   - remote runtime operator projection attach nelkul is konzisztens feluleten.
+5. A tovabbi successor-owned scope valtozatlan:
+   - `Phase 2F`: remote attach consume,
+   - `Phase 3A`: remote approval/rework routing,
+   - `Phase 3B`: remote commit/merge/delete cleanup routing,
+   - `Phase 3C`: recovery/docs/rollout closure.
+
 ### Phase 2D Approval Boundary Note
 
 1. A `Phase 2D` taskot csak akkor kell approvable bounded remote first-start activation closure-kent megitelni, ha ezt a `T1-T10` activation-focused test/contract matrix a sajat szeletan belul le tudja fedni:
@@ -245,27 +268,29 @@ Az explicit control-model dontesek most visszanyerhetok a designbol es a review-
 3. A lezart taskok archivalt allapotban mar itt vannak:
    - `plans/archive/tasks/remote-bubble-execution/phase2b-remote-create-write-path-enablement.md`
    - `plans/archive/tasks/remote-bubble-execution/phase2c-remote-sync-hook-contract-foundation.md`
-4. A kovetkezo explicit implementacios fazis most a `Phase 2D`:
-   - remote SSH start orchestration,
-   - optional `pairflow_sync_command` best-effort consume,
-   - deterministic same-authority inner-start repo identity closure a remote clone es a syncelt bubble control-plane kozott,
-   - explicit remote workspace-authority consume a clone rooton,
-   - local `state.json` control-plane reconciliation + `remote.json` created -> started pointer transition,
-   - local `state-cache.json` init,
-   - mikozben a `status/list/attach` read-model tovabbra is successor-only `Phase 2E/2F`.
+4. A `Phase 2D` is leszallt es `main`-re merge-olve:
+   - remote SSH start orchestration implementalt,
+   - optional `pairflow_sync_command` best-effort consume implementalt,
+   - deterministic same-authority inner-start repo identity closure lezart,
+   - explicit remote workspace-authority consume a clone rooton lezart,
+   - local `state.json` control-plane reconciliation + `remote.json` created -> started pointer transition baseline,
+   - local `state-cache.json` init baseline.
+5. A kovetkezo explicit implementacios fazis most a `Phase 2E`:
+   - remote `status/list` read-model consume,
+   - cache freshness/read-model wording,
+   - remote runtime operator projection attach nelkul.
 
 ## Active Task
 
-1. `plans/tasks/remote-bubble-execution/phase2d-remote-ssh-start-activation.md`
-2. A `Phase 2B` es `Phase 2C` archived baseline lett; a jelenlegi egyetlen aktiv implementacios task most a remote SSH start activation, mikozben a status/list/attach surfaces tovabbra is kulon successor fazisban maradnak.
+1. `plans/tasks/remote-bubble-execution/phase2e-remote-status-and-list-read-model.md`
+2. A `Phase 2B`, `Phase 2C`, es `Phase 2D` archived baseline lett; a jelenlegi egyetlen aktiv implementacios task most a remote `status/list` read-model consume, mikozben az attach es a remote mutation/cleanup routing tovabbra is kulon successor fazisban maradnak.
 
 ## Planned Next Tasks (Do Not Materialize Yet)
 
-1. `plans/tasks/remote-bubble-execution/phase2e-remote-status-and-list-read-model.md`
-2. `plans/tasks/remote-bubble-execution/phase2f-remote-attach-consume.md`
-3. `plans/tasks/remote-bubble-execution/phase3a-remote-approval-and-rework-routing.md`
-4. `plans/tasks/remote-bubble-execution/phase3b-remote-commit-merge-delete-cleanup.md`
-5. `plans/tasks/remote-bubble-execution/phase3c-recovery-diagnostics-and-rollout.md`
+1. `plans/tasks/remote-bubble-execution/phase2f-remote-attach-consume.md`
+2. `plans/tasks/remote-bubble-execution/phase3a-remote-approval-and-rework-routing.md`
+3. `plans/tasks/remote-bubble-execution/phase3b-remote-commit-merge-delete-cleanup.md`
+4. `plans/tasks/remote-bubble-execution/phase3c-recovery-diagnostics-and-rollout.md`
 
 ## Dependencies
 

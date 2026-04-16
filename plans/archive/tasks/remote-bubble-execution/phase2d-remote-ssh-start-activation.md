@@ -35,6 +35,16 @@ owners:
 
 # Task: Remote Bubble Execution Remote SSH Start Activation (Phase 2D)
 
+## Archive Note (2026-04-16)
+
+1. Ez a task implementalva, review-zva, approválva es merge-elve lett a `main` branchre.
+2. A bounded `Phase 2D` activation closure ezzel lezart:
+   - remote SSH first-start orchestration,
+   - same-authority inner-start repo/workspace closure,
+   - local pointer/cache/control-plane reconciliation,
+   - remote `--attach` explicit reject.
+3. A kovetkezo nyitott successor fazis a parent plan szerint `Phase 2E` marad.
+
 ## Current Codebase Check (2026-04-16)
 
 1. A `Phase 2B` retained baseline mar lezarta a remote create write-pathot:
