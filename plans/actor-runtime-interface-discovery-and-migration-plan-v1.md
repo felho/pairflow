@@ -23,13 +23,13 @@ owners:
    - a repo-surface wording mar a surviving `bubble status` / `bubble restart` / `agent emit --kind meta_review_result` contractot koveti,
    - a kulon internal meta-review live-run runtime stack mar nem aktiv current-tree blocker.
 4. Emiatt ez a plan mar nem owns-olja a 2026-04-12-es meta-review cleanup resequencinget mint elo implementation programot; az a blokk historical traceabilitykent relevans, de nem current-state statusjelenteskent.
-5. A 2026-04-15-os current tree alapjan az actor-runtime implementation follow-up elso negy closureja mar merged allapotban van:
+5. A 2026-04-16-os current tree alapjan az actor-runtime implementation follow-up elso ot closureja mar merged allapotban van:
    - `E1` execution-scoped authority foundation: az explicit `execution_id` canonical authority resze a persisted `execution_context` shape-nak, a schema enforcementnek es a canonical actor emit pathnak.
    - `E2a` typed delivery / launch ack producer + shared contract closure: a producer/shared port seam explicit `accepted|rejected` es `running|failed_to_start` vocabularyt ad.
    - `E2b` direct runtime/orchestration consumer alignment: a kickoff, ask-human, pass/converged, watchdog, start/restart consume-family mar ugyanennek a typed ack truthnak a same-authority consume/projection nyelven all ra; ez a `b72242cc3e63a2316738f5e131f81aefcb0ff4c8` merge-ben zarult.
    - `E2c` persisted diagnostics / meta-review / read-model fallout closure: ez azota lezart es archivalt current-tree predecessor, az archive traceability pathja `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-persisted-diagnostics-meta-review-read-model-fallout-phaseE2c.md`.
+   - `E3a` implementer wrapper/authority foundation hardening: lezart es archivalt current-tree predecessor, az archive traceability pathja `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-implementer-pilot-foundation-hardening-phaseE3a.md`.
 6. Emiatt a fennmarado live scope ma mar:
-   - `E3a` implementer wrapper/authority foundation hardening,
    - `E3b` implementer pilot activation,
    - `E3c` implementer pilot parity + fail-closed hardening,
    - `E4` reviewer + meta-reviewer rollout es retained adapter cleanup.
@@ -70,8 +70,8 @@ owners:
    - megvan a typed `accepted|running|rejected|failed_to_start` delivery/launch ack boundary a producer/shared port seam-en,
    - es megvan a direct runtime/orchestration consume-family alignment ugyanennek a canonical truthnak a menten.
    - es megvan a persisted diagnostics / meta-review / read-model fallout closure (`E2c`) ugyanennek a lezart runtime truthnak a stale-null/read-model semanticszevel.
-4. Emiatt a remaining open implementation scope mar nem authority-, direct-consume- vagy persisted/read-model closurevel kezdodik: ezek a predecessor closurek mar megvannak. A nyitott implementacios sor most mar az implementer wrapper/authority foundation hardeninggel (`E3a`) folytatodik, utana kozvetlenul az implementer pilot activation (`E3b`) jon, majd kulon az implementer pilot parity + fail-closed hardening (`E3c`), es csak ezutan nyithato a multi-role rollout / retained adapter cleanup (`E4`).
-5. Az `E3a` itt a szuk current-tree ownership lock: wrapper routing, authoritative-context-first bridge, workspace-prep same-authority hardening, explicit dispatcher fallback policy, es a non-implementer `human_question` baseline preserved lockja. A korabban kulon kezelt `E3b0` askHuman command-orchestration-wiring predecessor nem bizonyult onallo implementalhato closure-nek: a code-read alapjan a command-to-flow builder/plumbing retegek tobbsege thin forwarding, es a valos ownership-hatar csak az activation/projection bounded mainline mellett vedheto. Emiatt az esetlegesen szukseges minimalis mainline-seam explicitte tel az `E3b` activation closure resze marad, mig az `E3c` tovabbra is a stale/duplicate/restart parity es fail-closed hardening closuret owns-olja ugyanazon lezart foundation felett.
+4. Emiatt a remaining open implementation scope mar nem authority-, direct-consume-, persisted/read-model- vagy implementer-foundation closurevel kezdodik: ezek a predecessor closurek mar megvannak. A nyitott implementacios sor most mar kozvetlenul az implementer pilot activationnel (`E3b`) folytatodik, utana kulon az implementer pilot parity + fail-closed hardening (`E3c`) jon, es csak ezutan nyithato a multi-role rollout / retained adapter cleanup (`E4`).
+5. Az `E3a` current-tree ownership lockja mar historical predecessor: wrapper routing, authoritative-context-first bridge, workspace-prep same-authority hardening, explicit dispatcher fallback policy, es a non-implementer `human_question` baseline preserved lockja lezart foundationkent mar a merged tree resze. A korabban kulon kezelt `E3b0` askHuman command-orchestration-wiring predecessor nem bizonyult onallo implementalhato closure-nek: a code-read alapjan a command-to-flow builder/plumbing retegek tobbsege thin forwarding, es a valos ownership-hatar csak az activation/projection bounded mainline mellett vedheto. Emiatt az esetlegesen szukseges minimalis mainline-seam explicitte tel az `E3b` activation closure resze marad, mig az `E3c` tovabbra is a stale/duplicate/restart parity es fail-closed hardening closuret owns-olja ugyanazon lezart foundation felett.
 
 ## Post-Discovery Implementation Control Model (2026-04-13)
 
@@ -101,8 +101,8 @@ owners:
    - delivery_launch_producer_closure: historical predecessor `E2a`
    - internal_execution_closure: historical predecessor `E2b`
    - read_model_diagnostics_fallout_closure: historical predecessor `E2c`, minimalis fallout alignment csak ott, ahol az explicit boundary projection/status carryovert kenyszerit
-   - workflow_orchestration_closure: current open task (`E3a` implementer wrapper/authority foundation hardening), bounded ownership = wrapper routing + authoritative-context-first bridge + workspace-prep same-authority lock + explicit dispatcher fallback policy + non-implementer `human_question` baseline preservation
-   - activation_closure: successor task (`E3b` implementer pilot activation), fresh-path activation owned here; a `human_question` command-to-flow mainline esetlegesen szukseges minimalis explicitte tetele csak addig engedett, ameddig ugyanennek az activation-owned bounded seamnek a resze marad, authority- vagy wrapper-dontes ujranyitasa nelkul
+   - workflow_orchestration_closure: historical predecessor `E3a`; bounded ownership = wrapper routing + authoritative-context-first bridge + workspace-prep same-authority lock + explicit dispatcher fallback policy + non-implementer `human_question` baseline preservation; archive traceability path = `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-implementer-pilot-foundation-hardening-phaseE3a.md`
+   - activation_closure: current open task (`E3b` implementer pilot activation), fresh-path activation owned here; a `human_question` command-to-flow mainline esetlegesen szukseges minimalis explicitte tetele csak addig engedett, ameddig ugyanennek az activation-owned bounded seamnek a resze marad, authority- vagy wrapper-dontes ujranyitasa nelkul
    - cleanup_recovery_closure: successor tasks (`E3c` implementer pilot parity + fail-closed hardening, majd `E4` reviewer + meta-reviewer rollout / retained adapter cleanup)
 
 ## Post-Discovery Authority Fan-out Scan (2026-04-13)
