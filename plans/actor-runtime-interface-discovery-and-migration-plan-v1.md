@@ -84,7 +84,9 @@ owners:
    - nincs role-specifikus uj actor API a generic boundary helyett,
    - nincs “pilot convenience” celu egy-taskos bundled cutover.
 5. Allowed resolution path:
-   - a jelenlegi deterministic same-authority path (`state.execution_context` + `handoff_id` + optional guards) preserved baseline marad, amig az explicit execution-scoped replacement boundary meg nem erkezik,
+   - a canonical authority source-of-truth a top-level `execution_context`, ennek first-class execution identityje pedig a `handoff_id` + explicit `execution_id`,
+   - az optional `expected_role`, `expected_round` es `expected_state_fingerprint` guardok fail-closed verification mezok; megorizhetok, de nem valthatjak ki a canonical execution identityt,
+   - a compat workspace/CWD path csak teljes canonical context rehidratacios bridge lehet, nem kulon authorityforras,
    - restart/recovery tovabbra is explicit uj execution-contexten mehet, nem implicit pane allapoton,
    - a jelenlegi non-implementer `human_question` / human-gate baseline preserved marad, amig kulon successor task explicit nem rendelkezik rola.
 6. Missing-data rule:
@@ -93,6 +95,7 @@ owners:
    - nincs pane-lathatosagbol visszakovetkeztetett “valoszinuleg accepted” fallback.
 7. Sequencing authority:
    - `plans/tasks/actor-runtime-interface-pilot-cutover-phaseE.md`
+   - `plans/actor-runtime-interface-execution-authority-contract-note-v1.md`
 8. Phase boundary:
    - authority_contract_foundation_closure: historical predecessor `E1`
    - delivery_launch_producer_closure: historical predecessor `E2a`

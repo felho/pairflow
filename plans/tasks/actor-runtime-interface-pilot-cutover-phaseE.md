@@ -50,7 +50,9 @@ Current-tree sequencing anchor keszitese a discovery utan megmaradt actor-runtim
    - role-specifikus uj actor API a generic boundary helyett,
    - bundled “do the whole pilot in one task” delivery.
 5. Allowed resolution path:
-   - a jelenlegi deterministic same-authority path (`state.execution_context` + `handoff_id` + optional guards) preserved baseline marad, amig az explicit replacement boundary megerkezik,
+   - a canonical authority source-of-truth a top-level `execution_context`, ennek first-class execution identityje pedig a `handoff_id` + explicit `execution_id`,
+   - az optional `expected_role`, `expected_round` es `expected_state_fingerprint` guardok fail-closed verification mezok; megorizhetok, de nem valthatjak ki a canonical execution identityt,
+   - a compat workspace/CWD path csak teljes canonical context rehidratacios bridge lehet, nem kulon authorityforras,
    - restart/recovery explicit uj execution authorityval tovabbra is megengedett,
    - tmux retained topology observability/debug surface maradhat, de nem control source,
    - a jelenlegi non-implementer `human_question` / human-gate baseline preserved marad, amig kulon successor task explicit nem szukiti vagy csereli.
@@ -175,7 +177,7 @@ Current-tree sequencing anchor keszitese a discovery utan megmaradt actor-runtim
 | Control model | Authority truth explicit execution-contextbol jon. | A sequencing elso lepesenek ezt kell formalizalnia. | P1 | required-now |
 | Read-path rule | Ack truth explicit runtime boundaryrol jon, nem tmux-bol. | A typed ack producer closure es a consume-family fallout kulon closure marad. | P1 | required-now |
 | Forbidden fallback | Nincs pane-derived authority vagy success fallback. | A pilot task nem epithet heuristic acceptance-re. | P1 | required-now |
-| Allowed resolution path | A jelenlegi deterministic same-authority path preserved baseline. | Az E1 replacement csak explicit proof mellett cserelheti le. | P1 | required-now |
+| Allowed resolution path | A canonical authority a top-level `execution_context`; a minimum execution identity `handoff_id` + explicit `execution_id`, a guardok pedig csak fail-closed verification mezok. | Az E1/E3 utani docs nem downgrade-olhatjak az `execution_id`-t guard vagy compat szerepbe. | P1 | required-now |
 | Missing-data rule | Hianyzo authority vagy ack fail-closed / explicit unavailable. | A sequencing nem enged bundled shortcutot. | P1 | required-now |
 | Phase boundary | Foundation -> ack producer/contract -> runtime consumer alignment -> persisted/read-model fallout -> implementer foundation -> implementer pilot activation (including only the minimal `askHuman` command-to-flow mainline seam needed to close activation ownership) -> parity/fail-closed hardening -> multi-role cleanup. | A successor split kotelezo. | P1 | required-now |
 
