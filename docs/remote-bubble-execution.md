@@ -218,7 +218,7 @@ The `instanceId` distinguishes this start from any later start instance of the s
 
 **File:** `.pairflow/bubbles/<id>/state-cache.json`
 
-Initialized on `bubble start`, then updated on every `status` call. This is the **single cache authority** for remote state. The `bubble list` command reads from this file, not from `remote.json`.
+Initialized on `bubble start`, then updated only by explicit live read-model refresh paths (`status` and `list --refresh`). This is the **single cache authority** for remote state. The default `bubble list` command reads from this file, not from `remote.json`.
 
 ```json
 {
@@ -333,6 +333,10 @@ pairflow bubble status --id <bubbleId>
   │   └─ Render local CREATED status from config + remote pointer (no SSH)
   ├─ Else:
   │   ├─ SSH: pairflow bubble status --id <bubbleId> --repo <remoteClonePath> --json
+  │   ├─ If SSH fails or the remote status payload is invalid:
+  │   │   └─ Report remote status as unavailable (fail-closed);
+  │   │      do not reinterpret stale cache as fresh live truth,
+  │   │      and leave state-cache.json untouched
   │   ├─ If SSH succeeds but the runtime session is missing (e.g. remote reboot):
   │   │   └─ Report: bubble stopped unexpectedly; persisted state is preserved on disk,
   │   │      but the runtime is no longer active.
@@ -386,24 +390,31 @@ pairflow bubble list
   │
   ├─ Scan local .pairflow/bubbles/ (existing logic)
   ├─ For each bubble, check if remote.json exists
-  ├─ For remote bubbles with state-cache.json: use cached state (no SSH call)
-  ├─ For remote bubbles without state-cache.json yet:
-  │   └─ Display as CREATED (remote, not started)
+  ├─ For remote bubbles with remote.json(kind="created"): display as CREATED (remote, not started)
+  ├─ For started remote bubbles with valid state-cache.json: use cached state (no SSH call)
+  ├─ For started remote bubbles with missing/invalid state-cache.json:
+  │   └─ Display as remote/unavailable (started, cache missing or invalid);
+  │      do not fall back to local state.json as remote runtime truth
   └─ Display with location column
 
   ID              STATE                  ROUND   LOCATION
   feature-auth    RUNNING (round 2/8)    2/8     myserver (remote)
   doc-review      CREATED                -       myserver (remote, not started)
+  stuck-remote    -                      -       myserver (remote, started; cache missing -> unavailable)
   fix-login       WAITING_HUMAN          3/8     local
   refactor-db     DONE                   -       local
 ```
+
+In structured output, list-entry `stateSource` should cover all four Phase 2E branches explicitly: `cache` for default cache-hit projection, `refresh` for explicit live refresh results, `created_not_started` for a `remote.json(kind="created")` pointer, and `unavailable_started` for started remote bubbles whose cache or refresh path cannot prove fresh runtime truth. Top-level lifecycle fields stay absent unless a retained compat consumer requires a labeled `compatLifecyclePlaceholder`, in which case its `source` value is `local_control_plane_compat`.
 
 For live status of remote bubbles, use `--refresh`:
 
 ```
 pairflow bubble list --refresh
   │
-  └─ For each remote bubble: SSH status call → update cache → display
+  └─ For each started remote bubble: SSH status call → update cache on success → display;
+     on per-bubble refresh failure, keep stale cache-derived projection if one exists,
+     otherwise degrade only that bubble to explicit unavailable projection
 ```
 
 ---

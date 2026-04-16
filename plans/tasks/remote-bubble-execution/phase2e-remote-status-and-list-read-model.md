@@ -64,6 +64,18 @@ owners:
    - `Phase 2F` tovabbra is kulon attach task marad,
    - `Phase 3A/3B/3C` tovabbra is kulon mutation/cleanup/recovery consumer family marad.
 
+## Source-Anchor Consistency
+
+1. A `Phase 2E` primary artifact authorityja ez a taskfajl; a `docs/remote-bubble-execution.md` csak ott retained baseline, ahol nem mond ellent ennek a read-model contractnak.
+2. Ha a design doc korabbi wordingje a remote `list` cache-hianyt altalanosan `CREATED (remote, not started)` allapotkent mutatna, ez a task a szukebb authority:
+   - `created/not-started` projection csak explicit `remote.json(kind="created")` pointerre ervenyes,
+   - `remote.json(kind="started")` + missing/invalid `state-cache.json` eseten a bubble explicit `unavailable_started` / `cacheStatus=missing|invalid` remote allapotkent marad lathato,
+   - local `state.json` vagy mas local control-plane lifecycle nem lephet elo elnevezes nelkuli remote truthkent.
+3. Ha a design doc a started remote `status` SSH-hibajat ugy fogalmazna, mintha stale cache alapjan tovabbra is lenne sikeres live truth claim, ez a task felulirja:
+   - a `status` fail-closed/unavailable eredmenyt ad,
+   - a cache erintetlen marad,
+   - restart/attach/mutation guidance nem nyilik meg ebben a fazisban.
+
 ## Implementation Target Decision
 
 1. `implementable_now`: `yes`
@@ -91,6 +103,8 @@ owners:
    - `started` pointer eseten a `status` live remote read-model authorityt consume-ol,
    - a `list` default path cache-first marad, mig a live refresh explicit `--refresh` gate alatt tortenik,
    - a local `state-cache.json` csak cache/projection authority marad, nem uj canonical runtime truth,
+   - a `remoteExecutionSummary` aggregate mezok additive read-model metadata-k maradnak, es nem irhatjak felul a retained lifecycle bucketek canonical jelenteseit,
+   - a `compatLifecyclePlaceholder` csak labeled compat branchkent jelenhet meg `stateSource=unavailable_started` mellett, nem onallo remote lifecycle truthkent,
    - runtime-loss vagy SSH-unavailable esetben a surface fail-closed wordinget ad, nem attach/restart claimet.
 2. Ezek hianya vagy kesobbi ownershipje nem lehet `Phase 2E` blocker, mert successor-owned scope:
    - attach launcher/forwarding/interactive consume,
@@ -102,7 +116,7 @@ owners:
 
 ### Goal
 
-Lezarni a remote bubble `status` es `list` operator read-model consume-jat ugy, hogy a surface a remote runtime allapotat irja le a megfelelo freshness-forras jelolesével, mikozben:
+Lezarni a remote bubble `status` es `list` operator read-model consume-jat ugy, hogy a surface a remote runtime allapotat irja le a megfelelo freshness-forras jelolesevel, mikozben:
 1. a local gep nem lesz surrogate runtime authority,
 2. a `state-cache.json` cache/projection szerepe explicit marad,
 3. a created-vs-started remote pointer elteres fail-closed read-pathkent jelenik meg,
@@ -326,9 +340,9 @@ Lezarni a remote bubble `status` es `list` operator read-model consume-jat ugy, 
 |---|---|---|---|---|---|---|---|
 | `BubbleListInput` / CLI list options | `repoPath?`, `cwd?`, `now?`; CLI: `--repo`, `--json` | additive `refresh?: boolean`; CLI: optional `--refresh` | existing fields | `refresh` | non-breaking | P1 | required-now |
 | internal `RemoteBubbleStatusSnapshot` | N/A | new normalized remote adapter result | `state`, `round`, `activeAgent`, `activeRole`, `activeSince`, `lastCommandAt`, `runtimeAvailability` | `executionContext`, `maxRounds`, `lastCheckedAt`, remote-runtime diagnostics fields | non-breaking internal | P1 | required-now |
-| `BubbleStatusView` | local-only lifecycle/watchdog/meta-review projection | additive remote projection metadata + explicit local/remote merge rule | existing status fields retained; local host-specific mezok retained | `remoteExecution` view: `alias`, `host`, `pointerKind`, `statusSource`, `cacheStatus`, `runtimeAvailability`, `remoteClonePath?`, `lastCacheCheckAt?` | non-breaking | P1 | required-now |
-| `BubbleListEntry` | local state/runtime/attention projection | additive remote projection metadata + explicit source semantics | existing list fields retained; started remote bubble eseten top-level `state`, `round` cache-derived remote lifecyclekent jelenhet meg, cache missnel pedig legfeljebb explicit compat placeholderkent maradhat a retained consumer signature miatt | `remoteExecution` view: `alias`, `host`, `pointerKind`, `stateSource` (`cache` \| `refresh` \| `created_not_started` \| `unavailable_started`), `cacheStatus`, `remoteClonePath?`, `lastCacheCheckAt?`, `compatLifecyclePlaceholder?` | non-breaking | P1 | required-now |
-| `BubbleListView` repo summary | fixed lifecycle bucket summary only | additive remote summary metadata | existing `byState` retained | `remoteExecutionSummary`: `createdNotStarted`, `unavailableStarted`, `refreshedThisRun?` | non-breaking | P1 | required-now |
+| `BubbleStatusView` | local-only lifecycle/watchdog/meta-review projection | additive remote projection metadata + explicit local/remote merge rule | existing status fields retained; local host-specific mezok retained | `remoteExecution` view: `alias`, `host`, `pointerKind`, `statusSource` (status-only source label for live vs created/not-started vs unavailable status rendering), `cacheStatus`, `runtimeAvailability`, `remoteClonePath?`, `lastCacheCheckAt?` | non-breaking | P1 | required-now |
+| `BubbleListEntry` | local state/runtime/attention projection | additive remote projection metadata + explicit source semantics | existing list fields retained; started remote bubble eseten top-level `state`, `round` cache-derived remote lifecyclekent jelenhet meg, cache missnel pedig legfeljebb explicit compat placeholderkent maradhat a retained consumer signature miatt | `remoteExecution` view: `alias`, `host`, `pointerKind`, `stateSource` (list-entry branch selector: `cache` \| `refresh` \| `created_not_started` \| `unavailable_started`), `cacheStatus`, `remoteClonePath?`, `lastCacheCheckAt?`, `compatLifecyclePlaceholder?` (`0..1` object, only when `stateSource=unavailable_started` and a retained consumer still requires top-level lifecycle fill; fields: `state`, optional `round`, `source='local_control_plane_compat'`) | non-breaking | P1 | required-now |
+| `BubbleListView` repo summary | fixed lifecycle bucket summary only | additive remote summary metadata | existing `byState` retained | `remoteExecutionSummary` (`0..1` object on list view): `createdNotStarted` (non-negative integer), `unavailableStarted` (non-negative integer), `refreshedThisRun?` (optional boolean emitted only for explicit refresh runs) | non-breaking | P1 | required-now |
 | local cache update contract | `state-cache.json` initialized by start only | additive read-model refresh writes after validated remote status | `lastCheckedAt`, `state`, `round`, `maxRounds` | `implementerStatus`, `reviewerStatus` | non-breaking | P1 | required-now |
 
 ### 3) Side Effects Contract
@@ -346,7 +360,7 @@ Lezarni a remote bubble `status` es `list` operator read-model consume-jat ugy, 
 | remote pointer missing | local artifacts | result | retained local status/list path | N/A | info | P1 | required-now |
 | remote pointer `created` | local artifacts | result | local remote/not-started projection, no SSH | N/A | info | P1 | required-now |
 | started remote `status` refresh success | SSH remote status | result | cache refresh + remote/live render | N/A | info | P1 | required-now |
-| started remote `status` SSH failure | SSH remote status | throw | fail-closed unavailable error, cache untouched | `STATUS_REMOTE_STATUS_UNAVAILABLE` | warn | P1 | required-now |
+| started remote `status` SSH failure or invalid payload | SSH remote status | throw | fail-closed unavailable error, cache untouched | `STATUS_REMOTE_STATUS_UNAVAILABLE` | warn | P1 | required-now |
 | started remote `status` runtime missing after live refresh | SSH remote status | result | explicit runtime-loss wording; no restart/attach claim | `STATUS_REMOTE_RUNTIME_MISSING` | warn | P1 | required-now |
 | started remote plain `list` with valid cache | local cache | result | cache-first projection | N/A | info | P1 | required-now |
 | started remote plain `list` with missing/invalid cache | local cache | fallback | remote bubble kept visible as explicit remote/unavailable entry with `stateSource=unavailable_started` + `cacheStatus=missing|invalid`; ha retained top-level lifecycle mezok technikailag kellenek, azok csak compat placeholderkent maradhatnak | `LIST_REMOTE_CACHE_UNAVAILABLE` | warn | P1 | required-now |
@@ -366,11 +380,11 @@ Lezarni a remote bubble `status` es `list` operator read-model consume-jat ugy, 
 | T1 | remote created status projection | remote bubble `remote.json(kind="created")`, no remote clone path | `pairflow bubble status --id <id>` | local remote/not-started projection, zero SSH call | P1 | required-now | `tests/core/bubble/statusBubble.test.ts` |
 | T2 | remote started live status refresh | remote bubble `remote.json(kind="started")`, valid remote target, valid remote status JSON | `pairflow bubble status --id <id>` | remote/live view render + cache refresh | P1 | required-now | `tests/core/bubble/statusBubble.test.ts`, `tests/v11/infrastructure/executor/ssh/sshBubbleStatus.test.ts` |
 | T3 | remote runtime missing wording | started remote bubble, live remote status succeeds but runtime no longer active | `status` | explicit fail-closed runtime-loss wording; nincs restart/attach claim | P1 | required-now | `tests/core/bubble/statusBubble.test.ts`, `tests/cli/bubbleStatusCommand.test.ts` |
-| T4 | remote status SSH unavailable | started remote bubble, SSH status dependency fails | `status` | command fail-closed/unavailable; cache untouched | P1 | required-now | `tests/core/bubble/statusBubble.test.ts` |
+| T4 | remote status unavailable fail-closed | started remote bubble, SSH status dependency fails or returns invalid payload | `status` | command fail-closed/unavailable with `STATUS_REMOTE_STATUS_UNAVAILABLE`; cache untouched | P1 | required-now | `tests/core/bubble/statusBubble.test.ts` |
 | T5 | list default cache-first | started remote bubble with valid `state-cache.json` | `pairflow bubble list` | zero SSH call; cache-based remote entry | P1 | required-now | `tests/core/bubble/listBubbles.test.ts`, `tests/v11/application/list/listCommandApi.test.ts` |
-| T5a | list cache miss unavailable projection | started remote bubble, missing/invalid `state-cache.json`, started pointer present | `pairflow bubble list` | zero SSH call; explicit remote/unavailable projection `stateSource=unavailable_started` + `cacheStatus=missing|invalid`; barmely retained top-level lifecycle mező csak labeled compat placeholder lehet | P1 | required-now | `tests/core/bubble/listBubbles.test.ts` |
-| T5b | list summary unavailable aggregate | mixed list view local + remote cache hit + remote unavailable branch | `pairflow bubble list` | a summary explicit `remoteExecutionSummary.unavailableStarted` jelzest ad; a consume nem kenyszerul pusztan `byState` alapjan remote lifecycle truthot allitani | P1 | required-now | `tests/core/bubble/listBubbles.test.ts`, `tests/cli/bubbleListCommand.test.ts` |
-| T6 | list explicit refresh | started remote bubble(s) with valid remote target | `pairflow bubble list --refresh` | per-bubble remote refresh + cache update + rendered fresh projection | P1 | required-now | `tests/core/bubble/listBubbles.test.ts`, `tests/cli/bubbleListCommand.test.ts` |
+| T5a | list cache miss unavailable projection | started remote bubble, missing/invalid `state-cache.json`, started pointer present | `pairflow bubble list` | zero SSH call; explicit remote/unavailable projection `stateSource=unavailable_started` + `cacheStatus=missing|invalid`; barmely retained top-level lifecycle mezo csak labeled `compatLifecyclePlaceholder` objektummal maradhat | P1 | required-now | `tests/core/bubble/listBubbles.test.ts` |
+| T5b | list summary unavailable aggregate | mixed list view local + remote cache hit + remote unavailable branch | `pairflow bubble list` | a summary explicit `remoteExecutionSummary.unavailableStarted` szamlalot ad; a consume nem kenyszerul pusztan `byState` alapjan remote lifecycle truthot allitani | P1 | required-now | `tests/core/bubble/listBubbles.test.ts`, `tests/cli/bubbleListCommand.test.ts` |
+| T6 | list explicit refresh | started remote bubble(s) with valid remote target | `pairflow bubble list --refresh` | per-bubble remote refresh + cache update + rendered fresh projection; a view optionalisan `remoteExecutionSummary.refreshedThisRun=true` mezovel jelezheti az explicit refresh run-t | P1 | required-now | `tests/core/bubble/listBubbles.test.ts`, `tests/cli/bubbleListCommand.test.ts` |
 | T7 | list refresh partial failure | mixed remote bubbles, egyik refresh sikertelen | `list --refresh` | csak az erintett bubble degradalodik stale/unavailable projekciora; a command nem omlik ossze | P1 | required-now | `tests/core/bubble/listBubbles.test.ts` |
 | T8 | remote created list projection | remote bubble `created` pointerrel | `pairflow bubble list` | remote/not-started entry, zero SSH call | P1 | required-now | `tests/core/bubble/listBubbles.test.ts` |
 | T9 | local bubble baseline retention | local bubbles current statesben | `status` es `list` | retained existing projections es tests | P1 | required-now | `tests/core/bubble/statusBubble.test.ts`, `tests/core/bubble/listBubbles.test.ts` |
