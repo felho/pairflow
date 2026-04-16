@@ -24,8 +24,8 @@ owners:
    - `E2b` direct runtime/orchestration consumer alignment.
 2. Az `E2b` consume-family alignment a `b72242cc3e63a2316738f5e131f81aefcb0ff4c8` merge-ben zart, es a relevant code/test diff a kickoff, ask-human, pass/converged, watchdog, start/restart seam-eket erinti.
 3. Az `E2c` persisted diagnostics / meta-review / read-model fallout closure szinten lezart current-tree predecessor; emiatt ez a sequencing artifact mar nem `E1` vagy `E2c` megnyitasat irja elo kovetkezo aktiv lepeskent, hanem azt rogziti, hogy a remaining open successor mar `E3a`.
-4. A jelenlegi elo implementation target ezert az `plans/tasks/actor-runtime-interface-implementer-pilot-foundation-hardening-phaseE3a.md`: itt kell lezarni a wrapper routing, authoritative-context-first bridge, workspace-prep same-authority foundation, explicit dispatcher fallback policy es non-implementer `human_question` baseline-preservation slice-ot ugy, hogy az `E3b0` mar csak a public `askHuman` command-to-flow wiring explicit, rovidebb predecessor-seamjet owns-olja, az `E3b` pedig mar csak fresh-path activation closuret, az `E3c` pedig parity/fail-closed hardening closuret orokoljon.
-5. A sequencing logika ettol nem valtozik: az archivalt `E2c` sem csuszhatott vissza producer-contract vagy pilot-activation workbe, de a korabban egyben kezelt `E3` activation slice tul szelesnek bizonyult; a nyitott lane igy `E3a -> E3b0 -> E3b -> E3c`, utana `E4`.
+4. A jelenlegi elo implementation target ezert az `plans/tasks/actor-runtime-interface-implementer-pilot-foundation-hardening-phaseE3a.md`: itt kell lezarni a wrapper routing, authoritative-context-first bridge, workspace-prep same-authority foundation, explicit dispatcher fallback policy es non-implementer `human_question` baseline-preservation slice-ot ugy, hogy az `E3b` mar a fresh-path activation closuret owns-olja, benne legfeljebb a szukseges minimalis `askHuman` command-to-flow mainline seam explicitte tetelevel, az `E3c` pedig parity/fail-closed hardening closuret orokoljon.
+5. A sequencing logika ettol nem valtozik: az archivalt `E2c` sem csuszhatott vissza producer-contract vagy pilot-activation workbe, de a korabban kulon kezelt `E3b0` refaktor-szelet nem bizonyult onallo implementalhato closure-nek. A nyitott lane igy `E3a -> E3b -> E3c`, utana `E4`.
 6. Review authority note:
    - approval/review refreshnel a current worktree docs-allapot az authority,
    - a korabbi approval snapshot csak historical trace, nem aktiv sequencing baseline.
@@ -66,8 +66,7 @@ Current-tree sequencing anchor keszitese a discovery utan megmaradt actor-runtim
    - internal_execution_closure: historical predecessor `E2b`
    - read_model_diagnostics_fallout_closure: historical predecessor `E2c`, minimalis fallout alignment csak ott, ahol az explicit boundary projection/status carryovert kenyszerit
    - workflow_orchestration_closure: current open task `E3a`, bounded ownership = wrapper routing + authoritative-context-first bridge + workspace-prep same-authority lock + explicit dispatcher fallback policy + non-implementer `human_question` baseline preservation
-   - consumer_family_alignment_closure: successor task `E3b0`, bounded ownership = public `askHuman` command-to-flow mainline wiring explicit, rovidebb predecessor-seamje preserved behavior mellett
-   - activation_closure: successor task `E3b`, fresh-path activation only; authority-, wrapper- vagy command/orchestration rewiring reopen tiltott
+   - activation_closure: successor task `E3b`, fresh-path activation owned here; a public `askHuman` command-to-flow mainline legszuksegesebb explicitte tetele csak addig engedett, ameddig ugyanennek az activation-owned bounded seamnek a resze marad, authority-, wrapper- vagy broad builder-cleanup dontes nelkul
    - cleanup_recovery_closure: successor taskok `E3c`, majd `E4`
 
 ### Authority Boundary Map
@@ -156,7 +155,6 @@ Current-tree sequencing anchor keszitese a discovery utan megmaradt actor-runtim
    - `E2b direct runtime/orchestration consumer alignment`
    - `E2c persisted diagnostics / meta-review / read-model fallout closure`
    - `E3a implementer wrapper/authority foundation hardening`
-   - `E3b0 askHuman command mainline wiring simplification`
    - `E3b implementer pilot activation`
    - `E3c implementer pilot parity + fail-closed hardening`
    - `E4 reviewer + meta-reviewer rollout / retained adapter cleanup`
@@ -179,7 +177,7 @@ Current-tree sequencing anchor keszitese a discovery utan megmaradt actor-runtim
 | Forbidden fallback | Nincs pane-derived authority vagy success fallback. | A pilot task nem epithet heuristic acceptance-re. | P1 | required-now |
 | Allowed resolution path | A jelenlegi deterministic same-authority path preserved baseline. | Az E1 replacement csak explicit proof mellett cserelheti le. | P1 | required-now |
 | Missing-data rule | Hianyzo authority vagy ack fail-closed / explicit unavailable. | A sequencing nem enged bundled shortcutot. | P1 | required-now |
-| Phase boundary | Foundation -> ack producer/contract -> runtime consumer alignment -> persisted/read-model fallout -> implementer foundation -> askHuman wiring simplification predecessor -> pilot activation -> parity/fail-closed hardening -> multi-role cleanup. | A successor split kotelezo. | P1 | required-now |
+| Phase boundary | Foundation -> ack producer/contract -> runtime consumer alignment -> persisted/read-model fallout -> implementer foundation -> implementer pilot activation (including only the minimal `askHuman` command-to-flow mainline seam needed to close activation ownership) -> parity/fail-closed hardening -> multi-role cleanup. | A successor split kotelezo. | P1 | required-now |
 
 ### 0a) Shared Contract Compatibility
 
@@ -189,7 +187,7 @@ Current-tree sequencing anchor keszitese a discovery utan megmaradt actor-runtim
 | `ActorEmitBaseInput` authority fields | canonical actor emit input | breaking successor | sequencing only; foundation task owns change | `E1` |
 | tmux delivery confirmation contract | delivery runtime, restart/watchdog fallout | breaking successor | sequencing only; contract source-of-truth closure `E2a`, downstream consume/read-model fallout `E2b`/`E2c` | `E2a` contract source, `E2b`/`E2c` downstream fallout |
 | pilot actor routing foundation | implementer flow first | additive hardening | sequencing only | `E3a` |
-| `askHuman` command-to-flow wiring ownership seam | implementer `human_question` command/orchestration consumer family | additive refactor predecessor | sequencing only; a public command mainline explicit, rovidebb predecessor-seamme valik | `E3b0` |
+| `askHuman` command-to-flow mainline seam | implementer `human_question` command/orchestration consumer family | additive activation-owned tightening | sequencing only; az `E3b` activation task owns-olja annyiban, amennyiben ez a fresh-path activation bounded mainline-jahoz szukseges | `E3b` |
 | implementer pilot activation | implementer flow first | additive activation | sequencing only | `E3b` |
 | implementer pilot parity + fail-closed hardening | implementer runtime parity/recovery | fail-closed after activation | sequencing only | `E3c` |
 | reviewer/meta-reviewer retained adapter cleanup | rollout / cleanup consumers | breaking successor | sequencing only | `E4` |
@@ -206,13 +204,12 @@ Current-tree sequencing anchor keszitese a discovery utan megmaradt actor-runtim
 
 | Step | Successor File | Dominant Boundary | Why it must be separate | Must not include |
 |---|---|---|---|---|
-| `E1` | `plans/archive/tasks/actor-runtime-interface-execution-authority-foundation-phaseE1.md` | execution-scoped authority contract | A canonical authority shape formalizalasa megelőzi az osszes consume/activation munkat. | delivery/ack activation, pilot rollout |
-| `E2a` | `plans/archive/tasks/actor-runtime-interface-delivery-ack-producer-contract-phaseE2a.md` | typed delivery / launch producer + shared contract closure | A runtime acceptance truth producer seamje kulon closure; ezt nem szabad consumer rollouttal vagy pilot aktivalassal osszecsomagolni. | runtime/orchestration consume fallout, persisted diagnostics, implementer pilot |
+| `E1` | `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-execution-authority-foundation-phaseE1.md` | execution-scoped authority contract | A canonical authority shape formalizalasa megelőzi az osszes consume/activation munkat. | delivery/ack activation, pilot rollout |
+| `E2a` | `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-delivery-ack-producer-contract-phaseE2a.md` | typed delivery / launch producer + shared contract closure | A runtime acceptance truth producer seamje kulon closure; ezt nem szabad consumer rollouttal vagy pilot aktivalassal osszecsomagolni. | runtime/orchestration consume fallout, persisted diagnostics, implementer pilot |
 | `E2b` | `plans/tasks/actor-runtime-interface-direct-runtime-orchestration-consumer-alignment-phaseE2b.md` | direct runtime/orchestration consumer alignment | A lezart typed ack contract consume-family atallasa kulon compatibility closure; ezt nem szabad a producer semanticszel vagy read-model fallouttal osszemosni. | producer semantics reopen, persisted diagnostics/read-model fallout, implementer pilot |
-| `E2c` | `plans/archive/tasks/actor-runtime-interface-persisted-diagnostics-meta-review-read-model-fallout-phaseE2c.md` | persisted diagnostics + meta-review + read-model fallout | A persisted/projection/status fallout kulon read-model closure volt; itt mar nem szabadott uj ack truthot definialni. | producer contract ujranyitasa, implementer pilot, multi-role cleanup |
+| `E2c` | `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-persisted-diagnostics-meta-review-read-model-fallout-phaseE2c.md` | persisted diagnostics + meta-review + read-model fallout | A persisted/projection/status fallout kulon read-model closure volt; itt mar nem szabadott uj ack truthot definialni. | producer contract ujranyitasa, implementer pilot, multi-role cleanup |
 | `E3a` | `plans/tasks/actor-runtime-interface-implementer-pilot-foundation-hardening-phaseE3a.md` | implementer wrapper/authority foundation hardening | A magas risk-score mellett a pilot activation elott kulon kell lezarni a wrapper + authoritative-context primary route hardeninget ugy, hogy a non-implementer `human_question` baseline ne szukuljon neman, es a dispatcher fallback policy explicit legyen. | runtime activation claim, duplicate/restart parity closure, reviewer/meta-reviewer rollout, non-implementer human-gate baseline rewrite |
-| `E3b0` | `plans/tasks/actor-runtime-interface-askhuman-command-mainline-wiring-simplification-phaseE3b0.md` | askHuman command mainline wiring simplification | A public `askHuman` command-to-flow wiring predecessor kulon refaktor-closure, mert e nelkul az activation task meg mindig implicit plumbing ownershiprol vitazna ahelyett, hogy a fresh-path activationre szukulne. | authority/wrapper/result-shape redesign, runtime activation claim, parity/fail-closed hardening |
-| `E3b` | `plans/tasks/actor-runtime-interface-implementer-pilot-activation-phaseE3b.md` | implementer pilot activation | Az aktiv pilot fresh-path proof csak lezart implementer same-authority foundation es az `E3b0` altal explicitte tett command-to-flow predecessor felett vedheto, es itt sem nyithato ujra authority-, wrapper- vagy command/orchestration-wiring dontes. | authority/wrapper-shape reopen, command/orchestration rewiring, stale/duplicate/restart parity closure, reviewer/meta-reviewer rollout, full adapter cleanup |
+| `E3b` | `plans/tasks/actor-runtime-interface-implementer-pilot-activation-phaseE3b.md` | implementer pilot activation | Az aktiv pilot fresh-path proof lezart implementer same-authority foundation felett vedheto, es owns-olhatja a `human_question` command-to-flow mainline szukseges minimalis explicitte tetelet is addig, ameddig ez ugyanannak az activation-owned bounded seamnek a resze marad. | authority/wrapper-shape reopen, broad builder-only cleanup, stale/duplicate/restart parity closure, reviewer/meta-reviewer rollout, full adapter cleanup |
 | `E3c` | `plans/tasks/actor-runtime-interface-implementer-pilot-parity-and-fail-closed-hardening-phaseE3c.md` | implementer pilot parity + fail-closed hardening | A stale/duplicate/restart parity es a no-second-success minimum contract kulon closure, mert activation utan is sajat fail-closed/recovery kockazatot hordoz. | authority/wrapper-shape reopen, fresh-path activation redesign, reviewer/meta-reviewer rollout, broad adapter cleanup |
 | `E4` | `plans/tasks/actor-runtime-interface-reviewer-meta-rollout-and-adapter-cleanup-phaseE4.md` | multi-role rollout + retained cleanup | A policy-heavy role-ok es a retained adapter cleanup csak a lezart implementer activation + parity utan vedheto. | uj authority foundation vagy uj ack contract |
 
@@ -222,17 +219,16 @@ Normative sequencing rules:
 2. `E2a` merge nelkul `E2b` nem owns-olhat consume-family alignmentet canonical truth claim mellett.
 3. `E2b` merge nelkul `E2c` nem allithat persisted/meta-review/status closuret lezart runtime boundaryre hivatkozva.
 4. `E2c` merge nelkul `E3a` csak historical spike lehetne, canonical implementer foundation hardening nem.
-5. `E3a` merge nelkul `E3b0` nem nyithat canonical command-to-flow wiring simplificationt implementer foundation claim mellett.
-6. `E3b0` merge nelkul `E3b` nem nyithat implementer pilot activationt explicit, rovidebb askHuman mainline claim mellett.
-7. `E3b` merge nelkul `E3c` nem nyithat implementer parity/fail-closed hardeninget aktiv pilot claim mellett.
-8. `E3c` merge nelkul `E4` nem nyithat retained cleanupot role-neutral completion claim mellett.
+5. `E3a` merge nelkul `E3b` nem nyithat implementer pilot activationt implementer foundation claim mellett.
+6. `E3b` merge nelkul `E3c` nem nyithat implementer parity/fail-closed hardeninget aktiv pilot claim mellett.
+7. `E3c` merge nelkul `E4` nem nyithat retained cleanupot role-neutral completion claim mellett.
 9. Ha current-tree implementation kozben minimalis status/diagnostics fallout jelenik meg, azt az eppen aktiv successor task owns-olja, nem uj bundled cleanup task.
 
 ### 0d) Sequencing Simulation
 
 | Simulation ID | Starting Point | Attempted Move | Expected Result | Why this proves the split |
 |---|---|---|---|---|
-| `SIM1_HAPPY_PATH` | current tree: state-derived authority, tmux delivery confirm, no typed ack boundary | `E1 -> E2a -> E2b -> E2c -> E3a -> E3b0 -> E3b -> E3c -> E4` sorrendben haladunk | minden lepes a kovetkezo egyetlen valos blokkolo prereqjet zarja le: authority -> producer ack truth -> consume-family alignment -> persisted/read-model fallout -> implementer foundation -> askHuman command mainline simplification -> implementer fresh-path activation -> implementer parity/fail-closed hardening -> multi-role cleanup | Ez a sorrend koveti a current-tree boundary spreadet, es nem kever authority hardeninget a command/orchestration predecessor-refaktorral, a runtime activation parityval vagy a recovery hardeninggel. |
+| `SIM1_HAPPY_PATH` | current tree: state-derived authority, tmux delivery confirm, no typed ack boundary | `E1 -> E2a -> E2b -> E2c -> E3a -> E3b -> E3c -> E4` sorrendben haladunk | minden lepes a kovetkezo egyetlen valos blokkolo prereqjet zarja le: authority -> producer ack truth -> consume-family alignment -> persisted/read-model fallout -> implementer foundation -> implementer fresh-path activation, benne a legszuksegesebb askHuman mainline seam explicitte tetele -> implementer parity/fail-closed hardening -> multi-role cleanup | Ez a sorrend koveti a current-tree boundary spreadet, es nem kever authority hardeninget broad builder-cleanuppal, a runtime activation parityval vagy a recovery hardeninggel. |
 | `SIM2_SKIP_E1` | current tree-ben nincs explicit `execution_id` / emit-capability shape | kozvetlenul `E2a`, `E2b`, `E3a`, `E3b` vagy `E3c` nyitas | a task review-loopba csuszik, mert az ack vagy pilot tasknak sajat authority-shape dontest kellene hoznia | Bizonyitja, hogy az authority foundation nem optional hygiene, hanem producer-first prerequisite. |
 | `SIM3_SKIP_E2A` | `E1` utan mar van explicit authority shape, de a runtime acceptance meg mindig tmux-confirmation/best-effort | kozvetlen consume-family alignment vagy implementer pilot | a consumer task kenytelen lenne sajat maga definialni, mi szamit `accepted` / `running` truthnak, vagy visszacsuszik pane-derived heuristikara | Bizonyitja, hogy a typed delivery/launch producer boundary kulon closure, nem a consume rollout mellektermeke. |
 | `SIM4_BUNDLE_E2A_E2C` | current tree high-risk fan-out | producer contract + persisted/status/meta-review fallout egy taskban | ugyanabban a taskban vitatnank a canonical ack truthot es annak read-model projectionjet | Bizonyitja, hogy a closure-budget gate tiltja a producer + read-model bundled closuret. |
@@ -241,9 +237,9 @@ Normative sequencing rules:
 Simulation readout:
 
 1. A current tree-ben a foundation gap es a producer/direct-consume prereq closurek mar nem nyitottak: az explicit `execution_id` authority-shape, a typed delivery/launch ack producer seam es a direct runtime/orchestration consume alignment mar merged.
-2. A legerosebb fennmarado nyitott gap ma mar nem persisted/read-model closure, hanem az implementer activation lane, de ez a risk gate szerint tovabbi negy bounded closure-re bontando: elobb `E3a` foundation hardening, utana `E3b0` askHuman command mainline wiring simplification predecessor, majd `E3b` fresh-path pilot activation, vegul `E3c` parity/fail-closed hardening.
+2. A legerosebb fennmarado nyitott gap ma mar nem persisted/read-model closure, hanem az implementer activation lane, de ez a risk gate szerint tovabbi harom bounded closure-re bontando: elobb `E3a` foundation hardening, majd `E3b` fresh-path pilot activation a legszuksegesebb askHuman mainline seam explicitte tetelevel egyutt, vegul `E3c` parity/fail-closed hardening.
 3. Emiatt az elso megmaradt aktivacios elokeszito lepes most mar az implementer wrapper/authority hardening, nem a teljes pilot egyben.
-4. Az `E3a` kimeneti contractja akkor jo, ha az `E3b0` mar nem nyit ujra authority- vagy wrapper-shape dontest, csak a public `askHuman` command-to-flow predecessor seamet teszi explicitte es rovidebbe, az `E3b` ezutan mar csak fresh-path activation bizonyitast hoz, es az `E3c` sem nyitja ujra ezt a foundationt, csak parity/fail-closed hardeninget vegez.
+4. Az `E3a` kimeneti contractja akkor jo, ha az `E3b` mar nem nyit ujra authority- vagy wrapper-shape dontest, csak a fresh-path activation closuret viszi, benne legfeljebb a public `askHuman` command-to-flow bounded mainline legszuksegesebb explicitte tetelevel; az `E3c` sem nyitja ujra ezt a foundationt, csak parity/fail-closed hardeninget vegez.
 5. Reviewer + meta-reviewer rolloutot a simulation tovabbra is csak `E4`-ben engedi, mert ott mar az `E3b` aktivalt es az `E3c` parityval vedett implementer boundaryre lehet epiteni, nem csak a lezart predecesszor contractokra.
 
 ### 1) Call-site Matrix
@@ -286,7 +282,7 @@ Constraint:
 | must-use | `plans/tasks/actor-runtime-interface-capability-contract-phaseB-draft.md` | P1 | required-now |
 | must-use | `plans/tasks/actor-runtime-interface-scenario-simulation-phaseC-matrix.md` | P1 | required-now |
 | must-use | `plans/tasks/actor-runtime-interface-migration-spine-phaseD-plan.md` | P1 | required-now |
-| must-use | current-tree code evidence: `src/v11/shared/actorProtocol/actorEmitContext.ts`, `src/v11/application/actorProtocol/emitActorProtocolV11.ts`, `src/types/protocol.ts`, `src/v11/shared/delivery/tmuxDeliveryContract.ts`, `src/v11/infrastructure/channel/tmux/tmuxDeliveryRuntime.ts`, `src/v11/application/start/startCommandTmuxLaunch.ts` | P1 | required-now |
+| must-use | current-tree code evidence: `src/v11/shared/actorProtocol/actorEmitContext.ts`, `src/v11/application/actorProtocol/emitActorProtocolV11.ts`, `src/types/protocol.ts`, `src/v11/shared/delivery/tmuxDeliveryContract.ts`, `src/v11/infrastructure/channel/tmux/tmuxDeliveryRuntime.ts`, `src/v11/application/start/startCommandTmuxLaunch.ts`, `src/v11/application/askHuman/askHumanCommandApi.ts`, `src/v11/application/askHuman/askHumanCommandOrchestration.ts`, `src/v11/shared/askHuman/askHumanCommandFlowOrchestration.ts`, `src/v11/application/askHuman/runAskHumanFlow.ts` | P1 | required-now |
 | must-not-use | stale 2026-04-12 Phase E state claims current-state factkent | P1 | required-now |
 | must-not-use | bundled single-task pilot implementation | P1 | required-now |
 
@@ -296,7 +292,7 @@ Constraint:
 |---|---|---|---|---|---|---|---|
 | T1 | parent plan no longer reports removed surfaces as live current blockers | stale plan top section exists | docs review fut | a current-state summary mar nem allit public `bubble meta-review` vagy live-run residue-t current blockernek | P1 | required-now | doc review |
 | T2 | sequencing anchor exists | parent plan item 5 hivatkozik a Phase E taskra | docs review fut | letezik a checked-in `plans/tasks/actor-runtime-interface-pilot-cutover-phaseE.md` artifact | P1 | required-now | doc review |
-| T3 | split is explicit | remaining scope authority + ack + pilot + cleanup fan-outot erint | docs review fut | a task explicit `E1, E2a, E2b, E2c, E3a, E3b0, E3b, E3c, E4` successor splitet ad | P1 | required-now | doc review |
+| T3 | split is explicit | remaining scope authority + ack + pilot + cleanup fan-outot erint | docs review fut | a task explicit `E1, E2a, E2b, E2c, E3a, E3b, E3c, E4` successor splitet ad, es kimondja hogy az `E3b0` kulon predecessor-szelet superseded | P1 | required-now | doc review |
 | T4 | current-tree code evidence is reflected | actor wrapper + tmux delivery + missing typed ack ma is current codeben latszik | docs review fut | a sequencing ezeket named current gapskent rogzíti | P1 | required-now | doc review |
 | T5 | bundled Phase E task is explicitly forbidden | high-risk scope maradt hatra | docs review fut | a task kimondja, hogy a maradek implementation nem viheto egy taskban | P1 | required-now | doc review |
 
@@ -309,7 +305,7 @@ Constraint:
 
 | ID | Item | Layer | Priority | Timing | Source | Proposed Action |
 |---|---|---|---|---|---|---|
-| H1 | remaining successor task files explicit kidolgozasa | L2 | P2 | later-hardening | sequencing anchor | Nyisd meg az `E3a`, `E3b0`, `E3b`, `E3c`, `E4` taskokat kulon implementable artifactkent, es a lezart `E1`/`E2a`/`E2b`/`E2c` artifactokat current-tree traceability szerint tartsd karban |
+| H1 | remaining successor task files explicit kidolgozasa | L2 | P2 | later-hardening | sequencing anchor | Nyisd meg az `E3a`, `E3b`, `E3c`, `E4` taskokat kulon implementable artifactkent, tartsd karban a superseded `E3b0` traceabilityt, es a lezart `E1`/`E2a`/`E2b`/`E2c` artifactokat current-tree traceability szerint tartsd karban |
 
 ## Review Control
 
@@ -323,5 +319,5 @@ Task allapot `completed`, ha:
 
 1. a parent plan current-state es statusz allitasa current-tree igazsagra van allitva;
 2. a Phase E sequencing anchor file checked-in allapotban letezik;
-3. az `E1, E2a, E2b, E2c, E3a, E3b0, E3b, E3c, E4` successor split explicit boundary-kkel es must-not-include guardokkal rogzitett;
+3. az `E1, E2a, E2b, E2c, E3a, E3b, E3c, E4` successor split explicit boundary-kkel es must-not-include guardokkal rogzitett, es az `E3b0` superseded traceability note-kent szerepel;
 4. a sequencing current-tree code evidence-re epul, nem historical stale statuszra.

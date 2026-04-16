@@ -32,14 +32,14 @@ owners:
 
 1. A current tree-ben az `E1`, `E2a`, `E2b` es `E2c` predecessor closurek mar merged/allapotban lezartak; ez a task a kovetkezo elo implementation target az implementer lane-en.
 2. Emiatt az `E3a` ownershipje szandekosan szuk: wrapper routing, authoritative-context-first bridge, workspace-prep same-authority lock, outer dispatcher fallback policy explicit rogzitese, es a non-implementer `human_question` baseline preserved lockja.
-3. Az `E3b` es `E3c` csak erre a lezart foundationre epithet ra; ott mar nem nyithato ujra sem az authority-shape, sem a wrapper-model dontes.
+3. Az `E3b` es `E3c` csak erre a lezart foundationre epithet ra; ott mar nem nyithato ujra sem az authority-shape, sem a wrapper-model dontes. A korabban kulon kezelt `E3b0` wiring-refaktor csak annyiban maradhat eletben, amennyiben az `E3b` activation-owned bounded seamjen belul, minimalis mainline explicitte tetelkent zarul.
 4. Local phase-boundary mirror:
    - `authority_contract_foundation_closure`: historical predecessor `E1`
    - `delivery_launch_producer_closure`: historical predecessor `E2a`
    - `internal_execution_closure`: historical predecessor `E2b`
    - `read_model_diagnostics_fallout_closure`: historical predecessor `E2c`
    - `workflow_orchestration_closure`: current open task (`E3a` implementer wrapper/authority foundation hardening); owned slice = wrapper routing + authoritative-context-first bridge + workspace-prep same-authority lock + outer dispatcher fallback policy explicit rogzitese + non-implementer `human_question` baseline preserved lockja
-   - `activation_closure`: successor task (`E3b` implementer pilot activation); fresh-path activation only, authority- vagy wrapper-shape reopen tiltott
+   - `activation_closure`: successor task (`E3b` implementer pilot activation); fresh-path activation owned there, benne legfeljebb a `human_question` mainline legszuksegesebb command-to-flow explicitte tetelevel; authority- vagy wrapper-shape reopen tiltott
    - `cleanup_recovery_closure`: successor tasks (`E3c` implementer pilot parity + fail-closed hardening, majd `E4` reviewer + meta-reviewer rollout / retained adapter cleanup)
 5. Review source-of-truth:
    - a jelenlegi bubble worktree docs-allapota a candidate authority,
@@ -51,7 +51,7 @@ owners:
 
 1. Szukitse bounded foundation slice-ra az implementer pilotot ugy, hogy az implementer `pass` es `human_question` canonical wrapper/authority route-ja review-stabil legyen meg az aktiv pilot claim elott.
 2. Tegye explicitte, hogy az implementer emit bridge authoritative-context-first modellen all, es a compat workspace lookup legfeljebb bridge marad, nem alternativ canonical authority.
-3. Keszitse elo az `E3b` activation taskot es az `E3c` parity hardening taskot ugy, hogy egyikben se kelljen ujra authority- vagy wrapper-shape dontest hozni.
+3. Keszitse elo az `E3b` activation taskot es az `E3c` parity hardening taskot ugy, hogy egyikben se kelljen ujra authority- vagy wrapper-shape dontest hozni; a korabban kulon kezelt `E3b0` wiring-szelet ne maradjon onallo blocker, ha a valos ownership-hatar az activation mainline-on zarul.
 4. Rogzitse explicitten, hogy ez a hardening az implementer pilot path ownershipje; nem teheti implementer-only surface-sze a jelenlegi `human_question` / human-gate baseline-t mas role-ok szamara.
 
 ### Domain / Control Model Summary
@@ -185,7 +185,7 @@ Static successor-lock criteria:
 
 1. Az `E3a` artifactnek explicitten rogzitenie kell, hogy az `E1`-`E2c` predecessor closurek lezart baseline-kent oroklodnek.
 2. Az `E3a` artifactnek explicitten rogzitenie kell, hogy sajat ownershipje wrapper routingra, authoritative-context-first bridge-re, workspace-prep same-authority hardeningre, outer dispatcher fallback policy explicit rogzitesere es a non-implementer `human_question` baseline preserved lockjara szukul.
-3. Az `E3a` artifactnek explicitten rogzitenie kell, hogy az `E3b` mar nem nyithat ujra authority- vagy wrapper-shape dontest, csak activation closuret owns-olhat, az `E3c` pedig csak parity/fail-closed hardening closuret.
+3. Az `E3a` artifactnek explicitten rogzitenie kell, hogy az `E3b` mar nem nyithat ujra authority- vagy wrapper-shape dontest, csak activation closuret owns-olhat, benne legfeljebb a bounded `askHuman` mainline seam szukseges explicitte tetelevel; az `E3c` pedig csak parity/fail-closed hardening closuret.
 
 ### 3) Error and Fallback Contract
 
@@ -216,7 +216,7 @@ Task allapot tovabbra is `implementable`, ha a dokumentum szovege es a bounded i
 3. a `Call-site Matrix` es a `target_files` ugyanazt a bounded seam-setet tukrozi: `src/cli/commands/agent/emit.ts`, `src/v11/shared/actorProtocol/actorEmitContext.ts`, `src/v11/application/actorProtocol/emitActorProtocolV11.ts`, `src/v11/application/actorProtocol/actorProtocolEmitters.ts`, `src/v11/application/pass/passWorkspaceContextPreparation.ts`, `src/v11/application/askHuman/askHumanWorkspaceContextPreparation.ts`, `src/v11/shared/askHuman/askHumanRunningStateValidationChecks.ts`;
 4. az `In Scope` es `Call-site Matrix` explicitten kimondja, hogy az implementer wrapper hardening nem szukitheti neman a non-implementer `human_question` baseline-t, es ezt nemcsak dispatcher-policy, hanem a reviewer/non-implementer `ask-human` running-state role guard explicit baselinejekent is nevesiti;
 5. az `Out of Scope` blokk explicitten felsorolja legalabb ezeket a kizart closureket: duplicate delivery parity; restart recovery parity; tmux ack/provenance containment beyond baseline preservation; implementer pilot activation claim; reviewer/meta-reviewer rollout; reviewer vagy mas non-implementer `human_question` baseline rewrite;
-6. a `Static successor-lock criteria` 3. pontja explicitten kimondja, hogy az `E3b` ownershipje activation closure-re, az `E3c` ownershipje pedig parity/fail-closed hardening closure-re szukul, es egyik sem nyithat ujra authority- vagy wrapper-shape dontest; ezt a `Current Tree Position` local successor sorai is ugyanigy tukrozik.
+6. a `Static successor-lock criteria` 3. pontja explicitten kimondja, hogy az `E3b` ownershipje activation closure-re szukul, benne legfeljebb a bounded `askHuman` mainline seam szukseges explicitte tetelevel, az `E3c` ownershipje pedig parity/fail-closed hardening closure-re; egyik sem nyithat ujra authority- vagy wrapper-shape dontest, es ezt a `Current Tree Position` local successor sorai is ugyanigy tukrozik.
 
 ## L2 - Implementation Notes (Optional)
 

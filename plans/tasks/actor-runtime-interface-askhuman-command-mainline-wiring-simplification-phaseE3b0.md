@@ -2,7 +2,7 @@
 artifact_type: task
 artifact_id: task_actor_runtime_interface_askhuman_command_mainline_wiring_simplification_phaseE3b0_v1
 title: "Actor Runtime Interface AskHuman Command Mainline Wiring Simplification (Phase E3b0)"
-status: implementable
+status: superseded
 updated_at: 2026-04-16
 phase: phaseE3b0
 target_files:
@@ -34,6 +34,18 @@ owners:
 ---
 
 # Task: Actor Runtime Interface AskHuman Command Mainline Wiring Simplification (Phase E3b0)
+
+## Superseded Review Note (2026-04-16)
+
+1. A task kulon predecessor-szeletkent lett megnyitva azzal a celdal, hogy a public `askHuman` command-to-flow wiring explicittebb es rovidebb ownership-seamre zarhato legyen meg az activation elott.
+2. A current-tree code-read es a sikertelen refine-korok alapjan ez a vagas nem bizonyult stabil, onallo implementalhato closure-nek:
+   - a legtobb erintett command/orchestration/builder file thin forwarding vagy dependency-plumbing reteg,
+   - a valos ownership-hatar nem ezek strukturai roviditesenel, hanem az implementer `human_question` activation-result bounded mainline-janal zarul,
+   - standalone refaktorkent a task vagy no-op cleanupba csuszik, vagy belelog az `E3b` activation/projection contractjaiba.
+3. Emiatt ez az artifact `superseded`: az esetlegesen szukseges minimalis command-to-flow mainline explicitte tel az `E3b` activation-owned bounded closure resze.
+4. A task historical traceabilitykent marad meg:
+   - broad builder/plumbing cleanup tovabbra sem nyithato `E3b` cimen,
+   - authority-, wrapper-, result-shape vagy parity/recovery dontes tovabbra sem csuszhat ide vissza.
 
 ## L0 - Policy
 
