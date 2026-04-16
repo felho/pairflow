@@ -51,7 +51,7 @@ async function loadExecutionContextOrThrow(
   input: StartBubbleInput,
   deps: Pick<
     Awaited<ReturnType<typeof resolveStartBubbleDependencies>>,
-    "readReviewerBriefArtifact" | "readReviewerFocusArtifact"
+    "readReviewerBriefArtifact" | "readReviewerFocusArtifact" | "readRemotePointer"
   >,
   resolved?: ResolvedStartBubble
 ): Promise<StartExecutionContext> {
@@ -60,7 +60,9 @@ async function loadExecutionContextOrThrow(
       readReviewerBriefArtifact:
         deps.readReviewerBriefArtifact,
       readReviewerFocusArtifact:
-        deps.readReviewerFocusArtifact
+        deps.readReviewerFocusArtifact,
+      readRemotePointer:
+        deps.readRemotePointer
     }, {
       ...(resolved !== undefined ? { resolved } : {})
     });
@@ -114,6 +116,8 @@ async function runStartFlow(input: {
 }): Promise<{
   startResult: Awaited<ReturnType<typeof runFreshStartFlow>>;
   resolvedTmuxSessionName: string;
+  executionTarget: "local" | "remote";
+  runtimeWorkspacePath: string;
 }> {
   const startResult = input.context.startMode === "fresh"
     ? await runFreshStartFlow({
@@ -131,7 +135,9 @@ async function runStartFlow(input: {
 
   return {
     startResult,
-    resolvedTmuxSessionName
+    resolvedTmuxSessionName,
+    executionTarget: startResult.executionTarget,
+    runtimeWorkspacePath: startResult.runtimeWorkspacePath
   };
 }
 
@@ -207,10 +213,18 @@ export async function startBubble(
     isTmuxSessionAliveDefault
   });
   const context = await loadExecutionContextOrThrow(input, deps, resolved);
-  await claimRuntimeSessionOwnershipOrThrow({
-    context,
-    deps
-  });
+  const bypassRuntimeSessionClaim =
+    context.remoteStartContext !== undefined
+    || (
+      context.startMode === "fresh"
+      && context.resolved.bubbleConfig.executor?.type === "ssh"
+    );
+  if (!bypassRuntimeSessionClaim) {
+    await claimRuntimeSessionOwnershipOrThrow({
+      context,
+      deps
+    });
+  }
 
   let tmuxSessionName: string | null = null;
   const freshProgress: FreshStartProgress = {
@@ -220,7 +234,12 @@ export async function startBubble(
   };
 
   try {
-    const { startResult, resolvedTmuxSessionName } = await runStartFlow({
+    const {
+      startResult,
+      resolvedTmuxSessionName,
+      executionTarget,
+      runtimeWorkspacePath
+    } = await runStartFlow({
       context,
       deps,
       freshProgress
@@ -238,7 +257,9 @@ export async function startBubble(
         start_mode: context.startMode,
         state: startResult.written.state.state,
         tmux_session_name: resolvedTmuxSessionName,
-        worktree_path: context.resolved.bubblePaths.worktreePath
+        worktree_path: context.resolved.bubblePaths.worktreePath,
+        execution_target: executionTarget,
+        runtime_workspace_path: runtimeWorkspacePath
       },
       now: context.now
     });
@@ -247,13 +268,15 @@ export async function startBubble(
       bubbleId: context.resolved.bubbleId,
       state: startResult.written.state,
       tmuxSessionName: resolvedTmuxSessionName,
-      worktreePath: context.resolved.bubblePaths.worktreePath
+      worktreePath: context.resolved.bubblePaths.worktreePath,
+      executionTarget,
+      runtimeWorkspacePath
     });
   } catch (error) {
     await cleanupFailedStart({
       context,
       deps,
-      ownershipClaimed: true,
+      ownershipClaimed: !bypassRuntimeSessionClaim,
       workspaceBootstrapped: freshProgress.workspaceBootstrapped,
       tmuxSessionName,
       preparingState: freshProgress.preparingState

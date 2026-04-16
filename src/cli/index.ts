@@ -460,8 +460,20 @@ async function handleBubbleStartCommand(args: string[]): Promise<number> {
     return 0;
   }
 
+  const workspaceLabel =
+    result.executionTarget === "remote" ? "remoteClone" : "worktree";
+  const workspacePath =
+    result.executionTarget === "remote"
+      ? result.runtimeWorkspacePath
+      : result.worktreePath;
+  if (result.executionTarget === "remote") {
+    process.stdout.write(
+      `Started bubble ${result.bubbleId}: ${workspaceLabel} ${workspacePath}\n`
+    );
+    return 0;
+  }
   process.stdout.write(
-    `Started bubble ${result.bubbleId}: session ${result.tmuxSessionName}, worktree ${result.worktreePath}\n`
+    `Started bubble ${result.bubbleId}: session ${result.tmuxSessionName}, ${workspaceLabel} ${workspacePath}\n`
   );
   return 0;
 }

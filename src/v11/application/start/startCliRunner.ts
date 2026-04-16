@@ -13,6 +13,7 @@ import {
 import {
   hasIdeationMetadataParseWarning
 } from "../../domain/ideation/ideationMetadata.js";
+import { createStartBubbleError } from "./startCommandRuntime.js";
 import { startCliDependencyDefaults } from "./startCommandDependencyDefaults.js";
 import { parseBubbleStartCommandOptions } from "./startCliOptions.js";
 import type { ResolvedBubbleById } from "../../shared/ports/bubbleLookup.js";
@@ -31,6 +32,10 @@ interface ResolvedBubbleStartDependencies {
   register: typeof startCliDependencyDefaults.registerRepoInRegistry;
   runStartBubble: typeof startBubble;
   reportWarning: (message: string) => void;
+}
+
+function isRemoteSshBubble(resolvedBubble: ResolvedBubbleById): boolean {
+  return resolvedBubble.bubbleConfig.executor?.type === "ssh";
 }
 
 async function runTmuxAttach(sessionName: string): Promise<void> {
@@ -159,6 +164,18 @@ export async function runBubbleStartCommand(
       ...(options.repo !== undefined ? { repoPath: options.repo } : {}),
       cwd
     });
+    if (options.attach && isRemoteSshBubble(resolvedBubble)) {
+      throw createStartBubbleError({
+        reasonCode: "START_REMOTE_ATTACH_UNSUPPORTED",
+        message:
+          `bubble ${options.id} uses remote SSH execution; \`pairflow bubble start --attach\` is not supported in this phase. Start without --attach.`,
+        context: {
+          bubble_id: options.id,
+          repo_path: resolvedBubble.repoPath,
+          executor_type: "ssh"
+        }
+      });
+    }
     warnOnIdeationMetadataParseFailure({
       bubbleId: options.id,
       bubbleConfig: resolvedBubble.bubbleConfig,

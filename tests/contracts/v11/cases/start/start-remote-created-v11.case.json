@@ -1,0 +1,26 @@
+{
+  "id": "start-remote-created-v11",
+  "command": "start",
+  "mode": "v11",
+  "description": "Start contract case for successful first remote SSH activation from a created remote pointer.",
+  "input": {
+    "fixture": {
+      "scenario": "remote_created"
+    }
+  },
+  "expected": {
+    "status": "ok",
+    "reasonCode": "STARTED",
+    "stateSubset": {
+      "state": "RUNNING"
+    }
+  },
+  "tags": [
+    "seed",
+    "m0",
+    "start",
+    "v11",
+    "remote",
+    "success-path"
+  ]
+}

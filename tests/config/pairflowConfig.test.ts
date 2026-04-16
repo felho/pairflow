@@ -161,6 +161,47 @@ pairflow_sync_command = "   "
     }
   });
 
+  it("rejects multi-word pairflow_command on the TOML parse path", () => {
+    try {
+      parsePairflowGlobalConfigToml(`
+[remotes.workstation]
+host = "office-ws"
+repo_base = "/data/repos"
+pairflow_command = "node ./dist/cli/index.js"
+`);
+      throw new Error("Expected parsePairflowGlobalConfigToml to throw.");
+    } catch (error) {
+      expect(error).toBeInstanceOf(SchemaValidationError);
+      expect((error as SchemaValidationError).errors).toEqual([
+        {
+          path: "remotes.workstation.pairflow_command",
+          message:
+            "PAIRFLOW_REMOTE_CONFIG_INVALID: Must be a single executable token without whitespace"
+        }
+      ]);
+    }
+  });
+
+  it("rejects option-like remote host tokens on the TOML parse path", () => {
+    try {
+      parsePairflowGlobalConfigToml(`
+[remotes.workstation]
+host = "-Jjumpbox"
+repo_base = "/data/repos"
+`);
+      throw new Error("Expected parsePairflowGlobalConfigToml to throw.");
+    } catch (error) {
+      expect(error).toBeInstanceOf(SchemaValidationError);
+      expect((error as SchemaValidationError).errors).toEqual([
+        {
+          path: "remotes.workstation.host",
+          message:
+            "PAIRFLOW_REMOTE_CONFIG_INVALID: Must be a single SSH token without whitespace and may not start with '-'"
+        }
+      ]);
+    }
+  });
+
   it("rejects top-level keys that appear after a [remotes.<name>] section", () => {
     try {
       parsePairflowGlobalConfigToml(`
@@ -338,6 +379,53 @@ open_command = "unterminated
         (error) => error.path === "remotes.broken.default_port_forwards[1]"
       )
     ).toBe(true);
+  });
+
+  it("rejects remote host tokens that could be parsed as ssh/scp options", () => {
+    const result = validatePairflowGlobalConfig({
+      remotes: {
+        broken: {
+          host: "-oProxyCommand=evil",
+          repo_base: "/repos"
+        }
+      }
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) {
+      return;
+    }
+    expect(result.errors).toEqual([
+      {
+        path: "remotes.broken.host",
+        message:
+          "PAIRFLOW_REMOTE_CONFIG_INVALID: Must be a single SSH token without whitespace and may not start with '-'"
+      }
+    ]);
+  });
+
+  it("rejects remote user tokens that are not a single safe ssh token", () => {
+    const result = validatePairflowGlobalConfig({
+      remotes: {
+        broken: {
+          host: "ssh-host",
+          user: "dev ops",
+          repo_base: "/repos"
+        }
+      }
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) {
+      return;
+    }
+    expect(result.errors).toEqual([
+      {
+        path: "remotes.broken.user",
+        message:
+          "PAIRFLOW_REMOTE_CONFIG_INVALID: Must be a single SSH token without whitespace and may not start with '-'"
+      }
+    ]);
   });
 
   it("fails closed when default_port_forwards contains any invalid entry", () => {

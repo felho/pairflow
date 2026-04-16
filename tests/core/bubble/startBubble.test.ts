@@ -1,6 +1,6 @@
 import { mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import { homedir, tmpdir } from "node:os";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import { spawn } from "node:child_process";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -57,6 +57,18 @@ import {
 import { buildResumedState } from "../../../src/v11/application/start/startCommandFlows.js";
 import { startCommandContextDefaults } from "../../../src/v11/application/start/startCommandDependencyDefaults.js";
 import type { UpsertRuntimeSessionInput } from "../../../src/v11/shared/ports/runtimeSessions.js";
+import {
+  remoteCloneStartModeEnvVar,
+  remoteCloneStartModeValue,
+  remoteCloneWorkspaceRootEnvVar
+} from "../../../src/v11/application/start/startCommandRemoteExecution.js";
+import type { ExecuteRemoteBubbleStartInput } from "../../../src/v11/application/start/startCommandContract.js";
+import {
+  readRemotePointer,
+  readRemoteStateCache,
+  writeRemotePointer
+} from "../../../src/v11/infrastructure/artifact/bubble/remoteExecutionArtifacts.js";
+import { runGit } from "../../helpers/git.js";
 
 const tempDirs: string[] = [];
 
@@ -65,6 +77,14 @@ async function createTempRepo(prefix: string = "pairflow-start-bubble-"): Promis
   tempDirs.push(root);
   await initGitRepository(root);
   return root;
+}
+
+async function addOriginRemote(repoPath: string, remoteName: string = "origin"): Promise<string> {
+  const remotePath = await mkdtemp(join(tmpdir(), "pairflow-start-origin-"));
+  tempDirs.push(remotePath);
+  await runGit(remotePath, ["init", "--bare"]);
+  await runGit(repoPath, ["remote", "add", remoteName, remotePath]);
+  return remotePath;
 }
 
 async function assertBashParses(command: string): Promise<void> {
@@ -569,6 +589,998 @@ describe("startBubble", () => {
     expect(policySnapshot).toBe(`${reviewerSeverityOntologyFullMarkdown}\n`);
     await assertBashParses(implementerCommand);
     await assertBashParses(reviewerCommand);
+  });
+
+  it("runs remote first-start through the remote execution seam and persists started artifacts", async () => {
+    const repoPath = await createTempRepo();
+    await addOriginRemote(repoPath);
+    const created = await createBubble({
+      id: "b_start_remote_01",
+      repoPath,
+      baseBranch: "main",
+      reviewArtifactType: "code",
+      task: "Remote start task",
+      cwd: repoPath
+    });
+
+    await writeFile(
+      created.paths.bubbleTomlPath,
+      renderBubbleConfigToml({
+        ...created.config,
+        executor: {
+          type: "ssh",
+          remote: "homelab"
+        }
+      }),
+      "utf8"
+    );
+    await writeRemotePointer(created.paths.remotePointerPath, {
+      kind: "created",
+      host: "homelab",
+      portForwards: [3000]
+    });
+    const expectedRemoteClonePath = `~/repos/${basename(repoPath)}--${created.bubbleId}`;
+
+    const executeRemoteBubbleStart = vi.fn(async (input: ExecuteRemoteBubbleStartInput) => {
+      const syncedBubbleToml = input.controlFiles.find((file) =>
+        file.relativePath.endsWith("/bubble.toml")
+      );
+      const syncedState = input.controlFiles.find((file) =>
+        file.relativePath.endsWith("/state.json")
+      );
+      expect(syncedBubbleToml?.content).toContain(`repo_path = "${input.remoteClonePath}"`);
+      expect(JSON.parse(syncedState?.content ?? "{}")).toMatchObject({
+        state: "CREATED"
+      });
+      return {
+        remoteClonePath: input.remoteClonePath,
+        tmuxSessionName: "pf-b_start_remote_01",
+        startedAt: "2026-04-16T10:20:30.000Z",
+        instanceId: "inst_20260416T102030000Z",
+        remoteState: {
+          lastCheckedAt: "2026-04-16T10:20:31.000Z",
+          state: "RUNNING" as const,
+          round: 4,
+          maxRounds: 8,
+          implementerStatus: "idle",
+          reviewerStatus: "working"
+        }
+      };
+    });
+
+    const result = await startBubble(
+      {
+        bubbleId: created.bubbleId,
+        cwd: repoPath,
+        now: new Date("2026-04-16T10:20:30.000Z")
+      },
+      {
+        loadPairflowGlobalConfig: async () => ({
+          remotes: {
+            homelab: {
+              host: "homelab",
+              repo_base: "~/repos"
+            }
+          }
+        }),
+        executeRemoteBubbleStart,
+        claimRuntimeSession: vi.fn(async () => {
+          throw new Error("remote start must not claim runtime session ownership");
+        }),
+        bootstrapWorktreeWorkspace: vi.fn(async () => {
+          throw new Error("remote start must not bootstrap a local worktree");
+        }),
+        launchBubbleTmuxSession: vi.fn(async () => {
+          throw new Error("remote outer start must not launch local tmux");
+        })
+      }
+    );
+
+    expect(executeRemoteBubbleStart).toHaveBeenCalledTimes(1);
+    expect(result.executionTarget).toBe("remote");
+    expect(result.runtimeWorkspacePath).toBe(expectedRemoteClonePath);
+    expect(result.tmuxSessionName).toBe("pf-b_start_remote_01");
+    expect(result.state.state).toBe("RUNNING");
+
+    await expect(readRemotePointer(created.paths.remotePointerPath)).resolves.toEqual({
+      kind: "started",
+      host: "homelab",
+      instanceId: "inst_20260416T102030000Z",
+      remoteClonePath: expectedRemoteClonePath,
+      tmuxSession: "pf-b_start_remote_01",
+      startedAt: "2026-04-16T10:20:30.000Z",
+      portForwards: [3000]
+    });
+    await expect(readRemoteStateCache(created.paths.remoteStateCachePath)).resolves.toEqual({
+      lastCheckedAt: "2026-04-16T10:20:31.000Z",
+      state: "RUNNING",
+      round: 4,
+      maxRounds: 8,
+      implementerStatus: "idle",
+      reviewerStatus: "working"
+    });
+    await expect(readStateSnapshot(created.paths.statePath)).resolves.toMatchObject({
+      state: {
+        state: "RUNNING"
+      }
+    });
+  });
+
+  it("fails closed before remote execution when the created remote pointer is missing", async () => {
+    const repoPath = await createTempRepo();
+    await addOriginRemote(repoPath);
+    const created = await createBubble({
+      id: "b_start_remote_missing_pointer_01",
+      repoPath,
+      baseBranch: "main",
+      reviewArtifactType: "code",
+      task: "Remote pointer missing",
+      cwd: repoPath
+    });
+
+    await writeFile(
+      created.paths.bubbleTomlPath,
+      renderBubbleConfigToml({
+        ...created.config,
+        executor: {
+          type: "ssh",
+          remote: "homelab"
+        }
+      }),
+      "utf8"
+    );
+
+    const executeRemoteBubbleStart = vi.fn(async () => {
+      throw new Error("should not execute remote start");
+    });
+
+    await expect(
+      startBubble(
+        {
+          bubbleId: created.bubbleId,
+          cwd: repoPath,
+          now: new Date("2026-04-16T10:30:00.000Z")
+        },
+        {
+          loadPairflowGlobalConfig: async () => ({
+            remotes: {
+              homelab: {
+                host: "homelab",
+                repo_base: "~/repos"
+              }
+            }
+          }),
+          executeRemoteBubbleStart
+        }
+      )
+    ).rejects.toThrow(/START_REMOTE_POINTER_MISSING/u);
+
+    expect(executeRemoteBubbleStart).not.toHaveBeenCalled();
+  });
+
+  it("fails remote preflight before SSH execution when origin is missing", async () => {
+    const repoPath = await createTempRepo();
+    const created = await createBubble({
+      id: "b_start_remote_preflight_01",
+      repoPath,
+      baseBranch: "main",
+      reviewArtifactType: "code",
+      task: "Remote preflight",
+      cwd: repoPath
+    });
+
+    await writeFile(
+      created.paths.bubbleTomlPath,
+      renderBubbleConfigToml({
+        ...created.config,
+        executor: {
+          type: "ssh",
+          remote: "homelab"
+        }
+      }),
+      "utf8"
+    );
+    await writeRemotePointer(created.paths.remotePointerPath, {
+      kind: "created",
+      host: "homelab"
+    });
+
+    const executeRemoteBubbleStart = vi.fn(async () => {
+      throw new Error("should not execute remote start");
+    });
+
+    await expect(
+      startBubble(
+        {
+          bubbleId: created.bubbleId,
+          cwd: repoPath,
+          now: new Date("2026-04-16T10:40:00.000Z")
+        },
+        {
+          loadPairflowGlobalConfig: async () => ({
+            remotes: {
+              homelab: {
+                host: "homelab",
+                repo_base: "~/repos"
+              }
+            }
+          }),
+          executeRemoteBubbleStart
+        }
+      )
+    ).rejects.toThrow(/START_REMOTE_PREFLIGHT_FAILED/u);
+
+    expect(executeRemoteBubbleStart).not.toHaveBeenCalled();
+    await expect(readRemotePointer(created.paths.remotePointerPath)).resolves.toEqual({
+      kind: "created",
+      host: "homelab"
+    });
+  });
+
+  it("fails remote preflight before SSH execution when the repository has tracked dirty changes", async () => {
+    const repoPath = await createTempRepo();
+    await addOriginRemote(repoPath);
+    const created = await createBubble({
+      id: "b_start_remote_preflight_dirty_01",
+      repoPath,
+      baseBranch: "main",
+      reviewArtifactType: "code",
+      task: "Remote preflight dirty",
+      cwd: repoPath
+    });
+
+    await writeFile(
+      created.paths.bubbleTomlPath,
+      renderBubbleConfigToml({
+        ...created.config,
+        executor: {
+          type: "ssh",
+          remote: "homelab"
+        }
+      }),
+      "utf8"
+    );
+    await writeRemotePointer(created.paths.remotePointerPath, {
+      kind: "created",
+      host: "homelab"
+    });
+    await writeFile(join(repoPath, "README.md"), "# Pairflow dirty\n", "utf8");
+
+    const executeRemoteBubbleStart = vi.fn(async () => {
+      throw new Error("should not execute remote start");
+    });
+
+    await expect(
+      startBubble(
+        {
+          bubbleId: created.bubbleId,
+          cwd: repoPath,
+          now: new Date("2026-04-16T10:42:00.000Z")
+        },
+        {
+          loadPairflowGlobalConfig: async () => ({
+            remotes: {
+              homelab: {
+                host: "homelab",
+                repo_base: "~/repos"
+              }
+            }
+          }),
+          executeRemoteBubbleStart
+        }
+      )
+    ).rejects.toThrow(/START_REMOTE_PREFLIGHT_FAILED/u);
+
+    expect(executeRemoteBubbleStart).not.toHaveBeenCalled();
+    await expect(readRemotePointer(created.paths.remotePointerPath)).resolves.toEqual({
+      kind: "created",
+      host: "homelab"
+    });
+  });
+
+  it("fails closed before SSH execution when the created pointer host drifts from the configured remote host", async () => {
+    const repoPath = await createTempRepo();
+    await addOriginRemote(repoPath);
+    const created = await createBubble({
+      id: "b_start_remote_host_drift_01",
+      repoPath,
+      baseBranch: "main",
+      reviewArtifactType: "code",
+      task: "Remote host drift",
+      cwd: repoPath
+    });
+
+    await writeFile(
+      created.paths.bubbleTomlPath,
+      renderBubbleConfigToml({
+        ...created.config,
+        executor: {
+          type: "ssh",
+          remote: "homelab"
+        }
+      }),
+      "utf8"
+    );
+    await writeRemotePointer(created.paths.remotePointerPath, {
+      kind: "created",
+      host: "old-homelab"
+    });
+
+    const executeRemoteBubbleStart = vi.fn(async () => {
+      throw new Error("should not execute remote start");
+    });
+
+    await expect(
+      startBubble(
+        {
+          bubbleId: created.bubbleId,
+          cwd: repoPath,
+          now: new Date("2026-04-16T10:45:00.000Z")
+        },
+        {
+          loadPairflowGlobalConfig: async () => ({
+            remotes: {
+              homelab: {
+                host: "homelab",
+                repo_base: "~/repos"
+              }
+            }
+          }),
+          executeRemoteBubbleStart
+        }
+      )
+    ).rejects.toMatchObject({
+      reasonCode: "START_REMOTE_POINTER_INVALID"
+    });
+
+    expect(executeRemoteBubbleStart).not.toHaveBeenCalled();
+    await expect(readRemotePointer(created.paths.remotePointerPath)).resolves.toEqual({
+      kind: "created",
+      host: "old-homelab"
+    });
+  });
+
+  it("fails closed before remote execution when the configured remote alias is missing", async () => {
+    const repoPath = await createTempRepo();
+    await addOriginRemote(repoPath);
+    const created = await createBubble({
+      id: "b_start_remote_config_invalid_01",
+      repoPath,
+      baseBranch: "main",
+      reviewArtifactType: "code",
+      task: "Remote config invalid",
+      cwd: repoPath
+    });
+
+    await writeFile(
+      created.paths.bubbleTomlPath,
+      renderBubbleConfigToml({
+        ...created.config,
+        executor: {
+          type: "ssh",
+          remote: "homelab"
+        }
+      }),
+      "utf8"
+    );
+    await writeRemotePointer(created.paths.remotePointerPath, {
+      kind: "created",
+      host: "homelab"
+    });
+
+    const executeRemoteBubbleStart = vi.fn(async () => {
+      throw new Error("should not execute remote start");
+    });
+
+    await expect(
+      startBubble(
+        {
+          bubbleId: created.bubbleId,
+          cwd: repoPath,
+          now: new Date("2026-04-16T10:45:00.000Z")
+        },
+        {
+          loadPairflowGlobalConfig: async () => ({
+            remotes: {
+              other: {
+                host: "other",
+                repo_base: "~/repos"
+              }
+            }
+          }),
+          executeRemoteBubbleStart
+        }
+      )
+    ).rejects.toThrow(/START_REMOTE_CONFIG_INVALID/u);
+
+    expect(executeRemoteBubbleStart).not.toHaveBeenCalled();
+    await expect(readRemotePointer(created.paths.remotePointerPath)).resolves.toEqual({
+      kind: "created",
+      host: "homelab"
+    });
+  });
+
+  it("reports remote warning messages and still succeeds when the sync hook warns", async () => {
+    const repoPath = await createTempRepo();
+    await addOriginRemote(repoPath);
+    const created = await createBubble({
+      id: "b_start_remote_warning_01",
+      repoPath,
+      baseBranch: "main",
+      reviewArtifactType: "code",
+      task: "Remote warning task",
+      cwd: repoPath
+    });
+
+    await writeFile(
+      created.paths.bubbleTomlPath,
+      renderBubbleConfigToml({
+        ...created.config,
+        executor: {
+          type: "ssh",
+          remote: "homelab"
+        }
+      }),
+      "utf8"
+    );
+    await writeRemotePointer(created.paths.remotePointerPath, {
+      kind: "created",
+      host: "homelab"
+    });
+
+    const warnings: string[] = [];
+    await startBubble(
+      {
+        bubbleId: created.bubbleId,
+        cwd: repoPath,
+        now: new Date("2026-04-16T10:50:00.000Z")
+      },
+      {
+        loadPairflowGlobalConfig: async () => ({
+          remotes: {
+            homelab: {
+              host: "homelab",
+              repo_base: "~/repos",
+              pairflow_sync_command: "false"
+            }
+          }
+        }),
+        executeRemoteBubbleStart: async (input) => ({
+          remoteClonePath: input.remoteClonePath,
+          tmuxSessionName: "pf-b_start_remote_warning_01",
+          startedAt: "2026-04-16T10:50:00.000Z",
+          instanceId: "inst_warning_01",
+          remoteState: {
+            lastCheckedAt: "2026-04-16T10:50:01.000Z",
+            state: "RUNNING" as const,
+            round: 1,
+            maxRounds: 8
+          },
+          warnings: ["Pairflow warning: remote sync hook failed but start will continue"]
+        }),
+        reportWarning: (message) => {
+          warnings.push(message);
+        }
+      }
+    );
+
+    expect(warnings).toEqual([
+      "Pairflow warning: remote sync hook failed but start will continue"
+    ]);
+  });
+
+  it("does not recurse into remote orchestration during explicit inner remote start", async () => {
+    const repoPath = await createTempRepo();
+    const created = await createBubble({
+      id: "b_start_remote_inner_01",
+      repoPath,
+      baseBranch: "main",
+      reviewArtifactType: "code",
+      task: "Remote inner start task",
+      cwd: repoPath
+    });
+
+    await writeFile(
+      created.paths.bubbleTomlPath,
+      renderBubbleConfigToml({
+        ...created.config,
+        executor: {
+          type: "ssh",
+          remote: "homelab"
+        }
+      }),
+      "utf8"
+    );
+
+    const previousMode = process.env[remoteCloneStartModeEnvVar];
+    const previousWorkspaceRoot = process.env[remoteCloneWorkspaceRootEnvVar];
+    const previousPairflowWorktreeRoot = process.env.PAIRFLOW_WORKTREE_ROOT;
+    process.env[remoteCloneStartModeEnvVar] = remoteCloneStartModeValue;
+    process.env[remoteCloneWorkspaceRootEnvVar] = repoPath;
+    process.env.PAIRFLOW_WORKTREE_ROOT = repoPath;
+    try {
+      const result = await startBubble(
+        {
+          bubbleId: created.bubbleId,
+          cwd: repoPath,
+          now: new Date("2026-04-16T11:00:00.000Z")
+        },
+        {
+          claimRuntimeSession: vi.fn(async () => {
+            throw new Error("inner remote start must not claim runtime session");
+          }),
+          bootstrapWorktreeWorkspace: vi.fn(async () => {
+            throw new Error("inner remote start must not bootstrap a worktree");
+          }),
+          executeRemoteBubbleStart: vi.fn(async () => {
+            throw new Error("inner remote start must not re-enter remote SSH execution");
+          }),
+          launchBubbleTmuxSession: vi.fn(async () => ({
+            sessionName: "pf-b_start_remote_inner_01"
+          }))
+        }
+      );
+
+      expect(result.executionTarget).toBe("remote");
+      expect(result.runtimeWorkspacePath).toBe(repoPath);
+      expect(result.tmuxSessionName).toBe("pf-b_start_remote_inner_01");
+      expect(result.state.state).toBe("RUNNING");
+    } finally {
+      if (previousMode === undefined) {
+        delete process.env[remoteCloneStartModeEnvVar];
+      } else {
+        process.env[remoteCloneStartModeEnvVar] = previousMode;
+      }
+      if (previousWorkspaceRoot === undefined) {
+        delete process.env[remoteCloneWorkspaceRootEnvVar];
+      } else {
+        process.env[remoteCloneWorkspaceRootEnvVar] = previousWorkspaceRoot;
+      }
+      if (previousPairflowWorktreeRoot === undefined) {
+        delete process.env.PAIRFLOW_WORKTREE_ROOT;
+      } else {
+        process.env.PAIRFLOW_WORKTREE_ROOT = previousPairflowWorktreeRoot;
+      }
+    }
+  });
+
+  it("fails closed when remote inner-start env leaks into a non-ssh bubble", async () => {
+    const repoPath = await createTempRepo();
+    const created = await createBubble({
+      id: "b_start_remote_env_leak_01",
+      repoPath,
+      baseBranch: "main",
+      reviewArtifactType: "code",
+      task: "Remote env leak",
+      cwd: repoPath
+    });
+
+    const previousMode = process.env[remoteCloneStartModeEnvVar];
+    const previousWorkspaceRoot = process.env[remoteCloneWorkspaceRootEnvVar];
+    process.env[remoteCloneStartModeEnvVar] = remoteCloneStartModeValue;
+    process.env[remoteCloneWorkspaceRootEnvVar] = repoPath;
+    try {
+      await expect(
+        startBubble(
+          {
+            bubbleId: created.bubbleId,
+            cwd: repoPath,
+            now: new Date("2026-04-16T11:05:00.000Z")
+          }
+        )
+      ).rejects.toMatchObject({
+        reasonCode: "START_REMOTE_EXECUTION_CONTEXT_INVALID"
+      });
+    } finally {
+      if (previousMode === undefined) {
+        delete process.env[remoteCloneStartModeEnvVar];
+      } else {
+        process.env[remoteCloneStartModeEnvVar] = previousMode;
+      }
+      if (previousWorkspaceRoot === undefined) {
+        delete process.env[remoteCloneWorkspaceRootEnvVar];
+      } else {
+        process.env[remoteCloneWorkspaceRootEnvVar] = previousWorkspaceRoot;
+      }
+    }
+  });
+
+  it("fails closed when remote inner-start env leaks into a local ssh source repo", async () => {
+    const repoPath = await createTempRepo();
+    await addOriginRemote(repoPath);
+    const created = await createBubble({
+      id: "b_start_remote_source_env_leak_01",
+      repoPath,
+      baseBranch: "main",
+      reviewArtifactType: "code",
+      task: "Remote source env leak",
+      cwd: repoPath
+    });
+
+    await writeFile(
+      created.paths.bubbleTomlPath,
+      renderBubbleConfigToml({
+        ...created.config,
+        executor: {
+          type: "ssh",
+          remote: "homelab"
+        }
+      }),
+      "utf8"
+    );
+    await writeRemotePointer(created.paths.remotePointerPath, {
+      kind: "created",
+      host: "homelab"
+    });
+
+    const previousMode = process.env[remoteCloneStartModeEnvVar];
+    const previousWorkspaceRoot = process.env[remoteCloneWorkspaceRootEnvVar];
+    const previousPairflowWorktreeRoot = process.env.PAIRFLOW_WORKTREE_ROOT;
+    process.env[remoteCloneStartModeEnvVar] = remoteCloneStartModeValue;
+    process.env[remoteCloneWorkspaceRootEnvVar] = repoPath;
+    process.env.PAIRFLOW_WORKTREE_ROOT = repoPath;
+    const executeRemoteBubbleStart = vi.fn(async () => {
+      throw new Error("source repo env leak must not bypass remote SSH activation");
+    });
+    try {
+      await expect(
+        startBubble(
+          {
+            bubbleId: created.bubbleId,
+            cwd: repoPath,
+            now: new Date("2026-04-16T11:06:00.000Z")
+          },
+          {
+            loadPairflowGlobalConfig: async () => ({
+              remotes: {
+                homelab: {
+                  host: "homelab",
+                  repo_base: "~/repos"
+                }
+              }
+            }),
+            executeRemoteBubbleStart,
+            launchBubbleTmuxSession: vi.fn(async () => {
+              throw new Error("source repo env leak must not launch local inner-start tmux");
+            })
+          }
+        )
+      ).rejects.toMatchObject({
+        reasonCode: "START_REMOTE_EXECUTION_CONTEXT_INVALID"
+      });
+    } finally {
+      if (previousMode === undefined) {
+        delete process.env[remoteCloneStartModeEnvVar];
+      } else {
+        process.env[remoteCloneStartModeEnvVar] = previousMode;
+      }
+      if (previousWorkspaceRoot === undefined) {
+        delete process.env[remoteCloneWorkspaceRootEnvVar];
+      } else {
+        process.env[remoteCloneWorkspaceRootEnvVar] = previousWorkspaceRoot;
+      }
+      if (previousPairflowWorktreeRoot === undefined) {
+        delete process.env.PAIRFLOW_WORKTREE_ROOT;
+      } else {
+        process.env.PAIRFLOW_WORKTREE_ROOT = previousPairflowWorktreeRoot;
+      }
+    }
+
+    expect(executeRemoteBubbleStart).not.toHaveBeenCalled();
+    await expect(readRemotePointer(created.paths.remotePointerPath)).resolves.toEqual({
+      kind: "created",
+      host: "homelab"
+    });
+    await expect(readStateSnapshot(created.paths.statePath)).resolves.toMatchObject({
+      state: {
+        state: "CREATED"
+      }
+    });
+  });
+
+  it("fails closed when local RUNNING reconciliation fails after remote confirmation", async () => {
+    const repoPath = await createTempRepo();
+    await addOriginRemote(repoPath);
+    const created = await createBubble({
+      id: "b_start_remote_persist_fail_01",
+      repoPath,
+      baseBranch: "main",
+      reviewArtifactType: "code",
+      task: "Remote persist failure",
+      cwd: repoPath
+    });
+
+    await writeFile(
+      created.paths.bubbleTomlPath,
+      renderBubbleConfigToml({
+        ...created.config,
+        executor: {
+          type: "ssh",
+          remote: "homelab"
+        }
+      }),
+      "utf8"
+    );
+    await writeRemotePointer(created.paths.remotePointerPath, {
+      kind: "created",
+      host: "homelab"
+    });
+
+    await expect(
+      startBubble(
+        {
+          bubbleId: created.bubbleId,
+          cwd: repoPath,
+          now: new Date("2026-04-16T11:10:00.000Z")
+        },
+        {
+          loadPairflowGlobalConfig: async () => ({
+            remotes: {
+              homelab: {
+                host: "homelab",
+                repo_base: "~/repos"
+              }
+            }
+          }),
+          executeRemoteBubbleStart: async (input) => ({
+            remoteClonePath: input.remoteClonePath,
+            tmuxSessionName: "pf-b_start_remote_persist_fail_01",
+            startedAt: "2026-04-16T11:10:00.000Z",
+            instanceId: "inst_persist_fail_01",
+            remoteState: {
+              lastCheckedAt: "2026-04-16T11:10:01.000Z",
+              state: "RUNNING" as const,
+              round: 1,
+              maxRounds: 8
+            }
+          }),
+          writeStateSnapshot: async (statePath, state, options) => {
+            if (state.state === "RUNNING") {
+              throw new Error("forced running persistence failure");
+            }
+            return writeStateSnapshot(statePath, state, options);
+          }
+        }
+      )
+    ).rejects.toMatchObject({
+      reasonCode: "START_REMOTE_RECONCILIATION_FAILED"
+    });
+
+    await expect(readRemotePointer(created.paths.remotePointerPath)).resolves.toEqual({
+      kind: "created",
+      host: "homelab"
+    });
+    await expect(readRemoteStateCache(created.paths.remoteStateCachePath)).resolves.toBeNull();
+    await expect(readStateSnapshot(created.paths.statePath)).resolves.toMatchObject({
+      state: {
+        state: "FAILED"
+      }
+    });
+  });
+
+  it("fails closed when the confirmed remote snapshot is not RUNNING", async () => {
+    const repoPath = await createTempRepo();
+    await addOriginRemote(repoPath);
+    const created = await createBubble({
+      id: "b_start_remote_confirmation_invalid_01",
+      repoPath,
+      baseBranch: "main",
+      reviewArtifactType: "code",
+      task: "Remote confirmation invalid",
+      cwd: repoPath
+    });
+
+    await writeFile(
+      created.paths.bubbleTomlPath,
+      renderBubbleConfigToml({
+        ...created.config,
+        executor: {
+          type: "ssh",
+          remote: "homelab"
+        }
+      }),
+      "utf8"
+    );
+    await writeRemotePointer(created.paths.remotePointerPath, {
+      kind: "created",
+      host: "homelab"
+    });
+
+    await expect(
+      startBubble(
+        {
+          bubbleId: created.bubbleId,
+          cwd: repoPath,
+          now: new Date("2026-04-16T11:10:30.000Z")
+        },
+        {
+          loadPairflowGlobalConfig: async () => ({
+            remotes: {
+              homelab: {
+                host: "homelab",
+                repo_base: "~/repos"
+              }
+            }
+          }),
+          executeRemoteBubbleStart: async (input) => ({
+            remoteClonePath: input.remoteClonePath,
+            tmuxSessionName: "pf-b_start_remote_confirmation_invalid_01",
+            startedAt: "2026-04-16T11:10:30.000Z",
+            instanceId: "inst_confirmation_invalid_01",
+            remoteState: {
+              lastCheckedAt: "2026-04-16T11:10:31.000Z",
+              state: "WAITING_HUMAN" as const,
+              round: 1,
+              maxRounds: 8
+            }
+          })
+        }
+      )
+    ).rejects.toMatchObject({
+      reasonCode: "START_REMOTE_CONFIRMATION_INVALID"
+    });
+
+    await expect(readRemotePointer(created.paths.remotePointerPath)).resolves.toEqual({
+      kind: "created",
+      host: "homelab"
+    });
+    await expect(readRemoteStateCache(created.paths.remoteStateCachePath)).resolves.toBeNull();
+    await expect(readStateSnapshot(created.paths.statePath)).resolves.toMatchObject({
+      state: {
+        state: "FAILED"
+      }
+    });
+  });
+
+  it("surfaces rollback failures when local reconciliation rollback also fails", async () => {
+    const repoPath = await createTempRepo();
+    await addOriginRemote(repoPath);
+    const created = await createBubble({
+      id: "b_start_remote_rollback_fail_01",
+      repoPath,
+      baseBranch: "main",
+      reviewArtifactType: "code",
+      task: "Remote rollback failure",
+      cwd: repoPath
+    });
+
+    await writeFile(
+      created.paths.bubbleTomlPath,
+      renderBubbleConfigToml({
+        ...created.config,
+        executor: {
+          type: "ssh",
+          remote: "homelab"
+        }
+      }),
+      "utf8"
+    );
+    await writeRemotePointer(created.paths.remotePointerPath, {
+      kind: "created",
+      host: "homelab"
+    });
+
+    const result = await startBubble(
+      {
+        bubbleId: created.bubbleId,
+        cwd: repoPath,
+        now: new Date("2026-04-16T11:11:00.000Z")
+      },
+      {
+        loadPairflowGlobalConfig: async () => ({
+          remotes: {
+            homelab: {
+              host: "homelab",
+              repo_base: "~/repos"
+            }
+          }
+        }),
+        executeRemoteBubbleStart: async (input) => ({
+          remoteClonePath: input.remoteClonePath,
+          tmuxSessionName: "pf-b_start_remote_rollback_fail_01",
+          startedAt: "2026-04-16T11:11:00.000Z",
+          instanceId: "inst_rollback_fail_01",
+          remoteState: {
+            lastCheckedAt: "2026-04-16T11:11:01.000Z",
+            state: "RUNNING" as const,
+            round: 1,
+            maxRounds: 8
+          }
+        }),
+        writeStateSnapshot: async (statePath, state, options) => {
+          if (state.state === "RUNNING") {
+            throw new Error("forced running persistence failure");
+          }
+          return writeStateSnapshot(statePath, state, options);
+        },
+        removeRemoteStateCache: async () => {
+          throw new Error("forced cache rollback failure");
+        },
+        writeRemotePointer: async (path, value) => {
+          if (value.kind === "created") {
+            throw new Error("forced pointer rollback failure");
+          }
+          return writeRemotePointer(path, value);
+        }
+      }
+    ).catch((error: unknown) => error);
+
+    expect(result).toBeInstanceOf(StartBubbleError);
+    expect(result).toMatchObject({
+      reasonCode: "START_REMOTE_RECONCILIATION_ROLLBACK_FAILED"
+    });
+    if (!(result instanceof StartBubbleError)) {
+      throw new Error("Expected rollback failure to throw StartBubbleError.");
+    }
+    expect(result.context?.rollback_failures).toEqual([
+      "remote_state_cache=forced cache rollback failure",
+      "remote_pointer=forced pointer rollback failure"
+    ]);
+  });
+
+  it("fails closed when remote SSH execution throws before runtime confirmation", async () => {
+    const repoPath = await createTempRepo();
+    await addOriginRemote(repoPath);
+    const created = await createBubble({
+      id: "b_start_remote_exec_fail_01",
+      repoPath,
+      baseBranch: "main",
+      reviewArtifactType: "code",
+      task: "Remote execution failure",
+      cwd: repoPath
+    });
+
+    await writeFile(
+      created.paths.bubbleTomlPath,
+      renderBubbleConfigToml({
+        ...created.config,
+        executor: {
+          type: "ssh",
+          remote: "homelab"
+        }
+      }),
+      "utf8"
+    );
+    await writeRemotePointer(created.paths.remotePointerPath, {
+      kind: "created",
+      host: "homelab"
+    });
+
+    await expect(
+      startBubble(
+        {
+          bubbleId: created.bubbleId,
+          cwd: repoPath,
+          now: new Date("2026-04-16T11:05:00.000Z")
+        },
+        {
+          loadPairflowGlobalConfig: async () => ({
+            remotes: {
+              homelab: {
+                host: "homelab",
+                repo_base: "~/repos"
+              }
+            }
+          }),
+          executeRemoteBubbleStart: async () => {
+            throw new Error("simulated remote ssh mid-sequence failure");
+          }
+        }
+      )
+    ).rejects.toMatchObject({
+      reasonCode: "START_REMOTE_EXECUTION_FAILED"
+    });
+
+    await expect(readRemotePointer(created.paths.remotePointerPath)).resolves.toEqual({
+      kind: "created",
+      host: "homelab"
+    });
+    await expect(readRemoteStateCache(created.paths.remoteStateCachePath)).resolves.toBeNull();
+    await expect(readStateSnapshot(created.paths.statePath)).resolves.toMatchObject({
+      state: {
+        state: "FAILED"
+      }
+    });
   });
 
   it("persists fresh canonical launch workspace authority before tmux launch", async () => {

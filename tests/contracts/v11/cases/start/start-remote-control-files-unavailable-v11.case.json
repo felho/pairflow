@@ -1,0 +1,26 @@
+{
+  "id": "start-remote-control-files-unavailable-v11",
+  "command": "start",
+  "mode": "v11",
+  "description": "Start contract case for failing closed before remote mutation when required local control artifacts cannot be read.",
+  "input": {
+    "fixture": {
+      "scenario": "remote_control_files_unavailable"
+    }
+  },
+  "expected": {
+    "status": "error",
+    "reasonCode": "START_REMOTE_CONTROL_FILES_UNAVAILABLE",
+    "stateSubset": {
+      "state": "CREATED"
+    }
+  },
+  "tags": [
+    "seed",
+    "m0",
+    "start",
+    "v11",
+    "remote",
+    "preflight"
+  ]
+}

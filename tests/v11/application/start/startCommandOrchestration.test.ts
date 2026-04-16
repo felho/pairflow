@@ -15,6 +15,14 @@ import {
   upsertRuntimeSession,
   removeRuntimeSession
 } from "../../../../src/v11/infrastructure/executor/sessionRuntime/runtimeSessionsRegistry.js";
+import {
+  readRemotePointer,
+  removeRemoteStateCache,
+  writeRemotePointer,
+  writeRemoteStateCache
+} from "../../../../src/v11/infrastructure/artifact/bubble/remoteExecutionArtifacts.js";
+import { executeRemoteBubbleStart } from "../../../../src/v11/infrastructure/executor/ssh/sshBubbleStart.js";
+import { loadPairflowGlobalConfig } from "../../../../src/config/pairflowConfig.js";
 import { StartBubbleError } from "../../../../src/v11/application/start/startCommandRuntime.js";
 import {
   mapStartBubbleResult,
@@ -44,6 +52,12 @@ describe("startCommandOrchestration", () => {
     expect(resolved.claimSession).toBe(claimRuntimeSession);
     expect(resolved.upsertSession).toBe(upsertRuntimeSession);
     expect(resolved.removeSession).toBe(removeRuntimeSession);
+    expect(resolved.loadPairflowGlobalConfig).toBe(loadPairflowGlobalConfig);
+    expect(resolved.readRemotePointer).toBe(readRemotePointer);
+    expect(resolved.writeRemotePointer).toBe(writeRemotePointer);
+    expect(resolved.writeRemoteStateCache).toBe(writeRemoteStateCache);
+    expect(resolved.removeRemoteStateCache).toBe(removeRemoteStateCache);
+    expect(resolved.executeRemoteBubbleStart).toBe(executeRemoteBubbleStart);
     expect(resolved.buildResumeSummary).toBe(buildResumeTranscriptSummary);
   });
 
@@ -93,7 +107,24 @@ describe("startCommandOrchestration", () => {
         updatedAt: "2026-03-19T00:00:00.000Z"
       })),
       removeRuntimeSession: vi.fn(async () => true),
-      buildResumeTranscriptSummary: vi.fn(async () => "summary")
+      buildResumeTranscriptSummary: vi.fn(async () => "summary"),
+      loadPairflowGlobalConfig: vi.fn(async () => ({})),
+      readRemotePointer: vi.fn(async () => null),
+      writeRemotePointer: vi.fn(async () => undefined),
+      writeRemoteStateCache: vi.fn(async () => undefined),
+      removeRemoteStateCache: vi.fn(async () => undefined),
+      executeRemoteBubbleStart: vi.fn(async () => ({
+        remoteClonePath: "/remote/repo",
+        tmuxSessionName: "pf-bubble",
+        startedAt: "2026-03-19T00:00:00.000Z",
+        instanceId: "inst_01",
+          remoteState: {
+            lastCheckedAt: "2026-03-19T00:00:00.000Z",
+            state: "RUNNING" as const,
+            round: 1,
+            maxRounds: 8
+          }
+        }))
     };
 
     const fallbackRunWorktreeBootstrapCommand = vi.fn(async () => undefined);
@@ -126,6 +157,12 @@ describe("startCommandOrchestration", () => {
     expect(resolved.claimSession).toBe(overrides.claimRuntimeSession);
     expect(resolved.upsertSession).toBe(overrides.upsertRuntimeSession);
     expect(resolved.removeSession).toBe(overrides.removeRuntimeSession);
+    expect(resolved.loadPairflowGlobalConfig).toBe(overrides.loadPairflowGlobalConfig);
+    expect(resolved.readRemotePointer).toBe(overrides.readRemotePointer);
+    expect(resolved.writeRemotePointer).toBe(overrides.writeRemotePointer);
+    expect(resolved.writeRemoteStateCache).toBe(overrides.writeRemoteStateCache);
+    expect(resolved.removeRemoteStateCache).toBe(overrides.removeRemoteStateCache);
+    expect(resolved.executeRemoteBubbleStart).toBe(overrides.executeRemoteBubbleStart);
     expect(resolved.buildResumeSummary).toBe(overrides.buildResumeTranscriptSummary);
   });
 
@@ -161,14 +198,18 @@ describe("startCommandOrchestration", () => {
       bubbleId: "b_start_01",
       state,
       tmuxSessionName: "pf-b_start_01",
-      worktreePath: "/tmp/worktree"
+      worktreePath: "/tmp/worktree",
+      executionTarget: "local",
+      runtimeWorkspacePath: "/tmp/worktree"
     });
 
     expect(result).toEqual({
       bubbleId: "b_start_01",
       state,
       tmuxSessionName: "pf-b_start_01",
-      worktreePath: "/tmp/worktree"
+      worktreePath: "/tmp/worktree",
+      executionTarget: "local",
+      runtimeWorkspacePath: "/tmp/worktree"
     });
   });
 });

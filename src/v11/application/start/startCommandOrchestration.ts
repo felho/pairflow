@@ -2,8 +2,15 @@ import { buildResumeTranscriptSummary } from "./startCommandResumeSummary.js";
 import type { BubbleStateSnapshot } from "../../../types/bubble.js";
 import type {
   StartBubbleDependencies,
-  StartBubbleResult
+  StartBubbleResult,
+  ExecuteRemoteBubbleStartInput,
+  ExecuteRemoteBubbleStartResult
 } from "./startCommandContract.js";
+import type { PairflowGlobalConfig } from "../../../config/pairflowConfig.js";
+import type {
+  BubbleRemotePointer,
+  BubbleRemoteStateCache
+} from "../../../types/bubble.js";
 import type { LaunchBubbleTmuxSessionAckPort } from "../../shared/ports/tmuxSessions.js";
 import {
   buildPreparingWorkspaceStartRejectMessage,
@@ -44,6 +51,20 @@ interface StartBubbleDependencyDefaults {
     NonNullable<StartBubbleDependencies["removeRuntimeSession"]>;
   writeStateSnapshot:
     NonNullable<StartBubbleDependencies["writeStateSnapshot"]>;
+  loadPairflowGlobalConfig:
+    NonNullable<StartBubbleDependencies["loadPairflowGlobalConfig"]>;
+  runGitCommand:
+    NonNullable<StartBubbleDependencies["runGitCommand"]>;
+  readRemotePointer:
+    NonNullable<StartBubbleDependencies["readRemotePointer"]>;
+  writeRemotePointer:
+    NonNullable<StartBubbleDependencies["writeRemotePointer"]>;
+  writeRemoteStateCache:
+    NonNullable<StartBubbleDependencies["writeRemoteStateCache"]>;
+  removeRemoteStateCache:
+    NonNullable<StartBubbleDependencies["removeRemoteStateCache"]>;
+  executeRemoteBubbleStart:
+    NonNullable<StartBubbleDependencies["executeRemoteBubbleStart"]>;
 }
 
 let startBubbleDependencyDefaultsPromise:
@@ -73,7 +94,21 @@ async function loadStartBubbleDependencyDefaults(): Promise<StartBubbleDependenc
     removeRuntimeSession:
       startBubbleDependencyDefaults.removeRuntimeSession,
     writeStateSnapshot:
-      startBubbleDependencyDefaults.writeStateSnapshot
+      startBubbleDependencyDefaults.writeStateSnapshot,
+    loadPairflowGlobalConfig:
+      startBubbleDependencyDefaults.loadPairflowGlobalConfig,
+    runGitCommand:
+      startBubbleDependencyDefaults.runGitCommand,
+    readRemotePointer:
+      startBubbleDependencyDefaults.readRemotePointer,
+    writeRemotePointer:
+      startBubbleDependencyDefaults.writeRemotePointer,
+    writeRemoteStateCache:
+      startBubbleDependencyDefaults.writeRemoteStateCache,
+    removeRemoteStateCache:
+      startBubbleDependencyDefaults.removeRemoteStateCache,
+    executeRemoteBubbleStart:
+      startBubbleDependencyDefaults.executeRemoteBubbleStart
   }));
   return startBubbleDependencyDefaultsPromise;
 }
@@ -103,6 +138,21 @@ export interface ResolvedStartBubbleDependencies {
   upsertSession: NonNullable<StartBubbleDependencies["upsertRuntimeSession"]>;
   removeSession: NonNullable<StartBubbleDependencies["removeRuntimeSession"]>;
   writeState: NonNullable<StartBubbleDependencies["writeStateSnapshot"]>;
+  loadPairflowGlobalConfig:
+    () => Promise<PairflowGlobalConfig>;
+  runGitCommand:
+    NonNullable<StartBubbleDependencies["runGitCommand"]>;
+  readRemotePointer:
+    (path: string) => Promise<BubbleRemotePointer | null>;
+  writeRemotePointer:
+    (path: string, value: BubbleRemotePointer) => Promise<void>;
+  writeRemoteStateCache:
+    (path: string, value: BubbleRemoteStateCache) => Promise<void>;
+  removeRemoteStateCache:
+    (path: string) => Promise<void>;
+  executeRemoteBubbleStart:
+    (input: ExecuteRemoteBubbleStartInput) => Promise<ExecuteRemoteBubbleStartResult>;
+  reportWarning: (message: string) => void;
   buildResumeSummary:
     NonNullable<StartBubbleDependencies["buildResumeTranscriptSummary"]>;
   readReviewerBriefArtifact: ReadReviewerBriefArtifactPort;
@@ -174,6 +224,32 @@ export async function resolveStartBubbleDependencies(
       ?? startBubbleDependencyDefaults.removeRuntimeSession,
     writeState:
       dependencies.writeStateSnapshot ?? startBubbleDependencyDefaults.writeStateSnapshot,
+    loadPairflowGlobalConfig:
+      dependencies.loadPairflowGlobalConfig
+      ?? startBubbleDependencyDefaults.loadPairflowGlobalConfig,
+    runGitCommand:
+      dependencies.runGitCommand
+      ?? startBubbleDependencyDefaults.runGitCommand,
+    readRemotePointer:
+      dependencies.readRemotePointer
+      ?? startBubbleDependencyDefaults.readRemotePointer,
+    writeRemotePointer:
+      dependencies.writeRemotePointer
+      ?? startBubbleDependencyDefaults.writeRemotePointer,
+    writeRemoteStateCache:
+      dependencies.writeRemoteStateCache
+      ?? startBubbleDependencyDefaults.writeRemoteStateCache,
+    removeRemoteStateCache:
+      dependencies.removeRemoteStateCache
+      ?? startBubbleDependencyDefaults.removeRemoteStateCache,
+    executeRemoteBubbleStart:
+      dependencies.executeRemoteBubbleStart
+      ?? startBubbleDependencyDefaults.executeRemoteBubbleStart,
+    reportWarning:
+      dependencies.reportWarning
+      ?? ((message: string) => {
+        process.stderr.write(`${message}\n`);
+      }),
     buildResumeSummary:
       dependencies.buildResumeTranscriptSummary ?? buildResumeTranscriptSummary,
     readReviewerBriefArtifact:
@@ -221,11 +297,15 @@ export function mapStartBubbleResult(input: {
   state: BubbleStateSnapshot;
   tmuxSessionName: string;
   worktreePath: string;
+  executionTarget: "local" | "remote";
+  runtimeWorkspacePath: string;
 }): StartBubbleResult {
   return {
     bubbleId: input.bubbleId,
     state: input.state,
     tmuxSessionName: input.tmuxSessionName,
-    worktreePath: input.worktreePath
+    worktreePath: input.worktreePath,
+    executionTarget: input.executionTarget,
+    runtimeWorkspacePath: input.runtimeWorkspacePath
   };
 }

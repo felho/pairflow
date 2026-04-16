@@ -19,17 +19,25 @@ import {
 } from "../../shared/start/startStateMutation.js";
 import type { WorktreeBootstrapResult } from "../../shared/ports/worktreeWorkspace.js";
 import { createStartBubbleError } from "./startCommandRuntime.js";
+import {
+  runRemoteCloneInnerStart,
+  runRemoteStartExecution
+} from "./startCommandRemoteExecution.js";
 
 type StartWrittenState = StartLoadedStateSnapshot;
 
 interface FreshStartResult {
   written: StartWrittenState;
   tmuxSessionName: string;
+  executionTarget: "local" | "remote";
+  runtimeWorkspacePath: string;
 }
 
 interface ResumeStartResult {
   written: StartWrittenState;
   tmuxSessionName: string;
+  executionTarget: "local" | "remote";
+  runtimeWorkspacePath: string;
 }
 
 export interface FreshStartProgress {
@@ -138,6 +146,13 @@ export async function runFreshStartFlow(input: {
   deps: ResolvedStartBubbleDependencies;
   progress: FreshStartProgress;
 }): Promise<FreshStartResult> {
+  if (input.context.remoteStartContext !== undefined) {
+    return runRemoteCloneInnerStart(input);
+  }
+  if (input.context.resolved.bubbleConfig.executor?.type === "ssh") {
+    return runRemoteStartExecution(input);
+  }
+
   const preparingWritten = await executeStartPreparingMutation({
     statePath: input.context.resolved.bubblePaths.statePath,
     loadedState: input.context.loadedState,
@@ -205,7 +220,9 @@ export async function runFreshStartFlow(input: {
 
   return {
     written,
-    tmuxSessionName: tmux.sessionName
+    tmuxSessionName: tmux.sessionName,
+    executionTarget: "local",
+    runtimeWorkspacePath: launchWorkspace.workspacePath
   };
 }
 
@@ -255,7 +272,9 @@ export async function runResumeStartFlow(input: {
 
   return {
     written,
-    tmuxSessionName: tmux.sessionName
+    tmuxSessionName: tmux.sessionName,
+    executionTarget: "local",
+    runtimeWorkspacePath: launchWorkspace.workspacePath
   };
 }
 
