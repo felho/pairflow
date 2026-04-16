@@ -27,16 +27,16 @@ Teams often have enough context already, but lose time in long interviews or end
 5. Work type determines minimum artifact chain (`task-only` vs `PRD -> Plan -> Task`).
 6. `later-hardening` items are emitted in a standard Hardening Backlog block.
 7. Contract-boundary override forces at least `Plan -> Task` even for small features.
-8. Complexity-risk triage runs before implementation-oriented Plan/Task drafting.
-9. High boundary-risk scopes should split before implementation; for authority fan-out this often means producer-first sequencing rather than a flat `foundation -> delivery -> activation`.
-10. Shared contract changes require explicit current-consumer inventory and additive-vs-breaking classification.
-11. Authority/read-model/multi-consumer tasks should record an explicit authority boundary map.
+8. Plans are coverage/dependency artifacts, not duplicate task-spec repositories.
+9. Complexity-risk triage primarily drives task sizing and split decisions; plans should not persist stale per-task numeric risk by default.
+10. High boundary-risk scopes should split before implementation; for authority fan-out this often means producer-first sequencing rather than a flat `foundation -> delivery -> activation`.
+11. Shared contract changes require explicit current-consumer inventory and additive-vs-breaking classification.
 12. The authority fan-out vocabulary is an analysis aid, not an automatic 6-phase template; the skill should prefer the smallest safe split.
-13. Tasks that refine existing runtime/canonicalization paths should record baseline-preservation rules so review tightening cannot silently remove required behavior.
-14. If a spec forbids fallback heuristics, it should also say which deterministic same-authority resolution paths remain allowed.
-15. Planning should also enforce a closure-budget view: producer boundary, shared contract, persistence/schema, and multiple consumer-family fallout should not be silently collapsed into one task.
-16. Planning should classify each bounded phase/task by primary task shape so producer work, fail-closed hardening, and coordination/locking do not get silently merged.
-17. Mutable-flow tasks should make the precondition-before-side-effect boundary explicit, including invalid-input side-effect expectations.
+13. Tasks must prove their real scope from `target_files` and touched entrypoints, not just from their label.
+14. Tasks that refine existing runtime/canonicalization paths should record baseline-preservation rules so review tightening cannot silently remove required behavior.
+15. If a spec forbids fallback heuristics, it should also say which deterministic same-authority resolution paths remain allowed.
+16. Mutable-flow tasks should make the precondition-before-side-effect boundary explicit, including invalid-input side-effect expectations.
+17. `ReviewSpec` is two-mode: `plan-mode` validates coverage/dependency/viability, while `task-mode` validates the task artifact plus target-file scope reality.
 
 ## Directory layout
 
