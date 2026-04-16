@@ -98,7 +98,7 @@ owners:
 
 ## Approval Scope / Review Boundary
 
-1. Ez a task akkor tekintheto tisztan approvable `Phase 2D` szeletnek, ha a bounded remote first-start activation closure egyertelmuen bizonyitott, es ezt a `T1-T10` activation-focused test/contract matrix a sajat szeletan belul le tudja fedni:
+1. Ez a task akkor tekintheto tisztan approvable `Phase 2D` szeletnek, ha a bounded remote first-start activation closure egyertelmuen bizonyitott, es ezt a `T1-T10` activation-focused test/contract matrix a sajat szeletan belul le tudja fedni, explicit `T7a/T7b` failure-split mellett:
    - first-start only `remote.json(kind="created")` retained pointerrol,
    - optional `pairflow_sync_command` best-effort consume-kent,
    - deterministic same-authority inner-start repo identity closure a remote clone es a syncelt `bubble.toml` kozott; nincs unresolved `repo_path` / bubble-lookup mismatch,
@@ -277,6 +277,32 @@ Aktivalni a remote bubble elso SSH-start pathjat ugy, hogy a local repo explicit
    - local persisted control-plane / started / cache authority csak sikeres remote runtime confirmation utan irhato ki.
 4. Success-claim rule:
    - ha a remote runtime elindult, de a local `state.json` control-plane reconciliation vagy a local started/cache artifact persistence elbukik, a command teljes kimenete tovabbra is failure; a local operator surface nem claimelhet sikeres started allapotot.
+5. No-compensating-cleanup rule:
+   - ha a remote runtime confirmation mar megtortent, de a local reconciliation/persistence kesobb elbukik, a task nem kovetel meg heurisztikus remote shutdown/delete/cleanup rollbackot a latszolagos atomicitas kedveert,
+   - a command fail-closed marad, a local authority nem claimel success state-et, a remote cleanup/recovery pedig tovabbra is successor-owned.
+
+### Ordered Activation Contract
+
+1. Az aktivacios sorrend required-now:
+   - `executor.remote` -> global remote config lookup closure,
+   - created-pointer consume + local git preflight closure,
+   - optional sync-hook consume,
+   - remote clone/materialization,
+   - canonical control-artifact sync,
+   - deterministic same-authority repo identity closure,
+   - explicit clone-root workspace-authority consume,
+   - explicit inner remote start discriminator/context,
+   - remote runtime confirmation,
+   - local `state.json` reconciliation + `remote.json(kind="started")` + `state-cache.json` write.
+2. A fenti sorrendben a local persisted success authority csak az explicit remote runtime confirmation utan irhato ki.
+3. A canonical control-artifact sync minimumkeszlete:
+   - retained `bubble.toml`,
+   - retained local `state.json`,
+   - retained `transcript.ndjson`,
+   - retained `inbox.ndjson`,
+   - `artifacts/task.md`,
+   - es ha jelen vannak: `artifacts/reviewer-focus.json`, `artifacts/reviewer-policy-snapshot.md`, `artifacts/doc-contract-gates.json`.
+4. Phase 2D-ben sem az ordering, sem a sync-minimumkeszlet nem lazithato implicit fallbackkal, legacy `config.json` authorityval, vagy partial-success claimmel.
 
 ### In Scope
 
@@ -367,6 +393,7 @@ Aktivalni a remote bubble elso SSH-start pathjat ugy, hogy a local repo explicit
 | Attach policy | Remote bubble start nem nyithat attach consume-ot | `--attach` remote bubble-re explicit reject | P1 | required-now |
 | Inner bootstrap ownership | Remote bubble sajat bootstrapja a remote inner start ownershipe | outer local start nem futtathat local `commands.bootstrap` parancsot | P1 | required-now |
 | Missing-data rule | Missing/invalid executor alias vagy created pointer eseten nincs remote start | nincs fallback local start vagy partial remote success claim | P1 | required-now |
+| Post-start persistence failure policy | Remote runtime confirmation utani local persist-hiba tovabbra is command failure | nincs local success claim, es nincs required-now kompenzalo remote shutdown/delete cleanup rollback vagy recovery flow | P1 | required-now |
 
 ### 0a) Shared Contract Compatibility
 
@@ -392,16 +419,16 @@ Aktivalni a remote bubble elso SSH-start pathjat ugy, hogy a local repo explicit
 | ID | File | Function / Entry | Exact Signature | Insertion Point | Expected Behavior | Priority | Timing | Evidence Target |
 |---|---|---|---|---|---|---|---|---|
 | CS1 | `src/v11/application/start/startCommandContext.ts` | start context loading | `loadStartExecutionContext(input, deps, options?) -> Promise<StartExecutionContext>` | start preflight context | remote bubble-nel retained executor/global-config/pointer consume-hoz elegendo contextet epit, es a local `state.json` start-mode/control-plane truth tovabbra is explicit authority marad | P1 | required-now | T1, T2, T3 |
-| CS1a | `src/v11/infrastructure/executor/workspace/bubbleLookup.ts` | remote clone lookup retained contract | `resolveBubbleById(...) -> Promise<ResolvedBubbleById>` | remote inner-start precondition | a remote clone-ba syncelt bubble control-artifact set csak deterministic same-authority repo identity closure mellett eleg a retained lookup contracthoz; nincs legacy `config.json` fallback es nincs unresolved `repo_path` mismatch | P1 | required-now | T1, T7 |
-| CS2 | `src/v11/application/start/startCommandApi.ts` | start orchestration root | `startBubble(input, dependencies?) -> Promise<StartBubbleResult>` | top-level start flow | remote bubble-nel nem claimel local runtime session ownershipot es nem megy local tmux/bootstrap happy pathra | P1 | required-now | T1, T7, T10 |
+| CS1a | `src/v11/infrastructure/executor/workspace/bubbleLookup.ts` | remote clone lookup retained contract | `resolveBubbleById(...) -> Promise<ResolvedBubbleById>` | remote inner-start precondition | a remote clone-ba syncelt bubble control-artifact set csak deterministic same-authority repo identity closure mellett eleg a retained lookup contracthoz; nincs legacy `config.json` fallback es nincs unresolved `repo_path` mismatch | P1 | required-now | T1, T7a |
+| CS2 | `src/v11/application/start/startCommandApi.ts` | start orchestration root | `startBubble(input, dependencies?) -> Promise<StartBubbleResult>` | top-level start flow | remote bubble-nel nem claimel local runtime session ownershipot es nem megy local tmux/bootstrap happy pathra | P1 | required-now | T1, T7a, T7b, T10 |
 | CS2a | `src/v11/application/start/startCommandSession.ts` | runtime session ownership seam | `claimRuntimeSessionOwnership(input: { context: StartExecutionContext; deps: ResolvedStartBubbleDependencies; }) -> Promise<RuntimeSessionRecord>` | local session-claim boundary | remote first-start branch ezt a seamet nem hasznalhatja runtime truthkent; local start/resume retained baseline tovabb el | P1 | required-now | T1, T9, T10 |
 | CS3 | `src/v11/application/start/startCommandFlows.ts` | flow dispatch | `runFreshStartFlow(...)` remote-aware branchingje | fresh start branch | remote executor eseten explicit remote activation flow fut, explicit clone-root workspace-authority consume-val; nem local bootstrap/tmux launch es nem implicit worktree fallback | P1 | required-now | T1, T4, T5, T6 |
 | CS4 | `src/v11/application/start/startCliRunner.ts` | CLI attach policy | `runBubbleStartCommand(args, cwd?, dependencies?) -> Promise<StartBubbleResult | null>` | CLI command path | remote bubble + `--attach` eseten explicit actionable reject, local attach retained baseline mellett | P1 | required-now | T8, T9 |
 | CS4a | `src/v11/application/start/startCommandContract.ts` | public start result contract | `StartBubbleResult` | API/result surface | remote bubble success resultje explicit remote-safe session/workspace summaryra alkalmas, de nem implikal local attach authorityt | P1 | required-now | T1, T10 |
 | CS4b | `src/v11/application/start/startCliOptions.ts`, `src/cli/index.ts` | start help es success summary | CLI help text + stdout summary | user-visible command surface | a retained `--attach` help mellett a remote reject fail-closed marad, a success summary pedig nem teveszti ossze a remote clone pathot local attach/worktree authorityval | P1 | required-now | T8, T10 |
-| CS5 | `src/v11/application/start/startCommandRemoteExecution.ts` | new remote activation seam | `runRemoteStartExecution(input) -> Promise<RemoteStartExecutionResult>` | new start-only execution seam | local preflight, optional sync-hook, remote materialization/start, deterministic same-authority inner-start repo/workspace closure, remote confirmation, local control-plane/pointer/cache persistence egy bounded flowban zarul | P1 | required-now | T1-T7, T10 |
+| CS5 | `src/v11/application/start/startCommandRemoteExecution.ts` | new remote activation seam | `runRemoteStartExecution(input) -> Promise<RemoteStartExecutionResult>` | new start-only execution seam | local preflight, optional sync-hook, remote materialization/start, deterministic same-authority inner-start repo/workspace closure, remote confirmation, local control-plane/pointer/cache persistence egy bounded flowban zarul | P1 | required-now | T1-T6, T7a, T7b, T10 |
 | CS6 | `src/v11/infrastructure/executor/ssh/sshBubbleStart.ts` | SSH/SCP adapter seam | injected command helpers | infrastructure execution seam | remote shell/copy steps explicit adapteren mennek, nincs start-level inline shell string sprawl | P1 | required-now | T1, T4, T5, T6 |
-| CS7 | `src/v11/infrastructure/artifact/bubble/remoteExecutionArtifacts.ts` | pointer/cache write consume | `writeRemotePointer`, `writeRemoteStateCache` | local persistence boundary | successful remote start utan explicit started pointer es initial cache write tortenik, a local `state.json` control-plane reconciliationnel osszhangban | P1 | required-now | T1, T7 |
+| CS7 | `src/v11/infrastructure/artifact/bubble/remoteExecutionArtifacts.ts` | pointer/cache write consume | `writeRemotePointer`, `writeRemoteStateCache` | local persistence boundary | successful remote start utan explicit started pointer es initial cache write tortenik, a local `state.json` control-plane reconciliationnel osszhangban | P1 | required-now | T1, T7b |
 | CS8 | `tests/core/bubble/startBubble.test.ts` es `tests/contracts/v11/start.contract.runner.ts` | remote start coverage | vitest/contract runner | start regression surface | remote start happy path, fail-closed preflight, hook warning, attach reject, local baseline retention | P1 | required-now | T1-T10 |
 
 ### 2) Test Matrix
@@ -414,7 +441,8 @@ Aktivalni a remote bubble elso SSH-start pathjat ugy, hogy a local repo explicit
 | T4 | sync hook absent | valid remote bubble without `pairflow_sync_command` | start | hook skip explicit valid path; start ettol meg mehet tovabb | P1 | required-now | `tests/core/bubble/startBubble.test.ts` |
 | T5 | sync hook fails warning-only | valid remote bubble with failing `pairflow_sync_command` | start | warning keletkezik, de a remote start tovabb folytatodik es sikeres lehet | P1 | required-now | `tests/contracts/v11/cases/start/start-remote-sync-hook-warning-v11.case.json` |
 | T6 | local git preflight fail-closed | missing origin vagy dirty base branch | start | fail remote side effects elott; nincs remote clone/start; nincs local pointer/cache write | P1 | required-now | `tests/contracts/v11/cases/start/start-remote-preflight-missing-origin-v11.case.json`, `tests/core/bubble/startBubble.test.ts` |
-| T7 | remote start step fails | remote clone/artifact sync/remote inner start hiba | start | terminal failure; local started pointer/cache nem claimel success allapotot; remote artifact-set vagy inner-start mode hianya, unresolved same-authority repo identity, vagy explicit workspace-authority hianya is fail-closed error | P1 | required-now | `tests/core/bubble/startBubble.test.ts` |
+| T7a | remote start pre-confirmation step fails | remote clone/artifact sync/remote inner start hiba | start | terminal failure; local started pointer/cache nem claimel success allapotot; remote artifact-set vagy inner-start mode hianya, unresolved same-authority repo identity, vagy explicit workspace-authority hianya is fail-closed error | P1 | required-now | `tests/core/bubble/startBubble.test.ts` |
+| T7b | post-confirmation local persistence fails | remote runtime confirmation utan local reconciliation/persistence hiba | start | terminal failure; local started pointer/cache nem claimel success allapotot; Phase 2D-ben nincs required-now kompenzalo remote shutdown/delete cleanup claim vagy successor-owned recovery flow-korai bevonasa | P1 | required-now | `tests/core/bubble/startBubble.test.ts` |
 | T8 | remote attach reject | valid remote bubble + `--attach` | CLI start command | explicit actionable reject; nincs remote side effect; a retained help surface nem nyit Phase 2D-ben implicit attach supportot | P1 | required-now | `tests/contracts/v11/cases/start/start-remote-attach-rejected-v11.case.json`, `tests/v11/application/start/startCliEntrypointParity.test.ts` |
 | T9 | local start regresszio nincs | non-remote bubble retained baseline | start / start --attach | meglevo local worktree/clone retained behavior valtozatlan | P1 | required-now | existing start tests + new regression assertions |
 | T10 | remote bubble nem claimel local runtime authorityt | valid remote bubble success path | start | nincs local tmux attach path, nincs local runtime session ownership mint remote runtime truth, nincs immediate remote status refreshbol kepzett cache-init, a success summary sem allit local attach/worktree authorityt, es a local `state.json` sem marad stale `CREATED` control-plane allapotban | P1 | required-now | `tests/core/bubble/startBubble.test.ts`, `tests/v11/application/start/startCommandOrchestration.test.ts` |
@@ -428,12 +456,13 @@ Aktivalni a remote bubble elso SSH-start pathjat ugy, hogy a local repo explicit
 5. A local started pointer/cache persistence csak sikeres remote runtime confirmation utan tortenhet.
 6. Phase 2D-ben a remote restart/recovery mar started pointerrol nem required-now; ha a retained pointer mar `kind="started"`, es recovery semantics nem egyertelmuek, a task fail-closed maradjon ahelyett, hogy heurisztikus ujrainditast talal ki.
 7. A `claimRuntimeSessionOwnership` seam local start/resume retained authority marad; remote first-start path csak explicit bypass vagy branch-level kizaras mellett mehet tovabb, de nem teheti ezt remote runtime truth forrassa.
-8. A remote inner start elott a canonical bubble control-artifact setet kell a remote clone-ba syncelni: retained `bubble.toml`, retained local `state.json`, retained `transcript.ndjson`, retained `inbox.ndjson`, `artifacts/task.md`, valamint a reviewer brief/focus artifactok, ha jelen vannak. Legacy `config.json` authority nem talalhato ki.
+8. A remote inner start elott a canonical bubble control-artifact setet kell a remote clone-ba syncelni: retained `bubble.toml`, retained local `state.json`, retained `transcript.ndjson`, retained `inbox.ndjson`, `artifacts/task.md`, valamint ha jelen vannak `artifacts/reviewer-focus.json`, `artifacts/reviewer-policy-snapshot.md`, `artifacts/doc-contract-gates.json`. Legacy `config.json` authority nem talalhato ki.
 9. Az inner remote start elott deterministic same-authority repo identity closure kell a remote clone es a syncelt `bubble.toml` kozott; unresolved `repo_path` / bubble-lookup mismatch nem maradhat Phase 2D-bol nyitva, es nem tolhato at read-model vagy recovery ownershipre.
 10. Az inner remote start branch kivalasztasa explicit adapter-provided execution context vagy ezzel egyenerteku tipizalt discriminator alapjan tortenjen; puszta path-shape, local runtime-session jelenlet, vagy mas heurisztikus jel nem eleg.
 11. A remote activation explicit clone-root workspace-authority consume-val menjen tovabb; ez nem nyithat vissza mar lezart `Phase 1B1-1E` worktree/workspace alignment kerdest es nem relies-olhat implicit worktree fallback truthra.
 12. A sikeres remote first-start utan a local `state.json` control-plane reconciliation required-now ownership; ez nem halaszthato `Phase 2E` read-model consume-ra.
-13. A public `pairflow bubble start` result/help/success-summary remote bubble-nel fail-closed maradjon: `--attach` tovabbra is explicit reject, a sikeres kimenet pedig legfeljebb remote tmux sessiont es remote clone pathot nevezhet meg, de nem allithat implicit local attachot vagy local worktree authorityt.
+13. Ha a remote runtime confirmation mar megvan, de a local reconciliation/persistence kesobb elbukik, a command failure maradjon; Phase 2D nem kovetel meg heurisztikus remote shutdown/delete rollbackot vagy korai cleanup/recovery consume-ot, mert ezek tovabbra is successor-owned.
+14. A public `pairflow bubble start` result/help/success-summary remote bubble-nel fail-closed maradjon: `--attach` tovabbra is explicit reject, a sikeres kimenet pedig legfeljebb remote tmux sessiont es remote clone pathot nevezhet meg, de nem allithat implicit local attachot vagy local worktree authorityt.
 
 ### 4) Must-Use / Must-Not-Use
 
@@ -449,6 +478,7 @@ Aktivalni a remote bubble elso SSH-start pathjat ugy, hogy a local repo explicit
 | must-not-use | unresolved `repo_path` / bubble-lookup mismatch vagy implicit worktree fallback truth elfedese | P1 | required-now |
 | must-not-use | `docs/remote-bubble-execution.md` retained-section map 2-3. pontjaban jelolt konfliktusos start/cache/recovery wordingje mint feluliro authority | P1 | required-now |
 | must-not-use | sync hook fallback `pairflow_command` vagy `repo_base` alapjan | P1 | required-now |
+| must-not-use | local persistence hiba utan heurisztikus remote shutdown/delete cleanup rollback, mintha a cleanup/recovery mar Phase 2D ownership lenne | P1 | required-now |
 
 Retained-section map a `docs/remote-bubble-execution.md` authority-szukitesehez
 (`must-use` + `must-not-use` parban olvasando, nem kulonallo szabalykentes):
@@ -469,3 +499,4 @@ Retained-section map a `docs/remote-bubble-execution.md` authority-szukitesehez
 1. [later-hardening] Remote restart / reboot recovery explicit started-pointer consume-val kulon Phase 3C recovery taskban zarhato le.
 2. [later-hardening] Ha a remote start warning surface strukturalt warning artifactot igenyel a hook/version drift/push diagnostics miatt, azt ne ebben az activation taskban nyissuk meg operator read-modelkent.
 3. [later-hardening] Ha a remote start telemetry kulon metric mezot igenyel a sync-hook warning vagy remote preflight subtype-okhoz, azt kulon follow-upban erdemes megnyitni, nem a Phase 2D bounded activation szeletben.
+4. [later-hardening] Ha a remote runtime mar elindult, de a local reconciliation/persistence elbukott, az esetleges kompenzalo cleanup a `Phase 3B`, az operator-facing remediation/recovery pedig a `Phase 3C` ownershipben zarhato le, nem ebben a first-start activation taskban.
