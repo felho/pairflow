@@ -48,6 +48,16 @@ Include this section when `plan_ref` is non-null. Otherwise say `N/A`.
 4. Task-list impact: <refines|replaces|obsoletes `task_id` list, or `N/A`.>
 5. Inherited validation / exit expectation: <What plan-level evidence or exit expectation this task contributes to, or `N/A`.>
 
+### Canonical Contract Anchors
+
+Include this section when the task refines an already-closed authority/shared/read-model contract. Otherwise say `N/A`.
+
+1. Source-of-truth anchors: <List repo-local docs/code/tests that define the current contract, or `N/A`.>
+2. Canonical elements: <Fields/terms that remain canonical, or `N/A`.>
+3. Guard elements: <Validation/correlation guards that must not be promoted to canonical truth, or `N/A`.>
+4. Compat-only elements: <Rehydration/mirror/compat inputs that must stay secondary, or `N/A`.>
+5. Forbidden reinterpretations: <Meaning changes that are not allowed in this task, or `N/A`.>
+
 ### Scope Reality / Shape Proof
 
 Include this section when `target_files` are known. Otherwise say `N/A`.
@@ -147,7 +157,13 @@ Include this section when the task modifies an existing mutation flow or introdu
 | Missing-data rule | <explicit rule or `N/A`> | <fail-closed/unavailable/error behavior> | P1 | required-now |
 | Phase boundary | <explicit rule or `N/A`> | <what this task owns vs successor tasks across contract/producer/consume/activation/cleanup> | P2 | required-now |
 
-### 0a) Scope Reality and Shape Proof (if applicable)
+### 0a) Canonical Contract Preservation (if applicable)
+
+| Element | Source Anchor | Required Interpretation | This Task Action | Priority | Timing |
+|---|---|---|---|---|---|
+| <canonical/guard/compat term or `N/A`> | <ref or `N/A`> | <meaning that must stay fixed> | <preserve|authorized_reinterpretation|N/A> | P1 | required-now |
+
+### 0b) Scope Reality and Shape Proof (if applicable)
 
 | Item | Rule | Implementation / Review Consequence | Priority | Timing |
 |---|---|---|---|---|
@@ -158,7 +174,7 @@ Include this section when the task modifies an existing mutation flow or introdu
 | Branch inventory note | <explicit rule or `N/A`> | <which branch families must be represented in L1/tests> | P1 | required-now |
 | Shape proof | <explicit rule or `N/A`> | <why the declared bounded-task shape is still true> | P1 | required-now |
 
-### 0b) Plan Linkage and Successor Impact (if applicable)
+### 0c) Plan Linkage and Successor Impact (if applicable)
 
 | Item | Rule | Implementation / Review Consequence | Priority | Timing |
 |---|---|---|---|---|
@@ -168,19 +184,19 @@ Include this section when the task modifies an existing mutation flow or introdu
 | Task-list impact | <refines|replaces|obsoletes|`N/A`> | <what existing open task is affected> | P1 | required-now |
 | Inherited validation / exit expectation | <explicit rule or `N/A`> | <what evidence or exit expectation this task must satisfy> | P1 | required-now |
 
-### 0c) Shared Contract Compatibility (if applicable)
+### 0d) Shared Contract Compatibility (if applicable)
 
 | Shared Contract | Current Consumers | Change Type (`additive|breaking|N/A`) | This Task Action | Deferred Alignment |
 |---|---|---|---|---|
 | <path/interface/result-shape> | <list or `N/A`> | <type> | <what this task does> | <successor task or `N/A`> |
 
-### 0d) Baseline Preservation (if applicable)
+### 0e) Baseline Preservation (if applicable)
 
 | Current Behavior | Preserve/Replace/Forbid | Required Proof | Priority | Timing |
 |---|---|---|---|---|
 | <current deterministic path or `N/A`> | <preserve|replace|forbid> | <equivalence/replacement evidence or `N/A`> | P1 | required-now |
 
-### 0e) Precondition and Side-Effect Boundary (if applicable)
+### 0f) Precondition and Side-Effect Boundary (if applicable)
 
 | Case | Must Be Validated Before | Forbidden Early Side Effects | Required Failure Behavior | Priority | Timing |
 |---|---|---|---|---|---|
@@ -254,6 +270,8 @@ Use this section to track non-blocking review items (`later-hardening`) that sho
 8. If baseline behavior is removed or replaced, the task must name the exact replacement path and the proof expected from validation.
 9. If `plan_ref` is non-null, `Plan Linkage` and the inherited validation/exit expectation are mandatory and must stay consistent with successor impact notes.
 10. If `target_files` are known, `Scope Reality / Shape Proof` is mandatory and the declared task shape must match the inspected touched scope.
+11. If the task refines an already-closed authority/shared contract, `Canonical Contract Anchors` and `Canonical Contract Preservation` are mandatory.
+12. New terminology for an existing contract must map back to source anchors and field roles explicitly before it can become `required-now`.
 
 ## Spec Lock
 

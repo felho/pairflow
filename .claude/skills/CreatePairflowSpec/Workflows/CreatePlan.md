@@ -31,6 +31,7 @@ The plan is a coverage and dependency artifact, not a duplicate task-spec reposi
    - `forbidden_fallback`
    - `allowed_resolution_path`
    - `missing_data_rule`
+   - repo-local source anchors for any already-closed contract being refined
 5. Add a lightweight sequencing note only when task ordering depends on it:
    - producer-first boundary,
    - which downstream consume families remain,
@@ -50,6 +51,28 @@ Policy:
 2. The plan should keep `allowed_resolution_path` when deterministic same-authority resolution matters.
 3. The plan does not need full per-phase closure ownership, per-task shape math, or per-task numeric risk scoring.
 4. If the control model is not stable enough to sequence tasks, stop and ask focused blocker questions before finalizing an implementation-ready plan.
+
+### 1a.1) Run the Closed-Contract Drift Check
+
+Use `references/Closed-Contract-Drift-Check.md`.
+
+Run this when the plan:
+1. refines an existing implementation-oriented plan,
+2. tightens wording around an already-closed authority/shared contract,
+3. introduces new terminology for an existing canonical contract,
+4. changes wording that downstream tasks inherit.
+
+Required output when applicable:
+1. source anchors
+2. canonical elements / closed terms that must remain fixed
+3. any explicitly authorized reinterpretation
+4. drift status
+5. downstream task impact
+
+Policy:
+1. Keep this lightweight in the plan, but do not skip it.
+2. A refined plan must not silently reinterpret a closed canonical contract just because the new wording sounds cleaner.
+3. If drift is ambiguous or unauthorized, stop and refine the plan before treating its open tasks as implementation-ready.
 
 ### 1b) Build the Decomposition
 
@@ -121,6 +144,7 @@ Ask only if blocker data is missing:
    - no dangling predecessor assumptions,
    - no obsolete task left active without note,
    - no missing successor created by a recent split.
+9. If the plan refines an already-closed canonical contract, the wording must still match repo-local source anchors or explicitly cite an authorized reinterpretation.
 
 ### 5) Finalize
 

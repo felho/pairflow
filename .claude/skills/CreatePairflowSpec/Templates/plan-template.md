@@ -32,6 +32,15 @@ owners:
    - downstream consume families that remain separate: <text or `N/A`>
    - cleanup/recovery timing: <included now | deferred | `N/A`>
 
+## Canonical Contract Anchors (Optional)
+
+Use this section when the plan refines wording for an already-closed authority/shared/read-model contract. Otherwise say `N/A`.
+
+1. Source-of-truth anchors: <repo-local docs/code/tests or `N/A`>
+2. Closed canonical elements / terms: <list or `N/A`>
+3. Explicitly authorized reinterpretation (if any): <text or `N/A`>
+4. Downstream task impact: <which tasks inherit this wording and whether they need refinement, or `N/A`>
+
 ## Current Status
 
 ### Completed Work

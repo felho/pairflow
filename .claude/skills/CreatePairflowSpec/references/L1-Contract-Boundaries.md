@@ -17,6 +17,7 @@ L1 categories:
 8. Authority boundary map when authority/read-model/multi-consumer work is in scope
 9. Baseline-preservation and replacement-proof rules when an existing canonicalization/resolution path is refined or removed
 10. Precondition-before-side-effect boundary when an existing mutation flow is modified or coordination primitives are introduced
+11. Canonical contract anchors and field-role classification when a closed authority/shared contract is being refined
 
 Required clarifications inside L1:
 1. Mark required vs optional fields for changed input/output contracts.
@@ -29,5 +30,6 @@ Required clarifications inside L1:
 8. If a current runtime/canonicalization behavior is removed, record the replacement path and the equivalence or intentional-difference proof required from validation.
 9. If invalid input or an unmet precondition must not create side effects, state that explicitly in L1 instead of leaving it implicit in tests.
 10. If a task introduces locks/mutexes/serialization or rollback/retry semantics, capture that boundary explicitly rather than hiding it as an implementation detail.
+11. If a task refines an already-closed contract, record the repo-local source anchors and which elements remain canonical vs guard vs compat so wording drift is reviewable.
 
 Any item not crossing these boundaries should default to `later-hardening`.

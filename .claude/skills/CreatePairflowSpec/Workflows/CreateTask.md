@@ -46,10 +46,13 @@ Create or refine a Pairflow task file using `L0 -> L1 -> L2`.
    - title, scope, refs, likely target files, constraints.
 5. Extract likely:
    - canonical source-of-truth candidates,
+   - repo-local source anchors for any already-closed contract being refined,
    - business invariant and control model,
    - allowed read-path and missing-data rule,
    - allowed deterministic resolution paths inside the same authority chain,
    - forbidden fallback sources,
+   - canonical vs guard vs compat field-role candidates when an existing contract is being clarified,
+   - closed terminology that successor tasks may inherit,
    - existing baseline canonicalization/finalize/reconciliation paths that may need preservation,
    - affected surfaces,
    - authority producer and consumer families,
@@ -122,6 +125,31 @@ Policy:
    - intentionally replaced behavior,
    - or explicitly forbidden behavior.
 7. Do not let `forbidden_fallback` wording accidentally ban deterministic same-authority resolution paths unless the referenced artifact or task says so explicitly.
+
+### 1b.1) Run the Closed-Contract Drift Check
+
+Use `references/Closed-Contract-Drift-Check.md`.
+
+Run this check whenever any of the following is true:
+1. the task refines an existing implementation-oriented artifact,
+2. authority/shared-contract/read-model wording is being tightened or clarified,
+3. the task introduces new terminology for an existing runtime contract,
+4. successor tasks inherit wording from this task.
+
+Required output when applicable:
+1. `source_anchors`
+2. `canonical_elements`
+3. `guard_elements`
+4. `compat_elements`
+5. `closed_terms`
+6. `forbidden_reinterpretations`
+7. `drift_status`
+
+Policy:
+1. Do not finalize an implementable task if the refined wording is only locally coherent but no longer matches repo-local source anchors.
+2. Do not silently downgrade canonical fields into vague "guard" or "compat" language.
+3. New terminology for an existing contract is allowed only if the artifact anchors it to explicit source refs and field roles.
+4. If `drift_status` is `ambiguous_drift` or `unauthorized_reinterpretation`, stop and refine the artifact or route back to plan instead of drafting implementation-ready L1.
 
 ### 1c) Run the Authority Fan-out Scan
 
@@ -258,11 +286,12 @@ Policy:
 1. Generate a draft using `Templates/task-template.md`.
 2. Fill as much as possible from known context.
 3. Mark unknown required fields as `TODO_BLOCKER`.
-4. If risk gate requires split:
+4. When the Closed-Contract Drift Check applies, populate canonical contract anchors and field-role classifications explicitly instead of summarizing them vaguely.
+5. If risk gate requires split:
    - draft only the bounded task you are currently creating,
    - state the split decision explicitly,
    - do not silently keep the full original scope inside one task.
-5. If `plan_ref` exists:
+6. If `plan_ref` exists:
    - include a `Plan Linkage` section,
    - state the parent gap this task closes,
    - state predecessor/successor expectations,
@@ -339,6 +368,11 @@ Required blockers for Task output:
    - what producer/predecessor closure it depends on,
    - and which downstream closures remain for successor tasks.
 18. If the task cannot name a primary bounded-task shape, or mixes producer with fail-closed/coordination work without an explicit bounded proof, the task is not ready.
+19. If the Closed-Contract Drift Check applies, blockers also include:
+   - repo-local source anchors,
+   - canonical vs guard vs compat classification,
+   - forbidden reinterpretations,
+   - drift status proving there is no unauthorized semantic change.
 
 If blockers exist, ask only focused questions for those blockers.
 
@@ -365,23 +399,25 @@ If blockers exist, ask only focused questions for those blockers.
    - refines/replaces/obsoletes any prior open task,
    - inherits which plan-level validation/exit expectation.
 12. Record primary bounded-task shape explicitly, and secondary shape only when justified.
+13. If the Closed-Contract Drift Check applies, include canonical contract anchors and say explicitly which meanings are preserved rather than silently rephrased.
 
 ### 5) L1 pass
 
 Fill each section or mark `N/A`:
 1. Domain/control contract
-2. Scope reality and shape proof (required when `target_files` are known; otherwise `N/A`)
-3. Plan linkage and successor impact (required when `plan_ref` exists; otherwise `N/A`)
-4. Call-site matrix
-5. Data and interface contract
-6. Side effects contract
-7. Error and fallback contract
-8. Dependency constraints
-9. Test matrix (at least one golden path and one invalid case)
-10. Shared contract compatibility (required when a shared interface/result shape changes; otherwise `N/A`)
-11. Baseline preservation (required when an existing canonicalization/resolution path is refined or replaced; otherwise `N/A`)
-12. Closure-budget summary (required when authority/runtime/read-model/shared-contract work is in scope; otherwise `N/A`)
-13. Precondition and side-effect boundary (required when an existing mutation flow is modified or coordination primitives are introduced; otherwise `N/A`)
+2. Canonical contract preservation (required when the Closed-Contract Drift Check applies; otherwise `N/A`)
+3. Scope reality and shape proof (required when `target_files` are known; otherwise `N/A`)
+4. Plan linkage and successor impact (required when `plan_ref` exists; otherwise `N/A`)
+5. Call-site matrix
+6. Data and interface contract
+7. Side effects contract
+8. Error and fallback contract
+9. Dependency constraints
+10. Test matrix (at least one golden path and one invalid case)
+11. Shared contract compatibility (required when a shared interface/result shape changes; otherwise `N/A`)
+12. Baseline preservation (required when an existing canonicalization/resolution path is refined or replaced; otherwise `N/A`)
+13. Closure-budget summary (required when authority/runtime/read-model/shared-contract work is in scope; otherwise `N/A`)
+14. Precondition and side-effect boundary (required when an existing mutation flow is modified or coordination primitives are introduced; otherwise `N/A`)
 
 Rules:
 1. `target_files` must align with call-site matrix.
@@ -402,6 +438,7 @@ Rules:
 13. If the task touches a mutable flow, L1 must make explicit which validations occur before any side effect and what invalid/precondition-failure path proves zero-side-effect or bounded-side-effect behavior.
 14. If `plan_ref` exists, L1 must name the exact parent gap this task closes and what successor work remains or is invalidated.
 15. If the task inherits a plan-level exit expectation, the test matrix or a validation note must make that inheritance concrete enough to review.
+16. If the Closed-Contract Drift Check applies, L1 must make canonical vs guard vs compat roles concrete enough that a reviewer can detect semantic drift, not just wording polish.
 
 ### 5a) Consistency Gate (mandatory before L2)
 
@@ -450,6 +487,11 @@ Run a document-level consistency gate:
    - predecessor/successor expectations are still coherent after any local split,
    - obsolete/refined tasks are named explicitly,
    - and inherited plan-level validation expectations are reflected in L1.
+14. Re-check closed-contract drift when applicable:
+   - source anchors are cited,
+   - canonical elements have not been downgraded to guard/compat language,
+   - new terminology is explicitly mapped,
+   - and downstream inheritance notes do not silently change meaning.
 
 ### 6) L2 pass
 

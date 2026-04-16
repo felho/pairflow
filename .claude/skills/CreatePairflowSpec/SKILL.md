@@ -107,6 +107,44 @@ Policy:
 8. Do not let "forbidden fallback" wording accidentally ban a deterministic same-authority resolution path unless the artifact says so explicitly.
 9. Do not force full `phase_boundary` ownership into plans by default; keep that detail in tasks unless plan sequencing itself depends on it.
 
+## Closed-Contract Drift Check (Mandatory)
+
+Before approving or drafting a refined implementation-oriented Plan or Task that touches an already-established authority/shared contract/read-model contract, run the `Closed-Contract Drift Check`.
+
+Use `references/Closed-Contract-Drift-Check.md`.
+
+This check is especially important when:
+1. an existing canonical authority is being "clarified", "tightened", or "preserved",
+2. a refinement introduces new terminology for an existing contract,
+3. a task/plan inherits wording from an upstream artifact,
+4. a field might silently shift from canonical to guard/compat language,
+5. the artifact is docs-only but still changes implementation-significant contract wording.
+
+Artifact-specific minimums:
+1. `Plan`
+   - keep this lightweight but explicit:
+   - source anchors,
+   - canonical terms/elements that must stay fixed,
+   - any explicitly authorized reinterpretation,
+   - downstream task impact when wording changes.
+2. `Task`
+   - include the concrete canonical-vs-guard-vs-compat classification needed for implementation,
+   - include forbidden reinterpretations when existing runtime meaning must stay closed,
+   - include downstream inheritance constraints when successor tasks must not reopen the contract.
+3. `ReviewSpec`
+   - do not stop at local coherence,
+   - compare the artifact against repo-local source anchors when canonical contract meaning is in play.
+
+Policy:
+1. Local coherence is not enough when a refined artifact touches a closed contract.
+2. If the artifact silently reinterprets a closed contract term or canonical field role, do not mark it implementable/approvable.
+3. New terminology for an existing contract is allowed only when:
+   - it is explicitly anchored to source-of-truth refs,
+   - and its field/term mapping is concrete enough to prove no semantic drift.
+4. Do not let a refinement downgrade a canonical field into vague "guards", "compat input", or similar language unless a higher-level artifact explicitly authorizes that change.
+5. If a docs-only refinement changes implementation-significant meaning, treat it as a contract-risk issue, not as harmless wording polish.
+6. If drift is ambiguous rather than clearly absent, route to refinement or plan-level reconciliation instead of approving on style grounds.
+
 ## Target-File Reality Check (Mandatory for Task Drafting and Task Review)
 
 When `target_files` are known and the files exist, inspect them and, when needed, adjacent entrypoints/call-sites.
@@ -290,6 +328,8 @@ Policy:
 23. Plan slimness is a feature: keep plans focused on coverage, dependency, and sequencing.
 24. Task reality beats task label: bounded-slice claims must be derived from target-file and entrypoint reality.
 25. Review must be mode-specific: `plan-mode` validates coverage/dependency/viability, `task-mode` validates artifact plus scope reality.
+26. Closed-contract meaning must be preserved explicitly: a refinement may not silently reinterpret canonical fields, guards, compat paths, or inherited terms.
+27. If a contract is already closed upstream, new wording must anchor back to those source artifacts before it can become `required-now`.
 
 ## Minimum Contract Rules
 
@@ -367,6 +407,12 @@ Policy:
    - whether a new split task is required,
    - whether a downstream task became obsolete,
    - whether phase ordering is invalidated.
+32. When a refined Plan or Task touches an already-closed authority/shared contract, a `Closed-Contract Drift Check` is mandatory:
+   - source anchors,
+   - canonical vs guard vs compat classification,
+   - forbidden reinterpretations,
+   - and drift status.
+33. A refined artifact must not be marked implementable/approvable if it is only locally coherent but contradicts repo-local source anchors for the same contract.
 
 ## Templates and References
 
@@ -374,6 +420,7 @@ Policy:
 - Plan template: `Templates/plan-template.md`
 - PRD template: `Templates/prd-template.md`
 - Control-model readiness gate: `references/Control-Model-Readiness-Gate.md`
+- Closed-contract drift check: `references/Closed-Contract-Drift-Check.md`
 - L1 boundaries checklist: `references/L1-Contract-Boundaries.md`
 - Reviewer tags snippet: `references/Reviewer-Guidelines.md`
 - Complexity risk gate: `references/Complexity-Risk-Gate.md`

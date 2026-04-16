@@ -31,6 +31,7 @@ Allowed:
 5. route-back-to-plan decisions
 6. task target-file reality checks that verify bounded-slice claims
 7. minimal code-path/entrypoint inspection needed to decide actual scope ownership
+8. repo-local source-anchor comparison when a refined artifact touches a closed authority/shared contract
 
 Forbidden:
 1. implementation/code review for bugs, correctness defects, or quality grading
@@ -59,7 +60,8 @@ Read, in this order:
 1. target artifact
 2. referenced parent artifact(s)
 3. directly referenced sibling/downstream task artifacts when needed for viability review
-4. only the minimum extra references needed to judge boundary correctness
+4. repo-local source-of-truth anchors when canonical contract meaning may have been refined
+5. only the minimum extra references needed to judge boundary correctness
 
 Additional mode-specific load:
 1. In `plan-mode`, load only the minimum downstream task refs needed to judge coverage, dependency, and remaining-task viability.
@@ -71,16 +73,18 @@ For `task` review, parent plan context is mandatory when `plan_ref` exists.
 
 For `plan-mode`, apply:
 1. `Control-Model Readiness Gate`
-2. `Remaining-Task Viability Check`
+2. `Closed-Contract Drift Check` when applicable
+3. `Remaining-Task Viability Check`
 
 For `task-mode`, apply:
 1. `Target-File Reality Check`
 2. `Control-Model Readiness Gate`
-3. `Authority Fan-out Scan`
-4. `Closure-Budget Gate`
-5. `Bounded-Task-Shape Gate`
-6. `Complexity-Risk Gate`
-7. `Remaining-Task Viability Check`
+3. `Closed-Contract Drift Check` when applicable
+4. `Authority Fan-out Scan`
+5. `Closure-Budget Gate`
+6. `Bounded-Task-Shape Gate`
+7. `Complexity-Risk Gate`
+8. `Remaining-Task Viability Check`
 
 Policy:
 1. Review whether the artifact still fits the planning shape it claims.
@@ -88,8 +92,29 @@ Policy:
 3. Do not approve a plan just because its current phase text reads well if downstream listed tasks are no longer viable under it.
 4. In `task-mode`, if the target-file reality check disagrees with the task label, trust the reality check.
 5. Do not hide a widened scope behind the phrase "implementation review is forbidden." Scope-reality validation is mandatory in `task-mode`.
+6. Do not approve a refined artifact just because the wording reads cleaner if it silently reinterprets a closed contract.
 
-### 2a) Target-File Reality Check (`task-mode`)
+### 2a) Closed-Contract Drift Check (`plan-mode|task-mode` when applicable)
+
+Use `references/Closed-Contract-Drift-Check.md`.
+
+Run this when:
+1. the reviewed artifact refines an existing authority/shared-contract/read-model artifact,
+2. canonical terminology or field roles may have shifted,
+3. a docs-only refinement still changes implementation-significant wording.
+
+Required checks:
+1. identify repo-local source anchors,
+2. identify canonical vs guard vs compat elements when relevant,
+3. identify closed terms that must not be silently reinterpreted,
+4. classify drift status.
+
+Outcome:
+1. If the result is `ambiguous_drift`, require refinement or route back to plan.
+2. If the result is `unauthorized_reinterpretation`, do not approve.
+3. A locally coherent artifact that contradicts repo-local source anchors is not approvable.
+
+### 2b) Target-File Reality Check (`task-mode`)
 
 When `target_files` are known and the files exist, inspect them and, when needed, their adjacent entrypoints.
 
@@ -112,7 +137,8 @@ When reviewing a `plan`, check:
 3. whether dependency/order is explicit where correctness depends on it
 4. whether the plan-level control model is explicit enough for downstream tasks
 5. whether any lightweight sequencing note is sufficient where multi-consumer authority ordering matters
-6. whether downstream open tasks remain viable if this plan is accepted as written
+6. whether the plan silently reinterprets any already-closed canonical contract
+7. whether downstream open tasks remain viable if this plan is accepted as written
 
 Decision outcomes:
 1. `approve_plan`
@@ -128,7 +154,8 @@ When reviewing a `task`, check:
 3. whether producer work has absorbed fail-closed or coordination scope
 4. whether precondition-before-side-effect rules are explicit when needed
 5. whether the task still fits its parent gap and parent plan boundary
-6. whether downstream open tasks remain viable if this task is accepted as written
+6. whether the task silently reinterprets any already-closed canonical contract
+7. whether downstream open tasks remain viable if this task is accepted as written
 
 Decision outcomes:
 1. `approve_task`
@@ -187,6 +214,7 @@ For each material finding, explain:
 Additional task-mode rule:
 1. If the task label and target-file reality disagree, say that explicitly.
 2. Phrase the issue as bounded-slice drift, hidden scope, or parent-plan mismatch, not as a code bug.
+3. If the issue is contract-meaning drift, phrase it as unauthorized reinterpretation, ambiguous drift, or source-anchor mismatch rather than as a style nit.
 
 ## Output
 
