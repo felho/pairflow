@@ -26,6 +26,15 @@ import { setupRunningBubbleFixture } from "../../../helpers/bubble.js";
 import { initGitRepository } from "../../../helpers/git.js";
 
 const tempDirs: string[] = [];
+type ImplementerWrapperCall = Parameters<
+  typeof actorProtocolModule.emitImplementerPilotActorProtocolV11
+>;
+type ReviewerWrapperCall = Parameters<
+  typeof actorProtocolModule.emitReviewerActorProtocolV11
+>;
+type MetaReviewerWrapperCall = Parameters<
+  typeof actorProtocolModule.emitMetaReviewerActorProtocolV11
+>;
 
 async function createTempRepo(): Promise<string> {
   const root = await mkdtemp(join(tmpdir(), "pairflow-actor-protocol-v11-"));
@@ -958,18 +967,16 @@ describe("emitActorProtocolV11 wrappers", () => {
     });
 
     expect(wrapperSpy).toHaveBeenCalledOnce();
-    expect(wrapperSpy).toHaveBeenCalledWith(
-      expect.objectContaining({
-        authoritativeContext,
-        input: expect.objectContaining({
-          kind: "human_question",
-          bubble_id: bubble.bubbleId,
-          handoff_id: authoritativeContext.handoff_id,
-          execution_id: authoritativeContext.execution_id
-        })
-      }),
-      {}
-    );
+    const [wrapperInput, wrapperDependencies] =
+      wrapperSpy.mock.calls[0] as ImplementerWrapperCall;
+    expect(wrapperDependencies).toEqual({});
+    expect(wrapperInput.authoritativeContext).toBe(authoritativeContext);
+    expect(wrapperInput.input).toMatchObject({
+      kind: "human_question",
+      bubble_id: bubble.bubbleId,
+      handoff_id: authoritativeContext.handoff_id,
+      execution_id: authoritativeContext.execution_id
+    });
     expect(result.kind).toBe("human_question");
     if (result.kind !== "human_question") {
       throw new Error("Expected human_question result.");
@@ -1068,18 +1075,16 @@ describe("emitActorProtocolV11 wrappers", () => {
     });
 
     expect(wrapperSpy).toHaveBeenCalledOnce();
-    expect(wrapperSpy).toHaveBeenCalledWith(
-      expect.objectContaining({
-        authoritativeContext,
-        input: expect.objectContaining({
-          kind: "pass",
-          bubble_id: bubble.bubbleId,
-          handoff_id: authoritativeContext.handoff_id,
-          execution_id: authoritativeContext.execution_id
-        })
-      }),
-      {}
-    );
+    const [wrapperInput, wrapperDependencies] =
+      wrapperSpy.mock.calls[0] as ReviewerWrapperCall;
+    expect(wrapperDependencies).toEqual({});
+    expect(wrapperInput.authoritativeContext).toBe(authoritativeContext);
+    expect(wrapperInput.input).toMatchObject({
+      kind: "pass",
+      bubble_id: bubble.bubbleId,
+      handoff_id: authoritativeContext.handoff_id,
+      execution_id: authoritativeContext.execution_id
+    });
     expect(result.kind).toBe("pass");
     if (result.kind !== "pass") {
       throw new Error("Expected pass result.");
@@ -1133,18 +1138,16 @@ describe("emitActorProtocolV11 wrappers", () => {
     });
 
     expect(wrapperSpy).toHaveBeenCalledOnce();
-    expect(wrapperSpy).toHaveBeenCalledWith(
-      expect.objectContaining({
-        authoritativeContext,
-        input: expect.objectContaining({
-          kind: "convergence",
-          bubble_id: bubble.bubbleId,
-          handoff_id: authoritativeContext.handoff_id,
-          execution_id: authoritativeContext.execution_id
-        })
-      }),
-      {}
-    );
+    const [wrapperInput, wrapperDependencies] =
+      wrapperSpy.mock.calls[0] as ReviewerWrapperCall;
+    expect(wrapperDependencies).toEqual({});
+    expect(wrapperInput.authoritativeContext).toBe(authoritativeContext);
+    expect(wrapperInput.input).toMatchObject({
+      kind: "convergence",
+      bubble_id: bubble.bubbleId,
+      handoff_id: authoritativeContext.handoff_id,
+      execution_id: authoritativeContext.execution_id
+    });
     expect(result.kind).toBe("convergence");
     if (result.kind !== "convergence") {
       throw new Error("Expected convergence result.");
@@ -1193,18 +1196,16 @@ describe("emitActorProtocolV11 wrappers", () => {
     });
 
     expect(wrapperSpy).toHaveBeenCalledOnce();
-    expect(wrapperSpy).toHaveBeenCalledWith(
-      expect.objectContaining({
-        authoritativeContext,
-        input: expect.objectContaining({
-          kind: "meta_review_result",
-          bubble_id: bubble.bubbleId,
-          handoff_id: authoritativeContext.handoff_id,
-          execution_id: authoritativeContext.execution_id
-        })
-      }),
-      {}
-    );
+    const [wrapperInput, wrapperDependencies] =
+      wrapperSpy.mock.calls[0] as MetaReviewerWrapperCall;
+    expect(wrapperDependencies).toEqual({});
+    expect(wrapperInput.authoritativeContext).toBe(authoritativeContext);
+    expect(wrapperInput.input).toMatchObject({
+      kind: "meta_review_result",
+      bubble_id: bubble.bubbleId,
+      handoff_id: authoritativeContext.handoff_id,
+      execution_id: authoritativeContext.execution_id
+    });
     expect(result.kind).toBe("meta_review_result");
     if (result.kind !== "meta_review_result") {
       throw new Error("Expected meta_review_result.");
