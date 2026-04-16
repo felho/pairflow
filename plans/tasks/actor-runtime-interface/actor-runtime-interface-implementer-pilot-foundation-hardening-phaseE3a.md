@@ -3,7 +3,7 @@ artifact_type: task
 artifact_id: task_actor_runtime_interface_implementer_pilot_foundation_hardening_phaseE3a_v1
 title: "Actor Runtime Interface Implementer Pilot Foundation Hardening (Phase E3a)"
 status: implementable
-updated_at: 2026-04-15
+updated_at: 2026-04-16
 phase: phaseE3a
 target_files:
   - src/cli/commands/agent/emit.ts
@@ -71,7 +71,7 @@ owners:
 6. Missing-data rule: hianyzo vagy mismatched authority fail-closed.
 7. Phase boundary:
    - authority foundation predecessorbol orokolt, de implementer-route hardening itt owned,
-   - outer dispatcher fallback routing explicit policy-surface; preserved-baselinekent vagy explicit tightening targetkent kell nevezni, nem maradhat hallgatozo implicit dontes,
+   - outer dispatcher fallback routing explicit policy-surface; ennek a tasknak a normativ dontese `preserved-baseline`: retained same-authority compatibility route marad a jelenlegi non-implementer `human_question` / human-gate baseline vedelmere, de nem valhat uj canonical authority route-ta vagy implementer activation shortcutta,
    - runtime activation deferred `E3b`,
    - parity/fail-closed proof deferred `E3c`,
    - reviewer/meta-reviewer rollout deferred `E4`.
@@ -81,15 +81,70 @@ owners:
 1. `authority_producer`
    - `src/v11/shared/actorProtocol/actorEmitContext.ts`
    - CLI bridge via `src/cli/commands/agent/emit.ts`
-2. `workflow_orchestration_consumers`
+2. `stored_authority`
+   - inherited `state.execution_context`
+   - bubble state snapshot fingerprint + forwarded authority guards
+3. `workflow_orchestration_consumers`
    - `src/v11/application/actorProtocol/emitActorProtocolV11.ts`
    - `src/v11/application/actorProtocol/actorProtocolEmitters.ts`
    - `src/v11/application/pass/passWorkspaceContextPreparation.ts`
    - `src/v11/application/askHuman/askHumanWorkspaceContextPreparation.ts`
    - `src/v11/shared/askHuman/askHumanRunningStateValidationChecks.ts`
    - outer dispatcher fallback routing policy az `emitActorProtocolV11` dispatcher seam-en
-3. `cleanup_recovery_consumers`
+4. `explicit_out_of_scope_consumers`
+   - runtime activation/projection ownership (`E3b`)
+   - stale/duplicate/restart parity es cleanup/recovery consume csalad (`E3c`)
+   - reviewer/meta-reviewer rollout consume csalad (`E4`)
+5. `cleanup_recovery_consumers`
    - none owned here; restart parity deferred
+6. export surfaces closed in this phase: `no`; ez foundation hardening, nem activation/read-model vagy multi-role export closure
+
+### Shared Contract Compatibility
+
+| Shared Contract | Current Consumers | Change Type (`additive|breaking|N/A`) | This Task Action | Deferred Alignment |
+|---|---|---|---|---|
+| actor emit authority contract | CLI `agent emit`, `ActorEmitContextSnapshot`, wrapper entryk | compatible hardening | explicit same-authority route primary, target-authority reopen tiltott | activation-owned consume proof `E3b` |
+| implementer wrapper routing contract | implementer `pass` es implementer-origin `human_question` wrapper route | additive tightening | egyazon wrapper/authority model lock | fresh-path activation `E3b` |
+| workspace prep authority handoff contract | `pass` es `askHuman` prep seams | compatible hardening | `authoritativeContext` canonical branch, cwd bridge secondary | activation/projection consume `E3b` |
+| outer dispatcher fallback routing policy | `emitActorProtocolV11` dispatcher seam, non-implementer `human_question` baseline | compatible hardening | explicit `preserved-baseline` decision: retained same-authority compatibility route, implementer activation shortcut nelkul | barmilyen szukites/csere csak explicit successor taskban |
+| ask-human running-state role-eligibility baseline contract | reviewer/non-implementer `human_question` baseline | preserved baseline | reviewer allowed / `meta_reviewer` forbidden baseline explicit lock | broad role rollout `E4` |
+
+### Baseline Preservation
+
+1. Must-preserve behaviors:
+   - a canonical `agent emit` surface target-authority override nelkul marad;
+   - az explicit authoritative-context path az implementer `pass` es implementer-origin `human_question` primary route-ja marad;
+   - a compat workspace lookup csak secondary bridge maradhat, canonical authority nelkul;
+   - az outer dispatcher fallback routing `preserved-baseline` statuszban marad: retained same-authority compatibility route a jelenlegi non-implementer `human_question` baseline vedelmere;
+   - a reviewer/non-implementer `human_question` running-state baseline reviewer allowed / `meta_reviewer` forbidden formaban preserved marad.
+2. Allowed resolution paths:
+   - explicit authoritative context materialization ugyanazon bubble/execution authority chainen;
+   - canonical wrapper route -> workspace prep same-authority handoff;
+   - outer dispatcher fallback csak ugyanennek a preserved same-authority baseline-nak a compatibility route-jakent.
+3. Forbidden regression interpretations:
+   - a compat workspace lookup nem nevezheto at canonical authority route-ta;
+   - a preserved dispatcher fallback nem ertelmezheto uj activation shortcutkent;
+   - a non-implementer `human_question` baseline nem szukitheto implementer-only surface-sze.
+4. Replacement proof required if removed:
+   - ha a preserved dispatcher fallback vagy a non-implementer baseline barmely resze kikerul, explicit successor proof kell arrol, hogy az uj route ugyanazt a same-authority baseline-t hordozza regresszio nelkul.
+
+### Precondition and Side-Effect Boundary
+
+1. Primary bounded task shape: `contract_or_persisted_authority_foundation`
+2. Secondary shape (if any): `consumer_family_alignment`
+   Bounded proof: ugyanaz a szuk wrapper/bridge/workspace-prep/diszpecser seam zarja le a foundation lockot az implementer consume csaladon belul, uj activation, read-model vagy cleanup/recovery ownership nelkul.
+3. Preconditions that must pass before side effects:
+   - az inherited `E1`-`E2c` authority es typed-ack predecessor baseline ervenyes;
+   - az explicit authoritative context materialization koherens;
+   - a dispatcher fallback policy preserved-baseline statusza explicitten rogzitett;
+   - a non-implementer `human_question` baseline guardja megorizheto implementer-only szukites nelkul.
+4. Side effects forbidden before preconditions pass:
+   - nincs implementer activation claim;
+   - nincs target-authority reopen a public emit surface-en;
+   - nincs canonical cwd-only authority route;
+   - nincs dispatcher-policy implicit szukites vagy role-local shortcut.
+5. Invalid/precondition-failure behavior: zero activation side effect; explicit fail-closed authority mismatch vagy spec blocker.
+6. Coordination primitives in scope: `N/A`
 
 ### In Scope
 
@@ -138,6 +193,14 @@ owners:
    - a runtime activation closure explicitten deferred `E3b`,
    - a parity/fail-closed hardening closure explicitten deferred `E3c`,
    - ez a task csak a wrapper/authority foundation hardeninget owns-olja: wrapper routing + authoritative-context-first bridge + workspace-prep same-authority lock + explicit dispatcher policy + non-implementer baseline preservation.
+10. Closure-budget triage:
+   - closure buckets touched: `shared_contract`, `internal_execution_consumers`, `workflow_orchestration_consumers`
+   - intentionally collapsed closures: wrapper routing + authoritative-context-first bridge + workspace-prep same-authority lock + explicit preserved-baseline dispatcher policy + non-implementer `human_question` baseline lock, mert ugyanaz a foundation-only seam zarja le oket activation vagy cleanup fallout nelkul
+   - explicitly deferred closures: `read_model_consumers`, `cleanup_recovery_consumers`, activation-owned consume/projection closure
+11. Bounded-task-shape decision:
+   - primary shape: `contract_or_persisted_authority_foundation`
+   - secondary shape: `consumer_family_alignment`
+   - why this bounded mix is safe: a task nem aktival uj runtime viselkedest, csak ugyanazon implementer wrapper/prep/diszpecser seam-ben zarja le a same-authority foundationt es a hozza tartozo minimalis consume-family alignmentet
 
 ## L1 - Change Contract
 
@@ -150,8 +213,34 @@ owners:
 | Forbidden fallback | Nincs cwd-only, pane-only vagy target-override authority. | Fail-closed mismatch eseten. | P1 | required-now |
 | Missing-data rule | Authority hiany explicit hiba. | Nincs heuristic reroute. | P1 | required-now |
 | Non-implementer baseline | A jelenlegi reviewer/non-implementer `human_question` baseline nem szukulhet neman. | `E3a` nem teheti implementer-only surface-sze a `HUMAN_QUESTION` emitet. | P1 | required-now |
-| Dispatcher policy | Az outer dispatcher fallback routing explicit policy-surface. | Retained vagy tightened statuszat a tasknak ki kell mondania. | P1 | required-now |
+| Dispatcher policy | Az outer dispatcher fallback routing explicit policy-surface. | `preserved-baseline`: retained same-authority compatibility route marad a jelenlegi non-implementer `human_question` baseline vedelmere, activation shortcut nelkul. | P1 | required-now |
 | Phase boundary | `E3a` csak foundation hardeninget owns-ol. | `E3b`/`E3c` nem nyithat ujra authority- vagy wrapper-shape dontest. | P1 | required-now |
+
+### 0a) Shared Contract Compatibility
+
+| Shared Contract | Current Consumers | Change Type (`additive|breaking|N/A`) | This Task Action | Deferred Alignment |
+|---|---|---|---|---|
+| actor emit authority contract | CLI emit parse/run bridge, actor emit context materialization, wrapper entryk | compatible hardening | target-authority reopen tilalma + explicit same-authority primary route | activation-owned consume proof `E3b` |
+| implementer wrapper routing contract | implementer `pass`, implementer-origin `human_question` | additive tightening | wrapper route ugyanazon authority modellen lockolva | fresh activation `E3b` |
+| workspace prep authority handoff contract | pass/ask-human prep seams | compatible hardening | `authoritativeContext` primary, cwd bridge secondary | consume/projection proof `E3b` |
+| dispatcher fallback policy contract | dispatcher seam + non-implementer `human_question` baseline | compatible hardening | explicit `preserved-baseline` lock | barmilyen szukites vagy csere kulon successor decision |
+| ask-human running-state role guard baseline | reviewer/non-implementer human-gate callers | preserved baseline | reviewer allowed / `meta_reviewer` forbidden explicit lock | broad role-level rewrite `E4` |
+
+### 0b) Baseline Preservation
+
+| Current Behavior | Preserve/Replace/Forbid | Required Proof | Priority | Timing |
+|---|---|---|---|---|
+| canonical `agent emit` authority surface target override nelkul | preserve | CLI tests nem engednek uj target-authority inputot | P1 | required-now |
+| authoritative-context-first wrapper/prep branch | preserve es canonical primary-va erositi | wrapper/prep tests ugyanazt a same-authority utat bizonyitjak `pass` es `human_question` eseten | P1 | required-now |
+| compat workspace lookup secondary bridge statusza | preserve secondary bridgekent | mismatch eseten nincs canonical reroute | P1 | required-now |
+| outer dispatcher fallback routing | preserve explicit baselinekent | dispatcher path documented `preserved-baseline`, implementer activation shortcut nelkul | P1 | required-now |
+| reviewer/non-implementer `human_question` baseline | preserve | running-state role guard reviewer allowed / `meta_reviewer` forbidden marad | P1 | required-now |
+
+### 0c) Precondition and Side-Effect Boundary
+
+| Case | Must Be Validated Before | Forbidden Early Side Effects | Required Failure Behavior | Priority | Timing |
+|---|---|---|---|---|---|
+| wrapper/prep/dispatcher foundation hardening | inherited predecessor baseline + explicit authoritative context + preserved-baseline dispatcher policy | implementer activation claim, target-authority reopen, cwd-only canonical route, non-implementer baseline implicit szukitese | zero activation side effect; explicit fail-closed mismatch vagy spec blocker | P1 | required-now |
 
 ### 1) Call-site Matrix
 
@@ -159,7 +248,7 @@ owners:
 |---|---|---|---|---|---|---|
 | CS1 | `src/cli/commands/agent/emit.ts` | parse/run bridge | A public emit surface ne nyisson explicit target-authority API-t. | P1 | required-now | T1, T4 |
 | CS2 | `src/v11/shared/actorProtocol/actorEmitContext.ts` | authority materialization | Same-authority context explicit es fail-closed maradjon. | P1 | required-now | T1, T3 |
-| CS3 | `src/v11/application/actorProtocol/emitActorProtocolV11.ts` | implementer wrapper routing + outer dispatcher fallback policy | Az implementer `pass` es implementer-origin `human_question` ugyanazon wrapperen menjen; a non-implementer `human_question` baseline retained/tightened statusza explicit maradjon. | P1 | required-now | T1, T2, T5 |
+| CS3 | `src/v11/application/actorProtocol/emitActorProtocolV11.ts` | implementer wrapper routing + outer dispatcher fallback policy | Az implementer `pass` es implementer-origin `human_question` ugyanazon wrapperen menjen; a non-implementer `human_question` baseline explicit `preserved-baseline` statusza maradjon. | P1 | required-now | T1, T2, T5 |
 | CS4 | `src/v11/application/actorProtocol/actorProtocolEmitters.ts` | pass/human forwarders | Mindket emit ugyanazt az authoritative contextet vigye tovabb. | P1 | required-now | T2 |
 | CS5 | `src/v11/application/pass/passWorkspaceContextPreparation.ts` | prep path | Authoritative-context branch first-class canonical route legyen. | P1 | required-now | T2, T3 |
 | CS6 | `src/v11/application/askHuman/askHumanWorkspaceContextPreparation.ts` | prep path | Ugyanaz a same-authority branch ervenyes, mint `pass` eseten. | P1 | required-now | T2, T3 |
@@ -178,7 +267,7 @@ Normative rules:
 1. A task nem vezethet be uj public CLI opciot explicit target authority megadasara.
 2. Az implementer lane-en a `human_question` nem kaphat kulon authority modellt a `pass`-tol elteroen.
 3. A task nem teheti implementer-only surface-sze a `human_question` emitet; reviewer vagy mas non-implementer same-authority human-gate baseline csak explicit kulon successor taskban modosithato.
-4. Az outer dispatcher fallback routing policyjat explicitten preserved-baselinekent vagy explicit tightening targetkent kell nevezni; nem maradhat neman `E3b`-re vagy `E3c`-re tolva.
+4. Az outer dispatcher fallback routing policyja ebben a taskban explicit `preserved-baseline`: retained same-authority compatibility route marad a jelenlegi non-implementer `human_question` baseline mellett, es nem tolhato at neman `E3b`-re vagy `E3c`-re.
 5. A task nem claimelhet runtime activation closure-t.
 
 Static successor-lock criteria:
@@ -194,7 +283,7 @@ Static successor-lock criteria:
 | authority hianyzik vagy mismatched | throw | nincs fallback | P1 | required-now |
 | compat path authority shortcutot igenyelne | throw | route marad explicit bridge | P1 | required-now |
 | non-implementer `human_question` baseline csak implicit szukitessel tarthato fenn | result: a task/spec ebben a formaban nem implementation-ready | nincs local shortcut; preserve-baseline vagy explicit successor-task decision kell | P1 | required-now |
-| dispatcher fallback policy implicit maradna | result: a task/spec ebben a pontban hianyos | a retained vagy tightened statuszt explicitten rogziteni kell | P1 | required-now |
+| dispatcher fallback policy elterne az explicit preserved-baseline dontestol | result: scope blocker, mert ez mar successor-level policy csere lenne | retained same-authority compatibility route marad, amig kulon successor task explicit nem rendelkezik rola | P1 | required-now |
 | activation/parity igeny uj foundation dontest nyitna | result: scope blocker, amelyet nem az `E3a` owns-ol | explicit blocker handoff `E3b`/`E3c`-re vagy uj sequencing dontesre | P1 | required-now |
 
 ### 4) Test Matrix
@@ -205,7 +294,7 @@ Static successor-lock criteria:
 | T2 | implementer `human_question` ugyanazon modellen fut | a `human_question` emit/wrapper route ugyanahhoz a same-authority contexthez kotott, mint a `pass`, kulon role-local authority shortcut vagy alternate prep branch nelkul | P1 | required-now | targeted automated test (`human_question` same-authority route) |
 | T3 | stale vagy conflicting authority fail-closed | stale vagy conflicting authority mellett az emit explicit authority/context mismatch hibaval rejectelodik, es a wrapper/prep seam nem reroute-ol alternativ implementer authorityra | P1 | required-now | targeted automated test (mismatch fail-closed) |
 | T4 | CLI emit surface nem reopeneli a target-authority API-t | a public `agent emit` surface tovabbra sem parse-ol vagy fogad uj target-authority override bemenetet, es csak explicit canonical execution-context authorityval ervenyes | P1 | required-now | targeted automated test (CLI surface lock) |
-| T5 | non-implementer `human_question` baseline preserved | az `E3a` hardening nem szukiti implementer-only surface-sze a jelenlegi reviewer/non-implementer same-authority `human_question` baseline-t: a dispatcher retained/tightened policy explicitten vedett, es a running-state role guard reviewer allowed / `meta_reviewer` forbidden baseline-en marad | P1 | required-now | targeted automated tests (`human_question` non-implementer baseline preservation, `ask-human` running-state role guard) |
+| T5 | non-implementer `human_question` baseline preserved | az `E3a` hardening nem szukiti implementer-only surface-sze a jelenlegi reviewer/non-implementer same-authority `human_question` baseline-t: a dispatcher explicit `preserved-baseline` policyval vedett, es a running-state role guard reviewer allowed / `meta_reviewer` forbidden baseline-en marad | P1 | required-now | targeted automated tests (`human_question` non-implementer baseline preservation, `ask-human` running-state role guard) |
 
 ### 5) Spec Lock
 
