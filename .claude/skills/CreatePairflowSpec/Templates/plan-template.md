@@ -14,6 +14,11 @@ owners:
 
 <What this plan delivers and what success means.>
 
+## Done Definition
+
+1. <What must be true when the plan is complete.>
+2. <What evidence or behavior proves completion.>
+
 ## Guiding Principles
 
 1. Business invariant: <What must remain true from the business/domain perspective.>
@@ -22,80 +27,50 @@ owners:
 4. Forbidden fallback: <Which tempting alternative sources must not be used. If N/A, say N/A.>
 5. Allowed resolution path: <Which deterministic same-authority resolution/reconciliation paths are allowed. If N/A, say N/A.>
 6. Missing-data rule: <What happens if the thing is expected but missing.>
-7. Phase boundary note:
-   - contract closure: <phase>
-   - producer closure: <phase>
-   - internal execution closure: <phase>
-   - workflow/orchestration closure: <phase>
-   - read-model closure: <phase>
-   - activation closure: <phase>
-   - cleanup/recovery closure: <phase>
+7. Sequencing / boundary note:
+   - producer-first rule: <text or `N/A`>
+   - downstream consume families that remain separate: <text or `N/A`>
+   - cleanup/recovery timing: <included now | deferred | `N/A`>
 
-## Baseline Preservation Notes
+## Current Status
 
-Include this section when the plan refines or replaces an existing canonicalization, finalize, or reconciliation path. Otherwise say `N/A`.
+### Completed Work
 
-1. Preserved baseline behaviors: <List or `N/A`.>
-2. Intentionally replaced behaviors: <List or `N/A`.>
-3. Replacement proof expected from downstream tasks/evidence: <List or `N/A`.>
+1. <completed item or `N/A`>
 
-## Authority Fan-out Scan
+### Open Work
 
-1. Authority producer: <What produces canonical authority. If N/A, say N/A.>
-2. Persisted authority: <What persists authority. If N/A, say N/A.>
-3. Internal execution consumers: <List or N/A.>
-4. Workflow/orchestration consumers: <List or N/A.>
-5. Read-model consumers: <List or N/A.>
-6. Cleanup/recovery consumers: <List or N/A.>
-7. Collapse notes: <Which adjacent closures are intentionally merged, and why that is safe. If N/A, say N/A.>
+1. <open gap or `N/A`>
 
-## Mutation / Precondition Boundaries
+### Deferred / Future Work
 
-Include this section when the plan touches an existing mutation flow or introduces coordination primitives. Otherwise say `N/A`.
+1. <deferred item or `N/A`>
 
-1. Precondition-before-side-effect rule: <What must be validated before any artifact write, lock creation, namespace creation, network call, or other mutation.>
-2. Invalid/precondition-failure side-effect expectation: <Usually zero side effects; if not, state the bounded allowed side effects explicitly.>
-3. Coordination primitives by phase: <Which phase owns locks/mutexes/leases/idempotency/serialization, or `N/A`.>
-4. Fail-closed hardening by phase: <Which phase owns rollback/retry/cleanup/shared-state-preservation, or `N/A`.>
+## Progress / Phase Summary (Optional)
 
-## Complexity / Split Rationale
+Use only when progress tracking benefits from phase grouping. Otherwise say `N/A`.
 
-1. `risk_score`: `<0-12>`
-2. Why a plan is needed:
-   - `<boundary risk / contract override / prerequisite / phase split>`
-3. Split decision:
-   - `<minimum viable split for this scope; may be 3, 4, 5, or more phases/tasks>`
-4. Milestone-gated behavior to defer:
-   - `<text or N/A>`
-5. Closure-budget triage:
-   - closure buckets touched: `<list or N/A>`
-   - intentionally collapsed closures: `<list + why safe, or N/A>`
-   - explicitly deferred closures: `<list or N/A>`
+1. <phase or progress note>
 
-## Phase Breakdown
+## Open Task List
 
-| Phase | Goal | Inputs | Outputs | Exit Criteria |
+| Task | Purpose | Depends On | Closes Gap | Status |
 |---|---|---|---|---|
-| Phase 1 | <text> | <text> | <text> | <text> |
+| `plans/tasks/<feature>/<task>.md` | <why this task exists> | <task/ref or `N/A`> | <plan-level gap> | open |
 
-## Phase Ownership Grid
+## Coverage Map
 
-| Phase | Dominant Boundary | Primary Task Shape | Produced Authority | Consuming Surfaces | Forbidden Co-mingling |
-|---|---|---|---|---|---|
-| Phase 1 | <producer|consumer|activation|cleanup> | <one primary shape from the bounded-task-shape gate> | <text or N/A> | <text> | <what must not be mixed here> |
+| Plan Gap | Closed By | Notes |
+|---|---|---|
+| <gap> | <task(s)> | <notes or `N/A`> |
 
-## Task List
+## Dependencies and Order
 
-1. `plans/tasks/<feature>/phase1-<slug>.md`
-2. `plans/tasks/<feature>/phase2-<slug>.md`
+1. <dependency/order rule>
 
-## Dependencies
+## Risks and Assumptions
 
-1. <dependency>
-
-## Risks and Mitigations
-
-1. <risk> - <mitigation>
+1. <risk or assumption>
 
 ## Validation Strategy
 
