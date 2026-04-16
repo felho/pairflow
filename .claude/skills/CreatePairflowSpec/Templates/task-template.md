@@ -38,6 +38,16 @@ owners:
    - activation closure: <owned here or successor>
    - cleanup/recovery closure: <owned here or successor>
 
+### Plan Linkage
+
+Include this section when `plan_ref` is non-null. Otherwise say `N/A`.
+
+1. Parent plan gap closed: <What plan-level gap this task closes, or `N/A`.>
+2. Depends on: <Predecessor task/ref or `N/A`.>
+3. Unlocks / impacts successors: <Successor task(s), delayed consumers, or `N/A`.>
+4. Task-list impact: <refines|replaces|obsoletes `task_id` list, or `N/A`.>
+5. Inherited validation / exit expectation: <What plan-level evidence or exit expectation this task contributes to, or `N/A`.>
+
 ### Authority Boundary Map
 
 1. Authority producer: <What produces canonical authority in or before this task. If N/A, say N/A.>
@@ -126,19 +136,29 @@ Include this section when the task modifies an existing mutation flow or introdu
 | Missing-data rule | <explicit rule or `N/A`> | <fail-closed/unavailable/error behavior> | P1 | required-now |
 | Phase boundary | <explicit rule or `N/A`> | <what this task owns vs successor tasks across contract/producer/consume/activation/cleanup> | P2 | required-now |
 
-### 0a) Shared Contract Compatibility (if applicable)
+### 0a) Plan Linkage and Successor Impact (if applicable)
+
+| Item | Rule | Implementation / Review Consequence | Priority | Timing |
+|---|---|---|---|---|
+| Parent gap closed | <explicit rule or `N/A`> | <what plan-level gap this task resolves> | P1 | required-now |
+| Depends on | <task/ref or `N/A`> | <what predecessor must already hold> | P1 | required-now |
+| Unlocks / impacts successors | <task/ref list or `N/A`> | <what later work remains or changes> | P1 | required-now |
+| Task-list impact | <refines|replaces|obsoletes|`N/A`> | <what existing open task is affected> | P1 | required-now |
+| Inherited validation / exit expectation | <explicit rule or `N/A`> | <what evidence or exit expectation this task must satisfy> | P1 | required-now |
+
+### 0b) Shared Contract Compatibility (if applicable)
 
 | Shared Contract | Current Consumers | Change Type (`additive|breaking|N/A`) | This Task Action | Deferred Alignment |
 |---|---|---|---|---|
 | <path/interface/result-shape> | <list or `N/A`> | <type> | <what this task does> | <successor task or `N/A`> |
 
-### 0b) Baseline Preservation (if applicable)
+### 0c) Baseline Preservation (if applicable)
 
 | Current Behavior | Preserve/Replace/Forbid | Required Proof | Priority | Timing |
 |---|---|---|---|---|
 | <current deterministic path or `N/A`> | <preserve|replace|forbid> | <equivalence/replacement evidence or `N/A`> | P1 | required-now |
 
-### 0c) Precondition and Side-Effect Boundary (if applicable)
+### 0d) Precondition and Side-Effect Boundary (if applicable)
 
 | Case | Must Be Validated Before | Forbidden Early Side Effects | Required Failure Behavior | Priority | Timing |
 |---|---|---|---|---|---|
@@ -210,6 +230,7 @@ Use this section to track non-blocking review items (`later-hardening`) that sho
 6. If a shared contract changes, current-consumer inventory and additive-vs-breaking classification are mandatory.
 7. If an authority fan-out exists, the authority boundary map must stay consistent with the bounded task scope.
 8. If baseline behavior is removed or replaced, the task must name the exact replacement path and the proof expected from validation.
+9. If `plan_ref` is non-null, `Plan Linkage` and the inherited validation/exit expectation are mandatory and must stay consistent with successor impact notes.
 
 ## Spec Lock
 

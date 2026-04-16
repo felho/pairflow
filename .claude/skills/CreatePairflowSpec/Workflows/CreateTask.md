@@ -36,9 +36,15 @@ Create or refine a Pairflow task file using `L0 -> L1 -> L2`.
 
 1. Read any explicit references from the user.
 2. If `TARGET_PATH` exists, read and treat as baseline.
-3. Extract known values before asking questions:
+3. If `plan_ref` exists, read it to extract only the task-relevant parent context:
+   - overarching objective,
+   - the plan gap this task is supposed to close,
+   - predecessor/successor expectations,
+   - any plan-level validation or exit expectations this task contributes to,
+   - whether a split/replacement would obsolete or refine an existing open task.
+4. Extract known values before asking questions:
    - title, scope, refs, likely target files, constraints.
-4. Extract likely:
+5. Extract likely:
    - canonical source-of-truth candidates,
    - business invariant and control model,
    - allowed read-path and missing-data rule,
@@ -127,6 +133,10 @@ Policy:
 4. These labels are classification aids, not mandatory one-label-per-task output. A bounded task may own multiple adjacent closures when they share the same code path and risk profile.
 5. Prefer the smallest safe task count; split only where the ownership, compatibility, or consume-family boundary is real.
 6. The final task may rename these buckets into domain-local terminology, but the mapping back to the generic categories must stay explicit.
+7. If three or more consume families are implicated, the task must explicitly state:
+   - which closure this task owns now,
+   - which producer or predecessor closure it depends on,
+   - and which downstream consumer/read-model/cleanup closures remain for successor tasks.
 
 ### 1c) Run the Shared Contract Compatibility Gate
 
@@ -228,6 +238,12 @@ Policy:
    - draft only the bounded task you are currently creating,
    - state the split decision explicitly,
    - do not silently keep the full original scope inside one task.
+5. If `plan_ref` exists:
+   - include a `Plan Linkage` section,
+   - state the parent gap this task closes,
+   - state predecessor/successor expectations,
+   - state whether the current draft refines, replaces, or obsoletes any existing open task,
+   - and record any plan-level validation or exit expectation this task contributes to.
 
 ### 3) Run blocker gap check
 
@@ -237,25 +253,31 @@ Required blockers for Task output:
    - task-only flows: `prd_ref`/`plan_ref` may be `null`
    - contract-boundary override flows: `plan_ref` required
    - large/new-app flows: both refs required
-3. `L0`: goal, in-scope, out-of-scope, safety default
-4. `L1`: call-site/entry points, data/interface contract, error/fallback, test matrix
-5. If contract-boundary override is active:
+3. If `plan_ref` exists, `Plan Linkage` is mandatory:
+   - parent plan gap closed,
+   - predecessor dependency or `N/A`,
+   - successor tasks unlocked or impacted,
+   - obsolete/refined task IDs if the current split/replacement changes the task list,
+   - plan-level validation or exit expectation inherited by this task.
+4. `L0`: goal, in-scope, out-of-scope, safety default
+5. `L1`: call-site/entry points, data/interface contract, error/fallback, test matrix
+6. If contract-boundary override is active:
    - L1 `Data and Interface Contract` must have impacted contract rows
    - L1 test matrix must include at least one compatibility or migration scenario
-6. L1 contract details must be explicit:
+7. L1 contract details must be explicit:
    - required vs optional fields for impacted schemas/types
    - exact function signature for changed public entry points
    - if no allowed side effects are listed, mark pure behavior
    - if dependency exists, include dependency-failure fallback row
-7. Cross-reference and token integrity must be explicit:
+8. Cross-reference and token integrity must be explicit:
    - referenced IDs must resolve to existing rows/clauses/tokens,
    - canonical token names must be used consistently (no shorthand aliases).
-8. Complexity-risk blockers must be explicit:
+9. Complexity-risk blockers must be explicit:
    - if `risk_score >= 4`, split decision must be recorded,
    - if `identity_join_risk >= 1`, the task must state the matching seam and forbidden fallback identities,
    - if `risk_score >= 8` or hard-stop applies, task must not pretend to be direct one-shot delivery,
    - authority/source-of-truth note is mandatory when authority risk is non-zero.
-9. Control-model blockers must be explicit whenever applicable:
+10. Control-model blockers must be explicit whenever applicable:
    - `business_invariant`
    - `control_model`
    - `read_path_rule`
@@ -263,27 +285,31 @@ Required blockers for Task output:
    - `allowed_resolution_path`
    - `missing_data_rule`
    - `phase_boundary`
-10. If any control-model blocker is missing and correctness depends on it, the task is not ready. Ask focused blocker questions instead of drafting around the gap.
-11. If a shared contract is changing, blockers also include:
+11. If any control-model blocker is missing and correctness depends on it, the task is not ready. Ask focused blocker questions instead of drafting around the gap.
+12. If a shared contract is changing, blockers also include:
    - current consumers inventory,
    - additive vs breaking decision,
    - explicit alignment ownership.
-12. If the task refines or replaces an existing canonicalization/resolution path, blockers also include:
+13. If the task refines or replaces an existing canonicalization/resolution path, blockers also include:
    - `must_preserve_behaviors`,
    - `allowed_resolution_paths`,
    - `forbidden_regression_interpretations`,
    - `replacement_proof_required_if_removed`.
-13. If authority/runtime/read-model/shared-contract work is in scope, blockers also include closure-budget triage:
+14. If authority/runtime/read-model/shared-contract work is in scope, blockers also include closure-budget triage:
    - closure buckets touched,
    - collapsed closures,
    - deferred closures,
    - why the remaining bounded task is safe.
-14. If the task modifies an existing mutation flow, blockers also include a `Precondition and Side-Effect Boundary`:
+15. If the task modifies an existing mutation flow, blockers also include a `Precondition and Side-Effect Boundary`:
    - validations that must pass before mutations,
    - side effects forbidden before those validations pass,
    - invalid/precondition-failure behavior,
    - coordination primitives in scope or explicitly deferred.
-15. If the task cannot name a primary bounded-task shape, or mixes producer with fail-closed/coordination work without an explicit bounded proof, the task is not ready.
+16. If three or more consume families are implicated, blockers also include explicit sequencing ownership:
+   - whether this task is producer, consumer-family alignment, activation, read-model, or cleanup,
+   - what producer/predecessor closure it depends on,
+   - and which downstream closures remain for successor tasks.
+17. If the task cannot name a primary bounded-task shape, or mixes producer with fail-closed/coordination work without an explicit bounded proof, the task is not ready.
 
 If blockers exist, ask only focused questions for those blockers.
 
@@ -298,22 +324,29 @@ If blockers exist, ask only focused questions for those blockers.
 7. If applicable, include an `Authority Boundary Map` and use it to say what this task intentionally does not close.
 8. If the task touches an existing runtime authority/resolution path, include a `Baseline Preservation` section and say explicitly what is preserved vs intentionally replaced.
 9. If the task touches an existing mutation flow, include a `Precondition and Side-Effect Boundary` section.
-10. Record primary bounded-task shape explicitly, and secondary shape only when justified.
+10. If `plan_ref` exists, include a `Plan Linkage` section and keep it task-local:
+   - closes gap,
+   - depends on,
+   - unlocks or impacts successors,
+   - refines/replaces/obsoletes any prior open task,
+   - inherits which plan-level validation/exit expectation.
+11. Record primary bounded-task shape explicitly, and secondary shape only when justified.
 
 ### 5) L1 pass
 
 Fill each section or mark `N/A`:
 1. Domain/control contract
-2. Call-site matrix
-3. Data and interface contract
-4. Side effects contract
-5. Error and fallback contract
-6. Dependency constraints
-7. Test matrix (at least one golden path and one invalid case)
-8. Shared contract compatibility (required when a shared interface/result shape changes; otherwise `N/A`)
-9. Baseline preservation (required when an existing canonicalization/resolution path is refined or replaced; otherwise `N/A`)
-10. Closure-budget summary (required when authority/runtime/read-model/shared-contract work is in scope; otherwise `N/A`)
-11. Precondition and side-effect boundary (required when an existing mutation flow is modified or coordination primitives are introduced; otherwise `N/A`)
+2. Plan linkage and successor impact (required when `plan_ref` exists; otherwise `N/A`)
+3. Call-site matrix
+4. Data and interface contract
+5. Side effects contract
+6. Error and fallback contract
+7. Dependency constraints
+8. Test matrix (at least one golden path and one invalid case)
+9. Shared contract compatibility (required when a shared interface/result shape changes; otherwise `N/A`)
+10. Baseline preservation (required when an existing canonicalization/resolution path is refined or replaced; otherwise `N/A`)
+11. Closure-budget summary (required when authority/runtime/read-model/shared-contract work is in scope; otherwise `N/A`)
+12. Precondition and side-effect boundary (required when an existing mutation flow is modified or coordination primitives are introduced; otherwise `N/A`)
 
 Rules:
 1. `target_files` must align with call-site matrix.
@@ -331,6 +364,8 @@ Rules:
    - allowed deterministic same-authority resolution paths,
    - and any exact replacement path that justifies removing a current behavior.
 12. If the task touches a mutable flow, L1 must make explicit which validations occur before any side effect and what invalid/precondition-failure path proves zero-side-effect or bounded-side-effect behavior.
+13. If `plan_ref` exists, L1 must name the exact parent gap this task closes and what successor work remains or is invalidated.
+14. If the task inherits a plan-level exit expectation, the test matrix or a validation note must make that inheritance concrete enough to review.
 
 ### 5a) Consistency Gate (mandatory before L2)
 
@@ -368,6 +403,11 @@ Run a document-level consistency gate:
    - invalid/precondition-failure behavior is explicit,
    - forbidden early side effects do not reappear elsewhere in L1,
    - any new lock/mutex/serialization primitive is reflected in the bounded task shape and test matrix.
+12. Re-check plan linkage fit when `plan_ref` exists:
+   - the declared parent gap matches the actual bounded task,
+   - predecessor/successor expectations are still coherent after any local split,
+   - obsolete/refined tasks are named explicitly,
+   - and inherited plan-level validation expectations are reflected in L1.
 
 ### 6) L2 pass
 
