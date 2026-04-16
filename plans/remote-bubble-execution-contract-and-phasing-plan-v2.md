@@ -143,7 +143,7 @@ Az explicit control-model dontesek most visszanyerhetok a designbol es a review-
 | Phase 2A | `runtime_activation` | Local clone-topology activation gate | Phase 1E | clone-success local start injected/remote-capable bootstrap mellett, end-to-end canonical runtime consume-val | clone-start mar nem tud ket workspace-azonossag kozt szetszakadni, es a bubble vegigviheto a local lifecycle familyben is |
 | Phase 2B | `operator_write_enablement` | Remote create write-path exposure | Phase 2A | `bubble create --remote`, local executor persistence, `remote.json` created-pointer init | remote bubble local configkent letrehozhato, de runtime start meg nincs aktivalva |
 | Phase 2C | `contract_foundation` | Remote pre-start sync hook contract closure | Phase 2B | `pairflow_sync_command` global remote config contract, parser/validator/tests | a remote start activation mar explicit config-contractrol olvashatja a hookot, de meg nem futtatja |
-| Phase 2D | `runtime_activation` | Remote SSH start activation | Phase 2C | SSH clone/start orchestration, optional best-effort sync-hook consume, created->started pointer transition, state-cache init | remote bubble start tenylegesen megy stabil local modelre epitve, a sync hook pedig fail-soft operational seam marad |
+| Phase 2D | `runtime_activation` | Remote SSH start activation | Phase 2C | SSH clone/start orchestration, optional best-effort sync-hook consume, deterministic same-authority inner-start repo binding a remote clone es a syncelt bubble control-plane kozott, explicit remote workspace-authority consume a clone rooton, local control-plane state reconciliation, created->started pointer transition, state-cache init | remote bubble start tenylegesen megy stabil local modelre epitve; nincs `repo_path` / bubble-lookup authority mismatch, nincs implicit worktree fallback, es a local control-plane state sem marad stale `CREATED`; a sync hook pedig fail-soft operational seam marad |
 | Phase 2E | `operator_read_model` | Remote status/list projection | Phase 2D | status/list read-model, cache freshness, remote runtime wording | user-facing read-model mar a remote runtimeot irja le, attach nelkul is konzisztensen |
 | Phase 2F | `operator_read_model` | Remote attach consume | Phase 2E | attach wording, launcher consume, port-forward projection | az attach surface is a remote runtime modelre ul |
 | Phase 3A | `mutation_routing` | Remote approval/rework routing | Phase 2F | approval/rework command routing stabil remote runtimeon | operator mutation routing mar nem local-only runtimeot feltetelez |
@@ -155,7 +155,9 @@ Az explicit control-model dontesek most visszanyerhetok a designbol es a review-
 1. A `Phase 2D` taskot csak akkor kell approvable bounded remote first-start activation closure-kent megitelni, ha ezt a `T1-T10` activation-focused test/contract matrix a sajat szeletan belul le tudja fedni:
    - first-start only `remote.json(kind="created")` retained pointerrol,
    - optional `pairflow_sync_command` best-effort consume-kent,
-   - explicit remote runtime confirmation utan irt local `remote.json(kind="started")` + `state-cache.json`,
+   - deterministic same-authority inner-start repo identity closure a remote clone es a syncelt `bubble.toml` kozott; nincs unresolved `repo_path` / bubble-lookup mismatch,
+   - explicit remote workspace-authority consume a clone rooton, amely nem nyit uj implicit `work_mode`/worktree fallback truth-ot,
+   - explicit remote runtime confirmation utan irt local `state.json` control-plane reconciliation + `remote.json(kind="started")` + `state-cache.json`,
    - canonical bubble control-artifact sync a remote clone-ba legacy `config.json` authority nelkul,
    - explicit non-recursive inner-start discriminator a remote clone-on beluli branchhez,
    - remote `--attach` explicit reject, local runtime-session/tmux surrogate authority nelkul, remote-safe public start surface-szel.
@@ -171,6 +173,10 @@ Az explicit control-model dontesek most visszanyerhetok a designbol es a review-
 4. Design-doc conflict marker ehhez a szelethez:
    - a `docs/remote-bubble-execution.md` itt csak retained baselinekent hasznalhato,
    - ha a design doc start/cache/recovery wordingje ellentmond a task `must-not-use`, `Required Implementation Notes`, vagy `T1-T10` contractjanak, akkor a `Phase 2D` task contractja az authority.
+5. Phase ownership clarification:
+   - a remote clone-beli inner start `repo_path` / bubble-lookup same-authority closure nem `Phase 2E` read-model vagy `Phase 3C` recovery problema, hanem `Phase 2D` activation prerequisite,
+   - a remote clone-root workspace-authority consume nem nyithat vissza mar lezart `Phase 1B1-1E` authority alignmentet,
+   - a sikeres remote first-start utani local `state.json` control-plane reconciliation nem halaszthato kesobbi read-model taskra, mert a local `bubble start` lifecycle sajat start-mode truthja mar most ebbol el.
 
 ## Re-Simulation Check
 
@@ -242,7 +248,9 @@ Az explicit control-model dontesek most visszanyerhetok a designbol es a review-
 4. A kovetkezo explicit implementacios fazis most a `Phase 2D`:
    - remote SSH start orchestration,
    - optional `pairflow_sync_command` best-effort consume,
-   - `remote.json` created -> started pointer transition,
+   - deterministic same-authority inner-start repo identity closure a remote clone es a syncelt bubble control-plane kozott,
+   - explicit remote workspace-authority consume a clone rooton,
+   - local `state.json` control-plane reconciliation + `remote.json` created -> started pointer transition,
    - local `state-cache.json` init,
    - mikozben a `status/list/attach` read-model tovabbra is successor-only `Phase 2E/2F`.
 
