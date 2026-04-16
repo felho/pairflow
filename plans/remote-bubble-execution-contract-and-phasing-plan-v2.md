@@ -150,6 +150,28 @@ Az explicit control-model dontesek most visszanyerhetok a designbol es a review-
 | Phase 3B | `cleanup_routing` | Remote commit/merge/delete cleanup routing | Phase 3A | remote command routing a mar lezart local lifecycle cleanup familyre | a remote cleanup/routing ugyanarra a topology-modelre ul, de nem nyit uj local cleanup semantics-et |
 | Phase 3C | `recovery_rollout` | Recovery, docs, rollout closure | Phase 3B | diagnostics, reboot recovery guidance, docs, manual smoke evidence | failure semantics es rollout evidence lezarhato |
 
+### Phase 2D Approval Boundary Note
+
+1. A `Phase 2D` taskot csak akkor kell approvable bounded remote first-start activation closure-kent megitelni, ha ezt a `T1-T10` activation-focused test/contract matrix a sajat szeletan belul le tudja fedni:
+   - first-start only `remote.json(kind="created")` retained pointerrol,
+   - optional `pairflow_sync_command` best-effort consume-kent,
+   - explicit remote runtime confirmation utan irt local `remote.json(kind="started")` + `state-cache.json`,
+   - canonical bubble control-artifact sync a remote clone-ba legacy `config.json` authority nelkul,
+   - explicit non-recursive inner-start discriminator a remote clone-on beluli branchhez,
+   - remote `--attach` explicit reject, local runtime-session/tmux surrogate authority nelkul, remote-safe public start surface-szel.
+2. Ezek hianya vagy kesobbi ownershipje nem lehet `Phase 2D` blocker, mert successor-owned scope:
+   - `status/list` read-model wording, cache-freshness/refresh policy vagy cache-reconciliation consume az initial cache-initen tul,
+   - attach launcher, port-forward vagy UX consume,
+   - explicit started-pointer consume-ra epulo remote restart/reboot recovery semantics a `Phase 2D` first-start fail-closed guardon tul,
+   - approval/rework remote routing (`Phase 3A`) es commit/merge/delete remote routing (`Phase 3B`),
+   - strukturalt warning/read-model surfacing a hook/version diagnostics korul.
+3. Review-loop guardrail:
+   - ha egy eszrevetel nem a fenti bounded remote first-start activation closure correctnesset serti, azt legfeljebb `later-hardening` vagy successor-task note szinten szabad kezelni, nem required-now `Phase 2D` blocker-kent.
+   - ez a guardrail nem irja felul a canonical reviewer severity ontology evidence- es severity-policyjat.
+4. Design-doc conflict marker ehhez a szelethez:
+   - a `docs/remote-bubble-execution.md` itt csak retained baselinekent hasznalhato,
+   - ha a design doc start/cache/recovery wordingje ellentmond a task `must-not-use`, `Required Implementation Notes`, vagy `T1-T10` contractjanak, akkor a `Phase 2D` task contractja az authority.
+
 ## Re-Simulation Check
 
 1. `Phase 1B1 -> Phase 1B2 -> Phase 1C1 -> Phase 1C2 -> Phase 1D -> Phase 1E -> Phase 2A` sorrendben a local clone-topology activation correctness szempontbol stabil:
