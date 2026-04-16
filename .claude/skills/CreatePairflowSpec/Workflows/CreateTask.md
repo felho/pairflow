@@ -57,7 +57,31 @@ Create or refine a Pairflow task file using `L0 -> L1 -> L2`.
    - prerequisite milestones,
    - distinct acceptance goals.
 
-### 1a) Run the Control-Model Readiness Gate
+### 1a) Run the Target-File Reality Check
+
+Run this check whenever `target_files` are known and the files exist.
+
+Inspect the declared `target_files` and, when needed, their adjacent call-sites/entrypoints to derive the actual bounded slice.
+
+Minimum checks:
+1. Is any target file a mutation entrypoint (`route.ts`, write path, command handler, mutation service)?
+2. Does the touched scope change any of:
+   - write/producer behavior,
+   - shared response or status semantics,
+   - rollback/retry/cleanup/shared-state preservation,
+   - lock/idempotency/serialization behavior,
+   - precondition ordering relative to side effects?
+3. Are there fresh-vs-reused, success-vs-failure, retry-vs-no-retry, or precondition-pass-vs-fail branches that must be explicitly inventoried?
+4. Does the actual touched scope still match the claimed task label and bounded-task shape?
+
+Policy:
+1. Do not trust the task title, phase label, or requested task shape alone.
+2. `target_files` and actual touched scope override the task label when they disagree.
+3. If the touched scope implies producer, fail-closed, or coordination/concurrency work, the task must say so explicitly.
+4. If the touched scope changes a mutation boundary, the task must record precondition-before-side-effect behavior explicitly.
+5. If the actual scope mixes multiple correctness closures and the artifact cannot prove the mix is safe, split before drafting L1.
+
+### 1b) Run the Control-Model Readiness Gate
 
 Use `references/Control-Model-Readiness-Gate.md`.
 
@@ -99,7 +123,7 @@ Policy:
    - or explicitly forbidden behavior.
 7. Do not let `forbidden_fallback` wording accidentally ban deterministic same-authority resolution paths unless the referenced artifact or task says so explicitly.
 
-### 1b) Run the Authority Fan-out Scan
+### 1c) Run the Authority Fan-out Scan
 
 Run this scan whenever:
 1. `authority_risk >= 1`
@@ -138,7 +162,7 @@ Policy:
    - which producer or predecessor closure it depends on,
    - and which downstream consumer/read-model/cleanup closures remain for successor tasks.
 
-### 1c) Run the Shared Contract Compatibility Gate
+### 1d) Run the Shared Contract Compatibility Gate
 
 Run this gate when a shared interface/result shape, shared port, or shared artifact contract is changing.
 
@@ -154,7 +178,7 @@ Policy:
    - route back to plan refinement.
 3. Do not let a foundation task smuggle in downstream consumer alignment just because the changed contract is shared.
 
-### 1c.1) Run the Closure-Budget Gate
+### 1d.1) Run the Closure-Budget Gate
 
 Run this gate when the task touches authority/runtime/read-model/shared-contract work.
 
@@ -177,7 +201,7 @@ Policy:
    - and no separate compatibility or diagnostics risk exists.
 5. If that proof is not available from the loaded context, do not guess; route back to `CreatePlan`.
 
-### 1c.2) Run the Bounded-Task-Shape Gate
+### 1d.2) Run the Bounded-Task-Shape Gate
 
 Use `references/Bounded-Task-Shape-Gate.md`.
 
@@ -197,7 +221,7 @@ Policy:
 5. If the task changes precondition ordering relative to side effects, record that explicitly and treat it as a split trigger when mixed with producer or shared-contract work.
 6. If the task mixes `authority_producer` with `fail_closed_hardening` or `coordination_concurrency_hardening` without an explicit bounded proof, route back to `CreatePlan`.
 
-### 1d) Run the Complexity-Risk Gate
+### 1e) Run the Complexity-Risk Gate
 
 Use `references/Complexity-Risk-Gate.md`.
 
@@ -259,25 +283,30 @@ Required blockers for Task output:
    - successor tasks unlocked or impacted,
    - obsolete/refined task IDs if the current split/replacement changes the task list,
    - plan-level validation or exit expectation inherited by this task.
-4. `L0`: goal, in-scope, out-of-scope, safety default
-5. `L1`: call-site/entry points, data/interface contract, error/fallback, test matrix
-6. If contract-boundary override is active:
+4. Target-file reality proof is mandatory when `target_files` are known:
+   - actual mutation entrypoints reviewed,
+   - touched producer/fail-closed/coordination scope explicitly stated,
+   - precondition-before-side-effect changes called out when present,
+   - and any mismatch between requested label and actual scope is resolved in favor of actual scope.
+5. `L0`: goal, in-scope, out-of-scope, safety default
+6. `L1`: call-site/entry points, data/interface contract, error/fallback, test matrix
+7. If contract-boundary override is active:
    - L1 `Data and Interface Contract` must have impacted contract rows
    - L1 test matrix must include at least one compatibility or migration scenario
-7. L1 contract details must be explicit:
+8. L1 contract details must be explicit:
    - required vs optional fields for impacted schemas/types
    - exact function signature for changed public entry points
    - if no allowed side effects are listed, mark pure behavior
    - if dependency exists, include dependency-failure fallback row
-8. Cross-reference and token integrity must be explicit:
+9. Cross-reference and token integrity must be explicit:
    - referenced IDs must resolve to existing rows/clauses/tokens,
    - canonical token names must be used consistently (no shorthand aliases).
-9. Complexity-risk blockers must be explicit:
+10. Complexity-risk blockers must be explicit:
    - if `risk_score >= 4`, split decision must be recorded,
    - if `identity_join_risk >= 1`, the task must state the matching seam and forbidden fallback identities,
    - if `risk_score >= 8` or hard-stop applies, task must not pretend to be direct one-shot delivery,
    - authority/source-of-truth note is mandatory when authority risk is non-zero.
-10. Control-model blockers must be explicit whenever applicable:
+11. Control-model blockers must be explicit whenever applicable:
    - `business_invariant`
    - `control_model`
    - `read_path_rule`
@@ -285,31 +314,31 @@ Required blockers for Task output:
    - `allowed_resolution_path`
    - `missing_data_rule`
    - `phase_boundary`
-11. If any control-model blocker is missing and correctness depends on it, the task is not ready. Ask focused blocker questions instead of drafting around the gap.
-12. If a shared contract is changing, blockers also include:
+12. If any control-model blocker is missing and correctness depends on it, the task is not ready. Ask focused blocker questions instead of drafting around the gap.
+13. If a shared contract is changing, blockers also include:
    - current consumers inventory,
    - additive vs breaking decision,
    - explicit alignment ownership.
-13. If the task refines or replaces an existing canonicalization/resolution path, blockers also include:
+14. If the task refines or replaces an existing canonicalization/resolution path, blockers also include:
    - `must_preserve_behaviors`,
    - `allowed_resolution_paths`,
    - `forbidden_regression_interpretations`,
    - `replacement_proof_required_if_removed`.
-14. If authority/runtime/read-model/shared-contract work is in scope, blockers also include closure-budget triage:
+15. If authority/runtime/read-model/shared-contract work is in scope, blockers also include closure-budget triage:
    - closure buckets touched,
    - collapsed closures,
    - deferred closures,
    - why the remaining bounded task is safe.
-15. If the task modifies an existing mutation flow, blockers also include a `Precondition and Side-Effect Boundary`:
+16. If the task modifies an existing mutation flow, blockers also include a `Precondition and Side-Effect Boundary`:
    - validations that must pass before mutations,
    - side effects forbidden before those validations pass,
    - invalid/precondition-failure behavior,
    - coordination primitives in scope or explicitly deferred.
-16. If three or more consume families are implicated, blockers also include explicit sequencing ownership:
+17. If three or more consume families are implicated, blockers also include explicit sequencing ownership:
    - whether this task is producer, consumer-family alignment, activation, read-model, or cleanup,
    - what producer/predecessor closure it depends on,
    - and which downstream closures remain for successor tasks.
-17. If the task cannot name a primary bounded-task shape, or mixes producer with fail-closed/coordination work without an explicit bounded proof, the task is not ready.
+18. If the task cannot name a primary bounded-task shape, or mixes producer with fail-closed/coordination work without an explicit bounded proof, the task is not ready.
 
 If blockers exist, ask only focused questions for those blockers.
 
@@ -321,32 +350,38 @@ If blockers exist, ask only focused questions for those blockers.
 4. Include complexity-risk outcome and split decision.
 5. Include closure-budget outcome when applicable.
 6. If applicable, keep the L0 control-model summary short, then restate it concretely in a dedicated L1 domain/control contract section.
-7. If applicable, include an `Authority Boundary Map` and use it to say what this task intentionally does not close.
-8. If the task touches an existing runtime authority/resolution path, include a `Baseline Preservation` section and say explicitly what is preserved vs intentionally replaced.
-9. If the task touches an existing mutation flow, include a `Precondition and Side-Effect Boundary` section.
-10. If `plan_ref` exists, include a `Plan Linkage` section and keep it task-local:
+7. Include a `Scope Reality / Shape Proof` section when `target_files` are known and use it to record:
+   - which entrypoints/call-sites were inspected,
+   - whether producer/fail-closed/coordination scope is actually touched,
+   - whether mutation boundary changes exist,
+   - and why the declared task shape matches the real scope.
+8. If applicable, include an `Authority Boundary Map` and use it to say what this task intentionally does not close.
+9. If the task touches an existing runtime authority/resolution path, include a `Baseline Preservation` section and say explicitly what is preserved vs intentionally replaced.
+10. If the task touches an existing mutation flow, include a `Precondition and Side-Effect Boundary` section.
+11. If `plan_ref` exists, include a `Plan Linkage` section and keep it task-local:
    - closes gap,
    - depends on,
    - unlocks or impacts successors,
    - refines/replaces/obsoletes any prior open task,
    - inherits which plan-level validation/exit expectation.
-11. Record primary bounded-task shape explicitly, and secondary shape only when justified.
+12. Record primary bounded-task shape explicitly, and secondary shape only when justified.
 
 ### 5) L1 pass
 
 Fill each section or mark `N/A`:
 1. Domain/control contract
-2. Plan linkage and successor impact (required when `plan_ref` exists; otherwise `N/A`)
-3. Call-site matrix
-4. Data and interface contract
-5. Side effects contract
-6. Error and fallback contract
-7. Dependency constraints
-8. Test matrix (at least one golden path and one invalid case)
-9. Shared contract compatibility (required when a shared interface/result shape changes; otherwise `N/A`)
-10. Baseline preservation (required when an existing canonicalization/resolution path is refined or replaced; otherwise `N/A`)
-11. Closure-budget summary (required when authority/runtime/read-model/shared-contract work is in scope; otherwise `N/A`)
-12. Precondition and side-effect boundary (required when an existing mutation flow is modified or coordination primitives are introduced; otherwise `N/A`)
+2. Scope reality and shape proof (required when `target_files` are known; otherwise `N/A`)
+3. Plan linkage and successor impact (required when `plan_ref` exists; otherwise `N/A`)
+4. Call-site matrix
+5. Data and interface contract
+6. Side effects contract
+7. Error and fallback contract
+8. Dependency constraints
+9. Test matrix (at least one golden path and one invalid case)
+10. Shared contract compatibility (required when a shared interface/result shape changes; otherwise `N/A`)
+11. Baseline preservation (required when an existing canonicalization/resolution path is refined or replaced; otherwise `N/A`)
+12. Closure-budget summary (required when authority/runtime/read-model/shared-contract work is in scope; otherwise `N/A`)
+13. Precondition and side-effect boundary (required when an existing mutation flow is modified or coordination primitives are introduced; otherwise `N/A`)
 
 Rules:
 1. `target_files` must align with call-site matrix.
@@ -357,15 +392,16 @@ Rules:
 6. Required-now test rows should be self-contained; if a row depends on another row for shared invariants, add explicit normative dependency notation.
 7. If the risk gate forced a split, L1 must only describe the bounded phase, not the whole original umbrella feature.
 8. If the control-model gate applied, L1 must make the allowed read-path, forbidden fallbacks, and missing-data behavior concrete enough for implementation.
-9. If the authority fan-out scan applied, L1 must keep producer closure and consumer-family closure separated unless the artifact explicitly documents why they are inseparable.
-10. If the shared contract compatibility gate applied, L1 must make additive vs breaking behavior explicit and name any out-of-scope consumers.
-11. If baseline-preservation applies, L1 must distinguish:
+9. If `target_files` are known, L1 must name the inspected mutation/call-site reality and must resolve any mismatch between requested label and actual scope in favor of actual scope.
+10. If the authority fan-out scan applied, L1 must keep producer closure and consumer-family closure separated unless the artifact explicitly documents why they are inseparable.
+11. If the shared contract compatibility gate applied, L1 must make additive vs breaking behavior explicit and name any out-of-scope consumers.
+12. If baseline-preservation applies, L1 must distinguish:
    - forbidden heuristic fallbacks,
    - allowed deterministic same-authority resolution paths,
    - and any exact replacement path that justifies removing a current behavior.
-12. If the task touches a mutable flow, L1 must make explicit which validations occur before any side effect and what invalid/precondition-failure path proves zero-side-effect or bounded-side-effect behavior.
-13. If `plan_ref` exists, L1 must name the exact parent gap this task closes and what successor work remains or is invalidated.
-14. If the task inherits a plan-level exit expectation, the test matrix or a validation note must make that inheritance concrete enough to review.
+13. If the task touches a mutable flow, L1 must make explicit which validations occur before any side effect and what invalid/precondition-failure path proves zero-side-effect or bounded-side-effect behavior.
+14. If `plan_ref` exists, L1 must name the exact parent gap this task closes and what successor work remains or is invalidated.
+15. If the task inherits a plan-level exit expectation, the test matrix or a validation note must make that inheritance concrete enough to review.
 
 ### 5a) Consistency Gate (mandatory before L2)
 
@@ -391,19 +427,25 @@ Run a document-level consistency gate:
    - additive vs breaking decision is explicit,
    - any out-of-scope consumers are named,
    - no hidden downstream alignment has leaked into a bounded producer task.
-9. Re-check authority fan-out fit:
+9. Re-check target-file reality fit:
+   - the declared task label and primary shape still match the touched scope,
+   - hidden producer work has not been left under consumer-only wording,
+   - rollback/retry/cleanup/shared-state preservation is not hiding outside the declared shape,
+   - coordination primitives are not hiding outside the declared shape,
+   - and mutation boundary changes are reflected in the precondition/side-effect section.
+10. Re-check authority fan-out fit:
    - the task’s in-scope consumers match the declared authority boundary map,
    - export surfaces claimed as “closed in this phase” are truly in scope,
    - read-model and cleanup consume have not been pulled into a producer task by accident.
-10. Re-check bounded-task shape fit:
+11. Re-check bounded-task shape fit:
    - the declared primary shape matches the actual L1 contract,
    - producer work has not silently absorbed fail-closed hardening or coordination work,
    - any secondary shape is explicitly justified.
-11. Re-check precondition and side-effect ordering:
+12. Re-check precondition and side-effect ordering:
    - invalid/precondition-failure behavior is explicit,
    - forbidden early side effects do not reappear elsewhere in L1,
    - any new lock/mutex/serialization primitive is reflected in the bounded task shape and test matrix.
-12. Re-check plan linkage fit when `plan_ref` exists:
+13. Re-check plan linkage fit when `plan_ref` exists:
    - the declared parent gap matches the actual bounded task,
    - predecessor/successor expectations are still coherent after any local split,
    - obsolete/refined tasks are named explicitly,

@@ -48,6 +48,17 @@ Include this section when `plan_ref` is non-null. Otherwise say `N/A`.
 4. Task-list impact: <refines|replaces|obsoletes `task_id` list, or `N/A`.>
 5. Inherited validation / exit expectation: <What plan-level evidence or exit expectation this task contributes to, or `N/A`.>
 
+### Scope Reality / Shape Proof
+
+Include this section when `target_files` are known. Otherwise say `N/A`.
+
+1. Inspected entrypoints / call-sites: <Which target files and adjacent entrypoints were actually inspected, or `N/A`.>
+2. Actual touched scope: <producer | consumer-family alignment | activation/read-model | fail-closed | coordination | mixed + note>
+3. Mutation entrypoints in scope: <List concrete write paths / route handlers / command handlers, or `N/A`.>
+4. Hidden scope ruled out: <What was checked to rule out hidden producer/fail-closed/coordination scope, or `N/A`.>
+5. Branch inventory note: <fresh/reused, success/failure, retry/no-retry, precondition-pass/fail, or `N/A`.>
+6. Why the declared task shape matches reality: <Short scope-proof, or `TODO_BLOCKER`.>
+
 ### Authority Boundary Map
 
 1. Authority producer: <What produces canonical authority in or before this task. If N/A, say N/A.>
@@ -136,7 +147,18 @@ Include this section when the task modifies an existing mutation flow or introdu
 | Missing-data rule | <explicit rule or `N/A`> | <fail-closed/unavailable/error behavior> | P1 | required-now |
 | Phase boundary | <explicit rule or `N/A`> | <what this task owns vs successor tasks across contract/producer/consume/activation/cleanup> | P2 | required-now |
 
-### 0a) Plan Linkage and Successor Impact (if applicable)
+### 0a) Scope Reality and Shape Proof (if applicable)
+
+| Item | Rule | Implementation / Review Consequence | Priority | Timing |
+|---|---|---|---|---|
+| Inspected entrypoints / call-sites | <explicit rule or `N/A`> | <what concrete files/entrypoints define the real scope> | P1 | required-now |
+| Actual touched scope | <explicit rule or `N/A`> | <which correctness closure is actually touched> | P1 | required-now |
+| Mutation entrypoints in scope | <explicit rule or `N/A`> | <which write paths must be treated as mutation scope> | P1 | required-now |
+| Hidden scope ruled out | <explicit rule or `N/A`> | <what was checked to rule out hidden producer/fail-closed/coordination work> | P1 | required-now |
+| Branch inventory note | <explicit rule or `N/A`> | <which branch families must be represented in L1/tests> | P1 | required-now |
+| Shape proof | <explicit rule or `N/A`> | <why the declared bounded-task shape is still true> | P1 | required-now |
+
+### 0b) Plan Linkage and Successor Impact (if applicable)
 
 | Item | Rule | Implementation / Review Consequence | Priority | Timing |
 |---|---|---|---|---|
@@ -146,19 +168,19 @@ Include this section when the task modifies an existing mutation flow or introdu
 | Task-list impact | <refines|replaces|obsoletes|`N/A`> | <what existing open task is affected> | P1 | required-now |
 | Inherited validation / exit expectation | <explicit rule or `N/A`> | <what evidence or exit expectation this task must satisfy> | P1 | required-now |
 
-### 0b) Shared Contract Compatibility (if applicable)
+### 0c) Shared Contract Compatibility (if applicable)
 
 | Shared Contract | Current Consumers | Change Type (`additive|breaking|N/A`) | This Task Action | Deferred Alignment |
 |---|---|---|---|---|
 | <path/interface/result-shape> | <list or `N/A`> | <type> | <what this task does> | <successor task or `N/A`> |
 
-### 0c) Baseline Preservation (if applicable)
+### 0d) Baseline Preservation (if applicable)
 
 | Current Behavior | Preserve/Replace/Forbid | Required Proof | Priority | Timing |
 |---|---|---|---|---|
 | <current deterministic path or `N/A`> | <preserve|replace|forbid> | <equivalence/replacement evidence or `N/A`> | P1 | required-now |
 
-### 0d) Precondition and Side-Effect Boundary (if applicable)
+### 0e) Precondition and Side-Effect Boundary (if applicable)
 
 | Case | Must Be Validated Before | Forbidden Early Side Effects | Required Failure Behavior | Priority | Timing |
 |---|---|---|---|---|---|
@@ -231,6 +253,7 @@ Use this section to track non-blocking review items (`later-hardening`) that sho
 7. If an authority fan-out exists, the authority boundary map must stay consistent with the bounded task scope.
 8. If baseline behavior is removed or replaced, the task must name the exact replacement path and the proof expected from validation.
 9. If `plan_ref` is non-null, `Plan Linkage` and the inherited validation/exit expectation are mandatory and must stay consistent with successor impact notes.
+10. If `target_files` are known, `Scope Reality / Shape Proof` is mandatory and the declared task shape must match the inspected touched scope.
 
 ## Spec Lock
 
