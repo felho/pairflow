@@ -32,8 +32,9 @@ owners:
 ## Current Tree Position (2026-04-16)
 
 1. `E1`, `E2a`, `E2b` es `E2c` lezart predecessor baseline.
-2. Ez a task mar csak implementer-lane foundation hardening.
+2. Ez a task mar csak implementer-lane foundation hardening; nem activation proof.
 3. Az `E3b` es `E3c` mar nem nyithat ujra authority-shape dontest.
+4. Az `askHuman` command-to-flow mainline activation ownership es a flow-result -> finalization -> public-result projection chain tovabbra is `E3b`.
 
 ## L0 - Policy
 
@@ -58,14 +59,16 @@ owners:
 3. Guard fields: `expected_role`, `expected_round`, `expected_state_fingerprint`.
 4. Guard rule: a guard mezok fail-closed verification mezok, nem authority replacementek.
 5. Compat rule: a workspace/CWD lookup csak teljes canonical context exact rehydration bridge lehet.
+6. Successor-owned activation chain: a `command-to-flow mainline` -> `delivery outcome normalization` -> `flow-result -> finalization -> public-result` lanc `E3b` ownership, nem `E3a`.
 
 ### Domain / Control Model Summary
 
 1. Az implementer lane sem kaphat role-local authority shortcutot.
 2. A public `agent emit` surface nem nyithat explicit target-authority API-t.
-3. `authoritativeContext` primary route marad; a compat lookup csak secondary rehydration bridge.
-4. A dispatcher fallback csak preserved-baseline compatibility route lehet ugyanazon canonical execution identity menten.
-5. Hianyzo vagy mismatched `execution_id` fail-closed; guard mismatch szinten fail-closed.
+3. `E3a` ownership a wrapper/prep/dispatcher same-authority foundationre korlatozodik; nem owns-olja az activation-owned flow-result -> finalization -> public-result chain closurejat.
+4. `authoritativeContext` primary route marad; a compat lookup csak secondary rehydration bridge.
+5. A dispatcher fallback csak preserved-baseline compatibility route lehet ugyanazon canonical execution identity menten.
+6. Hianyzo vagy mismatched `execution_id` fail-closed; guard mismatch szinten fail-closed.
 
 ### In Scope
 
@@ -80,7 +83,8 @@ owners:
 1. Fresh activation proof vagy projection redesign.
 2. Duplicate/restart/stale parity.
 3. Reviewer/meta-reviewer rollout.
-4. Tmux topology vagy adapter redesign.
+4. Az activation-owned `askHuman` `command-to-flow mainline`, `delivery outcome normalization`, es `flow-result -> finalization -> public-result` chain ownership; ez `E3b`, nem a baseline-preserving running-state guard.
+5. Tmux topology vagy adapter redesign.
 
 ## L1 - Change Contract
 
@@ -92,6 +96,7 @@ owners:
 | Guard rule | `expected_role`, `expected_round`, `expected_state_fingerprint` csak fail-closed guard. | Guard-preservation megengedett, authority substitution nem. | P1 | required-now |
 | Compat rule | CWD/workspace lookup csak exact rehydration bridge lehet. | Nincs `handoff_id`-only compat authority. | P1 | required-now |
 | Non-implementer baseline | Reviewer/non-implementer `human_question` baseline preserved marad. | `E3a` nem csinalhat implementer-only emit surface-t. | P1 | required-now |
+| Activation boundary | Az `askHuman` `command-to-flow mainline`, `delivery outcome normalization`, es `flow-result -> finalization -> public-result` chain ownership `E3b`-ben marad. | `E3a` csak wrapper/prep/dispatcher same-authority foundationt zarhat; a successor-owned activation chainhez csak a canonical authority foundationt orokiti, maga a chain nem `E3a` call-site/test ownership. | P1 | required-now |
 | Phase boundary | `E3a` csak foundation hardeninget owns-ol. | `E3b`/`E3c` nem hozhat uj authority-shape dontest. | P1 | required-now |
 
 ### 1) Call-site Matrix
@@ -103,7 +108,7 @@ owners:
 | CS3 | `src/v11/application/actorProtocol/emitActorProtocolV11.ts` | wrapper routing + dispatcher | implementer `pass` es implementer-origin `human_question` ugyanarra a canonical authority route-ra all; dispatcher fallback csak preserved baseline compatibility route | P1 | required-now | T2, T4 |
 | CS4 | `src/v11/application/actorProtocol/actorProtocolEmitters.ts` | pass/human forwarders | a canonical execution identity es a guardok pontosan tovabbmennek; nincs field loss vagy reinterpretation | P1 | required-now | T2 |
 | CS5 | prep files | workspace prep | `authoritativeContext` primary; compat lookup csak exact rehydration bridge | P1 | required-now | T3 |
-| CS6 | `src/v11/shared/askHuman/askHumanRunningStateValidationChecks.ts` | running-state guard | reviewer allowed / `meta_reviewer` forbidden baseline preserved marad | P1 | required-now | T4 |
+| CS6 | `src/v11/shared/askHuman/askHumanRunningStateValidationChecks.ts` | running-state guard | reviewer allowed / `meta_reviewer` forbidden baseline preserved marad; ez baseline guard seam, nem activation-owned finalization/public-result chain | P1 | required-now | T4 |
 
 ### 2) Test Matrix
 
@@ -118,3 +123,4 @@ owners:
 
 1. Ha a dispatcher fallback szukitese felmerul, az kulon successor decision; ez a task ezt nem vezetheti be csendesen.
 2. Ha activation vagy parity csak uj authority-vocabularyval tunik implementalhatonak, akkor a higher-level docs reconciliation hianyzik.
+3. Ha az `askHuman` `command-to-flow mainline`, `delivery outcome normalization`, vagy a `flow-result -> finalization -> public-result` chain ownership latszik szuksegesnek, az `E3b` scope, nem `E3a` correction.
