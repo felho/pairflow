@@ -161,7 +161,7 @@ If the task includes future milestone-gated behavior:
 
 ## Output expectations
 
-When risk score is `4+`, the spec should explicitly capture:
+When risk score is `4+`, the Task artifact should explicitly capture:
 1. `risk_score`
 2. `authority_change`
 3. `surface_count`
@@ -180,18 +180,23 @@ If authority fan-out is the reason for the split, do not stop at the generic thr
 - `read-model`
 - `cleanup/rollout`
 
-Also record closure-budget triage when authority/runtime/read-model/shared-contract work is in scope:
+Also record closure-budget triage in the Task when authority/runtime/read-model/shared-contract work is in scope:
 1. which closure buckets are touched,
 2. which adjacent closures are intentionally collapsed,
 3. why the collapse is safe,
 4. which closures are explicitly deferred.
 
-Also state whether any of these closures are intentionally collapsed into one bounded phase/task, and why that collapse is safe.
+Also state whether any of these closures are intentionally collapsed into one bounded task, and why that collapse is safe.
 
-For mutable existing flows, also record:
+For mutable existing flows, the Task should also record:
 1. whether invalid/precondition-failure should produce zero side effects,
 2. whether rollback/retry/shared-state-preservation is in the same slice,
 3. whether coordination primitives are introduced,
 4. whether those concerns are intentionally split out of the producer/delivery slice.
 
 When risk score is `8+`, do not write the task as if it were direct feature delivery unless the user explicitly asks for a knowingly high-risk bundle.
+
+For Plans:
+1. use this gate to decide whether decomposition is required,
+2. do not persist per-task numeric risk scoring by default,
+3. record only the resulting split/dependency shape when that changes plan correctness.

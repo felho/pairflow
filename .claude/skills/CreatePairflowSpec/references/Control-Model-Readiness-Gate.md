@@ -56,15 +56,11 @@ For affected scopes, the artifact author must explicitly answer these questions.
      - hard error,
      - or another clearly bounded behavior.
 
-7. `phase_boundary` (which phase closes contract, producer, consume, activation, and cleanup)
-   - Which phase owns:
-     - `contract_closure`,
-     - `producer_closure`,
-     - `internal_execution_closure`,
-     - `workflow_orchestration_closure`,
-     - `read_model_closure`,
-     - `activation_closure`,
-     - `cleanup_recovery_closure`?
+7. `sequencing_boundary` (which boundary matters for task ordering and ownership)
+   - Which boundary must be explicit so downstream tasks do not drift?
+   - Use the lightest form that preserves correctness:
+     - lightweight plan sequencing note,
+     - or detailed task-local ownership when the bounded slice needs it.
 
 ## Applicability Rules
 
@@ -96,14 +92,10 @@ That section must capture:
 4. forbidden fallback
 5. allowed resolution path
 6. missing-data rule
-7. detailed phase boundary ownership:
-   - contract closure
-   - producer closure
-   - internal execution closure
-   - workflow/orchestration closure
-   - read-model closure
-   - activation closure
-   - cleanup/recovery closure
+7. a lightweight sequencing note only when ordering depends on it:
+   - producer-first boundary,
+   - which downstream consume families remain,
+   - whether cleanup/recovery is included now or deferred
 
 If these are not stable enough yet, the plan should stop and request clarification instead of pretending that the phase split is implementation-ready.
 
@@ -149,13 +141,9 @@ All of the following are true:
 4. Forbidden fallback sources are explicit.
 5. Allowed resolution paths are explicit when needed.
 6. Missing-data behavior is explicit.
-7. Phase/task ownership boundaries are explicit enough to avoid cross-seam drift across:
-   - producer,
-   - internal execution,
-   - workflow/orchestration,
-   - read-model,
-   - activation,
-   - cleanup/recovery.
+7. The artifact records ownership/sequencing boundaries at the right level:
+   - plan: lightweight sequencing note when ordering depends on it,
+   - task: detailed bounded-slice ownership where implementation needs it.
 
 ### `NOT_READY`
 
@@ -175,7 +163,7 @@ If the gate is `NOT_READY`:
 2. Ask focused blocker questions if the missing control-model decision is not clearly recoverable from the available context.
 3. Rewrite the artifact to add the missing control-model section first only when the required control-model information is already clearly recoverable from existing references, code, or explicit prior decisions, but is not yet written down.
 4. Never invent a control model, fallback rule, or missing-data behavior just to make the artifact look implementable.
-5. Never compress `phase_boundary` into a single vague sentence when the sequencing depends on producer vs consumer-family closure.
+5. Never compress sequencing-critical ownership into a vague sentence when producer vs consumer-family closure materially affects ordering.
 6. Never treat a preserved deterministic same-authority resolution path as a forbidden fallback unless the artifact says so explicitly.
 
 The skill must be proactive here:

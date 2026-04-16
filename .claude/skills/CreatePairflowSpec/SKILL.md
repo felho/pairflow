@@ -245,23 +245,23 @@ Policy:
 2. `0-4`: single task is generally acceptable.
 3. `5-7`: split is strongly recommended; prefer `Plan -> Task`.
 4. `8-12`: refactor-first split is mandatory; do not keep the scope as one feature-delivery task.
-4. If a hard-stop rule from the reference applies, split regardless of total score.
-5. If the task introduces a canonical source-of-truth and also activates runtime behavior, default to `foundation -> delivery -> activation`.
-6. If future milestone-gated behavior is involved, document the contract now but keep activation in a later task.
-7. If the task changes a public contract or UI consume while correct behavior depends on fragile identity matching across seams, default to split even below the top score band.
-8. If the same authority touches three or more consume families, default split vocabulary is:
+5. If a hard-stop rule from the reference applies, split regardless of total score.
+6. If the task introduces a canonical source-of-truth and also activates runtime behavior, default to `foundation -> delivery -> activation`.
+7. If future milestone-gated behavior is involved, document the contract now but keep activation in a later task.
+8. If the task changes a public contract or UI consume while correct behavior depends on fragile identity matching across seams, default to split even below the top score band.
+9. If the same authority touches three or more consume families, default split vocabulary is:
    - `persisted authority` (if needed)
    - `authority producer`
    - `consumer-family alignment`
    - `activation`
    - `read-model`
    - `cleanup/rollout`
-9. The vocabulary above is not a mandatory phase count. Collapse phases/tasks when:
+10. The vocabulary above is not a mandatory phase count. Collapse phases/tasks when:
    - `persisted authority` and `authority producer` are closed by the same bounded change,
    - `activation` and `read-model` do not carry separate read-model or compatibility risk,
    - `cleanup/rollout` does not touch shared consumer contracts.
-10. But do not collapse producer closure, shared-contract migration, and multi-family consumer fallout into one task merely because the code is nearby; this is a planning error, not an implementation optimization.
-11. Do not persist per-task numeric risk scoring in plans by default; plans should capture decomposition, not stale task math.
+11. But do not collapse producer closure, shared-contract migration, and multi-family consumer fallout into one task merely because the code is nearby; this is a planning error, not an implementation optimization.
+12. Do not persist per-task numeric risk scoring in plans by default; plans should capture decomposition, not stale task math.
 
 ## Core Principles
 
