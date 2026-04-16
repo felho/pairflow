@@ -1,0 +1,26 @@
+{
+  "id": "start-remote-preflight-missing-origin-v11",
+  "command": "start",
+  "mode": "v11",
+  "description": "Start contract case for remote SSH activation failing closed before remote execution when git origin is missing.",
+  "input": {
+    "fixture": {
+      "scenario": "remote_preflight_missing_origin"
+    }
+  },
+  "expected": {
+    "status": "error",
+    "reasonCode": "START_REMOTE_PREFLIGHT_FAILED",
+    "stateSubset": {
+      "state": "CREATED"
+    }
+  },
+  "tags": [
+    "seed",
+    "m0",
+    "start",
+    "v11",
+    "remote",
+    "failure-path"
+  ]
+}

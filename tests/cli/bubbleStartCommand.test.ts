@@ -358,4 +358,49 @@ describe("runBubbleStartCommand", () => {
       stderrSpy.mockRestore();
     }
   });
+
+  it("rejects --attach for remote SSH bubbles before starting", async () => {
+    const resolvedBubble = {
+      bubbleId: "b_start_remote_attach_01",
+      repoPath: "/repo",
+      bubbleConfig: {
+        id: "b_start_remote_attach_01",
+        executor: {
+          type: "ssh",
+          remote: "homelab"
+        }
+      },
+      bubblePaths: {
+        bubbleDir: "/repo/.pairflow/bubbles/b_start_remote_attach_01"
+      }
+    } as unknown as ResolvedBubbleById;
+    const resolveBubbleByIdMock: NonNullable<
+      BubbleStartCommandDependencies["resolveBubbleById"]
+    > = vi.fn(() => Promise.resolve(resolvedBubble));
+    const startBubbleMock: NonNullable<
+      BubbleStartCommandDependencies["startBubble"]
+    > = vi.fn();
+    const registerRepoInRegistry = vi.fn();
+
+    await expect(
+      runBubbleStartCommand(
+        [
+          "--id",
+          "b_start_remote_attach_01",
+          "--attach"
+        ],
+        "/tmp",
+        {
+          resolveBubbleById: resolveBubbleByIdMock,
+          registerRepoInRegistry,
+          startBubble: startBubbleMock
+        }
+      )
+    ).rejects.toMatchObject({
+      reasonCode: "START_REMOTE_ATTACH_UNSUPPORTED"
+    });
+
+    expect(registerRepoInRegistry).not.toHaveBeenCalled();
+    expect(startBubbleMock).not.toHaveBeenCalled();
+  });
 });

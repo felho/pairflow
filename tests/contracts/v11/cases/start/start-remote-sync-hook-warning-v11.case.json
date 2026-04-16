@@ -1,0 +1,26 @@
+{
+  "id": "start-remote-sync-hook-warning-v11",
+  "command": "start",
+  "mode": "v11",
+  "description": "Start contract case for remote SSH activation that surfaces a warning-only sync hook failure.",
+  "input": {
+    "fixture": {
+      "scenario": "remote_sync_hook_warning"
+    }
+  },
+  "expected": {
+    "status": "ok",
+    "reasonCode": "STARTED",
+    "stateSubset": {
+      "state": "RUNNING"
+    }
+  },
+  "tags": [
+    "seed",
+    "m0",
+    "start",
+    "v11",
+    "remote",
+    "warning-path"
+  ]
+}

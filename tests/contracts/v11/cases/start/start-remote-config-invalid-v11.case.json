@@ -1,0 +1,26 @@
+{
+  "id": "start-remote-config-invalid-v11",
+  "command": "start",
+  "mode": "v11",
+  "description": "Start contract case for remote SSH activation failing closed when the configured remote alias is missing from the global remotes map.",
+  "input": {
+    "fixture": {
+      "scenario": "remote_config_invalid"
+    }
+  },
+  "expected": {
+    "status": "error",
+    "reasonCode": "START_REMOTE_CONFIG_INVALID",
+    "stateSubset": {
+      "state": "CREATED"
+    }
+  },
+  "tags": [
+    "seed",
+    "m0",
+    "start",
+    "v11",
+    "remote",
+    "failure-path"
+  ]
+}

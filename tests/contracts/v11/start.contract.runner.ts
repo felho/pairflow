@@ -11,7 +11,14 @@ import {
   writeStateSnapshot
 } from "../../../src/v11/infrastructure/state/stateStore.js";
 import { startBubbleV11 } from "../../../src/v11/application/start/emitStartV11.js";
-import { initGitRepository } from "../../helpers/git.js";
+import { runBubbleStartCommand as runBubbleStartCommandV11 } from "../../../src/v11/application/start/startCliCommand.js";
+import { writeRemotePointer } from "../../../src/v11/infrastructure/artifact/bubble/remoteExecutionArtifacts.js";
+import type {
+  ExecuteRemoteBubbleStartInput,
+  StartBubbleDependencies
+} from "../../../src/v11/application/start/startCommandContract.js";
+import { RemoteBubbleStartError } from "../../../src/v11/infrastructure/executor/ssh/sshBubbleStart.js";
+import { initGitRepository, runGit } from "../../helpers/git.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
 import { buildWorktreeBootstrapResult } from "../../helpers/worktreeBootstrapResult.js";
 import type { ContractCase, ContractCaseExpected } from "./schema.js";
@@ -54,7 +61,16 @@ type StartContractExtendedScenario =
   | "clone_activated_resume"
   | "clone_state_not_startable"
   | "launch_ack_failed"
-  | "stale_session_reclaim";
+  | "stale_session_reclaim"
+  | "remote_created"
+  | "remote_execution_failed"
+  | "remote_confirmation_invalid"
+  | "remote_reconciliation_failed"
+  | "remote_sync_hook_warning"
+  | "remote_preflight_missing_origin"
+  | "remote_config_invalid"
+  | "remote_attach_rejected"
+  | "remote_control_files_unavailable";
 
 type ResumableStartState =
   | "RUNNING"
@@ -120,10 +136,19 @@ function parseStartCaseInput(input: ContractCase["input"]): ParsedStartCaseInput
       scenarioRaw !== "clone_activated_resume" &&
       scenarioRaw !== "clone_state_not_startable" &&
       scenarioRaw !== "launch_ack_failed" &&
-      scenarioRaw !== "stale_session_reclaim"
+      scenarioRaw !== "stale_session_reclaim" &&
+      scenarioRaw !== "remote_created" &&
+      scenarioRaw !== "remote_execution_failed" &&
+      scenarioRaw !== "remote_confirmation_invalid" &&
+      scenarioRaw !== "remote_reconciliation_failed" &&
+      scenarioRaw !== "remote_sync_hook_warning" &&
+      scenarioRaw !== "remote_preflight_missing_origin" &&
+      scenarioRaw !== "remote_config_invalid" &&
+      scenarioRaw !== "remote_attach_rejected" &&
+      scenarioRaw !== "remote_control_files_unavailable"
     ) {
       throw new Error(
-        "start contract input.fixture.scenario must be one of: basic, state_not_startable, bootstrap_fails_cleanup, clone_activated, clone_activated_resume, clone_state_not_startable, launch_ack_failed, stale_session_reclaim."
+        "start contract input.fixture.scenario must be one of: basic, state_not_startable, bootstrap_fails_cleanup, clone_activated, clone_activated_resume, clone_state_not_startable, launch_ack_failed, stale_session_reclaim, remote_created, remote_execution_failed, remote_confirmation_invalid, remote_reconciliation_failed, remote_sync_hook_warning, remote_preflight_missing_origin, remote_config_invalid, remote_attach_rejected, remote_control_files_unavailable."
       );
     }
     scenario = scenarioRaw ?? "basic";
@@ -305,6 +330,36 @@ async function setResumeFixtureState(input: {
   });
 }
 
+async function configureRemoteBubbleFixture(input: {
+  repoPath: string;
+  bubble: Awaited<ReturnType<typeof createBubble>>;
+  withOrigin: boolean;
+}): Promise<string | undefined> {
+  let remotePath: string | undefined;
+  if (input.withOrigin) {
+    remotePath = await mkdtemp(join(tmpdir(), "pairflow-start-contract-origin-"));
+    await runGit(remotePath, ["init", "--bare"]);
+    await runGit(input.repoPath, ["remote", "add", "origin", remotePath]);
+  }
+
+  await writeFile(
+    input.bubble.paths.bubbleTomlPath,
+    renderBubbleConfigToml({
+      ...input.bubble.config,
+      executor: {
+        type: "ssh",
+        remote: "homelab"
+      }
+    }),
+    "utf8"
+  );
+  await writeRemotePointer(input.bubble.paths.remotePointerPath, {
+    kind: "created",
+    host: "homelab"
+  });
+  return remotePath;
+}
+
 function normalizeStartResult(result: Awaited<ReturnType<typeof startBubbleV11>>): StartContractSuccessOutput {
   return {
     status: "ok",
@@ -392,6 +447,7 @@ async function executeStartCase(input: {
   executor: typeof startBubbleV11;
 }): Promise<StartContractOutput> {
   const repoPath = await mkdtemp(join(tmpdir(), "pairflow-start-contract-"));
+  const cleanupPaths: string[] = [];
   try {
     await initGitRepository(repoPath);
     const parsedInput = parseStartCaseInput(input.caseDef.input);
@@ -455,6 +511,32 @@ async function executeStartCase(input: {
       );
     }
 
+    if (
+      parsedInput.scenario === "remote_created"
+      || parsedInput.scenario === "remote_execution_failed"
+      || parsedInput.scenario === "remote_confirmation_invalid"
+      || parsedInput.scenario === "remote_reconciliation_failed"
+      || parsedInput.scenario === "remote_sync_hook_warning"
+      || parsedInput.scenario === "remote_preflight_missing_origin"
+      || parsedInput.scenario === "remote_config_invalid"
+      || parsedInput.scenario === "remote_attach_rejected"
+      || parsedInput.scenario === "remote_control_files_unavailable"
+    ) {
+      const remoteOriginPath = await configureRemoteBubbleFixture({
+        repoPath,
+        bubble,
+        withOrigin:
+          parsedInput.scenario !== "remote_preflight_missing_origin"
+      });
+      if (remoteOriginPath !== undefined) {
+        cleanupPaths.push(remoteOriginPath);
+      }
+    }
+
+    if (parsedInput.scenario === "remote_control_files_unavailable") {
+      await rm(bubble.paths.taskArtifactPath, { force: true });
+    }
+
     let claimCalls = 0;
     let bootstrapCalls = 0;
     let bootstrapRequestedWorkspaceKind: string | undefined;
@@ -464,15 +546,149 @@ async function executeStartCase(input: {
     let resumeSummaryCalls = 0;
     let staleSessionRemoved = false;
     let cleanupSessionRemoved = false;
+    let remoteExecutionCalls = 0;
+    let remoteAttachStartCalls = 0;
+    let remoteAttachRegistryCalls = 0;
 
     try {
-      const result = await input.executor(
+      const remoteWarnings: string[] = [];
+      const startDependencies: Pick<
+        StartBubbleDependencies,
+        | "loadPairflowGlobalConfig"
+        | "executeRemoteBubbleStart"
+        | "writeStateSnapshot"
+        | "reportWarning"
+      > = {
+        loadPairflowGlobalConfig: () => Promise.resolve({
+          remotes:
+            parsedInput.scenario === "remote_config_invalid"
+              ? {
+                  other: {
+                    host: "other",
+                    repo_base: "~/repos"
+                  }
+                }
+              : {
+                  homelab: {
+                    host: "homelab",
+                    repo_base: "~/repos",
+                    ...(parsedInput.scenario === "remote_sync_hook_warning"
+                      ? { pairflow_sync_command: "false" }
+                      : {})
+                  }
+                }
+        }),
+        executeRemoteBubbleStart: (remoteInput: ExecuteRemoteBubbleStartInput) => {
+          remoteExecutionCalls += 1;
+          if (parsedInput.scenario === "remote_execution_failed") {
+            return Promise.reject(new Error("contract remote execution failure"));
+          }
+          if (parsedInput.scenario === "remote_confirmation_invalid") {
+            return Promise.reject(
+              new RemoteBubbleStartError({
+                code: "REMOTE_CONFIRMATION_INVALID",
+                message:
+                  `Remote start confirmation for bubble ${bubble.bubbleId} expected RUNNING but received FAILED.`,
+                details: {
+                  receivedState: "FAILED",
+                  receivedRound: 1
+                }
+              })
+            );
+          }
+
+          return Promise.resolve({
+            remoteClonePath: remoteInput.remoteClonePath,
+            tmuxSessionName: `pf-${bubble.bubbleId}`,
+            startedAt: "2026-03-20T12:00:00.000Z",
+            instanceId: "inst_contract_remote_01",
+            remoteState: {
+              lastCheckedAt: "2026-03-20T12:00:01.000Z",
+              state: "RUNNING" as const,
+              round: 1,
+              maxRounds: bubble.config.max_rounds
+            },
+            ...(parsedInput.scenario === "remote_sync_hook_warning"
+              ? {
+                  warnings: [
+                    "Pairflow warning: remote sync hook failed but start will continue"
+                  ]
+                }
+              : {})
+          });
+        },
+        writeStateSnapshot: async (...args) => {
+          const [statePath, state, options] = args;
+          if (
+            parsedInput.scenario === "remote_reconciliation_failed"
+            && state.state === "RUNNING"
+          ) {
+            throw new Error("contract remote reconciliation failure");
+          }
+          return writeStateSnapshot(statePath, state, options);
+        },
+        reportWarning: (message: string) => {
+          remoteWarnings.push(message);
+        }
+      };
+
+      const result =
+        parsedInput.scenario === "remote_attach_rejected"
+          ? await runBubbleStartCommandV11(
+              [
+                "--id",
+                bubble.bubbleId,
+                "--repo",
+                repoPath,
+                "--attach"
+              ],
+              repoPath,
+              {
+                resolveBubbleById: () => Promise.resolve({
+                  bubbleId: bubble.bubbleId,
+                  repoPath,
+                  bubbleConfig: {
+                    ...bubble.config,
+                    executor: {
+                      type: "ssh" as const,
+                      remote: "homelab"
+                    }
+                  },
+                  bubblePaths: bubble.paths
+                }),
+                registerRepoInRegistry: () => {
+                  remoteAttachRegistryCalls += 1;
+                  return Promise.resolve({
+                    added: false,
+                    entry: {
+                      repoPath,
+                      addedAt: "2026-03-20T12:00:00.000Z"
+                    },
+                    registryPath: `${repoPath}/.pairflow/repos.json`
+                  });
+                },
+                startBubble: async () => {
+                  remoteAttachStartCalls += 1;
+                  return input.executor({
+                    bubbleId: bubble.bubbleId,
+                    cwd: repoPath,
+                    now: new Date("2026-03-20T12:00:00.000Z")
+                  });
+                }
+              }
+            ).then(() => {
+              throw new Error(
+                "start contract remote_attach_rejected scenario expected CLI rejection."
+              );
+            })
+          : await input.executor(
         {
           bubbleId: bubble.bubbleId,
           cwd: repoPath,
           now: new Date("2026-03-20T12:00:00.000Z")
         },
         {
+          ...startDependencies,
           bootstrapWorktreeWorkspace: (bootstrapInput) => {
             bootstrapCalls += 1;
             bootstrapRequestedWorkspaceKind = bootstrapInput.workspaceKind;
@@ -634,6 +850,22 @@ async function executeStartCase(input: {
         }
       }
 
+      if (parsedInput.scenario === "remote_sync_hook_warning") {
+        if (remoteWarnings.length !== 1) {
+          throw new Error(
+            "start contract remote_sync_hook_warning scenario expected exactly one warning."
+          );
+        }
+      }
+      if (
+        parsedInput.scenario === "remote_control_files_unavailable"
+        && remoteExecutionCalls !== 0
+      ) {
+        throw new Error(
+          "start contract remote_control_files_unavailable scenario expected failure before remote execution."
+        );
+      }
+
       if (parsedInput.scenario === "clone_state_not_startable") {
         throw new Error(
           "start contract clone_state_not_startable scenario expected rejection, but start succeeded."
@@ -660,6 +892,43 @@ async function executeStartCase(input: {
           );
         }
       }
+      if (
+        parsedInput.scenario === "remote_control_files_unavailable"
+        && remoteExecutionCalls !== 0
+      ) {
+        throw new Error(
+          "start contract remote_control_files_unavailable scenario expected no remote execution side effects."
+        );
+      }
+      if (parsedInput.scenario === "remote_control_files_unavailable") {
+        const errorContext =
+          typeof error === "object"
+          && error !== null
+          && "context" in error
+          && typeof (error as { context?: unknown }).context === "object"
+          && (error as { context?: unknown }).context !== null
+            ? (error as {
+                context: Record<string, unknown>;
+              }).context
+            : null;
+        if (
+          errorContext?.artifact_relative_path
+          !== `.pairflow/bubbles/${bubble.bubbleId}/artifacts/task.md`
+          || errorContext.artifact_requirement !== "required"
+          || errorContext.artifact_kind !== "task"
+        ) {
+          throw new Error(
+            "start contract remote_control_files_unavailable scenario expected structured task artifact failure context."
+          );
+        }
+      }
+      if (parsedInput.scenario === "remote_attach_rejected") {
+        if (remoteAttachStartCalls !== 0 || remoteAttachRegistryCalls !== 0) {
+          throw new Error(
+            "start contract remote_attach_rejected scenario expected CLI rejection before start execution and registry registration."
+          );
+        }
+      }
       assertCloneRejectInvariants({
         scenario: parsedInput.scenario,
         bootstrapCalls,
@@ -677,6 +946,10 @@ async function executeStartCase(input: {
       });
     }
   } finally {
+    await Promise.all(cleanupPaths.map((path) => rm(path, {
+      recursive: true,
+      force: true
+    })));
     await rm(repoPath, { recursive: true, force: true });
   }
 }

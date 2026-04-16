@@ -1,0 +1,26 @@
+{
+  "id": "start-remote-attach-rejected-v11",
+  "command": "start",
+  "mode": "v11",
+  "description": "Start contract case for explicit remote SSH attach rejection on the public start CLI surface.",
+  "input": {
+    "fixture": {
+      "scenario": "remote_attach_rejected"
+    }
+  },
+  "expected": {
+    "status": "error",
+    "reasonCode": "START_REMOTE_ATTACH_UNSUPPORTED",
+    "stateSubset": {
+      "state": "CREATED"
+    }
+  },
+  "tags": [
+    "seed",
+    "m0",
+    "start",
+    "v11",
+    "remote",
+    "attach-policy"
+  ]
+}

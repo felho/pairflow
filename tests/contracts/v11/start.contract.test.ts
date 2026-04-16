@@ -22,7 +22,16 @@ const startCaseSources = [
   "tests/contracts/v11/cases/start/start-clone-not-activated-resume-approved-for-commit-v11.case.json",
   "tests/contracts/v11/cases/start/start-clone-not-activated-resume-committed-v11.case.json",
   "tests/contracts/v11/cases/start/start-launch-ack-failed-v11.case.json",
-  "tests/contracts/v11/cases/start/start-stale-session-reclaim-v11.case.json"
+  "tests/contracts/v11/cases/start/start-stale-session-reclaim-v11.case.json",
+  "tests/contracts/v11/cases/start/start-remote-created-v11.case.json",
+  "tests/contracts/v11/cases/start/start-remote-execution-failed-v11.case.json",
+  "tests/contracts/v11/cases/start/start-remote-confirmation-invalid-v11.case.json",
+  "tests/contracts/v11/cases/start/start-remote-reconciliation-failed-v11.case.json",
+  "tests/contracts/v11/cases/start/start-remote-sync-hook-warning-v11.case.json",
+  "tests/contracts/v11/cases/start/start-remote-preflight-missing-origin-v11.case.json",
+  "tests/contracts/v11/cases/start/start-remote-config-invalid-v11.case.json",
+  "tests/contracts/v11/cases/start/start-remote-attach-rejected-v11.case.json",
+  "tests/contracts/v11/cases/start/start-remote-control-files-unavailable-v11.case.json"
 ] as const;
 
 const startExpectedSourcesSorted = [...startCaseSources].sort();

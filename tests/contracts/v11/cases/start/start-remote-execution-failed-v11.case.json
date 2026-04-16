@@ -1,0 +1,26 @@
+{
+  "id": "start-remote-execution-failed-v11",
+  "command": "start",
+  "mode": "v11",
+  "description": "Start contract case for remote SSH activation failing closed before runtime confirmation when the remote execution seam errors mid-sequence.",
+  "input": {
+    "fixture": {
+      "scenario": "remote_execution_failed"
+    }
+  },
+  "expected": {
+    "status": "error",
+    "reasonCode": "START_REMOTE_EXECUTION_FAILED",
+    "stateSubset": {
+      "state": "FAILED"
+    }
+  },
+  "tags": [
+    "seed",
+    "m0",
+    "start",
+    "v11",
+    "remote",
+    "failure-path"
+  ]
+}

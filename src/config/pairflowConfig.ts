@@ -36,6 +36,8 @@ const REMOTE_CONFIG_KEYS = new Set([
   "default_port_forwards"
 ]);
 const REMOTE_ALIAS_PATTERN = /^[A-Za-z0-9_-]+$/u;
+const SINGLE_TOKEN_REMOTE_COMMAND_PATTERN = /^\S+$/u;
+const SAFE_REMOTE_SSH_TOKEN_PATTERN = /^(?!-)\S+$/u;
 
 export function validateRemoteDefaultPortForwards(
   value: unknown,
@@ -413,6 +415,12 @@ export function validatePairflowGlobalConfig(
             path: `${remotePath}.host`,
             message: `${PAIRFLOW_REMOTE_CONFIG_INVALID}: Must be a non-empty string`
           });
+        } else if (!SAFE_REMOTE_SSH_TOKEN_PATTERN.test(host.trim())) {
+          errors.push({
+            path: `${remotePath}.host`,
+            message:
+              `${PAIRFLOW_REMOTE_CONFIG_INVALID}: Must be a single SSH token without whitespace and may not start with '-'`
+          });
         }
 
         if (!isNonEmptyString(repoBase)) {
@@ -427,15 +435,28 @@ export function validatePairflowGlobalConfig(
             path: `${remotePath}.user`,
             message: `${PAIRFLOW_REMOTE_CONFIG_INVALID}: Must be a non-empty string`
           });
+        } else if (
+          user !== undefined
+          && !SAFE_REMOTE_SSH_TOKEN_PATTERN.test(user.trim())
+        ) {
+          errors.push({
+            path: `${remotePath}.user`,
+            message:
+              `${PAIRFLOW_REMOTE_CONFIG_INVALID}: Must be a single SSH token without whitespace and may not start with '-'`
+          });
         }
 
         if (
           pairflowCommand !== undefined
-          && !isNonEmptyString(pairflowCommand)
+          && (
+            !isNonEmptyString(pairflowCommand)
+            || !SINGLE_TOKEN_REMOTE_COMMAND_PATTERN.test(pairflowCommand.trim())
+          )
         ) {
           errors.push({
             path: `${remotePath}.pairflow_command`,
-            message: `${PAIRFLOW_REMOTE_CONFIG_INVALID}: Must be a non-empty string`
+            message:
+              `${PAIRFLOW_REMOTE_CONFIG_INVALID}: Must be a single executable token without whitespace`
           });
         }
 

@@ -1,4 +1,4 @@
-import { readFile, writeFile } from "node:fs/promises";
+import { readFile, rm, writeFile } from "node:fs/promises";
 
 import type {
   BubbleRemotePointer,
@@ -205,4 +205,21 @@ export async function writeRemoteStateCache(
   value: BubbleRemoteStateCache
 ): Promise<void> {
   await writeJsonArtifact(path, value);
+}
+
+export async function removeRemoteStateCache(path: string): Promise<void> {
+  try {
+    await rm(path, { force: true });
+  } catch (error) {
+    throw new RemoteArtifactIoError({
+      code: REMOTE_ARTIFACT_WRITE_FAILED,
+      operation: "write",
+      artifactPath: path,
+      context: {
+        source: "removeRemoteStateCache",
+        errno: (error as NodeJS.ErrnoException).code ?? null
+      },
+      cause: error
+    });
+  }
 }

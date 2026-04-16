@@ -24,7 +24,7 @@ export function getBubbleStartHelpText(): string {
     "Options:",
     "  --id <id>             Bubble id",
     "  --repo <path>         Optional repository path (defaults to cwd ancestry lookup)",
-    "  --attach              Auto-attach/switch to the bubble tmux session after start",
+    "  --attach              Auto-attach/switch to the bubble tmux session after start (remote SSH bubbles reject this in Phase 2D)",
     "  -h, --help            Show this help"
   ].join("\n");
 }

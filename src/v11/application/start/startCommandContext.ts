@@ -14,8 +14,13 @@ import type {
   ReadReviewerBriefArtifactPort,
   ReadReviewerFocusArtifactPort
 } from "../../shared/ports/reviewerArtifacts.js";
+import type { BubbleRemotePointer } from "../../../types/bubble.js";
 import { resolveStartBubbleMode } from "./startCommandOrchestration.js";
 import { createStartBubbleError } from "./startCommandRuntime.js";
+import {
+  resolveRemoteCloneStartContextFromEnv,
+  type RemoteCloneStartContext
+} from "./startCommandRemoteExecution.js";
 
 export type StartLoadedState =
   Awaited<ReturnType<typeof startCommandContextDefaults.readStateSnapshot>>;
@@ -24,6 +29,7 @@ export type ResolvedStartBubble =
 export const reviewerPolicySnapshotFileName = "reviewer-policy-snapshot.md";
 export const reviewerPolicySnapshotUnavailableReasonCode =
   "REVIEWER_POLICY_SNAPSHOT_UNAVAILABLE";
+const pairflowWorktreeRootEnvVar = "PAIRFLOW_WORKTREE_ROOT";
 
 function buildReviewerPolicySnapshotContent(): string {
   return `${reviewerSeverityOntologyFullMarkdown}\n`;
@@ -83,6 +89,78 @@ async function ensureReviewerPolicySnapshot(
   return artifactPathAbs;
 }
 
+function resolveOptionalWorkspaceEnvPath(
+  envVar: string
+): string | undefined {
+  const rawValue = process.env[envVar];
+  if (typeof rawValue !== "string") {
+    return undefined;
+  }
+
+  const trimmed = rawValue.trim();
+  if (trimmed.length === 0) {
+    return undefined;
+  }
+
+  return resolve(trimmed);
+}
+
+async function assertVerifiedRemoteCloneContext(input: {
+  resolved: ResolvedStartBubble;
+  remoteStartContext: RemoteCloneStartContext;
+  readRemotePointer: (path: string) => Promise<BubbleRemotePointer | null>;
+}): Promise<void> {
+  const normalizedWorkspaceRoot = resolve(input.remoteStartContext.workspaceRoot);
+  const pairflowWorktreeRoot = resolveOptionalWorkspaceEnvPath(
+    pairflowWorktreeRootEnvVar
+  );
+
+  if (pairflowWorktreeRoot !== normalizedWorkspaceRoot) {
+    throw createStartBubbleError({
+      reasonCode: "START_REMOTE_EXECUTION_CONTEXT_INVALID",
+      message:
+        `Bubble ${input.resolved.bubbleId} remote inner-start env is only valid inside a verified remote clone workspace authority.`,
+      context: {
+        bubble_id: input.resolved.bubbleId,
+        remote_workspace_root: normalizedWorkspaceRoot,
+        pairflow_worktree_root: pairflowWorktreeRoot ?? null,
+        required_env_var: pairflowWorktreeRootEnvVar
+      }
+    });
+  }
+
+  let remotePointer: BubbleRemotePointer | null;
+  try {
+    remotePointer = await input.readRemotePointer(
+      input.resolved.bubblePaths.remotePointerPath
+    );
+  } catch (error) {
+    throw createStartBubbleError({
+      reasonCode: "START_REMOTE_EXECUTION_CONTEXT_INVALID",
+      message:
+        `Bubble ${input.resolved.bubbleId} could not verify remote clone control-plane boundaries for inner-start env.`,
+      context: {
+        bubble_id: input.resolved.bubbleId,
+        remote_pointer_path: input.resolved.bubblePaths.remotePointerPath
+      },
+      cause: error
+    });
+  }
+
+  if (remotePointer !== null) {
+    throw createStartBubbleError({
+      reasonCode: "START_REMOTE_EXECUTION_CONTEXT_INVALID",
+      message:
+        `Bubble ${input.resolved.bubbleId} refused remote inner-start env because local source-repo remote artifacts are still present.`,
+      context: {
+        bubble_id: input.resolved.bubbleId,
+        remote_pointer_kind: remotePointer.kind,
+        remote_pointer_path: input.resolved.bubblePaths.remotePointerPath
+      }
+    });
+  }
+}
+
 export interface StartExecutionContext {
   resolved: ResolvedStartBubble;
   now: Date;
@@ -99,6 +177,7 @@ export interface StartExecutionContext {
   runtimeSessionRecord?: RuntimeSessionRecord;
   reviewerBriefText?: string;
   reviewerFocus?: ReviewerFocusExtractionResult;
+  remoteStartContext?: RemoteCloneStartContext;
 }
 
 export async function loadStartExecutionContext(
@@ -106,6 +185,7 @@ export async function loadStartExecutionContext(
   dependencies: {
     readReviewerBriefArtifact: ReadReviewerBriefArtifactPort;
     readReviewerFocusArtifact: ReadReviewerFocusArtifactPort;
+    readRemotePointer: (path: string) => Promise<BubbleRemotePointer | null>;
   },
   options: {
     resolved?: ResolvedStartBubble;
@@ -141,6 +221,28 @@ export async function loadStartExecutionContext(
   );
   const loadedState =
     await startCommandContextDefaults.readStateSnapshot(resolved.bubblePaths.statePath);
+  const remoteStartContext = resolveRemoteCloneStartContextFromEnv();
+  if (
+    remoteStartContext !== undefined
+    && resolved.bubbleConfig.executor?.type !== "ssh"
+  ) {
+    throw createStartBubbleError({
+      reasonCode: "START_REMOTE_EXECUTION_CONTEXT_INVALID",
+      message:
+        `Bubble ${resolved.bubbleId} received remote inner-start env context but is not configured for remote SSH execution.`,
+      context: {
+        bubble_id: resolved.bubbleId,
+        executor_type: resolved.bubbleConfig.executor?.type ?? null
+      }
+    });
+  }
+  if (remoteStartContext !== undefined) {
+    await assertVerifiedRemoteCloneContext({
+      resolved,
+      remoteStartContext,
+      readRemotePointer: dependencies.readRemotePointer
+    });
+  }
 
   return {
     resolved,
@@ -152,6 +254,7 @@ export async function loadStartExecutionContext(
     expectedTmuxSessionName: buildBubbleTmuxSessionName(resolved.bubbleId),
     donePackagePath: join(resolved.bubblePaths.artifactsDir, "done-package.md"),
     policySnapshotPathAbs,
+    ...(remoteStartContext !== undefined ? { remoteStartContext } : {}),
     ...(reviewerBriefText !== undefined ? { reviewerBriefText } : {}),
     ...(reviewerFocus !== undefined ? { reviewerFocus } : {})
   };
