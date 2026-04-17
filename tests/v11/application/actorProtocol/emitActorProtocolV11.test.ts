@@ -10,6 +10,7 @@ import {
   resolveActorRuntimeDispatchPlan,
   resolveActorRuntimeDispatchPlanByRouteId
 } from "../../../../src/v11/application/actorProtocol/actorRuntimeDispatchMatrix.js";
+import * as actorRuntimeKernelModule from "../../../../src/v11/application/actorProtocol/actorRuntimeKernel.js";
 import {
   resolveActorEmitContextByBubbleId
 } from "../../../../src/v11/shared/actorProtocol/actorEmitContext.js";
@@ -32,14 +33,8 @@ import { setupRunningBubbleFixture } from "../../../helpers/bubble.js";
 import { initGitRepository } from "../../../helpers/git.js";
 
 const tempDirs: string[] = [];
-type ImplementerWrapperCall = Parameters<
-  typeof actorProtocolModule.emitImplementerPilotActorProtocolV11
->;
-type ReviewerWrapperCall = Parameters<
-  typeof actorProtocolModule.emitReviewerActorProtocolV11
->;
-type MetaReviewerWrapperCall = Parameters<
-  typeof actorProtocolModule.emitMetaReviewerActorProtocolV11
+type ExecuteActorRuntimeDispatchPlanCall = Parameters<
+  typeof actorRuntimeKernelModule.executeActorRuntimeDispatchPlan
 >;
 
 async function createTempRepo(): Promise<string> {
@@ -245,6 +240,7 @@ function buildSyntheticAuthoritativeContext(input: {
 }
 
 afterEach(async () => {
+  vi.restoreAllMocks();
   await Promise.all(
     tempDirs.splice(0).map((path) =>
       rm(path, { recursive: true, force: true })
@@ -607,6 +603,10 @@ describe("emitActorProtocolV11 wrappers", () => {
       bubbleId: bubble.bubbleId,
       repoPath
     });
+    const kernelSpy = vi.spyOn(
+      actorRuntimeKernelModule,
+      "executeActorRuntimeDispatchPlan"
+    );
 
     const result = await actorProtocolModule.emitImplementerPilotActorProtocolV11({
       input: {
@@ -620,6 +620,17 @@ describe("emitActorProtocolV11 wrappers", () => {
       authoritativeContext
     });
 
+    expect(kernelSpy).toHaveBeenCalledOnce();
+    const [kernelInput] =
+      kernelSpy.mock.calls[0] as ExecuteActorRuntimeDispatchPlanCall;
+    expect(kernelInput.plan.route.id).toBe("implementer_pass");
+    expect(kernelInput.actorInput).toMatchObject({
+      kind: "pass",
+      bubble_id: bubble.bubbleId,
+      handoff_id: authoritativeContext.handoff_id,
+      execution_id: authoritativeContext.execution_id
+    });
+    expect(kernelInput.authoritativeContext).toBe(authoritativeContext);
     expect(result.kind).toBe("pass");
     if (result.kind !== "pass") {
       throw new Error("Expected pass result.");
@@ -640,6 +651,10 @@ describe("emitActorProtocolV11 wrappers", () => {
       bubbleId: bubble.bubbleId,
       repoPath
     });
+    const kernelSpy = vi.spyOn(
+      actorRuntimeKernelModule,
+      "executeActorRuntimeDispatchPlan"
+    );
 
     const result = await actorProtocolModule.emitImplementerPilotActorProtocolV11({
       input: {
@@ -653,6 +668,17 @@ describe("emitActorProtocolV11 wrappers", () => {
       authoritativeContext
     });
 
+    expect(kernelSpy).toHaveBeenCalledOnce();
+    const [kernelInput] =
+      kernelSpy.mock.calls[0] as ExecuteActorRuntimeDispatchPlanCall;
+    expect(kernelInput.plan.route.id).toBe("implementer_human_question");
+    expect(kernelInput.actorInput).toMatchObject({
+      kind: "human_question",
+      bubble_id: bubble.bubbleId,
+      handoff_id: authoritativeContext.handoff_id,
+      execution_id: authoritativeContext.execution_id
+    });
+    expect(kernelInput.authoritativeContext).toBe(authoritativeContext);
     expect(result.kind).toBe("human_question");
     if (result.kind !== "human_question") {
       throw new Error("Expected human_question result.");
@@ -1026,6 +1052,10 @@ describe("emitActorProtocolV11 wrappers", () => {
       bubbleId: bubble.bubbleId,
       repoPath
     });
+    const kernelSpy = vi.spyOn(
+      actorRuntimeKernelModule,
+      "executeActorRuntimeDispatchPlan"
+    );
 
     const result = await actorProtocolModule.emitReviewerActorProtocolV11({
       input: {
@@ -1045,6 +1075,17 @@ describe("emitActorProtocolV11 wrappers", () => {
       authoritativeContext
     });
 
+    expect(kernelSpy).toHaveBeenCalledOnce();
+    const [kernelInput] =
+      kernelSpy.mock.calls[0] as ExecuteActorRuntimeDispatchPlanCall;
+    expect(kernelInput.plan.route.id).toBe("reviewer_convergence");
+    expect(kernelInput.actorInput).toMatchObject({
+      kind: "convergence",
+      bubble_id: bubble.bubbleId,
+      handoff_id: authoritativeContext.handoff_id,
+      execution_id: authoritativeContext.execution_id
+    });
+    expect(kernelInput.authoritativeContext).toBe(authoritativeContext);
     expect(result.kind).toBe("convergence");
     if (result.kind !== "convergence") {
       throw new Error("Expected convergence result.");
@@ -1068,6 +1109,10 @@ describe("emitActorProtocolV11 wrappers", () => {
       bubbleId: bubble.bubbleId,
       repoPath
     });
+    const kernelSpy = vi.spyOn(
+      actorRuntimeKernelModule,
+      "executeActorRuntimeDispatchPlan"
+    );
 
     const result = await actorProtocolModule.emitMetaReviewerActorProtocolV11({
       input: {
@@ -1087,6 +1132,19 @@ describe("emitActorProtocolV11 wrappers", () => {
       authoritativeContext
     });
 
+    expect(kernelSpy).toHaveBeenCalledOnce();
+    const [kernelInput] =
+      kernelSpy.mock.calls[0] as ExecuteActorRuntimeDispatchPlanCall;
+    expect(kernelInput.plan.route.id).toBe(
+      "meta_reviewer_meta_review_result"
+    );
+    expect(kernelInput.actorInput).toMatchObject({
+      kind: "meta_review_result",
+      bubble_id: bubble.bubbleId,
+      handoff_id: authoritativeContext.handoff_id,
+      execution_id: authoritativeContext.execution_id
+    });
+    expect(kernelInput.authoritativeContext).toBe(authoritativeContext);
     expect(result.kind).toBe("meta_review_result");
     if (result.kind !== "meta_review_result") {
       throw new Error("Expected meta_review_result.");
@@ -1320,7 +1378,7 @@ describe("emitActorProtocolV11 wrappers", () => {
     } satisfies Partial<ActorEmitContextError>);
   });
 
-  it("routes implementer human_question through the Phase E wrapper from the outer dispatcher", async () => {
+  it("routes implementer human_question through the shared runtime kernel from the outer dispatcher", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({
       repoPath,
@@ -1331,9 +1389,9 @@ describe("emitActorProtocolV11 wrappers", () => {
       bubbleId: bubble.bubbleId,
       repoPath
     });
-    const wrapperSpy = vi.spyOn(
-      actorProtocolModule.implementerPilotActorProtocolV11,
-      "emit"
+    const kernelSpy = vi.spyOn(
+      actorRuntimeKernelModule,
+      "executeActorRuntimeDispatchPlan"
     );
 
     const result = await actorProtocolModule.emitActorProtocolFromWorkspaceV11({
@@ -1349,13 +1407,12 @@ describe("emitActorProtocolV11 wrappers", () => {
       authoritativeContext
     });
 
-    expect(wrapperSpy).toHaveBeenCalledOnce();
-    const [wrapperInput, wrapperDependencies] =
-      wrapperSpy.mock.calls[0] as ImplementerWrapperCall;
-    expect(wrapperDependencies).toEqual({});
-    expect(wrapperInput.authoritativeContext).toBe(authoritativeContext);
-    expect(wrapperInput.dispatchPlan?.route.id).toBe("implementer_human_question");
-    expect(wrapperInput.input).toMatchObject({
+    expect(kernelSpy).toHaveBeenCalledOnce();
+    const [kernelInput] =
+      kernelSpy.mock.calls[0] as ExecuteActorRuntimeDispatchPlanCall;
+    expect(kernelInput.plan.route.id).toBe("implementer_human_question");
+    expect(kernelInput.authoritativeContext).toBe(authoritativeContext);
+    expect(kernelInput.actorInput).toMatchObject({
       kind: "human_question",
       bubble_id: bubble.bubbleId,
       handoff_id: authoritativeContext.handoff_id,
@@ -1370,7 +1427,7 @@ describe("emitActorProtocolV11 wrappers", () => {
     ]);
   });
 
-  it("preserves reviewer human_question via the retained outer-dispatch baseline", async () => {
+  it("preserves reviewer human_question via the retained kernel-backed outer-dispatch baseline", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({
       repoPath,
@@ -1388,13 +1445,9 @@ describe("emitActorProtocolV11 wrappers", () => {
       bubbleId: bubble.bubbleId,
       repoPath
     });
-    const reviewerWrapperSpy = vi.spyOn(
-      actorProtocolModule.reviewerActorProtocolV11,
-      "emit"
-    );
-    const implementerWrapperSpy = vi.spyOn(
-      actorProtocolModule.implementerPilotActorProtocolV11,
-      "emit"
+    const kernelSpy = vi.spyOn(
+      actorRuntimeKernelModule,
+      "executeActorRuntimeDispatchPlan"
     );
 
     const result = await actorProtocolModule.emitActorProtocolFromWorkspaceV11({
@@ -1410,8 +1463,13 @@ describe("emitActorProtocolV11 wrappers", () => {
       authoritativeContext
     });
 
-    expect(reviewerWrapperSpy).not.toHaveBeenCalled();
-    expect(implementerWrapperSpy).not.toHaveBeenCalled();
+    expect(kernelSpy).toHaveBeenCalledOnce();
+    const [kernelInput] =
+      kernelSpy.mock.calls[0] as ExecuteActorRuntimeDispatchPlanCall;
+    expect(kernelInput.plan.route.id).toBe(
+      "reviewer_human_question_fallback"
+    );
+    expect(kernelInput.plan.route.routePolicy).toBe("retained_fallback");
     expect(result.kind).toBe("human_question");
     if (result.kind !== "human_question") {
       throw new Error("Expected human_question result.");
@@ -1422,7 +1480,7 @@ describe("emitActorProtocolV11 wrappers", () => {
     expect(result.human_question.state.state).toBe("WAITING_HUMAN");
   });
 
-  it("routes reviewer pass through the Phase E wrapper from the outer dispatcher", async () => {
+  it("routes reviewer pass through the shared runtime kernel from the outer dispatcher", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({
       repoPath,
@@ -1440,9 +1498,9 @@ describe("emitActorProtocolV11 wrappers", () => {
       bubbleId: bubble.bubbleId,
       repoPath
     });
-    const wrapperSpy = vi.spyOn(
-      actorProtocolModule.reviewerActorProtocolV11,
-      "emit"
+    const kernelSpy = vi.spyOn(
+      actorRuntimeKernelModule,
+      "executeActorRuntimeDispatchPlan"
     );
 
     const result = await actorProtocolModule.emitActorProtocolFromWorkspaceV11({
@@ -1458,13 +1516,12 @@ describe("emitActorProtocolV11 wrappers", () => {
       authoritativeContext
     });
 
-    expect(wrapperSpy).toHaveBeenCalledOnce();
-    const [wrapperInput, wrapperDependencies] =
-      wrapperSpy.mock.calls[0] as ReviewerWrapperCall;
-    expect(wrapperDependencies).toEqual({});
-    expect(wrapperInput.authoritativeContext).toBe(authoritativeContext);
-    expect(wrapperInput.dispatchPlan?.route.id).toBe("reviewer_pass");
-    expect(wrapperInput.input).toMatchObject({
+    expect(kernelSpy).toHaveBeenCalledOnce();
+    const [kernelInput] =
+      kernelSpy.mock.calls[0] as ExecuteActorRuntimeDispatchPlanCall;
+    expect(kernelInput.plan.route.id).toBe("reviewer_pass");
+    expect(kernelInput.authoritativeContext).toBe(authoritativeContext);
+    expect(kernelInput.actorInput).toMatchObject({
       kind: "pass",
       bubble_id: bubble.bubbleId,
       handoff_id: authoritativeContext.handoff_id,
@@ -1479,7 +1536,7 @@ describe("emitActorProtocolV11 wrappers", () => {
     );
   });
 
-  it("routes reviewer convergence through the Phase E wrapper from the outer dispatcher", async () => {
+  it("routes reviewer convergence through the shared runtime kernel from the outer dispatcher", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({
       repoPath,
@@ -1499,9 +1556,9 @@ describe("emitActorProtocolV11 wrappers", () => {
       bubbleId: bubble.bubbleId,
       repoPath
     });
-    const wrapperSpy = vi.spyOn(
-      actorProtocolModule.reviewerActorProtocolV11,
-      "emit"
+    const kernelSpy = vi.spyOn(
+      actorRuntimeKernelModule,
+      "executeActorRuntimeDispatchPlan"
     );
 
     const result = await actorProtocolModule.emitActorProtocolFromWorkspaceV11({
@@ -1522,13 +1579,12 @@ describe("emitActorProtocolV11 wrappers", () => {
       authoritativeContext
     });
 
-    expect(wrapperSpy).toHaveBeenCalledOnce();
-    const [wrapperInput, wrapperDependencies] =
-      wrapperSpy.mock.calls[0] as ReviewerWrapperCall;
-    expect(wrapperDependencies).toEqual({});
-    expect(wrapperInput.authoritativeContext).toBe(authoritativeContext);
-    expect(wrapperInput.dispatchPlan?.route.id).toBe("reviewer_convergence");
-    expect(wrapperInput.input).toMatchObject({
+    expect(kernelSpy).toHaveBeenCalledOnce();
+    const [kernelInput] =
+      kernelSpy.mock.calls[0] as ExecuteActorRuntimeDispatchPlanCall;
+    expect(kernelInput.plan.route.id).toBe("reviewer_convergence");
+    expect(kernelInput.authoritativeContext).toBe(authoritativeContext);
+    expect(kernelInput.actorInput).toMatchObject({
       kind: "convergence",
       bubble_id: bubble.bubbleId,
       handoff_id: authoritativeContext.handoff_id,
@@ -1543,7 +1599,7 @@ describe("emitActorProtocolV11 wrappers", () => {
     );
   });
 
-  it("routes meta_review_result through the Phase E wrapper from the outer dispatcher", async () => {
+  it("routes meta_review_result through the shared runtime kernel from the outer dispatcher", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({
       repoPath,
@@ -1559,9 +1615,9 @@ describe("emitActorProtocolV11 wrappers", () => {
       bubbleId: bubble.bubbleId,
       repoPath
     });
-    const wrapperSpy = vi.spyOn(
-      actorProtocolModule.metaReviewerActorProtocolV11,
-      "emit"
+    const kernelSpy = vi.spyOn(
+      actorRuntimeKernelModule,
+      "executeActorRuntimeDispatchPlan"
     );
 
     const result = await actorProtocolModule.emitActorProtocolFromWorkspaceV11({
@@ -1581,15 +1637,14 @@ describe("emitActorProtocolV11 wrappers", () => {
       authoritativeContext
     });
 
-    expect(wrapperSpy).toHaveBeenCalledOnce();
-    const [wrapperInput, wrapperDependencies] =
-      wrapperSpy.mock.calls[0] as MetaReviewerWrapperCall;
-    expect(wrapperDependencies).toEqual({});
-    expect(wrapperInput.authoritativeContext).toBe(authoritativeContext);
-    expect(wrapperInput.dispatchPlan?.route.id).toBe(
+    expect(kernelSpy).toHaveBeenCalledOnce();
+    const [kernelInput] =
+      kernelSpy.mock.calls[0] as ExecuteActorRuntimeDispatchPlanCall;
+    expect(kernelInput.authoritativeContext).toBe(authoritativeContext);
+    expect(kernelInput.plan.route.id).toBe(
       "meta_reviewer_meta_review_result"
     );
-    expect(wrapperInput.input).toMatchObject({
+    expect(kernelInput.actorInput).toMatchObject({
       kind: "meta_review_result",
       bubble_id: bubble.bubbleId,
       handoff_id: authoritativeContext.handoff_id,
