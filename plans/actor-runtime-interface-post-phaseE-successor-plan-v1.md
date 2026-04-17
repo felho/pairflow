@@ -115,14 +115,14 @@ owners:
    - uj actorokat akartok hozzaadni,
    - uj role projection johet,
    - vagy a mostani wrapper-sprawl mar lassitja a kodmozgatast.
-4. A jelenlegi legjobb decomposition-becslés szerint ez varhatoan `3` bounded task, konzervativ felso becslessel `3-4`:
+4. A jelenlegi legjobb decomposition-becslés szerint ez most mar `3` explicit bounded szelet, konzervativ felso becslessel `3-4`:
    - `O1-T1`: docs-only kernel boundary clarification a task artifact in-place refinementjevel es source-anchored kernel contract note-tal
    - `O1-T2`: belso typed authority / route / policy matrix bevezetese public vocabulary rewrite nelkul
    - `O1-T3`: a jelenlegi wrapper-sprawl raulitese a belso matrixra explicit kernel + policy + workflow-adapter szetvalasztassal
    - opcionális `O1-T4`: retained fallback / parity / cleanup hardening, ha ez nem zarhato biztonsagosan `O1-T3`-ban
-5. Ez becsles, nem befagyasztott phase-count:
-   - ha az `O1-T2` es `O1-T3` ugyanazon bounded code pathban zarhato, a lane `3` taskra szukulhet,
-   - ha kulon consumer fallout nyilik, `O1-T4` onallo hardening taskka valhat.
+5. Ez tovabbra is decomposition-becsles, nem befagyasztott vegso phase-count:
+   - a current tree-ben az `O1-T2` mar kulon lezart szelet, ezert a lane minimuma mar `O1-T1 -> O1-T2 -> O1-T3`,
+   - a nyitott kerdes mar csak az, hogy az optionalis `O1-T4` hardening kulon bounded taskka valik-e.
 
 ### Opportunity 2: Topology-Neutral Delivery and Executor Split
 
@@ -189,6 +189,23 @@ owners:
 6. Ez a first slice meg mindig nem runtime rewrite:
    - csak a canonical authority, a route/policy matrix es a workflow adapter boundary explicit szetvalasztasat ownershipolja.
 
+## Current Tree Progress Update (2026-04-17)
+
+1. Az `O1-T1` docs-only boundary clarification mar lezart baseline:
+   - task artifact: `plans/tasks/actor-runtime-interface-opportunity1-task1-generic-runtime-kernel-boundary-clarification.md`
+   - normative note: `plans/actor-runtime-interface-generic-runtime-kernel-contract-note-v1.md`
+2. Az `O1-T2` code-level matrix slice 2026-04-17-en merge-olve lett a `main` branchre:
+   - merge commit: `afa6558d622540e842986e44cab68ad6af91c2d8`
+   - bounded closure: a typed internal authority / route / policy matrix explicit current-tree source-of-truth-ja mar kulon file-ban el:
+     - `src/v11/application/actorProtocol/actorRuntimeDispatchMatrix.ts`
+3. A current tree-ben a wrapper-sprawl azonban meg mindig nyitott:
+   - `emitActorProtocolV11.ts` tovabbra is egyszerre ownershipolja az outer dispatcher route-valasztast, a wrapper-local plan canonicalizationt, es a workflow-adapter call-site wiringet,
+   - `actorProtocolEmitters.ts` mar kulon adapter-surface, de a generic kernel vs policy vs workflow-adapter boundary meg nincs explicit runtime seamre ultetve.
+4. Emiatt a lane aktualis kovetkezo bounded implementacios szelete most az `O1-T3`:
+   - `plans/tasks/actor-runtime-interface-opportunity1-task3-kernel-policy-workflow-adapter-separation.md`
+5. Az optionalis `O1-T4` tovabbra sem nyilik automatikusan:
+   - csak akkor kell kulon successor task, ha az `O1-T3` utan retained fallback / parity / cleanup hardening marad nyitva kulon bounded consumer fallouttal.
+
 ## Done Definition
 
 1. Ez a plan akkor szamit lezartnak, ha az alabbi ket allitas egyike igaz:
@@ -200,7 +217,10 @@ owners:
 
 1. `Opportunity 1`
    - aktiv successor lane
-   - current first slice: `O1-T1` docs-only kernel boundary clarification
+   - completed predecessor slices:
+     - `O1-T1` docs-only kernel boundary clarification
+     - `O1-T2` belso typed authority / route / policy matrix
+   - current next slice: `O1-T3` kernel + policy + workflow-adapter separation
 2. `Opportunity 2`
    - deferred successor lane `O2-T1`
    - preserved baseline: a lezart typed ack/runtime-success semantics nem reopenolhato
