@@ -307,3 +307,83 @@ On reaching the 10th round of P1 findings on the Phase 1B docref task, the user 
 - The agent quote at line 458 is much longer than the single-sentence excerpt quoted above. The full message contains the 8-stage split vocabulary ("persisted authority / authority producer / bubble-loop consume / tmux/runtime consume / activation / operator read-model / cleanup / recovery") which is captured in the delta block above rather than the quote block. The quote block deliberately kept a single verbatim sentence to satisfy quote discipline; the broader content is summarized in the `Problem solved` section.
 - The `remote-phase1b-docref` transcript's individual `CONVERGENCE` payloads were not line-by-line checked for finding titles in this section (unlike the `ca22d258` / `bci3-impl` section where finding titles were fully enumerated). The round-by-round finding pattern here is asserted by the user at rollout:L284 ("10th round"), not recomputed from `advisory_findings_open_total` per round in the archive.
 - The companion session (`019d7e4b-...`) is noted but not analyzed; its role in the skill refinement (if any) is not established.
+
+---
+
+## 2026-04-12 — `ef55d8a1` — Baseline Preservation + `allowed_resolution_path`
+
+**Commit message:** pairflow: tighten baseline preservation in specs and review
+
+**What it introduced (from diff):**
+Adds a 7th Core Question `allowed_resolution_path` to the Control-Model Readiness Gate ("which resolution or reconciliation paths are explicitly allowed inside the same authority chain"), inserted between `forbidden_fallback` and `missing_data_rule`. Introduces a dedicated `Baseline Preservation` section across PRD / Plan / Task templates with fields `must_preserve_behaviors`, `allowed_resolution_paths`, `forbidden_regression_interpretations`, `replacement_proof_required_if_removed`. Adds new Task L1 row "Allowed resolution path" and new L1 subsection "0b) Baseline Preservation (if applicable)" (Current Behavior / Preserve|Replace|Forbid / Required Proof / Priority / Timing). Two new SKILL.md Core Principles (17-18), two new Minimum Contract Rules (21-22), two new Control-Model Gate policy rules (7-8), two new README design choices (13-14), and matching extraction/validation/blocker steps in all three workflows.
+
+**Authoring session:**
+- File: `/Users/felho/.codex/sessions/2026/04/12/rollout-2026-04-12T14-30-42-019d81ac-3ecb-75f0-ac11-120c2d4ac164.jsonl`
+- Session id: `019d81ac-3ecb-75f0-ac11-120c2d4ac164`
+- `cwd`: `/Users/felho/dev/pairflow`
+- Time window: `2026-04-12T12:49:27.580Z` → `2026-04-12T20:52:36.559Z` (≈8h 3min; commit at 17:32:53 UTC, ~4h 43min after start, ~3h 20min before end).
+- User prompt count / agent message count: 37 user / 202 agent across the full session.
+- Session type: **hybrid — domain implementation + agent-proposed mid-session skill tightening**. The session's primary activity until 17:00 UTC was domain work (`actor-runtime-interface-meta-review` repo-surface cleanup, the `last-report` removal). The skill commit at 17:32 UTC was a mid-session side-track: the agent proposed a skill update based on the removal-task experience, and the user approved it. The session then continued with more domain work (post-commit through 20:52 UTC).
+
+**Verbatim quotes**
+
+No single user message before the commit (17:32 UTC) articulates the "why" for this commit in one sentence. The skill tightening emerged from a *pattern* across multiple pre-commit user messages, each catching a specific case where a removal pass had left trailing behavior in place — the kind of slip that in the inverse direction (spec forbids fallback too broadly) would remove a valid deterministic path. Relevant pre-commit user messages cited verbatim:
+
+> [user, line 600, 2026-04-12T15:55:37Z] "akkor a last-report kivétele terv az teljesen készen van?"
+> *(EN)* "so — is the last-report removal plan completely done?"
+
+> [user, line 626, 2026-04-12T15:59:46Z] "nem, értem, az előbb pont ezt kérdeztem, légyszi ne doksikban lévő státuszt nézd, mert az lehet félrevezető, nézd meg a kódot is"
+> *(EN)* "no, I got it — that's what I was asking. please don't look at doc status, that can be misleading; check the code too."
+
+> [user, line 815, 2026-04-12T16:09:01Z] "akkor tegyél még egy ellenőrzést a kódban, hogy a last-report-nak van-e még bármi nyoma"
+> *(EN)* "then do one more check in the code for any remaining trace of last-report."
+
+> [user, line 1704, 2026-04-12T16:41:47Z] "több helyen láttam, hogy a writeFile kikeürlt, de van egy readFile, ott a readFile az micsoda?"
+> *(EN)* "I saw in several places that writeFile was removed, but there's a readFile — what is that readFile doing there?"
+
+The L1704 quote is the clearest single illustration of the commit's motivation: a removal pass had silently left a readFile path in place — exactly the class of regression risk the commit's `forbidden_regression_interpretations` + `replacement_proof_required_if_removed` fields are designed to catch. The commit's inverse framing ("do not let 'forbidden fallback' wording accidentally ban a deterministic same-authority resolution path") is the counterpart: a removal-task reviewer could equally over-remove a valid deterministic path by treating it as a forbidden heuristic.
+
+**Session content vs commit content delta:**
+
+This is a `hybrid` session where the concepts were NOT explicitly named by the user before the commit. The session-side signal is indirect — the domain-task practice generated a pattern; the agent proposed the skill-level formalization between ~17:00 and 17:32 UTC; the user approved and committed. The main conversation confirms the concepts exist in the post-17:00 portion of the session by keyword search but did not spot-verify each one line-by-line for this section.
+
+```
+Commit-side (from `git show ef55d8a1`):
+- Control-Model Gate Core Questions: 6 → 7 (adds `allowed_resolution_path` as #5)
+- Control-Model Gate Policy rules: 6 → 8 (adds #7 canonicalization-classification and #8 no-accidental-ban)
+- Templates (PRD/Plan/Task): new `Baseline Preservation` sections
+- Task template L0: new fields `must_preserve_behaviors`, `allowed_resolution_paths`, `forbidden_regression_interpretations`, `replacement_proof_required_if_removed`
+- Task template L1: new "Allowed resolution path" row in Domain/Control Contract; new "0b) Baseline Preservation (if applicable)" table
+- SKILL.md Core Principles: +2 (17-18, baseline-preservation-before-cleanup, state-allowed-deterministic-paths)
+- SKILL.md Minimum Contract Rules: +2 (21-22, Baseline Preservation section + replacement proof)
+- README design choices: +2 (13-14)
+- Workflows: `allowed_resolution_path` extraction + baseline-preservation blockers in CreatePRD / CreatePlan / CreateTask
+
+Session-side (direct signal, pre-commit):
+- No explicit mention of "Baseline Preservation", "allowed_resolution_path", "forbidden_regression_interpretations", "must_preserve_behaviors", or "replacement_proof_required_if_removed" in pre-commit user messages.
+- Strong pattern in pre-commit user messages (L600, L626, L815, L934, L1704, L1713, L1943): repeated requests to verify the removal is complete, explicit rejection of doc-level status as authority ("check the code too"), and the specific writeFile/readFile asymmetry catch at L1704.
+- Agent-proposed mid-session skill update (between the 16:59 UTC domain commit and the 17:32 UTC skill commit): not spot-verified line-by-line in this section — see `Gaps`.
+
+Verdict: structural extension of the Control-Model Gate and Task template from the prior Control-Model Readiness Gate (bdd4646f) and Authority Fan-out Scan (8b57b962). The session contains the *domain experience* that motivated the tightening but not an explicit pre-commit user statement of the new rule names.
+```
+
+**Incident evidence (bubble and direct-edit work):**
+- **Pre-commit bubble context (earlier in the session):** `imp-ari-mr-repo-surface` (`bi_00mnvro250_7d06f1136a49416cabef`, archived). This is the implementation bubble the user was reviewing at L267 (14:19 UTC) and L391 (15:48 UTC). Related docs-only predecessor: `doc-ari-mr-repo-surface` (`bi_00mnvqnckp_7d60bdcd4c63de79a697`).
+- **Main pre-commit work from L574 onwards (no archived bubble found):** the user continued with `plans/tasks/actor-runtime-interface-meta-review-cached-repo-surface-cleanup-phaseE.md` — the `last-report` removal task — via direct-edit workflow rather than a standalone bubble. No archive instance with `*phaseE*` or `*cleanup*` in the bubble id was found for the 2026-04-12 15:00-21:00 UTC window; this work appears to have been committed directly (see L790 "commit" at 16:08 and L2207 "commit" at 16:59).
+- **Characterization of non-convergence / risk pattern (from pre-commit user messages, directly cited above):**
+  - The user repeatedly insists that the removal cannot be confirmed by doc-level status (L626) and must be re-verified against actual code (L815, L1713, L1943) — three explicit re-check requests within 50 minutes.
+  - At L1704 the user personally catches that the agent had removed `writeFile` but left `readFile` in place — i.e. the removal pass was incomplete and only human inspection caught it.
+  - The skill commit at 17:32 UTC formalizes the inverse failure mode into the spec/review framework: when a removal/refactor task forbids a fallback, it must also say which deterministic same-authority paths remain allowed, so reviewers do not silently over-remove.
+- **Watchdog history:** not separately checked for this commit; the direct-edit pattern means there may be no watchdog trail for the phaseE cleanup.
+
+**Problem solved (synthesized, in the user's framing):**
+Across a long implementation session on `actor-runtime-interface-meta-review` cleanup (the `last-report` removal), the user discovered through repeated manual verification that removal passes can silently leave asymmetric remnants (writeFile removed but readFile remaining) and that doc-level status is untrustworthy. This practical experience surfaced a framework-level gap: the Control-Model Readiness Gate's existing `forbidden_fallback` question, without a paired `allowed_resolution_path` question, lets reviewers swing the other way and over-remove valid deterministic paths under the label "heuristic fallback". The commit adds the missing paired question, new Baseline Preservation fields across PRD / Plan / Task, and matching validation/blocker steps in all three workflows, so that future removal-oriented tasks carry both sides of the contract explicitly.
+
+**Related prior sessions:**
+None found within the 8-hour window that explicitly authored different parts of this commit. The session itself contains the full hybrid story (domain work → agent-proposed skill update → commit). The prior-day `8b57b962` session (`019d7e3e-...`) established the Authority Fan-out Scan vocabulary that this commit extends.
+
+**Gaps / uncertainty:**
+- **No single pre-commit user quote articulates the new rule names.** The "why" is a *multi-message domain-work pattern* followed by an agent-proposed skill update. This differs from the earlier sections where a single user message named the gate or problem directly.
+- **The specific agent message that proposed the skill update (between 16:59 UTC "commit" and 17:32 UTC skill commit) was not spot-verified in this main conversation** — the subagent retry that examined this session chose quotes from the post-commit portion (19:10 UTC), which is temporally invalid. A narrower pre-commit agent-message enumeration would be needed to cite the exact skill-proposal turn.
+- **No archived bubble for the phaseE cleanup task.** Direct-edit workflow, two commits (16:08 and 16:59 UTC) in the pairflow repo main branch, then the skill commit at 17:32 UTC. The phaseE cleanup commits themselves are not referenced by hash in this appendix.
+- **User message counts** (37 user / 202 agent) are session-total; only ~28 user messages occur before the 17:32 UTC commit (L7 through L2207). The post-commit messages do not inform this section.
