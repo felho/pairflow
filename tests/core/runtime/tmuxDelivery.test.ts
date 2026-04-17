@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import {
   buildTranscriptFallbackRef,
@@ -7,6 +7,7 @@ import {
   retryStuckAgentInput
 } from "../../../src/v11/infrastructure/channel/tmux/tmuxDelivery.js";
 import {
+  attemptTmuxDelivery,
   createAcceptedTmuxDeliveryAck,
   createRejectedTmuxDeliveryAck,
   projectTmuxDeliveryAckToLegacyResult
@@ -316,6 +317,81 @@ describe("tmux delivery canonical ack helpers", () => {
         projectTmuxDeliveryAckToLegacyResult(canonicalCase.ack),
         canonicalCase.title
       ).toEqual(canonicalCase.expectedLegacy);
+    }
+  });
+});
+
+describe("tmux delivery T6 runtime observability baseline", () => {
+  it("keeps pane visibility and marker/session inspection diagnostics-only without an explicit accepted ack", async () => {
+    // Helper-level T6 coverage. The facade-level emitTmuxDeliveryNotification
+    // scenario later in this file proves the same baseline through the public
+    // delivery surface so the two tests stay intentionally complementary.
+    const calls: string[][] = [];
+    const targetPane = "pf-b_delivery_01:0.2";
+    const message =
+      "# [pairflow] r1 PASS codex->claude msg=msg_20260222_101 ref=artifact://handoff.md.";
+    const expectedCapturePaneCall = ["capture-pane", "-pt", targetPane];
+    const expectedMessageWriteCall = ["send-keys", "-t", targetPane, "-l", message];
+    const expectedEnterCall = ["send-keys", "-t", targetPane, "Enter"];
+    const runner: TmuxRunner = (args): Promise<TmuxRunResult> => {
+      calls.push(args);
+      if (args[0] === "capture-pane") {
+        return Promise.resolve({
+          stdout:
+            "accepted=true running=true handoff_id=handoff_advanced_02 actor acknowledged work",
+          stderr: "",
+          exitCode: 0
+        });
+      }
+
+      return Promise.resolve({
+        stdout: "",
+        stderr: "",
+        exitCode: 0
+      });
+    };
+
+    // Fake timers keep the helper's sleep-based confirmation path deterministic.
+    vi.useFakeTimers();
+    try {
+      const resultPromise = attemptTmuxDelivery({
+        runner,
+        targetPane,
+        envelopeId: "msg_20260222_101",
+        message,
+        sessionName: "pf-b_delivery_01",
+        targetPaneIndex: 2,
+        // This test isolates the first-attempt fail-closed path; retry behavior
+        // is covered separately by the retry-focused scenarios below.
+        deliveryAttempts: 1
+      });
+      await vi.runAllTimersAsync();
+      const result = await resultPromise;
+
+      const capturePaneCalls = calls.filter((call) => call[0] === "capture-pane");
+      const messageWriteCalls = calls.filter(
+        (call) => call[0] === "send-keys" && call[3] === "-l"
+      );
+      const enterCalls = calls.filter(
+        (call) => call[0] === "send-keys" && call[3] === "Enter" && call.length === 4
+      );
+
+      expect(messageWriteCalls).toEqual([expectedMessageWriteCall]);
+      expect(enterCalls).toEqual([expectedEnterCall]);
+      expect(capturePaneCalls.length).toBeGreaterThanOrEqual(1);
+      expect(capturePaneCalls.every((call) => call.join("\u0000") === expectedCapturePaneCall.join("\u0000"))).toBe(
+        true
+      );
+      expect(result).toEqual(
+        createRejectedTmuxDeliveryAck({
+          reason: "delivery_unconfirmed",
+          message,
+          sessionName: "pf-b_delivery_01",
+          targetPaneIndex: 2
+        })
+      );
+    } finally {
+      vi.useRealTimers();
     }
   });
 });
