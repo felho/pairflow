@@ -22,18 +22,33 @@ describe("approvalCommandDependencyResolution", () => {
         delivered: true,
         message: "default"
       })) as never;
+    const defaultExecuteRemoteApproval = (async () =>
+      ({
+        kind: "decision",
+        bubbleId: "default",
+        sequence: 1,
+        envelope: {} as never,
+        state: {} as never
+      })) as never;
     const defaultEnsureBubble = (async () =>
       ({
         bubbleId: "default",
         bubbleInstanceId: "bubble-instance",
         bubbleConfig: {} as never
       })) as never;
+    const defaultReadRemotePointer = (async () => null) as never;
     const defaultReadState = (async () =>
       ({
         state: {} as never,
         fingerprint: "default"
       })) as never;
     const defaultReadTranscript = (async () => []) as never;
+    const defaultResolveRemoteTarget = (async () =>
+      ({
+        alias: "remote",
+        host: "ssh.example.com",
+        pairflowCommand: "pairflow"
+      })) as never;
     const defaultResolveDeliveryMessageRef = (() => "default-ref") as never;
     const defaultWriteState = (async () =>
       ({
@@ -54,9 +69,12 @@ describe("approvalCommandDependencyResolution", () => {
     }, {
       appendProtocolEnvelope: defaultAppend,
       emitTmuxDeliveryNotification: defaultEmitTmux,
+      executeRemoteBubbleApprovalCommand: defaultExecuteRemoteApproval,
       ensureBubbleInstanceIdForMutation: defaultEnsureBubble,
+      readRemotePointer: defaultReadRemotePointer,
       readStateSnapshot: defaultReadState,
       readTranscriptEnvelopes: defaultReadTranscript,
+      resolveRemoteBubbleStatusTarget: defaultResolveRemoteTarget,
       resolveBubbleById: defaultResolveBubble,
       resolveDeliveryMessageRef: defaultResolveDeliveryMessageRef,
       writeStateSnapshot: defaultWriteState
@@ -65,10 +83,17 @@ describe("approvalCommandDependencyResolution", () => {
     expect(resolved.appendProtocolEnvelope).toBe(defaultAppend);
     expect(resolved.resolveBubbleById).toBe(defaultResolveBubble);
     expect(resolved.emitTmuxDeliveryNotification).toBe(customEmit);
+    expect(resolved.executeRemoteBubbleApprovalCommand).toBe(
+      defaultExecuteRemoteApproval
+    );
     expect(resolved.resolveDeliveryMessageRef).toBe(customResolveMessageRef);
     expect(resolved.ensureBubbleInstanceIdForMutation).toBe(defaultEnsureBubble);
+    expect(resolved.readRemotePointer).toBe(defaultReadRemotePointer);
     expect(resolved.readStateSnapshot).toBe(defaultReadState);
     expect(resolved.readTranscriptEnvelopes).toBe(defaultReadTranscript);
+    expect(resolved.resolveRemoteBubbleStatusTarget).toBe(
+      defaultResolveRemoteTarget
+    );
     expect(resolved.writeStateSnapshot).toBe(defaultWriteState);
   });
 });

@@ -14,6 +14,39 @@ export async function runApprovalDecisionFlowWithContext(
     execution: ApprovalFlowExecutionContext;
   }
 ): Promise<EmitApprovalDecisionResult> {
+  if (input.execution.route === "remote") {
+    const routed = await input.dependencies.executeRemoteBubbleApprovalCommand({
+      action: "approve",
+      bubbleId: input.execution.resolved.bubbleId,
+      remoteClonePath: input.execution.remotePointer.remoteClonePath,
+      remoteTarget: input.execution.remoteTarget,
+      refs: input.flow.refs,
+      overrideNonApprove: input.flow.overrideNonApprove ?? false,
+      ...(input.flow.overrideReason !== undefined
+        ? { overrideReason: input.flow.overrideReason }
+        : {})
+    });
+
+    if (routed.kind !== "decision") {
+      throw input.flow.createError({
+        reasonCode: "APPROVAL_REMOTE_RESULT_INVALID",
+        message:
+          `Remote approval for '${input.execution.resolved.bubbleId}' returned a queued rework result for approve.`,
+        context: {
+          command_name: "approval",
+          bubble_id: input.execution.resolved.bubbleId
+        }
+      });
+    }
+
+    return {
+      bubbleId: routed.bubbleId,
+      sequence: routed.sequence,
+      envelope: routed.envelope,
+      state: routed.state
+    };
+  }
+
   const bubbleIdentity = await input.dependencies.ensureBubbleInstanceIdForMutation({
     bubbleId: input.execution.resolved.bubbleId,
     repoPath: input.execution.resolved.repoPath,

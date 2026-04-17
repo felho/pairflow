@@ -1,5 +1,7 @@
 export {
   type AttachBubbleErrorLike,
+  type RemoteBubbleApprovalCommandErrorLike,
+  type RemoteBubbleStatusErrorLike,
   UiApiHttpError,
   type UiApiHttpErrorContext,
   type UiApiHttpErrorInput,
@@ -12,6 +14,8 @@ export {
   isAttachRuntimeMissingError,
   isConflictErrorMessage,
   isNotFoundErrorMessage,
+  isRemoteBubbleApprovalCommandErrorLike,
+  isRemoteBubbleStatusErrorLike,
   notFound,
   parseStateFromErrorMessage,
   sendApiError,

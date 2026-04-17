@@ -15,6 +15,8 @@ import {
   isAttachBubbleErrorLike,
   isConflictErrorMessage,
   isNotFoundErrorMessage,
+  isRemoteBubbleApprovalCommandErrorLike,
+  isRemoteBubbleStatusErrorLike,
   notFound,
   parseStateFromErrorMessage,
   readJsonBody,
@@ -179,6 +181,30 @@ async function mapActionErrorToApiError(input: {
         ? { attachContextReason: input.error.context.reason }
         : {})
     });
+  }
+
+  if (isRemoteBubbleApprovalCommandErrorLike(input.error)) {
+    const details = {
+      bubbleId: input.bubbleId,
+      repoPath: input.repoPath,
+      reasonCode: input.error.code
+    };
+    return internalError(message, details);
+  }
+
+  if (isRemoteBubbleStatusErrorLike(input.error)) {
+    const details = {
+      bubbleId: input.bubbleId,
+      repoPath: input.repoPath,
+      reasonCode: input.error.code
+    };
+    if (input.error.code === "REMOTE_STATUS_CONFIG_INVALID") {
+      return badRequest(message, details);
+    }
+    if (input.error.code === "REMOTE_STATUS_TRANSPORT_FAILED") {
+      return conflict(message, details);
+    }
+    return internalError(message, details);
   }
 
   if (input.error instanceof Error && input.error.name === "UiApiBadRequest") {

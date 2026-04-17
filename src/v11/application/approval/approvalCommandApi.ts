@@ -18,11 +18,13 @@ import type { ApprovalCommandDefaultDependencies } from "./approvalCommandDepend
 import { ApprovalCommandError } from "../../shared/approval/approvalCommandError.js";
 import { startCommandContextDefaults } from "../start/startCommandDependencyDefaults.js";
 import { reviewerDeliveryDefaults } from "../pass/reviewerDeliveryDefaults.js";
+import { statusCommandDependencyDefaults } from "../../shared/status/statusCommandDependencyDefaults.js";
 import {
   appendProtocolEnvelope,
   readTranscriptEnvelopes
 } from "../../shared/transcript/transcriptDependencyDefaults.js";
 import { readStateSnapshot, writeStateSnapshot } from "../../shared/state/stateStoreDefaults.js";
+import { executeRemoteBubbleApprovalCommand } from "../../infrastructure/executor/ssh/sshBubbleApprovalCommand.js";
 
 let approvalDependencyDefaultsPromise:
   | Promise<ApprovalCommandDefaultDependencies>
@@ -55,9 +57,13 @@ async function loadApprovalDependencyDefaults(): Promise<ApprovalCommandDefaultD
     appendProtocolEnvelope,
     emitTmuxDeliveryNotification:
       reviewerDeliveryDefaults.emitTmuxDeliveryNotification,
+    executeRemoteBubbleApprovalCommand,
     ensureBubbleInstanceIdForMutation,
+    readRemotePointer: statusCommandDependencyDefaults.readRemotePointer,
     readStateSnapshot,
     readTranscriptEnvelopes,
+    resolveRemoteBubbleStatusTarget:
+      statusCommandDependencyDefaults.resolveRemoteBubbleStatusTarget,
     resolveBubbleById,
     resolveDeliveryMessageRef: reviewerDeliveryDefaults.resolveDeliveryMessageRef,
     writeStateSnapshot
