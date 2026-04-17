@@ -3,7 +3,7 @@ artifact_type: note
 artifact_id: note_actor_runtime_interface_execution_authority_contract_v1
 title: "Actor Runtime Interface Execution Authority Contract Note"
 status: active
-updated_at: 2026-04-16
+updated_at: 2026-04-17
 owners:
   - "felho"
 ---
@@ -76,3 +76,23 @@ owners:
 3. `E3c` parity/fail-closed closure; ugyanazon canonical execution identity felett bizonyít.
 4. `E4` reviewer és meta-reviewer consume-family rollout; ugyanezt a canonical authority vocabularyt örökli.
 
+## E4 Consume-Family Closure
+
+1. Reviewer runtime parity:
+   - a reviewer `pass` és `convergence` ugyanazon canonical execution authorityt consume-olja,
+   - a current-tree ownership lánc: actor emit wrapper -> converged orchestration -> run flow -> gate delivery,
+   - a reviewer rollout nem szűkíthető le pusztán a leaf delivery seamre.
+2. Meta-review runtime parity:
+   - a meta-review submit ugyanazon canonical execution authorityt consume-olja,
+   - a current-tree ownership lánc: actor emit/meta-review wrapper -> submit preparation -> authority/stale-guard -> runtime/routing,
+   - nincs külön meta-review authority-szótár vagy role-local authority source.
+3. Retained tmux delivery cleanup boundary:
+   - a `tmuxDelivery` message/targeting/delivery facade retained compatibility-réteg,
+   - explicit delivery target role, pane targeting és fallback reason code csak transport/delivery diagnosztika,
+   - ezek nem canonical authority és nem runtime success truth források.
+4. Runtime truth rule Phase E4 után is:
+   - reviewer vagy meta-reviewer success csak explicit canonical runtime outcome-ból vezethető le,
+   - pane output, prompt visibility, marker confirmation vagy tmux delivery ACK legfeljebb delivery-transport bizonyíték.
+5. Sequencing rule:
+   - amíg a current tree ezen a lezárt vocabularyn és consume-pathon marad, `E4` lezártnak tekinthető,
+   - új authority producer, broad tmux topology csere vagy role-local authority shortcut csak külön successor taskban nyitható újra.
