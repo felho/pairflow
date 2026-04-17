@@ -464,3 +464,81 @@ None found within the pre-commit window that author a different part of this com
 - The specific bubble whose rounds 1-11 triggered this reflection is named in passing ("round eleven", "at least run twenty") but not quoted by id in the session. The corresponding pairflow archive entry was not located in this appendix.
 - `plans/feature-ideas.md` was updated in the same commit with "implementation-phase bubble process ideas"; that file's content is out of scope for this skill-evolution appendix and has not been inspected here.
 - The first subagent-produced count of 8 user / 12 agent was spot-corrected to 15 user / 71 agent after direct `rg -c` verification on the session file.
+
+---
+
+## 2026-04-15 — `77d2210e` — Bounded-Task-Shape Gate + ReviewSpec workflow
+
+**Commit message:** Improve CreatePairflowSpec planning gates
+
+**What it introduced (from diff):**
+Introduces a new mandatory `Bounded-Task-Shape Gate` for mutable/runtime flows with six primary shapes (`contract_or_persisted_authority_foundation`, `authority_producer`, `consumer_family_alignment`, `fail_closed_hardening`, `coordination_concurrency_hardening`, `activation_or_read_model`) and seven policy rules. Adds a brand-new 151-line `ReviewSpec` workflow (planning-only review, not code review) plus two new reference files (`Bounded-Task-Shape-Gate.md` 82 lines, `Remaining-Task-Viability-Check.md` 69 lines). Adds 2 new Core Principles (21-22, precondition-before-side-effect + concurrency-is-its-own-closure), 6 new Minimum Contract Rules (24-29, bounded-task-shape classification / Precondition and Side-Effect Boundary section / invalid-case test / spec-review planning-only / parent-plan load / remaining-task viability), template additions (Mutation / Precondition Boundaries section, Primary Task Shape column, L0 Precondition and Side-Effect Boundary subsection, L1 "0c)" table, L1 Test Matrix T3 row), and a new SKILL.md routing entry + Example #4 for ReviewSpec.
+
+**Authoring session:**
+- File: `/Users/felho/.codex/sessions/2026/04/15/rollout-2026-04-15T17-11-54-019d91b2-e9be-7b30-8e6a-807893124f96.jsonl`
+- Session id: `019d91b2-e9be-7b30-8e6a-807893124f96`
+- `cwd`: `/Users/felho/dev/pairflow`
+- Time window: `2026-04-15T15:11:59.040Z` → `2026-04-15T18:11:41.284Z` (≈3h; commit at 16:42:11 UTC, 1h 30min after session start, 1h 29min before session end)
+- User prompt count / agent message count: 21 user / 91 agent
+- Session type: **authoring** — user opens with the recurring "review the bubble, deep mode" intro (L7: `impl_phase2b_remote_create: review the bubble, deep mode, be very verbose`), then asks at L186 why the planning skill keeps missing the over-wide-task pattern, the agent diagnoses the two concrete gaps at L309 and reports that it has already applied the fix to the skill, and the commit lands ~30 minutes later.
+
+**Verbatim quotes**
+
+> [user, line 186, 2026-04-15T15:19:02Z] "amit nem értek, hogy elvileg a plan lépésekre bontásánál igyekszünk figyelni arra, hogy ilyen szempontok figyelembe legyenek véve, de valahogy ez mintha nem működne, mert rendre futunk bele, hogy 15 kör után jövünk rá arra, hogy nem lehet ebben a formában megcsinálni, és kisebb darabokra kell bontani, hogyan lehetne ezt a bontást jobb alapokra helyezni?"
+>
+> *(EN)* "what I don't understand — in theory we try to pay attention to these considerations when splitting the plan into steps, but somehow this isn't working: we keep hitting the case where after 15 rounds we realize it can't be done in this form and it has to be split into smaller pieces. How could we put this splitting on a better foundation?"
+
+> [agent, line 309, 2026-04-15T16:12:52Z] "a planning-oldali fő hiány nem az volt, hogy ne lennének gate-ek, hanem az, hogy a jelenlegi skill túl könnyen átengedi a rossz shape-ű bounded taskokat. Két konkrét hiány volt: 1. Nem volt külön kényszer arra, hogy a task/phase elsődleges shape-jét kimondjuk. [...] 2. Nem volt kötelező `precondition-before-side-effect` boundary."
+>
+> *(EN)* "the main planning-side gap was not that gates were missing, but that the current skill lets wrong-shape bounded tasks slip through too easily. Two concrete gaps: 1. there was no explicit requirement to name the primary shape of the task/phase. [...] 2. there was no mandatory `precondition-before-side-effect` boundary."
+
+**Session content vs commit content delta:**
+
+```
+Session-side (user framing at rollout:L186 + agent diagnosis at rollout:L309):
+- User problem: planning splits fail despite existing gates; users discover "after 15 rounds" that the task has to be broken into smaller pieces.
+- Agent-named gaps (literally from L309):
+  - Gap 1: no explicit requirement to name the primary task/phase shape; producer / fail_closed_hardening / coordination_concurrency_hardening slip into one task.
+  - Gap 2: no mandatory `precondition-before-side-effect` boundary; the plan/task is not forced to state what must be validated before any side effect, what invalid-input behavior is, and whether lock/rollback/retry are their own closures.
+- Agent explicitly names the three problem-shape labels: `producer`, `fail_closed_hardening`, `coordination_concurrency_hardening`.
+- Agent lists modified files at L309 (matches the committed file set exactly): SKILL.md, CreatePlan.md, CreateTask.md, plan-template.md, task-template.md, Complexity-Risk-Gate.md, L1-Contract-Boundaries.md, README.md. (The ReviewSpec.md + Bounded-Task-Shape-Gate.md + Remaining-Task-Viability-Check.md files were added later in the session, before commit.)
+
+Commit-side (from `git show 77d2210e` on the skill):
+- New mandatory `Bounded-Task-Shape Gate` with exactly 6 shape labels: `contract_or_persisted_authority_foundation`, `authority_producer`, `consumer_family_alignment`, `fail_closed_hardening`, `coordination_concurrency_hardening`, `activation_or_read_model`.
+- 7 gate policy rules.
+- New `Precondition and Side-Effect Boundary` section in Task template + `Mutation / Precondition Boundaries` in Plan template + L1 "0c)" table + L1 Test Matrix T3 row.
+- New 151-line `ReviewSpec` workflow + new `Remaining-Task-Viability-Check.md` (69 lines) reference.
+- New 82-line `Bounded-Task-Shape-Gate.md` reference.
+- New SKILL.md Core Principles 21-22, Minimum Contract Rules 24-29, README design choices 16-17, Routing entry for ReviewSpec, Example #4.
+
+Match analysis:
+- The **two agent-named gaps at L309** (no-primary-shape, no-precondition-boundary) match the commit exactly:
+  - Gap 1 → Bounded-Task-Shape Gate (6 shapes) + SKILL.md Core Principle 22 + Minimum Contract Rule 24 + templates "Primary Task Shape" column / bullet 13 / primary-shape L0 subsection.
+  - Gap 2 → Core Principle 21 + Minimum Contract Rule 25 + Plan "Mutation / Precondition Boundaries" + Task "Precondition and Side-Effect Boundary" + L1 "0c)" + Test Matrix T3.
+- The agent's three labeled problem shapes at L309 (`producer`, `fail_closed_hardening`, `coordination_concurrency_hardening`) appear verbatim in the committed gate's 6-shape list.
+- The **ReviewSpec workflow + Remaining-Task-Viability-Check** are not explicitly requested in the L186 user quote or L309 agent diagnosis — they appear later in the session (subagent retrieval notes L319, L346, L356 agent messages and a post-L309 user approval). Not spot-verified in this appendix at line-level, but the commit includes them as part of the same change.
+
+Verdict: **structural match on the two gaps explicitly named by the agent at L309**, plus one additional in-scope concept (ReviewSpec workflow + remaining-task viability check) that developed later in the same pre-commit session window and is documented by the subagent retrieval but not line-cited in this appendix.
+```
+
+**Incident evidence (bubble):**
+- Bubble id (from session L7): `impl_phase2b_remote_create`
+- Archive instance found: `/Users/felho/.pairflow/archive/b8d470bb2ac6be3b/bi_00mnzt8dm4_b31050a38042c1c12469/`
+- Final state + final round: `DONE at round 13` (`state.json:state`, `state.json:round`)
+- Bubble repo: `/Users/felho/dev/pairflow` (`bubble.toml:repo_path`); artifact type: code (implementation of Phase 2B remote-create write path).
+- Characterization of the non-convergence pattern (from archive `transcript.ndjson`, cited by line):
+  - Multi-round reviewer CONVERGENCE with advisory findings persisting round-over-round: R4 `advisory_findings_open_total: 4` (`transcript.ndjson:L9`); R5 `3` (`:L14`); R6 `5` (`:L19`); R7 `6` (`:L24`); R8 `3` (`:L29`). The bubble eventually reached `DONE` at round 13, but the pattern through rounds 4-8 matches the user's "15-round" framing at rollout:L186.
+  - Recurring P2 classes across rounds include: `writeRemotePointer` contract/validation asymmetry (R4-R5), partial-write inconsistency window between `bubble.toml executor.remote` and `remote_pointer.json` (R6, R7 "orphan remote.json has no compensating rollback"), repeated test-coverage gaps, and the `T6 fail-closed coverage layer drift` (R8). These are exactly the mixed-shape pattern (producer + fail-closed hardening + coordination-flavored ordering) that the new Bounded-Task-Shape Gate targets.
+  - Persistence-write ordering is the core recurring concern: remote.json vs bubble.toml write ordering, partial rollback absence — this is the `precondition-before-side-effect` and `fail_closed_hardening` territory the commit formalizes.
+- Watchdog history: archive `transcript.ndjson` has 57 lines; no separate watchdog-history file required — the round-by-round reviewer CONVERGENCE findings are sufficient evidence for the "mixed producer + fail-closed + coordination" pattern.
+
+**Problem solved (synthesized, in the user's framing):**
+The `impl_phase2b_remote_create` bubble reached round 13 (with round 4-8 reviewer convergences repeatedly surfacing persistence-write-ordering and rollback-symmetry findings) despite the existing skill having Control-Model Gate, Authority Fan-out Scan, Complexity-Risk Gate, Baseline Preservation, and Closure-Budget Gate. The user's framing at L186 is direct: "we keep hitting the case where after 15 rounds we realize it can't be done in this form and it has to be split into smaller pieces." The agent's L309 diagnosis names the two missing forcing functions (primary-shape classification at plan/task creation; precondition-before-side-effect boundary), and the commit formalizes them into the Bounded-Task-Shape Gate + matching template sections, plus a new ReviewSpec workflow so the same over-wide-task pattern can be caught during planning review rather than at round 15.
+
+**Related prior sessions:**
+None found within the pre-commit window. The session itself contains the full "review → diagnosis → skill update → commit" chain in one ~3h sitting.
+
+**Gaps / uncertainty:**
+- The ReviewSpec workflow (151-line new file) and `Remaining-Task-Viability-Check` reference were added to the skill as part of this commit but are not explicitly named in the L186 user message or the L309 agent diagnosis. The subagent retrieval mentions agent turns at L319, L346, L356 where ReviewSpec is proposed, but those lines are not individually line-cited or verbatim-quoted in this appendix. A narrower follow-up would be needed to quote the exact ReviewSpec proposal turn.
+- The agent quote at L309 is long; the excerpt shown in `Verbatim quotes` is the central "two gaps" sentence with `[...]` between the two numbered points. The full L309 message includes the exact list of modified skill files (matching the committed diff exactly) — the main conversation verified this match but did not inline the full file list in the quote block.
+- One subagent methodological note contained a self-contradictory timestamp statement ("16:42:11 UTC ... = 14:42:11 UTC") which was corrected here: the commit timestamp is `2026-04-15T16:42:11 UTC` (i.e. 18:42:11 CEST).
