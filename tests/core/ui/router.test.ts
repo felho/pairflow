@@ -6,6 +6,8 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { AttachBubbleError } from "../../../src/v11/application/attach/emitAttachV11.js";
+import { RemoteBubbleApprovalCommandError } from "../../../src/v11/infrastructure/executor/ssh/sshBubbleApprovalCommand.js";
+import { RemoteBubbleStatusError } from "../../../src/v11/infrastructure/executor/ssh/sshBubbleStatus.js";
 import type { RestartBubbleResult } from "../../../src/v11/application/restart/restartCommandContract.js";
 import { createUiRouter, resolveStaticAssetPath } from "../../../src/v11/infrastructure/ui/router.js";
 import type { UiEventsBroker } from "../../../src/v11/infrastructure/ui/events.js";
@@ -1000,6 +1002,461 @@ describe("createUiRouter attach action", () => {
       });
       expect(startBubble).not.toHaveBeenCalled();
       expect(attachBubble).toHaveBeenCalledTimes(1);
+    } finally {
+      await server.close();
+    }
+  });
+
+  it("maps remote approve start-required failures to HTTP 409 conflict", async () => {
+    const repoPath = "/tmp/pairflow-ui-router-approve-remote-created";
+    const emitApprove = vi.fn(() =>
+      Promise.reject(
+        new Error(
+          "Remote approval for 'b-router-approve-remote-created' requires a started remote pointer. Run `pairflow bubble start --id b-router-approve-remote-created` first."
+        )
+      )
+    );
+    const status: BubbleStatusView = {
+      bubbleId: "b-router-approve-remote-created",
+      repoPath,
+      worktreePath: "/tmp/worktree",
+      bubbleStartedAt: "2026-04-17T09:00:00.000Z",
+      state: "CREATED",
+      round: 0,
+      activeAgent: null,
+      activeRole: null,
+      activeSince: null,
+      lastCommandAt: null,
+      paneActivity: {
+        readStatus: "missing",
+        lastChangedAt: null,
+        sampledAt: null,
+        sinceLastChangedSeconds: null,
+        sinceSampledSeconds: null,
+        lastSampleStatus: null,
+        lastSampleError: null,
+        sessionName: null,
+        targetPane: null
+      },
+      executionContext: null,
+      watchdog: {
+        monitored: false,
+        monitoredAgent: null,
+        timeoutMinutes: 30,
+        referenceTimestamp: null,
+        deadlineTimestamp: null,
+        remainingSeconds: null,
+        expired: false
+      },
+      pendingInboxItems: {
+        humanQuestions: 0,
+        approvalRequests: 0,
+        total: 0
+      },
+      transcript: {
+        totalMessages: 0,
+        lastMessageType: null,
+        lastMessageTs: null,
+        lastMessageId: null
+      },
+      metaReview: {
+        actor: "meta-reviewer",
+        authorityActive: false,
+        runtimeDelivery: null
+      },
+      commandPath: {
+        status: "external",
+        profile: "external",
+        localEntrypoint: "/tmp/worktree/dist/cli/index.js",
+        activeEntrypoint: "/usr/local/bin/pairflow",
+        message: "external Pairflow CLI active",
+        pinnedCommand: "pairflow"
+      },
+      accuracy_critical: false,
+      last_review_verification: "missing",
+      failing_gates: [],
+      spec_lock_state: {
+        state: "IMPLEMENTABLE",
+        open_blocker_count: 0,
+        open_required_now_count: 0
+      },
+      round_gate_state: {
+        applies: false,
+        violated: false,
+        round: 0
+      },
+      stateValidation: null
+    };
+    const inbox: BubbleInboxView = {
+      bubbleId: "b-router-approve-remote-created",
+      repoPath,
+      state: "CREATED",
+      pending: {
+        humanQuestions: 0,
+        approvalRequests: 0,
+        total: 0
+      },
+      items: []
+    };
+    const getBubbleStatus = vi.fn(async () => status);
+    const getBubbleInbox = vi.fn(async () => inbox);
+    const readRuntimeSessionsRegistry = vi.fn(async () => ({}));
+
+    const scope: UiRepoScope = {
+      repos: [repoPath],
+      has: (value: string) => Promise.resolve(value === repoPath)
+    };
+    const events: UiEventsBroker = {
+      subscribe: () => () => undefined,
+      getSnapshot: () => ({
+        id: 1,
+        ts: "2026-02-25T00:00:00.000Z",
+        type: "snapshot",
+        repos: [],
+        bubbles: []
+      }),
+      refreshNow: () => Promise.resolve(undefined),
+      addRepo: () => Promise.resolve(false),
+      removeRepo: () => Promise.resolve(false),
+      close: () => Promise.resolve(undefined)
+    };
+
+    const router = createUiRouter({
+      repoScope: scope,
+      events,
+      dependencies: {
+        emitApprove,
+        getBubbleStatus,
+        getBubbleInbox,
+        readRuntimeSessionsRegistry
+      }
+    });
+    const server = await startRouterServer(router);
+
+    try {
+      const response = await fetch(
+        `${server.url}/api/bubbles/b-router-approve-remote-created/approve?repo=${encodeURIComponent(repoPath)}`,
+        {
+          method: "POST",
+          headers: {
+            "content-type": "application/json"
+          },
+          body: JSON.stringify({})
+        }
+      );
+      const payload = (await response.json()) as {
+        error: {
+          code: string;
+          details?: Record<string, unknown>;
+        };
+      };
+
+      expect(response.status).toBe(409);
+      expect(payload.error.code).toBe("conflict");
+      expect(payload.error.details).toMatchObject({
+        bubbleId: "b-router-approve-remote-created",
+        repoPath,
+        currentState: "CREATED"
+      });
+      expect(emitApprove).toHaveBeenCalledTimes(1);
+    } finally {
+      await server.close();
+    }
+  });
+
+  it("maps remote approval transport failures to HTTP 500 with remote approval taxonomy", async () => {
+    const repoPath = "/tmp/pairflow-ui-router-approve-remote-transport";
+    const emitApprove = vi.fn(() =>
+      Promise.reject(
+        new RemoteBubbleApprovalCommandError({
+          code: "REMOTE_APPROVAL_TRANSPORT_FAILED",
+          message: "ssh transport failed (exit 255): connection refused"
+        })
+      )
+    );
+    const status: BubbleStatusView = {
+      bubbleId: "b-router-approve-remote-transport",
+      repoPath,
+      worktreePath: "/tmp/worktree",
+      bubbleStartedAt: "2026-04-17T09:00:00.000Z",
+      state: "READY_FOR_HUMAN_APPROVAL",
+      round: 2,
+      activeAgent: null,
+      activeRole: null,
+      activeSince: null,
+      lastCommandAt: "2026-04-17T09:00:00.000Z",
+      paneActivity: {
+        readStatus: "missing",
+        lastChangedAt: null,
+        sampledAt: null,
+        sinceLastChangedSeconds: null,
+        sinceSampledSeconds: null,
+        lastSampleStatus: null,
+        lastSampleError: null,
+        sessionName: null,
+        targetPane: null
+      },
+      executionContext: null,
+      watchdog: {
+        monitored: false,
+        monitoredAgent: null,
+        timeoutMinutes: 30,
+        referenceTimestamp: null,
+        deadlineTimestamp: null,
+        remainingSeconds: null,
+        expired: false
+      },
+      pendingInboxItems: {
+        humanQuestions: 0,
+        approvalRequests: 1,
+        total: 1
+      },
+      transcript: {
+        totalMessages: 4,
+        lastMessageType: "APPROVAL_REQUEST",
+        lastMessageTs: "2026-04-17T09:00:00.000Z",
+        lastMessageId: "msg_approval_01"
+      },
+      metaReview: {
+        actor: "meta-reviewer",
+        authorityActive: false,
+        runtimeDelivery: null
+      },
+      commandPath: {
+        status: "external",
+        profile: "external",
+        localEntrypoint: "/tmp/worktree/dist/cli/index.js",
+        activeEntrypoint: "/usr/local/bin/pairflow",
+        message: "external Pairflow CLI active",
+        pinnedCommand: "pairflow"
+      },
+      accuracy_critical: false,
+      last_review_verification: "missing",
+      failing_gates: [],
+      spec_lock_state: {
+        state: "IMPLEMENTABLE",
+        open_blocker_count: 0,
+        open_required_now_count: 0
+      },
+      round_gate_state: {
+        applies: false,
+        violated: false,
+        round: 2
+      },
+      stateValidation: null
+    };
+    const inbox: BubbleInboxView = {
+      bubbleId: "b-router-approve-remote-transport",
+      repoPath,
+      state: "READY_FOR_HUMAN_APPROVAL",
+      pending: {
+        humanQuestions: 0,
+        approvalRequests: 1,
+        total: 1
+      },
+      items: []
+    };
+    const getBubbleStatus = vi.fn(async () => status);
+    const getBubbleInbox = vi.fn(async () => inbox);
+    const readRuntimeSessionsRegistry = vi.fn(async () => ({}));
+
+    const scope: UiRepoScope = {
+      repos: [repoPath],
+      has: (value: string) => Promise.resolve(value === repoPath)
+    };
+    const events: UiEventsBroker = {
+      subscribe: () => () => undefined,
+      getSnapshot: () => ({
+        id: 1,
+        ts: "2026-02-25T00:00:00.000Z",
+        type: "snapshot",
+        repos: [],
+        bubbles: []
+      }),
+      refreshNow: () => Promise.resolve(undefined),
+      addRepo: () => Promise.resolve(false),
+      removeRepo: () => Promise.resolve(false),
+      close: () => Promise.resolve(undefined)
+    };
+
+    const router = createUiRouter({
+      repoScope: scope,
+      events,
+      dependencies: {
+        emitApprove,
+        getBubbleStatus,
+        getBubbleInbox,
+        readRuntimeSessionsRegistry
+      }
+    });
+    const server = await startRouterServer(router);
+
+    try {
+      const response = await fetch(
+        `${server.url}/api/bubbles/b-router-approve-remote-transport/approve?repo=${encodeURIComponent(repoPath)}`,
+        {
+          method: "POST",
+          headers: {
+            "content-type": "application/json"
+          },
+          body: JSON.stringify({})
+        }
+      );
+      const payload = (await response.json()) as {
+        error: {
+          code: string;
+          details?: Record<string, unknown>;
+        };
+      };
+
+      expect(response.status).toBe(500);
+      expect(payload.error.code).toBe("internal_error");
+      expect(payload.error.details).toMatchObject({
+        bubbleId: "b-router-approve-remote-transport",
+        repoPath,
+        reasonCode: "REMOTE_APPROVAL_TRANSPORT_FAILED"
+      });
+    } finally {
+      await server.close();
+    }
+  });
+
+  it("maps remote approval payload failures to HTTP 500 with remote approval taxonomy", async () => {
+    const repoPath = "/tmp/pairflow-ui-router-rework-remote-payload";
+    const emitRequestRework = vi.fn(() =>
+      Promise.reject(
+        new RemoteBubbleApprovalCommandError({
+          code: "REMOTE_APPROVAL_PAYLOAD_INVALID",
+          message: "Remote request-rework returned malformed payload."
+        })
+      )
+    );
+
+    const scope: UiRepoScope = {
+      repos: [repoPath],
+      has: (value: string) => Promise.resolve(value === repoPath)
+    };
+    const events: UiEventsBroker = {
+      subscribe: () => () => undefined,
+      getSnapshot: () => ({
+        id: 1,
+        ts: "2026-02-25T00:00:00.000Z",
+        type: "snapshot",
+        repos: [],
+        bubbles: []
+      }),
+      refreshNow: () => Promise.resolve(undefined),
+      addRepo: () => Promise.resolve(false),
+      removeRepo: () => Promise.resolve(false),
+      close: () => Promise.resolve(undefined)
+    };
+
+    const router = createUiRouter({
+      repoScope: scope,
+      events,
+      dependencies: {
+        emitRequestRework
+      }
+    });
+    const server = await startRouterServer(router);
+
+    try {
+      const response = await fetch(
+        `${server.url}/api/bubbles/b-router-rework-remote-payload/request-rework?repo=${encodeURIComponent(repoPath)}`,
+        {
+          method: "POST",
+          headers: {
+            "content-type": "application/json"
+          },
+          body: JSON.stringify({
+            message: "Please rework."
+          })
+        }
+      );
+      const payload = (await response.json()) as {
+        error: {
+          code: string;
+          details?: Record<string, unknown>;
+        };
+      };
+
+      expect(response.status).toBe(500);
+      expect(payload.error.code).toBe("internal_error");
+      expect(payload.error.details).toMatchObject({
+        bubbleId: "b-router-rework-remote-payload",
+        repoPath,
+        reasonCode: "REMOTE_APPROVAL_PAYLOAD_INVALID"
+      });
+    } finally {
+      await server.close();
+    }
+  });
+
+  it("maps remote approval target/config failures to HTTP 400 with actionable taxonomy", async () => {
+    const repoPath = "/tmp/pairflow-ui-router-approve-remote-config";
+    const emitApprove = vi.fn(() =>
+      Promise.reject(
+        new RemoteBubbleStatusError({
+          code: "REMOTE_STATUS_CONFIG_INVALID",
+          message:
+            "Remote status for b-router-approve-remote-config refused host mismatch: pointer host (pointer.example.com) does not match configured execution host (ssh.example.com)."
+        })
+      )
+    );
+
+    const scope: UiRepoScope = {
+      repos: [repoPath],
+      has: (value: string) => Promise.resolve(value === repoPath)
+    };
+    const events: UiEventsBroker = {
+      subscribe: () => () => undefined,
+      getSnapshot: () => ({
+        id: 1,
+        ts: "2026-02-25T00:00:00.000Z",
+        type: "snapshot",
+        repos: [],
+        bubbles: []
+      }),
+      refreshNow: () => Promise.resolve(undefined),
+      addRepo: () => Promise.resolve(false),
+      removeRepo: () => Promise.resolve(false),
+      close: () => Promise.resolve(undefined)
+    };
+
+    const router = createUiRouter({
+      repoScope: scope,
+      events,
+      dependencies: {
+        emitApprove
+      }
+    });
+    const server = await startRouterServer(router);
+
+    try {
+      const response = await fetch(
+        `${server.url}/api/bubbles/b-router-approve-remote-config/approve?repo=${encodeURIComponent(repoPath)}`,
+        {
+          method: "POST",
+          headers: {
+            "content-type": "application/json"
+          },
+          body: JSON.stringify({})
+        }
+      );
+      const payload = (await response.json()) as {
+        error: {
+          code: string;
+          details?: Record<string, unknown>;
+        };
+      };
+
+      expect(response.status).toBe(400);
+      expect(payload.error.code).toBe("bad_request");
+      expect(payload.error.details).toMatchObject({
+        bubbleId: "b-router-approve-remote-config",
+        repoPath,
+        reasonCode: "REMOTE_STATUS_CONFIG_INVALID"
+      });
     } finally {
       await server.close();
     }

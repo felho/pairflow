@@ -202,7 +202,8 @@ export function isConflictErrorMessage(message: string): boolean {
     "Bubble branch not found locally",
     "cannot be identical",
     "Merge failed for",
-    "does not exist. Start the bubble runtime first."
+    "does not exist. Start the bubble runtime first.",
+    "requires a started remote pointer. Run `pairflow bubble start"
   ];
   return patterns.some((pattern) => message.includes(pattern));
 }
@@ -219,6 +220,16 @@ export interface AttachBubbleErrorLike {
   } | undefined;
 }
 
+export interface RemoteBubbleApprovalCommandErrorLike {
+  name: string;
+  code?: string | undefined;
+}
+
+export interface RemoteBubbleStatusErrorLike {
+  name: string;
+  code?: string | undefined;
+}
+
 export function isAttachBubbleErrorLike(
   error: unknown
 ): error is AttachBubbleErrorLike {
@@ -229,6 +240,36 @@ export function isAttachBubbleErrorLike(
     return false;
   }
   return true;
+}
+
+export function isRemoteBubbleApprovalCommandErrorLike(
+  error: unknown
+): error is RemoteBubbleApprovalCommandErrorLike {
+  const candidate = error as (Error & { code?: string }) | undefined;
+  return (
+    candidate instanceof Error &&
+    candidate.name === "RemoteBubbleApprovalCommandError" &&
+    (
+      candidate.code === "REMOTE_APPROVAL_TRANSPORT_FAILED" ||
+      candidate.code === "REMOTE_APPROVAL_PAYLOAD_INVALID"
+    )
+  );
+}
+
+export function isRemoteBubbleStatusErrorLike(
+  error: unknown
+): error is RemoteBubbleStatusErrorLike {
+  const candidate = error as (Error & { code?: string }) | undefined;
+  return (
+    candidate instanceof Error &&
+    candidate.name === "RemoteBubbleStatusError" &&
+    (
+      candidate.code === "REMOTE_STATUS_CONFIG_INVALID" ||
+      candidate.code === "REMOTE_STATUS_CONFIG_UNAVAILABLE" ||
+      candidate.code === "REMOTE_STATUS_TRANSPORT_FAILED" ||
+      candidate.code === "REMOTE_STATUS_PAYLOAD_INVALID"
+    )
+  );
 }
 
 export function isAttachRuntimeMissingError(error: unknown): boolean {

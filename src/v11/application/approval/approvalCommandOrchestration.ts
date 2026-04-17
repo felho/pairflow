@@ -95,6 +95,10 @@ export function throwAsApprovalCommandError(error: unknown): never {
     isApprovalCommandError,
     createApprovalCommandError,
     isBubbleLookupError: (candidate) =>
-      isNamedError(candidate, "BubbleLookupError")
+      isNamedError(candidate, "BubbleLookupError"),
+    isRemoteBubbleApprovalCommandError: (candidate) =>
+      isNamedError(candidate, "RemoteBubbleApprovalCommandError"),
+    isRemoteBubbleStatusError: (candidate) =>
+      isNamedError(candidate, "RemoteBubbleStatusError")
   });
 }

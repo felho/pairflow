@@ -15,6 +15,37 @@ export async function runRequestReworkFlowWithContext(
     execution: ApprovalFlowExecutionContext;
   }
 ): Promise<EmitRequestReworkResult> {
+  if (input.execution.route === "remote") {
+    const routed = await input.dependencies.executeRemoteBubbleApprovalCommand({
+      action: "request-rework",
+      bubbleId: input.execution.resolved.bubbleId,
+      message: input.flow.message,
+      refs: input.flow.refs,
+      remoteClonePath: input.execution.remotePointer.remoteClonePath,
+      remoteTarget: input.execution.remoteTarget
+    });
+
+    if (routed.kind === "queued_rework") {
+      return {
+        mode: "queued",
+        bubbleId: routed.bubbleId,
+        intentId: routed.intentId,
+        state: routed.state,
+        ...(routed.supersededIntentId !== undefined
+          ? { supersededIntentId: routed.supersededIntentId }
+          : {})
+      };
+    }
+
+    return {
+      mode: "immediate",
+      bubbleId: routed.bubbleId,
+      sequence: routed.sequence,
+      envelope: routed.envelope,
+      state: routed.state
+    };
+  }
+
   const state = input.execution.state;
 
   if (isHumanApprovalState(state.state)) {

@@ -26,6 +26,7 @@ export async function runApprovalDecisionFlow(
     {
       bubbleId: input.bubbleId,
       now: input.now,
+      createError: input.createError,
       dependencies,
       ...(input.repoPath !== undefined ? { repoPath: input.repoPath } : {}),
       ...(input.cwd !== undefined ? { cwd: input.cwd } : {})
@@ -47,6 +48,7 @@ export async function runRequestReworkFlow(
     {
       bubbleId: input.bubbleId,
       now: input.now,
+      createError: input.createError,
       dependencies,
       ...(input.repoPath !== undefined ? { repoPath: input.repoPath } : {}),
       ...(input.cwd !== undefined ? { cwd: input.cwd } : {})
