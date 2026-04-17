@@ -47,7 +47,7 @@ owners:
    - duplicate masodik success tilalma,
    - restart utani uj execution authority,
    - delayed vagy missing ack melletti no-success.
-3. Tartsa meg a retained tmux/runtime surfacet observability-only adapterkent; a parity bizonyitas nem adhat neki authority vagy success truth szerepet.
+3. Tartsa meg, hogy a retained tmux runtime visibility/ack seam observability-only baseline maradjon, mikozben a watchdog recovery helper legfeljebb bounded operational side effectet vegezhet; egyik retained seam sem adhat authority vagy success truth szerepet.
 
 ### Complexity / Split Decision
 
@@ -70,9 +70,13 @@ owners:
 1. Canonical execution identity: `handoff_id` + explicit `execution_id`.
 2. Canonical authority source-of-truth: top-level `execution_context`.
 3. Guard fields: `expected_role`, `expected_round`, `expected_state_fingerprint`.
-4. Ugyanarra a canonical execution identityre nincs masodik successful launch vagy delivery.
-5. Restart utan uj `execution_id` kotelezo; a regi authority stale marad.
-6. Pane activity, tmux visibility, marker latas vagy operatori megfigyeles nem authority es nem success truth.
+4. `ActorEmitContextSnapshot`: a teljes canonical emit snapshot, amely a `handoff_id` + `execution_id` identityt, a guard mezoket es a snapshot-integrityhez szukseges canonical contextet egyben hordozza.
+5. `compat_bridge`: a named workspace/session same-authority bridge, amely csak teljes `ActorEmitContextSnapshot` rehidratacioval ervenyes; preserved baseline, nem current `agent emit` proof seam.
+6. Ugyanarra a canonical execution identityre nincs masodik successful launch vagy delivery.
+7. Restart utan uj `execution_id` kotelezo; a regi authority stale marad.
+8. Pane activity, tmux visibility, marker latas vagy operatori megfigyeles nem authority es nem success truth.
+9. `parity-preserving minimal touch`: olyan retained adapter erintes, amely csak a lezart canonical authority + explicit runtime outcome baseline-t vedegeti, es nem ownershipolja a cleanupot, topology-cseret vagy uj consume-family rolloutot.
+10. `runtime observability baseline`: pane visibility, marker-status es session-inspection jelek a tmux runtime seamben; diagnostics-only jelek maradnak explicit accepted ack nelkul.
 
 ### Scope Reality / Shape Proof
 
@@ -101,6 +105,7 @@ owners:
    - `read_model_consumers`
    - reviewer vagy `meta_reviewer` rollout
    - broad retained adapter cleanup
+   - workspace/session `compat_bridge` caller-proof es rollout
    - uj producer semantics vagy authority vocabulary reinterpretation
 
 ### Baseline Preservation
@@ -142,7 +147,7 @@ owners:
    - `E3b` activation closure
 3. Unlocks:
    - `E4` reviewer + meta-reviewer rollout
-   - retained adapter cleanup csak a lezart implementer parity utan
+   - retained adapter cleanup csak a lezart implementer parity utan, akkor is, ha `E3c` parity-preserving minimal touchot megenged a retained adapter facaden
 4. Refines prior open task semantics: ez a refinement kiboviti a bounded slice bizonyitasat; nem valtoztatja meg a plan phase orderinget.
 5. Inherited plan-level validation expectation:
    - stale authority reject,
@@ -157,6 +162,7 @@ owners:
 2. Duplicate delivery vagy second-success minimum policy ugyanazon canonical execution identityre.
 3. Restart recovery authority refresh az implementer pilot parity proof reszekent.
 4. Delayed vagy missing ack melletti no-success behavior.
+5. Watchdog stuck-input recovery bounded side-effect contractja annyiban, amennyiben nem ad authority vagy success truthot.
 
 ### Out of Scope
 
@@ -165,6 +171,7 @@ owners:
 3. Reviewer/meta-reviewer rollout.
 4. Broad retained adapter cleanup vagy topology rewrite.
 5. Read-model vagy public diagnostics redesign.
+6. Workspace/session `compat_bridge` caller-proof a current `agent emit` live seam-en kivul.
 
 ## L1 - Change Contract
 
@@ -184,9 +191,10 @@ owners:
 |---|---|---|---|---|
 | `execution_context` | canonical | `plans/actor-runtime-interface-execution-authority-contract-note-v1.md` | top-level authority source-of-truth | tmux/pane/runtime session metadata authorityforrassa emelese |
 | `handoff_id` + `execution_id` | canonical | `src/v11/shared/state/executionContext.ts` | minimum execution identity | `execution_id` optional vagy `handoff_id`-bol derivalt |
+| `ActorEmitContextSnapshot` | canonical snapshot | `src/v11/shared/actorProtocol/actorEmitContext.ts` | a teljes emit authority + guard + integrity snapshot egyben mozog | partial vagy `execution_id` nelkuli `compat_bridge` rehidratacio |
 | `expected_role`, `expected_round`, `expected_state_fingerprint` | guard | `src/v11/shared/actorProtocol/actorEmitContext.ts` | fail-closed verification mezok | canonical identity replace-ese vagy diagnostics-only downgrade |
 | tmux ack status/reason | shared contract | `src/v11/shared/delivery/tmuxDeliveryContract.ts` | explicit runtime outcome accepted/rejected shape-ben | pane activitybol vagy trust-prompt visibilitybol inferred success |
-| workspace/session resolution | compat | `plans/actor-runtime-interface-execution-authority-contract-note-v1.md` | deterministic same-authority bridge lehet | kulon authority source vagy success truth |
+| workspace/session resolution | `compat_bridge` | `plans/actor-runtime-interface-execution-authority-contract-note-v1.md` | preserved compatibility baselinekent csak teljes `ActorEmitContextSnapshot` rehidratacios same-authority bridge lehet | kulon authority source, `execution_id` nelkuli path vagy success truth |
 
 `drift_status: no_drift`
 
@@ -198,6 +206,10 @@ owners:
 | Stale/conflicting reject az actor emit validation route-ban ervenyesul | `src/v11/shared/actorProtocol/actorEmitContext.ts` | A fail-closed ownershipot explicit erre a seamre kell kotni. |
 | Public emit surface execution-id fail-closed parse-time is elvaras | `src/cli/commands/agent/emit.ts` | A tasknak nevesitenie kell a CLI boundaryt, nem eleg "actor emit tests". |
 | No-success retry parity kulon delivery helper + runtime ack seam-ben el | `src/v11/shared/delivery/implementerHandoffDelivery.ts`, `src/v11/infrastructure/channel/tmux/tmuxDeliveryRuntime.ts` | A tasknak explicit no-success seam ownershipot kell vallalnia. |
+| Public emit route reality | `src/cli/commands/agent/emit.ts`, `src/v11/shared/actorProtocol/actorEmitContext.ts` | A live `pairflow agent emit` authority route `bubbleId + repoPath` alapu `resolveActorEmitContextByBubbleId`; workspace/session `compat_bridge` rehydration nem current E3c proof seam. |
+| Retained adapter file reality | `src/v11/infrastructure/channel/tmux/tmuxDelivery.ts`, parent plan `E3c -> E4` sequencing | `emitTmuxDeliveryNotification` aktiv transport facade marad explicit ack projectionnel; cleanup tovabbra is `E4` successor-scope. |
+| Runtime observability baseline reality | `src/v11/infrastructure/channel/tmux/tmuxDeliveryRuntime.ts` | Pane visibility es marker/session inspection csak diagnostics marad explicit accepted ack nelkul. |
+| Watchdog recovery reality | `src/v11/infrastructure/channel/tmux/tmuxDelivery.ts` | `retryStuckAgentInput` aktiv bounded recovery side effect: csak `stuck_in_input` marker mellett submitol Entert, nem observability-only helper. |
 | Az actual scope tobb consumer bucketet erint, de nem nyit uj producer semanticsot | parent plan fan-out scan | Egy bounded E3c task maradhat, ha csak parity/hardening closure-t ownershipol. |
 
 ### 3) Plan Linkage and Successor Impact
@@ -218,18 +230,23 @@ owners:
 | CS2 | `src/v11/shared/start/startStateMutation.ts` | `buildResumedState` | resume/restart az implementer authorityt explicit uj contextre allitja, nem implicit pane allapotra | P1 | required-now | T4 |
 | CS3 | `src/v11/shared/actorProtocol/actorEmitContext.ts` | `assertActorEmitContextMatches`, `assertActorEmitContextSnapshotIntegrity` | stale, conflicting, derived vagy duplicate authority fail-closed | P1 | required-now | T1, T2, T3 |
 | CS4 | `src/cli/commands/agent/emit.ts` | `parseAgentEmitCommandOptions`, `runAgentEmitCommand` | public emit surface megkoveteli az explicit distinct `execution_id`-t es nem enged target-authority shortcutot | P1 | required-now | T1, T2 |
-| CS5 | `src/v11/application/actorProtocol/emitActorProtocolV11.ts` | implementer emit route | a public emit ugyanarra a canonical validation es runtime route-ra megy | P2 | required-now | T2, T3 |
+| CS5 | `src/v11/application/actorProtocol/emitActorProtocolV11.ts` | `emitImplementerPilotActorProtocolV11`, `emitActorProtocolFromWorkspaceV11` | a public emit ugyanarra a bubble-id alapu canonical validation es runtime route-ra megy | P2 | required-now | T2, T3 |
 | CS6 | `src/v11/shared/delivery/implementerHandoffDelivery.ts` | `shouldRetryImplementerHandoffDelivery`, `executeImplementerHandoffDelivery` | retry csak bounded runtime failure-re engedett, missing ack mellett nincs success | P1 | required-now | T5 |
-| CS7 | `src/v11/infrastructure/channel/tmux/tmuxDeliveryRuntime.ts` | `attemptTmuxDelivery`, ack projection helpers | accepted/rejected ack marad a runtime truth; pane visibility nem acceptance proof | P1 | required-now | T5, T6 |
-| CS8 | `src/v11/infrastructure/channel/tmux/tmuxDelivery.ts` | retained adapter facade | adapter megmarad observability-only transport seamnek | P2 | required-now | T6 |
+| CS7 | `src/v11/infrastructure/channel/tmux/tmuxDeliveryRuntime.ts` | `attemptTmuxDelivery`, ack projection helpers | accepted/rejected ack marad a runtime truth; pane visibility es marker/session inspection nem acceptance proof | P1 | required-now | T5, T6 |
+| CS8 | `src/v11/infrastructure/channel/tmux/tmuxDelivery.ts` | `emitTmuxDeliveryNotification` | adapter aktiv transport facade marad explicit ack projectionnel; csak parity-preserving minimal touch engedett, cleanup nem | P2 | required-now | T5, T6 |
+| CS9 | `src/v11/infrastructure/channel/tmux/tmuxDelivery.ts` | `retryStuckAgentInput` | watchdog recovery helper csak `stuck_in_input` esetben submitol Entert; bounded side effect, nem authority vagy success truth | P2 | required-now | T8 |
 
 ### 5) Data and Interface Contract
 
 | Item | Shape / Contract | Required Now | Notes |
 |---|---|---|---|
 | Actor emit input | `handoff_id`, `execution_id`, `kind`, `repo`, `bubble_id` | yes | `execution_id` kotelezo es distinct a `handoff_id`-tol |
+| Canonical emit snapshot | teljes `ActorEmitContextSnapshot` | yes ahol snapshot-verify route fut | partial snapshot nem fogadhato el |
 | Actor emit guard input | `expected_role`, `expected_round`, `expected_state_fingerprint` | conditional | Guard only; mismatch fail-closed |
 | Persisted runtime authority | top-level `execution_context` | yes | canonical state authority marad |
+| Compat rehydration input | workspace/session csak akkor ervenyes, ha teljes `ActorEmitContextSnapshot`-ot tud visszaadni | no | preserved `compat_bridge` baseline; nem current `agent emit` E3c proof |
+| Runtime observability signals | pane visibility, marker/session inspection | conditional | diagnostics only; explicit ack marad a truth-source |
+| Watchdog recovery input | `stuck_in_input` marker az aktiv pane input bufferben | conditional | helper submitolhat Entert, de nem ad authority- vagy success-truthot |
 | Restarted authority | uj `execution_id`, uj attempt lineage | yes | regi authority stale marad |
 | Runtime ack | explicit accepted/rejected tmux ack reasonnel | yes | success csak accepted ackkal vagy arra epulo expliciten tipizalt outcome-mal |
 
@@ -249,7 +266,10 @@ owners:
 | Missing `execution_id` | `ACTOR_EMIT_INPUT_EXECUTION_ID_MISSING` | nincs fallback `handoff_id`-ra |
 | `execution_id == handoff_id` | `ACTOR_EMIT_FORBIDDEN_EXECUTION_ID_DERIVATION` | nincs inferred authority |
 | Snapshot vagy guard mismatch | `ACTOR_EMIT_CONTEXT_INVALID` / canonical mismatch reject | fail-closed, side effect nelkul |
-| Duplicate emit authority advance utan | stale authority reject | nincs second success |
+| Restart utani stale authority reuse | `ACTOR_EMIT_CONTEXT_INVALID` / stale authority reject | nincs pre-restart authority fallback vagy convenience-accept |
+| Duplicate emit authority advance utan | `ACTOR_EMIT_CONTEXT_INVALID` / stale authority reject | nincs second success |
+| Runtime observability jelek explicit accepted ack nelkul | explicit rejected/unavailable runtime-level outcome | nincs diagnostics-derived success |
+| Watchdog stuck-input recovery route | bounded helper retry csak `stuck_in_input` esetben | nincs authority/success upgrade a submit-enter side effectbol |
 | Missing/unconfirmed runtime ack | explicit rejected/unavailable runtime-level outcome | nincs pane-derived success |
 
 ### 8) Dependency Constraints
@@ -270,7 +290,9 @@ owners:
 | T3 | conflicting-context fail-closed | role/round/fingerprint/snapshot mismatch mellett nincs successful side effect | P1 | required-now | `tests/v11/application/actorProtocol/emitActorProtocolV11.test.ts`, `tests/cli/agentEmitCommand.test.ts` |
 | T4 | restart remint | restart utan uj `execution_id`; a restart elotti authority stale marad | P1 | required-now | `tests/core/runtime/restartRecovery.test.ts` |
 | T5 | missing-ack no-success | `delivery_unconfirmed` vagy `tmux_send_failed` utan nincs success inference | P1 | required-now | `tests/v11/shared/delivery/implementerHandoffDelivery.test.ts`, `tests/core/runtime/tmuxDelivery.test.ts` |
-| T6 | retained adapter observability-only baseline | adapter cleanup elott is explicit ack marad a truth-source | P2 | required-now | `tests/core/runtime/tmuxDelivery.test.ts` |
+| T6 | runtime observability baseline | pane visibility es marker/session inspection explicit accepted ack nelkul diagnostics-only marad | P2 | required-now | `tests/core/runtime/tmuxDelivery.test.ts` |
+| T7 | public emit live authority route | `agent emit` bubble-id alapu authoritative contextet hasznal, nem workspace/session `compat_bridge` proofot | P2 | required-now | `tests/cli/agentEmitCommand.test.ts`, `tests/v11/application/actorProtocol/emitActorProtocolV11.test.ts` |
+| T8 | watchdog stuck-input recovery | `retryStuckAgentInput` csak `stuck_in_input` marker mellett submitol Entert; kulonben nincs retry es nincs authority/success claim | P2 | required-now | `tests/core/runtime/tmuxDelivery.test.ts` |
 
 ### 10) Shared Contract Compatibility
 
@@ -278,6 +300,7 @@ owners:
 |---|---|---|---|
 | `tmuxDeliveryContract` runtime ack shape | additive/preserved, nem breaking rewrite | implementer delivery helper, tmux runtime adapter, implementer emit path | reviewer, `meta_reviewer`, read-model fallout |
 | actor emit authority vocabulary | preserved shared contract | public emit CLI, actor emit validation, implementer runtime route | `E4` reviewer/meta-reviewer rollout |
+| `compat_bridge` same-authority rehydration | preserved compatibility baseline, nem required-now E3c proof | none a current `agent emit` / implementer emit live pathon | workspace/session compat callers a current target-file proofon kivul |
 
 ### 11) Baseline Preservation
 
@@ -296,6 +319,7 @@ owners:
 | `shared_contract` | in scope | explicit runtime ack semantics preserved and consumed fail-closed |
 | `internal_execution_consumers` | in scope | actor emit validation + CLI boundary |
 | `workflow_orchestration_consumers` | in scope | implementer emit route parity |
+| `compat_bridge` | preserved baseline only | live callers outside current `agent emit` / implementer E3c proof; no required-now claim in this task |
 | `read_model_consumers` | deferred | nem `E3c` scope |
 | `persisted_authority_or_schema` | preserved baseline only | no schema reinterpretation |
 | `cleanup_recovery_consumers` | in scope | restart stale-authority invalidation |
@@ -308,6 +332,7 @@ Deferred closures:
 1. reviewer/meta-reviewer rollout
 2. broad retained adapter cleanup
 3. read-model fallout
+4. workspace/session `compat_bridge` caller-proof
 
 Why bounded task still safe:
 1. ugyanazon lezart implementer authority seam consumereit zarja le,
@@ -326,7 +351,8 @@ Why bounded task still safe:
 ## L2 - Implementation Notes
 
 1. Ha a duplicate policy implementation-szinten suppresszalt no-opkent egyszerubb, az elfogadhato, de explicit second-success nem jelenhet meg.
-2. Ha a retained adapter cleanup implementation kozben broad topology cseret kovetelne, azt `E4` vagy kulon successor task ownershipolja.
+2. Ha a retained adapter cleanup implementation kozben broad topology cseret kovetelne, azt `E4` vagy kulon successor task ownershipolja; `E3c` csak parity-preserving minimal touchot enged a delivery facaden, es kulon bounded watchdog recovery side effectet a stuck-input helperben.
+3. A `compat_bridge` preserved baseline marad, de nem current `agent emit` E3c proof seam; a live workspace/session caller-proof kulon successor vagy kulon scope-owned taskba tartozik.
 
 ## Assumptions
 
