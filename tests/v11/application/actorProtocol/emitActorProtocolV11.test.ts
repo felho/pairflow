@@ -5,6 +5,12 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
+  assertActorRuntimeDispatchPlanPolicies,
+  actorRuntimeRouteMatrix,
+  resolveActorRuntimeDispatchPlan,
+  resolveActorRuntimeDispatchPlanByRouteId
+} from "../../../../src/v11/application/actorProtocol/actorRuntimeDispatchMatrix.js";
+import {
   resolveActorEmitContextByBubbleId
 } from "../../../../src/v11/shared/actorProtocol/actorEmitContext.js";
 import type { AgentName } from "../../../../src/types/bubble.js";
@@ -171,10 +177,19 @@ function buildSyntheticAuthoritativeContext(input: {
   expectedRound: number;
   fingerprint: string;
   worktreePath?: string;
+  activeAgent?: AgentName | null;
 }): ActorEmitContextSnapshot {
   const repo = input.repo ?? "/repo";
   const worktreePath =
     input.worktreePath ?? `${repo}/.pairflow/worktrees/${input.bubbleId}`;
+  const activeAgent =
+    input.activeAgent === undefined
+      ? input.expectedRole === "implementer"
+        ? "codex"
+        : input.expectedRole === "reviewer"
+          ? "claude"
+          : "codex"
+      : input.activeAgent;
 
   return {
     repo,
@@ -206,14 +221,10 @@ function buildSyntheticAuthoritativeContext(input: {
         bubble_id: input.bubbleId,
         state: "RUNNING",
         round: input.expectedRound,
-        active_agent:
-          input.expectedRole === "implementer"
-            ? "codex"
-            : input.expectedRole === "reviewer"
-              ? "claude"
-              : "codex",
-        active_role: input.expectedRole,
-        active_since: "2026-03-25T10:00:00.000Z",
+        active_agent: activeAgent,
+        active_role: activeAgent === null ? null : input.expectedRole,
+        active_since:
+          activeAgent === null ? null : "2026-03-25T10:00:00.000Z",
         round_role_history: [],
         last_command_at: "2026-03-25T10:00:00.000Z",
         execution_context: {
@@ -242,6 +253,349 @@ afterEach(async () => {
 });
 
 describe("emitActorProtocolV11 wrappers", () => {
+  it("publishes the exact current-tree authority x input runtime route matrix", () => {
+    expect(actorRuntimeRouteMatrix).toEqual([
+      {
+        id: "implementer_pass",
+        authorityRole: "implementer",
+        inputKind: "pass",
+        handler: "implementer_wrapper",
+        adapter: "pass_adapter",
+        routePolicy: "wrapper",
+        policyCheckIds: [
+          "context_snapshot_integrity",
+          "input_context_match",
+          "implementer_authority"
+        ]
+      },
+      {
+        id: "implementer_human_question",
+        authorityRole: "implementer",
+        inputKind: "human_question",
+        handler: "implementer_wrapper",
+        adapter: "human_question_adapter",
+        routePolicy: "wrapper",
+        policyCheckIds: [
+          "context_snapshot_integrity",
+          "input_context_match",
+          "implementer_authority"
+        ]
+      },
+      {
+        id: "reviewer_pass",
+        authorityRole: "reviewer",
+        inputKind: "pass",
+        handler: "reviewer_wrapper",
+        adapter: "pass_adapter",
+        routePolicy: "wrapper",
+        policyCheckIds: [
+          "context_snapshot_integrity",
+          "input_context_match",
+          "reviewer_authority"
+        ]
+      },
+      {
+        id: "reviewer_convergence",
+        authorityRole: "reviewer",
+        inputKind: "convergence",
+        handler: "reviewer_wrapper",
+        adapter: "convergence_adapter",
+        routePolicy: "wrapper",
+        policyCheckIds: [
+          "context_snapshot_integrity",
+          "input_context_match",
+          "reviewer_authority"
+        ]
+      },
+      {
+        id: "reviewer_human_question_fallback",
+        authorityRole: "reviewer",
+        inputKind: "human_question",
+        handler: "reviewer_human_question_fallback",
+        adapter: "human_question_adapter",
+        routePolicy: "retained_fallback",
+        policyCheckIds: [
+          "context_snapshot_integrity",
+          "input_context_match",
+          "reviewer_human_question_retained_fallback"
+        ]
+      },
+      {
+        id: "meta_reviewer_meta_review_result",
+        authorityRole: "meta_reviewer",
+        inputKind: "meta_review_result",
+        handler: "meta_reviewer_wrapper",
+        adapter: "meta_review_result_adapter",
+        routePolicy: "wrapper",
+        policyCheckIds: [
+          "context_snapshot_integrity",
+          "input_context_match",
+          "meta_reviewer_authority",
+          "meta_reviewer_active_agent_codex_when_present"
+        ]
+      }
+    ]);
+  });
+
+  it("resolves the retained reviewer human_question fallback as an explicit dispatch plan", () => {
+    expect(
+      resolveActorRuntimeDispatchPlan({
+        expectedRole: "reviewer",
+        inputKind: "human_question"
+      })
+    ).toMatchObject({
+      route: {
+        id: "reviewer_human_question_fallback",
+        handler: "reviewer_human_question_fallback",
+        routePolicy: "retained_fallback",
+        adapter: "human_question_adapter"
+      },
+      policyChecks: [
+        {
+          id: "context_snapshot_integrity",
+          owner: "canonical_authority_context"
+        },
+        {
+          id: "input_context_match",
+          owner: "canonical_authority_context"
+        },
+        {
+          id: "reviewer_human_question_retained_fallback",
+          owner: "runtime_route_policy"
+        }
+      ]
+    });
+  });
+
+  it("keeps structured dispatch error context for unsupported meta-reviewer input kinds", () => {
+    expect(() =>
+      resolveActorRuntimeDispatchPlan({
+        expectedRole: "meta_reviewer",
+        inputKind: "pass"
+      })
+    ).toThrowErrorMatchingInlineSnapshot(
+      "[ActorEmitContextError: ACTOR_EMIT_CONTEXT_INVALID: meta_reviewer authority only supports meta_review_result emits.]"
+    );
+
+    try {
+      resolveActorRuntimeDispatchPlan({
+        expectedRole: "meta_reviewer",
+        inputKind: "pass"
+      });
+      throw new Error("Expected ActorEmitContextError.");
+    } catch (error) {
+      expect(error).toMatchObject({
+        name: "ActorEmitContextError",
+        reasonCode: "ACTOR_EMIT_CONTEXT_INVALID",
+        context: {
+          route: "resolveActorRuntimeDispatchPlan",
+          expectedAuthority: "meta_reviewer meta_review_result route",
+          receivedKind: "pass"
+        }
+      } satisfies Partial<ActorEmitContextError>);
+    }
+  });
+
+  it("keeps structured dispatch error context for unsupported implementer input kinds", () => {
+    expect(() =>
+      resolveActorRuntimeDispatchPlan({
+        expectedRole: "implementer",
+        inputKind: "convergence"
+      })
+    ).toThrowErrorMatchingInlineSnapshot(
+      "[ActorEmitContextError: ACTOR_EMIT_CONTEXT_INVALID: implementer authority does not support convergence via outer dispatcher fallback.]"
+    );
+
+    try {
+      resolveActorRuntimeDispatchPlan({
+        expectedRole: "implementer",
+        inputKind: "convergence"
+      });
+      throw new Error("Expected ActorEmitContextError.");
+    } catch (error) {
+      expect(error).toMatchObject({
+        name: "ActorEmitContextError",
+        reasonCode: "ACTOR_EMIT_CONTEXT_INVALID",
+        context: {
+          route: "resolveActorRuntimeDispatchPlan",
+          expectedAuthority: "implementer authority wrapper",
+          receivedKind: "convergence"
+        }
+      } satisfies Partial<ActorEmitContextError>);
+    }
+  });
+
+  it("keeps structured dispatch error context for unsupported reviewer input kinds", () => {
+    expect(() =>
+      resolveActorRuntimeDispatchPlan({
+        expectedRole: "reviewer",
+        inputKind: "meta_review_result"
+      })
+    ).toThrowErrorMatchingInlineSnapshot(
+      "[ActorEmitContextError: ACTOR_EMIT_CONTEXT_INVALID: reviewer authority does not support meta_review_result via outer dispatcher fallback.]"
+    );
+
+    try {
+      resolveActorRuntimeDispatchPlan({
+        expectedRole: "reviewer",
+        inputKind: "meta_review_result"
+      });
+      throw new Error("Expected ActorEmitContextError.");
+    } catch (error) {
+      expect(error).toMatchObject({
+        name: "ActorEmitContextError",
+        reasonCode: "ACTOR_EMIT_CONTEXT_INVALID",
+        context: {
+          route: "resolveActorRuntimeDispatchPlan",
+          expectedAuthority: "reviewer human_question baseline",
+          receivedKind: "meta_review_result"
+        }
+      } satisfies Partial<ActorEmitContextError>);
+    }
+  });
+
+  it("enforces reviewer authority from the dispatch plan policy checks", () => {
+    const actorInput = {
+      kind: "pass",
+      repo: "/repo",
+      bubble_id: "b_actor_protocol_policy_reviewer_01",
+      handoff_id: "reviewer:b_actor_protocol_policy_reviewer_01:round:2:attempt:1",
+      execution_id: "exec_actor_protocol_policy_reviewer_01",
+      summary: "Dispatch-plan policy enforcement should require reviewer agent",
+      no_findings: true
+    } as const;
+    const authoritativeContext = buildSyntheticAuthoritativeContext({
+      bubbleId: actorInput.bubble_id,
+      handoffId: actorInput.handoff_id,
+      executionId: actorInput.execution_id,
+      expectedRole: "reviewer",
+      expectedRound: 2,
+      fingerprint: "fp_actor_protocol_policy_reviewer_01",
+      activeAgent: null
+    });
+    const plan = resolveActorRuntimeDispatchPlan({
+      expectedRole: authoritativeContext.expected_role,
+      inputKind: actorInput.kind
+    });
+
+    expect(() =>
+      assertActorRuntimeDispatchPlanPolicies({
+        plan,
+        actorInput,
+        authoritativeContext
+      })
+    ).toThrowErrorMatchingInlineSnapshot(
+      "[ActorEmitContextError: ACTOR_EMIT_CONTEXT_INVALID: canonical reviewer authority requires an active reviewer agent.]"
+    );
+  });
+
+  it("enforces meta-review active-agent policy from the dispatch plan policy checks", () => {
+    const actorInput = {
+      kind: "meta_review_result",
+      repo: "/repo",
+      bubble_id: "b_actor_protocol_policy_meta_01",
+      handoff_id: "meta_review:b_actor_protocol_policy_meta_01:round:2:attempt:1",
+      execution_id: "exec_actor_protocol_policy_meta_01",
+      round: 2,
+      recommendation: "approve",
+      summary: "Dispatch-plan policy enforcement should require codex when active_agent is present",
+      report_json: buildApproveMetaReviewReportJson(
+        "meta-review-policy-enforcement"
+      )
+    } as const;
+    const authoritativeContext = buildSyntheticAuthoritativeContext({
+      bubbleId: actorInput.bubble_id,
+      handoffId: actorInput.handoff_id,
+      executionId: actorInput.execution_id,
+      expectedRole: "meta_reviewer",
+      expectedRound: 2,
+      fingerprint: "fp_actor_protocol_policy_meta_01",
+      activeAgent: "claude"
+    });
+    const plan = resolveActorRuntimeDispatchPlan({
+      expectedRole: authoritativeContext.expected_role,
+      inputKind: actorInput.kind
+    });
+
+    expect(() =>
+      assertActorRuntimeDispatchPlanPolicies({
+        plan,
+        actorInput,
+        authoritativeContext
+      })
+    ).toThrowErrorMatchingInlineSnapshot(
+      "[ActorEmitContextError: ACTOR_EMIT_CONTEXT_INVALID: canonical meta-reviewer authority requires codex when active_agent is present (active_agent=claude).]"
+    );
+  });
+
+  it("re-materializes canonical policy checks from route id when a caller injects a partial dispatch plan", async () => {
+    const actorInput = {
+      kind: "pass",
+      repo: "/repo",
+      bubble_id: "b_actor_protocol_dispatch_plan_canonicalize_01",
+      handoff_id: "reviewer:b_actor_protocol_dispatch_plan_canonicalize_01:round:2:attempt:1",
+      execution_id: "exec_actor_protocol_dispatch_plan_canonicalize_01",
+      summary: "Injected dispatch plans must not suppress reviewer authority checks",
+      no_findings: true
+    } as const;
+    const authoritativeContext = buildSyntheticAuthoritativeContext({
+      bubbleId: actorInput.bubble_id,
+      handoffId: actorInput.handoff_id,
+      executionId: actorInput.execution_id,
+      expectedRole: "reviewer",
+      expectedRound: 2,
+      fingerprint: "fp_actor_protocol_dispatch_plan_canonicalize_01",
+      activeAgent: null
+    });
+    const canonicalPlan = resolveActorRuntimeDispatchPlanByRouteId({
+      routeId: "reviewer_pass"
+    });
+
+    await expect(
+      actorProtocolModule.emitReviewerActorProtocolV11({
+        input: actorInput,
+        authoritativeContext,
+        dispatchPlan: {
+          route: canonicalPlan.route,
+          policyChecks: []
+        }
+      })
+    ).rejects.toThrow(
+      /canonical reviewer authority requires an active reviewer agent/u
+    );
+  });
+
+  it("rejects an injected dispatch plan whose route kind does not match the emitted input kind", () => {
+    const authoritativeContext = buildSyntheticAuthoritativeContext({
+      bubbleId: "b_actor_protocol_dispatch_plan_kind_mismatch_01",
+      handoffId: "reviewer:b_actor_protocol_dispatch_plan_kind_mismatch_01:round:2:attempt:1",
+      executionId: "exec_actor_protocol_dispatch_plan_kind_mismatch_01",
+      expectedRole: "reviewer",
+      expectedRound: 2,
+      fingerprint: "fp_actor_protocol_dispatch_plan_kind_mismatch_01"
+    });
+    const mismatchedPlan = resolveActorRuntimeDispatchPlanByRouteId({
+      routeId: "reviewer_pass"
+    });
+
+    expect(() =>
+      assertActorRuntimeDispatchPlanPolicies({
+        plan: mismatchedPlan,
+        actorInput: {
+          kind: "convergence",
+          repo: "/repo",
+          bubble_id: "b_actor_protocol_dispatch_plan_kind_mismatch_01",
+          handoff_id: "reviewer:b_actor_protocol_dispatch_plan_kind_mismatch_01:round:2:attempt:1",
+          execution_id: "exec_actor_protocol_dispatch_plan_kind_mismatch_01",
+          summary: "Injected dispatch plan must not drift from emitted input kind"
+        },
+        authoritativeContext
+      })
+    ).toThrowErrorMatchingInlineSnapshot(
+      "[ActorEmitContextError: ACTOR_EMIT_CONTEXT_INVALID: dispatch plan route reviewer_pass only supports pass, received convergence.]"
+    );
+  });
+
   it("routes direct pass wrapper calls through canonical implementer authority", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({
@@ -1000,6 +1354,7 @@ describe("emitActorProtocolV11 wrappers", () => {
       wrapperSpy.mock.calls[0] as ImplementerWrapperCall;
     expect(wrapperDependencies).toEqual({});
     expect(wrapperInput.authoritativeContext).toBe(authoritativeContext);
+    expect(wrapperInput.dispatchPlan?.route.id).toBe("implementer_human_question");
     expect(wrapperInput.input).toMatchObject({
       kind: "human_question",
       bubble_id: bubble.bubbleId,
@@ -1108,6 +1463,7 @@ describe("emitActorProtocolV11 wrappers", () => {
       wrapperSpy.mock.calls[0] as ReviewerWrapperCall;
     expect(wrapperDependencies).toEqual({});
     expect(wrapperInput.authoritativeContext).toBe(authoritativeContext);
+    expect(wrapperInput.dispatchPlan?.route.id).toBe("reviewer_pass");
     expect(wrapperInput.input).toMatchObject({
       kind: "pass",
       bubble_id: bubble.bubbleId,
@@ -1171,6 +1527,7 @@ describe("emitActorProtocolV11 wrappers", () => {
       wrapperSpy.mock.calls[0] as ReviewerWrapperCall;
     expect(wrapperDependencies).toEqual({});
     expect(wrapperInput.authoritativeContext).toBe(authoritativeContext);
+    expect(wrapperInput.dispatchPlan?.route.id).toBe("reviewer_convergence");
     expect(wrapperInput.input).toMatchObject({
       kind: "convergence",
       bubble_id: bubble.bubbleId,
@@ -1229,6 +1586,9 @@ describe("emitActorProtocolV11 wrappers", () => {
       wrapperSpy.mock.calls[0] as MetaReviewerWrapperCall;
     expect(wrapperDependencies).toEqual({});
     expect(wrapperInput.authoritativeContext).toBe(authoritativeContext);
+    expect(wrapperInput.dispatchPlan?.route.id).toBe(
+      "meta_reviewer_meta_review_result"
+    );
     expect(wrapperInput.input).toMatchObject({
       kind: "meta_review_result",
       bubble_id: bubble.bubbleId,
@@ -1280,6 +1640,33 @@ describe("emitActorProtocolV11 wrappers", () => {
     } satisfies Partial<ActorEmitContextError>);
   });
 
+  it("rejects reviewer pass from the outer dispatcher when active reviewer authority is missing", async () => {
+    await expect(
+      actorProtocolModule.emitActorProtocolFromWorkspaceV11({
+        input: {
+          kind: "pass",
+          repo: "/repo",
+          bubble_id: "b_actor_protocol_dispatch_reviewer_missing_agent_01",
+          handoff_id: "reviewer:b_actor_protocol_dispatch_reviewer_missing_agent_01:round:2:attempt:1",
+          execution_id: "exec_actor_protocol_dispatch_reviewer_missing_agent_01",
+          summary: "Outer dispatcher should enforce active reviewer authority",
+          no_findings: true
+        },
+        authoritativeContext: buildSyntheticAuthoritativeContext({
+          bubbleId: "b_actor_protocol_dispatch_reviewer_missing_agent_01",
+          handoffId: "reviewer:b_actor_protocol_dispatch_reviewer_missing_agent_01:round:2:attempt:1",
+          executionId: "exec_actor_protocol_dispatch_reviewer_missing_agent_01",
+          expectedRole: "reviewer",
+          expectedRound: 2,
+          fingerprint: "fp_actor_protocol_dispatch_reviewer_missing_agent_01",
+          activeAgent: null
+        }) as never
+      })
+    ).rejects.toThrow(
+      /canonical reviewer authority requires an active reviewer agent/u
+    );
+  });
+
   it("rejects pass from the outer dispatcher when authority is meta-reviewer", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({
@@ -1317,6 +1704,37 @@ describe("emitActorProtocolV11 wrappers", () => {
     } satisfies Partial<ActorEmitContextError>);
   });
 
+  it("rejects meta_review_result from the outer dispatcher when a non-codex live agent claims meta-review authority", async () => {
+    await expect(
+      actorProtocolModule.emitActorProtocolFromWorkspaceV11({
+        input: {
+          kind: "meta_review_result",
+          repo: "/repo",
+          bubble_id: "b_actor_protocol_dispatch_meta_review_non_codex_01",
+          handoff_id: "meta_review:b_actor_protocol_dispatch_meta_review_non_codex_01:round:2:attempt:1",
+          execution_id: "exec_actor_protocol_dispatch_meta_review_non_codex_01",
+          round: 2,
+          recommendation: "approve",
+          summary: "Outer dispatcher should enforce codex live meta-review authority",
+          report_json: buildApproveMetaReviewReportJson(
+            "meta-review-outer-dispatch-live-agent-reject"
+          )
+        },
+        authoritativeContext: buildSyntheticAuthoritativeContext({
+          bubbleId: "b_actor_protocol_dispatch_meta_review_non_codex_01",
+          handoffId: "meta_review:b_actor_protocol_dispatch_meta_review_non_codex_01:round:2:attempt:1",
+          executionId: "exec_actor_protocol_dispatch_meta_review_non_codex_01",
+          expectedRole: "meta_reviewer",
+          expectedRound: 2,
+          fingerprint: "fp_actor_protocol_dispatch_meta_review_non_codex_01",
+          activeAgent: "claude"
+        }) as never
+      })
+    ).rejects.toThrow(
+      /canonical meta-reviewer authority requires codex when active_agent is present/u
+    );
+  });
+
   it("rejects convergence from the outer dispatcher when authority is implementer", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({
@@ -1347,6 +1765,29 @@ describe("emitActorProtocolV11 wrappers", () => {
       message:
         "ACTOR_EMIT_CONTEXT_INVALID: implementer authority does not support convergence via outer dispatcher fallback."
     } satisfies Partial<ActorEmitContextError>);
+  });
+
+  it("preserves canonical context mismatch precedence before unsupported-route rejection in the outer dispatcher", async () => {
+    await expect(
+      actorProtocolModule.emitActorProtocolFromWorkspaceV11({
+        input: {
+          kind: "convergence",
+          repo: "/repo",
+          bubble_id: "b_actor_protocol_dispatch_ordering_01",
+          handoff_id: "implementer:b_actor_protocol_dispatch_ordering_01:round:2:attempt:1",
+          execution_id: "exec_actor_protocol_dispatch_ordering_01_input",
+          summary: "Unsupported routes must not mask canonical execution mismatch"
+        },
+        authoritativeContext: buildSyntheticAuthoritativeContext({
+          bubbleId: "b_actor_protocol_dispatch_ordering_01",
+          handoffId: "implementer:b_actor_protocol_dispatch_ordering_01:round:2:attempt:1",
+          executionId: "exec_actor_protocol_dispatch_ordering_01_context",
+          expectedRole: "implementer",
+          expectedRound: 2,
+          fingerprint: "fp_actor_protocol_dispatch_ordering_01"
+        }) as never
+      })
+    ).rejects.toThrow(/Canonical actor emit execution mismatch/u);
   });
 
   it("rejects convergence from the outer dispatcher when authority is meta-reviewer", async () => {
