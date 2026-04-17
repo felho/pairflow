@@ -593,8 +593,11 @@ pairflow bubble inbox --id feat_login --repo .
 # Open the bubble's worktree in your editor
 pairflow bubble open --id feat_login --repo .
 
-# Attach to the bubble's tmux session (uses configured launcher)
+# Attach locally via tmux, or remotely via the persisted started pointer
 pairflow bubble attach --id feat_login --repo .
+
+# Override remote port forwards for this attach only
+pairflow bubble attach --id feat_login --repo . --port-forward 3000 --port-forward 5173
 ```
 
 ### Scenario 6: Using the web UI
@@ -810,7 +813,7 @@ Ideation note:
 | `bubble delete --id <id> [--repo <path>] [--force]` | Delete a bubble; without `--force` it reports external artifacts and exits with confirmation-required status |
 | `bubble resume --id <id> [--repo <path>]` | Resume from WAITING_HUMAN with default reply |
 | `bubble open --id <id> [--repo <path>]` | Open worktree in editor |
-| `bubble attach --id <id> [--repo <path>]` | Attach to bubble's tmux session via configured macOS launcher (`auto|warp|iterm2|terminal|ghostty|copy`) |
+| `bubble attach --id <id> [--repo <path>] [--port-forward <port>]...` | Attach via configured macOS launcher; local bubbles use tmux, remote bubbles use the persisted started pointer and optional per-attach port-forward overrides |
 | `bubble status --id <id> [--repo <path>] [--json]` | Show current state |
 | `bubble list [--repo <path>] [--json]` | List all bubbles |
 | `bubble inbox --id <id> [--repo <path>] [--json]` | Show pending human actions |
@@ -968,7 +971,10 @@ Behavior:
 
 - `auto` probes GUI launchers in deterministic order: `iterm2 -> ghostty -> warp -> terminal`, then falls back to `copy`.
 - Explicit GUI launchers (`warp|iterm2|terminal|ghostty`) do not silently switch to another GUI launcher.
-- `copy` does not open a terminal app; it returns the tmux attach command.
+- `copy` does not open a terminal app; it returns the generated attach command.
+- Local bubbles keep tmux attach behavior.
+- Remote bubbles attach through the persisted started pointer; if the pointer is only `created`, attach fails closed and instructs you to run `bubble start` first.
+- `--port-forward` is CLI-only and applies only to that remote attach invocation; otherwise attach uses the persisted pointer's forwarded ports.
 
 ### Open command selection (`bubble open`)
 
