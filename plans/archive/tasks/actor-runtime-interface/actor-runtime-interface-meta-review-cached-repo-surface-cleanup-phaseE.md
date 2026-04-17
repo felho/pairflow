@@ -150,7 +150,7 @@ Normative sequencing rules:
 | Source | Binding requirement for this task | Why it matters |
 |---|---|---|
 | `plans/actor-runtime-interface-discovery-and-migration-plan-v1.md` Remaining Phase E Resequencing Update | Ez a task a replacement lane Phase E5 repo-surface cleanup szelete, es nem override-olja az E3 -> E4 -> E5 sorrendet. | Megakadalyozza, hogy a task "azonnali kovetkezo" cimen atlepje a public read-model predecessort. |
-| `plans/tasks/actor-runtime-interface-meta-review-cached-public-read-model-removal-phaseE.md` | Phase E3 predecessor: a public `bubble meta-review` surface es a hozza tartozo retained read stack elobb zarando le. | A README command reference follow-on cleanup ehhez kotott, nem pusztan a Phase E4 archive-hoz. |
+| `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-meta-review-cached-public-read-model-removal-phaseE.md` | Phase E3 predecessor: a public `bubble meta-review` surface es a hozza tartozo retained read stack elobb zarando le. | A README command reference follow-on cleanup ehhez kotott, nem pusztan a Phase E4 archive-hoz. |
 | `.claude/skills/UsePairflow/Workflows/InterveneBubble.md`, `.claude/skills/UsePairflow/Workflows/CloseBubble.md` | Ezekben a cached terminology approval/status contextet jelent, nem removed `--meta-review-source` operator mode-ot. | Megakadalyozza, hogy a task tevesen visszahuzza ezeket a workflowkat repo-surface mode-cleanup cim alatt. |
 | `plans/archive/tasks/actor-runtime-interface-meta-review-cached-persisted-authority-and-cleanup-recovery-removal-phaseE.md` | Phase E4 archived predecessor: a persisted authority + cleanup/recovery closure mar lezart boundary. | A jelen task nem nyithatja vissza a runtime/state cleanup scope-ot. |
 | `plans/tasks/actor-runtime-interface-meta-review-cached-surface-removal-phaseE.md`, `plans/tasks/actor-runtime-interface-meta-review-cached-state-decoupling-phaseE.md` | Historical superseded artifacts only; nem maradhatnak aktiv ownership/next-task hivatkozaskent. | Ez a task explicitten a replacement splitre mutasson, ne a korabbi loop-prone framingre. |
@@ -197,7 +197,7 @@ Constraint: if no allowed side effects are listed above, implementation must be 
 |---|---|---|---|
 | must-use | repo-local skill source of truth under `.claude/skills/UsePairflow/**` | P1 | required-now |
 | must-use | active docs traceability az uj replacement tasklancra | P1 | required-now |
-| must-use | `plans/tasks/actor-runtime-interface-meta-review-cached-public-read-model-removal-phaseE.md` mint explicit predecessor gate a README follow-on cleanuphez | P1 | required-now |
+| must-use | `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-meta-review-cached-public-read-model-removal-phaseE.md` mint explicit predecessor gate a README follow-on cleanuphez | P1 | required-now |
 | must-not-use | `--meta-review-source=cached` wording | P1 | required-now |
 | must-not-use | superseded old remaining task pathok active docsban | P1 | required-now |
 | must-not-use | README command reference cleanup Phase E3 elott | P1 | required-now |
