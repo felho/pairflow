@@ -1,4 +1,3 @@
-import type { AgentName } from "../../../types/bubble.js";
 import {
   ActorEmitContextError,
   assertActorEmitContextSnapshotIntegrity,
@@ -20,6 +19,12 @@ import {
   emitMetaReviewActorResultV11,
   emitPassActorResultV11
 } from "./actorProtocolEmitters.js";
+import {
+  type ActorRuntimeDispatchPlan,
+  assertActorRuntimeDispatchPlanPolicies,
+  resolveActorRuntimeDispatchPlan,
+  resolveActorRuntimeDispatchPlanByRouteId
+} from "./actorRuntimeDispatchMatrix.js";
 import type { EmitAskHumanV11Result } from "../askHuman/emitAskHumanV11.js";
 import type { EmitConvergedV11Result } from "../converged/emitConvergedV11.js";
 import type { MetaReviewSubmitResultV11 } from "../metaReview/emitMetaReviewV11.js";
@@ -58,16 +63,34 @@ export interface ActorProtocolDependencies {
 interface ResolvedImplementerPilotActorEmitInputV11 {
   input: PassActorEmitInput | HumanQuestionActorEmitInput;
   authoritativeContext: ActorEmitContextSnapshot;
+  dispatchPlan?: ActorRuntimeDispatchPlan;
 }
 
 interface ResolvedReviewerActorEmitInputV11 {
   input: PassActorEmitInput | ConvergenceActorEmitInput;
   authoritativeContext: ActorEmitContextSnapshot;
+  dispatchPlan?: ActorRuntimeDispatchPlan;
 }
 
 interface ResolvedMetaReviewerActorEmitInputV11 {
   input: MetaReviewResultActorEmitInput;
   authoritativeContext: ActorEmitContextSnapshot;
+  dispatchPlan?: ActorRuntimeDispatchPlan;
+}
+
+function assertNeverActorRuntimeDispatchHandler(
+  handler: never
+): never {
+  throw new ActorEmitContextError({
+    reasonCode: "ACTOR_EMIT_CONTEXT_INVALID",
+    message:
+      `ACTOR_EMIT_CONTEXT_INVALID: unhandled actor runtime dispatch handler ${String(handler)}.`,
+    context: {
+      route: "emitActorProtocolFromWorkspaceV11",
+      expectedAuthority: "known_actor_runtime_dispatch_handler",
+      receivedHandler: String(handler)
+    }
+  });
 }
 
 export async function emitImplementerPilotActorProtocolV11(
@@ -79,17 +102,25 @@ export async function emitImplementerPilotActorProtocolV11(
   { kind: "pass" } | { kind: "human_question" }
 >> {
   const { input, authoritativeContext: context } = resolvedInput;
-  assertActorEmitContextSnapshotIntegrity(context);
-  assertActorEmitInputMatchesContext({
-    actorInput: input,
-    authoritativeContext: context
-  });
-  if (context.expected_role !== "implementer") {
+  const plan = resolvedInput.dispatchPlan
+    ? resolveActorRuntimeDispatchPlanByRouteId({
+      routeId: resolvedInput.dispatchPlan.route.id
+    })
+    : resolveActorRuntimeDispatchPlan({
+      expectedRole: context.expected_role,
+      inputKind: input.kind
+    });
+  if (plan.route.handler !== "implementer_wrapper") {
     throw new ActorEmitContextError(
       "ACTOR_EMIT_CONTEXT_INVALID",
       "ACTOR_EMIT_CONTEXT_INVALID: implementer pilot wrapper requires implementer authority."
     );
   }
+  assertActorRuntimeDispatchPlanPolicies({
+    plan,
+    actorInput: input,
+    authoritativeContext: context
+  });
 
   if (input.kind === "pass") {
     return emitPassActorResultV11({
@@ -111,25 +142,6 @@ export const implementerPilotActorProtocolV11 = {
   emit: emitImplementerPilotActorProtocolV11
 } as const;
 
-function requireReviewerAuthority(
-  context: ActorEmitContextSnapshot
-): AgentName {
-  if (context.expected_role !== "reviewer") {
-    throw new ActorEmitContextError(
-      "ACTOR_EMIT_CONTEXT_INVALID",
-      "ACTOR_EMIT_CONTEXT_INVALID: reviewer wrapper requires reviewer authority."
-    );
-  }
-  const activeAgent = context.loaded_state.state.active_agent;
-  if (activeAgent === null) {
-    throw new ActorEmitContextError(
-      "ACTOR_EMIT_CONTEXT_INVALID",
-      "ACTOR_EMIT_CONTEXT_INVALID: canonical reviewer authority requires an active reviewer agent."
-    );
-  }
-  return activeAgent;
-}
-
 export async function emitReviewerActorProtocolV11(
   resolvedInput: ResolvedReviewerActorEmitInputV11
   ,
@@ -139,14 +151,27 @@ export async function emitReviewerActorProtocolV11(
   { kind: "pass" } | { kind: "convergence" }
 >> {
   const { input, authoritativeContext: context } = resolvedInput;
-  assertActorEmitContextSnapshotIntegrity(context);
-  assertActorEmitInputMatchesContext({
+  const plan = resolvedInput.dispatchPlan
+    ? resolveActorRuntimeDispatchPlanByRouteId({
+      routeId: resolvedInput.dispatchPlan.route.id
+    })
+    : resolveActorRuntimeDispatchPlan({
+      expectedRole: context.expected_role,
+      inputKind: input.kind
+    });
+  if (plan.route.handler !== "reviewer_wrapper") {
+    throw new ActorEmitContextError(
+      "ACTOR_EMIT_CONTEXT_INVALID",
+      "ACTOR_EMIT_CONTEXT_INVALID: reviewer wrapper requires reviewer authority."
+    );
+  }
+  assertActorRuntimeDispatchPlanPolicies({
+    plan,
     actorInput: input,
     authoritativeContext: context
   });
 
   if (input.kind === "pass") {
-    requireReviewerAuthority(context);
     return emitPassActorResultV11({
       actorInput: input,
       authoritativeContext: context,
@@ -156,7 +181,13 @@ export async function emitReviewerActorProtocolV11(
     });
   }
 
-  const expectedReviewer = requireReviewerAuthority(context);
+  const expectedReviewer = context.loaded_state.state.active_agent;
+  if (expectedReviewer === null) {
+    throw new ActorEmitContextError(
+      "ACTOR_EMIT_CONTEXT_INVALID",
+      "ACTOR_EMIT_CONTEXT_INVALID: canonical reviewer authority requires an active reviewer agent."
+    );
+  }
   return emitConvergenceActorResultV11({
     actorInput: input,
     authoritativeContext: context,
@@ -171,29 +202,6 @@ export const reviewerActorProtocolV11 = {
   emit: emitReviewerActorProtocolV11
 } as const;
 
-function requireMetaReviewerAuthority(
-  context: ActorEmitContextSnapshot
-): void {
-  if (context.expected_role !== "meta_reviewer") {
-    throw new ActorEmitContextError(
-      "ACTOR_EMIT_CONTEXT_INVALID",
-      "ACTOR_EMIT_CONTEXT_INVALID: meta-reviewer wrapper requires meta_reviewer authority."
-    );
-  }
-
-  const activeAgent = context.loaded_state.state.active_agent;
-  if (activeAgent === null) {
-    // Recovery may keep canonical execution authority while clearing live ownership.
-    return;
-  }
-  if (activeAgent !== "codex") {
-    throw new ActorEmitContextError(
-      "ACTOR_EMIT_CONTEXT_INVALID",
-      `ACTOR_EMIT_CONTEXT_INVALID: canonical meta-reviewer authority requires codex when active_agent is present (active_agent=${activeAgent}).`
-    );
-  }
-}
-
 export async function emitMetaReviewerActorProtocolV11(
   resolvedInput: ResolvedMetaReviewerActorEmitInputV11
   ,
@@ -204,12 +212,25 @@ export async function emitMetaReviewerActorProtocolV11(
 >> {
   void dependencies;
   const { input, authoritativeContext: context } = resolvedInput;
-  assertActorEmitContextSnapshotIntegrity(context);
-  assertActorEmitInputMatchesContext({
+  const plan = resolvedInput.dispatchPlan
+    ? resolveActorRuntimeDispatchPlanByRouteId({
+      routeId: resolvedInput.dispatchPlan.route.id
+    })
+    : resolveActorRuntimeDispatchPlan({
+      expectedRole: context.expected_role,
+      inputKind: input.kind
+    });
+  if (plan.route.handler !== "meta_reviewer_wrapper") {
+    throw new ActorEmitContextError(
+      "ACTOR_EMIT_CONTEXT_INVALID",
+      "ACTOR_EMIT_CONTEXT_INVALID: meta-reviewer wrapper requires meta_reviewer authority."
+    );
+  }
+  assertActorRuntimeDispatchPlanPolicies({
+    plan,
     actorInput: input,
     authoritativeContext: context
   });
-  requireMetaReviewerAuthority(context);
   return emitMetaReviewActorResultV11({
     actorInput: input,
     authoritativeContext: context
@@ -220,80 +241,6 @@ export const metaReviewerActorProtocolV11 = {
   emit: emitMetaReviewerActorProtocolV11
 } as const;
 
-async function emitActorProtocolViaAuthorityWrappers(
-  resolvedInput: ResolvedActorEmitInputV11
-  ,
-  dependencies: ActorProtocolDependencies = {}
-): Promise<ActorEmitResultV11 | null> {
-  const { input, authoritativeContext: context } = resolvedInput;
-  if (
-    context.expected_role === "implementer" &&
-    (input.kind === "pass" || input.kind === "human_question")
-  ) {
-    return implementerPilotActorProtocolV11.emit({
-      input,
-      authoritativeContext: context
-    }, dependencies);
-  }
-  if (
-    context.expected_role === "reviewer" &&
-    (input.kind === "pass" || input.kind === "convergence")
-  ) {
-    return reviewerActorProtocolV11.emit({
-      input,
-      authoritativeContext: context
-    }, dependencies);
-  }
-  if (
-    context.expected_role === "meta_reviewer" &&
-    input.kind === "meta_review_result"
-  ) {
-    return metaReviewerActorProtocolV11.emit({
-      input,
-      authoritativeContext: context
-    }, dependencies);
-  }
-  return null;
-}
-
-async function emitActorProtocolViaFallbackRouting(
-  resolvedInput: ResolvedActorEmitInputV11
-): Promise<ActorEmitResultV11> {
-  const { input, authoritativeContext: context } = resolvedInput;
-  if (context.expected_role === "meta_reviewer") {
-    throw new ActorEmitContextError(
-      "ACTOR_EMIT_CONTEXT_INVALID",
-      "ACTOR_EMIT_CONTEXT_INVALID: meta_reviewer authority only supports meta_review_result emits."
-    );
-  }
-
-  // Explicit retained baseline: reviewer-origin human_question remains allowed
-  // outside the implementer pilot wrapper, but all other wrapper mismatches fail closed.
-  if (
-    context.expected_role === "reviewer"
-    && input.kind === "human_question"
-  ) {
-    return emitHumanQuestionActorResultV11({
-      actorInput: input,
-      authoritativeContext: context
-    });
-  }
-
-  throw new ActorEmitContextError({
-    reasonCode: "ACTOR_EMIT_CONTEXT_INVALID",
-    message:
-      `ACTOR_EMIT_CONTEXT_INVALID: ${context.expected_role} authority does not support ${input.kind} via outer dispatcher fallback.`,
-    context: {
-      route: "emitActorProtocolViaFallbackRouting",
-      expectedAuthority:
-        context.expected_role === "reviewer"
-          ? "reviewer human_question baseline"
-          : `${context.expected_role} authority wrapper`,
-      receivedKind: String(input.kind)
-    }
-  });
-}
-
 export async function emitActorProtocolFromWorkspaceV11(
   resolvedInput: ResolvedActorEmitInputV11,
   dependencies: ActorProtocolDependencies = {}
@@ -303,13 +250,41 @@ export async function emitActorProtocolFromWorkspaceV11(
     actorInput: resolvedInput.input,
     authoritativeContext: resolvedInput.authoritativeContext
   });
-
-  const routedResult = await emitActorProtocolViaAuthorityWrappers(
-    resolvedInput,
-    dependencies
-  );
-  if (routedResult !== null) {
-    return routedResult;
+  const plan = resolveActorRuntimeDispatchPlan({
+    expectedRole: resolvedInput.authoritativeContext.expected_role,
+    inputKind: resolvedInput.input.kind
+  });
+  const { input, authoritativeContext: context } = resolvedInput;
+  switch (plan.route.handler) {
+    case "implementer_wrapper":
+      return implementerPilotActorProtocolV11.emit({
+        input: input as PassActorEmitInput | HumanQuestionActorEmitInput,
+        authoritativeContext: context,
+        dispatchPlan: plan
+      }, dependencies);
+    case "reviewer_wrapper":
+      return reviewerActorProtocolV11.emit({
+        input: input as PassActorEmitInput | ConvergenceActorEmitInput,
+        authoritativeContext: context,
+        dispatchPlan: plan
+      }, dependencies);
+    case "meta_reviewer_wrapper":
+      return metaReviewerActorProtocolV11.emit({
+        input: input as MetaReviewResultActorEmitInput,
+        authoritativeContext: context,
+        dispatchPlan: plan
+      }, dependencies);
+    case "reviewer_human_question_fallback":
+      assertActorRuntimeDispatchPlanPolicies({
+        plan,
+        actorInput: input,
+        authoritativeContext: context
+      });
+      return emitHumanQuestionActorResultV11({
+        actorInput: input as HumanQuestionActorEmitInput,
+        authoritativeContext: context
+      });
+    default:
+      return assertNeverActorRuntimeDispatchHandler(plan.route.handler);
   }
-  return emitActorProtocolViaFallbackRouting(resolvedInput);
 }

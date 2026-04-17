@@ -18,6 +18,7 @@ export interface ActorEmitContextErrorContext {
   route?: string | undefined;
   expectedAuthority?: string | undefined;
   receivedKind?: string | undefined;
+  receivedHandler?: string | undefined;
 }
 
 export interface ActorEmitContextErrorInput {
