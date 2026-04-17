@@ -692,3 +692,71 @@ After the `911af8a2` refactor committed the Artifact Responsibilities reorganiza
 **Gaps / uncertainty:**
 - The specific agent message that enumerated the three inconsistencies between `rollout:L910` and `rollout:L962` was not individually line-cited in this appendix. The correspondence between what the agent identified and what the commit applies is 1:1 by construction (the user approved with "javítsd ezeket" before any commit).
 - This commit was not researched via a subagent because its scope (three focused edits, same session as the prior commit, short pre-commit window) did not warrant a full investigation round; the main conversation read the pre-commit user messages directly.
+
+---
+
+## 2026-04-16 — `a75bca03` — Closed-Contract Drift Check
+
+**Commit message:** Add closed-contract drift checks to CreatePairflowSpec
+
+**What it introduced (from diff):**
+New mandatory `Closed-Contract Drift Check` gate in `SKILL.md` (applies when a refined implementation-oriented Plan or Task touches an already-established authority / shared-contract / read-model contract). New reference file `references/Closed-Contract-Drift-Check.md`. The gate covers five trigger situations: (1) existing canonical authority being "clarified / tightened / preserved", (2) refinement introduces new terminology for an existing contract, (3) task/plan inherits wording from an upstream artifact, (4) a field might silently shift from canonical to guard / compat language, (5) the artifact is docs-only but still changes implementation-significant contract wording. Artifact-specific minimums per Plan / Task / `ReviewSpec` and six policy rules (notably: "local coherence is not enough"; "new terminology requires source-anchor + concrete field mapping"; "docs-only refinements that change implementation-significant meaning are contract-risk, not harmless polish"). Adds two new SKILL.md Core Principles (26-27: closed-contract meaning preserved explicitly; new wording must anchor back to source artifacts before becoming `required-now`). Adds two new Minimum Contract Rules (32-33: drift check mandatory when refined Plan/Task touches closed contract; a refined artifact must not be marked implementable if only locally coherent but contradicts repo-local source anchors). Templates gain a `Canonical Contract Anchors` section (Plan and Task L0) and a new L1 "0a) Canonical Contract Preservation" table (renumbering 0b-0f of prior sections). Workflows gain new steps: `CreatePlan 1a.1 Run the Closed-Contract Drift Check`, `CreateTask 1b.1 Run the Closed-Contract Drift Check`, with matching extraction / blocker / L1 / Consistency-Gate rules. `ReviewSpec` updated: repo-local source-anchor comparison added to Allowed; the drift check runs in both plan-mode and task-mode when applicable.
+
+**Authoring session:**
+- File: **none found.** This commit appears to be **offline-authored**: no Codex session in the commit-minus-8h window contains the commit-unique keywords (`Closed-Contract Drift Check`, `Canonical Contract Anchors`, `canonical vs guard vs compat`, `drift_status`, `forbidden_reinterpretations`, etc.) before the commit timestamp. The keywords only appear in post-commit sessions starting at `rollout-2026-04-16T22-05-03-019d97e5-...` (≈12 min after commit).
+- **Adjacent (non-authoring) session observed:** `rollout-2026-04-16T21-30-29-019d97c6-026a-7431-92be-61990119e2fa.jsonl` — `cwd=/Users/felho/dev/pairflow`, time window `2026-04-16T19:49:59Z → 2026-04-16T19:54:35Z` (4.5 min), 2 user / 10 agent. First user message at L7 is a bubble review request (`e3a-doc-refi: review the bubble, deep mode, be very verbose`), unrelated to the skill commit. The session's `git status --short` output at L17 (2026-04-16T19:50:09Z) already lists all seven modified skill files plus the untracked `references/Closed-Contract-Drift-Check.md` — i.e. the edits were on disk before this session even started. Last user message at L85 (19:53:51 UTC, 18 seconds after the commit) is "rework" referring to the `e3a-doc-refi` bubble, not the skill commit. The `a75bca03` commit was not initiated from this session's conversation.
+- Session type: **offline-no-session** — new category in this dataset. Not `authoring` (no agent synthesis), not `review-only` (no user-initiated diff review with the agent), not `sync-only` (no visible mirror-commit request), not `hybrid` (no mid-session skill-tightening). The user drafted and committed the change outside any Codex session.
+- Derivation window: between the prior commit `5f0f0254` at `2026-04-16T19:08:44Z` and this commit at `2026-04-16T19:53:33Z` = **≈45 minutes**, of which the last ≈4 minutes are the unrelated `019d97c6-026a` session in pairflow cwd. That leaves ≈41 minutes of undocumented offline drafting time.
+
+**Verbatim quotes**
+
+No pre-commit user or agent quotes exist in Codex session archives for this commit. The user's reasoning can only be inferred from (a) the commit's own text, (b) the `911af8a2` / `5f0f0254` session it follows, and (c) post-commit sessions that start ≈12 minutes later and use the drift-check vocabulary (but those are downstream uses, not the "why").
+
+**Session content vs commit content delta:**
+
+Not applicable in the standard shape — there is no authoring session to compare against the commit. The conceptual delta below is a commit-side-only inventory against the immediate predecessors.
+
+```
+Predecessor state after 5f0f0254 (commit #9):
+- Artifact Responsibilities (PRD/Plan/Task/ReviewSpec) established in SKILL.md.
+- Target-File Reality Check mandatory for Task drafting and Task review.
+- Control-Model Readiness Gate reshaped into artifact-specific minimums.
+- Plan-level defaults slimmed; Task-self-containment in effect.
+- Reference files aligned with the refactor (5f0f0254 cleanup).
+- No explicit gate for the scenario where a refinement preserves a closed contract in wording but drifts it in meaning.
+
+Commit-side added by a75bca03:
+- New mandatory Closed-Contract Drift Check gate (5 trigger situations, artifact-specific minimums, 6 policy rules).
+- New references/Closed-Contract-Drift-Check.md file.
+- SKILL.md Core Principles 26-27 added.
+- SKILL.md Minimum Contract Rules 32-33 added.
+- Plan template: new "Canonical Contract Anchors (Optional)" section.
+- Task template: new "Canonical Contract Anchors" section (L0) + new L1 "0a) Canonical Contract Preservation" table; prior tables renumbered 0b-0f; two new Reviewer Tags rules (11-12).
+- CreatePlan workflow: new step 1a.1 "Run the Closed-Contract Drift Check"; updated Step 1 extraction to include repo-local source anchors; new Validate rule (9).
+- CreateTask workflow: new step 1b.1 "Run the Closed-Contract Drift Check"; updated Step 1 extraction; L0 Draft rules updated; new Required Blockers #19; new L1 rule (16); new Consistency-Gate rule (14); L1 pass list reorganized to include "Canonical contract preservation" as item 2.
+- ReviewSpec workflow: "repo-local source-anchor comparison" added to Allowed; Closed-Contract Drift Check added to both plan-mode and task-mode gate runs.
+
+Match analysis:
+- This is a pure additive commit layered on top of the 911af8a2/5f0f0254 Artifact Responsibilities refactor. No prior concept is renamed away.
+- The gate fits the "refined Plan/Task touches already-closed contract" slot that the prior refactor did not explicitly cover; the triggers (new terminology / inherited wording / silent field-role shifts) are orthogonal to Control-Model Readiness, Target-File Reality Check, Authority Fan-out Scan, Closure-Budget Gate, and Bounded-Task-Shape Gate.
+
+Verdict: additive new gate closing the "silent semantic drift on refinement" failure mode; no renames; no drops.
+```
+
+**Incident evidence (bubble):**
+- Bubble id: `n/a` (no session to name a bubble).
+- Archive instance: `n/a`.
+- Characterization: the commit-diff itself is the primary evidence. The immediate predecessor commit (`911af8a2` / `5f0f0254` on the same day) refactored the skill around artifact boundaries and explicitly allowed "refinement" as a common activity — that context makes the omission of a drift-check gate structurally obvious. The user plausibly noticed the gap while reviewing the just-committed refactor state and drafted the new gate offline. This is an inference from commit sequencing, not a transcript citation.
+
+**Problem solved (synthesized, from the commit's own text):**
+After the `911af8a2` / `5f0f0254` Artifact Responsibilities refactor slimmed Plans and emphasized Task-self-containment, the skill had an explicit place for *refinements* (Plans and Tasks are frequently refined after initial drafting) but no safeguard against silent semantic drift when a refinement "clarifies" or "tightens" the wording of an already-closed authority / shared contract / read-model contract. The Closed-Contract Drift Check closes that gap: when a refined artifact touches a closed contract, the author must cite repo-local source anchors, classify fields as canonical / guard / compat, and prove no unauthorized reinterpretation. The two SKILL.md Minimum Contract Rules (32-33) make this mandatory and explicitly forbid marking a refined artifact implementable when it is only locally coherent but contradicts the repo-local sources of truth.
+
+**Related prior sessions:**
+- `rollout-2026-04-16T18-33-13-019d9723-...jsonl` — the `911af8a2` and `5f0f0254` session (same cwd `precedens.ai`). The immediate conceptual predecessor: this drift-check gate layers on top of the Artifact Responsibilities refactor established there.
+- No sessions earlier in the series reference the "closed-contract drift" or "canonical vs guard vs compat" vocabulary; the pattern is first named in this commit.
+
+**Gaps / uncertainty:**
+- **The commit has no Codex authoring session.** This is a category that had not appeared in the prior 9 commits (which split between `authoring`, `review-only`, `hybrid`, and `sync-only`). The user's "why" for this gate is therefore not directly citable from any session archive; it can only be read from the commit's own text and inferred from the prior same-day refactor context.
+- The adjacent pairflow session (`019d97c6-026a`) is NOT the authoring session — it ran 4.5 min, was dedicated to a separate `e3a-doc-refi` bubble review, and its `git status` output at L17 proves the skill edits were already on disk before it started.
+- Post-commit sessions starting at `rollout-2026-04-16T22-05-03-019d97e5-...` (2026-04-16T20:05+ UTC) are the first Codex sessions to use the new drift-check vocabulary; they are *consumers* of the gate, not its source.
+- The precise reasoning the user went through offline between `5f0f0254` (19:08 UTC) and `a75bca03` (19:53 UTC) — whether it was triggered by a concrete spec instance they just saw, a general reflection, or a review of the refactor itself — is not recoverable from the archive alone.
