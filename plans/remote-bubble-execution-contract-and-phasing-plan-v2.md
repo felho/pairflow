@@ -285,17 +285,23 @@ Az explicit control-model dontesek most visszanyerhetok a designbol es a review-
    - `plans/archive/tasks/remote-bubble-execution/phase2c-remote-sync-hook-contract-foundation.md`
    - `plans/archive/tasks/remote-bubble-execution/phase2d-remote-ssh-start-activation.md`
    - `plans/archive/tasks/remote-bubble-execution/phase2e-remote-status-and-list-read-model.md`
-7. A kovetkezo explicit implementacios fazis most a `Phase 2F`:
+7. A `Phase 2F` task dokumentacios/Feynman-refinement review-ja 2026-04-17-en lezart docs-only bubble-ben megtortent:
+   - a bounded attach-consume control model egyszerubb es explicit lett,
+   - a `target_files` / shared UI surface reality pontosabb lett, kulonosen az `ActionBar` CTA/hint consume miatt,
+   - az approval boundary es a review-loop resistance guardrail szovege szukebb es implementacio-biztosabb lett,
+   - a task tovabbra is implementalhato, de meg nincs leszallitva.
+8. A kovetkezo explicit implementacios fazis tovabbra is a `Phase 2F`:
    - remote `attach` consume a Phase 2E read-model authorityra ultetve,
    - launcher/forwarding projection,
    - remote attach UX es fail-closed operator surface.
 
 ## Active Task
 
-1. A jelenlegi materializalt aktiv task a `Phase 2F`:
+1. A jelenlegi materializalt es docs-reviewval frissitett aktiv task a `Phase 2F`:
    - `plans/tasks/remote-bubble-execution/phase2f-remote-attach-consume.md`
-2. A `Phase 2B`, `Phase 2C`, `Phase 2D`, es `Phase 2E` archived baseline lett.
-3. Az approval/rework, cleanup, es recovery scope tovabbra is kulon successor fazisban marad.
+2. A kovetkezo tenyleges implementacios munka ehhez a `Phase 2F` taskhoz tartozik; `Phase 3A` meg nem aktiv.
+3. A `Phase 2B`, `Phase 2C`, `Phase 2D`, es `Phase 2E` archived baseline lett.
+4. Az approval/rework, cleanup, es recovery scope tovabbra is kulon successor fazisban marad.
 
 ## Planned Next Tasks (Do Not Materialize Yet)
 
