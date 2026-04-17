@@ -161,3 +161,71 @@ None found within the 8-hour pre-commit window; the authoring session itself con
 - The session is 4.6 MB; full transcript not exhaustively read. The specific messages where the agent proposes the `identity_join_risk` axis name and the three escalation rules were not individually line-cited. The verdict that the commit's new concepts were synthesized during the session rests on the commit timestamp falling mid-session (21:18 UTC, between 20:38 start and 07:57 end) combined with the user's explicit request at line 352 to review and improve the gate.
 - The Stripe / `payment_intent` / Billingo domain examples in the committed reference file are strongly consistent with a billing-integration bubble, and `bci3-impl` is a billing-integration bubble on precedens.ai — but no direct line in the archive explicitly links the committed example text to this specific bubble. The link is contextual (session cwd, bubble scope, finding titles, timing) rather than quoted.
 - `round_role_history` timestamps in `state.json` were not spot-verified; the exact gap between bubble start and session start is not confirmed in this appendix.
+
+---
+
+## 2026-04-11 — `bdd4646f` — Control-Model Readiness Gate
+
+**Commit message:** skills: harden CreatePairflowSpec control model gating
+
+**What it introduced (from diff):**
+Adds a brand-new `Control-Model Readiness Gate` (mandatory) across the skill, with a new 156-line reference `references/Control-Model-Readiness-Gate.md` defining six required answers when the gate applies: `business_invariant`, `control_model`, `read_path_rule`, `forbidden_fallback`, `missing_data_rule`, `phase_boundary`. Hardens anti-heuristic policy ("never invent a control model, fallback rule, or missing-data behavior just to make the artifact look implementable"; "do not convert missing control-model decisions into clever technical seams"). Adds 4 new Core Principles (10-13) and 3 new Minimum Contract Rules (14-16) to `SKILL.md`. Extends PRD / Plan / Task templates with matching sections (PRD: `Business Invariants` + `Control Model`; Plan: `Guiding Principles`; Task: `Domain / Control Model`). Updates all three workflows (`CreatePRD`, `CreatePlan`, `CreateTask`) with the gate as a new step before implementation-level design.
+
+**Authoring session:**
+- File: `/Users/felho/.codex/sessions/2026/04/11/rollout-2026-04-11T20-06-00-019d7db8-ddf1-74c0-b59c-89f27be0d220.jsonl`
+- Session id: `019d7db8-ddf1-74c0-b59c-89f27be0d220`
+- `cwd`: `/Users/felho/dev/pairflow`
+- Time window: `2026-04-11T18:06:00.691Z` → `2026-04-11T18:32:59.196Z` (≈27 minutes; commit at 18:23 UTC, 17 minutes after session start and 10 minutes before session end).
+- User prompt count / agent message count: 2 user / 7 agent.
+- Session type: **review-only**. The skill changes were already written to disk as uncommitted edits *before* the session started; the user opened the session to ask for a consistency review, not to co-design the gate.
+
+**Verbatim quotes**
+
+> [user, line 7] "So there are some uncommitted changes related to the createPerflowSpecSkill. So please review those changes and I'm very curious whether you see you can have general comments, please have an eye on whether the new changes are consistent, etc."
+
+> [agent, line 33] "A diff alapján a fő változás egy új, kötelező `Control-Model Readiness Gate` bevezetése a skill egészében. Most azt ellenőrzöm, hogy ez mindenhol ugyanazzal a jelentéssel szerepel-e, és hogy a template-ek tényleg lefedik-e azt, amit a workflow-k már megkövetelnek."
+>
+> *(EN)* "Based on the diff, the main change is introducing a new mandatory `Control-Model Readiness Gate` across the skill. I'm now checking whether it carries the same meaning everywhere, and whether the templates actually cover what the workflows already require."
+
+**Session content vs commit content delta:**
+
+Because this is a **review-only session** (the skill diff already existed on disk when the session opened), the usual "session-introduced concept → committed concept" alignment does not apply. The relevant comparison here is **review-identified issues → commit final state as merged**.
+
+```
+Pre-session state (uncommitted edits on disk, pre-review):
+- New gate conceptually present, but with structural inconsistencies (per agent review during session)
+
+Review-identified structural issues (from agent review across the 7 agent messages):
+- CreateTask gate placement vs the skill's own "context-first" principle
+- Task template coverage of L1 implementation clarity
+- PRD workflow marking control-model as "when applicable" vs PRD template mandating the sections
+
+Commit-side final state (from `git show bdd4646f -- .claude/skills/CreatePairflowSpec/`):
+- Gate definition in SKILL.md (Core Principles 10-13, Minimum Contract Rules 14-16)
+- 6-answer gate mechanics in the new reference file
+- CreateTask: gate at step 0a, Complexity-Risk Gate moved to 0b; context-first retained at steps 1+; Required Blockers #9-10 for control-model blockers
+- CreatePlan: gate at 1a, Complexity-Risk Gate moved to 1b; new policy #6 on ambiguity → close control model before delivery
+- CreatePRD: gate at 1a with "when applicable" gating; PRD template's new sections are structural but the workflow treats them as conditional
+- All three templates gain dedicated control-model sections
+
+Verdict: the commit represents the final state *after* the user read the session's review feedback. The 3 structural items the agent flagged during review were either resolved in the diff before commit, or the user accepted them as-is. This appendix cannot precisely attribute which flagged items changed which lines of the pre-commit diff, because the pre-session uncommitted diff was not captured anywhere.
+```
+
+**Incident evidence (bubble):**
+- Bubble id (from session): `n/a` — this is a skill-review session, not a bubble-triggered reflection.
+- Archive instance(s) found: `n/a` directly from this session.
+- Final state + final round: `n/a`.
+- Characterization of non-convergence: `n/a` for this specific session. The underlying motivation is almost certainly the billing-integration bubbles from the prior 24–48 hours on precedens.ai (`bci3-impl` CANCELLED per the `ca22d258` section above; `bci3a-impl` DONE at round 2 per `/Users/felho/.pairflow/archive/be2ac5d87a57bdcc/bi_00mnunonm9_d808cdfafaf5b5dd5d2c/state.json:state`), but the linkage is contextual rather than quoted in this session.
+- Watchdog history: `n/a`.
+
+**Problem solved (synthesized, in the user's framing):**
+Between 2026-04-10 and 2026-04-11, several precedens.ai billing-integration bubbles (`bci3-impl`, `bci3a-impl`) exposed a failure mode not captured by the existing gate suite: specs that described *what* the product wants without pinning down *what controls* the decision — leaving authority/read-path/missing-data behavior implicit and allowing round-after-round drift once implementation started. Offline, the user drafted a new Control-Model Readiness Gate with 6 explicit required answers and integrated it across SKILL.md, templates, and workflows, then opened this short Codex review session to check the diff for internal consistency before committing. The commit reflects that review's adjustments.
+
+**Related prior sessions:**
+- `/Users/felho/.codex/sessions/2026/04/10/rollout-2026-04-10T22-38-29-019d791e-...jsonl` — the `ca22d258` authoring session (20:38 UTC 2026-04-10 → 07:57 UTC 2026-04-11). Ended ~10h before this review session. Contained the `bci3-impl` diagnosis that likely informed the control-model gate design authored offline between the two sessions.
+- A parallel precedens.ai session `rollout-2026-04-11T20-37-44-019d7dd5-...jsonl` starts 14 minutes **after** this commit (18:37 UTC 2026-04-11), cwd `/Users/felho/dev/make-it-legal/precedens.ai` — user returned to billing-integration work immediately after committing the skill change. Not a prior session, but a contextual neighbor worth noting.
+
+**Gaps / uncertainty:**
+- No pre-session diff was captured anywhere the main conversation can inspect. The exact shape of the uncommitted edits at session-open time vs the final committed state cannot be reconstructed from the archive; the 3 review-identified structural issues are therefore a summary of agent feedback, not a precise "before/after" diff.
+- The session transcript was not exhaustively line-cited for the 3 structural issue descriptions; the summary is derived from the subagent's read of the 7 agent messages rather than individual quoted lines with numbers. This is the main fidelity gap for this section relative to the plan's quote-discipline.
+- The contextual link to `bci3-impl` / `bci3a-impl` failure patterns is inferred from the commit timing, the Stripe/billing/settlement domain examples embedded in the new reference, and the parallel precedens.ai session that opens minutes after commit — but this session itself does not quote bubble names or P-level findings.
