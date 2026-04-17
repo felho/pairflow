@@ -115,6 +115,14 @@ owners:
    - uj actorokat akartok hozzaadni,
    - uj role projection johet,
    - vagy a mostani wrapper-sprawl mar lassitja a kodmozgatast.
+4. A jelenlegi legjobb decomposition-becslés szerint ez varhatoan `3` bounded task, konzervativ felso becslessel `3-4`:
+   - `O1-T1`: docs-only kernel boundary clarification
+   - `O1-T2`: belso typed authority / route / policy matrix bevezetese public vocabulary rewrite nelkul
+   - `O1-T3`: a jelenlegi wrapper-sprawl raulitese a belso matrixra explicit kernel + policy + workflow-adapter szetvalasztassal
+   - opcionális `O1-T4`: retained fallback / parity / cleanup hardening, ha ez nem zarhato biztonsagosan `O1-T3`-ban
+5. Ez becsles, nem befagyasztott phase-count:
+   - ha az `O1-T2` es `O1-T3` ugyanazon bounded code pathban zarhato, a lane `3` taskra szukulhet,
+   - ha kulon consumer fallout nyilik, `O1-T4` onallo hardening taskka valhat.
 
 ### Opportunity 2: Topology-Neutral Delivery and Executor Split
 
@@ -145,12 +153,21 @@ owners:
 1. Elso dontes: van-e valos igeny uj actor/topology/onboarding flexibilitasra.
 2. Ha nincs, a plan maradhat `proposed` allapotban, implementacios task nelkul.
 3. Ha van, az ajanlott sorrend:
-   - `S1` generic runtime kernel boundary clarification,
-   - `S2` delivery/executor topology-neutral contract clarification,
-   - `S3` onboarding es extension-surface simplification.
+   - `O1-T1` generic runtime kernel boundary clarification,
+   - `O2-T1` delivery/executor topology-neutral contract clarification,
+   - `O3-T1` onboarding es extension-surface simplification.
 4. Azert ez a sorrend, mert:
    - onboardingot nem erdemes stabil generic core nelkul nyitni,
    - topology-neutral deliveryt nem erdemes full rewritekent kezelni, amig a boundary nevei es ownershipja nem tiszta.
+5. Az `Opportunity 1` elso bounded taskja:
+   - `plans/tasks/actor-runtime-interface-opportunity1-task1-generic-runtime-kernel-boundary-clarification.md`
+6. `O2-T1` csak preserved-baseline clarification lane lehet:
+   - a lezart `accepted | running | rejected | failed_to_start` runtime-ack/runtime-truth semanticsat nem nyithatja ujra,
+   - csak a topology/executor-boundary es retained adapter ownership pontositasat ownershipolja.
+7. `O3-T1` csak az `Opportunity 1 / O1-T1` altal lezart boundary- es vocabulary-matrix utan nyithato:
+   - onboarding simplification csak a zart baseline vocabulary explicit mappingjara epulhet,
+   - az `Opportunity 4` alapertelmezetten ebbe a lane-be van beolvasztva mint core-vs-extension rationalization,
+   - kulon `O4-T1` csak akkor nyithato, ha az `Opportunity 1 / O1-T1` outputja bizonyitja, hogy ez onallo bounded closure.
 
 ## Suggested First Implementation Slice
 
@@ -160,13 +177,30 @@ owners:
    - a mostani wrapper logic inventoryja,
    - es egy explicit mapping arrol, mi marad policy-level kulonbseg.
 3. Ez docs+typed-boundary taskkent kezdheto, mielott barmilyen delivery topology vagy CLI surface mozdul.
+4. A current sequencing anchor ehhez a docs-only first slice-hoz:
+   - `plans/tasks/actor-runtime-interface-opportunity1-task1-generic-runtime-kernel-boundary-clarification.md`
 
 ## Done Definition
 
 1. Ez a plan akkor szamit lezartnak, ha az alabbi ket allitas egyike igaz:
-   - explicit dontes szuletik arrol, hogy a post-Phase-E architekturális follow-up nem prioritas, es nem nyilik implementacios task,
-   - vagy legalabb egy bounded successor task letrejon a fenti opportunity area-k valamelyikere.
+   - explicit dontes szuletik arrol, hogy a post-Phase-E architekturális follow-up nem prioritas, es minden opportunity `deferred` vagy `parkolt` dispositiont kap,
+   - vagy minden opportunity explicit successor lane-hez vagy explicit deferred/parkolt dispositionhoz van kotve, es legalabb az elso bounded successor task letrejon.
 2. Implementacios sikerkriteriumot ez a plan szandekosan nem vallal; azt a kesobbi task(ok) ownershipoljak.
+
+## Opportunity Disposition
+
+1. `Opportunity 1`
+   - aktiv successor lane
+   - current first slice: `O1-T1` docs-only kernel boundary clarification
+2. `Opportunity 2`
+   - deferred successor lane `O2-T1`
+   - preserved baseline: a lezart typed ack/runtime-success semantics nem reopenolhato
+3. `Opportunity 3`
+   - deferred successor lane `O3-T1`
+   - csak `O1-T1` explicit vocabulary/boundary outputjara epulhet
+4. `Opportunity 4`
+   - default szerint `O3-T1` resze
+   - kulon lane csak akkor, ha az `O1-T1` boundary output kulon bounded closurekent bizonyitja
 
 ## Traceability
 
