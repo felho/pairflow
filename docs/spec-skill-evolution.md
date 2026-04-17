@@ -387,3 +387,80 @@ None found within the 8-hour window that explicitly authored different parts of 
 - **The specific agent message that proposed the skill update (between 16:59 UTC "commit" and 17:32 UTC skill commit) was not spot-verified in this main conversation** — the subagent retry that examined this session chose quotes from the post-commit portion (19:10 UTC), which is temporally invalid. A narrower pre-commit agent-message enumeration would be needed to cite the exact skill-proposal turn.
 - **No archived bubble for the phaseE cleanup task.** Direct-edit workflow, two commits (16:08 and 16:59 UTC) in the pairflow repo main branch, then the skill commit at 17:32 UTC. The phaseE cleanup commits themselves are not referenced by hash in this appendix.
 - **User message counts** (37 user / 202 agent) are session-total; only ~28 user messages occur before the 17:32 UTC commit (L7 through L2207). The post-commit messages do not inform this section.
+
+---
+
+## 2026-04-14 — `26bff313` — Closure-Budget Gate
+
+**Commit message:** Harden CreatePairflowSpec closure-budget planning
+
+**What it introduced (from diff):**
+Introduces a new mandatory `Closure-Budget Gate` (scope triggers: authority / runtime / read-model / shared-contract work). The gate counts how many of seven closure buckets materially change in the same bounded artifact: `authority_producer`, `shared_contract`, `internal_execution_consumers`, `workflow_orchestration_consumers`, `read_model_consumers`, `persisted_authority_or_schema`, `cleanup_recovery_consumers`. Six policy rules force split or route-back when combinations exceed the budget (e.g. producer + shared-contract + any two consumer buckets together). Adds two new Complexity-Risk Gate hard stops (#7-8) for the same pattern, two new SKILL.md Core Principles (19-20: closure-width primacy, no single-task carry of producer-closure + shared-contract-migration + consumer-rollout + diagnostics together), one new Minimum Contract Rule (23: explicit closure-budget triage in artifacts), one new README design choice (15), a `closure-budget triage` bullet in plan and task templates, and matching workflow steps (CreatePlan 1d, CreateTask 1c.1). Commit body also mentions a parallel update to `plans/feature-ideas.md` for "implementation-phase bubble process ideas" — out of scope for this skill-evolution appendix.
+
+**Authoring session:**
+- File: `/Users/felho/.codex/sessions/2026/04/14/rollout-2026-04-14T12-24-44-019d8b85-a25c-7911-aacf-ea91026daf2e.jsonl`
+- Session id: `019d8b85-a25c-7911-aacf-ea91026daf2e`
+- `cwd`: `/Users/felho/dev/pairflow`
+- Time window: `2026-04-14T10:24:50.969Z` → `2026-04-14T12:25:23.724Z` (≈2h; commit at 11:18 UTC, ≈54 min after session start, ≈67 min before end).
+- User prompt count / agent message count: 15 user / 71 agent.
+- Session type: **authoring** — user explicitly asks for a retrospective on why the existing planning apparatus failed, then asks for process improvements. The agent synthesizes the fix during the session (the term `closure budget` is introduced by the agent at rollout:L344 within 2 minutes of the user's reflection request at L339).
+
+**Verbatim quotes**
+
+> [user, line 329, 2026-04-14T10:47:38Z] "So we are officially in round eleven. But there were multiple runs when I asked you to fix something directly in the bubble verb tree. So at least we are at run twenty. So I'm not 100% sure that the approach driven by this task is good enough or not. So maybe you need to reconsider re-sequencing the task or at least just check whether what might be the issue why we have so many P1s even in RAN to N. But that is usually definitely the sign of something is too complex"
+
+> [user, line 339, 2026-04-14T10:56:54Z] "Please, before we do that, let's reflect back what went wrong here and how could we improve the overall process. This time we used the existing skills, the risk card. I even asked you to do a simulation, and you said that based on the simulation this will probably work, which means that we definitely can and should improve the process. Because usually by the time we get to a point where we need to give up, we lose two, three, four hours of work. So we need to improve and minimize the number of such cases with better planning."
+
+> [agent, line 344, 2026-04-14T10:57:29Z] "Túl nagy volt az egyszerre mozgatott authority-scope. Egy taskba került a producer boundary, a shared contract, több downstream consumer, a persistence/schema, a status/CLI fallout és a meta-review diagnostics is."
+>
+> *(EN)* "The authority-scope moved at once was too large. A single task bundled the producer boundary, the shared contract, multiple downstream consumers, the persistence/schema, the status/CLI fallout, and the meta-review diagnostics."
+
+**Session content vs commit content delta:**
+
+```
+Session-side (from agent synthesis at rollout:L344, continuation of the same message):
+- Diagnosis of what went wrong: "Too large authority-scope" — single task bundled producer boundary + shared contract + multiple downstream consumers + persistence/schema + status/CLI fallout + meta-review diagnostics (6 closure families named in one sentence).
+- Proposed naming: "Vezessünk be külön `closure budget`..." — agent introduces the `closure budget` term explicitly in the same message.
+- Diagnosis: round count (11) was misleading because direct worktree-fixes multiplied real iteration count (~20); simulation validated coherence but not rollout-friction.
+- Proposed rule: early stop-rule when too many seams change, too many consumers break, too many validation surfaces need stabilization per bubble, too much "spec drift" expected, too many manual interventions before re-scoping.
+
+Commit-side (from `git show 26bff313` on the skill):
+- Gate name: `Closure-Budget Gate` (commit form, cosmetic difference from session's `closure budget` lower-case phrase).
+- Closure buckets (7): `authority_producer`, `shared_contract`, `internal_execution_consumers`, `workflow_orchestration_consumers`, `read_model_consumers`, `persisted_authority_or_schema`, `cleanup_recovery_consumers`.
+- Six policy rules (producer + shared-contract + any two consumers → split; schema + shared-contract + two+ consumers → Plan→Task; producer + shared contract + read-model/status/CLI → sequencing-failure; adjacent closures only with explicit proof; "do not let task stay broad merely because each sub-area looks understandable"; output must name collapsed vs deferred).
+- Two new Complexity-Risk Gate hard stops (#7-8) mirroring the Closure-Budget Gate triggers.
+- SKILL.md Core Principles 19-20 (closure-width primacy; no single-task carry).
+- Minimum Contract Rule 23 (explicit triage).
+- README design choice 15.
+- Template additions (plan + task closure-budget triage bullets).
+- Workflow additions (CreatePlan 1d, CreateTask 1c.1, plus blockers and L1 updates in CreateTask).
+
+Match analysis:
+- Session diagnosis lists 6 closure families ("producer boundary / shared contract / multiple downstream consumers / persistence/schema / status/CLI fallout / meta-review diagnostics"); commit lands 7 formal buckets (session's "multiple downstream consumers" is split into 3 consumer-family buckets: `internal_execution_consumers`, `workflow_orchestration_consumers`, `read_model_consumers` — these 3 inherit from the Authority Fan-out Scan introduced in `8b57b962`; session's "status/CLI fallout" is folded into `read_model_consumers` and/or `cleanup_recovery_consumers`).
+- Session term: `closure budget` (lowercase, phrase). Commit term: `Closure-Budget Gate` (titled, hyphenated). Cosmetic difference, same concept.
+- Session "early stop-rule" intent is realized as the 6 policy rules in the committed gate.
+- Session-proposed metrics ("too many seams / consumers / validation surfaces / spec drift / manual interventions") do not appear as a formal per-axis score in this commit; they are embedded in the qualitative policy ("do not let a task stay broad...").
+
+Verdict: **structural match, with the expected formalization gap**: the session proposed the concept and the agent introduced the term `closure budget` explicitly; the commit formalizes it into the skill's gate-and-triage vocabulary reusing the 7-bucket inventory already established by the prior Authority Fan-out Scan commit (`8b57b962`). No renames or drops; one minor expansion (session's 6 families → commit's 7 buckets via finer-grained consumer split).
+```
+
+**Incident evidence (bubble or direct-edit work):**
+- Bubble id (from session): no single bubble is quoted by name in the pre-commit portion of this session. The user at L329 references "round eleven" with ~9 additional direct-worktree fixes ("at least run twenty") — the subagent's retry suggested `actor-runtime-e2-impl` as the external reference, but the main conversation did not spot-verify a specific bubble id in the session.
+- Archive instance(s) found: no archive hit for the implied external bubble (likely not yet archived at commit time, or archived under a different id).
+- Final state + final round: `n/a` in this appendix.
+- Characterization of the non-convergence pattern (cited directly from pre-commit session content):
+  - Round ≥ 11 in a single bubble, with ≥ 9 additional direct worktree fixes outside the lifecycle — i.e. ~20 real rework passes in one task (rollout:L329, user).
+  - Simulation over the existing skill/risk-card pipeline had reported "this will probably work" — i.e. the existing gate apparatus passed a broad scope and the failure only surfaced after hours of wasted implementation (rollout:L339, user).
+  - Diagnosis: "too large authority-scope" — 6 closure families (producer / shared contract / multiple consumers / persistence/schema / status/CLI fallout / meta-review diagnostics) bundled into one bounded task (rollout:L344, agent).
+- Watchdog history: not inspected for this appendix.
+
+**Problem solved (synthesized, in the user's framing):**
+After a task reached round 11 in a lifecycle bubble plus ~9 additional direct worktree fixes without converging, and the existing planning apparatus (skill + risk card + simulation) had judged the scope "probably workable", the user asked for a retrospective on why the process itself failed rather than another local bug fix. The agent identified the pattern as excessive closure-breadth: one task bundled six distinct closure families (producer / contract / consumers / schema / status-CLI / diagnostics). The commit codifies that diagnosis into a new `Closure-Budget Gate` with a 7-bucket inventory (reusing the Authority Fan-out vocabulary from `8b57b962`) and six split-forcing policy rules, so future tasks of this shape are blocked at planning time rather than after hours of implementation.
+
+**Related prior sessions:**
+None found within the pre-commit window that author a different part of this commit. The session itself contains the full user reflection → agent synthesis → commit chain in a single ~2h sitting.
+
+**Gaps / uncertainty:**
+- The specific bubble whose rounds 1-11 triggered this reflection is named in passing ("round eleven", "at least run twenty") but not quoted by id in the session. The corresponding pairflow archive entry was not located in this appendix.
+- `plans/feature-ideas.md` was updated in the same commit with "implementation-phase bubble process ideas"; that file's content is out of scope for this skill-evolution appendix and has not been inspected here.
+- The first subagent-produced count of 8 user / 12 agent was spot-corrected to 15 user / 71 agent after direct `rg -c` verification on the session file.
