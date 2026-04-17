@@ -542,3 +542,84 @@ None found within the pre-commit window. The session itself contains the full "r
 - The ReviewSpec workflow (151-line new file) and `Remaining-Task-Viability-Check` reference were added to the skill as part of this commit but are not explicitly named in the L186 user message or the L309 agent diagnosis. The subagent retrieval mentions agent turns at L319, L346, L356 where ReviewSpec is proposed, but those lines are not individually line-cited or verbatim-quoted in this appendix. A narrower follow-up would be needed to quote the exact ReviewSpec proposal turn.
 - The agent quote at L309 is long; the excerpt shown in `Verbatim quotes` is the central "two gaps" sentence with `[...]` between the two numbered points. The full L309 message includes the exact list of modified skill files (matching the committed diff exactly) — the main conversation verified this match but did not inline the full file list in the quote block.
 - One subagent methodological note contained a self-contradictory timestamp statement ("16:42:11 UTC ... = 14:42:11 UTC") which was corrected here: the commit timestamp is `2026-04-15T16:42:11 UTC` (i.e. 18:42:11 CEST).
+
+---
+
+## 2026-04-16 — `911af8a2` — Artifact Responsibilities refactor
+
+**Commit message:** spec: align skill rules with artifact boundaries
+
+**What it introduced (from diff):**
+Refactor commit (no new gate). Introduces an explicit `Artifact Responsibilities` section in `SKILL.md` separating PRD / Plan / Task / `ReviewSpec` roles. Adds a new `Target-File Reality Check` section (mandatory for Task drafting and Task review). Reshapes the Control-Model Readiness Gate's "Minimum required answers" into `Artifact-specific minimums`. Relaxes plan-level requirements (per-task numeric risk scores, `Phase Ownership Grid`, full mutation/precondition sections are no longer plan defaults) in favor of task-self-containment. Widens the opening lines of the Authority Fan-out Scan, Closure-Budget Gate, and Bounded-Task-Shape Gate to cover "reviewing task boundaries" in addition to drafting. Adds three new Core Principles (23-25: "Plan slimness is a feature"; "Task reality beats task label"; "Review must be mode-specific"). Revises Minimum Contract Rules 15-18 to require target-file scope proof from Tasks / `ReviewSpec task-mode` and explicitly restrict plan bloat. Updates `README.md` design choices 8-17 accordingly.
+
+**Authoring session:**
+- File: `/Users/felho/.codex/sessions/2026/04/16/rollout-2026-04-16T18-33-13-019d9723-b5a0-7e73-a9d7-c6bce1c58557.jsonl`
+- Session id: `019d9723-b5a0-7e73-a9d7-c6bce1c58557`
+- `cwd`: `/Users/felho/dev/make-it-legal/precedens.ai`
+- Time window: `2026-04-16T16:33:13.161Z` → `2026-04-16T19:35:31.088Z` (≈3h 2min; commit at 19:02:34 UTC, ≈2h 29min after session start, ≈33 min before session end).
+- User prompt count / agent message count: 33 user / 115 agent.
+- Session type: **authoring** — user opens with the recurring "review the bubble, deep mode" intro (L7: `p3b-impl: review the bubble, deep mode, be very verbose, focus on the implementation and not on bubble process related issues`), asks a sequence of "why" questions about the skill (L202, L212, L222), the agent diagnoses the over-stuffing at L286 and proposes the Plan-minimal / Task-self-contained model at L296, the user approves and directs the agent to write changes directly into the skill files at L303 ("írd át őket közvetlenül itt: /Users/felho/dev/pairflow/.claude/skills/CreatePairflowSpec"), then serializes the result through several "commit" user messages (L582, L617, L660, L705, L736, L774, L805, L879). The `911af8a2` commit corresponds to the last pre-commit user "commit" message at L879 (2026-04-16T19:02:17Z, 17 seconds before the commit hash timestamp).
+
+**Verbatim quotes**
+
+> [user, line 222, 2026-04-16T16:42:55Z] "de most azt mondtad el, hogy mi történt, de nem azt, hogy vajon mi miatt történt, vagy átfordítva, ott van a $CreatePairflowSpec skill, és a CreateTask workflow jelenlegi verzióján is ez átment, valamint többször használtuk a ReviewSpec-et is erre a taszkra, és ott sem jelzett semmilyen problémát"
+>
+> *(EN)* "you told me WHAT happened, but not WHY it happened — or put another way: the $CreatePairflowSpec skill is there, and this got past the CreateTask workflow's current version, plus we used ReviewSpec several times on this task, and even that didn't flag any problem."
+
+> [agent, line 296, 2026-04-16T16:56:28Z] "A plan ne task-shape dokumentum legyen, hanem **coverage + dependency dokumentum**."
+>
+> *(EN)* "The plan shouldn't be a task-shape document — it should be a coverage + dependency document."
+
+**Session content vs commit content delta:**
+
+This is a **relocation and role-clarification** commit, not an additive-new-concept commit. The session-to-commit mapping is unusually clean.
+
+```
+Session-side proposal (agent at rollout:L286 and L296; context from user "why" sequence L202/L212/L222):
+- Diagnosis: Plan-level and Task-level rules overlap too much; the skill passed the p3b-impl task through CreateTask + ReviewSpec without catching its over-wide scope.
+- Prescribed structural model (L296):
+  - **Plan = coverage + dependency document** (objective / done definition, open task list, dependency/order, per-task short purpose+status, coverage map, deferred/successor items).
+  - **Task = self-contained bounded slice** (bounded slice, primary/secondary shape, risk triage, mutation branch inventory, precondition/side-effect boundary, fail-closed/rollback/retry semantics, target_files, L1 contract).
+  - **ReviewSpec two-mode**: plan-mode (coverage / dependency / remaining-task viability) vs task-mode (artifact + target-file reality check — explicitly NOT a bug-hunting code review).
+  - Explicit removals from Plan: numeric `risk_score`, phase-specific bounded-shape explanations, task self-descriptions duplicated in plan.
+  - Caveat: "nem nullára csökkentsük az overlapet" — the plan must still answer "if all open tasks land, does the overall goal close?"
+
+Commit-side (from `git show 911af8a2`):
+- New `Artifact Responsibilities` section in SKILL.md — 4 role definitions match the session model 1:1:
+  - PRD: product intent / business invariant / control model / user-visible behavior. "No task-local closure math."
+  - Plan: coverage/dependency artifact. "Do not use the plan as a duplicate task-spec repository."
+  - Task: bounded implementation slice. "Must prove its scope using `target_files`, touched entrypoints, mutation boundaries, and bounded-task shape."
+  - ReviewSpec: plan-mode + task-mode.
+- New `Target-File Reality Check` section — maps directly to the agent's "task-mode ... target fájlokat is ellenőrzi" + "artifact + scope reality check".
+- Control-Model Readiness Gate: `Minimum required answers` restructured into `Artifact-specific minimums` — maps to the agent's Plan-minimal vs Task-full responsibility split.
+- Core Principles 23-25: "Plan slimness is a feature" + "Task reality beats task label" + "Review must be mode-specific" — three compact restatements of the session's three conclusions.
+- Minimum Contract Rule 15 reshape: scope-reality proof required for Task and ReviewSpec task-mode.
+- Minimum Contract Rule 16 new: "Plans should not carry per-task numeric risk scores, full phase ownership grids, or full mutation/precondition boundary sections by default" — direct port of L296 "plan-level risk score nem kell".
+- Complexity-Risk Gate policy #11 new: "Do not persist per-task numeric risk scoring in plans by default".
+- Authority Fan-out Scan / Closure-Budget Gate / Bounded-Task-Shape Gate opening lines widened to cover "reviewing task boundaries" — the ReviewSpec two-mode integration.
+- Removed from plan defaults: the pre-existing rule requiring `Phase Ownership Grid` for plans (previously a Minimum Contract Rule) — demoted to optional.
+
+Match analysis:
+- The agent's L296 five-point model lands exactly in the SKILL.md refactor; no drops.
+- No gate renamed; no gate removed. Only structural relocations: Plan-specific rules moved to Task defaults or to "not by default"; gate applicability widened to review.
+
+Verdict: **structural refactor reflecting the agent's L296 prescription 1:1** into SKILL.md vocabulary. One demotion (Plan numeric risk score + Phase Ownership Grid defaults); one widening (gate-opening lines include review). Every new / renamed / widened rule has a clear session-side counterpart.
+```
+
+**Incident evidence (bubble):**
+- Bubble id (from session L7): `p3b-impl`
+- Archive instance found: `/Users/felho/.pairflow/archive/be2ac5d87a57bdcc/bi_00mo1hkzsh_3d71140d1896c302317e/`
+- Bubble repo: `/Users/felho/dev/make-it-legal/precedens.ai` (`bubble.toml:repo_path`); artifact type: `code`; branch: `bubble/p3b-impl`.
+- Final state + final round: not individually spot-verified for this section.
+- Characterization: the user's triple "why" sequence (L202 "mi az oka annak, hogy ilyen sok kört futunk ezzel a taszkkal?"; L212 "és annak mi az oka, hogy ezt nem láttuk előre, és mondjuk bontottuk kisebb taszkokra?"; L222 the full skill framing above) establishes the incident pattern at the **skill level**, not the bubble-implementation level. The commit targets the skill gap rather than any specific bubble finding.
+
+**Problem solved (synthesized, in the user's framing):**
+After running the `p3b-impl` bubble through the existing `CreateTask` workflow and `ReviewSpec` multiple times without the skill flagging the over-wide task scope, the user asked directly: why did none of the gates catch this? The agent's diagnosis was that Plans had accumulated too much Task-scope content (per-task risk scores, Phase Ownership Grids, full mutation boundaries), and `ReviewSpec` was undifferentiated between plan-mode and task-mode review. The commit reorganizes the skill around four explicit artifact responsibilities (PRD / Plan / Task / `ReviewSpec`), slims plan-level requirements, and introduces the Target-File Reality Check so `ReviewSpec task-mode` can validate bounded-slice claims against actual code rather than just the task's self-description.
+
+**Related prior sessions:**
+None found within the pre-commit window. The session itself contains the full "review → why questions → agent diagnosis → user approval → file edits → commit" chain in one ~3h sitting. Two follow-up commits in the same work window (`5f0f0254` at 19:08 UTC and `a75bca03` at 19:53 UTC) are commits #9 and #10 and have their own sections.
+
+**Gaps / uncertainty:**
+- `p3b-impl` bubble `state.json` (final state, round count) not spot-verified for this section. The session records establish the incident context; exact round-by-round finding counts are out of scope.
+- The first subagent run on this commit produced incorrect session metadata (session end timestamp 17:19 instead of 19:35 UTC; counts 9/8 instead of 33/115; cwd labelled as pairflow rather than precedens.ai) and **fabricated two user quotes** at L50 and L56 that are actually `exec_command_end` and `function_call` events, not `user_message` events. The main conversation recovered the correct metadata and the real pre-commit user_message list by direct `rg -n '"type":"user_message"' <rollout>` enumeration. The append above uses only validated lines.
+- The agent message at L296 is much longer than the one-sentence verbatim excerpt above; it contains a full 5-point proposed model. The excerpt was kept short to satisfy quote discipline; the full model is summarized in the delta block.
