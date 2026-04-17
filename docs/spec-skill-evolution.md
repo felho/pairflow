@@ -833,3 +833,61 @@ Captured on 2026-04-17 during the research session that produced this document. 
 ### Revised verdict in one sentence
 
 The initial "too much, too redundant" impression underestimated the skill's depth. The skill is in fact an **evidence-based safety system** for a specific domain (Pairflow bubble refinement's recurring failure modes), and the user's own self-correction (the `911af8a2` refactor) was already targeting redundancy reduction more sophisticatedly than my original proposal. Onboarding difficulty and abstraction level remain legitimate concerns, but the rule count is no longer more than the evidence warrants.
+
+---
+
+# Appendix B — Theoretical framing (conceptual understanding)
+
+Captured on 2026-04-17 as a conceptual exercise, not a refactor proposal. The user's motivation: the skill grew from trial-and-error on two different projects (Pairflow + precedens.ai billing integration), the vocabulary feels Pairflow-specific but the patterns generalize, and they want a deeper mental model — both for themselves and for explaining the skill to others. This appendix records the most illuminating theoretical frames, ordered from deepest/most unifying to most transfer-friendly.
+
+## B.1 One-sentence thesis
+
+The skill is a **refinement-type-checker for work packages**: each gate checks whether the task is "well-typed" in one dimension. Seen through this lens, the gates are different facets of one deeper concept, not ad-hoc rules.
+
+## B.2 Why "refinement type"?
+
+A refinement type is not only a set of values, but a set of values that satisfy a predicate (e.g. `Positive = { x: Int | x > 0 }`). The skill does exactly this at the *task* level: it is not enough that a work item "is a task" — the task must satisfy predicates (effect-monomorphism, ownership separation, preserved baseline invariants, and so on). Each gate encodes one such predicate.
+
+## B.3 Gates as predicate-checkers
+
+| Gate | Predicate it checks | Closest CS analog |
+|---|---|---|
+| Bounded-Task-Shape | Is the task **effect-monomorphic** (one primary shape)? | Effect systems / algebraic effects (Koka, Eff) |
+| Authority Fan-out Scan | Are the touched ownership regions **separated**? | Separation Logic frame rule |
+| Closure-Budget Gate | How many **independent closures** move together? | Transaction atomicity / isolation budget |
+| Control-Model Readiness Gate | Are the read paths **deterministic and non-ambiguous**? | CQRS + unambiguous state-machine |
+| Baseline Preservation | Is the task a **refinement** rather than a replacement? | Liskov / behavioral subtyping / refinement calculus |
+| Closed-Contract Drift Check | Is the refinement **invariant-preserving**? | Contract compatibility / Hyrum's Law mitigation |
+| Target-File Reality Check | Does the **declared type match the observed type**? | Type inference vs. annotation correspondence |
+| Complexity-Risk Gate | Is the type **too complex** to verify as one bounded slice? | Decidability / tractability budget |
+
+## B.4 Why this generalizes across domains
+
+Refinement-type discipline is **domain-independent**: in any system with state, multiple readers, a lifecycle, and refinement, these predicates are meaningful. Both Pairflow (bubble refinement with producer-consumer authority flows) and precedens.ai billing integration (Stripe ↔ Billingo ↔ local authority reconciliation) are exactly such systems. The concrete vocabulary (`payment_intent`, `writeRemotePointer`, meta-reviewer) is domain-specific, but the *type properties* are generic. The fact that the same gate set holds up on two domains is empirical evidence that the underlying frame is type-theoretic rather than Pairflow-specific — two data points is not proof, but it is the right shape of evidence for a generic invariant.
+
+## B.5 Complementary frames (different views of the same phenomenon)
+
+These are not alternatives to Appendix B.3's type frame; they look at the same structure from other angles and are useful in different audiences.
+
+1. **Parnas-style modularity at task granularity.** "On the Criteria to Be Used in Decomposing Systems into Modules" (1972): each module should encapsulate a single *secret*. The skill lifts this to task granularity — each bounded task should close a single design decision; the gates detect secret-mixing (authority + coordination + rollback bundled together). **Most transfer-friendly frame for senior engineers** — one-line elevator pitch: "it's Parnas at task granularity."
+
+2. **Architectural smell detection at design time.** Each gate maps onto a known anti-pattern, but applied to the *task specification* rather than the code: `surface_spread` ↔ Shotgun Surgery; producer + consumer mixing ↔ Feature Envy; closure-budget overflow ↔ God Object; `forbidden_fallback` without `allowed_resolution_path` ↔ silent precondition weakening; `target_files` disagreeing with declared shape ↔ Mislabeled Interface. **Most pragmatic frame for onboarding** — new contributors recognise the anti-patterns first, can come back to the type story later.
+
+3. **Hoare logic at the spec level.** `{P} task {Q}`: the Precondition-and-Side-Effect Boundary section is a direct Hoare triple; the Control-Model Readiness Gate fixes `P`; Baseline Preservation fixes the `Q` invariants. Especially clean for mutation-flow tasks.
+
+## B.6 Relationship between the three frames
+
+- **Depth:** the type frame is deepest — Parnas modularity and smell detection are both derivable from it (Parnas's "module secret" is the information-hiding predicate; anti-patterns are mis-typings).
+- **Transferability:** the Parnas frame is easiest to state to an experienced engineer who does not think in types.
+- **Pragmatic onboarding:** the architectural-smells frame is closest to lived experience and requires the least prior theory.
+- **Operational depth:** Hoare logic is the closest to the actual gate mechanics for mutation tasks and the cleanest frame for writing new gates that fit the existing system.
+
+All three look at the same phenomenon from different abstraction levels.
+
+## B.7 One non-theoretical but important observation
+
+The skill looks strongly type-theoretic *in retrospect* because the **failure modes** it catches are the same ones that programming language theory has been catching for decades at the code level (effect mixing, ownership violations, precondition/postcondition drift, invariant erosion, specification/implementation divergence). The skill does at the task-specification level what a type checker does at the code level: **preventive, locally-checkable, domain-independent invariant enforcement**. The only difference is the object of typing — task specifications instead of program expressions.
+
+## B.8 What this frame is for (and what it is not)
+
+This appendix is intended to **deepen understanding**, not to drive a refactor. The operational SKILL.md is still needed as the LLM-executable form; the type-theoretic frame sits *underneath* it and explains *why* the rules are what they are. A useful future artifact (out of scope here) would be a short "theoretical introduction" (≈2 pages) pointing out: here is the task-typing discipline; here is how each gate fits; here is why it generalizes. That would give new contributors a skeleton on which to hang the operational rules, rather than asking them to learn 430 lines of SKILL.md cold.
