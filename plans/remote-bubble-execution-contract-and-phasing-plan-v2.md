@@ -147,8 +147,31 @@ Az explicit control-model dontesek most visszanyerhetok a designbol es a review-
 | Phase 2E | `operator_read_model` | Remote status/list projection | Phase 2D | status/list read-model, cache freshness, remote runtime wording | user-facing read-model mar a remote runtimeot irja le, attach nelkul is konzisztensen |
 | Phase 2F | `operator_read_model` | Remote attach consume | Phase 2E | attach wording, launcher consume, port-forward projection | az attach surface is a remote runtime modelre ul |
 | Phase 3A | `mutation_routing` | Remote approval/rework routing | Phase 2F | approval/rework command routing stabil remote runtimeon | operator mutation routing mar nem local-only runtimeot feltetelez |
-| Phase 3B | `cleanup_routing` | Remote commit/merge/delete cleanup routing | Phase 3A | remote command routing a mar lezart local lifecycle cleanup familyre | a remote cleanup/routing ugyanarra a topology-modelre ul, de nem nyit uj local cleanup semantics-et |
-| Phase 3C | `recovery_rollout` | Recovery, docs, rollout closure | Phase 3B | diagnostics, reboot recovery guidance, docs, manual smoke evidence | failure semantics es rollout evidence lezarhato |
+| Phase 3B1 | `cleanup_routing` | Remote commit routing and continuity closure | Phase 3A | remote commit command routing + bounded mutable control-artifact sync-back a retained local commit contracthoz | remote commit mar nem local git fallbackra ul, de merge/delete meg kulon successor-owned marad |
+| Phase 3B2 | `cleanup_routing` | Remote merge routing and publication closure | Phase 3B1 | remote merge command routing + explicit durable publication policy + bounded merge-completion reconcile | remote merge nem a laptop local repo merge-preflightjara ul, es publication semantics explicit |
+| Phase 3B3 | `cleanup_routing` | Remote delete cleanup and archive closure | Phase 3B2 | remote delete confirmation/force routing + archive continuity sync-back + remote destructive cleanup closure | remote delete nem hagy orphan remote clone/runtime artifactot, es a local archive/delete contract retained marad |
+| Phase 3C | `recovery_rollout` | Recovery, docs, rollout closure | Phase 3B3 | diagnostics, reboot recovery guidance, docs, manual smoke evidence | failure semantics es rollout evidence lezarhato |
+
+## Progress Update (2026-04-18)
+
+1. A `Phase 3A` implementacios bubble 2026-04-18-an lezarult, merge-re kerult, es a task archivalt baseline lett.
+2. A lezart bounded scope:
+   - remote approval routing a started remote pointer authorityjara ultetve,
+   - remote immediate request-rework routing a canonical remote runtime authorityn,
+   - remote queued request-rework intent retainelt `WAITING_HUMAN` semanticaval,
+   - bounded `sshBubbleApprovalCommand` helper a remote approval/rework command familyhez,
+   - UI/CLI/application consume parity a remote approval/rework branchen,
+   - explicit fail-closed behavior created/missing remote pointer, invalid target, transport hiba, es payload-invaliditas eseten.
+3. A `Phase 3A` task archivalt allapotban mar itt van:
+   - `plans/archive/tasks/remote-bubble-execution/phase3a-remote-approval-and-rework-routing.md`
+4. A kovetkezo aktiv, meg nem leszallitott fazis a terv szerint most mar a `Phase 3B1`:
+   - remote commit routing a started remote pointer authorityjara,
+   - bounded mutable control-artifact sync-back a retained local `CommitBubbleResult` continuityhoz,
+   - explicit no-local-git fallback remote started bubble eseten.
+5. A tovabbi successor-owned scope valtozatlan:
+   - `Phase 3B2`: remote merge routing and publication closure,
+   - `Phase 3B3`: remote delete cleanup and archive closure,
+   - `Phase 3C`: recovery/docs/rollout closure.
 
 ## Progress Update (2026-04-16)
 
@@ -170,7 +193,7 @@ Az explicit control-model dontesek most visszanyerhetok a designbol es a review-
 5. A tovabbi successor-owned scope valtozatlan:
    - `Phase 2F`: remote attach consume,
    - `Phase 3A`: remote approval/rework routing,
-   - `Phase 3B`: remote commit/merge/delete cleanup routing,
+   - `Phase 3B1-3B3`: remote cleanup routing split,
    - `Phase 3C`: recovery/docs/rollout closure.
 
 ### Phase 2D Approval Boundary Note
@@ -188,7 +211,7 @@ Az explicit control-model dontesek most visszanyerhetok a designbol es a review-
    - `status/list` read-model wording, cache-freshness/refresh policy vagy cache-reconciliation consume az initial cache-initen tul,
    - attach launcher, port-forward vagy UX consume,
    - explicit started-pointer consume-ra epulo remote restart/reboot recovery semantics a `Phase 2D` first-start fail-closed guardon tul,
-   - approval/rework remote routing (`Phase 3A`) es commit/merge/delete remote routing (`Phase 3B`),
+   - approval/rework remote routing (`Phase 3A`) es cleanup-routing split (`Phase 3B1-3B3`),
    - strukturalt warning/read-model surfacing a hook/version diagnostics korul.
 3. Review-loop guardrail:
    - ha egy eszrevetel nem a fenti bounded remote first-start activation closure correctnesset serti, azt legfeljebb `later-hardening` vagy successor-task note szinten szabad kezelni, nem required-now `Phase 2D` blocker-kent.
@@ -296,24 +319,26 @@ Az explicit control-model dontesek most visszanyerhetok a designbol es a review-
    - remote attach UX es fail-closed operator surface leszallitva,
    - a task archivalt allapotban mar itt van:
      `plans/archive/tasks/remote-bubble-execution/phase2f-remote-attach-consume.md`
-9. A kovetkezo explicit implementacios fazis most mar a `Phase 3A`:
+9. A kovetkezo explicit implementacios fazis a 2026-04-16-os allapot szerint a `Phase 3A` volt:
    - remote approval/rework routing,
    - operator mutation routing ugyanarra a remote runtime topology-modelre ultetve,
    - local-only runtime-feltetelezesek eltavolitasa az approval/rework consume surface-ekrol.
 
 ## Active Task
 
-1. A `Phase 2F` mar archived baseline:
+1. A `Phase 2F` es `Phase 3A` mar archived baseline:
    - `plans/archive/tasks/remote-bubble-execution/phase2f-remote-attach-consume.md`
-2. A kovetkezo tenyleges implementacios munka a mar materializalt `Phase 3A` taskhoz tartozik:
-   - `plans/tasks/remote-bubble-execution/phase3a-remote-approval-and-rework-routing.md`
-3. A `Phase 2B`, `Phase 2C`, `Phase 2D`, `Phase 2E`, es `Phase 2F` archived baseline lett.
-4. Az approval/rework, cleanup, es recovery scope tovabbra is kulon successor fazisban marad, ebbol a kovetkezo aktivalasra varo szelet a `Phase 3A`.
+   - `plans/archive/tasks/remote-bubble-execution/phase3a-remote-approval-and-rework-routing.md`
+2. A kovetkezo tenyleges implementacios munka a `Phase 3B1` task materializalasahoz tartozik:
+   - `plans/tasks/remote-bubble-execution/phase3b1-remote-commit-routing-and-continuity.md`
+3. A `Phase 2B`, `Phase 2C`, `Phase 2D`, `Phase 2E`, `Phase 2F`, es `Phase 3A` archived baseline lett.
+4. Az approval/rework, cleanup, es recovery scope tovabbra is kulon successor fazisban marad, de a cleanup routing most mar harom bounded szeletre bomlik: `Phase 3B1` commit, `Phase 3B2` merge, `Phase 3B3` delete.
 
 ## Successor Tasks (Do Not Materialize Yet)
 
-1. `plans/tasks/remote-bubble-execution/phase3b-remote-commit-merge-delete-cleanup.md`
-2. `plans/tasks/remote-bubble-execution/phase3c-recovery-diagnostics-and-rollout.md`
+1. `plans/tasks/remote-bubble-execution/phase3b2-remote-merge-routing-and-publication.md`
+2. `plans/tasks/remote-bubble-execution/phase3b3-remote-delete-cleanup-and-archive-closure.md`
+3. `plans/tasks/remote-bubble-execution/phase3c-recovery-diagnostics-and-rollout.md`
 
 ## Dependencies
 
@@ -387,9 +412,14 @@ Az explicit control-model dontesek most visszanyerhetok a designbol es a review-
    - remote attach command/launcher/forwarding projection tests.
 13. Phase 3A:
    - remote approval/rework routing tests.
-14. Phase 3B:
-   - remote commit/merge/delete cleanup routing tests a lezart local lifecycle baseline-en.
-15. Phase 3C:
+14. Phase 3B1:
+   - remote commit routing tests a lezart local lifecycle baseline-en,
+   - mutable control-artifact sync-back continuity proof a retained commit contracthoz.
+15. Phase 3B2:
+   - remote merge routing + durable publication policy tests.
+16. Phase 3B3:
+   - remote delete confirmation/force + archive continuity sync-back tests.
+17. Phase 3C:
    - recovery diagnostics tests,
    - legalabb egy manual remote smoke.
 
