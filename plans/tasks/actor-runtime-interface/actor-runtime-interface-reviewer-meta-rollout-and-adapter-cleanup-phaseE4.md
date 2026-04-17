@@ -41,10 +41,12 @@ owners:
 
 ## Current Tree Position (2026-04-17)
 
-1. `E3a` lezarta a canonical execution authority vocabularyt.
-2. `E3b` implementer activation archival traceability pathja: `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-implementer-pilot-activation-phaseE3b.md`.
-3. `E3c` implementer parity baseline archival traceability pathja: `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-implementer-pilot-parity-and-fail-closed-hardening-phaseE3c.md`.
-4. Ez a task consume-family rollout es retained adapter cleanup, nem authority-foundation vagy activation redesign.
+1. A current-tree sequencing authority a `plans/tasks/actor-runtime-interface-pilot-cutover-phaseE.md` es a `plans/actor-runtime-interface-discovery-and-migration-plan-v1.md`; mindketto azt rogzíti, hogy az egyetlen megmaradt aktiv implementation closure mar `E4`.
+2. `E2c` persisted diagnostics / meta-review / read-model fallout archival traceability pathja: `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-persisted-diagnostics-meta-review-read-model-fallout-phaseE2c.md`.
+3. `E3a` canonical execution authority vocabulary closure archival traceability pathja: `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-implementer-pilot-foundation-hardening-phaseE3a.md`.
+4. `E3b` implementer activation archival traceability pathja: `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-implementer-pilot-activation-phaseE3b.md`.
+5. `E3c` implementer parity baseline archival traceability pathja: `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-implementer-pilot-parity-and-fail-closed-hardening-phaseE3c.md`.
+6. Ez a task consume-family rollout es retained adapter cleanup, nem authority-foundation, activation redesign vagy implementer parity reopen.
 
 ## L0 - Policy
 
@@ -74,6 +76,7 @@ owners:
 5. Meta-review submit rollout: a meta-review wrapper -> submit preparation/authority -> submit runtime/routing canonical submit lanca, nem pusztan wrapper-facade.
 6. Retained adapter cleanup itt csak parity-preserving message/targeting/delivery facade cleanup lehet; nem broad topology csere.
 7. E4 nem nyithat ujra authority-producer, implementer activation vagy implementer parity dontest.
+8. A canonical execution authority vocabulary closed marad: `handoff_id`, explicit `execution_id` es az optional guard mezok mellett nincs uj alias vagy legacy authority terminology.
 
 ### Domain / Control Model Summary
 
@@ -244,9 +247,11 @@ owners:
 
 | Dependency | Constraint | Failure / Deviation Policy |
 |---|---|---|
+| archived `E2c` fallout closure | preserved baseline | E4 nem ownershipolja ujra a persisted diagnostics / read-model / public meta-review falloutot |
 | `E3a` canonical vocabulary | nem nyithato ujra | ha reviewer/meta rollout uj authority shape-et igenyelne, route back to plan |
 | archived `E3b` activation closure | preserved baseline | E4 nem ownershipolja ujra az implementer activationt |
 | archived `E3c` parity closure | preserved baseline | E4 nem ownershipolja ujra az implementer stale/duplicate/restart parityt |
+| sequencing authority docs | current-tree source-of-truth | ha a Phase E sequencing anchor mas open closure-t allitana, ezt a taskot elobb doc-szinten kell ujraigazitani |
 | retained tmux runtime | observability/debug retained | ha cleanup broad topology csereve valna, kulon successor task kell |
 
 ### 5) Test Matrix
@@ -262,3 +267,9 @@ owners:
 1. Ha a rollout csak kulon reviewer vagy meta-review authority-szotarral tunik kivitelezhetonek, az regresszio.
 2. Ha a cleanup broad topology-csereve novekedne, azt kulon successor taskra kell bontani.
 3. Ha a retained adapter cleanup valojaban csak facade/message/targeting parity-preserving alignment, ezt implementation kozben is szuken kell tartani, es nem szabad broad tmux-runtime rewrite-ba csuszni.
+4. Ha a current-tree docs read nem mutat uj sequencing driftet, preferald a no-op vagy traceability-only refinementet a spekulativ boundary-bovites helyett.
+
+## Review / Approval Context
+
+1. A current bubble worktree docs-allapota a review/approval source-of-truth.
+2. Korabbi approval snapshot csak historical traceability.
