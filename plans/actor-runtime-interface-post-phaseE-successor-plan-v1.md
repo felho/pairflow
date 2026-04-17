@@ -116,7 +116,7 @@ owners:
    - uj role projection johet,
    - vagy a mostani wrapper-sprawl mar lassitja a kodmozgatast.
 4. A jelenlegi legjobb decomposition-becslés szerint ez varhatoan `3` bounded task, konzervativ felso becslessel `3-4`:
-   - `O1-T1`: docs-only kernel boundary clarification
+   - `O1-T1`: docs-only kernel boundary clarification a task artifact in-place refinementjevel es source-anchored kernel contract note-tal
    - `O1-T2`: belso typed authority / route / policy matrix bevezetese public vocabulary rewrite nelkul
    - `O1-T3`: a jelenlegi wrapper-sprawl raulitese a belso matrixra explicit kernel + policy + workflow-adapter szetvalasztassal
    - opcionális `O1-T4`: retained fallback / parity / cleanup hardening, ha ez nem zarhato biztonsagosan `O1-T3`-ban
@@ -161,10 +161,15 @@ owners:
    - topology-neutral deliveryt nem erdemes full rewritekent kezelni, amig a boundary nevei es ownershipja nem tiszta.
 5. Az `Opportunity 1` elso bounded taskja:
    - `plans/tasks/actor-runtime-interface-opportunity1-task1-generic-runtime-kernel-boundary-clarification.md`
-6. `O2-T1` csak preserved-baseline clarification lane lehet:
+6. Az `O1-T1` docs-only outputja source-anchored boundary note-ot kotelez:
+   - `plans/actor-runtime-interface-generic-runtime-kernel-contract-note-v1.md`
+7. `O1-T2` es `O1-T3` csak az `O1-T1` altal lezart exact route/policy matrixon es preserved baseline-okon ulhet:
+   - nem nyithatjak ujra az execution authority note closed jelenteset,
+   - nem lazithatjak a reviewer fallback vagy meta-reviewer guard preserved baseline-jat implicit cleanup cimszo alatt.
+8. `O2-T1` csak preserved-baseline clarification lane lehet:
    - a lezart `accepted | running | rejected | failed_to_start` runtime-ack/runtime-truth semanticsat nem nyithatja ujra,
    - csak a topology/executor-boundary es retained adapter ownership pontositasat ownershipolja.
-7. `O3-T1` csak az `Opportunity 1 / O1-T1` altal lezart boundary- es vocabulary-matrix utan nyithato:
+9. `O3-T1` csak az `Opportunity 1 / O1-T1` altal lezart boundary- es vocabulary-matrix utan nyithato:
    - onboarding simplification csak a zart baseline vocabulary explicit mappingjara epulhet,
    - az `Opportunity 4` alapertelmezetten ebbe a lane-be van beolvasztva mint core-vs-extension rationalization,
    - kulon `O4-T1` csak akkor nyithato, ha az `Opportunity 1 / O1-T1` outputja bizonyitja, hogy ez onallo bounded closure.
@@ -179,6 +184,10 @@ owners:
 3. Ez docs+typed-boundary taskkent kezdheto, mielott barmilyen delivery topology vagy CLI surface mozdul.
 4. A current sequencing anchor ehhez a docs-only first slice-hoz:
    - `plans/tasks/actor-runtime-interface-opportunity1-task1-generic-runtime-kernel-boundary-clarification.md`
+5. A current docs-only output note ugyanennek a first slice-nak a normativ boundary inventoryja:
+   - `plans/actor-runtime-interface-generic-runtime-kernel-contract-note-v1.md`
+6. Ez a first slice meg mindig nem runtime rewrite:
+   - csak a canonical authority, a route/policy matrix es a workflow adapter boundary explicit szetvalasztasat ownershipolja.
 
 ## Done Definition
 

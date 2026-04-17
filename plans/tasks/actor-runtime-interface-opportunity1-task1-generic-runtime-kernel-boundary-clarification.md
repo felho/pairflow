@@ -5,6 +5,7 @@ title: "Actor Runtime Interface Opportunity 1 Task 1: Generic Runtime Kernel Bou
 status: implementable
 phase: post-phaseE
 target_files:
+  - plans/tasks/actor-runtime-interface-opportunity1-task1-generic-runtime-kernel-boundary-clarification.md
   - plans/actor-runtime-interface-generic-runtime-kernel-contract-note-v1.md
   - plans/actor-runtime-interface-post-phaseE-successor-plan-v1.md
 prd_ref: null
@@ -79,19 +80,30 @@ Docs-only, implementalhato `O1-T1` sequencing szelet keszitese az `Opportunity 1
 
 ### In Scope
 
-1. Egy uj docs-only contract note letrehozasa itt:
+1. A letezo source task artifact in-place refinementje itt:
+   - `plans/tasks/actor-runtime-interface-opportunity1-task1-generic-runtime-kernel-boundary-clarification.md`
+2. Egy uj docs-only contract note letrehozasa itt:
    - `plans/actor-runtime-interface-generic-runtime-kernel-contract-note-v1.md`
-2. A current tree wrapper/policy matrix explicit inventorozasa legalabb erre a tengelyre:
+3. A current tree wrapper/policy matrix explicit inventorozasa legalabb erre a tengelyre:
    - `expected_role`
    - `input.kind`
    - routed emitter path
+   - fallback helper path ahol a current tree retained fallbackot hasznal
    - extra policy guard
    - fail-closed vagy retained-fallback kimenet
-3. A kovetkezo harom boundary kulon nevesitese:
+   - es legalabb ezekkel a preserved current-tree sorokkal:
+     - implementer -> `pass`
+     - implementer -> `human_question`
+     - reviewer -> `pass`
+     - reviewer -> `convergence`
+     - reviewer -> `human_question` retained fallback
+     - meta_reviewer -> `meta_review_result`
+     - minden egyeb `expected_role x input.kind` kombinacio fail-closed
+4. A kovetkezo harom boundary kulon nevesitese:
    - canonical actor authority context
    - generic runtime route/policy matrix
    - workflow-specific output/result adapters
-4. Egy kulon vocabulary matrix rogzítese legalabb ezek szetvalasztasaval:
+5. Egy kulon vocabulary matrix rogzítese legalabb ezek szetvalasztasaval:
    - `AgentName`
    - `ProtocolParticipant`
    - `AgentRole`
@@ -106,16 +118,16 @@ Docs-only, implementalhato `O1-T1` sequencing szelet keszitese az `Opportunity 1
      - role-to-awaited-output baseline:
        - `meta_reviewer -> meta_review_result`
        - otherwise `pass_result`
-5. Egy belso, meg nem implementalt typed boundary megnevezese minimum ilyen fogalmakkal vagy veluk ekvivalens local terminologyval:
+6. Egy belso, meg nem implementalt typed boundary megnevezese minimum ilyen fogalmakkal vagy veluk ekvivalens local terminologyval:
    - `ActorRuntimeRoute`
    - `ActorRuntimePolicyCheck`
    - `ActorRuntimeDispatchPlan`
-6. Annak explicit rogzítese, hogy a first slice utan mely code surfaces maradnak read-only downstream constraints:
+7. Annak explicit rogzítese, hogy a first slice utan mely code surfaces maradnak read-only downstream constraints:
    - `src/types/protocol.ts`
    - `src/cli/commands/agent/emit.ts`
    - `src/v11/shared/state/executionContext.ts`
    - `src/v11/shared/metaReview/metaReviewExecutionContext.ts`
-7. A successor plan sequencing szekciojanak frissitese az `O1-T1` task pathjaval.
+8. A successor plan sequencing szekciojanak frissitese az `O1-T1` task pathjaval es azzal, hogy az `O1-T1` outputja a task artifact in-place refinementje + a source-anchored kernel contract note.
 
 ### Out of Scope
 
@@ -169,16 +181,18 @@ Docs-only, implementalhato `O1-T1` sequencing szelet keszitese az `Opportunity 1
 ### Scope Reality / Shape Proof
 
 1. A declared `target_files` docs-only artifactok:
+   - `plans/tasks/actor-runtime-interface-opportunity1-task1-generic-runtime-kernel-boundary-clarification.md`
    - `plans/actor-runtime-interface-generic-runtime-kernel-contract-note-v1.md`
    - `plans/actor-runtime-interface-post-phaseE-successor-plan-v1.md`
-2. Nincs mutation entrypoint a target scope-ban.
-3. A repo-local source anchorok sok runtime surface-t erintenek, de azok ebben a taskban csak evidence es closed-contract source szerepet kapnak.
-4. Emiatt a valos bounded slice docs-only contract foundation:
+2. A primary artifact a letezo task file; ezt kell source-anchored boundary precisionnel refine-olni, nem uj standalone synthesis doksival helyettesiteni.
+3. Nincs mutation entrypoint a target scope-ban.
+4. A repo-local source anchorok sok runtime surface-t erintenek, de azok ebben a taskban csak evidence es closed-contract source szerepet kapnak.
+5. Emiatt a valos bounded slice docs-only contract foundation:
    - nincs authority producer munka,
    - nincs public shared-contract migration,
    - nincs consumer-family code alignment,
    - nincs cleanup vagy activation delivery.
-5. A task label es a valos scope egyezik: ez `contract_or_persisted_authority_foundation` alaku docs-only closure, nem runtime implementation slice.
+6. A task label es a valos scope egyezik: ez `contract_or_persisted_authority_foundation` alaku docs-only closure, nem runtime implementation slice.
 
 ### Control Model Clauses
 
@@ -365,34 +379,43 @@ Conclusion:
 
 ### Deliverables
 
-1. `plans/actor-runtime-interface-generic-runtime-kernel-contract-note-v1.md`
+1. `plans/tasks/actor-runtime-interface-opportunity1-task1-generic-runtime-kernel-boundary-clarification.md`
+   - primary artifactkent in-place refined marad
+   - explicitten rogziti a reviewer-origin `human_question` retained fallback sort es az osszes egyeb role x input mismatch fail-closed baseline-jat
+   - explicitten kimondja, hogy `O1-T2`, `O1-T3`, `O2-T1` es `O3-T1` csak ezen a boundary/output matrixon ulhet tovabb
+2. `plans/actor-runtime-interface-generic-runtime-kernel-contract-note-v1.md`
    - kotelezo szekciok:
      - current-tree coupling inventory
      - closed baseline vocabulary matrix
      - exact awaited-output type and role mapping
      - role x input route/policy matrix
+     - reviewer `human_question` retained fallback helper naming (`emitActorProtocolViaFallbackRouting`)
      - canonical vs policy vs workflow-adapter boundary split
      - proposed typed internal boundary vocabulary
      - preserved baselines
      - explicit downstream constraints
-2. `plans/actor-runtime-interface-post-phaseE-successor-plan-v1.md`
+3. `plans/actor-runtime-interface-post-phaseE-successor-plan-v1.md`
    - az `O1-T1` task explicit sequencing hivatkozasa
+   - explicit downstream gating `O1-T2` / `O1-T3` / `O2-T1` / `O3-T1` felé
 
 ### Completion Checks
 
-1. A note explicitten kimondja, hogy az Opportunity 1 elso szelete docs-only boundary clarification, nem runtime rewrite.
-2. A note tablazatos vagy ezzel ekvivalens formaban inventoryzza a current wrapper matrixot.
-3. A note tablazatos vagy ezzel ekvivalens formaban kulon nevezi a zart vocabulary fogalmakat.
-4. A note explicit rogzíti:
+1. A primary task artifact in-place refined marad; nincs helyette uj standalone review/synthesis document primary outputkent.
+2. A note explicitten kimondja, hogy az Opportunity 1 elso szelete docs-only boundary clarification, nem runtime rewrite.
+3. A note tablazatos vagy ezzel ekvivalens formaban inventoryzza a current wrapper matrixot.
+4. A note tablazatos vagy ezzel ekvivalens formaban kulon nevezi a zart vocabulary fogalmakat.
+5. A note explicit rogzíti:
    - `BubbleExecutionContextAwaitedOutputType = pass_result | meta_review_result`
    - `MetaReviewExecutionContextAwaitedOutputType = meta_review_result`
    - role-to-awaited-output baseline:
      - `meta_reviewer -> meta_review_result`
      - otherwise `pass_result`
-5. A note kulon nevesiti a canonical authority, policy guard es workflow adapter retegeket.
-6. A note explicit read-only downstream constraintkent nevezi meg a public protocol/CLI/state couplingokat.
-7. A note explicit zart baseline-kent nevezi meg a bubble config/state/policy reteget.
-8. A successor plan mar konkret task pathra mutat az `O1-T1` elso szelethez.
+6. A note explicit rogziti a reviewer-origin `human_question` retained fallback sort es azt, hogy minden egyeb role x input mismatch fail-closed marad.
+7. A note a reviewer `human_question` retained fallback sort a konkret `emitActorProtocolViaFallbackRouting` helperre kotve nevezi meg, nem csak altalanos fallback leirassal.
+8. A note kulon nevesiti a canonical authority, policy guard es workflow adapter retegeket.
+9. A note explicit read-only downstream constraintkent nevezi meg a public protocol/CLI/state couplingokat.
+10. A note explicit zart baseline-kent nevezi meg a bubble config/state/policy reteget.
+11. A successor plan mar konkret task pathra mutat az `O1-T1` elso szelethez, es explicit gatinget ad a downstream successor lane-ekhez.
 
 ## L2 - Evidence and Review
 
