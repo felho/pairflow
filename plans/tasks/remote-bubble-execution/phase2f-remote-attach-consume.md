@@ -23,6 +23,7 @@ target_files:
   - ui/src/lib/api.ts
   - ui/src/lib/types.ts
   - ui/src/lib/attachAvailability.ts
+  - ui/src/components/actions/ActionBar.tsx
   - ui/src/components/canvas/BubbleExpandedCard.tsx
   - ui/src/state/useBubbleStore.ts
   - tests/core/bubble/attachBubble.test.ts
@@ -30,6 +31,7 @@ target_files:
   - tests/core/ui/router.test.ts
   - tests/cli/bubbleAttachCommand.test.ts
   - tests/cli/bubbleStartCommand.test.ts
+  - ui/src/components/actions/ActionBar.test.tsx
   - ui/src/lib/attachAvailability.test.ts
   - ui/src/components/canvas/BubbleExpandedCard.test.tsx
   - ui/src/state/useBubbleStore.test.ts
@@ -41,6 +43,26 @@ owners:
 ---
 
 # Task: Remote Bubble Execution Remote Attach Consume (Phase 2F)
+
+## Feynman Summary / One-Screen Model
+
+1. A `Phase 2E` mar megmondja, hogy a bubble remote-e, es ha remote, milyen attach-relevans allapotban van; ebbol jon a UI attach gating truth, de ez onmagaban meg nem attach-command authority.
+2. A `Phase 2F` ezt nem irja felul, hanem explicit attach consume surface-sze forditja:
+   - local bubble -> retained local attach,
+   - remote `created` pointer -> explicit "start first",
+   - remote `started` pointer -> SSH attach command ugyanabbal a launcher familyvel.
+3. A read-model gating es az attach authority kulon szerep:
+   - remote bubble eseten a visibility/enabled/hint contract a `Phase 2E` read-modelrol jon, nem local tmux/session heurisztikarol,
+   - a remote attach command authorityja viszont a persisted started pointer.
+4. A port-forward authority egyszeru es egyiranyu:
+   - CLI `--port-forward` a legerosebb opt-in,
+   - ennek hianyaban a persisted started pointer `portForwards` ervenyes,
+   - UI/API attach Phase 2F-ben nem vezet be kulon operator override-ot.
+5. A task lenyege nem "remote start", hanem "remotehoz attach consume":
+   - nincs implicit start,
+   - nincs implicit restart,
+   - nincs approve/rework/cleanup routing.
+6. A successor-owned temak blocker-minositeset az Approval Scope 4-5 pontja szerint kell megitelni: csak akkor johetnek vissza `Phase 2F` blockernek, ha bizonyithato, hogy nelkuluk a `Phase 2F` sajat attach authorityja, UI gatingje, vagy retry boundaryja nem zarhato le helyesen.
 
 ## Current Codebase Check (2026-04-17)
 
@@ -73,6 +95,20 @@ owners:
    - `Phase 3A` tovabbra is kulon mutation routing task marad,
    - `Phase 3B` tovabbra is kulon cleanup task marad,
    - `Phase 3C` tovabbra is kulon recovery/docs/rollout task marad.
+
+## Target-File Reality / Touch Envelope
+
+1. A `target_files` lista ebben a taskban implementation envelope, nem "minden elem kotelezoen modosul" promise.
+2. Review-szempontbol a kotelezo bounded surface-ek:
+   - CLI attach entrypoint + parse/help wiring,
+   - remote pointer read/validation + attach command build,
+   - launcher consume ugyanazzal a generated commanddal,
+   - UI attach visibility/action/store consume a `Phase 2E` read-modelrol.
+3. A lista vegyesen tartalmaz:
+   - jelenleg hianyzo, uj-file jelolt pathokat: `src/cli/commands/bubble/attach.ts`, `tests/cli/bubbleAttachCommand.test.ts`,
+   - mar letezo shared surface-eket: `ui/src/components/actions/ActionBar.tsx`, `ui/src/components/actions/ActionBar.test.tsx`.
+4. A meglevo shared UI surface-ek azert szerepelnek itt, mert az attach availability es copy/CTA UX tenylegesen ezen a komponens-lancon megy at.
+5. Nem minden felsorolt file kotelezoen modosul ugyanabban a patchben, de a Call-site Matrix es a Test Matrix `required-now` sorai teljes kovetelmenyek maradnak; a touch-set csak azt tisztazza, hogy ezek mely bounded file-reszletekben zarhatok le.
 
 ## Source-Anchor Consistency
 
@@ -108,7 +144,10 @@ owners:
 
 ## Approval Scope / Review Boundary
 
-1. Ez a task akkor tekintheto tisztan approvable `Phase 2F` szeletnek, ha a bounded remote attach consume egyertelmuen bizonyitott:
+1. Gyors screening-kerdes approval elott:
+   - a remote attach most mar a `Phase 2E` read-modelt es a persisted started pointert consume-olja ugy, hogy nem nyit vissza start/restart/mutation/cleanup semantics-et?
+2. Ez a screening-kerdes nem helyettesiti az alatta levo teljes acceptance checklistet; csak rovid operatori osszefoglalas.
+3. Ez a task akkor tekintheto tisztan approvable `Phase 2F` szeletnek, ha a bounded remote attach consume egyertelmuen bizonyitott:
    - explicit `pairflow bubble attach` public surface letezik,
    - local bubble attach retained valtozatlan marad,
    - `remote.json(kind="created")` pointer eseten az attach fail-closed actionable "start first" hibat ad,
@@ -116,14 +155,17 @@ owners:
    - a pointer read/validation seam explicit task-scope-ban van; a remote attach authority nem implicit bubble-lookup vagy global-config fallback,
    - a launcher consume ugyanazt a generated attach commandot futtatja/copy-zza, mint amit a CLI/UI surface visszaad,
    - a UI attach availability mar a remote read-modelre ul, nem local tmux/session feltetelezesre,
+   - az `ActionBar` CTA/hint render ugyanazt a gated `visible/enabled/hint` modelltruthot viszi tovabb, mint a `BubbleExpandedCard`,
    - remote tmux/runtime hiba eseten nincs implicit local `startBubble()` recovery retry,
-   - a UI/API attach consume a persisted pointer/default forward authorityra ul; ad hoc port-forward override Phase 2F-ben csak a CLI attach surface-en kotelezo,
+   - a UI/API attach consume a persisted pointer/default forward authorityra ul; Phase 2F-ben ott nincs kulon operator-szintu ad hoc port-forward input vagy override,
+   - a CLI attach surface ettol kulon explicit `--port-forward` opt-int adhat,
    - a result/error contract additive marad a CLI/UI/API consume feluleteken.
-2. Ezek hianya vagy kesobbi ownershipje nem lehet `Phase 2F` blocker, mert successor-owned scope:
+4. Ezek hianya vagy kesobbi ownershipje nem lehet `Phase 2F` blocker, mert successor-owned scope:
    - remote restart vagy reboot recovery semantics,
    - remote approval/rework routing,
    - remote cleanup/delete/merge routing,
    - remote status/list producer rework vagy pointer producer modositas.
+5. Az 1. screening-kerdes es a 4. successor lista egyutt ertelmezendo: a rovid screening nem irhatja felul sem a 3. acceptance checklistet, sem a 4. pontban zarva hagyott successor scope-ot.
 
 ## L0 - Policy
 
@@ -199,7 +241,8 @@ Lezarni a remote bubble attach consume-ot ugy, hogy a user explicit attach surfa
    - existing launcher precedence (`bubble attach_launcher` -> global attach launcher -> default) megmarad,
    - `Phase 2D` remote `start --attach` reject baseline nem torolheto csendben,
    - `Phase 2E` remote status/list read-model contract nem gyengulhet attach miatt,
-   - a meglevo UI attach copy-mode consume retained marad; remote attach csak a command payload authorityjat valtoztatja.
+   - a meglevo UI attach copy-mode consume retained marad; remote attach csak a command payload authorityjat valtoztatja,
+   - a shared `ActionBar`/attach CTA-hint surface ugyanarra a gated availability truthra marad ultetve, nem vezet be kulon local-only readiness logikat.
 2. Allowed resolution paths:
    - local bubble -> retained local attach command,
    - started remote pointer -> remote SSH attach command builder -> launcher consume.
@@ -283,7 +326,7 @@ Lezarni a remote bubble attach consume-ot ugy, hogy a user explicit attach surfa
 | --- | --- | --- | --- | --- |
 | `pairflow bubble attach` CLI | `src/cli/index.ts`, new bubble command surface | additive | explicit public attach entrypoint, help text, option parsing | `start --attach` remote policy |
 | Attach command/result contract | attach builder, pointer artifact seam, router, UI API/store client | additive | remote attach input/output mezok legfeljebb additivek; existing local callers nem tornek | mutation routing |
-| UI attach availability | `BubbleExpandedCard`, UI state/api consumers | behavioral consume change | remote attach mar nem hidden-by-default; read-model gated enablement/hint | recovery guidance |
+| UI attach availability | `BubbleExpandedCard`, `ActionBar`, UI state/api consumers | behavioral consume change | remote attach mar nem hidden-by-default; read-model gated enablement/hint | recovery guidance |
 | Router attach action | UI router + HTTP error discriminator | behavioral tighten | local auto-retry retained; remote auto-retry tiltott | remote restart flow |
 
 ### 0b Baseline Preservation
@@ -308,6 +351,7 @@ Lezarni a remote bubble attach consume-ot ugy, hogy a user explicit attach surfa
 | UI router `POST /api/bubbles/:id/attach` | local attach | retained local retry-on-missing | remote-only policyval torni local UX-et |
 | UI router `POST /api/bubbles/:id/attach` | remote attach | egyszeri attach invoke persisted pointer/default forward authorityval, explicit remote hiba mapping | `startBubble()` retry |
 | `BubbleExpandedCard` attach affordance | remote summary/detail | read-model gated visible/enabled/hint | local runtime sessionbol attach readinesset feltetelezni |
+| `ActionBar` attach CTA + hint render | attach availability model | a read-model gated `visible/enabled/hint` contractot torzitas nelkul jelenitse meg | local tmux-only readinesset visszacsempeszni a gomb/hint UX-be |
 | `useBubbleStore` attach action | remote attach result | retained copy-mode UX, de remote SSH command payload consume-ja | local tmux-only command formatot feltetelezni |
 
 ## 2) Data and Interface Contract
@@ -375,13 +419,15 @@ Lezarni a remote bubble attach consume-ot ugy, hogy a user explicit attach surfa
 | T3 | remote created pointer fail-closed | `remote.json(kind="created")` | attach | actionable start-first hiba, nincs SSH invoke | P1 | required-now |
 | T4 | remote started attach command build | valid started pointer | attach | SSH command + remote tmux target + launcher consume | P1 | required-now |
 | T5 | port-forward precedence | started pointer + CLI overrides | attach | CLI ports elsobbsege, shell-safe `-L` projection | P1 | required-now |
-| T6 | UI remote attach visibility | remote detail/summary shapes | render + action availability | started remote attach lathato/ertelmes; created remote nem claimel attach-ready | P1 | required-now |
+| T6 | UI remote attach visibility | remote detail/summary shapes | render + action availability | started remote attach nem hidden-by-default es attach-szempontbol ertelmes; created remote nem claimel attach-ready; a remote visibility/enabled allapot a `Phase 2E` read-modelre ul | P1 | required-now |
 | T7 | router local retry retained | local tmux missing | UI attach action | `startBubble()` retry retained | P1 | required-now |
 | T8 | router remote retry forbidden | remote tmux/SSH missing | UI attach action | nincs `startBubble()` retry, explicit remote hiba | P1 | required-now |
 | T9 | start --attach baseline preserved | remote bubble | `bubble start --attach` | tovabbra is explicit reject | P1 | required-now |
 | T10 | store copy-mode retained | UI attach result `launcherUsed=copy` | attach | clipboard consume retained, remote SSH command is masolhato | P1 | required-now |
-| T11 | pointer read failure fail-closed | invalid/malformed remote pointer | attach | explicit invalid remote attach error, nincs fallback | P1 | required-now |
-| T12 | result contract additive | CLI/API/UI attach result | attach | local callers nem tornek, remote attachCommand SSH alapu lehet | P2 | required-now |
+| T11 | UI/API no ad-hoc port-forward override | remote attach via UI/API surface | attach | a UI/API consume a persisted pointer/default forward authorityra ul; kulon operator port-forward input vagy override nincs | P1 | required-now |
+| T12 | pointer read failure fail-closed | invalid/malformed remote pointer | attach | explicit invalid remote attach error, nincs fallback | P1 | required-now |
+| T13 | ActionBar CTA/hint parity | attach availability model allapotai (`created`, `started`, unavailable) | render CTA + hint | az `ActionBar` a gated `visible/enabled/hint` allapotot torzitas nelkul viszi tovabb minden attach-relevans allapotban, copy-mode alatt is | P2 | required-now |
+| T14 | result contract additive | CLI/API/UI attach result | attach | local callers nem tornek, remote attachCommand SSH alapu lehet | P2 | required-now |
 
 ## L2 - Implementation Notes
 
@@ -402,10 +448,20 @@ Lezarni a remote bubble attach consume-ot ugy, hogy a user explicit attach surfa
    - deterministic dedupe/order hasznos, ha a builder egyszeru marad tole.
 6. A UI attach action Phase 2F-ben szandekosan nem kap sajat operator-szintu port-forward inputot; ha ez kesobb kell, az kulon additive successor task legyen, ne csendes scope-novekmeny.
 
+## Review-Loop Resistance
+
+1. File-shape review helyett behavior-slice review kell:
+   - nem az a kerdes, hogy pontosan melyik komponensben landol az attach gating,
+   - hanem az, hogy a remote attach authority es a retry boundary jo helyre kerult-e.
+2. Successor-owned temat csak akkor szabad ide visszahozni blockernek, ha bizonyithato, hogy nelkule a `Phase 2F` sajat attach authorityja, UI gatingje, vagy retry boundaryja nem zarhato le helyesen.
+   - ugyanennek a szabalynek a roviditett operatori verzioja olvashato a Feynman Summary 6. pontjaban.
+3. A `Phase 2F`-et nem kell ujranyitni attol, hogy egy jobb status refresh, deeplink, recovery CTA vagy attach utani richer operator guidance kesobb hasznos lenne.
+4. Ha a megoldas a `Phase 2F` contracton belul mar attach-consume-only marad, akkor a touch-set kisebb atszervezese vagy shared UI komponensbe mozgo logika nem review blocker.
+
 ## Hardening Backlog
 
 1. Kesobbi taskban kulon elfer, ha a remote attach remote-runtime probe-ja strukturaltabb error kodokat ad.
-2. Kesobbi taskban elfer a remote `start --attach` policy ujragondolasa, ha a UX ezt tenyleg igenyli.
+2. Ha a UX kesobb igenyli, a remote `start --attach` policy csak kulon successor taskban es kifejezett policyvaltoztatassal vizsgalhato ujra; a `Phase 2F` task nem keszitheti elo csendes enablementtel.
 3. Kesobbi taskban elfer browser/deeplink richer UX a port-forward consume fole, de ez most nem required-now.
 
 ## Review Control
