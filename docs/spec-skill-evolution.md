@@ -760,3 +760,76 @@ After the `911af8a2` / `5f0f0254` Artifact Responsibilities refactor slimmed Pla
 - The adjacent pairflow session (`019d97c6-026a`) is NOT the authoring session — it ran 4.5 min, was dedicated to a separate `e3a-doc-refi` bubble review, and its `git status` output at L17 proves the skill edits were already on disk before it started.
 - Post-commit sessions starting at `rollout-2026-04-16T22-05-03-019d97e5-...` (2026-04-16T20:05+ UTC) are the first Codex sessions to use the new drift-check vocabulary; they are *consumers* of the gate, not its source.
 - The precise reasoning the user went through offline between `5f0f0254` (19:08 UTC) and `a75bca03` (19:53 UTC) — whether it was triggered by a concrete spec instance they just saw, a general reflection, or a review of the refactor itself — is not recoverable from the archive alone.
+
+---
+
+# Appendix A — Skill Assessment Trace
+
+Captured on 2026-04-17 during the research session that produced this document. Two snapshots are recorded here verbatim for future reference: the assessment given at the start of the research session (before any commit-level investigation), and the revised assessment after the 10-commit research was complete. Kept side-by-side so future readers can see how evidence moved the opinion.
+
+## A.1 Initial assessment — 2026-04-17, pre-research
+
+*Context: at the start of the session the user asked for an opinion on the `CreatePairflowSpec` skill at its then-current state (after `a75bca03`, ≈2,585 lines across `SKILL.md` + 4 Workflows + 7 references + 3 Templates, with 7 mandatory gates). No commit-level history research had been done yet.*
+
+**Overall impression:** well thought out, but overly heavy. Strong core (artifact-responsibility separation, work-type triage, L0/L1/L2, Target-File Reality Check), bureaucratic periphery (gate stack, Minimum Contract Rules, Core Principles) — some of which appears to duplicate work across sections.
+
+### Strengths
+
+1. Clean responsibility separation: PRD = intent, Plan = coverage/sequencing, Task = bounded slice, Review = boundary. Rarely this sharply distinguished in practice.
+2. "Context-first, gap-only interview" and evidence-based P0/P1 grading — right principles, crisply stated.
+3. Target-File Reality Check: pragmatic defence against "the label lies about the scope". The single most practical piece in the skill.
+4. `forbidden_fallback` + `allowed_resolution_path` pairing. Rarely seen: explicitly preventing review-tightening regression. Sophisticated.
+5. Baseline Preservation section concept: a refinement may not sneak away baseline behavior.
+
+### Concerns
+
+1. **Gate overgrowth.** Seven mandatory gates in SKILL.md (Control-Model, Closed-Contract, Target-File, Authority Fan-out, Closure-Budget, Bounded-Task-Shape, Complexity-Risk). At least three (Authority Fan-out + Closure-Budget + Bounded-Task-Shape) appear to count the same closure-bucket set from different angles — consolidation candidate.
+2. **Ironic size.** The skill campaigns against "review-loop inflation", yet the `Minimum Contract Rules` (33 points) + `Core Principles` (27 points) + 7 gates + 4 workflows is itself a review-loop generator. Every activation carries a high context cost, and LLM attention fragments.
+3. **Significant redundancy.** `Minimum Contract Rules` and `Core Principles` are largely re-statements of the gates — the same idea said a third time. Today the SKILL.md is not "router + policy", it is "router + policy + encyclopedia".
+4. **Abstraction-level issue.** The `closure bucket` vocabulary (`authority_producer`, `read_model_consumers`, `cleanup_recovery_consumers`, …) works when the team has lived with it; in a new project it would over-complicate trivial work.
+5. **No concrete good-output example is visible.** Templates carry scaffolding but SKILL.md does not point to "here is what an acceptable L0/L1/L2 task looks like". Examples in the doc are routing-level, not artifact-level.
+6. **Risk-proportional gate application is weak in practice.** On paper bugfix/docs-only can skip gates; in reality the text leans heavily on "mandatory", and the CreateTask workflow step 0 lands most scopes on full gate evaluation.
+
+### Suggestions (ordered by priority)
+
+1. **Gate consolidation**: merge `Authority Fan-out` + `Closure-Budget` + `Bounded-Task-Shape` into a single `Scope Classification Gate` that does the fan-out inventory, the collapse/split decision, and the primary-shape classification in one pass.
+2. **SKILL.md slimming to ~150 lines**: router table + work-type triage + contract-boundary override + brief gate index. Most of `Minimum Contract Rules` and `Core Principles` moves under `references/`, referenced per workflow.
+3. **One fully worked example** in `references/Example-Task.md` showing what a complete, acceptable L0/L1/L2 task looks like — more valuable than another rule.
+4. **Explicit bugfix/docs-only fast path**: reduce the gate list outright when the work-type triage classifies them that way.
+
+## A.2 Revised assessment — 2026-04-17, post-research
+
+*Context: after researching all ten skill commits between 2026-04-05 and 2026-04-16 and documenting them earlier in this file, the initial assessment was re-examined against the actual incident evidence.*
+
+### What the research refuted in the initial assessment
+
+1. **"Gate overgrowth" is largely inaccurate as framed.** Each gate is tied to a specific documented bubble-failure pattern, not a theoretical abstraction. The research section for each commit above names the triggering bubble, cites round-by-round `CONVERGENCE` findings from `transcript.ndjson`, and shows the gate closing exactly that failure mode. Summary:
+   - Complexity-Risk → `review-policy-runtime-surface-phase1` CANCELLED R4.
+   - `identity_join_risk` → `bci3-impl` Stripe / `payment_intent` / vendor id reconciliation.
+   - Control-Model Readiness → billing/Stripe source-of-truth confusion.
+   - Authority Fan-out → `remote-phase1b-docref` round 3 "too many consume families".
+   - Baseline Preservation → last-report removal (`writeFile` removed, `readFile` left in place).
+   - Closure-Budget → bubble at round 11 + 9 direct fixes, passing every prior gate.
+   - Bounded-Task-Shape → `impl_phase2b_remote_create` R13 with mixed producer + fail-closed + coordination.
+   - Closed-Contract Drift → refinement drift risk after the `911af8a2` refactor.
+   The gates operate as **defence-in-depth**, not as naive duplication.
+2. **My own "gate consolidation" proposal would have been a regression.** Authority Fan-out, Closure-Budget, and Bounded-Task-Shape each answer an orthogonal question (*how many consume families? how many closure families move together? is the task's primary shape producer vs fail-closed vs coordination?*). Collapsing them into one gate would lose coverage of the specific failure modes each is designed to catch.
+3. **The user already noticed the bloat and course-corrected.** Commits `911af8a2` and `5f0f0254` (2026-04-16) are exactly a redundancy-reduction pass: Plan slimmed, Task self-contained, `ReviewSpec` two-mode. The user's correction is more sophisticated than my original "merge gates" suggestion — it is layering rather than brutal consolidation.
+
+### What remains valid from the initial concerns
+
+1. **The skill is still sizeable.** SKILL.md in the `a75bca03` state is still ≈430 lines; the `911af8a2` refactor reduced structural duplication but the total rule count has grown. New-user onboarding is still heavy.
+2. **The `closure bucket` / `authority_producer` / `cleanup_recovery_consumers` vocabulary is deliberately generic** (see `8b57b962` user instruction at rollout:L621 demanding "perflow agnostic" bucket names), but the abstraction price is real: without Pairflow-domain context the vocabulary is hard to onboard onto.
+3. **There is still no single fully worked L0/L1/L2 reference example.** Templates give the scaffold, domain examples in the gate reference files have grown (Stripe invoice id etc. in `identity_join_risk`), but an end-to-end acceptable task artifact is not shown anywhere.
+4. **Risk-proportional gate application is still weak for bugfix / docs-only.** Work-type triage exists at the top of SKILL.md, but the gate list is additive and does not auto-skip for lower-risk work-types. Every new commit has been additive in this regard.
+
+### What the research surfaced that the initial assessment did not see
+
+1. **Evidence-based iteration, not ad-hoc accretion.** Each gate has an archived bubble behind it, and the user's "20–30 rounds" framing (rollout:L284 at `ca22d258`) aggregates across a real bubble chain (bci3 → bci3a → phaseE). The perception is not paranoia; the archive corroborates it.
+2. **User self-correction is part of the skill's design loop.** One of ten commits (`911af8a2`) is an explicit refactor; the user audits their own skill and does not only add to it. This changes how additional gates should be weighed: not "is it worth the cost?" alone, but "is the self-audit frequency sane?" — and it is (10 commits / 12 days, plus one explicit redundancy-reduction pass).
+3. **The "incident ledger" I suggested at the start of the session implicitly already exists** in the triad of commit message + commit diff + adjacent Codex session. This document has now made it explicit in `docs/spec-skill-evolution.md`.
+4. **New session-type taxonomy** emerged during the research: `authoring` (co-design), `review-only` (user brings pre-drafted diff), `hybrid` (domain work + mid-session skill tightening), `sync-only` (mirror commit to another repo), `offline-no-session` (no Codex session at all). This is not skill-criticism — it characterises how the user designs, and shows the gates were not all produced the same way.
+
+### Revised verdict in one sentence
+
+The initial "too much, too redundant" impression underestimated the skill's depth. The skill is in fact an **evidence-based safety system** for a specific domain (Pairflow bubble refinement's recurring failure modes), and the user's own self-correction (the `911af8a2` refactor) was already targeting redundancy reduction more sophisticatedly than my original proposal. Onboarding difficulty and abstraction level remain legitimate concerns, but the rule count is no longer more than the evidence warrants.
