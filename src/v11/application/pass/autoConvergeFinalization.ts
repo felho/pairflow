@@ -10,6 +10,7 @@ import type {
   ReviewerFindingsClaim,
   ReviewerFindingsClaimParserMetadata
 } from "../../domain/pass/reviewerFindingsClaim.js";
+import type { PassActivationProvenance } from "./passCommandContract.js";
 
 export interface FinalizeAutoConvergePassInput {
   now: Date;
@@ -35,6 +36,7 @@ export interface FinalizeAutoConvergePassInput {
   repeatCleanReasonDetail: RepeatCleanAutoconvergeReasonDetail;
   repeatCleanTrigger: boolean;
   mostRecentPreviousReviewerCleanPassEnvelope: boolean;
+  activation?: PassActivationProvenance;
   converged: EmitConvergedResult;
 }
 
@@ -80,6 +82,7 @@ export interface FinalizeAutoConvergePassDependencies<TResult> {
   buildAutoConvergePassResult: (input: {
     bubbleId: string;
     inferredIntent: boolean;
+    activation?: PassActivationProvenance;
     repeatCleanReasonDetail: RepeatCleanAutoconvergeReasonDetail;
     convergenceSequence: number;
     convergenceEnvelope: EmitConvergedResult["convergenceEnvelope"];
@@ -149,6 +152,9 @@ export async function finalizeAutoConvergePass<TResult>(
   return dependencies.buildAutoConvergePassResult({
     bubbleId: input.bubbleId,
     inferredIntent: input.inferredIntent,
+    ...(input.activation !== undefined
+      ? { activation: input.activation }
+      : {}),
     repeatCleanReasonDetail: input.repeatCleanReasonDetail,
     convergenceSequence: input.converged.convergenceSequence,
     convergenceEnvelope: input.converged.convergenceEnvelope,

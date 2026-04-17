@@ -15,6 +15,7 @@ import type {
   ReviewerFindingsClaimParserMetadata
 } from "../../domain/pass/reviewerFindingsClaim.js";
 import type { evaluateReviewerGateWarnings } from "../../../v11/shared/gates/docContractGates.js";
+import type { PassActivationProvenance } from "./passCommandContract.js";
 
 interface NormalPassPathsInput {
   transcriptPath: string;
@@ -46,6 +47,7 @@ export interface RunNormalPassFlowInput {
   noFindings: boolean;
   findings: Finding[];
   inferredIntent: boolean;
+  activation?: PassActivationProvenance;
   reviewerVerification: ReviewVerificationInputResolution | undefined;
   state: BubbleStateSnapshot;
   expectedStateFingerprint: string;
@@ -192,6 +194,7 @@ export interface RunNormalPassFlowDependencies<TResult> {
     sequence: number;
     envelope: ProtocolEnvelope;
     state: BubbleStateSnapshot;
+    activation?: PassActivationProvenance;
     deliveryResult: EmitTmuxDeliveryNotificationResult | undefined;
     deliveryRetried: boolean;
   }) => Promise<TResult>;

@@ -42,6 +42,7 @@ describe("emitAskHumanFromWorkspaceV11", () => {
       bubbleId: "b_ask_human_v11_01",
       task: "Need clarification"
     });
+    const authorityBeforeEmit = await readStateSnapshot(bubble.paths.statePath);
     const now = new Date("2026-02-21T12:10:00.000Z");
 
     const result = await emitAskHumanFromWorkspaceV11({
@@ -56,6 +57,13 @@ describe("emitAskHumanFromWorkspaceV11", () => {
     expect(result.envelope.sender).toBe("codex");
     expect(result.envelope.recipient).toBe("human");
     expect(result.state.state).toBe("WAITING_HUMAN");
+    expect(result.activation).toEqual({
+      handoff_id: authorityBeforeEmit.state.execution_context?.handoff_id,
+      execution_id: authorityBeforeEmit.state.execution_context?.execution_id,
+      expected_role: authorityBeforeEmit.state.execution_context?.active_role,
+      expected_round: authorityBeforeEmit.state.execution_context?.round,
+      expected_state_fingerprint: authorityBeforeEmit.fingerprint
+    });
     expect(result.delivery).toMatchObject({
       delivered: false,
       reason: "no_runtime_session",

@@ -45,6 +45,9 @@ export function buildAutoConvergeFlowInput(
     reviewerVerification: input.passRouting.reviewerVerification,
     passIntent: input.passRouting.intent,
     inferredIntent: input.passRouting.inferredIntent,
+    ...(input.activation !== undefined
+      ? { activation: input.activation }
+      : {}),
     hasFindings: input.hasFindings,
     noFindings: input.noFindings,
     findings: input.findings,

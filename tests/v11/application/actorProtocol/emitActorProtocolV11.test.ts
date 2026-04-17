@@ -488,6 +488,35 @@ describe("emitActorProtocolV11 wrappers", () => {
     } satisfies Partial<ActorEmitContextError>);
   });
 
+  it("rejects direct implementer wrapper calls when authoritative snapshot reuses handoff_id as execution_id", async () => {
+    const handoffId =
+      "implementer:b_actor_protocol_integrity_impl_02:round:2:attempt:1";
+
+    await expect(
+      actorProtocolModule.emitImplementerPilotActorProtocolV11({
+        input: {
+          kind: "human_question",
+          repo: "/repo",
+          bubble_id: "b_actor_protocol_integrity_impl_02",
+          handoff_id: handoffId,
+          execution_id: "exec_actor_protocol_integrity_impl_02",
+          question: "Need input"
+        },
+        authoritativeContext: buildSyntheticAuthoritativeContext({
+          bubbleId: "b_actor_protocol_integrity_impl_02",
+          handoffId,
+          executionId: handoffId,
+          expectedRole: "implementer",
+          expectedRound: 2,
+          fingerprint: "fp_actor_protocol_integrity_impl_02"
+        }) as never
+      })
+    ).rejects.toMatchObject({
+      name: "ActorEmitContextError",
+      reasonCode: "ACTOR_EMIT_CONTEXT_INVALID"
+    } satisfies Partial<ActorEmitContextError>);
+  });
+
   it("routes direct reviewer wrapper pass calls through canonical reviewer authority", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({

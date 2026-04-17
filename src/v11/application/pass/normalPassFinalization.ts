@@ -14,6 +14,7 @@ import type {
   ReviewerFindingsClaimParserMetadata
 } from "../../domain/pass/reviewerFindingsClaim.js";
 import type { EmitTmuxDeliveryNotificationResult } from "../../shared/ports/tmuxDelivery.js";
+import type { PassActivationProvenance } from "./passCommandContract.js";
 
 export interface FinalizeNormalPassInput {
   now: Date;
@@ -43,6 +44,7 @@ export interface FinalizeNormalPassInput {
   sequence: number;
   envelope: ProtocolEnvelope;
   state: BubbleStateSnapshot;
+  activation?: PassActivationProvenance;
   deliveryResult: EmitTmuxDeliveryNotificationResult | undefined;
   deliveryRetried: boolean;
 }
@@ -80,6 +82,7 @@ export interface FinalizeNormalPassDependencies<TResult> {
     envelope: ProtocolEnvelope;
     state: BubbleStateSnapshot;
     inferredIntent: boolean;
+    activation?: PassActivationProvenance;
     repeatCleanReasonCode: RepeatCleanAutoconvergeReasonCode;
     repeatCleanReasonDetail: RepeatCleanAutoconvergeReasonDetail;
     repeatCleanTrigger: boolean;
@@ -161,6 +164,9 @@ export async function finalizeNormalPass<TResult>(
     envelope: input.envelope,
     state: input.state,
     inferredIntent: input.inferredIntent,
+    ...(input.activation !== undefined
+      ? { activation: input.activation }
+      : {}),
     repeatCleanReasonCode: input.repeatCleanReasonCode,
     repeatCleanReasonDetail: input.repeatCleanReasonDetail,
     repeatCleanTrigger: input.repeatCleanTrigger,

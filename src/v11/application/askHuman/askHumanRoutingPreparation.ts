@@ -8,6 +8,9 @@ import type {
   PrepareAskHumanRoutingInput,
   PrepareAskHumanRoutingResult
 } from "../../shared/askHuman/askHumanRoutingContract.js";
+import {
+  buildOptionalActorActivationProvenance
+} from "../../shared/actorProtocol/actorEmitContext.js";
 import { resolveAskHumanRoutingPreparationDependencies } from "./askHumanRoutingPreparationDependencyResolution.js";
 import { prepareAskHumanWorkspaceContext } from "./askHumanWorkspaceContextPreparation.js";
 
@@ -36,6 +39,15 @@ export async function prepareAskHumanRouting(
     dependencies: resolvedDependencies
   });
   assertAskHumanRunningState(workspace.state, input.createError);
+  const activation =
+    workspace.state.active_role === "implementer"
+      ? buildOptionalActorActivationProvenance({
+          ...(input.authoritativeContext !== undefined
+            ? { authoritativeContext: input.authoritativeContext }
+            : {}),
+          loadedState: workspace.loadedState
+        })
+      : undefined;
 
   return {
     nowIso: input.now.toISOString(),
@@ -44,6 +56,7 @@ export async function prepareAskHumanRouting(
     resolved: workspace.resolved,
     bubbleIdentity: workspace.bubbleIdentity,
     loadedState: workspace.loadedState,
-    state: workspace.state
+    state: workspace.state,
+    ...(activation !== undefined ? { activation } : {})
   };
 }

@@ -6,6 +6,7 @@ import {
 import type { BubbleStateSnapshot } from "../../../types/bubble.js";
 import type { ProtocolEnvelope } from "../../../types/protocol.js";
 import type { EmitConvergedV11Result as EmitConvergedResult } from "../converged/emitConvergedV11.js";
+import type { PassActivationProvenance } from "./passCommandContract.js";
 
 export interface PassResultDeliveryLike {
   status: "accepted" | "rejected";
@@ -18,6 +19,7 @@ export interface PassResultDeliveryLike {
 export interface BuildAutoConvergePassResultInput {
   bubbleId: string;
   inferredIntent: boolean;
+  activation?: PassActivationProvenance;
   repeatCleanReasonDetail: RepeatCleanAutoconvergeReasonDetail;
   convergenceSequence: number;
   convergenceEnvelope: ProtocolEnvelope;
@@ -35,6 +37,7 @@ export interface BuildNormalPassResultInput {
   envelope: ProtocolEnvelope;
   state: BubbleStateSnapshot;
   inferredIntent: boolean;
+  activation?: PassActivationProvenance;
   repeatCleanReasonCode: RepeatCleanAutoconvergeReasonCode;
   repeatCleanReasonDetail: RepeatCleanAutoconvergeReasonDetail;
   repeatCleanTrigger: boolean;
@@ -51,6 +54,7 @@ export interface AutoConvergePassResult {
   resultEnvelopeKind: "convergence";
   state: BubbleStateSnapshot;
   inferredIntent: boolean;
+  activation?: PassActivationProvenance;
   transitionDecision: "auto_converge";
   repeatCleanReasonCode: typeof repeatCleanAutoconvergeTriggeredReasonCode;
   repeatCleanReasonDetail: RepeatCleanAutoconvergeReasonDetail;
@@ -74,6 +78,7 @@ export interface NormalPassResult {
   resultEnvelopeKind: "pass";
   state: BubbleStateSnapshot;
   inferredIntent: boolean;
+  activation?: PassActivationProvenance;
   transitionDecision: "normal_pass";
   repeatCleanReasonCode: RepeatCleanAutoconvergeReasonCode;
   repeatCleanReasonDetail: RepeatCleanAutoconvergeReasonDetail;
@@ -94,6 +99,11 @@ export function buildAutoConvergePassResult(
     resultEnvelopeKind: "convergence" as const,
     state: input.state,
     inferredIntent: input.inferredIntent,
+    ...(input.activation !== undefined
+      ? {
+          activation: input.activation
+        }
+      : {}),
     transitionDecision: "auto_converge" as const,
     repeatCleanReasonCode: repeatCleanAutoconvergeTriggeredReasonCode,
     repeatCleanReasonDetail: input.repeatCleanReasonDetail,
@@ -130,6 +140,11 @@ export function buildNormalPassResult(
     resultEnvelopeKind: "pass" as const,
     state: input.state,
     inferredIntent: input.inferredIntent,
+    ...(input.activation !== undefined
+      ? {
+          activation: input.activation
+        }
+      : {}),
     transitionDecision: "normal_pass" as const,
     repeatCleanReasonCode: input.repeatCleanReasonCode,
     repeatCleanReasonDetail: input.repeatCleanReasonDetail,

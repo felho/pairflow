@@ -82,6 +82,9 @@ function buildFinalizeNormalPassInput<TResult>(input: {
     sequence: input.mapped.sequence,
     envelope: input.mapped.envelope,
     state: input.written.state,
+    ...(input.flowInput.activation !== undefined
+      ? { activation: input.flowInput.activation }
+      : {}),
     deliveryResult: input.normalPassDelivery.deliveryResult,
     deliveryRetried: input.normalPassDelivery.deliveryRetried
   };

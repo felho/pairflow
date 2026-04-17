@@ -65,6 +65,9 @@ export function buildNormalPassFlowInput(
     noFindings: input.noFindings,
     findings: input.findings,
     inferredIntent: input.passRouting.inferredIntent,
+    ...(input.activation !== undefined
+      ? { activation: input.activation }
+      : {}),
     reviewerVerification: input.passRouting.reviewerVerification,
     state: input.state,
     expectedStateFingerprint: input.loadedState.fingerprint,

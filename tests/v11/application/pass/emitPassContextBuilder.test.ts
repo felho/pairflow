@@ -64,7 +64,8 @@ describe("emitPassContextBuilder", () => {
             bubbleInstanceId: "bi_1234567890_abcdef0123456789"
           },
           loadedState: {
-            fingerprint: "fp_emit_ctx_01"
+            fingerprint: "fp_emit_ctx_01",
+            state: {}
           },
           state: {
             state: "RUNNING",
@@ -126,6 +127,7 @@ describe("emitPassContextBuilder", () => {
     expect(capturedRoutingInput?.senderRole).toBe("reviewer");
     expect(capturedRoutingInput?.round).toBe(2);
     expect(capturedRoutingDependencies).toBeDefined();
+    expect(context.activation).toBeUndefined();
   });
 
   it("omits optional inputIntent when command input does not provide it", async () => {
@@ -162,7 +164,8 @@ describe("emitPassContextBuilder", () => {
             bubbleInstanceId: "bi_1234567890_abcdef0123456789"
           },
           loadedState: {
-            fingerprint: "fp_emit_ctx_02"
+            fingerprint: "fp_emit_ctx_02",
+            state: {}
           },
           state: {
             state: "RUNNING",
@@ -214,5 +217,464 @@ describe("emitPassContextBuilder", () => {
     expect(
       Object.prototype.hasOwnProperty.call(capturedRoutingInput ?? {}, "inputIntent")
     ).toBe(false);
+  });
+
+  it("omits activation when loaded execution context has blank execution_id without authoritative context", async () => {
+    const context = await buildEmitPassContext(
+      {
+        commandInput: {
+          summary: "raw summary"
+        },
+        createError: (message: PairflowCommandErrorInput) => new Error(toErrorMessage(message)),
+        inferDefaultPassIntent: () => "review"
+      },
+      {
+        normalizePassCommandInput: () => ({
+          summary: "normalized summary",
+          refs: [],
+          now: new Date("2026-03-19T22:40:00.000Z")
+        }),
+        normalizePassCommandPayload: () => ({
+          findings: [],
+          hasFindings: false,
+          noFindings: false,
+          findingsPayloadInvalid: false
+        }),
+        preparePassWorkspaceContext: async () =>
+          ({
+            resolved: {
+              bubbleId: "b_emit_ctx_03",
+              repoPath: "/repo",
+              bubbleConfig: {
+                id: "b_emit_ctx_03",
+                review_artifact_type: "code",
+                severity_gate_round: 4
+              },
+              bubblePaths: {
+                worktreePath: "/repo/.pairflow/worktrees/b_emit_ctx_03",
+                transcriptPath: "/repo/.pairflow/bubbles/b_emit_ctx_03/transcript.ndjson"
+              }
+            },
+            bubbleIdentity: {
+              bubbleInstanceId: "bi_1234567890_abcdef0123456789"
+            },
+            loadedState: {
+              fingerprint: "fp_emit_ctx_03",
+              state: {
+                execution_context: {
+                  active_role: "reviewer",
+                  awaited_output_type: "pass_result",
+                  handoff_id: "implementer:b_emit_ctx_03:round:2:attempt:1",
+                  execution_id: "   ",
+                  round: 2,
+                  started_at: "2026-03-19T22:00:00.000Z",
+                  deadline_at: "2026-03-19T23:00:00.000Z",
+                  attempt: 1
+                }
+              }
+            },
+            state: {
+              state: "RUNNING",
+              round: 2
+            },
+            handoff: {
+              senderAgent: "claude",
+              senderRole: "reviewer",
+              recipientAgent: "codex",
+              recipientRole: "implementer",
+              envelopeRound: 2,
+              nextRound: 3
+            },
+            implementer: "codex",
+            reviewer: "claude"
+          }) as never,
+        buildPassRoutingInput: (input) => input as never,
+        preparePassRouting: async () =>
+          ({
+            intent: "review",
+            inferredIntent: true,
+            reviewerVerification: undefined,
+            transcript: [],
+            repeatCleanTrigger: {
+              reasonCode: "REPEAT_CLEAN_TRIGGER_NOT_MET",
+              reasonDetail: "base_precondition_not_met",
+              trigger: false,
+              mostRecentPreviousReviewerCleanPassEnvelope: false
+            }
+          }) as never,
+        createPassRoutingDependencies: () => ({}) as never
+      }
+    );
+
+    expect(context.activation).toBeUndefined();
+  });
+
+  it("omits activation when loaded execution context is missing execution_id without authoritative context", async () => {
+    const context = await buildEmitPassContext(
+      {
+        commandInput: {
+          summary: "raw summary"
+        },
+        createError: (message: PairflowCommandErrorInput) => new Error(toErrorMessage(message)),
+        inferDefaultPassIntent: () => "review"
+      },
+      {
+        normalizePassCommandInput: () => ({
+          summary: "normalized summary",
+          refs: [],
+          now: new Date("2026-03-19T22:42:00.000Z")
+        }),
+        normalizePassCommandPayload: () => ({
+          findings: [],
+          hasFindings: false,
+          noFindings: false,
+          findingsPayloadInvalid: false
+        }),
+        preparePassWorkspaceContext: async () =>
+          ({
+            resolved: {
+              bubbleId: "b_emit_ctx_035",
+              repoPath: "/repo",
+              bubbleConfig: {
+                id: "b_emit_ctx_035",
+                review_artifact_type: "code",
+                severity_gate_round: 4
+              },
+              bubblePaths: {
+                worktreePath: "/repo/.pairflow/worktrees/b_emit_ctx_035",
+                transcriptPath: "/repo/.pairflow/bubbles/b_emit_ctx_035/transcript.ndjson"
+              }
+            },
+            bubbleIdentity: {
+              bubbleInstanceId: "bi_1234567890_abcdef0123456789"
+            },
+            loadedState: {
+              fingerprint: "fp_emit_ctx_035",
+              state: {
+                execution_context: {
+                  active_role: "reviewer",
+                  awaited_output_type: "pass_result",
+                  handoff_id: "implementer:b_emit_ctx_035:round:2:attempt:1",
+                  round: 2,
+                  started_at: "2026-03-19T22:00:00.000Z",
+                  deadline_at: "2026-03-19T23:00:00.000Z",
+                  attempt: 1
+                } as never
+              }
+            },
+            state: {
+              state: "RUNNING",
+              round: 2
+            },
+            handoff: {
+              senderAgent: "claude",
+              senderRole: "reviewer",
+              recipientAgent: "codex",
+              recipientRole: "implementer",
+              envelopeRound: 2,
+              nextRound: 3
+            },
+            implementer: "codex",
+            reviewer: "claude"
+          }) as never,
+        buildPassRoutingInput: (input) => input as never,
+        preparePassRouting: async () =>
+          ({
+            intent: "review",
+            inferredIntent: true,
+            reviewerVerification: undefined,
+            transcript: [],
+            repeatCleanTrigger: {
+              reasonCode: "REPEAT_CLEAN_TRIGGER_NOT_MET",
+              reasonDetail: "base_precondition_not_met",
+              trigger: false,
+              mostRecentPreviousReviewerCleanPassEnvelope: false
+            }
+          }) as never,
+        createPassRoutingDependencies: () => ({}) as never
+      }
+    );
+
+    expect(context.activation).toBeUndefined();
+  });
+
+  it("maps activation from loaded state execution context when authoritative context is absent", async () => {
+    const context = await buildEmitPassContext(
+      {
+        commandInput: {
+          summary: "raw summary"
+        },
+        createError: (message: PairflowCommandErrorInput) => new Error(toErrorMessage(message)),
+        inferDefaultPassIntent: () => "review"
+      },
+      {
+        normalizePassCommandInput: () => ({
+          summary: "normalized summary",
+          refs: [],
+          now: new Date("2026-03-19T22:45:00.000Z")
+        }),
+        normalizePassCommandPayload: () => ({
+          findings: [],
+          hasFindings: false,
+          noFindings: false,
+          findingsPayloadInvalid: false
+        }),
+        preparePassWorkspaceContext: async () =>
+          ({
+            resolved: {
+              bubbleId: "b_emit_ctx_04",
+              repoPath: "/repo",
+              bubbleConfig: {
+                id: "b_emit_ctx_04",
+                review_artifact_type: "code",
+                severity_gate_round: 4
+              },
+              bubblePaths: {
+                worktreePath: "/repo/.pairflow/worktrees/b_emit_ctx_04",
+                transcriptPath: "/repo/.pairflow/bubbles/b_emit_ctx_04/transcript.ndjson"
+              }
+            },
+            bubbleIdentity: {
+              bubbleInstanceId: "bi_1234567890_abcdef0123456789"
+            },
+            loadedState: {
+              fingerprint: "fp_emit_ctx_04",
+              state: {
+                execution_context: {
+                  active_role: "reviewer",
+                  awaited_output_type: "pass_result",
+                  handoff_id: "implementer:b_emit_ctx_04:round:2:attempt:1",
+                  execution_id: "exec_emit_ctx_04",
+                  round: 2,
+                  started_at: "2026-03-19T22:00:00.000Z",
+                  deadline_at: "2026-03-19T23:00:00.000Z",
+                  attempt: 1
+                }
+              }
+            },
+            state: {
+              state: "RUNNING",
+              round: 2
+            },
+            handoff: {
+              senderAgent: "claude",
+              senderRole: "reviewer",
+              recipientAgent: "codex",
+              recipientRole: "implementer",
+              envelopeRound: 2,
+              nextRound: 3
+            },
+            implementer: "codex",
+            reviewer: "claude"
+          }) as never,
+        buildPassRoutingInput: (input) => input as never,
+        preparePassRouting: async () =>
+          ({
+            intent: "review",
+            inferredIntent: true,
+            reviewerVerification: undefined,
+            transcript: [],
+            repeatCleanTrigger: {
+              reasonCode: "REPEAT_CLEAN_TRIGGER_NOT_MET",
+              reasonDetail: "base_precondition_not_met",
+              trigger: false,
+              mostRecentPreviousReviewerCleanPassEnvelope: false
+            }
+          }) as never,
+        createPassRoutingDependencies: () => ({}) as never
+      }
+    );
+
+    expect(context.activation).toBeUndefined();
+  });
+
+  it("prefers authoritative activation context over loaded state execution context", async () => {
+    const context = await buildEmitPassContext(
+      {
+        commandInput: {
+          summary: "raw summary",
+          authoritativeContext: {
+            handoff_id: "implementer:b_emit_ctx_05:round:3:attempt:1",
+            execution_id: "exec_authoritative_05",
+            expected_role: "implementer",
+            expected_round: 3,
+            expected_state_fingerprint: "fp_authoritative_05"
+          } as never
+        },
+        createError: (message: PairflowCommandErrorInput) => new Error(toErrorMessage(message)),
+        inferDefaultPassIntent: () => "review"
+      },
+      {
+        normalizePassCommandInput: () => ({
+          summary: "normalized summary",
+          refs: [],
+          now: new Date("2026-03-19T22:50:00.000Z")
+        }),
+        normalizePassCommandPayload: () => ({
+          findings: [],
+          hasFindings: false,
+          noFindings: false,
+          findingsPayloadInvalid: false
+        }),
+        preparePassWorkspaceContext: async () =>
+          ({
+            resolved: {
+              bubbleId: "b_emit_ctx_05",
+              repoPath: "/repo",
+              bubbleConfig: {
+                id: "b_emit_ctx_05",
+                review_artifact_type: "code",
+                severity_gate_round: 4
+              },
+              bubblePaths: {
+                worktreePath: "/repo/.pairflow/worktrees/b_emit_ctx_05",
+                transcriptPath: "/repo/.pairflow/bubbles/b_emit_ctx_05/transcript.ndjson"
+              }
+            },
+            bubbleIdentity: {
+              bubbleInstanceId: "bi_1234567890_abcdef0123456789"
+            },
+            loadedState: {
+              fingerprint: "fp_emit_ctx_05",
+              state: {
+                execution_context: {
+                  active_role: "reviewer",
+                  awaited_output_type: "pass_result",
+                  handoff_id: "stale_handoff",
+                  execution_id: "stale_execution",
+                  round: 99,
+                  started_at: "2026-03-19T22:00:00.000Z",
+                  deadline_at: "2026-03-19T23:00:00.000Z",
+                  attempt: 1
+                }
+              }
+            },
+            state: {
+              state: "RUNNING",
+              round: 3
+            },
+            handoff: {
+              senderAgent: "claude",
+              senderRole: "reviewer",
+              recipientAgent: "codex",
+              recipientRole: "implementer",
+              envelopeRound: 3,
+              nextRound: 4
+            },
+            implementer: "codex",
+            reviewer: "claude"
+          }) as never,
+        buildPassRoutingInput: (input) => input as never,
+        preparePassRouting: async () =>
+          ({
+            intent: "review",
+            inferredIntent: true,
+            reviewerVerification: undefined,
+            transcript: [],
+            repeatCleanTrigger: {
+              reasonCode: "REPEAT_CLEAN_TRIGGER_NOT_MET",
+              reasonDetail: "base_precondition_not_met",
+              trigger: false,
+              mostRecentPreviousReviewerCleanPassEnvelope: false
+            }
+          }) as never,
+        createPassRoutingDependencies: () => ({}) as never
+      }
+    );
+
+    expect(context.activation).toBeUndefined();
+  });
+
+  it("omits activation when implementer execution_id reuses handoff_id", async () => {
+    const context = await buildEmitPassContext(
+      {
+        commandInput: {
+          summary: "raw summary"
+        },
+        createError: (message: PairflowCommandErrorInput) => new Error(toErrorMessage(message)),
+        inferDefaultPassIntent: () => "review"
+      },
+      {
+        normalizePassCommandInput: () => ({
+          summary: "normalized summary",
+          refs: [],
+          now: new Date("2026-03-19T22:55:00.000Z")
+        }),
+        normalizePassCommandPayload: () => ({
+          findings: [],
+          hasFindings: false,
+          noFindings: false,
+          findingsPayloadInvalid: false
+        }),
+        preparePassWorkspaceContext: async () =>
+          ({
+            resolved: {
+              bubbleId: "b_emit_ctx_06",
+              repoPath: "/repo",
+              bubbleConfig: {
+                id: "b_emit_ctx_06",
+                review_artifact_type: "code",
+                severity_gate_round: 4
+              },
+              bubblePaths: {
+                worktreePath: "/repo/.pairflow/worktrees/b_emit_ctx_06",
+                transcriptPath: "/repo/.pairflow/bubbles/b_emit_ctx_06/transcript.ndjson"
+              }
+            },
+            bubbleIdentity: {
+              bubbleInstanceId: "bi_1234567890_abcdef0123456789"
+            },
+            loadedState: {
+              fingerprint: "fp_emit_ctx_06",
+              state: {
+                active_role: "implementer",
+                round: 2,
+                execution_context: {
+                  active_role: "implementer",
+                  awaited_output_type: "pass_result",
+                  handoff_id: "implementer:b_emit_ctx_06:round:2:attempt:1",
+                  execution_id: "implementer:b_emit_ctx_06:round:2:attempt:1",
+                  round: 2,
+                  started_at: "2026-03-19T22:00:00.000Z",
+                  deadline_at: "2026-03-19T23:00:00.000Z",
+                  attempt: 1
+                }
+              }
+            },
+            state: {
+              state: "RUNNING",
+              round: 2,
+              active_role: "implementer"
+            },
+            handoff: {
+              senderAgent: "codex",
+              senderRole: "implementer",
+              recipientAgent: "claude",
+              recipientRole: "reviewer",
+              envelopeRound: 2,
+              nextRound: 2
+            },
+            implementer: "codex",
+            reviewer: "claude"
+          }) as never,
+        buildPassRoutingInput: (input) => input as never,
+        preparePassRouting: async () =>
+          ({
+            intent: "review",
+            inferredIntent: true,
+            reviewerVerification: undefined,
+            transcript: [],
+            repeatCleanTrigger: {
+              reasonCode: "REPEAT_CLEAN_TRIGGER_NOT_MET",
+              reasonDetail: "base_precondition_not_met",
+              trigger: false,
+              mostRecentPreviousReviewerCleanPassEnvelope: false
+            }
+          }) as never,
+        createPassRoutingDependencies: () => ({}) as never
+      }
+    );
+
+    expect(context.activation).toBeUndefined();
   });
 });

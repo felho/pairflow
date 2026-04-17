@@ -6,7 +6,12 @@ import type {
 } from "./askHumanDeliveryPortsContract.js";
 import type { BubbleStateSnapshot } from "../../../types/bubble.js";
 import type { ProtocolEnvelope } from "../../../types/protocol.js";
-import type { ActorEmitContextSnapshot } from "../actorProtocol/actorEmitContext.js";
+import type {
+  ActorActivationProvenance,
+  ActorEmitContextSnapshot
+} from "../actorProtocol/actorEmitContext.js";
+
+export type AskHumanActivationProvenance = ActorActivationProvenance;
 
 export interface EmitAskHumanInput {
   question: string;
@@ -22,6 +27,7 @@ export interface EmitAskHumanResult {
   envelope: ProtocolEnvelope;
   state: BubbleStateSnapshot;
   inferredRecipient: "human";
+  activation?: AskHumanActivationProvenance;
   delivery?: {
     status: AskHumanEmitTmuxDeliveryNotificationResult["status"];
     delivered: boolean;

@@ -33,6 +33,13 @@ describe("finalizeAskHumanFlow", () => {
             round: 2,
             active_agent: "codex",
             active_role: "implementer"
+          },
+          activation: {
+            handoff_id: "implementer:b_ask_human_01:round:2:attempt:1",
+            execution_id: "exec_b_ask_human_01_round2",
+            expected_role: "implementer",
+            expected_round: 2,
+            expected_state_fingerprint: "fp_ask_human_01"
           }
         } as never,
         appended: {
@@ -98,6 +105,13 @@ describe("finalizeAskHumanFlow", () => {
         state: "WAITING_HUMAN"
       },
       inferredRecipient: "human",
+      activation: {
+        handoff_id: "implementer:b_ask_human_01:round:2:attempt:1",
+        execution_id: "exec_b_ask_human_01_round2",
+        expected_role: "implementer",
+        expected_round: 2,
+        expected_state_fingerprint: "fp_ask_human_01"
+      },
       delivery: {
         status: "accepted",
         delivered: true,
@@ -130,6 +144,13 @@ describe("finalizeAskHumanFlow", () => {
             round: 2,
             active_agent: "codex",
             active_role: "implementer"
+          },
+          activation: {
+            handoff_id: "implementer:b_ask_human_02:round:2:attempt:1",
+            execution_id: "exec_b_ask_human_02_round2",
+            expected_role: "implementer",
+            expected_round: 2,
+            expected_state_fingerprint: "fp_ask_human_02"
           }
         } as never,
         appended: {
@@ -166,6 +187,13 @@ describe("finalizeAskHumanFlow", () => {
       message: "tmux delivery notification failed: tmux boom",
       reason: "tmux_send_failed",
       reason_code: "DELIVERY_ACK_REJECTED"
+    });
+    expect(result.activation).toEqual({
+      handoff_id: "implementer:b_ask_human_02:round:2:attempt:1",
+      execution_id: "exec_b_ask_human_02_round2",
+      expected_role: "implementer",
+      expected_round: 2,
+      expected_state_fingerprint: "fp_ask_human_02"
     });
   });
 
@@ -260,6 +288,7 @@ describe("finalizeAskHumanFlow", () => {
       delivered: true,
       message: "ok"
     });
+    expect("activation" in result).toBe(false);
     expect(bubbleNotificationSettled).toBe(false);
 
     resolveBubbleNotification?.();

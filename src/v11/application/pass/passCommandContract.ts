@@ -6,11 +6,16 @@ import type { BubbleStateSnapshot } from "../../../types/bubble.js";
 import type { Finding } from "../../../types/findings.js";
 import type { ProtocolEnvelope, PassIntent } from "../../../types/protocol.js";
 import type { PassDeliveryDependencies } from "./reviewerDelivery.js";
-import type { ActorEmitContextSnapshot } from "../../shared/actorProtocol/actorEmitContext.js";
+import type {
+  ActorActivationProvenance,
+  ActorEmitContextSnapshot
+} from "../../shared/actorProtocol/actorEmitContext.js";
 import type {
   EmitConvergedDependencies,
   EmitConvergedResult
 } from "../../shared/converged/convergedCommandTypes.js";
+
+export type PassActivationProvenance = ActorActivationProvenance;
 
 export interface EmitPassInput {
   summary: string;
@@ -30,6 +35,7 @@ export interface EmitPassResult {
   resultEnvelopeKind: "pass" | "convergence";
   state: BubbleStateSnapshot;
   inferredIntent: boolean;
+  activation?: PassActivationProvenance;
   transitionDecision: "normal_pass" | "auto_converge";
   repeatCleanReasonCode: RepeatCleanAutoconvergeReasonCode;
   repeatCleanReasonDetail: RepeatCleanAutoconvergeReasonDetail;
@@ -43,8 +49,10 @@ export interface EmitPassResult {
     approvalRequestEnvelope: ProtocolEnvelope;
   };
   delivery?: {
+    status: "accepted" | "rejected";
     delivered: boolean;
     reason?: string;
+    reason_code?: string;
     retried: boolean;
   };
   passValidationCompatibilityArtifactWriteFailureReason?: string;

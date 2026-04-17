@@ -134,6 +134,427 @@ describe("prepareAskHumanRouting", () => {
     });
   });
 
+  it("omits activation when loaded execution context has blank execution_id without authoritative context", async () => {
+    const result = await prepareAskHumanRouting(
+      {
+        question: "Need human input",
+        now: new Date("2026-02-21T12:10:00.000Z"),
+        createError: (message: PairflowCommandErrorInput) => new AskHumanRoutingTestError(toErrorMessage(message))
+      },
+      {
+        resolveBubbleFromWorkspaceCwd: async () =>
+          ({
+            bubbleId: "b_ask_human_blank_execution_id",
+            repoPath: "/repo",
+            bubblePaths: {
+              statePath: "/repo/.pairflow/bubbles/b_ask_human_blank_execution_id/state.json"
+            },
+            bubbleConfig: { id: "b_ask_human_blank_execution_id" }
+          }) as never,
+        ensureBubbleInstanceIdForMutation: async () =>
+          ({
+            bubbleInstanceId: "bi_1234567890_abcdef0123456789",
+            bubbleConfig: { id: "b_ask_human_blank_execution_id" },
+            backfilled: false
+          }) as never,
+        readStateSnapshot: async () =>
+          ({
+            state: {
+              state: "RUNNING",
+              round: 2,
+              active_agent: "codex",
+              active_role: "implementer",
+              active_since: "2026-02-21T12:00:00.000Z",
+              execution_context: {
+                active_role: "implementer",
+                awaited_output_type: "pass_result",
+                handoff_id: "implementer:b_ask_human_blank_execution_id:round:2:attempt:1",
+                execution_id: "   ",
+                round: 2,
+                started_at: "2026-02-21T12:00:00.000Z",
+                deadline_at: "2026-02-21T13:00:00.000Z",
+                attempt: 1
+              }
+            },
+            fingerprint: "fp_blank_execution_id_01"
+          }) as never
+      }
+    );
+
+    expect(result.activation).toBeUndefined();
+  });
+
+  it("omits activation when loaded execution context is missing execution_id without authoritative context", async () => {
+    const result = await prepareAskHumanRouting(
+      {
+        question: "Need human input",
+        now: new Date("2026-02-21T12:10:00.000Z"),
+        createError: (message: PairflowCommandErrorInput) => new AskHumanRoutingTestError(toErrorMessage(message))
+      },
+      {
+        resolveBubbleFromWorkspaceCwd: async () =>
+          ({
+            bubbleId: "b_ask_human_missing_execution_id",
+            repoPath: "/repo",
+            bubblePaths: {
+              statePath: "/repo/.pairflow/bubbles/b_ask_human_missing_execution_id/state.json"
+            },
+            bubbleConfig: { id: "b_ask_human_missing_execution_id" }
+          }) as never,
+        ensureBubbleInstanceIdForMutation: async () =>
+          ({
+            bubbleInstanceId: "bi_1234567890_abcdef0123456789",
+            bubbleConfig: { id: "b_ask_human_missing_execution_id" },
+            backfilled: false
+          }) as never,
+        readStateSnapshot: async () =>
+          ({
+            state: {
+              state: "RUNNING",
+              round: 2,
+              active_agent: "codex",
+              active_role: "implementer",
+              active_since: "2026-02-21T12:00:00.000Z",
+              execution_context: {
+                active_role: "implementer",
+                awaited_output_type: "pass_result",
+                handoff_id: "implementer:b_ask_human_missing_execution_id:round:2:attempt:1",
+                round: 2,
+                started_at: "2026-02-21T12:00:00.000Z",
+                deadline_at: "2026-02-21T13:00:00.000Z",
+                attempt: 1
+              } as never
+            },
+            fingerprint: "fp_missing_execution_id_01"
+          }) as never
+      }
+    );
+
+    expect(result.activation).toBeUndefined();
+  });
+
+  it("maps activation from loaded state execution context when authoritative context is absent", async () => {
+    const result = await prepareAskHumanRouting(
+      {
+        question: "Need human input",
+        now: new Date("2026-02-21T12:10:00.000Z"),
+        createError: (message: PairflowCommandErrorInput) => new AskHumanRoutingTestError(toErrorMessage(message))
+      },
+      {
+        resolveBubbleFromWorkspaceCwd: async () =>
+          ({
+            bubbleId: "b_ask_human_state_activation",
+            repoPath: "/repo",
+            bubblePaths: {
+              statePath: "/repo/.pairflow/bubbles/b_ask_human_state_activation/state.json"
+            },
+            bubbleConfig: { id: "b_ask_human_state_activation" }
+          }) as never,
+        ensureBubbleInstanceIdForMutation: async () =>
+          ({
+            bubbleInstanceId: "bi_1234567890_abcdef0123456789",
+            bubbleConfig: { id: "b_ask_human_state_activation" },
+            backfilled: false
+          }) as never,
+        readStateSnapshot: async () =>
+          ({
+            state: {
+              state: "RUNNING",
+              round: 2,
+              active_agent: "codex",
+              active_role: "implementer",
+              active_since: "2026-02-21T12:00:00.000Z",
+              execution_context: {
+                active_role: "implementer",
+                awaited_output_type: "pass_result",
+                handoff_id: "implementer:b_ask_human_state_activation:round:2:attempt:1",
+                execution_id: "exec_ask_human_state_activation",
+                round: 2,
+                started_at: "2026-02-21T12:00:00.000Z",
+                deadline_at: "2026-02-21T13:00:00.000Z",
+                attempt: 1
+              }
+            },
+            fingerprint: "fp_ask_human_state_activation"
+          }) as never
+      }
+    );
+
+    expect(result.activation).toEqual({
+      handoff_id: "implementer:b_ask_human_state_activation:round:2:attempt:1",
+      execution_id: "exec_ask_human_state_activation",
+      expected_role: "implementer",
+      expected_round: 2,
+      expected_state_fingerprint: "fp_ask_human_state_activation"
+    });
+  });
+
+  it("surfaces authoritative activation context when the authoritative snapshot stays coherent", async () => {
+    const result = await prepareAskHumanRouting(
+      {
+        question: "Need human input",
+        now: new Date("2026-02-21T12:10:00.000Z"),
+        authoritativeContext: {
+          repo: "/repo",
+          bubble_id: "b_ask_human_authoritative",
+          handoff_id: "implementer:b_ask_human_authoritative:round:3:attempt:1",
+          execution_id: "exec_ask_human_authoritative",
+          expected_role: "implementer",
+          expected_round: 3,
+          expected_state_fingerprint: "fp_ask_human_authoritative",
+          worktree_path: "/repo/worktrees/b_ask_human_authoritative",
+          resolved: {
+            bubbleId: "b_ask_human_authoritative",
+            repoPath: "/repo",
+            worktreePath: "/repo/worktrees/b_ask_human_authoritative",
+            cwd: "/repo/worktrees/b_ask_human_authoritative",
+            bubblePaths: {
+              statePath: "/repo/.pairflow/bubbles/b_ask_human_authoritative/state.json",
+              worktreePath: "/repo/worktrees/b_ask_human_authoritative"
+            },
+            bubbleConfig: { id: "b_ask_human_authoritative" }
+          } as never,
+          loaded_state: {
+            state: {
+              bubble_id: "b_ask_human_authoritative",
+              state: "RUNNING",
+              round: 3,
+              active_agent: "codex",
+              active_role: "implementer",
+              active_since: "2026-02-21T12:00:00.000Z",
+              execution_context: {
+                active_role: "implementer",
+                awaited_output_type: "pass_result",
+                handoff_id: "implementer:b_ask_human_authoritative:round:3:attempt:1",
+                execution_id: "exec_ask_human_authoritative",
+                round: 3,
+                started_at: "2026-02-21T12:00:00.000Z",
+                deadline_at: "2026-02-21T13:00:00.000Z",
+                attempt: 1
+              }
+            },
+            fingerprint: "fp_ask_human_authoritative"
+          } as never,
+          execution_context: {
+            active_role: "implementer",
+            awaited_output_type: "pass_result",
+            handoff_id: "implementer:b_ask_human_authoritative:round:3:attempt:1",
+            execution_id: "exec_ask_human_authoritative",
+            round: 3,
+            started_at: "2026-02-21T12:00:00.000Z",
+            deadline_at: "2026-02-21T13:00:00.000Z",
+            attempt: 1
+          }
+        },
+        createError: (message: PairflowCommandErrorInput) => new AskHumanRoutingTestError(toErrorMessage(message))
+      },
+      {
+        resolveBubbleFromWorkspaceCwd: async () => {
+          throw new Error("resolveBubbleFromWorkspaceCwd should not be used with authoritative context");
+        },
+        ensureBubbleInstanceIdForMutation: async () =>
+          ({
+            bubbleInstanceId: "bi_1234567890_abcdef0123456789",
+            bubbleConfig: { id: "b_ask_human_authoritative" },
+            backfilled: false
+          }) as never,
+        readStateSnapshot: async () => {
+          throw new Error("readStateSnapshot should not be used with authoritative context");
+        }
+      }
+    );
+
+    expect(result.activation).toEqual({
+      handoff_id: "implementer:b_ask_human_authoritative:round:3:attempt:1",
+      execution_id: "exec_ask_human_authoritative",
+      expected_role: "implementer",
+      expected_round: 3,
+      expected_state_fingerprint: "fp_ask_human_authoritative"
+    });
+  });
+
+  it("omits activation when authoritative context disagrees with the live loaded-state role", async () => {
+    const result = await prepareAskHumanRouting(
+      {
+        question: "Need human input",
+        now: new Date("2026-02-21T12:10:00.000Z"),
+        authoritativeContext: {
+          repo: "/repo",
+          bubble_id: "b_ask_human_authoritative_mismatch",
+          handoff_id: "implementer:b_ask_human_authoritative_mismatch:round:3:attempt:1",
+          execution_id: "exec_ask_human_authoritative_mismatch",
+          expected_role: "reviewer",
+          expected_round: 3,
+          expected_state_fingerprint: "fp_ask_human_authoritative_mismatch",
+          worktree_path: "/repo/worktrees/b_ask_human_authoritative_mismatch",
+          resolved: {
+            bubbleId: "b_ask_human_authoritative_mismatch",
+            repoPath: "/repo",
+            worktreePath: "/repo/worktrees/b_ask_human_authoritative_mismatch",
+            cwd: "/repo/worktrees/b_ask_human_authoritative_mismatch",
+            bubblePaths: {
+              statePath:
+                "/repo/.pairflow/bubbles/b_ask_human_authoritative_mismatch/state.json",
+              worktreePath: "/repo/worktrees/b_ask_human_authoritative_mismatch"
+            },
+            bubbleConfig: { id: "b_ask_human_authoritative_mismatch" }
+          } as never,
+          loaded_state: {
+            state: {
+              bubble_id: "b_ask_human_authoritative_mismatch",
+              state: "RUNNING",
+              round: 3,
+              active_agent: "codex",
+              active_role: "implementer",
+              active_since: "2026-02-21T12:00:00.000Z",
+              execution_context: {
+                active_role: "reviewer",
+                awaited_output_type: "pass_result",
+                handoff_id: "implementer:b_ask_human_authoritative_mismatch:round:3:attempt:1",
+                execution_id: "exec_ask_human_authoritative_mismatch",
+                round: 3,
+                started_at: "2026-02-21T12:00:00.000Z",
+                deadline_at: "2026-02-21T13:00:00.000Z",
+                attempt: 1
+              }
+            },
+            fingerprint: "fp_ask_human_authoritative_mismatch"
+          } as never,
+          execution_context: {
+            active_role: "reviewer",
+            awaited_output_type: "pass_result",
+            handoff_id: "implementer:b_ask_human_authoritative_mismatch:round:3:attempt:1",
+            execution_id: "exec_ask_human_authoritative_mismatch",
+            round: 3,
+            started_at: "2026-02-21T12:00:00.000Z",
+            deadline_at: "2026-02-21T13:00:00.000Z",
+            attempt: 1
+          }
+        },
+        createError: (message: PairflowCommandErrorInput) =>
+          new AskHumanRoutingTestError(toErrorMessage(message))
+      },
+      {
+        resolveBubbleFromWorkspaceCwd: async () => {
+          throw new Error("resolveBubbleFromWorkspaceCwd should not be used with authoritative context");
+        },
+        ensureBubbleInstanceIdForMutation: async () =>
+          ({
+            bubbleInstanceId: "bi_1234567890_abcdef0123456789",
+            bubbleConfig: { id: "b_ask_human_authoritative_mismatch" },
+            backfilled: false
+          }) as never,
+        readStateSnapshot: async () => {
+          throw new Error("readStateSnapshot should not be used with authoritative context");
+        }
+      }
+    );
+
+    expect(result.activation).toBeUndefined();
+  });
+
+  it("omits activation when implementer execution_id reuses handoff_id", async () => {
+    const result = await prepareAskHumanRouting(
+      {
+        question: "Need human input",
+        now: new Date("2026-02-21T12:10:00.000Z"),
+        createError: (message: PairflowCommandErrorInput) =>
+          new AskHumanRoutingTestError(toErrorMessage(message))
+      },
+      {
+        resolveBubbleFromWorkspaceCwd: async () =>
+          ({
+            bubbleId: "b_ask_human_same_id_activation",
+            repoPath: "/repo",
+            bubblePaths: {
+              statePath: "/repo/.pairflow/bubbles/b_ask_human_same_id_activation/state.json"
+            },
+            bubbleConfig: { id: "b_ask_human_same_id_activation" }
+          }) as never,
+        ensureBubbleInstanceIdForMutation: async () =>
+          ({
+            bubbleInstanceId: "bi_1234567890_abcdef0123456789",
+            bubbleConfig: { id: "b_ask_human_same_id_activation" },
+            backfilled: false
+          }) as never,
+        readStateSnapshot: async () =>
+          ({
+            state: {
+              state: "RUNNING",
+              round: 2,
+              active_agent: "codex",
+              active_role: "implementer",
+              active_since: "2026-02-21T12:00:00.000Z",
+              execution_context: {
+                active_role: "implementer",
+                awaited_output_type: "pass_result",
+                handoff_id: "implementer:b_ask_human_same_id_activation:round:2:attempt:1",
+                execution_id:
+                  "implementer:b_ask_human_same_id_activation:round:2:attempt:1",
+                round: 2,
+                started_at: "2026-02-21T12:00:00.000Z",
+                deadline_at: "2026-02-21T13:00:00.000Z",
+                attempt: 1
+              }
+            },
+            fingerprint: "fp_ask_human_same_id_activation"
+          }) as never
+      }
+    );
+
+    expect(result.activation).toBeUndefined();
+  });
+
+  it("omits activation when reviewer invokes ask-human from RUNNING state", async () => {
+    const result = await prepareAskHumanRouting(
+      {
+        question: "Need reviewer-side human input",
+        now: new Date("2026-02-21T12:10:00.000Z"),
+        createError: (message: PairflowCommandErrorInput) => new AskHumanRoutingTestError(toErrorMessage(message))
+      },
+      {
+        resolveBubbleFromWorkspaceCwd: async () =>
+          ({
+            bubbleId: "b_ask_human_reviewer_no_activation",
+            repoPath: "/repo",
+            bubblePaths: {
+              statePath: "/repo/.pairflow/bubbles/b_ask_human_reviewer_no_activation/state.json"
+            },
+            bubbleConfig: { id: "b_ask_human_reviewer_no_activation" }
+          }) as never,
+        ensureBubbleInstanceIdForMutation: async () =>
+          ({
+            bubbleInstanceId: "bi_1234567890_abcdef0123456789",
+            bubbleConfig: { id: "b_ask_human_reviewer_no_activation" },
+            backfilled: false
+          }) as never,
+        readStateSnapshot: async () =>
+          ({
+            state: {
+              state: "RUNNING",
+              round: 2,
+              active_agent: "claude",
+              active_role: "reviewer",
+              active_since: "2026-02-21T12:00:00.000Z",
+              execution_context: {
+                active_role: "reviewer",
+                awaited_output_type: "pass_result",
+                handoff_id: "reviewer:b_ask_human_reviewer_no_activation:round:2:attempt:1",
+                execution_id: "exec_ask_human_reviewer_no_activation",
+                round: 2,
+                started_at: "2026-02-21T12:00:00.000Z",
+                deadline_at: "2026-02-21T13:00:00.000Z",
+                attempt: 1
+              }
+            },
+            fingerprint: "fp_ask_human_reviewer_no_activation"
+          }) as never
+      }
+    );
+
+    expect(result.activation).toBeUndefined();
+  });
+
   const invalidRunningStateCases: Array<{
     name: string;
     state: Record<string, unknown>;

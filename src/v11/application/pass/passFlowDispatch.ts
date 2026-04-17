@@ -58,6 +58,9 @@ export async function dispatchPassFlow(
         implementer: input.implementer,
         state: input.state,
         loadedState: input.loadedState,
+        ...(input.activation !== undefined
+          ? { activation: input.activation }
+          : {}),
         passRouting: input.passRouting,
         createError: input.createError,
         onDownstreamRejected: input.onDownstreamRejected
@@ -82,6 +85,9 @@ export async function dispatchPassFlow(
       implementer: input.implementer,
       state: input.state,
       loadedState: input.loadedState,
+      ...(input.activation !== undefined
+        ? { activation: input.activation }
+        : {}),
       passRouting: input.passRouting,
       createError: input.createError
     }),
