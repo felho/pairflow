@@ -97,16 +97,16 @@ Ez a task akkor sikeres, ha:
 1. `plan_ref`: `plans/actor-runtime-interface-discovery-and-migration-plan-v1.md`
    - Ez a canonical forras a Phase E retained adapter cleanup helyere a teljes migration programban.
 2. Binding migration input:
-   - `plans/tasks/actor-runtime-interface-migration-spine-phaseD-plan.md`
+   - `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-migration-spine-phaseD-plan.md`
    - Ez rogzitette, hogy a retained `tmux`/watchdog/operator topology observability-only adapter maradjon, es hogy a duplicate delivery valamint az ack-source ownership Phase E-ben valjon implementacios policyva.
 3. Binding target contract:
-   - `plans/tasks/actor-runtime-interface-capability-contract-phaseB-draft.md`
+   - `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-capability-contract-phaseB-draft.md`
    - Ez az authoritative typed ack es explicit authority boundary.
 4. Binding scenario/parity input:
-   - `plans/tasks/actor-runtime-interface-scenario-simulation-phaseC-matrix.md`
+   - `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-scenario-simulation-phaseC-matrix.md`
    - A runtime delivery cleanup kotelezo parity inputjai innen jonnek.
 5. Binding current-state grounding:
-   - `plans/tasks/actor-runtime-interface-behavior-inventory-phaseA-inventory.md`
+   - `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-behavior-inventory-phaseA-inventory.md`
    - Ez mutatja, hogy a `tmuxDelivery` es a watchdog retained runtime adapterek.
 6. Precedence rule:
    - target boundaryhoz a Phase B authoritative,
@@ -219,9 +219,9 @@ Normative rules:
 
 | Type | Items | Priority | Timing |
 |---|---|---|---|
-| must-use | `plans/tasks/actor-runtime-interface-migration-spine-phaseD-plan.md` retained adapter ownershipa es `S2` delivery/ack boundaryja | P1 | required-now |
-| must-use | `plans/tasks/actor-runtime-interface-capability-contract-phaseB-draft.md` typed ack vocabularyja (`accepted`, `rejected`, `running`, `failed_to_start`) | P1 | required-now |
-| must-use | `plans/tasks/actor-runtime-interface-scenario-simulation-phaseC-matrix.md` runtime parity inputjai (`SC8`, `SC10`, `SC11`) | P1 | required-now |
+| must-use | `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-migration-spine-phaseD-plan.md` retained adapter ownershipa es `S2` delivery/ack boundaryja | P1 | required-now |
+| must-use | `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-capability-contract-phaseB-draft.md` typed ack vocabularyja (`accepted`, `rejected`, `running`, `failed_to_start`) | P1 | required-now |
+| must-use | `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-scenario-simulation-phaseC-matrix.md` runtime parity inputjai (`SC8`, `SC10`, `SC11`) | P1 | required-now |
 | must-use | meglovo execution-context authority es restart recovery fail-closed modell | P1 | required-now |
 | must-not-use | pane-visible activitybol vagy send-successbol levezetett canonical acceptance/running inference | P1 | required-now |
 | must-not-use | uj actor primitive vagy uj lifecycle-state a runtime adapter cleanup miatt | P1 | required-now |

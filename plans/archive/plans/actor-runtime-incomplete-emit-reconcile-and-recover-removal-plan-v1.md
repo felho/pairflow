@@ -75,9 +75,9 @@ Siker eseten:
 ## Dependencies
 
 1. [actor-runtime-interface-discovery-and-migration-plan-v1.md](/Users/felho/dev/pairflow/plans/actor-runtime-interface-discovery-and-migration-plan-v1.md)
-2. [actor-runtime-interface-migration-spine-phaseD-plan.md](/Users/felho/dev/pairflow/plans/tasks/actor-runtime-interface-migration-spine-phaseD-plan.md)
-3. [actor-runtime-interface-capability-contract-phaseB-draft.md](/Users/felho/dev/pairflow/plans/tasks/actor-runtime-interface-capability-contract-phaseB-draft.md)
-4. [actor-runtime-interface-scenario-simulation-phaseC-matrix.md](/Users/felho/dev/pairflow/plans/tasks/actor-runtime-interface-scenario-simulation-phaseC-matrix.md)
+2. [actor-runtime-interface-migration-spine-phaseD-plan.md](/Users/felho/dev/pairflow/plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-migration-spine-phaseD-plan.md)
+3. [actor-runtime-interface-capability-contract-phaseB-draft.md](/Users/felho/dev/pairflow/plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-capability-contract-phaseB-draft.md)
+4. [actor-runtime-interface-scenario-simulation-phaseC-matrix.md](/Users/felho/dev/pairflow/plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-scenario-simulation-phaseC-matrix.md)
 5. [actor-runtime-interface-meta-review-recovery-reconcile-refactor-draft.md](/Users/felho/dev/pairflow/plans/tasks/actor-runtime-interface-meta-review-recovery-reconcile-refactor-draft.md)
 6. [actor-runtime-interface-meta-review-submit-inconclusive-human-gate-phaseE.md](/Users/felho/dev/pairflow/plans/archive/tasks/actor-runtime-interface-meta-review-submit-inconclusive-human-gate-phaseE.md)
 7. [actor-runtime-interface-meta-review-approve-advisory-guidance-hardening-phaseE.md](/Users/felho/dev/pairflow/plans/archive/tasks/actor-runtime-interface-meta-review-approve-advisory-guidance-hardening-phaseE.md)

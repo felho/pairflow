@@ -41,7 +41,7 @@ plan_ref: plans/actor-runtime-interface-discovery-and-migration-plan-v1.md
 system_context_ref: README.md
 normative_refs:
   - plans/actor-runtime-interface-discovery-and-migration-plan-v1.md
-  - plans/tasks/actor-runtime-interface-migration-spine-phaseD-plan.md
+  - plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-migration-spine-phaseD-plan.md
   - plans/archive/tasks/actor-runtime-interface-reviewer-cutover-phaseE.md
   - plans/archive/tasks/actor-runtime-interface-meta-reviewer-cutover-phaseE.md
   - docs/pairflow-initial-design.md
@@ -149,7 +149,7 @@ Ez a task akkor sikeres, ha:
 1. `plan_ref`: `plans/actor-runtime-interface-discovery-and-migration-plan-v1.md`
    - Ez a canonical umbrella a reviewer/meta-reviewer cutover sequencinghez.
 2. Binding rollout input:
-   - `plans/tasks/actor-runtime-interface-migration-spine-phaseD-plan.md`
+   - `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-migration-spine-phaseD-plan.md`
    - Ez rogziti, hogy a bypass tenyleges aktivalasa csak a Phase E sorrend utan vedheto.
 3. Binding reviewer prerequisite:
    - `plans/archive/tasks/actor-runtime-interface-reviewer-cutover-phaseE.md`
@@ -283,7 +283,7 @@ Normative rules:
 | Type | Items | Priority | Timing |
 |---|---|---|---|
 | must-use | `plans/actor-runtime-interface-discovery-and-migration-plan-v1.md` | P1 | required-now |
-| must-use | `plans/tasks/actor-runtime-interface-migration-spine-phaseD-plan.md` | P1 | required-now |
+| must-use | `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-migration-spine-phaseD-plan.md` | P1 | required-now |
 | must-use | `plans/archive/tasks/actor-runtime-interface-reviewer-cutover-phaseE.md` | P1 | required-now |
 | must-use | `plans/archive/tasks/actor-runtime-interface-meta-reviewer-cutover-phaseE.md` | P1 | required-now |
 | must-use | shared core modules for UI/API behavior | P1 | required-now |

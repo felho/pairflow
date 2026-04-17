@@ -14,10 +14,10 @@ owners:
 
 1. `src/core/**` mar nincs a checked-out tree-ben; az eredeti residual-core retirement blokkolo kontextus historical-only.
 2. A plan sajat docs-only A-D deliverable-jei checked-in allapotban megvannak:
-   - `plans/tasks/actor-runtime-interface-behavior-inventory-phaseA-inventory.md`
-   - `plans/tasks/actor-runtime-interface-capability-contract-phaseB-draft.md`
-   - `plans/tasks/actor-runtime-interface-scenario-simulation-phaseC-matrix.md`
-   - `plans/tasks/actor-runtime-interface-migration-spine-phaseD-plan.md`
+   - `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-behavior-inventory-phaseA-inventory.md`
+   - `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-capability-contract-phaseB-draft.md`
+   - `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-scenario-simulation-phaseC-matrix.md`
+   - `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-migration-spine-phaseD-plan.md`
 3. A korabbi meta-review cached public read-model, persisted-authority/cleanup, repo-surface es live-run closurek mar historical context:
    - a public `bubble meta-review` namespace removed, a current CLI generic unknown-commandra zar [tests/cli/index.test.ts szerint],
    - a repo-surface wording mar a surviving `bubble status` / `bubble restart` / `agent emit --kind meta_review_result` contractot koveti,
@@ -77,7 +77,7 @@ owners:
    - es megvan a direct runtime/orchestration consume-family alignment ugyanennek a canonical truthnak a menten.
    - es megvan a persisted diagnostics / meta-review / read-model fallout closure (`E2c`) ugyanennek a lezart runtime truthnak a stale-null/read-model semanticszevel.
    - es megvan a reviewer + meta-reviewer consume-family rollout / retained adapter cleanup closure (`E4`) a lezart canonical authority vocabulary menten.
-4. Emiatt a plan alatt mar nincs nyitott implementation sor: ha kesobb uj actor-runtime scope nyilik, azt kulon successor plan vagy task kell hogy ownershipolja, nem ez a discovery-parent artifact.
+4. Emiatt a plan alatt mar nincs nyitott implementation sor: ha kesobb uj actor-runtime scope nyilik, azt kulon successor plan vagy task kell hogy ownershipolja, nem ez a discovery-parent artifact. A 2026-04-17-es post-Phase-E opportunity ownership anchorja: `plans/actor-runtime-interface-post-phaseE-successor-plan-v1.md`.
 5. Az `E3a`, `E3b`, `E3c` es `E4` current-tree ownership lockjai historical predecessorek:
    - `E3a`: wrapper routing, authoritative-context-first bridge, workspace-prep same-authority hardening, explicit dispatcher fallback policy, es a non-implementer `human_question` baseline preserved lock foundationkent lezart es archivalt.
    - `E3b`: a fresh implementer activation closure lezart es archivalt a `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-implementer-pilot-activation-phaseE3b.md` pathon.
@@ -433,10 +433,10 @@ Ez a plan discovery- es preparation-jellegu. Nem celja a Phase 4 vagy Phase 5 le
 
 ## Task List
 
-1. `plans/tasks/actor-runtime-interface-behavior-inventory-phaseA.md`
-2. `plans/tasks/actor-runtime-interface-capability-contract-phaseB.md`
-3. `plans/tasks/actor-runtime-interface-scenario-simulation-phaseC.md`
-4. `plans/tasks/actor-runtime-interface-migration-spine-phaseD.md`
+1. `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-behavior-inventory-phaseA.md`
+2. `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-capability-contract-phaseB.md`
+3. `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-scenario-simulation-phaseC.md`
+4. `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-migration-spine-phaseD.md`
 5. `plans/tasks/actor-runtime-interface-pilot-cutover-phaseE.md` (historical Phase E sequencing closeout anchor; a current-tree implementation lanchosszt mar lezartnak tekinti)
 
 ## Dependencies

@@ -92,16 +92,16 @@ Ez a task akkor sikeres, ha:
 1. `plan_ref`: `plans/actor-runtime-interface-discovery-and-migration-plan-v1.md`
    - Ez a canonical forras a Phase E pilot-cutover helyenek es a Phase D utani kovetkezo lepesnek.
 2. Binding migration input:
-   - `plans/tasks/actor-runtime-interface-migration-spine-phaseD-plan.md`
+   - `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-migration-spine-phaseD-plan.md`
    - Ez rogzitette az implementer-first sorrendet, a wrapper -> delivery/ack -> core freeze -> policy split -> implementer pilot lepessorat, es a bounded policy ownershipot.
 3. Binding target contract:
-   - `plans/tasks/actor-runtime-interface-capability-contract-phaseB-draft.md`
+   - `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-capability-contract-phaseB-draft.md`
    - Ez az authoritative core boundary.
 4. Binding scenario/parity input:
-   - `plans/tasks/actor-runtime-interface-scenario-simulation-phaseC-matrix.md`
+   - `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-scenario-simulation-phaseC-matrix.md`
    - Az implementer pilot kotelezo parity inputjai innen jonnek.
 5. Binding current-state grounding:
-   - `plans/tasks/actor-runtime-interface-behavior-inventory-phaseA-inventory.md`
+   - `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-behavior-inventory-phaseA-inventory.md`
    - Ez mutatja, mely runtime/operator surface-ek maradnak retained adapterek.
 6. Precedence rule:
    - target boundaryhoz a Phase B authoritative,
@@ -216,9 +216,9 @@ Normative rules:
 
 | Type | Items | Priority | Timing |
 |---|---|---|---|
-| must-use | `plans/tasks/actor-runtime-interface-migration-spine-phaseD-plan.md` implementer-first pilot sorrendje es retained adapter policyja | P1 | required-now |
-| must-use | `plans/tasks/actor-runtime-interface-capability-contract-phaseB-draft.md` minimalis core capability es explicit authority contractja | P1 | required-now |
-| must-use | `plans/tasks/actor-runtime-interface-scenario-simulation-phaseC-matrix.md` implementer parity inputjai (`SC1`, `SC5`, `SC6`, `SC7`, `SC8`, `SC10`, `SC11`) | P1 | required-now |
+| must-use | `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-migration-spine-phaseD-plan.md` implementer-first pilot sorrendje es retained adapter policyja | P1 | required-now |
+| must-use | `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-capability-contract-phaseB-draft.md` minimalis core capability es explicit authority contractja | P1 | required-now |
+| must-use | `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-scenario-simulation-phaseC-matrix.md` implementer parity inputjai (`SC1`, `SC5`, `SC6`, `SC7`, `SC8`, `SC10`, `SC11`) | P1 | required-now |
 | must-use | meglovo `actorEmitContext` + `executionContext` fail-closed authority modell | P1 | required-now |
 | must-not-use | implicit workspace/pane/shell authority fallback a canonical implementer pathban | P1 | required-now |
 | must-not-use | reviewer vagy meta-reviewer cutover scope becsempeszese ugyanebbe a taskba | P1 | required-now |

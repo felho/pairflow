@@ -5,7 +5,7 @@ title: "Actor Runtime Interface Capability Contract (Phase B)"
 status: completed
 phase: phaseB
 target_files:
-  - plans/tasks/actor-runtime-interface-capability-contract-phaseB-draft.md
+  - plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-capability-contract-phaseB-draft.md
 prd_ref: null
 plan_ref: plans/actor-runtime-interface-discovery-and-migration-plan-v1.md
 system_context_ref: README.md
@@ -79,7 +79,7 @@ Phase B akkor sikeres, ha letrejon egy jol olvashato contract draft, amely:
 1. `plan_ref`: `plans/actor-runtime-interface-discovery-and-migration-plan-v1.md`
    - Ez a canonical forras a Phase B capability contract scope-jahoz, a role-neutrality policyhoz, a core-vs-extension policyhoz es a delivery/ack boundaryhoz.
 2. Binding current-state input:
-   - `plans/tasks/actor-runtime-interface-behavior-inventory-phaseA-inventory.md`
+   - `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-behavior-inventory-phaseA-inventory.md`
    - Ez a current-state evidence-forras, amely a mai behaviorokat es target-disposition mintakat rogzitette.
 3. Binding normative companion set:
    - `plans/archive/plans/protocol-first-bubble-runtime-and-meta-review-unification-plan-v1.md`
@@ -112,8 +112,8 @@ Phase B akkor sikeres, ha letrejon egy jol olvashato contract draft, amely:
 
 | ID | File | Function/Entry | Exact Signature (args -> return) | Insertion Point | Expected Behavior | Priority | Timing | Evidence |
 |---|---|---|---|---|---|---|---|---|
-| CS1 | `plans/tasks/actor-runtime-interface-capability-contract-phaseB-draft.md` | checked-in contract draft artifact | markdown contract schema -> checked-in artifact | uj Phase B draft artifact | Egyetlen normativ contract draft keszul, amely capability modellel, authority boundaryval, output contracttal, delivery/ack modellel, actor-vs-executor separationnel es extension policyval irja le a target actor runtime interface-et | P1 | required-now | Phase B deliverable definicio |
-| CS2 | `plans/tasks/actor-runtime-interface-behavior-inventory-phaseA-inventory.md` | Phase A evidence synthesis | inventory rows + synthesis -> contract decisions | Phase B draft current-state grounding section | A draft explicitten levezeti, hogy a Phase A `core` / `adapt` / `remove` megfigyeleseibol mi lesz target core capability, mi kerul executorba, mi marad bounded extension, es mi marad transitional adapter/removal tema | P1 | required-now | Phase A -> Phase B traceability |
+| CS1 | `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-capability-contract-phaseB-draft.md` | checked-in contract draft artifact | markdown contract schema -> checked-in artifact | uj Phase B draft artifact | Egyetlen normativ contract draft keszul, amely capability modellel, authority boundaryval, output contracttal, delivery/ack modellel, actor-vs-executor separationnel es extension policyval irja le a target actor runtime interface-et | P1 | required-now | Phase B deliverable definicio |
+| CS2 | `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-behavior-inventory-phaseA-inventory.md` | Phase A evidence synthesis | inventory rows + synthesis -> contract decisions | Phase B draft current-state grounding section | A draft explicitten levezeti, hogy a Phase A `core` / `adapt` / `remove` megfigyeleseibol mi lesz target core capability, mi kerul executorba, mi marad bounded extension, es mi marad transitional adapter/removal tema | P1 | required-now | Phase A -> Phase B traceability |
 | CS3 | `plans/actor-runtime-interface-discovery-and-migration-plan-v1.md` | capability + authority + role model derivation | plan workstream requirements -> contract sections | Phase B draft normative sections | A draft explicitten rogziti az input authorityt, a role-neutral modellt, a canonical outputokat, a delivery trigger es ack boundaryt, valamint a tiltott actor-muveleteket | P1 | required-now | Workstream 2 alignment |
 | CS4 | `plans/archive/plans/protocol-first-bubble-runtime-and-meta-review-unification-plan-v1.md` + `plans/archive/tasks/protocol-first/protocol-first-cli-and-protocol-surface-unification-phase4.md` + `plans/archive/tasks/protocol-first/protocol-first-legacy-meta-review-model-removal-phase5.md` | protocol-first companion synthesis | binding protocol-first refs -> contract constraints | Phase B draft compatibility section | A draft nem epulhet retained aliasokra, legacy lifecycle-re vagy special-case meta-review actor API-ra; a canonical actor boundary Phase 4/5 kompatibilis marad | P1 | required-now | protocol-first compatibility |
 | CS5 | `docs/v2/pairflow-v2-architecture-plan-joint.md` | informational architecture comparison | informational input -> non-normative synthesis | Phase B draft comparison note | A draft roviden jelzi, hogyan illeszkedik a role/kernel/capability thinking a v2 iranyhoz, de nem teszi a v2-t normativ override-da | P2 | required-now | informational consistency |
@@ -168,7 +168,7 @@ Constraint:
 | Type | Items | Priority | Timing |
 |---|---|---|---|
 | must-use | `plans/actor-runtime-interface-discovery-and-migration-plan-v1.md` | P1 | required-now |
-| must-use | `plans/tasks/actor-runtime-interface-behavior-inventory-phaseA-inventory.md` | P1 | required-now |
+| must-use | `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-behavior-inventory-phaseA-inventory.md` | P1 | required-now |
 | must-use | `plans/archive/plans/protocol-first-bubble-runtime-and-meta-review-unification-plan-v1.md` | P1 | required-now |
 | must-use | `plans/archive/tasks/protocol-first/protocol-first-cli-and-protocol-surface-unification-phase4.md` | P1 | required-now |
 | must-use | `plans/archive/tasks/protocol-first/protocol-first-legacy-meta-review-model-removal-phase5.md` | P1 | required-now |
@@ -183,7 +183,7 @@ Constraint:
 
 | ID | Scenario | Given | When | Then | Priority | Timing | Evidence |
 |---|---|---|---|---|---|---|---|
-| T1 | contract draft artifact exists | a task docs-only modban fut | a deliverable elkeszul | letezik a checked-in `plans/tasks/actor-runtime-interface-capability-contract-phaseB-draft.md` artifact | P1 | required-now | doc review |
+| T1 | contract draft artifact exists | a task docs-only modban fut | a deliverable elkeszul | letezik a checked-in `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-capability-contract-phaseB-draft.md` artifact | P1 | required-now | doc review |
 | T2 | Phase A traceability explicit | a Phase A inventory mar target-minositeseket adott | a draft elkeszul | a draft roviden visszakoti a Phase A fo `core` / `adapt` / `remove` megfigyeleseit a target contract-dontesekhez | P1 | required-now | doc review |
 | T3 | role-neutral model explicit | a Phase A es parent plan role-neutral iranyt rogzitettek | a draft elkeszul | a draft explicitten kimondja, hogy az `implementer`, `reviewer`, `meta_reviewer` es kesobbi role-ok ugyanazon actor runtime boundaryt hasznaljak | P1 | required-now | doc review |
 | T4 | explicit authority contract present | a current-stateben implicit context surfaces is latszanak | a draft elkeszul | a target actor contract minimum explicit authoritymezoket kovetel, es tiltja az implicit actor-write contextet | P1 | required-now | doc review |
@@ -226,7 +226,7 @@ Constraint:
 
 Task allapot `IMPLEMENTABLE`, ha:
 
-1. letezik a checked-in `plans/tasks/actor-runtime-interface-capability-contract-phaseB-draft.md` artifact;
+1. letezik a checked-in `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-capability-contract-phaseB-draft.md` artifact;
 2. a draft explicitten rogziti a minimalis core capability-ket, a bounded extension policyt es a forbidden domain-eket;
 3. a draft role-neutral modellt ad az `implementer`, `reviewer`, `meta_reviewer` es kesobbi role-ok szamara;
 4. a draft explicit authority, delivery trigger es ack boundary minimum szerzodest ad;

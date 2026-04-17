@@ -5,7 +5,7 @@ title: "Actor Runtime Interface Scenario Simulation (Phase C)"
 status: completed
 phase: phaseC
 target_files:
-  - plans/tasks/actor-runtime-interface-scenario-simulation-phaseC-matrix.md
+  - plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-scenario-simulation-phaseC-matrix.md
 prd_ref: null
 plan_ref: plans/actor-runtime-interface-discovery-and-migration-plan-v1.md
 system_context_ref: README.md
@@ -95,10 +95,10 @@ Phase C akkor sikeres, ha letrejon egy jol olvashato matrix artifact, amely:
 1. `plan_ref`: `plans/actor-runtime-interface-discovery-and-migration-plan-v1.md`
    - Ez a canonical forras a Phase C scope-jahoz, a minimum szcenariokhoz es a gap-analysis szerepehez.
 2. Binding target contract input:
-   - `plans/tasks/actor-runtime-interface-capability-contract-phaseB-draft.md`
+   - `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-capability-contract-phaseB-draft.md`
    - Ez a normativ boundary, amelyet a szcenariok ellenoriznek; a matrix alaphelyzetben ezt teszteli, nem ujratervezi.
 3. Binding current-state comparison input:
-   - `plans/tasks/actor-runtime-interface-behavior-inventory-phaseA-inventory.md`
+   - `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-behavior-inventory-phaseA-inventory.md`
    - Ez mutatja, mely mai use case-ek es retained adapter-szalas sajatossagok igenyelnek szimulaciot.
 4. Binding normative companion set:
    - `plans/archive/plans/protocol-first-bubble-runtime-and-meta-review-unification-plan-v1.md`
@@ -131,9 +131,9 @@ Phase C akkor sikeres, ha letrejon egy jol olvashato matrix artifact, amely:
 
 | ID | File | Function/Entry | Exact Signature (args -> return) | Insertion Point | Expected Behavior | Priority | Timing | Evidence |
 |---|---|---|---|---|---|---|---|---|
-| CS1 | `plans/tasks/actor-runtime-interface-scenario-simulation-phaseC-matrix.md` | checked-in Phase C matrix artifact | markdown scenario matrix -> checked-in artifact | uj Phase C matrix artifact | Egyetlen artifact keszul, amely szcenariorow-kon vegigjatsza a Phase B contractot, es a vegere explicit coverage/gap synthesis-t ad | P1 | required-now | Phase C deliverable definicio |
-| CS2 | `plans/tasks/actor-runtime-interface-capability-contract-phaseB-draft.md` | target contract simulation input | Phase B boundary sections -> scenario rows | Phase C matrix contract-mapping resz | Minden fo scenario explicitten Phase B capability-, authority-, output- es ack boundarykhoz kotodik | P1 | required-now | Phase B -> Phase C traceability |
-| CS3 | `plans/tasks/actor-runtime-interface-behavior-inventory-phaseA-inventory.md` | current-state use-case seed | inventory synthesis -> representative scenarios | Phase C matrix scenario seed resz | A matrix nem elvont peldakon alapul, hanem a mai fo actor-use-case-eket, retained adapter-szalasakat es edge-case-eit szimulalja | P1 | required-now | Phase A -> Phase C grounding |
+| CS1 | `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-scenario-simulation-phaseC-matrix.md` | checked-in Phase C matrix artifact | markdown scenario matrix -> checked-in artifact | uj Phase C matrix artifact | Egyetlen artifact keszul, amely szcenariorow-kon vegigjatsza a Phase B contractot, es a vegere explicit coverage/gap synthesis-t ad | P1 | required-now | Phase C deliverable definicio |
+| CS2 | `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-capability-contract-phaseB-draft.md` | target contract simulation input | Phase B boundary sections -> scenario rows | Phase C matrix contract-mapping resz | Minden fo scenario explicitten Phase B capability-, authority-, output- es ack boundarykhoz kotodik | P1 | required-now | Phase B -> Phase C traceability |
+| CS3 | `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-behavior-inventory-phaseA-inventory.md` | current-state use-case seed | inventory synthesis -> representative scenarios | Phase C matrix scenario seed resz | A matrix nem elvont peldakon alapul, hanem a mai fo actor-use-case-eket, retained adapter-szalasakat es edge-case-eit szimulalja | P1 | required-now | Phase A -> Phase C grounding |
 | CS4 | `plans/actor-runtime-interface-discovery-and-migration-plan-v1.md` | workstream 3 realization | workstream requirements -> scenario categories | Phase C matrix scope sections | A matrix lefedi a parent plan altal minimumkent kert fo szcenariokat es gap-analysis kerdeseket | P1 | required-now | plan alignment |
 | CS5 | `plans/archive/plans/protocol-first-bubble-runtime-and-meta-review-unification-plan-v1.md` + protocol-first Phase 4/5 taskok | protocol-first compatibility check | binding refs -> scenario guardrails | Phase C synthesis note | A matrix nem huz vissza legacy alias, implicit authority vagy special-case meta-review modelleket a target boundaryba | P1 | required-now | protocol-first compatibility |
 
@@ -185,8 +185,8 @@ Constraint:
 | Type | Items | Priority | Timing |
 |---|---|---|---|
 | must-use | `plans/actor-runtime-interface-discovery-and-migration-plan-v1.md` | P1 | required-now |
-| must-use | `plans/tasks/actor-runtime-interface-capability-contract-phaseB-draft.md` | P1 | required-now |
-| must-use | `plans/tasks/actor-runtime-interface-behavior-inventory-phaseA-inventory.md` | P1 | required-now |
+| must-use | `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-capability-contract-phaseB-draft.md` | P1 | required-now |
+| must-use | `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-behavior-inventory-phaseA-inventory.md` | P1 | required-now |
 | must-use | `plans/archive/plans/protocol-first-bubble-runtime-and-meta-review-unification-plan-v1.md` | P1 | required-now |
 | must-use | `plans/archive/tasks/protocol-first/protocol-first-cli-and-protocol-surface-unification-phase4.md` | P1 | required-now |
 | must-use | `plans/archive/tasks/protocol-first/protocol-first-legacy-meta-review-model-removal-phase5.md` | P1 | required-now |
@@ -200,7 +200,7 @@ Constraint:
 
 | ID | Scenario | Given | When | Then | Priority | Timing | Evidence |
 |---|---|---|---|---|---|---|---|
-| T1 | Phase C matrix artifact exists | a task docs-only modban fut | a deliverable elkeszul | letezik a checked-in `plans/tasks/actor-runtime-interface-scenario-simulation-phaseC-matrix.md` artifact | P1 | required-now | doc review |
+| T1 | Phase C matrix artifact exists | a task docs-only modban fut | a deliverable elkeszul | letezik a checked-in `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-scenario-simulation-phaseC-matrix.md` artifact | P1 | required-now | doc review |
 | T2 | core actor result scenarios covered | Phase B contract `result` familyt hasznal | a matrix elkeszul | kulon row-k fedik le legalabb az implementer result, reviewer fix-request jellegu result, reviewer convergence es meta-review result esetet | P1 | required-now | doc review |
 | T3 | human input scenario covered | Phase B contract `human_input_request` familyt ad | a matrix elkeszul | kulon row fedi le a blokkolo human input request szcenariot | P1 | required-now | doc review |
 | T4 | stale es conflicting context scenarios covered | explicit authority es current-execution emit a target modell | a matrix elkeszul | kulon row-k irjak le a stale authority es conflicting context esetet explicit fail-closed vagy bounded open-question kovetkezmennyel | P1 | required-now | doc review |
@@ -240,7 +240,7 @@ Constraint:
 
 Task allapot `IMPLEMENTABLE`, ha:
 
-1. letezik a checked-in `plans/tasks/actor-runtime-interface-scenario-simulation-phaseC-matrix.md` artifact;
+1. letezik a checked-in `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-scenario-simulation-phaseC-matrix.md` artifact;
 2. a matrix explicit row-kon vegigjatsza a minimum core es edge-case szcenariokat;
 3. minden row rogziti az input authorityt, a szukseges capability-ket, a vart output familyt, a delivery/launch ackot es a provenance/idempotency megfontolast;
 4. minden row rendelkezik `coverage_verdict`-tel;

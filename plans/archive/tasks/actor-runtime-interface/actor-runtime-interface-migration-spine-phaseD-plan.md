@@ -4,10 +4,10 @@ artifact_id: plan_actor_runtime_interface_migration_spine_phaseD_v1
 title: "Actor Runtime Interface Migration Spine (Phase D Plan)"
 status: completed
 phase: phaseD
-source_task_ref: plans/tasks/actor-runtime-interface-migration-spine-phaseD.md
-source_contract_ref: plans/tasks/actor-runtime-interface-capability-contract-phaseB-draft.md
-source_matrix_ref: plans/tasks/actor-runtime-interface-scenario-simulation-phaseC-matrix.md
-source_inventory_ref: plans/tasks/actor-runtime-interface-behavior-inventory-phaseA-inventory.md
+source_task_ref: plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-migration-spine-phaseD.md
+source_contract_ref: plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-capability-contract-phaseB-draft.md
+source_matrix_ref: plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-scenario-simulation-phaseC-matrix.md
+source_inventory_ref: plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-behavior-inventory-phaseA-inventory.md
 plan_ref: plans/actor-runtime-interface-discovery-and-migration-plan-v1.md
 system_context_ref: README.md
 normative_refs:

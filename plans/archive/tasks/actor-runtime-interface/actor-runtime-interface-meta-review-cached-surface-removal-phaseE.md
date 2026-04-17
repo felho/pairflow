@@ -35,7 +35,7 @@ target_files:
   - ui/src/components/canvas/BubbleCanvas.tsx
   - ui/src/components/canvas/BubbleCanvas.test.tsx
   - plans/actor-runtime-interface-discovery-and-migration-plan-v1.md
-  - plans/tasks/actor-runtime-interface-meta-review-operator-read-surface-closure-phaseE.md
+  - plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-meta-review-operator-read-surface-closure-phaseE.md
   - tests/cli/bubbleMetaReviewCommand.test.ts
   - tests/v11/application/metaReview/metaReviewCliEntrypointParity.test.ts
   - tests/v11/shared/metaReview/metaReviewCommandReadArtifacts.test.ts

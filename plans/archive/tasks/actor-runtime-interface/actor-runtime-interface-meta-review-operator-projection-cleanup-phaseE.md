@@ -144,16 +144,16 @@ Ez a task akkor sikeres, ha:
 1. `plan_ref`: `plans/actor-runtime-interface-discovery-and-migration-plan-v1.md`
    - Ez a canonical forras a Phase E cleanup iranyahoz a teljes migration programban.
 2. Binding migration input:
-   - `plans/tasks/actor-runtime-interface-migration-spine-phaseD-plan.md`
+   - `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-migration-spine-phaseD-plan.md`
    - Ez rogzitette, hogy a retained adapterek cleanupja a cutoverek utan kovetkezik, es hogy a meta-review operator surface observability/projection reteg marad.
 3. Binding target contract:
-   - `plans/tasks/actor-runtime-interface-capability-contract-phaseB-draft.md`
+   - `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-capability-contract-phaseB-draft.md`
    - Ez az authoritative role-neutral boundary; az operator surface nem lephet be actor authority domainbe.
 4. Binding scenario/parity input:
-   - `plans/tasks/actor-runtime-interface-scenario-simulation-phaseC-matrix.md`
+   - `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-scenario-simulation-phaseC-matrix.md`
    - Kotelezoen iranyado a duplicate/ack/observability kerdesekhez.
 5. Binding current-state grounding:
-   - `plans/tasks/actor-runtime-interface-behavior-inventory-phaseA-inventory.md`
+   - `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-behavior-inventory-phaseA-inventory.md`
    - Ez mutatja, hogy a `bubble meta-review` operator surface ma operator-only retained adapter, mig a canonical submit kulon actor-facing path.
 6. Binding historical boundary:
    - `plans/archive/tasks/protocol-first/protocol-first-cli-and-protocol-surface-unification-phase4.md`
@@ -310,8 +310,8 @@ Normative rules:
 
 | Type | Items | Priority | Timing |
 |---|---|---|---|
-| must-use | `plans/tasks/actor-runtime-interface-migration-spine-phaseD-plan.md` cleanup sorrendje es retained ownershipa | P1 | required-now |
-| must-use | `plans/tasks/actor-runtime-interface-capability-contract-phaseB-draft.md` explicit actor authority es role-neutral boundary szerzodese | P1 | required-now |
+| must-use | `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-migration-spine-phaseD-plan.md` cleanup sorrendje es retained ownershipa | P1 | required-now |
+| must-use | `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-capability-contract-phaseB-draft.md` explicit actor authority es role-neutral boundary szerzodese | P1 | required-now |
 | must-use | `plans/archive/tasks/protocol-first/protocol-first-cli-and-protocol-surface-unification-phase4.md` operator-vs-actor splitje | P1 | required-now |
 | must-use | `plans/archive/tasks/protocol-first/protocol-first-legacy-meta-review-model-removal-phase5.md` removed submit + state-neutral operator surface kontraktja | P1 | required-now |
 | must-use | `docs/meta-review-gate-prd.md` cached retrieval + snapshot-route recovery szerzodese | P2 | required-now |

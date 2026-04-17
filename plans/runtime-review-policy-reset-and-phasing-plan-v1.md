@@ -189,7 +189,7 @@ Ha ezek kozul barmelyik tovabbra is kulon helper-halmazokban el, akkor a kovetke
 ## Dependencies
 
 1. [plans/actor-runtime-interface-discovery-and-migration-plan-v1.md](/Users/felho/dev/pairflow/plans/actor-runtime-interface-discovery-and-migration-plan-v1.md)
-2. [plans/tasks/actor-runtime-interface-migration-spine-phaseD-plan.md](/Users/felho/dev/pairflow/plans/tasks/actor-runtime-interface-migration-spine-phaseD-plan.md)
+2. [plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-migration-spine-phaseD-plan.md](/Users/felho/dev/pairflow/plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-migration-spine-phaseD-plan.md)
 3. [plans/tasks/review-policy-runtime-surface-and-rollout-phase1.md](/Users/felho/dev/pairflow/plans/tasks/review-policy-runtime-surface-and-rollout-phase1.md)
 4. reviewer es meta-reviewer Phase E cutover taskok a bypass activation prerequisite-jeikent
 

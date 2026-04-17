@@ -286,9 +286,9 @@ Constraint:
 | Type | Items | Priority | Timing |
 |---|---|---|---|
 | must-use | `plans/actor-runtime-interface-discovery-and-migration-plan-v1.md` | P1 | required-now |
-| must-use | `plans/tasks/actor-runtime-interface-capability-contract-phaseB-draft.md` | P1 | required-now |
-| must-use | `plans/tasks/actor-runtime-interface-scenario-simulation-phaseC-matrix.md` | P1 | required-now |
-| must-use | `plans/tasks/actor-runtime-interface-migration-spine-phaseD-plan.md` | P1 | required-now |
+| must-use | `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-capability-contract-phaseB-draft.md` | P1 | required-now |
+| must-use | `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-scenario-simulation-phaseC-matrix.md` | P1 | required-now |
+| must-use | `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-migration-spine-phaseD-plan.md` | P1 | required-now |
 | must-use | current-tree code evidence: `src/v11/shared/actorProtocol/actorEmitContext.ts`, `src/v11/application/actorProtocol/emitActorProtocolV11.ts`, `src/types/protocol.ts`, `src/v11/shared/delivery/tmuxDeliveryContract.ts`, `src/v11/infrastructure/channel/tmux/tmuxDeliveryRuntime.ts`, `src/v11/application/start/startCommandTmuxLaunch.ts`, `src/v11/application/askHuman/askHumanCommandApi.ts`, `src/v11/application/askHuman/askHumanCommandOrchestration.ts`, `src/v11/shared/askHuman/askHumanCommandFlowOrchestration.ts`, `src/v11/application/askHuman/runAskHumanFlow.ts` | P1 | required-now |
 | must-not-use | stale 2026-04-12 Phase E state claims current-state factkent | P1 | required-now |
 | must-not-use | bundled single-task pilot implementation | P1 | required-now |

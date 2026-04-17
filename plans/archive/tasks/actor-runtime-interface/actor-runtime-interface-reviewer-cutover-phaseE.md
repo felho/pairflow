@@ -95,16 +95,16 @@ Ez a task akkor sikeres, ha:
 1. `plan_ref`: `plans/actor-runtime-interface-discovery-and-migration-plan-v1.md`
    - Ez a canonical forras a reviewer Phase E helyere a teljes migration programban.
 2. Binding migration input:
-   - `plans/tasks/actor-runtime-interface-migration-spine-phaseD-plan.md`
+   - `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-migration-spine-phaseD-plan.md`
    - Ez rogzitette, hogy az implementer utan a reviewer kovetkezik, es hogy a reviewer gate policy tovabbra is policy layer marad.
 3. Binding target contract:
-   - `plans/tasks/actor-runtime-interface-capability-contract-phaseB-draft.md`
+   - `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-capability-contract-phaseB-draft.md`
    - Ez az authoritative role-neutral boundary.
 4. Binding scenario/parity input:
-   - `plans/tasks/actor-runtime-interface-scenario-simulation-phaseC-matrix.md`
+   - `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-scenario-simulation-phaseC-matrix.md`
    - A reviewer cutover kotelezo parity inputjai innen jonnek.
 5. Binding current-state grounding:
-   - `plans/tasks/actor-runtime-interface-behavior-inventory-phaseA-inventory.md`
+   - `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-behavior-inventory-phaseA-inventory.md`
    - Ez mutatja, mely reviewer guidance es retained surface marad policy/adaptor reteg.
 6. Precedence rule:
    - target boundaryhoz a Phase B authoritative,
@@ -211,9 +211,9 @@ Normative rules:
 
 | Type | Items | Priority | Timing |
 |---|---|---|---|
-| must-use | `plans/tasks/actor-runtime-interface-migration-spine-phaseD-plan.md` reviewer sorrendje es reviewer gate ownershipa | P1 | required-now |
-| must-use | `plans/tasks/actor-runtime-interface-capability-contract-phaseB-draft.md` role-neutral core boundaryja | P1 | required-now |
-| must-use | `plans/tasks/actor-runtime-interface-scenario-simulation-phaseC-matrix.md` reviewer parity inputjai (`SC2`, `SC3`, `SC6`, `SC7`, `SC9`, `SC10`) | P1 | required-now |
+| must-use | `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-migration-spine-phaseD-plan.md` reviewer sorrendje es reviewer gate ownershipa | P1 | required-now |
+| must-use | `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-capability-contract-phaseB-draft.md` role-neutral core boundaryja | P1 | required-now |
+| must-use | `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-scenario-simulation-phaseC-matrix.md` reviewer parity inputjai (`SC2`, `SC3`, `SC6`, `SC7`, `SC9`, `SC10`) | P1 | required-now |
 | must-use | meglovo `actorEmitContext` fail-closed authority modell | P1 | required-now |
 | must-not-use | uj reviewer actor primitive vagy uj output family | P1 | required-now |
 | must-not-use | reviewer gate policy actor-owned command-specifikus API-vá emelese | P1 | required-now |

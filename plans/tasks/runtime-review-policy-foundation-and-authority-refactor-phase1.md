@@ -29,7 +29,7 @@ system_context_ref: docs/pairflow-initial-design.md
 normative_refs:
   - plans/runtime-review-policy-reset-and-phasing-plan-v1.md
   - plans/actor-runtime-interface-discovery-and-migration-plan-v1.md
-  - plans/tasks/actor-runtime-interface-migration-spine-phaseD-plan.md
+  - plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-migration-spine-phaseD-plan.md
   - docs/pairflow-initial-design.md
 owners:
   - "felho"

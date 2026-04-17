@@ -89,16 +89,16 @@ Ez a task akkor sikeres, ha:
 1. `plan_ref`: `plans/actor-runtime-interface-discovery-and-migration-plan-v1.md`
    - Ez a canonical forras a `meta_reviewer` Phase E helyere a teljes migration programban.
 2. Binding migration input:
-   - `plans/tasks/actor-runtime-interface-migration-spine-phaseD-plan.md`
+   - `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-migration-spine-phaseD-plan.md`
    - Ez rogzitette, hogy a `meta_reviewer` az implementer es reviewer utan kovetkezik, es hogy a retained operator status csak diagnostics/projection maradhat.
 3. Binding target contract:
-   - `plans/tasks/actor-runtime-interface-capability-contract-phaseB-draft.md`
+   - `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-capability-contract-phaseB-draft.md`
    - Ez az authoritative role-neutral boundary.
 4. Binding scenario/parity input:
-   - `plans/tasks/actor-runtime-interface-scenario-simulation-phaseC-matrix.md`
+   - `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-scenario-simulation-phaseC-matrix.md`
    - A meta-reviewer cutover kotelezo parity inputjai innen jonnek.
 5. Binding current-state grounding:
-   - `plans/tasks/actor-runtime-interface-behavior-inventory-phaseA-inventory.md`
+   - `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-behavior-inventory-phaseA-inventory.md`
    - Ez mutatja, mely meta-review path marad retained operator/runtime adapter reteg.
 6. Precedence rule:
    - target boundaryhoz a Phase B authoritative,
@@ -207,9 +207,9 @@ Normative rules:
 
 | Type | Items | Priority | Timing |
 |---|---|---|---|
-| must-use | `plans/tasks/actor-runtime-interface-migration-spine-phaseD-plan.md` meta-reviewer sorrendje es retained diagnostics ownershipa | P1 | required-now |
-| must-use | `plans/tasks/actor-runtime-interface-capability-contract-phaseB-draft.md` role-neutral core boundaryja | P1 | required-now |
-| must-use | `plans/tasks/actor-runtime-interface-scenario-simulation-phaseC-matrix.md` meta-review parity inputjai (`SC4`, `SC9`, `SC10`, `SC11`) | P1 | required-now |
+| must-use | `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-migration-spine-phaseD-plan.md` meta-reviewer sorrendje es retained diagnostics ownershipa | P1 | required-now |
+| must-use | `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-capability-contract-phaseB-draft.md` role-neutral core boundaryja | P1 | required-now |
+| must-use | `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-scenario-simulation-phaseC-matrix.md` meta-review parity inputjai (`SC4`, `SC9`, `SC10`, `SC11`) | P1 | required-now |
 | must-use | meglovo `actorEmitContext` + `executionContext` fail-closed authority modell | P1 | required-now |
 | must-not-use | implicit operator status/pane/cwd authority fallback a canonical meta-review pathban | P1 | required-now |
 | must-not-use | kulon meta-reviewer actor primitive vagy uj output family | P1 | required-now |

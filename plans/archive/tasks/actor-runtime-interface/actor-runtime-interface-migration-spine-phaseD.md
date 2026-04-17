@@ -5,7 +5,7 @@ title: "Actor Runtime Interface Migration Spine (Phase D)"
 status: completed
 phase: phaseD
 target_files:
-  - plans/tasks/actor-runtime-interface-migration-spine-phaseD-plan.md
+  - plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-migration-spine-phaseD-plan.md
 prd_ref: null
 plan_ref: plans/actor-runtime-interface-discovery-and-migration-plan-v1.md
 system_context_ref: README.md
@@ -94,13 +94,13 @@ Phase D akkor sikeres, ha letrejon egy jol olvashato migration-plan artifact, am
 1. `plan_ref`: `plans/actor-runtime-interface-discovery-and-migration-plan-v1.md`
    - Ez a canonical forras a Workstream 4 migration spine sorrendhez es a Phase D elvart kimenetehez.
 2. Binding target contract input:
-   - `plans/tasks/actor-runtime-interface-capability-contract-phaseB-draft.md`
+   - `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-capability-contract-phaseB-draft.md`
    - A migration a mar elfogadott target boundaryra epul.
 3. Binding scenario/gap input:
-   - `plans/tasks/actor-runtime-interface-scenario-simulation-phaseC-matrix.md`
+   - `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-scenario-simulation-phaseC-matrix.md`
    - A retained adapterek, explicit gapek es bounded open questionok innen jonnek.
 4. Binding current-state grounding:
-   - `plans/tasks/actor-runtime-interface-behavior-inventory-phaseA-inventory.md`
+   - `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-behavior-inventory-phaseA-inventory.md`
    - Ez mutatja, mely mai runtime/operator surface-ek maradnak retained adapternek vagy cleanup-jeloltnek.
 5. Binding normative companion set:
    - `plans/archive/plans/protocol-first-bubble-runtime-and-meta-review-unification-plan-v1.md`
@@ -132,9 +132,9 @@ Phase D akkor sikeres, ha letrejon egy jol olvashato migration-plan artifact, am
 
 | ID | File | Function/Entry | Exact Signature (args -> return) | Insertion Point | Expected Behavior | Priority | Timing | Evidence |
 |---|---|---|---|---|---|---|---|---|
-| CS1 | `plans/tasks/actor-runtime-interface-migration-spine-phaseD-plan.md` | checked-in Phase D migration artifact | markdown migration spine -> checked-in artifact | uj Phase D plan artifact | Egyetlen artifact keszul, amely migration lepesekre bontja a target boundary bevezeteset, parity gate-ekkel es retained adapter ownershippel | P1 | required-now | Phase D deliverable definicio |
-| CS2 | `plans/tasks/actor-runtime-interface-capability-contract-phaseB-draft.md` | target boundary lock | Phase B contract -> migration invariants | Phase D invariants section | A migration spine explicitten Phase B core contract invariansaihoz kotodik, es nem nyitja ujra a target boundaryt | P1 | required-now | Phase B -> Phase D lock |
-| CS3 | `plans/tasks/actor-runtime-interface-scenario-simulation-phaseC-matrix.md` | migration risk inputs | Phase C coverage/gaps -> migration ordering | Phase D retained adapter / open question sections | A Phase C covered-with-adapter es gap megfigyelesei explicit migration-step inputokka valnak | P1 | required-now | Phase C -> Phase D grounding |
+| CS1 | `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-migration-spine-phaseD-plan.md` | checked-in Phase D migration artifact | markdown migration spine -> checked-in artifact | uj Phase D plan artifact | Egyetlen artifact keszul, amely migration lepesekre bontja a target boundary bevezeteset, parity gate-ekkel es retained adapter ownershippel | P1 | required-now | Phase D deliverable definicio |
+| CS2 | `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-capability-contract-phaseB-draft.md` | target boundary lock | Phase B contract -> migration invariants | Phase D invariants section | A migration spine explicitten Phase B core contract invariansaihoz kotodik, es nem nyitja ujra a target boundaryt | P1 | required-now | Phase B -> Phase D lock |
+| CS3 | `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-scenario-simulation-phaseC-matrix.md` | migration risk inputs | Phase C coverage/gaps -> migration ordering | Phase D retained adapter / open question sections | A Phase C covered-with-adapter es gap megfigyelesei explicit migration-step inputokka valnak | P1 | required-now | Phase C -> Phase D grounding |
 | CS4 | `plans/actor-runtime-interface-discovery-and-migration-plan-v1.md` | Workstream 4 realization | migration workstream -> migration steps | Phase D step list | A lepesek az elvi sorrendet kovetik: wrapper, delivery/ack boundary, core freeze, boundary split, pilot, rollout | P1 | required-now | plan alignment |
 | CS5 | protocol-first companion refs | protocol-first compatibility | retained surfaces -> cleanup ownership | Phase D cleanup section | A migration spine nem hozhat vissza legacy alias, implicit authority vagy special-case meta-review modellt | P1 | required-now | protocol-first compatibility |
 
@@ -185,9 +185,9 @@ Constraint:
 | Type | Items | Priority | Timing |
 |---|---|---|---|
 | must-use | `plans/actor-runtime-interface-discovery-and-migration-plan-v1.md` | P1 | required-now |
-| must-use | `plans/tasks/actor-runtime-interface-capability-contract-phaseB-draft.md` | P1 | required-now |
-| must-use | `plans/tasks/actor-runtime-interface-scenario-simulation-phaseC-matrix.md` | P1 | required-now |
-| must-use | `plans/tasks/actor-runtime-interface-behavior-inventory-phaseA-inventory.md` | P1 | required-now |
+| must-use | `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-capability-contract-phaseB-draft.md` | P1 | required-now |
+| must-use | `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-scenario-simulation-phaseC-matrix.md` | P1 | required-now |
+| must-use | `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-behavior-inventory-phaseA-inventory.md` | P1 | required-now |
 | must-use | `plans/archive/plans/protocol-first-bubble-runtime-and-meta-review-unification-plan-v1.md` | P1 | required-now |
 | must-use | `plans/archive/tasks/protocol-first/protocol-first-cli-and-protocol-surface-unification-phase4.md` | P1 | required-now |
 | must-use | `plans/archive/tasks/protocol-first/protocol-first-legacy-meta-review-model-removal-phase5.md` | P1 | required-now |
@@ -201,7 +201,7 @@ Constraint:
 
 | ID | Scenario | Given | When | Then | Priority | Timing | Evidence |
 |---|---|---|---|---|---|---|---|
-| T1 | Phase D plan artifact exists | a task docs-only modban fut | a deliverable elkeszul | letezik a checked-in `plans/tasks/actor-runtime-interface-migration-spine-phaseD-plan.md` artifact | P1 | required-now | doc review |
+| T1 | Phase D plan artifact exists | a task docs-only modban fut | a deliverable elkeszul | letezik a checked-in `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-migration-spine-phaseD-plan.md` artifact | P1 | required-now | doc review |
 | T2 | migration steps explicit and ordered | parent plan Workstream 4 sorrendet ker | a dokumentum elkeszul | a migration spine explicit, rendezett lepeslistat ad a wrapper -> delivery/ack -> core freeze -> boundary split -> pilot -> rollout sorrendhez | P1 | required-now | doc review |
 | T3 | every step has parity evidence | a Phase D migration spine parity-gated kell legyen | a dokumentum review-ja megtortenik | minden migration step rendelkezik parity evidence mezovel vagy ekvivalens explicit bizonyitekkal | P1 | required-now | doc review |
 | T4 | retained adapters have ownership | Phase C retained adapter-pathokat mutatott | a dokumentum elkeszul | minden retained adapterhez explicit owner domain es cleanup trigger tartozik, vagy retained indoklas marad | P1 | required-now | doc review |
@@ -239,7 +239,7 @@ Constraint:
 
 Task allapot `IMPLEMENTABLE`, ha:
 
-1. letezik a checked-in `plans/tasks/actor-runtime-interface-migration-spine-phaseD-plan.md` artifact;
+1. letezik a checked-in `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-migration-spine-phaseD-plan.md` artifact;
 2. a dokumentum explicit migration lepessor-rendet ad a target boundary bevezetesere;
 3. minden lepeshez rogziti az elofeltetelt, a parity evidence-et, a retained adapter ownershipet es a cleanup trigger vagy retained indoklast;
 4. a Phase C bounded nyitott pontjai owner-domain es decision-point szinten le vannak fordítva migration-inputra;

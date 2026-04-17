@@ -155,10 +155,10 @@ Ez a task akkor sikeres, ha:
 2. Parent cleanup contract:
    - `plans/archive/tasks/actor-runtime-interface-meta-review-operator-projection-cleanup-phaseE.md`
 3. Binding migration/context refs:
-   - `plans/tasks/actor-runtime-interface-migration-spine-phaseD-plan.md`
-   - `plans/tasks/actor-runtime-interface-capability-contract-phaseB-draft.md`
-   - `plans/tasks/actor-runtime-interface-scenario-simulation-phaseC-matrix.md`
-   - `plans/tasks/actor-runtime-interface-behavior-inventory-phaseA-inventory.md`
+   - `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-migration-spine-phaseD-plan.md`
+   - `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-capability-contract-phaseB-draft.md`
+   - `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-scenario-simulation-phaseC-matrix.md`
+   - `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-behavior-inventory-phaseA-inventory.md`
 4. Historical boundary refs:
    - `plans/archive/tasks/protocol-first/protocol-first-cli-and-protocol-surface-unification-phase4.md`
    - `plans/archive/tasks/protocol-first/protocol-first-legacy-meta-review-model-removal-phase5.md`
@@ -233,9 +233,9 @@ Normative rules:
 
 | Source | This task must realize | Why this is binding here | Evidence |
 |---|---|---|---|
-| `plans/tasks/actor-runtime-interface-capability-contract-phaseB-draft.md` Phase B `Decision Baseline` + `Core Capability Invariants` | nincs special-case meta-review actor API, es nincs implicit actor-write authority | ez fogja vissza, hogy a cleanup ne csusszon vissza mixed actor/operator boundaryba | T4, T5 |
-| `plans/tasks/actor-runtime-interface-migration-spine-phaseD-plan.md` Phase D `S6_REVIEWER_META_AND_CLEANUP` | retained meta-review operator surface cleanupja a cutoverek utan | ez a task mar nem uj actor slice, hanem a Phase E cleanup backlog resze | T1, T4, T5 |
-| `plans/tasks/actor-runtime-interface-migration-spine-phaseD-plan.md` Phase D `Retained Adapter Ownership and Cleanup` meta-review row | a `status` diagnostics operator-owned maradjon, ne canonical authority | a cleanup celja e hatar tovabbi tisztitasa, nem a path ujranyitasa | T1, T3, T5 |
+| `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-capability-contract-phaseB-draft.md` Phase B `Decision Baseline` + `Core Capability Invariants` | nincs special-case meta-review actor API, es nincs implicit actor-write authority | ez fogja vissza, hogy a cleanup ne csusszon vissza mixed actor/operator boundaryba | T4, T5 |
+| `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-migration-spine-phaseD-plan.md` Phase D `S6_REVIEWER_META_AND_CLEANUP` | retained meta-review operator surface cleanupja a cutoverek utan | ez a task mar nem uj actor slice, hanem a Phase E cleanup backlog resze | T1, T4, T5 |
+| `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-migration-spine-phaseD-plan.md` Phase D `Retained Adapter Ownership and Cleanup` meta-review row | a `status` diagnostics operator-owned maradjon, ne canonical authority | a cleanup celja e hatar tovabbi tisztitasa, nem a path ujranyitasa | T1, T3, T5 |
 | `plans/archive/tasks/protocol-first/protocol-first-cli-and-protocol-surface-unification-phase4.md` Phase 4 operator-vs-actor split | a `bubble meta-review` surface operator namespace maradjon, a `submit` removed maradjon | ez akadalyozza meg az actor-facing special-case path visszatereset | T4, T5 |
 | `plans/archive/tasks/protocol-first/protocol-first-legacy-meta-review-model-removal-phase5.md` Phase 5 state-neutral operator surface | a retained operator surface ne koveteljen legacy actor-write authorityt | ettol marad a subtree projection reteg, nem kulon canonical control bus | T1, T2, T5 |
 | `docs/meta-review-gate-prd.md` Meta-review gate read contract | `status`/`last-report` cheap non-generative retrieval | ez a task ugyanennek a mar rogzitett kontraktnak a migration utani cleanup-megerositese | T1, T2, T3 |
