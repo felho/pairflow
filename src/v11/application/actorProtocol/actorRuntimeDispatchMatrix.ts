@@ -12,7 +12,7 @@ import type {
   ActorEmitContextSnapshot
 } from "../../shared/actorProtocol/actorEmitContext.js";
 
-export const actorRuntimePolicyCheckIds = [
+const actorRuntimePolicyCheckIds = [
   "context_snapshot_integrity",
   "input_context_match",
   "implementer_authority",
@@ -35,17 +35,17 @@ export interface ActorRuntimePolicyCheck {
   description: string;
 }
 
-export const actorRuntimeDispatchHandlers = [
+const actorRuntimeDispatchHandlers = [
   "implementer_wrapper",
   "reviewer_wrapper",
   "meta_reviewer_wrapper",
   "reviewer_human_question_fallback"
 ] as const;
 
-export type ActorRuntimeDispatchHandler =
+type ActorRuntimeDispatchHandler =
   (typeof actorRuntimeDispatchHandlers)[number];
 
-export const actorRuntimeAdapterIds = [
+const actorRuntimeAdapterIds = [
   "pass_adapter",
   "human_question_adapter",
   "convergence_adapter",
@@ -54,19 +54,14 @@ export const actorRuntimeAdapterIds = [
 
 export type ActorRuntimeAdapterId = (typeof actorRuntimeAdapterIds)[number];
 
-export const actorRuntimeRouteIds = [
-  "implementer_pass",
-  "implementer_human_question",
-  "reviewer_pass",
-  "reviewer_convergence",
-  "reviewer_human_question_fallback",
-  "meta_reviewer_meta_review_result"
-] as const;
-
-export type ActorRuntimeRouteId = (typeof actorRuntimeRouteIds)[number];
-
 export interface ActorRuntimeRoute {
-  id: ActorRuntimeRouteId;
+  id:
+    | "implementer_pass"
+    | "implementer_human_question"
+    | "reviewer_pass"
+    | "reviewer_convergence"
+    | "reviewer_human_question_fallback"
+    | "meta_reviewer_meta_review_result";
   authorityRole: AgentRole;
   inputKind: ActorOutputKind;
   handler: ActorRuntimeDispatchHandler;
@@ -429,27 +424,6 @@ export function resolveActorRuntimeDispatchPlan(input: {
       receivedKind: input.inputKind
     }
   });
-}
-
-export function resolveActorRuntimeDispatchPlanByRouteId(input: {
-  routeId: ActorRuntimeRouteId;
-}): ActorRuntimeDispatchPlan {
-  const route = actorRuntimeRouteMatrix.find(
-    (candidate) => candidate.id === input.routeId
-  );
-  if (route === undefined) {
-    throw new ActorEmitContextError({
-      reasonCode: "ACTOR_EMIT_CONTEXT_INVALID",
-      message:
-        `ACTOR_EMIT_CONTEXT_INVALID: unknown actor runtime dispatch route ${input.routeId}.`,
-      context: {
-        route: "resolveActorRuntimeDispatchPlanByRouteId",
-        expectedAuthority: "known_actor_runtime_dispatch_route",
-        receivedKind: input.routeId
-      }
-    });
-  }
-  return buildActorRuntimeDispatchPlan(route);
 }
 
 export function assertActorRuntimeDispatchPlanPolicies(input: {
