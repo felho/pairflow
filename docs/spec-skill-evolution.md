@@ -229,3 +229,81 @@ Between 2026-04-10 and 2026-04-11, several precedens.ai billing-integration bubb
 - No pre-session diff was captured anywhere the main conversation can inspect. The exact shape of the uncommitted edits at session-open time vs the final committed state cannot be reconstructed from the archive; the 3 review-identified structural issues are therefore a summary of agent feedback, not a precise "before/after" diff.
 - The session transcript was not exhaustively line-cited for the 3 structural issue descriptions; the summary is derived from the subagent's read of the 7 agent messages rather than individual quoted lines with numbers. This is the main fidelity gap for this section relative to the plan's quote-discipline.
 - The contextual link to `bci3-impl` / `bci3a-impl` failure patterns is inferred from the commit timing, the Stripe/billing/settlement domain examples embedded in the new reference, and the parallel precedens.ai session that opens minutes after commit — but this session itself does not quote bubble names or P-level findings.
+
+---
+
+## 2026-04-11 — `8b57b962` — Authority Fan-out Scan (generalized authority sequencing)
+
+**Commit message:** docs: generalize CreatePairflowSpec authority sequencing guards
+
+**What it introduced (from diff):**
+Adds a new mandatory `Authority Fan-out Scan` gate with six generic authority buckets (`authority_producer`, `persisted_authority`, `internal_execution_consumers`, `workflow_orchestration_consumers`, `read_model_consumers`, `cleanup_recovery_consumers`). Expands `phase_boundary` from a single free-form field to seven named closures (contract / producer / internal_execution / workflow_orchestration / read_model / activation / cleanup_recovery). Adds a new `Shared Contract Compatibility Gate` in the `CreateTask` workflow with required current-consumer inventory and additive-vs-breaking classification. Adds three new `SKILL.md` Core Principles (14-16: producer-first, shared-contract inventory, minimum viable sequencing), extends Minimum Contract Rules (14-20) with authority-fan-out / shared-contract / `Phase Ownership Grid` / `Authority Boundary Map` requirements. Templates gain `Authority Fan-out Scan` and `Phase Ownership Grid` (plan) and `Authority Boundary Map` (task). Terminology rename across the skill: "public-consume" → "multi-consumer".
+
+**Authoring session:**
+- File: `/Users/felho/.codex/sessions/2026/04/11/rollout-2026-04-11T22-31-39-019d7e3e-3762-7f83-999a-88c69fc9fba6.jsonl`
+- Session id: `019d7e3e-3762-7f83-999a-88c69fc9fba6`
+- `cwd`: `/Users/felho/dev/pairflow`
+- Time window: `2026-04-11T20:31:39.885Z` → `2026-04-11T22:24:07.087Z` (≈113 minutes; commit at 21:48 UTC falls 1h 17min after session start, 36 minutes before session end — mid-session).
+- User prompt count / agent message count: 18 user / 84 agent.
+- Session type: **authoring** — user opens with a non-convergence frustration (line 284), agent diagnoses the structural blind spot (line 458), user iteratively steers the gate design including an explicit domain-agnostic rename at line 621, then commits at line 763.
+
+**Verbatim quotes**
+
+> [user, line 284] "So something is not okay. Keep running to these P1 issues and this is the 10th round. So usually this is the indication of some unanticipated complexity or something is not clear. It's pleasing about whether the goal of this task file or the scope of this task file is correct or not."
+
+> [agent, line 458] "A skill jelenleg túl gyakran 'feature slicing' szemmel bont. Itt viszont 'authority propagation slicing' kellett volna."
+>
+> *(EN)* "The skill currently slices too often with a 'feature slicing' lens. In this case 'authority propagation slicing' would have been needed instead."
+
+> [user, line 621] "So I see an issue here because some of these items are perflow specific, but the scale is perflow agnostic, so we can use to create any type of task for any type of application. [...] make sure that the way how we improve the scale is perflow agnostic. I mean not perflow as a tool but perflow as a domain, so the skill cannot reference some domain elements of perflow because it should be able to use for any project."
+
+**Session content vs commit content delta:**
+
+```
+Session-side (initial agent proposal at rollout:L458 after bubble diagnosis):
+- Split vocabulary introduced (explicit list): persisted authority / authority producer / bubble-loop consume / tmux/runtime consume / activation / operator read-model / cleanup / recovery
+- Authority bucket names (initial draft agent-suggested): authority_producer, persisted_authority, internal_runtime_consumers, bubble_loop_consumers, operator_read_model_consumers, cleanup_lifecycle_consumers
+- Diagnosis framing: "feature slicing" vs "authority propagation slicing" (rollout:L458)
+
+Session-side user steering (rollout:L621):
+- Mandate: bucket names MUST be "perflow agnostic" (domain-generic, not pairflow-specific)
+
+Commit-side (from `git show 8b57b962` on the reference + SKILL.md):
+- Authority buckets (generic, committed): authority_producer, persisted_authority, internal_execution_consumers, workflow_orchestration_consumers, read_model_consumers, cleanup_recovery_consumers
+- `phase_boundary` (7 named closures): contract_closure, producer_closure, internal_execution_closure, workflow_orchestration_closure, read_model_closure, activation_closure, cleanup_recovery_closure
+- `Authority Fan-out Scan` gate (mandatory), `Shared Contract Compatibility Gate` (new in CreateTask), `Phase Ownership Grid` (plan template), `Authority Boundary Map` (task template)
+- Terminology rename: "public-consume" → "multi-consumer"
+
+Match analysis (names):
+- authority_producer: session ↔ commit ✓ identical
+- persisted_authority: session ↔ commit ✓ identical
+- internal_runtime_consumers → internal_execution_consumers: **renamed** (pairflow-specific "runtime" → generic "execution") per user mandate at L621
+- bubble_loop_consumers → workflow_orchestration_consumers: **renamed** (pairflow-specific "bubble-loop" → generic "workflow_orchestration") per L621
+- operator_read_model_consumers → read_model_consumers: **shortened** (pairflow-specific "operator" prefix dropped) per L621
+- cleanup_lifecycle_consumers → cleanup_recovery_consumers: **renamed** (domain-generic "recovery" instead of pairflow-specific "lifecycle") per L621
+- Split vocabulary: session listed 8 stages; commit landed 7 named closures under `phase_boundary` (the session's "tmux/runtime consume" + "operator read-model" collapsed into `workflow_orchestration_closure` + `read_model_closure`).
+
+Verdict: **structural alignment with explicit domain-agnostic renames**. The agent's initial proposal used pairflow-specific consumer names; the user's line 621 intervention drove every consumer-bucket rename that appears in the commit. No concept dropped; one structural collapse (8 session stages → 7 closures) occurred between session proposal and final commit. The commit names are 1:1 what the user explicitly asked for, not what the agent initially proposed.
+```
+
+**Incident evidence (bubble):**
+- Bubble id (from session): `remote-phase1b-docref` (inferred from the "Phase 1B" agent framing at rollout:L458; confirmed via archive lookup).
+- Archive instance found: `/Users/felho/.pairflow/archive/b8d470bb2ac6be3b/bi_00mnup5jii_96e154efb80daf76218f/`
+- Final state + final round: `CANCELLED at round 3` (`state.json:state`, `state.json:round`).
+- Bubble repo: `/Users/felho/dev/pairflow` (`bubble.toml:repo_path`); artifact type `document` (docs-only refinement of a remote-execution design task).
+- Characterization of non-convergence (each bullet backed by an archive citation):
+  - Transcript has 12 lines with event types `TASK / PASS / CONVERGENCE / APPROVAL_REQUEST / APPROVAL_DECISION` (same high-level structure as the earlier `bci3-impl` and `review-policy-runtime-surface-phase1` archives). No dedicated `FINDING` type — advisory findings live inside `CONVERGENCE` payloads, consistent with the archive schema seen in earlier sections of this document.
+  - `state.json:round_role_history` records 3 codex+claude rework rounds before the user-initiated cancellation.
+  - User's own framing at rollout:L284 ("10th round") is higher than the archive's round count (3 in this bubble); the user is likely aggregating across the full refinement-plus-implementation attempt chain and/or adjacent phase-1 bubbles. The archive round count and the user-stated round count should both be recorded — they are not a contradiction, they are two viewpoints on the same work.
+- Watchdog history: not separately checked for this bubble; the archive `transcript.ndjson` is the primary evidence.
+
+**Problem solved (synthesized, in the user's framing):**
+On reaching the 10th round of P1 findings on the Phase 1B docref task, the user concluded the failure pattern was structural rather than incremental. The agent's diagnosis at rollout:L458 is the key: the existing skill was defaulting to "feature slicing" (foundation → delivery → activation) when the scope actually required "authority propagation slicing" — separating who produces canonical authority from each consumer family that reads it. The commit formalizes that diagnosis into a new mandatory `Authority Fan-out Scan` gate with six domain-agnostic authority buckets (per user's line 621 mandate), expands `phase_boundary` into seven explicit closures, and adds a `Shared Contract Compatibility Gate` so shared-interface changes cannot silently drift across consumer families.
+
+**Related prior sessions:**
+- `/Users/felho/.codex/sessions/2026/04/11/rollout-2026-04-11T22-46-40-019d7e4b-f389-7103-a7f0-e4d07e77dfc5.jsonl` — starts 20:46 UTC (15 minutes after this session starts), also `cwd=/Users/felho/dev/pairflow`. Overlapping parallel session; not spot-verified as a contributing source in this appendix.
+
+**Gaps / uncertainty:**
+- The agent quote at line 458 is much longer than the single-sentence excerpt quoted above. The full message contains the 8-stage split vocabulary ("persisted authority / authority producer / bubble-loop consume / tmux/runtime consume / activation / operator read-model / cleanup / recovery") which is captured in the delta block above rather than the quote block. The quote block deliberately kept a single verbatim sentence to satisfy quote discipline; the broader content is summarized in the `Problem solved` section.
+- The `remote-phase1b-docref` transcript's individual `CONVERGENCE` payloads were not line-by-line checked for finding titles in this section (unlike the `ca22d258` / `bci3-impl` section where finding titles were fully enumerated). The round-by-round finding pattern here is asserted by the user at rollout:L284 ("10th round"), not recomputed from `advisory_findings_open_total` per round in the archive.
+- The companion session (`019d7e4b-...`) is noted but not analyzed; its role in the skill refinement (if any) is not established.
