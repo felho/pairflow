@@ -1,4 +1,6 @@
-import { statusCommandDependencyDefaults } from "./statusCommandDependencyDefaults.js";
+import type { BubbleRemotePointer, BubbleRemoteStateCache } from "../../../types/bubble.js";
+import { RemoteBubbleStatusError } from "../../infrastructure/executor/ssh/sshBubbleStatus.js";
+import { isNamedError } from "../errors/namedError.js";
 import {
   countPendingHumanQuestions,
   readStatusTranscriptData,
@@ -7,6 +9,7 @@ import {
   resolveStatusGateState,
   withAccuracyCriticalVerificationGate
 } from "./statusCommandInternals.js";
+import { statusCommandDependencyDefaults } from "./statusCommandDependencyDefaults.js";
 import {
   buildBubbleStatusView,
   type BubbleStatusView
@@ -15,7 +18,6 @@ import type {
   ReadWatchdogPaneActivity,
   ReadWatchdogPaneActivityResult
 } from "../watchdog/watchdogPaneActivityStore.js";
-import { isNamedError } from "../errors/namedError.js";
 
 export interface BubbleStatusInput {
   bubbleId: string;
@@ -28,6 +30,18 @@ export type { BubbleStatusView } from "./statusCommandViewBuilder.js";
 
 export interface BubbleStatusDependencies {
   readWatchdogPaneActivity: ReadWatchdogPaneActivity;
+  readRemotePointer?: (
+    path: string
+  ) => Promise<BubbleRemotePointer | null>;
+  readRemoteStateCache?: (
+    path: string
+  ) => Promise<BubbleRemoteStateCache | null>;
+  writeRemoteStateCache?: (
+    path: string,
+    value: BubbleRemoteStateCache
+  ) => Promise<void>;
+  resolveRemoteBubbleStatusTarget?: typeof statusCommandDependencyDefaults.resolveRemoteBubbleStatusTarget;
+  executeRemoteBubbleStatus?: typeof statusCommandDependencyDefaults.executeRemoteBubbleStatus;
 }
 
 export class BubbleStatusError extends Error {
@@ -37,38 +51,130 @@ export class BubbleStatusError extends Error {
   }
 }
 
-export async function getBubbleStatus(
-  input: BubbleStatusInput,
-  dependencies: BubbleStatusDependencies
-): Promise<BubbleStatusView> {
-  const resolved = await statusCommandDependencyDefaults.resolveBubbleById({
-    bubbleId: input.bubbleId,
-    ...(input.repoPath !== undefined ? { repoPath: input.repoPath } : {}),
-    ...(input.cwd !== undefined ? { cwd: input.cwd } : {})
-  });
+async function readRemoteStateCacheSafe(input: {
+  path: string;
+  readRemoteStateCache: NonNullable<BubbleStatusDependencies["readRemoteStateCache"]>;
+}): Promise<{
+  cache: BubbleRemoteStateCache | null;
+  cacheStatus: "present" | "missing" | "invalid";
+}> {
+  try {
+    const cache = await input.readRemoteStateCache(input.path);
+    return {
+      cache,
+      cacheStatus: cache === null ? "missing" : "present"
+    };
+  } catch (error) {
+    if (isNamedError(error, "SchemaValidationError")) {
+      return {
+        cache: null,
+        cacheStatus: "invalid"
+      };
+    }
+    throw error;
+  }
+}
+
+async function refreshRemoteStateCache(input: {
+  path: string;
+  snapshot: {
+    lastCheckedAt: string;
+    state: BubbleStatusView["state"];
+    round: number;
+  };
+  maxRounds: number;
+  writeRemoteStateCache: NonNullable<BubbleStatusDependencies["writeRemoteStateCache"]>;
+  readRemoteStateCache: NonNullable<BubbleStatusDependencies["readRemoteStateCache"]>;
+}): Promise<{
+  cacheStatus: "present" | "missing" | "invalid";
+  cacheReasonCode?:
+    | "STATUS_REMOTE_CACHE_WRITE_FAILED"
+    | "STATUS_REMOTE_CACHE_FALLBACK_READ_FAILED";
+  lastCacheCheckAt?: string;
+}> {
+  try {
+    await input.writeRemoteStateCache(input.path, {
+      lastCheckedAt: input.snapshot.lastCheckedAt,
+      state: input.snapshot.state,
+      round: input.snapshot.round,
+      maxRounds: input.maxRounds
+    });
+    return {
+      cacheStatus: "present",
+      lastCacheCheckAt: input.snapshot.lastCheckedAt
+    };
+  } catch {
+    try {
+      const cacheResult = await readRemoteStateCacheSafe({
+        path: input.path,
+        readRemoteStateCache: input.readRemoteStateCache
+      });
+      return {
+        cacheStatus: cacheResult.cacheStatus,
+        cacheReasonCode: "STATUS_REMOTE_CACHE_WRITE_FAILED",
+        ...(cacheResult.cache?.lastCheckedAt !== undefined
+          ? { lastCacheCheckAt: cacheResult.cache.lastCheckedAt }
+          : {})
+      };
+    } catch {
+      return {
+        cacheStatus: "missing",
+        cacheReasonCode: "STATUS_REMOTE_CACHE_FALLBACK_READ_FAILED"
+      };
+    }
+  }
+}
+
+function resolveConfiguredRemoteAlias(input: {
+  bubbleId: string;
+  bubbleConfig: Awaited<
+    ReturnType<typeof statusCommandDependencyDefaults.resolveBubbleById>
+  >["bubbleConfig"];
+}): string {
+  if (input.bubbleConfig.executor?.type === "ssh") {
+    return input.bubbleConfig.executor.remote;
+  }
+  throw new BubbleStatusError(
+    `STATUS_REMOTE_STATUS_UNAVAILABLE: Bubble ${input.bubbleId} has remote execution artifacts without an ssh executor alias in bubble.toml.`
+  );
+}
+
+function formatRemoteStatusUnavailableReason(error: unknown): string {
+  const reason = error instanceof Error ? error.message : String(error);
+  return reason.startsWith("STATUS_REMOTE_STATUS_UNAVAILABLE:")
+    ? reason
+    : `STATUS_REMOTE_STATUS_UNAVAILABLE: ${reason}`;
+}
+
+async function buildLocalBubbleStatusView(input: {
+  resolved: Awaited<ReturnType<typeof statusCommandDependencyDefaults.resolveBubbleById>>;
+  now: Date;
+  dependencies: BubbleStatusDependencies;
+  remoteExecution?: BubbleStatusView["remoteExecution"];
+}): Promise<BubbleStatusView> {
   const {
     state,
     stateValidation,
     transcript,
     inbox
-  } = await readStatusTranscriptData(resolved);
+  } = await readStatusTranscriptData(input.resolved);
   const pendingQuestions = countPendingHumanQuestions(inbox);
-  const accuracyCritical = resolved.bubbleConfig.accuracy_critical === true;
+  const accuracyCritical = input.resolved.bubbleConfig.accuracy_critical === true;
   const pendingApprovals =
     stateValidation === null
-      ? resolvePendingApprovalCount(resolved, state, inbox)
+      ? resolvePendingApprovalCount(input.resolved, state, inbox)
       : 0;
   const verificationStatus =
     stateValidation === null
       ? await resolveReviewVerificationState(
-          resolved,
+          input.resolved,
           state,
           accuracyCritical
         )
       : "missing";
   const gateState =
     stateValidation === null
-      ? await resolveStatusGateState(resolved, state.round)
+      ? await resolveStatusGateState(input.resolved, state.round)
       : {
           failingGates: [],
           specLockState: {
@@ -90,15 +196,14 @@ export async function getBubbleStatus(
     );
   }
 
-  const now = input.now ?? new Date();
   const paneActivityRead: ReadWatchdogPaneActivityResult =
-    await dependencies.readWatchdogPaneActivity({
-      runtimeDir: resolved.bubblePaths.runtimeDir,
-      bubbleId: resolved.bubbleId
+    await input.dependencies.readWatchdogPaneActivity({
+      runtimeDir: input.resolved.bubblePaths.runtimeDir,
+      bubbleId: input.resolved.bubbleId
     });
 
   return buildBubbleStatusView({
-    resolved,
+    resolved: input.resolved,
     state,
     transcript,
     pendingQuestions,
@@ -108,7 +213,140 @@ export async function getBubbleStatus(
     gateState,
     stateValidation,
     paneActivityRead,
-    now
+    now: input.now,
+    ...(input.remoteExecution !== undefined
+      ? { remoteExecution: input.remoteExecution }
+      : {})
+  });
+}
+
+export async function getBubbleStatus(
+  input: BubbleStatusInput,
+  dependencies: BubbleStatusDependencies
+): Promise<BubbleStatusView> {
+  const resolved = await statusCommandDependencyDefaults.resolveBubbleById({
+    bubbleId: input.bubbleId,
+    ...(input.repoPath !== undefined ? { repoPath: input.repoPath } : {}),
+    ...(input.cwd !== undefined ? { cwd: input.cwd } : {})
+  });
+  const now = input.now ?? new Date();
+  const readRemotePointer =
+    dependencies.readRemotePointer
+    ?? statusCommandDependencyDefaults.readRemotePointer;
+  const readRemoteStateCache =
+    dependencies.readRemoteStateCache
+    ?? statusCommandDependencyDefaults.readRemoteStateCache;
+  const writeRemoteStateCache =
+    dependencies.writeRemoteStateCache
+    ?? statusCommandDependencyDefaults.writeRemoteStateCache;
+  const resolveRemoteBubbleStatusTarget =
+    dependencies.resolveRemoteBubbleStatusTarget
+    ?? statusCommandDependencyDefaults.resolveRemoteBubbleStatusTarget;
+  const executeRemoteBubbleStatus =
+    dependencies.executeRemoteBubbleStatus
+    ?? statusCommandDependencyDefaults.executeRemoteBubbleStatus;
+  const remotePointer = await readRemotePointer(resolved.bubblePaths.remotePointerPath);
+
+  if (remotePointer?.kind === "started") {
+    try {
+      const remoteAlias = resolveConfiguredRemoteAlias({
+        bubbleId: resolved.bubbleId,
+        bubbleConfig: resolved.bubbleConfig
+      });
+      const remoteTarget = await resolveRemoteBubbleStatusTarget({
+        bubbleId: resolved.bubbleId,
+        remoteAlias,
+        expectedHost: remotePointer.host
+      });
+      const remoteStatusSnapshot = await executeRemoteBubbleStatus(
+        {
+          bubbleId: resolved.bubbleId,
+          remoteClonePath: remotePointer.remoteClonePath,
+          remoteTarget
+        }
+      );
+      const cacheRefresh = await refreshRemoteStateCache({
+        path: resolved.bubblePaths.remoteStateCachePath,
+        snapshot: {
+          lastCheckedAt: remoteStatusSnapshot.lastCheckedAt,
+          state: remoteStatusSnapshot.state,
+          round: remoteStatusSnapshot.round
+        },
+        maxRounds: resolved.bubbleConfig.max_rounds,
+        writeRemoteStateCache,
+        readRemoteStateCache
+      });
+
+      return buildBubbleStatusView({
+        resolved,
+        remoteStatusSnapshot,
+        remoteExecution: {
+          alias: remoteTarget.alias,
+          host: remoteTarget.host,
+          pointerKind: "started",
+          viewKind: "status",
+          statusSource: "live",
+          cacheStatus: cacheRefresh.cacheStatus,
+          runtimeAvailability: remoteStatusSnapshot.runtimeAvailability,
+          ...(remoteStatusSnapshot.runtimeAvailability === "missing"
+            ? { reasonCode: "STATUS_REMOTE_RUNTIME_MISSING" as const }
+            : {}),
+          ...(cacheRefresh.cacheReasonCode !== undefined
+            ? { cacheReasonCode: cacheRefresh.cacheReasonCode }
+            : {}),
+          remoteClonePath: remotePointer.remoteClonePath,
+          lastLiveCheckAt: remoteStatusSnapshot.lastCheckedAt,
+          ...(cacheRefresh.lastCacheCheckAt !== undefined
+            ? { lastCacheCheckAt: cacheRefresh.lastCacheCheckAt }
+            : {})
+        }
+      });
+    } catch (error) {
+      let remoteCacheSuffix = "";
+      try {
+        const remoteCache = await readRemoteStateCacheSafe({
+          path: resolved.bubblePaths.remoteStateCachePath,
+          readRemoteStateCache
+        });
+        remoteCacheSuffix =
+          remoteCache.cacheStatus === "present"
+            ? `${remoteCache.cache?.lastCheckedAt !== undefined
+                ? ` cache_status=present cache_last_checked_at=${remoteCache.cache.lastCheckedAt}.`
+                : " cache_status=present."}`
+            : ` cache_status=${remoteCache.cacheStatus}.`;
+      } catch {
+        remoteCacheSuffix =
+          " cache_status=read_failed cache_reason=STATUS_REMOTE_CACHE_READ_FAILED.";
+      }
+      const reason = formatRemoteStatusUnavailableReason(error);
+      throw new BubbleStatusError(
+        `Failed to load remote status for `
+        + `${resolved.bubbleId}: ${reason}`
+        + remoteCacheSuffix
+      );
+    }
+  }
+
+  return buildLocalBubbleStatusView({
+    resolved,
+    now,
+    dependencies,
+    ...(remotePointer?.kind === "created"
+      ? {
+          remoteExecution: {
+            alias:
+              resolved.bubbleConfig.executor?.type === "ssh"
+                ? resolved.bubbleConfig.executor.remote
+                : remotePointer.host,
+            host: remotePointer.host,
+            pointerKind: "created" as const,
+            viewKind: "status" as const,
+            statusSource: "created_not_started" as const,
+            cacheStatus: "missing" as const,
+            runtimeAvailability: "not_started" as const
+          }
+        }
+      : {})
   });
 }
 
@@ -119,6 +357,11 @@ export function asBubbleStatusError(error: unknown): never {
   if (isNamedError(error, "BubbleLookupError")) {
     throw new BubbleStatusError(
       `${error.message} context: command_name=status.`
+    );
+  }
+  if (error instanceof RemoteBubbleStatusError) {
+    throw new BubbleStatusError(
+      `${error.code}: ${error.message} context: command_name=status.`
     );
   }
   if (error instanceof Error) {

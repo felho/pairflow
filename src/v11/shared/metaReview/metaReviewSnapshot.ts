@@ -10,8 +10,8 @@ export interface ActiveMetaReviewRuntimeDeliveryView {
   reasonCode: string | null;
   message: string;
   observedAt: string;
-  observedForHandoffId: string;
-  observedForRound: number;
+  observedForHandoffId: string | null;
+  observedForRound: number | null;
 }
 
 export interface MetaReviewRuntimeDeliveryCorrelation {

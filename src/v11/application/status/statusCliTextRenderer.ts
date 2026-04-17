@@ -46,6 +46,41 @@ function formatMetaReviewText(status: BubbleStatusView): string {
   return `Meta-review: authority=${status.metaReview.authorityActive ? "active" : "inactive"}`;
 }
 
+function formatRemoteExecutionText(status: BubbleStatusView): string | null {
+  const remoteExecution = status.remoteExecution;
+  if (remoteExecution === undefined) {
+    return null;
+  }
+  const cloneSuffix =
+    remoteExecution.remoteClonePath !== undefined
+      ? ` clone=${remoteExecution.remoteClonePath}`
+      : "";
+  const cacheSuffix =
+    remoteExecution.lastCacheCheckAt !== undefined
+      ? ` cache_checked=${remoteExecution.lastCacheCheckAt}`
+      : "";
+  const liveSuffix =
+    remoteExecution.lastLiveCheckAt !== undefined
+      ? ` live_checked=${remoteExecution.lastLiveCheckAt}`
+      : "";
+  const reasonSuffix =
+    remoteExecution.reasonCode !== undefined
+      ? ` reason=${remoteExecution.reasonCode}`
+      : "";
+  const cacheReasonSuffix =
+    remoteExecution.cacheReasonCode !== undefined
+      ? ` cache_reason=${remoteExecution.cacheReasonCode}`
+      : "";
+  return `Remote execution: alias=${remoteExecution.alias} host=${remoteExecution.host} pointer=${remoteExecution.pointerKind} source=${remoteExecution.statusSource} runtime=${remoteExecution.runtimeAvailability} cache=${remoteExecution.cacheStatus}${reasonSuffix}${cacheReasonSuffix}${liveSuffix}${cacheSuffix}${cloneSuffix}`;
+}
+
+function formatRemoteRuntimeNote(status: BubbleStatusView): string | null {
+  if (status.remoteExecution?.reasonCode !== "STATUS_REMOTE_RUNTIME_MISSING") {
+    return null;
+  }
+  return "Remote runtime note: persisted bubble state is preserved on disk, but no live remote runtime is active; this view stays fail-closed.";
+}
+
 function formatPaneActivityText(status: BubbleStatusView): string {
   const paneActivity = status.paneActivity;
   if (paneActivity.readStatus === "missing") {
@@ -65,11 +100,15 @@ export function renderBubbleStatusText(status: BubbleStatusView): string {
       : status.stateValidation.errors
           .map((error) => `${error.path}: ${error.message}`)
           .join("; ");
+  const remoteExecutionText = formatRemoteExecutionText(status);
+  const remoteRuntimeNote = formatRemoteRuntimeNote(status);
   const lines: string[] = [
     `Bubble: ${status.bubbleId}`,
     `Bubble start: ${status.bubbleStartedAt ?? "-"}`,
     `State: ${status.state} (round ${status.round})`,
     `State validation: ${stateValidationSummary}`,
+    ...(remoteExecutionText !== null ? [remoteExecutionText] : []),
+    ...(remoteRuntimeNote !== null ? [remoteRuntimeNote] : []),
     `Active: ${status.activeAgent ?? "-"} (${status.activeRole ?? "-"}) since ${status.activeSince ?? "-"}`,
     `Last command: ${status.lastCommandAt ?? "-"}`,
     formatPaneActivityText(status),

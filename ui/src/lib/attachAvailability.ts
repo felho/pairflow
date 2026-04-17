@@ -1,5 +1,6 @@
 import type {
   BubbleLifecycleState,
+  UiBubbleSummary,
   UiRuntimeHealth
 } from "./types";
 
@@ -16,6 +17,7 @@ interface AttachAvailabilityInput {
   state: BubbleLifecycleState;
   hasRuntimeSession: boolean;
   runtime: UiRuntimeHealth;
+  remoteExecution?: UiBubbleSummary["remoteExecution"];
 }
 
 export interface AttachAvailability {
@@ -29,6 +31,15 @@ export function getAttachAvailability(
   input: AttachAvailabilityInput
 ): AttachAvailability {
   const command = `tmux attach -t pf-${input.bubbleId}`;
+
+  if (input.remoteExecution !== undefined) {
+    return {
+      visible: false,
+      enabled: false,
+      command,
+      hint: null
+    };
+  }
 
   if (!runtimeCapableStates.has(input.state)) {
     return {

@@ -1,3 +1,13 @@
+import { loadPairflowGlobalConfig } from "../../../config/pairflowConfig.js";
+import {
+  readRemotePointer,
+  readRemoteStateCache,
+  writeRemoteStateCache
+} from "../../infrastructure/artifact/bubble/remoteExecutionArtifacts.js";
+import {
+  executeRemoteBubbleStatus,
+  resolveRemoteBubbleStatusTarget
+} from "../../infrastructure/executor/ssh/sshBubbleStatus.js";
 import {
   readDocContractGateArtifact,
   resolveDocContractGateArtifactPath
@@ -57,11 +67,17 @@ async function readReviewVerificationArtifactStatusForStatus(
 }
 
 export const statusCommandDependencyDefaults = {
+  executeRemoteBubbleStatus,
   inspectStateSnapshot: inspectStateSnapshotForStatus,
+  loadPairflowGlobalConfig,
   readDocContractGateArtifact,
+  readRemotePointer,
+  readRemoteStateCache,
   readReviewVerificationArtifactStatus: readReviewVerificationArtifactStatusForStatus,
   readStateSnapshot,
   readTranscriptEnvelopes,
+  resolveRemoteBubbleStatusTarget,
   resolveBubbleById,
-  resolveDocContractGateArtifactPath
+  resolveDocContractGateArtifactPath,
+  writeRemoteStateCache
 } as const;

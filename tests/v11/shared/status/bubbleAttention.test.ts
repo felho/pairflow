@@ -35,6 +35,56 @@ describe("v11 status bubbleAttention", () => {
     });
   });
 
+  it("suppresses runtime-missing attention when runtime expectation is explicitly overridden", () => {
+    const attention = resolveBubbleAttention({
+      state: "RUNNING",
+      runtimeSession: null,
+      stateValidation: null,
+      watchdog: {
+        monitored: false,
+        expired: false,
+        referenceTimestamp: "2026-02-22T18:40:00.000Z"
+      },
+      paneActivityRead: {
+        status: "missing"
+      },
+      now: new Date("2026-02-22T18:45:00.000Z"),
+      runtimeExpectedOverride: false
+    });
+
+    expect(attention).toBeNull();
+  });
+
+  it("preserves runtime-mismatch attention when runtime expectation is explicitly disabled", () => {
+    const attention = resolveBubbleAttention({
+      state: "RUNNING",
+      runtimeSession: {
+        bubbleId: "b_status_attention_remote_01",
+        repoPath: "/repo",
+        worktreePath: "/repo/.pairflow-worktree",
+        tmuxSessionName: "pf-b_status_attention_remote_01",
+        updatedAt: "2026-02-22T18:45:01.000Z"
+      },
+      stateValidation: null,
+      watchdog: {
+        monitored: false,
+        expired: false,
+        referenceTimestamp: "2026-02-22T18:45:00.000Z"
+      },
+      paneActivityRead: {
+        status: "missing"
+      },
+      now: new Date("2026-02-22T18:45:02.000Z"),
+      runtimeExpectedOverride: false
+    });
+
+    expect(attention).toMatchObject({
+      code: "runtime_mismatch",
+      severity: "warning",
+      label: "Runtime mismatch"
+    });
+  });
+
   it("suppresses runtime-mismatch attention during PREPARING_WORKSPACE", () => {
     const attention = resolveBubbleAttention({
       state: "PREPARING_WORKSPACE",

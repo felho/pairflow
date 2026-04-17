@@ -40,6 +40,7 @@ export function bubbleSummary(input: {
   activeRole?: UiBubbleSummary["activeRole"];
   attention?: UiBubbleSummary["attention"];
   metaReview?: Partial<UiBubbleSummary["metaReview"]>;
+  remoteExecution?: UiBubbleSummary["remoteExecution"];
 }): UiBubbleSummary {
   const state = input.state ?? "RUNNING";
   const runtimeSession =
@@ -63,6 +64,7 @@ export function bubbleSummary(input: {
     activeRole: input.activeRole ?? "implementer",
     activeSince: "2026-02-24T11:50:00.000Z",
     lastCommandAt: "2026-02-24T12:00:00.000Z",
+    stateValidation: null,
     runtimeSession,
     runtime: {
       expected: true,
@@ -70,6 +72,9 @@ export function bubbleSummary(input: {
       stale: input.stale ?? false
     },
     attention: input.attention ?? null,
+    ...(input.remoteExecution !== undefined
+      ? { remoteExecution: input.remoteExecution }
+      : {}),
     metaReview: {
       actor: "meta-reviewer",
       authorityActive: state === "RUNNING" && (input.activeRole ?? "implementer") === "meta_reviewer",
@@ -90,6 +95,7 @@ export function bubbleCard(input: {
   activeRole?: UiBubbleSummary["activeRole"];
   attention?: UiBubbleSummary["attention"];
   metaReview?: Partial<UiBubbleSummary["metaReview"]>;
+  remoteExecution?: UiBubbleSummary["remoteExecution"];
 }): BubbleCardModel {
   const bubble = bubbleSummary(input);
   return {
@@ -105,6 +111,7 @@ export function bubbleDetail(input: {
   runtimeSession?: UiBubbleSummary["runtimeSession"];
   stale?: boolean;
   attention?: UiBubbleSummary["attention"];
+  remoteExecution?: UiBubbleSummary["remoteExecution"];
 }): UiBubbleDetail {
   const summary = bubbleSummary(input);
   return {

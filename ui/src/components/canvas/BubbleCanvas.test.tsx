@@ -144,6 +144,87 @@ describe("BubbleCanvas", () => {
     expect(onPositionCommit).not.toHaveBeenCalled();
   });
 
+  it("prefers explicit invalid-state attention over generic stale-runtime summary text", () => {
+    render(
+      <BubbleCanvas
+        bubbles={[
+          bubbleCard({
+            bubbleId: "b-invalid-remote",
+            repoPath: "/repo-a",
+            runtimeSession: null,
+            stale: true,
+            attention: {
+              code: "state_invalid",
+              severity: "critical",
+              label: "Invalid state",
+              detail: "State snapshot validation failed and requires attention."
+            }
+          })
+        ]}
+        positions={{}}
+        expandedBubbleIds={[]}
+        onPositionChange={() => undefined}
+        onPositionCommit={() => undefined}
+        onToggleExpand={() => undefined}
+        onDelete={(bubbleId) => Promise.resolve(deletedResult(bubbleId))}
+      />
+    );
+
+    expect(
+      screen.getByText("State snapshot validation failed and requires attention.")
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/Stale runtime/u)).not.toBeInTheDocument();
+  });
+
+  it("does not render stale-runtime fallback text for active refreshed remote bubbles", () => {
+    render(
+      <BubbleCanvas
+        bubbles={[
+          {
+            ...bubbleCard({
+              bubbleId: "b-remote-active",
+              repoPath: "/repo-a",
+              state: "READY_FOR_HUMAN_APPROVAL",
+              runtimeSession: {
+                bubbleId: "b-remote-active",
+                repoPath: "/repo-a",
+                worktreePath: "/tmp/b-remote-active",
+                tmuxSessionName: "remote:b-remote-active",
+                updatedAt: "2026-04-16T10:01:00.000Z"
+              },
+              remoteExecution: {
+                alias: "lab",
+                host: "ssh.example.com",
+                pointerKind: "started",
+                viewKind: "list",
+                stateSource: "refresh",
+                cacheStatus: "present",
+                remoteClonePath: "/srv/pairflow/repo--b-remote-active",
+                lastCacheCheckAt: "2026-04-16T10:01:00.000Z"
+              }
+            }),
+            runtime: {
+              expected: false,
+              present: false,
+              stale: false
+            }
+          }
+        ]}
+        positions={{}}
+        expandedBubbleIds={[]}
+        onPositionChange={() => undefined}
+        onPositionCommit={() => undefined}
+        onToggleExpand={() => undefined}
+        onDelete={(bubbleId) => Promise.resolve(deletedResult(bubbleId))}
+      />
+    );
+
+    expect(
+      screen.getByText("Waiting for human decision after meta-reviewer handoff.")
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/Stale runtime/u)).not.toBeInTheDocument();
+  });
+
   it("renders canonical running, failed, and human-gate lifecycle messaging", () => {
     const { container } = render(
       <BubbleCanvas

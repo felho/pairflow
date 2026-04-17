@@ -149,6 +149,63 @@ describe("BubbleExpandedCard", () => {
     expect(screen.getByRole("button", { name: "Attach" })).toBeInTheDocument();
   });
 
+  it("does not expose attach or restart hints for remote bubbles from summary data", () => {
+    renderExpandedCard({
+      bubble: bubbleCard({
+        bubbleId: "b-expanded-remote-summary",
+        repoPath: "/repo-a",
+        state: "READY_FOR_HUMAN_APPROVAL",
+        runtimeSession: null,
+        stale: true,
+        remoteExecution: {
+          alias: "lab",
+          host: "ssh.example.com",
+          pointerKind: "started",
+          viewKind: "status",
+          statusSource: "live",
+          cacheStatus: "missing",
+          runtimeAvailability: "missing",
+          reasonCode: "STATUS_REMOTE_RUNTIME_MISSING"
+        }
+      })
+    });
+
+    expect(screen.queryByRole("button", { name: "Attach" })).not.toBeInTheDocument();
+    expect(screen.queryByText(/restart runtime automatically/u)).not.toBeInTheDocument();
+  });
+
+  it("does not expose attach or restart hints for remote bubbles from detail data", () => {
+    renderExpandedCard({
+      bubble: bubbleCard({
+        bubbleId: "b-expanded-remote-detail",
+        repoPath: "/repo-a",
+        state: "READY_FOR_HUMAN_APPROVAL",
+        runtimeSession: null,
+        stale: true
+      }),
+      detail: bubbleDetail({
+        bubbleId: "b-expanded-remote-detail",
+        repoPath: "/repo-a",
+        state: "READY_FOR_HUMAN_APPROVAL",
+        runtimeSession: null,
+        stale: true,
+        remoteExecution: {
+          alias: "lab",
+          host: "ssh.example.com",
+          pointerKind: "started",
+          viewKind: "status",
+          statusSource: "live",
+          cacheStatus: "missing",
+          runtimeAvailability: "missing",
+          reasonCode: "STATUS_REMOTE_RUNTIME_MISSING"
+        }
+      })
+    });
+
+    expect(screen.queryByRole("button", { name: "Attach" })).not.toBeInTheDocument();
+    expect(screen.queryByText(/restart runtime automatically/u)).not.toBeInTheDocument();
+  });
+
   it("copies bubble review prompt on double click of expanded bubble id label", async () => {
     renderExpandedCard();
 

@@ -9,6 +9,7 @@ import type { BubbleListView } from "./listCommandContract.js";
 export interface BubbleListCommandOptions {
   repo?: string;
   json: boolean;
+  refresh: boolean;
   help: false;
 }
 
@@ -23,11 +24,12 @@ export type ParsedBubbleListCommandOptions =
 export function getBubbleListHelpText(): string {
   return [
     "Usage:",
-    "  pairflow bubble list [--repo <path>] [--json]",
+    "  pairflow bubble list [--repo <path>] [--json] [--refresh]",
     "",
     "Options:",
     "  --repo <path>         Optional repository path (defaults to git top-level from cwd)",
     "  --json                Print structured JSON output",
+    "  --refresh             Refresh started remote bubbles via remote status read",
     "  -h, --help            Show this help"
   ].join("\n");
 }
@@ -42,6 +44,9 @@ export function parseBubbleListCommandOptions(
         type: "string"
       },
       json: {
+        type: "boolean"
+      },
+      refresh: {
         type: "boolean"
       },
       help: {
@@ -60,6 +65,7 @@ export function parseBubbleListCommandOptions(
   return {
     ...(parsed.values.repo !== undefined ? { repo: parsed.values.repo } : {}),
     json: parsed.values.json ?? false,
+    refresh: parsed.values.refresh ?? false,
     help: false
   };
 }
@@ -71,6 +77,11 @@ export function renderBubbleListText(view: BubbleListView): string {
     `Runtime sessions: registered=${view.runtimeSessions.registered}, stale=${view.runtimeSessions.stale}`,
     `States: CREATED=${view.byState.CREATED}, PREPARING_WORKSPACE=${view.byState.PREPARING_WORKSPACE}, RUNNING=${view.byState.RUNNING}, WAITING_HUMAN=${view.byState.WAITING_HUMAN}, READY_FOR_HUMAN_APPROVAL=${view.byState.READY_FOR_HUMAN_APPROVAL}, APPROVED_FOR_COMMIT=${view.byState.APPROVED_FOR_COMMIT}, COMMITTED=${view.byState.COMMITTED}, DONE=${view.byState.DONE}, FAILED=${view.byState.FAILED}, CANCELLED=${view.byState.CANCELLED}`
   ];
+  if (view.remoteExecutionSummary !== undefined) {
+    lines.push(
+      `Remote summary: created_not_started=${view.remoteExecutionSummary.createdNotStarted}, unavailable_started=${view.remoteExecutionSummary.unavailableStarted}${view.remoteExecutionSummary.refreshedThisRun === true ? ", refreshed_this_run=yes" : ""}`
+    );
+  }
 
   if (view.bubbles.length === 0) {
     lines.push("No bubbles found.");
@@ -82,8 +93,18 @@ export function renderBubbleListText(view: BubbleListView): string {
     const session = bubble.runtimeSession?.tmuxSessionName ?? "-";
     const validationSuffix =
       bubble.stateValidation === null ? "" : " state_validation=invalid";
+    const lifecycleSummary =
+      bubble.remoteExecution?.stateSource === "unavailable_started"
+        ? `state=unavailable, round=-${bubble.remoteExecution.compatLifecyclePlaceholder !== undefined
+          ? ` compat_state=${bubble.remoteExecution.compatLifecyclePlaceholder.state}${bubble.remoteExecution.compatLifecyclePlaceholder.round !== undefined ? ` compat_round=${bubble.remoteExecution.compatLifecyclePlaceholder.round}` : ""}`
+          : ""}`
+        : `state=${bubble.state}, round=${bubble.round}`;
+    const remoteSuffix =
+      bubble.remoteExecution === undefined
+        ? ""
+        : ` remote=${bubble.remoteExecution.pointerKind}@${bubble.remoteExecution.host} source=${bubble.remoteExecution.stateSource} cache=${bubble.remoteExecution.cacheStatus}${bubble.remoteExecution.lastCacheCheckAt !== undefined ? ` checked=${bubble.remoteExecution.lastCacheCheckAt}` : ""}${bubble.remoteExecution.refreshAttemptedAt !== undefined ? ` refresh_attempted=${bubble.remoteExecution.refreshAttemptedAt}` : ""}${bubble.remoteExecution.reasonCode !== undefined ? ` reason=${bubble.remoteExecution.reasonCode}` : ""}${bubble.remoteExecution.remoteClonePath !== undefined ? ` clone=${bubble.remoteExecution.remoteClonePath}` : ""}`;
     lines.push(
-      `- ${bubble.bubbleId}: state=${bubble.state}, round=${bubble.round}, active=${bubble.activeAgent ?? "-"}(${bubble.activeRole ?? "-"}), session=${session}${validationSuffix}`
+      `- ${bubble.bubbleId}: ${lifecycleSummary}, active=${bubble.activeAgent ?? "-"}(${bubble.activeRole ?? "-"}), session=${session}${validationSuffix}${remoteSuffix}`
     );
   }
 
@@ -102,7 +123,8 @@ export async function runBubbleListCommand(
   try {
     return await listBubbles({
       repoPath: options.repo,
-      cwd
+      cwd,
+      refresh: options.refresh
     });
   } catch (error) {
     asBubbleListError(error, {

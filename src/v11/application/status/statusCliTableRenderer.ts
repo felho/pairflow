@@ -102,6 +102,14 @@ export function renderBubbleStatusTable(
   const runtimeSummary = status.watchdog.monitored
     ? `last ${dim(formatClockTimestamp(status.paneActivity.lastChangedAt))} | age=${dim(formatElapsedSeconds(status.paneActivity.sinceLastChangedSeconds))} | watchdog ${green("on")} ${status.watchdog.timeoutMinutes}m rem=${formatWatchdogRemaining(status.watchdog)}`
     : `inactive | last observed ${dim(formatClockTimestamp(status.paneActivity.lastChangedAt))} | watchdog ${dim("off")} ${status.watchdog.timeoutMinutes}m rem=${formatWatchdogRemaining(status.watchdog)}`;
+  const remoteExecutionSummary =
+    status.remoteExecution === undefined
+      ? null
+      : `alias=${status.remoteExecution.alias} host=${status.remoteExecution.host} | source=${status.remoteExecution.statusSource} | runtime=${status.remoteExecution.runtimeAvailability}${status.remoteExecution.reasonCode !== undefined ? `/${status.remoteExecution.reasonCode}` : ""} | cache=${status.remoteExecution.cacheStatus}${status.remoteExecution.cacheReasonCode !== undefined ? `/${status.remoteExecution.cacheReasonCode}` : ""}${status.remoteExecution.lastLiveCheckAt !== undefined ? ` | live @ ${dim(formatTableTimestamp(status.remoteExecution.lastLiveCheckAt))}` : ""}${status.remoteExecution.lastCacheCheckAt !== undefined ? ` | cache @ ${dim(formatTableTimestamp(status.remoteExecution.lastCacheCheckAt))}` : ""}`;
+  const remoteRuntimeNote =
+    status.remoteExecution?.reasonCode === "STATUS_REMOTE_RUNTIME_MISSING"
+      ? "persisted state preserved on disk | live runtime unavailable | fail-closed"
+      : null;
   const rows: Array<readonly [string, string]> = [
     [
       "Bubble",
@@ -111,6 +119,12 @@ export function renderBubbleStatusTable(
       "Lifecycle",
       `${formatStateLabel(status.state)} r${status.round} | active ${formatActiveOwner(status.activeAgent, status.activeRole)} | since ${dim(formatClockTimestamp(status.activeSince))}`
     ],
+    ...(remoteExecutionSummary === null
+      ? []
+      : [["Remote", remoteExecutionSummary] as const]),
+    ...(remoteRuntimeNote === null
+      ? []
+      : [["Remote note", remoteRuntimeNote] as const]),
     [
       "Runtime",
       runtimeSummary

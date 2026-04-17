@@ -127,7 +127,8 @@ export function BubbleExpandedCard(props: BubbleExpandedCardProps): JSX.Element 
     bubbleId: attachSource.bubbleId,
     state: attachSource.state,
     hasRuntimeSession: attachSource.runtimeSession !== null,
-    runtime: attachSource.runtime
+    runtime: attachSource.runtime,
+    remoteExecution: attachSource.remoteExecution
   });
 
   const [timelineCompact, setTimelineCompact] = useState(true);
