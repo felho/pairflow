@@ -58,7 +58,7 @@ owners:
    - `WAITING_HUMAN` -> deferred deterministic rework intent;
    remote bubble eseten mindketto a remote authorityn hajtodik vegre, nem local surrogate truthon.
 
-## Current Codebase Check (2026-04-17)
+## Current Codebase Check / Current-Tree Reality Check (2026-04-17)
 
 1. A remote runtime activation/read-model/attach consume mar lezart:
    - `Phase 2D` adja a started pointer authorityt,
@@ -76,10 +76,15 @@ owners:
 4. A jelenlegi kodbase-ben nincs remote approval/rework command router:
    - nincs kulon typed helper/port, amely a started remote pointerrol remote mutationt futtatna,
    - es nincs bounded machine-readable remote result consume seam a CLI/UI/application callersnek.
-5. A design doc mar kimondja az altalanos remote command routing intentet:
+5. Target-file reality pontositas:
+   - a front matterben jelolt SSH approval helper jelenleg meg nem letezo uj file/surface,
+   - a mai repo-ban az SSH executor oldalon a megfelelo analog belso surface a `sshBubbleStart.ts` es a `sshBubbleStatus.ts`,
+   - ezert a task nem review-olhato ugy, mintha kotelezoen egy mar letezo approval SSH modul patch-elese lenne az egyetlen jo megoldas,
+   - mikozben a front matter `target_files` tovabbra is tiszta file-path inventory marad, es a placement-flex szabaly csak a body-level contractban rogzithet.
+6. A design doc mar kimondja az altalanos remote command routing intentet:
    - `pairflow bubble <command>` remote bubble eseten SSH-n a remote clone-ban fut,
    - de a jelenlegi implementationnek meg nincs ehhez bounded approval/rework consumer seama.
-6. A sandbox compatibility gate kifejezetten tiltja, hogy ez a task szetszorja az egyedi raw SSH command string epitest a kodbase-ben.
+7. A sandbox compatibility gate kifejezetten tiltja, hogy ez a task szetszorja az egyedi raw SSH command string epitest a kodbase-ben.
 
 ## Parent Plan Fit / Stable Sequencing
 
@@ -96,7 +101,7 @@ owners:
    - `Phase 3C` tovabbra is kulon recovery/docs/rollout task marad,
    - plain remote `reply` routing nem emelheto be csendben ebbe a taskba.
 
-## Target-File Reality / Touch Envelope
+## Target Surface / Touch Envelope
 
 1. A touched reality itt nem egyszeru CLI polish:
    - a primer scope valojaban workflow-orchestration + mutation entrypoint alignment,
@@ -107,10 +112,14 @@ owners:
    - kulon bounded remote approval command helper vagy port,
    - UI router/default consume, hogy a first-party UI se local-only mutation truthot feltetelezzen,
    - explicit regression tests a local retained es a remote routed branchre.
-3. A task nem olvashato at ugy, mintha generikus "remote command router" foundation lenne:
+3. Placement precision:
+   - a helper lehet uj SSH executor file vagy a meglevo approval/application seam melletti szuk extract,
+   - de a placementnek ugyanazon bounded remote approval/rework consume csaladon belul kell maradnia,
+   - es nem nyithat altalanos multi-command vagy cleanup routing foundationt.
+4. A task nem olvashato at ugy, mintha generikus "remote command router" foundation lenne:
    - ez a task csak az approval/request-rework family consume-ja,
    - a commit/merge/delete family kulon `Phase 3B`.
-4. A task nem olvashato at ugy sem, mintha minden human mutation ide tartozna:
+5. A task nem olvashato at ugy sem, mintha minden human mutation ide tartozna:
    - `reply` szandekosan nincs a target_files kozt,
    - mert ez a task approval/rework ownershipu, nem altalanos WAITING_HUMAN mutation cutover.
 
@@ -152,9 +161,50 @@ owners:
    - remote reboot/restart recoveryt,
    - altalanos shared remote command router teljes command-family cutovert.
 
-## Approval Scope / Review Boundary
+## Sandbox Compatibility Gate
 
-1. Gyors screening-kerdes approval elott:
+Reference: `docs/architecture/sandbox-compatibility-gate.md`
+
+1. `SG1 Runtime Boundary Preservation`
+   - megfeleles: igen, ha a `Phase 3A` remote approve/request-rework routing tovabbra is kulon mutation relay seamkent marad meg, es nem redukalodik puszta host-shell shortcutra.
+   - konkret Phase 3A ertekeles:
+     - ez a task csak az approval/rework command relay szeletet formalizalja,
+     - nem mossa ossze a runtime start, interactive attach, vagy cleanup/teardown retegeket a remote approval helperrel,
+     - a `Phase 2D-2F` retained baseline marad a start/status/list/attach boundarykon.
+2. `SG2 Host Path Non-Authority`
+   - megfeleles: igen, ha a remote mutation authority tovabbra is a started remote pointer + canonical remote Pairflow state, nem pusztan a `remoteClonePath`.
+   - konkret Phase 3A ertekeles:
+     - a `remoteClonePath` implementation detail marad a target resolutionhoz,
+     - a canonical mutation targetet a `remote.json(kind="started")` pointer authority es a remote runtime state jeloli,
+     - host path nem valhat egyeduli persisted identityve vagy local caller shortcut authorityva.
+3. `SG3 Host-Tool Decoupling`
+   - megfeleles: igen, ha a task nem nevezi at az approval/rework mutationt `ssh`- vagy `tmux`-specifikus product-fogalomma.
+   - konkret Phase 3A ertekeles:
+     - a raw `ssh` execution transport detail marad,
+     - a `tmux` nem lehet approval runtime identity vagy approval success contract,
+     - a routed approve/request-rework semantics nem kotheto veglegesen host-tool nevhez vagy session-formahoz.
+4. `SG4 Wrapper-Ready Execution`
+   - megfeleles: igen, ha a remote approval/rework execution bounded helper/port seamre epul, es nem szorodik szet kontrollalatlan raw SSH command string epitessze.
+   - konkret Phase 3A ertekeles:
+     - a mai `ssh host -> ... -> pairflow ...` forma moge kesobb wrapper/runtime entry reteg behelyezheto maradjon,
+     - a helper egy helyen tartsa a command build/exec responsibilityt,
+     - a CLI/UI/application consume family ne kozvetlen host-shell stringekre epuljon.
+5. `SG5 Explicit Non-Goals for Isolation`
+   - megfeleles: igen, ha a task explicit kimondja, hogy a sandboxing es izolacios policy nem ebben a fazisban zarul.
+   - explicit Phase 3A non-goalok:
+     - runtime wrapper implementacio,
+     - workspace root mapping vagy sandbox root/bind-mount mapping,
+     - attach implementacio,
+     - cleanup implementacio,
+     - network/process/filesystem policy layer,
+     - altalanos sandbox/container/cloud runtime activation.
+   - gate note:
+     - ez a fazis csak azt koveteli meg, hogy a fenti retegek kesobb cserelhetok maradjanak,
+     - nem koveteli meg, hogy a `Phase 3A` mar most izolalt runtimeot vezessen be.
+
+## Approval Scope / Review Boundary (Reviewer Approval Boundary)
+
+1. Gyors screening-kerdes reviewer approval elott:
    - a remote approve/request-rework most mar a started remote pointer authorityjara ul ugy, hogy remote bubble eseten nincs local transcript/state write fallback, es nem nyilik meg commit/cleanup/recovery scope?
 2. Ez a task akkor tekintheto tisztan approvable `Phase 3A` szeletnek, ha a bounded remote mutation routing egyertelmuen bizonyitott:
    - local bubble approve/request-rework retained valtozatlan marad,
@@ -229,7 +279,7 @@ Lezarni a remote bubble approval/rework mutation routingot ugy, hogy a human dec
    - `src/v11/defaults/ui/routerDefaults.ts`
    - `src/v11/infrastructure/ui/routerActionDispatch.ts`
 4. `internal_execution_consumers` in scope
-   - `src/v11/infrastructure/executor/ssh/sshBubbleApprovalCommand.ts`
+   - `src/v11/infrastructure/executor/ssh/sshBubbleApprovalCommand.ts` vagy equivalent narrow placement ugyanebben a remote approval/rework consume familyben
 5. Explicit out-of-scope consumers
    - `reply`
    - `commit` / `merge` / `delete`
@@ -289,9 +339,20 @@ Lezarni a remote bubble approval/rework mutation routingot ugy, hogy a human dec
 
 ### Target File Precision
 
-1. A primer implementation surface a front matterben felsorolt production + test fileokra szukul.
+1. A front matter `target_files` listaja tiszta file-path inventory a bounded surface anchorjaihoz, nem kommenthely es nem literal filename-lock:
+   - a meglevo entrypointok es contract-seamek kotelezo anchorok,
+   - a placement-flex szabaly a body-level contractban rogzitendo, nem a front matter sorokban,
+   - a jelenleg nem letezo helper-entry tovabbra is teljesitheto uj file vagy equivalent narrow extract formaban, ha a body-level contract ezt kulon megengedi.
 2. Uj helper/file csak a remote approval/rework command consume-hoz hozhato letre; nincs altalanos multi-command router escape hatch.
-3. Ha a bounded closure status/list/attach/cleanup fileokat is erdemben modositania kellene, az scope blocker es plan/task pontositasi trigger.
+3. Equivalent narrow placement elfogadhato, ha:
+   - ugyanaz a mutation authority branch zarul le,
+   - nem szelesiti a touched consumer family-t,
+   - es tovabbra sincs commit/merge/delete/reply/recovery ownership drift.
+4. A front matterben szereplo production helper-path es a hozza tartozo direkt regression-test anchor ugyanazon body-level placement-flex szabaly szerint ertelmezendo:
+   - a front matter mindket esetben csak bounded path inventory,
+   - ha a helper equivalent narrow extractkent zarul le ugyanebben az approval/rework consume familyben, a direkt helper-regression test anchor is ugyanebben a szuk familyben igazithato,
+   - de ezt a rugalmassagot tovabbra sem a front matter sorai, hanem a body-level contract hordozza.
+5. Ha a bounded closure status/list/attach/cleanup fileokat is erdemben modositania kellene, az scope blocker es plan/task pontositasi trigger.
 
 ### Safety Defaults
 
@@ -399,14 +460,18 @@ Lezarni a remote bubble approval/rework mutation routingot ugy, hogy a human dec
    - input: bubble id, repo path, decision/request-rework mode, message/refs/override params, resolved bubble context
    - authority input: started remote pointer + ssh executor alias
    - output: retained `EmitApprovalDecisionResult` vagy `EmitRequestReworkResult` shape-hez illesztheto typed result
-2. A helper nem lehet:
+2. Placement note:
+   - a CS7 file-path sor anchor inventory marad,
+   - equivalent narrow placement tovabbra is elfogadhato a `Target File Precision` es az `Authority Boundary Map` szabalyai szerint,
+   - es ugyanez a body-level placement-flex vonatkozik a kozvetlen helper-regression test anchorra is.
+3. A helper nem lehet:
    - CLI stdout parse wrapper,
    - generic commit/merge/delete router ebben a taskban,
    - local state write fallback mechanizmus.
-3. A helper remote command buildjenel:
+4. A helper remote command buildjenel:
    - egy helyen osszpontosuljon a raw SSH command build/exec,
    - ne teritse szet ezt a call-siteokon.
-4. A helper success contractja:
+5. A helper success contractja:
    - remote mutation success nem teheto fuggove uj local cache/state reconciliation lepestol,
    - ha frissebb operator projection kell, az kulon status/list reread-del kerendo.
 
@@ -436,7 +501,7 @@ Lezarni a remote bubble approval/rework mutation routingot ugy, hogy a human dec
    - `Phase 3B` cleanup routing majd kulon dont arrol, hogy ugyanazt a seamet generalizalja-e.
 5. A `reply` action remote bubble eseten e task utan is kulon elbiralas alatt marad; a `Phase 3A` nem claimelheti ugy a WAITING_HUMAN closure-t, mintha minden human mutation mar remote-safe lenne.
 
-## Review Focus
+## Review Focus (Reviewer Focus)
 
 1. Nem az a kerdes, hogy a remote helper "szep" vagy eleg altalanos-e.
 2. Hanem az, hogy:
@@ -444,6 +509,20 @@ Lezarni a remote bubble approval/rework mutation routingot ugy, hogy a human dec
    - a local surrogate mutation path tenyleg ki van-e zarva,
    - az immediate vs queued rework retained semanticaja remote bubble eseten is valos maradt-e,
    - es a task nem nyitotta-e meg csendben a `Phase 3B` vagy `reply` scope-ot.
+
+## Reviewer Guardrails
+
+1. Required-now blocker csak akkor, ha az implementation:
+   - elveszti a started remote pointer authorityt mint canonical mutation targetet,
+   - remote bubble eseten local transcript/state fallbackot hagy bent,
+   - elmossa az immediate vs queued request-rework retained semantic splitet,
+   - vagy csendben megnyitja a `reply`, `commit`, `merge`, `delete`, `restart`, illetve recovery scope-ot.
+2. Nem blocker onmagaban:
+   - a remote helper vegso filename-je, a hozza tartozo kozvetlen helper-regression test anchor vegso pathja, vagy a pontos internal placement, ha a bounded consume family, a narrow placement, es az egyhelyes raw SSH command build/exec invariant megmarad,
+   - az, hogy a machine-readable remote result seam belso structured payloadra vagy mas, ugyanazon retained `EmitApprovalDecisionResult` / `EmitRequestReworkResult` shape-ek egyikere egyertelmuen lekepzett typed internal adapterre epul, ameddig nem emberi stdout/text parse az egyeduli caller contract,
+   - az, hogy a UI error surfacing melyik mar letezo router/default/approval adapter fileban, ugyanazon approval/rework consume family-n belul, az egyhelyes raw SSH command build/exec invariant megtartasa mellett zarul le, ha a first-party UI actionable fail-closed hibat kap.
+3. Later-hardening vagy successor-owned tema, nem `Phase 3A` rework trigger:
+   - a canonical successor-owned lista a fenti `Reviewer Approval Boundary` 3. pontja; itt azt nem ismeteljuk meg, mert a drift-kockazat onmagaban nem `Phase 3A` blocker.
 
 ## Successor Notes
 
