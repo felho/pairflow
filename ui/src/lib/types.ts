@@ -1,17 +1,17 @@
-export const bubbleLifecycleStates = [
-  "CREATED",
-  "PREPARING_WORKSPACE",
-  "RUNNING",
-  "WAITING_HUMAN",
-  "READY_FOR_HUMAN_APPROVAL",
-  "APPROVED_FOR_COMMIT",
-  "COMMITTED",
-  "DONE",
-  "FAILED",
-  "CANCELLED"
-] as const;
-
-export type BubbleLifecycleState = (typeof bubbleLifecycleStates)[number];
+import {
+  bubbleLifecycleStates
+} from "./contracts/bubbleLifecycle.js";
+import type {
+  BubbleLifecycleState
+} from "./contracts/bubbleLifecycle.js";
+import type { StateValidationDiagnostics } from "./contracts/stateValidation.js";
+import type { UiBubbleRemoteExecution } from "./contracts/uiRemoteExecution.js";
+export { bubbleLifecycleStates };
+export type { BubbleLifecycleState };
+export type {
+  UiBubbleListRemoteExecution,
+  UiBubbleStatusRemoteExecution
+} from "./contracts/uiRemoteExecution.js";
 export const protocolMessageTypes = [
   "TASK",
   "PASS",
@@ -176,10 +176,12 @@ export interface UiBubbleSummary {
   activeRole: string | null;
   activeSince: string | null;
   lastCommandAt: string | null;
+  stateValidation: StateValidationDiagnostics | null;
   runtimeSession: RuntimeSessionRecord | null;
   runtime: UiRuntimeHealth;
   attention: UiBubbleAttention | null;
   metaReview: UiBubbleMetaReviewSummary;
+  remoteExecution?: UiBubbleRemoteExecution;
 }
 
 export interface UiRepoSummary {
@@ -200,6 +202,11 @@ export interface UiRepoSummary {
   runtimeSessions: {
     registered: number;
     stale: number;
+  };
+  remoteExecutionSummary?: {
+    createdNotStarted: number;
+    unavailableStarted: number;
+    refreshedThisRun?: boolean;
   };
 }
 

@@ -7,11 +7,13 @@ import type {
   BubbleLifecycleState
 } from "../../../types/bubble.js";
 import type { UiBubbleAttention } from "../../../types/ui.js";
+import type { UiBubbleListRemoteExecution } from "../../../types/uiRemoteExecution.js";
 
 export interface BubbleListInput {
   repoPath?: string | undefined;
   cwd?: string | undefined;
   now?: Date | undefined;
+  refresh?: boolean | undefined;
 }
 
 export interface BubbleListEntry {
@@ -32,6 +34,7 @@ export interface BubbleListEntry {
     authorityActive: boolean;
     runtimeDelivery: ActiveMetaReviewRuntimeDeliveryView | null;
   };
+  remoteExecution?: UiBubbleListRemoteExecution;
 }
 
 export interface BubbleListStateCounts {
@@ -56,4 +59,9 @@ export interface BubbleListView {
     stale: number;
   };
   bubbles: BubbleListEntry[];
+  remoteExecutionSummary?: {
+    createdNotStarted: number;
+    unavailableStarted: number;
+    refreshedThisRun?: boolean;
+  };
 }

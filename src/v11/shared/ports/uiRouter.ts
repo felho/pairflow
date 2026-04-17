@@ -29,6 +29,7 @@ export interface UiBubbleListInput {
   repoPath?: string | undefined;
   cwd?: string | undefined;
   now?: Date | undefined;
+  refresh?: boolean | undefined;
 }
 
 export type UiBubbleListStateCounts = Record<BubbleLifecycleState, number>;
@@ -44,6 +45,11 @@ export interface UiBubbleListView {
     stale: number;
   };
   bubbles: UiBubbleListEntry[];
+  remoteExecutionSummary?: {
+    createdNotStarted: number;
+    unavailableStarted: number;
+    refreshedThisRun?: boolean;
+  };
 }
 
 export interface UiBubbleTimelineInput {

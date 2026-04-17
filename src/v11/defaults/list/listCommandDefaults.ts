@@ -1,3 +1,13 @@
+import { loadPairflowGlobalConfig } from "../../../config/pairflowConfig.js";
+import {
+  readRemotePointer,
+  readRemoteStateCache,
+  writeRemoteStateCache
+} from "../../infrastructure/artifact/bubble/remoteExecutionArtifacts.js";
+import {
+  executeRemoteBubbleStatus,
+  resolveRemoteBubbleStatusTarget
+} from "../../infrastructure/executor/ssh/sshBubbleStatus.js";
 import {
   normalizeRepoPath,
   RepoResolutionError,
@@ -13,13 +23,19 @@ import { inspectStateSnapshot } from "../state/stateStoreDefaults.js";
 import { readTranscriptEnvelopes } from "../transcript/transcriptDependencyDefaults.js";
 
 export const listCommandDefaults = {
+  executeRemoteBubbleStatus,
   RepoResolutionError,
   inspectStateSnapshot,
   listBubbleIds,
+  loadPairflowGlobalConfig,
   normalizeRepoPath,
   readBubbleTomlArtifact,
+  readRemotePointer,
+  readRemoteStateCache,
   readRuntimeSessionsRegistry,
   readTranscriptEnvelopes,
   readWatchdogPaneActivity,
-  resolveRepoPath
+  resolveRemoteBubbleStatusTarget,
+  resolveRepoPath,
+  writeRemoteStateCache
 } as const;

@@ -38,8 +38,16 @@ export function isRuntimeSessionExpected(state: BubbleLifecycleState): boolean {
 export function presentRuntimeHealth(
   state: BubbleLifecycleState,
   runtimeSession: RuntimeSessionRecord | null,
-  stateValidation: BubbleListEntry["stateValidation"] = null
+  stateValidation: BubbleListEntry["stateValidation"] = null,
+  remoteExecution?: UiBubbleSummary["remoteExecution"]
 ): UiRuntimeHealth {
+  if (remoteExecution !== undefined) {
+    return {
+      expected: false,
+      present: false,
+      stale: false
+    };
+  }
   const expected = isRuntimeSessionExpected(state);
   const present = runtimeSession !== null;
   return {
@@ -67,10 +75,14 @@ export function presentBubbleSummaryFromListEntry(
     runtime: presentRuntimeHealth(
       entry.state,
       entry.runtimeSession,
-      entry.stateValidation
+      entry.stateValidation,
+      entry.remoteExecution
     ),
     attention: entry.attention,
-    metaReview: presentMetaReviewSummary(entry.metaReview)
+    metaReview: presentMetaReviewSummary(entry.metaReview),
+    ...(entry.remoteExecution !== undefined
+      ? { remoteExecution: entry.remoteExecution }
+      : {})
   };
 }
 
@@ -79,7 +91,10 @@ export function presentRepoSummary(view: BubbleListView): UiRepoSummary {
     repoPath: view.repoPath,
     total: view.total,
     byState: view.byState,
-    runtimeSessions: view.runtimeSessions
+    runtimeSessions: view.runtimeSessions,
+    ...(view.remoteExecutionSummary !== undefined
+      ? { remoteExecutionSummary: view.remoteExecutionSummary }
+      : {})
   };
 }
 
@@ -97,27 +112,15 @@ export function presentBubbleDetail(input: {
   status: BubbleStatusView;
   inbox: BubbleInboxView;
   runtimeSession: RuntimeSessionRecord | null;
+  now?: Date;
 }): UiBubbleDetail {
-  return {
-    bubbleId: input.status.bubbleId,
-    repoPath: input.status.repoPath,
-    worktreePath: input.status.worktreePath,
-    state: input.status.state,
-    round: input.status.round,
-    activeAgent: input.status.activeAgent,
-    activeRole: input.status.activeRole,
-    activeSince: input.status.activeSince,
-    lastCommandAt: input.status.lastCommandAt,
-    stateValidation: input.status.stateValidation,
-    runtimeSession: input.runtimeSession,
-    runtime: presentRuntimeHealth(
-      input.status.state,
-      input.runtimeSession,
-      input.status.stateValidation
-    ),
-    attention: resolveBubbleAttention({
+  const attention =
+    resolveBubbleAttention({
       state: input.status.state,
-      runtimeSession: input.runtimeSession,
+      runtimeSession:
+        input.status.remoteExecution === undefined
+          ? input.runtimeSession
+          : null,
       stateValidation: input.status.stateValidation,
       watchdog: input.status.watchdog,
       paneActivityRead:
@@ -151,9 +154,34 @@ export function presentBubbleDetail(input: {
             : {
                 status: "missing"
               },
-      now: new Date()
-    }),
+      now: input.now ?? new Date(),
+      ...(input.status.remoteExecution !== undefined
+        ? { runtimeExpectedOverride: false }
+        : {})
+    });
+  return {
+    bubbleId: input.status.bubbleId,
+    repoPath: input.status.repoPath,
+    worktreePath: input.status.worktreePath,
+    state: input.status.state,
+    round: input.status.round,
+    activeAgent: input.status.activeAgent,
+    activeRole: input.status.activeRole,
+    activeSince: input.status.activeSince,
+    lastCommandAt: input.status.lastCommandAt,
+    stateValidation: input.status.stateValidation,
+    runtimeSession: input.runtimeSession,
+    runtime: presentRuntimeHealth(
+      input.status.state,
+      input.runtimeSession,
+      input.status.stateValidation,
+      input.status.remoteExecution
+    ),
+    attention,
     metaReview: presentMetaReviewSummary(input.status.metaReview),
+    ...(input.status.remoteExecution !== undefined
+      ? { remoteExecution: input.status.remoteExecution }
+      : {}),
     watchdog: input.status.watchdog,
     pendingInboxItems: input.status.pendingInboxItems,
     inbox: {

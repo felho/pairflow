@@ -10,6 +10,9 @@ import type { RestartBubbleResult } from "../../../src/v11/application/restart/r
 import { createUiRouter, resolveStaticAssetPath } from "../../../src/v11/infrastructure/ui/router.js";
 import type { UiEventsBroker } from "../../../src/v11/infrastructure/ui/events.js";
 import type { UiRepoScope } from "../../../src/v11/infrastructure/ui/repoScope.js";
+import type { BubbleInboxView } from "../../../src/v11/shared/inbox/inboxCommandApi.js";
+import type { UiBubbleListView } from "../../../src/v11/shared/ports/uiRouter.js";
+import type { BubbleStatusView } from "../../../src/v11/shared/status/statusCommandApi.js";
 
 function createDeferred<T>(): {
   promise: Promise<T>;
@@ -118,6 +121,341 @@ describe("resolveStaticAssetPath", () => {
 
     expect(resolved.type).toBe("fallback");
     expect(resolved.path).toBe(join(assetsDir, "index.html"));
+  });
+});
+
+describe("createUiRouter bubble detail resource", () => {
+  it("preserves remote status metadata through the first-party detail route", async () => {
+    const repoPath = "/tmp/pairflow-ui-router-detail-repo";
+    const bubbleId = "b-router-detail-01";
+    const status: BubbleStatusView = {
+      bubbleId,
+      repoPath,
+      worktreePath: "/tmp/worktree",
+      bubbleStartedAt: "2026-02-24T12:00:00.000Z",
+      state: "READY_FOR_HUMAN_APPROVAL",
+      round: 2,
+      activeAgent: null,
+      activeRole: null,
+      activeSince: null,
+      lastCommandAt: "2026-02-24T12:00:30.000Z",
+      paneActivity: {
+        readStatus: "missing",
+        lastChangedAt: null,
+        sampledAt: null,
+        sinceLastChangedSeconds: null,
+        sinceSampledSeconds: null,
+        lastSampleStatus: null,
+        lastSampleError: null,
+        sessionName: null,
+        targetPane: null
+      },
+      executionContext: null,
+      watchdog: {
+        monitored: false,
+        monitoredAgent: null,
+        timeoutMinutes: 30,
+        referenceTimestamp: null,
+        deadlineTimestamp: null,
+        remainingSeconds: null,
+        expired: false
+      },
+      pendingInboxItems: {
+        humanQuestions: 0,
+        approvalRequests: 1,
+        total: 1
+      },
+      transcript: {
+        totalMessages: 4,
+        lastMessageType: "APPROVAL_REQUEST",
+        lastMessageTs: "2026-02-24T12:00:30.000Z",
+        lastMessageId: "msg_approval_01"
+      },
+      metaReview: {
+        actor: "meta-reviewer",
+        authorityActive: false,
+        runtimeDelivery: null
+      },
+      commandPath: {
+        status: "external",
+        profile: "external",
+        localEntrypoint: "/tmp/worktree/dist/cli/index.js",
+        activeEntrypoint: "/usr/local/bin/pairflow",
+        message: "external Pairflow CLI active",
+        pinnedCommand: "pairflow"
+      },
+      accuracy_critical: false,
+      last_review_verification: "missing",
+      failing_gates: [],
+      spec_lock_state: {
+        state: "IMPLEMENTABLE",
+        open_blocker_count: 0,
+        open_required_now_count: 0
+      },
+      round_gate_state: {
+        applies: false,
+        violated: false,
+        round: 2
+      },
+      stateValidation: null,
+      remoteExecution: {
+        alias: "lab",
+        host: "ssh.example.com",
+        pointerKind: "started",
+        viewKind: "status",
+        statusSource: "live",
+        cacheStatus: "present",
+        runtimeAvailability: "missing",
+        reasonCode: "STATUS_REMOTE_RUNTIME_MISSING",
+        remoteClonePath: "/srv/pairflow/repo--b-router-detail-01",
+        lastLiveCheckAt: "2026-02-24T12:00:31.000Z",
+        lastCacheCheckAt: "2026-02-24T12:00:30.000Z"
+      }
+    };
+    const inbox: BubbleInboxView = {
+      bubbleId,
+      repoPath,
+      state: "READY_FOR_HUMAN_APPROVAL",
+      pending: {
+        humanQuestions: 0,
+        approvalRequests: 1,
+        total: 1
+      },
+      items: []
+    };
+    const getBubbleStatus = vi.fn(async () => status);
+    const getBubbleInbox = vi.fn(async () => inbox);
+    const readRuntimeSessionsRegistry = vi.fn(async () => ({}));
+
+    const scope: UiRepoScope = {
+      repos: [repoPath],
+      has: (value: string) => Promise.resolve(value === repoPath)
+    };
+    const events: UiEventsBroker = {
+      subscribe: () => () => undefined,
+      getSnapshot: () => ({
+        id: 1,
+        ts: "2026-02-25T00:00:00.000Z",
+        type: "snapshot",
+        repos: [],
+        bubbles: []
+      }),
+      refreshNow: () => Promise.resolve(undefined),
+      addRepo: () => Promise.resolve(false),
+      removeRepo: () => Promise.resolve(false),
+      close: () => Promise.resolve(undefined)
+    };
+
+    const router = createUiRouter({
+      repoScope: scope,
+      events,
+      dependencies: {
+        getBubbleStatus,
+        getBubbleInbox,
+        readRuntimeSessionsRegistry
+      }
+    });
+    const server = await startRouterServer(router);
+
+    try {
+      const response = await fetch(
+        `${server.url}/api/bubbles/${bubbleId}?repo=${encodeURIComponent(repoPath)}`
+      );
+      const payload = (await response.json()) as {
+        bubble: {
+          attention?: unknown;
+          remoteExecution?: BubbleStatusView["remoteExecution"];
+          runtime?: {
+            expected: boolean;
+            present: boolean;
+            stale: boolean;
+          };
+        };
+      };
+
+      expect(response.status).toBe(200);
+      expect(payload.bubble.attention ?? null).toBeNull();
+      expect(payload.bubble.runtime).toStrictEqual({
+        expected: false,
+        present: false,
+        stale: false
+      });
+      expect(payload.bubble.remoteExecution).toStrictEqual({
+        alias: "lab",
+        host: "ssh.example.com",
+        pointerKind: "started",
+        viewKind: "status",
+        statusSource: "live",
+        cacheStatus: "present",
+        runtimeAvailability: "missing",
+        reasonCode: "STATUS_REMOTE_RUNTIME_MISSING",
+        remoteClonePath: "/srv/pairflow/repo--b-router-detail-01",
+        lastLiveCheckAt: "2026-02-24T12:00:31.000Z",
+        lastCacheCheckAt: "2026-02-24T12:00:30.000Z"
+      });
+      expect(getBubbleStatus).toHaveBeenCalledWith({
+        bubbleId,
+        repoPath
+      });
+      expect(getBubbleInbox).toHaveBeenCalledWith({
+        bubbleId,
+        repoPath
+      });
+      expect(readRuntimeSessionsRegistry).toHaveBeenCalledTimes(1);
+    } finally {
+      await server.close();
+    }
+  });
+});
+
+describe("createUiRouter bubble list resource", () => {
+  it("forwards refresh=true to the first-party list route", async () => {
+    const repoPath = "/tmp/pairflow-ui-router-list-repo";
+    const listView: UiBubbleListView = {
+      repoPath,
+      total: 0,
+      byState: {
+        CREATED: 0,
+        PREPARING_WORKSPACE: 0,
+        RUNNING: 0,
+        WAITING_HUMAN: 0,
+        READY_FOR_HUMAN_APPROVAL: 0,
+        APPROVED_FOR_COMMIT: 0,
+        COMMITTED: 0,
+        DONE: 0,
+        FAILED: 0,
+        CANCELLED: 0
+      },
+      runtimeSessions: {
+        registered: 0,
+        stale: 0
+      },
+      bubbles: [],
+      remoteExecutionSummary: {
+        createdNotStarted: 0,
+        unavailableStarted: 0,
+        refreshedThisRun: true
+      }
+    };
+    const listBubbles = vi.fn(async () => listView);
+
+    const scope: UiRepoScope = {
+      repos: [repoPath],
+      has: (value: string) => Promise.resolve(value === repoPath)
+    };
+    const events: UiEventsBroker = {
+      subscribe: () => () => undefined,
+      getSnapshot: () => ({
+        id: 1,
+        ts: "2026-02-25T00:00:00.000Z",
+        type: "snapshot",
+        repos: [],
+        bubbles: []
+      }),
+      refreshNow: () => Promise.resolve(undefined),
+      addRepo: () => Promise.resolve(false),
+      removeRepo: () => Promise.resolve(false),
+      close: () => Promise.resolve(undefined)
+    };
+
+    const router = createUiRouter({
+      repoScope: scope,
+      events,
+      dependencies: {
+        listBubbles
+      }
+    });
+    const server = await startRouterServer(router);
+
+    try {
+      const response = await fetch(
+        `${server.url}/api/bubbles?repo=${encodeURIComponent(repoPath)}&refresh=true`
+      );
+      const payload = (await response.json()) as {
+        repo: {
+          repoPath: string;
+        };
+        bubbles: unknown[];
+      };
+
+      expect(response.status).toBe(200);
+      expect(payload.repo.repoPath).toBe(repoPath);
+      expect(payload.bubbles).toStrictEqual([]);
+      expect(listBubbles).toHaveBeenCalledWith({
+        repoPath,
+        refresh: true
+      });
+    } finally {
+      await server.close();
+    }
+  });
+
+  it("forwards refresh=false to the first-party list route without forcing refresh", async () => {
+    const repoPath = "/tmp/pairflow-ui-router-list-repo";
+    const listView: UiBubbleListView = {
+      repoPath,
+      total: 0,
+      byState: {
+        CREATED: 0,
+        PREPARING_WORKSPACE: 0,
+        RUNNING: 0,
+        WAITING_HUMAN: 0,
+        READY_FOR_HUMAN_APPROVAL: 0,
+        APPROVED_FOR_COMMIT: 0,
+        COMMITTED: 0,
+        DONE: 0,
+        FAILED: 0,
+        CANCELLED: 0
+      },
+      runtimeSessions: {
+        registered: 0,
+        stale: 0
+      },
+      bubbles: []
+    };
+    const listBubbles = vi.fn(async () => listView);
+
+    const scope: UiRepoScope = {
+      repos: [repoPath],
+      has: (value: string) => Promise.resolve(value === repoPath)
+    };
+    const events: UiEventsBroker = {
+      subscribe: () => () => undefined,
+      getSnapshot: () => ({
+        id: 1,
+        ts: "2026-02-25T00:00:00.000Z",
+        type: "snapshot",
+        repos: [],
+        bubbles: []
+      }),
+      refreshNow: () => Promise.resolve(undefined),
+      addRepo: () => Promise.resolve(false),
+      removeRepo: () => Promise.resolve(false),
+      close: () => Promise.resolve(undefined)
+    };
+
+    const router = createUiRouter({
+      repoScope: scope,
+      events,
+      dependencies: {
+        listBubbles
+      }
+    });
+    const server = await startRouterServer(router);
+
+    try {
+      const response = await fetch(
+        `${server.url}/api/bubbles?repo=${encodeURIComponent(repoPath)}&refresh=false`
+      );
+
+      expect(response.status).toBe(200);
+      expect(listBubbles).toHaveBeenCalledWith({
+        repoPath,
+        refresh: false
+      });
+    } finally {
+      await server.close();
+    }
   });
 });
 

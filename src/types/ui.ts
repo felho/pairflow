@@ -12,6 +12,7 @@ import type {
 import type { ProtocolEnvelopePayload, ProtocolMessageType } from "./protocol.js";
 import type { WatchdogStatus } from "../v11/shared/watchdog/watchdogStatus.js";
 import type { StateValidationDiagnostics } from "../v11/shared/ports/stateSnapshots.js";
+import type { UiBubbleRemoteExecution } from "./uiRemoteExecution.js";
 
 export interface UiBubbleStateCounts {
   CREATED: number;
@@ -78,6 +79,7 @@ export interface UiBubbleSummary {
   runtime: UiRuntimeHealth;
   attention: UiBubbleAttention | null;
   metaReview: UiBubbleMetaReviewSummary;
+  remoteExecution?: UiBubbleRemoteExecution;
 }
 
 export interface UiPendingInboxCounts {
@@ -124,6 +126,11 @@ export interface UiRepoSummary {
   runtimeSessions: {
     registered: number;
     stale: number;
+  };
+  remoteExecutionSummary?: {
+    createdNotStarted: number;
+    unavailableStarted: number;
+    refreshedThisRun?: boolean;
   };
 }
 

@@ -62,8 +62,10 @@ function resolveStateValidationAttention(
 function resolveRuntimeAttention(input: {
   state: BubbleLifecycleState;
   runtimeSession: RuntimeSessionRecord | null;
+  runtimeExpectedOverride?: boolean;
 }): UiBubbleAttention | null {
-  const runtimeExpected = isRuntimeSessionExpectedState(input.state);
+  const runtimeExpected =
+    input.runtimeExpectedOverride ?? isRuntimeSessionExpectedState(input.state);
   if (runtimeExpected && input.runtimeSession === null) {
     return {
       code: "runtime_missing",
@@ -199,12 +201,16 @@ export function resolveBubbleAttention(input: {
   watchdog: Pick<WatchdogStatus, "expired" | "monitored" | "referenceTimestamp">;
   paneActivityRead: ReadWatchdogPaneActivityResult;
   now: Date;
+  runtimeExpectedOverride?: boolean;
 }): UiBubbleAttention | null {
   return (
     resolveStateValidationAttention(input.stateValidation)
     ?? resolveRuntimeAttention({
       state: input.state,
-      runtimeSession: input.runtimeSession
+      runtimeSession: input.runtimeSession,
+      ...(input.runtimeExpectedOverride !== undefined
+        ? { runtimeExpectedOverride: input.runtimeExpectedOverride }
+        : {})
     })
     ?? resolvePreparingWorkspaceAttention({
       state: input.state,

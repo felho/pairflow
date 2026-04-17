@@ -9,11 +9,13 @@ import type {
   BubbleSpecLockState
 } from "../../../types/bubble.js";
 import type { ProtocolEnvelope, ProtocolMessageType } from "../../../types/protocol.js";
+import type { UiBubbleStatusRemoteExecution } from "../../../types/uiRemoteExecution.js";
 import type {
   BubbleStatusState,
   ResolvedBubbleStatusContext,
   StatusGateState
 } from "./statusCommandInternals.js";
+import type { RemoteBubbleStatusSnapshot } from "../../infrastructure/executor/ssh/sshBubbleStatus.js";
 import { toStatusCommandPathView } from "./statusCommandInternals.js";
 import {
   buildStatusExecutionContextView,
@@ -68,21 +70,10 @@ export interface BubbleStatusView {
   spec_lock_state: BubbleSpecLockState;
   round_gate_state: BubbleRoundGateState;
   stateValidation: StateValidationDiagnostics | null;
+  remoteExecution?: UiBubbleStatusRemoteExecution;
 }
 
-export function buildBubbleStatusView({
-  resolved,
-  state,
-  transcript,
-  pendingQuestions,
-  pendingApprovals,
-  accuracyCritical,
-  verificationStatus,
-  gateState,
-  stateValidation,
-  paneActivityRead,
-  now
-}: {
+type LocalBubbleStatusViewInput = {
   resolved: ResolvedBubbleStatusContext;
   state: BubbleStatusState;
   transcript: ProtocolEnvelope[];
@@ -94,61 +85,115 @@ export function buildBubbleStatusView({
   stateValidation: StateValidationDiagnostics | null;
   paneActivityRead: ReadWatchdogPaneActivityResult;
   now: Date;
-}): BubbleStatusView {
-  const lastMessage = transcript[transcript.length - 1] ?? null;
+  remoteExecution?: BubbleStatusView["remoteExecution"];
+};
+
+type RemoteBubbleStatusViewInput = {
+  resolved: ResolvedBubbleStatusContext;
+  remoteStatusSnapshot: RemoteBubbleStatusSnapshot;
+  remoteExecution: NonNullable<BubbleStatusView["remoteExecution"]>;
+};
+
+function buildLocalBubbleStatusView(
+  input: LocalBubbleStatusViewInput
+): BubbleStatusView {
+  const lastMessage = input.transcript[input.transcript.length - 1] ?? null;
   const watchdog =
-    stateValidation === null
+    input.stateValidation === null
       ? computeWatchdogStatus(
-          state,
-          resolved.bubbleConfig.watchdog_timeout_minutes,
-          now
+          input.state,
+          input.resolved.bubbleConfig.watchdog_timeout_minutes,
+          input.now
         )
       : {
           monitored: false,
-          monitoredAgent: state.active_agent,
-          timeoutMinutes: resolved.bubbleConfig.watchdog_timeout_minutes,
-          referenceTimestamp: state.last_command_at ?? state.active_since,
+          monitoredAgent: input.state.active_agent,
+          timeoutMinutes: input.resolved.bubbleConfig.watchdog_timeout_minutes,
+          referenceTimestamp: input.state.last_command_at ?? input.state.active_since,
           deadlineTimestamp: null,
           remainingSeconds: null,
           expired: false
         };
-  const paneActivity = buildStatusPaneActivityView(paneActivityRead, now);
+  const paneActivity = buildStatusPaneActivityView(input.paneActivityRead, input.now);
   return {
-    bubbleId: resolved.bubbleId,
-    repoPath: resolved.repoPath,
-    worktreePath: resolved.bubblePaths.worktreePath,
+    bubbleId: input.resolved.bubbleId,
+    repoPath: input.resolved.repoPath,
+    worktreePath: input.resolved.bubblePaths.worktreePath,
     bubbleStartedAt: inferBubbleStartedAtFromInstanceId(
-      resolved.bubbleConfig.bubble_instance_id
+      input.resolved.bubbleConfig.bubble_instance_id
     ),
-    state: state.state,
-    round: state.round,
-    activeAgent: state.active_agent,
-    activeRole: state.active_role,
-    activeSince: state.active_since,
-    lastCommandAt: state.last_command_at,
+    state: input.state.state,
+    round: input.state.round,
+    activeAgent: input.state.active_agent,
+    activeRole: input.state.active_role,
+    activeSince: input.state.active_since,
+    lastCommandAt: input.state.last_command_at,
     paneActivity,
-    executionContext: buildStatusExecutionContextView(state.execution_context),
+    executionContext: buildStatusExecutionContextView(input.state.execution_context),
     watchdog,
     pendingInboxItems: {
-      humanQuestions: pendingQuestions,
-      approvalRequests: pendingApprovals,
-      total: pendingQuestions + pendingApprovals
+      humanQuestions: input.pendingQuestions,
+      approvalRequests: input.pendingApprovals,
+      total: input.pendingQuestions + input.pendingApprovals
     },
     transcript: {
-      totalMessages: transcript.length,
+      totalMessages: input.transcript.length,
       lastMessageType: lastMessage?.type ?? null,
       lastMessageTs: lastMessage?.ts ?? null,
       lastMessageId: lastMessage?.id ?? null
     },
-    metaReview: buildStatusMetaReviewView(state),
-    commandPath: toStatusCommandPathView(resolved),
-    accuracy_critical: accuracyCritical,
-    last_review_verification: verificationStatus,
-    failing_gates: gateState.failingGates,
-    spec_lock_state: gateState.specLockState,
-    round_gate_state: gateState.roundGateState,
-    stateValidation
+    metaReview: buildStatusMetaReviewView(input.state),
+    commandPath: toStatusCommandPathView(input.resolved),
+    accuracy_critical: input.accuracyCritical,
+    last_review_verification: input.verificationStatus,
+    failing_gates: input.gateState.failingGates,
+    spec_lock_state: input.gateState.specLockState,
+    round_gate_state: input.gateState.roundGateState,
+    stateValidation: input.stateValidation,
+    ...(input.remoteExecution !== undefined
+      ? { remoteExecution: input.remoteExecution }
+      : {})
   };
+}
+
+function buildRemoteBubbleStatusView(
+  input: RemoteBubbleStatusViewInput
+): BubbleStatusView {
+  return {
+    bubbleId: input.resolved.bubbleId,
+    repoPath: input.resolved.repoPath,
+    worktreePath: input.resolved.bubblePaths.worktreePath,
+    bubbleStartedAt: input.remoteStatusSnapshot.bubbleStartedAt,
+    state: input.remoteStatusSnapshot.state,
+    round: input.remoteStatusSnapshot.round,
+    activeAgent: input.remoteStatusSnapshot.activeAgent,
+    activeRole: input.remoteStatusSnapshot.activeRole,
+    activeSince: input.remoteStatusSnapshot.activeSince,
+    lastCommandAt: input.remoteStatusSnapshot.lastCommandAt,
+    paneActivity: input.remoteStatusSnapshot.paneActivity,
+    executionContext: input.remoteStatusSnapshot.executionContext,
+    watchdog: input.remoteStatusSnapshot.watchdog,
+    pendingInboxItems: input.remoteStatusSnapshot.pendingInboxItems,
+    transcript: input.remoteStatusSnapshot.transcript,
+    metaReview: input.remoteStatusSnapshot.metaReview,
+    commandPath: toStatusCommandPathView(input.resolved),
+    accuracy_critical: input.remoteStatusSnapshot.accuracyCritical,
+    last_review_verification: input.remoteStatusSnapshot.lastReviewVerification,
+    failing_gates: input.remoteStatusSnapshot.failingGates,
+    spec_lock_state: input.remoteStatusSnapshot.specLockState,
+    round_gate_state: input.remoteStatusSnapshot.roundGateState,
+    stateValidation: input.remoteStatusSnapshot.stateValidation,
+    remoteExecution: input.remoteExecution
+  };
+}
+
+export function buildBubbleStatusView(
+  input: LocalBubbleStatusViewInput | RemoteBubbleStatusViewInput
+): BubbleStatusView {
+  if ("remoteStatusSnapshot" in input) {
+    return buildRemoteBubbleStatusView(input);
+  }
+  return buildLocalBubbleStatusView(input);
 }
 
 function inferBubbleStartedAtFromInstanceId(

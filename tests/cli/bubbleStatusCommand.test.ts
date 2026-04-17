@@ -304,6 +304,38 @@ describe("renderBubbleStatusText", () => {
     expect(rendered).toContain("reason=META_REVIEW_REQUEST_DELIVERY_UNCONFIRMED");
     expect(rendered).toContain("message=pane delivery not confirmed");
   });
+
+  it("renders remote execution wording in text mode", () => {
+    const rendered = renderBubbleStatusText(
+      createStatusView({
+        remoteExecution: {
+          alias: "lab",
+          host: "ssh.example.com",
+          pointerKind: "started",
+          viewKind: "status",
+          statusSource: "live",
+          cacheStatus: "present",
+          runtimeAvailability: "missing",
+          reasonCode: "STATUS_REMOTE_RUNTIME_MISSING",
+          remoteClonePath: "/srv/pairflow/repo--b_status_render_01",
+          lastLiveCheckAt: "2026-04-16T10:00:30.000Z",
+          lastCacheCheckAt: "2026-04-16T10:00:00.000Z"
+        }
+      })
+    );
+
+    expect(rendered).toContain(
+      "Remote execution: alias=lab host=ssh.example.com pointer=started source=live runtime=missing cache=present reason=STATUS_REMOTE_RUNTIME_MISSING"
+    );
+    expect(rendered).toContain(
+      "Remote runtime note: persisted bubble state is preserved on disk, but no live remote runtime is active; this view stays fail-closed."
+    );
+    expect(rendered).toContain("live_checked=2026-04-16T10:00:30.000Z");
+    expect(rendered).toContain("cache_checked=2026-04-16T10:00:00.000Z");
+    expect(rendered).toContain("clone=/srv/pairflow/repo--b_status_render_01");
+    expect(rendered).not.toContain("attach");
+    expect(rendered).not.toContain("restart");
+  });
 });
 
 describe("renderBubbleStatusTable", () => {
@@ -528,6 +560,58 @@ describe("renderBubbleStatusTable", () => {
     expect(rendered).toContain(
       formatLocalTableTimestamp("2026-03-08T21:29:10.000Z")
     );
+  });
+
+  it("renders remote execution diagnostics in table mode", () => {
+    const rendered = renderBubbleStatusTable(
+      createStatusView({
+        remoteExecution: {
+          alias: "lab",
+          host: "ssh.example.com",
+          pointerKind: "started",
+          viewKind: "status",
+          statusSource: "live",
+          cacheStatus: "present",
+          runtimeAvailability: "active",
+          remoteClonePath: "/srv/pairflow/repo--b_status_render_01",
+          lastLiveCheckAt: "2026-04-16T10:00:30.000Z",
+          lastCacheCheckAt: "2026-04-16T10:00:00.000Z"
+        }
+      })
+    );
+
+    expect(rendered).toContain("| Remote");
+    expect(rendered).toContain("alias=lab host=ssh.example.com");
+    expect(rendered).toContain("source=live");
+    expect(rendered).toContain("runtime=active");
+    expect(rendered).toContain("live @");
+    expect(rendered).toContain("cache @");
+  });
+
+  it("renders explicit runtime-loss guidance in table mode", () => {
+    const rendered = renderBubbleStatusTable(
+      createStatusView({
+        remoteExecution: {
+          alias: "lab",
+          host: "ssh.example.com",
+          pointerKind: "started",
+          viewKind: "status",
+          statusSource: "live",
+          cacheStatus: "present",
+          runtimeAvailability: "missing",
+          reasonCode: "STATUS_REMOTE_RUNTIME_MISSING",
+          remoteClonePath: "/srv/pairflow/repo--b_status_render_01",
+          lastLiveCheckAt: "2026-04-16T10:00:30.000Z",
+          lastCacheCheckAt: "2026-04-16T10:00:00.000Z"
+        }
+      })
+    );
+
+    expect(rendered).toContain("| Remote note");
+    expect(rendered).toContain("persisted state preserved on disk");
+    expect(rendered).toContain("live runtime unavailable");
+    expect(rendered).not.toContain("attach");
+    expect(rendered).not.toContain("restart");
   });
 
   it("clips rendered table lines to the provided width", () => {

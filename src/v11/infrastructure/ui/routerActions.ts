@@ -55,6 +55,20 @@ async function resolveRepoFromUrl(
   }
 }
 
+function parseRefreshQueryFlag(url: URL): boolean | undefined {
+  const value = url.searchParams.get("refresh");
+  if (value === null) {
+    return undefined;
+  }
+  if (value === "1" || value === "true") {
+    return true;
+  }
+  if (value === "0" || value === "false") {
+    return false;
+  }
+  return undefined;
+}
+
 async function loadRuntimeSession(
   dependencies: UiRouterDependencies,
   repoPath: string,
@@ -86,11 +100,13 @@ async function loadBubbleDetail(input: {
     }),
     loadRuntimeSession(environment.dependencies, repoPath, bubbleId)
   ]);
+  const now = new Date();
   return {
     ...presentBubbleDetail({
       status,
       inbox,
-      runtimeSession
+      runtimeSession,
+      now
     }),
     repoPath
   };
@@ -234,8 +250,10 @@ export async function handleBubbleListRequest(input: {
   url: URL;
 }): Promise<{ status: number; body: unknown }> {
   const repoPath = await resolveRepoFromUrl(input.environment, input.url);
+  const refresh = parseRefreshQueryFlag(input.url);
   const view = await input.environment.dependencies.listBubbles({
     repoPath,
+    ...(refresh !== undefined ? { refresh } : {}),
     ...(input.environment.input.cwd !== undefined
       ? { cwd: input.environment.input.cwd }
       : {})

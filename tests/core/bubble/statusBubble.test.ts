@@ -2,7 +2,7 @@ import { chmod, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { emitAskHumanFromWorkspaceV11 as emitAskHumanFromWorkspace } from "../../../src/v11/application/askHuman/emitAskHumanV11.js";
 import { emitPassFromWorkspaceV11 as emitPassFromWorkspace } from "../../../src/v11/application/pass/emitPassV11.js";
@@ -10,11 +10,17 @@ import { createBubble } from "../../../src/v11/application/create/createBubble.j
 import { emitHumanReplyV11 as emitHumanReply } from "../../../src/v11/application/reply/emitReplyV11.js";
 import { getBubbleStatusV11 as getBubbleStatus } from "../../../src/v11/application/status/emitStatusV11.js";
 import { resolveDocContractGateArtifactPath } from "../../../src/v11/defaults/gates/docContractGateArtifactDefaults.js";
+import {
+  writeRemoteStateCache,
+  readRemoteStateCache,
+  writeRemotePointer
+} from "../../../src/v11/infrastructure/artifact/bubble/remoteExecutionArtifacts.js";
 import { appendProtocolEnvelope } from "../../../src/v11/infrastructure/artifact/transcript/transcriptStore.js";
 import {
   readStateSnapshot,
   writeStateSnapshot
 } from "../../../src/v11/infrastructure/state/stateStore.js";
+import { statusCommandDependencyDefaults } from "../../../src/v11/shared/status/statusCommandDependencyDefaults.js";
 import { writeWatchdogPaneActivity } from "../../../src/v11/infrastructure/artifact/watchdog/watchdogPaneActivityStore.js";
 import { buildMetaReviewExecutionContext } from "../../../src/v11/shared/metaReview/metaReviewExecutionContext.js";
 import { resolveWorktreePairflowEntrypoint } from "../../../src/v11/shared/command/pairflowCommandPathAssessment.js";
@@ -32,6 +38,7 @@ async function createTempRepo(): Promise<string> {
 }
 
 afterEach(async () => {
+  vi.restoreAllMocks();
   await Promise.all(
     tempDirs.splice(0).map((path) =>
       rm(path, { recursive: true, force: true })
@@ -63,6 +70,18 @@ async function withPathWithoutPairflow<T>(fn: () => Promise<T>): Promise<T> {
   } finally {
     process.env.PATH = originalPath;
   }
+}
+
+async function setBubbleExecutorRemoteAlias(
+  bubbleTomlPath: string,
+  remoteAlias = "lab"
+): Promise<void> {
+  const current = await readFile(bubbleTomlPath, "utf8");
+  await writeFile(
+    bubbleTomlPath,
+    `${current.trimEnd()}\n\n[executor]\ntype = "ssh"\nremote = "${remoteAlias}"\n`,
+    "utf8"
+  );
 }
 
 describe("getBubbleStatus", () => {
@@ -1010,6 +1029,914 @@ describe("getBubbleStatus", () => {
     expect(status.commandPath.status).toBe("missing");
     expect(status.commandPath.reasonCode).toBe(
       "PAIRFLOW_COMMAND_EXTERNAL_UNAVAILABLE"
+    );
+  });
+
+  it("renders created remote bubbles without SSH status refresh", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await createBubble({
+      id: "b_status_remote_created_01",
+      repoPath,
+      baseBranch: "main",
+      reviewArtifactType: "code",
+      task: "Remote created status",
+      cwd: repoPath
+    });
+
+    await writeRemotePointer(bubble.paths.remotePointerPath, {
+      kind: "created",
+      host: "ssh.example.com"
+    });
+
+    const remoteStatusSpy = vi.spyOn(
+      statusCommandDependencyDefaults,
+      "executeRemoteBubbleStatus"
+    );
+
+    const status = await getBubbleStatus({
+      bubbleId: bubble.bubbleId,
+      cwd: repoPath
+    });
+
+    expect(remoteStatusSpy).not.toHaveBeenCalled();
+    expect(status.remoteExecution).toMatchObject({
+      pointerKind: "created",
+      viewKind: "status",
+      statusSource: "created_not_started",
+      runtimeAvailability: "not_started"
+    });
+  });
+
+  it("refreshes started remote bubbles from remote status and updates the cache", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_status_remote_started_01",
+      task: "Remote started status"
+    });
+
+    await writeRemotePointer(bubble.paths.remotePointerPath, {
+      kind: "started",
+      host: "ssh.example.com",
+      instanceId: "inst_remote_started_01",
+      remoteClonePath: "/srv/pairflow/repo--b_status_remote_started_01",
+      tmuxSession: "pf-b_status_remote_started_01",
+      startedAt: "2026-04-16T09:40:00.000Z"
+    });
+    await setBubbleExecutorRemoteAlias(bubble.paths.bubbleTomlPath);
+
+    vi.spyOn(
+      statusCommandDependencyDefaults,
+      "resolveRemoteBubbleStatusTarget"
+    ).mockResolvedValue({
+      alias: "lab",
+      host: "ssh.example.com",
+      user: "pairflow",
+      pairflowCommand: "pairflow"
+    });
+    vi.spyOn(
+      statusCommandDependencyDefaults,
+      "executeRemoteBubbleStatus"
+    ).mockResolvedValue({
+      bubbleStartedAt: "2026-04-16T09:40:00.000Z",
+      state: "WAITING_HUMAN",
+      round: 3,
+      activeAgent: "claude",
+      activeRole: "reviewer",
+      activeSince: "2026-04-16T09:50:00.000Z",
+      lastCommandAt: "2026-04-16T09:58:00.000Z",
+      paneActivity: {
+        readStatus: "ok",
+        lastChangedAt: "2026-04-16T09:57:00.000Z",
+        sampledAt: "2026-04-16T09:59:30.000Z",
+        sinceLastChangedSeconds: 180,
+        sinceSampledSeconds: 30,
+        lastSampleStatus: "sampled",
+        lastSampleError: null,
+        sessionName: "pf-b_status_remote_started_01",
+        targetPane: "pf-b_status_remote_started_01:0.1"
+      },
+      executionContext: null,
+      watchdog: {
+        monitored: true,
+        monitoredAgent: "claude",
+        timeoutMinutes: 30,
+        referenceTimestamp: "2026-04-16T09:58:00.000Z",
+        deadlineTimestamp: "2026-04-16T10:28:00.000Z",
+        remainingSeconds: 1500,
+        expired: false
+      },
+      pendingInboxItems: {
+        humanQuestions: 1,
+        approvalRequests: 0,
+        total: 1
+      },
+      transcript: {
+        totalMessages: 4,
+        lastMessageType: "HUMAN_QUESTION",
+        lastMessageTs: "2026-04-16T09:58:00.000Z",
+        lastMessageId: "msg_remote_status_started_01"
+      },
+      metaReview: {
+        actor: "meta-reviewer",
+        authorityActive: false,
+        runtimeDelivery: null
+      },
+      accuracyCritical: false,
+      lastReviewVerification: "missing",
+      failingGates: [],
+      specLockState: {
+        state: "IMPLEMENTABLE",
+        open_blocker_count: 0,
+        open_required_now_count: 0
+      },
+      roundGateState: {
+        applies: false,
+        violated: false,
+        round: 3
+      },
+      stateValidation: null,
+      runtimeAvailability: "active",
+      lastCheckedAt: "2026-04-16T10:00:00.000Z"
+    });
+
+    const status = await getBubbleStatus({
+      bubbleId: bubble.bubbleId,
+      cwd: repoPath
+    });
+
+    expect(status.state).toBe("WAITING_HUMAN");
+    expect(status.round).toBe(3);
+    expect(status.remoteExecution).toMatchObject({
+      pointerKind: "started",
+      viewKind: "status",
+      statusSource: "live",
+      cacheStatus: "present",
+      lastLiveCheckAt: "2026-04-16T10:00:00.000Z",
+      lastCacheCheckAt: "2026-04-16T10:00:00.000Z"
+    });
+    await expect(readRemoteStateCache(bubble.paths.remoteStateCachePath)).resolves.toMatchObject({
+      state: "WAITING_HUMAN",
+      round: 3,
+      lastCheckedAt: "2026-04-16T10:00:00.000Z"
+    });
+  });
+
+  it("keeps live remote status when cache refresh persistence fails", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_status_remote_live_cache_write_fail_01",
+      task: "Remote live status with cache write failure"
+    });
+
+    await writeRemotePointer(bubble.paths.remotePointerPath, {
+      kind: "started",
+      host: "ssh.example.com",
+      instanceId: "inst_remote_live_cache_write_fail_01",
+      remoteClonePath: "/srv/pairflow/repo--b_status_remote_live_cache_write_fail_01",
+      tmuxSession: "pf-b_status_remote_live_cache_write_fail_01",
+      startedAt: "2026-04-16T09:40:00.000Z"
+    });
+    await setBubbleExecutorRemoteAlias(bubble.paths.bubbleTomlPath);
+
+    vi.spyOn(
+      statusCommandDependencyDefaults,
+      "resolveRemoteBubbleStatusTarget"
+    ).mockResolvedValue({
+      alias: "lab",
+      host: "ssh.example.com",
+      pairflowCommand: "pairflow"
+    });
+    vi.spyOn(
+      statusCommandDependencyDefaults,
+      "executeRemoteBubbleStatus"
+    ).mockResolvedValue({
+      bubbleStartedAt: "2026-04-16T09:40:00.000Z",
+      state: "WAITING_HUMAN",
+      round: 3,
+      activeAgent: "claude",
+      activeRole: "reviewer",
+      activeSince: "2026-04-16T09:50:00.000Z",
+      lastCommandAt: "2026-04-16T09:58:00.000Z",
+      paneActivity: {
+        readStatus: "ok",
+        lastChangedAt: "2026-04-16T09:57:00.000Z",
+        sampledAt: "2026-04-16T09:59:30.000Z",
+        sinceLastChangedSeconds: 180,
+        sinceSampledSeconds: 30,
+        lastSampleStatus: "sampled",
+        lastSampleError: null,
+        sessionName: "pf-b_status_remote_live_cache_write_fail_01",
+        targetPane: "pf-b_status_remote_live_cache_write_fail_01:0.1"
+      },
+      executionContext: null,
+      watchdog: {
+        monitored: true,
+        monitoredAgent: "claude",
+        timeoutMinutes: 30,
+        referenceTimestamp: "2026-04-16T09:58:00.000Z",
+        deadlineTimestamp: "2026-04-16T10:28:00.000Z",
+        remainingSeconds: 1500,
+        expired: false
+      },
+      pendingInboxItems: {
+        humanQuestions: 1,
+        approvalRequests: 0,
+        total: 1
+      },
+      transcript: {
+        totalMessages: 4,
+        lastMessageType: "HUMAN_QUESTION",
+        lastMessageTs: "2026-04-16T09:58:00.000Z",
+        lastMessageId: "msg_remote_live_cache_write_fail_01"
+      },
+      metaReview: {
+        actor: "meta-reviewer",
+        authorityActive: false,
+        runtimeDelivery: null
+      },
+      accuracyCritical: false,
+      lastReviewVerification: "missing",
+      failingGates: [],
+      specLockState: {
+        state: "IMPLEMENTABLE",
+        open_blocker_count: 0,
+        open_required_now_count: 0
+      },
+      roundGateState: {
+        applies: false,
+        violated: false,
+        round: 3
+      },
+      stateValidation: null,
+      runtimeAvailability: "active",
+      lastCheckedAt: "2026-04-16T10:00:00.000Z"
+    });
+    vi.spyOn(
+      statusCommandDependencyDefaults,
+      "writeRemoteStateCache"
+    ).mockRejectedValue(new Error("disk full"));
+
+    const status = await getBubbleStatus({
+      bubbleId: bubble.bubbleId,
+      cwd: repoPath
+    });
+
+    expect(status.state).toBe("WAITING_HUMAN");
+    expect(status.round).toBe(3);
+    expect(status.remoteExecution).toMatchObject({
+      pointerKind: "started",
+      viewKind: "status",
+      statusSource: "live",
+      cacheStatus: "missing",
+      runtimeAvailability: "active",
+      cacheReasonCode: "STATUS_REMOTE_CACHE_WRITE_FAILED",
+      lastLiveCheckAt: "2026-04-16T10:00:00.000Z"
+    });
+    expect(status.remoteExecution?.lastCacheCheckAt).toBeUndefined();
+  });
+
+  it("preserves stale cache timestamps as explicit fallback provenance when live remote status cache persistence fails", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_status_remote_live_cache_write_fail_stale_cache_01",
+      task: "Remote live status with stale cache write failure"
+    });
+
+    await writeRemotePointer(bubble.paths.remotePointerPath, {
+      kind: "started",
+      host: "ssh.example.com",
+      instanceId: "inst_remote_live_cache_write_fail_stale_cache_01",
+      remoteClonePath: "/srv/pairflow/repo--b_status_remote_live_cache_write_fail_stale_cache_01",
+      tmuxSession: "pf-b_status_remote_live_cache_write_fail_stale_cache_01",
+      startedAt: "2026-04-16T09:40:00.000Z"
+    });
+    await setBubbleExecutorRemoteAlias(bubble.paths.bubbleTomlPath);
+    await writeRemoteStateCache(bubble.paths.remoteStateCachePath, {
+      lastCheckedAt: "2026-04-16T09:55:00.000Z",
+      state: "RUNNING",
+      round: 2,
+      maxRounds: 5
+    });
+
+    vi.spyOn(
+      statusCommandDependencyDefaults,
+      "resolveRemoteBubbleStatusTarget"
+    ).mockResolvedValue({
+      alias: "lab",
+      host: "ssh.example.com",
+      pairflowCommand: "pairflow"
+    });
+    vi.spyOn(
+      statusCommandDependencyDefaults,
+      "executeRemoteBubbleStatus"
+    ).mockResolvedValue({
+      bubbleStartedAt: "2026-04-16T09:40:00.000Z",
+      state: "WAITING_HUMAN",
+      round: 3,
+      activeAgent: "claude",
+      activeRole: "reviewer",
+      activeSince: "2026-04-16T09:50:00.000Z",
+      lastCommandAt: "2026-04-16T09:58:00.000Z",
+      paneActivity: {
+        readStatus: "ok",
+        lastChangedAt: "2026-04-16T09:57:00.000Z",
+        sampledAt: "2026-04-16T09:59:30.000Z",
+        sinceLastChangedSeconds: 180,
+        sinceSampledSeconds: 30,
+        lastSampleStatus: "sampled",
+        lastSampleError: null,
+        sessionName: "pf-b_status_remote_live_cache_write_fail_stale_cache_01",
+        targetPane: "pf-b_status_remote_live_cache_write_fail_stale_cache_01:0.1"
+      },
+      executionContext: null,
+      watchdog: {
+        monitored: true,
+        monitoredAgent: "claude",
+        timeoutMinutes: 30,
+        referenceTimestamp: "2026-04-16T09:58:00.000Z",
+        deadlineTimestamp: "2026-04-16T10:28:00.000Z",
+        remainingSeconds: 1500,
+        expired: false
+      },
+      pendingInboxItems: {
+        humanQuestions: 1,
+        approvalRequests: 0,
+        total: 1
+      },
+      transcript: {
+        totalMessages: 4,
+        lastMessageType: "HUMAN_QUESTION",
+        lastMessageTs: "2026-04-16T09:58:00.000Z",
+        lastMessageId: "msg_remote_live_cache_write_fail_stale_cache_01"
+      },
+      metaReview: {
+        actor: "meta-reviewer",
+        authorityActive: false,
+        runtimeDelivery: null
+      },
+      accuracyCritical: false,
+      lastReviewVerification: "missing",
+      failingGates: [],
+      specLockState: {
+        state: "IMPLEMENTABLE",
+        open_blocker_count: 0,
+        open_required_now_count: 0
+      },
+      roundGateState: {
+        applies: false,
+        violated: false,
+        round: 3
+      },
+      stateValidation: null,
+      runtimeAvailability: "active",
+      lastCheckedAt: "2026-04-16T10:00:00.000Z"
+    });
+    vi.spyOn(
+      statusCommandDependencyDefaults,
+      "writeRemoteStateCache"
+    ).mockRejectedValue(new Error("disk full"));
+
+    const status = await getBubbleStatus({
+      bubbleId: bubble.bubbleId,
+      cwd: repoPath
+    });
+
+    expect(status.state).toBe("WAITING_HUMAN");
+    expect(status.round).toBe(3);
+    expect(status.remoteExecution).toMatchObject({
+      pointerKind: "started",
+      viewKind: "status",
+      statusSource: "live",
+      cacheStatus: "present",
+      runtimeAvailability: "active",
+      cacheReasonCode: "STATUS_REMOTE_CACHE_WRITE_FAILED",
+      lastLiveCheckAt: "2026-04-16T10:00:00.000Z",
+      lastCacheCheckAt: "2026-04-16T09:55:00.000Z"
+    });
+  });
+
+  it("surfaces invalid cache provenance when live remote status cache persistence fails onto a corrupted cache", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_status_remote_live_cache_write_fail_invalid_cache_01",
+      task: "Remote live status with invalid cache fallback"
+    });
+
+    await writeRemotePointer(bubble.paths.remotePointerPath, {
+      kind: "started",
+      host: "ssh.example.com",
+      instanceId: "inst_remote_live_cache_write_fail_invalid_cache_01",
+      remoteClonePath: "/srv/pairflow/repo--b_status_remote_live_cache_write_fail_invalid_cache_01",
+      tmuxSession: "pf-b_status_remote_live_cache_write_fail_invalid_cache_01",
+      startedAt: "2026-04-16T09:40:00.000Z"
+    });
+    await setBubbleExecutorRemoteAlias(bubble.paths.bubbleTomlPath);
+    await writeFile(bubble.paths.remoteStateCachePath, "{ invalid", "utf8");
+
+    vi.spyOn(
+      statusCommandDependencyDefaults,
+      "resolveRemoteBubbleStatusTarget"
+    ).mockResolvedValue({
+      alias: "lab",
+      host: "ssh.example.com",
+      pairflowCommand: "pairflow"
+    });
+    vi.spyOn(
+      statusCommandDependencyDefaults,
+      "executeRemoteBubbleStatus"
+    ).mockResolvedValue({
+      bubbleStartedAt: "2026-04-16T09:40:00.000Z",
+      state: "WAITING_HUMAN",
+      round: 3,
+      activeAgent: "claude",
+      activeRole: "reviewer",
+      activeSince: "2026-04-16T09:50:00.000Z",
+      lastCommandAt: "2026-04-16T09:58:00.000Z",
+      paneActivity: {
+        readStatus: "ok",
+        lastChangedAt: "2026-04-16T09:57:00.000Z",
+        sampledAt: "2026-04-16T09:59:30.000Z",
+        sinceLastChangedSeconds: 180,
+        sinceSampledSeconds: 30,
+        lastSampleStatus: "sampled",
+        lastSampleError: null,
+        sessionName: "pf-b_status_remote_live_cache_write_fail_invalid_cache_01",
+        targetPane: "pf-b_status_remote_live_cache_write_fail_invalid_cache_01:0.1"
+      },
+      executionContext: null,
+      watchdog: {
+        monitored: true,
+        monitoredAgent: "claude",
+        timeoutMinutes: 30,
+        referenceTimestamp: "2026-04-16T09:58:00.000Z",
+        deadlineTimestamp: "2026-04-16T10:28:00.000Z",
+        remainingSeconds: 1500,
+        expired: false
+      },
+      pendingInboxItems: {
+        humanQuestions: 1,
+        approvalRequests: 0,
+        total: 1
+      },
+      transcript: {
+        totalMessages: 4,
+        lastMessageType: "HUMAN_QUESTION",
+        lastMessageTs: "2026-04-16T09:58:00.000Z",
+        lastMessageId: "msg_remote_live_cache_write_fail_invalid_cache_01"
+      },
+      metaReview: {
+        actor: "meta-reviewer",
+        authorityActive: false,
+        runtimeDelivery: null
+      },
+      accuracyCritical: false,
+      lastReviewVerification: "missing",
+      failingGates: [],
+      specLockState: {
+        state: "IMPLEMENTABLE",
+        open_blocker_count: 0,
+        open_required_now_count: 0
+      },
+      roundGateState: {
+        applies: false,
+        violated: false,
+        round: 3
+      },
+      stateValidation: null,
+      runtimeAvailability: "active",
+      lastCheckedAt: "2026-04-16T10:00:00.000Z"
+    });
+    vi.spyOn(
+      statusCommandDependencyDefaults,
+      "writeRemoteStateCache"
+    ).mockRejectedValue(new Error("disk full"));
+
+    const status = await getBubbleStatus({
+      bubbleId: bubble.bubbleId,
+      cwd: repoPath
+    });
+
+    expect(status.remoteExecution).toMatchObject({
+      pointerKind: "started",
+      viewKind: "status",
+      statusSource: "live",
+      cacheStatus: "invalid",
+      runtimeAvailability: "active",
+      cacheReasonCode: "STATUS_REMOTE_CACHE_WRITE_FAILED",
+      lastLiveCheckAt: "2026-04-16T10:00:00.000Z"
+    });
+    expect(status.remoteExecution?.lastCacheCheckAt).toBeUndefined();
+  });
+
+  it("surfaces runtime-loss as explicit remote status metadata without reopening attach semantics", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_status_remote_runtime_missing_01",
+      task: "Remote runtime missing status"
+    });
+
+    await writeRemotePointer(bubble.paths.remotePointerPath, {
+      kind: "started",
+      host: "ssh.example.com",
+      instanceId: "inst_remote_runtime_missing_01",
+      remoteClonePath: "/srv/pairflow/repo--b_status_remote_runtime_missing_01",
+      tmuxSession: "pf-b_status_remote_runtime_missing_01",
+      startedAt: "2026-04-16T09:40:00.000Z"
+    });
+    await setBubbleExecutorRemoteAlias(bubble.paths.bubbleTomlPath);
+
+    vi.spyOn(
+      statusCommandDependencyDefaults,
+      "resolveRemoteBubbleStatusTarget"
+    ).mockResolvedValue({
+      alias: "lab",
+      host: "ssh.example.com",
+      user: "pairflow",
+      pairflowCommand: "pairflow"
+    });
+    vi.spyOn(
+      statusCommandDependencyDefaults,
+      "executeRemoteBubbleStatus"
+    ).mockResolvedValue({
+      bubbleStartedAt: "2026-04-16T09:40:00.000Z",
+      state: "RUNNING",
+      round: 3,
+      activeAgent: "claude",
+      activeRole: "reviewer",
+      activeSince: "2026-04-16T09:50:00.000Z",
+      lastCommandAt: "2026-04-16T09:58:00.000Z",
+      paneActivity: {
+        readStatus: "missing",
+        lastChangedAt: null,
+        sampledAt: null,
+        sinceLastChangedSeconds: null,
+        sinceSampledSeconds: null,
+        lastSampleStatus: null,
+        lastSampleError: null,
+        sessionName: null,
+        targetPane: null
+      },
+      executionContext: null,
+      watchdog: {
+        monitored: true,
+        monitoredAgent: "claude",
+        timeoutMinutes: 30,
+        referenceTimestamp: "2026-04-16T09:58:00.000Z",
+        deadlineTimestamp: "2026-04-16T10:28:00.000Z",
+        remainingSeconds: 1500,
+        expired: false
+      },
+      pendingInboxItems: {
+        humanQuestions: 0,
+        approvalRequests: 0,
+        total: 0
+      },
+      transcript: {
+        totalMessages: 4,
+        lastMessageType: "PASS",
+        lastMessageTs: "2026-04-16T09:58:00.000Z",
+        lastMessageId: "msg_remote_status_runtime_missing_01"
+      },
+      metaReview: {
+        actor: "meta-reviewer",
+        authorityActive: false,
+        runtimeDelivery: null
+      },
+      accuracyCritical: false,
+      lastReviewVerification: "missing",
+      failingGates: [],
+      specLockState: {
+        state: "IMPLEMENTABLE",
+        open_blocker_count: 0,
+        open_required_now_count: 0
+      },
+      roundGateState: {
+        applies: false,
+        violated: false,
+        round: 3
+      },
+      stateValidation: null,
+      runtimeAvailability: "missing",
+      lastCheckedAt: "2026-04-16T10:00:00.000Z"
+    });
+
+    const status = await getBubbleStatus({
+      bubbleId: bubble.bubbleId,
+      cwd: repoPath
+    });
+
+    expect(status.state).toBe("RUNNING");
+    expect(status.remoteExecution).toMatchObject({
+      pointerKind: "started",
+      viewKind: "status",
+      statusSource: "live",
+      cacheStatus: "present",
+      runtimeAvailability: "missing",
+      reasonCode: "STATUS_REMOTE_RUNTIME_MISSING",
+      lastLiveCheckAt: "2026-04-16T10:00:00.000Z",
+      lastCacheCheckAt: "2026-04-16T10:00:00.000Z"
+    });
+    await expect(readRemoteStateCache(bubble.paths.remoteStateCachePath)).resolves.toMatchObject({
+      state: "RUNNING",
+      round: 3,
+      lastCheckedAt: "2026-04-16T10:00:00.000Z"
+    });
+  });
+
+  it("fails closed when started remote status refresh is unavailable", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_status_remote_unavailable_01",
+      task: "Remote unavailable status"
+    });
+
+    await writeRemotePointer(bubble.paths.remotePointerPath, {
+      kind: "started",
+      host: "ssh.example.com",
+      instanceId: "inst_remote_unavailable_01",
+      remoteClonePath: "/srv/pairflow/repo--b_status_remote_unavailable_01",
+      tmuxSession: "pf-b_status_remote_unavailable_01",
+      startedAt: "2026-04-16T09:40:00.000Z"
+    });
+    await setBubbleExecutorRemoteAlias(bubble.paths.bubbleTomlPath);
+    await writeRemoteStateCache(bubble.paths.remoteStateCachePath, {
+      lastCheckedAt: "2026-04-16T09:59:00.000Z",
+      state: "WAITING_HUMAN",
+      round: 2,
+      maxRounds: 5
+    });
+
+    vi.spyOn(
+      statusCommandDependencyDefaults,
+      "resolveRemoteBubbleStatusTarget"
+    ).mockResolvedValue({
+      alias: "lab",
+      host: "ssh.example.com",
+      pairflowCommand: "pairflow"
+    });
+    vi.spyOn(
+      statusCommandDependencyDefaults,
+      "executeRemoteBubbleStatus"
+    ).mockRejectedValue(new Error("ssh transport failed"));
+
+    await expect(
+      getBubbleStatus({
+        bubbleId: bubble.bubbleId,
+        cwd: repoPath
+      })
+    ).rejects.toThrow(
+      "Failed to load remote status for b_status_remote_unavailable_01: STATUS_REMOTE_STATUS_UNAVAILABLE: ssh transport failed cache_status=present cache_last_checked_at=2026-04-16T09:59:00.000Z."
+    );
+    await expect(readRemoteStateCache(bubble.paths.remoteStateCachePath)).resolves.toEqual({
+      lastCheckedAt: "2026-04-16T09:59:00.000Z",
+      state: "WAITING_HUMAN",
+      round: 2,
+      maxRounds: 5
+    });
+  });
+
+  it("preserves invalid-cache provenance when remote status fails closed", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_status_remote_unavailable_invalid_cache_01",
+      task: "Remote unavailable status with invalid cache"
+    });
+
+    await writeRemotePointer(bubble.paths.remotePointerPath, {
+      kind: "started",
+      host: "ssh.example.com",
+      instanceId: "inst_remote_unavailable_invalid_cache_01",
+      remoteClonePath: "/srv/pairflow/repo--b_status_remote_unavailable_invalid_cache_01",
+      tmuxSession: "pf-b_status_remote_unavailable_invalid_cache_01",
+      startedAt: "2026-04-16T09:40:00.000Z"
+    });
+    await setBubbleExecutorRemoteAlias(bubble.paths.bubbleTomlPath);
+    await writeFile(bubble.paths.remoteStateCachePath, "{ invalid", "utf8");
+
+    vi.spyOn(
+      statusCommandDependencyDefaults,
+      "resolveRemoteBubbleStatusTarget"
+    ).mockResolvedValue({
+      alias: "lab",
+      host: "ssh.example.com",
+      pairflowCommand: "pairflow"
+    });
+    vi.spyOn(
+      statusCommandDependencyDefaults,
+      "executeRemoteBubbleStatus"
+    ).mockRejectedValue(new Error("ssh transport failed"));
+
+    await expect(
+      getBubbleStatus({
+        bubbleId: bubble.bubbleId,
+        cwd: repoPath
+      })
+    ).rejects.toThrow(
+      `Failed to load remote status for ${bubble.bubbleId}: STATUS_REMOTE_STATUS_UNAVAILABLE: ssh transport failed cache_status=invalid.`
+    );
+  });
+
+  it("surfaces fallback-read provenance when live cache persistence fails and fallback cache cannot be read", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_status_remote_live_cache_write_fail_read_fail_01",
+      task: "Remote live status fallback cache read failure"
+    });
+
+    await writeRemotePointer(bubble.paths.remotePointerPath, {
+      kind: "started",
+      host: "ssh.example.com",
+      instanceId: "inst_remote_live_cache_write_fail_read_fail_01",
+      remoteClonePath: "/srv/pairflow/repo--b_status_remote_live_cache_write_fail_read_fail_01",
+      tmuxSession: "pf-b_status_remote_live_cache_write_fail_read_fail_01",
+      startedAt: "2026-04-16T09:40:00.000Z"
+    });
+    await setBubbleExecutorRemoteAlias(bubble.paths.bubbleTomlPath);
+
+    vi.spyOn(
+      statusCommandDependencyDefaults,
+      "resolveRemoteBubbleStatusTarget"
+    ).mockResolvedValue({
+      alias: "lab",
+      host: "ssh.example.com",
+      pairflowCommand: "pairflow"
+    });
+    vi.spyOn(
+      statusCommandDependencyDefaults,
+      "executeRemoteBubbleStatus"
+    ).mockResolvedValue({
+      bubbleStartedAt: "2026-04-16T09:40:00.000Z",
+      state: "WAITING_HUMAN",
+      round: 3,
+      activeAgent: "claude",
+      activeRole: "reviewer",
+      activeSince: "2026-04-16T09:50:00.000Z",
+      lastCommandAt: "2026-04-16T09:58:00.000Z",
+      paneActivity: {
+        readStatus: "ok",
+        lastChangedAt: "2026-04-16T09:57:00.000Z",
+        sampledAt: "2026-04-16T09:59:30.000Z",
+        sinceLastChangedSeconds: 180,
+        sinceSampledSeconds: 30,
+        lastSampleStatus: "sampled",
+        lastSampleError: null,
+        sessionName: "pf-b_status_remote_live_cache_write_fail_read_fail_01",
+        targetPane: "pf-b_status_remote_live_cache_write_fail_read_fail_01:0.1"
+      },
+      executionContext: null,
+      watchdog: {
+        monitored: true,
+        monitoredAgent: "claude",
+        timeoutMinutes: 30,
+        referenceTimestamp: "2026-04-16T09:58:00.000Z",
+        deadlineTimestamp: "2026-04-16T10:28:00.000Z",
+        remainingSeconds: 1500,
+        expired: false
+      },
+      pendingInboxItems: {
+        humanQuestions: 1,
+        approvalRequests: 0,
+        total: 1
+      },
+      transcript: {
+        totalMessages: 4,
+        lastMessageType: "HUMAN_QUESTION",
+        lastMessageTs: "2026-04-16T09:58:00.000Z",
+        lastMessageId: "msg_remote_live_cache_write_fail_read_fail_01"
+      },
+      metaReview: {
+        actor: "meta-reviewer",
+        authorityActive: false,
+        runtimeDelivery: null
+      },
+      accuracyCritical: false,
+      lastReviewVerification: "missing",
+      failingGates: [],
+      specLockState: {
+        state: "IMPLEMENTABLE",
+        open_blocker_count: 0,
+        open_required_now_count: 0
+      },
+      roundGateState: {
+        applies: false,
+        violated: false,
+        round: 3
+      },
+      stateValidation: null,
+      runtimeAvailability: "active",
+      lastCheckedAt: "2026-04-16T10:00:00.000Z"
+    });
+    vi.spyOn(
+      statusCommandDependencyDefaults,
+      "writeRemoteStateCache"
+    ).mockRejectedValue(new Error("disk full"));
+    vi.spyOn(
+      statusCommandDependencyDefaults,
+      "readRemoteStateCache"
+    ).mockRejectedValue(new Error("EIO"));
+
+    const status = await getBubbleStatus({
+      bubbleId: bubble.bubbleId,
+      cwd: repoPath
+    });
+
+    expect(status.remoteExecution).toMatchObject({
+      pointerKind: "started",
+      viewKind: "status",
+      statusSource: "live",
+      cacheStatus: "missing",
+      runtimeAvailability: "active",
+      cacheReasonCode: "STATUS_REMOTE_CACHE_FALLBACK_READ_FAILED",
+      lastLiveCheckAt: "2026-04-16T10:00:00.000Z"
+    });
+    expect(status.remoteExecution?.lastCacheCheckAt).toBeUndefined();
+  });
+
+  it("surfaces explicit cache-read provenance when remote status fails closed and cache fallback cannot be read", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_status_remote_unavailable_cache_read_fail_01",
+      task: "Remote unavailable status with cache read failure"
+    });
+
+    await writeRemotePointer(bubble.paths.remotePointerPath, {
+      kind: "started",
+      host: "ssh.example.com",
+      instanceId: "inst_remote_unavailable_cache_read_fail_01",
+      remoteClonePath: "/srv/pairflow/repo--b_status_remote_unavailable_cache_read_fail_01",
+      tmuxSession: "pf-b_status_remote_unavailable_cache_read_fail_01",
+      startedAt: "2026-04-16T09:40:00.000Z"
+    });
+    await setBubbleExecutorRemoteAlias(bubble.paths.bubbleTomlPath);
+
+    vi.spyOn(
+      statusCommandDependencyDefaults,
+      "resolveRemoteBubbleStatusTarget"
+    ).mockResolvedValue({
+      alias: "lab",
+      host: "ssh.example.com",
+      pairflowCommand: "pairflow"
+    });
+    vi.spyOn(
+      statusCommandDependencyDefaults,
+      "executeRemoteBubbleStatus"
+    ).mockRejectedValue(new Error("ssh transport failed"));
+    vi.spyOn(
+      statusCommandDependencyDefaults,
+      "readRemoteStateCache"
+    ).mockRejectedValue(new Error("EIO"));
+
+    await expect(
+      getBubbleStatus({
+        bubbleId: bubble.bubbleId,
+        cwd: repoPath
+      })
+    ).rejects.toThrow(
+      `Failed to load remote status for ${bubble.bubbleId}: STATUS_REMOTE_STATUS_UNAVAILABLE: ssh transport failed cache_status=read_failed cache_reason=STATUS_REMOTE_CACHE_READ_FAILED.`
+    );
+  });
+
+  it("does not duplicate the remote status unavailable prefix when alias resolution fails early", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_status_remote_missing_alias_01",
+      task: "Remote missing alias status"
+    });
+
+    await writeRemotePointer(bubble.paths.remotePointerPath, {
+      kind: "started",
+      host: "ssh.example.com",
+      instanceId: "inst_remote_missing_alias_01",
+      remoteClonePath: "/srv/pairflow/repo--b_status_remote_missing_alias_01",
+      tmuxSession: "pf-b_status_remote_missing_alias_01",
+      startedAt: "2026-04-16T09:40:00.000Z"
+    });
+
+    await expect(
+      getBubbleStatus({
+        bubbleId: bubble.bubbleId,
+        cwd: repoPath
+      })
+    ).rejects.toThrow(
+      "Failed to load remote status for b_status_remote_missing_alias_01: STATUS_REMOTE_STATUS_UNAVAILABLE: Bubble b_status_remote_missing_alias_01 has remote execution artifacts without an ssh executor alias in bubble.toml. cache_status=missing."
+    );
+    await expect(
+      getBubbleStatus({
+        bubbleId: bubble.bubbleId,
+        cwd: repoPath
+      })
+    ).rejects.not.toThrow(
+      /STATUS_REMOTE_STATUS_UNAVAILABLE: Failed to load remote status for .*STATUS_REMOTE_STATUS_UNAVAILABLE:/u
     );
   });
 });

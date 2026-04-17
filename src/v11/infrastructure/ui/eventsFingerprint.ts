@@ -75,6 +75,7 @@ async function bubbleFingerprint(
     transcriptSig,
     runtimeSig,
     attentionSig,
+    JSON.stringify(entry.remoteExecution ?? null),
     entry.state,
     String(entry.round)
   ].join("|");
