@@ -1,5 +1,8 @@
 import type { PairflowGlobalConfig } from "../../../../config/pairflowConfig.js";
-import type { AttachLauncher } from "../../../../types/bubble.js";
+import type {
+  AttachLauncher,
+  BubbleRemotePointer
+} from "../../../../types/bubble.js";
 import type { ResolveBubbleByIdPort } from "../../../shared/ports/bubbleLookup.js";
 
 export type ExplicitAttachLauncher = Exclude<AttachLauncher, "auto">;
@@ -9,14 +12,22 @@ export interface AttachBubbleInput {
   bubbleId: string;
   repoPath?: string | undefined;
   cwd?: string | undefined;
+  portForwards?: number[] | undefined;
 }
 
 export interface AttachBubbleResult {
   bubbleId: string;
   tmuxSessionName: string;
   launcherRequested: AttachLauncher;
-  launcherUsed: AttachLauncher;
+  launcherUsed: ExplicitAttachLauncher;
   attachCommand?: string;
+  diagnostics?: AttachBubbleResultDiagnostic[];
+}
+
+export interface AttachBubbleResultDiagnostic {
+  code: "REMOTE_ATTACH_CONFIG_SUPPLEMENT_UNAVAILABLE";
+  message: string;
+  context: AttachBubbleErrorContext;
 }
 
 export interface AttachCommandExecutionInput {
@@ -51,6 +62,9 @@ export type AttachLauncherFailureClass =
 
 export type AttachBubbleReasonCode =
   | "TMUX_SESSION_MISSING"
+  | "REMOTE_ATTACH_START_REQUIRED"
+  | "REMOTE_ATTACH_POINTER_INVALID"
+  | "REMOTE_ATTACH_CONFIG_INVALID"
   | "ATTACH_LAUNCHER_UNAVAILABLE"
   | "ATTACH_LAUNCHER_LAUNCH_FAILED"
   | "ATTACH_LAUNCHER_PREPARE_FAILED";
@@ -62,6 +76,7 @@ export interface AttachBubbleDependencies {
   writeYamlFile?: (path: string, content: string) => Promise<void>;
   checkLauncherAvailability?: LauncherAvailabilityChecker;
   loadPairflowGlobalConfig?: () => Promise<PairflowGlobalConfig>;
+  readRemotePointer?: (path: string) => Promise<BubbleRemotePointer | null>;
 }
 
 export type AttachBubbleV11Input = AttachBubbleInput;
@@ -74,6 +89,9 @@ export interface AttachBubbleErrorContext {
   reason?: string;
   repoPath?: string;
   tmuxSessionName?: string;
+  remoteAlias?: string;
+  remoteHost?: string;
+  remoteClonePath?: string;
 }
 
 interface AttachBubbleErrorOptions {

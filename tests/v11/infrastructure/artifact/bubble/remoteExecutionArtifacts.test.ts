@@ -52,6 +52,7 @@ describe("remote execution artifacts", () => {
     await writeRemotePointer(paths.remotePointerPath, {
       kind: "started",
       host: "homelab",
+      user: "dev",
       instanceId: "inst_20260411T203000Z",
       remoteClonePath: "~/repos/pairflow--b_remote_artifacts_01",
       tmuxSession: "pf-b_remote_artifacts_01",
@@ -61,6 +62,7 @@ describe("remote execution artifacts", () => {
     expect(await readRemotePointer(paths.remotePointerPath)).toEqual({
       kind: "started",
       host: "homelab",
+      user: "dev",
       instanceId: "inst_20260411T203000Z",
       remoteClonePath: "~/repos/pairflow--b_remote_artifacts_01",
       tmuxSession: "pf-b_remote_artifacts_01",

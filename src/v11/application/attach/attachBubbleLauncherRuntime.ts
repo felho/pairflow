@@ -24,8 +24,55 @@ interface AttachLauncherResolution {
   attachCommand?: string;
 }
 
+const sshTransportOptions = [
+  ["BatchMode", "yes"],
+  ["StrictHostKeyChecking", "yes"],
+  ["ConnectTimeout", "10"],
+  ["ConnectionAttempts", "1"]
+] as const;
+
 export function buildAttachCommand(sessionName: string): string {
   return `tmux attach -t ${shellQuote(sessionName)}`;
+}
+
+function normalizePortForwards(ports: readonly number[] | undefined): number[] {
+  if (ports === undefined) {
+    return [];
+  }
+
+  return [...new Set(ports)]
+    .filter((port) => Number.isInteger(port) && port >= 1 && port <= 65_535)
+    .sort((left, right) => left - right);
+}
+
+export function buildRemoteAttachCommand(input: {
+  host: string;
+  user?: string;
+  remoteClonePath: string;
+  tmuxSessionName: string;
+  portForwards?: readonly number[];
+}): string {
+  const sshTarget =
+    input.user !== undefined ? `${input.user}@${input.host}` : input.host;
+  const remoteShellCommand = [
+    `cd ${shellQuote(input.remoteClonePath)}`,
+    buildAttachCommand(input.tmuxSessionName)
+  ].join(" && ");
+  const commandParts = [
+    "ssh",
+    ...sshTransportOptions.flatMap(([key, value]) => ["-o", `${key}=${value}`]),
+    ...normalizePortForwards(input.portForwards).flatMap((port) => [
+      "-L",
+      `127.0.0.1:${port}:127.0.0.1:${port}`
+    ]),
+    "-t",
+    sshTarget,
+    "bash",
+    "-lc",
+    remoteShellCommand
+  ];
+
+  return commandParts.map((part) => shellQuote(part)).join(" ");
 }
 
 export async function resolveAttachLauncher(input: {

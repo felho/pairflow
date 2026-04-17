@@ -798,6 +798,74 @@ describe("createUiRouter attach action", () => {
     }
   });
 
+  it("restarts runtime when attach error carries tmux-missing context reason without explicit reasonCode", async () => {
+    const repoPath = "/tmp/pairflow-ui-router-attach-recover-context";
+    const attachBubble = vi
+      .fn()
+      .mockRejectedValueOnce(
+        new AttachBubbleError(
+          "Tmux session \"pf-b-router-attach-recover-context\" does not exist. Start the bubble runtime first.",
+          {
+            context: {
+              reason: "tmux_session_missing"
+            }
+          }
+        )
+      )
+      .mockResolvedValueOnce({
+        bubbleId: "b-router-attach-recover-context",
+        tmuxSessionName: "pf-b-router-attach-recover-context",
+        launcherRequested: "auto",
+        launcherUsed: "copy",
+        attachCommand: "tmux attach -t pf-b-router-attach-recover-context"
+      });
+    const startBubble = vi.fn(async () => ({} as never));
+
+    const scope: UiRepoScope = {
+      repos: [repoPath],
+      has: (value: string) => Promise.resolve(value === repoPath)
+    };
+    const events: UiEventsBroker = {
+      subscribe: () => () => undefined,
+      getSnapshot: () => ({
+        id: 1,
+        ts: "2026-02-25T00:00:00.000Z",
+        type: "snapshot",
+        repos: [],
+        bubbles: []
+      }),
+      refreshNow: () => Promise.resolve(undefined),
+      addRepo: () => Promise.resolve(false),
+      removeRepo: () => Promise.resolve(false),
+      close: () => Promise.resolve(undefined)
+    };
+
+    const router = createUiRouter({
+      repoScope: scope,
+      events,
+      dependencies: {
+        attachBubble,
+        startBubble
+      }
+    });
+    const server = await startRouterServer(router);
+
+    try {
+      const response = await fetch(
+        `${server.url}/api/bubbles/b-router-attach-recover-context/attach?repo=${encodeURIComponent(repoPath)}`,
+        {
+          method: "POST"
+        }
+      );
+
+      expect(response.status).toBe(200);
+      expect(startBubble).toHaveBeenCalledTimes(1);
+      expect(attachBubble).toHaveBeenCalledTimes(2);
+    } finally {
+      await server.close();
+    }
+  });
+
   it("maps launcher_unavailable attach errors to HTTP 400 with launcher details", async () => {
     const repoPath = "/tmp/pairflow-ui-router-attach-repo";
     const attachBubble = vi.fn(() =>
@@ -866,15 +934,90 @@ describe("createUiRouter attach action", () => {
     }
   });
 
-  it("maps launcher_launch_failed attach errors to HTTP 500 with launcher details", async () => {
+  it("does not retry startBubble for remote attach start-required errors", async () => {
     const repoPath = "/tmp/pairflow-ui-router-attach-repo";
     const attachBubble = vi.fn(() =>
       Promise.reject(
-        new AttachBubbleError("Attach launcher 'warp' failed with launcher_launch_failed.", {
-          launcher: "warp",
-          failureClass: "launcher_launch_failed",
-          stderrExcerpt: "URI launch failed"
-        })
+        new AttachBubbleError(
+          "Remote bubble 'b-router-attach-remote-created' is not started yet. Run `pairflow bubble start --id b-router-attach-remote-created` first.",
+          {
+            reasonCode: "REMOTE_ATTACH_START_REQUIRED"
+          }
+        )
+      )
+    );
+    const startBubble = vi.fn(async () => ({} as never));
+
+    const scope: UiRepoScope = {
+      repos: [repoPath],
+      has: (value: string) => Promise.resolve(value === repoPath)
+    };
+    const events: UiEventsBroker = {
+      subscribe: () => () => undefined,
+      getSnapshot: () => ({
+        id: 1,
+        ts: "2026-02-25T00:00:00.000Z",
+        type: "snapshot",
+        repos: [],
+        bubbles: []
+      }),
+      refreshNow: () => Promise.resolve(undefined),
+      addRepo: () => Promise.resolve(false),
+      removeRepo: () => Promise.resolve(false),
+      close: () => Promise.resolve(undefined)
+    };
+
+    const router = createUiRouter({
+      repoScope: scope,
+      events,
+      dependencies: {
+        attachBubble,
+        startBubble
+      }
+    });
+    const server = await startRouterServer(router);
+
+    try {
+      const response = await fetch(
+        `${server.url}/api/bubbles/b-router-attach-remote-created/attach?repo=${encodeURIComponent(repoPath)}`,
+        {
+          method: "POST"
+        }
+      );
+      const payload = (await response.json()) as {
+        error: {
+          code: string;
+          details?: Record<string, unknown>;
+        };
+      };
+
+      expect(response.status).toBe(400);
+      expect(payload.error.code).toBe("bad_request");
+      expect(payload.error.details).toMatchObject({
+        bubbleId: "b-router-attach-remote-created",
+        repoPath,
+        reasonCode: "REMOTE_ATTACH_START_REQUIRED"
+      });
+      expect(startBubble).not.toHaveBeenCalled();
+      expect(attachBubble).toHaveBeenCalledTimes(1);
+    } finally {
+      await server.close();
+    }
+  });
+
+  it("maps remote executor incompatibility attach errors to HTTP 400 with config-invalid taxonomy", async () => {
+    const repoPath = "/tmp/pairflow-ui-router-attach-config-invalid";
+    const attachBubble = vi.fn(() =>
+      Promise.reject(
+        new AttachBubbleError(
+          "Remote attach for 'b-router-attach-config-invalid' requires an ssh executor configuration.",
+          {
+            reasonCode: "REMOTE_ATTACH_CONFIG_INVALID",
+            context: {
+              reason: "remote_executor_invalid"
+            }
+          }
+        )
       )
     );
 
@@ -908,6 +1051,75 @@ describe("createUiRouter attach action", () => {
 
     try {
       const response = await fetch(
+        `${server.url}/api/bubbles/b-router-attach-config-invalid/attach?repo=${encodeURIComponent(repoPath)}`,
+        {
+          method: "POST"
+        }
+      );
+      const payload = (await response.json()) as {
+        error: {
+          code: string;
+          details?: Record<string, unknown>;
+        };
+      };
+
+      expect(response.status).toBe(400);
+      expect(payload.error.code).toBe("bad_request");
+      expect(payload.error.details).toMatchObject({
+        bubbleId: "b-router-attach-config-invalid",
+        repoPath,
+        reasonCode: "REMOTE_ATTACH_CONFIG_INVALID",
+        attachContextReason: "remote_executor_invalid"
+      });
+    } finally {
+      await server.close();
+    }
+  });
+
+  it("maps launcher_launch_failed attach errors to HTTP 500 with launcher details", async () => {
+    const repoPath = "/tmp/pairflow-ui-router-attach-repo";
+    const attachBubble = vi.fn(() =>
+      Promise.reject(
+        new AttachBubbleError("Attach launcher 'warp' failed with launcher_launch_failed.", {
+          launcher: "warp",
+          failureClass: "launcher_launch_failed",
+          stderrExcerpt: "URI launch failed"
+        })
+      )
+    );
+    const startBubble = vi.fn(async () => ({} as never));
+
+    const scope: UiRepoScope = {
+      repos: [repoPath],
+      has: (value: string) => Promise.resolve(value === repoPath)
+    };
+    const events: UiEventsBroker = {
+      subscribe: () => () => undefined,
+      getSnapshot: () => ({
+        id: 1,
+        ts: "2026-02-25T00:00:00.000Z",
+        type: "snapshot",
+        repos: [],
+        bubbles: []
+      }),
+      refreshNow: () => Promise.resolve(undefined),
+      addRepo: () => Promise.resolve(false),
+      removeRepo: () => Promise.resolve(false),
+      close: () => Promise.resolve(undefined)
+    };
+
+    const router = createUiRouter({
+      repoScope: scope,
+      events,
+      dependencies: {
+        attachBubble,
+        startBubble
+      }
+    });
+    const server = await startRouterServer(router);
+
+    try {
+      const response = await fetch(
         `${server.url}/api/bubbles/b-router-attach-02/attach?repo=${encodeURIComponent(repoPath)}`,
         {
           method: "POST"
@@ -929,6 +1141,7 @@ describe("createUiRouter attach action", () => {
         failureClass: "launcher_launch_failed",
         stderrExcerpt: "URI launch failed"
       });
+      expect(startBubble).not.toHaveBeenCalled();
     } finally {
       await server.close();
     }

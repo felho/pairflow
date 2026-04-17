@@ -2,17 +2,14 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { spawn } from "node:child_process";
 
-import { SchemaValidationError } from "../../../shared/validation/primitives.js";
-import { DEFAULT_ATTACH_LAUNCHER } from "../../../../config/defaults.js";
 import { loadPairflowGlobalConfig } from "../../../../config/pairflowConfig.js";
-import type { AttachLauncher } from "../../../../types/bubble.js";
+import { readRemotePointer } from "../../artifact/bubble/remoteExecutionArtifacts.js";
 import {
-  BubbleLookupError,
-  resolveBubbleById
+  BubbleLookupError
 } from "../workspace/bubbleLookup.js";
-import { buildBubbleTmuxSessionName } from "../../../shared/bubble/tmuxSessionName.js";
 import {
   AttachBubbleError,
+  type AttachBubbleReasonCode,
   type AttachBubbleDependencies,
   type AttachBubbleInput,
   type AttachBubbleResult,
@@ -20,7 +17,13 @@ import {
   type AttachCommandExecutionResult,
   type AttachCommandExecutor
 } from "./pairflowCommandAttachContract.js";
-import { buildCheckLauncherAvailabilityDefault, buildAttachCommand, resolveAttachLauncher } from "./pairflowCommandAttachLauncher.js";
+import {
+  buildCheckLauncherAvailabilityDefault,
+  buildAttachCommand,
+  buildRemoteAttachCommand,
+  resolveAttachLauncher
+} from "./pairflowCommandAttachLauncher.js";
+import { resolveAttachBubbleExecution } from "../../../shared/attach/resolveAttachBubbleExecution.js";
 
 export const executeAttachCommand: AttachCommandExecutor = async (
   input: AttachCommandExecutionInput
@@ -81,7 +84,17 @@ export async function attachBubble(
   input: AttachBubbleInput,
   dependencies: AttachBubbleDependencies = {}
 ): Promise<AttachBubbleResult> {
-  const resolveBubble = dependencies.resolveBubbleById ?? resolveBubbleById;
+  const resolveBubble = dependencies.resolveBubbleById;
+  if (resolveBubble === undefined) {
+    throw new AttachBubbleError(
+      "Attach bubble requires resolveBubbleById dependency.",
+      {
+        context: {
+          reason: "resolve_bubble_dependency_missing"
+        }
+      }
+    );
+  }
   const checkSession =
     dependencies.checkTmuxSessionExists ?? checkTmuxSessionExistsDefault;
   const writeYaml = dependencies.writeYamlFile ?? writeYamlFileDefault;
@@ -92,6 +105,8 @@ export async function attachBubble(
   const loadGlobalConfig =
     dependencies.loadPairflowGlobalConfig ??
     loadPairflowGlobalConfig;
+  const readRemotePointerArtifact =
+    dependencies.readRemotePointer ?? readRemotePointer;
 
   const resolved = await resolveBubble({
     bubbleId: input.bubbleId,
@@ -99,57 +114,31 @@ export async function attachBubble(
     ...(input.cwd !== undefined ? { cwd: input.cwd } : {})
   });
 
-  const tmuxSessionName = buildBubbleTmuxSessionName(resolved.bubbleId);
-  const sessionExists = await checkSession(tmuxSessionName);
-  if (!sessionExists) {
-    throw new AttachBubbleError(
-      `Tmux session "${tmuxSessionName}" does not exist. Start the bubble runtime first.`,
-      {
-        context: {
-          bubbleId: resolved.bubbleId,
-          reason: "tmux_session_missing",
-          repoPath: resolved.repoPath,
-          tmuxSessionName
-        },
-        reasonCode: "TMUX_SESSION_MISSING"
-      }
-    );
-  }
+  const resolvedExecution = await resolveAttachBubbleExecution({
+    request: input,
+    resolved,
+    checkTmuxSessionExists: checkSession,
+    loadPairflowGlobalConfig: loadGlobalConfig,
+    readRemotePointer: readRemotePointerArtifact,
+    buildAttachCommand,
+    buildRemoteAttachCommand,
+    createAttachError: ({ message, options }) =>
+      new AttachBubbleError(message, {
+        ...(options?.context !== undefined ? { context: options.context } : {}),
+        ...(options?.reasonCode !== undefined
+          ? { reasonCode: options.reasonCode as AttachBubbleReasonCode }
+          : {})
+      }),
+    isAttachError: (error): error is AttachBubbleError =>
+      error instanceof AttachBubbleError
+  });
 
-  let globalAttachLauncher: AttachLauncher | undefined;
-  if (resolved.bubbleConfig.attach_launcher === undefined) {
-    try {
-      globalAttachLauncher = (await loadGlobalConfig()).attach_launcher;
-    } catch (error) {
-      if (error instanceof SchemaValidationError) {
-        globalAttachLauncher = undefined;
-      } else {
-        const reason = error instanceof Error ? error.message : String(error);
-        throw new AttachBubbleError(
-          `Failed to load global Pairflow config for '${resolved.bubbleId}': ${reason}`,
-          {
-            context: {
-              bubbleId: resolved.bubbleId,
-              reason: "load_global_config_failed",
-              repoPath: resolved.repoPath
-            }
-          }
-        );
-      }
-    }
-  }
-
-  const launcherRequested =
-    resolved.bubbleConfig.attach_launcher ??
-    globalAttachLauncher ??
-    DEFAULT_ATTACH_LAUNCHER;
-  const attachCommand = buildAttachCommand(tmuxSessionName);
   const launcherResolution = await resolveAttachLauncher({
-    launcherRequested,
+    launcherRequested: resolvedExecution.launcherRequested,
     context: {
-      tmuxSessionName,
+      tmuxSessionName: resolvedExecution.tmuxSessionName,
       repoPath: resolved.repoPath,
-      attachCommand,
+      attachCommand: resolvedExecution.attachCommand,
       executeAttachCommand: runCommand,
       writeYamlFile: writeYaml
     },
@@ -158,11 +147,14 @@ export async function attachBubble(
 
   return {
     bubbleId: resolved.bubbleId,
-    tmuxSessionName,
-    launcherRequested,
+    tmuxSessionName: resolvedExecution.tmuxSessionName,
+    launcherRequested: resolvedExecution.launcherRequested,
     launcherUsed: launcherResolution.launcherUsed,
     ...(launcherResolution.attachCommand !== undefined
       ? { attachCommand: launcherResolution.attachCommand }
+      : {}),
+    ...(resolvedExecution.diagnostics !== undefined
+      ? { diagnostics: resolvedExecution.diagnostics }
       : {})
   };
 }

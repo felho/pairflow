@@ -1,2 +1,6 @@
 export { buildCheckLauncherAvailabilityDefault } from "./pairflowCommandAttachLauncherAvailability.js";
-export { buildAttachCommand, resolveAttachLauncher } from "./pairflowCommandAttachLauncherRuntime.js";
+export {
+  buildAttachCommand,
+  buildRemoteAttachCommand,
+  resolveAttachLauncher
+} from "./pairflowCommandAttachLauncherRuntime.js";

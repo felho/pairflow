@@ -149,7 +149,7 @@ describe("BubbleExpandedCard", () => {
     expect(screen.getByRole("button", { name: "Attach" })).toBeInTheDocument();
   });
 
-  it("does not expose attach or restart hints for remote bubbles from summary data", () => {
+  it("shows enabled attach for active remote bubbles from summary data", () => {
     renderExpandedCard({
       bubble: bubbleCard({
         bubbleId: "b-expanded-remote-summary",
@@ -163,18 +163,17 @@ describe("BubbleExpandedCard", () => {
           pointerKind: "started",
           viewKind: "status",
           statusSource: "live",
-          cacheStatus: "missing",
-          runtimeAvailability: "missing",
-          reasonCode: "STATUS_REMOTE_RUNTIME_MISSING"
+          cacheStatus: "present",
+          runtimeAvailability: "active"
         }
       })
     });
 
-    expect(screen.queryByRole("button", { name: "Attach" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Attach" })).toBeEnabled();
     expect(screen.queryByText(/restart runtime automatically/u)).not.toBeInTheDocument();
   });
 
-  it("does not expose attach or restart hints for remote bubbles from detail data", () => {
+  it("shows disabled attach with fail-closed hint for unavailable remote detail data", () => {
     renderExpandedCard({
       bubble: bubbleCard({
         bubbleId: "b-expanded-remote-detail",
@@ -202,8 +201,39 @@ describe("BubbleExpandedCard", () => {
       })
     });
 
-    expect(screen.queryByRole("button", { name: "Attach" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Attach" })).toBeDisabled();
+    expect(screen.getByText(/fail-closed/u)).toBeInTheDocument();
     expect(screen.queryByText(/restart runtime automatically/u)).not.toBeInTheDocument();
+  });
+
+  it("shows disabled attach with start-first hint for created remote detail data", () => {
+    renderExpandedCard({
+      bubble: bubbleCard({
+        bubbleId: "b-expanded-remote-created",
+        repoPath: "/repo-a",
+        state: "RUNNING",
+        runtimeSession: null,
+        stale: false
+      }),
+      detail: bubbleDetail({
+        bubbleId: "b-expanded-remote-created",
+        repoPath: "/repo-a",
+        state: "RUNNING",
+        runtimeSession: null,
+        stale: false,
+        remoteExecution: {
+          alias: "lab",
+          host: "ssh.example.com",
+          pointerKind: "created",
+          viewKind: "list",
+          stateSource: "created_not_started",
+          cacheStatus: "missing"
+        }
+      })
+    });
+
+    expect(screen.getByRole("button", { name: "Attach" })).toBeDisabled();
+    expect(screen.getByText(/Start it first, then attach/u)).toBeInTheDocument();
   });
 
   it("copies bubble review prompt on double click of expanded bubble id label", async () => {

@@ -297,6 +297,11 @@ export interface AttachActionResult {
   launcherRequested: string;
   launcherUsed: string;
   attachCommand?: string;
+  diagnostics?: Array<{
+    code: string;
+    message: string;
+    context?: Record<string, unknown>;
+  }>;
 }
 
 export interface BubblePosition {

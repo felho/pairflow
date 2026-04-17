@@ -68,6 +68,20 @@ function createAvailabilityChecker(
 }
 
 describe("attachBubble", () => {
+  it("requires resolveBubbleById dependency", async () => {
+    await expect(
+      attachBubble({
+        bubbleId: "b_attach_missing_resolve_dependency",
+        repoPath: "/tmp/pairflow-attach-missing-resolve-dependency"
+      })
+    ).rejects.toMatchObject({
+      name: "AttachBubbleError",
+      context: {
+        reason: "resolve_bubble_dependency_missing"
+      }
+    } satisfies Partial<AttachBubbleError>);
+  });
+
   it("uses warp launcher when explicitly requested", async () => {
     const resolved = createResolvedBubbleFixture({
       bubbleId: "b_attach_warp",
@@ -1074,5 +1088,429 @@ describe("attachBubble", () => {
         }
       )
     ).rejects.toThrow(/Tmux session .* does not exist/u);
+  });
+
+  it("fails closed with actionable guidance when remote pointer is created", async () => {
+    const resolved = createResolvedBubbleFixture({
+      bubbleId: "b_attach_remote_created",
+      repoPath: "/tmp/pairflow-attach-remote-created"
+    });
+
+    await expect(
+      attachBubble(
+        {
+          bubbleId: resolved.bubbleId,
+          repoPath: resolved.repoPath
+        },
+        {
+          resolveBubbleById: () => Promise.resolve({
+            ...resolved,
+            bubbleConfig: {
+              ...resolved.bubbleConfig,
+              executor: {
+                type: "ssh",
+                remote: "lab"
+              }
+            }
+          }),
+          checkTmuxSessionExists: () => Promise.resolve(true),
+          readRemotePointer: () => Promise.resolve({
+            kind: "created",
+            host: "ssh.example.com",
+            portForwards: [3000]
+          })
+        }
+      )
+    ).rejects.toMatchObject({
+      reasonCode: "REMOTE_ATTACH_START_REQUIRED"
+    } satisfies Partial<AttachBubbleError>);
+  });
+
+  it("builds remote ssh attach command from started pointer authority", async () => {
+    const resolved = createResolvedBubbleFixture({
+      bubbleId: "b_attach_remote_started",
+      repoPath: "/tmp/pairflow-attach-remote-started",
+      attachLauncher: "copy"
+    });
+
+    const result = await attachBubble(
+      {
+        bubbleId: resolved.bubbleId,
+        repoPath: resolved.repoPath
+      },
+      {
+        resolveBubbleById: () => Promise.resolve({
+          ...resolved,
+          bubbleConfig: {
+            ...resolved.bubbleConfig,
+            executor: {
+              type: "ssh",
+              remote: "lab"
+            }
+          }
+        }),
+        checkTmuxSessionExists: () => Promise.resolve(true),
+        readRemotePointer: () => Promise.resolve({
+          kind: "started",
+          host: "ssh.example.com",
+          instanceId: "remote-instance-01",
+          remoteClonePath: "/srv/pairflow/repo--b_attach_remote_started",
+          tmuxSession: "pf-remote-b_attach_remote_started",
+          startedAt: "2026-04-17T10:00:00.000Z",
+          portForwards: [5173, 3000]
+        }),
+        loadPairflowGlobalConfig: () => Promise.resolve({
+          remotes: {
+            lab: {
+              host: "ssh.example.com",
+              user: "dev",
+              repo_base: "/srv/pairflow"
+            }
+          }
+        })
+      }
+    );
+
+    expect(result).toEqual({
+      bubbleId: "b_attach_remote_started",
+      tmuxSessionName: "pf-remote-b_attach_remote_started",
+      launcherRequested: "copy",
+      launcherUsed: "copy",
+      attachCommand:
+        "'ssh' '-o' 'BatchMode=yes' '-o' 'StrictHostKeyChecking=yes' '-o' 'ConnectTimeout=10' '-o' 'ConnectionAttempts=1' '-L' '127.0.0.1:3000:127.0.0.1:3000' '-L' '127.0.0.1:5173:127.0.0.1:5173' '-t' 'dev@ssh.example.com' 'bash' '-lc' 'cd '\\''/srv/pairflow/repo--b_attach_remote_started'\\'' && tmux attach -t '\\''pf-remote-b_attach_remote_started'\\'''"
+    });
+  });
+
+  it("prefers explicit CLI port forwards over persisted pointer defaults for remote attach", async () => {
+    const resolved = createResolvedBubbleFixture({
+      bubbleId: "b_attach_remote_ports",
+      repoPath: "/tmp/pairflow-attach-remote-ports",
+      attachLauncher: "copy"
+    });
+
+    const result = await attachBubble(
+      {
+        bubbleId: resolved.bubbleId,
+        repoPath: resolved.repoPath,
+        portForwards: [8080, 3000, 8080]
+      },
+      {
+        resolveBubbleById: () => Promise.resolve({
+          ...resolved,
+          bubbleConfig: {
+            ...resolved.bubbleConfig,
+            executor: {
+              type: "ssh",
+              remote: "lab"
+            }
+          }
+        }),
+        checkTmuxSessionExists: () => Promise.resolve(true),
+        readRemotePointer: () => Promise.resolve({
+          kind: "started",
+          host: "ssh.example.com",
+          instanceId: "remote-instance-02",
+          remoteClonePath: "/srv/pairflow/repo--b_attach_remote_ports",
+          tmuxSession: "pf-remote-b_attach_remote_ports",
+          startedAt: "2026-04-17T10:00:00.000Z",
+          portForwards: [5173]
+        }),
+        loadPairflowGlobalConfig: () => Promise.resolve({
+          remotes: {
+            lab: {
+              host: "ssh.example.com",
+              repo_base: "/srv/pairflow"
+            }
+          }
+        })
+      }
+    );
+
+    expect(result.attachCommand).toContain(
+      "'127.0.0.1:3000:127.0.0.1:3000'"
+    );
+    expect(result.attachCommand).toContain(
+      "'127.0.0.1:8080:127.0.0.1:8080'"
+    );
+    expect(result.attachCommand).not.toContain(
+      "'127.0.0.1:5173:127.0.0.1:5173'"
+    );
+  });
+
+  it("keeps started-pointer attach authority when matching remote alias is missing from global config", async () => {
+    const resolved = createResolvedBubbleFixture({
+      bubbleId: "b_attach_remote_missing_alias",
+      repoPath: "/tmp/pairflow-attach-remote-missing-alias",
+      attachLauncher: "copy"
+    });
+
+    const result = await attachBubble(
+      {
+        bubbleId: resolved.bubbleId,
+        repoPath: resolved.repoPath
+      },
+      {
+        resolveBubbleById: () => Promise.resolve({
+          ...resolved,
+          bubbleConfig: {
+            ...resolved.bubbleConfig,
+            executor: {
+              type: "ssh",
+              remote: "lab"
+            }
+          }
+        }),
+        checkTmuxSessionExists: () => Promise.resolve(true),
+        readRemotePointer: () => Promise.resolve({
+          kind: "started",
+          host: "ssh.example.com",
+          user: "pointer-user",
+          instanceId: "remote-instance-missing-alias",
+          remoteClonePath: "/srv/pairflow/repo--b_attach_remote_missing_alias",
+          tmuxSession: "pf-remote-b_attach_remote_missing_alias",
+          startedAt: "2026-04-17T10:00:00.000Z"
+        }),
+        loadPairflowGlobalConfig: () => Promise.resolve({
+          remotes: {}
+        })
+      }
+    );
+
+    expect(result.attachCommand).toContain("'pointer-user@ssh.example.com'");
+    expect(result.attachCommand).toContain(
+      "/srv/pairflow/repo--b_attach_remote_missing_alias"
+    );
+  });
+
+  it("returns config-invalid when started remote pointer is paired with a non-ssh executor", async () => {
+    const resolved = createResolvedBubbleFixture({
+      bubbleId: "b_attach_remote_non_ssh_executor",
+      repoPath: "/tmp/pairflow-attach-remote-non-ssh-executor",
+      attachLauncher: "copy"
+    });
+
+    await expect(
+      attachBubble(
+        {
+          bubbleId: resolved.bubbleId,
+          repoPath: resolved.repoPath
+        },
+        {
+          resolveBubbleById: () => Promise.resolve(resolved),
+          checkTmuxSessionExists: () => Promise.resolve(true),
+          readRemotePointer: () => Promise.resolve({
+            kind: "started",
+            host: "ssh.example.com",
+            instanceId: "remote-instance-non-ssh",
+            remoteClonePath: "/srv/pairflow/repo--b_attach_remote_non_ssh_executor",
+            tmuxSession: "pf-remote-b_attach_remote_non_ssh_executor",
+            startedAt: "2026-04-17T10:00:00.000Z"
+          }),
+          loadPairflowGlobalConfig: () => Promise.resolve({
+            remotes: {
+              lab: {
+                host: "ssh.example.com",
+                repo_base: "/srv/pairflow"
+              }
+            }
+          })
+        }
+      )
+    ).rejects.toMatchObject({
+      name: "AttachBubbleError",
+      reasonCode: "REMOTE_ATTACH_CONFIG_INVALID",
+      context: {
+        reason: "remote_executor_invalid"
+      }
+    } satisfies Partial<AttachBubbleError>);
+  });
+
+  it("surfaces diagnostics when remote config supplement load fails unexpectedly", async () => {
+    const resolved = createResolvedBubbleFixture({
+      bubbleId: "b_attach_remote_config_supplement_failed",
+      repoPath: "/tmp/pairflow-attach-remote-config-supplement-failed",
+      attachLauncher: "copy"
+    });
+
+    const result = await attachBubble(
+      {
+        bubbleId: resolved.bubbleId,
+        repoPath: resolved.repoPath
+      },
+      {
+        resolveBubbleById: () => Promise.resolve({
+          ...resolved,
+          bubbleConfig: {
+            ...resolved.bubbleConfig,
+            executor: {
+              type: "ssh",
+              remote: "lab"
+            }
+          }
+        }),
+        checkTmuxSessionExists: () => Promise.resolve(true),
+        readRemotePointer: () => Promise.resolve({
+          kind: "started",
+          host: "ssh.example.com",
+          instanceId: "remote-instance-config-supplement",
+          remoteClonePath: "/srv/pairflow/repo--b_attach_remote_config_supplement_failed",
+          tmuxSession: "pf-remote-b_attach_remote_config_supplement_failed",
+          startedAt: "2026-04-17T10:00:00.000Z"
+        }),
+        loadPairflowGlobalConfig: () => {
+          throw new Error("EACCES while reading ~/.config/pairflow/config.toml");
+        }
+      }
+    );
+
+    expect(result.attachCommand).toContain("'ssh.example.com'");
+    expect(result.diagnostics).toHaveLength(1);
+    const diagnostic = result.diagnostics?.[0];
+    expect(diagnostic?.code).toBe("REMOTE_ATTACH_CONFIG_SUPPLEMENT_UNAVAILABLE");
+    expect(diagnostic?.context.reason).toBe("remote_config_supplement_unavailable");
+    expect(diagnostic?.context.remoteAlias).toBe("lab");
+    expect(diagnostic?.context.remoteHost).toBe("ssh.example.com");
+  });
+
+  it("falls back to default launcher for started remote attach when global config load fails", async () => {
+    const resolved = createResolvedBubbleFixture({
+      bubbleId: "b_attach_remote_default_launcher_on_config_error",
+      repoPath: "/tmp/pairflow-attach-remote-default-launcher-on-config-error"
+    });
+
+    const availabilityCalls: LauncherAvailabilityInput["launcher"][] = [];
+    const result = await attachBubble(
+      {
+        bubbleId: resolved.bubbleId,
+        repoPath: resolved.repoPath
+      },
+      {
+        resolveBubbleById: () => Promise.resolve({
+          ...resolved,
+          bubbleConfig: {
+            ...resolved.bubbleConfig,
+            executor: {
+              type: "ssh",
+              remote: "lab"
+            }
+          }
+        }),
+        checkTmuxSessionExists: () => Promise.resolve(true),
+        checkLauncherAvailability: createAvailabilityChecker({}, availabilityCalls),
+        readRemotePointer: () => Promise.resolve({
+          kind: "started",
+          host: "ssh.example.com",
+          instanceId: "remote-instance-default-launcher",
+          remoteClonePath: "/srv/pairflow/repo--b_attach_remote_default_launcher_on_config_error",
+          tmuxSession: "pf-remote-b_attach_remote_default_launcher_on_config_error",
+          startedAt: "2026-04-17T10:00:00.000Z"
+        }),
+        loadPairflowGlobalConfig: () => {
+          throw new Error("global config temporarily unavailable");
+        }
+      }
+    );
+
+    expect(availabilityCalls).toEqual([
+      "iterm2",
+      "ghostty",
+      "warp",
+      "terminal"
+    ]);
+    expect(result.launcherRequested).toBe("auto");
+    expect(result.launcherUsed).toBe("copy");
+    expect(result.attachCommand).toContain("'ssh.example.com'");
+    expect(result.diagnostics).toHaveLength(1);
+    expect(result.diagnostics?.[0]?.context.reason).toBe(
+      "remote_config_supplement_unavailable"
+    );
+  });
+
+  it("fails closed with start-required when ssh bubble has no remote pointer yet", async () => {
+    const resolved = createResolvedBubbleFixture({
+      bubbleId: "b_attach_remote_null_pointer",
+      repoPath: "/tmp/pairflow-attach-remote-null-pointer",
+      attachLauncher: "copy"
+    });
+
+    await expect(
+      attachBubble(
+        {
+          bubbleId: resolved.bubbleId,
+          repoPath: resolved.repoPath
+        },
+        {
+          resolveBubbleById: () => Promise.resolve({
+            ...resolved,
+            bubbleConfig: {
+              ...resolved.bubbleConfig,
+              executor: {
+                type: "ssh",
+                remote: "lab"
+              }
+            }
+          }),
+          checkTmuxSessionExists: () => Promise.resolve(false),
+          readRemotePointer: () => Promise.resolve(null),
+          loadPairflowGlobalConfig: () => Promise.resolve({
+            remotes: {
+              lab: {
+                host: "ssh.example.com",
+                repo_base: "/srv/pairflow"
+              }
+            }
+          })
+        }
+      )
+    ).rejects.toMatchObject({
+      name: "AttachBubbleError",
+      reasonCode: "REMOTE_ATTACH_START_REQUIRED"
+    } satisfies Partial<AttachBubbleError>);
+  });
+
+  it("fails closed when remote pointer read is malformed", async () => {
+    const resolved = createResolvedBubbleFixture({
+      bubbleId: "b_attach_remote_pointer_invalid",
+      repoPath: "/tmp/pairflow-attach-remote-pointer-invalid",
+      attachLauncher: "copy"
+    });
+
+    await expect(
+      attachBubble(
+        {
+          bubbleId: resolved.bubbleId,
+          repoPath: resolved.repoPath
+        },
+        {
+          resolveBubbleById: () => Promise.resolve({
+            ...resolved,
+            bubbleConfig: {
+              ...resolved.bubbleConfig,
+              executor: {
+                type: "ssh",
+                remote: "lab"
+              }
+            }
+          }),
+          checkTmuxSessionExists: () => Promise.resolve(true),
+          readRemotePointer: () => {
+            throw new SchemaValidationError("remote pointer invalid", [
+              { path: "tmuxSession", message: "Required" }
+            ]);
+          },
+          loadPairflowGlobalConfig: () => Promise.resolve({
+            remotes: {
+              lab: {
+                host: "ssh.example.com",
+                repo_base: "/srv/pairflow"
+              }
+            }
+          })
+        }
+      )
+    ).rejects.toMatchObject({
+      name: "AttachBubbleError",
+      reasonCode: "REMOTE_ATTACH_POINTER_INVALID"
+    } satisfies Partial<AttachBubbleError>);
   });
 });

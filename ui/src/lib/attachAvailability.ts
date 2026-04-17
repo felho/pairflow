@@ -30,22 +30,61 @@ export interface AttachAvailability {
 export function getAttachAvailability(
   input: AttachAvailabilityInput
 ): AttachAvailability {
-  const command = `tmux attach -t pf-${input.bubbleId}`;
-
-  if (input.remoteExecution !== undefined) {
-    return {
-      visible: false,
-      enabled: false,
-      command,
-      hint: null
-    };
-  }
+  const localCommand = `tmux attach -t pf-${input.bubbleId}`;
+  const remoteCommand = `pairflow bubble attach --id ${input.bubbleId}`;
 
   if (!runtimeCapableStates.has(input.state)) {
     return {
       visible: false,
       enabled: false,
-      command,
+      command:
+        input.remoteExecution !== undefined ? remoteCommand : localCommand,
+      hint: null
+    };
+  }
+
+  if (input.remoteExecution !== undefined) {
+    if (
+      input.remoteExecution.pointerKind === "created" ||
+      (
+        input.remoteExecution.viewKind === "list" &&
+        input.remoteExecution.stateSource === "created_not_started"
+      ) ||
+      (
+        input.remoteExecution.viewKind === "status" &&
+        input.remoteExecution.runtimeAvailability === "not_started"
+      )
+    ) {
+      return {
+        visible: true,
+        enabled: false,
+        command: remoteCommand,
+        hint: "Remote bubble is not started yet. Start it first, then attach."
+      };
+    }
+
+    if (
+      (
+        input.remoteExecution.viewKind === "list" &&
+        input.remoteExecution.stateSource === "unavailable_started"
+      ) ||
+      (
+        input.remoteExecution.viewKind === "status" &&
+        input.remoteExecution.runtimeAvailability !== "active"
+      )
+    ) {
+      return {
+        visible: true,
+        enabled: false,
+        command: remoteCommand,
+        hint: "Remote runtime is unavailable. Attach stays fail-closed and will not restart it automatically."
+      };
+    }
+
+    return {
+      visible: true,
+      enabled: true,
+      command: remoteCommand,
       hint: null
     };
   }
@@ -57,7 +96,7 @@ export function getAttachAvailability(
     return {
       visible: true,
       enabled: true,
-      command,
+      command: localCommand,
       hint: null
     };
   }
@@ -65,7 +104,7 @@ export function getAttachAvailability(
   return {
     visible: true,
     enabled: true,
-    command,
+    command: localCommand,
     hint: "Runtime session unavailable. Attach will restart runtime automatically before retrying."
   };
 }

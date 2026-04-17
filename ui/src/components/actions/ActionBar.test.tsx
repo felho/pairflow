@@ -241,6 +241,62 @@ describe("ActionBar", () => {
     expect(screen.queryByText("Opening Warp terminal...")).not.toBeInTheDocument();
   });
 
+  it("renders disabled attach with its hint when availability is fail-closed", () => {
+    render(
+      <ActionBar
+        bubble={bubbleCard({
+          bubbleId: "b-remote-unavailable",
+          repoPath: "/repo-a",
+          state: "WAITING_HUMAN"
+        })}
+        attach={{
+          visible: true,
+          enabled: false,
+          command: "pairflow bubble attach --id b-remote-unavailable",
+          hint: "Remote runtime is unavailable. Attach stays fail-closed and will not restart it automatically."
+        }}
+        isSubmitting={false}
+        actionError={null}
+        retryHint={null}
+        actionFailure={null}
+        onAction={vi.fn(() => Promise.resolve(undefined))}
+        onClearFeedback={vi.fn()}
+      />
+    );
+
+    expect(screen.getByRole("button", { name: "Attach" })).toBeDisabled();
+    expect(screen.getByText(/fail-closed/u)).toBeInTheDocument();
+  });
+
+  it("renders created remote attach hint without distorting the start-first message", () => {
+    render(
+      <ActionBar
+        bubble={bubbleCard({
+          bubbleId: "b-remote-created",
+          repoPath: "/repo-a",
+          state: "RUNNING"
+        })}
+        attach={{
+          visible: true,
+          enabled: false,
+          command: "pairflow bubble attach --id b-remote-created",
+          hint: "Remote bubble is not started yet. Start it first, then attach."
+        }}
+        isSubmitting={false}
+        actionError={null}
+        retryHint={null}
+        actionFailure={null}
+        onAction={vi.fn(() => Promise.resolve(undefined))}
+        onClearFeedback={vi.fn()}
+      />
+    );
+
+    expect(screen.getByRole("button", { name: "Attach" })).toBeDisabled();
+    expect(
+      screen.getByText("Remote bubble is not started yet. Start it first, then attach.")
+    ).toBeInTheDocument();
+  });
+
   it("renders restart as icon-only control with accessible name", () => {
     render(
       <ActionBar

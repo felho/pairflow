@@ -170,6 +170,17 @@ async function mapActionErrorToApiError(input: {
       : internalError(message, details);
   }
 
+  if (isAttachBubbleErrorLike(input.error) && input.error.reasonCode !== undefined) {
+    return badRequest(message, {
+      bubbleId: input.bubbleId,
+      repoPath: input.repoPath,
+      reasonCode: input.error.reasonCode,
+      ...(input.error.context?.reason !== undefined
+        ? { attachContextReason: input.error.context.reason }
+        : {})
+    });
+  }
+
   if (input.error instanceof Error && input.error.name === "UiApiBadRequest") {
     return badRequest(message);
   }

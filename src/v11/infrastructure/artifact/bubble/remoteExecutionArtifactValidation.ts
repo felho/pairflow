@@ -23,6 +23,7 @@ import {
 const remotePointerAllowedKeys = new Set([
   "kind",
   "host",
+  "user",
   "portForwards",
   "instanceId",
   "remoteClonePath",
@@ -48,6 +49,7 @@ const remoteStateCacheAllowedKeys = new Set([
 
 const forbiddenRemoteStateCachePointerKeys = new Set([
   "host",
+  "user",
   "instanceId",
   "remoteClonePath",
   "tmuxSession",
@@ -90,6 +92,7 @@ function validateRemotePointerDiscriminants(
   errors: ValidationError[]
 ): {
   host: unknown;
+  user: unknown;
   kind: BubbleRemotePointerKind | undefined;
   portForwards: number[] | undefined;
 } {
@@ -108,6 +111,14 @@ function validateRemotePointerDiscriminants(
     });
   }
 
+  const user = input.user;
+  if (user !== undefined && !isNonEmptyString(user)) {
+    errors.push({
+      path: "user",
+      message: "Must be a non-empty string"
+    });
+  }
+
   const rawKind = input.kind;
   if (!isBubbleRemotePointerKind(rawKind)) {
     errors.push({
@@ -118,6 +129,7 @@ function validateRemotePointerDiscriminants(
 
   return {
     host,
+    user,
     kind: isBubbleRemotePointerKind(rawKind) ? rawKind : undefined,
     portForwards: validatePortForwards(
       input.portForwards,
@@ -208,6 +220,7 @@ function validateOptionalRemotePointerFields(
 function normalizeRemotePointer(input: {
   pointerKind: BubbleRemotePointerKind | undefined;
   host: unknown;
+  user: unknown;
   portForwards: number[] | undefined;
   raw: Record<string, unknown>;
 }): ValidationResult<BubbleRemotePointer> {
@@ -215,6 +228,7 @@ function normalizeRemotePointer(input: {
     return validationOk({
       kind: "started",
       host: (input.host as string).trim(),
+      ...(input.user !== undefined ? { user: (input.user as string).trim() } : {}),
       instanceId: (input.raw.instanceId as string).trim(),
       remoteClonePath: (input.raw.remoteClonePath as string).trim(),
       tmuxSession: (input.raw.tmuxSession as string).trim(),
@@ -226,6 +240,7 @@ function normalizeRemotePointer(input: {
   return validationOk({
     kind: "created",
     host: (input.host as string).trim(),
+    ...(input.user !== undefined ? { user: (input.user as string).trim() } : {}),
     ...(input.portForwards !== undefined ? { portForwards: input.portForwards } : {})
   });
 }
@@ -243,7 +258,7 @@ export function validateRemotePointer(
     ]);
   }
 
-  const { host, kind, portForwards } = validateRemotePointerDiscriminants(input, errors);
+  const { host, user, kind, portForwards } = validateRemotePointerDiscriminants(input, errors);
   validateRemotePointerKindSpecificFields({
     pointerKind: kind,
     startedFieldValues: buildStartedRemotePointerFieldValues(input),
@@ -258,6 +273,7 @@ export function validateRemotePointer(
   return normalizeRemotePointer({
     pointerKind: kind,
     host,
+    user,
     portForwards,
     raw: input
   });

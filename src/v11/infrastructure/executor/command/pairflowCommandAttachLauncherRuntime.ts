@@ -2,6 +2,7 @@ import type { AttachLauncher } from "../../../../types/bubble.js";
 import { shellQuote } from "../../../shared/foundation/shellQuote.js";
 import {
   AttachBubbleError as AttachBubbleErrorClass,
+  type ExplicitAttachLauncher,
   type GuiAttachLauncher,
   type LauncherAvailabilityChecker
 } from "./pairflowCommandAttachContract.js";
@@ -19,11 +20,59 @@ const autoGuiLauncherOrder: readonly GuiAttachLauncher[] = [
 ];
 
 interface AttachLauncherResolution {
-  launcherUsed: AttachLauncher;
+  launcherUsed: ExplicitAttachLauncher;
   attachCommand?: string;
 }
+
+const sshTransportOptions = [
+  ["BatchMode", "yes"],
+  ["StrictHostKeyChecking", "yes"],
+  ["ConnectTimeout", "10"],
+  ["ConnectionAttempts", "1"]
+] as const;
+
 export function buildAttachCommand(sessionName: string): string {
   return `tmux attach -t ${shellQuote(sessionName)}`;
+}
+
+function normalizePortForwards(ports: readonly number[] | undefined): number[] {
+  if (ports === undefined) {
+    return [];
+  }
+
+  return [...new Set(ports)]
+    .filter((port) => Number.isInteger(port) && port >= 1 && port <= 65_535)
+    .sort((left, right) => left - right);
+}
+
+export function buildRemoteAttachCommand(input: {
+  host: string;
+  user?: string;
+  remoteClonePath: string;
+  tmuxSessionName: string;
+  portForwards?: readonly number[];
+}): string {
+  const sshTarget =
+    input.user !== undefined ? `${input.user}@${input.host}` : input.host;
+  const remoteShellCommand = [
+    `cd ${shellQuote(input.remoteClonePath)}`,
+    buildAttachCommand(input.tmuxSessionName)
+  ].join(" && ");
+  const commandParts = [
+    "ssh",
+    ...sshTransportOptions.flatMap(([key, value]) => ["-o", `${key}=${value}`]),
+    ...normalizePortForwards(input.portForwards).flatMap((port) => [
+      "-L",
+      `127.0.0.1:${port}:127.0.0.1:${port}`
+    ]),
+    "-t",
+    sshTarget,
+    "bash",
+    "-lc",
+    remoteShellCommand
+  ];
+
+  return commandParts.map((part) => shellQuote(part)).join(" ");
 }
 
 export async function resolveAttachLauncher(input: {
@@ -65,33 +114,31 @@ export async function resolveAttachLauncher(input: {
     };
   }
 
-  return (async () => {
-    for (const launcher of autoGuiLauncherOrder) {
-      const available = await input.checkLauncherAvailability({
-        launcher,
-        cwd: input.context.repoPath
-      });
-      if (!available) {
-        continue;
-      }
-
-      try {
-        await launchGuiLauncher(launcher, input.context);
-        return {
-          launcherUsed: launcher
-        };
-      } catch (error) {
-        const normalized = normalizeLauncherError(error, launcher);
-        if (normalized.failureClass === "launcher_unavailable") {
-          continue;
-        }
-        throw normalized;
-      }
+  for (const launcher of autoGuiLauncherOrder) {
+    const available = await input.checkLauncherAvailability({
+      launcher,
+      cwd: input.context.repoPath
+    });
+    if (!available) {
+      continue;
     }
 
-    return {
-      launcherUsed: "copy",
-      attachCommand: input.context.attachCommand
-    };
-  })();
+    try {
+      await launchGuiLauncher(launcher, input.context);
+      return {
+        launcherUsed: launcher
+      };
+    } catch (error) {
+      const normalized = normalizeLauncherError(error, launcher);
+      if (normalized.failureClass === "launcher_unavailable") {
+        continue;
+      }
+      throw normalized;
+    }
+  }
+
+  return {
+    launcherUsed: "copy",
+    attachCommand: input.context.attachCommand
+  };
 }
