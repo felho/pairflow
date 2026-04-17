@@ -122,10 +122,13 @@ User-provided context that frames the search:
 
 ### Quote-discipline rules (strict)
 
-1. Every quote in the `Verbatim quotes` block MUST come from an `rg -n` match on the exact rollout file cited. Include the line number. No paraphrasing inside the quote block — paraphrases go in the "Problem solved (synthesized)" section.
-2. Always label the speaker (`[user]` or `[agent]`). The rollout uses `event_msg.payload.type` = `user_message` / `agent_message` to distinguish.
-3. If the language is Hungarian, keep the original text verbatim and add an English paraphrase prefixed with `*(EN)*`.
-4. If unable to produce a verbatim quote that is both on-topic and under ~3 lines, say so in `Gaps / uncertainty` instead of padding with synthesized text.
+1. Every quote in the `Verbatim quotes` block MUST come from an `rg -n` match on the exact rollout file cited. The label MUST include a numeric line number: `[user, line 670]` or `[agent, line 863]`. Non-numeric placeholders like `[agent, final]`, `[agent, mid-session]`, `[agent, late]` are not acceptable — if you cannot cite a line number, omit the quote and note the gap in `Gaps / uncertainty`.
+2. No paraphrasing inside the quote block — paraphrases go in the "Problem solved (synthesized)" section.
+3. Always label the speaker (`[user]` or `[agent]`). The rollout uses `event_msg.payload.type` = `user_message` / `agent_message` to distinguish.
+4. If the language is Hungarian, keep the original text verbatim and add an English paraphrase prefixed with `*(EN)*`.
+5. If unable to produce a verbatim quote that is both on-topic and under ~3 lines, say so in `Gaps / uncertainty` instead of padding with synthesized text.
+6. **User quote selection:** when the session has multiple `user_message` entries, the primary user quote must be the one that carries the "why" — the most substantive rationale, frustration description, problem statement, or design-intent articulation. Not a closing acknowledgment ("yes, do it", "so please do all of this"), not a short yes/no, not a clarifying follow-up. If the richest user framing is spread across several messages, pick the single longest/most substantive one and note the others in `Related prior sessions` or `Problem solved`.
+7. **Agent quote selection:** an agent quote is secondary. Include at most one or two, and only when they add information the user did not state (e.g. the agent names the pattern, proposes the structure that lands in the commit). Agent quotes do not substitute for a user quote — if no adequate user quote exists, state that gap explicitly instead of leaning on agent quotes alone.
 
 ### Incident-evidence discipline (strict)
 
@@ -137,6 +140,53 @@ User-provided context that frames the search:
 
 1. The `Output Section Template` in this plan is normative. The subagent MUST copy the exact structure (headers and `**labels:**`) verbatim, only filling the `<placeholders>`. Do not rename, reorder, or add sibling sections (e.g. no "Core Content", no "Lineage Validation", no "Motivation Type" — use the provided sections).
 2. The final response consists of exactly two blocks: (a) the filled template, (b) the `## Methodological Notes` section. No preamble, no trailing summary, no extra headers.
+
+### Delta-check discipline (strict)
+
+The `Session content vs commit content delta` block compares the **concepts, names, scoring rules, and structure** that the session and the commit each introduce — NOT merely the file paths they touch. Filename-level matches are trivial (the session will obviously discuss the same files that get edited) and give no signal about whether the content actually aligns. The mechanism exists to detect:
+1. Renames (session used name X, commit lands name Y).
+2. Additions (commit adds a concept absent in the session — implies a second session or manual edit).
+3. Drops (session proposed a concept, commit dropped it — worth a Gap note).
+4. Structural divergences (scoring bands, axis counts, split-order vocabulary).
+
+Build two lists at the **concept/name level** from the authoring session and from `git show <HASH>` respectively, and present them side by side. Call out every renaming, addition, drop, or structural divergence. Write "matches" only when the specific names and structure align on both sides (cosmetic differences like Title Case vs snake_case are fine — call them out as cosmetic).
+
+**Good example (follow this shape):**
+
+```
+Session-side (from agent_message line 863):
+- Axes: Authority risk, Surface spread, Activation coupling, Prerequisite risk, Acceptance multiplicity (5)
+- Scoring: 0|1|2 per axis
+- Bands: 0-3 single task | 4-6 split recommended | 7-10 refactor-first
+- Split order: foundation → feature → activation
+- Output fields: risk_score, authority_change, surface_count, feature_activation, prerequisite_boundaries, acceptance_goals
+
+Commit-side (from git show 01ecf168 on Complexity-Risk-Gate.md):
+- Axes: authority_risk, surface_spread, activation_coupling, prerequisite_risk, acceptance_multiplicity (5)
+- Scoring: 0|1|2 per axis
+- Bands: 0-3 | 4-6 | 7-10 (same)
+- Split order: foundation (or authority refactor) → feature delivery → activation (or rollout)
+- Output fields: risk_score, authority_change, surface_count, feature_activation, prerequisite_boundaries
+
+Match analysis:
+- Axis count: 5 = 5 ✓
+- Axis names: align (Title Case → snake_case; cosmetic) ✓
+- Scoring/bands: identical ✓
+- Split order: identical in essence (commit adds parenthetical aliases) ✓
+- Output fields: commit drops `acceptance_goals` — absorbed into the Acceptance Multiplicity axis; not a functional gap
+
+Verdict: matches on all five axes; one minor output-field drop noted above.
+```
+
+**Anti-pattern (do NOT do this):**
+
+```
+Session-side patches: README.md, SKILL.md, Templates/plan-template.md, ...
+Commit-side files: .claude/skills/.../README.md, SKILL.md, ...
+Matches: Yes, on all filenames.
+```
+
+A filename match is trivial. It tells you nothing about whether the session's conceptual design made it into the commit. Always go to the concept/name level.
 
 ## Subagent Prompt Template
 
