@@ -16,6 +16,7 @@ import type {
   ReviewerFindingsClaim,
   ReviewerFindingsClaimParserMetadata
 } from "../../domain/pass/reviewerFindingsClaim.js";
+import type { PassActivationProvenance } from "./passCommandContract.js";
 
 export interface RunAutoConvergeFlowInput {
   summary: string;
@@ -44,6 +45,7 @@ export interface RunAutoConvergeFlowInput {
   reviewerVerification: ReviewVerificationInputResolution | undefined;
   passIntent: PassIntent;
   inferredIntent: boolean;
+  activation?: PassActivationProvenance;
   hasFindings: boolean;
   noFindings: boolean;
   findings: Finding[];
@@ -111,6 +113,7 @@ export interface RunAutoConvergeFlowDependencies<TResult> {
     repeatCleanReasonDetail: RepeatCleanAutoconvergeReasonDetail;
     repeatCleanTrigger: boolean;
     mostRecentPreviousReviewerCleanPassEnvelope: boolean;
+    activation?: PassActivationProvenance;
     converged: EmitConvergedResult;
   }) => Promise<TResult>;
 }
@@ -177,6 +180,9 @@ export async function runAutoConvergeFlow<TResult>(
     repeatCleanTrigger: input.repeatCleanTrigger,
     mostRecentPreviousReviewerCleanPassEnvelope:
       input.mostRecentPreviousReviewerCleanPassEnvelope,
+    ...(input.activation !== undefined
+      ? { activation: input.activation }
+      : {}),
     converged
   });
 }

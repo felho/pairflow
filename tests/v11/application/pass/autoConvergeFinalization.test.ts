@@ -134,4 +134,48 @@ describe("finalizeAutoConvergePass", () => {
     expect(updateCalled).toBe(false);
     expect(capturedResultInput?.docGateArtifactWriteFailureReason).toBeUndefined();
   });
+
+  it("omits activation from the auto-converge result-builder input when provenance is absent", async () => {
+    let capturedResultInput: Record<string, unknown> | undefined;
+
+    await finalizeAutoConvergePass(
+      {
+        now: new Date("2026-03-19T12:00:00.000Z"),
+        bubbleConfig: {
+          review_artifact_type: "code"
+        } as never,
+        artifactsDir: "/tmp/artifacts",
+        taskArtifactPath: "/tmp/task.md",
+        round: 2,
+        senderRole: "reviewer",
+        findings: [],
+        createError: (message: PairflowCommandErrorInput) => new Error(toErrorMessage(message)),
+        repoPath: "/tmp/repo",
+        bubbleId: "b_123",
+        bubbleInstanceId: "inst_1",
+        passIntent: "review",
+        inferredIntent: true,
+        senderAgent: "claude",
+        refsCount: 0,
+        hasFindings: false,
+        noFindings: true,
+        repeatCleanReasonCode: "REPEAT_CLEAN_AUTOCONVERGE_TRIGGERED",
+        repeatCleanReasonDetail: "previous_reviewer_pass_clean",
+        repeatCleanTrigger: true,
+        mostRecentPreviousReviewerCleanPassEnvelope: true,
+        converged: buildConvergedResult()
+      },
+      {
+        updateReviewerDocGateArtifact: async () => undefined,
+        emitBubbleLifecycleEventBestEffort: async () => undefined,
+        buildPassLifecycleMetricMetadata: () => ({ metric: "ok" }),
+        buildAutoConvergePassResult: (input) => {
+          capturedResultInput = input as unknown as Record<string, unknown>;
+          return input;
+        }
+      }
+    );
+
+    expect("activation" in (capturedResultInput ?? {})).toBe(false);
+  });
 });

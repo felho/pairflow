@@ -21,18 +21,25 @@ describe("askHumanFinalizationArtifacts", () => {
   });
 
   it("builds ask-human finalization result payload", () => {
-    expect(
-      buildAskHumanFinalizationResult({
-        bubbleId: "b_ask_human_01",
-        sequence: 3,
-        envelope: {
-          id: "msg_20260221_001"
-        } as never,
-        state: {
-          state: "WAITING_HUMAN"
-        } as never
-      })
-    ).toMatchObject({
+    const result = buildAskHumanFinalizationResult({
+      bubbleId: "b_ask_human_01",
+      sequence: 3,
+      envelope: {
+        id: "msg_20260221_001"
+      } as never,
+      state: {
+        state: "WAITING_HUMAN"
+      } as never,
+      activation: {
+        handoff_id: "implementer:b_ask_human_01:round:2:attempt:1",
+        execution_id: "exec_b_ask_human_01_round2",
+        expected_role: "implementer",
+        expected_round: 2,
+        expected_state_fingerprint: "fp_ask_human_01"
+      }
+    });
+
+    expect(result).toEqual({
       bubbleId: "b_ask_human_01",
       sequence: 3,
       envelope: {
@@ -41,8 +48,16 @@ describe("askHumanFinalizationArtifacts", () => {
       state: {
         state: "WAITING_HUMAN"
       },
-      inferredRecipient: "human"
+      inferredRecipient: "human",
+      activation: {
+        handoff_id: "implementer:b_ask_human_01:round:2:attempt:1",
+        execution_id: "exec_b_ask_human_01_round2",
+        expected_role: "implementer",
+        expected_round: 2,
+        expected_state_fingerprint: "fp_ask_human_01"
+      }
     });
+    expect("delivery" in result).toBe(false);
   });
 
   it("omits empty-string delivery messages from the finalization projection by contract", () => {
@@ -56,6 +71,13 @@ describe("askHumanFinalizationArtifacts", () => {
         state: {
           state: "WAITING_HUMAN"
         } as never,
+        activation: {
+          handoff_id: "implementer:b_ask_human_02:round:2:attempt:1",
+          execution_id: "exec_b_ask_human_02_round2",
+          expected_role: "implementer",
+          expected_round: 2,
+          expected_state_fingerprint: "fp_ask_human_02"
+        },
         deliveryResult: {
           status: "rejected",
           delivered: false,
@@ -74,6 +96,13 @@ describe("askHumanFinalizationArtifacts", () => {
         state: "WAITING_HUMAN"
       },
       inferredRecipient: "human",
+      activation: {
+        handoff_id: "implementer:b_ask_human_02:round:2:attempt:1",
+        execution_id: "exec_b_ask_human_02_round2",
+        expected_role: "implementer",
+        expected_round: 2,
+        expected_state_fingerprint: "fp_ask_human_02"
+      },
       delivery: {
         status: "rejected",
         delivered: false,

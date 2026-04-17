@@ -22,6 +22,11 @@ export function buildAskHumanFinalizationResult(
     envelope: input.envelope,
     state: input.state,
     inferredRecipient: "human" as const,
+    ...(input.activation !== undefined
+      ? {
+          activation: input.activation
+        }
+      : {}),
     ...(input.deliveryResult !== undefined
         ? {
           delivery: {

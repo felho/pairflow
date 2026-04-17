@@ -5,6 +5,7 @@ import type { BubbleStateSnapshot } from "../../../types/bubble.js";
 import type { Finding } from "../../../types/findings.js";
 import type { PreparePassRoutingResult } from "./passRoutingPreparation.js";
 import type { ResolvedPassHandoff } from "../../domain/pass/handoff.js";
+import type { PassActivationProvenance } from "./passCommandContract.js";
 
 export interface BuildFlowBaseInput {
   summary: string;
@@ -24,6 +25,7 @@ export interface BuildFlowBaseInput {
   implementer: ResolvedPassHandoff["recipientAgent"];
   state: BubbleStateSnapshot;
   loadedState: Pick<LoadedStateSnapshot, "fingerprint">;
+  activation?: PassActivationProvenance;
   passRouting: PreparePassRoutingResult;
   createError: PairflowCreateCommandError;
 }

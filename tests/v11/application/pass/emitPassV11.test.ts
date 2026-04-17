@@ -15,6 +15,7 @@ import {
 import { WorkspaceResolutionError } from "../../../../src/v11/infrastructure/executor/workspace/workspaceResolution.js";
 import { createBubble } from "../../../../src/v11/application/create/createCommandApi.js";
 import { bootstrapWorktreeWorkspace } from "../../../../src/v11/infrastructure/workspace/worktreeManager.js";
+import { readStateSnapshot } from "../../../../src/v11/infrastructure/state/stateStore.js";
 import { setupRunningBubbleFixture } from "../../../helpers/bubble.js";
 import { initGitRepository } from "../../../helpers/git.js";
 
@@ -46,6 +47,7 @@ async function executeSeededPass(input: {
     bubbleId: input.bubbleId,
     task: "Pass v11 wrapper parity"
   });
+  const authorityBeforeEmit = await readStateSnapshot(bubble.paths.statePath);
 
   const result = await input.executor({
     summary: "Implementer handoff baseline.",
@@ -63,22 +65,30 @@ async function executeSeededPass(input: {
     transitionDecision: result.transitionDecision,
     state: result.state.state,
     inferredIntent: result.inferredIntent,
+    activation: result.activation,
     repeatCleanTrigger: result.repeatCleanTrigger,
     repeatCleanReasonCode: result.repeatCleanReasonCode,
     repeatCleanReasonDetail: result.repeatCleanReasonDetail,
-    autoConverged: result.autoConverged
+    autoConverged: result.autoConverged,
+    expectedActivation: {
+      handoff_id: authorityBeforeEmit.state.execution_context?.handoff_id,
+      execution_id: authorityBeforeEmit.state.execution_context?.execution_id,
+      expected_role: authorityBeforeEmit.state.execution_context?.active_role,
+      expected_round: authorityBeforeEmit.state.execution_context?.round,
+      expected_state_fingerprint: authorityBeforeEmit.fingerprint
+    }
   };
 }
 
 describe("emitPassFromWorkspaceV11", () => {
   it("matches legacy pass behavior with explicit intent on seeded scenario", async () => {
     const legacy = await executeSeededPass({
-      bubbleId: "b_pass_v11_legacy_explicit_01",
+      bubbleId: "b_pass_v11_explicit_01",
       executor: emitPassFromWorkspace,
       includeIntent: true
     });
     const v11 = await executeSeededPass({
-      bubbleId: "b_pass_v11_v11_explicit_01",
+      bubbleId: "b_pass_v11_explicit_01",
       executor: emitPassFromWorkspaceV11,
       includeIntent: true
     });
@@ -91,18 +101,20 @@ describe("emitPassFromWorkspaceV11", () => {
     expect(v11.transitionDecision).toBe("normal_pass");
     expect(v11.state).toBe("RUNNING");
     expect(v11.inferredIntent).toBe(false);
+    expect(legacy.activation).toEqual(legacy.expectedActivation);
+    expect(v11.activation).toEqual(v11.expectedActivation);
     expect(v11.repeatCleanTrigger).toBe(false);
     expect(v11.autoConverged).toBeUndefined();
   });
 
   it("matches legacy pass behavior when intent is inferred", async () => {
     const legacy = await executeSeededPass({
-      bubbleId: "b_pass_v11_legacy_inferred_01",
+      bubbleId: "b_pass_v11_inferred_01",
       executor: emitPassFromWorkspace,
       includeIntent: false
     });
     const v11 = await executeSeededPass({
-      bubbleId: "b_pass_v11_v11_inferred_01",
+      bubbleId: "b_pass_v11_inferred_01",
       executor: emitPassFromWorkspaceV11,
       includeIntent: false
     });
@@ -115,6 +127,8 @@ describe("emitPassFromWorkspaceV11", () => {
     expect(v11.transitionDecision).toBe("normal_pass");
     expect(v11.state).toBe("RUNNING");
     expect(v11.inferredIntent).toBe(true);
+    expect(legacy.activation).toEqual(legacy.expectedActivation);
+    expect(v11.activation).toEqual(v11.expectedActivation);
     expect(v11.repeatCleanTrigger).toBe(false);
     expect(v11.autoConverged).toBeUndefined();
   });

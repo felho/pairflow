@@ -64,6 +64,15 @@ export interface ActorEmitContextSnapshot {
   execution_context: BubbleExecutionContext;
 }
 
+export type ActorActivationProvenance = Pick<
+  ActorEmitContextSnapshot,
+  | "handoff_id"
+  | "execution_id"
+  | "expected_role"
+  | "expected_round"
+  | "expected_state_fingerprint"
+>;
+
 function assertExecutionContext(
   state: LoadedStateSnapshot["state"],
   reasonCode: ActorEmitContextErrorReasonCode
@@ -87,13 +96,28 @@ function assertExecutionContext(
   return state.execution_context;
 }
 
+function resolveExecutionContextExecutionId(input: {
+  executionContext: BubbleExecutionContext;
+}): {
+  hasExecutionId: boolean;
+  executionId: unknown;
+} {
+  const executionContextRecord = input.executionContext as BubbleExecutionContext & {
+    execution_id?: unknown;
+  };
+
+  return {
+    hasExecutionId: Object.hasOwn(executionContextRecord, "execution_id"),
+    executionId: executionContextRecord.execution_id
+  };
+}
+
 function assertExecutionContextHasExecutionId(
   executionContext: BubbleExecutionContext
 ): string {
-  const executionContextRecord = executionContext as BubbleExecutionContext & {
-    execution_id?: unknown;
-  };
-  const hasExecutionId = Object.hasOwn(executionContextRecord, "execution_id");
+  const { hasExecutionId, executionId } = resolveExecutionContextExecutionId({
+    executionContext
+  });
   if (!hasExecutionId) {
     throw new ActorEmitContextError({
       reasonCode: "ACTOR_EMIT_CONTEXT_PRE_E1_EXECUTION_ID_MISSING",
@@ -107,8 +131,8 @@ function assertExecutionContextHasExecutionId(
     });
   }
   if (
-    typeof executionContextRecord.execution_id !== "string"
-    || executionContextRecord.execution_id.trim().length === 0
+    typeof executionId !== "string"
+    || executionId.trim().length === 0
   ) {
     throw new ActorEmitContextError({
       reasonCode: "ACTOR_EMIT_CONTEXT_EXECUTION_ID_MISSING",
@@ -117,11 +141,72 @@ function assertExecutionContextHasExecutionId(
       context: {
         route: "assert_execution_context_has_execution_id",
         expectedAuthority: "execution_id",
-        receivedKind: typeof executionContextRecord.execution_id
+        receivedKind: typeof executionId
       }
     });
   }
-  return executionContextRecord.execution_id;
+  return executionId;
+}
+
+function hasDistinctExecutionAuthority(input: {
+  handoffId: string;
+  executionId: string;
+}): boolean {
+  return input.executionId !== input.handoffId;
+}
+
+export function buildOptionalActorActivationProvenance(input: {
+  authoritativeContext?: ActorActivationProvenance;
+  loadedState: Pick<LoadedStateSnapshot, "fingerprint" | "state">;
+}): ActorActivationProvenance | undefined {
+  const executionContext = input.loadedState.state.execution_context;
+  if (executionContext === null || executionContext === undefined) {
+    return undefined;
+  }
+  if (
+    input.loadedState.state.active_role !== executionContext.active_role
+    || input.loadedState.state.round !== executionContext.round
+  ) {
+    return undefined;
+  }
+
+  const { hasExecutionId, executionId } = resolveExecutionContextExecutionId({
+    executionContext
+  });
+  if (
+    !hasExecutionId
+    || typeof executionId !== "string"
+    || executionId.trim().length === 0
+  ) {
+    return undefined;
+  }
+  if (
+    !hasDistinctExecutionAuthority({
+      handoffId: executionContext.handoff_id,
+      executionId
+    })
+  ) {
+    return undefined;
+  }
+
+  if (input.authoritativeContext !== undefined) {
+    return {
+      handoff_id: input.authoritativeContext.handoff_id,
+      execution_id: input.authoritativeContext.execution_id,
+      expected_role: input.authoritativeContext.expected_role,
+      expected_round: input.authoritativeContext.expected_round,
+      expected_state_fingerprint:
+        input.authoritativeContext.expected_state_fingerprint
+    };
+  }
+
+  return {
+    handoff_id: executionContext.handoff_id,
+    execution_id: executionId,
+    expected_role: executionContext.active_role,
+    expected_round: executionContext.round,
+    expected_state_fingerprint: input.loadedState.fingerprint
+  };
 }
 
 function buildActorEmitContextSnapshot(input: {
@@ -136,6 +221,23 @@ function buildActorEmitContextSnapshot(input: {
       : "ACTOR_EMIT_CONTEXT_MISSING_EXECUTION_CONTEXT"
   );
   const executionId = assertExecutionContextHasExecutionId(executionContext);
+  if (
+    !hasDistinctExecutionAuthority({
+      handoffId: executionContext.handoff_id,
+      executionId
+    })
+  ) {
+    throw new ActorEmitContextError({
+      reasonCode: input.reasonCode,
+      message:
+        "ACTOR_EMIT_FORBIDDEN_EXECUTION_ID_DERIVATION: execution_id must not be derived from or reused as handoff_id.",
+      context: {
+        route: "build_actor_emit_context_snapshot",
+        expectedAuthority: "distinct_execution_id",
+        receivedKind: "handoff_id_reused"
+      }
+    });
+  }
   const liveRole = input.loadedState.state.active_role;
   if (
     liveRole !== null &&
@@ -440,6 +542,23 @@ export function assertActorEmitContextSnapshotIntegrity(
         route: mismatchRoute,
         expectedAuthority: context.execution_id,
         receivedKind: executionId
+      }
+    });
+  }
+  if (
+    !hasDistinctExecutionAuthority({
+      handoffId: context.handoff_id,
+      executionId: context.execution_id
+    })
+  ) {
+    throw new ActorEmitContextError({
+      reasonCode: "ACTOR_EMIT_CONTEXT_INVALID",
+      message:
+        "ACTOR_EMIT_FORBIDDEN_EXECUTION_ID_DERIVATION: execution_id must not be derived from or reused as handoff_id. (snapshot integrity route requires ACTOR_EMIT_CONTEXT_INVALID normalization).",
+      context: {
+        route: mismatchRoute,
+        expectedAuthority: "distinct_execution_id",
+        receivedKind: "handoff_id_reused"
       }
     });
   }

@@ -4,6 +4,7 @@ import type {
   AskHumanLoadedStateSnapshot,
   AskHumanResolvedBubbleWorkspace
 } from "./askHumanRoutingPreparationDependencyResolutionContract.js";
+import type { AskHumanActivationProvenance } from "./askHumanCommandContract.js";
 
 type AskHumanActiveRole = Exclude<AgentRole, "meta_reviewer">;
 
@@ -22,4 +23,5 @@ export interface AskHumanRoutingContext {
   bubbleIdentity: AskHumanEnsureBubbleIdentityResult;
   loadedState: AskHumanLoadedStateSnapshot;
   state: AskHumanRunningState;
+  activation?: AskHumanActivationProvenance;
 }

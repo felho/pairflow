@@ -72,6 +72,7 @@ describe("passResultBuilder", () => {
         approvalRequestSequence: 43
       }
     });
+    expect("activation" in result).toBe(false);
   });
 
   it("builds normal pass result and preserves optional omission semantics", () => {
@@ -81,6 +82,13 @@ describe("passResultBuilder", () => {
       envelope: buildEnvelope("msg_pass"),
       state: buildState(),
       inferredIntent: false,
+      activation: {
+        handoff_id: "implementer:b_123:round:1:attempt:1",
+        execution_id: "exec_b_123_round1",
+        expected_role: "implementer",
+        expected_round: 1,
+        expected_state_fingerprint: "fp_456"
+      },
       repeatCleanReasonCode: "REPEAT_CLEAN_TRIGGER_NOT_MET",
       repeatCleanReasonDetail: "base_precondition_not_met",
       repeatCleanTrigger: false,
@@ -92,6 +100,13 @@ describe("passResultBuilder", () => {
       bubbleId: "b_123",
       sequence: 7,
       resultEnvelopeKind: "pass",
+      activation: {
+        handoff_id: "implementer:b_123:round:1:attempt:1",
+        execution_id: "exec_b_123_round1",
+        expected_role: "implementer",
+        expected_round: 1,
+        expected_state_fingerprint: "fp_456"
+      },
       transitionDecision: "normal_pass",
       repeatCleanReasonCode: "REPEAT_CLEAN_TRIGGER_NOT_MET",
       repeatCleanReasonDetail: "base_precondition_not_met",
@@ -101,5 +116,33 @@ describe("passResultBuilder", () => {
     });
     expect("delivery" in result).toBe(false);
     expect("docGateArtifactWriteFailureReason" in result).toBe(false);
+  });
+
+  it("omits activation when result builders are called without activation provenance", () => {
+    const autoConverged = buildAutoConvergePassResult({
+      bubbleId: "b_123",
+      inferredIntent: true,
+      repeatCleanReasonDetail: "previous_reviewer_pass_clean",
+      convergenceSequence: 42,
+      convergenceEnvelope: buildEnvelope("msg_conv_no_activation"),
+      state: buildState(),
+      gateRoute: "human_gate_approve",
+      approvalRequestSequence: 43,
+      approvalRequestEnvelope: buildEnvelope("msg_approval_no_activation")
+    });
+    const normal = buildNormalPassResult({
+      bubbleId: "b_123",
+      sequence: 8,
+      envelope: buildEnvelope("msg_pass_no_activation"),
+      state: buildState(),
+      inferredIntent: true,
+      repeatCleanReasonCode: "REPEAT_CLEAN_TRIGGER_NOT_MET",
+      repeatCleanReasonDetail: "base_precondition_not_met",
+      repeatCleanTrigger: false,
+      mostRecentPreviousReviewerCleanPassEnvelope: false
+    });
+
+    expect("activation" in autoConverged).toBe(false);
+    expect("activation" in normal).toBe(false);
   });
 });

@@ -49,6 +49,9 @@ export async function finalizeAskHumanFlow(
     sequence: input.appended.sequence,
     envelope: input.appended.envelope,
     state: input.written.state,
+    ...(input.routing.activation !== undefined
+      ? { activation: input.routing.activation }
+      : {}),
     ...(notifications.deliveryResult !== undefined
       ? { deliveryResult: notifications.deliveryResult }
       : {})

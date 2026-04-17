@@ -18,6 +18,7 @@ import type { emitBubbleLifecycleEventBestEffort } from "../../../v11/shared/met
 import type { BubbleStateSnapshot } from "../../../types/bubble.js";
 import type { ProtocolEnvelope } from "../../../types/protocol.js";
 import type { AskHumanRoutingContext } from "./askHumanRoutingContext.js";
+import type { AskHumanActivationProvenance } from "./askHumanCommandContract.js";
 
 export interface RunAskHumanFlowInput {
   now: Date;
@@ -62,6 +63,7 @@ export interface RunAskHumanFlowResult {
   envelope: ProtocolEnvelope;
   state: BubbleStateSnapshot;
   inferredRecipient: "human";
+  activation?: AskHumanActivationProvenance;
   delivery?: {
     status: AskHumanEmitTmuxDeliveryNotificationResult["status"];
     delivered: boolean;

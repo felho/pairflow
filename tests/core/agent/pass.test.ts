@@ -53,6 +53,7 @@ import {
   resolvePassValidationReviewerCompatibilityArtifactPath
 } from "../../../src/v11/infrastructure/artifact/validation/passValidationEvidence.js";
 import type { EmitTmuxDeliveryNotificationInput } from "../../../src/v11/infrastructure/channel/tmux/tmuxDelivery.js";
+import { passWorkspaceContextDefaults } from "../../../src/v11/application/pass/passWorkspaceContextDefaults.js";
 import { initGitRepository } from "../../helpers/git.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
 import { writeEvidenceLog } from "../../helpers/evidence.js";
@@ -130,6 +131,32 @@ async function writeStateSnapshot(
     normalizeTestStateForWrite(state),
     options
   );
+}
+
+async function withPatchedPassWorkspaceLoadedState<T>(input: {
+  statePath: string;
+  mutate: (
+    loaded: Awaited<ReturnType<typeof readStateSnapshot>>
+  ) => Awaited<ReturnType<typeof readStateSnapshot>>;
+  run: () => Promise<T>;
+}): Promise<T> {
+  const defaults = passWorkspaceContextDefaults as {
+    readStateSnapshot: typeof passWorkspaceContextDefaults.readStateSnapshot;
+  };
+  const originalReadStateSnapshot = defaults.readStateSnapshot;
+  defaults.readStateSnapshot = async (statePath) => {
+    const loaded = await originalReadStateSnapshot(statePath);
+    if (statePath !== input.statePath) {
+      return loaded;
+    }
+    return input.mutate(loaded);
+  };
+
+  try {
+    return await input.run();
+  } finally {
+    defaults.readStateSnapshot = originalReadStateSnapshot;
+  }
 }
 
 async function createTempRepo(): Promise<string> {
@@ -363,6 +390,7 @@ describe("emitPassFromWorkspace", { timeout: 20_000 }, () => {
       bubbleId: "b_pass_01",
       task: "Implement pass flow"
     });
+    const authorityBeforeEmit = await readStateSnapshot(bubble.paths.statePath);
     const now = new Date("2026-02-21T12:05:00.000Z");
 
     const result = await emitPassFromWorkspace({
@@ -391,6 +419,13 @@ describe("emitPassFromWorkspace", { timeout: 20_000 }, () => {
     expect(result.repeatCleanReasonDetail).toBe("base_precondition_not_met");
     expect(result.repeatCleanTrigger).toBe(false);
     expect(result.mostRecentPreviousReviewerCleanPassEnvelope).toBe(false);
+    expect(result.activation).toEqual({
+      handoff_id: authorityBeforeEmit.state.execution_context?.handoff_id,
+      execution_id: authorityBeforeEmit.state.execution_context?.execution_id,
+      expected_role: authorityBeforeEmit.state.execution_context?.active_role,
+      expected_round: authorityBeforeEmit.state.execution_context?.round,
+      expected_state_fingerprint: authorityBeforeEmit.fingerprint
+    });
 
     const transcript = await readTranscriptEnvelopes(bubble.paths.transcriptPath);
     expect(transcript.map((entry) => entry.type)).toEqual([
@@ -403,6 +438,70 @@ describe("emitPassFromWorkspace", { timeout: 20_000 }, () => {
     expect(loaded.state.active_role).toBe("reviewer");
     expect(loaded.state.round).toBe(1);
     expect(loaded.state.last_command_at).toBe(now.toISOString());
+  });
+
+  it("omits activation on the public pass result when the loaded execution context has blank execution_id", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_pass_blank_execution_id_01",
+      task: "Implement pass flow with blank execution_id fallback"
+    });
+    const result = await withPatchedPassWorkspaceLoadedState({
+      statePath: bubble.paths.statePath,
+      mutate: (loaded) => ({
+        ...loaded,
+        state: {
+          ...loaded.state,
+          execution_context: {
+            ...loaded.state.execution_context,
+            execution_id: "   "
+          } as never
+        }
+      }),
+      run: () => emitPassFromWorkspace({
+        summary: "Implementation complete",
+        cwd: bubble.paths.worktreePath,
+        now: new Date("2026-02-21T12:05:00.000Z")
+      })
+    });
+
+    expect(result.transitionDecision).toBe("normal_pass");
+    expect(result.resultEnvelopeKind).toBe("pass");
+    expect(result.activation).toBeUndefined();
+  });
+
+  it("omits activation on the public pass result when the live role and execution context role disagree", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_pass_role_mismatch_01",
+      task: "Implement pass flow with role mismatch fallback"
+    });
+    const result = await withPatchedPassWorkspaceLoadedState({
+      statePath: bubble.paths.statePath,
+      mutate: (loaded) => ({
+        ...loaded,
+        state: {
+          ...loaded.state,
+          active_agent: bubble.config.agents.implementer,
+          active_role: "implementer",
+          execution_context: {
+            ...loaded.state.execution_context,
+            active_role: "reviewer"
+          } as never
+        }
+      }),
+      run: () => emitPassFromWorkspace({
+        summary: "Implementation complete",
+        cwd: bubble.paths.worktreePath,
+        now: new Date("2026-02-21T12:05:00.000Z")
+      })
+    });
+
+    expect(result.transitionDecision).toBe("normal_pass");
+    expect(result.resultEnvelopeKind).toBe("pass");
+    expect(result.activation).toBeUndefined();
   });
 
   it("uses explicit intent override", async () => {
@@ -2544,7 +2643,6 @@ describe("emitPassFromWorkspace", { timeout: 20_000 }, () => {
       task: "Repeat-clean deterministic auto-converge"
     });
     await advanceToReviewerRoundTwoWithCleanHistory(bubble.paths.worktreePath);
-
     const result = await emitPassFromWorkspace({
       summary: "Reviewer clean handoff round 2",
       noFindings: true,
@@ -2564,6 +2662,7 @@ describe("emitPassFromWorkspace", { timeout: 20_000 }, () => {
     expect(result.autoConverged?.convergenceEnvelope.type).toBe("CONVERGENCE");
     expect(result.autoConverged?.approvalRequestEnvelope.type).toBe("TASK");
     expect(result.state.state).toBe("RUNNING");
+    expect(result.activation).toBeUndefined();
 
     const transcript = await readTranscriptEnvelopes(bubble.paths.transcriptPath);
     expect(transcript.map((entry) => entry.type)).toEqual([
@@ -2730,7 +2829,6 @@ describe("emitPassFromWorkspace", { timeout: 20_000 }, () => {
       task: "Repeat-clean delivery propagation"
     });
     await advanceToReviewerRoundTwoWithCleanHistory(bubble.paths.worktreePath);
-
     const deliveryRecipients: string[] = [];
     const result = await emitPassFromWorkspace(
       {
@@ -2763,7 +2861,45 @@ describe("emitPassFromWorkspace", { timeout: 20_000 }, () => {
       delivered: true,
       retried: false
     });
+    expect(result.activation).toBeUndefined();
     expect(deliveryRecipients).toEqual(["codex"]);
+  });
+
+  it("omits activation on the public auto-converge result when the loaded execution context is missing execution_id", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_pass_missing_execution_id_01",
+      task: "Repeat-clean auto-converge without execution_id fallback"
+    });
+    await advanceToReviewerRoundTwoWithCleanHistory(bubble.paths.worktreePath);
+    const result = await withPatchedPassWorkspaceLoadedState({
+      statePath: bubble.paths.statePath,
+      mutate: (loaded) => {
+        const executionContext = loaded.state.execution_context as typeof loaded.state.execution_context & {
+          execution_id?: string;
+        };
+        const { execution_id: _ignored, ...legacyExecutionContext } =
+          executionContext ?? {};
+        return {
+          ...loaded,
+          state: {
+            ...loaded.state,
+            execution_context: legacyExecutionContext as never
+          }
+        };
+      },
+      run: () => emitPassFromWorkspace({
+        summary: "Reviewer clean handoff round 2",
+        noFindings: true,
+        cwd: bubble.paths.worktreePath,
+        now: new Date("2026-03-01T10:04:00.000Z")
+      })
+    });
+
+    expect(result.transitionDecision).toBe("auto_converge");
+    expect(result.resultEnvelopeKind).toBe("convergence");
+    expect(result.activation).toBeUndefined();
   });
 
   it("surfaces auto-converge doc-gate artifact write failure reason in result metadata", async () => {
