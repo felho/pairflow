@@ -623,3 +623,72 @@ None found within the pre-commit window. The session itself contains the full "r
 - `p3b-impl` bubble `state.json` (final state, round count) not spot-verified for this section. The session records establish the incident context; exact round-by-round finding counts are out of scope.
 - The first subagent run on this commit produced incorrect session metadata (session end timestamp 17:19 instead of 19:35 UTC; counts 9/8 instead of 33/115; cwd labelled as pairflow rather than precedens.ai) and **fabricated two user quotes** at L50 and L56 that are actually `exec_command_end` and `function_call` events, not `user_message` events. The main conversation recovered the correct metadata and the real pre-commit user_message list by direct `rg -n '"type":"user_message"' <rollout>` enumeration. The append above uses only validated lines.
 - The agent message at L296 is much longer than the one-sentence verbatim excerpt above; it contains a full 5-point proposed model. The excerpt was kept short to satisfy quote discipline; the full model is summarized in the delta block.
+
+---
+
+## 2026-04-16 — `5f0f0254` — Post-refactor coherence cleanup
+
+**Commit message:** spec: finalize artifact boundary cleanup
+
+**What it introduced (from diff):**
+Small follow-up to `911af8a2` (6 minutes later). Three file changes, all cleanup:
+1. `SKILL.md`: Complexity-Risk Gate policy numbering fix — the prior commit left duplicate "4." entries; this commit renumbers into a contiguous 1-12 sequence.
+2. `references/Complexity-Risk-Gate.md`: explicit `Task` / `Plan` distinction in "Output expectations" — replaces ambiguous "spec" wording with "the Task artifact" where the output fields apply, and adds a dedicated "For Plans:" block (gate drives decomposition decision only; no per-task numeric risk score persisted; only resulting split/dependency shape recorded when it changes plan correctness). Also removes "phase/task" wording in favor of "bounded task" where the Task is the intended owner.
+3. `references/Control-Model-Readiness-Gate.md`: replaces the Core Question 7 from `phase_boundary` (with its 7-closure field list) to `sequencing_boundary` (a lightweight note; the detailed 7-closure ownership now lives only in Task-scope when the bounded slice needs it). Plan applicability is relaxed correspondingly (from "detailed phase boundary ownership" of 7 closures → "a lightweight sequencing note only when ordering depends on it"). `READY` and `NOT_READY` conditions rephrased to match.
+
+In short: the `911af8a2` refactor established the Plan-minimal / Task-self-contained split in `SKILL.md`, but the reference files and one policy numbering were still carrying the pre-refactor 7-closure `phase_boundary` shape. This commit ports that cleanup into the references so the whole skill is consistent.
+
+**Authoring session:**
+- File: `/Users/felho/.codex/sessions/2026/04/16/rollout-2026-04-16T18-33-13-019d9723-b5a0-7e73-a9d7-c6bce1c58557.jsonl` (same session as `911af8a2`).
+- Session id: `019d9723-b5a0-7e73-a9d7-c6bce1c58557`.
+- `cwd`: `/Users/felho/dev/make-it-legal/precedens.ai`.
+- Relevant window for this commit: `2026-04-16T19:02:17Z` (prior commit request) → `2026-04-16T19:08:29Z` (this commit's "commit" message at L1035) → `2026-04-16T19:08:44Z` (commit timestamp). ≈6 minutes.
+- Session type: **authoring (continuation of the `911af8a2` cleanup loop)** — same session, same conversation thread; the user asks for a coherence check on the just-committed state, the agent finds residual inconsistencies in the reference files and numbering, the user approves the fixes, commit lands.
+
+**Verbatim quotes**
+
+> [user, line 910, 2026-04-16T19:03:40Z] "most gondold át az egészet egyben, hogy van-e még valami változtatandó, meg azt, hogy a mostani állapot koherens-e"
+>
+> *(EN)* "now think through the whole thing together — whether there's anything else to change, and whether the current state is coherent."
+
+> [user, line 962, 2026-04-16T19:05:15Z] "javítsd ezeket"
+>
+> *(EN)* "fix these."
+
+**Session content vs commit content delta:**
+
+```
+Session flow between the two commits:
+- L910 (19:03): user requests a full coherence check on the post-refactor state.
+- Agent response (between L910 and L962): proposed residual inconsistencies (not individually line-cited in this appendix; they correspond to the three cleanup areas that land in the commit).
+- L962 (19:05): user approves ("javítsd ezeket").
+- Agent applies the three edits across SKILL.md, Complexity-Risk-Gate.md, Control-Model-Readiness-Gate.md.
+- L1012 (19:07): user asks the same coherence check a second time.
+- L1035 (19:08): user issues "commit"; `5f0f0254` lands 15 seconds later.
+
+Commit-side (from `git show 5f0f0254`):
+- SKILL.md: Complexity-Risk Gate policy renumbered 4 → 5, 5 → 6, ..., 10 → 11, 11 → 12 (single-line numeric fix).
+- Complexity-Risk-Gate.md: "the spec" → "the Task artifact"; closure-budget triage paragraph retargeted to "in the Task"; "bounded phase/task" → "bounded task"; "For mutable existing flows, also record" → "For mutable existing flows, the Task should also record"; added new "For Plans:" block (3 bullets: decomposition-only role / no per-task numeric scores / only split-dependency shape when it changes plan correctness).
+- Control-Model-Readiness-Gate.md: `phase_boundary` (Core Question 7 with 7-closure field list) → `sequencing_boundary` (lightweight plan note OR detailed task-local ownership); Plan applicability "detailed phase boundary ownership" (7 closures) → "a lightweight sequencing note only when ordering depends on it" (3 bullets); `READY` condition 7 rephrased ("phase/task ownership boundaries" of 7 closures → "ownership/sequencing boundaries at the right level"); `NOT_READY` policy #5 rephrased ("Never compress phase_boundary" → "Never compress sequencing-critical ownership").
+
+Match analysis:
+- All three file changes are direct completions of the `911af8a2` refactor intent (Plan-minimal / Task-self-contained / reference files consistent with SKILL.md).
+- Nothing substantively new is introduced — this is a coherence-closure commit, not a concept commit.
+
+Verdict: **finalization of the 911af8a2 refactor**. Strict subset of the prior commit's conceptual scope; no new gate, no new concept, no rename that changes semantics.
+```
+
+**Incident evidence (bubble):**
+- Bubble id: `n/a` — this commit is a same-session follow-up to the `911af8a2` refactor. The triggering incident context (`p3b-impl`) is documented in the prior commit's section and is not re-established here.
+- Archive instance: `n/a`.
+- Characterization: this commit has no standalone incident; its driver is the user's coherence-check request at `rollout:L910`.
+
+**Problem solved (synthesized, in the user's framing):**
+After the `911af8a2` refactor committed the Artifact Responsibilities reorganization in `SKILL.md`, residual inconsistencies remained in the two reference files (`Complexity-Risk-Gate.md` and `Control-Model-Readiness-Gate.md` still referenced "the spec" and "phase_boundary" with 7 closures at plan level, contradicting the new Plan-minimal rule) and the Complexity-Risk Gate policy had a numbering glitch. The user asked for a coherence check on the whole skill at `rollout:L910`; the agent identified and applied three focused fixes; the commit closes the refactor loop.
+
+**Related prior sessions:**
+- Same session as `911af8a2` (commit #8), 6 minutes earlier. No separate authoring chain.
+
+**Gaps / uncertainty:**
+- The specific agent message that enumerated the three inconsistencies between `rollout:L910` and `rollout:L962` was not individually line-cited in this appendix. The correspondence between what the agent identified and what the commit applies is 1:1 by construction (the user approved with "javítsd ezeket" before any commit).
+- This commit was not researched via a subagent because its scope (three focused edits, same session as the prior commit, short pre-commit window) did not warrant a full investigation round; the main conversation read the pre-commit user messages directly.
