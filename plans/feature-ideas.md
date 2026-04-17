@@ -33,3 +33,5 @@
   - Add a mandatory "sequencing failure?" section to deep review/meta-review outputs:
     - distinguish local implementation bugs from bad task slicing,
     - call out when producer boundary, shared contract, persistence, and multi-family consumer fallout were packed too tightly into one task.
+- https://github.com/plastic-labs/honcho
+- https://setcode.dev/
