@@ -78,3 +78,86 @@ None found within the 8-hour pre-commit window. The authoring session itself con
 **Gaps / uncertainty:**
 - The user's "20th to 30th rounds" framing (rollout:L670) does not align numerically with the archive record of 4 rounds for this specific bubble. The user is likely aggregating across multiple refinement attempts (and possibly earlier related bubbles); this specific archive shows 4 codex+claude rework rounds.
 - The bubble archive's `transcript.ndjson` has no dedicated `FINDING` message type; advisory findings live inside `CONVERGENCE` payload `findings[]` arrays, so characterization is based on `summary` and `findings[]` fields in each round's CONVERGENCE message.
+
+---
+
+## 2026-04-10 — `ca22d258` — Complexity Gate Tightening (`identity_join_risk` axis)
+
+**Commit message:** skills: tighten CreatePairflowSpec complexity gate
+
+**What it introduced (from diff):**
+Inserts a new risk axis `identity_join_risk` ("Identity / Join Fragility") as axis #3 in the Complexity-Risk Gate, growing the gate from 5 axes to 6. Expands the total score range `0-10` → `0-12` and rebalances bands `0-3 / 4-6 / 7-10` → `0-4 / 5-7 / 8-12`. Adds a 5th hard-stop rule and a brand-new "Escalation Rules Below Hard-Stop" section with three escalation rules. Also adds a policy point in `SKILL.md` (default to split when public contract/UI consume + fragile identity matching), an `identity_join_risk` entry in the Minimum Contract Rules, a new "Identity/join note" block in the task template, and matching guidance in both `CreatePlan` and `CreateTask` workflows.
+
+**Authoring session:**
+- File: `/Users/felho/.codex/sessions/2026/04/10/rollout-2026-04-10T22-38-29-019d791e-1c35-7b92-b0c3-6ab491e3d26d.jsonl`
+- Session id: `019d791e-1c35-7b92-b0c3-6ab491e3d26d`
+- `cwd`: `/Users/felho/dev/make-it-legal/precedens.ai`
+- Time window: `2026-04-10T20:38:29.699Z` → `2026-04-11T07:57:43.138Z` (≈11 hours; the commit at 21:18 UTC lands mid-session)
+- User prompt count / agent message count: 18 user / 102 agent
+
+**Verbatim quotes**
+
+> [user, line 352] "So before we do that, we have this complexity risk gate in the task file. So can you please locate in the use pairflow skill how that one is constructed and what I'm curious about? So based on this experience and learning related to this task file, I'm very curious whether that complexity risk gates should be improved or not. Because right now what I see is that the risk score is 5. But it's team that we still run into some kind of complexity issue, probably this is something which is not yet fully considered, so please check that part of the scale and think about whether we should improve it or not."
+
+**Session content vs commit content delta:**
+
+```
+Session-side trigger (from user_message rollout:L352):
+- Observed risk_score: 5 (in the then-current 4-6 "split strongly recommended" band)
+- Claim: task "still runs into some kind of complexity issue" despite the existing 5-axis gate
+- Request: review and improve the gate
+
+Pre-commit gate (the old 01ecf168 state):
+- Axes (5): authority_risk, surface_spread, activation_coupling, prerequisite_risk, acceptance_multiplicity
+- Score range: 0-10
+- Bands: 0-3 single task OK | 4-6 split strongly recommended | 7-10 refactor-first mandatory
+- Hard stops: 4 rules
+- Escalation rules: none
+
+Post-commit gate (from `git show ca22d258 -- .../Complexity-Risk-Gate.md`):
+- Axes (6): authority_risk, surface_spread, identity_join_risk (NEW, inserted as #3), activation_coupling, prerequisite_risk, acceptance_multiplicity
+- identity_join_risk scoring: 0|1|2
+  - 0: no cross-seam identity matching
+  - 1: one stable cross-seam mapping, but consumer correctness depends on it
+  - 2: multiple identifier forms / legacy+new seams / competing mappings
+  - Domain examples committed inline: Stripe invoice id → local authority row; payment_intent vs invoice id vs vendor id reconciliation; legacy payload identity vs new canonical authority identity
+- Score range: 0-10 → 0-12 (because of the new 6th axis)
+- Bands: 0-3/4-6/7-10 → 0-4/5-7/8-12
+- Hard stops: 4 → 5 (new #5: "task mixes contract cutover and UI consume cutover while the primary consumer depends on fragile identity matching")
+- Escalation rules: 0 → 3 (new section "Escalation Rules Below Hard-Stop"):
+    1. surface_spread = 2 and acceptance_multiplicity >= 1
+    2. identity_join_risk = 2 and surface_spread >= 1
+    3. authority_risk >= 1 and identity_join_risk >= 1 and public payload/UI consume changes
+- Template addendum: Task template gains "Identity/join note" block (canonical identity path, competing/fallback identities)
+- Workflow addenda: CreatePlan adds "isolate authority/read-model seam before UI/payload cutover when identity_join_risk >= 1"; CreateTask adds a blocker "if identity_join_risk >= 1, task must state the matching seam and forbidden fallback identities" and a split-preference policy
+- SKILL.md policy rule #7 (new): default to split even below the top score band when public contract/UI consume + fragile identity matching
+
+Match analysis:
+- The session-side input is the user's observation that risk_score=5 passed the old gate yet still led to a non-converging bubble — i.e. the existing 5 axes did not penalize the fragility that caused the failure.
+- The commit's response is a structural addition (new axis + new hard-stop + new escalation rules + band rebalance), not a rename or a drop.
+- No concept present in the session is missing from the commit. The commit adds concepts the session did not yet have names for — these were synthesized during the session (see `Gaps`).
+
+Verdict: structural extension (not a matches / non-matches call). Every change in the commit is directly motivated by the session's diagnosis of the `bci3-impl` failure; the commit adds the missing concept the session identified was needed.
+```
+
+**Incident evidence (bubble):**
+- Bubble id (from session): `bci3-impl`
+- Archive instance(s) found: `/Users/felho/.pairflow/archive/be2ac5d87a57bdcc/bi_00mntathfz_b3df49791cc3bada749e/`
+- Final state + final round: `CANCELLED at round 2` (`state.json:state`, `state.json:round`).
+- Bubble repo: `/Users/felho/dev/make-it-legal/precedens.ai` (`bubble.toml:repo_path`); artifact type `code` (`bubble.toml:review_artifact_type`).
+- Characterization of non-convergence (each backed by a direct archive citation):
+  - R2 `CONVERGENCE` surfaced `4×P2 + 1×P3` advisory findings (`transcript.ndjson:L5`, `advisory_findings_open_total: 5`). The five finding titles: `hasDependencyFailure scope couples seat API failures to billing fail-closed`; `BillingManualTransferLifecycleCard critical render branches uncovered`; `settlement_ops.source_kind yearly fallback detection path untested`; `resolveBillingDocumentStatusCopy send_failed+openUrl and created branches untested`; `suppressRecoveryPrimaryAction not asserted for annual_manual_transfer`.
+  - Task scope bundled authority contract (Stripe/Billingo invoice bridge) + runtime activation + UI consume (`BillingManualTransferLifecycleCard` render branches, `resolveBillingDocumentStatusCopy`) + fallback logic (`settlement_ops.source_kind yearly`) across multiple seams — the exact pattern the new hard-stop #5 and escalation rule #3 target.
+  - Event types observed in `transcript.ndjson`: `TASK`, `PASS`, `CONVERGENCE`, `APPROVAL_REQUEST` (no `APPROVAL_DECISION`), consistent with user-initiated cancellation after round 2 rather than an approval / rework cycle.
+- Watchdog history: n/a — no separate `watchdog-history/<bubble>.ndjson` for this bubble; findings fully contained in archive `transcript.ndjson`.
+
+**Problem solved (synthesized, in the user's framing):**
+After the `bci3-impl` bubble on precedens.ai billing integration failed to converge at round 2 despite having passed the existing complexity-risk gate with `risk_score = 5`, the user recognized that the gate missed a specific failure axis: the task bundled a Stripe/Billingo invoice bridge, `payment_intent`-vs-invoice-id mapping, legacy vendor reconciliation, and UI consume paths that depended on all those identities aligning correctly. The old 5-axis gate had no way to price this cross-seam identity fragility. The commit introduces `identity_join_risk` as a dedicated axis, along with a matching hard-stop and three sub-hard-stop escalation rules, to force split-before-implementation decisions whenever identity matching is fragile.
+
+**Related prior sessions:**
+None found within the 8-hour pre-commit window; the authoring session itself contains both the diagnosis and the gate redesign. Bubble `bci3-impl` was in-flight during the session — the skill change was a direct response rather than a delayed reflection across multiple Codex sessions.
+
+**Gaps / uncertainty:**
+- The session is 4.6 MB; full transcript not exhaustively read. The specific messages where the agent proposes the `identity_join_risk` axis name and the three escalation rules were not individually line-cited. The verdict that the commit's new concepts were synthesized during the session rests on the commit timestamp falling mid-session (21:18 UTC, between 20:38 start and 07:57 end) combined with the user's explicit request at line 352 to review and improve the gate.
+- The Stripe / `payment_intent` / Billingo domain examples in the committed reference file are strongly consistent with a billing-integration bubble, and `bci3-impl` is a billing-integration bubble on precedens.ai — but no direct line in the archive explicitly links the committed example text to this specific bubble. The link is contextual (session cwd, bubble scope, finding titles, timing) rather than quoted.
+- `round_role_history` timestamps in `state.json` were not spot-verified; the exact gap between bubble start and session start is not confirmed in this appendix.
