@@ -275,22 +275,33 @@ Az explicit control-model dontesek most visszanyerhetok a designbol es a review-
    - explicit remote workspace-authority consume a clone rooton lezart,
    - local `state.json` control-plane reconciliation + `remote.json` created -> started pointer transition baseline,
    - local `state-cache.json` init baseline.
-5. A kovetkezo explicit implementacios fazis most a `Phase 2E`:
-   - remote `status/list` read-model consume,
-   - cache freshness/read-model wording,
-   - remote runtime operator projection attach nelkul.
+5. A `Phase 2E` is leszallt es `main`-re merge-olve:
+   - remote `status/list` read-model consume implementalt,
+   - explicit remote cache/source/freshness projection baseline lezart,
+   - remote runtime operator wording attach nelkul is konzisztens lett,
+   - UI/list/status consumer boundary alignment es fail-closed cache provenance baseline lezart.
+6. A lezart taskok archivalt allapotban mar itt vannak:
+   - `plans/archive/tasks/remote-bubble-execution/phase2b-remote-create-write-path-enablement.md`
+   - `plans/archive/tasks/remote-bubble-execution/phase2c-remote-sync-hook-contract-foundation.md`
+   - `plans/archive/tasks/remote-bubble-execution/phase2d-remote-ssh-start-activation.md`
+   - `plans/archive/tasks/remote-bubble-execution/phase2e-remote-status-and-list-read-model.md`
+7. A kovetkezo explicit implementacios fazis most a `Phase 2F`:
+   - remote `attach` consume a Phase 2E read-model authorityra ultetve,
+   - launcher/forwarding projection,
+   - remote attach UX es fail-closed operator surface.
 
 ## Active Task
 
-1. `plans/tasks/remote-bubble-execution/phase2e-remote-status-and-list-read-model.md`
-2. A `Phase 2B`, `Phase 2C`, es `Phase 2D` archived baseline lett; a jelenlegi egyetlen aktiv implementacios task most a remote `status/list` read-model consume, mikozben az attach es a remote mutation/cleanup routing tovabbra is kulon successor fazisban maradnak.
+1. A jelenlegi materializalt aktiv task a `Phase 2F`:
+   - `plans/tasks/remote-bubble-execution/phase2f-remote-attach-consume.md`
+2. A `Phase 2B`, `Phase 2C`, `Phase 2D`, es `Phase 2E` archived baseline lett.
+3. Az approval/rework, cleanup, es recovery scope tovabbra is kulon successor fazisban marad.
 
 ## Planned Next Tasks (Do Not Materialize Yet)
 
-1. `plans/tasks/remote-bubble-execution/phase2f-remote-attach-consume.md`
-2. `plans/tasks/remote-bubble-execution/phase3a-remote-approval-and-rework-routing.md`
-3. `plans/tasks/remote-bubble-execution/phase3b-remote-commit-merge-delete-cleanup.md`
-4. `plans/tasks/remote-bubble-execution/phase3c-recovery-diagnostics-and-rollout.md`
+1. `plans/tasks/remote-bubble-execution/phase3a-remote-approval-and-rework-routing.md`
+2. `plans/tasks/remote-bubble-execution/phase3b-remote-commit-merge-delete-cleanup.md`
+3. `plans/tasks/remote-bubble-execution/phase3c-recovery-diagnostics-and-rollout.md`
 
 ## Dependencies
 
