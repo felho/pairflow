@@ -2879,8 +2879,12 @@ describe("emitPassFromWorkspace", { timeout: 20_000 }, () => {
         const executionContext = loaded.state.execution_context as typeof loaded.state.execution_context & {
           execution_id?: string;
         };
-        const { execution_id: _ignored, ...legacyExecutionContext } =
-          executionContext ?? {};
+        const legacyExecutionContext = {
+          ...(executionContext ?? {})
+        } as Record<string, unknown> & {
+          execution_id?: string;
+        };
+        delete legacyExecutionContext.execution_id;
         return {
           ...loaded,
           state: {

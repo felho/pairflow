@@ -167,6 +167,11 @@ export {
   runBubbleOpenCommand
 } from "./cli/commands/bubble/open.js";
 export {
+  getBubbleAttachHelpText,
+  parseBubbleAttachCommandOptions,
+  runBubbleAttachCommand
+} from "./cli/commands/bubble/attach.js";
+export {
   getBubbleResumeHelpText,
   parseBubbleResumeCommandOptions,
   runBubbleResumeCommand
@@ -538,6 +543,12 @@ export type {
   BubbleOpenHelpCommandOptions,
   ParsedBubbleOpenCommandOptions
 } from "./cli/commands/bubble/open.js";
+export type {
+  BubbleAttachCommandDependencies,
+  BubbleAttachCommandOptions,
+  BubbleAttachHelpCommandOptions,
+  ParsedBubbleAttachCommandOptions
+} from "./v11/application/attach/attachCliCommand.js";
 export type {
   BubbleResumeCommandOptions,
   BubbleResumeHelpCommandOptions,

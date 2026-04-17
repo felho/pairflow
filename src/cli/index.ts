@@ -43,6 +43,10 @@ import {
   runBubbleOpenCommand
 } from "./commands/bubble/open.js";
 import {
+  getBubbleAttachHelpText,
+  runBubbleAttachCommand
+} from "./commands/bubble/attach.js";
+import {
   getBubbleResumeHelpText,
   runBubbleResumeCommand
 } from "./commands/bubble/resume.js";
@@ -491,6 +495,23 @@ async function handleBubbleOpenCommand(args: string[]): Promise<number> {
   return 0;
 }
 
+async function handleBubbleAttachCommand(args: string[]): Promise<number> {
+  const result = await runBubbleAttachCommand(args);
+  if (result === null) {
+    process.stdout.write(`${getBubbleAttachHelpText()}\n`);
+    return 0;
+  }
+
+  const suffix =
+    result.attachCommand !== undefined
+      ? `, command=${result.attachCommand}`
+      : "";
+  process.stdout.write(
+    `Attach prepared for ${result.bubbleId}: launcher=${result.launcherUsed}, session=${result.tmuxSessionName}${suffix}\n`
+  );
+  return 0;
+}
+
 async function handleBubbleResumeCommand(args: string[]): Promise<number> {
   const result = await runBubbleResumeCommand(args);
   if (result === null) {
@@ -727,6 +748,7 @@ const bubbleSubcommandHandlers: Readonly<
   create: handleBubbleCreateCommand,
   kickoff: handleBubbleKickoffCommand,
   start: handleBubbleStartCommand,
+  attach: handleBubbleAttachCommand,
   open: handleBubbleOpenCommand,
   stop: handleBubbleStopCommand,
   delete: handleBubbleDeleteCommand,

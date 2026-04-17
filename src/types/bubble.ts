@@ -179,6 +179,7 @@ export type BubbleRemotePointerKind = (typeof bubbleRemotePointerKinds)[number];
 
 interface BubbleRemotePointerBase {
   host: string;
+  user?: string;
   portForwards?: number[];
 }
 

@@ -59,16 +59,14 @@ function escapeAppleScriptString(value: string): string {
   return escaped;
 }
 
-function buildAttachCommandForLauncherExecution(sessionName: string): string {
-  return `tmux attach -t ${shellQuote(sessionName)}`;
-}
-
-function buildWarpLaunchYaml(sessionName: string, cwd: string): string {
-  const safeSessionName = escapeYamlDoubleQuotedString(sessionName);
-  const safeCwd = escapeYamlDoubleQuotedString(cwd);
-  const safeAttachCommand = escapeYamlDoubleQuotedString(
-    buildAttachCommandForLauncherExecution(sessionName)
-  );
+function buildWarpLaunchYaml(input: {
+  sessionName: string;
+  cwd: string;
+  attachCommand: string;
+}): string {
+  const safeSessionName = escapeYamlDoubleQuotedString(input.sessionName);
+  const safeCwd = escapeYamlDoubleQuotedString(input.cwd);
+  const safeAttachCommand = escapeYamlDoubleQuotedString(input.attachCommand);
 
   return [
     "---",
@@ -83,8 +81,11 @@ function buildWarpLaunchYaml(sessionName: string, cwd: string): string {
   ].join("\n");
 }
 
-function buildShellAttachCommand(sessionName: string, repoPath: string): string {
-  return `cd ${shellQuote(repoPath)} && ${buildAttachCommandForLauncherExecution(sessionName)}`;
+function buildShellAttachCommand(input: {
+  repoPath: string;
+  attachCommand: string;
+}): string {
+  return `cd ${shellQuote(input.repoPath)} && ${input.attachCommand}`;
 }
 
 function buildOsaScriptCommand(script: string): string {
@@ -213,10 +214,10 @@ async function runLauncherCommand(input: {
 }
 
 async function launchWithIterm2(context: AttachLaunchContext): Promise<void> {
-  const shellAttachCommand = buildShellAttachCommand(
-    context.tmuxSessionName,
-    context.repoPath
-  );
+  const shellAttachCommand = buildShellAttachCommand({
+    repoPath: context.repoPath,
+    attachCommand: context.attachCommand
+  });
   const script = buildItermLaunchScript(shellAttachCommand);
 
   await runLauncherCommand({
@@ -229,7 +230,11 @@ async function launchWithIterm2(context: AttachLaunchContext): Promise<void> {
 
 async function launchWithWarp(context: AttachLaunchContext): Promise<void> {
   try {
-    const yamlContent = buildWarpLaunchYaml(context.tmuxSessionName, context.repoPath);
+    const yamlContent = buildWarpLaunchYaml({
+      sessionName: context.tmuxSessionName,
+      cwd: context.repoPath,
+      attachCommand: context.attachCommand
+    });
     const yamlPath = join(
       homedir(),
       ".warp",
@@ -259,10 +264,10 @@ async function launchWithWarp(context: AttachLaunchContext): Promise<void> {
 }
 
 async function launchWithTerminal(context: AttachLaunchContext): Promise<void> {
-  const shellAttachCommand = buildShellAttachCommand(
-    context.tmuxSessionName,
-    context.repoPath
-  );
+  const shellAttachCommand = buildShellAttachCommand({
+    repoPath: context.repoPath,
+    attachCommand: context.attachCommand
+  });
   const script = [
     'tell application "Terminal"',
     `  do script "${escapeAppleScriptString(shellAttachCommand)}"`,
@@ -279,10 +284,10 @@ async function launchWithTerminal(context: AttachLaunchContext): Promise<void> {
 }
 
 async function launchWithGhostty(context: AttachLaunchContext): Promise<void> {
-  const shellAttachCommand = buildShellAttachCommand(
-    context.tmuxSessionName,
-    context.repoPath
-  );
+  const shellAttachCommand = buildShellAttachCommand({
+    repoPath: context.repoPath,
+    attachCommand: context.attachCommand
+  });
   const command = [
     "open",
     "-na",

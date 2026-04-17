@@ -987,6 +987,52 @@ describe("createBubbleStore", () => {
     expect(store.getState().actionErrorById["b-a"]).toBeUndefined();
   });
 
+  it("copies remote ssh attach command when launcher resolves to copy", async () => {
+    const getBubbles = vi
+      .fn()
+      .mockResolvedValueOnce({
+        repo: repoSummary("/repo-a"),
+        bubbles: [bubbleSummary({ bubbleId: "b-a", repoPath: "/repo-a" })]
+      })
+      .mockResolvedValueOnce({
+        repo: repoSummary("/repo-a"),
+        bubbles: [bubbleSummary({ bubbleId: "b-a", repoPath: "/repo-a" })]
+      });
+
+    const remoteAttachCommand =
+      "'ssh' '-o' 'BatchMode=yes' '-t' 'dev@ssh.example.com' 'bash' '-lc' 'cd '\\''/srv/pairflow/repo--b-a'\\'' && tmux attach -t '\\''pf-remote-b-a'\\'''";
+    const api = createApiStub({
+      getRepos: vi.fn(async () => ["/repo-a"]),
+      getBubbles,
+      attachBubble: vi.fn(async () => ({
+        bubbleId: "b-a",
+        tmuxSessionName: "pf-remote-b-a",
+        launcherRequested: "copy",
+        launcherUsed: "copy",
+        attachCommand: remoteAttachCommand
+      }))
+    });
+
+    const store = createBubbleStore({
+      api,
+      createEventsClient: () => ({
+        start: () => undefined,
+        stop: () => undefined,
+        refresh: () => undefined
+      })
+    });
+
+    await store.getState().initialize();
+    await store.getState().runBubbleAction({
+      bubbleId: "b-a",
+      action: "attach"
+    });
+
+    expect(copyToClipboardMock).toHaveBeenCalledTimes(1);
+    expect(copyToClipboardMock).toHaveBeenCalledWith(remoteAttachCommand);
+    expect(store.getState().actionErrorById["b-a"]).toBeUndefined();
+  });
+
   it("surfaces actionable error when attach copy-to-clipboard fails", async () => {
     copyToClipboardMock.mockRejectedValue(new Error("Clipboard permission denied"));
 

@@ -2,6 +2,7 @@ import { getBubbleInbox } from "../../shared/inbox/inboxCommandApi.js";
 import { readRuntimeSessionsRegistry } from "../executor/sessionRuntime/runtimeSessionsRegistry.js";
 import { readBubbleTimeline } from "./presenters/timelinePresenter.js";
 import { attachBubble } from "../executor/command/pairflowCommandAttach.js";
+import { resolveBubbleById } from "../executor/workspace/bubbleLookup.js";
 import type { UiRouterDependencies } from "../../shared/ports/uiRouter.js";
 import type {
   CreateUiRouterInput
@@ -54,7 +55,10 @@ export const defaultUiRouterDependencies: UiRouterDependencies = {
   getBubbleInbox,
   readRuntimeSessionsRegistry,
   readBubbleTimeline,
-  attachBubble,
+  attachBubble: (input) =>
+    attachBubble(input, {
+      resolveBubbleById
+    }),
 };
 
 export function resolveUiRouterDependencies(
