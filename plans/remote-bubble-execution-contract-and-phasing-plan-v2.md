@@ -289,25 +289,31 @@ Az explicit control-model dontesek most visszanyerhetok a designbol es a review-
    - a bounded attach-consume control model egyszerubb es explicit lett,
    - a `target_files` / shared UI surface reality pontosabb lett, kulonosen az `ActionBar` CTA/hint consume miatt,
    - az approval boundary es a review-loop resistance guardrail szovege szukebb es implementacio-biztosabb lett,
-   - a task tovabbra is implementalhato, de meg nincs leszallitva.
-8. A kovetkezo explicit implementacios fazis tovabbra is a `Phase 2F`:
-   - remote `attach` consume a Phase 2E read-model authorityra ultetve,
-   - launcher/forwarding projection,
-   - remote attach UX es fail-closed operator surface.
+   - a task kesobbi implementacios bubble-jehez szukitett, implementacio-biztos baseline keszult.
+8. A `Phase 2F` implementacios bubble 2026-04-17-en lezarult es merge-re kerult:
+   - remote `attach` consume mar a `Phase 2E` read-model authorityra ul,
+   - launcher/forwarding projection leszallitva,
+   - remote attach UX es fail-closed operator surface leszallitva,
+   - a task archivalt allapotban mar itt van:
+     `plans/archive/tasks/remote-bubble-execution/phase2f-remote-attach-consume.md`
+9. A kovetkezo explicit implementacios fazis most mar a `Phase 3A`:
+   - remote approval/rework routing,
+   - operator mutation routing ugyanarra a remote runtime topology-modelre ultetve,
+   - local-only runtime-feltetelezesek eltavolitasa az approval/rework consume surface-ekrol.
 
 ## Active Task
 
-1. A jelenlegi materializalt es docs-reviewval frissitett aktiv task a `Phase 2F`:
-   - `plans/tasks/remote-bubble-execution/phase2f-remote-attach-consume.md`
-2. A kovetkezo tenyleges implementacios munka ehhez a `Phase 2F` taskhoz tartozik; `Phase 3A` meg nem aktiv.
-3. A `Phase 2B`, `Phase 2C`, `Phase 2D`, es `Phase 2E` archived baseline lett.
-4. Az approval/rework, cleanup, es recovery scope tovabbra is kulon successor fazisban marad.
+1. A `Phase 2F` mar archived baseline:
+   - `plans/archive/tasks/remote-bubble-execution/phase2f-remote-attach-consume.md`
+2. A kovetkezo tenyleges implementacios munka a mar materializalt `Phase 3A` taskhoz tartozik:
+   - `plans/tasks/remote-bubble-execution/phase3a-remote-approval-and-rework-routing.md`
+3. A `Phase 2B`, `Phase 2C`, `Phase 2D`, `Phase 2E`, es `Phase 2F` archived baseline lett.
+4. Az approval/rework, cleanup, es recovery scope tovabbra is kulon successor fazisban marad, ebbol a kovetkezo aktivalasra varo szelet a `Phase 3A`.
 
-## Planned Next Tasks (Do Not Materialize Yet)
+## Successor Tasks (Do Not Materialize Yet)
 
-1. `plans/tasks/remote-bubble-execution/phase3a-remote-approval-and-rework-routing.md`
-2. `plans/tasks/remote-bubble-execution/phase3b-remote-commit-merge-delete-cleanup.md`
-3. `plans/tasks/remote-bubble-execution/phase3c-recovery-diagnostics-and-rollout.md`
+1. `plans/tasks/remote-bubble-execution/phase3b-remote-commit-merge-delete-cleanup.md`
+2. `plans/tasks/remote-bubble-execution/phase3c-recovery-diagnostics-and-rollout.md`
 
 ## Dependencies
 
