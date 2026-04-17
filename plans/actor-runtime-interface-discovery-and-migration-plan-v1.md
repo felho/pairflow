@@ -23,20 +23,24 @@ owners:
    - a repo-surface wording mar a surviving `bubble status` / `bubble restart` / `agent emit --kind meta_review_result` contractot koveti,
    - a kulon internal meta-review live-run runtime stack mar nem aktiv current-tree blocker.
 4. Emiatt ez a plan mar nem owns-olja a 2026-04-12-es meta-review cleanup resequencinget mint elo implementation programot; az a blokk historical traceabilitykent relevans, de nem current-state statusjelenteskent.
-5. A 2026-04-16-os current tree alapjan az actor-runtime implementation follow-up elso ot closureja mar merged allapotban van:
+5. A 2026-04-17-es current tree alapjan az actor-runtime implementation follow-up teljes current-tree closure-lanca merged vagy archivalt allapotban van:
    - `E1` execution-scoped authority foundation: az explicit `execution_id` canonical authority resze a persisted `execution_context` shape-nak, a schema enforcementnek es a canonical actor emit pathnak.
    - `E2a` typed delivery / launch ack producer + shared contract closure: a producer/shared port seam explicit `accepted|rejected` es `running|failed_to_start` vocabularyt ad.
    - `E2b` direct runtime/orchestration consumer alignment: a kickoff, ask-human, pass/converged, watchdog, start/restart consume-family mar ugyanennek a typed ack truthnak a same-authority consume/projection nyelven all ra; ez a `b72242cc3e63a2316738f5e131f81aefcb0ff4c8` merge-ben zarult.
    - `E2c` persisted diagnostics / meta-review / read-model fallout closure: ez azota lezart es archivalt current-tree predecessor, az archive traceability pathja `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-persisted-diagnostics-meta-review-read-model-fallout-phaseE2c.md`.
    - `E3a` implementer wrapper/authority foundation hardening: lezart es archivalt current-tree predecessor, az archive traceability pathja `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-implementer-pilot-foundation-hardening-phaseE3a.md`.
-6. Emiatt a fennmarado live scope ma mar csak:
-   - `E4` reviewer + meta-reviewer rollout es retained adapter cleanup.
+   - `E3b` implementer activation: lezart es archivalt current-tree predecessor, az archive traceability pathja `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-implementer-pilot-activation-phaseE3b.md`.
+   - `E3c` implementer parity + fail-closed hardening: lezart es archivalt current-tree predecessor, az archive traceability pathja `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-implementer-pilot-parity-and-fail-closed-hardening-phaseE3c.md`.
+   - `E4` reviewer + meta-reviewer rollout es retained adapter cleanup: lezart bubble, merged es archivalt current-tree predecessor, az archive traceability pathja `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-reviewer-meta-rollout-and-adapter-cleanup-phaseE4.md`.
+6. Emiatt ebben a planban mar nincs fennmarado live implementation scope: a discoverybol kinott current-tree Phase E implementation program lezarult.
 7. A kozvetlen historical predecessor closurek current-tree traceability pathjai:
    - `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-implementer-pilot-activation-phaseE3b.md`
    - `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-implementer-pilot-parity-and-fail-closed-hardening-phaseE3c.md`
-8. Ennek a remaining implementation sequencingnek a current-tree anchorjai tovabbra is:
+   - `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-reviewer-meta-rollout-and-adapter-cleanup-phaseE4.md`
+8. A Phase E closeout historical traceability anchorjai:
    - `plans/tasks/actor-runtime-interface-pilot-cutover-phaseE.md`
-   - `plans/tasks/actor-runtime-interface/actor-runtime-interface-reviewer-meta-rollout-and-adapter-cleanup-phaseE4.md`
+   - `plans/actor-runtime-interface-execution-authority-contract-note-v1.md`
+   - `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-reviewer-meta-rollout-and-adapter-cleanup-phaseE4.md`
 9. Review authority note:
    - a current bubble worktree docs-allapota a review/approval source-of-truth,
    - korabbi approval-ready snapshot csak historical contextkent ervenyes.
@@ -67,16 +71,18 @@ owners:
 
 1. A plan eredeti discovery/preparation objective-je teljesult: a current-state inventory, a capability-first target contract, a scenario matrix es a migration spine kulon checked-in artifactkent letezik.
 2. A plan statusza emiatt `completed`: ez a dokumentum discovery-parent artifact marad, nem a fennmarado implementation munka allapotkoveto taskja.
-3. A discovery utani implementation tovabbra sem viheto egyetlen bundled taskban, de a current tree mar lezarta az elso negy predecessor closure-t:
+3. A discovery utani implementation tovabbra sem viheto egyetlen bundled taskban, es a current tree mar le is zarta a teljes E1-E4 closure-lancot:
    - megvan a Phase B-ben eloirt explicit execution-scoped `execution_id` authority-shape a canonical actor input pathon,
    - megvan a typed `accepted|running|rejected|failed_to_start` delivery/launch ack boundary a producer/shared port seam-en,
    - es megvan a direct runtime/orchestration consume-family alignment ugyanennek a canonical truthnak a menten.
    - es megvan a persisted diagnostics / meta-review / read-model fallout closure (`E2c`) ugyanennek a lezart runtime truthnak a stale-null/read-model semanticszevel.
-4. Emiatt a remaining open implementation scope mar nem authority-, direct-consume-, persisted/read-model-, implementer-foundation-, activation- vagy implementer-parity closurevel kezdodik: ezek a predecessor closurek mar megvannak. A nyitott implementacios sor most mar kozvetlenul a multi-role rollout / retained adapter cleanup taskkal (`E4`) folytatodik.
-5. Az `E3a`, `E3b` es `E3c` current-tree ownership lockjai historical predecessorek:
+   - es megvan a reviewer + meta-reviewer consume-family rollout / retained adapter cleanup closure (`E4`) a lezart canonical authority vocabulary menten.
+4. Emiatt a plan alatt mar nincs nyitott implementation sor: ha kesobb uj actor-runtime scope nyilik, azt kulon successor plan vagy task kell hogy ownershipolja, nem ez a discovery-parent artifact.
+5. Az `E3a`, `E3b`, `E3c` es `E4` current-tree ownership lockjai historical predecessorek:
    - `E3a`: wrapper routing, authoritative-context-first bridge, workspace-prep same-authority hardening, explicit dispatcher fallback policy, es a non-implementer `human_question` baseline preserved lock foundationkent lezart es archivalt.
    - `E3b`: a fresh implementer activation closure lezart es archivalt a `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-implementer-pilot-activation-phaseE3b.md` pathon.
    - `E3c`: a stale/duplicate/restart parity es fail-closed hardening closure lezart es archivalt a `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-implementer-pilot-parity-and-fail-closed-hardening-phaseE3c.md` pathon.
+   - `E4`: a reviewer + meta-reviewer rollout / retained adapter cleanup closure lezart bubbleben merged es archivalt a `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-reviewer-meta-rollout-and-adapter-cleanup-phaseE4.md` pathon.
 6. A korabban kulon kezelt `E3b0` askHuman command-orchestration-wiring predecessor nem bizonyult onallo implementalhato closure-nek: a code-read alapjan a command-to-flow builder/plumbing retegek tobbsege thin forwarding maradt, es a valos ownership-hatar azota az archivalt `E3b` activation/projection bounded mainline-jaban zarult le.
 
 ## Post-Discovery Implementation Control Model (2026-04-13)
@@ -99,9 +105,10 @@ owners:
    - authority hiany vagy mismatch -> fail-closed,
    - delivery/launch ack hiany -> explicit runtime-level unavailable/failure allapot,
    - nincs pane-lathatosagbol visszakovetkeztetett “valoszinuleg accepted” fallback.
-7. Sequencing authority:
+7. Phase-close traceability:
    - `plans/tasks/actor-runtime-interface-pilot-cutover-phaseE.md`
    - `plans/actor-runtime-interface-execution-authority-contract-note-v1.md`
+   - `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-reviewer-meta-rollout-and-adapter-cleanup-phaseE4.md`
 8. Phase boundary:
    - authority_contract_foundation_closure: historical predecessor `E1`
    - delivery_launch_producer_closure: historical predecessor `E2a`
@@ -110,7 +117,7 @@ owners:
    - workflow_orchestration_closure: historical predecessor `E3a`; bounded ownership = wrapper routing + authoritative-context-first bridge + workspace-prep same-authority lock + explicit dispatcher fallback policy + non-implementer `human_question` baseline preservation; archive traceability path = `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-implementer-pilot-foundation-hardening-phaseE3a.md`
    - activation_closure: historical predecessor `E3b`; fresh-path activation ownership lezart es archivalt a `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-implementer-pilot-activation-phaseE3b.md` pathon
    - cleanup_recovery_closure: historical predecessor `E3c`; implementer parity/recovery closure lezart es archivalt a `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-implementer-pilot-parity-and-fail-closed-hardening-phaseE3c.md` pathon
-   - multi_role_rollout_and_cleanup_closure: current open task (`E4` reviewer + meta-reviewer rollout / retained adapter cleanup)
+   - multi_role_rollout_and_cleanup_closure: historical predecessor `E4`, archive traceability path = `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-reviewer-meta-rollout-and-adapter-cleanup-phaseE4.md`
 
 ## Post-Discovery Authority Fan-out Scan (2026-04-13)
 
@@ -430,7 +437,7 @@ Ez a plan discovery- es preparation-jellegu. Nem celja a Phase 4 vagy Phase 5 le
 2. `plans/tasks/actor-runtime-interface-capability-contract-phaseB.md`
 3. `plans/tasks/actor-runtime-interface-scenario-simulation-phaseC.md`
 4. `plans/tasks/actor-runtime-interface-migration-spine-phaseD.md`
-5. `plans/tasks/actor-runtime-interface-pilot-cutover-phaseE.md` (2026-04-13-tol a remaining implementation sequencing anchorja; nem single-task bundled delivery)
+5. `plans/tasks/actor-runtime-interface-pilot-cutover-phaseE.md` (historical Phase E sequencing closeout anchor; a current-tree implementation lanchosszt mar lezartnak tekinti)
 
 ## Dependencies
 

@@ -2,7 +2,7 @@
 artifact_type: task
 artifact_id: task_actor_runtime_interface_meta_review_cached_public_read_model_removal_phaseE_v1
 title: "Actor Runtime Interface Meta-Review Cached Public Read-Model Removal (Phase E)"
-status: implementable
+status: completed
 phase: phaseE
 target_files:
   - src/cli/index.ts
@@ -38,13 +38,13 @@ Target file interpretation:
 1. A `target_files` lista a primer ownership seam-eket rogziti, nem teljes file-by-file closure inventory.
 2. A reszletes implementation closure es a kapcsolodo secondary/helper file-ok authoritative listaja a lenti L1 call-site matrixben marad.
 
-## Current Codebase Check (2026-04-12)
+## Current Codebase Check (2026-04-17)
 
-1. A jelenlegi tree-ben a public cached operator subtree meg mindig el a `src/cli/index.ts` es a `src/cli/commands/bubble/metaReview.ts` route/export seamen keresztul, mikozben a `run` path mar korabban el lett tavolitva; a megmaradt public felulet `status | last-report`.
-2. A `src/v11/application/metaReview/**` folder ma egyszerre tartalmaz torlendo public cached read CLI stackot es retained canonical submit parser/helper elemeket, ezert a public read removal sorrendjet explicitten kulon kell valasztani a megmarado `agent emit --kind meta_review_result` seamtol.
-3. A shared/defaults retained read surface ma meg aktiv export boundarykent el a `src/v11/defaults/metaReview/metaReviewApi.ts`, `src/v11/shared/metaReview/metaReviewCommandApi.ts`, `src/v11/shared/metaReview/metaReviewCommandContract.ts`, `src/v11/shared/metaReview/metaReviewCommandReadRuntime.ts`, `src/v11/shared/metaReview/metaReviewCommandReadProjection.ts` es `src/v11/shared/metaReview/metaReviewTypes.ts` file-okban.
-4. A direct regression consumers kozul a `tests/core/bubble/metaReview.test.ts` es a `tests/core/human/approval.test.ts` ma meg kozvetlenul hivja a retained `getMetaReviewStatus|getMetaReviewLastReport` read pathokat, tehat ez a task nem csak CLI route cleanup, hanem explicit direct read-consumer cleanup is.
-5. A `plans/actor-runtime-interface-discovery-and-migration-plan-v1.md` 2026-04-12-es resequencingje szerint ez a slice csak a public read-model/export closure-t owns-olja; a persisted `last_autonomous_*` shape removal es a repo-surface wording cleanup kulon successor taskban marad.
+1. A public `bubble meta-review` namespace mar nincs a current tree-ben; a CLI a removed subtree-re generic unknown-command viselkedessel zar, amit a `tests/cli/index.test.ts` explicitten ved.
+2. A korabbi public cached read-model route/export seam (`src/cli/commands/bubble/metaReview.ts`) es a hozza tartozo dedicated public CLI stack mar nem letezik a current tree-ben.
+3. A 2026-04-12-es retained read-model/export ownership snapshot ma mar historical context: a surviving `src/v11/shared/metaReview/**` es `src/v11/defaults/metaReview/**` felulet a canonical submit/guidance/runtime parity lane-re szukult, nem public cached read operator surface-re.
+4. Emiatt ez a task mar nem elo implementation target, hanem historical bounded removal spec: a current tree-ben a public cached read-model closure lezart allapotban van.
+5. A parent plan current-state olvasata ezzel osszhangban historicalnak tekinti a meta-review cached public read-model lane-t; kulon current-tree Phase E open successor mar nem erre a taskra mutat.
 
 ## L0 - Policy
 

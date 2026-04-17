@@ -18,7 +18,7 @@ owners:
 
 ## Current Tree Progress Update (2026-04-17)
 
-1. Az eredeti sequencing proof sorrendje ervenyben maradt, de a current tree kozben mar lezarta az elso harom predecessor closure-t:
+1. Az eredeti sequencing proof sorrendje ervenyben maradt, es a current tree kozben le is zarta a teljes E1-E4 closure-lancot:
    - `E1` execution-scoped authority foundation,
    - `E2a` delivery / launch producer + shared contract closure,
    - `E2b` direct runtime/orchestration consumer alignment.
@@ -27,9 +27,9 @@ owners:
    - `E3a` implementer foundation hardening archival traceability path: `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-implementer-pilot-foundation-hardening-phaseE3a.md`
    - `E3b` implementer pilot activation archival traceability path: `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-implementer-pilot-activation-phaseE3b.md`
    - `E3c` implementer pilot parity + fail-closed hardening archival traceability path: `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-implementer-pilot-parity-and-fail-closed-hardening-phaseE3c.md`
-4. Emiatt ez a sequencing artifact mar nem `E1`, `E2c`, `E3a`, `E3b` vagy `E3c` megnyitasat irja elo kovetkezo aktiv lepeskent, hanem azt rogziti, hogy a remaining open successor mar `E4`.
-5. A jelenlegi elo implementation target ezert a `plans/tasks/actor-runtime-interface/actor-runtime-interface-reviewer-meta-rollout-and-adapter-cleanup-phaseE4.md`: itt vedheto a reviewer + meta-reviewer consume-family rollout es a retained adapter cleanup a mar lezart implementer foundation + activation + parity closurek felett.
-6. A sequencing logika ettol nem valtozik: az archivalt `E2c` sem csuszhatott vissza producer-contract vagy pilot-activation workbe, es a korabban kulon kezelt `E3b0` refaktor-szelet sem bizonyult onallo implementalhato closure-nek. A megmaradt nyitott lane igy mar csak `E4`.
+4. Az `E4` reviewer + meta-reviewer rollout / retained adapter cleanup bubble szinten lezart, merged es archivalt current-tree predecessor lett: `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-reviewer-meta-rollout-and-adapter-cleanup-phaseE4.md`.
+5. Emiatt ez a sequencing artifact mar nem kovetkezo aktiv lepeseket jelol ki, hanem historical Phase E closeout anchor: azt rogzíti, hogy a split logika helyes volt, es a maradek lane vegul az archivalt `E4`-ben zarult le.
+6. A sequencing logika ettol nem valtozik: az archivalt `E2c` sem csuszhatott vissza producer-contract vagy pilot-activation workbe, es a korabban kulon kezelt `E3b0` refaktor-szelet sem bizonyult onallo implementalhato closure-nek. Uj actor-runtime scope mar csak kulon successor artifactban nyithato.
 7. Review authority note:
    - approval/review refreshnel a current worktree docs-allapot az authority,
    - a korabbi approval snapshot csak historical trace, nem aktiv sequencing baseline.
@@ -38,15 +38,15 @@ owners:
 
 ### Goal
 
-Current-tree sequencing anchor keszitese a discovery utan megmaradt actor-runtime implementation munkahoz ugy, hogy:
+Current-tree historical sequencing closeout anchor keszitese a discovery utan lezart actor-runtime implementation lancrol ugy, hogy:
 1. a stale parent-plan statusz helyere current-state sequencing keruljon,
-2. explicit legyen, hogy a fennmarado implementation scope nem viheto egyetlen bundled taskban,
-3. a kovetkezo successor taskok boundaryje, sorrendje es ownershipje review-loop nelkul kovetheto legyen.
+2. explicit legyen, hogy a discoverybol kinott implementation scope miert nem viheto egyetlen bundled taskban,
+3. a historical successor taskok boundaryje, sorrendje es ownershipje review-loop nelkul kovetheto legyen.
 
 ### Domain / Control Model Summary
 
 1. Business invariant: az `implementer`, `reviewer` es `meta_reviewer` ugyanazon actor-runtime boundaryt kell hogy hasznalja; role-nev alapjan nem maradhat kulon runtime truth vagy special-case lifecycle.
-2. Control model: a canonical actor write authority explicit execution-contexthez kotott. A remaining Phase E munka ezt erositi execution-scoped boundaryve; nem uj authorityforrast vezet be.
+2. Control model: a canonical actor write authority explicit execution-contexthez kotott. A Phase E closure-lanc ezt execution-scoped boundaryve erositi; nem uj authorityforrast vezet be.
 3. Read-path rule: actor authority, delivery truth es workflow-step allapot csak a canonical state/execution-context + actor-protocol + runtime-ack boundaryrol olvashato.
 4. Forbidden fallback:
    - tmux pane-visible activity mint authority truth,
@@ -74,7 +74,7 @@ Current-tree sequencing anchor keszitese a discovery utan megmaradt actor-runtim
    - workflow_orchestration_closure: historical predecessor `E3a`, archive traceability path = `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-implementer-pilot-foundation-hardening-phaseE3a.md`
    - activation_closure: historical predecessor `E3b`, archive traceability path = `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-implementer-pilot-activation-phaseE3b.md`
    - cleanup_recovery_closure: historical predecessor `E3c`, archive traceability path = `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-implementer-pilot-parity-and-fail-closed-hardening-phaseE3c.md`
-   - multi_role_rollout_and_cleanup_closure: current open task `E4`
+   - multi_role_rollout_and_cleanup_closure: historical predecessor `E4`, archive traceability path = `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-reviewer-meta-rollout-and-adapter-cleanup-phaseE4.md`
 
 ### Authority Boundary Map
 
@@ -218,7 +218,7 @@ Current-tree sequencing anchor keszitese a discovery utan megmaradt actor-runtim
 | `E3a` | `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-implementer-pilot-foundation-hardening-phaseE3a.md` | implementer wrapper/authority foundation hardening | A magas risk-score mellett a pilot activation elott kulon kellett lezarni a wrapper + authoritative-context primary route hardeninget ugy, hogy a non-implementer `human_question` baseline ne szukuljon neman, es a dispatcher fallback policy explicit legyen. | runtime activation claim, duplicate/restart parity closure, reviewer/meta-reviewer rollout, non-implementer human-gate baseline rewrite |
 | `E3b` | `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-implementer-pilot-activation-phaseE3b.md` | implementer pilot activation | Az aktiv pilot fresh-path proof lezart implementer same-authority foundation felett volt vedheto, es owns-olta a `human_question` command-to-flow mainline szukseges minimalis explicitte tetelet is addig, ameddig ez ugyanannak az activation-owned bounded seamnek a resze maradt. | authority/wrapper-shape reopen, broad builder-only cleanup, stale/duplicate/restart parity closure, reviewer/meta-reviewer rollout, full adapter cleanup |
 | `E3c` | `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-implementer-pilot-parity-and-fail-closed-hardening-phaseE3c.md` | implementer pilot parity + fail-closed hardening | A stale/duplicate/restart parity es a no-second-success minimum contract kulon closure maradt, mert activation utan is sajat fail-closed/recovery kockazatot hordozott. | authority/wrapper-shape reopen, fresh-path activation redesign, reviewer/meta-reviewer rollout, broad adapter cleanup |
-| `E4` | `plans/tasks/actor-runtime-interface/actor-runtime-interface-reviewer-meta-rollout-and-adapter-cleanup-phaseE4.md` | multi-role rollout + retained cleanup | A policy-heavy role-ok es a retained adapter cleanup csak a lezart implementer activation + parity utan vedheto. | uj authority foundation vagy uj ack contract |
+| `E4` | `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-reviewer-meta-rollout-and-adapter-cleanup-phaseE4.md` | multi-role rollout + retained cleanup | A policy-heavy role-ok es a retained adapter cleanup csak a lezart implementer activation + parity utan volt vedheto, es ez a closure bubbleben zarult le. | uj authority foundation vagy uj ack contract |
 
 Normative sequencing rules:
 
@@ -244,10 +244,10 @@ Normative sequencing rules:
 Simulation readout:
 
 1. A current tree-ben a foundation gap es a producer/direct-consume prereq closurek mar nem nyitottak: az explicit `execution_id` authority-shape, a typed delivery/launch ack producer seam es a direct runtime/orchestration consume alignment mar merged.
-2. A legerosebb fennmarado nyitott gap ma mar nem persisted/read-model closure vagy implementer-lane closure, hanem a reviewer + meta-reviewer consume-family rollout es a retained adapter cleanup.
-3. Emiatt az elso es egyetlen megmaradt aktiv implementation lepes most mar az `E4`, nem a foundation/activation/parity laneban tovabbi bontas.
-4. Az archivalt `E3a`, `E3b` es `E3c` kimeneti contractjai egyutt azt bizonyitjak, hogy az `E4` mar nem nyithat ujra authority-, wrapper-, activation- vagy implementer-parity dontest.
-5. Reviewer + meta-reviewer rolloutot a simulation tovabbra is csak `E4`-ben engedi, mert ott mar az archivalt `E3b` activation es az archivalt `E3c` parity utan vedheto a multi-role consume boundary.
+2. A legerosebb korabban nyitott gap a reviewer + meta-reviewer consume-family rollout es a retained adapter cleanup volt, es ez azota az archivalt `E4` closureban lezarult.
+3. Emiatt a current tree-ben mar nincs megmaradt aktiv implementation lepes ezen a sequencing artifacton belul.
+4. Az archivalt `E3a`, `E3b`, `E3c` es `E4` kimeneti contractjai egyutt azt bizonyitjak, hogy a discoverybol kinott Phase E actor-runtime implementation program current-tree szinten lezart.
+5. Ha uj actor-runtime scope jelenik meg, azt mar nem ez a sequencing artifact owns-olja, hanem kulon successor plan/task.
 
 ### 1) Call-site Matrix
 

@@ -2,7 +2,7 @@
 artifact_type: task
 artifact_id: task_actor_runtime_interface_meta_review_live_run_removal_phaseE_v1
 title: "Actor Runtime Interface Meta-Review Live-Run Removal (Phase E)"
-status: implementable
+status: completed
 phase: phaseE
 target_files:
   - src/v11/defaults/metaReview/metaReviewApi.ts
@@ -40,41 +40,13 @@ Target file interpretation:
 1. A `target_files` lista a primer ownership seam-eket rogziti.
 2. A task explicit elvarasa, hogy a primer file-okhoz kotott helper, fallback, test es export ballast is torlodjon ugyanebben a szeletben; a `target_files` lista nem mentesit a secondary file cleanup alol.
 
-## Current Codebase Check (2026-04-12)
+## Current Codebase Check (2026-04-17)
 
-1. A live-run meta-review subsystem ma onallo mini-runtimekent letezik:
-   - `src/v11/defaults/metaReview/metaReviewApi.ts`
-   - `src/v11/shared/metaReview/liveRun/**`
-   - `src/v11/infrastructure/executor/sessionRuntime/metaReviewLiveRunnerRuntime.ts`
-   - `src/v11/infrastructure/executor/command/metaReviewLiveRunnerCommand.ts`
-   - `src/v11/infrastructure/channel/tmux/metaReviewLiveRunnerPane.ts`
-2. A jelenlegi tree-ben a `runMetaReview(...)` produkcios hivoja nem latszik a workflow/gate/orchestration lane-ben; a `src` alatti talalatok a sajat live-run stackjara es a defaults facade-ra korlatozodnak, mikozben a megmarado runtime authority modell mar a gate + `meta_review_result` submit uton megy.
-3. A surviving canonical authority chain mar most is explicit:
-   - meta-review authority staging: `src/v11/shared/metaReviewGate/metaReviewGateApply.ts`
-   - canonical execution context: `src/v11/shared/metaReview/metaReviewExecutionContext.ts`
-   - canonical actor submit: `src/v11/application/actorProtocol/actorProtocolEmitters.ts`
-   - resume guidance: `src/v11/application/start/startCommandResumeKickoffMessageBuilders.ts`
-4. A live-run subsystem kulon prompt/schema/parser/env-mode/child-process/tmux-scrollback infrastruktúrát tart fenn olyan capabilityre, amely first-principles alapon nem szukseges a canonical authority + submit modellhez.
-5. A `tests/core/bubble/metaReview.test.ts` ma egyszerre fed le surviving canonical submit behavior-t es torlendo live-run behavior-t; a tasknak ezt a ket reteget szet kell valasztania, es a live-run specifikus coverage-et teljesen el kell tavolitania.
-6. A 2026-04-12-es explicit `rg` snapshot az acceptance regex tenyleges current-tree talalatait mutatja, es ezek a live-run-owned vagy kozvetlen live-run-coupled seam-ekre korlatozodnak:
-   - `src/v11/defaults/metaReview/metaReviewApi.ts`
-   - `src/v11/shared/metaReview/metaReviewDependencyDefaults.ts`
-   - `src/v11/shared/metaReview/liveRun/metaReviewLiveRunContract.ts`
-   - `src/v11/shared/metaReview/liveRun/metaReviewLiveRunPorts.ts`
-   - `src/v11/shared/metaReview/liveRun/metaReviewLiveRunExecution.ts`
-   - `src/v11/shared/metaReview/liveRun/metaReviewLiveRunRuntime.ts`
-   - `src/v11/shared/metaReview/liveRun/metaReviewLiveRunPersistence.ts`
-   - `src/v11/shared/metaReview/liveRun/metaReviewLiveRunApprovalRefresh.ts`
-   - `src/v11/shared/metaReview/liveRun/metaReviewLiveRunner.ts`
-   - `src/v11/shared/metaReview/liveRun/metaReviewLiveRunnerConfig.ts`
-   - `src/v11/shared/metaReview/liveRun/metaReviewLiveRunnerParsing.ts`
-   - `src/v11/shared/metaReview/liveRun/metaReviewLiveRunnerPrompt.ts`
-   - `src/v11/shared/metaReview/liveRun/metaReviewLiveRunnerReport.ts`
-   - `src/v11/infrastructure/channel/tmux/metaReviewLiveRunnerPane.ts`
-   - `src/v11/infrastructure/executor/sessionRuntime/metaReviewLiveRunnerRuntime.ts`
-   - `tests/core/bubble/metaReview.test.ts`
-7. Ez a snapshot illusztrativ hitlista, nem teljes ownership inventory: a removal teljes authoritative feluletet tovabbra is a `target_files`, a `Call-site Matrix`, es a kapcsolodo L1 contract tablazatok rogzitik.
-8. A snapshot nem mutat surviving gate/submit ownership lane-beli retained production consumer-t a torlendo live-run nevekre; ez a szelet bounded removal cleanup, nem ujabb architecture discovery vagy replacement design.
+1. A `src/v11/shared/metaReview/liveRun/**` subtree mar nincs jelen a current tree-ben, es a korabbi live-run-owned infra seam-ek (`metaReviewLiveRunnerRuntime`, `metaReviewLiveRunnerCommand`, `metaReviewLiveRunnerPane`) sem leteznek kulon subsystemkent.
+2. A surviving meta-review authority modell a current tree-ben a gate + `meta_review.execution_context` + canonical `meta_review_result` submit lanchoz kotott; kulon `runMetaReview(...)` produkcios runtime nem maradt aktiv boundary.
+3. A `src/v11/shared/metaReview/**` es `src/v11/defaults/metaReview/**` jelenlegi felulete mar a canonical submit/runtime parity lane-re szukult, nem tart fenn prompt/parser/env-mode/child-process/tmux-scrollback alapu central live-run control pathot.
+4. Emiatt ez a task mar nem elo removal target, hanem historical bounded removal spec: a current tree-ben a live-run subsystem closure tenyszeruen lezart allapotban van.
+5. A parent plan current-state olvasata szerint a kulon internal meta-review live-run runtime stack mar nem aktiv current-tree blocker; ez a task ezt a historical closuret dokumentalja, nem uj implementacios lane-t nyit.
 
 ## L0 - Policy
 
