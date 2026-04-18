@@ -16,6 +16,7 @@ const MERGE_CONFLICT_REQUIRES_MANUAL_RESOLUTION =
 const MERGE_REMOTE_DELETE_ORIGIN_UNAVAILABLE =
   "MERGE_REMOTE_DELETE_ORIGIN_UNAVAILABLE";
 const MERGE_REMOTE_DELETE_FAILED = "MERGE_REMOTE_DELETE_FAILED";
+const MERGE_BASE_BRANCH_PUSH_FAILED = "MERGE_BASE_BRANCH_PUSH_FAILED";
 
 async function mergeBubbleBranchIntoBase(input: {
   repoPath: string;
@@ -76,10 +77,27 @@ async function runMergeRemoteOperations(input: {
     await ensureOriginRemote(input.repoPath, input.runGit, input.createError);
   }
   if (input.push) {
-    await input.runGit(["push", "origin", input.baseBranch], {
-      cwd: input.repoPath
-    });
-    pushedBaseBranch = true;
+    try {
+      await input.runGit(["push", "origin", input.baseBranch], {
+        cwd: input.repoPath
+      });
+      pushedBaseBranch = true;
+    } catch (error) {
+      if (isNamedError(error, "GitCommandError")) {
+        throw input.createError({
+          reasonCode: MERGE_BASE_BRANCH_PUSH_FAILED,
+          message:
+            `Failed to publish merged base branch ${input.baseBranch} to origin.`,
+          context: {
+            command_name: "merge",
+            base_branch: input.baseBranch,
+            bubble_branch: input.bubbleBranch
+          },
+          cause: error
+        });
+      }
+      throw error;
+    }
   }
 
   if (!input.deleteRemote) {
@@ -139,6 +157,39 @@ export async function runMergeFlow(
     dependencies
   });
 
+  if (context.route === "remote") {
+    const remoteResult = await dependencies.executeRemoteBubbleMergeCommand({
+      bubbleId: context.resolved.bubbleId,
+      remoteClonePath: context.remotePointer.remoteClonePath,
+      remoteTarget: context.remoteTarget,
+      push: input.push,
+      deleteRemote: input.deleteRemote
+    });
+
+    await finalizeMergeFlow({
+      params: input,
+      context,
+      dependencies,
+      mergeCommitSha: remoteResult.mergeCommitSha,
+      pushedBaseBranch: remoteResult.pushedBaseBranch,
+      deletedRemoteBranch: remoteResult.deletedRemoteBranch
+    });
+
+    return buildMergeBubbleResult({
+      bubbleId: context.resolved.bubbleId,
+      baseBranch: remoteResult.baseBranch,
+      bubbleBranch: remoteResult.bubbleBranch,
+      mergeCommitSha: remoteResult.mergeCommitSha,
+      pushedBaseBranch: remoteResult.pushedBaseBranch,
+      deletedRemoteBranch: remoteResult.deletedRemoteBranch,
+      tmuxSessionName: remoteResult.tmuxSessionName,
+      tmuxSessionExisted: remoteResult.tmuxSessionExisted,
+      runtimeSessionRemoved: remoteResult.runtimeSessionRemoved,
+      removedWorktree: remoteResult.removedWorktree,
+      removedBubbleBranch: remoteResult.removedBubbleBranch
+    });
+  }
+
   const mergeCommitSha = await mergeBubbleBranchIntoBase({
     repoPath: context.repoPath,
     baseBranch: context.baseBranch,
@@ -166,6 +217,9 @@ export async function runMergeFlow(
     pushedBaseBranch,
     deletedRemoteBranch
   });
+  if (finalization === undefined) {
+    throw new Error("Local merge finalization did not return cleanup results.");
+  }
 
   return buildMergeBubbleResult({
     bubbleId: context.resolved.bubbleId,

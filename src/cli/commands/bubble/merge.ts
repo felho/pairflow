@@ -11,6 +11,7 @@ export interface BubbleMergeCommandOptions {
   repo?: string;
   push: boolean;
   "delete-remote": boolean;
+  json: boolean;
   help: false;
 }
 
@@ -25,13 +26,14 @@ export type ParsedBubbleMergeCommandOptions =
 export function getBubbleMergeHelpText(): string {
   return [
     "Usage:",
-    "  pairflow bubble merge --id <id> [--repo <path>] [--push] [--delete-remote]",
+    "  pairflow bubble merge --id <id> [--repo <path>] [--push] [--delete-remote] [--json]",
     "",
     "Options:",
     "  --id <id>             Bubble id",
     "  --repo <path>         Optional repository path (defaults to cwd ancestry lookup)",
     "  --push                Push merged base branch to origin",
     "  --delete-remote       Delete remote bubble branch from origin after merge",
+    "  --json                Print structured JSON output",
     "  -h, --help            Show this help",
     "",
     "Notes:",
@@ -58,6 +60,9 @@ export function parseBubbleMergeCommandOptions(
       "delete-remote": {
         type: "boolean"
       },
+      json: {
+        type: "boolean"
+      },
       help: {
         type: "boolean",
         short: "h"
@@ -81,6 +86,7 @@ export function parseBubbleMergeCommandOptions(
     ...(parsed.values.repo !== undefined ? { repo: parsed.values.repo } : {}),
     push: parsed.values.push ?? false,
     "delete-remote": parsed.values["delete-remote"] ?? false,
+    json: parsed.values.json ?? false,
     help: false
   };
 }

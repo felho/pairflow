@@ -16,15 +16,19 @@ export async function mergeBubbleCommandOrchestration(
   input: MergeBubbleInput,
   dependencies: MergeBubbleDependencies = {}
 ): Promise<MergeBubbleResult> {
-  const normalized = normalizeMergeBubbleInput(input, createBubbleMergeError);
-  const resolvedDependencies = await resolveMergeCommandDependencies(dependencies);
-  return runMergeFlow(
-    {
-      ...normalized,
-      createError: createBubbleMergeError
-    },
-    resolvedDependencies
-  );
+  try {
+    const normalized = normalizeMergeBubbleInput(input, createBubbleMergeError);
+    const resolvedDependencies = await resolveMergeCommandDependencies(dependencies);
+    return await runMergeFlow(
+      {
+        ...normalized,
+        createError: createBubbleMergeError
+      },
+      resolvedDependencies
+    );
+  } catch (error) {
+    return throwAsBubbleMergeError(error);
+  }
 }
 
 export {

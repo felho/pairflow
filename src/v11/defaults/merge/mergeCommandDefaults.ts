@@ -13,6 +13,9 @@ import {
   writeStateSnapshot
 } from "../../shared/state/stateStoreDefaults.js";
 import { emitBubbleLifecycleEventBestEffort } from "../../shared/metrics/bubbleEvents.js";
+import { readRemotePointer } from "../../infrastructure/artifact/bubble/remoteExecutionArtifacts.js";
+import { executeRemoteBubbleMergeCommand } from "../../infrastructure/executor/ssh/sshBubbleMergeCommand.js";
+import { statusCommandDependencyDefaults } from "../../shared/status/statusCommandDependencyDefaults.js";
 
 type MergeBubbleDependencyDefaults = {
   [K in keyof Required<MergeBubbleDependencies>]:
@@ -22,10 +25,14 @@ type MergeBubbleDependencyDefaults = {
 export const mergeBubbleDependencyDefaults = {
   branchExists,
   cleanupWorktreeWorkspace,
+  executeRemoteBubbleMergeCommand,
   emitBubbleLifecycleEventBestEffort,
   ensureBubbleInstanceIdForMutation,
+  readRemotePointer,
   readStateSnapshot,
   removeRuntimeSession,
+  resolveRemoteBubbleStatusTarget:
+    statusCommandDependencyDefaults.resolveRemoteBubbleStatusTarget,
   resolveBubbleById,
   runGit,
   terminateBubbleTmuxSession,

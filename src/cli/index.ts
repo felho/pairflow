@@ -68,6 +68,7 @@ import {
 } from "./commands/bubble/list.js";
 import {
   getBubbleMergeHelpText,
+  parseBubbleMergeCommandOptions,
   runBubbleMergeCommand
 } from "./commands/bubble/merge.js";
 import { renderMetaReviewSubmitText } from "../v11/application/metaReview/metaReviewSubmitRenderers.js";
@@ -708,9 +709,19 @@ async function handleBubbleCommitCommand(args: string[]): Promise<number> {
 }
 
 async function handleBubbleMergeCommand(args: string[]): Promise<number> {
+  const parsed = parseBubbleMergeCommandOptions(args);
+  if (parsed.help) {
+    process.stdout.write(`${getBubbleMergeHelpText()}\n`);
+    return 0;
+  }
   const result = await runBubbleMergeCommand(args);
   if (result === null) {
     process.stdout.write(`${getBubbleMergeHelpText()}\n`);
+    return 0;
+  }
+
+  if (parsed.json) {
+    process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
     return 0;
   }
 

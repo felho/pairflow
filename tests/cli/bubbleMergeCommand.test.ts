@@ -14,7 +14,8 @@ describe("parseBubbleMergeCommandOptions", () => {
       "--repo",
       "/tmp/repo",
       "--push",
-      "--delete-remote"
+      "--delete-remote",
+      "--json"
     ]);
 
     expect(parsed.help).toBe(false);
@@ -26,6 +27,7 @@ describe("parseBubbleMergeCommandOptions", () => {
     expect(parsed.repo).toBe("/tmp/repo");
     expect(parsed.push).toBe(true);
     expect(parsed["delete-remote"]).toBe(true);
+    expect(parsed.json).toBe(true);
   });
 
   it("supports help", () => {

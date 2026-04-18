@@ -17,6 +17,11 @@ export interface MergeBubbleDependencyDefaults {
     NonNullable<MergeBubbleDependencies["ensureBubbleInstanceIdForMutation"]>;
   emitBubbleLifecycleEventBestEffort:
     NonNullable<MergeBubbleDependencies["emitBubbleLifecycleEventBestEffort"]>;
+  readRemotePointer: NonNullable<MergeBubbleDependencies["readRemotePointer"]>;
+  resolveRemoteBubbleStatusTarget:
+    NonNullable<MergeBubbleDependencies["resolveRemoteBubbleStatusTarget"]>;
+  executeRemoteBubbleMergeCommand:
+    NonNullable<MergeBubbleDependencies["executeRemoteBubbleMergeCommand"]>;
 }
 
 let mergeBubbleDependencyDefaultsPromise:
