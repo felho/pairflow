@@ -393,7 +393,7 @@ pairflow bubble request-rework --id <id> --repo <repo> --message "<rework>"
 
 # Finalize
 pairflow bubble commit --id <id> --repo <repo> --auto
-pairflow bubble merge --id <id> --repo <repo> --push --delete-remote
+pairflow bubble merge --id <id> --repo <repo> --push --delete-remote [--json]
 ```
 
 Agent-side commands from the bubble worktree:
@@ -821,7 +821,7 @@ Ideation note:
 | `bubble approve --id <id> [--override-non-approve] [--override-reason <text>] [--repo <path>] [--ref <path>]...` | Approve for commit from `READY_FOR_HUMAN_APPROVAL` |
 | `bubble request-rework --id <id> --message <text> [--repo <path>] [--ref <path>]...` | Send back for rework (`READY_FOR_HUMAN_APPROVAL`: immediate; `WAITING_HUMAN`: queues deferred deterministic rework intent) |
 | `bubble commit --id <id> [--repo <path>] [--message <text>] [--ref <path>]...` | Commit and finalize |
-| `bubble merge --id <id> [--repo <path>] [--push] [--delete-remote]` | Merge bubble branch and clean up |
+| `bubble merge --id <id> [--repo <path>] [--push] [--delete-remote] [--json]` | Merge bubble branch and clean up |
 | `bubble reconcile [--repo <path>] [--dry-run] [--json]` | Clean up stale sessions |
 | `bubble watchdog --id <id> [--repo <path>] [--json]` | Check for stuck agents |
 Autonomous meta-review results are submitted through the canonical actor channel: `pairflow agent emit --kind meta_review_result ...`. Operator inspection uses `bubble status` / `bubble restart`; there is no public `bubble meta-review` subcommand family.

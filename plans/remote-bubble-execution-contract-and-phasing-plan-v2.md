@@ -324,14 +324,15 @@ Az explicit control-model dontesek most visszanyerhetok a designbol es a review-
 
 ## Active Task
 
-1. A `Phase 2F`, `Phase 3A`, es `Phase 3B1` mar archived baseline:
+1. A `Phase 2F`, `Phase 3A`, `Phase 3B1`, es `Phase 3B2` mar archived baseline:
    - `plans/archive/tasks/remote-bubble-execution/phase2f-remote-attach-consume.md`
    - `plans/archive/tasks/remote-bubble-execution/phase3a-remote-approval-and-rework-routing.md`
    - `plans/archive/tasks/remote-bubble-execution/phase3b1-remote-commit-routing-and-continuity.md`
-2. A kovetkezo tenyleges implementacios munka a `Phase 3B2` task materializalasahoz tartozik:
-   - `plans/tasks/remote-bubble-execution/phase3b2-remote-merge-routing-and-publication.md`
-3. A `Phase 2B`, `Phase 2C`, `Phase 2D`, `Phase 2E`, `Phase 2F`, `Phase 3A`, es `Phase 3B1` archived baseline lett.
-4. Az approval/rework, cleanup, es recovery scope tovabbra is kulon successor fazisban marad, de a cleanup routing most mar harom bounded szeletre bomlik: `Phase 3B1` commit, `Phase 3B2` merge, `Phase 3B3` delete.
+   - `plans/archive/tasks/remote-bubble-execution/phase3b2-remote-merge-routing-and-publication.md`
+2. A kovetkezo tenyleges implementacios munka a `Phase 3B3` task materializalasahoz tartozik:
+   - `plans/tasks/remote-bubble-execution/phase3b3-remote-delete-cleanup-and-archive-closure.md`
+3. A `Phase 2B`, `Phase 2C`, `Phase 2D`, `Phase 2E`, `Phase 2F`, `Phase 3A`, `Phase 3B1`, es `Phase 3B2` archived baseline lett.
+4. Az approval/rework, cleanup, es recovery scope tovabbra is kulon successor fazisban marad, de a cleanup routing most mar harom bounded szeletre bomlik: `Phase 3B1` commit, `Phase 3B2` merge, `Phase 3B3` delete; az aktiv cleanup successor innentol a `Phase 3B3`.
 
 ## Successor Tasks (Do Not Materialize Yet)
 
