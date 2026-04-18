@@ -8,8 +8,12 @@ target_files:
   - src/v11/application/commit/commitCliCommand.ts
   - src/v11/application/commit/commitCommandApi.ts
   - src/v11/application/commit/commitCommandApiContract.ts
+  - src/v11/application/commit/commitCommandContract.ts
   - src/v11/application/commit/commitCommandDefaults.ts
+  - src/v11/application/commit/commitCommandFinalization.ts
+  - src/v11/application/commit/commitCommandGitStep.ts
   - src/v11/application/commit/commitCommandRuntime.ts
+  - src/v11/application/commit/commitDonePackage.ts
   - src/v11/application/commit/emitCommitV11.ts
   - src/v11/shared/commit/commitCommandErrorNormalization.ts
   - src/v11/infrastructure/executor/ssh/sshBubbleCommitCommand.ts
@@ -50,14 +54,17 @@ owners:
 ## Current Codebase Check / Current-Tree Reality Check (2026-04-18)
 
 1. A commit path ma local git mutation boundary:
-   - [commitCommandApi.ts](/Users/felho/dev/pairflow/src/v11/application/commit/commitCommandApi.ts:74)
+   - [commitCommandApi.ts](/Users/felho/dev/pairflow/src/v11/application/commit/commitCommandApi.ts:98)
    - a `runCommitGitStep(...)` local repo/worktree staging + commit pathra ul.
 2. A commit result retained local continuityt feltetelez:
-   - `CommitBubbleResult.donePackagePath` local file path contract [commitCommandContract.ts](/Users/felho/dev/pairflow/src/v11/application/commit/commitCommandContract.ts:11)
+   - `CommitBubbleResult.donePackagePath` local file path contract [commitCommandContract.ts](/Users/felho/dev/pairflow/src/v11/application/commit/commitCommandContract.ts:14)
    - a CLI is erre ulo retained surface-t ad [index.ts](/Users/felho/dev/pairflow/src/cli/index.ts:703).
-3. A remote started pointer authority precedent mar letezik:
+3. A jelenlegi commit orchestration local-only finalization shape-ra ul:
+   - [commitCommandApi.ts](/Users/felho/dev/pairflow/src/v11/application/commit/commitCommandApi.ts:27) a `prepareCommitRuntimeContext(...)` belepesi pontja, es [commitCommandApi.ts](/Users/felho/dev/pairflow/src/v11/application/commit/commitCommandApi.ts:56) oldja a local `donePackagePath`-ot es hivja a `readOrCreateDonePackage(...)`-et,
+   - a retained local finalize lepesek (`appendDonePackageEnvelope(...)`, `persistCommittedThenDoneState(...)`, `emitCommitLifecycleEvent(...)`) ma uj local canonical mutationt allitanak elo.
+4. A remote started pointer authority precedent mar letezik:
    - approval/rework family remote helperrel route-ol a `Phase 3A` ota.
-4. Target-file reality:
+5. Target-file reality:
    - ez egy mutation entrypoint + fail-closed continuity task,
    - nem merge/delete/recovery task,
    - nem generic remote command foundation.
@@ -277,14 +284,15 @@ Lezarni a remote started bubble `commit` routingot ugy, hogy:
 | local commit local git mutation | preserve | existing local commit tests zoldben maradnak | P1 | required-now |
 | remote started bubble local git fallback | forbid | explicit no-local-git remote test | P1 | required-now |
 | retained local done-package path contract | preserve | synced local done-package proof | P1 | required-now |
+| remote route local re-finalization/re-synthesis a canonical sync-back helyett | forbid | explicit proof, hogy remote success utan a local oldal nem gyart uj commit envelope/state truthot | P1 | required-now |
 
 ### 1) Call-site Matrix
 
 | ID | File | Function/Entry | Exact Signature (args -> return) | Insertion Point | Expected Behavior | Priority | Timing | Evidence |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | CS1 | `src/v11/application/commit/commitCliCommand.ts` | `runBubbleCommitCommand(...)` | existing export | CLI commit entry | remote started bubble eseten same command surface remote route-ot consume-ol | P1 | required-now | T1, T3, T6 |
-| CS2 | `src/v11/application/commit/commitCommandApi.ts`, `commitCommandApiContract.ts`, `commitCommandDefaults.ts` | `commitBubble(...)` | existing export | commit orchestration seam | started remote pointer eseten remote helper + sync-back, local bubble eseten retained local path | P1 | required-now | T1, T3, T5 |
-| CS3 | `src/v11/infrastructure/executor/ssh/sshBubbleCommitCommand.ts` | new bounded helper | new typed helper | remote commit execution seam | remote command + typed result + bounded sync-back support | P1 | required-now | T3, T4, T5 |
+| CS2 | `src/v11/application/commit/commitCommandApi.ts`, `commitCommandApiContract.ts`, `commitCommandContract.ts`, `commitCommandDefaults.ts`, `commitCommandFinalization.ts`, `commitCommandGitStep.ts`, `commitCommandRuntime.ts`, `commitDonePackage.ts` | `commitBubble(...)` + retained finalization helpers | existing export + narrow internal refactor | commit orchestration seam | started remote pointer eseten a remote preconditions/mutation es a local continuity mapping kulonul el; local bubble eseten retained local path marad | P1 | required-now | T1, T3, T5, T7 |
+| CS3 | `src/v11/infrastructure/executor/ssh/sshBubbleCommitCommand.ts` | new bounded helper | new typed helper | remote commit execution seam | remote command + typed result bundle; local continuity iras a caller ownershipe marad | P1 | required-now | T3, T4, T5, T7 |
 | CS4 | `src/v11/infrastructure/ui/routerActions.ts`, `routerHttpErrors.ts` | router error mapping | existing exports | first-party UI action consume | typed remote commit errors actionable formaban jutnak el a UI-ba | P1 | required-now | T6 |
 
 ### 2) Remote Commit Helper Contract
@@ -296,13 +304,16 @@ Lezarni a remote started bubble `commit` routingot ugy, hogy:
    - resolved bubble context
    - started remote target
 2. Output:
-   - typed remote commit result enough to reconstruct retained local `CommitBubbleResult`
+   - typed remote commit result bundle, ami eleg a retained local `CommitBubbleResult` reconstructiojahoz es a local continuity sync-backhoz
 3. Must include:
    - commit SHA
    - commit message
    - staged files
-   - remote mutable control artifacts needed for sync-back or their direct sync-back execution
+   - remote post-commit `state.json` snapshot
+   - remote transcript delta vagy explicit appended envelope payload, ami alapjan a local continuity ugyanarra a canonical transcript truthra all
+   - remote `artifacts/done-package.md` payload
 4. Must not include:
+   - local filesystem write ownership vagy local sync-back side effect,
    - generic merge/delete command routing,
    - human stdout parse mint egyeduli caller contract.
 
@@ -312,11 +323,17 @@ Lezarni a remote started bubble `commit` routingot ugy, hogy:
    - `state.json`
    - `transcript.ndjson`
    - `artifacts/done-package.md`
-2. Success rule:
+2. Local sync-back owner:
+   - a local application commit orchestration irja a retained local continuity copykat a typed remote payload validalasa utan.
+3. Success rule:
    - retained local `CommitBubbleResult` csak akkor adhato vissza, ha ezek local continuity szinten mar rendelkezesre allnak.
-3. Failure rule:
+4. Failure rule:
    - sync-back hiba eseten explicit fail-closed error,
+   - nincs local `DONE` success mapping,
+   - nincs local lifecycle success emit,
    - nincs local partial success.
+5. Canonicality rule:
+   - remote started bubble eseten a local oldal nem szintetizalhat uj commit envelope/state/done-package truthot a remote canonical commit utan; a local oldal copy+map szerepben marad.
 
 ### 4) Error Taxonomy Contract
 
@@ -340,24 +357,30 @@ Lezarni a remote started bubble `commit` routingot ugy, hogy:
 | T4 | remote typed payload invalid | started remote pointer | explicit fail-closed hiba; nincs local success mapping | P1 | required-now |
 | T5 | remote sync-back fail-closed | remote commit success, local sync-back fails | nincs returned commit success, nincs partial continuity write successkent kezelve | P1 | required-now |
 | T6 | CLI/UI consume parity | CLI commit + UI action path | typed remote commit error/result parity megmarad | P1 | required-now |
+| T7 | remote success returns retained local continuity | started remote pointer + typed remote success + local sync-back success | `donePackagePath` local artifact pathra mutat; a local `state.json` / `transcript.ndjson` / `artifacts/done-package.md` a remote canonical commit eredmenyet tukrozi, nem egy uj local re-finalizationt | P1 | required-now |
 
 ## L2 - Implementation Notes
 
 1. A tasknak explicitten a sync-back utat kell valasztania; a korabbi "vagy sync-back, vagy uj additive result contract" ketutassag itt mar nem megengedett.
 2. A helper lehet kesobb altalanosabb seam alapja, de ebben a taskban commit-familyre bounded maradjon.
 3. A sync-back nem nyithat generic mirror policyt; csak a retained local commit continuity minimumet zarja.
+4. Remote started bubble eseten a jelenlegi local-only pipeline (`prepareCommitRuntimeContext(...) -> runCommitGitStep(...) -> appendDonePackageEnvelope(...) -> persistCommittedThenDoneState(...) -> emitCommitLifecycleEvent(...)`) nem maradhat valtozatlanul authority truth; a route szetvalasztasa/refaktorja ebben a taskban in-scope, ha commit-family boundaryn belul marad.
+5. A remote route nem pre-create-olhat vagy re-finalize-olhat local continuity artifactot remote success + sync-back proof elott.
+6. A `CommitBubbleResult.donePackagePath` explicit local artifact path marad; remote abszolut file path nem lephet ki ezen a contract boundaryn.
 
 ## Review Focus (Reviewer Focus)
 
 1. A remote commit authority jo helyre kerult-e.
-2. A retained local commit result continuity valos-e sync-back nelkul nem.
-3. A task nem nyitotta-e meg a merge/delete/recovery scope-ot.
+2. A retained local commit result continuity valos-e, es nem local re-synthesisbol jon-e.
+3. A remote route tiltja-e a pre-sync local finalizationt.
+4. A task nem nyitotta-e meg a merge/delete/recovery scope-ot.
 
 ## Reviewer Guardrails
 
 1. Required-now blocker csak akkor, ha az implementation:
    - remote started bubble eseten local git fallbackot hagy bent,
    - a retained local `CommitBubbleResult` continuity sync-back proof nelkul successkent kezeli,
+   - vagy a remote canonical commit utan localban uj commit/state/done-package truthot general ahelyett, hogy a remote canonical artifactokat sync-backelne,
    - vagy merge/delete scope-ot nyit.
 2. Nem blocker onmagaban:
    - a helper pontos filename-je, ha commit-family boundaryn belul marad,
