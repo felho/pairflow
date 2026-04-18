@@ -47,6 +47,24 @@ function resolveRecipientRoleFromRecipient(
   return recipient;
 }
 
+export function resolveEnvelopeRecipientRole(
+  envelope: ProtocolEnvelope,
+  bubbleConfig: BubbleConfig
+): DeliveryMessageRecipientRole {
+  const fallbackRecipientRole = resolveRecipientRoleFromRecipient(
+    envelope.recipient,
+    bubbleConfig
+  );
+  const parsed = parseDeliveryTargetRoleMetadata(envelope.payload.metadata);
+  if (parsed.status === "absent" || parsed.status === "invalid") {
+    return fallbackRecipientRole;
+  }
+  if (parsed.role === "meta_reviewer") {
+    return "meta-reviewer";
+  }
+  return parsed.role;
+}
+
 function resolvePaneIndexByDeliveryTargetRole(role: DeliveryTargetRole): number | undefined {
   if (role === "implementer") {
     return normalizePaneIndex(runtimePaneIndices.implementer);

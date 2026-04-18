@@ -2,14 +2,18 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
   buildTranscriptFallbackRef,
+  emitDeliveryNotificationAck,
   emitTmuxDeliveryNotification,
   resolveDeliveryMessageRef,
   retryStuckAgentInput
 } from "../../../src/v11/infrastructure/channel/tmux/tmuxDelivery.js";
 import {
   attemptTmuxDelivery,
+  createAcceptedDeliveryAck,
   createAcceptedTmuxDeliveryAck,
+  createRejectedDeliveryAck,
   createRejectedTmuxDeliveryAck,
+  projectDeliveryAckToLegacyResult,
   projectTmuxDeliveryAckToLegacyResult
 } from "../../../src/v11/infrastructure/channel/tmux/tmuxDeliveryRuntime.js";
 import {
@@ -162,6 +166,34 @@ function expectReviewerValidationClaimGuardrails(text: string | undefined): void
 }
 
 describe("tmux delivery canonical ack helpers", () => {
+  it("keeps neutral canonical helper exports aligned with retained tmux aliases", () => {
+    const acceptedInput = {
+      sessionName: "pf-b_delivery_01",
+      targetPaneIndex: 2,
+      message: "handoff delivered",
+      deliveryTargetReasonCode: "DELIVERY_TARGET_ROLE_INVALID" as const
+    };
+    const rejectedInput = {
+      reason: "unsupported_recipient" as const,
+      message: "handoff blocked",
+      sessionName: "pf-b_delivery_01",
+      targetPaneIndex: 2,
+      deliveryTargetReasonCode: "DELIVERY_TARGET_ROLE_UNMAPPED" as const
+    };
+
+    expect(createAcceptedDeliveryAck(acceptedInput)).toEqual(
+      createAcceptedTmuxDeliveryAck(acceptedInput)
+    );
+    expect(createRejectedDeliveryAck(rejectedInput)).toEqual(
+      createRejectedTmuxDeliveryAck(rejectedInput)
+    );
+    expect(
+      projectDeliveryAckToLegacyResult(createRejectedDeliveryAck(rejectedInput))
+    ).toEqual(
+      projectTmuxDeliveryAckToLegacyResult(createRejectedTmuxDeliveryAck(rejectedInput))
+    );
+  });
+
   it("projects every canonical delivery ack union member to matching legacy compatibility", () => {
     const canonicalCases = [
       {
@@ -318,6 +350,236 @@ describe("tmux delivery canonical ack helpers", () => {
         canonicalCase.title
       ).toEqual(canonicalCase.expectedLegacy);
     }
+  });
+});
+
+describe("emitDeliveryNotificationAck", () => {
+  it("returns accepted canonical ack and wrapper parity from the same runtime truth", async () => {
+    const createRunner = (): TmuxRunner => (args) => {
+      if (args[0] === "capture-pane") {
+        return Promise.resolve({
+          stdout:
+            "# [pairflow] r1 PASS codex->claude msg=msg_20260222_101 ref=artifact://handoff.md.",
+          stderr: "",
+          exitCode: 0
+        });
+      }
+
+      return Promise.resolve({
+        stdout: "",
+        stderr: "",
+        exitCode: 0
+      });
+    };
+    const sharedInput = {
+      bubbleId: "b_delivery_01",
+      bubbleConfig: baseConfig,
+      sessionsPath: "/tmp/repo/.pairflow/runtime/sessions.json",
+      envelope: createEnvelope(),
+      readSessionsRegistry: () => Promise.resolve(createRegistry())
+    };
+
+    const canonicalAck = await emitDeliveryNotificationAck({
+      ...sharedInput,
+      runner: createRunner()
+    });
+    const retainedResult = await emitTmuxDeliveryNotification({
+      ...sharedInput,
+      runner: createRunner()
+    });
+
+    expect(canonicalAck).toEqual(
+      createAcceptedDeliveryAck({
+        sessionName: "pf-b_delivery_01",
+        targetPaneIndex: 2,
+        message: retainedResult.message,
+        deliveryTargetReasonCode: "DELIVERY_TARGET_ROLE_ABSENT"
+      })
+    );
+    expect(retainedResult).toEqual(projectDeliveryAckToLegacyResult(canonicalAck));
+  });
+
+  it("fails closed with no_runtime_session before any tmux side effect", async () => {
+    const calls: string[][] = [];
+    const runner: TmuxRunner = (args): Promise<TmuxRunResult> => {
+      calls.push(args);
+      return Promise.resolve({
+        stdout: "",
+        stderr: "",
+        exitCode: 0
+      });
+    };
+
+    const result = await emitDeliveryNotificationAck({
+      bubbleId: "b_delivery_01",
+      bubbleConfig: baseConfig,
+      sessionsPath: "/tmp/repo/.pairflow/runtime/sessions.json",
+      envelope: createEnvelope(),
+      runner,
+      readSessionsRegistry: () => Promise.resolve({})
+    });
+
+    expect(result).toMatchObject({
+      status: "rejected",
+      reason: "no_runtime_session",
+      reason_code: "DELIVERY_ACK_RUNTIME_SESSION_UNAVAILABLE"
+    });
+    expect(calls).toHaveLength(0);
+  });
+
+  it("returns unsupported_recipient canonical ack when no pane can be resolved", async () => {
+    const mutablePaneIndices = runtimePaneIndices as {
+      metaReviewer: number | undefined;
+    };
+    const originalMetaReviewerPaneIndex = mutablePaneIndices.metaReviewer;
+    mutablePaneIndices.metaReviewer = undefined;
+    try {
+      const calls: string[][] = [];
+      const runner: TmuxRunner = (args): Promise<TmuxRunResult> => {
+        calls.push(args);
+        return Promise.resolve({
+          stdout: "",
+          stderr: "",
+          exitCode: 0
+        });
+      };
+      const result = await emitDeliveryNotificationAck({
+        bubbleId: "b_delivery_01",
+        bubbleConfig: createSharedAgentConfig("claude"),
+        sessionsPath: "/tmp/repo/.pairflow/runtime/sessions.json",
+        envelope: createEnvelope({
+          id: "msg_20260222_401",
+          sender: "orchestrator",
+          recipient: "codex",
+          type: "TASK",
+          payload: {
+            summary: "Unmapped explicit + unsupported legacy route.",
+            metadata: {
+              [deliveryTargetRoleMetadataKey]: "meta_reviewer"
+            }
+          },
+          refs: ["artifact://meta-review-task.md"]
+        }),
+        runner,
+        readSessionsRegistry: () => Promise.resolve(createRegistry())
+      });
+
+      expect(result).toMatchObject({
+        status: "rejected",
+        reason: "unsupported_recipient",
+        reason_code: "DELIVERY_ACK_TARGET_UNSUPPORTED",
+        sessionName: "pf-b_delivery_01",
+        deliveryTargetReasonCode: "DELIVERY_TARGET_ROLE_UNMAPPED"
+      });
+      expect(calls).toHaveLength(0);
+    } finally {
+      mutablePaneIndices.metaReviewer = originalMetaReviewerPaneIndex;
+    }
+  });
+
+  it("returns registry_read_failed canonical ack before any tmux side effect", async () => {
+    const calls: string[][] = [];
+    const runner: TmuxRunner = (args): Promise<TmuxRunResult> => {
+      calls.push(args);
+      return Promise.resolve({
+        stdout: "",
+        stderr: "",
+        exitCode: 0
+      });
+    };
+
+    const result = await emitDeliveryNotificationAck({
+      bubbleId: "b_delivery_01",
+      bubbleConfig: baseConfig,
+      sessionsPath: "/tmp/repo/.pairflow/runtime/sessions.json",
+      envelope: createEnvelope(),
+      runner,
+      readSessionsRegistry: async () => Promise.reject(new Error("invalid json"))
+    });
+
+    expect(result).toMatchObject({
+      status: "rejected",
+      reason: "registry_read_failed",
+      reason_code: "DELIVERY_ACK_RUNTIME_SESSION_UNAVAILABLE",
+      deliveryTargetReasonCode: "DELIVERY_TARGET_REGISTRY_READ_FAILED"
+    });
+    expect(calls).toHaveLength(0);
+  });
+
+  it("keeps registry_read_failed message on explicit meta-review role even when the pane is unmapped", async () => {
+    const mutablePaneIndices = runtimePaneIndices as {
+      metaReviewer: number | undefined;
+    };
+    const originalMetaReviewerPaneIndex = mutablePaneIndices.metaReviewer;
+    mutablePaneIndices.metaReviewer = undefined;
+    try {
+      const calls: string[][] = [];
+      const runner: TmuxRunner = (args): Promise<TmuxRunResult> => {
+        calls.push(args);
+        return Promise.resolve({
+          stdout: "",
+          stderr: "",
+          exitCode: 0
+        });
+      };
+
+      const result = await emitDeliveryNotificationAck({
+        bubbleId: "b_delivery_01",
+        bubbleConfig: createSharedAgentConfig("codex"),
+        sessionsPath: "/tmp/repo/.pairflow/runtime/sessions.json",
+        envelope: createEnvelope({
+          id: "msg_20260222_402",
+          sender: "orchestrator",
+          recipient: "codex",
+          type: "TASK",
+          payload: {
+            summary: "Meta-review task should keep explicit recipient-role guidance.",
+            metadata: {
+              [deliveryTargetRoleMetadataKey]: "meta_reviewer"
+            }
+          },
+          refs: ["artifact://meta-review-task.md"]
+        }),
+        runner,
+        readSessionsRegistry: async () => Promise.reject(new Error("invalid json"))
+      });
+
+      expect(result).toMatchObject({
+        status: "rejected",
+        reason: "registry_read_failed",
+        reason_code: "DELIVERY_ACK_RUNTIME_SESSION_UNAVAILABLE",
+        deliveryTargetReasonCode: "DELIVERY_TARGET_REGISTRY_READ_FAILED"
+      });
+      expect(result.message).toContain("Meta-review task received.");
+      expect(calls).toHaveLength(0);
+    } finally {
+      mutablePaneIndices.metaReviewer = originalMetaReviewerPaneIndex;
+    }
+  });
+
+  it("returns tmux_send_failed canonical ack when the tmux delivery command throws", async () => {
+    const runner: TmuxRunner = () => Promise.reject(new Error("tmux unavailable"));
+
+    const result = await emitDeliveryNotificationAck({
+      bubbleId: "b_delivery_01",
+      bubbleConfig: baseConfig,
+      sessionsPath: "/tmp/repo/.pairflow/runtime/sessions.json",
+      envelope: createEnvelope(),
+      runner,
+      readSessionsRegistry: () => Promise.resolve(createRegistry()),
+      deliveryAttempts: 2
+    });
+
+    expect(result).toMatchObject({
+      status: "rejected",
+      sessionName: "pf-b_delivery_01",
+      targetPaneIndex: 2,
+      reason: "tmux_send_failed",
+      reason_code: "DELIVERY_ACK_REJECTED"
+    });
+    expect(result.message).toContain(
+      "# [pairflow] r1 PASS codex->claude msg=msg_20260222_101 ref=artifact://handoff.md."
+    );
   });
 });
 

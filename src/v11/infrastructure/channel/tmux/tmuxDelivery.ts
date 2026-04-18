@@ -6,21 +6,27 @@ import {
 } from "./tmuxInput.js";
 import {
   attemptTmuxDelivery,
-  createRejectedTmuxDeliveryAck,
-  projectTmuxDeliveryAckToLegacyResult,
+  createRejectedDeliveryAck,
+  projectDeliveryAckToLegacyResult,
   readDeliverySessionContext
 } from "./tmuxDeliveryRuntime.js";
 import {
   buildTmuxDeliveryMessage,
 } from "./tmuxDeliveryMessageBuilder.js";
-import { resolveDeliveryMessageRef } from "./tmuxDeliveryRefs.js";
 import {
+  buildTranscriptFallbackRef,
+  resolveDeliveryMessageRef
+} from "./tmuxDeliveryRefs.js";
+import {
+  resolveEnvelopeRecipientRole,
   resolveEnvelopeTargetPane,
   resolveTargetPaneIndex
 } from "./tmuxDeliveryTargeting.js";
 import type { BubbleConfig } from "../../../../types/bubble.js";
 import type { AgentName } from "../../../../types/bubble.js";
 import type {
+  DeliveryAck,
+  EmitDeliveryNotificationInput,
   EmitTmuxDeliveryNotificationInput,
   EmitTmuxDeliveryNotificationResult
 } from "../../../shared/delivery/tmuxDeliveryContract.js";
@@ -33,10 +39,20 @@ interface EmitTmuxDeliveryNotificationRuntimeDependencies {
 export type EmitTmuxDeliveryNotificationRuntimeInput =
   EmitTmuxDeliveryNotificationInput & EmitTmuxDeliveryNotificationRuntimeDependencies;
 
+export type EmitDeliveryNotificationRuntimeInput =
+  EmitDeliveryNotificationInput & EmitTmuxDeliveryNotificationRuntimeDependencies;
+
 export type {
+  AcceptedDeliveryAck,
+  DeliveryAck,
+  DeliveryAckReasonCode,
+  DeliveryAckStatus,
+  DeliveryFailureReason,
   DeliveryTargetReasonCode,
+  EmitDeliveryNotificationInput,
   EmitTmuxDeliveryNotificationInput,
   EmitTmuxDeliveryNotificationResult,
+  RejectedDeliveryAck,
   ResolveDeliveryMessageRefInput,
   TmuxDeliveryAck,
   TmuxDeliveryAckReasonCode,
@@ -45,26 +61,22 @@ export type {
 } from "../../../shared/delivery/tmuxDeliveryContract.js";
 export { buildTranscriptFallbackRef, resolveDeliveryMessageRef } from "./tmuxDeliveryRefs.js";
 
-export async function emitTmuxDeliveryNotification(
-  input: EmitTmuxDeliveryNotificationRuntimeInput
-): Promise<EmitTmuxDeliveryNotificationResult> {
-  const messageRef =
-    input.messageRef ??
-    resolveDeliveryMessageRef({
-      bubbleId: input.bubbleId,
-      sessionsPath: input.sessionsPath,
-      envelope: input.envelope
-    });
-  const targetResolution = resolveEnvelopeTargetPane(
-    input.envelope,
-    input.bubbleConfig
-  );
-  const buildMessage = (workspacePath: string | undefined): string =>
+export async function emitDeliveryNotificationAck(
+  input: EmitDeliveryNotificationRuntimeInput
+): Promise<DeliveryAck> {
+  const readSessions = input.readSessionsRegistry ?? readRuntimeSessionsRegistry;
+  const buildRegistryReadFailedMessage = (): string =>
     buildTmuxDeliveryMessage({
       envelope: input.envelope,
-      messageRef,
+      messageRef:
+        input.messageRef ??
+        input.envelope.refs[0] ??
+        buildTranscriptFallbackRef(
+          input.bubbleId,
+          input.sessionsPath,
+          input.envelope.id
+        ),
       bubbleConfig: input.bubbleConfig,
-      ...(workspacePath !== undefined ? { workspacePath } : {}),
       ...(input.reviewerTestDirective !== undefined
         ? { reviewerTestDirective: input.reviewerTestDirective }
         : {}),
@@ -74,9 +86,48 @@ export async function emitTmuxDeliveryNotification(
       ...(input.reviewerFocus !== undefined
         ? { reviewerFocus: input.reviewerFocus }
         : {}),
-      recipientRole: targetResolution.recipientRole
+      recipientRole: resolveEnvelopeRecipientRole(
+        input.envelope,
+        input.bubbleConfig
+      )
     });
-  const readSessions = input.readSessionsRegistry ?? readRuntimeSessionsRegistry;
+  const createDeliveryMessage = (
+    workspacePath: string | undefined
+  ): {
+    message: string;
+    targetResolution: ReturnType<typeof resolveEnvelopeTargetPane>;
+  } => {
+    const messageRef =
+      input.messageRef ??
+      resolveDeliveryMessageRef({
+        bubbleId: input.bubbleId,
+        sessionsPath: input.sessionsPath,
+        envelope: input.envelope
+      });
+    const targetResolution = resolveEnvelopeTargetPane(
+      input.envelope,
+      input.bubbleConfig
+    );
+    return {
+      message: buildTmuxDeliveryMessage({
+        envelope: input.envelope,
+        messageRef,
+        bubbleConfig: input.bubbleConfig,
+        ...(workspacePath !== undefined ? { workspacePath } : {}),
+        ...(input.reviewerTestDirective !== undefined
+          ? { reviewerTestDirective: input.reviewerTestDirective }
+          : {}),
+        ...(input.reviewerBrief !== undefined
+          ? { reviewerBrief: input.reviewerBrief }
+          : {}),
+        ...(input.reviewerFocus !== undefined
+          ? { reviewerFocus: input.reviewerFocus }
+          : {}),
+        recipientRole: targetResolution.recipientRole
+      }),
+      targetResolution
+    };
+  };
 
   let sessionName: string | undefined;
   let workspacePath: string | undefined;
@@ -89,46 +140,45 @@ export async function emitTmuxDeliveryNotification(
     sessionName = sessionContext.sessionName;
     workspacePath = sessionContext.workspacePath;
   } catch {
-    const message = buildMessage(undefined);
-    return projectTmuxDeliveryAckToLegacyResult(createRejectedTmuxDeliveryAck({
+    return createRejectedDeliveryAck({
       reason: "registry_read_failed",
-      message,
+      message: buildRegistryReadFailedMessage(),
       deliveryTargetReasonCode: "DELIVERY_TARGET_REGISTRY_READ_FAILED"
-    }));
+    });
   }
 
+  const { message: workspaceMessage, targetResolution } =
+    createDeliveryMessage(workspacePath);
+
   if (sessionName === undefined || workspacePath === undefined) {
-    const message = buildMessage(undefined);
-    return projectTmuxDeliveryAckToLegacyResult(createRejectedTmuxDeliveryAck({
+    return createRejectedDeliveryAck({
       reason: "no_runtime_session",
-      message,
+      message: workspaceMessage,
       ...(targetResolution.deliveryTargetReasonCode !== undefined
         ? { deliveryTargetReasonCode: targetResolution.deliveryTargetReasonCode }
         : {})
-    }));
+    });
   }
 
   const targetPaneIndex = targetResolution.targetPaneIndex;
   if (targetPaneIndex === undefined) {
-    const message = buildMessage(workspacePath);
-    return projectTmuxDeliveryAckToLegacyResult(createRejectedTmuxDeliveryAck({
+    return createRejectedDeliveryAck({
       reason: "unsupported_recipient",
-      message,
+      message: workspaceMessage,
       sessionName,
       ...(targetResolution.deliveryTargetReasonCode !== undefined
         ? { deliveryTargetReasonCode: targetResolution.deliveryTargetReasonCode }
         : {})
-    }));
+    });
   }
 
   const targetPane = `${sessionName}:0.${targetPaneIndex}`;
-  const message = buildMessage(workspacePath);
   const runner = input.runner ?? runTmux;
   const deliveryAck = await attemptTmuxDelivery({
     runner,
     targetPane,
     envelopeId: input.envelope.id,
-    message,
+    message: workspaceMessage,
     sessionName,
     targetPaneIndex,
     ...(input.initialDelayMs !== undefined ? { initialDelayMs: input.initialDelayMs } : {}),
@@ -137,7 +187,14 @@ export async function emitTmuxDeliveryNotification(
       ? { deliveryTargetReasonCode: targetResolution.deliveryTargetReasonCode }
       : {})
   });
-  return projectTmuxDeliveryAckToLegacyResult(deliveryAck);
+  return deliveryAck;
+}
+
+export async function emitTmuxDeliveryNotification(
+  input: EmitTmuxDeliveryNotificationRuntimeInput
+): Promise<EmitTmuxDeliveryNotificationResult> {
+  const deliveryAck = await emitDeliveryNotificationAck(input);
+  return projectDeliveryAckToLegacyResult(deliveryAck);
 }
 
 // ---------------------------------------------------------------------------
