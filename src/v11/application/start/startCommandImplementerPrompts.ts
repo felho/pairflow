@@ -14,7 +14,7 @@ function buildCanonicalActorEmitLookupGuidance(input: {
   bubbleId: string;
   repoPath: string;
 }): string {
-  return `Before direct canonical emit, fetch fresh actor authority via \`pairflow bubble status --id ${input.bubbleId} --repo ${input.repoPath} --json\` and copy \`executionContext.handoffId\` (plus optional guards) from the JSON output. If you do not have an explicit authority snapshot yet, refresh status and wait for a current handoff instead of guessing or using removed aliases.`;
+  return `Before direct canonical emit, fetch fresh actor authority via \`pairflow bubble status --id ${input.bubbleId} --repo ${input.repoPath} --json\` and copy both \`executionContext.handoffId\` and \`executionContext.executionId\` (plus optional guards) from the JSON output. If you do not have an explicit authority snapshot yet, refresh status and wait for a current handoff instead of guessing or using removed aliases.`;
 }
 
 export function buildImplementerStartupPrompt(input: {
@@ -65,8 +65,8 @@ export function buildImplementerStartupPrompt(input: {
       bubbleId: input.bubbleId,
       repoPath: input.repoPath
     }),
-    "When done, run `pairflow agent emit --kind pass --repo <repo> --bubble-id <id> --handoff-id <handoff-id> --summary \"<what changed + validation>\"` with available evidence `--ref` attachments.",
-    "Use `pairflow agent emit --kind human_question --repo <repo> --bubble-id <id> --handoff-id <handoff-id> --question \"...\"` only for blockers."
+    "When done, run `pairflow agent emit --kind pass --repo <repo> --bubble-id <id> --handoff-id <handoff-id> --execution-id <execution-id> --summary \"<what changed + validation>\"` with available evidence `--ref` attachments.",
+    "Use `pairflow agent emit --kind human_question --repo <repo> --bubble-id <id> --handoff-id <handoff-id> --execution-id <execution-id> --question \"...\"` only for blockers."
   ].join(" ");
 }
 
@@ -90,7 +90,7 @@ export function buildImplementerKickoffMessage(input: {
       bubbleId: input.bubbleId,
       repoPath: "<repo>"
     }),
-    "When done with validation, hand off with `pairflow agent emit --kind pass --repo <repo> --bubble-id <id> --handoff-id <handoff-id> --summary \"<what changed + validation>\"` and include available evidence `--ref` log paths."
+    "When done with validation, hand off with `pairflow agent emit --kind pass --repo <repo> --bubble-id <id> --handoff-id <handoff-id> --execution-id <execution-id> --summary \"<what changed + validation>\"` and include available evidence `--ref` log paths."
   ].join(" ");
 }
 

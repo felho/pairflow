@@ -472,6 +472,10 @@ describe("startBubble", () => {
     expect(implementerCommand).toContain(
       `Execute pairflow commands from this launch workspace path only (Phase 1C1 no-split worktree root): ${created.paths.worktreePath}.`
     );
+    expect(implementerCommand).toContain("`executionContext.executionId`");
+    expect(implementerCommand).toContain(
+      "--handoff-id <handoff-id> --execution-id <execution-id> --summary"
+    );
     expect(reviewerCommand).toContain("claude");
     expect(reviewerCommand).toContain("--dangerously-skip-permissions");
     expect(reviewerCommand).toContain("--permission-mode");
@@ -569,9 +573,10 @@ describe("startBubble", () => {
     expect(reviewerCommand).toContain("`Deduplicated Findings: []`");
     expect(reviewerCommand).toContain("`Issue-Class Expansions: []`");
     expectReviewerValidationClaimGuardrails(reviewerCommand);
-    expect(reviewerCommand).toMatch(
-      /--finding [^`]*'P1:\.\.\.\|artifact:\/\/\.\.\.'/
+    expect(reviewerCommand).toContain(
+      "--handoff-id <handoff-id> --execution-id <execution-id> --summary"
     );
+    expect(reviewerCommand).toContain("P1:...|artifact://...");
     expect(reviewerCommand).toContain(REVIEWER_COMMAND_GATE_REQ_A);
     expect(reviewerCommand).toContain(REVIEWER_COMMAND_GATE_REQ_B);
     expect(reviewerCommand).toContain(REVIEWER_COMMAND_GATE_REQ_C);

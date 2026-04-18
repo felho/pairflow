@@ -10,7 +10,7 @@ export function getOrchestraHelpText(): string {
     "",
     "Phase 5 removal:",
     "  `orchestra` actor aliases were removed.",
-    "  Use `pairflow agent emit --kind <pass|human_question|convergence> ...`."
+    "  Use `pairflow agent emit --kind <pass|human_question|convergence> --repo <repo> --bubble-id <id> --handoff-id <handoff-id> --execution-id <execution-id> ...`."
   ].join("\n");
 }
 
@@ -31,7 +31,7 @@ export function runOrchestraCli(argv: string[]): Promise<number> {
     buildLegacyActorCommandRemovedError({
       command: "orchestra",
       canonicalCommand:
-        "pairflow agent emit --kind <pass|human_question|convergence> --repo <repo> --bubble-id <id> --handoff-id <handoff-id> ..."
+        "pairflow agent emit --kind <pass|human_question|convergence> --repo <repo> --bubble-id <id> --handoff-id <handoff-id> --execution-id <execution-id> ..."
     })
   );
 }

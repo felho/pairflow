@@ -21,6 +21,7 @@ describe("runOrchestraCli", () => {
 
     expect(exitCode).toBe(0);
     expect(stdoutSpy).toHaveBeenCalledWith(`${getOrchestraHelpText()}\n`);
+    expect(getOrchestraHelpText()).toContain("--execution-id <execution-id>");
   });
 
   it("fails closed for removed pass alias", async () => {

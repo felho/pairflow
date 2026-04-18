@@ -190,6 +190,7 @@ describe("parsePassCommandOptions", () => {
   it("documents doc-scope blocker qualifier limits in help text", () => {
     const help = getPassHelpText();
     expect(help).toContain("pairflow agent emit --kind pass");
+    expect(help).toContain("--execution-id <id>");
     expect(help).toContain(
       "Single ref accepts any non-empty token; multi-ref requires structured path/URI refs."
     );

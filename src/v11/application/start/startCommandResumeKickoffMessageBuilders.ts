@@ -15,7 +15,7 @@ export function formatResumeStateValue(value: string | number | null): string {
 }
 
 function buildResumeCanonicalActorEmitLookupGuidance(bubbleId: string): string {
-  return `Before direct canonical emit, refresh actor authority from this launch workspace with \`pairflow bubble status --id ${bubbleId} --json\` and copy the current \`executionContext.handoffId\`. Repeat this before each emit because authority can change after every successful handoff, convergence, meta-review transition, or human reply.`;
+  return `Before direct canonical emit, refresh actor authority from this launch workspace with \`pairflow bubble status --id ${bubbleId} --json\` and copy the current \`executionContext.handoffId\` and \`executionContext.executionId\`. Repeat this before each emit because authority can change after every successful handoff, convergence, meta-review transition, or human reply.`;
 }
 
 export function inferResumeReviewerProjectionVariant(input: {
@@ -71,7 +71,7 @@ export function buildResumeImplementerKickoffMessage(input: {
     ),
     buildResumeCanonicalActorEmitLookupGuidance(input.bubbleId),
     buildImplementerEvidenceHandoffGuidance(input.reviewArtifactType),
-    "Continue active implementation and hand off with `pairflow agent emit --kind pass --repo <repo> --bubble-id <id> --handoff-id <handoff-id> --summary \"<what changed + validation>\"` plus available evidence `--ref` logs when ready."
+    "Continue active implementation and hand off with `pairflow agent emit --kind pass --repo <repo> --bubble-id <id> --handoff-id <handoff-id> --execution-id <execution-id> --summary \"<what changed + validation>\"` plus available evidence `--ref` logs when ready."
   ].join(" ");
 }
 

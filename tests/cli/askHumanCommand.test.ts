@@ -40,6 +40,7 @@ describe("parseAskHumanCommandOptions", () => {
     const parsed = parseAskHumanCommandOptions(["--help"]);
     expect(parsed.help).toBe(true);
     expect(getAskHumanHelpText()).toContain("pairflow agent emit --kind human_question");
+    expect(getAskHumanHelpText()).toContain("--execution-id <id>");
     expect(getAskHumanHelpText()).toContain("pairflow ask-human");
   });
 

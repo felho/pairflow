@@ -64,7 +64,7 @@ const passParseOptions = {
 export function getPassHelpText(): string {
   return [
     "Usage:",
-    '  pairflow agent emit --kind pass --repo <path> --bubble-id <id> --handoff-id <id> --summary "<text>" [--ref <artifact-path>]... [--intent <task|review|fix_request>] [--finding <P0|P1|P2|P3:Title[|ref1,ref2]>]... [--no-findings]',
+    '  pairflow agent emit --kind pass --repo <path> --bubble-id <id> --handoff-id <id> --execution-id <id> --summary "<text>" [--ref <artifact-path>]... [--intent <task|review|fix_request>] [--finding <P0|P1|P2|P3:Title[|ref1,ref2]>]... [--no-findings]',
     "  Removed legacy alias:",
     "  pairflow pass",
     "",
@@ -170,7 +170,7 @@ export function runPassCommand(
     throw buildLegacyActorCommandRemovedError({
       command: "pass",
       canonicalCommand:
-        "pairflow agent emit --kind pass --repo <repo> --bubble-id <id> --handoff-id <handoff-id> --summary <text>"
+        "pairflow agent emit --kind pass --repo <repo> --bubble-id <id> --handoff-id <handoff-id> --execution-id <execution-id> --summary <text>"
     });
   } catch (error) {
     asPassCommandError(error);

@@ -27,7 +27,7 @@ export type ParsedAskHumanCommandOptions =
 export function getAskHumanHelpText(): string {
   return [
     "Usage:",
-    '  pairflow agent emit --kind human_question --repo <path> --bubble-id <id> --handoff-id <id> --question "<text>" [--ref <artifact-path>]...',
+    '  pairflow agent emit --kind human_question --repo <path> --bubble-id <id> --handoff-id <id> --execution-id <id> --question "<text>" [--ref <artifact-path>]...',
     "  Removed legacy alias:",
     "  pairflow ask-human",
     "",
@@ -93,7 +93,7 @@ export function runAskHumanCommand(
     throw buildLegacyActorCommandRemovedError({
       command: "ask-human",
       canonicalCommand:
-        "pairflow agent emit --kind human_question --repo <repo> --bubble-id <id> --handoff-id <handoff-id> --question <text>"
+        "pairflow agent emit --kind human_question --repo <repo> --bubble-id <id> --handoff-id <handoff-id> --execution-id <execution-id> --question <text>"
     });
   } catch (error) {
     asAskHumanCommandError(error);

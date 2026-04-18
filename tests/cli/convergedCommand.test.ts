@@ -56,6 +56,7 @@ describe("parseConvergedCommandOptions", () => {
     const help = getConvergedHelpText();
     expect(parsed.help).toBe(true);
     expect(help).toContain("pairflow agent emit --kind convergence");
+    expect(help).toContain("--execution-id <id>");
     expect(help).toContain("Removed legacy alias:");
     expect(help).toContain("pairflow converged");
     expect(help).toContain("CONVERGED_BLOCKER_FINDINGS_FORBIDDEN");

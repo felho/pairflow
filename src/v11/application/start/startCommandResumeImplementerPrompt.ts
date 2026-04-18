@@ -95,7 +95,7 @@ export function buildResumeImplementerStartupPrompt(input: {
       : [
           `Provide a concrete task via \`pairflow bubble kickoff --id ${input.bubbleId} --task "<text>"\` or \`--task-file <path>\`.`,
           "Do not use the current placeholder artifact as kickoff input.",
-          "If no concrete task source is available, send a blocker with `pairflow agent emit --kind human_question --repo <repo> --bubble-id <id> --handoff-id <handoff-id> --question \"...\"`."
+          "If no concrete task source is available, send a blocker with `pairflow agent emit --kind human_question --repo <repo> --bubble-id <id> --handoff-id <handoff-id> --execution-id <execution-id> --question \"...\"`."
         ]),
     resolveImplementerRoleInstruction(input.state)
   ];

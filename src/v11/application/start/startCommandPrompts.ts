@@ -114,7 +114,7 @@ function buildCanonicalActorEmitLookupGuidance(input: {
   bubbleId: string;
   repoPath: string;
 }): string {
-  return `Before direct canonical emit, fetch fresh actor authority via \`pairflow bubble status --id ${input.bubbleId} --repo ${input.repoPath} --json\` and copy \`executionContext.handoffId\` (plus optional guards) from the JSON output. If no explicit authority snapshot is available yet, refresh status and wait for a current handoff instead of falling back to removed aliases.`;
+  return `Before direct canonical emit, fetch fresh actor authority via \`pairflow bubble status --id ${input.bubbleId} --repo ${input.repoPath} --json\` and copy both \`executionContext.handoffId\` and \`executionContext.executionId\` (plus optional guards) from the JSON output. If no explicit authority snapshot is available yet, refresh status and wait for a current handoff instead of falling back to removed aliases.`;
 }
 
 export function buildMetaReviewerStartupPrompt(input: {

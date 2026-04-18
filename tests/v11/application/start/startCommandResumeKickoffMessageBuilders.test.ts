@@ -74,6 +74,7 @@ describe("startCommandResumeKickoffMessageBuilders", () => {
     expect(message).toContain(
       "Before direct canonical emit, refresh actor authority from this launch workspace with `pairflow bubble status --id b_start_resume_projection_01 --json`"
     );
+    expect(message).toContain("`executionContext.executionId`");
     expect(message).toContain(
       "If blocker findings remain under current scope policy, keep using `pairflow agent emit --kind pass ... --finding ...`."
     );

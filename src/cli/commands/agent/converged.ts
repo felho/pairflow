@@ -123,7 +123,7 @@ function assertConvergedSummaryFindingsConsistency(input: {
 export function getConvergedHelpText(): string {
   return [
     "Usage:",
-    '  pairflow agent emit --kind convergence --repo <path> --bubble-id <id> --handoff-id <id> --summary "<text>" [--ref <artifact-path>]... [--finding <P2|P3:Title[|ref1,ref2]>]...',
+    '  pairflow agent emit --kind convergence --repo <path> --bubble-id <id> --handoff-id <id> --execution-id <id> --summary "<text>" [--ref <artifact-path>]... [--finding <P2|P3:Title[|ref1,ref2]>]...',
     "  Removed legacy alias:",
     "  pairflow converged",
     "",
@@ -205,7 +205,7 @@ export function runConvergedCommand(
     throw buildLegacyActorCommandRemovedError({
       command: "converged",
       canonicalCommand:
-        "pairflow agent emit --kind convergence --repo <repo> --bubble-id <id> --handoff-id <handoff-id> --summary <text>"
+        "pairflow agent emit --kind convergence --repo <repo> --bubble-id <id> --handoff-id <handoff-id> --execution-id <execution-id> --summary <text>"
     });
   } catch (error) {
     asConvergedCommandError(error);

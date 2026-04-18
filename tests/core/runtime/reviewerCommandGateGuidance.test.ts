@@ -126,7 +126,7 @@ describe("reviewerCommandGateGuidance", () => {
 
     expect(instruction).toContain("If blocker findings (`P0/P1`) remain");
     expect(instruction).toContain(
-      "`pairflow agent emit --kind pass --repo <repo> --bubble-id <id> --handoff-id <handoff-id> --summary ... --finding 'P1:...|artifact://...'`"
+      "`pairflow agent emit --kind pass --repo <repo> --bubble-id <id> --handoff-id <handoff-id> --execution-id <execution-id> --summary ... --finding 'P1:...|artifact://...'`"
     );
   });
 

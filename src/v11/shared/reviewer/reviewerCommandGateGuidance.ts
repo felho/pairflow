@@ -13,7 +13,7 @@ export const REVIEWER_COMMAND_GATE_REQ_D =
 export const REVIEWER_COMMAND_GATE_REQ_E =
   "If blocker findings remain under current scope policy, keep using `pairflow agent emit --kind pass ... --finding ...`.";
 export const REVIEWER_COMMAND_GATE_REQ_F =
-  "Routing matrix (copy-paste after resolving `executionContext` from `pairflow bubble status --json`): blocker -> `pairflow agent emit --kind pass --repo <repo> --bubble-id <id> --handoff-id <handoff-id> --summary \"...\" --finding \"P1:Title|artifact://ref\"`; advisory-only (`P2/P3`) -> `pairflow agent emit --kind convergence --repo <repo> --bubble-id <id> --handoff-id <handoff-id> --summary \"...\" --finding \"P2:Title|artifact://ref\"`; clean -> `pairflow agent emit --kind convergence --repo <repo> --bubble-id <id> --handoff-id <handoff-id> --summary \"...\"` (no `--finding`).";
+  "Routing matrix (copy-paste after resolving `executionContext` from `pairflow bubble status --json`): blocker -> `pairflow agent emit --kind pass --repo <repo> --bubble-id <id> --handoff-id <handoff-id> --execution-id <execution-id> --summary \"...\" --finding \"P1:Title|artifact://ref\"`; advisory-only (`P2/P3`) -> `pairflow agent emit --kind convergence --repo <repo> --bubble-id <id> --handoff-id <handoff-id> --execution-id <execution-id> --summary \"...\" --finding \"P2:Title|artifact://ref\"`; clean -> `pairflow agent emit --kind convergence --repo <repo> --bubble-id <id> --handoff-id <handoff-id> --execution-id <execution-id> --summary \"...\"` (no `--finding`).";
 
 export const REVIEWER_COMMAND_GATE_FORBIDDEN = [
   "If review round is 2 or higher and you have blocker findings: use `pairflow agent emit --kind convergence ...`.",
@@ -75,5 +75,5 @@ export function buildReviewerFindingsPassInstruction(
     return "Document scope: canonical `pairflow agent emit --kind pass ... --finding ...` for blockers is valid only when structured findings include strict qualifiers (`timing=required-now` + `layer=L1`). CLI `--finding` cannot encode these qualifiers, so unqualified `P0/P1` entries are advisory and should converge at/after `severity_gate_round` using `pairflow agent emit --kind convergence ... --finding ...` (`P2/P3` only), or plain canonical convergence when clean.";
   }
 
-  return "If blocker findings (`P0/P1`) remain, first resolve `executionContext` via `pairflow bubble status --json`, then run `pairflow agent emit --kind pass --repo <repo> --bubble-id <id> --handoff-id <handoff-id> --summary ... --finding 'P1:...|artifact://...'` (repeatable; for P0/P1 include finding-level refs).";
+  return "If blocker findings (`P0/P1`) remain, first resolve `executionContext` via `pairflow bubble status --json`, then run `pairflow agent emit --kind pass --repo <repo> --bubble-id <id> --handoff-id <handoff-id> --execution-id <execution-id> --summary ... --finding 'P1:...|artifact://...'` (repeatable; for P0/P1 include finding-level refs).";
 }
