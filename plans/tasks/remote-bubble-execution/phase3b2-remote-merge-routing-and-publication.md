@@ -52,6 +52,9 @@ owners:
 4. A task itt nem nyitja meg a teljes bubble delete/archive/recovery familyt:
    - `Phase 3B3`: remote delete cleanup and archive closure
    - `Phase 3C`: recovery/docs/rollout
+5. A bounded local reconcile ebben a taskban csak retained merge continuity/control-plane metadata update lehet:
+   - nem vallalhat archive/delete closure ownershipot,
+   - nem vegezhet a jelenlegi merge-success continuityn tuli archive/delete metadata closure-t.
 
 ## Current Codebase Check / Current-Tree Reality Check (2026-04-18)
 
@@ -218,9 +221,11 @@ Lezarni a remote started bubble `merge` routingot ugy, hogy:
    - UI merge action dispatch + retained `UiMergeBubbleResult` consume surface
    - contract runner / tests
 4. `cleanup_recovery_consumers` in scope
+   - merge-finalization continuity subset
    - merge finalization
    - cleanup/result mapping
    - publication failure taxonomy
+   - bounded local reconcile csak retained merge continuity/control-plane metadata szinten
 5. Explicit out-of-scope consumers
    - delete command
    - archive cleanup
@@ -250,6 +255,7 @@ Lezarni a remote started bubble `merge` routingot ugy, hogy:
 3. Explicit durable publication policy a remote started merge successhez.
 4. Bounded local merge-completion reconcile a retained `MergeBubbleResult` continuityhoz.
 5. Merge error/publication taxonomy parity CLI consume iranyba.
+6. A bounded local reconcile csak retained merge continuity/control-plane metadata szinten maradhat; archive/delete closure ownership nem csuszhat at ide.
 
 ### Out of Scope
 
@@ -257,6 +263,7 @@ Lezarni a remote started bubble `merge` routingot ugy, hogy:
 2. Bubble metadata archival/deletion
 3. Recovery/runbook/docs
 4. Generic multi-command SSH cleanup router
+5. Barmilyen local vagy remote archive/delete closure, amely mar a `Phase 3B3` archive/delete closure ownershiphoz tartozik
 
 ### Target File Precision
 
@@ -304,7 +311,11 @@ Lezarni a remote started bubble `merge` routingot ugy, hogy:
    - explicit fail-closed hiba,
    - nincs local repo merge fallback,
    - nincs local success mapping publication vagy reconcile proof nelkul.
-4. Coordination primitives:
+4. Allowed local writes after validation:
+   - retained `MergeBubbleResult` mapping,
+   - bounded `state.json` / local control-plane merge-completion continuity update,
+   - csak olyan cleanup/result projection, ami nem archive/delete ownership.
+5. Coordination primitives:
    - `N/A` ebben a taskban; explicit deferred.
 
 ### Safety Defaults
@@ -352,7 +363,7 @@ Lezarni a remote started bubble `merge` routingot ugy, hogy:
 | Read/mutation path rule | Started pointer -> remote merge helper -> durable publication -> bounded local reconcile -> retained `MergeBubbleResult`. | Nincs "merged somewhere but not durably published" success. | P1 | required-now |
 | Forbidden fallback | No local merge fallback, no implicit local checkout mutation, no publication-nelkul success. | Explicit guards es reasonCode-ok kellenek. | P1 | required-now |
 | Missing-data rule | Created/missing/invalid pointer, transport/payload/publication/reconcile hiba fail-closed. | Nincs local success mapping. | P1 | required-now |
-| Phase boundary | Ez merge/publication cleanup-routing closure. | Delete/archive/recovery successor ownership marad. | P2 | required-now |
+| Phase boundary | Ez merge/publication cleanup-routing closure. | Delete/archive/recovery successor ownership marad; bounded local reconcile csak retained merge continuity/control-plane metadata szintig mehet el. | P2 | required-now |
 
 ### 0a) Shared Contract Compatibility
 
@@ -427,6 +438,10 @@ Lezarni a remote started bubble `merge` routingot ugy, hogy:
    - remote started bubble merge success csak durable publication proof mellett allhat elo,
    - a remote merge helpernek a merge mutation authorityval ugyanabban az authority chainben kell a publicationt bizonyitania,
    - "merged on remote clone only" nem eleg success contract.
+6. Cleanup/result interpretation rule:
+   - ha a helper cleanup outcome-okat is ad vissza, azok csak a retained merge result jelen taskban megengedett continuity-szintjet fedhetik le,
+   - archive/delete closure ownership nem csuszhat at a merge helperbe,
+   - a caller oldali bounded local reconcile ugyanezt a hatart tartja; lasd `3) Local Merge-Completion Reconcile Contract / Scope non-expansion rule`.
 
 ### 3) Local Merge-Completion Reconcile Contract
 
@@ -444,6 +459,9 @@ Lezarni a remote started bubble `merge` routingot ugy, hogy:
    - nincs local "already merged" reinterpretacio remote partial success utan.
 5. Canonicality rule:
    - remote started bubble eseten a local oldal nem futtathat uj local merge/push route-ot a remote canonical merge utan; a local oldal map+reconcile szerepben marad.
+6. Scope non-expansion rule:
+   - a local reconcile nem vallalhat archive/delete closure ownershipot, nem torolhet archive metadata-t, nem zarhat le delete continuityt, es nem vezetheti be a `Phase 3B3` success semantics-et.
+   - ez a caller-oldali parja a `2) Remote Merge Helper and Publication Contract / Cleanup/result interpretation rule` szabalyanak.
 
 ### 4) Error and Publication Taxonomy Contract
 
@@ -471,7 +489,7 @@ Lezarni a remote started bubble `merge` routingot ugy, hogy:
 | T4 | remote publication required | started remote pointer + remote merge without durable publication proof | explicit fail-closed publication error; nincs success result | P1 | required-now |
 | T5 | remote typed payload/reconcile failure | started remote pointer + remote merge success + invalid payload vagy local reconcile fail | nincs returned merge success, nincs local fake-success continuity | P1 | required-now |
 | T6 | CLI/UI/result parity | CLI merge path + UI merge action path + contract runner | retained `MergeBubbleResult` / `UiMergeBubbleResult` shape megmarad; remote success semantics publication-policyval osszhangban jelenik meg | P1 | required-now |
-| T7 | remote success returns retained continuity | started remote pointer + typed remote merge/publication success | `MergeBubbleResult` fields a canonical remote merge/publication/cleanup eredmenyt tukrozik; local checkout valtozatlan marad | P1 | required-now |
+| T7 | remote success returns retained continuity | started remote pointer + typed remote merge/publication success | `MergeBubbleResult` fields a canonical remote merge/publication/cleanup eredmenyt tukrozik; local checkout valtozatlan marad, es a bounded local reconcile nem vezet be archive/delete closure semantics-et | P1 | required-now |
 | T8 | remote merge conflict | started remote pointer + remote canonical merge conflict | explicit merge-conflict reasonCode; nincs local fallback merge | P1 | required-now |
 
 ## L2 - Implementation Notes
@@ -489,6 +507,10 @@ Lezarni a remote started bubble `merge` routingot ugy, hogy:
    - vagy retained origin-delete semantics-szel,
    - vagy explicit non-applicable/no-op semantics-szel,
    - de nem maradhat hallgatolagos, mezon beluli jelentescsuszaskent.
+7. Ha a remote merge/publication success egy remote cleanup outcome-ot is hoz, azt a tasknak explicitten a retained merge contract reszekent kell leirnia:
+   - nem eleg implicit "majd a delete phase tisztazza" jellegu megjegyzes,
+   - de ettol meg archive/delete closure ownership nem lephet at ebbe a fazisba,
+   - es ennek osszhangban kell maradnia a `2) Remote Merge Helper and Publication Contract` es a `3) Local Merge-Completion Reconcile Contract` hatarral.
 
 ## Review Focus (Reviewer Focus)
 
@@ -503,7 +525,8 @@ Lezarni a remote started bubble `merge` routingot ugy, hogy:
    - remote started bubble eseten local repo merge/push fallbackot hagy bent,
    - publication proof nelkul successkent kezel remote merge-et,
    - a local checkoutot implicit mutate-olja,
-   - vagy delete/archive scope-ot nyit.
+   - vagy delete/archive scope-ot nyit,
+   - vagy a bounded local reconcile-be archive/delete closure ownershipot csusztat.
 2. Nem blocker onmagaban:
    - a helper pontos filename-je, ha merge-family boundaryn belul marad,
    - a publication proof pontos transport-formatja, ha a typed success/error boundary tiszta marad,
