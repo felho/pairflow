@@ -45,6 +45,7 @@ import {
 import { shellQuote } from "../../../src/v11/shared/foundation/shellQuote.js";
 import type { BubbleStateSnapshot } from "../../../src/types/bubble.js";
 import type { WorktreeBootstrapInput } from "../../../src/v11/shared/ports/worktreeWorkspace.js";
+import type { LaunchBubbleTmuxSessionInput } from "../../../src/v11/shared/ports/tmuxSessions.js";
 import type * as WorktreeManagerModule from "../../../src/v11/infrastructure/workspace/worktreeManager.js";
 import { initGitRepository } from "../../helpers/git.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
@@ -1125,7 +1126,7 @@ describe("startBubble", () => {
           executeRemoteBubbleStart: vi.fn(async () => {
             throw new Error("inner remote start must not re-enter remote SSH execution");
           }),
-          launchBubbleTmuxSession: vi.fn(async (input) => {
+          launchBubbleTmuxSession: vi.fn(async (input: LaunchBubbleTmuxSessionInput) => {
             expect(extractBashLcScript(input.statusCommand)).toContain(
               "'/home/dev/.local/share/pnpm/pairflow' bubble status --id"
             );
