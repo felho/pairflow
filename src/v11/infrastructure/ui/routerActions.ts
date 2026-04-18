@@ -14,6 +14,7 @@ import {
   internalError,
   isAttachBubbleErrorLike,
   isBubbleCommitErrorLike,
+  isBubbleMergeErrorLike,
   isConflictErrorMessage,
   isNotFoundErrorMessage,
   isRemoteBubbleCommitCommandErrorLike,
@@ -181,6 +182,48 @@ async function mapActionErrorToApiError(input: {
       return internalError(message, details);
     }
     if (bubbleCommitReasonCode === "REMOTE_COMMIT_SYNC_BACK_FAILED") {
+      return internalError(message, details);
+    }
+    return internalError(message, details);
+  }
+
+  const bubbleMergeReasonCode =
+    isBubbleMergeErrorLike(input.error)
+      && typeof input.error.reasonCode === "string"
+      ? input.error.reasonCode
+      : undefined;
+
+  if (bubbleMergeReasonCode !== undefined) {
+    const details = {
+      bubbleId: input.bubbleId,
+      repoPath: input.repoPath,
+      reasonCode: bubbleMergeReasonCode
+    };
+    if (bubbleMergeReasonCode === "REMOTE_STATUS_CONFIG_INVALID") {
+      return badRequest(message, details);
+    }
+    if (
+      bubbleMergeReasonCode === "REMOTE_STATUS_TRANSPORT_FAILED" ||
+      bubbleMergeReasonCode === "MERGE_REMOTE_START_REQUIRED" ||
+      bubbleMergeReasonCode === "MERGE_STATE_DONE_REQUIRED" ||
+      bubbleMergeReasonCode === "MERGE_REPO_DIRTY" ||
+      bubbleMergeReasonCode === "MERGE_BASE_BRANCH_NOT_FOUND" ||
+      bubbleMergeReasonCode === "MERGE_BUBBLE_BRANCH_NOT_FOUND" ||
+      bubbleMergeReasonCode === "MERGE_BRANCHES_IDENTICAL" ||
+      bubbleMergeReasonCode === "MERGE_CONFLICT_REQUIRES_MANUAL_RESOLUTION"
+    ) {
+      return mapConflictWithCurrentState(bubbleMergeReasonCode);
+    }
+    if (
+      bubbleMergeReasonCode === "REMOTE_MERGE_COMMAND_FAILED" ||
+      bubbleMergeReasonCode === "REMOTE_MERGE_TRANSPORT_FAILED" ||
+      bubbleMergeReasonCode === "REMOTE_MERGE_PAYLOAD_INVALID" ||
+      bubbleMergeReasonCode === "REMOTE_MERGE_PUBLICATION_REQUIRED" ||
+      bubbleMergeReasonCode === "MERGE_REMOTE_RECONCILE_FAILED" ||
+      bubbleMergeReasonCode === "MERGE_BASE_BRANCH_PUSH_FAILED" ||
+      bubbleMergeReasonCode === "MERGE_REMOTE_DELETE_ORIGIN_UNAVAILABLE" ||
+      bubbleMergeReasonCode === "MERGE_REMOTE_DELETE_FAILED"
+    ) {
       return internalError(message, details);
     }
     return internalError(message, details);

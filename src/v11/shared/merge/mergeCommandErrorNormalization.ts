@@ -8,6 +8,8 @@ export interface NormalizeBubbleMergeErrorInput {
   isTmuxCommandError?: (candidate: unknown) => boolean;
   isRuntimeSessionsRegistryError?: (candidate: unknown) => boolean;
   isRuntimeSessionsRegistryLockError?: (candidate: unknown) => boolean;
+  isRemoteBubbleStatusError?: (candidate: unknown) => boolean;
+  isRemoteBubbleMergeCommandError?: (candidate: unknown) => boolean;
 }
 
 export function normalizeBubbleMergeError(
@@ -28,6 +30,20 @@ export function normalizeBubbleMergeError(
       return input.createBubbleMergeError(input.error.message);
     }
     return input.createBubbleMergeError(String(input.error));
+  }
+  if (
+    (input.isRemoteBubbleStatusError?.(input.error) === true ||
+      input.isRemoteBubbleMergeCommandError?.(input.error) === true) &&
+    input.error instanceof Error
+  ) {
+    const candidate = input.error as Error & { code?: string };
+    return input.createBubbleMergeError({
+      ...(typeof candidate.code === "string"
+        ? { reasonCode: candidate.code }
+        : {}),
+      message: candidate.message,
+      cause: candidate
+    });
   }
   if (input.error instanceof Error) {
     return input.createBubbleMergeError(input.error.message);

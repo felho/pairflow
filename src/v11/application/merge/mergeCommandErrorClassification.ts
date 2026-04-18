@@ -21,6 +21,10 @@ export function throwAsBubbleMergeError(error: unknown): never {
     isRuntimeSessionsRegistryError: (candidate) =>
       isNamedError(candidate, "RuntimeSessionsRegistryError"),
     isRuntimeSessionsRegistryLockError: (candidate) =>
-      isNamedError(candidate, "RuntimeSessionsRegistryLockError")
+      isNamedError(candidate, "RuntimeSessionsRegistryLockError"),
+    isRemoteBubbleStatusError: (candidate) =>
+      isNamedError(candidate, "RemoteBubbleStatusError"),
+    isRemoteBubbleMergeCommandError: (candidate) =>
+      isNamedError(candidate, "RemoteBubbleMergeCommandError")
   });
 }

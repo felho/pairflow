@@ -19,6 +19,11 @@ export interface ResolvedMergeCommandDependencies {
     MergeBubbleDependencyDefaults["ensureBubbleInstanceIdForMutation"];
   emitBubbleLifecycleEventBestEffort:
     MergeBubbleDependencyDefaults["emitBubbleLifecycleEventBestEffort"];
+  readRemotePointer: MergeBubbleDependencyDefaults["readRemotePointer"];
+  resolveRemoteBubbleStatusTarget:
+    MergeBubbleDependencyDefaults["resolveRemoteBubbleStatusTarget"];
+  executeRemoteBubbleMergeCommand:
+    MergeBubbleDependencyDefaults["executeRemoteBubbleMergeCommand"];
 }
 
 export async function resolveMergeCommandDependencies(
@@ -47,6 +52,14 @@ export async function resolveMergeCommandDependencies(
       ?? mergeBubbleDependencyDefaults.ensureBubbleInstanceIdForMutation,
     emitBubbleLifecycleEventBestEffort:
       dependencies.emitBubbleLifecycleEventBestEffort
-      ?? mergeBubbleDependencyDefaults.emitBubbleLifecycleEventBestEffort
+      ?? mergeBubbleDependencyDefaults.emitBubbleLifecycleEventBestEffort,
+    readRemotePointer:
+      dependencies.readRemotePointer ?? mergeBubbleDependencyDefaults.readRemotePointer,
+    resolveRemoteBubbleStatusTarget:
+      dependencies.resolveRemoteBubbleStatusTarget
+      ?? mergeBubbleDependencyDefaults.resolveRemoteBubbleStatusTarget,
+    executeRemoteBubbleMergeCommand:
+      dependencies.executeRemoteBubbleMergeCommand
+      ?? mergeBubbleDependencyDefaults.executeRemoteBubbleMergeCommand
   };
 }

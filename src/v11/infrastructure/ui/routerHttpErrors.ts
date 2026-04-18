@@ -240,6 +240,10 @@ export interface RemoteBubbleCommitCommandErrorLike {
   code?: string | undefined;
 }
 
+export interface BubbleMergeErrorLike extends Error {
+  reasonCode?: string | undefined;
+}
+
 export function isAttachBubbleErrorLike(
   error: unknown
 ): error is AttachBubbleErrorLike {
@@ -259,6 +263,16 @@ export function isBubbleCommitErrorLike(
   return (
     candidate instanceof Error &&
     candidate.name === "BubbleCommitError"
+  );
+}
+
+export function isBubbleMergeErrorLike(
+  error: unknown
+): error is BubbleMergeErrorLike {
+  const candidate = error as (Error & { reasonCode?: string }) | undefined;
+  return (
+    candidate instanceof Error &&
+    candidate.name === "BubbleMergeError"
   );
 }
 

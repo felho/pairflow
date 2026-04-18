@@ -10,11 +10,28 @@ describe("mergeCommandDependencyResolution", () => {
         stdout: "",
         stderr: ""
       })) as never;
+    const executeRemoteBubbleMergeCommand = (async () => ({
+      bubbleId: "b_remote_merge_01",
+      baseBranch: "main",
+      bubbleBranch: "bubble/b_remote_merge_01",
+      mergeCommitSha: "abcdef123456",
+      pushedBaseBranch: true,
+      deletedRemoteBranch: false,
+      tmuxSessionName: "pf-b_remote_merge_01",
+      tmuxSessionExisted: true,
+      runtimeSessionRemoved: true,
+      removedWorktree: true,
+      removedBubbleBranch: true
+    })) as never;
 
     const resolved = await resolveMergeCommandDependencies({
-      runGit: customRunGit
+      runGit: customRunGit,
+      executeRemoteBubbleMergeCommand
     });
 
     expect(resolved.runGit).toBe(customRunGit);
+    expect(resolved.executeRemoteBubbleMergeCommand).toBe(
+      executeRemoteBubbleMergeCommand
+    );
   });
 });

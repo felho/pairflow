@@ -1,24 +1,51 @@
-import { resolve } from "node:path";
-
+import type {
+  BubbleRemotePointerStarted,
+  BubbleStateSnapshot
+} from "../../../types/bubble.js";
 import type { LoadedStateSnapshot } from "../../shared/ports/stateSnapshots.js";
 import {
   assertCleanRepoWorkingTree,
   assertMergeBranchEligibility,
   assertMergeStateEligibility
 } from "../../shared/merge/mergeRoutingEligibility.js";
+import type { RemoteBubbleStatusTarget } from "../../infrastructure/executor/ssh/sshBubbleStatus.js";
 import type { ResolvedMergeCommandDependencies } from "./mergeCommandDependencyResolution.js";
 import type { RunMergeFlowInput } from "./mergeFlowTypes.js";
+import {
+  canonicalizeMergeExecutionPath,
+  resolveRemoteMergeExecutionContextFromEnv
+} from "./remoteMergeExecutionContext.js";
 
-export interface MergeFlowExecutionContext {
+interface MergeFlowExecutionContextBase {
   resolved: Awaited<ReturnType<ResolvedMergeCommandDependencies["resolveBubbleById"]>>;
   bubbleIdentity: Awaited<
     ReturnType<ResolvedMergeCommandDependencies["ensureBubbleInstanceIdForMutation"]>
   >;
   loaded: LoadedStateSnapshot;
+  state: BubbleStateSnapshot;
+  nowIso: string;
+}
+
+export interface LocalMergeFlowExecutionContext
+  extends MergeFlowExecutionContextBase {
+  route: "local";
   repoPath: string;
   baseBranch: string;
   bubbleBranch: string;
 }
+
+export interface RemoteMergeFlowExecutionContext
+  extends MergeFlowExecutionContextBase {
+  route: "remote";
+  remotePointer: BubbleRemotePointerStarted;
+  remoteTarget: RemoteBubbleStatusTarget;
+  baseBranch: string;
+  bubbleBranch: string;
+}
+
+export type MergeFlowExecutionContext =
+  | LocalMergeFlowExecutionContext
+  | RemoteMergeFlowExecutionContext;
 
 export async function initializeMergeFlowExecutionContext(input: {
   params: RunMergeFlowInput;
@@ -39,16 +66,83 @@ export async function initializeMergeFlowExecutionContext(input: {
   resolved.bubbleConfig = bubbleIdentity.bubbleConfig;
 
   const loaded = await input.dependencies.readStateSnapshot(resolved.bubblePaths.statePath);
-  assertMergeStateEligibility(loaded.state, input.params.createError);
+  const state = loaded.state;
+  assertMergeStateEligibility(state, input.params.createError);
 
-  const repoPath = resolve(resolved.repoPath);
   const baseBranch = resolved.bubbleConfig.base_branch;
   const bubbleBranch = resolved.bubbleConfig.bubble_branch;
+  const nowIso = input.params.nowIso;
+  const resolvedRepoPath = canonicalizeMergeExecutionPath(resolved.repoPath);
 
-  await assertCleanRepoWorkingTree(repoPath, input.dependencies.runGit, input.params.createError);
+  if (resolved.bubbleConfig.executor?.type === "ssh") {
+    const remoteMergeExecutionContext = resolveRemoteMergeExecutionContextFromEnv();
+    const remotePointer = await input.dependencies.readRemotePointer(
+      resolved.bubblePaths.remotePointerPath
+    );
 
-  const baseBranchExists = await input.dependencies.branchExists(repoPath, baseBranch);
-  const bubbleBranchExists = await input.dependencies.branchExists(repoPath, bubbleBranch);
+    if (
+      remoteMergeExecutionContext?.kind === "remote_clone"
+      && remoteMergeExecutionContext.workspaceRoot === resolvedRepoPath
+    ) {
+      if (remotePointer !== null) {
+        throw input.params.createError({
+          reasonCode: "MERGE_REMOTE_START_REQUIRED",
+          message:
+            `Remote inner merge for '${resolved.bubbleId}' refused to continue because source-repo remote artifacts are still present.`,
+          context: {
+            command_name: "merge",
+            bubble_id: resolved.bubbleId,
+            remote_pointer_kind: remotePointer.kind,
+            remote_workspace_root: remoteMergeExecutionContext.workspaceRoot
+          }
+        });
+      }
+    } else {
+      if (remotePointer?.kind !== "started") {
+        throw input.params.createError({
+          reasonCode: "MERGE_REMOTE_START_REQUIRED",
+          message:
+            `Remote merge for '${resolved.bubbleId}' requires a started remote pointer. Run \`pairflow bubble start --id ${resolved.bubbleId}\` first.`,
+          context: {
+            command_name: "merge",
+            bubble_id: resolved.bubbleId,
+            remote_pointer_kind: remotePointer?.kind ?? "missing"
+          }
+        });
+      }
+
+      const remoteTarget = await input.dependencies.resolveRemoteBubbleStatusTarget({
+        bubbleId: resolved.bubbleId,
+        remoteAlias: resolved.bubbleConfig.executor.remote,
+        expectedHost: remotePointer.host
+      });
+
+      return {
+        route: "remote",
+        resolved,
+        bubbleIdentity,
+        loaded,
+        state,
+        nowIso,
+        remotePointer,
+        remoteTarget,
+        baseBranch,
+        bubbleBranch
+      };
+    }
+  }
+
+  await assertCleanRepoWorkingTree(
+    resolvedRepoPath,
+    input.dependencies.runGit,
+    input.params.createError
+  );
+
+  const baseBranchExists = await input.dependencies.branchExists(resolvedRepoPath, baseBranch);
+  const bubbleBranchExists = await input.dependencies.branchExists(
+    resolvedRepoPath,
+    bubbleBranch
+  );
   assertMergeBranchEligibility({
     baseBranch,
     bubbleBranch,
@@ -58,10 +152,13 @@ export async function initializeMergeFlowExecutionContext(input: {
   });
 
   return {
+    route: "local",
     resolved,
     bubbleIdentity,
     loaded,
-    repoPath,
+    state,
+    nowIso,
+    repoPath: resolvedRepoPath,
     baseBranch,
     bubbleBranch
   };

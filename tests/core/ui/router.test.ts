@@ -7,6 +7,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { AttachBubbleError } from "../../../src/v11/application/attach/emitAttachV11.js";
 import { BubbleCommitErrorV11 as BubbleCommitError } from "../../../src/v11/application/commit/emitCommitV11.js";
+import { BubbleMergeErrorV11 as BubbleMergeError } from "../../../src/v11/application/merge/emitMergeV11.js";
 import { RemoteBubbleApprovalCommandError } from "../../../src/v11/infrastructure/executor/ssh/sshBubbleApprovalCommand.js";
 import { RemoteBubbleCommitCommandError } from "../../../src/v11/infrastructure/executor/ssh/sshBubbleCommitCommand.js";
 import { RemoteBubbleStatusError } from "../../../src/v11/infrastructure/executor/ssh/sshBubbleStatus.js";
@@ -1806,6 +1807,227 @@ describe("createUiRouter attach action", () => {
         bubbleId: "b-router-commit-raw-payload",
         repoPath,
         reasonCode: "REMOTE_COMMIT_PAYLOAD_INVALID"
+      });
+    } finally {
+      await server.close();
+    }
+  });
+
+  it("maps remote merge start-required failures to HTTP 409 with merge taxonomy", async () => {
+    const repoPath = "/tmp/pairflow-ui-router-merge-remote-start";
+    const router = createUiRouter({
+      repoScope: {
+        repos: [repoPath],
+        has: (value: string) => Promise.resolve(value === repoPath)
+      },
+      events: {
+        subscribe: () => () => undefined,
+        getSnapshot: () => ({
+          id: 1,
+          ts: "2026-02-25T00:00:00.000Z",
+          type: "snapshot",
+          repos: [],
+          bubbles: []
+        }),
+        refreshNow: () => Promise.resolve(undefined),
+        addRepo: () => Promise.resolve(false),
+        removeRepo: () => Promise.resolve(false),
+        close: () => Promise.resolve(undefined)
+      },
+      dependencies: {
+        getBubbleStatus: vi.fn(async (): Promise<BubbleStatusView> => ({
+          bubbleId: "b-router-merge-remote-start",
+          repoPath,
+          worktreePath: "/tmp/worktree",
+          bubbleStartedAt: null,
+          state: "DONE" as const,
+          round: 1,
+          activeAgent: null,
+          activeRole: null,
+          activeSince: null,
+          lastCommandAt: "2026-04-18T08:10:00.000Z",
+          paneActivity: {
+            readStatus: "missing",
+            lastChangedAt: null,
+            sampledAt: null,
+            sinceLastChangedSeconds: null,
+            sinceSampledSeconds: null,
+            lastSampleStatus: null,
+            lastSampleError: null,
+            sessionName: null,
+            targetPane: null
+          },
+          executionContext: null,
+          watchdog: {
+            monitored: false,
+            monitoredAgent: null,
+            timeoutMinutes: 30,
+            referenceTimestamp: null,
+            deadlineTimestamp: null,
+            remainingSeconds: null,
+            expired: false
+          },
+          pendingInboxItems: {
+            humanQuestions: 0,
+            approvalRequests: 0,
+            total: 0
+          },
+          transcript: {
+            totalMessages: 0,
+            lastMessageType: null,
+            lastMessageTs: null,
+            lastMessageId: null
+          },
+          metaReview: {
+            actor: "meta-reviewer",
+            authorityActive: false,
+            runtimeDelivery: null
+          },
+          commandPath: {
+            status: "external",
+            profile: "external",
+            localEntrypoint: "/tmp/worktree/dist/cli/index.js",
+            activeEntrypoint: "/usr/local/bin/pairflow",
+            message: "external Pairflow CLI active",
+            pinnedCommand: "pairflow"
+          },
+          accuracy_critical: false,
+          last_review_verification: "missing",
+          failing_gates: [],
+          spec_lock_state: {
+            state: "IMPLEMENTABLE",
+            open_blocker_count: 0,
+            open_required_now_count: 0
+          },
+          round_gate_state: {
+            applies: false,
+            violated: false,
+            round: 1
+          },
+          stateValidation: null
+        })),
+        getBubbleInbox: vi.fn(async (): Promise<BubbleInboxView> => ({
+          bubbleId: "b-router-merge-remote-start",
+          repoPath,
+          state: "DONE" as const,
+          pending: {
+            humanQuestions: 0,
+            approvalRequests: 0,
+            total: 0
+          },
+          items: []
+        })),
+        readRuntimeSessionsRegistry: vi.fn(async () => ({})),
+        mergeBubble: vi.fn(() =>
+          Promise.reject(
+            new BubbleMergeError({
+              reasonCode: "MERGE_REMOTE_START_REQUIRED",
+              message: "Remote merge requires a started pointer."
+            })
+          )
+        )
+      }
+    });
+    const server = await startRouterServer(router);
+
+    try {
+      const response = await fetch(
+        `${server.url}/api/bubbles/b-router-merge-remote-start/merge?repo=${encodeURIComponent(repoPath)}`,
+        {
+          method: "POST",
+          headers: {
+            "content-type": "application/json"
+          },
+          body: JSON.stringify({})
+        }
+      );
+      const payload = (await response.json()) as {
+        error: {
+          code: string;
+          details?: Record<string, unknown>;
+        };
+      };
+
+      expect(response.status).toBe(409);
+      expect(payload.error.code).toBe("conflict");
+      expect(payload.error.details).toMatchObject({
+        bubbleId: "b-router-merge-remote-start",
+        repoPath,
+        currentState: "DONE",
+        reasonCode: "MERGE_REMOTE_START_REQUIRED"
+      });
+    } finally {
+      await server.close();
+    }
+  });
+
+  it.each([
+    "REMOTE_MERGE_COMMAND_FAILED",
+    "REMOTE_MERGE_TRANSPORT_FAILED",
+    "REMOTE_MERGE_PAYLOAD_INVALID",
+    "REMOTE_MERGE_PUBLICATION_REQUIRED",
+    "MERGE_REMOTE_RECONCILE_FAILED",
+    "MERGE_BASE_BRANCH_PUSH_FAILED",
+    "MERGE_REMOTE_DELETE_ORIGIN_UNAVAILABLE",
+    "MERGE_REMOTE_DELETE_FAILED"
+  ])("maps %s merge failures to HTTP 500 with retained reason code", async (reasonCode) => {
+    const repoPath = `/tmp/pairflow-ui-router-merge-${reasonCode.toLowerCase()}`;
+    const router = createUiRouter({
+      repoScope: {
+        repos: [repoPath],
+        has: (value: string) => Promise.resolve(value === repoPath)
+      },
+      events: {
+        subscribe: () => () => undefined,
+        getSnapshot: () => ({
+          id: 1,
+          ts: "2026-02-25T00:00:00.000Z",
+          type: "snapshot",
+          repos: [],
+          bubbles: []
+        }),
+        refreshNow: () => Promise.resolve(undefined),
+        addRepo: () => Promise.resolve(false),
+        removeRepo: () => Promise.resolve(false),
+        close: () => Promise.resolve(undefined)
+      },
+      dependencies: {
+        mergeBubble: vi.fn(() =>
+          Promise.reject(
+            new BubbleMergeError({
+              reasonCode,
+              message: `${reasonCode}: merge failed`
+            })
+          )
+        )
+      }
+    });
+    const server = await startRouterServer(router);
+
+    try {
+      const response = await fetch(
+        `${server.url}/api/bubbles/b-router-merge-internal/merge?repo=${encodeURIComponent(repoPath)}`,
+        {
+          method: "POST",
+          headers: {
+            "content-type": "application/json"
+          },
+          body: JSON.stringify({})
+        }
+      );
+      const payload = (await response.json()) as {
+        error: {
+          code: string;
+          details?: Record<string, unknown>;
+        };
+      };
+
+      expect(response.status).toBe(500);
+      expect(payload.error.code).toBe("internal_error");
+      expect(payload.error.details).toMatchObject({
+        bubbleId: "b-router-merge-internal",
+        repoPath,
+        reasonCode
       });
     } finally {
       await server.close();

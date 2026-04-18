@@ -1,6 +1,7 @@
 export {
   type AttachBubbleErrorLike,
   type BubbleCommitErrorLike,
+  type BubbleMergeErrorLike,
   type RemoteBubbleCommitCommandErrorLike,
   type RemoteBubbleApprovalCommandErrorLike,
   type RemoteBubbleStatusErrorLike,
@@ -14,6 +15,7 @@ export {
   internalError,
   isAttachBubbleErrorLike,
   isBubbleCommitErrorLike,
+  isBubbleMergeErrorLike,
   isAttachRuntimeMissingError,
   isConflictErrorMessage,
   isNotFoundErrorMessage,
