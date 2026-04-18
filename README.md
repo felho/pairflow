@@ -634,7 +634,7 @@ The dashboard shows:
 - **Repo filter** — toggle visibility per repo when managing multiple repositories
 - **Real-time updates** via SSE (Server-Sent Events) with automatic polling fallback
 
-### Scenario 7: Crash recovery and restart
+### Scenario 7: Local crash recovery and restart
 
 If your machine reboots, tmux dies, or something goes wrong:
 
@@ -662,6 +662,8 @@ pairflow bubble restart --id feat_login --repo .
 ```
 
 `bubble status --json` shows the active authority snapshot plus non-authority meta-review diagnostics. If routing still has not completed, use `bubble restart` or continue the active workflow; there is no public `bubble meta-review recover` subcommand.
+
+Remote exception: for remote bubbles, this restart guidance does not extend to a started remote pointer after remote runtime loss. Use `pairflow bubble status --id <id> --repo . --json` or `pairflow bubble list --refresh` to confirm whether persisted state remains while the live runtime is missing. In this phase, Pairflow surfaces that condition fail-closed and does not treat `pairflow bubble start --id <id>` as the supported restart contract on top of preserved remote state.
 
 ### Scenario 8: Stopping or cancelling a bubble
 

@@ -21,7 +21,10 @@ export interface UiBubbleListRemoteExecution
   viewKind: "list";
   stateSource: "cache" | "refresh" | "created_not_started" | "unavailable_started";
   refreshAttemptedAt?: string;
+  runtimeAvailability?: "active" | "inactive" | "missing";
+  runtimeReasonCode?: "STATUS_REMOTE_RUNTIME_MISSING";
   reasonCode?: "LIST_REMOTE_REFRESH_UNAVAILABLE" | "LIST_REMOTE_CACHE_WRITE_FAILED";
+  lastLiveCheckAt?: string;
   compatLifecyclePlaceholder?: {
     state: BubbleLifecycleState;
     round?: number;

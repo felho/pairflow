@@ -206,6 +206,34 @@ describe("BubbleExpandedCard", () => {
     expect(screen.queryByText(/restart runtime automatically/u)).not.toBeInTheDocument();
   });
 
+  it("shows disabled attach with fail-closed hint for refreshed remote summary data", () => {
+    renderExpandedCard({
+      bubble: bubbleCard({
+        bubbleId: "b-expanded-remote-summary-missing",
+        repoPath: "/repo-a",
+        state: "READY_FOR_HUMAN_APPROVAL",
+        runtimeSession: null,
+        stale: false,
+        remoteExecution: {
+          alias: "lab",
+          host: "ssh.example.com",
+          pointerKind: "started",
+          viewKind: "list",
+          stateSource: "refresh",
+          cacheStatus: "present",
+          runtimeAvailability: "missing",
+          runtimeReasonCode: "STATUS_REMOTE_RUNTIME_MISSING",
+          lastLiveCheckAt: "2026-04-16T10:00:00.000Z",
+          lastCacheCheckAt: "2026-04-16T10:00:00.000Z"
+        }
+      })
+    });
+
+    expect(screen.getByRole("button", { name: "Attach" })).toBeDisabled();
+    expect(screen.getByText(/fail-closed/u)).toBeInTheDocument();
+    expect(screen.queryByText(/restart runtime automatically/u)).not.toBeInTheDocument();
+  });
+
   it("shows disabled attach with start-first hint for created remote detail data", () => {
     renderExpandedCard({
       bubble: bubbleCard({
