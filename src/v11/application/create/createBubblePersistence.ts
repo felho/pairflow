@@ -22,7 +22,6 @@ import type {
 } from "./createCommandContract.js";
 import { BubbleCreateError, ensureRuntimeSessionFile, renderTaskArtifact } from "./createCommandRuntime.js";
 import type { ReviewerFocusExtractionResult } from "../../../v11/shared/reviewer/reviewerBrief.js";
-import { writeRemotePointer as writeRemotePointerDefault } from "../../infrastructure/artifact/bubble/remoteExecutionArtifacts.js";
 
 export interface CreateBubblePersistenceInput {
   bubbleId: string;
@@ -119,8 +118,12 @@ export async function persistCreatedBubbleArtifacts(
     );
   }
   if (input.remotePointer !== undefined) {
-    const writeRemotePointer =
-      input.dependencies.writeRemotePointer ?? writeRemotePointerDefault;
+    const { writeRemotePointer } = input.dependencies;
+    if (writeRemotePointer === undefined) {
+      throw new BubbleCreateError(
+        "Missing required create bubble dependency: writeRemotePointer."
+      );
+    }
     await writeRemotePointer(input.paths.remotePointerPath, input.remotePointer);
   }
   await ensureRuntimeSessionFile(input.paths.sessionsPath);

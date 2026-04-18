@@ -3,7 +3,6 @@ import { dirname } from "node:path";
 import { spawn } from "node:child_process";
 
 import { loadPairflowGlobalConfig } from "../../../config/pairflowConfig.js";
-import { readRemotePointer } from "../../infrastructure/artifact/bubble/remoteExecutionArtifacts.js";
 import { buildCheckLauncherAvailabilityDefault } from "./attachBubbleLauncherAvailability.js";
 import {
   buildAttachCommand,
@@ -11,6 +10,7 @@ import {
   resolveAttachLauncher
 } from "./attachBubbleLauncherRuntime.js";
 import { resolveAttachBubbleExecution } from "../../shared/attach/resolveAttachBubbleExecution.js";
+import { statusCommandDependencyDefaults } from "../../shared/status/statusCommandDependencyDefaults.js";
 import {
   AttachBubbleError,
   type AttachBubbleReasonCode,
@@ -123,7 +123,7 @@ export async function attachBubble(
     dependencies.loadPairflowGlobalConfig ??
     loadPairflowGlobalConfig;
   const readRemotePointerArtifact =
-    dependencies.readRemotePointer ?? readRemotePointer;
+    dependencies.readRemotePointer ?? statusCommandDependencyDefaults.readRemotePointer;
 
   const resolved = await resolveBubble({
     bubbleId: input.bubbleId,

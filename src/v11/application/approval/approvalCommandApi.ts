@@ -6,6 +6,9 @@ import {
 import {
   resolveApprovalCommandDependencies,
 } from "./approvalCommandDependencyResolution.js";
+import {
+  loadExecuteRemoteBubbleApprovalCommandDefault
+} from "./approvalRemoteExecutionContract.js";
 import type {
   EmitApprovalDecisionDependencies,
   EmitApprovalDecisionInput,
@@ -24,7 +27,6 @@ import {
   readTranscriptEnvelopes
 } from "../../shared/transcript/transcriptDependencyDefaults.js";
 import { readStateSnapshot, writeStateSnapshot } from "../../shared/state/stateStoreDefaults.js";
-import { executeRemoteBubbleApprovalCommand } from "../../infrastructure/executor/ssh/sshBubbleApprovalCommand.js";
 
 let approvalDependencyDefaultsPromise:
   | Promise<ApprovalCommandDefaultDependencies>
@@ -53,6 +55,8 @@ async function resolveBubbleById(
 }
 
 async function loadApprovalDependencyDefaults(): Promise<ApprovalCommandDefaultDependencies> {
+  const executeRemoteBubbleApprovalCommand =
+    await loadExecuteRemoteBubbleApprovalCommandDefault();
   approvalDependencyDefaultsPromise ??= Promise.resolve({
     appendProtocolEnvelope,
     emitTmuxDeliveryNotification:

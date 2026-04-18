@@ -117,136 +117,114 @@ async function loadBubbleDetail(input: {
   };
 }
 
-async function mapActionErrorToApiError(input: {
+async function mapConflictWithCurrentState(input: {
   environment: RouterActionEnvironment;
-  error: unknown;
+  message: string;
   repoPath: string;
   bubbleId: string;
+  reasonCode?: string;
 }): Promise<UiApiError> {
-  const message = asErrorMessage(input.error);
-
-  const mapConflictWithCurrentState = async (reasonCode?: string): Promise<UiApiError> => {
-    let currentBubble: UiBubbleDetail | null = null;
-    try {
-      currentBubble = await loadBubbleDetail({
-        environment: input.environment,
-        repoPath: input.repoPath,
-        bubbleId: input.bubbleId
-      });
-    } catch {
-      currentBubble = null;
-    }
-
-    return conflict(message, {
-      bubbleId: input.bubbleId,
+  let currentBubble: UiBubbleDetail | null = null;
+  try {
+    currentBubble = await loadBubbleDetail({
+      environment: input.environment,
       repoPath: input.repoPath,
-      ...(reasonCode !== undefined ? { reasonCode } : {}),
-      currentState:
-        currentBubble?.state ?? parseStateFromErrorMessage(message) ?? null,
-      ...(currentBubble !== null ? { bubble: currentBubble } : {})
+      bubbleId: input.bubbleId
     });
+  } catch {
+    currentBubble = null;
+  }
+
+  return conflict(input.message, {
+    bubbleId: input.bubbleId,
+    repoPath: input.repoPath,
+    ...(input.reasonCode !== undefined ? { reasonCode: input.reasonCode } : {}),
+    currentState:
+      currentBubble?.state ?? parseStateFromErrorMessage(input.message) ?? null,
+    ...(currentBubble !== null ? { bubble: currentBubble } : {})
+  });
+}
+
+function buildBubbleActionErrorDetails(input: {
+  bubbleId: string;
+  repoPath: string;
+  reasonCode: string;
+}): { bubbleId: string; repoPath: string; reasonCode: string } {
+  return {
+    bubbleId: input.bubbleId,
+    repoPath: input.repoPath,
+    reasonCode: input.reasonCode
   };
+}
 
-  if (isNotFoundErrorMessage(message)) {
-    return notFound(message, {
-      bubbleId: input.bubbleId,
-      repoPath: input.repoPath
-    });
+async function mapBubbleCommitApiError(input: {
+  environment: RouterActionEnvironment;
+  message: string;
+  repoPath: string;
+  bubbleId: string;
+  reasonCode: string;
+}): Promise<UiApiError> {
+  const details = buildBubbleActionErrorDetails(input);
+  if (input.reasonCode === "REMOTE_STATUS_CONFIG_INVALID") {
+    return badRequest(input.message, details);
   }
-
-  const bubbleCommitReasonCode =
-    isBubbleCommitErrorLike(input.error)
-      && typeof input.error.reasonCode === "string"
-      ? input.error.reasonCode
-      : undefined;
-
-  if (bubbleCommitReasonCode !== undefined) {
-    const details = {
-      bubbleId: input.bubbleId,
-      repoPath: input.repoPath,
-      reasonCode: bubbleCommitReasonCode
-    };
-    if (bubbleCommitReasonCode === "REMOTE_STATUS_CONFIG_INVALID") {
-      return badRequest(message, details);
-    }
-    if (
-      bubbleCommitReasonCode === "REMOTE_STATUS_TRANSPORT_FAILED" ||
-      bubbleCommitReasonCode === "COMMIT_REMOTE_START_REQUIRED"
-    ) {
-      return mapConflictWithCurrentState(bubbleCommitReasonCode);
-    }
-    if (bubbleCommitReasonCode === "REMOTE_COMMIT_TRANSPORT_FAILED") {
-      return internalError(message, details);
-    }
-    if (bubbleCommitReasonCode === "REMOTE_COMMIT_PAYLOAD_INVALID") {
-      return internalError(message, details);
-    }
-    if (bubbleCommitReasonCode === "REMOTE_COMMIT_SYNC_BACK_FAILED") {
-      return internalError(message, details);
-    }
-    return internalError(message, details);
+  if (
+    input.reasonCode === "REMOTE_STATUS_TRANSPORT_FAILED" ||
+    input.reasonCode === "COMMIT_REMOTE_START_REQUIRED"
+  ) {
+    return mapConflictWithCurrentState(input);
   }
+  return internalError(input.message, details);
+}
 
-  const bubbleMergeReasonCode =
-    isBubbleMergeErrorLike(input.error)
-      && typeof input.error.reasonCode === "string"
-      ? input.error.reasonCode
-      : undefined;
-
-  if (bubbleMergeReasonCode !== undefined) {
-    const details = {
-      bubbleId: input.bubbleId,
-      repoPath: input.repoPath,
-      reasonCode: bubbleMergeReasonCode
-    };
-    if (bubbleMergeReasonCode === "REMOTE_STATUS_CONFIG_INVALID") {
-      return badRequest(message, details);
-    }
-    if (
-      bubbleMergeReasonCode === "REMOTE_STATUS_TRANSPORT_FAILED" ||
-      bubbleMergeReasonCode === "MERGE_REMOTE_START_REQUIRED" ||
-      bubbleMergeReasonCode === "MERGE_STATE_DONE_REQUIRED" ||
-      bubbleMergeReasonCode === "MERGE_REPO_DIRTY" ||
-      bubbleMergeReasonCode === "MERGE_BASE_BRANCH_NOT_FOUND" ||
-      bubbleMergeReasonCode === "MERGE_BUBBLE_BRANCH_NOT_FOUND" ||
-      bubbleMergeReasonCode === "MERGE_BRANCHES_IDENTICAL" ||
-      bubbleMergeReasonCode === "MERGE_CONFLICT_REQUIRES_MANUAL_RESOLUTION"
-    ) {
-      return mapConflictWithCurrentState(bubbleMergeReasonCode);
-    }
-    if (
-      bubbleMergeReasonCode === "REMOTE_MERGE_COMMAND_FAILED" ||
-      bubbleMergeReasonCode === "REMOTE_MERGE_TRANSPORT_FAILED" ||
-      bubbleMergeReasonCode === "REMOTE_MERGE_PAYLOAD_INVALID" ||
-      bubbleMergeReasonCode === "REMOTE_MERGE_PUBLICATION_REQUIRED" ||
-      bubbleMergeReasonCode === "MERGE_REMOTE_RECONCILE_FAILED" ||
-      bubbleMergeReasonCode === "MERGE_BASE_BRANCH_PUSH_FAILED" ||
-      bubbleMergeReasonCode === "MERGE_REMOTE_DELETE_ORIGIN_UNAVAILABLE" ||
-      bubbleMergeReasonCode === "MERGE_REMOTE_DELETE_FAILED"
-    ) {
-      return internalError(message, details);
-    }
-    return internalError(message, details);
+async function mapBubbleMergeApiError(input: {
+  environment: RouterActionEnvironment;
+  message: string;
+  repoPath: string;
+  bubbleId: string;
+  reasonCode: string;
+}): Promise<UiApiError> {
+  const details = buildBubbleActionErrorDetails(input);
+  if (input.reasonCode === "REMOTE_STATUS_CONFIG_INVALID") {
+    return badRequest(input.message, details);
   }
-
-  const remoteCommitCommandError =
-    isRemoteBubbleCommitCommandErrorLike(input.error)
-      && typeof input.error.code === "string"
-      ? input.error
-      : null;
-
-  if (remoteCommitCommandError !== null) {
-    return internalError(message, {
-      bubbleId: input.bubbleId,
-      repoPath: input.repoPath,
-      reasonCode: remoteCommitCommandError.code
-    });
+  if (
+    input.reasonCode === "REMOTE_STATUS_TRANSPORT_FAILED" ||
+    input.reasonCode === "MERGE_REMOTE_START_REQUIRED" ||
+    input.reasonCode === "MERGE_STATE_DONE_REQUIRED" ||
+    input.reasonCode === "MERGE_REPO_DIRTY" ||
+    input.reasonCode === "MERGE_BASE_BRANCH_NOT_FOUND" ||
+    input.reasonCode === "MERGE_BUBBLE_BRANCH_NOT_FOUND" ||
+    input.reasonCode === "MERGE_BRANCHES_IDENTICAL" ||
+    input.reasonCode === "MERGE_CONFLICT_REQUIRES_MANUAL_RESOLUTION"
+  ) {
+    return mapConflictWithCurrentState(input);
   }
+  return internalError(input.message, details);
+}
 
-  if (isConflictErrorMessage(message)) {
-    return mapConflictWithCurrentState(bubbleCommitReasonCode);
+function mapRemoteStatusApiError(input: {
+  message: string;
+  repoPath: string;
+  bubbleId: string;
+  reasonCode: string;
+}): UiApiError {
+  const details = buildBubbleActionErrorDetails(input);
+  if (input.reasonCode === "REMOTE_STATUS_CONFIG_INVALID") {
+    return badRequest(input.message, details);
   }
+  if (input.reasonCode === "REMOTE_STATUS_TRANSPORT_FAILED") {
+    return conflict(input.message, details);
+  }
+  return internalError(input.message, details);
+}
 
+function mapAttachApiError(input: {
+  message: string;
+  repoPath: string;
+  bubbleId: string;
+  error: unknown;
+}): UiApiError | undefined {
   if (
     isAttachBubbleErrorLike(input.error) &&
     input.error.launcher !== undefined &&
@@ -265,12 +243,12 @@ async function mapActionErrorToApiError(input: {
         : {})
     };
     return input.error.failureClass === "launcher_unavailable"
-      ? badRequest(message, details)
-      : internalError(message, details);
+      ? badRequest(input.message, details)
+      : internalError(input.message, details);
   }
 
   if (isAttachBubbleErrorLike(input.error) && input.error.reasonCode !== undefined) {
-    return badRequest(message, {
+    return badRequest(input.message, {
       bubbleId: input.bubbleId,
       repoPath: input.repoPath,
       reasonCode: input.error.reasonCode,
@@ -278,6 +256,92 @@ async function mapActionErrorToApiError(input: {
         ? { attachContextReason: input.error.context.reason }
         : {})
     });
+  }
+
+  return undefined;
+}
+
+async function mapActionErrorToApiError(input: {
+  environment: RouterActionEnvironment;
+  error: unknown;
+  repoPath: string;
+  bubbleId: string;
+}): Promise<UiApiError> {
+  const message = asErrorMessage(input.error);
+
+  if (isNotFoundErrorMessage(message)) {
+    return notFound(message, {
+      bubbleId: input.bubbleId,
+      repoPath: input.repoPath
+    });
+  }
+
+  const bubbleCommitReasonCode =
+    isBubbleCommitErrorLike(input.error)
+      && typeof input.error.reasonCode === "string"
+      ? input.error.reasonCode
+      : undefined;
+
+  if (bubbleCommitReasonCode !== undefined) {
+    return mapBubbleCommitApiError({
+      environment: input.environment,
+      message,
+      repoPath: input.repoPath,
+      bubbleId: input.bubbleId,
+      reasonCode: bubbleCommitReasonCode
+    });
+  }
+
+  const bubbleMergeReasonCode =
+    isBubbleMergeErrorLike(input.error)
+      && typeof input.error.reasonCode === "string"
+      ? input.error.reasonCode
+      : undefined;
+
+  if (bubbleMergeReasonCode !== undefined) {
+    return mapBubbleMergeApiError({
+      environment: input.environment,
+      message,
+      repoPath: input.repoPath,
+      bubbleId: input.bubbleId,
+      reasonCode: bubbleMergeReasonCode
+    });
+  }
+
+  const remoteCommitCommandError =
+    isRemoteBubbleCommitCommandErrorLike(input.error)
+      && typeof input.error.code === "string"
+      ? input.error
+      : null;
+
+  if (remoteCommitCommandError !== null) {
+    return internalError(message, {
+      bubbleId: input.bubbleId,
+      repoPath: input.repoPath,
+      reasonCode: remoteCommitCommandError.code
+    });
+  }
+
+  if (isConflictErrorMessage(message)) {
+    return mapConflictWithCurrentState({
+      environment: input.environment,
+      message,
+      repoPath: input.repoPath,
+      bubbleId: input.bubbleId,
+      ...(bubbleCommitReasonCode !== undefined
+        ? { reasonCode: bubbleCommitReasonCode }
+        : {})
+    });
+  }
+
+  const attachApiError = mapAttachApiError({
+    message,
+    repoPath: input.repoPath,
+    bubbleId: input.bubbleId,
+    error: input.error
+  });
+  if (attachApiError !== undefined) {
+    return attachApiError;
   }
 
   if (isRemoteBubbleApprovalCommandErrorLike(input.error)) {
@@ -290,18 +354,19 @@ async function mapActionErrorToApiError(input: {
   }
 
   if (isRemoteBubbleStatusErrorLike(input.error)) {
-    const details = {
-      bubbleId: input.bubbleId,
+    const { code } = input.error;
+    if (typeof code !== "string") {
+      return internalError(message, {
+        bubbleId: input.bubbleId,
+        repoPath: input.repoPath
+      });
+    }
+    return mapRemoteStatusApiError({
+      message,
       repoPath: input.repoPath,
-      reasonCode: input.error.code
-    };
-    if (input.error.code === "REMOTE_STATUS_CONFIG_INVALID") {
-      return badRequest(message, details);
-    }
-    if (input.error.code === "REMOTE_STATUS_TRANSPORT_FAILED") {
-      return conflict(message, details);
-    }
-    return internalError(message, details);
+      bubbleId: input.bubbleId,
+      reasonCode: code
+    });
   }
 
   if (input.error instanceof Error && input.error.name === "UiApiBadRequest") {

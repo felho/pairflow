@@ -6,7 +6,7 @@ import {
   type AttachBubbleV11Dependencies,
   type AttachBubbleV11Result
 } from "./emitAttachV11.js";
-import { resolveBubbleById } from "../../infrastructure/executor/workspace/bubbleLookup.js";
+import { resolveBubbleById } from "../../shared/bubbleLookup/bubbleLookupDefaults.js";
 
 export interface BubbleAttachCommandOptions {
   id: string;
@@ -38,13 +38,13 @@ function parsePortForwardValues(
   const ports = rawValues.map((rawValue) => {
     if (!/^\d+$/u.test(rawValue)) {
       throw new Error(
-        `ATTACH_PORT_FORWARD_INVALID: Invalid --port-forward value "${rawValue}". Expected integer TCP port in range 1-65535.`
+        `ATTACH_PORT_FORWARD_INVALID: Invalid --port-forward value "${rawValue}". Expected integer TCP port in range 1-65535. context: command_name=attach port_forward_value=${rawValue}.`
       );
     }
     const port = Number.parseInt(rawValue, 10);
     if (!Number.isInteger(port) || port < 1 || port > 65_535) {
       throw new Error(
-        `ATTACH_PORT_FORWARD_INVALID: Invalid --port-forward value "${rawValue}". Expected integer TCP port in range 1-65535.`
+        `ATTACH_PORT_FORWARD_INVALID: Invalid --port-forward value "${rawValue}". Expected integer TCP port in range 1-65535. context: command_name=attach port_forward_value=${rawValue}.`
       );
     }
     return port;

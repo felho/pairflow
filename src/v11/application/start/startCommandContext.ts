@@ -20,7 +20,7 @@ import { createStartBubbleError } from "./startCommandRuntime.js";
 import {
   resolveRemoteCloneStartContextFromEnv,
   type RemoteCloneStartContext
-} from "./startCommandRemoteExecution.js";
+} from "./startCommandRemoteExecutionContext.js";
 
 export type StartLoadedState =
   Awaited<ReturnType<typeof startCommandContextDefaults.readStateSnapshot>>;

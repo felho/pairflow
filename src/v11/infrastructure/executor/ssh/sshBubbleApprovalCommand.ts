@@ -1,10 +1,18 @@
-import type { BubbleStateSnapshot } from "../../../../types/bubble.js";
-import type { ProtocolEnvelope } from "../../../../types/protocol.js";
 import { shellQuote } from "../../../shared/foundation/shellQuote.js";
-import { parseEnvelopeLine } from "../../../shared/protocol/envelope.js";
-import { assertValidBubbleStateSnapshot } from "../../../shared/state/stateSchema.js";
 import type { RemoteBubbleStatusTarget } from "./sshBubbleStatus.js";
 import { runCommandDefault } from "./sshBubbleStatus.js";
+import {
+  normalizeDecisionResult,
+  normalizeQueuedReworkResult,
+  type RemoteBubbleApprovalDecisionResult,
+  type RemoteBubbleApprovalQueuedReworkResult
+} from "./sshBubbleApprovalParsing.js";
+import {
+  extractMarkerPayload,
+  parseRemoteBubbleState,
+  parseTranscriptLineCount,
+  type RemoteApprovalPayloadErrorContext
+} from "./sshBubbleApprovalParsingSupport.js";
 import {
   assertSingleTokenPairflowCommand,
   buildSshCommandArgs
@@ -53,21 +61,10 @@ export type ExecuteRemoteBubbleApprovalCommandInput =
   | ExecuteRemoteBubbleApproveCommandInput
   | ExecuteRemoteBubbleRequestReworkCommandInput;
 
-export interface RemoteBubbleApprovalDecisionResult {
-  kind: "decision";
-  bubbleId: string;
-  sequence: number;
-  envelope: ProtocolEnvelope;
-  state: BubbleStateSnapshot;
-}
-
-export interface RemoteBubbleApprovalQueuedReworkResult {
-  kind: "queued_rework";
-  bubbleId: string;
-  intentId: string;
-  state: BubbleStateSnapshot;
-  supersededIntentId?: string;
-}
+export type {
+  RemoteBubbleApprovalDecisionResult,
+  RemoteBubbleApprovalQueuedReworkResult
+};
 
 export type ExecuteRemoteBubbleApprovalCommandResult =
   | RemoteBubbleApprovalDecisionResult
@@ -88,6 +85,8 @@ export class RemoteBubbleApprovalCommandError extends Error {
   public readonly code:
     | "REMOTE_APPROVAL_TRANSPORT_FAILED"
     | "REMOTE_APPROVAL_PAYLOAD_INVALID";
+  public readonly reasonCode?: string;
+  public readonly context?: RemoteApprovalPayloadErrorContext;
 
   public constructor(input: {
     code:
@@ -95,10 +94,18 @@ export class RemoteBubbleApprovalCommandError extends Error {
       | "REMOTE_APPROVAL_PAYLOAD_INVALID";
     message: string;
     cause?: unknown;
+    reasonCode?: string;
+    context?: RemoteApprovalPayloadErrorContext;
   }) {
     super(input.message, input.cause === undefined ? undefined : { cause: input.cause });
     this.name = "RemoteBubbleApprovalCommandError";
     this.code = input.code;
+    if (input.reasonCode !== undefined) {
+      this.reasonCode = input.reasonCode;
+    }
+    if (input.context !== undefined) {
+      this.context = input.context;
+    }
   }
 }
 
@@ -185,317 +192,145 @@ function describeTransportFailure(input: {
   return `ssh transport failed (exit ${input.exitCode}): ${summarizeTransportOutput(detailSource)}`;
 }
 
-function escapeRegExpLiteral(input: string): string {
-  return input.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&");
+function createPayloadError(input: {
+  message: string;
+  cause?: unknown;
+  reasonCode: string;
+  context: RemoteApprovalPayloadErrorContext;
+}): RemoteBubbleApprovalCommandError {
+  return new RemoteBubbleApprovalCommandError({
+    code: "REMOTE_APPROVAL_PAYLOAD_INVALID",
+    message: input.message,
+    cause: input.cause,
+    reasonCode: input.reasonCode,
+    context: input.context
+  });
 }
 
-function extractMarkerPayload(input: {
-  stdout: string;
-  startMarker: string;
-  endMarker: string;
-  label: string;
-}): string {
-  const pattern = new RegExp(
-    `${escapeRegExpLiteral(input.startMarker)}\\n([\\s\\S]*?)\\n${escapeRegExpLiteral(input.endMarker)}`,
-    "gu"
-  );
-  const matches = [...input.stdout.matchAll(pattern)];
-  if (matches.length !== 1) {
-    throw new RemoteBubbleApprovalCommandError({
-      code: "REMOTE_APPROVAL_PAYLOAD_INVALID",
-      message:
-        `Remote approval returned stdout without exactly one ${input.label} marker envelope.`
-    });
-  }
-  return matches[0]?.[1] ?? "";
-}
-
-function parseRemoteBubbleState(input: {
-  raw: string;
+function readRemoteApprovalStates(input: {
+  result: { stdout: string };
   bubbleId: string;
-  label: string;
-}): BubbleStateSnapshot {
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(input.raw) as unknown;
-  } catch (error) {
-    throw new RemoteBubbleApprovalCommandError({
-      code: "REMOTE_APPROVAL_PAYLOAD_INVALID",
-      message:
-        `Remote approval returned invalid ${input.label} state JSON for bubble ${input.bubbleId}.`,
-      cause: error
-    });
-  }
-
-  try {
-    return assertValidBubbleStateSnapshot(parsed);
-  } catch (error) {
-    throw new RemoteBubbleApprovalCommandError({
-      code: "REMOTE_APPROVAL_PAYLOAD_INVALID",
-      message:
-        `Remote approval returned invalid ${input.label} state payload for bubble ${input.bubbleId}.`,
-      cause: error
-    });
-  }
-}
-
-function parseTranscriptLineCount(input: {
-  raw: string;
-  bubbleId: string;
-}): number {
-  const trimmed = input.raw.trim();
-  if (!/^\d+$/u.test(trimmed)) {
-    throw new RemoteBubbleApprovalCommandError({
-      code: "REMOTE_APPROVAL_PAYLOAD_INVALID",
-      message:
-        `Remote approval returned invalid transcript line count for bubble ${input.bubbleId}: ${trimmed || "<empty>"}.`
-    });
-  }
-  return Number.parseInt(trimmed, 10);
-}
-
-function normalizeIntentRefs(refs: string[] | undefined): string[] {
-  return refs ?? [];
-}
-
-function refsMatch(expected: string[], actual: string[]): boolean {
-  return (
-    expected.length === actual.length
-    && expected.every((ref, index) => actual[index] === ref)
-  );
-}
-
-function expectedDecisionState(
-  decision: "approve" | "rework"
-): BubbleStateSnapshot["state"] {
-  return decision === "approve" ? "APPROVED_FOR_COMMIT" : "RUNNING";
-}
-
-function normalizeEnvelopeMetadata(
-  envelope: ProtocolEnvelope,
-  bubbleId: string
-): Record<string, unknown> {
-  const metadata = envelope.payload.metadata;
-  if (metadata === null || metadata === undefined) {
-    return {};
-  }
-  if (typeof metadata !== "object") {
-    throw new RemoteBubbleApprovalCommandError({
-      code: "REMOTE_APPROVAL_PAYLOAD_INVALID",
-      message:
-        `Remote approval returned invalid metadata payload for bubble ${bubbleId}.`
-    });
-  }
-  return metadata;
-}
-
-function normalizeDecisionResult(input: {
-  bubbleId: string;
-  expectedDecision: "approve" | "rework";
-  expectedMessage?: string;
-  expectedRefs: string[];
-  expectedOverrideNonApprove?: boolean;
-  expectedOverrideReason?: string;
-  transcriptLine: string;
-  transcriptLineCount: number;
-  state: BubbleStateSnapshot;
-}): RemoteBubbleApprovalDecisionResult {
-  let envelope: ProtocolEnvelope;
-  try {
-    envelope = parseEnvelopeLine(input.transcriptLine);
-  } catch (error) {
-    throw new RemoteBubbleApprovalCommandError({
-      code: "REMOTE_APPROVAL_PAYLOAD_INVALID",
-      message:
-        `Remote approval returned an invalid approval decision transcript line for bubble ${input.bubbleId}.`,
-      cause: error
-    });
-  }
-
-  if (envelope.bubble_id !== input.bubbleId || envelope.type !== "APPROVAL_DECISION") {
-    throw new RemoteBubbleApprovalCommandError({
-      code: "REMOTE_APPROVAL_PAYLOAD_INVALID",
-      message:
-        `Remote approval returned a non-approval transcript tail for bubble ${input.bubbleId}.`
-    });
-  }
-
-  if (envelope.payload.decision !== input.expectedDecision) {
-    throw new RemoteBubbleApprovalCommandError({
-      code: "REMOTE_APPROVAL_PAYLOAD_INVALID",
-      message:
-        `Remote approval returned decision '${String(envelope.payload.decision)}' but expected '${input.expectedDecision}' for bubble ${input.bubbleId}.`
-    });
-  }
-
-  if (!refsMatch(input.expectedRefs, envelope.refs)) {
-    throw new RemoteBubbleApprovalCommandError({
-      code: "REMOTE_APPROVAL_PAYLOAD_INVALID",
-      message:
-        `Remote approval returned unexpected refs for bubble ${input.bubbleId}.`
-    });
-  }
-
-  const actualMessage = envelope.payload.message;
-  if (actualMessage !== input.expectedMessage) {
-    throw new RemoteBubbleApprovalCommandError({
-      code: "REMOTE_APPROVAL_PAYLOAD_INVALID",
-      message:
-        `Remote approval returned an unexpected decision message for bubble ${input.bubbleId}.`
-    });
-  }
-
-  const metadata = normalizeEnvelopeMetadata(envelope, input.bubbleId);
-  if (metadata.delivery_target_role !== "status") {
-    throw new RemoteBubbleApprovalCommandError({
-      code: "REMOTE_APPROVAL_PAYLOAD_INVALID",
-      message:
-        `Remote approval returned invalid delivery_target_role metadata for bubble ${input.bubbleId}.`
-    });
-  }
-
-  if (input.expectedDecision === "approve") {
-    const actualOverrideNonApprove = metadata.override_non_approve;
-    if ((input.expectedOverrideNonApprove ?? false) === true) {
-      if (actualOverrideNonApprove !== true) {
-        throw new RemoteBubbleApprovalCommandError({
-          code: "REMOTE_APPROVAL_PAYLOAD_INVALID",
-          message:
-            `Remote approval did not preserve override_non_approve metadata for bubble ${input.bubbleId}.`
-        });
-      }
-      if (metadata.override_reason !== input.expectedOverrideReason) {
-        throw new RemoteBubbleApprovalCommandError({
-          code: "REMOTE_APPROVAL_PAYLOAD_INVALID",
-          message:
-            `Remote approval did not preserve override_reason metadata for bubble ${input.bubbleId}.`
-        });
-      }
-    } else if (
-      actualOverrideNonApprove !== undefined
-      || metadata.override_reason !== undefined
-    ) {
-      throw new RemoteBubbleApprovalCommandError({
-        code: "REMOTE_APPROVAL_PAYLOAD_INVALID",
-        message:
-          `Remote approval returned unexpected override metadata for bubble ${input.bubbleId}.`
-      });
-    }
-  }
-
-  const expectedState = expectedDecisionState(input.expectedDecision);
-  if (input.state.state !== expectedState) {
-    throw new RemoteBubbleApprovalCommandError({
-      code: "REMOTE_APPROVAL_PAYLOAD_INVALID",
-      message:
-        `Remote approval returned state '${input.state.state}' but expected '${expectedState}' after '${input.expectedDecision}' for bubble ${input.bubbleId}.`
-    });
-  }
-
-  return {
-    kind: "decision",
+  action: "approve" | "request-rework";
+}) {
+  const beforeState = parseRemoteBubbleState({
+    raw: extractMarkerPayload({
+      stdout: input.result.stdout,
+      startMarker: remoteApprovalBeforeStateStartMarker,
+      endMarker: remoteApprovalBeforeStateEndMarker,
+      label: "before-state",
+      bubbleId: input.bubbleId,
+      action: input.action,
+      createPayloadError
+    }),
     bubbleId: input.bubbleId,
-    sequence: input.transcriptLineCount,
-    envelope,
-    state: input.state
-  };
+    label: "before",
+    action: input.action,
+    createPayloadError
+  });
+
+  const afterState = parseRemoteBubbleState({
+    raw: extractMarkerPayload({
+      stdout: input.result.stdout,
+      startMarker: remoteApprovalAfterStateStartMarker,
+      endMarker: remoteApprovalAfterStateEndMarker,
+      label: "after-state",
+      bubbleId: input.bubbleId,
+      action: input.action,
+      createPayloadError
+    }),
+    bubbleId: input.bubbleId,
+    label: "after",
+    action: input.action,
+    createPayloadError
+  });
+
+  return { beforeState, afterState };
 }
 
-function normalizeQueuedReworkResult(input: {
+function readRemoteApprovalTranscript(input: {
+  result: { stdout: string };
   bubbleId: string;
-  beforeState: BubbleStateSnapshot;
-  afterState: BubbleStateSnapshot;
-  expectedMessage: string;
-  expectedRefs: string[];
-}): RemoteBubbleApprovalQueuedReworkResult {
-  if (input.afterState.state !== "WAITING_HUMAN") {
-    throw new RemoteBubbleApprovalCommandError({
-      code: "REMOTE_APPROVAL_PAYLOAD_INVALID",
-      message:
-        `Remote request-rework returned state '${input.afterState.state}' but expected 'WAITING_HUMAN' for bubble ${input.bubbleId}.`
-    });
-  }
-
-  const pendingIntent = input.afterState.pending_rework_intent;
-  if (pendingIntent === null || pendingIntent === undefined) {
-    throw new RemoteBubbleApprovalCommandError({
-      code: "REMOTE_APPROVAL_PAYLOAD_INVALID",
-      message:
-        `Remote request-rework did not leave a pending rework intent for bubble ${input.bubbleId}.`
-    });
-  }
-
-  if (pendingIntent.status !== "pending") {
-    throw new RemoteBubbleApprovalCommandError({
-      code: "REMOTE_APPROVAL_PAYLOAD_INVALID",
-      message:
-        `Remote request-rework left intent '${pendingIntent.intent_id}' in status '${pendingIntent.status}' instead of 'pending' for bubble ${input.bubbleId}.`
-    });
-  }
-
-  if (pendingIntent.requested_by !== "human:request-rework") {
-    throw new RemoteBubbleApprovalCommandError({
-      code: "REMOTE_APPROVAL_PAYLOAD_INVALID",
-      message:
-        `Remote request-rework left intent '${pendingIntent.intent_id}' with unexpected requested_by '${pendingIntent.requested_by}' for bubble ${input.bubbleId}.`
-    });
-  }
-
-  if (pendingIntent.message !== input.expectedMessage) {
-    throw new RemoteBubbleApprovalCommandError({
-      code: "REMOTE_APPROVAL_PAYLOAD_INVALID",
-      message:
-        `Remote request-rework left intent '${pendingIntent.intent_id}' with an unexpected message for bubble ${input.bubbleId}.`
-    });
-  }
-
-  const pendingRefs = normalizeIntentRefs(pendingIntent.refs);
-  if (!refsMatch(input.expectedRefs, pendingRefs)) {
-    throw new RemoteBubbleApprovalCommandError({
-      code: "REMOTE_APPROVAL_PAYLOAD_INVALID",
-      message:
-        `Remote request-rework left intent '${pendingIntent.intent_id}' with unexpected refs for bubble ${input.bubbleId}.`
-    });
-  }
-
-  const previousPendingIntent = input.beforeState.pending_rework_intent ?? null;
-  if (previousPendingIntent !== null) {
-    if (previousPendingIntent.intent_id === pendingIntent.intent_id) {
-      throw new RemoteBubbleApprovalCommandError({
-        code: "REMOTE_APPROVAL_PAYLOAD_INVALID",
-        message:
-          `Remote request-rework did not create a new pending intent for bubble ${input.bubbleId}.`
-      });
-    }
-
-    const supersededEntry = (input.afterState.rework_intent_history ?? []).find(
-      (entry) => entry.intent_id === previousPendingIntent.intent_id
-    );
-    if (
-      supersededEntry?.status !== "superseded"
-      || supersededEntry.superseded_by_intent_id !== pendingIntent.intent_id
-    ) {
-      throw new RemoteBubbleApprovalCommandError({
-        code: "REMOTE_APPROVAL_PAYLOAD_INVALID",
-        message:
-          `Remote request-rework did not record supersession for prior pending intent '${previousPendingIntent.intent_id}' in bubble ${input.bubbleId}.`
-      });
-    }
-  }
-
-  const supersededIntentId =
-    previousPendingIntent !== null
-    && previousPendingIntent.intent_id !== pendingIntent.intent_id
-      ? previousPendingIntent.intent_id
-      : undefined;
-
-  return {
-    kind: "queued_rework",
+  action: "approve" | "request-rework";
+}) {
+  const transcriptLineCount = parseTranscriptLineCount({
+    raw: extractMarkerPayload({
+      stdout: input.result.stdout,
+      startMarker: remoteApprovalTranscriptCountStartMarker,
+      endMarker: remoteApprovalTranscriptCountEndMarker,
+      label: "transcript-count",
+      bubbleId: input.bubbleId,
+      action: input.action,
+      createPayloadError
+    }),
     bubbleId: input.bubbleId,
-    intentId: pendingIntent.intent_id,
-    state: input.afterState,
-    ...(supersededIntentId !== undefined ? { supersededIntentId } : {})
-  };
+    action: input.action,
+    createPayloadError
+  });
+
+  const transcriptLine = extractMarkerPayload({
+    stdout: input.result.stdout,
+    startMarker: remoteApprovalTranscriptLineStartMarker,
+    endMarker: remoteApprovalTranscriptLineEndMarker,
+    label: "transcript-line",
+    bubbleId: input.bubbleId,
+    action: input.action,
+    createPayloadError
+  });
+
+  return { transcriptLine, transcriptLineCount };
+}
+
+function normalizeRemoteApprovalOutcome(input: {
+  command: ExecuteRemoteBubbleApprovalCommandInput;
+  result: { stdout: string };
+}): ExecuteRemoteBubbleApprovalCommandResult {
+  const { beforeState, afterState } = readRemoteApprovalStates({
+    result: input.result,
+    bubbleId: input.command.bubbleId,
+    action: input.command.action
+  });
+
+  if (
+    input.command.action === "request-rework" &&
+    beforeState.state === "WAITING_HUMAN"
+  ) {
+    return normalizeQueuedReworkResult({
+      bubbleId: input.command.bubbleId,
+      beforeState,
+      afterState,
+      expectedMessage: input.command.message,
+      expectedRefs: input.command.refs,
+      createPayloadError
+    });
+  }
+
+  const transcript = readRemoteApprovalTranscript({
+    result: input.result,
+    bubbleId: input.command.bubbleId,
+    action: input.command.action
+  });
+
+  return normalizeDecisionResult({
+    bubbleId: input.command.bubbleId,
+    action: input.command.action,
+    expectedDecision: input.command.action === "approve" ? "approve" : "rework",
+    expectedRefs: input.command.refs,
+    ...(input.command.action === "request-rework"
+      ? { expectedMessage: input.command.message }
+      : {}),
+    ...(input.command.action === "approve"
+      ? {
+          expectedOverrideNonApprove: input.command.overrideNonApprove,
+          ...(input.command.overrideReason !== undefined
+            ? { expectedOverrideReason: input.command.overrideReason }
+            : {})
+        }
+      : {}),
+    transcriptLine: transcript.transcriptLine,
+    transcriptLineCount: transcript.transcriptLineCount,
+    state: afterState,
+    createPayloadError
+  });
 }
 
 export async function executeRemoteBubbleApprovalCommand(
@@ -508,6 +343,7 @@ export async function executeRemoteBubbleApprovalCommand(
     input.remoteTarget.user !== undefined
       ? `${input.remoteTarget.user}@${input.remoteTarget.host}`
       : input.remoteTarget.host;
+
   let result;
   try {
     result = await runCommand("ssh", buildSshCommandArgs({ target, script }));
@@ -520,85 +356,32 @@ export async function executeRemoteBubbleApprovalCommand(
       code: "REMOTE_APPROVAL_TRANSPORT_FAILED",
       message:
         `ssh transport failed before completion: ${summarizeTransportOutput(reason)}`,
-      cause: error
+      reasonCode: "REMOTE_APPROVAL_TRANSPORT_INVOKE_FAILED",
+      cause: error,
+      context: {
+        bubbleId: input.bubbleId,
+        phase: "transport_invoke",
+        action: input.action
+      }
     });
   }
 
   if (result.exitCode !== 0) {
     throw new RemoteBubbleApprovalCommandError({
       code: "REMOTE_APPROVAL_TRANSPORT_FAILED",
-      message: describeTransportFailure({
-        exitCode: result.exitCode,
-        stdout: result.stdout,
-        stderr: result.stderr
-      })
+      message: describeTransportFailure(result),
+      reasonCode: "REMOTE_APPROVAL_TRANSPORT_EXIT_FAILED",
+      context: {
+        bubbleId: input.bubbleId,
+        phase: "transport_exit",
+        action: input.action,
+        exitCode: result.exitCode
+      }
     });
   }
 
-  const beforeState = parseRemoteBubbleState({
-    raw: extractMarkerPayload({
-      stdout: result.stdout,
-      startMarker: remoteApprovalBeforeStateStartMarker,
-      endMarker: remoteApprovalBeforeStateEndMarker,
-      label: "before-state"
-    }),
-    bubbleId: input.bubbleId,
-    label: "before"
-  });
-  const afterState = parseRemoteBubbleState({
-    raw: extractMarkerPayload({
-      stdout: result.stdout,
-      startMarker: remoteApprovalAfterStateStartMarker,
-      endMarker: remoteApprovalAfterStateEndMarker,
-      label: "after-state"
-    }),
-    bubbleId: input.bubbleId,
-    label: "after"
-  });
-
-  if (input.action === "request-rework" && beforeState.state === "WAITING_HUMAN") {
-    return normalizeQueuedReworkResult({
-      bubbleId: input.bubbleId,
-      beforeState,
-      afterState,
-      expectedMessage: input.message,
-      expectedRefs: input.refs
-    });
-  }
-
-  const transcriptLineCount = parseTranscriptLineCount({
-    raw: extractMarkerPayload({
-      stdout: result.stdout,
-      startMarker: remoteApprovalTranscriptCountStartMarker,
-      endMarker: remoteApprovalTranscriptCountEndMarker,
-      label: "transcript-count"
-    }),
-    bubbleId: input.bubbleId
-  });
-  const transcriptLine = extractMarkerPayload({
-    stdout: result.stdout,
-    startMarker: remoteApprovalTranscriptLineStartMarker,
-    endMarker: remoteApprovalTranscriptLineEndMarker,
-    label: "transcript-line"
-  });
-
-  return normalizeDecisionResult({
-    bubbleId: input.bubbleId,
-    expectedDecision: input.action === "approve" ? "approve" : "rework",
-    expectedRefs: input.refs,
-    ...(input.action === "request-rework"
-      ? { expectedMessage: input.message }
-      : {}),
-    ...(input.action === "approve"
-      ? {
-          expectedOverrideNonApprove: input.overrideNonApprove,
-          ...(input.overrideReason !== undefined
-            ? { expectedOverrideReason: input.overrideReason }
-            : {})
-        }
-      : {}),
-    transcriptLine,
-    transcriptLineCount,
-    state: afterState
+  return normalizeRemoteApprovalOutcome({
+    command: input,
+    result
   });
 }

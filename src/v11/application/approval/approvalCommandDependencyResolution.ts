@@ -1,10 +1,9 @@
 import type { BubbleRemotePointer } from "../../../types/bubble.js";
 import { applyStateTransition } from "../../domain/state/machine.js";
 import type {
-  ExecuteRemoteBubbleApprovalCommandInput,
-  ExecuteRemoteBubbleApprovalCommandResult
-} from "../../infrastructure/executor/ssh/sshBubbleApprovalCommand.js";
-import type { RemoteBubbleStatusTarget } from "../../infrastructure/executor/ssh/sshBubbleStatus.js";
+  ExecuteRemoteBubbleApprovalCommandPort,
+  ResolveApprovalRemoteBubbleStatusTargetPort
+} from "./approvalRemoteExecutionContract.js";
 import { emitBubbleLifecycleEventBestEffort } from "../../shared/metrics/bubbleEvents.js";
 import { queueDeferredReworkIntent } from "../../shared/approval/reworkIntent.js";
 import type { EnsureBubbleInstanceIdForMutationPort } from "../../shared/ports/bubbleIdentity.js";
@@ -27,19 +26,13 @@ export interface ApprovalCommandDependencies {
   applyStateTransition?: typeof applyStateTransition;
   emitBubbleLifecycleEventBestEffort?: typeof emitBubbleLifecycleEventBestEffort;
   emitTmuxDeliveryNotification?: EmitDeliveryAckLikePort;
-  executeRemoteBubbleApprovalCommand?: (
-    input: ExecuteRemoteBubbleApprovalCommandInput
-  ) => Promise<ExecuteRemoteBubbleApprovalCommandResult>;
+  executeRemoteBubbleApprovalCommand?: ExecuteRemoteBubbleApprovalCommandPort;
   ensureBubbleInstanceIdForMutation?: EnsureBubbleInstanceIdForMutationPort;
   queueDeferredReworkIntent?: typeof queueDeferredReworkIntent;
   readRemotePointer?: (path: string) => Promise<BubbleRemotePointer | null>;
   readStateSnapshot?: ReadStateSnapshotPort;
   readTranscriptEnvelopes?: ReadTranscriptEnvelopesPort;
-  resolveRemoteBubbleStatusTarget?: (input: {
-    bubbleId: string;
-    remoteAlias: string;
-    expectedHost?: string;
-  }) => Promise<RemoteBubbleStatusTarget>;
+  resolveRemoteBubbleStatusTarget?: ResolveApprovalRemoteBubbleStatusTargetPort;
   resolveBubbleById?: ResolveBubbleByIdPort;
   resolveDeliveryMessageRef?: ResolveDeliveryMessageRefPort;
   writeStateSnapshot?: WriteStateSnapshotPort;
@@ -48,18 +41,12 @@ export interface ApprovalCommandDependencies {
 export interface ApprovalCommandDefaultDependencies {
   appendProtocolEnvelope: AppendProtocolEnvelopePort;
   emitTmuxDeliveryNotification: EmitDeliveryAckLikePort;
-  executeRemoteBubbleApprovalCommand: (
-    input: ExecuteRemoteBubbleApprovalCommandInput
-  ) => Promise<ExecuteRemoteBubbleApprovalCommandResult>;
+  executeRemoteBubbleApprovalCommand: ExecuteRemoteBubbleApprovalCommandPort;
   ensureBubbleInstanceIdForMutation: EnsureBubbleInstanceIdForMutationPort;
   readRemotePointer: (path: string) => Promise<BubbleRemotePointer | null>;
   readStateSnapshot: ReadStateSnapshotPort;
   readTranscriptEnvelopes: ReadTranscriptEnvelopesPort;
-  resolveRemoteBubbleStatusTarget: (input: {
-    bubbleId: string;
-    remoteAlias: string;
-    expectedHost?: string;
-  }) => Promise<RemoteBubbleStatusTarget>;
+  resolveRemoteBubbleStatusTarget: ResolveApprovalRemoteBubbleStatusTargetPort;
   resolveBubbleById: ResolveBubbleByIdPort;
   resolveDeliveryMessageRef: ResolveDeliveryMessageRefPort;
   writeStateSnapshot: WriteStateSnapshotPort;
@@ -70,19 +57,13 @@ export interface ResolvedApprovalCommandDependencies {
   applyStateTransition: typeof applyStateTransition;
   emitBubbleLifecycleEventBestEffort: typeof emitBubbleLifecycleEventBestEffort;
   emitTmuxDeliveryNotification: EmitDeliveryAckLikePort;
-  executeRemoteBubbleApprovalCommand: (
-    input: ExecuteRemoteBubbleApprovalCommandInput
-  ) => Promise<ExecuteRemoteBubbleApprovalCommandResult>;
+  executeRemoteBubbleApprovalCommand: ExecuteRemoteBubbleApprovalCommandPort;
   ensureBubbleInstanceIdForMutation: EnsureBubbleInstanceIdForMutationPort;
   queueDeferredReworkIntent: typeof queueDeferredReworkIntent;
   readRemotePointer: (path: string) => Promise<BubbleRemotePointer | null>;
   readStateSnapshot: ReadStateSnapshotPort;
   readTranscriptEnvelopes: ReadTranscriptEnvelopesPort;
-  resolveRemoteBubbleStatusTarget: (input: {
-    bubbleId: string;
-    remoteAlias: string;
-    expectedHost?: string;
-  }) => Promise<RemoteBubbleStatusTarget>;
+  resolveRemoteBubbleStatusTarget: ResolveApprovalRemoteBubbleStatusTargetPort;
   resolveBubbleById: ResolveBubbleByIdPort;
   resolveDeliveryMessageRef: ResolveDeliveryMessageRefPort;
   writeStateSnapshot: WriteStateSnapshotPort;

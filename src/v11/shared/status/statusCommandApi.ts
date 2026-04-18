@@ -1,5 +1,4 @@
 import type { BubbleRemotePointer, BubbleRemoteStateCache } from "../../../types/bubble.js";
-import { RemoteBubbleStatusError } from "../../infrastructure/executor/ssh/sshBubbleStatus.js";
 import { isNamedError } from "../errors/namedError.js";
 import {
   countPendingHumanQuestions,
@@ -14,6 +13,7 @@ import {
   buildBubbleStatusView,
   type BubbleStatusView
 } from "./statusCommandViewBuilder.js";
+import { isRemoteBubbleStatusErrorLike } from "./remoteBubbleStatusContract.js";
 import type {
   ReadWatchdogPaneActivity,
   ReadWatchdogPaneActivityResult
@@ -146,6 +146,131 @@ function formatRemoteStatusUnavailableReason(error: unknown): string {
     : `STATUS_REMOTE_STATUS_UNAVAILABLE: ${reason}`;
 }
 
+function resolveStatusCommandDependencies(
+  dependencies: BubbleStatusDependencies
+): {
+  readRemotePointer: NonNullable<BubbleStatusDependencies["readRemotePointer"]>;
+  readRemoteStateCache: NonNullable<BubbleStatusDependencies["readRemoteStateCache"]>;
+  writeRemoteStateCache: NonNullable<BubbleStatusDependencies["writeRemoteStateCache"]>;
+  resolveRemoteBubbleStatusTarget: NonNullable<
+    BubbleStatusDependencies["resolveRemoteBubbleStatusTarget"]
+  >;
+  executeRemoteBubbleStatus: NonNullable<
+    BubbleStatusDependencies["executeRemoteBubbleStatus"]
+  >;
+} {
+  return {
+    readRemotePointer:
+      dependencies.readRemotePointer
+      ?? statusCommandDependencyDefaults.readRemotePointer,
+    readRemoteStateCache:
+      dependencies.readRemoteStateCache
+      ?? statusCommandDependencyDefaults.readRemoteStateCache,
+    writeRemoteStateCache:
+      dependencies.writeRemoteStateCache
+      ?? statusCommandDependencyDefaults.writeRemoteStateCache,
+    resolveRemoteBubbleStatusTarget:
+      dependencies.resolveRemoteBubbleStatusTarget
+      ?? statusCommandDependencyDefaults.resolveRemoteBubbleStatusTarget,
+    executeRemoteBubbleStatus:
+      dependencies.executeRemoteBubbleStatus
+      ?? statusCommandDependencyDefaults.executeRemoteBubbleStatus
+  };
+}
+
+async function loadStartedRemoteBubbleStatusView(input: {
+  resolved: Awaited<ReturnType<typeof statusCommandDependencyDefaults.resolveBubbleById>>;
+  remotePointer: Extract<BubbleRemotePointer, { kind: "started" }>;
+  readRemoteStateCache: NonNullable<BubbleStatusDependencies["readRemoteStateCache"]>;
+  writeRemoteStateCache: NonNullable<BubbleStatusDependencies["writeRemoteStateCache"]>;
+  resolveRemoteBubbleStatusTarget: NonNullable<
+    BubbleStatusDependencies["resolveRemoteBubbleStatusTarget"]
+  >;
+  executeRemoteBubbleStatus: NonNullable<
+    BubbleStatusDependencies["executeRemoteBubbleStatus"]
+  >;
+}): Promise<BubbleStatusView> {
+  const remoteAlias = resolveConfiguredRemoteAlias({
+    bubbleId: input.resolved.bubbleId,
+    bubbleConfig: input.resolved.bubbleConfig
+  });
+  const remoteTarget = await input.resolveRemoteBubbleStatusTarget({
+    bubbleId: input.resolved.bubbleId,
+    remoteAlias,
+    expectedHost: input.remotePointer.host
+  });
+  const remoteStatusSnapshot = await input.executeRemoteBubbleStatus({
+    bubbleId: input.resolved.bubbleId,
+    remoteClonePath: input.remotePointer.remoteClonePath,
+    remoteTarget
+  });
+  const cacheRefresh = await refreshRemoteStateCache({
+    path: input.resolved.bubblePaths.remoteStateCachePath,
+    snapshot: {
+      lastCheckedAt: remoteStatusSnapshot.lastCheckedAt,
+      state: remoteStatusSnapshot.state,
+      round: remoteStatusSnapshot.round
+    },
+    maxRounds: input.resolved.bubbleConfig.max_rounds,
+    writeRemoteStateCache: input.writeRemoteStateCache,
+    readRemoteStateCache: input.readRemoteStateCache
+  });
+
+  return buildBubbleStatusView({
+    resolved: input.resolved,
+    remoteStatusSnapshot,
+    remoteExecution: {
+      alias: remoteTarget.alias,
+      host: remoteTarget.host,
+      pointerKind: "started",
+      viewKind: "status",
+      statusSource: "live",
+      cacheStatus: cacheRefresh.cacheStatus,
+      runtimeAvailability: remoteStatusSnapshot.runtimeAvailability,
+      ...(remoteStatusSnapshot.runtimeAvailability === "missing"
+        ? { reasonCode: "STATUS_REMOTE_RUNTIME_MISSING" as const }
+        : {}),
+      ...(cacheRefresh.cacheReasonCode !== undefined
+        ? { cacheReasonCode: cacheRefresh.cacheReasonCode }
+        : {}),
+      remoteClonePath: input.remotePointer.remoteClonePath,
+      lastLiveCheckAt: remoteStatusSnapshot.lastCheckedAt,
+      ...(cacheRefresh.lastCacheCheckAt !== undefined
+        ? { lastCacheCheckAt: cacheRefresh.lastCacheCheckAt }
+        : {})
+    }
+  });
+}
+
+async function throwRemoteBubbleStatusLoadError(input: {
+  error: unknown;
+  resolved: Awaited<ReturnType<typeof statusCommandDependencyDefaults.resolveBubbleById>>;
+  readRemoteStateCache: NonNullable<BubbleStatusDependencies["readRemoteStateCache"]>;
+}): Promise<never> {
+  let remoteCacheSuffix = "";
+  try {
+    const remoteCache = await readRemoteStateCacheSafe({
+      path: input.resolved.bubblePaths.remoteStateCachePath,
+      readRemoteStateCache: input.readRemoteStateCache
+    });
+    remoteCacheSuffix =
+      remoteCache.cacheStatus === "present"
+        ? `${remoteCache.cache?.lastCheckedAt !== undefined
+            ? ` cache_status=present cache_last_checked_at=${remoteCache.cache.lastCheckedAt}.`
+            : " cache_status=present."}`
+        : ` cache_status=${remoteCache.cacheStatus}.`;
+  } catch {
+    remoteCacheSuffix =
+      " cache_status=read_failed cache_reason=STATUS_REMOTE_CACHE_READ_FAILED.";
+  }
+  const reason = formatRemoteStatusUnavailableReason(input.error);
+  throw new BubbleStatusError(
+    `Failed to load remote status for `
+    + `${input.resolved.bubbleId}: ${reason}`
+    + remoteCacheSuffix
+  );
+}
+
 async function buildLocalBubbleStatusView(input: {
   resolved: Awaited<ReturnType<typeof statusCommandDependencyDefaults.resolveBubbleById>>;
   now: Date;
@@ -230,100 +355,31 @@ export async function getBubbleStatus(
     ...(input.cwd !== undefined ? { cwd: input.cwd } : {})
   });
   const now = input.now ?? new Date();
-  const readRemotePointer =
-    dependencies.readRemotePointer
-    ?? statusCommandDependencyDefaults.readRemotePointer;
-  const readRemoteStateCache =
-    dependencies.readRemoteStateCache
-    ?? statusCommandDependencyDefaults.readRemoteStateCache;
-  const writeRemoteStateCache =
-    dependencies.writeRemoteStateCache
-    ?? statusCommandDependencyDefaults.writeRemoteStateCache;
-  const resolveRemoteBubbleStatusTarget =
-    dependencies.resolveRemoteBubbleStatusTarget
-    ?? statusCommandDependencyDefaults.resolveRemoteBubbleStatusTarget;
-  const executeRemoteBubbleStatus =
-    dependencies.executeRemoteBubbleStatus
-    ?? statusCommandDependencyDefaults.executeRemoteBubbleStatus;
+  const {
+    readRemotePointer,
+    readRemoteStateCache,
+    writeRemoteStateCache,
+    resolveRemoteBubbleStatusTarget,
+    executeRemoteBubbleStatus
+  } = resolveStatusCommandDependencies(dependencies);
   const remotePointer = await readRemotePointer(resolved.bubblePaths.remotePointerPath);
 
   if (remotePointer?.kind === "started") {
     try {
-      const remoteAlias = resolveConfiguredRemoteAlias({
-        bubbleId: resolved.bubbleId,
-        bubbleConfig: resolved.bubbleConfig
-      });
-      const remoteTarget = await resolveRemoteBubbleStatusTarget({
-        bubbleId: resolved.bubbleId,
-        remoteAlias,
-        expectedHost: remotePointer.host
-      });
-      const remoteStatusSnapshot = await executeRemoteBubbleStatus(
-        {
-          bubbleId: resolved.bubbleId,
-          remoteClonePath: remotePointer.remoteClonePath,
-          remoteTarget
-        }
-      );
-      const cacheRefresh = await refreshRemoteStateCache({
-        path: resolved.bubblePaths.remoteStateCachePath,
-        snapshot: {
-          lastCheckedAt: remoteStatusSnapshot.lastCheckedAt,
-          state: remoteStatusSnapshot.state,
-          round: remoteStatusSnapshot.round
-        },
-        maxRounds: resolved.bubbleConfig.max_rounds,
-        writeRemoteStateCache,
-        readRemoteStateCache
-      });
-
-      return buildBubbleStatusView({
+      return await loadStartedRemoteBubbleStatusView({
         resolved,
-        remoteStatusSnapshot,
-        remoteExecution: {
-          alias: remoteTarget.alias,
-          host: remoteTarget.host,
-          pointerKind: "started",
-          viewKind: "status",
-          statusSource: "live",
-          cacheStatus: cacheRefresh.cacheStatus,
-          runtimeAvailability: remoteStatusSnapshot.runtimeAvailability,
-          ...(remoteStatusSnapshot.runtimeAvailability === "missing"
-            ? { reasonCode: "STATUS_REMOTE_RUNTIME_MISSING" as const }
-            : {}),
-          ...(cacheRefresh.cacheReasonCode !== undefined
-            ? { cacheReasonCode: cacheRefresh.cacheReasonCode }
-            : {}),
-          remoteClonePath: remotePointer.remoteClonePath,
-          lastLiveCheckAt: remoteStatusSnapshot.lastCheckedAt,
-          ...(cacheRefresh.lastCacheCheckAt !== undefined
-            ? { lastCacheCheckAt: cacheRefresh.lastCacheCheckAt }
-            : {})
-        }
+        remotePointer,
+        readRemoteStateCache,
+        writeRemoteStateCache,
+        resolveRemoteBubbleStatusTarget,
+        executeRemoteBubbleStatus
       });
     } catch (error) {
-      let remoteCacheSuffix = "";
-      try {
-        const remoteCache = await readRemoteStateCacheSafe({
-          path: resolved.bubblePaths.remoteStateCachePath,
-          readRemoteStateCache
-        });
-        remoteCacheSuffix =
-          remoteCache.cacheStatus === "present"
-            ? `${remoteCache.cache?.lastCheckedAt !== undefined
-                ? ` cache_status=present cache_last_checked_at=${remoteCache.cache.lastCheckedAt}.`
-                : " cache_status=present."}`
-            : ` cache_status=${remoteCache.cacheStatus}.`;
-      } catch {
-        remoteCacheSuffix =
-          " cache_status=read_failed cache_reason=STATUS_REMOTE_CACHE_READ_FAILED.";
-      }
-      const reason = formatRemoteStatusUnavailableReason(error);
-      throw new BubbleStatusError(
-        `Failed to load remote status for `
-        + `${resolved.bubbleId}: ${reason}`
-        + remoteCacheSuffix
-      );
+      await throwRemoteBubbleStatusLoadError({
+        error,
+        resolved,
+        readRemoteStateCache
+      });
     }
   }
 
@@ -359,7 +415,7 @@ export function asBubbleStatusError(error: unknown): never {
       `${error.message} context: command_name=status.`
     );
   }
-  if (error instanceof RemoteBubbleStatusError) {
+  if (isRemoteBubbleStatusErrorLike(error)) {
     throw new BubbleStatusError(
       `${error.code}: ${error.message} context: command_name=status.`
     );

@@ -175,33 +175,28 @@ async function resolveRemoteAttachConfig(input: {
   }
 }
 
-export async function resolveAttachBubbleExecution<
+async function readRemotePointerOrThrow<
   TAttachError extends Error,
   TReasonCode extends string
->(
-  input: ResolveAttachBubbleExecutionInput<TAttachError, TReasonCode>
-): Promise<ResolvedAttachBubbleExecution> {
-  const { resolved } = input;
-  let cachedGlobalConfigPromise: Promise<PairflowGlobalConfig> | undefined;
-  const loadGlobalConfigOnce = (): Promise<PairflowGlobalConfig> => {
-    cachedGlobalConfigPromise ??= input.loadPairflowGlobalConfig();
-    return cachedGlobalConfigPromise;
-  };
-
-  let remotePointer: BubbleRemotePointer | null;
+>(input: {
+  resolved: ResolvedBubbleById;
+  readRemotePointer: (path: string) => Promise<BubbleRemotePointer | null>;
+  createAttachError: ResolveAttachBubbleExecutionInput<TAttachError, TReasonCode>["createAttachError"];
+}): Promise<BubbleRemotePointer | null> {
   try {
-    remotePointer = await input.readRemotePointer(
-      resolved.bubblePaths.remotePointerPath
+    return await input.readRemotePointer(
+      input.resolved.bubblePaths.remotePointerPath
     );
   } catch (error) {
     if (error instanceof SchemaValidationError) {
       throw input.createAttachError({
-        message: `Remote attach for '${resolved.bubbleId}' requires a valid remote pointer: ${error.message}`,
+        message:
+          `Remote attach for '${input.resolved.bubbleId}' requires a valid remote pointer: ${error.message}`,
         options: {
           context: {
-            bubbleId: resolved.bubbleId,
+            bubbleId: input.resolved.bubbleId,
             reason: "remote_pointer_invalid",
-            repoPath: resolved.repoPath
+            repoPath: input.resolved.repoPath
           },
           reasonCode: "REMOTE_ATTACH_POINTER_INVALID" as TReasonCode
         }
@@ -209,101 +204,135 @@ export async function resolveAttachBubbleExecution<
     }
     throw error;
   }
+}
+
+async function resolveRequestedAttachLauncher<
+  TAttachError extends Error,
+  TReasonCode extends string
+>(input: {
+  resolved: ResolvedBubbleById;
+  remotePointer: BubbleRemotePointer | null;
+  loadGlobalConfigOnce: () => Promise<PairflowGlobalConfig>;
+  createAttachError: ResolveAttachBubbleExecutionInput<TAttachError, TReasonCode>["createAttachError"];
+}): Promise<AttachLauncher> {
+  if (input.resolved.bubbleConfig.attach_launcher !== undefined) {
+    return input.resolved.bubbleConfig.attach_launcher;
+  }
 
   let globalAttachLauncher: AttachLauncher | undefined;
-  if (resolved.bubbleConfig.attach_launcher === undefined) {
-    try {
-      globalAttachLauncher = (await loadGlobalConfigOnce()).attach_launcher;
-    } catch (error) {
-      if (error instanceof SchemaValidationError) {
-        globalAttachLauncher = undefined;
-      } else if (remotePointer?.kind === "started") {
-        globalAttachLauncher = undefined;
-      } else {
-        const reason = error instanceof Error ? error.message : String(error);
-        throw input.createAttachError({
-          message: `Failed to load global Pairflow config for '${resolved.bubbleId}': ${reason}`,
-          options: {
-            context: {
-              bubbleId: resolved.bubbleId,
-              reason: "load_global_config_failed",
-              repoPath: resolved.repoPath
-            }
-          }
-        });
-      }
-    }
-  }
-
-  const launcherRequested =
-    resolved.bubbleConfig.attach_launcher ??
-    globalAttachLauncher ??
-    DEFAULT_ATTACH_LAUNCHER;
-  const executor = resolved.bubbleConfig.executor;
-
-  if (remotePointer === null) {
-    if (executor?.type === "ssh") {
+  try {
+    globalAttachLauncher = (await input.loadGlobalConfigOnce()).attach_launcher;
+  } catch (error) {
+    if (error instanceof SchemaValidationError || input.remotePointer?.kind === "started") {
+      globalAttachLauncher = undefined;
+    } else {
+      const reason = error instanceof Error ? error.message : String(error);
       throw input.createAttachError({
-        message: `Remote bubble '${resolved.bubbleId}' is not started yet. Run \`pairflow bubble start --id ${resolved.bubbleId}\` first.`,
+        message:
+          `Failed to load global Pairflow config for '${input.resolved.bubbleId}': ${reason}`,
         options: {
           context: {
-            bubbleId: resolved.bubbleId,
-            reason: "remote_attach_start_required",
-            repoPath: resolved.repoPath,
-            remoteAlias: executor.remote
+            bubbleId: input.resolved.bubbleId,
+            reason: "load_global_config_failed",
+            repoPath: input.resolved.repoPath
           },
-          reasonCode: "REMOTE_ATTACH_START_REQUIRED" as TReasonCode
+          reasonCode: "REMOTE_ATTACH_CONFIG_INVALID" as TReasonCode
         }
       });
     }
-
-    const tmuxSessionName = `pf-${resolved.bubbleId}`;
-    const sessionExists = await input.checkTmuxSessionExists(tmuxSessionName);
-    if (!sessionExists) {
-      throw input.createAttachError({
-        message: `Tmux session "${tmuxSessionName}" does not exist. Start the bubble runtime first.`,
-        options: {
-          context: {
-            bubbleId: resolved.bubbleId,
-            reason: "tmux_session_missing",
-            repoPath: resolved.repoPath,
-            tmuxSessionName
-          },
-          reasonCode: "TMUX_SESSION_MISSING" as TReasonCode
-        }
-      });
-    }
-
-    return {
-      launcherRequested,
-      tmuxSessionName,
-      attachCommand: input.buildAttachCommand(tmuxSessionName)
-    };
   }
 
-  if (remotePointer.kind === "created") {
+  return globalAttachLauncher ?? DEFAULT_ATTACH_LAUNCHER;
+}
+
+async function resolveLocalAttachExecution<
+  TAttachError extends Error,
+  TReasonCode extends string
+>(input: {
+  resolved: ResolvedBubbleById;
+  launcherRequested: AttachLauncher;
+  executor: ResolvedBubbleById["bubbleConfig"]["executor"];
+  checkTmuxSessionExists: (sessionName: string) => Promise<boolean>;
+  createAttachError: ResolveAttachBubbleExecutionInput<TAttachError, TReasonCode>["createAttachError"];
+  buildAttachCommand: (sessionName: string) => string;
+}): Promise<ResolvedAttachBubbleExecution> {
+  if (input.executor?.type === "ssh") {
     throw input.createAttachError({
-      message: `Remote bubble '${resolved.bubbleId}' is not started yet. Run \`pairflow bubble start --id ${resolved.bubbleId}\` first.`,
+      message:
+        `Remote bubble '${input.resolved.bubbleId}' is not started yet. Run \`pairflow bubble start --id ${input.resolved.bubbleId}\` first.`,
       options: {
         context: {
-          bubbleId: resolved.bubbleId,
+          bubbleId: input.resolved.bubbleId,
           reason: "remote_attach_start_required",
-          repoPath: resolved.repoPath,
-          remoteHost: remotePointer.host
+          repoPath: input.resolved.repoPath,
+          remoteAlias: input.executor.remote
         },
         reasonCode: "REMOTE_ATTACH_START_REQUIRED" as TReasonCode
       }
     });
   }
 
-  if (executor?.type !== "ssh") {
+  const tmuxSessionName = `pf-${input.resolved.bubbleId}`;
+  const sessionExists = await input.checkTmuxSessionExists(tmuxSessionName);
+  if (!sessionExists) {
     throw input.createAttachError({
-      message: `Remote attach for '${resolved.bubbleId}' requires an ssh executor configuration.`,
+      message: `Tmux session "${tmuxSessionName}" does not exist. Start the bubble runtime first.`,
       options: {
         context: {
-          bubbleId: resolved.bubbleId,
+          bubbleId: input.resolved.bubbleId,
+          reason: "tmux_session_missing",
+          repoPath: input.resolved.repoPath,
+          tmuxSessionName
+        },
+        reasonCode: "TMUX_SESSION_MISSING" as TReasonCode
+      }
+    });
+  }
+
+  return {
+    launcherRequested: input.launcherRequested,
+    tmuxSessionName,
+    attachCommand: input.buildAttachCommand(tmuxSessionName)
+  };
+}
+
+async function resolveRemoteAttachExecution<
+  TAttachError extends Error,
+  TReasonCode extends string
+>(input: {
+  resolved: ResolvedBubbleById;
+  launcherRequested: AttachLauncher;
+  remotePointer: BubbleRemotePointer;
+  loadGlobalConfigOnce: () => Promise<PairflowGlobalConfig>;
+  requestPortForwards?: number[];
+  createAttachError: ResolveAttachBubbleExecutionInput<TAttachError, TReasonCode>["createAttachError"];
+  buildRemoteAttachCommand: ResolveAttachBubbleExecutionInput<TAttachError, TReasonCode>["buildRemoteAttachCommand"];
+}): Promise<ResolvedAttachBubbleExecution> {
+  if (input.remotePointer.kind === "created") {
+    throw input.createAttachError({
+      message:
+        `Remote bubble '${input.resolved.bubbleId}' is not started yet. Run \`pairflow bubble start --id ${input.resolved.bubbleId}\` first.`,
+      options: {
+        context: {
+          bubbleId: input.resolved.bubbleId,
+          reason: "remote_attach_start_required",
+          repoPath: input.resolved.repoPath,
+          remoteHost: input.remotePointer.host
+        },
+        reasonCode: "REMOTE_ATTACH_START_REQUIRED" as TReasonCode
+      }
+    });
+  }
+
+  const executor = input.resolved.bubbleConfig.executor;
+  if (executor?.type !== "ssh") {
+    throw input.createAttachError({
+      message: `Remote attach for '${input.resolved.bubbleId}' requires an ssh executor configuration.`,
+      options: {
+        context: {
+          bubbleId: input.resolved.bubbleId,
           reason: "remote_executor_invalid",
-          repoPath: resolved.repoPath
+          repoPath: input.resolved.repoPath
         },
         reasonCode: "REMOTE_ATTACH_CONFIG_INVALID" as TReasonCode
       }
@@ -311,27 +340,27 @@ export async function resolveAttachBubbleExecution<
   }
 
   const startedPointer = validateRemoteStartedPointer({
-    bubbleId: resolved.bubbleId,
-    repoPath: resolved.repoPath,
-    pointer: remotePointer,
+    bubbleId: input.resolved.bubbleId,
+    repoPath: input.resolved.repoPath,
+    pointer: input.remotePointer,
     remoteAlias: executor.remote,
     createAttachError: input.createAttachError
   });
   const remoteConfig = await resolveRemoteAttachConfig({
-    bubbleId: resolved.bubbleId,
-    repoPath: resolved.repoPath,
+    bubbleId: input.resolved.bubbleId,
+    repoPath: input.resolved.repoPath,
     remoteAlias: executor.remote,
     expectedHost: startedPointer.host,
-    loadGlobalConfig: loadGlobalConfigOnce
+    loadGlobalConfig: input.loadGlobalConfigOnce
   });
   const tmuxSessionName = startedPointer.tmuxSession;
   const portForwards = resolveRequestedPortForwards({
-    cliPortForwards: input.request.portForwards,
+    cliPortForwards: input.requestPortForwards,
     pointerPortForwards: startedPointer.portForwards
   });
 
   return {
-    launcherRequested,
+    launcherRequested: input.launcherRequested,
     tmuxSessionName,
     attachCommand: input.buildRemoteAttachCommand({
       host: startedPointer.host,
@@ -348,4 +377,50 @@ export async function resolveAttachBubbleExecution<
       ? { diagnostics: remoteConfig.diagnostics }
       : {})
   };
+}
+
+export async function resolveAttachBubbleExecution<
+  TAttachError extends Error,
+  TReasonCode extends string
+>(
+  input: ResolveAttachBubbleExecutionInput<TAttachError, TReasonCode>
+): Promise<ResolvedAttachBubbleExecution> {
+  const { resolved } = input;
+  let cachedGlobalConfigPromise: Promise<PairflowGlobalConfig> | undefined;
+  const loadGlobalConfigOnce = (): Promise<PairflowGlobalConfig> => {
+    cachedGlobalConfigPromise ??= input.loadPairflowGlobalConfig();
+    return cachedGlobalConfigPromise;
+  };
+  const remotePointer = await readRemotePointerOrThrow({
+    resolved,
+    readRemotePointer: input.readRemotePointer,
+    createAttachError: input.createAttachError
+  });
+  const launcherRequested = await resolveRequestedAttachLauncher({
+    resolved,
+    remotePointer,
+    loadGlobalConfigOnce,
+    createAttachError: input.createAttachError
+  });
+
+  return remotePointer === null
+    ? resolveLocalAttachExecution({
+        resolved,
+        launcherRequested,
+        executor: resolved.bubbleConfig.executor,
+        checkTmuxSessionExists: input.checkTmuxSessionExists,
+        createAttachError: input.createAttachError,
+        buildAttachCommand: input.buildAttachCommand
+      })
+    : resolveRemoteAttachExecution({
+        resolved,
+        launcherRequested,
+        remotePointer,
+        loadGlobalConfigOnce,
+        createAttachError: input.createAttachError,
+        buildRemoteAttachCommand: input.buildRemoteAttachCommand,
+        ...(input.request.portForwards !== undefined
+          ? { requestPortForwards: input.request.portForwards }
+          : {})
+      });
 }

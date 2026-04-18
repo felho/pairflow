@@ -17,14 +17,38 @@ import type { BranchExistsPort } from "../../shared/ports/git.js";
 import type { EnsureBubbleInstanceIdForMutationPort } from "../../shared/ports/bubbleIdentity.js";
 import type { EmitBubbleLifecycleEventBestEffortPort } from "../../shared/metrics/bubbleEvents.js";
 import type {
-  ExecuteRemoteBubbleMergeCommandInput,
-  ExecuteRemoteBubbleMergeCommandResult
-} from "../../infrastructure/executor/ssh/sshBubbleMergeCommand.js";
-import type { RemoteBubbleStatusTarget } from "../../infrastructure/executor/ssh/sshBubbleStatus.js";
-import type {
   BubbleRemotePointerCreated,
   BubbleRemotePointerStarted
 } from "../../../types/bubble.js";
+
+export interface RemoteMergeStatusTarget {
+  alias: string;
+  host: string;
+  user?: string;
+  pairflowCommand: string;
+}
+
+export interface ExecuteRemoteBubbleMergeCommandInput {
+  bubbleId: string;
+  remoteClonePath: string;
+  remoteTarget: RemoteMergeStatusTarget;
+  push: boolean;
+  deleteRemote: boolean;
+}
+
+export interface ExecuteRemoteBubbleMergeCommandResult {
+  bubbleId: string;
+  baseBranch: string;
+  bubbleBranch: string;
+  mergeCommitSha: string;
+  pushedBaseBranch: boolean;
+  deletedRemoteBranch: boolean;
+  tmuxSessionName: string;
+  tmuxSessionExisted: boolean;
+  runtimeSessionRemoved: boolean;
+  removedWorktree: boolean;
+  removedBubbleBranch: boolean;
+}
 
 export interface MergeBubbleInput {
   bubbleId: string;
@@ -67,7 +91,7 @@ export interface MergeBubbleDependencies {
     bubbleId: string;
     remoteAlias: string;
     expectedHost?: string;
-  }) => Promise<RemoteBubbleStatusTarget>;
+  }) => Promise<RemoteMergeStatusTarget>;
   executeRemoteBubbleMergeCommand?: (
     input: ExecuteRemoteBubbleMergeCommandInput
   ) => Promise<ExecuteRemoteBubbleMergeCommandResult>;

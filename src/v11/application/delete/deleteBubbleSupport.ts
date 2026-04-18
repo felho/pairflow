@@ -14,11 +14,6 @@ import type {
 import { deleteBubbleDependencyDefaults } from "./deleteBubbleDependencyDefaults.js";
 import type { BranchExistsPort } from "../../shared/ports/git.js";
 import type { PathExistsPort } from "../../shared/ports/pathExists.js";
-import type { RemoteBubbleStatusTarget } from "../../infrastructure/executor/ssh/sshBubbleStatus.js";
-import type {
-  ExecuteRemoteBubbleDeleteCommandInput,
-  ExecuteRemoteBubbleDeleteCommandResult
-} from "../../infrastructure/executor/ssh/sshBubbleDeleteCommand.js";
 import { stopBubbleV11 as stopBubble } from "../stop/emitStopV11.js";
 import {
   canonicalizeDeleteExecutionPath,
@@ -32,6 +27,47 @@ export interface DeleteBubbleInput {
   force?: boolean | undefined;
   archiveRootPath?: string | undefined;
   now?: Date | undefined;
+}
+
+export type DeleteRemoteBubbleStatusTarget = Awaited<
+  ReturnType<typeof deleteBubbleDependencyDefaults.resolveRemoteBubbleStatusTarget>
+>;
+
+export type ExecuteRemoteDeleteBubbleCommand =
+  typeof deleteBubbleDependencyDefaults.executeRemoteBubbleDeleteCommand;
+
+export type ExecuteRemoteBubbleDeleteCommandInput = Parameters<
+  ExecuteRemoteDeleteBubbleCommand
+>[0];
+
+export type ExecuteRemoteBubbleDeleteCommandResult = Awaited<
+  ReturnType<ExecuteRemoteDeleteBubbleCommand>
+>;
+
+export class DeleteRouteResolutionError extends Error {
+  public readonly code: string;
+  public readonly context: Readonly<Record<string, unknown>>;
+
+  public constructor(input: {
+    code: string;
+    message: string;
+    context: Readonly<Record<string, unknown>>;
+    cause?: unknown;
+  }) {
+    super(input.message, input.cause === undefined ? undefined : { cause: input.cause });
+    this.name = "DeleteRouteResolutionError";
+    this.code = input.code;
+    this.context = input.context;
+  }
+}
+
+function toDeleteRouteResolutionError(input: {
+  code: string;
+  message: string;
+  context: Readonly<Record<string, unknown>>;
+  cause?: unknown;
+}): DeleteRouteResolutionError {
+  return new DeleteRouteResolutionError(input);
 }
 
 export interface DeleteBubbleDependencies {
@@ -107,7 +143,7 @@ export interface RemoteDeleteRouteContext {
   route: "remote";
   resolved: ResolvedBubble;
   remotePointer: BubbleRemotePointerStarted;
-  remoteTarget: RemoteBubbleStatusTarget;
+  remoteTarget: DeleteRemoteBubbleStatusTarget;
 }
 
 export type DeleteRouteContext =
@@ -248,9 +284,17 @@ export async function resolveDeleteRouteContext(input: {
     && remoteDeleteExecutionContext.workspaceRoot === resolvedRepoPath
   ) {
     if (remotePointer !== null) {
-      throw new Error(
-        `Remote inner delete for '${resolved.bubbleId}' refused to continue because source-repo remote artifacts are still present.`
-      );
+      throw toDeleteRouteResolutionError({
+        code: "REMOTE_DELETE_SOURCE_POINTER_PRESENT",
+        message:
+          `Remote inner delete for '${resolved.bubbleId}' refused to continue because source-repo remote artifacts are still present.`,
+        context: {
+          bubbleId: resolved.bubbleId,
+          repoPath: resolved.repoPath,
+          remotePointerKind: remotePointer.kind,
+          workspaceRoot: remoteDeleteExecutionContext.workspaceRoot
+        }
+      });
     }
     return {
       route: "remote_clone",
@@ -260,9 +304,17 @@ export async function resolveDeleteRouteContext(input: {
   }
 
   if (remotePointer?.kind !== "started") {
-    throw new Error(
-      `Remote delete for '${resolved.bubbleId}' requires a started remote pointer. Run \`pairflow bubble start --id ${resolved.bubbleId}\` first.`
-    );
+    throw toDeleteRouteResolutionError({
+      code: "REMOTE_DELETE_POINTER_NOT_STARTED",
+      message:
+        `Remote delete for '${resolved.bubbleId}' requires a started remote pointer. Run \`pairflow bubble start --id ${resolved.bubbleId}\` first.`,
+      context: {
+        bubbleId: resolved.bubbleId,
+        repoPath: resolved.repoPath,
+        remotePointerKind: remotePointer?.kind ?? null,
+        workspaceRoot: remoteDeleteExecutionContext?.workspaceRoot ?? null
+      }
+    });
   }
 
   const remoteTarget = await input.dependencies.resolveRemoteBubbleStatusTarget({

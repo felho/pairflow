@@ -1,13 +1,3 @@
-import { loadPairflowGlobalConfig } from "../../../config/pairflowConfig.js";
-import {
-  readRemotePointer,
-  readRemoteStateCache,
-  writeRemoteStateCache
-} from "../../infrastructure/artifact/bubble/remoteExecutionArtifacts.js";
-import {
-  executeRemoteBubbleStatus,
-  resolveRemoteBubbleStatusTarget
-} from "../../infrastructure/executor/ssh/sshBubbleStatus.js";
 import {
   readDocContractGateArtifact,
   resolveDocContractGateArtifactPath
@@ -66,18 +56,23 @@ async function readReviewVerificationArtifactStatusForStatus(
   return readReviewVerificationArtifactStatus(...args);
 }
 
-export const statusCommandDependencyDefaults = {
-  executeRemoteBubbleStatus,
+const statusCommandDependencyDefaultsPromise = import(
+  "../../defaults/list/listCommandDefaults.js"
+).then(({ listCommandDefaults }) => ({
+  executeRemoteBubbleStatus: listCommandDefaults.executeRemoteBubbleStatus,
   inspectStateSnapshot: inspectStateSnapshotForStatus,
-  loadPairflowGlobalConfig,
+  loadPairflowGlobalConfig: listCommandDefaults.loadPairflowGlobalConfig,
   readDocContractGateArtifact,
-  readRemotePointer,
-  readRemoteStateCache,
+  readRemotePointer: listCommandDefaults.readRemotePointer,
+  readRemoteStateCache: listCommandDefaults.readRemoteStateCache,
   readReviewVerificationArtifactStatus: readReviewVerificationArtifactStatusForStatus,
   readStateSnapshot,
   readTranscriptEnvelopes,
-  resolveRemoteBubbleStatusTarget,
+  resolveRemoteBubbleStatusTarget: listCommandDefaults.resolveRemoteBubbleStatusTarget,
   resolveBubbleById,
   resolveDocContractGateArtifactPath,
-  writeRemoteStateCache
-} as const;
+  writeRemoteStateCache: listCommandDefaults.writeRemoteStateCache
+}));
+
+export const statusCommandDependencyDefaults =
+  await statusCommandDependencyDefaultsPromise;

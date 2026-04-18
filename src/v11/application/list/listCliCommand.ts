@@ -89,26 +89,74 @@ export function renderBubbleListText(view: BubbleListView): string {
   }
 
   lines.push("Bubble details:");
-  for (const bubble of view.bubbles) {
-    const session = bubble.runtimeSession?.tmuxSessionName ?? "-";
-    const validationSuffix =
-      bubble.stateValidation === null ? "" : " state_validation=invalid";
-    const lifecycleSummary =
-      bubble.remoteExecution?.stateSource === "unavailable_started"
-        ? `state=unavailable, round=-${bubble.remoteExecution.compatLifecyclePlaceholder !== undefined
-          ? ` compat_state=${bubble.remoteExecution.compatLifecyclePlaceholder.state}${bubble.remoteExecution.compatLifecyclePlaceholder.round !== undefined ? ` compat_round=${bubble.remoteExecution.compatLifecyclePlaceholder.round}` : ""}`
-          : ""}`
-        : `state=${bubble.state}, round=${bubble.round}`;
-    const remoteSuffix =
-      bubble.remoteExecution === undefined
-        ? ""
-        : ` remote=${bubble.remoteExecution.pointerKind}@${bubble.remoteExecution.host} source=${bubble.remoteExecution.stateSource}${bubble.remoteExecution.runtimeAvailability !== undefined ? ` runtime=${bubble.remoteExecution.runtimeAvailability}` : ""} cache=${bubble.remoteExecution.cacheStatus}${bubble.remoteExecution.lastLiveCheckAt !== undefined ? ` live_checked=${bubble.remoteExecution.lastLiveCheckAt}` : ""}${bubble.remoteExecution.lastCacheCheckAt !== undefined ? ` checked=${bubble.remoteExecution.lastCacheCheckAt}` : ""}${bubble.remoteExecution.refreshAttemptedAt !== undefined ? ` refresh_attempted=${bubble.remoteExecution.refreshAttemptedAt}` : ""}${bubble.remoteExecution.runtimeReasonCode !== undefined ? ` runtime_reason=${bubble.remoteExecution.runtimeReasonCode}` : ""}${bubble.remoteExecution.reasonCode !== undefined ? ` reason=${bubble.remoteExecution.reasonCode}` : ""}${bubble.remoteExecution.stateSource === "refresh" && bubble.remoteExecution.runtimeAvailability === "missing" ? " runtime_note=preserved_state_no_live_runtime_fail_closed" : ""}${bubble.remoteExecution.remoteClonePath !== undefined ? ` clone=${bubble.remoteExecution.remoteClonePath}` : ""}`;
-    lines.push(
-      `- ${bubble.bubbleId}: ${lifecycleSummary}, active=${bubble.activeAgent ?? "-"}(${bubble.activeRole ?? "-"}), session=${session}${validationSuffix}${remoteSuffix}`
-    );
-  }
+  lines.push(...view.bubbles.map(renderBubbleListDetailLine));
 
   return lines.join("\n");
+}
+
+function renderBubbleListDetailLine(view: BubbleListView["bubbles"][number]): string {
+  const session = view.runtimeSession?.tmuxSessionName ?? "-";
+  const validationSuffix =
+    view.stateValidation === null ? "" : " state_validation=invalid";
+  return (
+    `- ${view.bubbleId}: ${renderBubbleLifecycleSummary(view)}, `
+    + `active=${view.activeAgent ?? "-"}(${view.activeRole ?? "-"}), `
+    + `session=${session}${validationSuffix}${renderBubbleRemoteSuffix(view)}`
+  );
+}
+
+function renderBubbleLifecycleSummary(view: BubbleListView["bubbles"][number]): string {
+  if (view.remoteExecution?.stateSource !== "unavailable_started") {
+    return `state=${view.state}, round=${view.round}`;
+  }
+
+  const compat = view.remoteExecution.compatLifecyclePlaceholder;
+  if (compat === undefined) {
+    return "state=unavailable, round=-";
+  }
+
+  return (
+    `state=unavailable, round=- compat_state=${compat.state}`
+    + `${compat.round !== undefined ? ` compat_round=${compat.round}` : ""}`
+  );
+}
+
+function renderBubbleRemoteSuffix(view: BubbleListView["bubbles"][number]): string {
+  const remoteExecution = view.remoteExecution;
+  if (remoteExecution === undefined) {
+    return "";
+  }
+
+  return (
+    ` remote=${remoteExecution.pointerKind}@${remoteExecution.host}`
+    + ` source=${remoteExecution.stateSource}`
+    + `${remoteExecution.runtimeAvailability !== undefined
+      ? ` runtime=${remoteExecution.runtimeAvailability}`
+      : ""}`
+    + ` cache=${remoteExecution.cacheStatus}`
+    + `${remoteExecution.lastLiveCheckAt !== undefined
+      ? ` live_checked=${remoteExecution.lastLiveCheckAt}`
+      : ""}`
+    + `${remoteExecution.lastCacheCheckAt !== undefined
+      ? ` checked=${remoteExecution.lastCacheCheckAt}`
+      : ""}`
+    + `${remoteExecution.refreshAttemptedAt !== undefined
+      ? ` refresh_attempted=${remoteExecution.refreshAttemptedAt}`
+      : ""}`
+    + `${remoteExecution.runtimeReasonCode !== undefined
+      ? ` runtime_reason=${remoteExecution.runtimeReasonCode}`
+      : ""}`
+    + `${remoteExecution.reasonCode !== undefined
+      ? ` reason=${remoteExecution.reasonCode}`
+      : ""}`
+    + `${remoteExecution.stateSource === "refresh"
+      && remoteExecution.runtimeAvailability === "missing"
+      ? " runtime_note=preserved_state_no_live_runtime_fail_closed"
+      : ""}`
+    + `${remoteExecution.remoteClonePath !== undefined
+      ? ` clone=${remoteExecution.remoteClonePath}`
+      : ""}`
+  );
 }
 
 export async function runBubbleListCommand(

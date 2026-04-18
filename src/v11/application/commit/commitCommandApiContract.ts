@@ -1,7 +1,4 @@
-import type {
-  BubbleRemotePointerCreated,
-  BubbleRemotePointerStarted
-} from "../../../types/bubble.js";
+import type { BubbleRemotePointerStarted } from "../../../types/bubble.js";
 import type {
   EnsureBubbleInstanceIdForMutationResult
 } from "../../shared/ports/bubbleIdentity.js";
@@ -23,11 +20,12 @@ import type {
   ReadTranscriptEnvelopesPort
 } from "../../shared/ports/transcript.js";
 import type { RunGitPort } from "../../shared/ports/git.js";
-import type { RemoteBubbleStatusTarget } from "../../infrastructure/executor/ssh/sshBubbleStatus.js";
 import type {
-  ExecuteRemoteBubbleCommitCommandInput,
-  ExecuteRemoteBubbleCommitCommandResult
-} from "../../infrastructure/executor/ssh/sshBubbleCommitCommand.js";
+  CommitRemoteBubbleStatusTarget,
+  ExecuteRemoteBubbleCommitCommandPort,
+  ReadRemoteCommitPointerPort,
+  ResolveRemoteBubbleStatusTargetPort
+} from "./commitRemotePorts.js";
 
 export type ResolvedBubbleContext = ResolvedBubbleById;
 export type BubbleIdentity = EnsureBubbleInstanceIdForMutationResult;
@@ -37,20 +35,12 @@ export type WrittenState = LoadedStateSnapshot;
 
 export interface CommitBubbleDependencies {
   appendProtocolEnvelope: AppendProtocolEnvelopePort;
-  executeRemoteBubbleCommitCommand: (
-    input: ExecuteRemoteBubbleCommitCommandInput
-  ) => Promise<ExecuteRemoteBubbleCommitCommandResult>;
+  executeRemoteBubbleCommitCommand: ExecuteRemoteBubbleCommitCommandPort;
   ensureBubbleInstanceIdForMutation: EnsureBubbleInstanceIdForMutationPort;
-  readRemotePointer: (
-    path: string
-  ) => Promise<BubbleRemotePointerStarted | BubbleRemotePointerCreated | null>;
+  readRemotePointer: ReadRemoteCommitPointerPort;
   readStateSnapshot: ReadStateSnapshotPort;
   readTranscriptEnvelopes: ReadTranscriptEnvelopesPort;
-  resolveRemoteBubbleStatusTarget: (input: {
-    bubbleId: string;
-    remoteAlias: string;
-    expectedHost?: string;
-  }) => Promise<RemoteBubbleStatusTarget>;
+  resolveRemoteBubbleStatusTarget: ResolveRemoteBubbleStatusTargetPort;
   resolveBubbleById: ResolveBubbleByIdPort;
   runGit: RunGitPort;
   renamePath?: (fromPath: string, toPath: string) => Promise<void>;
@@ -76,7 +66,7 @@ export interface CommitRuntimeContext extends CommitRuntimeContextBase {
 export interface RemoteCommitRuntimeContext extends CommitRuntimeContextBase {
   route: "remote";
   remotePointer: BubbleRemotePointerStarted;
-  remoteTarget: RemoteBubbleStatusTarget;
+  remoteTarget: CommitRemoteBubbleStatusTarget;
 }
 
 export type CommitExecutionContext =

@@ -1,9 +1,4 @@
 import { shellQuote } from "../../../shared/foundation/shellQuote.js";
-import {
-  remoteMergeModeEnvVar,
-  remoteMergeModeInnerRemoteExecution,
-  remoteMergeWorkspaceRootEnvVar
-} from "../../../application/merge/remoteMergeExecutionContext.js";
 import type { RemoteBubbleStatusTarget } from "./sshBubbleStatus.js";
 import { runCommandDefault } from "./sshBubbleStatus.js";
 import {
@@ -11,6 +6,10 @@ import {
   buildSshCommandArgs
 } from "./sshBubbleStart.js";
 
+const remoteMergeModeEnvVar = "PAIRFLOW_REMOTE_MERGE_MODE";
+const remoteMergeWorkspaceRootEnvVar =
+  "PAIRFLOW_REMOTE_MERGE_WORKSPACE_ROOT";
+const remoteMergeModeInnerRemoteExecution = "inner_remote_execution";
 const remoteMergeExitStatusStartMarker =
   "__PAIRFLOW_REMOTE_MERGE_EXIT_STATUS_START__";
 const remoteMergeExitStatusEndMarker =
@@ -59,6 +58,16 @@ export interface RemoteBubbleMergeCommandDependencies {
   }>;
 }
 
+interface RemoteBubbleMergeCommandErrorContext {
+  command_name: "merge";
+  bubble_id?: string;
+  remote_alias?: string;
+  remote_host?: string;
+  remote_clone_path?: string;
+  remote_reason_code?: string;
+  operation?: "transport" | "payload" | "publication" | "command";
+}
+
 export class RemoteBubbleMergeCommandError extends Error {
   public readonly code:
     | "REMOTE_MERGE_TRANSPORT_FAILED"
@@ -66,6 +75,7 @@ export class RemoteBubbleMergeCommandError extends Error {
     | "REMOTE_MERGE_PUBLICATION_REQUIRED"
     | "REMOTE_MERGE_COMMAND_FAILED"
     | (string & {});
+  public readonly context: RemoteBubbleMergeCommandErrorContext | undefined;
 
   public constructor(input: {
     code:
@@ -76,10 +86,12 @@ export class RemoteBubbleMergeCommandError extends Error {
       | (string & {});
     message: string;
     cause?: unknown;
+    context?: RemoteBubbleMergeCommandErrorContext;
   }) {
     super(input.message, input.cause === undefined ? undefined : { cause: input.cause });
     this.name = "RemoteBubbleMergeCommandError";
     this.code = input.code;
+    this.context = input.context;
   }
 }
 
@@ -163,7 +175,11 @@ function extractMarkerPayload(input: {
     throw new RemoteBubbleMergeCommandError({
       code: "REMOTE_MERGE_PAYLOAD_INVALID",
       message:
-        `Remote merge returned stdout without exactly one ${input.label} marker envelope.`
+        `Remote merge returned stdout without exactly one ${input.label} marker envelope.`,
+      context: {
+        command_name: "merge",
+        operation: "payload"
+      }
     });
   }
   return matches[0]?.[1] ?? "";
@@ -179,7 +195,11 @@ function parseRemoteExitStatus(stdout: string): number {
   if (!/^\d+$/u.test(rawStatus)) {
     throw new RemoteBubbleMergeCommandError({
       code: "REMOTE_MERGE_PAYLOAD_INVALID",
-      message: "Remote merge returned an invalid exit status payload."
+      message: "Remote merge returned an invalid exit status payload.",
+      context: {
+        command_name: "merge",
+        operation: "payload"
+      }
     });
   }
   const parsed = Number(rawStatus);
@@ -196,14 +216,22 @@ function parseRemoteMergeResult(
     throw new RemoteBubbleMergeCommandError({
       code: "REMOTE_MERGE_PAYLOAD_INVALID",
       message: "Remote merge returned invalid JSON payload.",
-      cause: error
+      cause: error,
+      context: {
+        command_name: "merge",
+        operation: "payload"
+      }
     });
   }
 
   if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) {
     throw new RemoteBubbleMergeCommandError({
       code: "REMOTE_MERGE_PAYLOAD_INVALID",
-      message: "Remote merge returned a non-object JSON payload."
+      message: "Remote merge returned a non-object JSON payload.",
+      context: {
+        command_name: "merge",
+        operation: "payload"
+      }
     });
   }
 
@@ -228,7 +256,11 @@ function parseRemoteMergeResult(
     if (typeof candidate[field] !== "string" || candidate[field].trim().length === 0) {
       throw new RemoteBubbleMergeCommandError({
         code: "REMOTE_MERGE_PAYLOAD_INVALID",
-        message: `Remote merge payload field '${field}' must be a non-empty string.`
+        message: `Remote merge payload field '${field}' must be a non-empty string.`,
+        context: {
+          command_name: "merge",
+          operation: "payload"
+        }
       });
     }
   }
@@ -236,7 +268,11 @@ function parseRemoteMergeResult(
     if (typeof candidate[field] !== "boolean") {
       throw new RemoteBubbleMergeCommandError({
         code: "REMOTE_MERGE_PAYLOAD_INVALID",
-        message: `Remote merge payload field '${field}' must be a boolean.`
+        message: `Remote merge payload field '${field}' must be a boolean.`,
+        context: {
+          command_name: "merge",
+          operation: "payload"
+        }
       });
     }
   }
@@ -246,7 +282,12 @@ function parseRemoteMergeResult(
     throw new RemoteBubbleMergeCommandError({
       code: "REMOTE_MERGE_PUBLICATION_REQUIRED",
       message:
-        `Remote merge succeeded without durable publication proof for bubble ${bubbleId}.`
+        `Remote merge succeeded without durable publication proof for bubble ${bubbleId}.`,
+      context: {
+        command_name: "merge",
+        bubble_id: bubbleId,
+        operation: "publication"
+      }
     });
   }
 
@@ -265,11 +306,11 @@ function parseRemoteMergeResult(
   };
 }
 
-function parseRemoteCommandFailure(input: {
+function buildRemoteCommandFailure(input: {
   stderr: string;
   stdout: string;
   bubbleId: string;
-}): RemoteBubbleMergeCommandError {
+}): ConstructorParameters<typeof RemoteBubbleMergeCommandError>[0] {
   const detailSource =
     input.stderr.trim().length > 0 ? input.stderr.trim() : input.stdout.trim();
   const reasonCode = detailSource
@@ -277,15 +318,21 @@ function parseRemoteCommandFailure(input: {
     .map((line) => line.trim())
     .find((line) => remoteMergeReasonCodePattern.test(line))
     ?.match(remoteMergeReasonCodePattern)?.[1];
-  return new RemoteBubbleMergeCommandError({
+  return {
     code:
       (reasonCode as RemoteBubbleMergeCommandError["code"] | undefined)
       ?? "REMOTE_MERGE_COMMAND_FAILED",
     message:
       detailSource.length > 0
         ? detailSource
-        : `Remote merge command failed for bubble ${input.bubbleId}.`
-  });
+        : `Remote merge command failed for bubble ${input.bubbleId}.`,
+    context: {
+      command_name: "merge",
+      bubble_id: input.bubbleId,
+      operation: "command",
+      ...(reasonCode !== undefined ? { remote_reason_code: reasonCode } : {})
+    }
+  };
 }
 
 export async function executeRemoteBubbleMergeCommand(
@@ -310,7 +357,15 @@ export async function executeRemoteBubbleMergeCommand(
       message:
         `Remote merge transport failed for ${input.bubbleId} on ${input.remoteTarget.alias}: `
         + summarizeTransportOutput(error instanceof Error ? error.message : String(error)),
-      cause: error
+      cause: error,
+      context: {
+        command_name: "merge",
+        bubble_id: input.bubbleId,
+        remote_alias: input.remoteTarget.alias,
+        remote_host: input.remoteTarget.host,
+        remote_clone_path: input.remoteClonePath,
+        operation: "transport"
+      }
     });
   }
 
@@ -324,7 +379,15 @@ export async function executeRemoteBubbleMergeCommand(
       message:
         `Remote merge transport failed for ${input.bubbleId} on ${input.remoteTarget.alias}: `
         + summarizeTransportOutput(detailSource),
-      cause: transportResult.stderr
+      cause: transportResult.stderr,
+      context: {
+        command_name: "merge",
+        bubble_id: input.bubbleId,
+        remote_alias: input.remoteTarget.alias,
+        remote_host: input.remoteTarget.host,
+        remote_clone_path: input.remoteClonePath,
+        operation: "transport"
+      }
     });
   }
 
@@ -343,11 +406,11 @@ export async function executeRemoteBubbleMergeCommand(
   }).trim();
 
   if (exitStatus !== 0) {
-    throw parseRemoteCommandFailure({
+    throw new RemoteBubbleMergeCommandError(buildRemoteCommandFailure({
       stderr: stderrPayload,
       stdout: stdoutPayload,
       bubbleId: input.bubbleId
-    });
+    }));
   }
 
   return parseRemoteMergeResult(stdoutPayload);

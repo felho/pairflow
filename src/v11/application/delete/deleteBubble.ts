@@ -14,6 +14,7 @@ import {
   type DeleteExecutionContext,
   type DeleteResolution,
   type DeleteRuntimeCleanupResult,
+  type ExecuteRemoteBubbleDeleteCommandResult,
   inferCreatedAtFromBubbleInstanceId,
   preDeleteStopStateByLifecycle,
   requiresDeleteConfirmation,
@@ -28,7 +29,6 @@ import {
   emitDeleteLifecycleEvent,
   removeDeleteBubbleDirectory
 } from "./deleteBubbleFinalization.js";
-import type { ExecuteRemoteBubbleDeleteCommandResult } from "../../infrastructure/executor/ssh/sshBubbleDeleteCommand.js";
 
 export type {
   DeleteBubbleArtifacts,

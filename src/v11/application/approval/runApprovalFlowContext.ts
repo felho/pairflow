@@ -2,7 +2,7 @@ import type {
   BubbleRemotePointerStarted,
   BubbleStateSnapshot
 } from "../../../types/bubble.js";
-import type { RemoteBubbleStatusTarget } from "../../infrastructure/executor/ssh/sshBubbleStatus.js";
+import type { ApprovalRemoteBubbleStatusTarget } from "./approvalRemoteExecutionContract.js";
 import type { ResolvedApprovalCommandDependencies } from "./approvalCommandDependencyResolution.js";
 
 export interface LocalApprovalFlowExecutionContext {
@@ -18,7 +18,7 @@ export interface RemoteApprovalFlowExecutionContext {
   route: "remote";
   resolved: Awaited<ReturnType<ResolvedApprovalCommandDependencies["resolveBubbleById"]>>;
   remotePointer: BubbleRemotePointerStarted;
-  remoteTarget: RemoteBubbleStatusTarget;
+  remoteTarget: ApprovalRemoteBubbleStatusTarget;
   nowIso: string;
   lockPath: string;
 }

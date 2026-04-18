@@ -148,7 +148,7 @@ export async function executeGateDelivery(input: {
     sessionsPath: input.resolved.bubblePaths.sessionsPath,
     envelope: input.gateResult.gateEnvelope
   });
-  const emitDeliverySafe = async (
+  const emitTmuxDeliveryNotification = async (
     envelope: ProtocolEnvelope,
     options?: {
       initialDelayMs?: number;
@@ -173,14 +173,6 @@ export async function executeGateDelivery(input: {
       reason: "tmux_send_failed",
       reason_code: "DELIVERY_ACK_REJECTED"
     }));
-
-  const emitDeliveryNormalized = (
-    envelope: ProtocolEnvelope,
-    options?: {
-      initialDelayMs?: number;
-      deliveryAttempts?: number;
-    }
-  ): Promise<DeliveryAck> => emitDeliverySafe(envelope, options);
 
   if (input.gateResult.route === "auto_rework") {
     const autoReworkDeliveryInput = {
@@ -218,7 +210,7 @@ export async function executeGateDelivery(input: {
       : [input.gateResult.gateEnvelope];
 
   const deliveryResults = await Promise.all(
-    recipientEnvelopes.map((envelope) => emitDeliveryNormalized(envelope))
+    recipientEnvelopes.map((envelope) => emitTmuxDeliveryNotification(envelope))
   );
 
   return buildConvergedDelivery(deliveryResults, false);

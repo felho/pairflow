@@ -24,6 +24,7 @@ import type {
 } from "./commitCommandApiContract.js";
 import { runCommitGitStep } from "./commitCommandGitStep.js";
 import {
+  canonicalizeCommitExecutionPath,
   resolveRemoteCommitExecutionContextFromEnv
 } from "./remoteCommitExecutionContext.js";
 export { BubbleCommitError } from "./commitCommandRuntime.js";
@@ -52,12 +53,13 @@ async function prepareCommitExecutionContext(input: {
 
   if (resolved.bubbleConfig.executor?.type === "ssh") {
     const remoteCommitExecutionContext = resolveRemoteCommitExecutionContextFromEnv();
+    const resolvedRepoPath = canonicalizeCommitExecutionPath(resolved.repoPath);
     const remotePointer = await input.dependencies.readRemotePointer(
       resolved.bubblePaths.remotePointerPath
     );
     if (
       remoteCommitExecutionContext?.kind === "remote_clone"
-      && remoteCommitExecutionContext.workspaceRoot === resolved.repoPath
+      && remoteCommitExecutionContext.workspaceRoot === resolvedRepoPath
     ) {
       if (remotePointer !== null) {
         throw new BubbleCommitError({
@@ -137,6 +139,148 @@ async function prepareCommitExecutionContext(input: {
   };
 }
 
+function buildCommitLifecycleContext(input: {
+  context: CommitExecutionContext;
+  round: number;
+}) {
+  return {
+    resolved: input.context.resolved,
+    bubbleIdentity: input.context.bubbleIdentity,
+    donePackagePath: input.context.donePackagePath,
+    round: input.round
+  };
+}
+
+async function commitRemoteExecutionRoute(input: {
+  command: CommitBubbleInput;
+  context: Extract<CommitExecutionContext, { route: "remote" }>;
+  dependencies: CommitBubbleDependencies;
+  refs: string[];
+  now: Date;
+  auto: boolean;
+}): Promise<CommitBubbleResult> {
+  const remoteResult = await input.dependencies.executeRemoteBubbleCommitCommand({
+    bubbleId: input.command.bubbleId,
+    remoteClonePath: input.context.remotePointer.remoteClonePath,
+    remoteTarget: input.context.remoteTarget,
+    refs: input.refs,
+    ...(input.command.message !== undefined ? { message: input.command.message } : {}),
+    auto: input.auto
+  });
+
+  try {
+    await syncRemoteCommitContinuityArtifacts({
+      statePath: input.context.resolved.bubblePaths.statePath,
+      transcriptPath: input.context.resolved.bubblePaths.transcriptPath,
+      donePackagePath: input.context.donePackagePath,
+      stateContent: remoteResult.stateContent,
+      transcriptContent: remoteResult.transcriptContent,
+      donePackageContent: remoteResult.donePackageContent,
+      ...(input.dependencies.renamePath !== undefined
+        ? { renamePath: input.dependencies.renamePath }
+        : {}),
+      writeTextFile: input.dependencies.writeTextFile
+    });
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    throw new BubbleCommitError({
+      reasonCode: "REMOTE_COMMIT_SYNC_BACK_FAILED",
+      message:
+        `Remote commit succeeded for '${input.context.resolved.bubbleId}', but local continuity sync-back failed: ${reason}`,
+      context: {
+        bubble_id: input.context.resolved.bubbleId,
+        command_name: "commit",
+        remote_clone_path: input.context.remotePointer.remoteClonePath,
+        state_path: input.context.resolved.bubblePaths.statePath,
+        transcript_path: input.context.resolved.bubblePaths.transcriptPath,
+        done_package_path: input.context.donePackagePath
+      },
+      cause: error
+    });
+  }
+
+  await emitCommitLifecycleEvent({
+    context: buildCommitLifecycleContext({
+      context: input.context,
+      round: remoteResult.state.round
+    }),
+    commitSha: remoteResult.commitSha,
+    commitMessage: remoteResult.commitMessage,
+    stagedFiles: remoteResult.stagedFiles,
+    refs: input.refs,
+    now: input.now,
+    auto: input.auto
+  });
+
+  return {
+    bubbleId: input.context.resolved.bubbleId,
+    sequence: remoteResult.sequence,
+    envelope: remoteResult.envelope,
+    state: remoteResult.state,
+    commitSha: remoteResult.commitSha,
+    commitMessage: remoteResult.commitMessage,
+    stagedFiles: remoteResult.stagedFiles,
+    donePackagePath: input.context.donePackagePath
+  };
+}
+
+async function commitLocalExecutionRoute(input: {
+  command: CommitBubbleInput;
+  context: Extract<CommitExecutionContext, { route: "local" }>;
+  dependencies: CommitBubbleDependencies;
+  refs: string[];
+  now: Date;
+  nowIso: string;
+  auto: boolean;
+}): Promise<CommitBubbleResult> {
+  const { stagedFiles, commitMessage, commitSha } = await runCommitGitStep({
+    command: input.command,
+    context: input.context,
+    auto: input.auto,
+    runGit: input.dependencies.runGit
+  });
+
+  const appended = await appendDonePackageEnvelope({
+    context: input.context,
+    refs: input.refs,
+    now: input.now,
+    stagedFiles,
+    commitMessage,
+    commitSha
+  });
+
+  const written = await persistCommittedThenDoneState({
+    context: input.context,
+    nowIso: input.nowIso,
+    appended,
+    commitSha
+  });
+
+  await emitCommitLifecycleEvent({
+    context: buildCommitLifecycleContext({
+      context: input.context,
+      round: input.context.state.round
+    }),
+    commitSha,
+    commitMessage,
+    stagedFiles,
+    refs: input.refs,
+    now: input.now,
+    auto: input.auto
+  });
+
+  return {
+    bubbleId: input.context.resolved.bubbleId,
+    sequence: appended.sequence,
+    envelope: appended.envelope,
+    state: written.state,
+    commitSha,
+    commitMessage,
+    stagedFiles,
+    donePackagePath: input.context.donePackagePath
+  };
+}
+
 export async function commitBubble(
   input: CommitBubbleInput,
   dependencies: CommitBubbleDependencies
@@ -156,121 +300,25 @@ export async function commitBubble(
     });
 
     if (context.route === "remote") {
-      const remoteResult = await dependencies.executeRemoteBubbleCommitCommand({
-        bubbleId: input.bubbleId,
-        remoteClonePath: context.remotePointer.remoteClonePath,
-        remoteTarget: context.remoteTarget,
-        refs,
-        ...(input.message !== undefined ? { message: input.message } : {}),
-        auto
-      });
-
-      try {
-        await syncRemoteCommitContinuityArtifacts({
-          statePath: context.resolved.bubblePaths.statePath,
-          transcriptPath: context.resolved.bubblePaths.transcriptPath,
-          donePackagePath: context.donePackagePath,
-          stateContent: remoteResult.stateContent,
-          transcriptContent: remoteResult.transcriptContent,
-          donePackageContent: remoteResult.donePackageContent,
-          ...(dependencies.renamePath !== undefined
-            ? { renamePath: dependencies.renamePath }
-            : {}),
-          writeTextFile: dependencies.writeTextFile
-        });
-      } catch (error) {
-        const reason = error instanceof Error ? error.message : String(error);
-        throw new BubbleCommitError({
-          reasonCode: "REMOTE_COMMIT_SYNC_BACK_FAILED",
-          message:
-            `Remote commit succeeded for '${context.resolved.bubbleId}', but local continuity sync-back failed: ${reason}`,
-          context: {
-            bubble_id: context.resolved.bubbleId,
-            command_name: "commit",
-            remote_clone_path: context.remotePointer.remoteClonePath,
-            state_path: context.resolved.bubblePaths.statePath,
-            transcript_path: context.resolved.bubblePaths.transcriptPath,
-            done_package_path: context.donePackagePath
-          },
-          cause: error
-        });
-      }
-
-      await emitCommitLifecycleEvent({
-        context: {
-          resolved: context.resolved,
-          bubbleIdentity: context.bubbleIdentity,
-          donePackagePath: context.donePackagePath,
-          round: remoteResult.state.round
-        },
-        commitSha: remoteResult.commitSha,
-        commitMessage: remoteResult.commitMessage,
-        stagedFiles: remoteResult.stagedFiles,
+      return await commitRemoteExecutionRoute({
+        command: input,
+        context,
+        dependencies,
         refs,
         now,
         auto
       });
-
-      return {
-        bubbleId: context.resolved.bubbleId,
-        sequence: remoteResult.sequence,
-        envelope: remoteResult.envelope,
-        state: remoteResult.state,
-        commitSha: remoteResult.commitSha,
-        commitMessage: remoteResult.commitMessage,
-        stagedFiles: remoteResult.stagedFiles,
-        donePackagePath: context.donePackagePath
-      };
     }
 
-    const { stagedFiles, commitMessage, commitSha } = await runCommitGitStep({
+    return await commitLocalExecutionRoute({
       command: input,
       context,
-      auto,
-      runGit: dependencies.runGit
-    });
-
-    const appended = await appendDonePackageEnvelope({
-      context,
+      dependencies,
       refs,
       now,
-      stagedFiles,
-      commitMessage,
-      commitSha
-    });
-
-    const written = await persistCommittedThenDoneState({
-      context,
       nowIso,
-      appended,
-      commitSha
-    });
-
-    await emitCommitLifecycleEvent({
-      context: {
-        resolved: context.resolved,
-        bubbleIdentity: context.bubbleIdentity,
-        donePackagePath: context.donePackagePath,
-        round: context.state.round
-      },
-      commitSha,
-      commitMessage,
-      stagedFiles,
-      refs,
-      now,
       auto
     });
-
-    return {
-      bubbleId: context.resolved.bubbleId,
-      sequence: appended.sequence,
-      envelope: appended.envelope,
-      state: written.state,
-      commitSha,
-      commitMessage,
-      stagedFiles,
-      donePackagePath: context.donePackagePath
-    };
   } catch (error) {
     return throwAsBubbleCommitError(error);
   }

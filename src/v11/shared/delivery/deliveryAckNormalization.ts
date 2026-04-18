@@ -77,58 +77,32 @@ function normalizeAcceptedDeliveryAck(input: {
   });
 }
 
-export function normalizeDeliveryAck(result: DeliveryAckLike): DeliveryAck {
-  if ("status" in result && result.status !== undefined) {
-    if (result.status === "accepted") {
-      return normalizeAcceptedDeliveryAck({
-        message: result.message,
-        ...(result.sessionName !== undefined
-          ? { sessionName: result.sessionName }
-          : {}),
-        ...(result.targetPaneIndex !== undefined
-          ? { targetPaneIndex: result.targetPaneIndex }
-          : {}),
-        ...(result.deliveryTargetReasonCode !== undefined
-          ? { deliveryTargetReasonCode: result.deliveryTargetReasonCode }
-          : {})
-      });
-    }
+function toNormalizedAcceptedAck(
+  result: Pick<
+    DeliveryAckLike,
+    "message" | "sessionName" | "targetPaneIndex" | "deliveryTargetReasonCode"
+  >
+): DeliveryAck {
+  return normalizeAcceptedDeliveryAck({
+    message: result.message,
+    ...(result.sessionName !== undefined
+      ? { sessionName: result.sessionName }
+      : {}),
+    ...(result.targetPaneIndex !== undefined
+      ? { targetPaneIndex: result.targetPaneIndex }
+      : {}),
+    ...(result.deliveryTargetReasonCode !== undefined
+      ? { deliveryTargetReasonCode: result.deliveryTargetReasonCode }
+      : {})
+  });
+}
 
-    return normalizeRejectedDeliveryAck({
-      message: result.message,
-      ...(result.reason !== undefined
-        ? { reason: result.reason }
-        : {}),
-      ...(result.reason_code !== undefined
-        ? { reason_code: result.reason_code }
-        : {}),
-      ...(result.sessionName !== undefined
-        ? { sessionName: result.sessionName }
-        : {}),
-      ...(result.targetPaneIndex !== undefined
-        ? { targetPaneIndex: result.targetPaneIndex }
-        : {}),
-      ...(result.deliveryTargetReasonCode !== undefined
-        ? { deliveryTargetReasonCode: result.deliveryTargetReasonCode }
-        : {})
-    });
-  }
-
-  if (result.delivered) {
-    return normalizeAcceptedDeliveryAck({
-      message: result.message,
-      ...(result.sessionName !== undefined
-        ? { sessionName: result.sessionName }
-        : {}),
-      ...(result.targetPaneIndex !== undefined
-        ? { targetPaneIndex: result.targetPaneIndex }
-        : {}),
-      ...(result.deliveryTargetReasonCode !== undefined
-        ? { deliveryTargetReasonCode: result.deliveryTargetReasonCode }
-        : {})
-    });
-  }
-
+function toNormalizedRejectedAck(
+  result: Pick<
+    DeliveryAckLike,
+    "message" | "reason" | "reason_code" | "sessionName" | "targetPaneIndex" | "deliveryTargetReasonCode"
+  >
+): Extract<DeliveryAck, { status: "rejected" }> {
   return normalizeRejectedDeliveryAck({
     message: result.message,
     ...(result.reason !== undefined
@@ -147,4 +121,18 @@ export function normalizeDeliveryAck(result: DeliveryAckLike): DeliveryAck {
       ? { deliveryTargetReasonCode: result.deliveryTargetReasonCode }
       : {})
   });
+}
+
+export function normalizeDeliveryAck(result: DeliveryAckLike): DeliveryAck {
+  if ("status" in result && result.status !== undefined) {
+    return result.status === "accepted"
+      ? toNormalizedAcceptedAck(result)
+      : toNormalizedRejectedAck(result);
+  }
+
+  if (result.delivered) {
+    return toNormalizedAcceptedAck(result);
+  }
+
+  return toNormalizedRejectedAck(result);
 }

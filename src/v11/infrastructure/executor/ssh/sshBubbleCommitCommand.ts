@@ -1,10 +1,5 @@
 import type { BubbleStateSnapshot } from "../../../../types/bubble.js";
 import type { ProtocolEnvelope } from "../../../../types/protocol.js";
-import {
-  remoteCommitModeEnvVar,
-  remoteCommitModeInnerRemoteExecution,
-  remoteCommitWorkspaceRootEnvVar
-} from "../../../application/commit/remoteCommitExecutionContext.js";
 import { shellQuote } from "../../../shared/foundation/shellQuote.js";
 import { parseEnvelopeLine } from "../../../shared/protocol/envelope.js";
 import { assertValidBubbleStateSnapshot } from "../../../shared/state/stateSchema.js";
@@ -39,6 +34,10 @@ const remoteCommitStagedFilesStartMarker =
   "__PAIRFLOW_REMOTE_COMMIT_STAGED_FILES_START__";
 const remoteCommitStagedFilesEndMarker =
   "__PAIRFLOW_REMOTE_COMMIT_STAGED_FILES_END__";
+const remoteCommitModeEnvVar = "PAIRFLOW_REMOTE_COMMIT_MODE";
+const remoteCommitWorkspaceRootEnvVar =
+  "PAIRFLOW_REMOTE_COMMIT_WORKSPACE_ROOT";
+const remoteCommitModeInnerRemoteExecution = "inner_remote_execution";
 
 export interface ExecuteRemoteBubbleCommitCommandInput {
   bubbleId: string;
@@ -77,17 +76,22 @@ export class RemoteBubbleCommitCommandError extends Error {
   public readonly code:
     | "REMOTE_COMMIT_TRANSPORT_FAILED"
     | "REMOTE_COMMIT_PAYLOAD_INVALID";
+  public readonly context?: Record<string, string | number>;
 
   public constructor(input: {
     code:
       | "REMOTE_COMMIT_TRANSPORT_FAILED"
       | "REMOTE_COMMIT_PAYLOAD_INVALID";
     message: string;
+    context?: Record<string, string | number>;
     cause?: unknown;
   }) {
     super(input.message, input.cause === undefined ? undefined : { cause: input.cause });
     this.name = "RemoteBubbleCommitCommandError";
     this.code = input.code;
+    if (input.context !== undefined) {
+      this.context = input.context;
+    }
   }
 }
 
@@ -185,7 +189,12 @@ function extractMarkerPayload(input: {
     throw new RemoteBubbleCommitCommandError({
       code: "REMOTE_COMMIT_PAYLOAD_INVALID",
       message:
-        `Remote commit returned stdout without exactly one ${input.label} marker envelope.`
+        `Remote commit returned stdout without exactly one ${input.label} marker envelope.`,
+      context: {
+        command_name: "commit",
+        payload_label: input.label,
+        marker_count: matches.length
+      }
     });
   }
   return matches[0]?.[1] ?? "";
@@ -297,6 +306,40 @@ function parseOutputLines(stdout: string): string[] {
     .filter((line) => line.length > 0);
 }
 
+async function runRemoteBubbleCommitTransport(input: {
+  command: ExecuteRemoteBubbleCommitCommandInput;
+  runCommand: NonNullable<RemoteBubbleCommitCommandDependencies["runCommand"]>;
+  target: string;
+  script: string;
+}): Promise<{
+  stdout: string;
+  stderr: string;
+  exitCode: number;
+}> {
+  try {
+    return await input.runCommand(
+      "ssh",
+      buildSshCommandArgs({ target: input.target, script: input.script })
+    );
+  } catch (error) {
+    if (error instanceof RemoteBubbleCommitCommandError) {
+      throw error;
+    }
+    const reason = error instanceof Error ? error.message : String(error);
+    throw new RemoteBubbleCommitCommandError({
+      code: "REMOTE_COMMIT_TRANSPORT_FAILED",
+      message:
+        `ssh transport failed before completion: ${summarizeTransportOutput(reason)}`,
+      context: {
+        bubble_id: input.command.bubbleId,
+        command_name: "commit",
+        remote_host: input.command.remoteTarget.host
+      },
+      cause: error
+    });
+  }
+}
+
 export async function executeRemoteBubbleCommitCommand(
   input: ExecuteRemoteBubbleCommitCommandInput,
   dependencies: RemoteBubbleCommitCommandDependencies = {}
@@ -307,22 +350,12 @@ export async function executeRemoteBubbleCommitCommand(
     input.remoteTarget.user !== undefined
       ? `${input.remoteTarget.user}@${input.remoteTarget.host}`
       : input.remoteTarget.host;
-
-  let result;
-  try {
-    result = await runCommand("ssh", buildSshCommandArgs({ target, script }));
-  } catch (error) {
-    if (error instanceof RemoteBubbleCommitCommandError) {
-      throw error;
-    }
-    const reason = error instanceof Error ? error.message : String(error);
-    throw new RemoteBubbleCommitCommandError({
-      code: "REMOTE_COMMIT_TRANSPORT_FAILED",
-      message:
-        `ssh transport failed before completion: ${summarizeTransportOutput(reason)}`,
-      cause: error
-    });
-  }
+  const result = await runRemoteBubbleCommitTransport({
+    command: input,
+    runCommand,
+    target,
+    script
+  });
 
   if (result.exitCode !== 0) {
     throw new RemoteBubbleCommitCommandError({
@@ -331,7 +364,13 @@ export async function executeRemoteBubbleCommitCommand(
         exitCode: result.exitCode,
         stdout: result.stdout,
         stderr: result.stderr
-      })
+      }),
+      context: {
+        bubble_id: input.bubbleId,
+        command_name: "commit",
+        remote_host: input.remoteTarget.host,
+        exit_code: result.exitCode
+      }
     });
   }
 

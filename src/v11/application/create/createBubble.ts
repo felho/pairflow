@@ -21,6 +21,8 @@ export async function createBubble(
     appendProtocolEnvelope:
       dependencies.appendProtocolEnvelope ?? createBubbleDefaults.appendProtocolEnvelope,
     loadPairflowGlobalConfig:
-      dependencies.loadPairflowGlobalConfig ?? createBubbleDefaults.loadPairflowGlobalConfig
+      dependencies.loadPairflowGlobalConfig ?? createBubbleDefaults.loadPairflowGlobalConfig,
+    writeRemotePointer:
+      dependencies.writeRemotePointer ?? createBubbleDefaults.writeRemotePointer
   });
 }

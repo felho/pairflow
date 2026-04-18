@@ -15,7 +15,7 @@ import type {
   ResolvedBubbleStatusContext,
   StatusGateState
 } from "./statusCommandInternals.js";
-import type { RemoteBubbleStatusSnapshot } from "../../infrastructure/executor/ssh/sshBubbleStatus.js";
+import type { RemoteBubbleStatusSnapshot } from "./remoteBubbleStatusContract.js";
 import { toStatusCommandPathView } from "./statusCommandInternals.js";
 import {
   buildStatusExecutionContextView,

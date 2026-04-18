@@ -5,15 +5,19 @@ import { emitBubbleLifecycleEventBestEffort } from "../../../v11/shared/metrics/
 import type {
   DeleteBubbleArtifacts
 } from "../../../contracts/deleteBubble.js";
-import type { RemoteDeleteArchiveCapture } from "../../infrastructure/executor/ssh/sshBubbleDeleteCommand.js";
 import type {
   DeleteBubbleInput,
   DeleteExecutionContext,
+  ExecuteRemoteBubbleDeleteCommandResult,
   DeleteRuntimeCleanupResult,
   DeleteWorkspaceCleanupResult,
   ResolvedBubble,
   ResolvedDeleteDependencies
 } from "./deleteBubbleSupport.js";
+
+type RemoteDeleteArchiveCapture = NonNullable<
+  ExecuteRemoteBubbleDeleteCommandResult["archiveCapture"]
+>;
 
 export async function createDeleteArchive(input: {
   input: DeleteBubbleInput;

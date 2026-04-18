@@ -1,64 +1,62 @@
 import type { EmitApprovalDecisionResult } from "./approvalCommandContract.js";
-import { buildApprovalDecisionEnvelopePayload, emitApprovalDecisionDeliverySignals, emitApprovalDecisionLifecycleEvent } from "./runApprovalDecisionEffects.js";
+import {
+  buildApprovalDecisionEnvelopePayload,
+  emitApprovalDecisionDeliverySignals,
+  emitApprovalDecisionLifecycleEvent
+} from "./runApprovalDecisionEffects.js";
 import { resolveApprovalNextState } from "./approvalResultMapping.js";
 import type { RunApprovalDecisionFlowInput } from "./runApprovalFlowContract.js";
 import type { ResolvedApprovalCommandDependencies } from "./approvalCommandDependencyResolution.js";
-import { appendEnvelopeViaMutationBoundary, persistStateViaMutationBoundary } from "../../shared/mutation/mutationBoundaryIO.js";
+import {
+  appendEnvelopeViaMutationBoundary,
+  persistStateViaMutationBoundary
+} from "../../shared/mutation/mutationBoundaryIO.js";
 import { assertApprovalDecisionEligibility } from "../../shared/approval/approvalRoutingEligibility.js";
 import type { ApprovalFlowExecutionContext } from "./runApprovalFlowContext.js";
 
-export async function runApprovalDecisionFlowWithContext(
-  input: {
-    flow: RunApprovalDecisionFlowInput;
-    dependencies: ResolvedApprovalCommandDependencies;
-    execution: ApprovalFlowExecutionContext;
-  }
-): Promise<EmitApprovalDecisionResult> {
-  if (input.execution.route === "remote") {
-    const routed = await input.dependencies.executeRemoteBubbleApprovalCommand({
-      action: "approve",
-      bubbleId: input.execution.resolved.bubbleId,
-      remoteClonePath: input.execution.remotePointer.remoteClonePath,
-      remoteTarget: input.execution.remoteTarget,
-      refs: input.flow.refs,
-      overrideNonApprove: input.flow.overrideNonApprove ?? false,
-      ...(input.flow.overrideReason !== undefined
-        ? { overrideReason: input.flow.overrideReason }
-        : {})
-    });
-
-    if (routed.kind !== "decision") {
-      throw input.flow.createError({
-        reasonCode: "APPROVAL_REMOTE_RESULT_INVALID",
-        message:
-          `Remote approval for '${input.execution.resolved.bubbleId}' returned a queued rework result for approve.`,
-        context: {
-          command_name: "approval",
-          bubble_id: input.execution.resolved.bubbleId
-        }
-      });
-    }
-
-    return {
-      bubbleId: routed.bubbleId,
-      sequence: routed.sequence,
-      envelope: routed.envelope,
-      state: routed.state
-    };
-  }
-
-  const bubbleIdentity = await input.dependencies.ensureBubbleInstanceIdForMutation({
+async function runRemoteApprovalDecision(input: {
+  flow: RunApprovalDecisionFlowInput;
+  dependencies: ResolvedApprovalCommandDependencies;
+  execution: Extract<ApprovalFlowExecutionContext, { route: "remote" }>;
+}): Promise<EmitApprovalDecisionResult> {
+  const routed = await input.dependencies.executeRemoteBubbleApprovalCommand({
+    action: "approve",
     bubbleId: input.execution.resolved.bubbleId,
-    repoPath: input.execution.resolved.repoPath,
-    bubblePaths: input.execution.resolved.bubblePaths,
-    bubbleConfig: input.execution.resolved.bubbleConfig,
-    now: input.flow.now
+    remoteClonePath: input.execution.remotePointer.remoteClonePath,
+    remoteTarget: input.execution.remoteTarget,
+    refs: input.flow.refs,
+    overrideNonApprove: input.flow.overrideNonApprove ?? false,
+    ...(input.flow.overrideReason !== undefined
+      ? { overrideReason: input.flow.overrideReason }
+      : {})
   });
-  input.execution.resolved.bubbleConfig = bubbleIdentity.bubbleConfig;
 
+  if (routed.kind !== "decision") {
+    throw input.flow.createError({
+      reasonCode: "APPROVAL_REMOTE_RESULT_INVALID",
+      message:
+        `Remote approval for '${input.execution.resolved.bubbleId}' returned a queued rework result for approve.`,
+      context: {
+        command_name: "approval",
+        bubble_id: input.execution.resolved.bubbleId
+      }
+    });
+  }
+
+  return {
+    bubbleId: routed.bubbleId,
+    sequence: routed.sequence,
+    envelope: routed.envelope,
+    state: routed.state
+  };
+}
+
+async function appendLocalApprovalEnvelope(input: {
+  flow: RunApprovalDecisionFlowInput;
+  dependencies: ResolvedApprovalCommandDependencies;
+  execution: Extract<ApprovalFlowExecutionContext, { route: "local" }>;
+}) {
   const state = input.execution.state;
-  assertApprovalDecisionEligibility(state, input.flow.createError);
-
   const envelopePayload = await buildApprovalDecisionEnvelopePayload({
     decision: input.flow.decision,
     message: input.flow.message,
@@ -71,7 +69,7 @@ export async function runApprovalDecisionFlowWithContext(
     createError: input.flow.createError
   });
 
-  const appended = await appendEnvelopeViaMutationBoundary({
+  return appendEnvelopeViaMutationBoundary({
     append: input.dependencies.appendProtocolEnvelope,
     payload: {
       transcriptPath: input.execution.resolved.bubblePaths.transcriptPath,
@@ -89,7 +87,15 @@ export async function runApprovalDecisionFlowWithContext(
       }
     }
   });
+}
 
+async function persistLocalApprovalState(input: {
+  flow: RunApprovalDecisionFlowInput;
+  dependencies: ResolvedApprovalCommandDependencies;
+  execution: Extract<ApprovalFlowExecutionContext, { route: "local" }>;
+  appendedEnvelopeId: string;
+}) {
+  const state = input.execution.state;
   const nextState = resolveApprovalNextState({
     state,
     decision: input.flow.decision,
@@ -101,9 +107,8 @@ export async function runApprovalDecisionFlowWithContext(
     applyStateTransition: input.dependencies.applyStateTransition
   });
 
-  let written;
   try {
-    written = await persistStateViaMutationBoundary({
+    return await persistStateViaMutationBoundary({
       write: input.dependencies.writeStateSnapshot,
       statePath: input.execution.resolved.bubblePaths.statePath,
       state: nextState,
@@ -117,14 +122,54 @@ export async function runApprovalDecisionFlowWithContext(
     throw input.flow.createError({
       reasonCode: "APPROVAL_DECISION_STATE_PERSIST_FAILED",
       message:
-        `APPROVAL_DECISION ${appended.envelope.id} was appended but state update failed. Transcript remains canonical; recover state from transcript tail. Root error: ${reason}`,
+        `APPROVAL_DECISION ${input.appendedEnvelopeId} was appended but state update failed. Transcript remains canonical; recover state from transcript tail. Root error: ${reason}`,
       context: {
         command_name: "approval",
-        envelope_id: appended.envelope.id
+        envelope_id: input.appendedEnvelopeId
       },
       cause: error
     });
   }
+}
+
+export async function runApprovalDecisionFlowWithContext(
+  input: {
+    flow: RunApprovalDecisionFlowInput;
+    dependencies: ResolvedApprovalCommandDependencies;
+    execution: ApprovalFlowExecutionContext;
+  }
+): Promise<EmitApprovalDecisionResult> {
+  if (input.execution.route === "remote") {
+    return runRemoteApprovalDecision({
+      flow: input.flow,
+      dependencies: input.dependencies,
+      execution: input.execution
+    });
+  }
+
+  const bubbleIdentity = await input.dependencies.ensureBubbleInstanceIdForMutation({
+    bubbleId: input.execution.resolved.bubbleId,
+    repoPath: input.execution.resolved.repoPath,
+    bubblePaths: input.execution.resolved.bubblePaths,
+    bubbleConfig: input.execution.resolved.bubbleConfig,
+    now: input.flow.now
+  });
+  input.execution.resolved.bubbleConfig = bubbleIdentity.bubbleConfig;
+
+  const state = input.execution.state;
+  assertApprovalDecisionEligibility(state, input.flow.createError);
+
+  const appended = await appendLocalApprovalEnvelope({
+    flow: input.flow,
+    dependencies: input.dependencies,
+    execution: input.execution
+  });
+  const written = await persistLocalApprovalState({
+    flow: input.flow,
+    dependencies: input.dependencies,
+    execution: input.execution,
+    appendedEnvelopeId: appended.envelope.id
+  });
 
   const decisionMessageRef = input.dependencies.resolveDeliveryMessageRef({
     bubbleId: input.execution.resolved.bubbleId,

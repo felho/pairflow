@@ -8,7 +8,7 @@ import {
   assertMergeBranchEligibility,
   assertMergeStateEligibility
 } from "../../shared/merge/mergeRoutingEligibility.js";
-import type { RemoteBubbleStatusTarget } from "../../infrastructure/executor/ssh/sshBubbleStatus.js";
+import type { RemoteMergeStatusTarget } from "./mergeCommandContract.js";
 import type { ResolvedMergeCommandDependencies } from "./mergeCommandDependencyResolution.js";
 import type { RunMergeFlowInput } from "./mergeFlowTypes.js";
 import {
@@ -38,7 +38,7 @@ export interface RemoteMergeFlowExecutionContext
   extends MergeFlowExecutionContextBase {
   route: "remote";
   remotePointer: BubbleRemotePointerStarted;
-  remoteTarget: RemoteBubbleStatusTarget;
+  remoteTarget: RemoteMergeStatusTarget;
   baseBranch: string;
   bubbleBranch: string;
 }

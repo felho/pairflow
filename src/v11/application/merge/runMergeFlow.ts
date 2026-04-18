@@ -17,6 +17,7 @@ const MERGE_REMOTE_DELETE_ORIGIN_UNAVAILABLE =
   "MERGE_REMOTE_DELETE_ORIGIN_UNAVAILABLE";
 const MERGE_REMOTE_DELETE_FAILED = "MERGE_REMOTE_DELETE_FAILED";
 const MERGE_BASE_BRANCH_PUSH_FAILED = "MERGE_BASE_BRANCH_PUSH_FAILED";
+const MERGE_LOCAL_FINALIZATION_MISSING = "MERGE_LOCAL_FINALIZATION_MISSING";
 
 async function mergeBubbleBranchIntoBase(input: {
   repoPath: string;
@@ -218,7 +219,15 @@ export async function runMergeFlow(
     deletedRemoteBranch
   });
   if (finalization === undefined) {
-    throw new Error("Local merge finalization did not return cleanup results.");
+    throw input.createError({
+      reasonCode: MERGE_LOCAL_FINALIZATION_MISSING,
+      message: "Local merge finalization did not return cleanup results.",
+      context: {
+        bubble_id: context.resolved.bubbleId,
+        base_branch: context.baseBranch,
+        bubble_branch: context.bubbleBranch
+      }
+    });
   }
 
   return buildMergeBubbleResult({

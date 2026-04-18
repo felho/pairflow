@@ -180,11 +180,95 @@ export interface ResolveStartBubbleDependenciesInput {
     NonNullable<StartBubbleDependencies["isTmuxSessionAlive"]>;
 }
 
+function resolveLaunchTmuxAckDependency(input: {
+  dependencies: StartBubbleDependencies;
+  defaults: StartBubbleDependencyDefaults;
+}): LaunchBubbleTmuxSessionAckPort {
+  if (input.dependencies.launchBubbleTmuxSessionAck !== undefined) {
+    return input.dependencies.launchBubbleTmuxSessionAck;
+  }
+  if (input.dependencies.launchBubbleTmuxSession !== undefined) {
+    return projectLegacyLaunchPortToAckPort(
+      input.dependencies.launchBubbleTmuxSession
+    );
+  }
+  return input.defaults.launchBubbleTmuxSessionAck;
+}
+
+function resolveRuntimeSessionDependencies(input: {
+  dependencies: StartBubbleDependencies;
+  defaults: StartBubbleDependencyDefaults;
+}) {
+  return {
+    readSessions:
+      input.dependencies.readRuntimeSessionsRegistry
+      ?? input.defaults.readRuntimeSessionsRegistry,
+    claimSession:
+      input.dependencies.claimRuntimeSession
+      ?? input.defaults.claimRuntimeSession,
+    upsertSession:
+      input.dependencies.upsertRuntimeSession
+      ?? input.defaults.upsertRuntimeSession,
+    removeSession:
+      input.dependencies.removeRuntimeSession
+      ?? input.defaults.removeRuntimeSession
+  };
+}
+
+function resolveRemoteExecutionDependencies(input: {
+  dependencies: StartBubbleDependencies;
+  defaults: StartBubbleDependencyDefaults;
+}) {
+  return {
+    loadPairflowGlobalConfig:
+      input.dependencies.loadPairflowGlobalConfig
+      ?? input.defaults.loadPairflowGlobalConfig,
+    runGitCommand:
+      input.dependencies.runGitCommand ?? input.defaults.runGitCommand,
+    readRemotePointer:
+      input.dependencies.readRemotePointer ?? input.defaults.readRemotePointer,
+    writeRemotePointer:
+      input.dependencies.writeRemotePointer ?? input.defaults.writeRemotePointer,
+    writeRemoteStateCache:
+      input.dependencies.writeRemoteStateCache
+      ?? input.defaults.writeRemoteStateCache,
+    removeRemoteStateCache:
+      input.dependencies.removeRemoteStateCache
+      ?? input.defaults.removeRemoteStateCache,
+    executeRemoteBubbleStart:
+      input.dependencies.executeRemoteBubbleStart
+      ?? input.defaults.executeRemoteBubbleStart
+  };
+}
+
+function resolveReviewerDependencies(dependencies: StartBubbleDependencies) {
+  return {
+    buildResumeSummary:
+      dependencies.buildResumeTranscriptSummary ?? buildResumeTranscriptSummary,
+    readReviewerBriefArtifact:
+      dependencies.readReviewerBriefArtifact ?? defaultReadReviewerBriefArtifact,
+    readReviewerFocusArtifact:
+      dependencies.readReviewerFocusArtifact ?? defaultReadReviewerFocusArtifact,
+    resolveReviewerTestExecutionDirective:
+      dependencies.resolveReviewerTestExecutionDirective
+      ?? defaultResolveReviewerTestExecutionDirective
+  };
+}
+
 export async function resolveStartBubbleDependencies(
   input: ResolveStartBubbleDependenciesInput
 ): Promise<ResolvedStartBubbleDependencies> {
   const { dependencies } = input;
   const startBubbleDependencyDefaults = await loadStartBubbleDependencyDefaults();
+  const runtimeSessions = resolveRuntimeSessionDependencies({
+    dependencies,
+    defaults: startBubbleDependencyDefaults
+  });
+  const remoteExecution = resolveRemoteExecutionDependencies({
+    dependencies,
+    defaults: startBubbleDependencyDefaults
+  });
+  const reviewerDependencies = resolveReviewerDependencies(dependencies);
 
   return {
     bootstrap:
@@ -196,71 +280,25 @@ export async function resolveStartBubbleDependencies(
     runWorktreeBootstrapCommand:
       dependencies.runWorktreeBootstrapCommand
       ?? input.runWorktreeBootstrapCommandDefault,
-    launchTmuxAck:
-      dependencies.launchBubbleTmuxSessionAck
-      ?? (
-        dependencies.launchBubbleTmuxSession !== undefined
-          ? projectLegacyLaunchPortToAckPort(
-              dependencies.launchBubbleTmuxSession
-            )
-          : startBubbleDependencyDefaults.launchBubbleTmuxSessionAck
-      ),
+    launchTmuxAck: resolveLaunchTmuxAckDependency({
+      dependencies,
+      defaults: startBubbleDependencyDefaults
+    }),
     terminateTmux:
       dependencies.terminateBubbleTmuxSession
       ?? startBubbleDependencyDefaults.terminateBubbleTmuxSession,
     isTmuxSessionAlive:
       dependencies.isTmuxSessionAlive ?? input.isTmuxSessionAliveDefault,
-    readSessions:
-      dependencies.readRuntimeSessionsRegistry
-      ?? startBubbleDependencyDefaults.readRuntimeSessionsRegistry,
-    claimSession:
-      dependencies.claimRuntimeSession
-      ?? startBubbleDependencyDefaults.claimRuntimeSession,
-    upsertSession:
-      dependencies.upsertRuntimeSession
-      ?? startBubbleDependencyDefaults.upsertRuntimeSession,
-    removeSession:
-      dependencies.removeRuntimeSession
-      ?? startBubbleDependencyDefaults.removeRuntimeSession,
+    ...runtimeSessions,
     writeState:
       dependencies.writeStateSnapshot ?? startBubbleDependencyDefaults.writeStateSnapshot,
-    loadPairflowGlobalConfig:
-      dependencies.loadPairflowGlobalConfig
-      ?? startBubbleDependencyDefaults.loadPairflowGlobalConfig,
-    runGitCommand:
-      dependencies.runGitCommand
-      ?? startBubbleDependencyDefaults.runGitCommand,
-    readRemotePointer:
-      dependencies.readRemotePointer
-      ?? startBubbleDependencyDefaults.readRemotePointer,
-    writeRemotePointer:
-      dependencies.writeRemotePointer
-      ?? startBubbleDependencyDefaults.writeRemotePointer,
-    writeRemoteStateCache:
-      dependencies.writeRemoteStateCache
-      ?? startBubbleDependencyDefaults.writeRemoteStateCache,
-    removeRemoteStateCache:
-      dependencies.removeRemoteStateCache
-      ?? startBubbleDependencyDefaults.removeRemoteStateCache,
-    executeRemoteBubbleStart:
-      dependencies.executeRemoteBubbleStart
-      ?? startBubbleDependencyDefaults.executeRemoteBubbleStart,
+    ...remoteExecution,
     reportWarning:
       dependencies.reportWarning
       ?? ((message: string) => {
         process.stderr.write(`${message}\n`);
       }),
-    buildResumeSummary:
-      dependencies.buildResumeTranscriptSummary ?? buildResumeTranscriptSummary,
-    readReviewerBriefArtifact:
-      dependencies.readReviewerBriefArtifact
-      ?? defaultReadReviewerBriefArtifact,
-    readReviewerFocusArtifact:
-      dependencies.readReviewerFocusArtifact
-      ?? defaultReadReviewerFocusArtifact,
-    resolveReviewerTestExecutionDirective:
-      dependencies.resolveReviewerTestExecutionDirective
-      ?? defaultResolveReviewerTestExecutionDirective
+    ...reviewerDependencies
   };
 }
 

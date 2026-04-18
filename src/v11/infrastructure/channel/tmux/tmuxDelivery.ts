@@ -61,73 +61,80 @@ export type {
 } from "../../../shared/delivery/tmuxDeliveryContract.js";
 export { buildTranscriptFallbackRef, resolveDeliveryMessageRef } from "./tmuxDeliveryRefs.js";
 
+function buildRegistryReadFailedMessage(
+  input: EmitDeliveryNotificationRuntimeInput
+): string {
+  return buildTmuxDeliveryMessage({
+    envelope: input.envelope,
+    messageRef:
+      input.messageRef ??
+      input.envelope.refs[0] ??
+      buildTranscriptFallbackRef(
+        input.bubbleId,
+        input.sessionsPath,
+        input.envelope.id
+      ),
+    bubbleConfig: input.bubbleConfig,
+    ...(input.reviewerTestDirective !== undefined
+      ? { reviewerTestDirective: input.reviewerTestDirective }
+      : {}),
+    ...(input.reviewerBrief !== undefined
+      ? { reviewerBrief: input.reviewerBrief }
+      : {}),
+    ...(input.reviewerFocus !== undefined
+      ? { reviewerFocus: input.reviewerFocus }
+      : {}),
+    recipientRole: resolveEnvelopeRecipientRole(
+      input.envelope,
+      input.bubbleConfig
+    )
+  });
+}
+
+function createDeliveryMessage(input: {
+  runtimeInput: EmitDeliveryNotificationRuntimeInput;
+  workspacePath: string | undefined;
+}): {
+  message: string;
+  targetResolution: ReturnType<typeof resolveEnvelopeTargetPane>;
+} {
+  const { runtimeInput, workspacePath } = input;
+  const messageRef =
+    runtimeInput.messageRef ??
+    resolveDeliveryMessageRef({
+      bubbleId: runtimeInput.bubbleId,
+      sessionsPath: runtimeInput.sessionsPath,
+      envelope: runtimeInput.envelope
+    });
+  const targetResolution = resolveEnvelopeTargetPane(
+    runtimeInput.envelope,
+    runtimeInput.bubbleConfig
+  );
+  return {
+    message: buildTmuxDeliveryMessage({
+      envelope: runtimeInput.envelope,
+      messageRef,
+      bubbleConfig: runtimeInput.bubbleConfig,
+      ...(workspacePath !== undefined ? { workspacePath } : {}),
+      ...(runtimeInput.reviewerTestDirective !== undefined
+        ? { reviewerTestDirective: runtimeInput.reviewerTestDirective }
+        : {}),
+      ...(runtimeInput.reviewerBrief !== undefined
+        ? { reviewerBrief: runtimeInput.reviewerBrief }
+        : {}),
+      ...(runtimeInput.reviewerFocus !== undefined
+        ? { reviewerFocus: runtimeInput.reviewerFocus }
+        : {}),
+      recipientRole: targetResolution.recipientRole
+    }),
+    targetResolution
+  };
+}
+
 export async function emitDeliveryNotificationAck(
   input: EmitDeliveryNotificationRuntimeInput
 ): Promise<DeliveryAck> {
   const readSessions = input.readSessionsRegistry ?? readRuntimeSessionsRegistry;
-  const buildRegistryReadFailedMessage = (): string =>
-    buildTmuxDeliveryMessage({
-      envelope: input.envelope,
-      messageRef:
-        input.messageRef ??
-        input.envelope.refs[0] ??
-        buildTranscriptFallbackRef(
-          input.bubbleId,
-          input.sessionsPath,
-          input.envelope.id
-        ),
-      bubbleConfig: input.bubbleConfig,
-      ...(input.reviewerTestDirective !== undefined
-        ? { reviewerTestDirective: input.reviewerTestDirective }
-        : {}),
-      ...(input.reviewerBrief !== undefined
-        ? { reviewerBrief: input.reviewerBrief }
-        : {}),
-      ...(input.reviewerFocus !== undefined
-        ? { reviewerFocus: input.reviewerFocus }
-        : {}),
-      recipientRole: resolveEnvelopeRecipientRole(
-        input.envelope,
-        input.bubbleConfig
-      )
-    });
-  const createDeliveryMessage = (
-    workspacePath: string | undefined
-  ): {
-    message: string;
-    targetResolution: ReturnType<typeof resolveEnvelopeTargetPane>;
-  } => {
-    const messageRef =
-      input.messageRef ??
-      resolveDeliveryMessageRef({
-        bubbleId: input.bubbleId,
-        sessionsPath: input.sessionsPath,
-        envelope: input.envelope
-      });
-    const targetResolution = resolveEnvelopeTargetPane(
-      input.envelope,
-      input.bubbleConfig
-    );
-    return {
-      message: buildTmuxDeliveryMessage({
-        envelope: input.envelope,
-        messageRef,
-        bubbleConfig: input.bubbleConfig,
-        ...(workspacePath !== undefined ? { workspacePath } : {}),
-        ...(input.reviewerTestDirective !== undefined
-          ? { reviewerTestDirective: input.reviewerTestDirective }
-          : {}),
-        ...(input.reviewerBrief !== undefined
-          ? { reviewerBrief: input.reviewerBrief }
-          : {}),
-        ...(input.reviewerFocus !== undefined
-          ? { reviewerFocus: input.reviewerFocus }
-          : {}),
-        recipientRole: targetResolution.recipientRole
-      }),
-      targetResolution
-    };
-  };
 
   let sessionName: string | undefined;
   let workspacePath: string | undefined;
@@ -142,13 +149,15 @@ export async function emitDeliveryNotificationAck(
   } catch {
     return createRejectedDeliveryAck({
       reason: "registry_read_failed",
-      message: buildRegistryReadFailedMessage(),
+      message: buildRegistryReadFailedMessage(input),
       deliveryTargetReasonCode: "DELIVERY_TARGET_REGISTRY_READ_FAILED"
     });
   }
 
-  const { message: workspaceMessage, targetResolution } =
-    createDeliveryMessage(workspacePath);
+  const { message: workspaceMessage, targetResolution } = createDeliveryMessage({
+    runtimeInput: input,
+    workspacePath
+  });
 
   if (sessionName === undefined || workspacePath === undefined) {
     return createRejectedDeliveryAck({
