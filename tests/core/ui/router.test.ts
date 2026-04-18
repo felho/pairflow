@@ -6,7 +6,9 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { AttachBubbleError } from "../../../src/v11/application/attach/emitAttachV11.js";
+import { BubbleCommitErrorV11 as BubbleCommitError } from "../../../src/v11/application/commit/emitCommitV11.js";
 import { RemoteBubbleApprovalCommandError } from "../../../src/v11/infrastructure/executor/ssh/sshBubbleApprovalCommand.js";
+import { RemoteBubbleCommitCommandError } from "../../../src/v11/infrastructure/executor/ssh/sshBubbleCommitCommand.js";
 import { RemoteBubbleStatusError } from "../../../src/v11/infrastructure/executor/ssh/sshBubbleStatus.js";
 import type { RestartBubbleResult } from "../../../src/v11/application/restart/restartCommandContract.js";
 import { createUiRouter, resolveStaticAssetPath } from "../../../src/v11/infrastructure/ui/router.js";
@@ -1386,6 +1388,424 @@ describe("createUiRouter attach action", () => {
         bubbleId: "b-router-rework-remote-payload",
         repoPath,
         reasonCode: "REMOTE_APPROVAL_PAYLOAD_INVALID"
+      });
+    } finally {
+      await server.close();
+    }
+  });
+
+  it("maps remote commit start-required failures to HTTP 409 conflict with commit taxonomy", async () => {
+    const repoPath = "/tmp/pairflow-ui-router-commit-remote-created";
+    const commitBubble = vi.fn(() =>
+      Promise.reject(
+        new BubbleCommitError({
+          reasonCode: "COMMIT_REMOTE_START_REQUIRED",
+          message:
+            "Remote commit for 'b-router-commit-remote-created' requires a started remote pointer. Run `pairflow bubble start --id b-router-commit-remote-created` first."
+        })
+      )
+    );
+    const status: BubbleStatusView = {
+      bubbleId: "b-router-commit-remote-created",
+      repoPath,
+      worktreePath: "/tmp/worktree",
+      bubbleStartedAt: "2026-04-18T08:00:00.000Z",
+      state: "CREATED",
+      round: 0,
+      activeAgent: null,
+      activeRole: null,
+      activeSince: null,
+      lastCommandAt: null,
+      paneActivity: {
+        readStatus: "missing",
+        lastChangedAt: null,
+        sampledAt: null,
+        sinceLastChangedSeconds: null,
+        sinceSampledSeconds: null,
+        lastSampleStatus: null,
+        lastSampleError: null,
+        sessionName: null,
+        targetPane: null
+      },
+      executionContext: null,
+      watchdog: {
+        monitored: false,
+        monitoredAgent: null,
+        timeoutMinutes: 30,
+        referenceTimestamp: null,
+        deadlineTimestamp: null,
+        remainingSeconds: null,
+        expired: false
+      },
+      pendingInboxItems: {
+        humanQuestions: 0,
+        approvalRequests: 0,
+        total: 0
+      },
+      transcript: {
+        totalMessages: 0,
+        lastMessageType: null,
+        lastMessageTs: null,
+        lastMessageId: null
+      },
+      metaReview: {
+        actor: "meta-reviewer",
+        authorityActive: false,
+        runtimeDelivery: null
+      },
+      commandPath: {
+        status: "external",
+        profile: "external",
+        localEntrypoint: "/tmp/worktree/dist/cli/index.js",
+        activeEntrypoint: "/usr/local/bin/pairflow",
+        message: "external Pairflow CLI active",
+        pinnedCommand: "pairflow"
+      },
+      accuracy_critical: false,
+      last_review_verification: "missing",
+      failing_gates: [],
+      spec_lock_state: {
+        state: "IMPLEMENTABLE",
+        open_blocker_count: 0,
+        open_required_now_count: 0
+      },
+      round_gate_state: {
+        applies: false,
+        violated: false,
+        round: 0
+      },
+      stateValidation: null
+    };
+    const inbox: BubbleInboxView = {
+      bubbleId: "b-router-commit-remote-created",
+      repoPath,
+      state: "CREATED",
+      pending: {
+        humanQuestions: 0,
+        approvalRequests: 0,
+        total: 0
+      },
+      items: []
+    };
+    const router = createUiRouter({
+      repoScope: {
+        repos: [repoPath],
+        has: (value: string) => Promise.resolve(value === repoPath)
+      },
+      events: {
+        subscribe: () => () => undefined,
+        getSnapshot: () => ({
+          id: 1,
+          ts: "2026-02-25T00:00:00.000Z",
+          type: "snapshot",
+          repos: [],
+          bubbles: []
+        }),
+        refreshNow: () => Promise.resolve(undefined),
+        addRepo: () => Promise.resolve(false),
+        removeRepo: () => Promise.resolve(false),
+        close: () => Promise.resolve(undefined)
+      },
+      dependencies: {
+        commitBubble,
+        getBubbleStatus: vi.fn(async () => status),
+        getBubbleInbox: vi.fn(async () => inbox),
+        readRuntimeSessionsRegistry: vi.fn(async () => ({}))
+      }
+    });
+    const server = await startRouterServer(router);
+
+    try {
+      const response = await fetch(
+        `${server.url}/api/bubbles/b-router-commit-remote-created/commit?repo=${encodeURIComponent(repoPath)}`,
+        {
+          method: "POST",
+          headers: {
+            "content-type": "application/json"
+          },
+          body: JSON.stringify({
+            auto: false
+          })
+        }
+      );
+      const payload = (await response.json()) as {
+        error: {
+          code: string;
+          details?: Record<string, unknown>;
+        };
+      };
+
+      expect(response.status).toBe(409);
+      expect(payload.error.code).toBe("conflict");
+      expect(payload.error.details).toMatchObject({
+        bubbleId: "b-router-commit-remote-created",
+        repoPath,
+        currentState: "CREATED",
+        reasonCode: "COMMIT_REMOTE_START_REQUIRED"
+      });
+    } finally {
+      await server.close();
+    }
+  });
+
+  it("maps remote commit sync-back failures to HTTP 500 with commit taxonomy", async () => {
+    const repoPath = "/tmp/pairflow-ui-router-commit-syncback";
+    const router = createUiRouter({
+      repoScope: {
+        repos: [repoPath],
+        has: (value: string) => Promise.resolve(value === repoPath)
+      },
+      events: {
+        subscribe: () => () => undefined,
+        getSnapshot: () => ({
+          id: 1,
+          ts: "2026-02-25T00:00:00.000Z",
+          type: "snapshot",
+          repos: [],
+          bubbles: []
+        }),
+        refreshNow: () => Promise.resolve(undefined),
+        addRepo: () => Promise.resolve(false),
+        removeRepo: () => Promise.resolve(false),
+        close: () => Promise.resolve(undefined)
+      },
+      dependencies: {
+        commitBubble: vi.fn(() =>
+          Promise.reject(
+            new BubbleCommitError({
+              reasonCode: "REMOTE_COMMIT_SYNC_BACK_FAILED",
+              message: "Remote commit succeeded, but local sync-back failed."
+            })
+          )
+        )
+      }
+    });
+    const server = await startRouterServer(router);
+
+    try {
+      const response = await fetch(
+        `${server.url}/api/bubbles/b-router-commit-syncback/commit?repo=${encodeURIComponent(repoPath)}`,
+        {
+          method: "POST",
+          headers: {
+            "content-type": "application/json"
+          },
+          body: JSON.stringify({
+            auto: false
+          })
+        }
+      );
+      const payload = (await response.json()) as {
+        error: {
+          code: string;
+          details?: Record<string, unknown>;
+        };
+      };
+
+      expect(response.status).toBe(500);
+      expect(payload.error.code).toBe("internal_error");
+      expect(payload.error.details).toMatchObject({
+        bubbleId: "b-router-commit-syncback",
+        repoPath,
+        reasonCode: "REMOTE_COMMIT_SYNC_BACK_FAILED"
+      });
+    } finally {
+      await server.close();
+    }
+  });
+
+  it("maps remote commit transport failures to HTTP 500 with commit taxonomy", async () => {
+    const repoPath = "/tmp/pairflow-ui-router-commit-transport";
+    const router = createUiRouter({
+      repoScope: {
+        repos: [repoPath],
+        has: (value: string) => Promise.resolve(value === repoPath)
+      },
+      events: {
+        subscribe: () => () => undefined,
+        getSnapshot: () => ({
+          id: 1,
+          ts: "2026-02-25T00:00:00.000Z",
+          type: "snapshot",
+          repos: [],
+          bubbles: []
+        }),
+        refreshNow: () => Promise.resolve(undefined),
+        addRepo: () => Promise.resolve(false),
+        removeRepo: () => Promise.resolve(false),
+        close: () => Promise.resolve(undefined)
+      },
+      dependencies: {
+        commitBubble: vi.fn(() =>
+          Promise.reject(
+            new BubbleCommitError({
+              reasonCode: "REMOTE_COMMIT_TRANSPORT_FAILED",
+              message: "ssh transport failed during remote commit."
+            })
+          )
+        )
+      }
+    });
+    const server = await startRouterServer(router);
+
+    try {
+      const response = await fetch(
+        `${server.url}/api/bubbles/b-router-commit-transport/commit?repo=${encodeURIComponent(repoPath)}`,
+        {
+          method: "POST",
+          headers: {
+            "content-type": "application/json"
+          },
+          body: JSON.stringify({
+            auto: false
+          })
+        }
+      );
+      const payload = (await response.json()) as {
+        error: {
+          code: string;
+          details?: Record<string, unknown>;
+        };
+      };
+
+      expect(response.status).toBe(500);
+      expect(payload.error.code).toBe("internal_error");
+      expect(payload.error.details).toMatchObject({
+        bubbleId: "b-router-commit-transport",
+        repoPath,
+        reasonCode: "REMOTE_COMMIT_TRANSPORT_FAILED"
+      });
+    } finally {
+      await server.close();
+    }
+  });
+
+  it("maps remote commit payload failures to HTTP 500 with commit taxonomy", async () => {
+    const repoPath = "/tmp/pairflow-ui-router-commit-payload";
+    const router = createUiRouter({
+      repoScope: {
+        repos: [repoPath],
+        has: (value: string) => Promise.resolve(value === repoPath)
+      },
+      events: {
+        subscribe: () => () => undefined,
+        getSnapshot: () => ({
+          id: 1,
+          ts: "2026-02-25T00:00:00.000Z",
+          type: "snapshot",
+          repos: [],
+          bubbles: []
+        }),
+        refreshNow: () => Promise.resolve(undefined),
+        addRepo: () => Promise.resolve(false),
+        removeRepo: () => Promise.resolve(false),
+        close: () => Promise.resolve(undefined)
+      },
+      dependencies: {
+        commitBubble: vi.fn(() =>
+          Promise.reject(
+            new BubbleCommitError({
+              reasonCode: "REMOTE_COMMIT_PAYLOAD_INVALID",
+              message: "Remote commit returned malformed payload."
+            })
+          )
+        )
+      }
+    });
+    const server = await startRouterServer(router);
+
+    try {
+      const response = await fetch(
+        `${server.url}/api/bubbles/b-router-commit-payload/commit?repo=${encodeURIComponent(repoPath)}`,
+        {
+          method: "POST",
+          headers: {
+            "content-type": "application/json"
+          },
+          body: JSON.stringify({
+            auto: false
+          })
+        }
+      );
+      const payload = (await response.json()) as {
+        error: {
+          code: string;
+          details?: Record<string, unknown>;
+        };
+      };
+
+      expect(response.status).toBe(500);
+      expect(payload.error.code).toBe("internal_error");
+      expect(payload.error.details).toMatchObject({
+        bubbleId: "b-router-commit-payload",
+        repoPath,
+        reasonCode: "REMOTE_COMMIT_PAYLOAD_INVALID"
+      });
+    } finally {
+      await server.close();
+    }
+  });
+
+  it("preserves reasonCode when commitBubble leaks a raw remote commit command error", async () => {
+    const repoPath = "/tmp/pairflow-ui-router-commit-raw-payload";
+    const router = createUiRouter({
+      repoScope: {
+        repos: [repoPath],
+        has: (value: string) => Promise.resolve(value === repoPath)
+      },
+      events: {
+        subscribe: () => () => undefined,
+        getSnapshot: () => ({
+          id: 1,
+          ts: "2026-02-25T00:00:00.000Z",
+          type: "snapshot",
+          repos: [],
+          bubbles: []
+        }),
+        refreshNow: () => Promise.resolve(undefined),
+        addRepo: () => Promise.resolve(false),
+        removeRepo: () => Promise.resolve(false),
+        close: () => Promise.resolve(undefined)
+      },
+      dependencies: {
+        commitBubble: vi.fn(() =>
+          Promise.reject(
+            new RemoteBubbleCommitCommandError({
+              code: "REMOTE_COMMIT_PAYLOAD_INVALID",
+              message: "Remote commit returned malformed payload."
+            })
+          )
+        )
+      }
+    });
+    const server = await startRouterServer(router);
+
+    try {
+      const response = await fetch(
+        `${server.url}/api/bubbles/b-router-commit-raw-payload/commit?repo=${encodeURIComponent(repoPath)}`,
+        {
+          method: "POST",
+          headers: {
+            "content-type": "application/json"
+          },
+          body: JSON.stringify({
+            auto: false
+          })
+        }
+      );
+      const payload = (await response.json()) as {
+        error: {
+          code: string;
+          details?: Record<string, unknown>;
+        };
+      };
+
+      expect(response.status).toBe(500);
+      expect(payload.error.code).toBe("internal_error");
+      expect(payload.error.details).toMatchObject({
+        bubbleId: "b-router-commit-raw-payload",
+        repoPath,
+        reasonCode: "REMOTE_COMMIT_PAYLOAD_INVALID"
       });
     } finally {
       await server.close();

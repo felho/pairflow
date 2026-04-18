@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import { BubbleLookupError } from "../../../../src/v11/infrastructure/executor/workspace/bubbleLookup.js";
 import { GitCommandError } from "../../../../src/v11/infrastructure/workspace/git.js";
+import { RemoteBubbleCommitCommandError } from "../../../../src/v11/infrastructure/executor/ssh/sshBubbleCommitCommand.js";
+import { RemoteBubbleStatusError } from "../../../../src/v11/infrastructure/executor/ssh/sshBubbleStatus.js";
 import {
   BubbleCommitError,
   createBubbleCommitError,
@@ -45,5 +47,62 @@ describe("commitCommandErrorNormalization", () => {
     expect((fromGit as BubbleCommitError).context).toEqual({
       command_name: "commit"
     });
+  });
+
+  it("preserves remote status reason codes on normalized commit errors", () => {
+    const normalized = normalizeBubbleCommitError({
+      error: new RemoteBubbleStatusError({
+        code: "REMOTE_STATUS_CONFIG_INVALID",
+        message: "host mismatch"
+      }),
+      isBubbleCommitError,
+      createBubbleCommitError,
+      isRemoteBubbleStatusError: (candidate) =>
+        candidate instanceof RemoteBubbleStatusError
+    });
+
+    expect(normalized).toBeInstanceOf(BubbleCommitError);
+    expect((normalized as BubbleCommitError).reasonCode).toBe(
+      "REMOTE_STATUS_CONFIG_INVALID"
+    );
+    expect((normalized as Error).message).toContain("host mismatch");
+  });
+
+  it("preserves remote commit transport taxonomy on normalized commit errors", () => {
+    const normalized = normalizeBubbleCommitError({
+      error: new RemoteBubbleCommitCommandError({
+        code: "REMOTE_COMMIT_TRANSPORT_FAILED",
+        message: "ssh transport failed"
+      }),
+      isBubbleCommitError,
+      createBubbleCommitError,
+      isRemoteBubbleCommitCommandError: (candidate) =>
+        candidate instanceof RemoteBubbleCommitCommandError
+    });
+
+    expect(normalized).toBeInstanceOf(BubbleCommitError);
+    expect((normalized as BubbleCommitError).reasonCode).toBe(
+      "REMOTE_COMMIT_TRANSPORT_FAILED"
+    );
+    expect((normalized as Error).message).toContain("ssh transport failed");
+  });
+
+  it("preserves remote commit payload taxonomy on normalized commit errors", () => {
+    const normalized = normalizeBubbleCommitError({
+      error: new RemoteBubbleCommitCommandError({
+        code: "REMOTE_COMMIT_PAYLOAD_INVALID",
+        message: "remote payload was malformed"
+      }),
+      isBubbleCommitError,
+      createBubbleCommitError,
+      isRemoteBubbleCommitCommandError: (candidate) =>
+        candidate instanceof RemoteBubbleCommitCommandError
+    });
+
+    expect(normalized).toBeInstanceOf(BubbleCommitError);
+    expect((normalized as BubbleCommitError).reasonCode).toBe(
+      "REMOTE_COMMIT_PAYLOAD_INVALID"
+    );
+    expect((normalized as Error).message).toContain("remote payload was malformed");
   });
 });

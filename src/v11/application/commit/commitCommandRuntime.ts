@@ -4,12 +4,9 @@ import {
   isBubbleCommitError
 } from "../../shared/commit/commitCommandError.js";
 import { normalizeBubbleCommitError } from "../../shared/commit/commitCommandErrorNormalization.js";
+import { isNamedError } from "../../shared/errors/namedError.js";
 
 export { BubbleCommitError };
-
-function isNamedError(candidate: unknown, expectedName: string): boolean {
-  return candidate instanceof Error && candidate.name === expectedName;
-}
 
 export function throwAsBubbleCommitError(error: unknown): never {
   throw normalizeBubbleCommitError({
@@ -19,6 +16,10 @@ export function throwAsBubbleCommitError(error: unknown): never {
     isBubbleLookupError: (candidate) =>
       isNamedError(candidate, "BubbleLookupError"),
     isGitCommandError: (candidate) =>
-      isNamedError(candidate, "GitCommandError")
+      isNamedError(candidate, "GitCommandError"),
+    isRemoteBubbleCommitCommandError: (candidate) =>
+      isNamedError(candidate, "RemoteBubbleCommitCommandError"),
+    isRemoteBubbleStatusError: (candidate) =>
+      isNamedError(candidate, "RemoteBubbleStatusError")
   });
 }
