@@ -13,8 +13,10 @@ import {
   conflict,
   internalError,
   isAttachBubbleErrorLike,
+  isBubbleCommitErrorLike,
   isConflictErrorMessage,
   isNotFoundErrorMessage,
+  isRemoteBubbleCommitCommandErrorLike,
   isRemoteBubbleApprovalCommandErrorLike,
   isRemoteBubbleStatusErrorLike,
   notFound,
@@ -122,14 +124,7 @@ async function mapActionErrorToApiError(input: {
 }): Promise<UiApiError> {
   const message = asErrorMessage(input.error);
 
-  if (isNotFoundErrorMessage(message)) {
-    return notFound(message, {
-      bubbleId: input.bubbleId,
-      repoPath: input.repoPath
-    });
-  }
-
-  if (isConflictErrorMessage(message)) {
+  const mapConflictWithCurrentState = async (reasonCode?: string): Promise<UiApiError> => {
     let currentBubble: UiBubbleDetail | null = null;
     try {
       currentBubble = await loadBubbleDetail({
@@ -144,10 +139,61 @@ async function mapActionErrorToApiError(input: {
     return conflict(message, {
       bubbleId: input.bubbleId,
       repoPath: input.repoPath,
+      ...(reasonCode !== undefined ? { reasonCode } : {}),
       currentState:
         currentBubble?.state ?? parseStateFromErrorMessage(message) ?? null,
       ...(currentBubble !== null ? { bubble: currentBubble } : {})
     });
+  };
+
+  if (isNotFoundErrorMessage(message)) {
+    return notFound(message, {
+      bubbleId: input.bubbleId,
+      repoPath: input.repoPath
+    });
+  }
+
+  if (isBubbleCommitErrorLike(input.error) && input.error.reasonCode !== undefined) {
+    const details = {
+      bubbleId: input.bubbleId,
+      repoPath: input.repoPath,
+      reasonCode: input.error.reasonCode
+    };
+    if (input.error.reasonCode === "REMOTE_STATUS_CONFIG_INVALID") {
+      return badRequest(message, details);
+    }
+    if (
+      input.error.reasonCode === "REMOTE_STATUS_TRANSPORT_FAILED" ||
+      input.error.reasonCode === "COMMIT_REMOTE_START_REQUIRED"
+    ) {
+      return mapConflictWithCurrentState(input.error.reasonCode);
+    }
+    if (input.error.reasonCode === "REMOTE_COMMIT_TRANSPORT_FAILED") {
+      return internalError(message, details);
+    }
+    if (input.error.reasonCode === "REMOTE_COMMIT_PAYLOAD_INVALID") {
+      return internalError(message, details);
+    }
+    if (input.error.reasonCode === "REMOTE_COMMIT_SYNC_BACK_FAILED") {
+      return internalError(message, details);
+    }
+    return internalError(message, details);
+  }
+
+  if (isRemoteBubbleCommitCommandErrorLike(input.error) && input.error.code !== undefined) {
+    return internalError(message, {
+      bubbleId: input.bubbleId,
+      repoPath: input.repoPath,
+      reasonCode: input.error.code
+    });
+  }
+
+  if (isConflictErrorMessage(message)) {
+    return mapConflictWithCurrentState(
+      isBubbleCommitErrorLike(input.error) && input.error.reasonCode !== undefined
+        ? input.error.reasonCode
+        : undefined
+    );
   }
 
   if (

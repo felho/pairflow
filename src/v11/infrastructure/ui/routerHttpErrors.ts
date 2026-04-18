@@ -220,12 +220,22 @@ export interface AttachBubbleErrorLike {
   } | undefined;
 }
 
+export interface BubbleCommitErrorLike {
+  name: string;
+  reasonCode?: string | undefined;
+}
+
 export interface RemoteBubbleApprovalCommandErrorLike {
   name: string;
   code?: string | undefined;
 }
 
 export interface RemoteBubbleStatusErrorLike {
+  name: string;
+  code?: string | undefined;
+}
+
+export interface RemoteBubbleCommitCommandErrorLike {
   name: string;
   code?: string | undefined;
 }
@@ -240,6 +250,16 @@ export function isAttachBubbleErrorLike(
     return false;
   }
   return true;
+}
+
+export function isBubbleCommitErrorLike(
+  error: unknown
+): error is BubbleCommitErrorLike {
+  const candidate = error as (Error & { reasonCode?: string }) | undefined;
+  return (
+    candidate instanceof Error &&
+    candidate.name === "BubbleCommitError"
+  );
 }
 
 export function isRemoteBubbleApprovalCommandErrorLike(
@@ -268,6 +288,20 @@ export function isRemoteBubbleStatusErrorLike(
       candidate.code === "REMOTE_STATUS_CONFIG_UNAVAILABLE" ||
       candidate.code === "REMOTE_STATUS_TRANSPORT_FAILED" ||
       candidate.code === "REMOTE_STATUS_PAYLOAD_INVALID"
+    )
+  );
+}
+
+export function isRemoteBubbleCommitCommandErrorLike(
+  error: unknown
+): error is RemoteBubbleCommitCommandErrorLike {
+  const candidate = error as (Error & { code?: string }) | undefined;
+  return (
+    candidate instanceof Error &&
+    candidate.name === "RemoteBubbleCommitCommandError" &&
+    (
+      candidate.code === "REMOTE_COMMIT_TRANSPORT_FAILED" ||
+      candidate.code === "REMOTE_COMMIT_PAYLOAD_INVALID"
     )
   );
 }

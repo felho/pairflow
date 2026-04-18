@@ -2,9 +2,15 @@ import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { renderBubbleConfigToml } from "../../../src/config/bubbleConfig.js";
+import type {
+  BubbleConfig,
+  BubbleRemotePointerStarted,
+  BubbleStateSnapshot
+} from "../../../src/types/bubble.js";
+import type { ProtocolEnvelope } from "../../../src/types/protocol.js";
 import {
   emitConvergedFromWorkspaceV11 as emitConvergedFromWorkspace
 } from "../../../src/v11/application/converged/emitConvergedV11.js";
@@ -24,6 +30,7 @@ import { readStateSnapshot } from "../../../src/v11/infrastructure/state/stateSt
 import { bootstrapWorktreeWorkspace } from "../../../src/v11/infrastructure/workspace/worktreeManager.js";
 import { initGitRepository, runGit } from "../../helpers/git.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
+import { getBubblePaths } from "../../../src/v11/shared/bubble/bubblePaths.js";
 
 const tempDirs: string[] = [];
 
@@ -39,6 +46,55 @@ async function createTempRepo(): Promise<string> {
   tempDirs.push(root);
   await initGitRepository(root);
   return root;
+}
+
+function createRemoteBubbleConfig(repoPath: string, bubbleId: string): BubbleConfig {
+  return {
+    id: bubbleId,
+    repo_path: repoPath,
+    base_branch: "main",
+    bubble_branch: `bubble/${bubbleId}`,
+    work_mode: "worktree",
+    quality_mode: "strict",
+    review_artifact_type: "code",
+    pairflow_command_profile: "external",
+    reviewer_context_mode: "fresh",
+    watchdog_timeout_minutes: 60,
+    max_rounds: 5,
+    severity_gate_round: 2,
+    commit_requires_approval: true,
+    agents: {
+      implementer: "codex",
+      reviewer: "claude"
+    },
+    commands: {
+      test: "pnpm test",
+      typecheck: "pnpm typecheck"
+    },
+    notifications: {
+      enabled: false
+    },
+    doc_contract_gates: {
+      round_gate_applies_after: 2
+    },
+    executor: {
+      type: "ssh",
+      remote: "prod"
+    }
+  };
+}
+
+function createStartedRemotePointer(
+  bubbleId: string
+): BubbleRemotePointerStarted {
+  return {
+    kind: "started",
+    host: "ssh.example.com",
+    instanceId: `inst_${bubbleId}`,
+    remoteClonePath: `/srv/pairflow/repo--${bubbleId}`,
+    tmuxSession: `pf-${bubbleId}`,
+    startedAt: "2026-04-18T08:15:00.000Z"
+  };
 }
 
 function buildActiveMetaReviewerSession(input: {
@@ -548,5 +604,108 @@ describe("commitBubble", () => {
         now: new Date("2026-02-22T15:42:00.000Z")
       })
     ).rejects.toThrow(/COMMIT_CLONE_SOURCE_BRANCH_SYNC_FAILED/u);
+  });
+
+  it("keeps the public commit surface on the remote started authority with local continuity sync-back", async () => {
+    const repoPath = await createTempRepo();
+    const bubbleConfig = createRemoteBubbleConfig(repoPath, "b_commit_remote_public_01");
+    const bubblePaths = getBubblePaths(repoPath, "b_commit_remote_public_01");
+    const statePath = bubblePaths.statePath;
+    const transcriptPath = bubblePaths.transcriptPath;
+    const donePackagePath = join(bubblePaths.artifactsDir, "done-package.md");
+    const remoteState: BubbleStateSnapshot = {
+      bubble_id: "b_commit_remote_public_01",
+      state: "DONE",
+      round: 2,
+      active_agent: null,
+      active_since: null,
+      active_role: null,
+      execution_context: null,
+      round_role_history: [],
+      last_command_at: "2026-04-18T08:20:00.000Z",
+      pending_rework_intent: null,
+      rework_intent_history: []
+    };
+    const remoteEnvelope: ProtocolEnvelope = {
+      id: "msg_commit_remote_public_01",
+      ts: "2026-04-18T08:20:00.000Z",
+      bubble_id: "b_commit_remote_public_01",
+      sender: "orchestrator",
+      recipient: "human",
+      type: "DONE_PACKAGE",
+      round: 2,
+      payload: {
+        summary: "Remote public commit completed.",
+        metadata: {
+          done_package_path: "/srv/pairflow/repo/.pairflow/bubbles/b_commit_remote_public_01/artifacts/done-package.md",
+          staged_files: ["feature-public.txt"],
+          commit_message: "bubble(b_commit_remote_public_01): finalize",
+          commit_sha: "fedcba9876543210"
+        }
+      },
+      refs: []
+    };
+
+    const result = await commitBubble(
+      {
+        bubbleId: "b_commit_remote_public_01",
+        cwd: repoPath,
+        now: new Date("2026-04-18T08:20:00.000Z")
+      },
+      {
+        resolveBubbleById: vi.fn(async () => ({
+          bubbleId: "b_commit_remote_public_01",
+          repoPath,
+          bubblePaths,
+          bubbleConfig
+        })),
+        ensureBubbleInstanceIdForMutation: vi.fn(async () => ({
+          bubbleInstanceId: "bi_commit_remote_public_01",
+          bubbleConfig,
+          backfilled: false
+        })),
+        readRemotePointer: vi.fn(async () => createStartedRemotePointer("b_commit_remote_public_01")),
+        resolveRemoteBubbleStatusTarget: vi.fn(async () => ({
+          alias: "prod",
+          host: "ssh.example.com",
+          user: "pairflow",
+          pairflowCommand: "pairflow"
+        })),
+        executeRemoteBubbleCommitCommand: vi.fn(async () => ({
+          bubbleId: "b_commit_remote_public_01",
+          sequence: 5,
+          envelope: remoteEnvelope,
+          state: remoteState,
+          stateContent: `${JSON.stringify(remoteState, null, 2)}\n`,
+          transcriptContent: `${JSON.stringify(remoteEnvelope)}\n`,
+          donePackageContent: "# Done Package\n\nRemote public continuity.\n",
+          commitSha: "fedcba9876543210",
+          commitMessage: "bubble(b_commit_remote_public_01): finalize",
+          stagedFiles: ["feature-public.txt"]
+        })),
+        appendProtocolEnvelope: vi.fn(async () => {
+          throw new Error("unused");
+        }),
+        readStateSnapshot: vi.fn(async () => {
+          throw new Error("unused");
+        }),
+        readTranscriptEnvelopes: vi.fn(async () => []),
+        runGit: vi.fn(async () => {
+          throw new Error("runGit should not be used for remote public routing");
+        }),
+        writeTextFile: async (path: string, content: string) => {
+          await writeFile(path, content, "utf8");
+        },
+        writeStateSnapshot: vi.fn(async () => {
+          throw new Error("unused");
+        })
+      }
+    );
+
+    expect(result.donePackagePath).toBe(donePackagePath);
+    expect(result.commitSha).toBe("fedcba9876543210");
+    expect(await readFile(donePackagePath, "utf8")).toContain("Remote public continuity.");
+    expect(await readFile(statePath, "utf8")).toContain("\"state\": \"DONE\"");
+    expect(await readFile(transcriptPath, "utf8")).toContain("\"DONE_PACKAGE\"");
   });
 });

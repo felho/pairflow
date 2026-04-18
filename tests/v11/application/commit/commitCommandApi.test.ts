@@ -1,9 +1,17 @@
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, readdir, rename, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { renderBubbleConfigToml } from "../../../../src/config/bubbleConfig.js";
+import type {
+  BubbleConfig,
+  BubbleRemotePointerCreated,
+  BubbleRemotePointerStarted,
+  BubbleStateSnapshot
+} from "../../../../src/types/bubble.js";
+import type { ProtocolEnvelope } from "../../../../src/types/protocol.js";
 import {
   emitConvergedFromWorkspaceV11 as emitConvergedFromWorkspace
 } from "../../../../src/v11/application/converged/emitConvergedV11.js";
@@ -11,11 +19,18 @@ import { emitPassFromWorkspace } from "../../../../src/v11/application/pass/pass
 import { submitMetaReviewResultV11 as submitMetaReviewResult } from "../../../../src/v11/application/metaReview/emitMetaReviewV11.js";
 import { emitApproveV11 as emitApprove } from "../../../../src/v11/application/approval/emitApprovalV11.js";
 import { commitBubbleV11 as commitBubble } from "../../../../src/v11/application/commit/emitCommitV11.js";
+import {
+  remoteCommitModeEnvVar,
+  remoteCommitModeInnerRemoteExecution,
+  remoteCommitWorkspaceRootEnvVar
+} from "../../../../src/v11/application/commit/remoteCommitExecutionContext.js";
 import { readStateSnapshot } from "../../../../src/v11/infrastructure/state/stateStore.js";
 import { readTranscriptEnvelopes } from "../../../../src/v11/infrastructure/artifact/transcript/transcriptStore.js";
+import { RemoteBubbleCommitCommandError } from "../../../../src/v11/infrastructure/executor/ssh/sshBubbleCommitCommand.js";
 import { buildCommitBubbleDependencies } from "../../../helpers/commit.js";
 import { initGitRepository, runGit } from "../../../helpers/git.js";
 import { setupRunningBubbleFixture } from "../../../helpers/bubble.js";
+import { getBubblePaths } from "../../../../src/v11/shared/bubble/bubblePaths.js";
 
 const tempDirs: string[] = [];
 
@@ -24,6 +39,62 @@ async function createTempRepo(): Promise<string> {
   tempDirs.push(root);
   await initGitRepository(root);
   return root;
+}
+
+function createRemoteBubbleConfig(repoPath: string, bubbleId: string): BubbleConfig {
+  return {
+    id: bubbleId,
+    repo_path: repoPath,
+    base_branch: "main",
+    bubble_branch: `bubble/${bubbleId}`,
+    work_mode: "worktree",
+    quality_mode: "strict",
+    review_artifact_type: "code",
+    pairflow_command_profile: "external",
+    reviewer_context_mode: "fresh",
+    watchdog_timeout_minutes: 60,
+    max_rounds: 5,
+    severity_gate_round: 2,
+    commit_requires_approval: true,
+    agents: {
+      implementer: "codex",
+      reviewer: "claude"
+    },
+    commands: {
+      test: "pnpm test",
+      typecheck: "pnpm typecheck"
+    },
+    notifications: {
+      enabled: false
+    },
+    doc_contract_gates: {
+      round_gate_applies_after: 2
+    },
+    executor: {
+      type: "ssh",
+      remote: "prod"
+    }
+  };
+}
+
+function createStartedRemotePointer(
+  bubbleId: string
+): BubbleRemotePointerStarted {
+  return {
+    kind: "started",
+    host: "ssh.example.com",
+    instanceId: `inst_${bubbleId}`,
+    remoteClonePath: `/srv/pairflow/repo--${bubbleId}`,
+    tmuxSession: `pf-${bubbleId}`,
+    startedAt: "2026-04-18T08:00:00.000Z"
+  };
+}
+
+function createCreatedRemotePointer(): BubbleRemotePointerCreated {
+  return {
+    kind: "created",
+    host: "ssh.example.com"
+  };
 }
 
 function buildActiveMetaReviewerSession(input: {
@@ -151,5 +222,825 @@ describe("commitCommandApi", () => {
 
     const transcript = await readTranscriptEnvelopes(bubble.paths.transcriptPath);
     expect(transcript.at(-1)?.type).toBe("DONE_PACKAGE");
+  });
+
+  it("routes started remote commits through the remote authority and syncs local continuity artifacts", async () => {
+    const repoPath = await createTempRepo();
+    const bubbleConfig = createRemoteBubbleConfig(repoPath, "b_remote_commit_01");
+    const bubblePaths = getBubblePaths(repoPath, "b_remote_commit_01");
+    const statePath = bubblePaths.statePath;
+    const transcriptPath = bubblePaths.transcriptPath;
+    const donePackagePath = join(bubblePaths.artifactsDir, "done-package.md");
+    const remoteState: BubbleStateSnapshot = {
+      bubble_id: "b_remote_commit_01",
+      state: "DONE",
+      round: 2,
+      active_agent: null,
+      active_since: null,
+      active_role: null,
+      execution_context: null,
+      round_role_history: [],
+      last_command_at: "2026-04-18T08:05:00.000Z",
+      pending_rework_intent: null,
+      rework_intent_history: []
+    };
+    const remoteEnvelope: ProtocolEnvelope = {
+      id: "msg_remote_commit_01",
+      ts: "2026-04-18T08:05:00.000Z",
+      bubble_id: "b_remote_commit_01",
+      sender: "orchestrator",
+      recipient: "human",
+      type: "DONE_PACKAGE",
+      round: 2,
+      payload: {
+        summary: "Remote commit completed.",
+        metadata: {
+          done_package_path: "/srv/pairflow/repo/.pairflow/bubbles/b_remote_commit_01/artifacts/done-package.md",
+          staged_files: ["feature-remote.txt"],
+          commit_message: "bubble(b_remote_commit_01): finalize",
+          commit_sha: "abcdef1234567890"
+        }
+      },
+      refs: [
+        "/srv/pairflow/repo/.pairflow/evidence/typecheck.log"
+      ]
+    };
+    const executeRemoteBubbleCommitCommand = vi.fn(async () => ({
+      bubbleId: "b_remote_commit_01",
+      sequence: 7,
+      envelope: remoteEnvelope,
+      state: remoteState,
+      stateContent: `${JSON.stringify(remoteState, null, 2)}\n`,
+      transcriptContent: `${JSON.stringify(remoteEnvelope)}\n`,
+      donePackageContent: "# Done Package\n\nRemote continuity.\n",
+      commitSha: "abcdef1234567890",
+      commitMessage: "bubble(b_remote_commit_01): finalize",
+      stagedFiles: ["feature-remote.txt"]
+    }));
+    const runGit = vi.fn(async () => {
+      throw new Error("runGit should not be used for remote commit routing");
+    });
+    const appendProtocolEnvelope = vi.fn(async () => {
+      throw new Error("appendProtocolEnvelope should not be used for remote commit routing");
+    });
+    const writeStateSnapshot = vi.fn(async () => {
+      throw new Error("writeStateSnapshot should not be used for remote commit routing");
+    });
+
+    const result = await commitBubble(
+      {
+        bubbleId: "b_remote_commit_01",
+        cwd: repoPath,
+        refs: [".pairflow/evidence/typecheck.log"],
+        now: new Date("2026-04-18T08:05:00.000Z")
+      },
+      {
+        resolveBubbleById: vi.fn(async () => ({
+          bubbleId: "b_remote_commit_01",
+          repoPath,
+          bubblePaths,
+          bubbleConfig
+        })),
+        ensureBubbleInstanceIdForMutation: vi.fn(async () => ({
+          bubbleInstanceId: "bi_remote_commit_01",
+          bubbleConfig,
+          backfilled: false
+        })),
+        readRemotePointer: vi.fn(async () => createStartedRemotePointer("b_remote_commit_01")),
+        resolveRemoteBubbleStatusTarget: vi.fn(async () => ({
+          alias: "prod",
+          host: "ssh.example.com",
+          user: "pairflow",
+          pairflowCommand: "pairflow"
+        })),
+        executeRemoteBubbleCommitCommand,
+        appendProtocolEnvelope,
+        readStateSnapshot: vi.fn(async () => {
+          throw new Error("readStateSnapshot should not be used for remote commit routing");
+        }),
+        readTranscriptEnvelopes: vi.fn(async () => []),
+        runGit,
+        writeTextFile: async (path: string, content: string) => {
+          await writeFile(path, content, "utf8");
+        },
+        writeStateSnapshot
+      }
+    );
+
+    expect(result).toMatchObject({
+      bubbleId: "b_remote_commit_01",
+      sequence: 7,
+      state: {
+        state: "DONE"
+      },
+      commitSha: "abcdef1234567890",
+      stagedFiles: ["feature-remote.txt"],
+      donePackagePath
+    });
+    expect(await readFile(statePath, "utf8")).toBe(
+      `${JSON.stringify(remoteState, null, 2)}\n`
+    );
+    expect(await readFile(transcriptPath, "utf8")).toBe(
+      `${JSON.stringify(remoteEnvelope)}\n`
+    );
+    expect(await readFile(donePackagePath, "utf8")).toBe(
+      "# Done Package\n\nRemote continuity.\n"
+    );
+    expect(executeRemoteBubbleCommitCommand).toHaveBeenCalledWith({
+      auto: false,
+      bubbleId: "b_remote_commit_01",
+      refs: [".pairflow/evidence/typecheck.log"],
+      remoteClonePath: "/srv/pairflow/repo--b_remote_commit_01",
+      remoteTarget: {
+        alias: "prod",
+        host: "ssh.example.com",
+        user: "pairflow",
+        pairflowCommand: "pairflow"
+      }
+    });
+    expect(runGit).not.toHaveBeenCalled();
+    expect(appendProtocolEnvelope).not.toHaveBeenCalled();
+    expect(writeStateSnapshot).not.toHaveBeenCalled();
+  });
+
+  it("fails closed when remote commit requires a started pointer", async () => {
+    const repoPath = await createTempRepo();
+    const bubbleConfig = createRemoteBubbleConfig(repoPath, "b_remote_commit_created_01");
+    const bubblePaths = getBubblePaths(repoPath, "b_remote_commit_created_01");
+    const executeRemoteBubbleCommitCommand = vi.fn();
+
+    await expect(
+      commitBubble(
+        {
+          bubbleId: "b_remote_commit_created_01",
+          cwd: repoPath,
+          now: new Date("2026-04-18T08:10:00.000Z")
+        },
+        {
+          resolveBubbleById: vi.fn(async () => ({
+            bubbleId: "b_remote_commit_created_01",
+            repoPath,
+            bubblePaths,
+            bubbleConfig
+          })),
+          ensureBubbleInstanceIdForMutation: vi.fn(async () => ({
+            bubbleInstanceId: "bi_remote_commit_created_01",
+            bubbleConfig,
+            backfilled: false
+          })),
+          readRemotePointer: vi.fn(async () => createCreatedRemotePointer()),
+          resolveRemoteBubbleStatusTarget: vi.fn(async () => ({
+            alias: "prod",
+            host: "ssh.example.com",
+            pairflowCommand: "pairflow"
+          })),
+          executeRemoteBubbleCommitCommand,
+          appendProtocolEnvelope: vi.fn(async () => {
+            throw new Error("unused");
+          }),
+          readStateSnapshot: vi.fn(async () => {
+            throw new Error("unused");
+          }),
+          readTranscriptEnvelopes: vi.fn(async () => []),
+          runGit: vi.fn(async () => {
+            throw new Error("unused");
+          }),
+          writeTextFile: vi.fn(async () => undefined),
+          writeStateSnapshot: vi.fn(async () => {
+            throw new Error("unused");
+          })
+        }
+      )
+    ).rejects.toThrow(/requires a started remote pointer/u);
+
+    expect(executeRemoteBubbleCommitCommand).not.toHaveBeenCalled();
+  });
+
+  it("fails closed when remote commit has no remote pointer yet", async () => {
+    const repoPath = await createTempRepo();
+    const bubbleConfig = createRemoteBubbleConfig(repoPath, "b_remote_commit_missing_01");
+    const bubblePaths = getBubblePaths(repoPath, "b_remote_commit_missing_01");
+    const executeRemoteBubbleCommitCommand = vi.fn();
+
+    await expect(
+      commitBubble(
+        {
+          bubbleId: "b_remote_commit_missing_01",
+          cwd: repoPath,
+          now: new Date("2026-04-18T08:10:30.000Z")
+        },
+        {
+          resolveBubbleById: vi.fn(async () => ({
+            bubbleId: "b_remote_commit_missing_01",
+            repoPath,
+            bubblePaths,
+            bubbleConfig
+          })),
+          ensureBubbleInstanceIdForMutation: vi.fn(async () => ({
+            bubbleInstanceId: "bi_remote_commit_missing_01",
+            bubbleConfig,
+            backfilled: false
+          })),
+          readRemotePointer: vi.fn(async () => null),
+          resolveRemoteBubbleStatusTarget: vi.fn(async () => ({
+            alias: "prod",
+            host: "ssh.example.com",
+            pairflowCommand: "pairflow"
+          })),
+          executeRemoteBubbleCommitCommand,
+          appendProtocolEnvelope: vi.fn(async () => {
+            throw new Error("unused");
+          }),
+          readStateSnapshot: vi.fn(async () => {
+            throw new Error("unused");
+          }),
+          readTranscriptEnvelopes: vi.fn(async () => []),
+          runGit: vi.fn(async () => {
+            throw new Error("unused");
+          }),
+          writeTextFile: vi.fn(async () => undefined),
+          writeStateSnapshot: vi.fn(async () => {
+            throw new Error("unused");
+          })
+        }
+      )
+    ).rejects.toThrow(/requires a started remote pointer/u);
+
+    expect(executeRemoteBubbleCommitCommand).not.toHaveBeenCalled();
+  });
+
+  it("uses the local canonical commit path inside a verified remote clone execution context", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupApprovedBubble(
+      repoPath,
+      "b_remote_commit_inner_local_01"
+    );
+
+    await writeFile(
+      bubble.paths.bubbleTomlPath,
+      `${renderBubbleConfigToml({
+        ...bubble.config,
+        executor: {
+          type: "ssh",
+          remote: "prod"
+        }
+      })}\n`,
+      "utf8"
+    );
+    await writeFile(
+      join(bubble.paths.worktreePath, "feature-inner-remote.txt"),
+      "remote clone canonical local commit\n",
+      "utf8"
+    );
+    await runGit(bubble.paths.worktreePath, ["add", "feature-inner-remote.txt"]);
+    await writeFile(
+      join(bubble.paths.artifactsDir, "done-package.md"),
+      "# Done Package\n\nRemote clone local authority commit.\n",
+      "utf8"
+    );
+
+    vi.stubEnv(remoteCommitModeEnvVar, remoteCommitModeInnerRemoteExecution);
+    vi.stubEnv(remoteCommitWorkspaceRootEnvVar, repoPath);
+
+    try {
+      const result = await commitBubble(
+        {
+          bubbleId: bubble.bubbleId,
+          repoPath,
+          now: new Date("2026-04-18T08:18:00.000Z")
+        },
+        buildCommitBubbleDependencies()
+      );
+
+      expect(result.state.state).toBe("DONE");
+      expect(result.stagedFiles).toEqual(["feature-inner-remote.txt"]);
+      expect(result.envelope.type).toBe("DONE_PACKAGE");
+      expect(result.donePackagePath).toBe(
+        join(bubble.paths.artifactsDir, "done-package.md")
+      );
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
+  it("fails closed when remote commit returns an invalid payload", async () => {
+    const repoPath = await createTempRepo();
+    const bubbleConfig = createRemoteBubbleConfig(repoPath, "b_remote_commit_payload_01");
+    const bubblePaths = getBubblePaths(repoPath, "b_remote_commit_payload_01");
+    const executeRemoteBubbleCommitCommand = vi.fn(async () => {
+      throw new RemoteBubbleCommitCommandError({
+        code: "REMOTE_COMMIT_PAYLOAD_INVALID",
+        message: "Remote commit returned malformed payload."
+      });
+    });
+    const runGit = vi.fn(async () => {
+      throw new Error("runGit should not be used for remote commit routing");
+    });
+
+    await expect(
+      commitBubble(
+        {
+          bubbleId: "b_remote_commit_payload_01",
+          cwd: repoPath,
+          now: new Date("2026-04-18T08:11:00.000Z")
+        },
+        {
+          resolveBubbleById: vi.fn(async () => ({
+            bubbleId: "b_remote_commit_payload_01",
+            repoPath,
+            bubblePaths,
+            bubbleConfig
+          })),
+          ensureBubbleInstanceIdForMutation: vi.fn(async () => ({
+            bubbleInstanceId: "bi_remote_commit_payload_01",
+            bubbleConfig,
+            backfilled: false
+          })),
+          readRemotePointer: vi.fn(async () => createStartedRemotePointer("b_remote_commit_payload_01")),
+          resolveRemoteBubbleStatusTarget: vi.fn(async () => ({
+            alias: "prod",
+            host: "ssh.example.com",
+            user: "pairflow",
+            pairflowCommand: "pairflow"
+          })),
+          executeRemoteBubbleCommitCommand,
+          appendProtocolEnvelope: vi.fn(async () => {
+            throw new Error("unused");
+          }),
+          readStateSnapshot: vi.fn(async () => {
+            throw new Error("unused");
+          }),
+          readTranscriptEnvelopes: vi.fn(async () => []),
+          runGit,
+          writeTextFile: vi.fn(async () => undefined),
+          writeStateSnapshot: vi.fn(async () => {
+            throw new Error("unused");
+          })
+        }
+      )
+    ).rejects.toMatchObject({
+      reasonCode: "REMOTE_COMMIT_PAYLOAD_INVALID"
+    });
+
+    expect(executeRemoteBubbleCommitCommand).toHaveBeenCalledOnce();
+    expect(runGit).not.toHaveBeenCalled();
+  });
+
+  it("fails closed when local continuity sync-back breaks after remote commit success", async () => {
+    const repoPath = await createTempRepo();
+    const bubbleConfig = createRemoteBubbleConfig(
+      repoPath,
+      "b_remote_commit_sync_fail_01"
+    );
+    const bubblePaths = getBubblePaths(repoPath, "b_remote_commit_sync_fail_01");
+    const statePath = bubblePaths.statePath;
+    const transcriptPath = bubblePaths.transcriptPath;
+    const donePackagePath = join(bubblePaths.artifactsDir, "done-package.md");
+    const approvedState: BubbleStateSnapshot = {
+      bubble_id: "b_remote_commit_sync_fail_01",
+      state: "APPROVED_FOR_COMMIT",
+      round: 2,
+      active_agent: null,
+      active_since: null,
+      active_role: null,
+      execution_context: null,
+      round_role_history: [],
+      last_command_at: "2026-04-18T08:12:00.000Z",
+      pending_rework_intent: null,
+      rework_intent_history: []
+    };
+    await mkdir(dirname(statePath), { recursive: true });
+    await writeFile(statePath, `${JSON.stringify(approvedState, null, 2)}\n`, "utf8");
+    await writeFile(
+      transcriptPath,
+      `${JSON.stringify({
+        id: "msg_previous_remote_commit_sync_fail_01",
+        ts: "2026-04-18T08:11:00.000Z",
+        bubble_id: "b_remote_commit_sync_fail_01",
+        sender: "orchestrator",
+        recipient: "human",
+        type: "PASS",
+        round: 2,
+        payload: {
+          summary: "Previous local continuity state."
+        },
+        refs: []
+      } satisfies ProtocolEnvelope)}\n`,
+      "utf8"
+    );
+    const originalDonePackage = "# Done Package\n\nOriginal local continuity.\n";
+    await mkdir(dirname(donePackagePath), { recursive: true });
+    await writeFile(donePackagePath, originalDonePackage, "utf8");
+    const remoteEnvelope: ProtocolEnvelope = {
+      id: "msg_remote_commit_sync_fail_01",
+      ts: "2026-04-18T08:13:00.000Z",
+      bubble_id: "b_remote_commit_sync_fail_01",
+      sender: "orchestrator",
+      recipient: "human",
+      type: "DONE_PACKAGE",
+      round: 2,
+      payload: {
+        summary: "Remote commit completed.",
+        metadata: {
+          done_package_path: "/srv/pairflow/repo/.pairflow/bubbles/b_remote_commit_sync_fail_01/artifacts/done-package.md",
+          staged_files: ["feature.txt"],
+          commit_message: "bubble(b_remote_commit_sync_fail_01): finalize",
+          commit_sha: "1234567"
+        }
+      },
+      refs: []
+    };
+    const remoteDoneState: BubbleStateSnapshot = {
+      ...approvedState,
+      state: "DONE",
+      last_command_at: "2026-04-18T08:13:00.000Z"
+    };
+    const executeRemoteBubbleCommitCommand = vi.fn(async () => ({
+      bubbleId: "b_remote_commit_sync_fail_01",
+      sequence: 4,
+      envelope: remoteEnvelope,
+      state: remoteDoneState,
+      stateContent: `${JSON.stringify(remoteDoneState, null, 2)}\n`,
+      transcriptContent: `${JSON.stringify(remoteEnvelope)}\n`,
+      donePackageContent: "# Done Package\n\nRemote continuity sync should fail.\n",
+      commitSha: "1234567",
+      commitMessage: "bubble(b_remote_commit_sync_fail_01): finalize",
+      stagedFiles: ["feature.txt"]
+    }));
+
+    await expect(
+      commitBubble(
+        {
+          bubbleId: "b_remote_commit_sync_fail_01",
+          cwd: repoPath,
+          now: new Date("2026-04-18T08:13:00.000Z")
+        },
+        {
+          resolveBubbleById: vi.fn(async () => ({
+            bubbleId: "b_remote_commit_sync_fail_01",
+            repoPath,
+            bubblePaths,
+            bubbleConfig
+          })),
+          ensureBubbleInstanceIdForMutation: vi.fn(async () => ({
+            bubbleInstanceId: "bi_remote_commit_sync_fail_01",
+            bubbleConfig,
+            backfilled: false
+          })),
+          readRemotePointer: vi.fn(async () => createStartedRemotePointer("b_remote_commit_sync_fail_01")),
+          resolveRemoteBubbleStatusTarget: vi.fn(async () => ({
+            alias: "prod",
+            host: "ssh.example.com",
+            user: "pairflow",
+            pairflowCommand: "pairflow"
+          })),
+          executeRemoteBubbleCommitCommand,
+          appendProtocolEnvelope: vi.fn(async () => {
+            throw new Error("unused");
+          }),
+          readStateSnapshot: vi.fn(async () => {
+            throw new Error("unused");
+          }),
+          readTranscriptEnvelopes: vi.fn(async () => []),
+          runGit: vi.fn(async () => {
+            throw new Error("unused");
+          }),
+          writeTextFile: vi.fn(async (path: string, content: string) => {
+            if (content === `${JSON.stringify(remoteEnvelope)}\n`) {
+              throw new Error("simulated transcript sync failure");
+            }
+            await writeFile(path, content, "utf8");
+          }),
+          writeStateSnapshot: vi.fn(async () => {
+            throw new Error("unused");
+          })
+        }
+      )
+    ).rejects.toThrow(/REMOTE_COMMIT_SYNC_BACK_FAILED/u);
+
+    expect(await readFile(statePath, "utf8")).toBe(
+      `${JSON.stringify(approvedState, null, 2)}\n`
+    );
+    expect(await readFile(transcriptPath, "utf8")).toContain(
+      "\"msg_previous_remote_commit_sync_fail_01\""
+    );
+    expect(await readFile(donePackagePath, "utf8")).toBe(originalDonePackage);
+  });
+
+  it("rolls back previously applied local continuity artifacts when a later rename apply fails", async () => {
+    const repoPath = await createTempRepo();
+    const bubbleConfig = createRemoteBubbleConfig(
+      repoPath,
+      "b_remote_commit_sync_rename_fail_01"
+    );
+    const bubblePaths = getBubblePaths(repoPath, "b_remote_commit_sync_rename_fail_01");
+    const statePath = bubblePaths.statePath;
+    const transcriptPath = bubblePaths.transcriptPath;
+    const donePackagePath = join(bubblePaths.artifactsDir, "done-package.md");
+    const approvedState: BubbleStateSnapshot = {
+      bubble_id: "b_remote_commit_sync_rename_fail_01",
+      state: "APPROVED_FOR_COMMIT",
+      round: 2,
+      active_agent: null,
+      active_since: null,
+      active_role: null,
+      execution_context: null,
+      round_role_history: [],
+      last_command_at: "2026-04-18T08:14:00.000Z",
+      pending_rework_intent: null,
+      rework_intent_history: []
+    };
+    await mkdir(dirname(statePath), { recursive: true });
+    await writeFile(statePath, `${JSON.stringify(approvedState, null, 2)}\n`, "utf8");
+    await writeFile(
+      transcriptPath,
+      `${JSON.stringify({
+        id: "msg_previous_remote_commit_sync_rename_fail_01",
+        ts: "2026-04-18T08:13:00.000Z",
+        bubble_id: "b_remote_commit_sync_rename_fail_01",
+        sender: "orchestrator",
+        recipient: "human",
+        type: "PASS",
+        round: 2,
+        payload: {
+          summary: "Previous local continuity state."
+        },
+        refs: []
+      } satisfies ProtocolEnvelope)}\n`,
+      "utf8"
+    );
+    const originalDonePackage = "# Done Package\n\nOriginal local continuity before rename failure.\n";
+    await mkdir(dirname(donePackagePath), { recursive: true });
+    await writeFile(donePackagePath, originalDonePackage, "utf8");
+    const remoteEnvelope: ProtocolEnvelope = {
+      id: "msg_remote_commit_sync_rename_fail_01",
+      ts: "2026-04-18T08:15:00.000Z",
+      bubble_id: "b_remote_commit_sync_rename_fail_01",
+      sender: "orchestrator",
+      recipient: "human",
+      type: "DONE_PACKAGE",
+      round: 2,
+      payload: {
+        summary: "Remote commit completed.",
+        metadata: {
+          done_package_path: "/srv/pairflow/repo/.pairflow/bubbles/b_remote_commit_sync_rename_fail_01/artifacts/done-package.md",
+          staged_files: ["feature.txt"],
+          commit_message: "bubble(b_remote_commit_sync_rename_fail_01): finalize",
+          commit_sha: "2345678"
+        }
+      },
+      refs: []
+    };
+    const remoteDoneState: BubbleStateSnapshot = {
+      ...approvedState,
+      state: "DONE",
+      last_command_at: "2026-04-18T08:15:00.000Z"
+    };
+    const executeRemoteBubbleCommitCommand = vi.fn(async () => ({
+      bubbleId: "b_remote_commit_sync_rename_fail_01",
+      sequence: 5,
+      envelope: remoteEnvelope,
+      state: remoteDoneState,
+      stateContent: `${JSON.stringify(remoteDoneState, null, 2)}\n`,
+      transcriptContent: `${JSON.stringify(remoteEnvelope)}\n`,
+      donePackageContent: "# Done Package\n\nRemote continuity should roll back after rename failure.\n",
+      commitSha: "2345678",
+      commitMessage: "bubble(b_remote_commit_sync_rename_fail_01): finalize",
+      stagedFiles: ["feature.txt"]
+    }));
+    const renamePath = vi.fn(async (fromPath: string, toPath: string) => {
+      if (
+        fromPath.includes(".pairflow-sync-") &&
+        fromPath.endsWith(".tmp") &&
+        toPath === transcriptPath
+      ) {
+        throw new Error("simulated transcript rename apply failure");
+      }
+      await rename(fromPath, toPath);
+    });
+
+    await expect(
+      commitBubble(
+        {
+          bubbleId: "b_remote_commit_sync_rename_fail_01",
+          cwd: repoPath,
+          now: new Date("2026-04-18T08:15:00.000Z")
+        },
+        {
+          resolveBubbleById: vi.fn(async () => ({
+            bubbleId: "b_remote_commit_sync_rename_fail_01",
+            repoPath,
+            bubblePaths,
+            bubbleConfig
+          })),
+          ensureBubbleInstanceIdForMutation: vi.fn(async () => ({
+            bubbleInstanceId: "bi_remote_commit_sync_rename_fail_01",
+            bubbleConfig,
+            backfilled: false
+          })),
+          readRemotePointer: vi.fn(async () => createStartedRemotePointer("b_remote_commit_sync_rename_fail_01")),
+          resolveRemoteBubbleStatusTarget: vi.fn(async () => ({
+            alias: "prod",
+            host: "ssh.example.com",
+            user: "pairflow",
+            pairflowCommand: "pairflow"
+          })),
+          executeRemoteBubbleCommitCommand,
+          appendProtocolEnvelope: vi.fn(async () => {
+            throw new Error("unused");
+          }),
+          readStateSnapshot: vi.fn(async () => {
+            throw new Error("unused");
+          }),
+          readTranscriptEnvelopes: vi.fn(async () => []),
+          renamePath,
+          runGit: vi.fn(async () => {
+            throw new Error("unused");
+          }),
+          writeTextFile: vi.fn(async (path: string, content: string) => {
+            await writeFile(path, content, "utf8");
+          }),
+          writeStateSnapshot: vi.fn(async () => {
+            throw new Error("unused");
+          })
+        }
+      )
+    ).rejects.toThrow(/REMOTE_COMMIT_SYNC_BACK_FAILED/u);
+
+    expect(await readFile(statePath, "utf8")).toBe(
+      `${JSON.stringify(approvedState, null, 2)}\n`
+    );
+    expect(await readFile(transcriptPath, "utf8")).toContain(
+      "\"msg_previous_remote_commit_sync_rename_fail_01\""
+    );
+    expect(await readFile(donePackagePath, "utf8")).toBe(originalDonePackage);
+    expect(renamePath).toHaveBeenCalled();
+  });
+
+  it("retries backup restoration before leaving sync-back cleanup residue", async () => {
+    const repoPath = await createTempRepo();
+    const bubbleConfig = createRemoteBubbleConfig(
+      repoPath,
+      "b_remote_commit_sync_restore_retry_01"
+    );
+    const bubblePaths = getBubblePaths(
+      repoPath,
+      "b_remote_commit_sync_restore_retry_01"
+    );
+    const statePath = bubblePaths.statePath;
+    const transcriptPath = bubblePaths.transcriptPath;
+    const donePackagePath = join(bubblePaths.artifactsDir, "done-package.md");
+    const approvedState: BubbleStateSnapshot = {
+      bubble_id: "b_remote_commit_sync_restore_retry_01",
+      state: "APPROVED_FOR_COMMIT",
+      round: 2,
+      active_agent: null,
+      active_since: null,
+      active_role: null,
+      execution_context: null,
+      round_role_history: [],
+      last_command_at: "2026-04-18T08:16:00.000Z",
+      pending_rework_intent: null,
+      rework_intent_history: []
+    };
+    await mkdir(dirname(statePath), { recursive: true });
+    await writeFile(statePath, `${JSON.stringify(approvedState, null, 2)}\n`, "utf8");
+    await writeFile(
+      transcriptPath,
+      `${JSON.stringify({
+        id: "msg_previous_remote_commit_sync_restore_retry_01",
+        ts: "2026-04-18T08:15:00.000Z",
+        bubble_id: "b_remote_commit_sync_restore_retry_01",
+        sender: "orchestrator",
+        recipient: "human",
+        type: "PASS",
+        round: 2,
+        payload: {
+          summary: "Previous local continuity state."
+        },
+        refs: []
+      } satisfies ProtocolEnvelope)}\n`,
+      "utf8"
+    );
+    const originalDonePackage = "# Done Package\n\nOriginal local continuity before restore retry.\n";
+    await mkdir(dirname(donePackagePath), { recursive: true });
+    await writeFile(donePackagePath, originalDonePackage, "utf8");
+    const remoteEnvelope: ProtocolEnvelope = {
+      id: "msg_remote_commit_sync_restore_retry_01",
+      ts: "2026-04-18T08:17:00.000Z",
+      bubble_id: "b_remote_commit_sync_restore_retry_01",
+      sender: "orchestrator",
+      recipient: "human",
+      type: "DONE_PACKAGE",
+      round: 2,
+      payload: {
+        summary: "Remote commit completed.",
+        metadata: {
+          done_package_path: "/srv/pairflow/repo/.pairflow/bubbles/b_remote_commit_sync_restore_retry_01/artifacts/done-package.md",
+          staged_files: ["feature.txt"],
+          commit_message: "bubble(b_remote_commit_sync_restore_retry_01): finalize",
+          commit_sha: "3456789"
+        }
+      },
+      refs: []
+    };
+    const remoteDoneState: BubbleStateSnapshot = {
+      ...approvedState,
+      state: "DONE",
+      last_command_at: "2026-04-18T08:17:00.000Z"
+    };
+    const executeRemoteBubbleCommitCommand = vi.fn(async () => ({
+      bubbleId: "b_remote_commit_sync_restore_retry_01",
+      sequence: 6,
+      envelope: remoteEnvelope,
+      state: remoteDoneState,
+      stateContent: `${JSON.stringify(remoteDoneState, null, 2)}\n`,
+      transcriptContent: `${JSON.stringify(remoteEnvelope)}\n`,
+      donePackageContent: "# Done Package\n\nRemote continuity should restore after retry.\n",
+      commitSha: "3456789",
+      commitMessage: "bubble(b_remote_commit_sync_restore_retry_01): finalize",
+      stagedFiles: ["feature.txt"]
+    }));
+    let donePackageRestoreAttempts = 0;
+    const renamePath = vi.fn(async (fromPath: string, toPath: string) => {
+      if (
+        fromPath.includes(".pairflow-sync-") &&
+        fromPath.endsWith(".tmp") &&
+        toPath === transcriptPath
+      ) {
+        throw new Error("simulated transcript rename apply failure");
+      }
+      if (fromPath.includes(".pairflow-sync-") && fromPath.endsWith(".bak") && toPath === donePackagePath) {
+        donePackageRestoreAttempts += 1;
+        if (donePackageRestoreAttempts === 1) {
+          throw new Error("simulated restore collision");
+        }
+      }
+      await rename(fromPath, toPath);
+    });
+
+    await expect(
+      commitBubble(
+        {
+          bubbleId: "b_remote_commit_sync_restore_retry_01",
+          cwd: repoPath,
+          now: new Date("2026-04-18T08:17:00.000Z")
+        },
+        {
+          resolveBubbleById: vi.fn(async () => ({
+            bubbleId: "b_remote_commit_sync_restore_retry_01",
+            repoPath,
+            bubblePaths,
+            bubbleConfig
+          })),
+          ensureBubbleInstanceIdForMutation: vi.fn(async () => ({
+            bubbleInstanceId: "bi_remote_commit_sync_restore_retry_01",
+            bubbleConfig,
+            backfilled: false
+          })),
+          readRemotePointer: vi.fn(async () =>
+            createStartedRemotePointer("b_remote_commit_sync_restore_retry_01")
+          ),
+          resolveRemoteBubbleStatusTarget: vi.fn(async () => ({
+            alias: "prod",
+            host: "ssh.example.com",
+            user: "pairflow",
+            pairflowCommand: "pairflow"
+          })),
+          executeRemoteBubbleCommitCommand,
+          appendProtocolEnvelope: vi.fn(async () => {
+            throw new Error("unused");
+          }),
+          readStateSnapshot: vi.fn(async () => {
+            throw new Error("unused");
+          }),
+          readTranscriptEnvelopes: vi.fn(async () => []),
+          renamePath,
+          runGit: vi.fn(async () => {
+            throw new Error("unused");
+          }),
+          writeTextFile: vi.fn(async (path: string, content: string) => {
+            await writeFile(path, content, "utf8");
+          }),
+          writeStateSnapshot: vi.fn(async () => {
+            throw new Error("unused");
+          })
+        }
+      )
+    ).rejects.toThrow(/REMOTE_COMMIT_SYNC_BACK_FAILED/u);
+
+    expect(donePackageRestoreAttempts).toBe(2);
+    expect(await readFile(statePath, "utf8")).toBe(
+      `${JSON.stringify(approvedState, null, 2)}\n`
+    );
+    expect(await readFile(transcriptPath, "utf8")).toContain(
+      "\"msg_previous_remote_commit_sync_restore_retry_01\""
+    );
+    expect(await readFile(donePackagePath, "utf8")).toBe(originalDonePackage);
+    expect(
+      (await readdir(bubblePaths.artifactsDir)).filter((name) =>
+        name.includes(".pairflow-sync-")
+      )
+    ).toEqual([]);
   });
 });
