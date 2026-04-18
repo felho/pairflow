@@ -163,10 +163,13 @@ export async function maybeAcceptClaudeTrustPrompt(
   }
 
   const normalized = capture.stdout.toLowerCase();
-  const looksLikeTrustPrompt =
+  const looksLikeClaudeTrustPrompt =
     normalized.includes("security guide") &&
     normalized.includes("yes, i trust this folder");
-  if (!looksLikeTrustPrompt) {
+  const looksLikeCodexTrustPrompt =
+    normalized.includes("do you trust the contents of this directory") &&
+    normalized.includes("1. yes, continue");
+  if (!looksLikeClaudeTrustPrompt && !looksLikeCodexTrustPrompt) {
     return false;
   }
 

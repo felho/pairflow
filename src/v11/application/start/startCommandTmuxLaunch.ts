@@ -55,6 +55,8 @@ export async function launchFreshTmuxSession(input: {
   ideationPending: boolean;
   launchWorkspacePath: string;
 }): Promise<{ sessionName: string }> {
+  const externalPairflowCommand =
+    input.context.remoteStartContext?.externalPairflowCommand;
   const ack = await input.deps.launchTmuxAck({
     bubbleId: input.context.resolved.bubbleId,
     workspacePath: input.launchWorkspacePath,
@@ -62,7 +64,8 @@ export async function launchFreshTmuxSession(input: {
       input.context.resolved.bubbleId,
       input.context.resolved.repoPath,
       input.launchWorkspacePath,
-      input.context.resolved.bubbleConfig.pairflow_command_profile
+      input.context.resolved.bubbleConfig.pairflow_command_profile,
+      externalPairflowCommand
     ),
     statusPaneLabel: buildStatusPaneLabel(input.context.resolved.bubbleId),
     implementerPaneLabel: `[${input.context.resolved.bubbleConfig.agents.implementer}/implementer]`,
@@ -80,6 +83,9 @@ export async function launchFreshTmuxSession(input: {
       bubbleId: input.context.resolved.bubbleId,
       workspacePath: input.launchWorkspacePath,
       pairflowCommandProfile: input.context.resolved.bubbleConfig.pairflow_command_profile,
+      ...(externalPairflowCommand !== undefined
+        ? { externalPairflowCommand }
+        : {}),
       startupPrompt: buildImplementerStartupPrompt({
         bubbleId: input.context.resolved.bubbleId,
         repoPath: input.context.resolved.repoPath,
@@ -96,6 +102,9 @@ export async function launchFreshTmuxSession(input: {
       bubbleId: input.context.resolved.bubbleId,
       workspacePath: input.launchWorkspacePath,
       pairflowCommandProfile: input.context.resolved.bubbleConfig.pairflow_command_profile,
+      ...(externalPairflowCommand !== undefined
+        ? { externalPairflowCommand }
+        : {}),
       startupPrompt: buildReviewerStartupPrompt({
         bubbleId: input.context.resolved.bubbleId,
         repoPath: input.context.resolved.repoPath,
@@ -117,6 +126,9 @@ export async function launchFreshTmuxSession(input: {
       bubbleId: input.context.resolved.bubbleId,
       workspacePath: input.launchWorkspacePath,
       pairflowCommandProfile: input.context.resolved.bubbleConfig.pairflow_command_profile,
+      ...(externalPairflowCommand !== undefined
+        ? { externalPairflowCommand }
+        : {}),
       startupPrompt: buildMetaReviewerStartupPrompt({
         bubbleId: input.context.resolved.bubbleId,
         repoPath: input.context.resolved.repoPath,
@@ -159,6 +171,8 @@ export async function launchResumeTmuxSession(input: {
     "kickoffDiagnostic"
   >;
 }): Promise<{ sessionName: string }> {
+  const externalPairflowCommand =
+    input.context.remoteStartContext?.externalPairflowCommand;
   const ack = await input.deps.launchTmuxAck({
     bubbleId: input.context.resolved.bubbleId,
     workspacePath: input.launchWorkspacePath,
@@ -166,7 +180,8 @@ export async function launchResumeTmuxSession(input: {
       input.context.resolved.bubbleId,
       input.context.resolved.repoPath,
       input.launchWorkspacePath,
-      input.context.resolved.bubbleConfig.pairflow_command_profile
+      input.context.resolved.bubbleConfig.pairflow_command_profile,
+      externalPairflowCommand
     ),
     statusPaneLabel: buildStatusPaneLabel(input.context.resolved.bubbleId),
     implementerPaneLabel: `[${input.context.resolved.bubbleConfig.agents.implementer}/implementer]`,
@@ -184,6 +199,9 @@ export async function launchResumeTmuxSession(input: {
       bubbleId: input.context.resolved.bubbleId,
       workspacePath: input.launchWorkspacePath,
       pairflowCommandProfile: input.context.resolved.bubbleConfig.pairflow_command_profile,
+      ...(externalPairflowCommand !== undefined
+        ? { externalPairflowCommand }
+        : {}),
       startupPrompt: buildResumeImplementerStartupPrompt({
         bubbleId: input.context.resolved.bubbleId,
         repoPath: input.context.resolved.repoPath,
@@ -202,6 +220,9 @@ export async function launchResumeTmuxSession(input: {
       bubbleId: input.context.resolved.bubbleId,
       workspacePath: input.launchWorkspacePath,
       pairflowCommandProfile: input.context.resolved.bubbleConfig.pairflow_command_profile,
+      ...(externalPairflowCommand !== undefined
+        ? { externalPairflowCommand }
+        : {}),
       startupPrompt: buildResumeReviewerStartupPrompt({
         bubbleId: input.context.resolved.bubbleId,
         repoPath: input.context.resolved.repoPath,
@@ -229,6 +250,9 @@ export async function launchResumeTmuxSession(input: {
       bubbleId: input.context.resolved.bubbleId,
       workspacePath: input.launchWorkspacePath,
       pairflowCommandProfile: input.context.resolved.bubbleConfig.pairflow_command_profile,
+      ...(externalPairflowCommand !== undefined
+        ? { externalPairflowCommand }
+        : {}),
       startupPrompt: buildResumeMetaReviewerStartupPrompt({
         bubbleId: input.context.resolved.bubbleId,
         repoPath: input.context.resolved.repoPath,

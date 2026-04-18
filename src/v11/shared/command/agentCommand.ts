@@ -8,6 +8,7 @@ export interface BuildAgentCommandInput {
   workspacePath?: string;
   worktreePath?: string;
   pairflowCommandProfile?: PairflowCommandProfile;
+  externalPairflowCommand?: string;
   startupPrompt?: string | undefined;
 }
 
@@ -42,7 +43,8 @@ export function buildAgentCommand(input: BuildAgentCommandInput): string {
   const launchCommand = buildAgentLaunchCommand(agentName, input.startupPrompt);
   const pairflowBootstrap = buildPairflowCommandBootstrap(
     workspacePath,
-    input.pairflowCommandProfile ?? "external"
+    input.pairflowCommandProfile ?? "external",
+    input.externalPairflowCommand
   );
   const agentExitedMessage =
     `${agentName} exited (code $agent_exit_code). Dropping to interactive shell.`;

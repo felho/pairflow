@@ -15,6 +15,7 @@ import {
 } from "./startCommandRemoteExecutionFlow.js";
 
 export {
+  remoteCloneExternalPairflowCommandEnvVar,
   remoteCloneStartModeEnvVar,
   remoteCloneStartModeValue,
   remoteCloneWorkspaceRootEnvVar,

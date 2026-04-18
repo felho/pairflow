@@ -6,6 +6,7 @@ import {
 } from "../../../../config/bubbleConfig.js";
 import { shellQuote } from "../../../shared/foundation/shellQuote.js";
 import {
+  remoteStartExternalPairflowCommandEnvVar,
   remoteStartModeEnvVar,
   remoteStartModeInnerRemoteActivation,
   remoteStartWorkspaceRootEnvVar
@@ -209,6 +210,7 @@ export function buildRemoteInnerStartScript(input: {
     `export PAIRFLOW_WORKTREE_ROOT=${quotedRemoteClonePath}`,
     `export ${remoteStartModeEnvVar}=${shellQuote(remoteStartModeInnerRemoteActivation)}`,
     `export ${remoteStartWorkspaceRootEnvVar}=${quotedRemoteClonePath}`,
+    `export ${remoteStartExternalPairflowCommandEnvVar}=${shellQuote(pairflowCommand)}`,
     `${shellQuote(pairflowCommand)} bubble start --id ${shellQuote(input.bubbleId)} --repo ${quotedRemoteClonePath}`
   ].join("\n");
 }

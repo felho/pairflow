@@ -1,4 +1,5 @@
 import {
+  remoteStartExternalPairflowCommandEnvVar,
   remoteStartModeEnvVar,
   remoteStartModeInnerRemoteActivation,
   remoteStartWorkspaceRootEnvVar
@@ -7,17 +8,22 @@ import { createStartBubbleError } from "./startCommandRuntime.js";
 
 export const remoteCloneStartModeEnvVar = remoteStartModeEnvVar;
 export const remoteCloneWorkspaceRootEnvVar = remoteStartWorkspaceRootEnvVar;
+export const remoteCloneExternalPairflowCommandEnvVar =
+  remoteStartExternalPairflowCommandEnvVar;
 export const remoteCloneStartModeValue = remoteStartModeInnerRemoteActivation;
 
 export interface RemoteCloneStartContext {
   kind: "remote_clone";
   workspaceRoot: string;
+  externalPairflowCommand?: string;
 }
 
 export function resolveRemoteCloneStartContextFromEnv():
 RemoteCloneStartContext | undefined {
   const remoteStartMode = process.env[remoteStartModeEnvVar]?.trim();
   const workspaceRoot = process.env[remoteStartWorkspaceRootEnvVar]?.trim();
+  const externalPairflowCommand =
+    process.env[remoteStartExternalPairflowCommandEnvVar]?.trim();
 
   if (
     workspaceRoot !== undefined
@@ -63,6 +69,10 @@ RemoteCloneStartContext | undefined {
 
   return {
     kind: "remote_clone",
-    workspaceRoot
+    workspaceRoot,
+    ...(externalPairflowCommand !== undefined &&
+    externalPairflowCommand.length > 0
+      ? { externalPairflowCommand }
+      : {})
   };
 }

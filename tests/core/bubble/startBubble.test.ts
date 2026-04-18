@@ -58,6 +58,7 @@ import { buildResumedState } from "../../../src/v11/application/start/startComma
 import { startCommandContextDefaults } from "../../../src/v11/application/start/startCommandDependencyDefaults.js";
 import type { UpsertRuntimeSessionInput } from "../../../src/v11/shared/ports/runtimeSessions.js";
 import {
+  remoteCloneExternalPairflowCommandEnvVar,
   remoteCloneStartModeEnvVar,
   remoteCloneStartModeValue,
   remoteCloneWorkspaceRootEnvVar
@@ -1098,9 +1099,13 @@ describe("startBubble", () => {
     );
 
     const previousMode = process.env[remoteCloneStartModeEnvVar];
+    const previousExternalPairflowCommand =
+      process.env[remoteCloneExternalPairflowCommandEnvVar];
     const previousWorkspaceRoot = process.env[remoteCloneWorkspaceRootEnvVar];
     const previousPairflowWorktreeRoot = process.env.PAIRFLOW_WORKTREE_ROOT;
     process.env[remoteCloneStartModeEnvVar] = remoteCloneStartModeValue;
+    process.env[remoteCloneExternalPairflowCommandEnvVar] =
+      "/home/dev/.local/share/pnpm/pairflow";
     process.env[remoteCloneWorkspaceRootEnvVar] = repoPath;
     process.env.PAIRFLOW_WORKTREE_ROOT = repoPath;
     try {
@@ -1120,9 +1125,17 @@ describe("startBubble", () => {
           executeRemoteBubbleStart: vi.fn(async () => {
             throw new Error("inner remote start must not re-enter remote SSH execution");
           }),
-          launchBubbleTmuxSession: vi.fn(async () => ({
-            sessionName: "pf-b_start_remote_inner_01"
-          }))
+          launchBubbleTmuxSession: vi.fn(async (input) => {
+            expect(extractBashLcScript(input.statusCommand)).toContain(
+              "'/home/dev/.local/share/pnpm/pairflow' bubble status --id"
+            );
+            expect(extractBashLcScript(input.implementerCommand)).toContain(
+              "export PAIRFLOW_EXTERNAL_COMMAND='/home/dev/.local/share/pnpm/pairflow'"
+            );
+            return {
+              sessionName: "pf-b_start_remote_inner_01"
+            };
+          })
         }
       );
 
@@ -1135,6 +1148,12 @@ describe("startBubble", () => {
         delete process.env[remoteCloneStartModeEnvVar];
       } else {
         process.env[remoteCloneStartModeEnvVar] = previousMode;
+      }
+      if (previousExternalPairflowCommand === undefined) {
+        delete process.env[remoteCloneExternalPairflowCommandEnvVar];
+      } else {
+        process.env[remoteCloneExternalPairflowCommandEnvVar] =
+          previousExternalPairflowCommand;
       }
       if (previousWorkspaceRoot === undefined) {
         delete process.env[remoteCloneWorkspaceRootEnvVar];

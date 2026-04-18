@@ -45,12 +45,14 @@ export function buildStatusPaneCommand(
   bubbleId: string,
   repoPath: string,
   workspacePath: string,
-  pairflowCommandProfile: PairflowCommandProfile
+  pairflowCommandProfile: PairflowCommandProfile,
+  externalPairflowCommand?: string
 ): string {
   const displayWorkspacePath = formatStatusPaneLaunchWorkspacePath(workspacePath);
   const pairflowCommand = buildPinnedPairflowCommand(
     workspacePath,
-    pairflowCommandProfile
+    pairflowCommandProfile,
+    externalPairflowCommand
   );
   const watchdogCommand = `${pairflowCommand} bubble watchdog --id ${shellQuote(bubbleId)} --repo ${shellQuote(repoPath)} >/dev/null 2>&1 || true`;
   const statusCommand = `${pairflowCommand} bubble status --id ${shellQuote(bubbleId)} --repo ${shellQuote(repoPath)}`;

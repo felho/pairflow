@@ -9,24 +9,31 @@ import {
 
 export function buildPinnedPairflowCommand(
   workspacePath: string,
-  profile: PairflowCommandProfile = "external"
+  profile: PairflowCommandProfile = "external",
+  externalCommandOverride?: string
 ): string {
   if (profile === "external") {
-    return "pairflow";
+    return externalCommandOverride !== undefined &&
+      externalCommandOverride.trim().length > 0
+      ? shellQuote(externalCommandOverride.trim())
+      : "pairflow";
   }
   return `node ${shellQuote(resolveWorktreePairflowEntrypoint(workspacePath))}`;
 }
 
 export function buildPairflowCommandBootstrap(
   workspacePath: string,
-  profile: PairflowCommandProfile = "external"
+  profile: PairflowCommandProfile = "external",
+  externalCommandOverride?: string
 ): string[] {
   const resolvedWorktree = resolve(workspacePath.trim());
   const localEntrypoint = resolveWorktreePairflowEntrypoint(resolvedWorktree);
   const wrapperDir = resolve(resolvedWorktree, ".pairflow", "bin");
   const resolvedExternalCommand =
     profile === "external"
-      ? resolveExternalPairflowCommand(resolvedWorktree)
+      ? externalCommandOverride?.trim().length
+        ? externalCommandOverride.trim()
+        : resolveExternalPairflowCommand(resolvedWorktree)
       : null;
   const externalUnavailableMessage =
     "PAIRFLOW_COMMAND_EXTERNAL_UNAVAILABLE: PATH-resolved `pairflow` command is unavailable. " +

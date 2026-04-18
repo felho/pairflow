@@ -79,6 +79,23 @@ describe("buildAgentCommand", () => {
     await assertBashParses(command);
   });
 
+  it("pins the external pairflow authority when explicitly provided", async () => {
+    const workspacePath = "/tmp/pairflow-remote-workspace/canonical";
+    const command = buildAgentCommand({
+      agentName: "codex",
+      bubbleId: "b_agent_cmd_remote_external_01",
+      workspacePath,
+      externalPairflowCommand: "/home/dev/.local/share/pnpm/pairflow",
+      startupPrompt: "Prompt"
+    });
+    const script = extractBashLcScript(command);
+
+    expect(script).toContain(
+      "export PAIRFLOW_EXTERNAL_COMMAND='/home/dev/.local/share/pnpm/pairflow'"
+    );
+    await assertBashParses(command);
+  });
+
   it("builds self_host profile bootstrap when explicitly selected", async () => {
     const worktreePath = "/tmp/pairflow-worktree/claude";
     const command = buildAgentCommand({

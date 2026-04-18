@@ -249,6 +249,7 @@ describe("sshBubbleStart", () => {
     expect(script).toContain("cd '/home/dev/repos with spaces/repo'\\''s bubble'");
     expect(script).toContain("export PAIRFLOW_WORKTREE_ROOT='/home/dev/repos with spaces/repo'\\''s bubble'");
     expect(script).toContain("export PAIRFLOW_REMOTE_START_WORKSPACE_ROOT='/home/dev/repos with spaces/repo'\\''s bubble'");
+    expect(script).toContain("export PAIRFLOW_REMOTE_START_EXTERNAL_PAIRFLOW_COMMAND='pairflow'");
     expect(script).toContain("'pairflow' bubble start --id 'b_remote_home_relative_01' --repo '/home/dev/repos with spaces/repo'\\''s bubble'");
   });
 
