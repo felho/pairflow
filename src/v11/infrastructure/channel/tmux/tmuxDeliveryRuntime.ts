@@ -1,11 +1,11 @@
 import type { readRuntimeSessionsRegistry } from "../../executor/sessionRuntime/runtimeSessionsRegistry.js";
 import { resolveRuntimeSessionWorkspaceAuthority } from "../../../shared/runtimeSessionWorkspaceAuthority.js";
 import type {
+  DeliveryAck,
+  DeliveryAckReasonCode,
+  DeliveryFailureReason,
   DeliveryTargetReasonCode,
   EmitTmuxDeliveryNotificationResult,
-  TmuxDeliveryAck,
-  TmuxDeliveryAckReasonCode,
-  TmuxDeliveryFailureReason
 } from "../../../shared/delivery/tmuxDeliveryContract.js";
 import {
   confirmTmuxPaneMarkerSubmission,
@@ -41,8 +41,8 @@ export async function readDeliverySessionContext(input: {
   };
 }
 
-export function projectTmuxDeliveryAckToLegacyResult(
-  ack: TmuxDeliveryAck
+export function projectDeliveryAckToLegacyResult(
+  ack: DeliveryAck
 ): EmitTmuxDeliveryNotificationResult {
   if (ack.status === "accepted") {
     return {
@@ -69,9 +69,9 @@ export function projectTmuxDeliveryAckToLegacyResult(
   };
 }
 
-function resolveTmuxDeliveryAckReasonCode(
-  reason: TmuxDeliveryFailureReason
-): TmuxDeliveryAckReasonCode {
+function resolveDeliveryAckReasonCode(
+  reason: DeliveryFailureReason
+): DeliveryAckReasonCode {
   switch (reason) {
     case "no_runtime_session":
     case "registry_read_failed":
@@ -84,32 +84,32 @@ function resolveTmuxDeliveryAckReasonCode(
   }
 }
 
-export function createRejectedTmuxDeliveryAck(input: {
-  reason: TmuxDeliveryFailureReason;
+export function createRejectedDeliveryAck(input: {
+  reason: DeliveryFailureReason;
   message: string;
   deliveryTargetReasonCode?: DeliveryTargetReasonCode;
   sessionName?: string;
   targetPaneIndex?: number;
-}): TmuxDeliveryAck {
+}): DeliveryAck {
   return {
     status: "rejected",
     ...(input.sessionName !== undefined ? { sessionName: input.sessionName } : {}),
     ...(input.targetPaneIndex !== undefined ? { targetPaneIndex: input.targetPaneIndex } : {}),
     message: input.message,
     reason: input.reason,
-    reason_code: resolveTmuxDeliveryAckReasonCode(input.reason),
+    reason_code: resolveDeliveryAckReasonCode(input.reason),
     ...(input.deliveryTargetReasonCode !== undefined
       ? { deliveryTargetReasonCode: input.deliveryTargetReasonCode }
       : {})
   };
 }
 
-export function createAcceptedTmuxDeliveryAck(input: {
+export function createAcceptedDeliveryAck(input: {
   message: string;
   sessionName: string;
   targetPaneIndex: number;
   deliveryTargetReasonCode?: DeliveryTargetReasonCode;
-}): TmuxDeliveryAck {
+}): DeliveryAck {
   return {
     status: "accepted",
     sessionName: input.sessionName,
@@ -137,7 +137,7 @@ export async function attemptTmuxDelivery(input: {
   sessionName: string;
   targetPaneIndex: number;
   deliveryTargetReasonCode?: DeliveryTargetReasonCode;
-}): Promise<TmuxDeliveryAck> {
+}): Promise<DeliveryAck> {
   try {
     if ((input.initialDelayMs ?? 0) > 0) {
       await sleep(input.initialDelayMs as number);
@@ -153,7 +153,7 @@ export async function attemptTmuxDelivery(input: {
       ...(input.deliveryAttempts !== undefined ? { attempts: input.deliveryAttempts } : {})
     });
     if (confirmed) {
-      return createAcceptedTmuxDeliveryAck({
+      return createAcceptedDeliveryAck({
         message: input.message,
         sessionName: input.sessionName,
         targetPaneIndex: input.targetPaneIndex,
@@ -162,7 +162,7 @@ export async function attemptTmuxDelivery(input: {
           : {})
       });
     }
-    return createRejectedTmuxDeliveryAck({
+    return createRejectedDeliveryAck({
       reason: "delivery_unconfirmed",
       message: input.message,
       sessionName: input.sessionName,
@@ -172,7 +172,7 @@ export async function attemptTmuxDelivery(input: {
       : {})
     });
   } catch {
-    return createRejectedTmuxDeliveryAck({
+    return createRejectedDeliveryAck({
       reason: "tmux_send_failed",
       message: input.message,
       sessionName: input.sessionName,
@@ -183,3 +183,9 @@ export async function attemptTmuxDelivery(input: {
     });
   }
 }
+
+export const projectTmuxDeliveryAckToLegacyResult = projectDeliveryAckToLegacyResult;
+
+export const createRejectedTmuxDeliveryAck = createRejectedDeliveryAck;
+
+export const createAcceptedTmuxDeliveryAck = createAcceptedDeliveryAck;
