@@ -2,10 +2,15 @@ import { describe, expect, it, vi } from "vitest";
 
 import { buildResumeTranscriptSummary } from "../../../../src/v11/application/start/startCommandResumeSummary.js";
 import {
+  launchBubbleSessionAck as launchBubbleSessionAckDefault,
+  startBubbleDependencyDefaults
+} from "../../../../src/v11/defaults/start/startBubbleDefaults.js";
+import {
   bootstrapWorktreeWorkspace,
   cleanupWorktreeWorkspace
 } from "../../../../src/v11/infrastructure/workspace/worktreeManager.js";
 import {
+  launchBubbleSessionAck,
   launchBubbleTmuxSessionAck,
   terminateBubbleTmuxSession
 } from "../../../../src/v11/infrastructure/channel/tmux/tmuxManager.js";
@@ -32,6 +37,47 @@ import {
 import { buildWorktreeBootstrapResult } from "../../../helpers/worktreeBootstrapResult.js";
 
 describe("startCommandOrchestration", () => {
+  it("wires neutral and retained launch ack defaults through the start defaults seam", async () => {
+    expect(startBubbleDependencyDefaults.launchBubbleSessionAck).toBe(
+      launchBubbleSessionAckDefault
+    );
+    expect(startBubbleDependencyDefaults.launchBubbleTmuxSessionAck).toBe(
+      launchBubbleTmuxSessionAck
+    );
+    expect(startBubbleDependencyDefaults.launchBubbleSessionAck).toBe(
+      launchBubbleSessionAck
+    );
+
+    const input = {
+      bubbleId: "bubble",
+      workspacePath: "   ",
+      statusCommand: "status",
+      implementerCommand: "implementer",
+      reviewerCommand: "reviewer",
+      runner: vi.fn()
+    };
+
+    const canonicalAck =
+      await startBubbleDependencyDefaults.launchBubbleSessionAck(input);
+    const compatAck =
+      await startBubbleDependencyDefaults.launchBubbleTmuxSessionAck(input);
+
+    expect(canonicalAck).toEqual({
+      status: "failed_to_start",
+      reason_code: "LAUNCH_ACK_WORKSPACE_REQUIRED",
+      failure_kind: "workspace_required",
+      error_message:
+        "LAUNCH_WORKSPACE_REQUIRED: context operation_id=launch_bubble_session bubble_id=bubble."
+    });
+    expect(compatAck).toEqual({
+      status: "failed_to_start",
+      reason_code: "LAUNCH_ACK_WORKSPACE_REQUIRED",
+      failure_kind: "workspace_required",
+      error_message:
+        "TMUX_LAUNCH_WORKSPACE_REQUIRED: context operation_id=launch_bubble_tmux_session bubble_id=bubble."
+    });
+  });
+
   it("resolves default dependencies when no override is provided", async () => {
     const runWorktreeBootstrapCommandDefault = vi.fn(async () => undefined);
     const isTmuxSessionAliveDefault = vi.fn(async () => false);

@@ -21,7 +21,7 @@ export type TmuxRunner = (
   options?: TmuxRunOptions
 ) => Promise<TmuxRunResult>;
 
-export interface LaunchBubbleTmuxSessionInput {
+export interface LaunchBubbleSessionInput {
   bubbleId: string;
   workspacePath: string;
   statusCommand: string;
@@ -44,19 +44,28 @@ export interface LaunchBubbleTmuxSessionInput {
   runner?: TmuxRunner;
 }
 
-export type LaunchBubbleTmuxSessionAckStatus = "running" | "failed_to_start";
+export type LaunchBubbleTmuxSessionInput = LaunchBubbleSessionInput;
 
-export type LaunchBubbleTmuxSessionAckReasonCode =
+export type LaunchBubbleSessionAckStatus = "running" | "failed_to_start";
+
+export type LaunchBubbleTmuxSessionAckStatus = LaunchBubbleSessionAckStatus;
+
+export type LaunchBubbleSessionAckReasonCode =
   | "LAUNCH_ACK_WORKSPACE_REQUIRED"
   | "LAUNCH_ACK_SESSION_EXISTS"
   | "LAUNCH_ACK_TMUX_COMMAND_FAILED";
 
-export type LaunchBubbleTmuxSessionAckFailureKind =
+export type LaunchBubbleTmuxSessionAckReasonCode = LaunchBubbleSessionAckReasonCode;
+
+export type LaunchBubbleSessionAckFailureKind =
   | "workspace_required"
   | "session_exists"
   | "tmux_command_failed";
 
-export interface RunningLaunchBubbleTmuxSessionAck {
+export type LaunchBubbleTmuxSessionAckFailureKind =
+  LaunchBubbleSessionAckFailureKind;
+
+export interface RunningLaunchBubbleSessionAck {
   status: "running";
   sessionName: string;
   reason_code?: never;
@@ -64,7 +73,9 @@ export interface RunningLaunchBubbleTmuxSessionAck {
   error_message?: never;
 }
 
-export interface WorkspaceRequiredLaunchBubbleTmuxSessionAck {
+export type RunningLaunchBubbleTmuxSessionAck = RunningLaunchBubbleSessionAck;
+
+export interface WorkspaceRequiredLaunchBubbleSessionAck {
   status: "failed_to_start";
   reason_code: "LAUNCH_ACK_WORKSPACE_REQUIRED";
   failure_kind: "workspace_required";
@@ -72,7 +83,10 @@ export interface WorkspaceRequiredLaunchBubbleTmuxSessionAck {
   sessionName?: never;
 }
 
-export interface SessionExistsLaunchBubbleTmuxSessionAck {
+export type WorkspaceRequiredLaunchBubbleTmuxSessionAck =
+  WorkspaceRequiredLaunchBubbleSessionAck;
+
+export interface SessionExistsLaunchBubbleSessionAck {
   status: "failed_to_start";
   reason_code: "LAUNCH_ACK_SESSION_EXISTS";
   failure_kind: "session_exists";
@@ -80,7 +94,10 @@ export interface SessionExistsLaunchBubbleTmuxSessionAck {
   sessionName: string;
 }
 
-export interface TmuxCommandFailedLaunchBubbleTmuxSessionAck {
+export type SessionExistsLaunchBubbleTmuxSessionAck =
+  SessionExistsLaunchBubbleSessionAck;
+
+export interface TmuxCommandFailedLaunchBubbleSessionAck {
   status: "failed_to_start";
   reason_code: "LAUNCH_ACK_TMUX_COMMAND_FAILED";
   failure_kind: "tmux_command_failed";
@@ -88,11 +105,16 @@ export interface TmuxCommandFailedLaunchBubbleTmuxSessionAck {
   sessionName: string;
 }
 
-export type LaunchBubbleTmuxSessionAck =
-  | RunningLaunchBubbleTmuxSessionAck
-  | WorkspaceRequiredLaunchBubbleTmuxSessionAck
-  | SessionExistsLaunchBubbleTmuxSessionAck
-  | TmuxCommandFailedLaunchBubbleTmuxSessionAck;
+export type TmuxCommandFailedLaunchBubbleTmuxSessionAck =
+  TmuxCommandFailedLaunchBubbleSessionAck;
+
+export type LaunchBubbleSessionAck =
+  | RunningLaunchBubbleSessionAck
+  | WorkspaceRequiredLaunchBubbleSessionAck
+  | SessionExistsLaunchBubbleSessionAck
+  | TmuxCommandFailedLaunchBubbleSessionAck;
+
+export type LaunchBubbleTmuxSessionAck = LaunchBubbleSessionAck;
 
 export interface LaunchBubbleTmuxSessionResult {
   sessionName: string;
@@ -109,9 +131,11 @@ export interface TerminateBubbleTmuxSessionResult {
   existed: boolean;
 }
 
-export type LaunchBubbleTmuxSessionAckPort = (
-  input: LaunchBubbleTmuxSessionInput
-) => Promise<LaunchBubbleTmuxSessionAck>;
+export type LaunchBubbleSessionAckPort = (
+  input: LaunchBubbleSessionInput
+) => Promise<LaunchBubbleSessionAck>;
+
+export type LaunchBubbleTmuxSessionAckPort = LaunchBubbleSessionAckPort;
 
 export type LaunchBubbleTmuxSessionPort = (
   input: LaunchBubbleTmuxSessionInput
