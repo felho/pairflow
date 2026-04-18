@@ -96,18 +96,20 @@ describe("executePassDelivery", () => {
         refreshed: true
       };
     };
-    const emitTmuxDeliveryNotification: NonNullable<
-      PassDeliveryDependencies["emitTmuxDeliveryNotification"]
+    const emitDeliveryNotificationAck: NonNullable<
+      PassDeliveryDependencies["emitDeliveryNotificationAck"]
     > = async (input) => {
       emitCalls.push(input);
       return {
-        delivered: true,
-        message: "ok"
+        status: "accepted",
+        message: "ok",
+        sessionName: "pf_bubble",
+        targetPaneIndex: 1
       };
     };
     const reviewerDeliveryDependencies: PassDeliveryDependencies = {
       refreshReviewerContext,
-      emitTmuxDeliveryNotification,
+      emitDeliveryNotificationAck,
       readReviewerBriefArtifact,
       readReviewerFocusArtifact,
       resolveDeliveryMessageRef
@@ -149,8 +151,10 @@ describe("executePassDelivery", () => {
     });
     expect(result).toEqual({
       result: {
-        delivered: true,
-        message: "ok"
+        status: "accepted",
+        message: "ok",
+        sessionName: "pf_bubble",
+        targetPaneIndex: 1
       },
       retried: false
     });
@@ -158,24 +162,27 @@ describe("executePassDelivery", () => {
 
   it("retries once on unconfirmed delivery during implementer->reviewer handoff", async () => {
     const calls: unknown[] = [];
-    const emitTmuxDeliveryNotification: NonNullable<
-      PassDeliveryDependencies["emitTmuxDeliveryNotification"]
+    const emitDeliveryNotificationAck: NonNullable<
+      PassDeliveryDependencies["emitDeliveryNotificationAck"]
     > = async (input) => {
       calls.push(input);
       if (calls.length === 1) {
         return {
-          delivered: false,
+          status: "rejected",
           reason: "delivery_unconfirmed",
+          reason_code: "DELIVERY_ACK_REJECTED",
           message: "first attempt unconfirmed"
         };
       }
       return {
-        delivered: true,
-        message: "second attempt confirmed"
+        status: "accepted",
+        message: "second attempt confirmed",
+        sessionName: "pf_bubble",
+        targetPaneIndex: 1
       };
     };
     const reviewerDeliveryDependencies: PassDeliveryDependencies = {
-      emitTmuxDeliveryNotification,
+      emitDeliveryNotificationAck,
       readReviewerBriefArtifact,
       readReviewerFocusArtifact,
       resolveDeliveryMessageRef
@@ -202,8 +209,10 @@ describe("executePassDelivery", () => {
     });
     expect(result).toEqual({
       result: {
-        delivered: true,
-        message: "second attempt confirmed"
+        status: "accepted",
+        message: "second attempt confirmed",
+        sessionName: "pf_bubble",
+        targetPaneIndex: 1
       },
       retried: true
     });
@@ -212,20 +221,23 @@ describe("executePassDelivery", () => {
   it("retries once on unconfirmed delivery during reviewer->implementer handoff", async () => {
     const calls: unknown[] = [];
     const refreshCalls: unknown[] = [];
-    const emitTmuxDeliveryNotification: NonNullable<
-      PassDeliveryDependencies["emitTmuxDeliveryNotification"]
+    const emitDeliveryNotificationAck: NonNullable<
+      PassDeliveryDependencies["emitDeliveryNotificationAck"]
     > = async (input) => {
       calls.push(input);
       if (calls.length === 1) {
         return {
-          delivered: false,
+          status: "rejected",
           reason: "delivery_unconfirmed",
+          reason_code: "DELIVERY_ACK_REJECTED",
           message: "first attempt unconfirmed"
         };
       }
       return {
-        delivered: true,
-        message: "second attempt confirmed"
+        status: "accepted",
+        message: "second attempt confirmed",
+        sessionName: "pf_bubble",
+        targetPaneIndex: 1
       };
     };
     const refreshReviewerContext: NonNullable<
@@ -237,7 +249,7 @@ describe("executePassDelivery", () => {
       };
     };
     const reviewerDeliveryDependencies: PassDeliveryDependencies = {
-      emitTmuxDeliveryNotification,
+      emitDeliveryNotificationAck,
       refreshReviewerContext,
       readReviewerBriefArtifact,
       readReviewerFocusArtifact,
@@ -266,8 +278,10 @@ describe("executePassDelivery", () => {
     });
     expect(result).toEqual({
       result: {
-        delivered: true,
-        message: "second attempt confirmed"
+        status: "accepted",
+        message: "second attempt confirmed",
+        sessionName: "pf_bubble",
+        targetPaneIndex: 1
       },
       retried: true
     });

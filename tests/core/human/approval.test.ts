@@ -241,8 +241,10 @@ describe("approval decisions", () => {
               input.envelope.payload.metadata?.[deliveryTargetRoleMetadataKey]
           });
           return Promise.resolve({
-            delivered: true,
-            message: "ok"
+            status: "accepted" as const,
+            message: "ok",
+            sessionName: "pf_bubble",
+            targetPaneIndex: 1
           });
         }
       }
@@ -290,8 +292,10 @@ describe("approval decisions", () => {
               : {})
           });
           return Promise.resolve({
-            delivered: true,
-            message: "ok"
+            status: "accepted" as const,
+            message: "ok",
+            sessionName: "pf_bubble",
+            targetPaneIndex: 1
           });
         }
       }
@@ -310,12 +314,18 @@ describe("approval decisions", () => {
     expect(result.state.round).toBe(3);
     expect(result.delivery).toEqual({
       statusDelivery: {
+        status: "accepted",
         delivered: true,
-        message: "ok"
+        message: "ok",
+        sessionName: "pf_bubble",
+        targetPaneIndex: 1
       },
       implementerDelivery: {
+        status: "accepted",
         delivered: true,
-        message: "ok"
+        message: "ok",
+        sessionName: "pf_bubble",
+        targetPaneIndex: 1
       }
     });
     expect(result.state.round_role_history.some((entry) => entry.round === 3)).toBe(

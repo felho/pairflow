@@ -1,5 +1,6 @@
 import {
-  type EmitTmuxDeliveryNotificationResult
+  type DeliveryAck,
+  type EmitDeliveryAckLikePort
 } from "../../../v11/shared/ports/tmuxDelivery.js";
 import {
   readReviewerBriefArtifact as defaultReadReviewerBriefArtifact,
@@ -8,9 +9,6 @@ import {
 import type { ReviewerTestExecutionDirective } from "../../../v11/shared/reviewer/testEvidence.js";
 import type { BubbleConfig } from "../../../types/bubble.js";
 import type { ProtocolEnvelope } from "../../../types/protocol.js";
-import type {
-  EmitTmuxDeliveryNotificationPort
-} from "../../../v11/shared/ports/tmuxDelivery.js";
 import type {
   ReadReviewerBriefArtifactPort,
   ReadReviewerFocusArtifactPort
@@ -31,12 +29,14 @@ import {
   shouldRetryPassDelivery
 } from "./reviewerDeliveryHelpers.js";
 import { executeImplementerHandoffDelivery } from "../../shared/delivery/implementerHandoffDelivery.js";
+import { normalizeDeliveryAck } from "../../shared/delivery/deliveryAckNormalization.js";
 import {
   reviewerDeliveryDefaults
 } from "./reviewerDeliveryDefaults.js";
 
 export interface PassDeliveryDependencies {
-  emitTmuxDeliveryNotification?: EmitTmuxDeliveryNotificationPort;
+  emitDeliveryNotificationAck?: EmitDeliveryAckLikePort;
+  emitTmuxDeliveryNotification?: EmitDeliveryAckLikePort;
   refreshReviewerContext?: RefreshReviewerContextPort;
   readReviewerBriefArtifact?: ReadReviewerBriefArtifactPort;
   readReviewerFocusArtifact?: ReadReviewerFocusArtifactPort;
@@ -60,7 +60,7 @@ export interface ExecutePassDeliveryInput {
 }
 
 export interface ExecutePassDeliveryResult {
-  result: EmitTmuxDeliveryNotificationResult | undefined;
+  result: DeliveryAck | undefined;
   retried: boolean;
 }
 
@@ -69,8 +69,9 @@ export async function executePassDelivery(
   dependencies: PassDeliveryDependencies = {}
 ): Promise<ExecutePassDeliveryResult> {
   const emitDelivery =
-    dependencies.emitTmuxDeliveryNotification
-    ?? reviewerDeliveryDefaults.emitTmuxDeliveryNotification;
+    dependencies.emitDeliveryNotificationAck
+    ?? dependencies.emitTmuxDeliveryNotification
+    ?? reviewerDeliveryDefaults.emitDeliveryNotificationAck;
   const resolveMessageRef =
     dependencies.resolveDeliveryMessageRef
     ?? reviewerDeliveryDefaults.resolveDeliveryMessageRef;
@@ -119,7 +120,9 @@ export async function executePassDelivery(
     initialDelayMs: deliveryInitialDelayMs,
     resolveDeliveryMessageRef: resolveMessageRef
   });
-  let deliveryResult = await emitDelivery(deliveryInput).catch(() => undefined);
+  let deliveryResult = await emitDelivery(deliveryInput)
+    .then(normalizeDeliveryAck)
+    .catch(() => undefined);
   let deliveryRetried = false;
   const shouldRetryDelivery = shouldRetryPassDelivery({
     executeInput: input,
@@ -133,7 +136,7 @@ export async function executePassDelivery(
       // Retry once with a longer warm-up window before giving up.
       initialDelayMs: 5000,
       deliveryAttempts: 6
-    }).catch(() => deliveryResult);
+    }).then(normalizeDeliveryAck).catch(() => deliveryResult);
   }
 
   return {

@@ -132,6 +132,7 @@ export interface BuildNormalPassFlowDependenciesInput<TResult> {
     ExecuteNormalPassDeliveryDependencies["resolveReviewerTestDirectiveForPass"];
   executePassDelivery:
     ExecuteNormalPassDeliveryDependencies["executePassDelivery"];
+  emitDeliveryNotificationAck?: PassDeliveryDependencies["emitDeliveryNotificationAck"];
   emitTmuxDeliveryNotification?: PassDeliveryDependencies["emitTmuxDeliveryNotification"];
   refreshReviewerContext?: PassDeliveryDependencies["refreshReviewerContext"];
   readReviewerBriefArtifact?: PassDeliveryDependencies["readReviewerBriefArtifact"];
@@ -201,6 +202,9 @@ export function buildNormalPassFlowDependencies<TResult>(
       input.executeNormalPassDelivery(deliveryInput, {
         resolveReviewerTestDirectiveForPass: input.resolveReviewerTestDirectiveForPass,
         executePassDelivery: input.executePassDelivery,
+        ...(input.emitDeliveryNotificationAck !== undefined
+          ? { emitDeliveryNotificationAck: input.emitDeliveryNotificationAck }
+          : {}),
         ...(input.emitTmuxDeliveryNotification !== undefined
           ? { emitTmuxDeliveryNotification: input.emitTmuxDeliveryNotification }
           : {}),

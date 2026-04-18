@@ -15,7 +15,7 @@ function buildKickoffDefaultDependencies(): ResolvedKickoffDependencies {
     statFileFn: stat,
     writeFileFn: writeFile,
     appendEnvelope: kickoffDefaults.appendProtocolEnvelope,
-    emitDelivery: kickoffDefaults.emitTmuxDeliveryNotification
+    emitDelivery: kickoffDefaults.emitDeliveryNotificationAck
   };
 }
 
@@ -31,6 +31,9 @@ export function resolveKickoffDependencies(
     statFileFn: overrides.statFile ?? defaults.statFileFn,
     writeFileFn: overrides.writeFile ?? defaults.writeFileFn,
     appendEnvelope: overrides.appendProtocolEnvelope ?? defaults.appendEnvelope,
-    emitDelivery: overrides.emitTmuxDeliveryNotification ?? defaults.emitDelivery
+    emitDelivery:
+      overrides.emitDeliveryNotificationAck
+      ?? overrides.emitTmuxDeliveryNotification
+      ?? defaults.emitDelivery
   };
 }

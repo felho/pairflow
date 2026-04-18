@@ -3,10 +3,9 @@ import { basename, dirname, join } from "node:path";
 import { askHumanFinalizationDefaults } from "../../defaults/askHuman/askHumanFinalizationDefaults.js";
 import { emitBubbleLifecycleEventBestEffort } from "../../shared/metrics/bubbleEvents.js";
 import type {
-  AskHumanEmitTmuxDeliveryNotificationResult,
+  AskHumanDeliveryAck,
   ResolveAskHumanDeliveryMessageRefInput
 } from "../../shared/askHuman/askHumanDeliveryPortsContract.js";
-import type { EmitTmuxDeliveryNotificationResult } from "../../shared/delivery/tmuxDeliveryContract.js";
 
 function buildTranscriptFallbackRef(
   bubbleId: string,
@@ -40,24 +39,13 @@ function resolveDeliveryMessageRef(
   );
 }
 
-function mapTmuxDeliveryResultToAskHumanResult(
-  result: EmitTmuxDeliveryNotificationResult
-): AskHumanEmitTmuxDeliveryNotificationResult {
-  return {
-    status: result.delivered ? "accepted" : "rejected",
-    ...result
-  };
-}
-
 export const askHumanFinalizationDependencyDefaults = {
   emitTmuxDeliveryNotification: async (
     input: Parameters<
-      typeof askHumanFinalizationDefaults.emitTmuxDeliveryNotification
+      typeof askHumanFinalizationDefaults.emitDeliveryNotificationAck
     >[0]
-  ) =>
-    mapTmuxDeliveryResultToAskHumanResult(
-      await askHumanFinalizationDefaults.emitTmuxDeliveryNotification(input)
-    ),
+  ): Promise<AskHumanDeliveryAck> =>
+    askHumanFinalizationDefaults.emitDeliveryNotificationAck(input),
   emitBubbleNotification:
     askHumanFinalizationDefaults.emitBubbleNotification,
   resolveDeliveryMessageRef,

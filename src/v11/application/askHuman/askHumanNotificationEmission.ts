@@ -3,7 +3,8 @@ import type {
   EmitOptionalAskHumanNotificationsDependencies,
   EmitOptionalAskHumanNotificationsInput
 } from "../../shared/askHuman/askHumanNotificationEmissionContract.js";
-import type { AskHumanEmitTmuxDeliveryNotificationResult } from "../../shared/askHuman/askHumanDeliveryPortsContract.js";
+import type { AskHumanDeliveryAck } from "../../shared/askHuman/askHumanDeliveryPortsContract.js";
+import { normalizeDeliveryAck } from "../../shared/delivery/deliveryAckNormalization.js";
 
 function describeDetachedBubbleNotificationFailure(error: unknown): void {
   void error;
@@ -13,14 +14,13 @@ function describeDetachedBubbleNotificationFailure(error: unknown): void {
 
 function buildUnexpectedAskHumanDeliveryFailureResult(
   error: unknown
-): AskHumanEmitTmuxDeliveryNotificationResult {
+): AskHumanDeliveryAck {
   const detail =
     error instanceof Error && error.message.trim().length > 0
       ? error.message.trim()
       : "unknown tmux delivery error";
   return {
     status: "rejected",
-    delivered: false,
     message: `tmux delivery notification failed: ${detail}`,
     reason: "tmux_send_failed",
     reason_code: "DELIVERY_ACK_REJECTED"
@@ -37,7 +37,7 @@ export async function emitOptionalAskHumanNotifications(
   const bubbleNotificationPromise = dependencies.emitBubbleNotification(
     input.bubbleConfig,
     "waiting-human"
-  ).catch((error) => {
+  ).catch((error: unknown) => {
     describeDetachedBubbleNotificationFailure(error);
     return undefined;
   });
@@ -47,7 +47,7 @@ export async function emitOptionalAskHumanNotifications(
     sessionsPath: input.sessionsPath,
     envelope: input.envelope,
     messageRef: input.messageRef
-  }).catch((error) => buildUnexpectedAskHumanDeliveryFailureResult(error));
+  }).then(normalizeDeliveryAck).catch((error) => buildUnexpectedAskHumanDeliveryFailureResult(error));
   void bubbleNotificationPromise;
 
   return {

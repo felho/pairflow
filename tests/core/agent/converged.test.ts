@@ -423,6 +423,7 @@ describe("emitConvergedFromWorkspace", () => {
           return Promise.resolve({
             delivered: true,
             sessionName: "pf-b_converged_notify_01",
+            targetPaneIndex: 1,
             message: "ok"
           });
         },
@@ -543,6 +544,7 @@ describe("emitConvergedFromWorkspace", () => {
           return Promise.resolve({
             delivered: true,
             sessionName: "pf-b_converged_notify_03",
+            targetPaneIndex: 1,
             message: "ok"
           });
         }
@@ -658,6 +660,7 @@ describe("emitConvergedFromWorkspace", () => {
         emitTmuxDeliveryNotification: async () => ({
           delivered: true,
           sessionName: "pf-b_converged_policy_diag_01",
+          targetPaneIndex: 1,
           message: "ok"
         }),
         emitBubbleNotification: async () => ({
@@ -751,6 +754,7 @@ describe("emitConvergedFromWorkspace", () => {
           return Promise.resolve({
             delivered: true,
             sessionName: "pf-b_converged_notify_retry_01",
+            targetPaneIndex: 1,
             message: "ok"
           });
         }
@@ -839,6 +843,7 @@ describe("emitConvergedFromWorkspace", () => {
           return Promise.resolve({
             delivered: true,
             sessionName: "pf-b_converged_notify_02",
+            targetPaneIndex: 1,
             message: "ok"
           });
         },

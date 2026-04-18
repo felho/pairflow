@@ -25,7 +25,9 @@ describe("askHumanNotificationEmission", () => {
           return {
             status: "accepted",
             delivered: true,
-            message: "ok"
+            message: "ok",
+            sessionName: "pf_bubble",
+            targetPaneIndex: 1
           };
         },
         emitBubbleNotification: async (_config, kind) => {
@@ -49,8 +51,9 @@ describe("askHumanNotificationEmission", () => {
     expect(result).toEqual({
       deliveryResult: {
         status: "accepted",
-        delivered: true,
-        message: "ok"
+        message: "ok",
+        sessionName: "pf_bubble",
+        targetPaneIndex: 1
       }
     });
   });
@@ -85,7 +88,6 @@ describe("askHumanNotificationEmission", () => {
     expect(result).toEqual({
       deliveryResult: {
         status: "rejected",
-        delivered: false,
         message: "tmux delivery notification failed: tmux boom",
         reason: "tmux_send_failed",
         reason_code: "DELIVERY_ACK_REJECTED"
@@ -110,7 +112,9 @@ describe("askHumanNotificationEmission", () => {
         emitTmuxDeliveryNotification: async () => ({
           status: "accepted",
           delivered: true,
-          message: "ok"
+          message: "ok",
+          sessionName: "pf_bubble",
+          targetPaneIndex: 1
         }),
         emitBubbleNotification: async () => {
           throw new Error("notification boom");
@@ -121,8 +125,9 @@ describe("askHumanNotificationEmission", () => {
     expect(result).toEqual({
       deliveryResult: {
         status: "accepted",
-        delivered: true,
-        message: "ok"
+        message: "ok",
+        sessionName: "pf_bubble",
+        targetPaneIndex: 1
       }
     });
   });

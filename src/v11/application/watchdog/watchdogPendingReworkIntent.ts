@@ -11,16 +11,10 @@ import type {
   WriteStateSnapshotPort
 } from "../../shared/ports/stateSnapshots.js";
 import type {
-  EmitTmuxDeliveryNotificationPort,
-  ResolveDeliveryMessageRefPort,
-  TmuxDeliveryAckStatus
+  EmitDeliveryAckLikePort,
+  ResolveDeliveryMessageRefPort
 } from "../../shared/ports/tmuxDelivery.js";
-
-function resolveDeliveryStatus(input: {
-  delivered: boolean;
-}): TmuxDeliveryAckStatus {
-  return input.delivered ? "accepted" : "rejected";
-}
+import { normalizeDeliveryAck } from "../../shared/delivery/deliveryAckNormalization.js";
 
 export async function maybeApplyPendingReworkIntent(input: {
   now: Date;
@@ -29,7 +23,7 @@ export async function maybeApplyPendingReworkIntent(input: {
   loadedState: LoadedStateSnapshot;
   state: BubbleStateSnapshot;
   writeState: WriteStateSnapshotPort;
-  emitDelivery: EmitTmuxDeliveryNotificationPort;
+  emitDelivery: EmitDeliveryAckLikePort;
   ensureBubbleInstanceIdForMutation: EnsureBubbleInstanceIdForMutationPort;
   resolveDeliveryMessageRef: ResolveDeliveryMessageRefPort;
 }): Promise<BubbleWatchdogResult | null> {
@@ -66,12 +60,9 @@ export async function maybeApplyPendingReworkIntent(input: {
       sessionsPath: input.resolved.bubblePaths.sessionsPath,
       envelope: deliveryEnvelope
     })
-  });
+  }).then(normalizeDeliveryAck);
 
-  const deliveryStatus = resolveDeliveryStatus({
-    delivered: delivery.delivered
-  });
-  if (deliveryStatus !== "accepted") {
+  if (delivery.status !== "accepted") {
     return {
       bubbleId: input.resolved.bubbleId,
       escalated: false,

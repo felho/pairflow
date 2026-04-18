@@ -1,6 +1,6 @@
 import { emitBubbleNotification } from "../../infrastructure/channel/notifications.js";
 import {
-  emitTmuxDeliveryNotification,
+  emitDeliveryNotificationAck,
   retryStuckAgentInput
 } from "../../infrastructure/channel/tmux/tmuxDelivery.js";
 import { appendWatchdogTrace } from "../../infrastructure/artifact/watchdog/watchdogTraceStore.js";
@@ -21,7 +21,7 @@ export const watchdogCommandDefaults = {
   appendProtocolEnvelope,
   appendWatchdogTrace,
   emitBubbleNotification,
-  emitTmuxDeliveryNotification,
+  emitDeliveryNotificationAck,
   retryStuckAgentInput,
   readStateSnapshot,
   readRuntimeSessionsRegistry,

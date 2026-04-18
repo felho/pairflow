@@ -14,7 +14,7 @@ import type {
 } from "../../shared/ports/transcript.js";
 import type { EmitBubbleNotificationPort } from "../../shared/ports/notifications.js";
 import type {
-  EmitTmuxDeliveryNotificationPort,
+  EmitDeliveryAckLikePort,
   ResolveDeliveryMessageRefPort
 } from "../../shared/ports/tmuxDelivery.js";
 import {
@@ -41,7 +41,7 @@ export interface ExecuteConvergedExecutionDependencies {
   appendProtocolEnvelope?: AppendProtocolEnvelopePort;
   applyMetaReviewGateOnConvergence?:
     ResolvedConvergedExecutionDependencies["applyMetaReviewGateOnConvergence"];
-  emitTmuxDeliveryNotification?: EmitTmuxDeliveryNotificationPort;
+  emitDeliveryNotificationAck?: EmitDeliveryAckLikePort;
   emitBubbleNotification?: EmitBubbleNotificationPort;
   resolveDeliveryMessageRef?: ResolveDeliveryMessageRefPort;
 }
@@ -55,7 +55,7 @@ export interface ExecuteConvergedExecutionResult {
 interface ResolvedExecutionDependencies {
   appendEnvelope: AppendProtocolEnvelopePort;
   applyGate: ResolvedConvergedExecutionDependencies["applyMetaReviewGateOnConvergence"];
-  emitDelivery: EmitTmuxDeliveryNotificationPort;
+  emitDelivery: EmitDeliveryAckLikePort;
   emitNotification: EmitBubbleNotificationPort;
   resolveMessageRef: ResolveDeliveryMessageRefPort;
 }
@@ -67,7 +67,7 @@ function resolveExecutionDependencies(
   return {
     appendEnvelope: resolved.appendProtocolEnvelope,
     applyGate: resolved.applyMetaReviewGateOnConvergence,
-    emitDelivery: resolved.emitTmuxDeliveryNotification,
+    emitDelivery: resolved.emitDeliveryNotificationAck,
     emitNotification: resolved.emitBubbleNotification,
     resolveMessageRef: resolved.resolveDeliveryMessageRef
   };

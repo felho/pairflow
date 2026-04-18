@@ -1,7 +1,7 @@
 import type { EmitBubbleNotificationPort } from "../../shared/ports/notifications.js";
 import type { AppendProtocolEnvelopePort } from "../../shared/ports/transcript.js";
 import type {
-  EmitTmuxDeliveryNotificationPort,
+  EmitDeliveryAckLikePort,
   ResolveDeliveryMessageRefPort,
   RetryStuckAgentInputPort
 } from "../../shared/ports/tmuxDelivery.js";
@@ -32,7 +32,7 @@ export interface BubbleWatchdogInput {
 
 export interface BubbleWatchdogDependencies {
   appendProtocolEnvelope?: AppendProtocolEnvelopePort;
-  emitTmuxDeliveryNotification?: EmitTmuxDeliveryNotificationPort;
+  emitDeliveryNotificationAck?: EmitDeliveryAckLikePort;
   emitBubbleNotification?: EmitBubbleNotificationPort;
   readStateSnapshot?: ReadStateSnapshotPort;
   writeStateSnapshot?: WriteStateSnapshotPort;

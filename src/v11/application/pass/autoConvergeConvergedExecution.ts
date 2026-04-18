@@ -28,6 +28,7 @@ export interface ExecuteAutoConvergeConvergedDependencies {
     },
     dependencies?: EmitConvergedDependencies
   ) => Promise<EmitConvergedResult>;
+  emitDeliveryNotificationAck?: EmitConvergedDependencies["emitDeliveryNotificationAck"];
   emitTmuxDeliveryNotification?: EmitConvergedDependencies["emitTmuxDeliveryNotification"];
   emitBubbleNotification?: EmitConvergedDependencies["emitBubbleNotification"];
 }
@@ -48,6 +49,12 @@ export async function executeAutoConvergeConverged(
         expectedReviewer: input.expectedReviewer
       },
       {
+        ...(dependencies.emitDeliveryNotificationAck !== undefined
+          ? {
+              emitDeliveryNotificationAck:
+                dependencies.emitDeliveryNotificationAck
+            }
+          : {}),
         ...(dependencies.emitTmuxDeliveryNotification !== undefined
           ? { emitTmuxDeliveryNotification: dependencies.emitTmuxDeliveryNotification }
           : {}),

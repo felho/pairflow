@@ -12,7 +12,7 @@ import {
 
 export const kickoffDefaults = {
   appendProtocolEnvelope,
-  emitTmuxDeliveryNotification: reviewerDeliveryDefaults.emitTmuxDeliveryNotification,
+  emitDeliveryNotificationAck: reviewerDeliveryDefaults.emitDeliveryNotificationAck,
   readStateSnapshot,
   resolveBubbleById: openBubbleDefaults.resolveBubbleById,
   writeStateSnapshot

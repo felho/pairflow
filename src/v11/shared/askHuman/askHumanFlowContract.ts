@@ -9,7 +9,7 @@ import type {
 import type { applyStateTransition } from "../../domain/state/machine.js";
 import type {
   AskHumanDeliveryTargetReasonCode,
-  AskHumanEmitTmuxDeliveryNotificationResult,
+  AskHumanDeliveryAck,
   EmitAskHumanBubbleNotificationPort,
   EmitAskHumanTmuxDeliveryNotificationPort,
   ResolveAskHumanDeliveryMessageRefPort
@@ -65,17 +65,17 @@ export interface RunAskHumanFlowResult {
   inferredRecipient: "human";
   activation?: AskHumanActivationProvenance;
   delivery?: {
-    status: AskHumanEmitTmuxDeliveryNotificationResult["status"];
+    status: AskHumanDeliveryAck["status"];
     delivered: boolean;
     message?: string;
-    reason?: AskHumanEmitTmuxDeliveryNotificationResult["reason"];
-    reason_code?: AskHumanEmitTmuxDeliveryNotificationResult["reason_code"];
+    reason?: Extract<AskHumanDeliveryAck, { status: "rejected" }>["reason"];
+    reason_code?: Extract<AskHumanDeliveryAck, { status: "rejected" }>["reason_code"];
     deliveryTargetReasonCode?: AskHumanDeliveryTargetReasonCode;
   };
 }
 
 export interface AskHumanDeliveryResult {
-  deliveryResult: AskHumanEmitTmuxDeliveryNotificationResult | undefined;
+  deliveryResult: AskHumanDeliveryAck | undefined;
 }
 
 export interface RunAskHumanFlowDependencies {

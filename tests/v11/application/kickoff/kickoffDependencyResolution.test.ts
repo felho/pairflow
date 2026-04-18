@@ -19,7 +19,7 @@ describe("kickoffDependencyResolution", () => {
     expect(resolved.writeFileFn).toBe(writeFile);
     expect(resolved.appendEnvelope).toBe(appendProtocolEnvelope);
     expect(resolved.emitDelivery).toBe(
-      reviewerDeliveryDefaults.emitTmuxDeliveryNotification
+      reviewerDeliveryDefaults.emitDeliveryNotificationAck
     );
   });
 
@@ -30,7 +30,7 @@ describe("kickoffDependencyResolution", () => {
     const readFileOverride = (async () => "x") as unknown as typeof readFile;
     const writeFileOverride = (async () => {}) as unknown as typeof writeFile;
     const appendProtocolEnvelopeOverride = async () => ({}) as never;
-    const emitTmuxDeliveryNotificationOverride = async () => ({}) as never;
+    const emitDeliveryNotificationAckOverride = async () => ({}) as never;
 
     const resolved = resolveKickoffDependencies({
       resolveBubbleById: resolveBubbleByIdOverride,
@@ -39,7 +39,7 @@ describe("kickoffDependencyResolution", () => {
       readFile: readFileOverride,
       writeFile: writeFileOverride,
       appendProtocolEnvelope: appendProtocolEnvelopeOverride,
-      emitTmuxDeliveryNotification: emitTmuxDeliveryNotificationOverride
+      emitDeliveryNotificationAck: emitDeliveryNotificationAckOverride
     });
 
     expect(resolved.resolveBubble).toBe(resolveBubbleByIdOverride);
@@ -48,6 +48,6 @@ describe("kickoffDependencyResolution", () => {
     expect(resolved.readFileFn).toBe(readFileOverride);
     expect(resolved.writeFileFn).toBe(writeFileOverride);
     expect(resolved.appendEnvelope).toBe(appendProtocolEnvelopeOverride);
-    expect(resolved.emitDelivery).toBe(emitTmuxDeliveryNotificationOverride);
+    expect(resolved.emitDelivery).toBe(emitDeliveryNotificationAckOverride);
   });
 });

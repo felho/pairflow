@@ -1,36 +1,27 @@
 import type { BubbleConfig } from "../../../types/bubble.js";
 import type { ProtocolEnvelope } from "../../../types/protocol.js";
 import type {
+  DeliveryAck,
   DeliveryTargetReasonCode,
-  TmuxDeliveryAckReasonCode,
-  TmuxDeliveryAckStatus,
-  TmuxDeliveryFailureReason
+  EmitDeliveryNotificationInput
 } from "../delivery/tmuxDeliveryContract.js";
+import type { EmitDeliveryAckLikePort } from "../ports/tmuxDelivery.js";
 
 export type AskHumanBubbleNotificationKind = "waiting-human" | "converged";
 
-export type AskHumanTmuxDeliveryFailureReason = TmuxDeliveryFailureReason;
+export type AskHumanDeliveryFailureReason =
+  Extract<DeliveryAck, { status: "rejected" }>["reason"];
 
 export type AskHumanDeliveryTargetReasonCode = DeliveryTargetReasonCode;
 
-export interface AskHumanEmitTmuxDeliveryNotificationInput {
-  bubbleId: string;
-  bubbleConfig: BubbleConfig;
-  sessionsPath: string;
-  envelope: ProtocolEnvelope;
-  messageRef?: string;
-}
+export type AskHumanEmitDeliveryNotificationInput = EmitDeliveryNotificationInput;
 
-export interface AskHumanEmitTmuxDeliveryNotificationResult {
-  status: TmuxDeliveryAckStatus;
-  delivered: boolean;
-  sessionName?: string;
-  targetPaneIndex?: number;
-  message: string;
-  reason?: AskHumanTmuxDeliveryFailureReason;
-  reason_code?: TmuxDeliveryAckReasonCode;
-  deliveryTargetReasonCode?: AskHumanDeliveryTargetReasonCode;
-}
+export type AskHumanEmitTmuxDeliveryNotificationInput =
+  AskHumanEmitDeliveryNotificationInput;
+
+export type AskHumanDeliveryAck = DeliveryAck;
+
+export type AskHumanEmitTmuxDeliveryNotificationResult = AskHumanDeliveryAck;
 
 export interface ResolveAskHumanDeliveryMessageRefInput {
   bubbleId: string;
@@ -39,9 +30,11 @@ export interface ResolveAskHumanDeliveryMessageRefInput {
   messageRef?: string;
 }
 
-export type EmitAskHumanTmuxDeliveryNotificationPort = (
-  input: AskHumanEmitTmuxDeliveryNotificationInput
-) => Promise<AskHumanEmitTmuxDeliveryNotificationResult>;
+export type EmitAskHumanDeliveryNotificationAckPort =
+  EmitDeliveryAckLikePort;
+
+export type EmitAskHumanTmuxDeliveryNotificationPort =
+  EmitAskHumanDeliveryNotificationAckPort;
 
 export type ResolveAskHumanDeliveryMessageRefPort = (
   input: ResolveAskHumanDeliveryMessageRefInput

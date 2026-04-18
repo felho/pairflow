@@ -441,7 +441,10 @@ async function handleBubbleRequestReworkCommand(args: string[]): Promise<number>
     process.stdout.write(
       `APPROVAL_DECISION recorded for ${result.bubbleId}: ${result.envelope.id} -> rework\n`
     );
-    if (result.delivery?.implementerDelivery !== undefined && !result.delivery.implementerDelivery.delivered) {
+    if (
+      result.delivery?.implementerDelivery !== undefined
+      && result.delivery.implementerDelivery.status !== "accepted"
+    ) {
       process.stderr.write(
         `Warning: rework delivery to implementer pane was not confirmed (reason: ${result.delivery.implementerDelivery.reason ?? "unknown"}). Use \`pairflow bubble status --id ${result.bubbleId}\` and \`pairflow bubble restart --id ${result.bubbleId}\` if the implementer did not resume.\n`
       );

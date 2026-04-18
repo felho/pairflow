@@ -6,7 +6,7 @@ import { assertValidBubbleStateSnapshot } from "../../shared/state/stateSchema.j
 import type { ResolvedBubbleById } from "../../shared/ports/bubbleLookup.js";
 import type { EmitBubbleNotificationPort } from "../../shared/ports/notifications.js";
 import type {
-  EmitTmuxDeliveryNotificationPort,
+  EmitDeliveryAckLikePort,
   ResolveDeliveryMessageRefPort,
   RetryStuckAgentInputPort
 } from "../../shared/ports/tmuxDelivery.js";
@@ -28,7 +28,7 @@ export interface WatchdogRuntimeContext {
   writeState: WriteStateSnapshotPort;
   loadedState: LoadedStateSnapshot;
   state: BubbleStateSnapshot;
-  emitDelivery: EmitTmuxDeliveryNotificationPort;
+  emitDelivery: EmitDeliveryAckLikePort;
   emitNotification: EmitBubbleNotificationPort;
   resolveDeliveryMessageRef: ResolveDeliveryMessageRefPort;
   retryStuckAgentInput: RetryStuckAgentInputPort;

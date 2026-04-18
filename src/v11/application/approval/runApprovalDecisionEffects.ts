@@ -8,8 +8,12 @@ import type {
 import {
   resolveApprovalDecisionMetadata
 } from "../../shared/approval/approvalRoutingEligibility.js";
-import type { ApprovalDecisionDeliverySignalsResult } from "./approvalCommandContract.js";
-import type { EmitTmuxDeliveryNotificationResult } from "../../shared/ports/tmuxDelivery.js";
+import type {
+  ApprovalDecisionDeliverySignal,
+  ApprovalDecisionDeliverySignalsResult
+} from "./approvalCommandContract.js";
+import type { DeliveryAck } from "../../shared/ports/tmuxDelivery.js";
+import { normalizeDeliveryAck } from "../../shared/delivery/deliveryAckNormalization.js";
 
 type ApprovalDecisionFlowShape = Pick<
   NormalizedApprovalDecisionInput,
@@ -53,11 +57,50 @@ export async function buildApprovalDecisionEnvelopePayload(input: {
   return envelopePayload;
 }
 
-function buildFallbackDeliveryResult(message: string): EmitTmuxDeliveryNotificationResult {
+function buildFallbackDeliveryResult(message: string): DeliveryAck {
   return {
-    delivered: false,
+    status: "rejected",
     message,
-    reason: "tmux_send_failed"
+    reason: "tmux_send_failed",
+    reason_code: "DELIVERY_ACK_REJECTED"
+  };
+}
+
+function projectDeliveryAckToLegacyResult(
+  deliveryAck: DeliveryAck
+): ApprovalDecisionDeliverySignal {
+  if (deliveryAck.status === "accepted") {
+    return {
+      status: deliveryAck.status,
+      delivered: true,
+      message: deliveryAck.message,
+      ...(deliveryAck.sessionName !== undefined
+        ? { sessionName: deliveryAck.sessionName }
+        : {}),
+      ...(deliveryAck.targetPaneIndex !== undefined
+        ? { targetPaneIndex: deliveryAck.targetPaneIndex }
+        : {}),
+      ...(deliveryAck.deliveryTargetReasonCode !== undefined
+        ? { deliveryTargetReasonCode: deliveryAck.deliveryTargetReasonCode }
+        : {})
+    };
+  }
+
+  return {
+    status: deliveryAck.status,
+    delivered: false,
+    ...(deliveryAck.sessionName !== undefined
+      ? { sessionName: deliveryAck.sessionName }
+      : {}),
+    ...(deliveryAck.targetPaneIndex !== undefined
+      ? { targetPaneIndex: deliveryAck.targetPaneIndex }
+      : {}),
+    message: deliveryAck.message,
+    reason: deliveryAck.reason,
+    reason_code: deliveryAck.reason_code,
+    ...(deliveryAck.deliveryTargetReasonCode !== undefined
+      ? { deliveryTargetReasonCode: deliveryAck.deliveryTargetReasonCode }
+      : {})
   };
 }
 
@@ -75,7 +118,7 @@ export async function emitApprovalDecisionDeliverySignals(input: {
     sessionsPath: input.resolved.bubblePaths.sessionsPath,
     envelope: input.appendedEnvelope,
     messageRef: input.messageRef
-  }).catch(() =>
+  }).then(normalizeDeliveryAck).catch(() =>
     buildFallbackDeliveryResult(
       `Failed to deliver approval decision ${input.appendedEnvelope.id} to status pane.`
     )
@@ -83,7 +126,7 @@ export async function emitApprovalDecisionDeliverySignals(input: {
 
   if (input.decision !== "rework") {
     return {
-      statusDelivery
+      statusDelivery: projectDeliveryAckToLegacyResult(statusDelivery)
     };
   }
 
@@ -110,15 +153,15 @@ export async function emitApprovalDecisionDeliverySignals(input: {
       }
     },
     messageRef: input.messageRef
-  }).catch(() =>
+  }).then(normalizeDeliveryAck).catch(() =>
     buildFallbackDeliveryResult(
       `Failed to deliver approval decision ${input.appendedEnvelope.id} to implementer pane.`
     )
   );
 
   return {
-    statusDelivery,
-    implementerDelivery
+    statusDelivery: projectDeliveryAckToLegacyResult(statusDelivery),
+    implementerDelivery: projectDeliveryAckToLegacyResult(implementerDelivery)
   };
 }
 

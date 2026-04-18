@@ -78,7 +78,7 @@ describe("watchdogCommandApi", () => {
     sampleWatchdogPaneActivity?: () => Promise<PaneActivitySampleResult>;
   } = {}): BubbleWatchdogV11Dependencies {
     return {
-      emitTmuxDeliveryNotification: () =>
+      emitDeliveryNotificationAck: () =>
         Promise.resolve({
           delivered: true,
           message: "ok"

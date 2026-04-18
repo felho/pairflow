@@ -156,8 +156,10 @@ function createFlowDependencies(
       }) => {
         emittedDeliveries.push(input);
         return {
-          delivered: true,
-          message: "ok"
+          status: "accepted" as const,
+          message: "ok",
+          sessionName: "pf_approval_flow_01",
+          targetPaneIndex: 1
         };
       }),
       emitBubbleLifecycleEventBestEffort: vi.fn(async () => undefined),
@@ -232,8 +234,10 @@ function createRemoteFlowDependencies() {
     applyStateTransition,
     resolveDeliveryMessageRef: vi.fn(() => "unused"),
     emitTmuxDeliveryNotification: vi.fn(async () => ({
-      delivered: true,
-      message: "unused"
+      status: "accepted" as const,
+      message: "unused",
+      sessionName: "pf_remote_approval_01",
+      targetPaneIndex: 1
     })),
     emitBubbleLifecycleEventBestEffort: vi.fn(async () => undefined),
     queueDeferredReworkIntent: vi.fn(async () => ({}))

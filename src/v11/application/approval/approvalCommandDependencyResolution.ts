@@ -14,7 +14,7 @@ import type {
   ReadTranscriptEnvelopesPort
 } from "../../shared/ports/transcript.js";
 import type {
-  EmitTmuxDeliveryNotificationPort,
+  EmitDeliveryAckLikePort,
   ResolveDeliveryMessageRefPort
 } from "../../shared/ports/tmuxDelivery.js";
 import type {
@@ -26,7 +26,7 @@ export interface ApprovalCommandDependencies {
   appendProtocolEnvelope?: AppendProtocolEnvelopePort;
   applyStateTransition?: typeof applyStateTransition;
   emitBubbleLifecycleEventBestEffort?: typeof emitBubbleLifecycleEventBestEffort;
-  emitTmuxDeliveryNotification?: EmitTmuxDeliveryNotificationPort;
+  emitTmuxDeliveryNotification?: EmitDeliveryAckLikePort;
   executeRemoteBubbleApprovalCommand?: (
     input: ExecuteRemoteBubbleApprovalCommandInput
   ) => Promise<ExecuteRemoteBubbleApprovalCommandResult>;
@@ -47,7 +47,7 @@ export interface ApprovalCommandDependencies {
 
 export interface ApprovalCommandDefaultDependencies {
   appendProtocolEnvelope: AppendProtocolEnvelopePort;
-  emitTmuxDeliveryNotification: EmitTmuxDeliveryNotificationPort;
+  emitTmuxDeliveryNotification: EmitDeliveryAckLikePort;
   executeRemoteBubbleApprovalCommand: (
     input: ExecuteRemoteBubbleApprovalCommandInput
   ) => Promise<ExecuteRemoteBubbleApprovalCommandResult>;
@@ -69,7 +69,7 @@ export interface ResolvedApprovalCommandDependencies {
   appendProtocolEnvelope: AppendProtocolEnvelopePort;
   applyStateTransition: typeof applyStateTransition;
   emitBubbleLifecycleEventBestEffort: typeof emitBubbleLifecycleEventBestEffort;
-  emitTmuxDeliveryNotification: EmitTmuxDeliveryNotificationPort;
+  emitTmuxDeliveryNotification: EmitDeliveryAckLikePort;
   executeRemoteBubbleApprovalCommand: (
     input: ExecuteRemoteBubbleApprovalCommandInput
   ) => Promise<ExecuteRemoteBubbleApprovalCommandResult>;

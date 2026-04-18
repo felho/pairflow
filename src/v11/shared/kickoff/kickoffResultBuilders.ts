@@ -1,8 +1,8 @@
 import type { BubbleStateSnapshot } from "../../../types/bubble.js";
 import type {
-  TmuxDeliveryAckReasonCode,
-  TmuxDeliveryAckStatus,
-  TmuxDeliveryFailureReason
+  DeliveryAckReasonCode,
+  DeliveryAckStatus,
+  DeliveryFailureReason
 } from "../delivery/tmuxDeliveryContract.js";
 import {
   buildKickoffResultBase,
@@ -15,10 +15,10 @@ export interface KickoffIdeationMarkers {
 }
 
 export interface KickoffResultDelivery {
-  status: TmuxDeliveryAckStatus;
+  status: DeliveryAckStatus;
   delivered: boolean;
-  reason?: TmuxDeliveryFailureReason;
-  reason_code?: TmuxDeliveryAckReasonCode;
+  reason?: DeliveryFailureReason;
+  reason_code?: DeliveryAckReasonCode;
   retried: boolean;
 }
 

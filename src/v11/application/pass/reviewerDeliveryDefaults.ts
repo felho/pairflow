@@ -1,6 +1,7 @@
 import { basename, dirname, join } from "node:path";
 
 import type {
+  EmitDeliveryNotificationAckPort,
   EmitTmuxDeliveryNotificationPort,
   ResolveDeliveryMessageRefInput,
   ResolveDeliveryMessageRefPort
@@ -9,12 +10,14 @@ import type { RefreshReviewerContextPort } from "../../shared/ports/reviewerCont
 
 let reviewerDeliveryDefaultsPromise:
   | Promise<{
+      emitDeliveryNotificationAck: EmitDeliveryNotificationAckPort;
       emitTmuxDeliveryNotification: EmitTmuxDeliveryNotificationPort;
       refreshReviewerContext: RefreshReviewerContextPort;
     }>
   | undefined;
 
 async function loadReviewerDeliveryDefaults(): Promise<{
+  emitDeliveryNotificationAck: EmitDeliveryNotificationAckPort;
   emitTmuxDeliveryNotification: EmitTmuxDeliveryNotificationPort;
   refreshReviewerContext: RefreshReviewerContextPort;
 }> {
@@ -63,6 +66,13 @@ export async function emitTmuxDeliveryNotification(
   return defaults.emitTmuxDeliveryNotification(...args);
 }
 
+export async function emitDeliveryNotificationAck(
+  ...args: Parameters<EmitDeliveryNotificationAckPort>
+): Promise<Awaited<ReturnType<EmitDeliveryNotificationAckPort>>> {
+  const defaults = await loadReviewerDeliveryDefaults();
+  return defaults.emitDeliveryNotificationAck(...args);
+}
+
 export async function refreshReviewerContext(
   ...args: Parameters<RefreshReviewerContextPort>
 ): Promise<Awaited<ReturnType<RefreshReviewerContextPort>>> {
@@ -71,10 +81,12 @@ export async function refreshReviewerContext(
 }
 
 export const reviewerDeliveryDefaults = {
+  emitDeliveryNotificationAck,
   emitTmuxDeliveryNotification,
   refreshReviewerContext,
   resolveDeliveryMessageRef
 } as const satisfies {
+  emitDeliveryNotificationAck: EmitDeliveryNotificationAckPort;
   emitTmuxDeliveryNotification: EmitTmuxDeliveryNotificationPort;
   refreshReviewerContext: RefreshReviewerContextPort;
   resolveDeliveryMessageRef: ResolveDeliveryMessageRefPort;

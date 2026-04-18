@@ -54,8 +54,10 @@ describe("executeKickoffValidatedFlow", () => {
     const currentState = createRunningState(created.state);
     const nowIso = "2026-03-20T10:00:00.000Z";
     const emitDelivery = vi.fn(async () => ({
-      delivered: true,
-      message: "ok"
+      status: "accepted" as const,
+      message: "ok",
+      sessionName: "pf_bubble",
+      targetPaneIndex: 1
     }));
 
     const dependencies = {
@@ -149,7 +151,7 @@ describe("executeKickoffValidatedFlow", () => {
     const currentState = createRunningState(created.state);
     const nowIso = "2026-03-20T10:05:00.000Z";
     const emitDelivery = vi.fn(async () => ({
-      delivered: false,
+      status: "rejected" as const,
       message: "",
       reason: "delivery_unconfirmed",
       reason_code: "DELIVERY_ACK_REJECTED"
@@ -363,7 +365,9 @@ describe("executeKickoffValidatedFlow", () => {
       appendEnvelope: vi.fn(async () => ({})),
       emitDelivery: vi.fn(async () => ({
         delivered: true,
-        message: "ok"
+        message: "ok",
+        sessionName: "pf_bubble",
+        targetPaneIndex: 1
       }))
     } as unknown as ResolvedKickoffDependencies;
 

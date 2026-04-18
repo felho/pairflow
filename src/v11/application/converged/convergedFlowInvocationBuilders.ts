@@ -80,16 +80,30 @@ export interface BuildConvergedFlowDependenciesInput {
     ResolveReviewerTestExecutionDirectivePort | undefined;
   applyMetaReviewGateOnConvergence?:
     RunConvergedFlowDependencies["applyMetaReviewGateOnConvergence"];
+  emitDeliveryNotificationAck?:
+    RunConvergedFlowDependencies["emitDeliveryNotificationAck"];
   emitTmuxDeliveryNotification?:
-    RunConvergedFlowDependencies["emitTmuxDeliveryNotification"];
+    RunConvergedFlowDependencies["emitDeliveryNotificationAck"];
   emitBubbleNotification?:
     RunConvergedFlowDependencies["emitBubbleNotification"];
   readTranscriptEnvelopes?: ReadTranscriptEnvelopesPort;
 }
 
+function resolveConvergedDeliveryOverride(input: {
+  emitDeliveryNotificationAck?:
+    RunConvergedFlowDependencies["emitDeliveryNotificationAck"];
+  emitTmuxDeliveryNotification?:
+    RunConvergedFlowDependencies["emitDeliveryNotificationAck"];
+}): RunConvergedFlowDependencies["emitDeliveryNotificationAck"] | undefined {
+  return input.emitDeliveryNotificationAck ?? input.emitTmuxDeliveryNotification;
+}
+
 export function buildConvergedFlowDependencies(
   input: BuildConvergedFlowDependenciesInput
 ): RunConvergedFlowDependencies {
+  const emitDeliveryNotificationAck =
+    resolveConvergedDeliveryOverride(input);
+
   return {
     prepareConvergedRouting: input.prepareConvergedRouting,
     prepareConvergedPolicy: (policyInput) =>
@@ -123,8 +137,8 @@ export function buildConvergedFlowDependencies(
             input.applyMetaReviewGateOnConvergence
         }
       : {}),
-    ...(input.emitTmuxDeliveryNotification !== undefined
-      ? { emitTmuxDeliveryNotification: input.emitTmuxDeliveryNotification }
+    ...(emitDeliveryNotificationAck !== undefined
+      ? { emitDeliveryNotificationAck }
       : {}),
     ...(input.emitBubbleNotification !== undefined
       ? { emitBubbleNotification: input.emitBubbleNotification }
@@ -135,8 +149,10 @@ export function buildConvergedFlowDependencies(
 export interface BuildDefaultConvergedFlowDependenciesInput {
   applyMetaReviewGateOnConvergence?:
     RunConvergedFlowDependencies["applyMetaReviewGateOnConvergence"];
+  emitDeliveryNotificationAck?:
+    RunConvergedFlowDependencies["emitDeliveryNotificationAck"];
   emitTmuxDeliveryNotification?:
-    RunConvergedFlowDependencies["emitTmuxDeliveryNotification"];
+    RunConvergedFlowDependencies["emitDeliveryNotificationAck"];
   emitBubbleNotification?:
     RunConvergedFlowDependencies["emitBubbleNotification"];
   readTranscriptEnvelopes?: ReadTranscriptEnvelopesPort;
@@ -156,6 +172,7 @@ export function buildDefaultConvergedFlowDependencies(
     resolveReviewerTestExecutionDirective:
       input.resolveReviewerTestExecutionDirective,
     applyMetaReviewGateOnConvergence: input.applyMetaReviewGateOnConvergence,
+    emitDeliveryNotificationAck: input.emitDeliveryNotificationAck,
     emitTmuxDeliveryNotification: input.emitTmuxDeliveryNotification,
     emitBubbleNotification: input.emitBubbleNotification,
     ...(input.readTranscriptEnvelopes !== undefined

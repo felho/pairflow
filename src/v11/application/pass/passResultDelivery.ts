@@ -1,30 +1,28 @@
 import type {
-  EmitTmuxDeliveryNotificationResult,
-  TmuxDeliveryAckReasonCode,
-  TmuxDeliveryAckStatus
+  DeliveryAck,
+  DeliveryAckReasonCode,
+  DeliveryAckStatus
 } from "../../shared/ports/tmuxDelivery.js";
 
 export interface PassResultDelivery {
-  status: TmuxDeliveryAckStatus;
+  status: DeliveryAckStatus;
   delivered: boolean;
-  reason?: Exclude<EmitTmuxDeliveryNotificationResult["reason"], undefined>;
-  reason_code?: TmuxDeliveryAckReasonCode;
+  reason?: Extract<DeliveryAck, { status: "rejected" }>["reason"];
+  reason_code?: DeliveryAckReasonCode;
   retried: boolean;
 }
 
 export function mapPassResultDelivery(input: {
-  deliveryResult: EmitTmuxDeliveryNotificationResult | undefined;
+  deliveryResult: DeliveryAck | undefined;
   deliveryRetried: boolean;
 }): PassResultDelivery | undefined {
   if (input.deliveryResult === undefined) {
     return undefined;
   }
 
-  const status: TmuxDeliveryAckStatus =
-    input.deliveryResult.delivered ? "accepted" : "rejected";
   return {
-    status,
-    delivered: input.deliveryResult.delivered,
+    status: input.deliveryResult.status,
+    delivered: input.deliveryResult.status === "accepted",
     ...(input.deliveryResult.reason !== undefined
       ? { reason: input.deliveryResult.reason }
       : {}),

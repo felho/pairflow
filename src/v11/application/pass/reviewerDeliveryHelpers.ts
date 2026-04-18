@@ -1,6 +1,6 @@
 import type {
-  EmitTmuxDeliveryNotificationInput,
-  EmitTmuxDeliveryNotificationResult
+  DeliveryAck,
+  EmitDeliveryNotificationInput
 } from "../../../v11/shared/ports/tmuxDelivery.js";
 import {
   formatReviewerBriefPrompt,
@@ -107,7 +107,7 @@ export function buildPassDeliveryInput(input: {
   reviewerFocus: Awaited<ReturnType<ReadReviewerFocusArtifactPort>> | undefined;
   initialDelayMs: number | undefined;
   resolveDeliveryMessageRef: ResolveDeliveryMessageRefPort;
-}): EmitTmuxDeliveryNotificationInput {
+}): EmitDeliveryNotificationInput {
   const reviewerFocusForDelivery: ReviewerFocusExtractionResult | undefined = (
     input.executeInput.senderRole === "implementer"
     && input.reviewerFocus?.status === "present"
@@ -143,7 +143,7 @@ export function shouldRetryPassDelivery(input: {
     senderRole: "implementer" | "reviewer";
     recipientRole: "implementer" | "reviewer";
   };
-  deliveryResult: EmitTmuxDeliveryNotificationResult | undefined;
+  deliveryResult: DeliveryAck | undefined;
 }): boolean {
   return (
     input.executeInput.senderRole === "implementer"

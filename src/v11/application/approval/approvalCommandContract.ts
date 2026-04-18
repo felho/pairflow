@@ -1,6 +1,6 @@
 import type {
-  EmitTmuxDeliveryNotificationPort,
-  EmitTmuxDeliveryNotificationResult
+  DeliveryAck,
+  EmitDeliveryAckLikePort
 } from "../../shared/ports/tmuxDelivery.js";
 import type {
   BubbleStateSnapshot
@@ -11,12 +11,25 @@ import type {
 } from "../../../types/protocol.js";
 
 export interface EmitApprovalDecisionDependencies {
-  emitTmuxDeliveryNotification?: EmitTmuxDeliveryNotificationPort;
+  emitTmuxDeliveryNotification?: EmitDeliveryAckLikePort;
+}
+
+export interface ApprovalDecisionDeliverySignal {
+  status: DeliveryAck["status"];
+  delivered?: boolean;
+  message: string;
+  sessionName?: string;
+  targetPaneIndex?: number;
+  deliveryTargetReasonCode?: NonNullable<
+    DeliveryAck["deliveryTargetReasonCode"]
+  >;
+  reason?: Extract<DeliveryAck, { status: "rejected" }>["reason"];
+  reason_code?: Extract<DeliveryAck, { status: "rejected" }>["reason_code"];
 }
 
 export interface ApprovalDecisionDeliverySignalsResult {
-  statusDelivery: EmitTmuxDeliveryNotificationResult;
-  implementerDelivery?: EmitTmuxDeliveryNotificationResult;
+  statusDelivery: ApprovalDecisionDeliverySignal;
+  implementerDelivery?: ApprovalDecisionDeliverySignal;
 }
 
 export interface EmitApprovalDecisionInput {

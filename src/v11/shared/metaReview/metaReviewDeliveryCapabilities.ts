@@ -1,12 +1,12 @@
 import type {
-  EmitTmuxDeliveryNotificationInput,
-  EmitTmuxDeliveryNotificationResult,
+  DeliveryAck,
+  EmitDeliveryNotificationInput,
   ResolveDeliveryMessageRefInput
 } from "../delivery/tmuxDeliveryContract.js";
 
 export type MetaReviewDeliveryEmitter = (
-  input: EmitTmuxDeliveryNotificationInput
-) => Promise<EmitTmuxDeliveryNotificationResult>;
+  input: EmitDeliveryNotificationInput
+) => Promise<DeliveryAck>;
 
 export type MetaReviewDeliveryMessageRefBuilder = (
   input: ResolveDeliveryMessageRefInput

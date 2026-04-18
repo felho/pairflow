@@ -51,7 +51,7 @@ describe("watchdog command defaults", () => {
             soundPath: null,
             reason: "disabled" as const
           }),
-          emitTmuxDeliveryNotification: async () => ({
+          emitDeliveryNotificationAck: async () => ({
             delivered: true,
             message: "ok"
           }),

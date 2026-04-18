@@ -1,7 +1,8 @@
 import type {
-  EmitTmuxDeliveryNotificationResult,
-  TmuxDeliveryAckReasonCode,
-  TmuxDeliveryAckStatus
+  DeliveryAck,
+  DeliveryAckReasonCode,
+  DeliveryAckStatus,
+  EmitDeliveryAckLikePort
 } from "../../shared/ports/tmuxDelivery.js";
 import type { applyMetaReviewGateOnConvergence } from "../../shared/metaReviewGate/metaReviewGateCommandApi.js";
 import type { ResolvedBubbleWorkspace } from "../../shared/ports/workspaceResolution.js";
@@ -16,20 +17,21 @@ import {
   buildDefaultConvergedGateDeliveryDependencies,
   type ResolvedConvergedGateDeliveryDependencies
 } from "./convergedDefaultDependencies.js";
+import { normalizeDeliveryAck } from "../../shared/delivery/deliveryAckNormalization.js";
 
 export interface ConvergedDeliveryResult {
-  status: TmuxDeliveryAckStatus;
+  status: DeliveryAckStatus;
   delivered: boolean;
   reason?: string;
-  reason_code?: TmuxDeliveryAckReasonCode;
+  reason_code?: DeliveryAckReasonCode;
   retried: boolean;
 }
 
 interface NormalizedConvergedDelivery {
-  status: TmuxDeliveryAckStatus;
+  status: DeliveryAckStatus;
   delivered: boolean;
-  reason?: EmitTmuxDeliveryNotificationResult["reason"];
-  reason_code?: TmuxDeliveryAckReasonCode;
+  reason?: Extract<DeliveryAck, { status: "rejected" }>["reason"];
+  reason_code?: DeliveryAckReasonCode;
 }
 
 function withDeliveryTargetRole(
@@ -54,13 +56,11 @@ function withDeliveryTargetRole(
 }
 
 function normalizeConvergedDelivery(
-  delivery: EmitTmuxDeliveryNotificationResult
+  delivery: DeliveryAck
 ): NormalizedConvergedDelivery {
-  const status: TmuxDeliveryAckStatus =
-    delivery.delivered ? "accepted" : "rejected";
   return {
-    status,
-    delivered: delivery.delivered,
+    status: delivery.status,
+    delivered: delivery.status === "accepted",
     ...(delivery.reason !== undefined ? { reason: delivery.reason } : {}),
     ...(delivery.reason_code !== undefined
       ? { reason_code: delivery.reason_code }
@@ -81,7 +81,7 @@ function resolveAggregateConvergedDeliveryReason(
     return "partial_delivery_failed";
   }
 
-  const reasonPriority: Array<NonNullable<EmitTmuxDeliveryNotificationResult["reason"]>> = [
+  const reasonPriority: Array<Extract<DeliveryAck, { status: "rejected" }>["reason"]> = [
     "delivery_unconfirmed",
     "tmux_send_failed",
     "registry_read_failed",
@@ -98,7 +98,7 @@ function resolveAggregateConvergedDeliveryReason(
 }
 
 function buildConvergedDelivery(
-  deliveries: EmitTmuxDeliveryNotificationResult[],
+  deliveries: DeliveryAck[],
   retried: boolean
 ): ConvergedDeliveryResult {
   const normalizedDeliveries = deliveries.map(normalizeConvergedDelivery);
@@ -136,11 +136,11 @@ export async function executeGateDelivery(input: {
   implementer: AgentName;
   reviewer: AgentName;
   gateResult: Awaited<ReturnType<typeof applyMetaReviewGateOnConvergence>>;
-  emitDelivery: ResolvedConvergedGateDeliveryDependencies["emitTmuxDeliveryNotification"];
+  emitDelivery: EmitDeliveryAckLikePort;
   resolveMessageRef: ResolvedConvergedGateDeliveryDependencies["resolveDeliveryMessageRef"];
 }): Promise<ConvergedDeliveryResult> {
   const resolvedDependencies = buildDefaultConvergedGateDeliveryDependencies({
-    emitTmuxDeliveryNotification: input.emitDelivery,
+    emitDeliveryNotificationAck: input.emitDelivery,
     resolveDeliveryMessageRef: input.resolveMessageRef
   });
   const gateRef = resolvedDependencies.resolveDeliveryMessageRef({
@@ -154,8 +154,8 @@ export async function executeGateDelivery(input: {
       initialDelayMs?: number;
       deliveryAttempts?: number;
     }
-  ): Promise<EmitTmuxDeliveryNotificationResult> =>
-    resolvedDependencies.emitTmuxDeliveryNotification({
+  ): Promise<DeliveryAck> =>
+    resolvedDependencies.emitDeliveryNotificationAck({
       bubbleId: input.resolved.bubbleId,
       bubbleConfig: input.resolved.bubbleConfig,
       sessionsPath: input.resolved.bubblePaths.sessionsPath,
@@ -167,12 +167,20 @@ export async function executeGateDelivery(input: {
       ...(options?.deliveryAttempts !== undefined
         ? { deliveryAttempts: options.deliveryAttempts }
         : {})
-    }).catch(() => ({
-      delivered: false,
+    }).then(normalizeDeliveryAck).catch(() => ({
+      status: "rejected",
       message: "",
       reason: "tmux_send_failed",
       reason_code: "DELIVERY_ACK_REJECTED"
     }));
+
+  const emitDeliveryNormalized = (
+    envelope: ProtocolEnvelope,
+    options?: {
+      initialDelayMs?: number;
+      deliveryAttempts?: number;
+    }
+  ): Promise<DeliveryAck> => emitDeliverySafe(envelope, options);
 
   if (input.gateResult.route === "auto_rework") {
     const autoReworkDeliveryInput = {
@@ -184,7 +192,7 @@ export async function executeGateDelivery(input: {
     } as const;
     const autoReworkDelivery = await executeImplementerHandoffDelivery({
       deliveryInput: autoReworkDeliveryInput,
-      emitDelivery: resolvedDependencies.emitTmuxDeliveryNotification
+      emitDelivery: resolvedDependencies.emitDeliveryNotificationAck
     });
     return buildConvergedDelivery(
       [
@@ -210,7 +218,7 @@ export async function executeGateDelivery(input: {
       : [input.gateResult.gateEnvelope];
 
   const deliveryResults = await Promise.all(
-    recipientEnvelopes.map((envelope) => emitDeliverySafe(envelope))
+    recipientEnvelopes.map((envelope) => emitDeliveryNormalized(envelope))
   );
 
   return buildConvergedDelivery(deliveryResults, false);

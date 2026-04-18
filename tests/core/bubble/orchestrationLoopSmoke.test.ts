@@ -155,6 +155,7 @@ describe("bubble orchestration loop smoke", () => {
       return Promise.resolve({
         delivered: true,
         sessionName: `pf-${loopBubble.bubbleId}`,
+        targetPaneIndex: 1,
         message: "ok"
       });
     };
@@ -224,6 +225,7 @@ describe("bubble orchestration loop smoke", () => {
           return Promise.resolve({
             delivered: true,
             sessionName: `pf-${loopBubble.bubbleId}`,
+            targetPaneIndex: 1,
             message: `${envelope.type}:${envelope.recipient}`
           });
         },

@@ -13,7 +13,7 @@ import type {
   ReviewerFindingsClaim,
   ReviewerFindingsClaimParserMetadata
 } from "../../domain/pass/reviewerFindingsClaim.js";
-import type { EmitTmuxDeliveryNotificationResult } from "../../shared/ports/tmuxDelivery.js";
+import type { DeliveryAck } from "../../shared/ports/tmuxDelivery.js";
 import type { PassActivationProvenance } from "./passCommandContract.js";
 
 export interface FinalizeNormalPassInput {
@@ -45,7 +45,7 @@ export interface FinalizeNormalPassInput {
   envelope: ProtocolEnvelope;
   state: BubbleStateSnapshot;
   activation?: PassActivationProvenance;
-  deliveryResult: EmitTmuxDeliveryNotificationResult | undefined;
+  deliveryResult: DeliveryAck | undefined;
   deliveryRetried: boolean;
 }
 
@@ -67,7 +67,7 @@ export interface FinalizeNormalPassDependencies<TResult> {
     metadata: Record<string, unknown> | undefined
   ) => boolean | undefined;
   mapPassResultDelivery: (input: {
-    deliveryResult: EmitTmuxDeliveryNotificationResult | undefined;
+    deliveryResult: DeliveryAck | undefined;
     deliveryRetried: boolean;
   }) => {
     status: "accepted" | "rejected";

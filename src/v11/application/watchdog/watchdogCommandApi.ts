@@ -51,8 +51,8 @@ export async function runBubbleWatchdog(
   const loadedState = await readState(resolved.bubblePaths.statePath);
   const state = loadedState.state;
   const emitDelivery =
-    dependencies.emitTmuxDeliveryNotification ??
-    watchdogCommandDefaults.emitTmuxDeliveryNotification;
+    dependencies.emitDeliveryNotificationAck ??
+    watchdogCommandDefaults.emitDeliveryNotificationAck;
   const emitNotification =
     dependencies.emitBubbleNotification ??
     watchdogCommandDefaults.emitBubbleNotification;
