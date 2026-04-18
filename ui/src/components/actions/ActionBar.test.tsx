@@ -169,6 +169,47 @@ describe("ActionBar", () => {
     expect(onAction).not.toHaveBeenCalled();
   });
 
+  it("keeps reply and resume actions available for waiting-human meta-review timeout bubbles", () => {
+    render(
+      <ActionBar
+        bubble={bubbleCard({
+          bubbleId: "b-meta-timeout",
+          repoPath: "/repo-a",
+          state: "WAITING_HUMAN",
+          activeAgent: null,
+          activeRole: null,
+          metaReview: {
+            authorityActive: false,
+            runtimeDelivery: {
+              status: "failed",
+              reasonCode: "META_REVIEWER_PANE_EXITED",
+              message: "meta-review runtime failed before submit completed",
+              observedAt: "2026-02-24T12:30:00.000Z",
+              observedForHandoffId: "meta_review:b-meta-timeout:round:3:attempt:1",
+              observedForRound: 3
+            }
+          }
+        })}
+        attach={{
+          visible: false,
+          enabled: false,
+          command: "tmux attach -t pf-b-meta-timeout",
+          hint: null
+        }}
+        isSubmitting={false}
+        actionError={null}
+        retryHint={null}
+        actionFailure={null}
+        onAction={vi.fn(() => Promise.resolve(undefined))}
+        onClearFeedback={vi.fn()}
+      />
+    );
+
+    expect(screen.getByRole("button", { name: "Reply" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Resume" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Queue Rework" })).toBeInTheDocument();
+  });
+
   it("submits commit form with default auto=true", async () => {
     const user = userEvent.setup();
     const onAction = vi.fn(() => Promise.resolve(undefined));

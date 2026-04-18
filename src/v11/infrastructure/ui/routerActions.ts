@@ -153,47 +153,55 @@ async function mapActionErrorToApiError(input: {
     });
   }
 
-  if (isBubbleCommitErrorLike(input.error) && input.error.reasonCode !== undefined) {
+  const bubbleCommitReasonCode =
+    isBubbleCommitErrorLike(input.error)
+      && typeof input.error.reasonCode === "string"
+      ? input.error.reasonCode
+      : undefined;
+
+  if (bubbleCommitReasonCode !== undefined) {
     const details = {
       bubbleId: input.bubbleId,
       repoPath: input.repoPath,
-      reasonCode: input.error.reasonCode
+      reasonCode: bubbleCommitReasonCode
     };
-    if (input.error.reasonCode === "REMOTE_STATUS_CONFIG_INVALID") {
+    if (bubbleCommitReasonCode === "REMOTE_STATUS_CONFIG_INVALID") {
       return badRequest(message, details);
     }
     if (
-      input.error.reasonCode === "REMOTE_STATUS_TRANSPORT_FAILED" ||
-      input.error.reasonCode === "COMMIT_REMOTE_START_REQUIRED"
+      bubbleCommitReasonCode === "REMOTE_STATUS_TRANSPORT_FAILED" ||
+      bubbleCommitReasonCode === "COMMIT_REMOTE_START_REQUIRED"
     ) {
-      return mapConflictWithCurrentState(input.error.reasonCode);
+      return mapConflictWithCurrentState(bubbleCommitReasonCode);
     }
-    if (input.error.reasonCode === "REMOTE_COMMIT_TRANSPORT_FAILED") {
+    if (bubbleCommitReasonCode === "REMOTE_COMMIT_TRANSPORT_FAILED") {
       return internalError(message, details);
     }
-    if (input.error.reasonCode === "REMOTE_COMMIT_PAYLOAD_INVALID") {
+    if (bubbleCommitReasonCode === "REMOTE_COMMIT_PAYLOAD_INVALID") {
       return internalError(message, details);
     }
-    if (input.error.reasonCode === "REMOTE_COMMIT_SYNC_BACK_FAILED") {
+    if (bubbleCommitReasonCode === "REMOTE_COMMIT_SYNC_BACK_FAILED") {
       return internalError(message, details);
     }
     return internalError(message, details);
   }
 
-  if (isRemoteBubbleCommitCommandErrorLike(input.error) && input.error.code !== undefined) {
+  const remoteCommitCommandError =
+    isRemoteBubbleCommitCommandErrorLike(input.error)
+      && typeof input.error.code === "string"
+      ? input.error
+      : null;
+
+  if (remoteCommitCommandError !== null) {
     return internalError(message, {
       bubbleId: input.bubbleId,
       repoPath: input.repoPath,
-      reasonCode: input.error.code
+      reasonCode: remoteCommitCommandError.code
     });
   }
 
   if (isConflictErrorMessage(message)) {
-    return mapConflictWithCurrentState(
-      isBubbleCommitErrorLike(input.error) && input.error.reasonCode !== undefined
-        ? input.error.reasonCode
-        : undefined
-    );
+    return mapConflictWithCurrentState(bubbleCommitReasonCode);
   }
 
   if (

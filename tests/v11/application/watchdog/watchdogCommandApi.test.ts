@@ -23,7 +23,11 @@ import {
 import { setupRunningBubbleFixture } from "../../../helpers/bubble.js";
 import { initGitRepository } from "../../../helpers/git.js";
 import { readStateSnapshot, writeStateSnapshot } from "../../../../src/v11/infrastructure/state/stateStore.js";
-import { buildRunningExecutionContext } from "../../../../src/v11/shared/state/executionContext.js";
+import {
+  buildRunningExecutionContext,
+  metaReviewExecutionContextToRunningContext
+} from "../../../../src/v11/shared/state/executionContext.js";
+import { buildMetaReviewExecutionContext } from "../../../../src/v11/shared/metaReview/metaReviewExecutionContext.js";
 
 const tempDirs: string[] = [];
 
@@ -101,6 +105,45 @@ describe("watchdogCommandApi", () => {
           }
         : {})
     };
+  }
+
+  async function moveToMetaReviewRunning(input: {
+    statePath: string;
+    bubbleId: string;
+    round: number;
+    activeSinceIso: string;
+    lastCommandAtIso: string;
+  }): Promise<void> {
+    const loaded = await readStateSnapshot(input.statePath);
+    const executionContext = buildMetaReviewExecutionContext({
+      bubbleId: input.bubbleId,
+      round: input.round,
+      startedAt: input.activeSinceIso,
+      watchdogTimeoutMinutes: 60,
+      attempt: 1
+    });
+
+    await writeStateSnapshot(
+      input.statePath,
+      {
+        ...loaded.state,
+        state: "RUNNING",
+        round: input.round,
+        active_agent: "codex",
+        active_role: "meta_reviewer",
+        active_since: input.activeSinceIso,
+        last_command_at: input.lastCommandAtIso,
+        execution_context: metaReviewExecutionContextToRunningContext(executionContext),
+        meta_review: {
+          ...loaded.state.meta_review!,
+          execution_context: executionContext
+        }
+      },
+      {
+        expectedFingerprint: loaded.fingerprint,
+        expectedState: "RUNNING"
+      }
+    );
   }
 
   it("seeds the first pane-activity record before timeout without escalating", async () => {
@@ -604,6 +647,39 @@ describe("watchdogCommandApi", () => {
     expect(result.escalated).toBe(true);
     expect(result.reason).toBe("escalated");
     expect(result.state.state).toBe("WAITING_HUMAN");
+  });
+
+  it("keeps meta-review timeout escalations resumable", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_watchdog_v11_meta_resume_01",
+      task: "Meta-review timeout should keep resumable human gate",
+      startedAt: "2026-02-22T12:00:00.000Z"
+    });
+    await moveToMetaReviewRunning({
+      statePath: bubble.paths.statePath,
+      bubbleId: bubble.bubbleId,
+      round: 1,
+      activeSinceIso: "2026-02-22T12:00:00.000Z",
+      lastCommandAtIso: "2026-02-22T12:00:00.000Z"
+    });
+
+    const result = await runBubbleWatchdogV11(
+      {
+        bubbleId: bubble.bubbleId,
+        cwd: repoPath,
+        now: new Date("2026-02-22T14:00:00.000Z")
+      },
+      baseDependencies()
+    );
+
+    expect(result.escalated).toBe(true);
+    expect(result.reason).toBe("escalated");
+    expect(result.state.state).toBe("WAITING_HUMAN");
+    expect(result.state.active_agent).toBe("codex");
+    expect(result.state.active_role).toBe("meta_reviewer");
+    expect(result.state.active_since).toBe("2026-02-22T12:00:00.000Z");
   });
 
   it("seeds a fresh record on the first expired run without escalating", async () => {

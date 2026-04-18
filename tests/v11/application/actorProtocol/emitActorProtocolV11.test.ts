@@ -147,20 +147,6 @@ function buildApproveMetaReviewReportJson(runId: string): {
   };
 }
 
-function buildInconclusiveMetaReviewReportJson(runId: string): {
-  findings_claim_state: "unknown";
-  findings_claim_source: "meta_review_artifact";
-  findings_count: number;
-  meta_review_run_id: string;
-} {
-  return {
-    findings_claim_state: "unknown",
-    findings_claim_source: "meta_review_artifact",
-    findings_count: 0,
-    meta_review_run_id: runId
-  };
-}
-
 function buildSyntheticAuthoritativeContext(input: {
   repo?: string;
   bubbleId: string;

@@ -12,18 +12,14 @@ import type {
   ActorEmitContextSnapshot
 } from "../../shared/actorProtocol/actorEmitContext.js";
 
-const actorRuntimePolicyCheckIds = [
-  "context_snapshot_integrity",
-  "input_context_match",
-  "implementer_authority",
-  "reviewer_authority",
-  "reviewer_human_question_retained_fallback",
-  "meta_reviewer_authority",
-  "meta_reviewer_active_agent_codex_when_present"
-] as const;
-
 export type ActorRuntimePolicyCheckId =
-  (typeof actorRuntimePolicyCheckIds)[number];
+  | "context_snapshot_integrity"
+  | "input_context_match"
+  | "implementer_authority"
+  | "reviewer_authority"
+  | "reviewer_human_question_retained_fallback"
+  | "meta_reviewer_authority"
+  | "meta_reviewer_active_agent_codex_when_present";
 
 export type ActorRuntimePolicyOwner =
   | "canonical_authority_context"
@@ -35,24 +31,17 @@ export interface ActorRuntimePolicyCheck {
   description: string;
 }
 
-const actorRuntimeDispatchHandlers = [
-  "implementer_route",
-  "reviewer_route",
-  "meta_reviewer_route",
-  "reviewer_human_question_fallback"
-] as const;
-
 type ActorRuntimeDispatchHandler =
-  (typeof actorRuntimeDispatchHandlers)[number];
+  | "implementer_route"
+  | "reviewer_route"
+  | "meta_reviewer_route"
+  | "reviewer_human_question_fallback";
 
-const actorRuntimeAdapterIds = [
-  "pass_adapter",
-  "human_question_adapter",
-  "convergence_adapter",
-  "meta_review_result_adapter"
-] as const;
-
-export type ActorRuntimeAdapterId = (typeof actorRuntimeAdapterIds)[number];
+export type ActorRuntimeAdapterId =
+  | "pass_adapter"
+  | "human_question_adapter"
+  | "convergence_adapter"
+  | "meta_review_result_adapter";
 
 export interface ActorRuntimeRoute {
   id:

@@ -132,9 +132,6 @@ export async function escalateMetaReviewWatchdog(
   const nextState = assertValidBubbleStateSnapshot({
     ...context.state,
     state: "WAITING_HUMAN",
-    active_agent: null,
-    active_role: null,
-    active_since: null,
     execution_context: null,
     last_command_at: context.nowIso,
     meta_review: clearLiveMetaReviewSnapshot(context.state.meta_review)

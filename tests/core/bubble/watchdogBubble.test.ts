@@ -9,6 +9,11 @@ import {
   emitAskHumanFromWorkspaceV11 as emitAskHumanFromWorkspace
 } from "../../../src/v11/application/askHuman/emitAskHumanV11.js";
 import { emitRequestReworkV11 as emitRequestRework } from "../../../src/v11/application/approval/emitApprovalV11.js";
+import {
+  DEFAULT_RESUME_MESSAGE,
+  resumeBubbleV11 as resumeBubble
+} from "../../../src/v11/application/resume/emitResumeV11.js";
+import { emitHumanReplyV11 as emitHumanReply } from "../../../src/v11/application/reply/emitReplyV11.js";
 import { readTranscriptEnvelopes } from "../../../src/v11/infrastructure/artifact/transcript/transcriptStore.js";
 import {
   readRuntimeSessionsRegistry,
@@ -519,6 +524,103 @@ describe("runBubbleWatchdog", () => {
     expect(transcript.at(-1)?.type).toBe("HUMAN_QUESTION");
     const inbox = await readTranscriptEnvelopes(bubble.paths.inboxPath);
     expect(inbox.at(-1)?.type).toBe("HUMAN_QUESTION");
+  });
+
+  it("allows resume after meta-review watchdog timeout", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_watchdog_meta_timeout_resume_01",
+      task: "Meta-review watchdog timeout should remain resumable",
+      startedAt: "2026-02-22T12:00:00.000Z"
+    });
+    await moveToMetaReviewRunning({
+      statePath: bubble.paths.statePath,
+      activeSinceIso: "2026-02-22T12:00:00.000Z",
+      lastCommandAtIso: "2026-02-22T12:00:00.000Z"
+    });
+
+    const watchdogResult = await runBubbleWatchdog({
+      bubbleId: bubble.bubbleId,
+      cwd: repoPath,
+      now: new Date("2026-02-22T14:00:00.000Z")
+    });
+
+    expect(watchdogResult.escalated).toBe(true);
+    expect(watchdogResult.state.state).toBe("WAITING_HUMAN");
+
+    const resumedAt = new Date("2026-02-22T14:01:00.000Z");
+    const resumeResult = await resumeBubble({
+      bubbleId: bubble.bubbleId,
+      cwd: repoPath,
+      now: resumedAt
+    });
+
+    expect(resumeResult.envelope.type).toBe("HUMAN_REPLY");
+    expect(resumeResult.envelope.payload.message).toBe(DEFAULT_RESUME_MESSAGE);
+    expect(resumeResult.state.state).toBe("RUNNING");
+    expect(resumeResult.state.active_agent).toBe("codex");
+    expect(resumeResult.state.active_role).toBe("meta_reviewer");
+    expect(resumeResult.state.active_since).toBe(resumedAt.toISOString());
+    expect(resumeResult.state.execution_context).toMatchObject({
+      active_role: "meta_reviewer",
+      awaited_output_type: "meta_review_result",
+      round: 1,
+      started_at: resumedAt.toISOString()
+    });
+
+    const transcript = await readTranscriptEnvelopes(bubble.paths.transcriptPath);
+    expect(transcript.at(-1)?.type).toBe("HUMAN_REPLY");
+  });
+
+  it("allows explicit reply after meta-review watchdog timeout", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_watchdog_meta_timeout_reply_01",
+      task: "Meta-review watchdog timeout should accept explicit human reply",
+      startedAt: "2026-02-22T12:00:00.000Z"
+    });
+    await moveToMetaReviewRunning({
+      statePath: bubble.paths.statePath,
+      activeSinceIso: "2026-02-22T12:00:00.000Z",
+      lastCommandAtIso: "2026-02-22T12:00:00.000Z"
+    });
+
+    const watchdogResult = await runBubbleWatchdog({
+      bubbleId: bubble.bubbleId,
+      cwd: repoPath,
+      now: new Date("2026-02-22T14:00:00.000Z")
+    });
+
+    expect(watchdogResult.escalated).toBe(true);
+    expect(watchdogResult.state.state).toBe("WAITING_HUMAN");
+
+    const replyAt = new Date("2026-02-22T14:01:00.000Z");
+    const replyResult = await emitHumanReply({
+      bubbleId: bubble.bubbleId,
+      message: "Meta-review timeout acknowledged; continue the meta-review flow.",
+      cwd: repoPath,
+      now: replyAt
+    });
+
+    expect(replyResult.envelope.type).toBe("HUMAN_REPLY");
+    expect(replyResult.envelope.payload.message).toBe(
+      "Meta-review timeout acknowledged; continue the meta-review flow."
+    );
+    expect(replyResult.state.state).toBe("RUNNING");
+    expect(replyResult.state.active_agent).toBe("codex");
+    expect(replyResult.state.active_role).toBe("meta_reviewer");
+    expect(replyResult.state.active_since).toBe(replyAt.toISOString());
+    expect(replyResult.state.execution_context).toMatchObject({
+      active_role: "meta_reviewer",
+      awaited_output_type: "meta_review_result",
+      round: 1,
+      started_at: replyAt.toISOString()
+    });
+
+    const transcript = await readTranscriptEnvelopes(bubble.paths.transcriptPath);
+    expect(transcript.at(-1)?.type).toBe("HUMAN_REPLY");
   });
 
   it("keeps RUNNING meta-review authority before deadline even when runtime delivery failed", async () => {
