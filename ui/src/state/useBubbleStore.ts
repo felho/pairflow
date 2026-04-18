@@ -223,6 +223,22 @@ function normalizeBubbleDetail(detail: UiBubbleDetail): UiBubbleDetail {
   };
 }
 
+function resolveSelectedRepos(input: {
+  priorSelected: string[];
+  priorRepos: string[];
+  repos: string[];
+}): string[] {
+  if (input.priorSelected.length === 0) {
+    return [...input.repos];
+  }
+
+  const repoSet = new Set(input.repos);
+  const priorRepoSet = new Set(input.priorRepos);
+  const retained = input.priorSelected.filter((repo) => repoSet.has(repo));
+  const discovered = input.repos.filter((repo) => !priorRepoSet.has(repo));
+  return [...retained, ...discovered];
+}
+
 function mergeExpandedDetailWithSummary(
   detail: UiBubbleDetail,
   bubble: BubbleCardModel
@@ -1073,11 +1089,11 @@ export function createBubbleStore(
           if (initializeId !== latestInitializeId) {
             return;
           }
-          const priorSelected = get().selectedRepos;
-          const selectedRepos =
-            priorSelected.length > 0
-              ? priorSelected.filter((repo) => repos.includes(repo))
-              : [...repos];
+          const selectedRepos = resolveSelectedRepos({
+            priorSelected: get().selectedRepos,
+            priorRepos: get().repos,
+            repos
+          });
 
           const payloads = await fetchRepoPayloads(api, repos);
           if (initializeId !== latestInitializeId) {
@@ -1138,8 +1154,13 @@ export function createBubbleStore(
             void refreshExpandedBubble(expandedId);
           }
 
+          const hadEventsClient = eventsClient !== null;
           const client = ensureEventsClient();
-          client.start();
+          if (hadEventsClient) {
+            client.refresh();
+          } else {
+            client.start();
+          }
         } catch (error) {
           if (initializeId !== latestInitializeId) {
             return;

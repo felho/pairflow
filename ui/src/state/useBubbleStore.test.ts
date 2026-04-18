@@ -212,6 +212,49 @@ describe("createBubbleStore", () => {
     expect(client.refresh).toHaveBeenCalledTimes(1);
   });
 
+  it("auto-selects newly discovered repos on reinitialize without re-enabling manually hidden repos", async () => {
+    let repos = ["/repo-a", "/repo-b"];
+    const bubblesByRepo = new Map([
+      ["/repo-a", [bubbleSummary({ bubbleId: "b-a", repoPath: "/repo-a" })]],
+      ["/repo-b", [bubbleSummary({ bubbleId: "b-b", repoPath: "/repo-b" })]],
+      ["/repo-c", [bubbleSummary({ bubbleId: "b-c", repoPath: "/repo-c" })]]
+    ]);
+
+    const api = createApiStub({
+      getRepos: vi.fn(async () => repos),
+      getBubbles: vi.fn(async (repoPath: string) => ({
+        repo: repoSummary(repoPath),
+        bubbles: bubblesByRepo.get(repoPath) ?? []
+      }))
+    });
+
+    const client = {
+      start: vi.fn(),
+      stop: vi.fn(),
+      refresh: vi.fn()
+    };
+
+    const store = createBubbleStore({
+      api,
+      createEventsClient: () => client
+    });
+
+    await store.getState().initialize();
+    await store.getState().toggleRepo("/repo-b");
+
+    repos = ["/repo-a", "/repo-b", "/repo-c"];
+    await store.getState().initialize();
+
+    expect(store.getState().repos).toEqual(repos);
+    expect(store.getState().selectedRepos).toEqual(["/repo-a", "/repo-c"]);
+    expect(selectVisibleBubbles(store.getState()).map((bubble) => bubble.bubbleId)).toEqual([
+      "b-a",
+      "b-c"
+    ]);
+    expect(client.start).toHaveBeenCalledTimes(1);
+    expect(client.refresh).toHaveBeenCalledTimes(2);
+  });
+
   it("adds and auto-expands newly created bubbles from realtime update events", async () => {
     const existingBubble = bubbleSummary({ bubbleId: "b-existing", repoPath: "/repo-a" });
     const createdBubble = bubbleSummary({ bubbleId: "b-created", repoPath: "/repo-a" });
