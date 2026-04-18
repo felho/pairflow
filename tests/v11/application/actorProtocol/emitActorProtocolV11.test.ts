@@ -254,9 +254,9 @@ describe("emitActorProtocolV11 runtime", () => {
         id: "implementer_pass",
         authorityRole: "implementer",
         inputKind: "pass",
-        handler: "implementer_wrapper",
+        handler: "implementer_route",
         adapter: "pass_adapter",
-        routePolicy: "wrapper",
+        routePolicy: "primary_route",
         policyCheckIds: [
           "context_snapshot_integrity",
           "input_context_match",
@@ -267,9 +267,9 @@ describe("emitActorProtocolV11 runtime", () => {
         id: "implementer_human_question",
         authorityRole: "implementer",
         inputKind: "human_question",
-        handler: "implementer_wrapper",
+        handler: "implementer_route",
         adapter: "human_question_adapter",
-        routePolicy: "wrapper",
+        routePolicy: "primary_route",
         policyCheckIds: [
           "context_snapshot_integrity",
           "input_context_match",
@@ -280,9 +280,9 @@ describe("emitActorProtocolV11 runtime", () => {
         id: "reviewer_pass",
         authorityRole: "reviewer",
         inputKind: "pass",
-        handler: "reviewer_wrapper",
+        handler: "reviewer_route",
         adapter: "pass_adapter",
-        routePolicy: "wrapper",
+        routePolicy: "primary_route",
         policyCheckIds: [
           "context_snapshot_integrity",
           "input_context_match",
@@ -293,9 +293,9 @@ describe("emitActorProtocolV11 runtime", () => {
         id: "reviewer_convergence",
         authorityRole: "reviewer",
         inputKind: "convergence",
-        handler: "reviewer_wrapper",
+        handler: "reviewer_route",
         adapter: "convergence_adapter",
-        routePolicy: "wrapper",
+        routePolicy: "primary_route",
         policyCheckIds: [
           "context_snapshot_integrity",
           "input_context_match",
@@ -319,9 +319,9 @@ describe("emitActorProtocolV11 runtime", () => {
         id: "meta_reviewer_meta_review_result",
         authorityRole: "meta_reviewer",
         inputKind: "meta_review_result",
-        handler: "meta_reviewer_wrapper",
+        handler: "meta_reviewer_route",
         adapter: "meta_review_result_adapter",
-        routePolicy: "wrapper",
+        routePolicy: "primary_route",
         policyCheckIds: [
           "context_snapshot_integrity",
           "input_context_match",
@@ -413,7 +413,7 @@ describe("emitActorProtocolV11 runtime", () => {
         reasonCode: "ACTOR_EMIT_CONTEXT_INVALID",
         context: {
           route: "resolveActorRuntimeDispatchPlan",
-          expectedAuthority: "implementer authority wrapper",
+          expectedAuthority: "implementer authority route",
           receivedKind: "convergence"
         }
       } satisfies Partial<ActorEmitContextError>);
@@ -528,7 +528,7 @@ describe("emitActorProtocolV11 runtime", () => {
     const bubble = await setupRunningBubbleFixture({
       repoPath,
       bubbleId: "b_actor_protocol_dispatch_01",
-      task: "Outer dispatcher should use implementer wrapper"
+      task: "Outer dispatcher should use implementer route"
     });
     const authoritativeContext = await resolveActorEmitContextByBubbleId({
       bubbleId: bubble.bubbleId,
@@ -546,7 +546,7 @@ describe("emitActorProtocolV11 runtime", () => {
         bubble_id: bubble.bubbleId,
         handoff_id: authoritativeContext.handoff_id,
         execution_id: authoritativeContext.execution_id,
-        question: "Should outer dispatcher use the wrapper?",
+        question: "Should outer dispatcher use the implementer route?",
         refs: ["artifact://dispatch/ref.md"]
       },
       authoritativeContext
@@ -630,7 +630,7 @@ describe("emitActorProtocolV11 runtime", () => {
     const bubble = await setupRunningBubbleFixture({
       repoPath,
       bubbleId: "b_actor_protocol_dispatch_reviewer_01",
-      task: "Outer dispatcher should use reviewer wrapper"
+      task: "Outer dispatcher should use reviewer route"
     });
     await switchFixtureToReviewerAuthority({
       repoPath,
@@ -655,7 +655,7 @@ describe("emitActorProtocolV11 runtime", () => {
         bubble_id: bubble.bubbleId,
         handoff_id: authoritativeContext.handoff_id,
         execution_id: authoritativeContext.execution_id,
-        summary: "Should outer dispatcher use the reviewer wrapper?",
+        summary: "Should outer dispatcher use the reviewer route?",
         no_findings: true
       },
       authoritativeContext
@@ -677,7 +677,7 @@ describe("emitActorProtocolV11 runtime", () => {
       throw new Error("Expected pass result.");
     }
     expect(result.pass.envelope.payload.summary).toBe(
-      "Should outer dispatcher use the reviewer wrapper?"
+      "Should outer dispatcher use the reviewer route?"
     );
   });
 
@@ -686,7 +686,7 @@ describe("emitActorProtocolV11 runtime", () => {
     const bubble = await setupRunningBubbleFixture({
       repoPath,
       bubbleId: "b_actor_protocol_dispatch_reviewer_convergence_01",
-      task: "Outer dispatcher should use reviewer convergence wrapper"
+      task: "Outer dispatcher should use reviewer convergence route"
     });
     await seedConvergedCandidate(bubble.paths.worktreePath);
     await switchFixtureToReviewerAuthority({
@@ -713,7 +713,7 @@ describe("emitActorProtocolV11 runtime", () => {
         bubble_id: bubble.bubbleId,
         handoff_id: authoritativeContext.handoff_id,
         execution_id: authoritativeContext.execution_id,
-        summary: "Should outer dispatcher use the reviewer convergence wrapper?",
+        summary: "Should outer dispatcher use the reviewer convergence route?",
         findings: [
           {
             severity: "P2",
@@ -740,7 +740,7 @@ describe("emitActorProtocolV11 runtime", () => {
       throw new Error("Expected convergence result.");
     }
     expect(result.convergence.convergenceEnvelope.payload.summary).toBe(
-      "Should outer dispatcher use the reviewer convergence wrapper?"
+      "Should outer dispatcher use the reviewer convergence route?"
     );
   });
 
@@ -749,7 +749,7 @@ describe("emitActorProtocolV11 runtime", () => {
     const bubble = await setupRunningBubbleFixture({
       repoPath,
       bubbleId: "b_actor_protocol_dispatch_meta_review_01",
-      task: "Outer dispatcher should use meta-reviewer wrapper"
+      task: "Outer dispatcher should use meta-review route"
     });
     await switchFixtureToMetaReviewerAuthority({
       bubbleId: bubble.bubbleId,
@@ -774,9 +774,9 @@ describe("emitActorProtocolV11 runtime", () => {
         execution_id: authoritativeContext.execution_id,
         round: authoritativeContext.expected_round,
         recommendation: "approve",
-        summary: "Should outer dispatcher use the meta-reviewer wrapper?",
+        summary: "Should outer dispatcher use the meta-review route?",
         report_json: buildApproveMetaReviewReportJson(
-          "meta-review-wrapper-outer-dispatch"
+          "meta-review-route-outer-dispatch"
         )
       },
       authoritativeContext
@@ -800,7 +800,7 @@ describe("emitActorProtocolV11 runtime", () => {
       throw new Error("Expected meta_review_result.");
     }
     expect(result.meta_review_result.summary).toBe(
-      "Should outer dispatcher use the meta-reviewer wrapper?"
+      "Should outer dispatcher use the meta-review route?"
     );
     expect(result.meta_review_result.gate_route).toBe("human_gate_approve");
   });
@@ -829,7 +829,7 @@ describe("emitActorProtocolV11 runtime", () => {
           recommendation: "approve",
           summary: "Should reject wrong-role outer-dispatch meta-review submit",
           report_json: buildApproveMetaReviewReportJson(
-            "meta-review-wrapper-outer-dispatch-reject"
+            "meta-review-route-outer-dispatch-reject"
           )
         },
         authoritativeContext

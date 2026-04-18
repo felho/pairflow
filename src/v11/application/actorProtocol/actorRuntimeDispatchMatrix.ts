@@ -36,9 +36,9 @@ export interface ActorRuntimePolicyCheck {
 }
 
 const actorRuntimeDispatchHandlers = [
-  "implementer_wrapper",
-  "reviewer_wrapper",
-  "meta_reviewer_wrapper",
+  "implementer_route",
+  "reviewer_route",
+  "meta_reviewer_route",
   "reviewer_human_question_fallback"
 ] as const;
 
@@ -66,7 +66,7 @@ export interface ActorRuntimeRoute {
   inputKind: ActorOutputKind;
   handler: ActorRuntimeDispatchHandler;
   adapter: ActorRuntimeAdapterId;
-  routePolicy: "wrapper" | "retained_fallback";
+  routePolicy: "primary_route" | "retained_fallback";
   policyCheckIds: readonly ActorRuntimePolicyCheckId[];
 }
 
@@ -96,7 +96,7 @@ function assertImplementerAuthority(
   if (context.expected_role !== "implementer") {
     throw new ActorEmitContextError(
       "ACTOR_EMIT_CONTEXT_INVALID",
-      "ACTOR_EMIT_CONTEXT_INVALID: implementer pilot wrapper requires implementer authority."
+      "ACTOR_EMIT_CONTEXT_INVALID: implementer route requires implementer authority."
     );
   }
 }
@@ -107,7 +107,7 @@ function assertReviewerAuthority(
   if (context.expected_role !== "reviewer") {
     throw new ActorEmitContextError(
       "ACTOR_EMIT_CONTEXT_INVALID",
-      "ACTOR_EMIT_CONTEXT_INVALID: reviewer wrapper requires reviewer authority."
+      "ACTOR_EMIT_CONTEXT_INVALID: reviewer route requires reviewer authority."
     );
   }
   if (context.loaded_state.state.active_agent === null) {
@@ -145,7 +145,7 @@ function assertMetaReviewerAuthority(
   if (context.expected_role !== "meta_reviewer") {
     throw new ActorEmitContextError(
       "ACTOR_EMIT_CONTEXT_INVALID",
-      "ACTOR_EMIT_CONTEXT_INVALID: meta-reviewer wrapper requires meta_reviewer authority."
+      "ACTOR_EMIT_CONTEXT_INVALID: meta-review route requires meta_reviewer authority."
     );
   }
 }
@@ -297,9 +297,9 @@ export const actorRuntimeRouteMatrix: readonly ActorRuntimeRoute[] = [
     id: "implementer_pass",
     authorityRole: "implementer",
     inputKind: "pass",
-    handler: "implementer_wrapper",
+    handler: "implementer_route",
     adapter: "pass_adapter",
-    routePolicy: "wrapper",
+    routePolicy: "primary_route",
     policyCheckIds: [
       "context_snapshot_integrity",
       "input_context_match",
@@ -310,9 +310,9 @@ export const actorRuntimeRouteMatrix: readonly ActorRuntimeRoute[] = [
     id: "implementer_human_question",
     authorityRole: "implementer",
     inputKind: "human_question",
-    handler: "implementer_wrapper",
+    handler: "implementer_route",
     adapter: "human_question_adapter",
-    routePolicy: "wrapper",
+    routePolicy: "primary_route",
     policyCheckIds: [
       "context_snapshot_integrity",
       "input_context_match",
@@ -323,9 +323,9 @@ export const actorRuntimeRouteMatrix: readonly ActorRuntimeRoute[] = [
     id: "reviewer_pass",
     authorityRole: "reviewer",
     inputKind: "pass",
-    handler: "reviewer_wrapper",
+    handler: "reviewer_route",
     adapter: "pass_adapter",
-    routePolicy: "wrapper",
+    routePolicy: "primary_route",
     policyCheckIds: [
       "context_snapshot_integrity",
       "input_context_match",
@@ -336,9 +336,9 @@ export const actorRuntimeRouteMatrix: readonly ActorRuntimeRoute[] = [
     id: "reviewer_convergence",
     authorityRole: "reviewer",
     inputKind: "convergence",
-    handler: "reviewer_wrapper",
+    handler: "reviewer_route",
     adapter: "convergence_adapter",
-    routePolicy: "wrapper",
+    routePolicy: "primary_route",
     policyCheckIds: [
       "context_snapshot_integrity",
       "input_context_match",
@@ -362,9 +362,9 @@ export const actorRuntimeRouteMatrix: readonly ActorRuntimeRoute[] = [
     id: "meta_reviewer_meta_review_result",
     authorityRole: "meta_reviewer",
     inputKind: "meta_review_result",
-    handler: "meta_reviewer_wrapper",
+    handler: "meta_reviewer_route",
     adapter: "meta_review_result_adapter",
-    routePolicy: "wrapper",
+    routePolicy: "primary_route",
     policyCheckIds: [
       "context_snapshot_integrity",
       "input_context_match",
@@ -420,7 +420,7 @@ export function resolveActorRuntimeDispatchPlan(input: {
       expectedAuthority:
         input.expectedRole === "reviewer"
           ? "reviewer human_question baseline"
-          : `${input.expectedRole} authority wrapper`,
+          : `${input.expectedRole} authority route`,
       receivedKind: input.inputKind
     }
   });
