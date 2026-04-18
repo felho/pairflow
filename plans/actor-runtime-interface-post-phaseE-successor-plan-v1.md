@@ -132,6 +132,8 @@ owners:
    - remote runner,
    - API/IPC delivery,
    - vagy non-tmux actor launch irany felmerul.
+4. Az `O2-T1` docs-only boundary note-ja:
+   - `plans/actor-runtime-interface-topology-neutral-delivery-executor-contract-note-v1.md`
 
 ### Opportunity 3: New Actor Onboarding Contract
 
@@ -167,10 +169,13 @@ owners:
    - nem nyithatjak ujra az execution authority note closed jelenteset,
    - nem lazithatjak a reviewer fallback vagy meta-reviewer guard preserved baseline-jat implicit cleanup cimszo alatt.
 8. `O2-T1` csak preserved-baseline clarification lane lehet:
-   - a lezart `accepted | running | rejected | failed_to_start` runtime-ack/runtime-truth semanticsat nem nyithatja ujra,
+   - a lezart delivery ack baseline-t (`accepted | rejected`) nem nyithatja ujra,
+   - a lezart launch ack baseline-t (`running | failed_to_start`) nem nyithatja ujra,
    - csak a topology/executor-boundary es retained adapter ownership pontositasat ownershipolja.
+   - normativ note path: `plans/actor-runtime-interface-topology-neutral-delivery-executor-contract-note-v1.md`
 9. `O3-T1` csak az `Opportunity 1 / O1-T1` altal lezart boundary- es vocabulary-matrix utan nyithato:
-   - onboarding simplification csak a zart baseline vocabulary explicit mappingjara epulhet,
+   - onboarding simplification csak az `O1-T1` kernel boundary note-ra es az `O2-T1` delivery/executor boundary note-ra epulhet,
+   - a zart baseline vocabulary explicit mappingjara es a topology/executor boundary explicit szetszalazasara kell tamaszkodnia,
    - az `Opportunity 4` alapertelmezetten ebbe a lane-be van beolvasztva mint core-vs-extension rationalization,
    - kulon `O4-T1` csak akkor nyithato, ha az `Opportunity 1 / O1-T1` outputja bizonyitja, hogy ez onallo bounded closure.
 10. A current tree-ben az `Opportunity 1` mar lezart successor lane:
@@ -215,6 +220,7 @@ owners:
 6. Emiatt az `Opportunity 1` current-tree successor lane lezarhato.
 7. Az `Opportunity 2` current next bounded successor slice-a megnyithato docs-only clarification lane-kent:
    - task artifact: `plans/tasks/actor-runtime-interface-opportunity2-task1-topology-neutral-delivery-executor-clarification.md`
+   - normative note: `plans/actor-runtime-interface-topology-neutral-delivery-executor-contract-note-v1.md`
    - scope: topology-neutral delivery/executor contract boundary clarification retained `tmux` adapter ownership explicit source-anchor inventoryval
    - preserved baseline: a `Phase E2a`-ban lezart typed delivery/launch ack semantics tovabbra sem reopenolhato
 
@@ -238,10 +244,11 @@ owners:
 2. `Opportunity 2`
    - current next successor lane `O2-T1`
    - task artifact: `plans/tasks/actor-runtime-interface-opportunity2-task1-topology-neutral-delivery-executor-clarification.md`
+   - normative note: `plans/actor-runtime-interface-topology-neutral-delivery-executor-contract-note-v1.md`
    - preserved baseline: a lezart typed ack/runtime-success semantics nem reopenolhato
 3. `Opportunity 3`
    - deferred successor lane `O3-T1`
-   - csak `O1-T1` explicit vocabulary/boundary outputjara epulhet
+   - csak az `O1-T1` kernel boundary note-ra es az `O2-T1` delivery/executor boundary note-ra epulhet
 4. `Opportunity 4`
    - default szerint `O3-T1` resze
    - kulon lane csak akkor, ha az `O1-T1` boundary output kulon bounded closurekent bizonyitja
