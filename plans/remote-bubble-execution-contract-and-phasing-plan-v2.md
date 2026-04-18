@@ -154,22 +154,22 @@ Az explicit control-model dontesek most visszanyerhetok a designbol es a review-
 
 ## Progress Update (2026-04-18)
 
-1. A `Phase 3B1` implementacioja 2026-04-18-an leszallt, merge-re kerult a `main` branchre, es a task archivalt baseline lett.
-2. A lezart bounded scope:
-   - remote commit routing a started remote pointer authorityjara ultetve,
-   - explicit inner-remote execution discriminator, hogy a remote clone-on beluli canonical `commit` ne routoljon vissza ujabb SSH remote commandra,
-   - bounded mutable control-artifact sync-back a retained local `CommitBubbleResult` continuityhoz (`state.json`, `transcript.ndjson`, `artifacts/done-package.md`),
-   - UI/CLI/application consume parity a remote commit branchen,
-   - explicit fail-closed behavior created/missing remote pointer, invalid target, transport hiba, payload-invaliditas, es local continuity sync-back failure eseten.
-3. A `Phase 3B1` task archivalt allapotban mar itt van:
+1. A `Phase 3B1`, `Phase 3B2`, es `Phase 3B3` implementacioja 2026-04-18-ra leszallt, merge-re kerult a `main` branchre, es a cleanup-routing family teljes archived baseline lett.
+2. A lezart bounded scope a cleanup familyben:
+   - remote commit routing a started remote pointer authorityjara ultetve, bounded mutable control-artifact sync-back continuityval,
+   - remote merge routing explicit durable publication policyval es retained merge/publication continuity reconcile-lel,
+   - remote delete confirmation/force routing a remote canonical delete inventoryra ultetve, local archive continuity sync-backkal es remote destructive cleanup closure-rel.
+3. A cleanup family archivalt taskjai most mar itt vannak:
    - `plans/archive/tasks/remote-bubble-execution/phase3b1-remote-commit-routing-and-continuity.md`
-4. A kovetkezo aktiv, meg nem leszallitott fazis a terv szerint most mar a `Phase 3B2`:
-   - remote merge routing a started remote pointer authorityjara,
-   - explicit durable publication policy a remote merge completion semanticajahoz,
-   - bounded merge-completion reconcile a retained local merge/publication continuityhoz.
-5. A tovabbi successor-owned scope valtozatlan:
-   - `Phase 3B3`: remote delete cleanup and archive closure,
-   - `Phase 3C`: recovery/docs/rollout closure.
+   - `plans/archive/tasks/remote-bubble-execution/phase3b2-remote-merge-routing-and-publication.md`
+   - `plans/archive/tasks/remote-bubble-execution/phase3b3-remote-delete-cleanup-and-archive-closure.md`
+4. A cleanup splithez tartozo aktiv implementacios task mar nincs a repo-ban; a cleanup family archived baseline.
+5. A kovetkezo fazis a terv szerint a `Phase 3C`, es a task dokumentuma most mar materializalva van:
+   - recovery diagnostics,
+   - reboot/repair guidance,
+   - docs es manual smoke evidence,
+   - task path:
+     `plans/tasks/remote-bubble-execution/phase3c-recovery-diagnostics-and-rollout.md`
 
 ## Progress Update (2026-04-16)
 
@@ -324,24 +324,22 @@ Az explicit control-model dontesek most visszanyerhetok a designbol es a review-
 
 ## Active Task
 
-1. A `Phase 2F`, `Phase 3A`, `Phase 3B1`, es `Phase 3B2` mar archived baseline:
+1. A `Phase 2F`, `Phase 3A`, `Phase 3B1`, `Phase 3B2`, es `Phase 3B3` mar archived baseline:
    - `plans/archive/tasks/remote-bubble-execution/phase2f-remote-attach-consume.md`
    - `plans/archive/tasks/remote-bubble-execution/phase3a-remote-approval-and-rework-routing.md`
    - `plans/archive/tasks/remote-bubble-execution/phase3b1-remote-commit-routing-and-continuity.md`
    - `plans/archive/tasks/remote-bubble-execution/phase3b2-remote-merge-routing-and-publication.md`
-2. A `Phase 3B3` task dokumentuma most mar materializalva van, igy a kovetkezo tenyleges munka annak implementacios bubble-je:
-   - tervezett task path:
-     `plans/tasks/remote-bubble-execution/phase3b3-remote-delete-cleanup-and-archive-closure.md`
-   - status: implementacios bubble-re kesz
-3. A `Phase 2B`, `Phase 2C`, `Phase 2D`, `Phase 2E`, `Phase 2F`, `Phase 3A`, `Phase 3B1`, es `Phase 3B2` archived baseline lett.
-4. Az approval/rework, cleanup, es recovery scope tovabbra is kulon successor fazisban marad, de a cleanup routing most mar harom bounded szeletre bomlik: `Phase 3B1` commit, `Phase 3B2` merge, `Phase 3B3` delete; az aktiv cleanup successor innentol a `Phase 3B3`.
+   - `plans/archive/tasks/remote-bubble-execution/phase3b3-remote-delete-cleanup-and-archive-closure.md`
+2. A kovetkezo aktiv task dokumentuma most mar itt van:
+   - `plans/tasks/remote-bubble-execution/phase3c-recovery-diagnostics-and-rollout.md`
+3. A `Phase 2B`, `Phase 2C`, `Phase 2D`, `Phase 2E`, `Phase 2F`, `Phase 3A`, `Phase 3B1`, `Phase 3B2`, es `Phase 3B3` archived baseline lett.
+4. Az approval/rework, cleanup, es recovery scope tovabbra is kulon successor fazisban marad, de a cleanup routing split mar lezart; az egyetlen aktiv successor innen a `Phase 3C`.
 
 ## Successor Tasks
 
 1. kovetkezo aktiv task:
-   `plans/tasks/remote-bubble-execution/phase3b3-remote-delete-cleanup-and-archive-closure.md`
-2. ezutan kovetkezo successor:
    `plans/tasks/remote-bubble-execution/phase3c-recovery-diagnostics-and-rollout.md`
+2. ez a plan utolso nyitott successor taskja.
 
 ## Dependencies
 
