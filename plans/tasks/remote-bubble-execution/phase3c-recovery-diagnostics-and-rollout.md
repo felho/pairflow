@@ -12,9 +12,17 @@ target_files:
   - src/v11/shared/list/listCommandApi.ts
   - src/v11/application/list/listCliCommand.ts
   - tests/core/bubble/listBubbles.test.ts
+guard_only_files:
   - src/v11/infrastructure/ui/presenters/bubblePresenter.ts
   - tests/core/ui/router.test.ts
+  - ui/src/lib/contracts/uiRemoteExecution.ts
+  - ui/src/lib/types.ts
+  - src/v11/shared/status/statusCommandApi.ts
+  - src/v11/application/status/statusCliTextRenderer.ts
+  - src/v11/application/status/statusCliTableRenderer.ts
   - tests/core/bubble/statusBubble.test.ts
+# `guard_only_files` deklarativ inventory: ezek source-anchor / passive-consumer guard file-ok.
+# Defaultban nem primary edit ownership, csak akkor toucholhatok, ha a CS4/CS5 compatibility/parity guard ezt kifejezetten szuksegesse teszi.
 prd_ref: null
 plan_ref: plans/remote-bubble-execution-contract-and-phasing-plan-v2.md
 system_context_ref: docs/pairflow-initial-design.md
@@ -47,7 +55,13 @@ owners:
    - `src/v11/shared/list/listCommandApi.ts`
    - `src/v11/application/list/listCliCommand.ts`
    A live refresh ma nem ad ugyanolyan explicit preserved-state/runtime-loss diagnosztikat, mint a status surface.
-5. A design doc mar kimondja a reboot/runtime-loss baseline-t, de ez meg nincs teljesen rolloutolva operator-facing status/list/docs wordingben:
+5. A presenter/router consume family ebben a taskban csak passive consumer guard:
+   - `src/v11/infrastructure/ui/presenters/bubblePresenter.ts`
+   - `tests/core/ui/router.test.ts`
+   - `ui/src/lib/contracts/uiRemoteExecution.ts`
+   - `ui/src/lib/types.ts`
+   Ezek csak akkor valnak mutacios scope-pa, ha az additive list-contract alignment ezt kivetelesen szuksegesse teszi; kulon UI redesign ownership nincs.
+6. A design doc mar kimondja a reboot/runtime-loss baseline-t, de ez meg nincs teljesen rolloutolva operator-facing list/docs wordingben:
    - `docs/remote-bubble-execution.md`
 
 ## L0 - Policy
@@ -55,8 +69,8 @@ owners:
 ### Goal
 
 1. Zarja le a remote reboot/runtime-loss recovery diagnostics surface-t ugy, hogy a started remote pointerre ulo live status truth fail-closed semantics-e konzisztensen megjelenjen `bubble status`, `bubble list --refresh`, es a user-facing docs surface-eken.
-2. Rogzitse a reboot/repair guidance-et ugy, hogy ne sugalljon nem tamogatott started-pointer restart contractot.
-3. Kerjen minimal manual smoke evidence-et a rollout closure-hoz.
+2. Rogzitse a reboot/runtime-loss melletti operator guidance-et ugy, hogy az csak bounded diagnose/fail-closed wordinget adjon, es ne sugalljon nem tamogatott started-pointer restart contractot.
+3. Kerjen minimal manual smoke evidence-et a rollout closure-hoz ugy, hogy annak rogzitett helye alapertelmezetten a bubble done package (`.pairflow/bubbles/<id>/artifacts/done-package.md`), vagy ettol eltero esetben egy explicit evidence artifact legyen.
 
 ### Domain / Control Model Summary
 
@@ -76,19 +90,19 @@ owners:
    - runtime-loss nem moshato ossze generikus `inactive` vagy `refresh unavailable` jelentessel, ha a live status kifejezetten `missing` runtime-ot adott.
 5. Allowed resolution path:
    - started pointer -> live remote status read -> explicit runtime-loss projection -> retained cache update only where mar baseline -> CLI/JSON/docs surfacing;
-   - operator guidance: inspect -> confirm preserved state -> fail closed -> manual next step a dokumentalt boundaryn belul.
+   - operator guidance: bounded inspect/diagnose within the current authority boundary (peldaul SSH reachability/clone-presence check, `bubble status`, `bubble list --refresh`) -> confirm preserved state -> fail closed -> csak dokumentalt manual next-step wording; nincs restart promise vagy uj lifecycle action.
 6. Missing-data rule:
    - ha live status nem erheto el, marad az eddigi unavailable/cache fallback surface;
    - ha cache-only list fut, nincs synthetic runtime-loss diagnosis;
    - ha docs nem tudnak lezart recovery contractot allitani, explicit "not supported in this phase" wording kell.
 7. Phase boundary:
-   - contract closure: owned here a remote runtime-loss diagnostics wording es additive shared projection mezok szintjen
+   - contract closure: owned here a remote runtime-loss diagnostics wording es bounded additive shared projection mezok szintjen
    - producer closure: not owned here
    - internal execution closure: not owned here
-   - workflow/orchestration closure: owned here csak read-only status/list surfacingig
+   - workflow/orchestration closure: owned here csak read-only status/list/docs surfacing wordingig, nem uj command contractkent
    - read-model closure: owned here
    - activation closure: not owned here
-   - cleanup/recovery closure: owned here csak diagnostics/runbook/rollout szinten, nem runtime recreate implementaciokent
+   - cleanup/recovery closure: owned here csak diagnostics/runbook/manual-smoke-rollout szinten, nem runtime recreate implementaciokent
 
 ### Plan Linkage
 
@@ -105,7 +119,7 @@ owners:
 5. Inherited validation / exit expectation:
    - recovery diagnostics tests,
    - docs wording closure,
-   - legalabb egy manual remote smoke evidence.
+   - legalabb egy manual remote smoke evidence, alapertelmezetten a bubble done package-ben vagy ettol eltero esetben explicit evidence artifactban rogzitve.
 
 ### Canonical Contract Anchors
 
@@ -171,7 +185,7 @@ owners:
    - manual smoke evidence.
 6. Why the declared task shape matches reality:
    - a current tree mar tudja a runtime-loss status authorityt; ez a task ezt a lezart truthot terjeszti ki a retained list/docs/operator rollout surfacesre, runtime recreate vagy lifecycle mutation ownership nelkul;
-   - a status-layer file-ok itt canonical anchor/parity guard szerepben maradnak, mig a tenyleges edit ownership a list/shared-contract/docs consume familyre szukul.
+   - a status-layer file-ok itt canonical anchor/parity guard szerepben maradnak, a presenter/router consume pedig passive guard marad; a tenyleges edit ownership a list/shared-contract/docs consume familyre szukul.
 
 ### Authority Boundary Map
 
@@ -182,8 +196,9 @@ owners:
    - local `state-cache.json` mint cache-only projection.
 3. In-scope consumers:
    - list CLI/JSON refresh projection,
-   - passive UI passthrough consumers (`bubblePresenter`, router payload shape) additive shared-contract alignment szintjen,
-   - status CLI render csak source-anchor/parity guardkent,
+   - passive UI passthrough consumers (`bubblePresenter`, router payload shape) csak additive shared-contract alignment guard szintjen,
+   - UI client contract mirror (`ui/src/lib/contracts/uiRemoteExecution.ts`, `ui/src/lib/types.ts`) csak parity/compatibility guard szintjen,
+   - status CLI render csak source-anchor/parity guardkent, default mutacios ownership nelkul,
    - README/design-doc operator guidance.
 4. Explicit out-of-scope consumers:
    - start/restart activation,
@@ -236,8 +251,8 @@ owners:
 
 1. Runtime-loss diagnostics additive surfacing a `bubble list --refresh` read-modelben.
 2. Status/list/docs wording alignment a preserved-state fail-closed semantics korul.
-3. User-facing reboot/repair guidance ugyanazon bounded authority kereten belul.
-4. Manual smoke evidence elvaras a rollout closure-hoz.
+3. User-facing reboot/runtime-loss diagnostics guidance ugyanazon bounded authority kereten belul.
+4. Manual smoke evidence elvaras a rollout closure-hoz, explicit rogzitett artifact hellyel.
 
 ### Out of Scope
 
@@ -284,7 +299,7 @@ owners:
 12. Bounded-task-shape decision:
    - primary shape: `activation_or_read_model`
    - secondary shape: `fail_closed_hardening`
-   - why this bounded mix is safe: a task nem valtoztat runtime truthot vagy lifecycle mutationt, csak a mar lezart truth surfacinget es operator guidance-et zarja le.
+   - why this bounded mix is safe: a task nem valtoztat runtime truthot vagy lifecycle mutationt, csak a mar lezart truth surfacinget es operator guidance-et zarja le; status/presenter/router csak parity-passive guard.
 
 ## L1 - Change Contract
 
@@ -314,7 +329,7 @@ owners:
 | Item | Rule | Implementation / Review Consequence | Priority | Timing |
 |---|---|---|---|---|
 | Inspected entrypoints / call-sites | status/list command APIs, renderers, shared projection types, docs/readme | Valos scope = read-model diagnostics rollout | P1 | required-now |
-| Actual touched scope | read-model + docs + fail-closed wording | Nem csuszhat restart implementationba | P1 | required-now |
+| Actual touched scope | list/shared-contract/docs rollout + fail-closed wording | Nem csuszhat restart implementationba vagy aktivacios ownershipbe | P1 | required-now |
 | Mutation entrypoints in scope | existing cache write refresh utan, docs text files | No new runtime mutation seam | P1 | required-now |
 | Hidden scope ruled out | start/attach/delete family nem target file | Uj lifecycle work ilyen taskban blocker | P1 | required-now |
 | Branch inventory note | live missing vs refresh unavailable vs cache-only | Mindharom allapot kulon tesztelendo | P1 | required-now |
@@ -328,21 +343,21 @@ owners:
 | Depends on | `Phase 2E`, `Phase 2F`, `Phase 3B3` archived baseline | read-model es cleanup predecessor semantics mar lezart | P1 | required-now |
 | Unlocks / impacts successors | `N/A` | nincs tovabbi plan successor | P1 | required-now |
 | Task-list impact | materializalja a nyitott taskot | plan active-task section ehhez igazodik | P1 | required-now |
-| Inherited validation / exit expectation | diagnostics tests + docs + manual smoke | implementation bubble nem zárhat smoke evidence nelkul | P1 | required-now |
+| Inherited validation / exit expectation | diagnostics tests + docs + manual smoke | implementation bubble nem zárhat smoke evidence nelkul, es annak rogzitett artifact helye kell legyen | P1 | required-now |
 
 ### 0d) Shared Contract Compatibility
 
 | Shared Contract | Current Consumers | Change Type (`additive|breaking|N/A`) | This Task Action | Deferred Alignment |
 |---|---|---|---|---|
-| `UiBubbleListRemoteExecution` | list CLI text, UI presenter passthrough, router JSON payload consumers, list tests | additive | optional runtime-loss diagnostics fields hozzaadasa a live refresh branchhez; passive passthrough consumers explicit inventoryja megtortenik | broad web UI copy polish `N/A` |
-| status remote execution wording | status CLI text/table, UI detail payload, status tests | preserve + wording alignment | retained runtime-loss semantics megorzese source-anchor/parity guardkent; target-scope default edit nelkul | `N/A` |
-| remote execution docs wording | README, design doc, operator usage | additive/preserve | explicit reboot/runtime-loss guidance | `N/A` |
+| `UiBubbleListRemoteExecution` | list CLI text, UI presenter passthrough, router JSON payload consumers, mirrored UI client contract/types, list tests | additive | optional runtime-loss diagnostics fields hozzaadasa a live refresh branchhez; passive passthrough consumers es a mirrored UI client contract csak compatibility/parity guardkent igazodhatnak | broad web UI copy polish `N/A` |
+| status remote execution wording | status CLI text/table, UI detail payload, status tests | preserve + wording alignment | retained runtime-loss semantics source-anchor/parity guardkent marad; primary edit ownership nem nyilik meg ezen a soron keresztul | `N/A` |
+| remote execution docs wording | README, design doc, operator usage | additive/preserve | explicit reboot/runtime-loss diagnostics + bounded inspect/diagnose guidance ugyanazon authority boundaryn belul + smoke artifact expectation | `N/A` |
 
 ### 0e) Baseline Preservation
 
 | Current Behavior | Preserve/Replace/Forbid | Required Proof | Priority | Timing |
 |---|---|---|---|---|
-| status runtime-missing note | preserve | status tests es renderer asserts zoldben maradnak vagy equivalentre frissulnek | P1 | required-now |
+| status runtime-missing note | preserve | status tests es renderer asserts zoldben maradnak; ha touch szukseges, az csak parity guard lehet | P1 | required-now |
 | default list cache-only projection | preserve | cache-only list tesztben nincs synthetic runtime-loss field | P1 | required-now |
 | refresh unavailable fallback | preserve | existing unavailable tests retained | P1 | required-now |
 | docs that imply started-pointer restart support | forbid | README/design doc explicit "not supported in this phase" wording | P1 | required-now |
@@ -352,7 +367,7 @@ owners:
 | Case | Must Be Validated Before | Forbidden Early Side Effects | Required Failure Behavior | Priority | Timing |
 |---|---|---|---|---|---|
 | live runtime-loss projection | successful live remote status read returning runtime missing | cache/local placeholderbol gyartott runtime-loss branch | retain explicit unavailable/cache fallback | P1 | required-now |
-| docs recovery guidance | source-anchor wording checked against design doc and current status contract | restart support vagy unsupported command allitas | explicit fail-closed guidance only | P1 | required-now |
+| docs recovery guidance | source-anchor wording checked against design doc and current status contract | restart support vagy uj lifecycle-action allitas | explicit fail-closed guidance only | P1 | required-now |
 
 ### 1) Call-site Matrix
 
@@ -361,9 +376,9 @@ owners:
 | CS1 | `src/shared/contracts/uiRemoteExecution.ts` | `UiBubbleListRemoteExecution` | type export | shared list remote execution contract | additive mezokkel lehessen kulon runtime-loss diagnostics-et surfacelni a refresh branchen | P1 | required-now | T2, T3 |
 | CS2 | `src/v11/shared/list/listCommandApi.ts` | refreshed remote list builder | existing internal helper + exported `listBubbles(...)` path | list refresh projection | live runtime-loss kulon diagnosztikakent jelenik meg, nem unavailable/cache branchkent | P1 | required-now | T2, T3, T4 |
 | CS3 | `src/v11/application/list/listCliCommand.ts` | `renderBubbleListText(...)` | existing export | list CLI summary | text output lassa a runtime-loss kulon allapotot es ne sugalljon restartot | P1 | required-now | T2, T4, T5 |
-| CS4 | `src/v11/infrastructure/ui/presenters/bubblePresenter.ts`, `tests/core/ui/router.test.ts` | presenter passthrough + router payload contract | existing exports/tests | passive consumer alignment guard | additive list-contract bovites mellett a passthrough consumers vagy valtozatlanok maradnak, vagy explicitten igazodnak kulon redesign nelkul | P1 | required-now | T2, T5 |
-| CS5 | `src/v11/shared/status/statusCommandApi.ts`, `src/v11/application/status/statusCliTextRenderer.ts`, `src/v11/application/status/statusCliTableRenderer.ts` | status source anchor + renderers | existing exports | parity/source-anchor guard | a retained `STATUS_REMOTE_RUNTIME_MISSING` semantics marad source anchor; itt csak parity-preservation engedett | P1 | required-now | T1, T5 |
-| CS6 | `README.md`, `docs/remote-bubble-execution.md` | user-facing docs sections | markdown docs | recovery/runbook/rollout wording | explicit reboot/runtime-loss guidance + manual smoke checklist | P1 | required-now | T5, T6 |
+| CS4 | `src/v11/infrastructure/ui/presenters/bubblePresenter.ts`, `tests/core/ui/router.test.ts`, `ui/src/lib/contracts/uiRemoteExecution.ts`, `ui/src/lib/types.ts` | presenter passthrough + router payload contract + mirrored UI contract/types | existing exports/tests | passive consumer alignment guard | csak akkor toucholhato, ha az additive list-contract compatibility/parity ezt kivetelesen szuksegesse teszi; kulon redesign nincs | P1 | required-now | T2, T5 |
+| CS5 | `src/v11/shared/status/statusCommandApi.ts`, `src/v11/application/status/statusCliTextRenderer.ts`, `src/v11/application/status/statusCliTableRenderer.ts` | status source anchor + renderers | existing exports | parity/source-anchor guard | a retained `STATUS_REMOTE_RUNTIME_MISSING` semantics marad source anchor; defaultban csak parity-preservation/untouched elvaras engedett | P1 | required-now | T1, T5 |
+| CS6 | `README.md`, `docs/remote-bubble-execution.md` | user-facing docs sections | markdown docs | recovery/runbook/rollout wording | explicit reboot/runtime-loss diagnostics guidance + bounded inspect/diagnose examples ugyanazon authority boundaryn belul + manual smoke artifact checklist | P1 | required-now | T5, T6 |
 
 ### 2) Data and Interface Contract
 
@@ -371,7 +386,7 @@ owners:
 |---|---|---|---|---|---|---|---|
 | `UiBubbleListRemoteExecution` | `viewKind`, `stateSource`, cache metadata, refresh failure reasons | additive live runtime diagnostics a refresh branchhez | existing required fields retained | optional runtime diagnostics fields only when live refresh proves them | non-breaking additive | P1 | required-now |
 | status remote execution projection | explicit runtimeAvailability + `STATUS_REMOTE_RUNTIME_MISSING` | retained | existing status fields retained | wording-only alignment | non-breaking | P1 | required-now |
-| docs/runbook guidance | design doc has recovery matrix; README currently thinner | explicit operator guidance aligned to design doc + current status contract | command examples + unsupported restart wording | manual smoke checklist | additive | P1 | required-now |
+| docs/runbook guidance | design doc has recovery matrix; README currently thinner | explicit operator guidance aligned to design doc + current status contract | bounded inspect/diagnose examples (peldaul `ssh <remote>` reachability/clone-presence check, `bubble status`, `bubble list --refresh`) + unsupported restart wording | manual smoke checklist + artifact location | additive | P1 | required-now |
 
 ### 3) Side Effects Contract
 
@@ -379,7 +394,7 @@ owners:
 |---|---|---|---|---|---|
 | Remote status cache | existing cache write after successful live refresh | cache mutation from local inference or unavailable branch | current baseline only | P1 | required-now |
 | CLI/read-model projection | additive remote diagnostics fields/text | lifecycle mutation, remote restart, attach side effects | read-only surface task | P1 | required-now |
-| Docs | README/design doc wording updates | promising unsupported restart/recovery behavior | manual smoke evidence may live in done package / evidence note | P1 | required-now |
+| Docs | README/design doc wording updates | promising unsupported restart/recovery behavior | manual smoke evidence a bubble done package-ben vagy explicit evidence artifactban legyen hivatkozva | P1 | required-now |
 
 ### 4) Error and Fallback Contract
 
@@ -405,8 +420,8 @@ owners:
 | T2 | list refresh surfaces runtime-loss explicitly | started remote pointer, `--refresh`, live status says runtime missing | `listBubbles` + text render | refresh branch carries explicit runtime-loss diagnostics; not downgraded to generic inactive/unavailable | P1 | required-now | automated test |
 | T3 | cache-only list does not invent runtime-loss | started remote pointer, no refresh, cache present | `listBubbles` | cache projection marad, no synthetic runtime-loss diagnostics | P1 | required-now | automated test |
 | T4 | refresh unavailable remains distinct from runtime-loss | started remote pointer, refresh transport/payload failure | `listBubbles --refresh` | retained unavailable/cache fallback reason branch marad | P1 | required-now | automated test |
-| T5 | docs wording matches fail-closed contract | updated README + design doc | doc review / text assertions as applicable | no started-pointer restart guidance; explicit runtime-loss guidance present | P1 | required-now | doc diff checklist |
-| T6 | manual remote smoke | remote bubble started on real/simulated remote, runtime then removed (for example tmux/session gone while persisted state remains) | operator runs `bubble status`, `bubble list --refresh`, follows docs wording | observed output and docs guidance agree on preserved-state fail-closed semantics | P1 | required-now | manual smoke note in done package or task evidence |
+| T5 | docs wording matches fail-closed contract | updated README + design doc | doc review / text assertions as applicable | no started-pointer restart guidance; explicit runtime-loss guidance present; only bounded inspect/diagnose examples appear within the same authority boundary | P1 | required-now | doc diff checklist |
+| T6 | manual remote smoke | remote bubble started on real/simulated remote, runtime then removed (for example tmux/session gone while persisted state remains) | operator runs `bubble status`, `bubble list --refresh`, follows docs wording | observed output and docs guidance agree on preserved-state fail-closed semantics, es a smoke note alapertelmezetten a bubble done package-ben vagy ettol eltero esetben explicit evidence artifactban rogzitett | P1 | required-now | manual smoke note in done package or explicit evidence artifact |
 
 ## L2 - Implementation Notes
 
@@ -415,7 +430,8 @@ owners:
 3. A manual smoke evidence legyen rovid, de konkret:
    - pontos parancsok,
    - pontos observed status/list output vagy JSON fieldek,
-   - egy mondat arrol, hogy a docs wording ezzel megegyezett.
+   - egy mondat arrol, hogy a docs wording ezzel megegyezett,
+   - explicit hivatkozas arra, hogy a smoke note alapertelmezetten a bubble done package-ben, vagy ettol eltero esetben kulon evidence artifactban van rogzitve.
 
 ## Review Focus
 
@@ -423,7 +439,8 @@ owners:
 2. A list refresh nem mossa-e ossze a `missing` es `unavailable` allapotokat.
 3. A default cache-only list nem talal-e ki uj live truthot.
 4. A docs nem sugallnak-e nem tamogatott restart/recovery contractot.
-5. A manual smoke elvaras eleg konkret-e a rollout closure-hoz.
+5. A status-layer es presenter/router consume family megmarad-e source-anchor/passive-guard szerepben default edit ownership nelkul.
+6. A manual smoke elvaras eleg konkret-e a rollout closure-hoz.
 
 ## Hardening Backlog
 
