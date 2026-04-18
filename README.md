@@ -670,8 +670,10 @@ pairflow bubble restart --id feat_login --repo .
 pairflow bubble stop --id feat_login --repo .
 
 # Delete a bubble (with confirmation gate when external artifacts exist)
-pairflow bubble delete --id feat_login --repo .          # reports artifacts, may exit with code 2
-pairflow bubble delete --id feat_login --repo . --force  # performs delete
+pairflow bubble delete --id feat_login --repo .                 # reports artifacts, may exit with code 2
+pairflow bubble delete --id feat_login --repo . --force         # performs delete
+pairflow bubble delete --id feat_login --repo . --json          # prints structured result
+pairflow bubble delete --id feat_login --repo . --force --json  # force-delete with structured result
 ```
 
 Delete behavior notes:
@@ -810,7 +812,7 @@ Ideation note:
 | `bubble start --id <id> [--repo <path>]` | Start a bubble (worktree + tmux) |
 | `bubble restart --id <id> [--repo <path>]` | Restart a bubble runtime (tmux/session cleanup + start) |
 | `bubble stop --id <id> [--repo <path>]` | Stop and cancel a bubble |
-| `bubble delete --id <id> [--repo <path>] [--force]` | Delete a bubble; without `--force` it reports external artifacts and exits with confirmation-required status |
+| `bubble delete --id <id> [--repo <path>] [--force] [--json]` | Delete a bubble; without `--force` it reports external artifacts and exits with confirmation-required status |
 | `bubble resume --id <id> [--repo <path>]` | Resume from WAITING_HUMAN with default reply |
 | `bubble open --id <id> [--repo <path>]` | Open worktree in editor |
 | `bubble attach --id <id> [--repo <path>] [--port-forward <port>]...` | Attach via configured macOS launcher; local bubbles use tmux, remote bubbles use the persisted started pointer and optional per-attach port-forward overrides |
