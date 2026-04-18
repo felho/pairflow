@@ -97,6 +97,7 @@ export async function createArchiveSnapshotInStaging(input: {
   bubbleDir: string;
   bubbleId: string;
   bubbleInstanceId: string;
+  sourceBubbleDir?: string | undefined;
   now?: Date | undefined;
   stagingPath: string;
 }): Promise<{
@@ -121,7 +122,7 @@ export async function createArchiveSnapshotInStaging(input: {
       repo_key: input.archivePaths.repoKey,
       bubble_instance_id: input.bubbleInstanceId,
       bubble_id: input.bubbleId,
-      source_bubble_dir: resolve(input.bubbleDir),
+      source_bubble_dir: resolve(input.sourceBubbleDir ?? input.bubbleDir),
       archived_files: archivedFiles
     };
     await writeFile(

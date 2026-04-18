@@ -26,6 +26,7 @@ export interface CreateArchiveSnapshotInput {
   bubbleId: string;
   bubbleInstanceId: string;
   bubbleDir: string;
+  sourceBubbleDir?: string | undefined;
   locksDir: string;
   now?: Date | undefined;
   archiveRootPath?: string | undefined;
@@ -92,6 +93,9 @@ export async function createArchiveSnapshot(
           bubbleDir: input.bubbleDir,
           bubbleId: input.bubbleId,
           bubbleInstanceId: input.bubbleInstanceId,
+          ...(input.sourceBubbleDir !== undefined
+            ? { sourceBubbleDir: input.sourceBubbleDir }
+            : {}),
           now: input.now,
           stagingPath
         });
@@ -125,6 +129,9 @@ export async function createArchiveSnapshot(
           bubbleId: input.bubbleId,
           bubbleInstanceId: input.bubbleInstanceId,
           lockPath,
+          ...(input.sourceBubbleDir !== undefined
+            ? { sourceBubbleDir: input.sourceBubbleDir }
+            : {}),
           reason: "create_failed"
         },
         cause: error

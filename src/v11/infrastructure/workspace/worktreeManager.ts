@@ -256,6 +256,10 @@ async function resolveCleanupWorkspaceKind(
   repoPath: string,
   worktreePath: string
 ): Promise<CleanupWorkspaceKind> {
+  if (repoPath === worktreePath && await isGitWorkspace(worktreePath)) {
+    return "clone";
+  }
+
   if (await isWorktreeRegistered(repoPath, worktreePath)) {
     return "registered-worktree";
   }
@@ -387,6 +391,9 @@ export const cleanupWorktreeWorkspace: CleanupWorktreeWorkspacePort = async (
           bubbleBranch: input.bubbleBranch
         })
         : false;
+  const cloneSelfHostedRepo = workspaceKind === "clone" && repoPath === worktreePath;
+  const bubbleBranchExistsBeforeCleanup =
+    canRemoveBranch && await branchExists(repoPath, input.bubbleBranch);
 
   let removedWorktree = false;
   if (workspaceKind === "registered-worktree") {
@@ -400,7 +407,9 @@ export const cleanupWorktreeWorkspace: CleanupWorktreeWorkspacePort = async (
   }
 
   let removedBranch = false;
-  if (canRemoveBranch && await branchExists(repoPath, input.bubbleBranch)) {
+  if (cloneSelfHostedRepo && bubbleBranchExistsBeforeCleanup) {
+    removedBranch = true;
+  } else if (canRemoveBranch && await branchExists(repoPath, input.bubbleBranch)) {
     await runGit(["branch", "-D", input.bubbleBranch], {
       cwd: repoPath
     });

@@ -12,6 +12,11 @@ import {
   type DeleteBubbleDependencies
 } from "../../../src/v11/application/delete/deleteBubble.js";
 import {
+  remoteDeleteModeEnvVar,
+  remoteDeleteModeInnerRemoteExecution,
+  remoteDeleteWorkspaceRootEnvVar
+} from "../../../src/v11/application/delete/remoteDeleteExecutionContext.js";
+import {
   readRuntimeSessionsRegistry,
   removeRuntimeSession,
   upsertRuntimeSession
@@ -33,6 +38,7 @@ import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
 
 const tempDirs: string[] = [];
 const initialArchiveRoot = process.env.PAIRFLOW_ARCHIVE_ROOT;
+const initialMetricsRoot = process.env.PAIRFLOW_METRICS_EVENTS_ROOT;
 
 async function createTempDir(prefix: string): Promise<string> {
   const root = await mkdtemp(join(tmpdir(), prefix));
@@ -66,8 +72,71 @@ async function convertRunningBubbleToClone(
   return bubble;
 }
 
+async function convertDeleteBubbleToRemoteStarted(
+  bubble: Awaited<ReturnType<typeof createBubble>>
+) {
+  await writeFile(
+    bubble.paths.bubbleTomlPath,
+    renderBubbleConfigToml({
+      ...bubble.config,
+      executor: {
+        type: "ssh",
+        remote: "prod"
+      }
+    }),
+    "utf8"
+  );
+  await writeFile(
+    bubble.paths.remotePointerPath,
+    JSON.stringify(
+      {
+        kind: "started",
+        host: "ssh.example.com",
+        instanceId: `inst_${bubble.bubbleId}`,
+        remoteClonePath: `/srv/pairflow/repo--${bubble.bubbleId}`,
+        tmuxSession: `pf-${bubble.bubbleId}`,
+        startedAt: "2026-04-18T08:00:00.000Z"
+      },
+      null,
+      2
+    ),
+    "utf8"
+  );
+  return bubble;
+}
+
+async function convertDeleteBubbleToRemoteCreated(
+  bubble: Awaited<ReturnType<typeof createBubble>>
+) {
+  await writeFile(
+    bubble.paths.bubbleTomlPath,
+    renderBubbleConfigToml({
+      ...bubble.config,
+      executor: {
+        type: "ssh",
+        remote: "prod"
+      }
+    }),
+    "utf8"
+  );
+  await writeFile(
+    bubble.paths.remotePointerPath,
+    JSON.stringify(
+      {
+        kind: "created",
+        host: "ssh.example.com"
+      },
+      null,
+      2
+    ),
+    "utf8"
+  );
+  return bubble;
+}
+
 beforeEach(async () => {
   process.env.PAIRFLOW_ARCHIVE_ROOT = await createTempDir("pairflow-archive-root-");
+  process.env.PAIRFLOW_METRICS_EVENTS_ROOT = await createTempDir("pairflow-metrics-root-");
 });
 
 afterEach(async () => {
@@ -75,6 +144,11 @@ afterEach(async () => {
     delete process.env.PAIRFLOW_ARCHIVE_ROOT;
   } else {
     process.env.PAIRFLOW_ARCHIVE_ROOT = initialArchiveRoot;
+  }
+  if (initialMetricsRoot === undefined) {
+    delete process.env.PAIRFLOW_METRICS_EVENTS_ROOT;
+  } else {
+    process.env.PAIRFLOW_METRICS_EVENTS_ROOT = initialMetricsRoot;
   }
 
   await Promise.all(
@@ -95,6 +169,22 @@ async function readArchiveIndexFromRepo(
   });
 
   return JSON.parse(await readFile(paths.archiveIndexPath, "utf8")) as ArchiveIndexDocument;
+}
+
+async function readMetricsEventsForDate(at: Date): Promise<Record<string, unknown>[]> {
+  const metricsRoot = process.env.PAIRFLOW_METRICS_EVENTS_ROOT;
+  if (metricsRoot === undefined) {
+    throw new Error("PAIRFLOW_METRICS_EVENTS_ROOT is not configured.");
+  }
+  const year = at.getUTCFullYear().toString();
+  const month = String(at.getUTCMonth() + 1).padStart(2, "0");
+  const shardPath = join(metricsRoot, year, month, `events-${year}-${month}.ndjson`);
+  const raw = await readFile(shardPath, "utf8");
+  return raw
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0)
+    .map((line) => JSON.parse(line) as Record<string, unknown>);
 }
 
 function buildArchiveManifest(input: {
@@ -1073,6 +1163,1168 @@ describe("deleteBubble", () => {
     expect(
       index.entries.filter((entry) => entry.bubble_instance_id === bubbleInstanceId)
     ).toHaveLength(1);
+  });
+
+  it("routes remote started delete confirmation through the remote authority", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await convertDeleteBubbleToRemoteStarted(
+      await createBubble({
+        id: "b_delete_remote_confirm_01",
+        repoPath,
+        baseBranch: "main",
+        reviewArtifactType: "code",
+        task: "Remote delete confirm",
+        cwd: repoPath
+      })
+    );
+    const pathExists = vi.fn(async () => {
+      throw new Error("local inventory must not drive remote confirmation");
+    });
+    const branchExistsMock = vi.fn(async () => {
+      throw new Error("local branch inventory must not drive remote confirmation");
+    });
+    const executeRemoteBubbleDeleteCommand = vi.fn(async () => ({
+      result: {
+        bubbleId: bubble.bubbleId,
+        deleted: false,
+        requiresConfirmation: true,
+        artifacts: {
+          worktree: {
+            exists: true,
+            path: `/srv/pairflow/repo--${bubble.bubbleId}`
+          },
+          tmux: {
+            exists: true,
+            sessionName: `pf-${bubble.bubbleId}`
+          },
+          runtimeSession: {
+            exists: true,
+            sessionName: `pf-${bubble.bubbleId}`
+          },
+          branch: {
+            exists: true,
+            name: bubble.config.bubble_branch
+          }
+        },
+        tmuxSessionTerminated: false,
+        runtimeSessionRemoved: false,
+        removedWorktree: false,
+        removedBubbleBranch: false
+      }
+    }));
+
+    const result = await deleteBubble(
+      {
+        bubbleId: bubble.bubbleId,
+        cwd: repoPath
+      },
+      {
+        pathExists,
+        branchExists: branchExistsMock,
+        executeRemoteBubbleDeleteCommand,
+        resolveRemoteBubbleStatusTarget: vi.fn(async () => ({
+          alias: "prod",
+          host: "ssh.example.com",
+          user: "pairflow",
+          pairflowCommand: "pairflow"
+        }))
+      }
+    );
+
+    expect(result.requiresConfirmation).toBe(true);
+    expect(result.artifacts.worktree.path).toBe(`/srv/pairflow/repo--${bubble.bubbleId}`);
+    expect(pathExists).not.toHaveBeenCalled();
+    expect(branchExistsMock).not.toHaveBeenCalled();
+    expect(executeRemoteBubbleDeleteCommand).toHaveBeenCalledWith({
+      bubbleId: bubble.bubbleId,
+      remoteClonePath: `/srv/pairflow/repo--${bubble.bubbleId}`,
+      remoteTarget: {
+        alias: "prod",
+        host: "ssh.example.com",
+        user: "pairflow",
+        pairflowCommand: "pairflow"
+      },
+      force: false
+    });
+  });
+
+  it("fails closed when remote delete runs without a started pointer", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await createBubble({
+      id: "b_delete_remote_missing_pointer_01",
+      repoPath,
+      baseBranch: "main",
+      reviewArtifactType: "code",
+      task: "Remote delete missing pointer",
+      cwd: repoPath
+    });
+    await writeFile(
+      bubble.paths.bubbleTomlPath,
+      renderBubbleConfigToml({
+        ...bubble.config,
+        executor: {
+          type: "ssh",
+          remote: "prod"
+        }
+      }),
+      "utf8"
+    );
+    const pathExists = vi.fn(async () => {
+      throw new Error("local inventory must not run when started pointer is missing");
+    });
+    const executeRemoteBubbleDeleteCommand = vi.fn(async () => {
+      throw new Error("remote delete helper must not run without a started pointer");
+    });
+
+    await expect(
+      deleteBubble(
+        {
+          bubbleId: bubble.bubbleId,
+          cwd: repoPath
+        },
+        {
+          pathExists,
+          executeRemoteBubbleDeleteCommand
+        }
+      )
+    ).rejects.toThrow(/requires a started remote pointer/u);
+
+    expect(pathExists).not.toHaveBeenCalled();
+    expect(executeRemoteBubbleDeleteCommand).not.toHaveBeenCalled();
+  });
+
+  it("fails closed when remote delete only has a created pointer", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await convertDeleteBubbleToRemoteCreated(
+      await createBubble({
+        id: "b_delete_remote_created_pointer_01",
+        repoPath,
+        baseBranch: "main",
+        reviewArtifactType: "code",
+        task: "Remote delete created pointer",
+        cwd: repoPath
+      })
+    );
+    const pathExists = vi.fn(async () => {
+      throw new Error("local inventory must not run when pointer is only created");
+    });
+    const executeRemoteBubbleDeleteCommand = vi.fn(async () => {
+      throw new Error("remote delete helper must not run with a created pointer");
+    });
+
+    await expect(
+      deleteBubble(
+        {
+          bubbleId: bubble.bubbleId,
+          cwd: repoPath
+        },
+        {
+          pathExists,
+          executeRemoteBubbleDeleteCommand
+        }
+      )
+    ).rejects.toThrow(/requires a started remote pointer/u);
+
+    expect(pathExists).not.toHaveBeenCalled();
+    expect(executeRemoteBubbleDeleteCommand).not.toHaveBeenCalled();
+  });
+
+  it("keeps local archive continuity on remote started delete success", async () => {
+    const repoPath = await createTempRepo();
+    const now = new Date("2026-04-18T16:20:00.000Z");
+    const bubble = await convertDeleteBubbleToRemoteStarted(
+      await createBubble({
+        id: "b_delete_remote_success_01",
+        repoPath,
+        baseBranch: "main",
+        reviewArtifactType: "code",
+        task: "Remote delete success",
+        cwd: repoPath
+      })
+    );
+    const remoteState = `{\n  "bubble_id": "${bubble.bubbleId}",\n  "state": "DONE"\n}\n`;
+    const remoteTranscript =
+      `{"id":"msg_remote_delete_01","bubble_id":"${bubble.bubbleId}","type":"DONE_PACKAGE"}\n`;
+    const cleanupWorktreeWorkspace = vi.fn(async () => {
+      throw new Error("local workspace cleanup must stay unused on remote success");
+    });
+
+    const result = await deleteBubble(
+      {
+        bubbleId: bubble.bubbleId,
+        cwd: repoPath,
+        force: true,
+        now
+      },
+      {
+        executeRemoteBubbleDeleteCommand: vi.fn(async () => ({
+          result: {
+            bubbleId: bubble.bubbleId,
+            deleted: true,
+            requiresConfirmation: false,
+            artifacts: {
+              worktree: {
+                exists: true,
+                path: `/srv/pairflow/repo--${bubble.bubbleId}`
+              },
+              tmux: {
+                exists: true,
+                sessionName: `pf-${bubble.bubbleId}`
+              },
+              runtimeSession: {
+                exists: true,
+                sessionName: `pf-${bubble.bubbleId}`
+              },
+              branch: {
+                exists: true,
+                name: bubble.config.bubble_branch
+              }
+            },
+            tmuxSessionTerminated: true,
+            runtimeSessionRemoved: true,
+            removedWorktree: true,
+            removedBubbleBranch: true
+          },
+          archiveCapture: {
+            sourceBubbleDir: `/srv/pairflow/repo--${bubble.bubbleId}/.pairflow/bubbles/${bubble.bubbleId}`,
+            bubbleToml: await readFile(bubble.paths.bubbleTomlPath, "utf8"),
+            stateJson: remoteState,
+            transcriptNdjson: remoteTranscript,
+            inboxNdjson: "",
+            taskMarkdown: "# Remote Task\n\nCanonical remote delete payload.\n"
+          }
+        })),
+        resolveRemoteBubbleStatusTarget: vi.fn(async () => ({
+          alias: "prod",
+          host: "ssh.example.com",
+          user: "pairflow",
+          pairflowCommand: "pairflow"
+        })),
+        pathExists: vi.fn(async () => {
+          throw new Error("local inventory must not drive remote delete success");
+        }),
+        branchExists: vi.fn(async () => {
+          throw new Error("local branch inventory must not drive remote delete success");
+        }),
+        cleanupWorktreeWorkspace
+      }
+    );
+
+    expect(result.deleted).toBe(true);
+    expect(result.tmuxSessionTerminated).toBe(true);
+    expect(result.runtimeSessionRemoved).toBe(true);
+    expect(result.removedWorktree).toBe(true);
+    expect(result.removedBubbleBranch).toBe(true);
+
+    const archivePaths = await resolveArchivePaths({
+      repoPath,
+      bubbleInstanceId: bubble.config.bubble_instance_id as string,
+      archiveRootPath: process.env.PAIRFLOW_ARCHIVE_ROOT
+    });
+    const manifest = JSON.parse(
+      await readFile(
+        join(archivePaths.bubbleInstanceArchivePath, "archive-manifest.json"),
+        "utf8"
+      )
+    ) as ArchiveManifest;
+    expect(manifest.source_bubble_dir).toBe(
+      `/srv/pairflow/repo--${bubble.bubbleId}/.pairflow/bubbles/${bubble.bubbleId}`
+    );
+    expect(
+      await readFile(join(archivePaths.bubbleInstanceArchivePath, "state.json"), "utf8")
+    ).toBe(remoteState);
+    expect(
+      await readFile(
+        join(archivePaths.bubbleInstanceArchivePath, "transcript.ndjson"),
+        "utf8"
+      )
+    ).toBe(remoteTranscript);
+    expect(cleanupWorktreeWorkspace).not.toHaveBeenCalled();
+    expect(
+      (await readMetricsEventsForDate(now)).find(
+        (event) => event.event_type === "bubble_deleted"
+      )
+    ).toMatchObject({
+      bubble_id: bubble.bubbleId,
+      bubble_instance_id: bubble.config.bubble_instance_id,
+      event_type: "bubble_deleted",
+      round: null,
+      actor_role: "orchestrator",
+      metadata: {
+        force: true,
+        tmux_session_terminated: true,
+        runtime_session_removed: true,
+        removed_worktree: true,
+        removed_bubble_branch: true,
+        had_worktree: true,
+        had_tmux_session: true,
+        had_runtime_session: true,
+        had_branch: true
+      }
+    });
+    await expect(stat(bubble.paths.bubbleDir)).rejects.toMatchObject({
+      code: "ENOENT"
+    });
+  });
+
+  it("fails closed when remote delete finalization cannot remove the local bubble directory", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await convertDeleteBubbleToRemoteStarted(
+      await createBubble({
+        id: "b_delete_remote_remove_active_fail_01",
+        repoPath,
+        baseBranch: "main",
+        reviewArtifactType: "code",
+        task: "Remote delete local remove-active failure",
+        cwd: repoPath
+      })
+    );
+    const now = new Date("2026-04-18T16:35:00.000Z");
+    const removeBubbleDirectory = vi.fn(async () => {
+      throw new Error("permission denied");
+    });
+
+    await expect(
+      deleteBubble(
+        {
+          bubbleId: bubble.bubbleId,
+          cwd: repoPath,
+          force: true,
+          now
+        },
+        {
+          executeRemoteBubbleDeleteCommand: vi.fn(async () => ({
+            result: {
+              bubbleId: bubble.bubbleId,
+              deleted: true,
+              requiresConfirmation: false,
+              artifacts: {
+                worktree: {
+                  exists: true,
+                  path: `/srv/pairflow/repo--${bubble.bubbleId}`
+                },
+                tmux: {
+                  exists: true,
+                  sessionName: `pf-${bubble.bubbleId}`
+                },
+                runtimeSession: {
+                  exists: true,
+                  sessionName: `pf-${bubble.bubbleId}`
+                },
+                branch: {
+                  exists: true,
+                  name: bubble.config.bubble_branch
+                }
+              },
+              tmuxSessionTerminated: true,
+              runtimeSessionRemoved: true,
+              removedWorktree: true,
+              removedBubbleBranch: true
+            },
+            archiveCapture: {
+              sourceBubbleDir: `/srv/pairflow/repo--${bubble.bubbleId}/.pairflow/bubbles/${bubble.bubbleId}`,
+              bubbleToml: await readFile(bubble.paths.bubbleTomlPath, "utf8"),
+              stateJson: `{"bubble_id":"${bubble.bubbleId}","state":"DONE"}\n`,
+              transcriptNdjson: `{"id":"msg_remote_remove_active_fail_01"}\n`,
+              inboxNdjson: ""
+            }
+          })),
+          resolveRemoteBubbleStatusTarget: vi.fn(async () => ({
+            alias: "prod",
+            host: "ssh.example.com",
+            user: "pairflow",
+            pairflowCommand: "pairflow"
+          })),
+          removeBubbleDirectory
+        }
+      )
+    ).rejects.toThrow(/step=remove-active/u);
+
+    const archivePaths = await resolveArchivePaths({
+      repoPath,
+      bubbleInstanceId: bubble.config.bubble_instance_id as string,
+      archiveRootPath: process.env.PAIRFLOW_ARCHIVE_ROOT
+    });
+    await expect(stat(archivePaths.bubbleInstanceArchivePath)).resolves.toBeDefined();
+    const index = await readArchiveIndexFromRepo(repoPath);
+    expect(
+      index.entries.some(
+        (entry) =>
+          entry.bubble_instance_id === bubble.config.bubble_instance_id
+          && entry.status === "deleted"
+      )
+    ).toBe(true);
+    await expect(stat(bubble.paths.bubbleDir)).resolves.toBeDefined();
+  });
+
+  it("fails closed when non-force remote delete reports deleted=true even if remote artifacts are already absent", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await convertDeleteBubbleToRemoteStarted(
+      await createBubble({
+        id: "b_delete_remote_zero_art_01",
+        repoPath,
+        baseBranch: "main",
+        reviewArtifactType: "code",
+        task: "Remote delete zero artifact contract",
+        cwd: repoPath
+      })
+    );
+    const remoteState = `{"bubble_id":"${bubble.bubbleId}","state":"DONE"}\n`;
+    const createArchiveSnapshot = vi.fn(async () => {
+      throw new Error("archive must not run on non-force remote success payload");
+    });
+    const removeBubbleDirectory = vi.fn(async () => undefined);
+
+    await expect(
+      deleteBubble(
+        {
+          bubbleId: bubble.bubbleId,
+          cwd: repoPath
+        },
+        {
+          executeRemoteBubbleDeleteCommand: vi.fn(async () => ({
+            result: {
+              bubbleId: bubble.bubbleId,
+              deleted: true,
+              requiresConfirmation: false,
+              artifacts: {
+                worktree: {
+                  exists: false,
+                  path: `/srv/pairflow/repo--${bubble.bubbleId}`
+                },
+                tmux: {
+                  exists: false,
+                  sessionName: `pf-${bubble.bubbleId}`
+                },
+                runtimeSession: {
+                  exists: false,
+                  sessionName: null
+                },
+                branch: {
+                  exists: false,
+                  name: bubble.config.bubble_branch
+                }
+              },
+              tmuxSessionTerminated: false,
+              runtimeSessionRemoved: false,
+              removedWorktree: false,
+              removedBubbleBranch: false
+            },
+            archiveCapture: {
+              sourceBubbleDir: `/srv/pairflow/repo--${bubble.bubbleId}/.pairflow/bubbles/${bubble.bubbleId}`,
+              bubbleToml: await readFile(bubble.paths.bubbleTomlPath, "utf8"),
+              stateJson: remoteState,
+              transcriptNdjson: `{"id":"msg_remote_zero_artifact_01"}\n`,
+              inboxNdjson: ""
+            }
+          })),
+          resolveRemoteBubbleStatusTarget: vi.fn(async () => ({
+            alias: "prod",
+            host: "ssh.example.com",
+            user: "pairflow",
+            pairflowCommand: "pairflow"
+          })),
+          createArchiveSnapshot,
+          removeBubbleDirectory
+        }
+      )
+    ).rejects.toThrow(
+      /non-force remote delete must stay on the confirmation contract and must not report deleted=true/u
+    );
+
+    expect(createArchiveSnapshot).not.toHaveBeenCalled();
+    expect(removeBubbleDirectory).not.toHaveBeenCalled();
+    await expect(stat(bubble.paths.bubbleDir)).resolves.toBeDefined();
+  });
+
+  it("fails closed when remote confirmation payload reports a different bubble identity", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await convertDeleteBubbleToRemoteStarted(
+      await createBubble({
+        id: "b_delete_remote_id_mismatch_confirm_01",
+        repoPath,
+        baseBranch: "main",
+        reviewArtifactType: "code",
+        task: "Remote delete confirmation identity mismatch",
+        cwd: repoPath
+      })
+    );
+    const createArchiveSnapshot = vi.fn(async () => {
+      throw new Error("archive must not run on remote confirmation mismatch");
+    });
+
+    await expect(
+      deleteBubble(
+        {
+          bubbleId: bubble.bubbleId,
+          cwd: repoPath
+        },
+        {
+          executeRemoteBubbleDeleteCommand: vi.fn(async () => ({
+            result: {
+              bubbleId: "b_delete_remote_id_mismatch_other_01",
+              deleted: false,
+              requiresConfirmation: true,
+              artifacts: {
+                worktree: {
+                  exists: true,
+                  path: `/srv/pairflow/repo--${bubble.bubbleId}`
+                },
+                tmux: {
+                  exists: true,
+                  sessionName: `pf-${bubble.bubbleId}`
+                },
+                runtimeSession: {
+                  exists: true,
+                  sessionName: `pf-${bubble.bubbleId}`
+                },
+                branch: {
+                  exists: true,
+                  name: bubble.config.bubble_branch
+                }
+              },
+              tmuxSessionTerminated: false,
+              runtimeSessionRemoved: false,
+              removedWorktree: false,
+              removedBubbleBranch: false
+            }
+          })),
+          resolveRemoteBubbleStatusTarget: vi.fn(async () => ({
+            alias: "prod",
+            host: "ssh.example.com",
+            user: "pairflow",
+            pairflowCommand: "pairflow"
+          })),
+          createArchiveSnapshot
+        }
+      )
+    ).rejects.toThrow(/returned payload for bubble b_delete_remote_id_mismatch_other_01/u);
+
+    expect(createArchiveSnapshot).not.toHaveBeenCalled();
+    await expect(stat(bubble.paths.bubbleDir)).resolves.toBeDefined();
+  });
+
+  it("fails closed when remote success payload reports a different bubble identity", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await convertDeleteBubbleToRemoteStarted(
+      await createBubble({
+        id: "b_delete_remote_id_mismatch_success_01",
+        repoPath,
+        baseBranch: "main",
+        reviewArtifactType: "code",
+        task: "Remote delete success identity mismatch",
+        cwd: repoPath
+      })
+    );
+    const createArchiveSnapshot = vi.fn(async () => {
+      throw new Error("archive must not run on remote success mismatch");
+    });
+    const removeBubbleDirectory = vi.fn(async () => undefined);
+
+    await expect(
+      deleteBubble(
+        {
+          bubbleId: bubble.bubbleId,
+          cwd: repoPath,
+          force: true
+        },
+        {
+          executeRemoteBubbleDeleteCommand: vi.fn(async () => ({
+            result: {
+              bubbleId: "b_delete_remote_id_mismatch_other_02",
+              deleted: true,
+              requiresConfirmation: false,
+              artifacts: {
+                worktree: {
+                  exists: true,
+                  path: `/srv/pairflow/repo--${bubble.bubbleId}`
+                },
+                tmux: {
+                  exists: true,
+                  sessionName: `pf-${bubble.bubbleId}`
+                },
+                runtimeSession: {
+                  exists: true,
+                  sessionName: `pf-${bubble.bubbleId}`
+                },
+                branch: {
+                  exists: true,
+                  name: bubble.config.bubble_branch
+                }
+              },
+              tmuxSessionTerminated: true,
+              runtimeSessionRemoved: true,
+              removedWorktree: true,
+              removedBubbleBranch: true
+            },
+            archiveCapture: {
+              sourceBubbleDir: `/srv/pairflow/repo--${bubble.bubbleId}/.pairflow/bubbles/${bubble.bubbleId}`,
+              bubbleToml: await readFile(bubble.paths.bubbleTomlPath, "utf8"),
+              stateJson: `{"bubble_id":"${bubble.bubbleId}","state":"DONE"}\n`,
+              transcriptNdjson: `{"id":"msg_remote_id_mismatch_success_01"}\n`,
+              inboxNdjson: ""
+            }
+          })),
+          resolveRemoteBubbleStatusTarget: vi.fn(async () => ({
+            alias: "prod",
+            host: "ssh.example.com",
+            user: "pairflow",
+            pairflowCommand: "pairflow"
+          })),
+          createArchiveSnapshot,
+          removeBubbleDirectory
+        }
+      )
+    ).rejects.toThrow(/force path returned payload for bubble b_delete_remote_id_mismatch_other_02/u);
+
+    expect(createArchiveSnapshot).not.toHaveBeenCalled();
+    expect(removeBubbleDirectory).not.toHaveBeenCalled();
+    await expect(stat(bubble.paths.bubbleDir)).resolves.toBeDefined();
+  });
+
+  it("fails closed when remote archive continuity cannot be materialized locally", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await convertDeleteBubbleToRemoteStarted(
+      await createBubble({
+        id: "b_delete_remote_archive_fail_01",
+        repoPath,
+        baseBranch: "main",
+        reviewArtifactType: "code",
+        task: "Remote delete archive fail",
+        cwd: repoPath
+      })
+    );
+    const removeBubbleDirectory = vi.fn(async () => undefined);
+
+    await expect(
+      deleteBubble(
+        {
+          bubbleId: bubble.bubbleId,
+          cwd: repoPath,
+          force: true
+        },
+        {
+          executeRemoteBubbleDeleteCommand: vi.fn(async () => ({
+            result: {
+              bubbleId: bubble.bubbleId,
+              deleted: true,
+              requiresConfirmation: false,
+              artifacts: {
+                worktree: {
+                  exists: true,
+                  path: `/srv/pairflow/repo--${bubble.bubbleId}`
+                },
+                tmux: {
+                  exists: true,
+                  sessionName: `pf-${bubble.bubbleId}`
+                },
+                runtimeSession: {
+                  exists: true,
+                  sessionName: `pf-${bubble.bubbleId}`
+                },
+                branch: {
+                  exists: true,
+                  name: bubble.config.bubble_branch
+                }
+              },
+              tmuxSessionTerminated: true,
+              runtimeSessionRemoved: true,
+              removedWorktree: true,
+              removedBubbleBranch: true
+            },
+            archiveCapture: {
+              sourceBubbleDir: `/srv/pairflow/repo--${bubble.bubbleId}/.pairflow/bubbles/${bubble.bubbleId}`,
+              bubbleToml: await readFile(bubble.paths.bubbleTomlPath, "utf8"),
+              stateJson: `{"bubble_id":"${bubble.bubbleId}","state":"DONE"}\n`,
+              transcriptNdjson: `{"id":"msg_remote_archive_fail_01"}\n`,
+              inboxNdjson: ""
+            }
+          })),
+          resolveRemoteBubbleStatusTarget: vi.fn(async () => ({
+            alias: "prod",
+            host: "ssh.example.com",
+            user: "pairflow",
+            pairflowCommand: "pairflow"
+          })),
+          createArchiveSnapshot: vi.fn(async () => {
+            throw new Error("snapshot failed");
+          }),
+          removeBubbleDirectory
+        }
+      )
+    ).rejects.toThrow(/step=snapshot/u);
+
+    expect(removeBubbleDirectory).not.toHaveBeenCalled();
+    expect(await readFile(bubble.paths.statePath, "utf8")).toContain("\"state\": \"CREATED\"");
+    await expect(stat(bubble.paths.bubbleDir)).resolves.toBeDefined();
+  });
+
+  it("fails closed when remote delete does not prove clone cleanup", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await convertDeleteBubbleToRemoteStarted(
+      await createBubble({
+        id: "b_delete_remote_cleanup_missing_01",
+        repoPath,
+        baseBranch: "main",
+        reviewArtifactType: "code",
+        task: "Remote delete cleanup proof",
+        cwd: repoPath
+      })
+    );
+    const createArchiveSnapshot = vi.fn(async () => {
+      throw new Error("archive should not run without remote cleanup proof");
+    });
+
+    await expect(
+      deleteBubble(
+        {
+          bubbleId: bubble.bubbleId,
+          cwd: repoPath,
+          force: true
+        },
+        {
+          executeRemoteBubbleDeleteCommand: vi.fn(async () => ({
+            result: {
+              bubbleId: bubble.bubbleId,
+              deleted: true,
+              requiresConfirmation: false,
+              artifacts: {
+                worktree: {
+                  exists: true,
+                  path: `/srv/pairflow/repo--${bubble.bubbleId}`
+                },
+                tmux: {
+                  exists: false,
+                  sessionName: `pf-${bubble.bubbleId}`
+                },
+                runtimeSession: {
+                  exists: false,
+                  sessionName: null
+                },
+                branch: {
+                  exists: true,
+                  name: bubble.config.bubble_branch
+                }
+              },
+              tmuxSessionTerminated: false,
+              runtimeSessionRemoved: false,
+              removedWorktree: false,
+              removedBubbleBranch: false
+            },
+            archiveCapture: {
+              sourceBubbleDir: `/srv/pairflow/repo--${bubble.bubbleId}/.pairflow/bubbles/${bubble.bubbleId}`,
+              bubbleToml: await readFile(bubble.paths.bubbleTomlPath, "utf8"),
+              stateJson: `{"bubble_id":"${bubble.bubbleId}","state":"DONE"}\n`,
+              transcriptNdjson: `{"id":"msg_remote_cleanup_missing_01"}\n`,
+              inboxNdjson: ""
+            }
+          })),
+          resolveRemoteBubbleStatusTarget: vi.fn(async () => ({
+            alias: "prod",
+            host: "ssh.example.com",
+            user: "pairflow",
+            pairflowCommand: "pairflow"
+          })),
+          createArchiveSnapshot
+        }
+      )
+    ).rejects.toThrow(/did not prove destructive cleanup of the remote clone/u);
+
+    expect(createArchiveSnapshot).not.toHaveBeenCalled();
+    await expect(stat(bubble.paths.bubbleDir)).resolves.toBeDefined();
+  });
+
+  it("fails closed when remote delete does not prove tmux cleanup", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await convertDeleteBubbleToRemoteStarted(
+      await createBubble({
+        id: "b_delete_remote_tmux_cleanup_missing_01",
+        repoPath,
+        baseBranch: "main",
+        reviewArtifactType: "code",
+        task: "Remote delete tmux cleanup proof",
+        cwd: repoPath
+      })
+    );
+
+    await expect(
+      deleteBubble(
+        {
+          bubbleId: bubble.bubbleId,
+          cwd: repoPath,
+          force: true
+        },
+        {
+          executeRemoteBubbleDeleteCommand: vi.fn(async () => ({
+            result: {
+              bubbleId: bubble.bubbleId,
+              deleted: true,
+              requiresConfirmation: false,
+              artifacts: {
+                worktree: {
+                  exists: false,
+                  path: `/srv/pairflow/repo--${bubble.bubbleId}`
+                },
+                tmux: {
+                  exists: true,
+                  sessionName: `pf-${bubble.bubbleId}`
+                },
+                runtimeSession: {
+                  exists: false,
+                  sessionName: null
+                },
+                branch: {
+                  exists: false,
+                  name: bubble.config.bubble_branch
+                }
+              },
+              tmuxSessionTerminated: false,
+              runtimeSessionRemoved: false,
+              removedWorktree: false,
+              removedBubbleBranch: false
+            },
+            archiveCapture: {
+              sourceBubbleDir: `/srv/pairflow/repo--${bubble.bubbleId}/.pairflow/bubbles/${bubble.bubbleId}`,
+              bubbleToml: await readFile(bubble.paths.bubbleTomlPath, "utf8"),
+              stateJson: `{"bubble_id":"${bubble.bubbleId}","state":"DONE"}\n`,
+              transcriptNdjson: `{"id":"msg_remote_tmux_cleanup_missing_01"}\n`,
+              inboxNdjson: ""
+            }
+          })),
+          resolveRemoteBubbleStatusTarget: vi.fn(async () => ({
+            alias: "prod",
+            host: "ssh.example.com",
+            user: "pairflow",
+            pairflowCommand: "pairflow"
+          })),
+          createArchiveSnapshot: vi.fn(async () => {
+            throw new Error("archive should not run without tmux cleanup proof");
+          })
+        }
+      )
+    ).rejects.toThrow(/did not prove tmux cleanup for the remote session/u);
+  });
+
+  it("fails closed when remote delete does not prove runtime-session cleanup", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await convertDeleteBubbleToRemoteStarted(
+      await createBubble({
+        id: "b_del_remote_runtime_clean_01",
+        repoPath,
+        baseBranch: "main",
+        reviewArtifactType: "code",
+        task: "Remote delete runtime cleanup proof",
+        cwd: repoPath
+      })
+    );
+
+    await expect(
+      deleteBubble(
+        {
+          bubbleId: bubble.bubbleId,
+          cwd: repoPath,
+          force: true
+        },
+        {
+          executeRemoteBubbleDeleteCommand: vi.fn(async () => ({
+            result: {
+              bubbleId: bubble.bubbleId,
+              deleted: true,
+              requiresConfirmation: false,
+              artifacts: {
+                worktree: {
+                  exists: false,
+                  path: `/srv/pairflow/repo--${bubble.bubbleId}`
+                },
+                tmux: {
+                  exists: false,
+                  sessionName: `pf-${bubble.bubbleId}`
+                },
+                runtimeSession: {
+                  exists: true,
+                  sessionName: `pf-${bubble.bubbleId}`
+                },
+                branch: {
+                  exists: false,
+                  name: bubble.config.bubble_branch
+                }
+              },
+              tmuxSessionTerminated: false,
+              runtimeSessionRemoved: false,
+              removedWorktree: false,
+              removedBubbleBranch: false
+            },
+            archiveCapture: {
+              sourceBubbleDir: `/srv/pairflow/repo--${bubble.bubbleId}/.pairflow/bubbles/${bubble.bubbleId}`,
+              bubbleToml: await readFile(bubble.paths.bubbleTomlPath, "utf8"),
+              stateJson: `{"bubble_id":"${bubble.bubbleId}","state":"DONE"}\n`,
+              transcriptNdjson: `{"id":"msg_remote_runtime_cleanup_missing_01"}\n`,
+              inboxNdjson: ""
+            }
+          })),
+          resolveRemoteBubbleStatusTarget: vi.fn(async () => ({
+            alias: "prod",
+            host: "ssh.example.com",
+            user: "pairflow",
+            pairflowCommand: "pairflow"
+          })),
+          createArchiveSnapshot: vi.fn(async () => {
+            throw new Error("archive should not run without runtime cleanup proof");
+          })
+        }
+      )
+    ).rejects.toThrow(/did not prove runtime-session cleanup/u);
+  });
+
+  it("fails closed when remote delete does not prove branch cleanup", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await convertDeleteBubbleToRemoteStarted(
+      await createBubble({
+        id: "b_del_remote_branch_clean_01",
+        repoPath,
+        baseBranch: "main",
+        reviewArtifactType: "code",
+        task: "Remote delete branch cleanup proof",
+        cwd: repoPath
+      })
+    );
+
+    await expect(
+      deleteBubble(
+        {
+          bubbleId: bubble.bubbleId,
+          cwd: repoPath,
+          force: true
+        },
+        {
+          executeRemoteBubbleDeleteCommand: vi.fn(async () => ({
+            result: {
+              bubbleId: bubble.bubbleId,
+              deleted: true,
+              requiresConfirmation: false,
+              artifacts: {
+                worktree: {
+                  exists: false,
+                  path: `/srv/pairflow/repo--${bubble.bubbleId}`
+                },
+                tmux: {
+                  exists: false,
+                  sessionName: `pf-${bubble.bubbleId}`
+                },
+                runtimeSession: {
+                  exists: false,
+                  sessionName: null
+                },
+                branch: {
+                  exists: true,
+                  name: bubble.config.bubble_branch
+                }
+              },
+              tmuxSessionTerminated: false,
+              runtimeSessionRemoved: false,
+              removedWorktree: false,
+              removedBubbleBranch: false
+            },
+            archiveCapture: {
+              sourceBubbleDir: `/srv/pairflow/repo--${bubble.bubbleId}/.pairflow/bubbles/${bubble.bubbleId}`,
+              bubbleToml: await readFile(bubble.paths.bubbleTomlPath, "utf8"),
+              stateJson: `{"bubble_id":"${bubble.bubbleId}","state":"DONE"}\n`,
+              transcriptNdjson: `{"id":"msg_remote_branch_cleanup_missing_01"}\n`,
+              inboxNdjson: ""
+            }
+          })),
+          resolveRemoteBubbleStatusTarget: vi.fn(async () => ({
+            alias: "prod",
+            host: "ssh.example.com",
+            user: "pairflow",
+            pairflowCommand: "pairflow"
+          })),
+          createArchiveSnapshot: vi.fn(async () => {
+            throw new Error("archive should not run without branch cleanup proof");
+          })
+        }
+      )
+    ).rejects.toThrow(/did not prove remote branch cleanup/u);
+  });
+
+  it("accepts remote delete success when the canonical remote worktree was already absent", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await convertDeleteBubbleToRemoteStarted(
+      await createBubble({
+        id: "b_delete_remote_absent_worktree_01",
+        repoPath,
+        baseBranch: "main",
+        reviewArtifactType: "code",
+        task: "Remote delete absent worktree",
+        cwd: repoPath
+      })
+    );
+
+    const result = await deleteBubble(
+      {
+        bubbleId: bubble.bubbleId,
+        cwd: repoPath,
+        force: true
+      },
+      {
+        executeRemoteBubbleDeleteCommand: vi.fn(async () => ({
+          result: {
+            bubbleId: bubble.bubbleId,
+            deleted: true,
+            requiresConfirmation: false,
+            artifacts: {
+              worktree: {
+                exists: false,
+                path: `/srv/pairflow/repo--${bubble.bubbleId}`
+              },
+              tmux: {
+                exists: false,
+                sessionName: `pf-${bubble.bubbleId}`
+              },
+              runtimeSession: {
+                exists: false,
+                sessionName: null
+              },
+              branch: {
+                exists: false,
+                name: bubble.config.bubble_branch
+              }
+            },
+            tmuxSessionTerminated: false,
+            runtimeSessionRemoved: false,
+            removedWorktree: false,
+            removedBubbleBranch: false
+          },
+          archiveCapture: {
+            sourceBubbleDir: `/srv/pairflow/repo--${bubble.bubbleId}/.pairflow/bubbles/${bubble.bubbleId}`,
+            bubbleToml: await readFile(bubble.paths.bubbleTomlPath, "utf8"),
+            stateJson: `{"bubble_id":"${bubble.bubbleId}","state":"DONE"}\n`,
+            transcriptNdjson: `{"id":"msg_remote_absent_worktree_01"}\n`,
+            inboxNdjson: ""
+          }
+        })),
+        resolveRemoteBubbleStatusTarget: vi.fn(async () => ({
+          alias: "prod",
+          host: "ssh.example.com",
+          user: "pairflow",
+          pairflowCommand: "pairflow"
+        }))
+      }
+    );
+
+    expect(result.deleted).toBe(true);
+    expect(result.artifacts.worktree.exists).toBe(false);
+    const archivePaths = await resolveArchivePaths({
+      repoPath,
+      bubbleInstanceId: bubble.config.bubble_instance_id as string,
+      archiveRootPath: process.env.PAIRFLOW_ARCHIVE_ROOT
+    });
+    await expect(stat(archivePaths.bubbleInstanceArchivePath)).resolves.toBeDefined();
+  });
+
+  it("uses the local canonical delete path inside a verified remote clone execution context", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await createBubble({
+      id: "b_delete_remote_clone_local_01",
+      repoPath,
+      baseBranch: "main",
+      reviewArtifactType: "code",
+      task: "Remote clone local delete",
+      cwd: repoPath
+    });
+    await writeFile(
+      bubble.paths.bubbleTomlPath,
+      renderBubbleConfigToml({
+        ...bubble.config,
+        executor: {
+          type: "ssh",
+          remote: "prod"
+        }
+      }),
+      "utf8"
+    );
+    vi.stubEnv(remoteDeleteModeEnvVar, remoteDeleteModeInnerRemoteExecution);
+    vi.stubEnv(remoteDeleteWorkspaceRootEnvVar, repoPath);
+
+    const pathExists = vi.fn(async (path: string) => path === repoPath);
+    const branchExistsMock = vi.fn(async () => false);
+    const executeRemoteBubbleDeleteCommand = vi.fn(async () => {
+      throw new Error("remote delete helper should not run inside verified remote clone execution");
+    });
+    const cleanupWorktreeWorkspace = vi.fn(async () => ({
+      repoPath,
+      bubbleBranch: bubble.config.bubble_branch,
+      worktreePath: repoPath,
+      removedWorktree: true,
+      removedBranch: false
+    }));
+    const removeBubbleDirectory = vi.fn(async () => undefined);
+
+    const result = await deleteBubble(
+      {
+        bubbleId: bubble.bubbleId,
+        cwd: repoPath,
+        force: true
+      },
+      {
+        pathExists,
+        branchExists: branchExistsMock,
+        runTmux: vi.fn(async () => ({
+          stdout: "",
+          stderr: "no session",
+          exitCode: 1
+        })),
+        executeRemoteBubbleDeleteCommand,
+        resolveRemoteBubbleStatusTarget: vi.fn(async () => {
+          throw new Error("remote target resolution should not run in remote_clone route");
+        }),
+        cleanupWorktreeWorkspace,
+        removeBubbleDirectory
+      }
+    );
+
+    expect(result.deleted).toBe(true);
+    expect(pathExists).toHaveBeenCalledWith(repoPath);
+    expect(cleanupWorktreeWorkspace).toHaveBeenCalledWith({
+      repoPath,
+      bubbleBranch: bubble.config.bubble_branch,
+      worktreePath: repoPath
+    });
+    expect(executeRemoteBubbleDeleteCommand).not.toHaveBeenCalled();
+  });
+
+  it("fails closed in remote clone execution when source-repo remote artifacts still exist", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await convertDeleteBubbleToRemoteCreated(
+      await createBubble({
+        id: "b_delete_remote_clone_orphan_guard_01",
+        repoPath,
+        baseBranch: "main",
+        reviewArtifactType: "code",
+        task: "Remote clone orphan guard",
+        cwd: repoPath
+      })
+    );
+    vi.stubEnv(remoteDeleteModeEnvVar, remoteDeleteModeInnerRemoteExecution);
+    vi.stubEnv(remoteDeleteWorkspaceRootEnvVar, repoPath);
+
+    const executeRemoteBubbleDeleteCommand = vi.fn(async () => {
+      throw new Error("remote delete helper should not run when orphan guard triggers");
+    });
+
+    await expect(
+      deleteBubble(
+        {
+          bubbleId: bubble.bubbleId,
+          cwd: repoPath
+        },
+        {
+          executeRemoteBubbleDeleteCommand
+        }
+      )
+    ).rejects.toThrow(/refused to continue because source-repo remote artifacts are still present/u);
+
+    expect(executeRemoteBubbleDeleteCommand).not.toHaveBeenCalled();
   });
 
   it("forwards archiveRootPath and uses global archive locks path", async () => {

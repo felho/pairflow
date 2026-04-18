@@ -51,6 +51,12 @@ describe("runCli bubble delete confirmation exit code", () => {
 
     vi.doMock("../../src/cli/commands/bubble/delete.js", () => ({
       getBubbleDeleteHelpText: () => "pairflow bubble delete --help",
+      parseBubbleDeleteCommandOptions: (args: string[]) => ({
+        id: args[1],
+        force: false,
+        json: false,
+        help: false
+      }),
       runBubbleDeleteCommand
     }));
 
@@ -86,6 +92,12 @@ describe("runCli bubble delete confirmation exit code", () => {
 
     vi.doMock("../../src/cli/commands/bubble/delete.js", () => ({
       getBubbleDeleteHelpText: () => "pairflow bubble delete --help",
+      parseBubbleDeleteCommandOptions: (args: string[]) => ({
+        id: args[1],
+        force: false,
+        json: false,
+        help: false
+      }),
       runBubbleDeleteCommand
     }));
 

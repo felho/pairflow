@@ -25,6 +25,23 @@ describe("parseBubbleDeleteCommandOptions", () => {
     expect(parsed.id).toBe("b_delete_01");
     expect(parsed.repo).toBe("/tmp/repo");
     expect(parsed.force).toBe(true);
+    expect(parsed.json).toBe(false);
+  });
+
+  it("parses optional json output", () => {
+    const parsed = parseBubbleDeleteCommandOptions([
+      "--id",
+      "b_delete_json_01",
+      "--json"
+    ]);
+
+    expect(parsed.help).toBe(false);
+    if (parsed.help) {
+      throw new Error("Expected validated bubble delete options");
+    }
+
+    expect(parsed.id).toBe("b_delete_json_01");
+    expect(parsed.json).toBe(true);
   });
 
   it("supports help", () => {
@@ -32,6 +49,7 @@ describe("parseBubbleDeleteCommandOptions", () => {
     expect(parsed.help).toBe(true);
     const helpText = getBubbleDeleteHelpText();
     expect(helpText).toContain("pairflow bubble delete");
+    expect(helpText).toContain("--json");
     expect(helpText).toContain("Exit code is 2 when confirmation is required");
   });
 

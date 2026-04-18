@@ -661,4 +661,28 @@ describe("cleanupWorktreeWorkspace", () => {
     expect(result.removedWorktree).toBe(true);
     expect(result.removedBranch).toBe(true);
   });
+
+  it("treats a self-hosted clone root as removing the owned branch together with the clone", async () => {
+    const repoPath = await createGitRepo();
+    const worktreePath = await createWorktreePath("b_clone_self_hosted_owned");
+    const bubbleBranch = "bubble/b_clone_self_hosted_owned";
+
+    await createCloneWorkspace({
+      repoPath,
+      worktreePath,
+      bubbleBranch
+    });
+
+    const result = await cleanupWorktreeWorkspace({
+      repoPath: worktreePath,
+      bubbleBranch,
+      worktreePath
+    });
+
+    expect(result.removedWorktree).toBe(true);
+    expect(result.removedBranch).toBe(true);
+    await expect(lstat(worktreePath)).rejects.toMatchObject({
+      code: "ENOENT"
+    });
+  });
 });
