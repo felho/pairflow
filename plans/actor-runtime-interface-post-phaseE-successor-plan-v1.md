@@ -134,6 +134,16 @@ owners:
    - vagy non-tmux actor launch irany felmerul.
 4. Az `O2-T1` docs-only boundary note-ja:
    - `plans/actor-runtime-interface-topology-neutral-delivery-executor-contract-note-v1.md`
+5. Az `Opportunity 2` current-tree reality check alapjan nem egyetlen implementacios task:
+   - a shared delivery/launch contract retained `tmux` naminggel ma is tobb consume familyre sugarzik szet,
+   - kulon producer/adapter foundation, workflow-orchestration consume es read-model/public compat closure latszik,
+   - emiatt az `O2` lane minimuma az `O2-T1` docs-only clarification utan tovabbi tobb bounded task.
+6. A legkisebb safe decomposition jelen allapot szerint:
+   - `O2-T1`: docs-only topology/delivery/executor boundary clarification es sequencing lock
+   - `O2-T2`: topology-neutral delivery contract + retained adapter foundation
+   - `O2-T3`: topology-neutral delivery consume-family alignment
+   - `O2-T4`: topology-neutral launch/executor contract foundation
+   - `O2-T5`: topology-neutral launch/executor consume-family alignment + retained public/read-model cleanup
 
 ### Opportunity 3: New Actor Onboarding Contract
 
@@ -173,14 +183,72 @@ owners:
    - a lezart launch ack baseline-t (`running | failed_to_start`) nem nyithatja ujra,
    - csak a topology/executor-boundary es retained adapter ownership pontositasat ownershipolja.
    - normativ note path: `plans/actor-runtime-interface-topology-neutral-delivery-executor-contract-note-v1.md`
-9. `O3-T1` csak az `Opportunity 1 / O1-T1` altal lezart boundary- es vocabulary-matrix utan nyithato:
+9. `O2-T2`-`O2-T5` producer-first sorrendben kell nyiljanak:
+   - elobb a topology-neutral delivery es launch/executor foundation szeletek,
+   - utana a workflow-orchestration consume-family alignment,
+   - es csak a consume-family cutover utan a retained public/read-model compat cleanup.
+10. `O3-T1` csak az `Opportunity 1 / O1-T1` altal lezart boundary- es vocabulary-matrix utan nyithato:
    - onboarding simplification csak az `O1-T1` kernel boundary note-ra es az `O2-T1` delivery/executor boundary note-ra epulhet,
+   - es csak az `O2` implementation lane enough-closureja utan nyithato biztonsagosan, amikor a retained `tmux` delivery/executor coupling mar nem keveredik a canonical boundaryval,
    - a zart baseline vocabulary explicit mappingjara es a topology/executor boundary explicit szetszalazasara kell tamaszkodnia,
    - az `Opportunity 4` alapertelmezetten ebbe a lane-be van beolvasztva mint core-vs-extension rationalization,
    - kulon `O4-T1` csak akkor nyithato, ha az `Opportunity 1 / O1-T1` outputja bizonyitja, hogy ez onallo bounded closure.
-10. A current tree-ben az `Opportunity 1` mar lezart successor lane:
-   - emiatt a kovetkezo bounded successor slice az `O2-T1`
-   - task artifact path: `plans/tasks/actor-runtime-interface-opportunity2-task1-topology-neutral-delivery-executor-clarification.md`
+11. A current tree-ben az `Opportunity 1` mar lezart successor lane:
+   - emiatt az `Opportunity 2` current next implementation slice-a mar nem az `O2` lane definialasa, hanem az `O2-T2` delivery contract + retained adapter foundation task
+
+## Opportunity 2 Decomposition
+
+1. `O2-T1`
+   - status: completed docs-only boundary clarification
+   - artifact path: `plans/tasks/actor-runtime-interface-opportunity2-task1-topology-neutral-delivery-executor-clarification.md`
+   - output: `plans/actor-runtime-interface-topology-neutral-delivery-executor-contract-note-v1.md`
+2. `O2-T2`
+   - shape: `shared_contract` + `authority_producer` foundation
+   - artifact path: `plans/tasks/actor-runtime-interface-opportunity2-task2-topology-neutral-delivery-contract-and-retained-adapter-foundation.md`
+   - goal: topology-neutral delivery ack/port naming bevezetese retained `tmux` adapter parityvel, workflow consume-atallitas nelkul
+   - expected target family:
+     - `src/v11/shared/delivery/tmuxDeliveryContract.ts`
+     - `src/v11/shared/ports/tmuxDelivery.ts`
+     - `src/v11/infrastructure/channel/tmux/tmuxDeliveryRuntime.ts`
+     - `src/v11/infrastructure/channel/tmux/tmuxDelivery.ts`
+   - why separate: a delivery contract es producer seam mar most tobb workflow/read-model consumerre sugarzik ki
+3. `O2-T3`
+   - shape: `workflow_orchestration_consumers`
+   - goal: a delivery consume-family atallitasa a topology-neutral delivery contractra retained compat projection mellett
+   - expected target family:
+     - `src/v11/shared/kickoff/**`
+     - `src/v11/application/approval/**`
+     - `src/v11/application/converged/**`
+     - `src/v11/application/pass/**`
+     - `src/v11/application/reply/**`
+     - `src/v11/application/askHuman/**`
+     - `src/v11/shared/delivery/implementerHandoffDelivery.ts`
+     - `src/v11/shared/metaReview/metaReviewDeliveryCapabilities.ts`
+     - kapcsolodo retained public export surfaces, ha a delivery neutral naminget a `src/v11/shared/**` retegen tul is tovabb kell huzni
+   - why separate: ez mar consume-family alignment, nem producer rename
+4. `O2-T4`
+   - shape: `shared_contract` + `authority_producer` foundation
+   - goal: topology-neutral launch/executor ack/port naming bevezetese retained `tmux` launch producer parityvel
+   - expected target family:
+     - `src/v11/shared/ports/tmuxSessions.ts`
+     - `src/v11/infrastructure/channel/tmux/tmuxManager.ts`
+     - `src/v11/defaults/start/startBubbleDefaults.ts`
+   - why separate: a launch/executor seam kulon contract es kulon producer closure a message-delivery oldaltol
+5. `O2-T5`
+   - shape: `workflow_orchestration_consumers` + `read_model_consumers`
+   - goal: a launch/executor consume-family es a retained public/read-model coupling topology-neutral contractra allitasa
+   - expected target family:
+     - `src/v11/application/start/**`
+     - `src/v11/application/restart/**`
+     - `src/v11/defaults/metaReviewGate/**`
+     - `src/v11/shared/ports/uiRouter.ts`
+     - kapcsolodo CLI/UI consume/projection surfaces
+   - why separate: itt mar a retained consume csaladak es a public/read-model fallout zarasa tortenik
+6. `O2` lane done csak akkor claimelheto, ha:
+   - `O2-T1` lezart baseline,
+   - a delivery es launch/executor producer foundation kulon source-of-truth-kent megvan,
+   - a consume familyk atalltak a topology-neutral contractra vagy explicit retained compat statuszt kaptak,
+   - es a retained `tmux` vocabulary mar nem keveredik a canonical delivery/executor boundary jelentesevel.
 
 ## Historical First Implementation Slice (`Opportunity 1`)
 
@@ -218,11 +286,14 @@ owners:
 5. Az optionalis `O1-T4` kulon successor taskkent nem nyilt meg:
    - retained fallback / parity / cleanup hardening nem maradt nyitva kulon bounded consumer fallouttal.
 6. Emiatt az `Opportunity 1` current-tree successor lane lezarhato.
-7. Az `Opportunity 2` current next bounded successor slice-a megnyithato docs-only clarification lane-kent:
-   - task artifact: `plans/tasks/actor-runtime-interface-opportunity2-task1-topology-neutral-delivery-executor-clarification.md`
+7. Az `Opportunity 2` docs-only first slice-a mar lezart baseline:
+   - completed task artifact: `plans/tasks/actor-runtime-interface-opportunity2-task1-topology-neutral-delivery-executor-clarification.md`
    - normative note: `plans/actor-runtime-interface-topology-neutral-delivery-executor-contract-note-v1.md`
-   - scope: topology-neutral delivery/executor contract boundary clarification retained `tmux` adapter ownership explicit source-anchor inventoryval
+   - closure: topology-neutral delivery/executor contract boundary clarification retained `tmux` adapter ownership explicit source-anchor inventoryval
    - preserved baseline: a `Phase E2a`-ban lezart typed delivery/launch ack semantics tovabbra sem reopenolhato
+8. Az `Opportunity 2` current next bounded implementation slice-a:
+   - `O2-T2`
+   - scope: topology-neutral delivery contract + retained adapter foundation
 
 ## Done Definition
 
@@ -242,9 +313,11 @@ owners:
    - kulon `O1-T4` nem nyilt meg
    - disposition: closed on current tree
 2. `Opportunity 2`
-   - current next successor lane `O2-T1`
-   - task artifact: `plans/tasks/actor-runtime-interface-opportunity2-task1-topology-neutral-delivery-executor-clarification.md`
-   - normative note: `plans/actor-runtime-interface-topology-neutral-delivery-executor-contract-note-v1.md`
+   - open successor lane
+   - completed slice:
+     - `O2-T1` docs-only topology/delivery/executor boundary clarification
+   - current next slice:
+     - `O2-T2` topology-neutral delivery contract + retained adapter foundation
    - preserved baseline: a lezart typed ack/runtime-success semantics nem reopenolhato
 3. `Opportunity 3`
    - deferred successor lane `O3-T1`
