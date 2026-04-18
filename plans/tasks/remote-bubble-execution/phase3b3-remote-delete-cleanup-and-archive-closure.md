@@ -515,6 +515,18 @@ Lezarni a remote started bubble `delete` routingot ugy, hogy:
 4. A retained local `DeleteBubbleResult` continuity valos-e.
 5. A task nem nyitotta-e meg a recovery/docs/rollout scope-ot.
 
+## Reviewer Guardrails
+
+1. Required-now blocker csak akkor, ha az implementacio:
+   - remote started bubble eseten local-only confirmation vagy archive truth fallbackot hagy bent,
+   - archive continuity proof nelkul `deleted=true` success mappinget ad,
+   - remote destructive cleanup proof nelkul clean successkent kezeli a delete-et,
+   - vagy recovery/runbook/docs scope-ot, esetleg generic remote janitor ownershipot nyit.
+2. Nem blocker onmagaban:
+   - a remote delete payload pontos transport-formatja, ha a typed authority boundary tiszta marad es a payload tovabbra is eleg a confirmation inventory + archive continuity + destructive cleanup success/failure consume-hoz,
+   - a helper pontos filename-je, ha delete-family boundaryn belul marad es nem nyit uj shared janitor vagy recovery ownershipot,
+   - a retained CLI/UI wordingon tuli operator-facing hardening, ha a canonical delete/archive semantics mar helyes es a retained confirmation/success consumer contract nem valtozik.
+
 ## Spec Lock
 
 1. A `Phase 3B3` task implementacio kozben nem nevezheti a local bubbleDir-t canonical archive truthnak remote started bubble eseten kulon bizonyitas nelkul.
@@ -525,3 +537,10 @@ Lezarni a remote started bubble `delete` routingot ugy, hogy:
 
 1. [later-hardening] Ha a delete familynek kesobb explicit remote error-normalization/reason-code taxonomy kell, azt kulon source-anchoros refinementben erdemes materializalni, nem ebben a cleanup-routing taskban.
 2. [later-hardening] Ha a remote archive continuity payload kesobb reusable archive-helper seamre extractalhato, azt a `Phase 3C` elott kulon erdemes ujraertekelni.
+
+## Successor Notes
+
+1. `Phase 3C` ownership:
+   - recovery diagnostics es reboot guidance
+   - docs/runbook/rollout/manual smoke evidence
+   - retained delete contracton tuli operator-facing wording hardening; ez a `Reviewer Guardrails` 2. pontjaban nevesitett nem-blokkolo, kesobbi hardening ownership
