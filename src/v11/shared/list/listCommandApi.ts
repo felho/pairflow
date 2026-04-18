@@ -532,8 +532,16 @@ async function buildRefreshedRemoteBubbleListEntry(input: {
         viewKind: "list",
         stateSource: "refresh",
         cacheStatus,
-        remoteClonePath: input.remotePointer.remoteClonePath,
         ...(refreshFailure !== undefined ? refreshFailure : {}),
+        runtimeAvailability: remoteStatusSnapshot.runtimeAvailability,
+        // Preserve both signals when live runtime-loss was confirmed but cache persistence failed:
+        // the live read still proved runtime state, while the local cache write reported a separate
+        // post-refresh persistence problem.
+        ...(remoteStatusSnapshot.runtimeAvailability === "missing"
+          ? { runtimeReasonCode: "STATUS_REMOTE_RUNTIME_MISSING" as const }
+          : {}),
+        remoteClonePath: input.remotePointer.remoteClonePath,
+        lastLiveCheckAt: remoteStatusSnapshot.lastCheckedAt,
         ...(lastCacheCheckAt !== undefined ? { lastCacheCheckAt } : {})
       }
     },

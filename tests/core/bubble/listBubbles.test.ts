@@ -713,6 +713,9 @@ describe("listBubbles", () => {
       cacheStatus: "present",
       lastCacheCheckAt: "2026-04-16T10:00:00.000Z"
     });
+    expect(listed.bubbles[0]?.remoteExecution?.runtimeAvailability).toBeUndefined();
+    expect(listed.bubbles[0]?.remoteExecution?.runtimeReasonCode).toBeUndefined();
+    expect(listed.bubbles[0]?.remoteExecution?.lastLiveCheckAt).toBeUndefined();
   });
 
   it("projects created remote bubbles in list output without SSH refresh", async () => {
@@ -752,6 +755,9 @@ describe("listBubbles", () => {
         cacheStatus: "missing"
       }
     });
+    expect(listed.bubbles[0]?.remoteExecution?.runtimeAvailability).toBeUndefined();
+    expect(listed.bubbles[0]?.remoteExecution?.runtimeReasonCode).toBeUndefined();
+    expect(listed.bubbles[0]?.remoteExecution?.lastLiveCheckAt).toBeUndefined();
     expect(listed.remoteExecutionSummary).toEqual({
       createdNotStarted: 1,
       unavailableStarted: 0
@@ -1006,8 +1012,11 @@ describe("listBubbles", () => {
 
     expect(refreshed?.remoteExecution).toMatchObject({
       stateSource: "refresh",
+      runtimeAvailability: "inactive",
+      lastLiveCheckAt: "2026-04-16T10:01:00.000Z",
       lastCacheCheckAt: "2026-04-16T10:01:00.000Z"
     });
+    expect(refreshed?.remoteExecution?.runtimeReasonCode).toBeUndefined();
     expect(refreshed?.lastCommandAt).toBe("2026-04-16T10:00:00.000Z");
     expect(fallback?.remoteExecution).toMatchObject({
       stateSource: "cache",
@@ -1016,10 +1025,132 @@ describe("listBubbles", () => {
       refreshAttemptedAt: "2026-04-16T10:02:00.000Z",
       reasonCode: "LIST_REMOTE_REFRESH_UNAVAILABLE"
     });
+    expect(fallback?.remoteExecution?.runtimeAvailability).toBeUndefined();
+    expect(fallback?.remoteExecution?.runtimeReasonCode).toBeUndefined();
+    expect(fallback?.remoteExecution?.lastLiveCheckAt).toBeUndefined();
     expect(fallback?.lastCommandAt).toBeNull();
     expect(listed.remoteExecutionSummary).toMatchObject({
       refreshedThisRun: true
     });
+  });
+
+  it("surfaces runtime-loss distinctly for refreshed remote entries", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_list_remote_refresh_runtime_missing_01",
+      task: "Remote refresh runtime missing"
+    });
+
+    await writeRemotePointer(bubble.paths.remotePointerPath, {
+      kind: "started",
+      host: "ssh.example.com",
+      instanceId: "inst_list_remote_refresh_runtime_missing_01",
+      remoteClonePath: "/srv/pairflow/repo--b_list_remote_refresh_runtime_missing_01",
+      tmuxSession: "pf-b_list_remote_refresh_runtime_missing_01",
+      startedAt: "2026-04-16T09:40:00.000Z"
+    });
+    await setBubbleExecutorRemoteAlias(bubble.paths.bubbleTomlPath);
+
+    vi.spyOn(
+      listCommandDefaults,
+      "resolveRemoteBubbleStatusTarget"
+    ).mockResolvedValue({
+      alias: "lab",
+      host: "ssh.example.com",
+      user: "pairflow",
+      pairflowCommand: "pairflow"
+    });
+    vi.spyOn(
+      listCommandDefaults,
+      "executeRemoteBubbleStatus"
+    ).mockResolvedValue({
+      bubbleStartedAt: "2026-04-16T09:40:00.000Z",
+      state: "RUNNING",
+      round: 3,
+      activeAgent: "claude",
+      activeRole: "reviewer",
+      activeSince: "2026-04-16T09:50:00.000Z",
+      lastCommandAt: "2026-04-16T09:58:00.000Z",
+      paneActivity: {
+        readStatus: "missing",
+        lastChangedAt: null,
+        sampledAt: null,
+        sinceLastChangedSeconds: null,
+        sinceSampledSeconds: null,
+        lastSampleStatus: null,
+        lastSampleError: null,
+        sessionName: null,
+        targetPane: null
+      },
+      executionContext: null,
+      watchdog: {
+        monitored: true,
+        monitoredAgent: "claude",
+        timeoutMinutes: 30,
+        referenceTimestamp: "2026-04-16T09:58:00.000Z",
+        deadlineTimestamp: "2026-04-16T10:28:00.000Z",
+        remainingSeconds: 1500,
+        expired: false
+      },
+      pendingInboxItems: {
+        humanQuestions: 0,
+        approvalRequests: 0,
+        total: 0
+      },
+      transcript: {
+        totalMessages: 4,
+        lastMessageType: "PASS",
+        lastMessageTs: "2026-04-16T09:58:00.000Z",
+        lastMessageId: "msg_list_remote_refresh_runtime_missing_01"
+      },
+      metaReview: {
+        actor: "meta-reviewer",
+        authorityActive: false,
+        runtimeDelivery: null
+      },
+      accuracyCritical: false,
+      lastReviewVerification: "missing",
+      failingGates: [],
+      specLockState: {
+        state: "IMPLEMENTABLE",
+        open_blocker_count: 0,
+        open_required_now_count: 0
+      },
+      roundGateState: {
+        applies: false,
+        violated: false,
+        round: 3
+      },
+      stateValidation: null,
+      runtimeAvailability: "missing",
+      lastCheckedAt: "2026-04-16T10:00:00.000Z"
+    });
+
+    const listed = await listBubbles({
+      repoPath,
+      refresh: true,
+      now: new Date("2026-04-16T10:02:00.000Z")
+    });
+
+    expect(listed.bubbles[0]).toMatchObject({
+      state: "RUNNING",
+      round: 3,
+      lastCommandAt: "2026-04-16T09:58:00.000Z",
+      remoteExecution: {
+        stateSource: "refresh",
+        cacheStatus: "present",
+        runtimeAvailability: "missing",
+        runtimeReasonCode: "STATUS_REMOTE_RUNTIME_MISSING",
+        lastLiveCheckAt: "2026-04-16T10:00:00.000Z",
+        lastCacheCheckAt: "2026-04-16T10:00:00.000Z"
+      }
+    });
+    expect(listed.bubbles[0]?.remoteExecution?.reasonCode).toBeUndefined();
+    expect(listed.byState.RUNNING).toBe(1);
+    await expect(readFile(bubble.paths.remoteStateCachePath, "utf8")).resolves.toContain(
+      "\"state\": \"RUNNING\""
+    );
   });
 
   it("keeps refreshed live projection and omits stale cache timestamps when cache persistence fails", async () => {
@@ -1137,10 +1268,142 @@ describe("listBubbles", () => {
     expect(listed.bubbles[0]?.remoteExecution).toMatchObject({
       stateSource: "refresh",
       cacheStatus: "present",
+      runtimeAvailability: "inactive",
       refreshAttemptedAt: "2026-04-16T10:02:00.000Z",
-      reasonCode: "LIST_REMOTE_CACHE_WRITE_FAILED"
+      reasonCode: "LIST_REMOTE_CACHE_WRITE_FAILED",
+      lastLiveCheckAt: "2026-04-16T10:01:00.000Z"
     });
     expect(listed.bubbles[0]?.remoteExecution?.lastCacheCheckAt).toBeUndefined();
+    expect(listed.bubbles[0]?.remoteExecution?.runtimeReasonCode).toBeUndefined();
+    expect(listed.remoteExecutionSummary).toMatchObject({
+      refreshedThisRun: true
+    });
+  });
+
+  it("preserves runtime-loss diagnostics when cache persistence fails after refresh", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_list_remote_refresh_missing_cache_write_fail_01",
+      task: "Remote refresh runtime missing cache write failure"
+    });
+
+    await writeRemotePointer(bubble.paths.remotePointerPath, {
+      kind: "started",
+      host: "ssh.example.com",
+      instanceId: "inst_list_remote_refresh_missing_cache_write_fail_01",
+      remoteClonePath: "/srv/pairflow/repo--b_list_remote_refresh_missing_cache_write_fail_01",
+      tmuxSession: "pf-b_list_remote_refresh_missing_cache_write_fail_01",
+      startedAt: "2026-04-16T09:40:00.000Z"
+    });
+    await setBubbleExecutorRemoteAlias(bubble.paths.bubbleTomlPath);
+    await writeRemoteStateCache(bubble.paths.remoteStateCachePath, {
+      lastCheckedAt: "2026-04-16T09:55:00.000Z",
+      state: "WAITING_HUMAN",
+      round: 2,
+      maxRounds: 5
+    });
+
+    vi.spyOn(
+      listCommandDefaults,
+      "resolveRemoteBubbleStatusTarget"
+    ).mockResolvedValue({
+      alias: "lab",
+      host: "ssh.example.com",
+      pairflowCommand: "pairflow"
+    });
+    vi.spyOn(
+      listCommandDefaults,
+      "executeRemoteBubbleStatus"
+    ).mockResolvedValue({
+      bubbleStartedAt: "2026-04-16T09:40:00.000Z",
+      state: "RUNNING",
+      round: 3,
+      activeAgent: "claude",
+      activeRole: "reviewer",
+      activeSince: "2026-04-16T09:50:00.000Z",
+      lastCommandAt: "2026-04-16T09:58:00.000Z",
+      paneActivity: {
+        readStatus: "missing",
+        lastChangedAt: null,
+        sampledAt: null,
+        sinceLastChangedSeconds: null,
+        sinceSampledSeconds: null,
+        lastSampleStatus: null,
+        lastSampleError: null,
+        sessionName: null,
+        targetPane: null
+      },
+      executionContext: null,
+      watchdog: {
+        monitored: true,
+        monitoredAgent: "claude",
+        timeoutMinutes: 30,
+        referenceTimestamp: "2026-04-16T09:58:00.000Z",
+        deadlineTimestamp: "2026-04-16T10:28:00.000Z",
+        remainingSeconds: 1500,
+        expired: false
+      },
+      pendingInboxItems: {
+        humanQuestions: 0,
+        approvalRequests: 0,
+        total: 0
+      },
+      transcript: {
+        totalMessages: 4,
+        lastMessageType: "PASS",
+        lastMessageTs: "2026-04-16T09:58:00.000Z",
+        lastMessageId: "msg_list_remote_refresh_missing_cache_write_fail_01"
+      },
+      metaReview: {
+        actor: "meta-reviewer",
+        authorityActive: false,
+        runtimeDelivery: null
+      },
+      accuracyCritical: false,
+      lastReviewVerification: "missing",
+      failingGates: [],
+      specLockState: {
+        state: "IMPLEMENTABLE",
+        open_blocker_count: 0,
+        open_required_now_count: 0
+      },
+      roundGateState: {
+        applies: false,
+        violated: false,
+        round: 3
+      },
+      stateValidation: null,
+      runtimeAvailability: "missing",
+      lastCheckedAt: "2026-04-16T10:01:00.000Z"
+    });
+    vi.spyOn(
+      listCommandDefaults,
+      "writeRemoteStateCache"
+    ).mockRejectedValue(new Error("disk full"));
+
+    const listed = await listBubbles({
+      repoPath,
+      refresh: true,
+      now: new Date("2026-04-16T10:02:00.000Z")
+    });
+
+    expect(listed.bubbles[0]).toMatchObject({
+      state: "RUNNING",
+      round: 3,
+      lastCommandAt: "2026-04-16T09:58:00.000Z",
+      remoteExecution: {
+        stateSource: "refresh",
+        cacheStatus: "present",
+        runtimeAvailability: "missing",
+        runtimeReasonCode: "STATUS_REMOTE_RUNTIME_MISSING",
+        refreshAttemptedAt: "2026-04-16T10:02:00.000Z",
+        reasonCode: "LIST_REMOTE_CACHE_WRITE_FAILED",
+        lastLiveCheckAt: "2026-04-16T10:01:00.000Z"
+      }
+    });
+    expect(listed.bubbles[0]?.remoteExecution?.lastCacheCheckAt).toBeUndefined();
+    expect(listed.byState.RUNNING).toBe(1);
     expect(listed.remoteExecutionSummary).toMatchObject({
       refreshedThisRun: true
     });
@@ -1517,9 +1780,12 @@ describe("listBubbles", () => {
       remoteExecution: {
         stateSource: "refresh",
         cacheStatus: "present",
+        runtimeAvailability: "active",
+        lastLiveCheckAt: "2026-04-16T10:01:00.000Z",
         lastCacheCheckAt: "2026-04-16T10:01:00.000Z"
       }
     });
+    expect(listed.bubbles[0]?.remoteExecution?.runtimeReasonCode).toBeUndefined();
   });
 
   it("degrades list refresh to cache when the bubble lacks an ssh executor alias", async () => {
@@ -1673,6 +1939,8 @@ describe("listBubbles", () => {
         source: "local_control_plane_compat"
       }
     });
+    expect(listed.bubbles[0]?.remoteExecution?.runtimeAvailability).toBeUndefined();
+    expect(listed.bubbles[0]?.remoteExecution?.runtimeReasonCode).toBeUndefined();
     expect(listed.byState.RUNNING).toBe(0);
     expect(listed.remoteExecutionSummary).toEqual({
       createdNotStarted: 0,

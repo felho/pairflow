@@ -216,6 +216,102 @@ describe("attachAvailability", () => {
     });
   });
 
+  it("enables attach for refreshed remote list shapes when runtime stays active", () => {
+    const availability = getAttachAvailability({
+      bubbleId: "b-remote-list-active-123",
+      state: "READY_FOR_HUMAN_APPROVAL",
+      hasRuntimeSession: false,
+      runtime: {
+        expected: false,
+        present: false,
+        stale: false
+      },
+      remoteExecution: {
+        alias: "lab",
+        host: "ssh.example.com",
+        pointerKind: "started",
+        viewKind: "list",
+        stateSource: "refresh",
+        cacheStatus: "present",
+        runtimeAvailability: "active",
+        lastLiveCheckAt: "2026-04-16T10:00:00.000Z",
+        lastCacheCheckAt: "2026-04-16T10:00:00.000Z"
+      }
+    });
+
+    expect(availability).toEqual({
+      visible: true,
+      enabled: true,
+      command: "pairflow bubble attach --id b-remote-list-active-123",
+      hint: null
+    });
+  });
+
+  it("disables attach with fail-closed hint for refreshed remote list inactive shapes", () => {
+    const availability = getAttachAvailability({
+      bubbleId: "b-remote-list-inactive-123",
+      state: "WAITING_HUMAN",
+      hasRuntimeSession: false,
+      runtime: {
+        expected: false,
+        present: false,
+        stale: false
+      },
+      remoteExecution: {
+        alias: "lab",
+        host: "ssh.example.com",
+        pointerKind: "started",
+        viewKind: "list",
+        stateSource: "refresh",
+        cacheStatus: "present",
+        runtimeAvailability: "inactive",
+        lastLiveCheckAt: "2026-04-16T10:00:00.000Z",
+        lastCacheCheckAt: "2026-04-16T10:00:00.000Z"
+      }
+    });
+
+    expect(availability).toEqual({
+      visible: true,
+      enabled: false,
+      command: "pairflow bubble attach --id b-remote-list-inactive-123",
+      hint:
+        "Remote runtime is unavailable. Attach stays fail-closed and will not restart it automatically."
+    });
+  });
+
+  it("disables attach with fail-closed hint for refreshed remote list runtime-loss shapes", () => {
+    const availability = getAttachAvailability({
+      bubbleId: "b-remote-list-missing-123",
+      state: "WAITING_HUMAN",
+      hasRuntimeSession: false,
+      runtime: {
+        expected: false,
+        present: false,
+        stale: false
+      },
+      remoteExecution: {
+        alias: "lab",
+        host: "ssh.example.com",
+        pointerKind: "started",
+        viewKind: "list",
+        stateSource: "refresh",
+        cacheStatus: "present",
+        runtimeAvailability: "missing",
+        runtimeReasonCode: "STATUS_REMOTE_RUNTIME_MISSING",
+        lastLiveCheckAt: "2026-04-16T10:00:00.000Z",
+        lastCacheCheckAt: "2026-04-16T10:00:00.000Z"
+      }
+    });
+
+    expect(availability).toEqual({
+      visible: true,
+      enabled: false,
+      command: "pairflow bubble attach --id b-remote-list-missing-123",
+      hint:
+        "Remote runtime is unavailable. Attach stays fail-closed and will not restart it automatically."
+    });
+  });
+
   it("hides attach outside runtime-capable states", () => {
     const availability = getAttachAvailability({
       bubbleId: "b-123",

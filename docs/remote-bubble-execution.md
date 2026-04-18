@@ -212,7 +212,7 @@ Started shape:
 }
 ```
 
-The `instanceId` distinguishes this start from any later start instance of the same bubble if a future phase defines an explicit restart/recovery flow.
+The `instanceId` distinguishes this started instance from any later separately-defined start lineage of the same bubble. This document does not define a restart/recovery contract on top of preserved started state.
 
 ### 5.4 State cache file (cache only)
 
@@ -416,6 +416,8 @@ pairflow bubble list --refresh
      on per-bubble refresh failure, keep stale cache-derived projection if one exists,
      otherwise degrade only that bubble to explicit unavailable projection
 ```
+
+When the live refresh succeeds but reports `runtimeAvailability="missing"`, the list entry must stay in the `refresh` branch and preserve the remotely confirmed lifecycle snapshot (`state`, `round`, timestamps). This is a runtime-loss diagnosis with preserved state, not a transport failure. Default cache-only `bubble list` still must not invent this diagnosis without a fresh live read.
 
 ---
 
@@ -623,6 +625,34 @@ For remote reboot specifically:
 2. Check whether `~/repos/<project>--<bubbleId>` still exists
 3. If persisted bubble state is present but the tmux session is gone, treat it as runtime-loss with preserved state
 4. Do not treat `pairflow bubble start --id <bubbleId>` as an already-approved Phase 2D restart contract on top of preserved state; fail closed and defer explicit restart/recovery semantics to the later recovery phase
+
+### Operator guidance for runtime-loss
+
+When a started remote bubble may have lost its runtime after reboot or tmux loss:
+
+1. Check reachability and clone presence on the remote host.
+2. Run `pairflow bubble status --id <bubbleId> --repo <repo> --json`.
+3. Run `pairflow bubble list --repo <repo> --refresh` if you need a repo-wide refreshed read-model.
+4. If the live status says the runtime is missing, record that the persisted state is still present but no live runtime is active.
+5. Do not convert that observation into a supported `pairflow bubble start --id <bubbleId>` restart path in this phase.
+
+### Manual smoke evidence expectation
+
+Rollout closure should include one short manual smoke note, stored by default in `.pairflow/bubbles/<id>/artifacts/done-package.md` or, if needed, in a separate evidence artifact that is referenced from the done package.
+
+That note should capture:
+
+1. The exact commands used for the check, typically `pairflow bubble status --json` and `pairflow bubble list --refresh`.
+2. The observed fail-closed output or JSON fields showing preserved state plus missing live runtime.
+3. A short confirmation that the operator-facing docs wording matched the observed behavior.
+
+Example closure note:
+
+1. `pairflow bubble status --id p3c-demo --repo /repo --json`
+2. `pairflow bubble list --repo /repo --refresh`
+3. Observed status JSON fields: `"state":"RUNNING"`, `"round":3`, `"remoteExecution":{"runtimeAvailability":"missing","runtimeReasonCode":"STATUS_REMOTE_RUNTIME_MISSING","lastLiveCheckAt":"2026-04-16T10:00:00.000Z"}`
+4. Observed list text suffix: `source=refresh runtime=missing cache=present live_checked=2026-04-16T10:00:00.000Z checked=2026-04-16T10:00:00.000Z runtime_reason=STATUS_REMOTE_RUNTIME_MISSING runtime_note=preserved_state_no_live_runtime_fail_closed`
+5. Docs wording matched the behavior: persisted state remained visible, but the runtime was reported fail-closed as missing, with no restart claim for the started pointer.
 
 ---
 
