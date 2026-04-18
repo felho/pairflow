@@ -6,11 +6,24 @@ import type {
   DeleteBubbleArtifacts,
   DeleteBubbleResult
 } from "../../../contracts/deleteBubble.js";
-import type { BubbleLifecycleState } from "../../../types/bubble.js";
+import type {
+  BubbleLifecycleState,
+  BubbleRemotePointerCreated,
+  BubbleRemotePointerStarted
+} from "../../../types/bubble.js";
 import { deleteBubbleDependencyDefaults } from "./deleteBubbleDependencyDefaults.js";
 import type { BranchExistsPort } from "../../shared/ports/git.js";
 import type { PathExistsPort } from "../../shared/ports/pathExists.js";
+import type { RemoteBubbleStatusTarget } from "../../infrastructure/executor/ssh/sshBubbleStatus.js";
+import type {
+  ExecuteRemoteBubbleDeleteCommandInput,
+  ExecuteRemoteBubbleDeleteCommandResult
+} from "../../infrastructure/executor/ssh/sshBubbleDeleteCommand.js";
 import { stopBubbleV11 as stopBubble } from "../stop/emitStopV11.js";
+import {
+  canonicalizeDeleteExecutionPath,
+  resolveRemoteDeleteExecutionContextFromEnv
+} from "./remoteDeleteExecutionContext.js";
 
 export interface DeleteBubbleInput {
   bubbleId: string;
@@ -38,6 +51,15 @@ export interface DeleteBubbleDependencies {
   upsertDeletedArchiveIndexEntry?:
     | typeof deleteBubbleDependencyDefaults.upsertDeletedArchiveIndexEntry
     | undefined;
+  readRemotePointer?: ((
+    path: string
+  ) => Promise<BubbleRemotePointerStarted | BubbleRemotePointerCreated | null>) | undefined;
+  resolveRemoteBubbleStatusTarget?:
+    | typeof deleteBubbleDependencyDefaults.resolveRemoteBubbleStatusTarget
+    | undefined;
+  executeRemoteBubbleDeleteCommand?:
+    | ((input: ExecuteRemoteBubbleDeleteCommandInput) => Promise<ExecuteRemoteBubbleDeleteCommandResult>)
+    | undefined;
 }
 
 export interface ResolvedDeleteDependencies {
@@ -55,6 +77,14 @@ export interface ResolvedDeleteDependencies {
     typeof deleteBubbleDependencyDefaults.createArchiveSnapshot;
   upsertDeletedArchiveIndexEntry:
     typeof deleteBubbleDependencyDefaults.upsertDeletedArchiveIndexEntry;
+  readRemotePointer: NonNullable<
+    DeleteBubbleDependencies["readRemotePointer"]
+  >;
+  resolveRemoteBubbleStatusTarget:
+    typeof deleteBubbleDependencyDefaults.resolveRemoteBubbleStatusTarget;
+  executeRemoteBubbleDeleteCommand: NonNullable<
+    DeleteBubbleDependencies["executeRemoteBubbleDeleteCommand"]
+  >;
   archiveLocksDir: string;
 }
 
@@ -66,6 +96,23 @@ export interface DeleteResolution {
   resolved: ResolvedBubble;
   artifacts: DeleteBubbleArtifacts;
 }
+
+export interface LocalDeleteRouteContext {
+  route: "local" | "remote_clone";
+  resolved: ResolvedBubble;
+  worktreePath: string;
+}
+
+export interface RemoteDeleteRouteContext {
+  route: "remote";
+  resolved: ResolvedBubble;
+  remotePointer: BubbleRemotePointerStarted;
+  remoteTarget: RemoteBubbleStatusTarget;
+}
+
+export type DeleteRouteContext =
+  | LocalDeleteRouteContext
+  | RemoteDeleteRouteContext;
 
 export interface DeleteExecutionContext {
   bubbleInstanceId: string;
@@ -157,7 +204,78 @@ export function resolveDeleteDependencies(
     upsertDeletedArchiveIndexEntry:
       dependencies.upsertDeletedArchiveIndexEntry ??
       deleteBubbleDependencyDefaults.upsertDeletedArchiveIndexEntry,
+    readRemotePointer:
+      dependencies.readRemotePointer ??
+      deleteBubbleDependencyDefaults.readRemotePointer,
+    resolveRemoteBubbleStatusTarget:
+      dependencies.resolveRemoteBubbleStatusTarget ??
+      deleteBubbleDependencyDefaults.resolveRemoteBubbleStatusTarget,
+    executeRemoteBubbleDeleteCommand:
+      dependencies.executeRemoteBubbleDeleteCommand ??
+      deleteBubbleDependencyDefaults.executeRemoteBubbleDeleteCommand,
     archiveLocksDir: join(homedir(), ".pairflow", "locks")
+  };
+}
+
+export async function resolveDeleteRouteContext(input: {
+  deleteInput: DeleteBubbleInput;
+  dependencies: ResolvedDeleteDependencies;
+}): Promise<DeleteRouteContext> {
+  const resolved = await input.dependencies.resolveBubbleById({
+    bubbleId: input.deleteInput.bubbleId,
+    ...(input.deleteInput.repoPath !== undefined
+      ? { repoPath: input.deleteInput.repoPath }
+      : {}),
+    ...(input.deleteInput.cwd !== undefined ? { cwd: input.deleteInput.cwd } : {})
+  });
+
+  const resolvedRepoPath = canonicalizeDeleteExecutionPath(resolved.repoPath);
+  if (resolved.bubbleConfig.executor?.type !== "ssh") {
+    return {
+      route: "local",
+      resolved,
+      worktreePath: resolved.bubblePaths.worktreePath
+    };
+  }
+
+  const remoteDeleteExecutionContext = resolveRemoteDeleteExecutionContextFromEnv();
+  const remotePointer = await input.dependencies.readRemotePointer(
+    resolved.bubblePaths.remotePointerPath
+  );
+
+  if (
+    remoteDeleteExecutionContext?.kind === "remote_clone"
+    && remoteDeleteExecutionContext.workspaceRoot === resolvedRepoPath
+  ) {
+    if (remotePointer !== null) {
+      throw new Error(
+        `Remote inner delete for '${resolved.bubbleId}' refused to continue because source-repo remote artifacts are still present.`
+      );
+    }
+    return {
+      route: "remote_clone",
+      resolved,
+      worktreePath: resolved.repoPath
+    };
+  }
+
+  if (remotePointer?.kind !== "started") {
+    throw new Error(
+      `Remote delete for '${resolved.bubbleId}' requires a started remote pointer. Run \`pairflow bubble start --id ${resolved.bubbleId}\` first.`
+    );
+  }
+
+  const remoteTarget = await input.dependencies.resolveRemoteBubbleStatusTarget({
+    bubbleId: resolved.bubbleId,
+    remoteAlias: resolved.bubbleConfig.executor.remote,
+    expectedHost: remotePointer.host
+  });
+
+  return {
+    route: "remote",
+    resolved,
+    remotePointer,
+    remoteTarget
   };
 }
 

@@ -10,6 +10,7 @@ export interface BubbleDeleteCommandOptions {
   id: string;
   repo?: string;
   force: boolean;
+  json: boolean;
   help: false;
 }
 
@@ -24,12 +25,13 @@ export type ParsedBubbleDeleteCommandOptions =
 export function getBubbleDeleteHelpText(): string {
   return [
     "Usage:",
-    "  pairflow bubble delete --id <id> [--repo <path>] [--force]",
+    "  pairflow bubble delete --id <id> [--repo <path>] [--force] [--json]",
     "",
     "Options:",
     "  --id <id>             Bubble id",
     "  --repo <path>         Optional repository path (defaults to cwd ancestry lookup)",
     "  --force               Delete even when external artifacts still exist",
+    "  --json                Print structured JSON output",
     "  -h, --help            Show this help",
     "",
     "Notes:",
@@ -52,6 +54,9 @@ export function parseBubbleDeleteCommandOptions(
         type: "string"
       },
       force: {
+        type: "boolean"
+      },
+      json: {
         type: "boolean"
       },
       help: {
@@ -78,6 +83,7 @@ export function parseBubbleDeleteCommandOptions(
     id,
     ...(parsed.values.repo !== undefined ? { repo: parsed.values.repo } : {}),
     force: parsed.values.force ?? false,
+    json: parsed.values.json ?? false,
     help: false
   };
 }

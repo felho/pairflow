@@ -86,6 +86,7 @@ import {
 } from "./commands/bubble/stop.js";
 import {
   getBubbleDeleteHelpText,
+  parseBubbleDeleteCommandOptions,
   runBubbleDeleteCommand
 } from "./commands/bubble/delete.js";
 import {
@@ -579,10 +580,17 @@ function formatDeleteArtifactsText(input: {
 
 async function handleBubbleDeleteCommand(args: string[]): Promise<number> {
   try {
+    const parsed = parseBubbleDeleteCommandOptions(args);
+    const jsonOutput = !parsed.help && parsed.json;
     const result = await runBubbleDeleteCommand(args);
     if (result === null) {
       process.stdout.write(`${getBubbleDeleteHelpText()}\n`);
       return 0;
+    }
+
+    if (jsonOutput) {
+      process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
+      return result.requiresConfirmation ? 2 : 0;
     }
 
     if (result.requiresConfirmation) {

@@ -1,4 +1,6 @@
 import { createArchiveSnapshot } from "../../infrastructure/artifact/archive/archiveSnapshot.js";
+import { readRemotePointer } from "../../infrastructure/artifact/bubble/remoteExecutionArtifacts.js";
+import { executeRemoteBubbleDeleteCommand } from "../../infrastructure/executor/ssh/sshBubbleDeleteCommand.js";
 import { upsertDeletedArchiveIndexEntry } from "../../infrastructure/artifact/archive/archiveIndex.js";
 import { pathExists } from "../../infrastructure/foundation/fs/pathExists.js";
 import {
@@ -13,17 +15,22 @@ import { terminateBubbleTmuxSession } from "../tmux/tmuxSessionDefaults.js";
 import { cleanupWorktreeWorkspace } from "../worktree/worktreeWorkspaceDefaults.js";
 import { resolveBubbleById } from "../../shared/bubbleLookup/bubbleLookupDefaults.js";
 import { buildBubbleTmuxSessionName } from "../../shared/bubble/tmuxSessionName.js";
+import { statusCommandDependencyDefaults } from "../../shared/status/statusCommandDependencyDefaults.js";
 
 export const deleteBubbleDependencyDefaults = {
   buildBubbleTmuxSessionName,
   branchExists,
   cleanupWorktreeWorkspace,
   createArchiveSnapshot,
+  executeRemoteBubbleDeleteCommand,
   ensureBubbleInstanceIdForMutation,
   pathExists,
+  readRemotePointer,
   readRuntimeSessionsRegistry,
   readStateSnapshot,
   removeRuntimeSession,
+  resolveRemoteBubbleStatusTarget:
+    statusCommandDependencyDefaults.resolveRemoteBubbleStatusTarget,
   resolveBubbleById,
   runTmux,
   TmuxCommandError,
