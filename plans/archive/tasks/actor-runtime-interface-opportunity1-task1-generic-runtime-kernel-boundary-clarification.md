@@ -2,10 +2,10 @@
 artifact_type: task
 artifact_id: task_actor_runtime_interface_opportunity1_task1_generic_runtime_kernel_boundary_v1
 title: "Actor Runtime Interface Opportunity 1 Task 1: Generic Runtime Kernel Boundary Clarification"
-status: implementable
+status: completed
 phase: post-phaseE
 target_files:
-  - plans/tasks/actor-runtime-interface-opportunity1-task1-generic-runtime-kernel-boundary-clarification.md
+  - plans/archive/tasks/actor-runtime-interface-opportunity1-task1-generic-runtime-kernel-boundary-clarification.md
   - plans/actor-runtime-interface-generic-runtime-kernel-contract-note-v1.md
   - plans/actor-runtime-interface-post-phaseE-successor-plan-v1.md
 prd_ref: null
@@ -81,7 +81,7 @@ Docs-only, implementalhato `O1-T1` sequencing szelet keszitese az `Opportunity 1
 ### In Scope
 
 1. A letezo source task artifact in-place refinementje itt:
-   - `plans/tasks/actor-runtime-interface-opportunity1-task1-generic-runtime-kernel-boundary-clarification.md`
+   - `plans/archive/tasks/actor-runtime-interface-opportunity1-task1-generic-runtime-kernel-boundary-clarification.md`
 2. Egy uj docs-only contract note letrehozasa itt:
    - `plans/actor-runtime-interface-generic-runtime-kernel-contract-note-v1.md`
 3. A current tree wrapper/policy matrix explicit inventorozasa legalabb erre a tengelyre:
@@ -181,7 +181,7 @@ Docs-only, implementalhato `O1-T1` sequencing szelet keszitese az `Opportunity 1
 ### Scope Reality / Shape Proof
 
 1. A declared `target_files` docs-only artifactok:
-   - `plans/tasks/actor-runtime-interface-opportunity1-task1-generic-runtime-kernel-boundary-clarification.md`
+   - `plans/archive/tasks/actor-runtime-interface-opportunity1-task1-generic-runtime-kernel-boundary-clarification.md`
    - `plans/actor-runtime-interface-generic-runtime-kernel-contract-note-v1.md`
    - `plans/actor-runtime-interface-post-phaseE-successor-plan-v1.md`
 2. A primary artifact a letezo task file; ezt kell source-anchored boundary precisionnel refine-olni, nem uj standalone synthesis doksival helyettesiteni.
@@ -379,7 +379,7 @@ Conclusion:
 
 ### Deliverables
 
-1. `plans/tasks/actor-runtime-interface-opportunity1-task1-generic-runtime-kernel-boundary-clarification.md`
+1. `plans/archive/tasks/actor-runtime-interface-opportunity1-task1-generic-runtime-kernel-boundary-clarification.md`
    - primary artifactkent in-place refined marad
    - explicitten rogziti a reviewer-origin `human_question` retained fallback sort es az osszes egyeb role x input mismatch fail-closed baseline-jat
    - explicitten kimondja, hogy `O1-T2`, `O1-T3`, `O2-T1` es `O3-T1` csak ezen a boundary/output matrixon ulhet tovabb

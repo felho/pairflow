@@ -2,7 +2,7 @@
 artifact_type: task
 artifact_id: task_actor_runtime_interface_opportunity1_task3_kernel_policy_workflow_adapter_separation_v1
 title: "Actor Runtime Interface Opportunity 1 Task 3: Kernel Policy Workflow-Adapter Separation"
-status: implementable
+status: completed
 phase: post-phaseE
 target_files:
   - src/v11/application/actorProtocol/emitActorProtocolV11.ts
