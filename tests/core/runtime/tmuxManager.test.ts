@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
   buildBubbleTmuxSessionName,
+  launchBubbleSessionAck,
   launchBubbleTmuxSession,
   launchBubbleTmuxSessionAck,
   respawnTmuxPaneCommand,
@@ -56,7 +57,7 @@ describe("buildBubbleTmuxSessionName", () => {
   });
 });
 
-describe("launchBubbleTmuxSessionAck", () => {
+describe("launchBubbleSessionAck", () => {
   it("returns canonical running ack on successful launch", async () => {
     const runner: TmuxRunner = (args: string[]) =>
       Promise.resolve({
@@ -65,7 +66,7 @@ describe("launchBubbleTmuxSessionAck", () => {
         exitCode: args[0] === "has-session" ? 1 : 0
       });
 
-    const ack = await launchBubbleTmuxSessionAck({
+    const ack = await launchBubbleSessionAck({
       bubbleId: "b_start_ack",
       workspacePath: "/tmp/worktree",
       statusCommand: "status",
@@ -88,7 +89,7 @@ describe("launchBubbleTmuxSessionAck", () => {
         exitCode: 0
       });
 
-    const ack = await launchBubbleTmuxSessionAck({
+    const ack = await launchBubbleSessionAck({
       bubbleId: "b_start_exists",
       workspacePath: "/tmp/worktree",
       statusCommand: "status",
@@ -107,7 +108,7 @@ describe("launchBubbleTmuxSessionAck", () => {
   });
 
   it("returns canonical failed_to_start ack when workspace authority is missing", async () => {
-    const ack = await launchBubbleTmuxSessionAck({
+    const ack = await launchBubbleSessionAck({
       bubbleId: "b_start_missing_workspace_ack",
       workspacePath: "   ",
       statusCommand: "status",
@@ -121,7 +122,7 @@ describe("launchBubbleTmuxSessionAck", () => {
       reason_code: "LAUNCH_ACK_WORKSPACE_REQUIRED",
       failure_kind: "workspace_required",
       error_message:
-        "TMUX_LAUNCH_WORKSPACE_REQUIRED: context operation_id=launch_bubble_tmux_session bubble_id=b_start_missing_workspace_ack."
+        "LAUNCH_WORKSPACE_REQUIRED: context operation_id=launch_bubble_session bubble_id=b_start_missing_workspace_ack."
     });
   });
 
@@ -146,7 +147,7 @@ describe("launchBubbleTmuxSessionAck", () => {
       });
     };
 
-    const ack = await launchBubbleTmuxSessionAck({
+    const ack = await launchBubbleSessionAck({
       bubbleId: "b_start_tmux_fail_ack",
       workspacePath: "/tmp/worktree",
       statusCommand: "status",
@@ -164,9 +165,48 @@ describe("launchBubbleTmuxSessionAck", () => {
     });
   });
 
+  it("returns canonical failed_to_start ack when pane seeding throws after layout succeeds", async () => {
+    const bubbleId = "b_start_seed_fail_ack";
+    const ack = await launchBubbleSessionAck({
+      bubbleId,
+      workspacePath: "/tmp/worktree",
+      statusCommand: "status",
+      implementerCommand: "codex",
+      reviewerCommand: "claude",
+      implementerBootstrapMessage: "bootstrap implementer",
+      runner: (args: string[]) => {
+        if (args[0] === "has-session") {
+          return Promise.resolve({
+            stdout: "",
+            stderr: "",
+            exitCode: 1
+          });
+        }
+
+        if (args[0] === "send-keys") {
+          return Promise.reject(new Error("tmux pane seed failed"));
+        }
+
+        return Promise.resolve({
+          stdout: buildSplitPaneStdout(args),
+          stderr: "",
+          exitCode: 0
+        });
+      }
+    });
+
+    expect(ack).toEqual({
+      status: "failed_to_start",
+      reason_code: "LAUNCH_ACK_TMUX_COMMAND_FAILED",
+      failure_kind: "tmux_command_failed",
+      error_message: "tmux pane seed failed",
+      sessionName: buildBubbleTmuxSessionName(bubbleId)
+    });
+  });
+
   it("converts has-session transport failures into canonical failed_to_start ack", async () => {
     const bubbleId = "b_start_has_session_transport_fail_ack";
-    const ack = await launchBubbleTmuxSessionAck({
+    const ack = await launchBubbleSessionAck({
       bubbleId,
       workspacePath: "/tmp/worktree",
       statusCommand: "status",
@@ -187,7 +227,7 @@ describe("launchBubbleTmuxSessionAck", () => {
   it("converts has-session non-1 exit failures into canonical failed_to_start ack", async () => {
     const bubbleId = "b_start_has_session_exit_fail_ack";
     const sessionName = buildBubbleTmuxSessionName(bubbleId);
-    const ack = await launchBubbleTmuxSessionAck({
+    const ack = await launchBubbleSessionAck({
       bubbleId,
       workspacePath: "/tmp/worktree",
       statusCommand: "status",
@@ -232,6 +272,48 @@ describe("launchBubbleTmuxSessionAck", () => {
           })
       })
     ).rejects.toThrow("TMUX_PANE_ID_PARSE_FAILED:");
+  });
+
+  it("retains tmux-named compat ack alias with the same canonical output", async () => {
+    const runner: TmuxRunner = (args: string[]) =>
+      Promise.resolve({
+        stdout: buildSplitPaneStdout(args),
+        stderr: "",
+        exitCode: args[0] === "has-session" ? 1 : 0
+      });
+
+    const ack = await launchBubbleTmuxSessionAck({
+      bubbleId: "b_start_ack_compat",
+      workspacePath: "/tmp/worktree",
+      statusCommand: "status",
+      implementerCommand: "codex",
+      reviewerCommand: "claude",
+      runner
+    });
+
+    expect(ack).toEqual({
+      status: "running",
+      sessionName: "pf-b_start_ack_compat"
+    });
+  });
+
+  it("retains tmux-named compat ack alias on canonical failure paths as well", async () => {
+    const ack = await launchBubbleTmuxSessionAck({
+      bubbleId: "b_start_missing_workspace_ack_compat",
+      workspacePath: "   ",
+      statusCommand: "status",
+      implementerCommand: "codex",
+      reviewerCommand: "claude",
+      runner: vi.fn()
+    });
+
+    expect(ack).toEqual({
+      status: "failed_to_start",
+      reason_code: "LAUNCH_ACK_WORKSPACE_REQUIRED",
+      failure_kind: "workspace_required",
+      error_message:
+        "TMUX_LAUNCH_WORKSPACE_REQUIRED: context operation_id=launch_bubble_tmux_session bubble_id=b_start_missing_workspace_ack_compat."
+    });
   });
 });
 

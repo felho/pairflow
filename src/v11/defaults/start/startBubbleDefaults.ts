@@ -1,6 +1,7 @@
 import { loadPairflowGlobalConfig as loadPairflowGlobalConfigCanonical } from "../../../config/pairflowConfig.js";
 import {
   terminateBubbleTmuxSession as terminateBubbleTmuxSessionCanonical,
+  launchBubbleSessionAck as launchBubbleSessionAckCanonical,
   launchBubbleTmuxSessionAck as launchBubbleTmuxSessionAckCanonical,
   launchBubbleTmuxSession as launchBubbleTmuxSessionCanonical
 } from "../../infrastructure/channel/tmux/tmuxManager.js";
@@ -43,6 +44,7 @@ import type {
   RemoveRuntimeSessionPort
 } from "../../shared/ports/runtimeSessions.js";
 import type {
+  LaunchBubbleSessionAckPort,
   LaunchBubbleTmuxSessionAckPort,
   LaunchBubbleTmuxSessionPort,
   TerminateBubbleTmuxSessionPort
@@ -53,6 +55,7 @@ import type { WriteStateSnapshotPort } from "../../shared/ports/stateSnapshots.j
 export interface StartBubbleDependencyDefaults {
   bootstrapWorktreeWorkspace: BootstrapWorktreeWorkspacePort;
   cleanupWorktreeWorkspace: CleanupWorktreeWorkspacePort;
+  launchBubbleSessionAck: LaunchBubbleSessionAckPort;
   launchBubbleTmuxSessionAck: LaunchBubbleTmuxSessionAckPort;
   launchBubbleTmuxSession: LaunchBubbleTmuxSessionPort;
   terminateBubbleTmuxSession: TerminateBubbleTmuxSessionPort;
@@ -81,6 +84,9 @@ export const bootstrapWorktreeWorkspace: BootstrapWorktreeWorkspacePort =
 export const launchBubbleTmuxSession: LaunchBubbleTmuxSessionPort =
   launchBubbleTmuxSessionCanonical;
 
+export const launchBubbleSessionAck: LaunchBubbleSessionAckPort =
+  launchBubbleSessionAckCanonical;
+
 export const launchBubbleTmuxSessionAck: LaunchBubbleTmuxSessionAckPort =
   launchBubbleTmuxSessionAckCanonical;
 
@@ -96,6 +102,7 @@ export const upsertRuntimeSession: UpsertRuntimeSessionPort =
 export const startBubbleDependencyDefaults: StartBubbleDependencyDefaults = {
   bootstrapWorktreeWorkspace,
   cleanupWorktreeWorkspace: cleanupWorktreeWorkspaceCanonical,
+  launchBubbleSessionAck,
   launchBubbleTmuxSessionAck,
   launchBubbleTmuxSession,
   terminateBubbleTmuxSession: terminateBubbleTmuxSessionCanonical,
