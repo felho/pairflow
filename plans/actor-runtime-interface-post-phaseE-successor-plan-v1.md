@@ -173,21 +173,23 @@ owners:
    - onboarding simplification csak a zart baseline vocabulary explicit mappingjara epulhet,
    - az `Opportunity 4` alapertelmezetten ebbe a lane-be van beolvasztva mint core-vs-extension rationalization,
    - kulon `O4-T1` csak akkor nyithato, ha az `Opportunity 1 / O1-T1` outputja bizonyitja, hogy ez onallo bounded closure.
+10. A current tree-ben az `Opportunity 1` mar lezart successor lane:
+   - emiatt a kovetkezo bounded successor slice az `O2-T1`
+   - task artifact path: `plans/tasks/actor-runtime-interface-opportunity2-task1-topology-neutral-delivery-executor-clarification.md`
 
-## Suggested First Implementation Slice
+## Historical First Implementation Slice (`Opportunity 1`)
 
-1. Ha a successor planbol tenyleges munka indul, az elso bounded task ne runtime rewrite legyen.
-2. A legkisebb ertelmes elso szelet:
-   - a role-neutral actor runtime kernel dokumentalt, typed belso contractja,
-   - a mostani wrapper logic inventoryja,
-   - es egy explicit mapping arrol, mi marad policy-level kulonbseg.
-3. Ez docs+typed-boundary taskkent kezdheto, mielott barmilyen delivery topology vagy CLI surface mozdul.
-4. A current sequencing anchor ehhez a docs-only first slice-hoz:
-   - historical task artifact: `plans/archive/tasks/actor-runtime-interface-opportunity1-task1-generic-runtime-kernel-boundary-clarification.md`
-5. A current docs-only output note ugyanennek a first slice-nak a normativ boundary inventoryja:
+1. Ez a blokk mar nem a current next slice-ot jeloli, hanem az `Opportunity 1` lane historical elso bounded szeletet rogziti.
+2. Az `O1` legkisebb ertelmes elso szelete az volt, hogy:
+   - a role-neutral actor runtime kernel dokumentalt, typed belso contractot kapjon,
+   - a wrapper logic explicit inventory keszuljon,
+   - es megszulessen egy pontos mapping arrol, mi marad policy-level kulonbseg.
+3. Ez docs+typed-boundary taskkent indult, mielott barmilyen delivery topology vagy CLI surface mozdult volna.
+4. Ennek a historical docs-only first slice-nak a task anchorja:
+   - `plans/archive/tasks/actor-runtime-interface-opportunity1-task1-generic-runtime-kernel-boundary-clarification.md`
+5. Ennek a historical first slice-nak a normativ boundary note-ja:
    - `plans/actor-runtime-interface-generic-runtime-kernel-contract-note-v1.md`
-6. Ez a first slice meg mindig nem runtime rewrite:
-   - csak a canonical authority, a route/policy matrix es a workflow adapter boundary explicit szetvalasztasat ownershipolja.
+6. A current tree-ben ez a slice mar lezart baseline; a current next successor slice-t az alatti progress update es disposition szekcio `O2-T1`-kent nevezi meg.
 
 ## Current Tree Progress Update (2026-04-18)
 
@@ -211,6 +213,10 @@ owners:
 5. Az optionalis `O1-T4` kulon successor taskkent nem nyilt meg:
    - retained fallback / parity / cleanup hardening nem maradt nyitva kulon bounded consumer fallouttal.
 6. Emiatt az `Opportunity 1` current-tree successor lane lezarhato.
+7. Az `Opportunity 2` current next bounded successor slice-a megnyithato docs-only clarification lane-kent:
+   - task artifact: `plans/tasks/actor-runtime-interface-opportunity2-task1-topology-neutral-delivery-executor-clarification.md`
+   - scope: topology-neutral delivery/executor contract boundary clarification retained `tmux` adapter ownership explicit source-anchor inventoryval
+   - preserved baseline: a `Phase E2a`-ban lezart typed delivery/launch ack semantics tovabbra sem reopenolhato
 
 ## Done Definition
 
@@ -230,7 +236,8 @@ owners:
    - kulon `O1-T4` nem nyilt meg
    - disposition: closed on current tree
 2. `Opportunity 2`
-   - deferred successor lane `O2-T1`
+   - current next successor lane `O2-T1`
+   - task artifact: `plans/tasks/actor-runtime-interface-opportunity2-task1-topology-neutral-delivery-executor-clarification.md`
    - preserved baseline: a lezart typed ack/runtime-success semantics nem reopenolhato
 3. `Opportunity 3`
    - deferred successor lane `O3-T1`
