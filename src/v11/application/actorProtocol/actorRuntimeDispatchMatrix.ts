@@ -292,7 +292,7 @@ const actorRuntimePolicyCheckCatalog: Readonly<
   }
 };
 
-export const actorRuntimeRouteMatrix: readonly ActorRuntimeRoute[] = [
+const actorRuntimeRouteMatrix: readonly ActorRuntimeRoute[] = [
   {
     id: "implementer_pass",
     authorityRole: "implementer",

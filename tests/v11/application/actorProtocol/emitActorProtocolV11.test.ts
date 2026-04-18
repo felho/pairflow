@@ -6,7 +6,6 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   assertActorRuntimeDispatchPlanPolicies,
-  actorRuntimeRouteMatrix,
   resolveActorRuntimeDispatchPlan
 } from "../../../../src/v11/application/actorProtocol/actorRuntimeDispatchMatrix.js";
 import * as actorRuntimeKernelModule from "../../../../src/v11/application/actorProtocol/actorRuntimeKernel.js";
@@ -248,15 +247,19 @@ afterEach(async () => {
 });
 
 describe("emitActorProtocolV11 runtime", () => {
-  it("publishes the exact current-tree authority x input runtime route matrix", () => {
-    expect(actorRuntimeRouteMatrix).toEqual([
+  it("resolves the exact current-tree authority x input runtime routes", () => {
+    const expectedRoutes = [
       {
-        id: "implementer_pass",
-        authorityRole: "implementer",
-        inputKind: "pass",
-        handler: "implementer_route",
-        adapter: "pass_adapter",
-        routePolicy: "primary_route",
+        expectedRole: "implementer" as const,
+        inputKind: "pass" as const,
+        route: {
+          id: "implementer_pass",
+          authorityRole: "implementer",
+          inputKind: "pass",
+          handler: "implementer_route",
+          adapter: "pass_adapter",
+          routePolicy: "primary_route"
+        },
         policyCheckIds: [
           "context_snapshot_integrity",
           "input_context_match",
@@ -264,12 +267,16 @@ describe("emitActorProtocolV11 runtime", () => {
         ]
       },
       {
-        id: "implementer_human_question",
-        authorityRole: "implementer",
-        inputKind: "human_question",
-        handler: "implementer_route",
-        adapter: "human_question_adapter",
-        routePolicy: "primary_route",
+        expectedRole: "implementer" as const,
+        inputKind: "human_question" as const,
+        route: {
+          id: "implementer_human_question",
+          authorityRole: "implementer",
+          inputKind: "human_question",
+          handler: "implementer_route",
+          adapter: "human_question_adapter",
+          routePolicy: "primary_route"
+        },
         policyCheckIds: [
           "context_snapshot_integrity",
           "input_context_match",
@@ -277,12 +284,16 @@ describe("emitActorProtocolV11 runtime", () => {
         ]
       },
       {
-        id: "reviewer_pass",
-        authorityRole: "reviewer",
-        inputKind: "pass",
-        handler: "reviewer_route",
-        adapter: "pass_adapter",
-        routePolicy: "primary_route",
+        expectedRole: "reviewer" as const,
+        inputKind: "pass" as const,
+        route: {
+          id: "reviewer_pass",
+          authorityRole: "reviewer",
+          inputKind: "pass",
+          handler: "reviewer_route",
+          adapter: "pass_adapter",
+          routePolicy: "primary_route"
+        },
         policyCheckIds: [
           "context_snapshot_integrity",
           "input_context_match",
@@ -290,12 +301,16 @@ describe("emitActorProtocolV11 runtime", () => {
         ]
       },
       {
-        id: "reviewer_convergence",
-        authorityRole: "reviewer",
-        inputKind: "convergence",
-        handler: "reviewer_route",
-        adapter: "convergence_adapter",
-        routePolicy: "primary_route",
+        expectedRole: "reviewer" as const,
+        inputKind: "convergence" as const,
+        route: {
+          id: "reviewer_convergence",
+          authorityRole: "reviewer",
+          inputKind: "convergence",
+          handler: "reviewer_route",
+          adapter: "convergence_adapter",
+          routePolicy: "primary_route"
+        },
         policyCheckIds: [
           "context_snapshot_integrity",
           "input_context_match",
@@ -303,12 +318,16 @@ describe("emitActorProtocolV11 runtime", () => {
         ]
       },
       {
-        id: "reviewer_human_question_fallback",
-        authorityRole: "reviewer",
-        inputKind: "human_question",
-        handler: "reviewer_human_question_fallback",
-        adapter: "human_question_adapter",
-        routePolicy: "retained_fallback",
+        expectedRole: "reviewer" as const,
+        inputKind: "human_question" as const,
+        route: {
+          id: "reviewer_human_question_fallback",
+          authorityRole: "reviewer",
+          inputKind: "human_question",
+          handler: "reviewer_human_question_fallback",
+          adapter: "human_question_adapter",
+          routePolicy: "retained_fallback"
+        },
         policyCheckIds: [
           "context_snapshot_integrity",
           "input_context_match",
@@ -316,12 +335,16 @@ describe("emitActorProtocolV11 runtime", () => {
         ]
       },
       {
-        id: "meta_reviewer_meta_review_result",
-        authorityRole: "meta_reviewer",
-        inputKind: "meta_review_result",
-        handler: "meta_reviewer_route",
-        adapter: "meta_review_result_adapter",
-        routePolicy: "primary_route",
+        expectedRole: "meta_reviewer" as const,
+        inputKind: "meta_review_result" as const,
+        route: {
+          id: "meta_reviewer_meta_review_result",
+          authorityRole: "meta_reviewer",
+          inputKind: "meta_review_result",
+          handler: "meta_reviewer_route",
+          adapter: "meta_review_result_adapter",
+          routePolicy: "primary_route"
+        },
         policyCheckIds: [
           "context_snapshot_integrity",
           "input_context_match",
@@ -329,7 +352,19 @@ describe("emitActorProtocolV11 runtime", () => {
           "meta_reviewer_active_agent_codex_when_present"
         ]
       }
-    ]);
+    ];
+
+    for (const expectedRoute of expectedRoutes) {
+      const plan = resolveActorRuntimeDispatchPlan({
+        expectedRole: expectedRoute.expectedRole,
+        inputKind: expectedRoute.inputKind
+      });
+
+      expect(plan.route).toMatchObject(expectedRoute.route);
+      expect(plan.policyChecks.map((policyCheck) => policyCheck.id)).toEqual(
+        expectedRoute.policyCheckIds
+      );
+    }
   });
 
   it("resolves the retained reviewer human_question fallback as an explicit dispatch plan", () => {
