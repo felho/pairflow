@@ -1,6 +1,6 @@
 import { emitBubbleNotification } from "../../infrastructure/channel/notifications.js";
 import {
-  emitTmuxDeliveryNotification,
+  emitDeliveryNotificationAck,
   resolveDeliveryMessageRef
 } from "../../infrastructure/channel/tmux/tmuxDelivery.js";
 import { assessPairflowCommandPath } from "../../shared/command/pairflowCommandPathAssessment.js";
@@ -31,11 +31,11 @@ export const convergedDependencyDefaults = {
   execution: {
     appendProtocolEnvelope,
     emitBubbleNotification,
-    emitTmuxDeliveryNotification,
+    emitDeliveryNotificationAck,
     resolveDeliveryMessageRef
   },
   gateDelivery: {
-    emitTmuxDeliveryNotification,
+    emitDeliveryNotificationAck,
     resolveDeliveryMessageRef
   },
   validation: {

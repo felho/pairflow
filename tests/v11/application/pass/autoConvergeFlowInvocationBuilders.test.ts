@@ -187,6 +187,7 @@ describe("autoConvergeFlowInvocationBuilders", () => {
     expect(typeof capturedConvergedDeps.emitConvergedFromWorkspace).toBe(
       "function"
     );
+    expect(capturedConvergedDeps).not.toHaveProperty("emitDeliveryNotificationAck");
     expect(capturedConvergedDeps).not.toHaveProperty("emitTmuxDeliveryNotification");
     expect(capturedConvergedDeps).not.toHaveProperty("emitBubbleNotification");
     expect(typeof capturedFinalizeDeps.updateReviewerDocGateArtifact).toBe(
@@ -206,6 +207,7 @@ describe("autoConvergeFlowInvocationBuilders", () => {
   it("forwards optional converged emit overrides when provided", async () => {
     let capturedConvergedDeps: Record<string, unknown> | undefined;
 
+    const emitDeliveryNotificationAck = (() => undefined) as never;
     const emitTmuxDeliveryNotification = (() => undefined) as never;
     const emitBubbleNotification = (() => undefined) as never;
 
@@ -226,6 +228,7 @@ describe("autoConvergeFlowInvocationBuilders", () => {
         } as never;
       },
       emitConvergedFromWorkspace: async () => ({} as never),
+      emitDeliveryNotificationAck,
       emitTmuxDeliveryNotification,
       emitBubbleNotification,
       finalizeAutoConvergePass: async () => ({ status: "ok" }),
@@ -254,6 +257,9 @@ describe("autoConvergeFlowInvocationBuilders", () => {
     }
     expect(typeof capturedConvergedDeps.emitConvergedFromWorkspace).toBe(
       "function"
+    );
+    expect(capturedConvergedDeps.emitDeliveryNotificationAck).toBe(
+      emitDeliveryNotificationAck
     );
     expect(capturedConvergedDeps.emitTmuxDeliveryNotification).toBe(
       emitTmuxDeliveryNotification

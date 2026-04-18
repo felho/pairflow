@@ -19,8 +19,10 @@ describe("approvalCommandDependencyResolution", () => {
       })) as never;
     const defaultEmitTmux = (async () =>
       ({
-        delivered: true,
-        message: "default"
+        status: "accepted" as const,
+        message: "default",
+        sessionName: "pf_default_approval",
+        targetPaneIndex: 1
       })) as never;
     const defaultExecuteRemoteApproval = (async () =>
       ({
@@ -58,8 +60,10 @@ describe("approvalCommandDependencyResolution", () => {
 
     const customEmit = (() =>
       Promise.resolve({
-        delivered: true,
-        message: "custom"
+        status: "accepted" as const,
+        message: "custom",
+        sessionName: "pf_custom_approval",
+        targetPaneIndex: 2
       })) as never;
     const customResolveMessageRef = (() => "custom-ref") as never;
 

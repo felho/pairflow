@@ -91,8 +91,10 @@ describe("v11 reply delivery invariant", () => {
             }
           });
           return {
-            delivered: true,
-            message: "ok"
+            status: "accepted" as const,
+            message: "ok",
+            sessionName: "pf_bubble",
+            targetPaneIndex: 1
           };
         }
       }

@@ -1,8 +1,5 @@
 import type { ProtocolEnvelopeDraft } from "../../../types/protocol.js";
-import type {
-  EmitTmuxDeliveryNotificationInput,
-  EmitTmuxDeliveryNotificationResult
-} from "../delivery/tmuxDeliveryContract.js";
+import type { EmitDeliveryAckLikePort } from "../ports/tmuxDelivery.js";
 import type {
   ResolveBubbleByIdPort
 } from "../ports/bubbleLookup.js";
@@ -31,9 +28,7 @@ export type KickoffStatFile = (
   path: string
 ) => Promise<KickoffStatResult>;
 
-export type KickoffEmitDelivery = (
-  input: EmitTmuxDeliveryNotificationInput
-) => Promise<EmitTmuxDeliveryNotificationResult>;
+export type KickoffEmitDelivery = EmitDeliveryAckLikePort;
 
 export interface KickoffDependencyOverrides {
   resolveBubbleById?: ResolveBubbleByIdPort;
@@ -43,6 +38,7 @@ export interface KickoffDependencyOverrides {
   statFile?: KickoffStatFile;
   writeFile?: KickoffWriteFile;
   appendProtocolEnvelope?: AppendProtocolEnvelopePort;
+  emitDeliveryNotificationAck?: KickoffEmitDelivery;
   emitTmuxDeliveryNotification?: KickoffEmitDelivery;
 }
 

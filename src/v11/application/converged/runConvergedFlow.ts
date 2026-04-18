@@ -31,10 +31,10 @@ function buildExecutionDependencies(
             dependencies.applyMetaReviewGateOnConvergence
         }
       : {}),
-    ...(dependencies.emitTmuxDeliveryNotification !== undefined
+    ...(dependencies.emitDeliveryNotificationAck !== undefined
       ? {
-          emitTmuxDeliveryNotification:
-            dependencies.emitTmuxDeliveryNotification
+          emitDeliveryNotificationAck:
+            dependencies.emitDeliveryNotificationAck
         }
       : {}),
     ...(dependencies.emitBubbleNotification !== undefined

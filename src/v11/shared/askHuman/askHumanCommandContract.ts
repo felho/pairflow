@@ -1,6 +1,6 @@
 import type {
   AskHumanDeliveryTargetReasonCode,
-  AskHumanEmitTmuxDeliveryNotificationResult,
+  AskHumanDeliveryAck,
   EmitAskHumanBubbleNotificationPort,
   EmitAskHumanTmuxDeliveryNotificationPort
 } from "./askHumanDeliveryPortsContract.js";
@@ -29,11 +29,11 @@ export interface EmitAskHumanResult {
   inferredRecipient: "human";
   activation?: AskHumanActivationProvenance;
   delivery?: {
-    status: AskHumanEmitTmuxDeliveryNotificationResult["status"];
+    status: AskHumanDeliveryAck["status"];
     delivered: boolean;
     message?: string;
-    reason?: AskHumanEmitTmuxDeliveryNotificationResult["reason"];
-    reason_code?: AskHumanEmitTmuxDeliveryNotificationResult["reason_code"];
+    reason?: Extract<AskHumanDeliveryAck, { status: "rejected" }>["reason"];
+    reason_code?: Extract<AskHumanDeliveryAck, { status: "rejected" }>["reason_code"];
     deliveryTargetReasonCode?: AskHumanDeliveryTargetReasonCode;
   };
 }

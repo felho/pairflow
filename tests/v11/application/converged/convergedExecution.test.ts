@@ -84,7 +84,7 @@ describe("executeConvergedExecution", () => {
           },
           state: {}
         }) as never,
-        emitTmuxDeliveryNotification: async (input) => {
+        emitDeliveryNotificationAck: async (input) => {
           deliveryCalls.push({
             recipient: input.envelope.recipient,
             roleMetadata: input.envelope.payload.metadata?.[deliveryTargetRoleMetadataKey]
@@ -99,7 +99,9 @@ describe("executeConvergedExecution", () => {
           }
           return {
             delivered: true,
-            message: ""
+            message: "",
+            sessionName: "pf_bubble",
+            targetPaneIndex: 1
           };
         },
         emitBubbleNotification: (config, commandName) => {
@@ -205,7 +207,7 @@ describe("executeConvergedExecution", () => {
           },
           state: {}
         }) as never,
-        emitTmuxDeliveryNotification: async (input) => {
+        emitDeliveryNotificationAck: async (input) => {
           deliveryCallCount += 1;
           deliveryOptions.push({
             ...(input.initialDelayMs !== undefined
@@ -225,7 +227,9 @@ describe("executeConvergedExecution", () => {
           }
           return {
             delivered: true,
-            message: ""
+            message: "",
+            sessionName: "pf_bubble",
+            targetPaneIndex: 1
           };
         },
         emitBubbleNotification: (config, commandName) => {
@@ -309,7 +313,7 @@ describe("executeConvergedExecution", () => {
           },
           state: {}
         }) as never,
-        emitTmuxDeliveryNotification: async (input) => {
+        emitDeliveryNotificationAck: async (input) => {
           if (input.envelope.recipient === "human") {
             throw new Error("simulated tmux send failure");
           }

@@ -73,7 +73,9 @@ describe("implementerHandoffDelivery", () => {
         }
         return {
           delivered: true,
-          message: "ok"
+          message: "ok",
+          sessionName: "pf_bubble",
+          targetPaneIndex: 1
         };
       }
     });
@@ -85,8 +87,10 @@ describe("implementerHandoffDelivery", () => {
     });
     expect(result).toEqual({
       result: {
-        delivered: true,
-        message: "ok"
+        status: "accepted",
+        message: "ok",
+        sessionName: "pf_bubble",
+        targetPaneIndex: 1
       },
       retried: true
     });
@@ -103,7 +107,9 @@ describe("implementerHandoffDelivery", () => {
         }
         return {
           delivered: true,
-          message: "retry recovered"
+          message: "retry recovered",
+          sessionName: "pf_bubble",
+          targetPaneIndex: 1
         };
       }
     });
@@ -111,8 +117,10 @@ describe("implementerHandoffDelivery", () => {
     expect(calls).toHaveLength(2);
     expect(result).toEqual({
       result: {
-        delivered: true,
-        message: "retry recovered"
+        status: "accepted",
+        message: "retry recovered",
+        sessionName: "pf_bubble",
+        targetPaneIndex: 1
       },
       retried: true
     });
@@ -142,9 +150,10 @@ describe("implementerHandoffDelivery", () => {
     });
     expect(result).toEqual({
       result: {
-        delivered: false,
+        status: "rejected",
         message: "first attempt unconfirmed",
-        reason: "delivery_unconfirmed"
+        reason: "delivery_unconfirmed",
+        reason_code: "DELIVERY_ACK_REJECTED"
       },
       retried: true
     });
@@ -158,7 +167,9 @@ describe("implementerHandoffDelivery", () => {
         calls.push(input);
         return {
           delivered: true,
-          message: "ok"
+          message: "ok",
+          sessionName: "pf_bubble",
+          targetPaneIndex: 1
         };
       }
     });

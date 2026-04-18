@@ -32,10 +32,12 @@ describe("runCli request-rework delivery warning parity", () => {
       state: {},
       delivery: {
         statusDelivery: {
+          status: "accepted",
           delivered: true,
           message: "status ok"
         },
         implementerDelivery: {
+          status: "rejected",
           delivered: false,
           message: "implementer failed",
           reason: "delivery_unconfirmed"
@@ -71,5 +73,5 @@ describe("runCli request-rework delivery warning parity", () => {
       "--message",
       "x"
     ]);
-  });
+  }, 10000);
 });

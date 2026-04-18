@@ -83,6 +83,8 @@ export interface BuildAutoConvergeFlowDependenciesInput<TResult> {
   >;
   emitConvergedFromWorkspace:
     ExecuteAutoConvergeConvergedDependencies["emitConvergedFromWorkspace"];
+  emitDeliveryNotificationAck?:
+    EmitConvergedDependencies["emitDeliveryNotificationAck"];
   emitTmuxDeliveryNotification?: EmitConvergedDependencies["emitTmuxDeliveryNotification"];
   emitBubbleNotification?: EmitConvergedDependencies["emitBubbleNotification"];
   finalizeAutoConvergePass: (
@@ -107,6 +109,12 @@ export function buildAutoConvergeFlowDependencies<TResult>(
     executeAutoConvergeConverged: (autoConvergedInput) =>
       input.executeAutoConvergeConverged(autoConvergedInput, {
         emitConvergedFromWorkspace: input.emitConvergedFromWorkspace,
+        ...(input.emitDeliveryNotificationAck !== undefined
+          ? {
+              emitDeliveryNotificationAck:
+                input.emitDeliveryNotificationAck
+            }
+          : {}),
         ...(input.emitTmuxDeliveryNotification !== undefined
           ? { emitTmuxDeliveryNotification: input.emitTmuxDeliveryNotification }
           : {}),

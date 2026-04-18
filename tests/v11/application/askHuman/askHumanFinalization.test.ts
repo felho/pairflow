@@ -64,7 +64,9 @@ describe("finalizeAskHumanFlow", () => {
           return {
             status: "accepted",
             delivered: true,
-            message: "ok"
+            message: "ok",
+            sessionName: "pf_bubble",
+            targetPaneIndex: 1
           };
         },
         emitBubbleNotification: async (_config, kind) => {
@@ -205,6 +207,8 @@ describe("finalizeAskHumanFlow", () => {
           status: "accepted";
           delivered: boolean;
           message: string;
+          sessionName: string;
+          targetPaneIndex: number;
         }) => void)
       | undefined;
 
@@ -218,6 +222,8 @@ describe("finalizeAskHumanFlow", () => {
       status: "accepted";
       delivered: boolean;
       message: string;
+      sessionName: string;
+      targetPaneIndex: number;
     }>((resolvePromise) => {
       deliveryResolve = resolvePromise;
     });
@@ -279,7 +285,9 @@ describe("finalizeAskHumanFlow", () => {
     deliveryResolve?.({
       status: "accepted",
       delivered: true,
-      message: "ok"
+      message: "ok",
+      sessionName: "pf_bubble",
+      targetPaneIndex: 1
     });
 
     const result = await resultPromise;

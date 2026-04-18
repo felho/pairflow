@@ -139,7 +139,9 @@ describe("emitAskHumanFromWorkspaceV11", () => {
           return Promise.resolve({
             status: "accepted",
             delivered: true,
-            message: "ok"
+            message: "ok",
+            sessionName: "pf_bubble",
+            targetPaneIndex: 1
           });
         },
         emitBubbleNotification: () =>

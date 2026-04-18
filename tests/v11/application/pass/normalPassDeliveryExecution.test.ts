@@ -47,15 +47,19 @@ describe("executeNormalPassDelivery", () => {
           capturedDeliveryDependencies = deps;
           return {
             result: {
-              delivered: true,
-              message: "delivered"
+              status: "accepted" as const,
+              message: "delivered",
+              sessionName: "pf_bubble",
+              targetPaneIndex: 2
             },
             retried: false
           };
         },
-        emitTmuxDeliveryNotification: async () => ({
-          delivered: false,
-          message: "noop"
+        emitDeliveryNotificationAck: async () => ({
+          status: "rejected" as const,
+          message: "noop",
+          reason: "tmux_send_failed" as const,
+          reason_code: "DELIVERY_ACK_REJECTED" as const
         }),
         refreshReviewerContext: async () => ({
           refreshed: false,
@@ -65,12 +69,14 @@ describe("executeNormalPassDelivery", () => {
     );
 
     expect(capturedDeliveryInput?.reviewerTestDirective).toEqual(directive);
-    expect(typeof capturedDeliveryDependencies?.emitTmuxDeliveryNotification).toBe("function");
+    expect(typeof capturedDeliveryDependencies?.emitDeliveryNotificationAck).toBe("function");
     expect(typeof capturedDeliveryDependencies?.refreshReviewerContext).toBe("function");
     expect(result.reviewerTestDirective).toEqual(directive);
     expect(result.deliveryResult).toEqual({
-      delivered: true,
-      message: "delivered"
+      status: "accepted",
+      message: "delivered",
+      sessionName: "pf_bubble",
+      targetPaneIndex: 2
     });
     expect(result.deliveryRetried).toBe(false);
   });
@@ -109,8 +115,9 @@ describe("executeNormalPassDelivery", () => {
           capturedDeliveryInput = input;
           return {
             result: {
-              delivered: false,
+              status: "rejected" as const,
               reason: "delivery_unconfirmed",
+              reason_code: "DELIVERY_ACK_REJECTED" as const,
               message: "failed"
             },
             retried: true
@@ -123,8 +130,9 @@ describe("executeNormalPassDelivery", () => {
     expect(capturedDeliveryInput?.reviewerTestDirective).toEqual(directive);
     expect(result.reviewerTestDirective).toEqual(directive);
     expect(result.deliveryResult).toEqual({
-      delivered: false,
+      status: "rejected",
       reason: "delivery_unconfirmed",
+      reason_code: "DELIVERY_ACK_REJECTED",
       message: "failed"
     });
     expect(result.deliveryRetried).toBe(true);

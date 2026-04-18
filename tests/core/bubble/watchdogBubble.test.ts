@@ -26,7 +26,7 @@ import { metaReviewExecutionContextToRunningContext } from "../../../src/v11/sha
 import { applyStateTransition } from "../../../src/v11/domain/state/machine.js";
 import { readStateSnapshot, writeStateSnapshot } from "../../../src/v11/infrastructure/state/stateStore.js";
 import { runBubbleWatchdogV11 } from "../../../src/v11/application/watchdog/emitWatchdogV11.js";
-import type { EmitTmuxDeliveryNotificationPort } from "../../../src/v11/shared/ports/tmuxDelivery.js";
+import type { EmitDeliveryNotificationAckPort } from "../../../src/v11/shared/ports/tmuxDelivery.js";
 import { initGitRepository } from "../../helpers/git.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
 
@@ -265,7 +265,7 @@ describe("runBubbleWatchdog", () => {
         now: new Date("2026-02-22T12:13:00.000Z")
       },
       {
-        emitTmuxDeliveryNotification: () =>
+        emitDeliveryNotificationAck: () =>
           Promise.resolve({
             delivered: false,
             message: "",
@@ -322,8 +322,8 @@ describe("runBubbleWatchdog", () => {
         now: new Date("2026-02-22T12:23:00.000Z")
       },
       {
-        emitTmuxDeliveryNotification: (
-          input: Parameters<EmitTmuxDeliveryNotificationPort>[0]
+        emitDeliveryNotificationAck: (
+          input: Parameters<EmitDeliveryNotificationAckPort>[0]
         ) => {
           if (input.messageRef === undefined) {
             throw new Error("Expected messageRef for deferred rework-intent delivery.");
@@ -338,7 +338,9 @@ describe("runBubbleWatchdog", () => {
           });
           return Promise.resolve({
             delivered: true,
-            message: "ok"
+            message: "ok",
+            sessionName: "pf_bubble",
+            targetPaneIndex: 1
           });
         }
       }
@@ -372,15 +374,17 @@ describe("runBubbleWatchdog", () => {
       cwd: repoPath,
       now: escalatedAt
     }, {
-      emitTmuxDeliveryNotification: (
-        input: Parameters<EmitTmuxDeliveryNotificationPort>[0]
+      emitDeliveryNotificationAck: (
+        input: Parameters<EmitDeliveryNotificationAckPort>[0]
       ) => {
         if (input.messageRef !== undefined) {
           deliveryRefs.push(input.messageRef);
         }
         return Promise.resolve({
           delivered: true,
-          message: "ok"
+          message: "ok",
+          sessionName: "pf_bubble",
+          targetPaneIndex: 1
         });
       },
       emitBubbleNotification: () =>
@@ -936,8 +940,8 @@ describe("runBubbleWatchdog", () => {
         now: new Date("2026-02-22T12:02:00.000Z")
       },
       {
-        emitTmuxDeliveryNotification: async (
-          input: Parameters<EmitTmuxDeliveryNotificationPort>[0]
+        emitDeliveryNotificationAck: async (
+          input: Parameters<EmitDeliveryNotificationAckPort>[0]
         ) => {
           deliveries.push({
             bubbleId: input.bubbleId,
@@ -951,7 +955,9 @@ describe("runBubbleWatchdog", () => {
           });
           return {
             delivered: true,
-            message: "ok"
+            message: "ok",
+            sessionName: "pf_bubble",
+            targetPaneIndex: 1
           };
         }
       }

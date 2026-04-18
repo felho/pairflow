@@ -55,6 +55,12 @@ export function createAutoConvergeFlowDependencies(
     prepareRepeatCleanAutoConverge,
     executeAutoConvergeConverged,
     emitConvergedFromWorkspace,
+    ...(runtimeDependencies.emitDeliveryNotificationAck !== undefined
+      ? {
+          emitDeliveryNotificationAck:
+            runtimeDependencies.emitDeliveryNotificationAck
+        }
+      : {}),
     ...(runtimeDependencies.emitTmuxDeliveryNotification !== undefined
       ? {
           emitTmuxDeliveryNotification:
@@ -95,6 +101,12 @@ export function createNormalPassFlowDependencies(
     executeNormalPassDelivery,
     resolveReviewerTestDirectiveForPass,
     executePassDelivery,
+    ...(runtimeDependencies.emitDeliveryNotificationAck !== undefined
+      ? {
+          emitDeliveryNotificationAck:
+            runtimeDependencies.emitDeliveryNotificationAck
+        }
+      : {}),
     ...(runtimeDependencies.emitTmuxDeliveryNotification !== undefined
       ? {
           emitTmuxDeliveryNotification:

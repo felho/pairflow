@@ -545,7 +545,9 @@ describe("emitPassFromWorkspace", { timeout: 20_000 }, () => {
           }
           return Promise.resolve({
             delivered: true,
-            message: "ok"
+            message: "ok",
+            sessionName: "pf_bubble",
+            targetPaneIndex: 1
           });
         }
       }
@@ -2849,7 +2851,9 @@ describe("emitPassFromWorkspace", { timeout: 20_000 }, () => {
           }
           return {
             delivered: true,
-            message: "ok"
+            message: "ok",
+            sessionName: "pf_bubble",
+            targetPaneIndex: 1
           };
         }
       }
@@ -4332,7 +4336,9 @@ present`,
           capturedDirective = input.reviewerTestDirective;
           return Promise.resolve({
             delivered: true,
-            message: "ok"
+            message: "ok",
+            sessionName: "pf_bubble",
+            targetPaneIndex: 1
           });
         }
       }
@@ -4609,7 +4615,9 @@ present`,
           deliveryReviewerFocus = input.reviewerFocus;
           return Promise.resolve({
             delivered: true,
-            message: "ok"
+            message: "ok",
+            sessionName: "pf_bubble",
+            targetPaneIndex: 1
           });
         }
       }
@@ -4649,7 +4657,9 @@ present`,
           deliveryReviewerFocus = input.reviewerFocus;
           return Promise.resolve({
             delivered: true,
-            message: "ok"
+            message: "ok",
+            sessionName: "pf_bubble",
+            targetPaneIndex: 1
           });
         }
       }
@@ -4693,7 +4703,9 @@ present`,
           );
           return Promise.resolve({
             delivered: true,
-            message: "ok"
+            message: "ok",
+            sessionName: "pf_bubble",
+            targetPaneIndex: 1
           });
         }
       }
@@ -4758,7 +4770,9 @@ present`,
           }
           return Promise.resolve({
             delivered: true,
-            message: "ok"
+            message: "ok",
+            sessionName: "pf_bubble",
+            targetPaneIndex: 1
           });
         }
       }
@@ -4838,7 +4852,9 @@ present`,
         });
         return Promise.resolve({
           delivered: true,
-          message: "ok"
+          message: "ok",
+          sessionName: "pf_bubble",
+          targetPaneIndex: 1
         });
       }
     };
@@ -4945,7 +4961,9 @@ present`,
           }
           return Promise.resolve({
             delivered: true,
-            message: "ok"
+            message: "ok",
+            sessionName: "pf_bubble",
+            targetPaneIndex: 1
           });
         }
       }
@@ -5513,7 +5531,9 @@ present`,
           emitTmuxDeliveryNotification: () =>
             Promise.resolve({
               delivered: true,
-              message: "ok"
+              message: "ok",
+              sessionName: "pf_bubble",
+              targetPaneIndex: 1
             })
         }
       )
@@ -5552,7 +5572,9 @@ present`,
           capturedDirective = input.reviewerTestDirective;
           return Promise.resolve({
             delivered: true,
-            message: "ok"
+            message: "ok",
+            sessionName: "pf_bubble",
+            targetPaneIndex: 1
           });
         }
       }

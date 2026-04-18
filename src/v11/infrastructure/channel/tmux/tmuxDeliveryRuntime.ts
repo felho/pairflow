@@ -47,9 +47,11 @@ export function projectDeliveryAckToLegacyResult(
   if (ack.status === "accepted") {
     return {
       delivered: true,
-      sessionName: ack.sessionName,
-      targetPaneIndex: ack.targetPaneIndex,
       message: ack.message,
+      ...(ack.sessionName !== undefined ? { sessionName: ack.sessionName } : {}),
+      ...(ack.targetPaneIndex !== undefined
+        ? { targetPaneIndex: ack.targetPaneIndex }
+        : {}),
       ...(ack.deliveryTargetReasonCode !== undefined
         ? { deliveryTargetReasonCode: ack.deliveryTargetReasonCode }
         : {})

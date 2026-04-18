@@ -16,7 +16,7 @@ import type {
 
 let metaReviewDefaultsPromise:
   | Promise<{
-    emitTmuxDeliveryNotification: NonNullable<
+    emitDeliveryNotificationAck: NonNullable<
       MetaReviewCommandDependencies["emitDeliveryNotification"]
     >;
     resolveDeliveryMessageRef: NonNullable<
@@ -25,7 +25,9 @@ let metaReviewDefaultsPromise:
   }>
   | undefined;
 
-async function loadMetaReviewDefaults() {
+async function loadMetaReviewDefaults(): Promise<NonNullable<
+  Awaited<typeof metaReviewDefaultsPromise>
+>> {
   metaReviewDefaultsPromise ??= import(
     "../../defaults/metaReview/metaReviewDefaults.js"
   ).then(({ metaReviewDefaults }) => metaReviewDefaults);
@@ -38,7 +40,7 @@ async function withMetaReviewDefaults(
   const metaReviewDefaults = await loadMetaReviewDefaults();
   return {
     readFile,
-    emitDeliveryNotification: metaReviewDefaults.emitTmuxDeliveryNotification,
+    emitDeliveryNotification: metaReviewDefaults.emitDeliveryNotificationAck,
     buildDeliveryMessageRef: metaReviewDefaults.resolveDeliveryMessageRef,
     ...dependencies
   };

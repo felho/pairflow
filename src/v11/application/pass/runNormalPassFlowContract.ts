@@ -4,7 +4,7 @@ import type {
 } from "../../../v11/domain/convergence/repeatCleanAutoconverge.js";
 import type { ReviewerTestExecutionDirective } from "../../../v11/shared/reviewer/testEvidence.js";
 import type { ReviewVerificationInputResolution } from "../../../v11/shared/reviewer/reviewVerification.js";
-import type { EmitTmuxDeliveryNotificationResult } from "../../../v11/shared/ports/tmuxDelivery.js";
+import type { DeliveryAck } from "../../../v11/shared/ports/tmuxDelivery.js";
 import type { LoadedStateSnapshot } from "../../../v11/shared/ports/stateSnapshots.js";
 import type { AgentName, BubbleConfig, BubbleStateSnapshot } from "../../../types/bubble.js";
 import type { Finding } from "../../../types/findings.js";
@@ -163,7 +163,7 @@ export interface RunNormalPassFlowDependencies<TResult> {
     reviewerTestDirective?: ReviewerTestExecutionDirective;
   }) => Promise<{
     reviewerTestDirective?: ReviewerTestExecutionDirective;
-    deliveryResult: EmitTmuxDeliveryNotificationResult | undefined;
+    deliveryResult: DeliveryAck | undefined;
     deliveryRetried: boolean;
   }>;
   finalizeNormalPass: (input: {
@@ -195,7 +195,7 @@ export interface RunNormalPassFlowDependencies<TResult> {
     envelope: ProtocolEnvelope;
     state: BubbleStateSnapshot;
     activation?: PassActivationProvenance;
-    deliveryResult: EmitTmuxDeliveryNotificationResult | undefined;
+    deliveryResult: DeliveryAck | undefined;
     deliveryRetried: boolean;
   }) => Promise<TResult>;
 }

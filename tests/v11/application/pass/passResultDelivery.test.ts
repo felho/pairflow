@@ -16,8 +16,10 @@ describe("mapPassResultDelivery", () => {
     expect(
       mapPassResultDelivery({
         deliveryResult: {
-          delivered: true,
-          message: "ok"
+          status: "accepted",
+          message: "ok",
+          sessionName: "pf_bubble",
+          targetPaneIndex: 1
         },
         deliveryRetried: false
       })
@@ -32,7 +34,7 @@ describe("mapPassResultDelivery", () => {
     expect(
       mapPassResultDelivery({
         deliveryResult: {
-          delivered: false,
+          status: "rejected",
           reason: "delivery_unconfirmed",
           reason_code: "DELIVERY_ACK_REJECTED",
           message: "not confirmed"

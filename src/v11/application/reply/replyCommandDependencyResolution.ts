@@ -5,11 +5,11 @@ import { startCommandContextDefaults } from "../start/startCommandDependencyDefa
 import { reviewerDeliveryDefaults } from "../pass/reviewerDeliveryDefaults.js";
 
 async function emitTmuxDeliveryNotification(
-  ...args: Parameters<typeof reviewerDeliveryDefaults.emitTmuxDeliveryNotification>
+  ...args: Parameters<typeof reviewerDeliveryDefaults.emitDeliveryNotificationAck>
 ): Promise<
-  Awaited<ReturnType<typeof reviewerDeliveryDefaults.emitTmuxDeliveryNotification>>
+  Awaited<ReturnType<typeof reviewerDeliveryDefaults.emitDeliveryNotificationAck>>
 > {
-  return reviewerDeliveryDefaults.emitTmuxDeliveryNotification(...args);
+  return reviewerDeliveryDefaults.emitDeliveryNotificationAck(...args);
 }
 
 async function ensureBubbleInstanceIdForMutation(

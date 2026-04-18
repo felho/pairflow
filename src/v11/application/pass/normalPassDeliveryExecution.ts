@@ -11,13 +11,15 @@ import type {
   WriteReviewerTestEvidenceArtifactPort
 } from "../../../v11/shared/ports/reviewerTestEvidenceArtifacts.js";
 import type {
-  EmitTmuxDeliveryNotificationPort,
-  EmitTmuxDeliveryNotificationResult
+  DeliveryAck,
+  DeliveryAckLike,
+  EmitDeliveryAckLikePort
 } from "../../../v11/shared/ports/tmuxDelivery.js";
 import type {
   ResolveDeliveryMessageRefPort
 } from "../../../v11/shared/ports/tmuxDelivery.js";
 import type { RefreshReviewerContextPort } from "../../../v11/shared/ports/reviewerContext.js";
+import { normalizeDeliveryAck } from "../../../v11/shared/delivery/deliveryAckNormalization.js";
 
 export interface ExecuteNormalPassDeliveryInput {
   senderRole: "implementer" | "reviewer";
@@ -64,21 +66,23 @@ export interface ExecuteNormalPassDeliveryDependencies {
       reviewerTestDirective?: ReviewerTestExecutionDirective;
     },
     dependencies?: {
-      emitTmuxDeliveryNotification?: EmitTmuxDeliveryNotificationPort;
+      emitDeliveryNotificationAck?: EmitDeliveryAckLikePort;
+      emitTmuxDeliveryNotification?: EmitDeliveryAckLikePort;
       refreshReviewerContext?: RefreshReviewerContextPort;
       readReviewerBriefArtifact?: ReadReviewerBriefArtifactPort;
       readReviewerFocusArtifact?: ReadReviewerFocusArtifactPort;
       resolveDeliveryMessageRef?: ResolveDeliveryMessageRefPort;
     }
   ) => Promise<{
-    result: EmitTmuxDeliveryNotificationResult | undefined;
+    result: DeliveryAckLike | undefined;
     retried: boolean;
   }>;
   verifyImplementerTestEvidence?: VerifyImplementerTestEvidencePort;
   writeReviewerTestEvidenceArtifact?: WriteReviewerTestEvidenceArtifactPort;
   resolveReviewerTestExecutionDirectiveFromArtifact?:
     ResolveReviewerTestExecutionDirectiveFromArtifactPort;
-  emitTmuxDeliveryNotification?: EmitTmuxDeliveryNotificationPort;
+  emitDeliveryNotificationAck?: EmitDeliveryAckLikePort;
+  emitTmuxDeliveryNotification?: EmitDeliveryAckLikePort;
   refreshReviewerContext?: RefreshReviewerContextPort;
   readReviewerBriefArtifact?: ReadReviewerBriefArtifactPort;
   readReviewerFocusArtifact?: ReadReviewerFocusArtifactPort;
@@ -87,7 +91,7 @@ export interface ExecuteNormalPassDeliveryDependencies {
 
 export interface ExecuteNormalPassDeliveryResult {
   reviewerTestDirective?: ReviewerTestExecutionDirective;
-  deliveryResult: EmitTmuxDeliveryNotificationResult | undefined;
+  deliveryResult: DeliveryAck | undefined;
   deliveryRetried: boolean;
 }
 
@@ -142,6 +146,9 @@ export async function executeNormalPassDelivery(
         : {})
     },
     {
+      ...(dependencies.emitDeliveryNotificationAck !== undefined
+        ? { emitDeliveryNotificationAck: dependencies.emitDeliveryNotificationAck }
+        : {}),
       ...(dependencies.emitTmuxDeliveryNotification !== undefined
         ? { emitTmuxDeliveryNotification: dependencies.emitTmuxDeliveryNotification }
         : {}),
@@ -164,7 +171,10 @@ export async function executeNormalPassDelivery(
     ...(reviewerTestDirective !== undefined
       ? { reviewerTestDirective }
       : {}),
-    deliveryResult: delivery.result,
+    deliveryResult:
+      delivery.result === undefined
+        ? undefined
+        : normalizeDeliveryAck(delivery.result),
     deliveryRetried: delivery.retried
   };
 }

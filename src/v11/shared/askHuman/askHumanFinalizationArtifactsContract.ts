@@ -1,6 +1,6 @@
 import type { BubbleStateSnapshot } from "../../../types/bubble.js";
 import type { ProtocolEnvelope } from "../../../types/protocol.js";
-import type { AskHumanEmitTmuxDeliveryNotificationResult } from "./askHumanDeliveryPortsContract.js";
+import type { AskHumanDeliveryAck } from "./askHumanDeliveryPortsContract.js";
 import type { AskHumanActivationProvenance } from "./askHumanCommandContract.js";
 
 export interface AskHumanLifecycleMetricMetadataInput {
@@ -15,5 +15,5 @@ export interface BuildAskHumanFinalizationResultInput {
   envelope: ProtocolEnvelope;
   state: BubbleStateSnapshot;
   activation?: AskHumanActivationProvenance;
-  deliveryResult?: AskHumanEmitTmuxDeliveryNotificationResult;
+  deliveryResult?: AskHumanDeliveryAck;
 }

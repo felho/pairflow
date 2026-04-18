@@ -155,7 +155,7 @@ describe("convergedFlowInvocationBuilders", () => {
     expect(dependencies.executeConvergedExecution).toBeTypeOf("function");
     expect(dependencies.finalizeConvergedFlow).toBeTypeOf("function");
     expect(dependencies.emitBubbleNotification).toBeTypeOf("function");
-    expect("emitTmuxDeliveryNotification" in dependencies).toBe(false);
+    expect("emitDeliveryNotificationAck" in dependencies).toBe(false);
     expect("applyMetaReviewGateOnConvergence" in dependencies).toBe(false);
   });
 
@@ -201,13 +201,88 @@ describe("convergedFlowInvocationBuilders", () => {
           state: {}
         }) as never,
       applyMetaReviewGateOnConvergence: undefined,
-      emitTmuxDeliveryNotification: undefined,
+      emitDeliveryNotificationAck: undefined,
       emitBubbleNotification: undefined
     });
 
     expect("applyMetaReviewGateOnConvergence" in dependencies).toBe(false);
-    expect("emitTmuxDeliveryNotification" in dependencies).toBe(false);
+    expect("emitDeliveryNotificationAck" in dependencies).toBe(false);
     expect("emitBubbleNotification" in dependencies).toBe(false);
+  });
+
+  it("maps the legacy converged delivery override onto the canonical ack port", () => {
+    const legacyEmitDelivery = async () =>
+      ({
+        delivered: true,
+        message: "ok"
+      }) as never;
+
+    const dependencies = buildConvergedFlowDependencies({
+      prepareConvergedRouting: async () =>
+        ({
+          resolved: {},
+          bubbleIdentity: {},
+          state: {},
+          implementer: "codex",
+          reviewer: "claude"
+        }) as never,
+      prepareConvergedPolicy: async () =>
+        ({
+          transcript: [],
+          policy: {
+            ok: true,
+            errors: [],
+            diagnostics: []
+          },
+          convergencePolicyDiagnostics: []
+        }) as never,
+      prepareConvergedValidation: async () =>
+        ({
+          specLockState: {},
+          roundGateState: {},
+          summaryVerifierGateDecision: {}
+        }) as never,
+      executeConvergedExecution: async () =>
+        ({
+          convergence: {},
+          gateResult: {}
+        }) as never,
+      finalizeConvergedFlow: async () =>
+        ({
+          bubbleId: "b_legacy",
+          convergenceSequence: 1,
+          convergenceEnvelope: {},
+          gateRoute: "human_gate_approve",
+          approvalRequestSequence: 2,
+          approvalRequestEnvelope: {},
+          state: {}
+        }) as never,
+      emitTmuxDeliveryNotification: legacyEmitDelivery
+    });
+
+    expect(dependencies.emitDeliveryNotificationAck).toBe(legacyEmitDelivery);
+  });
+
+  it("prefers the canonical converged delivery override when both keys are provided", () => {
+    const canonicalEmitDelivery = async () =>
+      ({
+        status: "accepted",
+        message: "ok",
+        sessionName: "pf-test",
+        targetPaneIndex: 1
+      }) as never;
+    const legacyEmitDelivery = async () =>
+      ({
+        delivered: true,
+        message: "legacy"
+      }) as never;
+
+    const dependencies = buildDefaultConvergedFlowDependencies({
+      emitDeliveryNotificationAck: canonicalEmitDelivery,
+      emitTmuxDeliveryNotification: legacyEmitDelivery
+    });
+
+    expect(dependencies.emitDeliveryNotificationAck).toBe(canonicalEmitDelivery);
   });
 
   it("builds default dependencies and forwards optional notifier overrides", () => {
@@ -228,7 +303,7 @@ describe("convergedFlowInvocationBuilders", () => {
     expect(dependencies.executeConvergedExecution).toBeTypeOf("function");
     expect(dependencies.finalizeConvergedFlow).toBeTypeOf("function");
     expect(dependencies.emitBubbleNotification).toBeTypeOf("function");
-    expect("emitTmuxDeliveryNotification" in dependencies).toBe(false);
+    expect("emitDeliveryNotificationAck" in dependencies).toBe(false);
     expect("applyMetaReviewGateOnConvergence" in dependencies).toBe(false);
   });
 
@@ -237,11 +312,11 @@ describe("convergedFlowInvocationBuilders", () => {
     const gateDeliveryDependencies = buildDefaultConvergedGateDeliveryDependencies();
 
     expect(executionDependencies.appendProtocolEnvelope).toBeTypeOf("function");
-    expect(executionDependencies.emitTmuxDeliveryNotification).toBeTypeOf("function");
+    expect(executionDependencies.emitDeliveryNotificationAck).toBeTypeOf("function");
     expect(executionDependencies.emitBubbleNotification).toBeTypeOf("function");
     expect(executionDependencies.resolveDeliveryMessageRef).toBeTypeOf("function");
     expect(executionDependencies.applyMetaReviewGateOnConvergence).toBeTypeOf("function");
-    expect(gateDeliveryDependencies.emitTmuxDeliveryNotification).toBeTypeOf("function");
+    expect(gateDeliveryDependencies.emitDeliveryNotificationAck).toBeTypeOf("function");
     expect(gateDeliveryDependencies.resolveDeliveryMessageRef).toBeTypeOf("function");
   });
 
@@ -294,7 +369,7 @@ describe("convergedFlowInvocationBuilders", () => {
     expect("expectedStateFingerprint" in invocation.flowInput).toBe(false);
     expect("expectedReviewer" in invocation.flowInput).toBe(false);
     expect(invocation.flowDependencies.emitBubbleNotification).toBeTypeOf("function");
-    expect("emitTmuxDeliveryNotification" in invocation.flowDependencies).toBe(false);
+    expect("emitDeliveryNotificationAck" in invocation.flowDependencies).toBe(false);
     expect("applyMetaReviewGateOnConvergence" in invocation.flowDependencies).toBe(false);
   });
 
@@ -307,13 +382,13 @@ describe("convergedFlowInvocationBuilders", () => {
       resolveMetaReviewRolloutBlockingReasonCodes: () => [],
       dependencies: {
         applyMetaReviewGateOnConvergence: undefined,
-        emitTmuxDeliveryNotification: undefined,
+        emitDeliveryNotificationAck: undefined,
         emitBubbleNotification: undefined
       }
     });
 
     expect("applyMetaReviewGateOnConvergence" in invocation.flowDependencies).toBe(false);
-    expect("emitTmuxDeliveryNotification" in invocation.flowDependencies).toBe(false);
+    expect("emitDeliveryNotificationAck" in invocation.flowDependencies).toBe(false);
     expect("emitBubbleNotification" in invocation.flowDependencies).toBe(false);
   });
 

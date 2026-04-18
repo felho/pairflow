@@ -1,43 +1,48 @@
 import type {
-  EmitTmuxDeliveryNotificationInput,
-  EmitTmuxDeliveryNotificationResult
+  DeliveryAck,
+  EmitDeliveryNotificationInput
 } from "./tmuxDeliveryContract.js";
+import type {
+  DeliveryAckLike,
+  EmitDeliveryAckLikePort
+} from "../ports/tmuxDelivery.js";
+import { normalizeDeliveryAck } from "./deliveryAckNormalization.js";
 
 export interface ExecuteImplementerHandoffDeliveryResult {
-  result: EmitTmuxDeliveryNotificationResult;
+  result: DeliveryAck;
   retried: boolean;
 }
 
 export function shouldRetryImplementerHandoffDelivery(
-  result: EmitTmuxDeliveryNotificationResult | undefined
+  result: DeliveryAckLike | undefined
 ): boolean {
+  const normalized = result === undefined ? undefined : normalizeDeliveryAck(result);
   return (
-    result !== undefined &&
-    !result.delivered &&
+    normalized !== undefined &&
+    normalized.status === "rejected" &&
     (
-      result.reason === "delivery_unconfirmed" ||
-      result.reason === "tmux_send_failed"
+      normalized.reason === "delivery_unconfirmed" ||
+      normalized.reason === "tmux_send_failed"
     )
   );
 }
 
-function buildUnexpectedDeliveryFailureResult(): EmitTmuxDeliveryNotificationResult {
+function buildUnexpectedDeliveryFailureResult(): DeliveryAck {
   return {
-    delivered: false,
+    status: "rejected",
     message: "",
-    reason: "tmux_send_failed"
+    reason: "tmux_send_failed",
+    reason_code: "DELIVERY_ACK_REJECTED"
   };
 }
 
 export async function executeImplementerHandoffDelivery(input: {
-  deliveryInput: EmitTmuxDeliveryNotificationInput;
-  emitDelivery: (
-    deliveryInput: EmitTmuxDeliveryNotificationInput
-  ) => Promise<EmitTmuxDeliveryNotificationResult>;
+  deliveryInput: EmitDeliveryNotificationInput;
+  emitDelivery: EmitDeliveryAckLikePort;
 }): Promise<ExecuteImplementerHandoffDeliveryResult> {
-  let deliveryResult = await input.emitDelivery(input.deliveryInput).catch(
-    () => buildUnexpectedDeliveryFailureResult()
-  );
+  let deliveryResult = await input.emitDelivery(input.deliveryInput)
+    .then(normalizeDeliveryAck)
+    .catch(() => buildUnexpectedDeliveryFailureResult());
   let deliveryRetried = false;
 
   if (shouldRetryImplementerHandoffDelivery(deliveryResult)) {
@@ -49,7 +54,7 @@ export async function executeImplementerHandoffDelivery(input: {
       // Retry once with the same timing used by the stable reviewer handoff flow.
       initialDelayMs: 5000,
       deliveryAttempts: 6
-    }).catch(() => initialFailureResult);
+    }).then(normalizeDeliveryAck).catch(() => initialFailureResult);
   }
 
   return {

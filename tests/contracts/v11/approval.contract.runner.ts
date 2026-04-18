@@ -400,8 +400,10 @@ async function executeApprovalCase(input: {
         refKind: classifyDeliveryRefKind(deliveryInput.messageRef)
       });
       return Promise.resolve({
-        delivered: true,
-        message: "ok"
+        status: "accepted" as const,
+        message: "ok",
+        sessionName: "pf_bubble",
+        targetPaneIndex: 1
       });
     };
 

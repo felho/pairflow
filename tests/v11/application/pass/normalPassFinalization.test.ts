@@ -46,8 +46,10 @@ describe("finalizeNormalPass", () => {
           state: "RUNNING"
         } as never,
         deliveryResult: {
-          delivered: true,
-          message: "ok"
+          status: "accepted",
+          message: "ok",
+          sessionName: "pf_bubble",
+          targetPaneIndex: 1
         },
         deliveryRetried: false
       },
