@@ -1,6 +1,6 @@
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -132,6 +132,19 @@ function createRemoteExecutionDeps(overrides: Partial<ResolvedStartBubbleDepende
     writeRemotePointer,
     writeRemoteStateCache: async () => undefined,
     removeRemoteStateCache: async () => undefined,
+    upsertSession: async (input) => ({
+      bubbleId: String(input.bubbleId),
+      repoPath: String(input.repoPath),
+      worktreePath: String(input.worktreePath),
+      ...(input.workspacePath !== undefined
+        ? { workspacePath: input.workspacePath }
+        : {}),
+      ...(input.workspaceKind !== undefined
+        ? { workspaceKind: input.workspaceKind }
+        : {}),
+      tmuxSessionName: String(input.tmuxSessionName),
+      updatedAt: "2026-04-16T12:45:00.000Z"
+    }),
     writeState: writeStateSnapshot,
     executeRemoteBubbleStart: async (input) => ({
       remoteClonePath: input.remoteClonePath,
@@ -279,6 +292,56 @@ describe("startCommandRemoteExecution", () => {
     ).rejects.toMatchObject({
       reasonCode: "START_REMOTE_POINTER_INVALID"
     });
+  });
+
+  it("persists local runtime session authority after remote start confirmation", async () => {
+    const { context } = await createRemoteStartFixture();
+    context.now = new Date("2026-04-16T12:45:00.000Z");
+    const upsertCalls: UpsertRuntimeSessionInput[] = [];
+    const expectedRemoteClonePath =
+      `~/repos/${basename(context.resolved.repoPath)}--${context.resolved.bubbleId}`;
+
+    const result = await runRemoteStartExecution({
+      context,
+      deps: createRemoteExecutionDeps({
+        upsertSession: async (input: UpsertRuntimeSessionInput) => {
+          upsertCalls.push(input);
+          return {
+            bubbleId: String(input.bubbleId),
+            repoPath: String(input.repoPath),
+            worktreePath: String(input.worktreePath),
+            ...(input.workspacePath !== undefined
+              ? { workspacePath: String(input.workspacePath) }
+              : {}),
+            ...(input.workspaceKind !== undefined
+              ? { workspaceKind: input.workspaceKind }
+              : {}),
+            tmuxSessionName: String(input.tmuxSessionName),
+            updatedAt: "2026-04-16T12:45:00.000Z"
+          };
+        }
+      }),
+      progress: {
+        workspaceBootstrapped: false,
+        preparingState: null,
+        preparingFingerprint: null
+      }
+    });
+
+    expect(upsertCalls).toEqual([
+      {
+        sessionsPath: context.resolved.bubblePaths.sessionsPath,
+        bubbleId: context.resolved.bubbleId,
+        repoPath: context.resolved.repoPath,
+        worktreePath: context.resolved.bubblePaths.worktreePath,
+        workspacePath: expectedRemoteClonePath,
+        workspaceKind: "worktree",
+        tmuxSessionName: "pf-b_remote_execution_unit_01",
+        now: new Date("2026-04-16T12:45:00.000Z")
+      }
+    ]);
+    expect(result.runtimeWorkspacePath).toBe(expectedRemoteClonePath);
+    expect(result.tmuxSessionName).toBe("pf-b_remote_execution_unit_01");
   });
 
   it("fails closed when the created pointer host drifts from the configured execution host", async () => {

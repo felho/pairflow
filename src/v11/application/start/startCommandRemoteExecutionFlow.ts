@@ -101,6 +101,17 @@ async function persistConfirmedRemoteStart(input: {
   prepared: PreparedRemoteStartExecution;
   remoteStartResult: ExecuteRemoteBubbleStartResult;
 }): Promise<StartCommandResultLike> {
+  await input.deps.upsertSession({
+    sessionsPath: input.context.resolved.bubblePaths.sessionsPath,
+    bubbleId: input.context.resolved.bubbleId,
+    repoPath: input.context.resolved.repoPath,
+    worktreePath: input.context.resolved.bubblePaths.worktreePath,
+    workspacePath: input.remoteStartResult.remoteClonePath,
+    workspaceKind: input.context.resolved.bubbleConfig.work_mode,
+    tmuxSessionName: input.remoteStartResult.tmuxSessionName,
+    now: input.context.now
+  });
+
   await input.deps.writeRemoteStateCache(
     input.context.resolved.bubblePaths.remoteStateCachePath,
     input.remoteStartResult.remoteState
