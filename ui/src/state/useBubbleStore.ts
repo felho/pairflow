@@ -252,14 +252,16 @@ function mergeExpandedDetailWithSummary(
     detail.runtime.present &&
     !detail.runtime.stale;
   const preserveDetailRuntime = detailRuntimeHealthy && !summaryRuntimeHealthy;
-  const preserveDetailAttention =
-    detail.attention !== null && bubble.attention === null;
   const preserveDetailRemoteExecution =
     detail.remoteExecution !== undefined
     && (
       bubble.remoteExecution === undefined
       || isWeakerRemoteExecutionSummary(detail.remoteExecution, bubble.remoteExecution)
     );
+  const preserveDetailAttention =
+    detail.attention !== null
+    && bubble.attention === null
+    && preserveDetailRemoteExecution;
   const mergedRemoteExecution = preserveDetailRemoteExecution
     ? detail.remoteExecution
     : bubble.remoteExecution;

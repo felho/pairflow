@@ -1637,6 +1637,67 @@ describe("createBubbleStore", () => {
     await Promise.resolve();
   });
 
+  it("clears stale local attention when realtime summary becomes healthy", async () => {
+    const initialSummary = bubbleSummary({
+      bubbleId: "b-a",
+      repoPath: "/repo-a",
+      state: "RUNNING"
+    });
+    const staleDetail = bubbleDetail({
+      bubbleId: "b-a",
+      repoPath: "/repo-a",
+      state: "RUNNING",
+      attention: {
+        code: "quiet_pane",
+        severity: "warning",
+        label: "Quiet 10m",
+        detail: "No pane activity was observed for 10 minutes."
+      }
+    });
+
+    const api = createApiStub({
+      getRepos: vi.fn(async () => ["/repo-a"]),
+      getBubbles: vi.fn(async () => ({
+        repo: repoSummary("/repo-a"),
+        bubbles: [initialSummary]
+      })),
+      getBubble: vi.fn(async () => staleDetail),
+      getBubbleTimeline: vi.fn(async () => [])
+    });
+
+    let emitEvent: (event: UiEvent) => void = () => undefined;
+    const store = createBubbleStore({
+      api,
+      createEventsClient: (input) => {
+        emitEvent = input.onEvent;
+        return {
+          start: () => undefined,
+          stop: () => undefined,
+          refresh: () => undefined
+        };
+      }
+    });
+
+    await store.getState().initialize();
+    await store.getState().toggleBubbleExpanded("b-a");
+
+    emitEvent({
+      id: 201,
+      ts: "2026-04-19T16:41:05.570Z",
+      type: "bubble.updated",
+      repoPath: "/repo-a",
+      bubbleId: "b-a",
+      bubble: bubbleSummary({
+        bubbleId: "b-a",
+        repoPath: "/repo-a",
+        state: "RUNNING",
+        attention: null
+      })
+    });
+
+    expect(store.getState().bubbleDetails["b-a"]?.attention).toBeNull();
+  });
+
   it("keeps expanded detail remote status truth when realtime summary falls back to cache-only remote execution", async () => {
     const initialSummary = bubbleSummary({
       bubbleId: "b-a",
