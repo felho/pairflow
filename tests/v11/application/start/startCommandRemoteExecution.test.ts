@@ -16,7 +16,10 @@ import {
 } from "../../../../src/v11/application/start/startCommandRemoteExecution.js";
 import type { StartExecutionContext } from "../../../../src/v11/application/start/startCommandContext.js";
 import type { ResolvedStartBubbleDependencies } from "../../../../src/v11/application/start/startCommandOrchestration.js";
+import type { BubbleStateSnapshot } from "../../../../src/types/bubble.js";
 import { RemoteBubbleStartError } from "../../../../src/v11/infrastructure/executor/ssh/sshBubbleStart.js";
+import type { UpsertRuntimeSessionInput } from "../../../../src/v11/shared/ports/runtimeSessions.js";
+import type { WriteStateSnapshotOptions } from "../../../../src/v11/infrastructure/state/stateStore.js";
 import { readStateSnapshot, writeStateSnapshot } from "../../../../src/v11/infrastructure/state/stateStore.js";
 import {
   readRemotePointer,
@@ -189,7 +192,7 @@ describe("startCommandRemoteExecution", () => {
 
   it("persists canonical workspace authority before launching the remote reviewer session", async () => {
     const { context } = await createRemoteStartFixture();
-    const upsertCalls: Array<Record<string, unknown>> = [];
+    const upsertCalls: UpsertRuntimeSessionInput[] = [];
     context.now = new Date("2026-04-16T12:00:00.000Z");
     context.expectedTmuxSessionName = "pf-b_remote_execution_unit_01";
     context.runtimeSessionRecord = {
@@ -207,8 +210,8 @@ describe("startCommandRemoteExecution", () => {
     const result = await runRemoteCloneInnerStart({
       context,
       deps: {
-        upsertSession: async (input) => {
-          upsertCalls.push(input as Record<string, unknown>);
+        upsertSession: async (input: UpsertRuntimeSessionInput) => {
+          upsertCalls.push(input);
           return {
             bubbleId: String(input.bubbleId),
             repoPath: String(input.repoPath),
@@ -219,13 +222,17 @@ describe("startCommandRemoteExecution", () => {
             updatedAt: "2026-04-16T12:00:00.000Z"
           };
         },
-        writeState: async (statePath, state, options) =>
+        writeState: async (
+          statePath: string,
+          state: BubbleStateSnapshot,
+          options: WriteStateSnapshotOptions
+        ) =>
           writeStateSnapshot(statePath, state, options),
         launchSessionAck: async () => ({
           status: "running",
           sessionName: "pf-b_remote_execution_unit_01"
         })
-      } as ResolvedStartBubbleDependencies,
+      } as unknown as ResolvedStartBubbleDependencies,
       progress: {
         workspaceBootstrapped: false,
         preparingState: null,
