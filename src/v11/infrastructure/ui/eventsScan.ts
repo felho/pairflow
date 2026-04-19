@@ -3,6 +3,7 @@ import { join } from "node:path";
 
 import { getBubblePaths } from "../artifact/bubble/paths.js";
 import { pathExists } from "../foundation/fs/pathExists.js";
+import { getWatchdogPaneActivityPath } from "../artifact/watchdog/watchdogPaneActivityStore.js";
 import type { UiEvent, UiRepoUpdatedEvent } from "../../../types/ui.js";
 import { presentBubbleSummaryFromListEntry, presentRepoSummary } from "./presenters/bubblePresenter.js";
 import type { BubbleFingerprintSnapshot, RepoDiff, RepoSnapshot } from "./eventsState.js";
@@ -84,6 +85,7 @@ export async function refreshUiEventsWatchers(input: {
     targets.add(join(repoPath, ".pairflow", "bubbles"));
     targets.add(join(repoPath, ".pairflow", "runtime"));
     targets.add(join(repoPath, ".pairflow", "runtime", "sessions.json"));
+    targets.add(join(repoPath, ".pairflow", "runtime", "watchdog-health"));
 
     const bubbleIds = await listBubbleIds(repoPath);
     for (const bubbleId of bubbleIds) {
@@ -92,6 +94,7 @@ export async function refreshUiEventsWatchers(input: {
       targets.add(paths.statePath);
       targets.add(paths.inboxPath);
       targets.add(paths.transcriptPath);
+      targets.add(getWatchdogPaneActivityPath(paths.runtimeDir, bubbleId));
     }
   }
 
