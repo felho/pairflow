@@ -150,7 +150,8 @@ describe("resolveBubbleFromWorkspaceCwd", () => {
         loadPairflowGlobalConfig: async () => ({
           remotes: {
             spark1: {
-              host: "spark1"
+              host: "spark1",
+              repo_base: "~/repos"
             }
           }
         })

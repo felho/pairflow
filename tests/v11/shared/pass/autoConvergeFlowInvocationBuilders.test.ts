@@ -31,6 +31,7 @@ describe("autoConvergeFlowInvocationBuilders", () => {
       resolved: {
         bubbleId: "b_1",
         repoPath: "/tmp/repo",
+        worktreePath: "/tmp/remote-repo",
         bubbleConfig: {
           severity_gate_round: 2
         } as never,
@@ -87,6 +88,7 @@ describe("autoConvergeFlowInvocationBuilders", () => {
     expect(created.bubbleId).toBe("b_1");
     expect(created.passIntent).toBe("review");
     expect(created.expectedStateFingerprint).toBe("fp_1");
+    expect(created.worktreePath).toBe("/tmp/remote-repo");
     expect(created.repeatCleanTrigger).toBe(true);
     expect(created.reviewerFindingsClaim).toEqual({
       state: "clean",

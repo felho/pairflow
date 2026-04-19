@@ -48,7 +48,7 @@ export function buildNormalPassFlowInput(
     statePath: input.resolved.bubblePaths.statePath,
     artifactsDir: input.resolved.bubblePaths.artifactsDir,
     taskArtifactPath: input.resolved.bubblePaths.taskArtifactPath,
-    worktreePath: input.resolved.bubblePaths.worktreePath,
+    worktreePath: input.resolved.worktreePath,
     sessionsPath: input.resolved.bubblePaths.sessionsPath,
     reviewerBriefArtifactPath: input.resolved.bubblePaths.reviewerBriefArtifactPath,
     reviewerFocusArtifactPath: input.resolved.bubblePaths.reviewerFocusArtifactPath,

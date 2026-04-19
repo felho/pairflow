@@ -26,6 +26,7 @@ function createDispatchInput(trigger: boolean): DispatchPassFlowInput {
     resolved: {
       bubbleId: "b_dispatch_01",
       repoPath: "/repo",
+      worktreePath: "/remote/repo",
       bubbleConfig: {
         id: "b_dispatch_01",
         review_artifact_type: "code",

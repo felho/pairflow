@@ -29,7 +29,7 @@ export function buildAutoConvergeFlowInput(
     bubbleInstanceId: input.bubbleIdentity.bubbleInstanceId,
     repoPath: input.resolved.repoPath,
     bubbleConfig: input.resolved.bubbleConfig,
-    worktreePath: input.resolved.bubblePaths.worktreePath,
+    worktreePath: input.resolved.worktreePath,
     artifactsDir: input.resolved.bubblePaths.artifactsDir,
     taskArtifactPath: input.resolved.bubblePaths.taskArtifactPath,
     statePath: input.resolved.bubblePaths.statePath,

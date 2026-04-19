@@ -17,7 +17,7 @@ export interface BuildFlowBaseInput {
   noFindings: boolean;
   resolved: Pick<
     ResolvedBubbleWorkspace,
-    "bubbleId" | "bubbleConfig" | "bubblePaths" | "repoPath"
+    "bubbleId" | "bubbleConfig" | "bubblePaths" | "repoPath" | "worktreePath"
   >;
   bubbleIdentity: Pick<EnsureBubbleInstanceIdForMutationResult, "bubbleInstanceId">;
   handoff: ResolvedPassHandoff;

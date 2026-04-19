@@ -28,6 +28,7 @@ function createNormalBaseInput(
     resolved: {
       bubbleId: "b_pass_builder_01",
       repoPath: "/repo",
+      worktreePath: "/remote/repo",
       bubbleConfig: {
         id: "b_pass_builder_01",
         review_artifact_type: "code",
@@ -92,6 +93,7 @@ describe("normalPassFlowInvocationBuilders", () => {
 
     expect(input.intent).toBe("review");
     expect(input.inferredIntent).toBe(false);
+    expect(input.paths.worktreePath).toBe("/remote/repo");
     expect(input.repeatClean).toEqual({
       reasonCode: "REPEAT_CLEAN_TRIGGER_NOT_MET",
       reasonDetail: "base_precondition_not_met",

@@ -50,6 +50,7 @@ describe("emitPassContextBuilder", () => {
           resolved: {
             bubbleId: "b_emit_ctx_01",
             repoPath: "/repo",
+            worktreePath: "/remote/repo",
             bubbleConfig: {
               id: "b_emit_ctx_01",
               review_artifact_type: "code",
@@ -126,6 +127,7 @@ describe("emitPassContextBuilder", () => {
     expect(capturedRoutingInput?.inputIntent).toBe("review");
     expect(capturedRoutingInput?.senderRole).toBe("reviewer");
     expect(capturedRoutingInput?.round).toBe(2);
+    expect(capturedRoutingInput?.worktreePath).toBe("/remote/repo");
     expect(capturedRoutingDependencies).toBeDefined();
     expect(context.activation).toBeUndefined();
   });
@@ -150,6 +152,7 @@ describe("emitPassContextBuilder", () => {
           resolved: {
             bubbleId: "b_emit_ctx_02",
             repoPath: "/repo",
+            worktreePath: "/remote/repo",
             bubbleConfig: {
               id: "b_emit_ctx_02",
               review_artifact_type: "code",
@@ -245,6 +248,7 @@ describe("emitPassContextBuilder", () => {
             resolved: {
               bubbleId: "b_emit_ctx_03",
               repoPath: "/repo",
+              worktreePath: "/repo/.pairflow/worktrees/b_emit_ctx_03",
               bubbleConfig: {
                 id: "b_emit_ctx_03",
                 review_artifact_type: "code",
@@ -335,6 +339,7 @@ describe("emitPassContextBuilder", () => {
             resolved: {
               bubbleId: "b_emit_ctx_035",
               repoPath: "/repo",
+              worktreePath: "/repo/.pairflow/worktrees/b_emit_ctx_035",
               bubbleConfig: {
                 id: "b_emit_ctx_035",
                 review_artifact_type: "code",
@@ -424,6 +429,7 @@ describe("emitPassContextBuilder", () => {
             resolved: {
               bubbleId: "b_emit_ctx_04",
               repoPath: "/repo",
+              worktreePath: "/repo/.pairflow/worktrees/b_emit_ctx_04",
               bubbleConfig: {
                 id: "b_emit_ctx_04",
                 review_artifact_type: "code",
@@ -521,6 +527,7 @@ describe("emitPassContextBuilder", () => {
             resolved: {
               bubbleId: "b_emit_ctx_05",
               repoPath: "/repo",
+              worktreePath: "/repo/.pairflow/worktrees/b_emit_ctx_05",
               bubbleConfig: {
                 id: "b_emit_ctx_05",
                 review_artifact_type: "code",
@@ -611,6 +618,7 @@ describe("emitPassContextBuilder", () => {
             resolved: {
               bubbleId: "b_emit_ctx_06",
               repoPath: "/repo",
+              worktreePath: "/repo/.pairflow/worktrees/b_emit_ctx_06",
               bubbleConfig: {
                 id: "b_emit_ctx_06",
                 review_artifact_type: "code",

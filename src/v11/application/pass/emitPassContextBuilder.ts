@@ -109,7 +109,7 @@ export async function buildEmitPassContext(
       noFindings,
       findingsPayloadInvalid: normalizedPayload.findingsPayloadInvalid,
       bubbleConfig: resolved.bubbleConfig,
-      worktreePath: resolved.bubblePaths.worktreePath,
+      worktreePath: resolved.worktreePath,
       transcriptPath: resolved.bubblePaths.transcriptPath,
       reviewer,
       implementer,

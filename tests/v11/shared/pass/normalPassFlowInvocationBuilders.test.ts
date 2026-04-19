@@ -37,6 +37,7 @@ describe("normalPassFlowInvocationBuilders", () => {
       resolved: {
         bubbleId: "b_1",
         repoPath: "/tmp/repo",
+        worktreePath: "/tmp/remote-repo",
         bubbleConfig: {} as never,
         bubblePaths: {
           transcriptPath: "/tmp/transcript.ndjson",
@@ -79,6 +80,7 @@ describe("normalPassFlowInvocationBuilders", () => {
     expect(created.intent).toBe("fix_request");
     expect(created.expectedStateFingerprint).toBe("fp_1");
     expect(created.repeatClean.reasonCode).toBe("REPEAT_CLEAN_TRIGGER_NOT_MET");
+    expect(created.paths.worktreePath).toBe("/tmp/remote-repo");
     expect(created.paths.transcriptPath).toBe("/tmp/transcript.ndjson");
   });
 

@@ -28,6 +28,7 @@ function createAutoConvergeBaseInput(
     resolved: {
       bubbleId: "b_auto_builder_01",
       repoPath: "/repo",
+      worktreePath: "/remote/repo",
       bubbleConfig: {
         id: "b_auto_builder_01",
         review_artifact_type: "code",
@@ -88,6 +89,7 @@ describe("autoConvergeFlowInvocationBuilders", () => {
     const input = buildAutoConvergeFlowInput(createAutoConvergeBaseInput());
 
     expect(input.passIntent).toBe("review");
+    expect(input.worktreePath).toBe("/remote/repo");
     expect(input.inferredIntent).toBe(true);
     expect(input.repeatCleanReasonCode).toBe(
       "REPEAT_CLEAN_AUTOCONVERGE_TRIGGERED"
