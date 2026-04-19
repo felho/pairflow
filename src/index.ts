@@ -384,6 +384,10 @@ export {
   emitTmuxDeliveryNotification
 } from "./v11/infrastructure/channel/tmux/tmuxDelivery.js";
 export {
+  projectApprovalDecisionDeliverySignalToUiDeliverySignal,
+  projectApprovalDecisionDeliverySignalsToUiDeliverySignals
+} from "./v11/defaults/ui/routerDefaults.js";
+export {
   readRepoRegistry,
   registerRepoInRegistry,
   removeRepoFromRegistry,
@@ -691,6 +695,27 @@ export type {
   EmitTmuxDeliveryNotificationResult,
   TmuxDeliveryFailureReason
 } from "./v11/infrastructure/channel/tmux/tmuxDelivery.js";
+export type {
+  AcceptedDeliveryAck,
+  DeliveryAck,
+  DeliveryAckCompatShape,
+  DeliveryAckLike,
+  DeliveryAckReasonCode,
+  DeliveryAckStatus,
+  DeliveryFailureReason,
+  DeliveryTargetReasonCode,
+  EmitDeliveryAckLikePort,
+  EmitDeliveryNotificationAckPort,
+  EmitDeliveryNotificationInput,
+  RejectedDeliveryAck,
+  ResolveDeliveryMessageRefInput
+} from "./v11/shared/ports/tmuxDelivery.js";
+export type {
+  UiAcceptedDeliverySignal,
+  UiApprovalDecisionDeliverySignal,
+  UiApprovalDecisionDeliverySignals,
+  UiRejectedDeliverySignal
+} from "./v11/shared/ports/uiDelivery.js";
 export type {
   WatchdogStatus
 } from "./v11/shared/watchdog/watchdogStatus.js";

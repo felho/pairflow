@@ -15,25 +15,26 @@ import { getBubbleStatusV11 as getBubbleStatus } from "../../application/status/
 import { stopBubbleV11 as stopBubble } from "../../application/stop/emitStopV11.js";
 import { listBubbles } from "../../shared/list/listCommandApi.js";
 import type {
-  EmitTmuxDeliveryNotificationResult
-} from "../../shared/ports/tmuxDelivery.js";
-import type {
   UiEmitApprovalDecisionResult,
   UiEmitRequestReworkResult,
   UiRouterDependencies
 } from "../../shared/ports/uiRouter.js";
+import type {
+  UiApprovalDecisionDeliverySignal,
+  UiApprovalDecisionDeliverySignals
+} from "../../shared/ports/uiDelivery.js";
 import type {
   ApprovalDecisionDeliverySignal,
   EmitApprovalDecisionResult,
   EmitRequestReworkResult
 } from "../../application/approval/approvalCommandContract.js";
 
-function mapApprovalDecisionDeliverySignal(
+export function projectApprovalDecisionDeliverySignalToUiDeliverySignal(
   signal: ApprovalDecisionDeliverySignal
-): EmitTmuxDeliveryNotificationResult {
+): UiApprovalDecisionDeliverySignal {
   return signal.status === "accepted"
     ? {
-        delivered: true,
+        status: "accepted",
         message: signal.message,
         ...(signal.sessionName !== undefined
           ? { sessionName: signal.sessionName }
@@ -46,7 +47,7 @@ function mapApprovalDecisionDeliverySignal(
           : {})
       }
     : {
-        delivered: false,
+        status: "rejected",
         message: signal.message,
         ...(signal.reason !== undefined ? { reason: signal.reason } : {}),
         ...(signal.reason_code !== undefined
@@ -64,6 +65,24 @@ function mapApprovalDecisionDeliverySignal(
       };
 }
 
+export function projectApprovalDecisionDeliverySignalsToUiDeliverySignals(
+  result: NonNullable<EmitApprovalDecisionResult["delivery"]>
+): UiApprovalDecisionDeliverySignals {
+  return {
+    statusDelivery: projectApprovalDecisionDeliverySignalToUiDeliverySignal(
+      result.statusDelivery
+    ),
+    ...(result.implementerDelivery !== undefined
+      ? {
+          implementerDelivery:
+            projectApprovalDecisionDeliverySignalToUiDeliverySignal(
+              result.implementerDelivery
+            )
+        }
+      : {})
+  };
+}
+
 function mapUiApprovalDecisionResult(
   result: EmitApprovalDecisionResult
 ): UiEmitApprovalDecisionResult {
@@ -74,18 +93,9 @@ function mapUiApprovalDecisionResult(
     state: result.state,
     ...(result.delivery !== undefined
       ? {
-          delivery: {
-            statusDelivery: mapApprovalDecisionDeliverySignal(
-              result.delivery.statusDelivery
-            ),
-            ...(result.delivery.implementerDelivery !== undefined
-              ? {
-                  implementerDelivery: mapApprovalDecisionDeliverySignal(
-                    result.delivery.implementerDelivery
-                  )
-                }
-              : {})
-          }
+          delivery: projectApprovalDecisionDeliverySignalsToUiDeliverySignals(
+            result.delivery
+          )
         }
       : {})
   };

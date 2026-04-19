@@ -16,8 +16,8 @@ import type {
   BubbleStatusView
 } from "../status/statusCommandApi.js";
 import type {
-  EmitTmuxDeliveryNotificationResult
-} from "./tmuxDelivery.js";
+  UiApprovalDecisionDeliverySignals
+} from "./uiDelivery.js";
 import type {
   ReadRuntimeSessionsRegistryPort
 } from "./runtimeSessions.js";
@@ -76,10 +76,7 @@ export interface UiEmitApprovalDecisionResult {
   sequence: number;
   envelope: ProtocolEnvelope;
   state: BubbleStateSnapshot;
-  delivery?: {
-    statusDelivery: EmitTmuxDeliveryNotificationResult;
-    implementerDelivery?: EmitTmuxDeliveryNotificationResult;
-  };
+  delivery?: UiApprovalDecisionDeliverySignals;
 }
 
 export interface UiEmitRequestReworkImmediateResult

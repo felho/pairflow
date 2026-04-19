@@ -14,9 +14,22 @@ export interface EmitApprovalDecisionDependencies {
   emitTmuxDeliveryNotification?: EmitDeliveryAckLikePort;
 }
 
-export interface ApprovalDecisionDeliverySignal {
-  status: DeliveryAck["status"];
-  delivered?: boolean;
+export interface AcceptedApprovalDecisionDeliverySignal {
+  status: Extract<DeliveryAck["status"], "accepted">;
+  delivered?: true;
+  message: string;
+  sessionName?: string;
+  targetPaneIndex?: number;
+  deliveryTargetReasonCode?: NonNullable<
+    DeliveryAck["deliveryTargetReasonCode"]
+  >;
+  reason?: never;
+  reason_code?: never;
+}
+
+export interface RejectedApprovalDecisionDeliverySignal {
+  status: Extract<DeliveryAck["status"], "rejected">;
+  delivered?: false;
   message: string;
   sessionName?: string;
   targetPaneIndex?: number;
@@ -26,6 +39,10 @@ export interface ApprovalDecisionDeliverySignal {
   reason?: Extract<DeliveryAck, { status: "rejected" }>["reason"];
   reason_code?: Extract<DeliveryAck, { status: "rejected" }>["reason_code"];
 }
+
+export type ApprovalDecisionDeliverySignal =
+  | AcceptedApprovalDecisionDeliverySignal
+  | RejectedApprovalDecisionDeliverySignal;
 
 export interface ApprovalDecisionDeliverySignalsResult {
   statusDelivery: ApprovalDecisionDeliverySignal;
