@@ -14,9 +14,7 @@ export interface LaunchBubbleTmuxSessionLayoutInput {
   metaReviewerPaneLabel: string;
   statusPaneHeight: number;
   tmuxPaneSeparators: number;
-  implementerCommand: string;
-  reviewerCommand: string;
-  metaReviewerCommand: string;
+  placeholderCommand: string;
 }
 
 export interface LaunchBubbleTmuxSessionLayoutResult {
@@ -57,7 +55,7 @@ export async function launchBubbleTmuxSessionLayout(
     statusPane,
     "-c",
     input.workspacePath,
-    input.implementerCommand
+    input.placeholderCommand
   ];
   const implementerSplit = await input.runner(implementerSplitCommand);
   const implementerPaneId = parseTmuxPaneId(implementerSplit.stdout, implementerSplitCommand);
@@ -80,7 +78,7 @@ export async function launchBubbleTmuxSessionLayout(
     "50",
     "-c",
     input.workspacePath,
-    input.reviewerCommand
+    input.placeholderCommand
   ];
   const reviewerSplit = await input.runner(reviewerSplitCommand);
   const reviewerPaneId = parseTmuxPaneId(reviewerSplit.stdout, reviewerSplitCommand);
@@ -96,7 +94,7 @@ export async function launchBubbleTmuxSessionLayout(
     "50",
     "-c",
     input.workspacePath,
-    input.metaReviewerCommand
+    input.placeholderCommand
   ];
   const metaReviewerSplit = await input.runner(metaReviewerSplitCommand);
   const metaReviewerPaneId = parseTmuxPaneId(metaReviewerSplit.stdout, metaReviewerSplitCommand);

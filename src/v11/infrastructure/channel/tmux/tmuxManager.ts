@@ -62,6 +62,10 @@ function buildStatusPaneLabel(bubbleId: string): string {
   return `[orchestrator/status]-[${bubbleId}]`;
 }
 
+function buildLaunchPanePlaceholderCommand(): string {
+  return "sh -lc 'while :; do sleep 3600; done'";
+}
+
 export interface RespawnTmuxPaneCommandInput {
   sessionName: string;
   paneIndex: number;
@@ -254,6 +258,7 @@ async function resolveLaunchBubbleSessionAck(
   const reviewerPaneLabel = input.reviewerPaneLabel ?? "[claude/reviewer]";
   const metaReviewerPaneLabel =
     input.metaReviewerPaneLabel ?? "[codex/meta-reviewer]";
+  const placeholderCommand = buildLaunchPanePlaceholderCommand();
 
   try {
     const hasSession = await runner(["has-session", "-t", sessionName], {
@@ -301,9 +306,28 @@ async function resolveLaunchBubbleSessionAck(
       metaReviewerPaneLabel,
       statusPaneHeight,
       tmuxPaneSeparators,
-      implementerCommand: input.implementerCommand,
-      reviewerCommand: input.reviewerCommand,
-      metaReviewerCommand
+      placeholderCommand
+    });
+    await respawnTmuxPaneCommand({
+      sessionName,
+      paneIndex: runtimePaneIndices.implementer,
+      cwd: workspacePath,
+      command: input.implementerCommand,
+      runner
+    });
+    await respawnTmuxPaneCommand({
+      sessionName,
+      paneIndex: runtimePaneIndices.reviewer,
+      cwd: workspacePath,
+      command: input.reviewerCommand,
+      runner
+    });
+    await respawnTmuxPaneCommand({
+      sessionName,
+      paneIndex: runtimePaneIndices.metaReviewer,
+      cwd: workspacePath,
+      command: metaReviewerCommand,
+      runner
     });
     await seedBubbleTmuxPaneMessages({
       runner,

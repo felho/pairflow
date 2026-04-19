@@ -13,6 +13,8 @@ import {
   type TmuxRunner
 } from "../../../src/v11/infrastructure/channel/tmux/tmuxManager.js";
 
+const launchPanePlaceholderCommand = "sh -lc 'while :; do sleep 3600; done'";
+
 function buildSplitPaneStdout(args: string[]): string {
   if (args[0] !== "split-window") {
     return "";
@@ -441,7 +443,10 @@ describe("launchBubbleTmuxSession", () => {
       "resize-pane",
       "set-hook",
       "set-hook",
-      "run-shell"
+      "run-shell",
+      "respawn-pane",
+      "respawn-pane",
+      "respawn-pane"
     ]);
     expect(calls[2]?.args).toEqual([
       "set-option",
@@ -503,7 +508,7 @@ describe("launchBubbleTmuxSession", () => {
       "pf-b_start_01:0.0",
       "-c",
       "/tmp/worktree",
-      "codex"
+      launchPanePlaceholderCommand
     ]);
     // Status pane fixed to 13 lines before reviewer split.
     expect(calls[10]?.args).toEqual([
@@ -526,7 +531,7 @@ describe("launchBubbleTmuxSession", () => {
       "50",
       "-c",
       "/tmp/worktree",
-      "claude"
+      launchPanePlaceholderCommand
     ]);
     // Meta-reviewer split uses dedicated pane after reviewer.
     expect(calls[12]?.args).toEqual([
@@ -541,7 +546,7 @@ describe("launchBubbleTmuxSession", () => {
       "50",
       "-c",
       "/tmp/worktree",
-      "claude"
+      launchPanePlaceholderCommand
     ]);
     expect(calls[14]?.args?.slice(0, 4)).toEqual([
       "set-hook",
@@ -564,6 +569,33 @@ describe("launchBubbleTmuxSession", () => {
       "window-resized"
     ]);
     expect(calls[15]?.args?.[4]).toContain("run-shell '");
+    expect(calls[17]?.args).toEqual([
+      "respawn-pane",
+      "-k",
+      "-t",
+      "pf-b_start_01:0.1",
+      "-c",
+      "/tmp/worktree",
+      "codex"
+    ]);
+    expect(calls[18]?.args).toEqual([
+      "respawn-pane",
+      "-k",
+      "-t",
+      "pf-b_start_01:0.2",
+      "-c",
+      "/tmp/worktree",
+      "claude"
+    ]);
+    expect(calls[19]?.args).toEqual([
+      "respawn-pane",
+      "-k",
+      "-t",
+      "pf-b_start_01:0.3",
+      "-c",
+      "/tmp/worktree",
+      "claude"
+    ]);
   });
 
   it("sends kickoff message to implementer pane when provided", async () => {
