@@ -11,7 +11,7 @@ import type {
   BubbleRemotePointer,
   BubbleRemoteStateCache
 } from "../../../types/bubble.js";
-import type { LaunchBubbleTmuxSessionAckPort } from "../../shared/ports/tmuxSessions.js";
+import type { LaunchBubbleSessionAckPort } from "../../shared/ports/tmuxSessions.js";
 import {
   buildPreparingWorkspaceStartRejectMessage,
   createStartBubbleError
@@ -35,10 +35,8 @@ interface StartBubbleDependencyDefaults {
     NonNullable<StartBubbleDependencies["bootstrapWorktreeWorkspace"]>;
   cleanupWorktreeWorkspace:
     NonNullable<StartBubbleDependencies["cleanupWorktreeWorkspace"]>;
-  launchBubbleTmuxSessionAck:
-    NonNullable<StartBubbleDependencies["launchBubbleTmuxSessionAck"]>;
-  launchBubbleTmuxSession:
-    NonNullable<StartBubbleDependencies["launchBubbleTmuxSession"]>;
+  launchBubbleSessionAck:
+    NonNullable<StartBubbleDependencies["launchBubbleSessionAck"]>;
   terminateBubbleTmuxSession:
     NonNullable<StartBubbleDependencies["terminateBubbleTmuxSession"]>;
   readRuntimeSessionsRegistry:
@@ -79,10 +77,8 @@ async function loadStartBubbleDependencyDefaults(): Promise<StartBubbleDependenc
       startBubbleDependencyDefaults.bootstrapWorktreeWorkspace,
     cleanupWorktreeWorkspace:
       startBubbleDependencyDefaults.cleanupWorktreeWorkspace,
-    launchBubbleTmuxSessionAck:
-      startBubbleDependencyDefaults.launchBubbleTmuxSessionAck,
-    launchBubbleTmuxSession:
-      startBubbleDependencyDefaults.launchBubbleTmuxSession,
+    launchBubbleSessionAck:
+      startBubbleDependencyDefaults.launchBubbleSessionAck,
     terminateBubbleTmuxSession:
       startBubbleDependencyDefaults.terminateBubbleTmuxSession,
     readRuntimeSessionsRegistry:
@@ -128,7 +124,7 @@ export interface ResolvedStartBubbleDependencies {
   cleanup: NonNullable<StartBubbleDependencies["cleanupWorktreeWorkspace"]>;
   runWorktreeBootstrapCommand:
     NonNullable<StartBubbleDependencies["runWorktreeBootstrapCommand"]>;
-  launchTmuxAck: LaunchBubbleTmuxSessionAckPort;
+  launchSessionAck: LaunchBubbleSessionAckPort;
   terminateTmux:
     NonNullable<StartBubbleDependencies["terminateBubbleTmuxSession"]>;
   isTmuxSessionAlive: NonNullable<StartBubbleDependencies["isTmuxSessionAlive"]>;
@@ -160,9 +156,9 @@ export interface ResolvedStartBubbleDependencies {
   resolveReviewerTestExecutionDirective: ResolveReviewerTestExecutionDirectivePort;
 }
 
-function projectLegacyLaunchPortToAckPort(
+function projectLegacyLaunchPortToSessionAckPort(
   launchBubbleTmuxSession: NonNullable<StartBubbleDependencies["launchBubbleTmuxSession"]>
-): LaunchBubbleTmuxSessionAckPort {
+): LaunchBubbleSessionAckPort {
   return async (input) => {
     const result = await launchBubbleTmuxSession(input);
     return {
@@ -180,19 +176,22 @@ export interface ResolveStartBubbleDependenciesInput {
     NonNullable<StartBubbleDependencies["isTmuxSessionAlive"]>;
 }
 
-function resolveLaunchTmuxAckDependency(input: {
+function resolveLaunchSessionAckDependency(input: {
   dependencies: StartBubbleDependencies;
   defaults: StartBubbleDependencyDefaults;
-}): LaunchBubbleTmuxSessionAckPort {
+}): LaunchBubbleSessionAckPort {
+  if (input.dependencies.launchBubbleSessionAck !== undefined) {
+    return input.dependencies.launchBubbleSessionAck;
+  }
   if (input.dependencies.launchBubbleTmuxSessionAck !== undefined) {
     return input.dependencies.launchBubbleTmuxSessionAck;
   }
   if (input.dependencies.launchBubbleTmuxSession !== undefined) {
-    return projectLegacyLaunchPortToAckPort(
+    return projectLegacyLaunchPortToSessionAckPort(
       input.dependencies.launchBubbleTmuxSession
     );
   }
-  return input.defaults.launchBubbleTmuxSessionAck;
+  return input.defaults.launchBubbleSessionAck;
 }
 
 function resolveRuntimeSessionDependencies(input: {
@@ -280,7 +279,7 @@ export async function resolveStartBubbleDependencies(
     runWorktreeBootstrapCommand:
       dependencies.runWorktreeBootstrapCommand
       ?? input.runWorktreeBootstrapCommandDefault,
-    launchTmuxAck: resolveLaunchTmuxAckDependency({
+    launchSessionAck: resolveLaunchSessionAckDependency({
       dependencies,
       defaults: startBubbleDependencyDefaults
     }),

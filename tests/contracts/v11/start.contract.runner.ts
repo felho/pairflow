@@ -11,6 +11,7 @@ import {
   writeStateSnapshot
 } from "../../../src/v11/infrastructure/state/stateStore.js";
 import { startBubbleV11 } from "../../../src/v11/application/start/emitStartV11.js";
+import { StartBubbleError } from "../../../src/v11/application/start/startCommandRuntime.js";
 import { runBubbleStartCommand as runBubbleStartCommandV11 } from "../../../src/v11/application/start/startCliCommand.js";
 import { writeRemotePointer } from "../../../src/v11/infrastructure/artifact/bubble/remoteExecutionArtifacts.js";
 import type {
@@ -61,6 +62,8 @@ type StartContractExtendedScenario =
   | "clone_activated_resume"
   | "clone_state_not_startable"
   | "launch_ack_failed"
+  | "launch_ack_failed_compat"
+  | "legacy_launch_bridge_failed"
   | "stale_session_reclaim"
   | "remote_created"
   | "remote_execution_failed"
@@ -136,6 +139,8 @@ function parseStartCaseInput(input: ContractCase["input"]): ParsedStartCaseInput
       scenarioRaw !== "clone_activated_resume" &&
       scenarioRaw !== "clone_state_not_startable" &&
       scenarioRaw !== "launch_ack_failed" &&
+      scenarioRaw !== "launch_ack_failed_compat" &&
+      scenarioRaw !== "legacy_launch_bridge_failed" &&
       scenarioRaw !== "stale_session_reclaim" &&
       scenarioRaw !== "remote_created" &&
       scenarioRaw !== "remote_execution_failed" &&
@@ -148,7 +153,7 @@ function parseStartCaseInput(input: ContractCase["input"]): ParsedStartCaseInput
       scenarioRaw !== "remote_control_files_unavailable"
     ) {
       throw new Error(
-        "start contract input.fixture.scenario must be one of: basic, state_not_startable, bootstrap_fails_cleanup, clone_activated, clone_activated_resume, clone_state_not_startable, launch_ack_failed, stale_session_reclaim, remote_created, remote_execution_failed, remote_confirmation_invalid, remote_reconciliation_failed, remote_sync_hook_warning, remote_preflight_missing_origin, remote_config_invalid, remote_attach_rejected, remote_control_files_unavailable."
+        "start contract input.fixture.scenario must be one of: basic, state_not_startable, bootstrap_fails_cleanup, clone_activated, clone_activated_resume, clone_state_not_startable, launch_ack_failed, launch_ack_failed_compat, legacy_launch_bridge_failed, stale_session_reclaim, remote_created, remote_execution_failed, remote_confirmation_invalid, remote_reconciliation_failed, remote_sync_hook_warning, remote_preflight_missing_origin, remote_config_invalid, remote_attach_rejected, remote_control_files_unavailable."
       );
     }
     scenario = scenarioRaw ?? "basic";
@@ -277,6 +282,27 @@ function assertCloneActivationInvariants(input: {
         "start contract clone_activated_resume scenario expected exactly one resume summary preparation."
       );
     }
+  }
+}
+
+function assertLaunchOverrideFailureInvariants(input: {
+  scenario: StartContractExtendedScenario;
+  bootstrapCalls: number;
+  claimCalls: number;
+  launchCalls: number;
+}): void {
+  if (
+    input.scenario !== "launch_ack_failed"
+    && input.scenario !== "launch_ack_failed_compat"
+    && input.scenario !== "legacy_launch_bridge_failed"
+  ) {
+    return;
+  }
+
+  if (input.bootstrapCalls !== 1 || input.claimCalls !== 1 || input.launchCalls !== 1) {
+    throw new Error(
+      `start contract ${input.scenario} scenario expected exactly one bootstrap, one claim, and one launch attempt before fail-closed rejection.`
+    );
   }
 }
 
@@ -716,7 +742,7 @@ async function executeStartCase(input: {
           },
           ...(parsedInput.scenario === "launch_ack_failed"
             ? {
-                launchBubbleTmuxSessionAck: () => {
+                launchBubbleSessionAck: () => {
                   launchCalls += 1;
                   return Promise.resolve({
                     status: "failed_to_start" as const,
@@ -727,6 +753,31 @@ async function executeStartCase(input: {
                   });
                 }
               }
+            : parsedInput.scenario === "launch_ack_failed_compat"
+              ? {
+                  launchBubbleTmuxSessionAck: () => {
+                    launchCalls += 1;
+                    return Promise.resolve({
+                      status: "failed_to_start" as const,
+                      reason_code: "LAUNCH_ACK_TMUX_COMMAND_FAILED" as const,
+                      failure_kind: "tmux_command_failed" as const,
+                      error_message: "contract retained launch ack rejected",
+                      sessionName: `pf-${bubble.bubbleId}`
+                    });
+                  }
+                }
+              : parsedInput.scenario === "legacy_launch_bridge_failed"
+                ? {
+                    launchBubbleTmuxSession: () => {
+                      launchCalls += 1;
+                      return Promise.reject(
+                        new StartBubbleError({
+                          reasonCode: "LAUNCH_ACK_TMUX_COMMAND_FAILED",
+                          message: "legacy launch bridge rejected"
+                        })
+                      );
+                    }
+                  }
             : {
                 launchBubbleTmuxSession: () => {
                   launchCalls += 1;
@@ -935,6 +986,12 @@ async function executeStartCase(input: {
         claimCalls,
         launchCalls,
         resumeSummaryCalls
+      });
+      assertLaunchOverrideFailureInvariants({
+        scenario: parsedInput.scenario,
+        bootstrapCalls,
+        claimCalls,
+        launchCalls
       });
       return normalizeStartErrorResult({
         error,

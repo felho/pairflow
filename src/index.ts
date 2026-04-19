@@ -360,6 +360,7 @@ export {
 } from "./v11/domain/convergence/policy.js";
 export {
   buildBubbleTmuxSessionName,
+  launchBubbleSessionAck,
   launchBubbleTmuxSession,
   runTmux,
   terminateBubbleTmuxSession,
@@ -647,6 +648,9 @@ export type {
   ProtocolSequenceAllocation
 } from "./v11/shared/protocol/sequenceAllocator.js";
 export type {
+  LaunchBubbleSessionAck,
+  LaunchBubbleSessionAckPort,
+  LaunchBubbleSessionInput,
   LaunchBubbleTmuxSessionInput,
   LaunchBubbleTmuxSessionResult,
   TerminateBubbleTmuxSessionInput,

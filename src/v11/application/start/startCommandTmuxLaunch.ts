@@ -27,7 +27,7 @@ function buildStatusPaneLabel(bubbleId: string): string {
 
 function assertRunningLaunchAck(input: {
   bubbleId: string;
-  ack: Awaited<ReturnType<ResolvedStartBubbleDependencies["launchTmuxAck"]>>;
+  ack: Awaited<ReturnType<ResolvedStartBubbleDependencies["launchSessionAck"]>>;
 }): { sessionName: string } {
   if (input.ack.status === "running") {
     return {
@@ -57,7 +57,7 @@ export async function launchFreshTmuxSession(input: {
 }): Promise<{ sessionName: string }> {
   const externalPairflowCommand =
     input.context.remoteStartContext?.externalPairflowCommand;
-  const ack = await input.deps.launchTmuxAck({
+  const ack = await input.deps.launchSessionAck({
     bubbleId: input.context.resolved.bubbleId,
     workspacePath: input.launchWorkspacePath,
     statusCommand: buildStatusPaneCommand(
@@ -173,7 +173,7 @@ export async function launchResumeTmuxSession(input: {
 }): Promise<{ sessionName: string }> {
   const externalPairflowCommand =
     input.context.remoteStartContext?.externalPairflowCommand;
-  const ack = await input.deps.launchTmuxAck({
+  const ack = await input.deps.launchSessionAck({
     bubbleId: input.context.resolved.bubbleId,
     workspacePath: input.launchWorkspacePath,
     statusCommand: buildStatusPaneCommand(

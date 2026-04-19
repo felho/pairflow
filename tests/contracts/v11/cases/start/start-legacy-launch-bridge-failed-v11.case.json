@@ -1,0 +1,23 @@
+{
+  "id": "start-legacy-launch-bridge-failed-v11",
+  "command": "start",
+  "mode": "v11",
+  "description": "Seed start v11 contract case for legacy launch bridge rejection fail-closed path.",
+  "input": {
+    "fixture": {
+      "scenario": "legacy_launch_bridge_failed"
+    }
+  },
+  "expected": {
+    "status": "error",
+    "reasonCode": "LAUNCH_ACK_TMUX_COMMAND_FAILED",
+    "stateSubset": {
+      "state": "FAILED"
+    }
+  },
+  "tags": [
+    "seed",
+    "m0",
+    "start"
+  ]
+}
