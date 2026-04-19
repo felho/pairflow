@@ -41,7 +41,7 @@ export interface NotifyMetaReviewerSubmissionRequestInput {
   targetPane: string;
 }
 
-export interface NotifyMetaReviewerSubmissionRequestDependencies {
+export interface MetaReviewGateNotifyRuntimeCapabilities {
   runTmux?: MetaReviewGateTmuxRunner;
   maybeAcceptClaudeTrustPrompt?: (
     runner: MetaReviewGateTmuxRunner,
@@ -58,6 +58,10 @@ export interface NotifyMetaReviewerSubmissionRequestDependencies {
   ) => Promise<void>;
 }
 
+export interface NotifyMetaReviewerSubmissionRequestDependencies {
+  runtime?: MetaReviewGateNotifyRuntimeCapabilities;
+}
+
 export interface MetaReviewRuntimeDeliveryObservation {
   status: "confirmed" | "uncertain" | "failed";
   reasonCode: string | null;
@@ -69,10 +73,8 @@ export type NotifyMetaReviewerSubmissionRequest = (
   dependencies?: NotifyMetaReviewerSubmissionRequestDependencies
 ) => Promise<MetaReviewRuntimeDeliveryObservation>;
 
-export interface ResolveMetaReviewerPaneWarningInput {
-  setMetaReviewerPane: SetMetaReviewerPaneBindingPort;
-  notifySubmissionRequest: NotifyMetaReviewerSubmissionRequest;
-  runTmuxRunner: MetaReviewGateTmuxRunner;
+export interface MetaReviewGatePaneBindingRuntimeCapabilities {
+  runTmux?: MetaReviewGateTmuxRunner;
   buildAgentCommand?: (input: {
     agentName: "codex";
     bubbleId: string;
@@ -88,6 +90,17 @@ export interface ResolveMetaReviewerPaneWarningInput {
     command: string;
     runner?: MetaReviewGateTmuxRunner;
   }) => Promise<void>;
+}
+
+export interface MetaReviewGateRuntimeCapabilities {
+  notify?: MetaReviewGateNotifyRuntimeCapabilities;
+  paneBinding?: MetaReviewGatePaneBindingRuntimeCapabilities;
+}
+
+export interface ResolveMetaReviewerPaneWarningInput {
+  setMetaReviewerPane: SetMetaReviewerPaneBindingPort;
+  notifySubmissionRequest?: NotifyMetaReviewerSubmissionRequest;
+  runtime?: MetaReviewGateRuntimeCapabilities;
   sessionsPath: string;
   bubbleId: string;
   round: number;
@@ -126,7 +139,7 @@ export interface ApplyMetaReviewGateOnConvergenceDependencies {
   setMetaReviewerPaneBinding?: SetMetaReviewerPaneBindingPort;
   notifyMetaReviewerSubmissionRequest?: NotifyMetaReviewerSubmissionRequest;
   resolveMetaReviewerPaneWarning?: ResolveMetaReviewerPaneWarning;
-  runTmux?: MetaReviewGateTmuxRunner;
+  runtime?: MetaReviewGateRuntimeCapabilities;
   readFile?: MetaReviewArtifactReadPort;
 }
 

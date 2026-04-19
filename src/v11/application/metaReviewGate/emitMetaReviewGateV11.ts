@@ -7,31 +7,150 @@ import {
 import type {
   ApplyMetaReviewGateOnConvergenceDependencies,
   ApplyMetaReviewGateOnConvergenceInput,
-  MetaReviewGateResult
+  MetaReviewRuntimeDeliveryObservation,
+  MetaReviewGateNotifyRuntimeCapabilities,
+  MetaReviewGatePaneBindingRuntimeCapabilities,
+  MetaReviewGateRuntimeCapabilities,
+  MetaReviewGateResult,
+  NotifyMetaReviewerSubmissionRequest,
+  NotifyMetaReviewerSubmissionRequestDependencies,
+  NotifyMetaReviewerSubmissionRequestInput,
+  ResolveMetaReviewerPaneWarning
 } from "../../shared/metaReviewGate/metaReviewGateCommandContract.js";
 import type {
-  NotifyMetaReviewerSubmissionRequest,
-  NotifyMetaReviewerSubmissionRequestInput,
-  NotifyMetaReviewerSubmissionRequestDependencies,
-  MetaReviewRuntimeDeliveryObservation,
-  ResolveMetaReviewerPaneWarning
-} from "../../shared/metaReviewGate/metaReviewGateTypes.js";
+  MetaReviewGateDependencyDefaults
+} from "../../defaults/metaReviewGate/metaReviewGateCommandDefaults.js";
 import { notifyMetaReviewerSubmissionRequest } from "./metaReviewGateNotify.js";
 import { resolveMetaReviewerPaneWarning } from "./metaReviewGatePaneBinding.js";
 import { resolveMetaReviewGateDependencyDefaults } from "./metaReviewGateDependencyDefaults.js";
 
 let metaReviewGateDependencyDefaultsPromise:
-  | Promise<Awaited<ReturnType<typeof resolveMetaReviewGateDependencyDefaults>>>
+  | Promise<MetaReviewGateDependencyDefaults>
   | undefined;
 
-async function loadMetaReviewGateDependencyDefaults() {
+async function loadMetaReviewGateDependencyDefaults(): Promise<
+  MetaReviewGateDependencyDefaults
+> {
   metaReviewGateDependencyDefaultsPromise ??=
     resolveMetaReviewGateDependencyDefaults();
   return metaReviewGateDependencyDefaultsPromise;
 }
 
+function mergeCapabilityLayer<T extends object>(
+  override: Partial<T> | undefined,
+  defaults: T
+): T {
+  const merged = {
+    ...defaults
+  };
+  if (override === undefined) {
+    return merged;
+  }
+
+  for (const [key, value] of Object.entries(override) as Array<
+    [keyof T, T[keyof T] | undefined]
+  >) {
+    if (value !== undefined) {
+      merged[key] = value;
+    }
+  }
+
+  return merged;
+}
+
+function mergeMetaReviewGateNotifyRuntime(
+  runtime: MetaReviewGateNotifyRuntimeCapabilities | undefined,
+  defaults: MetaReviewGateDependencyDefaults["runtime"]["notify"]
+): MetaReviewGateNotifyRuntimeCapabilities {
+  return mergeCapabilityLayer(runtime, defaults);
+}
+
+function mergeMetaReviewGatePaneBindingRuntime(
+  runtime: MetaReviewGatePaneBindingRuntimeCapabilities | undefined,
+  defaults: MetaReviewGateDependencyDefaults["runtime"]["paneBinding"]
+): MetaReviewGatePaneBindingRuntimeCapabilities {
+  return mergeCapabilityLayer(runtime, defaults);
+}
+
+function mergeNotifyRuntimeLayers(input: {
+  callerRuntime: MetaReviewGateNotifyRuntimeCapabilities | undefined;
+  wrapperRuntime: MetaReviewGateNotifyRuntimeCapabilities | undefined;
+  defaults: MetaReviewGateDependencyDefaults["runtime"]["notify"];
+}): MetaReviewGateNotifyRuntimeCapabilities {
+  return mergeMetaReviewGateNotifyRuntime(
+    mergeCapabilityLayer(input.callerRuntime, input.wrapperRuntime ?? {}),
+    input.defaults
+  );
+}
+
+function mergePaneBindingRuntimeLayers(input: {
+  callerRuntime: MetaReviewGatePaneBindingRuntimeCapabilities | undefined;
+  wrapperRuntime: MetaReviewGatePaneBindingRuntimeCapabilities | undefined;
+  defaults: MetaReviewGateDependencyDefaults["runtime"]["paneBinding"];
+}): MetaReviewGatePaneBindingRuntimeCapabilities {
+  return mergeMetaReviewGatePaneBindingRuntime(
+    mergeCapabilityLayer(input.callerRuntime, input.wrapperRuntime ?? {}),
+    input.defaults
+  );
+}
+
+function resolvePaneBindingWrapperNotifyRuntime(input: {
+  inputRuntime: MetaReviewGateRuntimeCapabilities | undefined;
+  defaults: MetaReviewGateDependencyDefaults["runtime"]["notify"];
+  preserveCallerNotifyRuntime: boolean;
+}): MetaReviewGateNotifyRuntimeCapabilities | undefined {
+  if (input.preserveCallerNotifyRuntime) {
+    return input.inputRuntime?.notify;
+  }
+
+  return mergeMetaReviewGateNotifyRuntime(
+    input.inputRuntime?.notify,
+    input.defaults
+  );
+}
+
+function buildPaneBindingWrapperRuntime(input: {
+  defaults: MetaReviewGateDependencyDefaults["runtime"];
+  inputRuntime: MetaReviewGateRuntimeCapabilities | undefined;
+  paneBindingRuntime: MetaReviewGatePaneBindingRuntimeCapabilities | undefined;
+  preserveCallerNotifyRuntime: boolean;
+}): MetaReviewGateRuntimeCapabilities {
+  const notify = resolvePaneBindingWrapperNotifyRuntime({
+    inputRuntime: input.inputRuntime,
+    defaults: input.defaults.notify,
+    preserveCallerNotifyRuntime: input.preserveCallerNotifyRuntime
+  });
+
+  return {
+    ...(notify !== undefined ? { notify } : {}),
+    paneBinding: mergePaneBindingRuntimeLayers({
+      callerRuntime: input.inputRuntime?.paneBinding,
+      wrapperRuntime: input.paneBindingRuntime,
+      defaults: input.defaults.paneBinding
+    })
+  };
+}
+
+function buildApplyRuntimeForwarding(input: {
+  dependencies: ApplyMetaReviewGateOnConvergenceDependencies;
+}):
+  | Pick<ApplyMetaReviewGateOnConvergenceDependencies, "runtime">
+  | Record<never, never> {
+  if (input.dependencies.runtime === undefined) {
+    return {};
+  }
+
+  // Keep the original runtime object visible to explicit seam overrides.
+  // Built-in wrappers resolve nested defaults separately so custom hooks can
+  // still observe intentionally incomplete runtime input.
+  return {
+    runtime: input.dependencies.runtime
+  };
+}
+
 function withMetaReviewGateNotifyDefaults(
-  notify: NotifyMetaReviewerSubmissionRequest = notifyMetaReviewerSubmissionRequest
+  notify: NotifyMetaReviewerSubmissionRequest = notifyMetaReviewerSubmissionRequest,
+  runtime?: MetaReviewGateNotifyRuntimeCapabilities
 ): Promise<NotifyMetaReviewerSubmissionRequest> {
   return loadMetaReviewGateDependencyDefaults().then((defaults) =>
     (
@@ -39,33 +158,30 @@ function withMetaReviewGateNotifyDefaults(
       dependencies: NotifyMetaReviewerSubmissionRequestDependencies = {}
     ) =>
       notify(input, {
-        runTmux: dependencies.runTmux ?? defaults.runTmux,
-        maybeAcceptClaudeTrustPrompt:
-          dependencies.maybeAcceptClaudeTrustPrompt
-          ?? defaults.maybeAcceptClaudeTrustPrompt,
-        sendAndSubmitTmuxPaneMessage:
-          dependencies.sendAndSubmitTmuxPaneMessage
-          ?? defaults.sendAndSubmitTmuxPaneMessage,
-        submitTmuxPaneInput:
-          dependencies.submitTmuxPaneInput
-          ?? defaults.submitTmuxPaneInput
+        runtime: mergeNotifyRuntimeLayers({
+          callerRuntime: dependencies.runtime,
+          wrapperRuntime: runtime,
+          defaults: defaults.runtime.notify
+        })
       })
   );
 }
 
 function withMetaReviewGatePaneBindingDefaults(
-  resolveWarning: ResolveMetaReviewerPaneWarning = resolveMetaReviewerPaneWarning
+  resolveWarning: ResolveMetaReviewerPaneWarning = resolveMetaReviewerPaneWarning,
+  runtime?: MetaReviewGatePaneBindingRuntimeCapabilities,
+  preserveNotifyRuntime: boolean = false
 ): Promise<ResolveMetaReviewerPaneWarning> {
   return loadMetaReviewGateDependencyDefaults().then((defaults) =>
     (input) =>
       resolveWarning({
         ...input,
-        buildAgentCommand:
-          input.buildAgentCommand
-          ?? defaults.buildAgentCommand,
-        respawnTmuxPaneCommand:
-          input.respawnTmuxPaneCommand
-          ?? defaults.respawnTmuxPaneCommand
+        runtime: buildPaneBindingWrapperRuntime({
+          defaults: defaults.runtime,
+          inputRuntime: input.runtime,
+          paneBindingRuntime: runtime,
+          preserveCallerNotifyRuntime: preserveNotifyRuntime
+        })
       })
   );
 }
@@ -74,6 +190,10 @@ async function withMetaReviewGateApplyDefaults(
   dependencies: ApplyMetaReviewGateOnConvergenceDependencies = {}
 ): Promise<ApplyMetaReviewGateOnConvergenceDependencies> {
   const defaults = await loadMetaReviewGateDependencyDefaults();
+  const preserveNotifyRuntimeForResolveOverride =
+    dependencies.notifyMetaReviewerSubmissionRequest !== undefined &&
+    dependencies.runtime?.notify !== undefined;
+
   return {
     appendProtocolEnvelope:
       dependencies.appendProtocolEnvelope
@@ -94,13 +214,21 @@ async function withMetaReviewGateApplyDefaults(
       dependencies.writeStateSnapshot
       ?? defaults.writeStateSnapshot,
     readFile: dependencies.readFile ?? defaults.readFile,
-    runTmux: dependencies.runTmux ?? defaults.runTmux,
+    ...buildApplyRuntimeForwarding({
+      dependencies
+    }),
     notifyMetaReviewerSubmissionRequest:
       dependencies.notifyMetaReviewerSubmissionRequest
-      ?? (await withMetaReviewGateNotifyDefaults()),
+      ?? await withMetaReviewGateNotifyDefaults(
+        undefined,
+        dependencies.runtime?.notify
+      ),
     resolveMetaReviewerPaneWarning:
-      dependencies.resolveMetaReviewerPaneWarning
-      ?? (await withMetaReviewGatePaneBindingDefaults())
+      await withMetaReviewGatePaneBindingDefaults(
+        dependencies.resolveMetaReviewerPaneWarning,
+        dependencies.runtime?.paneBinding,
+        preserveNotifyRuntimeForResolveOverride
+      )
   };
 }
 

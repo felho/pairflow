@@ -78,11 +78,22 @@ export interface SetMetaReviewerPaneBindingInput {
   lockTimeoutMs?: number;
 }
 
-export interface SetMetaReviewerPaneBindingResult {
-  updated: boolean;
-  reason?: "no_runtime_session" | "shared_runtime_pane";
-  record?: RuntimeSessionRecord;
-}
+export type SetMetaReviewerPaneBindingResult =
+  | {
+    updated: false;
+    reason: "no_runtime_session" | "shared_runtime_pane";
+    record?: undefined;
+  }
+  | {
+    updated: true;
+    record: RuntimeSessionRecord;
+    reason?: undefined;
+  }
+  | {
+    updated: true;
+    reason: "durable_handoff_only";
+    record?: undefined;
+  };
 
 export type ReadRuntimeSessionsRegistryPort = (
   sessionsPath: string,

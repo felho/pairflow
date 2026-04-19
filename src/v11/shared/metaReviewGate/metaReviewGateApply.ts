@@ -58,8 +58,10 @@ export async function applyMetaReviewGateOnConvergence(
 
   const paneBinding = await context.resolvePaneWarning({
     setMetaReviewerPane: context.setMetaReviewerPane,
-    notifySubmissionRequest: context.notifySubmissionRequest,
-    runTmuxRunner: context.runTmuxRunner,
+    ...(context.notifySubmissionRequest !== undefined
+      ? { notifySubmissionRequest: context.notifySubmissionRequest }
+      : {}),
+    ...(context.runtime !== undefined ? { runtime: context.runtime } : {}),
     sessionsPath: context.resolved.bubblePaths.sessionsPath,
     bubbleId: context.resolved.bubbleId,
     round: kickoffResult.state.round,

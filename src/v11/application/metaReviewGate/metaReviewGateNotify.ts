@@ -57,9 +57,13 @@ function detectSubmittedMarker(text: string, marker: string): MarkerStatus {
 }
 
 async function assertMetaReviewRequestSubmitted(input: {
-  runTmux: NonNullable<NotifyMetaReviewerSubmissionRequestDependencies["runTmux"]>;
+  runTmux: NonNullable<
+    NonNullable<NotifyMetaReviewerSubmissionRequestDependencies["runtime"]>["runTmux"]
+  >;
   submitTmuxPaneInput: NonNullable<
-    NotifyMetaReviewerSubmissionRequestDependencies["submitTmuxPaneInput"]
+    NonNullable<
+      NotifyMetaReviewerSubmissionRequestDependencies["runtime"]
+    >["submitTmuxPaneInput"]
   >;
   targetPane: string;
   marker: string;
@@ -110,15 +114,13 @@ export async function notifyMetaReviewerSubmissionRequest(
   input: NotifyMetaReviewerSubmissionRequestInput,
   dependencies: NotifyMetaReviewerSubmissionRequestDependencies = {}
 ): Promise<MetaReviewRuntimeDeliveryObservation> {
-  const runner = dependencies.runTmux;
-  const maybeAcceptClaudeTrustPrompt =
-    dependencies.maybeAcceptClaudeTrustPrompt;
-  const sendAndSubmitTmuxPaneMessage =
-    dependencies.sendAndSubmitTmuxPaneMessage;
-  const submitTmuxPaneInput = dependencies.submitTmuxPaneInput;
+  const runtime = dependencies.runtime;
+  const runner = runtime?.runTmux;
+  const maybeAcceptClaudeTrustPrompt = runtime?.maybeAcceptClaudeTrustPrompt;
+  const sendAndSubmitTmuxPaneMessage = runtime?.sendAndSubmitTmuxPaneMessage;
+  const submitTmuxPaneInput = runtime?.submitTmuxPaneInput;
   if (
     runner === undefined ||
-    maybeAcceptClaudeTrustPrompt === undefined ||
     sendAndSubmitTmuxPaneMessage === undefined ||
     submitTmuxPaneInput === undefined
   ) {
@@ -135,9 +137,11 @@ export async function notifyMetaReviewerSubmissionRequest(
     `Required command (include --report-json parity fields): ${buildMetaReviewSubmitCommandTemplate({ bubbleId: input.bubbleId, round: input.round })}. ${buildMetaReviewSubmitApproveParityNote()}`
   ].join(" ");
 
-  await maybeAcceptClaudeTrustPrompt(runner, input.targetPane).catch(
-    () => undefined
-  );
+  if (maybeAcceptClaudeTrustPrompt !== undefined) {
+    await maybeAcceptClaudeTrustPrompt(runner, input.targetPane).catch(
+      () => undefined
+    );
+  }
   try {
     await sendAndSubmitTmuxPaneMessage(runner, input.targetPane, message);
   } catch (error) {

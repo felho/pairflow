@@ -13,6 +13,7 @@ const metaReviewGateCaseSources = [
   "tests/contracts/v11/cases/meta-review-gate/gate-apply-basic-parity.case.json",
   "tests/contracts/v11/cases/meta-review-gate/meta-review-gate-apply-basic-v11.case.json",
   "tests/contracts/v11/cases/meta-review-gate/meta-review-gate-apply-basic-parity.case.json",
+  "tests/contracts/v11/cases/meta-review-gate/meta-review-gate-apply-running-failed-delivery-parity.case.json",
   "tests/contracts/v11/cases/meta-review-gate/meta-review-gate-apply-running-parity.case.json",
   "tests/contracts/v11/cases/meta-review-gate/meta-review-gate-apply-sticky-bypass-parity.case.json"
 ] as const;
