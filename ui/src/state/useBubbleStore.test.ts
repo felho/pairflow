@@ -1548,6 +1548,94 @@ describe("createBubbleStore", () => {
     );
     expect(store.getState().bubbleDetails["b-a"]?.runtime.stale).toBe(false);
   });
+
+  it("keeps expanded detail attention and remote diagnostics while realtime summary omits them", async () => {
+    const initialSummary = bubbleSummary({
+      bubbleId: "b-a",
+      repoPath: "/repo-a",
+      state: "WAITING_HUMAN"
+    });
+    const diagnosticDetail = bubbleDetail({
+      bubbleId: "b-a",
+      repoPath: "/repo-a",
+      state: "WAITING_HUMAN",
+      attention: {
+        code: "watchdog_expired",
+        severity: "warning",
+        label: "Watchdog expired",
+        detail: "The watchdog deadline passed without observed protocol activity."
+      },
+      remoteExecution: {
+        alias: "spark1",
+        host: "spark1",
+        pointerKind: "started",
+        viewKind: "status",
+        statusSource: "live",
+        cacheStatus: "present",
+        runtimeAvailability: "missing",
+        reasonCode: "STATUS_REMOTE_RUNTIME_MISSING",
+        remoteClonePath: "/remote/repo",
+        lastLiveCheckAt: "2026-04-19T11:30:00.000Z",
+        lastCacheCheckAt: "2026-04-19T11:30:00.000Z"
+      }
+    });
+    const deferredDetail = createDeferred<typeof diagnosticDetail>();
+
+    const getBubble = vi
+      .fn<(repoPath: string, bubbleId: string) => Promise<typeof diagnosticDetail>>()
+      .mockResolvedValueOnce(diagnosticDetail)
+      .mockImplementationOnce(async () => deferredDetail.promise);
+
+    const api = createApiStub({
+      getRepos: vi.fn(async () => ["/repo-a"]),
+      getBubbles: vi.fn(async () => ({
+        repo: repoSummary("/repo-a"),
+        bubbles: [initialSummary]
+      })),
+      getBubble,
+      getBubbleTimeline: vi.fn(async () => [])
+    });
+
+    let emitEvent: (event: UiEvent) => void = () => undefined;
+    const store = createBubbleStore({
+      api,
+      createEventsClient: (input) => {
+        emitEvent = input.onEvent;
+        return {
+          start: () => undefined,
+          stop: () => undefined,
+          refresh: () => undefined
+        };
+      }
+    });
+
+    await store.getState().initialize();
+    await store.getState().toggleBubbleExpanded("b-a");
+
+    emitEvent({
+      id: 201,
+      ts: "2026-04-19T11:31:00.000Z",
+      type: "bubble.updated",
+      repoPath: "/repo-a",
+      bubbleId: "b-a",
+      bubble: bubbleSummary({
+        bubbleId: "b-a",
+        repoPath: "/repo-a",
+        state: "WAITING_HUMAN",
+        attention: null
+      })
+    });
+
+    expect(store.getState().bubbleDetails["b-a"]?.attention).toEqual(
+      diagnosticDetail.attention
+    );
+    expect(store.getState().bubbleDetails["b-a"]?.remoteExecution).toEqual(
+      diagnosticDetail.remoteExecution
+    );
+
+    deferredDetail.resolve(diagnosticDetail);
+    await Promise.resolve();
+  });
 });
 
 describe("deleteBubble store method", () => {

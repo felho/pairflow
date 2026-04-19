@@ -252,6 +252,13 @@ function mergeExpandedDetailWithSummary(
     detail.runtime.present &&
     !detail.runtime.stale;
   const preserveDetailRuntime = detailRuntimeHealthy && !summaryRuntimeHealthy;
+  const preserveDetailAttention =
+    detail.attention !== null && bubble.attention === null;
+  const preserveDetailRemoteExecution =
+    detail.remoteExecution !== undefined && bubble.remoteExecution === undefined;
+  const mergedRemoteExecution = preserveDetailRemoteExecution
+    ? detail.remoteExecution
+    : bubble.remoteExecution;
 
   return {
     ...detail,
@@ -263,7 +270,11 @@ function mergeExpandedDetailWithSummary(
     runtimeSession: preserveDetailRuntime
       ? detail.runtimeSession
       : bubble.runtimeSession,
-    runtime: preserveDetailRuntime ? detail.runtime : bubble.runtime
+    runtime: preserveDetailRuntime ? detail.runtime : bubble.runtime,
+    attention: preserveDetailAttention ? detail.attention : bubble.attention,
+    ...(mergedRemoteExecution !== undefined
+      ? { remoteExecution: mergedRemoteExecution }
+      : {})
   };
 }
 
