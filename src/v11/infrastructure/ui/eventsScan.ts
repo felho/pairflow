@@ -9,6 +9,23 @@ import { presentBubbleSummaryFromListEntry, presentRepoSummary } from "./present
 import type { BubbleFingerprintSnapshot, RepoDiff, RepoSnapshot } from "./eventsState.js";
 import { bubbleFingerprint, listBubbleIds, sameRepoSummary } from "./eventsFingerprint.js";
 import { listBubbles } from "./eventsScanDefaults.js";
+import type { UiBubbleListView as BubbleListView } from "../../shared/ports/uiRouter.js";
+
+function repoSnapshotHasStartedRemoteBubble(snapshot: RepoSnapshot | undefined): boolean {
+  if (snapshot === undefined) {
+    return false;
+  }
+  for (const bubble of snapshot.bubbles.values()) {
+    if (bubble.summary.remoteExecution?.pointerKind === "started") {
+      return true;
+    }
+  }
+  return false;
+}
+
+function viewHasStartedRemoteBubble(view: BubbleListView): boolean {
+  return view.bubbles.some((bubble) => bubble.remoteExecution?.pointerKind === "started");
+}
 
 export async function scanUiEventsRepo(input: {
   repoPath: string;
@@ -16,11 +33,23 @@ export async function scanUiEventsRepo(input: {
   snapshots: Map<string, RepoSnapshot>;
   nextBubbleUpdatedEvent: (repoPath: string, bubble: ReturnType<typeof presentBubbleSummaryFromListEntry>) => RepoDiff["changed"][number];
   nextBubbleRemovedEvent: (repoPath: string, bubbleId: string) => RepoDiff["removed"][number];
+  listBubbles?: typeof listBubbles;
 }): Promise<RepoDiff> {
-  const view = await listBubbles({
-    repoPath: input.repoPath
-  });
   const previous = input.snapshots.get(input.repoPath);
+  const listBubblesFn = input.listBubbles ?? listBubbles;
+  let view = await listBubblesFn({
+    repoPath: input.repoPath,
+    ...(repoSnapshotHasStartedRemoteBubble(previous) ? { refresh: true } : {})
+  });
+  if (
+    !repoSnapshotHasStartedRemoteBubble(previous)
+    && viewHasStartedRemoteBubble(view)
+  ) {
+    view = await listBubblesFn({
+      repoPath: input.repoPath,
+      refresh: true
+    });
+  }
   const repoSummary = presentRepoSummary(view);
 
   const nextBubbles = new Map<string, BubbleFingerprintSnapshot>();
@@ -133,6 +162,7 @@ export async function scanUiEventsAll(input: {
   nextRepoEvent: (repoPath: string, repo: RepoDiff["repo"]) => UiRepoUpdatedEvent;
   refreshWatchers: () => Promise<void>;
   notify: (event: UiEvent) => void;
+  listBubbles?: typeof listBubbles;
 }): Promise<void> {
   const diffs: RepoDiff[] = [];
   for (const repoPath of input.repos) {
@@ -142,7 +172,8 @@ export async function scanUiEventsAll(input: {
         emitEvents: input.emitEvents,
         snapshots: input.snapshots,
         nextBubbleUpdatedEvent: input.nextBubbleUpdatedEvent,
-        nextBubbleRemovedEvent: input.nextBubbleRemovedEvent
+        nextBubbleRemovedEvent: input.nextBubbleRemovedEvent,
+        ...(input.listBubbles !== undefined ? { listBubbles: input.listBubbles } : {})
       })
     );
   }
