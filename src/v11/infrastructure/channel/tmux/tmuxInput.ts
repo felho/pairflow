@@ -155,25 +155,52 @@ export async function maybeAcceptClaudeTrustPrompt(
   runner: TmuxRunner,
   targetPane: string
 ): Promise<boolean> {
-  const capture = await runner(["capture-pane", "-pt", targetPane], {
-    allowFailure: true
-  });
-  if (capture.exitCode !== 0) {
-    return false;
+  let accepted = false;
+
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const capture = await runner(["capture-pane", "-pt", targetPane], {
+      allowFailure: true
+    });
+    if (capture.exitCode !== 0) {
+      return accepted;
+    }
+
+    const normalized = capture.stdout.toLowerCase();
+    const looksLikeClaudeFolderTrustPrompt =
+      normalized.includes("security guide") &&
+      normalized.includes("yes, i trust this folder");
+    const looksLikeClaudeBypassPermissionsPrompt =
+      normalized.includes("bypass permissions mode") &&
+      normalized.includes("yes, i accept");
+    const looksLikeCodexTrustPrompt =
+      normalized.includes("do you trust the contents of this directory") &&
+      normalized.includes("1. yes, continue");
+
+    if (looksLikeClaudeFolderTrustPrompt) {
+      // Claude's folder-trust prompt already highlights the "Yes" option.
+      // Confirming requires a bare Enter, not typing "1".
+      await submitTmuxPaneInput(runner, targetPane);
+      accepted = true;
+      await sleep(250);
+      continue;
+    }
+
+    if (looksLikeClaudeBypassPermissionsPrompt) {
+      await sendAndSubmitTmuxPaneMessage(runner, targetPane, "2");
+      accepted = true;
+      await sleep(250);
+      continue;
+    }
+
+    if (looksLikeCodexTrustPrompt) {
+      await sendAndSubmitTmuxPaneMessage(runner, targetPane, "1");
+      accepted = true;
+      await sleep(250);
+      continue;
+    }
+
+    return accepted;
   }
 
-  const normalized = capture.stdout.toLowerCase();
-  const looksLikeClaudeTrustPrompt =
-    normalized.includes("security guide") &&
-    normalized.includes("yes, i trust this folder");
-  const looksLikeCodexTrustPrompt =
-    normalized.includes("do you trust the contents of this directory") &&
-    normalized.includes("1. yes, continue");
-  if (!looksLikeClaudeTrustPrompt && !looksLikeCodexTrustPrompt) {
-    return false;
-  }
-
-  await sendAndSubmitTmuxPaneMessage(runner, targetPane, "1");
-  await sleep(200);
-  return true;
+  return accepted;
 }
