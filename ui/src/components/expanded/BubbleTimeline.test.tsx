@@ -116,6 +116,28 @@ describe("BubbleTimeline", () => {
     expect(screen.queryByText("Loading timeline...")).not.toBeInTheDocument();
   });
 
+  it("keeps loaded timeline visible during refresh", () => {
+    render(
+      <BubbleTimeline
+        entries={[
+          timelineEntry({
+            id: "env-refresh-1",
+            sender: "implementer",
+            payload: {
+              summary: "Remote smoke running."
+            }
+          })
+        ]}
+        isLoading
+        error={null}
+        compact={false}
+      />
+    );
+
+    expect(screen.getByText("Remote smoke running.")).toBeInTheDocument();
+    expect(screen.queryByText("Loading timeline...")).not.toBeInTheDocument();
+  });
+
   it("preserves manual scroll position when user scrolls away from bottom", () => {
     const firstEntries = Array.from({ length: 5 }, (_, index) =>
       timelineEntry({

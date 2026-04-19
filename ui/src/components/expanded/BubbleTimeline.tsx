@@ -219,10 +219,11 @@ export function BubbleTimeline(props: BubbleTimelineProps): JSX.Element {
   const shouldAutoScrollRef = useRef(true);
   const compact = props.compact;
   const showError = props.error !== null;
-  const showLoading = props.isLoading && !showError;
+  const showInitialLoading =
+    props.isLoading && !showError && props.entries === null;
   const hasExtras = props.extras !== null && props.extras !== undefined;
   const hasEmptyState =
-    !showLoading && !showError && props.entries !== null && props.entries.length === 0;
+    !showError && props.entries !== null && props.entries.length === 0;
 
   useEffect(() => {
     const el = scrollRef.current;
@@ -231,12 +232,12 @@ export function BubbleTimeline(props: BubbleTimelineProps): JSX.Element {
     }
   }, [props.entries, props.extras]);
 
-  const hasEntries = !showLoading && !showError && props.entries !== null && props.entries.length > 0;
+  const hasEntries = !showError && props.entries !== null && props.entries.length > 0;
   const showScrollable = hasEntries || hasEmptyState || hasExtras;
 
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
-      {showLoading ? (
+      {showInitialLoading ? (
         <div className="py-2 text-[10px] text-[#666]">Loading timeline...</div>
       ) : null}
 
