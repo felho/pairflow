@@ -99,7 +99,7 @@ export async function checkTmuxPaneMarkerStatus(
   targetPane: string,
   marker: string
 ): Promise<TmuxPaneMarkerStatus> {
-  const capture = await runner(["capture-pane", "-pt", targetPane], {
+  const capture = await runner(["capture-pane", "-p", "-S", "-200", "-t", targetPane], {
     allowFailure: true
   });
   if (capture.exitCode !== 0) {

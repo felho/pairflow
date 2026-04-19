@@ -592,7 +592,14 @@ describe("tmux delivery T6 runtime observability baseline", () => {
     const targetPane = "pf-b_delivery_01:0.2";
     const message =
       "# [pairflow] r1 PASS codex->claude msg=msg_20260222_101 ref=artifact://handoff.md.";
-    const expectedCapturePaneCall = ["capture-pane", "-pt", targetPane];
+    const expectedCapturePaneCall = [
+      "capture-pane",
+      "-p",
+      "-S",
+      "-200",
+      "-t",
+      targetPane
+    ];
     const expectedMessageWriteCall = ["send-keys", "-t", targetPane, "-l", message];
     const expectedEnterCall = ["send-keys", "-t", targetPane, "Enter"];
     const runner: TmuxRunner = (args): Promise<TmuxRunResult> => {
@@ -641,9 +648,7 @@ describe("tmux delivery T6 runtime observability baseline", () => {
       expect(messageWriteCalls).toEqual([expectedMessageWriteCall]);
       expect(enterCalls).toEqual([expectedEnterCall]);
       expect(capturePaneCalls.length).toBeGreaterThanOrEqual(1);
-      expect(capturePaneCalls.every((call) => call.join("\u0000") === expectedCapturePaneCall.join("\u0000"))).toBe(
-        true
-      );
+      expect(capturePaneCalls).toContainEqual(expectedCapturePaneCall);
       expect(result).toEqual(
         createRejectedTmuxDeliveryAck({
           reason: "delivery_unconfirmed",
@@ -3047,6 +3052,52 @@ describe("emitTmuxDeliveryNotification", () => {
       sessionName: "pf-b_delivery_01",
       targetPaneIndex: 2
     });
+  });
+
+  it("accepts delivery when the pairflow marker is only visible in recent pane scrollback", async () => {
+    const calls: string[][] = [];
+    const runner: TmuxRunner = (args): Promise<TmuxRunResult> => {
+      calls.push(args);
+      if (args[0] === "capture-pane") {
+        return Promise.resolve({
+          stdout: [
+            "Earlier output above the current viewport:",
+            "# [pairflow] r1 PASS codex->claude msg=msg_20260222_101 ref=artifact://handoff.md.",
+            "",
+            "Claude Code is ready.",
+            "",
+            ">"
+          ].join("\n"),
+          stderr: "",
+          exitCode: 0
+        });
+      }
+      return Promise.resolve({
+        stdout: "",
+        stderr: "",
+        exitCode: 0
+      });
+    };
+
+    const result = await emitTmuxDeliveryNotification({
+      bubbleId: "b_delivery_01",
+      bubbleConfig: baseConfig,
+      sessionsPath: "/tmp/repo/.pairflow/runtime/sessions.json",
+      envelope: createEnvelope(),
+      runner,
+      readSessionsRegistry: () => Promise.resolve(createRegistry()),
+      deliveryAttempts: 1
+    });
+
+    expect(result.delivered).toBe(true);
+    expect(calls).toContainEqual([
+      "capture-pane",
+      "-p",
+      "-S",
+      "-200",
+      "-t",
+      "pf-b_delivery_01:0.2"
+    ]);
   });
 });
 
