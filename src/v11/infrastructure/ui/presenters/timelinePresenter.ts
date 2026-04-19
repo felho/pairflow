@@ -1,7 +1,13 @@
 import { readFile } from "node:fs/promises";
+import { join } from "node:path";
 
 import { resolveBubbleById } from "../../executor/workspace/bubbleLookup.js";
+import { readRemotePointer } from "../../artifact/bubble/remoteExecutionArtifacts.js";
 import { readTranscriptEnvelopes } from "../../artifact/transcript/transcriptStore.js";
+import {
+  resolveRemoteBubbleStatusTarget,
+  runCommandDefault
+} from "../../executor/ssh/sshBubbleStatus.js";
 import type { ProtocolEnvelope } from "../../../../types/protocol.js";
 import type { Finding } from "../../../../types/findings.js";
 import {
@@ -23,12 +29,29 @@ import {
   isNonEmptyString,
   isRecord
 } from "../../../shared/validation/primitives.js";
+import { shellQuote } from "../../../shared/foundation/shellQuote.js";
 
 export interface ReadBubbleTimelineInput {
   bubbleId: string;
   repoPath?: string | undefined;
   cwd?: string | undefined;
 }
+
+interface ReadBubbleTimelineDependencies {
+  resolveBubbleById?: typeof resolveBubbleById;
+  readRemotePointer?: typeof readRemotePointer;
+  resolveRemoteBubbleStatusTarget?: typeof resolveRemoteBubbleStatusTarget;
+  runCommand?: typeof runCommandDefault;
+}
+
+const remoteTimelineCommandTimeoutMs = 10_000;
+
+const sshTransportOptions = [
+  ["BatchMode", "yes"],
+  ["StrictHostKeyChecking", "yes"],
+  ["ConnectTimeout", "10"],
+  ["ConnectionAttempts", "1"]
+] as const;
 
 export function presentTimeline(envelopes: ProtocolEnvelope[]): UiTimelineEntry[] {
   return envelopes.map((envelope) => ({
@@ -185,6 +208,28 @@ async function readTimelineLenientFromTranscriptPath(
   return entries;
 }
 
+export function readBubbleTimelineFromTranscriptText(
+  raw: string
+): UiTimelineEntry[] {
+  const entries: UiTimelineEntry[] = [];
+  for (const line of raw.split(/\r?\n/u)) {
+    if (line.trim().length === 0) {
+      continue;
+    }
+    try {
+      const parsed: unknown = JSON.parse(line);
+      const presented = presentTimelineEntryLenient(parsed);
+      if (presented !== null) {
+        entries.push(presented);
+      }
+    } catch {
+      // Best-effort fallback: invalid lines are ignored.
+    }
+  }
+
+  return entries;
+}
+
 export async function readBubbleTimelineFromTranscriptPath(
   transcriptPath: string
 ): Promise<UiTimelineEntry[]> {
@@ -202,14 +247,109 @@ export async function readBubbleTimelineFromTranscriptPath(
   }
 }
 
+function buildSshTarget(input: { host: string; user?: string }): string {
+  return input.user !== undefined ? `${input.user}@${input.host}` : input.host;
+}
+
+function buildSshCommandArgs(input: {
+  target: string;
+  script: string;
+}): string[] {
+  return [
+    ...sshTransportOptions.flatMap(([key, value]) => ["-o", `${key}=${value}`]),
+    input.target,
+    "bash",
+    "-c",
+    input.script
+  ];
+}
+
+async function readRemoteTimelineText(input: {
+  bubbleId: string;
+  remoteClonePath: string;
+  remoteAlias: string;
+  expectedHost: string;
+  resolveRemoteBubbleStatusTargetFn: typeof resolveRemoteBubbleStatusTarget;
+  runCommand: typeof runCommandDefault;
+}): Promise<string> {
+  const remoteTarget = await input.resolveRemoteBubbleStatusTargetFn({
+    bubbleId: input.bubbleId,
+    remoteAlias: input.remoteAlias,
+    expectedHost: input.expectedHost
+  });
+  const transcriptPath = join(
+    input.remoteClonePath,
+    ".pairflow",
+    "bubbles",
+    input.bubbleId,
+    "transcript.ndjson"
+  );
+  const abortController = new AbortController();
+  const timeout = setTimeout(() => {
+    abortController.abort();
+  }, remoteTimelineCommandTimeoutMs);
+  timeout.unref?.();
+
+  try {
+    const result = await input.runCommand(
+      "ssh",
+      buildSshCommandArgs({
+        target: buildSshTarget({
+          host: remoteTarget.host,
+          ...(remoteTarget.user !== undefined ? { user: remoteTarget.user } : {})
+        }),
+        script: `if [ -f ${shellQuote(transcriptPath)} ]; then cat ${shellQuote(transcriptPath)}; fi`
+      }),
+      {
+        signal: abortController.signal
+      }
+    );
+    if (result.exitCode !== 0) {
+      throw new Error(result.stderr.trim().length > 0 ? result.stderr.trim() : result.stdout.trim());
+    }
+    return result.stdout;
+  } catch (error) {
+    if (error instanceof Error && error.name === "AbortError") {
+      throw new Error(
+        `Remote timeline read timed out after ${remoteTimelineCommandTimeoutMs}ms for ${input.bubbleId}.`
+      );
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 export async function readBubbleTimeline(
-  input: ReadBubbleTimelineInput
+  input: ReadBubbleTimelineInput,
+  dependencies: ReadBubbleTimelineDependencies = {}
 ): Promise<UiTimelineEntry[]> {
-  const resolved = await resolveBubbleById({
+  const resolveBubbleByIdFn = dependencies.resolveBubbleById ?? resolveBubbleById;
+  const readRemotePointerFn = dependencies.readRemotePointer ?? readRemotePointer;
+  const resolveRemoteBubbleStatusTargetFn =
+    dependencies.resolveRemoteBubbleStatusTarget ?? resolveRemoteBubbleStatusTarget;
+  const runCommand = dependencies.runCommand ?? runCommandDefault;
+  const resolved = await resolveBubbleByIdFn({
     bubbleId: input.bubbleId,
     ...(input.repoPath !== undefined ? { repoPath: input.repoPath } : {}),
     ...(input.cwd !== undefined ? { cwd: input.cwd } : {})
   });
+
+  const remotePointer = await readRemotePointerFn(resolved.bubblePaths.remotePointerPath);
+  if (
+    remotePointer?.kind === "started"
+    && resolved.bubbleConfig.executor?.type === "ssh"
+  ) {
+    const raw = await readRemoteTimelineText({
+      bubbleId: input.bubbleId,
+      remoteClonePath: remotePointer.remoteClonePath,
+      remoteAlias: resolved.bubbleConfig.executor.remote,
+      expectedHost: remotePointer.host,
+      resolveRemoteBubbleStatusTargetFn,
+      runCommand
+    });
+    return readBubbleTimelineFromTranscriptText(raw);
+  }
 
   return readBubbleTimelineFromTranscriptPath(resolved.bubblePaths.transcriptPath);
 }

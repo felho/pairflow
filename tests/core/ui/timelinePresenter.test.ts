@@ -2,9 +2,12 @@ import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { readBubbleTimelineFromTranscriptPath } from "../../../src/v11/infrastructure/ui/presenters/timelinePresenter.js";
+import {
+  readBubbleTimeline,
+  readBubbleTimelineFromTranscriptPath
+} from "../../../src/v11/infrastructure/ui/presenters/timelinePresenter.js";
 
 const tempDirs: string[] = [];
 
@@ -106,5 +109,102 @@ describe("timelinePresenter lenient fallback", () => {
     expect(timeline[0]?.payload.summary).toContain("Strict parse should fail");
     expect(timeline[0]?.payload.findings_claim_state).toBe("open_findings");
     expect(timeline[0]?.payload.findings_claim_source).toBe("payload_findings_count");
+  });
+
+  it("reads remote transcript content for started ssh bubbles instead of stale local transcript", async () => {
+    const dir = await createTempDir();
+    const transcriptPath = join(dir, "transcript.ndjson");
+    await writeFile(
+      transcriptPath,
+      `${JSON.stringify({
+        id: "msg_local_001",
+        ts: "2026-04-19T19:50:57.099Z",
+        bubble_id: "remote-smoke18",
+        sender: "orchestrator",
+        recipient: "codex",
+        type: "TASK",
+        round: 0,
+        payload: {
+          summary: "Only local bootstrap task"
+        },
+        refs: []
+      })}\n`,
+      "utf8"
+    );
+
+    const timeline = await readBubbleTimeline(
+      {
+        bubbleId: "remote-smoke18",
+        repoPath: "/repo"
+      },
+      {
+        resolveBubbleById: vi.fn(async () => ({
+          bubbleId: "remote-smoke18",
+          repoPath: "/repo",
+          bubbleConfig: {
+            executor: {
+              type: "ssh",
+              remote: "spark1"
+            }
+          },
+          bubblePaths: {
+            transcriptPath,
+            remotePointerPath: "/repo/.pairflow/bubbles/remote-smoke18/remote.json"
+          }
+        })) as never,
+        readRemotePointer: vi.fn(async () => ({
+          kind: "started",
+          host: "spark1",
+          remoteClonePath: "/home/felho/repos/pairflow--remote-smoke18",
+          instanceId: "instance-1",
+          tmuxSession: "pf-remote-smoke18",
+          startedAt: "2026-04-19T19:50:57.099Z"
+        })) as never,
+        resolveRemoteBubbleStatusTarget: vi.fn(async () => ({
+          alias: "spark1",
+          host: "spark1",
+          pairflowCommand: "pairflow"
+        })) as never,
+        runCommand: vi.fn(async () => ({
+          stdout: [
+            JSON.stringify({
+              id: "msg_20260419_001",
+              ts: "2026-04-19T19:50:57.099Z",
+              bubble_id: "remote-smoke18",
+              sender: "orchestrator",
+              recipient: "codex",
+              type: "TASK",
+              round: 0,
+              payload: {
+                summary: "Remote task"
+              },
+              refs: []
+            }),
+            JSON.stringify({
+              id: "msg_20260419_002",
+              ts: "2026-04-19T19:51:43.291Z",
+              bubble_id: "remote-smoke18",
+              sender: "codex",
+              recipient: "claude",
+              type: "PASS",
+              round: 1,
+              payload: {
+                summary: "Remote PASS"
+              },
+              refs: []
+            })
+          ].join("\n"),
+          stderr: "",
+          exitCode: 0
+        })) as never
+      }
+    );
+
+    expect(timeline).toHaveLength(2);
+    expect(timeline.map((entry) => entry.id)).toEqual([
+      "msg_20260419_001",
+      "msg_20260419_002"
+    ]);
+    expect(timeline[1]?.payload.summary).toBe("Remote PASS");
   });
 });
