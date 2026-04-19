@@ -18,7 +18,10 @@ target_files:
   - src/v11/shared/kickoff/kickoffResultBuilders.ts
   - src/v11/shared/askHuman/askHumanDeliveryPortsContract.ts
   - src/v11/shared/askHuman/askHumanCommandContract.ts
+  - src/v11/shared/askHuman/askHumanCommandFlowDependencyInputBuilder.ts
+  - src/v11/shared/askHuman/askHumanCommandFlowDependencyWiringInputBuilder.ts
   - src/v11/shared/askHuman/askHumanFlowContract.ts
+  - src/v11/shared/askHuman/askHumanFlowDependencyWiringContract.ts
   - src/v11/shared/askHuman/askHumanFlowInvocationContract.ts
   - src/v11/shared/askHuman/askHumanFlowDependencyOptionalOverrides.ts
   - src/v11/shared/askHuman/askHumanRuntimeDependencyForwardingContract.ts
@@ -29,6 +32,7 @@ target_files:
   - src/v11/shared/askHuman/askHumanFinalizationArtifacts.ts
   - src/v11/shared/askHuman/askHumanFinalizationDependencyBuilderContract.ts
   - src/v11/shared/askHuman/askHumanFinalizationDependencyResolutionContract.ts
+  - src/v11/shared/askHuman/askHumanFinalizationDependencyResolutionInputBuilder.ts
   - src/v11/application/askHuman/askHumanNotificationEmission.ts
   - src/v11/application/askHuman/askHumanFinalization.ts
   - src/v11/application/askHuman/askHumanFinalizationDependencyBuilder.ts
@@ -63,9 +67,13 @@ target_files:
   - tests/contracts/v11/converged.contract.test.ts
   - tests/contracts/v11/pass.contract.test.ts
   - tests/v11/application/askHuman/askHumanNotificationEmission.test.ts
+  - tests/v11/application/askHuman/askHumanCommandFlowDependencyInputBuilder.test.ts
+  - tests/v11/application/askHuman/askHumanCommandFlowDependencyWiringInputBuilder.test.ts
+  - tests/v11/application/askHuman/askHumanFlowDependencyWiring.test.ts
   - tests/v11/application/askHuman/askHumanFinalization.test.ts
   - tests/v11/application/askHuman/askHumanFinalizationDependencyBuilder.test.ts
   - tests/v11/application/askHuman/askHumanFinalizationDependencyResolution.test.ts
+  - tests/v11/application/askHuman/askHumanFinalizationDependencyResolutionInputBuilder.test.ts
   - tests/v11/application/askHuman/askHumanFinalizationArtifacts.test.ts
   - tests/v11/application/askHuman/askHumanRuntimeDependencyForwarding.test.ts
   - tests/v11/application/kickoff/kickoffValidatedExecution.test.ts
@@ -95,7 +103,7 @@ owners:
 
 1. A canonical delivery producer baseline current-tree szinten topology-neutral:
    - `DeliveryAck`
-   - `EmitDeliveryAckLikePort`
+   - `EmitDeliveryNotificationAckPort`
    - `accepted | rejected`
 2. A public/read-model closure current-tree szinten mar kulon, lezart predecessor slice:
    - archived `O2-T7`
@@ -109,7 +117,10 @@ owners:
    - `src/v11/shared/kickoff/kickoffResultBuilders.ts`
    - `src/v11/shared/askHuman/askHumanDeliveryPortsContract.ts`
    - `src/v11/shared/askHuman/askHumanCommandContract.ts`
+   - `src/v11/shared/askHuman/askHumanCommandFlowDependencyInputBuilder.ts`
+   - `src/v11/shared/askHuman/askHumanCommandFlowDependencyWiringInputBuilder.ts`
    - `src/v11/shared/askHuman/askHumanFlowContract.ts`
+   - `src/v11/shared/askHuman/askHumanFlowDependencyWiringContract.ts`
    - `src/v11/shared/askHuman/askHumanFlowInvocationContract.ts`
    - `src/v11/shared/askHuman/askHumanFlowDependencyOptionalOverrides.ts`
    - `src/v11/shared/askHuman/askHumanRuntimeDependencyForwardingContract.ts`
@@ -120,6 +131,7 @@ owners:
    - `src/v11/shared/askHuman/askHumanFinalizationArtifacts.ts`
    - `src/v11/shared/askHuman/askHumanFinalizationDependencyBuilderContract.ts`
    - `src/v11/shared/askHuman/askHumanFinalizationDependencyResolutionContract.ts`
+   - `src/v11/shared/askHuman/askHumanFinalizationDependencyResolutionInputBuilder.ts`
    - `src/v11/application/askHuman/askHumanNotificationEmission.ts`
    - `src/v11/application/askHuman/askHumanFinalization.ts`
    - `src/v11/application/askHuman/askHumanFinalizationDependencyBuilder.ts`
@@ -142,7 +154,7 @@ owners:
    - `src/v11/application/pass/passResultDelivery.ts`
    - `src/v11/application/pass/passResultBuilder.ts`
 4. A residual pattern current-tree szinten ket forma:
-   - neutral port tipussal leirt dependency tovabbra is `emitTmuxDeliveryNotification` neven jon be
+   - canonical neutral port mellett tobb consume seam tovabbra is `emitTmuxDeliveryNotification` neven vagy compat bridge-tipussal jon be
    - a helper/result/finalization surface tovabbra is `delivered: boolean` projectiont ownershipol elso osztalyu workflow/internal shape-kent
 5. A retained infrastructure adapter current-tree szinten kulon, lezart baseline:
    - `src/v11/infrastructure/channel/tmux/tmuxDelivery.ts`
@@ -170,6 +182,8 @@ owners:
    - a boolean `delivered` projection nem lehet kulon canonical truth.
 2. Control model:
    - a retained `emitTmuxDeliveryNotification` vocabulary legfeljebb compat alias vagy same-authority bridge;
+   - a canonical neutral consume port `EmitDeliveryNotificationAckPort`;
+   - az `EmitDeliveryAckLikePort` legfeljebb atmeneti compat bridge-type lehet, nem shared source-of-truth.
    - a final decision source `DeliveryAck.status` vagy ennek explicit, azonos authorityju projectionje.
 3. Read-path rule:
    - a belso workflow/internal consume contractok nem re-derivalhatnak canonical truthot a compat boolean mezobol;
@@ -230,15 +244,17 @@ owners:
    - `src/v11/application/pass/normalPassFinalization.ts`
 2. Canonical elements:
    - `DeliveryAck`
-   - `EmitDeliveryAckLikePort`
+   - `EmitDeliveryNotificationAckPort`
    - `DeliveryAck.status`
    - `accepted | rejected`
 3. Compat elements:
    - `emitTmuxDeliveryNotification`
+   - `EmitDeliveryAckLikePort`
    - `EmitAskHumanTmuxDeliveryNotificationPort`
    - `delivered: boolean`
 4. Forbidden reinterpretations:
    - retained alias nem nevezheto ki workflow authority contractnak;
+   - `EmitDeliveryAckLikePort` nem nevezheto ki canonical neutral portnak;
    - `delivered` nem promotalhato vissza canonical consume mezove;
    - a residual cleanup nem nevezheto at public/read-model tasknak.
 5. `drift_status`: `residual_gap_discovered_after_consume_family_closure`
@@ -255,7 +271,10 @@ owners:
    - `src/v11/shared/kickoff/kickoffResultBuilders.ts`
    - `src/v11/shared/askHuman/askHumanDeliveryPortsContract.ts`
    - `src/v11/shared/askHuman/askHumanCommandContract.ts`
+   - `src/v11/shared/askHuman/askHumanCommandFlowDependencyInputBuilder.ts`
+   - `src/v11/shared/askHuman/askHumanCommandFlowDependencyWiringInputBuilder.ts`
    - `src/v11/shared/askHuman/askHumanFlowContract.ts`
+   - `src/v11/shared/askHuman/askHumanFlowDependencyWiringContract.ts`
    - `src/v11/shared/askHuman/askHumanFlowInvocationContract.ts`
    - `src/v11/shared/askHuman/askHumanFlowDependencyOptionalOverrides.ts`
    - `src/v11/shared/askHuman/askHumanRuntimeDependencyForwardingContract.ts`
@@ -266,6 +285,7 @@ owners:
    - `src/v11/shared/askHuman/askHumanFinalizationArtifacts.ts`
    - `src/v11/shared/askHuman/askHumanFinalizationDependencyBuilderContract.ts`
    - `src/v11/shared/askHuman/askHumanFinalizationDependencyResolutionContract.ts`
+   - `src/v11/shared/askHuman/askHumanFinalizationDependencyResolutionInputBuilder.ts`
    - `src/v11/application/askHuman/askHumanNotificationEmission.ts`
    - `src/v11/application/askHuman/askHumanFinalization.ts`
    - `src/v11/application/askHuman/askHumanFinalizationDependencyBuilder.ts`
@@ -294,7 +314,8 @@ owners:
    - `no`
 4. Why the declared shape matches reality:
    - a current residual ugyanazon delivery consumer familyben maradt bent;
-   - a shared/internal contractszukites ugyanabban a filecsaladban zarul, mint a workflow/internal caller alignment es az adjacent forwarding/finalization wiring;
+   - az ask-human residual csak akkor zarhato, ha a flow/finalization/runtime forwarding mellett a command-to-flow es finalization-resolution input builder bridge-ek is ugyanebben a slice-ban alignalodnak;
+   - a shared/internal contractszukites ugyanabban a filecsaladban zarul, mint a workflow/internal caller alignment es az adjacent forwarding/finalization/input-builder wiring;
    - nincs UI/public vagy infrastructure fallout ugyanebben a slice-ban.
 
 ### Authority Boundary Map
@@ -332,10 +353,11 @@ owners:
 1. In-scope delivery dependency contracts neutral namingre es explicit compat alias policyra allitasa.
 2. In-scope helper/result surfaces `status`-first, ack-driven ownershipra allitasa.
 3. Ask-human retained aliasok es result projectionk szukitese, ahol ezek mar csak same-authority bridge-kent indokolhatok.
-4. Ask-human finalization es runtime-forwarding seam-ek alignmentje, hogy a retained dependency nev csak explicit compat bridge-kent maradjon.
-5. Approval delivery projection seam explicit neutral-owner cleanupja, ahol a legacy projection current-tree szinten meg mindig elso osztalyu command-owned contract.
-6. Kickoff/pass/converged result, forwarding, invocation es finalization seam-ek alignmentje, hogy a boolean mezok explicit projection statuszban maradjanak.
-7. A kapcsolodo tests frissitese, ahol a contract ownership valtozas bizonyitasa szukseges.
+4. Ask-human command-to-flow, flow-runtime es finalization-resolution input-builder seam-ek alignmentje, hogy a retained dependency nev ne maradjon rejtett wiring owner.
+5. Ask-human finalization es runtime-forwarding seam-ek alignmentje, hogy a retained dependency nev csak explicit compat bridge-kent maradjon.
+6. Approval delivery projection seam explicit neutral-owner cleanupja, ahol a legacy projection current-tree szinten meg mindig elso osztalyu command-owned contract.
+7. Kickoff/pass/converged result, forwarding, invocation es finalization seam-ek alignmentje, hogy a boolean mezok explicit projection statuszban maradjanak.
+8. A kapcsolodo tests frissitese, ahol a contract ownership valtozas bizonyitasa szukseges.
 
 ### Out of Scope
 
@@ -360,16 +382,18 @@ owners:
 ### Complexity Risk Gate
 
 1. `authority_risk`: `1`
-2. `surface_spread`: `1`
+2. `surface_spread`: `2`
 3. `identity_join_risk`: `1`
 4. `activation_coupling`: `0`
 5. `prerequisite_risk`: `1`
-6. `acceptance_multiplicity`: `1`
-7. `risk_score`: `5`
+6. `acceptance_multiplicity`: `2`
+7. `risk_score`: `7`
 8. `single-task allowed`: `yes`
 9. Split note:
-   - UI/public scope mar lezart
-   - meta-review gate runtime residual kulon task
+   - a parent plan mar kulon closure-ba tette a producer/public/meta-review lane-eket;
+   - ez a task csak akkor marad egyben, ha uj consume family nem nyilik a jelenlegi ask-human/pass/converged/approval/reply/kickoff residualon tul;
+   - UI/public scope mar lezart;
+   - meta-review gate runtime residual kulon task.
 10. Closure-budget triage:
    - closure buckets touched: `shared_contract`, `internal_execution_consumers`, `workflow_orchestration_consumers`
    - intentionally collapsed closures: narrow contract cleanup + in-family consumer alignment
@@ -391,6 +415,8 @@ owners:
 | Element | Current Role | Target Role | Preservation Rule | Priority | Timing |
 |---|---|---|---|---|---|
 | `DeliveryAck.status` | canonical delivery truth | canonical delivery truth | semantika nem valtozik | P1 | required-now |
+| `EmitDeliveryNotificationAckPort` | canonical neutral consume port | canonical neutral consume port | shared source-of-truth marad | P1 | required-now |
+| `EmitDeliveryAckLikePort` | mixed-consumer compat bridge | mixed-consumer compat bridge | nem emelheto canonical neutral portta | P1 | required-now |
 | retained adapter exportok | infrastructure compatibility | infrastructure compatibility | removal nincs ebben a taskban | P1 | required-now |
 | boolean `delivered` mezok | compat projection | compat projection | csak explicit ack-derived projectionkent maradhatnak | P1 | required-now |
 
@@ -399,6 +425,7 @@ owners:
 | Shared Contract | Current Consumers Inventory | Change Type (`additive|breaking|N/A`) | This Task Action | Deferred Alignment |
 |---|---|---|---|---|
 | delivery consumer dependency names | approval, reply, kickoff, ask-human, converged, pass | additive/narrowing | neutral port naming, retained alias max compat | external/public surfaces |
+| internal compat delivery call typing | approval, reply, ask-human, converged, pass transition seams | additive/narrowing | `EmitDeliveryAckLikePort` maradhat atmeneti bridge-type, de canonical owner nem lehet | later cleanup only after full inventory |
 | delivery helper/result/finalization surfaces | approval projection seam, kickoff, ask-human, converged, pass | additive/narrowing | `status`-first ownership + explicit compat boolean projection | later removal only with inventory |
 
 ### 1) Plan Linkage and Successor Impact
@@ -416,7 +443,7 @@ owners:
 | CS1 | `src/v11/application/approval/approvalCommandContract.ts` + `approvalCommandApi.ts` + `approvalCommandDependencyResolution.ts` + `runApprovalDecisionEffects.ts` | approval dependency + projection ownership | neutral port type but retained dependency name plus explicit legacy projection seam | neutral dependency owner, legacy projection explicit compat-only seam | approval lane current-tree residualja nem csak a contractban, hanem a runtime projection ownerben is latszik | P1 | required-now | code diff + approval tests |
 | CS2 | `src/v11/application/reply/replyCommandContract.ts` + `replyCommandApi.ts` + `replyCommandDependencyResolution.ts` | reply dependency surface | retained delivery dependency name current orchestrator callig | neutral delivery dependency owner through API/orchestration surface | workflow contract residual itt a direct fire-and-forget callerig tart | P1 | required-now | code diff + reply tests |
 | CS3 | `src/v11/shared/kickoff/kickoffDependencyContract.ts` + `src/v11/application/kickoff/kickoffDependencyResolution.ts` + `src/v11/shared/kickoff/kickoffValidatedExecutionDelivery.ts` + `src/v11/shared/kickoff/kickoffResultBuilders.ts` | kickoff override + validation/result ownership | dual neutral + retained override, retained boolean result shape | explicit neutral override owner, retained boolean explicit compat projection | kickoffnal a dependency, validated delivery es result ownership egyutt zarja a residualt | P1 | required-now | code diff + kickoff tests |
-| CS4 | `src/v11/shared/askHuman/askHumanDeliveryPortsContract.ts` + `askHumanCommandContract.ts` + `askHumanFlowContract.ts` + `askHumanFlowInvocationContract.ts` + `askHumanFlowDependencyOptionalOverrides.ts` + `askHumanRuntimeDependencyForwardingContract.ts` + `askHumanRuntimeDependencyForwarding.ts` + `askHumanNotificationEmissionContract.ts` + `askHumanCommandOrchestrationContract.ts` + `askHumanFinalizationArtifactsContract.ts` + `askHumanFinalizationArtifacts.ts` + `askHumanFinalizationDependencyBuilderContract.ts` + `askHumanFinalizationDependencyResolutionContract.ts` + `src/v11/application/askHuman/askHumanNotificationEmission.ts` + `askHumanFinalization.ts` + `askHumanFinalizationDependencyBuilder.ts` + `askHumanFinalizationDependencyDefaults.ts` + `askHumanFinalizationDependencyResolution.ts` | ask-human shared/application delivery contract family | retained alias types, retained dependency names, boolean result ownership tobb flow/finalization/forwarding seam-en | neutral naming + explicit compat projection across the central flow es finalization owners | ask-human residual ownership nem csak a command contractban, hanem a flow/finalization/forwarding/defaults contractokban is latszik | P1 | required-now | code diff + ask-human tests/contracts |
+| CS4 | `src/v11/shared/askHuman/askHumanDeliveryPortsContract.ts` + `askHumanCommandContract.ts` + `askHumanCommandFlowDependencyInputBuilder.ts` + `askHumanCommandFlowDependencyWiringInputBuilder.ts` + `askHumanFlowContract.ts` + `askHumanFlowDependencyWiringContract.ts` + `askHumanFlowInvocationContract.ts` + `askHumanFlowDependencyOptionalOverrides.ts` + `askHumanRuntimeDependencyForwardingContract.ts` + `askHumanRuntimeDependencyForwarding.ts` + `askHumanNotificationEmissionContract.ts` + `askHumanCommandOrchestrationContract.ts` + `askHumanFinalizationArtifactsContract.ts` + `askHumanFinalizationArtifacts.ts` + `askHumanFinalizationDependencyBuilderContract.ts` + `askHumanFinalizationDependencyResolutionContract.ts` + `askHumanFinalizationDependencyResolutionInputBuilder.ts` + `src/v11/application/askHuman/askHumanNotificationEmission.ts` + `askHumanFinalization.ts` + `askHumanFinalizationDependencyBuilder.ts` + `askHumanFinalizationDependencyDefaults.ts` + `askHumanFinalizationDependencyResolution.ts` | ask-human shared/application delivery contract family | retained alias types, retained dependency names, boolean result ownership tobb flow/finalization/forwarding/input-builder seam-en | neutral naming + explicit compat projection across the central flow, builder es finalization owners | ask-human residual ownership nem csak a command contractban, hanem a command-to-flow wiringben, a flow runtime bridge-ben, a finalization-resolution input builderben es a defaults/finalization seam-ekben is latszik | P1 | required-now | code diff + ask-human tests/contracts |
 | CS5 | `src/v11/shared/converged/convergedCommandTypes.ts` + `src/v11/application/converged/convergedFlowInvocationBuilders.ts` + `runConvergedFlowContract.ts` + `convergedFinalizationTypes.ts` | converged flow dependency + result/finalization ownership | retained dependency alias and boolean delivery result shape | neutral dependency owner with explicit compat-only outward projection | converged workflow familyben a residual alias es boolean result a finalization shape-ben is first-class | P1 | required-now | code diff + converged tests/contracts |
 | CS6 | `src/v11/application/converged/convergedGateDelivery.ts` | aggregate delivery result | `delivered` first-class aggregate field | `status`-first aggregate with explicit compat projection only if still needed | aggregate ownership itt dol el | P1 | required-now | code/test diff |
 | CS7 | `src/v11/application/pass/passCommandContract.ts` + `reviewerDelivery.ts` + `reviewerDeliveryDefaults.ts` + `autoConvergeConvergedExecution.ts` + `autoConvergeFlowInvocationBuilders.ts` + `normalPassDeliveryExecution.ts` + `normalPassFlowInvocationBuilders.ts` + `passFlowDependencyWiring.ts` + `normalPassFinalization.ts` + `passResultDelivery.ts` + `passResultBuilder.ts` | pass dependency + wiring/finalization/result ownership | retained alias + boolean result field tobb invocation es delivery seam-en | neutral dependency owner + explicit compat projection | pass internal execution lane residualja a forwarding/invocation/finalization ownerig sugarzik | P1 | required-now | code/test diff |
@@ -445,7 +472,7 @@ owners:
 |---|---|---|---|---|---|
 | T1 | approval/reply dependency alignment | approval or reply flow compiles and runs with neutral dependency ownership | no retained dependency name remains canonical in these contracts, and approval legacy projection seam is explicit compat-only | P1 | `tests/core/human/approval.test.ts`, `tests/core/human/reply.test.ts`, `tests/contracts/v11/approval.contract.test.ts`, `tests/contracts/v11/reply.contract.test.ts`, typecheck |
 | T2 | kickoff override precedence and result ownership | neutral override + optional compat alias | neutral owner remains canonical, compat alias only fallback, kickoff validated delivery/result remains explicit projection | P1 | `tests/core/bubble/kickoffBubble.test.ts`, `tests/contracts/v11/kickoff.contract.test.ts`, `tests/v11/application/kickoff/kickoffValidatedExecution.test.ts`, `tests/v11/application/kickoff/kickoffResultBuilders.test.ts`, typecheck |
-| T3 | ask-human contract alignment | ask-human delivery types/results/finalization wiring inspected | shared/application flow es finalization contract neutralized, boolean explicit compat-only projection | P1 | `tests/core/agent/askHuman.test.ts`, `tests/contracts/v11/askHuman.contract.test.ts`, `tests/v11/application/askHuman/askHumanNotificationEmission.test.ts`, `tests/v11/application/askHuman/askHumanFinalization.test.ts`, `tests/v11/application/askHuman/askHumanFinalizationDependencyBuilder.test.ts`, `tests/v11/application/askHuman/askHumanFinalizationDependencyResolution.test.ts`, `tests/v11/application/askHuman/askHumanFinalizationArtifacts.test.ts`, `tests/v11/application/askHuman/askHumanRuntimeDependencyForwarding.test.ts`, typecheck |
+| T3 | ask-human contract alignment | ask-human delivery types/results/finalization wiring inspected | shared/application flow, input-builder es finalization contract neutralized, boolean explicit compat-only projection | P1 | `tests/core/agent/askHuman.test.ts`, `tests/contracts/v11/askHuman.contract.test.ts`, `tests/v11/application/askHuman/askHumanNotificationEmission.test.ts`, `tests/v11/application/askHuman/askHumanCommandFlowDependencyInputBuilder.test.ts`, `tests/v11/application/askHuman/askHumanCommandFlowDependencyWiringInputBuilder.test.ts`, `tests/v11/application/askHuman/askHumanFlowDependencyWiring.test.ts`, `tests/v11/application/askHuman/askHumanFinalization.test.ts`, `tests/v11/application/askHuman/askHumanFinalizationDependencyBuilder.test.ts`, `tests/v11/application/askHuman/askHumanFinalizationDependencyResolution.test.ts`, `tests/v11/application/askHuman/askHumanFinalizationDependencyResolutionInputBuilder.test.ts`, `tests/v11/application/askHuman/askHumanFinalizationArtifacts.test.ts`, `tests/v11/application/askHuman/askHumanRuntimeDependencyForwarding.test.ts`, typecheck |
 | T4 | converged aggregate alignment | mixed delivery results | aggregate reasoning derives from ack status, not boolean ownership, es a finalization shape compat-only projection marad | P1 | `tests/core/agent/converged.test.ts`, `tests/contracts/v11/converged.contract.test.ts`, `tests/v11/application/converged/convergedFlowInvocationBuilders.test.ts`, `tests/v11/application/converged/convergedFinalization.test.ts`, `tests/v11/application/converged/runConvergedFlow.test.ts`, typecheck |
 | T5 | pass delivery alignment | pass flow delivers accepted/rejected results | pass contract remains ack-driven with preserved compat projection across wiring, delivery execution, auto-converge es result seams | P1 | `tests/core/agent/pass.test.ts`, `tests/contracts/v11/pass.contract.test.ts`, `tests/v11/application/pass/reviewerDelivery.test.ts`, `tests/v11/application/pass/autoConvergeConvergedExecution.test.ts`, `tests/v11/application/pass/autoConvergeFlowInvocationBuilders.test.ts`, `tests/v11/application/pass/normalPassDeliveryExecution.test.ts`, `tests/v11/application/pass/normalPassFlowInvocationBuilders.test.ts`, `tests/v11/application/pass/passFlowDependencyWiring.test.ts`, `tests/v11/application/pass/normalPassFinalization.test.ts`, `tests/v11/application/pass/passResultDelivery.test.ts`, `tests/v11/application/pass/passResultBuilder.test.ts`, typecheck |
 | T6 | public/read-model non-scope proof | diff reviewed | no UI/router or root export fallout pulled in | P1 | diff review |
