@@ -518,7 +518,7 @@ describe("launchBubbleTmuxSession", () => {
       "-y",
       "13"
     ]);
-    // Reviewer split uses -p 50 inside implementer pane.
+    // Reviewer split targets the implementer pane directly; frame hooks normalize heights later.
     expect(calls[11]?.args).toEqual([
       "split-window",
       "-v",
@@ -527,13 +527,11 @@ describe("launchBubbleTmuxSession", () => {
       "#{pane_id}",
       "-t",
       "pf-b_start_01:0.1",
-      "-p",
-      "50",
       "-c",
       "/tmp/worktree",
       launchPanePlaceholderCommand
     ]);
-    // Meta-reviewer split uses dedicated pane after reviewer.
+    // Meta-reviewer split targets the reviewer pane directly.
     expect(calls[12]?.args).toEqual([
       "split-window",
       "-v",
@@ -542,8 +540,6 @@ describe("launchBubbleTmuxSession", () => {
       "#{pane_id}",
       "-t",
       "pf-b_start_01:0.2",
-      "-p",
-      "50",
       "-c",
       "/tmp/worktree",
       launchPanePlaceholderCommand

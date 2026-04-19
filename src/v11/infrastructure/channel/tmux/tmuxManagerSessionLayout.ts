@@ -76,8 +76,6 @@ export async function launchBubbleTmuxSessionLayout(
     "#{pane_id}",
     "-t",
     implementerPane,
-    "-p",
-    "50",
     "-c",
     input.workspacePath,
     input.placeholderCommand
@@ -92,8 +90,6 @@ export async function launchBubbleTmuxSessionLayout(
     "#{pane_id}",
     "-t",
     reviewerPane,
-    "-p",
-    "50",
     "-c",
     input.workspacePath,
     input.placeholderCommand
