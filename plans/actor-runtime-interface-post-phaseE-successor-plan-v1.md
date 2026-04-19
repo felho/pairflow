@@ -196,7 +196,7 @@ owners:
    - a zart baseline vocabulary explicit mappingjara es a topology/executor boundary explicit szetszalazasara kell tamaszkodnia,
    - az `Opportunity 4` alapertelmezetten ebbe a lane-be van beolvasztva mint core-vs-extension rationalization,
    - kulon `O4-T1` csak akkor nyithato, ha az `Opportunity 1 / O1-T1` outputja bizonyitja, hogy ez onallo bounded closure.
-11. A current tree-ben az `Opportunity 1` implementacios successor lane-je lezart, az `Opportunity 2`-ben viszont maradt ket residual downstream cleanup slice:
+11. A current tree-ben az `Opportunity 1` implementacios successor lane-je lezart, az `Opportunity 2`-ben viszont maradt egy residual downstream cleanup slice:
    - emiatt a kovetkezo bounded successor tovabbra is `O2`-ben van, nem az `O3`-ban
 
 ## Opportunity 2 Decomposition
@@ -262,9 +262,9 @@ owners:
      - terminate/delete/merge session cleanup surfaces
    - why separate: itt mar a retained start consume csalad es a repo-root/public export fallout zarasa tortenik, nem producer closure; a restart lane current-tree szinten a `startBubble(...)` inherited parityn keresztul koveti ezt a closure-t
 6. `O2-T6`
-   - status: current next residual workflow/defaults slice
+   - status: completed residual workflow/defaults slice
    - shape: `internal_execution_consumers` + `workflow_orchestration_consumers`
-   - task artifact: `plans/tasks/actor-runtime-interface-opportunity2-task6-meta-review-gate-runtime-capability-decoupling.md`
+   - task artifact: `plans/archive/tasks/actor-runtime-interface-opportunity2-task6-meta-review-gate-runtime-capability-decoupling.md`
    - goal: a meta-review gate workflow/defaults/runtime lane direct retained `tmux` primitive ownershipjanak domain-scoped capability contractra allitasa retained adapter parity mellett
    - expected target family:
      - `src/v11/shared/metaReviewGate/**`
@@ -279,7 +279,7 @@ owners:
      - generic executor registry vagy non-`tmux` runtime platform bevezetese
    - why separate: itt a workflow/defaults/internal execution meta-review gate contract ownership zarasa tortenik; a UI/public fallout kulon closure
 7. `O2-T7`
-   - status: downstream residual read-model/public slice
+   - status: current next residual read-model/public slice
    - shape: `read_model_consumers` + `activation_or_read_model`
    - task artifact: `plans/tasks/actor-runtime-interface-opportunity2-task7-ui-router-and-public-delivery-read-model-export-alignment.md`
    - goal: a UI/router es repo-root/public delivery read-model/export surface topology-neutral alignmentje retained parity mellett
@@ -369,14 +369,17 @@ owners:
      - a start/orchestration consume boundary primary launch truthja mar a topology-neutral `LaunchBubbleSessionAck` contractra ul
      - a retained `launchBubbleTmuxSessionAck(...)` es `launchBubbleTmuxSession(...)` explicit compat bridge maradt, nem canonical consume authority
      - a repo-root/public surface additiven exportalja a neutral launch helper/type csaladot retained parity mellett
-12. A current tree-ben ugyanakkor maradt egy residual downstream gap, amelyet az `O2-T1` note mar eredetileg is explicit deferred future implementation taskkent nevezett meg:
-   - a meta-review gate defaults lane current-tree szinten meg mindig direkt `tmux` pane primitivekre ul
-   - a UI/router es repo-root/public delivery surface tovabbra is retained `EmitTmuxDeliveryNotification*` vocabularyt exportal/fogyaszt
-13. A residual downstream gap a current-tree review alapjan ket bounded successor slice-ra bomlott:
-   - `O2-T6`
-   - scope: meta-review gate workflow/defaults/runtime capability decoupling retained adapter parity mellett
-   - task artifact: `plans/tasks/actor-runtime-interface-opportunity2-task6-meta-review-gate-runtime-capability-decoupling.md`
-14. Az `O2-T6` utani downstream residual slice:
+12. Az `O2-T6` meta-review gate workflow/defaults/runtime capability decoupling 2026-04-19-en merge-olve lett a `main` branchre:
+   - archived task artifact: `plans/archive/tasks/actor-runtime-interface-opportunity2-task6-meta-review-gate-runtime-capability-decoupling.md`
+   - merge commit: `353aad9ff062ea29b0c999d0a457bebcb4b0e021`
+   - bounded closure:
+     - a meta-review gate workflow/defaults lane direct retained `tmux` primitive ownershipja gate-local capability contractra allt retained adapter parityvel,
+     - a `MetaReviewRuntimeDeliveryObservation` persisted workflow truth maradt,
+     - a fail-closed delivery proof explicit negative parity coverage-et kapott.
+13. A current tree-ben maradt egyetlen residual downstream gap, amelyet az `O2-T1` note mar eredetileg is explicit deferred future implementation taskkent nevezett meg:
+   - a UI/router approval/rework delivery read-model tovabbra is retained `EmitTmuxDeliveryNotificationResult` shape-re projektal,
+   - a dedikalt repo-root/public delivery-contract export surface tovabbra is retained `EmitTmuxDeliveryNotification*` vocabularyra ul.
+14. A current next bounded successor slice:
    - `O2-T7`
    - scope: UI/router + repo-root/public delivery read-model/export alignment
    - task artifact: `plans/tasks/actor-runtime-interface-opportunity2-task7-ui-router-and-public-delivery-read-model-export-alignment.md`
@@ -406,9 +409,8 @@ owners:
      - `O2-T3` topology-neutral delivery consume-family alignment
      - `O2-T4` topology-neutral launch/executor contract foundation
      - `O2-T5` topology-neutral launch/executor consume-family alignment + launch repo-root/public export cleanup
-   - current next slice:
      - `O2-T6` meta-review gate workflow/defaults/runtime capability decoupling
-   - downstream residual slice:
+   - current next slice:
      - `O2-T7` UI/router + repo-root/public delivery read-model/export alignment
    - preserved baseline: a lezart typed ack/runtime-success semantics nem reopenolhato
    - disposition: open until residual downstream consumers are decoupled from direct `tmux` contract ownership
@@ -432,4 +434,6 @@ owners:
    - `src/types/protocol.ts`
    - `src/cli/commands/agent/emit.ts`
    - `src/v11/infrastructure/channel/tmux/tmuxDelivery.ts`
-   - `src/v11/defaults/metaReviewGate/metaReviewGateCommandDefaults.ts`
+   - `src/v11/shared/ports/uiRouter.ts`
+   - `src/v11/defaults/ui/routerDefaults.ts`
+   - `src/index.ts`

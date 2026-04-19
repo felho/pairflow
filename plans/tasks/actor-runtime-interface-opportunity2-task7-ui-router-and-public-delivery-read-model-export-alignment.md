@@ -8,6 +8,7 @@ target_files:
   - src/v11/shared/ports/uiRouter.ts
   - src/v11/defaults/ui/routerDefaults.ts
   - src/v11/infrastructure/ui/routerDependencies.ts
+  - src/v11/infrastructure/ui/routerActionDispatch.ts
   - src/index.ts
   - tests/core/ui/router.test.ts
 prd_ref: null
@@ -30,11 +31,14 @@ owners:
    - `UiEmitApprovalDecisionResult.delivery.implementerDelivery?: EmitTmuxDeliveryNotificationResult`
 3. A default UI mapper explicitten visszaprojektalja a neutral delivery signal-t a retained `delivered: boolean` shape-re:
    - `src/v11/defaults/ui/routerDefaults.ts`
-4. A repo-root/public delivery export surface current-tree szinten csak retained `EmitTmuxDeliveryNotification*` delivery shape-et exportal, neutral parity nelkul:
+4. A dedikalt repo-root/public delivery-contract export surface current-tree szinten csak retained `EmitTmuxDeliveryNotification*` vocabularyt exportal, neutral `DeliveryAck` parity nelkul:
    - `src/index.ts`
-5. A meta-review gate workflow/defaults cleanup kulon predecessor slice:
-   - ezt az `O2-T6` ownershipolja
+5. A meta-review gate workflow/defaults cleanup mar lezart predecessor slice:
+   - archived task artifact: `plans/archive/tasks/actor-runtime-interface-opportunity2-task6-meta-review-gate-runtime-capability-decoupling.md`
    - ez a task mar csak read-model/public alignment.
+6. A first-party UI HTTP route mar ugyanazt a dependency-surface-et terheli, ezert a read-model alignment blast radius a mapper+router boundaryben zarhato:
+   - `src/v11/infrastructure/ui/routerActionDispatch.ts`
+   - `tests/core/ui/router.test.ts`
 
 ## L0 - Policy
 
@@ -81,14 +85,14 @@ owners:
 2. Depends on:
    - `plans/actor-runtime-interface-post-phaseE-successor-plan-v1.md`
    - `plans/actor-runtime-interface-topology-neutral-delivery-executor-contract-note-v1.md`
-   - `plans/tasks/actor-runtime-interface-opportunity2-task6-meta-review-gate-runtime-capability-decoupling.md`
+   - `plans/archive/tasks/actor-runtime-interface-opportunity2-task6-meta-review-gate-runtime-capability-decoupling.md`
    - `plans/archive/tasks/actor-runtime-interface-opportunity2-task5-topology-neutral-launch-executor-consume-family-alignment.md`
 3. Unlocks / impacts successors:
    - `Opportunity 2` lane closeout
    - `O3-T1` biztonsagosabb nyitasa, mert a residual public/read-model retained ownership is eltunik
 4. Task-list impact:
-   - ez az `Opportunity 2` residual read-model/public closeout slice-a
-   - kulon lett bontva a meta-review gate workflow/defaults cleanup utan
+   - ez a current next bounded implementation slice az `Opportunity 2` lane-ben
+   - kulon lett bontva a lezart meta-review gate workflow/defaults cleanup utan
 
 ### Canonical Contract Anchors
 
@@ -120,6 +124,7 @@ owners:
    - `src/v11/shared/ports/uiRouter.ts`
    - `src/v11/defaults/ui/routerDefaults.ts`
    - `src/v11/infrastructure/ui/routerDependencies.ts`
+   - `src/v11/infrastructure/ui/routerActionDispatch.ts`
    - `src/index.ts`
 2. Actual touched scope:
    - primary bounded-task shape: `activation_or_read_model`
@@ -145,6 +150,7 @@ owners:
    - `src/v11/shared/ports/uiRouter.ts`
    - `src/v11/defaults/ui/routerDefaults.ts`
    - `src/v11/infrastructure/ui/routerDependencies.ts`
+   - `src/v11/infrastructure/ui/routerActionDispatch.ts`
    - `src/index.ts`
 6. `cleanup_recovery_consumers`
    - deferred
@@ -234,8 +240,9 @@ owners:
 | CS1 | `src/v11/shared/ports/uiRouter.ts` | UI delivery signal contract | retained `EmitTmuxDeliveryNotificationResult` | neutral UI/public delivery signal | contract owner itt latszik | P1 | required-now | code diff |
 | CS2 | `src/v11/defaults/ui/routerDefaults.ts` | UI signal mapping | neutral -> retained boolean projection | neutral -> neutral projection | read-model fallout itt zarhato | P1 | required-now | `tests/core/ui/router.test.ts` |
 | CS3 | `src/v11/infrastructure/ui/routerDependencies.ts` | UI dependency loading | current router contract | aligned router contract | dependency surface parity | P1 | required-now | code diff |
-| CS4 | `src/index.ts` | root public delivery exports | retained-only export surface | additive neutral delivery exports retained parityvel | public fallout itt zarhato | P1 | required-now | code diff |
-| CS5 | tests | UI router coverage | retained assumptions | neutral UI/public contract assertions | closeout tests kellenek | P1 | required-now | test diff |
+| CS4 | `src/v11/infrastructure/ui/routerActionDispatch.ts` | first-party HTTP action boundary | typed UI result passthrough | aligned JSON payload shape | blast radius itt zarul a route szelen | P1 | required-now | `tests/core/ui/router.test.ts` |
+| CS5 | `src/index.ts` | root public delivery exports | retained-only delivery export surface | additive neutral delivery exports retained parityvel | public fallout itt zarhato | P1 | required-now | code diff |
+| CS6 | tests | UI router coverage | retained assumptions | neutral UI/public contract assertions | closeout tests kellenek | P1 | required-now | test diff |
 
 ### 3) Data and Interface Contract
 
@@ -258,8 +265,8 @@ owners:
 
 | ID | Scenario | Setup | Expected Result | Priority | Evidence |
 |---|---|---|---|---|---|
-| T1 | UI approve mapping | approval delivery signal adott | UI result neutral signal shape-et ad vissza | P1 | `tests/core/ui/router.test.ts` |
-| T2 | UI rework mapping | immediate rework signal adott | neutral signal semantics preserved | P1 | `tests/core/ui/router.test.ts` |
+| T1 | UI approve mapping | approval delivery signal adott | UI result es HTTP payload neutral signal shape-et ad vissza | P1 | `tests/core/ui/router.test.ts` |
+| T2 | UI rework mapping | immediate rework signal adott | neutral signal semantics preserved marad a first-party route-on is | P1 | `tests/core/ui/router.test.ts` |
 | T3 | rejected signal fields | rejected approval signal optional okokkal | `reason` / `reason_code` explicit marad | P1 | code/test diff |
 | T4 | root export parity | repo-root export surface olvasasa | neutral delivery exportok elerhetok retained parity mellett | P1 | code diff |
 
