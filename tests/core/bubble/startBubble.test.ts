@@ -1109,6 +1109,18 @@ describe("startBubble", () => {
       "/home/dev/.local/share/pnpm/pairflow";
     process.env[remoteCloneWorkspaceRootEnvVar] = repoPath;
     process.env.PAIRFLOW_WORKTREE_ROOT = repoPath;
+    const claimRuntimeSession = vi.fn(async () => ({
+      claimed: true,
+      record: {
+        bubbleId: created.bubbleId,
+        repoPath,
+        worktreePath: created.paths.worktreePath,
+        tmuxSessionName: "pf-b_start_remote_inner_01",
+        workspacePath: repoPath,
+        workspaceKind: "worktree" as const,
+        updatedAt: "2026-04-16T11:00:00.000Z"
+      }
+    }));
     try {
       const result = await startBubble(
         {
@@ -1117,9 +1129,7 @@ describe("startBubble", () => {
           now: new Date("2026-04-16T11:00:00.000Z")
         },
         {
-          claimRuntimeSession: vi.fn(async () => {
-            throw new Error("inner remote start must not claim runtime session");
-          }),
+          claimRuntimeSession,
           bootstrapWorktreeWorkspace: vi.fn(async () => {
             throw new Error("inner remote start must not bootstrap a worktree");
           }),
@@ -1144,6 +1154,7 @@ describe("startBubble", () => {
       expect(result.runtimeWorkspacePath).toBe(repoPath);
       expect(result.tmuxSessionName).toBe("pf-b_start_remote_inner_01");
       expect(result.state.state).toBe("RUNNING");
+      expect(claimRuntimeSession).toHaveBeenCalledTimes(1);
     } finally {
       if (previousMode === undefined) {
         delete process.env[remoteCloneStartModeEnvVar];

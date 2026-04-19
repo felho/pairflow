@@ -214,11 +214,9 @@ export async function startBubble(
   });
   const context = await loadExecutionContextOrThrow(input, deps, resolved);
   const bypassRuntimeSessionClaim =
-    context.remoteStartContext !== undefined
-    || (
-      context.startMode === "fresh"
-      && context.resolved.bubbleConfig.executor?.type === "ssh"
-    );
+    context.remoteStartContext === undefined
+    && context.startMode === "fresh"
+    && context.resolved.bubbleConfig.executor?.type === "ssh";
   if (!bypassRuntimeSessionClaim) {
     await claimRuntimeSessionOwnershipOrThrow({
       context,
