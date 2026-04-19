@@ -309,15 +309,12 @@ function mergeExpandedDetailWithIncomingDetail(
     return incoming;
   }
 
-  const preservePreviousAttention =
-    previous.attention !== null && incoming.attention === null;
   const preservePreviousRemoteExecution =
     previous.remoteExecution !== undefined && incoming.remoteExecution === undefined;
 
   return {
     ...previous,
     ...incoming,
-    attention: preservePreviousAttention ? previous.attention : incoming.attention,
     ...(preservePreviousRemoteExecution
       ? { remoteExecution: previous.remoteExecution }
       : incoming.remoteExecution !== undefined

@@ -1792,6 +1792,62 @@ describe("createBubbleStore", () => {
       diagnosticDetail.remoteExecution
     );
   });
+
+  it("clears expanded detail attention when a later detail refresh resolves it", async () => {
+    const initialSummary = bubbleSummary({
+      bubbleId: "b-a",
+      repoPath: "/repo-a",
+      state: "WAITING_HUMAN"
+    });
+    const diagnosticDetail = bubbleDetail({
+      bubbleId: "b-a",
+      repoPath: "/repo-a",
+      state: "WAITING_HUMAN",
+      attention: {
+        code: "watchdog_expired",
+        severity: "warning",
+        label: "Watchdog expired",
+        detail: "The watchdog deadline passed without observed protocol activity."
+      }
+    });
+    const resolvedDetail = {
+      ...diagnosticDetail,
+      attention: null
+    };
+
+    const api = createApiStub({
+      getRepos: vi.fn(async () => ["/repo-a"]),
+      getBubbles: vi.fn(async () => ({
+        repo: repoSummary("/repo-a"),
+        bubbles: [initialSummary]
+      })),
+      getBubble: vi
+        .fn<(repoPath: string, bubbleId: string) => Promise<typeof diagnosticDetail>>()
+        .mockResolvedValueOnce(diagnosticDetail)
+        .mockResolvedValueOnce(resolvedDetail as typeof diagnosticDetail),
+      getBubbleTimeline: vi.fn(async () => [])
+    });
+
+    const store = createBubbleStore({
+      api,
+      createEventsClient: () => ({
+        start: () => undefined,
+        stop: () => undefined,
+        refresh: () => undefined
+      })
+    });
+
+    await store.getState().initialize();
+    await store.getState().toggleBubbleExpanded("b-a");
+    expect(store.getState().bubbleDetails["b-a"]?.attention).toEqual(
+      diagnosticDetail.attention
+    );
+
+    await store.getState().refreshExpandedBubble("b-a");
+
+    expect(store.getState().bubbleDetails["b-a"]?.attention).toBeNull();
+    expect(store.getState().bubblesById["b-a"]?.attention).toBeNull();
+  });
 });
 
 describe("deleteBubble store method", () => {
