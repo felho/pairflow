@@ -7,9 +7,6 @@ import type {
   LaunchBubbleTmuxSessionInput,
   LaunchBubbleTmuxSessionPort,
   LaunchBubbleTmuxSessionResult,
-  TerminateBubbleTmuxSessionInput,
-  TerminateBubbleTmuxSessionPort,
-  TerminateBubbleTmuxSessionResult,
   TmuxRunner
 } from "../../../shared/ports/tmuxSessions.js";
 import {
@@ -18,6 +15,10 @@ import {
 } from "./tmuxRunner.js";
 import { launchBubbleTmuxSessionLayout } from "./tmuxManagerSessionLayout.js";
 import { seedBubbleTmuxPaneMessages } from "./tmuxManagerPaneSeed.js";
+import {
+  respawnTmuxPaneCommand,
+  terminateBubbleTmuxSession
+} from "./tmuxManagerRuntime.js";
 
 export type {
   LaunchBubbleSessionAck,
@@ -50,6 +51,7 @@ export type {
   TmuxRunner
 } from "../../../shared/ports/tmuxSessions.js";
 export { runTmux, TmuxCommandError } from "./tmuxRunner.js";
+export type { RespawnTmuxPaneCommandInput } from "./tmuxManagerRuntime.js";
 
 export const runtimePaneIndices = {
   status: 0,
@@ -64,14 +66,6 @@ function buildStatusPaneLabel(bubbleId: string): string {
 
 function buildLaunchPanePlaceholderCommand(): string {
   return "sh -lc 'while :; do sleep 3600; done'";
-}
-
-export interface RespawnTmuxPaneCommandInput {
-  sessionName: string;
-  paneIndex: number;
-  cwd: string;
-  command: string;
-  runner?: TmuxRunner;
 }
 
 export class TmuxSessionExistsError extends Error {
@@ -157,6 +151,20 @@ interface LaunchBubbleSessionAckResolution {
   legacyError?: Error;
 }
 
+interface LaunchBubbleSessionRuntimeConfig {
+  runner: TmuxRunner;
+  sessionName: string;
+  workspacePath: string;
+  statusPaneHeight: number;
+  tmuxPaneSeparators: number;
+  metaReviewerCommand: string;
+  statusPaneLabel: string;
+  implementerPaneLabel: string;
+  reviewerPaneLabel: string;
+  metaReviewerPaneLabel: string;
+  placeholderCommand: string;
+}
+
 function createLaunchBubbleSessionAckResolution(
   input:
     | {
@@ -216,6 +224,140 @@ function isLaunchAckInternalInvariantError(error: unknown): boolean {
   );
 }
 
+function createWorkspaceRequiredAckResolution(
+  bubbleId: string,
+  error: unknown
+): LaunchBubbleSessionAckResolution {
+  const legacyError = new Error(
+    buildLegacyTmuxLaunchWorkspaceRequiredMessage(bubbleId)
+  );
+  const canonicalErrorMessage =
+    error instanceof Error ? error.message : new Error(String(error)).message;
+  return createLaunchBubbleSessionAckResolution({
+    failureKind: "workspace_required",
+    errorMessage: canonicalErrorMessage,
+    legacyError
+  });
+}
+
+function buildLaunchBubbleSessionRuntimeConfig(
+  input: LaunchBubbleSessionInput,
+  runner: TmuxRunner,
+  sessionName: string,
+  workspacePath: string
+): LaunchBubbleSessionRuntimeConfig {
+  return {
+    runner,
+    sessionName,
+    workspacePath,
+    statusPaneHeight: 13,
+    tmuxPaneSeparators: 4,
+    metaReviewerCommand: input.metaReviewerCommand ?? input.reviewerCommand,
+    statusPaneLabel: input.statusPaneLabel ?? buildStatusPaneLabel(input.bubbleId),
+    implementerPaneLabel: input.implementerPaneLabel ?? "[codex/implementer]",
+    reviewerPaneLabel: input.reviewerPaneLabel ?? "[claude/reviewer]",
+    metaReviewerPaneLabel:
+      input.metaReviewerPaneLabel ?? "[codex/meta-reviewer]",
+    placeholderCommand: buildLaunchPanePlaceholderCommand()
+  };
+}
+
+async function resolveHasSessionAckFailure(
+  runner: TmuxRunner,
+  sessionName: string
+): Promise<LaunchBubbleSessionAckResolution | null> {
+  const hasSession = await runner(["has-session", "-t", sessionName], {
+    allowFailure: true
+  });
+  if (hasSession.exitCode === 1) {
+    return null;
+  }
+  if (hasSession.exitCode === 0) {
+    const legacyError = new TmuxSessionExistsError(sessionName);
+    return createLaunchBubbleSessionAckResolution({
+      failureKind: "session_exists",
+      errorMessage: legacyError.message,
+      sessionName,
+      legacyError
+    });
+  }
+
+  const legacyError = new TmuxCommandError(
+    ["has-session", "-t", sessionName],
+    hasSession.exitCode,
+    hasSession.stderr || hasSession.stdout
+  );
+  return createLaunchBubbleSessionAckResolution({
+    failureKind: "tmux_command_failed",
+    errorMessage: legacyError.message,
+    sessionName,
+    legacyError
+  });
+}
+
+async function launchAndSeedBubbleSession(
+  config: LaunchBubbleSessionRuntimeConfig,
+  input: LaunchBubbleSessionInput
+): Promise<void> {
+  await config.runner([
+    "new-session",
+    "-d",
+    "-s",
+    config.sessionName,
+    "-c",
+    config.workspacePath,
+    input.statusCommand
+  ]);
+  const layout = await launchBubbleTmuxSessionLayout({
+    runner: config.runner,
+    sessionName: config.sessionName,
+    workspacePath: config.workspacePath,
+    statusPaneLabel: config.statusPaneLabel,
+    implementerPaneLabel: config.implementerPaneLabel,
+    reviewerPaneLabel: config.reviewerPaneLabel,
+    metaReviewerPaneLabel: config.metaReviewerPaneLabel,
+    statusPaneHeight: config.statusPaneHeight,
+    tmuxPaneSeparators: config.tmuxPaneSeparators,
+    placeholderCommand: config.placeholderCommand
+  });
+  await respawnTmuxPaneCommand({
+    sessionName: config.sessionName,
+    paneIndex: runtimePaneIndices.implementer,
+    cwd: config.workspacePath,
+    command: input.implementerCommand,
+    runner: config.runner
+  });
+  await respawnTmuxPaneCommand({
+    sessionName: config.sessionName,
+    paneIndex: runtimePaneIndices.reviewer,
+    cwd: config.workspacePath,
+    command: input.reviewerCommand,
+    runner: config.runner
+  });
+  await respawnTmuxPaneCommand({
+    sessionName: config.sessionName,
+    paneIndex: runtimePaneIndices.metaReviewer,
+    cwd: config.workspacePath,
+    command: config.metaReviewerCommand,
+    runner: config.runner
+  });
+  await seedBubbleTmuxPaneMessages({
+    runner: config.runner,
+    implementerPaneId: layout.implementerPaneId,
+    reviewerPaneId: layout.reviewerPaneId,
+    metaReviewerPaneId: layout.metaReviewerPaneId,
+    implementerSubmitStartupPrompt: input.implementerSubmitStartupPrompt,
+    reviewerSubmitStartupPrompt: input.reviewerSubmitStartupPrompt,
+    metaReviewerSubmitStartupPrompt: input.metaReviewerSubmitStartupPrompt,
+    implementerBootstrapMessage: input.implementerBootstrapMessage,
+    reviewerBootstrapMessage: input.reviewerBootstrapMessage,
+    metaReviewerBootstrapMessage: input.metaReviewerBootstrapMessage,
+    implementerKickoffMessage: input.implementerKickoffMessage,
+    reviewerKickoffMessage: input.reviewerKickoffMessage,
+    metaReviewerKickoffMessage: input.metaReviewerKickoffMessage
+  });
+}
+
 export const launchBubbleSessionAck: LaunchBubbleSessionAckPort = async (
   input: LaunchBubbleSessionInput
 ): Promise<LaunchBubbleSessionAck> => {
@@ -239,111 +381,24 @@ async function resolveLaunchBubbleSessionAck(
   try {
     workspacePath = resolveLaunchWorkspacePath(input);
   } catch (error) {
-    const legacyError = new Error(
-      buildLegacyTmuxLaunchWorkspaceRequiredMessage(input.bubbleId)
-    );
-    const canonicalErrorMessage =
-      error instanceof Error ? error.message : new Error(String(error)).message;
-    return createLaunchBubbleSessionAckResolution({
-      failureKind: "workspace_required",
-      errorMessage: canonicalErrorMessage,
-      legacyError
-    });
+    return createWorkspaceRequiredAckResolution(input.bubbleId, error);
   }
-  const statusPaneHeight = 13;
-  const tmuxPaneSeparators = 4;
-  const metaReviewerCommand = input.metaReviewerCommand ?? input.reviewerCommand;
-  const statusPaneLabel = input.statusPaneLabel ?? buildStatusPaneLabel(input.bubbleId);
-  const implementerPaneLabel = input.implementerPaneLabel ?? "[codex/implementer]";
-  const reviewerPaneLabel = input.reviewerPaneLabel ?? "[claude/reviewer]";
-  const metaReviewerPaneLabel =
-    input.metaReviewerPaneLabel ?? "[codex/meta-reviewer]";
-  const placeholderCommand = buildLaunchPanePlaceholderCommand();
+  const runtimeConfig = buildLaunchBubbleSessionRuntimeConfig(
+    input,
+    runner,
+    sessionName,
+    workspacePath
+  );
 
   try {
-    const hasSession = await runner(["has-session", "-t", sessionName], {
-      allowFailure: true
-    });
-    if (hasSession.exitCode === 0) {
-      const legacyError = new TmuxSessionExistsError(sessionName);
-      return createLaunchBubbleSessionAckResolution({
-        failureKind: "session_exists",
-        errorMessage: legacyError.message,
-        sessionName,
-        legacyError
-      });
+    const hasSessionFailure = await resolveHasSessionAckFailure(
+      runtimeConfig.runner,
+      runtimeConfig.sessionName
+    );
+    if (hasSessionFailure !== null) {
+      return hasSessionFailure;
     }
-    if (hasSession.exitCode !== 1) {
-      const legacyError = new TmuxCommandError(
-        ["has-session", "-t", sessionName],
-        hasSession.exitCode,
-        hasSession.stderr || hasSession.stdout
-      );
-      return createLaunchBubbleSessionAckResolution({
-        failureKind: "tmux_command_failed",
-        errorMessage: legacyError.message,
-        sessionName,
-        legacyError
-      });
-    }
-
-    await runner([
-      "new-session",
-      "-d",
-      "-s",
-      sessionName,
-      "-c",
-      workspacePath,
-      input.statusCommand
-    ]);
-    const layout = await launchBubbleTmuxSessionLayout({
-      runner,
-      sessionName,
-      workspacePath,
-      statusPaneLabel,
-      implementerPaneLabel,
-      reviewerPaneLabel,
-      metaReviewerPaneLabel,
-      statusPaneHeight,
-      tmuxPaneSeparators,
-      placeholderCommand
-    });
-    await respawnTmuxPaneCommand({
-      sessionName,
-      paneIndex: runtimePaneIndices.implementer,
-      cwd: workspacePath,
-      command: input.implementerCommand,
-      runner
-    });
-    await respawnTmuxPaneCommand({
-      sessionName,
-      paneIndex: runtimePaneIndices.reviewer,
-      cwd: workspacePath,
-      command: input.reviewerCommand,
-      runner
-    });
-    await respawnTmuxPaneCommand({
-      sessionName,
-      paneIndex: runtimePaneIndices.metaReviewer,
-      cwd: workspacePath,
-      command: metaReviewerCommand,
-      runner
-    });
-    await seedBubbleTmuxPaneMessages({
-      runner,
-      implementerPaneId: layout.implementerPaneId,
-      reviewerPaneId: layout.reviewerPaneId,
-      metaReviewerPaneId: layout.metaReviewerPaneId,
-      implementerSubmitStartupPrompt: input.implementerSubmitStartupPrompt,
-      reviewerSubmitStartupPrompt: input.reviewerSubmitStartupPrompt,
-      metaReviewerSubmitStartupPrompt: input.metaReviewerSubmitStartupPrompt,
-      implementerBootstrapMessage: input.implementerBootstrapMessage,
-      reviewerBootstrapMessage: input.reviewerBootstrapMessage,
-      metaReviewerBootstrapMessage: input.metaReviewerBootstrapMessage,
-      implementerKickoffMessage: input.implementerKickoffMessage,
-      reviewerKickoffMessage: input.reviewerKickoffMessage,
-      metaReviewerKickoffMessage: input.metaReviewerKickoffMessage
-    });
+    await launchAndSeedBubbleSession(runtimeConfig, input);
 
     return {
       ack: {
@@ -381,69 +436,4 @@ export const launchBubbleTmuxSession: LaunchBubbleTmuxSessionPort = async (
     `${ack.reason_code}: context operation_id=launch_bubble_tmux_session bubble_id=${input.bubbleId}. ${ack.error_message}`
   );
 };
-
-function isTmuxMissingSessionError(output: string): boolean {
-  const normalized = output.toLowerCase();
-  return (
-    normalized.includes("can't find session") ||
-    normalized.includes("no server running") ||
-    normalized.includes("no current target")
-  );
-}
-
-export const terminateBubbleTmuxSession: TerminateBubbleTmuxSessionPort = async (
-  input: TerminateBubbleTmuxSessionInput
-): Promise<TerminateBubbleTmuxSessionResult> => {
-  const runner = input.runner ?? runTmux;
-  const sessionName =
-    input.sessionName ?? (input.bubbleId !== undefined
-      ? buildBubbleTmuxSessionName(input.bubbleId)
-      : undefined);
-
-  if (sessionName === undefined) {
-    throw new Error(
-      "TMUX_TERMINATE_SESSION_INPUT_REQUIRED: context operation_id=terminate_bubble_tmux_session requires sessionName or bubbleId."
-    );
-  }
-
-  const result = await runner(["kill-session", "-t", sessionName], {
-    allowFailure: true
-  });
-
-  if (result.exitCode === 0) {
-    return {
-      sessionName,
-      existed: true
-    };
-  }
-
-  const combinedOutput = `${result.stderr}\n${result.stdout}`;
-  if (isTmuxMissingSessionError(combinedOutput)) {
-    return {
-      sessionName,
-      existed: false
-    };
-  }
-
-  throw new TmuxCommandError(
-    ["kill-session", "-t", sessionName],
-    result.exitCode,
-    result.stderr
-  );
-};
-
-export async function respawnTmuxPaneCommand(
-  input: RespawnTmuxPaneCommandInput
-): Promise<void> {
-  const runner = input.runner ?? runTmux;
-  const targetPane = `${input.sessionName}:0.${input.paneIndex}`;
-  await runner([
-    "respawn-pane",
-    "-k",
-    "-t",
-    targetPane,
-    "-c",
-    input.cwd,
-    input.command
-  ]);
-}
+export { terminateBubbleTmuxSession, respawnTmuxPaneCommand };
