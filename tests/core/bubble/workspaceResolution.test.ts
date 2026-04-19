@@ -133,4 +133,43 @@ describe("resolveBubbleFromWorkspaceCwd", () => {
       await realpath(bubble.paths.worktreePath)
     );
   });
+
+  it("resolves ssh executor bubbles from a remote-style clone root on the bubble branch", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await createBubble(
+      {
+        id: "b_resolve_remote_01",
+        repoPath,
+        baseBranch: "main",
+        reviewArtifactType: "code",
+        task: "Task",
+        remote: "spark1",
+        cwd: repoPath
+      },
+      {
+        loadPairflowGlobalConfig: async () => ({
+          remotes: {
+            spark1: {
+              host: "spark1"
+            }
+          }
+        })
+      }
+    );
+
+    await runGit(repoPath, ["checkout", "-b", bubble.config.bubble_branch]);
+
+    const resolved = await resolveBubbleFromWorkspaceCwd(repoPath);
+    const normalizedResolvedRepoPath = await realpath(resolved.repoPath);
+    const normalizedResolvedWorktreePath = await realpath(resolved.worktreePath);
+    const normalizedRepoPath = await realpath(repoPath);
+
+    expect(resolved.bubbleId).toBe("b_resolve_remote_01");
+    expect(normalizedResolvedRepoPath).toBe(normalizedRepoPath);
+    expect(normalizedResolvedWorktreePath).toBe(normalizedRepoPath);
+    expect(resolved.bubbleConfig.executor).toEqual({
+      type: "ssh",
+      remote: "spark1"
+    });
+  });
 });

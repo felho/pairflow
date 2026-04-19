@@ -100,7 +100,18 @@ export async function doesCandidateMatchWorkspace(
 
   const expectedWorktreePath = resolve(candidate.paths.worktreePath);
   const normalizedExpectedWorktreePath = await normalizePath(expectedWorktreePath);
-  return isPathInside(normalizedExpectedWorktreePath, normalizedWorktreePath);
+  if (isPathInside(normalizedExpectedWorktreePath, normalizedWorktreePath)) {
+    return true;
+  }
+
+  // Remote ssh executor bubbles run directly from a remote clone root rather
+  // than from the local `.pairflow-worktrees/...` path derived by getBubblePaths.
+  // In that self-host layout the git repo root and worktree root are the same
+  // remote clone path, so branch-based resolution should accept the bubble even
+  // though the derived local worktree path does not match.
+  return candidate.config.executor?.type === "ssh"
+    && normalizedConfigRepoPath === normalizedRepoPath
+    && normalizedRepoPath === normalizedWorktreePath;
 }
 
 export async function listBubbleConfigs(
