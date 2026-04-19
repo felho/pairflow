@@ -149,6 +149,8 @@ export function shouldRetryPassDelivery(input: {
     input.executeInput.senderRole === "implementer"
     && input.executeInput.recipientRole === "reviewer"
     && (
+      input.deliveryResult?.reason === "no_runtime_session"
+      || 
       input.deliveryResult?.reason === "delivery_unconfirmed"
       || input.deliveryResult?.reason === "tmux_send_failed"
     )

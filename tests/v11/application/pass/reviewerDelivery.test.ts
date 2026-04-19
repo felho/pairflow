@@ -218,6 +218,64 @@ describe("executePassDelivery", () => {
     });
   });
 
+  it("retries once on no_runtime_session during implementer->reviewer handoff", async () => {
+    const calls: unknown[] = [];
+    const emitDeliveryNotificationAck: NonNullable<
+      PassDeliveryDependencies["emitDeliveryNotificationAck"]
+    > = async (input) => {
+      calls.push(input);
+      if (calls.length === 1) {
+        return {
+          status: "rejected",
+          reason: "no_runtime_session",
+          reason_code: "DELIVERY_ACK_REJECTED",
+          message: "reviewer runtime session not registered yet"
+        };
+      }
+      return {
+        status: "accepted",
+        message: "second attempt confirmed",
+        sessionName: "pf_bubble",
+        targetPaneIndex: 2
+      };
+    };
+    const reviewerDeliveryDependencies: PassDeliveryDependencies = {
+      emitDeliveryNotificationAck,
+      readReviewerBriefArtifact,
+      readReviewerFocusArtifact,
+      resolveDeliveryMessageRef
+    };
+
+    const result = await executePassDelivery(
+      {
+        bubbleId: "b_delivery_v11_01",
+        bubbleConfig: createBubbleConfig("persistent"),
+        sessionsPath: "/tmp/repo/.pairflow/runtime/sessions.json",
+        reviewerBriefArtifactPath: "/tmp/missing-brief.md",
+        reviewerFocusArtifactPath: "/tmp/missing-focus.json",
+        envelope: createEnvelope(),
+        senderRole: "implementer",
+        recipientRole: "reviewer"
+      },
+      reviewerDeliveryDependencies
+    );
+
+    expect(calls).toHaveLength(2);
+    expect(calls[1]).toMatchObject({
+      initialDelayMs: 5000,
+      deliveryAttempts: 6
+    });
+    expect(result).toEqual({
+      result: {
+        status: "accepted",
+        message: "second attempt confirmed",
+        sessionName: "pf_bubble",
+        targetPaneIndex: 2
+      },
+      retried: true
+    });
+  });
+
   it("retries once on unconfirmed delivery during reviewer->implementer handoff", async () => {
     const calls: unknown[] = [];
     const refreshCalls: unknown[] = [];
