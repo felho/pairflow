@@ -712,6 +712,7 @@ export function createBubbleStore(
   let latestInitializeId = 0;
   let latestAppliedEventId = 0;
   let latestAppliedSnapshotTs = "";
+  const latestExpandedRefreshRequestIdByBubble = new Map<string, number>();
 
   const store = createStore<BubbleStoreState>((set, get) => {
     const syncExpandedFromSummary = (
@@ -788,6 +789,9 @@ export function createBubbleStore(
       if (bubble === undefined) {
         return;
       }
+      const refreshRequestId =
+        (latestExpandedRefreshRequestIdByBubble.get(bubbleId) ?? 0) + 1;
+      latestExpandedRefreshRequestIdByBubble.set(bubbleId, refreshRequestId);
 
       set((state) => ({
         detailLoadingById: {
@@ -816,6 +820,11 @@ export function createBubbleStore(
       ]);
 
       set((state) => {
+        if (latestExpandedRefreshRequestIdByBubble.get(bubbleId) !== refreshRequestId) {
+          return {};
+        }
+        latestExpandedRefreshRequestIdByBubble.delete(bubbleId);
+
         const detailLoadingById = { ...state.detailLoadingById };
         const timelineLoadingById = { ...state.timelineLoadingById };
         delete detailLoadingById[bubbleId];

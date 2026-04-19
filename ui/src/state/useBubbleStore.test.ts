@@ -20,7 +20,9 @@ import type {
   BubbleDeleteResult,
   BubblePosition,
   ConnectionStatus,
+  UiBubbleDetail,
   UiEvent,
+  UiTimelineEntry,
   UiRepoSummary
 } from "../lib/types";
 import { bubbleDetail, bubbleSummary, repoSummary } from "../test/fixtures";
@@ -2198,5 +2200,160 @@ describe("deleteBubble store method", () => {
 
     expect(api.deleteBubble).toHaveBeenCalledWith("/repo-a", "b-a", { force: true });
     expect(getBubbles).toHaveBeenCalledTimes(2);
+  });
+
+  it("ignores stale expanded refresh completions that resolve after a newer refresh", async () => {
+    const initialSummary = bubbleSummary({
+      bubbleId: "b-a",
+      repoPath: "/repo-a",
+      state: "RUNNING"
+    });
+    const initialDetail = bubbleDetail({
+      bubbleId: "b-a",
+      repoPath: "/repo-a",
+      state: "RUNNING"
+    });
+    const readyDetail = bubbleDetail({
+      bubbleId: "b-a",
+      repoPath: "/repo-a",
+      state: "READY_FOR_HUMAN_APPROVAL"
+    });
+    const initialReviewerMetaDetail = {
+      ...initialDetail,
+      activeRole: "reviewer" as const,
+      metaReview: {
+        actor: "meta-reviewer" as const,
+        authorityActive: true,
+        runtimeDelivery: null
+      }
+    };
+    const readyForApprovalDetail = {
+      ...readyDetail,
+      activeAgent: null,
+      activeRole: null,
+      metaReview: {
+        actor: "meta-reviewer" as const,
+        authorityActive: false,
+        runtimeDelivery: null
+      }
+    };
+    const staleDetailDeferred = createDeferred<typeof initialReviewerMetaDetail>();
+    const staleTimelineDeferred = createDeferred<UiTimelineEntry[]>();
+    const latestTimeline: UiTimelineEntry[] = [
+      {
+        id: "env-approval",
+        ts: "2026-04-19T19:26:48.011Z",
+        round: 2,
+        type: "APPROVAL_REQUEST" as const,
+        sender: "orchestrator",
+        recipient: "human",
+        payload: {
+          summary: "Bubble is ready for approval."
+        },
+        refs: []
+      }
+    ];
+
+    const getBubble = vi
+      .fn<(repoPath: string, bubbleId: string) => Promise<UiBubbleDetail>>()
+      .mockResolvedValueOnce(initialReviewerMetaDetail)
+      .mockImplementationOnce(async () => staleDetailDeferred.promise)
+      .mockResolvedValueOnce(readyForApprovalDetail);
+    const getBubbleTimeline = vi
+      .fn<(repoPath: string, bubbleId: string) => Promise<typeof latestTimeline>>()
+      .mockResolvedValueOnce([])
+      .mockImplementationOnce(async () => staleTimelineDeferred.promise)
+      .mockResolvedValueOnce(latestTimeline);
+
+    let emitEvent: (event: UiEvent) => void = () => undefined;
+    const store = createBubbleStore({
+      api: createApiStub({
+        getRepos: vi.fn(async () => ["/repo-a"]),
+        getBubbles: vi.fn(async () => ({
+          repo: repoSummary("/repo-a"),
+          bubbles: [initialSummary]
+        })),
+        getBubble,
+        getBubbleTimeline
+      }),
+      createEventsClient: (input) => {
+        emitEvent = input.onEvent;
+        return {
+          start: () => undefined,
+          stop: () => undefined,
+          refresh: () => undefined
+        };
+      }
+    });
+
+    await store.getState().initialize();
+    await store.getState().toggleBubbleExpanded("b-a");
+
+    emitEvent({
+      id: 301,
+      ts: "2026-04-19T19:26:10.000Z",
+      type: "bubble.updated",
+      repoPath: "/repo-a",
+      bubbleId: "b-a",
+      bubble: bubbleSummary({
+        bubbleId: "b-a",
+        repoPath: "/repo-a",
+        state: "RUNNING",
+        activeRole: "reviewer",
+        metaReview: {
+          actor: "meta-reviewer",
+          authorityActive: true,
+          runtimeDelivery: null
+        }
+      })
+    });
+
+    emitEvent({
+      id: 302,
+      ts: "2026-04-19T19:26:48.011Z",
+      type: "bubble.updated",
+      repoPath: "/repo-a",
+      bubbleId: "b-a",
+      bubble: bubbleSummary({
+        bubbleId: "b-a",
+        repoPath: "/repo-a",
+        state: "READY_FOR_HUMAN_APPROVAL",
+        activeAgent: null,
+        activeRole: null,
+        metaReview: {
+          actor: "meta-reviewer",
+          authorityActive: false,
+          runtimeDelivery: null
+        }
+      })
+    });
+
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(store.getState().bubbleDetails["b-a"]?.state).toBe("READY_FOR_HUMAN_APPROVAL");
+    expect(store.getState().bubbleTimelines["b-a"]).toEqual(latestTimeline);
+
+    staleDetailDeferred.resolve(initialReviewerMetaDetail);
+    staleTimelineDeferred.resolve([
+      {
+        id: "env-pass",
+        ts: "2026-04-19T19:20:59.424Z",
+        round: 1,
+        type: "PASS",
+        sender: "codex",
+        recipient: "claude",
+        payload: {
+          summary: "stale pass only"
+        },
+        refs: []
+      }
+    ]);
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(store.getState().bubblesById["b-a"]?.state).toBe("READY_FOR_HUMAN_APPROVAL");
+    expect(store.getState().bubbleDetails["b-a"]?.state).toBe("READY_FOR_HUMAN_APPROVAL");
+    expect(store.getState().bubbleTimelines["b-a"]).toEqual(latestTimeline);
   });
 });
