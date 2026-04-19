@@ -27,7 +27,7 @@ target_files:
   - tests/v11/application/commit/commitCommandErrorNormalization.test.ts
   - tests/v11/infrastructure/executor/ssh/sshBubbleCommitCommand.test.ts
 prd_ref: null
-plan_ref: plans/remote-bubble-execution-contract-and-phasing-plan-v2.md
+plan_ref: plans/archive/plans/remote-bubble-execution-contract-and-phasing-plan-v2.md
 system_context_ref: docs/pairflow-initial-design.md
 owners:
   - "felho"
@@ -84,7 +84,7 @@ owners:
 ## Source-Anchor Consistency
 
 1. Source anchors:
-   - [remote-bubble-execution-contract-and-phasing-plan-v2.md](/Users/felho/dev/pairflow/plans/remote-bubble-execution-contract-and-phasing-plan-v2.md:150)
+   - [remote-bubble-execution-contract-and-phasing-plan-v2.md](/Users/felho/dev/pairflow/plans/archive/plans/remote-bubble-execution-contract-and-phasing-plan-v2.md:150)
    - [phase3a-remote-approval-and-rework-routing.md](/Users/felho/dev/pairflow/plans/archive/tasks/remote-bubble-execution/phase3a-remote-approval-and-rework-routing.md:136)
    - [phase1e-local-clone-lifecycle-cleanup-alignment.md](/Users/felho/dev/pairflow/plans/archive/tasks/remote-bubble-execution/phase1e-local-clone-lifecycle-cleanup-alignment.md:241)
 2. Canonical elements:

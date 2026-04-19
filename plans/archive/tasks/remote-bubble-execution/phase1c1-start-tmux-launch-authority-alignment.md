@@ -30,7 +30,7 @@ target_files:
   - tests/contracts/v11/start.contract.test.ts
   - tests/v11/application/start/startCommandOrchestration.test.ts
 prd_ref: null
-plan_ref: plans/remote-bubble-execution-contract-and-phasing-plan-v2.md
+plan_ref: plans/archive/plans/remote-bubble-execution-contract-and-phasing-plan-v2.md
 system_context_ref: docs/pairflow-initial-design.md
 owners:
   - "felho"
@@ -299,7 +299,7 @@ Binding note:
 
 | Type | Items | Priority | Timing |
 |---|---|---|---|
-| must-use | `plans/remote-bubble-execution-contract-and-phasing-plan-v2.md` | P1 | required-now |
+| must-use | `plans/archive/plans/remote-bubble-execution-contract-and-phasing-plan-v2.md` | P1 | required-now |
 | must-use | `plans/archive/tasks/remote-bubble-execution/phase1b2-workspace-authority-producer-foundation.md` mint retained producer baseline | P1 | required-now |
 | must-use | `src/v11/application/start/startCommandOrchestration.ts` mint dependency/default wiring seam | P1 | required-now |
 | must-use | `src/v11/application/start/startCommandTmuxLaunch.ts` mint primary consume seam | P1 | required-now |

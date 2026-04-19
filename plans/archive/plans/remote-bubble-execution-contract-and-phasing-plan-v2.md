@@ -2,7 +2,7 @@
 artifact_type: plan
 artifact_id: plan_remote_bubble_execution_contract_and_phasing_v2
 title: "Remote Bubble Execution Contract and Phasing Plan (V2 Reset)"
-status: in_progress
+status: completed
 prd_ref: null
 owners:
   - "felho"

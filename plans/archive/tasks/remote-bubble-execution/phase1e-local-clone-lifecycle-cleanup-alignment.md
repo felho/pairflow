@@ -16,7 +16,7 @@ target_files:
   - tests/core/bubble/deleteBubble.test.ts
   - tests/core/workspace/worktreeManager.test.ts
 prd_ref: null
-plan_ref: plans/remote-bubble-execution-contract-and-phasing-plan-v2.md
+plan_ref: plans/archive/plans/remote-bubble-execution-contract-and-phasing-plan-v2.md
 system_context_ref: docs/pairflow-initial-design.md
 owners:
   - "felho"
@@ -294,7 +294,7 @@ Lezarni a local clone lifecycle cleanup familyt ugy, hogy egy kesobb aktivalt lo
 
 | Type | Items | Priority | Timing |
 | --- | --- | --- | --- |
-| must-use | `plans/remote-bubble-execution-contract-and-phasing-plan-v2.md` | P1 | required-now |
+| must-use | `plans/archive/plans/remote-bubble-execution-contract-and-phasing-plan-v2.md` | P1 | required-now |
 | must-use | `docs/remote-bubble-execution.md` flat clone topology rules | P1 | required-now |
 | must-use | `src/v11/infrastructure/workspace/worktreeManager.ts` as shared local cleanup port | P1 | required-now |
 | must-not-use | start/runtime consume files as implementation target | P1 | required-now |

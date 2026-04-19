@@ -32,7 +32,7 @@ target_files:
   - tests/v11/application/merge/mergeCommandErrorNormalization.test.ts
   - tests/v11/infrastructure/executor/ssh/sshBubbleMergeCommand.test.ts
 prd_ref: null
-plan_ref: plans/remote-bubble-execution-contract-and-phasing-plan-v2.md
+plan_ref: plans/archive/plans/remote-bubble-execution-contract-and-phasing-plan-v2.md
 system_context_ref: docs/pairflow-initial-design.md
 owners:
   - "felho"
@@ -112,7 +112,7 @@ owners:
 ## Source-Anchor Consistency
 
 1. Source anchors:
-   - [remote-bubble-execution-contract-and-phasing-plan-v2.md](/Users/felho/dev/pairflow/plans/remote-bubble-execution-contract-and-phasing-plan-v2.md:151)
+   - [remote-bubble-execution-contract-and-phasing-plan-v2.md](/Users/felho/dev/pairflow/plans/archive/plans/remote-bubble-execution-contract-and-phasing-plan-v2.md:151)
    - [phase3b1-remote-commit-routing-and-continuity.md](/Users/felho/dev/pairflow/plans/archive/tasks/remote-bubble-execution/phase3b1-remote-commit-routing-and-continuity.md:394)
    - [phase1e-local-clone-lifecycle-cleanup-alignment.md](/Users/felho/dev/pairflow/plans/archive/tasks/remote-bubble-execution/phase1e-local-clone-lifecycle-cleanup-alignment.md:269)
    - [remote-bubble-execution.md](/Users/felho/dev/pairflow/docs/remote-bubble-execution.md:467)

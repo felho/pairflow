@@ -9,7 +9,7 @@ target_files:
   - src/config/pairflowConfig.ts
   - tests/config/pairflowConfig.test.ts
 prd_ref: null
-plan_ref: plans/remote-bubble-execution-contract-and-phasing-plan-v2.md
+plan_ref: plans/archive/plans/remote-bubble-execution-contract-and-phasing-plan-v2.md
 system_context_ref: docs/pairflow-initial-design.md
 owners:
   - "felho"
@@ -247,7 +247,7 @@ Lezarni a remote pre-start sync hook minimal config-contractjat ugy, hogy a keso
 
 | Type | Reference / Surface | Priority | Timing |
 |---|---|---|---|
-| must-use | `plans/remote-bubble-execution-contract-and-phasing-plan-v2.md` | P1 | required-now |
+| must-use | `plans/archive/plans/remote-bubble-execution-contract-and-phasing-plan-v2.md` | P1 | required-now |
 | must-use | `docs/remote-bubble-execution.md` mint a sync-hook config-surface es opaque target-specific wording baseline-ja | P2 | required-now |
 | must-not-use | `start/**` consume/invoke behavior | P1 | required-now |
 | must-not-use | `pairflow_command` alapju implicit hook fallback | P1 | required-now |

@@ -28,7 +28,7 @@ target_files:
   - tests/core/ui/router.test.ts
   - tests/v11/infrastructure/executor/ssh/sshBubbleApprovalCommand.test.ts
 prd_ref: null
-plan_ref: plans/remote-bubble-execution-contract-and-phasing-plan-v2.md
+plan_ref: plans/archive/plans/remote-bubble-execution-contract-and-phasing-plan-v2.md
 system_context_ref: docs/pairflow-initial-design.md
 owners:
   - "felho"
@@ -126,7 +126,7 @@ owners:
 ## Source-Anchor Consistency
 
 1. A `Phase 3A` primary authorityja a parent plan es ez a taskfilel:
-   - `plans/remote-bubble-execution-contract-and-phasing-plan-v2.md`
+   - `plans/archive/plans/remote-bubble-execution-contract-and-phasing-plan-v2.md`
    - ez a task szukebb authority, mint a design doc altalanos "other commands" wordingje.
 2. Closed-contract source anchors:
    - `Phase 2D`: started pointer remote runtime authority,

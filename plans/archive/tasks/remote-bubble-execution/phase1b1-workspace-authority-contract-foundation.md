@@ -20,7 +20,7 @@ target_files:
   - tests/core/runtime/startupReconciler.test.ts
   - tests/v11/application/start/startCommandOrchestration.test.ts
 prd_ref: null
-plan_ref: plans/remote-bubble-execution-contract-and-phasing-plan-v2.md
+plan_ref: plans/archive/plans/remote-bubble-execution-contract-and-phasing-plan-v2.md
 system_context_ref: docs/pairflow-initial-design.md
 owners:
   - "felho"
@@ -165,7 +165,7 @@ Constraint: ha itt nincs explicit consumer alignment engedelyezve, implementacio
 
 | Type | Items | Priority | Timing |
 |---|---|---|---|
-| must-use | `plans/remote-bubble-execution-contract-and-phasing-plan-v2.md` | P1 | required-now |
+| must-use | `plans/archive/plans/remote-bubble-execution-contract-and-phasing-plan-v2.md` | P1 | required-now |
 | must-not-use | `src/v11/application/start/startCommandTmuxLaunch.ts` | P1 | required-now |
 | must-not-use | `src/v11/infrastructure/channel/tmux/**` | P1 | required-now |
 | must-not-use | `src/v11/application/pass/**`, `converged/**`, `askHuman/**` | P1 | required-now |

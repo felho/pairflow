@@ -24,7 +24,7 @@ guard_only_files:
 # `guard_only_files` deklarativ inventory: ezek source-anchor / passive-consumer guard file-ok.
 # Defaultban nem primary edit ownership, csak akkor toucholhatok, ha a CS4/CS5 compatibility/parity guard ezt kifejezetten szuksegesse teszi.
 prd_ref: null
-plan_ref: plans/remote-bubble-execution-contract-and-phasing-plan-v2.md
+plan_ref: plans/archive/plans/remote-bubble-execution-contract-and-phasing-plan-v2.md
 system_context_ref: docs/pairflow-initial-design.md
 owners:
   - "felho"
@@ -124,7 +124,7 @@ owners:
 ### Canonical Contract Anchors
 
 1. Source-of-truth anchors:
-   - `plans/remote-bubble-execution-contract-and-phasing-plan-v2.md`
+   - `plans/archive/plans/remote-bubble-execution-contract-and-phasing-plan-v2.md`
    - `docs/remote-bubble-execution.md`
    - `src/shared/contracts/uiRemoteExecution.ts`
    - `src/v11/shared/status/statusCommandApi.ts`

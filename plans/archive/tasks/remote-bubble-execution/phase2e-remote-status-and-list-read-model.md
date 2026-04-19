@@ -28,7 +28,7 @@ target_files:
   - tests/v11/application/status/statusCliEntrypointParity.test.ts
   - tests/v11/infrastructure/executor/ssh/sshBubbleStatus.test.ts
 prd_ref: null
-plan_ref: plans/remote-bubble-execution-contract-and-phasing-plan-v2.md
+plan_ref: plans/archive/plans/remote-bubble-execution-contract-and-phasing-plan-v2.md
 system_context_ref: docs/pairflow-initial-design.md
 owners:
   - "felho"

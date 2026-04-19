@@ -27,7 +27,7 @@ target_files:
   - tests/contracts/v11/cases/start/start-remote-preflight-missing-origin-v11.case.json
   - tests/contracts/v11/cases/start/start-remote-attach-rejected-v11.case.json
 prd_ref: null
-plan_ref: plans/remote-bubble-execution-contract-and-phasing-plan-v2.md
+plan_ref: plans/archive/plans/remote-bubble-execution-contract-and-phasing-plan-v2.md
 system_context_ref: docs/pairflow-initial-design.md
 owners:
   - "felho"
@@ -478,7 +478,7 @@ Aktivalni a remote bubble elso SSH-start pathjat ugy, hogy a local repo explicit
 
 | Type | Reference / Surface | Priority | Timing |
 |---|---|---|---|
-| must-use | `plans/remote-bubble-execution-contract-and-phasing-plan-v2.md` | P1 | required-now |
+| must-use | `plans/archive/plans/remote-bubble-execution-contract-and-phasing-plan-v2.md` | P1 | required-now |
 | must-use | `docs/remote-bubble-execution.md` csak a retained-section map 1. pontjaban rogzitett nem konfliktusos baseline-szakaszokra: remote host config, independent clone topology, pointer/cache role split | P1 | required-now |
 | must-use | retained `bubble.toml.repo_path` + retained local `state.json` control-plane truth, a Phase 2D plan ownership pontositasaval egyutt | P1 | required-now |
 | must-use | retained `remote.json` / `state-cache.json` authority split | P1 | required-now |

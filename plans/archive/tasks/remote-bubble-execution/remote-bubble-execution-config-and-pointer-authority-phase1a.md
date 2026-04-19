@@ -14,7 +14,7 @@ target_files:
   - tests/config/bubbleConfig.test.ts
   - tests/v11/infrastructure/artifact/bubble/remoteExecutionArtifacts.test.ts
 prd_ref: null
-plan_ref: plans/remote-bubble-execution-contract-and-phasing-plan-v2.md
+plan_ref: plans/archive/plans/remote-bubble-execution-contract-and-phasing-plan-v2.md
 system_context_ref: docs/pairflow-initial-design.md
 owners:
   - "felho"
@@ -238,7 +238,7 @@ Constraint: ha itt nincs explicit engedelyezett network/process side effect, az 
 
 | Type | Items | Priority | Timing |
 |---|---|---|---|
-| must-use | `plans/remote-bubble-execution-contract-and-phasing-plan-v2.md` mint retained Phase 1A baseline authority | P1 | required-now |
+| must-use | `plans/archive/plans/remote-bubble-execution-contract-and-phasing-plan-v2.md` mint retained Phase 1A baseline authority | P1 | required-now |
 | must-use | `docs/architecture/sandbox-compatibility-gate.md` task-level gate sourcekent | P1 | required-now |
 | must-not-use | SSH helper, tmux helper, git clone/start wiring ebben a taskban | P1 | required-now |
 | must-not-use | worktree/runtime session/tmux session alapjan remote authority inference | P1 | required-now |

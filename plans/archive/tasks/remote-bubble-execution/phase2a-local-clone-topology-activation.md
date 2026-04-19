@@ -30,7 +30,7 @@ target_files:
   - tests/contracts/v11/cases/start/start-clone-not-activated-resume-approved-for-commit-v11.case.json
   - tests/contracts/v11/cases/start/start-clone-not-activated-resume-committed-v11.case.json
 prd_ref: null
-plan_ref: plans/remote-bubble-execution-contract-and-phasing-plan-v2.md
+plan_ref: plans/archive/plans/remote-bubble-execution-contract-and-phasing-plan-v2.md
 system_context_ref: docs/pairflow-initial-design.md
 owners:
   - "felho"
@@ -331,7 +331,7 @@ Aktivalni a local clone-topology start/resume pathot ugy, hogy a bubble friss st
 
 | Type | Items | Priority | Timing |
 | --- | --- | --- | --- |
-| must-use | `plans/remote-bubble-execution-contract-and-phasing-plan-v2.md` | P1 | required-now |
+| must-use | `plans/archive/plans/remote-bubble-execution-contract-and-phasing-plan-v2.md` | P1 | required-now |
 | must-use | `docs/remote-bubble-execution.md` flat clone topology rules | P1 | required-now |
 | must-use | `plans/archive/tasks/remote-bubble-execution/phase1e-local-clone-lifecycle-cleanup-alignment.md` retained local lifecycle baseline | P1 | required-now |
 | must-use | `src/v11/shared/runtimeSessionWorkspaceAuthority.ts` retained authority resolver semantics | P1 | required-now |

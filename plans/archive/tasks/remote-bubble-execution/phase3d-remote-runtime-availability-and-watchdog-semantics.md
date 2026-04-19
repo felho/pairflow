@@ -23,7 +23,7 @@ target_files:
   - ui/src/lib/attachAvailability.test.ts
   - ui/src/components/canvas/BubbleExpandedCard.test.tsx
 prd_ref: null
-plan_ref: plans/remote-bubble-execution-contract-and-phasing-plan-v2.md
+plan_ref: plans/archive/plans/remote-bubble-execution-contract-and-phasing-plan-v2.md
 system_context_ref: docs/pairflow-initial-design.md
 owners:
   - "felho"
@@ -111,7 +111,7 @@ owners:
    - a lezart `Phase 3C` utan maradt egy residual remote operatori semantics gap:
      a watchdog-expired, de tovabbra is bizonyithatoan elo remote runtime jelenleg ugyanabba a `runtime unavailable` fail-closed bucketbe esik, mint a tenyleges runtime-loss.
 2. Depends on:
-   - `plans/remote-bubble-execution-contract-and-phasing-plan-v2.md`
+   - `plans/archive/plans/remote-bubble-execution-contract-and-phasing-plan-v2.md`
    - `plans/archive/tasks/remote-bubble-execution/phase2e-remote-status-and-list-read-model.md`
    - `plans/archive/tasks/remote-bubble-execution/phase2f-remote-attach-consume.md`
    - `plans/archive/tasks/remote-bubble-execution/phase3c-recovery-diagnostics-and-rollout.md`
@@ -125,7 +125,7 @@ owners:
 ### Canonical Contract Anchors
 
 1. Source-of-truth anchors:
-   - `plans/remote-bubble-execution-contract-and-phasing-plan-v2.md`
+   - `plans/archive/plans/remote-bubble-execution-contract-and-phasing-plan-v2.md`
    - `src/v11/infrastructure/executor/ssh/sshBubbleStatusPayload.ts`
    - `src/v11/shared/status/remoteBubbleStatusContract.ts`
    - `src/v11/shared/status/statusCommandApi.ts`
