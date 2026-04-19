@@ -112,6 +112,7 @@ export function bubbleDetail(input: {
   stale?: boolean;
   attention?: UiBubbleSummary["attention"];
   remoteExecution?: UiBubbleSummary["remoteExecution"];
+  watchdog?: Partial<UiBubbleDetail["watchdog"]>;
 }): UiBubbleDetail {
   const summary = bubbleSummary(input);
   return {
@@ -123,7 +124,8 @@ export function bubbleDetail(input: {
       referenceTimestamp: summary.lastCommandAt,
       deadlineTimestamp: "2026-02-24T12:20:00.000Z",
       remainingSeconds: 960,
-      expired: false
+      expired: false,
+      ...input.watchdog
     },
     pendingInboxItems: {
       humanQuestions: 1,

@@ -1153,6 +1153,233 @@ describe("listBubbles", () => {
     );
   });
 
+  it("keeps refreshed remote entries active when only the watchdog expired", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_list_remote_refresh_watchdog_live_01",
+      task: "Remote refresh watchdog active"
+    });
+
+    await writeRemotePointer(bubble.paths.remotePointerPath, {
+      kind: "started",
+      host: "ssh.example.com",
+      instanceId: "inst_list_remote_refresh_watchdog_live_01",
+      remoteClonePath: "/srv/pairflow/repo--b_list_remote_refresh_watchdog_live_01",
+      tmuxSession: "pf-b_list_remote_refresh_watchdog_live_01",
+      startedAt: "2026-04-16T09:45:00.000Z"
+    });
+    await setBubbleExecutorRemoteAlias(bubble.paths.bubbleTomlPath);
+    vi.spyOn(
+      listCommandDefaults,
+      "resolveRemoteBubbleStatusTarget"
+    ).mockResolvedValue({
+      alias: "lab",
+      host: "ssh.example.com",
+      user: "pairflow",
+      pairflowCommand: "pairflow"
+    });
+    vi.spyOn(
+      listCommandDefaults,
+      "executeRemoteBubbleStatus"
+    ).mockResolvedValue({
+      bubbleStartedAt: "2026-04-16T09:45:00.000Z",
+      state: "WAITING_HUMAN",
+      round: 3,
+      activeAgent: "claude",
+      activeRole: "reviewer",
+      activeSince: "2026-04-16T09:50:00.000Z",
+      lastCommandAt: "2026-04-16T09:58:00.000Z",
+      paneActivity: {
+        readStatus: "ok",
+        lastChangedAt: "2026-04-16T09:57:00.000Z",
+        sampledAt: "2026-04-16T10:00:00.000Z",
+        sinceLastChangedSeconds: 180,
+        sinceSampledSeconds: 0,
+        lastSampleStatus: "sampled",
+        lastSampleError: null,
+        sessionName: "pf-b_list_remote_refresh_watchdog_live_01",
+        targetPane: "pf-b_list_remote_refresh_watchdog_live_01:0.1"
+      },
+      executionContext: null,
+      watchdog: {
+        monitored: true,
+        monitoredAgent: "claude",
+        timeoutMinutes: 30,
+        referenceTimestamp: "2026-04-16T09:20:00.000Z",
+        deadlineTimestamp: "2026-04-16T09:50:00.000Z",
+        remainingSeconds: 0,
+        expired: true
+      },
+      pendingInboxItems: {
+        humanQuestions: 1,
+        approvalRequests: 0,
+        total: 1
+      },
+      transcript: {
+        totalMessages: 4,
+        lastMessageType: "HUMAN_QUESTION",
+        lastMessageTs: "2026-04-16T09:58:00.000Z",
+        lastMessageId: "msg_list_remote_refresh_watchdog_live_01"
+      },
+      metaReview: {
+        actor: "meta-reviewer",
+        authorityActive: false,
+        runtimeDelivery: null
+      },
+      accuracyCritical: false,
+      lastReviewVerification: "missing",
+      failingGates: [],
+      specLockState: {
+        state: "IMPLEMENTABLE",
+        open_blocker_count: 0,
+        open_required_now_count: 0
+      },
+      roundGateState: {
+        applies: false,
+        violated: false,
+        round: 3
+      },
+      stateValidation: null,
+      runtimeAvailability: "active",
+      lastCheckedAt: "2026-04-16T10:00:00.000Z"
+    });
+
+    const listed = await listBubbles({
+      repoPath,
+      refresh: true,
+      now: new Date("2026-04-16T10:02:00.000Z")
+    });
+
+    expect(listed.bubbles[0]).toMatchObject({
+      attention: {
+        code: "watchdog_expired",
+        severity: "critical",
+        label: "Watchdog expired"
+      },
+      remoteExecution: {
+        stateSource: "refresh",
+        cacheStatus: "present",
+        runtimeAvailability: "active",
+        lastLiveCheckAt: "2026-04-16T10:00:00.000Z",
+        lastCacheCheckAt: "2026-04-16T10:00:00.000Z"
+      }
+    });
+    expect(listed.bubbles[0]?.remoteExecution?.runtimeReasonCode).toBeUndefined();
+  });
+
+  it("keeps refreshed recovery entries active when watchdog agent identity is null", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_list_remote_refresh_recovery_live_01",
+      task: "Remote refresh recovery active"
+    });
+
+    await writeRemotePointer(bubble.paths.remotePointerPath, {
+      kind: "started",
+      host: "ssh.example.com",
+      instanceId: "inst_list_remote_refresh_recovery_live_01",
+      remoteClonePath:
+        "/srv/pairflow/repo--b_list_remote_refresh_recovery_live_01",
+      tmuxSession: "pf-b_list_remote_refresh_recovery_live_01",
+      startedAt: "2026-04-16T09:45:00.000Z"
+    });
+    await setBubbleExecutorRemoteAlias(bubble.paths.bubbleTomlPath);
+    vi.spyOn(
+      listCommandDefaults,
+      "resolveRemoteBubbleStatusTarget"
+    ).mockResolvedValue({
+      alias: "lab",
+      host: "ssh.example.com",
+      user: "pairflow",
+      pairflowCommand: "pairflow"
+    });
+    vi.spyOn(
+      listCommandDefaults,
+      "executeRemoteBubbleStatus"
+    ).mockResolvedValue({
+      bubbleStartedAt: "2026-04-16T09:45:00.000Z",
+      state: "RUNNING",
+      round: 3,
+      activeAgent: null,
+      activeRole: null,
+      activeSince: null,
+      lastCommandAt: "2026-04-16T09:58:00.000Z",
+      paneActivity: {
+        readStatus: "ok",
+        lastChangedAt: "2026-04-16T09:57:00.000Z",
+        sampledAt: "2026-04-16T10:00:00.000Z",
+        sinceLastChangedSeconds: 180,
+        sinceSampledSeconds: 0,
+        lastSampleStatus: "sampled",
+        lastSampleError: null,
+        sessionName: "pf-b_list_remote_refresh_recovery_live_01",
+        targetPane: "pf-b_list_remote_refresh_recovery_live_01:0.1"
+      },
+      executionContext: null,
+      watchdog: {
+        monitored: true,
+        monitoredAgent: null,
+        timeoutMinutes: 30,
+        referenceTimestamp: "2026-04-16T09:20:00.000Z",
+        deadlineTimestamp: "2026-04-16T09:50:00.000Z",
+        remainingSeconds: 0,
+        expired: false
+      },
+      pendingInboxItems: {
+        humanQuestions: 0,
+        approvalRequests: 0,
+        total: 0
+      },
+      transcript: {
+        totalMessages: 4,
+        lastMessageType: "PASS",
+        lastMessageTs: "2026-04-16T09:58:00.000Z",
+        lastMessageId: "msg_list_remote_refresh_recovery_live_01"
+      },
+      metaReview: {
+        actor: "meta-reviewer",
+        authorityActive: false,
+        runtimeDelivery: null
+      },
+      accuracyCritical: false,
+      lastReviewVerification: "missing",
+      failingGates: [],
+      specLockState: {
+        state: "IMPLEMENTABLE",
+        open_blocker_count: 0,
+        open_required_now_count: 0
+      },
+      roundGateState: {
+        applies: false,
+        violated: false,
+        round: 3
+      },
+      stateValidation: null,
+      runtimeAvailability: "active",
+      lastCheckedAt: "2026-04-16T10:00:00.000Z"
+    });
+
+    const listed = await listBubbles({
+      repoPath,
+      refresh: true,
+      now: new Date("2026-04-16T10:02:00.000Z")
+    });
+
+    expect(listed.bubbles[0]).toMatchObject({
+      state: "RUNNING",
+      remoteExecution: {
+        stateSource: "refresh",
+        cacheStatus: "present",
+        runtimeAvailability: "active",
+        lastLiveCheckAt: "2026-04-16T10:00:00.000Z",
+        lastCacheCheckAt: "2026-04-16T10:00:00.000Z"
+      }
+    });
+    expect(listed.bubbles[0]?.remoteExecution?.runtimeReasonCode).toBeUndefined();
+  });
+
   it("keeps refreshed live projection and omits stale cache timestamps when cache persistence fails", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({

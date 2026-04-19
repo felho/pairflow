@@ -336,6 +336,41 @@ describe("renderBubbleStatusText", () => {
     expect(rendered).not.toContain("attach");
     expect(rendered).not.toContain("restart");
   });
+
+  it("keeps watchdog-only remote status distinct from runtime-loss wording", () => {
+    const rendered = renderBubbleStatusText(
+      createStatusView({
+        watchdog: {
+          monitored: true,
+          monitoredAgent: "codex",
+          timeoutMinutes: 5,
+          referenceTimestamp: "2026-02-22T12:05:00.000Z",
+          deadlineTimestamp: "2026-02-22T12:10:00.000Z",
+          remainingSeconds: 0,
+          expired: true
+        },
+        remoteExecution: {
+          alias: "lab",
+          host: "ssh.example.com",
+          pointerKind: "started",
+          viewKind: "status",
+          statusSource: "live",
+          cacheStatus: "present",
+          runtimeAvailability: "active",
+          remoteClonePath: "/srv/pairflow/repo--b_status_render_01",
+          lastLiveCheckAt: "2026-04-16T10:00:30.000Z",
+          lastCacheCheckAt: "2026-04-16T10:00:00.000Z"
+        }
+      })
+    );
+
+    expect(rendered).toContain(
+      "Remote execution: alias=lab host=ssh.example.com pointer=started source=live runtime=active cache=present"
+    );
+    expect(rendered).toContain("Escalation: watchdog timeout exceeded");
+    expect(rendered).not.toContain("Remote runtime note:");
+    expect(rendered).not.toContain("live runtime unavailable");
+  });
 });
 
 describe("renderBubbleStatusTable", () => {
