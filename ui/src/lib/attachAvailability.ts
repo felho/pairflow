@@ -70,8 +70,10 @@ export function getAttachAvailability(
           input.remoteExecution.stateSource === "unavailable_started" ||
           (
             input.remoteExecution.pointerKind === "started" &&
-            input.remoteExecution.runtimeAvailability !== undefined &&
-            input.remoteExecution.runtimeAvailability !== "active"
+            (
+              input.remoteExecution.runtimeAvailability === undefined ||
+              input.remoteExecution.runtimeAvailability !== "active"
+            )
           )
         )
       ) ||

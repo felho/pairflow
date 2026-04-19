@@ -278,6 +278,31 @@ function mergeExpandedDetailWithSummary(
   };
 }
 
+function mergeExpandedDetailWithIncomingDetail(
+  previous: UiBubbleDetail | undefined,
+  incoming: UiBubbleDetail
+): UiBubbleDetail {
+  if (previous === undefined) {
+    return incoming;
+  }
+
+  const preservePreviousAttention =
+    previous.attention !== null && incoming.attention === null;
+  const preservePreviousRemoteExecution =
+    previous.remoteExecution !== undefined && incoming.remoteExecution === undefined;
+
+  return {
+    ...previous,
+    ...incoming,
+    attention: preservePreviousAttention ? previous.attention : incoming.attention,
+    ...(preservePreviousRemoteExecution
+      ? { remoteExecution: previous.remoteExecution }
+      : incoming.remoteExecution !== undefined
+        ? { remoteExecution: incoming.remoteExecution }
+        : {})
+  };
+}
+
 function getStorageFromWindow(): StorageLike | null {
   if (typeof window === "undefined") {
     return null;
@@ -780,7 +805,10 @@ export function createBubbleStore(
         };
 
         if (detailResult.status === "fulfilled") {
-          const detail = normalizeBubbleDetail(detailResult.value);
+          const detail = mergeExpandedDetailWithIncomingDetail(
+            state.bubbleDetails[bubbleId],
+            normalizeBubbleDetail(detailResult.value)
+          );
           next.bubbleDetails = {
             ...state.bubbleDetails,
             [bubbleId]: detail

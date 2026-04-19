@@ -216,6 +216,37 @@ describe("attachAvailability", () => {
     });
   });
 
+  it("disables attach with fail-closed hint for cache-only started remote list-shapes without runtime proof", () => {
+    const availability = getAttachAvailability({
+      bubbleId: "b-remote-cache-unknown",
+      state: "WAITING_HUMAN",
+      hasRuntimeSession: false,
+      runtime: {
+        expected: false,
+        present: false,
+        stale: false
+      },
+      remoteExecution: {
+        alias: "spark1",
+        host: "spark1",
+        pointerKind: "started",
+        viewKind: "list",
+        stateSource: "cache",
+        cacheStatus: "present",
+        remoteClonePath: "/remote/repo",
+        lastCacheCheckAt: "2026-04-19T12:40:00.000Z"
+      }
+    });
+
+    expect(availability).toEqual({
+      visible: true,
+      enabled: false,
+      command: "pairflow bubble attach --id b-remote-cache-unknown",
+      hint:
+        "Remote runtime is unavailable. Attach stays fail-closed and will not restart it automatically."
+    });
+  });
+
   it("enables attach for refreshed remote list shapes when runtime stays active", () => {
     const availability = getAttachAvailability({
       bubbleId: "b-remote-list-active-123",

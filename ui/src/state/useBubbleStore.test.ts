@@ -1636,6 +1636,75 @@ describe("createBubbleStore", () => {
     deferredDetail.resolve(diagnosticDetail);
     await Promise.resolve();
   });
+
+  it("keeps expanded detail remote diagnostics when a later detail refresh omits them", async () => {
+    const initialSummary = bubbleSummary({
+      bubbleId: "b-a",
+      repoPath: "/repo-a",
+      state: "WAITING_HUMAN"
+    });
+    const diagnosticDetail = bubbleDetail({
+      bubbleId: "b-a",
+      repoPath: "/repo-a",
+      state: "WAITING_HUMAN",
+      attention: {
+        code: "watchdog_expired",
+        severity: "warning",
+        label: "Watchdog expired",
+        detail: "The watchdog deadline passed without observed protocol activity."
+      },
+      remoteExecution: {
+        alias: "spark1",
+        host: "spark1",
+        pointerKind: "started",
+        viewKind: "status",
+        statusSource: "live",
+        cacheStatus: "present",
+        runtimeAvailability: "missing",
+        reasonCode: "STATUS_REMOTE_RUNTIME_MISSING",
+        remoteClonePath: "/remote/repo",
+        lastLiveCheckAt: "2026-04-19T11:30:00.000Z",
+        lastCacheCheckAt: "2026-04-19T11:30:00.000Z"
+      }
+    });
+    const incompleteRefreshDetail = {
+      ...diagnosticDetail
+    };
+    delete (incompleteRefreshDetail as { remoteExecution?: unknown }).remoteExecution;
+
+    const api = createApiStub({
+      getRepos: vi.fn(async () => ["/repo-a"]),
+      getBubbles: vi.fn(async () => ({
+        repo: repoSummary("/repo-a"),
+        bubbles: [initialSummary]
+      })),
+      getBubble: vi
+        .fn<(repoPath: string, bubbleId: string) => Promise<typeof diagnosticDetail>>()
+        .mockResolvedValueOnce(diagnosticDetail)
+        .mockResolvedValueOnce(incompleteRefreshDetail as typeof diagnosticDetail),
+      getBubbleTimeline: vi.fn(async () => [])
+    });
+
+    const store = createBubbleStore({
+      api,
+      createEventsClient: () => ({
+        start: () => undefined,
+        stop: () => undefined,
+        refresh: () => undefined
+      })
+    });
+
+    await store.getState().initialize();
+    await store.getState().toggleBubbleExpanded("b-a");
+    await store.getState().refreshExpandedBubble("b-a");
+
+    expect(store.getState().bubbleDetails["b-a"]?.remoteExecution).toEqual(
+      diagnosticDetail.remoteExecution
+    );
+    expect(store.getState().bubblesById["b-a"]?.remoteExecution).toEqual(
+      diagnosticDetail.remoteExecution
+    );
+  });
 });
 
 describe("deleteBubble store method", () => {
