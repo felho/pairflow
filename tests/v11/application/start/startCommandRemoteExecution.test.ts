@@ -187,6 +187,67 @@ describe("startCommandRemoteExecution", () => {
     });
   });
 
+  it("persists canonical workspace authority before launching the remote reviewer session", async () => {
+    const { context } = await createRemoteStartFixture();
+    const upsertCalls: Array<Record<string, unknown>> = [];
+    context.now = new Date("2026-04-16T12:00:00.000Z");
+    context.expectedTmuxSessionName = "pf-b_remote_execution_unit_01";
+    context.runtimeSessionRecord = {
+      bubbleId: context.resolved.bubbleId,
+      repoPath: context.resolved.repoPath,
+      worktreePath: context.resolved.bubblePaths.worktreePath,
+      tmuxSessionName: "pf-b_remote_execution_unit_01",
+      updatedAt: "2026-04-16T11:59:00.000Z"
+    };
+    context.remoteStartContext = {
+      kind: "remote_clone" as const,
+      workspaceRoot: context.resolved.repoPath
+    };
+
+    const result = await runRemoteCloneInnerStart({
+      context,
+      deps: {
+        upsertSession: async (input) => {
+          upsertCalls.push(input as Record<string, unknown>);
+          return {
+            bubbleId: String(input.bubbleId),
+            repoPath: String(input.repoPath),
+            worktreePath: String(input.worktreePath),
+            workspacePath: String(input.workspacePath),
+            workspaceKind: input.workspaceKind,
+            tmuxSessionName: String(input.tmuxSessionName),
+            updatedAt: "2026-04-16T12:00:00.000Z"
+          };
+        },
+        writeState: async (statePath, state, options) =>
+          writeStateSnapshot(statePath, state, options),
+        launchSessionAck: async () => ({
+          status: "running",
+          sessionName: "pf-b_remote_execution_unit_01"
+        })
+      } as ResolvedStartBubbleDependencies,
+      progress: {
+        workspaceBootstrapped: false,
+        preparingState: null,
+        preparingFingerprint: null
+      }
+    });
+
+    expect(upsertCalls).toEqual([
+      {
+        sessionsPath: context.resolved.bubblePaths.sessionsPath,
+        bubbleId: context.resolved.bubbleId,
+        repoPath: context.resolved.repoPath,
+        worktreePath: context.resolved.bubblePaths.worktreePath,
+        workspacePath: context.resolved.repoPath,
+        workspaceKind: "worktree",
+        tmuxSessionName: "pf-b_remote_execution_unit_01",
+        now: new Date("2026-04-16T12:00:00.000Z")
+      }
+    ]);
+    expect(result.runtimeWorkspacePath).toBe(context.resolved.repoPath);
+  });
+
   it("fails closed when the remote pointer is not in created state", async () => {
     const { context } = await createRemoteStartFixture();
     await writeRemotePointer(context.resolved.bubblePaths.remotePointerPath, {

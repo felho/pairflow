@@ -95,6 +95,19 @@ export async function runRemoteCloneInnerStart(input: {
   input.progress.preparingState = preparingWritten.state;
   input.progress.preparingFingerprint = preparingWritten.fingerprint;
 
+  input.context.runtimeSessionRecord = await input.deps.upsertSession({
+    sessionsPath: input.context.resolved.bubblePaths.sessionsPath,
+    bubbleId: input.context.resolved.bubbleId,
+    repoPath: input.context.resolved.repoPath,
+    worktreePath: input.context.resolved.bubblePaths.worktreePath,
+    workspacePath: remoteStartContext.workspaceRoot,
+    workspaceKind: input.context.resolved.bubbleConfig.work_mode,
+    tmuxSessionName:
+      input.context.runtimeSessionRecord?.tmuxSessionName
+      ?? input.context.expectedTmuxSessionName,
+    now: input.context.now
+  });
+
   const ideationPending =
     input.context.resolved.bubbleConfig.ideation?.mode === true
     && input.context.resolved.bubbleConfig.ideation.task_pending === true
