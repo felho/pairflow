@@ -68,4 +68,28 @@ describe("bubbleFingerprint remote execution normalization", () => {
 
     expect(missingFingerprint).not.toBe(activeFingerprint);
   });
+
+  it("changes when stable remote bubble handoff fields change even if poll timestamps do not", async () => {
+    const implementer: BubbleListEntry = {
+      ...createRemoteBubbleEntry({
+        runtimeAvailability: "active"
+      }),
+      activeAgent: "codex",
+      activeRole: "implementer",
+      activeSince: "2026-04-19T20:34:40.000Z",
+      lastCommandAt: "2026-04-19T20:34:40.000Z"
+    };
+    const reviewer: BubbleListEntry = {
+      ...implementer,
+      activeAgent: "claude",
+      activeRole: "reviewer",
+      activeSince: "2026-04-19T20:35:12.000Z",
+      lastCommandAt: "2026-04-19T20:35:12.000Z"
+    };
+
+    const implementerFingerprint = await bubbleFingerprint("/repo", implementer);
+    const reviewerFingerprint = await bubbleFingerprint("/repo", reviewer);
+
+    expect(reviewerFingerprint).not.toBe(implementerFingerprint);
+  });
 });

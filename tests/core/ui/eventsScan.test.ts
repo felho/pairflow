@@ -207,4 +207,71 @@ describe("scanUiEventsRepo remote refresh routing", () => {
       result.snapshot.bubbles.get(bubble.bubbleId)?.summary.remoteExecution?.viewKind
     ).toBe("list");
   });
+
+  it("emits a changed event when a started remote bubble handoff updates active role without changing state or round", async () => {
+    const repoPath = await createTempRepo();
+    const normalizedRepoPath = await normalizeRepoPath(repoPath);
+    const bubble = await setupRunningBubbleFixture({
+      bubbleId: "b_ui_events_scan_03",
+      repoPath,
+      task: "Remote handoff fingerprint"
+    });
+
+    const implementerEntry = createBubbleListEntry({
+      repoPath: normalizedRepoPath,
+      worktreePath: bubble.paths.worktreePath,
+      bubbleId: bubble.bubbleId,
+      round: 1,
+      stateSource: "refresh"
+    });
+    const reviewerEntry: BubbleListEntry = {
+      ...implementerEntry,
+      activeAgent: "claude",
+      activeRole: "reviewer",
+      activeSince: "2026-04-19T20:00:30.000Z",
+      lastCommandAt: "2026-04-19T20:00:30.000Z"
+    };
+
+    const initialView = createListView(normalizedRepoPath, implementerEntry);
+    const snapshots = new Map<string, RepoSnapshot>([
+      [
+        normalizedRepoPath,
+        {
+          repo: presentRepoSummary(initialView),
+          bubbles: new Map([
+            [
+              bubble.bubbleId,
+              {
+                summary: presentBubbleSummaryFromListEntry(implementerEntry),
+                fingerprint: await (await import("../../../src/v11/infrastructure/ui/eventsFingerprint.js")).bubbleFingerprint(
+                  normalizedRepoPath,
+                  implementerEntry
+                )
+              }
+            ]
+          ])
+        }
+      ]
+    ]);
+
+    const result = await scanUiEventsRepo({
+      repoPath: normalizedRepoPath,
+      emitEvents: true,
+      snapshots,
+      nextBubbleUpdatedEvent: (repo, updatedBubble) => ({
+        id: 1,
+        ts: "2026-04-19T20:00:30.000Z",
+        type: "bubble.updated",
+        repoPath: repo,
+        bubbleId: updatedBubble.bubbleId,
+        bubble: updatedBubble
+      }),
+      nextBubbleRemovedEvent: () => ({}) as never,
+      listBubbles: vi.fn(async () => createListView(normalizedRepoPath, reviewerEntry))
+    });
+
+    expect(result.changed).toHaveLength(1);
+    expect(result.changed[0]?.type).toBe("bubble.updated");
+    expect(result.changed[0]?.bubble.activeRole).toBe("reviewer");
+  });
 });

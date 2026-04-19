@@ -61,6 +61,36 @@ function normalizeRemoteExecutionForFingerprint(
   return stable;
 }
 
+function normalizeBubbleEntryForFingerprint(
+  entry: BubbleListEntry
+): Record<string, unknown> {
+  return {
+    bubbleId: entry.bubbleId,
+    repoPath: entry.repoPath,
+    worktreePath: entry.worktreePath,
+    state: entry.state,
+    round: entry.round,
+    activeAgent: entry.activeAgent,
+    activeRole: entry.activeRole,
+    activeSince: entry.activeSince,
+    lastCommandAt: entry.lastCommandAt,
+    stateValidation: entry.stateValidation,
+    runtimeSession:
+      entry.runtimeSession === null
+        ? null
+        : {
+            tmuxSessionName: entry.runtimeSession.tmuxSessionName,
+            updatedAt: entry.runtimeSession.updatedAt,
+            metaReviewerPane: entry.runtimeSession.metaReviewerPane ?? null,
+            workspacePath: entry.runtimeSession.workspacePath,
+            workspaceKind: entry.runtimeSession.workspaceKind
+          },
+    attention: entry.attention,
+    metaReview: entry.metaReview,
+    remoteExecution: normalizeRemoteExecutionForFingerprint(entry.remoteExecution)
+  };
+}
+
 async function bubbleFingerprint(
   repoPath: string,
   entry: BubbleListEntry
@@ -92,9 +122,7 @@ async function bubbleFingerprint(
     transcriptSig,
     runtimeSig,
     attentionSig,
-    JSON.stringify(normalizeRemoteExecutionForFingerprint(entry.remoteExecution)),
-    entry.state,
-    String(entry.round)
+    JSON.stringify(normalizeBubbleEntryForFingerprint(entry))
   ].join("|");
 }
 
