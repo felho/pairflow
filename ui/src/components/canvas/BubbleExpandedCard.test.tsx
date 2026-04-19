@@ -173,6 +173,57 @@ describe("BubbleExpandedCard", () => {
     expect(screen.queryByText(/restart runtime automatically/u)).not.toBeInTheDocument();
   });
 
+  it("keeps attach enabled for watchdog-expired remote detail when runtime proof stays active", () => {
+    renderExpandedCard({
+      bubble: bubbleCard({
+        bubbleId: "b-expanded-remote-watchdog",
+        repoPath: "/repo-a",
+        state: "WAITING_HUMAN",
+        runtimeSession: null,
+        stale: false,
+        attention: {
+          code: "watchdog_expired",
+          severity: "critical",
+          label: "Watchdog expired",
+          detail: "The watchdog deadline passed without observed protocol activity."
+        }
+      }),
+      detail: bubbleDetail({
+        bubbleId: "b-expanded-remote-watchdog",
+        repoPath: "/repo-a",
+        state: "WAITING_HUMAN",
+        runtimeSession: null,
+        stale: false,
+        attention: {
+          code: "watchdog_expired",
+          severity: "critical",
+          label: "Watchdog expired",
+          detail: "The watchdog deadline passed without observed protocol activity."
+        },
+        watchdog: {
+          expired: true,
+          remainingSeconds: 0
+        },
+        remoteExecution: {
+          alias: "lab",
+          host: "ssh.example.com",
+          pointerKind: "started",
+          viewKind: "status",
+          statusSource: "live",
+          cacheStatus: "present",
+          runtimeAvailability: "active",
+          lastLiveCheckAt: "2026-04-16T10:00:00.000Z",
+          lastCacheCheckAt: "2026-04-16T10:00:00.000Z"
+        }
+      })
+    });
+
+    expect(screen.getByRole("button", { name: "Attach" })).toBeEnabled();
+    expect(screen.getByText(/watchdog deadline passed/u)).toBeInTheDocument();
+    expect(screen.getByRole("article")).toHaveClass("border-rose-500");
+    expect(screen.queryByText(/fail-closed/u)).not.toBeInTheDocument();
+  });
+
   it("shows disabled attach with fail-closed hint for unavailable remote detail data", () => {
     renderExpandedCard({
       bubble: bubbleCard({

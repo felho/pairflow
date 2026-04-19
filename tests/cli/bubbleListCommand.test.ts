@@ -289,6 +289,84 @@ describe("renderBubbleListText", () => {
     expect(rendered).not.toContain("runtime_note=preserved_state_no_live_runtime_fail_closed");
   });
 
+  it("keeps watchdog-only refreshed entries distinct from runtime-loss wording", () => {
+    const rendered = renderBubbleListText({
+      repoPath: "/tmp/repo",
+      total: 1,
+      byState: {
+        CREATED: 0,
+        PREPARING_WORKSPACE: 0,
+        RUNNING: 0,
+        WAITING_HUMAN: 1,
+        READY_FOR_HUMAN_APPROVAL: 0,
+        APPROVED_FOR_COMMIT: 0,
+        COMMITTED: 0,
+        DONE: 0,
+        FAILED: 0,
+        CANCELLED: 0
+      },
+      runtimeSessions: {
+        registered: 0,
+        stale: 0
+      },
+      remoteExecutionSummary: {
+        createdNotStarted: 0,
+        unavailableStarted: 0,
+        refreshedThisRun: true
+      },
+      bubbles: [
+        {
+          bubbleId: "b_list_render_remote_watchdog_active_01",
+          repoPath: "/tmp/repo",
+          worktreePath:
+            "/tmp/repo/.pairflow-worktrees/b_list_render_remote_watchdog_active_01",
+          state: "WAITING_HUMAN",
+          round: 3,
+          activeAgent: "claude",
+          activeRole: "reviewer",
+          activeSince: "2026-04-16T09:50:00.000Z",
+          lastCommandAt: "2026-04-16T09:58:00.000Z",
+          stateValidation: null,
+          runtimeSession: null,
+          attention: {
+            code: "watchdog_expired",
+            severity: "critical",
+            label: "Watchdog expired",
+            detail: "The watchdog deadline passed without observed protocol activity."
+          },
+          metaReview: {
+            actor: "meta-reviewer",
+            authorityActive: false,
+            runtimeDelivery: null
+          },
+          remoteExecution: {
+            alias: "lab",
+            host: "ssh.example.com",
+            pointerKind: "started",
+            viewKind: "list",
+            stateSource: "refresh",
+            cacheStatus: "present",
+            runtimeAvailability: "active",
+            lastLiveCheckAt: "2026-04-16T10:00:00.000Z",
+            lastCacheCheckAt: "2026-04-16T10:00:00.000Z",
+            remoteClonePath:
+              "/srv/pairflow/repo--b_list_render_remote_watchdog_active_01"
+          }
+        }
+      ]
+    });
+
+    expect(rendered).toContain(
+      "b_list_render_remote_watchdog_active_01: state=WAITING_HUMAN, round=3"
+    );
+    expect(rendered).toContain("source=refresh runtime=active");
+    expect(rendered).toContain("live_checked=2026-04-16T10:00:00.000Z");
+    expect(rendered).not.toContain("runtime_reason=STATUS_REMOTE_RUNTIME_MISSING");
+    expect(rendered).not.toContain(
+      "runtime_note=preserved_state_no_live_runtime_fail_closed"
+    );
+  });
+
   it("does not render runtime-loss note for cache-backed entries", () => {
     const rendered = renderBubbleListText({
       repoPath: "/tmp/repo",

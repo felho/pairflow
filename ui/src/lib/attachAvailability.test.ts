@@ -70,6 +70,37 @@ describe("attachAvailability", () => {
     });
   });
 
+  it("keeps attach enabled for live remote status shapes with active remote runtime proof", () => {
+    const availability = getAttachAvailability({
+      bubbleId: "b-remote-watchdog-123",
+      state: "WAITING_HUMAN",
+      hasRuntimeSession: false,
+      runtime: {
+        expected: false,
+        present: false,
+        stale: false
+      },
+      remoteExecution: {
+        alias: "lab",
+        host: "ssh.example.com",
+        pointerKind: "started",
+        viewKind: "status",
+        statusSource: "live",
+        cacheStatus: "present",
+        runtimeAvailability: "active",
+        lastLiveCheckAt: "2026-04-16T10:00:00.000Z",
+        lastCacheCheckAt: "2026-04-16T10:00:00.000Z"
+      }
+    });
+
+    expect(availability).toEqual({
+      visible: true,
+      enabled: true,
+      command: "pairflow bubble attach --id b-remote-watchdog-123",
+      hint: null
+    });
+  });
+
   it("disables attach with actionable hint for created_not_started remote list-shapes", () => {
     const availability = getAttachAvailability({
       bubbleId: "b-remote-created-123",
@@ -274,6 +305,37 @@ describe("attachAvailability", () => {
       visible: true,
       enabled: true,
       command: "pairflow bubble attach --id b-remote-list-active-123",
+      hint: null
+    });
+  });
+
+  it("keeps attach enabled for refreshed remote list shapes when only watchdog attention changed", () => {
+    const availability = getAttachAvailability({
+      bubbleId: "b-remote-list-watchdog-123",
+      state: "WAITING_HUMAN",
+      hasRuntimeSession: false,
+      runtime: {
+        expected: false,
+        present: false,
+        stale: false
+      },
+      remoteExecution: {
+        alias: "lab",
+        host: "ssh.example.com",
+        pointerKind: "started",
+        viewKind: "list",
+        stateSource: "refresh",
+        cacheStatus: "present",
+        runtimeAvailability: "active",
+        lastLiveCheckAt: "2026-04-16T10:00:00.000Z",
+        lastCacheCheckAt: "2026-04-16T10:00:00.000Z"
+      }
+    });
+
+    expect(availability).toEqual({
+      visible: true,
+      enabled: true,
+      command: "pairflow bubble attach --id b-remote-list-watchdog-123",
       hint: null
     });
   });

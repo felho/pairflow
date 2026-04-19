@@ -336,16 +336,11 @@ function inferRuntimeAvailability(input: {
     return "inactive";
   }
   if (
-    input.watchdog.expired
-    || input.paneActivity.lastSampleStatus !== "sampled"
+    input.paneActivity.lastSampleStatus !== "sampled"
     || input.paneActivity.sessionName === null
     || input.paneActivity.targetPane === null
     || input.paneActivity.sampledAt === null
     || input.paneActivity.lastChangedAt === null
-    || (
-      input.watchdog.monitored
-      && input.watchdog.monitoredAgent === null
-    )
     || input.paneActivity.readStatus !== "ok"
   ) {
     return "missing";

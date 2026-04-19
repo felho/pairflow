@@ -167,7 +167,7 @@ describe("sshBubbleStatus", () => {
     expect(status.lastCheckedAt).toBe("2026-04-16T10:00:00.000Z");
   });
 
-  it("treats watchdog-expired runtime snapshots as missing even when pane sampling still looks readable", async () => {
+  it("keeps watchdog-expired runtime snapshots active when pane sampling still looks readable", async () => {
     const status = await executeRemoteBubbleStatus(
       {
         bubbleId: "b_remote_status_watchdog_expired_01",
@@ -258,7 +258,103 @@ describe("sshBubbleStatus", () => {
       }
     );
 
-    expect(status.runtimeAvailability).toBe("missing");
+    expect(status.runtimeAvailability).toBe("active");
+    expect(status.watchdog).toMatchObject({
+      monitored: true,
+      monitoredAgent: "codex",
+      expired: true
+    });
+  });
+
+  it("keeps monitored recovery snapshots active when watchdog agent identity is null but live pane proof is intact", async () => {
+    const status = await executeRemoteBubbleStatus(
+      {
+        bubbleId: "b_remote_status_meta_review_recovery_01",
+        remoteClonePath:
+          "/srv/pairflow/repo--b_remote_status_meta_review_recovery_01",
+        remoteTarget: {
+          alias: "prod",
+          host: "ssh.example.com",
+          user: "pairflow",
+          pairflowCommand: "pairflow"
+        }
+      },
+      {
+        now: () => new Date("2026-04-16T10:10:00.000Z"),
+        runCommand: async () => ({
+          stdout: JSON.stringify({
+            bubbleStartedAt: "2026-04-16T09:45:00.000Z",
+            state: "RUNNING",
+            round: 3,
+            activeAgent: null,
+            activeRole: null,
+            activeSince: null,
+            lastCommandAt: "2026-04-16T09:58:00.000Z",
+            paneActivity: {
+              readStatus: "ok",
+              lastChangedAt: "2026-04-16T09:57:00.000Z",
+              sampledAt: "2026-04-16T10:09:30.000Z",
+              sinceLastChangedSeconds: 750,
+              sinceSampledSeconds: 30,
+              lastSampleStatus: "sampled",
+              lastSampleError: null,
+              sessionName: "pf-b_remote_status_meta_review_recovery_01",
+              targetPane:
+                "pf-b_remote_status_meta_review_recovery_01:0.1"
+            },
+            executionContext: null,
+            watchdog: {
+              monitored: true,
+              monitoredAgent: null,
+              timeoutMinutes: 30,
+              referenceTimestamp: "2026-04-16T09:58:00.000Z",
+              deadlineTimestamp: "2026-04-16T10:28:00.000Z",
+              remainingSeconds: 1080,
+              expired: false
+            },
+            pendingInboxItems: {
+              humanQuestions: 0,
+              approvalRequests: 0,
+              total: 0
+            },
+            transcript: {
+              totalMessages: 5,
+              lastMessageType: "PASS",
+              lastMessageTs: "2026-04-16T09:58:00.000Z",
+              lastMessageId: "msg_remote_status_meta_review_recovery_01"
+            },
+            metaReview: {
+              actor: "meta-reviewer",
+              authorityActive: false,
+              runtimeDelivery: null
+            },
+            accuracy_critical: false,
+            last_review_verification: "missing",
+            failing_gates: [],
+            spec_lock_state: {
+              state: "IMPLEMENTABLE",
+              open_blocker_count: 0,
+              open_required_now_count: 0
+            },
+            round_gate_state: {
+              applies: false,
+              violated: false,
+              round: 3
+            },
+            stateValidation: null
+          }),
+          stderr: "",
+          exitCode: 0
+        })
+      }
+    );
+
+    expect(status.runtimeAvailability).toBe("active");
+    expect(status.watchdog).toMatchObject({
+      monitored: true,
+      monitoredAgent: null,
+      expired: false
+    });
   });
 
   it("uses a non-login shell for the remote status command to avoid shell-init stdout pollution", async () => {
