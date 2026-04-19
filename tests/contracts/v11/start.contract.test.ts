@@ -22,6 +22,8 @@ const startCaseSources = [
   "tests/contracts/v11/cases/start/start-clone-not-activated-resume-approved-for-commit-v11.case.json",
   "tests/contracts/v11/cases/start/start-clone-not-activated-resume-committed-v11.case.json",
   "tests/contracts/v11/cases/start/start-launch-ack-failed-v11.case.json",
+  "tests/contracts/v11/cases/start/start-launch-ack-failed-compat-v11.case.json",
+  "tests/contracts/v11/cases/start/start-legacy-launch-bridge-failed-v11.case.json",
   "tests/contracts/v11/cases/start/start-stale-session-reclaim-v11.case.json",
   "tests/contracts/v11/cases/start/start-remote-created-v11.case.json",
   "tests/contracts/v11/cases/start/start-remote-execution-failed-v11.case.json",

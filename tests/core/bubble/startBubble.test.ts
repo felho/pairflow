@@ -18,9 +18,19 @@ import {
   StartBubbleErrorV11 as StartBubbleError
 } from "../../../src/v11/application/start/emitStartV11.js";
 import {
+  launchBubbleSessionAck as launchBubbleSessionAckPublicApi,
+  launchBubbleTmuxSession as launchBubbleTmuxSessionPublicApi,
   startBubble as startBubblePublicApi,
   StartBubbleError as PublicStartBubbleError
 } from "../../../src/index.js";
+import type {
+  LaunchBubbleSessionAck,
+  LaunchBubbleSessionInput
+} from "../../../src/index.js";
+import {
+  launchBubbleSessionAck as launchBubbleSessionAckCanonical,
+  launchBubbleTmuxSession as launchBubbleTmuxSessionCanonical
+} from "../../../src/v11/infrastructure/channel/tmux/tmuxManager.js";
 import { upsertRuntimeSession } from "../../../src/v11/infrastructure/executor/sessionRuntime/runtimeSessionsRegistry.js";
 import { BubbleLookupError } from "../../../src/v11/infrastructure/executor/workspace/bubbleLookup.js";
 import {
@@ -289,6 +299,25 @@ describe("startBubble", () => {
     expect(implementerCommand).not.toContain(
       "Implement in this worktree and run relevant validation before handoff."
     );
+  });
+
+  it("re-exports neutral and retained launch helpers from the public surface", () => {
+    const input: LaunchBubbleSessionInput = {
+      bubbleId: "bubble",
+      workspacePath: "/tmp/worktree",
+      statusCommand: "status",
+      implementerCommand: "implementer",
+      reviewerCommand: "reviewer"
+    };
+    const ack: LaunchBubbleSessionAck = {
+      status: "running",
+      sessionName: "pf-bubble"
+    };
+
+    expect(input.bubbleId).toBe("bubble");
+    expect(ack.sessionName).toBe("pf-bubble");
+    expect(launchBubbleSessionAckPublicApi).toBe(launchBubbleSessionAckCanonical);
+    expect(launchBubbleTmuxSessionPublicApi).toBe(launchBubbleTmuxSessionCanonical);
   });
 
   it("transitions CREATED -> PREPARING_WORKSPACE -> RUNNING and launches tmux", async () => {
@@ -3155,7 +3184,7 @@ describe("startBubble", () => {
               worktreePath: created.paths.worktreePath
             })
           ),
-        launchBubbleTmuxSessionAck: async () => ({
+        launchBubbleSessionAck: async () => ({
           status: "failed_to_start",
           reason_code: "LAUNCH_ACK_TMUX_COMMAND_FAILED",
           failure_kind: "tmux_command_failed",
@@ -3204,6 +3233,87 @@ describe("startBubble", () => {
     expect((thrown as StartBubbleError).message).toContain(
       "Cause: LAUNCH_ACK_TMUX_COMMAND_FAILED: tmux launch rejected in test"
     );
+  });
+
+  it("fails closed through the retained ack compat override path", async () => {
+    const repoPath = await createTempRepo();
+    const created = await createBubble({
+      id: "b_start_launch_ack_compat_01",
+      repoPath,
+      baseBranch: "main",
+      reviewArtifactType: "code",
+      task: "Retained launch ack compat override should still fail closed",
+      cwd: repoPath
+    });
+    const launchBubbleTmuxSessionAckOverride = vi.fn(async () => ({
+      status: "failed_to_start" as const,
+      reason_code: "LAUNCH_ACK_TMUX_COMMAND_FAILED" as const,
+      failure_kind: "tmux_command_failed" as const,
+      error_message: "compat tmux launch rejected in test",
+      sessionName: `pf-${created.bubbleId}`
+    }));
+    const launchBubbleTmuxSessionOverride = vi.fn(async () => ({
+      sessionName: "pf-unexpected-legacy"
+    }));
+
+    const thrown = await startBubble(
+      {
+        bubbleId: created.bubbleId,
+        cwd: repoPath,
+        now: new Date("2026-03-23T10:03:45.000Z")
+      },
+      {
+        bootstrapWorktreeWorkspace: () =>
+          Promise.resolve(
+            buildWorktreeBootstrapResult({
+              repoPath,
+              bubbleBranch: created.config.bubble_branch,
+              worktreePath: created.paths.worktreePath
+            })
+          ),
+        launchBubbleTmuxSessionAck: launchBubbleTmuxSessionAckOverride,
+        launchBubbleTmuxSession: launchBubbleTmuxSessionOverride,
+        cleanupWorktreeWorkspace: () =>
+          Promise.resolve({
+            repoPath,
+            bubbleBranch: created.config.bubble_branch,
+            worktreePath: created.paths.worktreePath,
+            removedBranch: true,
+            removedWorktree: true
+          }),
+        claimRuntimeSession: (input) =>
+          Promise.resolve({
+            claimed: true,
+            record: {
+              bubbleId: input.bubbleId,
+              repoPath: input.repoPath,
+              worktreePath: input.worktreePath,
+              tmuxSessionName: input.tmuxSessionName,
+              updatedAt: "2026-03-23T10:03:45.000Z"
+            }
+          }),
+        removeRuntimeSession: () => Promise.resolve(true)
+      }
+    ).then(
+      () => null,
+      (error: unknown) => error
+    );
+
+    expect(thrown).toBeInstanceOf(StartBubbleError);
+    expect((thrown as StartBubbleError).reasonCode).toBe(
+      "LAUNCH_ACK_TMUX_COMMAND_FAILED"
+    );
+    expect((thrown as StartBubbleError).context).toMatchObject({
+      bubble_id: created.bubbleId,
+      stage: "launch_tmux",
+      failure_kind: "tmux_command_failed",
+      tmux_session_name: `pf-${created.bubbleId}`
+    });
+    expect((thrown as StartBubbleError).message).toContain(
+      "Cause: LAUNCH_ACK_TMUX_COMMAND_FAILED: compat tmux launch rejected in test"
+    );
+    expect(launchBubbleTmuxSessionAckOverride).toHaveBeenCalledTimes(1);
+    expect(launchBubbleTmuxSessionOverride).not.toHaveBeenCalled();
   });
 
   it("preserves StartBubbleError metadata when startup-incomplete catch rewrites the message", async () => {

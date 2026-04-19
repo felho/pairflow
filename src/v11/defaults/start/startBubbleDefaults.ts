@@ -56,8 +56,6 @@ export interface StartBubbleDependencyDefaults {
   bootstrapWorktreeWorkspace: BootstrapWorktreeWorkspacePort;
   cleanupWorktreeWorkspace: CleanupWorktreeWorkspacePort;
   launchBubbleSessionAck: LaunchBubbleSessionAckPort;
-  launchBubbleTmuxSessionAck: LaunchBubbleTmuxSessionAckPort;
-  launchBubbleTmuxSession: LaunchBubbleTmuxSessionPort;
   terminateBubbleTmuxSession: TerminateBubbleTmuxSessionPort;
   readRuntimeSessionsRegistry: ReadRuntimeSessionsRegistryPort;
   claimRuntimeSession: ClaimRuntimeSessionPort;
@@ -103,8 +101,6 @@ export const startBubbleDependencyDefaults: StartBubbleDependencyDefaults = {
   bootstrapWorktreeWorkspace,
   cleanupWorktreeWorkspace: cleanupWorktreeWorkspaceCanonical,
   launchBubbleSessionAck,
-  launchBubbleTmuxSessionAck,
-  launchBubbleTmuxSession,
   terminateBubbleTmuxSession: terminateBubbleTmuxSessionCanonical,
   readRuntimeSessionsRegistry,
   claimRuntimeSession,
