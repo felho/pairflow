@@ -53,6 +53,36 @@ const sshTransportOptions = [
   ["ConnectionAttempts", "1"]
 ] as const;
 
+type RemoteTimelineReadErrorCode =
+  | "REMOTE_TIMELINE_TRANSPORT_FAILED"
+  | "REMOTE_TIMELINE_TIMEOUT";
+
+interface RemoteTimelineReadErrorContext {
+  bubble_id: string;
+  remote_alias: string;
+  remote_host: string;
+  remote_clone_path: string;
+  operation: "transport" | "timeout";
+  exit_code?: number;
+}
+
+class RemoteTimelineReadError extends Error {
+  public readonly code: RemoteTimelineReadErrorCode;
+  public readonly context: RemoteTimelineReadErrorContext;
+
+  public constructor(input: {
+    code: RemoteTimelineReadErrorCode;
+    message: string;
+    context: RemoteTimelineReadErrorContext;
+    cause?: unknown;
+  }) {
+    super(input.message, input.cause === undefined ? undefined : { cause: input.cause });
+    this.name = "RemoteTimelineReadError";
+    this.code = input.code;
+    this.context = input.context;
+  }
+}
+
 export function presentTimeline(envelopes: ProtocolEnvelope[]): UiTimelineEntry[] {
   return envelopes.map((envelope) => ({
     id: envelope.id,
@@ -262,6 +292,14 @@ function buildSshCommandArgs(input: {
   ];
 }
 
+function summarizeTransportOutput(output: string): string {
+  const normalized = output.replace(/\s+/gu, " ").trim();
+  if (normalized.length === 0) {
+    return "<empty>";
+  }
+  return normalized.slice(0, 200);
+}
+
 async function readRemoteTimelineText(input: {
   bubbleId: string;
   remoteClonePath: string;
@@ -303,14 +341,37 @@ async function readRemoteTimelineText(input: {
       }
     );
     if (result.exitCode !== 0) {
-      throw new Error(result.stderr.trim().length > 0 ? result.stderr.trim() : result.stdout.trim());
+      const detailSource = result.stderr.trim().length > 0 ? result.stderr : result.stdout;
+      throw new RemoteTimelineReadError({
+        code: "REMOTE_TIMELINE_TRANSPORT_FAILED",
+        message:
+          `Remote timeline read transport failed (exit ${result.exitCode}): ${summarizeTransportOutput(detailSource)}`,
+        context: {
+          bubble_id: input.bubbleId,
+          remote_alias: input.remoteAlias,
+          remote_host: remoteTarget.host,
+          remote_clone_path: input.remoteClonePath,
+          operation: "transport",
+          exit_code: result.exitCode
+        }
+      });
     }
     return result.stdout;
   } catch (error) {
     if (error instanceof Error && error.name === "AbortError") {
-      throw new Error(
-        `Remote timeline read timed out after ${remoteTimelineCommandTimeoutMs}ms for ${input.bubbleId}.`
-      );
+      throw new RemoteTimelineReadError({
+        code: "REMOTE_TIMELINE_TIMEOUT",
+        message:
+          `Remote timeline read timed out after ${remoteTimelineCommandTimeoutMs}ms for ${input.bubbleId}.`,
+        context: {
+          bubble_id: input.bubbleId,
+          remote_alias: input.remoteAlias,
+          remote_host: remoteTarget.host,
+          remote_clone_path: input.remoteClonePath,
+          operation: "timeout"
+        },
+        cause: error
+      });
     }
     throw error;
   } finally {

@@ -20,7 +20,11 @@ import type {
   BubbleCreateDependencies,
   ResolvedTaskInput
 } from "./createCommandContract.js";
-import { BubbleCreateError, ensureRuntimeSessionFile, renderTaskArtifact } from "./createCommandRuntime.js";
+import {
+  ensureRuntimeSessionFile,
+  renderTaskArtifact,
+  toBubbleCreateError
+} from "./createCommandRuntime.js";
 import type { ReviewerFocusExtractionResult } from "../../../v11/shared/reviewer/reviewerBrief.js";
 
 export interface CreateBubblePersistenceInput {
@@ -41,6 +45,76 @@ export interface ReviewerFocusArtifactPersistResult {
   status: "written" | "write_failed";
   artifactPath: string;
   errorCode?: string;
+}
+
+async function persistRemotePointerArtifact(input: {
+  bubbleId: string;
+  remotePointer?: BubbleRemotePointerCreated | undefined;
+  paths: BubblePaths;
+  dependencies: BubbleCreateDependencies;
+}): Promise<void> {
+  if (input.remotePointer === undefined) {
+    return;
+  }
+
+  const { writeRemotePointer } = input.dependencies;
+  if (writeRemotePointer === undefined) {
+    throw toBubbleCreateError({
+      message: "Missing required create bubble dependency: writeRemotePointer.",
+      context: {
+        dependency: "writeRemotePointer",
+        command_name: "create",
+        bubble_id: input.bubbleId
+      }
+    });
+  }
+
+  await writeRemotePointer(input.paths.remotePointerPath, input.remotePointer);
+}
+
+async function appendInitialTaskEnvelopeIfNeeded(input: {
+  bubbleId: string;
+  createdAt: Date;
+  paths: BubblePaths;
+  config: BubbleConfig;
+  round: number;
+  task: ResolvedTaskInput;
+  ideationMode: boolean;
+  dependencies: BubbleCreateDependencies;
+}): Promise<void> {
+  if (input.ideationMode) {
+    return;
+  }
+
+  if (input.dependencies.appendProtocolEnvelope === undefined) {
+    throw toBubbleCreateError({
+      message: "Missing required create bubble dependency: appendProtocolEnvelope.",
+      context: {
+        dependency: "appendProtocolEnvelope",
+        command_name: "create",
+        bubble_id: input.bubbleId
+      }
+    });
+  }
+
+  await appendInitialTaskEnvelope({
+    bubbleId: input.bubbleId,
+    createdAt: input.createdAt,
+    paths: input.paths,
+    config: input.config,
+    round: input.round,
+    task: input.task,
+    appendEnvelope: input.dependencies.appendProtocolEnvelope,
+    createError: (message) =>
+      toBubbleCreateError({
+        message,
+        context: {
+          command_name: "create",
+          bubble_id: input.bubbleId,
+          operation: "append_initial_task_envelope"
+        }
+      })
+  });
 }
 
 export async function persistCreatedBubbleArtifacts(
@@ -117,34 +191,18 @@ export async function persistCreatedBubbleArtifacts(
       }
     );
   }
-  if (input.remotePointer !== undefined) {
-    const { writeRemotePointer } = input.dependencies;
-    if (writeRemotePointer === undefined) {
-      throw new BubbleCreateError(
-        "Missing required create bubble dependency: writeRemotePointer."
-      );
-    }
-    await writeRemotePointer(input.paths.remotePointerPath, input.remotePointer);
-  }
+  await persistRemotePointerArtifact(input);
   await ensureRuntimeSessionFile(input.paths.sessionsPath);
-
-  if (!input.ideationMode) {
-    if (input.dependencies.appendProtocolEnvelope === undefined) {
-      throw new BubbleCreateError(
-        "Missing required create bubble dependency: appendProtocolEnvelope."
-      );
-    }
-    await appendInitialTaskEnvelope({
-      bubbleId: input.bubbleId,
-      createdAt: input.createdAt,
-      paths: input.paths,
-      config: input.config,
-      round: input.state.round,
-      task: input.task,
-      appendEnvelope: input.dependencies.appendProtocolEnvelope,
-      createError: (message) => new BubbleCreateError(message)
-    });
-  }
+  await appendInitialTaskEnvelopeIfNeeded({
+    bubbleId: input.bubbleId,
+    createdAt: input.createdAt,
+    paths: input.paths,
+    config: input.config,
+    round: input.state.round,
+    task: input.task,
+    ideationMode: input.ideationMode,
+    dependencies: input.dependencies
+  });
 
   return {
     status: reviewerFocusArtifactWriteStatus,

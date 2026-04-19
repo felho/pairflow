@@ -17,7 +17,6 @@ import type {
   ResolvedTaskInput
 } from "./createCommandContract.js";
 import {
-  BubbleCreateError,
   buildBubbleConfig,
   buildIdeationPlaceholderTaskContent,
   ensureBubbleDoesNotExist,
@@ -26,6 +25,7 @@ import {
   resolveCreateBubbleRemoteExecution,
   resolveReviewerBriefInput,
   resolveTaskInput,
+  toBubbleCreateError,
   validateBubbleId
 } from "./createCommandRuntime.js";
 import {
@@ -58,9 +58,14 @@ export async function prepareCreateBubbleFlowContext(input: {
 
   const repoPath = resolve(input.command.repoPath);
   if (input.dependencies.assertGitRepository === undefined) {
-    throw new BubbleCreateError(
-      "Missing required create bubble dependency: assertGitRepository."
-    );
+    throw toBubbleCreateError({
+      message: "Missing required create bubble dependency: assertGitRepository.",
+      context: {
+        dependency: "assertGitRepository",
+        command_name: "create",
+        bubble_id: input.command.id
+      }
+    });
   }
   await ensureRepoPathIsGitRepo(
     repoPath,
@@ -69,7 +74,14 @@ export async function prepareCreateBubbleFlowContext(input: {
 
   const baseBranch = input.command.baseBranch.trim();
   if (baseBranch.length === 0) {
-    throw new BubbleCreateError("Base branch cannot be empty.");
+    throw toBubbleCreateError({
+      message: "Base branch cannot be empty.",
+      context: {
+        command_name: "create",
+        bubble_id: input.command.id,
+        base_branch: input.command.baseBranch
+      }
+    });
   }
 
   const paths = getBubblePaths(repoPath, input.command.id);
@@ -105,9 +117,15 @@ export async function prepareCreateBubbleFlowContext(input: {
     | undefined;
   if (input.command.remote !== undefined) {
     if (input.dependencies.loadPairflowGlobalConfig === undefined) {
-      throw new BubbleCreateError(
-        "Missing required create bubble dependency: loadPairflowGlobalConfig."
-      );
+      throw toBubbleCreateError({
+        message: "Missing required create bubble dependency: loadPairflowGlobalConfig.",
+        context: {
+          dependency: "loadPairflowGlobalConfig",
+          command_name: "create",
+          bubble_id: input.command.id,
+          remote: input.command.remote
+        }
+      });
     }
     remoteExecution = await resolveCreateBubbleRemoteExecution({
       remote: input.command.remote,

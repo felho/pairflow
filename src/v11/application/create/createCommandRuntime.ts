@@ -43,7 +43,7 @@ export class BubbleCreateError extends Error {
   }
 }
 
-function toBubbleCreateError(input: {
+export function toBubbleCreateError(input: {
   message: string;
   context: Record<string, unknown>;
 }): BubbleCreateError {
