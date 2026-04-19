@@ -1,6 +1,9 @@
 import type { AgentName, PairflowCommandProfile } from "../../../types/bubble.js";
 import { shellQuote } from "../foundation/shellQuote.js";
-import { buildPairflowCommandBootstrap } from "./pairflowCommandBootstrap.js";
+import {
+  buildPairflowCommandBootstrap,
+  type PairflowRemoteWorkspaceAuthority
+} from "./pairflowCommandBootstrap.js";
 
 export interface BuildAgentCommandInput {
   agentName: AgentName;
@@ -9,6 +12,7 @@ export interface BuildAgentCommandInput {
   worktreePath?: string;
   pairflowCommandProfile?: PairflowCommandProfile;
   externalPairflowCommand?: string;
+  remoteWorkspaceAuthority?: PairflowRemoteWorkspaceAuthority;
   startupPrompt?: string | undefined;
 }
 
@@ -44,7 +48,8 @@ export function buildAgentCommand(input: BuildAgentCommandInput): string {
   const pairflowBootstrap = buildPairflowCommandBootstrap(
     workspacePath,
     input.pairflowCommandProfile ?? "external",
-    input.externalPairflowCommand
+    input.externalPairflowCommand,
+    input.remoteWorkspaceAuthority
   );
   const agentExitedMessage =
     `${agentName} exited (code $agent_exit_code). Dropping to interactive shell.`;

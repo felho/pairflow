@@ -3,9 +3,20 @@ import { resolve } from "node:path";
 import type { PairflowCommandProfile } from "../../../types/bubble.js";
 import { shellQuote } from "../foundation/shellQuote.js";
 import {
+  remoteStartExternalPairflowCommandEnvVar,
+  remoteStartModeEnvVar,
+  remoteStartModeInnerRemoteActivation,
+  remoteStartWorkspaceRootEnvVar
+} from "../bubble/remoteStartExecutionContext.js";
+import {
   resolveExternalPairflowCommand,
   resolveWorktreePairflowEntrypoint
 } from "./pairflowCommandPathAssessment.js";
+
+export interface PairflowRemoteWorkspaceAuthority {
+  workspaceRoot: string;
+  externalPairflowCommand?: string;
+}
 
 export function buildPinnedPairflowCommand(
   workspacePath: string,
@@ -24,11 +35,20 @@ export function buildPinnedPairflowCommand(
 export function buildPairflowCommandBootstrap(
   workspacePath: string,
   profile: PairflowCommandProfile = "external",
-  externalCommandOverride?: string
+  externalCommandOverride?: string,
+  remoteWorkspaceAuthority?: PairflowRemoteWorkspaceAuthority
 ): string[] {
   const resolvedWorktree = resolve(workspacePath.trim());
   const localEntrypoint = resolveWorktreePairflowEntrypoint(resolvedWorktree);
   const wrapperDir = resolve(resolvedWorktree, ".pairflow", "bin");
+  const resolvedRemoteWorkspaceRoot =
+    remoteWorkspaceAuthority?.workspaceRoot !== undefined
+      ? resolve(remoteWorkspaceAuthority.workspaceRoot.trim())
+      : undefined;
+  const resolvedRemoteExternalCommand =
+    remoteWorkspaceAuthority?.externalPairflowCommand?.trim().length
+      ? remoteWorkspaceAuthority.externalPairflowCommand.trim()
+      : undefined;
   const resolvedExternalCommand =
     profile === "external"
       ? externalCommandOverride?.trim().length
@@ -45,6 +65,17 @@ export function buildPairflowCommandBootstrap(
   if (profile === "external") {
     return [
       `export PAIRFLOW_WORKTREE_ROOT=${shellQuote(resolvedWorktree)}`,
+      ...(resolvedRemoteWorkspaceRoot !== undefined
+        ? [
+            `export ${remoteStartModeEnvVar}=${shellQuote(remoteStartModeInnerRemoteActivation)}`,
+            `export ${remoteStartWorkspaceRootEnvVar}=${shellQuote(resolvedRemoteWorkspaceRoot)}`,
+            ...(resolvedRemoteExternalCommand !== undefined
+              ? [
+                  `export ${remoteStartExternalPairflowCommandEnvVar}=${shellQuote(resolvedRemoteExternalCommand)}`
+                ]
+              : [])
+          ]
+        : []),
       `export PAIRFLOW_COMMAND_PROFILE=${shellQuote(profile)}`,
       `export PAIRFLOW_WRAPPER_DIR=${shellQuote(wrapperDir)}`,
       'mkdir -p "$PAIRFLOW_WRAPPER_DIR"',
@@ -77,6 +108,17 @@ export function buildPairflowCommandBootstrap(
 
   return [
     `export PAIRFLOW_WORKTREE_ROOT=${shellQuote(resolvedWorktree)}`,
+    ...(resolvedRemoteWorkspaceRoot !== undefined
+      ? [
+          `export ${remoteStartModeEnvVar}=${shellQuote(remoteStartModeInnerRemoteActivation)}`,
+          `export ${remoteStartWorkspaceRootEnvVar}=${shellQuote(resolvedRemoteWorkspaceRoot)}`,
+          ...(resolvedRemoteExternalCommand !== undefined
+            ? [
+                `export ${remoteStartExternalPairflowCommandEnvVar}=${shellQuote(resolvedRemoteExternalCommand)}`
+              ]
+            : [])
+        ]
+      : []),
     `export PAIRFLOW_COMMAND_PROFILE=${shellQuote(profile)}`,
     `export PAIRFLOW_LOCAL_ENTRYPOINT=${shellQuote(localEntrypoint)}`,
     `export PAIRFLOW_WRAPPER_DIR=${shellQuote(wrapperDir)}`,

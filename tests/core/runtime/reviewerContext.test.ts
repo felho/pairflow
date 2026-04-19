@@ -244,4 +244,49 @@ describe("refreshReviewerContext", () => {
     expect(script).toContain("PAIRFLOW_COMMAND_PATH_STALE");
     expect(script).not.toContain("PAIRFLOW_EXTERNAL_COMMAND");
   });
+
+  it("exports remote workspace authority when refreshing reviewer for ssh executor bubbles", async () => {
+    const calls: string[][] = [];
+    const runner: TmuxRunner = (args): Promise<TmuxRunResult> => {
+      calls.push(args);
+      return Promise.resolve({
+        stdout: "",
+        stderr: "",
+        exitCode: 0
+      });
+    };
+
+    const result = await refreshReviewerContext({
+      bubbleId: "b_reviewer_ctx_01",
+      bubbleConfig: {
+        ...baseConfig,
+        executor: {
+          type: "ssh",
+          remote: "spark1"
+        }
+      },
+      sessionsPath: "/tmp/repo/.pairflow/runtime/sessions.json",
+      runner,
+      readSessionsRegistry: () =>
+        Promise.resolve({
+          b_reviewer_ctx_01: createRuntimeSessionRecord({
+            workspacePath: "/remote/repos/pairflow--bubble-01",
+            workspaceKind: "clone"
+          })
+        })
+    });
+
+    expect(result).toEqual({
+      refreshed: true
+    });
+    const reviewerCommand = calls[0]?.[6];
+    expect(typeof reviewerCommand).toBe("string");
+    const script = extractBashLcScript(reviewerCommand as string);
+    expect(script).toContain(
+      "export PAIRFLOW_REMOTE_START_MODE='inner_remote_activation'"
+    );
+    expect(script).toContain(
+      "export PAIRFLOW_REMOTE_START_WORKSPACE_ROOT='/remote/repos/pairflow--bubble-01'"
+    );
+  });
 });

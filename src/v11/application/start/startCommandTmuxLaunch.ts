@@ -57,6 +57,15 @@ export async function launchFreshTmuxSession(input: {
 }): Promise<{ sessionName: string }> {
   const externalPairflowCommand =
     input.context.remoteStartContext?.externalPairflowCommand;
+  const remoteWorkspaceAuthority =
+    input.context.remoteStartContext !== undefined
+      ? {
+          workspaceRoot: input.context.remoteStartContext.workspaceRoot,
+          ...(externalPairflowCommand !== undefined
+            ? { externalPairflowCommand }
+            : {})
+        }
+      : undefined;
   const ack = await input.deps.launchSessionAck({
     bubbleId: input.context.resolved.bubbleId,
     workspacePath: input.launchWorkspacePath,
@@ -86,6 +95,9 @@ export async function launchFreshTmuxSession(input: {
       ...(externalPairflowCommand !== undefined
         ? { externalPairflowCommand }
         : {}),
+      ...(remoteWorkspaceAuthority !== undefined
+        ? { remoteWorkspaceAuthority }
+        : {}),
       startupPrompt: buildImplementerStartupPrompt({
         bubbleId: input.context.resolved.bubbleId,
         repoPath: input.context.resolved.repoPath,
@@ -104,6 +116,9 @@ export async function launchFreshTmuxSession(input: {
       pairflowCommandProfile: input.context.resolved.bubbleConfig.pairflow_command_profile,
       ...(externalPairflowCommand !== undefined
         ? { externalPairflowCommand }
+        : {}),
+      ...(remoteWorkspaceAuthority !== undefined
+        ? { remoteWorkspaceAuthority }
         : {}),
       startupPrompt: buildReviewerStartupPrompt({
         bubbleId: input.context.resolved.bubbleId,
@@ -128,6 +143,9 @@ export async function launchFreshTmuxSession(input: {
       pairflowCommandProfile: input.context.resolved.bubbleConfig.pairflow_command_profile,
       ...(externalPairflowCommand !== undefined
         ? { externalPairflowCommand }
+        : {}),
+      ...(remoteWorkspaceAuthority !== undefined
+        ? { remoteWorkspaceAuthority }
         : {}),
       startupPrompt: buildMetaReviewerStartupPrompt({
         bubbleId: input.context.resolved.bubbleId,
@@ -173,6 +191,15 @@ export async function launchResumeTmuxSession(input: {
 }): Promise<{ sessionName: string }> {
   const externalPairflowCommand =
     input.context.remoteStartContext?.externalPairflowCommand;
+  const remoteWorkspaceAuthority =
+    input.context.remoteStartContext !== undefined
+      ? {
+          workspaceRoot: input.context.remoteStartContext.workspaceRoot,
+          ...(externalPairflowCommand !== undefined
+            ? { externalPairflowCommand }
+            : {})
+        }
+      : undefined;
   const ack = await input.deps.launchSessionAck({
     bubbleId: input.context.resolved.bubbleId,
     workspacePath: input.launchWorkspacePath,
@@ -202,6 +229,9 @@ export async function launchResumeTmuxSession(input: {
       ...(externalPairflowCommand !== undefined
         ? { externalPairflowCommand }
         : {}),
+      ...(remoteWorkspaceAuthority !== undefined
+        ? { remoteWorkspaceAuthority }
+        : {}),
       startupPrompt: buildResumeImplementerStartupPrompt({
         bubbleId: input.context.resolved.bubbleId,
         repoPath: input.context.resolved.repoPath,
@@ -222,6 +252,9 @@ export async function launchResumeTmuxSession(input: {
       pairflowCommandProfile: input.context.resolved.bubbleConfig.pairflow_command_profile,
       ...(externalPairflowCommand !== undefined
         ? { externalPairflowCommand }
+        : {}),
+      ...(remoteWorkspaceAuthority !== undefined
+        ? { remoteWorkspaceAuthority }
         : {}),
       startupPrompt: buildResumeReviewerStartupPrompt({
         bubbleId: input.context.resolved.bubbleId,
@@ -252,6 +285,9 @@ export async function launchResumeTmuxSession(input: {
       pairflowCommandProfile: input.context.resolved.bubbleConfig.pairflow_command_profile,
       ...(externalPairflowCommand !== undefined
         ? { externalPairflowCommand }
+        : {}),
+      ...(remoteWorkspaceAuthority !== undefined
+        ? { remoteWorkspaceAuthority }
         : {}),
       startupPrompt: buildResumeMetaReviewerStartupPrompt({
         bubbleId: input.context.resolved.bubbleId,

@@ -63,6 +63,13 @@ export async function refreshReviewerContext(
     bubbleId: input.bubbleId,
     workspacePath,
     pairflowCommandProfile: input.bubbleConfig.pairflow_command_profile,
+    ...(input.bubbleConfig.executor?.type === "ssh"
+      ? {
+          remoteWorkspaceAuthority: {
+            workspaceRoot: workspacePath
+          }
+        }
+      : {}),
     startupPrompt: input.reviewerStartupPrompt
   });
 

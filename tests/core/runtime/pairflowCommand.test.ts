@@ -78,6 +78,28 @@ describe("pairflow command path helpers", () => {
     expect(bootstrap.join("\n")).toContain("export PAIRFLOW_WORKTREE_ROOT='/tmp/pairflow-worktree'");
   });
 
+  it("exports remote start authority when provided for external profile", () => {
+    const bootstrap = buildPairflowCommandBootstrap(
+      "/tmp/pairflow-worktree",
+      "external",
+      "/usr/local/bin/pairflow",
+      {
+        workspaceRoot: "/remote/repos/pairflow--bubble-01",
+        externalPairflowCommand: "/home/dev/.local/share/pnpm/pairflow"
+      }
+    );
+
+    expect(bootstrap.join("\n")).toContain(
+      "export PAIRFLOW_REMOTE_START_MODE='inner_remote_activation'"
+    );
+    expect(bootstrap.join("\n")).toContain(
+      "export PAIRFLOW_REMOTE_START_WORKSPACE_ROOT='/remote/repos/pairflow--bubble-01'"
+    );
+    expect(bootstrap.join("\n")).toContain(
+      "export PAIRFLOW_REMOTE_START_EXTERNAL_PAIRFLOW_COMMAND='/home/dev/.local/share/pnpm/pairflow'"
+    );
+  });
+
   it("resolves external pairflow by ignoring the worktree wrapper directory", async () => {
     const root = await mkdtemp(join(tmpdir(), "pairflow-command-external-"));
     tempDirs.push(root);

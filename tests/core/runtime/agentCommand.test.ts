@@ -96,6 +96,33 @@ describe("buildAgentCommand", () => {
     await assertBashParses(command);
   });
 
+  it("exports remote workspace authority for remote external panes", async () => {
+    const workspacePath = "/remote/repos/pairflow--bubble-01";
+    const command = buildAgentCommand({
+      agentName: "codex",
+      bubbleId: "b_agent_cmd_remote_authority_01",
+      workspacePath,
+      externalPairflowCommand: "/home/dev/.local/share/pnpm/pairflow",
+      remoteWorkspaceAuthority: {
+        workspaceRoot: workspacePath,
+        externalPairflowCommand: "/home/dev/.local/share/pnpm/pairflow"
+      },
+      startupPrompt: "Prompt"
+    });
+    const script = extractBashLcScript(command);
+
+    expect(script).toContain(
+      "export PAIRFLOW_REMOTE_START_MODE='inner_remote_activation'"
+    );
+    expect(script).toContain(
+      "export PAIRFLOW_REMOTE_START_WORKSPACE_ROOT='/remote/repos/pairflow--bubble-01'"
+    );
+    expect(script).toContain(
+      "export PAIRFLOW_REMOTE_START_EXTERNAL_PAIRFLOW_COMMAND='/home/dev/.local/share/pnpm/pairflow'"
+    );
+    await assertBashParses(command);
+  });
+
   it("builds self_host profile bootstrap when explicitly selected", async () => {
     const worktreePath = "/tmp/pairflow-worktree/claude";
     const command = buildAgentCommand({
