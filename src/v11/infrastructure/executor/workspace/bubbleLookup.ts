@@ -25,6 +25,35 @@ export class BubbleLookupError extends Error {
   }
 }
 
+interface RemoteWorkspaceAuthorityCandidate {
+  modeEnvVar: string;
+  expectedMode: string;
+  workspaceRootEnvVar: string;
+}
+
+const remoteWorkspaceAuthorityCandidates: readonly RemoteWorkspaceAuthorityCandidate[] = [
+  {
+    modeEnvVar: "PAIRFLOW_REMOTE_START_MODE",
+    expectedMode: "inner_remote_activation",
+    workspaceRootEnvVar: "PAIRFLOW_REMOTE_START_WORKSPACE_ROOT"
+  },
+  {
+    modeEnvVar: "PAIRFLOW_REMOTE_COMMIT_MODE",
+    expectedMode: "inner_remote_execution",
+    workspaceRootEnvVar: "PAIRFLOW_REMOTE_COMMIT_WORKSPACE_ROOT"
+  },
+  {
+    modeEnvVar: "PAIRFLOW_REMOTE_MERGE_MODE",
+    expectedMode: "inner_remote_execution",
+    workspaceRootEnvVar: "PAIRFLOW_REMOTE_MERGE_WORKSPACE_ROOT"
+  },
+  {
+    modeEnvVar: "PAIRFLOW_REMOTE_DELETE_MODE",
+    expectedMode: "inner_remote_execution",
+    workspaceRootEnvVar: "PAIRFLOW_REMOTE_DELETE_WORKSPACE_ROOT"
+  }
+] as const;
+
 async function fileExists(path: string): Promise<boolean> {
   return access(path, fsConstants.F_OK)
     .then(() => true)
@@ -84,6 +113,37 @@ async function normalizePath(path: string): Promise<string> {
   return realpath(path).catch(() => resolve(path));
 }
 
+async function resolveRemoteWorkspaceAuthorityOverride(input: {
+  repoPath: string;
+  derivedWorktreePath: string;
+}): Promise<string | undefined> {
+  if (await fileExists(input.derivedWorktreePath)) {
+    return undefined;
+  }
+
+  const normalizedRepoPath = await normalizePath(input.repoPath);
+  for (const candidate of remoteWorkspaceAuthorityCandidates) {
+    const mode = process.env[candidate.modeEnvVar]?.trim();
+    if (mode !== candidate.expectedMode) {
+      continue;
+    }
+
+    const workspaceRoot = process.env[candidate.workspaceRootEnvVar]?.trim();
+    if (workspaceRoot === undefined || workspaceRoot.length === 0) {
+      continue;
+    }
+
+    const normalizedWorkspaceRoot = await normalizePath(workspaceRoot);
+    if (normalizedWorkspaceRoot !== normalizedRepoPath) {
+      continue;
+    }
+
+    return normalizedWorkspaceRoot;
+  }
+
+  return undefined;
+}
+
 export const resolveBubbleById: ResolveBubbleByIdPort = async (
   input: ResolveBubbleByIdInput
 ): Promise<ResolvedBubbleById> => {
@@ -138,7 +198,19 @@ export const resolveBubbleById: ResolveBubbleByIdPort = async (
     );
   }
 
-  const bubblePaths = getBubblePaths(configRepoPath, bubbleConfig.id);
+  const derivedBubblePaths = getBubblePaths(configRepoPath, bubbleConfig.id);
+  const remoteWorkspaceAuthorityOverride =
+    await resolveRemoteWorkspaceAuthorityOverride({
+      repoPath: configRepoPath,
+      derivedWorktreePath: derivedBubblePaths.worktreePath
+    });
+  const bubblePaths =
+    remoteWorkspaceAuthorityOverride === undefined
+      ? derivedBubblePaths
+      : {
+          ...derivedBubblePaths,
+          worktreePath: remoteWorkspaceAuthorityOverride
+        };
 
   return {
     bubbleId: bubbleConfig.id,
