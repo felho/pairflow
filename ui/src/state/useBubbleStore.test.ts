@@ -1637,6 +1637,93 @@ describe("createBubbleStore", () => {
     await Promise.resolve();
   });
 
+  it("keeps expanded detail remote status truth when realtime summary falls back to cache-only remote execution", async () => {
+    const initialSummary = bubbleSummary({
+      bubbleId: "b-a",
+      repoPath: "/repo-a",
+      state: "RUNNING"
+    });
+    const activeRemoteDetail = bubbleDetail({
+      bubbleId: "b-a",
+      repoPath: "/repo-a",
+      state: "RUNNING",
+      remoteExecution: {
+        alias: "spark1",
+        host: "spark1",
+        pointerKind: "started",
+        viewKind: "status",
+        statusSource: "live",
+        cacheStatus: "present",
+        runtimeAvailability: "active",
+        remoteClonePath: "/remote/repo",
+        lastLiveCheckAt: "2026-04-19T16:25:12.972Z",
+        lastCacheCheckAt: "2026-04-19T16:25:12.972Z"
+      }
+    });
+    const deferredDetail = createDeferred<typeof activeRemoteDetail>();
+
+    const getBubble = vi
+      .fn<(repoPath: string, bubbleId: string) => Promise<typeof activeRemoteDetail>>()
+      .mockResolvedValueOnce(activeRemoteDetail)
+      .mockImplementationOnce(async () => deferredDetail.promise);
+
+    const api = createApiStub({
+      getRepos: vi.fn(async () => ["/repo-a"]),
+      getBubbles: vi.fn(async () => ({
+        repo: repoSummary("/repo-a"),
+        bubbles: [initialSummary]
+      })),
+      getBubble,
+      getBubbleTimeline: vi.fn(async () => [])
+    });
+
+    let emitEvent: (event: UiEvent) => void = () => undefined;
+    const store = createBubbleStore({
+      api,
+      createEventsClient: (input) => {
+        emitEvent = input.onEvent;
+        return {
+          start: () => undefined,
+          stop: () => undefined,
+          refresh: () => undefined
+        };
+      }
+    });
+
+    await store.getState().initialize();
+    await store.getState().toggleBubbleExpanded("b-a");
+
+    emitEvent({
+      id: 202,
+      ts: "2026-04-19T16:25:38.482Z",
+      type: "bubble.updated",
+      repoPath: "/repo-a",
+      bubbleId: "b-a",
+      bubble: bubbleSummary({
+        bubbleId: "b-a",
+        repoPath: "/repo-a",
+        state: "RUNNING",
+        remoteExecution: {
+          alias: "spark1",
+          host: "spark1",
+          pointerKind: "started",
+          viewKind: "list",
+          stateSource: "cache",
+          cacheStatus: "present",
+          remoteClonePath: "/remote/repo",
+          lastCacheCheckAt: "2026-04-19T16:25:38.482Z"
+        }
+      })
+    });
+
+    expect(store.getState().bubbleDetails["b-a"]?.remoteExecution).toEqual(
+      activeRemoteDetail.remoteExecution
+    );
+
+    deferredDetail.resolve(activeRemoteDetail);
+    await Promise.resolve();
+  });
+
   it("keeps expanded detail remote diagnostics when a later detail refresh omits them", async () => {
     const initialSummary = bubbleSummary({
       bubbleId: "b-a",

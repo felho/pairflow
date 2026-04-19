@@ -255,7 +255,11 @@ function mergeExpandedDetailWithSummary(
   const preserveDetailAttention =
     detail.attention !== null && bubble.attention === null;
   const preserveDetailRemoteExecution =
-    detail.remoteExecution !== undefined && bubble.remoteExecution === undefined;
+    detail.remoteExecution !== undefined
+    && (
+      bubble.remoteExecution === undefined
+      || isWeakerRemoteExecutionSummary(detail.remoteExecution, bubble.remoteExecution)
+    );
   const mergedRemoteExecution = preserveDetailRemoteExecution
     ? detail.remoteExecution
     : bubble.remoteExecution;
@@ -276,6 +280,25 @@ function mergeExpandedDetailWithSummary(
       ? { remoteExecution: mergedRemoteExecution }
       : {})
   };
+}
+
+function isWeakerRemoteExecutionSummary(
+  detail: UiBubbleDetail["remoteExecution"],
+  summary: BubbleCardModel["remoteExecution"]
+): boolean {
+  if (detail === undefined || summary === undefined) {
+    return false;
+  }
+
+  if (detail.viewKind !== "status" || summary.viewKind !== "list") {
+    return false;
+  }
+
+  return (
+    summary.stateSource === "cache"
+    && summary.runtimeAvailability === undefined
+    && detail.runtimeAvailability !== "not_started"
+  );
 }
 
 function mergeExpandedDetailWithIncomingDetail(
