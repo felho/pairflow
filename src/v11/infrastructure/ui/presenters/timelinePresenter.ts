@@ -258,8 +258,6 @@ function buildSshCommandArgs(input: {
   return [
     ...sshTransportOptions.flatMap(([key, value]) => ["-o", `${key}=${value}`]),
     input.target,
-    "bash",
-    "-c",
     input.script
   ];
 }

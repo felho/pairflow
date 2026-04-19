@@ -132,6 +132,39 @@ describe("timelinePresenter lenient fallback", () => {
       "utf8"
     );
 
+    const runCommand = vi.fn(async () => ({
+      stdout: [
+        JSON.stringify({
+          id: "msg_20260419_001",
+          ts: "2026-04-19T19:50:57.099Z",
+          bubble_id: "remote-smoke18",
+          sender: "orchestrator",
+          recipient: "codex",
+          type: "TASK",
+          round: 0,
+          payload: {
+            summary: "Remote task"
+          },
+          refs: []
+        }),
+        JSON.stringify({
+          id: "msg_20260419_002",
+          ts: "2026-04-19T19:51:43.291Z",
+          bubble_id: "remote-smoke18",
+          sender: "codex",
+          recipient: "claude",
+          type: "PASS",
+          round: 1,
+          payload: {
+            summary: "Remote PASS"
+          },
+          refs: []
+        })
+      ].join("\n"),
+      stderr: "",
+      exitCode: 0
+    }));
+
     const timeline = await readBubbleTimeline(
       {
         bubbleId: "remote-smoke18",
@@ -165,38 +198,7 @@ describe("timelinePresenter lenient fallback", () => {
           host: "spark1",
           pairflowCommand: "pairflow"
         })) as never,
-        runCommand: vi.fn(async () => ({
-          stdout: [
-            JSON.stringify({
-              id: "msg_20260419_001",
-              ts: "2026-04-19T19:50:57.099Z",
-              bubble_id: "remote-smoke18",
-              sender: "orchestrator",
-              recipient: "codex",
-              type: "TASK",
-              round: 0,
-              payload: {
-                summary: "Remote task"
-              },
-              refs: []
-            }),
-            JSON.stringify({
-              id: "msg_20260419_002",
-              ts: "2026-04-19T19:51:43.291Z",
-              bubble_id: "remote-smoke18",
-              sender: "codex",
-              recipient: "claude",
-              type: "PASS",
-              round: 1,
-              payload: {
-                summary: "Remote PASS"
-              },
-              refs: []
-            })
-          ].join("\n"),
-          stderr: "",
-          exitCode: 0
-        })) as never
+        runCommand: runCommand as never
       }
     );
 
@@ -206,5 +208,13 @@ describe("timelinePresenter lenient fallback", () => {
       "msg_20260419_002"
     ]);
     expect(timeline[1]?.payload.summary).toBe("Remote PASS");
+    expect(runCommand).toHaveBeenCalledWith(
+      "ssh",
+      expect.arrayContaining([
+        "spark1",
+        "if [ -f '/home/felho/repos/pairflow--remote-smoke18/.pairflow/bubbles/remote-smoke18/transcript.ndjson' ]; then cat '/home/felho/repos/pairflow--remote-smoke18/.pairflow/bubbles/remote-smoke18/transcript.ndjson'; fi"
+      ]),
+      expect.any(Object)
+    );
   });
 });
