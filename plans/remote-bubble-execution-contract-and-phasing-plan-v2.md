@@ -181,6 +181,18 @@ Az explicit control-model dontesek most visszanyerhetok a designbol es a review-
      `plans/tasks/remote-bubble-execution/phase3d-remote-runtime-availability-and-watchdog-semantics.md`
 4. A parent plan emiatt mar nem kezelheto teljesen lezartnak; a current active successor a `Phase 3D`.
 
+## Progress Update (2026-04-19, post-Phase-3D-close)
+
+1. A `Phase 3D` implementacioja 2026-04-19-en leszallt, merge-re kerult a `main` branchre, es archivalt baseline lett:
+   - `plans/archive/tasks/remote-bubble-execution/phase3d-remote-runtime-availability-and-watchdog-semantics.md`
+2. A lezart bounded scope:
+   - a watchdog-only stall es a tenyleges runtime-loss operator read-model semantics kulon bucketbe kerult,
+   - a remote status/list CLI es UI attach surface tovabbra is fail-closed marad valodi runtime-lossnal,
+   - a watchdog-expired, de tovabbra is elo remote runtime mar nem omlik automatikusan `runtime unavailable` allapotba,
+   - a read-model parity regressziokat celzott status/list/UI/SSH tesztek fedik le.
+3. A `Phase 3D` closeouttal a parent planban jelenleg nincs uj, materializalt remote execution successor task.
+4. Tovabbi successor csak akkor justified, ha a most lezart read-model semantics utan uj, kulon bounded residual gap jelenik meg.
+
 ## Progress Update (2026-04-18, pre-Phase-3C-close)
 
 1. A `Phase 3B1`, `Phase 3B2`, es `Phase 3B3` implementacioja 2026-04-18-ra leszallt, merge-re kerult a `main` branchre, es a cleanup-routing family teljes archived baseline lett.
@@ -353,26 +365,22 @@ Az explicit control-model dontesek most visszanyerhetok a designbol es a review-
 
 ## Active Task
 
-1. A `Phase 2F`, `Phase 3A`, `Phase 3B1`, `Phase 3B2`, es `Phase 3B3` archived baseline:
+1. Jelenleg nincs aktiv implementacios task a remote execution lanchban.
+2. A `Phase 2F`, `Phase 3A`, `Phase 3B1`, `Phase 3B2`, `Phase 3B3`, `Phase 3C`, es `Phase 3D` archived baseline:
    - `plans/archive/tasks/remote-bubble-execution/phase2f-remote-attach-consume.md`
    - `plans/archive/tasks/remote-bubble-execution/phase3a-remote-approval-and-rework-routing.md`
    - `plans/archive/tasks/remote-bubble-execution/phase3b1-remote-commit-routing-and-continuity.md`
    - `plans/archive/tasks/remote-bubble-execution/phase3b2-remote-merge-routing-and-publication.md`
    - `plans/archive/tasks/remote-bubble-execution/phase3b3-remote-delete-cleanup-and-archive-closure.md`
-2. A `Phase 3C` archived baseline:
    - `plans/archive/tasks/remote-bubble-execution/phase3c-recovery-diagnostics-and-rollout.md`
-3. Az uj aktiv task dokumentum:
-   - `plans/tasks/remote-bubble-execution/phase3d-remote-runtime-availability-and-watchdog-semantics.md`
-4. A `Phase 2B`, `Phase 2C`, `Phase 2D`, `Phase 2E`, `Phase 2F`, `Phase 3A`, `Phase 3B1`, `Phase 3B2`, `Phase 3B3`, es `Phase 3C` archived baseline lett.
-5. Az approval/rework, cleanup, es recovery routing successor-lanc lezarult, de a remote operatori runtime semantics lane-ben maradt egy uj residual successor: `Phase 3D`.
+   - `plans/archive/tasks/remote-bubble-execution/phase3d-remote-runtime-availability-and-watchdog-semantics.md`
+3. A `Phase 2B`, `Phase 2C`, `Phase 2D`, `Phase 2E`, `Phase 2F`, `Phase 3A`, `Phase 3B1`, `Phase 3B2`, `Phase 3B3`, `Phase 3C`, es `Phase 3D` archived baseline lett.
+4. Az approval/rework, cleanup, recovery, es residual operator read-model semantics successor-lanc jelenleg lezarult.
 
 ## Successor Tasks
 
-1. Current next task:
-   - `plans/tasks/remote-bubble-execution/phase3d-remote-runtime-availability-and-watchdog-semantics.md`
-2. A `Phase 3D` a `Phase 3C` utani residual remote operatori semantics slice:
-   - a watchdog-expired stall es a tenyleges runtime-loss nem eshet ugyanabba a fail-closed bucketbe, ha a live remote session/pane proof tovabbra is jo.
-3. A `Phase 3D` utan a kovetkezo lehetséges successor mar csak akkor justified, ha a runtime-availability semantics decoupling uj recovery/restart policy taskot indokol; ez jelenleg nincs materializalva.
+1. Jelenleg nincs materializalt kovetkezo task.
+2. Tovabbi successor csak akkor justified, ha a `Phase 3D` closeout utan uj, kulon bounded residual gap jelenik meg a remote execution lane-ben.
 
 ## Dependencies
 
