@@ -146,6 +146,8 @@ owners:
    - `O2-T5`: topology-neutral launch/executor consume-family alignment + launch repo-root/public export cleanup
    - `O2-T6`: meta-review gate workflow/defaults/runtime capability decoupling
    - `O2-T7`: UI/router + repo-root/public delivery read-model/export alignment
+   - `O2-T8`: delivery consumer contract residual closeout
+   - `O2-T9`: meta-review gate workflow runtime capability residual closeout
 
 ### Opportunity 3: New Actor Onboarding Contract
 
@@ -185,19 +187,21 @@ owners:
    - a lezart launch ack baseline-t (`running | failed_to_start`) nem nyithatja ujra,
    - csak a topology/executor-boundary es retained adapter ownership pontositasat ownershipolja.
    - normativ note path: `plans/actor-runtime-interface-topology-neutral-delivery-executor-contract-note-v1.md`
-9. `O2-T2`-`O2-T7` producer-first sorrendben kell nyiljanak:
+9. `O2-T2`-`O2-T9` producer-first sorrendben kell nyiljanak:
    - elobb a topology-neutral delivery es launch/executor foundation szeletek,
    - utana a workflow-orchestration consume-family alignment,
-   - es csak a consume-family cutover utan elobb a meta-review gate workflow/defaults cleanup,
-   - majd a UI/public read-model/export alignment.
+   - majd a meta-review gate workflow/defaults cleanup es a UI/public read-model/export alignment,
+   - es a lane vegen a megmaradt residual consumer/workflow contract ownership closeout.
 10. `O3-T1` csak az `Opportunity 1 / O1-T1` altal lezart boundary- es vocabulary-matrix utan nyithato:
    - onboarding simplification csak az `O1-T1` kernel boundary note-ra es az `O2-T1` delivery/executor boundary note-ra epulhet,
    - es csak az `O2` implementation lane enough-closureja utan nyithato biztonsagosan, amikor a retained `tmux` delivery/executor coupling mar nem keveredik a canonical boundaryval,
    - a zart baseline vocabulary explicit mappingjara es a topology/executor boundary explicit szetszalazasara kell tamaszkodnia,
    - az `Opportunity 4` alapertelmezetten ebbe a lane-be van beolvasztva mint core-vs-extension rationalization,
    - kulon `O4-T1` csak akkor nyithato, ha az `Opportunity 1 / O1-T1` outputja bizonyitja, hogy ez onallo bounded closure.
-11. A current tree-ben az `Opportunity 1` implementacios successor lane-je lezart, az `Opportunity 2`-ben viszont maradt egy residual downstream cleanup slice:
-   - emiatt a kovetkezo bounded successor tovabbra is `O2`-ben van, nem az `O3`-ban
+11. A current tree-ben az `Opportunity 1` implementacios successor lane-je lezart, az `Opportunity 2`-ben viszont ket residual internal/workflow cleanup slice maradt:
+   - delivery consumer contract residual closeout
+   - meta-review gate workflow runtime capability residual closeout
+12. Emiatt a kovetkezo bounded successor tovabbra is `O2`-ben van, nem az `O3`-ban.
 
 ## Opportunity 2 Decomposition
 
@@ -279,9 +283,9 @@ owners:
      - generic executor registry vagy non-`tmux` runtime platform bevezetese
    - why separate: itt a workflow/defaults/internal execution meta-review gate contract ownership zarasa tortenik; a UI/public fallout kulon closure
 7. `O2-T7`
-   - status: current next residual read-model/public slice
+   - status: completed residual read-model/public slice
    - shape: `read_model_consumers` + `activation_or_read_model`
-   - task artifact: `plans/tasks/actor-runtime-interface-opportunity2-task7-ui-router-and-public-delivery-read-model-export-alignment.md`
+   - task artifact: `plans/archive/tasks/actor-runtime-interface-opportunity2-task7-ui-router-and-public-delivery-read-model-export-alignment.md`
    - goal: a UI/router es repo-root/public delivery read-model/export surface topology-neutral alignmentje retained parity mellett
    - expected target family:
      - `src/v11/shared/ports/uiRouter.ts`
@@ -293,11 +297,45 @@ owners:
      - `src/v11/application/start/**`
      - generic executor registry vagy non-`tmux` runtime platform bevezetese
    - why separate: ez mar tisztan read-model/public fallout; a meta-review gate workflow/defaults cleanup kulon bounded closure
-8. `O2` lane done csak akkor claimelheto, ha:
+8. `O2-T8`
+   - status: proposed residual consume-family closeout slice
+   - shape: `internal_execution_consumers` + `workflow_orchestration_consumers`
+   - task artifact: `plans/tasks/actor-runtime-interface-opportunity2-task8-delivery-consumer-contract-residual-closeout.md`
+   - goal: a delivery consume family current-tree residual retained dependency/result ownershipjanak neutral consumer contractra szukitese
+   - expected target family:
+     - `src/v11/application/approval/**`
+     - `src/v11/application/reply/**`
+     - `src/v11/shared/kickoff/**`
+     - `src/v11/shared/askHuman/**`
+     - `src/v11/application/askHuman/**`
+     - `src/v11/shared/converged/**`
+     - `src/v11/application/converged/**`
+     - `src/v11/application/pass/**`
+   - explicit out-of-scope family:
+     - `src/v11/infrastructure/channel/tmux/**`
+     - `src/v11/shared/ports/uiRouter.ts`
+     - `src/index.ts`
+     - launch/executor lane
+   - why separate: ez mar residual internal/workflow consumer contract closeout; nem producer es nem public/read-model cleanup
+9. `O2-T9`
+   - status: proposed residual workflow runtime-capability closeout slice
+   - shape: `internal_execution_consumers` + `workflow_orchestration_consumers`
+   - task artifact: `plans/tasks/actor-runtime-interface-opportunity2-task9-meta-review-gate-workflow-runtime-capability-residual-closeout.md`
+   - goal: a meta-review gate current-tree raw `tmux` primitive ownershipjanak teljes workflow-level leszukitese gate-local runtime capability statuszra
+   - expected target family:
+     - `src/v11/shared/metaReviewGate/**`
+     - `src/v11/application/metaReviewGate/**`
+     - `src/v11/defaults/metaReviewGate/**`
+   - explicit out-of-scope family:
+     - UI/public delivery read-model surfaces
+     - repo-root export cleanup
+     - generic executor registry vagy non-`tmux` runtime platform
+   - why separate: kulon filecsalad es kulon fail-closed/runtime contract kockazat; nem biztonsagos az `O2-T8` residual delivery taskkal osszegyurni
+10. `O2` lane done csak akkor claimelheto, ha:
    - `O2-T1` lezart baseline,
    - a delivery es launch/executor producer foundation kulon source-of-truth-kent megvan,
    - a consume familyk atalltak a topology-neutral contractra vagy explicit retained compat statuszt kaptak,
-   - a megmaradt meta-review gate es UI/public downstream consumers sem viselkednek `tmux` contract ownerkent,
+   - a megmaradt delivery residual es meta-review gate workflow residual is lezarult,
    - es a retained `tmux` vocabulary mar nem keveredik a canonical delivery/executor boundary jelentesevel.
 
 ## Historical First Implementation Slice (`Opportunity 1`)
@@ -376,13 +414,19 @@ owners:
      - a meta-review gate workflow/defaults lane direct retained `tmux` primitive ownershipja gate-local capability contractra allt retained adapter parityvel,
      - a `MetaReviewRuntimeDeliveryObservation` persisted workflow truth maradt,
      - a fail-closed delivery proof explicit negative parity coverage-et kapott.
-13. A current tree-ben maradt egyetlen residual downstream gap, amelyet az `O2-T1` note mar eredetileg is explicit deferred future implementation taskkent nevezett meg:
-   - a UI/router approval/rework delivery read-model tovabbra is retained `EmitTmuxDeliveryNotificationResult` shape-re projektal,
-   - a dedikalt repo-root/public delivery-contract export surface tovabbra is retained `EmitTmuxDeliveryNotification*` vocabularyra ul.
-14. A current next bounded successor slice:
-   - `O2-T7`
-   - scope: UI/router + repo-root/public delivery read-model/export alignment
-   - task artifact: `plans/tasks/actor-runtime-interface-opportunity2-task7-ui-router-and-public-delivery-read-model-export-alignment.md`
+13. Az `O2-T7` UI/router + repo-root/public delivery read-model/export alignment 2026-04-19-en merge-olve lett a `main` branchre:
+   - archived task artifact: `plans/archive/tasks/actor-runtime-interface-opportunity2-task7-ui-router-and-public-delivery-read-model-export-alignment.md`
+   - merge commit: `40e33c6a33a56b91141c525e30042c08bef8f182`
+   - bounded closure:
+     - a UI/router delivery contract same-authority neutral projectionra allt
+     - a repo-root/public delivery export surface additive neutral parityt kapott retained compatibility mellett
+14. A current tree-ben ezek utan ket residual internal/workflow gap maradt:
+   - a delivery consume family tobb belso contractja tovabbra is retained `tmux` dependency/result naminget ownershipol current canonical owner szerepben
+   - a meta-review gate workflow contract tovabbra is raw `tmux` primitive neveken ownershipolja a runtime capabilityt
+15. A current next bounded successor slices:
+   - `O2-T8`
+   - `O2-T9`
+   - ezek nyitjak meg az `Opportunity 2` valodi closeoutjat az `O3` elott
 
 ## Done Definition
 
@@ -410,8 +454,10 @@ owners:
      - `O2-T4` topology-neutral launch/executor contract foundation
      - `O2-T5` topology-neutral launch/executor consume-family alignment + launch repo-root/public export cleanup
      - `O2-T6` meta-review gate workflow/defaults/runtime capability decoupling
-   - current next slice:
      - `O2-T7` UI/router + repo-root/public delivery read-model/export alignment
+   - current next slices:
+     - `O2-T8` delivery consumer contract residual closeout
+     - `O2-T9` meta-review gate workflow runtime capability residual closeout
    - preserved baseline: a lezart typed ack/runtime-success semantics nem reopenolhato
    - disposition: open until residual downstream consumers are decoupled from direct `tmux` contract ownership
 3. `Opportunity 3`
