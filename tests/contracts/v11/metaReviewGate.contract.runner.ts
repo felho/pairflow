@@ -22,9 +22,7 @@ export interface MetaReviewGateContractOutput {
   gateRoute: string | null;
   envelopeType: string | null;
   envelopePayload: Record<string, unknown> | null;
-  stateSubset: {
-    state: string;
-  } | null;
+  stateSubset: Record<string, unknown> | null;
 }
 
 export interface MetaReviewGateContractRunResult {
@@ -37,9 +35,14 @@ type MetaReviewGateApplyScenario =
   | "meta_review_running"
   | "sticky_bypass";
 
+type MetaReviewGateContractNotifyDelivery =
+  | "confirmed"
+  | "failed";
+
 function parseMetaReviewGateCaseInput(input: ContractCase["input"]): {
   route: "apply";
   applyScenario: MetaReviewGateApplyScenario;
+  notifyDelivery: MetaReviewGateContractNotifyDelivery;
   summary?: string;
   refs: string[];
 } {
@@ -77,9 +80,21 @@ function parseMetaReviewGateCaseInput(input: ContractCase["input"]): {
     );
   }
 
+  const notifyDeliveryRaw = input.notifyDelivery;
+  if (
+    notifyDeliveryRaw !== undefined &&
+    notifyDeliveryRaw !== "confirmed" &&
+    notifyDeliveryRaw !== "failed"
+  ) {
+    throw new Error(
+      "metaReviewGate contract input.notifyDelivery must be one of: confirmed, failed."
+    );
+  }
+
   return {
     route: "apply",
     applyScenario: applyScenarioRaw ?? "run_failed",
+    notifyDelivery: notifyDeliveryRaw ?? "confirmed",
     ...(typeof summaryRaw === "string" ? { summary: summaryRaw } : {}),
     refs: refsRaw ?? []
   };
@@ -100,7 +115,12 @@ function normalizeMetaReviewGateResult(
     envelopeType: result.gateEnvelope.type,
     envelopePayload,
     stateSubset: {
-      state: result.state.state
+      state: result.state.state,
+      meta_review: {
+        runtime_delivery: {
+          status: result.state.meta_review?.runtime_delivery?.status ?? null
+        }
+      }
     }
   };
 }
@@ -198,14 +218,18 @@ function assertContractExpectedSubset(input: {
       `${input.label}: gateRoute mismatch (expected=${input.expected.gateRoute}, actual=${input.output.gateRoute})`
     );
   }
-  const expectedState = input.expected.stateSubset?.state;
   if (
-    typeof expectedState === "string" &&
-    input.output.stateSubset?.state !== expectedState
+    input.expected.stateSubset !== undefined
   ) {
-    throw new Error(
-      `${input.label}: stateSubset.state mismatch (expected=${expectedState}, actual=${input.output.stateSubset?.state ?? "undefined"})`
-    );
+    if (input.output.stateSubset === null) {
+      throw new Error(`${input.label}: missing stateSubset for subset assertion`);
+    }
+    assertRecordSubset({
+      actual: input.output.stateSubset,
+      expected: input.expected.stateSubset,
+      label: input.label,
+      path: "stateSubset"
+    });
   }
   if (
     input.expected.envelopeType !== undefined &&
@@ -269,6 +293,8 @@ async function executeMetaReviewGateCase(input: {
       bubbleId: bubble.bubbleId,
       repoPath,
       worktreePath: bubble.paths.worktreePath,
+      workspacePath: bubble.paths.worktreePath,
+      workspaceKind: "worktree",
       tmuxSessionName: "pf-meta-review-contract",
       updatedAt: nowIso,
       metaReviewerPane: {
@@ -278,6 +304,20 @@ async function executeMetaReviewGateCase(input: {
         updatedAt: nowIso
       }
     };
+    let submittedMetaReviewRequest: string | undefined;
+    const notifyRunTmux = () => Promise.resolve(
+      caseInput.notifyDelivery === "failed"
+        ? {
+          stdout: "codex exited (code 1). Dropping to interactive shell.",
+          stderr: "",
+          exitCode: 0
+        }
+        : {
+          stdout: submittedMetaReviewRequest ?? "",
+          stderr: "",
+          exitCode: 0
+        }
+    );
 
     const result = await input.applyExecutor(
       {
@@ -299,11 +339,26 @@ async function executeMetaReviewGateCase(input: {
               }
             : noRuntimeSessionBindingResult
         ),
-        notifyMetaReviewerSubmissionRequest: () => Promise.resolve({
-          status: "confirmed" as const,
-          reasonCode: null,
-          message: "ok"
-        })
+        runtime: {
+          notify: {
+            runTmux: notifyRunTmux,
+            maybeAcceptClaudeTrustPrompt: () => Promise.resolve(undefined),
+            sendAndSubmitTmuxPaneMessage: (_runner, _targetPane, message) => {
+              submittedMetaReviewRequest = message;
+              return Promise.resolve(undefined);
+            },
+            submitTmuxPaneInput: () => Promise.resolve(undefined)
+          },
+          paneBinding: {
+            runTmux: () => Promise.resolve({
+              stdout: "",
+              stderr: "",
+              exitCode: 0
+            }),
+            buildAgentCommand: () => "codex meta-review",
+            respawnTmuxPaneCommand: () => Promise.resolve(undefined)
+          }
+        }
       }
     );
 

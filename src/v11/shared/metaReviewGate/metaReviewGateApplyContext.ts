@@ -16,8 +16,7 @@ import type {
 import type { SetMetaReviewerPaneBindingPort } from "../ports/runtimeSessions.js";
 import type {
   ApplyMetaReviewGateOnConvergenceDependencies,
-  ApplyMetaReviewGateOnConvergenceInput,
-  NotifyMetaReviewerSubmissionRequest
+  ApplyMetaReviewGateOnConvergenceInput
 } from "./metaReviewGateTypes.js";
 import { MetaReviewGateError } from "./metaReviewGateTypes.js";
 
@@ -27,10 +26,11 @@ export interface ApplyMetaReviewGateExecutionContext {
   readState: ReadStateSnapshotPort;
   writeState: WriteStateSnapshotPort;
   setMetaReviewerPane: SetMetaReviewerPaneBindingPort;
-  notifySubmissionRequest: NotifyMetaReviewerSubmissionRequest;
+  notifySubmissionRequest:
+    ApplyMetaReviewGateOnConvergenceDependencies["notifyMetaReviewerSubmissionRequest"];
   resolvePaneWarning:
     NonNullable<ApplyMetaReviewGateOnConvergenceDependencies["resolveMetaReviewerPaneWarning"]>;
-  runTmuxRunner: NonNullable<ApplyMetaReviewGateOnConvergenceDependencies["runTmux"]>;
+  runtime: ApplyMetaReviewGateOnConvergenceDependencies["runtime"];
   readFileFn: MetaReviewArtifactReadPort;
   now: Date;
   nowIso: string;
@@ -57,13 +57,10 @@ export async function initializeApplyMetaReviewGateExecutionContext(
     dependencies,
     input.bubbleId
   );
-  const notifySubmissionRequest =
-    requireApplyNotifySubmissionRequest(dependencies, input.bubbleId);
   const resolvePaneWarning = requireApplyPaneWarningResolver(
     dependencies,
     input.bubbleId
   );
-  const runTmuxRunner = requireApplyTmuxRunner(dependencies, input.bubbleId);
   const readFileFn = requireApplyArtifactReadPort(dependencies, input.bubbleId);
   const now = input.now ?? new Date();
   const nowIso = now.toISOString();
@@ -94,9 +91,9 @@ export async function initializeApplyMetaReviewGateExecutionContext(
     readState,
     writeState,
     setMetaReviewerPane,
-    notifySubmissionRequest,
+    notifySubmissionRequest: dependencies.notifyMetaReviewerSubmissionRequest,
     resolvePaneWarning,
-    runTmuxRunner,
+    runtime: dependencies.runtime,
     readFileFn,
     now,
     nowIso,
@@ -196,32 +193,6 @@ function requireApplyPaneWarningResolver(
   return buildMissingApplyCapabilityError(
     bubbleId,
     "meta-review gate pane-binding capability is unavailable."
-  );
-}
-
-function requireApplyNotifySubmissionRequest(
-  dependencies: ApplyMetaReviewGateOnConvergenceDependencies,
-  bubbleId: string
-): NotifyMetaReviewerSubmissionRequest {
-  if (dependencies.notifyMetaReviewerSubmissionRequest !== undefined) {
-    return dependencies.notifyMetaReviewerSubmissionRequest;
-  }
-  return buildMissingApplyCapabilityError(
-    bubbleId,
-    "meta-review gate notify capability is unavailable."
-  );
-}
-
-function requireApplyTmuxRunner(
-  dependencies: ApplyMetaReviewGateOnConvergenceDependencies,
-  bubbleId: string
-): NonNullable<ApplyMetaReviewGateOnConvergenceDependencies["runTmux"]> {
-  if (dependencies.runTmux !== undefined) {
-    return dependencies.runTmux;
-  }
-  return buildMissingApplyCapabilityError(
-    bubbleId,
-    "meta-review gate tmux capability is unavailable."
   );
 }
 

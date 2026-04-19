@@ -3,13 +3,27 @@ import { describe, expect, it, vi } from "vitest";
 import {
   resolveMetaReviewerPaneWarning
 } from "../../../../src/v11/application/metaReviewGate/metaReviewGatePaneBinding.js";
+import type {
+  SetMetaReviewerPaneBindingPort
+} from "../../../../src/v11/shared/ports/runtimeSessions.js";
+import type {
+  NotifyMetaReviewerSubmissionRequestDependencies
+} from "../../../../src/v11/shared/metaReviewGate/metaReviewGateTypes.js";
+
+function resolveRuntimeFromNotifyCall(
+  call: unknown
+): NotifyMetaReviewerSubmissionRequestDependencies["runtime"] {
+  if (!Array.isArray(call) || call.length < 2) {
+    throw new Error("notifySubmissionRequest call is missing dependency payload.");
+  }
+  return (call[1] as NotifyMetaReviewerSubmissionRequestDependencies).runtime;
+}
 
 describe("metaReviewGatePaneBinding", () => {
   it("returns runtime-unavailable when agent command builder is missing", async () => {
     const result = await resolveMetaReviewerPaneWarning({
       setMetaReviewerPane: vi.fn(),
       notifySubmissionRequest: vi.fn(),
-      runTmuxRunner: vi.fn(),
       sessionsPath: "/repo/.pairflow/runtime/sessions.json",
       bubbleId: "b_meta_review_gate_missing_builder",
       round: 1,
@@ -32,8 +46,11 @@ describe("metaReviewGatePaneBinding", () => {
     const result = await resolveMetaReviewerPaneWarning({
       setMetaReviewerPane: vi.fn(),
       notifySubmissionRequest: vi.fn(),
-      runTmuxRunner: vi.fn(),
-      buildAgentCommand: vi.fn(() => "codex meta-review"),
+      runtime: {
+        paneBinding: {
+          buildAgentCommand: vi.fn(() => "codex meta-review")
+        }
+      },
       sessionsPath: "/repo/.pairflow/runtime/sessions.json",
       bubbleId: "b_meta_review_gate_missing_respawn",
       round: 1,
@@ -59,9 +76,13 @@ describe("metaReviewGatePaneBinding", () => {
         reason: "no_runtime_session" as const
       })),
       notifySubmissionRequest: vi.fn(),
-      runTmuxRunner: vi.fn(),
-      buildAgentCommand: vi.fn(() => "codex meta-review"),
-      respawnTmuxPaneCommand: vi.fn(async () => undefined),
+      runtime: {
+        paneBinding: {
+          runTmux: vi.fn(),
+          buildAgentCommand: vi.fn(() => "codex meta-review"),
+          respawnTmuxPaneCommand: vi.fn(async () => undefined)
+        }
+      },
       sessionsPath: "/repo/.pairflow/runtime/sessions.json",
       bubbleId: "b_meta_review_gate_no_runtime",
       round: 1,
@@ -81,16 +102,19 @@ describe("metaReviewGatePaneBinding", () => {
   });
 
   it("confirms durable handoff path without pane respawn when no record update is required", async () => {
-    const notifySubmissionRequest = vi.fn();
     const respawnTmuxPaneCommand = vi.fn();
     const result = await resolveMetaReviewerPaneWarning({
       setMetaReviewerPane: vi.fn(async () => ({
-        updated: true as const
+        updated: true as const,
+        reason: "durable_handoff_only" as const
       })),
-      notifySubmissionRequest,
-      runTmuxRunner: vi.fn(),
-      buildAgentCommand: vi.fn(() => "codex meta-review"),
-      respawnTmuxPaneCommand,
+      runtime: {
+        paneBinding: {
+          runTmux: vi.fn(),
+          buildAgentCommand: vi.fn(() => "codex meta-review"),
+          respawnTmuxPaneCommand
+        }
+      },
       sessionsPath: "/repo/.pairflow/runtime/sessions.json",
       bubbleId: "b_meta_review_gate_durable_handoff",
       round: 1,
@@ -108,6 +132,40 @@ describe("metaReviewGatePaneBinding", () => {
       shouldDeactivate: false
     });
     expect(respawnTmuxPaneCommand).not.toHaveBeenCalled();
+  });
+
+  it("fails closed when pane binding reports updated without record or durable handoff reason", async () => {
+    const notifySubmissionRequest = vi.fn();
+    const result = await resolveMetaReviewerPaneWarning({
+      setMetaReviewerPane: vi.fn(async () => (
+        { updated: true as const } as unknown as Awaited<
+          ReturnType<SetMetaReviewerPaneBindingPort>
+        >
+      )),
+      notifySubmissionRequest,
+      runtime: {
+        paneBinding: {
+          runTmux: vi.fn(),
+          buildAgentCommand: vi.fn(() => "codex meta-review"),
+          respawnTmuxPaneCommand: vi.fn(async () => undefined)
+        }
+      },
+      sessionsPath: "/repo/.pairflow/runtime/sessions.json",
+      bubbleId: "b_meta_review_gate_invalid_updated_without_record",
+      round: 1,
+      now: new Date("2026-04-13T00:00:00.000Z"),
+      taskArtifactPath: "/repo/.pairflow/bubbles/b_meta_review_gate_invalid_updated_without_record/artifacts/task.md",
+      pairflowCommandProfile: "external"
+    });
+
+    expect(result).toEqual({
+      delivery: {
+        status: "failed",
+        reasonCode: "META_REVIEWER_PANE_RUNTIME_UNAVAILABLE",
+        message: "meta-review gate pane binding updated without runtime session record authority."
+      },
+      shouldDeactivate: false
+    });
     expect(notifySubmissionRequest).not.toHaveBeenCalled();
   });
 
@@ -138,9 +196,13 @@ describe("metaReviewGatePaneBinding", () => {
         }
       }),
       notifySubmissionRequest,
-      runTmuxRunner: vi.fn(),
-      buildAgentCommand,
-      respawnTmuxPaneCommand,
+      runtime: {
+        paneBinding: {
+          runTmux: vi.fn(),
+          buildAgentCommand,
+          respawnTmuxPaneCommand
+        }
+      },
       sessionsPath: "/repo/.pairflow/runtime/sessions.json",
       bubbleId: "b_meta_review_gate_legacy_workspace",
       round: 2,
@@ -190,9 +252,13 @@ describe("metaReviewGatePaneBinding", () => {
         }
       }),
       notifySubmissionRequest,
-      runTmuxRunner: vi.fn(),
-      buildAgentCommand: vi.fn(() => "codex meta-review"),
-      respawnTmuxPaneCommand,
+      runtime: {
+        paneBinding: {
+          runTmux: vi.fn(),
+          buildAgentCommand: vi.fn(() => "codex meta-review"),
+          respawnTmuxPaneCommand
+        }
+      },
       sessionsPath: "/repo/.pairflow/runtime/sessions.json",
       bubbleId: "b_meta_review_gate_clone_fallback_forbidden",
       round: 2,
@@ -241,11 +307,15 @@ describe("metaReviewGatePaneBinding", () => {
         }
       }),
       notifySubmissionRequest,
-      runTmuxRunner: vi.fn(),
-      buildAgentCommand: vi.fn(() => "codex meta-review"),
-      respawnTmuxPaneCommand: vi.fn(async () => {
-        throw new Error("respawn denied");
-      }),
+      runtime: {
+        paneBinding: {
+          runTmux: vi.fn(),
+          buildAgentCommand: vi.fn(() => "codex meta-review"),
+          respawnTmuxPaneCommand: vi.fn(async () => {
+            throw new Error("respawn denied");
+          })
+        }
+      },
       sessionsPath: "/repo/.pairflow/runtime/sessions.json",
       bubbleId: "b_meta_review_gate_respawn_fail",
       round: 3,
@@ -261,5 +331,186 @@ describe("metaReviewGatePaneBinding", () => {
       message: "META_REVIEWER_PANE_RESPAWN_FAILED: respawn denied"
     });
     expect(notifySubmissionRequest).not.toHaveBeenCalled();
+  });
+
+  it("fails closed after respawn when notify capability is absent on the active pane path", async () => {
+    const result = await resolveMetaReviewerPaneWarning({
+      setMetaReviewerPane: async () => ({
+        updated: true,
+        record: {
+          bubbleId: "b_meta_review_gate_notify_missing_after_respawn",
+          repoPath: "/repo",
+          worktreePath: "/worktree",
+          workspacePath: "/workspace",
+          workspaceKind: "clone",
+          tmuxSessionName: "pf-b_meta_review_gate_notify_missing_after_respawn",
+          updatedAt: "2026-04-13T00:12:00.000Z",
+          metaReviewerPane: {
+            role: "meta-reviewer",
+            paneIndex: 4,
+            active: true,
+            updatedAt: "2026-04-13T00:12:00.000Z"
+          }
+        }
+      }),
+      runtime: {
+        paneBinding: {
+          runTmux: vi.fn(),
+          buildAgentCommand: vi.fn(() => "codex meta-review"),
+          respawnTmuxPaneCommand: vi.fn(async () => undefined)
+        }
+      },
+      sessionsPath: "/repo/.pairflow/runtime/sessions.json",
+      bubbleId: "b_meta_review_gate_notify_missing_after_respawn",
+      round: 3,
+      now: new Date("2026-04-13T00:12:00.000Z"),
+      taskArtifactPath: "/repo/.pairflow/bubbles/b_meta_review_gate_notify_missing_after_respawn/artifacts/task.md",
+      pairflowCommandProfile: "external"
+    });
+
+    expect(result).toEqual({
+      delivery: {
+        status: "failed",
+        reasonCode: "META_REVIEW_REQUEST_DELIVERY_RUNTIME_UNAVAILABLE",
+        message: "meta-review gate notify capability is unavailable."
+      },
+      shouldDeactivate: true
+    });
+  });
+
+  it("forwards notify runtime and falls back to pane-binding runner on successful rebinding", async () => {
+    const paneRunner = vi.fn();
+    const notifyRunner = vi.fn();
+    const buildAgentCommand = vi.fn(() => "codex meta-review");
+    const respawnTmuxPaneCommand = vi.fn(async () => undefined);
+    const notifySubmissionRequest = vi.fn(async () => ({
+      status: "confirmed" as const,
+      reasonCode: null,
+      message: "delivered"
+    }));
+
+    const result = await resolveMetaReviewerPaneWarning({
+      setMetaReviewerPane: async () => ({
+        updated: true,
+        record: {
+          bubbleId: "b_meta_review_gate_notify_forwarding",
+          repoPath: "/repo",
+          worktreePath: "/worktree",
+          workspacePath: "/workspace",
+          workspaceKind: "clone",
+          tmuxSessionName: "pf-b_meta_review_gate_notify_forwarding",
+          updatedAt: "2026-04-13T00:15:00.000Z",
+          metaReviewerPane: {
+            role: "meta-reviewer",
+            paneIndex: 5,
+            active: true,
+            updatedAt: "2026-04-13T00:15:00.000Z"
+          }
+        }
+      }),
+      notifySubmissionRequest,
+      runtime: {
+        notify: {
+          runTmux: notifyRunner,
+          sendAndSubmitTmuxPaneMessage: vi.fn(async () => undefined),
+          submitTmuxPaneInput: vi.fn(async () => undefined)
+        },
+        paneBinding: {
+          runTmux: paneRunner,
+          buildAgentCommand,
+          respawnTmuxPaneCommand
+        }
+      },
+      sessionsPath: "/repo/.pairflow/runtime/sessions.json",
+      bubbleId: "b_meta_review_gate_notify_forwarding",
+      round: 4,
+      now: new Date("2026-04-13T00:15:00.000Z"),
+      taskArtifactPath: "/repo/.pairflow/bubbles/b_meta_review_gate_notify_forwarding/artifacts/task.md",
+      pairflowCommandProfile: "external"
+    });
+
+    expect(result).toEqual({
+      delivery: {
+        status: "confirmed",
+        reasonCode: null,
+        message: "delivered"
+      },
+      shouldDeactivate: true
+    });
+    expect(buildAgentCommand).toHaveBeenCalledTimes(1);
+    expect(respawnTmuxPaneCommand).toHaveBeenCalledWith({
+      sessionName: "pf-b_meta_review_gate_notify_forwarding",
+      paneIndex: 5,
+      cwd: "/workspace",
+      command: "codex meta-review",
+      runner: paneRunner
+    });
+    expect(notifySubmissionRequest).toHaveBeenCalledWith({
+      bubbleId: "b_meta_review_gate_notify_forwarding",
+      round: 4,
+      targetPane: "pf-b_meta_review_gate_notify_forwarding:0.5"
+    }, expect.anything());
+    const notifyForwardingCall = notifySubmissionRequest.mock.calls.at(-1);
+    expect(notifyForwardingCall).toBeDefined();
+    const notifyRuntime = resolveRuntimeFromNotifyCall(notifyForwardingCall);
+    expect(notifyRuntime?.runTmux).toBe(notifyRunner);
+    expect(typeof notifyRuntime?.sendAndSubmitTmuxPaneMessage).toBe("function");
+    expect(typeof notifyRuntime?.submitTmuxPaneInput).toBe("function");
+  });
+
+  it("falls back to pane-binding runner when notify runtime has no runner", async () => {
+    const paneRunner = vi.fn();
+    const notifySubmissionRequest = vi.fn(async () => ({
+      status: "confirmed" as const,
+      reasonCode: null,
+      message: "delivered"
+    }));
+
+    await resolveMetaReviewerPaneWarning({
+      setMetaReviewerPane: async () => ({
+        updated: true,
+        record: {
+          bubbleId: "b_meta_review_gate_notify_runner_fallback",
+          repoPath: "/repo",
+          worktreePath: "/worktree",
+          workspacePath: "/workspace",
+          workspaceKind: "clone",
+          tmuxSessionName: "pf-b_meta_review_gate_notify_runner_fallback",
+          updatedAt: "2026-04-13T00:20:00.000Z",
+          metaReviewerPane: {
+            role: "meta-reviewer",
+            paneIndex: 3,
+            active: true,
+            updatedAt: "2026-04-13T00:20:00.000Z"
+          }
+        }
+      }),
+      notifySubmissionRequest,
+      runtime: {
+        notify: {
+          sendAndSubmitTmuxPaneMessage: vi.fn(async () => undefined),
+          submitTmuxPaneInput: vi.fn(async () => undefined)
+        },
+        paneBinding: {
+          runTmux: paneRunner,
+          buildAgentCommand: vi.fn(() => "codex meta-review"),
+          respawnTmuxPaneCommand: vi.fn(async () => undefined)
+        }
+      },
+      sessionsPath: "/repo/.pairflow/runtime/sessions.json",
+      bubbleId: "b_meta_review_gate_notify_runner_fallback",
+      round: 2,
+      now: new Date("2026-04-13T00:20:00.000Z"),
+      taskArtifactPath: "/repo/.pairflow/bubbles/b_meta_review_gate_notify_runner_fallback/artifacts/task.md",
+      pairflowCommandProfile: "external"
+    });
+
+    expect(notifySubmissionRequest).toHaveBeenCalledWith(expect.anything(), expect.anything());
+    const fallbackCall = notifySubmissionRequest.mock.calls.at(-1);
+    expect(fallbackCall).toBeDefined();
+    const fallbackRuntime = resolveRuntimeFromNotifyCall(fallbackCall);
+    expect(fallbackRuntime?.runTmux).toBe(paneRunner);
+    expect(typeof fallbackRuntime?.sendAndSubmitTmuxPaneMessage).toBe("function");
+    expect(typeof fallbackRuntime?.submitTmuxPaneInput).toBe("function");
   });
 });
