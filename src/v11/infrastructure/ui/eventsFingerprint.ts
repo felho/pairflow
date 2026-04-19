@@ -5,6 +5,7 @@ import { join, resolve } from "node:path";
 import { getBubblePaths } from "../artifact/bubble/paths.js";
 import type { UiBubbleListEntry as BubbleListEntry } from "../../shared/ports/uiRouter.js";
 import type { UiRepoSummary } from "../../../types/ui.js";
+import type { UiBubbleListRemoteExecution } from "../../../shared/contracts/uiRemoteExecution.js";
 
 function normalizeRepoPathForQueue(repoPath: string): string {
   const resolvedRepoPath = resolve(repoPath);
@@ -44,6 +45,22 @@ async function fileFingerprint(path: string): Promise<string> {
   return `${info.mtimeMs}:${info.size}`;
 }
 
+function normalizeRemoteExecutionForFingerprint(
+  remoteExecution: UiBubbleListRemoteExecution | undefined
+): Record<string, unknown> | null {
+  if (remoteExecution === undefined) {
+    return null;
+  }
+
+  const stable: Record<string, unknown> = {
+    ...remoteExecution
+  };
+  delete stable.lastLiveCheckAt;
+  delete stable.lastCacheCheckAt;
+  delete stable.refreshAttemptedAt;
+  return stable;
+}
+
 async function bubbleFingerprint(
   repoPath: string,
   entry: BubbleListEntry
@@ -75,7 +92,7 @@ async function bubbleFingerprint(
     transcriptSig,
     runtimeSig,
     attentionSig,
-    JSON.stringify(entry.remoteExecution ?? null),
+    JSON.stringify(normalizeRemoteExecutionForFingerprint(entry.remoteExecution)),
     entry.state,
     String(entry.round)
   ].join("|");
