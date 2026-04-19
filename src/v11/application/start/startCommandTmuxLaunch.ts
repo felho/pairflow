@@ -16,6 +16,7 @@ import {
 import type { resolveResumeKickoffMessages } from "./startCommandResumePrompts.js";
 import type { ResolvedStartBubbleDependencies } from "./startCommandOrchestration.js";
 import type { StartExecutionContext } from "./startCommandContext.js";
+import type { PairflowRemoteWorkspaceAuthority } from "../../shared/command/pairflowCommandBootstrap.js";
 
 function shouldSubmitStartupPrompt(agentName: "codex" | "claude"): boolean {
   return agentName === "codex";
@@ -23,6 +24,46 @@ function shouldSubmitStartupPrompt(agentName: "codex" | "claude"): boolean {
 
 function buildStatusPaneLabel(bubbleId: string): string {
   return `[orchestrator/status]-[${bubbleId}]`;
+}
+
+function resolveRemoteWorkspaceAuthority(
+  context: StartExecutionContext
+): PairflowRemoteWorkspaceAuthority | undefined {
+  const externalPairflowCommand = context.remoteStartContext?.externalPairflowCommand;
+  if (context.remoteStartContext === undefined) {
+    return undefined;
+  }
+
+  return {
+    workspaceRoot: context.remoteStartContext.workspaceRoot,
+    ...(externalPairflowCommand !== undefined
+      ? { externalPairflowCommand }
+      : {})
+  };
+}
+
+function buildAgentLaunchCommand(input: {
+  agentName: "codex" | "claude";
+  bubbleId: string;
+  workspacePath: string;
+  pairflowCommandProfile: StartExecutionContext["resolved"]["bubbleConfig"]["pairflow_command_profile"];
+  startupPrompt: string;
+  externalPairflowCommand?: string;
+  remoteWorkspaceAuthority?: PairflowRemoteWorkspaceAuthority;
+}): string {
+  return buildAgentCommand({
+    agentName: input.agentName,
+    bubbleId: input.bubbleId,
+    workspacePath: input.workspacePath,
+    pairflowCommandProfile: input.pairflowCommandProfile,
+    ...(input.externalPairflowCommand !== undefined
+      ? { externalPairflowCommand: input.externalPairflowCommand }
+      : {}),
+    ...(input.remoteWorkspaceAuthority !== undefined
+      ? { remoteWorkspaceAuthority: input.remoteWorkspaceAuthority }
+      : {}),
+    startupPrompt: input.startupPrompt
+  });
 }
 
 function assertRunningLaunchAck(input: {
@@ -57,15 +98,7 @@ export async function launchFreshTmuxSession(input: {
 }): Promise<{ sessionName: string }> {
   const externalPairflowCommand =
     input.context.remoteStartContext?.externalPairflowCommand;
-  const remoteWorkspaceAuthority =
-    input.context.remoteStartContext !== undefined
-      ? {
-          workspaceRoot: input.context.remoteStartContext.workspaceRoot,
-          ...(externalPairflowCommand !== undefined
-            ? { externalPairflowCommand }
-            : {})
-        }
-      : undefined;
+  const remoteWorkspaceAuthority = resolveRemoteWorkspaceAuthority(input.context);
   const ack = await input.deps.launchSessionAck({
     bubbleId: input.context.resolved.bubbleId,
     workspacePath: input.launchWorkspacePath,
@@ -87,17 +120,13 @@ export async function launchFreshTmuxSession(input: {
       input.context.resolved.bubbleConfig.agents.reviewer
     ),
     metaReviewerSubmitStartupPrompt: true,
-    implementerCommand: buildAgentCommand({
+    implementerCommand: buildAgentLaunchCommand({
       agentName: input.context.resolved.bubbleConfig.agents.implementer,
       bubbleId: input.context.resolved.bubbleId,
       workspacePath: input.launchWorkspacePath,
       pairflowCommandProfile: input.context.resolved.bubbleConfig.pairflow_command_profile,
-      ...(externalPairflowCommand !== undefined
-        ? { externalPairflowCommand }
-        : {}),
-      ...(remoteWorkspaceAuthority !== undefined
-        ? { remoteWorkspaceAuthority }
-        : {}),
+      ...(externalPairflowCommand !== undefined ? { externalPairflowCommand } : {}),
+      ...(remoteWorkspaceAuthority !== undefined ? { remoteWorkspaceAuthority } : {}),
       startupPrompt: buildImplementerStartupPrompt({
         bubbleId: input.context.resolved.bubbleId,
         repoPath: input.context.resolved.repoPath,
@@ -109,17 +138,13 @@ export async function launchFreshTmuxSession(input: {
         ideationPending: input.ideationPending
       })
     }),
-    reviewerCommand: buildAgentCommand({
+    reviewerCommand: buildAgentLaunchCommand({
       agentName: input.context.resolved.bubbleConfig.agents.reviewer,
       bubbleId: input.context.resolved.bubbleId,
       workspacePath: input.launchWorkspacePath,
       pairflowCommandProfile: input.context.resolved.bubbleConfig.pairflow_command_profile,
-      ...(externalPairflowCommand !== undefined
-        ? { externalPairflowCommand }
-        : {}),
-      ...(remoteWorkspaceAuthority !== undefined
-        ? { remoteWorkspaceAuthority }
-        : {}),
+      ...(externalPairflowCommand !== undefined ? { externalPairflowCommand } : {}),
+      ...(remoteWorkspaceAuthority !== undefined ? { remoteWorkspaceAuthority } : {}),
       startupPrompt: buildReviewerStartupPrompt({
         bubbleId: input.context.resolved.bubbleId,
         repoPath: input.context.resolved.repoPath,
@@ -136,17 +161,13 @@ export async function launchFreshTmuxSession(input: {
           : {})
       })
     }),
-    metaReviewerCommand: buildAgentCommand({
+    metaReviewerCommand: buildAgentLaunchCommand({
       agentName: "codex",
       bubbleId: input.context.resolved.bubbleId,
       workspacePath: input.launchWorkspacePath,
       pairflowCommandProfile: input.context.resolved.bubbleConfig.pairflow_command_profile,
-      ...(externalPairflowCommand !== undefined
-        ? { externalPairflowCommand }
-        : {}),
-      ...(remoteWorkspaceAuthority !== undefined
-        ? { remoteWorkspaceAuthority }
-        : {}),
+      ...(externalPairflowCommand !== undefined ? { externalPairflowCommand } : {}),
+      ...(remoteWorkspaceAuthority !== undefined ? { remoteWorkspaceAuthority } : {}),
       startupPrompt: buildMetaReviewerStartupPrompt({
         bubbleId: input.context.resolved.bubbleId,
         repoPath: input.context.resolved.repoPath,
@@ -191,15 +212,7 @@ export async function launchResumeTmuxSession(input: {
 }): Promise<{ sessionName: string }> {
   const externalPairflowCommand =
     input.context.remoteStartContext?.externalPairflowCommand;
-  const remoteWorkspaceAuthority =
-    input.context.remoteStartContext !== undefined
-      ? {
-          workspaceRoot: input.context.remoteStartContext.workspaceRoot,
-          ...(externalPairflowCommand !== undefined
-            ? { externalPairflowCommand }
-            : {})
-        }
-      : undefined;
+  const remoteWorkspaceAuthority = resolveRemoteWorkspaceAuthority(input.context);
   const ack = await input.deps.launchSessionAck({
     bubbleId: input.context.resolved.bubbleId,
     workspacePath: input.launchWorkspacePath,
@@ -221,17 +234,13 @@ export async function launchResumeTmuxSession(input: {
       input.context.resolved.bubbleConfig.agents.reviewer
     ),
     metaReviewerSubmitStartupPrompt: true,
-    implementerCommand: buildAgentCommand({
+    implementerCommand: buildAgentLaunchCommand({
       agentName: input.context.resolved.bubbleConfig.agents.implementer,
       bubbleId: input.context.resolved.bubbleId,
       workspacePath: input.launchWorkspacePath,
       pairflowCommandProfile: input.context.resolved.bubbleConfig.pairflow_command_profile,
-      ...(externalPairflowCommand !== undefined
-        ? { externalPairflowCommand }
-        : {}),
-      ...(remoteWorkspaceAuthority !== undefined
-        ? { remoteWorkspaceAuthority }
-        : {}),
+      ...(externalPairflowCommand !== undefined ? { externalPairflowCommand } : {}),
+      ...(remoteWorkspaceAuthority !== undefined ? { remoteWorkspaceAuthority } : {}),
       startupPrompt: buildResumeImplementerStartupPrompt({
         bubbleId: input.context.resolved.bubbleId,
         repoPath: input.context.resolved.repoPath,
@@ -245,17 +254,13 @@ export async function launchResumeTmuxSession(input: {
         ...(input.kickoffDiagnostic !== undefined ? { kickoffDiagnostic: input.kickoffDiagnostic } : {})
       })
     }),
-    reviewerCommand: buildAgentCommand({
+    reviewerCommand: buildAgentLaunchCommand({
       agentName: input.context.resolved.bubbleConfig.agents.reviewer,
       bubbleId: input.context.resolved.bubbleId,
       workspacePath: input.launchWorkspacePath,
       pairflowCommandProfile: input.context.resolved.bubbleConfig.pairflow_command_profile,
-      ...(externalPairflowCommand !== undefined
-        ? { externalPairflowCommand }
-        : {}),
-      ...(remoteWorkspaceAuthority !== undefined
-        ? { remoteWorkspaceAuthority }
-        : {}),
+      ...(externalPairflowCommand !== undefined ? { externalPairflowCommand } : {}),
+      ...(remoteWorkspaceAuthority !== undefined ? { remoteWorkspaceAuthority } : {}),
       startupPrompt: buildResumeReviewerStartupPrompt({
         bubbleId: input.context.resolved.bubbleId,
         repoPath: input.context.resolved.repoPath,
@@ -278,17 +283,13 @@ export async function launchResumeTmuxSession(input: {
         ...(input.kickoffDiagnostic !== undefined ? { kickoffDiagnostic: input.kickoffDiagnostic } : {})
       })
     }),
-    metaReviewerCommand: buildAgentCommand({
+    metaReviewerCommand: buildAgentLaunchCommand({
       agentName: "codex",
       bubbleId: input.context.resolved.bubbleId,
       workspacePath: input.launchWorkspacePath,
       pairflowCommandProfile: input.context.resolved.bubbleConfig.pairflow_command_profile,
-      ...(externalPairflowCommand !== undefined
-        ? { externalPairflowCommand }
-        : {}),
-      ...(remoteWorkspaceAuthority !== undefined
-        ? { remoteWorkspaceAuthority }
-        : {}),
+      ...(externalPairflowCommand !== undefined ? { externalPairflowCommand } : {}),
+      ...(remoteWorkspaceAuthority !== undefined ? { remoteWorkspaceAuthority } : {}),
       startupPrompt: buildResumeMetaReviewerStartupPrompt({
         bubbleId: input.context.resolved.bubbleId,
         repoPath: input.context.resolved.repoPath,
