@@ -24,10 +24,10 @@ function buildSplitPaneStdout(args: string[]): string {
   if (target?.endsWith(":0.0")) {
     return "%11\n";
   }
-  if (target === "%11") {
+  if (target === "%11" || target?.endsWith(":0.1")) {
     return "%12\n";
   }
-  if (target === "%12") {
+  if (target === "%12" || target?.endsWith(":0.2")) {
     return "%13\n";
   }
   return "%99\n";
@@ -526,7 +526,7 @@ describe("launchBubbleTmuxSession", () => {
       "-F",
       "#{pane_id}",
       "-t",
-      "%11",
+      "pf-b_start_01:0.1",
       "-p",
       "50",
       "-c",
@@ -541,7 +541,7 @@ describe("launchBubbleTmuxSession", () => {
       "-F",
       "#{pane_id}",
       "-t",
-      "%12",
+      "pf-b_start_01:0.2",
       "-p",
       "50",
       "-c",

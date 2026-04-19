@@ -37,6 +37,8 @@ export async function launchBubbleTmuxSessionLayout(
   input: LaunchBubbleTmuxSessionLayoutInput
 ): Promise<LaunchBubbleTmuxSessionLayoutResult> {
   const statusPane = `${input.sessionName}:0.0`;
+  const implementerPane = `${input.sessionName}:0.1`;
+  const reviewerPane = `${input.sessionName}:0.2`;
   await applyBubbleTmuxSessionFrameSetup({
     runner: input.runner,
     sessionName: input.sessionName,
@@ -73,7 +75,7 @@ export async function launchBubbleTmuxSessionLayout(
     "-F",
     "#{pane_id}",
     "-t",
-    implementerPaneId,
+    implementerPane,
     "-p",
     "50",
     "-c",
@@ -89,7 +91,7 @@ export async function launchBubbleTmuxSessionLayout(
     "-F",
     "#{pane_id}",
     "-t",
-    reviewerPaneId,
+    reviewerPane,
     "-p",
     "50",
     "-c",
