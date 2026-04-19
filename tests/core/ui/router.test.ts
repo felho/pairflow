@@ -12,6 +12,11 @@ import { RemoteBubbleApprovalCommandError } from "../../../src/v11/infrastructur
 import { RemoteBubbleCommitCommandError } from "../../../src/v11/infrastructure/executor/ssh/sshBubbleCommitCommand.js";
 import { RemoteBubbleStatusError } from "../../../src/v11/infrastructure/executor/ssh/sshBubbleStatus.js";
 import type { RestartBubbleResult } from "../../../src/v11/application/restart/restartCommandContract.js";
+import type * as EmitApprovalModule from "../../../src/v11/application/approval/emitApprovalV11.js";
+import {
+  projectApprovalDecisionDeliverySignalToUiDeliverySignal,
+  projectApprovalDecisionDeliverySignalsToUiDeliverySignals
+} from "../../../src/v11/defaults/ui/routerDefaults.js";
 import { createUiRouter, resolveStaticAssetPath } from "../../../src/v11/infrastructure/ui/router.js";
 import type { UiEventsBroker } from "../../../src/v11/infrastructure/ui/events.js";
 import type { UiRepoScope } from "../../../src/v11/infrastructure/ui/repoScope.js";
@@ -92,6 +97,36 @@ async function createAssetsDir(): Promise<string> {
   return dir;
 }
 
+const emitApprovalModulePath =
+  "../../../src/v11/application/approval/emitApprovalV11.js";
+
+async function withMockedApproveRouteDependencies<T>(
+  emitApproveV11: ReturnType<typeof vi.fn>,
+  run: (createUiRouterWithDefaultProjection: typeof createUiRouter) => Promise<T>
+): Promise<T> {
+  vi.resetModules();
+  vi.doMock(emitApprovalModulePath, async () => {
+    const actual = await vi.importActual<typeof EmitApprovalModule>(
+      emitApprovalModulePath
+    );
+
+    return {
+      ...actual,
+      emitApproveV11
+    };
+  });
+
+  try {
+    const { createUiRouter: createUiRouterWithDefaultProjection } = await import(
+      "../../../src/v11/infrastructure/ui/router.js"
+    );
+    return await run(createUiRouterWithDefaultProjection);
+  } finally {
+    vi.resetModules();
+    vi.doUnmock(emitApprovalModulePath);
+  }
+}
+
 afterEach(async () => {
   await Promise.all(
     tempDirs.splice(0).map((path) =>
@@ -126,6 +161,76 @@ describe("resolveStaticAssetPath", () => {
 
     expect(resolved.type).toBe("fallback");
     expect(resolved.path).toBe(join(assetsDir, "index.html"));
+  });
+});
+
+describe("approval decision delivery projection", () => {
+  it("projects application delivery compat fields out of the shared UI/public contract", () => {
+    const accepted = projectApprovalDecisionDeliverySignalToUiDeliverySignal({
+      status: "accepted",
+      delivered: true,
+      message: "Approval delivered to reviewer.",
+      sessionName: "pf-b-router-approve-success",
+      targetPaneIndex: 1
+    });
+    const rejected = projectApprovalDecisionDeliverySignalToUiDeliverySignal({
+      status: "rejected",
+      delivered: false,
+      message: "Implementer delivery could not be confirmed.",
+      reason: "no_runtime_session",
+      reason_code: "DELIVERY_ACK_RUNTIME_SESSION_UNAVAILABLE"
+    });
+
+    expect(accepted).toStrictEqual({
+      status: "accepted",
+      message: "Approval delivered to reviewer.",
+      sessionName: "pf-b-router-approve-success",
+      targetPaneIndex: 1
+    });
+    expect("delivered" in (accepted as object)).toBe(false);
+    expect(rejected).toStrictEqual({
+      status: "rejected",
+      message: "Implementer delivery could not be confirmed.",
+      reason: "no_runtime_session",
+      reason_code: "DELIVERY_ACK_RUNTIME_SESSION_UNAVAILABLE"
+    });
+    expect("delivered" in (rejected as object)).toBe(false);
+  });
+
+  it("projects approval delivery collections out of the shared UI/public contract", () => {
+    const projected = projectApprovalDecisionDeliverySignalsToUiDeliverySignals({
+      statusDelivery: {
+        status: "accepted",
+        delivered: true,
+        message: "Approval delivered to reviewer.",
+        sessionName: "pf-b-router-approve-success",
+        targetPaneIndex: 1
+      },
+      implementerDelivery: {
+        status: "rejected",
+        delivered: false,
+        message: "Implementer delivery could not be confirmed.",
+        reason: "no_runtime_session",
+        reason_code: "DELIVERY_ACK_RUNTIME_SESSION_UNAVAILABLE"
+      }
+    });
+
+    expect(projected).toStrictEqual({
+      statusDelivery: {
+        status: "accepted",
+        message: "Approval delivered to reviewer.",
+        sessionName: "pf-b-router-approve-success",
+        targetPaneIndex: 1
+      },
+      implementerDelivery: {
+        status: "rejected",
+        message: "Implementer delivery could not be confirmed.",
+        reason: "no_runtime_session",
+        reason_code: "DELIVERY_ACK_RUNTIME_SESSION_UNAVAILABLE"
+      }
+    });
+    expect("delivered" in (projected.statusDelivery as object)).toBe(false);
+    expect("delivered" in (projected.implementerDelivery as object)).toBe(false);
   });
 });
 
@@ -724,293 +829,583 @@ describe("createUiRouter delete action", () => {
   });
 });
 
-describe("createUiRouter attach action", () => {
-  it("restarts runtime and retries attach when tmux session is missing", async () => {
-    const repoPath = "/tmp/pairflow-ui-router-attach-repo";
-    const attachBubble = vi
-      .fn()
-      .mockRejectedValueOnce(
-        new AttachBubbleError(
-          "Tmux session \"pf-b-router-attach-recover\" does not exist. Start the bubble runtime first.",
-          {
-            reasonCode: "TMUX_SESSION_MISSING"
-          }
+describe("createUiRouter action routes", () => {
+  describe("attach routes", () => {
+    it("restarts runtime and retries attach when tmux session is missing", async () => {
+      const repoPath = "/tmp/pairflow-ui-router-attach-repo";
+      const attachBubble = vi
+        .fn()
+        .mockRejectedValueOnce(
+          new AttachBubbleError(
+            "Tmux session \"pf-b-router-attach-recover\" does not exist. Start the bubble runtime first.",
+            {
+              reasonCode: "TMUX_SESSION_MISSING"
+            }
+          )
         )
-      )
-      .mockResolvedValueOnce({
-        bubbleId: "b-router-attach-recover",
-        tmuxSessionName: "pf-b-router-attach-recover",
-        launcherRequested: "auto",
-        launcherUsed: "copy",
-        attachCommand: "tmux attach -t pf-b-router-attach-recover"
-      });
-    const startBubble = vi.fn(async () => ({} as never));
+        .mockResolvedValueOnce({
+          bubbleId: "b-router-attach-recover",
+          tmuxSessionName: "pf-b-router-attach-recover",
+          launcherRequested: "auto",
+          launcherUsed: "copy",
+          attachCommand: "tmux attach -t pf-b-router-attach-recover"
+        });
+      const startBubble = vi.fn(async () => ({} as never));
 
-    const scope: UiRepoScope = {
-      repos: [repoPath],
-      has: (value: string) => Promise.resolve(value === repoPath)
-    };
-    const events: UiEventsBroker = {
-      subscribe: () => () => undefined,
-      getSnapshot: () => ({
-        id: 1,
-        ts: "2026-02-25T00:00:00.000Z",
-        type: "snapshot",
-        repos: [],
-        bubbles: []
-      }),
-      refreshNow: () => Promise.resolve(undefined),
-      addRepo: () => Promise.resolve(false),
-      removeRepo: () => Promise.resolve(false),
-      close: () => Promise.resolve(undefined)
-    };
-
-    const router = createUiRouter({
-      repoScope: scope,
-      events,
-      dependencies: {
-        attachBubble,
-        startBubble
-      }
-    });
-    const server = await startRouterServer(router);
-
-    try {
-      const response = await fetch(
-        `${server.url}/api/bubbles/b-router-attach-recover/attach?repo=${encodeURIComponent(repoPath)}`,
-        {
-          method: "POST"
-        }
-      );
-      const payload = (await response.json()) as {
-        result: {
-          bubbleId: string;
-          launcherUsed: string;
-          attachCommand?: string;
-        };
+      const scope: UiRepoScope = {
+        repos: [repoPath],
+        has: (value: string) => Promise.resolve(value === repoPath)
+      };
+      const events: UiEventsBroker = {
+        subscribe: () => () => undefined,
+        getSnapshot: () => ({
+          id: 1,
+          ts: "2026-02-25T00:00:00.000Z",
+          type: "snapshot",
+          repos: [],
+          bubbles: []
+        }),
+        refreshNow: () => Promise.resolve(undefined),
+        addRepo: () => Promise.resolve(false),
+        removeRepo: () => Promise.resolve(false),
+        close: () => Promise.resolve(undefined)
       };
 
-      expect(response.status).toBe(200);
-      expect(payload.result).toMatchObject({
-        bubbleId: "b-router-attach-recover",
-        launcherUsed: "copy",
-        attachCommand: "tmux attach -t pf-b-router-attach-recover"
+      const router = createUiRouter({
+        repoScope: scope,
+        events,
+        dependencies: {
+          attachBubble,
+          startBubble
+        }
       });
-      expect(startBubble).toHaveBeenCalledTimes(1);
-      expect(attachBubble).toHaveBeenCalledTimes(2);
-    } finally {
-      await server.close();
-    }
-  });
+      const server = await startRouterServer(router);
 
-  it("restarts runtime when attach error carries tmux-missing context reason without explicit reasonCode", async () => {
-    const repoPath = "/tmp/pairflow-ui-router-attach-recover-context";
-    const attachBubble = vi
-      .fn()
-      .mockRejectedValueOnce(
-        new AttachBubbleError(
-          "Tmux session \"pf-b-router-attach-recover-context\" does not exist. Start the bubble runtime first.",
+      try {
+        const response = await fetch(
+          `${server.url}/api/bubbles/b-router-attach-recover/attach?repo=${encodeURIComponent(repoPath)}`,
           {
-            context: {
-              reason: "tmux_session_missing"
-            }
+            method: "POST"
           }
-        )
-      )
-      .mockResolvedValueOnce({
-        bubbleId: "b-router-attach-recover-context",
-        tmuxSessionName: "pf-b-router-attach-recover-context",
-        launcherRequested: "auto",
-        launcherUsed: "copy",
-        attachCommand: "tmux attach -t pf-b-router-attach-recover-context"
-      });
-    const startBubble = vi.fn(async () => ({} as never));
+        );
+        const payload = (await response.json()) as {
+          result: {
+            bubbleId: string;
+            launcherUsed: string;
+            attachCommand?: string;
+          };
+        };
 
-    const scope: UiRepoScope = {
-      repos: [repoPath],
-      has: (value: string) => Promise.resolve(value === repoPath)
-    };
-    const events: UiEventsBroker = {
-      subscribe: () => () => undefined,
-      getSnapshot: () => ({
-        id: 1,
-        ts: "2026-02-25T00:00:00.000Z",
-        type: "snapshot",
-        repos: [],
-        bubbles: []
-      }),
-      refreshNow: () => Promise.resolve(undefined),
-      addRepo: () => Promise.resolve(false),
-      removeRepo: () => Promise.resolve(false),
-      close: () => Promise.resolve(undefined)
-    };
-
-    const router = createUiRouter({
-      repoScope: scope,
-      events,
-      dependencies: {
-        attachBubble,
-        startBubble
+        expect(response.status).toBe(200);
+        expect(payload.result).toMatchObject({
+          bubbleId: "b-router-attach-recover",
+          launcherUsed: "copy",
+          attachCommand: "tmux attach -t pf-b-router-attach-recover"
+        });
+        expect(startBubble).toHaveBeenCalledTimes(1);
+        expect(attachBubble).toHaveBeenCalledTimes(2);
+      } finally {
+        await server.close();
       }
     });
-    const server = await startRouterServer(router);
 
-    try {
-      const response = await fetch(
-        `${server.url}/api/bubbles/b-router-attach-recover-context/attach?repo=${encodeURIComponent(repoPath)}`,
-        {
-          method: "POST"
+    it("restarts runtime when attach error carries tmux-missing context reason without explicit reasonCode", async () => {
+      const repoPath = "/tmp/pairflow-ui-router-attach-recover-context";
+      const attachBubble = vi
+        .fn()
+        .mockRejectedValueOnce(
+          new AttachBubbleError(
+            "Tmux session \"pf-b-router-attach-recover-context\" does not exist. Start the bubble runtime first.",
+            {
+              context: {
+                reason: "tmux_session_missing"
+              }
+            }
+          )
+        )
+        .mockResolvedValueOnce({
+          bubbleId: "b-router-attach-recover-context",
+          tmuxSessionName: "pf-b-router-attach-recover-context",
+          launcherRequested: "auto",
+          launcherUsed: "copy",
+          attachCommand: "tmux attach -t pf-b-router-attach-recover-context"
+        });
+      const startBubble = vi.fn(async () => ({} as never));
+
+      const scope: UiRepoScope = {
+        repos: [repoPath],
+        has: (value: string) => Promise.resolve(value === repoPath)
+      };
+      const events: UiEventsBroker = {
+        subscribe: () => () => undefined,
+        getSnapshot: () => ({
+          id: 1,
+          ts: "2026-02-25T00:00:00.000Z",
+          type: "snapshot",
+          repos: [],
+          bubbles: []
+        }),
+        refreshNow: () => Promise.resolve(undefined),
+        addRepo: () => Promise.resolve(false),
+        removeRepo: () => Promise.resolve(false),
+        close: () => Promise.resolve(undefined)
+      };
+
+      const router = createUiRouter({
+        repoScope: scope,
+        events,
+        dependencies: {
+          attachBubble,
+          startBubble
         }
+      });
+      const server = await startRouterServer(router);
+
+      try {
+        const response = await fetch(
+          `${server.url}/api/bubbles/b-router-attach-recover-context/attach?repo=${encodeURIComponent(repoPath)}`,
+          {
+            method: "POST"
+          }
+        );
+
+        expect(response.status).toBe(200);
+        expect(startBubble).toHaveBeenCalledTimes(1);
+        expect(attachBubble).toHaveBeenCalledTimes(2);
+      } finally {
+        await server.close();
+      }
+    });
+
+    it("maps launcher_unavailable attach errors to HTTP 400 with launcher details", async () => {
+      const repoPath = "/tmp/pairflow-ui-router-attach-repo";
+      const attachBubble = vi.fn(() =>
+        Promise.reject(
+          new AttachBubbleError("Attach launcher 'iterm2' is unavailable on this host.", {
+            launcher: "iterm2",
+            failureClass: "launcher_unavailable",
+            stderrExcerpt: "Unable to find application named \"iTerm\""
+          })
+        )
       );
 
-      expect(response.status).toBe(200);
-      expect(startBubble).toHaveBeenCalledTimes(1);
-      expect(attachBubble).toHaveBeenCalledTimes(2);
-    } finally {
-      await server.close();
-    }
-  });
+      const scope: UiRepoScope = {
+        repos: [repoPath],
+        has: (value: string) => Promise.resolve(value === repoPath)
+      };
+      const events: UiEventsBroker = {
+        subscribe: () => () => undefined,
+        getSnapshot: () => ({
+          id: 1,
+          ts: "2026-02-25T00:00:00.000Z",
+          type: "snapshot",
+          repos: [],
+          bubbles: []
+        }),
+        refreshNow: () => Promise.resolve(undefined),
+        addRepo: () => Promise.resolve(false),
+        removeRepo: () => Promise.resolve(false),
+        close: () => Promise.resolve(undefined)
+      };
 
-  it("maps launcher_unavailable attach errors to HTTP 400 with launcher details", async () => {
-    const repoPath = "/tmp/pairflow-ui-router-attach-repo";
-    const attachBubble = vi.fn(() =>
-      Promise.reject(
-        new AttachBubbleError("Attach launcher 'iterm2' is unavailable on this host.", {
+      const router = createUiRouter({
+        repoScope: scope,
+        events,
+        dependencies: {
+          attachBubble
+        }
+      });
+      const server = await startRouterServer(router);
+
+      try {
+        const response = await fetch(
+          `${server.url}/api/bubbles/b-router-attach-01/attach?repo=${encodeURIComponent(repoPath)}`,
+          {
+            method: "POST"
+          }
+        );
+        const payload = (await response.json()) as {
+          error: {
+            code: string;
+            details?: Record<string, unknown>;
+          };
+        };
+
+        expect(response.status).toBe(400);
+        expect(payload.error.code).toBe("bad_request");
+        expect(payload.error.details).toMatchObject({
+          bubbleId: "b-router-attach-01",
+          repoPath,
           launcher: "iterm2",
           failureClass: "launcher_unavailable",
           stderrExcerpt: "Unable to find application named \"iTerm\""
-        })
-      )
-    );
-
-    const scope: UiRepoScope = {
-      repos: [repoPath],
-      has: (value: string) => Promise.resolve(value === repoPath)
-    };
-    const events: UiEventsBroker = {
-      subscribe: () => () => undefined,
-      getSnapshot: () => ({
-        id: 1,
-        ts: "2026-02-25T00:00:00.000Z",
-        type: "snapshot",
-        repos: [],
-        bubbles: []
-      }),
-      refreshNow: () => Promise.resolve(undefined),
-      addRepo: () => Promise.resolve(false),
-      removeRepo: () => Promise.resolve(false),
-      close: () => Promise.resolve(undefined)
-    };
-
-    const router = createUiRouter({
-      repoScope: scope,
-      events,
-      dependencies: {
-        attachBubble
+        });
+      } finally {
+        await server.close();
       }
     });
-    const server = await startRouterServer(router);
 
-    try {
-      const response = await fetch(
-        `${server.url}/api/bubbles/b-router-attach-01/attach?repo=${encodeURIComponent(repoPath)}`,
-        {
-          method: "POST"
-        }
-      );
-      const payload = (await response.json()) as {
-        error: {
-          code: string;
-          details?: Record<string, unknown>;
-        };
-      };
-
-      expect(response.status).toBe(400);
-      expect(payload.error.code).toBe("bad_request");
-      expect(payload.error.details).toMatchObject({
-        bubbleId: "b-router-attach-01",
-        repoPath,
-        launcher: "iterm2",
-        failureClass: "launcher_unavailable",
-        stderrExcerpt: "Unable to find application named \"iTerm\""
-      });
-    } finally {
-      await server.close();
-    }
-  });
-
-  it("does not retry startBubble for remote attach start-required errors", async () => {
-    const repoPath = "/tmp/pairflow-ui-router-attach-repo";
-    const attachBubble = vi.fn(() =>
-      Promise.reject(
-        new AttachBubbleError(
-          "Remote bubble 'b-router-attach-remote-created' is not started yet. Run `pairflow bubble start --id b-router-attach-remote-created` first.",
-          {
-            reasonCode: "REMOTE_ATTACH_START_REQUIRED"
-          }
+    it("does not retry startBubble for remote attach start-required errors", async () => {
+      const repoPath = "/tmp/pairflow-ui-router-attach-repo";
+      const attachBubble = vi.fn(() =>
+        Promise.reject(
+          new AttachBubbleError(
+            "Remote bubble 'b-router-attach-remote-created' is not started yet. Run `pairflow bubble start --id b-router-attach-remote-created` first.",
+            {
+              reasonCode: "REMOTE_ATTACH_START_REQUIRED"
+            }
+          )
         )
-      )
-    );
-    const startBubble = vi.fn(async () => ({} as never));
-
-    const scope: UiRepoScope = {
-      repos: [repoPath],
-      has: (value: string) => Promise.resolve(value === repoPath)
-    };
-    const events: UiEventsBroker = {
-      subscribe: () => () => undefined,
-      getSnapshot: () => ({
-        id: 1,
-        ts: "2026-02-25T00:00:00.000Z",
-        type: "snapshot",
-        repos: [],
-        bubbles: []
-      }),
-      refreshNow: () => Promise.resolve(undefined),
-      addRepo: () => Promise.resolve(false),
-      removeRepo: () => Promise.resolve(false),
-      close: () => Promise.resolve(undefined)
-    };
-
-    const router = createUiRouter({
-      repoScope: scope,
-      events,
-      dependencies: {
-        attachBubble,
-        startBubble
-      }
-    });
-    const server = await startRouterServer(router);
-
-    try {
-      const response = await fetch(
-        `${server.url}/api/bubbles/b-router-attach-remote-created/attach?repo=${encodeURIComponent(repoPath)}`,
-        {
-          method: "POST"
-        }
       );
-      const payload = (await response.json()) as {
-        error: {
-          code: string;
-          details?: Record<string, unknown>;
-        };
+      const startBubble = vi.fn(async () => ({} as never));
+
+      const scope: UiRepoScope = {
+        repos: [repoPath],
+        has: (value: string) => Promise.resolve(value === repoPath)
+      };
+      const events: UiEventsBroker = {
+        subscribe: () => () => undefined,
+        getSnapshot: () => ({
+          id: 1,
+          ts: "2026-02-25T00:00:00.000Z",
+          type: "snapshot",
+          repos: [],
+          bubbles: []
+        }),
+        refreshNow: () => Promise.resolve(undefined),
+        addRepo: () => Promise.resolve(false),
+        removeRepo: () => Promise.resolve(false),
+        close: () => Promise.resolve(undefined)
       };
 
-      expect(response.status).toBe(400);
-      expect(payload.error.code).toBe("bad_request");
-      expect(payload.error.details).toMatchObject({
-        bubbleId: "b-router-attach-remote-created",
-        repoPath,
-        reasonCode: "REMOTE_ATTACH_START_REQUIRED"
+      const router = createUiRouter({
+        repoScope: scope,
+        events,
+        dependencies: {
+          attachBubble,
+          startBubble
+        }
       });
-      expect(startBubble).not.toHaveBeenCalled();
-      expect(attachBubble).toHaveBeenCalledTimes(1);
-    } finally {
-      await server.close();
-    }
+      const server = await startRouterServer(router);
+
+      try {
+        const response = await fetch(
+          `${server.url}/api/bubbles/b-router-attach-remote-created/attach?repo=${encodeURIComponent(repoPath)}`,
+          {
+            method: "POST"
+          }
+        );
+        const payload = (await response.json()) as {
+          error: {
+            code: string;
+            details?: Record<string, unknown>;
+          };
+        };
+
+        expect(response.status).toBe(400);
+        expect(payload.error.code).toBe("bad_request");
+        expect(payload.error.details).toMatchObject({
+          bubbleId: "b-router-attach-remote-created",
+          repoPath,
+          reasonCode: "REMOTE_ATTACH_START_REQUIRED"
+        });
+        expect(startBubble).not.toHaveBeenCalled();
+        expect(attachBubble).toHaveBeenCalledTimes(1);
+      } finally {
+        await server.close();
+      }
+    });
   });
 
-  it("maps remote approve start-required failures to HTTP 409 conflict", async () => {
+  describe("approval and rework routes", () => {
+    it("returns neutral approval delivery signals from the first-party approve route", async () => {
+      const repoPath = "/tmp/pairflow-ui-router-approve-success";
+      const emitApprove = vi.fn(async () => ({
+        bubbleId: "b-router-approve-success",
+        sequence: 7,
+        envelope: {} as never,
+        state: {} as never,
+        delivery: {
+          statusDelivery: {
+            status: "accepted" as const,
+            message: "Approval delivered to reviewer.",
+            sessionName: "pf-b-router-approve-success",
+            targetPaneIndex: 1
+          }
+        }
+      }));
+
+      const router = createUiRouter({
+        repoScope: {
+          repos: [repoPath],
+          has: (value: string) => Promise.resolve(value === repoPath)
+        },
+        events: {
+          subscribe: () => () => undefined,
+          getSnapshot: () => ({
+            id: 1,
+            ts: "2026-02-25T00:00:00.000Z",
+            type: "snapshot",
+            repos: [],
+            bubbles: []
+          }),
+          refreshNow: () => Promise.resolve(undefined),
+          addRepo: () => Promise.resolve(false),
+          removeRepo: () => Promise.resolve(false),
+          close: () => Promise.resolve(undefined)
+        },
+        dependencies: {
+          emitApprove
+        }
+      });
+      const server = await startRouterServer(router);
+
+      try {
+        const response = await fetch(
+          `${server.url}/api/bubbles/b-router-approve-success/approve?repo=${encodeURIComponent(repoPath)}`,
+          {
+            method: "POST",
+            headers: {
+              "content-type": "application/json"
+            },
+            body: JSON.stringify({})
+          }
+        );
+        const payload = (await response.json()) as {
+          result: {
+            delivery?: {
+              statusDelivery: {
+                status: string;
+                message: string;
+                sessionName?: string;
+                targetPaneIndex?: number;
+              };
+            };
+          };
+        };
+
+        expect(response.status).toBe(200);
+        expect(payload.result.delivery?.statusDelivery).toStrictEqual({
+          status: "accepted",
+          message: "Approval delivered to reviewer.",
+          sessionName: "pf-b-router-approve-success",
+          targetPaneIndex: 1
+        });
+      } finally {
+        await server.close();
+      }
+    });
+
+    it("strips legacy delivered fields from the default first-party approve route dependency chain", async () => {
+      let server: Awaited<ReturnType<typeof startRouterServer>> | undefined;
+
+      const emitApproveV11 = vi.fn(async () => ({
+        bubbleId: "b-router-approve-default",
+        sequence: 9,
+        envelope: {} as never,
+        state: {} as never,
+        delivery: {
+          statusDelivery: {
+            status: "accepted" as const,
+            delivered: true,
+            message: "Approval delivered to reviewer.",
+            sessionName: "pf-b-router-approve-default",
+            targetPaneIndex: 1
+          },
+          implementerDelivery: {
+            status: "rejected" as const,
+            delivered: false,
+            message: "Implementer delivery could not be confirmed.",
+            reason: "no_runtime_session" as const,
+            reason_code: "DELIVERY_ACK_RUNTIME_SESSION_UNAVAILABLE" as const
+          }
+        }
+      }));
+
+      try {
+        await withMockedApproveRouteDependencies(
+          emitApproveV11,
+          async (createUiRouterWithDefaultProjection) => {
+            const repoPath = "/tmp/pairflow-ui-router-approve-default";
+            const router = createUiRouterWithDefaultProjection({
+              repoScope: {
+                repos: [repoPath],
+                has: (value: string) => Promise.resolve(value === repoPath)
+              },
+              events: {
+                subscribe: () => () => undefined,
+                getSnapshot: () => ({
+                  id: 1,
+                  ts: "2026-02-25T00:00:00.000Z",
+                  type: "snapshot",
+                  repos: [],
+                  bubbles: []
+                }),
+                refreshNow: () => Promise.resolve(undefined),
+                addRepo: () => Promise.resolve(false),
+                removeRepo: () => Promise.resolve(false),
+                close: () => Promise.resolve(undefined)
+              }
+            });
+            server = await startRouterServer(router);
+
+            const response = await fetch(
+              `${server.url}/api/bubbles/b-router-approve-default/approve?repo=${encodeURIComponent(repoPath)}`,
+              {
+                method: "POST",
+                headers: {
+                  "content-type": "application/json"
+                },
+                body: JSON.stringify({})
+              }
+            );
+            const payload = (await response.json()) as {
+              result: {
+                delivery?: {
+                  statusDelivery: {
+                    status: string;
+                    message: string;
+                    sessionName?: string;
+                    targetPaneIndex?: number;
+                  };
+                  implementerDelivery?: {
+                    status: string;
+                    message: string;
+                    reason?: string;
+                    reason_code?: string;
+                  };
+                };
+              };
+            };
+
+            expect(response.status).toBe(200);
+            expect(emitApproveV11).toHaveBeenCalledTimes(1);
+            expect(payload.result.delivery).toStrictEqual({
+              statusDelivery: {
+                status: "accepted",
+                message: "Approval delivered to reviewer.",
+                sessionName: "pf-b-router-approve-default",
+                targetPaneIndex: 1
+              },
+              implementerDelivery: {
+                status: "rejected",
+                message: "Implementer delivery could not be confirmed.",
+                reason: "no_runtime_session",
+                reason_code: "DELIVERY_ACK_RUNTIME_SESSION_UNAVAILABLE"
+              }
+            });
+            expect(
+              "delivered" in ((payload.result.delivery?.statusDelivery ?? {}) as object)
+            ).toBe(false);
+            expect(
+              "delivered" in ((payload.result.delivery?.implementerDelivery ?? {}) as object)
+            ).toBe(false);
+          }
+        );
+      } finally {
+        if (server !== undefined) {
+          await server.close();
+        }
+      }
+    });
+
+    it("preserves neutral rework delivery rejection fields on the first-party route", async () => {
+      const repoPath = "/tmp/pairflow-ui-router-rework-success";
+      const emitRequestRework = vi.fn(async () => ({
+        mode: "immediate" as const,
+        bubbleId: "b-router-rework-success",
+        sequence: 8,
+        envelope: {} as never,
+        state: {} as never,
+        delivery: {
+          statusDelivery: {
+            status: "accepted" as const,
+            message: "Rework request recorded for reviewer."
+          },
+          implementerDelivery: {
+            status: "rejected" as const,
+            message: "Implementer delivery could not be confirmed.",
+            reason: "no_runtime_session" as const,
+            reason_code: "DELIVERY_ACK_RUNTIME_SESSION_UNAVAILABLE" as const
+          }
+        }
+      }));
+
+      const router = createUiRouter({
+        repoScope: {
+          repos: [repoPath],
+          has: (value: string) => Promise.resolve(value === repoPath)
+        },
+        events: {
+          subscribe: () => () => undefined,
+          getSnapshot: () => ({
+            id: 1,
+            ts: "2026-02-25T00:00:00.000Z",
+            type: "snapshot",
+            repos: [],
+            bubbles: []
+          }),
+          refreshNow: () => Promise.resolve(undefined),
+          addRepo: () => Promise.resolve(false),
+          removeRepo: () => Promise.resolve(false),
+          close: () => Promise.resolve(undefined)
+        },
+        dependencies: {
+          emitRequestRework
+        }
+      });
+      const server = await startRouterServer(router);
+
+      try {
+        const response = await fetch(
+          `${server.url}/api/bubbles/b-router-rework-success/request-rework?repo=${encodeURIComponent(repoPath)}`,
+          {
+            method: "POST",
+            headers: {
+              "content-type": "application/json"
+            },
+            body: JSON.stringify({
+              message: "Please rework."
+            })
+          }
+        );
+        const payload = (await response.json()) as {
+          result: {
+            mode: string;
+            delivery?: {
+              statusDelivery: {
+                status: string;
+                message: string;
+              };
+              implementerDelivery?: {
+                status: string;
+                message: string;
+                reason?: string;
+                reason_code?: string;
+              };
+            };
+          };
+        };
+
+        expect(response.status).toBe(200);
+        expect(payload.result.mode).toBe("immediate");
+        expect(payload.result.delivery).toStrictEqual({
+          statusDelivery: {
+            status: "accepted",
+            message: "Rework request recorded for reviewer."
+          },
+          implementerDelivery: {
+            status: "rejected",
+            message: "Implementer delivery could not be confirmed.",
+            reason: "no_runtime_session",
+            reason_code: "DELIVERY_ACK_RUNTIME_SESSION_UNAVAILABLE"
+          }
+        });
+      } finally {
+        await server.close();
+      }
+    });
+    it("maps remote approve start-required failures to HTTP 409 conflict", async () => {
     const repoPath = "/tmp/pairflow-ui-router-approve-remote-created";
     const emitApprove = vi.fn(() =>
       Promise.reject(
@@ -1165,9 +1560,9 @@ describe("createUiRouter attach action", () => {
     } finally {
       await server.close();
     }
-  });
+    });
 
-  it("maps remote approval transport failures to HTTP 500 with remote approval taxonomy", async () => {
+    it("maps remote approval transport failures to HTTP 500 with remote approval taxonomy", async () => {
     const repoPath = "/tmp/pairflow-ui-router-approve-remote-transport";
     const emitApprove = vi.fn(() =>
       Promise.reject(
@@ -1322,9 +1717,9 @@ describe("createUiRouter attach action", () => {
     } finally {
       await server.close();
     }
-  });
+    });
 
-  it("maps remote approval payload failures to HTTP 500 with remote approval taxonomy", async () => {
+    it("maps remote approval payload failures to HTTP 500 with remote approval taxonomy", async () => {
     const repoPath = "/tmp/pairflow-ui-router-rework-remote-payload";
     const emitRequestRework = vi.fn(() =>
       Promise.reject(
@@ -1393,6 +1788,7 @@ describe("createUiRouter attach action", () => {
     } finally {
       await server.close();
     }
+    });
   });
 
   it("maps remote commit start-required failures to HTTP 409 conflict with commit taxonomy", async () => {
