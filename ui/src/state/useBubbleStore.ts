@@ -32,6 +32,8 @@ import type {
 const positionsStorageKey = "pairflow.ui.canvas.positions.v1";
 const expandedIdsStorageKey = "pairflow.ui.canvas.expandedIds.v1";
 const pollingRefreshErrorPrefix = "Polling refresh failed:";
+const expandedTimelineLagRetryDelayMs = 150;
+const expandedTimelineLagRetryMaxAttempts = 3;
 
 interface StorageLike {
   getItem(key: string): string | null;
@@ -713,8 +715,69 @@ export function createBubbleStore(
   let latestAppliedEventId = 0;
   let latestAppliedSnapshotTs = "";
   const latestExpandedRefreshRequestIdByBubble = new Map<string, number>();
+  const expandedTimelineLagRetryTimerByBubble = new Map<
+    string,
+    ReturnType<typeof setTimeout>
+  >();
+  const expandedTimelineLagRetryStateByBubble = new Map<
+    string,
+    {
+      expectedCount: number;
+      attempts: number;
+    }
+  >();
 
   const store = createStore<BubbleStoreState>((set, get) => {
+    const clearExpandedTimelineLagRetry = (bubbleId: string): void => {
+      const timer = expandedTimelineLagRetryTimerByBubble.get(bubbleId);
+      if (timer !== undefined) {
+        clearTimeout(timer);
+        expandedTimelineLagRetryTimerByBubble.delete(bubbleId);
+      }
+      expandedTimelineLagRetryStateByBubble.delete(bubbleId);
+    };
+
+    const scheduleExpandedTimelineLagRetry = (
+      bubbleId: string,
+      expectedCount: number
+    ): void => {
+      const state = get();
+      if (
+        !state.expandedBubbleIds.includes(bubbleId)
+        || state.bubblesById[bubbleId] === undefined
+      ) {
+        clearExpandedTimelineLagRetry(bubbleId);
+        return;
+      }
+
+      const previous = expandedTimelineLagRetryStateByBubble.get(bubbleId);
+      const attempts =
+        previous?.expectedCount === expectedCount ? previous.attempts + 1 : 1;
+      if (attempts > expandedTimelineLagRetryMaxAttempts) {
+        clearExpandedTimelineLagRetry(bubbleId);
+        return;
+      }
+
+      const existingTimer = expandedTimelineLagRetryTimerByBubble.get(bubbleId);
+      if (existingTimer !== undefined) {
+        clearTimeout(existingTimer);
+      }
+
+      expandedTimelineLagRetryStateByBubble.set(bubbleId, {
+        expectedCount,
+        attempts
+      });
+      const timer = setTimeout(() => {
+        expandedTimelineLagRetryTimerByBubble.delete(bubbleId);
+        const latest = expandedTimelineLagRetryStateByBubble.get(bubbleId);
+        if (latest?.expectedCount !== expectedCount) {
+          return;
+        }
+        void refreshExpandedBubble(bubbleId);
+      }, expandedTimelineLagRetryDelayMs);
+      expandedTimelineLagRetryTimerByBubble.set(bubbleId, timer);
+    };
+
     const syncExpandedFromSummary = (
       details: Record<string, UiBubbleDetail>,
       bubblesById: Record<string, BubbleCardModel>
@@ -787,6 +850,7 @@ export function createBubbleStore(
     const refreshExpandedBubble = async (bubbleId: string): Promise<void> => {
       const bubble = get().bubblesById[bubbleId];
       if (bubble === undefined) {
+        clearExpandedTimelineLagRetry(bubbleId);
         return;
       }
       const refreshRequestId =
@@ -819,10 +883,12 @@ export function createBubbleStore(
         api.getBubbleTimeline(bubble.repoPath, bubbleId)
       ]);
 
+      let acceptedLatestRefresh = false;
       set((state) => {
         if (latestExpandedRefreshRequestIdByBubble.get(bubbleId) !== refreshRequestId) {
           return {};
         }
+        acceptedLatestRefresh = true;
         latestExpandedRefreshRequestIdByBubble.delete(bubbleId);
 
         const detailLoadingById = { ...state.detailLoadingById };
@@ -875,6 +941,21 @@ export function createBubbleStore(
 
         return next;
       });
+
+      if (!acceptedLatestRefresh) {
+        return;
+      }
+
+      if (detailResult.status === "fulfilled" && timelineResult.status === "fulfilled") {
+        const expectedTimelineCount = detailResult.value.transcript.totalMessages;
+        const actualTimelineCount = timelineResult.value.length;
+        if (actualTimelineCount < expectedTimelineCount) {
+          scheduleExpandedTimelineLagRetry(bubbleId, expectedTimelineCount);
+          return;
+        }
+      }
+
+      clearExpandedTimelineLagRetry(bubbleId);
     };
 
     const ensureEventsClient = (): RealtimeEventsClient => {
@@ -1285,6 +1366,14 @@ export function createBubbleStore(
         latestInitializeId += 1;
         latestAppliedEventId = 0;
         latestAppliedSnapshotTs = "";
+        for (const bubbleId of expandedTimelineLagRetryTimerByBubble.keys()) {
+          const timer = expandedTimelineLagRetryTimerByBubble.get(bubbleId);
+          if (timer !== undefined) {
+            clearTimeout(timer);
+          }
+        }
+        expandedTimelineLagRetryTimerByBubble.clear();
+        expandedTimelineLagRetryStateByBubble.clear();
         if (eventsClient !== null) {
           eventsClient.stop();
           eventsClient = null;
@@ -1295,6 +1384,12 @@ export function createBubbleStore(
         const state = get();
         if (state.expandedBubbleIds.includes(bubbleId)) {
           // Collapse only toggles the display mode. Existing card coordinates stay fixed.
+          const timer = expandedTimelineLagRetryTimerByBubble.get(bubbleId);
+          if (timer !== undefined) {
+            clearTimeout(timer);
+          }
+          expandedTimelineLagRetryTimerByBubble.delete(bubbleId);
+          expandedTimelineLagRetryStateByBubble.delete(bubbleId);
           set({
             expandedBubbleIds: state.expandedBubbleIds.filter((id) => id !== bubbleId)
           });
@@ -1316,6 +1411,12 @@ export function createBubbleStore(
       },
 
       collapseBubble(bubbleId: string): void {
+        const timer = expandedTimelineLagRetryTimerByBubble.get(bubbleId);
+        if (timer !== undefined) {
+          clearTimeout(timer);
+        }
+        expandedTimelineLagRetryTimerByBubble.delete(bubbleId);
+        expandedTimelineLagRetryStateByBubble.delete(bubbleId);
         set((state) => ({
           expandedBubbleIds: state.expandedBubbleIds.filter((id) => id !== bubbleId)
         }));

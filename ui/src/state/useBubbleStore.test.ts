@@ -25,7 +25,7 @@ import type {
   UiTimelineEntry,
   UiRepoSummary
 } from "../lib/types";
-import { bubbleDetail, bubbleSummary, repoSummary } from "../test/fixtures";
+import { bubbleDetail, bubbleSummary, repoSummary, timelineEntry } from "../test/fixtures";
 
 class MemoryStorage {
   private readonly records = new Map<string, string>();
@@ -2355,5 +2355,132 @@ describe("deleteBubble store method", () => {
     expect(store.getState().bubblesById["b-a"]?.state).toBe("READY_FOR_HUMAN_APPROVAL");
     expect(store.getState().bubbleDetails["b-a"]?.state).toBe("READY_FOR_HUMAN_APPROVAL");
     expect(store.getState().bubbleTimelines["b-a"]).toEqual(latestTimeline);
+  });
+
+  it("retries expanded timeline refresh when detail transcript total is ahead of the timeline response", async () => {
+    vi.useFakeTimers();
+    try {
+      const initialSummary = bubbleSummary({
+        bubbleId: "b-a",
+        repoPath: "/repo-a",
+        round: 1,
+        activeAgent: "codex",
+        activeRole: "implementer"
+      });
+      const initialDetail = {
+        ...bubbleDetail({
+          bubbleId: "b-a",
+          repoPath: "/repo-a",
+          state: "RUNNING"
+        }),
+        round: 1,
+        activeAgent: "codex",
+        activeRole: "implementer",
+        transcript: {
+          totalMessages: 1,
+          lastMessageType: "TASK",
+          lastMessageTs: "2026-04-19T20:46:40.952Z",
+          lastMessageId: "msg_001"
+        }
+      } satisfies UiBubbleDetail;
+      const laggingDetail = {
+        ...bubbleDetail({
+          bubbleId: "b-a",
+          repoPath: "/repo-a",
+          state: "RUNNING"
+        }),
+        round: 1,
+        activeAgent: "claude",
+        activeRole: "reviewer",
+        transcript: {
+          totalMessages: 2,
+          lastMessageType: "PASS",
+          lastMessageTs: "2026-04-19T20:47:18.143Z",
+          lastMessageId: "msg_002"
+        }
+      } satisfies UiBubbleDetail;
+      const initialTimeline: UiTimelineEntry[] = [
+        timelineEntry({
+          id: "msg_001",
+          round: 0,
+          type: "TASK",
+          sender: "orchestrator",
+          recipient: "codex"
+        })
+      ];
+      const recoveredTimeline: UiTimelineEntry[] = [
+        ...initialTimeline,
+        timelineEntry({
+          id: "msg_002",
+          round: 1,
+          type: "PASS",
+          sender: "codex",
+          recipient: "claude"
+        })
+      ];
+
+      const getBubble = vi
+        .fn<(repoPath: string, bubbleId: string) => Promise<UiBubbleDetail>>()
+        .mockResolvedValueOnce(initialDetail)
+        .mockResolvedValueOnce(laggingDetail)
+        .mockResolvedValueOnce(laggingDetail);
+      const getBubbleTimeline = vi
+        .fn<(repoPath: string, bubbleId: string) => Promise<UiTimelineEntry[]>>()
+        .mockResolvedValueOnce(initialTimeline)
+        .mockResolvedValueOnce(initialTimeline)
+        .mockResolvedValueOnce(recoveredTimeline);
+
+      let emitEvent: (event: UiEvent) => void = () => undefined;
+      const store = createBubbleStore({
+        api: createApiStub({
+          getRepos: vi.fn(async () => ["/repo-a"]),
+          getBubbles: vi.fn(async () => ({
+            repo: repoSummary("/repo-a"),
+            bubbles: [initialSummary]
+          })),
+          getBubble,
+          getBubbleTimeline
+        }),
+        createEventsClient: (input) => {
+          emitEvent = input.onEvent;
+          return {
+            start: () => undefined,
+            stop: () => undefined,
+            refresh: () => undefined
+          };
+        }
+      });
+
+      await store.getState().initialize();
+      await store.getState().toggleBubbleExpanded("b-a");
+
+      emitEvent({
+        id: 401,
+        ts: "2026-04-19T20:47:18.200Z",
+        type: "bubble.updated",
+        repoPath: "/repo-a",
+        bubbleId: "b-a",
+        bubble: bubbleSummary({
+          bubbleId: "b-a",
+          repoPath: "/repo-a",
+          round: 1,
+          activeAgent: "claude",
+          activeRole: "reviewer"
+        })
+      });
+
+      await Promise.resolve();
+      await Promise.resolve();
+      expect(store.getState().bubbleTimelines["b-a"]).toEqual(initialTimeline);
+
+      await vi.advanceTimersByTimeAsync(200);
+      await Promise.resolve();
+      await Promise.resolve();
+
+      expect(store.getState().bubbleTimelines["b-a"]).toEqual(recoveredTimeline);
+      expect(getBubbleTimeline).toHaveBeenCalledTimes(3);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
