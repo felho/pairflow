@@ -20,6 +20,7 @@ import type {
   ReadStateSnapshotPort,
   WriteStateSnapshotPort
 } from "../../shared/ports/stateSnapshots.js";
+import type { ResolveBubbleFromWorkspaceCwdPort } from "../../shared/ports/workspaceResolution.js";
 
 export interface ApprovalCommandDependencies {
   appendProtocolEnvelope?: AppendProtocolEnvelopePort;
@@ -34,6 +35,7 @@ export interface ApprovalCommandDependencies {
   readTranscriptEnvelopes?: ReadTranscriptEnvelopesPort;
   resolveRemoteBubbleStatusTarget?: ResolveApprovalRemoteBubbleStatusTargetPort;
   resolveBubbleById?: ResolveBubbleByIdPort;
+  resolveBubbleFromWorkspaceCwd?: ResolveBubbleFromWorkspaceCwdPort;
   resolveDeliveryMessageRef?: ResolveDeliveryMessageRefPort;
   writeStateSnapshot?: WriteStateSnapshotPort;
 }
@@ -48,6 +50,7 @@ export interface ApprovalCommandDefaultDependencies {
   readTranscriptEnvelopes: ReadTranscriptEnvelopesPort;
   resolveRemoteBubbleStatusTarget: ResolveApprovalRemoteBubbleStatusTargetPort;
   resolveBubbleById: ResolveBubbleByIdPort;
+  resolveBubbleFromWorkspaceCwd: ResolveBubbleFromWorkspaceCwdPort;
   resolveDeliveryMessageRef: ResolveDeliveryMessageRefPort;
   writeStateSnapshot: WriteStateSnapshotPort;
 }
@@ -65,6 +68,7 @@ export interface ResolvedApprovalCommandDependencies {
   readTranscriptEnvelopes: ReadTranscriptEnvelopesPort;
   resolveRemoteBubbleStatusTarget: ResolveApprovalRemoteBubbleStatusTargetPort;
   resolveBubbleById: ResolveBubbleByIdPort;
+  resolveBubbleFromWorkspaceCwd: ResolveBubbleFromWorkspaceCwdPort;
   resolveDeliveryMessageRef: ResolveDeliveryMessageRefPort;
   writeStateSnapshot: WriteStateSnapshotPort;
 }
@@ -101,6 +105,9 @@ export function resolveApprovalCommandDependencies(
       dependencies.resolveRemoteBubbleStatusTarget
       ?? defaults.resolveRemoteBubbleStatusTarget,
     resolveBubbleById: dependencies.resolveBubbleById ?? defaults.resolveBubbleById,
+    resolveBubbleFromWorkspaceCwd:
+      dependencies.resolveBubbleFromWorkspaceCwd
+      ?? defaults.resolveBubbleFromWorkspaceCwd,
     resolveDeliveryMessageRef:
       dependencies.resolveDeliveryMessageRef ?? defaults.resolveDeliveryMessageRef,
     writeStateSnapshot: dependencies.writeStateSnapshot ?? defaults.writeStateSnapshot

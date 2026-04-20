@@ -9,3 +9,7 @@ export interface ResolvedBubbleWorkspace {
   worktreePath: string;
   cwd: string;
 }
+
+export type ResolveBubbleFromWorkspaceCwdPort = (
+  cwdInput?: string
+) => Promise<ResolvedBubbleWorkspace>;
