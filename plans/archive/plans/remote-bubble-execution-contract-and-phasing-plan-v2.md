@@ -153,6 +153,7 @@ Az explicit control-model dontesek most visszanyerhetok a designbol es a review-
 | Phase 3C | `recovery_rollout` | Recovery, docs, rollout closure | Phase 3B3 | diagnostics, reboot recovery guidance, docs, manual smoke evidence | failure semantics es rollout evidence lezarhato |
 | Phase 3D | `operator_read_model` | Remote runtime-availability vs watchdog semantics decoupling | Phase 3C | remote status/list/CLI/UI attach semantics, ahol a watchdog expiry kulon attention marad, de nem automatikus runtime-loss | a watchdog-only stall nem omlik `runtime unavailable` fail-closed bucketbe, mikozben a valodi runtime-loss tovabbra is fail-closed marad |
 | Phase 3E | `mutation_routing` | Verified remote-clone local request-rework execution | Phase 3D | request-rework route selection, amely a retained thin-client started-pointer route mellett felismeri a verified remote clone contextet, es ugyanarra a canonical remote bubble state-re enged local CLI mutationt immediate/queued retained semanticaval | contextual review sessionbol helyben kiadhato a canonical `request-rework`, mikozben a laptop source repo tovabbra sem valhat local mutation fallbackga, es a created/missing/ambiguous esetek fail-closed maradnak |
+| Phase 3F | `operator_read_model` | Remote-aware open command and UI open consume | Phase 3E | `bubble open` / UI `Open` route selection es launch-template resolution, amely local bubble eseten retained worktree-open marad, started remote bubble eseten pedig a remote clone authorityra parametrizalt editor launch consume-ra valt | a remote bubble `Open` mar nem lokalis worktree-feltetelezesre ul, mikozben a local open precedence es a created/missing/invalid remote esetek fail-closed semanticsa retained marad |
 
 ## Progress Update (2026-04-18)
 
@@ -211,6 +212,27 @@ Az explicit control-model dontesek most visszanyerhetok a designbol es a review-
    - verified remote clone -> uj local `request-rework` mutation path,
    - created/missing/ambiguous vagy source-repo-boundary helyzet -> fail-closed.
 5. A parent plan emiatt mar nem kezelheto teljesen lezartnak; a current active successor a `Phase 3E`.
+
+## Progress Update (2026-04-20, deferred successor materialization)
+
+1. A `Phase 3E` melletti kulon operator-facing consume gap is materializalodott a current tree-ben:
+   - a remote bubble `Open` surface ma tovabbra is lokalis worktree/open-command modellre epit,
+   - mikozben a started remote bubble canonical workspace authorityja a remote clone.
+2. Ez a gap nem nyitja ujra a mutation-routing lane-t:
+   - nincs state mutation,
+   - nincs attach-flow rewrite,
+   - nincs runtime activation.
+3. A materializalt, de nem current-active successor slice:
+   - `Phase 3F`
+   - task path:
+     `plans/tasks/remote-bubble-execution/phase3f-remote-aware-open-command-and-ui-open-consume.md`
+4. A szukitett control-model dontes:
+   - local bubble `open` retained local precedence-en marad,
+   - started remote bubble `open` kulon remote-aware launch-template resolutiont igenyel,
+   - created/missing/invalid remote pointer tovabbra is fail-closed marad.
+5. A parent plan aktiv successor ownershipa ettol meg nem valtozik:
+   - a current active successor tovabbra is a `Phase 3E`,
+   - a `Phase 3F` csak utana justified vegrehajtasi szelet.
 
 ## Progress Update (2026-04-18, pre-Phase-3C-close)
 
