@@ -385,7 +385,7 @@ Current implementation note (2026-04-20):
 
 - The routed pattern above is the retained thin-client operator model.
 - The current implementation does **not** yet support issuing `pairflow bubble request-rework` directly from inside a verified remote bubble clone as a local canonical mutation path.
-- That contextual local-clone `request-rework` workflow is a separate planned refinement.
+- That contextual local-clone `request-rework` workflow is a separate request-rework-only planned refinement; `approve`, `reply`, and cleanup commands remain on the retained thin-client routed model in this design slice.
 
 ### 6.6 `pairflow bubble list`
 
