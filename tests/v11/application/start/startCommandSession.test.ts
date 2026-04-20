@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import { claimRuntimeSessionOwnership } from "../../../../src/v11/application/start/startCommandSession.js";
 import type { StartExecutionContext } from "../../../../src/v11/application/start/startCommandContext.js";
 import type { ResolvedStartBubbleDependencies } from "../../../../src/v11/application/start/startCommandOrchestration.js";
+import type { ClaimRuntimeSessionInput } from "../../../../src/v11/shared/ports/runtimeSessions.js";
 
 function buildContext(overrides: Partial<StartExecutionContext> = {}): StartExecutionContext {
   return {
@@ -31,7 +32,7 @@ function buildContext(overrides: Partial<StartExecutionContext> = {}): StartExec
 
 describe("startCommandSession", () => {
   it("uses verified remote clone authority when claiming a resume session", async () => {
-    const claimSession = vi.fn(async (input) => ({
+    const claimSession = vi.fn(async (input: ClaimRuntimeSessionInput) => ({
       claimed: true as const,
       record: {
         bubbleId: input.bubbleId,
