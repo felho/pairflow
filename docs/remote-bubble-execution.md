@@ -381,6 +381,12 @@ pairflow bubble <command> --id <bubbleId> [args]
   └─ SSH: cd <remoteClonePath> && pairflow bubble <command> --id <bubbleId> [args]
 ```
 
+Current implementation note (2026-04-20):
+
+- The routed pattern above is the retained thin-client operator model.
+- The current implementation does **not** yet support issuing `pairflow bubble request-rework` directly from inside a verified remote bubble clone as a local canonical mutation path.
+- That contextual local-clone `request-rework` workflow is a separate planned refinement.
+
 ### 6.6 `pairflow bubble list`
 
 Lists both local and remote bubbles:
@@ -573,6 +579,7 @@ See [§14 V2 Extraction Seams](#14-v2-extraction-seams) for where and how V2 wil
 - **Single user.** The remote host is assumed to be single-user. No multi-tenant isolation.
 - **No automatic notifications.** When a remote bubble reaches WAITING_HUMAN, the user must poll via `status` or `list --refresh`. Push notifications (Slack, email) are a future feature (V2 Channel Adapters).
 - **Manual prerequisite setup.** Pairflow does not automate remote host provisioning. Software installation and authentication are the user's responsibility.
+- **Contextual remote-clone rework gap.** If the operator is already reviewing inside a verified remote bubble clone (for example via VS Code Remote SSH), `pairflow bubble request-rework` is not yet a supported local canonical mutation path; the retained implementation still assumes the laptop thin-client routed model.
 
 ### Future extensions
 

@@ -2,7 +2,7 @@
 artifact_type: plan
 artifact_id: plan_remote_bubble_execution_contract_and_phasing_v2
 title: "Remote Bubble Execution Contract and Phasing Plan (V2 Reset)"
-status: completed
+status: active
 prd_ref: null
 owners:
   - "felho"
@@ -152,6 +152,7 @@ Az explicit control-model dontesek most visszanyerhetok a designbol es a review-
 | Phase 3B3 | `cleanup_routing` | Remote delete cleanup and archive closure | Phase 3B2 | remote delete confirmation/force routing + archive continuity sync-back + remote destructive cleanup closure | remote delete nem hagy orphan remote clone/runtime artifactot, es a local archive/delete contract retained marad |
 | Phase 3C | `recovery_rollout` | Recovery, docs, rollout closure | Phase 3B3 | diagnostics, reboot recovery guidance, docs, manual smoke evidence | failure semantics es rollout evidence lezarhato |
 | Phase 3D | `operator_read_model` | Remote runtime-availability vs watchdog semantics decoupling | Phase 3C | remote status/list/CLI/UI attach semantics, ahol a watchdog expiry kulon attention marad, de nem automatikus runtime-loss | a watchdog-only stall nem omlik `runtime unavailable` fail-closed bucketbe, mikozben a valodi runtime-loss tovabbra is fail-closed marad |
+| Phase 3E | `mutation_routing` | Verified remote-clone local request-rework execution | Phase 3D | request-rework route selection, amely a retained thin-client started-pointer route mellett felismeri a verified remote clone contextet, es ugyanarra a canonical remote bubble state-re enged local CLI mutationt immediate/queued retained semanticaval | contextual review sessionbol helyben kiadhato a canonical `request-rework`, mikozben a laptop source repo tovabbra sem valhat local mutation fallbackga, es a created/missing/ambiguous esetek fail-closed maradnak |
 
 ## Progress Update (2026-04-18)
 
@@ -192,6 +193,24 @@ Az explicit control-model dontesek most visszanyerhetok a designbol es a review-
    - a read-model parity regressziokat celzott status/list/UI/SSH tesztek fedik le.
 3. A `Phase 3D` closeouttal a parent planban jelenleg nincs uj, materializalt remote execution successor task.
 4. Tovabbi successor csak akkor justified, ha a most lezart read-model semantics utan uj, kulon bounded residual gap jelenik meg.
+
+## Progress Update (2026-04-20)
+
+1. A `Phase 3D` closeout utan uj workflow-gap derult ki a current tree-ben:
+   - ha az operator mar a verified remote bubble clone-ban review-zik (peldaul VS Code Remote SSH sessionben), a contextual `request-rework` kiadasa nem tamaszkodhat jol a jelenlegi thin-client started-pointer route selectionre.
+2. Ez nem altalanos remote operator parity igeny:
+   - a konkret residual gap a contextual `request-rework`,
+   - nem nyitja ujra az `approve`, `reply`, vagy a cleanup family teljes scope-jat.
+3. A residual successor slice:
+   - `Phase 3E`
+   - task path:
+     `plans/tasks/remote-bubble-execution/phase3e-verified-remote-clone-local-request-rework.md`
+4. A szukitett control-model dontes:
+   - local bubble -> retained local mutation,
+   - laptop thin client remote bubble -> retained started-pointer-based routed mutation,
+   - verified remote clone -> uj local `request-rework` mutation path,
+   - created/missing/ambiguous vagy source-repo-boundary helyzet -> fail-closed.
+5. A parent plan emiatt mar nem kezelheto teljesen lezartnak; a current active successor a `Phase 3E`.
 
 ## Progress Update (2026-04-18, pre-Phase-3C-close)
 
@@ -365,7 +384,8 @@ Az explicit control-model dontesek most visszanyerhetok a designbol es a review-
 
 ## Active Task
 
-1. Jelenleg nincs aktiv implementacios task a remote execution lanchban.
+1. Jelenleg az aktiv implementacios successor task:
+   - `plans/tasks/remote-bubble-execution/phase3e-verified-remote-clone-local-request-rework.md`
 2. A `Phase 2F`, `Phase 3A`, `Phase 3B1`, `Phase 3B2`, `Phase 3B3`, `Phase 3C`, es `Phase 3D` archived baseline:
    - `plans/archive/tasks/remote-bubble-execution/phase2f-remote-attach-consume.md`
    - `plans/archive/tasks/remote-bubble-execution/phase3a-remote-approval-and-rework-routing.md`
@@ -375,12 +395,13 @@ Az explicit control-model dontesek most visszanyerhetok a designbol es a review-
    - `plans/archive/tasks/remote-bubble-execution/phase3c-recovery-diagnostics-and-rollout.md`
    - `plans/archive/tasks/remote-bubble-execution/phase3d-remote-runtime-availability-and-watchdog-semantics.md`
 3. A `Phase 2B`, `Phase 2C`, `Phase 2D`, `Phase 2E`, `Phase 2F`, `Phase 3A`, `Phase 3B1`, `Phase 3B2`, `Phase 3B3`, `Phase 3C`, es `Phase 3D` archived baseline lett.
-4. Az approval/rework, cleanup, recovery, es residual operator read-model semantics successor-lanc jelenleg lezarult.
+4. Az approval/rework cleanup-family es read-model residual lanc kozul ujra csak a contextual `request-rework` gap maradt nyitva.
 
 ## Successor Tasks
 
-1. Jelenleg nincs materializalt kovetkezo task.
-2. Tovabbi successor csak akkor justified, ha a `Phase 3D` closeout utan uj, kulon bounded residual gap jelenik meg a remote execution lane-ben.
+1. A jelenleg materializalt kovetkezo task:
+   - `plans/tasks/remote-bubble-execution/phase3e-verified-remote-clone-local-request-rework.md`
+2. Tovabbi successor csak akkor justified, ha a `Phase 3E` closeout utan uj, kulon bounded residual gap jelenik meg a remote execution lane-ben.
 
 ## Dependencies
 
@@ -393,8 +414,10 @@ Az explicit control-model dontesek most visszanyerhetok a designbol es a review-
    - runtime session registry: `src/v11/shared/ports/runtimeSessions.ts`, `src/v11/infrastructure/executor/sessionRuntime/**`
    - tmux/runtime consume: `src/v11/infrastructure/channel/tmux/**`
    - bubble-loop consume: `src/v11/application/pass/**`, `src/v11/application/converged/**`, `src/v11/application/askHuman/**`
+   - approval/request-rework mutation routing: `src/v11/application/approval/**`
    - local lifecycle cleanup consume: `src/v11/application/commit/**`, `src/v11/application/merge/**`, `src/v11/application/delete/**`, `src/v11/infrastructure/workspace/**`
    - operator read-model: `src/v11/shared/status/**`, `src/v11/application/status/**`, `src/cli/index.ts`
+   - workspace authority resolution: `src/v11/infrastructure/executor/workspace/**`
    - remote cleanup/routing consumers: `src/v11/application/delete/**`, `src/v11/application/merge/**`
 
 ## Risks and Mitigations
