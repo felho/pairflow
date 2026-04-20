@@ -51,6 +51,15 @@ describe("approvalCommandDependencyResolution", () => {
         host: "ssh.example.com",
         pairflowCommand: "pairflow"
       })) as never;
+    const defaultResolveBubbleFromWorkspaceCwd = (async () =>
+      ({
+        bubbleId: "default",
+        bubbleConfig: {} as never,
+        bubblePaths: {} as never,
+        repoPath: "/repo",
+        worktreePath: "/repo",
+        cwd: "/repo"
+      })) as never;
     const defaultResolveDeliveryMessageRef = (() => "default-ref") as never;
     const defaultWriteState = (async () =>
       ({
@@ -80,6 +89,7 @@ describe("approvalCommandDependencyResolution", () => {
       readTranscriptEnvelopes: defaultReadTranscript,
       resolveRemoteBubbleStatusTarget: defaultResolveRemoteTarget,
       resolveBubbleById: defaultResolveBubble,
+      resolveBubbleFromWorkspaceCwd: defaultResolveBubbleFromWorkspaceCwd,
       resolveDeliveryMessageRef: defaultResolveDeliveryMessageRef,
       writeStateSnapshot: defaultWriteState
     });
@@ -97,6 +107,9 @@ describe("approvalCommandDependencyResolution", () => {
     expect(resolved.readTranscriptEnvelopes).toBe(defaultReadTranscript);
     expect(resolved.resolveRemoteBubbleStatusTarget).toBe(
       defaultResolveRemoteTarget
+    );
+    expect(resolved.resolveBubbleFromWorkspaceCwd).toBe(
+      defaultResolveBubbleFromWorkspaceCwd
     );
     expect(resolved.writeStateSnapshot).toBe(defaultWriteState);
   });

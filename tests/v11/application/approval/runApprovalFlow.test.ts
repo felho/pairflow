@@ -1,6 +1,13 @@
+import { mkdtemp, symlink } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+
 import { describe, expect, it, vi } from "vitest";
 
-import type { BubbleStateSnapshot } from "../../../../src/types/bubble.js";
+import type {
+  BubbleRemotePointer,
+  BubbleStateSnapshot
+} from "../../../../src/types/bubble.js";
 import { applyStateTransition } from "../../../../src/v11/domain/state/machine.js";
 import { deliveryTargetRoleMetadataKey } from "../../../../src/types/protocol.js";
 import { runApprovalDecisionFlow } from "../../../../src/v11/application/approval/runApprovalFlow.js";
@@ -40,6 +47,36 @@ function createWaitingHumanState(): BubbleStateSnapshot {
   const ready = createReadyForHumanApprovalState();
   return {
     ...ready,
+    state: "WAITING_HUMAN"
+  };
+}
+
+function createRemoteReadyForHumanApprovalState(): BubbleStateSnapshot {
+  return {
+    bubble_id: "b_remote_approval_01",
+    state: "READY_FOR_HUMAN_APPROVAL",
+    round: 2,
+    active_agent: null,
+    active_since: null,
+    active_role: null,
+    execution_context: null,
+    round_role_history: [],
+    last_command_at: "2026-04-17T09:00:00.000Z",
+    pending_rework_intent: null,
+    rework_intent_history: [],
+    meta_review: {
+      execution_context: null,
+      runtime_delivery: null,
+      auto_rework_count: 0,
+      auto_rework_limit: 5,
+      sticky_human_gate: false
+    }
+  };
+}
+
+function createRemoteWaitingHumanState(): BubbleStateSnapshot {
+  return {
+    ...createRemoteReadyForHumanApprovalState(),
     state: "WAITING_HUMAN"
   };
 }
@@ -143,6 +180,9 @@ function createFlowDependencies(
         state: nextState,
         fingerprint: "fp_state_written_01"
       })),
+      resolveBubbleFromWorkspaceCwd: vi.fn(async () => {
+        throw new Error("workspace resolution is unused for local approvals");
+      }),
       resolveDeliveryMessageRef: vi.fn(() => "transcript.ndjson#msg_approval_001"),
       emitTmuxDeliveryNotification: vi.fn(async (input: {
         bubbleId: string;
@@ -168,21 +208,81 @@ function createFlowDependencies(
   };
 }
 
-function createRemoteFlowDependencies() {
+function createRemoteFlowDependencies(
+  input: {
+    state?: BubbleStateSnapshot;
+    resolvedRepoPath?: string;
+    workspaceRepoPath?: string;
+    workspaceWorktreePath?: string;
+    remotePointer?:
+      | {
+          kind: "started";
+          host: string;
+          instanceId: string;
+          remoteClonePath: string;
+          tmuxSession: string;
+          startedAt: string;
+        }
+      | null;
+    remotePointerError?: Error;
+    workspaceResolution?:
+      | "unavailable"
+      | "verified_remote_clone"
+      | "different_bubble"
+      | "ambiguous"
+      | "resolution_error";
+  } = {}
+) {
   const executeRemoteBubbleApprovalCommand = vi.fn();
+  const state = input.state ?? createRemoteReadyForHumanApprovalState();
+  const resolvedRepoPath = input.resolvedRepoPath ?? "/repo";
+  const workspaceRepoPath = input.workspaceRepoPath ?? resolvedRepoPath;
+  const workspaceWorktreePath =
+    input.workspaceWorktreePath ?? workspaceRepoPath;
+  const approvalRequest = [
+    {
+      id: "msg_remote_approval_request_001",
+      ts: "2026-04-17T09:00:00.000Z",
+      bubble_id: state.bubble_id,
+      sender: "orchestrator",
+      recipient: "human",
+      type: "APPROVAL_REQUEST",
+      round: state.round,
+      payload: {
+        summary: "Remote approval summary",
+        metadata: {
+          latest_recommendation: "approve"
+        }
+      },
+      refs: []
+    } as const
+  ];
+  const remotePointer: BubbleRemotePointer | null = input.remotePointer === undefined
+    ? {
+        kind: "started" as const,
+        host: "ssh.example.com",
+        instanceId: "inst_remote_approval_01",
+        remoteClonePath: "/srv/pairflow/repo--b_remote_approval_01",
+        tmuxSession: "pf-b_remote_approval_01",
+        startedAt: "2026-04-17T09:00:00.000Z"
+      }
+    : input.remotePointer;
+  const workspaceResolution = input.workspaceResolution ?? "unavailable";
   const rawDependencies = {
     resolveBubbleById: vi.fn(async () => ({
-      bubbleId: "b_remote_approval_01",
-      repoPath: "/repo",
+      bubbleId: state.bubble_id,
+      repoPath: resolvedRepoPath,
       bubblePaths: {
-        statePath: "/repo/.pairflow/bubbles/b_remote_approval_01/state.json",
+        statePath:
+          `${resolvedRepoPath}/.pairflow/bubbles/${state.bubble_id}/state.json`,
         transcriptPath:
-          "/repo/.pairflow/bubbles/b_remote_approval_01/transcript.ndjson",
-        inboxPath: "/repo/.pairflow/bubbles/b_remote_approval_01/inbox.ndjson",
-        locksDir: "/repo/.pairflow/bubbles/b_remote_approval_01/locks",
-        sessionsPath: "/repo/.pairflow/runtime/sessions.json",
+          `${resolvedRepoPath}/.pairflow/bubbles/${state.bubble_id}/transcript.ndjson`,
+        inboxPath:
+          `${resolvedRepoPath}/.pairflow/bubbles/${state.bubble_id}/inbox.ndjson`,
+        locksDir: `${resolvedRepoPath}/.pairflow/bubbles/${state.bubble_id}/locks`,
+        sessionsPath: `${resolvedRepoPath}/.pairflow/runtime/sessions.json`,
         remotePointerPath:
-          "/repo/.pairflow/bubbles/b_remote_approval_01/remote.json"
+          `${resolvedRepoPath}/.pairflow/bubbles/${state.bubble_id}/remote.json`
       },
       bubbleConfig: {
         agents: {
@@ -196,14 +296,14 @@ function createRemoteFlowDependencies() {
         }
       }
     })),
-    readRemotePointer: vi.fn(async () => ({
-      kind: "started",
-      host: "ssh.example.com",
-      instanceId: "inst_remote_approval_01",
-      remoteClonePath: "/srv/pairflow/repo--b_remote_approval_01",
-      tmuxSession: "pf-b_remote_approval_01",
-      startedAt: "2026-04-17T09:00:00.000Z"
-    })),
+    readRemotePointer: vi.fn<(path: string) => Promise<BubbleRemotePointer | null>>(
+      async () => {
+        if (input.remotePointerError !== undefined) {
+          throw input.remotePointerError;
+        }
+        return remotePointer;
+      }
+    ),
     resolveRemoteBubbleStatusTarget: vi.fn(async () => ({
       alias: "prod",
       host: "ssh.example.com",
@@ -211,16 +311,33 @@ function createRemoteFlowDependencies() {
       pairflowCommand: "pairflow"
     })),
     executeRemoteBubbleApprovalCommand,
-    readStateSnapshot: vi.fn(async () => {
-      throw new Error("readStateSnapshot should not be used for remote routing");
-    }),
-    appendProtocolEnvelope: vi.fn(async () => {
-      throw new Error("appendProtocolEnvelope should not be used for remote routing");
-    }),
-    writeStateSnapshot: vi.fn(async () => {
-      throw new Error("writeStateSnapshot should not be used for remote routing");
-    }),
-    readTranscriptEnvelopes: vi.fn(async () => []),
+    readStateSnapshot: vi.fn(async () => ({
+      state,
+      fingerprint: "fp_remote_state_01"
+    })),
+    appendProtocolEnvelope: vi.fn(async (input: {
+      envelope: {
+        bubble_id: string;
+        sender: "human";
+        recipient: "orchestrator";
+        type: "APPROVAL_DECISION";
+        round: number;
+        payload: Record<string, unknown>;
+        refs: string[];
+      };
+    }) => ({
+      sequence: 21,
+      envelope: {
+        id: "msg_remote_local_rework_001",
+        ts: "2026-04-17T09:06:00.000Z",
+        ...input.envelope
+      }
+    })),
+    writeStateSnapshot: vi.fn(async (_path: string, nextState: unknown) => ({
+      state: nextState,
+      fingerprint: "fp_remote_state_written_01"
+    })),
+    readTranscriptEnvelopes: vi.fn(async () => approvalRequest),
     ensureBubbleInstanceIdForMutation: vi.fn(async () => ({
       bubbleInstanceId: "bi_remote_approval_01",
       bubbleConfig: {
@@ -232,6 +349,92 @@ function createRemoteFlowDependencies() {
       }
     })),
     applyStateTransition,
+    resolveBubbleFromWorkspaceCwd: vi.fn(async () => {
+      if (workspaceResolution === "verified_remote_clone") {
+        return {
+          bubbleId: state.bubble_id,
+          repoPath: workspaceRepoPath,
+          worktreePath: workspaceWorktreePath,
+          cwd: workspaceWorktreePath,
+          bubblePaths: {
+            statePath:
+              `${workspaceRepoPath}/.pairflow/bubbles/${state.bubble_id}/state.json`,
+            transcriptPath:
+              `${workspaceRepoPath}/.pairflow/bubbles/${state.bubble_id}/transcript.ndjson`,
+            inboxPath:
+              `${workspaceRepoPath}/.pairflow/bubbles/${state.bubble_id}/inbox.ndjson`,
+            locksDir: `${workspaceRepoPath}/.pairflow/bubbles/${state.bubble_id}/locks`,
+            sessionsPath: `${workspaceRepoPath}/.pairflow/runtime/sessions.json`,
+            remotePointerPath:
+              `${workspaceRepoPath}/.pairflow/bubbles/${state.bubble_id}/remote.json`
+          },
+          bubbleConfig: {
+            agents: {
+              implementer: "codex",
+              reviewer: "claude"
+            },
+            watchdog_timeout_minutes: 60,
+            executor: {
+              type: "ssh" as const,
+              remote: "prod"
+            }
+          }
+        };
+      }
+      if (workspaceResolution === "different_bubble") {
+        return {
+          bubbleId: "b_other_remote_bubble_01",
+          repoPath: workspaceRepoPath,
+          worktreePath: workspaceWorktreePath,
+          cwd: workspaceWorktreePath,
+          bubblePaths: {
+            statePath:
+              `${workspaceRepoPath}/.pairflow/bubbles/b_other_remote_bubble_01/state.json`,
+            transcriptPath:
+              `${workspaceRepoPath}/.pairflow/bubbles/b_other_remote_bubble_01/transcript.ndjson`,
+            inboxPath:
+              `${workspaceRepoPath}/.pairflow/bubbles/b_other_remote_bubble_01/inbox.ndjson`,
+            locksDir:
+              `${workspaceRepoPath}/.pairflow/bubbles/b_other_remote_bubble_01/locks`,
+            sessionsPath: `${workspaceRepoPath}/.pairflow/runtime/sessions.json`,
+            remotePointerPath:
+              `${workspaceRepoPath}/.pairflow/bubbles/b_other_remote_bubble_01/remote.json`
+          },
+          bubbleConfig: {
+            agents: {
+              implementer: "codex",
+              reviewer: "claude"
+            },
+            watchdog_timeout_minutes: 60,
+            executor: {
+              type: "ssh" as const,
+              remote: "prod"
+            }
+          }
+        };
+      }
+      if (workspaceResolution === "ambiguous") {
+        const error = new Error("workspace resolution ambiguous");
+        Object.assign(error, {
+          name: "WorkspaceResolutionError",
+          context: {
+            reason: "ambiguous_bubble_config_match"
+          }
+        });
+        throw error;
+      }
+      if (workspaceResolution === "resolution_error") {
+        const error = new Error("workspace resolution failed");
+        Object.assign(error, {
+          name: "WorkspaceResolutionError",
+          context: {
+            reason: "no_matching_bubble_config"
+          }
+        });
+        throw error;
+      }
+      throw new Error("workspace resolution unavailable");
+    }),
     resolveDeliveryMessageRef: vi.fn(() => "unused"),
     emitTmuxDeliveryNotification: vi.fn(async () => ({
       status: "accepted" as const,
@@ -240,7 +443,7 @@ function createRemoteFlowDependencies() {
       targetPaneIndex: 1
     })),
     emitBubbleLifecycleEventBestEffort: vi.fn(async () => undefined),
-    queueDeferredReworkIntent: vi.fn(async () => ({}))
+    queueDeferredReworkIntent: vi.fn(() => ({}))
   };
 
   return {
@@ -519,6 +722,423 @@ describe("runApprovalDecisionFlow delivery invariant", () => {
         pairflowCommand: "pairflow"
       }
     });
+  });
+
+  it("uses the local canonical request-rework path inside a verified remote clone when WAITING_HUMAN", async () => {
+    const now = new Date("2026-04-17T09:06:00.000Z");
+    const flow = createRemoteFlowDependencies({
+      state: createRemoteWaitingHumanState(),
+      remotePointer: null,
+      workspaceResolution: "verified_remote_clone"
+    });
+    const queued = queueDeferredReworkIntent({
+      state: createRemoteWaitingHumanState(),
+      message: "Please rework locally.",
+      requestedBy: "human:request-rework",
+      now
+    });
+    flow.rawDependencies.queueDeferredReworkIntent = vi.fn(() => queued);
+
+    const result = await runRequestReworkFlow(
+      {
+        bubbleId: "b_remote_approval_01",
+        message: "Please rework locally.",
+        refs: [],
+        now,
+        createError: (input) => new Error(toErrorMessage(input))
+      },
+      flow.dependencies
+    );
+
+    expect(result).toMatchObject({
+      mode: "queued",
+      bubbleId: "b_remote_approval_01",
+      intentId: queued.intent.intent_id,
+      state: {
+        state: "WAITING_HUMAN"
+      }
+    });
+    expect(flow.executeRemoteBubbleApprovalCommand).not.toHaveBeenCalled();
+    expect(flow.rawDependencies.readStateSnapshot).toHaveBeenCalledWith(
+      "/repo/.pairflow/bubbles/b_remote_approval_01/state.json"
+    );
+    expect(flow.rawDependencies.writeStateSnapshot).toHaveBeenCalledOnce();
+  });
+
+  it("uses the local canonical request-rework path inside a verified remote clone when awaiting approval", async () => {
+    const now = new Date("2026-04-17T09:06:00.000Z");
+    const flow = createRemoteFlowDependencies({
+      state: createRemoteReadyForHumanApprovalState(),
+      remotePointer: null,
+      workspaceResolution: "verified_remote_clone"
+    });
+
+    const result = await runRequestReworkFlow(
+      {
+        bubbleId: "b_remote_approval_01",
+        message: "Please rework locally now.",
+        refs: [],
+        now,
+        createError: (input) => new Error(toErrorMessage(input))
+      },
+      flow.dependencies
+    );
+
+    expect(result).toMatchObject({
+      mode: "immediate",
+      bubbleId: "b_remote_approval_01",
+      state: {
+        state: "RUNNING"
+      }
+    });
+    expect(flow.executeRemoteBubbleApprovalCommand).not.toHaveBeenCalled();
+    expect(flow.rawDependencies.appendProtocolEnvelope).toHaveBeenCalledOnce();
+  });
+
+  it("accepts a symlinked verified remote clone root as the same local request-rework authority", async () => {
+    const resolvedRepoPath = await mkdtemp(
+      join(tmpdir(), "pairflow-approval-remote-clone-")
+    );
+    const symlinkRoot = await mkdtemp(
+      join(tmpdir(), "pairflow-approval-remote-clone-link-")
+    );
+    const symlinkPath = join(symlinkRoot, "repo-link");
+    await symlink(resolvedRepoPath, symlinkPath);
+
+    const flow = createRemoteFlowDependencies({
+      state: createRemoteReadyForHumanApprovalState(),
+      resolvedRepoPath,
+      workspaceRepoPath: symlinkPath,
+      workspaceWorktreePath: symlinkPath,
+      remotePointer: null,
+      workspaceResolution: "verified_remote_clone"
+    });
+
+    const result = await runRequestReworkFlow(
+      {
+        bubbleId: "b_remote_approval_01",
+        message: "Please rework locally through the symlinked clone.",
+        refs: [],
+        now: new Date("2026-04-17T09:06:00.000Z"),
+        createError: (input) => new Error(toErrorMessage(input))
+      },
+      flow.dependencies
+    );
+
+    expect(result).toMatchObject({
+      mode: "immediate",
+      bubbleId: "b_remote_approval_01",
+      state: {
+        state: "RUNNING"
+      }
+    });
+    expect(flow.executeRemoteBubbleApprovalCommand).not.toHaveBeenCalled();
+    expect(flow.rawDependencies.appendProtocolEnvelope).toHaveBeenCalledOnce();
+  });
+
+  it("fails closed when the verified remote clone repo path does not match canonical bubble authority", async () => {
+    const flow = createRemoteFlowDependencies({
+      state: createRemoteReadyForHumanApprovalState(),
+      resolvedRepoPath: "/canonical-repo",
+      workspaceRepoPath: "/different-repo",
+      workspaceWorktreePath: "/different-repo",
+      remotePointer: null,
+      workspaceResolution: "verified_remote_clone"
+    });
+
+    await expect(() =>
+      runRequestReworkFlow(
+        {
+          bubbleId: "b_remote_approval_01",
+          message: "Please rework locally.",
+          refs: [],
+          now: new Date("2026-04-17T09:06:00.000Z"),
+          createError: (input) => new Error(toErrorMessage(input))
+        },
+        flow.dependencies
+      )
+    ).rejects.toThrow(
+      /does not match the canonical bubble repository authority/u
+    );
+
+    expect(flow.rawDependencies.readStateSnapshot).not.toHaveBeenCalled();
+    expect(flow.executeRemoteBubbleApprovalCommand).not.toHaveBeenCalled();
+  });
+
+  it("keeps the retained remote route when cwd is inside the clone but not at the verified clone root", async () => {
+    const flow = createRemoteFlowDependencies({
+      state: createRemoteReadyForHumanApprovalState(),
+      workspaceWorktreePath: "/repo/subdir",
+      workspaceResolution: "verified_remote_clone"
+    });
+    flow.executeRemoteBubbleApprovalCommand.mockResolvedValue({
+      mode: "immediate",
+      bubbleId: "b_remote_approval_01",
+      sequence: 15,
+      envelope: {
+        id: "msg_remote_rework_001",
+        ts: "2026-04-17T09:06:00.000Z",
+        bubble_id: "b_remote_approval_01",
+        sender: "human",
+        recipient: "orchestrator",
+        type: "APPROVAL_DECISION",
+        round: 2,
+        payload: {
+          decision: "request_rework"
+        },
+        refs: []
+      },
+      state: {
+        ...createRemoteReadyForHumanApprovalState(),
+        state: "RUNNING"
+      }
+    });
+
+    const result = await runRequestReworkFlow(
+      {
+        bubbleId: "b_remote_approval_01",
+        message: "Please rework through retained remote routing.",
+        refs: [],
+        now: new Date("2026-04-17T09:06:00.000Z"),
+        createError: (input) => new Error(toErrorMessage(input))
+      },
+      flow.dependencies
+    );
+
+    expect(result).toMatchObject({
+      mode: "immediate",
+      bubbleId: "b_remote_approval_01",
+      sequence: 15
+    });
+    expect(flow.rawDependencies.readStateSnapshot).not.toHaveBeenCalled();
+    expect(flow.executeRemoteBubbleApprovalCommand).toHaveBeenCalledOnce();
+  });
+
+  it("fails closed when retained remote pointer artifacts are still present in a verified remote clone", async () => {
+    const flow = createRemoteFlowDependencies({
+      state: createRemoteReadyForHumanApprovalState(),
+      remotePointer: {
+        kind: "started",
+        host: "ssh.example.com",
+        instanceId: "inst_remote_approval_01",
+        remoteClonePath: "/srv/pairflow/repo--b_remote_approval_01",
+        tmuxSession: "pf-b_remote_approval_01",
+        startedAt: "2026-04-17T09:00:00.000Z"
+      },
+      workspaceResolution: "verified_remote_clone"
+    });
+
+    await expect(() =>
+      runRequestReworkFlow(
+        {
+          bubbleId: "b_remote_approval_01",
+          message: "Please rework locally.",
+          refs: [],
+          now: new Date("2026-04-17T09:06:00.000Z"),
+          createError: (input) => new Error(toErrorMessage(input))
+        },
+        flow.dependencies
+      )
+    ).rejects.toThrow(
+      /retained remote pointer artifacts are still present/u
+    );
+
+    expect(flow.rawDependencies.readStateSnapshot).not.toHaveBeenCalled();
+    expect(flow.executeRemoteBubbleApprovalCommand).not.toHaveBeenCalled();
+  });
+
+  it("surfaces clone-root fallback diagnostics when subdirectory cwd falls back to the retained remote path", async () => {
+    const flow = createRemoteFlowDependencies({
+      state: createRemoteReadyForHumanApprovalState(),
+      workspaceWorktreePath: "/repo/subdir",
+      remotePointer: null,
+      workspaceResolution: "verified_remote_clone"
+    });
+
+    await expect(() =>
+      runRequestReworkFlow(
+        {
+          bubbleId: "b_remote_approval_01",
+          message: "Please rework through retained remote routing.",
+          refs: [],
+          now: new Date("2026-04-17T09:06:00.000Z"),
+          createError: (input) => new Error(toErrorMessage(input))
+        },
+        flow.dependencies
+      )
+    ).rejects.toThrow(
+      /inside the verified clone but not at its clone root '\/repo'/u
+    );
+
+    expect(flow.rawDependencies.readStateSnapshot).not.toHaveBeenCalled();
+    expect(flow.executeRemoteBubbleApprovalCommand).not.toHaveBeenCalled();
+  });
+
+  it("does not treat repo-only remote context as verified remote clone authority", async () => {
+    const flow = createRemoteFlowDependencies({
+      state: createRemoteWaitingHumanState(),
+      remotePointer: null,
+      workspaceResolution: "unavailable"
+    });
+
+    await expect(() =>
+      runRequestReworkFlow(
+        {
+          bubbleId: "b_remote_approval_01",
+          message: "Please rework locally.",
+          refs: [],
+          now: new Date("2026-04-17T09:06:00.000Z"),
+          createError: (input) => new Error(toErrorMessage(input)),
+          repoPath: "/repo"
+        },
+        flow.dependencies
+      )
+    ).rejects.toThrow(/requires a started remote pointer/u);
+
+    expect(flow.rawDependencies.readStateSnapshot).not.toHaveBeenCalled();
+    expect(flow.executeRemoteBubbleApprovalCommand).not.toHaveBeenCalled();
+  });
+
+  it("keeps the retained remote route on non-ambiguous workspace resolution failures", async () => {
+    const flow = createRemoteFlowDependencies({
+      state: createRemoteWaitingHumanState(),
+      workspaceResolution: "resolution_error"
+    });
+    flow.executeRemoteBubbleApprovalCommand.mockResolvedValue({
+      kind: "queued_rework",
+      mode: "queued",
+      bubbleId: "b_remote_approval_01",
+      intentId: "ri_remote_approval_01",
+      sequence: 16,
+      envelope: {
+        id: "msg_remote_rework_queued_001",
+        ts: "2026-04-17T09:06:00.000Z",
+        bubble_id: "b_remote_approval_01",
+        sender: "human",
+        recipient: "orchestrator",
+        type: "APPROVAL_DECISION",
+        round: 2,
+        payload: {
+          decision: "request_rework"
+        },
+        refs: []
+      },
+      state: createRemoteWaitingHumanState()
+    });
+
+    const result = await runRequestReworkFlow(
+      {
+        bubbleId: "b_remote_approval_01",
+        message: "Please rework through retained remote routing.",
+        refs: [],
+        now: new Date("2026-04-17T09:06:00.000Z"),
+        createError: (input) => new Error(toErrorMessage(input))
+      },
+      flow.dependencies
+    );
+
+    expect(result).toMatchObject({
+      mode: "queued",
+      bubbleId: "b_remote_approval_01",
+      intentId: "ri_remote_approval_01"
+    });
+    expect(flow.rawDependencies.readStateSnapshot).not.toHaveBeenCalled();
+    expect(flow.executeRemoteBubbleApprovalCommand).toHaveBeenCalledOnce();
+  });
+
+  it("fails closed when remote pointer verification throws inside the verified remote clone branch", async () => {
+    const flow = createRemoteFlowDependencies({
+      state: createRemoteReadyForHumanApprovalState(),
+      remotePointer: null,
+      remotePointerError: new Error("remote pointer unreadable"),
+      workspaceResolution: "verified_remote_clone"
+    });
+
+    await expect(() =>
+      runRequestReworkFlow(
+        {
+          bubbleId: "b_remote_approval_01",
+          message: "Please rework locally.",
+          refs: [],
+          now: new Date("2026-04-17T09:06:00.000Z"),
+          createError: (input) => new Error(toErrorMessage(input))
+        },
+        flow.dependencies
+      )
+    ).rejects.toThrow(/could not verify remote clone control-plane boundaries/u);
+
+    expect(flow.rawDependencies.readStateSnapshot).not.toHaveBeenCalled();
+    expect(flow.executeRemoteBubbleApprovalCommand).not.toHaveBeenCalled();
+  });
+
+  it("fails closed when the active workspace resolves to a different bubble", async () => {
+    const flow = createRemoteFlowDependencies({
+      state: createRemoteReadyForHumanApprovalState(),
+      workspaceResolution: "different_bubble"
+    });
+
+    await expect(() =>
+      runRequestReworkFlow(
+        {
+          bubbleId: "b_remote_approval_01",
+          message: "Please rework locally.",
+          refs: [],
+          now: new Date("2026-04-17T09:06:00.000Z"),
+          createError: (input) => new Error(toErrorMessage(input))
+        },
+        flow.dependencies
+      )
+    ).rejects.toThrow(/active workspace resolves to bubble b_other_remote_bubble_01/u);
+
+    expect(flow.rawDependencies.readStateSnapshot).not.toHaveBeenCalled();
+    expect(flow.executeRemoteBubbleApprovalCommand).not.toHaveBeenCalled();
+  });
+
+  it("fails closed when workspace authority is ambiguous", async () => {
+    const flow = createRemoteFlowDependencies({
+      state: createRemoteReadyForHumanApprovalState(),
+      workspaceResolution: "ambiguous"
+    });
+
+    await expect(() =>
+      runRequestReworkFlow(
+        {
+          bubbleId: "b_remote_approval_01",
+          message: "Please rework locally.",
+          refs: [],
+          now: new Date("2026-04-17T09:06:00.000Z"),
+          createError: (input) => new Error(toErrorMessage(input))
+        },
+        flow.dependencies
+      )
+    ).rejects.toThrow(/could not disambiguate the active workspace authority/u);
+
+    expect(flow.rawDependencies.readStateSnapshot).not.toHaveBeenCalled();
+    expect(flow.executeRemoteBubbleApprovalCommand).not.toHaveBeenCalled();
+  });
+
+  it("keeps approve on the retained remote-routing path even inside a verified remote clone", async () => {
+    const flow = createRemoteFlowDependencies({
+      state: createRemoteReadyForHumanApprovalState(),
+      remotePointer: null,
+      workspaceResolution: "verified_remote_clone"
+    });
+
+    await expect(() =>
+      runApprovalDecisionFlow(
+        {
+          bubbleId: "b_remote_approval_01",
+          decision: "approve",
+          refs: [],
+          now: new Date("2026-04-17T09:07:00.000Z"),
+          createError: (input) => new Error(toErrorMessage(input))
+        },
+        flow.dependencies
+      )
+    ).rejects.toThrow(/requires a started remote pointer/u);
+
+    expect(flow.rawDependencies.readStateSnapshot).not.toHaveBeenCalled();
+    expect(flow.executeRemoteBubbleApprovalCommand).not.toHaveBeenCalled();
   });
 
   it("queues local request-rework intent without approval transcript mutation while WAITING_HUMAN", async () => {

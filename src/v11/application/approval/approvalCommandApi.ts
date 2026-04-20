@@ -27,6 +27,7 @@ import {
   readTranscriptEnvelopes
 } from "../../shared/transcript/transcriptDependencyDefaults.js";
 import { readStateSnapshot, writeStateSnapshot } from "../../shared/state/stateStoreDefaults.js";
+import { resolveBubbleFromWorkspaceCwd } from "../../infrastructure/executor/workspace/workspaceResolution.js";
 
 let approvalDependencyDefaultsPromise:
   | Promise<ApprovalCommandDefaultDependencies>
@@ -69,6 +70,7 @@ async function loadApprovalDependencyDefaults(): Promise<ApprovalCommandDefaultD
     resolveRemoteBubbleStatusTarget:
       statusCommandDependencyDefaults.resolveRemoteBubbleStatusTarget,
     resolveBubbleById,
+    resolveBubbleFromWorkspaceCwd,
     resolveDeliveryMessageRef: reviewerDeliveryDefaults.resolveDeliveryMessageRef,
     writeStateSnapshot
   });

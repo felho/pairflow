@@ -384,8 +384,12 @@ pairflow bubble <command> --id <bubbleId> [args]
 Current implementation note (2026-04-20):
 
 - The routed pattern above is the retained thin-client operator model.
-- The current implementation does **not** yet support issuing `pairflow bubble request-rework` directly from inside a verified remote bubble clone as a local canonical mutation path.
-- That contextual local-clone `request-rework` workflow is a separate request-rework-only planned refinement; `approve`, `reply`, and cleanup commands remain on the retained thin-client routed model in this design slice.
+- `pairflow bubble request-rework` now has one bounded exception to the routed pattern above:
+  - when the operator is already inside the verified remote bubble clone workspace,
+  - and Pairflow can prove that workspace context from the active clone root,
+  - and no retained clone-local `remote.json` pointer artifacts are present in that workspace,
+  - then `request-rework` may mutate the canonical remote runtime state locally from that clone.
+- This exception is request-rework-only. `approve`, `reply`, and cleanup commands remain on the retained thin-client routed model in this design slice.
 
 ### 6.6 `pairflow bubble list`
 
@@ -575,11 +579,11 @@ See [§14 V2 Extraction Seams](#14-v2-extraction-seams) for where and how V2 wil
 
 ### Current limitations
 
-- **Network required for commands.** Every `status`, `approve`, `attach` etc. needs SSH access to the remote. Offline operation on the laptop is limited to cached state.
+- **Network required for thin-client commands.** The retained laptop-side `status`, `approve`, `attach`, and related routed commands still need SSH access to the remote. The bounded exception is local `request-rework` from inside a verified remote clone workspace, which can mutate the canonical remote runtime state in place without hopping back through the laptop-side routed path.
 - **Single user.** The remote host is assumed to be single-user. No multi-tenant isolation.
 - **No automatic notifications.** When a remote bubble reaches WAITING_HUMAN, the user must poll via `status` or `list --refresh`. Push notifications (Slack, email) are a future feature (V2 Channel Adapters).
 - **Manual prerequisite setup.** Pairflow does not automate remote host provisioning. Software installation and authentication are the user's responsibility.
-- **Contextual remote-clone rework gap.** If the operator is already reviewing inside a verified remote bubble clone (for example via VS Code Remote SSH), `pairflow bubble request-rework` is not yet a supported local canonical mutation path; the retained implementation still assumes the laptop thin-client routed model.
+- **No general remote-local mutation parity.** Only `request-rework` gained verified remote-clone local parity in this slice. `approve`, `reply`, and cleanup commands still follow the retained thin-client routed model.
 
 ### Future extensions
 

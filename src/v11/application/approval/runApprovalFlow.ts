@@ -7,7 +7,10 @@ import type {
   RunRequestReworkFlowInput
 } from "./runApprovalFlowContract.js";
 import type { ResolvedApprovalCommandDependencies } from "./approvalCommandDependencyResolution.js";
-import { initializeApprovalFlowExecutionContext } from "./runApprovalFlowContext.js";
+import {
+  initializeApprovalFlowExecutionContext,
+  initializeRequestReworkFlowExecutionContext
+} from "./runApprovalFlowContext.js";
 import {
   runApprovalDecisionFlowWithContext,
   runRequestReworkFlowWithContext
@@ -44,7 +47,7 @@ export async function runRequestReworkFlow(
   input: RunRequestReworkFlowInput,
   dependencies: ResolvedApprovalCommandDependencies
 ): Promise<EmitRequestReworkResult> {
-  const execution = await initializeApprovalFlowExecutionContext(
+  const execution = await initializeRequestReworkFlowExecutionContext(
     {
       bubbleId: input.bubbleId,
       now: input.now,
