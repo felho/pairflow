@@ -137,6 +137,7 @@ pairflow bubble inbox --id <BUBBLE_ID> --repo <REPO_PATH>
     ```bash
     pairflow bubble approve --id <BUBBLE_ID> --repo <REPO_PATH>
     ```
+    Remote bubble note: this remains a laptop-side routed command by default; do not SSH into the remote clone and run approve there manually.
   - If approve fails with `APPROVAL_OVERRIDE_REQUIRED` or `APPROVAL_PARITY_OVERRIDE_REQUIRED`, rerun only when the human decision is still approve and you can provide a concise explicit justification:
     ```bash
     pairflow bubble approve --id <BUBBLE_ID> --repo <REPO_PATH> --override-non-approve --override-reason "<concise human justification>"
@@ -145,6 +146,7 @@ pairflow bubble inbox --id <BUBBLE_ID> --repo <REPO_PATH>
   ```bash
   pairflow bubble request-rework --id <BUBBLE_ID> --repo <REPO_PATH> --message "<MESSAGE>"
   ```
+  Remote bubble note: default to the same laptop-side routed path. Only use remote-clone local parity for `request-rework` when Pairflow can already prove the verified remote clone workspace context and that exception is intentionally being used.
 
 6. Verify post-decision state when command executed.
 ```bash

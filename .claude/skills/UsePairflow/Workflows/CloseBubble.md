@@ -18,6 +18,7 @@ PUSH: `true` if `--push` flag is present, default `false`
 DELETE_REMOTE: `true` if `--delete-remote` flag is present, default `false`
 REVIEW_ARTIFACT_TYPE: read from bubble metadata (`document` or `code`) before merge
 TASK_SOURCE_PATH: absolute task source file path extracted from bubble artifact metadata before merge
+BASE_BRANCH: base branch read from bubble metadata before merge when available
 
 ## Instructions
 
@@ -25,6 +26,7 @@ TASK_SOURCE_PATH: absolute task source file path extracted from bubble artifact 
 - Never use raw `git merge`, `tmux kill-session`, `git worktree remove`, or `git branch -d` directly in this workflow.
 - Always check status before deciding the next step.
 - There is no public `pairflow bubble meta-review ...` operator namespace; use `bubble status` / `bubble restart` for inspection and remediation.
+- For started remote bubbles, close lifecycle commands stay on the retained laptop-side routed model. Run `approve` / `commit` / `merge` / `delete` from the local repo; do not SSH into the remote clone and run those manually there.
 - State progression reference:
   `CREATED -> PREPARING_WORKSPACE -> RUNNING -> WAITING_HUMAN -> META_REVIEW_RUNNING -> READY_FOR_HUMAN_APPROVAL (legacy: READY_FOR_APPROVAL) -> APPROVED_FOR_COMMIT -> COMMITTED -> DONE`
 - Closure applies only when the bubble is at least `READY_FOR_HUMAN_APPROVAL` (legacy compatible: `READY_FOR_APPROVAL`).
@@ -64,6 +66,7 @@ pairflow bubble status --id <BUBBLE_ID> --repo <REPO_PATH> --json
 
 - Before merge, capture `REVIEW_ARTIFACT_TYPE` from:
   - `<REPO_PATH>/.pairflow/bubbles/<BUBBLE_ID>/bubble.toml` (`review_artifact_type`)
+- Also capture `BASE_BRANCH` from the same `bubble.toml` when available.
 - If `REVIEW_ARTIFACT_TYPE` is `code`, try to capture `TASK_SOURCE_PATH` from:
   - `<REPO_PATH>/.pairflow/bubbles/<BUBBLE_ID>/artifacts/task.md`
   - Expected first-line format: `Source: file (<ABSOLUTE_PATH>)`
@@ -78,6 +81,7 @@ pairflow bubble status --id <BUBBLE_ID> --repo <REPO_PATH> --json
      ```bash
      pairflow bubble approve --id <BUBBLE_ID> --repo <REPO_PATH>
      ```
+     Remote bubble note: still run this from the laptop/local repo so Pairflow can route it over SSH using the retained local pointer state.
   2. If clean approve succeeds, continue.
   3. If approve fails with `APPROVAL_OVERRIDE_REQUIRED` or `APPROVAL_PARITY_OVERRIDE_REQUIRED`, rerun only when the human close decision is explicit and you can state a concise justification:
      ```bash
@@ -93,6 +97,7 @@ pairflow bubble status --id <BUBBLE_ID> --repo <REPO_PATH> --json
   ```bash
   pairflow bubble commit --id <BUBBLE_ID> --repo <REPO_PATH> --auto
   ```
+  Remote bubble note: still run this from the laptop/local repo; do not commit lifecycle state by manually invoking Pairflow inside the remote clone.
 - Else if state is already `COMMITTED` or `DONE`, skip commit.
 
 #### C) Merge step
@@ -105,6 +110,7 @@ pairflow bubble status --id <BUBBLE_ID> --repo <REPO_PATH> --json
     ```
   - Add `--push` only if PUSH is true.
   - Add `--delete-remote` only if DELETE_REMOTE is true.
+  - Remote bubble note: this routed merge executes on the remote and may push there, but it does not automatically update the laptop's local checkout.
 - If merge returns conflict/error indicating manual conflict resolution is required, STOP and report exact error.
 
 ### 5. Post-merge verification
@@ -120,15 +126,17 @@ Apply only if merge succeeded.
    - `README.md`: update when CLI behavior, flags, UX flow, or user-visible runtime behavior changed.
    - `docs/` content: update when workflow/policy/spec behavior changed beyond README-level notes.
    - Progress tracker: if repository has a relevant tracker (for example under `docs/` or `progress/`), update implementation status/evidence pointers.
-2. Apply required updates immediately on `main`.
-3. Archive the source task file (mirror layout) if `TASK_SOURCE_PATH` is known:
+2. If the bubble was remote and the merge succeeded, sync the local checkout to the merged base branch before making local follow-up edits:
+   - use a project-safe fast-forward update flow (for example `git pull --ff-only origin <BASE_BRANCH>`) rather than assuming the local checkout already contains the merged changes.
+3. Apply required updates immediately on `main`.
+4. Archive the source task file (mirror layout) if `TASK_SOURCE_PATH` is known:
    - Source root must be: `<REPO_PATH>/plans/tasks/`
    - Relative task path: `<REL_PATH> = TASK_SOURCE_PATH minus <REPO_PATH>/plans/tasks/`
    - Archive destination: `<REPO_PATH>/plans/archive/tasks/<REL_PATH>`
    - Keep directory structure mirrored (root task stays at archive root; nested task keeps nested folder path).
    - Use `git mv` (create archive parent directories first if needed).
    - If destination already exists, STOP and ask user (no overwrite).
-4. If follow-up edits or archive move were made, commit them on `main` with a clear message describing docs/progress/archive completion.
+5. If follow-up edits or archive move were made, commit them on `main` with a clear message describing docs/progress/archive completion.
 
 ### 7. Special cases
 

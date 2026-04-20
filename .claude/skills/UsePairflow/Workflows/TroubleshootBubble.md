@@ -60,6 +60,7 @@ pairflow bubble inbox --id <BUBBLE_ID> --repo <REPO_PATH>
     - Otherwise continue normal loop (`pass` / `converged`) instead of approval commands.
   - `META_REVIEW_RUNNING` -> inspect the canonical status snapshot; if routing appears stuck or runtime is unhealthy, run `pairflow bubble restart --id <BUBBLE_ID> --repo <REPO_PATH>` and re-check state.
   - `READY_FOR_HUMAN_APPROVAL` (legacy `READY_FOR_APPROVAL`) -> `approve` or `request-rework`.
+    - For remote bubbles, this means the retained laptop-side routed path by default, not manual lifecycle mutation inside the remote clone.
     - If approve fails with `APPROVAL_OVERRIDE_REQUIRED` or `APPROVAL_PARITY_OVERRIDE_REQUIRED`, rerun only with explicit human justification via `bubble approve --override-non-approve --override-reason "<reason>"`.
 - If command output contains `IDEATION_PASS_BLOCKED` or `IDEATION_CONVERGED_BLOCKED`, treat it as pending kickoff and apply the same `bubble kickoff` path.
 - If watchdog timeout led to `WAITING_HUMAN` -> send precise `bubble reply`, then re-check.
@@ -67,6 +68,7 @@ pairflow bubble inbox --id <BUBBLE_ID> --repo <REPO_PATH>
 - Remote exception:
   - If status JSON shows a started remote bubble with runtime unavailable/missing (for example `remoteExecution.pointerKind="started"` and remote runtime availability/reason indicates missing/unavailable), STOP in fail-closed mode.
   - Report that persisted remote state may still exist, but this phase does not treat `bubble start` or `bubble restart` as the generic supported recovery path on top of that started pointer.
+  - Do not “work around” routed-command failures by SSH-ing into the remote clone and running `approve`, `commit`, `merge`, or `delete` manually; keep the operator model on the local routed path unless a command-specific parity exception is explicitly documented.
   - Use `pairflow bubble status --id <BUBBLE_ID> --repo <REPO_PATH> --json` or `pairflow bubble list --repo <REPO_PATH> --refresh` to confirm the remote diagnosis before escalating.
 - If `bubble start` reported success but state remains `CREATED` -> wait briefly and poll status again from repo root cwd.
 - If repo lookup confusion exists -> retry with explicit absolute `--repo` and verify `repoPath`/`worktreePath` in status json.

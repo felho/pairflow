@@ -61,6 +61,8 @@ This skill exists to avoid lifecycle mistakes (wrong command in wrong state, los
   - explain the technical issue,
   - explain why it matters in practical terms,
   - state whether it is blocking now or only future hardening debt.
+22. For started remote bubbles, the laptop/local repo remains the operator control plane. Run lifecycle commands from the local repo so Pairflow can use the retained pointer/cache state and SSH routing; do not SSH into the remote clone and run `approve`, `reply`, `commit`, `merge`, or `delete` there manually.
+23. The only bounded remote-clone local-parity exception in this design slice is `request-rework`, and only when Pairflow can prove the verified remote clone workspace context and no retained clone-local `remote.json` pointer artifacts are present. Default to the laptop-routed path unless that exception is explicitly known to apply.
 
 ## Execution Modes (Mandatory)
 
@@ -93,10 +95,13 @@ This skill exists to avoid lifecycle mistakes (wrong command in wrong state, los
 - `WAITING_HUMAN` -> use `pairflow bubble reply` (NOT `bubble request-rework`)
 - `META_REVIEW_RUNNING` -> inspect `pairflow bubble status --id <id> --json`; if gate appears stuck or runtime is unhealthy, use `pairflow bubble restart --id <id> [--repo <path>]`
 - `READY_FOR_HUMAN_APPROVAL` (legacy compatible: `READY_FOR_APPROVAL`) -> choose `pairflow bubble approve` OR `pairflow bubble request-rework`
+  - For remote bubbles, this still means the laptop-side routed command from the local repo by default, not manual lifecycle mutation inside the remote clone.
   - `pairflow bubble approve` enforces override requirements from transcript context.
   - If approve fails with `APPROVAL_OVERRIDE_REQUIRED` or `APPROVAL_PARITY_OVERRIDE_REQUIRED`, rerun only with explicit human justification via `--override-non-approve --override-reason "<reason>"`.
 - `APPROVED_FOR_COMMIT` -> `pairflow bubble commit --auto`
+  - For remote bubbles, run the routed command from the laptop/local repo; do not `ssh` into the remote clone and commit manually.
 - `DONE` -> `pairflow bubble merge`
+  - For remote bubbles, run the routed command from the laptop/local repo; Pairflow merges/pushes on the remote and does not auto-update the local checkout.
 - `CANCELLED` with needed changes -> recovery workflow (manual git path from bubble worktree)
 
 ## Practical Guardrails
@@ -112,6 +117,10 @@ This skill exists to avoid lifecycle mistakes (wrong command in wrong state, los
   - Keep `bubble attach` as a separate explicit step after remote start; do not assume create/start should auto-attach.
   - Do not add `--attach` to `bubble start` by default for either local or remote bubbles; only do it on explicit user request for interactive switching.
   - Respect repository-specific bubble-create guardrails such as required `--bootstrap-command` when they are declared in the repo docs or AGENTS instructions.
+- Remote routed-command guardrails after start:
+  - For started remote bubbles, `status`, `approve`, `reply`, `commit`, `merge`, and `delete` stay on the retained laptop-side thin-client routed path by default.
+  - Do not treat the remote clone as the operator control plane for those commands; the local repo's `.pairflow/bubbles/<id>/remote.json` and `state-cache.json` remain part of the routing contract.
+  - The bounded exception is verified remote-clone local `request-rework` parity; if that proof is absent, stay on the laptop-routed path.
 - While a bubble is running, parallel direct commits on `main` are allowed only for file-disjoint scope (no overlap with the bubble's touched files).
 - After `bubble start`, status may be briefly stale. Poll status once more before deciding it failed.
 - If `--repo` lookup behaves unexpectedly, retry from repo root cwd and verify with `status --json`.

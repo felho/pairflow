@@ -84,6 +84,7 @@ cat <REPO_PATH>/.pairflow/bubbles/<BUBBLE_ID>/bubble.toml
     ```bash
     pairflow bubble approve --id <BUBBLE_ID> --repo <REPO_PATH>
     ```
+    Remote bubble note: this remains a laptop-side routed command by default; do not SSH into the remote clone and run approve there manually.
   - If approve fails with `APPROVAL_OVERRIDE_REQUIRED` or `APPROVAL_PARITY_OVERRIDE_REQUIRED` and the operator still intends to approve, rerun with explicit human justification:
     ```bash
     pairflow bubble approve --id <BUBBLE_ID> --repo <REPO_PATH> --override-non-approve --override-reason "<concise human justification>"
