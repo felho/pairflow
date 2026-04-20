@@ -69,7 +69,12 @@ owners:
    - `merge`
    - `delete`
    Ezek explicit remote inner execution contextet hasznalnak, de ez jelenleg nem all rendelkezesre a user-altal inditott review-session `request-rework` use-case-hez.
-7. Fontos bounded-scope kovetkezmeny:
+7. A design doc current implementation note-ja is ugyanazt a retained boundaryt irja le:
+   - a routed pattern tovabbra is a thin-client operator baseline,
+   - a verified remote clone local `request-rework` kulon planned refinement,
+   - `approve`/`reply`/cleanup nincs ebben a residual slice-ban.
+   - [docs/remote-bubble-execution.md](/Users/felho/dev/pairflow/docs/remote-bubble-execution.md)
+8. Fontos bounded-scope kovetkezmeny:
    - ezt a taskot nem szabad ugy megoldani, hogy a shared `approve + request-rework` contextet altalanosan fellazitja,
    - mert az feleslegesen ujranyitna az `approve` route selection boundaryt is.
 
@@ -446,7 +451,7 @@ Lezarni a verified remote clone-bol futtatott local `request-rework` execution s
    - `remote.json` remote clone-ba valo sync workaround,
    - generic operator command bus,
    - shared `approve + request-rework + reply` parity taskba valo osszemosas,
-   - request-rework-only seam explicit megnevezese vagy retained-proof nelkuli shared approval widening.
+   - request-rework-only seam explicit megnevezesenek hianya, vagy retained-proof nelkuli shared approval widening.
 
 ## L2 - Implementation Notes (Optional)
 
