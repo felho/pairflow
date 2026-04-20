@@ -24,6 +24,7 @@ TASK_FILE: extracted from `--task-file` argument (optional; for ideation kickoff
 - Prefer absolute repo path when lookup ambiguity appears.
 - Re-verify after each fix attempt.
 - If diagnosis is inconclusive, stop with a concrete escalation path.
+- For remote started-pointer runtime loss, stay fail-closed: do not imply that `bubble start` or `bubble restart` is already the supported recovery contract on top of preserved remote state.
 
 ## Error Messages
 
@@ -63,6 +64,10 @@ pairflow bubble inbox --id <BUBBLE_ID> --repo <REPO_PATH>
 - If command output contains `IDEATION_PASS_BLOCKED` or `IDEATION_CONVERGED_BLOCKED`, treat it as pending kickoff and apply the same `bubble kickoff` path.
 - If watchdog timeout led to `WAITING_HUMAN` -> send precise `bubble reply`, then re-check.
 - If runtime appears unhealthy (agent pane unresponsive, stale tmux/session ownership, token/login refresh required) -> run `pairflow bubble restart --id <BUBBLE_ID> --repo <REPO_PATH>`, then re-check status/inbox.
+- Remote exception:
+  - If status JSON shows a started remote bubble with runtime unavailable/missing (for example `remoteExecution.pointerKind="started"` and remote runtime availability/reason indicates missing/unavailable), STOP in fail-closed mode.
+  - Report that persisted remote state may still exist, but this phase does not treat `bubble start` or `bubble restart` as the generic supported recovery path on top of that started pointer.
+  - Use `pairflow bubble status --id <BUBBLE_ID> --repo <REPO_PATH> --json` or `pairflow bubble list --repo <REPO_PATH> --refresh` to confirm the remote diagnosis before escalating.
 - If `bubble start` reported success but state remains `CREATED` -> wait briefly and poll status again from repo root cwd.
 - If repo lookup confusion exists -> retry with explicit absolute `--repo` and verify `repoPath`/`worktreePath` in status json.
 - If restart/recheck shows the bubble is no longer in `META_REVIEW_RUNNING`, treat the earlier diagnosis as stale, refresh status/inbox, then continue with state-correct routing.

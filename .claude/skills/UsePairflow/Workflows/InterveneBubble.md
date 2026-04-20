@@ -26,6 +26,7 @@ TASK_FILE: extracted from `--task-file` argument (optional; only for ideation ki
 - Prefer explicit, targeted human messages; avoid vague replies.
 - Re-check state after every state-changing command.
 - For runtime/process restart intent (token budget/login refresh, pane appears stuck), use `pairflow bubble restart` instead of manual tmux commands.
+- Remote exception: for started remote bubbles that already report runtime loss, do not assume `bubble restart` or `bubble start` is the supported recovery path on top of preserved remote state in this phase.
 - Default mode is `bubble_autonomous`: do not perform direct implementation edits from this workflow.
 - Switch to `manual_assist` only on explicit user request; never switch silently.
 
@@ -60,6 +61,8 @@ cat <REPO_PATH>/.pairflow/bubbles/<BUBBLE_ID>/bubble.toml
   pairflow bubble restart --id <BUBBLE_ID> --repo <REPO_PATH>
   ```
   Then continue with step 5 verification.
+- Before using the generic restart path, check for the remote fail-closed exception in the status JSON:
+  - if the bubble is remote and already shows started-pointer runtime loss/unavailable remote runtime, STOP and route to `TroubleshootBubble` instead of running `restart`
 - If state is `RUNNING` and ideation is pending (`round=0` + `ideation.task_pending=true`):
   - If neither `TASK_TEXT` nor `TASK_FILE` is provided -> STOP and report: `"Error: ideation bubble in RUNNING round 0 requires --task <text> or --task-file <path> for bubble kickoff."`
   - If both are provided -> STOP and report that kickoff accepts exactly one task input.

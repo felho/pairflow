@@ -1,6 +1,6 @@
 ---
 description: Create and start a pairflow bubble safely from clean base state
-argument-hint: [--id <name>] [--task-file <path>] [--task <text>] [--ideation] [--repo <path>] [--base <branch>] [--review-artifact-type <document|code>] [--print]
+argument-hint: [--id <name>] [--task-file <path>] [--task <text>] [--ideation] [--repo <path>] [--base <branch>] [--review-artifact-type <document|code>] [--remote <host>] [--print]
 allowed-tools: Bash, Read, Glob, AskUserQuestion
 ---
 
@@ -20,12 +20,14 @@ REPO_PATH: extracted from `--repo`, or `git rev-parse --show-toplevel`
 BASE_BRANCH: extracted from `--base`, default `main`
 REVIEW_ARTIFACT_TYPE: extracted from `--review-artifact-type` if provided, otherwise resolved from intent
 PRINT_ONLY: `true` if `--print` flag is present, default `false`
+REMOTE_HOST: extracted from `--remote` argument (optional)
 
 ## Instructions
 
 - Always use absolute paths in generated commands.
 - Exactly one create input is expected: `TASK_FILE`, `TASK_TEXT`, or `IDEATION_MODE=true`.
 - `pairflow bubble create` requires explicit `--review-artifact-type <document|code>`.
+- If `REMOTE_HOST` is provided, create must use `pairflow bubble create --remote <host> ...`; remote execution still begins only at `bubble start`.
 - `--ideation` creates a taskless bubble and requires explicit `pairflow bubble kickoff` later before the first implementer/reviewer handoff.
 - Ideation default is **round-0 hold** after create/start. Do not auto-kickoff unless the user explicitly asks to kickoff now.
 - Intent guardrail (critical):
@@ -44,6 +46,7 @@ PRINT_ONLY: `true` if `--print` flag is present, default `false`
 - If all task inputs are missing and ideation intent is not explicit, search `plans/tasks/` and ask the user which task file to use.
 - Default behavior: execute `create` and `start`.
 - Print-only behavior (`--print`): print commands but run nothing.
+- If the repo/project instructions require extra create-time flags for reliable remote starts (for example mandatory `--bootstrap-command`), include them. Do not silently drop repo-specific guardrails.
 - Pre-flight before create/start:
   - Base repo worktree must be clean (`git status --short` empty).
   - No active merge/rebase/cherry-pick state.
@@ -57,6 +60,7 @@ PRINT_ONLY: `true` if `--print` flag is present, default `false`
 - If pre-flight fails: STOP and report exact blocker.
 - Guardrail: this workflow must not execute task work (no implementation/review/testing/file edits related to task content).
 - Post-start default mode is `bubble_autonomous` unless user explicitly requests `manual_assist`.
+- Remote attach is a separate explicit step after remote start. Do not assume create/start should automatically attach into a remote tmux session.
 - If the user later requests pre-kickoff manual preparation in the bubble worktree, handle that as a separate follow-up request (outside this create/start workflow), then kickoff with an inline summary of already-applied changes.
 
 ## Workflow
@@ -147,25 +151,25 @@ PRINT_ONLY: `true` if `--print` flag is present, default `false`
 Task file create:
 
 ```bash
-pairflow bubble create --id <BUBBLE_ID> --repo <REPO_PATH> --base <BASE_BRANCH> --review-artifact-type <REVIEW_ARTIFACT_TYPE> --task-file <TASK_FILE>
+pairflow bubble create --id <BUBBLE_ID> --repo <REPO_PATH> --base <BASE_BRANCH> --review-artifact-type <REVIEW_ARTIFACT_TYPE> [--remote <REMOTE_HOST>] --task-file <TASK_FILE>
 ```
 
 Inline task create:
 
 ```bash
-pairflow bubble create --id <BUBBLE_ID> --repo <REPO_PATH> --base <BASE_BRANCH> --review-artifact-type <REVIEW_ARTIFACT_TYPE> --task "<TASK_TEXT>"
+pairflow bubble create --id <BUBBLE_ID> --repo <REPO_PATH> --base <BASE_BRANCH> --review-artifact-type <REVIEW_ARTIFACT_TYPE> [--remote <REMOTE_HOST>] --task "<TASK_TEXT>"
 ```
 
 Ideation create:
 
 ```bash
-pairflow bubble create --id <BUBBLE_ID> --repo <REPO_PATH> --base <BASE_BRANCH> --review-artifact-type <REVIEW_ARTIFACT_TYPE> --ideation
+pairflow bubble create --id <BUBBLE_ID> --repo <REPO_PATH> --base <BASE_BRANCH> --review-artifact-type <REVIEW_ARTIFACT_TYPE> [--remote <REMOTE_HOST>] --ideation
 ```
 
 Start:
 
 ```bash
-pairflow bubble start --id <BUBBLE_ID> --repo <REPO_PATH> --attach
+pairflow bubble start --id <BUBBLE_ID> --repo <REPO_PATH>
 ```
 
 ### 8. Execute or print
@@ -178,6 +182,7 @@ pairflow bubble start --id <BUBBLE_ID> --repo <REPO_PATH> --attach
   - Then run `pairflow bubble start ...`
   - If `start` fails with repo-lookup mismatch, retry from repo root cwd and recheck status json.
   - Never auto-downgrade from `--task-file` to inline `--task` unless user explicitly approves.
+  - If `REMOTE_HOST` is set, report `bubble attach` as a follow-up operator command instead of auto-attaching now.
 
 ### 9. Verify state after start
 
@@ -208,10 +213,11 @@ Default mode (create/start executed):
 Bubble <BUBBLE_ID> created and started.
 
 Start session:
-pairflow bubble start --id <BUBBLE_ID> --repo <REPO_PATH> --attach
+pairflow bubble start --id <BUBBLE_ID> --repo <REPO_PATH>
 
 Task source: <inline|task-file|ideation>
 Review artifact type: <REVIEW_ARTIFACT_TYPE>
+Execution target: <local|remote:<REMOTE_HOST>>
 Verified base HEAD: <COMMIT_SHA>
 Current state: <STATE>
 Active agent: <AGENT or none>
@@ -226,10 +232,10 @@ Print-only mode (task file):
 Commands ready:
 
 1. Create:
-pairflow bubble create --id <BUBBLE_ID> --repo <REPO_PATH> --base <BASE_BRANCH> --review-artifact-type <REVIEW_ARTIFACT_TYPE> --task-file <TASK_FILE>
+pairflow bubble create --id <BUBBLE_ID> --repo <REPO_PATH> --base <BASE_BRANCH> --review-artifact-type <REVIEW_ARTIFACT_TYPE> [--remote <REMOTE_HOST>] --task-file <TASK_FILE>
 
 2. Start:
-pairflow bubble start --id <BUBBLE_ID> --repo <REPO_PATH> --attach
+pairflow bubble start --id <BUBBLE_ID> --repo <REPO_PATH>
 ```
 
 Print-only mode (inline task):
@@ -238,10 +244,10 @@ Print-only mode (inline task):
 Commands ready:
 
 1. Create:
-pairflow bubble create --id <BUBBLE_ID> --repo <REPO_PATH> --base <BASE_BRANCH> --review-artifact-type <REVIEW_ARTIFACT_TYPE> --task "<TASK_TEXT>"
+pairflow bubble create --id <BUBBLE_ID> --repo <REPO_PATH> --base <BASE_BRANCH> --review-artifact-type <REVIEW_ARTIFACT_TYPE> [--remote <REMOTE_HOST>] --task "<TASK_TEXT>"
 
 2. Start:
-pairflow bubble start --id <BUBBLE_ID> --repo <REPO_PATH> --attach
+pairflow bubble start --id <BUBBLE_ID> --repo <REPO_PATH>
 ```
 
 Print-only mode (ideation):
@@ -250,10 +256,10 @@ Print-only mode (ideation):
 Commands ready:
 
 1. Create:
-pairflow bubble create --id <BUBBLE_ID> --repo <REPO_PATH> --base <BASE_BRANCH> --review-artifact-type <REVIEW_ARTIFACT_TYPE> --ideation
+pairflow bubble create --id <BUBBLE_ID> --repo <REPO_PATH> --base <BASE_BRANCH> --review-artifact-type <REVIEW_ARTIFACT_TYPE> [--remote <REMOTE_HOST>] --ideation
 
 2. Start:
-pairflow bubble start --id <BUBBLE_ID> --repo <REPO_PATH> --attach
+pairflow bubble start --id <BUBBLE_ID> --repo <REPO_PATH>
 
 3. Kickoff (required before pass/converged):
 pairflow bubble kickoff --id <BUBBLE_ID> --repo <REPO_PATH> --task "<TASK_TEXT>"

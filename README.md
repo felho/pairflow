@@ -266,6 +266,53 @@ pairflow bubble status --id my_first --repo "$TEST_REPO" --json
 
 This opens a tmux session with 4 panes. The agents can now start working.
 
+## Remote quick start
+
+Remote bubbles use the same lifecycle, but execution happens in a remote clone over SSH.
+
+1. Configure a remote host in `~/.pairflow/config.toml`:
+
+```toml
+[remotes.spark1]
+host = "spark1"
+repo_base = "~/repos"
+pairflow_command = "pairflow"
+pairflow_sync_command = "~/bin/pairflow-sync"
+default_port_forwards = [3000, 5173]
+```
+
+2. Make sure the remote host can already run:
+
+```bash
+ssh spark1 "pairflow --version"
+ssh spark1 "claude auth status"
+ssh spark1 "codex --version"
+```
+
+3. Create and start a remote bubble:
+
+```bash
+pairflow bubble create --id remote_demo --repo "$TEST_REPO" --base main \
+  --review-artifact-type code \
+  --remote spark1 \
+  --task "Run this change on the remote executor."
+pairflow bubble start --id remote_demo --repo "$TEST_REPO"
+```
+
+4. Monitor and attach:
+
+```bash
+pairflow bubble status --id remote_demo --repo "$TEST_REPO" --json
+pairflow bubble attach --id remote_demo --repo "$TEST_REPO"
+pairflow bubble attach --id remote_demo --repo "$TEST_REPO" --port-forward 3000 --port-forward 5173
+```
+
+Important remote notes:
+- `bubble create --remote <host>` only writes local control-plane state; nothing starts remotely until `bubble start`.
+- `bubble attach` for remote bubbles uses the persisted started pointer, not local tmux.
+- If a started remote bubble later reports runtime loss, treat that fail-closed. In this phase, do not assume `bubble start` or `bubble restart` reconstructs a started remote pointer on top of preserved state.
+- For the full design and recovery model, see [docs/remote-bubble-execution.md](./docs/remote-bubble-execution.md).
+
 ---
 
 ## How we use Pairflow in practice (agent + UI first)
@@ -809,7 +856,7 @@ Ideation note:
 
 | Command | Description |
 |---------|-------------|
-| `bubble create --id <id> --repo <path> --base <branch> --review-artifact-type <document\|code> ((--task <text> \| --task-file <path>) \| --ideation) [--reviewer-brief <text> \| --reviewer-brief-file <path>] [--accuracy-critical]` | Initialize a new bubble (task-based or taskless ideation mode) |
+| `bubble create --id <id> --repo <path> --base <branch> --review-artifact-type <document\|code> ((--task <text> \| --task-file <path>) \| --ideation) [--remote <host>] [--reviewer-brief <text> \| --reviewer-brief-file <path>] [--accuracy-critical]` | Initialize a new bubble (task-based or taskless ideation mode, local or remote) |
 | `bubble kickoff --id <id> (--task <text> \| --task-file <path>) [--repo <path>]` | Activate a taskless ideation bubble (round `0` -> `1`) |
 | `bubble start --id <id> [--repo <path>]` | Start a bubble (worktree + tmux) |
 | `bubble restart --id <id> [--repo <path>]` | Restart a bubble runtime (tmux/session cleanup + start) |

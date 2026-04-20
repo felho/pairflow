@@ -51,9 +51,12 @@ This skill exists to avoid lifecycle mistakes (wrong command in wrong state, los
 12. Decision separation: `--decide approve|rework` controls lifecycle action only (`bubble approve` / `bubble request-rework`) and is independent from review content gathering.
 13. Ideation lifecycle is explicit: if a bubble was created with `--ideation`, run `pairflow bubble kickoff` before any `pass`/`converged` loop command.
 14. If runtime is unhealthy (agent pane unresponsive, tmux/session mismatch, token/login refresh needed), prefer `pairflow bubble restart --id <id> [--repo <path>]` over manual tmux kill/start steps.
-15. `RUNNING round=0` ideation state is a valid hold state. Do not auto-kickoff. Exception: if the user asks for a loop action (`pass`/`converged`) while still in round-0 ideation, run kickoff first because loop actions require an active round.
-16. Pre-kickoff manual preparation in the bubble worktree is allowed when explicitly requested by the user. In this pattern, kickoff text should summarize already-applied work and define expected first handoff behavior.
-17. `ReviewBubble` should explain findings in business-technical language by default, not just reviewer shorthand:
+15. Remote exception: if a started remote bubble reports runtime loss (`remoteExecution.pointerKind="started"` with runtime unavailable/missing), treat that fail-closed. Do not assume `bubble start` or `bubble restart` is the supported recovery contract on top of preserved remote state in this phase.
+16. For remote bubble creation, use `pairflow bubble create --remote <host> ...`; execution still begins only at `bubble start`.
+17. Remote attach is a separate operator step. `bubble attach` for remote bubbles uses the persisted started pointer plus optional `--port-forward`, not local tmux attach.
+18. `RUNNING round=0` ideation state is a valid hold state. Do not auto-kickoff. Exception: if the user asks for a loop action (`pass`/`converged`) while still in round-0 ideation, run kickoff first because loop actions require an active round.
+19. Pre-kickoff manual preparation in the bubble worktree is allowed when explicitly requested by the user. In this pattern, kickoff text should summarize already-applied work and define expected first handoff behavior.
+20. `ReviewBubble` should explain findings in business-technical language by default, not just reviewer shorthand:
   - explain the technical issue,
   - explain why it matters in practical terms,
   - state whether it is blocking now or only future hardening debt.
@@ -85,6 +88,7 @@ This skill exists to avoid lifecycle mistakes (wrong command in wrong state, los
 - `RUNNING` with ideation pending and no kickoff request yet -> hold in round-0; report status and wait for explicit kickoff decision
 - `RUNNING` (active round, typically `round>=1`) -> no approve/rework yet; use normal loop commands (`pass`, `converged`) in agent panes
 - Runtime-health issue in non-final active states (for example stalled pane, refreshed agent login/session) -> `pairflow bubble restart --id <id> [--repo <path>]`
+- Remote started-pointer runtime loss (`remoteExecution.pointerKind="started"` with runtime unavailable/missing) -> inspect `pairflow bubble status --id <id> --repo <path> --json` or `pairflow bubble list --refresh`; report preserved-state fail-closed and do not imply that `start`/`restart` is already the supported recovery path
 - `WAITING_HUMAN` -> use `pairflow bubble reply` (NOT `bubble request-rework`)
 - `META_REVIEW_RUNNING` -> inspect `pairflow bubble status --id <id> --json`; if gate appears stuck or runtime is unhealthy, use `pairflow bubble restart --id <id> [--repo <path>]`
 - `READY_FOR_HUMAN_APPROVAL` (legacy compatible: `READY_FOR_APPROVAL`) -> choose `pairflow bubble approve` OR `pairflow bubble request-rework`
@@ -102,6 +106,10 @@ This skill exists to avoid lifecycle mistakes (wrong command in wrong state, los
   - If task file exists on `main`, commit it before bubble start.
   - Exception: if the only pre-flight blocker is that the selected task file is uncommitted (new or modified), auto-commit that task file without asking for approval, then continue bubble create/start.
   - This exception applies to both docs-only refinement bubbles and implementation bubbles when the task source is that file.
+- Remote create/start guardrails:
+  - `pairflow bubble create --remote <host>` configures a remote executor but does not touch the remote host yet.
+  - Keep `bubble attach` as a separate explicit step after remote start; do not assume create/start should auto-attach.
+  - Respect repository-specific bubble-create guardrails such as required `--bootstrap-command` when they are declared in the repo docs or AGENTS instructions.
 - While a bubble is running, parallel direct commits on `main` are allowed only for file-disjoint scope (no overlap with the bubble's touched files).
 - After `bubble start`, status may be briefly stale. Poll status once more before deciding it failed.
 - If `--repo` lookup behaves unexpectedly, retry from repo root cwd and verify with `status --json`.
