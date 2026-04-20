@@ -4,6 +4,7 @@ import { getBubblePaths } from "../../../src/v11/infrastructure/artifact/bubble/
 import {
   attachBubble
 } from "../../../src/v11/application/attach/emitAttachV11.js";
+import { buildBubbleTmuxSessionName } from "../../../src/v11/shared/bubble/tmuxSessionName.js";
 import { SchemaValidationError } from "../../../src/v11/shared/validation/primitives.js";
 import type {
   AttachBubbleError,
@@ -1088,6 +1089,39 @@ describe("attachBubble", () => {
         }
       )
     ).rejects.toThrow(/Tmux session .* does not exist/u);
+  });
+
+  it("uses the hashed start-session naming contract for local attach", async () => {
+    const resolved = createResolvedBubbleFixture({
+      bubbleId: "phase3f-remote-open-ui-consume",
+      repoPath: "/tmp/pairflow-attach-hashed-session",
+      attachLauncher: "copy"
+    });
+
+    const checkedSessionNames: string[] = [];
+    const result = await attachBubble(
+      {
+        bubbleId: resolved.bubbleId,
+        repoPath: resolved.repoPath
+      },
+      {
+        resolveBubbleById: () => Promise.resolve(resolved),
+        checkTmuxSessionExists: (sessionName) => {
+          checkedSessionNames.push(sessionName);
+          return Promise.resolve(true);
+        }
+      }
+    );
+
+    expect(checkedSessionNames).toEqual([
+      buildBubbleTmuxSessionName(resolved.bubbleId)
+    ]);
+    expect(result.tmuxSessionName).toBe(
+      buildBubbleTmuxSessionName(resolved.bubbleId)
+    );
+    expect(result.attachCommand).toBe(
+      `tmux attach -t '${buildBubbleTmuxSessionName(resolved.bubbleId)}'`
+    );
   });
 
   it("fails closed with actionable guidance when remote pointer is created", async () => {

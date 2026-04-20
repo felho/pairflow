@@ -7,6 +7,7 @@ import type {
 } from "../../../types/bubble.js";
 import type { ResolvedBubbleById } from "../ports/bubbleLookup.js";
 import { SchemaValidationError } from "../validation/primitives.js";
+import { buildBubbleTmuxSessionName } from "../bubble/tmuxSessionName.js";
 
 export interface AttachBubbleErrorContextShape {
   bubbleId?: string;
@@ -272,7 +273,7 @@ async function resolveLocalAttachExecution<
     });
   }
 
-  const tmuxSessionName = `pf-${input.resolved.bubbleId}`;
+  const tmuxSessionName = buildBubbleTmuxSessionName(input.resolved.bubbleId);
   const sessionExists = await input.checkTmuxSessionExists(tmuxSessionName);
   if (!sessionExists) {
     throw input.createAttachError({
