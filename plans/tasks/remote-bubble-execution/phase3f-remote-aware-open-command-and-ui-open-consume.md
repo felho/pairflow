@@ -280,32 +280,70 @@ owners:
 5. A `remote_authority` canonical formaja:
    - `[user@]host`
    - a `user@` prefix csak akkor jelenik meg, ha a resolved remote user elerheto.
-6. A remote URI rendering ownershipa:
+6. Authority assembly es supplement boundary:
+   - a `remoteClonePath` canonical source-a kizarolag a started pointer `remoteClonePath` mezoje;
+   - a `host` canonical source-a a started pointer `host` mezoje;
+   - a remote config supplement legfeljebb a hianyzo `user` erteket adhatja hozza, illetve expected-host drift guardkent hasznalhato;
+   - a config supplement nem irhatja felul sem a persisted `host`-ot, sem a `remoteClonePath`-ot.
+7. A remote URI rendering ownershipa:
    - dedikalt URI-encoding helper ownership,
    - nem megengedett a `remote_clone_path` vagy a `remote_authority` egyszeru `shellQuote`-os URI-resz renderje,
    - a shell quoting csak a vegso command argument boundaryra alkalmazhato.
-7. Minimum remote placeholder vocabulary:
+8. Minimum remote placeholder vocabulary:
    - `{{remote_clone_path}}`
    - `{{remote_host}}`
    - `{{remote_user}}`
    - `{{remote_authority}}`
    - optional: `{{remote_alias}}`
-8. A shared `OpenBubbleResult` / `UiOpenBubbleResult` contract explicit target-modelre valt:
+9. Rendering contract explicit fail-closed szabalyokkal:
+   - a local `open_command` tovabbra is csak local placeholder semanticsra epithet;
+   - a remote `open_remote_command` csak a remote placeholder vocabularyt kapja guaranteed inputkent;
+   - `{{worktree_path}}` nem kap hallgatolagos remote clone jelentest;
+   - unresolved vagy nem tamogatott placeholder eseten az `open` explicit konfiguracios hibaval alljon meg, nyers tokenes launch nelkul.
+10. A shared `OpenBubbleResult` / `UiOpenBubbleResult` contract explicit target-modelre valt:
    - `workspaceKind`: `local_worktree` | `remote_clone`
    - `workspacePath`: a tenyleges launch-target path
    - `remoteAuthority?`: csak remote launch eseten
    - `command`
    - `worktreePath` retained compatibility fieldkent csak local-worktree jelentessel maradhat; nem terhelheto tul remote clone path jelentessel.
-9. Remote open akkor engedett, ha:
+11. Result-consume branch explicit marad:
+   - a CLI es a UI human wording a `workspaceKind` alapjan valasszon local-vs-remote sikeruzenetet;
+   - nem megengedett a target-tipus visszakovetkeztetese pusztan a `worktreePath` jelenletebol.
+12. Remote open akkor engedett, ha:
    - bubble executor ssh,
    - remote pointer `kind="started"`,
    - remote clone path jelen van,
    - host drift nincs a config supplement es a pointer kozott.
-10. Remote open forbidden when:
+13. Local-vs-remote validation branch elvalik:
+   - local bubble eseten retained worktree existence check marad;
+   - remote bubble eseten a laptop oldali worktree existence nem lehet authority proof vagy launch precondition.
+14. Remote open forbidden when:
    - pointer missing,
    - pointer `created`,
    - invalid pointer,
    - ambiguous host/authority supplement.
+
+## Implementation Sequence
+
+1. Additiv config-shape eloszor:
+   - bubble/global `open_remote_command` parser + typing + defaults ugy, hogy a local `open_command` contract erintetlen maradjon.
+2. Shared open route-selection masodikkent:
+   - local-vs-remote branch explicit seamre keruljon,
+   - remote branch started pointert, config supplementet, es host drift guardot fogyasszon,
+   - attach consume-bol csak a szukseges authority-resolution mintat vegye at, ne logika-copyval.
+3. Remote rendering/helper reteg harmadikkent:
+   - kulon remote template rendering + URI encoding helper,
+   - explicit fail-closed placeholder validation,
+   - built-in remote default ugyanebben a seam-ben.
+4. Result-surface es operator wording negyedikkent:
+   - `OpenBubbleResult` / `UiOpenBubbleResult` target-model explicitte valik,
+   - CLI output, README, es UI contract wording ugyanarra a shape-re all ra.
+5. Tesztmatrix vegul:
+   - local retained baseline,
+   - remote happy path,
+   - pointer/config drift guard,
+   - placeholder/encoding fail-closed esetek,
+   - CLI/UI result wording alignment.
 
 ## Acceptance Criteria
 
@@ -320,14 +358,27 @@ owners:
 9. `created` remote bubble eseten az `open` explicit fail-closed hibat ad:
    - start required,
    - nincs implicit remote start vagy attach.
-10. A tesztek fedik:
+10. A remote branch nem igenyel es nem is hasznal laptop oldali worktree existence proofot a launch authorityhoz.
+11. A started pointer `host` es `remoteClonePath` canonical authority marad; config supplement ezeket nem irhatja felul, csak hianyzo usert potolhat es drift guardot adhat.
+12. Unresolved vagy nem tamogatott remote placeholder eseten az `open` explicit konfiguracios hibaval all meg; nincs reszlegesen renderelt parancs.
+13. A remote built-in default URI-ja dedikalt URI-encodinggal all elo; nincs shell-quoted URI-reszlet mint encoding surrogate.
+14. A remote authority nem vezetheto le implicit modon sem local source repo-bol, sem `--repo` ertekbol; remote consume eseten a launch target authorityja kizarolag a started pointerbol es a szuk config supplementbol epulhet fel.
+15. A tesztek fedik:
    - local precedence,
    - remote precedence,
    - built-in remote default render,
+   - `[user@]host` authority render ugy, hogy a `user@` prefix csak akkor jelenjen meg, ha resolved remote user tenylegesen elerheto,
    - explicit open-result shape local-vs-remote target semanticsa,
+   - result-consumer wording local-vs-remote branch alapjan,
    - remote placeholder rendering,
+   - unresolved placeholder fail-closed,
    - started-vs-created pointer gating,
+   - remote branch nem igenyel laptop oldali worktree existence proofot, es nem a local worktree preconditionokbol kovetkeztet launch authorityra,
    - expected-host drift fail-closed,
+   - ambiguous host/authority supplement fail-closed,
+   - config supplement only-fills-missing-user semantics anelkul, hogy felulirna a persisted `host` vagy `remoteClonePath` authorityt,
+   - dedikalt URI-encoding helper ownership, ahol a shell quoting nem URI-encoding surrogate,
+   - nincs implicit remote authority levezetes local source repo vagy `--repo` alapjan,
    - CLI wording alignment.
 
 ## Out of Scope
@@ -337,6 +388,8 @@ owners:
 3. Remote editor session health verification.
 4. Background detection arrol, hogy a VS Code Remote SSH extension telepitve van-e.
 5. Success toast, post-launch polling, vagy richer UI telemetry.
+6. Persisted remote pointer schema ujranyitasa a szukseges consume-felteteleken tul.
+7. Barmilyen local-source-repo vagy `--repo` alapjan torteno implicit remote authority levezetes.
 
 ## Non-Blocking Notes
 
