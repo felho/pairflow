@@ -31,6 +31,12 @@ describe("sshBubbleApprovalCommand", () => {
       "export PAIRFLOW_WORKTREE_ROOT='/srv/pairflow clones/repo'\\''s bubble'"
     );
     expect(script).toContain(
+      "export PAIRFLOW_REMOTE_APPROVAL_MODE='inner_remote_execution'"
+    );
+    expect(script).toContain(
+      "export PAIRFLOW_REMOTE_APPROVAL_WORKSPACE_ROOT='/srv/pairflow clones/repo'\\''s bubble'"
+    );
+    expect(script).toContain(
       "'pairflow' 'bubble' 'approve' '--id' 'b_remote_approval_01' '--repo' '/srv/pairflow clones/repo'\\''s bubble'"
     );
     expect(script).toContain("'--override-non-approve'");

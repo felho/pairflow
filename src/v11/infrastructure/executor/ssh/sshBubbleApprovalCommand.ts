@@ -34,6 +34,10 @@ const remoteApprovalTranscriptLineStartMarker =
   "__PAIRFLOW_REMOTE_APPROVAL_TRANSCRIPT_LINE_START__";
 const remoteApprovalTranscriptLineEndMarker =
   "__PAIRFLOW_REMOTE_APPROVAL_TRANSCRIPT_LINE_END__";
+const remoteApprovalModeEnvVar = "PAIRFLOW_REMOTE_APPROVAL_MODE";
+const remoteApprovalWorkspaceRootEnvVar =
+  "PAIRFLOW_REMOTE_APPROVAL_WORKSPACE_ROOT";
+const remoteApprovalModeInnerRemoteExecution = "inner_remote_execution";
 
 export type RemoteBubbleApprovalCommandAction = "approve" | "request-rework";
 
@@ -159,6 +163,8 @@ export function buildRemoteBubbleApprovalScript(
     "set -euo pipefail",
     `cd ${shellQuote(input.remoteClonePath)}`,
     `export PAIRFLOW_WORKTREE_ROOT=${shellQuote(input.remoteClonePath)}`,
+    `export ${remoteApprovalModeEnvVar}=${shellQuote(remoteApprovalModeInnerRemoteExecution)}`,
+    `export ${remoteApprovalWorkspaceRootEnvVar}=${shellQuote(input.remoteClonePath)}`,
     `printf '%s\\n' ${shellQuote(remoteApprovalBeforeStateStartMarker)}`,
     `cat ${shellQuote(statePath)}`,
     `printf '%s\\n' ${shellQuote(remoteApprovalBeforeStateEndMarker)}`,

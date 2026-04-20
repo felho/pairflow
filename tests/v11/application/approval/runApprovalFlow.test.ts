@@ -10,6 +10,11 @@ import type {
 } from "../../../../src/types/bubble.js";
 import { applyStateTransition } from "../../../../src/v11/domain/state/machine.js";
 import { deliveryTargetRoleMetadataKey } from "../../../../src/types/protocol.js";
+import {
+  remoteApprovalModeEnvVar,
+  remoteApprovalModeInnerRemoteExecution,
+  remoteApprovalWorkspaceRootEnvVar
+} from "../../../../src/v11/application/approval/remoteApprovalExecutionContext.js";
 import { runApprovalDecisionFlow } from "../../../../src/v11/application/approval/runApprovalFlow.js";
 import { runRequestReworkFlow } from "../../../../src/v11/application/approval/runApprovalFlow.js";
 import { queueDeferredReworkIntent } from "../../../../src/v11/shared/approval/reworkIntent.js";
@@ -580,6 +585,44 @@ describe("runApprovalDecisionFlow delivery invariant", () => {
       },
       overrideNonApprove: false
     });
+  });
+
+  it("uses the local canonical approval path inside a verified remote clone execution context", async () => {
+    const now = new Date("2026-04-17T09:05:00.000Z");
+    const flow = createRemoteFlowDependencies({
+      remotePointer: null,
+      resolvedRepoPath: "/srv/pairflow/repo--b_remote_approval_01"
+    });
+
+    vi.stubEnv(
+      remoteApprovalModeEnvVar,
+      remoteApprovalModeInnerRemoteExecution
+    );
+    vi.stubEnv(
+      remoteApprovalWorkspaceRootEnvVar,
+      "/srv/pairflow/repo--b_remote_approval_01"
+    );
+
+    try {
+      const result = await runApprovalDecisionFlow(
+        {
+          bubbleId: "b_remote_approval_01",
+          decision: "approve",
+          refs: [],
+          now,
+          createError: (input) => new Error(toErrorMessage(input))
+        },
+        flow.dependencies
+      );
+
+      expect(result.state.state).toBe("APPROVED_FOR_COMMIT");
+      expect(flow.executeRemoteBubbleApprovalCommand).not.toHaveBeenCalled();
+      expect(flow.rawDependencies.readStateSnapshot).toHaveBeenCalledOnce();
+      expect(flow.rawDependencies.appendProtocolEnvelope).toHaveBeenCalledOnce();
+      expect(flow.rawDependencies.writeStateSnapshot).toHaveBeenCalledOnce();
+    } finally {
+      vi.unstubAllEnvs();
+    }
   });
 
   it("queues remote request-rework through the started pointer authority when WAITING_HUMAN remains retained", async () => {

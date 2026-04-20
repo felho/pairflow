@@ -8,6 +8,10 @@ import type {
 } from "../../../types/bubble.js";
 import type { ApprovalRemoteBubbleStatusTarget } from "./approvalRemoteExecutionContract.js";
 import type { ResolvedApprovalCommandDependencies } from "./approvalCommandDependencyResolution.js";
+import {
+  canonicalizeApprovalExecutionPath,
+  resolveRemoteApprovalExecutionContextFromEnv
+} from "./remoteApprovalExecutionContext.js";
 
 export interface LocalApprovalFlowExecutionContext {
   route: "local";
@@ -442,6 +446,38 @@ export async function initializeApprovalFlowExecutionContext(input: {
 }): Promise<ApprovalFlowExecutionContext> {
   const base = await resolveApprovalFlowBaseResolution(input);
   if (base.resolved.bubbleConfig.executor?.type === "ssh") {
+    const remoteApprovalExecutionContext =
+      resolveRemoteApprovalExecutionContextFromEnv();
+    const resolvedRepoPath = canonicalizeApprovalExecutionPath(
+      base.resolved.repoPath
+    );
+    if (
+      remoteApprovalExecutionContext?.kind === "remote_clone"
+      && remoteApprovalExecutionContext.workspaceRoot === resolvedRepoPath
+    ) {
+      const remotePointer = await input.dependencies.readRemotePointer(
+        base.resolved.bubblePaths.remotePointerPath
+      );
+      if (remotePointer !== null) {
+        throw input.createError({
+          reasonCode: "APPROVAL_REMOTE_CLONE_CONTEXT_INVALID",
+          message:
+            `Remote inner approval for '${base.resolved.bubbleId}' refused to continue because source-repo remote artifacts are still present.`,
+          context: {
+            command_name: "approval",
+            bubble_id: base.resolved.bubbleId,
+            remote_pointer_kind: remotePointer.kind,
+            remote_workspace_root: remoteApprovalExecutionContext.workspaceRoot
+          }
+        });
+      }
+
+      return initializeLocalApprovalFlowExecutionContext({
+        base,
+        dependencies: input.dependencies
+      });
+    }
+
     return initializeRemoteApprovalFlowExecutionContext({
       base,
       createError: input.createError,
@@ -466,6 +502,38 @@ export async function initializeRequestReworkFlowExecutionContext(input: {
   const base = await resolveApprovalFlowBaseResolution(input);
 
   if (base.resolved.bubbleConfig.executor?.type !== "ssh") {
+    return initializeLocalApprovalFlowExecutionContext({
+      base,
+      dependencies: input.dependencies
+    });
+  }
+
+  const remoteApprovalExecutionContext =
+    resolveRemoteApprovalExecutionContextFromEnv();
+  const resolvedRepoPath = canonicalizeApprovalExecutionPath(
+    base.resolved.repoPath
+  );
+  if (
+    remoteApprovalExecutionContext?.kind === "remote_clone"
+    && remoteApprovalExecutionContext.workspaceRoot === resolvedRepoPath
+  ) {
+    const remotePointer = await input.dependencies.readRemotePointer(
+      base.resolved.bubblePaths.remotePointerPath
+    );
+    if (remotePointer !== null) {
+      throw input.createError({
+        reasonCode: "APPROVAL_REMOTE_CLONE_CONTEXT_INVALID",
+        message:
+          `Remote inner request-rework for '${base.resolved.bubbleId}' refused to continue because source-repo remote artifacts are still present.`,
+        context: {
+          command_name: "approval",
+          bubble_id: base.resolved.bubbleId,
+          remote_pointer_kind: remotePointer.kind,
+          remote_workspace_root: remoteApprovalExecutionContext.workspaceRoot
+        }
+      });
+    }
+
     return initializeLocalApprovalFlowExecutionContext({
       base,
       dependencies: input.dependencies
