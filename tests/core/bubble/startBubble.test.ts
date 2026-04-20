@@ -1343,6 +1343,81 @@ describe("startBubble", () => {
     });
   });
 
+  it("resumes a remote clone bubble with verified remote clone workspace authority", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_start_remote_clone_resume_01",
+      task: "Remote clone resume uses verified clone root as tmux workspace authority"
+    });
+
+    await writeFile(
+      bubble.paths.bubbleTomlPath,
+      renderBubbleConfigToml({
+        ...bubble.config,
+        executor: {
+          type: "ssh",
+          remote: "homelab"
+        }
+      }),
+      "utf8"
+    );
+
+    const previousMode = process.env[remoteCloneStartModeEnvVar];
+    const previousWorkspaceRoot = process.env[remoteCloneWorkspaceRootEnvVar];
+    const previousPairflowWorktreeRoot = process.env.PAIRFLOW_WORKTREE_ROOT;
+    process.env[remoteCloneStartModeEnvVar] = remoteCloneStartModeValue;
+    process.env[remoteCloneWorkspaceRootEnvVar] = repoPath;
+    process.env.PAIRFLOW_WORKTREE_ROOT = repoPath;
+
+    try {
+      const result = await startBubble(
+        {
+          bubbleId: bubble.bubbleId,
+          cwd: repoPath,
+          now: new Date("2026-04-20T19:05:00.000Z")
+        },
+        {
+          buildResumeTranscriptSummary: async () =>
+            "resume-summary: verified-remote-clone",
+          launchBubbleTmuxSession: async (input: LaunchBubbleTmuxSessionInput) => {
+            const implementerScript = extractBashLcScript(input.implementerCommand);
+            expect(input.workspacePath).toBe(repoPath);
+            expect(implementerScript).toContain(
+              `if ! cd ${shellQuote(repoPath)}; then`
+            );
+            expect(implementerScript).not.toContain(
+              bubble.paths.worktreePath
+            );
+            return {
+              sessionName: "pf-b_start_remote_clone_resume_01"
+            };
+          }
+        }
+      );
+
+      expect(result.executionTarget).toBe("local");
+      expect(result.runtimeWorkspacePath).toBe(repoPath);
+      expect(result.tmuxSessionName).toBe("pf-b_start_remote_clone_resume_01");
+    } finally {
+      if (previousMode === undefined) {
+        delete process.env[remoteCloneStartModeEnvVar];
+      } else {
+        process.env[remoteCloneStartModeEnvVar] = previousMode;
+      }
+      if (previousWorkspaceRoot === undefined) {
+        delete process.env[remoteCloneWorkspaceRootEnvVar];
+      } else {
+        process.env[remoteCloneWorkspaceRootEnvVar] = previousWorkspaceRoot;
+      }
+      if (previousPairflowWorktreeRoot === undefined) {
+        delete process.env.PAIRFLOW_WORKTREE_ROOT;
+      } else {
+        process.env.PAIRFLOW_WORKTREE_ROOT = previousPairflowWorktreeRoot;
+      }
+    }
+  });
+
   it("fails closed when local RUNNING reconciliation fails after remote confirmation", async () => {
     const repoPath = await createTempRepo();
     await addOriginRemote(repoPath);

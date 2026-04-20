@@ -7,23 +7,44 @@ import type { ResolvedStartBubbleDependencies } from "./startCommandOrchestratio
 import type { StartExecutionContext } from "./startCommandContext.js";
 import { StartBubbleError } from "./startCommandRuntime.js";
 
+function resolveVerifiedRemoteCloneWorkspaceAuthority(
+  context: StartExecutionContext
+): {
+  workspacePath: string;
+  workspaceKind: WorkspaceKind;
+} | undefined {
+  const workspacePath = context.remoteStartContext?.workspaceRoot?.trim();
+  if ((workspacePath?.length ?? 0) === 0) {
+    return undefined;
+  }
+
+  return {
+    workspacePath: workspacePath!,
+    workspaceKind: context.resolved.bubbleConfig.work_mode
+  };
+}
+
 function resolveInitialRuntimeLaunchWorkspaceAuthority(input: {
-  startMode: StartExecutionContext["startMode"];
-  launchWorkspacePath: string;
-  launchWorkspaceKind: WorkspaceKind;
+  context: StartExecutionContext;
 }): {
   workspacePath?: string;
   workspaceKind?: WorkspaceKind;
 } {
-  if (input.startMode === "fresh") {
+  const verifiedRemoteCloneAuthority =
+    resolveVerifiedRemoteCloneWorkspaceAuthority(input.context);
+  if (verifiedRemoteCloneAuthority !== undefined) {
+    return verifiedRemoteCloneAuthority;
+  }
+
+  if (input.context.startMode === "fresh") {
     // Fresh start claims runtime ownership before bootstrap resolves the
     // canonical launch workspace authority, so Phase 1C1 keeps this empty.
     return {};
   }
   return {
     // Resume reuses the Phase 1C1 canonical no-split launch workspace root.
-    workspacePath: input.launchWorkspacePath,
-    workspaceKind: input.launchWorkspaceKind
+    workspacePath: input.context.resolved.bubblePaths.worktreePath,
+    workspaceKind: input.context.resolved.bubbleConfig.work_mode
   };
 }
 
@@ -39,6 +60,7 @@ async function readPersistedRuntimeSessionRecord(input: {
 }
 
 function resolveRetryRuntimeLaunchWorkspaceAuthority(input: {
+  context: StartExecutionContext;
   bubbleId: string;
   requestedWorkspaceKind: WorkspaceKind;
   existingRecord: RuntimeSessionRecord;
@@ -46,6 +68,12 @@ function resolveRetryRuntimeLaunchWorkspaceAuthority(input: {
   workspacePath?: string;
   workspaceKind?: WorkspaceKind;
 } {
+  const verifiedRemoteCloneAuthority =
+    resolveVerifiedRemoteCloneWorkspaceAuthority(input.context);
+  if (verifiedRemoteCloneAuthority !== undefined) {
+    return verifiedRemoteCloneAuthority;
+  }
+
   const resolution = resolveRuntimeSessionWorkspaceAuthority({
     runtimeSessionRecord: input.existingRecord
   });
@@ -111,9 +139,7 @@ export async function claimRuntimeSessionOwnership(input: {
     }
   }
   const initialWorkspaceAuthority = resolveInitialRuntimeLaunchWorkspaceAuthority({
-    startMode: input.context.startMode,
-    launchWorkspacePath: input.context.resolved.bubblePaths.worktreePath,
-    launchWorkspaceKind: input.context.resolved.bubbleConfig.work_mode
+    context: input.context
   });
   const firstClaim = await input.deps.claimSession({
     sessionsPath: input.context.resolved.bubblePaths.sessionsPath,
@@ -158,6 +184,7 @@ export async function claimRuntimeSessionOwnership(input: {
       let retryWorkspaceAuthority;
       try {
         retryWorkspaceAuthority = resolveRetryRuntimeLaunchWorkspaceAuthority({
+          context: input.context,
           bubbleId: input.context.resolved.bubbleId,
           requestedWorkspaceKind: input.context.resolved.bubbleConfig.work_mode,
           existingRecord: firstClaim.record
