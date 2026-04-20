@@ -29,6 +29,7 @@ import {
   emitDeleteLifecycleEvent,
   removeDeleteBubbleDirectory
 } from "./deleteBubbleFinalization.js";
+import { maybeFinalizeRemoteDeleteMissingTargetFallback } from "./deleteBubbleRemoteMissingTargetFallback.js";
 
 export type {
   DeleteBubbleArtifacts,
@@ -320,12 +321,31 @@ export async function deleteBubble(
   });
 
   if (routeContext.route === "remote") {
-    const remoteResult = await resolvedDependencies.executeRemoteBubbleDeleteCommand({
-      bubbleId: routeContext.resolved.bubbleId,
-      remoteClonePath: routeContext.remotePointer.remoteClonePath,
-      remoteTarget: routeContext.remoteTarget,
-      force: input.force === true
-    });
+    let remoteResult: ExecuteRemoteBubbleDeleteCommandResult;
+    try {
+      remoteResult = await resolvedDependencies.executeRemoteBubbleDeleteCommand({
+        bubbleId: routeContext.resolved.bubbleId,
+        remoteClonePath: routeContext.remotePointer.remoteClonePath,
+        remoteTarget: routeContext.remoteTarget,
+        force: input.force === true
+      });
+    } catch (error) {
+      const fallbackResult = await maybeFinalizeRemoteDeleteMissingTargetFallback({
+        deleteInput: input,
+        routeContext,
+        dependencies: resolvedDependencies,
+        now,
+        remoteDeleteError: error,
+        determineDeleteExecutionContext,
+        returnDeleteSuccessWithLifecycle,
+        toDeleteStepError,
+        inferCreatedAtFromBubbleInstanceId
+      });
+      if (fallbackResult !== undefined) {
+        return fallbackResult;
+      }
+      throw error;
+    }
 
     if (input.force !== true) {
       return assertRemoteDeleteConfirmationResult({

@@ -16,6 +16,7 @@ import {
   remoteDeleteModeInnerRemoteExecution,
   remoteDeleteWorkspaceRootEnvVar
 } from "../../../src/v11/application/delete/remoteDeleteExecutionContext.js";
+import { RemoteBubbleDeleteCommandError } from "../../../src/v11/infrastructure/executor/ssh/sshBubbleDeleteCommand.js";
 import {
   readRuntimeSessionsRegistry,
   removeRuntimeSession,
@@ -2220,6 +2221,84 @@ describe("deleteBubble", () => {
       archiveRootPath: process.env.PAIRFLOW_ARCHIVE_ROOT
     });
     await expect(stat(archivePaths.bubbleInstanceArchivePath)).resolves.toBeDefined();
+  });
+
+  it("falls back to local archive continuity when force remote delete sees a missing remote clone target", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await convertDeleteBubbleToRemoteStarted(
+      await createBubble({
+        id: "b_delete_remote_invalid_target_force_01",
+        repoPath,
+        baseBranch: "main",
+        reviewArtifactType: "code",
+        task: "Remote delete invalid target fallback",
+        cwd: repoPath
+      })
+    );
+    const now = new Date("2026-04-18T16:55:00.000Z");
+
+    const result = await deleteBubble(
+      {
+        bubbleId: bubble.bubbleId,
+        cwd: repoPath,
+        force: true,
+        now
+      },
+      {
+        executeRemoteBubbleDeleteCommand: vi.fn(async () => {
+          throw new RemoteBubbleDeleteCommandError({
+            code: "REMOTE_DELETE_INVALID_TARGET",
+            message:
+              `Remote delete transport failed for ${bubble.bubbleId} on prod: missing remote clone target`,
+            context: {
+              bubbleId: bubble.bubbleId,
+              remoteAlias: "prod"
+            }
+          });
+        }),
+        resolveRemoteBubbleStatusTarget: vi.fn(async () => ({
+          alias: "prod",
+          host: "ssh.example.com",
+          user: "pairflow",
+          pairflowCommand: "pairflow"
+        }))
+      }
+    );
+
+    expect(result.deleted).toBe(true);
+    expect(result.artifacts.worktree).toEqual({
+      exists: false,
+      path: `/srv/pairflow/repo--${bubble.bubbleId}`
+    });
+    expect(result.tmuxSessionTerminated).toBe(false);
+    expect(result.runtimeSessionRemoved).toBe(false);
+    expect(result.removedWorktree).toBe(false);
+    expect(result.removedBubbleBranch).toBe(false);
+
+    const archivePaths = await resolveArchivePaths({
+      repoPath,
+      bubbleInstanceId: bubble.config.bubble_instance_id as string,
+      archiveRootPath: process.env.PAIRFLOW_ARCHIVE_ROOT
+    });
+    await expect(stat(archivePaths.bubbleInstanceArchivePath)).resolves.toBeDefined();
+    await expect(stat(bubble.paths.bubbleDir)).rejects.toMatchObject({
+      code: "ENOENT"
+    });
+    expect(
+      (await readMetricsEventsForDate(now)).find(
+        (event) => event.event_type === "bubble_deleted"
+      )
+    ).toMatchObject({
+      bubble_id: bubble.bubbleId,
+      event_type: "bubble_deleted",
+      metadata: {
+        force: true,
+        had_worktree: false,
+        had_tmux_session: false,
+        had_runtime_session: false,
+        had_branch: false
+      }
+    });
   });
 
   it("uses the local canonical delete path inside a verified remote clone execution context", async () => {
