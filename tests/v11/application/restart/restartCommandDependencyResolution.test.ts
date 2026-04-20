@@ -32,10 +32,12 @@ describe("restartCommandDependencyResolution", () => {
       ({
         existed: true
       })) as never;
+    const readRemotePointer = (async () => null) as never;
     const removeRuntimeSession = (async () => true) as never;
 
     const resolved = resolveRestartBubbleDependencies({
       resolveBubbleById,
+      readRemotePointer,
       terminateBubbleTmuxSession,
       removeRuntimeSession,
       startBubble: customStartBubble,
@@ -43,6 +45,7 @@ describe("restartCommandDependencyResolution", () => {
     });
 
     expect(resolved.resolveBubbleById).toBe(resolveBubbleById);
+    expect(resolved.readRemotePointer).toBe(readRemotePointer);
     expect(resolved.terminateBubbleTmuxSession).toBe(terminateBubbleTmuxSession);
     expect(resolved.removeRuntimeSession).toBe(removeRuntimeSession);
     expect(resolved.startBubble).toBe(customStartBubble);

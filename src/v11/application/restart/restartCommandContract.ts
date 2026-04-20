@@ -8,6 +8,7 @@ import type {
 import type {
   ResolveBubbleByIdPort
 } from "../../shared/ports/bubbleLookup.js";
+import type { BubbleRemotePointer } from "../../../types/bubble.js";
 import type {
   TerminateBubbleTmuxSessionPort
 } from "../../shared/ports/tmuxSessions.js";
@@ -35,6 +36,7 @@ export interface RestartBubbleResult {
 
 export interface RestartBubbleDependencies {
   resolveBubbleById?: ResolveBubbleByIdPort;
+  readRemotePointer?: (path: string) => Promise<BubbleRemotePointer | null>;
   terminateBubbleTmuxSession?: TerminateBubbleTmuxSessionPort;
   removeRuntimeSession?: RemoveRuntimeSessionPort;
   persistPassValidationRecoveryMarker?: PersistPassValidationRecoveryMarkerPort;

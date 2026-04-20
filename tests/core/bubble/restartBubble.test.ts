@@ -18,7 +18,8 @@ describe("restartBubble", () => {
         id: "b_restart_01"
       },
       bubblePaths: {
-        sessionsPath: "/tmp/repo-real/.pairflow/runtime/sessions.json"
+        sessionsPath: "/tmp/repo-real/.pairflow/runtime/sessions.json",
+        remotePointerPath: "/tmp/repo-real/.pairflow/bubbles/b_restart_01/remote.json"
       }
     } as unknown as ResolvedBubbleById;
 
@@ -33,6 +34,7 @@ describe("restartBubble", () => {
         existed: true
       });
     });
+    const readRemotePointer = vi.fn(async () => null);
     const removeRuntimeSession = vi.fn(() => {
       callOrder.push("remove");
       return Promise.resolve(true);
@@ -58,6 +60,7 @@ describe("restartBubble", () => {
       },
       {
         resolveBubbleById,
+        readRemotePointer,
         terminateBubbleTmuxSession,
         removeRuntimeSession,
         startBubble
@@ -72,6 +75,9 @@ describe("restartBubble", () => {
     expect(terminateBubbleTmuxSession).toHaveBeenCalledWith({
       bubbleId: "b_restart_01"
     });
+    expect(readRemotePointer).toHaveBeenCalledWith(
+      "/tmp/repo-real/.pairflow/bubbles/b_restart_01/remote.json"
+    );
     expect(removeRuntimeSession).toHaveBeenCalledWith({
       sessionsPath: "/tmp/repo-real/.pairflow/runtime/sessions.json",
       bubbleId: "b_restart_01"
@@ -97,7 +103,8 @@ describe("restartBubble", () => {
         },
         {
           resolveBubbleById: () =>
-            Promise.reject(new Error("Bubble b_restart_02 does not exist"))
+            Promise.reject(new Error("Bubble b_restart_02 does not exist")),
+          readRemotePointer: async () => null
         }
       )
     ).rejects.toBeInstanceOf(RestartBubbleError);
@@ -114,10 +121,12 @@ describe("restartBubble", () => {
           id: "b_restart_03"
         },
         bubblePaths: {
-          sessionsPath: "/tmp/repo-real/.pairflow/runtime/sessions.json"
+          sessionsPath: "/tmp/repo-real/.pairflow/runtime/sessions.json",
+          remotePointerPath: "/tmp/repo-real/.pairflow/bubbles/b_restart_03/remote.json"
         }
       } as unknown as ResolvedBubbleById);
     });
+    const readRemotePointer = vi.fn(async () => null);
     const terminateBubbleTmuxSession = vi.fn(() => {
       callOrder.push("terminate");
       return Promise.resolve({
@@ -148,6 +157,7 @@ describe("restartBubble", () => {
       },
       {
         resolveBubbleById,
+        readRemotePointer,
         terminateBubbleTmuxSession,
         removeRuntimeSession,
         startBubble
@@ -158,5 +168,55 @@ describe("restartBubble", () => {
     expect(result.previousTmuxSessionExisted).toBe(false);
     expect(result.previousRuntimeSessionRemoved).toBe(false);
     expect(result.tmuxSessionName).toBe("pf-b_restart_03");
+  });
+
+  it("fails closed when restart is invoked on a started remote bubble", async () => {
+    const resolveBubbleById = vi.fn(() =>
+      Promise.resolve({
+        bubbleId: "b_restart_remote_started_01",
+        repoPath: "/tmp/repo-real",
+        bubbleConfig: {
+          id: "b_restart_remote_started_01"
+        },
+        bubblePaths: {
+          sessionsPath: "/tmp/repo-real/.pairflow/runtime/sessions.json",
+          remotePointerPath:
+            "/tmp/repo-real/.pairflow/bubbles/b_restart_remote_started_01/remote.json"
+        }
+      } as unknown as ResolvedBubbleById)
+    );
+    const readRemotePointer = vi.fn(async () => ({
+      kind: "started" as const,
+      host: "spark1",
+      instanceId: "inst_remote_started_01",
+      remoteClonePath: "/remote/repos/pairflow--b_restart_remote_started_01",
+      tmuxSession: "pf-b_restart_remote_started_01",
+      startedAt: "2026-04-20T18:00:00.000Z"
+    }));
+    const terminateBubbleTmuxSession = vi.fn();
+    const removeRuntimeSession = vi.fn();
+    const startBubble = vi.fn();
+
+    await expect(
+      restartBubble(
+        {
+          bubbleId: "b_restart_remote_started_01",
+          repoPath: "/tmp/repo-real"
+        },
+        {
+          resolveBubbleById,
+          readRemotePointer,
+          terminateBubbleTmuxSession,
+          removeRuntimeSession,
+          startBubble
+        }
+      )
+    ).rejects.toMatchObject({
+      reasonCode: "RESTART_REMOTE_STARTED_UNSUPPORTED"
+    });
+
+    expect(terminateBubbleTmuxSession).not.toHaveBeenCalled();
+    expect(removeRuntimeSession).not.toHaveBeenCalled();
+    expect(startBubble).not.toHaveBeenCalled();
   });
 });

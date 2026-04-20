@@ -2,12 +2,14 @@ import type { ResolveBubbleByIdPort } from "../../shared/ports/bubbleLookup.js";
 import type { PersistPassValidationRecoveryMarkerPort } from "../../shared/ports/passValidationRecovery.js";
 import type { RemoveRuntimeSessionPort } from "../../shared/ports/runtimeSessions.js";
 import type { TerminateBubbleTmuxSessionPort } from "../../shared/ports/tmuxSessions.js";
+import type { BubbleRemotePointer } from "../../../types/bubble.js";
 import type { RestartBubbleDependencies } from "./restartCommandContract.js";
 import { startBubbleV11 as startBubble } from "../start/emitStartV11.js";
 import { createRestartBubbleError } from "./restartCommandRuntime.js";
 
 export interface ResolvedRestartBubbleDependencies {
   resolveBubbleById: ResolveBubbleByIdPort;
+  readRemotePointer: (path: string) => Promise<BubbleRemotePointer | null>;
   terminateBubbleTmuxSession: TerminateBubbleTmuxSessionPort;
   removeRuntimeSession: RemoveRuntimeSessionPort;
   persistPassValidationRecoveryMarker: PersistPassValidationRecoveryMarkerPort;
@@ -35,6 +37,10 @@ export function resolveRestartBubbleDependencies(
     resolveBubbleById: requireRestartDependency(
       dependencies.resolveBubbleById,
       "resolveBubbleById"
+    ),
+    readRemotePointer: requireRestartDependency(
+      dependencies.readRemotePointer,
+      "readRemotePointer"
     ),
     terminateBubbleTmuxSession: requireRestartDependency(
       dependencies.terminateBubbleTmuxSession,

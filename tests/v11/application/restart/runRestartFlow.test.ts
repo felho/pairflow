@@ -33,9 +33,11 @@ function createDependencies(
         bubbleConfig: {} as never,
         bubblePaths: {
           sessionsPath: "/tmp/repo/.pairflow/runtime/sessions.json",
-          worktreePath: "/tmp/worktree"
+          worktreePath: "/tmp/worktree",
+          remotePointerPath: "/tmp/repo/.pairflow/bubbles/b_restart_01/remote.json"
         }
       }) as never,
+    readRemotePointer: async () => null,
     terminateBubbleTmuxSession: async () => ({ existed: true }) as never,
     removeRuntimeSession: async () => true,
     persistPassValidationRecoveryMarker: async () => ({
@@ -150,7 +152,8 @@ describe("runRestartFlow", () => {
             bubbleConfig: {} as never,
             bubblePaths: {
               sessionsPath: join(repoPath, ".pairflow", "runtime", "sessions.json"),
-              worktreePath: missingWorktreePath
+              worktreePath: missingWorktreePath,
+              remotePointerPath: join(repoPath, ".pairflow", "bubbles", "b_restart_01", "remote.json")
             }
           }) as never,
         persistPassValidationRecoveryMarker,
@@ -255,5 +258,53 @@ describe("runRestartFlow", () => {
 
     expect(terminateBubbleTmuxSession).toHaveBeenCalledTimes(1)
     expect(removeRuntimeSession).toHaveBeenCalledTimes(1)
+  })
+
+  it("fails closed before cleanup when remote started-state authority is present", async () => {
+    const terminateBubbleTmuxSession = vi.fn(async () => ({ existed: true }) as never)
+    const removeRuntimeSession = vi.fn(async () => true)
+    const persistPassValidationRecoveryMarker = vi.fn(async () => ({
+      persisted_targets: ["repo:repo_runtime_marker"],
+      warnings: []
+    }))
+    const startBubble = vi.fn(async () =>
+      ({
+        bubbleId: "b_restart_01",
+        state: {
+          state: "RUNNING"
+        },
+        tmuxSessionName: "pf-b_restart_01",
+        worktreePath: "/tmp/worktree"
+      }) as never
+    )
+
+    await expect(
+      runRestartFlow(
+        {
+          bubbleId: "b_restart_01"
+        },
+        createDependencies({
+          readRemotePointer: async () => ({
+            kind: "started",
+            host: "spark1",
+            instanceId: "inst_01",
+            remoteClonePath: "/remote/repos/pairflow--b_restart_01",
+            tmuxSession: "pf-b_restart_01",
+            startedAt: "2026-04-20T18:00:00.000Z"
+          }),
+          terminateBubbleTmuxSession,
+          removeRuntimeSession,
+          persistPassValidationRecoveryMarker,
+          startBubble
+        })
+      )
+    ).rejects.toMatchObject({
+      reasonCode: "RESTART_REMOTE_STARTED_UNSUPPORTED"
+    })
+
+    expect(persistPassValidationRecoveryMarker).not.toHaveBeenCalled()
+    expect(terminateBubbleTmuxSession).not.toHaveBeenCalled()
+    expect(removeRuntimeSession).not.toHaveBeenCalled()
+    expect(startBubble).not.toHaveBeenCalled()
   })
 })
