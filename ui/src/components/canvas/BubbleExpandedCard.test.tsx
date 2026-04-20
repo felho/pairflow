@@ -170,7 +170,38 @@ describe("BubbleExpandedCard", () => {
     });
 
     expect(screen.getByRole("button", { name: "Attach" })).toBeEnabled();
+    expect(
+      screen.getByLabelText("Remote bubble on lab (ssh.example.com)")
+    ).toBeInTheDocument();
     expect(screen.queryByText(/restart runtime automatically/u)).not.toBeInTheDocument();
+  });
+
+  it("shows remote indicator from expanded detail data", () => {
+    renderExpandedCard({
+      bubble: bubbleCard({
+        bubbleId: "b-expanded-remote-detail-indicator",
+        repoPath: "/repo-a",
+        state: "READY_FOR_HUMAN_APPROVAL"
+      }),
+      detail: bubbleDetail({
+        bubbleId: "b-expanded-remote-detail-indicator",
+        repoPath: "/repo-a",
+        state: "READY_FOR_HUMAN_APPROVAL",
+        remoteExecution: {
+          alias: "edge",
+          host: "remote.example.com",
+          pointerKind: "started",
+          viewKind: "status",
+          statusSource: "live",
+          cacheStatus: "present",
+          runtimeAvailability: "active"
+        }
+      })
+    });
+
+    expect(
+      screen.getByLabelText("Remote bubble on edge (remote.example.com)")
+    ).toBeInTheDocument();
   });
 
   it("keeps attach enabled for watchdog-expired remote detail when runtime proof stays active", () => {

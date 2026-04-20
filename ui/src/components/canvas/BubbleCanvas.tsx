@@ -22,6 +22,7 @@ import {
 import { cn } from "../../lib/utils";
 import { ConnectedBubbleExpandedCard } from "./ConnectedBubbleExpandedCard";
 import { DeleteConfirmDialog } from "./DeleteConfirmDialog";
+import { RemoteBubbleIndicator } from "./RemoteBubbleIndicator";
 import { resolveBubbleBorder, stateVisuals } from "./stateVisuals";
 
 interface DragState {
@@ -292,15 +293,18 @@ function BubbleCard(props: BubbleCardProps): JSX.Element {
           props.onPositionCommit();
         }}
       >
-        <span
-          className="select-none text-[13px] font-semibold tracking-wide text-white"
-          data-copy-bubble-id-target="true"
-          onDoubleClick={(event) => {
-            event.stopPropagation();
-            void copyBubbleId();
-          }}
-        >
-          {props.bubble.bubbleId}
+        <span className="flex min-w-0 items-center gap-1.5">
+          <RemoteBubbleIndicator remoteExecution={props.bubble.remoteExecution} />
+          <span
+            className="truncate select-none text-[13px] font-semibold tracking-wide text-white"
+            data-copy-bubble-id-target="true"
+            onDoubleClick={(event) => {
+              event.stopPropagation();
+              void copyBubbleId();
+            }}
+          >
+            {props.bubble.bubbleId}
+          </span>
         </span>
         <span className="flex items-center gap-1.5">
           <span className={cn("inline-block h-[7px] w-[7px] rounded-full", visual.led)} />

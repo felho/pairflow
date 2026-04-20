@@ -15,6 +15,7 @@ import { cn } from "../../lib/utils";
 import type { RunBubbleActionInput } from "../../state/useBubbleStore";
 import { ActionBar } from "../actions/ActionBar";
 import { BubbleTimeline } from "../expanded/BubbleTimeline";
+import { RemoteBubbleIndicator } from "./RemoteBubbleIndicator";
 import { resolveBubbleBorder, stateVisuals } from "./stateVisuals";
 
 interface DragState {
@@ -218,15 +219,18 @@ export function BubbleExpandedCard(props: BubbleExpandedCardProps): JSX.Element 
         }}
       >
         <div className="flex items-center justify-between">
-          <span
-            className="select-none text-[12px] font-semibold tracking-wide text-white"
-            data-drag-disabled="true"
-            onDoubleClick={(event) => {
-              event.stopPropagation();
-              void copyBubbleId();
-            }}
-          >
-            {props.bubble.bubbleId}
+          <span className="flex min-w-0 items-center gap-1.5">
+            <RemoteBubbleIndicator remoteExecution={attachSource.remoteExecution} />
+            <span
+              className="truncate select-none text-[12px] font-semibold tracking-wide text-white"
+              data-drag-disabled="true"
+              onDoubleClick={(event) => {
+                event.stopPropagation();
+                void copyBubbleId();
+              }}
+            >
+              {props.bubble.bubbleId}
+            </span>
           </span>
           <button
             type="button"

@@ -222,6 +222,9 @@ describe("BubbleCanvas", () => {
     expect(
       screen.getByText("Waiting for human decision after meta-reviewer handoff.")
     ).toBeInTheDocument();
+    expect(
+      screen.getByLabelText("Remote bubble on lab (ssh.example.com)")
+    ).toBeInTheDocument();
     expect(screen.queryByText(/Stale runtime/u)).not.toBeInTheDocument();
   });
 
