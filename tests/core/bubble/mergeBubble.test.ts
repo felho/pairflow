@@ -488,6 +488,71 @@ describe("mergeBubble", () => {
     expect(resolveRemoteBubbleStatusTarget).not.toHaveBeenCalled();
   });
 
+  it("persists DONE state before removing a self-hosted verified remote clone repo", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupDoneBubble(repoPath, "b_merge_remote_inner_self_hosted_01");
+
+    await writeFile(
+      bubble.paths.bubbleTomlPath,
+      `${renderBubbleConfigToml({
+        ...bubble.config,
+        executor: {
+          type: "ssh",
+          remote: "prod"
+        }
+      })}\n`,
+      "utf8"
+    );
+    await rm(bubble.paths.worktreePath, { recursive: true, force: true });
+
+    vi.stubEnv(remoteMergeModeEnvVar, remoteMergeModeInnerRemoteExecution);
+    vi.stubEnv(remoteMergeWorkspaceRootEnvVar, repoPath);
+
+    const executeRemoteBubbleMergeCommand = vi.fn(async () => {
+      throw new Error("remote merge helper should not run inside verified remote clone execution");
+    });
+    const resolveRemoteBubbleStatusTarget = vi.fn(async () => {
+      throw new Error("remote target resolution should not run inside verified remote clone execution");
+    });
+    const emitBubbleLifecycleEventBestEffort = vi.fn(async () => undefined);
+    const cleanupWorktreeWorkspace = vi.fn(async () => {
+      await rm(repoPath, { recursive: true, force: true });
+      return {
+        repoPath,
+        bubbleBranch: bubble.config.bubble_branch,
+        worktreePath: repoPath,
+        removedWorktree: true,
+        removedBranch: true
+      };
+    });
+
+    const result = await mergeBubble(
+      {
+        bubbleId: bubble.bubbleId,
+        repoPath,
+        now: new Date("2026-04-18T12:17:00.000Z")
+      },
+      {
+        cleanupWorktreeWorkspace,
+        executeRemoteBubbleMergeCommand,
+        resolveRemoteBubbleStatusTarget,
+        emitBubbleLifecycleEventBestEffort
+      }
+    );
+
+    expect(result.baseBranch).toBe("main");
+    expect(result.bubbleBranch).toBe(bubble.config.bubble_branch);
+    expect(result.removedWorktree).toBe(true);
+    expect(result.removedBubbleBranch).toBe(true);
+    expect(executeRemoteBubbleMergeCommand).not.toHaveBeenCalled();
+    expect(resolveRemoteBubbleStatusTarget).not.toHaveBeenCalled();
+    await expect(stat(repoPath)).rejects.toMatchObject({
+      code: "ENOENT"
+    });
+    expect(cleanupWorktreeWorkspace).toHaveBeenCalledOnce();
+    expect(emitBubbleLifecycleEventBestEffort).toHaveBeenCalledOnce();
+  });
+
   it.each([
     {
       name: "missing remote pointer",

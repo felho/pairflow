@@ -119,11 +119,6 @@ export async function finalizeMergeFlow(input: {
     sessionsPath: input.context.resolved.bubblePaths.sessionsPath,
     bubbleId: input.context.resolved.bubbleId
   });
-  const workspaceCleanup = await input.dependencies.cleanupWorktreeWorkspace({
-    repoPath: input.context.resolved.repoPath,
-    bubbleBranch: input.context.bubbleBranch,
-    worktreePath: input.context.resolved.bubblePaths.worktreePath
-  });
 
   await persistStateViaMutationBoundary({
     write: input.dependencies.writeStateSnapshot,
@@ -136,6 +131,12 @@ export async function finalizeMergeFlow(input: {
       expectedFingerprint: input.context.loaded.fingerprint,
       expectedState: "DONE"
     }
+  });
+
+  const workspaceCleanup = await input.dependencies.cleanupWorktreeWorkspace({
+    repoPath: input.context.resolved.repoPath,
+    bubbleBranch: input.context.bubbleBranch,
+    worktreePath: input.context.resolved.bubblePaths.worktreePath
   });
 
   await input.dependencies.emitBubbleLifecycleEventBestEffort({
