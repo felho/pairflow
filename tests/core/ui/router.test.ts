@@ -831,11 +831,10 @@ describe("createUiRouter delete action", () => {
 
 describe("createUiRouter action routes", () => {
   describe("attach routes", () => {
-    it("restarts runtime and retries attach when tmux session is missing", async () => {
+    it("returns attach error when tmux session is missing", async () => {
       const repoPath = "/tmp/pairflow-ui-router-attach-repo";
-      const attachBubble = vi
-        .fn()
-        .mockRejectedValueOnce(
+      const attachBubble = vi.fn(() =>
+        Promise.reject(
           new AttachBubbleError(
             "Tmux session \"pf-b-router-attach-recover\" does not exist. Start the bubble runtime first.",
             {
@@ -843,13 +842,7 @@ describe("createUiRouter action routes", () => {
             }
           )
         )
-        .mockResolvedValueOnce({
-          bubbleId: "b-router-attach-recover",
-          tmuxSessionName: "pf-b-router-attach-recover",
-          launcherRequested: "auto",
-          launcherUsed: "copy",
-          attachCommand: "tmux attach -t pf-b-router-attach-recover"
-        });
+      );
       const startBubble = vi.fn(async () => ({} as never));
 
       const scope: UiRepoScope = {
@@ -889,31 +882,29 @@ describe("createUiRouter action routes", () => {
           }
         );
         const payload = (await response.json()) as {
-          result: {
-            bubbleId: string;
-            launcherUsed: string;
-            attachCommand?: string;
+          error: {
+            code: string;
+            details?: Record<string, unknown>;
           };
         };
 
-        expect(response.status).toBe(200);
-        expect(payload.result).toMatchObject({
+        expect(response.status).toBe(409);
+        expect(payload.error.code).toBe("conflict");
+        expect(payload.error.details).toMatchObject({
           bubbleId: "b-router-attach-recover",
-          launcherUsed: "copy",
-          attachCommand: "tmux attach -t pf-b-router-attach-recover"
+          repoPath
         });
-        expect(startBubble).toHaveBeenCalledTimes(1);
-        expect(attachBubble).toHaveBeenCalledTimes(2);
+        expect(startBubble).not.toHaveBeenCalled();
+        expect(attachBubble).toHaveBeenCalledTimes(1);
       } finally {
         await server.close();
       }
     });
 
-    it("restarts runtime when attach error carries tmux-missing context reason without explicit reasonCode", async () => {
+    it("returns attach context when tmux-missing error is reported via context reason", async () => {
       const repoPath = "/tmp/pairflow-ui-router-attach-recover-context";
-      const attachBubble = vi
-        .fn()
-        .mockRejectedValueOnce(
+      const attachBubble = vi.fn(() =>
+        Promise.reject(
           new AttachBubbleError(
             "Tmux session \"pf-b-router-attach-recover-context\" does not exist. Start the bubble runtime first.",
             {
@@ -923,13 +914,7 @@ describe("createUiRouter action routes", () => {
             }
           )
         )
-        .mockResolvedValueOnce({
-          bubbleId: "b-router-attach-recover-context",
-          tmuxSessionName: "pf-b-router-attach-recover-context",
-          launcherRequested: "auto",
-          launcherUsed: "copy",
-          attachCommand: "tmux attach -t pf-b-router-attach-recover-context"
-        });
+      );
       const startBubble = vi.fn(async () => ({} as never));
 
       const scope: UiRepoScope = {
@@ -968,10 +953,17 @@ describe("createUiRouter action routes", () => {
             method: "POST"
           }
         );
+        const payload = (await response.json()) as {
+          error: {
+            code: string;
+            details?: Record<string, unknown>;
+          };
+        };
 
-        expect(response.status).toBe(200);
-        expect(startBubble).toHaveBeenCalledTimes(1);
-        expect(attachBubble).toHaveBeenCalledTimes(2);
+        expect(response.status).toBe(409);
+        expect(payload.error.code).toBe("conflict");
+        expect(startBubble).not.toHaveBeenCalled();
+        expect(attachBubble).toHaveBeenCalledTimes(1);
       } finally {
         await server.close();
       }

@@ -319,13 +319,3 @@ export function isRemoteBubbleCommitCommandErrorLike(
     )
   );
 }
-
-export function isAttachRuntimeMissingError(error: unknown): boolean {
-  return (
-    isAttachBubbleErrorLike(error) &&
-    (
-      error.reasonCode === "TMUX_SESSION_MISSING" ||
-      error.context?.reason === "tmux_session_missing"
-    )
-  );
-}

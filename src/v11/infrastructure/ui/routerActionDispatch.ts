@@ -4,7 +4,6 @@ import type {
 } from "./routerContracts.js";
 import {
   badRequest,
-  isAttachRuntimeMissingError,
   parseApproveBody,
   parseCommitBody,
   parseDeleteBody,
@@ -38,27 +37,11 @@ async function handleAttachAction(
   repoPath: string,
   bubbleId: string
 ): Promise<AttachBubbleResult> {
-  try {
-    return await environment.dependencies.attachBubble({
-      bubbleId,
-      repoPath,
-      ...resolveOptionalCwd(environment)
-    });
-  } catch (error) {
-    if (!isAttachRuntimeMissingError(error)) {
-      throw error;
-    }
-    await environment.dependencies.startBubble({
-      bubbleId,
-      repoPath,
-      ...resolveOptionalCwd(environment)
-    });
-    return environment.dependencies.attachBubble({
-      bubbleId,
-      repoPath,
-      ...resolveOptionalCwd(environment)
-    });
-  }
+  return environment.dependencies.attachBubble({
+    bubbleId,
+    repoPath,
+    ...resolveOptionalCwd(environment)
+  });
 }
 
 async function handleApproveAction(

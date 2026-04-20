@@ -16,7 +16,6 @@ export {
   isAttachBubbleErrorLike,
   isBubbleCommitErrorLike,
   isBubbleMergeErrorLike,
-  isAttachRuntimeMissingError,
   isConflictErrorMessage,
   isNotFoundErrorMessage,
   isRemoteBubbleCommitCommandErrorLike,
