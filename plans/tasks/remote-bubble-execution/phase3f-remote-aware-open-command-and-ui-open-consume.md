@@ -2,7 +2,7 @@
 artifact_type: task
 artifact_id: task_remote_bubble_execution_phase3f_remote_aware_open_command_and_ui_open_consume_v1
 title: "Remote Bubble Execution Remote-Aware Open Command and UI Open Consume (Phase 3F)"
-status: draft
+status: implementable
 phase: phase3f-remote-aware-open-command-and-ui-open-consume
 target_files:
   - src/v11/application/open/openBubbleRuntime.ts
@@ -21,8 +21,10 @@ target_files:
   - tests/config/pairflowConfig.test.ts
   - tests/config/bubbleConfig.test.ts
   - tests/core/ui/server.integration.test.ts
+  - tests/core/ui/router.test.ts
   - README.md
   - docs/remote-bubble-execution.md
+  - docs/pairflow-ui-prd.md
 prd_ref: null
 plan_ref: plans/archive/plans/remote-bubble-execution-contract-and-phasing-plan-v2.md
 system_context_ref: docs/pairflow-initial-design.md
@@ -30,6 +32,7 @@ normative_refs:
   - plans/archive/plans/remote-bubble-execution-contract-and-phasing-plan-v2.md
   - plans/tasks/remote-bubble-execution/phase3e-verified-remote-clone-local-request-rework.md
   - docs/remote-bubble-execution.md
+  - docs/pairflow-ui-prd.md
   - README.md
 owners:
   - "felho"
@@ -139,8 +142,12 @@ owners:
 
 ## Implementation Target Decision
 
-1. `implementable_now`: `no`
-2. A task jelenleg `draft`, mert a pontos remote command contractot elobb explicit task-level formaban kell rogzitni.
+1. `implementable_now`: `yes`
+2. A task implementalhato, mert a remote command contract itt explicit task-level formaban rogzitett:
+   - built-in remote default,
+   - `remote_authority` canonical forma,
+   - URI-encoding ownership,
+   - returned open-result semantics.
 3. A bounded task-shape:
    - operator-facing consume alignment egyetlen command familyben: `open`.
 4. A preferalt implementation shape:
@@ -170,8 +177,9 @@ owners:
    - local-vs-remote open route selection,
    - created/missing/invalid pointer fail-closed branching.
 5. `read_model_consumers`
-   - reszben in scope:
-   - CLI/UI returned open result wording csak annyiban, amennyiben a launch target tipusa explicitte valik.
+   - szuk, de explicit in scope:
+   - CLI returned open summary wording,
+   - backend/UI shared open-result contract, amennyiben a launch target tipusa explicitte valik.
 6. `cleanup_recovery_consumers`
    - explicit out of scope:
    - attach/start/restart/merge/delete/commit flows,
@@ -181,20 +189,24 @@ owners:
 ## Closure Budget / Task-Shape Triage
 
 1. `closure_buckets_touched`
+   - `shared_contract`
    - `internal_execution_consumers`
    - `workflow_orchestration_consumers`
    - `read_model_consumers`
+   - `persisted_authority_or_schema`
 2. `closure_buckets_not_touched`
    - `authority_producer`
-   - `persisted_authority_or_schema`
    - `cleanup_recovery_consumers`
 3. `collapsed_closures`
+   - narrow open-result contract bridge
+   - additive config-surface extension ugyanazon `open` command familyben
    - internal open-route selection
    - remote launch-template resolution
-   - thin UI/CLI surface wording alignment
+   - thin CLI/UI surface alignment
 4. `why_collapse_is_safe`
    - ugyanazt az operator-facing correctness boundaryt zarjak:
-   - a canonical workspace launch target helyes meghatarozasat.
+   - a canonical workspace launch target helyes meghatarozasat;
+   - az uj config mezok es az explicit open-result contract nem nyitnak kulon producer vagy cleanup lane-t, csak ugyanennek az `open` familynek a bounded consume-hidjat zarjak le.
 5. `explicitly_deferred_closures`
    - attach/open command-profile unification,
    - IDE-specific plugin detection,
@@ -202,19 +214,24 @@ owners:
    - UI success toast / richer launch diagnostics.
 6. `primary_task_shape`
    - `consumer_family_alignment`
+7. `secondary_task_shape`
+   - `shared_contract` (narrow open-config + open-result bridge only)
+8. `why_secondary_shape_is_safe`
+   - a task additive config-contractot es explicit result-shape-et vezet be, de ezek ownershipa ugyanabban a bounded `open` consume familyben marad;
+   - nincs uj authority producer, nincs kulon activation lane, es nincs altalanos remote operator API ujranyitasa.
 
 ## Complexity-Risk Triage
 
 1. `risk_score`
-   - `4`
+   - `5`
 2. `split_decision`
    - `single_task_acceptable`
 3. `authority_risk`
    - `1`
    - retained started pointer authority consume-ja correctness-critical.
 4. `surface_spread`
-   - `1`
-   - open runtime + config + tests + thin CLI/UI wording.
+   - `2`
+   - open runtime + config parsers + shared open-result contract + CLI/UI wording + tests.
 5. `identity_join_risk`
    - `1`
    - remote alias / host / user / started pointer join pontos kell legyen.
@@ -236,6 +253,7 @@ owners:
      - global `open_command`
      - built-in local default
    - UI `Open` tovabbra is a shared backend `open` actiont hivja,
+   - a returned local `open` target tovabbra is worktree-alapu,
    - created/missing/invalid remote pointer fail-closed marad,
    - attach semantikaja valtozatlan.
 2. `allowed_resolution_paths`
@@ -257,19 +275,33 @@ owners:
    - bubble `open_remote_command`
    - global `open_remote_command`
    - built-in remote default
-4. A remote defaultnek VS Code Remote SSH-compatible launch formanak kell lennie.
-5. Minimum remote placeholder vocabulary:
+4. A built-in remote default canonical formaja:
+   - `code --folder-uri "vscode-remote://ssh-remote+{{remote_authority}}{{remote_clone_path}}"`
+5. A `remote_authority` canonical formaja:
+   - `[user@]host`
+   - a `user@` prefix csak akkor jelenik meg, ha a resolved remote user elerheto.
+6. A remote URI rendering ownershipa:
+   - dedikalt URI-encoding helper ownership,
+   - nem megengedett a `remote_clone_path` vagy a `remote_authority` egyszeru `shellQuote`-os URI-resz renderje,
+   - a shell quoting csak a vegso command argument boundaryra alkalmazhato.
+7. Minimum remote placeholder vocabulary:
    - `{{remote_clone_path}}`
    - `{{remote_host}}`
    - `{{remote_user}}`
    - `{{remote_authority}}`
    - optional: `{{remote_alias}}`
-6. Remote open akkor engedett, ha:
+8. A shared `OpenBubbleResult` / `UiOpenBubbleResult` contract explicit target-modelre valt:
+   - `workspaceKind`: `local_worktree` | `remote_clone`
+   - `workspacePath`: a tenyleges launch-target path
+   - `remoteAuthority?`: csak remote launch eseten
+   - `command`
+   - `worktreePath` retained compatibility fieldkent csak local-worktree jelentessel maradhat; nem terhelheto tul remote clone path jelentessel.
+9. Remote open akkor engedett, ha:
    - bubble executor ssh,
    - remote pointer `kind="started"`,
    - remote clone path jelen van,
    - host drift nincs a config supplement es a pointer kozott.
-7. Remote open forbidden when:
+10. Remote open forbidden when:
    - pointer missing,
    - pointer `created`,
    - invalid pointer,
@@ -283,13 +315,16 @@ owners:
 4. A remote launch template kulon config surface-en lakik; a local `open_command` nem kap uj implicit remote jelentest.
 5. A CLI help es a README explicitte rogziti a local-vs-remote open precedence-t.
 6. A CLI output nem allitja remote bubble eseten, hogy lokalis worktree nyilt meg.
-7. A UI `Open` tovabbra is ugyanazt a backend open behavior-t hivja, es remote bubble eseten a remote-aware launch valosul meg.
-8. `created` remote bubble eseten az `open` explicit fail-closed hibat ad:
+7. A shared open-result contract explicitte kulonbseget tesz `local_worktree` es `remote_clone` launch target kozott, es a `worktreePath` mezo nem kap remote clone jelentest.
+8. A UI `Open` tovabbra is ugyanazt a backend open behavior-t hivja, es remote bubble eseten a remote-aware launch valosul meg.
+9. `created` remote bubble eseten az `open` explicit fail-closed hibat ad:
    - start required,
    - nincs implicit remote start vagy attach.
-9. A tesztek fedik:
+10. A tesztek fedik:
    - local precedence,
    - remote precedence,
+   - built-in remote default render,
+   - explicit open-result shape local-vs-remote target semanticsa,
    - remote placeholder rendering,
    - started-vs-created pointer gating,
    - expected-host drift fail-closed,
@@ -303,16 +338,9 @@ owners:
 4. Background detection arrol, hogy a VS Code Remote SSH extension telepitve van-e.
 5. Success toast, post-launch polling, vagy richer UI telemetry.
 
-## Open Questions Kept Bounded
+## Non-Blocking Notes
 
-1. A built-in remote default pontos formaja:
-   - `code --folder-uri ...`
-   - vagy alternative CLI shape,
-   - ezt a task implementacio elott egyetlen explicit decisionnel le kell zarni.
-2. A `remote_authority` pontos canonical formja:
-   - `host`
-   - vagy `[user@]host`
-   - optional port jelenleg nem scope.
-3. A remote URI encoding ownershipa:
-   - dedikalt helper,
-   - nem `shellQuote`-ra bizott URI-resz render.
+1. Optional port support tovabbra sem scope:
+   - a canonical remote authority ebben a taskban `[user@]host` marad.
+2. Ha a VS Code CLI kesobb alternative remote-open formara valtozik, az kulon docs/compat refinement lehet:
+   - ez a task a jelenlegi canonical built-in defaultot rogzitettnek kezeli.
