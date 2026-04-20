@@ -105,20 +105,21 @@ git status --short
 Create/start:
 ```bash
 pairflow bubble create --id <id> --repo <abs_repo_path> --base main --review-artifact-type <document|code> --task-file <abs_task_path>
-pairflow bubble start --id <id> --repo <abs_repo_path> --attach
+pairflow bubble start --id <id> --repo <abs_repo_path>
 pairflow bubble status --id <id> --repo <abs_repo_path> --json
 ```
 
 Ideation start (taskless create + explicit activation):
 ```bash
 pairflow bubble create --id <id> --repo <abs_repo_path> --base main --review-artifact-type <document|code> --ideation
-pairflow bubble start --id <id> --repo <abs_repo_path> --attach
+pairflow bubble start --id <id> --repo <abs_repo_path>
 pairflow bubble kickoff --id <id> --repo <abs_repo_path> --task-file <abs_task_path>
 ```
 
 `pairflow bubble create` requires `--review-artifact-type <document|code>`.
 `auto` is not available as a create-time ownership option.
 Ideation Phase-1 uses no new lifecycle state: bubble runs as `RUNNING round=0` until explicit kickoff.
+Attach is a separate opt-in follow-up step. Do not append `--attach` to `bubble start` unless the user explicitly asks for interactive attach/switch behavior.
 
 Human intervention:
 ```bash

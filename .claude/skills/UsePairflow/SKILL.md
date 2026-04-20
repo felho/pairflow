@@ -54,9 +54,10 @@ This skill exists to avoid lifecycle mistakes (wrong command in wrong state, los
 15. Remote exception: if a started remote bubble reports runtime loss (`remoteExecution.pointerKind="started"` with runtime unavailable/missing), treat that fail-closed. Do not assume `bubble start` or `bubble restart` is the supported recovery contract on top of preserved remote state in this phase.
 16. For remote bubble creation, use `pairflow bubble create --remote <host> ...`; execution still begins only at `bubble start`.
 17. Remote attach is a separate operator step. `bubble attach` for remote bubbles uses the persisted started pointer plus optional `--port-forward`, not local tmux attach.
-18. `RUNNING round=0` ideation state is a valid hold state. Do not auto-kickoff. Exception: if the user asks for a loop action (`pass`/`converged`) while still in round-0 ideation, run kickoff first because loop actions require an active round.
-19. Pre-kickoff manual preparation in the bubble worktree is allowed when explicitly requested by the user. In this pattern, kickoff text should summarize already-applied work and define expected first handoff behavior.
-20. `ReviewBubble` should explain findings in business-technical language by default, not just reviewer shorthand:
+18. Do not add `--attach` to `pairflow bubble start` unless the user explicitly asks for an interactive attach/switch step right now.
+19. `RUNNING round=0` ideation state is a valid hold state. Do not auto-kickoff. Exception: if the user asks for a loop action (`pass`/`converged`) while still in round-0 ideation, run kickoff first because loop actions require an active round.
+20. Pre-kickoff manual preparation in the bubble worktree is allowed when explicitly requested by the user. In this pattern, kickoff text should summarize already-applied work and define expected first handoff behavior.
+21. `ReviewBubble` should explain findings in business-technical language by default, not just reviewer shorthand:
   - explain the technical issue,
   - explain why it matters in practical terms,
   - state whether it is blocking now or only future hardening debt.
@@ -109,6 +110,7 @@ This skill exists to avoid lifecycle mistakes (wrong command in wrong state, los
 - Remote create/start guardrails:
   - `pairflow bubble create --remote <host>` configures a remote executor but does not touch the remote host yet.
   - Keep `bubble attach` as a separate explicit step after remote start; do not assume create/start should auto-attach.
+  - Do not add `--attach` to `bubble start` by default for either local or remote bubbles; only do it on explicit user request for interactive switching.
   - Respect repository-specific bubble-create guardrails such as required `--bootstrap-command` when they are declared in the repo docs or AGENTS instructions.
 - While a bubble is running, parallel direct commits on `main` are allowed only for file-disjoint scope (no overlap with the bubble's touched files).
 - After `bubble start`, status may be briefly stale. Poll status once more before deciding it failed.

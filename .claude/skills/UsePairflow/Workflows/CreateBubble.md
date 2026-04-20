@@ -47,6 +47,7 @@ REMOTE_HOST: extracted from `--remote` argument (optional)
 - Default behavior: execute `create` and `start`.
 - Print-only behavior (`--print`): print commands but run nothing.
 - If the repo/project instructions require extra create-time flags for reliable remote starts (for example mandatory `--bootstrap-command`), include them. Do not silently drop repo-specific guardrails.
+- Never add `--attach` to `pairflow bubble start` unless the user explicitly asks to attach/switch into the bubble session right now.
 - Pre-flight before create/start:
   - Base repo worktree must be clean (`git status --short` empty).
   - No active merge/rebase/cherry-pick state.
@@ -61,6 +62,7 @@ REMOTE_HOST: extracted from `--remote` argument (optional)
 - Guardrail: this workflow must not execute task work (no implementation/review/testing/file edits related to task content).
 - Post-start default mode is `bubble_autonomous` unless user explicitly requests `manual_assist`.
 - Remote attach is a separate explicit step after remote start. Do not assume create/start should automatically attach into a remote tmux session.
+- Even for local bubbles, treat attach as a separate opt-in operator step after start; default create/start output should stop at `bubble start` + `bubble status`.
 - If the user later requests pre-kickoff manual preparation in the bubble worktree, handle that as a separate follow-up request (outside this create/start workflow), then kickoff with an inline summary of already-applied changes.
 
 ## Workflow
@@ -212,7 +214,7 @@ Default mode (create/start executed):
 ```
 Bubble <BUBBLE_ID> created and started.
 
-Start session:
+Start command executed:
 pairflow bubble start --id <BUBBLE_ID> --repo <REPO_PATH>
 
 Task source: <inline|task-file|ideation>
@@ -223,7 +225,7 @@ Current state: <STATE>
 Active agent: <AGENT or none>
 Next lifecycle step: <normal loop | hold in round-0 | kickoff required for ideation bubble>
 
-Stopped after bubble start (no task execution in CreateBubble workflow).
+Attach was not requested, so CreateBubble stopped after start/status (no task execution in CreateBubble workflow).
 ```
 
 Print-only mode (task file):
