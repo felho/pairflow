@@ -1,5 +1,7 @@
+import { constants as fsConstants } from "node:fs";
+import { access } from "node:fs/promises";
+
 import { isNamedError } from "../errors/namedError.js";
-import { pathExists } from "../../infrastructure/foundation/fs/pathExists.js";
 import { getBubblePaths } from "../bubble/bubblePaths.js";
 import type {
   BubbleListEntry,
@@ -28,6 +30,22 @@ export type {
 } from "./listCommandErrors.js";
 
 export { BubbleListError } from "./listCommandErrors.js";
+
+async function pathExists(path: string): Promise<boolean> {
+  return access(path, fsConstants.F_OK)
+    .then(() => true)
+    .catch((error: unknown) => {
+      if (
+        typeof error === "object"
+        && error !== null
+        && "code" in error
+        && (error.code === "ENOENT" || error.code === "ENOTDIR")
+      ) {
+        return false;
+      }
+      throw error;
+    });
+}
 
 async function shouldSkipDeletedBubbleDuringList(input: {
   repoPath: string;

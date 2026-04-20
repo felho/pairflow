@@ -17,7 +17,6 @@ export interface LocalApprovalFlowExecutionContext {
   nowIso: string;
   lockPath: string;
 }
-
 export interface RemoteApprovalFlowExecutionContext {
   route: "remote";
   resolved: Awaited<ReturnType<ResolvedApprovalCommandDependencies["resolveBubbleById"]>>;
@@ -31,7 +30,6 @@ export interface RemoteApprovalFlowExecutionContext {
 export type ApprovalFlowExecutionContext =
   | LocalApprovalFlowExecutionContext
   | RemoteApprovalFlowExecutionContext;
-
 interface ApprovalFlowBaseResolution {
   resolved: Awaited<ReturnType<ResolvedApprovalCommandDependencies["resolveBubbleById"]>>;
   nowIso: string;
@@ -42,13 +40,16 @@ interface ApprovalExecutionPathIdentity {
   absolutePath: string;
   canonicalPath: string;
 }
-
 interface RequestReworkRemoteFallbackDiagnostic {
   reasonCode: "verified_remote_clone_root_required";
   workspaceRepoPath: string;
   workspaceRootPath: string;
 }
 
+type ResolvedWorkspaceFromCwd =
+  Awaited<
+    ReturnType<ResolvedApprovalCommandDependencies["resolveBubbleFromWorkspaceCwd"]>
+  >;
 async function resolveApprovalExecutionPathIdentity(
   pathValue: string
 ): Promise<ApprovalExecutionPathIdentity> {
@@ -68,7 +69,6 @@ function approvalExecutionPathsMatch(
     || left.canonicalPath === right.canonicalPath
   );
 }
-
 function isWorkspaceResolutionReason(error: unknown, reason: string): boolean {
   if (typeof error !== "object" || error === null || !("context" in error)) {
     return false;
@@ -81,6 +81,163 @@ function isWorkspaceResolutionReason(error: unknown, reason: string): boolean {
     && "reason" in context
     && context.reason === reason
   );
+}
+async function resolveWorkspaceAuthorityForRequestRework(input: {
+  base: ApprovalFlowBaseResolution;
+  createError: PairflowCreateCommandError;
+  dependencies: ResolvedApprovalCommandDependencies;
+  cwd?: string | undefined;
+}): Promise<ResolvedWorkspaceFromCwd | undefined> {
+  try {
+    return await input.dependencies.resolveBubbleFromWorkspaceCwd(input.cwd);
+  } catch (error) {
+    if (isWorkspaceResolutionReason(error, "ambiguous_bubble_config_match")) {
+      throw input.createError({
+        reasonCode: "APPROVAL_REMOTE_CLONE_CONTEXT_INVALID",
+        message:
+          `Bubble ${input.base.resolved.bubbleId} could not disambiguate the active workspace authority for local request-rework.`,
+        context: {
+          command_name: "approval",
+          bubble_id: input.base.resolved.bubbleId
+        },
+        cause: error
+      });
+    }
+    // Any other workspace-resolution failure means we could not prove
+    // verified remote-clone authority, so keep the retained remote route.
+    return undefined;
+  }
+}
+function assertWorkspaceMatchesBubbleForRequestRework(input: {
+  base: ApprovalFlowBaseResolution;
+  createError: PairflowCreateCommandError;
+  resolvedWorkspace: ResolvedWorkspaceFromCwd;
+}): void {
+  if (input.resolvedWorkspace.bubbleId === input.base.resolved.bubbleId) {
+    return;
+  }
+
+  throw input.createError({
+    reasonCode: "APPROVAL_REMOTE_CLONE_CONTEXT_INVALID",
+    message:
+      `Bubble ${input.base.resolved.bubbleId} refused local request-rework because the active workspace resolves to bubble ${input.resolvedWorkspace.bubbleId} instead.`,
+    context: {
+      command_name: "approval",
+      bubble_id: input.base.resolved.bubbleId,
+      workspace_bubble_id: input.resolvedWorkspace.bubbleId
+    }
+  });
+}
+async function resolveRequestReworkExecutionPathIdentities(input: {
+  base: ApprovalFlowBaseResolution;
+  resolvedWorkspace: ResolvedWorkspaceFromCwd;
+}): Promise<{
+  resolvedRepoPathIdentity: ApprovalExecutionPathIdentity;
+  workspaceRepoPathIdentity: ApprovalExecutionPathIdentity;
+  workspaceRootIdentity: ApprovalExecutionPathIdentity;
+}> {
+  const [
+    resolvedRepoPathIdentity,
+    workspaceRepoPathIdentity,
+    workspaceRootIdentity
+  ] = await Promise.all([
+    resolveApprovalExecutionPathIdentity(input.base.resolved.repoPath),
+    resolveApprovalExecutionPathIdentity(input.resolvedWorkspace.repoPath),
+    resolveApprovalExecutionPathIdentity(input.resolvedWorkspace.worktreePath)
+  ]);
+
+  return {
+    resolvedRepoPathIdentity,
+    workspaceRepoPathIdentity,
+    workspaceRootIdentity
+  };
+}
+function assertWorkspaceRepoAuthorityForRequestRework(input: {
+  base: ApprovalFlowBaseResolution;
+  createError: PairflowCreateCommandError;
+  resolvedRepoPathIdentity: ApprovalExecutionPathIdentity;
+  workspaceRepoPathIdentity: ApprovalExecutionPathIdentity;
+}): void {
+  if (
+    approvalExecutionPathsMatch(
+      input.workspaceRepoPathIdentity,
+      input.resolvedRepoPathIdentity
+    )
+  ) {
+    return;
+  }
+
+  throw input.createError({
+    reasonCode: "APPROVAL_REMOTE_CLONE_CONTEXT_INVALID",
+    message:
+      `Bubble ${input.base.resolved.bubbleId} refused local request-rework because the active workspace does not match the canonical bubble repository authority.`,
+    context: {
+      command_name: "approval",
+      bubble_id: input.base.resolved.bubbleId,
+      workspace_repo_path: input.workspaceRepoPathIdentity.absolutePath,
+      resolved_repo_path: input.resolvedRepoPathIdentity.absolutePath
+    }
+  });
+}
+function resolveCloneRootFallbackDiagnostic(input: {
+  workspaceRepoPathIdentity: ApprovalExecutionPathIdentity;
+  workspaceRootIdentity: ApprovalExecutionPathIdentity;
+}): RequestReworkRemoteFallbackDiagnostic | undefined {
+  if (
+    approvalExecutionPathsMatch(
+      input.workspaceRootIdentity,
+      input.workspaceRepoPathIdentity
+    )
+  ) {
+    return undefined;
+  }
+
+  return {
+    reasonCode: "verified_remote_clone_root_required",
+    workspaceRepoPath: input.workspaceRepoPathIdentity.absolutePath,
+    workspaceRootPath: input.workspaceRootIdentity.absolutePath
+  };
+}
+
+async function assertNoRetainedRemotePointerArtifactsForRequestRework(input: {
+  base: ApprovalFlowBaseResolution;
+  createError: PairflowCreateCommandError;
+  dependencies: ResolvedApprovalCommandDependencies;
+}): Promise<void> {
+  let remotePointer: BubbleRemotePointer | null;
+  try {
+    remotePointer = await input.dependencies.readRemotePointer(
+      input.base.resolved.bubblePaths.remotePointerPath
+    );
+  } catch (error) {
+    throw input.createError({
+      reasonCode: "APPROVAL_REMOTE_CLONE_CONTEXT_INVALID",
+      message:
+        `Bubble ${input.base.resolved.bubbleId} could not verify remote clone control-plane boundaries for local request-rework.`,
+      context: {
+        command_name: "approval",
+        bubble_id: input.base.resolved.bubbleId,
+        remote_pointer_path: input.base.resolved.bubblePaths.remotePointerPath
+      },
+      cause: error
+    });
+  }
+
+  if (remotePointer === null) {
+    return;
+  }
+
+  throw input.createError({
+    reasonCode: "APPROVAL_REMOTE_CLONE_CONTEXT_INVALID",
+    message:
+      `Bubble ${input.base.resolved.bubbleId} refused local request-rework inside a remote clone because retained remote pointer artifacts are still present.`,
+    context: {
+      command_name: "approval",
+      bubble_id: input.base.resolved.bubbleId,
+      remote_pointer_kind: remotePointer.kind,
+      remote_pointer_path: input.base.resolved.bubblePaths.remotePointerPath
+    }
+  });
 }
 
 async function resolveApprovalFlowBaseResolution(input: {
@@ -214,125 +371,57 @@ async function resolveVerifiedRemoteCloneRequestReworkContext(input: {
   dependencies: ResolvedApprovalCommandDependencies;
   cwd?: string | undefined;
 }): Promise<VerifiedRemoteCloneRequestReworkResolution> {
-  let resolvedWorkspace:
-    | Awaited<
-        ReturnType<ResolvedApprovalCommandDependencies["resolveBubbleFromWorkspaceCwd"]>
-      >
-    | undefined;
-  try {
-    resolvedWorkspace = await input.dependencies.resolveBubbleFromWorkspaceCwd(
-      input.cwd
-    );
-  } catch (error) {
-    if (isWorkspaceResolutionReason(error, "ambiguous_bubble_config_match")) {
-      throw input.createError({
-        reasonCode: "APPROVAL_REMOTE_CLONE_CONTEXT_INVALID",
-        message:
-          `Bubble ${input.base.resolved.bubbleId} could not disambiguate the active workspace authority for local request-rework.`,
-        context: {
-          command_name: "approval",
-          bubble_id: input.base.resolved.bubbleId
-        },
-        cause: error
-      });
-    }
-    // Any other workspace-resolution failure means we could not prove
-    // verified remote-clone authority, so keep the retained remote route.
+  const resolvedWorkspace = await resolveWorkspaceAuthorityForRequestRework({
+    base: input.base,
+    createError: input.createError,
+    dependencies: input.dependencies,
+    ...(input.cwd !== undefined ? { cwd: input.cwd } : {})
+  });
+
+  if (resolvedWorkspace === undefined) {
     return {
       kind: "fallback"
     };
   }
 
-  if (resolvedWorkspace.bubbleId !== input.base.resolved.bubbleId) {
-    throw input.createError({
-      reasonCode: "APPROVAL_REMOTE_CLONE_CONTEXT_INVALID",
-      message:
-        `Bubble ${input.base.resolved.bubbleId} refused local request-rework because the active workspace resolves to bubble ${resolvedWorkspace.bubbleId} instead.`,
-      context: {
-        command_name: "approval",
-        bubble_id: input.base.resolved.bubbleId,
-        workspace_bubble_id: resolvedWorkspace.bubbleId
-      }
-    });
-  }
+  assertWorkspaceMatchesBubbleForRequestRework({
+    base: input.base,
+    createError: input.createError,
+    resolvedWorkspace
+  });
 
-  const [
+  const {
     resolvedRepoPathIdentity,
     workspaceRepoPathIdentity,
     workspaceRootIdentity
-  ] = await Promise.all([
-    resolveApprovalExecutionPathIdentity(input.base.resolved.repoPath),
-    resolveApprovalExecutionPathIdentity(resolvedWorkspace.repoPath),
-    resolveApprovalExecutionPathIdentity(resolvedWorkspace.worktreePath)
-  ]);
+  } = await resolveRequestReworkExecutionPathIdentities({
+    base: input.base,
+    resolvedWorkspace
+  });
 
-  if (
-    !approvalExecutionPathsMatch(
-      workspaceRepoPathIdentity,
-      resolvedRepoPathIdentity
-    )
-  ) {
-    throw input.createError({
-      reasonCode: "APPROVAL_REMOTE_CLONE_CONTEXT_INVALID",
-      message:
-        `Bubble ${input.base.resolved.bubbleId} refused local request-rework because the active workspace does not match the canonical bubble repository authority.`,
-      context: {
-        command_name: "approval",
-        bubble_id: input.base.resolved.bubbleId,
-        workspace_repo_path: workspaceRepoPathIdentity.absolutePath,
-        resolved_repo_path: resolvedRepoPathIdentity.absolutePath
-      }
-    });
-  }
+  assertWorkspaceRepoAuthorityForRequestRework({
+    base: input.base,
+    createError: input.createError,
+    resolvedRepoPathIdentity,
+    workspaceRepoPathIdentity
+  });
 
-  if (
-    !approvalExecutionPathsMatch(
-      workspaceRootIdentity,
-      workspaceRepoPathIdentity
-    )
-  ) {
+  const cloneRootFallbackDiagnostic = resolveCloneRootFallbackDiagnostic({
+    workspaceRepoPathIdentity,
+    workspaceRootIdentity
+  });
+  if (cloneRootFallbackDiagnostic !== undefined) {
     return {
       kind: "fallback",
-      diagnostic: {
-        reasonCode: "verified_remote_clone_root_required",
-        workspaceRepoPath: workspaceRepoPathIdentity.absolutePath,
-        workspaceRootPath: workspaceRootIdentity.absolutePath
-      }
+      diagnostic: cloneRootFallbackDiagnostic
     };
   }
 
-  let remotePointer: BubbleRemotePointer | null;
-  try {
-    remotePointer = await input.dependencies.readRemotePointer(
-      input.base.resolved.bubblePaths.remotePointerPath
-    );
-  } catch (error) {
-    throw input.createError({
-      reasonCode: "APPROVAL_REMOTE_CLONE_CONTEXT_INVALID",
-      message:
-        `Bubble ${input.base.resolved.bubbleId} could not verify remote clone control-plane boundaries for local request-rework.`,
-      context: {
-        command_name: "approval",
-        bubble_id: input.base.resolved.bubbleId,
-        remote_pointer_path: input.base.resolved.bubblePaths.remotePointerPath
-      },
-      cause: error
-    });
-  }
-
-  if (remotePointer !== null) {
-    throw input.createError({
-      reasonCode: "APPROVAL_REMOTE_CLONE_CONTEXT_INVALID",
-      message:
-        `Bubble ${input.base.resolved.bubbleId} refused local request-rework inside a remote clone because retained remote pointer artifacts are still present.`,
-      context: {
-        command_name: "approval",
-        bubble_id: input.base.resolved.bubbleId,
-        remote_pointer_kind: remotePointer.kind,
-        remote_pointer_path: input.base.resolved.bubblePaths.remotePointerPath
-      }
-    });
-  }
+  await assertNoRetainedRemotePointerArtifactsForRequestRework({
+    base: input.base,
+    createError: input.createError,
+    dependencies: input.dependencies
+  });
 
   return {
     kind: "local",
