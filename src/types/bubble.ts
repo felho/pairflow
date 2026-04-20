@@ -259,6 +259,7 @@ export interface BubbleConfig {
   accuracy_critical?: boolean;
   attach_launcher?: AttachLauncher;
   open_command?: string;
+  open_remote_command?: string;
   agents: BubbleAgentsConfig;
   commands: BubbleCommandsConfig;
   notifications: BubbleNotificationsConfig;

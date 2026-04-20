@@ -412,13 +412,21 @@ describe("UI server integration", () => {
         mergeCommitSha: "def456"
       })
     );
-    const openBubbleMock = vi.fn(() =>
-      Promise.resolve({
+    const openBubbleMock = vi.fn()
+      .mockResolvedValueOnce({
         bubbleId: fixture.bubbleId,
         command: "cursor /tmp/worktree",
-        worktreePath: "/tmp/worktree"
+        workspaceKind: "remote_clone" as const,
+        workspacePath: "/srv/pairflow/repo--b_ui_server_01",
+        remoteAuthority: "dev@ssh.example.com"
       })
-    );
+      .mockResolvedValueOnce({
+        bubbleId: fixture.bubbleId,
+        command: "cursor /tmp/worktree",
+        workspaceKind: "local_worktree" as const,
+        workspacePath: "/tmp/worktree",
+        worktreePath: "/tmp/worktree"
+      });
     const stopBubbleMock = vi.fn(() =>
       Promise.resolve({
         bubbleId: fixture.bubbleId,
@@ -597,6 +605,34 @@ describe("UI server integration", () => {
       );
       expect(open.status).toBe(200);
       expect(openBubbleMock).toHaveBeenCalledTimes(1);
+      expect(open.body).toEqual({
+        result: {
+          bubbleId: fixture.bubbleId,
+          command: "cursor /tmp/worktree",
+          workspaceKind: "remote_clone",
+          workspacePath: "/srv/pairflow/repo--b_ui_server_01",
+          remoteAuthority: "dev@ssh.example.com"
+        }
+      });
+
+      const openLocal = await requestJson(
+        server.url,
+        `/api/bubbles/${fixture.bubbleId}/open?repo=${encodeURIComponent(fixture.repoPath)}`,
+        {
+          method: "POST"
+        }
+      );
+      expect(openLocal.status).toBe(200);
+      expect(openBubbleMock).toHaveBeenCalledTimes(2);
+      expect(openLocal.body).toEqual({
+        result: {
+          bubbleId: fixture.bubbleId,
+          command: "cursor /tmp/worktree",
+          workspaceKind: "local_worktree",
+          workspacePath: "/tmp/worktree",
+          worktreePath: "/tmp/worktree"
+        }
+      });
 
       const stop = await requestJson(
         server.url,

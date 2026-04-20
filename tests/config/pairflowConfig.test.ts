@@ -46,6 +46,16 @@ open_command = "code --reuse-window {{worktree_path}}"
     expect(parsed.open_command).toBe("code --reuse-window {{worktree_path}}");
   });
 
+  it("parses open_remote_command when provided", () => {
+    const parsed = parsePairflowGlobalConfigToml(`
+open_remote_command = "code --folder-uri \\"vscode-remote://ssh-remote+{{remote_authority}}{{remote_clone_path}}\\""
+`);
+
+    expect(parsed.open_remote_command).toBe(
+      'code --folder-uri "vscode-remote://ssh-remote+{{remote_authority}}{{remote_clone_path}}"'
+    );
+  });
+
   it("parses empty config when attach_launcher is omitted", () => {
     const parsed = parsePairflowGlobalConfigToml(`
 # empty config
@@ -264,6 +274,20 @@ future_root_key = "value"
     expect(result.errors.some((error) => error.path === "open_command")).toBe(
       true
     );
+  });
+
+  it("rejects empty or whitespace global open_remote_command values", () => {
+    const result = validatePairflowGlobalConfig({
+      open_remote_command: "   "
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) {
+      return;
+    }
+    expect(
+      result.errors.some((error) => error.path === "open_remote_command")
+    ).toBe(true);
   });
 
   it("rejects unsupported global config sections", () => {

@@ -609,6 +609,13 @@ export function validateBubbleConfig(input: unknown): ValidationResult<BubbleCon
   }
 
   const openCommand = readString(input, "open_command", "open_command", errors, false);
+  const openRemoteCommand = readString(
+    input,
+    "open_remote_command",
+    "open_remote_command",
+    errors,
+    false
+  );
 
   const agents = readObject(input, "agents", "agents", errors, true);
   const commands = readObject(input, "commands", "commands", errors, true);
@@ -1039,6 +1046,10 @@ export function validateBubbleConfig(input: unknown): ValidationResult<BubbleCon
     validatedConfig.open_command = openCommand;
   }
 
+  if (openRemoteCommand !== undefined) {
+    validatedConfig.open_remote_command = openRemoteCommand;
+  }
+
   return validationOk(validatedConfig);
 }
 
@@ -1177,6 +1188,9 @@ export function renderBubbleConfigToml(config: BubbleConfig): string {
       : '# attach_launcher unset; attach uses ~/.pairflow/config.toml, then "auto"',
     config.open_command
       ? `open_command = ${tomlString(config.open_command)}`
+      : undefined,
+    config.open_remote_command
+      ? `open_remote_command = ${tomlString(config.open_remote_command)}`
       : undefined,
     ...(executor !== undefined
       ? [

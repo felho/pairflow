@@ -31,8 +31,21 @@ export function getBubbleOpenHelpText(): string {
     "  -h, --help            Show this help",
     "",
     "Notes:",
-    "  Uses bubble open_command, then ~/.pairflow/config.toml open_command, then default cursor {{worktree_path}}."
+    "  Local open uses bubble open_command, then ~/.pairflow/config.toml open_command, then default cursor {{worktree_path}}.",
+    "  Remote open uses bubble open_remote_command, then ~/.pairflow/config.toml open_remote_command, then the built-in VS Code Remote SSH folder URI."
   ].join("\n");
+}
+
+export function formatBubbleOpenResultText(result: OpenBubbleResult): string {
+  if (result.workspaceKind === "remote_clone") {
+    const authority =
+      result.remoteAuthority === undefined
+        ? ""
+        : ` authority=${result.remoteAuthority}`;
+    return `Opened bubble ${result.bubbleId}: remote clone${authority} path=${result.workspacePath}`;
+  }
+
+  return `Opened bubble ${result.bubbleId}: worktree ${result.workspacePath}`;
 }
 
 export function parseBubbleOpenCommandOptions(

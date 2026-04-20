@@ -1029,28 +1029,45 @@ Behavior:
 
 ### Open command selection (`bubble open`)
 
-`bubble open` resolves editor launch command with this priority:
+`bubble open` resolves editor launch command with explicit local-vs-remote precedence:
+
+Local bubbles:
 
 1. `open_command` in bubble `bubble.toml` (only when explicitly set)
 2. `open_command` in global `~/.pairflow/config.toml` (if set)
 3. Built-in default: `cursor {{worktree_path}}`
 
+Remote bubbles with a persisted `started` pointer:
+
+1. `open_remote_command` in bubble `bubble.toml` (only when explicitly set)
+2. `open_remote_command` in global `~/.pairflow/config.toml` (if set)
+3. Built-in default: `code --folder-uri "vscode-remote://ssh-remote+{{remote_authority}}{{remote_clone_path}}"`
+
 Global default in `~/.pairflow/config.toml`:
 
 ```toml
 open_command = "code --reuse-window {{worktree_path}}"
+open_remote_command = "code --folder-uri \"vscode-remote://ssh-remote+{{remote_authority}}{{remote_clone_path}}\""
 ```
 
 Bubble-level override in `bubble.toml`:
 
 ```toml
 open_command = "cursor --reuse-window {{worktree_path}}"
+open_remote_command = "code --folder-uri \"vscode-remote://ssh-remote+{{remote_authority}}{{remote_clone_path}}\""
 ```
 
 Rendering rules:
 
 - If template contains `{{worktree_path}}`, all occurrences are replaced.
-- If template has no placeholder, Pairflow appends shell-quoted worktree path.
+- For local templates, if the template has no placeholder, Pairflow appends the shell-quoted worktree path.
+- Remote placeholders are supported only as standalone shell-argument tokens.
+- Supported remote placeholders are `{{remote_clone_path}}`, `{{remote_host}}`, `{{remote_user}}`, `{{remote_authority}}`, and `{{remote_alias}}`.
+- Standalone remote placeholders are rendered as shell-quoted argument values.
+- If you need a VS Code Remote SSH URI, use the canonical literal `vscode-remote://ssh-remote+{{remote_authority}}{{remote_clone_path}}`; Pairflow URI-encodes that literal before shell quoting the final command.
+- Pairflow only consults global remote config for placeholder supplementation when the started pointer is missing the needed remote identity, or when remote template resolution already had to consult global precedence because there is no bubble-level `open_remote_command`.
+- `{{worktree_path}}` never gains an implicit remote meaning.
+- The built-in remote default uses dedicated URI encoding for the VS Code Remote SSH folder URI and does not treat shell quoting as URI encoding.
 
 ## Advanced internals
 

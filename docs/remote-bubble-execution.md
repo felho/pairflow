@@ -136,6 +136,7 @@ If a remote bubble needs local-only secrets or environment-specific files, the u
 # Existing config
 attach_launcher = "auto"
 open_command = "cursor"
+open_remote_command = "code --folder-uri \"vscode-remote://ssh-remote+{{remote_authority}}{{remote_clone_path}}\""
 
 # Remote host definitions
 [remotes.myserver]
@@ -178,7 +179,39 @@ remote = "myserver"
 
 The `executor` object is intentionally extensible. In this design it uses the minimal `{ type: "ssh", remote: "<host>" }` shape, but the `type` field exists specifically so future runtime kinds (containerized, sandboxed, cloud-backed, etc.) can add executor-specific fields without redefining the top-level bubble config contract.
 
-### 5.3 Remote pointer file (pointer only)
+### 5.3 Remote-aware `bubble open`
+
+`pairflow bubble open` remains a shared surface for both local and remote bubbles, but remote bubbles use a separate command family:
+
+1. Bubble `open_remote_command`
+2. Global `open_remote_command`
+3. Built-in VS Code Remote SSH folder URI default
+
+Canonical built-in default:
+
+- `code --folder-uri "vscode-remote://ssh-remote+{{remote_authority}}{{remote_clone_path}}"`
+
+The remote launch target is derived only from the persisted `started` pointer:
+
+- `host` comes from the pointer
+- `remoteClonePath` comes from the pointer
+- config supplement may only fill a missing `user`
+- config supplement must fail closed on host drift or ambiguous user authority when remote config is actually consulted
+- Pairflow consults remote config only when the started pointer is missing needed remote identity data, or when remote open template precedence already had to load global config because there is no bubble-level `open_remote_command`
+
+Remote placeholders:
+
+- `{{remote_clone_path}}`
+- `{{remote_host}}`
+- `{{remote_user}}`
+- `{{remote_authority}}`
+- `{{remote_alias}}`
+
+Outside the canonical VS Code Remote SSH URI literal, these placeholders are only supported as standalone shell-argument tokens. Embedded placeholder composition must fail closed instead of relying on shell quoting as a URI-encoding surrogate.
+
+`{{worktree_path}}` never maps to the remote clone path.
+
+### 5.4 Remote pointer file (pointer only)
 
 **File:** `.pairflow/bubbles/<id>/remote.json`
 
@@ -214,7 +247,7 @@ Started shape:
 
 The `instanceId` distinguishes this started instance from any later separately-defined start lineage of the same bubble. This document does not define a restart/recovery contract on top of preserved started state.
 
-### 5.4 State cache file (cache only)
+### 5.5 State cache file (cache only)
 
 **File:** `.pairflow/bubbles/<id>/state-cache.json`
 

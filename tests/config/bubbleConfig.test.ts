@@ -845,6 +845,8 @@ typecheck = "pnpm typecheck"
       commit_requires_approval: true,
       attach_launcher: "ghostty",
       open_command: "cursor {{worktree_path}}",
+      open_remote_command:
+        'code --folder-uri "vscode-remote://ssh-remote+{{remote_authority}}{{remote_clone_path}}"',
       agents: {
         implementer: "codex",
         reviewer: "claude"
@@ -873,6 +875,9 @@ typecheck = "pnpm typecheck"
     );
     expect(reparsed.commands.typecheck).toBe("pnpm typecheck");
     expect(reparsed.attach_launcher).toBe("ghostty");
+    expect(reparsed.open_remote_command).toBe(
+      'code --folder-uri "vscode-remote://ssh-remote+{{remote_authority}}{{remote_clone_path}}"'
+    );
     expect(reparsed.local_overlay?.mode).toBe("copy");
     expect(reparsed.local_overlay?.entries).toEqual([".claude", ".env.local"]);
   });
@@ -938,6 +943,28 @@ typecheck = "pnpm typecheck"
     expect(parsed.open_command).toBe("cursor --reuse-window {{worktree_path}}");
   });
 
+  it("parses explicit open_remote_command from TOML input", () => {
+    const parsed = parseBubbleConfigToml(`
+id = "b_test_open_remote_command"
+repo_path = "/tmp/repo"
+base_branch = "main"
+bubble_branch = "bubble/b_test_open_remote_command"
+open_remote_command = "code --folder-uri \\"vscode-remote://ssh-remote+{{remote_authority}}{{remote_clone_path}}\\""
+
+[agents]
+implementer = "codex"
+reviewer = "claude"
+
+[commands]
+test = "pnpm test"
+typecheck = "pnpm typecheck"
+`);
+
+    expect(parsed.open_remote_command).toBe(
+      'code --folder-uri "vscode-remote://ssh-remote+{{remote_authority}}{{remote_clone_path}}"'
+    );
+  });
+
   it("rejects empty or whitespace open_command when explicitly set", () => {
     const result = validateBubbleConfig({
       id: "b_test_open_command_invalid",
@@ -962,6 +989,32 @@ typecheck = "pnpm typecheck"
     expect(result.errors.some((error) => error.path === "open_command")).toBe(
       true
     );
+  });
+
+  it("rejects empty or whitespace open_remote_command when explicitly set", () => {
+    const result = validateBubbleConfig({
+      id: "b_test_open_remote_command_invalid",
+      repo_path: "/tmp/repo",
+      base_branch: "main",
+      bubble_branch: "bubble/b_test_open_remote_command_invalid",
+      open_remote_command: "   ",
+      agents: {
+        implementer: "codex",
+        reviewer: "claude"
+      },
+      commands: {
+        test: "pnpm test",
+        typecheck: "pnpm typecheck"
+      }
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) {
+      return;
+    }
+    expect(
+      result.errors.some((error) => error.path === "open_remote_command")
+    ).toBe(true);
   });
 
   it("rejects invalid bubble_instance_id format", () => {

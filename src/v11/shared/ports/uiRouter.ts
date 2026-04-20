@@ -7,6 +7,7 @@ import type {
 import type { UiTimelineEntry } from "../../../types/ui.js";
 import type { BubbleListEntry } from "../list/listCommandContract.js";
 import type { ProtocolEnvelope } from "../../../types/protocol.js";
+import type { OpenBubbleResult as SharedOpenBubbleResult } from "./openBubble.js";
 import type {
   BubbleInboxInput,
   BubbleInboxView
@@ -153,11 +154,7 @@ export interface UiMergeBubbleInput extends UiBubbleMutationInput {
   deleteRemote?: boolean | undefined;
 }
 
-export interface UiOpenBubbleResult {
-  bubbleId: string;
-  worktreePath: string;
-  command: string;
-}
+export type UiOpenBubbleResult = SharedOpenBubbleResult;
 
 export interface UiDeleteBubbleInput extends UiBubbleMutationInput {
   force?: boolean | undefined;
