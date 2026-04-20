@@ -176,6 +176,40 @@ describe("listBubbles", () => {
     expect(listed.bubbles[0]?.runtimeSession?.tmuxSessionName).toBe("pf-b_list_04");
   });
 
+  it("skips a bubble that disappears after id enumeration", async () => {
+    const repoPath = await createTempRepo();
+    const keptBubble = await createBubble({
+      id: "b_list_keep_01",
+      repoPath,
+      baseBranch: "main",
+      reviewArtifactType: "code",
+      task: "Kept bubble",
+      cwd: repoPath
+    });
+    const deletedBubble = await createBubble({
+      id: "b_list_deleted_01",
+      repoPath,
+      baseBranch: "main",
+      reviewArtifactType: "code",
+      task: "Deleted bubble",
+      cwd: repoPath
+    });
+
+    await rm(deletedBubble.paths.bubbleDir, { recursive: true, force: true });
+    vi.spyOn(listCommandDefaults, "listBubbleIds").mockResolvedValue([
+      keptBubble.bubbleId,
+      deletedBubble.bubbleId
+    ]);
+
+    const listed = await listBubbles({ repoPath });
+
+    expect(listed.total).toBe(1);
+    expect(listed.bubbles.map((entry) => entry.bubbleId)).toEqual([
+      keptBubble.bubbleId
+    ]);
+    expect(listed.byState.CREATED).toBe(1);
+  });
+
   it("counts phase-2 states in byState summary", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({

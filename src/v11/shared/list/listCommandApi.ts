@@ -1,4 +1,6 @@
 import { isNamedError } from "../errors/namedError.js";
+import { pathExists } from "../../infrastructure/foundation/fs/pathExists.js";
+import { getBubblePaths } from "../bubble/bubblePaths.js";
 import type {
   BubbleListEntry,
   BubbleListInput,
@@ -27,6 +29,27 @@ export type {
 
 export { BubbleListError } from "./listCommandErrors.js";
 
+async function shouldSkipDeletedBubbleDuringList(input: {
+  repoPath: string;
+  bubbleId: string;
+  error: unknown;
+}): Promise<boolean> {
+  if (
+    typeof input.error !== "object"
+    || input.error === null
+    || !("code" in input.error)
+    || (
+      input.error.code !== "ENOENT"
+      && input.error.code !== "ENOTDIR"
+    )
+  ) {
+    return false;
+  }
+
+  const bubblePaths = getBubblePaths(input.repoPath, input.bubbleId);
+  return !(await pathExists(bubblePaths.bubbleTomlPath));
+}
+
 export async function listBubbles(input: BubbleListInput = {}): Promise<BubbleListView> {
   const {
     repoPath,
@@ -45,14 +68,28 @@ export async function listBubbles(input: BubbleListInput = {}): Promise<BubbleLi
   let unavailableStarted = 0;
 
   for (const bubbleId of bubbleIds) {
-    const built = await buildBubbleListEntry({
-      repoPath,
-      normalizedRepoPath,
-      bubbleId,
-      sessions,
-      now,
-      refresh: input.refresh ?? false
-    });
+    let built;
+    try {
+      built = await buildBubbleListEntry({
+        repoPath,
+        normalizedRepoPath,
+        bubbleId,
+        sessions,
+        now,
+        refresh: input.refresh ?? false
+      });
+    } catch (error) {
+      if (
+        await shouldSkipDeletedBubbleDuringList({
+          repoPath,
+          bubbleId,
+          error
+        })
+      ) {
+        continue;
+      }
+      throw error;
+    }
     if (built.hasRuntimeSession) {
       if (built.invalidState) {
         staleForInvalidStates += 1;
