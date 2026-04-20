@@ -68,7 +68,7 @@ Priority order:
 7. Attach means attaching to the whole tmux session (`tmux attach -t pf-<id>`), not individual panes. There is no per-pane attach CLI command.
 8. Canonical truth remains file-backed (`state.json`, `transcript.ndjson`, `inbox.ndjson`, runtime session registry).
 9. Transcript reader tolerates partial trailing NDJSON line; UI must not hard-fail on this.
-10. `open` means invoking the same behavior as `pairflow bubble open` (`open_command` + `{{worktree_path}}` interpolation); UI should surface command errors directly.
+10. `open` means invoking the same behavior as `pairflow bubble open`: local bubbles use `open_command` + `{{worktree_path}}`, while started remote bubbles use `open_remote_command` and the persisted remote clone authority. UI should surface command errors directly.
 
 ## Retained implementation decisions
 

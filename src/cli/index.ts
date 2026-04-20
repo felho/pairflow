@@ -39,6 +39,7 @@ import {
   runBubbleReplyCommand
 } from "./commands/bubble/reply.js";
 import {
+  formatBubbleOpenResultText,
   getBubbleOpenHelpText,
   runBubbleOpenCommand
 } from "./commands/bubble/open.js";
@@ -494,9 +495,7 @@ async function handleBubbleOpenCommand(args: string[]): Promise<number> {
     return 0;
   }
 
-  process.stdout.write(
-    `Opened bubble ${result.bubbleId}: worktree ${result.worktreePath}\n`
-  );
+  process.stdout.write(`${formatBubbleOpenResultText(result)}\n`);
   return 0;
 }
 

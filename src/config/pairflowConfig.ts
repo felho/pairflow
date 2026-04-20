@@ -22,6 +22,7 @@ import {
 export interface PairflowGlobalConfig {
   attach_launcher?: AttachLauncher;
   open_command?: string;
+  open_remote_command?: string;
   remotes?: Record<string, PairflowRemoteHostConfig>;
 }
 
@@ -368,6 +369,21 @@ export function validatePairflowGlobalConfig(
     });
   }
 
+  const openRemoteCommand = input.open_remote_command;
+  const validatedOpenRemoteCommand = isNonEmptyString(openRemoteCommand)
+    ? openRemoteCommand
+    : undefined;
+
+  if (
+    openRemoteCommand !== undefined
+    && validatedOpenRemoteCommand === undefined
+  ) {
+    errors.push({
+      path: "open_remote_command",
+      message: "Must be a non-empty string"
+    });
+  }
+
   const remotesInput = input.remotes;
   const validatedRemotes: Record<string, PairflowRemoteHostConfig> = {};
   if (remotesInput !== undefined) {
@@ -511,6 +527,9 @@ export function validatePairflowGlobalConfig(
       : {}),
     ...(validatedOpenCommand !== undefined
       ? { open_command: validatedOpenCommand }
+      : {}),
+    ...(validatedOpenRemoteCommand !== undefined
+      ? { open_remote_command: validatedOpenRemoteCommand }
       : {}),
     ...(Object.keys(validatedRemotes).length > 0
       ? { remotes: validatedRemotes }

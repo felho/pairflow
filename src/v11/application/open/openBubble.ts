@@ -1,4 +1,5 @@
 import { isNamedError } from "../../shared/errors/namedError.js";
+import type { OpenBubbleResult } from "../../shared/ports/openBubble.js";
 import {
   createOpenBubbleError,
   executeOpenCommand,
@@ -6,7 +7,6 @@ import {
   openBubbleRuntime,
   type OpenBubbleDependencies,
   type OpenBubbleInput,
-  type OpenBubbleResult,
   type OpenCommandExecutionInput,
   type OpenCommandExecutionResult,
   type OpenCommandExecutor
