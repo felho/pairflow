@@ -1,9 +1,7 @@
 import { isNamedError } from "../../shared/errors/namedError.js";
 import type { OpenBubbleResult } from "../../shared/ports/openBubble.js";
 import {
-  createOpenBubbleError,
   executeOpenCommand,
-  OpenBubbleError,
   openBubbleRuntime,
   type OpenBubbleDependencies,
   type OpenBubbleInput,
@@ -11,6 +9,10 @@ import {
   type OpenCommandExecutionResult,
   type OpenCommandExecutor
 } from "./openBubbleRuntime.js";
+import {
+  createOpenBubbleError,
+  OpenBubbleError
+} from "./openBubbleError.js";
 import { openBubbleDefaults } from "./openBubbleDefaults.js";
 
 export async function openBubble(
@@ -21,7 +23,10 @@ export async function openBubble(
     ...dependencies,
     resolveBubbleById:
       dependencies.resolveBubbleById
-      ?? ((...args) => openBubbleDefaults.resolveBubbleById(...args))
+      ?? ((...args) => openBubbleDefaults.resolveBubbleById(...args)),
+    readRemotePointer:
+      dependencies.readRemotePointer
+      ?? ((...args) => openBubbleDefaults.readRemotePointer(...args))
   });
 }
 

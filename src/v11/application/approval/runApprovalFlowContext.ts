@@ -1,6 +1,3 @@
-import { realpath } from "node:fs/promises";
-import { resolve } from "node:path";
-
 import type {
   BubbleRemotePointer,
   BubbleRemotePointerStarted,
@@ -8,10 +5,19 @@ import type {
 } from "../../../types/bubble.js";
 import type { ApprovalRemoteBubbleStatusTarget } from "./approvalRemoteExecutionContract.js";
 import type { ResolvedApprovalCommandDependencies } from "./approvalCommandDependencyResolution.js";
+import type {
+  RequestReworkRemoteFallbackDiagnostic
+} from "./requestReworkRemoteCloneSupport.js";
 import {
   canonicalizeApprovalExecutionPath,
   resolveRemoteApprovalExecutionContextFromEnv
 } from "./remoteApprovalExecutionContext.js";
+import {
+  isWorkspaceResolutionReason,
+  resolveCloneRootFallbackDiagnostic,
+  resolveRequestReworkExecutionPathIdentities as resolveRequestReworkExecutionPathIdentitiesSupport,
+  workspaceRepoMatchesResolvedRepo
+} from "./requestReworkRemoteCloneSupport.js";
 
 export interface LocalApprovalFlowExecutionContext {
   route: "local";
@@ -40,52 +46,10 @@ interface ApprovalFlowBaseResolution {
   lockPath: string;
 }
 
-interface ApprovalExecutionPathIdentity {
-  absolutePath: string;
-  canonicalPath: string;
-}
-interface RequestReworkRemoteFallbackDiagnostic {
-  reasonCode: "verified_remote_clone_root_required";
-  workspaceRepoPath: string;
-  workspaceRootPath: string;
-}
-
 type ResolvedWorkspaceFromCwd =
   Awaited<
     ReturnType<ResolvedApprovalCommandDependencies["resolveBubbleFromWorkspaceCwd"]>
   >;
-async function resolveApprovalExecutionPathIdentity(
-  pathValue: string
-): Promise<ApprovalExecutionPathIdentity> {
-  const absolutePath = resolve(pathValue);
-  return {
-    absolutePath,
-    canonicalPath: await realpath(absolutePath).catch(() => absolutePath)
-  };
-}
-
-function approvalExecutionPathsMatch(
-  left: ApprovalExecutionPathIdentity,
-  right: ApprovalExecutionPathIdentity
-): boolean {
-  return (
-    left.absolutePath === right.absolutePath
-    || left.canonicalPath === right.canonicalPath
-  );
-}
-function isWorkspaceResolutionReason(error: unknown, reason: string): boolean {
-  if (typeof error !== "object" || error === null || !("context" in error)) {
-    return false;
-  }
-
-  const context = error.context;
-  return (
-    typeof context === "object"
-    && context !== null
-    && "reason" in context
-    && context.reason === reason
-  );
-}
 async function resolveWorkspaceAuthorityForRequestRework(input: {
   base: ApprovalFlowBaseResolution;
   createError: PairflowCreateCommandError;
@@ -135,39 +99,24 @@ function assertWorkspaceMatchesBubbleForRequestRework(input: {
 async function resolveRequestReworkExecutionPathIdentities(input: {
   base: ApprovalFlowBaseResolution;
   resolvedWorkspace: ResolvedWorkspaceFromCwd;
-}): Promise<{
-  resolvedRepoPathIdentity: ApprovalExecutionPathIdentity;
-  workspaceRepoPathIdentity: ApprovalExecutionPathIdentity;
-  workspaceRootIdentity: ApprovalExecutionPathIdentity;
-}> {
-  const [
-    resolvedRepoPathIdentity,
-    workspaceRepoPathIdentity,
-    workspaceRootIdentity
-  ] = await Promise.all([
-    resolveApprovalExecutionPathIdentity(input.base.resolved.repoPath),
-    resolveApprovalExecutionPathIdentity(input.resolvedWorkspace.repoPath),
-    resolveApprovalExecutionPathIdentity(input.resolvedWorkspace.worktreePath)
-  ]);
-
-  return {
-    resolvedRepoPathIdentity,
-    workspaceRepoPathIdentity,
-    workspaceRootIdentity
-  };
+}) {
+  return resolveRequestReworkExecutionPathIdentitiesSupport({
+    resolvedRepoPath: input.base.resolved.repoPath,
+    workspaceRepoPath: input.resolvedWorkspace.repoPath,
+    workspaceRootPath: input.resolvedWorkspace.worktreePath
+  });
 }
 function assertWorkspaceRepoAuthorityForRequestRework(input: {
   base: ApprovalFlowBaseResolution;
   createError: PairflowCreateCommandError;
-  resolvedRepoPathIdentity: ApprovalExecutionPathIdentity;
-  workspaceRepoPathIdentity: ApprovalExecutionPathIdentity;
+  resolvedRepoPathIdentity: Awaited<
+    ReturnType<typeof resolveRequestReworkExecutionPathIdentities>
+  >["resolvedRepoPathIdentity"];
+  workspaceRepoPathIdentity: Awaited<
+    ReturnType<typeof resolveRequestReworkExecutionPathIdentities>
+  >["workspaceRepoPathIdentity"];
 }): void {
-  if (
-    approvalExecutionPathsMatch(
-      input.workspaceRepoPathIdentity,
-      input.resolvedRepoPathIdentity
-    )
-  ) {
+  if (workspaceRepoMatchesResolvedRepo(input)) {
     return;
   }
 
@@ -183,26 +132,6 @@ function assertWorkspaceRepoAuthorityForRequestRework(input: {
     }
   });
 }
-function resolveCloneRootFallbackDiagnostic(input: {
-  workspaceRepoPathIdentity: ApprovalExecutionPathIdentity;
-  workspaceRootIdentity: ApprovalExecutionPathIdentity;
-}): RequestReworkRemoteFallbackDiagnostic | undefined {
-  if (
-    approvalExecutionPathsMatch(
-      input.workspaceRootIdentity,
-      input.workspaceRepoPathIdentity
-    )
-  ) {
-    return undefined;
-  }
-
-  return {
-    reasonCode: "verified_remote_clone_root_required",
-    workspaceRepoPath: input.workspaceRepoPathIdentity.absolutePath,
-    workspaceRootPath: input.workspaceRootIdentity.absolutePath
-  };
-}
-
 async function assertNoRetainedRemotePointerArtifactsForRequestRework(input: {
   base: ApprovalFlowBaseResolution;
   createError: PairflowCreateCommandError;
