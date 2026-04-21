@@ -16,6 +16,8 @@ Estimate risk from boundary spread:
 5. whether the task depends on unfinished prerequisite milestones,
 6. whether the task tries to close too many distinct acceptance goals at once.
 7. whether coordination/locking or precondition-ordering changes are being smuggled into a producer or delivery slice.
+8. whether the task changes where success/completion is proven, while also changing cleanup or result/status/event truth surfaces.
+9. whether a proof contract is reused from an existing flow, but its validation strictness is not clearly inherited.
 
 For authority-heavy scopes, also inspect consume families:
 1. internal execution consumers,
@@ -122,6 +124,10 @@ Do not keep the scope as a single implementation task if any of the following is
    - rollback/retry/cleanup/shared-state-preservation semantics, or
    - lock/mutex/lease/idempotency/serialization semantics, or
    - precondition ordering that determines whether side effects happen before validation.
+10. The same bounded slice would change the canonical success/completion proof source and also:
+   - post-success cleanup semantics, or
+   - final result/status/event truth semantics.
+11. The same bounded slice would reuse a cleanup/delete/reconcile proof contract, but the artifact does not explicitly prove proof-parity or explicitly narrow the reused contract safely.
 
 ## Escalation Rules Below Hard-Stop
 
@@ -187,6 +193,13 @@ Also record closure-budget triage in the Task when authority/runtime/read-model/
 4. which closures are explicitly deferred.
 
 Also state whether any of these closures are intentionally collapsed into one bounded task, and why that collapse is safe.
+
+Also record success/completion proof-boundary triage when mutable flow completion semantics are changing:
+1. current canonical success/completion proof source,
+2. target canonical success/completion proof source,
+3. final result/status/event surfaces affected,
+4. whether any surface becomes mixed-truth across phases,
+5. whether an existing proof contract is reused, and if so whether full proof-parity is required here or deferred explicitly.
 
 For mutable existing flows, the Task should also record:
 1. whether invalid/precondition-failure should produce zero side effects,

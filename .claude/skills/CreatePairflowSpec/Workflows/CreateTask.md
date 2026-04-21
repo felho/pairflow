@@ -54,6 +54,10 @@ Create or refine a Pairflow task file using `L0 -> L1 -> L2`.
    - canonical vs guard vs compat field-role candidates when an existing contract is being clarified,
    - closed terminology that successor tasks may inherit,
    - existing baseline canonicalization/finalize/reconciliation paths that may need preservation,
+   - current success/completion proof source for any mutable flow being refined,
+   - target success/completion proof source after this task,
+   - final result/status/event surfaces that would reflect the changed proof,
+   - any reused cleanup/delete/reconcile proof contract and whether parity with that contract is expected,
    - affected surfaces,
    - authority producer and consumer families,
    - shared contract consumers and compatibility risk,
@@ -75,7 +79,8 @@ Minimum checks:
    - lock/idempotency/serialization behavior,
    - precondition ordering relative to side effects?
 3. Are there fresh-vs-reused, success-vs-failure, retry-vs-no-retry, or precondition-pass-vs-fail branches that must be explicitly inventoried?
-4. Does the actual touched scope still match the claimed task label and bounded-task shape?
+4. Which branches construct final success/status/result truth, and from which phase does each truth come?
+5. Does the actual touched scope still match the claimed task label and bounded-task shape?
 
 Policy:
 1. Do not trust the task title, phase label, or requested task shape alone.
@@ -83,6 +88,7 @@ Policy:
 3. If the touched scope implies producer, fail-closed, or coordination/concurrency work, the task must say so explicitly.
 4. If the touched scope changes a mutation boundary, the task must record precondition-before-side-effect behavior explicitly.
 5. If the actual scope mixes multiple correctness closures and the artifact cannot prove the mix is safe, split before drafting L1.
+6. If the touched scope changes where success/completion is proven, and also changes cleanup/recovery behavior or final result/status/event surfaces, split unless the artifact can prove a single bounded closure with no mixed-truth ambiguity.
 
 ### 1b) Run the Control-Model Readiness Gate
 
@@ -125,6 +131,7 @@ Policy:
    - intentionally replaced behavior,
    - or explicitly forbidden behavior.
 7. Do not let `forbidden_fallback` wording accidentally ban deterministic same-authority resolution paths unless the referenced artifact or task says so explicitly.
+8. If the task changes where success/completion is proven, it must make that proof boundary explicit instead of leaving it implicit inside call-site or cleanup wording.
 
 ### 1b.1) Run the Closed-Contract Drift Check
 
@@ -158,6 +165,7 @@ Run this scan whenever:
 2. `identity_join_risk >= 1`
 3. a shared interface/result shape is changing
 4. a canonical authority is consumed by multiple surfaces or roles
+5. success/completion truth is surfaced through multiple result/status/event consumers
 
 Inventory the relevant generic authority buckets, either with these names or with an explicitly mapped project-local equivalent:
 1. `authority_producer`
@@ -189,6 +197,7 @@ Policy:
    - which closure this task owns now,
    - which producer or predecessor closure it depends on,
    - and which downstream consumer/read-model/cleanup closures remain for successor tasks.
+8. If success/completion proof cutover changes what multiple surfaces report as final truth, treat those surfaces as consume families for split analysis even when they share one command entrypoint.
 
 ### 1d) Run the Shared Contract Compatibility Gate
 
@@ -228,6 +237,7 @@ Policy:
    - the same consumer family owns the fallout,
    - and no separate compatibility or diagnostics risk exists.
 5. If that proof is not available from the loaded context, do not guess; route back to `CreatePlan`.
+6. If the task changes canonical success/completion proof source and also changes cleanup/recovery or final result/status/event semantics, do not finalize as one bounded task unless the artifact includes an explicit proof-boundary mapping and mixed-truth justification.
 
 ### 1d.2) Run the Bounded-Task-Shape Gate
 
@@ -248,6 +258,7 @@ Policy:
 4. If the task introduces rollback/retry/cleanup/shared-state-preservation or failure-envelope tightening, `fail_closed_hardening` is in scope and must be recorded explicitly.
 5. If the task changes precondition ordering relative to side effects, record that explicitly and treat it as a split trigger when mixed with producer or shared-contract work.
 6. If the task mixes `authority_producer` with `fail_closed_hardening` or `coordination_concurrency_hardening` without an explicit bounded proof, route back to `CreatePlan`.
+7. If the task changes success/completion proof boundary and also changes compat result/status/event semantics, treat that as mixed-shape by default and route back to `CreatePlan` unless an explicit bounded proof says otherwise.
 
 ### 1e) Run the Complexity-Risk Gate
 
@@ -280,6 +291,7 @@ Policy:
 7. If the authority fan-out scan reveals three or more consume families, producer closure and consumer-family closure should not remain in the same bounded task by default.
 8. But do not split adjacent closures into separate tasks just to mirror the vocabulary; merge them when they are genuinely one bounded change with the same consumers and no separate compatibility/read-model risk.
 9. If the Closure-Budget Gate says the task is too wide, the task must not be written as direct feature-delivery even if the risk score alone looks borderline acceptable.
+10. If the task changes canonical success/completion proof source and also touches cleanup or final result/status/event semantics, default `single-task allowed: no` unless proof-boundary mapping shows one non-ambiguous bounded closure.
 
 ### 2) Build draft immediately
 
@@ -373,6 +385,12 @@ Required blockers for Task output:
    - canonical vs guard vs compat classification,
    - forbidden reinterpretations,
    - drift status proving there is no unauthorized semantic change.
+20. If the task changes an existing mutable flow's success/completion semantics, blockers also include:
+   - current canonical success/completion proof source,
+   - target canonical success/completion proof source,
+   - final result/status/event truth-surface mapping,
+   - explicit note whether any surface is mixed-truth across phases,
+   - reused proof-contract parity rule (`inherit_full_parity | narrowed_here_with_proof | no_reuse`).
 
 If blockers exist, ask only focused questions for those blockers.
 
@@ -400,6 +418,7 @@ If blockers exist, ask only focused questions for those blockers.
    - inherits which plan-level validation/exit expectation.
 12. Record primary bounded-task shape explicitly, and secondary shape only when justified.
 13. If the Closed-Contract Drift Check applies, include canonical contract anchors and say explicitly which meanings are preserved rather than silently rephrased.
+14. If the task changes success/completion semantics of an existing mutable flow, include a `Success / Completion Proof Boundary` section.
 
 ### 5) L1 pass
 
@@ -418,6 +437,7 @@ Fill each section or mark `N/A`:
 12. Baseline preservation (required when an existing canonicalization/resolution path is refined or replaced; otherwise `N/A`)
 13. Closure-budget summary (required when authority/runtime/read-model/shared-contract work is in scope; otherwise `N/A`)
 14. Precondition and side-effect boundary (required when an existing mutation flow is modified or coordination primitives are introduced; otherwise `N/A`)
+15. Success / completion proof boundary (required when an existing mutable flow's completion semantics or final truth surfaces change; otherwise `N/A`)
 
 Rules:
 1. `target_files` must align with call-site matrix.
@@ -439,6 +459,11 @@ Rules:
 14. If `plan_ref` exists, L1 must name the exact parent gap this task closes and what successor work remains or is invalidated.
 15. If the task inherits a plan-level exit expectation, the test matrix or a validation note must make that inheritance concrete enough to review.
 16. If the Closed-Contract Drift Check applies, L1 must make canonical vs guard vs compat roles concrete enough that a reviewer can detect semantic drift, not just wording polish.
+17. If success/completion proof boundary changes, L1 must make explicit:
+   - what proves success now,
+   - what proves completion now,
+   - which final result/status/event surfaces use which proof,
+   - and whether any compat surface intentionally remains mixed-truth or must stay single-truth.
 
 ### 5a) Consistency Gate (mandatory before L2)
 
@@ -482,12 +507,17 @@ Run a document-level consistency gate:
    - invalid/precondition-failure behavior is explicit,
    - forbidden early side effects do not reappear elsewhere in L1,
    - any new lock/mutex/serialization primitive is reflected in the bounded task shape and test matrix.
-13. Re-check plan linkage fit when `plan_ref` exists:
+13. Re-check success/completion proof fit:
+   - current vs target proof boundary is explicit,
+   - final result/status/event surfaces are mapped,
+   - no field is silently populated from a different proof phase than its surrounding surface implies,
+   - reused proof contracts keep full parity unless explicit narrowing is proven.
+14. Re-check plan linkage fit when `plan_ref` exists:
    - the declared parent gap matches the actual bounded task,
    - predecessor/successor expectations are still coherent after any local split,
    - obsolete/refined tasks are named explicitly,
    - and inherited plan-level validation expectations are reflected in L1.
-14. Re-check closed-contract drift when applicable:
+15. Re-check closed-contract drift when applicable:
    - source anchors are cited,
    - canonical elements have not been downgraded to guard/compat language,
    - new terminology is explicitly mapped,

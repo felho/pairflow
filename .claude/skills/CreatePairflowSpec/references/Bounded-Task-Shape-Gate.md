@@ -57,6 +57,8 @@ Split by default when any of these are true:
 3. a slice changes precondition ordering relative to side effects and also changes producer or shared-contract behavior
 4. rollback/retry/shared-state-preservation is being added to "finish" a producer task
 5. locking/serialization is being added to "stabilize" a producer task
+6. the slice changes where success/completion is proven and also changes cleanup/recovery or final result/status/event semantics
+7. the slice keeps one compat surface but its fields would now be populated from different proof phases without an explicit truth-surface mapping
 
 These are not minor implementation details. They are separate correctness closures.
 
@@ -70,6 +72,16 @@ When a task modifies an existing mutation flow, record:
    - or explicitly bounded side effects.
 
 If this rule changes in the same slice as producer or shared-contract work, split by default.
+
+## Success/Completion Proof Boundary Rule
+
+When a task changes an existing mutable flow, record:
+1. what currently proves success/completion,
+2. what will prove success/completion after this task,
+3. which final result/status/event surfaces reflect that proof,
+4. whether any surface is canonical truth, guard-only, or compat-only.
+
+If the task changes the proof boundary and also changes cleanup/recovery behavior or final surface semantics, split by default unless the artifact proves the same bounded code path closes all of it without mixed-truth ambiguity.
 
 ## Output Expectations
 

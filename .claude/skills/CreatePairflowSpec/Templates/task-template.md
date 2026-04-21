@@ -86,6 +86,19 @@ Include this section when the task refines or replaces an existing canonicalizat
 3. Forbidden regression interpretations: <What reviewers/implementers must not "tighten" away, or `N/A`.>
 4. Replacement proof required if removed: <What exact replacement/equivalence evidence is required, or `N/A`.>
 
+### Success / Completion Proof Boundary
+
+Include this section when the task changes an existing mutable flow's completion semantics or final truth surfaces. Otherwise say `N/A`.
+
+1. Current canonical success proof source: <What currently proves success, or `N/A`.>
+2. Target canonical success proof source: <What proves success after this task, or `N/A`.>
+3. Current canonical completion proof source: <What currently proves completion/finalization, or `N/A`.>
+4. Target canonical completion proof source: <What proves completion/finalization after this task, or `N/A`.>
+5. Reused proof contract: <cleanup/delete/reconcile contract reused here, or `N/A`.>
+6. Proof-parity rule: <`inherit_full_parity | narrowed_here_with_proof | no_reuse`>
+7. Final truth surfaces affected: <result fields / status fields / lifecycle events + note, or `N/A`.>
+8. Mixed-truth surfaces allowed: <none | explicit compat-only list + why safe>
+
 ### Precondition and Side-Effect Boundary
 
 Include this section when the task modifies an existing mutation flow or introduces coordination primitives. Otherwise say `N/A`.
@@ -196,7 +209,13 @@ Include this section when the task modifies an existing mutation flow or introdu
 |---|---|---|---|---|
 | <current deterministic path or `N/A`> | <preserve|replace|forbid> | <equivalence/replacement evidence or `N/A`> | P1 | required-now |
 
-### 0f) Precondition and Side-Effect Boundary (if applicable)
+### 0f) Success / Completion Proof Boundary (if applicable)
+
+| Surface | Current Proof Source | Target Proof Source | Canonical / Compat / Guard | Mixed-Truth Allowed? | Priority | Timing |
+|---|---|---|---|---|---|---|
+| <result/status/event surface or `N/A`> | <text> | <text> | <canonical|compat|guard> | <no|yes + why> | P1 | required-now |
+
+### 0g) Precondition and Side-Effect Boundary (if applicable)
 
 | Case | Must Be Validated Before | Forbidden Early Side Effects | Required Failure Behavior | Priority | Timing |
 |---|---|---|---|---|---|

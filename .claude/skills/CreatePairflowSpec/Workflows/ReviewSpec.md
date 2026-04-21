@@ -123,7 +123,9 @@ Minimum checks:
 2. Does the touched scope include producer behavior, fail-closed behavior, or coordination/concurrency behavior?
 3. Does the touched scope change precondition-before-side-effect ordering?
 4. Are rollback/retry/cleanup/shared-state preservation branches present?
-5. Does the actual scope still match the task's claimed bounded-task shape?
+5. Does the touched scope change where success/completion is proven?
+6. Do any final result/status/event surfaces become mixed-truth across phases?
+7. Does the actual scope still match the task's claimed bounded-task shape?
 
 Outcome:
 1. Record whether the task is still correctly classified.
@@ -155,7 +157,9 @@ When reviewing a `task`, check:
 4. whether precondition-before-side-effect rules are explicit when needed
 5. whether the task still fits its parent gap and parent plan boundary
 6. whether the task silently reinterprets any already-closed canonical contract
-7. whether downstream open tasks remain viable if this task is accepted as written
+7. whether the task changes success/completion proof boundary and, if so, whether that cutover is isolated cleanly enough
+8. whether reused cleanup/delete/reconcile proof contracts retain validation parity or prove an explicit narrowed contract
+9. whether downstream open tasks remain viable if this task is accepted as written
 
 Decision outcomes:
 1. `approve_task`
@@ -215,6 +219,7 @@ Additional task-mode rule:
 1. If the task label and target-file reality disagree, say that explicitly.
 2. Phrase the issue as bounded-slice drift, hidden scope, or parent-plan mismatch, not as a code bug.
 3. If the issue is contract-meaning drift, phrase it as unauthorized reinterpretation, ambiguous drift, or source-anchor mismatch rather than as a style nit.
+4. If the issue is a success/completion proof cutover mixed with cleanup or final truth-surface alignment, phrase it as a split-trigger or sequencing problem, not as an implementation detail.
 
 ## Output
 

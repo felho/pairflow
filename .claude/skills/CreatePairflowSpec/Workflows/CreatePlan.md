@@ -35,7 +35,8 @@ The plan is a coverage and dependency artifact, not a duplicate task-spec reposi
 5. Add a lightweight sequencing note only when task ordering depends on it:
    - producer-first boundary,
    - which downstream consume families remain,
-   - whether cleanup/recovery is included now or deferred.
+   - whether cleanup/recovery is included now or deferred,
+   - whether success/completion proof cutover is included now or deferred.
 6. Do not duplicate task-internal bounded-slice reasoning in the plan unless remaining-task viability or ordering depends on it.
 
 ### 1a) Run the Plan-Level Control-Model Check
@@ -89,6 +90,11 @@ Policy:
    - and do not mirror each task's internal risk triage, mutation branches, closure-budget math, or bounded-task shape.
 4. Use authority fan-out, complexity, and closure-budget reasoning as decomposition aids, but do not dump their full intermediate analysis into the plan.
 5. If multiple tasks overlap the same plan-level gap, make the sequencing explicit or simplify the task list so ownership is unambiguous.
+6. If an open gap would simultaneously:
+   - move the canonical success/completion proof boundary,
+   - add or tighten post-success cleanup/recovery semantics,
+   - and align final result/status/event semantics,
+   split that gap before finalizing the plan unless one bounded code path truly owns all three with no mixed-truth compat surface.
 
 ### 1c) Validate Plan Sufficiency
 
@@ -140,11 +146,12 @@ Ask only if blocker data is missing:
 5. The plan does not jump to route/UI/runtime tasks before the control model is explicit.
 6. Missing-data behavior is explicit before surfacing/cutover tasks are treated as implementation-ready.
 7. If multi-consumer authority sequencing matters, the plan records that boundary in a lightweight sequencing note rather than hiding it in task-local detail.
-8. Remaining-task viability is preserved:
+8. If success/completion proof cutover and cleanup/result alignment are both needed, the plan must say whether they remain in one bounded task or are split, and why.
+9. Remaining-task viability is preserved:
    - no dangling predecessor assumptions,
    - no obsolete task left active without note,
    - no missing successor created by a recent split.
-9. If the plan refines an already-closed canonical contract, the wording must still match repo-local source anchors or explicitly cite an authorized reinterpretation.
+10. If the plan refines an already-closed canonical contract, the wording must still match repo-local source anchors or explicitly cite an authorized reinterpretation.
 
 ### 5) Finalize
 
