@@ -295,6 +295,24 @@ Az explicit control-model dontesek most visszanyerhetok a designbol es a review-
    - `Phase 3G2`
    - task issuance csak a `Phase 3G1B` closeout utan justified.
 
+## Progress Update (2026-04-21, post-Phase-3G1B-close)
+
+1. A `Phase 3G1B` implementacioja leszallt, merge-re kerult a `main` branchre, es archived baseline lett:
+   - `plans/archive/tasks/remote-bubble-execution/phase3g1b-remote-merge-cleanup-proof-and-result-alignment.md`
+2. A lezart bounded scope:
+   - explicit post-success remote cleanup seam a merge-family finalizationban,
+   - cleanup proof parity a delete-family destructive cleanup retained baseline-ja fele,
+   - retained `MergeBubbleResult` es merge-event cleanup truth alignment,
+   - fail-closed cleanup dispatch / proof / contract-invalid taxonomy a local durable merge truth megorzese mellett.
+3. A current active implementacios successor emiatt mar a `Phase 3G2`:
+   - `plans/tasks/remote-bubble-execution/phase3g2-remote-merge-operator-contract-alignment.md`
+4. A `Phase 3G2` materializalasa most mar justified:
+   - a current tree operator-facing merge surfaces kozott tovabbra is van wording drift a started-remote merge retained semantikajahoz kepest,
+   - CLI/help/docs/skill surface-ek egy resze meg mindig remote merge + remote push jellegu closure-t sugall,
+   - mikozben a current canonical behavior mar local import + local merge + explicit post-success remote cleanup.
+5. Jelenleg a remote execution lane-ben nincs `Phase 3G2` utan materializalt kovetkezo successor task:
+   - uj residual csak akkor justified, ha a `Phase 3G2` closeout utan is marad kulon bounded gap.
+
 ## Progress Update (2026-04-18, pre-Phase-3C-close)
 
 1. A `Phase 3B1`, `Phase 3B2`, es `Phase 3B3` implementacioja 2026-04-18-ra leszallt, merge-re kerult a `main` branchre, es a cleanup-routing family teljes archived baseline lett.
@@ -468,8 +486,8 @@ Az explicit control-model dontesek most visszanyerhetok a designbol es a review-
 ## Active Task
 
 1. Jelenleg az aktiv implementacios successor task:
-   - `plans/tasks/remote-bubble-execution/phase3g1b-remote-merge-cleanup-proof-and-result-alignment.md`
-2. A `Phase 2F`, `Phase 3A`, `Phase 3B1`, `Phase 3B2`, `Phase 3B3`, `Phase 3C`, `Phase 3D`, `Phase 3E`, es `Phase 3G1A` archived baseline:
+   - `plans/tasks/remote-bubble-execution/phase3g2-remote-merge-operator-contract-alignment.md`
+2. A `Phase 2F`, `Phase 3A`, `Phase 3B1`, `Phase 3B2`, `Phase 3B3`, `Phase 3C`, `Phase 3D`, `Phase 3E`, `Phase 3G1A`, es `Phase 3G1B` archived baseline:
    - `plans/archive/tasks/remote-bubble-execution/phase2f-remote-attach-consume.md`
    - `plans/archive/tasks/remote-bubble-execution/phase3a-remote-approval-and-rework-routing.md`
    - `plans/archive/tasks/remote-bubble-execution/phase3b1-remote-commit-routing-and-continuity.md`
@@ -479,16 +497,16 @@ Az explicit control-model dontesek most visszanyerhetok a designbol es a review-
    - `plans/archive/tasks/remote-bubble-execution/phase3d-remote-runtime-availability-and-watchdog-semantics.md`
    - `plans/archive/tasks/remote-bubble-execution/phase3e-verified-remote-clone-local-request-rework.md`
    - `plans/archive/tasks/remote-bubble-execution/phase3g1a-remote-merge-handoff-and-local-success-boundary.md`
-3. A `Phase 2B`, `Phase 2C`, `Phase 2D`, `Phase 2E`, `Phase 2F`, `Phase 3A`, `Phase 3B1`, `Phase 3B2`, `Phase 3B3`, `Phase 3C`, `Phase 3D`, `Phase 3E`, es `Phase 3G1A` archived baseline lett.
-4. A contextual `request-rework`, a local success-boundary cutover, es az archived cleanup-routing baseline utan mar a remote merge cleanup-proof/result-alignment residual gap a kovetkezo aktiv bounded slice.
+   - `plans/archive/tasks/remote-bubble-execution/phase3g1b-remote-merge-cleanup-proof-and-result-alignment.md`
+3. A `Phase 2B`, `Phase 2C`, `Phase 2D`, `Phase 2E`, `Phase 2F`, `Phase 3A`, `Phase 3B1`, `Phase 3B2`, `Phase 3B3`, `Phase 3C`, `Phase 3D`, `Phase 3E`, `Phase 3G1A`, es `Phase 3G1B` archived baseline lett.
+4. A contextual `request-rework`, a local success-boundary cutover, es a merge cleanup-proof/result-alignment closeout utan mar az operator-facing merge contract alignment a kovetkezo aktiv bounded slice.
 
 ## Successor Tasks
 
 1. A jelenleg materializalt kovetkezo task:
-   - `plans/tasks/remote-bubble-execution/phase3g1b-remote-merge-cleanup-proof-and-result-alignment.md`
-2. A kovetkezo deferred successor:
-   - `Phase 3G2 remote merge operator contract alignment`
-3. Tovabbi successor csak akkor justified, ha a `Phase 3G1B` closeout utan a `Phase 3G2` operatori alignment meg mindig szukseges, vagy uj, kulon bounded residual gap jelenik meg a remote execution lane-ben.
+   - `plans/tasks/remote-bubble-execution/phase3g2-remote-merge-operator-contract-alignment.md`
+2. Jelenleg nincs materializalt, `Phase 3G2` utani deferred successor.
+3. Tovabbi successor csak akkor justified, ha a `Phase 3G2` closeout utan uj, kulon bounded residual gap jelenik meg a remote execution lane-ben.
 
 ## Dependencies
 
