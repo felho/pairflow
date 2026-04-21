@@ -18,6 +18,8 @@ import {
   DEFAULT_MAX_ROUNDS,
   DEFAULT_PAIRFLOW_COMMAND_PROFILE,
   DEFAULT_QUALITY_MODE,
+  DEFAULT_REVIEW_POLICY_AUTO_REWORK_MIN_SEVERITY,
+  DEFAULT_REVIEW_POLICY_LOOP_MODE,
   DEFAULT_REVIEW_ARTIFACT_TYPE,
   DEFAULT_REVIEWER_CONTEXT_MODE,
   DEFAULT_SEVERITY_GATE_ROUND,
@@ -29,6 +31,8 @@ import {
   isAgentName,
   isAttachLauncher,
   isBubbleExecutorType,
+  isBubbleReviewAutoReworkSeverity,
+  isBubbleReviewLoopMode,
   isLocalOverlayMode,
   isPairflowCommandProfile,
   isQualityMode,
@@ -63,6 +67,12 @@ export const SEVERITY_GATE_ROUND_INVALID =
   "SEVERITY_GATE_ROUND_INVALID" as const;
 export const BUBBLE_EXECUTOR_INVALID =
   "BUBBLE_EXECUTOR_INVALID" as const;
+export const REVIEW_POLICY_INVALID =
+  "REVIEW_POLICY_INVALID" as const;
+export const REVIEW_POLICY_LOOP_MODE_INVALID =
+  "REVIEW_POLICY_LOOP_MODE_INVALID" as const;
+export const REVIEW_POLICY_THRESHOLD_INVALID =
+  "REVIEW_POLICY_THRESHOLD_INVALID" as const;
 
 function formatCreateReviewArtifactTypeError(
   reasonCode:
@@ -654,6 +664,13 @@ export function validateBubbleConfig(input: unknown): ValidationResult<BubbleCon
     errors,
     false
   );
+  const reviewPolicy = readObject(
+    input,
+    "review_policy",
+    "review_policy",
+    errors,
+    false
+  );
 
   const implementer = agents
     ? readString(agents, "implementer", "agents.implementer", errors, true)
@@ -868,6 +885,60 @@ export function validateBubbleConfig(input: unknown): ValidationResult<BubbleCon
     ideationTaskPending = false;
   }
 
+  if (reviewPolicy !== undefined) {
+    const allowedKeys = new Set([
+      "review_loop_mode",
+      "meta_review_auto_rework_min_severity"
+    ]);
+    for (const key of Object.keys(reviewPolicy)) {
+      if (allowedKeys.has(key)) {
+        continue;
+      }
+
+      errors.push({
+        path: `review_policy.${key}`,
+        message:
+          `${REVIEW_POLICY_INVALID}: Unknown review_policy field "${key}"`
+      });
+    }
+  }
+
+  const hasExplicitReviewPolicyFields =
+    reviewPolicy !== undefined &&
+    (
+      reviewPolicy.review_loop_mode !== undefined ||
+      reviewPolicy.meta_review_auto_rework_min_severity !== undefined
+    );
+
+  const reviewPolicyLoopModeCandidate =
+    reviewPolicy?.review_loop_mode ?? DEFAULT_REVIEW_POLICY_LOOP_MODE;
+  if (!isBubbleReviewLoopMode(reviewPolicyLoopModeCandidate)) {
+    errors.push({
+      path: "review_policy.review_loop_mode",
+      message:
+        `${REVIEW_POLICY_LOOP_MODE_INVALID}: Must be one of: full, meta_only`
+    });
+  }
+  const reviewPolicyLoopMode = isBubbleReviewLoopMode(reviewPolicyLoopModeCandidate)
+    ? reviewPolicyLoopModeCandidate
+    : DEFAULT_REVIEW_POLICY_LOOP_MODE;
+
+  const reviewPolicySeverityCandidate =
+    reviewPolicy?.meta_review_auto_rework_min_severity
+    ?? DEFAULT_REVIEW_POLICY_AUTO_REWORK_MIN_SEVERITY;
+  if (!isBubbleReviewAutoReworkSeverity(reviewPolicySeverityCandidate)) {
+    errors.push({
+      path: "review_policy.meta_review_auto_rework_min_severity",
+      message:
+        `${REVIEW_POLICY_THRESHOLD_INVALID}: Must be one of: P1, P2, P3`
+    });
+  }
+  const reviewPolicySeverity = isBubbleReviewAutoReworkSeverity(
+    reviewPolicySeverityCandidate
+  )
+    ? reviewPolicySeverityCandidate
+    : DEFAULT_REVIEW_POLICY_AUTO_REWORK_MIN_SEVERITY;
+
   let validatedExecutor: BubbleConfig["executor"] | undefined;
   if (executor !== undefined) {
     const allowedKeys = new Set(["type", "remote"]);
@@ -939,6 +1010,14 @@ export function validateBubbleConfig(input: unknown): ValidationResult<BubbleCon
     validatedNotifications.converged_sound = convergedSound;
   }
 
+  const validatedReviewPolicy: BubbleConfig["review_policy"] =
+    !hasExplicitReviewPolicyFields
+      ? undefined
+      : {
+          review_loop_mode: reviewPolicyLoopMode,
+          meta_review_auto_rework_min_severity: reviewPolicySeverity
+        };
+
   const validatedConfig: BubbleConfig = {
     id: id as string,
     ...(bubbleInstanceId !== undefined
@@ -962,6 +1041,9 @@ export function validateBubbleConfig(input: unknown): ValidationResult<BubbleCon
     accuracy_critical: accuracyCritical as boolean,
     ...(attachLauncher !== undefined
       ? { attach_launcher: attachLauncher as AttachLauncher }
+      : {}),
+    ...(validatedReviewPolicy !== undefined
+      ? { review_policy: validatedReviewPolicy }
       : {}),
     agents: {
       implementer: implementer as "codex" | "claude",
@@ -1165,6 +1247,7 @@ export function renderBubbleConfigToml(config: BubbleConfig): string {
   const docContractGates = config.doc_contract_gates;
   const ideation = config.ideation;
   const executor = config.executor;
+  const reviewPolicy = config.review_policy;
   const lines: Array<string | undefined> = [
     `id = ${tomlString(config.id)}`,
     config.bubble_instance_id
@@ -1192,6 +1275,16 @@ export function renderBubbleConfigToml(config: BubbleConfig): string {
     config.open_remote_command
       ? `open_remote_command = ${tomlString(config.open_remote_command)}`
       : undefined,
+    ...(reviewPolicy !== undefined
+      ? [
+          "",
+          "[review_policy]",
+          `review_loop_mode = ${tomlString(reviewPolicy.review_loop_mode)}`,
+          `meta_review_auto_rework_min_severity = ${tomlString(
+            reviewPolicy.meta_review_auto_rework_min_severity
+          )}`
+        ]
+      : []),
     ...(executor !== undefined
       ? [
           "",

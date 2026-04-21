@@ -4,7 +4,8 @@ import type {
   ActiveMetaReviewRuntimeDeliveryView
 } from "../metaReview/metaReviewSnapshot.js";
 import type {
-  BubbleLifecycleState
+  BubbleLifecycleState,
+  BubbleReviewPolicyRuntimeView
 } from "../../../types/bubble.js";
 import type { UiBubbleAttention } from "../../../types/ui.js";
 import type { UiBubbleListRemoteExecution } from "../../../types/uiRemoteExecution.js";
@@ -29,6 +30,7 @@ export interface BubbleListEntry {
   stateValidation: StateValidationDiagnostics | null;
   runtimeSession: RuntimeSessionRecord | null;
   attention: UiBubbleAttention | null;
+  reviewPolicy?: BubbleReviewPolicyRuntimeView;
   metaReview: {
     actor: "meta-reviewer";
     authorityActive: boolean;

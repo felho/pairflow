@@ -7,6 +7,9 @@ import type { getBubblePaths } from "../bubble/bubblePaths.js";
 import { isNamedError } from "../errors/namedError.js";
 import { isMetaReviewExecutionContextActiveState } from "../metaReview/metaReviewExecutionContext.js";
 import { projectActiveMetaReviewRuntimeDelivery } from "../metaReview/metaReviewSnapshot.js";
+import {
+  buildBubbleReviewPolicyRuntimeView
+} from "../reviewPolicy/reviewPolicyRuntime.js";
 import type { RemoteBubbleStatusSnapshot } from "../status/remoteBubbleStatusContract.js";
 import { resolveBubbleAttention } from "../status/bubbleAttention.js";
 import { computeWatchdogStatus } from "../watchdog/watchdogStatus.js";
@@ -137,6 +140,7 @@ export function buildLocalBubbleListEntry(input: {
         paneActivityRead: input.paneActivityRead,
         now: input.now
       }),
+      reviewPolicy: buildBubbleReviewPolicyRuntimeView(input.config),
       metaReview: {
         actor: "meta-reviewer",
         authorityActive: isMetaReviewExecutionContextActiveState(input.stateLoaded.state),
@@ -173,6 +177,7 @@ export function buildCreatedRemoteBubbleListEntry(input: {
       stateValidation: input.stateLoaded.stateValidation,
       runtimeSession: null,
       attention: null,
+      reviewPolicy: buildBubbleReviewPolicyRuntimeView(input.config),
       metaReview: neutralMetaReview(),
       remoteExecution: {
         alias: resolveRemoteAlias(input.config, input.remotePointer),
@@ -214,6 +219,7 @@ export function buildCachedRemoteBubbleListEntry(input: {
       stateValidation: null,
       runtimeSession: null,
       attention: null,
+      reviewPolicy: buildBubbleReviewPolicyRuntimeView(input.config),
       metaReview: neutralMetaReview(),
       remoteExecution: {
         alias: resolveRemoteAlias(input.config, input.remotePointer),
@@ -259,6 +265,7 @@ export function buildUnavailableRemoteBubbleListEntry(input: {
       stateValidation: null,
       runtimeSession: null,
       attention: null,
+      reviewPolicy: buildBubbleReviewPolicyRuntimeView(input.config),
       metaReview: neutralMetaReview(),
       remoteExecution: {
         alias: resolveRemoteAlias(input.config, input.remotePointer),
@@ -396,6 +403,7 @@ export async function buildRefreshedRemoteBubbleListEntry(input: {
         now: input.now,
         runtimeExpectedOverride: false
       }),
+      reviewPolicy: buildBubbleReviewPolicyRuntimeView(input.config),
       metaReview: remoteStatusSnapshot.metaReview,
       remoteExecution: {
         alias: remoteTarget.alias,

@@ -1,5 +1,7 @@
 import type {
   AttachLauncher,
+  BubbleReviewAutoReworkSeverity,
+  BubbleReviewLoopMode,
   LocalOverlayMode,
   PairflowCommandProfile,
   QualityMode,
@@ -20,6 +22,9 @@ export const DEFAULT_COMMIT_REQUIRES_APPROVAL = true;
 export const DEFAULT_ATTACH_LAUNCHER: AttachLauncher = "auto";
 export const DEFAULT_LOCAL_OVERLAY_ENABLED = true;
 export const DEFAULT_LOCAL_OVERLAY_MODE: LocalOverlayMode = "symlink";
+export const DEFAULT_REVIEW_POLICY_LOOP_MODE: BubbleReviewLoopMode = "full";
+export const DEFAULT_REVIEW_POLICY_AUTO_REWORK_MIN_SEVERITY:
+  BubbleReviewAutoReworkSeverity = "P1";
 export const DEFAULT_LOCAL_OVERLAY_ENTRIES = [
   ".claude",
   ".mcp.json",

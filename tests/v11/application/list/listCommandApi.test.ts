@@ -65,6 +65,12 @@ describe("v11 list command api", () => {
     expect(listed.byState.RUNNING).toBe(1);
     expect(listed.runtimeSessions.registered).toBe(1);
     expect(listed.runtimeSessions.stale).toBe(0);
+    expect(listed.bubbles[0]?.reviewPolicy).toEqual({
+      requested_loop_mode: "full",
+      effective_loop_mode: "full",
+      support_status: "enabled",
+      meta_review_auto_rework_min_severity: "P1"
+    });
     expect(listed.bubbles[1]?.runtimeSession?.tmuxSessionName).toBe(
       "pf-b_v11_list_02"
     );

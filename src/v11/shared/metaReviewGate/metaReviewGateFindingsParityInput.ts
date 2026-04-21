@@ -21,6 +21,7 @@ export const metaReviewFindingsParityGuardReasonCode =
 
 export interface ReworkFindingsParityInput {
   findingsCount: number;
+  artifactRef: string;
   artifactPath: string;
   artifactStatus: string;
   digest: string;
@@ -146,6 +147,7 @@ export function resolveReworkFindingsParityInput(input: {
     ok: true,
     value: {
       findingsCount,
+      artifactRef: normalizedArtifactRef,
       artifactPath,
       artifactStatus,
       digest,

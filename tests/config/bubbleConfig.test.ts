@@ -10,6 +10,7 @@ import {
   PAIRFLOW_COMMAND_PROFILE_INVALID,
   parseBubbleConfigToml,
   parseToml,
+  REVIEW_POLICY_INVALID,
   REVIEW_ARTIFACT_TYPE_AUTO_REMOVED,
   renderBubbleConfigToml,
   validateBubbleConfigRemoteReferences,
@@ -44,6 +45,7 @@ describe("bubble config schema", () => {
     expect(config.attach_launcher).toBeUndefined();
     expect(config.notifications.enabled).toBe(true);
     expect(config.accuracy_critical).toBe(false);
+    expect(config.review_policy).toBeUndefined();
     expect(config.local_overlay?.enabled).toBe(true);
     expect(config.local_overlay?.mode).toBe("symlink");
     expect(config.local_overlay?.entries).toEqual([
@@ -82,6 +84,47 @@ describe("bubble config schema", () => {
     expect(reparsed.commands.bootstrap).toBe(
       "pnpm install --frozen-lockfile && pnpm build"
     );
+  });
+
+  it("parses and roundtrips explicit review_policy metadata", () => {
+    const config = parseBubbleConfigToml(`${baseToml}
+[review_policy]
+review_loop_mode = "meta_only"
+meta_review_auto_rework_min_severity = "P2"
+`);
+
+    expect(config.review_policy).toEqual({
+      review_loop_mode: "meta_only",
+      meta_review_auto_rework_min_severity: "P2"
+    });
+
+    const rendered = renderBubbleConfigToml(config);
+    expect(rendered).toContain("[review_policy]");
+    expect(rendered).toContain('review_loop_mode = "meta_only"');
+    expect(rendered).toContain('meta_review_auto_rework_min_severity = "P2"');
+    expect(parseBubbleConfigToml(rendered).review_policy).toEqual({
+      review_loop_mode: "meta_only",
+      meta_review_auto_rework_min_severity: "P2"
+    });
+  });
+
+  it("does not render [review_policy] when the config omits it", () => {
+    const rendered = renderBubbleConfigToml(parseBubbleConfigToml(baseToml));
+
+    expect(rendered).not.toContain("[review_policy]");
+    expect(parseBubbleConfigToml(rendered).review_policy).toBeUndefined();
+  });
+
+  it("treats an empty [review_policy] section as absent", () => {
+    const config = parseBubbleConfigToml(`${baseToml}
+[review_policy]
+`);
+
+    expect(config.review_policy).toBeUndefined();
+
+    const rendered = renderBubbleConfigToml(config);
+    expect(rendered).not.toContain("[review_policy]");
+    expect(parseBubbleConfigToml(rendered).review_policy).toBeUndefined();
   });
 
   it("parses and renders pass validation command policy fields", () => {
@@ -220,6 +263,115 @@ round_gate_applies_after = -1
         (error) =>
           error.path === "severity_gate_round"
           && error.message.includes("SEVERITY_GATE_ROUND_INVALID")
+      )
+    ).toBe(true);
+  });
+
+  it("rejects invalid review_policy loop mode", () => {
+    const result = validateBubbleConfig({
+      id: "b_test_01",
+      repo_path: "/tmp/repo",
+      base_branch: "main",
+      bubble_branch: "bubble/b_test_01",
+      review_policy: {
+        review_loop_mode: "invalid",
+        meta_review_auto_rework_min_severity: "P1"
+      },
+      agents: {
+        implementer: "codex",
+        reviewer: "claude"
+      },
+      commands: {
+        test: "pnpm test",
+        typecheck: "pnpm typecheck"
+      },
+      notifications: {
+        enabled: true
+      }
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) {
+      return;
+    }
+    expect(
+      result.errors.some(
+        (error) =>
+          error.path === "review_policy.review_loop_mode"
+          && error.message.includes("REVIEW_POLICY_LOOP_MODE_INVALID")
+      )
+    ).toBe(true);
+  });
+
+  it("rejects invalid review_policy threshold severity including P0", () => {
+    const result = validateBubbleConfig({
+      id: "b_test_01",
+      repo_path: "/tmp/repo",
+      base_branch: "main",
+      bubble_branch: "bubble/b_test_01",
+      review_policy: {
+        review_loop_mode: "full",
+        meta_review_auto_rework_min_severity: "P0"
+      },
+      agents: {
+        implementer: "codex",
+        reviewer: "claude"
+      },
+      commands: {
+        test: "pnpm test",
+        typecheck: "pnpm typecheck"
+      },
+      notifications: {
+        enabled: true
+      }
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) {
+      return;
+    }
+    expect(
+      result.errors.some(
+        (error) =>
+          error.path === "review_policy.meta_review_auto_rework_min_severity"
+          && error.message.includes("REVIEW_POLICY_THRESHOLD_INVALID")
+      )
+    ).toBe(true);
+  });
+
+  it("rejects unknown extra fields in [review_policy]", () => {
+    const result = validateBubbleConfig({
+      id: "b_test_01",
+      repo_path: "/tmp/repo",
+      base_branch: "main",
+      bubble_branch: "bubble/b_test_01",
+      agents: {
+        implementer: "codex",
+        reviewer: "claude"
+      },
+      commands: {
+        test: "pnpm test",
+        typecheck: "pnpm typecheck"
+      },
+      notifications: {
+        enabled: true
+      },
+      review_policy: {
+        review_loop_mode: "full",
+        meta_review_auto_rework_min_severity: "P1",
+        unsupported_flag: true
+      }
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) {
+      return;
+    }
+    expect(
+      result.errors.some(
+        (error) =>
+          error.path === "review_policy.unsupported_flag"
+          && error.message.includes(REVIEW_POLICY_INVALID)
       )
     ).toBe(true);
   });

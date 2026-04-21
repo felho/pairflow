@@ -49,7 +49,12 @@ export async function validateFindingsArtifactParity(input: {
   readFileFn: MetaReviewGateArtifactReadFn;
   sleepForRetryMs?: (delayMs: number) => Promise<void>;
 }): Promise<
-  | { ok: true; artifactOpenTotal: number }
+  | {
+      ok: true;
+      artifactOpenTotal: number;
+      artifact: Record<string, unknown>;
+      split: FindingsOpenSplit | null;
+    }
   | { ok: false; reason: string; metadata: FindingsParityMetadata }
 > {
   const buildMetadata = (inputMetadata: {
@@ -157,7 +162,12 @@ export async function validateFindingsArtifactParity(input: {
     };
   }
 
-  return { ok: true, artifactOpenTotal };
+  return {
+    ok: true,
+    artifactOpenTotal,
+    artifact: artifactParsed,
+    split: parsedSplit
+  };
 }
 
 export function isPositiveReworkRecommendation(
