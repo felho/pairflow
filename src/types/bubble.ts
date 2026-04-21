@@ -55,6 +55,19 @@ export const createReviewArtifactTypes = ["code", "document"] as const;
 
 export type CreateReviewArtifactType = (typeof createReviewArtifactTypes)[number];
 
+export const bubbleReviewLoopModes = ["full", "meta_only"] as const;
+
+export type BubbleReviewLoopMode = (typeof bubbleReviewLoopModes)[number];
+
+export const bubbleReviewAutoReworkSeverities = ["P1", "P2", "P3"] as const;
+
+export type BubbleReviewAutoReworkSeverity =
+  (typeof bubbleReviewAutoReworkSeverities)[number];
+
+export const bubbleReviewSupportStatuses = ["enabled", "guarded"] as const;
+
+export type BubbleReviewSupportStatus = (typeof bubbleReviewSupportStatuses)[number];
+
 export const localOverlayModes = ["symlink", "copy"] as const;
 
 export type LocalOverlayMode = (typeof localOverlayModes)[number];
@@ -154,6 +167,19 @@ export interface BubbleLocalOverlayConfig {
 export interface BubbleDocContractGatesConfig {
   round_gate_applies_after: number;
   parse_warning?: string;
+}
+
+export interface BubbleReviewPolicyConfig {
+  review_loop_mode: BubbleReviewLoopMode;
+  meta_review_auto_rework_min_severity: BubbleReviewAutoReworkSeverity;
+}
+
+export interface BubbleReviewPolicyRuntimeView {
+  requested_loop_mode: BubbleReviewLoopMode;
+  effective_loop_mode: BubbleReviewLoopMode;
+  support_status: BubbleReviewSupportStatus;
+  meta_review_auto_rework_min_severity: BubbleReviewAutoReworkSeverity;
+  blocked_reason_code?: string;
 }
 
 export interface PairflowRemoteHostConfig {
@@ -260,6 +286,7 @@ export interface BubbleConfig {
   attach_launcher?: AttachLauncher;
   open_command?: string;
   open_remote_command?: string;
+  review_policy?: BubbleReviewPolicyConfig;
   agents: BubbleAgentsConfig;
   commands: BubbleCommandsConfig;
   notifications: BubbleNotificationsConfig;
@@ -452,6 +479,24 @@ export function isCreateReviewArtifactType(
   return (
     typeof value === "string"
     && (createReviewArtifactTypes as readonly string[]).includes(value)
+  );
+}
+
+export function isBubbleReviewLoopMode(
+  value: unknown
+): value is BubbleReviewLoopMode {
+  return (
+    typeof value === "string"
+    && (bubbleReviewLoopModes as readonly string[]).includes(value)
+  );
+}
+
+export function isBubbleReviewAutoReworkSeverity(
+  value: unknown
+): value is BubbleReviewAutoReworkSeverity {
+  return (
+    typeof value === "string"
+    && (bubbleReviewAutoReworkSeverities as readonly string[]).includes(value)
   );
 }
 

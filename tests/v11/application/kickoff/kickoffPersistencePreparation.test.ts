@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -52,5 +52,39 @@ describe("prepareKickoffPersistence", () => {
     expect(updatedConfig.ideation?.mode).toBe(true);
     expect(updatedConfig.ideation?.task_pending).toBe(false);
     expect(updatedConfig.ideation?.kicked_off_at).toBe("2026-03-19T22:30:00.000Z");
+  });
+
+  it("does not materialize review_policy during unrelated kickoff persistence rewrites", async () => {
+    const repoPath = await createTempRepo();
+    const created = await createBubble({
+      id: "b_kickoff_persistence_02",
+      repoPath,
+      baseBranch: "main",
+      reviewArtifactType: "code",
+      ideation: true,
+      cwd: repoPath
+    });
+
+    const withoutReviewPolicy = (
+      await readFile(created.paths.bubbleTomlPath, "utf8")
+    ).replace(
+      /\n\[review_policy\]\nreview_loop_mode = ".*?"\nmeta_review_auto_rework_min_severity = ".*?"\n/u,
+      "\n"
+    );
+    await writeFile(created.paths.bubbleTomlPath, withoutReviewPolicy, "utf8");
+
+    const prepared = await prepareKickoffPersistence({
+      taskArtifactPath: created.paths.taskArtifactPath,
+      bubbleTomlPath: created.paths.bubbleTomlPath,
+      nowIso: "2026-03-19T22:35:00.000Z",
+      readFile
+    });
+
+    expect(prepared.previousBubbleToml).not.toContain("[review_policy]");
+    expect(prepared.nextBubbleToml).not.toContain("[review_policy]");
+    const updatedConfig = parseBubbleConfigToml(prepared.nextBubbleToml);
+    expect(updatedConfig.review_policy).toBeUndefined();
+    expect(updatedConfig.ideation?.task_pending).toBe(false);
+    expect(updatedConfig.ideation?.kicked_off_at).toBe("2026-03-19T22:35:00.000Z");
   });
 });

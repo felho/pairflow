@@ -5,9 +5,13 @@ import type { ReadWatchdogPaneActivityResult } from "../watchdog/watchdogPaneAct
 import type {
   BubbleFailingGate,
   BubbleLifecycleState,
+  BubbleReviewPolicyRuntimeView,
   BubbleRoundGateState,
   BubbleSpecLockState
 } from "../../../types/bubble.js";
+import {
+  buildBubbleReviewPolicyRuntimeView
+} from "../reviewPolicy/reviewPolicyRuntime.js";
 import type { ProtocolEnvelope, ProtocolMessageType } from "../../../types/protocol.js";
 import type { UiBubbleStatusRemoteExecution } from "../../../types/uiRemoteExecution.js";
 import type {
@@ -39,6 +43,7 @@ export interface BubbleStatusView {
   lastCommandAt: string | null;
   paneActivity: StatusPaneActivityView;
   executionContext: StatusExecutionContextView | null;
+  reviewPolicy?: BubbleReviewPolicyRuntimeView;
   watchdog: WatchdogStatus;
   pendingInboxItems: {
     humanQuestions: number;
@@ -130,6 +135,7 @@ function buildLocalBubbleStatusView(
     lastCommandAt: input.state.last_command_at,
     paneActivity,
     executionContext: buildStatusExecutionContextView(input.state.execution_context),
+    reviewPolicy: buildBubbleReviewPolicyRuntimeView(input.resolved.bubbleConfig),
     watchdog,
     pendingInboxItems: {
       humanQuestions: input.pendingQuestions,
@@ -172,6 +178,7 @@ function buildRemoteBubbleStatusView(
     lastCommandAt: input.remoteStatusSnapshot.lastCommandAt,
     paneActivity: input.remoteStatusSnapshot.paneActivity,
     executionContext: input.remoteStatusSnapshot.executionContext,
+    reviewPolicy: buildBubbleReviewPolicyRuntimeView(input.resolved.bubbleConfig),
     watchdog: input.remoteStatusSnapshot.watchdog,
     pendingInboxItems: input.remoteStatusSnapshot.pendingInboxItems,
     transcript: input.remoteStatusSnapshot.transcript,

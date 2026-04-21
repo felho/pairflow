@@ -36,6 +36,15 @@ async function removeBubbleInstanceIdFromToml(path: string): Promise<void> {
   await writeFile(path, renderBubbleConfigToml(legacy), "utf8");
 }
 
+async function removeReviewPolicyFromToml(path: string): Promise<void> {
+  const current = await readFile(path, "utf8");
+  const updated = current.replace(
+    /\n\[review_policy\]\nreview_loop_mode = ".*?"\nmeta_review_auto_rework_min_severity = ".*?"\n/u,
+    "\n"
+  );
+  await writeFile(path, updated, "utf8");
+}
+
 async function readMetricsEvents(metricsRoot: string): Promise<Record<string, unknown>[]> {
   const files = [
     join(metricsRoot, "2026", "02", "events-2026-02.ndjson"),
@@ -89,6 +98,7 @@ describe("bubble_instance_id legacy migration", () => {
     });
 
     await removeBubbleInstanceIdFromToml(bubble.paths.bubbleTomlPath);
+    await removeReviewPolicyFromToml(bubble.paths.bubbleTomlPath);
 
     await resolveBubbleById({
       bubbleId: bubble.bubbleId,
@@ -99,6 +109,7 @@ describe("bubble_instance_id legacy migration", () => {
       await readFile(bubble.paths.bubbleTomlPath, "utf8")
     );
     expect(afterReadOnly.bubble_instance_id).toBeUndefined();
+    expect(afterReadOnly.review_policy).toBeUndefined();
 
     const now = new Date("2026-02-26T13:20:00.000Z");
     await emitAskHumanFromWorkspace({
@@ -111,6 +122,10 @@ describe("bubble_instance_id legacy migration", () => {
       await readFile(bubble.paths.bubbleTomlPath, "utf8")
     );
     expect(afterMutating.bubble_instance_id).toMatch(/^bi_[A-Za-z0-9_-]{10,}$/u);
+    expect(afterMutating.review_policy).toBeUndefined();
+    expect(await readFile(bubble.paths.bubbleTomlPath, "utf8")).not.toContain(
+      "[review_policy]"
+    );
 
     const events = await readMetricsEvents(metricsRoot);
     const bubbleEvents = events.filter(

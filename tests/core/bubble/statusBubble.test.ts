@@ -109,6 +109,12 @@ describe("getBubbleStatus", () => {
     expect(status.pendingInboxItems.humanQuestions).toBe(1);
     expect(status.pendingInboxItems.total).toBe(1);
     expect(status.transcript.lastMessageType).toBe("HUMAN_QUESTION");
+    expect(status.reviewPolicy).toEqual({
+      requested_loop_mode: "full",
+      effective_loop_mode: "full",
+      support_status: "enabled",
+      meta_review_auto_rework_min_severity: "P1"
+    });
     expect(status.watchdog.timeoutMinutes).toBe(30);
     expect(status.watchdog.remainingSeconds).toBe(1620);
   });

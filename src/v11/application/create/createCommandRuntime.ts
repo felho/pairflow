@@ -13,6 +13,8 @@ import {
   DEFAULT_MAX_ROUNDS,
   DEFAULT_PAIRFLOW_COMMAND_PROFILE,
   DEFAULT_QUALITY_MODE,
+  DEFAULT_REVIEW_POLICY_AUTO_REWORK_MIN_SEVERITY,
+  DEFAULT_REVIEW_POLICY_LOOP_MODE,
   DEFAULT_REVIEWER_CONTEXT_MODE,
   DEFAULT_SEVERITY_GATE_ROUND,
   DEFAULT_WATCHDOG_TIMEOUT_MINUTES,
@@ -295,6 +297,11 @@ export function buildBubbleConfig(input: CreateBubbleConfigInput): BubbleConfig 
     ...(input.openCommand !== undefined
       ? { open_command: input.openCommand }
       : {}),
+    review_policy: {
+      review_loop_mode: DEFAULT_REVIEW_POLICY_LOOP_MODE,
+      meta_review_auto_rework_min_severity:
+        DEFAULT_REVIEW_POLICY_AUTO_REWORK_MIN_SEVERITY
+    },
     agents: {
       implementer: input.implementer ?? "codex",
       reviewer: input.reviewer ?? "claude"
