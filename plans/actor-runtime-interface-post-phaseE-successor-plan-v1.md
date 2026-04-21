@@ -207,12 +207,12 @@ owners:
 
 1. `O2-T1`
    - status: completed docs-only boundary clarification
-   - artifact path: `plans/tasks/actor-runtime-interface-opportunity2-task1-topology-neutral-delivery-executor-clarification.md`
+   - artifact path: `plans/archive/tasks/actor-runtime-interface-opportunity2-task1-topology-neutral-delivery-executor-clarification.md`
    - output: `plans/actor-runtime-interface-topology-neutral-delivery-executor-contract-note-v1.md`
 2. `O2-T2`
    - status: completed foundation slice
    - shape: `shared_contract` + `authority_producer` foundation
-   - artifact path: `plans/tasks/actor-runtime-interface-opportunity2-task2-topology-neutral-delivery-contract-and-retained-adapter-foundation.md`
+   - artifact path: `plans/archive/tasks/actor-runtime-interface-opportunity2-task2-topology-neutral-delivery-contract-and-retained-adapter-foundation.md`
    - goal: topology-neutral delivery ack/port naming bevezetese retained `tmux` adapter parityvel, workflow consume-atallitas nelkul
    - expected target family:
      - `src/v11/shared/delivery/tmuxDeliveryContract.ts`
@@ -375,12 +375,12 @@ owners:
    - retained fallback / parity / cleanup hardening nem maradt nyitva kulon bounded consumer fallouttal.
 6. Emiatt az `Opportunity 1` current-tree successor lane lezarhato.
 7. Az `Opportunity 2` docs-only first slice-a mar lezart baseline:
-   - completed task artifact: `plans/tasks/actor-runtime-interface-opportunity2-task1-topology-neutral-delivery-executor-clarification.md`
+   - archived task artifact: `plans/archive/tasks/actor-runtime-interface-opportunity2-task1-topology-neutral-delivery-executor-clarification.md`
    - normative note: `plans/actor-runtime-interface-topology-neutral-delivery-executor-contract-note-v1.md`
    - closure: topology-neutral delivery/executor contract boundary clarification retained `tmux` adapter ownership explicit source-anchor inventoryval
    - preserved baseline: a `Phase E2a`-ban lezart typed delivery/launch ack semantics tovabbra sem reopenolhato
 8. Az `O2-T2` code-level delivery foundation 2026-04-18-an merge-olve lett a `main` branchre:
-   - completed task artifact: `plans/tasks/actor-runtime-interface-opportunity2-task2-topology-neutral-delivery-contract-and-retained-adapter-foundation.md`
+   - archived task artifact: `plans/archive/tasks/actor-runtime-interface-opportunity2-task2-topology-neutral-delivery-contract-and-retained-adapter-foundation.md`
    - merge commit: `6d1a80b6c53b051cbf5da7f9614b3449b2f8c202`
    - bounded closure:
      - additive topology-neutral delivery contract/port naming explicit a retained shared surface-en

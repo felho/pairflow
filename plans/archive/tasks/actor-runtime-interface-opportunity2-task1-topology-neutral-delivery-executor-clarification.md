@@ -2,10 +2,10 @@
 artifact_type: task
 artifact_id: task_actor_runtime_interface_opportunity2_task1_topology_neutral_delivery_executor_boundary_v1
 title: "Actor Runtime Interface Opportunity 2 Task 1: Topology-Neutral Delivery and Executor Boundary Clarification"
-status: implementable
+status: completed
 phase: post-phaseE
 target_files:
-  - plans/tasks/actor-runtime-interface-opportunity2-task1-topology-neutral-delivery-executor-clarification.md
+  - plans/archive/tasks/actor-runtime-interface-opportunity2-task1-topology-neutral-delivery-executor-clarification.md
   - plans/actor-runtime-interface-topology-neutral-delivery-executor-contract-note-v1.md
   - plans/actor-runtime-interface-post-phaseE-successor-plan-v1.md
 prd_ref: null
@@ -201,7 +201,7 @@ Docs-only, implementalhato `O2-T1` successor task keszitese az `Opportunity 2` a
 ### In Scope
 
 1. Az `Opportunity 2 / O2-T1` docs-only task artifact megirasa vagy refinementje itt:
-   - `plans/tasks/actor-runtime-interface-opportunity2-task1-topology-neutral-delivery-executor-clarification.md`
+   - `plans/archive/tasks/actor-runtime-interface-opportunity2-task1-topology-neutral-delivery-executor-clarification.md`
 2. Egy uj source-anchored note ownershipja itt:
    - `plans/actor-runtime-interface-topology-neutral-delivery-executor-contract-note-v1.md`
 3. Az explicit boundary-szetszalazas legalabb erre a harom retegre:
@@ -316,7 +316,7 @@ Docs-only, implementalhato `O2-T1` successor task keszitese az `Opportunity 2` a
 
 | ID | File | Function/Entry | Exact Signature (args -> return) | Insertion Point | Expected Behavior | Priority | Timing | Evidence |
 |---|---|---|---|---|---|---|---|---|
-| CS1 | `plans/tasks/actor-runtime-interface-opportunity2-task1-topology-neutral-delivery-executor-clarification.md` | task artifact | markdown task -> implementable spec | full artifact | Az `O2-T1` explicit preserved-baseline clarification lane-kent legyen specifikalva. | P1 | required-now | docs diff |
+| CS1 | `plans/archive/tasks/actor-runtime-interface-opportunity2-task1-topology-neutral-delivery-executor-clarification.md` | task artifact | markdown task -> implementable spec | full artifact | Az `O2-T1` explicit preserved-baseline clarification lane-kent legyen specifikalva. | P1 | required-now | docs diff |
 | CS2 | `plans/actor-runtime-interface-topology-neutral-delivery-executor-contract-note-v1.md` | contract note | markdown note -> source-anchored boundary note | uj note | Kulon nevezze meg a topology-neutral contractot, a retained `tmux` adaptert es a retained current consumers-t. | P1 | required-now | docs diff |
 | CS3 | `plans/actor-runtime-interface-post-phaseE-successor-plan-v1.md` | Opportunity 2 sequencing | markdown plan update | sequencing / disposition szekciok | Az `Opportunity 2` current next successor slice-a legyen explicit task path-val. | P1 | required-now | docs diff |
 | CS4 | `src/v11/shared/delivery/tmuxDeliveryContract.ts` | delivery contract exports | type exports -> typed ack vocabulary | source anchor inventory | A note preserved baseline-kent rogzitse a delivery ack statuszokat es a compat projection szerepet. | P1 | required-now | source anchor |

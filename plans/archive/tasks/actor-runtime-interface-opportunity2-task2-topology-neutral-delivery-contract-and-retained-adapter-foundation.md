@@ -2,7 +2,7 @@
 artifact_type: task
 artifact_id: task_actor_runtime_interface_opportunity2_task2_topology_neutral_delivery_contract_retained_adapter_foundation_v1
 title: "Actor Runtime Interface Opportunity 2 Task 2: Topology-Neutral Delivery Contract and Retained Adapter Foundation"
-status: implementable
+status: completed
 phase: post-phaseE
 target_files:
   - src/v11/shared/delivery/tmuxDeliveryContract.ts

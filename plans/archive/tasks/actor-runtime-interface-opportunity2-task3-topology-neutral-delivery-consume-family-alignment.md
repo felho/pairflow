@@ -149,7 +149,7 @@ owners:
 2. Depends on:
    - `plans/actor-runtime-interface-post-phaseE-successor-plan-v1.md`
    - `plans/actor-runtime-interface-topology-neutral-delivery-executor-contract-note-v1.md`
-   - `plans/tasks/actor-runtime-interface-opportunity2-task2-topology-neutral-delivery-contract-and-retained-adapter-foundation.md`
+   - `plans/archive/tasks/actor-runtime-interface-opportunity2-task2-topology-neutral-delivery-contract-and-retained-adapter-foundation.md`
 3. Unlocks / impacts successors:
    - retained `tmux` delivery wrapper kesobbi cleanupja, ha mar nincs in-scope consumer rajta
    - esetleges public/read-model delivery export cleanup, ha az `O2-T3` utan ez kulon bounded slice-kent meg mindig indokolt
@@ -168,7 +168,7 @@ owners:
 1. Source-of-truth anchors:
    - `plans/actor-runtime-interface-post-phaseE-successor-plan-v1.md`
    - `plans/actor-runtime-interface-topology-neutral-delivery-executor-contract-note-v1.md`
-   - `plans/tasks/actor-runtime-interface-opportunity2-task2-topology-neutral-delivery-contract-and-retained-adapter-foundation.md`
+   - `plans/archive/tasks/actor-runtime-interface-opportunity2-task2-topology-neutral-delivery-contract-and-retained-adapter-foundation.md`
    - `src/v11/shared/delivery/tmuxDeliveryContract.ts`
    - `src/v11/shared/ports/tmuxDelivery.ts`
    - `src/v11/infrastructure/channel/tmux/tmuxDelivery.ts`
@@ -417,7 +417,7 @@ owners:
 
 | Type | Items | Priority | Timing |
 |---|---|---|---|
-| must-use | `plans/tasks/actor-runtime-interface-opportunity2-task2-topology-neutral-delivery-contract-and-retained-adapter-foundation.md` | P1 | required-now |
+| must-use | `plans/archive/tasks/actor-runtime-interface-opportunity2-task2-topology-neutral-delivery-contract-and-retained-adapter-foundation.md` | P1 | required-now |
 | must-use | current delivery source anchors in `src/v11/shared/delivery/tmuxDeliveryContract.ts`, `src/v11/shared/ports/tmuxDelivery.ts`, `src/v11/infrastructure/channel/tmux/tmuxDelivery.ts` | P1 | required-now |
 | must-not-use | `src/v11/shared/ports/uiRouter.ts`, `src/index.ts` public/read-model cleanup | P1 | required-now |
 | must-not-use | launch/executor lane (`tmuxSessions`, start/restart launch contract work) | P1 | required-now |
