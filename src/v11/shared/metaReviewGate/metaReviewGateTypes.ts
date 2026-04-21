@@ -41,21 +41,74 @@ export interface NotifyMetaReviewerSubmissionRequestInput {
   targetPane: string;
 }
 
+export interface MetaReviewGateNotifyTmuxCapabilities {
+  runner?: MetaReviewGateTmuxRunner;
+  maybeAcceptTrustPrompt?: (
+    runner: MetaReviewGateTmuxRunner,
+    targetPane: string
+  ) => Promise<boolean | void>;
+  sendSubmissionRequestMessage?: (
+    runner: MetaReviewGateTmuxRunner,
+    targetPane: string,
+    message: string
+  ) => Promise<void>;
+  submitPaneInput?: (
+    runner: MetaReviewGateTmuxRunner,
+    targetPane: string
+  ) => Promise<void>;
+}
+
 export interface MetaReviewGateNotifyRuntimeCapabilities {
+  tmux?: MetaReviewGateNotifyTmuxCapabilities;
+  /** @deprecated Use `tmux.runner`. */
   runTmux?: MetaReviewGateTmuxRunner;
+  /** @deprecated Use `tmux.maybeAcceptTrustPrompt`. */
   maybeAcceptClaudeTrustPrompt?: (
     runner: MetaReviewGateTmuxRunner,
     targetPane: string
   ) => Promise<boolean | void>;
+  /** @deprecated Use `tmux.sendSubmissionRequestMessage`. */
   sendAndSubmitTmuxPaneMessage?: (
     runner: MetaReviewGateTmuxRunner,
     targetPane: string,
     message: string
   ) => Promise<void>;
+  /** @deprecated Use `tmux.submitPaneInput`. */
   submitTmuxPaneInput?: (
     runner: MetaReviewGateTmuxRunner,
     targetPane: string
   ) => Promise<void>;
+}
+
+function hasDefinedValues(record: Record<string, unknown>): boolean {
+  return Object.values(record).some((value) => value !== undefined);
+}
+
+export function resolveMetaReviewGateNotifyTmuxCapabilities(
+  runtime: MetaReviewGateNotifyRuntimeCapabilities | undefined
+): MetaReviewGateNotifyTmuxCapabilities | undefined {
+  const runner = runtime?.tmux?.runner ?? runtime?.runTmux;
+  const maybeAcceptTrustPrompt =
+    runtime?.tmux?.maybeAcceptTrustPrompt
+    ?? runtime?.maybeAcceptClaudeTrustPrompt;
+  const sendSubmissionRequestMessage =
+    runtime?.tmux?.sendSubmissionRequestMessage
+    ?? runtime?.sendAndSubmitTmuxPaneMessage;
+  const submitPaneInput =
+    runtime?.tmux?.submitPaneInput
+    ?? runtime?.submitTmuxPaneInput;
+  const resolved = {
+    ...(runner !== undefined ? { runner } : {}),
+    ...(maybeAcceptTrustPrompt !== undefined
+      ? { maybeAcceptTrustPrompt }
+      : {}),
+    ...(sendSubmissionRequestMessage !== undefined
+      ? { sendSubmissionRequestMessage }
+      : {}),
+    ...(submitPaneInput !== undefined ? { submitPaneInput } : {})
+  };
+
+  return hasDefinedValues(resolved) ? resolved : undefined;
 }
 
 export interface NotifyMetaReviewerSubmissionRequestDependencies {
@@ -73,8 +126,18 @@ export type NotifyMetaReviewerSubmissionRequest = (
   dependencies?: NotifyMetaReviewerSubmissionRequestDependencies
 ) => Promise<MetaReviewRuntimeDeliveryObservation>;
 
+export interface MetaReviewGatePaneBindingTmuxCapabilities {
+  runner?: MetaReviewGateTmuxRunner;
+  respawnPaneCommand?: (input: {
+    sessionName: string;
+    paneIndex: number;
+    cwd: string;
+    command: string;
+    runner?: MetaReviewGateTmuxRunner;
+  }) => Promise<void>;
+}
+
 export interface MetaReviewGatePaneBindingRuntimeCapabilities {
-  runTmux?: MetaReviewGateTmuxRunner;
   buildAgentCommand?: (input: {
     agentName: "codex";
     bubbleId: string;
@@ -83,6 +146,10 @@ export interface MetaReviewGatePaneBindingRuntimeCapabilities {
     pairflowCommandProfile?: PairflowCommandProfile;
     startupPrompt?: string | undefined;
   }) => string;
+  tmux?: MetaReviewGatePaneBindingTmuxCapabilities;
+  /** @deprecated Use `tmux.runner`. */
+  runTmux?: MetaReviewGateTmuxRunner;
+  /** @deprecated Use `tmux.respawnPaneCommand`. */
   respawnTmuxPaneCommand?: (input: {
     sessionName: string;
     paneIndex: number;
@@ -90,6 +157,21 @@ export interface MetaReviewGatePaneBindingRuntimeCapabilities {
     command: string;
     runner?: MetaReviewGateTmuxRunner;
   }) => Promise<void>;
+}
+
+export function resolveMetaReviewGatePaneBindingTmuxCapabilities(
+  runtime: MetaReviewGatePaneBindingRuntimeCapabilities | undefined
+): MetaReviewGatePaneBindingTmuxCapabilities | undefined {
+  const runner = runtime?.tmux?.runner ?? runtime?.runTmux;
+  const respawnPaneCommand =
+    runtime?.tmux?.respawnPaneCommand
+    ?? runtime?.respawnTmuxPaneCommand;
+  const resolved = {
+    ...(runner !== undefined ? { runner } : {}),
+    ...(respawnPaneCommand !== undefined ? { respawnPaneCommand } : {})
+  };
+
+  return hasDefinedValues(resolved) ? resolved : undefined;
 }
 
 export interface MetaReviewGateRuntimeCapabilities {

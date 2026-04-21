@@ -11,24 +11,30 @@ afterEach(() => {
 describe("metaReviewGateNotify", () => {
   it.each([
     {
-      label: "runTmux is missing",
+      label: "tmux.runner is missing",
       runtime: {
-        sendAndSubmitTmuxPaneMessage: vi.fn(async () => undefined),
-        submitTmuxPaneInput: vi.fn(async () => undefined)
+        tmux: {
+          sendSubmissionRequestMessage: vi.fn(async () => undefined),
+          submitPaneInput: vi.fn(async () => undefined)
+        }
       }
     },
     {
-      label: "sendAndSubmitTmuxPaneMessage is missing",
+      label: "tmux.sendSubmissionRequestMessage is missing",
       runtime: {
-        runTmux: vi.fn(),
-        submitTmuxPaneInput: vi.fn(async () => undefined)
+        tmux: {
+          runner: vi.fn(),
+          submitPaneInput: vi.fn(async () => undefined)
+        }
       }
     },
     {
-      label: "submitTmuxPaneInput is missing",
+      label: "tmux.submitPaneInput is missing",
       runtime: {
-        runTmux: vi.fn(),
-        sendAndSubmitTmuxPaneMessage: vi.fn(async () => undefined)
+        tmux: {
+          runner: vi.fn(),
+          sendSubmissionRequestMessage: vi.fn(async () => undefined)
+        }
       }
     }
   ])("fails closed when notify runtime capabilities are incomplete: $label", async ({ runtime }) => {
@@ -68,9 +74,11 @@ describe("metaReviewGateNotify", () => {
       targetPane
     }, {
       runtime: {
-        runTmux,
-        sendAndSubmitTmuxPaneMessage,
-        submitTmuxPaneInput
+        tmux: {
+          runner: runTmux,
+          sendSubmissionRequestMessage: sendAndSubmitTmuxPaneMessage,
+          submitPaneInput: submitTmuxPaneInput
+        }
       }
     });
 
@@ -105,9 +113,11 @@ describe("metaReviewGateNotify", () => {
       targetPane
     }, {
       runtime: {
-        runTmux,
-        sendAndSubmitTmuxPaneMessage,
-        submitTmuxPaneInput
+        tmux: {
+          runner: runTmux,
+          sendSubmissionRequestMessage: sendAndSubmitTmuxPaneMessage,
+          submitPaneInput: submitTmuxPaneInput
+        }
       }
     });
 
@@ -149,9 +159,11 @@ describe("metaReviewGateNotify", () => {
       targetPane
     }, {
       runtime: {
-        runTmux,
-        sendAndSubmitTmuxPaneMessage,
-        submitTmuxPaneInput
+        tmux: {
+          runner: runTmux,
+          sendSubmissionRequestMessage: sendAndSubmitTmuxPaneMessage,
+          submitPaneInput: submitTmuxPaneInput
+        }
       }
     });
 
@@ -187,9 +199,11 @@ describe("metaReviewGateNotify", () => {
       targetPane
     }, {
       runtime: {
-        runTmux,
-        sendAndSubmitTmuxPaneMessage,
-        submitTmuxPaneInput
+        tmux: {
+          runner: runTmux,
+          sendSubmissionRequestMessage: sendAndSubmitTmuxPaneMessage,
+          submitPaneInput: submitTmuxPaneInput
+        }
       }
     });
 
@@ -199,6 +213,44 @@ describe("metaReviewGateNotify", () => {
       status: "failed",
       reasonCode: "META_REVIEWER_PANE_EXITED",
       message: "meta-reviewer pane fell back to interactive shell after Codex exit."
+    });
+    expect(sendAndSubmitTmuxPaneMessage).toHaveBeenCalledTimes(1);
+    expect(submitTmuxPaneInput).not.toHaveBeenCalled();
+  });
+
+  it("accepts deprecated legacy top-level notify helper fields as compatibility input", async () => {
+    vi.useFakeTimers();
+
+    const bubbleId = "b_meta_review_notify_legacy_compat";
+    const round = 6;
+    const targetPane = "pf-b_meta_review_notify_legacy_compat:0.3";
+    const marker = `bubble=${bubbleId} meta-review request round=${round}.`;
+    const runTmux = vi.fn(async () => ({
+      stdout: `${marker}\n>`,
+      stderr: "",
+      exitCode: 0
+    }));
+    const sendAndSubmitTmuxPaneMessage = vi.fn(async () => undefined);
+    const submitTmuxPaneInput = vi.fn(async () => undefined);
+
+    const resultPromise = notifyMetaReviewerSubmissionRequest({
+      bubbleId,
+      round,
+      targetPane
+    }, {
+      runtime: {
+        runTmux,
+        sendAndSubmitTmuxPaneMessage,
+        submitTmuxPaneInput
+      }
+    });
+
+    await vi.advanceTimersByTimeAsync(800);
+
+    await expect(resultPromise).resolves.toEqual({
+      status: "confirmed",
+      reasonCode: null,
+      message: "meta-review submit request delivery confirmed from pane scrollback."
     });
     expect(sendAndSubmitTmuxPaneMessage).toHaveBeenCalledTimes(1);
     expect(submitTmuxPaneInput).not.toHaveBeenCalled();

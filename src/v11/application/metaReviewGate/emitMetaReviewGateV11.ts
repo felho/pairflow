@@ -17,6 +17,12 @@ import type {
   NotifyMetaReviewerSubmissionRequestInput,
   ResolveMetaReviewerPaneWarning
 } from "../../shared/metaReviewGate/metaReviewGateCommandContract.js";
+import {
+  type MetaReviewGateNotifyTmuxCapabilities,
+  type MetaReviewGatePaneBindingTmuxCapabilities,
+  resolveMetaReviewGateNotifyTmuxCapabilities,
+  resolveMetaReviewGatePaneBindingTmuxCapabilities
+} from "../../shared/metaReviewGate/metaReviewGateTypes.js";
 import type {
   MetaReviewGateDependencyDefaults
 } from "../../defaults/metaReviewGate/metaReviewGateCommandDefaults.js";
@@ -58,18 +64,95 @@ function mergeCapabilityLayer<T extends object>(
   return merged;
 }
 
+function canonicalizeMetaReviewGateNotifyRuntime(
+  runtime: MetaReviewGateNotifyRuntimeCapabilities | undefined
+): MetaReviewGateNotifyRuntimeCapabilities {
+  const tmux = resolveMetaReviewGateNotifyTmuxCapabilities(runtime);
+  return tmux === undefined ? {} : { tmux };
+}
+
+function materializeMetaReviewGateNotifyRuntimeCompatibility(
+  runtime: MetaReviewGateNotifyRuntimeCapabilities | undefined
+): MetaReviewGateNotifyRuntimeCapabilities {
+  const tmux = resolveMetaReviewGateNotifyTmuxCapabilities(runtime);
+  return {
+    ...(tmux !== undefined ? { tmux } : {}),
+    ...(tmux?.runner !== undefined ? { runTmux: tmux.runner } : {}),
+    ...(tmux?.maybeAcceptTrustPrompt !== undefined
+      ? { maybeAcceptClaudeTrustPrompt: tmux.maybeAcceptTrustPrompt }
+      : {}),
+    ...(tmux?.sendSubmissionRequestMessage !== undefined
+      ? { sendAndSubmitTmuxPaneMessage: tmux.sendSubmissionRequestMessage }
+      : {}),
+    ...(tmux?.submitPaneInput !== undefined
+      ? { submitTmuxPaneInput: tmux.submitPaneInput }
+      : {})
+  };
+}
+
+function canonicalizeMetaReviewGatePaneBindingRuntime(
+  runtime: MetaReviewGatePaneBindingRuntimeCapabilities | undefined
+): MetaReviewGatePaneBindingRuntimeCapabilities {
+  const tmux = resolveMetaReviewGatePaneBindingTmuxCapabilities(runtime);
+  return {
+    ...(runtime?.buildAgentCommand !== undefined
+      ? { buildAgentCommand: runtime.buildAgentCommand }
+      : {}),
+    ...(tmux !== undefined ? { tmux } : {})
+  };
+}
+
+function materializeMetaReviewGatePaneBindingRuntimeCompatibility(
+  runtime: MetaReviewGatePaneBindingRuntimeCapabilities | undefined
+): MetaReviewGatePaneBindingRuntimeCapabilities {
+  const tmux = resolveMetaReviewGatePaneBindingTmuxCapabilities(runtime);
+  return {
+    ...(runtime?.buildAgentCommand !== undefined
+      ? { buildAgentCommand: runtime.buildAgentCommand }
+      : {}),
+    ...(tmux !== undefined ? { tmux } : {}),
+    ...(tmux?.runner !== undefined ? { runTmux: tmux.runner } : {}),
+    ...(tmux?.respawnPaneCommand !== undefined
+      ? { respawnTmuxPaneCommand: tmux.respawnPaneCommand }
+      : {})
+  };
+}
+
+function mergeNotifyTmuxCapabilities(
+  override: MetaReviewGateNotifyTmuxCapabilities | undefined,
+  defaults: MetaReviewGateDependencyDefaults["runtime"]["notify"]["tmux"]
+): MetaReviewGateNotifyTmuxCapabilities {
+  return mergeCapabilityLayer(override, defaults);
+}
+
 function mergeMetaReviewGateNotifyRuntime(
   runtime: MetaReviewGateNotifyRuntimeCapabilities | undefined,
   defaults: MetaReviewGateDependencyDefaults["runtime"]["notify"]
 ): MetaReviewGateNotifyRuntimeCapabilities {
-  return mergeCapabilityLayer(runtime, defaults);
+  return {
+    tmux: mergeNotifyTmuxCapabilities(
+      canonicalizeMetaReviewGateNotifyRuntime(runtime).tmux,
+      defaults.tmux
+    )
+  };
+}
+
+function mergePaneBindingTmuxCapabilities(
+  override: MetaReviewGatePaneBindingTmuxCapabilities | undefined,
+  defaults: MetaReviewGateDependencyDefaults["runtime"]["paneBinding"]["tmux"]
+): MetaReviewGatePaneBindingTmuxCapabilities {
+  return mergeCapabilityLayer(override, defaults);
 }
 
 function mergeMetaReviewGatePaneBindingRuntime(
   runtime: MetaReviewGatePaneBindingRuntimeCapabilities | undefined,
   defaults: MetaReviewGateDependencyDefaults["runtime"]["paneBinding"]
 ): MetaReviewGatePaneBindingRuntimeCapabilities {
-  return mergeCapabilityLayer(runtime, defaults);
+  const normalized = canonicalizeMetaReviewGatePaneBindingRuntime(runtime);
+  return {
+    buildAgentCommand: normalized.buildAgentCommand ?? defaults.buildAgentCommand,
+    tmux: mergePaneBindingTmuxCapabilities(normalized.tmux, defaults.tmux)
+  };
 }
 
 function mergeNotifyRuntimeLayers(input: {
@@ -77,8 +160,23 @@ function mergeNotifyRuntimeLayers(input: {
   wrapperRuntime: MetaReviewGateNotifyRuntimeCapabilities | undefined;
   defaults: MetaReviewGateDependencyDefaults["runtime"]["notify"];
 }): MetaReviewGateNotifyRuntimeCapabilities {
+  const callerRuntime = canonicalizeMetaReviewGateNotifyRuntime(
+    input.callerRuntime
+  );
+  const wrapperRuntime = canonicalizeMetaReviewGateNotifyRuntime(
+    input.wrapperRuntime
+  );
   return mergeMetaReviewGateNotifyRuntime(
-    mergeCapabilityLayer(input.callerRuntime, input.wrapperRuntime ?? {}),
+    {
+      ...(callerRuntime.tmux !== undefined || wrapperRuntime.tmux !== undefined
+        ? {
+            tmux: mergeCapabilityLayer(
+              callerRuntime.tmux,
+              wrapperRuntime.tmux ?? {}
+            )
+          }
+        : {})
+    },
     input.defaults
   );
 }
@@ -88,8 +186,33 @@ function mergePaneBindingRuntimeLayers(input: {
   wrapperRuntime: MetaReviewGatePaneBindingRuntimeCapabilities | undefined;
   defaults: MetaReviewGateDependencyDefaults["runtime"]["paneBinding"];
 }): MetaReviewGatePaneBindingRuntimeCapabilities {
+  const callerRuntime = canonicalizeMetaReviewGatePaneBindingRuntime(
+    input.callerRuntime
+  );
+  const wrapperRuntime = canonicalizeMetaReviewGatePaneBindingRuntime(
+    input.wrapperRuntime
+  );
   return mergeMetaReviewGatePaneBindingRuntime(
-    mergeCapabilityLayer(input.callerRuntime, input.wrapperRuntime ?? {}),
+    {
+      ...(
+        callerRuntime.buildAgentCommand !== undefined ||
+        wrapperRuntime.buildAgentCommand !== undefined
+          ? {
+              buildAgentCommand:
+                callerRuntime.buildAgentCommand
+                ?? wrapperRuntime.buildAgentCommand
+            }
+          : {}
+      ),
+      ...(callerRuntime.tmux !== undefined || wrapperRuntime.tmux !== undefined
+        ? {
+            tmux: mergeCapabilityLayer(
+              callerRuntime.tmux,
+              wrapperRuntime.tmux ?? {}
+            )
+          }
+        : {})
+    },
     input.defaults
   );
 }
@@ -100,12 +223,17 @@ function resolvePaneBindingWrapperNotifyRuntime(input: {
   preserveCallerNotifyRuntime: boolean;
 }): MetaReviewGateNotifyRuntimeCapabilities | undefined {
   if (input.preserveCallerNotifyRuntime) {
-    return input.inputRuntime?.notify;
+    const notify = materializeMetaReviewGateNotifyRuntimeCompatibility(
+      input.inputRuntime?.notify
+    );
+    return notify.tmux === undefined ? undefined : notify;
   }
 
-  return mergeMetaReviewGateNotifyRuntime(
-    input.inputRuntime?.notify,
-    input.defaults
+  return materializeMetaReviewGateNotifyRuntimeCompatibility(
+    mergeMetaReviewGateNotifyRuntime(
+      input.inputRuntime?.notify,
+      input.defaults
+    )
   );
 }
 
@@ -123,11 +251,13 @@ function buildPaneBindingWrapperRuntime(input: {
 
   return {
     ...(notify !== undefined ? { notify } : {}),
-    paneBinding: mergePaneBindingRuntimeLayers({
-      callerRuntime: input.inputRuntime?.paneBinding,
-      wrapperRuntime: input.paneBindingRuntime,
-      defaults: input.defaults.paneBinding
-    })
+    paneBinding: materializeMetaReviewGatePaneBindingRuntimeCompatibility(
+      mergePaneBindingRuntimeLayers({
+        callerRuntime: input.inputRuntime?.paneBinding,
+        wrapperRuntime: input.paneBindingRuntime,
+        defaults: input.defaults.paneBinding
+      })
+    )
   };
 }
 
@@ -141,10 +271,26 @@ function buildApplyRuntimeForwarding(input: {
   }
 
   // Keep the original runtime object visible to explicit seam overrides.
-  // Built-in wrappers resolve nested defaults separately so custom hooks can
-  // still observe intentionally incomplete runtime input.
+  // Built-in wrappers still canonicalize through nested tmux.* helpers, but
+  // explicit override seams keep the compatibility aliases promised by the
+  // public callable surface.
   return {
-    runtime: input.dependencies.runtime
+    runtime: {
+      ...(input.dependencies.runtime.notify !== undefined
+        ? {
+            notify: materializeMetaReviewGateNotifyRuntimeCompatibility(
+              input.dependencies.runtime.notify
+            )
+          }
+        : {}),
+      ...(input.dependencies.runtime.paneBinding !== undefined
+        ? {
+            paneBinding: materializeMetaReviewGatePaneBindingRuntimeCompatibility(
+              input.dependencies.runtime.paneBinding
+            )
+          }
+        : {})
+    }
   };
 }
 

@@ -1,0 +1,33 @@
+{
+  "id": "meta-review-gate-apply-running-deprecated-runtime-input-uncertain-delivery-parity",
+  "command": "metaReviewGate",
+  "mode": "parity",
+  "description": "Seed contract case for meta-review gate apply running route with deprecated top-level runtime input and uncertain runtime delivery parity baseline.",
+  "input": {
+    "route": "apply",
+    "applyScenario": "meta_review_running",
+    "notifyDelivery": "uncertain",
+    "runtimeInputShape": "deprecated_top_level",
+    "summary": "Seed apply running contract summary with deprecated top-level runtime input and uncertain notify delivery",
+    "refs": []
+  },
+  "expected": {
+    "status": "ok",
+    "gateRoute": "meta_review_running",
+    "stateSubset": {
+      "state": "RUNNING",
+      "meta_review": {
+        "runtime_delivery": {
+          "status": "uncertain"
+        }
+      }
+    }
+  },
+  "tags": [
+    "seed",
+    "m3",
+    "meta-review-gate",
+    "parity",
+    "compat"
+  ]
+}

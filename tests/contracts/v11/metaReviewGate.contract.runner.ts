@@ -37,12 +37,18 @@ type MetaReviewGateApplyScenario =
 
 type MetaReviewGateContractNotifyDelivery =
   | "confirmed"
+  | "uncertain"
   | "failed";
+
+type MetaReviewGateContractRuntimeInputShape =
+  | "canonical_nested_tmux"
+  | "deprecated_top_level";
 
 function parseMetaReviewGateCaseInput(input: ContractCase["input"]): {
   route: "apply";
   applyScenario: MetaReviewGateApplyScenario;
   notifyDelivery: MetaReviewGateContractNotifyDelivery;
+  runtimeInputShape: MetaReviewGateContractRuntimeInputShape;
   summary?: string;
   refs: string[];
 } {
@@ -84,10 +90,22 @@ function parseMetaReviewGateCaseInput(input: ContractCase["input"]): {
   if (
     notifyDeliveryRaw !== undefined &&
     notifyDeliveryRaw !== "confirmed" &&
+    notifyDeliveryRaw !== "uncertain" &&
     notifyDeliveryRaw !== "failed"
   ) {
     throw new Error(
-      "metaReviewGate contract input.notifyDelivery must be one of: confirmed, failed."
+      "metaReviewGate contract input.notifyDelivery must be one of: confirmed, uncertain, failed."
+    );
+  }
+
+  const runtimeInputShapeRaw = input.runtimeInputShape;
+  if (
+    runtimeInputShapeRaw !== undefined &&
+    runtimeInputShapeRaw !== "canonical_nested_tmux" &&
+    runtimeInputShapeRaw !== "deprecated_top_level"
+  ) {
+    throw new Error(
+      "metaReviewGate contract input.runtimeInputShape must be one of: canonical_nested_tmux, deprecated_top_level."
     );
   }
 
@@ -95,6 +113,7 @@ function parseMetaReviewGateCaseInput(input: ContractCase["input"]): {
     route: "apply",
     applyScenario: applyScenarioRaw ?? "run_failed",
     notifyDelivery: notifyDeliveryRaw ?? "confirmed",
+    runtimeInputShape: runtimeInputShapeRaw ?? "canonical_nested_tmux",
     ...(typeof summaryRaw === "string" ? { summary: summaryRaw } : {}),
     refs: refsRaw ?? []
   };
@@ -312,12 +331,66 @@ async function executeMetaReviewGateCase(input: {
           stderr: "",
           exitCode: 0
         }
+        : caseInput.notifyDelivery === "uncertain"
+          ? {
+            stdout: "still waiting for structured submit to appear",
+            stderr: "",
+            exitCode: 0
+          }
         : {
-          stdout: submittedMetaReviewRequest ?? "",
-          stderr: "",
-          exitCode: 0
-        }
+            stdout: submittedMetaReviewRequest ?? "",
+            stderr: "",
+            exitCode: 0
+          }
     );
+    const paneBindingRunTmux = () => Promise.resolve({
+      stdout: "",
+      stderr: "",
+      exitCode: 0
+    });
+    const maybeAcceptTrustPrompt = () => Promise.resolve(undefined);
+    const sendSubmissionRequestMessage = (
+      _runner: typeof notifyRunTmux,
+      _targetPane: string,
+      message: string
+    ) => {
+      submittedMetaReviewRequest = message;
+      return Promise.resolve(undefined);
+    };
+    const submitPaneInput = () => Promise.resolve(undefined);
+    const respawnPaneCommand = () => Promise.resolve(undefined);
+    const runtime =
+      caseInput.runtimeInputShape === "deprecated_top_level"
+        ? {
+            notify: {
+              runTmux: notifyRunTmux,
+              maybeAcceptClaudeTrustPrompt: maybeAcceptTrustPrompt,
+              sendAndSubmitTmuxPaneMessage: sendSubmissionRequestMessage,
+              submitTmuxPaneInput: submitPaneInput
+            },
+            paneBinding: {
+              runTmux: paneBindingRunTmux,
+              buildAgentCommand: () => "codex meta-review",
+              respawnTmuxPaneCommand: respawnPaneCommand
+            }
+          }
+        : {
+            notify: {
+              tmux: {
+                runner: notifyRunTmux,
+                maybeAcceptTrustPrompt,
+                sendSubmissionRequestMessage,
+                submitPaneInput
+              }
+            },
+            paneBinding: {
+              buildAgentCommand: () => "codex meta-review",
+              tmux: {
+                runner: paneBindingRunTmux,
+                respawnPaneCommand
+              }
+            }
+          };
 
     const result = await input.applyExecutor(
       {
@@ -339,26 +412,7 @@ async function executeMetaReviewGateCase(input: {
               }
             : noRuntimeSessionBindingResult
         ),
-        runtime: {
-          notify: {
-            runTmux: notifyRunTmux,
-            maybeAcceptClaudeTrustPrompt: () => Promise.resolve(undefined),
-            sendAndSubmitTmuxPaneMessage: (_runner, _targetPane, message) => {
-              submittedMetaReviewRequest = message;
-              return Promise.resolve(undefined);
-            },
-            submitTmuxPaneInput: () => Promise.resolve(undefined)
-          },
-          paneBinding: {
-            runTmux: () => Promise.resolve({
-              stdout: "",
-              stderr: "",
-              exitCode: 0
-            }),
-            buildAgentCommand: () => "codex meta-review",
-            respawnTmuxPaneCommand: () => Promise.resolve(undefined)
-          }
-        }
+        runtime
       }
     );
 

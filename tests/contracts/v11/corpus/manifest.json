@@ -603,9 +603,33 @@
       "kind": "seed_case"
     },
     {
+      "id": "meta-review-gate-apply-running-deprecated-runtime-input-parity",
+      "command": "metaReviewGate",
+      "source": "tests/contracts/v11/cases/meta-review-gate/meta-review-gate-apply-running-deprecated-runtime-input-parity.case.json",
+      "kind": "seed_case"
+    },
+    {
+      "id": "meta-review-gate-apply-running-deprecated-runtime-input-failed-delivery-parity",
+      "command": "metaReviewGate",
+      "source": "tests/contracts/v11/cases/meta-review-gate/meta-review-gate-apply-running-deprecated-runtime-input-failed-delivery-parity.case.json",
+      "kind": "seed_case"
+    },
+    {
+      "id": "meta-review-gate-apply-running-deprecated-runtime-input-uncertain-delivery-parity",
+      "command": "metaReviewGate",
+      "source": "tests/contracts/v11/cases/meta-review-gate/meta-review-gate-apply-running-deprecated-runtime-input-uncertain-delivery-parity.case.json",
+      "kind": "seed_case"
+    },
+    {
       "id": "meta-review-gate-apply-running-failed-delivery-parity",
       "command": "metaReviewGate",
       "source": "tests/contracts/v11/cases/meta-review-gate/meta-review-gate-apply-running-failed-delivery-parity.case.json",
+      "kind": "seed_case"
+    },
+    {
+      "id": "meta-review-gate-apply-running-uncertain-delivery-parity",
+      "command": "metaReviewGate",
+      "source": "tests/contracts/v11/cases/meta-review-gate/meta-review-gate-apply-running-uncertain-delivery-parity.case.json",
       "kind": "seed_case"
     },
     {

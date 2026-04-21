@@ -6,6 +6,10 @@ import type {
 } from "../../shared/metaReviewGate/metaReviewGateTypes.js";
 import type { PairflowCommandProfile } from "../../../types/bubble.js";
 import {
+  resolveMetaReviewGateNotifyTmuxCapabilities,
+  resolveMetaReviewGatePaneBindingTmuxCapabilities
+} from "../../shared/metaReviewGate/metaReviewGateTypes.js";
+import {
   resolveRuntimeSessionWorkspaceAuthority
 } from "../../shared/runtimeSessionWorkspaceAuthority.js";
 import { buildMetaReviewerStartupPrompt } from "../start/startCommandPrompts.js";
@@ -118,14 +122,35 @@ function resolveNotifyRuntimeForPaneBinding(input: {
     NonNullable<Parameters<ResolveMetaReviewerPaneWarning>[0]["runtime"]>["paneBinding"]
   >;
 }) {
-  const notifyRuntime = input.notifyRuntime?.notify;
+  const notifyTmux = resolveMetaReviewGateNotifyTmuxCapabilities(
+    input.notifyRuntime?.notify
+  );
+  const paneBindingTmux = resolveMetaReviewGatePaneBindingTmuxCapabilities(
+    input.paneBindingRuntime
+  );
+  const tmux = (
+    notifyTmux !== undefined || paneBindingTmux?.runner !== undefined
+      ? {
+          ...(notifyTmux ?? {}),
+          // Pane-binding only shares runner authority; submit helpers stay notify-owned.
+          ...(notifyTmux?.runner !== undefined || paneBindingTmux?.runner === undefined
+            ? {}
+            : { runner: paneBindingTmux.runner })
+        }
+      : undefined
+  );
   return {
-    ...(notifyRuntime ?? {}),
-    // Pane-binding only shares runner authority; submit helpers stay notify-owned.
-    ...(notifyRuntime?.runTmux !== undefined ||
-    input.paneBindingRuntime.runTmux === undefined
-      ? {}
-      : { runTmux: input.paneBindingRuntime.runTmux })
+    ...(tmux !== undefined ? { tmux } : {}),
+    ...(tmux?.runner !== undefined ? { runTmux: tmux.runner } : {}),
+    ...(tmux?.maybeAcceptTrustPrompt !== undefined
+      ? { maybeAcceptClaudeTrustPrompt: tmux.maybeAcceptTrustPrompt }
+      : {}),
+    ...(tmux?.sendSubmissionRequestMessage !== undefined
+      ? { sendAndSubmitTmuxPaneMessage: tmux.sendSubmissionRequestMessage }
+      : {}),
+    ...(tmux?.submitPaneInput !== undefined
+      ? { submitTmuxPaneInput: tmux.submitPaneInput }
+      : {})
   };
 }
 
@@ -133,6 +158,9 @@ export const resolveMetaReviewerPaneWarning: ResolveMetaReviewerPaneWarning = as
   input
 ) => {
   const paneBindingRuntime = input.runtime?.paneBinding;
+  const paneBindingTmux = resolveMetaReviewGatePaneBindingTmuxCapabilities(
+    paneBindingRuntime
+  );
   if (paneBindingRuntime?.buildAgentCommand === undefined) {
     return buildMetaReviewerPaneFailure({
       reasonCode: "META_REVIEWER_PANE_RUNTIME_UNAVAILABLE",
@@ -140,7 +168,7 @@ export const resolveMetaReviewerPaneWarning: ResolveMetaReviewerPaneWarning = as
       shouldDeactivate: false
     });
   }
-  if (paneBindingRuntime.respawnTmuxPaneCommand === undefined) {
+  if (paneBindingTmux?.respawnPaneCommand === undefined) {
     return buildMetaReviewerPaneFailure({
       reasonCode: "META_REVIEWER_PANE_RUNTIME_UNAVAILABLE",
       message: "meta-review gate pane binding is missing respawn capability.",
@@ -202,13 +230,13 @@ export const resolveMetaReviewerPaneWarning: ResolveMetaReviewerPaneWarning = as
     pairflowCommandProfile: input.pairflowCommandProfile
   });
   try {
-    await paneBindingRuntime.respawnTmuxPaneCommand({
+    await paneBindingTmux.respawnPaneCommand({
       sessionName: bindStart.record.tmuxSessionName,
       paneIndex,
       cwd: workspacePath,
       command: metaReviewerCommand,
-      ...(paneBindingRuntime.runTmux !== undefined
-        ? { runner: paneBindingRuntime.runTmux }
+      ...(paneBindingTmux.runner !== undefined
+        ? { runner: paneBindingTmux.runner }
         : {})
     });
   } catch (error) {
