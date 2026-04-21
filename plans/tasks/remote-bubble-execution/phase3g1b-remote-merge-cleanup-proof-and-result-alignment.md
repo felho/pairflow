@@ -13,6 +13,7 @@ target_files:
   - src/v11/defaults/merge/mergeCommandDefaults.ts
   - src/v11/infrastructure/executor/ssh/sshBubbleMergeCommand.ts
   - tests/core/bubble/mergeBubble.test.ts
+  - tests/contracts/v11/merge.contract.runner.ts
   - tests/v11/application/merge/mergeCommandDependencyResolution.test.ts
   - tests/v11/infrastructure/executor/ssh/sshBubbleMergeCommand.test.ts
 prd_ref: null
@@ -40,15 +41,26 @@ owners:
 
 ## Current Codebase Check / Current-Tree Reality Check (2026-04-21)
 
-1. A current tree-ben a remote merge vegleges resultje ma cleanup truthot is a remote helper payloadbol olvas:
-   - [src/v11/application/merge/runMergeFlow.ts](/Users/felho/dev/pairflow/src/v11/application/merge/runMergeFlow.ts:179)
-2. A remote route local finalizationja ma reconcile-only, nem ad explicit cleanup-phase resultet:
+1. A current tree-ben a remote merge vegleges resultje mar nem a remote helper payloadbol epul:
+   - a helper csak pre-cleanup handoffot ad,
+   - a final resultet a local import/merge utan a remote finalization konzervativ cleanup-projectionje tolti ki,
+   - [src/v11/application/merge/runMergeFlow.ts](/Users/felho/dev/pairflow/src/v11/application/merge/runMergeFlow.ts:356)
+2. A remote route local finalizationja ma meg mindig reconcile-first + best-effort projection:
+   - state persist blocker mar fail-closed,
+   - runtime-session remove best-effort,
+   - explicit remote worktree/branch cleanup seam meg nincs,
+   - a returned cleanup booleans emiatt ma szandekosan konzervativak,
    - [src/v11/application/merge/mergeFlowFinalization.ts](/Users/felho/dev/pairflow/src/v11/application/merge/mergeFlowFinalization.ts:41)
-3. A retained result shape kulon file-ban epul:
+3. A pre-cleanup helper payload current tree-ben mar explicit closed contract:
+   - cleanup/publication truth mezoket a parser tiltja,
+   - [src/v11/infrastructure/executor/ssh/sshBubbleMergeCommand.ts](/Users/felho/dev/pairflow/src/v11/infrastructure/executor/ssh/sshBubbleMergeCommand.ts:239)
+4. A retained result shape kulon file-ban epul:
    - [src/v11/application/merge/mergeResultMapping.ts](/Users/felho/dev/pairflow/src/v11/application/merge/mergeResultMapping.ts:1)
-4. A remote delete force-path ugyanebben a cleanup-routing familyben mar explicit proof-parityt kovetel:
+5. A merge contract runner current tree-ben meg explicit `Phase 3G1A` utani atmeneti local-route cleanup note-tal el:
+   - [tests/contracts/v11/merge.contract.runner.ts](/Users/felho/dev/pairflow/tests/contracts/v11/merge.contract.runner.ts:183)
+6. A remote delete force-path ugyanebben a cleanup-routing familyben mar explicit proof-parityt kovetel:
    - [src/v11/application/delete/deleteBubble.ts](/Users/felho/dev/pairflow/src/v11/application/delete/deleteBubble.ts:263)
-5. Target-file reality:
+7. Target-file reality:
    - ez cleanup-proof es final truth-surface alignment task,
    - nem uj success-boundary foundation task,
    - nem operator/read-model wording task.
@@ -68,7 +80,7 @@ owners:
 1. Parent plan gap closed:
    - a started remote merge cleanup closure mar nem lehet laza best-effort, es a vegleges truth surfaces nem maradhatnak mixed-phase allapotban.
 2. Depends on:
-   - `plans/tasks/remote-bubble-execution/phase3g1a-remote-merge-handoff-and-local-success-boundary.md`
+   - `plans/archive/tasks/remote-bubble-execution/phase3g1a-remote-merge-handoff-and-local-success-boundary.md`
 3. Unlocks / impacts successors:
    - `Phase 3G2 remote merge operator contract alignment`
 4. Task-list impact:
@@ -86,9 +98,11 @@ owners:
    - [src/v11/application/merge/mergeFlowFinalization.ts](/Users/felho/dev/pairflow/src/v11/application/merge/mergeFlowFinalization.ts)
    - [src/v11/application/merge/mergeResultMapping.ts](/Users/felho/dev/pairflow/src/v11/application/merge/mergeResultMapping.ts)
    - [src/v11/infrastructure/executor/ssh/sshBubbleMergeCommand.ts](/Users/felho/dev/pairflow/src/v11/infrastructure/executor/ssh/sshBubbleMergeCommand.ts)
+   - [tests/contracts/v11/merge.contract.runner.ts](/Users/felho/dev/pairflow/tests/contracts/v11/merge.contract.runner.ts)
    - [src/v11/application/delete/deleteBubble.ts](/Users/felho/dev/pairflow/src/v11/application/delete/deleteBubble.ts)
 2. Closed canonical elements, amelyeket ez a task nem ertelmezhet ujra:
    - a durable success proof source mar a `Phase 3G1A` altal local boundaryre kerult,
+   - a pre-cleanup helper payload mar nem hordozhat cleanup/publication completion truthot,
    - a remote cleanup tovabbra sem publication gate,
    - a delete cleanup continuity retained baseline marad.
 3. Uj explicit clarification, amelyet ez a task zar le:
@@ -117,9 +131,9 @@ owners:
    - proof parity a delete-family destructive closureval.
 6. `read_model_consumers`
    - in scope mint retained truth-surface consumers:
-   - merge CLI text/json surface,
-   - UI router `UiMergeBubbleResult` typing,
-   - package-exported `MergeBubbleResult` typing
+   - `tests/contracts/v11/merge.contract.runner.ts` mint primary retained consume-proof surface,
+   - `MergeBubbleResult` stable-shape contract,
+   - CLI/UI/package consume inventory csak akkor target, ha a cleanup-truth alignment explicit consume-surface driftet kenyszerit ki
    - explicit deferred:
    - operator wording/help/docs alignment,
    - consumer-facing terminology- vagy wording-racionalizalas.
@@ -131,9 +145,10 @@ owners:
    - merge finalization,
    - merge result mapping,
    - remote merge executor cleanup contractja,
+   - merge contract parity/invariant proof,
    - merge helper direct consumer typing,
    - merge tests.
-2. A task ownershipolja a retained result/event truth alignmentet a meglvo consumer surfaces fele, de nem ownershipolja a public operator wording alignmentet.
+2. A task ownershipolja a retained result/event truth alignmentet a merge-family source anchors es a primary retained contract-proof surface fele, de nem ownershipolja a public operator wording alignmentet.
 3. Actual touched scope:
    - `fail_closed_hardening`
    - bounded `consumer_family_alignment`
@@ -152,7 +167,7 @@ owners:
    - retained final truth alignment
 3. `why_collapse_is_safe`
    - ugyanaz a merge finalization/result ownershipolja oket,
-   - a retained read-model consume ugyanazon `MergeBubbleResult`/event truth surface lezarasabol el,
+   - a retained consume-proof itt elsodlegesen ugyanazon `MergeBubbleResult`/event/contract-invariant surface lezarasabol el,
    - a canonical success proof source mar elozoleg stabilizalva van `Phase 3G1A`-ban.
 4. `explicitly_deferred_closures`
    - operator/CLI/help/docs wording alignment
@@ -215,6 +230,7 @@ owners:
    - `MergeBubbleResult`
    - cleanup-phase failure shape
    - merge lifecycle event metadata
+   - merge contract cleanup invariant proof
 8. Mixed-truth surfaces allowed:
    - `none`
 
@@ -287,10 +303,9 @@ owners:
 2. A final retained resultben nem maradhat mixed-phase truth.
 3. A merge lifecycle event metadata sem allithat cleanup-complete truthot cleanup proof nelkul.
 4. A retained result shape-et fogyaszto meglevo consumer surfaces:
-   - CLI merge text/json output,
-   - UI router result typing,
-   - package-exported merge result typing
-   ugyanazt a stable shape-et tartjak meg, de innentol cleanup-phase truthot kell latniuk a vegleges mezokben.
+   - a primary in-scope consume-proof surface a merge contract runner cleanup invariantje,
+   - a CLI/UI/package consume inventory stable shape-kent retained marad,
+   - ezekhez csak akkor kell explicit target-file consume update, ha a cleanup-truth alignment shape vagy consumer-meaning driftet kenyszerit ki.
 
 ### Cleanup-Phase Failure Contract
 
@@ -304,8 +319,10 @@ owners:
 
 1. A remote route finalizationja adjon explicit cleanup-phase outcome-ot.
 2. A `runMergeFlow` remote route a vegleges retained resultet mar ne kozvetlenul a pre-cleanup remote payloadbol epitse.
-3. A `mergeResultMapping` es a returned `MergeBubbleResult` cleanup booleans csak cleanup-phase truthra uljenek.
-4. Ha a delete-family proof parityhoz kozos helper hasznos, az a legszukebb merge/delete cleanup targetban szulethet meg; ne nyisson altalanos shared frameworkot.
+3. A `runMergeFlow` remote route mar current tree-ben sem a pre-cleanup payloadbol epiti a vegleges resultet; ez a task azt ownershipolja, hogy a finalization explicit cleanup-phase outcome-ja keruljon a final resultbe.
+4. A `mergeResultMapping` es a returned `MergeBubbleResult` cleanup booleans csak cleanup-phase truthra uljenek.
+5. A `tests/contracts/v11/merge.contract.runner.ts` `cleanup_invariant` atmeneti local-route note-ja ebben a taskban zaruljon le.
+6. Ha a delete-family proof parityhoz kozos helper hasznos, az a legszukebb merge/delete cleanup targetban szulethet meg; ne nyisson altalanos shared frameworkot.
 
 ## Acceptance Criteria
 
@@ -324,12 +341,13 @@ owners:
    - cleanup seam contract mapping
    - cleanup-proof parity assertions
    - merge result truth alignment
+   - merge contract cleanup invariant alignment
    - helper-result direct consumer typing alignment
 2. Integration:
    - started remote merge success local durable merge + cleanup success
    - cleanup failure local truthvesztes nelkul
    - artifact-existed-but-proof-missing fail-closed
-   - retained CLI/UI/export consume stable-shape, final-truth behaviorrel
+   - retained contract-proof surface stable-shape, final-truth behaviorrel
 3. Regression:
    - a remote route vegleges resultje nem hasznalhat local reconcile truthot cleanup truth helyett.
    - a retained `MergeBubbleResult` surface nem maradhat compat-only vagy mixed-phase a `Phase 3G1B` utan.
