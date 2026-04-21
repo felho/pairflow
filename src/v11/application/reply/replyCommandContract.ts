@@ -28,6 +28,7 @@ export interface EmitHumanReplyResult {
 
 export interface EmitHumanReplyDependencies {
   appendProtocolEnvelope?: AppendProtocolEnvelopePort;
+  emitDeliveryNotificationAck?: EmitDeliveryAckLikePort;
   emitTmuxDeliveryNotification?: EmitDeliveryAckLikePort;
   ensureBubbleInstanceIdForMutation?: EnsureBubbleInstanceIdForMutationPort;
   readStateSnapshot?: ReadStateSnapshotPort;

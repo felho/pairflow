@@ -70,7 +70,7 @@ describe("askHumanCommandOrchestration", () => {
           );
           expect(dependencies.executeAskHumanExecution).toBeTypeOf("function");
           expect(dependencies.finalizeAskHumanFlow).toBeTypeOf("function");
-          expect(dependencies.emitTmuxDeliveryNotification).toBeTypeOf("function");
+          expect(dependencies.emitDeliveryNotificationAck).toBeTypeOf("function");
           expect(dependencies.emitBubbleNotification).toBeTypeOf("function");
           return {
             bubbleId: "b_ask_human_01",
@@ -139,7 +139,7 @@ describe("askHumanCommandOrchestration", () => {
             nowIso: now.toISOString()
           }) as never,
         runAskHumanFlow: async (_input, dependencies) => {
-          expect("emitTmuxDeliveryNotification" in dependencies).toBe(false);
+          expect("emitDeliveryNotificationAck" in dependencies).toBe(false);
           expect("emitBubbleNotification" in dependencies).toBe(false);
           return {
             bubbleId: "b_ask_human_02",

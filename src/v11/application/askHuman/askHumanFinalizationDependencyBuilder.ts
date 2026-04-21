@@ -7,22 +7,23 @@ import { askHumanFinalizationDependencyDefaults } from "./askHumanFinalizationDe
 export function buildAskHumanFinalizationDependencies(
   dependencies: AskHumanFinalizationDependencySource
 ): AskHumanFinalizationDependencies {
+  const emitDeliveryNotificationAck =
+    dependencies.emitDeliveryNotificationAck
+    ?? dependencies.emitTmuxDeliveryNotification
+    ?? askHumanFinalizationDependencyDefaults.emitDeliveryNotificationAck;
+  const resolveDeliveryMessageRef =
+    dependencies.resolveDeliveryMessageRef
+    ?? askHumanFinalizationDependencyDefaults.resolveDeliveryMessageRef;
+
   return {
-    ...(dependencies.emitTmuxDeliveryNotification !== undefined
-      ? { emitTmuxDeliveryNotification: dependencies.emitTmuxDeliveryNotification }
-      : {
-          emitTmuxDeliveryNotification:
-            askHumanFinalizationDependencyDefaults.emitTmuxDeliveryNotification
-        }),
+    emitDeliveryNotificationAck,
     ...(dependencies.emitBubbleNotification !== undefined
       ? { emitBubbleNotification: dependencies.emitBubbleNotification }
       : {
           emitBubbleNotification:
             askHumanFinalizationDependencyDefaults.emitBubbleNotification
         }),
-    ...(dependencies.resolveDeliveryMessageRef !== undefined
-      ? { resolveDeliveryMessageRef: dependencies.resolveDeliveryMessageRef }
-      : {}),
+    resolveDeliveryMessageRef,
     ...(dependencies.emitBubbleLifecycleEventBestEffort !== undefined
       ? { emitBubbleLifecycleEventBestEffort: dependencies.emitBubbleLifecycleEventBestEffort }
       : {

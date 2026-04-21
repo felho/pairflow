@@ -62,7 +62,7 @@ export interface EmitConvergedResult {
   state: BubbleStateSnapshot;
   delivery?: {
     status: "accepted" | "rejected";
-    delivered: boolean;
+    delivered?: boolean;
     reason?: string;
     reason_code?: string;
     retried: boolean;

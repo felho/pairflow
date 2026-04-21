@@ -36,6 +36,15 @@ export interface PassFlowRuntimeDependencies extends PassDeliveryDependencies {
   emitBubbleNotification?: EmitConvergedDependencies["emitBubbleNotification"];
 }
 
+function resolvePassFlowDeliveryOverride(
+  runtimeDependencies: PassFlowRuntimeDependencies
+): PassDeliveryDependencies["emitDeliveryNotificationAck"] | undefined {
+  return (
+    runtimeDependencies.emitDeliveryNotificationAck
+    ?? runtimeDependencies.emitTmuxDeliveryNotification
+  );
+}
+
 export function createPassRoutingDependencies(
   inferDefaultPassIntent: (activeRole: AgentRole) => PassIntent
 ) {
@@ -51,21 +60,15 @@ export function createPassRoutingDependencies(
 export function createAutoConvergeFlowDependencies(
   runtimeDependencies: PassFlowRuntimeDependencies
 ) {
+  const emitDeliveryNotificationAck =
+    resolvePassFlowDeliveryOverride(runtimeDependencies);
+
   return buildAutoConvergeFlowDependencies({
     prepareRepeatCleanAutoConverge,
     executeAutoConvergeConverged,
     emitConvergedFromWorkspace,
-    ...(runtimeDependencies.emitDeliveryNotificationAck !== undefined
-      ? {
-          emitDeliveryNotificationAck:
-            runtimeDependencies.emitDeliveryNotificationAck
-        }
-      : {}),
-    ...(runtimeDependencies.emitTmuxDeliveryNotification !== undefined
-      ? {
-          emitTmuxDeliveryNotification:
-            runtimeDependencies.emitTmuxDeliveryNotification
-        }
+    ...(emitDeliveryNotificationAck !== undefined
+      ? { emitDeliveryNotificationAck }
       : {}),
     ...(runtimeDependencies.emitBubbleNotification !== undefined
       ? { emitBubbleNotification: runtimeDependencies.emitBubbleNotification }
@@ -81,6 +84,9 @@ export function createAutoConvergeFlowDependencies(
 export function createNormalPassFlowDependencies(
   runtimeDependencies: PassFlowRuntimeDependencies
 ) {
+  const emitDeliveryNotificationAck =
+    resolvePassFlowDeliveryOverride(runtimeDependencies);
+
   return buildNormalPassFlowDependencies({
     prepareNormalPassAppend,
     executeNormalPassAppend,
@@ -101,17 +107,8 @@ export function createNormalPassFlowDependencies(
     executeNormalPassDelivery,
     resolveReviewerTestDirectiveForPass,
     executePassDelivery,
-    ...(runtimeDependencies.emitDeliveryNotificationAck !== undefined
-      ? {
-          emitDeliveryNotificationAck:
-            runtimeDependencies.emitDeliveryNotificationAck
-        }
-      : {}),
-    ...(runtimeDependencies.emitTmuxDeliveryNotification !== undefined
-      ? {
-          emitTmuxDeliveryNotification:
-            runtimeDependencies.emitTmuxDeliveryNotification
-        }
+    ...(emitDeliveryNotificationAck !== undefined
+      ? { emitDeliveryNotificationAck }
       : {}),
     ...(runtimeDependencies.refreshReviewerContext !== undefined
       ? { refreshReviewerContext: runtimeDependencies.refreshReviewerContext }

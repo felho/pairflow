@@ -7,7 +7,9 @@ export function buildAskHumanFlowDependenciesInputFromCommandOrchestration(
   return {
     executeAskHumanExecution: dependencies.executeAskHumanExecution,
     finalizeAskHumanFlow: dependencies.finalizeAskHumanFlow,
-    emitTmuxDeliveryNotification: dependencies.emitTmuxDeliveryNotification,
+    emitDeliveryNotificationAck:
+      dependencies.emitDeliveryNotificationAck
+      ?? dependencies.emitTmuxDeliveryNotification,
     emitBubbleNotification: dependencies.emitBubbleNotification
   };
 }

@@ -212,4 +212,212 @@ describe("normalPassFlowInvocationBuilders", () => {
     expect("emitTmuxDeliveryNotification" in dependencies).toBe(false);
     expect("refreshReviewerContext" in dependencies).toBe(false);
   });
+
+  it("maps the legacy normal-pass delivery override onto the canonical key", async () => {
+    let capturedDeliveryDependencies: Record<string, unknown> | undefined;
+
+    const emitTmuxDeliveryNotification = (() => undefined) as never;
+
+    const dependencies = buildNormalPassFlowDependencies({
+      prepareNormalPassAppend: () => ({
+        docGateScopeActive: false,
+        findingsForPayload: [],
+        lockPath: "/tmp/pass.lock"
+      }),
+      executeNormalPassAppend: async () => ({
+        sequence: 1,
+        envelope: {
+          id: "env_pass_legacy"
+        } as never
+      }),
+      resolvePassValidationForPass: async () => ({
+        validationRefs: []
+      }),
+      resolvePassValidationPolicy: () => ({
+        policyState: "policy_missing",
+        commands: [],
+        requiredCommandSetId: null
+      }),
+      runPassValidationCommand: async () => ({
+        command: "pnpm typecheck",
+        exitCode: 0,
+        logPath: ".pairflow/evidence/pass-validation-typecheck.log",
+        durationMs: 1
+      }),
+      buildPassValidationEvidenceArtifact: async () => ({}) as never,
+      writePassValidationEvidenceArtifact: async () => undefined,
+      writePassValidationReviewerCompatibilityArtifact: async () => undefined,
+      persistNormalPassPostAppend: async () => ({
+        written: {
+          state: {
+            state: "RUNNING",
+            round: 2
+          }
+        } as never
+      }),
+      writePostAppendReviewVerificationArtifact: async () => undefined,
+      writePostAppendPassState: async () =>
+        ({
+          state: {
+            state: "RUNNING",
+            round: 2
+          }
+        }) as never,
+      updateReviewerDocGateArtifact: async () => undefined,
+      executeNormalPassDelivery: async (_input, dependencyOverrides) => {
+        capturedDeliveryDependencies =
+          dependencyOverrides as unknown as Record<string, unknown>;
+        return {
+          deliveryResult: undefined,
+          deliveryRetried: false
+        };
+      },
+      resolveReviewerTestDirectiveForPass: async () => undefined,
+      executePassDelivery: async () => ({
+        result: undefined,
+        retried: false
+      }),
+      emitTmuxDeliveryNotification,
+      finalizeNormalPass: async () => ({
+        status: "ok"
+      }),
+      emitBubbleLifecycleEventBestEffort: async () => undefined,
+      buildPassLifecycleMetricMetadata: () => ({}),
+      resolveMostRecentPreviousReviewerPassIsCleanFromMetadata: () => undefined,
+      mapPassResultDelivery: () => ({
+        status: "accepted",
+        retried: false
+      }),
+      buildNormalPassResult: () => ({
+        status: "ok"
+      })
+    });
+
+    await dependencies.executeNormalPassDelivery({
+      senderRole: "reviewer",
+      bubbleId: "b_pass_builder_legacy",
+      bubbleConfig: {} as never,
+      envelope: { id: "env_pass_delivery_legacy" } as never,
+      worktreePath: "/repo/worktree",
+      repoPath: "/repo",
+      artifactsDir: "/repo/.pairflow/artifacts",
+      sessionsPath: "/repo/.pairflow/sessions",
+      reviewerBriefArtifactPath: "/repo/.pairflow/reviewer-brief.md",
+      reviewerFocusArtifactPath: "/repo/.pairflow/reviewer-focus.json",
+      recipientRole: "implementer",
+      now: new Date("2026-03-19T22:30:00.000Z")
+    });
+
+    expect(capturedDeliveryDependencies?.emitDeliveryNotificationAck).toBe(
+      emitTmuxDeliveryNotification
+    );
+    expect(capturedDeliveryDependencies).not.toHaveProperty(
+      "emitTmuxDeliveryNotification"
+    );
+  });
+
+  it("prefers the canonical normal-pass delivery override when both keys are provided", async () => {
+    let capturedDeliveryDependencies: Record<string, unknown> | undefined;
+
+    const emitDeliveryNotificationAck = (() => undefined) as never;
+    const emitTmuxDeliveryNotification = (() => undefined) as never;
+
+    const dependencies = buildNormalPassFlowDependencies({
+      prepareNormalPassAppend: () => ({
+        docGateScopeActive: false,
+        findingsForPayload: [],
+        lockPath: "/tmp/pass.lock"
+      }),
+      executeNormalPassAppend: async () => ({
+        sequence: 1,
+        envelope: {
+          id: "env_pass_dual_key"
+        } as never
+      }),
+      resolvePassValidationForPass: async () => ({
+        validationRefs: []
+      }),
+      resolvePassValidationPolicy: () => ({
+        policyState: "policy_missing",
+        commands: [],
+        requiredCommandSetId: null
+      }),
+      runPassValidationCommand: async () => ({
+        command: "pnpm typecheck",
+        exitCode: 0,
+        logPath: ".pairflow/evidence/pass-validation-typecheck.log",
+        durationMs: 1
+      }),
+      buildPassValidationEvidenceArtifact: async () => ({}) as never,
+      writePassValidationEvidenceArtifact: async () => undefined,
+      writePassValidationReviewerCompatibilityArtifact: async () => undefined,
+      persistNormalPassPostAppend: async () => ({
+        written: {
+          state: {
+            state: "RUNNING",
+            round: 2
+          }
+        } as never
+      }),
+      writePostAppendReviewVerificationArtifact: async () => undefined,
+      writePostAppendPassState: async () =>
+        ({
+          state: {
+            state: "RUNNING",
+            round: 2
+          }
+        }) as never,
+      updateReviewerDocGateArtifact: async () => undefined,
+      executeNormalPassDelivery: async (_input, dependencyOverrides) => {
+        capturedDeliveryDependencies =
+          dependencyOverrides as unknown as Record<string, unknown>;
+        return {
+          deliveryResult: undefined,
+          deliveryRetried: false
+        };
+      },
+      resolveReviewerTestDirectiveForPass: async () => undefined,
+      executePassDelivery: async () => ({
+        result: undefined,
+        retried: false
+      }),
+      emitDeliveryNotificationAck,
+      emitTmuxDeliveryNotification,
+      finalizeNormalPass: async () => ({
+        status: "ok"
+      }),
+      emitBubbleLifecycleEventBestEffort: async () => undefined,
+      buildPassLifecycleMetricMetadata: () => ({}),
+      resolveMostRecentPreviousReviewerPassIsCleanFromMetadata: () => undefined,
+      mapPassResultDelivery: () => ({
+        status: "accepted",
+        retried: false
+      }),
+      buildNormalPassResult: () => ({
+        status: "ok"
+      })
+    });
+
+    await dependencies.executeNormalPassDelivery({
+      senderRole: "reviewer",
+      bubbleId: "b_pass_builder_dual_key",
+      bubbleConfig: {} as never,
+      envelope: { id: "env_pass_delivery_dual_key" } as never,
+      worktreePath: "/repo/worktree",
+      repoPath: "/repo",
+      artifactsDir: "/repo/.pairflow/artifacts",
+      sessionsPath: "/repo/.pairflow/sessions",
+      reviewerBriefArtifactPath: "/repo/.pairflow/reviewer-brief.md",
+      reviewerFocusArtifactPath: "/repo/.pairflow/reviewer-focus.json",
+      recipientRole: "implementer",
+      now: new Date("2026-03-19T22:35:00.000Z")
+    });
+
+    expect(capturedDeliveryDependencies?.emitDeliveryNotificationAck).toBe(
+      emitDeliveryNotificationAck
+    );
+    expect(capturedDeliveryDependencies).not.toHaveProperty(
+      "emitTmuxDeliveryNotification"
+    );
+  });
 });

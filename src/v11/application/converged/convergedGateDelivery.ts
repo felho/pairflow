@@ -21,7 +21,7 @@ import { normalizeDeliveryAck } from "../../shared/delivery/deliveryAckNormaliza
 
 export interface ConvergedDeliveryResult {
   status: DeliveryAckStatus;
-  delivered: boolean;
+  delivered?: boolean;
   reason?: string;
   reason_code?: DeliveryAckReasonCode;
   retried: boolean;
@@ -29,9 +29,17 @@ export interface ConvergedDeliveryResult {
 
 interface NormalizedConvergedDelivery {
   status: DeliveryAckStatus;
-  delivered: boolean;
+  delivered?: boolean;
   reason?: Extract<DeliveryAck, { status: "rejected" }>["reason"];
   reason_code?: DeliveryAckReasonCode;
+}
+
+function buildConvergedCompatDeliveredProjection(
+  status: DeliveryAckStatus
+): Pick<NormalizedConvergedDelivery, "delivered"> {
+  return {
+    delivered: status === "accepted"
+  };
 }
 
 function withDeliveryTargetRole(
@@ -60,7 +68,7 @@ function normalizeConvergedDelivery(
 ): NormalizedConvergedDelivery {
   return {
     status: delivery.status,
-    delivered: delivery.status === "accepted",
+    ...buildConvergedCompatDeliveredProjection(delivery.status),
     ...(delivery.reason !== undefined ? { reason: delivery.reason } : {}),
     ...(delivery.reason_code !== undefined
       ? { reason_code: delivery.reason_code }
@@ -115,12 +123,12 @@ function buildConvergedDelivery(
   return failedDeliveryCount === 0
     ? {
         status: "accepted",
-        delivered: true,
+        ...buildConvergedCompatDeliveredProjection("accepted"),
         retried
       }
     : {
         status: "rejected",
-        delivered: false,
+        ...buildConvergedCompatDeliveredProjection("rejected"),
         ...(aggregatedDeliveryReason !== undefined
           ? { reason: aggregatedDeliveryReason }
           : {}),
@@ -148,7 +156,7 @@ export async function executeGateDelivery(input: {
     sessionsPath: input.resolved.bubblePaths.sessionsPath,
     envelope: input.gateResult.gateEnvelope
   });
-  const emitTmuxDeliveryNotification = async (
+  const emitDeliveryNotificationAck = async (
     envelope: ProtocolEnvelope,
     options?: {
       initialDelayMs?: number;
@@ -210,7 +218,7 @@ export async function executeGateDelivery(input: {
       : [input.gateResult.gateEnvelope];
 
   const deliveryResults = await Promise.all(
-    recipientEnvelopes.map((envelope) => emitTmuxDeliveryNotification(envelope))
+    recipientEnvelopes.map((envelope) => emitDeliveryNotificationAck(envelope))
   );
 
   return buildConvergedDelivery(deliveryResults, false);

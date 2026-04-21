@@ -72,7 +72,7 @@ describe("executeAutoConvergeConverged", () => {
     expect(result).toBe(expectedResult);
   });
 
-  it("forwards both canonical and legacy delivery overrides when both are provided", async () => {
+  it("prefers the canonical delivery override when both auto-converge keys are provided", async () => {
     let capturedDependencies: Parameters<
       Parameters<typeof executeAutoConvergeConverged>[1]["emitConvergedFromWorkspace"]
     >[1] | undefined;
@@ -106,9 +106,42 @@ describe("executeAutoConvergeConverged", () => {
     expect(capturedDependencies?.emitDeliveryNotificationAck).toBe(
       emitDeliveryNotificationAck
     );
-    expect(capturedDependencies?.emitTmuxDeliveryNotification).toBe(
+    expect(capturedDependencies).not.toHaveProperty("emitTmuxDeliveryNotification");
+  });
+
+  it("maps the legacy delivery override onto the canonical auto-converge dependency", async () => {
+    let capturedDependencies: Parameters<
+      Parameters<typeof executeAutoConvergeConverged>[1]["emitConvergedFromWorkspace"]
+    >[1] | undefined;
+
+    const emitTmuxDeliveryNotification = (() => undefined) as never;
+
+    await executeAutoConvergeConverged(
+      {
+        summary: "auto converge",
+        refs: [],
+        cwd: "/tmp/wt",
+        now: new Date("2026-03-19T12:00:00.000Z"),
+        expectedStateFingerprint: "fp_1",
+        expectedRound: 2,
+        expectedReviewer: "claude",
+        onDownstreamRejected: () => {
+          throw new Error("unexpected");
+        }
+      },
+      {
+        emitConvergedFromWorkspace: async (_input, dependencies) => {
+          capturedDependencies = dependencies;
+          return buildConvergedResult();
+        },
+        emitTmuxDeliveryNotification
+      }
+    );
+
+    expect(capturedDependencies?.emitDeliveryNotificationAck).toBe(
       emitTmuxDeliveryNotification
     );
+    expect(capturedDependencies).not.toHaveProperty("emitTmuxDeliveryNotification");
   });
 
   it("maps thrown downstream errors to rejection callback reason", async () => {

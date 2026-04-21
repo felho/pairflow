@@ -33,10 +33,22 @@ export interface ExecuteAutoConvergeConvergedDependencies {
   emitBubbleNotification?: EmitConvergedDependencies["emitBubbleNotification"];
 }
 
+function resolveAutoConvergeDeliveryOverride(
+  dependencies: ExecuteAutoConvergeConvergedDependencies
+): EmitConvergedDependencies["emitDeliveryNotificationAck"] | undefined {
+  return (
+    dependencies.emitDeliveryNotificationAck
+    ?? dependencies.emitTmuxDeliveryNotification
+  );
+}
+
 export async function executeAutoConvergeConverged(
   input: ExecuteAutoConvergeConvergedInput,
   dependencies: ExecuteAutoConvergeConvergedDependencies
 ): Promise<EmitConvergedResult> {
+  const emitDeliveryNotificationAck =
+    resolveAutoConvergeDeliveryOverride(dependencies);
+
   try {
     return await dependencies.emitConvergedFromWorkspace(
       {
@@ -49,14 +61,8 @@ export async function executeAutoConvergeConverged(
         expectedReviewer: input.expectedReviewer
       },
       {
-        ...(dependencies.emitDeliveryNotificationAck !== undefined
-          ? {
-              emitDeliveryNotificationAck:
-                dependencies.emitDeliveryNotificationAck
-            }
-          : {}),
-        ...(dependencies.emitTmuxDeliveryNotification !== undefined
-          ? { emitTmuxDeliveryNotification: dependencies.emitTmuxDeliveryNotification }
+        ...(emitDeliveryNotificationAck !== undefined
+          ? { emitDeliveryNotificationAck }
           : {}),
         ...(dependencies.emitBubbleNotification !== undefined
           ? { emitBubbleNotification: dependencies.emitBubbleNotification }

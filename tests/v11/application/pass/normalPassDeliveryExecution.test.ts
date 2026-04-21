@@ -137,4 +137,49 @@ describe("executeNormalPassDelivery", () => {
     });
     expect(result.deliveryRetried).toBe(true);
   });
+
+  it("prefers the canonical delivery override when wiring pass delivery dependencies", async () => {
+    let capturedDeliveryDependencies:
+      | Parameters<Parameters<typeof executeNormalPassDelivery>[1]["executePassDelivery"]>[1]
+      | undefined;
+
+    const emitDeliveryNotificationAck = (() => undefined) as never;
+    const emitTmuxDeliveryNotification = (() => undefined) as never;
+
+    await executeNormalPassDelivery(
+      {
+        senderRole: "reviewer",
+        bubbleId: "b_456",
+        bubbleConfig: {} as BubbleConfig,
+        envelope: { id: "env_3" } as unknown as ProtocolEnvelope,
+        worktreePath: "/tmp/wt",
+        repoPath: "/tmp/repo",
+        artifactsDir: "/tmp/artifacts",
+        sessionsPath: "/tmp/sessions.json",
+        reviewerBriefArtifactPath: "/tmp/reviewer-brief.md",
+        reviewerFocusArtifactPath: "/tmp/reviewer-focus.json",
+        recipientRole: "implementer",
+        now: new Date("2026-03-19T12:00:00.000Z")
+      },
+      {
+        resolveReviewerTestDirectiveForPass: async () => undefined,
+        executePassDelivery: async (_input, deps) => {
+          capturedDeliveryDependencies = deps;
+          return {
+            result: undefined,
+            retried: false
+          };
+        },
+        emitDeliveryNotificationAck,
+        emitTmuxDeliveryNotification
+      }
+    );
+
+    expect(capturedDeliveryDependencies?.emitDeliveryNotificationAck).toBe(
+      emitDeliveryNotificationAck
+    );
+    expect(capturedDeliveryDependencies).not.toHaveProperty(
+      "emitTmuxDeliveryNotification"
+    );
+  });
 });

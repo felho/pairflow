@@ -17,7 +17,7 @@ describe("approvalCommandDependencyResolution", () => {
         bubblePaths: {} as never,
         repoPath: "/repo"
       })) as never;
-    const defaultEmitTmux = (async () =>
+    const defaultEmitDelivery = (async () =>
       ({
         status: "accepted" as const,
         message: "default",
@@ -81,7 +81,7 @@ describe("approvalCommandDependencyResolution", () => {
       resolveDeliveryMessageRef: customResolveMessageRef
     }, {
       appendProtocolEnvelope: defaultAppend,
-      emitTmuxDeliveryNotification: defaultEmitTmux,
+      emitDeliveryNotificationAck: defaultEmitDelivery,
       executeRemoteBubbleApprovalCommand: defaultExecuteRemoteApproval,
       ensureBubbleInstanceIdForMutation: defaultEnsureBubble,
       readRemotePointer: defaultReadRemotePointer,
@@ -96,7 +96,7 @@ describe("approvalCommandDependencyResolution", () => {
 
     expect(resolved.appendProtocolEnvelope).toBe(defaultAppend);
     expect(resolved.resolveBubbleById).toBe(defaultResolveBubble);
-    expect(resolved.emitTmuxDeliveryNotification).toBe(customEmit);
+    expect(resolved.emitDeliveryNotificationAck).toBe(customEmit);
     expect(resolved.executeRemoteBubbleApprovalCommand).toBe(
       defaultExecuteRemoteApproval
     );
@@ -112,5 +112,95 @@ describe("approvalCommandDependencyResolution", () => {
       defaultResolveBubbleFromWorkspaceCwd
     );
     expect(resolved.writeStateSnapshot).toBe(defaultWriteState);
+  });
+
+  it("prefers direct emitDeliveryNotificationAck override over legacy compat alias", () => {
+    const directEmit = (() =>
+      Promise.resolve({
+        status: "accepted" as const,
+        message: "direct",
+        sessionName: "pf_direct_approval",
+        targetPaneIndex: 3
+      })) as never;
+    const legacyEmit = (() =>
+      Promise.resolve({
+        status: "accepted" as const,
+        message: "legacy",
+        sessionName: "pf_legacy_approval",
+        targetPaneIndex: 4
+      })) as never;
+
+    const resolved = resolveApprovalCommandDependencies(
+      {
+        emitDeliveryNotificationAck: directEmit,
+        emitTmuxDeliveryNotification: legacyEmit
+      },
+      {
+        appendProtocolEnvelope: (() =>
+          Promise.resolve({
+            envelope: {} as never,
+            sequence: 1,
+            mirrorWriteFailures: []
+          })) as never,
+        emitDeliveryNotificationAck: (() =>
+          Promise.resolve({
+            status: "accepted" as const,
+            message: "default",
+            sessionName: "pf_default_approval",
+            targetPaneIndex: 1
+          })) as never,
+        executeRemoteBubbleApprovalCommand: (async () =>
+          ({
+            kind: "decision",
+            bubbleId: "default",
+            sequence: 1,
+            envelope: {} as never,
+            state: {} as never
+          })) as never,
+        ensureBubbleInstanceIdForMutation: (async () =>
+          ({
+            bubbleId: "default",
+            bubbleInstanceId: "bubble-instance",
+            bubbleConfig: {} as never
+          })) as never,
+        readRemotePointer: (async () => null) as never,
+        readStateSnapshot: (async () =>
+          ({
+            state: {} as never,
+            fingerprint: "default"
+          })) as never,
+        readTranscriptEnvelopes: (async () => []) as never,
+        resolveRemoteBubbleStatusTarget: (async () =>
+          ({
+            alias: "remote",
+            host: "ssh.example.com",
+            pairflowCommand: "pairflow"
+          })) as never,
+        resolveBubbleById: (async () =>
+          ({
+            bubbleId: "default",
+            bubbleConfig: {} as never,
+            bubblePaths: {} as never,
+            repoPath: "/repo"
+          })) as never,
+        resolveBubbleFromWorkspaceCwd: (async () =>
+          ({
+            bubbleId: "default",
+            bubbleConfig: {} as never,
+            bubblePaths: {} as never,
+            repoPath: "/repo",
+            worktreePath: "/repo",
+            cwd: "/repo"
+          })) as never,
+        resolveDeliveryMessageRef: (() => "default-ref") as never,
+        writeStateSnapshot: (async () =>
+          ({
+            state: {} as never,
+            fingerprint: "default"
+          })) as never
+      }
+    );
+
+    expect(resolved.emitDeliveryNotificationAck).toBe(directEmit);
   });
 });

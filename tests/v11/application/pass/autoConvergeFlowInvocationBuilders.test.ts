@@ -206,7 +206,7 @@ describe("autoConvergeFlowInvocationBuilders", () => {
     );
   });
 
-  it("forwards optional converged emit overrides when provided", async () => {
+  it("prefers the canonical converged delivery override when both keys are provided", async () => {
     let capturedConvergedDeps: Record<string, unknown> | undefined;
 
     const emitDeliveryNotificationAck = (() => undefined) as never;
@@ -263,11 +263,58 @@ describe("autoConvergeFlowInvocationBuilders", () => {
     expect(capturedConvergedDeps.emitDeliveryNotificationAck).toBe(
       emitDeliveryNotificationAck
     );
-    expect(capturedConvergedDeps.emitTmuxDeliveryNotification).toBe(
-      emitTmuxDeliveryNotification
-    );
+    expect(capturedConvergedDeps).not.toHaveProperty("emitTmuxDeliveryNotification");
     expect(capturedConvergedDeps.emitBubbleNotification).toBe(
       emitBubbleNotification
     );
+  });
+
+  it("maps the legacy converged delivery override onto the canonical key", async () => {
+    let capturedConvergedDeps: Record<string, unknown> | undefined;
+
+    const emitTmuxDeliveryNotification = (() => undefined) as never;
+
+    const dependencies = buildAutoConvergeFlowDependencies({
+      prepareRepeatCleanAutoConverge: async () => ({
+        expectedStateFingerprint: "fp_auto_04"
+      }),
+      executeAutoConvergeConverged: async (_input, dependencyOverrides) => {
+        capturedConvergedDeps =
+          dependencyOverrides as unknown as Record<string, unknown>;
+        return {
+          convergenceSequence: 15,
+          convergenceEnvelope: { id: "env_converged_04" },
+          state: { state: "READY_FOR_HUMAN_APPROVAL" },
+          gateRoute: "human_gate_approve",
+          approvalRequestSequence: 16,
+          approvalRequestEnvelope: { id: "env_approval_04" }
+        } as never;
+      },
+      emitConvergedFromWorkspace: async () => ({} as never),
+      emitTmuxDeliveryNotification,
+      finalizeAutoConvergePass: async () => ({ status: "ok" }),
+      updateReviewerDocGateArtifact: async () => undefined,
+      emitBubbleLifecycleEventBestEffort: async () => undefined,
+      buildPassLifecycleMetricMetadata: () => ({}),
+      buildAutoConvergePassResult: () => ({ status: "ok" })
+    });
+
+    await dependencies.executeAutoConvergeConverged({
+      summary: "auto",
+      refs: [],
+      cwd: "/repo",
+      now: new Date("2026-03-19T22:20:00.000Z"),
+      expectedStateFingerprint: "fp_auto_04",
+      expectedRound: 4,
+      expectedReviewer: "claude",
+      onDownstreamRejected: (reason) => {
+        throw new Error(reason);
+      }
+    });
+
+    expect(capturedConvergedDeps?.emitDeliveryNotificationAck).toBe(
+      emitTmuxDeliveryNotification
+    );
+    expect(capturedConvergedDeps).not.toHaveProperty("emitTmuxDeliveryNotification");
   });
 });

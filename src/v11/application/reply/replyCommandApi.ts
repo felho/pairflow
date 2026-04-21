@@ -70,13 +70,13 @@ export async function emitHumanReply(
   });
 
   // Optional UX signal; never block protocol/state progression on notification failure.
-  void resolvedDependencies.emitTmuxDeliveryNotification({
+  void resolvedDependencies.emitDeliveryNotificationAck({
     bubbleId: resolved.bubbleId,
     bubbleConfig: resolved.bubbleConfig,
     sessionsPath: resolved.bubblePaths.sessionsPath,
     envelope: appended.envelope,
     messageRef
-  });
+  }).catch(() => undefined);
 
   await emitBubbleLifecycleEventBestEffort({
     repoPath: resolved.repoPath,

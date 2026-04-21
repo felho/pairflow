@@ -40,7 +40,7 @@ function resolveDeliveryMessageRef(
 }
 
 export const askHumanFinalizationDependencyDefaults = {
-  emitTmuxDeliveryNotification: async (
+  emitDeliveryNotificationAck: async (
     input: Parameters<
       typeof askHumanFinalizationDefaults.emitDeliveryNotificationAck
     >[0]

@@ -8,9 +8,10 @@ export function resolveAskHumanFinalizationDependencies(
   input: ResolveAskHumanFinalizationDependenciesInput
 ): ResolvedAskHumanFinalizationDependencies {
   return {
-    emitTmuxDeliveryNotification:
-      input.emitTmuxDeliveryNotification
-      ?? askHumanFinalizationDependencyDefaults.emitTmuxDeliveryNotification,
+    emitDeliveryNotificationAck:
+      input.emitDeliveryNotificationAck
+      ?? input.emitTmuxDeliveryNotification
+      ?? askHumanFinalizationDependencyDefaults.emitDeliveryNotificationAck,
     emitBubbleNotification:
       input.emitBubbleNotification
       ?? askHumanFinalizationDependencyDefaults.emitBubbleNotification,

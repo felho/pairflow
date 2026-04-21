@@ -34,8 +34,8 @@ export async function finalizeAskHumanFlow(
   const notifications = await emitOptionalAskHumanNotifications(
     buildAskHumanFinalizationNotificationInput(input, messageRef),
     {
-      emitTmuxDeliveryNotification:
-        resolvedDependencies.emitTmuxDeliveryNotification,
+      emitDeliveryNotificationAck:
+        resolvedDependencies.emitDeliveryNotificationAck,
       emitBubbleNotification: resolvedDependencies.emitBubbleNotification
     }
   );

@@ -11,6 +11,7 @@ import type {
 } from "../../../types/protocol.js";
 
 export interface EmitApprovalDecisionDependencies {
+  emitDeliveryNotificationAck?: EmitDeliveryAckLikePort;
   emitTmuxDeliveryNotification?: EmitDeliveryAckLikePort;
 }
 

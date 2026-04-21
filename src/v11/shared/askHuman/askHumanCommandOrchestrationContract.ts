@@ -1,6 +1,7 @@
 import type { ActorEmitContextSnapshot } from "../actorProtocol/actorEmitContext.js";
 import type {
   EmitAskHumanBubbleNotificationPort,
+  EmitAskHumanDeliveryNotificationAckPort,
   EmitAskHumanTmuxDeliveryNotificationPort
 } from "./askHumanDeliveryPortsContract.js";
 import type {
@@ -24,6 +25,9 @@ export interface AskHumanCommandOrchestrationDependencies {
     RunAskHumanFlowDependencies["executeAskHumanExecution"];
   finalizeAskHumanFlow:
     RunAskHumanFlowDependencies["finalizeAskHumanFlow"];
+  emitDeliveryNotificationAck?:
+    | EmitAskHumanDeliveryNotificationAckPort
+    | undefined;
   emitTmuxDeliveryNotification?:
     | EmitAskHumanTmuxDeliveryNotificationPort
     | undefined;

@@ -57,7 +57,7 @@ describe("askHumanCommandOrchestrationInvocationBuilder", () => {
       finalizeAskHumanFlow
     );
     expect(
-      invocation.orchestrationDependencies.emitTmuxDeliveryNotification
+      invocation.orchestrationDependencies.emitDeliveryNotificationAck
     ).toBe(emitTmuxDeliveryNotification);
     expect("emitBubbleNotification" in invocation.orchestrationDependencies).toBe(
       false

@@ -82,7 +82,7 @@ interface ExecuteConvergedExecutionResult {
   };
   delivery?: {
     status: "accepted" | "rejected";
-    delivered: boolean;
+    delivered?: boolean;
     reason?: string;
     reason_code?: string;
     retried: boolean;
@@ -169,7 +169,7 @@ export interface RunConvergedFlowResult {
   state: BubbleStateSnapshot;
   delivery?: {
     status: "accepted" | "rejected";
-    delivered: boolean;
+    delivered?: boolean;
     reason?: string;
     reason_code?: string;
     retried: boolean;

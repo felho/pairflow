@@ -10,7 +10,7 @@ describe("askHumanFinalizationDependencyResolution", () => {
   it("uses finalization defaults when overrides are omitted", () => {
     const resolved = resolveAskHumanFinalizationDependencies({});
 
-    expect(resolved.emitTmuxDeliveryNotification).toEqual(expect.any(Function));
+    expect(resolved.emitDeliveryNotificationAck).toEqual(expect.any(Function));
     expect(resolved.emitBubbleNotification).toEqual(expect.any(Function));
     expect(resolved.resolveDeliveryMessageRef).toEqual(expect.any(Function));
     expect(
@@ -37,6 +37,47 @@ describe("askHumanFinalizationDependencyResolution", () => {
     );
   });
 
+  it("prefers direct delivery-ack override over the legacy alias", () => {
+    const emitDeliveryNotificationAckOverride = async () =>
+      ({
+        delivered: true,
+        message: "direct"
+      }) as never;
+    const emitTmuxDeliveryNotificationOverride = async () =>
+      ({
+        delivered: true,
+        message: "legacy"
+      }) as never;
+    const emitBubbleNotificationOverride = async () =>
+      ({
+        delivered: true
+      }) as never;
+    const resolveDeliveryMessageRefOverride = () => "message-ref";
+    const emitBubbleLifecycleEventBestEffortOverride = async () => undefined;
+
+    const resolved = resolveAskHumanFinalizationDependencies({
+      emitDeliveryNotificationAck: emitDeliveryNotificationAckOverride,
+      emitTmuxDeliveryNotification: emitTmuxDeliveryNotificationOverride,
+      emitBubbleNotification: emitBubbleNotificationOverride,
+      resolveDeliveryMessageRef: resolveDeliveryMessageRefOverride,
+      emitBubbleLifecycleEventBestEffort:
+        emitBubbleLifecycleEventBestEffortOverride
+    });
+
+    expect(resolved.emitDeliveryNotificationAck).toBe(
+      emitDeliveryNotificationAckOverride
+    );
+    expect(resolved.emitBubbleNotification).toBe(
+      emitBubbleNotificationOverride
+    );
+    expect(resolved.resolveDeliveryMessageRef).toBe(
+      resolveDeliveryMessageRefOverride
+    );
+    expect(resolved.emitBubbleLifecycleEventBestEffort).toBe(
+      emitBubbleLifecycleEventBestEffortOverride
+    );
+  });
+
   it("uses provided finalization overrides", () => {
     const emitTmuxDeliveryNotificationOverride = async () =>
       ({
@@ -57,7 +98,7 @@ describe("askHumanFinalizationDependencyResolution", () => {
         emitBubbleLifecycleEventBestEffortOverride
     });
 
-    expect(resolved.emitTmuxDeliveryNotification).toBe(
+    expect(resolved.emitDeliveryNotificationAck).toBe(
       emitTmuxDeliveryNotificationOverride
     );
     expect(resolved.emitBubbleNotification).toBe(

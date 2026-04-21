@@ -6,10 +6,18 @@ import type {
 
 export interface PassResultDelivery {
   status: DeliveryAckStatus;
-  delivered: boolean;
+  delivered?: boolean;
   reason?: Extract<DeliveryAck, { status: "rejected" }>["reason"];
   reason_code?: DeliveryAckReasonCode;
   retried: boolean;
+}
+
+function buildPassCompatDeliveredProjection(
+  status: DeliveryAckStatus
+): Pick<PassResultDelivery, "delivered"> {
+  return {
+    delivered: status === "accepted"
+  };
 }
 
 export function mapPassResultDelivery(input: {
@@ -22,7 +30,7 @@ export function mapPassResultDelivery(input: {
 
   return {
     status: input.deliveryResult.status,
-    delivered: input.deliveryResult.status === "accepted",
+    ...buildPassCompatDeliveredProjection(input.deliveryResult.status),
     ...(input.deliveryResult.reason !== undefined
       ? { reason: input.deliveryResult.reason }
       : {}),

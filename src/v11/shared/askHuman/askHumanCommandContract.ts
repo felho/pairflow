@@ -2,6 +2,7 @@ import type {
   AskHumanDeliveryTargetReasonCode,
   AskHumanDeliveryAck,
   EmitAskHumanBubbleNotificationPort,
+  EmitAskHumanDeliveryNotificationAckPort,
   EmitAskHumanTmuxDeliveryNotificationPort
 } from "./askHumanDeliveryPortsContract.js";
 import type { BubbleStateSnapshot } from "../../../types/bubble.js";
@@ -39,6 +40,7 @@ export interface EmitAskHumanResult {
 }
 
 export interface EmitAskHumanDependencies {
+  emitDeliveryNotificationAck?: EmitAskHumanDeliveryNotificationAckPort;
   emitTmuxDeliveryNotification?: EmitAskHumanTmuxDeliveryNotificationPort;
   emitBubbleNotification?: EmitAskHumanBubbleNotificationPort;
 }

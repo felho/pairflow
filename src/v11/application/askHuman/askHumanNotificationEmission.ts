@@ -41,7 +41,7 @@ export async function emitOptionalAskHumanNotifications(
     describeDetachedBubbleNotificationFailure(error);
     return undefined;
   });
-  const deliveryResult = await dependencies.emitTmuxDeliveryNotification({
+  const deliveryResult = await dependencies.emitDeliveryNotificationAck({
     bubbleId: input.bubbleId,
     bubbleConfig: input.bubbleConfig,
     sessionsPath: input.sessionsPath,

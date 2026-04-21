@@ -10,7 +10,7 @@ import type { PassActivationProvenance } from "./passCommandContract.js";
 
 export interface PassResultDeliveryLike {
   status: "accepted" | "rejected";
-  delivered: boolean;
+  delivered?: boolean;
   reason?: string;
   reason_code?: string;
   retried: boolean;

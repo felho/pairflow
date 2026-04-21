@@ -158,9 +158,18 @@ export interface BuildNormalPassFlowDependenciesInput<TResult> {
     FinalizeNormalPassDependencies<TResult>["buildNormalPassResult"];
 }
 
+function resolveNormalPassFlowDeliveryOverride<TResult>(
+  input: BuildNormalPassFlowDependenciesInput<TResult>
+): PassDeliveryDependencies["emitDeliveryNotificationAck"] | undefined {
+  return input.emitDeliveryNotificationAck ?? input.emitTmuxDeliveryNotification;
+}
+
 export function buildNormalPassFlowDependencies<TResult>(
   input: BuildNormalPassFlowDependenciesInput<TResult>
 ): RunNormalPassFlowDependencies<TResult> {
+  const emitDeliveryNotificationAck =
+    resolveNormalPassFlowDeliveryOverride(input);
+
   return {
     prepareNormalPassAppend: input.prepareNormalPassAppend,
     executeNormalPassAppend: input.executeNormalPassAppend,
@@ -202,11 +211,8 @@ export function buildNormalPassFlowDependencies<TResult>(
       input.executeNormalPassDelivery(deliveryInput, {
         resolveReviewerTestDirectiveForPass: input.resolveReviewerTestDirectiveForPass,
         executePassDelivery: input.executePassDelivery,
-        ...(input.emitDeliveryNotificationAck !== undefined
-          ? { emitDeliveryNotificationAck: input.emitDeliveryNotificationAck }
-          : {}),
-        ...(input.emitTmuxDeliveryNotification !== undefined
-          ? { emitTmuxDeliveryNotification: input.emitTmuxDeliveryNotification }
+        ...(emitDeliveryNotificationAck !== undefined
+          ? { emitDeliveryNotificationAck }
           : {}),
         ...(input.refreshReviewerContext !== undefined
           ? { refreshReviewerContext: input.refreshReviewerContext }

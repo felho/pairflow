@@ -23,7 +23,7 @@ describe("askHumanCommandOrchestrationDependencyBuilder", () => {
       emitBubbleNotification
     });
 
-    expect(dependencies.emitTmuxDeliveryNotification).toBe(
+    expect(dependencies.emitDeliveryNotificationAck).toBe(
       emitTmuxDeliveryNotification
     );
     expect(dependencies.emitBubbleNotification).toBe(emitBubbleNotification);

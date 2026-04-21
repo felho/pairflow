@@ -2,6 +2,7 @@ import type { RunAskHumanFlowDependencies } from "./askHumanFlowContract.js";
 import type { AskHumanRoutingContext } from "./askHumanRoutingContext.js";
 import type {
   EmitAskHumanBubbleNotificationPort,
+  EmitAskHumanDeliveryNotificationAckPort,
   EmitAskHumanTmuxDeliveryNotificationPort
 } from "./askHumanDeliveryPortsContract.js";
 
@@ -24,6 +25,9 @@ export interface BuildAskHumanFlowDependenciesInput {
     | undefined;
   applyStateTransition?:
     | RunAskHumanFlowDependencies["applyStateTransition"]
+    | undefined;
+  emitDeliveryNotificationAck?:
+    | EmitAskHumanDeliveryNotificationAckPort
     | undefined;
   emitTmuxDeliveryNotification?:
     | EmitAskHumanTmuxDeliveryNotificationPort
