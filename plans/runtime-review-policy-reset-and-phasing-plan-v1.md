@@ -32,7 +32,7 @@ Ujra-szekvencialni a runtime review policy munkat ugy, hogy:
    - mi a missing-data behavior.
 4. A current next bounded step egyertelmu:
    - egy frissen generalt Phase 1 foundation task,
-   - az adjacent `O2-T9` lane-tol kulon ownership mellett.
+   - a mar lezart `O2-T9` baseline megorzese mellett.
 
 ## Guiding Principles
 
@@ -61,7 +61,7 @@ Ujra-szekvencialni a runtime review policy munkat ugy, hogy:
    - downstream consume families that remain separate:
      meta-review gate routing, human-gate payload/approval refresh, status/detail/list projection, es opcionális UI/API consume kulon fazisban mozoghatnak.
    - cleanup/recovery timing:
-     cleanup/recovery alignment csak ott jon be, ahol a fazis explicitten ownershipolja; adjacent `O2-T9` cleanup nem resze ennek a lane-nek.
+     cleanup/recovery alignment csak ott jon be, ahol a fazis explicitten ownershipolja; a lezart `O2-T9` cleanup preserved predecessor baseline, nem resze ennek a lane-nek.
 
 ## Canonical Contract Anchors
 
@@ -93,7 +93,7 @@ Ujra-szekvencialni a runtime review policy munkat ugy, hogy:
    ez azonban nem egyenlo a plan altal igenyelt canonical `review_policy` surface-szel vagy egyetlen threshold-authority boundaryval.
 3. A korabbi taskokban szereplo `src/core/**` targetek a vegleges core retirement utan mar nem leteznek.
 4. A plan tovabbra is `draft`; egy korabbi Phase 1 foundation task draft szuletett, de current-tree szinten stale target-listas volt, ezert nem retained implementation input.
-5. A post-Phase-E actor-runtime successor lane current tree-ben mar kulon ownership alatt fut; a runtime review policy lane-nek nem szabad magaba huznia az adjacent `O2-T9` meta-review gate runtime-capability residual cleanupot.
+5. A post-Phase-E actor-runtime successor lane current tree-ben mar lezart baseline; a runtime review policy lane-nek nem szabad ujranyitnia az archived `O2-T9` meta-review gate runtime-capability cleanupot.
 6. A current list/status pathok meg mindig kozvetlen current-tree entrypointokra epulnek:
    - `src/v11/shared/list/listCommandEntryBuilder.ts`
    - `src/v11/shared/list/listCommandApi.ts`
@@ -151,7 +151,7 @@ Sikernek az szamit, ha a kovetkezo kor mar nem egyetlen bubble-ben mozgatja egys
      a kotelezo backend consume family jelenleg biztosan `list/status`;
      `detail` csak akkor maradhat Phase 1 scope-ban, ha a task explicit current-tree entrypointot nevez meg hozza.
      A jelenlegi tree alapjan a `detail` inkabb UI/router-presenter compose family, nem implicit backend projection boundary.
-2. Ha az adjacent `O2-T9` eppen aktiv merge-slice, azt elobb le kell zarni, hogy a meta-review gate workflow contract ne ket lane-ben valtozzon egyszerre.
+2. Az archived `O2-T9` current-tree preserved baseline; a Phase 1 tasknak erre epulnie kell, es nem szabad ugyanazt a runtime-capability cleanupot ujranyitnia.
 
 ## Decision Baseline
 
@@ -166,7 +166,7 @@ Sikernek az szamit, ha a kovetkezo kor mar nem egyetlen bubble-ben mozgatja egys
 5. Az auto-rework threshold sem szabad, hogy prompt-, snapshot- vagy runtime-surface-centrikus patchworkkent keszuljon el; elotte vagy vele egy idoben explicit authority simplification kell.
 6. A reviewer bypassbol most a policy/config/UI/state contract es provenance-elv specifikalhato, de a tenyleges runtime behavior aktivacio tovabbra sem csuszhat vissza foundation/threshold delivery melle opportunistic same-slice rolloutkent.
 7. A shared runtime review policy surface workflow/orchestrator-owned marad; actor csak policy-derived inputot kaphat.
-8. A post-Phase-E actor-runtime successor lane preserved baseline marad; a runtime review policy munka erre tamaszkodhat, de nem replacementje az ott meg nyitott residual cleanupnak.
+8. A post-Phase-E actor-runtime successor lane preserved baseline marad; a runtime review policy munka erre tamaszkodhat, de nem replacementje a mar lezart `O2-T9` cleanupnak.
 
 ## Why Reset
 
@@ -321,7 +321,7 @@ Phase 1 authoring guard:
    - web UI/store nagy blast radius
    - actor prompt/guidance plusz semantics
    - recovery/persistence opportunistic tovabbfejlesztes a foundationon tuli mertekben
-   - adjacent `O2-T9` workflow runtime-capability residual cleanup bevonasa ebbe a lane-be
+   - archived `O2-T9` workflow runtime-capability cleanup ujranyitasa ebbe a lane-be
 
 ### Phase 2
 
@@ -347,7 +347,7 @@ Phase 1 authoring guard:
 1. Current-tree adjacent dependency:
    [plans/actor-runtime-interface-post-phaseE-successor-plan-v1.md](/Users/felho/dev/pairflow/plans/actor-runtime-interface-post-phaseE-successor-plan-v1.md)
 2. Current-tree adjacent residual task:
-   [plans/tasks/actor-runtime-interface-opportunity2-task9-meta-review-gate-workflow-runtime-capability-residual-closeout.md](/Users/felho/dev/pairflow/plans/tasks/actor-runtime-interface-opportunity2-task9-meta-review-gate-workflow-runtime-capability-residual-closeout.md)
+   [plans/archive/tasks/actor-runtime-interface-opportunity2-task9-meta-review-gate-workflow-runtime-capability-residual-closeout.md](/Users/felho/dev/pairflow/plans/archive/tasks/actor-runtime-interface-opportunity2-task9-meta-review-gate-workflow-runtime-capability-residual-closeout.md)
 3. Historical actor-runtime sequencing baseline:
    [plans/actor-runtime-interface-discovery-and-migration-plan-v1.md](/Users/felho/dev/pairflow/plans/actor-runtime-interface-discovery-and-migration-plan-v1.md)
 4. Historical migration spine baseline:
@@ -368,7 +368,7 @@ Phase 1 authoring guard:
    Mitigation: Phase 3A es 3B kulon task, kulon acceptance criteria-val.
 
 4. Risk: az adjacent actor-runtime successor residual cleanup es a review-policy lane osszecsuszik.
-   Mitigation: az `O2-T9` current-tree adjacent dependency maradjon kulon ownership; a review-policy Phase 1 ne vallaljon runtime-capability contract cleanupot.
+   Mitigation: az archived `O2-T9` preserved baseline maradjon kulon boundary; a review-policy Phase 1 ne vallaljon runtime-capability contract cleanupot.
 
 5. Risk: elveszik a bubble-ben megszerzett konkret tudás.
    Mitigation: ezt a plant a bubble diffkategoriak es review findingok alapjan rogzitjuk; a bubble nem merge-olodik, de discovery inputkent megmarad.
@@ -415,4 +415,4 @@ Phase 1 authoring guard:
    - hol csuszott szet az authority,
    - mely tesztek jeleztek driftet.
 3. A kovetkezo kor clean `main`-rol induljon e terv alapjan frissen generalt Phase 1 taskkal.
-4. Ha az adjacent `O2-T9` eppen aktiv merge-slice, a Phase 1 indulasa elott erdemes annak closurejat megvarni, hogy a meta-review gate workflow contract ne ket lane-ben valtozzon egyszerre.
+4. Az archived `O2-T9` closureja current-tree baseline; a Phase 1 indulasa erre epuljon, es ne mozgassa ujra ugyanazt a meta-review gate workflow contract cleanupot.

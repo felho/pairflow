@@ -29,7 +29,7 @@ normative_refs:
   - plans/runtime-review-policy-reset-and-phasing-plan-v1.md
   - plans/tasks/review-policy-runtime-surface-and-rollout-phase1.md
   - plans/actor-runtime-interface-post-phaseE-successor-plan-v1.md
-  - plans/tasks/actor-runtime-interface-opportunity2-task9-meta-review-gate-workflow-runtime-capability-residual-closeout.md
+  - plans/archive/tasks/actor-runtime-interface-opportunity2-task9-meta-review-gate-workflow-runtime-capability-residual-closeout.md
   - docs/pairflow-initial-design.md
   - docs/architecture/v11-placement-and-extraction-governance.md
 owners:
@@ -87,7 +87,7 @@ Bevezetni a shared runtime review policy foundationt ugy, hogy:
 1. Parent plan gap closed:
    a planbol hianyzo Phase 1 foundation slice, amely a canonical policy objectet, a kozos runtime-view buildert, a mutation seamet es a pure threshold-authority boundaryt letrehozza.
 2. Depends on:
-   approved [runtime-review-policy-reset-and-phasing-plan-v1.md](/Users/felho/dev/pairflow/plans/runtime-review-policy-reset-and-phasing-plan-v1.md), es az `O2-T9` lane maradjon kulon ownership alatt.
+   approved [runtime-review-policy-reset-and-phasing-plan-v1.md](/Users/felho/dev/pairflow/plans/runtime-review-policy-reset-and-phasing-plan-v1.md), es az archived `O2-T9` baseline maradjon preserved boundary.
 3. Unlocks / impacts successors:
    `runtime-review-policy-auto-rework-threshold-phase2`, valamint a `runtime-review-policy-reviewer-bypass-contract-phase3a` task.
 4. Task-list impact:
@@ -145,7 +145,7 @@ Bevezetni a shared runtime review policy foundationt ugy, hogy:
 3. In-scope consumers:
    backend status/list/detail projection, es a future threshold task altal hasznalhato pure resolver API.
 4. Explicit out-of-scope consumers:
-   current gate routing, approval refresh/human-gate payload, reviewer snapshot alignment, UI/API controls, `O2-T9` cleanup lane.
+   current gate routing, approval refresh/human-gate payload, reviewer snapshot alignment, UI/API controls, archived `O2-T9` cleanup baseline.
 5. Export surfaces closed in this phase:
    `no`; a backend contract additive lesz, de operatori/UI activation es human-gate consume kesobbi taskban zarul.
 
@@ -202,7 +202,7 @@ N/A. Ez a task nem valtoztatja meg a meta-review gate canonical success/completi
 2. Approval refresh / human-gate envelope parity alignment.
 3. Reviewer bypass contract vagy activation.
 4. Web UI control surface, UI store, API mutation endpoint.
-5. `O2-T9` runtime-capability cleanup vagy tmux capability rename.
+5. archived `O2-T9` runtime-capability cleanup ujranyitasa vagy tovabbi tmux capability rename.
 
 ### Safety Defaults
 
@@ -287,7 +287,7 @@ N/A. Ez a task nem valtoztatja meg a meta-review gate canonical success/completi
 | Item | Rule | Implementation / Review Consequence | Priority | Timing |
 |---|---|---|---|---|
 | Parent gap closed | plan Phase 1 foundation gap | Ez a task hozza letre az implementalhato foundation baseline-t | P1 | required-now |
-| Depends on | approved reset plan; `O2-T9` kulon lane marad | Nem keverheto bele runtime-capability cleanup | P1 | required-now |
+| Depends on | approved reset plan; archived `O2-T9` preserved baseline marad | Nem keverheto bele runtime-capability cleanup | P1 | required-now |
 | Unlocks / impacts successors | Phase 2 threshold delivery, Phase 3A bypass contract | A successorok mar nem hozhatnak letre uj canonical ownerseget | P1 | required-now |
 | Task-list impact | stale draft replaced by this task | Nincs in-place retarget ping-pong | P1 | required-now |
 | Inherited validation / exit expectation | Phase 1 utan nincs gate behavior change | Approval/human-gate/bypass valtozatlan marad | P1 | required-now |
@@ -383,7 +383,7 @@ Constraint: ha a task nem nevezi meg kifejezetten, a resolvernek es a runtime-vi
 | Type | Items | Priority | Timing |
 |---|---|---|---|
 | must-use | `plans/runtime-review-policy-reset-and-phasing-plan-v1.md`, `docs/architecture/v11-placement-and-extraction-governance.md`, existing findings parity helpers | P1 | required-now |
-| must-not-use | reviewer snapshot as threshold truth, approval metadata as severity source, UI/store rollout, `O2-T9` cleanup scope, gate-route behavior change | P1 | required-now |
+| must-not-use | reviewer snapshot as threshold truth, approval metadata as severity source, UI/store rollout, archived `O2-T9` cleanup scope, gate-route behavior change | P1 | required-now |
 
 ### 6) Test Matrix
 
