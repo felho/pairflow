@@ -69,6 +69,16 @@ owners:
    - README/docs operator contract alignment.
 4. Ezek kulon deferred successorban zarulnak.
 
+## Plan Linkage
+
+1. Ez a task a lezartnak hitt archived `Phase 3B2` cleanup-order semanticsat korrigalja, nem uj remote merge route familyt vezet be:
+   - [remote-bubble-execution-contract-and-phasing-plan-v2.md](/Users/felho/dev/pairflow/plans/archive/plans/remote-bubble-execution-contract-and-phasing-plan-v2.md:250)
+2. A task explicit successor-impactje:
+   - kozvetlenul csak a `Phase 3G2` operator contract alignmentet unlockolja,
+   - a korabban archivalt `Phase 3F` open-surface snapshotot nem nyitja ujra:
+     [remote-bubble-execution-contract-and-phasing-plan-v2.md](/Users/felho/dev/pairflow/plans/archive/plans/remote-bubble-execution-contract-and-phasing-plan-v2.md:257)
+3. A `Phase 3G2` task-file tovabbra sem justified addig, amig a `Phase 3G1` exit criteria es regresszios ordering proof nincs teljesitve.
+
 ## Source-Anchor Consistency
 
 1. Canonical source anchors:
@@ -93,7 +103,7 @@ owners:
    - nincs uj authority producer.
 2. `persisted_authority`
    - in scope:
-   - a lokalis repo hidden refje es a lokalis `main` merge lesz a durable integration authority.
+   - a lokalis repo hidden refje es a lokalis canonical base branch merge lesz a durable integration authority.
 3. `internal_execution_consumers`
    - in scope:
    - remote merge transport/helper,
@@ -110,6 +120,20 @@ owners:
 6. `cleanup_recovery_consumers`
    - explicit in scope:
    - destructive remote cleanup feltetelrendszere.
+
+## Scope Reality / Shape Proof
+
+1. A current tree-ben a bounded megvalositas a meglevo merge familyn belul marad:
+   - remote SSH merge transport,
+   - merge application orchestration,
+   - merge finalization/result mapping,
+   - a kapcsolodo merge tests.
+2. A task nem igenyel uj generic remote execution foundationt vagy kulon shared authority-producer layert.
+3. Ha uj helper/export kell, annak a legszukebb merge-family targeton kell megszuletnie:
+   - ne nyisson uj generic `shared` vagy altalanos remote cleanup frameworkot.
+4. A compat consume surface retained marad:
+   - a CLI/UI user-facing contract wording es surface ownership explicit out of scope marad,
+   - ebben a taskban legfeljebb a merge-family internal result-mapping truth-timingja pontosithato a retained compat shape alatt.
 
 ## Closure Budget / Task-Shape Triage
 
@@ -168,7 +192,7 @@ owners:
 2. `allowed_resolution_paths`
    - remote commit
    - local direct fetch hidden ref ala
-   - local merge `main`-be
+   - local merge a lokalis canonical base branchbe
    - explicit post-success remote cleanup
 3. `forbidden_regression_interpretations`
    - remote merge nem torolheti el a clone-t a local import/merge elott,
@@ -181,7 +205,7 @@ owners:
 1. Validations, amelyeknek remote destructive cleanup elott at kell menniuk:
    - remote mergeable source bizonyitasa
    - local fetch hidden ref ala
-   - local merge `main`-be
+   - local merge a lokalis canonical base branchbe
    - local state/lifecycle persist
 2. Side effects, amelyek ezek elott tiltottak:
    - remote clone fizikai cleanup
@@ -220,7 +244,7 @@ owners:
    - merge success csak bizonyitott local import + local merge utan allithato.
 4. Forbidden fallback:
    - cleanup publication/import/merge proof elott,
-   - remote clone `main`-jet tartos merge targetnek tekinteni.
+   - remote clone canonical base branch-et tartos merge targetnek tekinteni.
 5. Missing-data rule:
    - ha a remote commit/import proof nem szerezheto meg, a merge fail-closed marad.
 
@@ -239,6 +263,8 @@ owners:
 1. A local import target hidden ref.
 2. Preferalt naming:
    - `refs/pairflow/import/<bubble-id>`
+3. A task nem ownershipolja a hidden-ref naming public dokumentalasat vagy operatori expose-olasat; ez belso orchestration detail marad.
+4. Ha kesobb megis kell public/operator alignment a hidden-ref semantics korul, az a `Phase 3G2` vagy mas kulon successor ownershipja.
 
 ### Remote Merge Transport Contract
 
@@ -250,6 +276,33 @@ owners:
 3. A helpernek el kell hagynia a `pushedBaseBranch === true` publication proofot, mint remote success gate-et.
 4. A helper nem adhat olyan success payloadot, amely `removedWorktree` / `removedBubbleBranch` / `runtimeSessionRemoved` vegleges truthkent mar beallitott, mikozben a local merge meg nem tortent meg.
 5. Ez a contract valtozas a meglevo `sshBubbleMergeCommand.ts` module-on belul vagy ugyanennek a familynek egy valos sibling exportjan keresztul zarul; kulon cleanup-file nem required-now.
+
+### Remote Handoff Authority Contract
+
+Target-file anchors:
+- [src/v11/application/merge/mergeCommandContract.ts](/Users/felho/dev/pairflow/src/v11/application/merge/mergeCommandContract.ts:31)
+- [src/v11/application/merge/runMergeFlow.ts](/Users/felho/dev/pairflow/src/v11/application/merge/runMergeFlow.ts:161)
+- [src/v11/infrastructure/executor/ssh/sshBubbleMergeCommand.ts](/Users/felho/dev/pairflow/src/v11/infrastructure/executor/ssh/sshBubbleMergeCommand.ts:209)
+
+1. A helper payloadnak eleg informaciot kell adnia ahhoz, hogy a laptop lokalis repo-ja ujrafelfedezes nelkul vegrehajthassa a durable importot:
+   - vagy kozvetlen fetchable source-specet,
+   - vagy annak a megbizhato, tipizalt osszetevoit.
+2. A task nem ir elo egyetlen konkret transport-shape-et sem, de a kulso orchestration nem fugghet implicit shell-string parsingtol vagy nem-tipizalt stdout kovetkeztetestol.
+3. Ha a payload nem tudja egyertelmuen bizonyitani, honnan es mit kell a lokalis repo-ba importalni:
+   - a merge payload-invalid / fail-closed marad,
+   - remote cleanup nem indulhat el.
+
+### Local Durable Integration Boundary
+
+1. A canonical success boundary ebben a taskban:
+   - local fetch hidden ref ala
+   - local merge a lokalis canonical base branchbe (jelenlegi retained baselineben tipikusan `main`)
+   - local state/lifecycle persist
+2. A remote cleanup dispatch csak ezen boundary utan futhat.
+3. Ha a lokalis merge mar megtortent, de a local reconcile/persist fazis elhasal:
+   - a command nem reportolhat clean success allapotot,
+   - remote cleanup nem futhat le,
+   - a durable local integration truth nem veszhet el es nem irhato felul hamis cleanup-success shape-pel.
 
 ### Post-Success Cleanup Seam
 
@@ -276,41 +329,58 @@ owners:
    - local merge es local finalization
    - csak ezutan remote cleanup invocation
 4. A `mergeResultMapping` csak a lokalisan bizonyitott integration utan es a cleanup fazis ismert kimenetevel epitse fel a vegleges remote merge success shape-et.
+5. A retained result booleans idozitese explicit legyen:
+   - osszhangban a `Remote Merge Transport Contract` szaballyal, a pre-cleanup remote helper tobbe nem kezelheti a `pushedBaseBranch === true` allapotot publication gate-kent vagy success proofkent,
+   - ebben a taskban a vegleges retained resultben a `pushedBaseBranch` remote route-on compat-only mezokent marad, es nem allithat publication proofot vagy local `origin` push truthot; ha nem tortent kulon, bizonyitott post-success mapping, maradjon `false`,
+   - `removedWorktree` / `removedBubbleBranch` / `runtimeSessionRemoved` sem helper payloadban, sem vegleges success mappingben nem allithato cleanup-complete truthkent a tenyleges post-success cleanup fazis lefutasa elott.
 
 ## Acceptance Criteria
 
 1. Started remote bubble merge sikeres, ha:
    - a remote helper pre-cleanup handoff payloadot ad,
+   - a payload egyertelmuen bizonyitja, honnan es mit kell a lokalis repo-ba importalni ujrafelfedezes nelkul,
    - a remote bubble commit lokalis hidden ref ala bekerul,
-   - a lokalis `main` merge es local persist sikeres,
+   - a lokalis canonical base branch merge es local persist sikeres,
    - csak ezutan tortenik meg a remote cleanup.
 2. Ha a local fetch/import elhasal:
    - a merge fail-closed,
    - remote cleanup nem fut le.
-3. Ha a lokalis merge elhasal:
+3. Ha a remote helper payload nem bizonyitja egyertelmuen az import source-ot:
+   - a merge payload-invalid / fail-closed,
+   - remote cleanup nem fut le.
+4. Ha a lokalis merge elhasal:
    - a merge fail-closed,
    - remote cleanup nem fut le.
-4. Ha a post-success remote cleanup elhasal:
+5. Ha a post-success remote cleanup dispatch mar megtortent, de maga a cleanup fazis elhasal:
    - a lokalis durable merge eredmeny megmarad,
    - a hiba kulon cleanup-phase failurekent latszik.
-5. A regresszios teszt explicit bizonyitja:
+6. Ha a local fetch/import es a lokalis merge mar sikeres, de a local state/lifecycle persist vagy mas local reconcile lepest meg a remote cleanup dispatch elott hiba er:
+   - a command nem adhat clean success resultot,
+   - remote cleanup nem fut le,
+   - a hiba reconcile-phase failurekent latszik ugy, hogy a lokalis durable merge truth megmarad.
+7. A regresszios teszt explicit bizonyitja:
    - a mai “cleanup publication proof elott” bug nem tortenhet meg.
 
 ## Validation / Evidence
 
 1. Unit:
    - remote merge helper contract mapping a pre-cleanup payloadra
+   - payload-invalid fail-closed, ha az import source nincs egyertelmuen tipizalva
    - hidden-ref import orchestration
    - post-success remote cleanup invocation contract
+   - retained result boolean truth-timing remote route-on
 2. Integration:
    - started remote merge success path local durable importtal
    - fetch failure fail-closed
+   - payload-invalid fail-closed import-source ambiguity mellett
    - local merge failure fail-closed
+   - local reconcile/persist failure cleanup dispatch nelkul, mikozben a lokalis durable truth megmarad
    - post-success cleanup failure without local data loss
+   - regresszios ordering proof arra, hogy cleanup publication/import/merge proof elott nem futhat le
 
 ## Done Definition
 
 1. A started remote bubble merge durable local handoffja direct `git fetch` alapu hidden ref importtal mukodik.
 2. A destructive remote cleanup explicit post-success fazisba kerul a meglevo merge bridge familyben.
 3. A remote merge cleanup sorrendje mar nem enged adatvesztest.
-4. A tesztek lefedik a siker- es fail-closed sorrendi eseteket.
+4. A tesztek lefedik a siker-, payload-invalid-, reconcile-failure-, cleanup-failure- es egyeb fail-closed sorrendi eseteket.
