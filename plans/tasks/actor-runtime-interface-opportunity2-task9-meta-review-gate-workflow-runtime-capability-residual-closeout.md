@@ -5,6 +5,7 @@ title: "Actor Runtime Interface Opportunity 2 Task 9: Meta-Review Gate Workflow 
 status: implementable
 phase: post-phaseE
 target_files:
+  - src/v11/shared/metaReviewGate/metaReviewGateTmuxCapabilities.ts
   - src/v11/shared/metaReviewGate/metaReviewGateTypes.ts
   - src/v11/shared/metaReviewGate/metaReviewGateCommandContract.ts
   - src/v11/shared/metaReviewGate/metaReviewGateCommandApi.ts
@@ -13,12 +14,16 @@ target_files:
   - src/v11/shared/metaReviewGate/metaReviewGateApply.ts
   - src/v11/application/metaReviewGate/metaReviewGateCommandContract.ts
   - src/v11/application/metaReviewGate/metaReviewGateApplyContext.ts
+  - src/v11/application/metaReviewGate/metaReviewGateDependencyDefaults.ts
+  - src/v11/application/metaReviewGate/metaReviewGateCommandDefaults.ts
   - src/v11/application/metaReviewGate/metaReviewGateNotify.ts
   - src/v11/application/metaReviewGate/metaReviewGatePaneBinding.ts
   - src/v11/application/metaReviewGate/emitMetaReviewGateV11.ts
   - src/v11/defaults/metaReviewGate/metaReviewGateCommandDefaults.ts
   - tests/core/bubble/metaReviewGate.test.ts
+  - tests/contracts/v11/metaReviewGate.contract.runner.ts
   - tests/contracts/v11/metaReviewGate.contract.test.ts
+  - tests/v11/application/metaReview/metaReviewGateNotify.test.ts
   - tests/v11/application/metaReview/metaReviewGatePaneBinding.test.ts
 prd_ref: null
 plan_ref: plans/actor-runtime-interface-post-phaseE-successor-plan-v1.md
@@ -34,23 +39,37 @@ owners:
 1. A meta-review gate lane current-tree szinten mar explicit observation truthot hasznal:
    - `MetaReviewRuntimeDeliveryObservation`
    - `confirmed | uncertain | failed`
-2. Ugyanakkor a shared/application workflow contract current-tree szinten meg mindig retained raw `tmux` primitive neveken ownershipolja a runtime capabilityt:
+2. Ugyanakkor a shared/application/defaults lane current-tree szinten meg mindig retained raw `tmux` primitive nev mezokkel ownershipolja a gate-local runtime capabilityt:
    - `runTmux`
+   - `maybeAcceptClaudeTrustPrompt`
    - `sendAndSubmitTmuxPaneMessage`
    - `submitTmuxPaneInput`
    - `respawnTmuxPaneCommand`
-3. A residual direct ownership kulonosen latszik:
+3. A residual ownership mar nem standalone workflow runner authoritykent latszik, hanem nested gate-local capability es defaults/wrapper wiring formajaban:
    - `src/v11/shared/metaReviewGate/metaReviewGateTypes.ts`
+   - `src/v11/application/metaReviewGate/metaReviewGateDependencyDefaults.ts`
+   - `src/v11/application/metaReviewGate/metaReviewGateCommandDefaults.ts`
    - `src/v11/defaults/metaReviewGate/metaReviewGateCommandDefaults.ts`
    - `src/v11/application/metaReviewGate/metaReviewGateNotify.ts`
    - `src/v11/application/metaReviewGate/metaReviewGatePaneBinding.ts`
-4. A retained runtime adapter current-tree szinten tovabbra is valid implementation detail:
+4. Az adjacent command/apply export shell-ek current-tree szinten mar inkabb forwarding/adjacency szerepuek, nem a residual elsodleges ownerjei:
+   - `src/v11/shared/metaReviewGate/metaReviewGateCommandContract.ts`
+   - `src/v11/shared/metaReviewGate/metaReviewGateCommandApi.ts`
+   - `src/v11/shared/metaReviewGate/metaReviewGateCommandRuntime.ts`
+   - `src/v11/shared/metaReviewGate/metaReviewGateApplyContext.ts`
+   - `src/v11/shared/metaReviewGate/metaReviewGateApply.ts`
+   - `src/v11/application/metaReviewGate/metaReviewGateCommandContract.ts`
+   - `src/v11/application/metaReviewGate/metaReviewGateApplyContext.ts`
+   - `src/v11/application/metaReviewGate/emitMetaReviewGateV11.ts`
+5. A retained runtime adapter current-tree szinten tovabbra is valid implementation detail:
    - `tmux` runner
+   - trust-prompt acceptance helper
    - pane submit
    - pane respawn
-5. Emiatt a current residual gap nem observation-truth rewrite es nem generic executor alapozas:
+   - a raw runner vocabulary source anchorja `src/v11/shared/metaReviewGate/metaReviewGateTmuxCapabilities.ts`, de ez retained capability-detail marad, nem kulon shared workflow authority
+6. Emiatt a current residual gap nem observation-truth rewrite es nem generic executor alapozas:
    - ez a workflow contract ownership tovabbi szukitese
-6. A UI/public delivery read-model scope current-tree szinten mar kulon, lezart predecessor task:
+7. A UI/public delivery read-model scope current-tree szinten mar kulon, lezart predecessor task:
    - ezt nem szabad visszahuzni ebbe a lane-be
 
 ## L0 - Policy
@@ -96,7 +115,7 @@ owners:
 ### Plan Linkage
 
 1. Parent plan gap:
-   - `O2-T6` utan current-tree szinten megmaradt raw `tmux` primitive ownership a meta-review gate shared/application workflow contractban.
+   - `O2-T6` utan current-tree szinten megmaradt raw `tmux` primitive nev ownership a meta-review gate nested runtime capability es defaults/wrapper wiring contractban.
 2. Depends on:
    - `plans/actor-runtime-interface-post-phaseE-successor-plan-v1.md`
    - `plans/actor-runtime-interface-topology-neutral-delivery-executor-contract-note-v1.md`
@@ -114,19 +133,24 @@ owners:
    - `plans/actor-runtime-interface-post-phaseE-successor-plan-v1.md`
    - `plans/actor-runtime-interface-topology-neutral-delivery-executor-contract-note-v1.md`
    - `plans/archive/tasks/actor-runtime-interface-opportunity2-task6-meta-review-gate-runtime-capability-decoupling.md`
+   - `src/v11/shared/metaReviewGate/metaReviewGateTmuxCapabilities.ts`
    - `src/v11/shared/metaReviewGate/metaReviewGateTypes.ts`
    - `src/v11/shared/metaReviewGate/metaReviewGateApply.ts`
    - `src/v11/application/metaReviewGate/metaReviewGateNotify.ts`
    - `src/v11/application/metaReviewGate/metaReviewGatePaneBinding.ts`
    - `src/v11/defaults/metaReviewGate/metaReviewGateCommandDefaults.ts`
+   - `tests/contracts/v11/metaReviewGate.contract.runner.ts`
 2. Canonical elements:
    - `MetaReviewRuntimeDeliveryObservation`
    - `confirmed | uncertain | failed`
 3. Compat elements:
+   - `MetaReviewGateTmuxRunner`
+   - `maybeAcceptClaudeTrustPrompt`
    - retained `tmux` runner/default implementations
    - pane submit/respawn helpers
 4. Forbidden reinterpretations:
    - retained `tmux` defaults nem lehetnek shared workflow authorityk;
+   - a `MetaReviewGateTmuxRunner` helper type nem nevezheto ki kulon canonical workflow authoritynak;
    - a residual cleanup nem nyithat uj generic executor lane-t;
    - az observation contract nem downgrade-olhato diagnostics-only alakra.
 5. `drift_status`: `residual_gap_discovered_after_meta_review_gate_cleanup`
@@ -134,12 +158,16 @@ owners:
 ### Scope Reality / Shape Proof
 
 1. Inspected entrypoints / call-sites:
+   - `src/v11/shared/metaReviewGate/metaReviewGateTmuxCapabilities.ts`
    - `src/v11/shared/metaReviewGate/metaReviewGateTypes.ts`
    - `src/v11/shared/metaReviewGate/metaReviewGateApply.ts`
    - `src/v11/shared/metaReviewGate/metaReviewGateApplyContext.ts`
+   - `src/v11/application/metaReviewGate/metaReviewGateDependencyDefaults.ts`
+   - `src/v11/application/metaReviewGate/metaReviewGateCommandDefaults.ts`
    - `src/v11/application/metaReviewGate/metaReviewGateNotify.ts`
    - `src/v11/application/metaReviewGate/metaReviewGatePaneBinding.ts`
    - `src/v11/defaults/metaReviewGate/metaReviewGateCommandDefaults.ts`
+   - `tests/contracts/v11/metaReviewGate.contract.runner.ts`
 2. Actual touched scope:
    - primary bounded-task shape: `consumer_family_alignment`
    - justified secondary shape: `contract_or_persisted_authority_foundation`
@@ -147,8 +175,10 @@ owners:
    - `no`
 4. Why the declared shape matches reality:
    - a same-family meta-review gate workflow/internal contract sugarzasa zarodik itt;
-   - nincs public/read-model vagy producer fallout;
-   - a shared contract-szukites ugyanabban a gate filecsaladban zarul, mint az internal execution consume alignment.
+   - a residual elsodlegesen a nested capability type surface-ben, a notify/pane-binding consume pathban, es a defaults/wrapper wiringben maradt meg;
+   - a contract-runner test fan-out explicit scope-resz, mert a runtime capability shape-et valosan ott epitjuk fel es injektaljuk parity/contract coverage alatt;
+   - az adjacent command/apply export shell-ek csak annyiban tartoznak ide, amennyiben a type/export surface-et kovetniuk kell;
+   - nincs public/read-model vagy producer fallout.
 
 ### Authority Boundary Map
 
@@ -163,6 +193,8 @@ owners:
 4. `workflow_orchestration_consumers`
    - `src/v11/shared/metaReviewGate/**`
    - `src/v11/application/metaReviewGate/emitMetaReviewGateV11.ts`
+   - `src/v11/application/metaReviewGate/metaReviewGateDependencyDefaults.ts`
+   - `src/v11/application/metaReviewGate/metaReviewGateCommandDefaults.ts`
    - `src/v11/defaults/metaReviewGate/metaReviewGateCommandDefaults.ts`
 5. `read_model_consumers`
    - explicit out of scope
@@ -174,9 +206,11 @@ owners:
 ### In Scope
 
 1. Meta-review gate shared/application runtime capability contract szukitese.
-2. Default injection es internal execution consume alignmentje, hogy a retained primitivek adapter statuszban maradjanak.
-3. Adjacent export shim-ek frissitese, ha a type surface a szukites miatt mozog.
+2. Default injection, wrapper merge, es internal execution consume alignmentje, hogy a retained primitivek adapter statuszban maradjanak.
+3. Adjacent export shim-ek frissitese csak akkor, ha a type surface a szukites miatt mozog.
 4. Kapcsolodo meta-review gate tests frissitese.
+   - minimum notify + pane-binding coveragevel, hogy a gate-local runtime capability szukites teljes fan-outja bizonyithato legyen.
+   - contract-runner parity coveragevel is, ha a runtime capability shape vagy helper inventory valtozik.
 
 ### Out of Scope
 
@@ -190,6 +224,7 @@ owners:
 1. Az observation semantics valtozatlan marad.
 2. Missing capability fail-closed marad.
 3. Retained `tmux` helper mezok csak adapter/default statuszban maradhatnak.
+4. Adjacent export shell-eket nem kell primer scope-kent atminositeni, ha csak a gate-local capability szukitest kovetik.
 
 ### Contract Boundary / Blast Radius
 
