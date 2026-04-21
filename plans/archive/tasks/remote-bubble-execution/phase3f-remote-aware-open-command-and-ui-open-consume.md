@@ -30,7 +30,7 @@ plan_ref: plans/archive/plans/remote-bubble-execution-contract-and-phasing-plan-
 system_context_ref: docs/pairflow-initial-design.md
 normative_refs:
   - plans/archive/plans/remote-bubble-execution-contract-and-phasing-plan-v2.md
-  - plans/tasks/remote-bubble-execution/phase3e-verified-remote-clone-local-request-rework.md
+  - plans/archive/tasks/remote-bubble-execution/phase3e-verified-remote-clone-local-request-rework.md
   - docs/remote-bubble-execution.md
   - docs/pairflow-ui-prd.md
   - README.md
@@ -122,7 +122,7 @@ owners:
 
 1. Canonical source anchors:
    - [plans/archive/plans/remote-bubble-execution-contract-and-phasing-plan-v2.md](/Users/felho/dev/pairflow/plans/archive/plans/remote-bubble-execution-contract-and-phasing-plan-v2.md)
-   - [plans/tasks/remote-bubble-execution/phase3e-verified-remote-clone-local-request-rework.md](/Users/felho/dev/pairflow/plans/tasks/remote-bubble-execution/phase3e-verified-remote-clone-local-request-rework.md)
+   - [plans/archive/tasks/remote-bubble-execution/phase3e-verified-remote-clone-local-request-rework.md](/Users/felho/dev/pairflow/plans/archive/tasks/remote-bubble-execution/phase3e-verified-remote-clone-local-request-rework.md)
    - [docs/remote-bubble-execution.md](/Users/felho/dev/pairflow/docs/remote-bubble-execution.md)
    - [README.md](/Users/felho/dev/pairflow/README.md)
 2. Closed canonical elements, amelyeket ez a task nem ertelmezhet ujra:

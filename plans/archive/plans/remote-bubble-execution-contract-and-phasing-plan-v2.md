@@ -154,6 +154,8 @@ Az explicit control-model dontesek most visszanyerhetok a designbol es a review-
 | Phase 3D | `operator_read_model` | Remote runtime-availability vs watchdog semantics decoupling | Phase 3C | remote status/list/CLI/UI attach semantics, ahol a watchdog expiry kulon attention marad, de nem automatikus runtime-loss | a watchdog-only stall nem omlik `runtime unavailable` fail-closed bucketbe, mikozben a valodi runtime-loss tovabbra is fail-closed marad |
 | Phase 3E | `mutation_routing` | Verified remote-clone local request-rework execution | Phase 3D | request-rework route selection, amely a retained thin-client started-pointer route mellett felismeri a verified remote clone contextet, es ugyanarra a canonical remote bubble state-re enged local CLI mutationt immediate/queued retained semanticaval | contextual review sessionbol helyben kiadhato a canonical `request-rework`, mikozben a laptop source repo tovabbra sem valhat local mutation fallbackga, es a created/missing/ambiguous esetek fail-closed maradnak |
 | Phase 3F | `operator_read_model` | Remote-aware open command and UI open consume | Phase 3E | `bubble open` / UI `Open` route selection es launch-template resolution, amely local bubble eseten retained worktree-open marad, started remote bubble eseten pedig a remote clone authorityra parametrizalt editor launch consume-ra valt | a remote bubble `Open` mar nem lokalis worktree-feltetelezesre ul, mikozben a local open precedence es a created/missing/invalid remote esetek fail-closed semanticsa retained marad |
+| Phase 3G1 | `cleanup_routing` | Remote merge durable local handoff and post-success cleanup seam | Phase 3E | started remote bubble merge local hidden-ref durable handoffal, lokalis base-branch merge ownershipgal, es explicit post-success remote cleanup seam-mel | started remote merge nem veszitheti el a bubble commitot cleanup miatt; a durable integration authority explicit a lokalis repo, es a remote cleanup csak sikeres local merge utan futhat |
+| Phase 3G2 | `operator_read_model` | Remote merge operator contract alignment | Phase 3G1 | route-aware CLI/help/skill/docs alignment a started remote merge semanticsra | az operatori merge surface mar nem sugall push-based remote closure modellt, es a core ordering semantics wordingben is explicit |
 
 ## Progress Update (2026-04-18)
 
@@ -222,10 +224,10 @@ Az explicit control-model dontesek most visszanyerhetok a designbol es a review-
    - nincs state mutation,
    - nincs attach-flow rewrite,
    - nincs runtime activation.
-3. A materializalt, de nem current-active successor slice:
+3. A korabban materializalt, de nem current-active successor task-spec snapshot:
    - `Phase 3F`
    - task path:
-     `plans/tasks/remote-bubble-execution/phase3f-remote-aware-open-command-and-ui-open-consume.md`
+     `plans/archive/tasks/remote-bubble-execution/phase3f-remote-aware-open-command-and-ui-open-consume.md`
 4. A szukitett control-model dontes:
    - local bubble `open` retained local precedence-en marad,
    - started remote bubble `open` kulon remote-aware launch-template resolutiont igenyel,
@@ -233,6 +235,48 @@ Az explicit control-model dontesek most visszanyerhetok a designbol es a review-
 5. A parent plan aktiv successor ownershipa ettol meg nem valtozik:
    - a current active successor tovabbra is a `Phase 3E`,
    - a `Phase 3F` csak utana justified vegrehajtasi szelet.
+
+## Progress Update (2026-04-21)
+
+1. Real closeout hasznalat kozben latent cleanup-routing defect derult ki az archived `Phase 3B2` baseline-ban:
+   - started remote bubble merge fail-closed publication hibaval megallhat ugy, hogy a remote clone cleanup addigra mar lefutott,
+   - emiatt a bubble commit elveszhet, mielott a valtozas tartosan megjelenne a laptop lokalis repo-jaban.
+2. Ez nem uj operator read-model vagy altalanos remote parity gap:
+   - bounded residual a remote merge durable handoff es cleanup-order semanticsaban,
+   - vagyis explicit `cleanup_routing` successor, nem `operator_read_model` vagy `mutation_routing` jellegu ujranyitas.
+3. Emiatt uj residual successor slice eloszor `Phase 3G` jelolessel materializalodott.
+4. A szukitett control-model dontes:
+   - started remote bubble remote clone-ja tovabbra is execution substrate,
+   - a durable merge target a laptop lokalis repo-ja,
+   - a remote merge publication proofja nem `origin` push, hanem a lokalis repo-ba torteno import + lokalis merge,
+   - remote destructive cleanup publication/import/merge proof elott tilos.
+5. Ez a residual successor felulirja az archived `Phase 3B2` "lezart cleanup-routing family" feltetelezeset:
+   - az archived baseline tortenetileg megmarad,
+   - de current-tree planning szempontbol a cleanup-routing lane mar nem tekintheto teljesen lezartnak.
+6. Aktiv successor ownership:
+   - current active successor kezdetben a `Phase 3G` residual slice lett,
+   - a korabban materializalt, de nem current-active `Phase 3F` archivalt task-spec snapshotkent tovabbra is deferred slice marad,
+   - uj remote closeout/operator successor issuance csak a `Phase 3G` korrekcios closure utan justified.
+
+## Progress Update (2026-04-21, post-ReviewSpec split)
+
+1. A `Phase 3G` residual successor task-mode review-ja azt mutatta, hogy a kezdeti `3G` tul szeles egyetlen bounded slicekent:
+   - a core durable handoff + cleanup ordering correctness,
+   - es az operator-facing CLI/help/skill/docs alignment
+   egy taskban mar nem bizonyitott bounded task-shape.
+2. Emiatt a residual successor ket szeletre lett bontva:
+   - `Phase 3G1`: core cleanup-routing correctness closure
+   - `Phase 3G2`: operator contract alignment closure
+3. A current active implementacios successor:
+   - `Phase 3G1`
+   - task path:
+     `plans/tasks/remote-bubble-execution/phase3g1-remote-merge-durable-local-handoff-and-post-success-cleanup.md`
+4. A deferred, meg nem materializalt successor:
+   - `Phase 3G2`
+   - task file csak a `Phase 3G1` exit criteria-ja utan justified.
+5. A korabbi `Phase 3G` task superseded lett:
+   - nem patch-eltuk tovabb,
+   - a task issuance policy szerint ujraspecifikalt, szukebb successor slice valtja fel.
 
 ## Progress Update (2026-04-18, pre-Phase-3C-close)
 
@@ -407,7 +451,7 @@ Az explicit control-model dontesek most visszanyerhetok a designbol es a review-
 ## Active Task
 
 1. Jelenleg az aktiv implementacios successor task:
-   - `plans/tasks/remote-bubble-execution/phase3e-verified-remote-clone-local-request-rework.md`
+   - `plans/tasks/remote-bubble-execution/phase3g1-remote-merge-durable-local-handoff-and-post-success-cleanup.md`
 2. A `Phase 2F`, `Phase 3A`, `Phase 3B1`, `Phase 3B2`, `Phase 3B3`, `Phase 3C`, es `Phase 3D` archived baseline:
    - `plans/archive/tasks/remote-bubble-execution/phase2f-remote-attach-consume.md`
    - `plans/archive/tasks/remote-bubble-execution/phase3a-remote-approval-and-rework-routing.md`
@@ -417,13 +461,15 @@ Az explicit control-model dontesek most visszanyerhetok a designbol es a review-
    - `plans/archive/tasks/remote-bubble-execution/phase3c-recovery-diagnostics-and-rollout.md`
    - `plans/archive/tasks/remote-bubble-execution/phase3d-remote-runtime-availability-and-watchdog-semantics.md`
 3. A `Phase 2B`, `Phase 2C`, `Phase 2D`, `Phase 2E`, `Phase 2F`, `Phase 3A`, `Phase 3B1`, `Phase 3B2`, `Phase 3B3`, `Phase 3C`, es `Phase 3D` archived baseline lett.
-4. Az approval/rework cleanup-family es read-model residual lanc kozul ujra csak a contextual `request-rework` gap maradt nyitva.
+4. A contextual `request-rework` es az archived cleanup-routing baseline utan mar a remote merge durability residual gap a kovetkezo aktiv bounded slice.
 
 ## Successor Tasks
 
 1. A jelenleg materializalt kovetkezo task:
-   - `plans/tasks/remote-bubble-execution/phase3e-verified-remote-clone-local-request-rework.md`
-2. Tovabbi successor csak akkor justified, ha a `Phase 3E` closeout utan uj, kulon bounded residual gap jelenik meg a remote execution lane-ben.
+   - `plans/tasks/remote-bubble-execution/phase3g1-remote-merge-durable-local-handoff-and-post-success-cleanup.md`
+2. A kovetkezo deferred successor:
+   - `Phase 3G2 remote merge operator contract alignment`
+3. Tovabbi successor csak akkor justified, ha a `Phase 3G1` closeout utan a `Phase 3G2` operatori alignment meg mindig szukseges, vagy uj, kulon bounded residual gap jelenik meg a remote execution lane-ben.
 
 ## Dependencies
 
