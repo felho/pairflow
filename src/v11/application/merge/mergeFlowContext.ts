@@ -8,7 +8,10 @@ import {
   assertMergeBranchEligibility,
   assertMergeStateEligibility
 } from "../../shared/merge/mergeRoutingEligibility.js";
-import type { RemoteMergeStatusTarget } from "./mergeCommandContract.js";
+import {
+  buildMergeImportRef,
+  type RemoteMergeStatusTarget
+} from "./mergeCommandContract.js";
 import type { ResolvedMergeCommandDependencies } from "./mergeCommandDependencyResolution.js";
 import type { RunMergeFlowInput } from "./mergeFlowTypes.js";
 import {
@@ -24,12 +27,12 @@ interface MergeFlowExecutionContextBase {
   loaded: LoadedStateSnapshot;
   state: BubbleStateSnapshot;
   nowIso: string;
+  repoPath: string;
 }
 
 export interface LocalMergeFlowExecutionContext
   extends MergeFlowExecutionContextBase {
   route: "local";
-  repoPath: string;
   baseBranch: string;
   bubbleBranch: string;
 }
@@ -41,6 +44,37 @@ export interface RemoteMergeFlowExecutionContext
   remoteTarget: RemoteMergeStatusTarget;
   baseBranch: string;
   bubbleBranch: string;
+  localImportRef: string;
+}
+
+async function assertRemoteMergeLocalPrerequisites(input: {
+  repoPath: string;
+  baseBranch: string;
+  bubbleBranch: string;
+  dependencies: ResolvedMergeCommandDependencies;
+  createError: RunMergeFlowInput["createError"];
+}): Promise<void> {
+  await assertCleanRepoWorkingTree(
+    input.repoPath,
+    input.dependencies.runGit,
+    input.createError
+  );
+
+  const baseBranchExists = await input.dependencies.branchExists(
+    input.repoPath,
+    input.baseBranch
+  );
+  const bubbleBranchExists = await input.dependencies.branchExists(
+    input.repoPath,
+    input.bubbleBranch
+  );
+  assertMergeBranchEligibility({
+    baseBranch: input.baseBranch,
+    bubbleBranch: input.bubbleBranch,
+    baseBranchExists,
+    bubbleBranchExists,
+    createError: input.createError
+  });
 }
 
 export type MergeFlowExecutionContext =
@@ -116,6 +150,13 @@ export async function initializeMergeFlowExecutionContext(input: {
         remoteAlias: resolved.bubbleConfig.executor.remote,
         expectedHost: remotePointer.host
       });
+      await assertRemoteMergeLocalPrerequisites({
+        repoPath: resolvedRepoPath,
+        baseBranch,
+        bubbleBranch,
+        dependencies: input.dependencies,
+        createError: input.params.createError
+      });
 
       return {
         route: "remote",
@@ -124,10 +165,12 @@ export async function initializeMergeFlowExecutionContext(input: {
         loaded,
         state,
         nowIso,
+        repoPath: resolvedRepoPath,
         remotePointer,
         remoteTarget,
         baseBranch,
-        bubbleBranch
+        bubbleBranch,
+        localImportRef: buildMergeImportRef(resolved.bubbleId)
       };
     }
   }

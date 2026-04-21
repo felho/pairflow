@@ -17,6 +17,7 @@ import {
 } from "../../../src/v11/application/merge/remoteMergeExecutionContext.js";
 import { RemoteBubbleMergeCommandError } from "../../../src/v11/infrastructure/executor/ssh/sshBubbleMergeCommand.js";
 import { readStateSnapshot, writeStateSnapshot } from "../../../src/v11/infrastructure/state/stateStore.js";
+import { GitCommandError } from "../../../src/v11/infrastructure/workspace/git.js";
 import { bootstrapWorktreeWorkspace } from "../../../src/v11/infrastructure/workspace/worktreeManager.js";
 import { initGitRepository, runGit } from "../../helpers/git.js";
 
@@ -160,6 +161,119 @@ async function convertDoneBubbleToRemoteCreated(
     "utf8"
   );
   return bubble;
+}
+
+function buildRemoteMergeHandoffResult(
+  bubble: Awaited<ReturnType<typeof setupDoneBubble>>,
+  overrides: Partial<{
+    baseBranch: string;
+    bubbleBranch: string;
+    mergeCommitSha: string;
+    importSourceRef: string;
+    importSourceCommitSha: string;
+    tmuxSessionName: string;
+  }> = {}
+) {
+  const mergeCommitSha = overrides.mergeCommitSha ?? "abcdef1234567890";
+  return {
+    bubbleId: bubble.bubbleId,
+    baseBranch: overrides.baseBranch ?? "main",
+    bubbleBranch: overrides.bubbleBranch ?? bubble.config.bubble_branch,
+    mergeCommitSha,
+    importSource: {
+      kind: "git_ref" as const,
+      ref: overrides.importSourceRef ?? `refs/pairflow/import/${bubble.bubbleId}`,
+      commitSha: overrides.importSourceCommitSha ?? mergeCommitSha
+    },
+    cleanupPending: true as const,
+    ...(overrides.tmuxSessionName !== undefined
+      ? { tmuxSessionName: overrides.tmuxSessionName }
+      : { tmuxSessionName: `pf-${bubble.bubbleId}` })
+  };
+}
+
+function createRemoteRouteGitMock(input: {
+  bubbleId: string;
+  importedCommitSha?: string;
+  mergedHeadSha?: string;
+  fetchError?: Error;
+  revParseError?: Error;
+  mergeError?: Error;
+  baseBranch?: string;
+}) {
+  const importedCommitSha = input.importedCommitSha ?? "abcdef1234567890";
+  const mergedHeadSha = input.mergedHeadSha ?? "fedcba0987654321";
+  const baseBranch = input.baseBranch ?? "main";
+
+  return vi.fn(async (args: string[]) => {
+    if (args[0] === "status") {
+      return {
+        stdout: "",
+        stderr: "",
+        exitCode: 0
+      };
+    }
+    if (args[0] === "fetch") {
+      if (input.fetchError !== undefined) {
+        throw input.fetchError;
+      }
+      return {
+        stdout: "",
+        stderr: "",
+        exitCode: 0
+      };
+    }
+    if (
+      args[0] === "rev-parse"
+      && args[1] === `refs/pairflow/import/${input.bubbleId}^{commit}`
+    ) {
+      if (input.revParseError !== undefined) {
+        throw input.revParseError;
+      }
+      return {
+        stdout: `${importedCommitSha}\n`,
+        stderr: "",
+        exitCode: 0
+      };
+    }
+    if (args[0] === "checkout" && args[1] === baseBranch) {
+      return {
+        stdout: "",
+        stderr: "",
+        exitCode: 0
+      };
+    }
+    if (
+      args[0] === "merge"
+      && args[1] === "--no-ff"
+      && args[2] === "--no-edit"
+      && args[3] === `refs/pairflow/import/${input.bubbleId}`
+    ) {
+      if (input.mergeError !== undefined) {
+        throw input.mergeError;
+      }
+      return {
+        stdout: "",
+        stderr: "",
+        exitCode: 0
+      };
+    }
+    if (args[0] === "merge" && args[1] === "--abort") {
+      return {
+        stdout: "",
+        stderr: "",
+        exitCode: 0
+      };
+    }
+    if (args[0] === "rev-parse" && args[1] === "HEAD") {
+      return {
+        stdout: `${mergedHeadSha}\n`,
+        stderr: "",
+        exitCode: 0
+      };
+    }
+    throw new Error(`Unexpected git command: ${args.join(" ")}`);
+  });
 }
 
 afterEach(async () => {
@@ -328,34 +442,23 @@ describe("mergeBubble", () => {
     expect(workspaceStats.isDirectory()).toBe(true);
   });
 
-  it("routes started remote merge through the remote helper without local git merge fallback", async () => {
+  it("routes started remote merge through pre-cleanup handoff and local import/merge proof", async () => {
     const repoPath = await createTempRepo();
     const bubble = await convertDoneBubbleToRemoteStarted(
       await setupDoneBubble(repoPath, "b_merge_remote_started_01")
     );
 
-    const executeRemoteBubbleMergeCommand = vi.fn(async () => ({
-      bubbleId: bubble.bubbleId,
-      baseBranch: "main",
-      bubbleBranch: bubble.config.bubble_branch,
-      mergeCommitSha: "abcdef1234567890",
-      pushedBaseBranch: true,
-      deletedRemoteBranch: false,
-      tmuxSessionName: `pf-${bubble.bubbleId}`,
-      tmuxSessionExisted: true,
-      runtimeSessionRemoved: true,
-      removedWorktree: true,
-      removedBubbleBranch: true
-    }));
-    const runGitSpy = vi.fn(async () => {
-      throw new Error("runGit should not be used for remote started merge routing");
+    const executeRemoteBubbleMergeCommand = vi.fn(async () =>
+      buildRemoteMergeHandoffResult(bubble)
+    );
+    const runGitSpy = createRemoteRouteGitMock({
+      bubbleId: bubble.bubbleId
     });
 
     const result = await mergeBubble(
       {
         bubbleId: bubble.bubbleId,
         cwd: repoPath,
-        push: true,
         now: new Date("2026-04-18T08:05:00.000Z")
       },
       {
@@ -379,20 +482,80 @@ describe("mergeBubble", () => {
         user: "pairflow",
         pairflowCommand: "pairflow"
       },
-      push: true,
-      deleteRemote: false
+      baseBranch: "main",
+      bubbleBranch: bubble.config.bubble_branch,
+      tmuxSessionName: `pf-${bubble.bubbleId}`
     });
-    expect(runGitSpy).not.toHaveBeenCalled();
+    expect(runGitSpy).toHaveBeenCalled();
     expect(result).toMatchObject({
       bubbleId: bubble.bubbleId,
-      mergeCommitSha: "abcdef1234567890",
-      pushedBaseBranch: true,
-      removedWorktree: true,
-      removedBubbleBranch: true
+      mergeCommitSha: "fedcba0987654321",
+      pushedBaseBranch: false,
+      removedWorktree: false,
+      removedBubbleBranch: false,
+      tmuxSessionName: `pf-${bubble.bubbleId}`,
+      tmuxSessionExisted: false
     });
+    expect(runGitSpy).toHaveBeenCalledWith(
+      [
+        "merge",
+        "--no-ff",
+        "--no-edit",
+        `refs/pairflow/import/${bubble.bubbleId}`
+      ],
+      expect.any(Object)
+    );
 
     const state = await readStateSnapshot(bubble.paths.statePath);
     expect(state.state.last_command_at).toBe("2026-04-18T08:05:00.000Z");
+  });
+
+  it.each([
+    {
+      name: "--push",
+      input: {
+        push: true
+      }
+    },
+    {
+      name: "--delete-remote",
+      input: {
+        deleteRemote: true
+      }
+    }
+  ])("fails closed for started remote merge when $name is requested", async ({ input }) => {
+    const repoPath = await createTempRepo();
+    const bubble = await convertDoneBubbleToRemoteStarted(
+      await setupDoneBubble(repoPath, "b_merge_remote_started_flags_01")
+    );
+
+    const executeRemoteBubbleMergeCommand = vi.fn(async () =>
+      buildRemoteMergeHandoffResult(bubble)
+    );
+
+    await expect(
+      mergeBubble(
+        {
+          bubbleId: bubble.bubbleId,
+          cwd: repoPath,
+          ...input
+        },
+        {
+          executeRemoteBubbleMergeCommand,
+          resolveRemoteBubbleStatusTarget: vi.fn(async () => ({
+            alias: "prod",
+            host: "ssh.example.com",
+            user: "pairflow",
+            pairflowCommand: "pairflow"
+          }))
+        }
+      )
+    ).rejects.toMatchObject({
+      name: "BubbleMergeError",
+      reasonCode: "MERGE_REMOTE_POST_CLEANUP_FLAGS_UNSUPPORTED"
+    } satisfies Partial<BubbleMergeError>);
+
+    expect(executeRemoteBubbleMergeCommand).not.toHaveBeenCalled();
   });
 
   it("uses the local canonical merge path inside a verified remote clone execution context", async () => {
@@ -621,27 +784,34 @@ describe("mergeBubble", () => {
     }
   );
 
-  it("fails closed when started remote merge has no publication proof", async () => {
+  it("fails closed before remote dispatch when local source repo is dirty", async () => {
     const repoPath = await createTempRepo();
     const bubble = await convertDoneBubbleToRemoteStarted(
-      await setupDoneBubble(repoPath, "b_merge_remote_publication_01")
+      await setupDoneBubble(repoPath, "b_merge_remote_dirty_01")
     );
+    await writeFile(join(repoPath, "dirty.txt"), "dirty\n", "utf8");
+
+    const executeRemoteBubbleMergeCommand = vi.fn(async () => ({
+      bubbleId: bubble.bubbleId,
+      baseBranch: "main",
+      bubbleBranch: bubble.config.bubble_branch,
+      mergeCommitSha: "abcdef1234567890",
+      importSource: {
+        kind: "git_ref" as const,
+        ref: `refs/pairflow/import/${bubble.bubbleId}`,
+        commitSha: "abcdef1234567890"
+      },
+      cleanupPending: true as const
+    }));
 
     await expect(
       mergeBubble(
         {
           bubbleId: bubble.bubbleId,
-          cwd: repoPath,
-          push: true
+          cwd: repoPath
         },
         {
-          executeRemoteBubbleMergeCommand: vi.fn(async () => {
-            throw new RemoteBubbleMergeCommandError({
-              code: "REMOTE_MERGE_PUBLICATION_REQUIRED",
-              message:
-                `Remote merge succeeded without durable publication proof for bubble ${bubble.bubbleId}.`
-            });
-          }),
+          executeRemoteBubbleMergeCommand,
           resolveRemoteBubbleStatusTarget: vi.fn(async () => ({
             alias: "prod",
             host: "ssh.example.com",
@@ -651,8 +821,10 @@ describe("mergeBubble", () => {
       )
     ).rejects.toMatchObject({
       name: "BubbleMergeError",
-      reasonCode: "REMOTE_MERGE_PUBLICATION_REQUIRED"
+      reasonCode: "MERGE_REPO_DIRTY"
     } satisfies Partial<BubbleMergeError>);
+
+    expect(executeRemoteBubbleMergeCommand).not.toHaveBeenCalled();
   });
 
   it("fails closed when local reconcile after remote merge cannot be persisted", async () => {
@@ -661,27 +833,21 @@ describe("mergeBubble", () => {
       await setupDoneBubble(repoPath, "b_merge_remote_reconcile_01")
     );
 
+    const runGitSpy = createRemoteRouteGitMock({
+      bubbleId: bubble.bubbleId
+    });
+
     await expect(
       mergeBubble(
         {
           bubbleId: bubble.bubbleId,
-          cwd: repoPath,
-          push: true
+          cwd: repoPath
         },
         {
-          executeRemoteBubbleMergeCommand: vi.fn(async () => ({
-            bubbleId: bubble.bubbleId,
-            baseBranch: "main",
-            bubbleBranch: bubble.config.bubble_branch,
-            mergeCommitSha: "abcdef1234567890",
-            pushedBaseBranch: true,
-            deletedRemoteBranch: true,
-            tmuxSessionName: `pf-${bubble.bubbleId}`,
-            tmuxSessionExisted: true,
-            runtimeSessionRemoved: true,
-            removedWorktree: true,
-            removedBubbleBranch: true
-          })),
+          runGit: runGitSpy,
+          executeRemoteBubbleMergeCommand: vi.fn(async () =>
+            buildRemoteMergeHandoffResult(bubble)
+          ),
           resolveRemoteBubbleStatusTarget: vi.fn(async () => ({
             alias: "prod",
             host: "ssh.example.com",
@@ -704,8 +870,15 @@ describe("mergeBubble", () => {
       await setupDoneBubble(repoPath, "b_merge_remote_conflict_01")
     );
 
-    const runGitSpy = vi.fn(async () => {
-      throw new Error("runGit should not be used for remote conflict routing");
+    const runGitSpy = vi.fn(async (args: string[]) => {
+      if (args[0] === "status") {
+        return {
+          stdout: "",
+          stderr: "",
+          exitCode: 0
+        };
+      }
+      throw new Error(`Unexpected git command: ${args.join(" ")}`);
     });
 
     await expect(
@@ -735,6 +908,482 @@ describe("mergeBubble", () => {
       reasonCode: "MERGE_CONFLICT_REQUIRES_MANUAL_RESOLUTION"
     } satisfies Partial<BubbleMergeError>);
 
-    expect(runGitSpy).not.toHaveBeenCalled();
+    expect(runGitSpy).toHaveBeenCalledWith(["status", "--porcelain"], expect.any(Object));
+  });
+
+  it("fails closed before remote dispatch when the local base branch is missing", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await convertDoneBubbleToRemoteStarted(
+      await setupDoneBubble(repoPath, "b_merge_remote_missing_base_01")
+    );
+
+    const executeRemoteBubbleMergeCommand = vi.fn(async () =>
+      buildRemoteMergeHandoffResult(bubble)
+    );
+    const branchExists = vi.fn(async (_repoPath: string, branch: string) => branch !== "main");
+
+    await expect(
+      mergeBubble(
+        {
+          bubbleId: bubble.bubbleId,
+          cwd: repoPath
+        },
+        {
+          branchExists,
+          executeRemoteBubbleMergeCommand,
+          resolveRemoteBubbleStatusTarget: vi.fn(async () => ({
+            alias: "prod",
+            host: "ssh.example.com",
+            pairflowCommand: "pairflow"
+          }))
+        }
+      )
+    ).rejects.toMatchObject({
+      name: "BubbleMergeError",
+      reasonCode: "MERGE_BASE_BRANCH_NOT_FOUND"
+    } satisfies Partial<BubbleMergeError>);
+
+    expect(executeRemoteBubbleMergeCommand).not.toHaveBeenCalled();
+  });
+
+  it("fails closed before remote dispatch when the local bubble branch is missing", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await convertDoneBubbleToRemoteStarted(
+      await setupDoneBubble(repoPath, "b_merge_remote_missing_branch_01")
+    );
+
+    const executeRemoteBubbleMergeCommand = vi.fn(async () =>
+      buildRemoteMergeHandoffResult(bubble)
+    );
+    const branchExists = vi.fn(async (_repoPath: string, branch: string) =>
+      branch !== bubble.config.bubble_branch
+    );
+
+    await expect(
+      mergeBubble(
+        {
+          bubbleId: bubble.bubbleId,
+          cwd: repoPath
+        },
+        {
+          branchExists,
+          executeRemoteBubbleMergeCommand,
+          resolveRemoteBubbleStatusTarget: vi.fn(async () => ({
+            alias: "prod",
+            host: "ssh.example.com",
+            pairflowCommand: "pairflow"
+          }))
+        }
+      )
+    ).rejects.toMatchObject({
+      name: "BubbleMergeError",
+      reasonCode: "MERGE_BUBBLE_BRANCH_NOT_FOUND"
+    } satisfies Partial<BubbleMergeError>);
+
+    expect(executeRemoteBubbleMergeCommand).not.toHaveBeenCalled();
+  });
+
+  it("fails closed when local fetch import fails after remote dispatch", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await convertDoneBubbleToRemoteStarted(
+      await setupDoneBubble(repoPath, "b_merge_remote_fetch_fail_01")
+    );
+
+    const runGitSpy = createRemoteRouteGitMock({
+      bubbleId: bubble.bubbleId,
+      fetchError: new GitCommandError(
+        [
+          "fetch",
+          "--no-tags",
+          "ssh://pairflow@ssh.example.com/srv/pairflow/repo--b_merge_remote_fetch_fail_01",
+          `refs/pairflow/import/${bubble.bubbleId}:refs/pairflow/import/${bubble.bubbleId}`
+        ],
+        1,
+        "fetch failed"
+      )
+    });
+
+    await expect(
+      mergeBubble(
+        {
+          bubbleId: bubble.bubbleId,
+          cwd: repoPath
+        },
+        {
+          runGit: runGitSpy,
+          executeRemoteBubbleMergeCommand: vi.fn(async () =>
+            buildRemoteMergeHandoffResult(bubble)
+          ),
+          resolveRemoteBubbleStatusTarget: vi.fn(async () => ({
+            alias: "prod",
+            host: "ssh.example.com",
+            user: "pairflow",
+            pairflowCommand: "pairflow"
+          }))
+        }
+      )
+    ).rejects.toMatchObject({
+      name: "BubbleMergeError",
+      reasonCode: "MERGE_REMOTE_IMPORT_FAILED"
+    } satisfies Partial<BubbleMergeError>);
+
+    expect(runGitSpy).toHaveBeenCalledWith(
+      [
+        "fetch",
+        "--no-tags",
+        "ssh://pairflow@ssh.example.com/srv/pairflow/repo--b_merge_remote_fetch_fail_01",
+        `refs/pairflow/import/${bubble.bubbleId}:refs/pairflow/import/${bubble.bubbleId}`
+      ],
+      expect.any(Object)
+    );
+  });
+
+  it("uses an encoded ssh URL when importing from a remote clone path with reserved characters", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await convertDoneBubbleToRemoteStarted(
+      await setupDoneBubble(repoPath, "b_merge_remote_encoded_url_01")
+    );
+
+    await writeFile(
+      bubble.paths.remotePointerPath,
+      JSON.stringify(
+        {
+          kind: "started",
+          host: "ssh.example.com",
+          instanceId: `inst_${bubble.bubbleId}`,
+          remoteClonePath: "/srv/pairflow remote/repo#with?reserved",
+          tmuxSession: `pf-${bubble.bubbleId}`,
+          startedAt: "2026-04-18T08:00:00.000Z"
+        },
+        null,
+        2
+      ),
+      "utf8"
+    );
+
+    const runGitSpy = createRemoteRouteGitMock({
+      bubbleId: bubble.bubbleId
+    });
+
+    await mergeBubble(
+      {
+        bubbleId: bubble.bubbleId,
+        cwd: repoPath
+      },
+      {
+        runGit: runGitSpy,
+        executeRemoteBubbleMergeCommand: vi.fn(async () =>
+          buildRemoteMergeHandoffResult(bubble)
+        ),
+        resolveRemoteBubbleStatusTarget: vi.fn(async () => ({
+          alias: "prod",
+          host: "ssh.example.com",
+          user: "pairflow",
+          pairflowCommand: "pairflow"
+        }))
+      }
+    );
+
+    expect(runGitSpy).toHaveBeenCalledWith(
+      [
+        "fetch",
+        "--no-tags",
+        "ssh://pairflow@ssh.example.com/srv/pairflow%20remote/repo%23with%3Freserved",
+        `refs/pairflow/import/${bubble.bubbleId}:refs/pairflow/import/${bubble.bubbleId}`
+      ],
+      expect.any(Object)
+    );
+  });
+
+  it("fails closed when the remote handoff ref does not match the expected hidden ref", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await convertDoneBubbleToRemoteStarted(
+      await setupDoneBubble(repoPath, "b_merge_remote_ref_mismatch_01")
+    );
+
+    const runGitSpy = createRemoteRouteGitMock({
+      bubbleId: bubble.bubbleId
+    });
+
+    await expect(
+      mergeBubble(
+        {
+          bubbleId: bubble.bubbleId,
+          cwd: repoPath
+        },
+        {
+          runGit: runGitSpy,
+          executeRemoteBubbleMergeCommand: vi.fn(async () =>
+            buildRemoteMergeHandoffResult(bubble, {
+              importSourceRef: `refs/pairflow/import/${bubble.bubbleId}-other`
+            })
+          ),
+          resolveRemoteBubbleStatusTarget: vi.fn(async () => ({
+            alias: "prod",
+            host: "ssh.example.com",
+            user: "pairflow",
+            pairflowCommand: "pairflow"
+          }))
+        }
+      )
+    ).rejects.toMatchObject({
+      name: "BubbleMergeError",
+      reasonCode: "MERGE_REMOTE_HANDOFF_INVALID"
+    } satisfies Partial<BubbleMergeError>);
+
+    expect(runGitSpy).not.toHaveBeenCalledWith(
+      expect.arrayContaining(["fetch"]),
+      expect.anything()
+    );
+  });
+
+  it("fails closed when the remote handoff base branch does not match the expected local base branch", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await convertDoneBubbleToRemoteStarted(
+      await setupDoneBubble(repoPath, "b_merge_remote_base_mismatch_01")
+    );
+
+    const runGitSpy = createRemoteRouteGitMock({
+      bubbleId: bubble.bubbleId
+    });
+
+    await expect(
+      mergeBubble(
+        {
+          bubbleId: bubble.bubbleId,
+          cwd: repoPath
+        },
+        {
+          runGit: runGitSpy,
+          executeRemoteBubbleMergeCommand: vi.fn(async () =>
+            buildRemoteMergeHandoffResult(bubble, {
+              baseBranch: "release"
+            })
+          ),
+          resolveRemoteBubbleStatusTarget: vi.fn(async () => ({
+            alias: "prod",
+            host: "ssh.example.com",
+            user: "pairflow",
+            pairflowCommand: "pairflow"
+          }))
+        }
+      )
+    ).rejects.toMatchObject({
+      name: "BubbleMergeError",
+      reasonCode: "MERGE_REMOTE_HANDOFF_INVALID"
+    } satisfies Partial<BubbleMergeError>);
+
+    expect(runGitSpy).not.toHaveBeenCalledWith(
+      expect.arrayContaining(["fetch"]),
+      expect.anything()
+    );
+  });
+
+  it("fails closed when the remote handoff bubble branch does not match the expected local bubble branch", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await convertDoneBubbleToRemoteStarted(
+      await setupDoneBubble(repoPath, "b_merge_remote_branch_mismatch_01")
+    );
+
+    const runGitSpy = createRemoteRouteGitMock({
+      bubbleId: bubble.bubbleId
+    });
+
+    await expect(
+      mergeBubble(
+        {
+          bubbleId: bubble.bubbleId,
+          cwd: repoPath
+        },
+        {
+          runGit: runGitSpy,
+          executeRemoteBubbleMergeCommand: vi.fn(async () =>
+            buildRemoteMergeHandoffResult(bubble, {
+              bubbleBranch: `${bubble.config.bubble_branch}-other`
+            })
+          ),
+          resolveRemoteBubbleStatusTarget: vi.fn(async () => ({
+            alias: "prod",
+            host: "ssh.example.com",
+            user: "pairflow",
+            pairflowCommand: "pairflow"
+          }))
+        }
+      )
+    ).rejects.toMatchObject({
+      name: "BubbleMergeError",
+      reasonCode: "MERGE_REMOTE_HANDOFF_INVALID"
+    } satisfies Partial<BubbleMergeError>);
+
+    expect(runGitSpy).not.toHaveBeenCalledWith(
+      expect.arrayContaining(["fetch"]),
+      expect.anything()
+    );
+  });
+
+  it("fails closed with merge-specific import taxonomy when imported hidden-ref dereference fails", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await convertDoneBubbleToRemoteStarted(
+      await setupDoneBubble(repoPath, "b_merge_remote_rev_parse_fail_01")
+    );
+
+    const runGitSpy = createRemoteRouteGitMock({
+      bubbleId: bubble.bubbleId,
+      revParseError: new GitCommandError(
+        ["rev-parse", `refs/pairflow/import/${bubble.bubbleId}^{commit}`],
+        1,
+        "not a commit"
+      )
+    });
+
+    await expect(
+      mergeBubble(
+        {
+          bubbleId: bubble.bubbleId,
+          cwd: repoPath
+        },
+        {
+          runGit: runGitSpy,
+          executeRemoteBubbleMergeCommand: vi.fn(async () =>
+            buildRemoteMergeHandoffResult(bubble)
+          ),
+          resolveRemoteBubbleStatusTarget: vi.fn(async () => ({
+            alias: "prod",
+            host: "ssh.example.com",
+            user: "pairflow",
+            pairflowCommand: "pairflow"
+          }))
+        }
+      )
+    ).rejects.toMatchObject({
+      name: "BubbleMergeError",
+      reasonCode: "MERGE_REMOTE_IMPORT_FAILED"
+    } satisfies Partial<BubbleMergeError>);
+  });
+
+  it("fails closed when local merge after import requires manual resolution", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await convertDoneBubbleToRemoteStarted(
+      await setupDoneBubble(repoPath, "b_merge_remote_local_conflict_01")
+    );
+
+    const runGitSpy = createRemoteRouteGitMock({
+      bubbleId: bubble.bubbleId,
+      mergeError: new GitCommandError(
+        ["merge", "--no-ff", "--no-edit", `refs/pairflow/import/${bubble.bubbleId}`],
+        1,
+        "merge conflict"
+      )
+    });
+
+    await expect(
+      mergeBubble(
+        {
+          bubbleId: bubble.bubbleId,
+          cwd: repoPath
+        },
+        {
+          runGit: runGitSpy,
+          executeRemoteBubbleMergeCommand: vi.fn(async () =>
+            buildRemoteMergeHandoffResult(bubble)
+          ),
+          resolveRemoteBubbleStatusTarget: vi.fn(async () => ({
+            alias: "prod",
+            host: "ssh.example.com",
+            user: "pairflow",
+            pairflowCommand: "pairflow"
+          }))
+        }
+      )
+    ).rejects.toMatchObject({
+      name: "BubbleMergeError",
+      reasonCode: "MERGE_CONFLICT_REQUIRES_MANUAL_RESOLUTION"
+    } satisfies Partial<BubbleMergeError>);
+
+    expect(runGitSpy).toHaveBeenCalledWith(
+      ["merge", "--abort"],
+      expect.objectContaining({
+        allowFailure: true
+      })
+    );
+  });
+
+  it("fails closed when imported hidden-ref commit does not match the handoff payload", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await convertDoneBubbleToRemoteStarted(
+      await setupDoneBubble(repoPath, "b_merge_remote_commit_mismatch_01")
+    );
+
+    const runGitSpy = createRemoteRouteGitMock({
+      bubbleId: bubble.bubbleId,
+      importedCommitSha: "9999999999999999"
+    });
+
+    await expect(
+      mergeBubble(
+        {
+          bubbleId: bubble.bubbleId,
+          cwd: repoPath
+        },
+        {
+          runGit: runGitSpy,
+          executeRemoteBubbleMergeCommand: vi.fn(async () =>
+            buildRemoteMergeHandoffResult(bubble, {
+              importSourceCommitSha: "abcdef1234567890"
+            })
+          ),
+          resolveRemoteBubbleStatusTarget: vi.fn(async () => ({
+            alias: "prod",
+            host: "ssh.example.com",
+            user: "pairflow",
+            pairflowCommand: "pairflow"
+          }))
+        }
+      )
+    ).rejects.toMatchObject({
+      name: "BubbleMergeError",
+      reasonCode: "MERGE_REMOTE_HANDOFF_INVALID"
+    } satisfies Partial<BubbleMergeError>);
+  });
+
+  it("fails closed when the parsed remote handoff import source is malformed", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await convertDoneBubbleToRemoteStarted(
+      await setupDoneBubble(repoPath, "b_merge_remote_import_source_invalid_01")
+    );
+
+    const runGitSpy = createRemoteRouteGitMock({
+      bubbleId: bubble.bubbleId
+    });
+
+    await expect(
+      mergeBubble(
+        {
+          bubbleId: bubble.bubbleId,
+          cwd: repoPath
+        },
+        {
+          runGit: runGitSpy,
+          executeRemoteBubbleMergeCommand: vi.fn(async () => ({
+            ...buildRemoteMergeHandoffResult(bubble),
+            importSource: null
+          } as unknown as ReturnType<typeof buildRemoteMergeHandoffResult>)),
+          resolveRemoteBubbleStatusTarget: vi.fn(async () => ({
+            alias: "prod",
+            host: "ssh.example.com",
+            user: "pairflow",
+            pairflowCommand: "pairflow"
+          }))
+        }
+      )
+    ).rejects.toMatchObject({
+      name: "BubbleMergeError",
+      reasonCode: "MERGE_REMOTE_HANDOFF_INVALID"
+    } satisfies Partial<BubbleMergeError>);
+
+    expect(runGitSpy).not.toHaveBeenCalledWith(
+      expect.arrayContaining(["fetch"]),
+      expect.anything()
+    );
   });
 });

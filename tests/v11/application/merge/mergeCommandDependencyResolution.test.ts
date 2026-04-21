@@ -15,13 +15,12 @@ describe("mergeCommandDependencyResolution", () => {
       baseBranch: "main",
       bubbleBranch: "bubble/b_remote_merge_01",
       mergeCommitSha: "abcdef123456",
-      pushedBaseBranch: true,
-      deletedRemoteBranch: false,
-      tmuxSessionName: "pf-b_remote_merge_01",
-      tmuxSessionExisted: true,
-      runtimeSessionRemoved: true,
-      removedWorktree: true,
-      removedBubbleBranch: true
+      importSource: {
+        kind: "git_ref" as const,
+        ref: "refs/pairflow/import/b_remote_merge_01",
+        commitSha: "abcdef123456"
+      },
+      cleanupPending: true
     })) as never;
 
     const resolved = await resolveMergeCommandDependencies({

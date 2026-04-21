@@ -28,12 +28,23 @@ export interface RemoteMergeStatusTarget {
   pairflowCommand: string;
 }
 
+export interface RemoteMergeImportSource {
+  kind: "git_ref";
+  ref: string;
+  commitSha: string;
+}
+
+export function buildMergeImportRef(bubbleId: string): string {
+  return `refs/pairflow/import/${bubbleId}`;
+}
+
 export interface ExecuteRemoteBubbleMergeCommandInput {
   bubbleId: string;
   remoteClonePath: string;
   remoteTarget: RemoteMergeStatusTarget;
-  push: boolean;
-  deleteRemote: boolean;
+  baseBranch: string;
+  bubbleBranch: string;
+  tmuxSessionName?: string;
 }
 
 export interface ExecuteRemoteBubbleMergeCommandResult {
@@ -41,13 +52,9 @@ export interface ExecuteRemoteBubbleMergeCommandResult {
   baseBranch: string;
   bubbleBranch: string;
   mergeCommitSha: string;
-  pushedBaseBranch: boolean;
-  deletedRemoteBranch: boolean;
-  tmuxSessionName: string;
-  tmuxSessionExisted: boolean;
-  runtimeSessionRemoved: boolean;
-  removedWorktree: boolean;
-  removedBubbleBranch: boolean;
+  importSource: RemoteMergeImportSource;
+  cleanupPending: true;
+  tmuxSessionName?: string;
 }
 
 export interface MergeBubbleInput {

@@ -180,6 +180,9 @@ function assertMergeScenarioInvariant(input: {
   scenario: MergeContractExtendedScenario;
   caseId: string;
 }): void {
+  // `cleanup_invariant` remains a local-route fixture. Phase 3G1A intentionally
+  // preserves conservative compat cleanup booleans on the started-remote path
+  // until the successor cleanup/result alignment slice closes that contract.
   if (input.scenario !== "cleanup_invariant") {
     return;
   }
