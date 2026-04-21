@@ -270,19 +270,30 @@ Az explicit control-model dontesek most visszanyerhetok a designbol es a review-
    - `Phase 3G1B`: remote merge cleanup proof es result alignment
    - `Phase 3G2`: operator contract alignment
 3. A current active implementacios successor:
-   - `Phase 3G1A`
-   - task path:
-     `plans/tasks/remote-bubble-execution/phase3g1a-remote-merge-handoff-and-local-success-boundary.md`
-4. A mar materializalt, de `Phase 3G1A` utan kovetkezo kotelezo successor:
    - `Phase 3G1B`
    - task path:
      `plans/tasks/remote-bubble-execution/phase3g1b-remote-merge-cleanup-proof-and-result-alignment.md`
-5. A deferred successor:
+4. A deferred successor:
    - `Phase 3G2`
    - task file csak a `Phase 3G1B` exit criteria-ja utan justified.
-6. A korabbi egyetlen `Phase 3G1` task superseded lett:
+5. A korabbi egyetlen `Phase 3G1` task superseded lett:
    - nem patch-eltuk tovabb,
    - ket szukebb successor slice valtja fel.
+
+## Progress Update (2026-04-21, post-Phase-3G1A-close)
+
+1. A `Phase 3G1A` implementacioja leszallt, merge-re kerult a `main` branchre, es archived baseline lett:
+   - `plans/archive/tasks/remote-bubble-execution/phase3g1a-remote-merge-handoff-and-local-success-boundary.md`
+2. A lezart bounded scope:
+   - started remote merge helper contract mar csak pre-cleanup handoff payloadot ad,
+   - a durable success proof mar explicit local hidden-ref import + local merge + local state persist boundaryre ul,
+   - a started-remote `--push` / `--delete-remote` path explicit fail-closed reject lett a pre-cleanup handoff fazisban.
+3. A `Phase 3G` cleanup-routing residual current active implementacios successorja emiatt mar a `Phase 3G1B`:
+   - task path:
+     `plans/tasks/remote-bubble-execution/phase3g1b-remote-merge-cleanup-proof-and-result-alignment.md`
+4. A deferred successor valtozatlan:
+   - `Phase 3G2`
+   - task issuance csak a `Phase 3G1B` closeout utan justified.
 
 ## Progress Update (2026-04-18, pre-Phase-3C-close)
 
@@ -457,8 +468,8 @@ Az explicit control-model dontesek most visszanyerhetok a designbol es a review-
 ## Active Task
 
 1. Jelenleg az aktiv implementacios successor task:
-   - `plans/tasks/remote-bubble-execution/phase3g1a-remote-merge-handoff-and-local-success-boundary.md`
-2. A `Phase 2F`, `Phase 3A`, `Phase 3B1`, `Phase 3B2`, `Phase 3B3`, `Phase 3C`, es `Phase 3D` archived baseline:
+   - `plans/tasks/remote-bubble-execution/phase3g1b-remote-merge-cleanup-proof-and-result-alignment.md`
+2. A `Phase 2F`, `Phase 3A`, `Phase 3B1`, `Phase 3B2`, `Phase 3B3`, `Phase 3C`, `Phase 3D`, `Phase 3E`, es `Phase 3G1A` archived baseline:
    - `plans/archive/tasks/remote-bubble-execution/phase2f-remote-attach-consume.md`
    - `plans/archive/tasks/remote-bubble-execution/phase3a-remote-approval-and-rework-routing.md`
    - `plans/archive/tasks/remote-bubble-execution/phase3b1-remote-commit-routing-and-continuity.md`
@@ -466,8 +477,10 @@ Az explicit control-model dontesek most visszanyerhetok a designbol es a review-
    - `plans/archive/tasks/remote-bubble-execution/phase3b3-remote-delete-cleanup-and-archive-closure.md`
    - `plans/archive/tasks/remote-bubble-execution/phase3c-recovery-diagnostics-and-rollout.md`
    - `plans/archive/tasks/remote-bubble-execution/phase3d-remote-runtime-availability-and-watchdog-semantics.md`
-3. A `Phase 2B`, `Phase 2C`, `Phase 2D`, `Phase 2E`, `Phase 2F`, `Phase 3A`, `Phase 3B1`, `Phase 3B2`, `Phase 3B3`, `Phase 3C`, es `Phase 3D` archived baseline lett.
-4. A contextual `request-rework` es az archived cleanup-routing baseline utan mar a remote merge durability residual gap a kovetkezo aktiv bounded slice.
+   - `plans/archive/tasks/remote-bubble-execution/phase3e-verified-remote-clone-local-request-rework.md`
+   - `plans/archive/tasks/remote-bubble-execution/phase3g1a-remote-merge-handoff-and-local-success-boundary.md`
+3. A `Phase 2B`, `Phase 2C`, `Phase 2D`, `Phase 2E`, `Phase 2F`, `Phase 3A`, `Phase 3B1`, `Phase 3B2`, `Phase 3B3`, `Phase 3C`, `Phase 3D`, `Phase 3E`, es `Phase 3G1A` archived baseline lett.
+4. A contextual `request-rework`, a local success-boundary cutover, es az archived cleanup-routing baseline utan mar a remote merge cleanup-proof/result-alignment residual gap a kovetkezo aktiv bounded slice.
 
 ## Successor Tasks
 
