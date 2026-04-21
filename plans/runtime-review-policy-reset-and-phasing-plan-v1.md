@@ -147,7 +147,10 @@ Sikernek az szamit, ha a kovetkezo kor mar nem egyetlen bubble-ben mozgatja egys
      ez threshold delivery task legyen, ne uj foundation refactor.
      A routing/human-gate payload alignment ownershipolhato, de bypass contract vagy szeles UI/control surface meg nem.
    - current-tree read-model note:
-     a kotelezo consume family tovabbra is minimum `list/status`, de `detail` csak explicit entrypointtal ownershipolhato.
+     a kotelezo consume family itt mar nem `list/status`, mert azt a Phase 1 lezarta.
+     A bounded Phase 2 read-model closure a gate-route truth export familyre korlatozodik:
+     persisted human-gate envelope metadata, converged route metadata, metrics/report aggregation, valamint a mar letezo submit/result route exposure.
+     `detail` tovabbra is csak explicit entrypointtal ownershipolhato.
 2. Az archived `O2-T9` current-tree preserved baseline marad; a Phase 2 tasknak erre es a merged Phase 1 baseline-re kell epulnie, es nem szabad runtime-capability cleanupot vagy bypass-aktivaciot opportunistikusan visszahoznia.
 
 ## Decision Baseline
