@@ -1,9 +1,9 @@
 import type { BubbleConfig } from "../../../types/bubble.js";
 import type { ProtocolEnvelope } from "../../../types/protocol.js";
 import type {
-  EmitAskHumanBubbleNotificationPort,
-  EmitAskHumanDeliveryNotificationAckPort
+  EmitAskHumanBubbleNotificationPort
 } from "./askHumanDeliveryPortsContract.js";
+import type { EmitDeliveryNotificationAckPort } from "../ports/tmuxDelivery.js";
 
 export interface EmitOptionalAskHumanNotificationsInput {
   bubbleId: string;
@@ -14,6 +14,6 @@ export interface EmitOptionalAskHumanNotificationsInput {
 }
 
 export interface EmitOptionalAskHumanNotificationsDependencies {
-  emitDeliveryNotificationAck: EmitAskHumanDeliveryNotificationAckPort;
+  emitDeliveryNotificationAck: EmitDeliveryNotificationAckPort;
   emitBubbleNotification: EmitAskHumanBubbleNotificationPort;
 }

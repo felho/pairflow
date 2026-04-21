@@ -65,7 +65,7 @@ function buildFallbackDeliveryResult(message: string): DeliveryAck {
   };
 }
 
-function projectDeliveryAckToLegacyResult(
+function projectDeliveryAckToSignal(
   deliveryAck: DeliveryAck
 ): ApprovalDecisionDeliverySignal {
   if (deliveryAck.status === "accepted") {
@@ -123,7 +123,7 @@ export async function emitApprovalDecisionDeliverySignals(input: {
 
   if (input.decision !== "rework") {
     return {
-      statusDelivery: projectDeliveryAckToLegacyResult(statusDelivery)
+      statusDelivery: projectDeliveryAckToSignal(statusDelivery)
     };
   }
 
@@ -157,8 +157,8 @@ export async function emitApprovalDecisionDeliverySignals(input: {
   );
 
   return {
-    statusDelivery: projectDeliveryAckToLegacyResult(statusDelivery),
-    implementerDelivery: projectDeliveryAckToLegacyResult(implementerDelivery)
+    statusDelivery: projectDeliveryAckToSignal(statusDelivery),
+    implementerDelivery: projectDeliveryAckToSignal(implementerDelivery)
   };
 }
 

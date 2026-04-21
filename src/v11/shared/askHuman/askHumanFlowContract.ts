@@ -8,17 +8,19 @@ import type {
 } from "../ports/stateSnapshots.js";
 import type { applyStateTransition } from "../../domain/state/machine.js";
 import type {
-  AskHumanDeliveryTargetReasonCode,
-  AskHumanDeliveryAck,
   EmitAskHumanBubbleNotificationPort,
-  EmitAskHumanDeliveryNotificationAckPort,
-  ResolveAskHumanDeliveryMessageRefPort
 } from "./askHumanDeliveryPortsContract.js";
 import type { emitBubbleLifecycleEventBestEffort } from "../../../v11/shared/metrics/bubbleEvents.js";
 import type { BubbleStateSnapshot } from "../../../types/bubble.js";
 import type { ProtocolEnvelope } from "../../../types/protocol.js";
 import type { AskHumanRoutingContext } from "./askHumanRoutingContext.js";
 import type { AskHumanActivationProvenance } from "./askHumanCommandContract.js";
+import type {
+  DeliveryAck,
+  DeliveryTargetReasonCode,
+  EmitDeliveryNotificationAckPort,
+  ResolveDeliveryMessageRefPort
+} from "../ports/tmuxDelivery.js";
 
 export interface RunAskHumanFlowInput {
   now: Date;
@@ -51,9 +53,9 @@ export interface FinalizeAskHumanFlowInput {
 }
 
 export interface FinalizeAskHumanFlowDependencies {
-  emitDeliveryNotificationAck?: EmitAskHumanDeliveryNotificationAckPort;
+  emitDeliveryNotificationAck?: EmitDeliveryNotificationAckPort;
   emitBubbleNotification?: EmitAskHumanBubbleNotificationPort;
-  resolveDeliveryMessageRef?: ResolveAskHumanDeliveryMessageRefPort;
+  resolveDeliveryMessageRef?: ResolveDeliveryMessageRefPort;
   emitBubbleLifecycleEventBestEffort?: typeof emitBubbleLifecycleEventBestEffort;
 }
 
@@ -65,16 +67,16 @@ export interface RunAskHumanFlowResult {
   inferredRecipient: "human";
   activation?: AskHumanActivationProvenance;
   delivery?: {
-    status: AskHumanDeliveryAck["status"];
+    status: DeliveryAck["status"];
     message?: string;
-    reason?: Extract<AskHumanDeliveryAck, { status: "rejected" }>["reason"];
-    reason_code?: Extract<AskHumanDeliveryAck, { status: "rejected" }>["reason_code"];
-    deliveryTargetReasonCode?: AskHumanDeliveryTargetReasonCode;
+    reason?: Extract<DeliveryAck, { status: "rejected" }>["reason"];
+    reason_code?: Extract<DeliveryAck, { status: "rejected" }>["reason_code"];
+    deliveryTargetReasonCode?: DeliveryTargetReasonCode;
   };
 }
 
 export interface AskHumanDeliveryResult {
-  deliveryResult: AskHumanDeliveryAck | undefined;
+  deliveryResult: DeliveryAck | undefined;
 }
 
 export interface RunAskHumanFlowDependencies {
@@ -89,7 +91,7 @@ export interface RunAskHumanFlowDependencies {
   appendProtocolEnvelope?: AppendProtocolEnvelopePort;
   writeStateSnapshot?: WriteStateSnapshotPort;
   applyStateTransition?: typeof applyStateTransition;
-  emitDeliveryNotificationAck?: EmitAskHumanDeliveryNotificationAckPort;
+  emitDeliveryNotificationAck?: EmitDeliveryNotificationAckPort;
   emitBubbleNotification?: EmitAskHumanBubbleNotificationPort;
   resolveDeliveryMessageRef?: FinalizeAskHumanFlowDependencies["resolveDeliveryMessageRef"];
   emitBubbleLifecycleEventBestEffort?: typeof emitBubbleLifecycleEventBestEffort;

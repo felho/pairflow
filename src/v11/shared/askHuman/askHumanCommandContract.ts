@@ -1,8 +1,5 @@
 import type {
-  AskHumanDeliveryTargetReasonCode,
-  AskHumanDeliveryAck,
-  EmitAskHumanBubbleNotificationPort,
-  EmitAskHumanDeliveryNotificationAckPort
+  EmitAskHumanBubbleNotificationPort
 } from "./askHumanDeliveryPortsContract.js";
 import type { BubbleStateSnapshot } from "../../../types/bubble.js";
 import type { ProtocolEnvelope } from "../../../types/protocol.js";
@@ -10,6 +7,11 @@ import type {
   ActorActivationProvenance,
   ActorEmitContextSnapshot
 } from "../actorProtocol/actorEmitContext.js";
+import type {
+  DeliveryAck,
+  DeliveryTargetReasonCode,
+  EmitDeliveryNotificationAckPort
+} from "../ports/tmuxDelivery.js";
 
 export type AskHumanActivationProvenance = ActorActivationProvenance;
 
@@ -29,15 +31,15 @@ export interface EmitAskHumanResult {
   inferredRecipient: "human";
   activation?: AskHumanActivationProvenance;
   delivery?: {
-    status: AskHumanDeliveryAck["status"];
+    status: DeliveryAck["status"];
     message?: string;
-    reason?: Extract<AskHumanDeliveryAck, { status: "rejected" }>["reason"];
-    reason_code?: Extract<AskHumanDeliveryAck, { status: "rejected" }>["reason_code"];
-    deliveryTargetReasonCode?: AskHumanDeliveryTargetReasonCode;
+    reason?: Extract<DeliveryAck, { status: "rejected" }>["reason"];
+    reason_code?: Extract<DeliveryAck, { status: "rejected" }>["reason_code"];
+    deliveryTargetReasonCode?: DeliveryTargetReasonCode;
   };
 }
 
 export interface EmitAskHumanDependencies {
-  emitDeliveryNotificationAck?: EmitAskHumanDeliveryNotificationAckPort;
+  emitDeliveryNotificationAck?: EmitDeliveryNotificationAckPort;
   emitBubbleNotification?: EmitAskHumanBubbleNotificationPort;
 }

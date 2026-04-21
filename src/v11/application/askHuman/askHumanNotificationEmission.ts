@@ -3,7 +3,7 @@ import type {
   EmitOptionalAskHumanNotificationsDependencies,
   EmitOptionalAskHumanNotificationsInput
 } from "../../shared/askHuman/askHumanNotificationEmissionContract.js";
-import type { AskHumanDeliveryAck } from "../../shared/askHuman/askHumanDeliveryPortsContract.js";
+import type { DeliveryAck } from "../../shared/ports/tmuxDelivery.js";
 
 function describeDetachedBubbleNotificationFailure(error: unknown): void {
   void error;
@@ -13,7 +13,7 @@ function describeDetachedBubbleNotificationFailure(error: unknown): void {
 
 function buildUnexpectedAskHumanDeliveryFailureResult(
   error: unknown
-): AskHumanDeliveryAck {
+): DeliveryAck {
   const detail =
     error instanceof Error && error.message.trim().length > 0
       ? error.message.trim()
