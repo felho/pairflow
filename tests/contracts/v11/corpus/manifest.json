@@ -165,6 +165,12 @@
       "kind": "seed_case"
     },
     {
+      "id": "merge-cleanup-contract-invalid-path-v11",
+      "command": "merge",
+      "source": "tests/contracts/v11/cases/merge/merge-cleanup-contract-invalid-path-v11.case.json",
+      "kind": "seed_case"
+    },
+    {
       "id": "approval-approve-basic-v11",
       "command": "approval",
       "source": "tests/contracts/v11/cases/approval/approval-approve-basic-v11.case.json",

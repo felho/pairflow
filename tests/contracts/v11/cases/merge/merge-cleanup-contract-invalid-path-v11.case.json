@@ -1,0 +1,25 @@
+{
+  "id": "merge-cleanup-contract-invalid-path-v11",
+  "command": "merge",
+  "mode": "v11",
+  "description": "Merge v11 fails closed when remote cleanup returns a clone-path payload for a different workspace.",
+  "input": {
+    "fixture": {
+      "scenario": "cleanup_contract_invalid_path"
+    }
+  },
+  "expected": {
+    "status": "error",
+    "reasonCode": "MERGE_REMOTE_CLEANUP_CONTRACT_INVALID",
+    "stateSubset": {
+      "state": "DONE"
+    }
+  },
+  "tags": [
+    "seed",
+    "m0",
+    "merge",
+    "remote",
+    "guard"
+  ]
+}

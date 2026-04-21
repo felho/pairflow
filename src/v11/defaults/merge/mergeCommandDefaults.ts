@@ -14,7 +14,10 @@ import {
 } from "../../shared/state/stateStoreDefaults.js";
 import { emitBubbleLifecycleEventBestEffort } from "../../shared/metrics/bubbleEvents.js";
 import { readRemotePointer } from "../../infrastructure/artifact/bubble/remoteExecutionArtifacts.js";
-import { executeRemoteBubbleMergeCommand } from "../../infrastructure/executor/ssh/sshBubbleMergeCommand.js";
+import {
+  executeRemoteBubbleMergeCleanupCommand,
+  executeRemoteBubbleMergeCommand
+} from "../../infrastructure/executor/ssh/sshBubbleMergeCommand.js";
 import { statusCommandDependencyDefaults } from "../../shared/status/statusCommandDependencyDefaults.js";
 
 type MergeBubbleDependencyDefaults = {
@@ -25,6 +28,7 @@ type MergeBubbleDependencyDefaults = {
 export const mergeBubbleDependencyDefaults = {
   branchExists,
   cleanupWorktreeWorkspace,
+  executeRemoteBubbleMergeCleanupCommand,
   executeRemoteBubbleMergeCommand,
   emitBubbleLifecycleEventBestEffort,
   ensureBubbleInstanceIdForMutation,

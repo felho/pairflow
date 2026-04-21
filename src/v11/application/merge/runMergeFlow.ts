@@ -407,15 +407,7 @@ export async function runMergeFlow(
       mergeCommitSha,
       pushedBaseBranch: false,
       deletedRemoteBranch: false,
-      tmuxSessionName:
-        remoteResult.tmuxSessionName
-        ?? finalization.tmux.sessionName
-        ?? context.remotePointer.tmuxSession,
-      tmuxSessionExisted:
-        finalization.tmux.existed ?? false,
-      runtimeSessionRemoved: finalization.runtimeSessionRemoved,
-      removedWorktree: finalization.workspaceCleanup.removedWorktree,
-      removedBubbleBranch: finalization.workspaceCleanup.removedBranch
+      cleanupOutcome: finalization.cleanupOutcome
     });
   }
 
@@ -455,10 +447,6 @@ export async function runMergeFlow(
     mergeCommitSha,
     pushedBaseBranch,
     deletedRemoteBranch,
-    tmuxSessionName: finalization.tmux.sessionName,
-    tmuxSessionExisted: finalization.tmux.existed,
-    runtimeSessionRemoved: finalization.runtimeSessionRemoved,
-    removedWorktree: finalization.workspaceCleanup.removedWorktree,
-    removedBubbleBranch: finalization.workspaceCleanup.removedBranch
+    cleanupOutcome: finalization.cleanupOutcome
   });
 }

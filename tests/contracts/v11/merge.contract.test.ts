@@ -16,7 +16,8 @@ const mergeCaseSources = [
   "tests/contracts/v11/cases/merge/merge-repo-dirty-v11.case.json",
   "tests/contracts/v11/cases/merge/merge-branch-missing-v11.case.json",
   "tests/contracts/v11/cases/merge/merge-conflict-manual-resolution-v11.case.json",
-  "tests/contracts/v11/cases/merge/merge-cleanup-invariant-v11.case.json"
+  "tests/contracts/v11/cases/merge/merge-cleanup-invariant-v11.case.json",
+  "tests/contracts/v11/cases/merge/merge-cleanup-contract-invalid-path-v11.case.json"
 ] as const;
 
 const mergeExpectedSourcesSorted = [...mergeCaseSources].sort();

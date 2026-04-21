@@ -57,6 +57,54 @@ export interface ExecuteRemoteBubbleMergeCommandResult {
   tmuxSessionName?: string;
 }
 
+export interface ExecuteRemoteBubbleMergeCleanupCommandInput {
+  bubbleId: string;
+  remoteClonePath: string;
+  remoteTarget: RemoteMergeStatusTarget;
+  baseBranch: string;
+  bubbleBranch: string;
+  tmuxSessionName?: string;
+}
+
+export interface RemoteMergeCleanupArtifacts {
+  worktree: {
+    path: string;
+    existed: boolean;
+  };
+  tmux: {
+    sessionName?: string;
+    existed: boolean;
+  };
+  runtimeSession: {
+    path: string;
+    existed: boolean;
+  };
+  branch: {
+    name: string;
+    existed: boolean;
+  };
+}
+
+export interface ExecuteRemoteBubbleMergeCleanupCommandResult {
+  bubbleId: string;
+  baseBranch: string;
+  bubbleBranch: string;
+  artifacts: RemoteMergeCleanupArtifacts;
+  tmuxSessionTerminated: boolean;
+  runtimeSessionRemoved: boolean;
+  removedWorktree: boolean;
+  removedBubbleBranch: boolean;
+  tmuxSessionName?: string;
+}
+
+export interface MergeCleanupOutcome {
+  tmuxSessionName: string;
+  tmuxSessionExisted: boolean;
+  runtimeSessionRemoved: boolean;
+  removedWorktree: boolean;
+  removedBubbleBranch: boolean;
+}
+
 export interface MergeBubbleInput {
   bubbleId: string;
   repoPath?: string | undefined;
@@ -102,4 +150,7 @@ export interface MergeBubbleDependencies {
   executeRemoteBubbleMergeCommand?: (
     input: ExecuteRemoteBubbleMergeCommandInput
   ) => Promise<ExecuteRemoteBubbleMergeCommandResult>;
+  executeRemoteBubbleMergeCleanupCommand?: (
+    input: ExecuteRemoteBubbleMergeCleanupCommandInput
+  ) => Promise<ExecuteRemoteBubbleMergeCleanupCommandResult>;
 }

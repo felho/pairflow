@@ -24,6 +24,8 @@ export interface ResolvedMergeCommandDependencies {
     MergeBubbleDependencyDefaults["resolveRemoteBubbleStatusTarget"];
   executeRemoteBubbleMergeCommand:
     MergeBubbleDependencyDefaults["executeRemoteBubbleMergeCommand"];
+  executeRemoteBubbleMergeCleanupCommand:
+    MergeBubbleDependencyDefaults["executeRemoteBubbleMergeCleanupCommand"];
 }
 
 export async function resolveMergeCommandDependencies(
@@ -60,6 +62,9 @@ export async function resolveMergeCommandDependencies(
       ?? mergeBubbleDependencyDefaults.resolveRemoteBubbleStatusTarget,
     executeRemoteBubbleMergeCommand:
       dependencies.executeRemoteBubbleMergeCommand
-      ?? mergeBubbleDependencyDefaults.executeRemoteBubbleMergeCommand
+      ?? mergeBubbleDependencyDefaults.executeRemoteBubbleMergeCommand,
+    executeRemoteBubbleMergeCleanupCommand:
+      dependencies.executeRemoteBubbleMergeCleanupCommand
+      ?? mergeBubbleDependencyDefaults.executeRemoteBubbleMergeCleanupCommand
   };
 }

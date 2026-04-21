@@ -192,6 +192,60 @@ function buildRemoteMergeHandoffResult(
   };
 }
 
+function buildRemoteMergeCleanupResult(
+  bubble: Awaited<ReturnType<typeof setupDoneBubble>>,
+  overrides: Partial<{
+    baseBranch: string;
+    bubbleBranch: string;
+    remoteClonePath: string;
+    tmuxSessionName: string;
+    tmuxSessionExisted: boolean;
+    tmuxSessionTerminated: boolean;
+    runtimeSessionExisted: boolean;
+    runtimeSessionRemoved: boolean;
+    branchExisted: boolean;
+    removedWorktree: boolean;
+    removedBubbleBranch: boolean;
+  }> = {}
+) {
+  const remoteClonePath =
+    overrides.remoteClonePath ?? `/srv/pairflow/repo--${bubble.bubbleId}`;
+  const tmuxSessionName = overrides.tmuxSessionName ?? `pf-${bubble.bubbleId}`;
+  const tmuxSessionExisted = overrides.tmuxSessionExisted ?? true;
+  const runtimeSessionExisted = overrides.runtimeSessionExisted ?? true;
+  const branchExisted = overrides.branchExisted ?? true;
+
+  return {
+    bubbleId: bubble.bubbleId,
+    baseBranch: overrides.baseBranch ?? "main",
+    bubbleBranch: overrides.bubbleBranch ?? bubble.config.bubble_branch,
+    artifacts: {
+      worktree: {
+        path: remoteClonePath,
+        existed: true
+      },
+      tmux: {
+        sessionName: tmuxSessionName,
+        existed: tmuxSessionExisted
+      },
+      runtimeSession: {
+        path: `${remoteClonePath}/.pairflow/runtime/sessions.json`,
+        existed: runtimeSessionExisted
+      },
+      branch: {
+        name: overrides.bubbleBranch ?? bubble.config.bubble_branch,
+        existed: branchExisted
+      }
+    },
+    tmuxSessionTerminated: overrides.tmuxSessionTerminated ?? tmuxSessionExisted,
+    runtimeSessionRemoved:
+      overrides.runtimeSessionRemoved ?? runtimeSessionExisted,
+    removedWorktree: overrides.removedWorktree ?? true,
+    removedBubbleBranch: overrides.removedBubbleBranch ?? branchExisted,
+    tmuxSessionName
+  };
+}
+
 function createRemoteRouteGitMock(input: {
   bubbleId: string;
   importedCommitSha?: string;
@@ -449,8 +503,16 @@ describe("mergeBubble", () => {
     );
 
     const executeRemoteBubbleMergeCommand = vi.fn(async () =>
-      buildRemoteMergeHandoffResult(bubble)
+      buildRemoteMergeHandoffResult(bubble, {
+        tmuxSessionName: `pf-handoff-${bubble.bubbleId}`
+      })
     );
+    const executeRemoteBubbleMergeCleanupCommand = vi.fn(async () =>
+      buildRemoteMergeCleanupResult(bubble, {
+        tmuxSessionName: `pf-cleanup-${bubble.bubbleId}`
+      })
+    );
+    const emitBubbleLifecycleEventBestEffort = vi.fn(async () => undefined);
     const runGitSpy = createRemoteRouteGitMock({
       bubbleId: bubble.bubbleId
     });
@@ -464,6 +526,8 @@ describe("mergeBubble", () => {
       {
         runGit: runGitSpy,
         executeRemoteBubbleMergeCommand,
+        executeRemoteBubbleMergeCleanupCommand,
+        emitBubbleLifecycleEventBestEffort,
         resolveRemoteBubbleStatusTarget: vi.fn(async () => ({
           alias: "prod",
           host: "ssh.example.com",
@@ -486,15 +550,29 @@ describe("mergeBubble", () => {
       bubbleBranch: bubble.config.bubble_branch,
       tmuxSessionName: `pf-${bubble.bubbleId}`
     });
+    expect(executeRemoteBubbleMergeCleanupCommand).toHaveBeenCalledWith({
+      bubbleId: bubble.bubbleId,
+      remoteClonePath: `/srv/pairflow/repo--${bubble.bubbleId}`,
+      remoteTarget: {
+        alias: "prod",
+        host: "ssh.example.com",
+        user: "pairflow",
+        pairflowCommand: "pairflow"
+      },
+      baseBranch: "main",
+      bubbleBranch: bubble.config.bubble_branch,
+      tmuxSessionName: `pf-${bubble.bubbleId}`
+    });
     expect(runGitSpy).toHaveBeenCalled();
     expect(result).toMatchObject({
       bubbleId: bubble.bubbleId,
       mergeCommitSha: "fedcba0987654321",
       pushedBaseBranch: false,
-      removedWorktree: false,
-      removedBubbleBranch: false,
-      tmuxSessionName: `pf-${bubble.bubbleId}`,
-      tmuxSessionExisted: false
+      removedWorktree: true,
+      removedBubbleBranch: true,
+      tmuxSessionName: `pf-cleanup-${bubble.bubbleId}`,
+      tmuxSessionExisted: true,
+      runtimeSessionRemoved: true
     });
     expect(runGitSpy).toHaveBeenCalledWith(
       [
@@ -505,6 +583,20 @@ describe("mergeBubble", () => {
       ],
       expect.any(Object)
     );
+    expect(emitBubbleLifecycleEventBestEffort).toHaveBeenCalledOnce();
+    const firstEventCall =
+      emitBubbleLifecycleEventBestEffort.mock.calls[0] as [unknown] | undefined;
+    const eventInput = firstEventCall?.[0];
+    expect(eventInput).toMatchObject({
+      eventType: "bubble_merged",
+      metadata: {
+        route: "remote",
+        tmux_session_existed: true,
+        runtime_session_removed: true,
+        removed_worktree: true,
+        removed_bubble_branch: true
+      }
+    });
 
     const state = await readStateSnapshot(bubble.paths.statePath);
     expect(state.state.last_command_at).toBe("2026-04-18T08:05:00.000Z");
@@ -864,6 +956,164 @@ describe("mergeBubble", () => {
     } satisfies Partial<BubbleMergeError>);
   });
 
+  it("fails closed when post-success remote cleanup cannot be dispatched after local reconcile", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await convertDoneBubbleToRemoteStarted(
+      await setupDoneBubble(repoPath, "b_merge_remote_cleanup_failed_01")
+    );
+
+    const runGitSpy = createRemoteRouteGitMock({
+      bubbleId: bubble.bubbleId
+    });
+    const emitBubbleLifecycleEventBestEffort = vi.fn(async () => undefined);
+
+    await expect(
+      mergeBubble(
+        {
+          bubbleId: bubble.bubbleId,
+          cwd: repoPath,
+          now: new Date("2026-04-18T08:06:00.000Z")
+        },
+        {
+          runGit: runGitSpy,
+          executeRemoteBubbleMergeCommand: vi.fn(async () =>
+            buildRemoteMergeHandoffResult(bubble)
+          ),
+          executeRemoteBubbleMergeCleanupCommand: vi.fn(async () => {
+            throw new RemoteBubbleMergeCommandError({
+              code: "REMOTE_MERGE_CLEANUP_TARGET_MISSING",
+              message:
+                "REMOTE_MERGE_CLEANUP_TARGET_MISSING: Missing remote clone path /srv/pairflow/repo"
+            });
+          }),
+          resolveRemoteBubbleStatusTarget: vi.fn(async () => ({
+            alias: "prod",
+            host: "ssh.example.com",
+            pairflowCommand: "pairflow"
+          })),
+          emitBubbleLifecycleEventBestEffort
+        }
+      )
+    ).rejects.toMatchObject({
+      name: "BubbleMergeError",
+      reasonCode: "MERGE_REMOTE_CLEANUP_FAILED",
+      context: {
+        command_name: "merge",
+        bubble_id: bubble.bubbleId,
+        remote_alias: "prod",
+        remote_host: "ssh.example.com",
+        remote_clone_path: `/srv/pairflow/repo--${bubble.bubbleId}`,
+        remote_reason_code: "REMOTE_MERGE_CLEANUP_TARGET_MISSING"
+      }
+    } satisfies Partial<BubbleMergeError>);
+
+    const state = await readStateSnapshot(bubble.paths.statePath);
+    expect(state.state.state).toBe("DONE");
+    expect(state.state.last_command_at).toBe("2026-04-18T08:06:00.000Z");
+    expect(emitBubbleLifecycleEventBestEffort).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    {
+      name: "clone cleanup",
+      cleanupResult: (bubble: Awaited<ReturnType<typeof setupDoneBubble>>) =>
+        buildRemoteMergeCleanupResult(bubble, {
+          removedWorktree: false
+        })
+    },
+    {
+      name: "tmux cleanup",
+      cleanupResult: (bubble: Awaited<ReturnType<typeof setupDoneBubble>>) =>
+        buildRemoteMergeCleanupResult(bubble, {
+          tmuxSessionTerminated: false
+        })
+    },
+    {
+      name: "runtime cleanup",
+      cleanupResult: (bubble: Awaited<ReturnType<typeof setupDoneBubble>>) =>
+        buildRemoteMergeCleanupResult(bubble, {
+          runtimeSessionRemoved: false
+        })
+    },
+    {
+      name: "branch cleanup",
+      cleanupResult: (bubble: Awaited<ReturnType<typeof setupDoneBubble>>) =>
+        buildRemoteMergeCleanupResult(bubble, {
+          removedBubbleBranch: false
+        })
+    }
+  ])("fails closed when started remote merge does not prove $name", async ({ cleanupResult }) => {
+    const repoPath = await createTempRepo();
+    const bubble = await convertDoneBubbleToRemoteStarted(
+      await setupDoneBubble(repoPath, "b_merge_remote_cleanup_proof_01")
+    );
+
+    await expect(
+      mergeBubble(
+        {
+          bubbleId: bubble.bubbleId,
+          cwd: repoPath
+        },
+        {
+          runGit: createRemoteRouteGitMock({
+            bubbleId: bubble.bubbleId
+          }),
+          executeRemoteBubbleMergeCommand: vi.fn(async () =>
+            buildRemoteMergeHandoffResult(bubble)
+          ),
+          executeRemoteBubbleMergeCleanupCommand: vi.fn(async () =>
+            cleanupResult(bubble)
+          ),
+          resolveRemoteBubbleStatusTarget: vi.fn(async () => ({
+            alias: "prod",
+            host: "ssh.example.com",
+            pairflowCommand: "pairflow"
+          }))
+        }
+      )
+    ).rejects.toMatchObject({
+      name: "BubbleMergeError",
+      reasonCode: "MERGE_REMOTE_CLEANUP_PROOF_MISSING"
+    } satisfies Partial<BubbleMergeError>);
+  });
+
+  it("fails closed when started remote cleanup returns a mismatched remote clone path", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await convertDoneBubbleToRemoteStarted(
+      await setupDoneBubble(repoPath, "b_merge_remote_cleanup_path_mismatch_01")
+    );
+
+    await expect(
+      mergeBubble(
+        {
+          bubbleId: bubble.bubbleId,
+          cwd: repoPath
+        },
+        {
+          runGit: createRemoteRouteGitMock({
+            bubbleId: bubble.bubbleId
+          }),
+          executeRemoteBubbleMergeCommand: vi.fn(async () =>
+            buildRemoteMergeHandoffResult(bubble)
+          ),
+          executeRemoteBubbleMergeCleanupCommand: vi.fn(async () =>
+            buildRemoteMergeCleanupResult(bubble, {
+              remoteClonePath: `/srv/pairflow/repo--${bubble.bubbleId}-unexpected`
+            })
+          ),
+          resolveRemoteBubbleStatusTarget: vi.fn(async () => ({
+            alias: "prod",
+            host: "ssh.example.com",
+            pairflowCommand: "pairflow"
+          }))
+        }
+      )
+    ).rejects.toMatchObject({
+      name: "BubbleMergeError",
+      reasonCode: "MERGE_REMOTE_CLEANUP_CONTRACT_INVALID"
+    } satisfies Partial<BubbleMergeError>);
+  });
+
   it("preserves remote merge conflict taxonomy without local fallback", async () => {
     const repoPath = await createTempRepo();
     const bubble = await convertDoneBubbleToRemoteStarted(
@@ -1074,6 +1324,11 @@ describe("mergeBubble", () => {
         runGit: runGitSpy,
         executeRemoteBubbleMergeCommand: vi.fn(async () =>
           buildRemoteMergeHandoffResult(bubble)
+        ),
+        executeRemoteBubbleMergeCleanupCommand: vi.fn(async () =>
+          buildRemoteMergeCleanupResult(bubble, {
+            remoteClonePath: "/srv/pairflow remote/repo#with?reserved"
+          })
         ),
         resolveRemoteBubbleStatusTarget: vi.fn(async () => ({
           alias: "prod",

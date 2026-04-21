@@ -7,7 +7,9 @@ import { describe, expect, it, vi } from "vitest";
 import type { RemoteBubbleMergeCommandError } from "../../../../../src/v11/infrastructure/executor/ssh/sshBubbleMergeCommand.js";
 
 import {
+  buildRemoteBubbleMergeCleanupScript,
   buildRemoteBubbleMergeScript,
+  executeRemoteBubbleMergeCleanupCommand,
   executeRemoteBubbleMergeCommand
 } from "../../../../../src/v11/infrastructure/executor/ssh/sshBubbleMergeCommand.js";
 import { initGitRepository, runGit } from "../../../../helpers/git.js";
@@ -28,14 +30,36 @@ function createMergeCommandInput() {
   } as const;
 }
 
-async function runLocalShellScript(script: string) {
+function createMergeCleanupCommandInput() {
+  return {
+    bubbleId: "b_remote_merge_01",
+    remoteClonePath: "/srv/pairflow clones/repo's bubble",
+    remoteTarget: {
+      alias: "prod",
+      host: "ssh.example.com",
+      user: "pairflow",
+      pairflowCommand: "pairflow"
+    },
+    baseBranch: "main",
+    bubbleBranch: "bubble/b_remote_merge_01",
+    tmuxSessionName: "pf-b_remote_merge_01"
+  } as const;
+}
+
+async function runLocalShellScript(
+  script: string,
+  options?: {
+    env?: NodeJS.ProcessEnv;
+  }
+) {
   return await new Promise<{
     stdout: string;
     stderr: string;
     exitCode: number;
   }>((resolve, reject) => {
     const child = spawn("bash", ["-lc", script], {
-      stdio: ["ignore", "pipe", "pipe"]
+      stdio: ["ignore", "pipe", "pipe"],
+      env: options?.env
     });
 
     let stdout = "";
@@ -125,6 +149,119 @@ describe("sshBubbleMergeCommand", () => {
       cleanupPending: true,
       tmuxSessionName: "pf-b_remote_merge_01"
     });
+  });
+
+  it("builds a remote merge cleanup script that proves cleanup artifacts explicitly", () => {
+    const script = buildRemoteBubbleMergeCleanupScript(
+      createMergeCleanupCommandInput()
+    );
+
+    expect(script).toContain("remote_clone_path=");
+    expect(script).toContain("/srv/pairflow clones/repo");
+    expect(script).toContain("bubble'");
+    expect(script).toContain("git -C \"$remote_clone_path\" branch -D \"$bubble_branch\" >&2");
+    expect(script).toContain("tmux kill-session -t \"$tmux_session_name\" >&2");
+    expect(script).toContain("rm -rf \"$remote_clone_path\"");
+    expect(script).toContain("tmuxSessionTerminated");
+    expect(script).toContain("runtimeSessionRemoved");
+    expect(script).toContain("removedWorktree");
+    expect(script).toContain("removedBubbleBranch");
+    expect(script).toContain("artifacts: {");
+  });
+
+  it("parses a structured cleanup payload", async () => {
+    const stdout = [
+      "__PAIRFLOW_REMOTE_MERGE_CLEANUP_EXIT_STATUS_START__",
+      "0",
+      "__PAIRFLOW_REMOTE_MERGE_CLEANUP_EXIT_STATUS_END__",
+      "__PAIRFLOW_REMOTE_MERGE_CLEANUP_STDOUT_START__",
+      JSON.stringify({
+        bubbleId: "b_remote_merge_01",
+        baseBranch: "main",
+        bubbleBranch: "bubble/b_remote_merge_01",
+        artifacts: {
+          worktree: {
+            path: "/srv/pairflow clones/repo's bubble",
+            existed: true
+          },
+          tmux: {
+            sessionName: "pf-b_remote_merge_01",
+            existed: true
+          },
+          runtimeSession: {
+            path: "/srv/pairflow clones/repo's bubble/.pairflow/runtime/sessions.json",
+            existed: true
+          },
+          branch: {
+            name: "bubble/b_remote_merge_01",
+            existed: true
+          }
+        },
+        tmuxSessionTerminated: true,
+        runtimeSessionRemoved: true,
+        removedWorktree: true,
+        removedBubbleBranch: true,
+        tmuxSessionName: "pf-b_remote_merge_01"
+      }),
+      "__PAIRFLOW_REMOTE_MERGE_CLEANUP_STDOUT_END__",
+      "__PAIRFLOW_REMOTE_MERGE_CLEANUP_STDERR_START__",
+      "",
+      "__PAIRFLOW_REMOTE_MERGE_CLEANUP_STDERR_END__"
+    ].join("\n");
+
+    const result = await executeRemoteBubbleMergeCleanupCommand(
+      createMergeCleanupCommandInput(),
+      {
+        runCommand: vi.fn(async () => ({
+          stdout,
+          stderr: "",
+          exitCode: 0
+        }))
+      }
+    );
+
+    expect(result).toMatchObject({
+      bubbleId: "b_remote_merge_01",
+      artifacts: {
+        worktree: {
+          path: "/srv/pairflow clones/repo's bubble",
+          existed: true
+        },
+        tmux: {
+          sessionName: "pf-b_remote_merge_01",
+          existed: true
+        },
+        runtimeSession: {
+          path: "/srv/pairflow clones/repo's bubble/.pairflow/runtime/sessions.json",
+          existed: true
+        },
+        branch: {
+          name: "bubble/b_remote_merge_01",
+          existed: true
+        }
+      },
+      tmuxSessionTerminated: true,
+      runtimeSessionRemoved: true,
+      removedWorktree: true,
+      removedBubbleBranch: true,
+      tmuxSessionName: "pf-b_remote_merge_01"
+    });
+  });
+
+  it("orders destructive clone removal before branch-cleanup failure exit", () => {
+    const script = buildRemoteBubbleMergeCleanupScript(
+      createMergeCleanupCommandInput()
+    );
+
+    expect(script).toContain("branch_cleanup_exit_code=0");
+    expect(script).toContain("rm -rf \"$remote_clone_path\"");
+    expect(script).toContain("exit \"$branch_cleanup_exit_code\"");
+    expect(script.indexOf("rm -rf \"$remote_clone_path\"")).toBeGreaterThan(
+      script.indexOf("branch_cleanup_exit_code=0")
+    );
+    expect(script.indexOf("exit \"$branch_cleanup_exit_code\"")).toBeGreaterThan(
+      script.indexOf("rm -rf \"$remote_clone_path\"")
+    );
   });
 
   it("keeps successful git merge stdout out of the structured payload at the command layer", async () => {
@@ -478,6 +615,91 @@ describe("sshBubbleMergeCommand", () => {
     ).rejects.toMatchObject({
       name: "RemoteBubbleMergeCommandError",
       code: "REMOTE_MERGE_PAYLOAD_INVALID"
+    } satisfies Partial<RemoteBubbleMergeCommandError>);
+  });
+
+  it("fails closed when the cleanup payload is missing required proof fields", async () => {
+    const stdout = [
+      "__PAIRFLOW_REMOTE_MERGE_CLEANUP_EXIT_STATUS_START__",
+      "0",
+      "__PAIRFLOW_REMOTE_MERGE_CLEANUP_EXIT_STATUS_END__",
+      "__PAIRFLOW_REMOTE_MERGE_CLEANUP_STDOUT_START__",
+      JSON.stringify({
+        bubbleId: "b_remote_merge_cleanup_invalid_01",
+        baseBranch: "main",
+        bubbleBranch: "bubble/b_remote_merge_cleanup_invalid_01",
+        artifacts: {
+          worktree: {
+            path: "/srv/pairflow/repo",
+            existed: true
+          },
+          tmux: {
+            existed: true
+          },
+          runtimeSession: {
+            path: "/srv/pairflow/repo/.pairflow/runtime/sessions.json",
+            existed: true
+          },
+          branch: {
+            name: "bubble/b_remote_merge_cleanup_invalid_01",
+            existed: true
+          }
+        },
+        runtimeSessionRemoved: true,
+        removedWorktree: true,
+        removedBubbleBranch: true
+      }),
+      "__PAIRFLOW_REMOTE_MERGE_CLEANUP_STDOUT_END__",
+      "__PAIRFLOW_REMOTE_MERGE_CLEANUP_STDERR_START__",
+      "",
+      "__PAIRFLOW_REMOTE_MERGE_CLEANUP_STDERR_END__"
+    ].join("\n");
+
+    await expect(
+      executeRemoteBubbleMergeCleanupCommand(
+        {
+          ...createMergeCleanupCommandInput(),
+          bubbleId: "b_remote_merge_cleanup_invalid_01",
+          bubbleBranch: "bubble/b_remote_merge_cleanup_invalid_01"
+        },
+        {
+          runCommand: vi.fn(async () => ({
+            stdout,
+            stderr: "",
+            exitCode: 0
+          }))
+        }
+      )
+    ).rejects.toMatchObject({
+      name: "RemoteBubbleMergeCommandError",
+      code: "REMOTE_MERGE_PAYLOAD_INVALID"
+    } satisfies Partial<RemoteBubbleMergeCommandError>);
+  });
+
+  it("preserves cleanup reason codes from stderr payloads", async () => {
+    const stdout = [
+      "__PAIRFLOW_REMOTE_MERGE_CLEANUP_EXIT_STATUS_START__",
+      "1",
+      "__PAIRFLOW_REMOTE_MERGE_CLEANUP_EXIT_STATUS_END__",
+      "__PAIRFLOW_REMOTE_MERGE_CLEANUP_STDOUT_START__",
+      "",
+      "__PAIRFLOW_REMOTE_MERGE_CLEANUP_STDOUT_END__",
+      "__PAIRFLOW_REMOTE_MERGE_CLEANUP_STDERR_START__",
+      "REMOTE_MERGE_CLEANUP_TARGET_MISSING: Missing remote clone path /srv/pairflow/repo",
+      "__PAIRFLOW_REMOTE_MERGE_CLEANUP_STDERR_END__"
+    ].join("\n");
+
+    await expect(
+      executeRemoteBubbleMergeCleanupCommand(createMergeCleanupCommandInput(), {
+        runCommand: vi.fn(async () => ({
+          stdout,
+          stderr: "",
+          exitCode: 0
+        }))
+      })
+    ).rejects.toMatchObject({
+      name: "RemoteBubbleMergeCommandError",
+      code: "REMOTE_MERGE_CLEANUP_TARGET_MISSING"
     } satisfies Partial<RemoteBubbleMergeCommandError>);
   });
 });
