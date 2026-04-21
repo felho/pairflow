@@ -31,7 +31,7 @@ Ujra-szekvencialni a runtime review policy munkat ugy, hogy:
    - mi az engedelyezett deterministic resolution path,
    - mi a missing-data behavior.
 4. A current next bounded step egyertelmu:
-   - egy frissen generalt Phase 1 foundation task,
+   - a Phase 1 merge utani kovetkezo task-spec,
    - a mar lezart `O2-T9` baseline megorzese mellett.
 
 ## Guiding Principles
@@ -83,28 +83,27 @@ Ujra-szekvencialni a runtime review policy munkat ugy, hogy:
    - a Phase 3A/3B taskok nem kezelhetik pending prerequisite-kent a mar preserved historical cutover baseline-t
    - a downstream taskok koncepcionalisan validak maradhatnak, de successor-scope-juk csak a Phase 1 current-tree re-anchoring utan tekintheto stabilnak
 
-## Current Codebase Check (2026-04-21)
+## Current Codebase Check (2026-04-21, post-merge)
 
-1. A checked-out `src`, `tests` es `ui` scope-ban tovabbra sincs `review_policy`, `review_loop_mode` vagy `meta_review_auto_rework_min_severity` runtime surface.
-2. A meta-review gate current tree-ben mar erosebb parity/observation baseline-en all:
-   - `validateStructuredMetaReviewPositiveClaim(...)`
-   - `MetaReviewRuntimeDeliveryObservation`
-   - same-round reviewer snapshot consistency consume
-   ez azonban nem egyenlo a plan altal igenyelt canonical `review_policy` surface-szel vagy egyetlen threshold-authority boundaryval.
-3. A korabbi taskokban szereplo `src/core/**` targetek a vegleges core retirement utan mar nem leteznek.
-4. A plan tovabbra is `draft`; egy korabbi Phase 1 foundation task draft szuletett, de current-tree szinten stale target-listas volt, ezert nem retained implementation input.
-5. A post-Phase-E actor-runtime successor lane current tree-ben mar lezart baseline; a runtime review policy lane-nek nem szabad ujranyitnia az archived `O2-T9` meta-review gate runtime-capability cleanupot.
-6. A current list/status pathok meg mindig kozvetlen current-tree entrypointokra epulnek:
-   - `src/v11/shared/list/listCommandEntryBuilder.ts`
-   - `src/v11/shared/list/listCommandApi.ts`
+1. A canonical `review_policy` config/runtime surface most mar jelen van a current `main`-on:
+   - `src/config/bubbleConfig.ts`
+   - `src/types/bubble.ts`
+   - `src/v11/shared/reviewPolicy/reviewPolicyRuntime.ts`
+   - `src/v11/shared/reviewPolicy/updateBubbleReviewPolicy.ts`
+2. A list/status consume family mar a kozos runtime-view builderre ul:
+   - `src/v11/shared/list/listCommandEntryProjection.ts`
    - `src/v11/shared/status/statusCommandViewBuilder.ts`
-   - `src/v11/shared/status/statusCommandApi.ts`
-   es a current tree-ben nincs meg elozoleg letezo `reviewPolicyRuntime` vagy `metaReviewGateThresholdAuthority` helper-surface, amihez a Phase 1 task "vissza tudna kotni".
-7. Ebbol kovetkezik, hogy a kovetkezo Phase 1 task target-file reality proofja csak meglevo entrypointokra epulhet; uj helper/extract fajl legfeljebb output lehet, nem elozetes scope-anchor.
-8. A current-tree `detail` consume jelenleg nem kulon backend Phase 1 entrypointkent latszik, hanem UI/router-presenter compositionkent:
+   Ez a Phase 1 read-model closuret lezart baseline-ne teszi, nem nyitott plan-gap.
+3. A pure threshold-authority boundary is letezik a current tree-ben:
+   - `src/v11/shared/metaReviewGate/metaReviewGateThresholdAuthority.ts`
+   A kovetkezo tasknak erre a merged authority surface-re kell epulnie, nem uj foundation seamet kell kitalalnia.
+4. A korabbi `src/core/**` targetek tovabbra sem relevansak; a lane current baseline-ja teljesen `src/v11/**`, `src/config/**`, `src/types/**`.
+5. A plan frontmattere tovabbra is `draft`; ettol a merged Phase 1 baseline valos, de a Phase 2 / Phase 3 artifactok hianya miatt a lane coverage meg nincs teljesen lezarva.
+6. A post-Phase-E actor-runtime successor lane current tree-ben mar lezart baseline; a runtime review policy lane-nek tovabbra sem szabad ujranyitnia az archived `O2-T9` meta-review gate runtime-capability cleanupot.
+7. A current-tree `detail` consume jelenleg tovabbra sem kulon backend Phase 2 entrypointkent latszik, hanem UI/router-presenter compositionkent:
    - `src/v11/infrastructure/ui/routerActions.ts`
    - `src/v11/infrastructure/ui/presenters/bubblePresenter.ts`
-   Ezert a `detail` nem kezelheto automatikus backend consume familykent a Phase 1 foundation slice-ban.
+   Ezert a `detail` a kovetkezo taskban sem kezelheto automatikus backend consume familykent explicit current-tree anchor nelkul.
 
 Sikernek az szamit, ha a kovetkezo kor mar nem egyetlen bubble-ben mozgatja egyszerre a policy schema-t, a threshold routingot, a human-gate envelope semantics-et, a runtime projection surface-eket, a recovery pathokat es a web UI/store reteget.
 
@@ -113,28 +112,20 @@ Sikernek az szamit, ha a kovetkezo kor mar nem egyetlen bubble-ben mozgatja egys
 ### Completed Work
 
 1. A wide-scope discovery bubble tanulsagai rogzitve lettek ebben a reset planben.
-2. A stale Phase 1 draftbol levont tanulsag:
-   a kovetkezo foundation taskot nem erdemes retargetelni in-place; friss taskgenerralas kell a mai topologyra.
-3. A current-tree adjacent actor-runtime baseline mar kulon successor lane-ben el:
+2. A stale Phase 1 draftbol levont tanulsag be lett epitve, es a replacement task current-tree topologyra lett ujrairva.
+3. A `runtime-review-policy-foundation-and-authority-refactor-phase1` task meg lett implementalva, merge-elve `main`-re, majd archivalva ide:
+   [runtime-review-policy-foundation-and-authority-refactor-phase1.md](/Users/felho/dev/pairflow/plans/archive/tasks/runtime-review-policy-foundation-and-authority-refactor-phase1.md)
+4. A current-tree adjacent actor-runtime baseline mar kulon successor lane-ben el:
    [actor-runtime-interface-post-phaseE-successor-plan-v1.md](/Users/felho/dev/pairflow/plans/actor-runtime-interface-post-phaseE-successor-plan-v1.md)
 
 ### Open Work
 
-1. A jelenlegi uj Phase 1 task meg nem approvable; refine-olni kell a mai `src/v11/**` topologyra.
-   - explicit current-tree anchorokkal:
-     `src/types/bubble.ts`
-     `src/config/bubbleConfig.ts`
-     `src/v11/shared/list/listCommandEntryBuilder.ts`
-     `src/v11/shared/list/listCommandApi.ts`
-     `src/v11/shared/status/statusCommandViewBuilder.ts`
-     `src/v11/shared/status/statusCommandApi.ts`
-     es a meglevo `src/v11/shared/metaReviewGate/**` parity/report helper csalad
-   - uj helper/extract fajl tovabbra is output lehet, nem bemeneti scope-anchor
-2. A planbol hianyzo Phase 2 / Phase 3A / Phase 3B task artifactok letrehozasa, de csak a Phase 1 task current-tree reality proofja utan.
+1. A Phase 2 task-spec mar letezik itt:
+   [runtime-review-policy-auto-rework-threshold-phase2.md](/Users/felho/dev/pairflow/plans/tasks/runtime-review-policy-auto-rework-threshold-phase2.md)
+2. A Phase 3A / Phase 3B task artifactok letrehozasa tovabbra is hianyzik coverage-szinten.
 3. A canonical control-model orokles explicit bevezetese a downstream taskokba.
 4. A downstream taskok dependency wordingje nem allithat `approved` parent-plan baseline-t, amig ennek a plannek a frontmatter statusza `draft`.
-5. A downstream Phase 2 / Phase 3 taskok koncepcionalisan maradhatnak, es a jelenlegi split-logika szerint tovabbra is validak.
-6. Ettol fuggetlenul a downstream taskok successor baseline-ja csak a Phase 1 current-tree re-anchoring utan tekintheto stabilnak.
+5. A downstream Phase 2 / Phase 3 taskok koncepcionalisan maradhatnak, de most mar a merged Phase 1 baseline-re kell hivatkozniuk, nem a reset-elotti gapre.
 
 ### Deferred / Future Work
 
@@ -143,20 +134,26 @@ Sikernek az szamit, ha a kovetkezo kor mar nem egyetlen bubble-ben mozgatja egys
 
 ## Immediate Next Step
 
-1. A current next bounded step a jelenlegi uj Phase 1 foundation task refine-ja; nem ujabb spekulativ helper-first draft generalasa.
+1. A current next bounded step a Phase 2 task-spec review-ja es bubble-inditasra kesz implementacios baseline-je:
+   [runtime-review-policy-auto-rework-threshold-phase2.md](/Users/felho/dev/pairflow/plans/tasks/runtime-review-policy-auto-rework-threshold-phase2.md)
    - authoring rule:
-     a bounded slice proofnak a jelenlegi entrypointokbol kell kiindulnia; az uj helper/extract fajlok csak implementation outputkent nevezhetok meg.
-     A consume-family scope-proof nem allhat meg builder-szinten; a mai list/status API entrypointokat is meg kell neveznie, ha azok mar a current-tree consume boundary reszei.
+     a task a merged Phase 1 authority/projection baseline-re epuljon, kulonosen:
+     `src/v11/shared/metaReviewGate/metaReviewGateThresholdAuthority.ts`,
+     `src/v11/shared/reviewPolicy/reviewPolicyRuntime.ts`,
+     `src/v11/shared/metaReviewGate/metaReviewGateCurrentRunFinalization.ts`,
+     `src/v11/shared/metaReviewGate/metaReviewGateHumanGatePersistence.ts`,
+     `src/v11/shared/metaReviewGate/approvalRequestEnvelope.ts`
+   - scope rule:
+     ez threshold delivery task legyen, ne uj foundation refactor.
+     A routing/human-gate payload alignment ownershipolhato, de bypass contract vagy szeles UI/control surface meg nem.
    - current-tree read-model note:
-     a kotelezo backend consume family jelenleg biztosan `list/status`;
-     `detail` csak akkor maradhat Phase 1 scope-ban, ha a task explicit current-tree entrypointot nevez meg hozza.
-     A jelenlegi tree alapjan a `detail` inkabb UI/router-presenter compose family, nem implicit backend projection boundary.
-2. Az archived `O2-T9` current-tree preserved baseline; a Phase 1 tasknak erre epulnie kell, es nem szabad ugyanazt a runtime-capability cleanupot ujranyitnia.
+     a kotelezo consume family tovabbra is minimum `list/status`, de `detail` csak explicit entrypointtal ownershipolhato.
+2. Az archived `O2-T9` current-tree preserved baseline marad; a Phase 2 tasknak erre es a merged Phase 1 baseline-re kell epulnie, es nem szabad runtime-capability cleanupot vagy bypass-aktivaciot opportunistikusan visszahoznia.
 
 ## Decision Baseline
 
-1. A `review-policy-runtime-surface-phase1` bubble tanulasi artifact. Nem delivery baseline, nem incremental merge-jelolt.
-2. A kovetkezo implementacios kor clean `main`-rol induljon, uj bubble(k)ben.
+1. A resetet kivalto `review-policy-runtime-surface-phase1` bubble tovabbra is tanulasi artifact; a delivery baseline most mar a merge-elt es archivalt Phase 1 task.
+2. A kovetkezo implementacios kor clean `main`-rol induljon, uj bubble-ben.
 3. A ket funkcio kozos ernyoje tovabbra is a shared `runtime review policy` surface:
    - `review_loop_mode = full | meta_only`
    - `meta_review_auto_rework_min_severity = P1 | P2 | P3`
@@ -263,6 +260,8 @@ Ez a kombinacio tul sok helyen nyitott ownership-kerdest egyszerre.
    - non-goal:
      - bypass contract
      - nagy UI/control surface
+   - current status:
+     a spec-file mar letezik; a kovetkezo lepes a bubble-scoped implementacio.
 
 3. `plans/tasks/runtime-review-policy-reviewer-bypass-contract-phase3a.md`
    - cel: bypass policy/config/UI/provenance contract specifikalasa behavior nelkul
