@@ -29,17 +29,13 @@ export interface ExecuteAutoConvergeConvergedDependencies {
     dependencies?: EmitConvergedDependencies
   ) => Promise<EmitConvergedResult>;
   emitDeliveryNotificationAck?: EmitConvergedDependencies["emitDeliveryNotificationAck"];
-  emitTmuxDeliveryNotification?: EmitConvergedDependencies["emitTmuxDeliveryNotification"];
   emitBubbleNotification?: EmitConvergedDependencies["emitBubbleNotification"];
 }
 
 function resolveAutoConvergeDeliveryOverride(
   dependencies: ExecuteAutoConvergeConvergedDependencies
 ): EmitConvergedDependencies["emitDeliveryNotificationAck"] | undefined {
-  return (
-    dependencies.emitDeliveryNotificationAck
-    ?? dependencies.emitTmuxDeliveryNotification
-  );
+  return dependencies.emitDeliveryNotificationAck;
 }
 
 export async function executeAutoConvergeConverged(

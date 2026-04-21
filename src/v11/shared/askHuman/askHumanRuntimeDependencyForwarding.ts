@@ -6,14 +6,11 @@ import type {
 export function forwardAskHumanRuntimeNotificationDependencies(
   dependencies: AskHumanRuntimeNotificationDependencies
 ): ForwardedAskHumanRuntimeNotificationDependencies {
-  const emitDeliveryNotificationAck =
-    dependencies.emitDeliveryNotificationAck
-    ?? dependencies.emitTmuxDeliveryNotification;
-
   return {
-    ...(emitDeliveryNotificationAck !== undefined
+    ...(dependencies.emitDeliveryNotificationAck !== undefined
       ? {
-          emitDeliveryNotificationAck
+          emitDeliveryNotificationAck:
+            dependencies.emitDeliveryNotificationAck
         }
       : {}),
     ...(dependencies.emitBubbleNotification !== undefined

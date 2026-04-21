@@ -162,7 +162,7 @@ function writePassResult(
       `PASS recorded for ${result.bubbleId}: ${result.envelope.id} -> ${result.envelope.recipient} (reason=${result.repeatCleanReasonCode})\n`;
   }
   process.stdout.write(outputLine);
-  if (result.delivery !== undefined && !result.delivery.delivered) {
+  if (result.delivery !== undefined && result.delivery.status !== "accepted") {
     const guidance =
       result.transitionDecision === "auto_converge"
         ? `Use \`pairflow bubble status --id ${result.bubbleId}\` to inspect approval state, then \`pairflow bubble approve --id ${result.bubbleId}\`, \`pairflow bubble request-rework --id ${result.bubbleId}\`, or \`pairflow bubble reply --id ${result.bubbleId}\` as appropriate.`
@@ -224,7 +224,7 @@ function writeConvergedResult(
   process.stdout.write(
     `CONVERGENCE recorded for ${result.bubbleId}: ${result.convergenceEnvelope.id}; ${handoffDescription}\n`
   );
-  if (result.delivery !== undefined && !result.delivery.delivered) {
+  if (result.delivery !== undefined && result.delivery.status !== "accepted") {
     const guidance =
       result.approvalRequestEnvelope.type === "APPROVAL_REQUEST"
         ? `Use \`pairflow bubble status --id ${result.bubbleId}\` to inspect approval state, then \`pairflow bubble approve --id ${result.bubbleId}\`, \`pairflow bubble request-rework --id ${result.bubbleId}\`, or \`pairflow bubble reply --id ${result.bubbleId}\` as appropriate.`

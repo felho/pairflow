@@ -53,7 +53,7 @@ describe("askHumanFlowInvocationBuilders", () => {
         ({
           kind: "waiting-human",
           attempted: false,
-          delivered: false,
+          status: "rejected",
           soundPath: null,
           reason: "disabled"
         }) as never
@@ -62,7 +62,7 @@ describe("askHumanFlowInvocationBuilders", () => {
     expect(dependencies.executeAskHumanExecution).toBeTypeOf("function");
     expect(dependencies.finalizeAskHumanFlow).toBeTypeOf("function");
     expect(dependencies.emitBubbleNotification).toBeTypeOf("function");
-    expect("emitTmuxDeliveryNotification" in dependencies).toBe(false);
+    expect("emitDeliveryNotificationAck" in dependencies).toBe(false);
     expect("appendProtocolEnvelope" in dependencies).toBe(false);
     expect("writeStateSnapshot" in dependencies).toBe(false);
     expect("applyStateTransition" in dependencies).toBe(false);
@@ -83,11 +83,11 @@ describe("askHumanFlowInvocationBuilders", () => {
           state: {},
           inferredRecipient: "human"
         }) as never,
-      emitTmuxDeliveryNotification: undefined,
+      emitDeliveryNotificationAck: undefined,
       emitBubbleNotification: undefined
     });
 
-    expect("emitTmuxDeliveryNotification" in dependencies).toBe(false);
+    expect("emitDeliveryNotificationAck" in dependencies).toBe(false);
     expect("emitBubbleNotification" in dependencies).toBe(false);
   });
 });

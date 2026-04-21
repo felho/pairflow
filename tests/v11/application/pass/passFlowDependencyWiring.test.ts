@@ -62,27 +62,24 @@ describe("passFlowDependencyWiring", () => {
     });
   });
 
-  it("keeps the legacy delivery override wired as a compatibility alias", async () => {
+  it("forwards the canonical delivery override into normal pass wiring", async () => {
     buildNormalPassFlowDependencies.mockReturnValue({ kind: "normal-deps" });
 
     const { createNormalPassFlowDependencies } = await import(
       "../../../../src/v11/application/pass/passFlowDependencyWiring.js"
     );
 
-    const emitTmuxDeliveryNotification = (() => undefined) as never;
+    const emitDeliveryNotificationAck = (() => undefined) as never;
     createNormalPassFlowDependencies({
-      emitTmuxDeliveryNotification
+      emitDeliveryNotificationAck
     });
 
     expect(buildNormalPassFlowDependencies.mock.calls[0]?.[0]).toMatchObject({
-      emitDeliveryNotificationAck: emitTmuxDeliveryNotification
+      emitDeliveryNotificationAck: emitDeliveryNotificationAck
     });
-    expect(buildNormalPassFlowDependencies.mock.calls[0]?.[0]).not.toHaveProperty(
-      "emitTmuxDeliveryNotification"
-    );
   });
 
-  it("prefers the canonical delivery override when both pass wiring keys are provided", async () => {
+  it("forwards the canonical delivery override into pass wiring", async () => {
     buildAutoConvergeFlowDependencies.mockReturnValue({ kind: "auto-deps" });
 
     const { createAutoConvergeFlowDependencies } = await import(
@@ -90,18 +87,13 @@ describe("passFlowDependencyWiring", () => {
     );
 
     const emitDeliveryNotificationAck = (() => undefined) as never;
-    const emitTmuxDeliveryNotification = (() => undefined) as never;
 
     createAutoConvergeFlowDependencies({
-      emitDeliveryNotificationAck,
-      emitTmuxDeliveryNotification
+      emitDeliveryNotificationAck
     });
 
     expect(buildAutoConvergeFlowDependencies.mock.calls[0]?.[0]).toMatchObject({
       emitDeliveryNotificationAck
     });
-    expect(buildAutoConvergeFlowDependencies.mock.calls[0]?.[0]).not.toHaveProperty(
-      "emitTmuxDeliveryNotification"
-    );
   });
 });

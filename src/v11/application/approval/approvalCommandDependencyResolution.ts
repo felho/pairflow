@@ -13,7 +13,7 @@ import type {
   ReadTranscriptEnvelopesPort
 } from "../../shared/ports/transcript.js";
 import type {
-  EmitDeliveryAckLikePort,
+  EmitDeliveryNotificationAckPort,
   ResolveDeliveryMessageRefPort
 } from "../../shared/ports/tmuxDelivery.js";
 import type {
@@ -26,8 +26,7 @@ export interface ApprovalCommandDependencies {
   appendProtocolEnvelope?: AppendProtocolEnvelopePort;
   applyStateTransition?: typeof applyStateTransition;
   emitBubbleLifecycleEventBestEffort?: typeof emitBubbleLifecycleEventBestEffort;
-  emitDeliveryNotificationAck?: EmitDeliveryAckLikePort;
-  emitTmuxDeliveryNotification?: EmitDeliveryAckLikePort;
+  emitDeliveryNotificationAck?: EmitDeliveryNotificationAckPort;
   executeRemoteBubbleApprovalCommand?: ExecuteRemoteBubbleApprovalCommandPort;
   ensureBubbleInstanceIdForMutation?: EnsureBubbleInstanceIdForMutationPort;
   queueDeferredReworkIntent?: typeof queueDeferredReworkIntent;
@@ -43,7 +42,7 @@ export interface ApprovalCommandDependencies {
 
 export interface ApprovalCommandDefaultDependencies {
   appendProtocolEnvelope: AppendProtocolEnvelopePort;
-  emitDeliveryNotificationAck: EmitDeliveryAckLikePort;
+  emitDeliveryNotificationAck: EmitDeliveryNotificationAckPort;
   executeRemoteBubbleApprovalCommand: ExecuteRemoteBubbleApprovalCommandPort;
   ensureBubbleInstanceIdForMutation: EnsureBubbleInstanceIdForMutationPort;
   readRemotePointer: (path: string) => Promise<BubbleRemotePointer | null>;
@@ -60,7 +59,7 @@ export interface ResolvedApprovalCommandDependencies {
   appendProtocolEnvelope: AppendProtocolEnvelopePort;
   applyStateTransition: typeof applyStateTransition;
   emitBubbleLifecycleEventBestEffort: typeof emitBubbleLifecycleEventBestEffort;
-  emitDeliveryNotificationAck: EmitDeliveryAckLikePort;
+  emitDeliveryNotificationAck: EmitDeliveryNotificationAckPort;
   executeRemoteBubbleApprovalCommand: ExecuteRemoteBubbleApprovalCommandPort;
   ensureBubbleInstanceIdForMutation: EnsureBubbleInstanceIdForMutationPort;
   queueDeferredReworkIntent: typeof queueDeferredReworkIntent;
@@ -87,7 +86,6 @@ export function resolveApprovalCommandDependencies(
       ?? emitBubbleLifecycleEventBestEffort,
     emitDeliveryNotificationAck:
       dependencies.emitDeliveryNotificationAck
-      ?? dependencies.emitTmuxDeliveryNotification
       ?? defaults.emitDeliveryNotificationAck,
     executeRemoteBubbleApprovalCommand:
       dependencies.executeRemoteBubbleApprovalCommand

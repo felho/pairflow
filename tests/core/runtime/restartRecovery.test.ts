@@ -366,7 +366,7 @@ describe("restart recovery", () => {
     if (result === null || result.kind !== "human_question") {
       throw new Error("Expected human_question result.");
     }
-    expect(result.human_question.delivery?.delivered).toBe(false);
+    expect(result.human_question.delivery?.status).toBe("rejected");
   });
 
   it(
@@ -514,8 +514,9 @@ describe("restart recovery", () => {
 
     const emitDelivery = () =>
       Promise.resolve({
-        delivered: true,
+        status: "accepted" as const,
         sessionName: "pf-b_restart_meta_submit_smoke_01",
+        targetPaneIndex: 1,
         message: "ok"
       });
 
@@ -524,7 +525,7 @@ describe("restart recovery", () => {
       cwd: bubble.paths.worktreePath,
       now: new Date("2026-02-23T13:01:00.000Z")
     }, {
-      emitTmuxDeliveryNotification: () => emitDelivery(),
+      emitDeliveryNotificationAck: () => emitDelivery(),
       refreshReviewerContext: () => Promise.resolve({ refreshed: false })
     });
     await emitPassFromWorkspace({
@@ -533,7 +534,7 @@ describe("restart recovery", () => {
       cwd: bubble.paths.worktreePath,
       now: new Date("2026-02-23T13:02:00.000Z")
     }, {
-      emitTmuxDeliveryNotification: () => emitDelivery(),
+      emitDeliveryNotificationAck: () => emitDelivery(),
       refreshReviewerContext: () => Promise.resolve({ refreshed: false })
     });
     await emitPassFromWorkspace({
@@ -541,7 +542,7 @@ describe("restart recovery", () => {
       cwd: bubble.paths.worktreePath,
       now: new Date("2026-02-23T13:03:00.000Z")
     }, {
-      emitTmuxDeliveryNotification: () => emitDelivery(),
+      emitDeliveryNotificationAck: () => emitDelivery(),
       refreshReviewerContext: () => Promise.resolve({ refreshed: false })
     });
 
@@ -561,7 +562,7 @@ describe("restart recovery", () => {
               message: "meta-reviewer pane exited after durable kickoff"
             })
           }),
-        emitTmuxDeliveryNotification: () => emitDelivery(),
+        emitDeliveryNotificationAck: () => emitDelivery(),
         emitBubbleNotification: async (_config, kind) => ({
           kind,
           attempted: false,

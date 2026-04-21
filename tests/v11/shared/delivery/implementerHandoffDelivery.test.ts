@@ -66,13 +66,14 @@ describe("implementerHandoffDelivery", () => {
         calls.push(input);
         if (calls.length === 1) {
           return {
-            delivered: false,
+            status: "rejected" as const,
             message: "unconfirmed",
-            reason: "delivery_unconfirmed"
+            reason: "delivery_unconfirmed",
+            reason_code: "DELIVERY_ACK_REJECTED" as const
           };
         }
         return {
-          delivered: true,
+          status: "accepted" as const,
           message: "ok",
           sessionName: "pf_bubble",
           targetPaneIndex: 1
@@ -106,7 +107,7 @@ describe("implementerHandoffDelivery", () => {
           throw new Error("transport exploded");
         }
         return {
-          delivered: true,
+          status: "accepted" as const,
           message: "retry recovered",
           sessionName: "pf_bubble",
           targetPaneIndex: 1
@@ -134,9 +135,10 @@ describe("implementerHandoffDelivery", () => {
         calls.push(input);
         if (calls.length === 1) {
           return {
-            delivered: false,
+            status: "rejected" as const,
             message: "first attempt unconfirmed",
-            reason: "delivery_unconfirmed"
+            reason: "delivery_unconfirmed",
+            reason_code: "DELIVERY_ACK_REJECTED" as const
           };
         }
         throw new Error("retry transport exploded");
@@ -166,7 +168,7 @@ describe("implementerHandoffDelivery", () => {
       emitDelivery: async (input) => {
         calls.push(input);
         return {
-          delivered: true,
+          status: "accepted" as const,
           message: "ok",
           sessionName: "pf_bubble",
           targetPaneIndex: 1
@@ -181,35 +183,35 @@ describe("implementerHandoffDelivery", () => {
   it("retries only retryable failure reasons", () => {
     expect(
       shouldRetryImplementerHandoffDelivery({
-        delivered: false,
+        status: "rejected",
         message: "",
         reason: "delivery_unconfirmed"
       })
     ).toBe(true);
     expect(
       shouldRetryImplementerHandoffDelivery({
-        delivered: false,
+        status: "rejected",
         message: "",
         reason: "tmux_send_failed"
       })
     ).toBe(true);
     expect(
       shouldRetryImplementerHandoffDelivery({
-        delivered: false,
+        status: "rejected",
         message: "",
         reason: "registry_read_failed"
       })
     ).toBe(false);
     expect(
       shouldRetryImplementerHandoffDelivery({
-        delivered: false,
+        status: "rejected",
         message: "",
         reason: "unsupported_recipient"
       })
     ).toBe(false);
     expect(
       shouldRetryImplementerHandoffDelivery({
-        delivered: false,
+        status: "rejected",
         message: "",
         reason: "no_runtime_session"
       })

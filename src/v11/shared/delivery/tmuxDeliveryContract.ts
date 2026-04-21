@@ -46,8 +46,9 @@ export type TmuxDeliveryAckStatus = DeliveryAckStatus;
 
 export interface AcceptedDeliveryAck {
   status: "accepted";
-  sessionName: string;
-  targetPaneIndex: number;
+  delivered?: true;
+  sessionName?: string;
+  targetPaneIndex?: number;
   message: string;
   deliveryTargetReasonCode?: DeliveryTargetReasonCode;
   reason?: never;
@@ -58,9 +59,10 @@ export type AcceptedTmuxDeliveryAck = AcceptedDeliveryAck;
 
 export interface RejectedDeliveryAck {
   status: "rejected";
+  delivered?: false;
   message: string;
-  reason: DeliveryFailureReason;
-  reason_code: DeliveryAckReasonCode;
+  reason?: DeliveryFailureReason;
+  reason_code?: DeliveryAckReasonCode;
   sessionName?: string;
   targetPaneIndex?: number;
   deliveryTargetReasonCode?: DeliveryTargetReasonCode;

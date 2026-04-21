@@ -39,10 +39,7 @@ export interface PassFlowRuntimeDependencies extends PassDeliveryDependencies {
 function resolvePassFlowDeliveryOverride(
   runtimeDependencies: PassFlowRuntimeDependencies
 ): PassDeliveryDependencies["emitDeliveryNotificationAck"] | undefined {
-  return (
-    runtimeDependencies.emitDeliveryNotificationAck
-    ?? runtimeDependencies.emitTmuxDeliveryNotification
-  );
+  return runtimeDependencies.emitDeliveryNotificationAck;
 }
 
 export function createPassRoutingDependencies(

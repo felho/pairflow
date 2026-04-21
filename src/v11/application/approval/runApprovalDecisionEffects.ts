@@ -13,7 +13,6 @@ import type {
   ApprovalDecisionDeliverySignalsResult
 } from "./approvalCommandContract.js";
 import type { DeliveryAck } from "../../shared/ports/tmuxDelivery.js";
-import { normalizeDeliveryAck } from "../../shared/delivery/deliveryAckNormalization.js";
 
 type ApprovalDecisionFlowShape = Pick<
   NormalizedApprovalDecisionInput,
@@ -72,7 +71,6 @@ function projectDeliveryAckToLegacyResult(
   if (deliveryAck.status === "accepted") {
     return {
       status: deliveryAck.status,
-      delivered: true,
       message: deliveryAck.message,
       ...(deliveryAck.sessionName !== undefined
         ? { sessionName: deliveryAck.sessionName }
@@ -88,7 +86,6 @@ function projectDeliveryAckToLegacyResult(
 
   return {
     status: deliveryAck.status,
-    delivered: false,
     ...(deliveryAck.sessionName !== undefined
       ? { sessionName: deliveryAck.sessionName }
       : {}),
@@ -118,7 +115,7 @@ export async function emitApprovalDecisionDeliverySignals(input: {
     sessionsPath: input.resolved.bubblePaths.sessionsPath,
     envelope: input.appendedEnvelope,
     messageRef: input.messageRef
-  }).then(normalizeDeliveryAck).catch(() =>
+  }).catch(() =>
     buildFallbackDeliveryResult(
       `Failed to deliver approval decision ${input.appendedEnvelope.id} to status pane.`
     )
@@ -153,7 +150,7 @@ export async function emitApprovalDecisionDeliverySignals(input: {
       }
     },
     messageRef: input.messageRef
-  }).then(normalizeDeliveryAck).catch(() =>
+  }).catch(() =>
     buildFallbackDeliveryResult(
       `Failed to deliver approval decision ${input.appendedEnvelope.id} to implementer pane.`
     )

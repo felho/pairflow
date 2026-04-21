@@ -585,7 +585,7 @@ describe("emitDeliveryNotificationAck", () => {
 
 describe("tmux delivery T6 runtime observability baseline", () => {
   it("keeps pane visibility and marker/session inspection diagnostics-only without an explicit accepted ack", async () => {
-    // Helper-level T6 coverage. The facade-level emitTmuxDeliveryNotification
+    // Helper-level T6 coverage. The facade-level emitDeliveryNotificationAck
     // scenario later in this file proves the same baseline through the public
     // delivery surface so the two tests stay intentionally complementary.
     const calls: string[][] = [];
@@ -663,7 +663,7 @@ describe("tmux delivery T6 runtime observability baseline", () => {
   });
 });
 
-describe("emitTmuxDeliveryNotification", () => {
+describe("emitDeliveryNotificationAck", () => {
   it("mentions meta-reviewer gate context for approval requests tagged with actor metadata", async () => {
     const calls: string[][] = [];
     const runner: TmuxRunner = (args): Promise<TmuxRunResult> => {
@@ -683,7 +683,7 @@ describe("emitTmuxDeliveryNotification", () => {
       });
     };
 
-    const result = await emitTmuxDeliveryNotification({
+    const result = await emitDeliveryNotificationAck({
       bubbleId: "b_delivery_01",
       bubbleConfig: baseConfig,
       sessionsPath: "/tmp/repo/.pairflow/runtime/sessions.json",
@@ -707,7 +707,7 @@ describe("emitTmuxDeliveryNotification", () => {
       deliveryAttempts: 2
     });
 
-    expect(result.delivered).toBe(true);
+    expect(result.status).toBe("accepted");
     const messageCall = calls.find(
       (call) =>
         call[0] === "send-keys" &&
@@ -739,7 +739,7 @@ describe("emitTmuxDeliveryNotification", () => {
       });
     };
 
-    const result = await emitTmuxDeliveryNotification({
+    const result = await emitDeliveryNotificationAck({
       bubbleId: "b_delivery_01",
       bubbleConfig: createSharedAgentConfig("codex"),
       sessionsPath: "/tmp/repo/.pairflow/runtime/sessions.json",
@@ -760,7 +760,7 @@ describe("emitTmuxDeliveryNotification", () => {
       readSessionsRegistry: () => Promise.resolve(createRegistry())
     });
 
-    expect(result.delivered).toBe(true);
+    expect(result.status).toBe("accepted");
     expect(result.targetPaneIndex).toBe(3);
     expect(
       calls.some((call) => call[0] === "send-keys" && call[2] === "pf-b_delivery_01:0.3")
@@ -809,7 +809,7 @@ describe("emitTmuxDeliveryNotification", () => {
       });
     };
 
-    const result = await emitTmuxDeliveryNotification({
+    const result = await emitDeliveryNotificationAck({
       bubbleId: "b_delivery_01",
       bubbleConfig: createSharedAgentConfig("codex"),
       sessionsPath: "/tmp/repo/.pairflow/runtime/sessions.json",
@@ -828,7 +828,7 @@ describe("emitTmuxDeliveryNotification", () => {
       readSessionsRegistry: () => Promise.resolve(createRegistry())
     });
 
-    expect(result.delivered).toBe(true);
+    expect(result.status).toBe("accepted");
     expect(result.targetPaneIndex).toBe(1);
     expect(result.deliveryTargetReasonCode).toBe("DELIVERY_TARGET_ROLE_INVALID");
     expect(
@@ -861,7 +861,7 @@ describe("emitTmuxDeliveryNotification", () => {
         });
       };
 
-      const result = await emitTmuxDeliveryNotification({
+      const result = await emitDeliveryNotificationAck({
         bubbleId: "b_delivery_01",
         bubbleConfig: createSharedAgentConfig("codex"),
         sessionsPath: "/tmp/repo/.pairflow/runtime/sessions.json",
@@ -882,7 +882,7 @@ describe("emitTmuxDeliveryNotification", () => {
         readSessionsRegistry: () => Promise.resolve(createRegistry())
       });
 
-      expect(result.delivered).toBe(true);
+      expect(result.status).toBe("accepted");
       expect(result.targetPaneIndex).toBe(1);
       expect(result.deliveryTargetReasonCode).toBe("DELIVERY_TARGET_ROLE_UNMAPPED");
       expect(
@@ -912,7 +912,7 @@ describe("emitTmuxDeliveryNotification", () => {
       });
     };
 
-    const result = await emitTmuxDeliveryNotification({
+    const result = await emitDeliveryNotificationAck({
       bubbleId: "b_delivery_01",
       bubbleConfig: createSharedAgentConfig("claude"),
       sessionsPath: "/tmp/repo/.pairflow/runtime/sessions.json",
@@ -931,7 +931,7 @@ describe("emitTmuxDeliveryNotification", () => {
       readSessionsRegistry: () => Promise.resolve(createRegistry())
     });
 
-    expect(result.delivered).toBe(true);
+    expect(result.status).toBe("accepted");
     expect(result.targetPaneIndex).toBe(2);
     expect(
       calls.some((call) => call[0] === "send-keys" && call[2] === "pf-b_delivery_01:0.2")
@@ -957,7 +957,7 @@ describe("emitTmuxDeliveryNotification", () => {
       });
     };
 
-    const result = await emitTmuxDeliveryNotification({
+    const result = await emitDeliveryNotificationAck({
       bubbleId: "b_delivery_01",
       bubbleConfig: createSharedAgentConfig("codex"),
       sessionsPath: "/tmp/repo/.pairflow/runtime/sessions.json",
@@ -979,7 +979,7 @@ describe("emitTmuxDeliveryNotification", () => {
       readSessionsRegistry: () => Promise.resolve(createRegistry())
     });
 
-    expect(result.delivered).toBe(true);
+    expect(result.status).toBe("accepted");
     expect(result.targetPaneIndex).toBe(2);
     expect(
       calls.some((call) => call[0] === "send-keys" && call[2] === "pf-b_delivery_01:0.2")
@@ -1012,7 +1012,7 @@ describe("emitTmuxDeliveryNotification", () => {
       verification_status: "trusted"
     };
 
-    const result = await emitTmuxDeliveryNotification({
+    const result = await emitDeliveryNotificationAck({
       bubbleId: "b_delivery_01",
       bubbleConfig: {
         ...baseConfig,
@@ -1033,7 +1033,7 @@ describe("emitTmuxDeliveryNotification", () => {
       deliveryAttempts: 2
     });
 
-    expect(result.delivered).toBe(true);
+    expect(result.status).toBe("accepted");
     expect(result.sessionName).toBe("pf-b_delivery_01");
     expect(result.targetPaneIndex).toBe(2);
     expect(result.deliveryTargetReasonCode).toBe("DELIVERY_TARGET_ROLE_ABSENT");
@@ -1182,7 +1182,7 @@ describe("emitTmuxDeliveryNotification", () => {
       });
     };
 
-    const result = await emitTmuxDeliveryNotification({
+    const result = await emitDeliveryNotificationAck({
       bubbleId: "b_delivery_01",
       bubbleConfig: {
         ...baseConfig,
@@ -1200,7 +1200,7 @@ describe("emitTmuxDeliveryNotification", () => {
       deliveryAttempts: 2
     });
 
-    expect(result.delivered).toBe(true);
+    expect(result.status).toBe("accepted");
     const messageCall = calls.find(
       (call) =>
         call[0] === "send-keys" &&
@@ -1234,7 +1234,7 @@ describe("emitTmuxDeliveryNotification", () => {
       });
     };
 
-    const result = await emitTmuxDeliveryNotification({
+    const result = await emitDeliveryNotificationAck({
       bubbleId: "b_delivery_01",
       bubbleConfig: baseConfig,
       sessionsPath: "/tmp/repo/.pairflow/runtime/sessions.json",
@@ -1250,7 +1250,7 @@ describe("emitTmuxDeliveryNotification", () => {
       readSessionsRegistry: () => Promise.resolve(createRegistry())
     });
 
-    expect(result.delivered).toBe(true);
+    expect(result.status).toBe("accepted");
     expect(result.sessionName).toBe("pf-b_delivery_01");
     expect(result.targetPaneIndex).toBe(2);
     expect(result.message).toContain(
@@ -1259,9 +1259,9 @@ describe("emitTmuxDeliveryNotification", () => {
     expect(result).not.toHaveProperty("reason");
     expect(result).not.toHaveProperty("reason_code");
     expect(Object.keys(result).sort()).toEqual([
-      "delivered",
       "message",
       "sessionName",
+      "status",
       "targetPaneIndex"
     ]);
   });
@@ -1283,7 +1283,7 @@ describe("emitTmuxDeliveryNotification", () => {
       });
     };
 
-    const result = await emitTmuxDeliveryNotification({
+    const result = await emitDeliveryNotificationAck({
       bubbleId: "b_delivery_01",
       bubbleConfig: baseConfig,
       sessionsPath: "/tmp/repo/.pairflow/runtime/sessions.json",
@@ -1300,7 +1300,7 @@ describe("emitTmuxDeliveryNotification", () => {
       deliveryAttempts: 1
     });
 
-    expect(result.delivered).toBe(false);
+    expect(result.status).toBe("rejected");
     expect(result.sessionName).toBe("pf-b_delivery_01");
     expect(result.targetPaneIndex).toBe(2);
     expect(result.message).toContain(
@@ -1335,7 +1335,7 @@ describe("emitTmuxDeliveryNotification", () => {
       verification_status: "trusted"
     };
 
-    await emitTmuxDeliveryNotification({
+    await emitDeliveryNotificationAck({
       bubbleId: "b_delivery_01",
       bubbleConfig: {
         ...baseConfig,
@@ -1391,7 +1391,7 @@ describe("emitTmuxDeliveryNotification", () => {
       });
     };
 
-    await emitTmuxDeliveryNotification({
+    await emitDeliveryNotificationAck({
       bubbleId: "b_delivery_01",
       bubbleConfig: {
         ...baseConfig,
@@ -1479,7 +1479,7 @@ describe("emitTmuxDeliveryNotification", () => {
       });
     };
 
-    await emitTmuxDeliveryNotification({
+    await emitDeliveryNotificationAck({
       bubbleId: "b_delivery_01",
       bubbleConfig: {
         ...baseConfig,
@@ -1529,7 +1529,7 @@ describe("emitTmuxDeliveryNotification", () => {
       });
     };
 
-    await emitTmuxDeliveryNotification({
+    await emitDeliveryNotificationAck({
       bubbleId: "b_delivery_01",
       bubbleConfig: {
         ...baseConfig,
@@ -1591,7 +1591,7 @@ describe("emitTmuxDeliveryNotification", () => {
       });
     };
 
-    await emitTmuxDeliveryNotification({
+    await emitDeliveryNotificationAck({
       bubbleId: "b_delivery_01",
       bubbleConfig: {
         ...baseConfig,
@@ -1605,7 +1605,7 @@ describe("emitTmuxDeliveryNotification", () => {
       runner,
       readSessionsRegistry: () => Promise.resolve(createRegistry())
     });
-    await emitTmuxDeliveryNotification({
+    await emitDeliveryNotificationAck({
       bubbleId: "b_delivery_01",
       bubbleConfig: {
         ...baseConfig,
@@ -1680,7 +1680,7 @@ describe("emitTmuxDeliveryNotification", () => {
       });
     };
 
-    await emitTmuxDeliveryNotification({
+    await emitDeliveryNotificationAck({
       bubbleId: "b_delivery_01",
       bubbleConfig: {
         ...baseConfig,
@@ -1696,7 +1696,7 @@ describe("emitTmuxDeliveryNotification", () => {
       readSessionsRegistry: () => Promise.resolve(createRegistry())
     });
 
-    await emitTmuxDeliveryNotification({
+    await emitDeliveryNotificationAck({
       bubbleId: "b_delivery_01",
       bubbleConfig: {
         ...baseConfig,
@@ -1765,7 +1765,7 @@ describe("emitTmuxDeliveryNotification", () => {
       });
     };
 
-    await emitTmuxDeliveryNotification({
+    await emitDeliveryNotificationAck({
       bubbleId: "b_delivery_01",
       bubbleConfig: {
         ...baseConfig,
@@ -1853,7 +1853,7 @@ describe("emitTmuxDeliveryNotification", () => {
       });
     };
 
-    await emitTmuxDeliveryNotification({
+    await emitDeliveryNotificationAck({
       bubbleId: "b_delivery_01",
       bubbleConfig: {
         ...baseConfig,
@@ -1896,7 +1896,7 @@ describe("emitTmuxDeliveryNotification", () => {
       });
     };
 
-    const result = await emitTmuxDeliveryNotification({
+    const result = await emitDeliveryNotificationAck({
       bubbleId: "b_delivery_01",
       bubbleConfig: baseConfig,
       sessionsPath: "/tmp/repo/.pairflow/runtime/sessions.json",
@@ -1909,7 +1909,7 @@ describe("emitTmuxDeliveryNotification", () => {
       readSessionsRegistry: () => Promise.resolve(createRegistry())
     });
 
-    expect(result.delivered).toBe(true);
+    expect(result.status).toBe("accepted");
     expect(result.targetPaneIndex).toBe(0);
     const toStatusPane = calls.find(
       (call) => call[0] === "send-keys" && call[2] === "pf-b_delivery_01:0.0"
@@ -1943,7 +1943,7 @@ describe("emitTmuxDeliveryNotification", () => {
       });
     };
 
-    const result = await emitTmuxDeliveryNotification({
+    const result = await emitDeliveryNotificationAck({
       bubbleId: "b_delivery_01",
       bubbleConfig: createSharedAgentConfig("codex"),
       sessionsPath: "/tmp/repo/.pairflow/runtime/sessions.json",
@@ -1965,7 +1965,7 @@ describe("emitTmuxDeliveryNotification", () => {
       readSessionsRegistry: () => Promise.resolve(createRegistry())
     });
 
-    expect(result.delivered).toBe(true);
+    expect(result.status).toBe("accepted");
     expect(result.targetPaneIndex).toBe(0);
     expect(
       calls.some((call) => call[0] === "send-keys" && call[2] === "pf-b_delivery_01:0.0")
@@ -1991,7 +1991,7 @@ describe("emitTmuxDeliveryNotification", () => {
       });
     };
 
-    const result = await emitTmuxDeliveryNotification({
+    const result = await emitDeliveryNotificationAck({
       bubbleId: "b_delivery_01",
       bubbleConfig: baseConfig,
       sessionsPath: "/tmp/repo/.pairflow/runtime/sessions.json",
@@ -2004,7 +2004,7 @@ describe("emitTmuxDeliveryNotification", () => {
       readSessionsRegistry: () => Promise.resolve(createRegistry())
     });
 
-    expect(result.delivered).toBe(true);
+    expect(result.status).toBe("accepted");
     expect(result.targetPaneIndex).toBe(1);
     expect(
       calls.some((call) => call[0] === "send-keys" && call[2] === "pf-b_delivery_01:0.1")
@@ -2051,7 +2051,7 @@ describe("emitTmuxDeliveryNotification", () => {
       });
     };
 
-    const result = await emitTmuxDeliveryNotification({
+    const result = await emitDeliveryNotificationAck({
       bubbleId: "b_delivery_01",
       bubbleConfig: baseConfig,
       sessionsPath: "/tmp/repo/.pairflow/runtime/sessions.json",
@@ -2070,7 +2070,7 @@ describe("emitTmuxDeliveryNotification", () => {
       readSessionsRegistry: () => Promise.resolve(createRegistry())
     });
 
-    expect(result.delivered).toBe(true);
+    expect(result.status).toBe("accepted");
     expect(result.targetPaneIndex).toBe(1);
     const approvalCall = calls.find(
       (call) =>
@@ -2110,7 +2110,7 @@ describe("emitTmuxDeliveryNotification", () => {
       });
     };
 
-    const result = await emitTmuxDeliveryNotification({
+    const result = await emitDeliveryNotificationAck({
       bubbleId: "b_delivery_01",
       bubbleConfig: baseConfig,
       sessionsPath: "/tmp/repo/.pairflow/runtime/sessions.json",
@@ -2133,7 +2133,7 @@ describe("emitTmuxDeliveryNotification", () => {
       readSessionsRegistry: () => Promise.resolve(createRegistry())
     });
 
-    expect(result.delivered).toBe(true);
+    expect(result.status).toBe("accepted");
     const approvalCall = calls.find(
       (call) =>
         call[0] === "send-keys" &&
@@ -2165,7 +2165,7 @@ describe("emitTmuxDeliveryNotification", () => {
       });
     };
 
-    await emitTmuxDeliveryNotification({
+    await emitDeliveryNotificationAck({
       bubbleId: "b_delivery_01",
       bubbleConfig: baseConfig,
       sessionsPath: "/tmp/repo/.pairflow/runtime/sessions.json",
@@ -2220,7 +2220,7 @@ describe("emitTmuxDeliveryNotification", () => {
         });
       };
 
-      await emitTmuxDeliveryNotification({
+      await emitDeliveryNotificationAck({
         bubbleId: "b_delivery_01",
         bubbleConfig: {
           ...baseConfig,
@@ -2333,7 +2333,7 @@ describe("emitTmuxDeliveryNotification", () => {
       });
     };
 
-    const result = await emitTmuxDeliveryNotification({
+    const result = await emitDeliveryNotificationAck({
       bubbleId: "b_delivery_01",
       bubbleConfig: {
         ...baseConfig,
@@ -2352,7 +2352,7 @@ describe("emitTmuxDeliveryNotification", () => {
       readSessionsRegistry: () => Promise.resolve(createRegistry())
     });
 
-    expect(result.delivered).toBe(true);
+    expect(result.status).toBe("accepted");
     const passToImplementerCall = calls.find(
       (call) =>
         call[0] === "send-keys" &&
@@ -2402,7 +2402,7 @@ describe("emitTmuxDeliveryNotification", () => {
       });
     };
 
-    const result = await emitTmuxDeliveryNotification({
+    const result = await emitDeliveryNotificationAck({
       bubbleId: "b_delivery_01",
       bubbleConfig: baseConfig,
       sessionsPath: "/tmp/repo/.pairflow/runtime/sessions.json",
@@ -2413,7 +2413,7 @@ describe("emitTmuxDeliveryNotification", () => {
       readSessionsRegistry: () => Promise.resolve(createRegistry())
     });
 
-    expect(result.delivered).toBe(true);
+    expect(result.status).toBe("accepted");
     const messageCall = calls.find(
       (call) =>
         call[0] === "send-keys" &&
@@ -2444,7 +2444,7 @@ describe("emitTmuxDeliveryNotification", () => {
       });
     };
 
-    const result = await emitTmuxDeliveryNotification({
+    const result = await emitDeliveryNotificationAck({
       bubbleId: "b_delivery_01",
       bubbleConfig: baseConfig,
       sessionsPath: "/tmp/repo/.pairflow/runtime/sessions.json",
@@ -2455,7 +2455,7 @@ describe("emitTmuxDeliveryNotification", () => {
       readSessionsRegistry: () => Promise.resolve(createRegistry())
     });
 
-    expect(result.delivered).toBe(true);
+    expect(result.status).toBe("accepted");
     const messageCall = calls.find(
       (call) =>
         call[0] === "send-keys" &&
@@ -2486,7 +2486,7 @@ describe("emitTmuxDeliveryNotification", () => {
       });
     };
 
-    const result = await emitTmuxDeliveryNotification({
+    const result = await emitDeliveryNotificationAck({
       bubbleId: "b_delivery_01",
       bubbleConfig: baseConfig,
       sessionsPath: "/tmp/repo/.pairflow/runtime/sessions.json",
@@ -2499,7 +2499,7 @@ describe("emitTmuxDeliveryNotification", () => {
       readSessionsRegistry: () => Promise.resolve(createRegistry())
     });
 
-    expect(result.delivered).toBe(true);
+    expect(result.status).toBe("accepted");
     expect(result.targetPaneIndex).toBe(2);
     expect(
       calls.some((call) => call[0] === "send-keys" && call[2] === "pf-b_delivery_01:0.2")
@@ -2542,7 +2542,7 @@ describe("emitTmuxDeliveryNotification", () => {
       });
     };
 
-    const result = await emitTmuxDeliveryNotification({
+    const result = await emitDeliveryNotificationAck({
       bubbleId: "b_delivery_01",
       bubbleConfig: baseConfig,
       sessionsPath: "/tmp/repo/.pairflow/runtime/sessions.json",
@@ -2557,7 +2557,7 @@ describe("emitTmuxDeliveryNotification", () => {
         )
     });
 
-    expect(result.delivered).toBe(true);
+    expect(result.status).toBe("accepted");
     expect(result.message).toContain(
       "Run pairflow commands from workspace root: /tmp/runtime-workspace."
     );
@@ -2585,7 +2585,7 @@ describe("emitTmuxDeliveryNotification", () => {
       });
     };
 
-    const result = await emitTmuxDeliveryNotification({
+    const result = await emitDeliveryNotificationAck({
       bubbleId: "b_delivery_01",
       bubbleConfig: baseConfig,
       sessionsPath: "/tmp/repo/.pairflow/runtime/sessions.json",
@@ -2601,7 +2601,7 @@ describe("emitTmuxDeliveryNotification", () => {
     });
 
     expect(result).toMatchObject({
-      delivered: false,
+      status: "rejected",
       reason: "no_runtime_session"
     });
     expect(result.message).toContain(
@@ -2621,7 +2621,7 @@ describe("emitTmuxDeliveryNotification", () => {
       });
     };
 
-    const result = await emitTmuxDeliveryNotification({
+    const result = await emitDeliveryNotificationAck({
       bubbleId: "b_delivery_01",
       bubbleConfig: baseConfig,
       sessionsPath: "/tmp/repo/.pairflow/runtime/sessions.json",
@@ -2631,7 +2631,7 @@ describe("emitTmuxDeliveryNotification", () => {
     });
 
     expect(result).toMatchObject({
-      delivered: false,
+      status: "rejected",
       reason: "no_runtime_session",
       reason_code: "DELIVERY_ACK_RUNTIME_SESSION_UNAVAILABLE"
     });
@@ -2655,7 +2655,7 @@ describe("emitTmuxDeliveryNotification", () => {
       });
     };
 
-    const result = await emitTmuxDeliveryNotification({
+    const result = await emitDeliveryNotificationAck({
       bubbleId: "b_delivery_01",
       bubbleConfig: baseConfig,
       sessionsPath: "/tmp/repo/.pairflow/runtime/sessions.json",
@@ -2672,7 +2672,7 @@ describe("emitTmuxDeliveryNotification", () => {
     });
 
     expect(result).toMatchObject({
-      delivered: false,
+      status: "rejected",
       reason: "no_runtime_session",
       reason_code: "DELIVERY_ACK_RUNTIME_SESSION_UNAVAILABLE"
     });
@@ -2693,7 +2693,7 @@ describe("emitTmuxDeliveryNotification", () => {
       });
     };
 
-    const result = await emitTmuxDeliveryNotification({
+    const result = await emitDeliveryNotificationAck({
       bubbleId: "b_delivery_01",
       bubbleConfig: baseConfig,
       sessionsPath: "/tmp/repo/.pairflow/runtime/sessions.json",
@@ -2709,7 +2709,7 @@ describe("emitTmuxDeliveryNotification", () => {
     });
 
     expect(result).toMatchObject({
-      delivered: false,
+      status: "rejected",
       reason: "no_runtime_session",
       reason_code: "DELIVERY_ACK_RUNTIME_SESSION_UNAVAILABLE"
     });
@@ -2726,7 +2726,7 @@ describe("emitTmuxDeliveryNotification", () => {
     const originalMetaReviewerPaneIndex = mutablePaneIndices.metaReviewer;
     mutablePaneIndices.metaReviewer = undefined;
     try {
-      const result = await emitTmuxDeliveryNotification({
+      const result = await emitDeliveryNotificationAck({
         bubbleId: "b_delivery_01",
         bubbleConfig: createSharedAgentConfig("claude"),
         sessionsPath: "/tmp/repo/.pairflow/runtime/sessions.json",
@@ -2747,7 +2747,7 @@ describe("emitTmuxDeliveryNotification", () => {
       });
 
       expect(result).toMatchObject({
-        delivered: false,
+        status: "rejected",
         reason: "unsupported_recipient",
         reason_code: "DELIVERY_ACK_TARGET_UNSUPPORTED",
         deliveryTargetReasonCode: "DELIVERY_TARGET_ROLE_UNMAPPED"
@@ -2758,7 +2758,7 @@ describe("emitTmuxDeliveryNotification", () => {
   });
 
   it("returns registry_read_failed when session registry load fails", async () => {
-    const result = await emitTmuxDeliveryNotification({
+    const result = await emitDeliveryNotificationAck({
       bubbleId: "b_delivery_01",
       bubbleConfig: baseConfig,
       sessionsPath: "/tmp/repo/.pairflow/runtime/sessions.json",
@@ -2767,7 +2767,7 @@ describe("emitTmuxDeliveryNotification", () => {
     });
 
     expect(result).toMatchObject({
-      delivered: false,
+      status: "rejected",
       reason: "registry_read_failed",
       reason_code: "DELIVERY_ACK_RUNTIME_SESSION_UNAVAILABLE",
       deliveryTargetReasonCode: "DELIVERY_TARGET_REGISTRY_READ_FAILED"
@@ -2783,7 +2783,7 @@ describe("emitTmuxDeliveryNotification", () => {
   it("returns tmux_send_failed when tmux command fails", async () => {
     const runner: TmuxRunner = () => Promise.reject(new Error("tmux unavailable"));
 
-    const result = await emitTmuxDeliveryNotification({
+    const result = await emitDeliveryNotificationAck({
       bubbleId: "b_delivery_01",
       bubbleConfig: baseConfig,
       sessionsPath: "/tmp/repo/.pairflow/runtime/sessions.json",
@@ -2794,7 +2794,7 @@ describe("emitTmuxDeliveryNotification", () => {
     });
 
     expect(result).toMatchObject({
-      delivered: false,
+      status: "rejected",
       sessionName: "pf-b_delivery_01",
       targetPaneIndex: 2,
       reason: "tmux_send_failed",
@@ -2831,7 +2831,7 @@ describe("emitTmuxDeliveryNotification", () => {
       });
     };
 
-    const result = await emitTmuxDeliveryNotification({
+    const result = await emitDeliveryNotificationAck({
       bubbleId: "b_delivery_01",
       bubbleConfig: baseConfig,
       sessionsPath: "/tmp/repo/.pairflow/runtime/sessions.json",
@@ -2842,7 +2842,7 @@ describe("emitTmuxDeliveryNotification", () => {
     });
 
     expect(result).toMatchObject({
-      delivered: false,
+      status: "rejected",
       sessionName: "pf-b_delivery_01",
       targetPaneIndex: 2,
       reason: "tmux_send_failed",
@@ -2883,7 +2883,7 @@ describe("emitTmuxDeliveryNotification", () => {
       });
     };
 
-    const result = await emitTmuxDeliveryNotification({
+    const result = await emitDeliveryNotificationAck({
       bubbleId: "b_delivery_01",
       bubbleConfig: baseConfig,
       sessionsPath: "/tmp/repo/.pairflow/runtime/sessions.json",
@@ -2893,7 +2893,7 @@ describe("emitTmuxDeliveryNotification", () => {
       deliveryAttempts: 2
     });
 
-    expect(result.delivered).toBe(true);
+    expect(result.status).toBe("accepted");
     const submitCalls = calls.filter(
       (call) => call[0] === "send-keys" && call[2] === "pf-b_delivery_01:0.2"
     );
@@ -2940,7 +2940,7 @@ describe("emitTmuxDeliveryNotification", () => {
       });
     };
 
-    const result = await emitTmuxDeliveryNotification({
+    const result = await emitDeliveryNotificationAck({
       bubbleId: "b_delivery_01",
       bubbleConfig: baseConfig,
       sessionsPath: "/tmp/repo/.pairflow/runtime/sessions.json",
@@ -2950,7 +2950,7 @@ describe("emitTmuxDeliveryNotification", () => {
       deliveryAttempts: 3
     });
 
-    expect(result.delivered).toBe(true);
+    expect(result.status).toBe("accepted");
     // Verify retry Enter was sent after detecting stuck_in_input.
     const enterRetries = calls.filter(
       (call) =>
@@ -2998,7 +2998,7 @@ describe("emitTmuxDeliveryNotification", () => {
       });
     };
 
-    const result = await emitTmuxDeliveryNotification({
+    const result = await emitDeliveryNotificationAck({
       bubbleId: "b_delivery_01",
       bubbleConfig: baseConfig,
       sessionsPath: "/tmp/repo/.pairflow/runtime/sessions.json",
@@ -3008,7 +3008,7 @@ describe("emitTmuxDeliveryNotification", () => {
       deliveryAttempts: 3
     });
 
-    expect(result.delivered).toBe(true);
+    expect(result.status).toBe("accepted");
     const enterRetries = calls.filter(
       (call) =>
         call[0] === "send-keys" &&
@@ -3035,7 +3035,7 @@ describe("emitTmuxDeliveryNotification", () => {
       });
     };
 
-    const result = await emitTmuxDeliveryNotification({
+    const result = await emitDeliveryNotificationAck({
       bubbleId: "b_delivery_01",
       bubbleConfig: baseConfig,
       sessionsPath: "/tmp/repo/.pairflow/runtime/sessions.json",
@@ -3046,7 +3046,7 @@ describe("emitTmuxDeliveryNotification", () => {
     });
 
     expect(result).toMatchObject({
-      delivered: false,
+      status: "rejected",
       reason: "delivery_unconfirmed",
       reason_code: "DELIVERY_ACK_REJECTED",
       sessionName: "pf-b_delivery_01",
@@ -3079,7 +3079,7 @@ describe("emitTmuxDeliveryNotification", () => {
       });
     };
 
-    const result = await emitTmuxDeliveryNotification({
+    const result = await emitDeliveryNotificationAck({
       bubbleId: "b_delivery_01",
       bubbleConfig: baseConfig,
       sessionsPath: "/tmp/repo/.pairflow/runtime/sessions.json",
@@ -3089,7 +3089,7 @@ describe("emitTmuxDeliveryNotification", () => {
       deliveryAttempts: 1
     });
 
-    expect(result.delivered).toBe(true);
+    expect(result.status).toBe("accepted");
     expect(calls).toContainEqual([
       "capture-pane",
       "-p",

@@ -6,8 +6,7 @@ export function buildAskHumanFlowRuntimeDependenciesFromCommandRuntime(
 ): AskHumanFlowRuntimeDependencies {
   return {
     emitDeliveryNotificationAck:
-      dependencies.emitDeliveryNotificationAck
-      ?? dependencies.emitTmuxDeliveryNotification,
+      dependencies.emitDeliveryNotificationAck,
     emitBubbleNotification: dependencies.emitBubbleNotification
   };
 }

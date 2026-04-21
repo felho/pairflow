@@ -411,7 +411,7 @@ describe("emitConvergedFromWorkspace", () => {
         now: new Date("2026-02-22T09:04:00.000Z")
       },
       {
-        emitTmuxDeliveryNotification: (input) => {
+        emitDeliveryNotificationAck: (input) => {
           deliveries.push({
             recipient: input.envelope.recipient,
             deliveryTargetRole:
@@ -421,7 +421,7 @@ describe("emitConvergedFromWorkspace", () => {
               : {})
           });
           return Promise.resolve({
-            delivered: true,
+            status: "accepted",
             sessionName: "pf-b_converged_notify_01",
             targetPaneIndex: 1,
             message: "ok"
@@ -486,7 +486,6 @@ describe("emitConvergedFromWorkspace", () => {
     expect(deliveries[0]?.messageRef?.startsWith("transcript.ndjson#")).toBe(false);
     expect(result.delivery).toMatchObject({
       status: "accepted",
-      delivered: true,
       retried: false
     });
     }
@@ -539,10 +538,10 @@ describe("emitConvergedFromWorkspace", () => {
             last_command_at: "2026-02-22T09:04:30.000Z"
           }
         }),
-        emitTmuxDeliveryNotification: (input) => {
+        emitDeliveryNotificationAck: (input) => {
           deliveries.push(input.envelope.recipient);
           return Promise.resolve({
-            delivered: true,
+            status: "accepted",
             sessionName: "pf-b_converged_notify_03",
             targetPaneIndex: 1,
             message: "ok"
@@ -555,7 +554,6 @@ describe("emitConvergedFromWorkspace", () => {
     expect(result.gateRoute).toBe("auto_rework");
     expect(result.delivery).toMatchObject({
       status: "accepted",
-      delivered: true,
       retried: false
     });
     }
@@ -657,8 +655,8 @@ describe("emitConvergedFromWorkspace", () => {
             last_command_at: "2026-02-22T09:10:20.000Z"
           }
         }),
-        emitTmuxDeliveryNotification: async () => ({
-          delivered: true,
+        emitDeliveryNotificationAck: async () => ({
+          status: "accepted",
           sessionName: "pf-b_converged_policy_diag_01",
           targetPaneIndex: 1,
           message: "ok"
@@ -733,7 +731,7 @@ describe("emitConvergedFromWorkspace", () => {
             last_command_at: "2026-02-22T09:04:31.000Z"
           }
         }),
-        emitTmuxDeliveryNotification: (input) => {
+        emitDeliveryNotificationAck: (input) => {
           calls.push({
             recipient: input.envelope.recipient,
             ...(input.initialDelayMs !== undefined
@@ -745,14 +743,14 @@ describe("emitConvergedFromWorkspace", () => {
           });
           if (calls.length === 1) {
             return Promise.resolve({
-              delivered: false,
+              status: "rejected",
               sessionName: "pf-b_converged_notify_retry_01",
               message: "not confirmed",
               reason: "delivery_unconfirmed"
             });
           }
           return Promise.resolve({
-            delivered: true,
+            status: "accepted",
             sessionName: "pf-b_converged_notify_retry_01",
             targetPaneIndex: 1,
             message: "ok"
@@ -775,7 +773,6 @@ describe("emitConvergedFromWorkspace", () => {
     expect(result.gateRoute).toBe("auto_rework");
     expect(result.delivery).toMatchObject({
       status: "accepted",
-      delivered: true,
       retried: true
     });
   });
@@ -831,17 +828,17 @@ describe("emitConvergedFromWorkspace", () => {
         now: new Date("2026-02-22T09:04:00.000Z")
       },
       {
-        emitTmuxDeliveryNotification: (input) => {
+        emitDeliveryNotificationAck: (input) => {
           if (input.envelope.recipient === bubble.config.agents.implementer) {
             return Promise.resolve({
-              delivered: false,
+              status: "rejected",
               sessionName: "pf-b_converged_notify_02",
               message: "not confirmed",
               reason: "delivery_unconfirmed"
             });
           }
           return Promise.resolve({
-            delivered: true,
+            status: "accepted",
             sessionName: "pf-b_converged_notify_02",
             targetPaneIndex: 1,
             message: "ok"
@@ -854,7 +851,6 @@ describe("emitConvergedFromWorkspace", () => {
     expect(result.state.state).toBe("RUNNING");
     expect(result.delivery).toMatchObject({
       status: "rejected",
-      delivered: false,
       reason: "delivery_unconfirmed",
       retried: false
     });

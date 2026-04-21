@@ -4,9 +4,6 @@ import type { BuildAskHumanFlowDependenciesInput } from "./askHumanFlowInvocatio
 export function buildAskHumanFlowDependencyOptionalOverrides(
   input: BuildAskHumanFlowDependenciesInput
 ): Partial<RunAskHumanFlowDependencies> {
-  const emitDeliveryNotificationAck =
-    input.emitDeliveryNotificationAck ?? input.emitTmuxDeliveryNotification;
-
   return {
     ...(input.appendProtocolEnvelope !== undefined
       ? { appendProtocolEnvelope: input.appendProtocolEnvelope }
@@ -17,8 +14,8 @@ export function buildAskHumanFlowDependencyOptionalOverrides(
     ...(input.applyStateTransition !== undefined
       ? { applyStateTransition: input.applyStateTransition }
       : {}),
-    ...(emitDeliveryNotificationAck !== undefined
-      ? { emitDeliveryNotificationAck }
+    ...(input.emitDeliveryNotificationAck !== undefined
+      ? { emitDeliveryNotificationAck: input.emitDeliveryNotificationAck }
       : {}),
     ...(input.emitBubbleNotification !== undefined
       ? { emitBubbleNotification: input.emitBubbleNotification }

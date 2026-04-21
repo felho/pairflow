@@ -47,12 +47,12 @@ describe("watchdog command defaults", () => {
           emitBubbleNotification: async () => ({
             kind: "waiting-human" as const,
             attempted: false,
-            delivered: false,
+            status: "rejected",
             soundPath: null,
             reason: "disabled" as const
           }),
           emitDeliveryNotificationAck: async () => ({
-            delivered: true,
+            status: "accepted",
             message: "ok"
           }),
           retryStuckAgentInput: async () => false,

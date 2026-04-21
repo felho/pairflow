@@ -45,7 +45,6 @@ describe("passResultBuilder", () => {
       approvalRequestEnvelope: buildEnvelope("msg_approval"),
       delivery: {
         status: "accepted",
-        delivered: true,
         retried: false
       },
       docGateArtifactWriteFailureReason: "EACCES"
@@ -62,7 +61,6 @@ describe("passResultBuilder", () => {
       mostRecentPreviousReviewerCleanPassEnvelope: true,
       delivery: {
         status: "accepted",
-        delivered: true,
         retried: false
       },
       docGateArtifactWriteFailureReason: "EACCES",

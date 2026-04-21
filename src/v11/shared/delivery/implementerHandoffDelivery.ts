@@ -3,10 +3,8 @@ import type {
   EmitDeliveryNotificationInput
 } from "./tmuxDeliveryContract.js";
 import type {
-  DeliveryAckLike,
-  EmitDeliveryAckLikePort
+  EmitDeliveryNotificationAckPort
 } from "../ports/tmuxDelivery.js";
-import { normalizeDeliveryAck } from "./deliveryAckNormalization.js";
 
 export interface ExecuteImplementerHandoffDeliveryResult {
   result: DeliveryAck;
@@ -14,15 +12,14 @@ export interface ExecuteImplementerHandoffDeliveryResult {
 }
 
 export function shouldRetryImplementerHandoffDelivery(
-  result: DeliveryAckLike | undefined
+  result: DeliveryAck | undefined
 ): boolean {
-  const normalized = result === undefined ? undefined : normalizeDeliveryAck(result);
   return (
-    normalized !== undefined &&
-    normalized.status === "rejected" &&
+    result !== undefined &&
+    result.status === "rejected" &&
     (
-      normalized.reason === "delivery_unconfirmed" ||
-      normalized.reason === "tmux_send_failed"
+      result.reason === "delivery_unconfirmed" ||
+      result.reason === "tmux_send_failed"
     )
   );
 }
@@ -38,10 +35,9 @@ function buildUnexpectedDeliveryFailureResult(): DeliveryAck {
 
 export async function executeImplementerHandoffDelivery(input: {
   deliveryInput: EmitDeliveryNotificationInput;
-  emitDelivery: EmitDeliveryAckLikePort;
+  emitDelivery: EmitDeliveryNotificationAckPort;
 }): Promise<ExecuteImplementerHandoffDeliveryResult> {
   let deliveryResult = await input.emitDelivery(input.deliveryInput)
-    .then(normalizeDeliveryAck)
     .catch(() => buildUnexpectedDeliveryFailureResult());
   let deliveryRetried = false;
 
@@ -54,7 +50,7 @@ export async function executeImplementerHandoffDelivery(input: {
       // Retry once with the same timing used by the stable reviewer handoff flow.
       initialDelayMs: 5000,
       deliveryAttempts: 6
-    }).then(normalizeDeliveryAck).catch(() => initialFailureResult);
+    }).catch(() => initialFailureResult);
   }
 
   return {

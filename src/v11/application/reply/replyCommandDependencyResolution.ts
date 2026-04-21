@@ -73,7 +73,6 @@ export function resolveReplyCommandDependencies(
       ?? replyCommandDependencyDefaults.appendProtocolEnvelope,
     emitDeliveryNotificationAck:
       dependencies.emitDeliveryNotificationAck
-      ?? dependencies.emitTmuxDeliveryNotification
       ?? replyCommandDependencyDefaults.emitDeliveryNotificationAck,
     ensureBubbleInstanceIdForMutation:
       dependencies.ensureBubbleInstanceIdForMutation

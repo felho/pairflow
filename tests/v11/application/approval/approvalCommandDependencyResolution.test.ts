@@ -67,7 +67,7 @@ describe("approvalCommandDependencyResolution", () => {
         fingerprint: "default"
       })) as never;
 
-    const customEmit = (() =>
+    const customEmitDelivery = (() =>
       Promise.resolve({
         status: "accepted" as const,
         message: "custom",
@@ -77,7 +77,7 @@ describe("approvalCommandDependencyResolution", () => {
     const customResolveMessageRef = (() => "custom-ref") as never;
 
     const resolved = resolveApprovalCommandDependencies({
-      emitTmuxDeliveryNotification: customEmit,
+      emitDeliveryNotificationAck: customEmitDelivery,
       resolveDeliveryMessageRef: customResolveMessageRef
     }, {
       appendProtocolEnvelope: defaultAppend,
@@ -96,7 +96,7 @@ describe("approvalCommandDependencyResolution", () => {
 
     expect(resolved.appendProtocolEnvelope).toBe(defaultAppend);
     expect(resolved.resolveBubbleById).toBe(defaultResolveBubble);
-    expect(resolved.emitDeliveryNotificationAck).toBe(customEmit);
+    expect(resolved.emitDeliveryNotificationAck).toBe(customEmitDelivery);
     expect(resolved.executeRemoteBubbleApprovalCommand).toBe(
       defaultExecuteRemoteApproval
     );
@@ -114,7 +114,7 @@ describe("approvalCommandDependencyResolution", () => {
     expect(resolved.writeStateSnapshot).toBe(defaultWriteState);
   });
 
-  it("prefers direct emitDeliveryNotificationAck override over legacy compat alias", () => {
+  it("forwards a direct emitDeliveryNotificationAck override", () => {
     const directEmit = (() =>
       Promise.resolve({
         status: "accepted" as const,
@@ -122,18 +122,10 @@ describe("approvalCommandDependencyResolution", () => {
         sessionName: "pf_direct_approval",
         targetPaneIndex: 3
       })) as never;
-    const legacyEmit = (() =>
-      Promise.resolve({
-        status: "accepted" as const,
-        message: "legacy",
-        sessionName: "pf_legacy_approval",
-        targetPaneIndex: 4
-      })) as never;
 
     const resolved = resolveApprovalCommandDependencies(
       {
-        emitDeliveryNotificationAck: directEmit,
-        emitTmuxDeliveryNotification: legacyEmit
+        emitDeliveryNotificationAck: directEmit
       },
       {
         appendProtocolEnvelope: (() =>

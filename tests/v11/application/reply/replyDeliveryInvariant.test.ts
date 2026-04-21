@@ -74,7 +74,7 @@ describe("v11 reply delivery invariant", () => {
         now
       },
       {
-        emitTmuxDeliveryNotification: async (input) => {
+        emitDeliveryNotificationAck: async (input) => {
           deliveries.push({
             bubbleId: input.bubbleId,
             ...(input.messageRef !== undefined

@@ -50,7 +50,6 @@ export interface EmitPassResult {
   };
   delivery?: {
     status: "accepted" | "rejected";
-    delivered?: boolean;
     reason?: string;
     reason_code?: string;
     retried: boolean;

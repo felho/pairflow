@@ -1,4 +1,6 @@
-import type { EmitDeliveryAckLikePort } from "../../shared/ports/tmuxDelivery.js";
+import type {
+  EmitDeliveryNotificationAckPort
+} from "../../shared/ports/tmuxDelivery.js";
 import type { AppendProtocolEnvelopePort } from "../../shared/ports/transcript.js";
 import type {
   ReadStateSnapshotPort,
@@ -28,8 +30,7 @@ export interface EmitHumanReplyResult {
 
 export interface EmitHumanReplyDependencies {
   appendProtocolEnvelope?: AppendProtocolEnvelopePort;
-  emitDeliveryNotificationAck?: EmitDeliveryAckLikePort;
-  emitTmuxDeliveryNotification?: EmitDeliveryAckLikePort;
+  emitDeliveryNotificationAck?: EmitDeliveryNotificationAckPort;
   ensureBubbleInstanceIdForMutation?: EnsureBubbleInstanceIdForMutationPort;
   readStateSnapshot?: ReadStateSnapshotPort;
   resolveBubbleById?: ResolveBubbleByIdPort;

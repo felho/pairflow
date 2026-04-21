@@ -4,7 +4,9 @@ import type { ActorEmitContextSnapshot } from "../../shared/actorProtocol/actorE
 import type { ConvergencePolicyResult } from "../../../v11/domain/convergence/policy.js";
 import type { EmitBubbleNotificationPort } from "../../shared/ports/notifications.js";
 import type { PairflowCommandPathAssessment } from "../../shared/ports/pairflowCommand.js";
-import type { EmitDeliveryAckLikePort } from "../../shared/ports/tmuxDelivery.js";
+import type {
+  EmitDeliveryNotificationAckPort
+} from "../../shared/ports/tmuxDelivery.js";
 import type { ResolveReviewerTestExecutionDirectivePort } from "../../shared/ports/reviewerTestEvidenceArtifacts.js";
 import type { SummaryVerifierConsistencyGateDecisionRecord } from "../../../v11/shared/reviewer/summaryVerifierConsistencyGate.js";
 import type { ConvergedStructuredFinding } from "../../shared/converged/convergedCommandTypes.js";
@@ -22,7 +24,7 @@ import type { ProtocolEnvelope } from "../../../types/protocol.js";
 import type { PrepareConvergedValidationResult } from "./convergedValidationPreparationContract.js";
 
 export interface ExecuteConvergedExecutionDependencies {
-  emitDeliveryNotificationAck?: EmitDeliveryAckLikePort;
+  emitDeliveryNotificationAck?: EmitDeliveryNotificationAckPort;
   emitBubbleNotification?: EmitBubbleNotificationPort;
   applyMetaReviewGateOnConvergence?: typeof applyMetaReviewGateOnConvergence;
 }
@@ -82,7 +84,6 @@ interface ExecuteConvergedExecutionResult {
   };
   delivery?: {
     status: "accepted" | "rejected";
-    delivered?: boolean;
     reason?: string;
     reason_code?: string;
     retried: boolean;
@@ -169,7 +170,6 @@ export interface RunConvergedFlowResult {
   state: BubbleStateSnapshot;
   delivery?: {
     status: "accepted" | "rejected";
-    delivered?: boolean;
     reason?: string;
     reason_code?: string;
     retried: boolean;

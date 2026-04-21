@@ -11,10 +11,9 @@ import type {
   WriteStateSnapshotPort
 } from "../../shared/ports/stateSnapshots.js";
 import type {
-  EmitDeliveryAckLikePort,
+  EmitDeliveryNotificationAckPort,
   ResolveDeliveryMessageRefPort
 } from "../../shared/ports/tmuxDelivery.js";
-import { normalizeDeliveryAck } from "../../shared/delivery/deliveryAckNormalization.js";
 
 export async function maybeApplyPendingReworkIntent(input: {
   now: Date;
@@ -23,7 +22,7 @@ export async function maybeApplyPendingReworkIntent(input: {
   loadedState: LoadedStateSnapshot;
   state: BubbleStateSnapshot;
   writeState: WriteStateSnapshotPort;
-  emitDelivery: EmitDeliveryAckLikePort;
+  emitDelivery: EmitDeliveryNotificationAckPort;
   ensureBubbleInstanceIdForMutation: EnsureBubbleInstanceIdForMutationPort;
   resolveDeliveryMessageRef: ResolveDeliveryMessageRefPort;
 }): Promise<BubbleWatchdogResult | null> {
@@ -60,7 +59,7 @@ export async function maybeApplyPendingReworkIntent(input: {
       sessionsPath: input.resolved.bubblePaths.sessionsPath,
       envelope: deliveryEnvelope
     })
-  }).then(normalizeDeliveryAck);
+  });
 
   if (delivery.status !== "accepted") {
     return {

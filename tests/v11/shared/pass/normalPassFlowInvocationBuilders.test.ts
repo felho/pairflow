@@ -139,7 +139,7 @@ describe("normalPassFlowInvocationBuilders", () => {
       },
       resolveReviewerTestDirectiveForPass: async () => undefined,
       executePassDelivery: async () => ({ result: undefined, retried: false }),
-      emitTmuxDeliveryNotification: async () => ({ delivered: true }) as never,
+      emitDeliveryNotificationAck: async () => ({ status: "accepted" }) as never,
       refreshReviewerContext: async () => ({ refreshed: false }) as never,
       finalizeNormalPass: async (_input, dependencies) => {
         finalizeDependencies = dependencies;
@@ -172,7 +172,7 @@ describe("normalPassFlowInvocationBuilders", () => {
     expect(deliveryDependencies).toBeDefined();
     expect(typeof deliveryDependencies?.resolveReviewerTestDirectiveForPass).toBe("function");
     expect(typeof deliveryDependencies?.executePassDelivery).toBe("function");
-    expect(typeof deliveryDependencies?.emitTmuxDeliveryNotification).toBe("function");
+    expect(typeof deliveryDependencies?.emitDeliveryNotificationAck).toBe("function");
     expect(typeof deliveryDependencies?.refreshReviewerContext).toBe("function");
     expect(finalizeDependencies).toBeDefined();
     expect(typeof finalizeDependencies?.emitBubbleLifecycleEventBestEffort).toBe("function");

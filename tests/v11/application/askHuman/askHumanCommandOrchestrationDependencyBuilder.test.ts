@@ -10,21 +10,21 @@ describe("askHumanCommandOrchestrationDependencyBuilder", () => {
 
     expect(dependencies.executeAskHumanExecution).toBe(executeAskHumanExecution);
     expect(dependencies.finalizeAskHumanFlow).toBe(finalizeAskHumanFlow);
-    expect("emitTmuxDeliveryNotification" in dependencies).toBe(false);
+    expect("emitDeliveryNotificationAck" in dependencies).toBe(false);
     expect("emitBubbleNotification" in dependencies).toBe(false);
   });
 
   it("forwards explicit runtime notification dependencies", () => {
-    const emitTmuxDeliveryNotification = (() => Promise.resolve({})) as never;
+    const emitDeliveryNotificationAck = (() => Promise.resolve({})) as never;
     const emitBubbleNotification = (() => Promise.resolve({})) as never;
 
     const dependencies = buildAskHumanCommandOrchestrationDependencies({
-      emitTmuxDeliveryNotification,
+      emitDeliveryNotificationAck,
       emitBubbleNotification
     });
 
     expect(dependencies.emitDeliveryNotificationAck).toBe(
-      emitTmuxDeliveryNotification
+      emitDeliveryNotificationAck
     );
     expect(dependencies.emitBubbleNotification).toBe(emitBubbleNotification);
   });

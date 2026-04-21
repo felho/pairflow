@@ -132,7 +132,6 @@ describe("executeKickoffValidatedFlow", () => {
     expect(result.ok).toBe(true);
     expect((result as { delivery?: unknown }).delivery).toMatchObject({
       status: "accepted",
-      delivered: true,
       retried: false
     });
     expect(emitDelivery).toHaveBeenCalledTimes(1);
@@ -229,7 +228,6 @@ describe("executeKickoffValidatedFlow", () => {
     expect(result.ok).toBe(true);
     expect((result as { delivery?: unknown }).delivery).toMatchObject({
       status: "rejected",
-      delivered: false,
       reason: "delivery_unconfirmed",
       reason_code: "DELIVERY_ACK_REJECTED",
       retried: false
@@ -325,7 +323,6 @@ describe("executeKickoffValidatedFlow", () => {
     expect(result.ok).toBe(true);
     expect((result as { delivery?: unknown }).delivery).toMatchObject({
       status: "rejected",
-      delivered: false,
       reason: "tmux_send_failed",
       reason_code: "DELIVERY_ACK_REJECTED",
       retried: false
@@ -364,7 +361,7 @@ describe("executeKickoffValidatedFlow", () => {
       writeFileFn: vi.fn(async () => undefined),
       appendEnvelope: vi.fn(async () => ({})),
       emitDelivery: vi.fn(async () => ({
-        delivered: true,
+        status: "accepted" as const,
         message: "ok",
         sessionName: "pf_bubble",
         targetPaneIndex: 1

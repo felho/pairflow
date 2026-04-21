@@ -13,15 +13,15 @@ describe("askHumanFlowDependencyWiring", () => {
   });
 
   it("forwards only explicitly provided runtime notification dependencies", () => {
-    const emitTmuxDeliveryNotification = (() => Promise.resolve({})) as never;
+    const emitDeliveryNotificationAck = (() => Promise.resolve({})) as never;
 
     const dependencies = createAskHumanCommandOrchestrationDependencies({
-      emitTmuxDeliveryNotification,
+      emitDeliveryNotificationAck,
       emitBubbleNotification: undefined
     });
 
     expect(dependencies.emitDeliveryNotificationAck).toBe(
-      emitTmuxDeliveryNotification
+      emitDeliveryNotificationAck
     );
     expect("emitBubbleNotification" in dependencies).toBe(false);
   });

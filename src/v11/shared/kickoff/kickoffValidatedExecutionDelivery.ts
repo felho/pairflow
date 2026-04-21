@@ -5,15 +5,6 @@ import type {
 import type { ResolvedKickoffDependencies } from "./kickoffDependencyContract.js";
 import type { KickoffResultDelivery } from "./kickoffResultBuilders.js";
 import type { KickoffPreparedValidation } from "./kickoffValidationPreparation.js";
-import { normalizeDeliveryAck } from "../delivery/deliveryAckNormalization.js";
-
-function buildKickoffCompatDeliveredProjection(
-  status: DeliveryAck["status"]
-): Pick<KickoffResultDelivery, "delivered"> {
-  return {
-    delivered: status === "accepted"
-  };
-}
 
 function mapKickoffResultDelivery(input: {
   deliveryResult: DeliveryAck;
@@ -21,7 +12,6 @@ function mapKickoffResultDelivery(input: {
 }): KickoffResultDelivery {
   return {
     status: input.deliveryResult.status,
-    ...buildKickoffCompatDeliveredProjection(input.deliveryResult.status),
     ...(input.deliveryResult.reason !== undefined
       ? { reason: input.deliveryResult.reason }
       : {}),
@@ -35,7 +25,6 @@ function mapKickoffResultDelivery(input: {
 export function buildKickoffMissingEnvelopeDeliveryResult(): KickoffResultDelivery {
   return {
     status: "rejected",
-    delivered: false,
     reason: "delivery_unconfirmed",
     reason_code: "DELIVERY_ACK_REJECTED",
     retried: false
@@ -58,7 +47,7 @@ export async function executeKickoffValidatedDelivery(input: {
     bubbleConfig: input.validation.resolved.bubbleConfig,
     sessionsPath: input.validation.resolved.bubblePaths.sessionsPath,
     envelope: input.envelope
-  }).then(normalizeDeliveryAck).catch(() => emitFallbackResult);
+  }).catch(() => emitFallbackResult);
 
   return mapKickoffResultDelivery({
     deliveryResult,

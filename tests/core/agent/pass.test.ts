@@ -539,12 +539,12 @@ describe("emitPassFromWorkspace", { timeout: 20_000 }, () => {
         now: new Date("2026-02-21T12:05:00.000Z")
       },
       {
-        emitTmuxDeliveryNotification: (input) => {
+        emitDeliveryNotificationAck: (input) => {
           if (input.messageRef !== undefined) {
             deliveryRefs.push(input.messageRef);
           }
           return Promise.resolve({
-            delivered: true,
+            status: "accepted",
             message: "ok",
             sessionName: "pf_bubble",
             targetPaneIndex: 1
@@ -2840,17 +2840,17 @@ describe("emitPassFromWorkspace", { timeout: 20_000 }, () => {
         now: new Date("2026-03-01T10:04:00.000Z")
       },
       {
-        emitTmuxDeliveryNotification: async (input) => {
+        emitDeliveryNotificationAck: async (input) => {
           deliveryRecipients.push(String(input.envelope.recipient));
           if (input.envelope.recipient === "human") {
             return {
-              delivered: false,
+              status: "rejected",
               message: "not confirmed",
               reason: "delivery_unconfirmed"
             };
           }
           return {
-            delivered: true,
+            status: "accepted",
             message: "ok",
             sessionName: "pf_bubble",
             targetPaneIndex: 1
@@ -2862,7 +2862,6 @@ describe("emitPassFromWorkspace", { timeout: 20_000 }, () => {
     expect(result.transitionDecision).toBe("auto_converge");
     expect(result.delivery).toMatchObject({
       status: "accepted",
-      delivered: true,
       retried: false
     });
     expect(result.activation).toBeUndefined();
@@ -4332,10 +4331,10 @@ present`,
         now: new Date("2026-02-21T12:07:00.000Z")
       },
       {
-        emitTmuxDeliveryNotification: (input) => {
+        emitDeliveryNotificationAck: (input) => {
           capturedDirective = input.reviewerTestDirective;
           return Promise.resolve({
-            delivered: true,
+            status: "accepted",
             message: "ok",
             sessionName: "pf_bubble",
             targetPaneIndex: 1
@@ -4611,10 +4610,10 @@ present`,
         now: new Date("2026-02-21T12:05:00.000Z")
       },
       {
-        emitTmuxDeliveryNotification: (input: EmitTmuxDeliveryNotificationInput) => {
+        emitDeliveryNotificationAck: (input: EmitTmuxDeliveryNotificationInput) => {
           deliveryReviewerFocus = input.reviewerFocus;
           return Promise.resolve({
-            delivered: true,
+            status: "accepted",
             message: "ok",
             sessionName: "pf_bubble",
             targetPaneIndex: 1
@@ -4648,7 +4647,7 @@ present`,
         now: new Date("2026-02-21T12:05:00.000Z")
       },
       {
-        emitTmuxDeliveryNotification: (input: EmitTmuxDeliveryNotificationInput) => {
+        emitDeliveryNotificationAck: (input: EmitTmuxDeliveryNotificationInput) => {
           deliveryCallCount += 1;
           hasReviewerFocusField = Object.prototype.hasOwnProperty.call(
             input,
@@ -4656,7 +4655,7 @@ present`,
           );
           deliveryReviewerFocus = input.reviewerFocus;
           return Promise.resolve({
-            delivered: true,
+            status: "accepted",
             message: "ok",
             sessionName: "pf_bubble",
             targetPaneIndex: 1
@@ -4696,13 +4695,13 @@ present`,
         now: new Date("2026-02-21T12:06:00.000Z")
       },
       {
-        emitTmuxDeliveryNotification: (input: EmitTmuxDeliveryNotificationInput) => {
+        emitDeliveryNotificationAck: (input: EmitTmuxDeliveryNotificationInput) => {
           hasReviewerFocusField = Object.prototype.hasOwnProperty.call(
             input,
             "reviewerFocus"
           );
           return Promise.resolve({
-            delivered: true,
+            status: "accepted",
             message: "ok",
             sessionName: "pf_bubble",
             targetPaneIndex: 1
@@ -4746,7 +4745,7 @@ present`,
         now: new Date("2026-02-21T12:06:30.000Z")
       },
       {
-        emitTmuxDeliveryNotification: (input: {
+        emitDeliveryNotificationAck: (input: {
           envelope: { round: number };
           initialDelayMs?: number;
           deliveryAttempts?: number;
@@ -4763,13 +4762,13 @@ present`,
           callCount += 1;
           if (callCount === 1) {
             return Promise.resolve({
-              delivered: false,
+              status: "rejected",
               message: "unconfirmed",
               reason: "delivery_unconfirmed"
             });
           }
           return Promise.resolve({
-            delivered: true,
+            status: "accepted",
             message: "ok",
             sessionName: "pf_bubble",
             targetPaneIndex: 1
@@ -4790,7 +4789,6 @@ present`,
     ]);
     expect(result.delivery).toMatchObject({
       status: "accepted",
-      delivered: true,
       retried: true
     });
   });
@@ -4838,7 +4836,7 @@ present`,
           refreshed: true
         });
       },
-      emitTmuxDeliveryNotification: (input: {
+      emitDeliveryNotificationAck: (input: {
         envelope: { sender: string; recipient: string; round: number };
         initialDelayMs?: number;
       }) => {
@@ -4851,7 +4849,7 @@ present`,
             : {})
         });
         return Promise.resolve({
-          delivered: true,
+          status: "accepted" as const,
           message: "ok",
           sessionName: "pf_bubble",
           targetPaneIndex: 1
@@ -4937,7 +4935,7 @@ present`,
           Promise.resolve({
             refreshed: true
           }),
-        emitTmuxDeliveryNotification: (input: {
+        emitDeliveryNotificationAck: (input: {
           envelope: { round: number };
           initialDelayMs?: number;
           deliveryAttempts?: number;
@@ -4954,13 +4952,13 @@ present`,
           callCount += 1;
           if (callCount === 1) {
             return Promise.resolve({
-              delivered: false,
+              status: "rejected",
               message: "unconfirmed",
               reason: "delivery_unconfirmed"
             });
           }
           return Promise.resolve({
-            delivered: true,
+            status: "accepted",
             message: "ok",
             sessionName: "pf_bubble",
             targetPaneIndex: 1
@@ -4982,7 +4980,6 @@ present`,
     ]);
     expect(result.delivery).toMatchObject({
       status: "accepted",
-      delivered: true,
       retried: true
     });
   });
@@ -5204,10 +5201,10 @@ present`,
         now: new Date("2026-02-21T12:05:00.000Z")
       },
       {
-        emitTmuxDeliveryNotification: (input) => {
+        emitDeliveryNotificationAck: (input) => {
           capturedDirective = input.reviewerTestDirective;
           return Promise.resolve({
-            delivered: true,
+            status: "accepted",
             message: "ok"
           });
         }
@@ -5528,9 +5525,9 @@ present`,
           now: new Date("2026-02-21T12:05:00.000Z")
         },
         {
-          emitTmuxDeliveryNotification: () =>
+          emitDeliveryNotificationAck: () =>
             Promise.resolve({
-              delivered: true,
+              status: "accepted",
               message: "ok",
               sessionName: "pf_bubble",
               targetPaneIndex: 1
@@ -5568,10 +5565,10 @@ present`,
         now: new Date("2026-02-21T12:05:00.000Z")
       },
       {
-        emitTmuxDeliveryNotification: (input) => {
+        emitDeliveryNotificationAck: (input) => {
           capturedDirective = input.reviewerTestDirective;
           return Promise.resolve({
-            delivered: true,
+            status: "accepted",
             message: "ok",
             sessionName: "pf_bubble",
             targetPaneIndex: 1

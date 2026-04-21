@@ -12,14 +12,12 @@ import type {
 } from "../../../v11/shared/ports/reviewerTestEvidenceArtifacts.js";
 import type {
   DeliveryAck,
-  DeliveryAckLike,
-  EmitDeliveryAckLikePort
+  EmitDeliveryNotificationAckPort
 } from "../../../v11/shared/ports/tmuxDelivery.js";
 import type {
   ResolveDeliveryMessageRefPort
 } from "../../../v11/shared/ports/tmuxDelivery.js";
 import type { RefreshReviewerContextPort } from "../../../v11/shared/ports/reviewerContext.js";
-import { normalizeDeliveryAck } from "../../../v11/shared/delivery/deliveryAckNormalization.js";
 
 export interface ExecuteNormalPassDeliveryInput {
   senderRole: "implementer" | "reviewer";
@@ -66,23 +64,21 @@ export interface ExecuteNormalPassDeliveryDependencies {
       reviewerTestDirective?: ReviewerTestExecutionDirective;
     },
     dependencies?: {
-      emitDeliveryNotificationAck?: EmitDeliveryAckLikePort;
-      emitTmuxDeliveryNotification?: EmitDeliveryAckLikePort;
+      emitDeliveryNotificationAck?: EmitDeliveryNotificationAckPort;
       refreshReviewerContext?: RefreshReviewerContextPort;
       readReviewerBriefArtifact?: ReadReviewerBriefArtifactPort;
       readReviewerFocusArtifact?: ReadReviewerFocusArtifactPort;
       resolveDeliveryMessageRef?: ResolveDeliveryMessageRefPort;
     }
   ) => Promise<{
-    result: DeliveryAckLike | undefined;
+    result: DeliveryAck | undefined;
     retried: boolean;
   }>;
   verifyImplementerTestEvidence?: VerifyImplementerTestEvidencePort;
   writeReviewerTestEvidenceArtifact?: WriteReviewerTestEvidenceArtifactPort;
   resolveReviewerTestExecutionDirectiveFromArtifact?:
     ResolveReviewerTestExecutionDirectiveFromArtifactPort;
-  emitDeliveryNotificationAck?: EmitDeliveryAckLikePort;
-  emitTmuxDeliveryNotification?: EmitDeliveryAckLikePort;
+  emitDeliveryNotificationAck?: EmitDeliveryNotificationAckPort;
   refreshReviewerContext?: RefreshReviewerContextPort;
   readReviewerBriefArtifact?: ReadReviewerBriefArtifactPort;
   readReviewerFocusArtifact?: ReadReviewerFocusArtifactPort;
@@ -97,11 +93,8 @@ export interface ExecuteNormalPassDeliveryResult {
 
 function resolveNormalPassDeliveryOverride(
   dependencies: ExecuteNormalPassDeliveryDependencies
-): EmitDeliveryAckLikePort | undefined {
-  return (
-    dependencies.emitDeliveryNotificationAck
-    ?? dependencies.emitTmuxDeliveryNotification
-  );
+): EmitDeliveryNotificationAckPort | undefined {
+  return dependencies.emitDeliveryNotificationAck;
 }
 
 export async function executeNormalPassDelivery(
@@ -182,7 +175,7 @@ export async function executeNormalPassDelivery(
     deliveryResult:
       delivery.result === undefined
         ? undefined
-        : normalizeDeliveryAck(delivery.result),
+        : delivery.result,
     deliveryRetried: delivery.retried
   };
 }

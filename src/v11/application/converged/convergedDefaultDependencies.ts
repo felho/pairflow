@@ -9,7 +9,7 @@ import type {
   ReadTranscriptEnvelopesPort
 } from "../../shared/ports/transcript.js";
 import type {
-  EmitDeliveryAckLikePort,
+  EmitDeliveryNotificationAckPort,
   ResolveDeliveryMessageRefPort
 } from "../../shared/ports/tmuxDelivery.js";
 import type {
@@ -21,7 +21,7 @@ export interface ResolvedConvergedExecutionDependencies {
   appendProtocolEnvelope: AppendProtocolEnvelopePort;
   applyMetaReviewGateOnConvergence:
     NonNullable<RunConvergedFlowDependencies["applyMetaReviewGateOnConvergence"]>;
-  emitDeliveryNotificationAck: EmitDeliveryAckLikePort;
+  emitDeliveryNotificationAck: EmitDeliveryNotificationAckPort;
   emitBubbleNotification: EmitBubbleNotificationPort;
   resolveDeliveryMessageRef: ResolveDeliveryMessageRefPort;
 }
@@ -30,7 +30,7 @@ export interface BuildDefaultConvergedExecutionDependenciesInput {
   appendProtocolEnvelope?: AppendProtocolEnvelopePort | undefined;
   applyMetaReviewGateOnConvergence?:
     RunConvergedFlowDependencies["applyMetaReviewGateOnConvergence"];
-  emitDeliveryNotificationAck?: EmitDeliveryAckLikePort | undefined;
+  emitDeliveryNotificationAck?: EmitDeliveryNotificationAckPort | undefined;
   emitBubbleNotification?:
     RunConvergedFlowDependencies["emitBubbleNotification"];
   resolveDeliveryMessageRef?: ResolveDeliveryMessageRefPort | undefined;
@@ -59,12 +59,12 @@ export function buildDefaultConvergedExecutionDependencies(
 }
 
 export interface ResolvedConvergedGateDeliveryDependencies {
-  emitDeliveryNotificationAck: EmitDeliveryAckLikePort;
+  emitDeliveryNotificationAck: EmitDeliveryNotificationAckPort;
   resolveDeliveryMessageRef: ResolveDeliveryMessageRefPort;
 }
 
 export interface BuildDefaultConvergedGateDeliveryDependenciesInput {
-  emitDeliveryNotificationAck?: EmitDeliveryAckLikePort | undefined;
+  emitDeliveryNotificationAck?: EmitDeliveryNotificationAckPort | undefined;
   resolveDeliveryMessageRef?: ResolveDeliveryMessageRefPort | undefined;
 }
 

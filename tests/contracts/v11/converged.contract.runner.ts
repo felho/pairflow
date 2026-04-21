@@ -742,7 +742,7 @@ async function executeConvergedCase(input: {
       }
     };
     const emitDelivery: NonNullable<
-      EmitConvergedDependencies["emitTmuxDeliveryNotification"]
+      EmitConvergedDependencies["emitDeliveryNotificationAck"]
     > = (deliveryInput) => {
       const targetRoleRaw =
         deliveryInput.envelope.payload.metadata?.[deliveryTargetRoleMetadataKey];
@@ -753,14 +753,14 @@ async function executeConvergedCase(input: {
       });
       if (parsedInput.scenario === "delivery_partial_failure" && deliveries.length === 1) {
         return Promise.resolve({
-          delivered: false,
+          status: "rejected",
           message: "delivery failed",
           reason: "delivery_unconfirmed",
           reason_code: "DELIVERY_ACK_REJECTED"
         });
       }
       return Promise.resolve({
-        delivered: true,
+        status: "accepted",
         message: "ok"
       });
     };
@@ -788,7 +788,7 @@ async function executeConvergedCase(input: {
       cwd: bubble.paths.worktreePath,
       now: new Date(nowIso)
     }, {
-      emitTmuxDeliveryNotification: emitDelivery,
+      emitDeliveryNotificationAck: emitDelivery,
       applyMetaReviewGateOnConvergence
     });
     assertConvergedScenarioInvariant({

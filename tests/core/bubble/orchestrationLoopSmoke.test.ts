@@ -153,7 +153,7 @@ describe("bubble orchestration loop smoke", () => {
         type: envelope.type
       });
       return Promise.resolve({
-        delivered: true,
+        status: "accepted" as const,
         sessionName: `pf-${loopBubble.bubbleId}`,
         targetPaneIndex: 1,
         message: "ok"
@@ -167,7 +167,7 @@ describe("bubble orchestration loop smoke", () => {
         now: new Date("2026-02-27T10:01:00.000Z")
       },
       {
-        emitTmuxDeliveryNotification: ({ envelope }) => emitDelivery(envelope),
+        emitDeliveryNotificationAck: ({ envelope }) => emitDelivery(envelope),
         refreshReviewerContext: () => Promise.resolve({ refreshed: false })
       }
     );
@@ -183,7 +183,7 @@ describe("bubble orchestration loop smoke", () => {
         now: new Date("2026-02-27T10:02:00.000Z")
       },
       {
-        emitTmuxDeliveryNotification: ({ envelope }) => emitDelivery(envelope),
+        emitDeliveryNotificationAck: ({ envelope }) => emitDelivery(envelope),
         refreshReviewerContext: () => Promise.resolve({ refreshed: false })
       }
     );
@@ -198,7 +198,7 @@ describe("bubble orchestration loop smoke", () => {
         now: new Date("2026-02-27T10:03:00.000Z")
       },
       {
-        emitTmuxDeliveryNotification: ({ envelope }) => emitDelivery(envelope),
+        emitDeliveryNotificationAck: ({ envelope }) => emitDelivery(envelope),
         refreshReviewerContext: () => Promise.resolve({ refreshed: false })
       }
     );
@@ -216,14 +216,14 @@ describe("bubble orchestration loop smoke", () => {
         now: new Date("2026-02-27T10:04:00.000Z")
       },
       {
-        emitTmuxDeliveryNotification: ({ envelope }) => {
+        emitDeliveryNotificationAck: ({ envelope }) => {
           convergenceDeliveryCalls.push({
             bubbleId: loopBubble.bubbleId,
             recipient: envelope.recipient,
             type: envelope.type
           });
           return Promise.resolve({
-            delivered: true,
+            status: "accepted" as const,
             sessionName: `pf-${loopBubble.bubbleId}`,
             targetPaneIndex: 1,
             message: `${envelope.type}:${envelope.recipient}`

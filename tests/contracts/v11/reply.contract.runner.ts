@@ -376,7 +376,7 @@ async function executeReplyCase(input: {
 
     const deliveries: CapturedReplyDelivery[] = [];
     const emitDelivery: NonNullable<
-      EmitHumanReplyDependencies["emitTmuxDeliveryNotification"]
+      EmitHumanReplyDependencies["emitDeliveryNotificationAck"]
     > = (deliveryInput) => {
       const targetRoleRaw =
         deliveryInput.envelope.payload.metadata?.[deliveryTargetRoleMetadataKey];
@@ -387,7 +387,7 @@ async function executeReplyCase(input: {
         refKind: classifyDeliveryRefKind(deliveryInput.messageRef)
       });
       return Promise.resolve({
-        delivered: true,
+        status: "accepted",
         message: "ok"
       });
     };
@@ -400,7 +400,7 @@ async function executeReplyCase(input: {
         repoPath,
         now: new Date("2026-03-19T10:02:00.000Z")
       }, {
-        emitTmuxDeliveryNotification: emitDelivery
+        emitDeliveryNotificationAck: emitDelivery
       });
       assertReplyDeliveryInvariant({
         deliveries,

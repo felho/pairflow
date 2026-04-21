@@ -64,7 +64,6 @@ describe("finalizeNormalPass", () => {
         resolveMostRecentPreviousReviewerPassIsCleanFromMetadata: () => undefined,
         mapPassResultDelivery: () => ({
           status: "accepted",
-          delivered: true,
           retried: false
         }),
         buildNormalPassResult: (input) => {
@@ -92,7 +91,6 @@ describe("finalizeNormalPass", () => {
     );
     expect(capturedResultInput?.delivery).toEqual({
       status: "accepted",
-      delivered: true,
       retried: false
     });
     expect((result as { ok: boolean }).ok).toBe(true);

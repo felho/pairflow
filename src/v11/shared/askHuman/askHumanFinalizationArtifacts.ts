@@ -31,7 +31,6 @@ export function buildAskHumanFinalizationResult(
         ? {
           delivery: {
             status: input.deliveryResult.status,
-            delivered: input.deliveryResult.status === "accepted",
             ...(input.deliveryResult.message.length > 0
               ? { message: input.deliveryResult.message }
               : {}),

@@ -2,7 +2,9 @@ import type { AgentName } from "../../../types/bubble.js";
 import type { BubbleStateSnapshot } from "../../../types/bubble.js";
 import type { ActorEmitContextSnapshot } from "../actorProtocol/actorEmitContext.js";
 import type { EmitBubbleNotification } from "../delivery/bubbleNotificationContract.js";
-import type { EmitDeliveryAckLikePort } from "../ports/tmuxDelivery.js";
+import type {
+  EmitDeliveryNotificationAckPort
+} from "../ports/tmuxDelivery.js";
 import type { ProtocolEnvelope } from "../../../types/protocol.js";
 import type {
   applyMetaReviewGateOnConvergence
@@ -44,8 +46,7 @@ export interface EmitConvergedInput {
 }
 
 export interface EmitConvergedDependencies {
-  emitDeliveryNotificationAck?: EmitDeliveryAckLikePort;
-  emitTmuxDeliveryNotification?: EmitDeliveryAckLikePort;
+  emitDeliveryNotificationAck?: EmitDeliveryNotificationAckPort;
   emitBubbleNotification?: EmitBubbleNotification;
   applyMetaReviewGateOnConvergence?: typeof applyMetaReviewGateOnConvergence;
   resolveReviewerTestExecutionDirective?:
@@ -62,7 +63,6 @@ export interface EmitConvergedResult {
   state: BubbleStateSnapshot;
   delivery?: {
     status: "accepted" | "rejected";
-    delivered?: boolean;
     reason?: string;
     reason_code?: string;
     retried: boolean;

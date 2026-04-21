@@ -3,11 +3,9 @@ import { describe, expect, it } from "vitest";
 import { buildAskHumanFinalizationDependencyResolutionInput } from "../../../../src/v11/shared/askHuman/askHumanFinalizationDependencyResolutionInputBuilder.js";
 
 describe("askHumanFinalizationDependencyResolutionInputBuilder", () => {
-  it("prefers direct delivery-ack override over the legacy alias", () => {
+  it("forwards the canonical delivery-ack override", () => {
     const emitDeliveryNotificationAckOverride = (() =>
-      Promise.resolve({ delivered: true, message: "direct" })) as never;
-    const emitTmuxDeliveryNotificationOverride = (() =>
-      Promise.resolve({ delivered: true, message: "legacy" })) as never;
+      Promise.resolve({ status: "accepted", message: "direct" })) as never;
     const emitBubbleNotificationOverride = (() =>
       Promise.resolve({
         kind: "waiting-human",
@@ -22,7 +20,6 @@ describe("askHumanFinalizationDependencyResolutionInputBuilder", () => {
 
     const resolvedInput = buildAskHumanFinalizationDependencyResolutionInput({
       emitDeliveryNotificationAck: emitDeliveryNotificationAckOverride,
-      emitTmuxDeliveryNotification: emitTmuxDeliveryNotificationOverride,
       emitBubbleNotification: emitBubbleNotificationOverride,
       resolveDeliveryMessageRef: resolveDeliveryMessageRefOverride,
       emitBubbleLifecycleEventBestEffort:
@@ -39,8 +36,8 @@ describe("askHumanFinalizationDependencyResolutionInputBuilder", () => {
   });
 
   it("forwards finalization dependency overrides to resolution input", () => {
-    const emitTmuxDeliveryNotificationOverride = (() =>
-      Promise.resolve({ delivered: true, message: "ok" })) as never;
+    const emitDeliveryNotificationAckOverride = (() =>
+      Promise.resolve({ status: "accepted", message: "ok" })) as never;
     const emitBubbleNotificationOverride = (() =>
       Promise.resolve({
         kind: "waiting-human",
@@ -54,7 +51,7 @@ describe("askHumanFinalizationDependencyResolutionInputBuilder", () => {
       Promise.resolve(undefined)) as never;
 
     const resolvedInput = buildAskHumanFinalizationDependencyResolutionInput({
-      emitTmuxDeliveryNotification: emitTmuxDeliveryNotificationOverride,
+      emitDeliveryNotificationAck: emitDeliveryNotificationAckOverride,
       emitBubbleNotification: emitBubbleNotificationOverride,
       resolveDeliveryMessageRef: resolveDeliveryMessageRefOverride,
       emitBubbleLifecycleEventBestEffort:
@@ -62,7 +59,7 @@ describe("askHumanFinalizationDependencyResolutionInputBuilder", () => {
     });
 
     expect(resolvedInput).toEqual({
-      emitDeliveryNotificationAck: emitTmuxDeliveryNotificationOverride,
+      emitDeliveryNotificationAck: emitDeliveryNotificationAckOverride,
       emitBubbleNotification: emitBubbleNotificationOverride,
       resolveDeliveryMessageRef: resolveDeliveryMessageRefOverride,
       emitBubbleLifecycleEventBestEffort:

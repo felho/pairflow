@@ -47,27 +47,27 @@ describe("critical side-effect fitness check", () => {
     await writeRepoFile(
       repoRoot,
       "src/v11/application/pass/reviewerDelivery.ts",
-      "export const emit = (): void => { emitTmuxDeliveryNotification(); };\n"
+      "export const emit = (): void => { emitDeliveryNotificationAck(); };\n"
     );
     await writeRepoFile(
       repoRoot,
       "src/v11/application/converged/convergedResult.ts",
-      "export const result = { delivery: { delivered: true } };\n"
+      "export const result = { delivery: { status: 'accepted' } };\n"
     );
     await writeRepoFile(
       repoRoot,
       "src/v11/application/approval/runApprovalFlow.ts",
-      "export const emit = (): void => { emitTmuxDeliveryNotification(); };\n"
+      "export const emit = (): void => { emitDeliveryNotificationAck(); };\n"
     );
     await writeRepoFile(
       repoRoot,
       "src/v11/application/reply/replyCommandApi.ts",
-      "export const emit = (): void => { emitTmuxDeliveryNotification(); };\n"
+      "export const emit = (): void => { emitDeliveryNotificationAck(); };\n"
     );
     await writeRepoFile(
       repoRoot,
       "src/v11/application/askHuman/runAskHumanFlow.ts",
-      "export const emit = (): void => { emitTmuxDeliveryNotification(); };\n"
+      "export const emit = (): void => { emitDeliveryNotificationAck(); };\n"
     );
 
     const report = await buildCriticalSideEffectCheckReport({
@@ -97,32 +97,32 @@ describe("critical side-effect fitness check", () => {
     await writeRepoFile(
       repoRoot,
       "src/v11/application/kickoff/runKickoffFlow.ts",
-      "export const result = { delivery: { delivered: false } };\n"
+      "export const result = { delivery: { status: 'rejected' } };\n"
     );
     await writeRepoFile(
       repoRoot,
       "src/v11/application/pass/reviewerDelivery.ts",
-      "export const emit = (): void => { emitTmuxDeliveryNotification(); };\n"
+      "export const emit = (): void => { emitDeliveryNotificationAck(); };\n"
     );
     await writeRepoFile(
       repoRoot,
       "src/v11/application/converged/convergedResult.ts",
-      "export const result = { delivery: { delivered: true } };\n"
+      "export const result = { delivery: { status: 'accepted' } };\n"
     );
     await writeRepoFile(
       repoRoot,
       "src/v11/application/approval/runApprovalFlow.ts",
-      "export const emit = (): void => { emitTmuxDeliveryNotification(); };\n"
+      "export const emit = (): void => { emitDeliveryNotificationAck(); };\n"
     );
     await writeRepoFile(
       repoRoot,
       "src/v11/application/reply/replyCommandApi.ts",
-      "export const emit = (): void => { emitTmuxDeliveryNotification(); };\n"
+      "export const emit = (): void => { emitDeliveryNotificationAck(); };\n"
     );
     await writeRepoFile(
       repoRoot,
       "src/v11/application/askHuman/runAskHumanFlow.ts",
-      "export const emit = (): void => { emitTmuxDeliveryNotification(); };\n"
+      "export const emit = (): void => { emitDeliveryNotificationAck(); };\n"
     );
 
     const report = await buildCriticalSideEffectCheckReport({
@@ -171,7 +171,7 @@ describe("critical side-effect fitness check", () => {
     await writeRepoFile(
       repoRoot,
       "src/v11/application/pass/passCommandContract.ts",
-      "export interface PassCommandContract { emitTmuxDeliveryNotification: unknown }\n"
+      "export interface PassCommandContract { emitDeliveryNotificationAck: unknown }\n"
     );
     await writeRepoFile(
       repoRoot,
@@ -181,17 +181,17 @@ describe("critical side-effect fitness check", () => {
     await writeRepoFile(
       repoRoot,
       "src/v11/application/approval/approvalCommandContract.ts",
-      "export interface ApprovalCommandContract { emitTmuxDeliveryNotification: unknown }\n"
+      "export interface ApprovalCommandContract { emitDeliveryNotificationAck: unknown }\n"
     );
     await writeRepoFile(
       repoRoot,
       "src/v11/application/reply/replyCommandContract.ts",
-      "export interface ReplyCommandContract { emitTmuxDeliveryNotification: unknown }\n"
+      "export interface ReplyCommandContract { emitDeliveryNotificationAck: unknown }\n"
     );
     await writeRepoFile(
       repoRoot,
       "src/v11/application/askHuman/askHumanCommandContract.ts",
-      "export interface AskHumanCommandContract { emitTmuxDeliveryNotification: unknown }\n"
+      "export interface AskHumanCommandContract { emitDeliveryNotificationAck: unknown }\n"
     );
 
     const report = await buildCriticalSideEffectCheckReport({
@@ -221,32 +221,32 @@ describe("critical side-effect fitness check", () => {
     await writeRepoFile(
       repoRoot,
       "src/v11/application/kickoff/runKickoffFlow.ts",
-      "export const note = 'emitTmuxDeliveryNotification + delivery:';\n"
+      "export const note = 'emitDeliveryNotificationAck + delivery:';\n"
     );
     await writeRepoFile(
       repoRoot,
       "src/v11/application/pass/runPassFlow.ts",
-      "export const note = 'emitTmuxDeliveryNotification + delivery:';\n"
+      "export const note = 'emitDeliveryNotificationAck + delivery:';\n"
     );
     await writeRepoFile(
       repoRoot,
       "src/v11/application/converged/runConvergedFlow.ts",
-      "export const note = 'emitTmuxDeliveryNotification + delivery:';\n"
+      "export const note = 'emitDeliveryNotificationAck + delivery:';\n"
     );
     await writeRepoFile(
       repoRoot,
       "src/v11/application/approval/runApprovalFlow.ts",
-      "export const note = 'emitTmuxDeliveryNotification + delivery:';\n"
+      "export const note = 'emitDeliveryNotificationAck + delivery:';\n"
     );
     await writeRepoFile(
       repoRoot,
       "src/v11/application/reply/runReplyFlow.ts",
-      "export const note = 'emitTmuxDeliveryNotification + delivery:';\n"
+      "export const note = 'emitDeliveryNotificationAck + delivery:';\n"
     );
     await writeRepoFile(
       repoRoot,
       "src/v11/application/askHuman/runAskHumanFlow.ts",
-      "export const note = 'emitTmuxDeliveryNotification + delivery:';\n"
+      "export const note = 'emitDeliveryNotificationAck + delivery:';\n"
     );
 
     const report = await buildCriticalSideEffectCheckReport({
@@ -277,34 +277,34 @@ describe("critical side-effect fitness check", () => {
       repoRoot,
       "src/v11/application/reply/runReplyFlow.ts",
       [
-        "const notifier = dependencies.emitTmuxDeliveryNotification ?? emitTmuxDeliveryNotification;",
+        "const notifier = dependencies.emitDeliveryNotificationAck ?? emitDeliveryNotificationAck;",
         "void notifier({ recipient: 'human', message: 'x' });"
       ].join("\n")
     );
     await writeRepoFile(
       repoRoot,
       "src/v11/application/kickoff/runKickoffFlow.ts",
-      "export const result = { delivery: { delivered: true } };\n"
+      "export const result = { delivery: { status: 'accepted' } };\n"
     );
     await writeRepoFile(
       repoRoot,
       "src/v11/application/pass/runPassFlow.ts",
-      "export const emit = (): void => { emitTmuxDeliveryNotification(); };\n"
+      "export const emit = (): void => { emitDeliveryNotificationAck(); };\n"
     );
     await writeRepoFile(
       repoRoot,
       "src/v11/application/converged/runConvergedFlow.ts",
-      "export const result = { delivery: { delivered: true } };\n"
+      "export const result = { delivery: { status: 'accepted' } };\n"
     );
     await writeRepoFile(
       repoRoot,
       "src/v11/application/approval/runApprovalFlow.ts",
-      "export const emit = (): void => { emitTmuxDeliveryNotification(); };\n"
+      "export const emit = (): void => { emitDeliveryNotificationAck(); };\n"
     );
     await writeRepoFile(
       repoRoot,
       "src/v11/application/askHuman/runAskHumanFlow.ts",
-      "export const emit = (): void => { emitTmuxDeliveryNotification(); };\n"
+      "export const emit = (): void => { emitDeliveryNotificationAck(); };\n"
     );
 
     const report = await buildCriticalSideEffectCheckReport({
@@ -340,7 +340,7 @@ describe("critical side-effect fitness check", () => {
     await writeRepoFile(
       repoRoot,
       "src/v11/application/converged/runConvergedFlow.ts",
-      "const delivery = { delivered: true };\nexport const result = { delivery };\n"
+      "const delivery = { status: 'accepted' };\nexport const result = { delivery };\n"
     );
     await writeRepoFile(
       repoRoot,
@@ -400,27 +400,27 @@ describe("critical side-effect fitness check", () => {
     await writeRepoFile(
       repoRoot,
       "src/v11/application/pass/runPassFlow.ts",
-      "export const emit = (): void => { emitTmuxDeliveryNotification(); };\n"
+      "export const emit = (): void => { emitDeliveryNotificationAck(); };\n"
     );
     await writeRepoFile(
       repoRoot,
       "src/v11/application/converged/runConvergedFlow.ts",
-      "export const result = { delivery: { delivered: true } };\n"
+      "export const result = { delivery: { status: 'accepted' } };\n"
     );
     await writeRepoFile(
       repoRoot,
       "src/v11/application/approval/runApprovalFlow.ts",
-      "export const emit = (): void => { emitTmuxDeliveryNotification(); };\n"
+      "export const emit = (): void => { emitDeliveryNotificationAck(); };\n"
     );
     await writeRepoFile(
       repoRoot,
       "src/v11/application/reply/runReplyFlow.ts",
-      "export const emit = (): void => { emitTmuxDeliveryNotification(); };\n"
+      "export const emit = (): void => { emitDeliveryNotificationAck(); };\n"
     );
     await writeRepoFile(
       repoRoot,
       "src/v11/application/askHuman/runAskHumanFlow.ts",
-      "export const emit = (): void => { emitTmuxDeliveryNotification(); };\n"
+      "export const emit = (): void => { emitDeliveryNotificationAck(); };\n"
     );
 
     const report = await buildCriticalSideEffectCheckReport({

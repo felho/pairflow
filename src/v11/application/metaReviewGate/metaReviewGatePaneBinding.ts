@@ -93,6 +93,14 @@ type MetaReviewGateCommandBuilder = NonNullable<
   >["buildAgentCommand"]
 >;
 
+type MetaReviewGatePaneBindingRuntime = NonNullable<
+  NonNullable<Parameters<ResolveMetaReviewerPaneWarning>[0]["runtime"]>["paneBinding"]
+>;
+
+type MetaReviewGatePaneBindingTmux = NonNullable<
+  ReturnType<typeof resolveMetaReviewGatePaneBindingTmuxCapabilities>
+>;
+
 function buildMetaReviewerCommand(input: {
   buildAgentCommand: MetaReviewGateCommandBuilder;
   bubbleId: string;
@@ -154,27 +162,70 @@ function resolveNotifyRuntimeForPaneBinding(input: {
   };
 }
 
-export const resolveMetaReviewerPaneWarning: ResolveMetaReviewerPaneWarning = async (
-  input
-) => {
+function resolvePaneBindingPrerequisites(input: {
+  runtime: Parameters<ResolveMetaReviewerPaneWarning>[0]["runtime"];
+}):
+  | {
+    ok: true;
+    paneBindingRuntime: MetaReviewGatePaneBindingRuntime;
+    paneBindingTmux: MetaReviewGatePaneBindingTmux;
+    buildAgentCommand: MetaReviewGateCommandBuilder;
+    respawnPaneCommand: NonNullable<MetaReviewGatePaneBindingTmux["respawnPaneCommand"]>;
+  }
+  | {
+    ok: false;
+    failure: ReturnType<typeof buildMetaReviewerPaneFailure>;
+  } {
   const paneBindingRuntime = input.runtime?.paneBinding;
   const paneBindingTmux = resolveMetaReviewGatePaneBindingTmuxCapabilities(
     paneBindingRuntime
   );
+
   if (paneBindingRuntime?.buildAgentCommand === undefined) {
-    return buildMetaReviewerPaneFailure({
-      reasonCode: "META_REVIEWER_PANE_RUNTIME_UNAVAILABLE",
-      message: "meta-review gate pane binding is missing agent command builder.",
-      shouldDeactivate: false
-    });
+    return {
+      ok: false as const,
+      failure: buildMetaReviewerPaneFailure({
+        reasonCode: "META_REVIEWER_PANE_RUNTIME_UNAVAILABLE",
+        message: "meta-review gate pane binding is missing agent command builder.",
+        shouldDeactivate: false
+      })
+    };
   }
   if (paneBindingTmux?.respawnPaneCommand === undefined) {
-    return buildMetaReviewerPaneFailure({
-      reasonCode: "META_REVIEWER_PANE_RUNTIME_UNAVAILABLE",
-      message: "meta-review gate pane binding is missing respawn capability.",
-      shouldDeactivate: false
-    });
+    return {
+      ok: false as const,
+      failure: buildMetaReviewerPaneFailure({
+        reasonCode: "META_REVIEWER_PANE_RUNTIME_UNAVAILABLE",
+        message: "meta-review gate pane binding is missing respawn capability.",
+        shouldDeactivate: false
+      })
+    };
   }
+
+  return {
+    ok: true as const,
+    paneBindingRuntime,
+    paneBindingTmux,
+    buildAgentCommand: paneBindingRuntime.buildAgentCommand,
+    respawnPaneCommand: paneBindingTmux.respawnPaneCommand
+  };
+}
+
+export const resolveMetaReviewerPaneWarning: ResolveMetaReviewerPaneWarning = async (
+  input
+) => {
+  const prerequisites = resolvePaneBindingPrerequisites({
+    runtime: input.runtime
+  });
+  if (!prerequisites.ok) {
+    return prerequisites.failure;
+  }
+  const {
+    paneBindingRuntime,
+    paneBindingTmux,
+    buildAgentCommand,
+    respawnPaneCommand
+  } = prerequisites;
 
   const bindStart = await activateMetaReviewerPane(input);
   if (!bindStart.updated) {
@@ -222,7 +273,7 @@ export const resolveMetaReviewerPaneWarning: ResolveMetaReviewerPaneWarning = as
   }
   const workspacePath = workspaceAuthority.workspacePath;
   const metaReviewerCommand = buildMetaReviewerCommand({
-    buildAgentCommand: paneBindingRuntime.buildAgentCommand,
+    buildAgentCommand,
     bubbleId: input.bubbleId,
     workspacePath,
     repoPath: bindStart.record.repoPath,
@@ -230,7 +281,7 @@ export const resolveMetaReviewerPaneWarning: ResolveMetaReviewerPaneWarning = as
     pairflowCommandProfile: input.pairflowCommandProfile
   });
   try {
-    await paneBindingTmux.respawnPaneCommand({
+    await respawnPaneCommand({
       sessionName: bindStart.record.tmuxSessionName,
       paneIndex,
       cwd: workspacePath,

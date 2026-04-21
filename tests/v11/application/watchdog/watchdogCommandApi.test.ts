@@ -80,7 +80,7 @@ describe("watchdogCommandApi", () => {
     return {
       emitDeliveryNotificationAck: () =>
         Promise.resolve({
-          delivered: true,
+          status: "accepted",
           message: "ok"
         }),
       emitBubbleNotification: () =>

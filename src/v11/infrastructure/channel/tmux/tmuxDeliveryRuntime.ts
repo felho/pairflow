@@ -63,8 +63,8 @@ export function projectDeliveryAckToLegacyResult(
     ...(ack.sessionName !== undefined ? { sessionName: ack.sessionName } : {}),
     ...(ack.targetPaneIndex !== undefined ? { targetPaneIndex: ack.targetPaneIndex } : {}),
     message: ack.message,
-    reason: ack.reason,
-    reason_code: ack.reason_code,
+    ...(ack.reason !== undefined ? { reason: ack.reason } : {}),
+    ...(ack.reason_code !== undefined ? { reason_code: ack.reason_code } : {}),
     ...(ack.deliveryTargetReasonCode !== undefined
       ? { deliveryTargetReasonCode: ack.deliveryTargetReasonCode }
       : {})

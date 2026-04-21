@@ -2,8 +2,7 @@ import type {
   AskHumanDeliveryTargetReasonCode,
   AskHumanDeliveryAck,
   EmitAskHumanBubbleNotificationPort,
-  EmitAskHumanDeliveryNotificationAckPort,
-  EmitAskHumanTmuxDeliveryNotificationPort
+  EmitAskHumanDeliveryNotificationAckPort
 } from "./askHumanDeliveryPortsContract.js";
 import type { BubbleStateSnapshot } from "../../../types/bubble.js";
 import type { ProtocolEnvelope } from "../../../types/protocol.js";
@@ -31,7 +30,6 @@ export interface EmitAskHumanResult {
   activation?: AskHumanActivationProvenance;
   delivery?: {
     status: AskHumanDeliveryAck["status"];
-    delivered: boolean;
     message?: string;
     reason?: Extract<AskHumanDeliveryAck, { status: "rejected" }>["reason"];
     reason_code?: Extract<AskHumanDeliveryAck, { status: "rejected" }>["reason_code"];
@@ -41,6 +39,5 @@ export interface EmitAskHumanResult {
 
 export interface EmitAskHumanDependencies {
   emitDeliveryNotificationAck?: EmitAskHumanDeliveryNotificationAckPort;
-  emitTmuxDeliveryNotification?: EmitAskHumanTmuxDeliveryNotificationPort;
   emitBubbleNotification?: EmitAskHumanBubbleNotificationPort;
 }

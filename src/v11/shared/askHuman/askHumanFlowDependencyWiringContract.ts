@@ -1,15 +1,11 @@
 import type {
   EmitAskHumanBubbleNotificationPort,
-  EmitAskHumanDeliveryNotificationAckPort,
-  EmitAskHumanTmuxDeliveryNotificationPort
+  EmitAskHumanDeliveryNotificationAckPort
 } from "./askHumanDeliveryPortsContract.js";
 
 export interface AskHumanFlowRuntimeDependencies {
   emitDeliveryNotificationAck?:
     | EmitAskHumanDeliveryNotificationAckPort
-    | undefined;
-  emitTmuxDeliveryNotification?:
-    | EmitAskHumanTmuxDeliveryNotificationPort
     | undefined;
   emitBubbleNotification?: EmitAskHumanBubbleNotificationPort | undefined;
 }

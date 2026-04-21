@@ -12,7 +12,6 @@ import type {
   AskHumanDeliveryAck,
   EmitAskHumanBubbleNotificationPort,
   EmitAskHumanDeliveryNotificationAckPort,
-  EmitAskHumanTmuxDeliveryNotificationPort,
   ResolveAskHumanDeliveryMessageRefPort
 } from "./askHumanDeliveryPortsContract.js";
 import type { emitBubbleLifecycleEventBestEffort } from "../../../v11/shared/metrics/bubbleEvents.js";
@@ -53,7 +52,6 @@ export interface FinalizeAskHumanFlowInput {
 
 export interface FinalizeAskHumanFlowDependencies {
   emitDeliveryNotificationAck?: EmitAskHumanDeliveryNotificationAckPort;
-  emitTmuxDeliveryNotification?: EmitAskHumanTmuxDeliveryNotificationPort;
   emitBubbleNotification?: EmitAskHumanBubbleNotificationPort;
   resolveDeliveryMessageRef?: ResolveAskHumanDeliveryMessageRefPort;
   emitBubbleLifecycleEventBestEffort?: typeof emitBubbleLifecycleEventBestEffort;
@@ -68,7 +66,6 @@ export interface RunAskHumanFlowResult {
   activation?: AskHumanActivationProvenance;
   delivery?: {
     status: AskHumanDeliveryAck["status"];
-    delivered: boolean;
     message?: string;
     reason?: Extract<AskHumanDeliveryAck, { status: "rejected" }>["reason"];
     reason_code?: Extract<AskHumanDeliveryAck, { status: "rejected" }>["reason_code"];
@@ -93,7 +90,6 @@ export interface RunAskHumanFlowDependencies {
   writeStateSnapshot?: WriteStateSnapshotPort;
   applyStateTransition?: typeof applyStateTransition;
   emitDeliveryNotificationAck?: EmitAskHumanDeliveryNotificationAckPort;
-  emitTmuxDeliveryNotification?: EmitAskHumanTmuxDeliveryNotificationPort;
   emitBubbleNotification?: EmitAskHumanBubbleNotificationPort;
   resolveDeliveryMessageRef?: FinalizeAskHumanFlowDependencies["resolveDeliveryMessageRef"];
   emitBubbleLifecycleEventBestEffort?: typeof emitBubbleLifecycleEventBestEffort;

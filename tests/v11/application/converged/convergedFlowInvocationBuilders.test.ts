@@ -143,7 +143,7 @@ describe("convergedFlowInvocationBuilders", () => {
         ({
           kind: "waiting-human",
           attempted: false,
-          delivered: false,
+          status: "rejected",
           soundPath: null,
           reason: "disabled"
         }) as never
@@ -213,7 +213,7 @@ describe("convergedFlowInvocationBuilders", () => {
   it("maps the legacy converged delivery override onto the canonical ack port", () => {
     const legacyEmitDelivery = async () =>
       ({
-        delivered: true,
+        status: "accepted",
         message: "ok"
       }) as never;
 
@@ -257,13 +257,13 @@ describe("convergedFlowInvocationBuilders", () => {
           approvalRequestEnvelope: {},
           state: {}
         }) as never,
-      emitTmuxDeliveryNotification: legacyEmitDelivery
+      emitDeliveryNotificationAck: legacyEmitDelivery
     });
 
     expect(dependencies.emitDeliveryNotificationAck).toBe(legacyEmitDelivery);
   });
 
-  it("prefers the canonical converged delivery override when both keys are provided", () => {
+  it("forwards the canonical converged delivery override", () => {
     const canonicalEmitDelivery = async () =>
       ({
         status: "accepted",
@@ -271,15 +271,9 @@ describe("convergedFlowInvocationBuilders", () => {
         sessionName: "pf-test",
         targetPaneIndex: 1
       }) as never;
-    const legacyEmitDelivery = async () =>
-      ({
-        delivered: true,
-        message: "legacy"
-      }) as never;
 
     const dependencies = buildDefaultConvergedFlowDependencies({
-      emitDeliveryNotificationAck: canonicalEmitDelivery,
-      emitTmuxDeliveryNotification: legacyEmitDelivery
+      emitDeliveryNotificationAck: canonicalEmitDelivery
     });
 
     expect(dependencies.emitDeliveryNotificationAck).toBe(canonicalEmitDelivery);
@@ -343,7 +337,7 @@ describe("convergedFlowInvocationBuilders", () => {
           ({
             kind: "waiting-human",
             attempted: false,
-            delivered: false,
+            status: "rejected",
             soundPath: null,
             reason: "disabled"
           }) as never

@@ -9,7 +9,6 @@ export function buildAskHumanFinalizationDependencies(
 ): AskHumanFinalizationDependencies {
   const emitDeliveryNotificationAck =
     dependencies.emitDeliveryNotificationAck
-    ?? dependencies.emitTmuxDeliveryNotification
     ?? askHumanFinalizationDependencyDefaults.emitDeliveryNotificationAck;
   const resolveDeliveryMessageRef =
     dependencies.resolveDeliveryMessageRef

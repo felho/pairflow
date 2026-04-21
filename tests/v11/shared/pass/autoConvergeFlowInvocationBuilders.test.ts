@@ -120,7 +120,7 @@ describe("autoConvergeFlowInvocationBuilders", () => {
         } as never;
       },
       emitConvergedFromWorkspace: async () => ({}) as never,
-      emitTmuxDeliveryNotification: async () => ({ delivered: true }) as never,
+      emitDeliveryNotificationAck: async () => ({ status: "accepted" }) as never,
       emitBubbleNotification: async () => ({ shown: true } as never),
       finalizeAutoConvergePass: async (_input, dependencies) => {
         finalizeDependencies = dependencies;
@@ -137,7 +137,7 @@ describe("autoConvergeFlowInvocationBuilders", () => {
 
     expect(executeDependencies).toBeDefined();
     expect(typeof executeDependencies?.emitConvergedFromWorkspace).toBe("function");
-    expect(typeof executeDependencies?.emitTmuxDeliveryNotification).toBe("function");
+    expect(typeof executeDependencies?.emitDeliveryNotificationAck).toBe("function");
     expect(typeof executeDependencies?.emitBubbleNotification).toBe("function");
     expect(finalizeDependencies).toBeDefined();
     expect(typeof finalizeDependencies?.updateReviewerDocGateArtifact).toBe("function");

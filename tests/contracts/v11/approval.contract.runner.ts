@@ -389,7 +389,7 @@ async function executeApprovalCase(input: {
     await initGitRepository(repoPath);
     const deliveries: CapturedApprovalDelivery[] = [];
     const emitDelivery: NonNullable<
-      EmitApprovalDecisionDependencies["emitTmuxDeliveryNotification"]
+      EmitApprovalDecisionDependencies["emitDeliveryNotificationAck"]
     > = (deliveryInput) => {
       const targetRoleRaw =
         deliveryInput.envelope.payload.metadata?.[deliveryTargetRoleMetadataKey];
@@ -417,7 +417,7 @@ async function executeApprovalCase(input: {
         cwd: repoPath,
         now: new Date("2026-03-20T11:35:00.000Z")
       }, {
-        emitTmuxDeliveryNotification: emitDelivery
+        emitDeliveryNotificationAck: emitDelivery
       });
       assertApprovalDeliveryInvariant({
         action: input.action.action,
@@ -441,7 +441,7 @@ async function executeApprovalCase(input: {
         cwd: repoPath,
         now: new Date("2026-03-20T11:36:00.000Z")
       }, {
-        emitTmuxDeliveryNotification: emitDelivery
+        emitDeliveryNotificationAck: emitDelivery
       });
       assertApprovalDeliveryInvariant({
         action: input.action.action,
@@ -463,7 +463,7 @@ async function executeApprovalCase(input: {
         cwd: repoPath,
         now: new Date("2026-03-20T11:35:30.000Z")
       }, {
-        emitTmuxDeliveryNotification: emitDelivery
+        emitDeliveryNotificationAck: emitDelivery
       });
       deliveries.length = 0;
     }
@@ -475,7 +475,7 @@ async function executeApprovalCase(input: {
       cwd: repoPath,
       now: new Date("2026-03-20T11:36:00.000Z")
     }, {
-      emitTmuxDeliveryNotification: emitDelivery
+      emitDeliveryNotificationAck: emitDelivery
     });
     assertApprovalDeliveryInvariant({
       action: input.action.action,

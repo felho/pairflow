@@ -194,7 +194,6 @@ describe("normalPassFlowInvocationBuilders", () => {
       resolveMostRecentPreviousReviewerPassIsCleanFromMetadata: () => undefined,
       mapPassResultDelivery: () => ({
         status: "accepted",
-        delivered: true,
         retried: false
       }),
       buildNormalPassResult: () => ({
@@ -209,14 +208,14 @@ describe("normalPassFlowInvocationBuilders", () => {
     expect(dependencies.persistNormalPassPostAppend).toBeTypeOf("function");
     expect(dependencies.executeNormalPassDelivery).toBeTypeOf("function");
     expect(dependencies.finalizeNormalPass).toBeTypeOf("function");
-    expect("emitTmuxDeliveryNotification" in dependencies).toBe(false);
+    expect("emitDeliveryNotificationAck" in dependencies).toBe(false);
     expect("refreshReviewerContext" in dependencies).toBe(false);
   });
 
-  it("maps the legacy normal-pass delivery override onto the canonical key", async () => {
+  it("forwards the canonical normal-pass delivery override", async () => {
     let capturedDeliveryDependencies: Record<string, unknown> | undefined;
 
-    const emitTmuxDeliveryNotification = (() => undefined) as never;
+    const emitDeliveryNotificationAck = (() => undefined) as never;
 
     const dependencies = buildNormalPassFlowDependencies({
       prepareNormalPassAppend: () => ({
@@ -277,7 +276,7 @@ describe("normalPassFlowInvocationBuilders", () => {
         result: undefined,
         retried: false
       }),
-      emitTmuxDeliveryNotification,
+      emitDeliveryNotificationAck,
       finalizeNormalPass: async () => ({
         status: "ok"
       }),
@@ -309,10 +308,7 @@ describe("normalPassFlowInvocationBuilders", () => {
     });
 
     expect(capturedDeliveryDependencies?.emitDeliveryNotificationAck).toBe(
-      emitTmuxDeliveryNotification
-    );
-    expect(capturedDeliveryDependencies).not.toHaveProperty(
-      "emitTmuxDeliveryNotification"
+      emitDeliveryNotificationAck
     );
   });
 
@@ -320,7 +316,6 @@ describe("normalPassFlowInvocationBuilders", () => {
     let capturedDeliveryDependencies: Record<string, unknown> | undefined;
 
     const emitDeliveryNotificationAck = (() => undefined) as never;
-    const emitTmuxDeliveryNotification = (() => undefined) as never;
 
     const dependencies = buildNormalPassFlowDependencies({
       prepareNormalPassAppend: () => ({
@@ -382,7 +377,6 @@ describe("normalPassFlowInvocationBuilders", () => {
         retried: false
       }),
       emitDeliveryNotificationAck,
-      emitTmuxDeliveryNotification,
       finalizeNormalPass: async () => ({
         status: "ok"
       }),
@@ -415,9 +409,6 @@ describe("normalPassFlowInvocationBuilders", () => {
 
     expect(capturedDeliveryDependencies?.emitDeliveryNotificationAck).toBe(
       emitDeliveryNotificationAck
-    );
-    expect(capturedDeliveryDependencies).not.toHaveProperty(
-      "emitTmuxDeliveryNotification"
     );
   });
 });

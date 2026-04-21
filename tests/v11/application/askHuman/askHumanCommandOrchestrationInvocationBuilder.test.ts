@@ -37,7 +37,7 @@ describe("askHumanCommandOrchestrationInvocationBuilder", () => {
   });
 
   it("wires flow dependencies and forwards optional runtime notifiers", () => {
-    const emitTmuxDeliveryNotification = (() => Promise.resolve({})) as never;
+    const emitDeliveryNotificationAck = (() => Promise.resolve({})) as never;
 
     const invocation = buildAskHumanCommandOrchestrationInvocation({
       commandInput: {
@@ -45,7 +45,7 @@ describe("askHumanCommandOrchestrationInvocationBuilder", () => {
         now: new Date("2026-03-01T10:10:00.000Z")
       },
       runtimeDependencies: {
-        emitTmuxDeliveryNotification
+        emitDeliveryNotificationAck
       },
       createError: (message: PairflowCommandErrorInput) => new Error(toErrorMessage(message))
     });
@@ -58,7 +58,7 @@ describe("askHumanCommandOrchestrationInvocationBuilder", () => {
     );
     expect(
       invocation.orchestrationDependencies.emitDeliveryNotificationAck
-    ).toBe(emitTmuxDeliveryNotification);
+    ).toBe(emitDeliveryNotificationAck);
     expect("emitBubbleNotification" in invocation.orchestrationDependencies).toBe(
       false
     );

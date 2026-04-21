@@ -133,7 +133,6 @@ export interface BuildNormalPassFlowDependenciesInput<TResult> {
   executePassDelivery:
     ExecuteNormalPassDeliveryDependencies["executePassDelivery"];
   emitDeliveryNotificationAck?: PassDeliveryDependencies["emitDeliveryNotificationAck"];
-  emitTmuxDeliveryNotification?: PassDeliveryDependencies["emitTmuxDeliveryNotification"];
   refreshReviewerContext?: PassDeliveryDependencies["refreshReviewerContext"];
   readReviewerBriefArtifact?: PassDeliveryDependencies["readReviewerBriefArtifact"];
   readReviewerFocusArtifact?: PassDeliveryDependencies["readReviewerFocusArtifact"];
@@ -161,7 +160,7 @@ export interface BuildNormalPassFlowDependenciesInput<TResult> {
 function resolveNormalPassFlowDeliveryOverride<TResult>(
   input: BuildNormalPassFlowDependenciesInput<TResult>
 ): PassDeliveryDependencies["emitDeliveryNotificationAck"] | undefined {
-  return input.emitDeliveryNotificationAck ?? input.emitTmuxDeliveryNotification;
+  return input.emitDeliveryNotificationAck;
 }
 
 export function buildNormalPassFlowDependencies<TResult>(

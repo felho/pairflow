@@ -19,7 +19,6 @@ import type { ProtocolEnvelope } from "../../../types/protocol.js";
 
 export type ConvergedDelivery = {
   status: "accepted" | "rejected";
-  delivered?: boolean;
   reason?: string;
   reason_code?: string;
   retried: boolean;

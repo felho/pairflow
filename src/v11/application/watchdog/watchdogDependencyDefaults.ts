@@ -2,7 +2,7 @@ import type { ResolveBubbleByIdPort } from "../../shared/ports/bubbleLookup.js";
 import type { EmitBubbleNotificationPort } from "../../shared/ports/notifications.js";
 import type { AppendProtocolEnvelopePort } from "../../shared/ports/transcript.js";
 import type {
-  EmitDeliveryAckLikePort,
+  EmitDeliveryNotificationAckPort,
   ResolveDeliveryMessageRefPort,
   RetryStuckAgentInputPort
 } from "../../shared/ports/tmuxDelivery.js";
@@ -23,7 +23,7 @@ interface CoreWatchdogCommandDefaults {
   appendProtocolEnvelope: AppendProtocolEnvelopePort;
   appendWatchdogTrace: AppendWatchdogTracePort;
   emitBubbleNotification: EmitBubbleNotificationPort;
-  emitDeliveryNotificationAck: EmitDeliveryAckLikePort;
+  emitDeliveryNotificationAck: EmitDeliveryNotificationAckPort;
   retryStuckAgentInput: RetryStuckAgentInputPort;
   readStateSnapshot: ReadStateSnapshotPort;
   readRuntimeSessionsRegistry: ReadRuntimeSessionsRegistryPort;

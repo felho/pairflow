@@ -6,8 +6,7 @@ export function buildAskHumanFinalizationDependencyResolutionInput(
 ): ResolveAskHumanFinalizationDependenciesInput {
   return {
     emitDeliveryNotificationAck:
-      dependencies.emitDeliveryNotificationAck
-      ?? dependencies.emitTmuxDeliveryNotification,
+      dependencies.emitDeliveryNotificationAck,
     emitBubbleNotification: dependencies.emitBubbleNotification,
     resolveDeliveryMessageRef: dependencies.resolveDeliveryMessageRef,
     emitBubbleLifecycleEventBestEffort:

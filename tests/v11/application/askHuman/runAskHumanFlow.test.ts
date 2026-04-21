@@ -78,16 +78,16 @@ describe("runAskHumanFlow", () => {
         appendProtocolEnvelope: async () => appended,
         writeStateSnapshot: async () => written,
         applyStateTransition: (state) => state,
-        emitTmuxDeliveryNotification: async () =>
+        emitDeliveryNotificationAck: async () =>
           ({
-            delivered: true,
+            status: "accepted",
             message: "ok"
           }) as never,
         emitBubbleNotification: async () =>
           ({
             kind: "waiting-human",
             attempted: false,
-            delivered: false,
+            status: "rejected",
             soundPath: null,
             reason: "disabled"
           }) as never,

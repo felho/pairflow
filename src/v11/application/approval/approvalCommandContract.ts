@@ -1,6 +1,6 @@
 import type {
   DeliveryAck,
-  EmitDeliveryAckLikePort
+  EmitDeliveryNotificationAckPort
 } from "../../shared/ports/tmuxDelivery.js";
 import type {
   BubbleStateSnapshot
@@ -11,13 +11,11 @@ import type {
 } from "../../../types/protocol.js";
 
 export interface EmitApprovalDecisionDependencies {
-  emitDeliveryNotificationAck?: EmitDeliveryAckLikePort;
-  emitTmuxDeliveryNotification?: EmitDeliveryAckLikePort;
+  emitDeliveryNotificationAck?: EmitDeliveryNotificationAckPort;
 }
 
 export interface AcceptedApprovalDecisionDeliverySignal {
   status: Extract<DeliveryAck["status"], "accepted">;
-  delivered?: true;
   message: string;
   sessionName?: string;
   targetPaneIndex?: number;
@@ -30,7 +28,6 @@ export interface AcceptedApprovalDecisionDeliverySignal {
 
 export interface RejectedApprovalDecisionDeliverySignal {
   status: Extract<DeliveryAck["status"], "rejected">;
-  delivered?: false;
   message: string;
   sessionName?: string;
   targetPaneIndex?: number;

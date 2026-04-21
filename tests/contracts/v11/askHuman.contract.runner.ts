@@ -404,7 +404,7 @@ async function executeAskHumanCase(input: {
 
     const deliveries: CapturedAskHumanDelivery[] = [];
     const emitDelivery: NonNullable<
-      EmitAskHumanDependencies["emitTmuxDeliveryNotification"]
+      EmitAskHumanDependencies["emitDeliveryNotificationAck"]
     > = (deliveryInput) => {
       const targetRoleRaw =
         deliveryInput.envelope.payload.metadata?.[deliveryTargetRoleMetadataKey];
@@ -416,7 +416,6 @@ async function executeAskHumanCase(input: {
       });
       return Promise.resolve({
         status: "accepted",
-        delivered: true,
         message: "ok"
       });
     };
@@ -426,7 +425,7 @@ async function executeAskHumanCase(input: {
         refs: askHumanInput.refs,
         cwd: bubble.paths.worktreePath
       }, {
-        emitTmuxDeliveryNotification: emitDelivery
+        emitDeliveryNotificationAck: emitDelivery
       });
       assertAskHumanDeliveryInvariant({
         deliveries,

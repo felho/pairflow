@@ -67,18 +67,16 @@ describe("executeAutoConvergeConverged", () => {
       expectedReviewer: "claude"
     });
     expect(typeof capturedDependencies?.emitDeliveryNotificationAck).toBe("function");
-    expect(capturedDependencies).not.toHaveProperty("emitTmuxDeliveryNotification");
     expect(typeof capturedDependencies?.emitBubbleNotification).toBe("function");
     expect(result).toBe(expectedResult);
   });
 
-  it("prefers the canonical delivery override when both auto-converge keys are provided", async () => {
+  it("forwards the canonical delivery override into auto-converge execution", async () => {
     let capturedDependencies: Parameters<
       Parameters<typeof executeAutoConvergeConverged>[1]["emitConvergedFromWorkspace"]
     >[1] | undefined;
 
     const emitDeliveryNotificationAck = (() => undefined) as never;
-    const emitTmuxDeliveryNotification = (() => undefined) as never;
 
     await executeAutoConvergeConverged(
       {
@@ -98,50 +96,13 @@ describe("executeAutoConvergeConverged", () => {
           capturedDependencies = dependencies;
           return buildConvergedResult();
         },
-        emitDeliveryNotificationAck,
-        emitTmuxDeliveryNotification
+        emitDeliveryNotificationAck
       }
     );
 
     expect(capturedDependencies?.emitDeliveryNotificationAck).toBe(
       emitDeliveryNotificationAck
     );
-    expect(capturedDependencies).not.toHaveProperty("emitTmuxDeliveryNotification");
-  });
-
-  it("maps the legacy delivery override onto the canonical auto-converge dependency", async () => {
-    let capturedDependencies: Parameters<
-      Parameters<typeof executeAutoConvergeConverged>[1]["emitConvergedFromWorkspace"]
-    >[1] | undefined;
-
-    const emitTmuxDeliveryNotification = (() => undefined) as never;
-
-    await executeAutoConvergeConverged(
-      {
-        summary: "auto converge",
-        refs: [],
-        cwd: "/tmp/wt",
-        now: new Date("2026-03-19T12:00:00.000Z"),
-        expectedStateFingerprint: "fp_1",
-        expectedRound: 2,
-        expectedReviewer: "claude",
-        onDownstreamRejected: () => {
-          throw new Error("unexpected");
-        }
-      },
-      {
-        emitConvergedFromWorkspace: async (_input, dependencies) => {
-          capturedDependencies = dependencies;
-          return buildConvergedResult();
-        },
-        emitTmuxDeliveryNotification
-      }
-    );
-
-    expect(capturedDependencies?.emitDeliveryNotificationAck).toBe(
-      emitTmuxDeliveryNotification
-    );
-    expect(capturedDependencies).not.toHaveProperty("emitTmuxDeliveryNotification");
   });
 
   it("maps thrown downstream errors to rejection callback reason", async () => {

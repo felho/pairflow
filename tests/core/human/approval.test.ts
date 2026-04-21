@@ -229,7 +229,7 @@ describe("approval decisions", () => {
         now: new Date("2026-02-22T12:05:00.000Z")
       },
       {
-        emitTmuxDeliveryNotification: (input) => {
+        emitDeliveryNotificationAck: (input) => {
           if (input.messageRef === undefined) {
             throw new Error("Expected messageRef for approval delivery.");
           }
@@ -280,7 +280,7 @@ describe("approval decisions", () => {
         now: new Date("2026-02-22T12:05:00.000Z")
       },
       {
-        emitTmuxDeliveryNotification: (input) => {
+        emitDeliveryNotificationAck: (input) => {
           deliveries.push({
             recipient: input.envelope.recipient,
             type: input.envelope.type,
@@ -315,14 +315,12 @@ describe("approval decisions", () => {
     expect(result.delivery).toEqual({
       statusDelivery: {
         status: "accepted",
-        delivered: true,
         message: "ok",
         sessionName: "pf_bubble",
         targetPaneIndex: 1
       },
       implementerDelivery: {
         status: "accepted",
-        delivered: true,
         message: "ok",
         sessionName: "pf_bubble",
         targetPaneIndex: 1

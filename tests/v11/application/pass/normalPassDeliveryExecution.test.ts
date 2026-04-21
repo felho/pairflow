@@ -144,7 +144,6 @@ describe("executeNormalPassDelivery", () => {
       | undefined;
 
     const emitDeliveryNotificationAck = (() => undefined) as never;
-    const emitTmuxDeliveryNotification = (() => undefined) as never;
 
     await executeNormalPassDelivery(
       {
@@ -170,16 +169,12 @@ describe("executeNormalPassDelivery", () => {
             retried: false
           };
         },
-        emitDeliveryNotificationAck,
-        emitTmuxDeliveryNotification
+        emitDeliveryNotificationAck
       }
     );
 
     expect(capturedDeliveryDependencies?.emitDeliveryNotificationAck).toBe(
       emitDeliveryNotificationAck
-    );
-    expect(capturedDeliveryDependencies).not.toHaveProperty(
-      "emitTmuxDeliveryNotification"
     );
   });
 });

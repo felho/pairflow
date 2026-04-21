@@ -91,14 +91,14 @@ describe("executeConvergedExecution", () => {
           });
           if (input.envelope.recipient === "codex") {
             return {
-              delivered: false,
+              status: "rejected",
               message: "",
               reason: "delivery_unconfirmed",
               reason_code: "DELIVERY_ACK_REJECTED"
             };
           }
           return {
-            delivered: true,
+            status: "accepted",
             message: "",
             sessionName: "pf_bubble",
             targetPaneIndex: 1
@@ -134,7 +134,6 @@ describe("executeConvergedExecution", () => {
     ]);
     expect(result.delivery).toEqual({
       status: "rejected",
-      delivered: false,
       reason: "partial_delivery_failed",
       reason_code: "DELIVERY_ACK_REJECTED",
       retried: false
@@ -219,14 +218,14 @@ describe("executeConvergedExecution", () => {
           });
           if (deliveryCallCount === 1) {
             return {
-              delivered: false,
+              status: "rejected",
               message: "",
               reason: "delivery_unconfirmed",
               reason_code: "DELIVERY_ACK_REJECTED"
             };
           }
           return {
-            delivered: true,
+            status: "accepted",
             message: "",
             sessionName: "pf_bubble",
             targetPaneIndex: 1
@@ -255,7 +254,6 @@ describe("executeConvergedExecution", () => {
     ]);
     expect(result.delivery).toEqual({
       status: "accepted",
-      delivered: true,
       retried: true
     });
   });
@@ -319,14 +317,14 @@ describe("executeConvergedExecution", () => {
           }
           if (input.envelope.recipient === "codex") {
             return {
-              delivered: false,
+              status: "rejected",
               message: "",
               reason: "delivery_unconfirmed",
               reason_code: "DELIVERY_ACK_REJECTED"
             };
           }
           return {
-            delivered: false,
+            status: "rejected",
             message: "",
             reason: "no_runtime_session",
             reason_code: "DELIVERY_ACK_RUNTIME_SESSION_UNAVAILABLE"
@@ -345,7 +343,6 @@ describe("executeConvergedExecution", () => {
 
     expect(result.delivery).toEqual({
       status: "rejected",
-      delivered: false,
       reason: "delivery_unconfirmed",
       reason_code: "DELIVERY_ACK_REJECTED",
       retried: false

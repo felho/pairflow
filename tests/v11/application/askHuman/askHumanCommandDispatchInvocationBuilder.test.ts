@@ -19,7 +19,7 @@ describe("askHumanCommandDispatchInvocationBuilder", () => {
       now
     };
     const dependencies = {
-      emitTmuxDeliveryNotification: (() => Promise.resolve({})) as never,
+      emitDeliveryNotificationAck: (() => Promise.resolve({})) as never,
       emitBubbleNotification: (() => Promise.resolve({})) as never
     };
     const createError = (message: PairflowCommandErrorInput) => new Error(toErrorMessage(message));

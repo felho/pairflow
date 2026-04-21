@@ -4,7 +4,6 @@ import type {
   EmitOptionalAskHumanNotificationsInput
 } from "../../shared/askHuman/askHumanNotificationEmissionContract.js";
 import type { AskHumanDeliveryAck } from "../../shared/askHuman/askHumanDeliveryPortsContract.js";
-import { normalizeDeliveryAck } from "../../shared/delivery/deliveryAckNormalization.js";
 
 function describeDetachedBubbleNotificationFailure(error: unknown): void {
   void error;
@@ -47,7 +46,7 @@ export async function emitOptionalAskHumanNotifications(
     sessionsPath: input.sessionsPath,
     envelope: input.envelope,
     messageRef: input.messageRef
-  }).then(normalizeDeliveryAck).catch((error) => buildUnexpectedAskHumanDeliveryFailureResult(error));
+  }).catch((error) => buildUnexpectedAskHumanDeliveryFailureResult(error));
   void bubbleNotificationPromise;
 
   return {

@@ -37,27 +37,25 @@ describe("askHumanFinalizationDependencyResolution", () => {
     );
   });
 
-  it("prefers direct delivery-ack override over the legacy alias", () => {
+  it("forwards the canonical delivery-ack override", () => {
     const emitDeliveryNotificationAckOverride = async () =>
       ({
-        delivered: true,
+        status: "accepted",
         message: "direct"
-      }) as never;
-    const emitTmuxDeliveryNotificationOverride = async () =>
-      ({
-        delivered: true,
-        message: "legacy"
       }) as never;
     const emitBubbleNotificationOverride = async () =>
       ({
-        delivered: true
+        kind: "waiting-human",
+        attempted: false,
+        delivered: false,
+        soundPath: null,
+        reason: "disabled"
       }) as never;
     const resolveDeliveryMessageRefOverride = () => "message-ref";
     const emitBubbleLifecycleEventBestEffortOverride = async () => undefined;
 
     const resolved = resolveAskHumanFinalizationDependencies({
       emitDeliveryNotificationAck: emitDeliveryNotificationAckOverride,
-      emitTmuxDeliveryNotification: emitTmuxDeliveryNotificationOverride,
       emitBubbleNotification: emitBubbleNotificationOverride,
       resolveDeliveryMessageRef: resolveDeliveryMessageRefOverride,
       emitBubbleLifecycleEventBestEffort:
@@ -79,19 +77,23 @@ describe("askHumanFinalizationDependencyResolution", () => {
   });
 
   it("uses provided finalization overrides", () => {
-    const emitTmuxDeliveryNotificationOverride = async () =>
+    const emitDeliveryNotificationAckOverride = async () =>
       ({
-        delivered: true
+        status: "accepted"
       }) as never;
     const emitBubbleNotificationOverride = async () =>
       ({
-        delivered: true
+        kind: "waiting-human",
+        attempted: false,
+        delivered: false,
+        soundPath: null,
+        reason: "disabled"
       }) as never;
     const resolveDeliveryMessageRefOverride = () => "message-ref";
     const emitBubbleLifecycleEventBestEffortOverride = async () => undefined;
 
     const resolved = resolveAskHumanFinalizationDependencies({
-      emitTmuxDeliveryNotification: emitTmuxDeliveryNotificationOverride,
+      emitDeliveryNotificationAck: emitDeliveryNotificationAckOverride,
       emitBubbleNotification: emitBubbleNotificationOverride,
       resolveDeliveryMessageRef: resolveDeliveryMessageRefOverride,
       emitBubbleLifecycleEventBestEffort:
@@ -99,7 +101,7 @@ describe("askHumanFinalizationDependencyResolution", () => {
     });
 
     expect(resolved.emitDeliveryNotificationAck).toBe(
-      emitTmuxDeliveryNotificationOverride
+      emitDeliveryNotificationAckOverride
     );
     expect(resolved.emitBubbleNotification).toBe(
       emitBubbleNotificationOverride

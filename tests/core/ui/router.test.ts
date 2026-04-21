@@ -168,14 +168,12 @@ describe("approval decision delivery projection", () => {
   it("projects application delivery compat fields out of the shared UI/public contract", () => {
     const accepted = projectApprovalDecisionDeliverySignalToUiDeliverySignal({
       status: "accepted",
-      delivered: true,
       message: "Approval delivered to reviewer.",
       sessionName: "pf-b-router-approve-success",
       targetPaneIndex: 1
     });
     const rejected = projectApprovalDecisionDeliverySignalToUiDeliverySignal({
       status: "rejected",
-      delivered: false,
       message: "Implementer delivery could not be confirmed.",
       reason: "no_runtime_session",
       reason_code: "DELIVERY_ACK_RUNTIME_SESSION_UNAVAILABLE"
@@ -201,14 +199,12 @@ describe("approval decision delivery projection", () => {
     const projected = projectApprovalDecisionDeliverySignalsToUiDeliverySignals({
       statusDelivery: {
         status: "accepted",
-        delivered: true,
         message: "Approval delivered to reviewer.",
         sessionName: "pf-b-router-approve-success",
         targetPaneIndex: 1
       },
       implementerDelivery: {
         status: "rejected",
-        delivered: false,
         message: "Implementer delivery could not be confirmed.",
         reason: "no_runtime_session",
         reason_code: "DELIVERY_ACK_RUNTIME_SESSION_UNAVAILABLE"
@@ -1199,14 +1195,12 @@ describe("createUiRouter action routes", () => {
         delivery: {
           statusDelivery: {
             status: "accepted" as const,
-            delivered: true,
             message: "Approval delivered to reviewer.",
             sessionName: "pf-b-router-approve-default",
             targetPaneIndex: 1
           },
           implementerDelivery: {
             status: "rejected" as const,
-            delivered: false,
             message: "Implementer delivery could not be confirmed.",
             reason: "no_runtime_session" as const,
             reason_code: "DELIVERY_ACK_RUNTIME_SESSION_UNAVAILABLE" as const

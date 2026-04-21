@@ -6,8 +6,8 @@ import { join } from "node:path";
 import { parseBubbleConfigToml, renderBubbleConfigToml } from "../../../src/config/bubbleConfig.js";
 import { createBubble } from "../../../src/v11/application/create/createBubble.js";
 import { readTranscriptEnvelopes } from "../../../src/v11/infrastructure/artifact/transcript/transcriptStore.js";
-import type { EmitTmuxDeliveryNotificationResult } from "../../../src/v11/infrastructure/channel/tmux/tmuxDelivery.js";
 import { buildRunningExecutionContext } from "../../../src/v11/shared/state/executionContext.js";
+import type { DeliveryAck } from "../../../src/v11/shared/ports/tmuxDelivery.js";
 import {
   readStateSnapshot,
   StateStoreConflictError,
@@ -471,7 +471,7 @@ async function executeKickoffCase(input: {
 
     const deliveries: CapturedKickoffDelivery[] = [];
     const emitDelivery: NonNullable<
-      KickoffDependencyOverrideMap["emitTmuxDeliveryNotification"]
+      KickoffDependencyOverrideMap["emitDeliveryNotificationAck"]
     > = (deliveryInput) => {
       const targetRoleRaw =
         deliveryInput.envelope.payload.metadata?.[deliveryTargetRoleMetadataKey];
@@ -480,14 +480,16 @@ async function executeKickoffCase(input: {
         targetRole: typeof targetRoleRaw === "string" ? targetRoleRaw : null,
         refKind: classifyDeliveryRefKind(deliveryInput.messageRef)
       });
-      return Promise.resolve<EmitTmuxDeliveryNotificationResult>({
-        delivered: true,
-        message: "ok"
+      return Promise.resolve<DeliveryAck>({
+        status: "accepted",
+        message: "ok",
+        sessionName: "pf_kickoff_contract",
+        targetPaneIndex: 1
       });
     };
 
     const dependencyOverrides: KickoffDependencyOverrideMap = {
-      emitTmuxDeliveryNotification: emitDelivery
+      emitDeliveryNotificationAck: emitDelivery
     };
     if (parsedInput.fixture.stateConflict) {
       dependencyOverrides.writeStateSnapshot = () =>

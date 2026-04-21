@@ -14,6 +14,8 @@ import type {
   ReviewerFindingsClaimParserMetadata
 } from "../../domain/pass/reviewerFindingsClaim.js";
 import type { DeliveryAck } from "../../shared/ports/tmuxDelivery.js";
+import type { PassResultDelivery } from "./passResultDelivery.js";
+import type { BuildNormalPassResultInput } from "./passResultBuilder.js";
 import type { PassActivationProvenance } from "./passCommandContract.js";
 
 export interface FinalizeNormalPassInput {
@@ -69,34 +71,8 @@ export interface FinalizeNormalPassDependencies<TResult> {
   mapPassResultDelivery: (input: {
     deliveryResult: DeliveryAck | undefined;
     deliveryRetried: boolean;
-  }) => {
-    status: "accepted" | "rejected";
-    delivered?: boolean;
-    reason?: string;
-    reason_code?: string;
-    retried: boolean;
-  } | undefined;
-  buildNormalPassResult: (input: {
-    bubbleId: string;
-    sequence: number;
-    envelope: ProtocolEnvelope;
-    state: BubbleStateSnapshot;
-    inferredIntent: boolean;
-    activation?: PassActivationProvenance;
-    repeatCleanReasonCode: RepeatCleanAutoconvergeReasonCode;
-    repeatCleanReasonDetail: RepeatCleanAutoconvergeReasonDetail;
-    repeatCleanTrigger: boolean;
-    mostRecentPreviousReviewerCleanPassEnvelope: boolean;
-    delivery?: {
-      status: "accepted" | "rejected";
-      delivered?: boolean;
-      reason?: string;
-      reason_code?: string;
-      retried: boolean;
-    };
-    passValidationCompatibilityArtifactWriteFailureReason?: string;
-    docGateArtifactWriteFailureReason?: string;
-  }) => TResult;
+  }) => PassResultDelivery | undefined;
+  buildNormalPassResult: (input: BuildNormalPassResultInput) => TResult;
 }
 
 export async function finalizeNormalPass<TResult>(

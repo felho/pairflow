@@ -10,7 +10,6 @@ export function resolveAskHumanFinalizationDependencies(
   return {
     emitDeliveryNotificationAck:
       input.emitDeliveryNotificationAck
-      ?? input.emitTmuxDeliveryNotification
       ?? askHumanFinalizationDependencyDefaults.emitDeliveryNotificationAck,
     emitBubbleNotification:
       input.emitBubbleNotification

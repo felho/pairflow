@@ -65,7 +65,7 @@ describe("emitAskHumanFromWorkspaceV11", () => {
       expected_state_fingerprint: authorityBeforeEmit.fingerprint
     });
     expect(result.delivery).toMatchObject({
-      delivered: false,
+      status: "rejected",
       reason: "no_runtime_session",
       deliveryTargetReasonCode: "DELIVERY_TARGET_ROLE_ABSENT"
     });
@@ -131,14 +131,13 @@ describe("emitAskHumanFromWorkspaceV11", () => {
         now: new Date("2026-02-21T12:11:00.000Z")
       },
       {
-        emitTmuxDeliveryNotification: (input) => {
+        emitDeliveryNotificationAck: (input) => {
           if (input.messageRef === undefined) {
             throw new Error("Expected messageRef for HUMAN_QUESTION delivery.");
           }
           deliveryRefs.push(input.messageRef);
           return Promise.resolve({
             status: "accepted",
-            delivered: true,
             message: "ok",
             sessionName: "pf_bubble",
             targetPaneIndex: 1
@@ -148,7 +147,7 @@ describe("emitAskHumanFromWorkspaceV11", () => {
           Promise.resolve({
             kind: "waiting-human",
             attempted: false,
-            delivered: false,
+            status: "rejected",
             soundPath: null,
             reason: "disabled"
           })
@@ -161,7 +160,6 @@ describe("emitAskHumanFromWorkspaceV11", () => {
     expect(deliveryRefs[0]?.startsWith("transcript.ndjson#")).toBe(false);
     expect(result.delivery).toMatchObject({
       status: "accepted",
-      delivered: true,
       message: "ok"
     });
   });

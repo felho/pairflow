@@ -58,12 +58,11 @@ describe("finalizeAskHumanFlow", () => {
           expect(input.envelope).toBe(appendedEnvelope);
           return "transcript-ref#msg_20260221_001";
         },
-        emitTmuxDeliveryNotification: async (input) => {
-          callOrder.push("emitTmuxDeliveryNotification");
+        emitDeliveryNotificationAck: async (input) => {
+          callOrder.push("emitDeliveryNotificationAck");
           expect(input.messageRef).toBe("transcript-ref#msg_20260221_001");
           return {
             status: "accepted",
-            delivered: true,
             message: "ok",
             sessionName: "pf_bubble",
             targetPaneIndex: 1
@@ -75,7 +74,7 @@ describe("finalizeAskHumanFlow", () => {
           return {
             kind,
             attempted: false,
-            delivered: false,
+            status: "rejected",
             soundPath: null,
             reason: "disabled"
           };
@@ -96,7 +95,7 @@ describe("finalizeAskHumanFlow", () => {
     expect(callOrder).toEqual([
       "resolveDeliveryMessageRef",
       "emitBubbleNotification",
-      "emitTmuxDeliveryNotification",
+      "emitDeliveryNotificationAck",
       "emitBubbleLifecycleEventBestEffort"
     ]);
     expect(result).toMatchObject({
@@ -116,7 +115,6 @@ describe("finalizeAskHumanFlow", () => {
       },
       delivery: {
         status: "accepted",
-        delivered: true,
         message: "ok"
       }
     });
@@ -169,13 +167,13 @@ describe("finalizeAskHumanFlow", () => {
       },
       {
         resolveDeliveryMessageRef: () => "transcript-ref#msg_20260221_002",
-        emitTmuxDeliveryNotification: async () => {
+        emitDeliveryNotificationAck: async () => {
           throw new Error("tmux boom");
         },
         emitBubbleNotification: async () => ({
           kind: "waiting-human",
           attempted: false,
-          delivered: false,
+          status: "rejected",
           soundPath: null,
           reason: "disabled"
         }),
@@ -185,7 +183,6 @@ describe("finalizeAskHumanFlow", () => {
 
     expect(result.delivery).toEqual({
       status: "rejected",
-      delivered: false,
       message: "tmux delivery notification failed: tmux boom",
       reason: "tmux_send_failed",
       reason_code: "DELIVERY_ACK_REJECTED"
@@ -205,7 +202,6 @@ describe("finalizeAskHumanFlow", () => {
     let deliveryResolve:
       | ((value: {
           status: "accepted";
-          delivered: boolean;
           message: string;
           sessionName: string;
           targetPaneIndex: number;
@@ -220,7 +216,6 @@ describe("finalizeAskHumanFlow", () => {
     });
     const deliveryPromise = new Promise<{
       status: "accepted";
-      delivered: boolean;
       message: string;
       sessionName: string;
       targetPaneIndex: number;
@@ -267,7 +262,7 @@ describe("finalizeAskHumanFlow", () => {
       },
       {
         resolveDeliveryMessageRef: () => "transcript-ref#msg_20260221_003",
-        emitTmuxDeliveryNotification: async () => deliveryPromise,
+        emitDeliveryNotificationAck: async () => deliveryPromise,
         emitBubbleNotification: async () => {
           await bubbleNotificationPromise;
           return {
@@ -284,7 +279,6 @@ describe("finalizeAskHumanFlow", () => {
 
     deliveryResolve?.({
       status: "accepted",
-      delivered: true,
       message: "ok",
       sessionName: "pf_bubble",
       targetPaneIndex: 1
@@ -293,7 +287,6 @@ describe("finalizeAskHumanFlow", () => {
     const result = await resultPromise;
     expect(result.delivery).toEqual({
       status: "accepted",
-      delivered: true,
       message: "ok"
     });
     expect("activation" in result).toBe(false);

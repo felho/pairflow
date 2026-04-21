@@ -8,6 +8,7 @@ import {
 } from "../../../src/v11/application/metaReviewGate/emitMetaReviewGateV11.js";
 import { readStateSnapshot, writeStateSnapshot } from "../../../src/v11/infrastructure/state/stateStore.js";
 import { normalizeMetaReviewSnapshot } from "../../../src/v11/shared/metaReviewGate/metaReviewGateSnapshotHelpers.js";
+import type { MetaReviewGateTmuxRunner } from "../../../src/v11/shared/metaReviewGate/metaReviewGateTmuxCapabilities.js";
 import type {
   RuntimeSessionRecord
 } from "../../../src/v11/infrastructure/executor/sessionRuntime/runtimeSessionsRegistry.js";
@@ -350,7 +351,7 @@ async function executeMetaReviewGateCase(input: {
     });
     const maybeAcceptTrustPrompt = () => Promise.resolve(undefined);
     const sendSubmissionRequestMessage = (
-      _runner: typeof notifyRunTmux,
+      _runner: MetaReviewGateTmuxRunner,
       _targetPane: string,
       message: string
     ) => {

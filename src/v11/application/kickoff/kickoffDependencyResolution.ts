@@ -33,7 +33,6 @@ export function resolveKickoffDependencies(
     appendEnvelope: overrides.appendProtocolEnvelope ?? defaults.appendEnvelope,
     emitDelivery:
       overrides.emitDeliveryNotificationAck
-      ?? overrides.emitTmuxDeliveryNotification
       ?? defaults.emitDelivery
   };
 }

@@ -120,12 +120,12 @@ describe("emitHumanReply", () => {
         now: new Date("2026-02-21T12:09:00.000Z")
       },
       {
-        emitTmuxDeliveryNotification: (input) => {
+        emitDeliveryNotificationAck: (input) => {
           if (input.messageRef !== undefined) {
             deliveryRefs.push(input.messageRef);
           }
           return Promise.resolve({
-            delivered: true,
+            status: "accepted",
             message: "ok"
           });
         }
@@ -206,12 +206,12 @@ describe("emitHumanReply", () => {
         now: new Date("2026-02-21T12:10:00.000Z")
       },
       {
-        emitTmuxDeliveryNotification: (input) => {
+        emitDeliveryNotificationAck: (input) => {
           deliveries.push(
             String(input.envelope.payload.metadata?.[deliveryTargetRoleMetadataKey])
           );
           return Promise.resolve({
-            delivered: true,
+            status: "accepted",
             message: "ok"
           });
         }

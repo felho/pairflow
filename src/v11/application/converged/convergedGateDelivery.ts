@@ -2,7 +2,7 @@ import type {
   DeliveryAck,
   DeliveryAckReasonCode,
   DeliveryAckStatus,
-  EmitDeliveryAckLikePort
+  EmitDeliveryNotificationAckPort
 } from "../../shared/ports/tmuxDelivery.js";
 import type { applyMetaReviewGateOnConvergence } from "../../shared/metaReviewGate/metaReviewGateCommandApi.js";
 import type { ResolvedBubbleWorkspace } from "../../shared/ports/workspaceResolution.js";
@@ -17,11 +17,9 @@ import {
   buildDefaultConvergedGateDeliveryDependencies,
   type ResolvedConvergedGateDeliveryDependencies
 } from "./convergedDefaultDependencies.js";
-import { normalizeDeliveryAck } from "../../shared/delivery/deliveryAckNormalization.js";
 
 export interface ConvergedDeliveryResult {
   status: DeliveryAckStatus;
-  delivered?: boolean;
   reason?: string;
   reason_code?: DeliveryAckReasonCode;
   retried: boolean;
@@ -29,17 +27,8 @@ export interface ConvergedDeliveryResult {
 
 interface NormalizedConvergedDelivery {
   status: DeliveryAckStatus;
-  delivered?: boolean;
   reason?: Extract<DeliveryAck, { status: "rejected" }>["reason"];
   reason_code?: DeliveryAckReasonCode;
-}
-
-function buildConvergedCompatDeliveredProjection(
-  status: DeliveryAckStatus
-): Pick<NormalizedConvergedDelivery, "delivered"> {
-  return {
-    delivered: status === "accepted"
-  };
 }
 
 function withDeliveryTargetRole(
@@ -68,7 +57,6 @@ function normalizeConvergedDelivery(
 ): NormalizedConvergedDelivery {
   return {
     status: delivery.status,
-    ...buildConvergedCompatDeliveredProjection(delivery.status),
     ...(delivery.reason !== undefined ? { reason: delivery.reason } : {}),
     ...(delivery.reason_code !== undefined
       ? { reason_code: delivery.reason_code }
@@ -121,14 +109,12 @@ function buildConvergedDelivery(
       ? failedDeliveries.find((delivery) => delivery.reason_code !== undefined)?.reason_code
       : undefined;
   return failedDeliveryCount === 0
-    ? {
+      ? {
         status: "accepted",
-        ...buildConvergedCompatDeliveredProjection("accepted"),
         retried
       }
     : {
         status: "rejected",
-        ...buildConvergedCompatDeliveredProjection("rejected"),
         ...(aggregatedDeliveryReason !== undefined
           ? { reason: aggregatedDeliveryReason }
           : {}),
@@ -144,7 +130,7 @@ export async function executeGateDelivery(input: {
   implementer: AgentName;
   reviewer: AgentName;
   gateResult: Awaited<ReturnType<typeof applyMetaReviewGateOnConvergence>>;
-  emitDelivery: EmitDeliveryAckLikePort;
+  emitDelivery: EmitDeliveryNotificationAckPort;
   resolveMessageRef: ResolvedConvergedGateDeliveryDependencies["resolveDeliveryMessageRef"];
 }): Promise<ConvergedDeliveryResult> {
   const resolvedDependencies = buildDefaultConvergedGateDeliveryDependencies({
@@ -175,7 +161,7 @@ export async function executeGateDelivery(input: {
       ...(options?.deliveryAttempts !== undefined
         ? { deliveryAttempts: options.deliveryAttempts }
         : {})
-    }).then(normalizeDeliveryAck).catch(() => ({
+    }).catch(() => ({
       status: "rejected",
       message: "",
       reason: "tmux_send_failed",

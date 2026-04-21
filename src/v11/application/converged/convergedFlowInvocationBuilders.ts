@@ -82,8 +82,6 @@ export interface BuildConvergedFlowDependenciesInput {
     RunConvergedFlowDependencies["applyMetaReviewGateOnConvergence"];
   emitDeliveryNotificationAck?:
     RunConvergedFlowDependencies["emitDeliveryNotificationAck"];
-  emitTmuxDeliveryNotification?:
-    RunConvergedFlowDependencies["emitDeliveryNotificationAck"];
   emitBubbleNotification?:
     RunConvergedFlowDependencies["emitBubbleNotification"];
   readTranscriptEnvelopes?: ReadTranscriptEnvelopesPort;
@@ -92,10 +90,8 @@ export interface BuildConvergedFlowDependenciesInput {
 function resolveConvergedDeliveryOverride(input: {
   emitDeliveryNotificationAck?:
     RunConvergedFlowDependencies["emitDeliveryNotificationAck"];
-  emitTmuxDeliveryNotification?:
-    RunConvergedFlowDependencies["emitDeliveryNotificationAck"];
 }): RunConvergedFlowDependencies["emitDeliveryNotificationAck"] | undefined {
-  return input.emitDeliveryNotificationAck ?? input.emitTmuxDeliveryNotification;
+  return input.emitDeliveryNotificationAck;
 }
 
 export function buildConvergedFlowDependencies(
@@ -151,8 +147,6 @@ export interface BuildDefaultConvergedFlowDependenciesInput {
     RunConvergedFlowDependencies["applyMetaReviewGateOnConvergence"];
   emitDeliveryNotificationAck?:
     RunConvergedFlowDependencies["emitDeliveryNotificationAck"];
-  emitTmuxDeliveryNotification?:
-    RunConvergedFlowDependencies["emitDeliveryNotificationAck"];
   emitBubbleNotification?:
     RunConvergedFlowDependencies["emitBubbleNotification"];
   readTranscriptEnvelopes?: ReadTranscriptEnvelopesPort;
@@ -173,7 +167,6 @@ export function buildDefaultConvergedFlowDependencies(
       input.resolveReviewerTestExecutionDirective,
     applyMetaReviewGateOnConvergence: input.applyMetaReviewGateOnConvergence,
     emitDeliveryNotificationAck: input.emitDeliveryNotificationAck,
-    emitTmuxDeliveryNotification: input.emitTmuxDeliveryNotification,
     emitBubbleNotification: input.emitBubbleNotification,
     ...(input.readTranscriptEnvelopes !== undefined
       ? { readTranscriptEnvelopes: input.readTranscriptEnvelopes }

@@ -5,7 +5,9 @@ import type {
   DeliveryTargetReasonCode,
   EmitDeliveryNotificationInput
 } from "../delivery/tmuxDeliveryContract.js";
-import type { EmitDeliveryAckLikePort } from "../ports/tmuxDelivery.js";
+import type {
+  EmitDeliveryNotificationAckPort
+} from "../ports/tmuxDelivery.js";
 
 export type AskHumanBubbleNotificationKind = "waiting-human" | "converged";
 
@@ -31,7 +33,7 @@ export interface ResolveAskHumanDeliveryMessageRefInput {
 }
 
 export type EmitAskHumanDeliveryNotificationAckPort =
-  EmitDeliveryAckLikePort;
+  EmitDeliveryNotificationAckPort;
 
 export type EmitAskHumanTmuxDeliveryNotificationPort =
   EmitAskHumanDeliveryNotificationAckPort;

@@ -267,14 +267,13 @@ describe("emitAskHumanFromWorkspace", () => {
         now: new Date("2026-02-21T12:11:00.000Z")
       },
       {
-        emitTmuxDeliveryNotification: (input) => {
+        emitDeliveryNotificationAck: (input) => {
           if (input.messageRef === undefined) {
             throw new Error("Expected messageRef for HUMAN_QUESTION delivery.");
           }
           deliveryRefs.push(input.messageRef);
           return Promise.resolve({
             status: "accepted",
-            delivered: true,
             message: "ok"
           });
         },
@@ -282,7 +281,7 @@ describe("emitAskHumanFromWorkspace", () => {
           Promise.resolve({
             kind: "waiting-human",
             attempted: false,
-            delivered: false,
+            status: "rejected",
             soundPath: null,
             reason: "disabled"
           })

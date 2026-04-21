@@ -267,7 +267,7 @@ describe("runBubbleWatchdog", () => {
       {
         emitDeliveryNotificationAck: () =>
           Promise.resolve({
-            delivered: false,
+            status: "rejected",
             message: "",
             reason: "delivery_unconfirmed",
             reason_code: "DELIVERY_ACK_REJECTED"
@@ -337,7 +337,7 @@ describe("runBubbleWatchdog", () => {
             envelopeRef
           });
           return Promise.resolve({
-            delivered: true,
+            status: "accepted",
             message: "ok",
             sessionName: "pf_bubble",
             targetPaneIndex: 1
@@ -381,7 +381,7 @@ describe("runBubbleWatchdog", () => {
           deliveryRefs.push(input.messageRef);
         }
         return Promise.resolve({
-          delivered: true,
+          status: "accepted",
           message: "ok",
           sessionName: "pf_bubble",
           targetPaneIndex: 1
@@ -954,7 +954,7 @@ describe("runBubbleWatchdog", () => {
             messageRef: input.messageRef
           });
           return {
-            delivered: true,
+            status: "accepted",
             message: "ok",
             sessionName: "pf_bubble",
             targetPaneIndex: 1

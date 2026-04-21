@@ -27,7 +27,6 @@ describe("askHumanNotificationEmission", () => {
           expect(input.messageRef).toBe("transcript-ref#msg_20260221_001");
           return {
             status: "accepted",
-            delivered: true,
             message: "ok",
             sessionName: "pf_bubble",
             targetPaneIndex: 1
@@ -39,7 +38,7 @@ describe("askHumanNotificationEmission", () => {
           return {
             kind,
             attempted: false,
-            delivered: false,
+            status: "rejected",
             soundPath: null,
             reason: "disabled"
           };
@@ -81,7 +80,7 @@ describe("askHumanNotificationEmission", () => {
         emitBubbleNotification: async () => ({
           kind: "waiting-human",
           attempted: false,
-          delivered: false,
+          status: "rejected",
           soundPath: null,
           reason: "disabled"
         })
@@ -114,7 +113,6 @@ describe("askHumanNotificationEmission", () => {
       {
         emitDeliveryNotificationAck: async () => ({
           status: "accepted",
-          delivered: true,
           message: "ok",
           sessionName: "pf_bubble",
           targetPaneIndex: 1
