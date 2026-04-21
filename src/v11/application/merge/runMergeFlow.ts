@@ -1,5 +1,8 @@
 import { isNamedError } from "../../shared/errors/namedError.js";
-import type { MergeBubbleResult } from "./mergeCommandContract.js";
+import {
+  type ExecuteRemoteBubbleMergeCommandResult,
+  type MergeBubbleResult
+} from "./mergeCommandContract.js";
 import { buildMergeBubbleResult } from "./mergeResultMapping.js";
 import type { ResolvedMergeCommandDependencies } from "./mergeCommandDependencyResolution.js";
 import {
@@ -17,11 +20,15 @@ const MERGE_REMOTE_DELETE_ORIGIN_UNAVAILABLE =
   "MERGE_REMOTE_DELETE_ORIGIN_UNAVAILABLE";
 const MERGE_REMOTE_DELETE_FAILED = "MERGE_REMOTE_DELETE_FAILED";
 const MERGE_BASE_BRANCH_PUSH_FAILED = "MERGE_BASE_BRANCH_PUSH_FAILED";
-const MERGE_LOCAL_FINALIZATION_MISSING = "MERGE_LOCAL_FINALIZATION_MISSING";
+const MERGE_REMOTE_HANDOFF_INVALID = "MERGE_REMOTE_HANDOFF_INVALID";
+const MERGE_REMOTE_IMPORT_FAILED = "MERGE_REMOTE_IMPORT_FAILED";
+const MERGE_REMOTE_POST_CLEANUP_FLAGS_UNSUPPORTED =
+  "MERGE_REMOTE_POST_CLEANUP_FLAGS_UNSUPPORTED";
 
-async function mergeBubbleBranchIntoBase(input: {
+async function mergeRevisionIntoBase(input: {
   repoPath: string;
   baseBranch: string;
+  mergeRevision: string;
   bubbleBranch: string;
   runGit: ResolvedMergeCommandDependencies["runGit"];
   createError: RunMergeFlowInput["createError"];
@@ -31,7 +38,7 @@ async function mergeBubbleBranchIntoBase(input: {
   });
 
   try {
-    await input.runGit(["merge", "--no-ff", "--no-edit", input.bubbleBranch], {
+    await input.runGit(["merge", "--no-ff", "--no-edit", input.mergeRevision], {
       cwd: input.repoPath
     });
   } catch (error) {
@@ -149,6 +156,194 @@ async function runMergeRemoteOperations(input: {
   return { pushedBaseBranch, deletedRemoteBranch };
 }
 
+function buildRemoteCloneGitUrl(input: {
+  host: string;
+  user?: string;
+  remoteClonePath: string;
+}): string {
+  const authority = input.user !== undefined ? `${input.user}@${input.host}` : input.host;
+  const path = input.remoteClonePath.startsWith("/")
+    ? input.remoteClonePath
+    : `/${input.remoteClonePath}`;
+  const encodedPath = path
+    .split("/")
+    .map((segment, index) =>
+      index === 0 && segment.length === 0 ? "" : encodeURIComponent(segment)
+    )
+    .join("/");
+  return `ssh://${authority}${encodedPath}`;
+}
+
+function isRemoteMergeImportSource(
+  value: unknown
+): value is ExecuteRemoteBubbleMergeCommandResult["importSource"] {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) {
+    return false;
+  }
+
+  const candidate = value as Record<string, unknown>;
+  return (
+    candidate.kind === "git_ref"
+    && typeof candidate.ref === "string"
+    && candidate.ref.trim().length > 0
+    && typeof candidate.commitSha === "string"
+    && candidate.commitSha.trim().length > 0
+  );
+}
+
+async function importRemoteMergeHandoff(input: {
+  context: Extract<Awaited<ReturnType<typeof initializeMergeFlowExecutionContext>>, { route: "remote" }>;
+  remoteResult: ExecuteRemoteBubbleMergeCommandResult;
+  runGit: ResolvedMergeCommandDependencies["runGit"];
+  createError: RunMergeFlowInput["createError"];
+}): Promise<string> {
+  if (!isRemoteMergeImportSource(input.remoteResult.importSource)) {
+    throw input.createError({
+      reasonCode: MERGE_REMOTE_HANDOFF_INVALID,
+      message:
+        `Remote merge handoff import source is invalid for ${input.context.resolved.bubbleId}.`,
+      context: {
+        command_name: "merge",
+        bubble_id: input.context.resolved.bubbleId
+      }
+    });
+  }
+
+  const importSource = input.remoteResult.importSource;
+
+  if (input.remoteResult.baseBranch !== input.context.baseBranch) {
+    throw input.createError({
+      reasonCode: MERGE_REMOTE_HANDOFF_INVALID,
+      message:
+        `Remote merge handoff base branch mismatch for ${input.context.resolved.bubbleId}.`,
+      context: {
+        command_name: "merge",
+        bubble_id: input.context.resolved.bubbleId,
+        expected_base_branch: input.context.baseBranch,
+        actual_base_branch: input.remoteResult.baseBranch
+      }
+    });
+  }
+  if (input.remoteResult.bubbleBranch !== input.context.bubbleBranch) {
+    throw input.createError({
+      reasonCode: MERGE_REMOTE_HANDOFF_INVALID,
+      message:
+        `Remote merge handoff bubble branch mismatch for ${input.context.resolved.bubbleId}.`,
+      context: {
+        command_name: "merge",
+        bubble_id: input.context.resolved.bubbleId,
+        expected_bubble_branch: input.context.bubbleBranch,
+        actual_bubble_branch: input.remoteResult.bubbleBranch
+      }
+    });
+  }
+  if (input.remoteResult.cleanupPending !== true) {
+    throw input.createError({
+      reasonCode: MERGE_REMOTE_HANDOFF_INVALID,
+      message:
+        `Remote merge handoff for ${input.context.resolved.bubbleId} must remain pre-cleanup.`,
+      context: {
+        command_name: "merge",
+        bubble_id: input.context.resolved.bubbleId
+      }
+    });
+  }
+  if (importSource.ref !== input.context.localImportRef) {
+    throw input.createError({
+      reasonCode: MERGE_REMOTE_HANDOFF_INVALID,
+      message:
+        `Remote merge handoff ref mismatch for ${input.context.resolved.bubbleId}.`,
+      context: {
+        command_name: "merge",
+        bubble_id: input.context.resolved.bubbleId,
+        expected_import_ref: input.context.localImportRef,
+        actual_import_ref: importSource.ref
+      }
+    });
+  }
+
+  const remoteGitUrl = buildRemoteCloneGitUrl({
+    host: input.context.remoteTarget.host,
+    ...(input.context.remoteTarget.user !== undefined
+      ? { user: input.context.remoteTarget.user }
+      : {}),
+    remoteClonePath: input.context.remotePointer.remoteClonePath
+  });
+
+  try {
+    await input.runGit(
+      [
+        "fetch",
+        "--no-tags",
+        remoteGitUrl,
+        `${importSource.ref}:${input.context.localImportRef}`
+      ],
+      {
+        cwd: input.context.repoPath
+      }
+    );
+  } catch (error) {
+    if (isNamedError(error, "GitCommandError")) {
+      throw input.createError({
+        reasonCode: MERGE_REMOTE_IMPORT_FAILED,
+        message:
+          `Failed to import remote merge handoff for ${input.context.resolved.bubbleId}.`,
+        context: {
+          command_name: "merge",
+          bubble_id: input.context.resolved.bubbleId,
+          import_source_ref: importSource.ref,
+          local_import_ref: input.context.localImportRef,
+          remote_clone_path: input.context.remotePointer.remoteClonePath
+        },
+        cause: error
+      });
+    }
+    throw error;
+  }
+
+  let importedCommitSha: string;
+  try {
+    importedCommitSha = (
+      await input.runGit(["rev-parse", `${input.context.localImportRef}^{commit}`], {
+        cwd: input.context.repoPath
+      })
+    ).stdout.trim();
+  } catch (error) {
+    if (isNamedError(error, "GitCommandError")) {
+      throw input.createError({
+        reasonCode: MERGE_REMOTE_IMPORT_FAILED,
+        message:
+          `Failed to resolve imported remote merge handoff for ${input.context.resolved.bubbleId}.`,
+        context: {
+          command_name: "merge",
+          bubble_id: input.context.resolved.bubbleId,
+          local_import_ref: input.context.localImportRef,
+          remote_clone_path: input.context.remotePointer.remoteClonePath
+        },
+        cause: error
+      });
+    }
+    throw error;
+  }
+
+  if (importedCommitSha !== importSource.commitSha) {
+    throw input.createError({
+      reasonCode: MERGE_REMOTE_HANDOFF_INVALID,
+      message:
+        `Remote merge handoff commit mismatch for ${input.context.resolved.bubbleId}.`,
+      context: {
+        command_name: "merge",
+        bubble_id: input.context.resolved.bubbleId,
+        expected_commit_sha: importSource.commitSha,
+        actual_commit_sha: importedCommitSha,
+        local_import_ref: input.context.localImportRef
+      }
+    });
+  }
+
+  return input.context.localImportRef;
+}
+
 export async function runMergeFlow(
   input: RunMergeFlowInput,
   dependencies: ResolvedMergeCommandDependencies
@@ -159,41 +354,75 @@ export async function runMergeFlow(
   });
 
   if (context.route === "remote") {
+    if (input.push || input.deleteRemote) {
+      throw input.createError({
+        reasonCode: MERGE_REMOTE_POST_CLEANUP_FLAGS_UNSUPPORTED,
+        message:
+          `Started-remote merge for '${context.resolved.bubbleId}' does not support --push or --delete-remote in pre-cleanup handoff mode.`,
+        context: {
+          command_name: "merge",
+          bubble_id: context.resolved.bubbleId,
+          push_requested: input.push,
+          delete_remote_requested: input.deleteRemote
+        }
+      });
+    }
+
     const remoteResult = await dependencies.executeRemoteBubbleMergeCommand({
       bubbleId: context.resolved.bubbleId,
       remoteClonePath: context.remotePointer.remoteClonePath,
       remoteTarget: context.remoteTarget,
-      push: input.push,
-      deleteRemote: input.deleteRemote
+      baseBranch: context.baseBranch,
+      bubbleBranch: context.bubbleBranch,
+      tmuxSessionName: context.remotePointer.tmuxSession
+    });
+    const importedRevision = await importRemoteMergeHandoff({
+      context,
+      remoteResult,
+      runGit: dependencies.runGit,
+      createError: input.createError
+    });
+    const mergeCommitSha = await mergeRevisionIntoBase({
+      repoPath: context.repoPath,
+      baseBranch: context.baseBranch,
+      mergeRevision: importedRevision,
+      bubbleBranch: context.bubbleBranch,
+      runGit: dependencies.runGit,
+      createError: input.createError
     });
 
-    await finalizeMergeFlow({
+    const finalization = await finalizeMergeFlow({
       params: input,
       context,
       dependencies,
-      mergeCommitSha: remoteResult.mergeCommitSha,
-      pushedBaseBranch: remoteResult.pushedBaseBranch,
-      deletedRemoteBranch: remoteResult.deletedRemoteBranch
+      mergeCommitSha,
+      pushedBaseBranch: false,
+      deletedRemoteBranch: false
     });
 
     return buildMergeBubbleResult({
       bubbleId: context.resolved.bubbleId,
-      baseBranch: remoteResult.baseBranch,
-      bubbleBranch: remoteResult.bubbleBranch,
-      mergeCommitSha: remoteResult.mergeCommitSha,
-      pushedBaseBranch: remoteResult.pushedBaseBranch,
-      deletedRemoteBranch: remoteResult.deletedRemoteBranch,
-      tmuxSessionName: remoteResult.tmuxSessionName,
-      tmuxSessionExisted: remoteResult.tmuxSessionExisted,
-      runtimeSessionRemoved: remoteResult.runtimeSessionRemoved,
-      removedWorktree: remoteResult.removedWorktree,
-      removedBubbleBranch: remoteResult.removedBubbleBranch
+      baseBranch: context.baseBranch,
+      bubbleBranch: context.bubbleBranch,
+      mergeCommitSha,
+      pushedBaseBranch: false,
+      deletedRemoteBranch: false,
+      tmuxSessionName:
+        remoteResult.tmuxSessionName
+        ?? finalization.tmux.sessionName
+        ?? context.remotePointer.tmuxSession,
+      tmuxSessionExisted:
+        finalization.tmux.existed ?? false,
+      runtimeSessionRemoved: finalization.runtimeSessionRemoved,
+      removedWorktree: finalization.workspaceCleanup.removedWorktree,
+      removedBubbleBranch: finalization.workspaceCleanup.removedBranch
     });
   }
 
-  const mergeCommitSha = await mergeBubbleBranchIntoBase({
+  const mergeCommitSha = await mergeRevisionIntoBase({
     repoPath: context.repoPath,
     baseBranch: context.baseBranch,
+    mergeRevision: context.bubbleBranch,
     bubbleBranch: context.bubbleBranch,
     runGit: dependencies.runGit,
     createError: input.createError
@@ -218,17 +447,6 @@ export async function runMergeFlow(
     pushedBaseBranch,
     deletedRemoteBranch
   });
-  if (finalization === undefined) {
-    throw input.createError({
-      reasonCode: MERGE_LOCAL_FINALIZATION_MISSING,
-      message: "Local merge finalization did not return cleanup results.",
-      context: {
-        bubble_id: context.resolved.bubbleId,
-        base_branch: context.baseBranch,
-        bubble_branch: context.bubbleBranch
-      }
-    });
-  }
 
   return buildMergeBubbleResult({
     bubbleId: context.resolved.bubbleId,

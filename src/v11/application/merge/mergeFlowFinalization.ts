@@ -20,7 +20,7 @@ const MERGE_REMOTE_RECONCILE_FAILED = "MERGE_REMOTE_RECONCILE_FAILED";
 function toRemoteReconcileError(input: {
   params: RunMergeFlowInput;
   context: Extract<MergeFlowExecutionContext, { route: "remote" }>;
-  phase: "runtime_session_cleanup" | "state_persist" | "lifecycle_event_emit";
+  phase: "state_persist";
   error: unknown;
 }): never {
   const reason = input.error instanceof Error ? input.error.message : String(input.error);
@@ -45,28 +45,16 @@ export async function finalizeMergeFlow(input: {
   mergeCommitSha: string;
   pushedBaseBranch: boolean;
   deletedRemoteBranch: boolean;
-}): Promise<LocalMergeFlowFinalizationResult | undefined> {
+}): Promise<LocalMergeFlowFinalizationResult> {
   if (input.context.route === "remote") {
-    try {
-      await input.dependencies.removeRuntimeSession({
-        sessionsPath: input.context.resolved.bubblePaths.sessionsPath,
-        bubbleId: input.context.resolved.bubbleId
-      });
-    } catch (error) {
-      toRemoteReconcileError({
-        params: input.params,
-        context: input.context,
-        phase: "runtime_session_cleanup",
-        error
-      });
-    }
+    let runtimeSessionRemoved = false;
 
     try {
       await persistStateViaMutationBoundary({
         write: input.dependencies.writeStateSnapshot,
         statePath: input.context.resolved.bubblePaths.statePath,
         state: {
-          ...input.context.state,
+          ...input.context.loaded.state,
           last_command_at: input.context.nowIso
         },
         options: {
@@ -84,32 +72,43 @@ export async function finalizeMergeFlow(input: {
     }
 
     try {
-      await input.dependencies.emitBubbleLifecycleEventBestEffort({
-        repoPath: input.context.resolved.repoPath,
-        bubbleId: input.context.resolved.bubbleId,
-        bubbleInstanceId: input.context.bubbleIdentity.bubbleInstanceId,
-        eventType: "bubble_merged",
-        round: input.context.state.round > 0 ? input.context.state.round : null,
-        actorRole: "orchestrator",
-        metadata: {
-          base_branch: input.context.baseBranch,
-          bubble_branch: input.context.bubbleBranch,
-          merge_commit_sha: input.mergeCommitSha,
-          pushed_base_branch: input.pushedBaseBranch,
-          deleted_remote_branch: input.deletedRemoteBranch,
-          route: "remote"
-        },
-        now: input.params.now
+      runtimeSessionRemoved = await input.dependencies.removeRuntimeSession({
+        sessionsPath: input.context.resolved.bubblePaths.sessionsPath,
+        bubbleId: input.context.resolved.bubbleId
       });
-      return undefined;
-    } catch (error) {
-      toRemoteReconcileError({
-        params: input.params,
-        context: input.context,
-        phase: "lifecycle_event_emit",
-        error
-      });
+    } catch {
+      runtimeSessionRemoved = false;
     }
+
+    await input.dependencies.emitBubbleLifecycleEventBestEffort({
+      repoPath: input.context.resolved.repoPath,
+      bubbleId: input.context.resolved.bubbleId,
+      bubbleInstanceId: input.context.bubbleIdentity.bubbleInstanceId,
+      eventType: "bubble_merged",
+      round: input.context.state.round > 0 ? input.context.state.round : null,
+      actorRole: "orchestrator",
+      metadata: {
+        base_branch: input.context.baseBranch,
+        bubble_branch: input.context.bubbleBranch,
+        merge_commit_sha: input.mergeCommitSha,
+        pushed_base_branch: input.pushedBaseBranch,
+        deleted_remote_branch: input.deletedRemoteBranch,
+        route: "remote"
+      },
+      now: input.params.now
+    }).catch(() => undefined);
+
+    return {
+      tmux: {
+        sessionName: input.context.remotePointer.tmuxSession,
+        existed: false
+      },
+      runtimeSessionRemoved,
+      workspaceCleanup: {
+        removedWorktree: false,
+        removedBranch: false
+      }
+    };
   }
 
   const tmux = await input.dependencies.terminateBubbleTmuxSession({

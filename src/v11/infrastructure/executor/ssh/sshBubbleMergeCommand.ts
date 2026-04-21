@@ -1,15 +1,14 @@
 import { shellQuote } from "../../../shared/foundation/shellQuote.js";
-import type { RemoteBubbleStatusTarget } from "./sshBubbleStatus.js";
+import type {
+  ExecuteRemoteBubbleMergeCommandInput,
+  ExecuteRemoteBubbleMergeCommandResult
+} from "../../../application/merge/mergeCommandContract.js";
+import { buildMergeImportRef } from "../../../application/merge/mergeCommandContract.js";
 import { runCommandDefault } from "./sshBubbleStatus.js";
 import {
-  assertSingleTokenPairflowCommand,
   buildSshCommandArgs
 } from "./sshBubbleStart.js";
 
-const remoteMergeModeEnvVar = "PAIRFLOW_REMOTE_MERGE_MODE";
-const remoteMergeWorkspaceRootEnvVar =
-  "PAIRFLOW_REMOTE_MERGE_WORKSPACE_ROOT";
-const remoteMergeModeInnerRemoteExecution = "inner_remote_execution";
 const remoteMergeExitStatusStartMarker =
   "__PAIRFLOW_REMOTE_MERGE_EXIT_STATUS_START__";
 const remoteMergeExitStatusEndMarker =
@@ -24,28 +23,6 @@ const remoteMergeStderrEndMarker =
   "__PAIRFLOW_REMOTE_MERGE_STDERR_END__";
 const remoteMergeReasonCodePattern =
   /^(?:[A-Za-z][A-Za-z0-9]*Error:\s+)?([A-Z][A-Z0-9_]{2,})(?::(?:\s|$)|$)/u;
-
-export interface ExecuteRemoteBubbleMergeCommandInput {
-  bubbleId: string;
-  remoteClonePath: string;
-  remoteTarget: RemoteBubbleStatusTarget;
-  push: boolean;
-  deleteRemote: boolean;
-}
-
-export interface ExecuteRemoteBubbleMergeCommandResult {
-  bubbleId: string;
-  baseBranch: string;
-  bubbleBranch: string;
-  mergeCommitSha: string;
-  pushedBaseBranch: boolean;
-  deletedRemoteBranch: boolean;
-  tmuxSessionName: string;
-  tmuxSessionExisted: boolean;
-  runtimeSessionRemoved: boolean;
-  removedWorktree: boolean;
-  removedBubbleBranch: boolean;
-}
 
 export interface RemoteBubbleMergeCommandDependencies {
   runCommand?: (
@@ -65,14 +42,13 @@ interface RemoteBubbleMergeCommandErrorContext {
   remote_host?: string;
   remote_clone_path?: string;
   remote_reason_code?: string;
-  operation?: "transport" | "payload" | "publication" | "command";
+  operation?: "transport" | "payload" | "command";
 }
 
 export class RemoteBubbleMergeCommandError extends Error {
   public readonly code:
     | "REMOTE_MERGE_TRANSPORT_FAILED"
     | "REMOTE_MERGE_PAYLOAD_INVALID"
-    | "REMOTE_MERGE_PUBLICATION_REQUIRED"
     | "REMOTE_MERGE_COMMAND_FAILED"
     | (string & {});
   public readonly context: RemoteBubbleMergeCommandErrorContext | undefined;
@@ -81,7 +57,6 @@ export class RemoteBubbleMergeCommandError extends Error {
     code:
       | "REMOTE_MERGE_TRANSPORT_FAILED"
       | "REMOTE_MERGE_PAYLOAD_INVALID"
-      | "REMOTE_MERGE_PUBLICATION_REQUIRED"
       | "REMOTE_MERGE_COMMAND_FAILED"
       | (string & {});
     message: string;
@@ -98,44 +73,70 @@ export class RemoteBubbleMergeCommandError extends Error {
 function buildRemoteBubbleMergeCommandLine(
   input: ExecuteRemoteBubbleMergeCommandInput
 ): string {
-  const pairflowCommand = assertSingleTokenPairflowCommand(
-    input.remoteTarget.pairflowCommand
-  );
-  const args = [
-    pairflowCommand,
-    "bubble",
+  return [
+    "git",
     "merge",
-    "--id",
-    input.bubbleId,
-    "--repo",
-    input.remoteClonePath,
-    ...(input.push ? ["--push"] : []),
-    ...(input.deleteRemote ? ["--delete-remote"] : []),
-    "--json"
-  ];
-  return args.map((value) => shellQuote(value)).join(" ");
+    "--no-ff",
+    "--no-edit",
+    shellQuote(input.bubbleBranch)
+  ].join(" ");
 }
 
 export function buildRemoteBubbleMergeScript(
   input: ExecuteRemoteBubbleMergeCommandInput
 ): string {
   const remoteCommandLine = buildRemoteBubbleMergeCommandLine(input);
+  const importRef = buildMergeImportRef(input.bubbleId);
 
   return [
     "set -euo pipefail",
     `cd ${shellQuote(input.remoteClonePath)}`,
-    `export PAIRFLOW_WORKTREE_ROOT=${shellQuote(input.remoteClonePath)}`,
-    `export ${remoteMergeModeEnvVar}=${shellQuote(remoteMergeModeInnerRemoteExecution)}`,
-    `export ${remoteMergeWorkspaceRootEnvVar}=${shellQuote(input.remoteClonePath)}`,
+    `base_branch=${shellQuote(input.baseBranch)}`,
+    `bubble_branch=${shellQuote(input.bubbleBranch)}`,
+    `import_ref=${shellQuote(importRef)}`,
+    `bubble_id=${shellQuote(input.bubbleId)}`,
+    `tmux_session_name=${shellQuote(input.tmuxSessionName ?? "")}`,
+    "export base_branch bubble_branch import_ref bubble_id tmux_session_name",
     "stdout_file=$(mktemp)",
     "stderr_file=$(mktemp)",
     "cleanup() { rm -f \"$stdout_file\" \"$stderr_file\"; }",
     "trap cleanup EXIT",
     "command_exit_code=0",
     "set +e",
-    `${remoteCommandLine} >"$stdout_file" 2>"$stderr_file"`,
+    "(",
+    "  set -euo pipefail",
+    "  git checkout \"$base_branch\" >&2",
+    `  ${remoteCommandLine} >&2`,
+    "  merge_commit_sha=$(git rev-parse HEAD)",
+    "  git update-ref \"$import_ref\" \"$merge_commit_sha\"",
+    "  export merge_commit_sha import_ref",
+    "  node <<'NODE'",
+    "const payload = {",
+    "  bubbleId: process.env.bubble_id,",
+    "  baseBranch: process.env.base_branch,",
+    "  bubbleBranch: process.env.bubble_branch,",
+    "  mergeCommitSha: process.env.merge_commit_sha,",
+    "  importSource: {",
+    "    kind: 'git_ref',",
+    "    ref: process.env.import_ref,",
+    "    commitSha: process.env.merge_commit_sha",
+    "  },",
+    "  cleanupPending: true",
+    "};",
+    "if (typeof process.env.tmux_session_name === 'string' && process.env.tmux_session_name.length > 0) {",
+    "  payload.tmuxSessionName = process.env.tmux_session_name;",
+    "}",
+    "process.stdout.write(JSON.stringify(payload));",
+    "NODE",
+    `) >"$stdout_file" 2>"$stderr_file"`,
     "command_exit_code=$?",
     "set -e",
+    "if [ \"$command_exit_code\" -ne 0 ]; then",
+    "  if git rev-parse --verify -q MERGE_HEAD >/dev/null 2>&1; then",
+    "    git merge --abort >/dev/null 2>&1 || true",
+    "    printf '%s\\n' 'MERGE_CONFLICT_REQUIRES_MANUAL_RESOLUTION: remote merge conflict' >>\"$stderr_file\"",
+    "  fi",
+    "fi",
     `printf '%s\\n' ${shellQuote(remoteMergeExitStatusStartMarker)}`,
     "printf '%s\\n' \"$command_exit_code\"",
     `printf '%s\\n' ${shellQuote(remoteMergeExitStatusEndMarker)}`,
@@ -236,14 +237,14 @@ function parseRemoteMergeResult(
   }
 
   const candidate = parsed as Record<string, unknown>;
+  const importSource = candidate.importSource;
   const stringFields = [
     "bubbleId",
     "baseBranch",
     "bubbleBranch",
-    "mergeCommitSha",
-    "tmuxSessionName"
+    "mergeCommitSha"
   ] as const;
-  const booleanFields = [
+  const forbiddenFields = [
     "pushedBaseBranch",
     "deletedRemoteBranch",
     "tmuxSessionExisted",
@@ -251,6 +252,10 @@ function parseRemoteMergeResult(
     "removedWorktree",
     "removedBubbleBranch"
   ] as const;
+
+  // Keep the parser compat-tolerant for bounded rollout extras such as legacy
+  // `remoteCommitSha`, but only the normative pre-cleanup handoff fields below are
+  // part of the contract this phase owns.
 
   for (const field of stringFields) {
     if (typeof candidate[field] !== "string" || candidate[field].trim().length === 0) {
@@ -264,11 +269,11 @@ function parseRemoteMergeResult(
       });
     }
   }
-  for (const field of booleanFields) {
-    if (typeof candidate[field] !== "boolean") {
+  for (const field of forbiddenFields) {
+    if (field in candidate) {
       throw new RemoteBubbleMergeCommandError({
         code: "REMOTE_MERGE_PAYLOAD_INVALID",
-        message: `Remote merge payload field '${field}' must be a boolean.`,
+        message: `Remote merge payload field '${field}' is not allowed in pre-cleanup handoff mode.`,
         context: {
           command_name: "merge",
           operation: "payload"
@@ -277,32 +282,99 @@ function parseRemoteMergeResult(
     }
   }
 
-  if (candidate.pushedBaseBranch !== true) {
-    const bubbleId = candidate.bubbleId as string;
+  if (candidate.cleanupPending !== true) {
     throw new RemoteBubbleMergeCommandError({
-      code: "REMOTE_MERGE_PUBLICATION_REQUIRED",
+      code: "REMOTE_MERGE_PAYLOAD_INVALID",
       message:
-        `Remote merge succeeded without durable publication proof for bubble ${bubbleId}.`,
+        "Remote merge payload must keep cleanupPending=true for pre-cleanup handoff.",
       context: {
         command_name: "merge",
-        bubble_id: bubbleId,
-        operation: "publication"
+        operation: "payload"
+      }
+    });
+  }
+  if (
+    importSource === null
+    || typeof importSource !== "object"
+    || Array.isArray(importSource)
+  ) {
+    throw new RemoteBubbleMergeCommandError({
+      code: "REMOTE_MERGE_PAYLOAD_INVALID",
+      message: "Remote merge payload field 'importSource' must be an object.",
+      context: {
+        command_name: "merge",
+        operation: "payload"
       }
     });
   }
 
+  const importSourceRecord = importSource as Record<string, unknown>;
+  if (importSourceRecord.kind !== "git_ref") {
+    throw new RemoteBubbleMergeCommandError({
+      code: "REMOTE_MERGE_PAYLOAD_INVALID",
+      message: "Remote merge payload importSource.kind must equal 'git_ref'.",
+      context: {
+        command_name: "merge",
+        operation: "payload"
+      }
+    });
+  }
+  if (
+    typeof importSourceRecord.ref !== "string"
+    || importSourceRecord.ref.trim().length === 0
+  ) {
+    throw new RemoteBubbleMergeCommandError({
+      code: "REMOTE_MERGE_PAYLOAD_INVALID",
+      message: "Remote merge payload importSource.ref must be a non-empty string.",
+      context: {
+        command_name: "merge",
+        operation: "payload"
+      }
+    });
+  }
+  if (
+    typeof importSourceRecord.commitSha !== "string"
+    || importSourceRecord.commitSha.trim().length === 0
+  ) {
+    throw new RemoteBubbleMergeCommandError({
+      code: "REMOTE_MERGE_PAYLOAD_INVALID",
+      message: "Remote merge payload importSource.commitSha must be a non-empty string.",
+      context: {
+        command_name: "merge",
+        operation: "payload"
+      }
+    });
+  }
+  if (
+    "tmuxSessionName" in candidate
+    && (
+      typeof candidate.tmuxSessionName !== "string"
+      || candidate.tmuxSessionName.trim().length === 0
+    )
+  ) {
+    throw new RemoteBubbleMergeCommandError({
+      code: "REMOTE_MERGE_PAYLOAD_INVALID",
+      message: "Remote merge payload tmuxSessionName must be a non-empty string when present.",
+      context: {
+        command_name: "merge",
+        operation: "payload"
+      }
+    });
+  }
   return {
     bubbleId: candidate.bubbleId as string,
     baseBranch: candidate.baseBranch as string,
     bubbleBranch: candidate.bubbleBranch as string,
     mergeCommitSha: candidate.mergeCommitSha as string,
-    pushedBaseBranch: candidate.pushedBaseBranch as boolean,
-    deletedRemoteBranch: candidate.deletedRemoteBranch as boolean,
-    tmuxSessionName: candidate.tmuxSessionName as string,
-    tmuxSessionExisted: candidate.tmuxSessionExisted as boolean,
-    runtimeSessionRemoved: candidate.runtimeSessionRemoved as boolean,
-    removedWorktree: candidate.removedWorktree as boolean,
-    removedBubbleBranch: candidate.removedBubbleBranch as boolean
+    importSource: {
+      kind: "git_ref",
+      ref: importSourceRecord.ref,
+      commitSha: importSourceRecord.commitSha
+    },
+    cleanupPending: true,
+    ...(typeof candidate.tmuxSessionName === "string"
+      ? { tmuxSessionName: candidate.tmuxSessionName }
+      : {})
   };
 }
 
