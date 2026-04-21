@@ -3,6 +3,8 @@ import { createHash } from "node:crypto";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
+import { vi } from "vitest";
+import { renderBubbleConfigToml } from "../../../src/config/bubbleConfig.js";
 import { createBubble } from "../../../src/v11/application/create/createBubble.js";
 import { upsertRuntimeSession } from "../../../src/v11/infrastructure/executor/sessionRuntime/runtimeSessionsRegistry.js";
 import {
@@ -59,7 +61,8 @@ type MergeContractExtendedScenario =
   | "repo_dirty"
   | "bubble_branch_missing"
   | "merge_conflict"
-  | "cleanup_invariant";
+  | "cleanup_invariant"
+  | "cleanup_contract_invalid_path";
 
 interface ParsedMergeCaseInput {
   tmuxSessionExisted: boolean;
@@ -94,10 +97,11 @@ function parseMergeCaseInput(input: ContractCase["input"]): ParsedMergeCaseInput
       scenarioRaw !== "repo_dirty" &&
       scenarioRaw !== "bubble_branch_missing" &&
       scenarioRaw !== "merge_conflict" &&
-      scenarioRaw !== "cleanup_invariant"
+      scenarioRaw !== "cleanup_invariant" &&
+      scenarioRaw !== "cleanup_contract_invalid_path"
     ) {
       throw new Error(
-        "merge contract input.fixture.scenario must be one of: basic, state_not_done, repo_dirty, bubble_branch_missing, merge_conflict, cleanup_invariant."
+        "merge contract input.fixture.scenario must be one of: basic, state_not_done, repo_dirty, bubble_branch_missing, merge_conflict, cleanup_invariant, cleanup_contract_invalid_path."
       );
     }
     scenario = scenarioRaw ?? "basic";
@@ -180,33 +184,103 @@ function assertMergeScenarioInvariant(input: {
   scenario: MergeContractExtendedScenario;
   caseId: string;
 }): void {
-  // `cleanup_invariant` remains a local-route fixture. Phase 3G1A intentionally
-  // preserves conservative compat cleanup booleans on the started-remote path
-  // until the successor cleanup/result alignment slice closes that contract.
-  if (input.scenario !== "cleanup_invariant") {
+  if (input.scenario === "cleanup_invariant") {
+    if (input.output.status !== "ok") {
+      throw new Error(
+        `merge contract case=${input.caseId}: cleanup_invariant requires success output (reason=${input.output.reasonCode ?? "unknown"}).`
+      );
+    }
+    if (!input.output.tmuxSessionExisted) {
+      throw new Error(
+        `merge contract case=${input.caseId}: expected tmuxSessionExisted=true for cleanup_invariant.`
+      );
+    }
+    if (!input.output.runtimeSessionRemoved) {
+      throw new Error(
+        `merge contract case=${input.caseId}: expected runtimeSessionRemoved=true for cleanup_invariant.`
+      );
+    }
+    if (!input.output.removedWorktree || !input.output.removedBubbleBranch) {
+      throw new Error(
+        `merge contract case=${input.caseId}: expected worktree+bubble branch cleanup for cleanup_invariant.`
+      );
+    }
     return;
   }
 
-  if (input.output.status !== "ok") {
-    throw new Error(
-      `merge contract case=${input.caseId}: cleanup_invariant requires success output (reason=${input.output.reasonCode ?? "unknown"}).`
-    );
+  if (input.scenario === "cleanup_contract_invalid_path") {
+    if (input.output.status !== "error") {
+      throw new Error(
+        `merge contract case=${input.caseId}: cleanup_contract_invalid_path requires error output.`
+      );
+    }
+    if (input.output.reasonCode !== "MERGE_REMOTE_CLEANUP_CONTRACT_INVALID") {
+      throw new Error(
+        `merge contract case=${input.caseId}: expected MERGE_REMOTE_CLEANUP_CONTRACT_INVALID (actual=${input.output.reasonCode ?? "unknown"}).`
+      );
+    }
+    if (input.output.stateSubset.state !== "DONE") {
+      throw new Error(
+        `merge contract case=${input.caseId}: expected state=DONE after cleanup_contract_invalid_path (actual=${input.output.stateSubset.state}).`
+      );
+    }
   }
-  if (!input.output.tmuxSessionExisted) {
-    throw new Error(
-      `merge contract case=${input.caseId}: expected tmuxSessionExisted=true for cleanup_invariant.`
-    );
-  }
-  if (!input.output.runtimeSessionRemoved) {
-    throw new Error(
-      `merge contract case=${input.caseId}: expected runtimeSessionRemoved=true for cleanup_invariant.`
-    );
-  }
-  if (!input.output.removedWorktree || !input.output.removedBubbleBranch) {
-    throw new Error(
-      `merge contract case=${input.caseId}: expected worktree+bubble branch cleanup for cleanup_invariant.`
-    );
-  }
+}
+
+function buildRemoteMergeHandoffResult(input: {
+  bubbleId: string;
+  bubbleBranch: string;
+}) {
+  return {
+    bubbleId: input.bubbleId,
+    baseBranch: "main",
+    bubbleBranch: input.bubbleBranch,
+    mergeCommitSha: "abcdef1234567890",
+    importSource: {
+      kind: "git_ref" as const,
+      ref: `refs/pairflow/import/${input.bubbleId}`,
+      commitSha: "abcdef1234567890"
+    },
+    cleanupPending: true as const,
+    tmuxSessionName: `pf-${input.bubbleId}`
+  };
+}
+
+function buildRemoteMergeCleanupResult(input: {
+  bubbleId: string;
+  bubbleBranch: string;
+  remoteClonePath?: string;
+}) {
+  const remoteClonePath =
+    input.remoteClonePath ?? `/srv/pairflow/repo--${input.bubbleId}`;
+  return {
+    bubbleId: input.bubbleId,
+    baseBranch: "main",
+    bubbleBranch: input.bubbleBranch,
+    artifacts: {
+      worktree: {
+        path: remoteClonePath,
+        existed: true
+      },
+      tmux: {
+        sessionName: `pf-${input.bubbleId}`,
+        existed: true
+      },
+      runtimeSession: {
+        path: `${remoteClonePath}/.pairflow/runtime/sessions.json`,
+        existed: true
+      },
+      branch: {
+        name: input.bubbleBranch,
+        existed: true
+      }
+    },
+    tmuxSessionTerminated: true,
+    runtimeSessionRemoved: true,
+    removedWorktree: true,
+    removedBubbleBranch: true,
+    tmuxSessionName: `pf-${input.bubbleId}`
+  };
 }
 
 async function setupDoneBubble(repoPath: string, bubbleId: string) {
@@ -371,7 +445,12 @@ async function executeMergeCase(input: {
       await writeFile(join(repoPath, "dirty.txt"), "dirty\n", "utf8");
     }
 
-    if (parsedInput.scenario === "cleanup_invariant") {
+    let mergeDependencies: MergeBubbleDependencies | undefined;
+
+    if (
+      parsedInput.scenario === "cleanup_invariant"
+      || parsedInput.scenario === "cleanup_contract_invalid_path"
+    ) {
       await upsertRuntimeSession({
         sessionsPath: bubble.paths.sessionsPath,
         bubbleId: bubble.bubbleId,
@@ -380,7 +459,135 @@ async function executeMergeCase(input: {
         tmuxSessionName: `pf-${bubble.bubbleId}`,
         now: new Date("2026-03-20T11:19:00.000Z")
       });
+
+      await writeFile(
+        bubble.paths.bubbleTomlPath,
+        renderBubbleConfigToml({
+          ...bubble.config,
+          executor: {
+            type: "ssh",
+            remote: "prod"
+          }
+        }),
+        "utf8"
+      );
+      await writeFile(
+        bubble.paths.remotePointerPath,
+        JSON.stringify(
+          {
+            kind: "started",
+            host: "ssh.example.com",
+            instanceId: `inst_${bubble.bubbleId}`,
+            remoteClonePath: `/srv/pairflow/repo--${bubble.bubbleId}`,
+            tmuxSession: `pf-${bubble.bubbleId}`,
+            startedAt: "2026-03-20T11:18:00.000Z"
+          },
+          null,
+          2
+        ),
+        "utf8"
+      );
+      const executeRemoteBubbleMergeCommand: NonNullable<
+        MergeBubbleDependencies["executeRemoteBubbleMergeCommand"]
+      > = () =>
+        Promise.resolve(
+          buildRemoteMergeHandoffResult({
+            bubbleId: bubble.bubbleId,
+            bubbleBranch: bubble.config.bubble_branch
+          })
+        );
+      const executeRemoteBubbleMergeCleanupCommand: NonNullable<
+        MergeBubbleDependencies["executeRemoteBubbleMergeCleanupCommand"]
+      > = () =>
+        Promise.resolve(
+          buildRemoteMergeCleanupResult({
+            bubbleId: bubble.bubbleId,
+            bubbleBranch: bubble.config.bubble_branch,
+            ...(parsedInput.scenario === "cleanup_contract_invalid_path"
+              ? {
+                  remoteClonePath: `/srv/pairflow/repo--${bubble.bubbleId}-unexpected`
+                }
+              : {})
+          })
+        );
+      const resolveRemoteBubbleStatusTarget: NonNullable<
+        MergeBubbleDependencies["resolveRemoteBubbleStatusTarget"]
+      > = () =>
+        Promise.resolve({
+          alias: "prod",
+          host: "ssh.example.com",
+          user: "pairflow",
+          pairflowCommand: "pairflow"
+        });
+      mergeDependencies = {
+        runGit: vi.fn((args: string[]) => {
+          if (args[0] === "status") {
+            return Promise.resolve({
+              stdout: "",
+              stderr: "",
+              exitCode: 0
+            });
+          }
+          if (args[0] === "fetch") {
+            return Promise.resolve({
+              stdout: "",
+              stderr: "",
+              exitCode: 0
+            });
+          }
+          if (
+            args[0] === "rev-parse"
+            && args[1] === `refs/pairflow/import/${bubble.bubbleId}^{commit}`
+          ) {
+            return Promise.resolve({
+              stdout: "abcdef1234567890\n",
+              stderr: "",
+              exitCode: 0
+            });
+          }
+          if (args[0] === "checkout" && args[1] === "main") {
+            return Promise.resolve({
+              stdout: "",
+              stderr: "",
+              exitCode: 0
+            });
+          }
+          if (
+            args[0] === "merge"
+            && args[1] === "--no-ff"
+            && args[2] === "--no-edit"
+            && args[3] === `refs/pairflow/import/${bubble.bubbleId}`
+          ) {
+            return Promise.resolve({
+              stdout: "",
+              stderr: "",
+              exitCode: 0
+            });
+          }
+          if (args[0] === "rev-parse" && args[1] === "HEAD") {
+            return Promise.resolve({
+              stdout: "fedcba0987654321\n",
+              stderr: "",
+              exitCode: 0
+            });
+          }
+          throw new Error(`Unexpected git command: ${args.join(" ")}`);
+        }),
+        executeRemoteBubbleMergeCommand,
+        executeRemoteBubbleMergeCleanupCommand,
+        resolveRemoteBubbleStatusTarget
+      } satisfies MergeBubbleDependencies;
     }
+
+    const localMergeDependencies = mergeDependencies === undefined
+      ? {
+          terminateBubbleTmuxSession: (terminateInput: { bubbleId?: string }) =>
+            Promise.resolve({
+              sessionName: `pf-${terminateInput.bubbleId ?? "unknown"}`,
+              existed: parsedInput.tmuxSessionExisted
+            })
+        } satisfies Pick<MergeBubbleDependencies, "terminateBubbleTmuxSession">
+      : {};
 
     let output: MergeContractOutput;
     try {
@@ -391,11 +598,8 @@ async function executeMergeCase(input: {
           now: new Date("2026-03-20T11:20:00.000Z")
         },
         {
-          terminateBubbleTmuxSession: (terminateInput) =>
-            Promise.resolve({
-              sessionName: `pf-${terminateInput.bubbleId ?? "unknown"}`,
-              existed: parsedInput.tmuxSessionExisted
-            })
+          ...localMergeDependencies,
+          ...(mergeDependencies ?? {})
         }
       );
 

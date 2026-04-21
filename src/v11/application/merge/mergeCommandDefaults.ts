@@ -22,6 +22,8 @@ export interface MergeBubbleDependencyDefaults {
     NonNullable<MergeBubbleDependencies["resolveRemoteBubbleStatusTarget"]>;
   executeRemoteBubbleMergeCommand:
     NonNullable<MergeBubbleDependencies["executeRemoteBubbleMergeCommand"]>;
+  executeRemoteBubbleMergeCleanupCommand:
+    NonNullable<MergeBubbleDependencies["executeRemoteBubbleMergeCleanupCommand"]>;
 }
 
 let mergeBubbleDependencyDefaultsPromise:

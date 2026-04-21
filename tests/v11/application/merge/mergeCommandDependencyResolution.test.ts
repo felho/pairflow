@@ -22,15 +22,47 @@ describe("mergeCommandDependencyResolution", () => {
       },
       cleanupPending: true
     })) as never;
+    const executeRemoteBubbleMergeCleanupCommand = (async () => ({
+      bubbleId: "b_remote_merge_01",
+      baseBranch: "main",
+      bubbleBranch: "bubble/b_remote_merge_01",
+      artifacts: {
+        worktree: {
+          path: "/remote/repo",
+          existed: true
+        },
+        tmux: {
+          sessionName: "pf-b_remote_merge_01",
+          existed: true
+        },
+        runtimeSession: {
+          path: "/remote/repo/.pairflow/runtime/sessions.json",
+          existed: true
+        },
+        branch: {
+          name: "bubble/b_remote_merge_01",
+          existed: true
+        }
+      },
+      tmuxSessionTerminated: true,
+      runtimeSessionRemoved: true,
+      removedWorktree: true,
+      removedBubbleBranch: true,
+      tmuxSessionName: "pf-b_remote_merge_01"
+    })) as never;
 
     const resolved = await resolveMergeCommandDependencies({
       runGit: customRunGit,
-      executeRemoteBubbleMergeCommand
+      executeRemoteBubbleMergeCommand,
+      executeRemoteBubbleMergeCleanupCommand
     });
 
     expect(resolved.runGit).toBe(customRunGit);
     expect(resolved.executeRemoteBubbleMergeCommand).toBe(
       executeRemoteBubbleMergeCommand
+    );
+    expect(resolved.executeRemoteBubbleMergeCleanupCommand).toBe(
+      executeRemoteBubbleMergeCleanupCommand
     );
   });
 });

@@ -1,4 +1,7 @@
-import type { MergeBubbleResult } from "./mergeCommandContract.js";
+import type {
+  MergeBubbleResult,
+  MergeCleanupOutcome
+} from "./mergeCommandContract.js";
 
 export interface BuildMergeBubbleResultInput {
   bubbleId: string;
@@ -7,11 +10,7 @@ export interface BuildMergeBubbleResultInput {
   mergeCommitSha: string;
   pushedBaseBranch: boolean;
   deletedRemoteBranch: boolean;
-  tmuxSessionName: string;
-  tmuxSessionExisted: boolean;
-  runtimeSessionRemoved: boolean;
-  removedWorktree: boolean;
-  removedBubbleBranch: boolean;
+  cleanupOutcome: MergeCleanupOutcome;
 }
 
 export function buildMergeBubbleResult(
@@ -24,10 +23,10 @@ export function buildMergeBubbleResult(
     mergeCommitSha: input.mergeCommitSha,
     pushedBaseBranch: input.pushedBaseBranch,
     deletedRemoteBranch: input.deletedRemoteBranch,
-    tmuxSessionName: input.tmuxSessionName,
-    tmuxSessionExisted: input.tmuxSessionExisted,
-    runtimeSessionRemoved: input.runtimeSessionRemoved,
-    removedWorktree: input.removedWorktree,
-    removedBubbleBranch: input.removedBubbleBranch
+    tmuxSessionName: input.cleanupOutcome.tmuxSessionName,
+    tmuxSessionExisted: input.cleanupOutcome.tmuxSessionExisted,
+    runtimeSessionRemoved: input.cleanupOutcome.runtimeSessionRemoved,
+    removedWorktree: input.cleanupOutcome.removedWorktree,
+    removedBubbleBranch: input.cleanupOutcome.removedBubbleBranch
   };
 }
