@@ -81,6 +81,7 @@ Ujra-szekvencialni a runtime review policy munkat ugy, hogy:
    - a Phase 1 foundation tasknak explicit control-model inheritance kell
    - a Phase 2 threshold task nem promotálhat compat vagy reviewer-snapshot source-ot canonical truth-va
    - a Phase 3A/3B taskok nem kezelhetik pending prerequisite-kent a mar preserved historical cutover baseline-t
+   - a downstream taskok koncepcionalisan validak maradhatnak, de successor-scope-juk csak a Phase 1 current-tree re-anchoring utan tekintheto stabilnak
 
 ## Current Codebase Check (2026-04-21)
 
@@ -93,6 +94,17 @@ Ujra-szekvencialni a runtime review policy munkat ugy, hogy:
 3. A korabbi taskokban szereplo `src/core/**` targetek a vegleges core retirement utan mar nem leteznek.
 4. A plan tovabbra is `draft`; egy korabbi Phase 1 foundation task draft szuletett, de current-tree szinten stale target-listas volt, ezert nem retained implementation input.
 5. A post-Phase-E actor-runtime successor lane current tree-ben mar kulon ownership alatt fut; a runtime review policy lane-nek nem szabad magaba huznia az adjacent `O2-T9` meta-review gate runtime-capability residual cleanupot.
+6. A current list/status pathok meg mindig kozvetlen current-tree entrypointokra epulnek:
+   - `src/v11/shared/list/listCommandEntryBuilder.ts`
+   - `src/v11/shared/list/listCommandApi.ts`
+   - `src/v11/shared/status/statusCommandViewBuilder.ts`
+   - `src/v11/shared/status/statusCommandApi.ts`
+   es a current tree-ben nincs meg elozoleg letezo `reviewPolicyRuntime` vagy `metaReviewGateThresholdAuthority` helper-surface, amihez a Phase 1 task "vissza tudna kotni".
+7. Ebbol kovetkezik, hogy a kovetkezo Phase 1 task target-file reality proofja csak meglevo entrypointokra epulhet; uj helper/extract fajl legfeljebb output lehet, nem elozetes scope-anchor.
+8. A current-tree `detail` consume jelenleg nem kulon backend Phase 1 entrypointkent latszik, hanem UI/router-presenter compositionkent:
+   - `src/v11/infrastructure/ui/routerActions.ts`
+   - `src/v11/infrastructure/ui/presenters/bubblePresenter.ts`
+   Ezert a `detail` nem kezelheto automatikus backend consume familykent a Phase 1 foundation slice-ban.
 
 Sikernek az szamit, ha a kovetkezo kor mar nem egyetlen bubble-ben mozgatja egyszerre a policy schema-t, a threshold routingot, a human-gate envelope semantics-et, a runtime projection surface-eket, a recovery pathokat es a web UI/store reteget.
 
@@ -108,9 +120,21 @@ Sikernek az szamit, ha a kovetkezo kor mar nem egyetlen bubble-ben mozgatja egys
 
 ### Open Work
 
-1. Egy uj Phase 1 foundation task generalasa a mai `src/v11/**` topologyra.
-2. A planbol hianyzo Phase 2 / Phase 3A / Phase 3B task artifactok letrehozasa.
+1. A jelenlegi uj Phase 1 task meg nem approvable; refine-olni kell a mai `src/v11/**` topologyra.
+   - explicit current-tree anchorokkal:
+     `src/types/bubble.ts`
+     `src/config/bubbleConfig.ts`
+     `src/v11/shared/list/listCommandEntryBuilder.ts`
+     `src/v11/shared/list/listCommandApi.ts`
+     `src/v11/shared/status/statusCommandViewBuilder.ts`
+     `src/v11/shared/status/statusCommandApi.ts`
+     es a meglevo `src/v11/shared/metaReviewGate/**` parity/report helper csalad
+   - uj helper/extract fajl tovabbra is output lehet, nem bemeneti scope-anchor
+2. A planbol hianyzo Phase 2 / Phase 3A / Phase 3B task artifactok letrehozasa, de csak a Phase 1 task current-tree reality proofja utan.
 3. A canonical control-model orokles explicit bevezetese a downstream taskokba.
+4. A downstream taskok dependency wordingje nem allithat `approved` parent-plan baseline-t, amig ennek a plannek a frontmatter statusza `draft`.
+5. A downstream Phase 2 / Phase 3 taskok koncepcionalisan maradhatnak, es a jelenlegi split-logika szerint tovabbra is validak.
+6. Ettol fuggetlenul a downstream taskok successor baseline-ja csak a Phase 1 current-tree re-anchoring utan tekintheto stabilnak.
 
 ### Deferred / Future Work
 
@@ -119,7 +143,14 @@ Sikernek az szamit, ha a kovetkezo kor mar nem egyetlen bubble-ben mozgatja egys
 
 ## Immediate Next Step
 
-1. A current next bounded step egy frissen generalt Phase 1 foundation task; nem a korabbi stale draft retargetelese.
+1. A current next bounded step a jelenlegi uj Phase 1 foundation task refine-ja; nem ujabb spekulativ helper-first draft generalasa.
+   - authoring rule:
+     a bounded slice proofnak a jelenlegi entrypointokbol kell kiindulnia; az uj helper/extract fajlok csak implementation outputkent nevezhetok meg.
+     A consume-family scope-proof nem allhat meg builder-szinten; a mai list/status API entrypointokat is meg kell neveznie, ha azok mar a current-tree consume boundary reszei.
+   - current-tree read-model note:
+     a kotelezo backend consume family jelenleg biztosan `list/status`;
+     `detail` csak akkor maradhat Phase 1 scope-ban, ha a task explicit current-tree entrypointot nevez meg hozza.
+     A jelenlegi tree alapjan a `detail` inkabb UI/router-presenter compose family, nem implicit backend projection boundary.
 2. Ha az adjacent `O2-T9` eppen aktiv merge-slice, azt elobb le kell zarni, hogy a meta-review gate workflow contract ne ket lane-ben valtozzon egyszerre.
 
 ## Decision Baseline
@@ -192,7 +223,7 @@ Ez a kombinacio tul sok helyen nyitott ownership-kerdest egyszerre.
 
 | Phase | Goal | Inputs | Outputs | Exit Criteria |
 |---|---|---|---|---|
-| Phase 1 | Shared runtime review policy foundation + authority simplification | jelenlegi bubble tanulsagai, `plans/tasks/review-policy-runtime-surface-and-rollout-phase1.md`, actor-runtime migration plan, es ez a reset plan | canonical policy type/schema, single projection builder, single mutation seam, threshold authority resolver boundary | a policy/read/write/authority felelossegek explicitten szet vannak valasztva; nincs meg bypass behavior |
+| Phase 1 | Shared runtime review policy foundation + authority simplification | jelenlegi bubble tanulsagai, `plans/tasks/review-policy-runtime-surface-and-rollout-phase1.md`, actor-runtime migration plan, es ez a reset plan | canonical policy type/schema, single projection builder a jelenlegi `list/status` consume familyhez, single mutation seam, threshold authority resolver boundary | a policy/read/write/authority felelossegek explicitten szet vannak valasztva; nincs meg bypass behavior; `detail` nincs implicitten Phase 1-be huzva |
 | Phase 2 | Auto-rework severity threshold delivery a canonical gate boundaryn | Phase 1 foundation | threshold-aware routing a meta-review gate boundaryn, bounded read-surface exposure, regressziozaras | a threshold feature reszertelmet ad clean mainrol, UI/store blast radius nelkul vagy minimalis operatori exposure-rel |
 | Phase 3 | Reviewer bypass contract now, activation later | Phase 1 foundation + historical reviewer/meta-reviewer cutover baseline + current-tree actor-runtime successor baseline | bypass policy/config/UI/state contract spec, majd kulon activation task | a bypass behavior nem csuszik vissza foundation/threshold slice-ba; az aktivacio kulon taskban tortenik |
 
@@ -202,7 +233,7 @@ Ez a kombinacio tul sok helyen nyitott ownership-kerdest egyszerre.
    - cel: canonical ownership bezarasa egy helyre
    - scope:
      - `review_policy` schema/typing
-     - single read projection builder status/list/detail surface-ekhez
+     - single read projection builder a meglevo status/list consume familyhez
      - single mutation seam
      - single threshold-authority resolver API a findings artifact/parity input feloldasara
    - non-goal:
@@ -211,6 +242,17 @@ Ez a kombinacio tul sok helyen nyitott ownership-kerdest egyszerre.
      - vegso threshold UX polish
    - authoring note:
      ezt a taskot ujra kell generalni a current-tree topologyra; a korabbi draft nem retained input.
+     a task scope-proofja a meglevo current-tree file-okra kell epuljon, kulonosen:
+     `src/types/bubble.ts`,
+     `src/config/bubbleConfig.ts`,
+     `src/v11/shared/list/listCommandEntryBuilder.ts`,
+     `src/v11/shared/list/listCommandApi.ts`,
+     `src/v11/shared/status/statusCommandViewBuilder.ts`,
+     `src/v11/shared/status/statusCommandApi.ts`,
+     valamint a meglevo `src/v11/shared/metaReviewGate/**` parity/report helper entrypointokra.
+     Uj `shared/reviewPolicy/**` vagy kulon threshold-authority helper fajl csak output lehet; nem szabad oket ugy targetelni, mintha mar letezo implementation anchorok lennenek.
+     A task nem allithat `approved` parent-plan dependencyt, amig ez a plan `draft`.
+     A `detail` csak kulon explicit UI/detail entrypointtal ownershipolhato; a jelenlegi tree-ben ez nem backend anchor.
 
 2. `plans/tasks/runtime-review-policy-auto-rework-threshold-phase2.md`
    - cel: a threshold enforce tenyleges szallitasa a canonical gate boundaryn
@@ -250,9 +292,20 @@ Phase 1-ben a refaktor kotelezo eredmenye egyetlen canonical boundary legyen leg
    - parity metadata
    - same-round freshness/authority rules
 4. approval refresh es human-gate finding hydration ugyanabból az authority source-bol,
-5. status/detail/list surface ugyanabbol a projection builderbol.
+5. a meglevo status/list backend surface ugyanabbol a projection builderbol.
+
+Current-tree note:
+1. `detail` consume nem tekintheto automatikusan Phase 1 current-tree anchornek.
+2. Ha a task `detail` surface-et ownershipolni akar, explicitten meg kell neveznie a mai v11 entrypointot, amely ezt a consume familyt kepviseli.
+3. A jelenlegi current-tree evidence szerint ez UI/router-presenter compose boundary lenne, nem backend list/status projection boundary.
 
 Ha ezek kozul barmelyik tovabbra is kulon helper-halmazokban el, akkor a kovetkezo threshold task ujra ugyanebbe a review-loop mintaba fog visszacsuszni.
+
+Phase 1 authoring guard:
+1. A task target-file listaja nem epulhet tobbsegeben meg nem letezo helper fajlokra.
+2. A current-tree reality proofnak mindig meg kell neveznie, mely meglevo config/list/status/meta-review entrypointokbol lesz az extract vagy a refactor.
+   A `list/status` consume family reality proofja builder + API entrypoint szintet is nevezzen meg, ha azok mar kulon consume boundaryt alkotnak a current tree-ben.
+3. Ha uj helper fajl jon letre, azt implementation outputkent kell kezelni, nem bemeneti scope-bizonyitekkent.
 
 ## Delivery Policy by Phase
 
@@ -320,6 +373,18 @@ Ha ezek kozul barmelyik tovabbra is kulon helper-halmazokban el, akkor a kovetke
 5. Risk: elveszik a bubble-ben megszerzett konkret tudás.
    Mitigation: ezt a plant a bubble diffkategoriak es review findingok alapjan rogzitjuk; a bubble nem merge-olodik, de discovery inputkent megmarad.
 
+6. Risk: a kovetkezo Phase 1 task ujra spekulativ helper-fajlokra epul, es elszakad a current-tree entrypointoktol.
+   Mitigation: a tasknak explicit target-file reality proofot kell adnia a meglevo config/list/status/meta-review anchorokrol; uj helper fajl csak output lehet.
+
+7. Risk: a downstream task dependency wording erosebb allapotot allit a parent planrol, mint ami a frontmatterben tenylegesen van.
+   Mitigation: amig a plan `draft`, egy downstream task sem nevezheti ezt `approved` baseline-nak; legfeljebb current parent plan refkent hivatkozhat ra.
+
+8. Risk: a downstream taskok tul koran kapnak stabil successor-scope kezelest, mikozben a Phase 1 meg nincs current-tree entrypointokra visszahorgonyozva.
+   Mitigation: a downstream taskok maradhatnak valtozatlan splitben, de implementalhato successor baseline-nak csak a Phase 1 re-anchoring utan tekinthetok.
+
+9. Risk: a `detail` consume backend projectionkent kerul Phase 1-be, mikozben a current tree-ben valojaban UI/router-presenter compose family.
+   Mitigation: a Phase 1 backend minimum `list/status`; `detail` csak kulon explicit entrypointtal vagy kulon kesobbi lane-ben ownershipolhato.
+
 ## Validation Strategy
 
 1. Phase 1 validacioja ne teljes end-to-end rollout legyen, hanem seam-level regresszio:
@@ -327,6 +392,12 @@ Ha ezek kozul barmelyik tovabbra is kulon helper-halmazokban el, akkor a kovetke
    - projection builder,
    - mutation seam,
    - threshold authority resolver.
+   Es mar a task review szintjen kotelezo legyen a target-file reality check:
+   - a bounded slice bizonyitasa meglevo current-tree entrypointokkal,
+   - nem phantom helper-targetekkel.
+   A consume-family reality proofnak nem eleg helper/builder szinten megallnia; ahol a current tree API entrypointot is kulon tart fenn, azt is nev szerint meg kell nevezni.
+   A read-model consume family validacio Phase 1-ben minimum `list/status` legyen; `detail` csak explicit current-tree anchor eseten kotelezo.
+   Ha a `detail` consume felmerul, a validacionak kulon bizonyitania kell, hogy backend vagy UI/router-presenter familyrol beszelunk.
 2. Phase 2 validacio:
    - route enforce,
    - approval refresh parity,
