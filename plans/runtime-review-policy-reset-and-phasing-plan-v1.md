@@ -17,15 +17,110 @@ Ujra-szekvencialni a runtime review policy munkat ugy, hogy:
 2. a bubble jelenlegi kodjat ne tekintsuk merge-celpontnak,
 3. a kovetkezo implementacios kor clean `main`-rol induljon,
 4. a shared runtime review policy foundation, az auto-rework threshold, es a reviewer bypass ne egyetlen szeles blast-radiusu feature-kent mozogjon,
-5. a tenyleges bypass-aktivacio tovabbra is a reviewer + meta-reviewer cutover milestone-ok utan tortenjen.
+5. a tenyleges bypass-aktivacio tovabbra is kulon milestone-gated rollout maradjon, es ne csusszon vissza foundation- vagy threshold-szeletbe.
 
-## Current Codebase Check (2026-04-10)
+## Done Definition
 
-1. A checked-out `src`, `tests` es `ui` scope-ban nincs `review_policy`, `review_loop_mode` vagy `meta_review_auto_rework_min_severity` runtime surface.
-2. A korabbi taskokban szereplo `src/core/**` targetek a vegleges core retirement utan mar nem leteznek.
-3. A plan tovabbra is `draft`, es a kovetkezo implementacios kor elott friss `v11`-owned target file listat igenyel.
+1. A plan explicit current-tree sequencinget ad a runtime review policy lane-nek a post-Phase-E actor-runtime successor baseline mellett.
+2. A Phase 1 / Phase 2 / Phase 3 split coverage-szinten teljes, es egyik fazis sem hordoz kevert foundation + delivery + bypass activation scope-ot.
+3. A downstream taskokhoz szukseges control model plan-szinten explicit:
+   - mi a business invariant,
+   - mi a control owner,
+   - honnan szabad olvasni,
+   - mi tiltott fallback,
+   - mi az engedelyezett deterministic resolution path,
+   - mi a missing-data behavior.
+4. A current next bounded step egyertelmu:
+   - egy frissen generalt Phase 1 foundation task,
+   - az adjacent `O2-T9` lane-tol kulon ownership mellett.
+
+## Guiding Principles
+
+1. Business invariant:
+   - a review-loop runtime donteseknel nem keletkezhet ket vagy tobb versengo authority ugyanarra a threshold/bypass allapotra.
+   - a human-facing approval es a gate routing nem mondhat ellent egymasnak kulon source-of-truth miatt.
+2. Control model:
+   - a canonical runtime review policy workflow/orchestrator-owned.
+   - a threshold authority canonical inputjat egyetlen explicit authority boundary oldja fel.
+   - actor csak policy-derived inputot vagy constraintet kaphat; nem canonical policy source.
+3. Read-path rule:
+   - a review-policy runtime view, threshold authority, es a status/detail/list projection egy-egy named canonical helperen vagy boundaryn keresztul olvashato.
+   - a human-facing approval/hydration csak ugyanebbol az authority lancbol consume-olhat, ha az adott fazis ezt ownershipolja.
+4. Forbidden fallback:
+   - reviewer snapshot, summary-level derived adat, UI/store local projection vagy ad hoc route helper nem valhat canonical threshold truth-ta.
+   - actor prompt vagy actor output sem valhat canonical review-policy source-sza.
+5. Allowed resolution path:
+   - deterministic same-authority artifact/parity/report reconciliation megengedett, ha ugyanazon canonical authority lanc resze.
+   - report/artifact/parity input merge csak explicit named helper/boundary alatt megengedett.
+6. Missing-data rule:
+   - ha a canonical threshold source nem oldhato fel, a rendszer fail-closed vagy conservative route-on marad explicit diagnostics mellett.
+   - missing/incomplete policy surface nem eredmenyezhet silent bypass- vagy threshold-aktivaciot.
+7. Sequencing / boundary note:
+   - producer-first rule:
+     a canonical `review_policy` foundation es authority resolver elobb zarul, mint a threshold enforce vagy a bypass consume/activation.
+   - downstream consume families that remain separate:
+     meta-review gate routing, human-gate payload/approval refresh, status/detail/list projection, es opcionális UI/API consume kulon fazisban mozoghatnak.
+   - cleanup/recovery timing:
+     cleanup/recovery alignment csak ott jon be, ahol a fazis explicitten ownershipolja; adjacent `O2-T9` cleanup nem resze ennek a lane-nek.
+
+## Canonical Contract Anchors
+
+1. Source-of-truth anchors:
+   - [metaReviewGateCurrentRunFinalization.ts](/Users/felho/dev/pairflow/src/v11/shared/metaReviewGate/metaReviewGateCurrentRunFinalization.ts)
+   - [approvalRequestEnvelope.ts](/Users/felho/dev/pairflow/src/v11/shared/metaReviewGate/approvalRequestEnvelope.ts)
+   - [metaReviewGateReviewerSnapshot.ts](/Users/felho/dev/pairflow/src/v11/shared/metaReviewGate/metaReviewGateReviewerSnapshot.ts)
+   - [metaReviewGateFindingsValidation.ts](/Users/felho/dev/pairflow/src/v11/shared/metaReviewGate/metaReviewGateFindingsValidation.ts)
+   - [actor-runtime-interface-post-phaseE-successor-plan-v1.md](/Users/felho/dev/pairflow/plans/actor-runtime-interface-post-phaseE-successor-plan-v1.md)
+2. Closed canonical elements / terms:
+   - `MetaReviewRuntimeDeliveryObservation` runtime truth marad
+   - same-round findings artifact/parity validation preserved baseline
+   - actor-runtime successor preserved baseline, nem reopenolhato implicit cleanup cimszo alatt
+3. Explicitly authorized reinterpretation:
+   - `N/A`
+4. Downstream task impact:
+   - a Phase 1 foundation tasknak explicit control-model inheritance kell
+   - a Phase 2 threshold task nem promotálhat compat vagy reviewer-snapshot source-ot canonical truth-va
+   - a Phase 3A/3B taskok nem kezelhetik pending prerequisite-kent a mar preserved historical cutover baseline-t
+
+## Current Codebase Check (2026-04-21)
+
+1. A checked-out `src`, `tests` es `ui` scope-ban tovabbra sincs `review_policy`, `review_loop_mode` vagy `meta_review_auto_rework_min_severity` runtime surface.
+2. A meta-review gate current tree-ben mar erosebb parity/observation baseline-en all:
+   - `validateStructuredMetaReviewPositiveClaim(...)`
+   - `MetaReviewRuntimeDeliveryObservation`
+   - same-round reviewer snapshot consistency consume
+   ez azonban nem egyenlo a plan altal igenyelt canonical `review_policy` surface-szel vagy egyetlen threshold-authority boundaryval.
+3. A korabbi taskokban szereplo `src/core/**` targetek a vegleges core retirement utan mar nem leteznek.
+4. A plan tovabbra is `draft`; egy korabbi Phase 1 foundation task draft szuletett, de current-tree szinten stale target-listas volt, ezert nem retained implementation input.
+5. A post-Phase-E actor-runtime successor lane current tree-ben mar kulon ownership alatt fut; a runtime review policy lane-nek nem szabad magaba huznia az adjacent `O2-T9` meta-review gate runtime-capability residual cleanupot.
 
 Sikernek az szamit, ha a kovetkezo kor mar nem egyetlen bubble-ben mozgatja egyszerre a policy schema-t, a threshold routingot, a human-gate envelope semantics-et, a runtime projection surface-eket, a recovery pathokat es a web UI/store reteget.
+
+## Current Status
+
+### Completed Work
+
+1. A wide-scope discovery bubble tanulsagai rogzitve lettek ebben a reset planben.
+2. A stale Phase 1 draftbol levont tanulsag:
+   a kovetkezo foundation taskot nem erdemes retargetelni in-place; friss taskgenerralas kell a mai topologyra.
+3. A current-tree adjacent actor-runtime baseline mar kulon successor lane-ben el:
+   [actor-runtime-interface-post-phaseE-successor-plan-v1.md](/Users/felho/dev/pairflow/plans/actor-runtime-interface-post-phaseE-successor-plan-v1.md)
+
+### Open Work
+
+1. Egy uj Phase 1 foundation task generalasa a mai `src/v11/**` topologyra.
+2. A planbol hianyzo Phase 2 / Phase 3A / Phase 3B task artifactok letrehozasa.
+3. A canonical control-model orokles explicit bevezetese a downstream taskokba.
+
+### Deferred / Future Work
+
+1. Bypass runtime activation kulon taskban, foundation es threshold lane utan.
+2. Olyan UI/control surface, amely a bounded backend foundationnel mar nincs egy lane-ben.
+
+## Immediate Next Step
+
+1. A current next bounded step egy frissen generalt Phase 1 foundation task; nem a korabbi stale draft retargetelese.
+2. Ha az adjacent `O2-T9` eppen aktiv merge-slice, azt elobb le kell zarni, hogy a meta-review gate workflow contract ne ket lane-ben valtozzon egyszerre.
 
 ## Decision Baseline
 
@@ -38,8 +133,9 @@ Sikernek az szamit, ha a kovetkezo kor mar nem egyetlen bubble-ben mozgatja egys
    - az auto-rework threshold kozelebb van a mostani stackhez,
    - a reviewer bypass behavior topologiai elofeltetelekhez kotott.
 5. Az auto-rework threshold sem szabad, hogy prompt-, snapshot- vagy runtime-surface-centrikus patchworkkent keszuljon el; elotte vagy vele egy idoben explicit authority simplification kell.
-6. A reviewer bypassbol most a policy/config/UI/state contract es provenance-elv specifikalhato, de a tenyleges runtime behavior aktivacio nem mehet a reviewer es meta-reviewer cutover ele.
+6. A reviewer bypassbol most a policy/config/UI/state contract es provenance-elv specifikalhato, de a tenyleges runtime behavior aktivacio tovabbra sem csuszhat vissza foundation/threshold delivery melle opportunistic same-slice rolloutkent.
 7. A shared runtime review policy surface workflow/orchestrator-owned marad; actor csak policy-derived inputot kaphat.
+8. A post-Phase-E actor-runtime successor lane preserved baseline marad; a runtime review policy munka erre tamaszkodhat, de nem replacementje az ott meg nyitott residual cleanupnak.
 
 ## Why Reset
 
@@ -96,9 +192,9 @@ Ez a kombinacio tul sok helyen nyitott ownership-kerdest egyszerre.
 
 | Phase | Goal | Inputs | Outputs | Exit Criteria |
 |---|---|---|---|---|
-| Phase 1 | Shared runtime review policy foundation + authority simplification | jelenlegi bubble tanulsagai, `plans/tasks/review-policy-runtime-surface-and-rollout-phase1.md`, actor-runtime migration plan | canonical policy type/schema, single projection builder, single mutation seam, threshold authority resolver boundary | a policy/read/write/authority felelossegek explicitten szet vannak valasztva; nincs meg bypass behavior |
+| Phase 1 | Shared runtime review policy foundation + authority simplification | jelenlegi bubble tanulsagai, `plans/tasks/review-policy-runtime-surface-and-rollout-phase1.md`, actor-runtime migration plan, es ez a reset plan | canonical policy type/schema, single projection builder, single mutation seam, threshold authority resolver boundary | a policy/read/write/authority felelossegek explicitten szet vannak valasztva; nincs meg bypass behavior |
 | Phase 2 | Auto-rework severity threshold delivery a canonical gate boundaryn | Phase 1 foundation | threshold-aware routing a meta-review gate boundaryn, bounded read-surface exposure, regressziozaras | a threshold feature reszertelmet ad clean mainrol, UI/store blast radius nelkul vagy minimalis operatori exposure-rel |
-| Phase 3 | Reviewer bypass contract now, activation later | Phase 1 foundation + reviewer/meta-reviewer cutover artifactok | bypass policy/config/UI/state contract spec, majd kulon activation task a cutover utan | a bypass behavior nem indul el a cutover milestone-ok elott; az aktivacio kulon taskban tortenik |
+| Phase 3 | Reviewer bypass contract now, activation later | Phase 1 foundation + historical reviewer/meta-reviewer cutover baseline + current-tree actor-runtime successor baseline | bypass policy/config/UI/state contract spec, majd kulon activation task | a bypass behavior nem csuszik vissza foundation/threshold slice-ba; az aktivacio kulon taskban tortenik |
 
 ## Recommended Task Split
 
@@ -113,6 +209,8 @@ Ez a kombinacio tul sok helyen nyitott ownership-kerdest egyszerre.
      - teljes web UI rollout
      - bypass behavior
      - vegso threshold UX polish
+   - authoring note:
+     ezt a taskot ujra kell generalni a current-tree topologyra; a korabbi draft nem retained input.
 
 2. `plans/tasks/runtime-review-policy-auto-rework-threshold-phase2.md`
    - cel: a threshold enforce tenyleges szallitasa a canonical gate boundaryn
@@ -137,8 +235,9 @@ Ez a kombinacio tul sok helyen nyitott ownership-kerdest egyszerre.
 4. `plans/tasks/runtime-review-policy-reviewer-bypass-activation-post-cutover-phase3b.md`
    - cel: bypass runtime behavior aktivacio a reviewer + meta-reviewer cutover utan
    - explicit dependency:
-     - reviewer cutover kesz
-     - meta-reviewer cutover kesz
+     - historical reviewer cutover baseline preserved
+     - historical meta-reviewer cutover baseline preserved
+     - current-tree actor-runtime successor baseline nem regresszalodik
 
 ## Phase 1 Refactor Boundary
 
@@ -169,6 +268,7 @@ Ha ezek kozul barmelyik tovabbra is kulon helper-halmazokban el, akkor a kovetke
    - web UI/store nagy blast radius
    - actor prompt/guidance plusz semantics
    - recovery/persistence opportunistic tovabbfejlesztes a foundationon tuli mertekben
+   - adjacent `O2-T9` workflow runtime-capability residual cleanup bevonasa ebbe a lane-be
 
 ### Phase 2
 
@@ -176,22 +276,32 @@ Ha ezek kozul barmelyik tovabbra is kulon helper-halmazokban el, akkor a kovetke
 2. A Phase 2 task acceptance kriteriuma legyen szuk:
    - route decision ugyanazt az authority resolvert hasznalja,
    - nincs reviewer snapshot fallback authoritykent,
-   - a runtime surface nem gyart sajat threshold-igazsagot.
+   - a runtime surface nem gyart sajat threshold-igazsagot,
+   - es a gate-local runtime-capability contract cleanup nem keveredik bele ugyanebbe a szeletbe.
 
 ### Phase 3
 
 1. A bypass specifikacio most is elokeszitheto.
-2. A bypass behavior aktivacioja tovabbra is milestone-gated:
-   - reviewer cutover utan,
-   - meta-reviewer cutover utan.
-3. Nem kell a teljes program vegeig varni, de ezt a feature-t a cutover ele nem tesszuk be.
+2. A historical reviewer es meta-reviewer cutover mar preserved baseline, nem pending implementacios blocker.
+3. Ettol fuggetlenul a bypass behavior aktivacioja tovabbra is kulon milestone-gated rollout marad:
+   - foundation utan,
+   - threshold lane utan,
+   - explicit activation taskban.
+4. Nem kell a teljes program vegeig varni, de ezt a feature-t nem tesszuk be foundation- vagy threshold-szeletbe.
 
 ## Dependencies
 
-1. [plans/actor-runtime-interface-discovery-and-migration-plan-v1.md](/Users/felho/dev/pairflow/plans/actor-runtime-interface-discovery-and-migration-plan-v1.md)
-2. [plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-migration-spine-phaseD-plan.md](/Users/felho/dev/pairflow/plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-migration-spine-phaseD-plan.md)
-3. [plans/tasks/review-policy-runtime-surface-and-rollout-phase1.md](/Users/felho/dev/pairflow/plans/tasks/review-policy-runtime-surface-and-rollout-phase1.md)
-4. reviewer es meta-reviewer Phase E cutover taskok a bypass activation prerequisite-jeikent
+1. Current-tree adjacent dependency:
+   [plans/actor-runtime-interface-post-phaseE-successor-plan-v1.md](/Users/felho/dev/pairflow/plans/actor-runtime-interface-post-phaseE-successor-plan-v1.md)
+2. Current-tree adjacent residual task:
+   [plans/tasks/actor-runtime-interface-opportunity2-task9-meta-review-gate-workflow-runtime-capability-residual-closeout.md](/Users/felho/dev/pairflow/plans/tasks/actor-runtime-interface-opportunity2-task9-meta-review-gate-workflow-runtime-capability-residual-closeout.md)
+3. Historical actor-runtime sequencing baseline:
+   [plans/actor-runtime-interface-discovery-and-migration-plan-v1.md](/Users/felho/dev/pairflow/plans/actor-runtime-interface-discovery-and-migration-plan-v1.md)
+4. Historical migration spine baseline:
+   [plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-migration-spine-phaseD-plan.md](/Users/felho/dev/pairflow/plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-migration-spine-phaseD-plan.md)
+5. Discovery input / superseded wide-scope task:
+   [plans/tasks/review-policy-runtime-surface-and-rollout-phase1.md](/Users/felho/dev/pairflow/plans/tasks/review-policy-runtime-surface-and-rollout-phase1.md)
+6. Historical reviewer es meta-reviewer Phase E cutover artifactok preserved baseline-kent a bypass activation sequencinghez
 
 ## Risks and Mitigations
 
@@ -204,7 +314,10 @@ Ha ezek kozul barmelyik tovabbra is kulon helper-halmazokban el, akkor a kovetke
 3. Risk: a bypass specifikacio ujra belerangatja a runtime behavior kerdeseit.
    Mitigation: Phase 3A es 3B kulon task, kulon acceptance criteria-val.
 
-4. Risk: elveszik a bubble-ben megszerzett konkret tudás.
+4. Risk: az adjacent actor-runtime successor residual cleanup es a review-policy lane osszecsuszik.
+   Mitigation: az `O2-T9` current-tree adjacent dependency maradjon kulon ownership; a review-policy Phase 1 ne vallaljon runtime-capability contract cleanupot.
+
+5. Risk: elveszik a bubble-ben megszerzett konkret tudás.
    Mitigation: ezt a plant a bubble diffkategoriak es review findingok alapjan rogzitjuk; a bubble nem merge-olodik, de discovery inputkent megmarad.
 
 ## Validation Strategy
@@ -230,4 +343,5 @@ Ha ezek kozul barmelyik tovabbra is kulon helper-halmazokban el, akkor a kovetke
    - mely retegek mozdultak egyszerre,
    - hol csuszott szet az authority,
    - mely tesztek jeleztek driftet.
-3. A kovetkezo kor clean `main`-rol induljon e terv Phase 1 taskjaval.
+3. A kovetkezo kor clean `main`-rol induljon e terv alapjan frissen generalt Phase 1 taskkal.
+4. Ha az adjacent `O2-T9` eppen aktiv merge-slice, a Phase 1 indulasa elott erdemes annak closurejat megvarni, hogy a meta-review gate workflow contract ne ket lane-ben valtozzon egyszerre.
