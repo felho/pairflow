@@ -62,8 +62,8 @@ owners:
 4. A human-readable merge summary ma szinten nem kulonbözteti meg a local es started-remote operator meaninget:
    - [src/cli/index.ts](/Users/felho/dev/pairflow/src/cli/index.ts:738)
 5. A design docban explicit drift latszik:
-   - a `bubble merge` remote merge + remote push modellre utal,
-   - majd kulon `git pull` tanacsot ad a laptopra,
+   - a `bubble merge` started-remote closeoutot ugy irja le, mintha a remote oldali merge/publication lepes lenne a fo operator truth,
+   - majd kulon `git pull` tanacsot ad a laptopra a lokalis checkout kovetesere,
    - ez mar nem egyezik a current retained contracttal,
    - [docs/remote-bubble-execution.md](/Users/felho/dev/pairflow/docs/remote-bubble-execution.md:507)
 6. A README merge peldai szinten altalanos remote update modellt sugallnak:
@@ -80,7 +80,7 @@ owners:
 9. A target-file reality emiatt:
    - ez elsodlegesen `operator_read_model` / operator-facing contract alignment task,
    - a default implementation path CLI/help/docs/skill alignment,
-   - es a merge-core/result-contract family nem alap target scope, csak explicit follow-up trigger lehet, ha a semleges vagy route-aware CLI wording a jelenlegi public surface-eken bizonyithatoan nem zarhato le ezek nelkul.
+   - es a merge-core/result-contract family nem alap target scope; ha a default bounded slice nem eleg, az explicit scope-escalation note vagy kulon local refinement dontesi pontja, nem csendes task-bovites.
 
 ## Parent Plan Fit / Stable Sequencing
 
@@ -237,13 +237,14 @@ owners:
    - started-remote merge retained fail-closed flag reject megmarad,
    - local durable success boundary es cleanup-proof alignment megmarad.
 2. `allowed_resolution_path`
-   - a default pathon a wording lehet explicit generic vagy retained-behavior-aware,
-   - es csak akkor epulhet proven merge route-bol, ha ez a route proof explicit, szuk local refinementben bekerul.
+   - a default pathon a wording lehet explicit generic vagy route-aware,
+   - es csak akkor epulhet merge route-bol, ha a route explicit vagy a jelen task source-anchorjai alapjan bizonyithato,
+   - ellenkezo esetben a wording maradjon explicit generic.
 3. `forbidden_fallback`
    - remote route operator wordinget tilos legacy docbol vagy generic helpbol "orokolni" explicit route-check nelkul,
    - tilos a `pushedBaseBranch=false` / `deletedRemoteBranch=false` kombinaciobol onmagaban remote semanticsat visszafejteni.
 4. `missing_data_rule`
-   - ha egy surface-en a merge route nem bizonyithato explicitten, a wording maradjon semleges vagy mondja ki a generic baseline-t;
+   - ha egy surface-en a route nem explicit es a jelen task source-anchorjai alapjan sem bizonyithato, a wording maradjon semleges vagy mondja ki a generic baseline-t;
    - nem szabad remote push/publication modellt kitalalni hianyzo route-adat helyett.
 
 ## L0 - Policy
@@ -277,12 +278,19 @@ owners:
 
 ### Operator Merge Contract
 
-1. A merge CLI/help/docs kulonitse el:
-   - local merge retained optional push/delete-remote baseline,
+1. Azokon az operator-facing merge surface-eken, ahol a route explicit vagy a jelen task source-anchorjai alapjan bizonyithato, a wording kulonitse el:
+   - local merge retained optional `--push` / `--delete-remote` baseline,
    - started-remote merge retained unsupported-flag es local durable merge semantics.
-2. A default task closure nem kovetel uj merge-result route marker-t:
+2. Azokon a surface-eken, ahol a route nem explicit es a jelen task source-anchorjai alapjan sem bizonyithato, a wording maradjon szandekosan generic:
+   - lasd a `Current Codebase Check / Current-Tree Reality Check` azon pontjait, ahol a drift vagy a retained semantics source-anchorral mar bizonyithato (`4-8.` pont),
+   - ne sugalljon remote merge + remote push publication modellt,
+   - de ne talaljon ki uj route marker nelkul started-remote-specifikus allitast sem.
+3. A default task closure nem kovetel uj merge-result route marker-t:
    - eloszor a jelenlegi public surface-ekkel kompatibilis, nem-felrevezeto wordinget kell megprobalni.
-3. Ha a current CLI human-readable summary explicit route-aware olvasatot csak uj public result shape-pel tudna adni, az kulon explicit refinement trigger.
+4. Ha a current CLI human-readable summary explicit route-aware olvasatot csak uj public result shape-pel tudna adni, az kulon explicit dontesi pont:
+   - legfeljebb a `Narrow Additive Contract Allowance` szerinti szuk bridge justified,
+   - ennek hianyaban a task explicit scope-escalation note-tal all meg,
+   - es nem csendes merge-core vagy result-contract target-bovitessel.
 
 ### Skills / Workflow Contract
 
@@ -299,30 +307,38 @@ owners:
    - merge mutation semantics,
    - cleanup dispatch ordering,
    - success/completion proof source-of-truthot.
+3. Terminologiai sorrend:
+   - `local refinement`: a jelen taskon beluli explicit bounded dontesi pont, amely megallapitja, hogy a default wording-path eleg-e,
+   - `conditional additive bridge`: a legszukebb additive koveto lepes, amely csak ilyen local refinement utan justified,
+   - `scope-escalation note`: a closeoutban rogzitett explicit stop-kimenet, ha a default path es a conditional additive bridge sem eleg.
 
 ## L2 - Implementation Notes
 
 1. Preferalt a legszukebb route-aware operator seam:
    - CLI summary/helper wording alignment a jelenlegi public result shape-en belul.
 2. A help textben explicitte kell tenni, hogy a `--push` / `--delete-remote` flag retained generic/local capability, started-remote route-on nem hasznalhato.
-3. A README/design doc peldak ne tanacsoljanak implicit `git pull`-t mint started-remote merge utani kotelezo baseline-t, ha a current canonical behavior mar a local repo merge-je.
+3. Azokon a README/design doc szoveghelyeken es peldakban, amelyek kifejezetten a started-remote merge closeoutot irjak le, a closeout ugy szerepeljen, hogy a durable merge a laptop local repo-jaban tortenik:
+   - ne tanacsoljanak implicit `git pull`-t mint kotelezo baseline-t pusztan a merge befejezese miatt,
+   - es csak akkor beszeljenek kulon local checkout refreshrol, ha a konkret operator-flow valoban mas clone/checkout szinkronizalasat igenyli.
 4. A repo-local skill file-ok modositasa eseten az implementation closeoutnak kovetnie kell a skill sync policy-t, de a task source-of-truth targetje a repo-local `.claude/skills/**`.
 5. Ha a CLI summary a jelenlegi public result shape-en belul nem teheto nem-felrevezetove, azt implementation kozben explicit scope-escalation note-kent kell jelezni, nem csendes target-bovitessel.
 
 ## Acceptance Criteria
 
 1. A started-remote merge operator-facing surfaces nem sugallnak remote merge + remote push publication modellt.
-2. A merge CLI help explicitte kezeli a retained local vs started-remote operatori kulonbseget, vagy bizonyithatoan semleges marad.
-3. A human-readable CLI merge summary nem vezeti felre az operatort a started-remote path valodi durable merge targetjerol.
+2. A merge CLI help az `Operator Merge Contract` 1. pontja szerinti explicit vagy a jelen task source-anchorjai alapjan bizonyithato route eseten egyertelmuen kezeli a retained local vs started-remote operatori kulonbseget; az `Operator Merge Contract` 2. pontja szerinti esetekben pedig bizonyithatoan semleges marad.
+3. A human-readable CLI merge summary az `Operator Merge Contract` 1. pontja szerinti explicit vagy a jelen task source-anchorjai alapjan bizonyithato route eseten kifejezetten a started-remote path valodi local durable merge targetjerol beszel, vagy az `Operator Merge Contract` 2. pontja szerinti esetekben generic marad anelkul, hogy remote push/publication closeoutot sugallna.
 4. A README, design doc, es repo-local skill/workflow wording ugyanarra a canonical retained semanticsra all.
 5. A local merge retained `--push` / `--delete-remote` baseline nem regresszalodik.
-6. A default task closure merge-core/result-contract target-file modositasa nelkul is implementalhato.
+6. A default task closure elsodlegesen merge-core/result-contract target-file modositasa nelkul is implementalhato; ha ez hamisnak bizonyul, legfeljebb a `Narrow Additive Contract Allowance` szerinti szuk conditional additive bridge justified, es ha ez sem eleg, a task explicit scope-escalation note-tal all meg.
 
 ## Validation / Evidence
 
 1. CLI/unit:
-   - merge help text route-aware wording vagy explicit generic guard
-   - CLI summary wording local vs started-remote esetben
+   - merge help text route-aware wording csak ott, ahol a route explicit vagy a jelen task source-anchorjai alapjan bizonyithato
+   - merge help text explicit generic guard ott, ahol a route nem explicit es a jelen task source-anchorjai alapjan sem bizonyithato
+   - CLI summary wording local vs started-remote esetben csak akkor lehet route-aware, ha a route explicit vagy a jelen task source-anchorjai alapjan bizonyithato
+   - ha a route nem explicit es a jelen task source-anchorjai alapjan sem bizonyithato, a summary nem allit remote merge/publication closeoutot
 2. Core/unit csak explicit local refinement utan, ha szuk additive route marker kerul bevezetesre:
    - merge result contract shaping
    - local vs started-remote route marker assertions
@@ -333,6 +349,9 @@ owners:
 4. Regression:
    - local merge retained flag behavior unchanged
    - started-remote `--push` / `--delete-remote` unsupported path unchanged
+5. Escalation-path validation:
+   - ha a CLI summary csak uj route/result metadata mellett lenne teheto helyesse, a task closeout explicit scope-escalation note-ot tartalmaz a `done-package.md` summaryben es a canonical PASS summaryben
+   - es nem allitja azt, hogy a default bounded slice merge-core/result-contract valtoztatas nelkul is lezart maradt
 
 ## Done Definition
 
