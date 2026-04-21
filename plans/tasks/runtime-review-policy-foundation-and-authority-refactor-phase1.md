@@ -7,11 +7,11 @@ phase: phase1
 target_files:
   - src/types/bubble.ts
   - src/config/bubbleConfig.ts
-  - src/v11/shared/reviewPolicy/reviewPolicyRuntime.ts
-  - src/v11/shared/reviewPolicy/updateBubbleReviewPolicy.ts
   - src/v11/shared/list/listCommandContract.ts
   - src/v11/shared/list/listCommandEntryBuilder.ts
   - src/v11/shared/status/statusCommandViewBuilder.ts
+  - src/v11/shared/reviewPolicy/reviewPolicyRuntime.ts
+  - src/v11/shared/reviewPolicy/updateBubbleReviewPolicy.ts
   - src/v11/shared/metaReviewGate/metaReviewGateThresholdAuthority.ts
   - src/v11/shared/metaReviewGate/metaReviewGateFindingsMetadata.ts
   - src/v11/shared/metaReviewGate/metaReviewGateFindingsParityInput.ts
