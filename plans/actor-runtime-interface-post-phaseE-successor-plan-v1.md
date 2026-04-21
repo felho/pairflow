@@ -329,12 +329,13 @@ owners:
      - repo-root export cleanup
      - generic executor registry vagy non-`tmux` runtime platform
    - why separate: kulon filecsalad es kulon fail-closed/runtime contract kockazat; nem biztonsagos az `O2-T8` residual delivery taskkal osszegyurni
-10. Az `O2` lane current-tree szinten mar done-kent claimelheto, mert:
+10. Az `O2` lane current-tree szinten a canonical boundary closureig eljutott, de szigorubb compatibility-removal olvasat mellett tovabbi ket residual cleanup slice maradt:
    - `O2-T1` lezart baseline,
    - a delivery es launch/executor producer foundation kulon source-of-truth-kent megvan,
    - a consume familyk atalltak a topology-neutral contractra vagy explicit retained compat statuszt kaptak,
-   - a delivery residual es a meta-review gate workflow residual is lezarult,
-   - es a retained `tmux` vocabulary mar nem keveredik a canonical delivery/executor boundary jelentesevel.
+   - a delivery residual es a meta-review gate workflow residual canonical ownershipa lezarult,
+   - de a retained compatibility surface-ek teljes torlese kulon `O2-T10` + `O2-T11` closeout slice-ot igenyel,
+   - es csak ezek utan mondhato ki a full compatibility-surface removal olvasatu `O2` closeout.
 
 ## Historical First Implementation Slice (`Opportunity 1`)
 
@@ -432,8 +433,8 @@ owners:
      - a meta-review gate workflow/defaults lane kanonikus runtime surface-e nested gate-local `tmux` capabilityre szukult,
      - az explicit override seam retained legacy helper alias compatibilityt kapott consumer-side rewrite nelkul,
      - a deprecated top-level parity coverage es az uncertain-delivery contract matrix current-tree szinten explicit proofot kapott
-16. Emiatt az `Opportunity 2` current-tree implementation lane-je lezarhato.
-17. A current next bounded successor mar az `O3-T1`, ha az onboarding / extension-surface follow-up tenylegesen prioritast kap.
+16. Emiatt az `Opportunity 2` canonical boundary closure-ja lezart, de a full compatibility-surface removal olvasat mellett a lane nem tekintheto teljesen befejezettnek.
+17. A current next bounded successor mar az `O2-T10`, utana `O2-T11`; az `O3-T1` csak ezek utan nyithato biztonsagosan, ha az onboarding / extension-surface follow-up tenylegesen prioritast kap.
 
 ## Done Definition
 
@@ -453,7 +454,7 @@ owners:
    - kulon `O1-T4` nem nyilt meg
    - disposition: closed on current tree
 2. `Opportunity 2`
-   - completed successor lane
+   - reopened residual cleanup lane
    - completed slices:
      - `O2-T1` docs-only topology/delivery/executor boundary clarification
      - `O2-T2` topology-neutral delivery contract + retained adapter foundation
@@ -464,11 +465,16 @@ owners:
      - `O2-T7` UI/router + repo-root/public delivery read-model/export alignment
      - `O2-T8` delivery consumer contract residual closeout
      - `O2-T9` meta-review gate workflow runtime capability residual closeout
+   - open residual slices:
+     - `O2-T10` delivery compatibility surface removal
+       - task artifact: `plans/tasks/actor-runtime-interface-opportunity2-task10-delivery-compatibility-surface-removal.md`
+     - `O2-T11` meta-review gate deprecated runtime alias removal
+       - task artifact: `plans/tasks/actor-runtime-interface-opportunity2-task11-meta-review-gate-deprecated-runtime-alias-removal.md`
    - preserved baseline: a lezart typed ack/runtime-success semantics nem reopenolhato
-   - disposition: closed on current tree
+   - disposition: open residual cleanup after canonical closure
 3. `Opportunity 3`
    - deferred successor lane `O3-T1`
-   - current next bounded successor, ha a follow-up tenylegesen prioritas lesz
+   - `O2-T10` + `O2-T11` utan lehet current next bounded successor, ha a follow-up tenylegesen prioritas lesz
    - csak az `O1-T1` kernel boundary note-ra es az `O2-T1` delivery/executor boundary note-ra epulhet
 4. `Opportunity 4`
    - default szerint `O3-T1` resze
