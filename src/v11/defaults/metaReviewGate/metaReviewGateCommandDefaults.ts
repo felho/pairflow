@@ -44,26 +44,48 @@ export interface MetaReviewGateDependencyDefaults {
     >;
   runtime: {
     notify: {
-      runTmux: NonNullable<MetaReviewGateNotifyRuntimeCapabilities["runTmux"]>;
-      maybeAcceptClaudeTrustPrompt:
+      tmux: {
+        runner:
         NonNullable<
-          MetaReviewGateNotifyRuntimeCapabilities["maybeAcceptClaudeTrustPrompt"]
+          NonNullable<MetaReviewGateNotifyRuntimeCapabilities["tmux"]>["runner"]
         >;
-      sendAndSubmitTmuxPaneMessage:
+        maybeAcceptTrustPrompt:
         NonNullable<
-          MetaReviewGateNotifyRuntimeCapabilities["sendAndSubmitTmuxPaneMessage"]
+          NonNullable<
+            MetaReviewGateNotifyRuntimeCapabilities["tmux"]
+          >["maybeAcceptTrustPrompt"]
         >;
-      submitTmuxPaneInput:
-        NonNullable<MetaReviewGateNotifyRuntimeCapabilities["submitTmuxPaneInput"]>;
+        sendSubmissionRequestMessage:
+          NonNullable<
+            NonNullable<
+              MetaReviewGateNotifyRuntimeCapabilities["tmux"]
+            >["sendSubmissionRequestMessage"]
+          >;
+        submitPaneInput:
+          NonNullable<
+            NonNullable<
+              MetaReviewGateNotifyRuntimeCapabilities["tmux"]
+            >["submitPaneInput"]
+          >;
+      };
     };
     paneBinding: {
-      runTmux: NonNullable<MetaReviewGatePaneBindingRuntimeCapabilities["runTmux"]>;
       buildAgentCommand:
         NonNullable<MetaReviewGatePaneBindingRuntimeCapabilities["buildAgentCommand"]>;
-      respawnTmuxPaneCommand:
-        NonNullable<
-          MetaReviewGatePaneBindingRuntimeCapabilities["respawnTmuxPaneCommand"]
-        >;
+      tmux: {
+        runner:
+          NonNullable<
+            NonNullable<
+              MetaReviewGatePaneBindingRuntimeCapabilities["tmux"]
+            >["runner"]
+          >;
+        respawnPaneCommand:
+          NonNullable<
+            NonNullable<
+              MetaReviewGatePaneBindingRuntimeCapabilities["tmux"]
+            >["respawnPaneCommand"]
+          >;
+      };
     };
   };
   writeStateSnapshot:
@@ -79,15 +101,19 @@ export const metaReviewGateDependencyDefaults = {
   setMetaReviewerPaneBinding,
   runtime: {
     notify: {
-      runTmux,
-      maybeAcceptClaudeTrustPrompt,
-      sendAndSubmitTmuxPaneMessage,
-      submitTmuxPaneInput
+      tmux: {
+        runner: runTmux,
+        maybeAcceptTrustPrompt: maybeAcceptClaudeTrustPrompt,
+        sendSubmissionRequestMessage: sendAndSubmitTmuxPaneMessage,
+        submitPaneInput: submitTmuxPaneInput
+      }
     },
     paneBinding: {
-      runTmux,
       buildAgentCommand,
-      respawnTmuxPaneCommand
+      tmux: {
+        runner: runTmux,
+        respawnPaneCommand: respawnTmuxPaneCommand
+      }
     }
   },
   writeStateSnapshot

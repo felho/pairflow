@@ -85,16 +85,18 @@ describe("metaReviewGate V11 defaults", () => {
     const runtime: NonNullable<
       NotifyMetaReviewerSubmissionRequestDependencies["runtime"]
     > = {
-      maybeAcceptClaudeTrustPrompt: async () => undefined,
-      sendAndSubmitTmuxPaneMessage: async (runner) => {
-        observedRunner.push(runner);
-        throw new Error("stop after runner capture");
-      },
-      submitTmuxPaneInput: async () => undefined
+      tmux: {
+        maybeAcceptTrustPrompt: async () => undefined,
+        sendSubmissionRequestMessage: async (runner) => {
+          observedRunner.push(runner);
+          throw new Error("stop after runner capture");
+        },
+        submitPaneInput: async () => undefined
+      }
     };
     Object.assign(
-      runtime as Record<string, unknown>,
-      { runTmux: undefined }
+      runtime.tmux as Record<string, unknown>,
+      { runner: undefined }
     );
 
     const result = await notifyMetaReviewerSubmissionRequestV11({
@@ -157,26 +159,69 @@ describe("metaReviewGate V11 defaults", () => {
     expect(result.route).toBe("meta_review_running");
     expect(observedRuntime).toHaveLength(1);
     expect(typeof (observedRuntime[0] as {
+      notify?: { tmux?: { runner?: unknown } };
+    }).notify?.tmux?.runner).toBe("function");
+    expect(typeof (observedRuntime[0] as {
       notify?: { runTmux?: unknown };
     }).notify?.runTmux).toBe("function");
     expect(typeof (observedRuntime[0] as {
-      notify?: { sendAndSubmitTmuxPaneMessage?: unknown; submitTmuxPaneInput?: unknown };
+      notify?: {
+        tmux?: {
+          sendSubmissionRequestMessage?: unknown;
+          submitPaneInput?: unknown;
+        };
+      };
+    }).notify?.tmux?.sendSubmissionRequestMessage).toBe("function");
+    expect(typeof (observedRuntime[0] as {
+      notify?: { sendAndSubmitTmuxPaneMessage?: unknown };
     }).notify?.sendAndSubmitTmuxPaneMessage).toBe("function");
     expect(typeof (observedRuntime[0] as {
-      notify?: { sendAndSubmitTmuxPaneMessage?: unknown; submitTmuxPaneInput?: unknown };
+      notify?: {
+        tmux?: {
+          sendSubmissionRequestMessage?: unknown;
+          submitPaneInput?: unknown;
+        };
+      };
+    }).notify?.tmux?.submitPaneInput).toBe("function");
+    expect(typeof (observedRuntime[0] as {
+      notify?: { submitTmuxPaneInput?: unknown };
     }).notify?.submitTmuxPaneInput).toBe("function");
     expect(typeof (observedRuntime[0] as {
-      paneBinding?: { runTmux?: unknown; buildAgentCommand?: unknown; respawnTmuxPaneCommand?: unknown };
+      paneBinding?: {
+        tmux?: {
+          runner?: unknown;
+          respawnPaneCommand?: unknown;
+        };
+        buildAgentCommand?: unknown;
+      };
+    }).paneBinding?.tmux?.runner).toBe("function");
+    expect(typeof (observedRuntime[0] as {
+      paneBinding?: { runTmux?: unknown };
     }).paneBinding?.runTmux).toBe("function");
     expect(typeof (observedRuntime[0] as {
-      paneBinding?: { runTmux?: unknown; buildAgentCommand?: unknown; respawnTmuxPaneCommand?: unknown };
+      paneBinding?: {
+        tmux?: {
+          runner?: unknown;
+          respawnPaneCommand?: unknown;
+        };
+        buildAgentCommand?: unknown;
+      };
     }).paneBinding?.buildAgentCommand).toBe("function");
     expect(typeof (observedRuntime[0] as {
-      paneBinding?: { runTmux?: unknown; buildAgentCommand?: unknown; respawnTmuxPaneCommand?: unknown };
+      paneBinding?: {
+        tmux?: {
+          runner?: unknown;
+          respawnPaneCommand?: unknown;
+        };
+        buildAgentCommand?: unknown;
+      };
+    }).paneBinding?.tmux?.respawnPaneCommand).toBe("function");
+    expect(typeof (observedRuntime[0] as {
+      paneBinding?: { respawnTmuxPaneCommand?: unknown };
     }).paneBinding?.respawnTmuxPaneCommand).toBe("function");
   });
 
-  it("does not inject default notify helpers into explicit notify overrides", async () => {
+  it("preserves compatibility aliases while avoiding default notify helper injection into explicit notify overrides", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({
       repoPath,
@@ -188,17 +233,21 @@ describe("metaReviewGate V11 defaults", () => {
     > = [];
     const runtime: MetaReviewGateRuntimeCapabilities = {
       notify: {
-        sendAndSubmitTmuxPaneMessage: async () => undefined,
-        submitTmuxPaneInput: async () => undefined
+        tmux: {
+          sendSubmissionRequestMessage: async () => undefined,
+          submitPaneInput: async () => undefined
+        }
       },
       paneBinding: {
-        runTmux: async () => ({
-          stdout: "",
-          stderr: "",
-          exitCode: 0
-        }),
         buildAgentCommand: () => "codex meta-review",
-        respawnTmuxPaneCommand: async () => undefined
+        tmux: {
+          runner: async () => ({
+            stdout: "",
+            stderr: "",
+            exitCode: 0
+          }),
+          respawnPaneCommand: async () => undefined
+        }
       }
     };
 
@@ -242,9 +291,13 @@ describe("metaReviewGate V11 defaults", () => {
 
     expect(result.route).toBe("meta_review_running");
     expect(observedRuntime).toHaveLength(1);
+    expect(typeof observedRuntime[0]?.tmux?.runner).toBe("function");
     expect(typeof observedRuntime[0]?.runTmux).toBe("function");
+    expect(typeof observedRuntime[0]?.tmux?.sendSubmissionRequestMessage).toBe("function");
     expect(typeof observedRuntime[0]?.sendAndSubmitTmuxPaneMessage).toBe("function");
+    expect(typeof observedRuntime[0]?.tmux?.submitPaneInput).toBe("function");
     expect(typeof observedRuntime[0]?.submitTmuxPaneInput).toBe("function");
+    expect(observedRuntime[0]?.tmux?.maybeAcceptTrustPrompt).toBeUndefined();
     expect(observedRuntime[0]?.maybeAcceptClaudeTrustPrompt).toBeUndefined();
   });
 
@@ -271,22 +324,26 @@ describe("metaReviewGate V11 defaults", () => {
     }, {
       runtime: {
         notify: {
-          runTmux: notifyRunner,
-          sendAndSubmitTmuxPaneMessage: async (_runner, _targetPane, message) => {
-            submittedMessages.push(message);
-          },
-          submitTmuxPaneInput: async () => undefined
+          tmux: {
+            runner: notifyRunner,
+            sendSubmissionRequestMessage: async (_runner, _targetPane, message) => {
+              submittedMessages.push(message);
+            },
+            submitPaneInput: async () => undefined
+          }
         },
         paneBinding: {
-          runTmux: async () => ({
-            stdout: "",
-            stderr: "",
-            exitCode: 0
-          }),
           buildAgentCommand: () => "codex meta-review",
-          respawnTmuxPaneCommand: async ({ command, runner }) => {
-            paneRunnerCalls.push(command);
-            expect(typeof runner).toBe("function");
+          tmux: {
+            runner: async () => ({
+              stdout: "",
+              stderr: "",
+              exitCode: 0
+            }),
+            respawnPaneCommand: async ({ command, runner }) => {
+              paneRunnerCalls.push(command);
+              expect(typeof runner).toBe("function");
+            }
           }
         }
       },

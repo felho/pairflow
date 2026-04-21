@@ -7,6 +7,9 @@ import type {
   NotifyMetaReviewerSubmissionRequestDependencies,
   NotifyMetaReviewerSubmissionRequestInput
 } from "../../shared/metaReviewGate/metaReviewGateTypes.js";
+import {
+  resolveMetaReviewGateNotifyTmuxCapabilities
+} from "../../shared/metaReviewGate/metaReviewGateTypes.js";
 
 const metaReviewerPaneExitedReasonCode = "META_REVIEWER_PANE_EXITED";
 const metaReviewRequestDeliveryUnconfirmedReasonCode =
@@ -57,20 +60,26 @@ function detectSubmittedMarker(text: string, marker: string): MarkerStatus {
 }
 
 async function assertMetaReviewRequestSubmitted(input: {
-  runTmux: NonNullable<
-    NonNullable<NotifyMetaReviewerSubmissionRequestDependencies["runtime"]>["runTmux"]
-  >;
-  submitTmuxPaneInput: NonNullable<
+  paneRunner: NonNullable<
     NonNullable<
-      NotifyMetaReviewerSubmissionRequestDependencies["runtime"]
-    >["submitTmuxPaneInput"]
+      NonNullable<
+        NotifyMetaReviewerSubmissionRequestDependencies["runtime"]
+      >["tmux"]
+    >["runner"]
+  >;
+  submitPaneInput: NonNullable<
+    NonNullable<
+      NonNullable<
+        NotifyMetaReviewerSubmissionRequestDependencies["runtime"]
+      >["tmux"]
+    >["submitPaneInput"]
   >;
   targetPane: string;
   marker: string;
 }): Promise<MetaReviewRuntimeDeliveryObservation> {
   for (let attempt = 0; attempt < 3; attempt += 1) {
     await sleep(800);
-    const capture = await input.runTmux(
+    const capture = await input.paneRunner(
       ["capture-pane", "-p", "-t", input.targetPane, "-S", "-"],
       {
         allowFailure: true
@@ -99,7 +108,7 @@ async function assertMetaReviewRequestSubmitted(input: {
 
     if (attempt < 2) {
       await sleep(900);
-      await input.submitTmuxPaneInput(input.runTmux, input.targetPane);
+      await input.submitPaneInput(input.paneRunner, input.targetPane);
     }
   }
 
@@ -115,14 +124,15 @@ export async function notifyMetaReviewerSubmissionRequest(
   dependencies: NotifyMetaReviewerSubmissionRequestDependencies = {}
 ): Promise<MetaReviewRuntimeDeliveryObservation> {
   const runtime = dependencies.runtime;
-  const runner = runtime?.runTmux;
-  const maybeAcceptClaudeTrustPrompt = runtime?.maybeAcceptClaudeTrustPrompt;
-  const sendAndSubmitTmuxPaneMessage = runtime?.sendAndSubmitTmuxPaneMessage;
-  const submitTmuxPaneInput = runtime?.submitTmuxPaneInput;
+  const tmux = resolveMetaReviewGateNotifyTmuxCapabilities(runtime);
+  const runner = tmux?.runner;
+  const maybeAcceptTrustPrompt = tmux?.maybeAcceptTrustPrompt;
+  const sendSubmissionRequestMessage = tmux?.sendSubmissionRequestMessage;
+  const submitPaneInput = tmux?.submitPaneInput;
   if (
     runner === undefined ||
-    sendAndSubmitTmuxPaneMessage === undefined ||
-    submitTmuxPaneInput === undefined
+    sendSubmissionRequestMessage === undefined ||
+    submitPaneInput === undefined
   ) {
     return {
       status: "failed",
@@ -137,13 +147,13 @@ export async function notifyMetaReviewerSubmissionRequest(
     `Required command (include --report-json parity fields): ${buildMetaReviewSubmitCommandTemplate({ bubbleId: input.bubbleId, round: input.round })}. ${buildMetaReviewSubmitApproveParityNote()}`
   ].join(" ");
 
-  if (maybeAcceptClaudeTrustPrompt !== undefined) {
-    await maybeAcceptClaudeTrustPrompt(runner, input.targetPane).catch(
+  if (maybeAcceptTrustPrompt !== undefined) {
+    await maybeAcceptTrustPrompt(runner, input.targetPane).catch(
       () => undefined
     );
   }
   try {
-    await sendAndSubmitTmuxPaneMessage(runner, input.targetPane, message);
+    await sendSubmissionRequestMessage(runner, input.targetPane, message);
   } catch (error) {
     return {
       status: "failed",
@@ -152,8 +162,8 @@ export async function notifyMetaReviewerSubmissionRequest(
     };
   }
   return assertMetaReviewRequestSubmitted({
-    runTmux: runner,
-    submitTmuxPaneInput,
+    paneRunner: runner,
+    submitPaneInput,
     targetPane: input.targetPane,
     marker: requestMarker
   });

@@ -1,0 +1,32 @@
+{
+  "id": "meta-review-gate-apply-running-deprecated-runtime-input-parity",
+  "command": "metaReviewGate",
+  "mode": "parity",
+  "description": "Seed contract case for meta-review gate apply running route with deprecated top-level runtime input parity baseline.",
+  "input": {
+    "route": "apply",
+    "applyScenario": "meta_review_running",
+    "runtimeInputShape": "deprecated_top_level",
+    "summary": "Seed apply running contract summary with deprecated top-level runtime input",
+    "refs": []
+  },
+  "expected": {
+    "status": "ok",
+    "gateRoute": "meta_review_running",
+    "stateSubset": {
+      "state": "RUNNING",
+      "meta_review": {
+        "runtime_delivery": {
+          "status": "confirmed"
+        }
+      }
+    }
+  },
+  "tags": [
+    "seed",
+    "m3",
+    "meta-review-gate",
+    "parity",
+    "compat"
+  ]
+}
