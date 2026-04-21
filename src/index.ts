@@ -381,7 +381,7 @@ export {
   playSoundWithAfplay
 } from "./v11/infrastructure/channel/notifications.js";
 export {
-  emitTmuxDeliveryNotification
+  emitDeliveryNotificationAck
 } from "./v11/infrastructure/channel/tmux/tmuxDelivery.js";
 export {
   projectApprovalDecisionDeliverySignalToUiDeliverySignal,
@@ -691,22 +691,14 @@ export type {
   RepoRegistryEntry
 } from "./v11/infrastructure/executor/workspace/repoRegistry.js";
 export type {
-  EmitTmuxDeliveryNotificationInput,
-  EmitTmuxDeliveryNotificationResult,
-  TmuxDeliveryFailureReason
-} from "./v11/infrastructure/channel/tmux/tmuxDelivery.js";
-export type {
   AcceptedDeliveryAck,
   DeliveryAck,
-  DeliveryAckCompatShape,
-  DeliveryAckLike,
   DeliveryAckReasonCode,
   DeliveryAckStatus,
   DeliveryFailureReason,
   DeliveryTargetReasonCode,
-  EmitDeliveryAckLikePort,
-  EmitDeliveryNotificationAckPort,
   EmitDeliveryNotificationInput,
+  EmitDeliveryNotificationAckPort,
   RejectedDeliveryAck,
   ResolveDeliveryMessageRefInput
 } from "./v11/shared/ports/tmuxDelivery.js";

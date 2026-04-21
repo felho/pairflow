@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import type { EmitTmuxDeliveryNotificationInput } from "../../../../src/v11/infrastructure/channel/tmux/tmuxDelivery.js";
+import type { EmitDeliveryNotificationInput } from "../../../../src/v11/shared/ports/tmuxDelivery.js";
 import {
   executeImplementerHandoffDelivery,
   shouldRetryImplementerHandoffDelivery
 } from "../../../../src/v11/shared/delivery/implementerHandoffDelivery.js";
 
-function createDeliveryInput(): EmitTmuxDeliveryNotificationInput {
+function createDeliveryInput(): EmitDeliveryNotificationInput {
   return {
     bubbleId: "b_shared_delivery_01",
     bubbleConfig: {
@@ -59,7 +59,7 @@ function createDeliveryInput(): EmitTmuxDeliveryNotificationInput {
 
 describe("implementerHandoffDelivery", () => {
   it("retries once with reviewer-parity warm-up on delivery_unconfirmed", async () => {
-    const calls: EmitTmuxDeliveryNotificationInput[] = [];
+    const calls: EmitDeliveryNotificationInput[] = [];
     const result = await executeImplementerHandoffDelivery({
       deliveryInput: createDeliveryInput(),
       emitDelivery: async (input) => {
@@ -98,7 +98,7 @@ describe("implementerHandoffDelivery", () => {
   });
 
   it("normalizes unexpected throw to tmux_send_failed and retries once", async () => {
-    const calls: EmitTmuxDeliveryNotificationInput[] = [];
+    const calls: EmitDeliveryNotificationInput[] = [];
     const result = await executeImplementerHandoffDelivery({
       deliveryInput: createDeliveryInput(),
       emitDelivery: async (input) => {
@@ -128,7 +128,7 @@ describe("implementerHandoffDelivery", () => {
   });
 
   it("keeps the original retryable failure when the retry attempt throws", async () => {
-    const calls: EmitTmuxDeliveryNotificationInput[] = [];
+    const calls: EmitDeliveryNotificationInput[] = [];
     const result = await executeImplementerHandoffDelivery({
       deliveryInput: createDeliveryInput(),
       emitDelivery: async (input) => {
@@ -162,7 +162,7 @@ describe("implementerHandoffDelivery", () => {
   });
 
   it("does not retry successful deliveries", async () => {
-    const calls: EmitTmuxDeliveryNotificationInput[] = [];
+    const calls: EmitDeliveryNotificationInput[] = [];
     const result = await executeImplementerHandoffDelivery({
       deliveryInput: createDeliveryInput(),
       emitDelivery: async (input) => {

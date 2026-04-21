@@ -4,8 +4,7 @@ import type {
   DeliveryAck,
   DeliveryAckReasonCode,
   DeliveryFailureReason,
-  DeliveryTargetReasonCode,
-  EmitTmuxDeliveryNotificationResult,
+  DeliveryTargetReasonCode
 } from "../../../shared/delivery/tmuxDeliveryContract.js";
 import {
   confirmTmuxPaneMarkerSubmission,
@@ -37,36 +36,6 @@ export async function readDeliverySessionContext(input: {
       : {}),
     ...(workspaceAuthority.status === "resolved"
       ? { workspacePath: workspaceAuthority.authority.workspacePath }
-      : {})
-  };
-}
-
-export function projectDeliveryAckToLegacyResult(
-  ack: DeliveryAck
-): EmitTmuxDeliveryNotificationResult {
-  if (ack.status === "accepted") {
-    return {
-      delivered: true,
-      message: ack.message,
-      ...(ack.sessionName !== undefined ? { sessionName: ack.sessionName } : {}),
-      ...(ack.targetPaneIndex !== undefined
-        ? { targetPaneIndex: ack.targetPaneIndex }
-        : {}),
-      ...(ack.deliveryTargetReasonCode !== undefined
-        ? { deliveryTargetReasonCode: ack.deliveryTargetReasonCode }
-        : {})
-    };
-  }
-
-  return {
-    delivered: false,
-    ...(ack.sessionName !== undefined ? { sessionName: ack.sessionName } : {}),
-    ...(ack.targetPaneIndex !== undefined ? { targetPaneIndex: ack.targetPaneIndex } : {}),
-    message: ack.message,
-    ...(ack.reason !== undefined ? { reason: ack.reason } : {}),
-    ...(ack.reason_code !== undefined ? { reason_code: ack.reason_code } : {}),
-    ...(ack.deliveryTargetReasonCode !== undefined
-      ? { deliveryTargetReasonCode: ack.deliveryTargetReasonCode }
       : {})
   };
 }
@@ -185,9 +154,3 @@ export async function attemptTmuxDelivery(input: {
     });
   }
 }
-
-export const projectTmuxDeliveryAckToLegacyResult = projectDeliveryAckToLegacyResult;
-
-export const createRejectedTmuxDeliveryAck = createRejectedDeliveryAck;
-
-export const createAcceptedTmuxDeliveryAck = createAcceptedDeliveryAck;

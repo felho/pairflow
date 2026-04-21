@@ -582,15 +582,15 @@ describe("dependency fitness check", () => {
     ).toBe(false);
   });
 
-  it("still warns on concrete tmux runtime capability under shared", async () => {
+  it("still warns on concrete delivery runtime capability under shared", async () => {
     const repoRoot = await createTempRoot();
     await writeRepoFile(
       repoRoot,
       "src/v11/shared/askHuman/emit.ts",
       [
-        "import type { EmitTmuxDeliveryNotificationResult } from '../../../core/runtime/tmuxDelivery.js';",
-        "export function fallback(): EmitTmuxDeliveryNotificationResult {",
-        "  return { delivered: false, message: '', reason: 'tmux_send_failed' };",
+        "import type { DeliveryAck } from '../../../core/runtime/tmuxDelivery.js';",
+        "export function fallback(): DeliveryAck {",
+        "  return { status: 'rejected', message: '', reason: 'tmux_send_failed', reason_code: 'DELIVERY_ACK_REJECTED' };",
         "}",
         ""
       ].join("\n")
@@ -619,19 +619,19 @@ describe("dependency fitness check", () => {
     ).toBe(true);
   });
 
-  it("does not warn on tmux port types under shared ports", async () => {
+  it("does not warn on canonical delivery port types under shared ports", async () => {
     const repoRoot = await createTempRoot();
     await writeRepoFile(
       repoRoot,
       "src/v11/shared/ports/tmuxDelivery.ts",
-      "export type EmitTmuxDeliveryNotificationPort = (input: { bubbleId: string }) => Promise<{ delivered: boolean }>;\n"
+      "export type EmitDeliveryNotificationAckPort = (input: { bubbleId: string }) => Promise<{ status: 'accepted' | 'rejected' }>;\n"
     );
     await writeRepoFile(
       repoRoot,
       "src/v11/shared/ports/askHumanDelivery.ts",
       [
-        "import type { EmitTmuxDeliveryNotificationPort } from './tmuxDelivery.js';",
-        "export interface Deps { emit: EmitTmuxDeliveryNotificationPort; }",
+        "import type { EmitDeliveryNotificationAckPort } from './tmuxDelivery.js';",
+        "export interface Deps { emit: EmitDeliveryNotificationAckPort; }",
         ""
       ].join("\n")
     );

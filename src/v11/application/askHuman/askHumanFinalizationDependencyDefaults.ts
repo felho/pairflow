@@ -3,9 +3,9 @@ import { basename, dirname, join } from "node:path";
 import { askHumanFinalizationDefaults } from "../../defaults/askHuman/askHumanFinalizationDefaults.js";
 import { emitBubbleLifecycleEventBestEffort } from "../../shared/metrics/bubbleEvents.js";
 import type {
-  AskHumanDeliveryAck,
-  ResolveAskHumanDeliveryMessageRefInput
-} from "../../shared/askHuman/askHumanDeliveryPortsContract.js";
+  DeliveryAck,
+  ResolveDeliveryMessageRefInput
+} from "../../shared/ports/tmuxDelivery.js";
 
 function buildTranscriptFallbackRef(
   bubbleId: string,
@@ -30,7 +30,7 @@ function resolvePairflowDirFromSessionsPath(sessionsPath: string): string {
 }
 
 function resolveDeliveryMessageRef(
-  input: ResolveAskHumanDeliveryMessageRefInput
+  input: ResolveDeliveryMessageRefInput
 ): string {
   return (
     input.messageRef ??
@@ -44,7 +44,7 @@ export const askHumanFinalizationDependencyDefaults = {
     input: Parameters<
       typeof askHumanFinalizationDefaults.emitDeliveryNotificationAck
     >[0]
-  ): Promise<AskHumanDeliveryAck> =>
+  ): Promise<DeliveryAck> =>
     askHumanFinalizationDefaults.emitDeliveryNotificationAck(input),
   emitBubbleNotification:
     askHumanFinalizationDefaults.emitBubbleNotification,

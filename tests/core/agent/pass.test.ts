@@ -52,8 +52,8 @@ import {
 import {
   resolvePassValidationReviewerCompatibilityArtifactPath
 } from "../../../src/v11/infrastructure/artifact/validation/passValidationEvidence.js";
-import type { EmitTmuxDeliveryNotificationInput } from "../../../src/v11/infrastructure/channel/tmux/tmuxDelivery.js";
 import { passWorkspaceContextDefaults } from "../../../src/v11/application/pass/passWorkspaceContextDefaults.js";
+import type { EmitDeliveryNotificationInput } from "../../../src/v11/shared/ports/tmuxDelivery.js";
 import { initGitRepository } from "../../helpers/git.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
 import { writeEvidenceLog } from "../../helpers/evidence.js";
@@ -4602,7 +4602,7 @@ present`,
       ].join("\n")
     });
 
-    let deliveryReviewerFocus: EmitTmuxDeliveryNotificationInput["reviewerFocus"];
+    let deliveryReviewerFocus: EmitDeliveryNotificationInput["reviewerFocus"];
     await emitPassFromWorkspace(
       {
         summary: "Implementation complete",
@@ -4610,7 +4610,7 @@ present`,
         now: new Date("2026-02-21T12:05:00.000Z")
       },
       {
-        emitDeliveryNotificationAck: (input: EmitTmuxDeliveryNotificationInput) => {
+        emitDeliveryNotificationAck: (input: EmitDeliveryNotificationInput) => {
           deliveryReviewerFocus = input.reviewerFocus;
           return Promise.resolve({
             status: "accepted",
@@ -4637,7 +4637,7 @@ present`,
       task: "# Task\n## Scope\nNo reviewer focus section."
     });
 
-    let deliveryReviewerFocus: EmitTmuxDeliveryNotificationInput["reviewerFocus"];
+    let deliveryReviewerFocus: EmitDeliveryNotificationInput["reviewerFocus"];
     let deliveryCallCount = 0;
     let hasReviewerFocusField = false;
     await emitPassFromWorkspace(
@@ -4647,7 +4647,7 @@ present`,
         now: new Date("2026-02-21T12:05:00.000Z")
       },
       {
-        emitDeliveryNotificationAck: (input: EmitTmuxDeliveryNotificationInput) => {
+        emitDeliveryNotificationAck: (input: EmitDeliveryNotificationInput) => {
           deliveryCallCount += 1;
           hasReviewerFocusField = Object.prototype.hasOwnProperty.call(
             input,
@@ -4695,7 +4695,7 @@ present`,
         now: new Date("2026-02-21T12:06:00.000Z")
       },
       {
-        emitDeliveryNotificationAck: (input: EmitTmuxDeliveryNotificationInput) => {
+        emitDeliveryNotificationAck: (input: EmitDeliveryNotificationInput) => {
           hasReviewerFocusField = Object.prototype.hasOwnProperty.call(
             input,
             "reviewerFocus"

@@ -3,18 +3,13 @@ import { describe, expect, it, vi } from "vitest";
 import {
   buildTranscriptFallbackRef,
   emitDeliveryNotificationAck,
-  emitTmuxDeliveryNotification,
   resolveDeliveryMessageRef,
   retryStuckAgentInput
 } from "../../../src/v11/infrastructure/channel/tmux/tmuxDelivery.js";
 import {
   attemptTmuxDelivery,
   createAcceptedDeliveryAck,
-  createAcceptedTmuxDeliveryAck,
   createRejectedDeliveryAck,
-  createRejectedTmuxDeliveryAck,
-  projectDeliveryAckToLegacyResult,
-  projectTmuxDeliveryAckToLegacyResult
 } from "../../../src/v11/infrastructure/channel/tmux/tmuxDeliveryRuntime.js";
 import {
   buildMetaReviewSubmitApproveParityNote,
@@ -166,7 +161,7 @@ function expectReviewerValidationClaimGuardrails(text: string | undefined): void
 }
 
 describe("tmux delivery canonical ack helpers", () => {
-  it("keeps neutral canonical helper exports aligned with retained tmux aliases", () => {
+  it("creates canonical accepted and rejected acknowledgements", () => {
     const acceptedInput = {
       sessionName: "pf-b_delivery_01",
       targetPaneIndex: 2,
@@ -181,24 +176,29 @@ describe("tmux delivery canonical ack helpers", () => {
       deliveryTargetReasonCode: "DELIVERY_TARGET_ROLE_UNMAPPED" as const
     };
 
-    expect(createAcceptedDeliveryAck(acceptedInput)).toEqual(
-      createAcceptedTmuxDeliveryAck(acceptedInput)
-    );
-    expect(createRejectedDeliveryAck(rejectedInput)).toEqual(
-      createRejectedTmuxDeliveryAck(rejectedInput)
-    );
-    expect(
-      projectDeliveryAckToLegacyResult(createRejectedDeliveryAck(rejectedInput))
-    ).toEqual(
-      projectTmuxDeliveryAckToLegacyResult(createRejectedTmuxDeliveryAck(rejectedInput))
-    );
+    expect(createAcceptedDeliveryAck(acceptedInput)).toEqual({
+      status: "accepted",
+      sessionName: "pf-b_delivery_01",
+      targetPaneIndex: 2,
+      message: "handoff delivered",
+      deliveryTargetReasonCode: "DELIVERY_TARGET_ROLE_INVALID"
+    });
+    expect(createRejectedDeliveryAck(rejectedInput)).toEqual({
+      status: "rejected",
+      reason: "unsupported_recipient",
+      reason_code: "DELIVERY_ACK_TARGET_UNSUPPORTED",
+      sessionName: "pf-b_delivery_01",
+      targetPaneIndex: 2,
+      message: "handoff blocked",
+      deliveryTargetReasonCode: "DELIVERY_TARGET_ROLE_UNMAPPED"
+    });
   });
 
-  it("projects every canonical delivery ack union member to matching legacy compatibility", () => {
+  it("covers every canonical delivery ack union member", () => {
     const canonicalCases = [
       {
         title: "accepted",
-        ack: createAcceptedTmuxDeliveryAck({
+        ack: createAcceptedDeliveryAck({
           sessionName: "pf-b_delivery_01",
           targetPaneIndex: 2,
           message: "handoff delivered",
@@ -210,18 +210,11 @@ describe("tmux delivery canonical ack helpers", () => {
           targetPaneIndex: 2,
           message: "handoff delivered",
           deliveryTargetReasonCode: "DELIVERY_TARGET_ROLE_INVALID"
-        },
-        expectedLegacy: {
-          delivered: true,
-          sessionName: "pf-b_delivery_01",
-          targetPaneIndex: 2,
-          message: "handoff delivered",
-          deliveryTargetReasonCode: "DELIVERY_TARGET_ROLE_INVALID"
         }
       },
       {
         title: "no_runtime_session",
-        ack: createRejectedTmuxDeliveryAck({
+        ack: createRejectedDeliveryAck({
           reason: "no_runtime_session",
           message: "handoff blocked 0",
           sessionName: "pf-b_delivery_01",
@@ -234,19 +227,11 @@ describe("tmux delivery canonical ack helpers", () => {
           sessionName: "pf-b_delivery_01",
           targetPaneIndex: 2,
           message: "handoff blocked 0"
-        },
-        expectedLegacy: {
-          delivered: false,
-          sessionName: "pf-b_delivery_01",
-          targetPaneIndex: 2,
-          message: "handoff blocked 0",
-          reason: "no_runtime_session",
-          reason_code: "DELIVERY_ACK_RUNTIME_SESSION_UNAVAILABLE"
         }
       },
       {
         title: "registry_read_failed",
-        ack: createRejectedTmuxDeliveryAck({
+        ack: createRejectedDeliveryAck({
           reason: "registry_read_failed",
           message: "handoff blocked 1"
         }),
@@ -255,17 +240,11 @@ describe("tmux delivery canonical ack helpers", () => {
           reason: "registry_read_failed",
           reason_code: "DELIVERY_ACK_RUNTIME_SESSION_UNAVAILABLE",
           message: "handoff blocked 1"
-        },
-        expectedLegacy: {
-          delivered: false,
-          message: "handoff blocked 1",
-          reason: "registry_read_failed",
-          reason_code: "DELIVERY_ACK_RUNTIME_SESSION_UNAVAILABLE"
         }
       },
       {
         title: "unsupported_recipient",
-        ack: createRejectedTmuxDeliveryAck({
+        ack: createRejectedDeliveryAck({
           reason: "unsupported_recipient",
           message: "handoff blocked 2",
           sessionName: "pf-b_delivery_01",
@@ -280,20 +259,11 @@ describe("tmux delivery canonical ack helpers", () => {
           targetPaneIndex: 2,
           message: "handoff blocked 2",
           deliveryTargetReasonCode: "DELIVERY_TARGET_ROLE_UNMAPPED"
-        },
-        expectedLegacy: {
-          delivered: false,
-          sessionName: "pf-b_delivery_01",
-          targetPaneIndex: 2,
-          message: "handoff blocked 2",
-          reason: "unsupported_recipient",
-          reason_code: "DELIVERY_ACK_TARGET_UNSUPPORTED",
-          deliveryTargetReasonCode: "DELIVERY_TARGET_ROLE_UNMAPPED"
         }
       },
       {
         title: "delivery_unconfirmed",
-        ack: createRejectedTmuxDeliveryAck({
+        ack: createRejectedDeliveryAck({
           reason: "delivery_unconfirmed",
           message: "handoff blocked 3",
           sessionName: "pf-b_delivery_01",
@@ -306,19 +276,11 @@ describe("tmux delivery canonical ack helpers", () => {
           sessionName: "pf-b_delivery_01",
           targetPaneIndex: 2,
           message: "handoff blocked 3"
-        },
-        expectedLegacy: {
-          delivered: false,
-          sessionName: "pf-b_delivery_01",
-          targetPaneIndex: 2,
-          message: "handoff blocked 3",
-          reason: "delivery_unconfirmed",
-          reason_code: "DELIVERY_ACK_REJECTED"
         }
       },
       {
         title: "tmux_send_failed",
-        ack: createRejectedTmuxDeliveryAck({
+        ack: createRejectedDeliveryAck({
           reason: "tmux_send_failed",
           message: "handoff blocked 4",
           sessionName: "pf-b_delivery_01",
@@ -331,30 +293,18 @@ describe("tmux delivery canonical ack helpers", () => {
           sessionName: "pf-b_delivery_01",
           targetPaneIndex: 2,
           message: "handoff blocked 4"
-        },
-        expectedLegacy: {
-          delivered: false,
-          sessionName: "pf-b_delivery_01",
-          targetPaneIndex: 2,
-          message: "handoff blocked 4",
-          reason: "tmux_send_failed",
-          reason_code: "DELIVERY_ACK_REJECTED"
         }
       }
     ] as const;
 
     for (const canonicalCase of canonicalCases) {
       expect(canonicalCase.ack, canonicalCase.title).toEqual(canonicalCase.expectedAck);
-      expect(
-        projectTmuxDeliveryAckToLegacyResult(canonicalCase.ack),
-        canonicalCase.title
-      ).toEqual(canonicalCase.expectedLegacy);
     }
   });
 });
 
 describe("emitDeliveryNotificationAck", () => {
-  it("returns accepted canonical ack and wrapper parity from the same runtime truth", async () => {
+  it("returns an accepted canonical acknowledgement from runtime truth", async () => {
     const createRunner = (): TmuxRunner => (args) => {
       if (args[0] === "capture-pane") {
         return Promise.resolve({
@@ -383,20 +333,18 @@ describe("emitDeliveryNotificationAck", () => {
       ...sharedInput,
       runner: createRunner()
     });
-    const retainedResult = await emitTmuxDeliveryNotification({
-      ...sharedInput,
-      runner: createRunner()
-    });
 
-    expect(canonicalAck).toEqual(
+    expect(canonicalAck).toMatchObject(
       createAcceptedDeliveryAck({
         sessionName: "pf-b_delivery_01",
         targetPaneIndex: 2,
-        message: retainedResult.message,
+        message: canonicalAck.message,
         deliveryTargetReasonCode: "DELIVERY_TARGET_ROLE_ABSENT"
       })
     );
-    expect(retainedResult).toEqual(projectDeliveryAckToLegacyResult(canonicalAck));
+    expect(canonicalAck.message).toContain(
+      "# [pairflow] r1 PASS codex->claude msg=msg_20260222_101 ref=artifact://handoff.md."
+    );
   });
 
   it("fails closed with no_runtime_session before any tmux side effect", async () => {
@@ -650,7 +598,7 @@ describe("tmux delivery T6 runtime observability baseline", () => {
       expect(capturePaneCalls.length).toBeGreaterThanOrEqual(1);
       expect(capturePaneCalls).toContainEqual(expectedCapturePaneCall);
       expect(result).toEqual(
-        createRejectedTmuxDeliveryAck({
+        createRejectedDeliveryAck({
           reason: "delivery_unconfirmed",
           message,
           sessionName: "pf-b_delivery_01",

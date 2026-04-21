@@ -7,7 +7,6 @@ import {
 import {
   attemptTmuxDelivery,
   createRejectedDeliveryAck,
-  projectDeliveryAckToLegacyResult,
   readDeliverySessionContext
 } from "./tmuxDeliveryRuntime.js";
 import {
@@ -27,20 +26,15 @@ import type { AgentName } from "../../../../types/bubble.js";
 import type {
   DeliveryAck,
   EmitDeliveryNotificationInput,
-  EmitTmuxDeliveryNotificationInput,
-  EmitTmuxDeliveryNotificationResult
 } from "../../../shared/delivery/tmuxDeliveryContract.js";
 
-interface EmitTmuxDeliveryNotificationRuntimeDependencies {
+interface EmitDeliveryNotificationRuntimeDependencies {
   runner?: TmuxRunner;
   readSessionsRegistry?: typeof readRuntimeSessionsRegistry;
 }
 
-export type EmitTmuxDeliveryNotificationRuntimeInput =
-  EmitTmuxDeliveryNotificationInput & EmitTmuxDeliveryNotificationRuntimeDependencies;
-
 export type EmitDeliveryNotificationRuntimeInput =
-  EmitDeliveryNotificationInput & EmitTmuxDeliveryNotificationRuntimeDependencies;
+  EmitDeliveryNotificationInput & EmitDeliveryNotificationRuntimeDependencies;
 
 export type {
   AcceptedDeliveryAck,
@@ -50,14 +44,8 @@ export type {
   DeliveryFailureReason,
   DeliveryTargetReasonCode,
   EmitDeliveryNotificationInput,
-  EmitTmuxDeliveryNotificationInput,
-  EmitTmuxDeliveryNotificationResult,
   RejectedDeliveryAck,
-  ResolveDeliveryMessageRefInput,
-  TmuxDeliveryAck,
-  TmuxDeliveryAckReasonCode,
-  TmuxDeliveryAckStatus,
-  TmuxDeliveryFailureReason
+  ResolveDeliveryMessageRefInput
 } from "../../../shared/delivery/tmuxDeliveryContract.js";
 export { buildTranscriptFallbackRef, resolveDeliveryMessageRef } from "./tmuxDeliveryRefs.js";
 
@@ -197,13 +185,6 @@ export async function emitDeliveryNotificationAck(
       : {})
   });
   return deliveryAck;
-}
-
-export async function emitTmuxDeliveryNotification(
-  input: EmitTmuxDeliveryNotificationRuntimeInput
-): Promise<EmitTmuxDeliveryNotificationResult> {
-  const deliveryAck = await emitDeliveryNotificationAck(input);
-  return projectDeliveryAckToLegacyResult(deliveryAck);
 }
 
 // ---------------------------------------------------------------------------

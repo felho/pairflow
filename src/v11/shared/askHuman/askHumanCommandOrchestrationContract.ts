@@ -1,7 +1,6 @@
 import type { ActorEmitContextSnapshot } from "../actorProtocol/actorEmitContext.js";
 import type {
-  EmitAskHumanBubbleNotificationPort,
-  EmitAskHumanDeliveryNotificationAckPort
+  EmitAskHumanBubbleNotificationPort
 } from "./askHumanDeliveryPortsContract.js";
 import type {
   RunAskHumanFlowDependencies,
@@ -9,6 +8,7 @@ import type {
   RunAskHumanFlowResult
 } from "./askHumanFlowContract.js";
 import type { PrepareAskHumanRoutingFn } from "./askHumanRoutingContract.js";
+import type { EmitDeliveryNotificationAckPort } from "../ports/tmuxDelivery.js";
 
 export interface AskHumanCommandOrchestrationInput {
   question: string;
@@ -25,7 +25,7 @@ export interface AskHumanCommandOrchestrationDependencies {
   finalizeAskHumanFlow:
     RunAskHumanFlowDependencies["finalizeAskHumanFlow"];
   emitDeliveryNotificationAck?:
-    | EmitAskHumanDeliveryNotificationAckPort
+    | EmitDeliveryNotificationAckPort
     | undefined;
   emitBubbleNotification?: EmitAskHumanBubbleNotificationPort | undefined;
   prepareAskHumanRouting?: PrepareAskHumanRoutingFn;
