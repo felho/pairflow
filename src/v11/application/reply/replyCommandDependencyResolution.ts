@@ -4,7 +4,7 @@ import type { EmitHumanReplyDependencies } from "./replyCommandContract.js";
 import { startCommandContextDefaults } from "../start/startCommandDependencyDefaults.js";
 import { reviewerDeliveryDefaults } from "../pass/reviewerDeliveryDefaults.js";
 
-async function emitTmuxDeliveryNotification(
+async function emitDeliveryNotificationAck(
   ...args: Parameters<typeof reviewerDeliveryDefaults.emitDeliveryNotificationAck>
 ): Promise<
   Awaited<ReturnType<typeof reviewerDeliveryDefaults.emitDeliveryNotificationAck>>
@@ -40,7 +40,7 @@ function resolveDeliveryMessageRef(
 
 const replyCommandDependencyDefaults = {
   appendProtocolEnvelope,
-  emitTmuxDeliveryNotification,
+  emitDeliveryNotificationAck,
   ensureBubbleInstanceIdForMutation,
   readStateSnapshot,
   resolveBubbleById,
@@ -50,8 +50,8 @@ const replyCommandDependencyDefaults = {
 
 export interface ResolvedReplyCommandDependencies {
   appendProtocolEnvelope: NonNullable<EmitHumanReplyDependencies["appendProtocolEnvelope"]>;
-  emitTmuxDeliveryNotification: NonNullable<
-    EmitHumanReplyDependencies["emitTmuxDeliveryNotification"]
+  emitDeliveryNotificationAck: NonNullable<
+    EmitHumanReplyDependencies["emitDeliveryNotificationAck"]
   >;
   ensureBubbleInstanceIdForMutation: NonNullable<
     EmitHumanReplyDependencies["ensureBubbleInstanceIdForMutation"]
@@ -71,9 +71,10 @@ export function resolveReplyCommandDependencies(
     appendProtocolEnvelope:
       dependencies.appendProtocolEnvelope
       ?? replyCommandDependencyDefaults.appendProtocolEnvelope,
-    emitTmuxDeliveryNotification:
-      dependencies.emitTmuxDeliveryNotification
-      ?? replyCommandDependencyDefaults.emitTmuxDeliveryNotification,
+    emitDeliveryNotificationAck:
+      dependencies.emitDeliveryNotificationAck
+      ?? dependencies.emitTmuxDeliveryNotification
+      ?? replyCommandDependencyDefaults.emitDeliveryNotificationAck,
     ensureBubbleInstanceIdForMutation:
       dependencies.ensureBubbleInstanceIdForMutation
       ?? replyCommandDependencyDefaults.ensureBubbleInstanceIdForMutation,

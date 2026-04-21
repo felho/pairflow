@@ -11,7 +11,7 @@ describe("askHumanRuntimeDependencyForwarding", () => {
       emitBubbleNotification: undefined
     });
 
-    expect(dependencies.emitTmuxDeliveryNotification).toBe(
+    expect(dependencies.emitDeliveryNotificationAck).toBe(
       emitTmuxDeliveryNotification
     );
     expect("emitBubbleNotification" in dependencies).toBe(false);

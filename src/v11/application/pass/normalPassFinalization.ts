@@ -71,7 +71,7 @@ export interface FinalizeNormalPassDependencies<TResult> {
     deliveryRetried: boolean;
   }) => {
     status: "accepted" | "rejected";
-    delivered: boolean;
+    delivered?: boolean;
     reason?: string;
     reason_code?: string;
     retried: boolean;
@@ -89,7 +89,7 @@ export interface FinalizeNormalPassDependencies<TResult> {
     mostRecentPreviousReviewerCleanPassEnvelope: boolean;
     delivery?: {
       status: "accepted" | "rejected";
-      delivered: boolean;
+      delivered?: boolean;
       reason?: string;
       reason_code?: string;
       retried: boolean;

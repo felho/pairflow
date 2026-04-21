@@ -26,6 +26,7 @@ export interface ApprovalCommandDependencies {
   appendProtocolEnvelope?: AppendProtocolEnvelopePort;
   applyStateTransition?: typeof applyStateTransition;
   emitBubbleLifecycleEventBestEffort?: typeof emitBubbleLifecycleEventBestEffort;
+  emitDeliveryNotificationAck?: EmitDeliveryAckLikePort;
   emitTmuxDeliveryNotification?: EmitDeliveryAckLikePort;
   executeRemoteBubbleApprovalCommand?: ExecuteRemoteBubbleApprovalCommandPort;
   ensureBubbleInstanceIdForMutation?: EnsureBubbleInstanceIdForMutationPort;
@@ -42,7 +43,7 @@ export interface ApprovalCommandDependencies {
 
 export interface ApprovalCommandDefaultDependencies {
   appendProtocolEnvelope: AppendProtocolEnvelopePort;
-  emitTmuxDeliveryNotification: EmitDeliveryAckLikePort;
+  emitDeliveryNotificationAck: EmitDeliveryAckLikePort;
   executeRemoteBubbleApprovalCommand: ExecuteRemoteBubbleApprovalCommandPort;
   ensureBubbleInstanceIdForMutation: EnsureBubbleInstanceIdForMutationPort;
   readRemotePointer: (path: string) => Promise<BubbleRemotePointer | null>;
@@ -59,7 +60,7 @@ export interface ResolvedApprovalCommandDependencies {
   appendProtocolEnvelope: AppendProtocolEnvelopePort;
   applyStateTransition: typeof applyStateTransition;
   emitBubbleLifecycleEventBestEffort: typeof emitBubbleLifecycleEventBestEffort;
-  emitTmuxDeliveryNotification: EmitDeliveryAckLikePort;
+  emitDeliveryNotificationAck: EmitDeliveryAckLikePort;
   executeRemoteBubbleApprovalCommand: ExecuteRemoteBubbleApprovalCommandPort;
   ensureBubbleInstanceIdForMutation: EnsureBubbleInstanceIdForMutationPort;
   queueDeferredReworkIntent: typeof queueDeferredReworkIntent;
@@ -84,9 +85,10 @@ export function resolveApprovalCommandDependencies(
     emitBubbleLifecycleEventBestEffort:
       dependencies.emitBubbleLifecycleEventBestEffort
       ?? emitBubbleLifecycleEventBestEffort,
-    emitTmuxDeliveryNotification:
-      dependencies.emitTmuxDeliveryNotification
-      ?? defaults.emitTmuxDeliveryNotification,
+    emitDeliveryNotificationAck:
+      dependencies.emitDeliveryNotificationAck
+      ?? dependencies.emitTmuxDeliveryNotification
+      ?? defaults.emitDeliveryNotificationAck,
     executeRemoteBubbleApprovalCommand:
       dependencies.executeRemoteBubbleApprovalCommand
       ?? defaults.executeRemoteBubbleApprovalCommand,

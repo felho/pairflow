@@ -524,4 +524,77 @@ describe("finalizeConvergedFlow", () => {
       "[\"META_REVIEW_GATE_REWORK_DISPATCH_FAILED\"]"
     );
   });
+
+  it("preserves omitted delivered projection in converged finalization results", async () => {
+    const result = await finalizeConvergedFlow(
+      {
+        resolved: {
+          bubbleId: "b_final_projection",
+          repoPath: "/repo",
+          bubblePaths: {
+            worktreePath: "/repo/worktree"
+          },
+          bubbleConfig: {
+            pairflow_command_profile: "external"
+          }
+        } as never,
+        bubbleIdentity: {
+          bubbleInstanceId: "bi_final_projection"
+        } as never,
+        state: {
+          round: 1
+        } as never,
+        summary: "Converged summary",
+        refs: [],
+        now: new Date("2026-03-19T12:20:00.000Z"),
+        convergence: {
+          sequence: 61,
+          envelope: {
+            id: "env_conv_projection",
+            payload: {}
+          }
+        } as never,
+        gateResult: {
+          route: "human_gate_approve",
+          gateSequence: 62,
+          gateEnvelope: {
+            id: "env_gate_projection",
+            type: "APPROVAL_REQUEST"
+          },
+          state: {}
+        } as never,
+        summaryVerifierGateDecision: {
+          gate_decision: "allow",
+          reason_code: "no_claim_in_docs_only",
+          review_artifact_type: "document",
+          claim_classes_detected: "none",
+          verifier_status: "trusted",
+          matched_claim_triggers: []
+        },
+        specLockState: {
+          state: "IMPLEMENTABLE",
+          open_blocker_count: 0,
+          open_required_now_count: 0
+        },
+        roundGateState: {
+          applies: false,
+          violated: false,
+          round: 1
+        },
+        delivery: {
+          status: "accepted",
+          retried: false
+        }
+      },
+      {
+        resolveMetaReviewRolloutBlockingReasonCodes: () => [],
+        emitBubbleLifecycleEventBestEffort: async () => undefined
+      }
+    );
+
+    expect(result.delivery).toEqual({
+      status: "accepted",
+      retried: false
+    });
+  });
 });

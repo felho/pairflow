@@ -50,4 +50,26 @@ describe("kickoffDependencyResolution", () => {
     expect(resolved.appendEnvelope).toBe(appendProtocolEnvelopeOverride);
     expect(resolved.emitDelivery).toBe(emitDeliveryNotificationAckOverride);
   });
+
+  it("maps the legacy kickoff delivery override onto the canonical ack dependency", () => {
+    const emitTmuxDeliveryNotificationOverride = async () => ({}) as never;
+
+    const resolved = resolveKickoffDependencies({
+      emitTmuxDeliveryNotification: emitTmuxDeliveryNotificationOverride
+    });
+
+    expect(resolved.emitDelivery).toBe(emitTmuxDeliveryNotificationOverride);
+  });
+
+  it("prefers the canonical kickoff delivery override when both keys are provided", () => {
+    const emitDeliveryNotificationAckOverride = async () => ({}) as never;
+    const emitTmuxDeliveryNotificationOverride = async () => ({}) as never;
+
+    const resolved = resolveKickoffDependencies({
+      emitDeliveryNotificationAck: emitDeliveryNotificationAckOverride,
+      emitTmuxDeliveryNotification: emitTmuxDeliveryNotificationOverride
+    });
+
+    expect(resolved.emitDelivery).toBe(emitDeliveryNotificationAckOverride);
+  });
 });

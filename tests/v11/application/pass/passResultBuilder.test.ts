@@ -145,4 +145,27 @@ describe("passResultBuilder", () => {
     expect("activation" in autoConverged).toBe(false);
     expect("activation" in normal).toBe(false);
   });
+
+  it("treats delivered as an explicit compat projection in pass result builders", () => {
+    const result = buildNormalPassResult({
+      bubbleId: "b_123",
+      sequence: 9,
+      envelope: buildEnvelope("msg_pass_projection"),
+      state: buildState(),
+      inferredIntent: false,
+      repeatCleanReasonCode: "REPEAT_CLEAN_TRIGGER_NOT_MET",
+      repeatCleanReasonDetail: "base_precondition_not_met",
+      repeatCleanTrigger: false,
+      mostRecentPreviousReviewerCleanPassEnvelope: false,
+      delivery: {
+        status: "accepted",
+        retried: false
+      }
+    });
+
+    expect(result.delivery).toEqual({
+      status: "accepted",
+      retried: false
+    });
+  });
 });

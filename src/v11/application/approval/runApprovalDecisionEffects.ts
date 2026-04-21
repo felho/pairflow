@@ -112,7 +112,7 @@ export async function emitApprovalDecisionDeliverySignals(input: {
   dependencies: ResolvedApprovalCommandDependencies;
 }): Promise<ApprovalDecisionDeliverySignalsResult> {
   // Optional UX signal; never block protocol/state progression on notification failure.
-  const statusDelivery = await input.dependencies.emitTmuxDeliveryNotification({
+  const statusDelivery = await input.dependencies.emitDeliveryNotificationAck({
     bubbleId: input.resolved.bubbleId,
     bubbleConfig: input.resolved.bubbleConfig,
     sessionsPath: input.resolved.bubblePaths.sessionsPath,
@@ -137,7 +137,7 @@ export async function emitApprovalDecisionDeliverySignals(input: {
     input.appendedEnvelope.payload.metadata !== null
       ? input.appendedEnvelope.payload.metadata
       : {};
-  const implementerDelivery = await input.dependencies.emitTmuxDeliveryNotification({
+  const implementerDelivery = await input.dependencies.emitDeliveryNotificationAck({
     bubbleId: input.resolved.bubbleId,
     bubbleConfig: input.resolved.bubbleConfig,
     sessionsPath: input.resolved.bubblePaths.sessionsPath,

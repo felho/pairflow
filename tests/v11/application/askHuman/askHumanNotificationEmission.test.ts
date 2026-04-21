@@ -1,9 +1,10 @@
 import { describe, expect, it } from "vitest";
 
 import { emitOptionalAskHumanNotifications } from "../../../../src/v11/application/askHuman/askHumanNotificationEmission.js";
+import type { EmitDeliveryNotificationInput } from "../../../../src/v11/shared/delivery/tmuxDeliveryContract.js";
 
 describe("askHumanNotificationEmission", () => {
-  it("emits optional tmux delivery and bubble notification signals", async () => {
+  it("emits optional delivery-ack and bubble notification signals", async () => {
     const calls: string[] = [];
 
     const result = await emitOptionalAskHumanNotifications(
@@ -19,8 +20,10 @@ describe("askHumanNotificationEmission", () => {
         messageRef: "transcript-ref#msg_20260221_001"
       },
       {
-        emitTmuxDeliveryNotification: async (input) => {
-          calls.push("emitTmuxDeliveryNotification");
+        emitDeliveryNotificationAck: async (
+          input: EmitDeliveryNotificationInput
+        ) => {
+          calls.push("emitDeliveryNotificationAck");
           expect(input.messageRef).toBe("transcript-ref#msg_20260221_001");
           return {
             status: "accepted",
@@ -46,7 +49,7 @@ describe("askHumanNotificationEmission", () => {
 
     expect(calls).toEqual([
       "emitBubbleNotification",
-      "emitTmuxDeliveryNotification"
+      "emitDeliveryNotificationAck"
     ]);
     expect(result).toEqual({
       deliveryResult: {
@@ -72,7 +75,7 @@ describe("askHumanNotificationEmission", () => {
         messageRef: "transcript-ref#msg_20260221_002"
       },
       {
-        emitTmuxDeliveryNotification: async () => {
+        emitDeliveryNotificationAck: async () => {
           throw new Error("tmux boom");
         },
         emitBubbleNotification: async () => ({
@@ -109,7 +112,7 @@ describe("askHumanNotificationEmission", () => {
         messageRef: "transcript-ref#msg_20260221_003"
       },
       {
-        emitTmuxDeliveryNotification: async () => ({
+        emitDeliveryNotificationAck: async () => ({
           status: "accepted",
           delivered: true,
           message: "ok",

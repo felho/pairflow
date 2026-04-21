@@ -7,13 +7,21 @@ import type { KickoffResultDelivery } from "./kickoffResultBuilders.js";
 import type { KickoffPreparedValidation } from "./kickoffValidationPreparation.js";
 import { normalizeDeliveryAck } from "../delivery/deliveryAckNormalization.js";
 
+function buildKickoffCompatDeliveredProjection(
+  status: DeliveryAck["status"]
+): Pick<KickoffResultDelivery, "delivered"> {
+  return {
+    delivered: status === "accepted"
+  };
+}
+
 function mapKickoffResultDelivery(input: {
   deliveryResult: DeliveryAck;
   deliveryRetried: boolean;
 }): KickoffResultDelivery {
   return {
     status: input.deliveryResult.status,
-    delivered: input.deliveryResult.status === "accepted",
+    ...buildKickoffCompatDeliveredProjection(input.deliveryResult.status),
     ...(input.deliveryResult.reason !== undefined
       ? { reason: input.deliveryResult.reason }
       : {}),

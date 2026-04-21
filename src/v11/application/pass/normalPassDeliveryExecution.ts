@@ -95,10 +95,21 @@ export interface ExecuteNormalPassDeliveryResult {
   deliveryRetried: boolean;
 }
 
+function resolveNormalPassDeliveryOverride(
+  dependencies: ExecuteNormalPassDeliveryDependencies
+): EmitDeliveryAckLikePort | undefined {
+  return (
+    dependencies.emitDeliveryNotificationAck
+    ?? dependencies.emitTmuxDeliveryNotification
+  );
+}
+
 export async function executeNormalPassDelivery(
   input: ExecuteNormalPassDeliveryInput,
   dependencies: ExecuteNormalPassDeliveryDependencies
 ): Promise<ExecuteNormalPassDeliveryResult> {
+  const emitDeliveryNotificationAck =
+    resolveNormalPassDeliveryOverride(dependencies);
   const reviewerTestDirective =
     input.reviewerTestDirective
     ?? await dependencies.resolveReviewerTestDirectiveForPass({
@@ -146,11 +157,8 @@ export async function executeNormalPassDelivery(
         : {})
     },
     {
-      ...(dependencies.emitDeliveryNotificationAck !== undefined
-        ? { emitDeliveryNotificationAck: dependencies.emitDeliveryNotificationAck }
-        : {}),
-      ...(dependencies.emitTmuxDeliveryNotification !== undefined
-        ? { emitTmuxDeliveryNotification: dependencies.emitTmuxDeliveryNotification }
+      ...(emitDeliveryNotificationAck !== undefined
+        ? { emitDeliveryNotificationAck }
         : {}),
       ...(dependencies.refreshReviewerContext !== undefined
         ? { refreshReviewerContext: dependencies.refreshReviewerContext }

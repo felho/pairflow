@@ -60,7 +60,7 @@ describe("runAskHumanFlow", () => {
           expect(input.appended).toBe(appended);
           expect(input.written).toBe(written);
           expect(input.now).toBe(now);
-          expect(dependencies?.emitTmuxDeliveryNotification).toBeDefined();
+          expect(dependencies?.emitDeliveryNotificationAck).toBeDefined();
           expect(dependencies?.emitBubbleNotification).toBeDefined();
           expect(dependencies?.emitBubbleLifecycleEventBestEffort).toBeDefined();
           return {
@@ -173,7 +173,7 @@ describe("runAskHumanFlow", () => {
             }
           }) as never,
         finalizeAskHumanFlow: async (_input, dependencies) => {
-          expect(dependencies?.emitTmuxDeliveryNotification).toBeDefined();
+          expect(dependencies?.emitDeliveryNotificationAck).toBeDefined();
           expect(dependencies?.emitBubbleNotification).toBeDefined();
           expect(dependencies?.emitBubbleLifecycleEventBestEffort).toBeDefined();
           return {

@@ -60,7 +60,7 @@ async function loadApprovalDependencyDefaults(): Promise<ApprovalCommandDefaultD
     await loadExecuteRemoteBubbleApprovalCommandDefault();
   approvalDependencyDefaultsPromise ??= Promise.resolve({
     appendProtocolEnvelope,
-    emitTmuxDeliveryNotification:
+    emitDeliveryNotificationAck:
       reviewerDeliveryDefaults.emitDeliveryNotificationAck,
     executeRemoteBubbleApprovalCommand,
     ensureBubbleInstanceIdForMutation,

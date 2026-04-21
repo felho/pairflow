@@ -94,4 +94,36 @@ describe("kickoffResultBuilders", () => {
       state_after: stateAfter
     });
   });
+
+  it("keeps delivered as an explicit compat projection when omitted", () => {
+    const stateBefore = {
+      bubble_id: "b_kickoff_result_03",
+      state: "RUNNING",
+      round: 0
+    } as BubbleStateSnapshot;
+    const stateAfter = {
+      bubble_id: "b_kickoff_result_03",
+      state: "RUNNING",
+      round: 1
+    } as BubbleStateSnapshot;
+
+    const result = buildKickoffSuccessResult({
+      bubbleId: "b_kickoff_result_03",
+      markersBefore: {
+        ideation_mode: true,
+        ideation_task_pending: true
+      },
+      stateBefore,
+      stateAfter,
+      delivery: {
+        status: "accepted",
+        retried: false
+      }
+    });
+
+    expect(result.delivery).toEqual({
+      status: "accepted",
+      retried: false
+    });
+  });
 });

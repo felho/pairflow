@@ -75,7 +75,33 @@ describe("passFlowDependencyWiring", () => {
     });
 
     expect(buildNormalPassFlowDependencies.mock.calls[0]?.[0]).toMatchObject({
+      emitDeliveryNotificationAck: emitTmuxDeliveryNotification
+    });
+    expect(buildNormalPassFlowDependencies.mock.calls[0]?.[0]).not.toHaveProperty(
+      "emitTmuxDeliveryNotification"
+    );
+  });
+
+  it("prefers the canonical delivery override when both pass wiring keys are provided", async () => {
+    buildAutoConvergeFlowDependencies.mockReturnValue({ kind: "auto-deps" });
+
+    const { createAutoConvergeFlowDependencies } = await import(
+      "../../../../src/v11/application/pass/passFlowDependencyWiring.js"
+    );
+
+    const emitDeliveryNotificationAck = (() => undefined) as never;
+    const emitTmuxDeliveryNotification = (() => undefined) as never;
+
+    createAutoConvergeFlowDependencies({
+      emitDeliveryNotificationAck,
       emitTmuxDeliveryNotification
     });
+
+    expect(buildAutoConvergeFlowDependencies.mock.calls[0]?.[0]).toMatchObject({
+      emitDeliveryNotificationAck
+    });
+    expect(buildAutoConvergeFlowDependencies.mock.calls[0]?.[0]).not.toHaveProperty(
+      "emitTmuxDeliveryNotification"
+    );
   });
 });

@@ -16,7 +16,7 @@ export interface KickoffIdeationMarkers {
 
 export interface KickoffResultDelivery {
   status: DeliveryAckStatus;
-  delivered: boolean;
+  delivered?: boolean;
   reason?: DeliveryFailureReason;
   reason_code?: DeliveryAckReasonCode;
   retried: boolean;
@@ -107,7 +107,9 @@ export function buildKickoffSuccessResult(
         ? {
           delivery: {
             status: input.delivery.status,
-            delivered: input.delivery.delivered,
+            ...(input.delivery.delivered !== undefined
+              ? { delivered: input.delivery.delivered }
+              : {}),
             ...(input.delivery.reason !== undefined
               ? { reason: input.delivery.reason }
               : {}),

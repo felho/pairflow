@@ -11,6 +11,7 @@ import type {
   AskHumanDeliveryTargetReasonCode,
   AskHumanDeliveryAck,
   EmitAskHumanBubbleNotificationPort,
+  EmitAskHumanDeliveryNotificationAckPort,
   EmitAskHumanTmuxDeliveryNotificationPort,
   ResolveAskHumanDeliveryMessageRefPort
 } from "./askHumanDeliveryPortsContract.js";
@@ -51,6 +52,7 @@ export interface FinalizeAskHumanFlowInput {
 }
 
 export interface FinalizeAskHumanFlowDependencies {
+  emitDeliveryNotificationAck?: EmitAskHumanDeliveryNotificationAckPort;
   emitTmuxDeliveryNotification?: EmitAskHumanTmuxDeliveryNotificationPort;
   emitBubbleNotification?: EmitAskHumanBubbleNotificationPort;
   resolveDeliveryMessageRef?: ResolveAskHumanDeliveryMessageRefPort;
@@ -90,6 +92,7 @@ export interface RunAskHumanFlowDependencies {
   appendProtocolEnvelope?: AppendProtocolEnvelopePort;
   writeStateSnapshot?: WriteStateSnapshotPort;
   applyStateTransition?: typeof applyStateTransition;
+  emitDeliveryNotificationAck?: EmitAskHumanDeliveryNotificationAckPort;
   emitTmuxDeliveryNotification?: EmitAskHumanTmuxDeliveryNotificationPort;
   emitBubbleNotification?: EmitAskHumanBubbleNotificationPort;
   resolveDeliveryMessageRef?: FinalizeAskHumanFlowDependencies["resolveDeliveryMessageRef"];

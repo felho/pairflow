@@ -189,7 +189,7 @@ function createFlowDependencies(
         throw new Error("workspace resolution is unused for local approvals");
       }),
       resolveDeliveryMessageRef: vi.fn(() => "transcript.ndjson#msg_approval_001"),
-      emitTmuxDeliveryNotification: vi.fn(async (input: {
+      emitDeliveryNotificationAck: vi.fn(async (input: {
         bubbleId: string;
         messageRef?: string;
         envelope: {
@@ -441,7 +441,7 @@ function createRemoteFlowDependencies(
       throw new Error("workspace resolution unavailable");
     }),
     resolveDeliveryMessageRef: vi.fn(() => "unused"),
-    emitTmuxDeliveryNotification: vi.fn(async () => ({
+    emitDeliveryNotificationAck: vi.fn(async () => ({
       status: "accepted" as const,
       message: "unused",
       sessionName: "pf_remote_approval_01",
