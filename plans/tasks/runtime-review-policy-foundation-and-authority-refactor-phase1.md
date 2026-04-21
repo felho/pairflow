@@ -7,20 +7,36 @@ phase: phase1
 target_files:
   - src/types/bubble.ts
   - src/config/bubbleConfig.ts
-  - src/v11/shared/list/listCommandContract.ts
-  - src/v11/shared/list/listCommandEntryBuilder.ts
-  - src/v11/shared/status/statusCommandViewBuilder.ts
   - src/v11/shared/reviewPolicy/reviewPolicyRuntime.ts
   - src/v11/shared/reviewPolicy/updateBubbleReviewPolicy.ts
+  - src/v11/shared/list/listCommandContract.ts
+  - src/v11/shared/list/listCommandEntryBuilder.ts
+  - src/v11/shared/list/listCommandApi.ts
+  - src/v11/shared/status/statusCommandViewBuilder.ts
+  - src/v11/shared/status/statusCommandApi.ts
   - src/v11/shared/metaReviewGate/metaReviewGateThresholdAuthority.ts
+  - src/v11/shared/metaReviewGate/metaReviewGateCurrentRunFinalization.ts
+  - src/v11/shared/metaReviewGate/metaReviewGateHumanGatePersistence.ts
+  - src/v11/shared/metaReviewGate/approvalRequestEnvelope.ts
+  - src/v11/shared/metaReviewGate/metaReviewGateReviewerSnapshot.ts
+  - src/v11/shared/metaReviewGate/metaReviewGateFindingsValidation.ts
   - src/v11/shared/metaReviewGate/metaReviewGateFindingsMetadata.ts
+  - src/v11/shared/metaReviewGate/metaReviewGateFindingsParityHelpers.ts
   - src/v11/shared/metaReviewGate/metaReviewGateFindingsParityInput.ts
   - src/v11/shared/metaReviewGate/metaReviewGateFindingsSplit.ts
   - tests/config/bubbleConfig.test.ts
   - tests/core/bubble/listBubbles.test.ts
   - tests/core/bubble/statusBubble.test.ts
+  - tests/core/bubble/metaReviewGate.test.ts
+  - tests/core/bubble/approvalRequestEnvelope.test.ts
+  - tests/contracts/v11/metaReviewGate.contract.test.ts
+  - tests/v11/application/list/listCommandApi.test.ts
   - tests/v11/shared/reviewPolicy/reviewPolicyRuntime.test.ts
   - tests/v11/shared/reviewPolicy/updateBubbleReviewPolicy.test.ts
+  - tests/v11/shared/metaReviewGate/metaReviewGateFindingsMetadata.test.ts
+  - tests/v11/shared/metaReviewGate/metaReviewGateHumanGatePersistence.test.ts
+  - tests/v11/shared/metaReviewGate/metaReviewGateFindingsParityHelpers.test.ts
+  - tests/v11/shared/metaReviewGate/metaReviewGateFindingsSplit.test.ts
   - tests/v11/shared/metaReviewGate/metaReviewGateThresholdAuthority.test.ts
 prd_ref: null
 plan_ref: plans/runtime-review-policy-reset-and-phasing-plan-v1.md
@@ -41,9 +57,12 @@ owners:
 ## Current Codebase Check (2026-04-21)
 
 1. A checked-out codebase-ben tovabbra sincs canonical `review_policy` bubble-config surface, es nincs `review_loop_mode` / `meta_review_auto_rework_min_severity` runtime projection.
-2. A current list/status read pathok kozvetlenul a `BubbleConfig`-ot parse-oljak vagy consume-oljak, de nincs kozos review-policy runtime-view builder:
+2. A current list/status read pathok kozvetlenul a `BubbleConfig`-ot parse-oljak vagy consume-oljak, es a consume boundary current-tree anchorjai ezek:
    - `src/v11/shared/list/listCommandEntryBuilder.ts`
+   - `src/v11/shared/list/listCommandApi.ts`
    - `src/v11/shared/status/statusCommandViewBuilder.ts`
+   - `src/v11/shared/status/statusCommandApi.ts`
+   kozos review-policy runtime-view builder meg nincs.
 3. A meta-review gate current tree-ben letezik parity/report/artifact validation baseline, de nincs kulon named threshold-authority resolver boundary; a routing es human-gate consume tovabbra is mas helpercsoportokra tamaszkodik.
 4. A `MetaReviewRuntimeDeliveryObservation` es a same-round parity baseline preserved runtime truth marad; ez a task ezeket nem csereli le.
 5. A `src/core/**` topology vegleg retired; Phase 1 targetje csak a mai `src/v11/**`, `src/config/**`, `src/types/**` es teszt-topology lehet.
@@ -55,18 +74,18 @@ owners:
 Bevezetni a shared runtime review policy foundationt ugy, hogy:
 1. a canonical `review_policy` config/runtime shape workflow-owned legyen,
 2. a bubble TOML update-je egyetlen mutation seamre keruljon,
-3. a status/list/detail backend projection ugyanazt a runtime-view buildert hasznalja,
+3. a status/list backend projection ugyanazt a runtime-view buildert hasznalja a mai `listCommandApi` / `statusCommandApi` consume boundarykon at,
 4. a thresholdhez szukseges report/artifact/parity feloldas kulon named authority boundarybe keruljon,
 5. de a gate routing, approval refresh, human-gate payload es bypass activation meg ne valtozzon.
 
 ### Domain / Control Model Summary
 
 1. Business invariant:
-   ugyanarra a review-policy allapotra nem johet letre kulon canonical truth status/list/detail projectionben, bubble configban, vagy meta-review helper-oldalon.
+   ugyanarra a review-policy allapotra nem johet letre kulon canonical truth status/list projectionben, bubble configban, vagy meta-review helper-oldalon.
 2. Control model:
    a canonical `review_policy` workflow/orchestrator-owned bubble-config contract; a threshold authority truth kulon explicit resolver-owned boundary.
 3. Read-path rule:
-   review-policy runtime projection csak a kozos `reviewPolicyRuntime` helperen keresztul olvashato; threshold authority csak a named resolveren keresztul olvashato.
+   review-policy runtime projection csak a kozos runtime-view helperen keresztul olvashato a current-tree `list/status` API-builder consume family felett; threshold authority csak a named resolveren keresztul olvashato.
 4. Forbidden fallback:
    reviewer snapshot, approval envelope metadata, status/list local projection, UI/store local state es ad hoc route helper nem valhat canonical review-policy vagy threshold truth-ta.
 5. Allowed resolution path:
@@ -78,7 +97,7 @@ Bevezetni a shared runtime review policy foundationt ugy, hogy:
    - producer closure: owned here
    - internal execution closure: successor
    - workflow/orchestration closure: successor
-   - read_model_closure: owned here, de csak backend status/list/detail projection szinten
+   - read_model_closure: owned here, de csak backend status/list projection szinten
    - activation_closure: successor
    - cleanup_recovery_closure: successor
 
@@ -87,7 +106,7 @@ Bevezetni a shared runtime review policy foundationt ugy, hogy:
 1. Parent plan gap closed:
    a planbol hianyzo Phase 1 foundation slice, amely a canonical policy objectet, a kozos runtime-view buildert, a mutation seamet es a pure threshold-authority boundaryt letrehozza.
 2. Depends on:
-   approved [runtime-review-policy-reset-and-phasing-plan-v1.md](/Users/felho/dev/pairflow/plans/runtime-review-policy-reset-and-phasing-plan-v1.md), es az archived `O2-T9` baseline maradjon preserved boundary.
+   draft [runtime-review-policy-reset-and-phasing-plan-v1.md](/Users/felho/dev/pairflow/plans/runtime-review-policy-reset-and-phasing-plan-v1.md) plan-reference, es az `O2-T9` lane maradjon kulon ownership alatt.
 3. Unlocks / impacts successors:
    `runtime-review-policy-auto-rework-threshold-phase2`, valamint a `runtime-review-policy-reviewer-bypass-contract-phase3a` task.
 4. Task-list impact:
@@ -99,11 +118,15 @@ Bevezetni a shared runtime review policy foundationt ugy, hogy:
 
 1. Source-of-truth anchors:
    - `src/v11/shared/metaReviewGate/metaReviewGateCurrentRunFinalization.ts`
+   - `src/v11/shared/metaReviewGate/metaReviewGateHumanGatePersistence.ts`
    - `src/v11/shared/metaReviewGate/approvalRequestEnvelope.ts`
    - `src/v11/shared/metaReviewGate/metaReviewGateReviewerSnapshot.ts`
    - `src/v11/shared/metaReviewGate/metaReviewGateFindingsValidation.ts`
+   - `src/v11/shared/list/listCommandContract.ts`
    - `src/v11/shared/list/listCommandEntryBuilder.ts`
+   - `src/v11/shared/list/listCommandApi.ts`
    - `src/v11/shared/status/statusCommandViewBuilder.ts`
+   - `src/v11/shared/status/statusCommandApi.ts`
 2. Canonical elements:
    - bubble TOML marad a bubble-scoped config canonical store-ja
    - `MetaReviewRuntimeDeliveryObservation` observability-only runtime truth marad
@@ -123,18 +146,21 @@ Bevezetni a shared runtime review policy foundationt ugy, hogy:
 
 ### Scope Reality / Shape Proof
 
+`target_files` ebben a taskban szandekosan vegyes lista: tartalmaz kotelezo uj Phase 1 outputokat es preserve/prove celbol targetelt current-tree anchorokat is. A kotelezo ownershipet a Call-site Matrix, a Canonical Contract Preservation tabla, valamint a Test Matrix egyutt hatarozza meg; a preservation-only anchor nem ertelmezheto uj activation vagy routing ownershipkent.
+
 1. Inspected entrypoints / call-sites:
-   `src/config/bubbleConfig.ts`, `src/types/bubble.ts`, `src/v11/shared/list/listCommandEntryBuilder.ts`, `src/v11/shared/status/statusCommandViewBuilder.ts`, `src/v11/shared/metaReviewGate/metaReviewGateCurrentRunFinalization.ts`, `src/v11/shared/metaReviewGate/approvalRequestEnvelope.ts`, `src/v11/shared/metaReviewGate/metaReviewGateFindingsValidation.ts`, `src/v11/shared/metaReviewGate/metaReviewGateFindingsParityInput.ts`.
+   `src/config/bubbleConfig.ts`, `src/types/bubble.ts`, `src/v11/shared/list/listCommandEntryBuilder.ts`, `src/v11/shared/list/listCommandApi.ts`, `src/v11/shared/status/statusCommandViewBuilder.ts`, `src/v11/shared/status/statusCommandApi.ts`, `src/v11/shared/metaReviewGate/metaReviewGateCurrentRunFinalization.ts`, `src/v11/shared/metaReviewGate/metaReviewGateHumanGatePersistence.ts`, `src/v11/shared/metaReviewGate/approvalRequestEnvelope.ts`, `src/v11/shared/metaReviewGate/metaReviewGateFindingsValidation.ts`, `src/v11/shared/metaReviewGate/metaReviewGateFindingsParityHelpers.ts`, `src/v11/shared/metaReviewGate/metaReviewGateFindingsParityInput.ts`.
+   named Phase 1 outputok ebben a slice-ban: `src/v11/shared/reviewPolicy/reviewPolicyRuntime.ts`, `src/v11/shared/reviewPolicy/updateBubbleReviewPolicy.ts`, `src/v11/shared/metaReviewGate/metaReviewGateThresholdAuthority.ts`.
 2. Actual touched scope:
-   `contract_or_persisted_authority_foundation` primary, `activation_or_read_model` secondary only a backend list/status/detail consume familyre.
+   `contract_or_persisted_authority_foundation` primary, `activation_or_read_model` secondary only a backend list/status consume familyre.
 3. Mutation entrypoints in scope:
-   az uj `updateBubbleReviewPolicy(...)` bubble TOML read-modify-write seam; mas command/router/UI mutation entrypoint nincs scope-ban.
+   az uj `updateBubbleReviewPolicy(...)` bubble TOML read-modify-write seam Phase 1-ben kotelezo named output; a current-tree scope-proofot a `bubbleConfig` parse/render es a list/status API-builder consume family adja. Mas command/router/UI mutation entrypoint nincs scope-ban.
 4. Hidden scope ruled out:
-   approval/human-gate payload shaping, current-run routing, auto-rework dispatch, UI presenter es web store consume kulon ellenorizve es kiveve a scope-bol.
+   approval/human-gate payload shaping, current-run routing, auto-rework dispatch, valamint a `detail` UI/router-presenter compose family kulon ellenorizve es kiveve a scope-bol.
 5. Branch inventory note:
    precondition-pass/fail a bubble TOML write seamnel, parse/render valid/invalid branch, threshold authority resolved/unresolved/incomplete branch, es status/list projection full-vs-guarded branch.
 6. Why the declared task shape matches reality:
-   a task shared contract + persisted config + egy read-model family backend consume closurejat zarja; workflow routing consume, human-gate consume es activation kulon successor taskokban maradnak.
+   a task shared contract + persisted config + egy status/list read-model family backend consume closurejat zarja; workflow routing consume, human-gate consume es activation kulon successor taskokban maradnak.
 
 ### Authority Boundary Map
 
@@ -143,9 +169,9 @@ Bevezetni a shared runtime review policy foundationt ugy, hogy:
 2. Stored authority:
    `bubble.toml` persisted `review_policy` block, illetve a mar letezo report/artifact/parity metadata inputs.
 3. In-scope consumers:
-   backend status/list/detail projection, es a future threshold task altal hasznalhato pure resolver API.
+   backend status/list projection, valamint az ebben a fazisban eloallitott pure resolver API.
 4. Explicit out-of-scope consumers:
-   current gate routing, approval refresh/human-gate payload, reviewer snapshot alignment, UI/API controls, archived `O2-T9` cleanup baseline.
+   current gate routing, approval refresh/human-gate payload, reviewer snapshot alignment, UI/API controls, `O2-T9` cleanup lane.
 5. Export surfaces closed in this phase:
    `no`; a backend contract additive lesz, de operatori/UI activation es human-gate consume kesobbi taskban zarul.
 
@@ -174,7 +200,7 @@ N/A. Ez a task nem valtoztatja meg a meta-review gate canonical success/completi
 1. Primary bounded task shape:
    `contract_or_persisted_authority_foundation`
 2. Secondary shape (if any):
-   `activation_or_read_model`, de csak additive backend status/list/detail projection szinten; nincs kulon activation vagy UI consume.
+   `activation_or_read_model`, de csak additive backend status/list projection szinten; nincs kulon activation vagy UI consume.
 3. Preconditions that must pass before side effects:
    - bubble TOML sikeres parse
    - review-policy patch validalas
@@ -190,9 +216,9 @@ N/A. Ez a task nem valtoztatja meg a meta-review gate canonical success/completi
 ### In Scope
 
 1. `BubbleConfig.review_policy` additive config schema + TOML parse/render.
-2. Kozós review-policy runtime-view builder a requested/effective/support/blocked statehez.
+2. Kozos review-policy runtime-view builder a requested/effective/support/blocked statehez.
 3. Egyetlen bubble TOML mutation seam a review-policy mezokhoz.
-4. Backend status/list/detail projection additive bekotese ugyanarra a runtime-view builderre.
+4. Backend status/list projection additive bekotese ugyanarra a runtime-view builderre a current-tree API-builder consume familyben.
 5. Pure `metaReviewGateThresholdAuthority` resolver boundary report/artifact/parity inputokbol.
 6. A fenti seam-ekhez es contractszintekhez tartozo tesztcoverage.
 
@@ -202,13 +228,14 @@ N/A. Ez a task nem valtoztatja meg a meta-review gate canonical success/completi
 2. Approval refresh / human-gate envelope parity alignment.
 3. Reviewer bypass contract vagy activation.
 4. Web UI control surface, UI store, API mutation endpoint.
-5. archived `O2-T9` runtime-capability cleanup ujranyitasa vagy tovabbi tmux capability rename.
+5. `detail` UI/router-presenter compose family backend consume-kent vagy ownershipolt Phase 1 closurekent.
+6. `O2-T9` runtime-capability cleanup vagy tmux capability rename.
 
 ### Safety Defaults
 
 1. `review_policy.review_loop_mode = meta_only` Phase 1-ben persisted lehet, de `effective_loop_mode` nem valhat `meta_only`-va.
 2. Hianyos threshold authority input unresolved/incomplete eredmenyt ad, nem secondary source fallbackot.
-3. Additive status/list/detail field nem valtoztathatja meg a jelenlegi CLI/UI renderelt semantics-et, ha meg nincs consume.
+3. Additive status/list field nem valtoztathatja meg a jelenlegi CLI/UI renderelt semantics-et, ha meg nincs consume.
 4. A mutation seam nem vezethet be silent overwrite-ot vagy partial bubble TOML write-ot.
 
 ### Contract Boundary / Blast Radius
@@ -216,7 +243,7 @@ N/A. Ez a task nem valtoztatja meg a meta-review gate canonical success/completi
 1. `contract_boundary_override`: `yes`
 2. Impacted contracts:
    - bubble config contract
-   - backend status/list/detail read-model contract
+   - backend status/list read-model contract
    - internal threshold authority result contract
 
 ### Complexity Risk Gate
@@ -256,7 +283,7 @@ N/A. Ez a task nem valtoztatja meg a meta-review gate canonical success/completi
 |---|---|---|---|---|
 | Business invariant | Egy bubble review-policy es threshold truthja nem szorodhat szet tobb canonical helperre | A config, projection es authority boundary egy-egy named helperben zaruljon | P1 | required-now |
 | Control model | `review_policy` workflow-owned config, threshold truth pure resolver-owned | Actor, reviewer snapshot es approval metadata nem lehet authority source | P1 | required-now |
-| Read-path rule | Status/list/detail csak kozos review-policy runtime view-bol olvashat | Nincs sajat inline requested/effective/support projection | P1 | required-now |
+| Read-path rule | Status/list current-tree consume family csak kozos review-policy runtime view-bol olvashat | Nincs sajat inline requested/effective/support projection | P1 | required-now |
 | Forbidden fallback | Reviewer snapshot, approval metadata, UI/store local state nem fallback truth | Resolver unresolved marad, projection guarded marad | P1 | required-now |
 | Allowed resolution path | report_json + artifact + parity merge explicit resolverben engedelyezett | Same-authority deterministic merge helper-szinten maradhat | P1 | required-now |
 | Missing-data rule | Invalid policy throw; hianyos authority unresolved/incomplete result | Nem szabad synthetic threshold truthot gyartani | P1 | required-now |
@@ -267,9 +294,10 @@ N/A. Ez a task nem valtoztatja meg a meta-review gate canonical success/completi
 | Element | Source Anchor | Required Interpretation | This Task Action | Priority | Timing |
 |---|---|---|---|---|---|
 | `MetaReviewRuntimeDeliveryObservation` | `src/v11/shared/metaReviewGate/metaReviewGateTypes.ts` | observability-only runtime truth | preserve | P1 | required-now |
-| same-round findings parity validation | `src/v11/shared/metaReviewGate/metaReviewGateFindingsValidation.ts` | canonical guard chain resze | preserve + expose behind new resolver | P1 | required-now |
-| reviewer snapshot | `src/v11/shared/metaReviewGate/metaReviewGateReviewerSnapshot.ts` | guard/approval consistency only | preserve_as_guard | P1 | required-now |
-| approval envelope metadata | `src/v11/shared/metaReviewGate/approvalRequestEnvelope.ts` | human-facing payload metadata, nem threshold truth | preserve_as_compat | P1 | required-now |
+| same-round findings validation/parity helper chain | `src/v11/shared/metaReviewGate/metaReviewGateFindingsValidation.ts`, `src/v11/shared/metaReviewGate/metaReviewGateFindingsMetadata.ts`, `src/v11/shared/metaReviewGate/metaReviewGateFindingsParityHelpers.ts`, `src/v11/shared/metaReviewGate/metaReviewGateFindingsParityInput.ts`, `src/v11/shared/metaReviewGate/metaReviewGateFindingsSplit.ts` | canonical guard/input chain resze | preserve helper-family szinten + expose behind new resolver | P1 | required-now |
+| `metaReviewGateCurrentRunFinalization` + human-gate persistence wiring | `src/v11/shared/metaReviewGate/metaReviewGateCurrentRunFinalization.ts`, `src/v11/shared/metaReviewGate/metaReviewGateHumanGatePersistence.ts` | current route/finalization es persisted human-gate state/envelope seam parity preserved; default Phase 1 action a wiring valtozatlanul hagyasa | preserve_by_default; csak bounded same-family internal rewiring engedett explicit route/state/envelope parity proof mellett | P1 | required-now |
+| reviewer snapshot | `src/v11/shared/metaReviewGate/metaReviewGateReviewerSnapshot.ts` | guard/approval consistency only | preserve_as_guard + direct negative authority proof | P1 | required-now |
+| approval envelope metadata | `src/v11/shared/metaReviewGate/approvalRequestEnvelope.ts` | human-facing payload metadata, nem threshold truth | preserve_as_compat + direct negative authority proof | P1 | required-now |
 
 ### 0b) Scope Reality and Shape Proof
 
@@ -277,7 +305,7 @@ N/A. Ez a task nem valtoztatja meg a meta-review gate canonical success/completi
 |---|---|---|---|---|
 | Inspected entrypoints / call-sites | list/status builders, bubble config parse/render, current meta-review validation helpers atnezve | Ezek hatarozzak meg a valos target-file scope-ot | P1 | required-now |
 | Actual touched scope | foundation + additive backend read-model | Nem feature-activation task | P1 | required-now |
-| Mutation entrypoints in scope | uj `updateBubbleReviewPolicy(...)` seam | Minden review-policy bubble TOML write ezen menjen at | P1 | required-now |
+| Mutation entrypoints in scope | a named `updateBubbleReviewPolicy(...)` seam Phase 1-ben kotelezo output; a current-tree proofet a `bubbleConfig` parse/render + list/status API-builder family horgonyozza | Minden review-policy bubble TOML write ezen menjen at | P1 | required-now |
 | Hidden scope ruled out | current routing, approval payload es UI presenter nem target | Ezek successor taskok maradnak | P1 | required-now |
 | Branch inventory note | parse valid/invalid, write success/conflict, projection full/guarded, resolver resolved/unresolved | Tesztmatrixnek ezeket kulon fednie kell | P1 | required-now |
 | Shape proof | csak egy consumer family (`read_model`) van in scope a foundation mellett | A bounded task shape megvedheto split nelkul | P1 | required-now |
@@ -287,7 +315,7 @@ N/A. Ez a task nem valtoztatja meg a meta-review gate canonical success/completi
 | Item | Rule | Implementation / Review Consequence | Priority | Timing |
 |---|---|---|---|---|
 | Parent gap closed | plan Phase 1 foundation gap | Ez a task hozza letre az implementalhato foundation baseline-t | P1 | required-now |
-| Depends on | approved reset plan; archived `O2-T9` preserved baseline marad | Nem keverheto bele runtime-capability cleanup | P1 | required-now |
+| Depends on | draft reset plan reference; `O2-T9` kulon lane marad | Nem keverheto bele runtime-capability cleanup, es nincs approved parent-plan claim | P1 | required-now |
 | Unlocks / impacts successors | Phase 2 threshold delivery, Phase 3A bypass contract | A successorok mar nem hozhatnak letre uj canonical ownerseget | P1 | required-now |
 | Task-list impact | stale draft replaced by this task | Nincs in-place retarget ping-pong | P1 | required-now |
 | Inherited validation / exit expectation | Phase 1 utan nincs gate behavior change | Approval/human-gate/bypass valtozatlan marad | P1 | required-now |
@@ -297,7 +325,7 @@ N/A. Ez a task nem valtoztatja meg a meta-review gate canonical success/completi
 | Shared Contract | Current Consumers | Change Type (`additive|breaking|N/A`) | This Task Action | Deferred Alignment |
 |---|---|---|---|---|
 | `BubbleConfig` | parse/render, lookup, create/start/kickoff, tests | additive | `review_policy` block bevezetese defaults-szal | Phase 2/3 consume families only if needed |
-| `BubbleStatusView` | status CLI, UI detail presenter | additive | backend `reviewPolicy` projection field hozzaadasa render change nelkul | UI copy/controls deferred |
+| `BubbleStatusView` | status CLI, downstream status consume a meglevo status API-n keresztul | additive | backend `reviewPolicy` projection field hozzaadasa render change nelkul | UI copy/controls deferred |
 | `BubbleListEntry` | list CLI, UI summary presenter | additive | backend `reviewPolicy` projection field hozzaadasa render change nelkul | UI copy/controls deferred |
 | threshold authority result | uj internal shared contract | additive | explicit resolver result shape | routing/human-gate consume Phase 2-ben |
 
@@ -307,8 +335,8 @@ N/A. Ez a task nem valtoztatja meg a meta-review gate canonical success/completi
 |---|---|---|---|---|
 | recommendation+budget current route | preserve | current route test parity nem torhet | P1 | required-now |
 | same-round parity guard | preserve | resolver ugyanazt a guard chain-t vagy explicit supersetet hasznalja | P1 | required-now |
-| reviewer snapshot as approval-only guard | preserve | Phase 1 nem vezeti be authority fallbackkent | P1 | required-now |
-| approval metadata as compat payload | preserve | nincs threshold truth promotion | P1 | required-now |
+| reviewer snapshot as approval-only guard | preserve | explicit negative proof kell arra, hogy Phase 1 nem vezeti be authority fallbackkent | P1 | required-now |
+| approval metadata as compat payload | preserve | explicit negative proof kell arra, hogy nincs threshold truth promotion | P1 | required-now |
 
 ### 0f) Success / Completion Proof Boundary
 
@@ -329,13 +357,14 @@ N/A. Ez a task nem valtoztatja meg a meta-review gate canonical success/completi
 | ID | File | Function/Entry | Exact Signature (args -> return) | Insertion Point | Expected Behavior | Priority | Timing | Evidence |
 |---|---|---|---|---|---|---|---|---|
 | CS1 | `src/types/bubble.ts` | review policy types | `BubbleConfig -> type`, `BubbleStatusView/BubbleListEntry -> additive field types` | bubble config + shared status/list types | canonical `review_policy` config type es runtime-view fieldek explicitten tipizaltak | P1 | required-now | T1, T3 |
-| CS2 | `src/config/bubbleConfig.ts` | parse/render normalization | `parseBubbleConfigToml(input, options?) -> BubbleConfig`, `renderBubbleConfigToml(config) -> string` | TOML parse/render path | `review_policy` parse/render defaults-szal, fail-fast invalid valuesnel | P1 | required-now | T1, T2 |
-| CS3 | `src/v11/shared/reviewPolicy/reviewPolicyRuntime.ts` | policy runtime helpers | `normalizeBubbleReviewPolicy(config: BubbleConfig) -> NormalizedBubbleReviewPolicy`, `buildBubbleReviewPolicyRuntimeView(config: BubbleConfig) -> BubbleReviewPolicyRuntimeView` | uj shared helper | single canonical normalization + requested/effective/support projection | P1 | required-now | T3, T4 |
-| CS4 | `src/v11/shared/reviewPolicy/updateBubbleReviewPolicy.ts` | mutation seam | `updateBubbleReviewPolicy(input: UpdateBubbleReviewPolicyInput) -> Promise<UpdateBubbleReviewPolicyResult>` | uj shared mutation helper | egyetlen bubble TOML read-modify-write seam ownership a review-policy mezokhoz | P1 | required-now | T5, T6 |
-| CS5 | `src/v11/shared/list/listCommandContract.ts`, `src/v11/shared/list/listCommandEntryBuilder.ts` | list projection consume | `buildBubbleListEntry(...) -> Promise<BubbleBuildResult>` | backend list read path | a bubble list entry ugyanazt a canonical runtime view-t projekciozza | P1 | required-now | T3, T7 |
-| CS6 | `src/v11/shared/status/statusCommandViewBuilder.ts` | status projection consume | `buildBubbleStatusView(input) -> BubbleStatusView` | backend status/detail read path | a status/detail ugyanazt a canonical runtime view-t projekciozza | P1 | required-now | T3, T8 |
-| CS7 | `src/v11/shared/metaReviewGate/metaReviewGateThresholdAuthority.ts` | pure authority resolver | `resolveMetaReviewGateThresholdAuthority(input: ResolveMetaReviewGateThresholdAuthorityInput) -> Promise<MetaReviewGateThresholdAuthorityResolution>` | uj shared meta-review gate helper | report/artifact/parity inputokbol canonical threshold authority resultet epit route mutation nelkul | P1 | required-now | T9, T10, T11 |
-| CS8 | `src/v11/shared/metaReviewGate/metaReviewGateFindingsMetadata.ts`, `src/v11/shared/metaReviewGate/metaReviewGateFindingsParityInput.ts`, `src/v11/shared/metaReviewGate/metaReviewGateFindingsSplit.ts` | support helpers | existing helpers -> support-only | existing helper modules | support-only maradnak; nem valnak kulon authority dontesi felulettte | P1 | required-now | T9, T10 |
+| CS2 | `src/config/bubbleConfig.ts` | parse/render normalization | `parseBubbleConfigToml(input) -> BubbleConfig`, `renderBubbleConfigToml(config) -> string` | TOML parse/render path | `review_policy` parse/render defaults-szal, fail-fast invalid valuesnel | P1 | required-now | T1, T2 |
+| CS3 | `src/v11/shared/reviewPolicy/reviewPolicyRuntime.ts` | shared runtime-view helper | `normalizeBubbleReviewPolicy(config: BubbleConfig) -> NormalizedBubbleReviewPolicy`, `buildBubbleReviewPolicyRuntimeView(config: BubbleConfig) -> BubbleReviewPolicyRuntimeView` | named Phase 1 helper | single canonical normalization + requested/effective/support projection | P1 | required-now | T3, T4 |
+| CS4 | `src/v11/shared/reviewPolicy/updateBubbleReviewPolicy.ts` | mutation seam | `updateBubbleReviewPolicy(input: UpdateBubbleReviewPolicyInput) -> Promise<UpdateBubbleReviewPolicyResult>` | named Phase 1 helper | egyetlen bubble TOML read-modify-write seam ownership a review-policy mezokhoz | P1 | required-now | T5, T6 |
+| CS5 | `src/v11/shared/list/listCommandContract.ts`, `src/v11/shared/list/listCommandEntryBuilder.ts`, `src/v11/shared/list/listCommandApi.ts` | list consume boundary | existing list API/builder signatures | backend list read path | a current-tree list consume family adja a scope-anchor proofot; ebbe a slice-ba kotelezoen be kell kotni a named shared runtime-view helpert `[consumes CS3]`, ugy hogy a shared semantics a list builder/core proofban maradnak, es a `listCommandApi.ts` boundary sem derivalt, sem normalizalt review-policy allapotot nem gyarthat ujra inline, hanem a CS3 canonical projectionjat viszi tovabb | P1 | required-now | T3, T7 |
+| CS6 | `src/v11/shared/status/statusCommandViewBuilder.ts`, `src/v11/shared/status/statusCommandApi.ts` | status consume boundary | `buildBubbleStatusView(input) -> BubbleStatusView`, existing status API signatures | backend status read path | a current-tree status consume family adja a scope-anchor proofot; ebbe a slice-ba kotelezoen be kell kotni ugyanazt a named shared runtime-view helpert `[consumes CS3]`, ugy hogy a shared semantics a status builder/core proofban maradnak, es a `statusCommandApi.ts` boundary sem derivalt, sem normalizalt review-policy allapotot nem gyarthat ujra inline, hanem a CS3 canonical projectionjat viszi tovabb | P1 | required-now | T3, T8 |
+| CS7 | `src/v11/shared/metaReviewGate/metaReviewGateThresholdAuthority.ts` | threshold authority resolver | `resolveMetaReviewGateThresholdAuthority(input: ResolveMetaReviewGateThresholdAuthorityInput) -> Promise<MetaReviewGateThresholdAuthorityResolution>` | named Phase 1 helper | a slice-nak kotelezoen le kell zarni egy named threshold-authority resolver boundaryt report/artifact/parity inputok folott | P1 | required-now | T9, T10, T11 |
+| CS8 | `src/v11/shared/metaReviewGate/metaReviewGateCurrentRunFinalization.ts`, `src/v11/shared/metaReviewGate/metaReviewGateFindingsValidation.ts`, `src/v11/shared/metaReviewGate/metaReviewGateFindingsMetadata.ts`, `src/v11/shared/metaReviewGate/metaReviewGateFindingsParityHelpers.ts`, `src/v11/shared/metaReviewGate/metaReviewGateFindingsParityInput.ts`, `src/v11/shared/metaReviewGate/metaReviewGateFindingsSplit.ts` | threshold authority input chain | existing helper signatures -> support/current validation chain | existing helper family | a current tree authority input chain explicit; a named threshold resolver ezekre a helper inputokra epul | P1 | required-now | T9, T10, T11 |
+| CS9 | `src/v11/shared/metaReviewGate/metaReviewGateHumanGatePersistence.ts`, `src/v11/shared/metaReviewGate/approvalRequestEnvelope.ts`, `src/v11/shared/metaReviewGate/metaReviewGateReviewerSnapshot.ts` | compat / guard / persistence surfaces | existing helper signatures | approval + reviewer guard family es a persisted human-gate seam | compat/guard surface maradnak, es a persisted human-gate seam Phase 1-ben nem lep elo threshold authority source-sza; a summary-normalization es same-round reviewer fail-closed behavior explicit direct regression proofot kap, beleertve a snapshot/envelope metadata negative authority proofjat is | P1 | required-now | T9, T10, T12 |
 
 ### 2) Data and Interface Contract
 
@@ -345,7 +374,7 @@ N/A. Ez a task nem valtoztatja meg a meta-review gate canonical success/completi
 | Review policy runtime view | nincs | single canonical runtime view | `requested_loop_mode`, `effective_loop_mode`, `support_status`, `meta_review_auto_rework_min_severity` | `blocked_reason_code` | additive internal/read-model | P1 | required-now |
 | Review policy mutation seam | nincs | explicit shared write contract | requested review-policy fields, freshness/expected-content guard | diagnostics | additive internal | P1 | required-now |
 | Bubble list/status projection | implicit/no review-policy field | additive `reviewPolicy` field | canonical runtime view | none | additive | P1 | required-now |
-| Threshold authority resolution | helper-halmazon szetszorva | explicit pure result | `status`, `parityMetadata`, `diagnostics`, `highestOpenSeverity` | split counts, artifactRef, metaReviewRunId | additive internal | P1 | required-now |
+| Threshold authority resolution | helper-halmazon szetszorva | explicit pure result | `status`, `parityMetadata`, `diagnostics`, `highestOpenSeverity`, `artifactRef`, `metaReviewRunId` | split counts | additive internal | P1 | required-now |
 
 Normative rules:
 
@@ -353,8 +382,9 @@ Normative rules:
 2. `review_policy.meta_review_auto_rework_min_severity` canonical normalized domainje: `P1 | P2 | P3`.
 3. Ha a `review_policy` blokk hianyzik, a normalized internal shape akkor is teljes legyen deterministic defaultokkal.
 4. `effective_loop_mode` Phase 1-ben nem lehet `meta_only`.
-5. `support_status` minimum domain: `enabled | guarded | unsupported`.
-6. `highestOpenSeverity` csak report/artifact/parity authority chainbol szarmazhat; reviewer snapshotbol vagy approval metadata-bol nem.
+5. `support_status` Phase 1 canonical domainje: `enabled | guarded`.
+6. `P0` nem resze a persisted auto-rework threshold selector domainjenek; a meglevo fail-closed / highest-severity semantics alatt marad, es a policy config Phase 1-ben nem lazithatja vagy irhatja felul.
+7. `highestOpenSeverity` csak report/artifact/parity authority chainbol szarmazhat; reviewer snapshotbol vagy approval metadata-bol nem.
 
 ### 3) Side Effects Contract
 
@@ -383,29 +413,31 @@ Constraint: ha a task nem nevezi meg kifejezetten, a resolvernek es a runtime-vi
 | Type | Items | Priority | Timing |
 |---|---|---|---|
 | must-use | `plans/runtime-review-policy-reset-and-phasing-plan-v1.md`, `docs/architecture/v11-placement-and-extraction-governance.md`, existing findings parity helpers | P1 | required-now |
-| must-not-use | reviewer snapshot as threshold truth, approval metadata as severity source, UI/store rollout, archived `O2-T9` cleanup scope, gate-route behavior change | P1 | required-now |
+| must-not-use | reviewer snapshot as threshold truth, approval metadata as severity source, UI/store rollout, `O2-T9` cleanup scope, gate-route behavior change | P1 | required-now |
 
 ### 6) Test Matrix
 
 | ID | Scenario | Given | When | Then | Priority | Timing | Evidence |
 |---|---|---|---|---|---|---|---|
 | T1 | config round-trip | valid `review_policy` TOML block | parse + render + reparse | canonical internal shape round-trippel | P1 | required-now | `tests/config/bubbleConfig.test.ts` |
-| T2 | invalid config reject | invalid loop mode vagy severity | parse lefut | explicit config error jon | P1 | required-now | `tests/config/bubbleConfig.test.ts` |
-| T3 | shared runtime view | bubble config `review_policy`-val es anelkul | runtime view + list/status projection | ugyanaz a canonical `reviewPolicy` shape jelenik meg | P1 | required-now | `tests/v11/shared/reviewPolicy/reviewPolicyRuntime.test.ts`, `tests/core/bubble/listBubbles.test.ts`, `tests/core/bubble/statusBubble.test.ts` |
+| T2 | invalid config reject | invalid loop mode, invalid severity enum, vagy `P0` threshold selector | parse lefut | explicit config error jon (`REVIEW_POLICY_*_INVALID`), `P0` rejecttel | P1 | required-now | `tests/config/bubbleConfig.test.ts` |
+| T3 | shared runtime view | bubble config `review_policy`-val es anelkul | runtime view + list/status projection | ugyanaz a canonical `reviewPolicy` shape jelenik meg a list/status consume familyben | P1 | required-now | `tests/v11/shared/reviewPolicy/reviewPolicyRuntime.test.ts`, `tests/core/bubble/listBubbles.test.ts`, `tests/core/bubble/statusBubble.test.ts` |
 | T4 | guarded meta_only projection | `requested_loop_mode=meta_only` | runtime view builder lefut | `effective_loop_mode=full`, `support_status=guarded`, blocked reason explicit | P1 | required-now | `tests/v11/shared/reviewPolicy/reviewPolicyRuntime.test.ts` |
-| T5 | mutation seam updates only review policy | valid bubble TOML + review-policy patch | `updateBubbleReviewPolicy(...)` lefut | bubble TOML deterministicen frissul, mas mezok nem driftelnek | P1 | required-now | `tests/v11/shared/reviewPolicy/updateBubbleReviewPolicy.test.ts` |
-| T6 | mutation conflict | stale expected content / freshness guard | update lefut | explicit conflict result, zero side effects | P1 | required-now | `tests/v11/shared/reviewPolicy/updateBubbleReviewPolicy.test.ts` |
-| T7 | list consume shared projectiont hasznal | bubble list entry epul | list build lefut | nincs sajat inline requested/effective/support drift | P1 | required-now | `tests/core/bubble/listBubbles.test.ts` |
-| T8 | status/detail consume shared projectiont hasznal | bubble status epul | status build lefut | nincs kulon status-only projection drift | P1 | required-now | `tests/core/bubble/statusBubble.test.ts` |
-| T9 | threshold authority resolved same-authority chainbol | report_json + findings artifact + parity metadata rendelkezesre all | resolver lefut | `status=resolved`, parity metadata preserved, highest severity explicit | P1 | required-now | `tests/v11/shared/metaReviewGate/metaReviewGateThresholdAuthority.test.ts` |
-| T10 | threshold authority unresolved secondary source nelkul | artifact ref/run-link invalid vagy missing | resolver lefut | unresolved/incomplete result, reviewer snapshot nelkul | P1 | required-now | `tests/v11/shared/metaReviewGate/metaReviewGateThresholdAuthority.test.ts` |
-| T11 | threshold authority preserved guard chain | same-round parity guard fail | resolver lefut | diagnostics a current guard reasonokon alapulnak, de route nem valtozik | P1 | required-now | `tests/v11/shared/metaReviewGate/metaReviewGateThresholdAuthority.test.ts` |
+| T5 | mutation seam updates only review policy | valid bubble TOML + review-policy patch | canonical write seam lefut | bubble TOML deterministicen frissul, mas mezok nem driftelnek | P1 | required-now | `tests/v11/shared/reviewPolicy/updateBubbleReviewPolicy.test.ts`, `tests/config/bubbleConfig.test.ts` |
+| T6 | mutation conflict | stale expected content / freshness guard | update lefut | explicit `REVIEW_POLICY_WRITE_CONFLICT` result, zero side effects | P1 | required-now | `tests/v11/shared/reviewPolicy/updateBubbleReviewPolicy.test.ts` |
+| T7 | list command contract es list API consume shared projectiont hasznal | bubble list entry epul | list build lefut | nincs sajat inline requested/effective/support drift, es a list consume family (`listCommandContract.ts` + `listCommandApi.ts`) additive `reviewPolicy` fieldje ugyanebbol a canonical runtime view-bol jon, nem API-boundary ujraderivalasbol | P1 | required-now | `tests/core/bubble/listBubbles.test.ts` (primary semantic proof a shared list builder/entry projectionre), `tests/v11/application/list/listCommandApi.test.ts` (current-tree application-boundary harness; ebben a taskban explicit review-policy projection assertionnel kell boviteni, hogy a command API additive `reviewPolicy` fieldje a CS3 canonical projectionjat hordozza, es az API boundary ne derivalt sajat review-policy allapotot inline) |
+| T8 | status consume family shared projectiont hasznal | bubble status epul | status build lefut | nincs kulon status-only projection drift, es a status consume family (`statusCommandViewBuilder.ts` + `statusCommandApi.ts`) ugyanazt a canonical runtime view-t viszi tovabb, nem API-boundary ujraderivalasbol | P1 | required-now | `tests/core/bubble/statusBubble.test.ts` (primary es current-tree execution proof: a mai repo-ban ez a harness a `getBubbleStatusV11` / shared `statusCommandApi` utat futtatja, igy a status consume-boundary explicit review-policy projection assertioneit itt kell megfogni; a `statusCliEntrypointParity.test.ts` export-paritas-only coverage, ezert nem eleg onallo CS3 consume-proofnak) |
+| T9 | threshold authority resolved same-authority chainbol | report_json + findings artifact + parity metadata rendelkezesre all | resolver/input-chain coverage lefut | `status=resolved`, parity metadata preserved, highest severity explicit, es a reviewer snapshot / approval envelope guard- vagy compat-surface marad ugy, hogy egyik sem lep elo authority source-sza | P1 | required-now | `tests/v11/shared/metaReviewGate/metaReviewGateThresholdAuthority.test.ts`, `tests/core/bubble/metaReviewGate.test.ts`, `tests/contracts/v11/metaReviewGate.contract.test.ts`, `tests/v11/shared/metaReviewGate/metaReviewGateFindingsMetadata.test.ts`, `tests/v11/shared/metaReviewGate/metaReviewGateFindingsParityHelpers.test.ts`, `tests/v11/shared/metaReviewGate/metaReviewGateHumanGatePersistence.test.ts` (negative authority proof a guard/compat surface-ekre) |
+| T10 | threshold authority unresolved secondary source nelkul | artifact ref/run-link invalid vagy missing | resolver/input-chain coverage lefut | unresolved/incomplete result, reviewer snapshot es approval metadata nelkul mint authority source, vagyis nincs snapshot/envelope fallback severity truth | P1 | required-now | `tests/v11/shared/metaReviewGate/metaReviewGateThresholdAuthority.test.ts`, `tests/core/bubble/metaReviewGate.test.ts`, `tests/contracts/v11/metaReviewGate.contract.test.ts`, `tests/v11/shared/metaReviewGate/metaReviewGateFindingsMetadata.test.ts`, `tests/v11/shared/metaReviewGate/metaReviewGateFindingsParityHelpers.test.ts`, `tests/v11/shared/metaReviewGate/metaReviewGateHumanGatePersistence.test.ts` (negative authority proof fail-closed unresolved/incomplete agban) |
+| T11 | threshold authority preserved validation/parity helper chain | same-round parity guard fail | resolver/input-chain coverage lefut | diagnostics a current validation/parity helper chain reasonjaira epulnek, de route nem valtozik, es a helper-family preserve + expose contractja megmarad | P1 | required-now | `tests/v11/shared/metaReviewGate/metaReviewGateThresholdAuthority.test.ts`, `tests/core/bubble/metaReviewGate.test.ts`, `tests/contracts/v11/metaReviewGate.contract.test.ts`, `tests/v11/shared/metaReviewGate/metaReviewGateFindingsMetadata.test.ts`, `tests/v11/shared/metaReviewGate/metaReviewGateFindingsParityHelpers.test.ts`, `tests/v11/shared/metaReviewGate/metaReviewGateFindingsSplit.test.ts` |
+| T12 | approval envelope es reviewer snapshot guard surface preserve-elt marad | parity metadata consistent/mismatch, illetve same-round reviewer snapshot metadata-only open findings | approval request envelope epul | a human-facing summary normalization es fail-closed reviewer guard megmarad, de snapshot/envelope metadata nem lep elo threshold authority source-sza; explicit negative proof kell arra, hogy metadata-only surface marad | P1 | required-now | `tests/core/bubble/approvalRequestEnvelope.test.ts` (human-facing payload metadata-only proof), `tests/v11/shared/metaReviewGate/metaReviewGateFindingsMetadata.test.ts`, `tests/v11/shared/metaReviewGate/metaReviewGateHumanGatePersistence.test.ts` (negative authority proof a persisted human-gate route/payload surface-re) |
 
 ## L2 - Implementation Notes (Optional)
 
-1. A review-policy helper placement a `src/v11/shared/reviewPolicy/**` ala menjen, mert status/list es kesobbi mutation/UI/API consume kozos foundationje.
-2. A threshold authority resolver Phase 1-ben pure helper maradjon; a current gate finalization wiring atallasa csak akkor elfogadhato ebben a taskban, ha behavioral parity bizonyithato es nem nyit approval/human-gate consume-ot.
+1. A review-policy helper placement `src/v11/shared/reviewPolicy/**` ala keruljon; ezek Phase 1 kotelezo named outputok, mikozben a task scope-proofja tovabbra is a meglevo `list/status` API-builder es `bubbleConfig` entrypointokbol induljon, es az acceptance-proof ott family-szinten ertelmezendo, ahol a current tree-ben nincs kulon dedikalt per-file unit harness.
+2. A threshold authority resolver Phase 1-ben pure helper maradjon; a current gate finalization wiring defaultban maradjon erintetlen. Legfeljebb bounded same-family internal rewiring fogadhato el, ha explicit parity proof igazolja, hogy route selection, state write, envelope append es human-gate payload shaping valtozatlan marad, es ezzel sem approval-, sem human-gate-consume scope nem nyilik meg.
 3. Ha a list/status additive field compile-time consumer alignmentet igenyel, az alignment maradjon backend presenter-level no-op; ne nyisson uj operatori copy vagy UI-state rolloutot.
+4. Ha a consume-boundary proof existing current-tree harnessre epul, akkor a harnesset explicit review-policy projection assertionnel kell kiegesziteni; puszta export- vagy entrypoint-paritas nem eleg a CS3 consume-boundary bizonyitasahoz. A mai repo-ban ez T7-nel a `tests/v11/application/list/listCommandApi.test.ts`, T8-nal pedig a `tests/core/bubble/statusBubble.test.ts`, mert a `tests/v11/application/status/statusCliEntrypointParity.test.ts` csak export-paritast ellenoriz.
 
 ## Hardening Backlog (Optional)
 
@@ -428,7 +460,7 @@ Constraint: ha a task nem nevezi meg kifejezetten, a resolvernek es a runtime-vi
 
 Mark task as `IMPLEMENTABLE` when:
 1. a `review_policy` config schema es parse/render contract explicit,
-2. a kozos runtime-view builder status/list/detail consume-ra explicit,
-3. a bubble TOML mutation seam explicit es zero-side-effect conflict pathot ad,
-4. a pure threshold-authority resolver explicit result contracttal letrejon,
+2. a kozos runtime-view builder named Phase 1 helperkent explicit, es status/list consume-ra a current-tree API-builder anchorokon keresztul kotodik be,
+3. a bubble TOML mutation seam named Phase 1 helperkent explicit es zero-side-effect conflict pathot ad,
+4. a pure threshold-authority resolver named Phase 1 helperkent explicit result contracttal letrejon,
 5. es a task tovabbra sem huzza be a gate routingot, approval payloadot vagy bypass activationt.
