@@ -43,8 +43,6 @@ describe("startCommandOrchestration", () => {
     expect(startBubbleDependencyDefaults.launchBubbleSessionAck).toBe(
       launchBubbleSessionAck
     );
-    expect("launchBubbleTmuxSessionAck" in startBubbleDependencyDefaults).toBe(false);
-    expect("launchBubbleTmuxSession" in startBubbleDependencyDefaults).toBe(false);
 
     const input = {
       bubbleId: "bubble",
@@ -116,13 +114,6 @@ describe("startCommandOrchestration", () => {
         status: "running" as const,
         sessionName: "pf-bubble"
       })),
-      launchBubbleTmuxSessionAck: vi.fn(async () => ({
-        status: "running" as const,
-        sessionName: "pf-bubble-compat"
-      })),
-      launchBubbleTmuxSession: vi.fn(async () => ({
-        sessionName: "pf-bubble-legacy"
-      })),
       terminateBubbleTmuxSession: vi.fn(async () => ({
         sessionName: "pf-bubble",
         existed: true
@@ -193,8 +184,6 @@ describe("startCommandOrchestration", () => {
       sessionName: "pf-bubble"
     });
     expect(overrides.launchBubbleSessionAck).toHaveBeenCalledTimes(1);
-    expect(overrides.launchBubbleTmuxSessionAck).not.toHaveBeenCalled();
-    expect(overrides.launchBubbleTmuxSession).not.toHaveBeenCalled();
     expect(resolved.terminateTmux).toBe(overrides.terminateBubbleTmuxSession);
     expect(resolved.isTmuxSessionAlive).toBe(overrides.isTmuxSessionAlive);
     expect(resolved.readSessions).toBe(overrides.readRuntimeSessionsRegistry);
@@ -210,24 +199,15 @@ describe("startCommandOrchestration", () => {
     expect(resolved.buildResumeSummary).toBe(overrides.buildResumeTranscriptSummary);
   });
 
-  it("prefers the neutral override over retained ack and legacy bridge fallbacks", async () => {
+  it("prefers the neutral override when provided", async () => {
     const launchBubbleSessionAckOverride = vi.fn(async () => ({
       status: "running" as const,
       sessionName: "pf-bubble-neutral"
     }));
-    const launchBubbleTmuxSessionAckOverride = vi.fn(async () => ({
-      status: "running" as const,
-      sessionName: "pf-bubble-compat"
-    }));
-    const launchBubbleTmuxSessionOverride = vi.fn(async () => ({
-      sessionName: "pf-bubble-legacy"
-    }));
 
     const resolved = await resolveStartBubbleDependencies({
       dependencies: {
-        launchBubbleSessionAck: launchBubbleSessionAckOverride,
-        launchBubbleTmuxSessionAck: launchBubbleTmuxSessionAckOverride,
-        launchBubbleTmuxSession: launchBubbleTmuxSessionOverride
+        launchBubbleSessionAck: launchBubbleSessionAckOverride
       },
       runWorktreeBootstrapCommandDefault: vi.fn(async () => undefined),
       isTmuxSessionAliveDefault: vi.fn(async () => false)
@@ -246,65 +226,6 @@ describe("startCommandOrchestration", () => {
       sessionName: "pf-bubble-neutral"
     });
     expect(launchBubbleSessionAckOverride).toHaveBeenCalledTimes(1);
-    expect(launchBubbleTmuxSessionAckOverride).not.toHaveBeenCalled();
-    expect(launchBubbleTmuxSessionOverride).not.toHaveBeenCalled();
-  });
-
-  it("falls back to retained ack override when neutral override is absent", async () => {
-    const launchBubbleTmuxSessionAckOverride = vi.fn(async () => ({
-      status: "running" as const,
-      sessionName: "pf-bubble-compat"
-    }));
-
-    const resolved = await resolveStartBubbleDependencies({
-      dependencies: {
-        launchBubbleTmuxSessionAck: launchBubbleTmuxSessionAckOverride
-      },
-      runWorktreeBootstrapCommandDefault: vi.fn(async () => undefined),
-      isTmuxSessionAliveDefault: vi.fn(async () => false)
-    });
-
-    const ack = await resolved.launchSessionAck({
-      bubbleId: "bubble",
-      workspacePath: "worktree",
-      statusCommand: "status",
-      implementerCommand: "implementer",
-      reviewerCommand: "reviewer"
-    });
-
-    expect(ack).toEqual({
-      status: "running",
-      sessionName: "pf-bubble-compat"
-    });
-    expect(launchBubbleTmuxSessionAckOverride).toHaveBeenCalledTimes(1);
-  });
-
-  it("bridges the legacy launchBubbleTmuxSession override into the neutral ack port", async () => {
-    const launchBubbleTmuxSessionOverride = vi.fn(async () => ({
-      sessionName: "pf-bubble-legacy"
-    }));
-
-    const resolved = await resolveStartBubbleDependencies({
-      dependencies: {
-        launchBubbleTmuxSession: launchBubbleTmuxSessionOverride
-      },
-      runWorktreeBootstrapCommandDefault: vi.fn(async () => undefined),
-      isTmuxSessionAliveDefault: vi.fn(async () => false)
-    });
-
-    const ack = await resolved.launchSessionAck({
-      bubbleId: "bubble",
-      workspacePath: "worktree",
-      statusCommand: "status",
-      implementerCommand: "implementer",
-      reviewerCommand: "reviewer"
-    });
-
-    expect(ack).toEqual({
-      status: "running",
-      sessionName: "pf-bubble-legacy"
-    });
-    expect(launchBubbleTmuxSessionOverride).toHaveBeenCalledTimes(1);
   });
 
   it("routes CREATED to fresh and runtime states to resume", () => {

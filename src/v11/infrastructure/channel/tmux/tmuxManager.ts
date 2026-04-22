@@ -1,19 +1,14 @@
 import { buildBubbleTmuxSessionName } from "../../../shared/bubble/tmuxSessionName.js";
 import type {
   LaunchBubbleSessionAck,
-  LaunchBubbleSessionAckPort,
   LaunchBubbleSessionInput,
-  LaunchBubbleTmuxSessionAckPort,
-  LaunchBubbleTmuxSessionInput,
-  LaunchBubbleTmuxSessionPort,
-  LaunchBubbleTmuxSessionResult,
   TmuxRunner
 } from "../../../shared/ports/tmuxSessions.js";
 import {
   runTmux,
   TmuxCommandError
 } from "./tmuxRunner.js";
-import { launchBubbleTmuxSessionLayout } from "./tmuxManagerSessionLayout.js";
+import { launchBubbleSessionLayout } from "./tmuxManagerSessionLayout.js";
 import { seedBubbleTmuxPaneMessages } from "./tmuxManagerPaneSeed.js";
 import {
   respawnTmuxPaneCommand,
@@ -31,18 +26,6 @@ export type {
   WorkspaceRequiredLaunchBubbleSessionAck,
   SessionExistsLaunchBubbleSessionAck,
   CommandFailedLaunchBubbleSessionAck,
-  LaunchBubbleTmuxSessionAck,
-  LaunchBubbleTmuxSessionAckFailureKind,
-  LaunchBubbleTmuxSessionAckPort,
-  LaunchBubbleTmuxSessionAckReasonCode,
-  LaunchBubbleTmuxSessionAckStatus,
-  LaunchBubbleTmuxSessionInput,
-  RunningLaunchBubbleTmuxSessionAck,
-  WorkspaceRequiredLaunchBubbleTmuxSessionAck,
-  SessionExistsLaunchBubbleTmuxSessionAck,
-  CommandFailedLaunchBubbleTmuxSessionAck,
-  LaunchBubbleTmuxSessionPort,
-  LaunchBubbleTmuxSessionResult,
   TerminateBubbleTmuxSessionInput,
   TerminateBubbleTmuxSessionPort,
   TerminateBubbleTmuxSessionResult,
@@ -82,14 +65,6 @@ export { buildBubbleTmuxSessionName } from "../../../shared/bubble/tmuxSessionNa
 
 function buildCanonicalLaunchOperationContext(bubbleId: string): string {
   return `operation_id=launch_bubble_session bubble_id=${bubbleId}`;
-}
-
-function buildLegacyTmuxLaunchOperationContext(bubbleId: string): string {
-  return `operation_id=launch_bubble_tmux_session bubble_id=${bubbleId}`;
-}
-
-function buildLegacyTmuxLaunchWorkspaceRequiredMessage(bubbleId: string): string {
-  return `TMUX_LAUNCH_WORKSPACE_REQUIRED: context ${buildLegacyTmuxLaunchOperationContext(bubbleId)}.`;
 }
 
 interface LaunchBubbleSessionRuntimeInput extends LaunchBubbleSessionInput {
@@ -155,7 +130,6 @@ function createLaunchBubbleSessionFailureAck(
 
 interface LaunchBubbleSessionAckResolution {
   ack: LaunchBubbleSessionAck;
-  legacyError?: Error;
 }
 
 interface LaunchBubbleSessionRuntimeConfig {
@@ -177,47 +151,20 @@ function createLaunchBubbleSessionAckResolution(
     | {
       failureKind: "workspace_required";
       errorMessage: string;
-      legacyError?: Error;
     }
     | {
       failureKind: "session_exists";
       errorMessage: string;
       sessionName: string;
-      legacyError?: Error;
     }
     | {
       failureKind: "command_failed";
       errorMessage: string;
       sessionName: string;
-      legacyError?: Error;
     }
 ): LaunchBubbleSessionAckResolution {
-  const { legacyError, ...ackInput } = input;
   return {
-    ack: createLaunchBubbleSessionFailureAck(ackInput),
-    ...(legacyError !== undefined ? { legacyError } : {})
-  };
-}
-
-function projectRunningLaunchBubbleSessionAckToResult(
-  ack: Extract<LaunchBubbleSessionAck, { status: "running" }>
-): LaunchBubbleTmuxSessionResult {
-  return {
-    sessionName: ack.sessionName
-  };
-}
-
-function projectCanonicalLaunchAckToTmuxCompatAck(
-  bubbleId: string,
-  ack: LaunchBubbleSessionAck
-): LaunchBubbleSessionAck {
-  if (ack.failure_kind !== "workspace_required") {
-    return ack;
-  }
-
-  return {
-    ...ack,
-    error_message: buildLegacyTmuxLaunchWorkspaceRequiredMessage(bubbleId)
+    ack: createLaunchBubbleSessionFailureAck(input)
   };
 }
 
@@ -232,18 +179,14 @@ function isLaunchAckInternalInvariantError(error: unknown): boolean {
 }
 
 function createWorkspaceRequiredAckResolution(
-  bubbleId: string,
+  _bubbleId: string,
   error: unknown
 ): LaunchBubbleSessionAckResolution {
-  const legacyError = new Error(
-    buildLegacyTmuxLaunchWorkspaceRequiredMessage(bubbleId)
-  );
   const canonicalErrorMessage =
     error instanceof Error ? error.message : new Error(String(error)).message;
   return createLaunchBubbleSessionAckResolution({
     failureKind: "workspace_required",
-    errorMessage: canonicalErrorMessage,
-    legacyError
+    errorMessage: canonicalErrorMessage
   });
 }
 
@@ -280,25 +223,22 @@ async function resolveHasSessionAckFailure(
     return null;
   }
   if (hasSession.exitCode === 0) {
-    const legacyError = new TmuxSessionExistsError(sessionName);
     return createLaunchBubbleSessionAckResolution({
       failureKind: "session_exists",
-      errorMessage: legacyError.message,
-      sessionName,
-      legacyError
+      errorMessage: new TmuxSessionExistsError(sessionName).message,
+      sessionName
     });
   }
 
-  const legacyError = new TmuxCommandError(
+  const error = new TmuxCommandError(
     ["has-session", "-t", sessionName],
     hasSession.exitCode,
     hasSession.stderr || hasSession.stdout
   );
   return createLaunchBubbleSessionAckResolution({
     failureKind: "command_failed",
-    errorMessage: legacyError.message,
-    sessionName,
-    legacyError
+    errorMessage: error.message,
+    sessionName
   });
 }
 
@@ -315,7 +255,7 @@ async function launchAndSeedBubbleSession(
     config.workspacePath,
     input.statusCommand
   ]);
-  const layout = await launchBubbleTmuxSessionLayout({
+  const layout = await launchBubbleSessionLayout({
     runner: config.runner,
     sessionName: config.sessionName,
     workspacePath: config.workspacePath,
@@ -365,18 +305,11 @@ async function launchAndSeedBubbleSession(
   });
 }
 
-export const launchBubbleSessionAck: LaunchBubbleSessionAckPort = async (
-  input
+export const launchBubbleSessionAck = async (
+  input: LaunchBubbleSessionRuntimeInput
 ): Promise<LaunchBubbleSessionAck> => {
   const resolution = await resolveLaunchBubbleSessionAck(input);
   return resolution.ack;
-};
-
-export const launchBubbleTmuxSessionAck: LaunchBubbleTmuxSessionAckPort = async (
-  input
-) => {
-  const ack = await launchBubbleSessionAck(input);
-  return projectCanonicalLaunchAckToTmuxCompatAck(input.bubbleId, ack);
 };
 
 async function resolveLaunchBubbleSessionAck(
@@ -417,30 +350,12 @@ async function resolveLaunchBubbleSessionAck(
     if (isLaunchAckInternalInvariantError(error)) {
       throw error;
     }
-    const legacyError = error instanceof Error ? error : new Error(String(error));
     return createLaunchBubbleSessionAckResolution({
       failureKind: "command_failed",
-      errorMessage: legacyError.message,
-      sessionName,
-      legacyError
+      errorMessage:
+        error instanceof Error ? error.message : new Error(String(error)).message,
+      sessionName
     });
   }
 }
-
-export const launchBubbleTmuxSession: LaunchBubbleTmuxSessionPort = async (
-  input: LaunchBubbleTmuxSessionInput
-): Promise<LaunchBubbleTmuxSessionResult> => {
-  const { ack, legacyError } = await resolveLaunchBubbleSessionAck(input);
-  if (ack.status === "running") {
-    return projectRunningLaunchBubbleSessionAckToResult(ack);
-  }
-
-  if (legacyError !== undefined) {
-    throw legacyError;
-  }
-
-  throw new Error(
-    `${ack.reason_code}: context operation_id=launch_bubble_tmux_session bubble_id=${input.bubbleId}. ${ack.error_message}`
-  );
-};
 export { terminateBubbleTmuxSession, respawnTmuxPaneCommand };

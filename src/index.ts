@@ -361,7 +361,6 @@ export {
 export {
   buildBubbleTmuxSessionName,
   launchBubbleSessionAck,
-  launchBubbleTmuxSession,
   runTmux,
   terminateBubbleTmuxSession,
   TmuxCommandError,
@@ -655,8 +654,6 @@ export type {
   LaunchBubbleSessionAck,
   LaunchBubbleSessionAckPort,
   LaunchBubbleSessionInput,
-  LaunchBubbleTmuxSessionInput,
-  LaunchBubbleTmuxSessionResult,
   TerminateBubbleTmuxSessionInput,
   TerminateBubbleTmuxSessionResult,
   TmuxRunOptions,

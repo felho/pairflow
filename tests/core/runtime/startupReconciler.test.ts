@@ -327,8 +327,8 @@ describe("reconcileRuntimeSessions", () => {
             })
           );
         },
-        launchBubbleTmuxSession: () =>
-          Promise.resolve({ sessionName: "pf-b_reconcile_04" })
+        launchBubbleSessionAck: () =>
+          Promise.resolve({ status: "running" as const, sessionName: "pf-b_reconcile_04" })
       }
     );
 

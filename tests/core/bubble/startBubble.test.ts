@@ -19,7 +19,6 @@ import {
 } from "../../../src/v11/application/start/emitStartV11.js";
 import {
   launchBubbleSessionAck as launchBubbleSessionAckPublicApi,
-  launchBubbleTmuxSession as launchBubbleTmuxSessionPublicApi,
   startBubble as startBubblePublicApi,
   StartBubbleError as PublicStartBubbleError
 } from "../../../src/index.js";
@@ -28,8 +27,7 @@ import type {
   LaunchBubbleSessionInput
 } from "../../../src/index.js";
 import {
-  launchBubbleSessionAck as launchBubbleSessionAckCanonical,
-  launchBubbleTmuxSession as launchBubbleTmuxSessionCanonical
+  launchBubbleSessionAck as launchBubbleSessionAckCanonical
 } from "../../../src/v11/infrastructure/channel/tmux/tmuxManager.js";
 import { upsertRuntimeSession } from "../../../src/v11/infrastructure/executor/sessionRuntime/runtimeSessionsRegistry.js";
 import { BubbleLookupError } from "../../../src/v11/infrastructure/executor/workspace/bubbleLookup.js";
@@ -55,7 +53,6 @@ import {
 import { shellQuote } from "../../../src/v11/shared/foundation/shellQuote.js";
 import type { BubbleStateSnapshot } from "../../../src/types/bubble.js";
 import type { WorktreeBootstrapInput } from "../../../src/v11/shared/ports/worktreeWorkspace.js";
-import type { LaunchBubbleTmuxSessionInput } from "../../../src/v11/shared/ports/tmuxSessions.js";
 import type * as WorktreeManagerModule from "../../../src/v11/infrastructure/workspace/worktreeManager.js";
 import { initGitRepository } from "../../helpers/git.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
@@ -257,10 +254,10 @@ describe("startBubble", () => {
               worktreePath: created.paths.worktreePath
             })
           ),
-        launchBubbleTmuxSession: (input) => {
+        launchBubbleSessionAck: (input) => {
           capturedKickoff = input.implementerKickoffMessage;
           implementerCommand = input.implementerCommand;
-          return Promise.resolve({ sessionName: "pf-b_start_ideation_01" });
+          return Promise.resolve({ status: "running" as const, sessionName: "pf-b_start_ideation_01" });
         },
         claimRuntimeSession: (input) =>
           Promise.resolve({
@@ -301,7 +298,7 @@ describe("startBubble", () => {
     );
   });
 
-  it("re-exports neutral and retained launch helpers from the public surface", () => {
+  it("re-exports the neutral launch helper from the public surface", () => {
     const input: LaunchBubbleSessionInput = {
       bubbleId: "bubble",
       workspacePath: "/tmp/worktree",
@@ -317,7 +314,6 @@ describe("startBubble", () => {
     expect(input.bubbleId).toBe("bubble");
     expect(ack.sessionName).toBe("pf-bubble");
     expect(launchBubbleSessionAckPublicApi).toBe(launchBubbleSessionAckCanonical);
-    expect(launchBubbleTmuxSessionPublicApi).toBe(launchBubbleTmuxSessionCanonical);
   });
 
   it("transitions CREATED -> PREPARING_WORKSPACE -> RUNNING and launches tmux", async () => {
@@ -371,7 +367,7 @@ describe("startBubble", () => {
             })
           );
         },
-        launchBubbleTmuxSession: (input) => {
+        launchBubbleSessionAck: (input) => {
           calls.push("launch");
           implementerCommand = input.implementerCommand;
           reviewerCommand = input.reviewerCommand;
@@ -385,7 +381,7 @@ describe("startBubble", () => {
           expect(input.implementerKickoffMessage).toContain(
             created.paths.taskArtifactPath
           );
-          return Promise.resolve({ sessionName: "pf-b_start_01" });
+          return Promise.resolve({ status: "running" as const, sessionName: "pf-b_start_01" });
         },
         claimRuntimeSession: (input) => {
           claims.push({
@@ -706,7 +702,7 @@ describe("startBubble", () => {
         bootstrapWorktreeWorkspace: vi.fn(async () => {
           throw new Error("remote start must not bootstrap a local worktree");
         }),
-        launchBubbleTmuxSession: vi.fn(async () => {
+        launchBubbleSessionAck: vi.fn(async () => {
           throw new Error("remote outer start must not launch local tmux");
         })
       }
@@ -1165,7 +1161,7 @@ describe("startBubble", () => {
           executeRemoteBubbleStart: vi.fn(async () => {
             throw new Error("inner remote start must not re-enter remote SSH execution");
           }),
-          launchBubbleTmuxSession: vi.fn(async (input: LaunchBubbleTmuxSessionInput) => {
+          launchBubbleSessionAck: vi.fn(async (input: LaunchBubbleSessionInput) => {
             expect(extractBashLcScript(input.statusCommand)).toContain(
               "'/home/dev/.local/share/pnpm/pairflow' bubble status --id"
             );
@@ -1173,6 +1169,7 @@ describe("startBubble", () => {
               "export PAIRFLOW_EXTERNAL_COMMAND='/home/dev/.local/share/pnpm/pairflow'"
             );
             return {
+              status: "running" as const,
               sessionName: "pf-b_start_remote_inner_01"
             };
           })
@@ -1305,7 +1302,7 @@ describe("startBubble", () => {
               }
             }),
             executeRemoteBubbleStart,
-            launchBubbleTmuxSession: vi.fn(async () => {
+            launchBubbleSessionAck: vi.fn(async () => {
               throw new Error("source repo env leak must not launch local inner-start tmux");
             })
           }
@@ -1380,7 +1377,7 @@ describe("startBubble", () => {
         {
           buildResumeTranscriptSummary: async () =>
             "resume-summary: verified-remote-clone",
-          launchBubbleTmuxSession: async (input: LaunchBubbleTmuxSessionInput) => {
+          launchBubbleSessionAck: async (input: LaunchBubbleSessionInput) => {
             const implementerScript = extractBashLcScript(input.implementerCommand);
             expect(input.workspacePath).toBe(repoPath);
             expect(implementerScript).toContain(
@@ -1390,6 +1387,7 @@ describe("startBubble", () => {
               bubble.paths.worktreePath
             );
             return {
+              status: "running" as const,
               sessionName: "pf-b_start_remote_clone_resume_01"
             };
           }
@@ -1781,9 +1779,10 @@ describe("startBubble", () => {
             }
           }),
         upsertRuntimeSession: upsertRuntimeSessionMock,
-        launchBubbleTmuxSession: (input) => {
+        launchBubbleSessionAck: (input) => {
           expect(input.workspacePath).toBe(canonicalWorkspacePath);
           return Promise.resolve({
+            status: "running" as const,
             sessionName: "pf-b_start_canonical_workspace_01"
           });
         }
@@ -1845,9 +1844,10 @@ describe("startBubble", () => {
           expect(input.worktreePath).toBe(created.paths.worktreePath);
           expect(input.command).toBe("pnpm install --frozen-lockfile && pnpm build");
         },
-        launchBubbleTmuxSession: (input) => {
+        launchBubbleSessionAck: (input) => {
           expect(input.workspacePath).toBe(canonicalWorkspacePath);
           return Promise.resolve({
+            status: "running" as const,
             sessionName: "pf-b_start_bootstrap_canonical_workspace_01"
           });
         }
@@ -1948,12 +1948,12 @@ describe("startBubble", () => {
               updatedAt: "2026-02-22T14:20:00.000Z"
             };
           },
-          launchBubbleTmuxSession: async (input) => {
+          launchBubbleSessionAck: async (input) => {
             launchCalled = true;
             expect(input.workspacePath).toBe(
               `${created.paths.worktreePath}/../clone-authority`
             );
-            return { sessionName: "pf-b_start_bootstrap_clone_authority_01" };
+            return { status: "running" as const, sessionName: "pf-b_start_bootstrap_clone_authority_01" };
           },
           cleanupWorktreeWorkspace: async () => {
             cleanupCalled = true;
@@ -2048,10 +2048,10 @@ describe("startBubble", () => {
             updatedAt: "2026-02-22T13:01:00.000Z"
           });
         },
-        launchBubbleTmuxSession: (input) => {
+        launchBubbleSessionAck: (input) => {
           launchCalled = true;
           expect(input.workspacePath).toBe(created.paths.worktreePath);
-          return Promise.resolve({ sessionName: "pf-b_start_clone_01" });
+          return Promise.resolve({ status: "running" as const, sessionName: "pf-b_start_clone_01" });
         },
         removeRuntimeSession: () => {
           removeCalled = true;
@@ -2117,10 +2117,10 @@ describe("startBubble", () => {
           expect(input.workspacePath).toBe(created.paths.worktreePath);
           expect(input.worktreePath).toBe(created.paths.worktreePath);
         },
-        launchBubbleTmuxSession: (input) => {
+        launchBubbleSessionAck: (input) => {
           callOrder.push("launch");
           expect(input.workspacePath).toBe(created.paths.worktreePath);
-          return Promise.resolve({ sessionName: "pf-b_start_clone_bootstrap_cmd_01" });
+          return Promise.resolve({ status: "running" as const, sessionName: "pf-b_start_clone_bootstrap_cmd_01" });
         }
       }
     );
@@ -2203,9 +2203,9 @@ describe("startBubble", () => {
             upsertCalled = true;
             throw new Error("upsert should not run after workspace-kind mismatch");
           },
-          launchBubbleTmuxSession: async () => {
+          launchBubbleSessionAck: async () => {
             launchCalled = true;
-            return { sessionName: "pf-b_start_clone_workspace_kind_mismatch_01" };
+            return { status: "running" as const, sessionName: "pf-b_start_clone_workspace_kind_mismatch_01" };
           },
           cleanupWorktreeWorkspace: async () => {
             cleanupCalled = true;
@@ -2292,9 +2292,9 @@ describe("startBubble", () => {
           upsertCalled = true;
           throw new Error("upsert should not run after workspace-kind mismatch");
         },
-        launchBubbleTmuxSession: async () => {
+        launchBubbleSessionAck: async () => {
           launchCalled = true;
-          return { sessionName: "pf-b_start_worktree_kind_mismatch_01" };
+          return { status: "running" as const, sessionName: "pf-b_start_worktree_kind_mismatch_01" };
         },
         cleanupWorktreeWorkspace: async () => {
           cleanupCalled = true;
@@ -2406,10 +2406,11 @@ describe("startBubble", () => {
             summaryCalled += 1;
             return Promise.resolve(`resume-summary: state=${stateValue}`);
           },
-          launchBubbleTmuxSession: (input) => {
+          launchBubbleSessionAck: (input) => {
             launchCalled += 1;
             expect(input.workspacePath).toBe(cloneWorkspacePath);
             return Promise.resolve({
+              status: "running" as const,
               sessionName: `pf-b_start_clone_resume_${stateValue.toLowerCase()}`
             });
           }
@@ -2523,8 +2524,8 @@ describe("startBubble", () => {
                 worktreePath: created.paths.worktreePath
               })
             ),
-          launchBubbleTmuxSession: () =>
-            Promise.resolve({ sessionName: "pf-b_start_lookup_once_01" })
+          launchBubbleSessionAck: () =>
+            Promise.resolve({ status: "running" as const, sessionName: "pf-b_start_lookup_once_01" })
         }
       );
 
@@ -2572,9 +2573,9 @@ describe("startBubble", () => {
           expect(input.worktreePath).toBe(created.paths.worktreePath);
           expect(input.command).toBe("pnpm install --frozen-lockfile && pnpm build");
         },
-        launchBubbleTmuxSession: () => {
+        launchBubbleSessionAck: () => {
           callOrder.push("launch");
-          return Promise.resolve({ sessionName: "pf-b_start_bootstrap_cmd_01" });
+          return Promise.resolve({ status: "running" as const, sessionName: "pf-b_start_bootstrap_cmd_01" });
         },
         claimRuntimeSession: (input) =>
           Promise.resolve({
@@ -2626,9 +2627,9 @@ describe("startBubble", () => {
           ),
         runWorktreeBootstrapCommand: () =>
           Promise.reject(new Error("bootstrap command failed")),
-        launchBubbleTmuxSession: () => {
+        launchBubbleSessionAck: () => {
           launchCalled = true;
-          return Promise.resolve({ sessionName: "pf-b_start_bootstrap_cmd_fail_01" });
+          return Promise.resolve({ status: "running" as const, sessionName: "pf-b_start_bootstrap_cmd_fail_01" });
         },
         cleanupWorktreeWorkspace: () => {
           cleanupCalled = true;
@@ -2718,11 +2719,11 @@ describe("startBubble", () => {
               worktreePath: created.paths.worktreePath
             })
           ),
-        launchBubbleTmuxSession: (input) => {
+        launchBubbleSessionAck: (input) => {
           implementerCommand = input.implementerCommand;
           implementerKickoffMessage = input.implementerKickoffMessage;
           reviewerCommand = input.reviewerCommand;
-          return Promise.resolve({ sessionName: "pf-b_start_doc_01" });
+          return Promise.resolve({ status: "running" as const, sessionName: "pf-b_start_doc_01" });
         },
         claimRuntimeSession: (input) =>
           Promise.resolve({
@@ -2815,9 +2816,9 @@ describe("startBubble", () => {
               worktreePath: created.paths.worktreePath
             })
           ),
-        launchBubbleTmuxSession: (input) => {
+        launchBubbleSessionAck: (input) => {
           reviewerCommand = input.reviewerCommand;
-          return Promise.resolve({ sessionName: "pf-b_start_reviewer_brief_01" });
+          return Promise.resolve({ status: "running" as const, sessionName: "pf-b_start_reviewer_brief_01" });
         },
         claimRuntimeSession: (input) =>
           Promise.resolve({
@@ -2869,9 +2870,9 @@ describe("startBubble", () => {
               worktreePath: created.paths.worktreePath
             })
           ),
-        launchBubbleTmuxSession: (input) => {
+        launchBubbleSessionAck: (input) => {
           reviewerCommand = input.reviewerCommand;
-          return Promise.resolve({ sessionName: "pf-b_start_reviewer_focus_01" });
+          return Promise.resolve({ status: "running" as const, sessionName: "pf-b_start_reviewer_focus_01" });
         },
         claimRuntimeSession: (input) =>
           Promise.resolve({
@@ -2925,9 +2926,9 @@ describe("startBubble", () => {
               worktreePath: created.paths.worktreePath
             })
           ),
-        launchBubbleTmuxSession: (input) => {
+        launchBubbleSessionAck: (input) => {
           reviewerCommand = input.reviewerCommand;
-          return Promise.resolve({ sessionName: "pf-b_start_reviewer_focus_absent_01" });
+          return Promise.resolve({ status: "running" as const, sessionName: "pf-b_start_reviewer_focus_absent_01" });
         },
         claimRuntimeSession: (input) =>
           Promise.resolve({
@@ -2989,9 +2990,9 @@ describe("startBubble", () => {
               worktreePath: created.paths.worktreePath
             })
           ),
-        launchBubbleTmuxSession: (input) => {
+        launchBubbleSessionAck: (input) => {
           reviewerCommand = input.reviewerCommand;
-          return Promise.resolve({ sessionName: "pf-b_start_reviewer_focus_invalid_01" });
+          return Promise.resolve({ status: "running" as const, sessionName: "pf-b_start_reviewer_focus_invalid_01" });
         },
         claimRuntimeSession: (input) =>
           Promise.resolve({
@@ -3041,9 +3042,9 @@ describe("startBubble", () => {
               worktreePath: created.paths.worktreePath
             })
           ),
-        launchBubbleTmuxSession: (input) => {
+        launchBubbleSessionAck: (input) => {
           reviewerCommand = input.reviewerCommand;
-          return Promise.resolve({ sessionName: "pf-b_start_reviewer_brief_unreadable_01" });
+          return Promise.resolve({ status: "running" as const, sessionName: "pf-b_start_reviewer_brief_unreadable_01" });
         },
         claimRuntimeSession: (input) =>
           Promise.resolve({
@@ -3097,8 +3098,8 @@ describe("startBubble", () => {
               worktreePath: created.paths.worktreePath
             })
           ),
-        launchBubbleTmuxSession: () =>
-          Promise.resolve({ sessionName: "pf-b_start_policy_snapshot_overwrite_01" }),
+        launchBubbleSessionAck: () =>
+          Promise.resolve({ status: "running" as const, sessionName: "pf-b_start_policy_snapshot_overwrite_01" }),
         claimRuntimeSession: (input) =>
           Promise.resolve({
             claimed: true,
@@ -3199,7 +3200,7 @@ describe("startBubble", () => {
                 worktreePath: created.paths.worktreePath
               })
             ),
-          launchBubbleTmuxSession: () =>
+          launchBubbleSessionAck: () =>
             Promise.reject(
               new StartBubbleError({
                 reasonCode: reviewerPolicySnapshotUnavailableReasonCode,
@@ -3310,87 +3311,6 @@ describe("startBubble", () => {
     );
   });
 
-  it("fails closed through the retained ack compat override path", async () => {
-    const repoPath = await createTempRepo();
-    const created = await createBubble({
-      id: "b_start_launch_ack_compat_01",
-      repoPath,
-      baseBranch: "main",
-      reviewArtifactType: "code",
-      task: "Retained launch ack compat override should still fail closed",
-      cwd: repoPath
-    });
-    const launchBubbleTmuxSessionAckOverride = vi.fn(async () => ({
-      status: "failed_to_start" as const,
-      reason_code: "LAUNCH_ACK_COMMAND_FAILED" as const,
-      failure_kind: "command_failed" as const,
-      error_message: "compat tmux launch rejected in test",
-      sessionName: `pf-${created.bubbleId}`
-    }));
-    const launchBubbleTmuxSessionOverride = vi.fn(async () => ({
-      sessionName: "pf-unexpected-legacy"
-    }));
-
-    const thrown = await startBubble(
-      {
-        bubbleId: created.bubbleId,
-        cwd: repoPath,
-        now: new Date("2026-03-23T10:03:45.000Z")
-      },
-      {
-        bootstrapWorktreeWorkspace: () =>
-          Promise.resolve(
-            buildWorktreeBootstrapResult({
-              repoPath,
-              bubbleBranch: created.config.bubble_branch,
-              worktreePath: created.paths.worktreePath
-            })
-          ),
-        launchBubbleTmuxSessionAck: launchBubbleTmuxSessionAckOverride,
-        launchBubbleTmuxSession: launchBubbleTmuxSessionOverride,
-        cleanupWorktreeWorkspace: () =>
-          Promise.resolve({
-            repoPath,
-            bubbleBranch: created.config.bubble_branch,
-            worktreePath: created.paths.worktreePath,
-            removedBranch: true,
-            removedWorktree: true
-          }),
-        claimRuntimeSession: (input) =>
-          Promise.resolve({
-            claimed: true,
-            record: {
-              bubbleId: input.bubbleId,
-              repoPath: input.repoPath,
-              worktreePath: input.worktreePath,
-              tmuxSessionName: input.tmuxSessionName,
-              updatedAt: "2026-03-23T10:03:45.000Z"
-            }
-          }),
-        removeRuntimeSession: () => Promise.resolve(true)
-      }
-    ).then(
-      () => null,
-      (error: unknown) => error
-    );
-
-    expect(thrown).toBeInstanceOf(StartBubbleError);
-    expect((thrown as StartBubbleError).reasonCode).toBe(
-      "LAUNCH_ACK_COMMAND_FAILED"
-    );
-    expect((thrown as StartBubbleError).context).toMatchObject({
-      bubble_id: created.bubbleId,
-      stage: "launch_tmux",
-      failure_kind: "command_failed",
-      tmux_session_name: `pf-${created.bubbleId}`
-    });
-    expect((thrown as StartBubbleError).message).toContain(
-      "Cause: LAUNCH_ACK_COMMAND_FAILED: compat tmux launch rejected in test"
-    );
-    expect(launchBubbleTmuxSessionAckOverride).toHaveBeenCalledTimes(1);
-    expect(launchBubbleTmuxSessionOverride).not.toHaveBeenCalled();
-  });
-
   it("preserves StartBubbleError metadata when startup-incomplete catch rewrites the message", async () => {
     const repoPath = await createTempRepo();
     const created = await createBubble({
@@ -3426,7 +3346,7 @@ describe("startBubble", () => {
               worktreePath: created.paths.worktreePath
             })
           ),
-        launchBubbleTmuxSession: () => Promise.reject(injectedError),
+        launchBubbleSessionAck: () => Promise.reject(injectedError),
         cleanupWorktreeWorkspace: () =>
           Promise.resolve({
             repoPath,
@@ -3514,8 +3434,8 @@ describe("startBubble", () => {
                 })
               );
             },
-          launchBubbleTmuxSession: () =>
-            Promise.resolve({ sessionName: "pf-b_start_021" }),
+          launchBubbleSessionAck: () =>
+            Promise.resolve({ status: "running" as const, sessionName: "pf-b_start_021" }),
           removeRuntimeSession: (input) => {
             removedSessions.push(input.bubbleId);
             return Promise.resolve(true);
@@ -3580,7 +3500,7 @@ describe("startBubble", () => {
                 worktreePath: created.paths.worktreePath
               })
             ),
-          launchBubbleTmuxSession: () =>
+          launchBubbleSessionAck: () =>
             Promise.reject(new Error("tmux unavailable")),
           cleanupWorktreeWorkspace: () => {
             cleanupCalled = true;
@@ -3628,9 +3548,9 @@ describe("startBubble", () => {
               worktreePath: created.paths.worktreePath
             })
           ),
-        launchBubbleTmuxSession: (input) => {
+        launchBubbleSessionAck: (input) => {
           statusCommand = input.statusCommand;
-          return Promise.resolve({ sessionName: "pf-b_start_03" });
+          return Promise.resolve({ status: "running" as const, sessionName: "pf-b_start_03" });
         }
       }
     );
@@ -3698,12 +3618,12 @@ describe("startBubble", () => {
               worktreePath: created.paths.worktreePath
             })
           ),
-        launchBubbleTmuxSession: (input) => {
+        launchBubbleSessionAck: (input) => {
           statusCommand = input.statusCommand;
           implementerCommand = input.implementerCommand;
           reviewerCommand = input.reviewerCommand;
           metaReviewerCommand = input.metaReviewerCommand;
-          return Promise.resolve({ sessionName: "pf-b_start_self_host_01" });
+          return Promise.resolve({ status: "running" as const, sessionName: "pf-b_start_self_host_01" });
         }
       }
     );
@@ -3761,7 +3681,7 @@ describe("startBubble", () => {
           summaryPath = input.transcriptPath;
           return Promise.resolve("resume-summary: messages=3");
         },
-        launchBubbleTmuxSession: (input) => {
+        launchBubbleSessionAck: (input) => {
           const implementerScript = extractBashLcScript(input.implementerCommand);
           const reviewerScript = extractBashLcScript(input.reviewerCommand);
           expect(input.implementerBootstrapMessage).toBeUndefined();
@@ -3889,7 +3809,7 @@ describe("startBubble", () => {
           expect(input.reviewerCommand).toContain(REVIEWER_COMMAND_GATE_REQ_F);
           expect(input.reviewerCommand).not.toContain(REVIEWER_COMMAND_GATE_REQ_E);
           expectNoForbiddenReviewerCommandGateTokens(input.reviewerCommand);
-          return Promise.resolve({ sessionName: "pf-b_start_resume_01" });
+          return Promise.resolve({ status: "running" as const, sessionName: "pf-b_start_resume_01" });
         }
       }
     );
@@ -3958,7 +3878,7 @@ describe("startBubble", () => {
         },
         isTmuxSessionAlive: () => Promise.resolve(false),
         buildResumeTranscriptSummary: () => Promise.resolve("resume-summary: workspace-authority"),
-        launchBubbleTmuxSession: (input) => {
+        launchBubbleSessionAck: (input) => {
           const implementerScript = extractBashLcScript(input.implementerCommand);
           const reviewerScript = extractBashLcScript(input.reviewerCommand);
           expect(input.workspacePath).toBe(canonicalWorkspacePath);
@@ -3978,6 +3898,7 @@ describe("startBubble", () => {
             `Repository: ${repoPath}. Launch workspace (Phase 1C1 no-split worktree root): ${canonicalWorkspacePath}.`
           );
           return Promise.resolve({
+            status: "running" as const,
             sessionName: "pf-b_start_resume_workspace_authority_01"
           });
         }
@@ -4038,10 +3959,10 @@ describe("startBubble", () => {
           });
         },
         isTmuxSessionAlive: () => Promise.resolve(false),
-        launchBubbleTmuxSession: async (input) => {
+        launchBubbleSessionAck: async (input) => {
           launchCalled = true;
           expect(input.workspacePath).toBe(`${bubble.paths.worktreePath}/../clone-authority`);
-          return { sessionName: "pf-b_start_resume_clone_workspace_authority_01" };
+          return { status: "running" as const, sessionName: "pf-b_start_resume_clone_workspace_authority_01" };
         }
       }
     );
@@ -4103,9 +4024,9 @@ describe("startBubble", () => {
           summaryCalled = true;
           return "resume-summary: should-not-run";
         },
-        launchBubbleTmuxSession: async () => {
+        launchBubbleSessionAck: async () => {
           launchCalled = true;
-          return { sessionName: "pf-b_start_resume_clone_workspace_missing_path_01" };
+          return { status: "running" as const, sessionName: "pf-b_start_resume_clone_workspace_missing_path_01" };
         }
       }
     ).catch((error: unknown) => error);
@@ -4176,9 +4097,10 @@ describe("startBubble", () => {
           summaryCalled = true;
           return "resume-summary: should-not-run-without-runtime-session";
         },
-        launchBubbleTmuxSession: async () => {
+        launchBubbleSessionAck: async () => {
           launchCalled = true;
           return {
+            status: "running" as const,
             sessionName: "pf-b_start_resume_clone_runtime_session_missing_01"
           };
         }
@@ -4226,13 +4148,14 @@ describe("startBubble", () => {
       {
         isTmuxSessionAlive: () => Promise.resolve(false),
         buildResumeTranscriptSummary: () => Promise.resolve("resume-summary: workspace-reclaim"),
-        launchBubbleTmuxSession: (input) => {
+        launchBubbleSessionAck: (input) => {
           const implementerScript = extractBashLcScript(input.implementerCommand);
           expect(input.workspacePath).toBe(canonicalWorkspacePath);
           expect(implementerScript).toContain(
             `if ! cd ${shellQuote(canonicalWorkspacePath)}; then`
           );
           return Promise.resolve({
+            status: "running" as const,
             sessionName: "pf-b_start_resume_workspace_reclaim_01"
           });
         }
@@ -4289,9 +4212,10 @@ describe("startBubble", () => {
           summaryCalled = true;
           return "resume-summary: same-path-worktree-authority";
         },
-        launchBubbleTmuxSession: async () => {
+        launchBubbleSessionAck: async () => {
           launchCalled = true;
           return {
+            status: "running" as const,
             sessionName: "pf-b_start_resume_workspace_reclaim_worktree_missing_kind_01"
           };
         }
@@ -4354,9 +4278,10 @@ describe("startBubble", () => {
         },
         buildResumeTranscriptSummary: async () =>
           "resume-summary: malformed-stale-workspace-authority",
-        launchBubbleTmuxSession: async () => {
+        launchBubbleSessionAck: async () => {
           launchCalled = true;
           return {
+            status: "running" as const,
             sessionName: "pf-b_start_resume_workspace_reclaim_missing_kind_01"
           };
         }
@@ -4419,9 +4344,10 @@ describe("startBubble", () => {
         },
         buildResumeTranscriptSummary: async () =>
           "resume-summary: malformed-stale-clone-authority",
-        launchBubbleTmuxSession: async () => {
+        launchBubbleSessionAck: async () => {
           launchCalled = true;
           return {
+            status: "running" as const,
             sessionName:
               "pf-b_start_resume_workspace_reclaim_clone_missing_path_01"
           };
@@ -4471,9 +4397,10 @@ describe("startBubble", () => {
       {
         buildResumeTranscriptSummary: () =>
           Promise.resolve("resume-summary: invalid-reviewer-focus-artifact"),
-        launchBubbleTmuxSession: (input) => {
+        launchBubbleSessionAck: (input) => {
           reviewerCommand = input.reviewerCommand;
           return Promise.resolve({
+            status: "running" as const,
             sessionName: "pf-b_start_resume_focus_invalid_artifact_01"
           });
         }
@@ -4508,7 +4435,7 @@ describe("startBubble", () => {
       {
         buildResumeTranscriptSummary: () =>
           Promise.resolve("resume-summary: docs-only"),
-        launchBubbleTmuxSession: (input) => {
+        launchBubbleSessionAck: (input) => {
           expect(input.implementerCommand).toContain(
             "runtime checks are not required in this round"
           );
@@ -4544,7 +4471,7 @@ describe("startBubble", () => {
           );
           expectReviewerValidationClaimGuardrails(input.reviewerCommand);
           expect(input.reviewerCommand).toContain("Stand by unless you are active or receive a handoff.");
-          return Promise.resolve({ sessionName: "pf-b_start_resume_docs_01" });
+          return Promise.resolve({ status: "running" as const, sessionName: "pf-b_start_resume_docs_01" });
         }
       }
     );
@@ -4573,7 +4500,7 @@ describe("startBubble", () => {
       {
         buildResumeTranscriptSummary: () =>
           Promise.resolve("resume-summary: reviewer-active"),
-        launchBubbleTmuxSession: (input) => {
+        launchBubbleSessionAck: (input) => {
           expect(input.implementerKickoffMessage).toBeUndefined();
           expect(input.reviewerKickoffMessage).toContain("resume kickoff (reviewer)");
           expect(input.reviewerKickoffMessage).toContain(REVIEWER_COMMAND_GATE_REQ_A);
@@ -4583,7 +4510,7 @@ describe("startBubble", () => {
           expect(input.reviewerKickoffMessage).not.toContain(REVIEWER_COMMAND_GATE_REQ_C);
           expect(input.reviewerKickoffMessage).not.toContain(REVIEWER_COMMAND_GATE_REQ_E);
           expectNoForbiddenReviewerCommandGateTokens(input.reviewerKickoffMessage);
-          return Promise.resolve({ sessionName: "pf-b_start_resume_03" });
+          return Promise.resolve({ status: "running" as const, sessionName: "pf-b_start_resume_03" });
         }
       }
     );
@@ -4613,7 +4540,7 @@ describe("startBubble", () => {
       {
         buildResumeTranscriptSummary: () =>
           Promise.resolve("resume-summary: reviewer-active findings=0"),
-        launchBubbleTmuxSession: (input) => {
+        launchBubbleSessionAck: (input) => {
           expect(input.reviewerKickoffMessage).toContain("resume kickoff (reviewer)");
           expect(input.reviewerKickoffMessage).toContain(REVIEWER_COMMAND_GATE_REQ_B);
           expect(input.reviewerKickoffMessage).toContain(REVIEWER_COMMAND_GATE_REQ_C);
@@ -4622,7 +4549,7 @@ describe("startBubble", () => {
           expect(input.reviewerKickoffMessage).not.toContain(REVIEWER_COMMAND_GATE_REQ_A);
           expect(input.reviewerKickoffMessage).not.toContain(REVIEWER_COMMAND_GATE_REQ_E);
           expectNoForbiddenReviewerCommandGateTokens(input.reviewerKickoffMessage);
-          return Promise.resolve({ sessionName: "pf-b_start_resume_r2_clean_01" });
+          return Promise.resolve({ status: "running" as const, sessionName: "pf-b_start_resume_r2_clean_01" });
         }
       }
     );
@@ -4652,7 +4579,7 @@ describe("startBubble", () => {
       {
         buildResumeTranscriptSummary: () =>
           Promise.resolve("resume-summary: reviewer-active findings=2"),
-        launchBubbleTmuxSession: (input) => {
+        launchBubbleSessionAck: (input) => {
           expect(input.reviewerKickoffMessage).toContain("resume kickoff (reviewer)");
           expect(input.reviewerKickoffMessage).toContain(REVIEWER_COMMAND_GATE_REQ_E);
           expect(input.reviewerKickoffMessage).toContain(REVIEWER_COMMAND_GATE_REQ_C);
@@ -4661,7 +4588,7 @@ describe("startBubble", () => {
           expect(input.reviewerKickoffMessage).not.toContain(REVIEWER_COMMAND_GATE_REQ_A);
           expect(input.reviewerKickoffMessage).not.toContain(REVIEWER_COMMAND_GATE_REQ_B);
           expectNoForbiddenReviewerCommandGateTokens(input.reviewerKickoffMessage);
-          return Promise.resolve({ sessionName: "pf-b_start_resume_r2_findings_01" });
+          return Promise.resolve({ status: "running" as const, sessionName: "pf-b_start_resume_r2_findings_01" });
         }
       }
     );
@@ -4691,7 +4618,7 @@ describe("startBubble", () => {
       {
         buildResumeTranscriptSummary: () =>
           Promise.resolve("resume-summary: reviewer-active findings=unknown"),
-        launchBubbleTmuxSession: (input) => {
+        launchBubbleSessionAck: (input) => {
           expect(input.reviewerKickoffMessage).toContain("resume kickoff (reviewer)");
           expect(input.reviewerKickoffMessage).toContain(REVIEWER_COMMAND_GATE_REQ_E);
           expect(input.reviewerKickoffMessage).toContain(REVIEWER_COMMAND_GATE_REQ_C);
@@ -4699,7 +4626,7 @@ describe("startBubble", () => {
           expect(input.reviewerKickoffMessage).toContain(REVIEWER_COMMAND_GATE_REQ_F);
           expect(input.reviewerKickoffMessage).not.toContain(REVIEWER_COMMAND_GATE_REQ_B);
           expectNoForbiddenReviewerCommandGateTokens(input.reviewerKickoffMessage);
-          return Promise.resolve({ sessionName: "pf-b_start_resume_r2_parse_fallback_01" });
+          return Promise.resolve({ status: "running" as const, sessionName: "pf-b_start_resume_r2_parse_fallback_01" });
         }
       }
     );
@@ -4743,9 +4670,9 @@ describe("startBubble", () => {
       {
         buildResumeTranscriptSummary: () =>
           Promise.resolve("resume-summary: projection-clean findings=0"),
-        launchBubbleTmuxSession: (input) => {
+        launchBubbleSessionAck: (input) => {
           cleanKickoff = input.reviewerKickoffMessage ?? "";
-          return Promise.resolve({ sessionName: "pf-b_start_resume_r2_proj_clean_01" });
+          return Promise.resolve({ status: "running" as const, sessionName: "pf-b_start_resume_r2_proj_clean_01" });
         }
       }
     );
@@ -4759,9 +4686,10 @@ describe("startBubble", () => {
       {
         buildResumeTranscriptSummary: () =>
           Promise.resolve("resume-summary: projection-findings findings=3"),
-        launchBubbleTmuxSession: (input) => {
+        launchBubbleSessionAck: (input) => {
           findingsKickoff = input.reviewerKickoffMessage ?? "";
           return Promise.resolve({
+            status: "running" as const,
             sessionName: "pf-b_start_resume_r2_proj_findings_01"
           });
         }
@@ -4832,12 +4760,12 @@ describe("startBubble", () => {
       {
         buildResumeTranscriptSummary: () =>
           Promise.resolve("resume-summary: reviewer-directive"),
-        launchBubbleTmuxSession: (input) => {
+        launchBubbleSessionAck: (input) => {
           expect(input.reviewerCommand).toContain("Current directive:");
           expect(input.reviewerCommand).toContain(
             "Implementer test evidence has been orchestrator-verified."
           );
-          return Promise.resolve({ sessionName: "pf-b_start_resume_06" });
+          return Promise.resolve({ status: "running" as const, sessionName: "pf-b_start_resume_06" });
         }
       }
     );
@@ -4891,14 +4819,14 @@ describe("startBubble", () => {
       {
         buildResumeTranscriptSummary: () =>
           Promise.resolve("resume-summary: reviewer-doc-directive"),
-        launchBubbleTmuxSession: (input) => {
+        launchBubbleSessionAck: (input) => {
           expect(input.reviewerCommand).toContain("Current directive:");
           expect(input.reviewerCommand).toContain(
             "docs-only scope, runtime checks not required"
           );
           expectReviewerValidationClaimGuardrails(input.reviewerCommand);
           expect(input.reviewerKickoffMessage).toContain("resume kickoff (reviewer)");
-          return Promise.resolve({ sessionName: "pf-b_start_resume_doc_review_01" });
+          return Promise.resolve({ status: "running" as const, sessionName: "pf-b_start_resume_doc_review_01" });
         }
       }
     );
@@ -4951,10 +4879,10 @@ describe("startBubble", () => {
       {
         buildResumeTranscriptSummary: () =>
           Promise.resolve("resume-summary: implementer-active"),
-        launchBubbleTmuxSession: (input) => {
+        launchBubbleSessionAck: (input) => {
           expect(input.reviewerCommand).not.toContain("Current directive:");
           expect(input.reviewerKickoffMessage).toBeUndefined();
-          return Promise.resolve({ sessionName: "pf-b_start_resume_07" });
+          return Promise.resolve({ status: "running" as const, sessionName: "pf-b_start_resume_07" });
         }
       }
     );
@@ -4983,7 +4911,7 @@ describe("startBubble", () => {
       {
         buildResumeTranscriptSummary: () =>
           Promise.resolve("resume-summary: inconsistent-active"),
-        launchBubbleTmuxSession: (input) => {
+        launchBubbleSessionAck: (input) => {
           expect(input.implementerKickoffMessage).toBeUndefined();
           expect(input.reviewerKickoffMessage).toBeUndefined();
           expect(input.implementerCommand).toContain("resume-summary: inconsistent-active");
@@ -4992,7 +4920,7 @@ describe("startBubble", () => {
             "Kickoff diagnostic: RUNNING state active context is inconsistent;"
           );
           expect(input.reviewerCommand).toContain("No kickoff was sent");
-          return Promise.resolve({ sessionName: "pf-b_start_resume_04" });
+          return Promise.resolve({ status: "running" as const, sessionName: "pf-b_start_resume_04" });
         }
       }
     );
@@ -5028,12 +4956,13 @@ describe("startBubble", () => {
         {
           buildResumeTranscriptSummary: () =>
             Promise.resolve(`resume-summary: state=${stateValue}`),
-          launchBubbleTmuxSession: (input) => {
+          launchBubbleSessionAck: (input) => {
             expect(input.implementerKickoffMessage).toBeUndefined();
             expect(input.reviewerKickoffMessage).toBeUndefined();
             expect(input.implementerCommand).toContain(`state=${stateValue}`);
             expect(input.reviewerCommand).toContain(`state=${stateValue}`);
             return Promise.resolve({
+              status: "running" as const,
               sessionName: `pf-b_start_resume_state_${stateValue.toLowerCase()}`
             });
           }
@@ -5076,7 +5005,7 @@ describe("startBubble", () => {
       {
         buildResumeTranscriptSummary: () =>
           Promise.resolve("resume-summary: state=RUNNING(meta_review_authority)"),
-        launchBubbleTmuxSession: (input) => {
+        launchBubbleSessionAck: (input) => {
           expect(input.implementerKickoffMessage).toBeUndefined();
           expect(input.reviewerKickoffMessage).toBeUndefined();
           expect(input.metaReviewerKickoffMessage).toContain(
@@ -5086,6 +5015,7 @@ describe("startBubble", () => {
             "RUNNING"
           );
           return Promise.resolve({
+            status: "running" as const,
             sessionName: "pf-b_start_resume_meta_01"
           });
         }
@@ -5137,12 +5067,12 @@ describe("startBubble", () => {
         buildResumeTranscriptSummary: () => {
           throw new Error("summary dependency failed");
         },
-        launchBubbleTmuxSession: (input) => {
+        launchBubbleSessionAck: (input) => {
           expect(input.implementerCommand).toContain(
             "Resume transcript summary unavailable."
           );
           expect(input.reviewerCommand).toContain("reason=summary dependency failed");
-          return Promise.resolve({ sessionName: "pf-b_start_resume_05" });
+          return Promise.resolve({ status: "running" as const, sessionName: "pf-b_start_resume_05" });
         }
       }
     );
@@ -5166,7 +5096,7 @@ describe("startBubble", () => {
           now: new Date("2026-02-23T09:10:00.000Z")
         },
         {
-          launchBubbleTmuxSession: () =>
+          launchBubbleSessionAck: () =>
             Promise.reject(new Error("tmux unavailable for resume"))
         }
       )
@@ -5279,8 +5209,8 @@ describe("startBubble", () => {
               worktreePath: created.paths.worktreePath
             })
           ),
-        launchBubbleTmuxSession: () =>
-          Promise.resolve({ sessionName: "pf-b_start_05" })
+        launchBubbleSessionAck: () =>
+          Promise.resolve({ status: "running" as const, sessionName: "pf-b_start_05" })
       }
     );
 

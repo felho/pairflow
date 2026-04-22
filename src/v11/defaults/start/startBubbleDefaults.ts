@@ -1,9 +1,7 @@
 import { loadPairflowGlobalConfig as loadPairflowGlobalConfigCanonical } from "../../../config/pairflowConfig.js";
 import {
   terminateBubbleTmuxSession as terminateBubbleTmuxSessionCanonical,
-  launchBubbleSessionAck as launchBubbleSessionAckCanonical,
-  launchBubbleTmuxSessionAck as launchBubbleTmuxSessionAckCanonical,
-  launchBubbleTmuxSession as launchBubbleTmuxSessionCanonical
+  launchBubbleSessionAck as launchBubbleSessionAckCanonical
 } from "../../infrastructure/channel/tmux/tmuxManager.js";
 import {
   readRemotePointer as readRemotePointerCanonical,
@@ -45,8 +43,6 @@ import type {
 } from "../../shared/ports/runtimeSessions.js";
 import type {
   LaunchBubbleSessionAckPort,
-  LaunchBubbleTmuxSessionAckPort,
-  LaunchBubbleTmuxSessionPort,
   TerminateBubbleTmuxSessionPort
 } from "../../shared/ports/tmuxSessions.js";
 import type { RunGitPort } from "../../shared/ports/git.js";
@@ -79,14 +75,8 @@ export interface StartBubbleDependencyDefaults {
 export const bootstrapWorktreeWorkspace: BootstrapWorktreeWorkspacePort =
   bootstrapWorktreeWorkspaceCanonical;
 
-export const launchBubbleTmuxSession: LaunchBubbleTmuxSessionPort =
-  launchBubbleTmuxSessionCanonical;
-
 export const launchBubbleSessionAck: LaunchBubbleSessionAckPort =
   launchBubbleSessionAckCanonical;
-
-export const launchBubbleTmuxSessionAck: LaunchBubbleTmuxSessionAckPort =
-  launchBubbleTmuxSessionAckCanonical;
 
 export const claimRuntimeSession: ClaimRuntimeSessionPort =
   claimRuntimeSessionCanonical;
