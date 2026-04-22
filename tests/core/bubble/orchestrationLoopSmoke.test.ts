@@ -86,7 +86,7 @@ describe("bubble orchestration loop smoke", () => {
             })
           );
         },
-        launchBubbleTmuxSession: (input) => {
+        launchBubbleSessionAck: (input) => {
           startupLaunch = {
             implementerCommand: input.implementerCommand,
             reviewerCommand: input.reviewerCommand,
@@ -94,7 +94,7 @@ describe("bubble orchestration loop smoke", () => {
               ? { implementerKickoffMessage: input.implementerKickoffMessage }
               : {})
           };
-          return Promise.resolve({ sessionName: "pf-b_orch_smoke_01" });
+          return Promise.resolve({ status: "running" as const, sessionName: "pf-b_orch_smoke_01" });
         },
         isTmuxSessionAlive: (sessionName) => {
           tmuxAliveChecks.push(sessionName);

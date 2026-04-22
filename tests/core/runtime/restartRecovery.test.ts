@@ -88,8 +88,8 @@ describe("restart recovery", () => {
             })
           );
         },
-        launchBubbleTmuxSession: () =>
-          Promise.resolve({ sessionName: "pf-b_restart_01" })
+        launchBubbleSessionAck: () =>
+          Promise.resolve({ status: "running" as const, sessionName: "pf-b_restart_01" })
       }
     );
 
@@ -190,7 +190,7 @@ describe("restart recovery", () => {
               worktreePath: bubble.paths.worktreePath
             })
           ),
-        launchBubbleTmuxSession: (input) => {
+        launchBubbleSessionAck: (input) => {
           launchInput = {
             implementerCommand: input.implementerCommand,
             reviewerCommand: input.reviewerCommand,
@@ -198,7 +198,7 @@ describe("restart recovery", () => {
               ? { metaReviewerKickoffMessage: input.metaReviewerKickoffMessage }
               : {})
           };
-          return Promise.resolve({ sessionName: "pf-b_restart_meta_01" });
+          return Promise.resolve({ status: "running" as const, sessionName: "pf-b_restart_meta_01" });
         }
       }
     );
@@ -265,8 +265,8 @@ describe("restart recovery", () => {
               worktreePath: bubble.paths.worktreePath
             })
           ),
-        launchBubbleTmuxSession: () =>
-          Promise.resolve({ sessionName: "pf-b_restart_meta_02" })
+        launchBubbleSessionAck: () =>
+          Promise.resolve({ status: "running" as const, sessionName: "pf-b_restart_meta_02" })
       }
     );
 
@@ -318,8 +318,8 @@ describe("restart recovery", () => {
               worktreePath: bubble.paths.worktreePath
             })
           ),
-        launchBubbleTmuxSession: () =>
-          Promise.resolve({ sessionName: "pf-b_restart_impl_01" })
+        launchBubbleSessionAck: () =>
+          Promise.resolve({ status: "running" as const, sessionName: "pf-b_restart_impl_01" })
       }
     );
 
@@ -433,8 +433,8 @@ describe("restart recovery", () => {
               worktreePath: bubble.paths.worktreePath
             })
           ),
-        launchBubbleTmuxSession: () =>
-          Promise.resolve({ sessionName: "pf-b_restart_reviewer_01" })
+        launchBubbleSessionAck: () =>
+          Promise.resolve({ status: "running" as const, sessionName: "pf-b_restart_reviewer_01" })
       }
     );
 
@@ -507,8 +507,8 @@ describe("restart recovery", () => {
         now: new Date("2026-02-23T13:00:00.000Z")
       },
       {
-        launchBubbleTmuxSession: () =>
-          Promise.resolve({ sessionName: "pf-b_restart_meta_submit_smoke_01" })
+        launchBubbleSessionAck: () =>
+          Promise.resolve({ status: "running" as const, sessionName: "pf-b_restart_meta_submit_smoke_01" })
       }
     );
 
@@ -602,8 +602,8 @@ describe("restart recovery", () => {
         now: new Date("2026-02-23T13:05:00.000Z")
       },
       {
-        launchBubbleTmuxSession: () =>
-          Promise.resolve({ sessionName: "pf-b_restart_meta_submit_smoke_01" })
+        launchBubbleSessionAck: () =>
+          Promise.resolve({ status: "running" as const, sessionName: "pf-b_restart_meta_submit_smoke_01" })
       }
     );
 

@@ -4,7 +4,7 @@ import {
   applyBubbleTmuxSessionFrameSetup
 } from "./tmuxManagerSessionFrame.js";
 
-export interface LaunchBubbleTmuxSessionLayoutInput {
+export interface LaunchBubbleSessionLayoutInput {
   runner: TmuxRunner;
   sessionName: string;
   workspacePath: string;
@@ -17,7 +17,7 @@ export interface LaunchBubbleTmuxSessionLayoutInput {
   placeholderCommand: string;
 }
 
-export interface LaunchBubbleTmuxSessionLayoutResult {
+export interface LaunchBubbleSessionLayoutResult {
   implementerPaneId: string;
   reviewerPaneId: string;
   metaReviewerPaneId: string;
@@ -33,9 +33,9 @@ function parseTmuxPaneId(stdout: string, command: string[]): string {
   return paneId;
 }
 
-export async function launchBubbleTmuxSessionLayout(
-  input: LaunchBubbleTmuxSessionLayoutInput
-): Promise<LaunchBubbleTmuxSessionLayoutResult> {
+export async function launchBubbleSessionLayout(
+  input: LaunchBubbleSessionLayoutInput
+): Promise<LaunchBubbleSessionLayoutResult> {
   const statusPane = `${input.sessionName}:0.0`;
   const implementerPane = `${input.sessionName}:0.1`;
   const reviewerPane = `${input.sessionName}:0.2`;
