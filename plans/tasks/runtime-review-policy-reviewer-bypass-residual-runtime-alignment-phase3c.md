@@ -13,12 +13,15 @@ target_files:
   - src/v11/shared/approval/reworkIntent.ts
   - src/v11/application/start/startCommandTmuxLaunch.ts
   - src/v11/application/start/startCommandResumeKickoffMessages.ts
+  - src/v11/application/start/startCommandResumeKickoffMessageBuilders.ts
   - tests/v11/shared/metaReviewGate/metaReviewGateCurrentRunFinalization.test.ts
+  - tests/v11/shared/metaReviewGate/metaReviewGateHumanGatePersistence.test.ts
   - tests/v11/application/converged/convergedRoutingPreparation.test.ts
   - tests/v11/domain/convergence/policy.test.ts
   - tests/v11/domain/convergence/repeatCleanAutoconverge.test.ts
   - tests/v11/application/approval/approvalResultMapping.test.ts
   - tests/v11/shared/approval/reworkIntent.test.ts
+  - tests/v11/application/start/startCommandOrchestration.test.ts
   - tests/v11/application/start/startCommandResumeKickoffMessageBuilders.test.ts
 prd_ref: null
 plan_ref: plans/runtime-review-policy-reset-and-phasing-plan-v1.md
@@ -55,7 +58,13 @@ owners:
    - `src/v11/shared/approval/reworkIntent.ts`
    - `src/v11/application/start/startCommandTmuxLaunch.ts`
    - `src/v11/application/start/startCommandResumeKickoffMessages.ts`
-4. Emiatt a bypass Phase 3 teljes runtime closure-je csak akkor lesz vedheto, ha ezek a residual branches is ugyanarra a mar lezart activation truth-ra allnak ra.
+   - `src/v11/application/start/startCommandResumeKickoffMessageBuilders.ts`
+4. A konkret residual guardok a current tree-ben mar lathatoak:
+   - `convergedRoutingPreparation.ts` explicit `active_role === "reviewer"` es configured-reviewer guardot kovetel,
+   - `policyValidation.ts` legalabb ket round reviewer/implementer alternaciot kovetel,
+   - `metaReviewGateCurrentRunFinalization.ts` megtartott threshold- es `sticky_human_gate` guardokat hordoz, mikozben `metaReviewGateAutoRework.ts`, `approvalResultMapping.ts` es `reworkIntent.ts` a kovetkezo roundot ma meg hard-coded implementer active role-lal es reviewer-history appenddel irjak,
+   - `startCommandTmuxLaunch.ts` a startup/resume launch wiringet es kickoff message atadast ownershipolja, mig `startCommandResumeKickoffMessages.ts` a persisted `active_role` alapjan valaszt resume branch-et, a `startCommandResumeKickoffMessageBuilders.ts` pedig az igy feloldott kickoff/projection copyt formalja.
+5. Emiatt a bypass Phase 3 teljes runtime closure-je csak akkor lesz vedheto, ha ezek a residual branches is ugyanarra a mar lezart activation truth-ra allnak ra.
 
 ## L0 - Policy
 
@@ -105,6 +114,7 @@ Lezarni a reviewer bypass residual runtime alignmentot ugy, hogy:
    - [reworkIntent.ts](/Users/felho/dev/pairflow/src/v11/shared/approval/reworkIntent.ts)
    - [startCommandTmuxLaunch.ts](/Users/felho/dev/pairflow/src/v11/application/start/startCommandTmuxLaunch.ts)
    - [startCommandResumeKickoffMessages.ts](/Users/felho/dev/pairflow/src/v11/application/start/startCommandResumeKickoffMessages.ts)
+   - [startCommandResumeKickoffMessageBuilders.ts](/Users/felho/dev/pairflow/src/v11/application/start/startCommandResumeKickoffMessageBuilders.ts)
 2. Closed terms inherited:
    - Phase 3A requested/effective/support vocabulary
    - Phase 3B activation-core truth
@@ -121,11 +131,14 @@ Lezarni a reviewer bypass residual runtime alignmentot ugy, hogy:
    `src/v11/application/approval/approvalResultMapping.ts`,
    `src/v11/shared/approval/reworkIntent.ts`,
    `src/v11/application/start/startCommandTmuxLaunch.ts`,
-   `src/v11/application/start/startCommandResumeKickoffMessages.ts`.
+   `src/v11/application/start/startCommandResumeKickoffMessages.ts`,
+   `src/v11/application/start/startCommandResumeKickoffMessageBuilders.ts`.
 2. Actual touched scope:
    `consumer_family_alignment` primary, `fail_closed_hardening` secondary.
 3. Why this is separate from Phase 3B:
    ezek mar nem a live pass-path activation corehoz tartoznak, hanem residual runtime consume es recovery branches.
+4. Start/resume boundedness note:
+   a task a kickoff/runtime projection parityt ownershipolja, nem a tmux pane roster, agent inventory vagy startup UX redesign teljes ujratervezeset.
 
 ### Authority Boundary Map
 
@@ -138,7 +151,7 @@ Lezarni a reviewer bypass residual runtime alignmentot ugy, hogy:
 4. Workflow orchestration consumers:
    converged routing, startup/resume kickoff.
 5. Read model consumers:
-   `N/A` ebben a taskban.
+   bounded start/resume kickoff projection es diagnostics a `resolveResumeKickoffMessages(...)` / kickoff-builder familyben; list/status/detail read model nincs scope-ban.
 6. Cleanup/recovery consumers:
    approval rework, deferred rework, restart/resume.
 
@@ -188,6 +201,17 @@ Lezarni a reviewer bypass residual runtime alignmentot ugy, hogy:
 5. Invalid/precondition-failure behavior:
    fail-closed reviewer/full baseline marad.
 
+### Residual Branch Inventory
+
+1. `converged` / auto-converge:
+   a Phase 3C-nek explicitten le kell cserelnie a reviewer-only active-role es round-alternation feltetelezest ugyanarra az activation truth-ra, amelyet a Phase 3B mar bezart, vagy fail-closed reviewer/full baseline-ra kell visszaesnie.
+2. Meta-review finalize / auto-rework:
+   `sticky_human_gate`, threshold fallback es auto-rework state hydration maradhat retained guard, de egyik sem lephet elo bypass-topology authorityva; a dispatchalt route, next-round state es transcript metadata ugyanarra a resolved truth-ra kell uljon.
+3. Approval / deferred rework:
+   az approval-alapu rework es a deferred rework intent nem irhatja ujra vakon az implementer/reviewer alternaciot; a resumed `active_role`, `execution_context` es `round_role_history` a resolved topology folytatasa legyen vagy fail-closed baseline.
+4. Start / resume:
+   a resume kickoff copy, meta-reviewer diagnostic branch es fresh-start kickoff guidance nem sugallhat reviewer-first runtime topologiat, ha a persisted activation mar bypass-aktiv, de activation hianyaban tovabbra is a reviewer/full baseline-t kell kommunikalniuk.
+
 ### In Scope
 
 1. Converged / auto-converge residual branch alignment.
@@ -220,26 +244,51 @@ Lezarni a reviewer bypass residual runtime alignmentot ugy, hogy:
 
 | ID | File | Function/Entry | Contract delta | Priority | Timing |
 |---|---|---|---|---|---|
-| CS1 | `src/v11/application/converged/convergedRoutingPreparation.ts`, `src/v11/domain/convergence/policyValidation.ts` | convergence routing / policy | reviewer-owned residual baseline ugyanarra a Phase 3B activation truth-ra alljon ra, vagy fail-closed full/reviewer fallbackra | P1 | required-now |
-| CS2 | `src/v11/shared/metaReviewGate/metaReviewGateCurrentRunFinalization.ts`, `src/v11/shared/metaReviewGate/metaReviewGateAutoRework.ts` | meta-review residual route | auto-rework es finalize residual route-ja ne drifteljen reviewer-only baseline-re aktiv bypass mellett | P1 | required-now |
-| CS3 | `src/v11/application/approval/approvalResultMapping.ts`, `src/v11/shared/approval/reworkIntent.ts` | rework / recovery | approval es deferred rework ne terjen vissza hard-coded implementer/reviewer residual topologyra | P1 | required-now |
-| CS4 | `src/v11/application/start/startCommandTmuxLaunch.ts`, `src/v11/application/start/startCommandResumeKickoffMessages.ts` | start / resume residual topology | startup es resume kickoff ugyanazt a residual activation truth-ot consume-olja | P1 | required-now |
+| CS1 | `src/v11/application/converged/convergedRoutingPreparation.ts`, `src/v11/domain/convergence/policyValidation.ts` | convergence routing / policy | a hard-coded `active_role === "reviewer"` es reviewer/implementer alternation guard Phase 3B activation truth consume-jara cserelodik, kulonben explicit fail-closed reviewer/full fallback marad | P1 | required-now |
+| CS2 | `src/v11/shared/metaReviewGate/metaReviewGateCurrentRunFinalization.ts` | meta-review finalize retained guards | `sticky_human_gate`, threshold fallback es finalize diagnostics retained guard marad; nem lephetnek elo bypass-topology authorityva aktiv bypass mellett sem | P1 | required-now |
+| CS3 | `src/v11/shared/metaReviewGate/metaReviewGateAutoRework.ts` | meta-review auto-rework resumed topology | a residual route, delivery metadata es resumed state ugyanarra a resolved truth-ra ul, reviewer-owned topology drift nelkul | P1 | required-now |
+| CS4 | `src/v11/application/approval/approvalResultMapping.ts`, `src/v11/shared/approval/reworkIntent.ts` | rework / recovery | approval es deferred rework a next-round `active_role` / `execution_context` / `round_role_history` shape-et ugyanabbal a resolved topologyval epiti fel, nem vak implementer/reviewer alternacioval | P1 | required-now |
+| CS5 | `src/v11/application/start/startCommandTmuxLaunch.ts`, `src/v11/application/start/startCommandResumeKickoffMessages.ts`, `src/v11/application/start/startCommandResumeKickoffMessageBuilders.ts` | start / resume residual topology | a launch wiring, resume branch-valasztas es kickoff guidance ugyanazt a residual activation truth-ot consume-olja; scope-ban a kickoff/projection parity van, nem a pane-layout redesign | P1 | required-now |
 
-### 2) Test Matrix
+### 2) Branch / Fixture Inventory
+
+| ID | Branch | Must prove |
+|---|---|---|
+| B1 | `requested=meta_only` + Phase 3B activation proven + `converged` path | a convergence guard es policy nem kovetel reviewer-only residual topologyt aktiv bypass mellett |
+| B2 | `requested=meta_only` + Phase 3B activation proven + meta-review rework path | auto-rework es human fallback route retained guardokkal mukodik, de a resumed topology nem ir vissza hard-coded reviewer historyre |
+| B3 | `requested=meta_only` + Phase 3B activation proven + approval/deferred rework path | a kovetkezo round state-write es `execution_context` a resolved topologyval marad koherens |
+| B4 | `requested=meta_only` + Phase 3B activation proven + start/resume path | resume/fresh-start kickoff projection ugyanazt a topology truth-ot tukrozi, mint a persisted active context |
+| B5 | `requested=meta_only` + activation unresolved vagy `requested=full` baseline | minden residual branch fail-closed reviewer/full baseline-on marad, explicit diagnostics vagy baseline copy mellett |
+
+### 3) Test Matrix
 
 | ID | Scenario | Assertions | Priority |
 |---|---|---|---|
-| T1 | converged residual branch activated bypass mellett | nincs hidden reviewer-only drift | P1 |
-| T2 | meta-review finalize / auto-rework activated bypass mellett | residual route ugyanarra a truth-ra ul | P1 |
-| T3 | approval / deferred rework activated bypass mellett | recovery topology koherens marad | P1 |
-| T4 | start / resume residual branch activated bypass mellett | kickoff topology nem driftel vissza reviewer-centered baseline-re | P1 |
-| T5 | activation-unresolved residual fallback | fail-closed full/reviewer baseline marad | P1 |
+| T1 | converged residual branch activated bypass mellett | `converged` guard es policy ugyanazt a Phase 3B activation truth-ot consume-olja, reviewer-only drift nelkul | P1 |
+| T2 | meta-review finalize / auto-rework activated bypass mellett | residual route, transcript metadata es resumed state ugyanarra a truth-ra ul | P1 |
+| T3 | approval / deferred rework activated bypass mellett | next-round `active_role`, `execution_context` es `round_role_history` koherens marad | P1 |
+| T4 | start / resume residual branch activated bypass mellett | kickoff topology es diagnostics nem driftel vissza reviewer-centered baseline-re | P1 |
+| T5 | activation-unresolved residual fallback | fail-closed full/reviewer baseline marad, uj authority termeles nelkul | P1 |
+| T6 | residual alignment scope gate | nincs uj `review_policy` field/schema, UI mutation vagy presentational scope; a start/resume resz kickoff/projection parityre korlatozodik | P1 |
+
+### 4) Target File Coverage Map
+
+| Coverage | Source / Test anchors | Expected proof |
+|---|---|---|
+| C1 | `convergedRoutingPreparation.ts`, `policyValidation.ts`, `tests/v11/application/converged/convergedRoutingPreparation.test.ts`, `tests/v11/domain/convergence/policy.test.ts`, `tests/v11/domain/convergence/repeatCleanAutoconverge.test.ts` | B1 + T1 + T5 fail-closed convergence parity |
+| C2 | `metaReviewGateCurrentRunFinalization.ts`, `metaReviewGateAutoRework.ts`, `tests/v11/shared/metaReviewGate/metaReviewGateCurrentRunFinalization.test.ts`, `tests/v11/shared/metaReviewGate/metaReviewGateHumanGatePersistence.test.ts` | B2 + T2 + retained human-gate/threshold fallback nem valik bypass authorityva |
+| C3 | `approvalResultMapping.ts`, `reworkIntent.ts`, `tests/v11/application/approval/approvalResultMapping.test.ts`, `tests/v11/shared/approval/reworkIntent.test.ts` | B3 + T3 next-round state-write es recovery topology parity |
+| C4 | `startCommandTmuxLaunch.ts`, `startCommandResumeKickoffMessages.ts`, `startCommandResumeKickoffMessageBuilders.ts`, `tests/v11/application/start/startCommandOrchestration.test.ts`, `tests/v11/application/start/startCommandResumeKickoffMessageBuilders.test.ts` | B4 + T4 launch/resume kickoff projection parity, explicit start/resume scope-boundedness |
+| C5 | full target diff scope + acceptance review | B5 + T5 + T6 fail-closed baseline es no-schema/no-UI-mutation scope gate |
 
 ## L2 - Acceptance Criteria
 
-1. A residual runtime branches Phase 3C utan ugyanazt a Phase 3B activation truth-ot consume-oljak.
-2. Activation hianyaban a residual branches fail-closed reviewer/full baseline-on maradnak.
-3. A Phase 3A contract es a Phase 3B activation core nem nyilik ujra.
+1. A residual runtime branches Phase 3C utan ugyanazt a named Phase 3B activation truth-ot consume-oljak; egyik consumer sem vezet be sajat bypass authority seamet.
+2. A convergence, meta-review finalize/auto-rework, approval/deferred rework es start/resume consume csaladban a next-route, next-round state es kickoff projection ugyanazzal a resolved topologyval marad koherens.
+3. `sticky_human_gate`, reviewer-only active-role guard, round alternation evidence vagy stale startup projection Phase 3C utan csak retained fallback/diagnostics lehet, canonical bypass truth nem.
+4. Activation hianyaban a residual branches fail-closed reviewer/full baseline-on maradnak.
+5. A Phase 3A contract vocabulary es a Phase 3B activation-core authority nem nyilik ujra, es a task nem vezet be uj `review_policy` fieldet vagy schema-mutatast.
+6. A task nem huz be UI mutation vagy presentational redesign scope-ot; a start/resume resz kickoff/projection parityre korlatozodik.
 
 ## Hardening Backlog
 
