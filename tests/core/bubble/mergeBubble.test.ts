@@ -365,6 +365,7 @@ describe("mergeBubble", () => {
     expect(terminateCalled).toBe(true);
     expect(result.baseBranch).toBe("main");
     expect(result.bubbleBranch).toBe(bubble.config.bubble_branch);
+    expect(result.presentationRoute).toBe("local");
     expect(result.removedWorktree).toBe(true);
     expect(result.removedBubbleBranch).toBe(true);
     expect(result.mergeCommitSha.length).toBeGreaterThan(6);
@@ -431,6 +432,7 @@ describe("mergeBubble", () => {
 
     expect(result.pushedBaseBranch).toBe(true);
     expect(result.deletedRemoteBranch).toBe(true);
+    expect(result.presentationRoute).toBe("local");
 
     const remoteBubble = await runGit(
       repoPath,
@@ -464,6 +466,7 @@ describe("mergeBubble", () => {
 
     expect(result.baseBranch).toBe("main");
     expect(result.bubbleBranch).toBe(bubble.config.bubble_branch);
+    expect(result.presentationRoute).toBe("local");
     expect(result.removedWorktree).toBe(true);
     expect(result.removedBubbleBranch).toBe(true);
 
@@ -567,6 +570,7 @@ describe("mergeBubble", () => {
     expect(result).toMatchObject({
       bubbleId: bubble.bubbleId,
       mergeCommitSha: "fedcba0987654321",
+      presentationRoute: "started_remote",
       pushedBaseBranch: false,
       removedWorktree: true,
       removedBubbleBranch: true,
@@ -690,6 +694,7 @@ describe("mergeBubble", () => {
 
     expect(result.baseBranch).toBe("main");
     expect(result.bubbleBranch).toBe(bubble.config.bubble_branch);
+    expect(result.presentationRoute).toBe("local");
     expect(result.removedWorktree).toBe(true);
     expect(result.removedBubbleBranch).toBe(true);
     expect(executeRemoteBubbleMergeCommand).not.toHaveBeenCalled();
@@ -739,6 +744,7 @@ describe("mergeBubble", () => {
 
     expect(result.baseBranch).toBe("main");
     expect(result.bubbleBranch).toBe(bubble.config.bubble_branch);
+    expect(result.presentationRoute).toBe("local");
     expect(executeRemoteBubbleMergeCommand).not.toHaveBeenCalled();
     expect(resolveRemoteBubbleStatusTarget).not.toHaveBeenCalled();
   });
@@ -797,6 +803,7 @@ describe("mergeBubble", () => {
 
     expect(result.baseBranch).toBe("main");
     expect(result.bubbleBranch).toBe(bubble.config.bubble_branch);
+    expect(result.presentationRoute).toBe("local");
     expect(result.removedWorktree).toBe(true);
     expect(result.removedBubbleBranch).toBe(true);
     expect(executeRemoteBubbleMergeCommand).not.toHaveBeenCalled();

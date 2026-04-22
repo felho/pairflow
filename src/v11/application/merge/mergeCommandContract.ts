@@ -119,6 +119,7 @@ export interface MergeBubbleResult {
   baseBranch: string;
   bubbleBranch: string;
   mergeCommitSha: string;
+  presentationRoute: "local" | "started_remote";
   pushedBaseBranch: boolean;
   deletedRemoteBranch: boolean;
   tmuxSessionName: string;

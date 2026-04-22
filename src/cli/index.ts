@@ -68,9 +68,10 @@ import {
   runBubbleListCommand
 } from "./commands/bubble/list.js";
 import {
+  executeBubbleMergeCommand,
   getBubbleMergeHelpText,
   parseBubbleMergeCommandOptions,
-  runBubbleMergeCommand
+  renderBubbleMergeResultText
 } from "./commands/bubble/merge.js";
 import { renderMetaReviewSubmitText } from "../v11/application/metaReview/metaReviewSubmitRenderers.js";
 import {
@@ -724,11 +725,7 @@ async function handleBubbleMergeCommand(args: string[]): Promise<number> {
     process.stdout.write(`${getBubbleMergeHelpText()}\n`);
     return 0;
   }
-  const result = await runBubbleMergeCommand(args);
-  if (result === null) {
-    process.stdout.write(`${getBubbleMergeHelpText()}\n`);
-    return 0;
-  }
+  const result = await executeBubbleMergeCommand(parsed, process.cwd());
 
   if (parsed.json) {
     process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
@@ -736,7 +733,7 @@ async function handleBubbleMergeCommand(args: string[]): Promise<number> {
   }
 
   process.stdout.write(
-    `Merged bubble ${result.bubbleId}: ${result.bubbleBranch} -> ${result.baseBranch} @ ${result.mergeCommitSha}; pushed=${result.pushedBaseBranch ? "yes" : "no"}, remoteDeleted=${result.deletedRemoteBranch ? "yes" : "no"}, tmuxExisted=${result.tmuxSessionExisted ? "yes" : "no"}, runtimeSessionRemoved=${result.runtimeSessionRemoved ? "yes" : "no"}, worktreeRemoved=${result.removedWorktree ? "yes" : "no"}, branchRemoved=${result.removedBubbleBranch ? "yes" : "no"}\n`
+    `${renderBubbleMergeResultText(result)}\n`
   );
   return 0;
 }

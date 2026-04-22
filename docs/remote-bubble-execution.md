@@ -506,17 +506,17 @@ This branch is the branch later merged by `pairflow bubble merge`.
 
 ### 7.4 Post-completion sync
 
-After a remote bubble completes (DONE state), the changes are on the remote's bubble branch. To get them back:
+After a remote bubble completes (DONE state), the routed merge command imports the remote merge handoff and finishes the durable merge in the laptop's local repo:
 
 ```bash
-# Pairflow merges on remote and pushes to origin
+# Pairflow prepares/imports the remote merge handoff, then completes the merge locally
 pairflow bubble merge --id <bubbleId>
-# → SSH: merge bubble branch to base branch on remote
-# → SSH: git push origin <baseBranch>
-# → prints: "Merged. Run `git pull origin <baseBranch>` to update your local checkout."
+# → SSH: prepare remote merge handoff payload
+# → local repo: merge imported revision into <baseBranch>
+# → SSH: prove remote cleanup (runtime/session/workspace artifacts)
 ```
 
-The merge command does NOT automatically modify the laptop's local checkout. The user pulls explicitly when ready. This keeps the remote executor adapter from reaching into the user's local working directory.
+On this started-remote route, `--push` and `--delete-remote` are rejected: publication and branch-deletion flags are not the closeout truth here. The current local checkout is already the durable merge target. A separate `git pull` is only for other clones/checkouts that still need to sync to the merged base branch.
 
 ---
 
@@ -585,7 +585,7 @@ Or the agent can start the dev server as part of its implementation work (which 
 
 | Component | Size | Description |
 |-----------|------|-------------|
-| Merge + push flow | S | Post-merge git push to origin, hint to user to pull locally |
+| Merge closeout flow | S | Import remote merge handoff into the laptop/local repo, complete the durable local merge there, then prove remote cleanup; no started-remote closeout model based on remote push plus mandatory later local pull |
 | Remote cleanup | S | `rm -rf` bubble clone directory, tmux kill, local pointer removal |
 | Error handling | M | SSH connection failures, remote pairflow errors, stale sessions |
 

@@ -101,7 +101,7 @@ This skill exists to avoid lifecycle mistakes (wrong command in wrong state, los
 - `APPROVED_FOR_COMMIT` -> `pairflow bubble commit --auto`
   - For remote bubbles, run the routed command from the laptop/local repo; do not `ssh` into the remote clone and commit manually.
 - `DONE` -> `pairflow bubble merge`
-  - For remote bubbles, run the routed command from the laptop/local repo; Pairflow merges/pushes on the remote and does not auto-update the local checkout.
+  - For remote bubbles, run the routed command from the laptop/local repo; Pairflow imports the started-remote merge handoff, completes the durable merge in the local repo, then performs remote cleanup.
 - `CANCELLED` with needed changes -> recovery workflow (manual git path from bubble worktree)
 
 ## Practical Guardrails

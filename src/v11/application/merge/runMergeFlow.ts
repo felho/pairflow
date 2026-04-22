@@ -405,6 +405,7 @@ export async function runMergeFlow(
       baseBranch: context.baseBranch,
       bubbleBranch: context.bubbleBranch,
       mergeCommitSha,
+      presentationRoute: "started_remote",
       pushedBaseBranch: false,
       deletedRemoteBranch: false,
       cleanupOutcome: finalization.cleanupOutcome
@@ -445,6 +446,7 @@ export async function runMergeFlow(
     baseBranch: context.baseBranch,
     bubbleBranch: context.bubbleBranch,
     mergeCommitSha,
+    presentationRoute: "local",
     pushedBaseBranch,
     deletedRemoteBranch,
     cleanupOutcome: finalization.cleanupOutcome

@@ -4,14 +4,97 @@ import { join } from "node:path";
 
 import { afterAll, afterEach, describe, expect, it, vi } from "vitest";
 
+import { renderBubbleConfigToml } from "../../src/config/bubbleConfig.js";
 import { runCli } from "../../src/cli/index.js";
+import { writeRemotePointer } from "../../src/v11/infrastructure/artifact/bubble/remoteExecutionArtifacts.js";
+import { mergeBubbleDependencyDefaults } from "../../src/v11/defaults/merge/mergeCommandDefaults.js";
+import { createBubble } from "../../src/v11/application/create/createBubble.js";
+import {
+  readStateSnapshot,
+  writeStateSnapshot
+} from "../../src/v11/infrastructure/state/stateStore.js";
+import { bootstrapWorktreeWorkspace } from "../../src/v11/infrastructure/workspace/worktreeManager.js";
 import { setupRunningBubbleFixture } from "../helpers/bubble.js";
-import { initGitRepository } from "../helpers/git.js";
+import { initGitRepository, runGit } from "../helpers/git.js";
 
 describe("runCli", () => {
   const stdoutSpy = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
   const stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
   const tempDirs: string[] = [];
+
+  async function setupDoneBubbleFixture(repoPath: string, bubbleId: string) {
+    const bubble = await createBubble({
+      repoPath,
+      id: bubbleId,
+      baseBranch: "main",
+      reviewArtifactType: "code",
+      task: "CLI bubble merge test task",
+      cwd: repoPath
+    });
+
+    await bootstrapWorktreeWorkspace({
+      repoPath,
+      baseBranch: "main",
+      bubbleBranch: bubble.config.bubble_branch,
+      worktreePath: bubble.paths.worktreePath,
+      workspaceKind: "worktree"
+    });
+
+    await writeFile(
+      join(bubble.paths.worktreePath, "feature.txt"),
+      `${bubble.bubbleId}\n`,
+      "utf8"
+    );
+    await runGit(bubble.paths.worktreePath, ["add", "feature.txt"]);
+    await runGit(bubble.paths.worktreePath, ["commit", "-m", `feat(${bubble.bubbleId}): change`]);
+
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    await writeStateSnapshot(
+      bubble.paths.statePath,
+      {
+        ...loaded.state,
+        state: "DONE",
+        active_agent: null,
+        active_role: null,
+        active_since: null,
+        last_command_at: "2026-04-18T10:00:00.000Z"
+      },
+      {
+        expectedFingerprint: loaded.fingerprint,
+        expectedState: "CREATED"
+      }
+    );
+
+    return bubble;
+  }
+
+  async function convertDoneBubbleToRemoteStarted(
+    bubble: Awaited<ReturnType<typeof setupDoneBubbleFixture>>
+  ) {
+    await writeFile(
+      bubble.paths.bubbleTomlPath,
+      renderBubbleConfigToml({
+        ...bubble.config,
+        executor: {
+          type: "ssh",
+          remote: "prod"
+        }
+      }),
+      "utf8"
+    );
+
+    await writeRemotePointer(bubble.paths.remotePointerPath, {
+      kind: "started",
+      host: "ssh.example.com",
+      user: "pairflow",
+      instanceId: `inst_${bubble.bubbleId}`,
+      remoteClonePath: `/srv/pairflow/repo--${bubble.bubbleId}`,
+      tmuxSession: `pf-${bubble.bubbleId}`,
+      startedAt: "2026-04-18T08:00:00.000Z"
+    });
+
+    return bubble;
+  }
 
   afterEach(async () => {
     stdoutSpy.mockClear();
@@ -180,6 +263,254 @@ describe("runCli", () => {
 
     expect(exitCode).toBe(0);
     expect(stdoutSpy).toHaveBeenCalled();
+  });
+
+  it("renders local bubble merge output from the merge result route", async () => {
+    const repoPath = await mkdtemp(join(tmpdir(), "pairflow-cli-merge-local-"));
+    tempDirs.push(repoPath);
+    await initGitRepository(repoPath);
+    const bubble = await setupDoneBubbleFixture(repoPath, "b_cli_merge_local_01");
+
+    const exitCode = await runCli([
+      "bubble",
+      "merge",
+      "--id",
+      bubble.bubbleId,
+      "--repo",
+      repoPath
+    ]);
+
+    expect(exitCode).toBe(0);
+    const output = stdoutSpy.mock.calls.map((call) => String(call[0])).join("");
+    expect(output).toContain(`Merged bubble ${bubble.bubbleId}:`);
+    expect(output).toContain("pushed=no");
+    expect(output).toContain("remoteDeleted=no");
+    expect(output).not.toContain("durableMerge=localRepoFromStartedRemoteHandoff");
+  });
+
+  it("renders started-remote bubble merge output from the merge result route", async () => {
+    const repoPath = await mkdtemp(join(tmpdir(), "pairflow-cli-merge-remote-"));
+    tempDirs.push(repoPath);
+    await initGitRepository(repoPath);
+    const bubble = await convertDoneBubbleToRemoteStarted(
+      await setupDoneBubbleFixture(repoPath, "b_cli_merge_remote_01")
+    );
+    const remoteCommitSha = (
+      await runGit(repoPath, ["rev-parse", bubble.config.bubble_branch])
+    ).stdout.trim();
+    const importRef = `refs/pairflow/import/${bubble.bubbleId}`;
+
+    const resolveRemoteBubbleStatusTargetSpy = vi
+      .spyOn(mergeBubbleDependencyDefaults, "resolveRemoteBubbleStatusTarget")
+      .mockResolvedValue({
+        alias: "prod",
+        host: "ssh.example.com",
+        user: "pairflow",
+        pairflowCommand: "pairflow"
+      });
+    const executeRemoteBubbleMergeCommandSpy = vi
+      .spyOn(mergeBubbleDependencyDefaults, "executeRemoteBubbleMergeCommand")
+      .mockResolvedValue({
+        bubbleId: bubble.bubbleId,
+        baseBranch: "main",
+        bubbleBranch: bubble.config.bubble_branch,
+        mergeCommitSha: remoteCommitSha,
+        importSource: {
+          kind: "git_ref",
+          ref: importRef,
+          commitSha: remoteCommitSha
+        },
+        cleanupPending: true,
+        tmuxSessionName: `pf-${bubble.bubbleId}`
+      });
+    const executeRemoteBubbleMergeCleanupCommandSpy = vi
+      .spyOn(mergeBubbleDependencyDefaults, "executeRemoteBubbleMergeCleanupCommand")
+      .mockResolvedValue({
+        bubbleId: bubble.bubbleId,
+        baseBranch: "main",
+        bubbleBranch: bubble.config.bubble_branch,
+        artifacts: {
+          worktree: {
+            path: `/srv/pairflow/repo--${bubble.bubbleId}`,
+            existed: true
+          },
+          tmux: {
+            sessionName: `pf-${bubble.bubbleId}`,
+            existed: true
+          },
+          runtimeSession: {
+            path: `${repoPath}/.pairflow/runtime/sessions/${bubble.bubbleId}.json`,
+            existed: true
+          },
+          branch: {
+            name: bubble.config.bubble_branch,
+            existed: true
+          }
+        },
+        tmuxSessionTerminated: true,
+        runtimeSessionRemoved: true,
+        removedWorktree: true,
+        removedBubbleBranch: true,
+        tmuxSessionName: `pf-cleanup-${bubble.bubbleId}`
+      });
+    const originalRunGit = mergeBubbleDependencyDefaults.runGit;
+    const runGitSpy = vi
+      .spyOn(mergeBubbleDependencyDefaults, "runGit")
+      .mockImplementation(async (args, options) => {
+        if (
+          args[0] === "fetch"
+          && args[1] === "--no-tags"
+          && args[3] === `${importRef}:${importRef}`
+        ) {
+          return originalRunGit(["update-ref", importRef, remoteCommitSha], options);
+        }
+
+        return originalRunGit(args, options);
+      });
+
+    try {
+      const exitCode = await runCli([
+        "bubble",
+        "merge",
+        "--id",
+        bubble.bubbleId,
+        "--repo",
+        repoPath
+      ]);
+
+      expect(exitCode).toBe(0);
+      expect(resolveRemoteBubbleStatusTargetSpy).toHaveBeenCalledOnce();
+      expect(executeRemoteBubbleMergeCommandSpy).toHaveBeenCalledOnce();
+      expect(executeRemoteBubbleMergeCleanupCommandSpy).toHaveBeenCalledOnce();
+      expect(runGitSpy).toHaveBeenCalled();
+
+      const output = stdoutSpy.mock.calls.map((call) => String(call[0])).join("");
+      expect(output).toContain(`Merged bubble ${bubble.bubbleId}:`);
+      expect(output).toContain("durableMerge=localRepoFromStartedRemoteHandoff");
+      expect(output).not.toContain("pushed=");
+      expect(output).not.toContain("remoteDeleted=");
+    } finally {
+      runGitSpy.mockRestore();
+      executeRemoteBubbleMergeCleanupCommandSpy.mockRestore();
+      executeRemoteBubbleMergeCommandSpy.mockRestore();
+      resolveRemoteBubbleStatusTargetSpy.mockRestore();
+    }
+  });
+
+  it("renders started-remote bubble merge JSON output with the presentation route", async () => {
+    const repoPath = await mkdtemp(join(tmpdir(), "pairflow-cli-merge-remote-json-"));
+    tempDirs.push(repoPath);
+    await initGitRepository(repoPath);
+    const bubble = await convertDoneBubbleToRemoteStarted(
+      await setupDoneBubbleFixture(repoPath, "b_cli_merge_remote_json_01")
+    );
+    const remoteCommitSha = (
+      await runGit(repoPath, ["rev-parse", bubble.config.bubble_branch])
+    ).stdout.trim();
+    const importRef = `refs/pairflow/import/${bubble.bubbleId}`;
+
+    const resolveRemoteBubbleStatusTargetSpy = vi
+      .spyOn(mergeBubbleDependencyDefaults, "resolveRemoteBubbleStatusTarget")
+      .mockResolvedValue({
+        alias: "prod",
+        host: "ssh.example.com",
+        user: "pairflow",
+        pairflowCommand: "pairflow"
+      });
+    const executeRemoteBubbleMergeCommandSpy = vi
+      .spyOn(mergeBubbleDependencyDefaults, "executeRemoteBubbleMergeCommand")
+      .mockResolvedValue({
+        bubbleId: bubble.bubbleId,
+        baseBranch: "main",
+        bubbleBranch: bubble.config.bubble_branch,
+        mergeCommitSha: remoteCommitSha,
+        importSource: {
+          kind: "git_ref",
+          ref: importRef,
+          commitSha: remoteCommitSha
+        },
+        cleanupPending: true,
+        tmuxSessionName: `pf-${bubble.bubbleId}`
+      });
+    const executeRemoteBubbleMergeCleanupCommandSpy = vi
+      .spyOn(mergeBubbleDependencyDefaults, "executeRemoteBubbleMergeCleanupCommand")
+      .mockResolvedValue({
+        bubbleId: bubble.bubbleId,
+        baseBranch: "main",
+        bubbleBranch: bubble.config.bubble_branch,
+        artifacts: {
+          worktree: {
+            path: `/srv/pairflow/repo--${bubble.bubbleId}`,
+            existed: true
+          },
+          tmux: {
+            sessionName: `pf-${bubble.bubbleId}`,
+            existed: true
+          },
+          runtimeSession: {
+            path: `${repoPath}/.pairflow/runtime/sessions/${bubble.bubbleId}.json`,
+            existed: true
+          },
+          branch: {
+            name: bubble.config.bubble_branch,
+            existed: true
+          }
+        },
+        tmuxSessionTerminated: true,
+        runtimeSessionRemoved: true,
+        removedWorktree: true,
+        removedBubbleBranch: true,
+        tmuxSessionName: `pf-cleanup-${bubble.bubbleId}`
+      });
+    const originalRunGit = mergeBubbleDependencyDefaults.runGit;
+    const runGitSpy = vi
+      .spyOn(mergeBubbleDependencyDefaults, "runGit")
+      .mockImplementation(async (args, options) => {
+        if (
+          args[0] === "fetch"
+          && args[1] === "--no-tags"
+          && args[3] === `${importRef}:${importRef}`
+        ) {
+          return originalRunGit(["update-ref", importRef, remoteCommitSha], options);
+        }
+
+        return originalRunGit(args, options);
+      });
+
+    try {
+      const exitCode = await runCli([
+        "bubble",
+        "merge",
+        "--id",
+        bubble.bubbleId,
+        "--repo",
+        repoPath,
+        "--json"
+      ]);
+
+      expect(exitCode).toBe(0);
+      expect(resolveRemoteBubbleStatusTargetSpy).toHaveBeenCalledOnce();
+      expect(executeRemoteBubbleMergeCommandSpy).toHaveBeenCalledOnce();
+      expect(executeRemoteBubbleMergeCleanupCommandSpy).toHaveBeenCalledOnce();
+      expect(runGitSpy).toHaveBeenCalled();
+
+      const output = stdoutSpy.mock.calls.map((call) => String(call[0])).join("");
+      const parsed = JSON.parse(output) as {
+        bubbleId: string;
+        presentationRoute: string;
+        pushedBaseBranch: boolean;
+        deletedRemoteBranch: boolean;
+      };
+      expect(parsed.bubbleId).toBe(bubble.bubbleId);
+      expect(parsed.presentationRoute).toBe("started_remote");
+      expect(parsed.pushedBaseBranch).toBe(false);
+      expect(parsed.deletedRemoteBranch).toBe(false);
+    } finally {
+      runGitSpy.mockRestore();
+      executeRemoteBubbleMergeCleanupCommandSpy.mockRestore();
+      executeRemoteBubbleMergeCommandSpy.mockRestore();
+      resolveRemoteBubbleStatusTargetSpy.mockRestore();
+    }
   });
 
   it("routes top-level converged help to removal guidance", async () => {
