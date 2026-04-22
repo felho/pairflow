@@ -85,10 +85,7 @@ export async function maybeFinalizeRemoteDeleteMissingTargetFallback(input: {
   }) => Error;
   inferCreatedAtFromBubbleInstanceId: (bubbleInstanceId: string) => string | null;
 }): Promise<DeleteBubbleResult | undefined> {
-  if (
-    input.deleteInput.force !== true
-    || !isRemoteDeleteInvalidTargetError(input.remoteDeleteError)
-  ) {
+  if (!isRemoteDeleteInvalidTargetError(input.remoteDeleteError)) {
     return undefined;
   }
 
@@ -124,7 +121,7 @@ export async function maybeFinalizeRemoteDeleteMissingTargetFallback(input: {
     }),
     resolved: input.routeContext.resolved,
     execution,
-    force: true,
+    force: input.deleteInput.force === true,
     now: input.now
   });
 }

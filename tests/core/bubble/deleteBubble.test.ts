@@ -2564,6 +2564,107 @@ describe("deleteBubble", () => {
     });
   });
 
+  it("falls back to local archive continuity when non-force remote delete sees a missing remote clone target", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await convertDeleteBubbleToRemoteStarted(
+      await createBubble({
+        id: "b_del_remote_inv_nf_01",
+        repoPath,
+        baseBranch: "main",
+        reviewArtifactType: "code",
+        task: "Remote delete invalid target non-force fallback",
+        cwd: repoPath
+      })
+    );
+    const now = new Date("2026-04-18T16:56:00.000Z");
+    const healthPath = watchdogHealthPath(bubble.paths.runtimeDir, bubble.bubbleId);
+    const historyPath = watchdogHistoryPath(bubble.paths.runtimeDir, bubble.bubbleId);
+    await mkdir(join(bubble.paths.runtimeDir, "watchdog-health"), { recursive: true });
+    await mkdir(join(bubble.paths.runtimeDir, "watchdog-history"), { recursive: true });
+    await writeFile(
+      healthPath,
+      JSON.stringify({
+        bubble_id: bubble.bubbleId,
+        sampled_at: "2026-04-18T16:55:30.000Z",
+        pane_hash: "hash-remote-fallback-non-force",
+        last_changed_at: "2026-04-18T16:51:00.000Z",
+        last_sample_status: "sampled"
+      }),
+      "utf8"
+    );
+    await writeFile(historyPath, "{\"sample\":\"remote-fallback-non-force-keep\"}\n", "utf8");
+    await expect(stat(healthPath)).resolves.toBeDefined();
+
+    const result = await deleteBubble(
+      {
+        bubbleId: bubble.bubbleId,
+        cwd: repoPath,
+        now
+      },
+      {
+        executeRemoteBubbleDeleteCommand: vi.fn(async () => {
+          throw new RemoteBubbleDeleteCommandError({
+            code: "REMOTE_DELETE_INVALID_TARGET",
+            message:
+              `Remote delete transport failed for ${bubble.bubbleId} on prod: missing remote clone target`,
+            context: {
+              bubbleId: bubble.bubbleId,
+              remoteAlias: "prod"
+            }
+          });
+        }),
+        resolveRemoteBubbleStatusTarget: vi.fn(async () => ({
+          alias: "prod",
+          host: "ssh.example.com",
+          user: "pairflow",
+          pairflowCommand: "pairflow"
+        }))
+      }
+    );
+
+    expect(result.deleted).toBe(true);
+    expect(result.requiresConfirmation).toBe(false);
+    expect(result.artifacts.worktree).toEqual({
+      exists: false,
+      path: `/srv/pairflow/repo--${bubble.bubbleId}`
+    });
+    expect(result.tmuxSessionTerminated).toBe(false);
+    expect(result.runtimeSessionRemoved).toBe(false);
+    expect(result.removedWorktree).toBe(false);
+    expect(result.removedBubbleBranch).toBe(false);
+
+    const archivePaths = await resolveArchivePaths({
+      repoPath,
+      bubbleInstanceId: bubble.config.bubble_instance_id as string,
+      archiveRootPath: process.env.PAIRFLOW_ARCHIVE_ROOT
+    });
+    await expect(stat(archivePaths.bubbleInstanceArchivePath)).resolves.toBeDefined();
+    await expect(stat(bubble.paths.bubbleDir)).rejects.toMatchObject({
+      code: "ENOENT"
+    });
+    await expect(readFile(historyPath, "utf8")).resolves.toBe(
+      "{\"sample\":\"remote-fallback-non-force-keep\"}\n"
+    );
+    await expect(stat(healthPath)).rejects.toMatchObject({
+      code: "ENOENT"
+    });
+    expect(
+      (await readMetricsEventsForDate(now)).find(
+        (event) => event.event_type === "bubble_deleted"
+      )
+    ).toMatchObject({
+      bubble_id: bubble.bubbleId,
+      event_type: "bubble_deleted",
+      metadata: {
+        force: false,
+        had_worktree: false,
+        had_tmux_session: false,
+        had_runtime_session: false,
+        had_branch: false
+      }
+    });
+  });
+
   it("fails closed and does not emit bubble_deleted when missing-target fallback cannot remove runtime health", async () => {
     const repoPath = await createTempRepo();
     const bubble = await convertDeleteBubbleToRemoteStarted(
