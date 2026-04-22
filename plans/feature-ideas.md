@@ -33,5 +33,13 @@
   - Add a mandatory "sequencing failure?" section to deep review/meta-review outputs:
     - distinguish local implementation bugs from bad task slicing,
     - call out when producer boundary, shared contract, persistence, and multi-family consumer fallout were packed too tightly into one task.
+- Add a watchdog recovery automation path for reviewer/implementer stalls where the agent has clearly finished thinking but did not emit the next Pairflow command:
+  - detect the pattern where the pane content becomes semantically terminal (`safe to close`, `approve`, `rework`, `pass ready`, etc.) but no `pairflow` lifecycle command follows before watchdog timeout,
+  - on watchdog hit, classify this separately from a real crash/hang,
+  - auto-inject a bounded recovery action:
+    - either synthesize the missing lifecycle command directly when confidence is high and the state/action mapping is unambiguous,
+    - or at minimum send the equivalent of `bubble resume` plus a machine-generated nudge that tells the active agent exactly which command it now has to emit,
+  - record this as explicit bubble health telemetry so we can distinguish "agent reasoning failure" from "terminal-output-but-no-command" operator friction,
+  - keep this fail-closed for approval/merge/commit boundaries unless the system has a strict proof that the emitted action is state-safe.
 - https://github.com/plastic-labs/honcho
 - https://setcode.dev/
