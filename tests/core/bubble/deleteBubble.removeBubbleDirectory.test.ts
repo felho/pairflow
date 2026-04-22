@@ -35,6 +35,7 @@ function buildDependencies(): DeleteBubbleDependencies {
           bubbleTomlPath: "/tmp/bubble-dir/bubble.toml",
           locksDir: "/tmp/repo/.pairflow/locks",
           worktreePath: "/tmp/worktree",
+          runtimeDir: "/tmp/runtime",
           sessionsPath: "/tmp/sessions.json",
           bubbleDir: "/tmp/bubble-dir",
           statePath: "/tmp/state.json"
@@ -112,6 +113,7 @@ describe("deleteBubble default removeBubbleDirectory", () => {
     expect(rmMock).toHaveBeenCalledWith("/tmp/bubble-dir", {
       recursive: true
     });
+    expect(rmMock).toHaveBeenCalledWith("/tmp/runtime/watchdog-health/b-delete-rm-01.json");
   });
 
   it("propagates non-ENOENT removal errors", async () => {
@@ -133,5 +135,33 @@ describe("deleteBubble default removeBubbleDirectory", () => {
     expect(rmMock).toHaveBeenCalledWith("/tmp/bubble-dir", {
       recursive: true
     });
+  });
+
+  it("fails closed when runtime health cleanup fails after bubble directory removal", async () => {
+    const error = Object.assign(new Error("health cleanup denied"), {
+      code: "EPERM"
+    });
+    rmMock.mockImplementationOnce(() => Promise.resolve(undefined));
+    rmMock.mockImplementationOnce(() => Promise.reject(error));
+
+    await expect(
+      deleteBubble(
+        {
+          bubbleId: "b-delete-rm-01",
+          cwd: "/tmp/repo"
+        },
+        buildDependencies()
+      )
+    ).rejects.toThrow(
+      "Delete failed: bubble_id=b-delete-rm-01 bubble_instance_id=bi_00m8f7w14k_2f03e8b8e4f24d17ac12 step=remove-runtime-health reason=health cleanup denied"
+    );
+
+    expect(rmMock).toHaveBeenNthCalledWith(1, "/tmp/bubble-dir", {
+      recursive: true
+    });
+    expect(rmMock).toHaveBeenNthCalledWith(
+      2,
+      "/tmp/runtime/watchdog-health/b-delete-rm-01.json"
+    );
   });
 });

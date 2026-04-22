@@ -412,6 +412,147 @@ describe("createUiRouter bubble detail resource", () => {
       await server.close();
     }
   });
+
+  it("suppresses previous-run quiet-pane attention through the first-party detail route", async () => {
+    const repoPath = "/tmp/pairflow-ui-router-detail-prev-run-repo";
+    const bubbleId = "b-router-detail-prev-run-01";
+    const status: BubbleStatusView = {
+      bubbleId,
+      repoPath,
+      worktreePath: "/tmp/worktree",
+      bubbleStartedAt: "2026-02-24T12:00:00.000Z",
+      state: "RUNNING",
+      round: 2,
+      activeAgent: "codex",
+      activeRole: "implementer",
+      activeSince: "2026-02-24T12:00:00.000Z",
+      lastCommandAt: "2026-02-24T12:06:00.000Z",
+      paneActivity: {
+        readStatus: "ok",
+        lastChangedAt: "2026-02-24T11:50:00.000Z",
+        sampledAt: "2026-02-24T11:59:59.000Z",
+        sinceLastChangedSeconds: 960,
+        sinceSampledSeconds: 361,
+        lastSampleStatus: "sampled",
+        lastSampleError: null,
+        sessionName: "pf-b-router-detail-prev-run-01",
+        targetPane: "pf-b-router-detail-prev-run-01:0.1"
+      },
+      executionContext: null,
+      watchdog: {
+        monitored: true,
+        monitoredAgent: "codex",
+        timeoutMinutes: 30,
+        referenceTimestamp: "2026-02-24T12:06:00.000Z",
+        deadlineTimestamp: "2026-02-24T12:36:00.000Z",
+        remainingSeconds: 1800,
+        expired: false
+      },
+      pendingInboxItems: {
+        humanQuestions: 0,
+        approvalRequests: 0,
+        total: 0
+      },
+      transcript: {
+        totalMessages: 3,
+        lastMessageType: "PASS",
+        lastMessageTs: "2026-02-24T12:06:00.000Z",
+        lastMessageId: "msg_prev_run_quiet_01"
+      },
+      metaReview: {
+        actor: "meta-reviewer",
+        authorityActive: false,
+        runtimeDelivery: null
+      },
+      commandPath: {
+        status: "external",
+        profile: "external",
+        localEntrypoint: "/tmp/worktree/dist/cli/index.js",
+        activeEntrypoint: "/usr/local/bin/pairflow",
+        message: "external Pairflow CLI active",
+        pinnedCommand: "pairflow"
+      },
+      accuracy_critical: false,
+      last_review_verification: "missing",
+      failing_gates: [],
+      spec_lock_state: {
+        state: "IMPLEMENTABLE",
+        open_blocker_count: 0,
+        open_required_now_count: 0
+      },
+      round_gate_state: {
+        applies: false,
+        violated: false,
+        round: 2
+      },
+      stateValidation: null
+    };
+    const inbox: BubbleInboxView = {
+      bubbleId,
+      repoPath,
+      state: "RUNNING",
+      pending: {
+        humanQuestions: 0,
+        approvalRequests: 0,
+        total: 0
+      },
+      items: []
+    };
+    const getBubbleStatus = vi.fn(async () => status);
+    const getBubbleInbox = vi.fn(async () => inbox);
+    const readRuntimeSessionsRegistry = vi.fn(async () => ({
+      [bubbleId]: {
+        bubbleId,
+        repoPath,
+        worktreePath: "/tmp/worktree",
+        tmuxSessionName: "pf-b-router-detail-prev-run-01",
+        updatedAt: "2026-02-24T12:06:00.000Z"
+      }
+    }));
+
+    const router = createUiRouter({
+      repoScope: {
+        repos: [repoPath],
+        has: (value: string) => Promise.resolve(value === repoPath)
+      },
+      events: {
+        subscribe: () => () => undefined,
+        getSnapshot: () => ({
+          id: 1,
+          ts: "2026-02-25T00:00:00.000Z",
+          type: "snapshot",
+          repos: [],
+          bubbles: []
+        }),
+        refreshNow: () => Promise.resolve(undefined),
+        addRepo: () => Promise.resolve(false),
+        removeRepo: () => Promise.resolve(false),
+        close: () => Promise.resolve(undefined)
+      },
+      dependencies: {
+        getBubbleStatus,
+        getBubbleInbox,
+        readRuntimeSessionsRegistry
+      }
+    });
+    const server = await startRouterServer(router);
+
+    try {
+      const response = await fetch(
+        `${server.url}/api/bubbles/${bubbleId}?repo=${encodeURIComponent(repoPath)}`
+      );
+      const payload = (await response.json()) as {
+        bubble: {
+          attention?: unknown;
+        };
+      };
+
+      expect(response.status).toBe(200);
+      expect(payload.bubble.attention ?? null).toBeNull();
+    } finally {
+      await server.close();
+    }
+  });
 });
 
 describe("createUiRouter bubble list resource", () => {

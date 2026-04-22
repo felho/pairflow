@@ -36,3 +36,10 @@ export type WriteWatchdogPaneActivityPort = (
     record: WatchdogPaneActivityRecord;
   }
 ) => Promise<string>;
+
+export type RemoveWatchdogPaneActivityPort = (
+  input: {
+    runtimeDir: string;
+    bubbleId: string;
+  }
+) => Promise<void>;

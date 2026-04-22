@@ -155,6 +155,7 @@ export function presentBubbleDetail(input: {
                 status: "missing"
               },
       now: input.now ?? new Date(),
+      bubbleStartedAt: input.status.bubbleStartedAt,
       ...(input.status.remoteExecution !== undefined
         ? { runtimeExpectedOverride: false }
         : {})

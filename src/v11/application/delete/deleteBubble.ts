@@ -56,7 +56,12 @@ function toDeleteBubbleError(message: string): DeleteBubbleError {
 function toDeleteStepError(input: {
   bubbleId: string;
   bubbleInstanceId: string;
-  step: "snapshot" | "index" | "worktree-cleanup" | "remove-active";
+  step:
+    | "snapshot"
+    | "index"
+    | "worktree-cleanup"
+    | "remove-active"
+    | "remove-runtime-health";
   error: unknown;
 }): DeleteBubbleError {
   const reason = input.error instanceof Error ? input.error.message : String(input.error);

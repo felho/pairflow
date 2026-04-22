@@ -14,6 +14,8 @@ import type {
 import { deleteBubbleDependencyDefaults } from "./deleteBubbleDependencyDefaults.js";
 import type { BranchExistsPort } from "../../shared/ports/git.js";
 import type { PathExistsPort } from "../../shared/ports/pathExists.js";
+import type { RemoveWatchdogPaneActivityPort } from "../../shared/ports/watchdogPaneActivity.js";
+import { inferBubbleStartedAtFromInstanceId } from "../../shared/bubble/bubbleInstanceId.js";
 import { stopBubbleV11 as stopBubble } from "../stop/emitStopV11.js";
 import {
   canonicalizeDeleteExecutionPath,
@@ -80,6 +82,7 @@ export interface DeleteBubbleDependencies {
   removeRuntimeSession?: typeof deleteBubbleDependencyDefaults.removeRuntimeSession;
   cleanupWorktreeWorkspace?: typeof deleteBubbleDependencyDefaults.cleanupWorktreeWorkspace;
   removeBubbleDirectory?: ((path: string) => Promise<void>) | undefined;
+  removeWatchdogPaneActivity?: RemoveWatchdogPaneActivityPort | undefined;
   stopBubble?: typeof stopBubble;
   createArchiveSnapshot?:
     | typeof deleteBubbleDependencyDefaults.createArchiveSnapshot
@@ -108,6 +111,7 @@ export interface ResolvedDeleteDependencies {
   removeRuntimeSession: typeof deleteBubbleDependencyDefaults.removeRuntimeSession;
   cleanupWorktreeWorkspace: typeof deleteBubbleDependencyDefaults.cleanupWorktreeWorkspace;
   removeBubbleDirectory: (path: string) => Promise<void>;
+  removeWatchdogPaneActivity: RemoveWatchdogPaneActivityPort;
   stopBubble: typeof stopBubble;
   createArchiveSnapshot:
     typeof deleteBubbleDependencyDefaults.createArchiveSnapshot;
@@ -169,27 +173,7 @@ export interface DeleteWorkspaceCleanupResult {
 export function inferCreatedAtFromBubbleInstanceId(
   bubbleInstanceId: string
 ): string | null {
-  const segments = bubbleInstanceId.split("_");
-  if (segments.length < 3 || segments[0] !== "bi") {
-    return null;
-  }
-
-  const encodedTimestamp = segments[1];
-  if (encodedTimestamp === undefined || !/^[0-9a-z]+$/u.test(encodedTimestamp)) {
-    return null;
-  }
-
-  const timestampMs = Number.parseInt(encodedTimestamp, 36);
-  if (!Number.isSafeInteger(timestampMs) || timestampMs < 0) {
-    return null;
-  }
-
-  const createdAt = new Date(timestampMs);
-  if (Number.isNaN(createdAt.getTime())) {
-    return null;
-  }
-
-  return createdAt.toISOString();
+  return inferBubbleStartedAtFromInstanceId(bubbleInstanceId);
 }
 
 export async function removeBubbleDirectory(path: string): Promise<void> {
@@ -233,6 +217,9 @@ export function resolveDeleteDependencies(
       deleteBubbleDependencyDefaults.cleanupWorktreeWorkspace,
     removeBubbleDirectory:
       dependencies.removeBubbleDirectory ?? removeBubbleDirectory,
+    removeWatchdogPaneActivity:
+      dependencies.removeWatchdogPaneActivity ??
+      deleteBubbleDependencyDefaults.removeWatchdogPaneActivity,
     stopBubble: dependencies.stopBubble ?? stopBubble,
     createArchiveSnapshot:
       dependencies.createArchiveSnapshot ??

@@ -16,6 +16,7 @@ import { cleanupWorktreeWorkspace } from "../worktree/worktreeWorkspaceDefaults.
 import { resolveBubbleById } from "../../shared/bubbleLookup/bubbleLookupDefaults.js";
 import { buildBubbleTmuxSessionName } from "../../shared/bubble/tmuxSessionName.js";
 import { statusCommandDependencyDefaults } from "../../shared/status/statusCommandDependencyDefaults.js";
+import { removeWatchdogPaneActivity } from "../watchdog/watchdogPaneActivityDefaults.js";
 
 export const deleteBubbleDependencyDefaults = {
   buildBubbleTmuxSessionName,
@@ -28,6 +29,7 @@ export const deleteBubbleDependencyDefaults = {
   readRemotePointer,
   readRuntimeSessionsRegistry,
   readStateSnapshot,
+  removeWatchdogPaneActivity,
   removeRuntimeSession,
   resolveRemoteBubbleStatusTarget:
     statusCommandDependencyDefaults.resolveRemoteBubbleStatusTarget,

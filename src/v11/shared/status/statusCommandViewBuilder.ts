@@ -16,6 +16,7 @@ import type {
   StatusGateState
 } from "./statusCommandInternals.js";
 import type { RemoteBubbleStatusSnapshot } from "./remoteBubbleStatusContract.js";
+import { inferBubbleStartedAtFromInstanceId } from "../bubble/bubbleInstanceId.js";
 import { toStatusCommandPathView } from "./statusCommandInternals.js";
 import {
   buildStatusExecutionContextView,
@@ -194,34 +195,4 @@ export function buildBubbleStatusView(
     return buildRemoteBubbleStatusView(input);
   }
   return buildLocalBubbleStatusView(input);
-}
-
-function inferBubbleStartedAtFromInstanceId(
-  bubbleInstanceId: string | undefined
-): string | null {
-  if (bubbleInstanceId === undefined) {
-    return null;
-  }
-
-  const segments = bubbleInstanceId.split("_");
-  if (segments.length < 3 || segments[0] !== "bi") {
-    return null;
-  }
-
-  const encodedTimestamp = segments[1];
-  if (encodedTimestamp === undefined || !/^[0-9a-z]+$/u.test(encodedTimestamp)) {
-    return null;
-  }
-
-  const timestampMs = Number.parseInt(encodedTimestamp, 36);
-  if (!Number.isSafeInteger(timestampMs) || timestampMs < 0) {
-    return null;
-  }
-
-  const startedAt = new Date(timestampMs);
-  if (Number.isNaN(startedAt.getTime())) {
-    return null;
-  }
-
-  return startedAt.toISOString();
 }

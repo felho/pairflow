@@ -11,6 +11,7 @@ import type { RemoteBubbleStatusSnapshot } from "../status/remoteBubbleStatusCon
 import { resolveBubbleAttention } from "../status/bubbleAttention.js";
 import { computeWatchdogStatus } from "../watchdog/watchdogStatus.js";
 import type { ReadWatchdogPaneActivityResult } from "../watchdog/watchdogPaneActivityStore.js";
+import { inferBubbleStartedAtFromInstanceId } from "../bubble/bubbleInstanceId.js";
 import type { BubbleListEntry } from "./listCommandContract.js";
 import { runtimeSessionExpectedStates } from "./listCommandContext.js";
 import { listCommandDefaults } from "./listCommandDefaults.js";
@@ -135,7 +136,10 @@ export function buildLocalBubbleListEntry(input: {
         stateValidation: input.stateLoaded.stateValidation,
         watchdog,
         paneActivityRead: input.paneActivityRead,
-        now: input.now
+        now: input.now,
+        bubbleStartedAt: inferBubbleStartedAtFromInstanceId(
+          input.config.bubble_instance_id
+        )
       }),
       metaReview: {
         actor: "meta-reviewer",
@@ -394,7 +398,8 @@ export async function buildRefreshedRemoteBubbleListEntry(input: {
           paneActivity: remoteStatusSnapshot.paneActivity
         }),
         now: input.now,
-        runtimeExpectedOverride: false
+        runtimeExpectedOverride: false,
+        bubbleStartedAt: remoteStatusSnapshot.bubbleStartedAt
       }),
       metaReview: remoteStatusSnapshot.metaReview,
       remoteExecution: {

@@ -4,6 +4,7 @@ import { join } from "node:path";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { parseBubbleConfigToml, renderBubbleConfigToml } from "../../../src/config/bubbleConfig.js";
 import { createBubble } from "../../../src/v11/application/create/createBubble.js";
 import { buildMetaReviewExecutionContext } from "../../../src/v11/shared/metaReview/metaReviewExecutionContext.js";
 import {
@@ -52,6 +53,22 @@ async function setBubbleExecutorRemoteAlias(
   await writeFile(
     bubbleTomlPath,
     `${current.trimEnd()}\n\n[executor]\ntype = "ssh"\nremote = "${remoteAlias}"\n`,
+    "utf8"
+  );
+}
+
+async function setBubbleInstanceStartedAt(
+  bubbleTomlPath: string,
+  startedAt: string
+): Promise<void> {
+  const current = parseBubbleConfigToml(await readFile(bubbleTomlPath, "utf8"));
+  const timestamp = new Date(startedAt).getTime().toString(36).padStart(10, "0");
+  await writeFile(
+    bubbleTomlPath,
+    renderBubbleConfigToml({
+      ...current,
+      bubble_instance_id: `bi_${timestamp}_fixture0001`
+    }),
     "utf8"
   );
 }
@@ -416,6 +433,10 @@ describe("listBubbles", () => {
       task: "Quiet pane attention",
       startedAt: "2026-02-22T18:22:00.000Z"
     });
+    await setBubbleInstanceStartedAt(
+      bubble.paths.bubbleTomlPath,
+      "2026-02-22T18:22:00.000Z"
+    );
 
     await upsertRuntimeSession({
       sessionsPath: bubble.paths.sessionsPath,
@@ -449,6 +470,49 @@ describe("listBubbles", () => {
       severity: "warning",
       label: "Quiet 3m"
     });
+  });
+
+  it("suppresses quiet-pane attention when the sampled record predates the current local bubble start", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_list_attention_prev_run_01",
+      task: "Previous-run quiet pane suppression",
+      startedAt: "2026-02-22T18:22:00.000Z"
+    });
+    await setBubbleInstanceStartedAt(
+      bubble.paths.bubbleTomlPath,
+      "2026-02-22T18:22:00.000Z"
+    );
+
+    await upsertRuntimeSession({
+      sessionsPath: bubble.paths.sessionsPath,
+      bubbleId: bubble.bubbleId,
+      repoPath,
+      worktreePath: bubble.paths.worktreePath,
+      tmuxSessionName: "pf-b_list_attention_prev_run_01",
+      now: new Date("2026-02-22T18:23:00.000Z")
+    });
+    await writeWatchdogPaneActivity({
+      runtimeDir: bubble.paths.runtimeDir,
+      bubbleId: bubble.bubbleId,
+      record: {
+        bubble_id: bubble.bubbleId,
+        sampled_at: "2026-02-22T18:21:59.000Z",
+        pane_hash: "hash-prev-run",
+        last_changed_at: "2026-02-22T18:15:00.000Z",
+        session_name: "pf-b_list_attention_prev_run_01",
+        target_pane: "pf-b_list_attention_prev_run_01:0.1",
+        last_sample_status: "sampled"
+      }
+    });
+
+    const listed = await listBubbles({
+      repoPath,
+      now: new Date("2026-02-22T18:23:00.000Z")
+    });
+
+    expect(listed.bubbles[0]?.attention).toBeNull();
   });
 
   it("surfaces active meta-review runtime delivery diagnostics in list summaries", async () => {
@@ -2047,6 +2111,107 @@ describe("listBubbles", () => {
       }
     });
     expect(listed.bubbles[0]?.remoteExecution?.runtimeReasonCode).toBeUndefined();
+  });
+
+  it("suppresses refreshed remote quiet-pane attention when the latest sample predates bubbleStartedAt", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_list_remote_refresh_prev_run_01",
+      task: "Remote refresh previous-run quiet pane suppression"
+    });
+
+    await writeRemotePointer(bubble.paths.remotePointerPath, {
+      kind: "started",
+      host: "ssh.example.com",
+      instanceId: "inst_list_remote_refresh_prev_run_01",
+      remoteClonePath: "/srv/pairflow/repo--b_list_remote_refresh_prev_run_01",
+      tmuxSession: "pf-b_list_remote_refresh_prev_run_01",
+      startedAt: "2026-04-16T09:40:00.000Z"
+    });
+    await setBubbleExecutorRemoteAlias(bubble.paths.bubbleTomlPath);
+
+    vi.spyOn(
+      listCommandDefaults,
+      "resolveRemoteBubbleStatusTarget"
+    ).mockResolvedValue({
+      alias: "lab",
+      host: "ssh.example.com",
+      pairflowCommand: "pairflow"
+    });
+    vi.spyOn(
+      listCommandDefaults,
+      "executeRemoteBubbleStatus"
+    ).mockResolvedValue({
+      bubbleStartedAt: "2026-04-16T09:40:00.000Z",
+      state: "RUNNING",
+      round: 4,
+      activeAgent: "codex",
+      activeRole: "implementer",
+      activeSince: "2026-04-16T09:41:00.000Z",
+      lastCommandAt: "2026-04-16T10:00:00.000Z",
+      paneActivity: {
+        readStatus: "ok",
+        lastChangedAt: "2026-04-16T09:20:00.000Z",
+        sampledAt: "2026-04-16T09:39:59.000Z",
+        sinceLastChangedSeconds: 2520,
+        sinceSampledSeconds: 1261,
+        lastSampleStatus: "sampled",
+        lastSampleError: null,
+        sessionName: "pf-b_list_remote_refresh_prev_run_01",
+        targetPane: "pf-b_list_remote_refresh_prev_run_01:0.1"
+      },
+      executionContext: null,
+      watchdog: {
+        monitored: true,
+        monitoredAgent: "codex",
+        timeoutMinutes: 30,
+        referenceTimestamp: "2026-04-16T10:00:00.000Z",
+        deadlineTimestamp: "2026-04-16T10:30:00.000Z",
+        remainingSeconds: 1800,
+        expired: false
+      },
+      pendingInboxItems: {
+        humanQuestions: 0,
+        approvalRequests: 0,
+        total: 0
+      },
+      transcript: {
+        totalMessages: 5,
+        lastMessageType: "PASS",
+        lastMessageTs: "2026-04-16T10:00:00.000Z",
+        lastMessageId: "msg_list_remote_refresh_prev_run_01"
+      },
+      metaReview: {
+        actor: "meta-reviewer",
+        authorityActive: false,
+        runtimeDelivery: null
+      },
+      accuracyCritical: false,
+      lastReviewVerification: "missing",
+      failingGates: [],
+      specLockState: {
+        state: "IMPLEMENTABLE",
+        open_blocker_count: 0,
+        open_required_now_count: 0
+      },
+      roundGateState: {
+        applies: false,
+        violated: false,
+        round: 4
+      },
+      stateValidation: null,
+      runtimeAvailability: "active",
+      lastCheckedAt: "2026-04-16T10:01:00.000Z"
+    });
+
+    const listed = await listBubbles({
+      repoPath,
+      refresh: true,
+      now: new Date("2026-04-16T10:01:00.000Z")
+    });
+
+    expect(listed.bubbles[0]?.attention).toBeNull();
   });
 
   it("degrades list refresh to cache when the bubble lacks an ssh executor alias", async () => {

@@ -232,3 +232,19 @@ export async function writeWatchdogPaneActivity(input: {
 
   return path;
 }
+
+export async function removeWatchdogPaneActivity(input: {
+  runtimeDir: string;
+  bubbleId: string;
+}): Promise<void> {
+  const path = getWatchdogPaneActivityPath(input.runtimeDir, input.bubbleId);
+  try {
+    await rm(path);
+  } catch (error) {
+    const typedError = error as NodeJS.ErrnoException;
+    if (typedError.code === "ENOENT") {
+      return;
+    }
+    throw error;
+  }
+}

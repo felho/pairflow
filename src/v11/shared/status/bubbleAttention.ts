@@ -35,6 +35,17 @@ function resolveElapsedSeconds(
   return Math.max(0, Math.floor((now.getTime() - resolved) / 1_000));
 }
 
+function resolveTimestampMs(timestamp: string | null | undefined): number | null {
+  if (timestamp === null || timestamp === undefined) {
+    return null;
+  }
+  const resolved = Date.parse(timestamp);
+  if (Number.isNaN(resolved)) {
+    return null;
+  }
+  return resolved;
+}
+
 function formatQuietMinutes(seconds: number): number {
   return Math.max(3, Math.floor(seconds / 60));
 }
@@ -167,12 +178,23 @@ function resolveQuietPaneAttention(input: {
   watchdog: Pick<WatchdogStatus, "monitored">;
   paneActivityRead: ReadWatchdogPaneActivityResult;
   now: Date;
+  bubbleStartedAt?: string | null;
 }): UiBubbleAttention | null {
   if (
     input.state !== "RUNNING"
     || !input.watchdog.monitored
     || input.paneActivityRead.status !== "ok"
     || input.paneActivityRead.record.last_sample_status !== "sampled"
+  ) {
+    return null;
+  }
+
+  const sampledAtMs = resolveTimestampMs(input.paneActivityRead.record.sampled_at);
+  const bubbleStartedAtMs = resolveTimestampMs(input.bubbleStartedAt);
+  if (
+    sampledAtMs !== null
+    && bubbleStartedAtMs !== null
+    && sampledAtMs < bubbleStartedAtMs
   ) {
     return null;
   }
@@ -202,6 +224,7 @@ export function resolveBubbleAttention(input: {
   paneActivityRead: ReadWatchdogPaneActivityResult;
   now: Date;
   runtimeExpectedOverride?: boolean;
+  bubbleStartedAt?: string | null;
 }): UiBubbleAttention | null {
   return (
     resolveStateValidationAttention(input.stateValidation)
@@ -224,7 +247,10 @@ export function resolveBubbleAttention(input: {
       state: input.state,
       watchdog: input.watchdog,
       paneActivityRead: input.paneActivityRead,
-      now: input.now
+      now: input.now,
+      ...(input.bubbleStartedAt !== undefined
+        ? { bubbleStartedAt: input.bubbleStartedAt }
+        : {})
     })
   );
 }
