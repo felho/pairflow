@@ -118,16 +118,16 @@ Sikernek az szamit, ha a kovetkezo kor mar nem egyetlen bubble-ben mozgatja egys
 4. A current-tree adjacent actor-runtime baseline mar kulon successor lane-ben el:
    [actor-runtime-interface-post-phaseE-successor-plan-v1.md](/Users/felho/dev/pairflow/plans/actor-runtime-interface-post-phaseE-successor-plan-v1.md)
 5. A `runtime-review-policy-auto-rework-threshold-phase2` task docs-only refinement bubble-je lefutott, a bounded Phase 2 slice, authority ownership, fail-closed branch inventory, es consumer-surface contract wording implementacios baseline-re lett szukitve.
+6. A `runtime-review-policy-auto-rework-threshold-phase2` implementation bubble le lett zarva, merge-elve `main`-re, majd archivalva ide:
+   [runtime-review-policy-auto-rework-threshold-phase2.md](/Users/felho/dev/pairflow/plans/archive/tasks/runtime-review-policy-auto-rework-threshold-phase2.md)
 
 ### Open Work
 
-1. A Phase 2 task-spec mar letezik itt, es az implementation bubble mar fut:
-   [runtime-review-policy-auto-rework-threshold-phase2.md](/Users/felho/dev/pairflow/plans/tasks/runtime-review-policy-auto-rework-threshold-phase2.md)
-2. A Phase 2 bubble-scoped implementacio, review, es merge meg hatra van; ez most a lane aktiv kovetkezo delivery munkaja.
-3. A Phase 3A / Phase 3B task artifactok letrehozasa tovabbra is hianyzik coverage-szinten.
-4. A canonical control-model orokles explicit bevezetese a downstream taskokba.
-5. A downstream taskok dependency wordingje nem allithat `approved` parent-plan baseline-t, amig ennek a plannek a frontmatter statusza `draft`.
-6. A downstream Phase 2 / Phase 3 taskok koncepcionalisan maradhatnak, de most mar a merged Phase 1 baseline-re kell hivatkozniuk, nem a reset-elotti gapre.
+1. A Phase 3A / Phase 3B task artifactok letrehozasa tovabbra is hianyzik coverage-szinten.
+2. A canonical control-model orokles explicit bevezetese a downstream taskokba.
+3. A downstream taskok dependency wordingje nem allithat `approved` parent-plan baseline-t, amig ennek a plannek a frontmatter statusza `draft`.
+4. A downstream Phase 3 taskoknak mar a merged es archivalt Phase 1 + Phase 2 baseline-re kell hivatkozniuk, nem a reset-elotti gapre.
+5. A kovetkezo bounded delivery munka mar nem threshold implementation, hanem a reviewer bypass Phase 3A contract authoring task letrehozasa.
 
 ### Deferred / Future Work
 
@@ -136,26 +136,23 @@ Sikernek az szamit, ha a kovetkezo kor mar nem egyetlen bubble-ben mozgatja egys
 
 ## Immediate Next Step
 
-1. A current next bounded step a futo Phase 2 implementation bubble lezaratasa:
-   [runtime-review-policy-auto-rework-threshold-phase2.md](/Users/felho/dev/pairflow/plans/tasks/runtime-review-policy-auto-rework-threshold-phase2.md)
-   - delivery rule:
-     az implementation ugyanarra a merged Phase 1 authority/projection baseline-re epuljon, kulonosen:
-     `src/v11/shared/metaReviewGate/metaReviewGateThresholdAuthority.ts`,
-     `src/v11/shared/reviewPolicy/reviewPolicyRuntime.ts`,
-     `src/v11/shared/metaReviewGate/metaReviewGateCurrentRunFinalization.ts`,
-     `src/v11/shared/metaReviewGate/metaReviewGateHumanGatePersistence.ts`,
-     `src/v11/shared/metaReviewGate/approvalRequestEnvelope.ts`
-   - scope rule:
-     ez threshold delivery task legyen, ne uj foundation refactor.
-     A routing/human-gate payload alignment ownershipolhato, de bypass contract vagy szeles UI/control surface meg nem.
-   - current-tree read-model note:
-     a kotelezo consume family itt mar nem `list/status`, mert azt a Phase 1 lezarta.
-     A bounded Phase 2 read-model closure a gate-route truth export familyre korlatozodik:
-     persisted human-gate envelope metadata, converged route metadata, metrics/report aggregation, valamint a mar letezo submit/result route exposure.
-     `detail` tovabbra is csak explicit entrypointtal ownershipolhato.
-2. A kovetkezo kulon successor task a Phase 3A bypass-contract authoring legyen, de csak a Phase 2 threshold implementacio merge-e utan:
+1. A current next bounded step a Phase 3A bypass-contract authoring task letrehozasa:
    `plans/tasks/runtime-review-policy-reviewer-bypass-contract-phase3a.md`
-3. Az archived `O2-T9` current-tree preserved baseline marad; a Phase 2 tasknak erre es a merged Phase 1 baseline-re kell epulnie, es nem szabad runtime-capability cleanupot vagy bypass-aktivaciot opportunistikusan visszahoznia.
+   - delivery rule:
+     a task mar a merged es archivalt threshold baseline-re epuljon, kulonosen:
+     `src/v11/shared/reviewPolicy/reviewPolicyRuntime.ts`,
+     `src/v11/shared/metaReviewGate/metaReviewGateThresholdAuthority.ts`,
+     `src/v11/shared/metaReviewGate/metaReviewGateCurrentRunFinalization.ts`,
+     `src/v11/shared/metaReviewGate/approvalRequestEnvelope.ts`,
+     valamint a Phase 1 es Phase 2 archivalt taskok contract-nyelvezetere.
+   - scope rule:
+     ez contract-authoring task legyen, ne threshold follow-up implementation es ne bypass activation.
+     A policy/config/UI/state/provenance contract specifikalhato, de a tenyleges runtime behavior, handoff topology, es activation kulon Phase 3B ownership maradjon.
+   - current-tree note:
+     a Phase 3A feladata nem ujrairni a threshold delivery truth surface-t, hanem arra epiteni a bypass contractot explicit prerequisite- es provenance-szabalyokkal.
+2. A Phase 3B activation task tovabbra is csak a Phase 3A contract utan vedheto successor:
+   `plans/tasks/runtime-review-policy-reviewer-bypass-activation-post-cutover-phase3b.md`
+3. Az archived `O2-T9` current-tree preserved baseline marad; a Phase 3A tasknak sem szabad runtime-capability cleanupot vagy opportunistic bypass-aktivaciot visszahoznia.
 
 ## Decision Baseline
 
