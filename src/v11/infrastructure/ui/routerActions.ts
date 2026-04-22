@@ -2,6 +2,13 @@ import type { IncomingMessage } from "node:http";
 import { join } from "node:path";
 
 import type { UiBubbleDetail } from "../../../types/ui.js";
+import type { BubbleReviewPolicyRuntimeView } from "../../../types/bubble.js";
+import { REVIEW_POLICY_WRITE_CONFLICT } from "../../shared/reviewPolicy/updateBubbleReviewPolicy.js";
+import {
+  REVIEW_POLICY_STATE_CONFLICT,
+  UiBubbleReviewPolicyConflictError,
+  UiBubbleReviewPolicyStateConflictError
+} from "../../defaults/ui/updateBubbleReviewPolicyForUi.js";
 import type { RuntimeSessionRecord } from "../executor/sessionRuntime/runtimeSessionsRegistry.js";
 import { presentBubbleDetail, presentBubbleList } from "./presenters/bubblePresenter.js";
 import { UiRepoScopeError, resolveScopedRepoPath } from "./repoScope.js";
@@ -117,12 +124,37 @@ async function loadBubbleDetail(input: {
   };
 }
 
+function mergeBubbleDetailWithReviewPolicyConflict(
+  bubble: UiBubbleDetail | null,
+  reviewPolicyConflict:
+    | {
+        bubbleToml: string;
+        reviewPolicy: BubbleReviewPolicyRuntimeView;
+      }
+    | undefined
+): UiBubbleDetail | null {
+  if (bubble === null || reviewPolicyConflict === undefined) {
+    return bubble;
+  }
+  return {
+    ...bubble,
+    bubbleToml: reviewPolicyConflict.bubbleToml,
+    reviewPolicy: reviewPolicyConflict.reviewPolicy
+  };
+}
+
 async function mapConflictWithCurrentState(input: {
   environment: RouterActionEnvironment;
   message: string;
   repoPath: string;
   bubbleId: string;
   reasonCode?: string;
+  reviewPolicyConflict?:
+    | {
+        bubbleToml: string;
+        reviewPolicy: BubbleReviewPolicyRuntimeView;
+      }
+    | undefined;
 }): Promise<UiApiError> {
   let currentBubble: UiBubbleDetail | null = null;
   try {
@@ -135,13 +167,30 @@ async function mapConflictWithCurrentState(input: {
     currentBubble = null;
   }
 
+  const bubbleWithConflictContext = mergeBubbleDetailWithReviewPolicyConflict(
+    currentBubble,
+    input.reviewPolicyConflict
+  );
+  const currentState =
+    bubbleWithConflictContext?.state ?? parseStateFromErrorMessage(input.message) ?? null;
+
   return conflict(input.message, {
     bubbleId: input.bubbleId,
     repoPath: input.repoPath,
     ...(input.reasonCode !== undefined ? { reasonCode: input.reasonCode } : {}),
-    currentState:
-      currentBubble?.state ?? parseStateFromErrorMessage(input.message) ?? null,
-    ...(currentBubble !== null ? { bubble: currentBubble } : {})
+    currentState,
+    ...(bubbleWithConflictContext !== null ? { bubble: bubbleWithConflictContext } : {}),
+    ...(input.reviewPolicyConflict !== undefined
+      ? {
+          reviewPolicyConflict: {
+            bubbleId: input.bubbleId,
+            repoPath: input.repoPath,
+            currentState,
+            bubbleToml: input.reviewPolicyConflict.bubbleToml,
+            reviewPolicy: input.reviewPolicyConflict.reviewPolicy
+          }
+        }
+      : {})
   });
 }
 
@@ -331,6 +380,29 @@ async function mapActionErrorToApiError(input: {
       ...(bubbleCommitReasonCode !== undefined
         ? { reasonCode: bubbleCommitReasonCode }
         : {})
+    });
+  }
+
+  if (input.error instanceof UiBubbleReviewPolicyConflictError) {
+    return mapConflictWithCurrentState({
+      environment: input.environment,
+      message,
+      repoPath: input.repoPath,
+      bubbleId: input.bubbleId,
+      reasonCode: REVIEW_POLICY_WRITE_CONFLICT,
+      reviewPolicyConflict: {
+        bubbleToml: input.error.currentBubbleToml,
+        reviewPolicy: input.error.currentReviewPolicy
+      }
+    });
+  }
+
+  if (input.error instanceof UiBubbleReviewPolicyStateConflictError) {
+    return conflict(message, {
+      bubbleId: input.bubbleId,
+      repoPath: input.repoPath,
+      currentState: input.error.currentState,
+      reasonCode: REVIEW_POLICY_STATE_CONFLICT
     });
   }
 

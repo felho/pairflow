@@ -30,6 +30,7 @@ export const bubbleActionKinds = [
   "request-rework",
   "reply",
   "resume",
+  "update-review-policy",
   "restart",
   "commit",
   "merge",
@@ -166,6 +167,19 @@ export interface UiBubbleMetaReviewSummary {
   } | null;
 }
 
+export type BubbleReviewLoopMode = "full" | "meta_only";
+export type BubbleReviewSupportStatus = "enabled" | "guarded";
+
+export interface UiBubbleReviewPolicy {
+  requested_loop_mode: BubbleReviewLoopMode;
+  effective_loop_mode: BubbleReviewLoopMode;
+  support_status: BubbleReviewSupportStatus;
+  meta_review_auto_rework_min_severity: "P1" | "P2" | "P3";
+  blocked_reason_code?: string;
+  blocked_prerequisites?: string[];
+  provenance_note?: string;
+}
+
 export interface UiBubbleSummary {
   bubbleId: string;
   repoPath: string;
@@ -180,6 +194,7 @@ export interface UiBubbleSummary {
   runtimeSession: RuntimeSessionRecord | null;
   runtime: UiRuntimeHealth;
   attention: UiBubbleAttention | null;
+  reviewPolicy: UiBubbleReviewPolicy | null;
   metaReview: UiBubbleMetaReviewSummary;
   remoteExecution?: UiBubbleRemoteExecution;
 }
@@ -219,6 +234,7 @@ export interface UiApiErrorBody {
 }
 
 export interface UiBubbleDetail extends UiBubbleSummary {
+  bubbleToml: string | null;
   watchdog: UiBubbleWatchdog;
   pendingInboxItems: UiPendingInboxCounts;
   inbox: UiBubbleInbox;
@@ -289,6 +305,21 @@ export interface CommitActionInput {
 export interface MergeActionInput {
   push?: boolean;
   deleteRemote?: boolean;
+}
+
+export interface UpdateReviewPolicyActionInput {
+  reviewLoopMode: BubbleReviewLoopMode;
+  expectedBubbleToml?: string;
+}
+
+export interface UpdateReviewPolicyActionResult {
+  kind: "review_policy_updated";
+  bubbleId: string;
+  reviewPolicy: UiBubbleReviewPolicy;
+  previousRequestedLoopMode: BubbleReviewLoopMode;
+  nextRequestedLoopMode: BubbleReviewLoopMode;
+  activationChange: "none";
+  bubbleToml: string;
 }
 
 export interface AttachActionResult {

@@ -214,6 +214,7 @@ export const resolveBubbleById: ResolveBubbleByIdPort = async (
 
   return {
     bubbleId: bubbleConfig.id,
+    bubbleToml,
     bubbleConfig,
     bubblePaths,
     repoPath: configRepoPath

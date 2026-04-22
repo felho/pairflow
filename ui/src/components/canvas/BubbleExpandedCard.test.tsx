@@ -95,6 +95,66 @@ describe("BubbleExpandedCard", () => {
     expect(screen.getByText("Approval Package")).toBeInTheDocument();
   });
 
+  it("prefers detail state and round for approval package rendering", () => {
+    renderExpandedCard({
+      bubble: bubbleCard({
+        bubbleId: "b-expanded-1",
+        repoPath: "/repo-a",
+        state: "RUNNING",
+        round: 2
+      }),
+      detail: {
+        ...bubbleDetail({
+          bubbleId: "b-expanded-1",
+          repoPath: "/repo-a",
+          state: "READY_FOR_HUMAN_APPROVAL"
+        }),
+        round: 6
+      }
+    });
+
+    expect(screen.getByText("Approval Package")).toBeInTheDocument();
+    expect(screen.getByText("R6")).toBeInTheDocument();
+    expect(screen.queryByText("R2")).not.toBeInTheDocument();
+  });
+
+  it("prefers detail state when deciding whether to show the pending human question", () => {
+    renderExpandedCard({
+      bubble: bubbleCard({
+        bubbleId: "b-expanded-1",
+        repoPath: "/repo-a",
+        state: "RUNNING"
+      }),
+      detail: bubbleDetail({
+        bubbleId: "b-expanded-1",
+        repoPath: "/repo-a",
+        state: "WAITING_HUMAN"
+      })
+    });
+
+    expect(screen.getByText(/Question from human/u)).toBeInTheDocument();
+    expect(screen.getByText("Need confirmation")).toBeInTheDocument();
+  });
+
+  it("renders canonical review-policy details from the bubble surface", () => {
+    renderExpandedCard({
+      bubble: bubbleCard({
+        bubbleId: "b-expanded-1",
+        repoPath: "/repo-a"
+      })
+    });
+
+    expect(screen.getByText("Review Policy")).toBeInTheDocument();
+    expect(screen.getByText(/Requested:/u)).toBeInTheDocument();
+    expect(screen.getByText(/Effective:/u)).toBeInTheDocument();
+    expect(screen.getByText(/Support:/u)).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        /Policy updates only change the requested mode in Phase 3A\./u
+      )
+    ).toBeInTheDocument();
+  });
+
   it("adds meta-review running border while bubble remains in running state", () => {
     renderExpandedCard({
       bubble: bubbleCard({

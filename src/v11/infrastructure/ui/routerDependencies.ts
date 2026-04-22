@@ -23,6 +23,7 @@ type CoreUiRouterDependencyDefaults = Pick<
   | "resumeBubble"
   | "startBubble"
   | "stopBubble"
+  | "updateBubbleReviewPolicy"
 >;
 
 let uiRouterDependencyDefaultsPromise:
@@ -45,7 +46,9 @@ async function loadUiRouterDependencyDefaults(): Promise<CoreUiRouterDependencyD
     restartBubble: (...args) => uiRouterDependencyDefaults.restartBubble(...args),
     resumeBubble: (...args) => uiRouterDependencyDefaults.resumeBubble(...args),
     startBubble: (...args) => uiRouterDependencyDefaults.startBubble(...args),
-    stopBubble: (...args) => uiRouterDependencyDefaults.stopBubble(...args)
+    stopBubble: (...args) => uiRouterDependencyDefaults.stopBubble(...args),
+    updateBubbleReviewPolicy: (...args) =>
+      uiRouterDependencyDefaults.updateBubbleReviewPolicy(...args)
   }));
   return uiRouterDependencyDefaultsPromise;
 }
@@ -89,6 +92,9 @@ export function resolveUiRouterDependencies(
     mergeBubble: input.dependencies?.mergeBubble ?? defaultUiRouterDependencies.mergeBubble,
     openBubble: input.dependencies?.openBubble ?? defaultUiRouterDependencies.openBubble,
     attachBubble: input.dependencies?.attachBubble ?? defaultUiRouterDependencies.attachBubble,
+    updateBubbleReviewPolicy:
+      input.dependencies?.updateBubbleReviewPolicy
+      ?? defaultUiRouterDependencies.updateBubbleReviewPolicy,
     stopBubble: input.dependencies?.stopBubble ?? defaultUiRouterDependencies.stopBubble,
     restartBubble:
       input.dependencies?.restartBubble ?? defaultUiRouterDependencies.restartBubble,

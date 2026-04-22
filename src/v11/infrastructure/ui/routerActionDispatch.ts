@@ -9,6 +9,7 @@ import {
   parseDeleteBody,
   parseMergeBody,
   parseOptionalRefs,
+  parseReviewPolicyBody,
   requireMessage,
   throwApiError
 } from "./routerHttp.js";
@@ -150,6 +151,26 @@ async function handleDeleteAction(
   };
 }
 
+async function handleUpdateReviewPolicyAction(
+  input: BubbleActionDispatchInput
+): Promise<BubbleActionResponse> {
+  const reviewPolicyInput = parseReviewPolicyBody(input.body);
+  return {
+    status: 200,
+    // Keep lifecycle-state authority inside the lock-aware mutation seam so the
+    // router does not introduce a second, stale preflight decision point.
+    result: await input.environment.dependencies.updateBubbleReviewPolicy({
+      bubbleId: input.bubbleId,
+      repoPath: input.repoPath,
+      reviewLoopMode: reviewPolicyInput.reviewLoopMode,
+      ...(reviewPolicyInput.expectedBubbleToml !== undefined
+        ? { expectedBubbleToml: reviewPolicyInput.expectedBubbleToml }
+        : {}),
+      ...resolveOptionalCwd(input.environment)
+    })
+  };
+}
+
 export async function dispatchBubbleAction(
   input: BubbleActionDispatchInput
 ): Promise<BubbleActionResponse> {
@@ -200,6 +221,8 @@ export async function dispatchBubbleAction(
           input.bubbleId
         )
       };
+    case "update-review-policy":
+      return handleUpdateReviewPolicyAction(input);
     case "stop":
       return {
         status: 200,

@@ -77,7 +77,7 @@ async function atomicWriteState(
   }
 }
 
-async function withStateWriteLock<T>(
+export async function withStateWriteLock<T>(
   statePath: string,
   timeoutMs: number,
   task: () => Promise<T>

@@ -1,4 +1,8 @@
 import type { IncomingMessage } from "node:http";
+import {
+  isBubbleReviewLoopMode,
+  type BubbleReviewLoopMode
+} from "../../../types/bubble.js";
 import { badRequest, throwApiError } from "./routerHttpErrors.js";
 
 const maxJsonBodyBytes = 1_000_000;
@@ -171,6 +175,40 @@ export function parseDeleteBody(body: unknown): {
   }
   return {
     ...(forceValue !== undefined ? { force: forceValue } : {})
+  };
+}
+
+export function parseReviewPolicyBody(body: unknown): {
+  reviewLoopMode: BubbleReviewLoopMode;
+  expectedBubbleToml?: string | undefined;
+} {
+  if (typeof body !== "object" || body === null || Array.isArray(body)) {
+    throwApiError(
+      badRequest("Review policy request body must be a JSON object.")
+    );
+  }
+
+  const reviewLoopMode = (body as { reviewLoopMode?: unknown }).reviewLoopMode;
+  if (!isBubbleReviewLoopMode(reviewLoopMode)) {
+    throwApiError(
+      badRequest("Field `reviewLoopMode` must be one of: full, meta_only.")
+    );
+  }
+
+  const expectedBubbleToml =
+    (body as { expectedBubbleToml?: unknown }).expectedBubbleToml;
+  if (
+    expectedBubbleToml !== undefined
+    && typeof expectedBubbleToml !== "string"
+  ) {
+    throwApiError(
+      badRequest("Field `expectedBubbleToml` must be a string when provided.")
+    );
+  }
+
+  return {
+    reviewLoopMode,
+    ...(expectedBubbleToml !== undefined ? { expectedBubbleToml } : {})
   };
 }
 

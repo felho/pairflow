@@ -1,6 +1,8 @@
 import type { DeleteBubbleResult } from "../../../contracts/deleteBubble.js";
 import type {
   BubbleLifecycleState,
+  BubbleReviewLoopMode,
+  BubbleReviewPolicyRuntimeView,
   AttachLauncher,
   BubbleStateSnapshot
 } from "../../../types/bubble.js";
@@ -204,6 +206,21 @@ export interface UiAttachBubbleResult {
 
 export type AttachBubbleResult = UiAttachBubbleResult;
 
+export interface UiUpdateBubbleReviewPolicyInput extends UiBubbleMutationInput {
+  reviewLoopMode: BubbleReviewLoopMode;
+  expectedBubbleToml?: string | undefined;
+}
+
+export interface UiUpdateBubbleReviewPolicyResult {
+  kind: "review_policy_updated";
+  bubbleId: string;
+  reviewPolicy: BubbleReviewPolicyRuntimeView;
+  previousRequestedLoopMode: BubbleReviewLoopMode;
+  nextRequestedLoopMode: BubbleReviewLoopMode;
+  activationChange: "none";
+  bubbleToml: string;
+}
+
 export interface UiRouterDependencies {
   listBubbles: (input?: UiBubbleListInput) => Promise<UiBubbleListView>;
   getBubbleStatus: (
@@ -243,6 +260,9 @@ export interface UiRouterDependencies {
   attachBubble: (
     input: UiAttachBubbleInput
   ) => Promise<UiAttachBubbleResult>;
+  updateBubbleReviewPolicy: (
+    input: UiUpdateBubbleReviewPolicyInput
+  ) => Promise<UiUpdateBubbleReviewPolicyResult>;
   stopBubble: (
     input: UiBubbleMutationInput
   ) => Promise<UiStopBubbleResult>;

@@ -79,6 +79,7 @@ export function presentBubbleSummaryFromListEntry(
       entry.remoteExecution
     ),
     attention: entry.attention,
+    reviewPolicy: entry.reviewPolicy ?? null,
     metaReview: presentMetaReviewSummary(entry.metaReview),
     ...(entry.remoteExecution !== undefined
       ? { remoteExecution: entry.remoteExecution }
@@ -164,6 +165,7 @@ export function presentBubbleDetail(input: {
     bubbleId: input.status.bubbleId,
     repoPath: input.status.repoPath,
     worktreePath: input.status.worktreePath,
+    bubbleToml: input.status.bubbleToml ?? null,
     state: input.status.state,
     round: input.status.round,
     activeAgent: input.status.activeAgent,
@@ -179,6 +181,7 @@ export function presentBubbleDetail(input: {
       input.status.remoteExecution
     ),
     attention,
+    reviewPolicy: input.status.reviewPolicy ?? null,
     metaReview: presentMetaReviewSummary(input.status.metaReview),
     ...(input.status.remoteExecution !== undefined
       ? { remoteExecution: input.status.remoteExecution }

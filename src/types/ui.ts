@@ -1,6 +1,7 @@
 import type { RuntimeSessionRecord } from "../v11/infrastructure/executor/sessionRuntime/runtimeSessionsRegistry.js";
 import type {
-  BubbleLifecycleState
+  BubbleLifecycleState,
+  BubbleReviewPolicyRuntimeView
 } from "./bubble.js";
 import type {
   MetaReviewRuntimeDeliveryStatus
@@ -78,6 +79,7 @@ export interface UiBubbleSummary {
   runtimeSession: RuntimeSessionRecord | null;
   runtime: UiRuntimeHealth;
   attention: UiBubbleAttention | null;
+  reviewPolicy: BubbleReviewPolicyRuntimeView | null;
   metaReview: UiBubbleMetaReviewSummary;
   remoteExecution?: UiBubbleRemoteExecution;
 }
@@ -113,6 +115,7 @@ export interface UiBubbleTranscriptSummary {
 }
 
 export interface UiBubbleDetail extends UiBubbleSummary {
+  bubbleToml: string | null;
   watchdog: UiBubbleWatchdog;
   pendingInboxItems: UiPendingInboxCounts;
   inbox: UiBubbleInbox;

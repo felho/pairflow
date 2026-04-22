@@ -76,6 +76,20 @@ function createApiStub(overrides: Partial<PairflowApiClient>): PairflowApiClient
     requestRework: vi.fn(async () => ({})),
     replyBubble: vi.fn(async () => ({})),
     resumeBubble: vi.fn(async () => ({})),
+    updateReviewPolicy: vi.fn(async () => ({
+      kind: "review_policy_updated" as const,
+      bubbleId: "unknown",
+      reviewPolicy: {
+        requested_loop_mode: "meta_only" as const,
+        effective_loop_mode: "full" as const,
+        support_status: "guarded" as const,
+        meta_review_auto_rework_min_severity: "P1" as const
+      },
+      previousRequestedLoopMode: "full" as const,
+      nextRequestedLoopMode: "meta_only" as const,
+      activationChange: "none" as const,
+      bubbleToml: ""
+    })),
     restartBubble: vi.fn(async () => ({})),
     commitBubble: vi.fn(async () => ({})),
     mergeBubble: vi.fn(async () => ({})),
@@ -350,6 +364,52 @@ describe("createBubbleStore", () => {
       actor: "meta-reviewer",
       authorityActive: false,
       runtimeDelivery: null
+    });
+  });
+
+  it("drops empty blocked_prerequisites arrays from incoming reviewPolicy payloads", async () => {
+    const guardedBubble = {
+      ...bubbleSummary({
+        bubbleId: "b-guarded",
+        repoPath: "/repo-a"
+      }),
+      reviewPolicy: {
+        requested_loop_mode: "meta_only" as const,
+        effective_loop_mode: "full" as const,
+        support_status: "guarded" as const,
+        meta_review_auto_rework_min_severity: "P1" as const,
+        blocked_reason_code: "REVIEW_POLICY_META_ONLY_GUARDED",
+        blocked_prerequisites: [],
+        provenance_note: "Guarded until activation ownership lands."
+      }
+    };
+
+    const api = createApiStub({
+      getRepos: vi.fn(async () => ["/repo-a"]),
+      getBubbles: vi.fn(async () => ({
+        repo: repoSummary("/repo-a"),
+        bubbles: [guardedBubble]
+      }))
+    });
+
+    const store = createBubbleStore({
+      api,
+      createEventsClient: () => ({
+        start: () => undefined,
+        stop: () => undefined,
+        refresh: () => undefined
+      })
+    });
+
+    await store.getState().initialize();
+
+    expect(store.getState().bubblesById["b-guarded"]?.reviewPolicy).toEqual({
+      requested_loop_mode: "meta_only",
+      effective_loop_mode: "full",
+      support_status: "guarded",
+      meta_review_auto_rework_min_severity: "P1",
+      blocked_reason_code: "REVIEW_POLICY_META_ONLY_GUARDED",
+      provenance_note: "Guarded until activation ownership lands."
     });
   });
 
@@ -849,6 +909,360 @@ describe("createBubbleStore", () => {
     );
   });
 
+  it("uses explicit review-policy conflict context for update-review-policy 409 recovery", async () => {
+    const getBubbles = vi.fn(async () => ({
+      repo: repoSummary("/repo-a"),
+      bubbles: [
+        bubbleSummary({
+          bubbleId: "b-a",
+          repoPath: "/repo-a",
+          state: "RUNNING"
+        })
+      ]
+    }));
+    const updateReviewPolicy = vi.fn(async () => {
+      throw new PairflowApiError({
+        message: "review policy conflict",
+        status: 409,
+        code: "conflict",
+        details: {
+          reasonCode: "REVIEW_POLICY_WRITE_CONFLICT",
+          currentState: "RUNNING",
+          reviewPolicyConflict: {
+            bubbleId: "b-a",
+            repoPath: "/repo-a",
+            currentState: "RUNNING",
+            bubbleToml: "id = \"b-a\"\nreview_loop_mode = \"meta_only\"\n",
+            reviewPolicy: {
+              requested_loop_mode: "meta_only",
+              effective_loop_mode: "full",
+              support_status: "guarded",
+              meta_review_auto_rework_min_severity: "P1",
+              blocked_reason_code: "REVIEW_POLICY_META_ONLY_GUARDED"
+            }
+          }
+        }
+      });
+    });
+
+    const api = createApiStub({
+      getRepos: vi.fn(async () => ["/repo-a"]),
+      getBubbles,
+      updateReviewPolicy
+    });
+
+    const store = createBubbleStore({
+      api,
+      createEventsClient: () => ({
+        start: () => undefined,
+        stop: () => undefined,
+        refresh: () => undefined
+      })
+    });
+
+    await store.getState().initialize();
+    store.setState({
+      bubbleDetails: {
+        "b-a": bubbleDetail({
+          bubbleId: "b-a",
+          repoPath: "/repo-a",
+          state: "RUNNING"
+        })
+      }
+    });
+
+    await expect(
+      store.getState().runBubbleAction({
+        bubbleId: "b-a",
+        action: "update-review-policy",
+        reviewLoopMode: "meta_only",
+        expectedBubbleToml: "id = \"b-a\""
+      })
+    ).rejects.toBeInstanceOf(PairflowApiError);
+
+    expect(getBubbles).toHaveBeenCalledTimes(1);
+    expect(store.getState().bubblesById["b-a"]?.reviewPolicy).toMatchObject({
+      requested_loop_mode: "meta_only",
+      effective_loop_mode: "full",
+      support_status: "guarded"
+    });
+    expect(store.getState().bubbleDetails["b-a"]?.bubbleToml).toBe(
+      "id = \"b-a\"\nreview_loop_mode = \"meta_only\"\n"
+    );
+    expect(store.getState().actionRetryHintById["b-a"]).toContain(
+      "conflict response"
+    );
+    expect(store.getState().actionRetryHintById["b-a"]).not.toContain("refetched");
+  });
+
+  it("uses degraded review-policy conflict context without requiring currentState", async () => {
+    const getBubbles = vi.fn(async () => ({
+      repo: repoSummary("/repo-a"),
+      bubbles: [
+        bubbleSummary({
+          bubbleId: "b-a",
+          repoPath: "/repo-a",
+          state: "WAITING_HUMAN"
+        })
+      ]
+    }));
+    const updateReviewPolicy = vi.fn(async () => {
+      throw new PairflowApiError({
+        message: "review policy conflict",
+        status: 409,
+        code: "conflict",
+        details: {
+          reasonCode: "REVIEW_POLICY_WRITE_CONFLICT",
+          reviewPolicyConflict: {
+            bubbleId: "b-a",
+            repoPath: "/repo-a",
+            currentState: null,
+            bubbleToml: "id = \"b-a\"\nreview_loop_mode = \"meta_only\"\n",
+            reviewPolicy: {
+              requested_loop_mode: "meta_only",
+              effective_loop_mode: "full",
+              support_status: "guarded",
+              meta_review_auto_rework_min_severity: "P1",
+              blocked_reason_code: "REVIEW_POLICY_META_ONLY_GUARDED"
+            }
+          }
+        }
+      });
+    });
+
+    const api = createApiStub({
+      getRepos: vi.fn(async () => ["/repo-a"]),
+      getBubbles,
+      updateReviewPolicy
+    });
+
+    const store = createBubbleStore({
+      api,
+      createEventsClient: () => ({
+        start: () => undefined,
+        stop: () => undefined,
+        refresh: () => undefined
+      })
+    });
+
+    await store.getState().initialize();
+    store.setState({
+      bubbleDetails: {
+        "b-a": bubbleDetail({
+          bubbleId: "b-a",
+          repoPath: "/repo-a",
+          state: "WAITING_HUMAN"
+        })
+      }
+    });
+
+    await expect(
+      store.getState().runBubbleAction({
+        bubbleId: "b-a",
+        action: "update-review-policy",
+        reviewLoopMode: "meta_only",
+        expectedBubbleToml: "id = \"b-a\""
+      })
+    ).rejects.toBeInstanceOf(PairflowApiError);
+
+    expect(getBubbles).toHaveBeenCalledTimes(1);
+    expect(store.getState().bubblesById["b-a"]?.state).toBe("WAITING_HUMAN");
+    expect(store.getState().bubblesById["b-a"]?.reviewPolicy).toMatchObject({
+      requested_loop_mode: "meta_only",
+      effective_loop_mode: "full",
+      support_status: "guarded"
+    });
+    expect(store.getState().bubbleDetails["b-a"]?.state).toBe("WAITING_HUMAN");
+    expect(store.getState().bubbleDetails["b-a"]?.bubbleToml).toBe(
+      "id = \"b-a\"\nreview_loop_mode = \"meta_only\"\n"
+    );
+    expect(store.getState().actionRetryHintById["b-a"]).toContain(
+      "conflict response"
+    );
+    expect(store.getState().actionRetryHintById["b-a"]).not.toContain("refetched");
+  });
+
+  it("normalizes the legacy unsupported support_status alias in 409 review-policy conflict payloads", async () => {
+    const consoleWarnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const getBubbles = vi.fn(async () => ({
+      repo: repoSummary("/repo-a"),
+      bubbles: [
+        bubbleSummary({
+          bubbleId: "b-a",
+          repoPath: "/repo-a",
+          state: "RUNNING"
+        })
+      ]
+    }));
+    const updateReviewPolicy = vi.fn(async () => {
+      throw new PairflowApiError({
+        message: "review policy conflict",
+        status: 409,
+        code: "conflict",
+        details: {
+          reasonCode: "REVIEW_POLICY_WRITE_CONFLICT",
+          reviewPolicyConflict: {
+            bubbleId: "b-a",
+            repoPath: "/repo-a",
+            currentState: "RUNNING",
+            bubbleToml: "id = \"b-a\"\nreview_loop_mode = \"meta_only\"\n",
+            reviewPolicy: {
+              requested_loop_mode: "meta_only",
+              effective_loop_mode: "full",
+              support_status: "unsupported",
+              meta_review_auto_rework_min_severity: "P1"
+            }
+          }
+        }
+      });
+    });
+
+    const api = createApiStub({
+      getRepos: vi.fn(async () => ["/repo-a"]),
+      getBubbles,
+      updateReviewPolicy
+    });
+
+    const store = createBubbleStore({
+      api,
+      createEventsClient: () => ({
+        start: () => undefined,
+        stop: () => undefined,
+        refresh: () => undefined
+      })
+    });
+
+    await store.getState().initialize();
+
+    await expect(
+      store.getState().runBubbleAction({
+        bubbleId: "b-a",
+        action: "update-review-policy",
+        reviewLoopMode: "meta_only",
+        expectedBubbleToml: "id = \"b-a\""
+      })
+    ).rejects.toBeInstanceOf(PairflowApiError);
+
+    expect(getBubbles).toHaveBeenCalledTimes(1);
+    expect(store.getState().bubblesById["b-a"]?.reviewPolicy).toMatchObject({
+      requested_loop_mode: "meta_only",
+      effective_loop_mode: "full",
+      support_status: "guarded"
+    });
+    expect(store.getState().actionRetryHintById["b-a"]).toContain(
+      "conflict response"
+    );
+    expect(consoleWarnSpy).toHaveBeenCalledWith(
+      "Normalizing non-canonical review-policy support_status 'unsupported' from a 409 conflict payload to canonical 'guarded'.",
+      expect.objectContaining({
+        bubbleId: "b-a",
+        repoPath: "/repo-a",
+        source: "conflict_response"
+      })
+    );
+    consoleWarnSpy.mockRestore();
+  });
+
+  it("warns but keeps direct conflict context when the 409 reviewPolicy payload is malformed", async () => {
+    const consoleWarnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const getBubbles = vi.fn().mockResolvedValue({
+      repo: repoSummary("/repo-a"),
+      bubbles: [
+        bubbleSummary({
+          bubbleId: "b-a",
+          repoPath: "/repo-a",
+          state: "RUNNING"
+        })
+      ]
+    });
+    const updateReviewPolicy = vi.fn(async () => {
+      throw new PairflowApiError({
+        message: "review policy conflict",
+        status: 409,
+        code: "conflict",
+        details: {
+          reasonCode: "REVIEW_POLICY_WRITE_CONFLICT",
+          reviewPolicyConflict: {
+            bubbleId: "b-a",
+            repoPath: "/repo-a",
+            currentState: "RUNNING",
+            bubbleToml: "id = \"b-a\"\nreview_loop_mode = \"meta_only\"\n",
+            reviewPolicy: {
+              requested_loop_mode: "sidecar",
+              effective_loop_mode: "full",
+              support_status: "guarded",
+              meta_review_auto_rework_min_severity: "P1"
+            }
+          }
+        }
+      });
+    });
+
+    const api = createApiStub({
+      getRepos: vi.fn(async () => ["/repo-a"]),
+      getBubbles,
+      updateReviewPolicy
+    });
+
+    const store = createBubbleStore({
+      api,
+      createEventsClient: () => ({
+        start: () => undefined,
+        stop: () => undefined,
+        refresh: () => undefined
+      })
+    });
+
+    await store.getState().initialize();
+    store.setState({
+      bubbleDetails: {
+        "b-a": bubbleDetail({
+          bubbleId: "b-a",
+          repoPath: "/repo-a",
+          state: "RUNNING",
+          bubbleToml: "id = \"b-a\"\nreview_loop_mode = \"full\"\n",
+          reviewPolicy: {
+            requested_loop_mode: "full",
+            effective_loop_mode: "full",
+            support_status: "enabled",
+            meta_review_auto_rework_min_severity: "P1"
+          }
+        })
+      }
+    });
+
+    await expect(
+      store.getState().runBubbleAction({
+        bubbleId: "b-a",
+        action: "update-review-policy",
+        reviewLoopMode: "meta_only",
+        expectedBubbleToml: "id = \"b-a\""
+      })
+    ).rejects.toBeInstanceOf(PairflowApiError);
+
+    expect(getBubbles).toHaveBeenCalledTimes(1);
+    expect(store.getState().bubbleDetails["b-a"]?.bubbleToml).toBe(
+      "id = \"b-a\"\nreview_loop_mode = \"meta_only\"\n"
+    );
+    expect(store.getState().bubbleDetails["b-a"]?.reviewPolicy).toEqual({
+      requested_loop_mode: "full",
+      effective_loop_mode: "full",
+      support_status: "enabled",
+      meta_review_auto_rework_min_severity: "P1"
+    });
+    expect(store.getState().actionRetryHintById["b-a"]).toContain(
+      "reviewPolicy payload was malformed"
+    );
+    expect(consoleWarnSpy).toHaveBeenCalledWith(
+      "Ignoring review-policy conflict context because the 409 reviewPolicy payload is malformed.",
+      expect.objectContaining({
+        bubbleId: "b-a",
+        repoPath: "/repo-a"
+      })
+    );
+    consoleWarnSpy.mockRestore();
+  });
+
   it("passes approve override fields through to API", async () => {
     const getBubbles = vi.fn(async () => ({
       repo: repoSummary("/repo-a"),
@@ -924,6 +1338,356 @@ describe("createBubbleStore", () => {
     });
 
     expect(restartBubble).toHaveBeenCalledWith("/repo-a", "b-a");
+  });
+
+  it("passes review policy compare-and-swap fields through to API", async () => {
+    const getBubbles = vi.fn(async () => ({
+      repo: repoSummary("/repo-a"),
+      bubbles: [
+        bubbleSummary({
+          bubbleId: "b-a",
+          repoPath: "/repo-a",
+          state: "RUNNING"
+        })
+      ]
+    }));
+    const updateReviewPolicy = vi.fn(async () => ({
+      kind: "review_policy_updated" as const,
+      bubbleId: "b-a",
+      reviewPolicy: {
+        requested_loop_mode: "meta_only" as const,
+        effective_loop_mode: "full" as const,
+        support_status: "guarded" as const,
+        meta_review_auto_rework_min_severity: "P1" as const
+      },
+      previousRequestedLoopMode: "full" as const,
+      nextRequestedLoopMode: "meta_only" as const,
+      activationChange: "none" as const,
+      bubbleToml: "id = \"b-a\""
+    }));
+
+    const api = createApiStub({
+      getRepos: vi.fn(async () => ["/repo-a"]),
+      getBubbles,
+      updateReviewPolicy
+    });
+
+    const store = createBubbleStore({
+      api,
+      createEventsClient: () => ({
+        start: () => undefined,
+        stop: () => undefined,
+        refresh: () => undefined
+      })
+    });
+
+    await store.getState().initialize();
+    await store.getState().runBubbleAction({
+      bubbleId: "b-a",
+      action: "update-review-policy",
+      reviewLoopMode: "meta_only",
+      expectedBubbleToml: "id = \"b-a\""
+    });
+
+    expect(updateReviewPolicy).toHaveBeenCalledWith("/repo-a", "b-a", {
+      reviewLoopMode: "meta_only",
+      expectedBubbleToml: "id = \"b-a\""
+    });
+  });
+
+  it("applies update-review-policy success payload without depending on follow-up refetch", async () => {
+    const getBubbles = vi
+      .fn()
+      .mockResolvedValueOnce({
+        repo: repoSummary("/repo-a"),
+        bubbles: [
+          bubbleSummary({
+            bubbleId: "b-a",
+            repoPath: "/repo-a",
+            state: "RUNNING"
+          })
+        ]
+      })
+      .mockRejectedValue(new Error("refetch should not be required"));
+    const updateReviewPolicy = vi.fn(async () => ({
+      kind: "review_policy_updated" as const,
+      bubbleId: "b-a",
+      reviewPolicy: {
+        requested_loop_mode: "meta_only" as const,
+        effective_loop_mode: "full" as const,
+        support_status: "guarded" as const,
+        meta_review_auto_rework_min_severity: "P1" as const,
+        blocked_reason_code: "REVIEW_POLICY_META_ONLY_GUARDED"
+      },
+      previousRequestedLoopMode: "full" as const,
+      nextRequestedLoopMode: "meta_only" as const,
+      activationChange: "none" as const,
+      bubbleToml: "id = \"b-a\"\nreview_loop_mode = \"meta_only\"\n"
+    }));
+
+    const api = createApiStub({
+      getRepos: vi.fn(async () => ["/repo-a"]),
+      getBubbles,
+      updateReviewPolicy
+    });
+
+    const store = createBubbleStore({
+      api,
+      createEventsClient: () => ({
+        start: () => undefined,
+        stop: () => undefined,
+        refresh: () => undefined
+      })
+    });
+
+    await store.getState().initialize();
+    store.setState({
+      bubbleDetails: {
+        "b-a": bubbleDetail({
+          bubbleId: "b-a",
+          repoPath: "/repo-a",
+          state: "RUNNING"
+        })
+      }
+    });
+
+    await expect(
+      store.getState().runBubbleAction({
+        bubbleId: "b-a",
+        action: "update-review-policy",
+        reviewLoopMode: "meta_only",
+        expectedBubbleToml: "id = \"b-a\""
+      })
+    ).resolves.toBeUndefined();
+
+    expect(getBubbles).toHaveBeenCalledTimes(1);
+    expect(store.getState().bubblesById["b-a"]?.reviewPolicy).toMatchObject({
+      requested_loop_mode: "meta_only",
+      effective_loop_mode: "full",
+      support_status: "guarded"
+    });
+    expect(store.getState().bubbleDetails["b-a"]?.bubbleToml).toBe(
+      "id = \"b-a\"\nreview_loop_mode = \"meta_only\"\n"
+    );
+    expect(store.getState().actionErrorById["b-a"]).toBeUndefined();
+    expect(store.getState().actionRetryHintById["b-a"]).toBeUndefined();
+  });
+
+  it("falls back to repo refresh when update-review-policy success payload cannot be normalized", async () => {
+    const getBubbles = vi
+      .fn()
+      .mockResolvedValueOnce({
+        repo: repoSummary("/repo-a"),
+        bubbles: [
+          bubbleSummary({
+            bubbleId: "b-a",
+            repoPath: "/repo-a",
+            state: "RUNNING"
+          })
+        ]
+      })
+      .mockResolvedValueOnce({
+        repo: repoSummary("/repo-a"),
+        bubbles: [
+          bubbleSummary({
+            bubbleId: "b-a",
+            repoPath: "/repo-a",
+            state: "RUNNING",
+            reviewPolicy: {
+              requested_loop_mode: "meta_only",
+              effective_loop_mode: "full",
+              support_status: "guarded",
+              meta_review_auto_rework_min_severity: "P1",
+              blocked_reason_code: "REVIEW_POLICY_META_ONLY_GUARDED"
+            }
+          })
+        ]
+      });
+    const updateReviewPolicy = vi.fn(
+      async () =>
+        ({
+          kind: "review_policy_updated",
+          bubbleId: "b-a",
+          reviewPolicy: {
+            requested_loop_mode: "meta_only",
+            effective_loop_mode: "full",
+            support_status: "unsupported",
+            meta_review_auto_rework_min_severity: "P1"
+          },
+          previousRequestedLoopMode: "full",
+          nextRequestedLoopMode: "meta_only",
+          activationChange: "none",
+          bubbleToml: "id = \"b-a\"\nreview_loop_mode = \"meta_only\"\n"
+        }) as unknown as Awaited<ReturnType<PairflowApiClient["updateReviewPolicy"]>>
+    );
+
+    const api = createApiStub({
+      getRepos: vi.fn(async () => ["/repo-a"]),
+      getBubbles,
+      updateReviewPolicy
+    });
+
+    const store = createBubbleStore({
+      api,
+      createEventsClient: () => ({
+        start: () => undefined,
+        stop: () => undefined,
+        refresh: () => undefined
+      })
+    });
+
+    await store.getState().initialize();
+
+    await expect(
+      store.getState().runBubbleAction({
+        bubbleId: "b-a",
+        action: "update-review-policy",
+        reviewLoopMode: "meta_only",
+        expectedBubbleToml: "id = \"b-a\""
+      })
+    ).resolves.toBeUndefined();
+
+    expect(getBubbles).toHaveBeenCalledTimes(2);
+    expect(store.getState().bubblesById["b-a"]?.reviewPolicy).toMatchObject({
+      requested_loop_mode: "meta_only",
+      effective_loop_mode: "full",
+      support_status: "guarded"
+    });
+  });
+
+  it("ignores incomplete conflict response bubble context and falls back to refresh", async () => {
+    const getBubbles = vi
+      .fn()
+      .mockResolvedValueOnce({
+        repo: repoSummary("/repo-a"),
+        bubbles: [
+          bubbleSummary({
+            bubbleId: "b-a",
+            repoPath: "/repo-a",
+            state: "RUNNING"
+          })
+        ]
+      })
+      .mockResolvedValueOnce({
+        repo: repoSummary("/repo-a"),
+        bubbles: [
+          bubbleSummary({
+            bubbleId: "b-a",
+            repoPath: "/repo-a",
+            state: "RUNNING",
+            reviewPolicy: {
+              requested_loop_mode: "meta_only",
+              effective_loop_mode: "full",
+              support_status: "guarded",
+              meta_review_auto_rework_min_severity: "P1",
+              blocked_reason_code: "REVIEW_POLICY_META_ONLY_GUARDED"
+            }
+          })
+        ]
+      });
+    const updateReviewPolicy = vi.fn(async () => {
+      throw new PairflowApiError({
+        message: "review policy conflict",
+        status: 409,
+        code: "conflict",
+        details: {
+          reasonCode: "REVIEW_POLICY_WRITE_CONFLICT",
+          bubble: {
+            bubbleId: "b-a",
+            repoPath: "/repo-a",
+            bubbleToml: "id = \"b-a\"\n"
+          },
+          currentState: "RUNNING"
+        }
+      });
+    });
+
+    const api = createApiStub({
+      getRepos: vi.fn(async () => ["/repo-a"]),
+      getBubbles,
+      updateReviewPolicy
+    });
+
+    const store = createBubbleStore({
+      api,
+      createEventsClient: () => ({
+        start: () => undefined,
+        stop: () => undefined,
+        refresh: () => undefined
+      })
+    });
+
+    await store.getState().initialize();
+
+    await expect(
+      store.getState().runBubbleAction({
+        bubbleId: "b-a",
+        action: "update-review-policy",
+        reviewLoopMode: "meta_only",
+        expectedBubbleToml: "id = \"b-a\""
+      })
+    ).rejects.toBeInstanceOf(PairflowApiError);
+
+    expect(getBubbles).toHaveBeenCalledTimes(2);
+    expect(store.getState().actionRetryHintById["b-a"]).toContain(
+      "follow-up refresh completed"
+    );
+  });
+
+  it("preserves newline-terminated review policy compare-and-swap tokens through the store", async () => {
+    const getBubbles = vi.fn(async () => ({
+      repo: repoSummary("/repo-a"),
+      bubbles: [
+        bubbleSummary({
+          bubbleId: "b-a",
+          repoPath: "/repo-a",
+          state: "RUNNING"
+        })
+      ]
+    }));
+    const updateReviewPolicy = vi.fn(async () => ({
+      kind: "review_policy_updated" as const,
+      bubbleId: "b-a",
+      reviewPolicy: {
+        requested_loop_mode: "meta_only" as const,
+        effective_loop_mode: "full" as const,
+        support_status: "guarded" as const,
+        meta_review_auto_rework_min_severity: "P1" as const
+      },
+      previousRequestedLoopMode: "full" as const,
+      nextRequestedLoopMode: "meta_only" as const,
+      activationChange: "none" as const,
+      bubbleToml: "id = \"b-a\"\n"
+    }));
+    const expectedBubbleToml = "id = \"b-a\"\nreview_loop_mode = \"full\"\n";
+
+    const api = createApiStub({
+      getRepos: vi.fn(async () => ["/repo-a"]),
+      getBubbles,
+      updateReviewPolicy
+    });
+
+    const store = createBubbleStore({
+      api,
+      createEventsClient: () => ({
+        start: () => undefined,
+        stop: () => undefined,
+        refresh: () => undefined
+      })
+    });
+
+    await store.getState().initialize();
+    await store.getState().runBubbleAction({
+      bubbleId: "b-a",
+      action: "update-review-policy",
+      reviewLoopMode: "meta_only",
+      expectedBubbleToml
+    });
+
+    expect(updateReviewPolicy).toHaveBeenCalledWith("/repo-a", "b-a", {
+      reviewLoopMode: "meta_only",
+      expectedBubbleToml
+    });
   });
 
   it("returns confirmation artifacts for delete without force", async () => {
