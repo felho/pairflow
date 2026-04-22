@@ -4,7 +4,7 @@ import { cn } from "../../lib/utils";
 function statusLabel(status: ConnectionStatus): string {
   switch (status) {
     case "connected":
-      return "SSE connected";
+      return "SSE";
     case "connecting":
       return "Reconnecting...";
     case "stale":
