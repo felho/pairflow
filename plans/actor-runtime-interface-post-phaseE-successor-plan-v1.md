@@ -329,14 +329,14 @@ owners:
      - repo-root export cleanup
      - generic executor registry vagy non-`tmux` runtime platform
    - why separate: kulon filecsalad es kulon fail-closed/runtime contract kockazat; nem biztonsagos az `O2-T8` residual delivery taskkal osszegyurni
-10. Az `O2` lane current-tree szinten a canonical boundary closureig eljutott, de szigorubb compatibility-removal olvasat mellett tovabbi residual cleanup slice-ok maradtak:
+10. Az `O2` lane current-tree szinten a canonical boundary closureig eljutott, es a szigorubb compatibility-removal olvasat melletti residual cleanup slice-ok is lezartak:
    - `O2-T1` lezart baseline,
    - a delivery es launch/executor producer foundation kulon source-of-truth-kent megvan,
    - a consume familyk atalltak a topology-neutral contractra vagy explicit retained compat statuszt kaptak,
    - a delivery residual es a meta-review gate workflow residual canonical ownershipa lezarult,
-   - a retained compatibility surface-ek teljes torlese eredetileg kulon `O2-T10` + `O2-T11` closeout slice-ot igenyelt,
-   - `O2-T10` lezarasaval most mar csak az `O2-T11` maradt nyitva,
-   - es csak az `O2-T11` utan mondhato ki a full compatibility-surface removal olvasatu `O2` closeout.
+   - a retained compatibility surface-ek teljes torlese kulon `O2-T10` + `O2-T11` closeout slice-ban tortent meg,
+   - mind a delivery, mind a meta-review gate deprecated compatibility ingress current-tree szinten megszunt,
+   - emiatt a full compatibility-surface removal olvasatu `O2` closeout most mar kimondhato.
 
 ## Historical First Implementation Slice (`Opportunity 1`)
 
@@ -441,8 +441,15 @@ owners:
      - a retained delivery compatibility vocabulary teljesen kikerult a canonical shared contractbol, ports surface-bol, ask-human alias layerbol es repo-root/public export surface-bol,
      - a canonical delivery ack truth explicit `accepted | rejected` status-only boundaryra szukult,
      - a producer/runtime semantics preserved baseline maradt, es a residual delivery compat cleanup lezartnak tekintheto.
-17. Emiatt az `Opportunity 2` canonical boundary closure-ja lezart, de a full compatibility-surface removal olvasat mellett a lane meg mindig nem tekintheto teljesen befejezettnek.
-18. A current next bounded successor mar az `O2-T11`; az `O3-T1` csak ezutan nyithato biztonsagosan, ha az onboarding / extension-surface follow-up tenylegesen prioritast kap.
+17. Az `O2-T11` meta-review gate deprecated runtime alias removal 2026-04-22-en merge-olve lett a `main` branchre:
+   - archived task artifact: `plans/archive/tasks/actor-runtime-interface-opportunity2-task11-meta-review-gate-deprecated-runtime-alias-removal.md`
+   - merge commit: `dd6434e0e04c5de9c78dcdcee90fefabd6b98b9e`
+   - bounded closure:
+     - a deprecated top-level meta-review gate runtime alias surface teljesen kikerult a shared contractbol, emit/wrapper forwardingbol es pane-binding notify fallback shape-bol,
+     - a canonical nested `tmux.*` runtime capability ownership egyeduli consume formakent maradt meg,
+     - az observation truth (`confirmed | uncertain | failed`) preserved baseline maradt, es a deprecated parity coverage teljesen megszunt.
+18. Emiatt az `Opportunity 2` canonical boundary closure-ja es a full compatibility-surface removal olvasatu closeoutja is lezart current-tree allapot.
+19. A current next bounded successor mar az `O3-T1`, de csak akkor nyithato implementation taskkent, ha az onboarding / extension-surface follow-up tenylegesen prioritast kap.
 
 ## Done Definition
 
@@ -462,7 +469,7 @@ owners:
    - kulon `O1-T4` nem nyilt meg
    - disposition: closed on current tree
 2. `Opportunity 2`
-   - reopened residual cleanup lane
+   - completed residual cleanup lane
    - completed slices:
      - `O2-T1` docs-only topology/delivery/executor boundary clarification
      - `O2-T2` topology-neutral delivery contract + retained adapter foundation
@@ -475,14 +482,13 @@ owners:
      - `O2-T9` meta-review gate workflow runtime capability residual closeout
      - `O2-T10` delivery compatibility surface removal
        - task artifact: `plans/archive/tasks/actor-runtime-interface-opportunity2-task10-delivery-compatibility-surface-removal.md`
-   - open residual slices:
      - `O2-T11` meta-review gate deprecated runtime alias removal
-       - task artifact: `plans/tasks/actor-runtime-interface-opportunity2-task11-meta-review-gate-deprecated-runtime-alias-removal.md`
+       - task artifact: `plans/archive/tasks/actor-runtime-interface-opportunity2-task11-meta-review-gate-deprecated-runtime-alias-removal.md`
    - preserved baseline: a lezart typed ack/runtime-success semantics nem reopenolhato
-   - disposition: open residual cleanup after canonical closure
+   - disposition: closed on current tree
 3. `Opportunity 3`
    - deferred successor lane `O3-T1`
-   - `O2-T11` utan lehet current next bounded successor, ha a follow-up tenylegesen prioritas lesz
+   - current next bounded successor, ha a follow-up tenylegesen prioritas lesz
    - csak az `O1-T1` kernel boundary note-ra es az `O2-T1` delivery/executor boundary note-ra epulhet
 4. `Opportunity 4`
    - default szerint `O3-T1` resze
