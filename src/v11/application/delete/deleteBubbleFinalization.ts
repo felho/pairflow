@@ -232,7 +232,7 @@ export async function cleanupDeleteWorkspace(input: {
   toDeleteStepError: (input: {
     bubbleId: string;
     bubbleInstanceId: string;
-    step: "worktree-cleanup" | "remove-active";
+    step: "worktree-cleanup" | "remove-active" | "remove-runtime-health";
     error: unknown;
   }) => Error;
 }): Promise<DeleteWorkspaceCleanupResult> {
@@ -275,7 +275,7 @@ export async function removeDeleteBubbleDirectory(input: {
   toDeleteStepError: (input: {
     bubbleId: string;
     bubbleInstanceId: string;
-    step: "remove-active";
+    step: "remove-active" | "remove-runtime-health";
     error: unknown;
   }) => Error;
 }): Promise<void> {
@@ -286,6 +286,20 @@ export async function removeDeleteBubbleDirectory(input: {
       bubbleId: input.resolved.bubbleId,
       bubbleInstanceId: input.execution.bubbleInstanceId,
       step: "remove-active",
+      error
+    });
+  }
+
+  try {
+    await input.dependencies.removeWatchdogPaneActivity({
+      runtimeDir: input.resolved.bubblePaths.runtimeDir,
+      bubbleId: input.resolved.bubbleId
+    });
+  } catch (error) {
+    throw input.toDeleteStepError({
+      bubbleId: input.resolved.bubbleId,
+      bubbleInstanceId: input.execution.bubbleInstanceId,
+      step: "remove-runtime-health",
       error
     });
   }

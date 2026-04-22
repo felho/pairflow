@@ -1,8 +1,10 @@
 import {
   readWatchdogPaneActivity as readWatchdogPaneActivityCanonical,
+  removeWatchdogPaneActivity as removeWatchdogPaneActivityCanonical,
   writeWatchdogPaneActivity as writeWatchdogPaneActivityCanonical
 } from "../../infrastructure/artifact/watchdog/watchdogPaneActivityStore.js";
 import type {
+  RemoveWatchdogPaneActivityPort,
   ReadWatchdogPaneActivityPort,
   WriteWatchdogPaneActivityPort
 } from "../../shared/ports/watchdogPaneActivity.js";
@@ -14,3 +16,7 @@ export const readWatchdogPaneActivity: ReadWatchdogPaneActivityPort = async (
 export const writeWatchdogPaneActivity: WriteWatchdogPaneActivityPort = async (
   ...args
 ) => writeWatchdogPaneActivityCanonical(...args);
+
+export const removeWatchdogPaneActivity: RemoveWatchdogPaneActivityPort = async (
+  ...args
+) => removeWatchdogPaneActivityCanonical(...args);

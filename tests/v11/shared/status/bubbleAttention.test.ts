@@ -206,4 +206,156 @@ describe("v11 status bubbleAttention", () => {
       label: "Quiet 3m"
     });
   });
+
+  it("surfaces quiet-pane attention when the latest sample belongs to the current bubble run", () => {
+    const attention = resolveBubbleAttention({
+      state: "RUNNING",
+      runtimeSession: {
+        bubbleId: "b_status_attention_current_run_01",
+        repoPath: "/repo",
+        worktreePath: "/repo/.pairflow-worktree",
+        tmuxSessionName: "pf-b_status_attention_current_run_01",
+        updatedAt: "2026-02-22T18:30:00.000Z"
+      },
+      stateValidation: null,
+      watchdog: {
+        monitored: true,
+        expired: false,
+        referenceTimestamp: "2026-02-22T18:22:00.000Z"
+      },
+      paneActivityRead: {
+        status: "ok",
+        record: {
+          bubble_id: "b_status_attention_current_run_01",
+          sampled_at: "2026-02-22T18:22:50.000Z",
+          pane_hash: "hash-current-run",
+          last_changed_at: "2026-02-22T18:20:00.000Z",
+          session_name: "pf-b_status_attention_current_run_01",
+          target_pane: "pf-b_status_attention_current_run_01:0.1",
+          last_sample_status: "sampled"
+        }
+      },
+      bubbleStartedAt: "2026-02-22T18:22:00.000Z",
+      now: new Date("2026-02-22T18:23:00.000Z")
+    });
+
+    expect(attention).toMatchObject({
+      code: "quiet_pane",
+      severity: "warning",
+      label: "Quiet 3m"
+    });
+  });
+
+  it("keeps quiet-pane attention when sampled_at equals the current bubble start boundary", () => {
+    const attention = resolveBubbleAttention({
+      state: "RUNNING",
+      runtimeSession: {
+        bubbleId: "b_status_attention_equal_start_01",
+        repoPath: "/repo",
+        worktreePath: "/repo/.pairflow-worktree",
+        tmuxSessionName: "pf-b_status_attention_equal_start_01",
+        updatedAt: "2026-02-22T18:30:00.000Z"
+      },
+      stateValidation: null,
+      watchdog: {
+        monitored: true,
+        expired: false,
+        referenceTimestamp: "2026-02-22T18:22:00.000Z"
+      },
+      paneActivityRead: {
+        status: "ok",
+        record: {
+          bubble_id: "b_status_attention_equal_start_01",
+          sampled_at: "2026-02-22T18:22:00.000Z",
+          pane_hash: "hash-equal-start",
+          last_changed_at: "2026-02-22T18:19:00.000Z",
+          session_name: "pf-b_status_attention_equal_start_01",
+          target_pane: "pf-b_status_attention_equal_start_01:0.1",
+          last_sample_status: "sampled"
+        }
+      },
+      bubbleStartedAt: "2026-02-22T18:22:00.000Z",
+      now: new Date("2026-02-22T18:23:00.000Z")
+    });
+
+    expect(attention).toMatchObject({
+      code: "quiet_pane",
+      severity: "warning",
+      label: "Quiet 4m"
+    });
+  });
+
+  it("suppresses quiet-pane attention when the latest sample predates the current bubble start", () => {
+    const attention = resolveBubbleAttention({
+      state: "RUNNING",
+      runtimeSession: {
+        bubbleId: "b_status_attention_prev_run_01",
+        repoPath: "/repo",
+        worktreePath: "/repo/.pairflow-worktree",
+        tmuxSessionName: "pf-b_status_attention_prev_run_01",
+        updatedAt: "2026-02-22T18:30:00.000Z"
+      },
+      stateValidation: null,
+      watchdog: {
+        monitored: true,
+        expired: false,
+        referenceTimestamp: "2026-02-22T18:22:00.000Z"
+      },
+      paneActivityRead: {
+        status: "ok",
+        record: {
+          bubble_id: "b_status_attention_prev_run_01",
+          sampled_at: "2026-02-22T18:19:59.000Z",
+          pane_hash: "hash-prev-run",
+          last_changed_at: "2026-02-22T18:15:00.000Z",
+          session_name: "pf-b_status_attention_prev_run_01",
+          target_pane: "pf-b_status_attention_prev_run_01:0.1",
+          last_sample_status: "sampled"
+        }
+      },
+      bubbleStartedAt: "2026-02-22T18:20:00.000Z",
+      now: new Date("2026-02-22T18:23:00.000Z")
+    });
+
+    expect(attention).toBeNull();
+  });
+
+  it("preserves quiet-pane behavior when bubbleStartedAt is unavailable", () => {
+    const attention = resolveBubbleAttention({
+      state: "RUNNING",
+      runtimeSession: {
+        bubbleId: "b_status_attention_missing_start_01",
+        repoPath: "/repo",
+        worktreePath: "/repo/.pairflow-worktree",
+        tmuxSessionName: "pf-b_status_attention_missing_start_01",
+        updatedAt: "2026-02-22T18:30:00.000Z"
+      },
+      stateValidation: null,
+      watchdog: {
+        monitored: true,
+        expired: false,
+        referenceTimestamp: "2026-02-22T18:22:00.000Z"
+      },
+      paneActivityRead: {
+        status: "ok",
+        record: {
+          bubble_id: "b_status_attention_missing_start_01",
+          sampled_at: "2026-02-22T18:19:59.000Z",
+          pane_hash: "hash-missing-start",
+          last_changed_at: "2026-02-22T18:15:00.000Z",
+          session_name: "pf-b_status_attention_missing_start_01",
+          target_pane: "pf-b_status_attention_missing_start_01:0.1",
+          last_sample_status: "sampled"
+        }
+      },
+      bubbleStartedAt: null,
+      now: new Date("2026-02-22T18:23:00.000Z")
+    });
+
+    expect(attention).toMatchObject({
+      code: "quiet_pane",
+      severity: "warning",
+      label: "Quiet 8m"
+    });
+  });
 });

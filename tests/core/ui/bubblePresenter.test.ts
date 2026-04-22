@@ -363,6 +363,103 @@ describe("bubblePresenter", () => {
     expect(detail.attention).toBeNull();
   });
 
+  it("suppresses stale quiet-pane attention in the direct detail presenter path", () => {
+    const detail = presentBubbleDetail({
+      status: {
+        bubbleId: "b_detail_prev_run_quiet_01",
+        repoPath: "/tmp/repo",
+        worktreePath: "/tmp/worktree",
+        bubbleStartedAt: "2026-02-24T12:00:00.000Z",
+        state: "RUNNING",
+        round: 2,
+        activeAgent: "codex",
+        activeRole: "implementer",
+        activeSince: "2026-02-24T12:00:00.000Z",
+        lastCommandAt: "2026-02-24T12:06:00.000Z",
+        paneActivity: {
+          readStatus: "ok",
+          lastChangedAt: "2026-02-24T11:50:00.000Z",
+          sampledAt: "2026-02-24T11:59:59.000Z",
+          sinceLastChangedSeconds: 960,
+          sinceSampledSeconds: 360,
+          lastSampleStatus: "sampled",
+          lastSampleError: null,
+          sessionName: "pf-b_detail_prev_run_quiet_01",
+          targetPane: "pf-b_detail_prev_run_quiet_01:0.1"
+        },
+        executionContext: null,
+        watchdog: {
+          monitored: true,
+          monitoredAgent: "codex",
+          timeoutMinutes: 30,
+          referenceTimestamp: "2026-02-24T12:06:00.000Z",
+          deadlineTimestamp: "2026-02-24T12:36:00.000Z",
+          remainingSeconds: 1800,
+          expired: false
+        },
+        pendingInboxItems: {
+          humanQuestions: 0,
+          approvalRequests: 0,
+          total: 0
+        },
+        transcript: {
+          totalMessages: 3,
+          lastMessageType: "PASS",
+          lastMessageTs: "2026-02-24T12:06:00.000Z",
+          lastMessageId: "msg_prev_run_quiet_01"
+        },
+        metaReview: {
+          actor: "meta-reviewer",
+          authorityActive: false,
+          runtimeDelivery: null
+        },
+        commandPath: {
+          status: "external",
+          profile: "external",
+          localEntrypoint: "/tmp/worktree/dist/cli/index.js",
+          activeEntrypoint: "/usr/local/bin/pairflow",
+          message: "external Pairflow CLI active",
+          pinnedCommand: "pairflow"
+        },
+        accuracy_critical: false,
+        last_review_verification: "missing",
+        failing_gates: [],
+        spec_lock_state: {
+          state: "IMPLEMENTABLE",
+          open_blocker_count: 0,
+          open_required_now_count: 0
+        },
+        round_gate_state: {
+          applies: false,
+          violated: false,
+          round: 2
+        },
+        stateValidation: null
+      },
+      inbox: {
+        bubbleId: "b_detail_prev_run_quiet_01",
+        repoPath: "/tmp/repo",
+        state: "RUNNING",
+        pending: {
+          humanQuestions: 0,
+          approvalRequests: 0,
+          total: 0
+        },
+        items: []
+      },
+      runtimeSession: {
+        bubbleId: "b_detail_prev_run_quiet_01",
+        repoPath: "/tmp/repo",
+        worktreePath: "/tmp/worktree",
+        tmuxSessionName: "pf-b_detail_prev_run_quiet_01",
+        updatedAt: "2026-02-24T12:06:00.000Z"
+      },
+      now: new Date("2026-02-24T12:06:00.000Z")
+    });
+
+    expect(detail.attention).toBeNull();
+  });
+
   it("preserves non-runtime attention on remote detail views", () => {
     const detail = presentBubbleDetail({
       status: {

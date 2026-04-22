@@ -75,7 +75,12 @@ export async function maybeFinalizeRemoteDeleteMissingTargetFallback(input: {
   toDeleteStepError: (input: {
     bubbleId: string;
     bubbleInstanceId: string;
-    step: "snapshot" | "index" | "worktree-cleanup" | "remove-active";
+    step:
+      | "snapshot"
+      | "index"
+      | "worktree-cleanup"
+      | "remove-active"
+      | "remove-runtime-health";
     error: unknown;
   }) => Error;
   inferCreatedAtFromBubbleInstanceId: (bubbleInstanceId: string) => string | null;

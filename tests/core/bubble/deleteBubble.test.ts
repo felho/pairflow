@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, readdir, rm, stat, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, readdir, rm, stat, writeFile } from "node:fs/promises";
 import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -207,6 +207,14 @@ function buildArchiveManifest(input: {
   };
 }
 
+function watchdogHealthPath(runtimeDir: string, bubbleId: string): string {
+  return join(runtimeDir, "watchdog-health", `${bubbleId}.json`);
+}
+
+function watchdogHistoryPath(runtimeDir: string, bubbleId: string): string {
+  return join(runtimeDir, "watchdog-history", `${bubbleId}.ndjson`);
+}
+
 describe("deleteBubble", () => {
   it("throws when tmux has-session fails with unexpected exit code", async () => {
     const repoPath = await createTempRepo();
@@ -297,6 +305,62 @@ describe("deleteBubble", () => {
     await expect(stat(bubble.paths.bubbleDir)).rejects.toMatchObject({
       code: "ENOENT"
     });
+  });
+
+  it("fails closed and does not emit bubble_deleted when runtime health cleanup fails", async () => {
+    const repoPath = await createTempRepo();
+    const now = new Date("2026-04-18T10:00:00.000Z");
+    const bubble = await createBubble({
+      id: "b_delete_fail_runtime_health_01",
+      repoPath,
+      baseBranch: "main",
+      reviewArtifactType: "code",
+      task: "Delete with runtime health failure",
+      cwd: repoPath
+    });
+    const removeWatchdogPaneActivity = vi.fn(async () => {
+      throw Object.assign(new Error("health cleanup denied"), {
+        code: "EPERM"
+      });
+    });
+
+    await expect(
+      deleteBubble(
+        {
+          bubbleId: bubble.bubbleId,
+          cwd: repoPath,
+          now
+        },
+        {
+          runTmux: vi.fn(() =>
+            Promise.resolve({
+              stdout: "",
+              stderr: "no session",
+              exitCode: 1
+            })
+          ),
+          removeWatchdogPaneActivity
+        }
+      )
+    ).rejects.toThrow(
+      new RegExp(
+        `Delete failed: bubble_id=${bubble.bubbleId} .* step=remove-runtime-health reason=health cleanup denied`,
+        "u"
+      )
+    );
+
+    expect(removeWatchdogPaneActivity).toHaveBeenCalledWith({
+      runtimeDir: bubble.paths.runtimeDir,
+      bubbleId: bubble.bubbleId
+    });
+    await expect(stat(bubble.paths.bubbleDir)).rejects.toMatchObject({
+      code: "ENOENT"
+    });
+    expect(
+      (await readMetricsEventsForDate(now)).find(
+        (event) => event.event_type === "bubble_deleted"
+      )
+    ).toBeUndefined();
   });
 
   it("fills archive index created_at from bubble metadata when available", async () => {
@@ -395,6 +459,19 @@ describe("deleteBubble", () => {
       tmuxSessionName: "pf-b_delete_02",
       now: new Date("2026-02-25T10:00:00.000Z")
     });
+    const healthPath = watchdogHealthPath(bubble.paths.runtimeDir, bubble.bubbleId);
+    await mkdir(join(bubble.paths.runtimeDir, "watchdog-health"), { recursive: true });
+    await writeFile(
+      healthPath,
+      JSON.stringify({
+        bubble_id: bubble.bubbleId,
+        sampled_at: "2026-02-25T10:00:00.000Z",
+        pane_hash: "hash-confirm",
+        last_changed_at: "2026-02-25T09:57:00.000Z",
+        last_sample_status: "sampled"
+      }),
+      "utf8"
+    );
 
     const result = await deleteBubble(
       {
@@ -418,6 +495,7 @@ describe("deleteBubble", () => {
     expect(result.artifacts.branch.exists).toBe(true);
 
     await expect(stat(bubble.paths.bubbleDir)).resolves.toBeDefined();
+    await expect(stat(healthPath)).resolves.toBeDefined();
   });
 
   it("force deletes bubble and cleans runtime/worktree/branch artifacts", async () => {
@@ -436,6 +514,22 @@ describe("deleteBubble", () => {
       tmuxSessionName: "pf-b_delete_03",
       now: new Date("2026-02-25T10:05:00.000Z")
     });
+    const healthPath = watchdogHealthPath(bubble.paths.runtimeDir, bubble.bubbleId);
+    const historyPath = watchdogHistoryPath(bubble.paths.runtimeDir, bubble.bubbleId);
+    await mkdir(join(bubble.paths.runtimeDir, "watchdog-health"), { recursive: true });
+    await mkdir(join(bubble.paths.runtimeDir, "watchdog-history"), { recursive: true });
+    await writeFile(
+      healthPath,
+      JSON.stringify({
+        bubble_id: bubble.bubbleId,
+        sampled_at: "2026-02-25T10:05:10.000Z",
+        pane_hash: "hash-delete",
+        last_changed_at: "2026-02-25T10:01:00.000Z",
+        last_sample_status: "sampled"
+      }),
+      "utf8"
+    );
+    await writeFile(historyPath, "{\"sample\":\"keep\"}\n", "utf8");
     const stopBubbleMock: NonNullable<DeleteBubbleDependencies["stopBubble"]> = async () => {
       await removeRuntimeSession({
         sessionsPath: bubble.paths.sessionsPath,
@@ -485,6 +579,10 @@ describe("deleteBubble", () => {
     await expect(stat(bubble.paths.bubbleDir)).rejects.toMatchObject({
       code: "ENOENT"
     });
+    await expect(stat(healthPath)).rejects.toMatchObject({
+      code: "ENOENT"
+    });
+    await expect(readFile(historyPath, "utf8")).resolves.toBe("{\"sample\":\"keep\"}\n");
     await expect(stat(bubble.paths.worktreePath)).rejects.toMatchObject({
       code: "ENOENT"
     });
@@ -1343,6 +1441,22 @@ describe("deleteBubble", () => {
         cwd: repoPath
       })
     );
+    const historyPath = watchdogHistoryPath(bubble.paths.runtimeDir, bubble.bubbleId);
+    const healthPath = watchdogHealthPath(bubble.paths.runtimeDir, bubble.bubbleId);
+    await mkdir(join(bubble.paths.runtimeDir, "watchdog-health"), { recursive: true });
+    await mkdir(join(bubble.paths.runtimeDir, "watchdog-history"), { recursive: true });
+    await writeFile(
+      healthPath,
+      JSON.stringify({
+        bubble_id: bubble.bubbleId,
+        sampled_at: "2026-04-18T16:19:30.000Z",
+        pane_hash: "hash-remote-success",
+        last_changed_at: "2026-04-18T16:14:00.000Z",
+        last_sample_status: "sampled"
+      }),
+      "utf8"
+    );
+    await writeFile(historyPath, "{\"sample\":\"remote-success-keep\"}\n", "utf8");
     const remoteState = `{\n  "bubble_id": "${bubble.bubbleId}",\n  "state": "DONE"\n}\n`;
     const remoteTranscript =
       `{"id":"msg_remote_delete_01","bubble_id":"${bubble.bubbleId}","type":"DONE_PACKAGE"}\n`;
@@ -1466,6 +1580,132 @@ describe("deleteBubble", () => {
     await expect(stat(bubble.paths.bubbleDir)).rejects.toMatchObject({
       code: "ENOENT"
     });
+    await expect(readFile(historyPath, "utf8")).resolves.toBe(
+      "{\"sample\":\"remote-success-keep\"}\n"
+    );
+    await expect(stat(healthPath)).rejects.toMatchObject({
+      code: "ENOENT"
+    });
+  });
+
+  it("fails closed and does not emit bubble_deleted when remote started delete cannot remove runtime health", async () => {
+    const repoPath = await createTempRepo();
+    const now = new Date("2026-04-18T16:27:00.000Z");
+    const bubble = await convertDeleteBubbleToRemoteStarted(
+      await createBubble({
+        id: "b_delete_remote_health_fail_01",
+        repoPath,
+        baseBranch: "main",
+        reviewArtifactType: "code",
+        task: "Remote delete runtime health failure",
+        cwd: repoPath
+      })
+    );
+    const historyPath = watchdogHistoryPath(bubble.paths.runtimeDir, bubble.bubbleId);
+    const healthPath = watchdogHealthPath(bubble.paths.runtimeDir, bubble.bubbleId);
+    await mkdir(join(bubble.paths.runtimeDir, "watchdog-health"), { recursive: true });
+    await mkdir(join(bubble.paths.runtimeDir, "watchdog-history"), { recursive: true });
+    await writeFile(
+      healthPath,
+      JSON.stringify({
+        bubble_id: bubble.bubbleId,
+        sampled_at: "2026-04-18T16:26:30.000Z",
+        pane_hash: "hash-remote-health-fail",
+        last_changed_at: "2026-04-18T16:20:00.000Z",
+        last_sample_status: "sampled"
+      }),
+      "utf8"
+    );
+    await writeFile(historyPath, "{\"sample\":\"remote-health-fail-keep\"}\n", "utf8");
+    const removeWatchdogPaneActivity = vi.fn(async () => {
+      throw Object.assign(new Error("health cleanup denied"), {
+        code: "EPERM"
+      });
+    });
+
+    await expect(
+      deleteBubble(
+        {
+          bubbleId: bubble.bubbleId,
+          cwd: repoPath,
+          force: true,
+          now
+        },
+        {
+          executeRemoteBubbleDeleteCommand: vi.fn(async () => ({
+            result: {
+              bubbleId: bubble.bubbleId,
+              deleted: true,
+              requiresConfirmation: false,
+              artifacts: {
+                worktree: {
+                  exists: true,
+                  path: `/srv/pairflow/repo--${bubble.bubbleId}`
+                },
+                tmux: {
+                  exists: true,
+                  sessionName: `pf-${bubble.bubbleId}`
+                },
+                runtimeSession: {
+                  exists: true,
+                  sessionName: `pf-${bubble.bubbleId}`
+                },
+                branch: {
+                  exists: true,
+                  name: bubble.config.bubble_branch
+                }
+              },
+              tmuxSessionTerminated: true,
+              runtimeSessionRemoved: true,
+              removedWorktree: true,
+              removedBubbleBranch: true
+            },
+            archiveCapture: {
+              sourceBubbleDir: `/srv/pairflow/repo--${bubble.bubbleId}/.pairflow/bubbles/${bubble.bubbleId}`,
+              bubbleToml: await readFile(bubble.paths.bubbleTomlPath, "utf8"),
+              stateJson: `{"bubble_id":"${bubble.bubbleId}","state":"DONE"}\n`,
+              transcriptNdjson: `{"id":"msg_remote_health_fail_01"}\n`,
+              inboxNdjson: ""
+            }
+          })),
+          resolveRemoteBubbleStatusTarget: vi.fn(async () => ({
+            alias: "prod",
+            host: "ssh.example.com",
+            user: "pairflow",
+            pairflowCommand: "pairflow"
+          })),
+          removeWatchdogPaneActivity
+        }
+      )
+    ).rejects.toThrow(
+      new RegExp(
+        `Delete failed: bubble_id=${bubble.bubbleId} .* step=remove-runtime-health reason=health cleanup denied`,
+        "u"
+      )
+    );
+
+    expect(removeWatchdogPaneActivity).toHaveBeenCalledWith({
+      runtimeDir: bubble.paths.runtimeDir,
+      bubbleId: bubble.bubbleId
+    });
+    const archivePaths = await resolveArchivePaths({
+      repoPath,
+      bubbleInstanceId: bubble.config.bubble_instance_id as string,
+      archiveRootPath: process.env.PAIRFLOW_ARCHIVE_ROOT
+    });
+    await expect(stat(archivePaths.bubbleInstanceArchivePath)).resolves.toBeDefined();
+    await expect(stat(bubble.paths.bubbleDir)).rejects.toMatchObject({
+      code: "ENOENT"
+    });
+    await expect(readFile(historyPath, "utf8")).resolves.toBe(
+      "{\"sample\":\"remote-health-fail-keep\"}\n"
+    );
+    await expect(stat(healthPath)).resolves.toBeDefined();
+    expect(
+      (await readMetricsEventsForDate(now)).find(
+        (event) => event.event_type === "bubble_deleted"
+      )
+    ).toBeUndefined();
   });
 
   it("fails closed when remote delete finalization cannot remove the local bubble directory", async () => {
@@ -2236,6 +2476,23 @@ describe("deleteBubble", () => {
       })
     );
     const now = new Date("2026-04-18T16:55:00.000Z");
+    const healthPath = watchdogHealthPath(bubble.paths.runtimeDir, bubble.bubbleId);
+    const historyPath = watchdogHistoryPath(bubble.paths.runtimeDir, bubble.bubbleId);
+    await mkdir(join(bubble.paths.runtimeDir, "watchdog-health"), { recursive: true });
+    await mkdir(join(bubble.paths.runtimeDir, "watchdog-history"), { recursive: true });
+    await writeFile(
+      healthPath,
+      JSON.stringify({
+        bubble_id: bubble.bubbleId,
+        sampled_at: "2026-04-18T16:54:30.000Z",
+        pane_hash: "hash-remote-fallback",
+        last_changed_at: "2026-04-18T16:50:00.000Z",
+        last_sample_status: "sampled"
+      }),
+      "utf8"
+    );
+    await writeFile(historyPath, "{\"sample\":\"remote-fallback-keep\"}\n", "utf8");
+    await expect(stat(healthPath)).resolves.toBeDefined();
 
     const result = await deleteBubble(
       {
@@ -2284,6 +2541,12 @@ describe("deleteBubble", () => {
     await expect(stat(bubble.paths.bubbleDir)).rejects.toMatchObject({
       code: "ENOENT"
     });
+    await expect(readFile(historyPath, "utf8")).resolves.toBe(
+      "{\"sample\":\"remote-fallback-keep\"}\n"
+    );
+    await expect(stat(healthPath)).rejects.toMatchObject({
+      code: "ENOENT"
+    });
     expect(
       (await readMetricsEventsForDate(now)).find(
         (event) => event.event_type === "bubble_deleted"
@@ -2299,6 +2562,101 @@ describe("deleteBubble", () => {
         had_branch: false
       }
     });
+  });
+
+  it("fails closed and does not emit bubble_deleted when missing-target fallback cannot remove runtime health", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await convertDeleteBubbleToRemoteStarted(
+      await createBubble({
+        id: "b_del_remote_inv_hf_01",
+        repoPath,
+        baseBranch: "main",
+        reviewArtifactType: "code",
+        task: "Remote delete invalid target runtime health failure",
+        cwd: repoPath
+      })
+    );
+    const now = new Date("2026-04-18T16:57:00.000Z");
+    const healthPath = watchdogHealthPath(bubble.paths.runtimeDir, bubble.bubbleId);
+    const historyPath = watchdogHistoryPath(bubble.paths.runtimeDir, bubble.bubbleId);
+    await mkdir(join(bubble.paths.runtimeDir, "watchdog-health"), { recursive: true });
+    await mkdir(join(bubble.paths.runtimeDir, "watchdog-history"), { recursive: true });
+    await writeFile(
+      healthPath,
+      JSON.stringify({
+        bubble_id: bubble.bubbleId,
+        sampled_at: "2026-04-18T16:56:30.000Z",
+        pane_hash: "hash-remote-fallback-health-fail",
+        last_changed_at: "2026-04-18T16:52:00.000Z",
+        last_sample_status: "sampled"
+      }),
+      "utf8"
+    );
+    await writeFile(historyPath, "{\"sample\":\"remote-fallback-health-fail-keep\"}\n", "utf8");
+    const removeWatchdogPaneActivity = vi.fn(async () => {
+      throw Object.assign(new Error("health cleanup denied"), {
+        code: "EPERM"
+      });
+    });
+
+    await expect(
+      deleteBubble(
+        {
+          bubbleId: bubble.bubbleId,
+          cwd: repoPath,
+          force: true,
+          now
+        },
+        {
+          executeRemoteBubbleDeleteCommand: vi.fn(async () => {
+            throw new RemoteBubbleDeleteCommandError({
+              code: "REMOTE_DELETE_INVALID_TARGET",
+              message:
+                `Remote delete transport failed for ${bubble.bubbleId} on prod: missing remote clone target`,
+              context: {
+                bubbleId: bubble.bubbleId,
+                remoteAlias: "prod"
+              }
+            });
+          }),
+          resolveRemoteBubbleStatusTarget: vi.fn(async () => ({
+            alias: "prod",
+            host: "ssh.example.com",
+            user: "pairflow",
+            pairflowCommand: "pairflow"
+          })),
+          removeWatchdogPaneActivity
+        }
+      )
+    ).rejects.toThrow(
+      new RegExp(
+        `Delete failed: bubble_id=${bubble.bubbleId} .* step=remove-runtime-health reason=health cleanup denied`,
+        "u"
+      )
+    );
+
+    expect(removeWatchdogPaneActivity).toHaveBeenCalledWith({
+      runtimeDir: bubble.paths.runtimeDir,
+      bubbleId: bubble.bubbleId
+    });
+    const archivePaths = await resolveArchivePaths({
+      repoPath,
+      bubbleInstanceId: bubble.config.bubble_instance_id as string,
+      archiveRootPath: process.env.PAIRFLOW_ARCHIVE_ROOT
+    });
+    await expect(stat(archivePaths.bubbleInstanceArchivePath)).resolves.toBeDefined();
+    await expect(stat(bubble.paths.bubbleDir)).rejects.toMatchObject({
+      code: "ENOENT"
+    });
+    await expect(readFile(historyPath, "utf8")).resolves.toBe(
+      "{\"sample\":\"remote-fallback-health-fail-keep\"}\n"
+    );
+    await expect(stat(healthPath)).resolves.toBeDefined();
+    expect(
+      (await readMetricsEventsForDate(now)).find(
+        (event) => event.event_type === "bubble_deleted"
+      )
+    ).toBeUndefined();
   });
 
   it("uses the local canonical delete path inside a verified remote clone execution context", async () => {
