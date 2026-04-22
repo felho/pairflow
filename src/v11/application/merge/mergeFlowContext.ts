@@ -64,15 +64,14 @@ async function assertRemoteMergeLocalPrerequisites(input: {
     input.repoPath,
     input.baseBranch
   );
-  const bubbleBranchExists = await input.dependencies.branchExists(
-    input.repoPath,
-    input.bubbleBranch
-  );
+
+  // Started-remote merge imports the authoritative handoff ref back into the
+  // laptop repo, so it must not require a retained local bubble branch.
   assertMergeBranchEligibility({
     baseBranch: input.baseBranch,
     bubbleBranch: input.bubbleBranch,
     baseBranchExists,
-    bubbleBranchExists,
+    bubbleBranchExists: true,
     createError: input.createError
   });
 }
@@ -110,9 +109,7 @@ export async function initializeMergeFlowExecutionContext(input: {
 
   if (resolved.bubbleConfig.executor?.type === "ssh") {
     const remoteMergeExecutionContext = resolveRemoteMergeExecutionContextFromEnv();
-    const remotePointer = await input.dependencies.readRemotePointer(
-      resolved.bubblePaths.remotePointerPath
-    );
+    const remotePointer = await input.dependencies.readRemotePointer(resolved.bubblePaths.remotePointerPath);
 
     if (
       remoteMergeExecutionContext?.kind === "remote_clone"
@@ -182,10 +179,7 @@ export async function initializeMergeFlowExecutionContext(input: {
   );
 
   const baseBranchExists = await input.dependencies.branchExists(resolvedRepoPath, baseBranch);
-  const bubbleBranchExists = await input.dependencies.branchExists(
-    resolvedRepoPath,
-    bubbleBranch
-  );
+  const bubbleBranchExists = await input.dependencies.branchExists(resolvedRepoPath, bubbleBranch);
   assertMergeBranchEligibility({
     baseBranch,
     bubbleBranch,

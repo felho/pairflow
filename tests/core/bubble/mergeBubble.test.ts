@@ -1203,7 +1203,7 @@ describe("mergeBubble", () => {
     expect(executeRemoteBubbleMergeCommand).not.toHaveBeenCalled();
   });
 
-  it("fails closed before remote dispatch when the local bubble branch is missing", async () => {
+  it("does not require a local bubble branch before started remote merge dispatch", async () => {
     const repoPath = await createTempRepo();
     const bubble = await convertDoneBubbleToRemoteStarted(
       await setupDoneBubble(repoPath, "b_merge_remote_missing_branch_01")
@@ -1212,32 +1212,39 @@ describe("mergeBubble", () => {
     const executeRemoteBubbleMergeCommand = vi.fn(async () =>
       buildRemoteMergeHandoffResult(bubble)
     );
+    const executeRemoteBubbleMergeCleanupCommand = vi.fn(async () =>
+      buildRemoteMergeCleanupResult(bubble)
+    );
     const branchExists = vi.fn(async (_repoPath: string, branch: string) =>
-      branch !== bubble.config.bubble_branch
+      branch === bubble.config.base_branch
+    );
+    const runGitSpy = createRemoteRouteGitMock({
+      bubbleId: bubble.bubbleId
+    });
+
+    const result = await mergeBubble(
+      {
+        bubbleId: bubble.bubbleId,
+        cwd: repoPath
+      },
+      {
+        branchExists,
+        runGit: runGitSpy,
+        executeRemoteBubbleMergeCommand,
+        executeRemoteBubbleMergeCleanupCommand,
+        resolveRemoteBubbleStatusTarget: vi.fn(async () => ({
+          alias: "prod",
+          host: "ssh.example.com",
+          pairflowCommand: "pairflow"
+        }))
+      }
     );
 
-    await expect(
-      mergeBubble(
-        {
-          bubbleId: bubble.bubbleId,
-          cwd: repoPath
-        },
-        {
-          branchExists,
-          executeRemoteBubbleMergeCommand,
-          resolveRemoteBubbleStatusTarget: vi.fn(async () => ({
-            alias: "prod",
-            host: "ssh.example.com",
-            pairflowCommand: "pairflow"
-          }))
-        }
-      )
-    ).rejects.toMatchObject({
-      name: "BubbleMergeError",
-      reasonCode: "MERGE_BUBBLE_BRANCH_NOT_FOUND"
-    } satisfies Partial<BubbleMergeError>);
-
-    expect(executeRemoteBubbleMergeCommand).not.toHaveBeenCalled();
+    expect(result.presentationRoute).toBe("started_remote");
+    expect(branchExists).toHaveBeenCalledTimes(1);
+    expect(branchExists.mock.calls[0]?.[1]).toBe(bubble.config.base_branch);
+    expect(executeRemoteBubbleMergeCommand).toHaveBeenCalledOnce();
+    expect(executeRemoteBubbleMergeCleanupCommand).toHaveBeenCalledOnce();
   });
 
   it("fails closed when local fetch import fails after remote dispatch", async () => {

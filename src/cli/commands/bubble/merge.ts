@@ -77,7 +77,9 @@ export function renderBubbleMergeResultText(
   }
 
   const unexpectedRoute: never = result.presentationRoute;
-  throw new Error(`Unsupported bubble merge presentation route: ${unexpectedRoute}`);
+  throw new Error(
+    `Unsupported bubble merge presentation route: ${String(unexpectedRoute)}`
+  );
 }
 
 export function parseBubbleMergeCommandOptions(

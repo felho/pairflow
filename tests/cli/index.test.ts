@@ -353,6 +353,9 @@ describe("runCli", () => {
         removedBubbleBranch: true,
         tmuxSessionName: `pf-cleanup-${bubble.bubbleId}`
       });
+    const branchExistsSpy = vi
+      .spyOn(mergeBubbleDependencyDefaults, "branchExists")
+      .mockImplementation(async (_repoPath, branch) => branch === "main");
     const originalRunGit = mergeBubbleDependencyDefaults.runGit;
     const runGitSpy = vi
       .spyOn(mergeBubbleDependencyDefaults, "runGit")
@@ -382,6 +385,8 @@ describe("runCli", () => {
       expect(resolveRemoteBubbleStatusTargetSpy).toHaveBeenCalledOnce();
       expect(executeRemoteBubbleMergeCommandSpy).toHaveBeenCalledOnce();
       expect(executeRemoteBubbleMergeCleanupCommandSpy).toHaveBeenCalledOnce();
+      expect(branchExistsSpy).toHaveBeenCalledTimes(1);
+      expect(branchExistsSpy.mock.calls[0]?.[1]).toBe("main");
       expect(runGitSpy).toHaveBeenCalled();
 
       const output = stdoutSpy.mock.calls.map((call) => String(call[0])).join("");
@@ -391,6 +396,7 @@ describe("runCli", () => {
       expect(output).not.toContain("remoteDeleted=");
     } finally {
       runGitSpy.mockRestore();
+      branchExistsSpy.mockRestore();
       executeRemoteBubbleMergeCleanupCommandSpy.mockRestore();
       executeRemoteBubbleMergeCommandSpy.mockRestore();
       resolveRemoteBubbleStatusTargetSpy.mockRestore();
