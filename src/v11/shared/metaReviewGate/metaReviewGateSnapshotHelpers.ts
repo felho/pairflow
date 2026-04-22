@@ -37,11 +37,18 @@ export function buildHumanGateSummary(input: {
   };
   fallbackReason?: string;
 }): string {
+  const runSummary = input.metaReviewRun?.summary?.trim();
   if (input.fallbackReason !== undefined) {
+    if (
+      typeof runSummary === "string"
+      && runSummary.length > 0
+      && runSummary !== input.fallbackReason
+    ) {
+      return `${input.fallbackReason} Meta-review summary: ${runSummary}`;
+    }
     return input.fallbackReason;
   }
-  const runSummary = input.metaReviewRun?.summary;
-  if (typeof runSummary === "string" && runSummary.trim().length > 0) {
+  if (typeof runSummary === "string" && runSummary.length > 0) {
     return runSummary;
   }
   return input.convergenceSummary;

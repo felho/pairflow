@@ -38,6 +38,8 @@ export interface MetricsMetaReviewRouteCounts {
   human_gate_sticky_bypass: number;
   human_gate_approve: number;
   human_gate_budget_exhausted: number;
+  human_gate_threshold_not_met: number;
+  human_gate_threshold_unresolved: number;
   human_gate_inconclusive: number;
   human_gate_run_failed: number;
   human_gate_dispatch_failed: number;

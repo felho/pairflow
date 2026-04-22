@@ -14,6 +14,8 @@ const persistedHumanGateRoutes = new Set<
   "human_gate_sticky_bypass",
   "human_gate_approve",
   "human_gate_budget_exhausted",
+  "human_gate_threshold_not_met",
+  "human_gate_threshold_unresolved",
   "human_gate_inconclusive",
   "human_gate_run_failed",
   "human_gate_dispatch_failed"

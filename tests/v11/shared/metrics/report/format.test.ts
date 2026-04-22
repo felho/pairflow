@@ -51,6 +51,8 @@ function createReportFixture(): MetricsReportResult {
           human_gate_sticky_bypass: 0,
           human_gate_approve: 1,
           human_gate_budget_exhausted: 0,
+          human_gate_threshold_not_met: 1,
+          human_gate_threshold_unresolved: 1,
           human_gate_inconclusive: 0,
           human_gate_run_failed: 1,
           human_gate_dispatch_failed: 0
@@ -101,6 +103,8 @@ describe("metrics report formatters", () => {
     expect(rendered).toContain("false_convergence_count");
     expect(rendered).toContain("escaped_p1_after_converged");
     expect(rendered).toContain("meta_review_rollout.route_counts");
+    expect(rendered).toContain("threshold_not_met=1");
+    expect(rendered).toContain("threshold_unresolved=1");
     expect(rendered).toContain("PAIRFLOW_COMMAND_PATH_STALE=1");
   });
 

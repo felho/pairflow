@@ -8,8 +8,11 @@ import type {
   WriteStateSnapshotPort
 } from "../ports/stateSnapshots.js";
 import type {
+  BubbleConfig,
   BubbleStateSnapshot
 } from "../../../types/bubble.js";
+import type { BubbleReviewAutoReworkSeverity } from "../../../types/bubble.js";
+import type { FindingPriority } from "../../../types/findings.js";
 import {
   type FindingsParityMetadata
 } from "../../../types/protocol.js";
@@ -20,21 +23,103 @@ import {
   resolveHumanGateRoute,
   persistHumanGateRoute
 } from "./metaReviewGateShared.js";
-import { type MetaReviewGateResult } from "./metaReviewGateTypes.js";
+import {
+  type MetaReviewGateResult,
+  type MetaReviewGateThresholdMetadata
+} from "./metaReviewGateTypes.js";
 import { dispatchAutoRework } from "./metaReviewGateAutoRework.js";
 import { validateStructuredMetaReviewPositiveClaim } from "./metaReviewGateFindingsValidation.js";
 import { resolveFindingsParityMetadataFromReportJson } from "./metaReviewGateFindingsMetadata.js";
+import {
+  REVIEW_POLICY_THRESHOLD_CONTEXT_INCOMPLETE,
+  REVIEW_POLICY_THRESHOLD_SOURCE_UNRESOLVED,
+  resolveMetaReviewGateThresholdAuthority
+} from "./metaReviewGateThresholdAuthority.js";
+import { buildBubbleReviewPolicyRuntimeView } from "../reviewPolicy/reviewPolicyRuntime.js";
+
+const REVIEW_POLICY_AUTO_REWORK_THRESHOLD_NOT_MET =
+  "REVIEW_POLICY_AUTO_REWORK_THRESHOLD_NOT_MET" as const;
+
+const findingPriorityOrder: FindingPriority[] = ["P0", "P1", "P2", "P3"];
+
+type AutoReworkThresholdDecision =
+  | {
+      route: "auto_rework";
+      parityMetadata: FindingsParityMetadata | null;
+    }
+  | {
+      route: "human_gate_threshold_not_met" | "human_gate_threshold_unresolved";
+      parityMetadata: FindingsParityMetadata | null;
+      thresholdMetadata: MetaReviewGateThresholdMetadata;
+      fallbackReason: string;
+    };
+
+function resolveHumanGatePersistenceDecision(input: {
+  forceStickyHumanGateBypass: boolean;
+  recommendation: MetaReviewResult["recommendation"];
+  budgetAvailable: boolean;
+  thresholdMetadata?: MetaReviewGateThresholdMetadata;
+}): Exclude<MetaReviewGateResult["route"], "meta_review_running" | "auto_rework"> {
+  if (input.forceStickyHumanGateBypass) {
+    return "human_gate_sticky_bypass";
+  }
+
+  return resolveHumanGateRoute({
+    recommendation: input.recommendation,
+    budgetAvailable: input.budgetAvailable,
+    thresholdStatus: input.thresholdMetadata?.status ?? null
+  });
+}
+
+function resolveThresholdAuthorityParityMismatchDiagnostic(input: {
+  routingParityMetadata: FindingsParityMetadata | null;
+  authorityParityMetadata: FindingsParityMetadata | null;
+}): string | null {
+  const routingParityMetadata = input.routingParityMetadata;
+  const authorityParityMetadata = input.authorityParityMetadata;
+  if (
+    routingParityMetadata === null
+    || authorityParityMetadata === null
+  ) {
+    return null;
+  }
+
+  const comparableFields: Array<keyof FindingsParityMetadata> = [
+    "findings_claimed_open_total",
+    "findings_artifact_open_total",
+    "findings_artifact_status",
+    "findings_digest_sha256",
+    "meta_review_run_id",
+    "findings_parity_status"
+  ];
+  const mismatches = comparableFields.flatMap((field) => {
+    const routingValue = routingParityMetadata[field];
+    const authorityValue = authorityParityMetadata[field];
+    return routingValue === authorityValue
+      ? []
+      : [
+          `${field}: routing=${String(routingValue ?? "null")} authority=${String(authorityValue ?? "null")}`
+        ];
+  });
+
+  if (mismatches.length === 0) {
+    return null;
+  }
+
+  return [
+    REVIEW_POLICY_THRESHOLD_SOURCE_UNRESOLVED,
+    "routing parity metadata drifted before threshold authority resolution",
+    mismatches.join("; ")
+  ].join(": ");
+}
 
 interface FinalizeCurrentRunMetaReviewGateInput {
   resolved: {
     bubbleId: string;
-    bubbleConfig: {
-      watchdog_timeout_minutes: number;
-      agents: {
-        implementer: string;
-        reviewer: string;
-      };
-    };
+    bubbleConfig: Pick<
+      BubbleConfig,
+      "watchdog_timeout_minutes" | "agents" | "review_policy"
+    >;
     bubblePaths: {
       artifactsDir: string;
       bubbleDir: string;
@@ -139,6 +224,127 @@ async function resolveCurrentRunParity(input: {
   };
 }
 
+function thresholdMet(input: {
+  highestOpenSeverity: FindingPriority;
+  minSeverity: BubbleReviewAutoReworkSeverity;
+}): boolean {
+  return (
+    findingPriorityOrder.indexOf(input.highestOpenSeverity)
+    <= findingPriorityOrder.indexOf(input.minSeverity)
+  );
+}
+
+function buildThresholdNotMetSummary(input: {
+  minSeverity: BubbleReviewAutoReworkSeverity;
+  highestOpenSeverity: FindingPriority;
+}): string {
+  return [
+    "Meta-review recommended rework, but auto rework was not dispatched.",
+    `Highest open severity ${input.highestOpenSeverity} did not meet the configured minimum ${input.minSeverity}.`
+  ].join(" ");
+}
+
+function buildThresholdUnresolvedSummary(input: {
+  thresholdStatus: "unresolved" | "incomplete";
+  diagnostics: string[];
+}): string {
+  const diagnostic = input.diagnostics[0];
+  const detail =
+    typeof diagnostic === "string" && diagnostic.trim().length > 0
+      ? ` Detail: ${diagnostic}`
+      : "";
+  return [
+    "Meta-review recommended rework, but auto rework was blocked because threshold authority was not fully resolved.",
+    `Threshold status: ${input.thresholdStatus}.${detail}`
+  ].join(" ");
+}
+
+async function resolveAutoReworkThresholdDecision(input: {
+  finalizeInput: FinalizeCurrentRunMetaReviewGateInput;
+  runResultForRouting: MetaReviewResult;
+  parityMetadata: FindingsParityMetadata | null;
+}): Promise<AutoReworkThresholdDecision> {
+  const runtimePolicy = buildBubbleReviewPolicyRuntimeView(
+    input.finalizeInput.resolved.bubbleConfig
+  );
+  const thresholdAuthority = await resolveMetaReviewGateThresholdAuthority({
+    runResult: input.runResultForRouting,
+    bubbleDir: input.finalizeInput.resolved.bubblePaths.bubbleDir,
+    artifactsDir: input.finalizeInput.resolved.bubblePaths.artifactsDir,
+    readFileFn: input.finalizeInput.readFileFn
+  });
+  const parityMismatchDiagnostic = resolveThresholdAuthorityParityMismatchDiagnostic({
+    routingParityMetadata: input.parityMetadata,
+    authorityParityMetadata: thresholdAuthority.parityMetadata
+  });
+  const parityMetadata =
+    thresholdAuthority.parityMetadata ?? input.parityMetadata;
+  if (parityMismatchDiagnostic !== null) {
+    return {
+      route: "human_gate_threshold_unresolved",
+      parityMetadata,
+      thresholdMetadata: {
+        status: "unresolved",
+        reasonCode: REVIEW_POLICY_THRESHOLD_SOURCE_UNRESOLVED
+      },
+      fallbackReason: buildThresholdUnresolvedSummary({
+        thresholdStatus: "unresolved",
+        diagnostics: [parityMismatchDiagnostic]
+      })
+    };
+  }
+
+  if (thresholdAuthority.status === "resolved") {
+    if (
+      thresholdMet({
+        highestOpenSeverity: thresholdAuthority.highestOpenSeverity,
+        minSeverity: runtimePolicy.meta_review_auto_rework_min_severity
+      })
+    ) {
+      return {
+        route: "auto_rework",
+        parityMetadata
+      };
+    }
+
+    return {
+      route: "human_gate_threshold_not_met",
+      parityMetadata,
+      thresholdMetadata: {
+        status: "not_met",
+        reasonCode: REVIEW_POLICY_AUTO_REWORK_THRESHOLD_NOT_MET,
+        minSeverity: runtimePolicy.meta_review_auto_rework_min_severity,
+        highestOpenSeverity: thresholdAuthority.highestOpenSeverity
+      },
+      fallbackReason: buildThresholdNotMetSummary({
+        minSeverity: runtimePolicy.meta_review_auto_rework_min_severity,
+        highestOpenSeverity: thresholdAuthority.highestOpenSeverity
+      })
+    };
+  }
+
+  const thresholdStatus = thresholdAuthority.status;
+  const thresholdMetadata: MetaReviewGateThresholdMetadata =
+    thresholdStatus === "incomplete"
+      ? {
+          status: "incomplete",
+          reasonCode: REVIEW_POLICY_THRESHOLD_CONTEXT_INCOMPLETE
+        }
+      : {
+          status: "unresolved",
+          reasonCode: REVIEW_POLICY_THRESHOLD_SOURCE_UNRESOLVED
+        };
+  return {
+    route: "human_gate_threshold_unresolved",
+    parityMetadata,
+    thresholdMetadata,
+    fallbackReason: buildThresholdUnresolvedSummary({
+      thresholdStatus,
+      diagnostics: thresholdAuthority.diagnostics
+    })
+  };
+}
+
 async function persistRunFailedHumanRoute(
   input: FinalizeCurrentRunMetaReviewGateInput
 ): Promise<MetaReviewGateResult> {
@@ -217,15 +423,19 @@ async function persistResolvedHumanRoute(input: {
   runResultForRouting: MetaReviewResult;
   budgetAvailable: boolean;
   parityMetadata: FindingsParityMetadata | null;
-  stickyHumanGate: boolean;
+  forceStickyHumanGateBypass: boolean;
+  thresholdMetadata?: MetaReviewGateThresholdMetadata;
+  fallbackReason?: string;
 }): Promise<MetaReviewGateResult> {
   const finalizeInput = input.finalizeInput;
-  const route = input.stickyHumanGate
-    ? "human_gate_sticky_bypass"
-    : resolveHumanGateRoute(
-        input.runResultForRouting.recommendation,
-        input.budgetAvailable
-      );
+  const humanGateDecision = resolveHumanGatePersistenceDecision({
+    forceStickyHumanGateBypass: input.forceStickyHumanGateBypass,
+    recommendation: input.runResultForRouting.recommendation,
+    budgetAvailable: input.budgetAvailable,
+    ...(input.thresholdMetadata !== undefined
+      ? { thresholdMetadata: input.thresholdMetadata }
+      : {})
+  });
   return persistHumanGateRoute({
     appendEnvelope: finalizeInput.appendEnvelope,
     writeState: finalizeInput.writeState,
@@ -241,18 +451,24 @@ async function persistResolvedHumanRoute(input: {
     bubbleId: finalizeInput.resolved.bubbleId,
     summary: buildHumanGateSummary({
       convergenceSummary: finalizeInput.summary,
-      metaReviewRun: input.runResultForRouting
+      metaReviewRun: input.runResultForRouting,
+      ...(input.fallbackReason !== undefined
+        ? { fallbackReason: input.fallbackReason }
+        : {})
     }),
     refs: finalizeInput.refs,
     loaded: finalizeInput.loaded,
     expectedState: "RUNNING",
-    route,
+    route: humanGateDecision,
     metaReviewRun: input.runResultForRouting,
     parityMetadata:
       input.parityMetadata ??
       resolveFindingsParityMetadataFromReportJson(
         input.runResultForRouting.report_json
-      )
+      ),
+    ...(input.thresholdMetadata !== undefined
+      ? { thresholdMetadata: input.thresholdMetadata }
+      : {})
   });
 }
 
@@ -291,7 +507,7 @@ export async function finalizeCurrentRunMetaReviewGate(
       runResultForRouting: parity.runResultForRouting,
       budgetAvailable: parity.budgetAvailable,
       parityMetadata: parity.parityMetadata,
-      stickyHumanGate: true
+      forceStickyHumanGateBypass: true
     });
   }
 
@@ -299,10 +515,26 @@ export async function finalizeCurrentRunMetaReviewGate(
     parity.runResultForRouting.recommendation === "rework" &&
     parity.budgetAvailable
   ) {
+    const thresholdDecision = await resolveAutoReworkThresholdDecision({
+      finalizeInput: input,
+      runResultForRouting: parity.runResultForRouting,
+      parityMetadata: parity.parityMetadata
+    });
+    if (thresholdDecision.route !== "auto_rework") {
+      return persistResolvedHumanRoute({
+        finalizeInput: input,
+        runResultForRouting: parity.runResultForRouting,
+        budgetAvailable: parity.budgetAvailable,
+        parityMetadata: thresholdDecision.parityMetadata,
+        forceStickyHumanGateBypass: false,
+        thresholdMetadata: thresholdDecision.thresholdMetadata,
+        fallbackReason: thresholdDecision.fallbackReason
+      });
+    }
     return dispatchAutoRework({
       finalizeInput: input,
       runResultForRouting: parity.runResultForRouting,
-      parityMetadata: parity.parityMetadata,
+      parityMetadata: thresholdDecision.parityMetadata,
       persistDispatchFailedHumanRoute: (dispatchInput) =>
         persistDispatchFailedHumanRoute({
           finalizeInput: input,
@@ -311,11 +543,13 @@ export async function finalizeCurrentRunMetaReviewGate(
     });
   }
 
+  // Rework + available budget is fully handled by the threshold-aware branch above,
+  // so this fallback can only persist approve / inconclusive / budget-exhausted outcomes.
   return persistResolvedHumanRoute({
     finalizeInput: input,
     runResultForRouting: parity.runResultForRouting,
     budgetAvailable: parity.budgetAvailable,
     parityMetadata: parity.parityMetadata,
-    stickyHumanGate: false
+    forceStickyHumanGateBypass: false
   });
 }

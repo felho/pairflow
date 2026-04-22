@@ -376,6 +376,8 @@ describe("generateMetricsReport", () => {
         human_gate_sticky_bypass: 0,
         human_gate_approve: 0,
         human_gate_budget_exhausted: 0,
+        human_gate_threshold_not_met: 0,
+        human_gate_threshold_unresolved: 0,
         human_gate_inconclusive: 0,
         human_gate_run_failed: 1,
         human_gate_dispatch_failed: 0

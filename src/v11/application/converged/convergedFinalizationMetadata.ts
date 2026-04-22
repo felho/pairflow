@@ -95,6 +95,8 @@ export function resolveMetaReviewRouteRecommendation(input: {
   switch (input.route) {
     case "auto_rework":
     case "human_gate_budget_exhausted":
+    case "human_gate_threshold_not_met":
+    case "human_gate_threshold_unresolved":
       return "rework";
     case "human_gate_approve":
       return "approve";
@@ -121,6 +123,8 @@ export function resolveMetaReviewRouteStatus(input: {
     case "auto_rework":
     case "human_gate_approve":
     case "human_gate_budget_exhausted":
+    case "human_gate_threshold_not_met":
+    case "human_gate_threshold_unresolved":
     case "human_gate_inconclusive":
       return "success";
   }

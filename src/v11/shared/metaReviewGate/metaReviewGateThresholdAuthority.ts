@@ -6,6 +6,7 @@ import {
   resolveFindingsParityMetadataFromReportJson
 } from "./metaReviewGateFindingsMetadata.js";
 import {
+  buildFindingsParityMetadata,
   resolveReworkFindingsParityInput
 } from "./metaReviewGateFindingsParityInput.js";
 import {
@@ -52,6 +53,35 @@ export type MetaReviewGateThresholdAuthorityResolution =
 
 function prefixDiagnostic(reasonCode: string, detail: string): string {
   return `${reasonCode}: ${detail}`;
+}
+
+function buildVerifiedParityMetadata(input: {
+  findingsCount: number;
+  artifactOpenTotal: number;
+  artifactStatus: string;
+  digest: string;
+  metaReviewRunId: string;
+  artifactSplit:
+    | {
+        blockingOpenTotal: number;
+        advisoryOpenTotal: number;
+      }
+    | null;
+}): FindingsParityMetadata {
+  return {
+    ...buildFindingsParityMetadata({
+      findingsCount: input.findingsCount,
+      artifactOpenTotal: input.artifactOpenTotal,
+      artifactStatus: input.artifactStatus,
+      digest: input.digest,
+      metaReviewRunId: input.metaReviewRunId,
+      parityStatus: "ok"
+    }),
+    findings_blocking_open_total:
+      input.artifactSplit?.blockingOpenTotal ?? null,
+    findings_advisory_open_total:
+      input.artifactSplit?.advisoryOpenTotal ?? null
+  };
 }
 
 function resolveVerifiedOpenSplitTotals(input: {
@@ -195,15 +225,23 @@ export async function resolveMetaReviewGateThresholdAuthority(
 
   const artifactParsed = parity.artifact;
   const artifactSplit = parity.split;
+  const verifiedParityMetadata = buildVerifiedParityMetadata({
+    findingsCount: parityInput.value.findingsCount,
+    artifactOpenTotal: parity.artifactOpenTotal,
+    artifactStatus: parityInput.value.artifactStatus,
+    digest: parityInput.value.digest,
+    metaReviewRunId: parityInput.value.metaReviewRunId,
+    artifactSplit
+  });
   const verifiedOpenSplit = resolveVerifiedOpenSplitTotals({
-    parityMetadata,
+    parityMetadata: verifiedParityMetadata,
     artifactSplit
   });
   const highestOpenSeverity = resolveHighestOpenSeverity(artifactParsed.findings);
   if (highestOpenSeverity === null) {
     return {
       status: "incomplete",
-      parityMetadata,
+      parityMetadata: verifiedParityMetadata,
       diagnostics: [
         prefixDiagnostic(
           REVIEW_POLICY_THRESHOLD_CONTEXT_INCOMPLETE,
@@ -220,7 +258,7 @@ export async function resolveMetaReviewGateThresholdAuthority(
 
   return {
     status: "resolved",
-    parityMetadata,
+    parityMetadata: verifiedParityMetadata,
     diagnostics: [],
     highestOpenSeverity,
     artifactRef: parityInput.value.artifactRef,
