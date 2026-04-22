@@ -147,7 +147,8 @@ Wire-olni a merged Phase 1 review-policy authority surface-et a canonical meta-r
 4. Hidden scope ruled out:
    bubble config parse/render, list/status projection, UI presenter/API mutate surface, bypass topology es actor-runtime cutover kulon ellenorizve es scope-on kivul hagyva.
 5. Branch inventory note:
-   `rework+budget+threshold_met`, `rework+budget+threshold_not_met`, `rework+budget+threshold_unresolved_or_incomplete`, `rework+no_budget`, `approve`, `inconclusive`, `run_failed`, append-failure/rollback branch mind kotelezoen reprezentalt.
+   `rework+budget+threshold_met`, `rework+budget+threshold_not_met`, `rework+budget+threshold_unresolved`, `rework+budget+threshold_incomplete`, `rework+no_budget`, `approve`, `inconclusive`, `run_failed`, append-failure/rollback branch mind kotelezoen reprezentalt.
+   `human_gate_sticky_bypass` szandekosan nincs ebben az inventoryban, mert a bypass topology ebben a fazisban explicit scope-on kivul marad.
 6. Why the declared task shape matches reality:
    a task nem uj authority producet hoz letre, hanem a Phase 1 authority consume familyjat koti ra a gate routingra, es ugyanennek additive result-contract alignmentjat zarja a converged/metrics surfacesen.
 
@@ -163,6 +164,9 @@ Wire-olni a merged Phase 1 review-policy authority surface-et a canonical meta-r
    list/status/detail UI projection, API mutate surface, reviewer bypass contract, actor prompt topology, cleanup/recovery flows.
 5. Export surfaces closed in this phase:
    `yes`; a gate-route truth export surfaces additive modon bezarulnak a v11 gate result, submit-result, converged es metrics familyben.
+6. Implementation ownership guard:
+   a `src/v11/shared/reviewPolicy/reviewPolicyRuntime.ts` es `src/v11/shared/metaReviewGate/metaReviewGateThresholdAuthority.ts` ebben a fazisban consume-anchor baseline, nem producer-ownership target.
+   Ezekhez csak akkor indokolt hozzanyulni, ha tipusbiztonsagi vagy shared-contract kompatibilitasi kenyszer ezt kozvetlenul bizonyitja; uj authority semantics vagy producer-fallback nem viheto vissza rajtuk keresztul.
 
 ### Baseline Preservation
 
@@ -312,7 +316,7 @@ Wire-olni a merged Phase 1 review-policy authority surface-et a canonical meta-r
 | Actual touched scope | Gate-result consumer family alignment, nem config producer refactor | A review policy schemahoz csak consume, nem producer valtozas johet | P1 | required-now |
 | Mutation entrypoints in scope | `APPROVAL_DECISION` es `APPROVAL_REQUEST` append a finalize pathban | Threshold dontes csak ezek elott hozhato meg | P1 | required-now |
 | Hidden scope ruled out | List/status/UI/bypass explicit kiveve | Review kozben ezeket nem szabad opportunistic cleanup cimszo alatt hozzahuzni | P1 | required-now |
-| Branch inventory note | Nyolc route/precondition ag kotelezo | Tesztmatrixban kulon route- es metadata-assert kell | P1 | required-now |
+| Branch inventory note | Kilenc route/precondition ag kotelezo | Tesztmatrixban kulon route- es metadata-assert kell | P1 | required-now |
 | Shape proof | Phase 1 authority producer mar letezik | Ezert a bounded delivery task egy bubble-ben vallalhato | P1 | required-now |
 
 ### 0c) Plan Linkage and Successor Impact
@@ -342,7 +346,7 @@ Wire-olni a merged Phase 1 review-policy authority surface-et a canonical meta-r
 | `approve -> human_gate_approve` | preserve | Regression test + approval envelope parity | P1 | required-now |
 | `inconclusive -> human_gate_inconclusive` | preserve | Regression test | P1 | required-now |
 | `run failed -> human_gate_run_failed` | preserve | Regression test + route metadata | P1 | required-now |
-| `rework + budget + threshold missing -> auto_rework` | forbid | New fail-closed tests | P1 | required-now |
+| `rework + budget + threshold authority unresolved/incomplete or threshold compare not met -> auto_rework` | forbid | New fail-closed tests | P1 | required-now |
 
 ### 0f) Success / Completion Proof Boundary
 
@@ -365,7 +369,7 @@ Wire-olni a merged Phase 1 review-policy authority surface-et a canonical meta-r
 
 | ID | File | Function/Entry | Exact Signature (args -> return) | Insertion Point | Expected Behavior | Priority | Timing | Evidence |
 |---|---|---|---|---|---|---|---|---|
-| CS1 | `src/v11/shared/metaReviewGate/metaReviewGateCurrentRunFinalization.ts` | `finalizeCurrentRunMetaReviewGate(...)` | finalize input -> `Promise<MetaReviewGateResult>` | `rework` routing branch before `dispatchAutoRework(...)` | Resolve normalized threshold + authority, then choose `auto_rework` vs threshold-human-gate route | P1 | required-now | T1, T2, T3 |
+| CS1 | `src/v11/shared/metaReviewGate/metaReviewGateCurrentRunFinalization.ts` | `finalizeCurrentRunMetaReviewGate(...)` | finalize input -> `Promise<MetaReviewGateResult>` | `rework` routing branch before `dispatchAutoRework(...)` | Resolve normalized threshold + authority, then choose `auto_rework` vs threshold-human-gate route | P1 | required-now | T1, T2, T3, T3b |
 | CS2 | `src/v11/shared/metaReviewGate/metaReviewGateStateHelpers.ts` | `resolveHumanGateRoute(...)` or successor helper | recommendation/budget/(threshold outcome) -> route | human-gate route resolver | Existing route resolver bovitese vagy dedicated threshold-aware resolver | P1 | required-now | T2, T4 |
 | CS3 | `src/v11/shared/metaReviewGate/metaReviewGateTypes.ts`, `metaReviewGateCommandContract.ts` | route/result types | type exports | route union | Additiv route vocabulary: `human_gate_threshold_not_met`, `human_gate_threshold_unresolved` | P1 | required-now | T4, T9 |
 | CS4 | `src/v11/shared/metaReviewGate/metaReviewGateHumanGatePersistence.ts` | `persistHumanGateRoute(...)` | persist input -> `Promise<MetaReviewGateResult>` | persisted human gate route path | New threshold routes accepted, sticky/default semantics explicit | P1 | required-now | T5 |
@@ -380,10 +384,10 @@ Wire-olni a merged Phase 1 review-policy authority surface-et a canonical meta-r
 
 | Contract | Current | Target | Required Fields | Optional Fields | Compatibility | Priority | Timing |
 |---|---|---|---|---|---|---|---|
-| Gate route union | Existing 8-route union | Additive 10-route union | `human_gate_threshold_not_met`, `human_gate_threshold_unresolved` | none | additive | P1 | required-now |
+| Gate route union | Existing 7-route union | Additive 9-route union | `human_gate_threshold_not_met`, `human_gate_threshold_unresolved` | none | additive | P1 | required-now |
 | Threshold decision input | recommendation + budget only | recommendation + budget + normalized minimum + threshold authority outcome | `recommendation`, `budgetAvailable`, `minSeverity`, `authority.status` | `highestOpenSeverity`, diagnostics | internal additive | P1 | required-now |
-| Human gate persisted rationale | route only, plus existing run_failed metadata | Route + explicit threshold rationale metadata with summary as human-readable fallback | `meta_review_gate_route`, `latest_recommendation`, `meta_review_gate_threshold_status` | `meta_review_gate_threshold_min_severity`, `meta_review_gate_threshold_highest_open_severity`, `meta_review_gate_reason_code` | additive | P1 | required-now |
-| Submit result route exposure | existing `gate_route` union follows current route set | additive 10-route union | `gate_route` | none | additive | P1 | required-now |
+| Human gate persisted rationale | route only, plus existing run_failed metadata | Route + explicit threshold rationale metadata with summary as human-readable fallback | kozos minimum: `meta_review_gate_route`, `latest_recommendation`, `meta_review_gate_threshold_status`, `meta_review_gate_reason_code`; tovabbi kotelezo compare mezok a `human_gate_threshold_not_met` route mellett: `meta_review_gate_threshold_min_severity`, `meta_review_gate_threshold_highest_open_severity` | summary fallback only | additive | P1 | required-now |
+| Submit result route exposure | existing `gate_route` union follows current route set | additive 9-route union | `gate_route` | none | additive | P1 | required-now |
 | Converged route fallback | existing route switch | expanded route switch | truthful recommendation/status per new route | none | additive | P1 | required-now |
 | Metrics route counts | 7 counted human/auto routes | 9 counted human/auto routes | both new threshold routes | none | additive | P1 | required-now |
 
@@ -395,15 +399,16 @@ Normative rules:
    a meta-review recommendation `rework`, budget van, de a threshold authority `unresolved` vagy `incomplete`, ezert auto rework fail-closed tiltott.
 3. Mindket uj threshold-human-gate route recommendationje `rework`.
 4. Mindket uj threshold-human-gate route statusa `success`, mert a gate routing truthfully es szandekosan emberi kezbe adja at a dontest; ez nem runtime crash vagy append hiba.
-5. A threshold-human-gate `APPROVAL_REQUEST` metadata exact minimum key-setje:
+5. A threshold-human-gate `APPROVAL_REQUEST` metadata kozos minimum key-setje:
    - `meta_review_gate_route`
    - `latest_recommendation`
    - `meta_review_gate_threshold_status`
+   - `meta_review_gate_reason_code`
    Summary text maradhat human-readable fallback, de nem lehet az egyetlen canonical threshold rationale.
-6. A `human_gate_threshold_unresolved` route mellett explicit reason metadata kotelezo:
+6. A `human_gate_threshold_unresolved` route mellett explicit reason/status ertekpar kotelezo a kozos key-seten belul:
    - `meta_review_gate_reason_code = REVIEW_POLICY_THRESHOLD_SOURCE_UNRESOLVED | REVIEW_POLICY_THRESHOLD_CONTEXT_INCOMPLETE`
    - `meta_review_gate_threshold_status = unresolved | incomplete`
-7. A `human_gate_threshold_not_met` route mellett explicit compare metadata kotelezo:
+7. A `human_gate_threshold_not_met` route mellett a kozos key-set mellett explicit compare metadata kotelezo:
    - `meta_review_gate_reason_code = REVIEW_POLICY_AUTO_REWORK_THRESHOLD_NOT_MET`
    - `meta_review_gate_threshold_status = not_met`
    - `meta_review_gate_threshold_min_severity`
@@ -453,7 +458,8 @@ ha nincs resolved threshold authority, az implementation nem kuldhet `APPROVAL_D
 |---|---|---|---|
 | T1 | `rework + budget + threshold met` | route `auto_rework`, implementer decision appended, state resumed, auto_rework_count incremented | P1 |
 | T2 | `rework + budget + threshold not met` | route `human_gate_threshold_not_met`, no implementer decision append, human approval request appended | P1 |
-| T3 | `rework + budget + authority unresolved` | route `human_gate_threshold_unresolved`, no auto rework, exact threshold reason metadata keys present | P1 |
+| T3 | `rework + budget + authority unresolved` | route `human_gate_threshold_unresolved`, no auto rework, shared threshold metadata key-set present with `REVIEW_POLICY_THRESHOLD_SOURCE_UNRESOLVED` / `unresolved` values | P1 |
+| T3b | `rework + budget + authority incomplete` | route `human_gate_threshold_unresolved`, no auto rework, shared threshold metadata key-set present with `REVIEW_POLICY_THRESHOLD_CONTEXT_INCOMPLETE` / `incomplete` values | P1 |
 | T4 | Route union / resolver tests | New routes compile and resolver mapping does not corrupt existing branches | P1 |
 | T5 | Human gate persistence | New routes accepted, sticky/default semantics explicit, approval request persisted | P1 |
 | T6 | Approval envelope metadata | Threshold routes carry truthful route metadata, preserve `latest_recommendation=rework`, and emit the exact threshold key-set | P1 |
@@ -466,7 +472,7 @@ ha nincs resolved threshold authority, az implementation nem kuldhet `APPROVAL_D
 ## Acceptance Evidence
 
 1. Gate finalize tests bizonyitjak, hogy recommendation-only auto rework megszunt.
-2. Persisted approval request envelope-bol visszaolvashato a truthful threshold-human-gate route.
+2. Persisted approval request envelope-bol visszaolvashato a truthful threshold-human-gate route, beleertve az `unresolved` es `incomplete` fail-closed indokok kulon bizonyitasat.
 3. Converged metadata es metrics report ugyanazt az additive route truthot mutatja.
 4. A Phase 1 authority resolverhez nem kerul uj fallback source.
 
