@@ -3,7 +3,7 @@ artifact_type: note
 artifact_id: note_actor_runtime_interface_topology_neutral_delivery_executor_contract_v1
 title: "Actor Runtime Interface Topology-Neutral Delivery and Executor Contract Note"
 status: active
-updated_at: 2026-04-18
+updated_at: 2026-04-22
 owners:
   - "felho"
 ---
@@ -93,10 +93,13 @@ owners:
 3. A `tmux` pane/session/prompt/marker vocabulary retained adapter- es observability-surface marad:
    - hasznalhato implementacios bizonyitekkent a current adapterben,
    - de nem emelheto topology-neutral canonical truth-va.
-4. A runtime session workspace authority megengedett retained adapter input:
+4. A shared/public delivery rejection taxonomy, ha megjelenik a canonical boundaryn, topology-neutral marad:
+   - `command_failed` jellegu token megengedett,
+   - topology-specifikus elnevezes (peldaul `tmux_*`) nem lehet canonical failure-reason truth.
+5. A runtime session workspace authority megengedett retained adapter input:
    - a current `tmux` adapter innen olvashatja a workspace authorityt,
    - de ettol ez meg nem lesz a jovobeli topology-neutral executor contract kotelezo canonical mezoje.
-5. A current consumer coupling explicit marad:
+6. A current consumer coupling explicit marad:
    - legacy `delivered` projection,
    - start launch ack consume,
    - meta-review gate `tmux` dependency graph,
