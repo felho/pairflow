@@ -2,7 +2,7 @@
 artifact_type: plan
 artifact_id: plan_remote_bubble_execution_contract_and_phasing_v2
 title: "Remote Bubble Execution Contract and Phasing Plan (V2 Reset)"
-status: active
+status: completed
 prd_ref: null
 owners:
   - "felho"
@@ -313,6 +313,17 @@ Az explicit control-model dontesek most visszanyerhetok a designbol es a review-
 5. Jelenleg a remote execution lane-ben nincs `Phase 3G2` utan materializalt kovetkezo successor task:
    - uj residual csak akkor justified, ha a `Phase 3G2` closeout utan is marad kulon bounded gap.
 
+## Progress Update (2026-04-22, post-Phase-3G2-close)
+
+1. A `Phase 3G2` implementacioja leszallt, merge-re kerult a `main` branchre, es archivalt baseline lett:
+   - `plans/archive/tasks/remote-bubble-execution/phase3g2-remote-merge-operator-contract-alignment.md`
+2. A lezart bounded scope:
+   - `pairflow bubble merge` CLI help es human-readable summary route-aware operator alignmentje,
+   - README, design doc, es repo-local Pairflow skill/workflow wording alignment a retained started-remote merge semanticsra,
+   - a started-remote merge operatori contract egyertelmu lezarasa: remote handoff import -> durable local merge -> explicit post-success remote cleanup.
+3. A remote execution lane-ben jelenleg nincs uj, materializalt kovetkezo implementacios successor task.
+4. Uj remote-bubble execution successor csak akkor justified, ha a `Phase 3G2` closeout utan uj, kulon bounded residual gap jelenik meg.
+
 ## Progress Update (2026-04-18, pre-Phase-3C-close)
 
 1. A `Phase 3B1`, `Phase 3B2`, es `Phase 3B3` implementacioja 2026-04-18-ra leszallt, merge-re kerult a `main` branchre, es a cleanup-routing family teljes archived baseline lett.
@@ -485,8 +496,7 @@ Az explicit control-model dontesek most visszanyerhetok a designbol es a review-
 
 ## Active Task
 
-1. Jelenleg az aktiv implementacios successor task:
-   - `plans/tasks/remote-bubble-execution/phase3g2-remote-merge-operator-contract-alignment.md`
+1. Jelenleg nincs aktiv implementacios successor task a remote-bubble execution lane-ben.
 2. A `Phase 2F`, `Phase 3A`, `Phase 3B1`, `Phase 3B2`, `Phase 3B3`, `Phase 3C`, `Phase 3D`, `Phase 3E`, `Phase 3G1A`, es `Phase 3G1B` archived baseline:
    - `plans/archive/tasks/remote-bubble-execution/phase2f-remote-attach-consume.md`
    - `plans/archive/tasks/remote-bubble-execution/phase3a-remote-approval-and-rework-routing.md`
@@ -498,14 +508,14 @@ Az explicit control-model dontesek most visszanyerhetok a designbol es a review-
    - `plans/archive/tasks/remote-bubble-execution/phase3e-verified-remote-clone-local-request-rework.md`
    - `plans/archive/tasks/remote-bubble-execution/phase3g1a-remote-merge-handoff-and-local-success-boundary.md`
    - `plans/archive/tasks/remote-bubble-execution/phase3g1b-remote-merge-cleanup-proof-and-result-alignment.md`
-3. A `Phase 2B`, `Phase 2C`, `Phase 2D`, `Phase 2E`, `Phase 2F`, `Phase 3A`, `Phase 3B1`, `Phase 3B2`, `Phase 3B3`, `Phase 3C`, `Phase 3D`, `Phase 3E`, `Phase 3G1A`, es `Phase 3G1B` archived baseline lett.
-4. A contextual `request-rework`, a local success-boundary cutover, es a merge cleanup-proof/result-alignment closeout utan mar az operator-facing merge contract alignment a kovetkezo aktiv bounded slice.
+   - `plans/archive/tasks/remote-bubble-execution/phase3g2-remote-merge-operator-contract-alignment.md`
+3. A `Phase 2B`, `Phase 2C`, `Phase 2D`, `Phase 2E`, `Phase 2F`, `Phase 3A`, `Phase 3B1`, `Phase 3B2`, `Phase 3B3`, `Phase 3C`, `Phase 3D`, `Phase 3E`, `Phase 3G1A`, `Phase 3G1B`, es `Phase 3G2` archived baseline lett.
+4. A contextual `request-rework`, a local success-boundary cutover, a merge cleanup-proof/result-alignment closeout, es az operator-facing merge contract alignment utan a remote-bubble execution lane jelenleg lezarhato.
 
 ## Successor Tasks
 
-1. A jelenleg materializalt kovetkezo task:
-   - `plans/tasks/remote-bubble-execution/phase3g2-remote-merge-operator-contract-alignment.md`
-2. Jelenleg nincs materializalt, `Phase 3G2` utani deferred successor.
+1. Jelenleg nincs materializalt kovetkezo task a remote-bubble execution lane-ben.
+2. Jelenleg nincs materializalt, deferred remote-bubble execution successor sem.
 3. Tovabbi successor csak akkor justified, ha a `Phase 3G2` closeout utan uj, kulon bounded residual gap jelenik meg a remote execution lane-ben.
 
 ## Dependencies
