@@ -104,7 +104,7 @@ describe("metaReviewGatePaneBinding", () => {
   });
 
   it("confirms durable handoff path without pane respawn when no record update is required", async () => {
-    const respawnTmuxPaneCommand = vi.fn();
+    const respawnPaneCommand = vi.fn();
     const result = await resolveMetaReviewerPaneWarning({
       setMetaReviewerPane: vi.fn(async () => ({
         updated: true as const,
@@ -115,7 +115,7 @@ describe("metaReviewGatePaneBinding", () => {
           buildAgentCommand: vi.fn(() => "codex meta-review"),
           tmux: {
             runner: vi.fn(),
-            respawnPaneCommand: respawnTmuxPaneCommand
+            respawnPaneCommand
           }
         }
       },
@@ -135,7 +135,7 @@ describe("metaReviewGatePaneBinding", () => {
       },
       shouldDeactivate: false
     });
-    expect(respawnTmuxPaneCommand).not.toHaveBeenCalled();
+    expect(respawnPaneCommand).not.toHaveBeenCalled();
   });
 
   it("fails closed when pane binding reports updated without record or durable handoff reason", async () => {
@@ -182,7 +182,7 @@ describe("metaReviewGatePaneBinding", () => {
       reasonCode: null,
       message: "delivered"
     }));
-    const respawnTmuxPaneCommand = vi.fn(async () => undefined);
+    const respawnPaneCommand = vi.fn(async () => undefined);
 
     const result = await resolveMetaReviewerPaneWarning({
       setMetaReviewerPane: async () => ({
@@ -207,7 +207,7 @@ describe("metaReviewGatePaneBinding", () => {
           buildAgentCommand,
           tmux: {
             runner: vi.fn(),
-            respawnPaneCommand: respawnTmuxPaneCommand
+            respawnPaneCommand
           }
         }
       },
@@ -229,7 +229,7 @@ describe("metaReviewGatePaneBinding", () => {
       shouldDeactivate: true
     });
     expect(buildAgentCommand).not.toHaveBeenCalled();
-    expect(respawnTmuxPaneCommand).not.toHaveBeenCalled();
+    expect(respawnPaneCommand).not.toHaveBeenCalled();
     expect(notifySubmissionRequest).not.toHaveBeenCalled();
   });
 
@@ -239,7 +239,7 @@ describe("metaReviewGatePaneBinding", () => {
       reasonCode: null,
       message: "delivered"
     }));
-    const respawnTmuxPaneCommand = vi.fn(async () => undefined);
+    const respawnPaneCommand = vi.fn(async () => undefined);
 
     const result = await resolveMetaReviewerPaneWarning({
       setMetaReviewerPane: async () => ({
@@ -265,7 +265,7 @@ describe("metaReviewGatePaneBinding", () => {
           buildAgentCommand: vi.fn(() => "codex meta-review"),
           tmux: {
             runner: vi.fn(),
-            respawnPaneCommand: respawnTmuxPaneCommand
+            respawnPaneCommand
           }
         }
       },
@@ -286,7 +286,7 @@ describe("metaReviewGatePaneBinding", () => {
       },
       shouldDeactivate: true
     });
-    expect(respawnTmuxPaneCommand).not.toHaveBeenCalled();
+    expect(respawnPaneCommand).not.toHaveBeenCalled();
     expect(notifySubmissionRequest).not.toHaveBeenCalled();
   });
 
@@ -396,7 +396,7 @@ describe("metaReviewGatePaneBinding", () => {
     const paneRunner = vi.fn();
     const notifyRunner = vi.fn();
     const buildAgentCommand = vi.fn(() => "codex meta-review");
-    const respawnTmuxPaneCommand = vi.fn(async () => undefined);
+    const respawnPaneCommand = vi.fn(async () => undefined);
     const notifySubmissionRequest = vi.fn(async () => ({
       status: "confirmed" as const,
       reasonCode: null,
@@ -435,7 +435,7 @@ describe("metaReviewGatePaneBinding", () => {
           buildAgentCommand,
           tmux: {
             runner: paneRunner,
-            respawnPaneCommand: respawnTmuxPaneCommand
+            respawnPaneCommand
           }
         }
       },
@@ -456,7 +456,7 @@ describe("metaReviewGatePaneBinding", () => {
       shouldDeactivate: true
     });
     expect(buildAgentCommand).toHaveBeenCalledTimes(1);
-    expect(respawnTmuxPaneCommand).toHaveBeenCalledWith({
+    expect(respawnPaneCommand).toHaveBeenCalledWith({
       sessionName: "pf-b_meta_review_gate_notify_forwarding",
       paneIndex: 5,
       cwd: "/workspace",
@@ -536,37 +536,4 @@ describe("metaReviewGatePaneBinding", () => {
     expect(typeof fallbackRuntime?.tmux?.submitPaneInput).toBe("function");
   });
 
-  it("accepts deprecated legacy pane-binding helper fields as compatibility input", async () => {
-    const respawnTmuxPaneCommand = vi.fn(async () => undefined);
-
-    const result = await resolveMetaReviewerPaneWarning({
-      setMetaReviewerPane: vi.fn(async () => ({
-        updated: true as const,
-        reason: "durable_handoff_only" as const
-      })),
-      runtime: {
-        paneBinding: {
-          runTmux: vi.fn(),
-          buildAgentCommand: vi.fn(() => "codex meta-review"),
-          respawnTmuxPaneCommand
-        }
-      },
-      sessionsPath: "/repo/.pairflow/runtime/sessions.json",
-      bubbleId: "b_meta_review_gate_legacy_pane_binding_compat",
-      round: 1,
-      now: new Date("2026-04-13T00:25:00.000Z"),
-      taskArtifactPath: "/repo/.pairflow/bubbles/b_meta_review_gate_legacy_pane_binding_compat/artifacts/task.md",
-      pairflowCommandProfile: "external"
-    });
-
-    expect(result).toEqual({
-      delivery: {
-        status: "confirmed",
-        reasonCode: null,
-        message: "meta-review submit request uses durable handoff only; no pane binding update required."
-      },
-      shouldDeactivate: false
-    });
-    expect(respawnTmuxPaneCommand).not.toHaveBeenCalled();
-  });
 });

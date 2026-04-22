@@ -71,25 +71,6 @@ function canonicalizeMetaReviewGateNotifyRuntime(
   return tmux === undefined ? {} : { tmux };
 }
 
-function materializeMetaReviewGateNotifyRuntimeCompatibility(
-  runtime: MetaReviewGateNotifyRuntimeCapabilities | undefined
-): MetaReviewGateNotifyRuntimeCapabilities {
-  const tmux = resolveMetaReviewGateNotifyTmuxCapabilities(runtime);
-  return {
-    ...(tmux !== undefined ? { tmux } : {}),
-    ...(tmux?.runner !== undefined ? { runTmux: tmux.runner } : {}),
-    ...(tmux?.maybeAcceptTrustPrompt !== undefined
-      ? { maybeAcceptClaudeTrustPrompt: tmux.maybeAcceptTrustPrompt }
-      : {}),
-    ...(tmux?.sendSubmissionRequestMessage !== undefined
-      ? { sendAndSubmitTmuxPaneMessage: tmux.sendSubmissionRequestMessage }
-      : {}),
-    ...(tmux?.submitPaneInput !== undefined
-      ? { submitTmuxPaneInput: tmux.submitPaneInput }
-      : {})
-  };
-}
-
 function canonicalizeMetaReviewGatePaneBindingRuntime(
   runtime: MetaReviewGatePaneBindingRuntimeCapabilities | undefined
 ): MetaReviewGatePaneBindingRuntimeCapabilities {
@@ -99,22 +80,6 @@ function canonicalizeMetaReviewGatePaneBindingRuntime(
       ? { buildAgentCommand: runtime.buildAgentCommand }
       : {}),
     ...(tmux !== undefined ? { tmux } : {})
-  };
-}
-
-function materializeMetaReviewGatePaneBindingRuntimeCompatibility(
-  runtime: MetaReviewGatePaneBindingRuntimeCapabilities | undefined
-): MetaReviewGatePaneBindingRuntimeCapabilities {
-  const tmux = resolveMetaReviewGatePaneBindingTmuxCapabilities(runtime);
-  return {
-    ...(runtime?.buildAgentCommand !== undefined
-      ? { buildAgentCommand: runtime.buildAgentCommand }
-      : {}),
-    ...(tmux !== undefined ? { tmux } : {}),
-    ...(tmux?.runner !== undefined ? { runTmux: tmux.runner } : {}),
-    ...(tmux?.respawnPaneCommand !== undefined
-      ? { respawnTmuxPaneCommand: tmux.respawnPaneCommand }
-      : {})
   };
 }
 
@@ -223,17 +188,13 @@ function resolvePaneBindingWrapperNotifyRuntime(input: {
   preserveCallerNotifyRuntime: boolean;
 }): MetaReviewGateNotifyRuntimeCapabilities | undefined {
   if (input.preserveCallerNotifyRuntime) {
-    const notify = materializeMetaReviewGateNotifyRuntimeCompatibility(
-      input.inputRuntime?.notify
-    );
+    const notify = canonicalizeMetaReviewGateNotifyRuntime(input.inputRuntime?.notify);
     return notify.tmux === undefined ? undefined : notify;
   }
 
-  return materializeMetaReviewGateNotifyRuntimeCompatibility(
-    mergeMetaReviewGateNotifyRuntime(
-      input.inputRuntime?.notify,
-      input.defaults
-    )
+  return mergeMetaReviewGateNotifyRuntime(
+    input.inputRuntime?.notify,
+    input.defaults
   );
 }
 
@@ -251,13 +212,11 @@ function buildPaneBindingWrapperRuntime(input: {
 
   return {
     ...(notify !== undefined ? { notify } : {}),
-    paneBinding: materializeMetaReviewGatePaneBindingRuntimeCompatibility(
-      mergePaneBindingRuntimeLayers({
-        callerRuntime: input.inputRuntime?.paneBinding,
-        wrapperRuntime: input.paneBindingRuntime,
-        defaults: input.defaults.paneBinding
-      })
-    )
+    paneBinding: mergePaneBindingRuntimeLayers({
+      callerRuntime: input.inputRuntime?.paneBinding,
+      wrapperRuntime: input.paneBindingRuntime,
+      defaults: input.defaults.paneBinding
+    })
   };
 }
 
@@ -270,22 +229,18 @@ function buildApplyRuntimeForwarding(input: {
     return {};
   }
 
-  // Keep the original runtime object visible to explicit seam overrides.
-  // Built-in wrappers still canonicalize through nested tmux.* helpers, but
-  // explicit override seams keep the compatibility aliases promised by the
-  // public callable surface.
   return {
     runtime: {
       ...(input.dependencies.runtime.notify !== undefined
         ? {
-            notify: materializeMetaReviewGateNotifyRuntimeCompatibility(
+            notify: canonicalizeMetaReviewGateNotifyRuntime(
               input.dependencies.runtime.notify
             )
           }
         : {}),
       ...(input.dependencies.runtime.paneBinding !== undefined
         ? {
-            paneBinding: materializeMetaReviewGatePaneBindingRuntimeCompatibility(
+            paneBinding: canonicalizeMetaReviewGatePaneBindingRuntime(
               input.dependencies.runtime.paneBinding
             )
           }

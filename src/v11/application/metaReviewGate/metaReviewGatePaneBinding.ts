@@ -148,17 +148,7 @@ function resolveNotifyRuntimeForPaneBinding(input: {
       : undefined
   );
   return {
-    ...(tmux !== undefined ? { tmux } : {}),
-    ...(tmux?.runner !== undefined ? { runTmux: tmux.runner } : {}),
-    ...(tmux?.maybeAcceptTrustPrompt !== undefined
-      ? { maybeAcceptClaudeTrustPrompt: tmux.maybeAcceptTrustPrompt }
-      : {}),
-    ...(tmux?.sendSubmissionRequestMessage !== undefined
-      ? { sendAndSubmitTmuxPaneMessage: tmux.sendSubmissionRequestMessage }
-      : {}),
-    ...(tmux?.submitPaneInput !== undefined
-      ? { submitTmuxPaneInput: tmux.submitPaneInput }
-      : {})
+    ...(tmux !== undefined ? { tmux } : {})
   };
 }
 

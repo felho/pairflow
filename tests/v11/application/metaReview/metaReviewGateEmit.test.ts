@@ -162,9 +162,6 @@ describe("metaReviewGate V11 defaults", () => {
       notify?: { tmux?: { runner?: unknown } };
     }).notify?.tmux?.runner).toBe("function");
     expect(typeof (observedRuntime[0] as {
-      notify?: { runTmux?: unknown };
-    }).notify?.runTmux).toBe("function");
-    expect(typeof (observedRuntime[0] as {
       notify?: {
         tmux?: {
           sendSubmissionRequestMessage?: unknown;
@@ -172,9 +169,6 @@ describe("metaReviewGate V11 defaults", () => {
         };
       };
     }).notify?.tmux?.sendSubmissionRequestMessage).toBe("function");
-    expect(typeof (observedRuntime[0] as {
-      notify?: { sendAndSubmitTmuxPaneMessage?: unknown };
-    }).notify?.sendAndSubmitTmuxPaneMessage).toBe("function");
     expect(typeof (observedRuntime[0] as {
       notify?: {
         tmux?: {
@@ -184,9 +178,6 @@ describe("metaReviewGate V11 defaults", () => {
       };
     }).notify?.tmux?.submitPaneInput).toBe("function");
     expect(typeof (observedRuntime[0] as {
-      notify?: { submitTmuxPaneInput?: unknown };
-    }).notify?.submitTmuxPaneInput).toBe("function");
-    expect(typeof (observedRuntime[0] as {
       paneBinding?: {
         tmux?: {
           runner?: unknown;
@@ -195,9 +186,6 @@ describe("metaReviewGate V11 defaults", () => {
         buildAgentCommand?: unknown;
       };
     }).paneBinding?.tmux?.runner).toBe("function");
-    expect(typeof (observedRuntime[0] as {
-      paneBinding?: { runTmux?: unknown };
-    }).paneBinding?.runTmux).toBe("function");
     expect(typeof (observedRuntime[0] as {
       paneBinding?: {
         tmux?: {
@@ -216,12 +204,9 @@ describe("metaReviewGate V11 defaults", () => {
         buildAgentCommand?: unknown;
       };
     }).paneBinding?.tmux?.respawnPaneCommand).toBe("function");
-    expect(typeof (observedRuntime[0] as {
-      paneBinding?: { respawnTmuxPaneCommand?: unknown };
-    }).paneBinding?.respawnTmuxPaneCommand).toBe("function");
   });
 
-  it("preserves compatibility aliases while avoiding default notify helper injection into explicit notify overrides", async () => {
+  it("keeps explicit notify overrides canonical while avoiding default helper injection", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({
       repoPath,
@@ -292,13 +277,9 @@ describe("metaReviewGate V11 defaults", () => {
     expect(result.route).toBe("meta_review_running");
     expect(observedRuntime).toHaveLength(1);
     expect(typeof observedRuntime[0]?.tmux?.runner).toBe("function");
-    expect(typeof observedRuntime[0]?.runTmux).toBe("function");
     expect(typeof observedRuntime[0]?.tmux?.sendSubmissionRequestMessage).toBe("function");
-    expect(typeof observedRuntime[0]?.sendAndSubmitTmuxPaneMessage).toBe("function");
     expect(typeof observedRuntime[0]?.tmux?.submitPaneInput).toBe("function");
-    expect(typeof observedRuntime[0]?.submitTmuxPaneInput).toBe("function");
     expect(observedRuntime[0]?.tmux?.maybeAcceptTrustPrompt).toBeUndefined();
-    expect(observedRuntime[0]?.maybeAcceptClaudeTrustPrompt).toBeUndefined();
   });
 
   it("confirms built-in pane-binding and notify delivery without trust-prompt helper", async () => {
