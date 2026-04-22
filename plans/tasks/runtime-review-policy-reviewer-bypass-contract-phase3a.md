@@ -16,15 +16,10 @@ target_files:
   - src/v11/infrastructure/ui/presenters/bubblePresenter.ts
   - src/v11/infrastructure/ui/routerActionDispatch.ts
   - src/v11/infrastructure/ui/routerActions.ts
-  - src/v11/infrastructure/ui/routerDependencies.ts
-  - src/v11/infrastructure/ui/routerHttp.ts
-  - src/v11/defaults/ui/routerDefaults.ts
   - ui/src/lib/types.ts
   - ui/src/lib/api.ts
   - ui/src/lib/actionAvailability.ts
   - ui/src/state/useBubbleStore.ts
-  - ui/src/components/actions/ActionBar.tsx
-  - ui/src/components/canvas/BubbleExpandedCard.tsx
   - tests/core/bubble/listBubbles.test.ts
   - tests/core/bubble/statusBubble.test.ts
   - tests/core/ui/router.test.ts
@@ -35,8 +30,6 @@ target_files:
   - ui/src/lib/api.test.ts
   - ui/src/lib/actionAvailability.test.ts
   - ui/src/state/useBubbleStore.test.ts
-  - ui/src/components/actions/ActionBar.test.tsx
-  - ui/src/components/canvas/BubbleExpandedCard.test.tsx
 prd_ref: null
 plan_ref: plans/runtime-review-policy-reset-and-phasing-plan-v1.md
 system_context_ref: docs/pairflow-initial-design.md
@@ -78,10 +71,8 @@ owners:
 5. Kulon UI/API mutation contract review-policy frissitesre jelenleg nincs:
    - `src/v11/infrastructure/ui/routerActionDispatch.ts` csak lifecycle actionokkal dolgozik
    - `ui/src/lib/api.ts` nem exportal review-policy update route-ot
-6. A jelenlegi UI action es dependency wiring egy uj operatori review-policy mutationhoz nem all meg a dispatchnel:
+6. A jelenlegi UI action es consume inventory egy uj operatori review-policy mutationhoz nem all meg a dispatchnel:
    - `src/v11/infrastructure/ui/routerActions.ts`
-   - `src/v11/infrastructure/ui/routerDependencies.ts`
-   - `src/v11/defaults/ui/routerDefaults.ts`
    - `ui/src/lib/actionAvailability.ts`
 7. A `sticky_human_gate` es a `human_gate_sticky_bypass` gate-local baseline tovabbra is letezik, de ez nem reviewer-bypass activation contract:
    - `src/v11/shared/metaReviewGate/metaReviewGateCurrentRunFinalization.ts`
@@ -131,11 +122,13 @@ Lezerni a reviewer bypass Phase 3A contractot ugy, hogy:
    es
    [runtime-review-policy-auto-rework-threshold-phase2.md](/Users/felho/dev/pairflow/plans/archive/tasks/runtime-review-policy-auto-rework-threshold-phase2.md)
 3. Unlocks / impacts successors:
-   a Phase 3B bypass-activation task mar explicit contractra es prerequisite/provenance vocabularyra epulhet, nem kell sajat UI/API/state semantics-et kitalalnia.
+   egy kesobbi Phase 3B bypass-activation successor mar explicit contractra es prerequisite/provenance vocabularyra epulhet, nem kell sajat UI/API/state semantics-et kitalalnia. Ennek a successornek a pontos artifact pathja ebben a korben meg nem prerequisite.
 4. Task-list impact:
    ez az elso Phase 3 task; nem nyithatja ujra a Phase 1 foundationt vagy a Phase 2 threshold semantics-et.
 5. Inherited validation / exit expectation:
    a bypass contract akkor zarult, ha a config mutation, a list/status/detail/UI/API consume, es a blocked/provenance diagnostics ugyanazt a canonical policy allapotot tukrozik, mikozben az effective runtime tovabbra is `full`.
+6. Remaining-task viability rule:
+   a Phase 3A outputnak additive successor seamet kell hagynia maga utan: a kesobbi activation task ne kenyszeruljon a requested/effective/support vocabulary vagy a policy update contract ujratervezesere, csak az activation ownershipot zarja le.
 
 ### Canonical Contract Anchors
 
@@ -178,6 +171,8 @@ Lezerni a reviewer bypass Phase 3A contractot ugy, hogy:
 
 ### Scope Reality / Shape Proof
 
+`target_files` itt a kotelezo contract-anchorokat es a legkozelebbi current-tree consume surface-eket sorolja. Presentational component-level vagy infra-wiring fajlok csak akkor tekintendok Phase 3A implementation targetnek, ha a current tree bizonyithatoan nem tudja nelkuluk felhuzni ugyanazt a canonical contractot; ellenkezo esetben ezek successor vagy UX-polish scope-ban maradnak.
+
 1. Inspected entrypoints / call-sites:
    `src/v11/shared/reviewPolicy/reviewPolicyRuntime.ts`,
    `src/v11/shared/reviewPolicy/updateBubbleReviewPolicy.ts`,
@@ -188,13 +183,9 @@ Lezerni a reviewer bypass Phase 3A contractot ugy, hogy:
    `src/v11/infrastructure/ui/presenters/bubblePresenter.ts`,
    `src/v11/infrastructure/ui/routerActionDispatch.ts`,
    `src/v11/infrastructure/ui/routerActions.ts`,
-   `src/v11/infrastructure/ui/routerDependencies.ts`,
-   `src/v11/defaults/ui/routerDefaults.ts`,
    `ui/src/lib/api.ts`,
    `ui/src/lib/actionAvailability.ts`,
-   `ui/src/state/useBubbleStore.ts`,
-   `ui/src/components/actions/ActionBar.tsx`,
-   `ui/src/components/canvas/BubbleExpandedCard.tsx`.
+   `ui/src/state/useBubbleStore.ts`.
 2. Actual touched scope:
    `consumer_family_alignment` primary, `activation_or_read_model` secondary csak contract-surfacing ertelemben; tenyleges activation nincs scope-ban.
 3. Mutation entrypoints in scope:
@@ -246,7 +237,7 @@ Lezerni a reviewer bypass Phase 3A contractot ugy, hogy:
 |---|---|---|---|---|
 | `BubbleReviewPolicyRuntimeView` | list/status backend projection | additive | bypass prerequisite/provenance surface pontositasa ugyanebben a contract familyben | Phase 3B activation consume |
 | UI summary/detail payload | UI presenter, UI types, frontend store/components | additive | review-policy surface felhuzasa a summary/detail contractba | future UX polish |
-| UI router action contract | router dispatch + dependency/default wiring + frontend api/store/action inventory | additive | bounded review-policy update action a canonical write seamhez, explicit success/conflict semantics-szal | Phase 3B activation command semantics |
+| UI router action contract | router dispatch + router action inventory + frontend api/store/action inventory | additive | bounded review-policy update action a canonical write seamhez, explicit success/conflict semantics-szal | Phase 3B activation command semantics |
 
 ### Baseline Preservation
 
@@ -309,7 +300,8 @@ Lezerni a reviewer bypass Phase 3A contractot ugy, hogy:
 3. A review-policy surface felhuzasa a UI summary/detail payloadba.
 4. Bounded UI/API mutation contract review-policy update-re ugyanarra a canonical write seamre kotve.
 5. Guarded operator copy es optional unsupported-style diagnostics wording, activation sugallata nelkul.
-6. A fenti contractok regression- es compatibility-tesztjei.
+6. A necessary-minimum operator affordance ugyanazon current-tree summary/detail/action surface-ben, ha enelkul a canonical contract nem latszana vagy nem mutalhato.
+7. A fenti contractok regression- es compatibility-tesztjei.
 
 ### Out of Scope
 
@@ -318,6 +310,7 @@ Lezerni a reviewer bypass Phase 3A contractot ugy, hogy:
 3. Meta-review gate route semantics, threshold semantics, vagy human-gate payload semantics modositasa.
 4. Uj workflow engine vagy uj actor/output family.
 5. Cleanup/recovery topology vagy cross-round gate-state behavior ujrairasa.
+6. Kotelezo uj dedikalt UI panel vagy component-level redesign, ha a current tree mar rendelkezik elegendo operatori surface-szel a canonical contract surfacinghez.
 
 ### Safety Defaults
 
@@ -358,9 +351,9 @@ Lezerni a reviewer bypass Phase 3A contractot ugy, hogy:
 | CS2 | `src/v11/shared/reviewPolicy/updateBubbleReviewPolicy.ts` | canonical write seam | A review-policy update contract explicitten tamassza ala a Phase 3A UI/API mutationt conflict-aware write boundaryval | P1 | required-now |
 | CS3 | `src/v11/shared/list/listCommandContract.ts`, `src/v11/shared/list/listCommandEntryProjection.ts`, `src/v11/shared/status/statusCommandViewBuilder.ts` | backend read-model projection | A list/status surfaces ugyanazt a bypass support/provenance contractot mutassak, mint a detail/UI family | P1 | required-now |
 | CS4 | `src/types/ui.ts`, `src/v11/shared/ports/uiRouter.ts`, `src/v11/infrastructure/ui/presenters/bubblePresenter.ts` | UI detail/summary contract | A review-policy surface bekeruljon a summary/detail payloadba explicit blocked/provenance mezokkel | P1 | required-now |
-| CS5 | `src/v11/infrastructure/ui/routerActionDispatch.ts`, `src/v11/infrastructure/ui/routerActions.ts`, `src/v11/infrastructure/ui/routerDependencies.ts`, `src/v11/defaults/ui/routerDefaults.ts`, `src/v11/infrastructure/ui/routerHttp.ts` | UI router mutation entry | Legyen bounded `update-review-policy` action contract, amely policy update-t jelent, nem activationt, es teljes dependency/default wiringgel erkezik | P1 | required-now |
+| CS5 | `src/v11/infrastructure/ui/routerActionDispatch.ts`, `src/v11/infrastructure/ui/routerActions.ts`, `src/v11/shared/ports/uiRouter.ts` | UI router mutation entry | Legyen bounded review-policy update action contract a meglevo bubble-action surface-en, amely policy update-t jelent, nem activationt; tovabbi infra/default wiring csak akkor kotelezo, ha a current tree ezt kozvetlenul megkoveteli | P1 | required-now |
 | CS6 | `ui/src/lib/types.ts`, `ui/src/lib/api.ts`, `ui/src/lib/actionAvailability.ts`, `ui/src/state/useBubbleStore.ts` | frontend API/store consume | A frontend tipusok es action flow kulon kezeljek a policy update success-t, a standard conflictet, es a guarded surfaced allapotot | P1 | required-now |
-| CS7 | `ui/src/components/actions/ActionBar.tsx`, `ui/src/components/canvas/BubbleExpandedCard.tsx` | operator controls/copy | A bypass-control UI explicit guarded copyval es disabled/action-affordance semantics-szal jelenjen meg, activation sugallata nelkul | P1 | required-now |
+| CS7 | presentational action/detail consume slots a current tree szerint | operator controls/copy | Ha a jelenlegi summary/detail/action compose csak dedikalt affordance-on keresztul tudja lathatova tenni a canonical bypass contractot, ott explicit guarded copy es disabled/action-affordance semantics kell; kulon component-level UI nem kotelezo, ha ugyanaz a contract mar mas current-tree slotban hitelesen surfaced | P2 | conditional-now |
 
 ### 2) Data and Interface Contract
 
@@ -368,7 +361,7 @@ Lezerni a reviewer bypass Phase 3A contractot ugy, hogy:
 |---|---|---|---|---|---|---|---|
 | Review policy runtime view | requested/effective/support + optional reason code | bypass prerequisite/provenance explicit additive shape a closed `enabled | guarded` support-status enum megtartasa mellett | `requested_loop_mode`, `effective_loop_mode`, `support_status`, `meta_review_auto_rework_min_severity` | `blocked_reason_code`, `blocked_prerequisites`, `provenance_note` | additive | P1 | required-now |
 | UI summary/detail payload | nincs review-policy surface | explicit review-policy projection a UI contractban | `reviewPolicy` object azonos field-role mappinggel | operator copy helpers | additive | P1 | required-now |
-| UI mutation action | nincs review-policy action | bounded `POST /api/bubbles/:bubbleId/update-review-policy?repo=...` action | `reviewLoopMode` | `expectedBubbleToml` | additive | P1 | required-now |
+| UI mutation action | nincs review-policy action | bounded review-policy update action a meglevo bubble-action routing familyben | `reviewLoopMode` | `expectedBubbleToml` | additive | P1 | required-now |
 | Mutation result semantics | implicit/no route | success payload + standard HTTP conflict contract explicit | success: `kind`, `bubble`, `reviewPolicy`; conflict: `reasonCode`, `currentState`, `bubble` | optional warnings | additive | P1 | required-now |
 
 Normative rules:
@@ -386,6 +379,7 @@ Normative rules:
    - a policy update sikerult,
    - de a runtime activation tovabbra sincs bekapcsolva.
    Konfliktus eseten a UI router a meglevo standard `409 conflict` API semantics-et reuse-olja, current-bubble contexttel.
+9. A task nem ownershipolja egy uj dedikalt UI affordance bevezeteset; eleg barmely current-tree action/detail surface, amely ugyanazt a canonical read/write contractot torzitas nelkul mutatja.
 
 ### 3) Shared Contract / Consumer Inventory
 
@@ -416,9 +410,9 @@ Normative rules:
 | T2 | write seam supports review_loop_mode mutation for UI/API consumer | success vs conflict semantics explicit, no partial write | P1 |
 | T3 | list/status projection includes bypass support/provenance fields | backend read-model parity preserved | P1 |
 | T4 | UI summary/detail presenter carries reviewPolicy through | `UiBubbleSummary/Detail` contains canonical projection | P1 |
-| T5 | UI router validates `update-review-policy` payload es write conflictet standard `409`-re mapel | no hidden activation path, no ad hoc success-conflict union | P1 |
+| T5 | UI router validates the bounded review-policy update action payload es write conflictet standard `409`-re mapel | no hidden activation path, no ad hoc success-conflict union | P1 |
 | T6 | frontend api/store handles policy update success as policy-only success es `409 conflict` current-bubble contexttel | no activation language or state assumptions | P1 |
-| T7 | action bar / expanded card shows guarded copy and diagnostics-driven disabled rules | operator cannot confuse request with activation | P1 |
+| T7 | presentational surface only if dedicated affordance is introduced | guarded copy es diagnostics-driven affordance rules; operator nem keverheti ossze a requestet az activationnel | P2 |
 | T8 | sticky_human_gate does not affect bypass contract rendering | gate-local state not reused as bypass truth | P1 |
 
 ## L2 - Acceptance Criteria
@@ -426,15 +420,17 @@ Normative rules:
 1. A `meta_only` review-policy operator-facing contract explicit es auditalhato:
    a kert bypass policy, az effective runtime mod, es a blocked/guarded ok kulon mezokben jelenik meg.
 2. A UI/API/detail/list/status surfaces ugyanazt a canonical bypass support/provenance truth-ot mutatjak.
-3. A review-policy update action ugyanarra a canonical write seamre ul, `update-review-policy` route-tal es standard success/HTTP-conflict semantics-szal, explicitten policy update-kent viselkedik activation nelkul.
+3. A review-policy update action ugyanarra a canonical write seamre ul a meglevo bubble-action routing familyben, standard success/HTTP-conflict semantics-szal, explicitten policy update-kent viselkedik activation nelkul.
 4. A task explicit regressionvedelmet ad arra, hogy `sticky_human_gate` vagy `human_gate_sticky_bypass` ne legyen felreolvasva reviewer-bypass support truth-kent.
 5. A Phase 3A task nem vezet be scheduler/router/handoff activationt; a `meta_only` effective runtime mod tovabbra sem kapcsolodik be, es a canonical `support_status` enum sem nyilik ujra.
+6. A task utan marad egy eletkepes successor seam a Phase 3B activationhoz anelkul, hogy a requested/effective/support vocabularyt vagy a policy-mutation contractot ujra kellene tervezni.
 
 ## Acceptance Evidence
 
 1. Backend tests bizonyitjak, hogy a bypass contract additive a meglévő review-policy runtime view familyben.
-2. UI/router/store/component tests bizonyitjak, hogy a surfaced bypass allapot canonical szinten guarded marad activation nelkul, es barmely unavailable/unsupported wording csak diagnostics-copy.
+2. UI/router/store es szukseg eseten a konkret presentational surface tesztjei bizonyitjak, hogy a surfaced bypass allapot canonical szinten guarded marad activation nelkul, es barmely unavailable/unsupported wording csak diagnostics-copy.
 3. Mutation tests bizonyitjak a `200 success` vs `409 conflict` contractot es a zero-activation side effect szabalyat.
+4. The task artifact itself documents and proves, hogy a Phase 3A requested/effective/support vocabulary es a policy-mutation seam additive successor feluletet hagy a kesobbi Phase 3B activationnak, ujratervezesi kenyszer nelkul.
 
 ## Hardening Backlog
 
