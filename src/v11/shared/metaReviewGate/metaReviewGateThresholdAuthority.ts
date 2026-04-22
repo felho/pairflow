@@ -139,6 +139,50 @@ function resolveHighestOpenSeverity(findings: unknown): FindingPriority | null {
   return highestIndex === null ? null : (severityOrder[highestIndex] ?? null);
 }
 
+function buildThresholdAuthorityUnresolved(input: {
+  parityMetadata: FindingsParityMetadata | null;
+  diagnostics: string[];
+  artifactRef: string | null;
+  metaReviewRunId: string | null;
+  findingsBlockingOpenTotal: number | null;
+  findingsAdvisoryOpenTotal: number | null;
+}): MetaReviewGateThresholdAuthorityResolution {
+  return {
+    status: "unresolved",
+    parityMetadata: input.parityMetadata,
+    diagnostics: input.diagnostics,
+    highestOpenSeverity: null,
+    artifactRef: input.artifactRef,
+    metaReviewRunId: input.metaReviewRunId,
+    findingsBlockingOpenTotal: input.findingsBlockingOpenTotal,
+    findingsAdvisoryOpenTotal: input.findingsAdvisoryOpenTotal
+  };
+}
+
+function buildThresholdAuthorityIncomplete(input: {
+  parityMetadata: FindingsParityMetadata | null;
+  artifactRef: string | null;
+  metaReviewRunId: string;
+  findingsBlockingOpenTotal: number | null;
+  findingsAdvisoryOpenTotal: number | null;
+}): MetaReviewGateThresholdAuthorityResolution {
+  return {
+    status: "incomplete",
+    parityMetadata: input.parityMetadata,
+    diagnostics: [
+      prefixDiagnostic(
+        REVIEW_POLICY_THRESHOLD_CONTEXT_INCOMPLETE,
+        "findings artifact does not expose a resolvable open severity."
+      )
+    ],
+    highestOpenSeverity: null,
+    artifactRef: input.artifactRef,
+    metaReviewRunId: input.metaReviewRunId,
+    findingsBlockingOpenTotal: input.findingsBlockingOpenTotal,
+    findingsAdvisoryOpenTotal: input.findingsAdvisoryOpenTotal
+  };
+}
+
 export async function resolveMetaReviewGateThresholdAuthority(
   input: ResolveMetaReviewGateThresholdAuthorityInput
 ): Promise<MetaReviewGateThresholdAuthorityResolution> {
@@ -151,8 +195,7 @@ export async function resolveMetaReviewGateThresholdAuthority(
   const metaReviewRunId = parityMetadata?.meta_review_run_id ?? null;
 
   if (!isRecord(reportJson)) {
-    return {
-      status: "unresolved",
+    return buildThresholdAuthorityUnresolved({
       parityMetadata,
       diagnostics: [
         prefixDiagnostic(
@@ -160,12 +203,11 @@ export async function resolveMetaReviewGateThresholdAuthority(
           "report_json is required for threshold authority resolution."
         )
       ],
-      highestOpenSeverity: null,
       artifactRef,
       metaReviewRunId,
       findingsBlockingOpenTotal: parityMetadata?.findings_blocking_open_total ?? null,
       findingsAdvisoryOpenTotal: parityMetadata?.findings_advisory_open_total ?? null
-    };
+    });
   }
 
   const parityInput = resolveReworkFindingsParityInput({
@@ -175,8 +217,7 @@ export async function resolveMetaReviewGateThresholdAuthority(
     artifactsDir: input.artifactsDir
   });
   if (!parityInput.ok) {
-    return {
-      status: "unresolved",
+    return buildThresholdAuthorityUnresolved({
       parityMetadata: parityInput.metadata,
       diagnostics: [
         prefixDiagnostic(
@@ -184,14 +225,13 @@ export async function resolveMetaReviewGateThresholdAuthority(
           parityInput.reason
         )
       ],
-      highestOpenSeverity: null,
       artifactRef,
       metaReviewRunId,
       findingsBlockingOpenTotal:
         parityInput.metadata.findings_blocking_open_total ?? null,
       findingsAdvisoryOpenTotal:
         parityInput.metadata.findings_advisory_open_total ?? null
-    };
+    });
   }
 
   const parity = await validateFindingsArtifactParity({
@@ -206,8 +246,7 @@ export async function resolveMetaReviewGateThresholdAuthority(
       : {})
   });
   if (!parity.ok) {
-    return {
-      status: "unresolved",
+    return buildThresholdAuthorityUnresolved({
       parityMetadata: parity.metadata,
       diagnostics: [
         prefixDiagnostic(
@@ -215,12 +254,11 @@ export async function resolveMetaReviewGateThresholdAuthority(
           parity.reason
         )
       ],
-      highestOpenSeverity: null,
       artifactRef,
       metaReviewRunId: parityInput.value.metaReviewRunId,
       findingsBlockingOpenTotal: parity.metadata.findings_blocking_open_total ?? null,
       findingsAdvisoryOpenTotal: parity.metadata.findings_advisory_open_total ?? null
-    };
+    });
   }
 
   const artifactParsed = parity.artifact;
@@ -239,21 +277,13 @@ export async function resolveMetaReviewGateThresholdAuthority(
   });
   const highestOpenSeverity = resolveHighestOpenSeverity(artifactParsed.findings);
   if (highestOpenSeverity === null) {
-    return {
-      status: "incomplete",
+    return buildThresholdAuthorityIncomplete({
       parityMetadata: verifiedParityMetadata,
-      diagnostics: [
-        prefixDiagnostic(
-          REVIEW_POLICY_THRESHOLD_CONTEXT_INCOMPLETE,
-          "findings artifact does not expose a resolvable open severity."
-        )
-      ],
-      highestOpenSeverity: null,
       artifactRef,
       metaReviewRunId: parityInput.value.metaReviewRunId,
       findingsBlockingOpenTotal: verifiedOpenSplit.blocking,
       findingsAdvisoryOpenTotal: verifiedOpenSplit.advisory
-    };
+    });
   }
 
   return {

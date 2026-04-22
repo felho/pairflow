@@ -191,12 +191,11 @@ function isRemoteMergeImportSource(
   );
 }
 
-async function importRemoteMergeHandoff(input: {
+function assertRemoteMergeHandoffMatches(input: {
   context: Extract<Awaited<ReturnType<typeof initializeMergeFlowExecutionContext>>, { route: "remote" }>;
   remoteResult: ExecuteRemoteBubbleMergeCommandResult;
-  runGit: ResolvedMergeCommandDependencies["runGit"];
   createError: RunMergeFlowInput["createError"];
-}): Promise<string> {
+}): ExecuteRemoteBubbleMergeCommandResult["importSource"] {
   if (!isRemoteMergeImportSource(input.remoteResult.importSource)) {
     throw input.createError({
       reasonCode: MERGE_REMOTE_HANDOFF_INVALID,
@@ -210,7 +209,6 @@ async function importRemoteMergeHandoff(input: {
   }
 
   const importSource = input.remoteResult.importSource;
-
   if (input.remoteResult.baseBranch !== input.context.baseBranch) {
     throw input.createError({
       reasonCode: MERGE_REMOTE_HANDOFF_INVALID,
@@ -261,7 +259,15 @@ async function importRemoteMergeHandoff(input: {
       }
     });
   }
+  return importSource;
+}
 
+async function fetchRemoteMergeImportRef(input: {
+  context: Extract<Awaited<ReturnType<typeof initializeMergeFlowExecutionContext>>, { route: "remote" }>;
+  importSource: ExecuteRemoteBubbleMergeCommandResult["importSource"];
+  runGit: ResolvedMergeCommandDependencies["runGit"];
+  createError: RunMergeFlowInput["createError"];
+}): Promise<void> {
   const remoteGitUrl = buildRemoteCloneGitUrl({
     host: input.context.remoteTarget.host,
     ...(input.context.remoteTarget.user !== undefined
@@ -276,7 +282,7 @@ async function importRemoteMergeHandoff(input: {
         "fetch",
         "--no-tags",
         remoteGitUrl,
-        `${importSource.ref}:${input.context.localImportRef}`
+        `${input.importSource.ref}:${input.context.localImportRef}`
       ],
       {
         cwd: input.context.repoPath
@@ -291,7 +297,7 @@ async function importRemoteMergeHandoff(input: {
         context: {
           command_name: "merge",
           bubble_id: input.context.resolved.bubbleId,
-          import_source_ref: importSource.ref,
+          import_source_ref: input.importSource.ref,
           local_import_ref: input.context.localImportRef,
           remote_clone_path: input.context.remotePointer.remoteClonePath
         },
@@ -300,10 +306,15 @@ async function importRemoteMergeHandoff(input: {
     }
     throw error;
   }
+}
 
-  let importedCommitSha: string;
+async function resolveImportedMergeCommitSha(input: {
+  context: Extract<Awaited<ReturnType<typeof initializeMergeFlowExecutionContext>>, { route: "remote" }>;
+  runGit: ResolvedMergeCommandDependencies["runGit"];
+  createError: RunMergeFlowInput["createError"];
+}): Promise<string> {
   try {
-    importedCommitSha = (
+    return (
       await input.runGit(["rev-parse", `${input.context.localImportRef}^{commit}`], {
         cwd: input.context.repoPath
       })
@@ -325,6 +336,30 @@ async function importRemoteMergeHandoff(input: {
     }
     throw error;
   }
+}
+
+async function importRemoteMergeHandoff(input: {
+  context: Extract<Awaited<ReturnType<typeof initializeMergeFlowExecutionContext>>, { route: "remote" }>;
+  remoteResult: ExecuteRemoteBubbleMergeCommandResult;
+  runGit: ResolvedMergeCommandDependencies["runGit"];
+  createError: RunMergeFlowInput["createError"];
+}): Promise<string> {
+  const importSource = assertRemoteMergeHandoffMatches({
+    context: input.context,
+    remoteResult: input.remoteResult,
+    createError: input.createError
+  });
+  await fetchRemoteMergeImportRef({
+    context: input.context,
+    importSource,
+    runGit: input.runGit,
+    createError: input.createError
+  });
+  const importedCommitSha = await resolveImportedMergeCommitSha({
+    context: input.context,
+    runGit: input.runGit,
+    createError: input.createError
+  });
 
   if (importedCommitSha !== importSource.commitSha) {
     throw input.createError({

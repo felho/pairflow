@@ -94,6 +94,55 @@ function assertPersistHumanGateRouteInput(
   }
 }
 
+async function appendHumanGateRequestForRoute(input: {
+  persistInput: PersistHumanGateRouteInput;
+  recommendation: MetaReviewRecommendation | undefined;
+  advisoryFindings: MetaReviewGateAdvisoryFinding[] | undefined;
+}): Promise<AppendProtocolEnvelopeResult> {
+  const commonInput = {
+    appendEnvelope: input.persistInput.appendEnvelope,
+    transcriptPath: input.persistInput.transcriptPath,
+    inboxPath: input.persistInput.inboxPath,
+    lockPath: input.persistInput.lockPath,
+    now: input.persistInput.now,
+    bubbleId: input.persistInput.bubbleId,
+    round: input.persistInput.loaded.state.round,
+    summary: input.persistInput.summary,
+    refs: input.persistInput.refs,
+    ...(input.persistInput.parityMetadata !== undefined
+      ? { parityMetadata: input.persistInput.parityMetadata }
+      : {}),
+    ...(input.advisoryFindings !== undefined ? { findings: input.advisoryFindings } : {})
+  };
+
+  if (
+    input.persistInput.route === "human_gate_threshold_not_met"
+    || input.persistInput.route === "human_gate_threshold_unresolved"
+  ) {
+    if (input.recommendation !== "rework" || input.persistInput.thresholdMetadata === undefined) {
+      throw new MetaReviewGateError(
+        "META_REVIEW_GATE_TRANSITION_INVALID",
+        `META_REVIEW_GATE_TRANSITION_INVALID: threshold human-gate route ${input.persistInput.route} requires recommendation=rework and threshold metadata.`,
+        {
+          stageReasonCode: "META_REVIEW_GATE_TRANSITION_INVALID"
+        }
+      );
+    }
+    return appendHumanGateApprovalRequest({
+      ...commonInput,
+      route: input.persistInput.route,
+      recommendation: input.recommendation,
+      thresholdMetadata: input.persistInput.thresholdMetadata
+    });
+  }
+
+  return appendHumanGateApprovalRequest({
+    ...commonInput,
+    route: input.persistInput.route,
+    ...(input.recommendation !== undefined ? { recommendation: input.recommendation } : {})
+  });
+}
+
 export async function persistHumanGateRoute(
   input: PersistHumanGateRouteInput
 ): Promise<MetaReviewGateResult> {
@@ -137,53 +186,11 @@ export async function persistHumanGateRoute(
 
   let gateAppended: AppendProtocolEnvelopeResult;
   try {
-    if (
-      input.route === "human_gate_threshold_not_met"
-      || input.route === "human_gate_threshold_unresolved"
-    ) {
-      if (recommendation !== "rework" || input.thresholdMetadata === undefined) {
-        throw new MetaReviewGateError(
-          "META_REVIEW_GATE_TRANSITION_INVALID",
-          `META_REVIEW_GATE_TRANSITION_INVALID: threshold human-gate route ${input.route} requires recommendation=rework and threshold metadata.`
-        );
-      }
-      gateAppended = await appendHumanGateApprovalRequest({
-        appendEnvelope: input.appendEnvelope,
-        transcriptPath: input.transcriptPath,
-        inboxPath: input.inboxPath,
-        lockPath: input.lockPath,
-        now: input.now,
-        bubbleId: input.bubbleId,
-        round: input.loaded.state.round,
-        summary: input.summary,
-        route: input.route,
-        refs: input.refs,
-        recommendation,
-        ...(input.parityMetadata !== undefined
-          ? { parityMetadata: input.parityMetadata }
-          : {}),
-        thresholdMetadata: input.thresholdMetadata,
-        ...(advisoryFindings !== undefined ? { findings: advisoryFindings } : {})
-      });
-    } else {
-      gateAppended = await appendHumanGateApprovalRequest({
-        appendEnvelope: input.appendEnvelope,
-        transcriptPath: input.transcriptPath,
-        inboxPath: input.inboxPath,
-        lockPath: input.lockPath,
-        now: input.now,
-        bubbleId: input.bubbleId,
-        round: input.loaded.state.round,
-        summary: input.summary,
-        route: input.route,
-        refs: input.refs,
-        ...(recommendation !== undefined ? { recommendation } : {}),
-        ...(input.parityMetadata !== undefined
-          ? { parityMetadata: input.parityMetadata }
-          : {}),
-        ...(advisoryFindings !== undefined ? { findings: advisoryFindings } : {})
-      });
-    }
+    gateAppended = await appendHumanGateRequestForRoute({
+      persistInput: input,
+      recommendation,
+      advisoryFindings
+    });
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error);
     const rollbackState = input.rollbackStateOnAppendFailure ?? input.loaded.state;

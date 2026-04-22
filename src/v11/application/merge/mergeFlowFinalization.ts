@@ -70,11 +70,11 @@ function buildLocalCleanupOutcome(input: {
   };
 }
 
-function assertRemoteMergeCleanupResult(input: {
+function assertRemoteCleanupIdentity(input: {
   params: RunMergeFlowInput;
   context: Extract<MergeFlowExecutionContext, { route: "remote" }>;
   cleanupResult: ExecuteRemoteBubbleMergeCleanupCommandResult;
-}): MergeCleanupOutcome {
+}): void {
   const { cleanupResult, context } = input;
 
   if (cleanupResult.bubbleId !== context.resolved.bubbleId) {
@@ -114,9 +114,7 @@ function assertRemoteMergeCleanupResult(input: {
       }
     });
   }
-  if (
-    cleanupResult.artifacts.worktree.path !== context.remotePointer.remoteClonePath
-  ) {
+  if (cleanupResult.artifacts.worktree.path !== context.remotePointer.remoteClonePath) {
     throw input.params.createError({
       reasonCode: MERGE_REMOTE_CLEANUP_CONTRACT_INVALID,
       message:
@@ -129,74 +127,91 @@ function assertRemoteMergeCleanupResult(input: {
       }
     });
   }
-  if (
-    cleanupResult.artifacts.tmux.existed
-    && cleanupResult.tmuxSessionTerminated !== true
-  ) {
-    throw input.params.createError({
-      reasonCode: MERGE_REMOTE_CLEANUP_PROOF_MISSING,
-      message:
-        `Remote merge for '${context.resolved.bubbleId}' did not prove tmux cleanup for the remote session.`,
-      context: {
-        command_name: "merge",
-        bubble_id: context.resolved.bubbleId
-      }
-    });
-  }
-  if (
-    cleanupResult.artifacts.runtimeSession.existed
-    && cleanupResult.runtimeSessionRemoved !== true
-  ) {
-    throw input.params.createError({
-      reasonCode: MERGE_REMOTE_CLEANUP_PROOF_MISSING,
-      message:
-        `Remote merge for '${context.resolved.bubbleId}' did not prove runtime-session cleanup.`,
-      context: {
-        command_name: "merge",
-        bubble_id: context.resolved.bubbleId
-      }
-    });
-  }
-  if (
-    cleanupResult.artifacts.worktree.existed
-    && cleanupResult.removedWorktree !== true
-  ) {
-    throw input.params.createError({
-      reasonCode: MERGE_REMOTE_CLEANUP_PROOF_MISSING,
-      message:
-        `Remote merge for '${context.resolved.bubbleId}' did not prove destructive cleanup of the remote clone.`,
-      context: {
-        command_name: "merge",
-        bubble_id: context.resolved.bubbleId
-      }
-    });
-  }
-  if (
-    cleanupResult.artifacts.branch.existed
-    && cleanupResult.removedBubbleBranch !== true
-  ) {
-    throw input.params.createError({
-      reasonCode: MERGE_REMOTE_CLEANUP_PROOF_MISSING,
-      message:
-        `Remote merge for '${context.resolved.bubbleId}' did not prove remote branch cleanup.`,
-      context: {
-        command_name: "merge",
-        bubble_id: context.resolved.bubbleId
-      }
-    });
-  }
+}
 
+function assertRemoteCleanupProof(
+  input: {
+    params: RunMergeFlowInput;
+    context: Extract<MergeFlowExecutionContext, { route: "remote" }>;
+  },
+  proof: {
+    existed: boolean;
+    cleaned: boolean;
+    message: string;
+  }
+): void {
+  if (!proof.existed || proof.cleaned) {
+    return;
+  }
+  throw input.params.createError({
+    reasonCode: MERGE_REMOTE_CLEANUP_PROOF_MISSING,
+    message: proof.message,
+    context: {
+      command_name: "merge",
+      bubble_id: input.context.resolved.bubbleId
+    }
+  });
+}
+
+function assertRemoteCleanupProofs(input: {
+  params: RunMergeFlowInput;
+  context: Extract<MergeFlowExecutionContext, { route: "remote" }>;
+  cleanupResult: ExecuteRemoteBubbleMergeCleanupCommandResult;
+}): void {
+  assertRemoteCleanupProof(input, {
+    existed: input.cleanupResult.artifacts.tmux.existed,
+    cleaned: input.cleanupResult.tmuxSessionTerminated === true,
+    message:
+      `Remote merge for '${input.context.resolved.bubbleId}' did not prove tmux cleanup for the remote session.`
+  });
+  assertRemoteCleanupProof(input, {
+    existed: input.cleanupResult.artifacts.runtimeSession.existed,
+    cleaned: input.cleanupResult.runtimeSessionRemoved === true,
+    message:
+      `Remote merge for '${input.context.resolved.bubbleId}' did not prove runtime-session cleanup.`
+  });
+  assertRemoteCleanupProof(input, {
+    existed: input.cleanupResult.artifacts.worktree.existed,
+    cleaned: input.cleanupResult.removedWorktree === true,
+    message:
+      `Remote merge for '${input.context.resolved.bubbleId}' did not prove destructive cleanup of the remote clone.`
+  });
+  assertRemoteCleanupProof(input, {
+    existed: input.cleanupResult.artifacts.branch.existed,
+    cleaned: input.cleanupResult.removedBubbleBranch === true,
+    message:
+      `Remote merge for '${input.context.resolved.bubbleId}' did not prove remote branch cleanup.`
+  });
+}
+
+function buildRemoteCleanupOutcome(input: {
+  context: Extract<MergeFlowExecutionContext, { route: "remote" }>;
+  cleanupResult: ExecuteRemoteBubbleMergeCleanupCommandResult;
+}): MergeCleanupOutcome {
   return {
     tmuxSessionName: resolveCleanupTmuxSessionName({
-      primary: cleanupResult.tmuxSessionName,
-      secondary: cleanupResult.artifacts.tmux.sessionName,
-      fallback: context.remotePointer.tmuxSession
+      primary: input.cleanupResult.tmuxSessionName,
+      secondary: input.cleanupResult.artifacts.tmux.sessionName,
+      fallback: input.context.remotePointer.tmuxSession
     }),
-    tmuxSessionExisted: cleanupResult.artifacts.tmux.existed,
-    runtimeSessionRemoved: cleanupResult.runtimeSessionRemoved,
-    removedWorktree: cleanupResult.removedWorktree,
-    removedBubbleBranch: cleanupResult.removedBubbleBranch
+    tmuxSessionExisted: input.cleanupResult.artifacts.tmux.existed,
+    runtimeSessionRemoved: input.cleanupResult.runtimeSessionRemoved,
+    removedWorktree: input.cleanupResult.removedWorktree,
+    removedBubbleBranch: input.cleanupResult.removedBubbleBranch
   };
+}
+
+function assertRemoteMergeCleanupResult(input: {
+  params: RunMergeFlowInput;
+  context: Extract<MergeFlowExecutionContext, { route: "remote" }>;
+  cleanupResult: ExecuteRemoteBubbleMergeCleanupCommandResult;
+}): MergeCleanupOutcome {
+  assertRemoteCleanupIdentity(input);
+  assertRemoteCleanupProofs(input);
+  return buildRemoteCleanupOutcome({
+    context: input.context,
+    cleanupResult: input.cleanupResult
+  });
 }
 
 function extractRemoteCleanupErrorContext(error: unknown): {
@@ -234,86 +249,10 @@ export async function finalizeMergeFlow(input: {
   deletedRemoteBranch: boolean;
 }): Promise<LocalMergeFlowFinalizationResult> {
   if (input.context.route === "remote") {
-    try {
-      await persistStateViaMutationBoundary({
-        write: input.dependencies.writeStateSnapshot,
-        statePath: input.context.resolved.bubblePaths.statePath,
-        state: {
-          ...input.context.loaded.state,
-          last_command_at: input.context.nowIso
-        },
-        options: {
-          expectedFingerprint: input.context.loaded.fingerprint,
-          expectedState: "DONE"
-        }
-      });
-    } catch (error) {
-      toRemoteReconcileError({
-        params: input.params,
-        context: input.context,
-        phase: "state_persist",
-        error
-      });
-    }
-
-    let cleanupResult: ExecuteRemoteBubbleMergeCleanupCommandResult;
-    try {
-      cleanupResult = await input.dependencies.executeRemoteBubbleMergeCleanupCommand({
-        bubbleId: input.context.resolved.bubbleId,
-        remoteClonePath: input.context.remotePointer.remoteClonePath,
-        remoteTarget: input.context.remoteTarget,
-        baseBranch: input.context.baseBranch,
-        bubbleBranch: input.context.bubbleBranch,
-        tmuxSessionName: input.context.remotePointer.tmuxSession
-      });
-    } catch (error) {
-      throw input.params.createError({
-        reasonCode: MERGE_REMOTE_CLEANUP_FAILED,
-        message:
-          `Remote merge succeeded for '${input.context.resolved.bubbleId}', but post-success cleanup failed.`,
-        context: {
-          command_name: "merge",
-          bubble_id: input.context.resolved.bubbleId,
-          remote_alias: input.context.remoteTarget.alias,
-          remote_host: input.context.remoteTarget.host,
-          remote_clone_path: input.context.remotePointer.remoteClonePath,
-          ...extractRemoteCleanupErrorContext(error)
-        },
-        cause: error
-      });
-    }
-
-    const cleanupOutcome = assertRemoteMergeCleanupResult({
-      params: input.params,
-      context: input.context,
-      cleanupResult
+    return finalizeRemoteMergeFlow({
+      ...input,
+      context: input.context
     });
-
-    await input.dependencies.emitBubbleLifecycleEventBestEffort({
-      repoPath: input.context.resolved.repoPath,
-      bubbleId: input.context.resolved.bubbleId,
-      bubbleInstanceId: input.context.bubbleIdentity.bubbleInstanceId,
-      eventType: "bubble_merged",
-      round: input.context.state.round > 0 ? input.context.state.round : null,
-      actorRole: "orchestrator",
-      metadata: {
-        base_branch: input.context.baseBranch,
-        bubble_branch: input.context.bubbleBranch,
-        merge_commit_sha: input.mergeCommitSha,
-        pushed_base_branch: input.pushedBaseBranch,
-        deleted_remote_branch: input.deletedRemoteBranch,
-        route: "remote",
-        tmux_session_existed: cleanupOutcome.tmuxSessionExisted,
-        runtime_session_removed: cleanupOutcome.runtimeSessionRemoved,
-        removed_worktree: cleanupOutcome.removedWorktree,
-        removed_bubble_branch: cleanupOutcome.removedBubbleBranch
-      },
-      now: input.params.now
-    }).catch(() => undefined);
-
-    return {
-      cleanupOutcome
-    };
   }
 
   const tmux = await input.dependencies.terminateBubbleTmuxSession({
@@ -369,4 +308,92 @@ export async function finalizeMergeFlow(input: {
       workspaceCleanup
     })
   };
+}
+
+async function finalizeRemoteMergeFlow(input: {
+  params: RunMergeFlowInput;
+  context: Extract<MergeFlowExecutionContext, { route: "remote" }>;
+  dependencies: ResolvedMergeCommandDependencies;
+  mergeCommitSha: string;
+  pushedBaseBranch: boolean;
+  deletedRemoteBranch: boolean;
+}): Promise<LocalMergeFlowFinalizationResult> {
+  try {
+    await persistStateViaMutationBoundary({
+      write: input.dependencies.writeStateSnapshot,
+      statePath: input.context.resolved.bubblePaths.statePath,
+      state: {
+        ...input.context.loaded.state,
+        last_command_at: input.context.nowIso
+      },
+      options: {
+        expectedFingerprint: input.context.loaded.fingerprint,
+        expectedState: "DONE"
+      }
+    });
+  } catch (error) {
+    toRemoteReconcileError({
+      params: input.params,
+      context: input.context,
+      phase: "state_persist",
+      error
+    });
+  }
+
+  let cleanupResult: ExecuteRemoteBubbleMergeCleanupCommandResult;
+  try {
+    cleanupResult = await input.dependencies.executeRemoteBubbleMergeCleanupCommand({
+      bubbleId: input.context.resolved.bubbleId,
+      remoteClonePath: input.context.remotePointer.remoteClonePath,
+      remoteTarget: input.context.remoteTarget,
+      baseBranch: input.context.baseBranch,
+      bubbleBranch: input.context.bubbleBranch,
+      tmuxSessionName: input.context.remotePointer.tmuxSession
+    });
+  } catch (error) {
+    throw input.params.createError({
+      reasonCode: MERGE_REMOTE_CLEANUP_FAILED,
+      message:
+        `Remote merge succeeded for '${input.context.resolved.bubbleId}', but post-success cleanup failed.`,
+      context: {
+        command_name: "merge",
+        bubble_id: input.context.resolved.bubbleId,
+        remote_alias: input.context.remoteTarget.alias,
+        remote_host: input.context.remoteTarget.host,
+        remote_clone_path: input.context.remotePointer.remoteClonePath,
+        ...extractRemoteCleanupErrorContext(error)
+      },
+      cause: error
+    });
+  }
+
+  const cleanupOutcome = assertRemoteMergeCleanupResult({
+    params: input.params,
+    context: input.context,
+    cleanupResult
+  });
+
+  await input.dependencies.emitBubbleLifecycleEventBestEffort({
+    repoPath: input.context.resolved.repoPath,
+    bubbleId: input.context.resolved.bubbleId,
+    bubbleInstanceId: input.context.bubbleIdentity.bubbleInstanceId,
+    eventType: "bubble_merged",
+    round: input.context.state.round > 0 ? input.context.state.round : null,
+    actorRole: "orchestrator",
+    metadata: {
+      base_branch: input.context.baseBranch,
+      bubble_branch: input.context.bubbleBranch,
+      merge_commit_sha: input.mergeCommitSha,
+      pushed_base_branch: input.pushedBaseBranch,
+      deleted_remote_branch: input.deletedRemoteBranch,
+      route: "remote",
+      tmux_session_existed: cleanupOutcome.tmuxSessionExisted,
+      runtime_session_removed: cleanupOutcome.runtimeSessionRemoved,
+      removed_worktree: cleanupOutcome.removedWorktree,
+      removed_bubble_branch: cleanupOutcome.removedBubbleBranch
+    },
+    now: input.params.now
+  }).catch(() => undefined);
+
+  return { cleanupOutcome };
 }

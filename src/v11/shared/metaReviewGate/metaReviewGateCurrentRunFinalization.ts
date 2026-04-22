@@ -7,21 +7,14 @@ import type {
   LoadedStateSnapshot,
   WriteStateSnapshotPort
 } from "../ports/stateSnapshots.js";
-import type {
-  BubbleConfig,
-  BubbleStateSnapshot
-} from "../../../types/bubble.js";
+import type { BubbleConfig } from "../../../types/bubble.js";
 import type { BubbleReviewAutoReworkSeverity } from "../../../types/bubble.js";
 import type { FindingPriority } from "../../../types/findings.js";
 import {
   type FindingsParityMetadata
 } from "../../../types/protocol.js";
 import {
-  buildHumanGateSummary,
-  buildGateLockPath,
   normalizeMetaReviewSnapshot,
-  resolveHumanGateRoute,
-  persistHumanGateRoute
 } from "./metaReviewGateShared.js";
 import {
   type MetaReviewGateResult,
@@ -29,13 +22,18 @@ import {
 } from "./metaReviewGateTypes.js";
 import { dispatchAutoRework } from "./metaReviewGateAutoRework.js";
 import { validateStructuredMetaReviewPositiveClaim } from "./metaReviewGateFindingsValidation.js";
-import { resolveFindingsParityMetadataFromReportJson } from "./metaReviewGateFindingsMetadata.js";
+import type { MetaReviewGateArtifactReadFn } from "./metaReviewGateFindingsMetadata.js";
 import {
   REVIEW_POLICY_THRESHOLD_CONTEXT_INCOMPLETE,
   REVIEW_POLICY_THRESHOLD_SOURCE_UNRESOLVED,
   resolveMetaReviewGateThresholdAuthority
 } from "./metaReviewGateThresholdAuthority.js";
 import { buildBubbleReviewPolicyRuntimeView } from "../reviewPolicy/reviewPolicyRuntime.js";
+import {
+  persistDispatchFailedHumanRoute,
+  persistResolvedHumanRoute,
+  persistRunFailedHumanRoute
+} from "./metaReviewGateCurrentRunRoutePersistence.js";
 
 const REVIEW_POLICY_AUTO_REWORK_THRESHOLD_NOT_MET =
   "REVIEW_POLICY_AUTO_REWORK_THRESHOLD_NOT_MET" as const;
@@ -53,23 +51,6 @@ type AutoReworkThresholdDecision =
       thresholdMetadata: MetaReviewGateThresholdMetadata;
       fallbackReason: string;
     };
-
-function resolveHumanGatePersistenceDecision(input: {
-  forceStickyHumanGateBypass: boolean;
-  recommendation: MetaReviewResult["recommendation"];
-  budgetAvailable: boolean;
-  thresholdMetadata?: MetaReviewGateThresholdMetadata;
-}): Exclude<MetaReviewGateResult["route"], "meta_review_running" | "auto_rework"> {
-  if (input.forceStickyHumanGateBypass) {
-    return "human_gate_sticky_bypass";
-  }
-
-  return resolveHumanGateRoute({
-    recommendation: input.recommendation,
-    budgetAvailable: input.budgetAvailable,
-    thresholdStatus: input.thresholdMetadata?.status ?? null
-  });
-}
 
 function resolveThresholdAuthorityParityMismatchDiagnostic(input: {
   routingParityMetadata: FindingsParityMetadata | null;
@@ -172,6 +153,14 @@ function mergeRunResultWithParityResolution(input: {
   };
 }
 
+function callMetaReviewGateArtifactReadFn(
+  readFileFn: MetaReviewGateArtifactReadFn,
+  artifactPath: string,
+  encoding: "utf8"
+): Promise<string> {
+  return readFileFn(artifactPath, encoding);
+}
+
 async function resolveCurrentRunParity(input: {
   resolved: FinalizeCurrentRunMetaReviewGateInput["resolved"];
   snapshot: ReturnType<typeof normalizeMetaReviewSnapshot>;
@@ -191,6 +180,8 @@ async function resolveCurrentRunParity(input: {
       runResultForRouting: MetaReviewResult;
     }
 > {
+  const readFileFn = (artifactPath: string, encoding: "utf8") =>
+    callMetaReviewGateArtifactReadFn(input.readFileFn, artifactPath, encoding);
   const parity = await validateStructuredMetaReviewPositiveClaim({
     runResult: input.runResult,
     ...(input.runResult.report_json !== undefined
@@ -198,7 +189,7 @@ async function resolveCurrentRunParity(input: {
       : {}),
     bubbleDir: input.resolved.bubblePaths.bubbleDir,
     artifactsDir: input.resolved.bubblePaths.artifactsDir,
-    readFileFn: input.readFileFn
+    readFileFn
   });
   if (!parity.ok) {
     return {
@@ -343,133 +334,6 @@ async function resolveAutoReworkThresholdDecision(input: {
       diagnostics: thresholdAuthority.diagnostics
     })
   };
-}
-
-async function persistRunFailedHumanRoute(
-  input: FinalizeCurrentRunMetaReviewGateInput
-): Promise<MetaReviewGateResult> {
-  return persistHumanGateRoute({
-    appendEnvelope: input.appendEnvelope,
-    writeState: input.writeState,
-    statePath: input.resolved.bubblePaths.statePath,
-    transcriptPath: input.resolved.bubblePaths.transcriptPath,
-    inboxPath: input.resolved.bubblePaths.inboxPath,
-    lockPath: buildGateLockPath({
-      locksDir: input.resolved.bubblePaths.locksDir,
-      bubbleId: input.resolved.bubbleId
-    }),
-    now: input.now,
-    nowIso: input.now.toISOString(),
-    bubbleId: input.resolved.bubbleId,
-    summary: buildHumanGateSummary({
-      convergenceSummary: input.summary,
-      metaReviewRun: input.runResult
-    }),
-    refs: input.refs,
-    loaded: input.loaded,
-    expectedState: "RUNNING",
-    route: "human_gate_run_failed",
-    metaReviewRun: input.runResult,
-    parityMetadata: null,
-    stickyHumanGate: false
-  });
-}
-
-async function persistDispatchFailedHumanRoute(input: {
-  finalizeInput: FinalizeCurrentRunMetaReviewGateInput;
-  loaded: LoadedStateSnapshot;
-  expectedState: BubbleStateSnapshot["state"];
-  runResultForRouting: MetaReviewResult;
-  parityMetadata: FindingsParityMetadata | null;
-  fallbackReason: string;
-  rollbackStateOnAppendFailure?: BubbleStateSnapshot;
-}): Promise<MetaReviewGateResult> {
-  const finalizeInput = input.finalizeInput;
-  return persistHumanGateRoute({
-    appendEnvelope: finalizeInput.appendEnvelope,
-    writeState: finalizeInput.writeState,
-    statePath: finalizeInput.resolved.bubblePaths.statePath,
-    transcriptPath: finalizeInput.resolved.bubblePaths.transcriptPath,
-    inboxPath: finalizeInput.resolved.bubblePaths.inboxPath,
-    lockPath: buildGateLockPath({
-      locksDir: finalizeInput.resolved.bubblePaths.locksDir,
-      bubbleId: finalizeInput.resolved.bubbleId
-    }),
-    now: finalizeInput.now,
-    nowIso: finalizeInput.now.toISOString(),
-    bubbleId: finalizeInput.resolved.bubbleId,
-    summary: buildHumanGateSummary({
-      convergenceSummary: finalizeInput.summary,
-      fallbackReason: input.fallbackReason
-    }),
-    refs: finalizeInput.refs,
-    loaded: input.loaded,
-    expectedState: input.expectedState,
-    route: "human_gate_dispatch_failed",
-    metaReviewRun: input.runResultForRouting,
-    parityMetadata:
-      input.parityMetadata ??
-      resolveFindingsParityMetadataFromReportJson(
-        input.runResultForRouting.report_json
-      ),
-    ...(input.rollbackStateOnAppendFailure !== undefined
-      ? { rollbackStateOnAppendFailure: input.rollbackStateOnAppendFailure }
-      : {})
-  });
-}
-
-async function persistResolvedHumanRoute(input: {
-  finalizeInput: FinalizeCurrentRunMetaReviewGateInput;
-  runResultForRouting: MetaReviewResult;
-  budgetAvailable: boolean;
-  parityMetadata: FindingsParityMetadata | null;
-  forceStickyHumanGateBypass: boolean;
-  thresholdMetadata?: MetaReviewGateThresholdMetadata;
-  fallbackReason?: string;
-}): Promise<MetaReviewGateResult> {
-  const finalizeInput = input.finalizeInput;
-  const humanGateDecision = resolveHumanGatePersistenceDecision({
-    forceStickyHumanGateBypass: input.forceStickyHumanGateBypass,
-    recommendation: input.runResultForRouting.recommendation,
-    budgetAvailable: input.budgetAvailable,
-    ...(input.thresholdMetadata !== undefined
-      ? { thresholdMetadata: input.thresholdMetadata }
-      : {})
-  });
-  return persistHumanGateRoute({
-    appendEnvelope: finalizeInput.appendEnvelope,
-    writeState: finalizeInput.writeState,
-    statePath: finalizeInput.resolved.bubblePaths.statePath,
-    transcriptPath: finalizeInput.resolved.bubblePaths.transcriptPath,
-    inboxPath: finalizeInput.resolved.bubblePaths.inboxPath,
-    lockPath: buildGateLockPath({
-      locksDir: finalizeInput.resolved.bubblePaths.locksDir,
-      bubbleId: finalizeInput.resolved.bubbleId
-    }),
-    now: finalizeInput.now,
-    nowIso: finalizeInput.now.toISOString(),
-    bubbleId: finalizeInput.resolved.bubbleId,
-    summary: buildHumanGateSummary({
-      convergenceSummary: finalizeInput.summary,
-      metaReviewRun: input.runResultForRouting,
-      ...(input.fallbackReason !== undefined
-        ? { fallbackReason: input.fallbackReason }
-        : {})
-    }),
-    refs: finalizeInput.refs,
-    loaded: finalizeInput.loaded,
-    expectedState: "RUNNING",
-    route: humanGateDecision,
-    metaReviewRun: input.runResultForRouting,
-    parityMetadata:
-      input.parityMetadata ??
-      resolveFindingsParityMetadataFromReportJson(
-        input.runResultForRouting.report_json
-      ),
-    ...(input.thresholdMetadata !== undefined
-      ? { thresholdMetadata: input.thresholdMetadata }
-      : {})
-  });
 }
 
 export async function finalizeCurrentRunMetaReviewGate(
