@@ -14,10 +14,33 @@ import type {
 } from "../ports/transcript.js";
 import type { BubbleStateSnapshot } from "../../../types/bubble.js";
 import type { PairflowCommandProfile } from "../../../types/bubble.js";
+import type { BubbleReviewAutoReworkSeverity } from "../../../types/bubble.js";
+import type { FindingPriority } from "../../../types/findings.js";
 import type {
   MetaReviewResult
 } from "../metaReview/metaReviewTypes.js";
 import type { ProtocolEnvelope } from "../../../types/protocol.js";
+
+export type MetaReviewGateThresholdStatus =
+  | "not_met"
+  | "unresolved"
+  | "incomplete";
+
+export type MetaReviewGateThresholdMetadata =
+  | {
+      status: "not_met";
+      reasonCode: "REVIEW_POLICY_AUTO_REWORK_THRESHOLD_NOT_MET";
+      minSeverity: BubbleReviewAutoReworkSeverity;
+      highestOpenSeverity: FindingPriority;
+    }
+  | {
+      status: "unresolved";
+      reasonCode: "REVIEW_POLICY_THRESHOLD_SOURCE_UNRESOLVED";
+    }
+  | {
+      status: "incomplete";
+      reasonCode: "REVIEW_POLICY_THRESHOLD_CONTEXT_INCOMPLETE";
+    };
 
 export type MetaReviewGateRoute =
   | "meta_review_running"
@@ -25,6 +48,8 @@ export type MetaReviewGateRoute =
   | "human_gate_sticky_bypass"
   | "human_gate_approve"
   | "human_gate_budget_exhausted"
+  | "human_gate_threshold_not_met"
+  | "human_gate_threshold_unresolved"
   | "human_gate_inconclusive"
   | "human_gate_run_failed"
   | "human_gate_dispatch_failed";

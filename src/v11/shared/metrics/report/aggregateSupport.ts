@@ -2,6 +2,7 @@ import type {
   MetricsMetaReviewRouteCounts,
   MetricsReportEvent
 } from "./types.js";
+import type { MetaReviewGateRoute } from "../../metaReviewGate/metaReviewGateCommandContract.js";
 
 export interface ReviewerFindingMetadata {
   hasFindings: boolean;
@@ -12,15 +13,19 @@ export interface ReviewerFindingMetadata {
   p3: number;
 }
 
+type CountedMetaReviewRouteKey = Exclude<MetaReviewGateRoute, "meta_review_running">;
+
 const metaReviewRouteKeys = [
   "auto_rework",
   "human_gate_sticky_bypass",
   "human_gate_approve",
   "human_gate_budget_exhausted",
+  "human_gate_threshold_not_met",
+  "human_gate_threshold_unresolved",
   "human_gate_inconclusive",
   "human_gate_run_failed",
   "human_gate_dispatch_failed"
-] as const;
+] as const satisfies readonly CountedMetaReviewRouteKey[];
 
 export type MetaReviewRouteKey = (typeof metaReviewRouteKeys)[number];
 
@@ -106,6 +111,8 @@ export function createEmptyMetaReviewRouteCounts(): MetricsMetaReviewRouteCounts
     human_gate_sticky_bypass: 0,
     human_gate_approve: 0,
     human_gate_budget_exhausted: 0,
+    human_gate_threshold_not_met: 0,
+    human_gate_threshold_unresolved: 0,
     human_gate_inconclusive: 0,
     human_gate_run_failed: 0,
     human_gate_dispatch_failed: 0

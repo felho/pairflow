@@ -17,6 +17,7 @@ import {
   type AppendProtocolEnvelopeInput
 } from "../../../src/v11/infrastructure/artifact/transcript/transcriptStore.js";
 import { buildMetaReviewSubmitAdvisoryOnlyCorrectionNote } from "../../../src/v11/shared/metaReview/metaReviewSubmitGuidance.js";
+import type { MetaReviewGateThresholdMetadata } from "../../../src/v11/shared/metaReviewGate/metaReviewGateTypes.js";
 
 const tempDirs: string[] = [];
 
@@ -302,6 +303,160 @@ describe("appendHumanApprovalRequestEnvelope", () => {
     expect(
       result.envelope.payload.metadata?.approval_summary_normalized
     ).toBeUndefined();
+  });
+
+  it("persists threshold-not-met route metadata with the exact compare key set", async () => {
+    const now = new Date("2026-03-14T12:32:20.000Z");
+    const stub = createAppendEnvelopeStub(now);
+
+    const result = await appendHumanApprovalRequestEnvelope({
+      appendEnvelope: stub.appendEnvelope,
+      transcriptPath: "/tmp/transcript.ndjson",
+      inboxPath: "/tmp/inbox.ndjson",
+      lockPath: "/tmp/bubble.lock",
+      now,
+      bubbleId: "b_approval_env_threshold_not_met_01",
+      round: 18,
+      summary: "Highest open severity P3 did not meet configured minimum P2.",
+      route: "human_gate_threshold_not_met",
+      refs: [],
+      recommendation: "rework",
+      thresholdMetadata: {
+        status: "not_met",
+        reasonCode: "REVIEW_POLICY_AUTO_REWORK_THRESHOLD_NOT_MET",
+        minSeverity: "P2",
+        highestOpenSeverity: "P3"
+      }
+    });
+
+    expect(result.envelope.payload.metadata).toMatchObject({
+      [deliveryTargetRoleMetadataKey]: "status",
+      latest_recommendation: "rework",
+      meta_review_gate_route: "human_gate_threshold_not_met",
+      meta_review_gate_reason_code: "REVIEW_POLICY_AUTO_REWORK_THRESHOLD_NOT_MET",
+      meta_review_gate_threshold_status: "not_met",
+      meta_review_gate_threshold_min_severity: "P2",
+      meta_review_gate_threshold_highest_open_severity: "P3"
+    });
+  });
+
+  it("persists threshold-unresolved route metadata for incomplete authority", async () => {
+    const now = new Date("2026-03-14T12:32:40.000Z");
+    const stub = createAppendEnvelopeStub(now);
+
+    const result = await appendHumanApprovalRequestEnvelope({
+      appendEnvelope: stub.appendEnvelope,
+      transcriptPath: "/tmp/transcript.ndjson",
+      inboxPath: "/tmp/inbox.ndjson",
+      lockPath: "/tmp/bubble.lock",
+      now,
+      bubbleId: "b_approval_env_threshold_incomplete_01",
+      round: 18,
+      summary: "Threshold authority could not resolve highest open severity.",
+      route: "human_gate_threshold_unresolved",
+      refs: [],
+      recommendation: "rework",
+      thresholdMetadata: {
+        status: "incomplete",
+        reasonCode: "REVIEW_POLICY_THRESHOLD_CONTEXT_INCOMPLETE"
+      }
+    });
+
+    expect(result.envelope.payload.metadata).toMatchObject({
+      [deliveryTargetRoleMetadataKey]: "status",
+      latest_recommendation: "rework",
+      meta_review_gate_route: "human_gate_threshold_unresolved",
+      meta_review_gate_reason_code: "REVIEW_POLICY_THRESHOLD_CONTEXT_INCOMPLETE",
+      meta_review_gate_threshold_status: "incomplete"
+    });
+    expect(
+      Object.prototype.hasOwnProperty.call(
+        result.envelope.payload.metadata ?? {},
+        "meta_review_gate_threshold_min_severity"
+      )
+    ).toBe(false);
+    expect(
+      Object.prototype.hasOwnProperty.call(
+        result.envelope.payload.metadata ?? {},
+        "meta_review_gate_threshold_highest_open_severity"
+      )
+    ).toBe(false);
+  });
+
+  it("rejects threshold routes that omit latest_recommendation=rework", async () => {
+    const now = new Date("2026-03-14T12:32:50.000Z");
+    const stub = createAppendEnvelopeStub(now);
+
+    await expect(
+      appendHumanApprovalRequestEnvelope({
+        appendEnvelope: stub.appendEnvelope,
+        transcriptPath: "/tmp/transcript.ndjson",
+        inboxPath: "/tmp/inbox.ndjson",
+        lockPath: "/tmp/bubble.lock",
+        now,
+        bubbleId: "b_approval_env_threshold_guard_01",
+        round: 18,
+        summary: "Threshold authority could not resolve highest open severity.",
+        route: "human_gate_threshold_unresolved",
+        refs: [],
+        thresholdMetadata: {
+          status: "unresolved",
+          reasonCode: "REVIEW_POLICY_THRESHOLD_SOURCE_UNRESOLVED"
+        }
+      })
+    ).rejects.toThrow(/requires latest_recommendation=rework/u);
+  });
+
+  it("rejects threshold-not-met routes with a non-canonical reason code", async () => {
+    const now = new Date("2026-03-14T12:32:55.000Z");
+    const stub = createAppendEnvelopeStub(now);
+
+    await expect(
+      appendHumanApprovalRequestEnvelope({
+        appendEnvelope: stub.appendEnvelope,
+        transcriptPath: "/tmp/transcript.ndjson",
+        inboxPath: "/tmp/inbox.ndjson",
+        lockPath: "/tmp/bubble.lock",
+        now,
+        bubbleId: "b_approval_env_threshold_guard_02",
+        round: 18,
+        summary: "Highest open severity P3 did not meet configured minimum P2.",
+        route: "human_gate_threshold_not_met",
+        refs: [],
+        recommendation: "rework",
+        thresholdMetadata: {
+          status: "not_met",
+          reasonCode: "REVIEW_POLICY_THRESHOLD_SOURCE_UNRESOLVED",
+          minSeverity: "P2",
+          highestOpenSeverity: "P3"
+        } as unknown as MetaReviewGateThresholdMetadata
+      })
+    ).rejects.toThrow(/canonical not_met reason code/u);
+  });
+
+  it("rejects threshold-unresolved routes with a reason code from the wrong status family", async () => {
+    const now = new Date("2026-03-14T12:32:57.000Z");
+    const stub = createAppendEnvelopeStub(now);
+
+    await expect(
+      appendHumanApprovalRequestEnvelope({
+        appendEnvelope: stub.appendEnvelope,
+        transcriptPath: "/tmp/transcript.ndjson",
+        inboxPath: "/tmp/inbox.ndjson",
+        lockPath: "/tmp/bubble.lock",
+        now,
+        bubbleId: "b_approval_env_threshold_guard_03",
+        round: 18,
+        summary: "Threshold authority could not resolve highest open severity.",
+        route: "human_gate_threshold_unresolved",
+        refs: [],
+        recommendation: "rework",
+        thresholdMetadata: {
+          status: "incomplete",
+          reasonCode: "REVIEW_POLICY_THRESHOLD_SOURCE_UNRESOLVED"
+        } as unknown as MetaReviewGateThresholdMetadata
+      })
+    ).rejects.toThrow(/canonical reason code for the supplied threshold status/u);
   });
 
   it("emits structured run-failed route metadata for prefix-independent approval history checks", async () => {

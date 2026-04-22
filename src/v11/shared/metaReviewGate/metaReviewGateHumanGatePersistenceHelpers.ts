@@ -13,6 +13,7 @@ import type {
   AppendProtocolEnvelopeResult
 } from "../ports/transcript.js";
 import type { MetaReviewGateRoute } from "./metaReviewGateTypes.js";
+import type { MetaReviewGateThresholdMetadata } from "./metaReviewGateTypes.js";
 import type { MetaReviewGateAdvisoryFinding } from "./metaReviewGateFindingsSplit.js";
 import { isNamedError } from "../errors/namedError.js";
 
@@ -50,7 +51,7 @@ export function resolveHumanGateRecommendation(input: {
   return input.fallbackRecommendation;
 }
 
-export interface AppendHumanGateApprovalRequestInput {
+export type AppendHumanGateApprovalRequestInput = {
   appendEnvelope: AppendProtocolEnvelopePort;
   transcriptPath: string;
   inboxPath: string;
@@ -59,16 +60,51 @@ export interface AppendHumanGateApprovalRequestInput {
   bubbleId: string;
   round: number;
   summary: string;
-  route: MetaReviewGateRoute;
   refs: string[];
-  recommendation?: MetaReviewRecommendation;
   parityMetadata?: FindingsParityMetadata | null;
   findings?: MetaReviewGateAdvisoryFinding[];
 }
+  & (
+    | {
+        route: "human_gate_threshold_not_met" | "human_gate_threshold_unresolved";
+        recommendation: "rework";
+        thresholdMetadata: MetaReviewGateThresholdMetadata;
+      }
+    | {
+        route: Exclude<
+          MetaReviewGateRoute,
+          "human_gate_threshold_not_met" | "human_gate_threshold_unresolved"
+        >;
+        recommendation?: MetaReviewRecommendation;
+        thresholdMetadata?: MetaReviewGateThresholdMetadata;
+      }
+  );
 
 export async function appendHumanGateApprovalRequest(
   input: AppendHumanGateApprovalRequestInput
 ): Promise<AppendProtocolEnvelopeResult> {
+  if (
+    input.route === "human_gate_threshold_not_met"
+    || input.route === "human_gate_threshold_unresolved"
+  ) {
+    return appendHumanApprovalRequestEnvelope({
+      appendEnvelope: input.appendEnvelope,
+      transcriptPath: input.transcriptPath,
+      inboxPath: input.inboxPath,
+      lockPath: input.lockPath,
+      now: input.now,
+      bubbleId: input.bubbleId,
+      round: input.round,
+      summary: input.summary,
+      route: input.route,
+      refs: input.refs,
+      recommendation: input.recommendation,
+      parityMetadata: input.parityMetadata,
+      thresholdMetadata: input.thresholdMetadata,
+      ...(input.findings !== undefined ? { findings: input.findings } : {})
+    });
+  }
+
   return appendHumanApprovalRequestEnvelope({
     appendEnvelope: input.appendEnvelope,
     transcriptPath: input.transcriptPath,
