@@ -746,8 +746,8 @@ async function executeStartCase(input: {
                   launchCalls += 1;
                   return Promise.resolve({
                     status: "failed_to_start" as const,
-                    reason_code: "LAUNCH_ACK_TMUX_COMMAND_FAILED" as const,
-                    failure_kind: "tmux_command_failed" as const,
+                    reason_code: "LAUNCH_ACK_COMMAND_FAILED" as const,
+                    failure_kind: "command_failed" as const,
                     error_message: "contract launch ack rejected",
                     sessionName: `pf-${bubble.bubbleId}`
                   });
@@ -759,8 +759,8 @@ async function executeStartCase(input: {
                     launchCalls += 1;
                     return Promise.resolve({
                       status: "failed_to_start" as const,
-                      reason_code: "LAUNCH_ACK_TMUX_COMMAND_FAILED" as const,
-                      failure_kind: "tmux_command_failed" as const,
+                      reason_code: "LAUNCH_ACK_COMMAND_FAILED" as const,
+                      failure_kind: "command_failed" as const,
                       error_message: "contract retained launch ack rejected",
                       sessionName: `pf-${bubble.bubbleId}`
                     });
@@ -772,7 +772,7 @@ async function executeStartCase(input: {
                       launchCalls += 1;
                       return Promise.reject(
                         new StartBubbleError({
-                          reasonCode: "LAUNCH_ACK_TMUX_COMMAND_FAILED",
+                          reasonCode: "LAUNCH_ACK_COMMAND_FAILED",
                           message: "legacy launch bridge rejected"
                         })
                       );

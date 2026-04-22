@@ -3261,8 +3261,8 @@ describe("startBubble", () => {
           ),
         launchBubbleSessionAck: async () => ({
           status: "failed_to_start",
-          reason_code: "LAUNCH_ACK_TMUX_COMMAND_FAILED",
-          failure_kind: "tmux_command_failed",
+          reason_code: "LAUNCH_ACK_COMMAND_FAILED",
+          failure_kind: "command_failed",
           error_message: "tmux launch rejected in test",
           sessionName: `pf-${created.bubbleId}`
         }),
@@ -3294,19 +3294,19 @@ describe("startBubble", () => {
 
     expect(thrown).toBeInstanceOf(StartBubbleError);
     expect((thrown as StartBubbleError).reasonCode).toBe(
-      "LAUNCH_ACK_TMUX_COMMAND_FAILED"
+      "LAUNCH_ACK_COMMAND_FAILED"
     );
     expect((thrown as StartBubbleError).context).toMatchObject({
       bubble_id: created.bubbleId,
       stage: "launch_tmux",
-      failure_kind: "tmux_command_failed",
+      failure_kind: "command_failed",
       tmux_session_name: `pf-${created.bubbleId}`
     });
     expect((thrown as StartBubbleError).message).toContain(
       `Bubble ${created.bubbleId} startup did not complete.`
     );
     expect((thrown as StartBubbleError).message).toContain(
-      "Cause: LAUNCH_ACK_TMUX_COMMAND_FAILED: tmux launch rejected in test"
+      "Cause: LAUNCH_ACK_COMMAND_FAILED: tmux launch rejected in test"
     );
   });
 
@@ -3322,8 +3322,8 @@ describe("startBubble", () => {
     });
     const launchBubbleTmuxSessionAckOverride = vi.fn(async () => ({
       status: "failed_to_start" as const,
-      reason_code: "LAUNCH_ACK_TMUX_COMMAND_FAILED" as const,
-      failure_kind: "tmux_command_failed" as const,
+      reason_code: "LAUNCH_ACK_COMMAND_FAILED" as const,
+      failure_kind: "command_failed" as const,
       error_message: "compat tmux launch rejected in test",
       sessionName: `pf-${created.bubbleId}`
     }));
@@ -3376,16 +3376,16 @@ describe("startBubble", () => {
 
     expect(thrown).toBeInstanceOf(StartBubbleError);
     expect((thrown as StartBubbleError).reasonCode).toBe(
-      "LAUNCH_ACK_TMUX_COMMAND_FAILED"
+      "LAUNCH_ACK_COMMAND_FAILED"
     );
     expect((thrown as StartBubbleError).context).toMatchObject({
       bubble_id: created.bubbleId,
       stage: "launch_tmux",
-      failure_kind: "tmux_command_failed",
+      failure_kind: "command_failed",
       tmux_session_name: `pf-${created.bubbleId}`
     });
     expect((thrown as StartBubbleError).message).toContain(
-      "Cause: LAUNCH_ACK_TMUX_COMMAND_FAILED: compat tmux launch rejected in test"
+      "Cause: LAUNCH_ACK_COMMAND_FAILED: compat tmux launch rejected in test"
     );
     expect(launchBubbleTmuxSessionAckOverride).toHaveBeenCalledTimes(1);
     expect(launchBubbleTmuxSessionOverride).not.toHaveBeenCalled();

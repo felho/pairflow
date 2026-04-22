@@ -247,13 +247,13 @@ describe("runRestartFlow", () => {
           removeRuntimeSession,
           startBubble: async () => {
             throw Object.assign(new Error("tmux launch rejected in test"), {
-              reasonCode: "LAUNCH_ACK_TMUX_COMMAND_FAILED"
+              reasonCode: "LAUNCH_ACK_COMMAND_FAILED"
             })
           }
         })
       )
     ).rejects.toMatchObject({
-      reasonCode: "LAUNCH_ACK_TMUX_COMMAND_FAILED"
+      reasonCode: "LAUNCH_ACK_COMMAND_FAILED"
     })
 
     expect(terminateBubbleTmuxSession).toHaveBeenCalledTimes(1)

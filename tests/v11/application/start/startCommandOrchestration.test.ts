@@ -51,8 +51,7 @@ describe("startCommandOrchestration", () => {
       workspacePath: "   ",
       statusCommand: "status",
       implementerCommand: "implementer",
-      reviewerCommand: "reviewer",
-      runner: vi.fn()
+      reviewerCommand: "reviewer"
     };
 
     const canonicalAck =
