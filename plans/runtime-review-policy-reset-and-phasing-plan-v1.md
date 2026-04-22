@@ -117,15 +117,17 @@ Sikernek az szamit, ha a kovetkezo kor mar nem egyetlen bubble-ben mozgatja egys
    [runtime-review-policy-foundation-and-authority-refactor-phase1.md](/Users/felho/dev/pairflow/plans/archive/tasks/runtime-review-policy-foundation-and-authority-refactor-phase1.md)
 4. A current-tree adjacent actor-runtime baseline mar kulon successor lane-ben el:
    [actor-runtime-interface-post-phaseE-successor-plan-v1.md](/Users/felho/dev/pairflow/plans/actor-runtime-interface-post-phaseE-successor-plan-v1.md)
+5. A `runtime-review-policy-auto-rework-threshold-phase2` task docs-only refinement bubble-je lefutott, a bounded Phase 2 slice, authority ownership, fail-closed branch inventory, es consumer-surface contract wording implementacios baseline-re lett szukitve.
 
 ### Open Work
 
-1. A Phase 2 task-spec mar letezik itt:
+1. A Phase 2 task-spec mar letezik itt, es az implementation bubble mar fut:
    [runtime-review-policy-auto-rework-threshold-phase2.md](/Users/felho/dev/pairflow/plans/tasks/runtime-review-policy-auto-rework-threshold-phase2.md)
-2. A Phase 3A / Phase 3B task artifactok letrehozasa tovabbra is hianyzik coverage-szinten.
-3. A canonical control-model orokles explicit bevezetese a downstream taskokba.
-4. A downstream taskok dependency wordingje nem allithat `approved` parent-plan baseline-t, amig ennek a plannek a frontmatter statusza `draft`.
-5. A downstream Phase 2 / Phase 3 taskok koncepcionalisan maradhatnak, de most mar a merged Phase 1 baseline-re kell hivatkozniuk, nem a reset-elotti gapre.
+2. A Phase 2 bubble-scoped implementacio, review, es merge meg hatra van; ez most a lane aktiv kovetkezo delivery munkaja.
+3. A Phase 3A / Phase 3B task artifactok letrehozasa tovabbra is hianyzik coverage-szinten.
+4. A canonical control-model orokles explicit bevezetese a downstream taskokba.
+5. A downstream taskok dependency wordingje nem allithat `approved` parent-plan baseline-t, amig ennek a plannek a frontmatter statusza `draft`.
+6. A downstream Phase 2 / Phase 3 taskok koncepcionalisan maradhatnak, de most mar a merged Phase 1 baseline-re kell hivatkozniuk, nem a reset-elotti gapre.
 
 ### Deferred / Future Work
 
@@ -134,10 +136,10 @@ Sikernek az szamit, ha a kovetkezo kor mar nem egyetlen bubble-ben mozgatja egys
 
 ## Immediate Next Step
 
-1. A current next bounded step a Phase 2 task-spec review-ja es bubble-inditasra kesz implementacios baseline-je:
+1. A current next bounded step a futo Phase 2 implementation bubble lezaratasa:
    [runtime-review-policy-auto-rework-threshold-phase2.md](/Users/felho/dev/pairflow/plans/tasks/runtime-review-policy-auto-rework-threshold-phase2.md)
-   - authoring rule:
-     a task a merged Phase 1 authority/projection baseline-re epuljon, kulonosen:
+   - delivery rule:
+     az implementation ugyanarra a merged Phase 1 authority/projection baseline-re epuljon, kulonosen:
      `src/v11/shared/metaReviewGate/metaReviewGateThresholdAuthority.ts`,
      `src/v11/shared/reviewPolicy/reviewPolicyRuntime.ts`,
      `src/v11/shared/metaReviewGate/metaReviewGateCurrentRunFinalization.ts`,
@@ -151,7 +153,9 @@ Sikernek az szamit, ha a kovetkezo kor mar nem egyetlen bubble-ben mozgatja egys
      A bounded Phase 2 read-model closure a gate-route truth export familyre korlatozodik:
      persisted human-gate envelope metadata, converged route metadata, metrics/report aggregation, valamint a mar letezo submit/result route exposure.
      `detail` tovabbra is csak explicit entrypointtal ownershipolhato.
-2. Az archived `O2-T9` current-tree preserved baseline marad; a Phase 2 tasknak erre es a merged Phase 1 baseline-re kell epulnie, es nem szabad runtime-capability cleanupot vagy bypass-aktivaciot opportunistikusan visszahoznia.
+2. A kovetkezo kulon successor task a Phase 3A bypass-contract authoring legyen, de csak a Phase 2 threshold implementacio merge-e utan:
+   `plans/tasks/runtime-review-policy-reviewer-bypass-contract-phase3a.md`
+3. Az archived `O2-T9` current-tree preserved baseline marad; a Phase 2 tasknak erre es a merged Phase 1 baseline-re kell epulnie, es nem szabad runtime-capability cleanupot vagy bypass-aktivaciot opportunistikusan visszahoznia.
 
 ## Decision Baseline
 
