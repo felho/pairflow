@@ -11,15 +11,13 @@ import {
   writeStateSnapshot
 } from "../../shared/state/stateStoreDefaults.js";
 import { setMetaReviewerPaneBinding } from "../../infrastructure/channel/tmux/metaReviewerPaneBinding.js";
+import { runTmux } from "../../infrastructure/channel/tmux/tmuxManager.js";
 import {
-  respawnTmuxPaneCommand,
-  runTmux
-} from "../../infrastructure/channel/tmux/tmuxManager.js";
-import {
-  maybeAcceptClaudeTrustPrompt,
-  sendAndSubmitTmuxPaneMessage,
-  submitTmuxPaneInput
-} from "../../infrastructure/channel/tmux/tmuxInput.js";
+  acceptMetaReviewTrustPrompt,
+  respawnMetaReviewPane,
+  sendMetaReviewSubmissionRequest,
+  submitMetaReviewInput
+} from "../../infrastructure/channel/tmux/metaReviewGateTmuxDefaultBindings.js";
 import type {
   ApplyMetaReviewGateOnConvergenceDependencies
 } from "../../shared/metaReviewGate/metaReviewGateCommandContract.js";
@@ -103,16 +101,16 @@ export const metaReviewGateDependencyDefaults = {
     notify: {
       tmux: {
         runner: runTmux,
-        maybeAcceptTrustPrompt: maybeAcceptClaudeTrustPrompt,
-        sendSubmissionRequestMessage: sendAndSubmitTmuxPaneMessage,
-        submitPaneInput: submitTmuxPaneInput
+        maybeAcceptTrustPrompt: acceptMetaReviewTrustPrompt,
+        sendSubmissionRequestMessage: sendMetaReviewSubmissionRequest,
+        submitPaneInput: submitMetaReviewInput
       }
     },
     paneBinding: {
       buildAgentCommand,
       tmux: {
         runner: runTmux,
-        respawnPaneCommand: respawnTmuxPaneCommand
+        respawnPaneCommand: respawnMetaReviewPane
       }
     }
   },

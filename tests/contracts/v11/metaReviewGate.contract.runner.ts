@@ -41,15 +41,10 @@ type MetaReviewGateContractNotifyDelivery =
   | "uncertain"
   | "failed";
 
-type MetaReviewGateContractRuntimeInputShape =
-  | "canonical_nested_tmux"
-  | "deprecated_top_level";
-
 function parseMetaReviewGateCaseInput(input: ContractCase["input"]): {
   route: "apply";
   applyScenario: MetaReviewGateApplyScenario;
   notifyDelivery: MetaReviewGateContractNotifyDelivery;
-  runtimeInputShape: MetaReviewGateContractRuntimeInputShape;
   summary?: string;
   refs: string[];
 } {
@@ -99,22 +94,10 @@ function parseMetaReviewGateCaseInput(input: ContractCase["input"]): {
     );
   }
 
-  const runtimeInputShapeRaw = input.runtimeInputShape;
-  if (
-    runtimeInputShapeRaw !== undefined &&
-    runtimeInputShapeRaw !== "canonical_nested_tmux" &&
-    runtimeInputShapeRaw !== "deprecated_top_level"
-  ) {
-    throw new Error(
-      "metaReviewGate contract input.runtimeInputShape must be one of: canonical_nested_tmux, deprecated_top_level."
-    );
-  }
-
   return {
     route: "apply",
     applyScenario: applyScenarioRaw ?? "run_failed",
     notifyDelivery: notifyDeliveryRaw ?? "confirmed",
-    runtimeInputShape: runtimeInputShapeRaw ?? "canonical_nested_tmux",
     ...(typeof summaryRaw === "string" ? { summary: summaryRaw } : {}),
     refs: refsRaw ?? []
   };
@@ -360,38 +343,23 @@ async function executeMetaReviewGateCase(input: {
     };
     const submitPaneInput = () => Promise.resolve(undefined);
     const respawnPaneCommand = () => Promise.resolve(undefined);
-    const runtime =
-      caseInput.runtimeInputShape === "deprecated_top_level"
-        ? {
-            notify: {
-              runTmux: notifyRunTmux,
-              maybeAcceptClaudeTrustPrompt: maybeAcceptTrustPrompt,
-              sendAndSubmitTmuxPaneMessage: sendSubmissionRequestMessage,
-              submitTmuxPaneInput: submitPaneInput
-            },
-            paneBinding: {
-              runTmux: paneBindingRunTmux,
-              buildAgentCommand: () => "codex meta-review",
-              respawnTmuxPaneCommand: respawnPaneCommand
-            }
-          }
-        : {
-            notify: {
-              tmux: {
-                runner: notifyRunTmux,
-                maybeAcceptTrustPrompt,
-                sendSubmissionRequestMessage,
-                submitPaneInput
-              }
-            },
-            paneBinding: {
-              buildAgentCommand: () => "codex meta-review",
-              tmux: {
-                runner: paneBindingRunTmux,
-                respawnPaneCommand
-              }
-            }
-          };
+    const runtime = {
+      notify: {
+        tmux: {
+          runner: notifyRunTmux,
+          maybeAcceptTrustPrompt,
+          sendSubmissionRequestMessage,
+          submitPaneInput
+        }
+      },
+      paneBinding: {
+        buildAgentCommand: () => "codex meta-review",
+        tmux: {
+          runner: paneBindingRunTmux,
+          respawnPaneCommand
+        }
+      }
+    };
 
     const result = await input.applyExecutor(
       {

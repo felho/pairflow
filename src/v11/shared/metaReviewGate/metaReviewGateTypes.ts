@@ -60,24 +60,6 @@ export interface MetaReviewGateNotifyTmuxCapabilities {
 
 export interface MetaReviewGateNotifyRuntimeCapabilities {
   tmux?: MetaReviewGateNotifyTmuxCapabilities;
-  /** @deprecated Use `tmux.runner`. */
-  runTmux?: MetaReviewGateTmuxRunner;
-  /** @deprecated Use `tmux.maybeAcceptTrustPrompt`. */
-  maybeAcceptClaudeTrustPrompt?: (
-    runner: MetaReviewGateTmuxRunner,
-    targetPane: string
-  ) => Promise<boolean | void>;
-  /** @deprecated Use `tmux.sendSubmissionRequestMessage`. */
-  sendAndSubmitTmuxPaneMessage?: (
-    runner: MetaReviewGateTmuxRunner,
-    targetPane: string,
-    message: string
-  ) => Promise<void>;
-  /** @deprecated Use `tmux.submitPaneInput`. */
-  submitTmuxPaneInput?: (
-    runner: MetaReviewGateTmuxRunner,
-    targetPane: string
-  ) => Promise<void>;
 }
 
 function hasDefinedValues(record: Record<string, unknown>): boolean {
@@ -87,16 +69,10 @@ function hasDefinedValues(record: Record<string, unknown>): boolean {
 export function resolveMetaReviewGateNotifyTmuxCapabilities(
   runtime: MetaReviewGateNotifyRuntimeCapabilities | undefined
 ): MetaReviewGateNotifyTmuxCapabilities | undefined {
-  const runner = runtime?.tmux?.runner ?? runtime?.runTmux;
-  const maybeAcceptTrustPrompt =
-    runtime?.tmux?.maybeAcceptTrustPrompt
-    ?? runtime?.maybeAcceptClaudeTrustPrompt;
-  const sendSubmissionRequestMessage =
-    runtime?.tmux?.sendSubmissionRequestMessage
-    ?? runtime?.sendAndSubmitTmuxPaneMessage;
-  const submitPaneInput =
-    runtime?.tmux?.submitPaneInput
-    ?? runtime?.submitTmuxPaneInput;
+  const runner = runtime?.tmux?.runner;
+  const maybeAcceptTrustPrompt = runtime?.tmux?.maybeAcceptTrustPrompt;
+  const sendSubmissionRequestMessage = runtime?.tmux?.sendSubmissionRequestMessage;
+  const submitPaneInput = runtime?.tmux?.submitPaneInput;
   const resolved = {
     ...(runner !== undefined ? { runner } : {}),
     ...(maybeAcceptTrustPrompt !== undefined
@@ -147,25 +123,13 @@ export interface MetaReviewGatePaneBindingRuntimeCapabilities {
     startupPrompt?: string | undefined;
   }) => string;
   tmux?: MetaReviewGatePaneBindingTmuxCapabilities;
-  /** @deprecated Use `tmux.runner`. */
-  runTmux?: MetaReviewGateTmuxRunner;
-  /** @deprecated Use `tmux.respawnPaneCommand`. */
-  respawnTmuxPaneCommand?: (input: {
-    sessionName: string;
-    paneIndex: number;
-    cwd: string;
-    command: string;
-    runner?: MetaReviewGateTmuxRunner;
-  }) => Promise<void>;
 }
 
 export function resolveMetaReviewGatePaneBindingTmuxCapabilities(
   runtime: MetaReviewGatePaneBindingRuntimeCapabilities | undefined
 ): MetaReviewGatePaneBindingTmuxCapabilities | undefined {
-  const runner = runtime?.tmux?.runner ?? runtime?.runTmux;
-  const respawnPaneCommand =
-    runtime?.tmux?.respawnPaneCommand
-    ?? runtime?.respawnTmuxPaneCommand;
+  const runner = runtime?.tmux?.runner;
+  const respawnPaneCommand = runtime?.tmux?.respawnPaneCommand;
   const resolved = {
     ...(runner !== undefined ? { runner } : {}),
     ...(respawnPaneCommand !== undefined ? { respawnPaneCommand } : {})
