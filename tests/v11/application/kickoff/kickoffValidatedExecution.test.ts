@@ -323,7 +323,7 @@ describe("executeKickoffValidatedFlow", () => {
     expect(result.ok).toBe(true);
     expect((result as { delivery?: unknown }).delivery).toMatchObject({
       status: "rejected",
-      reason: "tmux_send_failed",
+      reason: "command_failed",
       reason_code: "DELIVERY_ACK_REJECTED",
       retried: false
     });

@@ -58,7 +58,7 @@ describe("executeNormalPassDelivery", () => {
         emitDeliveryNotificationAck: async () => ({
           status: "rejected" as const,
           message: "noop",
-          reason: "tmux_send_failed" as const,
+          reason: "command_failed" as const,
           reason_code: "DELIVERY_ACK_REJECTED" as const
         }),
         refreshReviewerContext: async () => ({

@@ -21,7 +21,7 @@ export type DeliveryFailureReason =
   | "unsupported_recipient"
   | "registry_read_failed"
   | "delivery_unconfirmed"
-  | "tmux_send_failed";
+  | "command_failed";
 
 export type DeliveryTargetReasonCode =
   | "DELIVERY_TARGET_ROLE_ABSENT"

@@ -120,7 +120,7 @@ describe("finalizeAskHumanFlow", () => {
     });
   });
 
-  it("surfaces the tmux_send_failed sentinel at finalization level when delivery notification throws", async () => {
+  it("surfaces the command_failed sentinel at finalization level when delivery notification throws", async () => {
     const result = await finalizeAskHumanFlow(
       {
         now: new Date("2026-02-21T12:20:00.000Z"),
@@ -183,8 +183,8 @@ describe("finalizeAskHumanFlow", () => {
 
     expect(result.delivery).toEqual({
       status: "rejected",
-      message: "tmux delivery notification failed: tmux boom",
-      reason: "tmux_send_failed",
+      message: "delivery notification failed: tmux boom",
+      reason: "command_failed",
       reason_code: "DELIVERY_ACK_REJECTED"
     });
     expect(result.activation).toEqual({

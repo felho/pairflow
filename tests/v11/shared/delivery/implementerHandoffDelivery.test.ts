@@ -97,7 +97,7 @@ describe("implementerHandoffDelivery", () => {
     });
   });
 
-  it("normalizes unexpected throw to tmux_send_failed and retries once", async () => {
+  it("normalizes unexpected throw to command_failed and retries once", async () => {
     const calls: EmitDeliveryNotificationInput[] = [];
     const result = await executeImplementerHandoffDelivery({
       deliveryInput: createDeliveryInput(),
@@ -192,7 +192,7 @@ describe("implementerHandoffDelivery", () => {
       shouldRetryImplementerHandoffDelivery({
         status: "rejected",
         message: "",
-        reason: "tmux_send_failed"
+        reason: "command_failed"
       })
     ).toBe(true);
     expect(

@@ -50,7 +50,7 @@ function resolveDeliveryAckReasonCode(
     case "unsupported_recipient":
       return "DELIVERY_ACK_TARGET_UNSUPPORTED";
     case "delivery_unconfirmed":
-    case "tmux_send_failed":
+    case "command_failed":
       return "DELIVERY_ACK_REJECTED";
   }
 }
@@ -144,7 +144,7 @@ export async function attemptTmuxDelivery(input: {
     });
   } catch {
     return createRejectedDeliveryAck({
-      reason: "tmux_send_failed",
+      reason: "command_failed",
       message: input.message,
       sessionName: input.sessionName,
       targetPaneIndex: input.targetPaneIndex,

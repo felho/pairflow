@@ -106,7 +106,7 @@ describe("runCli auto-converge warning parity", () => {
       passValidationCompatibilityArtifactWriteFailureReason: "compat_write_failed",
       delivery: {
         delivered: false,
-        reason: "tmux_send_failed",
+        reason: "command_failed",
         retried: false
       }
     } as unknown as EmitPassResult;
@@ -127,7 +127,7 @@ describe("runCli auto-converge warning parity", () => {
       "PASS recorded for b_pass_01: msg_pass_1 -> reviewer (reason=REPEAT_CLEAN_TRIGGER_NOT_MET)"
     );
     expect(stderr).toContain(
-      "Warning: handoff delivery to active pane was not confirmed (reason: tmux_send_failed)."
+      "Warning: handoff delivery to active pane was not confirmed (reason: command_failed)."
     );
     expect(stderr).toContain(
       "Warning: PASS validation compatibility artifact update failed during PASS handling (reason: compat_write_failed)."

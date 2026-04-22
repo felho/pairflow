@@ -79,7 +79,7 @@ function resolveAggregateConvergedDeliveryReason(
 
   const reasonPriority: Array<Extract<DeliveryAck, { status: "rejected" }>["reason"]> = [
     "delivery_unconfirmed",
-    "tmux_send_failed",
+    "command_failed",
     "registry_read_failed",
     "unsupported_recipient",
     "no_runtime_session"
@@ -164,7 +164,7 @@ export async function executeGateDelivery(input: {
     }).catch(() => ({
       status: "rejected",
       message: "",
-      reason: "tmux_send_failed",
+      reason: "command_failed",
       reason_code: "DELIVERY_ACK_REJECTED"
     }));
 

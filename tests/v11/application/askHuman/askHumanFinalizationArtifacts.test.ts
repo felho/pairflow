@@ -81,7 +81,7 @@ describe("askHumanFinalizationArtifacts", () => {
         deliveryResult: {
           status: "rejected",
           message: "",
-          reason: "tmux_send_failed",
+          reason: "command_failed",
           reason_code: "DELIVERY_ACK_REJECTED"
         }
       })
@@ -104,7 +104,7 @@ describe("askHumanFinalizationArtifacts", () => {
       },
       delivery: {
         status: "rejected",
-        reason: "tmux_send_failed",
+        reason: "command_failed",
         reason_code: "DELIVERY_ACK_REJECTED"
       }
     });

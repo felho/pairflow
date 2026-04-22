@@ -60,7 +60,7 @@ describe("askHumanNotificationEmission", () => {
     });
   });
 
-  it("maps thrown delivery errors to tmux_send_failed sentinel instead of dropping delivery info", async () => {
+  it("maps thrown delivery errors to command_failed sentinel instead of dropping delivery info", async () => {
     const result = await emitOptionalAskHumanNotifications(
       {
         bubbleId: "b_ask_human_02",
@@ -90,8 +90,8 @@ describe("askHumanNotificationEmission", () => {
     expect(result).toEqual({
       deliveryResult: {
         status: "rejected",
-        message: "tmux delivery notification failed: tmux boom",
-        reason: "tmux_send_failed",
+        message: "delivery notification failed: tmux boom",
+        reason: "command_failed",
         reason_code: "DELIVERY_ACK_REJECTED"
       }
     });

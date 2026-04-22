@@ -590,7 +590,7 @@ describe("dependency fitness check", () => {
       [
         "import type { DeliveryAck } from '../../../core/runtime/tmuxDelivery.js';",
         "export function fallback(): DeliveryAck {",
-        "  return { status: 'rejected', message: '', reason: 'tmux_send_failed', reason_code: 'DELIVERY_ACK_REJECTED' };",
+        "  return { status: 'rejected', message: '', reason: 'command_failed', reason_code: 'DELIVERY_ACK_REJECTED' };",
         "}",
         ""
       ].join("\n")

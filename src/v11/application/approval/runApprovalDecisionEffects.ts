@@ -60,7 +60,7 @@ function buildFallbackDeliveryResult(message: string): DeliveryAck {
   return {
     status: "rejected",
     message,
-    reason: "tmux_send_failed",
+    reason: "command_failed",
     reason_code: "DELIVERY_ACK_REJECTED"
   };
 }

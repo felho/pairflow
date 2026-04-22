@@ -17,11 +17,11 @@ function buildUnexpectedAskHumanDeliveryFailureResult(
   const detail =
     error instanceof Error && error.message.trim().length > 0
       ? error.message.trim()
-      : "unknown tmux delivery error";
+      : "unknown delivery error";
   return {
     status: "rejected",
-    message: `tmux delivery notification failed: ${detail}`,
-    reason: "tmux_send_failed",
+    message: `delivery notification failed: ${detail}`,
+    reason: "command_failed",
     reason_code: "DELIVERY_ACK_REJECTED"
   };
 }

@@ -279,16 +279,16 @@ describe("tmux delivery canonical ack helpers", () => {
         }
       },
       {
-        title: "tmux_send_failed",
+        title: "command_failed",
         ack: createRejectedDeliveryAck({
-          reason: "tmux_send_failed",
+          reason: "command_failed",
           message: "handoff blocked 4",
           sessionName: "pf-b_delivery_01",
           targetPaneIndex: 2
         }),
         expectedAck: {
           status: "rejected",
-          reason: "tmux_send_failed",
+          reason: "command_failed",
           reason_code: "DELIVERY_ACK_REJECTED",
           sessionName: "pf-b_delivery_01",
           targetPaneIndex: 2,
@@ -505,7 +505,7 @@ describe("emitDeliveryNotificationAck", () => {
     }
   });
 
-  it("returns tmux_send_failed canonical ack when the tmux delivery command throws", async () => {
+  it("returns command_failed canonical ack when the tmux delivery command throws", async () => {
     const runner: TmuxRunner = () => Promise.reject(new Error("tmux unavailable"));
 
     const result = await emitDeliveryNotificationAck({
@@ -522,7 +522,7 @@ describe("emitDeliveryNotificationAck", () => {
       status: "rejected",
       sessionName: "pf-b_delivery_01",
       targetPaneIndex: 2,
-      reason: "tmux_send_failed",
+      reason: "command_failed",
       reason_code: "DELIVERY_ACK_REJECTED"
     });
     expect(result.message).toContain(
@@ -2728,7 +2728,7 @@ describe("emitDeliveryNotificationAck", () => {
     );
   });
 
-  it("returns tmux_send_failed when tmux command fails", async () => {
+  it("returns command_failed when tmux command fails", async () => {
     const runner: TmuxRunner = () => Promise.reject(new Error("tmux unavailable"));
 
     const result = await emitDeliveryNotificationAck({
@@ -2745,7 +2745,7 @@ describe("emitDeliveryNotificationAck", () => {
       status: "rejected",
       sessionName: "pf-b_delivery_01",
       targetPaneIndex: 2,
-      reason: "tmux_send_failed",
+      reason: "command_failed",
       reason_code: "DELIVERY_ACK_REJECTED"
     });
     expect(result.message).toContain(
@@ -2756,7 +2756,7 @@ describe("emitDeliveryNotificationAck", () => {
     );
   });
 
-  it("returns tmux_send_failed when literal pane write exits non-zero", async () => {
+  it("returns command_failed when literal pane write exits non-zero", async () => {
     const calls: string[][] = [];
     const runner: TmuxRunner = (args): Promise<TmuxRunResult> => {
       calls.push(args);
@@ -2793,7 +2793,7 @@ describe("emitDeliveryNotificationAck", () => {
       status: "rejected",
       sessionName: "pf-b_delivery_01",
       targetPaneIndex: 2,
-      reason: "tmux_send_failed",
+      reason: "command_failed",
       reason_code: "DELIVERY_ACK_REJECTED"
     });
     expect(

@@ -19,7 +19,7 @@ export function shouldRetryImplementerHandoffDelivery(
     result.status === "rejected" &&
     (
       result.reason === "delivery_unconfirmed" ||
-      result.reason === "tmux_send_failed"
+      result.reason === "command_failed"
     )
   );
 }
@@ -28,7 +28,7 @@ function buildUnexpectedDeliveryFailureResult(): DeliveryAck {
   return {
     status: "rejected",
     message: "",
-    reason: "tmux_send_failed",
+    reason: "command_failed",
     reason_code: "DELIVERY_ACK_REJECTED"
   };
 }
