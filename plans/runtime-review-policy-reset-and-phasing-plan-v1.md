@@ -120,39 +120,43 @@ Sikernek az szamit, ha a kovetkezo kor mar nem egyetlen bubble-ben mozgatja egys
 5. A `runtime-review-policy-auto-rework-threshold-phase2` task docs-only refinement bubble-je lefutott, a bounded Phase 2 slice, authority ownership, fail-closed branch inventory, es consumer-surface contract wording implementacios baseline-re lett szukitve.
 6. A `runtime-review-policy-auto-rework-threshold-phase2` implementation bubble le lett zarva, merge-elve `main`-re, majd archivalva ide:
    [runtime-review-policy-auto-rework-threshold-phase2.md](/Users/felho/dev/pairflow/plans/archive/tasks/runtime-review-policy-auto-rework-threshold-phase2.md)
+7. A `runtime-review-policy-reviewer-bypass-contract-phase3a` implementation bubble le lett zarva, merge-elve `main`-re, majd archivalva ide:
+   [runtime-review-policy-reviewer-bypass-contract-phase3a.md](/Users/felho/dev/pairflow/plans/archive/tasks/runtime-review-policy-reviewer-bypass-contract-phase3a.md)
 
 ### Open Work
 
-1. A Phase 3A / Phase 3B task artifactok letrehozasa tovabbra is hianyzik coverage-szinten.
-2. A canonical control-model orokles explicit bevezetese a downstream taskokba.
-3. A downstream taskok dependency wordingje nem allithat `approved` parent-plan baseline-t, amig ennek a plannek a frontmatter statusza `draft`.
-4. A downstream Phase 3 taskoknak mar a merged es archivalt Phase 1 + Phase 2 baseline-re kell hivatkozniuk, nem a reset-elotti gapre.
-5. A kovetkezo bounded delivery munka mar nem threshold implementation, hanem a reviewer bypass Phase 3A contract authoring task letrehozasa.
+1. A Phase 3B activation-core task artifact mar letre lett hozva:
+   [runtime-review-policy-reviewer-bypass-activation-post-cutover-phase3b.md](/Users/felho/dev/pairflow/plans/tasks/runtime-review-policy-reviewer-bypass-activation-post-cutover-phase3b.md)
+2. A Phase 3C residual runtime alignment successor task artifact is letre lett hozva:
+   [runtime-review-policy-reviewer-bypass-residual-runtime-alignment-phase3c.md](/Users/felho/dev/pairflow/plans/tasks/runtime-review-policy-reviewer-bypass-residual-runtime-alignment-phase3c.md)
+3. A canonical control-model orokles explicit bevezetese a downstream taskokba tovabbra is kotelezo.
+4. A downstream taskok dependency wordingje nem allithat `approved` parent-plan baseline-t, amig ennek a plannek a frontmatter statusza `draft`.
+5. A downstream Phase 3 taskoknak mar a merged es archivalt Phase 1 + Phase 2 + Phase 3A baseline-re kell hivatkozniuk, nem a reset-elotti gapre.
+6. A kovetkezo bounded delivery munka mar nem a korabbi tulszeles 3B task implementacios bubble-je, hanem a szukitett Phase 3B activation-core implementacios bubble elinditasa.
 
 ### Deferred / Future Work
 
-1. Bypass runtime activation kulon taskban, foundation es threshold lane utan.
-2. Olyan UI/control surface, amely a bounded backend foundationnel mar nincs egy lane-ben.
+1. Bypass runtime activation core implementacio kulon bubble-ben, a letrehozott Phase 3B task szerint.
+2. A residual runtime alignment a Phase 3C successor task szerint zaruljon Phase 3B utan.
+3. Olyan UI/control surface, amely a bounded backend foundationnel mar nincs egy lane-ben.
 
 ## Immediate Next Step
 
-1. A current next bounded step a Phase 3A bypass-contract authoring task letrehozasa:
-   `plans/tasks/runtime-review-policy-reviewer-bypass-contract-phase3a.md`
+1. A current next bounded step a Phase 3B activation-core implementation bubble elinditasa erre a taskra:
+   [runtime-review-policy-reviewer-bypass-activation-post-cutover-phase3b.md](/Users/felho/dev/pairflow/plans/tasks/runtime-review-policy-reviewer-bypass-activation-post-cutover-phase3b.md)
    - delivery rule:
-     a task mar a merged es archivalt threshold baseline-re epuljon, kulonosen:
-     `src/v11/shared/reviewPolicy/reviewPolicyRuntime.ts`,
-     `src/v11/shared/metaReviewGate/metaReviewGateThresholdAuthority.ts`,
-     `src/v11/shared/metaReviewGate/metaReviewGateCurrentRunFinalization.ts`,
-     `src/v11/shared/metaReviewGate/approvalRequestEnvelope.ts`,
-     valamint a Phase 1 es Phase 2 archivalt taskok contract-nyelvezetere.
+     az implementacios bubble csak a live activation-core pass-path scope-ot vigye, es ne huzza vissza ugyanebbe a slice-ba a convergence, rework/recovery vagy start/resume residual closure-t.
    - scope rule:
-     ez contract-authoring task legyen, ne threshold follow-up implementation es ne bypass activation.
-     A policy/config/UI/state/provenance contract specifikalhato, de a tenyleges runtime behavior, handoff topology, es activation kulon Phase 3B ownership maradjon.
-   - current-tree note:
-     a Phase 3A feladata nem ujrairni a threshold delivery truth surface-t, hanem arra epiteni a bypass contractot explicit prerequisite- es provenance-szabalyokkal.
-2. A Phase 3B activation task tovabbra is csak a Phase 3A contract utan vedheto successor:
-   `plans/tasks/runtime-review-policy-reviewer-bypass-activation-post-cutover-phase3b.md`
-3. Az archived `O2-T9` current-tree preserved baseline marad; a Phase 3A tasknak sem szabad runtime-capability cleanupot vagy opportunistic bypass-aktivaciot visszahoznia.
+     a bubble a tenyleges live runtime behavior, handoff topology, delivery es post-pass state activation-core closure-t szallitsa.
+   - branch rule:
+     clean `main`-rol induljon, uj bubble-ben.
+2. A kovetkezo immediate successor task a residual runtime alignment:
+   [runtime-review-policy-reviewer-bypass-residual-runtime-alignment-phase3c.md](/Users/felho/dev/pairflow/plans/tasks/runtime-review-policy-reviewer-bypass-residual-runtime-alignment-phase3c.md)
+   - delivery rule:
+     ez a task mar a Phase 3B activation-core truth-ra epuljon, es csak a residual convergence/meta-review/rework/start-resume branches-t zarja le.
+3. A Phase 3B activation-core task tovabbra is csak a merged es archivalt Phase 3A contract utan vedheto successor:
+   `plans/archive/tasks/runtime-review-policy-reviewer-bypass-contract-phase3a.md`
+4. Az archived `O2-T9` current-tree preserved baseline marad; sem a Phase 3B, sem a Phase 3C tasknak nem szabad runtime-capability cleanupot vagy opportunistic side-scope-ot visszahoznia.
 
 ## Decision Baseline
 
@@ -226,7 +230,7 @@ Ez a kombinacio tul sok helyen nyitott ownership-kerdest egyszerre.
 |---|---|---|---|---|
 | Phase 1 | Shared runtime review policy foundation + authority simplification | jelenlegi bubble tanulsagai, `plans/tasks/review-policy-runtime-surface-and-rollout-phase1.md`, actor-runtime migration plan, es ez a reset plan | canonical policy type/schema, single projection builder a jelenlegi `list/status` consume familyhez, single mutation seam, threshold authority resolver boundary | a policy/read/write/authority felelossegek explicitten szet vannak valasztva; nincs meg bypass behavior; `detail` nincs implicitten Phase 1-be huzva |
 | Phase 2 | Auto-rework severity threshold delivery a canonical gate boundaryn | Phase 1 foundation | threshold-aware routing a meta-review gate boundaryn, bounded read-surface exposure, regressziozaras | a threshold feature reszertelmet ad clean mainrol, UI/store blast radius nelkul vagy minimalis operatori exposure-rel |
-| Phase 3 | Reviewer bypass contract now, activation later | Phase 1 foundation + historical reviewer/meta-reviewer cutover baseline + current-tree actor-runtime successor baseline | bypass policy/config/UI/state contract spec, majd kulon activation task | a bypass behavior nem csuszik vissza foundation/threshold slice-ba; az aktivacio kulon taskban tortenik |
+| Phase 3 | Reviewer bypass contract, activation core, majd residual runtime alignment | Phase 1 foundation + historical reviewer/meta-reviewer cutover baseline + current-tree actor-runtime successor baseline | bypass policy/config/UI/state contract spec, majd kulon activation-core task, majd kulon residual runtime alignment task | a bypass behavior nem csuszik vissza foundation/threshold slice-ba; az activation core es a residual runtime branches kulon taskban zarulnak |
 
 ## Recommended Task Split
 
@@ -278,11 +282,17 @@ Ez a kombinacio tul sok helyen nyitott ownership-kerdest egyszerre.
      - tenyleges scheduler/router topology valtas
 
 4. `plans/tasks/runtime-review-policy-reviewer-bypass-activation-post-cutover-phase3b.md`
-   - cel: bypass runtime behavior aktivacio a reviewer + meta-reviewer cutover utan
+   - cel: bypass live activation core a reviewer + meta-reviewer cutover utan
    - explicit dependency:
      - historical reviewer cutover baseline preserved
      - historical meta-reviewer cutover baseline preserved
      - current-tree actor-runtime successor baseline nem regresszalodik
+
+5. `plans/tasks/runtime-review-policy-reviewer-bypass-residual-runtime-alignment-phase3c.md`
+   - cel: residual convergence/meta-review/rework/start-resume runtime branches alignmentja a Phase 3B activation core utan
+   - explicit dependency:
+     - Phase 3B activation-core truth mar letezik
+     - a residual branches nem gyarthatnak sajat bypass authorityt
 
 ## Phase 1 Refactor Boundary
 
@@ -368,7 +378,7 @@ Phase 1 authoring guard:
    Mitigation: Phase 1 explicit deliverable legyen a single authority resolver + single projection builder.
 
 3. Risk: a bypass specifikacio ujra belerangatja a runtime behavior kerdeseit.
-   Mitigation: Phase 3A es 3B kulon task, kulon acceptance criteria-val.
+   Mitigation: Phase 3A contract, Phase 3B activation-core, es Phase 3C residual runtime alignment kulon task, kulon acceptance criteria-val.
 
 4. Risk: az adjacent actor-runtime successor residual cleanup es a review-policy lane osszecsuszik.
    Mitigation: az archived `O2-T9` preserved baseline maradjon kulon boundary; a review-policy Phase 1 ne vallaljon runtime-capability contract cleanupot.
