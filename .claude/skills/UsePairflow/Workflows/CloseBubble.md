@@ -110,7 +110,7 @@ pairflow bubble status --id <BUBBLE_ID> --repo <REPO_PATH> --json
     ```
   - Add `--push` only if PUSH is true.
   - Add `--delete-remote` only if DELETE_REMOTE is true.
-  - Remote bubble note: this routed merge executes on the remote and may push there, but it does not automatically update the laptop's local checkout.
+  - Remote bubble note: this routed merge still runs from the laptop/local repo, imports the started-remote handoff, completes the durable merge in that local repo, then performs remote cleanup. Do not describe it as remote merge/push plus later local checkout sync.
 - If merge returns conflict/error indicating manual conflict resolution is required, STOP and report exact error.
 
 ### 5. Post-merge verification
@@ -126,8 +126,9 @@ Apply only if merge succeeded.
    - `README.md`: update when CLI behavior, flags, UX flow, or user-visible runtime behavior changed.
    - `docs/` content: update when workflow/policy/spec behavior changed beyond README-level notes.
    - Progress tracker: if repository has a relevant tracker (for example under `docs/` or `progress/`), update implementation status/evidence pointers.
-2. If the bubble was remote and the merge succeeded, sync the local checkout to the merged base branch before making local follow-up edits:
-   - use a project-safe fast-forward update flow (for example `git pull --ff-only origin <BASE_BRANCH>`) rather than assuming the local checkout already contains the merged changes.
+2. If other clones/checkouts also need the merged base branch after a remote bubble merge, sync those explicitly:
+   - use a project-safe fast-forward update flow (for example `git pull --ff-only origin <BASE_BRANCH>`) for those other checkouts.
+   - Do not assume the current local checkout needs this after started-remote merge; it is already the durable merge target on the retained routed path.
 3. Apply required updates immediately on `main`.
 4. Archive the source task file (mirror layout) if `TASK_SOURCE_PATH` is known:
    - Source root must be: `<REPO_PATH>/plans/tasks/`

@@ -8,6 +8,7 @@ export interface BuildMergeBubbleResultInput {
   baseBranch: string;
   bubbleBranch: string;
   mergeCommitSha: string;
+  presentationRoute: "local" | "started_remote";
   pushedBaseBranch: boolean;
   deletedRemoteBranch: boolean;
   cleanupOutcome: MergeCleanupOutcome;
@@ -21,6 +22,7 @@ export function buildMergeBubbleResult(
     baseBranch: input.baseBranch,
     bubbleBranch: input.bubbleBranch,
     mergeCommitSha: input.mergeCommitSha,
+    presentationRoute: input.presentationRoute,
     pushedBaseBranch: input.pushedBaseBranch,
     deletedRemoteBranch: input.deletedRemoteBranch,
     tmuxSessionName: input.cleanupOutcome.tmuxSessionName,

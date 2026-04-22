@@ -443,6 +443,8 @@ pairflow bubble commit --id <id> --repo <repo> --auto
 pairflow bubble merge --id <id> --repo <repo> --push --delete-remote [--json]
 ```
 
+For local bubbles, `--push` / `--delete-remote` remain optional closeout flags. For started-remote bubbles, run the same merge command from the laptop/local repo, but the durable merge completes in that local repo from the remote handoff and those flags are rejected on that route.
+
 Agent-side commands from the bubble worktree:
 
 ```bash
@@ -553,7 +555,7 @@ pairflow bubble commit --id feat_login --repo /path/to/myapp --auto
 
 # 9. Merge + cleanup
 #    Merge bubble branch into base branch and clean runtime/worktree artifacts.
-#    Add --push/--delete-remote if you also want remote updates.
+#    Add --push/--delete-remote only on the local route if you also want origin updates.
 pairflow bubble merge --id feat_login --repo /path/to/myapp --push --delete-remote
 ```
 
@@ -872,7 +874,7 @@ Ideation note:
 | `bubble approve --id <id> [--override-non-approve] [--override-reason <text>] [--repo <path>] [--ref <path>]...` | Approve for commit from `READY_FOR_HUMAN_APPROVAL` |
 | `bubble request-rework --id <id> --message <text> [--repo <path>] [--ref <path>]...` | Send back for rework (`READY_FOR_HUMAN_APPROVAL`: immediate; `WAITING_HUMAN`: queues deferred deterministic rework intent) |
 | `bubble commit --id <id> [--repo <path>] [--message <text>] [--ref <path>]...` | Commit and finalize |
-| `bubble merge --id <id> [--repo <path>] [--push] [--delete-remote] [--json]` | Merge bubble branch and clean up |
+| `bubble merge --id <id> [--repo <path>] [--push] [--delete-remote] [--json]` | Merge bubble branch and clean up. `--push` / `--delete-remote` stay local-route only; started-remote merge completes the durable merge in the local repo and rejects those flags. |
 | `bubble reconcile [--repo <path>] [--dry-run] [--json]` | Clean up stale sessions |
 | `bubble watchdog --id <id> [--repo <path>] [--json]` | Check for stuck agents |
 Autonomous meta-review results are submitted through the canonical actor channel: `pairflow agent emit --kind meta_review_result ...`. Operator inspection uses `bubble status` / `bubble restart`; there is no public `bubble meta-review` subcommand family.
