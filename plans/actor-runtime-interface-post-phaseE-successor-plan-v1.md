@@ -448,8 +448,24 @@ owners:
      - a deprecated top-level meta-review gate runtime alias surface teljesen kikerult a shared contractbol, emit/wrapper forwardingbol es pane-binding notify fallback shape-bol,
      - a canonical nested `tmux.*` runtime capability ownership egyeduli consume formakent maradt meg,
      - az observation truth (`confirmed | uncertain | failed`) preserved baseline maradt, es a deprecated parity coverage teljesen megszunt.
-18. Emiatt az `Opportunity 2` canonical boundary closure-ja es a full compatibility-surface removal olvasatu closeoutja is lezart current-tree allapot.
-19. A current next bounded successor mar az `O3-T1`, de csak akkor nyithato implementation taskkent, ha az onboarding / extension-surface follow-up tenylegesen prioritast kap.
+18. A 2026-04-22-es utolagos current-tree audit ugyanakkor explicit residual launch compatibility surface-t talalt:
+   - retained `LaunchBubbleTmuxSession*` alias/result/port vocabulary a shared launch contractban,
+   - retained `launchBubbleTmuxSessionAck` / `launchBubbleTmuxSession` override es fallback bridge a start consume-familyben,
+   - retained `tmux`-specifikus launch failure taxonomy (`LAUNCH_ACK_TMUX_COMMAND_FAILED`, `tmux_command_failed`) a canonical launch boundaryn,
+   - retained launch compat repo-root/public export surface.
+19. A task-mode ReviewSpec ellenorzes alapjan ez a residual launch lane nem maradhat egyetlen bounded task:
+   - elobb a canonical launch shared-contract es producer termeket kell neutral closed termsre atallitani,
+   - csak ezutan torolheto bounded consumer/export closeoutkent a teljes retained launch compat surface.
+20. Emiatt az `Opportunity 2` residual launch lane ket taskra bomlik:
+   - `O2-T12` launch contract foundation neutralization
+   - `O2-T13` launch compatibility surface removal
+21. Az uj current next bounded successor az `O2-T12`:
+   - task artifact: `plans/tasks/actor-runtime-interface-opportunity2-task12-launch-contract-foundation-neutralization.md`
+   - scope: canonical launch shared-contract exact neutralization + producer term closure
+22. Az `O2-T13` csak az `O2-T12` utan nyithato:
+   - task artifact: `plans/tasks/actor-runtime-interface-opportunity2-task13-launch-compatibility-surface-removal.md`
+   - scope: retained launch compat alias/wrapper/export/test surface teljes torlese zero-hit closeouttal
+23. Az `O3-T1` tovabbra is deferred successor marad, de nem current next bounded successor addig, amig az `O2-T12` + `O2-T13` closeout nem tortenik meg vagy explicit defer dontes nem szuletik roluk.
 
 ## Done Definition
 
@@ -469,7 +485,7 @@ owners:
    - kulon `O1-T4` nem nyilt meg
    - disposition: closed on current tree
 2. `Opportunity 2`
-   - completed residual cleanup lane
+   - reopened residual cleanup lane
    - completed slices:
      - `O2-T1` docs-only topology/delivery/executor boundary clarification
      - `O2-T2` topology-neutral delivery contract + retained adapter foundation
@@ -484,11 +500,17 @@ owners:
        - task artifact: `plans/archive/tasks/actor-runtime-interface-opportunity2-task10-delivery-compatibility-surface-removal.md`
      - `O2-T11` meta-review gate deprecated runtime alias removal
        - task artifact: `plans/archive/tasks/actor-runtime-interface-opportunity2-task11-meta-review-gate-deprecated-runtime-alias-removal.md`
-   - preserved baseline: a lezart typed ack/runtime-success semantics nem reopenolhato
-   - disposition: closed on current tree
+   - current bounded successor:
+     - `O2-T12` launch contract foundation neutralization
+     - task artifact: `plans/tasks/actor-runtime-interface-opportunity2-task12-launch-contract-foundation-neutralization.md`
+   - successor after `O2-T12`:
+     - `O2-T13` launch compatibility surface removal
+     - task artifact: `plans/tasks/actor-runtime-interface-opportunity2-task13-launch-compatibility-surface-removal.md`
+   - preserved baseline: a lezart typed ack/runtime-success semantics nem reopenolhato, de a retained launch lane strict closeoutja csak az `O2-T12` canonical neutralization es az `O2-T13` zero-hit compat removal utan mondhato ki
+   - disposition: open until `O2-T12` + `O2-T13` closeout or explicit defer decision
 3. `Opportunity 3`
    - deferred successor lane `O3-T1`
-   - current next bounded successor, ha a follow-up tenylegesen prioritas lesz
+   - csak az `O2-T12` + `O2-T13` utan lehet ujra current next bounded successor, ha a follow-up tenylegesen prioritas lesz
    - csak az `O1-T1` kernel boundary note-ra es az `O2-T1` delivery/executor boundary note-ra epulhet
 4. `Opportunity 4`
    - default szerint `O3-T1` resze
