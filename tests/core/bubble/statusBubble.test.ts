@@ -4,6 +4,7 @@ import { join } from "node:path";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { parseBubbleConfigToml, renderBubbleConfigToml } from "../../../src/config/bubbleConfig.js";
 import { emitAskHumanFromWorkspaceV11 as emitAskHumanFromWorkspace } from "../../../src/v11/application/askHuman/emitAskHumanV11.js";
 import { emitPassFromWorkspaceV11 as emitPassFromWorkspace } from "../../../src/v11/application/pass/emitPassV11.js";
 import { createBubble } from "../../../src/v11/application/create/createBubble.js";
@@ -147,6 +148,43 @@ describe("getBubbleStatus", () => {
     expect(status.state).toBe("RUNNING");
     expect(status.pendingInboxItems.humanQuestions).toBe(0);
     expect(status.transcript.lastMessageType).toBe("HUMAN_REPLY");
+  });
+
+  it("surfaces guarded meta-only review policy diagnostics in status views", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_status_policy_01",
+      task: "Status review policy"
+    });
+    const current = parseBubbleConfigToml(await readFile(bubble.paths.bubbleTomlPath, "utf8"));
+    await writeFile(
+      bubble.paths.bubbleTomlPath,
+      renderBubbleConfigToml({
+        ...current,
+        review_policy: {
+          review_loop_mode: "meta_only",
+          meta_review_auto_rework_min_severity: "P3"
+        }
+      }),
+      "utf8"
+    );
+
+    const status = await getBubbleStatus({
+      bubbleId: bubble.bubbleId,
+      cwd: repoPath
+    });
+
+    expect(status.reviewPolicy).toEqual({
+      requested_loop_mode: "meta_only",
+      effective_loop_mode: "full",
+      support_status: "guarded",
+      meta_review_auto_rework_min_severity: "P3",
+      blocked_reason_code: "REVIEW_POLICY_META_ONLY_GUARDED",
+      blocked_prerequisites: ["reviewer_bypass_activation_phase3b_pending"],
+      provenance_note:
+        "Requested meta-only review remains guarded in Phase 3A; runtime execution stays on the full review loop until Phase 3B activation closes scheduler/router handoff ownership."
+    });
   });
 
   it("surfaces watchdog pane activity timing from runtime health record", async () => {

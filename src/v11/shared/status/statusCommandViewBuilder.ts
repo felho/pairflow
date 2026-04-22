@@ -35,6 +35,7 @@ export interface BubbleStatusView {
   bubbleId: string;
   repoPath: string;
   worktreePath: string;
+  bubbleToml?: string | undefined;
   bubbleStartedAt: string | null;
   state: BubbleLifecycleState;
   round: number;
@@ -157,6 +158,9 @@ function buildLocalBubbleStatusView(
     spec_lock_state: input.gateState.specLockState,
     round_gate_state: input.gateState.roundGateState,
     stateValidation: input.stateValidation,
+    ...(input.resolved.bubbleToml !== undefined
+      ? { bubbleToml: input.resolved.bubbleToml }
+      : {}),
     ...(input.remoteExecution !== undefined
       ? { remoteExecution: input.remoteExecution }
       : {})
@@ -191,6 +195,9 @@ function buildRemoteBubbleStatusView(
     spec_lock_state: input.remoteStatusSnapshot.specLockState,
     round_gate_state: input.remoteStatusSnapshot.roundGateState,
     stateValidation: input.remoteStatusSnapshot.stateValidation,
+    ...(input.resolved.bubbleToml !== undefined
+      ? { bubbleToml: input.resolved.bubbleToml }
+      : {}),
     remoteExecution: input.remoteExecution
   };
 }

@@ -17,6 +17,10 @@ import {
   projectApprovalDecisionDeliverySignalToUiDeliverySignal,
   projectApprovalDecisionDeliverySignalsToUiDeliverySignals
 } from "../../../src/v11/defaults/ui/routerDefaults.js";
+import {
+  UiBubbleReviewPolicyConflictError,
+  UiBubbleReviewPolicyStateConflictError
+} from "../../../src/v11/defaults/ui/updateBubbleReviewPolicyForUi.js";
 import { createUiRouter, resolveStaticAssetPath } from "../../../src/v11/infrastructure/ui/router.js";
 import type { UiEventsBroker } from "../../../src/v11/infrastructure/ui/events.js";
 import type { UiRepoScope } from "../../../src/v11/infrastructure/ui/repoScope.js";
@@ -2833,6 +2837,836 @@ describe("createUiRouter restart action", () => {
       expect(restartBubble).toHaveBeenCalledWith({
         bubbleId: "b-router-restart-01",
         repoPath
+      });
+    } finally {
+      await server.close();
+    }
+  });
+});
+
+describe("createUiRouter review policy action", () => {
+  function createReviewPolicyStatus(input: {
+    repoPath: string;
+    bubbleId: string;
+    state?: "RUNNING" | "DONE";
+  }) {
+    return {
+      bubbleId: input.bubbleId,
+      repoPath: input.repoPath,
+      worktreePath: "/tmp/worktree",
+      bubbleStartedAt: "2026-02-24T12:00:00.000Z",
+      state: input.state ?? "RUNNING",
+      round: 1,
+      activeAgent: "codex" as const,
+      activeRole: "implementer" as const,
+      activeSince: "2026-02-24T12:00:00.000Z",
+      lastCommandAt: "2026-02-24T12:00:30.000Z",
+      paneActivity: {
+        readStatus: "missing" as const,
+        lastChangedAt: null,
+        sampledAt: null,
+        sinceLastChangedSeconds: null,
+        sinceSampledSeconds: null,
+        lastSampleStatus: null,
+        lastSampleError: null,
+        sessionName: null,
+        targetPane: null
+      },
+      executionContext: null,
+      reviewPolicy: {
+        requested_loop_mode: "full" as const,
+        effective_loop_mode: "full" as const,
+        support_status: "enabled" as const,
+        meta_review_auto_rework_min_severity: "P1" as const
+      },
+      watchdog: {
+        monitored: true,
+        monitoredAgent: "codex" as const,
+        timeoutMinutes: 30,
+        referenceTimestamp: "2026-02-24T12:00:30.000Z",
+        deadlineTimestamp: "2026-02-24T12:30:30.000Z",
+        remainingSeconds: 1800,
+        expired: false
+      },
+      pendingInboxItems: {
+        humanQuestions: 0,
+        approvalRequests: 0,
+        total: 0
+      },
+      transcript: {
+        totalMessages: 1,
+        lastMessageType: "TASK" as const,
+        lastMessageTs: "2026-02-24T12:00:00.000Z",
+        lastMessageId: "msg_001"
+      },
+      metaReview: {
+        actor: "meta-reviewer" as const,
+        authorityActive: false,
+        runtimeDelivery: null
+      },
+      commandPath: {
+        status: "external" as const,
+        profile: "external" as const,
+        localEntrypoint: "/tmp/worktree/dist/cli/index.js",
+        activeEntrypoint: "/usr/local/bin/pairflow",
+        message: "external Pairflow CLI active",
+        pinnedCommand: "pairflow"
+      },
+      accuracy_critical: false,
+      last_review_verification: "missing" as const,
+      failing_gates: [],
+      spec_lock_state: {
+        state: "IMPLEMENTABLE" as const,
+        open_blocker_count: 0,
+        open_required_now_count: 0
+      },
+      round_gate_state: {
+        applies: false,
+        violated: false,
+        round: 1
+      },
+      stateValidation: null,
+      bubbleToml: `id = "${input.bubbleId}"`
+    };
+  }
+
+  it("routes review-policy updates to the dedicated dependency", async () => {
+    const repoPath = "/tmp/pairflow-ui-router-review-policy-repo";
+    const updateBubbleReviewPolicy = vi.fn(async () => ({
+      kind: "review_policy_updated" as const,
+      bubbleId: "b-router-policy-01",
+      reviewPolicy: {
+        requested_loop_mode: "meta_only" as const,
+        effective_loop_mode: "full" as const,
+        support_status: "guarded" as const,
+        meta_review_auto_rework_min_severity: "P1" as const,
+        blocked_reason_code: "REVIEW_POLICY_META_ONLY_GUARDED",
+        blocked_prerequisites: [
+          "reviewer_bypass_activation_phase3b_pending"
+        ],
+        provenance_note: "Phase 3A stays guarded."
+      },
+      previousRequestedLoopMode: "full" as const,
+      nextRequestedLoopMode: "meta_only" as const,
+      activationChange: "none" as const,
+      bubbleToml: "bubble.toml"
+    }));
+
+    const router = createUiRouter({
+      repoScope: {
+        repos: [repoPath],
+        has: (value: string) => Promise.resolve(value === repoPath)
+      },
+      events: {
+        subscribe: () => () => undefined,
+        getSnapshot: () => ({
+          id: 1,
+          ts: "2026-02-25T00:00:00.000Z",
+          type: "snapshot",
+          repos: [],
+          bubbles: []
+        }),
+        refreshNow: () => Promise.resolve(undefined),
+        addRepo: () => Promise.resolve(false),
+        removeRepo: () => Promise.resolve(false),
+        close: () => Promise.resolve(undefined)
+      },
+      dependencies: {
+        updateBubbleReviewPolicy
+      }
+    });
+    const server = await startRouterServer(router);
+
+    try {
+      const response = await fetch(
+        `${server.url}/api/bubbles/b-router-policy-01/update-review-policy?repo=${encodeURIComponent(repoPath)}`,
+        {
+          method: "POST",
+          headers: {
+            "content-type": "application/json"
+          },
+          body: JSON.stringify({
+            reviewLoopMode: "meta_only",
+            expectedBubbleToml: "id = \"b-router-policy-01\""
+          })
+        }
+      );
+      const payload = (await response.json()) as {
+        result: {
+          bubbleId: string;
+          activationChange: string;
+          reviewPolicy: {
+            requested_loop_mode: string;
+            effective_loop_mode: string;
+          };
+        };
+      };
+
+      expect(response.status).toBe(200);
+      expect(payload.result).toMatchObject({
+        bubbleId: "b-router-policy-01",
+        activationChange: "none",
+        reviewPolicy: {
+          requested_loop_mode: "meta_only",
+          effective_loop_mode: "full"
+        }
+      });
+      expect(updateBubbleReviewPolicy).toHaveBeenCalledWith({
+        bubbleId: "b-router-policy-01",
+        repoPath,
+        reviewLoopMode: "meta_only",
+        expectedBubbleToml: "id = \"b-router-policy-01\""
+      });
+    } finally {
+      await server.close();
+    }
+  });
+
+  it("rejects review-policy update when reviewLoopMode is invalid", async () => {
+    const repoPath = "/tmp/pairflow-ui-router-review-policy-invalid-repo";
+    const getBubbleStatus = vi.fn(async () =>
+      createReviewPolicyStatus({
+        repoPath,
+        bubbleId: "b-router-policy-invalid-01"
+      })
+    );
+    const updateBubbleReviewPolicy = vi.fn(async () => {
+      throw new Error("should not be called");
+    });
+
+    const router = createUiRouter({
+      repoScope: {
+        repos: [repoPath],
+        has: (value: string) => Promise.resolve(value === repoPath)
+      },
+      events: {
+        subscribe: () => () => undefined,
+        getSnapshot: () => ({
+          id: 1,
+          ts: "2026-02-25T00:00:00.000Z",
+          type: "snapshot",
+          repos: [],
+          bubbles: []
+        }),
+        refreshNow: () => Promise.resolve(undefined),
+        addRepo: () => Promise.resolve(false),
+        removeRepo: () => Promise.resolve(false),
+        close: () => Promise.resolve(undefined)
+      },
+      dependencies: {
+        getBubbleStatus,
+        updateBubbleReviewPolicy
+      }
+    });
+    const server = await startRouterServer(router);
+
+    try {
+      const response = await fetch(
+        `${server.url}/api/bubbles/b-router-policy-invalid-01/update-review-policy?repo=${encodeURIComponent(repoPath)}`,
+        {
+          method: "POST",
+          headers: {
+            "content-type": "application/json"
+          },
+          body: JSON.stringify({
+            reviewLoopMode: "meta"
+          })
+        }
+      );
+      const payload = (await response.json()) as {
+        error: {
+          code: string;
+          message: string;
+        };
+      };
+
+      expect(response.status).toBe(400);
+      expect(payload.error.code).toBe("bad_request");
+      expect(payload.error.message).toContain("reviewLoopMode");
+      expect(updateBubbleReviewPolicy).not.toHaveBeenCalled();
+    } finally {
+      await server.close();
+    }
+  });
+
+  it("rejects review-policy update when expectedBubbleToml is not a string", async () => {
+    const repoPath = "/tmp/pairflow-ui-router-review-policy-invalid-toml-repo";
+    const getBubbleStatus = vi.fn(async () =>
+      createReviewPolicyStatus({
+        repoPath,
+        bubbleId: "b-router-policy-invalid-02"
+      })
+    );
+    const updateBubbleReviewPolicy = vi.fn(async () => {
+      throw new Error("should not be called");
+    });
+
+    const router = createUiRouter({
+      repoScope: {
+        repos: [repoPath],
+        has: (value: string) => Promise.resolve(value === repoPath)
+      },
+      events: {
+        subscribe: () => () => undefined,
+        getSnapshot: () => ({
+          id: 1,
+          ts: "2026-02-25T00:00:00.000Z",
+          type: "snapshot",
+          repos: [],
+          bubbles: []
+        }),
+        refreshNow: () => Promise.resolve(undefined),
+        addRepo: () => Promise.resolve(false),
+        removeRepo: () => Promise.resolve(false),
+        close: () => Promise.resolve(undefined)
+      },
+      dependencies: {
+        getBubbleStatus,
+        updateBubbleReviewPolicy
+      }
+    });
+    const server = await startRouterServer(router);
+
+    try {
+      const response = await fetch(
+        `${server.url}/api/bubbles/b-router-policy-invalid-02/update-review-policy?repo=${encodeURIComponent(repoPath)}`,
+        {
+          method: "POST",
+          headers: {
+            "content-type": "application/json"
+          },
+          body: JSON.stringify({
+            reviewLoopMode: "meta_only",
+            expectedBubbleToml: { stale: true }
+          })
+        }
+      );
+      const payload = (await response.json()) as {
+        error: {
+          code: string;
+          message: string;
+        };
+      };
+
+      expect(response.status).toBe(400);
+      expect(payload.error.code).toBe("bad_request");
+      expect(payload.error.message).toContain("expectedBubbleToml");
+      expect(updateBubbleReviewPolicy).not.toHaveBeenCalled();
+    } finally {
+      await server.close();
+    }
+  });
+
+  it("rejects review-policy update once the bubble is already terminal", async () => {
+    const repoPath = "/tmp/pairflow-ui-router-review-policy-terminal-repo";
+    const bubbleId = "b-router-policy-terminal-01";
+    const updateBubbleReviewPolicy = vi.fn(async () => {
+      throw new UiBubbleReviewPolicyStateConflictError({
+        bubbleId,
+        currentState: "DONE"
+      });
+    });
+
+    const router = createUiRouter({
+      repoScope: {
+        repos: [repoPath],
+        has: (value: string) => Promise.resolve(value === repoPath)
+      },
+      events: {
+        subscribe: () => () => undefined,
+        getSnapshot: () => ({
+          id: 1,
+          ts: "2026-02-25T00:00:00.000Z",
+          type: "snapshot",
+          repos: [],
+          bubbles: []
+        }),
+        refreshNow: () => Promise.resolve(undefined),
+        addRepo: () => Promise.resolve(false),
+        removeRepo: () => Promise.resolve(false),
+        close: () => Promise.resolve(undefined)
+      },
+      dependencies: {
+        updateBubbleReviewPolicy
+      }
+    });
+    const server = await startRouterServer(router);
+
+    try {
+      const response = await fetch(
+        `${server.url}/api/bubbles/${bubbleId}/update-review-policy?repo=${encodeURIComponent(repoPath)}`,
+        {
+          method: "POST",
+          headers: {
+            "content-type": "application/json"
+          },
+          body: JSON.stringify({
+            reviewLoopMode: "meta_only",
+            expectedBubbleToml: "older"
+          })
+        }
+      );
+      const payload = (await response.json()) as {
+        error: {
+          code: string;
+          details?: Record<string, unknown>;
+          message: string;
+        };
+      };
+
+      expect(response.status).toBe(409);
+      expect(payload.error.code).toBe("conflict");
+      expect(payload.error.message).toContain("requires non-terminal mutable state");
+      expect(payload.error.details).toMatchObject({
+        bubbleId,
+        repoPath,
+        currentState: "DONE",
+        reasonCode: "REVIEW_POLICY_STATE_CONFLICT"
+      });
+      expect(updateBubbleReviewPolicy).toHaveBeenCalledWith({
+        bubbleId,
+        repoPath,
+        reviewLoopMode: "meta_only",
+        expectedBubbleToml: "older"
+      });
+    } finally {
+      await server.close();
+    }
+  });
+
+  it("rejects review-policy update when the request body is missing even if the bubble is terminal", async () => {
+    const repoPath = "/tmp/pairflow-ui-router-review-policy-terminal-missing-body-repo";
+    const bubbleId = "b-router-policy-terminal-missing-body-01";
+    const getBubbleStatus = vi.fn(async () =>
+      createReviewPolicyStatus({
+        repoPath,
+        bubbleId,
+        state: "DONE"
+      })
+    );
+    const updateBubbleReviewPolicy = vi.fn(async () => {
+      throw new Error("should not be called");
+    });
+
+    const router = createUiRouter({
+      repoScope: {
+        repos: [repoPath],
+        has: (value: string) => Promise.resolve(value === repoPath)
+      },
+      events: {
+        subscribe: () => () => undefined,
+        getSnapshot: () => ({
+          id: 1,
+          ts: "2026-02-25T00:00:00.000Z",
+          type: "snapshot",
+          repos: [],
+          bubbles: []
+        }),
+        refreshNow: () => Promise.resolve(undefined),
+        addRepo: () => Promise.resolve(false),
+        removeRepo: () => Promise.resolve(false),
+        close: () => Promise.resolve(undefined)
+      },
+      dependencies: {
+        getBubbleStatus,
+        updateBubbleReviewPolicy
+      }
+    });
+    const server = await startRouterServer(router);
+
+    try {
+      const response = await fetch(
+        `${server.url}/api/bubbles/${bubbleId}/update-review-policy?repo=${encodeURIComponent(repoPath)}`,
+        {
+          method: "POST"
+        }
+      );
+      const payload = (await response.json()) as {
+        error: {
+          code: string;
+          message: string;
+        };
+      };
+
+      expect(response.status).toBe(400);
+      expect(payload.error.code).toBe("bad_request");
+      expect(payload.error.message).toContain("Review policy request body must be a JSON object");
+      expect(getBubbleStatus).not.toHaveBeenCalled();
+      expect(updateBubbleReviewPolicy).not.toHaveBeenCalled();
+    } finally {
+      await server.close();
+    }
+  });
+
+  it("rejects review-policy update when the request body is not valid JSON", async () => {
+    const repoPath = "/tmp/pairflow-ui-router-review-policy-invalid-json-repo";
+    const bubbleId = "b-router-policy-invalid-json-01";
+    const getBubbleStatus = vi.fn(async () =>
+      createReviewPolicyStatus({
+        repoPath,
+        bubbleId
+      })
+    );
+    const updateBubbleReviewPolicy = vi.fn(async () => {
+      throw new Error("should not be called");
+    });
+
+    const router = createUiRouter({
+      repoScope: {
+        repos: [repoPath],
+        has: (value: string) => Promise.resolve(value === repoPath)
+      },
+      events: {
+        subscribe: () => () => undefined,
+        getSnapshot: () => ({
+          id: 1,
+          ts: "2026-02-25T00:00:00.000Z",
+          type: "snapshot",
+          repos: [],
+          bubbles: []
+        }),
+        refreshNow: () => Promise.resolve(undefined),
+        addRepo: () => Promise.resolve(false),
+        removeRepo: () => Promise.resolve(false),
+        close: () => Promise.resolve(undefined)
+      },
+      dependencies: {
+        getBubbleStatus,
+        updateBubbleReviewPolicy
+      }
+    });
+    const server = await startRouterServer(router);
+
+    try {
+      const response = await fetch(
+        `${server.url}/api/bubbles/${bubbleId}/update-review-policy?repo=${encodeURIComponent(repoPath)}`,
+        {
+          method: "POST",
+          headers: {
+            "content-type": "application/json"
+          },
+          body: "{"
+        }
+      );
+      const payload = (await response.json()) as {
+        error: {
+          code: string;
+          message: string;
+        };
+      };
+
+      expect(response.status).toBe(400);
+      expect(payload.error.code).toBe("bad_request");
+      expect(payload.error.message).toContain("Request body must be valid JSON");
+      expect(getBubbleStatus).not.toHaveBeenCalled();
+      expect(updateBubbleReviewPolicy).not.toHaveBeenCalled();
+    } finally {
+      await server.close();
+    }
+  });
+
+  it("maps review-policy write conflicts to HTTP 409 with current bubble detail", async () => {
+    const repoPath = "/tmp/pairflow-ui-router-review-policy-conflict-repo";
+    const bubbleId = "b-router-policy-conflict-01";
+    const updateBubbleReviewPolicy = vi.fn(async () => {
+      throw new UiBubbleReviewPolicyConflictError({
+        bubbleId,
+        currentBubbleToml: "id = \"b-router-policy-conflict-01\"\nreview_loop_mode = \"meta_only\"\n",
+        currentReviewPolicy: {
+          requested_loop_mode: "meta_only",
+          effective_loop_mode: "full",
+          support_status: "guarded",
+          meta_review_auto_rework_min_severity: "P1",
+          blocked_reason_code: "REVIEW_POLICY_META_ONLY_GUARDED"
+        }
+      });
+    });
+    const getBubbleStatus = vi.fn(async () =>
+      createReviewPolicyStatus({
+        repoPath,
+        bubbleId
+      })
+    );
+    const getBubbleInbox = vi.fn(async () => ({
+      bubbleId,
+      repoPath,
+      state: "RUNNING" as const,
+      pending: {
+        humanQuestions: 0,
+        approvalRequests: 0,
+        total: 0
+      },
+      items: []
+    }));
+    const readRuntimeSessionsRegistry = vi.fn(async () => ({}));
+
+    const router = createUiRouter({
+      repoScope: {
+        repos: [repoPath],
+        has: (value: string) => Promise.resolve(value === repoPath)
+      },
+      events: {
+        subscribe: () => () => undefined,
+        getSnapshot: () => ({
+          id: 1,
+          ts: "2026-02-25T00:00:00.000Z",
+          type: "snapshot",
+          repos: [],
+          bubbles: []
+        }),
+        refreshNow: () => Promise.resolve(undefined),
+        addRepo: () => Promise.resolve(false),
+        removeRepo: () => Promise.resolve(false),
+        close: () => Promise.resolve(undefined)
+      },
+      dependencies: {
+        updateBubbleReviewPolicy,
+        getBubbleStatus,
+        getBubbleInbox,
+        readRuntimeSessionsRegistry
+      }
+    });
+    const server = await startRouterServer(router);
+
+    try {
+      const response = await fetch(
+        `${server.url}/api/bubbles/${bubbleId}/update-review-policy?repo=${encodeURIComponent(repoPath)}`,
+        {
+          method: "POST",
+          headers: {
+            "content-type": "application/json"
+          },
+          body: JSON.stringify({
+            reviewLoopMode: "meta_only",
+            expectedBubbleToml: "older"
+          })
+        }
+      );
+      const payload = (await response.json()) as {
+        error: {
+          code: string;
+          details?: Record<string, unknown>;
+        };
+      };
+
+      expect(response.status).toBe(409);
+      expect(payload.error.code).toBe("conflict");
+      expect(payload.error.details).toMatchObject({
+        bubbleId,
+        repoPath,
+        reasonCode: "REVIEW_POLICY_WRITE_CONFLICT",
+        currentState: "RUNNING",
+        reviewPolicyConflict: {
+          bubbleId,
+          repoPath,
+          currentState: "RUNNING",
+          bubbleToml: "id = \"b-router-policy-conflict-01\"\nreview_loop_mode = \"meta_only\"\n",
+          reviewPolicy: {
+            requested_loop_mode: "meta_only",
+            effective_loop_mode: "full",
+            support_status: "guarded"
+          }
+        },
+        bubble: {
+          bubbleToml: "id = \"b-router-policy-conflict-01\"\nreview_loop_mode = \"meta_only\"\n",
+          reviewPolicy: {
+            requested_loop_mode: "meta_only",
+            effective_loop_mode: "full",
+            support_status: "guarded"
+          }
+        }
+      });
+      expect(getBubbleStatus).toHaveBeenCalledWith({
+        bubbleId,
+        repoPath
+      });
+      expect(getBubbleInbox).toHaveBeenCalledWith({
+        bubbleId,
+        repoPath
+      });
+    } finally {
+      await server.close();
+    }
+  });
+
+  it("keeps authoritative review-policy conflict context even when current bubble detail cannot be loaded", async () => {
+    const repoPath = "/tmp/pairflow-ui-router-review-policy-conflict-no-detail-repo";
+    const bubbleId = "b-router-policy-conflict-no-detail-01";
+    const updateBubbleReviewPolicy = vi.fn(async () => {
+      throw new UiBubbleReviewPolicyConflictError({
+        bubbleId,
+        currentBubbleToml:
+          "id = \"b-router-policy-conflict-no-detail-01\"\nreview_loop_mode = \"meta_only\"\n",
+        currentReviewPolicy: {
+          requested_loop_mode: "meta_only",
+          effective_loop_mode: "full",
+          support_status: "guarded",
+          meta_review_auto_rework_min_severity: "P1",
+          blocked_reason_code: "REVIEW_POLICY_META_ONLY_GUARDED"
+        }
+      });
+    });
+    const getBubbleStatus = vi.fn(async () =>
+      createReviewPolicyStatus({
+        repoPath,
+        bubbleId
+      })
+    );
+    const getBubbleInbox = vi.fn(async () => {
+      throw new Error("inbox unavailable");
+    });
+    const readRuntimeSessionsRegistry = vi.fn(async () => {
+      throw new Error("runtime registry unavailable");
+    });
+
+    const router = createUiRouter({
+      repoScope: {
+        repos: [repoPath],
+        has: (value: string) => Promise.resolve(value === repoPath)
+      },
+      events: {
+        subscribe: () => () => undefined,
+        getSnapshot: () => ({
+          id: 1,
+          ts: "2026-02-25T00:00:00.000Z",
+          type: "snapshot",
+          repos: [],
+          bubbles: []
+        }),
+        refreshNow: () => Promise.resolve(undefined),
+        addRepo: () => Promise.resolve(false),
+        removeRepo: () => Promise.resolve(false),
+        close: () => Promise.resolve(undefined)
+      },
+      dependencies: {
+        updateBubbleReviewPolicy,
+        getBubbleStatus,
+        getBubbleInbox,
+        readRuntimeSessionsRegistry
+      }
+    });
+    const server = await startRouterServer(router);
+
+    try {
+      const response = await fetch(
+        `${server.url}/api/bubbles/${bubbleId}/update-review-policy?repo=${encodeURIComponent(repoPath)}`,
+        {
+          method: "POST",
+          headers: {
+            "content-type": "application/json"
+          },
+          body: JSON.stringify({
+            reviewLoopMode: "meta_only",
+            expectedBubbleToml: "older"
+          })
+        }
+      );
+      const payload = (await response.json()) as {
+        error: {
+          code: string;
+          details?: Record<string, unknown>;
+        };
+      };
+
+      expect(response.status).toBe(409);
+      expect(payload.error.code).toBe("conflict");
+      expect(payload.error.details).toMatchObject({
+        bubbleId,
+        repoPath,
+        reasonCode: "REVIEW_POLICY_WRITE_CONFLICT",
+        currentState: null,
+        reviewPolicyConflict: {
+          bubbleId,
+          repoPath,
+          currentState: null,
+          bubbleToml:
+            "id = \"b-router-policy-conflict-no-detail-01\"\nreview_loop_mode = \"meta_only\"\n",
+          reviewPolicy: {
+            requested_loop_mode: "meta_only",
+            effective_loop_mode: "full",
+            support_status: "guarded"
+          }
+        }
+      });
+      expect(payload.error.details).not.toHaveProperty("bubble");
+    } finally {
+      await server.close();
+    }
+  });
+
+  it("maps locked review-policy state revalidation conflicts to HTTP 409", async () => {
+    const repoPath = "/tmp/pairflow-ui-router-review-policy-state-recheck-repo";
+    const bubbleId = "b-router-policy-state-recheck-01";
+    const getBubbleStatus = vi.fn(async () =>
+      createReviewPolicyStatus({
+        repoPath,
+        bubbleId,
+        state: "RUNNING"
+      })
+    );
+    const updateBubbleReviewPolicy = vi.fn(async () => {
+      throw new UiBubbleReviewPolicyStateConflictError({
+        bubbleId,
+        currentState: "DONE"
+      });
+    });
+
+    const router = createUiRouter({
+      repoScope: {
+        repos: [repoPath],
+        has: (value: string) => Promise.resolve(value === repoPath)
+      },
+      events: {
+        subscribe: () => () => undefined,
+        getSnapshot: () => ({
+          id: 1,
+          ts: "2026-02-25T00:00:00.000Z",
+          type: "snapshot",
+          repos: [],
+          bubbles: []
+        }),
+        refreshNow: () => Promise.resolve(undefined),
+        addRepo: () => Promise.resolve(false),
+        removeRepo: () => Promise.resolve(false),
+        close: () => Promise.resolve(undefined)
+      },
+      dependencies: {
+        getBubbleStatus,
+        updateBubbleReviewPolicy
+      }
+    });
+    const server = await startRouterServer(router);
+
+    try {
+      const response = await fetch(
+        `${server.url}/api/bubbles/${bubbleId}/update-review-policy?repo=${encodeURIComponent(repoPath)}`,
+        {
+          method: "POST",
+          headers: {
+            "content-type": "application/json"
+          },
+          body: JSON.stringify({
+            reviewLoopMode: "meta_only",
+            expectedBubbleToml: "older"
+          })
+        }
+      );
+      const payload = (await response.json()) as {
+        error: {
+          code: string;
+          details?: Record<string, unknown>;
+          message: string;
+        };
+      };
+
+      expect(response.status).toBe(409);
+      expect(payload.error.code).toBe("conflict");
+      expect(payload.error.message).toContain("non-terminal mutable state");
+      expect(payload.error.details).toMatchObject({
+        bubbleId,
+        repoPath,
+        currentState: "DONE",
+        reasonCode: "REVIEW_POLICY_STATE_CONFLICT"
       });
     } finally {
       await server.close();

@@ -10,6 +10,12 @@ import type {
 
 export const REVIEW_POLICY_META_ONLY_GUARDED =
   "REVIEW_POLICY_META_ONLY_GUARDED" as const;
+export const REVIEW_POLICY_META_ONLY_PHASE3B_PENDING =
+  "reviewer_bypass_activation_phase3b_pending" as const;
+export const REVIEW_POLICY_META_ONLY_PROVENANCE_NOTE =
+  (
+    "Requested meta-only review remains guarded in Phase 3A; runtime execution stays on the full review loop until Phase 3B activation closes scheduler/router handoff ownership."
+  ) as const;
 
 export type NormalizedBubbleReviewPolicy = BubbleReviewPolicyConfig;
 
@@ -36,7 +42,9 @@ export function buildBubbleReviewPolicyRuntimeView(
       support_status: "guarded",
       meta_review_auto_rework_min_severity:
         normalized.meta_review_auto_rework_min_severity,
-      blocked_reason_code: REVIEW_POLICY_META_ONLY_GUARDED
+      blocked_reason_code: REVIEW_POLICY_META_ONLY_GUARDED,
+      blocked_prerequisites: [REVIEW_POLICY_META_ONLY_PHASE3B_PENDING],
+      provenance_note: REVIEW_POLICY_META_ONLY_PROVENANCE_NOTE
     };
   }
 

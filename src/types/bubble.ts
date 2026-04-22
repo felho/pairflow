@@ -180,6 +180,8 @@ export interface BubbleReviewPolicyRuntimeView {
   support_status: BubbleReviewSupportStatus;
   meta_review_auto_rework_min_severity: BubbleReviewAutoReworkSeverity;
   blocked_reason_code?: string;
+  blocked_prerequisites?: string[];
+  provenance_note?: string;
 }
 
 export interface PairflowRemoteHostConfig {

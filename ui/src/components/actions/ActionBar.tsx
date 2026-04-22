@@ -19,6 +19,7 @@ const actionLabels: Partial<Record<BubbleActionKind, string>> = {
   "request-rework": "Request Rework",
   reply: "Reply",
   resume: "Resume",
+  "update-review-policy": "Review Policy",
   restart: "Restart",
   commit: "Commit",
   merge: "Merge",
@@ -30,11 +31,19 @@ const actionLabels: Partial<Record<BubbleActionKind, string>> = {
 type ModalAction = "request-rework" | "reply";
 
 function resolveActionLabel(
-  bubbleState: BubbleCardModel["state"],
+  bubble: BubbleCardModel,
   action: BubbleActionKind
 ): string | undefined {
-  if (action === "request-rework" && bubbleState === "WAITING_HUMAN") {
+  if (action === "request-rework" && bubble.state === "WAITING_HUMAN") {
     return "Queue Rework";
+  }
+  if (action === "update-review-policy") {
+    if (bubble.reviewPolicy === null) {
+      return "Review Policy Unavailable";
+    }
+    return bubble.reviewPolicy.requested_loop_mode === "meta_only"
+      ? "Full Review"
+      : "Meta-Only";
   }
   return actionLabels[action];
 }
@@ -53,6 +62,7 @@ function buttonTone(action: BubbleActionKind): string {
     case "reply":
       return "border-amber-500/70 bg-amber-500/[0.08] text-amber-500";
     case "restart":
+    case "update-review-policy":
       return "border-cyan-500/70 bg-cyan-500/[0.08] text-cyan-400";
     default:
       return "border-[#333] bg-[#1a1a1a] text-[#aaa] hover:border-[#555] hover:text-white";
@@ -87,6 +97,7 @@ function renderActionContent(action: BubbleActionKind, label: string): JSX.Eleme
 
 export interface ActionBarProps {
   bubble: BubbleCardModel;
+  expectedBubbleToml?: string | null;
   attach: AttachAvailability;
   isSubmitting: boolean;
   actionError: string | null;
@@ -94,6 +105,12 @@ export interface ActionBarProps {
   actionFailure: BubbleActionKind | null;
   onAction(input: RunBubbleActionInput): Promise<void>;
   onClearFeedback(): void;
+}
+
+function hasExpectedBubbleTomlValue(
+  expectedBubbleToml: string | null | undefined
+): expectedBubbleToml is string {
+  return typeof expectedBubbleToml === "string" && expectedBubbleToml.length > 0;
 }
 
 export function ActionBar(props: ActionBarProps): JSX.Element {
@@ -115,6 +132,28 @@ export function ActionBar(props: ActionBarProps): JSX.Element {
   const invokeAction = async (action: BubbleActionKind): Promise<void> => {
     props.onClearFeedback();
     try {
+      if (action === "update-review-policy") {
+        const reviewPolicy = props.bubble.reviewPolicy;
+        if (reviewPolicy === null) {
+          throw new Error("Review policy is unavailable until the latest bubble detail loads.");
+        }
+        const expectedBubbleToml = props.expectedBubbleToml;
+        if (!hasExpectedBubbleTomlValue(expectedBubbleToml)) {
+          throw new Error(
+            "Review policy update is unavailable until the latest bubble detail revision loads."
+          );
+        }
+        await props.onAction({
+          bubbleId: props.bubble.bubbleId,
+          action,
+          reviewLoopMode:
+            reviewPolicy.requested_loop_mode === "meta_only"
+              ? "full"
+              : "meta_only",
+          expectedBubbleToml
+        });
+        return;
+      }
       await props.onAction({
         bubbleId: props.bubble.bubbleId,
         action
@@ -181,7 +220,7 @@ export function ActionBar(props: ActionBarProps): JSX.Element {
           const openCommit = action === "commit";
           const openMerge = action === "merge";
           const needsModal = action === "request-rework" || action === "reply";
-          const label = resolveActionLabel(props.bubble.state, action);
+          const label = resolveActionLabel(props.bubble, action);
           if (label === undefined) {
             return null;
           }
@@ -210,7 +249,16 @@ export function ActionBar(props: ActionBarProps): JSX.Element {
               }}
               aria-label={label}
               title={label}
-              disabled={props.isSubmitting}
+              disabled={
+                props.isSubmitting
+                || (
+                  action === "update-review-policy"
+                  && (
+                    props.bubble.reviewPolicy === null
+                    || !hasExpectedBubbleTomlValue(props.expectedBubbleToml)
+                  )
+                )
+              }
             >
               {renderActionContent(action, label)}
             </button>

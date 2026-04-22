@@ -40,6 +40,10 @@ function repoLabel(repoPath: string): string {
   return parts[parts.length - 1] ?? repoPath;
 }
 
+function formatLoopMode(loopMode: "full" | "meta_only"): string {
+  return loopMode === "meta_only" ? "meta-only" : "full";
+}
+
 function asMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
@@ -121,7 +125,19 @@ export function BubbleExpandedCard(props: BubbleExpandedCardProps): JSX.Element 
   }, [stopDrag]);
 
   const attachSource = props.detail ?? props.bubble;
+  const actionBubble =
+    props.detail === null
+      ? props.bubble
+      : {
+          ...props.bubble,
+          state: props.detail.state,
+          round: props.detail.round,
+          activeAgent: props.detail.activeAgent,
+          activeRole: props.detail.activeRole,
+          reviewPolicy: props.detail.reviewPolicy
+        };
   const attention = attachSource.attention;
+  const reviewPolicy = attachSource.reviewPolicy;
   const visual = stateVisuals[attachSource.state];
   const borderClass = resolveBubbleBorder(attachSource);
   const attach = getAttachAvailability({
@@ -147,11 +163,11 @@ export function BubbleExpandedCard(props: BubbleExpandedCardProps): JSX.Element 
   }, [props.bubble.bubbleId]);
 
   const pendingQuestion =
-    props.bubble.state === "WAITING_HUMAN" && props.detail !== null
+    attachSource.state === "WAITING_HUMAN" && props.detail !== null
       ? props.detail.inbox.items.find((item) => item.type === "HUMAN_QUESTION") ?? null
       : null;
   const timelineExtras =
-    props.bubble.state === "READY_FOR_HUMAN_APPROVAL" &&
+    attachSource.state === "READY_FOR_HUMAN_APPROVAL" &&
     props.detail !== null ? (
       <div className="space-y-2 pb-1">
         <div className="rounded-[10px] border border-emerald-500/15 bg-emerald-500/[0.05] px-3 py-2.5">
@@ -262,7 +278,7 @@ export function BubbleExpandedCard(props: BubbleExpandedCardProps): JSX.Element 
             {repoLabel(props.bubble.repoPath)}
           </span>
           <span className="rounded-md border border-[#333] bg-[#1a1a1a] px-1.5 py-px font-mono text-[9px]">
-            R{props.bubble.round}
+            R{attachSource.round}
           </span>
           <span className="flex items-center gap-1.5">
             <span className={cn("inline-block h-[7px] w-[7px] rounded-full", visual.led)} />
@@ -306,12 +322,49 @@ export function BubbleExpandedCard(props: BubbleExpandedCardProps): JSX.Element 
         </div>
       ) : null}
 
+      <div className="mx-4 mb-2.5 rounded-[10px] border border-sky-500/15 bg-sky-500/[0.05] px-3 py-2.5">
+        <div className="mb-1 text-[9px] font-semibold uppercase tracking-wider text-sky-400">
+          Review Policy
+        </div>
+        {reviewPolicy === null ? (
+          <div className="text-[10px] leading-relaxed text-[#9a9a9a]">
+            Review policy view is unavailable. UI stays fail-closed until a canonical policy snapshot is present.
+          </div>
+        ) : (
+          <div className="space-y-1.5 text-[10px] leading-relaxed text-[#cfd8e3]">
+            <div className="flex flex-wrap gap-x-3 gap-y-1">
+              <span>Requested: <span className="font-mono text-white">{formatLoopMode(reviewPolicy.requested_loop_mode)}</span></span>
+              <span>Effective: <span className="font-mono text-white">{formatLoopMode(reviewPolicy.effective_loop_mode)}</span></span>
+              <span>Support: <span className="font-mono text-white">{reviewPolicy.support_status}</span></span>
+            </div>
+            <div className="text-[#9fb3c8]">
+              Policy updates only change the requested mode in Phase 3A. Runtime stays on the effective full loop until activation lands in a later phase.
+            </div>
+            {reviewPolicy.blocked_reason_code !== undefined ? (
+              <div className="font-mono text-[9px] uppercase tracking-wide text-amber-300">
+                Guard: {reviewPolicy.blocked_reason_code}
+              </div>
+            ) : null}
+            {reviewPolicy.blocked_prerequisites !== undefined
+            && reviewPolicy.blocked_prerequisites.length > 0 ? (
+              <div className="text-[#b8c2cc]">
+                Prerequisites: {reviewPolicy.blocked_prerequisites.join(", ")}
+              </div>
+            ) : null}
+            {reviewPolicy.provenance_note !== undefined ? (
+              <div className="text-[#8fa0b1]">{reviewPolicy.provenance_note}</div>
+            ) : null}
+          </div>
+        )}
+      </div>
+
       {/* Action buttons + timeline toggle */}
       <div className="mb-2.5 px-4">
         <div className="flex items-center justify-between">
           <div className="flex-1">
             <ActionBar
-              bubble={props.bubble}
+              bubble={actionBubble}
+              expectedBubbleToml={props.detail?.bubbleToml ?? null}
               attach={attach}
               isSubmitting={props.actionLoading}
               actionError={props.actionError}

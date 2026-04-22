@@ -3,6 +3,8 @@ import type {
   BubbleDeleteResult,
   CommitActionInput,
   MergeActionInput,
+  UpdateReviewPolicyActionInput,
+  UpdateReviewPolicyActionResult,
   UiApiErrorBody,
   UiBubbleDetail,
   UiBubbleSummary,
@@ -90,6 +92,11 @@ export interface PairflowApiClient {
     repoPath: string,
     bubbleId: string
   ) => Promise<Record<string, unknown>>;
+  updateReviewPolicy: (
+    repoPath: string,
+    bubbleId: string,
+    input: UpdateReviewPolicyActionInput
+  ) => Promise<UpdateReviewPolicyActionResult>;
   deleteBubble: (
     repoPath: string,
     bubbleId: string,
@@ -337,6 +344,19 @@ export function createApiClient(baseUrl: string = ""): PairflowApiClient {
 
     async restartBubble(repoPath: string, bubbleId: string): Promise<Record<string, unknown>> {
       return postBubbleAction(baseUrl, repoPath, bubbleId, "restart");
+    },
+
+    async updateReviewPolicy(
+      repoPath: string,
+      bubbleId: string,
+      input: UpdateReviewPolicyActionInput
+    ): Promise<UpdateReviewPolicyActionResult> {
+      return postBubbleAction(baseUrl, repoPath, bubbleId, "update-review-policy", {
+        reviewLoopMode: input.reviewLoopMode,
+        ...(input.expectedBubbleToml !== undefined
+          ? { expectedBubbleToml: input.expectedBubbleToml }
+          : {})
+      });
     },
 
     async deleteBubble(

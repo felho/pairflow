@@ -14,20 +14,24 @@ import {
   type RealtimeEventsClientInput
 } from "../lib/events";
 import type {
+  BubbleLifecycleState,
   BubbleActionKind,
   AttachActionResult,
+  BubbleReviewLoopMode,
   BubbleCardModel,
   BubbleDeleteResult,
   BubblePosition,
   CommitActionInput,
   ConnectionStatus,
   MergeActionInput,
+  UpdateReviewPolicyActionResult,
   UiBubbleDetail,
   UiBubbleSummary,
   UiRepoSummary,
   UiSnapshotEvent,
   UiTimelineEntry
 } from "../lib/types";
+import { bubbleLifecycleStates } from "../lib/types";
 
 const positionsStorageKey = "pairflow.ui.canvas.positions.v1";
 const expandedIdsStorageKey = "pairflow.ui.canvas.expandedIds.v1";
@@ -55,6 +59,8 @@ export interface RunBubbleActionInput {
   auto?: boolean;
   push?: boolean;
   deleteRemote?: boolean;
+  reviewLoopMode?: BubbleReviewLoopMode;
+  expectedBubbleToml?: string;
 }
 
 export interface BubbleStoreState {
@@ -134,6 +140,221 @@ function defaultMetaReviewSummary(): UiBubbleSummary["metaReview"] {
   };
 }
 
+function normalizeReviewPolicy(
+  input: unknown,
+  options: {
+    allowUnsupportedSupportStatusAlias?: boolean;
+    warningContext?: {
+      bubbleId?: string;
+      repoPath?: string;
+      source: "conflict_response";
+    };
+  } = {}
+): UiBubbleSummary["reviewPolicy"] {
+  if (input === undefined || input === null || typeof input !== "object") {
+    return null;
+  }
+  const candidate = input as Partial<NonNullable<UiBubbleSummary["reviewPolicy"]>>;
+  const rawSupportStatus = (input as { support_status?: unknown }).support_status;
+  const requestedLoopMode = candidate.requested_loop_mode;
+  const effectiveLoopMode = candidate.effective_loop_mode;
+  const supportStatus =
+    rawSupportStatus === "enabled" || rawSupportStatus === "guarded"
+      ? rawSupportStatus
+      : options.allowUnsupportedSupportStatusAlias === true
+        && rawSupportStatus === "unsupported"
+        ? "guarded"
+        : rawSupportStatus;
+  const severity = candidate.meta_review_auto_rework_min_severity;
+  if (
+    options.allowUnsupportedSupportStatusAlias === true
+    && rawSupportStatus === "unsupported"
+  ) {
+    console.warn(
+      "Normalizing non-canonical review-policy support_status 'unsupported' from a 409 conflict payload to canonical 'guarded'.",
+      {
+        ...(options.warningContext?.bubbleId !== undefined
+          ? { bubbleId: options.warningContext.bubbleId }
+          : {}),
+        ...(options.warningContext?.repoPath !== undefined
+          ? { repoPath: options.warningContext.repoPath }
+          : {}),
+        source: options.warningContext?.source ?? "conflict_response"
+      }
+    );
+  }
+  if (
+    (requestedLoopMode !== "full" && requestedLoopMode !== "meta_only")
+    || (effectiveLoopMode !== "full" && effectiveLoopMode !== "meta_only")
+    || (supportStatus !== "enabled" && supportStatus !== "guarded")
+    || (severity !== "P1" && severity !== "P2" && severity !== "P3")
+  ) {
+    return null;
+  }
+  return {
+    requested_loop_mode: requestedLoopMode,
+    effective_loop_mode: effectiveLoopMode,
+    support_status: supportStatus,
+    meta_review_auto_rework_min_severity: severity,
+    ...(typeof candidate.blocked_reason_code === "string"
+      ? { blocked_reason_code: candidate.blocked_reason_code }
+      : {}),
+    ...(Array.isArray(candidate.blocked_prerequisites)
+      && candidate.blocked_prerequisites.length > 0
+      && candidate.blocked_prerequisites.every((item) => typeof item === "string")
+      ? { blocked_prerequisites: candidate.blocked_prerequisites }
+      : {}),
+    ...(typeof candidate.provenance_note === "string"
+      ? { provenance_note: candidate.provenance_note }
+      : {})
+  };
+}
+
+function resolveActionRetryHint(
+  input: {
+    action: BubbleActionKind;
+    error: PairflowApiError;
+    usedConflictBubbleContext: boolean;
+    malformedConflictReviewPolicyPayload: boolean;
+    refreshConfirmed: boolean;
+  }
+): string | null {
+  if (input.error.status !== 409) {
+    return null;
+  }
+  if (input.action === "open" || input.action === "attach") {
+    return null;
+  }
+
+  const reasonCode =
+    typeof input.error.details?.reasonCode === "string"
+      ? input.error.details.reasonCode
+      : null;
+
+  if (input.action === "update-review-policy") {
+    if (reasonCode === "REVIEW_POLICY_WRITE_CONFLICT") {
+      if (
+        input.usedConflictBubbleContext
+        && input.malformedConflictReviewPolicyPayload
+      ) {
+        return "bubble.toml compare-and-swap conflict. Current bubble.toml/state came from the conflict response, but its reviewPolicy payload was malformed; refresh the bubble detail before retrying.";
+      }
+      if (input.usedConflictBubbleContext) {
+        return "bubble.toml compare-and-swap conflict. Current review-policy snapshot came from the conflict response; review it, then retry.";
+      }
+      if (input.refreshConfirmed) {
+        return "bubble.toml compare-and-swap conflict. A follow-up refresh completed; review the current review-policy snapshot, then retry.";
+      }
+      return "bubble.toml compare-and-swap conflict. Automatic refresh could not be confirmed; reload the bubble detail, then retry.";
+    }
+    if (reasonCode === "REVIEW_POLICY_STATE_CONFLICT") {
+      if (input.usedConflictBubbleContext) {
+        return "Review policy updates are disabled in the current lifecycle state. Current bubble context came from the conflict response.";
+      }
+      if (input.refreshConfirmed) {
+        return "Review policy updates are disabled in the current lifecycle state. A follow-up refresh completed.";
+      }
+      return "Review policy updates are disabled in the current lifecycle state. Automatic refresh could not be confirmed.";
+    }
+  }
+
+  return input.refreshConfirmed
+    ? "State changed in CLI/UI. Latest state was refetched. Review state, then retry."
+    : "State changed in CLI/UI. Automatic refresh could not be confirmed; reload state, then retry.";
+}
+
+interface ReviewPolicyConflictContext {
+  bubbleId: string;
+  repoPath: string;
+  currentState: BubbleLifecycleState | null;
+  bubbleToml: string;
+  reviewPolicy: NonNullable<UiBubbleSummary["reviewPolicy"]> | null;
+  reviewPolicyPayloadState: "present" | "missing" | "malformed";
+}
+
+function warnInvalidReviewPolicyConflictContext(input: {
+  bubbleId?: string;
+  repoPath?: string;
+  reviewPolicy: unknown;
+}): void {
+  console.warn(
+    "Ignoring review-policy conflict context because the 409 reviewPolicy payload is malformed.",
+    {
+      ...(input.bubbleId !== undefined ? { bubbleId: input.bubbleId } : {}),
+      ...(input.repoPath !== undefined ? { repoPath: input.repoPath } : {}),
+      reviewPolicy: input.reviewPolicy
+    }
+  );
+}
+
+function extractReviewPolicyConflictContext(
+  error: PairflowApiError
+): ReviewPolicyConflictContext | null {
+  if (error.status !== 409 || error.details === undefined) {
+    return null;
+  }
+
+  const candidate = error.details.reviewPolicyConflict;
+  if (
+    candidate === null
+    || candidate === undefined
+    || typeof candidate !== "object"
+    || Array.isArray(candidate)
+  ) {
+    return null;
+  }
+
+  const conflict = candidate as Partial<{
+    bubbleId: string;
+    repoPath: string;
+    currentState: BubbleLifecycleState;
+    bubbleToml: string;
+    reviewPolicy: UiBubbleSummary["reviewPolicy"];
+  }>;
+  const reviewPolicy = normalizeReviewPolicy(conflict.reviewPolicy, {
+    allowUnsupportedSupportStatusAlias: true,
+    warningContext: {
+      ...(typeof conflict.bubbleId === "string" ? { bubbleId: conflict.bubbleId } : {}),
+      ...(typeof conflict.repoPath === "string" ? { repoPath: conflict.repoPath } : {}),
+      source: "conflict_response"
+    }
+  });
+  if (reviewPolicy === null && conflict.reviewPolicy !== undefined) {
+    warnInvalidReviewPolicyConflictContext({
+      ...(typeof conflict.bubbleId === "string" ? { bubbleId: conflict.bubbleId } : {}),
+      ...(typeof conflict.repoPath === "string" ? { repoPath: conflict.repoPath } : {}),
+      reviewPolicy: conflict.reviewPolicy
+    });
+  }
+  if (
+    typeof conflict.bubbleId !== "string"
+    || typeof conflict.repoPath !== "string"
+    || typeof conflict.bubbleToml !== "string"
+  ) {
+    return null;
+  }
+
+  const currentState = bubbleLifecycleStates.includes(
+    conflict.currentState as BubbleLifecycleState
+  )
+    ? (conflict.currentState as BubbleLifecycleState)
+    : null;
+
+  return {
+    bubbleId: conflict.bubbleId,
+    repoPath: conflict.repoPath,
+    currentState,
+    bubbleToml: conflict.bubbleToml,
+    reviewPolicy,
+    reviewPolicyPayloadState:
+      reviewPolicy !== null
+        ? "present"
+        : conflict.reviewPolicy === undefined
+          ? "missing"
+          : "malformed"
+  };
+}
+
 function normalizeAttention(
   input: UiBubbleSummary["attention"] | undefined
 ): UiBubbleSummary["attention"] {
@@ -167,6 +388,7 @@ function normalizeBubbleSummary(input: UiBubbleSummary): UiBubbleSummary {
   return {
     ...input,
     attention: normalizeAttention((input as Partial<UiBubbleSummary>).attention),
+    reviewPolicy: normalizeReviewPolicy((input as Partial<UiBubbleSummary>).reviewPolicy),
     metaReview: {
       actor: "meta-reviewer",
       authorityActive: meta.authorityActive === true,
@@ -600,11 +822,11 @@ async function performBubbleAction(
   api: PairflowApiClient,
   bubble: BubbleCardModel,
   input: RunBubbleActionInput
-): Promise<void> {
+): Promise<UpdateReviewPolicyActionResult | null> {
   switch (input.action) {
     case "start":
       await api.startBubble(bubble.repoPath, bubble.bubbleId);
-      return;
+      return null;
     case "approve":
       await api.approveBubble(bubble.repoPath, bubble.bubbleId, {
         ...(input.refs !== undefined ? { refs: input.refs } : {}),
@@ -615,7 +837,7 @@ async function performBubbleAction(
           ? { overrideReason: input.overrideReason }
           : {})
       });
-      return;
+      return null;
     case "request-rework": {
       const message = input.message?.trim() ?? "";
       if (message.length === 0) {
@@ -625,7 +847,7 @@ async function performBubbleAction(
         message,
         ...(input.refs !== undefined ? { refs: input.refs } : {})
       });
-      return;
+      return null;
     }
     case "reply": {
       const message = input.message?.trim() ?? "";
@@ -636,14 +858,26 @@ async function performBubbleAction(
         message,
         ...(input.refs !== undefined ? { refs: input.refs } : {})
       });
-      return;
+      return null;
     }
     case "resume":
       await api.resumeBubble(bubble.repoPath, bubble.bubbleId);
-      return;
+      return null;
+    case "update-review-policy": {
+      const reviewLoopMode = input.reviewLoopMode;
+      if (reviewLoopMode === undefined) {
+        throw new Error("Review policy update requires a target review loop mode.");
+      }
+      return api.updateReviewPolicy(bubble.repoPath, bubble.bubbleId, {
+        reviewLoopMode,
+        ...(input.expectedBubbleToml !== undefined
+          ? { expectedBubbleToml: input.expectedBubbleToml }
+          : {})
+      });
+    }
     case "restart":
       await api.restartBubble(bubble.repoPath, bubble.bubbleId);
-      return;
+      return null;
     case "commit": {
       const commitInput: CommitActionInput = {
         auto: input.auto ?? true,
@@ -655,7 +889,7 @@ async function performBubbleAction(
           : {})
       };
       await api.commitBubble(bubble.repoPath, bubble.bubbleId, commitInput);
-      return;
+      return null;
     }
     case "merge": {
       const mergeInput: MergeActionInput = {
@@ -665,11 +899,11 @@ async function performBubbleAction(
           : {})
       };
       await api.mergeBubble(bubble.repoPath, bubble.bubbleId, mergeInput);
-      return;
+      return null;
     }
     case "open":
       await api.openBubble(bubble.repoPath, bubble.bubbleId);
-      return;
+      return null;
     case "attach":
       {
         const attachResult = await api.attachBubble(
@@ -687,10 +921,10 @@ async function performBubbleAction(
           }
         }
       }
-      return;
+      return null;
     case "stop":
       await api.stopBubble(bubble.repoPath, bubble.bubbleId);
-      return;
+      return null;
     case "delete":
       throw new Error(
         "Delete action requires two-phase confirmation and must use deleteBubble()."
@@ -1454,33 +1688,133 @@ export function createBubbleStore(
         });
 
         try {
-          await performBubbleAction(api, bubble, inputValue);
+          const result = await performBubbleAction(api, bubble, inputValue);
+
+          if (inputValue.action === "update-review-policy" && result !== null) {
+            const normalizedReviewPolicy = normalizeReviewPolicy(result.reviewPolicy);
+            if (normalizedReviewPolicy !== null && result.activationChange === "none") {
+              set((current) => {
+                const currentBubble = current.bubblesById[bubble.bubbleId];
+                if (currentBubble === undefined) {
+                  return {};
+                }
+
+                const nextBubble = {
+                  ...currentBubble,
+                  reviewPolicy: normalizedReviewPolicy
+                };
+                const next: Partial<BubbleStoreState> = {
+                  bubblesById: {
+                    ...current.bubblesById,
+                    [bubble.bubbleId]: nextBubble
+                  }
+                };
+                const currentDetail = current.bubbleDetails[bubble.bubbleId];
+
+                if (currentDetail !== undefined) {
+                  next.bubbleDetails = {
+                    ...current.bubbleDetails,
+                    [bubble.bubbleId]: mergeExpandedDetailWithIncomingDetail(
+                      currentDetail,
+                      normalizeBubbleDetail({
+                        ...currentDetail,
+                        reviewPolicy: normalizedReviewPolicy,
+                        bubbleToml: result.bubbleToml
+                      })
+                    )
+                  };
+                }
+
+                return next;
+              });
+              return;
+            }
+          }
+
           await refreshRepos([bubble.repoPath]);
           if (get().expandedBubbleIds.includes(bubble.bubbleId)) {
             await refreshExpandedBubble(bubble.bubbleId);
           }
         } catch (error) {
           const message = asMessage(error);
-          let retryHint: string | null = null;
+          let refreshConfirmed = false;
+          let usedConflictBubbleContext = false;
+          let malformedConflictReviewPolicyPayload = false;
 
           if (error instanceof PairflowApiError && error.status === 409) {
-            if (inputValue.action === "open" || inputValue.action === "attach") {
-              // Open/attach are not state-changing actions; show the actual error
-              // message instead of the generic "state changed" retry hint.
-              retryHint = null;
+            const reviewPolicyConflictContext =
+              inputValue.action === "update-review-policy"
+                ? extractReviewPolicyConflictContext(error)
+                : null;
+
+            if (reviewPolicyConflictContext !== null) {
+              usedConflictBubbleContext = true;
+              malformedConflictReviewPolicyPayload =
+                reviewPolicyConflictContext.reviewPolicyPayloadState === "malformed";
+              set((current) => {
+                const currentDetail = current.bubbleDetails[bubble.bubbleId];
+                const nextBubble = {
+                  ...(current.bubblesById[bubble.bubbleId] ?? bubble),
+                  ...(reviewPolicyConflictContext.currentState !== null
+                    ? { state: reviewPolicyConflictContext.currentState }
+                    : {}),
+                  ...(reviewPolicyConflictContext.reviewPolicy !== null
+                    ? { reviewPolicy: reviewPolicyConflictContext.reviewPolicy }
+                    : {})
+                };
+                return {
+                  bubblesById: {
+                    ...current.bubblesById,
+                    [bubble.bubbleId]: nextBubble
+                  },
+                  ...(currentDetail !== undefined
+                    ? {
+                        bubbleDetails: {
+                          ...current.bubbleDetails,
+                          [bubble.bubbleId]: mergeExpandedDetailWithIncomingDetail(
+                            currentDetail,
+                            normalizeBubbleDetail({
+                              ...currentDetail,
+                              ...(reviewPolicyConflictContext.currentState !== null
+                                ? { state: reviewPolicyConflictContext.currentState }
+                                : {}),
+                              ...(reviewPolicyConflictContext.reviewPolicy !== null
+                                ? {
+                                    reviewPolicy:
+                                      reviewPolicyConflictContext.reviewPolicy
+                                  }
+                                : {}),
+                              bubbleToml: reviewPolicyConflictContext.bubbleToml
+                            })
+                          )
+                        }
+                      }
+                    : {})
+                };
+              });
             } else {
-              retryHint =
-                "State changed in CLI/UI. Latest state was refetched. Review state, then retry.";
-            }
-            try {
-              await refreshRepos([bubble.repoPath]);
-              if (get().expandedBubbleIds.includes(bubble.bubbleId)) {
-                await refreshExpandedBubble(bubble.bubbleId);
+              try {
+                await refreshRepos([bubble.repoPath]);
+                if (get().expandedBubbleIds.includes(bubble.bubbleId)) {
+                  await refreshExpandedBubble(bubble.bubbleId);
+                }
+                refreshConfirmed = true;
+              } catch {
+                // Ignore secondary refresh failure and preserve original action error.
               }
-            } catch {
-              // Ignore secondary refresh failure and preserve original action error.
             }
           }
+
+          const retryHint =
+            error instanceof PairflowApiError
+              ? resolveActionRetryHint({
+                  action: inputValue.action,
+                  error,
+                  usedConflictBubbleContext,
+                  malformedConflictReviewPolicyPayload,
+                  refreshConfirmed
+                })
+              : null;
 
           set((current) => {
             const actionErrorById = {

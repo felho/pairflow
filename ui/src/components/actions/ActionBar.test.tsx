@@ -12,6 +12,7 @@ const actionLabels: Record<Exclude<BubbleActionKind, "delete">, string> = {
   "request-rework": "Request Rework",
   reply: "Reply",
   resume: "Resume",
+  "update-review-policy": "Meta-Only",
   restart: "Restart",
   commit: "Commit",
   merge: "Merge",
@@ -24,6 +25,9 @@ function resolveActionLabelForState(
   state: BubbleLifecycleState,
   action: Exclude<BubbleActionKind, "delete">
 ): string {
+  if (action === "update-review-policy") {
+    return "Meta-Only";
+  }
   if (state === "WAITING_HUMAN" && action === "request-rework") {
     return "Queue Rework";
   }
@@ -31,11 +35,26 @@ function resolveActionLabelForState(
 }
 
 const expectedMatrix: Record<BubbleLifecycleState, BubbleActionKind[]> = {
-  CREATED: ["start", "stop"],
-  PREPARING_WORKSPACE: ["stop"],
-  RUNNING: ["restart", "open", "stop"],
-  WAITING_HUMAN: ["request-rework", "reply", "resume", "restart", "open", "stop"],
-  READY_FOR_HUMAN_APPROVAL: ["approve", "request-rework", "restart", "open", "stop"],
+  CREATED: ["start", "update-review-policy", "stop"],
+  PREPARING_WORKSPACE: ["update-review-policy", "stop"],
+  RUNNING: ["update-review-policy", "restart", "open", "stop"],
+  WAITING_HUMAN: [
+    "request-rework",
+    "reply",
+    "resume",
+    "update-review-policy",
+    "restart",
+    "open",
+    "stop"
+  ],
+  READY_FOR_HUMAN_APPROVAL: [
+    "approve",
+    "request-rework",
+    "update-review-policy",
+    "restart",
+    "open",
+    "stop"
+  ],
   APPROVED_FOR_COMMIT: ["commit", "restart", "open", "stop"],
   COMMITTED: ["restart", "open", "stop"],
   DONE: ["merge", "open"],
@@ -280,6 +299,140 @@ describe("ActionBar", () => {
       action: "attach"
     });
     expect(screen.queryByText("Opening Warp terminal...")).not.toBeInTheDocument();
+  });
+
+  it("toggles review policy action toward meta-only when the bubble is currently full", async () => {
+    const user = userEvent.setup();
+    const onAction = vi.fn(() => Promise.resolve(undefined));
+
+    render(
+      <ActionBar
+        bubble={bubbleCard({
+          bubbleId: "b-policy",
+          repoPath: "/repo-a",
+          state: "RUNNING"
+        })}
+        attach={{
+          visible: false,
+          enabled: false,
+          command: "tmux attach -t pf-b-policy",
+          hint: null
+        }}
+        isSubmitting={false}
+        actionError={null}
+        retryHint={null}
+        actionFailure={null}
+        onAction={onAction}
+        onClearFeedback={vi.fn()}
+        expectedBubbleToml={"id = \"b-policy\""}
+      />
+    );
+
+    await user.click(screen.getByRole("button", { name: "Meta-Only" }));
+
+    expect(onAction).toHaveBeenCalledWith({
+      bubbleId: "b-policy",
+      action: "update-review-policy",
+      reviewLoopMode: "meta_only",
+      expectedBubbleToml: "id = \"b-policy\""
+    });
+  });
+
+  it("forwards expectedBubbleToml unchanged when the canonical detail ends with newlines", async () => {
+    const user = userEvent.setup();
+    const onAction = vi.fn(() => Promise.resolve(undefined));
+    const expectedBubbleToml = "id = \"b-policy\"\nreview_loop_mode = \"full\"\n";
+
+    render(
+      <ActionBar
+        bubble={bubbleCard({
+          bubbleId: "b-policy",
+          repoPath: "/repo-a",
+          state: "RUNNING"
+        })}
+        attach={{
+          visible: false,
+          enabled: false,
+          command: "tmux attach -t pf-b-policy",
+          hint: null
+        }}
+        isSubmitting={false}
+        actionError={null}
+        retryHint={null}
+        actionFailure={null}
+        onAction={onAction}
+        onClearFeedback={vi.fn()}
+        expectedBubbleToml={expectedBubbleToml}
+      />
+    );
+
+    await user.click(screen.getByRole("button", { name: "Meta-Only" }));
+
+    expect(onAction).toHaveBeenCalledWith({
+      bubbleId: "b-policy",
+      action: "update-review-policy",
+      reviewLoopMode: "meta_only",
+      expectedBubbleToml
+    });
+  });
+
+  it("disables review policy action until the latest bubble detail revision is loaded", () => {
+    render(
+      <ActionBar
+        bubble={bubbleCard({
+          bubbleId: "b-policy-missing-detail",
+          repoPath: "/repo-a",
+          state: "RUNNING"
+        })}
+        attach={{
+          visible: false,
+          enabled: false,
+          command: "tmux attach -t pf-b-policy-missing-detail",
+          hint: null
+        }}
+        isSubmitting={false}
+        actionError={null}
+        retryHint={null}
+        actionFailure={null}
+        onAction={vi.fn(() => Promise.resolve(undefined))}
+        onClearFeedback={vi.fn()}
+        expectedBubbleToml={null}
+      />
+    );
+
+    expect(screen.getByRole("button", { name: "Meta-Only" })).toBeDisabled();
+  });
+
+  it("keeps review policy action visible with an explicit unavailable label when policy data is missing", () => {
+    render(
+      <ActionBar
+        bubble={{
+          ...bubbleCard({
+            bubbleId: "b-policy-unavailable",
+            repoPath: "/repo-a",
+            state: "RUNNING"
+          }),
+          reviewPolicy: null
+        }}
+        attach={{
+          visible: false,
+          enabled: false,
+          command: "tmux attach -t pf-b-policy-unavailable",
+          hint: null
+        }}
+        isSubmitting={false}
+        actionError={null}
+        retryHint={null}
+        actionFailure={null}
+        onAction={vi.fn(() => Promise.resolve(undefined))}
+        onClearFeedback={vi.fn()}
+        expectedBubbleToml={null}
+      />
+    );
+
+    expect(
+      screen.getByRole("button", { name: "Review Policy Unavailable" })
+    ).toBeDisabled();
   });
 
   it("renders disabled attach with its hint when availability is fail-closed", () => {

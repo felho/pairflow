@@ -100,6 +100,67 @@ describe("createApiClient", () => {
     });
   });
 
+  it("preserves degraded review-policy conflict details on 409 responses", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          error: {
+            code: "conflict",
+            message: "review policy conflict",
+            details: {
+              reasonCode: "REVIEW_POLICY_WRITE_CONFLICT",
+              reviewPolicyConflict: {
+                bubbleId: "b-a",
+                repoPath: "/repo-a",
+                currentState: null,
+                bubbleToml: "id = \"b-a\"\nreview_loop_mode = \"meta_only\"\n",
+                reviewPolicy: {
+                  requested_loop_mode: "meta_only",
+                  effective_loop_mode: "full",
+                  support_status: "guarded",
+                  meta_review_auto_rework_min_severity: "P1",
+                  blocked_reason_code: "REVIEW_POLICY_META_ONLY_GUARDED"
+                }
+              }
+            }
+          }
+        }),
+        { status: 409 }
+      )
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const client = createApiClient();
+    const error = await captureError(() =>
+      client.updateReviewPolicy("/repo-a", "b-a", {
+        reviewLoopMode: "meta_only",
+        expectedBubbleToml: "id = \"b-a\"\n"
+      })
+    );
+
+    expect(error).toBeInstanceOf(PairflowApiError);
+    expect(error).toMatchObject({
+      status: 409,
+      code: "conflict",
+      details: {
+        reasonCode: "REVIEW_POLICY_WRITE_CONFLICT",
+        reviewPolicyConflict: {
+          bubbleId: "b-a",
+          repoPath: "/repo-a",
+          currentState: null,
+          bubbleToml: "id = \"b-a\"\nreview_loop_mode = \"meta_only\"\n",
+          reviewPolicy: {
+            requested_loop_mode: "meta_only",
+            effective_loop_mode: "full",
+            support_status: "guarded",
+            meta_review_auto_rework_min_severity: "P1",
+            blocked_reason_code: "REVIEW_POLICY_META_ONLY_GUARDED"
+          }
+        }
+      }
+    });
+  });
+
   it("calls detail/timeline endpoints and posts action payloads", async () => {
     const fetchMock = vi
       .fn()
@@ -127,6 +188,28 @@ describe("createApiClient", () => {
         new Response(JSON.stringify({ result: { bubbleId: "b-a", commitSha: "abc123" } }), {
           status: 200
         })
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            result: {
+              kind: "review_policy_updated",
+              bubbleId: "b-a",
+              reviewPolicy: {
+                requested_loop_mode: "meta_only",
+                effective_loop_mode: "full",
+                support_status: "guarded",
+                meta_review_auto_rework_min_severity: "P1",
+                blocked_reason_code: "REVIEW_POLICY_META_ONLY_GUARDED"
+              },
+              previousRequestedLoopMode: "full",
+              nextRequestedLoopMode: "meta_only",
+              activationChange: "none",
+              bubbleToml: "..."
+            }
+          }),
+          { status: 200 }
+        )
       )
       .mockResolvedValueOnce(
         new Response(
@@ -185,6 +268,16 @@ describe("createApiClient", () => {
       commitSha: "abc123"
     });
     await expect(
+      client.updateReviewPolicy("/repo-a", "b-a", {
+        reviewLoopMode: "meta_only"
+      })
+    ).resolves.toMatchObject({
+      bubbleId: "b-a",
+      reviewPolicy: {
+        requested_loop_mode: "meta_only"
+      }
+    });
+    await expect(
       client.deleteBubble("/repo-a", "b-a", {
         force: true
       })
@@ -226,6 +319,19 @@ describe("createApiClient", () => {
     );
     expect(fetchMock).toHaveBeenNthCalledWith(
       5,
+      "/api/bubbles/b-a/update-review-policy?repo=%2Frepo-a",
+      {
+        method: "POST",
+        body: JSON.stringify({
+          reviewLoopMode: "meta_only"
+        }),
+        headers: {
+          "content-type": "application/json"
+        }
+      }
+    );
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      6,
       "/api/bubbles/b-a/delete?repo=%2Frepo-a",
       {
         method: "POST",
@@ -316,6 +422,53 @@ describe("createApiClient", () => {
       "/api/bubbles/b-a/delete?repo=%2Frepo-a",
       {
         method: "POST"
+      }
+    );
+  });
+
+  it("serializes expectedBubbleToml exactly for update-review-policy compare-and-swap payloads", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          result: {
+            kind: "review_policy_updated",
+            bubbleId: "b-a",
+            reviewPolicy: {
+              requested_loop_mode: "meta_only",
+              effective_loop_mode: "full",
+              support_status: "guarded",
+              meta_review_auto_rework_min_severity: "P1"
+            },
+            previousRequestedLoopMode: "full",
+            nextRequestedLoopMode: "meta_only",
+            activationChange: "none",
+            bubbleToml: "id = \"b-a\"\n"
+          }
+        }),
+        { status: 200 }
+      )
+    );
+    const expectedBubbleToml = "id = \"b-a\"\nreview_loop_mode = \"full\"\n";
+
+    vi.stubGlobal("fetch", fetchMock);
+
+    const client = createApiClient();
+    await client.updateReviewPolicy("/repo-a", "b-a", {
+      reviewLoopMode: "meta_only",
+      expectedBubbleToml
+    });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/bubbles/b-a/update-review-policy?repo=%2Frepo-a",
+      {
+        method: "POST",
+        body: JSON.stringify({
+          reviewLoopMode: "meta_only",
+          expectedBubbleToml
+        }),
+        headers: {
+          "content-type": "application/json"
+        }
       }
     );
   });

@@ -199,6 +199,43 @@ describe("listBubbles", () => {
     expect(listed.bubbles[0]?.runtimeSession?.tmuxSessionName).toBe("pf-b_list_04");
   });
 
+  it("surfaces guarded meta-only review policy diagnostics in list projections", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await createBubble({
+      id: "b_list_policy_01",
+      repoPath,
+      baseBranch: "main",
+      reviewArtifactType: "code",
+      task: "List review policy",
+      cwd: repoPath
+    });
+    const current = parseBubbleConfigToml(await readFile(bubble.paths.bubbleTomlPath, "utf8"));
+    await writeFile(
+      bubble.paths.bubbleTomlPath,
+      renderBubbleConfigToml({
+        ...current,
+        review_policy: {
+          review_loop_mode: "meta_only",
+          meta_review_auto_rework_min_severity: "P2"
+        }
+      }),
+      "utf8"
+    );
+
+    const listed = await listBubbles({ repoPath });
+
+    expect(listed.bubbles[0]?.reviewPolicy).toEqual({
+      requested_loop_mode: "meta_only",
+      effective_loop_mode: "full",
+      support_status: "guarded",
+      meta_review_auto_rework_min_severity: "P2",
+      blocked_reason_code: "REVIEW_POLICY_META_ONLY_GUARDED",
+      blocked_prerequisites: ["reviewer_bypass_activation_phase3b_pending"],
+      provenance_note:
+        "Requested meta-only review remains guarded in Phase 3A; runtime execution stays on the full review loop until Phase 3B activation closes scheduler/router handoff ownership."
+    });
+  });
+
   it("skips a bubble that disappears after id enumeration", async () => {
     const repoPath = await createTempRepo();
     const keptBubble = await createBubble({

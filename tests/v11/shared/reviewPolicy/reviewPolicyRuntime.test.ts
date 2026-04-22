@@ -3,7 +3,9 @@ import { describe, expect, it } from "vitest";
 import type { BubbleConfig } from "../../../../src/types/bubble.js";
 import {
   buildBubbleReviewPolicyRuntimeView,
-  normalizeBubbleReviewPolicy
+  normalizeBubbleReviewPolicy,
+  REVIEW_POLICY_META_ONLY_PHASE3B_PENDING,
+  REVIEW_POLICY_META_ONLY_PROVENANCE_NOTE
 } from "../../../../src/v11/shared/reviewPolicy/reviewPolicyRuntime.js";
 
 function createConfig(
@@ -36,6 +38,15 @@ describe("reviewPolicyRuntime", () => {
     });
   });
 
+  it("keeps default runtime view free of guarded diagnostics when review_policy is missing", () => {
+    expect(buildBubbleReviewPolicyRuntimeView(createConfig(undefined))).toEqual({
+      requested_loop_mode: "full",
+      effective_loop_mode: "full",
+      support_status: "enabled",
+      meta_review_auto_rework_min_severity: "P1"
+    });
+  });
+
   it("guards meta_only so effective loop mode stays full in phase 1", () => {
     expect(
       buildBubbleReviewPolicyRuntimeView(
@@ -49,7 +60,9 @@ describe("reviewPolicyRuntime", () => {
       effective_loop_mode: "full",
       support_status: "guarded",
       meta_review_auto_rework_min_severity: "P3",
-      blocked_reason_code: "REVIEW_POLICY_META_ONLY_GUARDED"
+      blocked_reason_code: "REVIEW_POLICY_META_ONLY_GUARDED",
+      blocked_prerequisites: [REVIEW_POLICY_META_ONLY_PHASE3B_PENDING],
+      provenance_note: REVIEW_POLICY_META_ONLY_PROVENANCE_NOTE
     });
   });
 });

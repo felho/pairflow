@@ -14,6 +14,7 @@ import { startBubbleV11 as startBubble } from "../../application/start/emitStart
 import { getBubbleStatusV11 as getBubbleStatus } from "../../application/status/emitStatusV11.js";
 import { stopBubbleV11 as stopBubble } from "../../application/stop/emitStopV11.js";
 import { listBubbles } from "../../shared/list/listCommandApi.js";
+import { updateBubbleReviewPolicyForUi } from "./updateBubbleReviewPolicyForUi.js";
 import type {
   UiEmitApprovalDecisionResult,
   UiEmitRequestReworkResult,
@@ -135,7 +136,8 @@ export const uiRouterDependencyDefaults = {
   restartBubble,
   resumeBubble,
   startBubble,
-  stopBubble
+  stopBubble,
+  updateBubbleReviewPolicy: updateBubbleReviewPolicyForUi
 } satisfies Pick<
   UiRouterDependencies,
   | "commitBubble"
@@ -151,4 +153,5 @@ export const uiRouterDependencyDefaults = {
   | "resumeBubble"
   | "startBubble"
   | "stopBubble"
+  | "updateBubbleReviewPolicy"
 >;

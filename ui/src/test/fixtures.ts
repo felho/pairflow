@@ -39,6 +39,7 @@ export function bubbleSummary(input: {
   activeAgent?: UiBubbleSummary["activeAgent"];
   activeRole?: UiBubbleSummary["activeRole"];
   attention?: UiBubbleSummary["attention"];
+  reviewPolicy?: UiBubbleSummary["reviewPolicy"];
   metaReview?: Partial<UiBubbleSummary["metaReview"]>;
   remoteExecution?: UiBubbleSummary["remoteExecution"];
 }): UiBubbleSummary {
@@ -72,6 +73,12 @@ export function bubbleSummary(input: {
       stale: input.stale ?? false
     },
     attention: input.attention ?? null,
+    reviewPolicy: input.reviewPolicy ?? {
+      requested_loop_mode: "full",
+      effective_loop_mode: "full",
+      support_status: "enabled",
+      meta_review_auto_rework_min_severity: "P1"
+    },
     ...(input.remoteExecution !== undefined
       ? { remoteExecution: input.remoteExecution }
       : {}),
@@ -94,6 +101,7 @@ export function bubbleCard(input: {
   activeAgent?: UiBubbleSummary["activeAgent"];
   activeRole?: UiBubbleSummary["activeRole"];
   attention?: UiBubbleSummary["attention"];
+  reviewPolicy?: UiBubbleSummary["reviewPolicy"];
   metaReview?: Partial<UiBubbleSummary["metaReview"]>;
   remoteExecution?: UiBubbleSummary["remoteExecution"];
 }): BubbleCardModel {
@@ -111,12 +119,15 @@ export function bubbleDetail(input: {
   runtimeSession?: UiBubbleSummary["runtimeSession"];
   stale?: boolean;
   attention?: UiBubbleSummary["attention"];
+  reviewPolicy?: UiBubbleSummary["reviewPolicy"];
   remoteExecution?: UiBubbleSummary["remoteExecution"];
+  bubbleToml?: string;
   watchdog?: Partial<UiBubbleDetail["watchdog"]>;
 }): UiBubbleDetail {
   const summary = bubbleSummary(input);
   return {
     ...summary,
+    bubbleToml: input.bubbleToml ?? `id = "${input.bubbleId}"`,
     watchdog: {
       monitored: true,
       monitoredAgent: summary.activeAgent,
