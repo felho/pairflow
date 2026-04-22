@@ -68,7 +68,7 @@ describe("launchBubbleSessionAck", () => {
         exitCode: args[0] === "has-session" ? 1 : 0
       });
 
-    const ack = await launchBubbleSessionAck({
+    const ack = await launchBubbleTmuxSessionAck({
       bubbleId: "b_start_ack",
       workspacePath: "/tmp/worktree",
       statusCommand: "status",
@@ -91,7 +91,7 @@ describe("launchBubbleSessionAck", () => {
         exitCode: 0
       });
 
-    const ack = await launchBubbleSessionAck({
+    const ack = await launchBubbleTmuxSessionAck({
       bubbleId: "b_start_exists",
       workspacePath: "/tmp/worktree",
       statusCommand: "status",
@@ -115,8 +115,7 @@ describe("launchBubbleSessionAck", () => {
       workspacePath: "   ",
       statusCommand: "status",
       implementerCommand: "codex",
-      reviewerCommand: "claude",
-      runner: vi.fn()
+      reviewerCommand: "claude"
     });
 
     expect(ack).toEqual({
@@ -149,7 +148,7 @@ describe("launchBubbleSessionAck", () => {
       });
     };
 
-    const ack = await launchBubbleSessionAck({
+    const ack = await launchBubbleTmuxSessionAck({
       bubbleId: "b_start_tmux_fail_ack",
       workspacePath: "/tmp/worktree",
       statusCommand: "status",
@@ -160,8 +159,8 @@ describe("launchBubbleSessionAck", () => {
 
     expect(ack).toEqual({
       status: "failed_to_start",
-      reason_code: "LAUNCH_ACK_TMUX_COMMAND_FAILED",
-      failure_kind: "tmux_command_failed",
+      reason_code: "LAUNCH_ACK_COMMAND_FAILED",
+      failure_kind: "command_failed",
       error_message: "tmux new-session failed",
       sessionName: "pf-b_start_tmux_fail_ack"
     });
@@ -169,7 +168,7 @@ describe("launchBubbleSessionAck", () => {
 
   it("returns canonical failed_to_start ack when pane seeding throws after layout succeeds", async () => {
     const bubbleId = "b_start_seed_fail_ack";
-    const ack = await launchBubbleSessionAck({
+    const ack = await launchBubbleTmuxSessionAck({
       bubbleId,
       workspacePath: "/tmp/worktree",
       statusCommand: "status",
@@ -199,8 +198,8 @@ describe("launchBubbleSessionAck", () => {
 
     expect(ack).toEqual({
       status: "failed_to_start",
-      reason_code: "LAUNCH_ACK_TMUX_COMMAND_FAILED",
-      failure_kind: "tmux_command_failed",
+      reason_code: "LAUNCH_ACK_COMMAND_FAILED",
+      failure_kind: "command_failed",
       error_message: "tmux pane seed failed",
       sessionName: buildBubbleTmuxSessionName(bubbleId)
     });
@@ -208,7 +207,7 @@ describe("launchBubbleSessionAck", () => {
 
   it("converts has-session transport failures into canonical failed_to_start ack", async () => {
     const bubbleId = "b_start_has_session_transport_fail_ack";
-    const ack = await launchBubbleSessionAck({
+    const ack = await launchBubbleTmuxSessionAck({
       bubbleId,
       workspacePath: "/tmp/worktree",
       statusCommand: "status",
@@ -219,8 +218,8 @@ describe("launchBubbleSessionAck", () => {
 
     expect(ack).toEqual({
       status: "failed_to_start",
-      reason_code: "LAUNCH_ACK_TMUX_COMMAND_FAILED",
-      failure_kind: "tmux_command_failed",
+      reason_code: "LAUNCH_ACK_COMMAND_FAILED",
+      failure_kind: "command_failed",
       error_message: "tmux has-session transport failed",
       sessionName: buildBubbleTmuxSessionName(bubbleId)
     });
@@ -229,7 +228,7 @@ describe("launchBubbleSessionAck", () => {
   it("converts has-session non-1 exit failures into canonical failed_to_start ack", async () => {
     const bubbleId = "b_start_has_session_exit_fail_ack";
     const sessionName = buildBubbleTmuxSessionName(bubbleId);
-    const ack = await launchBubbleSessionAck({
+    const ack = await launchBubbleTmuxSessionAck({
       bubbleId,
       workspacePath: "/tmp/worktree",
       statusCommand: "status",
@@ -245,8 +244,8 @@ describe("launchBubbleSessionAck", () => {
 
     expect(ack).toEqual({
       status: "failed_to_start",
-      reason_code: "LAUNCH_ACK_TMUX_COMMAND_FAILED",
-      failure_kind: "tmux_command_failed",
+      reason_code: "LAUNCH_ACK_COMMAND_FAILED",
+      failure_kind: "command_failed",
       error_message:
         `tmux command failed (exit 2): tmux has-session -t ${sessionName}\ncan't connect to tmux server`,
       sessionName

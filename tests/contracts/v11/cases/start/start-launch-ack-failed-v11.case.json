@@ -10,7 +10,7 @@
   },
   "expected": {
     "status": "error",
-    "reasonCode": "LAUNCH_ACK_TMUX_COMMAND_FAILED",
+    "reasonCode": "LAUNCH_ACK_COMMAND_FAILED",
     "stateSubset": {
       "state": "FAILED"
     }

@@ -30,7 +30,7 @@ export type {
   RunningLaunchBubbleSessionAck,
   WorkspaceRequiredLaunchBubbleSessionAck,
   SessionExistsLaunchBubbleSessionAck,
-  TmuxCommandFailedLaunchBubbleSessionAck,
+  CommandFailedLaunchBubbleSessionAck,
   LaunchBubbleTmuxSessionAck,
   LaunchBubbleTmuxSessionAckFailureKind,
   LaunchBubbleTmuxSessionAckPort,
@@ -40,7 +40,7 @@ export type {
   RunningLaunchBubbleTmuxSessionAck,
   WorkspaceRequiredLaunchBubbleTmuxSessionAck,
   SessionExistsLaunchBubbleTmuxSessionAck,
-  TmuxCommandFailedLaunchBubbleTmuxSessionAck,
+  CommandFailedLaunchBubbleTmuxSessionAck,
   LaunchBubbleTmuxSessionPort,
   LaunchBubbleTmuxSessionResult,
   TerminateBubbleTmuxSessionInput,
@@ -92,7 +92,14 @@ function buildLegacyTmuxLaunchWorkspaceRequiredMessage(bubbleId: string): string
   return `TMUX_LAUNCH_WORKSPACE_REQUIRED: context ${buildLegacyTmuxLaunchOperationContext(bubbleId)}.`;
 }
 
-function resolveLaunchWorkspacePath(input: LaunchBubbleSessionInput): string {
+interface LaunchBubbleSessionRuntimeInput extends LaunchBubbleSessionInput {
+  runner?: TmuxRunner;
+}
+
+function resolveLaunchWorkspacePath(input: {
+  bubbleId: string;
+  workspacePath: string;
+}): string {
   const workspacePath = input.workspacePath.trim();
   if (workspacePath.length === 0) {
     throw new Error(
@@ -114,7 +121,7 @@ function createLaunchBubbleSessionFailureAck(
       sessionName: string;
     }
     | {
-      failureKind: "tmux_command_failed";
+      failureKind: "command_failed";
       errorMessage: string;
       sessionName: string;
     }
@@ -135,11 +142,11 @@ function createLaunchBubbleSessionFailureAck(
         error_message: input.errorMessage,
         sessionName: input.sessionName
       };
-    case "tmux_command_failed":
+    case "command_failed":
       return {
         status: "failed_to_start",
-        reason_code: "LAUNCH_ACK_TMUX_COMMAND_FAILED",
-        failure_kind: "tmux_command_failed",
+        reason_code: "LAUNCH_ACK_COMMAND_FAILED",
+        failure_kind: "command_failed",
         error_message: input.errorMessage,
         sessionName: input.sessionName
       };
@@ -179,7 +186,7 @@ function createLaunchBubbleSessionAckResolution(
       legacyError?: Error;
     }
     | {
-      failureKind: "tmux_command_failed";
+      failureKind: "command_failed";
       errorMessage: string;
       sessionName: string;
       legacyError?: Error;
@@ -241,7 +248,7 @@ function createWorkspaceRequiredAckResolution(
 }
 
 function buildLaunchBubbleSessionRuntimeConfig(
-  input: LaunchBubbleSessionInput,
+  input: LaunchBubbleSessionRuntimeInput,
   runner: TmuxRunner,
   sessionName: string,
   workspacePath: string
@@ -288,7 +295,7 @@ async function resolveHasSessionAckFailure(
     hasSession.stderr || hasSession.stdout
   );
   return createLaunchBubbleSessionAckResolution({
-    failureKind: "tmux_command_failed",
+    failureKind: "command_failed",
     errorMessage: legacyError.message,
     sessionName,
     legacyError
@@ -297,7 +304,7 @@ async function resolveHasSessionAckFailure(
 
 async function launchAndSeedBubbleSession(
   config: LaunchBubbleSessionRuntimeConfig,
-  input: LaunchBubbleSessionInput
+  input: LaunchBubbleSessionRuntimeInput
 ): Promise<void> {
   await config.runner([
     "new-session",
@@ -359,7 +366,7 @@ async function launchAndSeedBubbleSession(
 }
 
 export const launchBubbleSessionAck: LaunchBubbleSessionAckPort = async (
-  input: LaunchBubbleSessionInput
+  input
 ): Promise<LaunchBubbleSessionAck> => {
   const resolution = await resolveLaunchBubbleSessionAck(input);
   return resolution.ack;
@@ -373,7 +380,7 @@ export const launchBubbleTmuxSessionAck: LaunchBubbleTmuxSessionAckPort = async 
 };
 
 async function resolveLaunchBubbleSessionAck(
-  input: LaunchBubbleSessionInput
+  input: LaunchBubbleSessionRuntimeInput
 ): Promise<LaunchBubbleSessionAckResolution> {
   const runner = input.runner ?? runTmux;
   const sessionName = buildBubbleTmuxSessionName(input.bubbleId);
@@ -412,7 +419,7 @@ async function resolveLaunchBubbleSessionAck(
     }
     const legacyError = error instanceof Error ? error : new Error(String(error));
     return createLaunchBubbleSessionAckResolution({
-      failureKind: "tmux_command_failed",
+      failureKind: "command_failed",
       errorMessage: legacyError.message,
       sessionName,
       legacyError
