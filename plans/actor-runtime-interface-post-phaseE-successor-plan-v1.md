@@ -449,14 +449,14 @@ owners:
      - a canonical nested `tmux.*` runtime capability ownership egyeduli consume formakent maradt meg,
      - az observation truth (`confirmed | uncertain | failed`) preserved baseline maradt, es a deprecated parity coverage teljesen megszunt.
 18. Az `O2-T12` launch contract foundation neutralization 2026-04-22-en merge-olve lett a `main` branchre:
-   - task artifact: `plans/tasks/actor-runtime-interface-opportunity2-task12-launch-contract-foundation-neutralization.md`
+   - archived task artifact: `plans/archive/tasks/actor-runtime-interface-opportunity2-task12-launch-contract-foundation-neutralization.md`
    - merge commit: `2e3f3cf8a9b75b69a4c8782691724c61013cc7da`
    - bounded closure:
      - a canonical launch shared-contract es producer taxonomy topology-neutral closed termsre allt at,
      - a launch failure truth a canonical boundaryn `command_failed` retained-neutral tokenre szukult,
      - a retained compat removalhoz szukseges producer/shared baseline explicit replacement proofot kapott.
 19. Az `O2-T13` launch compatibility surface removal 2026-04-22-en merge-olve lett a `main` branchre:
-   - task artifact: `plans/tasks/actor-runtime-interface-opportunity2-task13-launch-compatibility-surface-removal.md`
+   - archived task artifact: `plans/archive/tasks/actor-runtime-interface-opportunity2-task13-launch-compatibility-surface-removal.md`
    - merge commit: `dc378730268866fb06635555970a4e7603e96dda`
    - bounded closure:
      - a retained `LaunchBubbleTmuxSession*` shared/public/start consume compatibility family teljesen kikerult a current tree-bol,
@@ -502,9 +502,9 @@ owners:
      - `O2-T11` meta-review gate deprecated runtime alias removal
        - task artifact: `plans/archive/tasks/actor-runtime-interface-opportunity2-task11-meta-review-gate-deprecated-runtime-alias-removal.md`
      - `O2-T12` launch contract foundation neutralization
-       - task artifact: `plans/tasks/actor-runtime-interface-opportunity2-task12-launch-contract-foundation-neutralization.md`
+       - task artifact: `plans/archive/tasks/actor-runtime-interface-opportunity2-task12-launch-contract-foundation-neutralization.md`
      - `O2-T13` launch compatibility surface removal
-       - task artifact: `plans/tasks/actor-runtime-interface-opportunity2-task13-launch-compatibility-surface-removal.md`
+       - task artifact: `plans/archive/tasks/actor-runtime-interface-opportunity2-task13-launch-compatibility-surface-removal.md`
    - preserved baseline: a lezart typed ack/runtime-success semantics nem reopenolhato; a retained tmux naming current-tree szinten mar csak adapter/default/operatori ownershipot jelol, nem canonical topology-neutral truthot
    - disposition: closed on current tree
 3. `Opportunity 3`

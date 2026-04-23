@@ -49,7 +49,7 @@ owners:
 
 1. Source anchors:
    - `plans/actor-runtime-interface-post-phaseE-successor-plan-v1.md`
-   - `plans/tasks/actor-runtime-interface-opportunity2-task12-launch-contract-foundation-neutralization.md`
+   - `plans/archive/tasks/actor-runtime-interface-opportunity2-task12-launch-contract-foundation-neutralization.md`
    - `src/v11/shared/ports/tmuxSessions.ts`
    - `src/v11/infrastructure/channel/tmux/tmuxManager.ts`
    - `src/v11/application/start/startCommandContract.ts`
