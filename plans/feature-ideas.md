@@ -43,3 +43,4 @@
   - keep this fail-closed for approval/merge/commit boundaries unless the system has a strict proof that the emitted action is state-safe.
 - https://github.com/plastic-labs/honcho
 - https://setcode.dev/
+- https://github.com/stanford-iris-lab/meta-harness
