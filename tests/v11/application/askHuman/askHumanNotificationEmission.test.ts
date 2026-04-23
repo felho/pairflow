@@ -97,6 +97,45 @@ describe("askHumanNotificationEmission", () => {
     });
   });
 
+  it("restores DELIVERY_TARGET_ROLE_ABSENT for no-runtime-session ask-human delivery rejections", async () => {
+    const result = await emitOptionalAskHumanNotifications(
+      {
+        bubbleId: "b_ask_human_04",
+        bubbleConfig: {
+          id: "b_ask_human_04"
+        } as never,
+        sessionsPath: "/repo/.pairflow/bubbles/b_ask_human_04/runtime/sessions.json",
+        envelope: {
+          id: "msg_20260221_004"
+        } as never,
+        messageRef: "transcript-ref#msg_20260221_004"
+      },
+      {
+        emitDeliveryNotificationAck: async () => ({
+          status: "rejected",
+          message: "no session",
+          reason: "no_runtime_session"
+        }),
+        emitBubbleNotification: async () => ({
+          kind: "waiting-human",
+          attempted: false,
+          status: "rejected",
+          soundPath: null,
+          reason: "disabled"
+        })
+      }
+    );
+
+    expect(result).toEqual({
+      deliveryResult: {
+        status: "rejected",
+        message: "no session",
+        reason: "no_runtime_session",
+        deliveryTargetReasonCode: "DELIVERY_TARGET_ROLE_ABSENT"
+      }
+    });
+  });
+
   it("keeps detached bubble-notification failures non-blocking and preserves tmux delivery result", async () => {
     const result = await emitOptionalAskHumanNotifications(
       {

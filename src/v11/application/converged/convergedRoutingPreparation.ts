@@ -42,6 +42,27 @@ export interface PrepareConvergedRoutingResult {
   effectiveLoopMode: BubbleReviewLoopMode;
 }
 
+interface ResolvedConvergedBubbleContext {
+  resolved: Awaited<ReturnType<typeof convergedDependencyDefaults.routing.resolveBubbleFromWorkspaceCwd>>;
+  bubbleIdentity: Awaited<ReturnType<typeof convergedDependencyDefaults.routing.ensureBubbleInstanceIdForMutation>>;
+}
+
+function resolveAuthoritativeBubbleContext(
+  authoritativeContext: ActorEmitContextSnapshot | undefined
+): ResolvedConvergedBubbleContext["resolved"] | undefined {
+  if (authoritativeContext === undefined) {
+    return undefined;
+  }
+  return {
+    bubbleId: authoritativeContext.bubble_id,
+    repoPath: authoritativeContext.repo,
+    bubblePaths: authoritativeContext.resolved.bubblePaths,
+    bubbleConfig: authoritativeContext.resolved.bubbleConfig,
+    worktreePath: authoritativeContext.worktree_path,
+    cwd: authoritativeContext.worktree_path
+  };
+}
+
 function assertConvergedActiveContext(input: {
   state: BubbleStateSnapshot,
   configuredImplementer: AgentName,
@@ -132,37 +153,17 @@ function assertConvergedActiveContext(input: {
   }
 }
 
-export async function prepareConvergedRouting(
+async function resolveConvergedBubbleContext(
   input: PrepareConvergedRoutingInput,
-  dependencies: PrepareConvergedRoutingDependencies = {}
-): Promise<PrepareConvergedRoutingResult> {
-  const resolveBubbleFromWorkspace =
-    dependencies.resolveBubbleFromWorkspaceCwd
-    ?? convergedDependencyDefaults.routing.resolveBubbleFromWorkspaceCwd;
-  const ensureBubbleIdentity =
-    dependencies.ensureBubbleInstanceIdForMutation
-    ?? convergedDependencyDefaults.routing.ensureBubbleInstanceIdForMutation;
-  const readStateSnapshotFn =
-    dependencies.readStateSnapshot
-    ?? convergedDependencyDefaults.routing.readStateSnapshot;
-  const resolveIdeationMetadataFn =
-    dependencies.resolveIdeationMetadata ?? resolveIdeationMetadata;
-
-  const authoritativeResolved =
-    input.authoritativeContext === undefined
-      ? undefined
-      : {
-          bubbleId: input.authoritativeContext.bubble_id,
-          repoPath: input.authoritativeContext.repo,
-          bubblePaths: input.authoritativeContext.resolved.bubblePaths,
-          bubbleConfig: input.authoritativeContext.resolved.bubbleConfig,
-          worktreePath: input.authoritativeContext.worktree_path,
-          cwd: input.authoritativeContext.worktree_path
-        };
+  dependencies: {
+    resolveBubbleFromWorkspace: typeof convergedDependencyDefaults.routing.resolveBubbleFromWorkspaceCwd;
+    ensureBubbleIdentity: typeof convergedDependencyDefaults.routing.ensureBubbleInstanceIdForMutation;
+  }
+): Promise<ResolvedConvergedBubbleContext> {
   const resolved =
-    authoritativeResolved
-    ?? await resolveBubbleFromWorkspace(input.cwd);
-  const bubbleIdentity = await ensureBubbleIdentity({
+    resolveAuthoritativeBubbleContext(input.authoritativeContext)
+    ?? await dependencies.resolveBubbleFromWorkspace(input.cwd);
+  const bubbleIdentity = await dependencies.ensureBubbleIdentity({
     bubbleId: resolved.bubbleId,
     repoPath: resolved.repoPath,
     bubblePaths: resolved.bubblePaths,
@@ -170,13 +171,22 @@ export async function prepareConvergedRouting(
     now: input.now
   });
   resolved.bubbleConfig = bubbleIdentity.bubbleConfig;
+  return {
+    resolved,
+    bubbleIdentity
+  };
+}
 
-  // Even when the caller provides authoritative actor context, convergence must
-  // independently re-read the persisted state before applying stale guards.
-  const loadedState = await readStateSnapshotFn(resolved.bubblePaths.statePath);
+function assertConvergedStateFreshness(input: {
+  loadedState: Awaited<ReturnType<typeof convergedDependencyDefaults.routing.readStateSnapshot>>;
+  expectedStateFingerprint: string | undefined;
+  expectedRound: number | undefined;
+  expectedReviewer: AgentName | undefined;
+  createError: PairflowCreateCommandError;
+}): void {
   if (
     input.expectedStateFingerprint !== undefined
-    && loadedState.fingerprint !== input.expectedStateFingerprint
+    && input.loadedState.fingerprint !== input.expectedStateFingerprint
   ) {
     throw input.createError({
       reasonCode: "AUTO_CONVERGE_STATE_STALE",
@@ -184,28 +194,12 @@ export async function prepareConvergedRouting(
       context: {
         command_name: "converged",
         expected_state_fingerprint: input.expectedStateFingerprint,
-        actual_state_fingerprint: loadedState.fingerprint
+        actual_state_fingerprint: input.loadedState.fingerprint
       }
     });
   }
 
-  const state = loadedState.state;
-  const ideationMetadata = resolveIdeationMetadataFn(resolved.bubbleConfig);
-  if (
-    state.state === "RUNNING" &&
-    state.round === 0 &&
-    ideationMetadata.mode &&
-    ideationMetadata.taskPending
-  ) {
-    throw input.createError({
-      reasonCode: IDEATION_CONVERGED_BLOCKED,
-      message: "ideation kickoff is required before CONVERGED handoff.",
-      context: {
-        command_name: "converged",
-        round: state.round
-      }
-    });
-  }
+  const state = input.loadedState.state;
   if (input.expectedRound !== undefined && state.round !== input.expectedRound) {
     throw input.createError({
       reasonCode: "AUTO_CONVERGE_STATE_STALE",
@@ -232,18 +226,91 @@ export async function prepareConvergedRouting(
       }
     });
   }
+}
 
-  const { implementer, reviewer } = resolved.bubbleConfig.agents;
-  const effectiveLoopMode = resolveRuntimeAlignedConvergedActiveRole({
-    config: resolved.bubbleConfig,
-    round: state.round,
-    activeRole: state.active_role,
+function assertConvergedIdeationGate(input: {
+  state: BubbleStateSnapshot;
+  resolvedBubbleConfig: ResolvedConvergedBubbleContext["resolved"]["bubbleConfig"];
+  resolveIdeationMetadataFn: typeof resolveIdeationMetadata;
+  createError: PairflowCreateCommandError;
+}): void {
+  const ideationMetadata = input.resolveIdeationMetadataFn(input.resolvedBubbleConfig);
+  if (
+    input.state.state === "RUNNING" &&
+    input.state.round === 0 &&
+    ideationMetadata.mode &&
+    ideationMetadata.taskPending
+  ) {
+    throw input.createError({
+      reasonCode: IDEATION_CONVERGED_BLOCKED,
+      message: "ideation kickoff is required before CONVERGED handoff.",
+      context: {
+        command_name: "converged",
+        round: input.state.round
+      }
+    });
+  }
+}
+
+function resolveConvergedEffectiveLoopMode(input: {
+  bubbleConfig: ResolvedConvergedBubbleContext["resolved"]["bubbleConfig"];
+  state: BubbleStateSnapshot;
+}): BubbleReviewLoopMode {
+  return resolveRuntimeAlignedConvergedActiveRole({
+    config: input.bubbleConfig,
+    round: input.state.round,
+    activeRole: input.state.active_role,
     executionContext: toRuntimeAlignedReviewPolicyExecutionContext(
-      state.execution_context
+      input.state.execution_context
     )
   }) === "implementer"
     ? "meta_only"
     : "full";
+}
+
+export async function prepareConvergedRouting(
+  input: PrepareConvergedRoutingInput,
+  dependencies: PrepareConvergedRoutingDependencies = {}
+): Promise<PrepareConvergedRoutingResult> {
+  const resolveBubbleFromWorkspace =
+    dependencies.resolveBubbleFromWorkspaceCwd
+    ?? convergedDependencyDefaults.routing.resolveBubbleFromWorkspaceCwd;
+  const ensureBubbleIdentity =
+    dependencies.ensureBubbleInstanceIdForMutation
+    ?? convergedDependencyDefaults.routing.ensureBubbleInstanceIdForMutation;
+  const readStateSnapshotFn =
+    dependencies.readStateSnapshot
+    ?? convergedDependencyDefaults.routing.readStateSnapshot;
+  const resolveIdeationMetadataFn =
+    dependencies.resolveIdeationMetadata ?? resolveIdeationMetadata;
+  const { resolved, bubbleIdentity } = await resolveConvergedBubbleContext(input, {
+    resolveBubbleFromWorkspace,
+    ensureBubbleIdentity
+  });
+
+  // Even when the caller provides authoritative actor context, convergence must
+  // independently re-read the persisted state before applying stale guards.
+  const loadedState = await readStateSnapshotFn(resolved.bubblePaths.statePath);
+  assertConvergedStateFreshness({
+    loadedState,
+    expectedStateFingerprint: input.expectedStateFingerprint,
+    expectedRound: input.expectedRound,
+    expectedReviewer: input.expectedReviewer,
+    createError: input.createError
+  });
+  const state = loadedState.state;
+  assertConvergedIdeationGate({
+    state,
+    resolvedBubbleConfig: resolved.bubbleConfig,
+    resolveIdeationMetadataFn,
+    createError: input.createError
+  });
+
+  const { implementer, reviewer } = resolved.bubbleConfig.agents;
+  const effectiveLoopMode = resolveConvergedEffectiveLoopMode({
+    bubbleConfig: resolved.bubbleConfig,
+    state
+  });
   assertConvergedActiveContext({
     state,
     configuredImplementer: implementer,

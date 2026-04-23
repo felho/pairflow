@@ -26,6 +26,23 @@ function buildUnexpectedAskHumanDeliveryFailureResult(
   };
 }
 
+function normalizeAskHumanDeliveryAck(deliveryAck: DeliveryAck): DeliveryAck {
+  if (
+    deliveryAck.status === "rejected"
+    && deliveryAck.reason === "no_runtime_session"
+    && deliveryAck.deliveryTargetReasonCode === undefined
+  ) {
+    return {
+      ...deliveryAck,
+      // Ask-human notifications still target the human/status lane even when
+      // the runtime session is absent, so preserve the historical reason code
+      // expected by the V11 ask-human contract and local CI.
+      deliveryTargetReasonCode: "DELIVERY_TARGET_ROLE_ABSENT"
+    };
+  }
+  return deliveryAck;
+}
+
 export async function emitOptionalAskHumanNotifications(
   input: EmitOptionalAskHumanNotificationsInput,
   dependencies: EmitOptionalAskHumanNotificationsDependencies
@@ -40,14 +57,14 @@ export async function emitOptionalAskHumanNotifications(
     describeDetachedBubbleNotificationFailure(error);
     return undefined;
   });
-  const deliveryResult = await dependencies.emitDeliveryNotificationAck({
+  const deliveryResult = normalizeAskHumanDeliveryAck(await dependencies.emitDeliveryNotificationAck({
     bubbleId: input.bubbleId,
     bubbleConfig: input.bubbleConfig,
     sessionsPath: input.sessionsPath,
     envelope: input.envelope,
     recipientRole: "status",
     messageRef: input.messageRef
-  }).catch((error) => buildUnexpectedAskHumanDeliveryFailureResult(error));
+  }).catch((error) => buildUnexpectedAskHumanDeliveryFailureResult(error)));
   void bubbleNotificationPromise;
 
   return {
