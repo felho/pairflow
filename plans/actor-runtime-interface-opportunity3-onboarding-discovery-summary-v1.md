@@ -33,7 +33,13 @@ owners:
    - workflow-owned role declaration, egy adott workflow configon beluli node/step funkcionális felelossege es capability kerete
 2. `agent`
    - a role workflow-beli konkretizaciojanak vegrehajtoi profilja
-   - persona, skills, mode, approach es egyeb behavior-config altal konkretizalt vegrehajto
+   - a current tree alapjan nem jo elsodlegesen "persona/mode/approach configkent" elkepzelni
+   - kozelebb all ahhoz, hogy egy role-bol indulva egy compose-olt instruction surface-t kap a vegrehajto:
+     - task / workspace context,
+     - Pairflow command guidance,
+     - canonical emit guidance,
+     - orchestration contractbol jovo evidence/artifact/completion elvarasok,
+     - es adott esetben role-specifikus review/gate policy reminder-ek
 3. `runner`
    - az underlying futtato motor / execution substrate
    - peldaul `codex`, `claude-code`, vagy kesobbi mas engine/harness
@@ -145,7 +151,13 @@ owners:
    - `src/v11/infrastructure/channel/tmux/tmuxManager.ts`
 10. Delivery target -> pane routing:
    - `src/v11/infrastructure/channel/tmux/tmuxDeliveryTargeting.ts`
-11. V2 conceptual reference:
+11. Start/resume prompt composition current-tree anchors:
+   - `src/v11/application/start/startCommandPrompts.ts`
+   - `src/v11/application/start/startCommandImplementerPrompts.ts`
+   - `src/v11/application/start/startCommandResumePrompts.ts`
+   - `src/v11/application/start/startCommandResumeImplementerPrompt.ts`
+   - `src/v11/shared/command/agentCommand.ts`
+12. V2 conceptual reference:
    - `docs/v2/pairflow-v2-architecture-plan-joint.md`
 
 ## Current-Tree Findings
@@ -216,6 +228,27 @@ owners:
 3. A jelen O3-korben ezt egyszerusitjuk:
    - ha egy role aktiv role-kent megjelenik a workflowban, dedikalt panelt/topology slotot kap.
 
+### 8. Agent behavior is composed from multiple code-owned prompt surfaces
+
+1. A current tree-ben a tenyleges agent launch gyakorlatilag:
+   - `agentName` (`codex` / `claude`)
+   - plusz egy kódból osszerakott `startupPrompt`
+2. A `buildAgentCommand(...)` maga nem hordoz role-specifikus domain modellt:
+   - a szerepspecifikus viselkedes a prompt builder-lancban all ossze
+3. A startup/resume promptok ma tobb kulon concernbol epulnek:
+   - task/workspace scope
+   - Pairflow command bootstrap/guidance
+   - canonical actor emit authority guidance
+   - implementer evidence handoff guidance
+   - reviewer findings/pass/gate/policy reminder-ek
+   - meta-review submit parity guidance
+4. Emiatt a jovobeli `agent` boundaryt ovatosan kell megvagni:
+   - nem latszik jonak egy olyan modell, ahol az agent lenyege csak `persona/mode/approach`
+   - kozelebb allhat a valos current-tree ownershiphoz, ha az agent vegrehajtoi profil, de az instruction surface tobb kulon contract compose eredmenye
+5. Discovery consequence:
+   - az `O3` ne probalja a jelenlegi prompt-compose logikat egyetlen "agent config" mezohalmazza leegyszerusiteni
+   - elobb a compose retegeket kell tisztazni, csak utana erdemes konfiguracios shape-et formalizalni
+
 ## Strategic Reading
 
 1. Az `O3` alatt nem erdemes ujra belebetonozni a mostani szerepkeszletet egy masik hardcoded matrixba.
@@ -253,6 +286,7 @@ owners:
    - state/execution-context invariants
    - route/policy assumptions
    - role-specific evidence/artifact/payload/completion enforcement
+   - startup/resume instruction-surface ownership
 5. `read_model_consumers`
    - CLI emit parser/help
    - public protocol-facing validation
@@ -294,6 +328,7 @@ owners:
 3. Goal:
    - a fix role x output x adapter x policy matrixot explicit belso definicios seam-re huzni
    - beleertve a role-specific orchestration contract explicitte tetelet
+   - es a prompt/instruction-surface compose ownership tisztazasat
    - ugy, hogy a jovobeli uj output kind tamogatas foundation-je kialakuljon
    - de a jelenlegi public vocabulary meg ebben a szeletben ne nyiljon ki
 4. Expected family:
@@ -378,6 +413,7 @@ owners:
 3. Current reading:
    - a belso foundation elsodlegesen `O3-T2`
    - a public contract nyitas elsodlegesen `O3-T5`
+   - a guidance/prompt compose ownership valoszinuleg `O3-T2` vagy kulon successor slice
 
 ### Q3. Dedicated panel baseline vs deferred topology variation
 
@@ -430,6 +466,7 @@ owners:
 5. Current reading:
    - a role-derived lookup lebontasanak foundation-je elsodlegesen `O3-T2`
    - a kapcsolodo public/protocol alignment elsodlegesen `O3-T5`
+   - a prompt/orchestration guidance compose owneret kulon kell tisztazni, nem csak a payload contract owneret
 
 ## Current Recommendation
 
@@ -454,6 +491,9 @@ owners:
 8. A `role` sem globalis reuse-objektumkent kezelendo:
    - workflow-owned declarationkent kell kezelni,
    - es az agent/runner/orchestration contract/dedikalt panel baseline jellegu adatok ennek workflow-beli konkretizaciojahoz tartoznak.
+9. Kulon kockazat, hogy a current-tree prompt-compose ownershipet tul koran leegyszerusitjuk:
+   - a jelenlegi rendszerben az instruction surface tobb kulon contract compose-ja,
+   - ezert ezt nem jo vakon `persona/mode/approach` tipusu agent-configga lapitani.
 
 ## Discussion Use
 
