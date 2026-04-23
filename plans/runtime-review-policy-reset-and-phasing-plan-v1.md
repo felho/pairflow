@@ -133,11 +133,14 @@ Sikernek az szamit, ha a kovetkezo kor mar nem egyetlen bubble-ben mozgatja egys
 4. A downstream taskok dependency wordingje nem allithat `approved` parent-plan baseline-t, amig ennek a plannek a frontmatter statusza `draft`.
 5. A downstream Phase 3 taskoknak mar a merged es archivalt Phase 1 + Phase 2 + Phase 3A baseline-re kell hivatkozniuk, nem a reset-elotti gapre.
 6. A kovetkezo bounded delivery munka mar nem a korabbi tulszeles 3B task implementacios bubble-je, hanem a szukitett Phase 3B activation-core implementacios bubble elinditasa.
+7. A Phase 3B es Phase 3C kozt explicit hatar maradjon:
+   - Phase 3B: live pass-path activation core,
+   - Phase 3C: residual runtime branches + broad status/list/UI/remote fail-closed parity.
 
 ### Deferred / Future Work
 
 1. Bypass runtime activation core implementacio kulon bubble-ben, a letrehozott Phase 3B task szerint.
-2. A residual runtime alignment a Phase 3C successor task szerint zaruljon Phase 3B utan.
+2. A residual runtime alignment es a broad status/list/UI/remote fail-closed parity a Phase 3C successor task szerint zaruljon Phase 3B utan.
 3. Olyan UI/control surface, amely a bounded backend foundationnel mar nincs egy lane-ben.
 
 ## Immediate Next Step
@@ -148,12 +151,14 @@ Sikernek az szamit, ha a kovetkezo kor mar nem egyetlen bubble-ben mozgatja egys
      az implementacios bubble csak a live activation-core pass-path scope-ot vigye, es ne huzza vissza ugyanebbe a slice-ba a convergence, rework/recovery vagy start/resume residual closure-t.
    - scope rule:
      a bubble a tenyleges live runtime behavior, handoff topology, delivery es post-pass state activation-core closure-t szallitsa.
+   - helper rule:
+     ha a task a shared `reviewPolicyRuntime` helper familyhez nyul, azt csak pass-path-bounded consume closure vagy explicit compatibility-preserving extract formaban teheti; broad status/list/UI/remote read-model parity nem valhat implicit Phase 3B ownershippa.
    - branch rule:
      clean `main`-rol induljon, uj bubble-ben.
 2. A kovetkezo immediate successor task a residual runtime alignment:
    [runtime-review-policy-reviewer-bypass-residual-runtime-alignment-phase3c.md](/Users/felho/dev/pairflow/plans/tasks/runtime-review-policy-reviewer-bypass-residual-runtime-alignment-phase3c.md)
    - delivery rule:
-     ez a task mar a Phase 3B activation-core truth-ra epuljon, es csak a residual convergence/meta-review/rework/start-resume branches-t zarja le.
+     ez a task mar a Phase 3B activation-core truth-ra epuljon, es a residual convergence/meta-review/rework/start-resume branches mellett a broad status/list/UI/remote fail-closed parityt is zarja le.
 3. A Phase 3B activation-core task tovabbra is csak a merged es archivalt Phase 3A contract utan vedheto successor:
    `plans/archive/tasks/runtime-review-policy-reviewer-bypass-contract-phase3a.md`
 4. Az archived `O2-T9` current-tree preserved baseline marad; sem a Phase 3B, sem a Phase 3C tasknak nem szabad runtime-capability cleanupot vagy opportunistic side-scope-ot visszahoznia.
@@ -230,7 +235,7 @@ Ez a kombinacio tul sok helyen nyitott ownership-kerdest egyszerre.
 |---|---|---|---|---|
 | Phase 1 | Shared runtime review policy foundation + authority simplification | jelenlegi bubble tanulsagai, `plans/tasks/review-policy-runtime-surface-and-rollout-phase1.md`, actor-runtime migration plan, es ez a reset plan | canonical policy type/schema, single projection builder a jelenlegi `list/status` consume familyhez, single mutation seam, threshold authority resolver boundary | a policy/read/write/authority felelossegek explicitten szet vannak valasztva; nincs meg bypass behavior; `detail` nincs implicitten Phase 1-be huzva |
 | Phase 2 | Auto-rework severity threshold delivery a canonical gate boundaryn | Phase 1 foundation | threshold-aware routing a meta-review gate boundaryn, bounded read-surface exposure, regressziozaras | a threshold feature reszertelmet ad clean mainrol, UI/store blast radius nelkul vagy minimalis operatori exposure-rel |
-| Phase 3 | Reviewer bypass contract, activation core, majd residual runtime alignment | Phase 1 foundation + historical reviewer/meta-reviewer cutover baseline + current-tree actor-runtime successor baseline | bypass policy/config/UI/state contract spec, majd kulon activation-core task, majd kulon residual runtime alignment task | a bypass behavior nem csuszik vissza foundation/threshold slice-ba; az activation core es a residual runtime branches kulon taskban zarulnak |
+| Phase 3 | Reviewer bypass contract, activation core, majd residual runtime alignment | Phase 1 foundation + historical reviewer/meta-reviewer cutover baseline + current-tree actor-runtime successor baseline | bypass policy/config/UI/state contract spec, majd kulon activation-core task, majd kulon residual runtime alignment + broad read-model fail-closed parity task | a bypass behavior nem csuszik vissza foundation/threshold slice-ba; az activation core es a residual runtime/read-model branches kulon taskban zarulnak |
 
 ## Recommended Task Split
 
@@ -289,10 +294,11 @@ Ez a kombinacio tul sok helyen nyitott ownership-kerdest egyszerre.
      - current-tree actor-runtime successor baseline nem regresszalodik
 
 5. `plans/tasks/runtime-review-policy-reviewer-bypass-residual-runtime-alignment-phase3c.md`
-   - cel: residual convergence/meta-review/rework/start-resume runtime branches alignmentja a Phase 3B activation core utan
+   - cel: residual convergence/meta-review/rework/start-resume runtime branches es a broad status/list/UI/remote fail-closed parity alignmentja a Phase 3B activation core utan
    - explicit dependency:
      - Phase 3B activation-core truth mar letezik
      - a residual branches nem gyarthatnak sajat bypass authorityt
+     - a broad read-model consume family sem mutathat optimista bypass truthot, ha a live activation authority nem bizonyitott
 
 ## Phase 1 Refactor Boundary
 
@@ -380,22 +386,25 @@ Phase 1 authoring guard:
 3. Risk: a bypass specifikacio ujra belerangatja a runtime behavior kerdeseit.
    Mitigation: Phase 3A contract, Phase 3B activation-core, es Phase 3C residual runtime alignment kulon task, kulon acceptance criteria-val.
 
-4. Risk: az adjacent actor-runtime successor residual cleanup es a review-policy lane osszecsuszik.
+4. Risk: a Phase 3B a shared `reviewPolicyRuntime` helperen keresztul hallgatolagosan broad read-model parity munkat huz vissza magaba.
+   Mitigation: a plan explicit helper-rule-t ir elo: Phase 3B csak pass-path-bounded consume closuret ownershipolhat; status/list/UI/remote fail-closed parity Phase 3C-ben zarul.
+
+5. Risk: az adjacent actor-runtime successor residual cleanup es a review-policy lane osszecsuszik.
    Mitigation: az archived `O2-T9` preserved baseline maradjon kulon boundary; a review-policy Phase 1 ne vallaljon runtime-capability contract cleanupot.
 
-5. Risk: elveszik a bubble-ben megszerzett konkret tudás.
+6. Risk: elveszik a bubble-ben megszerzett konkret tudás.
    Mitigation: ezt a plant a bubble diffkategoriak es review findingok alapjan rogzitjuk; a bubble nem merge-olodik, de discovery inputkent megmarad.
 
-6. Risk: a kovetkezo Phase 1 task ujra spekulativ helper-fajlokra epul, es elszakad a current-tree entrypointoktol.
+7. Risk: a kovetkezo Phase 1 task ujra spekulativ helper-fajlokra epul, es elszakad a current-tree entrypointoktol.
    Mitigation: a tasknak explicit target-file reality proofot kell adnia a meglevo config/list/status/meta-review anchorokrol; uj helper fajl csak output lehet.
 
-7. Risk: a downstream task dependency wording erosebb allapotot allit a parent planrol, mint ami a frontmatterben tenylegesen van.
+8. Risk: a downstream task dependency wording erosebb allapotot allit a parent planrol, mint ami a frontmatterben tenylegesen van.
    Mitigation: amig a plan `draft`, egy downstream task sem nevezheti ezt `approved` baseline-nak; legfeljebb current parent plan refkent hivatkozhat ra.
 
-8. Risk: a downstream taskok tul koran kapnak stabil successor-scope kezelest, mikozben a Phase 1 meg nincs current-tree entrypointokra visszahorgonyozva.
+9. Risk: a downstream taskok tul koran kapnak stabil successor-scope kezelest, mikozben a Phase 1 meg nincs current-tree entrypointokra visszahorgonyozva.
    Mitigation: a downstream taskok maradhatnak valtozatlan splitben, de implementalhato successor baseline-nak csak a Phase 1 re-anchoring utan tekinthetok.
 
-9. Risk: a `detail` consume backend projectionkent kerul Phase 1-be, mikozben a current tree-ben valojaban UI/router-presenter compose family.
+10. Risk: a `detail` consume backend projectionkent kerul Phase 1-be, mikozben a current tree-ben valojaban UI/router-presenter compose family.
    Mitigation: a Phase 1 backend minimum `list/status`; `detail` csak kulon explicit entrypointtal vagy kulon kesobbi lane-ben ownershipolhato.
 
 ## Validation Strategy

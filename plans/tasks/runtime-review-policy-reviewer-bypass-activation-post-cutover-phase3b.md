@@ -79,28 +79,33 @@ owners:
    - `src/v11/shared/state/executionContext.ts`
 8. Emiatt a current 3B gap mar nem contract- vagy UI-surface hiany, hanem a live pass-path activation core hianya:
    a bypass policy kerheto es operator-facingen latszik, de a tenyleges implementer -> meta-review direct handoff core meg nincs bezarva ugyanazon authority menten.
+9. A `src/v11/shared/reviewPolicy/reviewPolicyRuntime.ts` current tree-ben shared multi-consumer helper:
+   - kozvetlenul fogyasztja a `status`, `list`, `UI update conflict` es `meta-review finalize` consume csalad is,
+   - emiatt a Phase 3B nem irhatja at hallgatolagosan ennek a broad consume familynek a semanticsat,
+   - ha activation-proof logika kell, azt pass-path-only helperrel vagy explicit compatibility-preserving extracttel kell bevezetni.
 
 ## L0 - Policy
 
 ### Goal
 
 Lezarni a reviewer bypass Phase 3B activation core-t ugy, hogy:
-1. a `review_policy.review_loop_mode = "meta_only"` csak explicit activation-proof mellett valhasson `effective_loop_mode = "meta_only"` runtime allapotta,
+1. a `review_policy.review_loop_mode = "meta_only"` csak explicit activation-proof mellett valhasson `effective_loop_mode = "meta_only"` allapotta a pass-path-owned runtime helperben es a kozvetlen pass-path consume pontokban,
 2. a live pass-path activation authority ugyanazon canonical chainen doljon el, amelyre a Phase 3A requested/effective/support contract mar epul,
 3. a handoff, pass delivery, post-pass state write es execution-context truth ugyanazt az aktiv topology dontest kovesse,
 4. a rendszer fail-closed maradjon, ha activation eligibility nem bizonyithato,
-5. de a residual convergence, meta-review finalize, approval/rework es resume/start fallout ne keveredjen bele ebbe a bounded slice-ba.
+5. a broad status/list/UI/remote read-model fail-closed parity ne legyen implicit closure-kriterium ebben a slice-ban,
+6. es a residual convergence, meta-review finalize, approval/rework es resume/start fallout se keveredjen bele ebbe a bounded slice-ba.
 
 ### Domain / Control Model Summary
 
 1. Business invariant:
    a `meta_only` Phase 3B-ben sem puszta operatori intent; csak akkor valhat effective runtime modda, ha a live pass-path activation explicitten bizonyithato.
 2. Canonical control model:
-   a bypass truth source tovabbra is a workflow-owned `review_policy`, de az `effective_loop_mode` Phase 3B-ben mar egy explicit activation helper altal feloldott same-authority runtime view-bol jon.
+   a bypass truth source tovabbra is a workflow-owned `review_policy`, de az `effective_loop_mode` Phase 3B-ben mar egy explicit activation helper altal feloldott same-authority runtime view-bol jon a pass-path-owned consume csaladban.
 3. Activation rule:
-   `requested_loop_mode = "meta_only"` onmagaban nem eleg; kell explicit activation eligibility/provenance, amely egyszerre vezerli a runtime view effective mode-jat es a live handoff/state-write topologyt.
+   `requested_loop_mode = "meta_only"` onmagaban nem eleg; kell explicit activation eligibility/provenance, amely egyszerre vezerli a pass-path runtime helper effective mode-jat es a live handoff/state-write topologyt.
 4. Read-path rule:
-   operator-facing `effective_loop_mode` csak ugyanabbal az activation authorityval valthat `meta_only`-ra, amely alapjan a live implementer handoff mar nem reviewerre megy.
+   a Phase 3B csak azokat a read-path consume pontokat ownershipolja, amelyek kozvetlenul a live pass-path activation helperhez es a pass command/runtime topologyhoz tartoznak; invalid/drifted status/list/UI/remote parity successor-owned.
 5. Forbidden fallback:
    `sticky_human_gate`, `human_gate_sticky_bypass`, stale delivery metadata, UI/store local state vagy transcript parser nem valhat bypass activation truth-va.
 6. Allowed resolution path:
@@ -113,6 +118,8 @@ Lezarni a reviewer bypass Phase 3B activation core-t ugy, hogy:
    - live pass-path internal execution closure: owned here
    - workflow-orchestration consume closure a pass-pathon: owned here
    - residual convergence/recovery/start-resume closure: successor-owned Phase 3C
+9. Shared-helper rule:
+   a shared `reviewPolicyRuntime` helper family Phase 3B-ben csak ugy modosithato, ha a broad `status/list/UI/meta-review-finalize` consume family Phase 3C-ownershipa nem valik implicitte; ehhez pass-path-only activation helper vagy compatibility-preserving extract kell.
 
 ### Plan Linkage
 
@@ -123,11 +130,11 @@ Lezarni a reviewer bypass Phase 3B activation core-t ugy, hogy:
    [runtime-review-policy-auto-rework-threshold-phase2.md](/Users/felho/dev/pairflow/plans/archive/tasks/runtime-review-policy-auto-rework-threshold-phase2.md),
    [runtime-review-policy-reviewer-bypass-contract-phase3a.md](/Users/felho/dev/pairflow/plans/archive/tasks/runtime-review-policy-reviewer-bypass-contract-phase3a.md)
 3. Unlocks / impacts successors:
-   a residual convergence, meta-review finalize, rework/resume es startup fallout kulon bounded Phase 3C taskkent zarhato ugyanarra az activation truth-ra epulve.
+   a residual convergence, meta-review finalize, rework/resume es startup fallout, valamint a broad status/list/UI/remote read-model fail-closed parity kulon bounded Phase 3C taskkent zarhato ugyanarra az activation truth-ra epulve.
 4. Task-list impact:
    ez mar nem full bypass rollout task, hanem activation core slice; a residual runtime alignment successor-owned.
 5. Inherited validation / exit expectation:
-   a task akkor zarult, ha a live pass-path runtime behavior es az operator-facing effective mode ugyanarra a canonical activation truth-ra ul.
+   a task akkor zarult, ha a live pass-path runtime behavior, valamint a pass-path-owned runtime helper consume csalad ugyanarra a canonical activation truth-ra ul.
 6. Remaining-task viability rule:
    a tasknak eletkepes successor seamet kell hagynia a residual runtime alignmentnak anelkul, hogy a Phase 3A contractot vagy a 3B activation core truth-ot ujra kellene tervezni.
 
@@ -166,6 +173,7 @@ Lezarni a reviewer bypass Phase 3B activation core-t ugy, hogy:
 5. Forbidden reinterpretations:
    - a protocol metadata `delivery_target_role` nem lehet authority-forras a workflow topology felol, csak projection
    - a runtime view `effective_loop_mode` nem valhat optimistic UI truth-ta live handoff parity nelkul
+   - a shared `buildBubbleReviewPolicyRuntimeView(...)` helper nem reinterpretalhato ugy, mintha mar kizarlag pass-path-owned consume lenne
 6. Drift status:
    `no_drift_if_phase3b_preserves_phase3a_contract_and_closes_live_pass_path_activation_only`
 
@@ -185,14 +193,16 @@ Lezarni a reviewer bypass Phase 3B activation core-t ugy, hogy:
    `src/v11/application/pass/postAppendStateWriter.ts`,
    `src/v11/shared/state/executionContext.ts`.
 2. Actual touched scope:
-   `activation_or_read_model` primary, `consumer_family_alignment` secondary a live pass-path consume familyben.
+   `internal_execution_consumers` primary, `workflow_orchestration_consumers` secondary; bounded `read_model_consumers` csak ott fer bele, ahol a live pass-path helper parityjahoz szukseges.
 3. Why this bounded slice is now narrower:
-   a residual convergence, meta-review finalize, approval/rework es start/resume consume csaladok nem ownershipoltak itt; azok kulon successor taskba mennek.
+   a residual convergence, meta-review finalize, approval/rework es start/resume consume csaladok, valamint a broad status/list/UI/remote invalid-state parity nem ownershipoltak itt; azok kulon successor taskba mennek.
 4. Ingress/wrapper note:
    a live activation-core truth nem csak a handoff/domain es a delivery leaf-ekben jelenik meg, hanem a pass command builder -> workspace-context preparation -> normal delivery wrapper chainen is atmegy; ezeket a task explicit ownershipolja.
 5. Hidden scope ruled out:
-   meta-review gate finalization, convergence routing, approval/rework recovery, start/resume kickoff topology, UI mutation contract, uj review-policy field, threshold semantics redesign.
-6. Branch inventory note:
+   meta-review gate finalization, convergence routing, approval/rework recovery, start/resume kickoff topology, broad status/list/UI/remote invalid-state parity, compare-and-swap conflict hardening, UI mutation contract, uj review-policy field, threshold semantics redesign.
+6. Shared helper compatibility note:
+   mivel a `reviewPolicyRuntime.ts` current tree-ben shared multi-consumer anchor, a task csak olyan extractet vagy helper-szetvalasztast ownershipolhat, amely a non-pass-path consume family Phase 3C-s semanticsat nem irja at hallgatolagosan.
+7. Branch inventory note:
    `requested=full`,
    `requested=meta_only + activation proven`,
    `requested=meta_only + activation unresolved`,
@@ -200,7 +210,7 @@ Lezarni a reviewer bypass Phase 3B activation core-t ugy, hogy:
    `command ingress / workspace context handoff parity`,
    `delivery target metadata parity`
    kotelezoen reprezentalt.
-7. Why the declared task shape matches reality:
+8. Why the declared task shape matches reality:
    a current tree-ben a live bypass activation core a runtime view + handoff + delivery + post-pass state write + execution context consume csaladban zarhato; a tobbi residual branch nem kell ehhez ugyanebben a taskban.
 
 ### Authority Boundary Map
@@ -214,7 +224,7 @@ Lezarni a reviewer bypass Phase 3B activation core-t ugy, hogy:
 4. Workflow orchestration consumers:
    pass command builder, workspace-context preparation, pass-flow wiring es normal-pass invocation compose.
 5. Read model consumers:
-   `reviewPolicyRuntime` family, amelynek Phase 3B-ben az effective mode mar a live pass-path truth-ot kell mutatnia.
+   bounded `reviewPolicyRuntime` helper consume ott, ahol a pass-path activation proofjat ugyanabban a slice-ban kell atvinni; broad status/list/UI/remote read-model hardening successor-owned.
 6. Cleanup/recovery consumers:
    out of scope ebben a taskban; successor-owned Phase 3C.
 
@@ -224,7 +234,7 @@ Lezarni a reviewer bypass Phase 3B activation core-t ugy, hogy:
    - `shared_contract`
    - `workflow_orchestration_consumers`
    - `internal_execution_consumers`
-   - `read_model_consumers`
+   - `read_model_consumers` (bounded pass-path helper consume only)
 2. Explicitly not touched:
    - `authority_producer`
    - `persisted_authority_or_schema`
@@ -232,22 +242,23 @@ Lezarni a reviewer bypass Phase 3B activation core-t ugy, hogy:
    - `ui_mutation_contract`
    - `requested/effective/support vocabulary`
 3. Intentionally collapsed closures:
-   `shared_contract` + `read_model_consumers`,
+   `shared_contract` + bounded `read_model_consumers`,
    `workflow_orchestration_consumers` + `internal_execution_consumers`
 4. Why collapse is safe:
-   ugyanaz az activation helper zarja a runtime view effective mode-jat es a live pass-path topology consume csaladot; kulon compatibility vagy cleanup risket itt nem nyitunk.
+   ugyanaz az activation helper zarja a pass-path runtime view effective mode-jat es a live pass-path topology consume csaladot; broad operator/read-model parityt itt nem ownershipolunk.
 5. Explicitly deferred closures:
    - convergence residual alignment
    - meta-review finalize / auto-rework alignment
    - approval/rework recovery alignment
    - start/resume fallout
+   - broad status/list/UI/remote read-model fail-closed parity
    - UX polish
 
 ### Shared Contract Compatibility
 
 | Shared Contract | Current Consumers | Change Type | This Task Action | Deferred Alignment |
 |---|---|---|---|---|
-| `BubbleReviewPolicyRuntimeView` | status/list/UI/detail consume family | behavior closure on existing fields | `effective_loop_mode` csak explicit activation-proof mellett lehessen `meta_only`, Phase 3A vocabulary megtartasaval | later copy polish |
+| `BubbleReviewPolicyRuntimeView` | shared runtime helper; direct consumers today include pass-path-adjacent consume family plus status/list/UI conflict es meta-review finalize surfaces | behavior closure on existing fields | a Phase 3B activation truth vagy uj pass-path-only helperen, vagy explicit compatibility-preserving extracten zaruljon; broad shared-consumer semantics hallgatolagos atirasa nem megengedett | invalid/drifted status/list/UI/remote parity, meta-review-finalize alignment es broader diagnostics hardening Phase 3C-ben |
 | Pass command ingress contract | pass command builder, workspace-context preparation | behavior closure | a live activation truth a builder -> workspace-context preparation chainen is ugyanaz maradjon, mint a handoff leaf-ekben | none |
 | Pass handoff contract | pass domain, pass delivery, lifecycle metrics | additive or widening | a recipient-role topology tudjon reviewer helyett `meta_reviewer` targetet feloldani, fail-closed branch-ekkel | residual runtime branches in Phase 3C |
 | Post-pass running state | post-append state mutation, active execution authority | behavior closure | a resolved handoff target ugyanazt az `active_role` / `execution_context` truth-ot irja, amit a runtime view es delivery path hasznal | restart/rework fallout in Phase 3C |
@@ -394,7 +405,8 @@ Normative rules:
    - post-pass state write active role/output truth-jat.
 3. Ha barmelyik live pass-path consume family nem tud ugyanarra az activation truth-ra ulni, a fallback a `full` reviewer path.
 4. A protocol-level `delivery_target_role = meta_reviewer` csak projection; nem lehet a route dontes bemenete.
-5. A residual convergence/recovery/start-resume topology Phase 3B-ben nem ownershipolt.
+5. Ha a megvalositas a shared `reviewPolicyRuntime` helper familyhez nyul, kotelezo a compatibility-preserving extract vagy pass-path-only helper boundary; a broad status/list/UI/meta-review-finalize consume family semanticsa nem valtozhat implicit 3B scope-ban.
+6. A residual convergence/recovery/start-resume topology Phase 3B-ben nem ownershipolt.
 
 ### 3) Shared Contract / Consumer Inventory
 
@@ -446,6 +458,7 @@ Normative rules:
 2. Ingress/handoff/delivery/post-pass-state tesztek bizonyitjak, hogy activated meta-only alatt a live pass-path tenylegesen nem reviewer-topologyra megy vissza.
 3. Regression tesztek bizonyitjak, hogy `requested=full` baseline es a Phase 2 threshold lane nem serul.
 4. A task artifact maga dokumentalja, hogy a residual runtime alignment kulon successor taskba kerult, nem maradt hidden closure.
+5. A task artifact explicitten dokumentalja, hogy a shared `reviewPolicyRuntime` helper current-tree multi-consumer anchor, es a 3B csak compatibility-preserving extracttel vagy pass-path-only helperrel zarhat activation truthot.
 
 ## Hardening Backlog
 
