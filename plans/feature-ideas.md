@@ -44,3 +44,4 @@
 - https://github.com/plastic-labs/honcho
 - https://setcode.dev/
 - https://github.com/stanford-iris-lab/meta-harness
+- https://github.com/Neon-Data/auto-context
