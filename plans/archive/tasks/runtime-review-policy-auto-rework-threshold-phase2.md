@@ -38,10 +38,10 @@ target_files:
   - tests/v11/shared/metrics/report/format.test.ts
   - tests/v11/shared/metrics/report/report.test.ts
 prd_ref: null
-plan_ref: plans/runtime-review-policy-reset-and-phasing-plan-v1.md
+plan_ref: plans/archive/plans/runtime-review-policy-reset-and-phasing-plan-v1.md
 system_context_ref: docs/pairflow-initial-design.md
 normative_refs:
-  - plans/runtime-review-policy-reset-and-phasing-plan-v1.md
+  - plans/archive/plans/runtime-review-policy-reset-and-phasing-plan-v1.md
   - plans/archive/tasks/runtime-review-policy-foundation-and-authority-refactor-phase1.md
   - plans/actor-runtime-interface-post-phaseE-successor-plan-v1.md
   - docs/pairflow-initial-design.md

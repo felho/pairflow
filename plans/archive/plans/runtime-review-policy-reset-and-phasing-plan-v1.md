@@ -2,7 +2,7 @@
 artifact_type: plan
 artifact_id: plan_runtime_review_policy_reset_and_phasing_v1
 title: "Runtime Review Policy Reset and Phasing Plan"
-status: draft
+status: completed
 prd_ref: null
 owners:
   - "felho"

@@ -39,10 +39,10 @@ target_files:
   - tests/v11/shared/metaReviewGate/metaReviewGateFindingsSplit.test.ts
   - tests/v11/shared/metaReviewGate/metaReviewGateThresholdAuthority.test.ts
 prd_ref: null
-plan_ref: plans/runtime-review-policy-reset-and-phasing-plan-v1.md
+plan_ref: plans/archive/plans/runtime-review-policy-reset-and-phasing-plan-v1.md
 system_context_ref: docs/pairflow-initial-design.md
 normative_refs:
-  - plans/runtime-review-policy-reset-and-phasing-plan-v1.md
+  - plans/archive/plans/runtime-review-policy-reset-and-phasing-plan-v1.md
   - plans/tasks/review-policy-runtime-surface-and-rollout-phase1.md
   - plans/actor-runtime-interface-post-phaseE-successor-plan-v1.md
   - plans/archive/tasks/actor-runtime-interface-opportunity2-task9-meta-review-gate-workflow-runtime-capability-residual-closeout.md
@@ -106,7 +106,7 @@ Bevezetni a shared runtime review policy foundationt ugy, hogy:
 1. Parent plan gap closed:
    a planbol hianyzo Phase 1 foundation slice, amely a canonical policy objectet, a kozos runtime-view buildert, a mutation seamet es a pure threshold-authority boundaryt letrehozza.
 2. Depends on:
-   draft [runtime-review-policy-reset-and-phasing-plan-v1.md](/Users/felho/dev/pairflow/plans/runtime-review-policy-reset-and-phasing-plan-v1.md) plan-reference, es az `O2-T9` lane maradjon kulon ownership alatt.
+   completed [runtime-review-policy-reset-and-phasing-plan-v1.md](/Users/felho/dev/pairflow/plans/archive/plans/runtime-review-policy-reset-and-phasing-plan-v1.md) plan-reference, es az `O2-T9` lane maradjon kulon ownership alatt.
 3. Unlocks / impacts successors:
    `runtime-review-policy-auto-rework-threshold-phase2`, valamint a `runtime-review-policy-reviewer-bypass-contract-phase3a` task.
 4. Task-list impact:
@@ -412,7 +412,7 @@ Constraint: ha a task nem nevezi meg kifejezetten, a resolvernek es a runtime-vi
 
 | Type | Items | Priority | Timing |
 |---|---|---|---|
-| must-use | `plans/runtime-review-policy-reset-and-phasing-plan-v1.md`, `docs/architecture/v11-placement-and-extraction-governance.md`, existing findings parity helpers | P1 | required-now |
+| must-use | `plans/archive/plans/runtime-review-policy-reset-and-phasing-plan-v1.md`, `docs/architecture/v11-placement-and-extraction-governance.md`, existing findings parity helpers | P1 | required-now |
 | must-not-use | reviewer snapshot as threshold truth, approval metadata as severity source, UI/store rollout, `O2-T9` cleanup scope, gate-route behavior change | P1 | required-now |
 
 ### 6) Test Matrix
