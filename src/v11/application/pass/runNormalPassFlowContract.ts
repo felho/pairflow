@@ -9,7 +9,11 @@ import type { LoadedStateSnapshot } from "../../../v11/shared/ports/stateSnapsho
 import type { AgentName, BubbleConfig, BubbleStateSnapshot } from "../../../types/bubble.js";
 import type { Finding } from "../../../types/findings.js";
 import type { PassIntent, ProtocolEnvelope } from "../../../types/protocol.js";
-import type { ResolvedPassHandoff } from "../../domain/pass/handoff.js";
+import type {
+  PassRecipientRole,
+  PassSenderRole,
+  ResolvedPassHandoff
+} from "../../domain/pass/handoff.js";
 import type {
   ReviewerFindingsClaim,
   ReviewerFindingsClaimParserMetadata
@@ -68,7 +72,7 @@ export interface RunNormalPassFlowInput {
 
 export interface RunNormalPassFlowDependencies<TResult> {
   prepareNormalPassAppend: (input: {
-    senderRole: "implementer" | "reviewer";
+    senderRole: PassSenderRole;
     reviewArtifactType: BubbleConfig["review_artifact_type"];
     round: number;
     findings: Finding[];
@@ -148,7 +152,7 @@ export interface RunNormalPassFlowDependencies<TResult> {
     docGateArtifactWriteFailureReason?: string;
   }>;
   executeNormalPassDelivery: (input: {
-    senderRole: "implementer" | "reviewer";
+    senderRole: PassSenderRole;
     bubbleId: string;
     bubbleConfig: BubbleConfig;
     envelope: ProtocolEnvelope;
@@ -158,7 +162,7 @@ export interface RunNormalPassFlowDependencies<TResult> {
     sessionsPath: string;
     reviewerBriefArtifactPath: string;
     reviewerFocusArtifactPath: string;
-    recipientRole: "implementer" | "reviewer";
+    recipientRole: PassRecipientRole;
     now: Date;
     reviewerTestDirective?: ReviewerTestExecutionDirective;
   }) => Promise<{
@@ -172,12 +176,12 @@ export interface RunNormalPassFlowDependencies<TResult> {
     bubbleId: string;
     bubbleInstanceId: string;
     round: number;
-    actorRole: "implementer" | "reviewer";
+    actorRole: PassSenderRole;
     passIntent: PassIntent;
     inferredIntent: boolean;
     sender: AgentName;
     recipient: AgentName;
-    recipientRole: "implementer" | "reviewer";
+    recipientRole: PassRecipientRole;
     refsCount: number;
     hasFindings: boolean;
     noFindings: boolean;

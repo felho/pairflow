@@ -177,4 +177,82 @@ describe("executeNormalPassDelivery", () => {
       emitDeliveryNotificationAck
     );
   });
+
+  it("forwards meta-reviewer recipient routing without forcing reviewer fallback semantics", async () => {
+    let capturedDeliveryInput:
+      | Parameters<Parameters<typeof executeNormalPassDelivery>[1]["executePassDelivery"]>[0]
+      | undefined;
+
+    await executeNormalPassDelivery(
+      {
+        senderRole: "implementer",
+        bubbleId: "b_meta_review_delivery",
+        bubbleConfig: {} as BubbleConfig,
+        envelope: { id: "env_meta" } as unknown as ProtocolEnvelope,
+        worktreePath: "/tmp/wt",
+        repoPath: "/tmp/repo",
+        artifactsDir: "/tmp/artifacts",
+        sessionsPath: "/tmp/sessions.json",
+        reviewerBriefArtifactPath: "/tmp/reviewer-brief.md",
+        reviewerFocusArtifactPath: "/tmp/reviewer-focus.json",
+        recipientRole: "meta_reviewer",
+        now: new Date("2026-03-19T12:00:00.000Z")
+      },
+      {
+        resolveReviewerTestDirectiveForPass: async () => undefined,
+        executePassDelivery: async (input) => {
+          capturedDeliveryInput = input;
+          return {
+            result: undefined,
+            retried: false
+          };
+        }
+      }
+    );
+
+    expect(capturedDeliveryInput?.recipientRole).toBe("meta_reviewer");
+  });
+
+  it("keeps pass-path delivery bound to explicit recipientRole instead of envelope metadata", async () => {
+    let capturedDeliveryInput:
+      | Parameters<Parameters<typeof executeNormalPassDelivery>[1]["executePassDelivery"]>[0]
+      | undefined;
+
+    await executeNormalPassDelivery(
+      {
+        senderRole: "implementer",
+        bubbleId: "b_meta_review_delivery_metadata_guard",
+        bubbleConfig: {} as BubbleConfig,
+        envelope: {
+          id: "env_meta_guard",
+          payload: {
+            summary: "handoff",
+            metadata: {
+              delivery_target_role: "meta_reviewer"
+            }
+          }
+        } as unknown as ProtocolEnvelope,
+        worktreePath: "/tmp/wt",
+        repoPath: "/tmp/repo",
+        artifactsDir: "/tmp/artifacts",
+        sessionsPath: "/tmp/sessions.json",
+        reviewerBriefArtifactPath: "/tmp/reviewer-brief.md",
+        reviewerFocusArtifactPath: "/tmp/reviewer-focus.json",
+        recipientRole: "reviewer",
+        now: new Date("2026-03-19T12:00:00.000Z")
+      },
+      {
+        resolveReviewerTestDirectiveForPass: async () => undefined,
+        executePassDelivery: async (input) => {
+          capturedDeliveryInput = input;
+          return {
+            result: undefined,
+            retried: false
+          };
+        }
+      }
+    );
+
+    expect(capturedDeliveryInput?.recipientRole).toBe("reviewer");
+  });
 });

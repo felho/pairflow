@@ -47,10 +47,20 @@ function resolveRecipientRoleFromRecipient(
   return recipient;
 }
 
+function resolveRecipientRoleFromDeliveryTargetRole(
+  role: DeliveryTargetRole
+): DeliveryMessageRecipientRole {
+  return role === "meta_reviewer" ? "meta-reviewer" : role;
+}
+
 export function resolveEnvelopeRecipientRole(
   envelope: ProtocolEnvelope,
-  bubbleConfig: BubbleConfig
+  bubbleConfig: BubbleConfig,
+  explicitRecipientRole?: DeliveryTargetRole
 ): DeliveryMessageRecipientRole {
+  if (explicitRecipientRole !== undefined) {
+    return resolveRecipientRoleFromDeliveryTargetRole(explicitRecipientRole);
+  }
   const fallbackRecipientRole = resolveRecipientRoleFromRecipient(
     envelope.recipient,
     bubbleConfig
@@ -86,8 +96,20 @@ export interface EnvelopeTargetPaneResolution {
 
 export function resolveEnvelopeTargetPane(
   envelope: ProtocolEnvelope,
-  bubbleConfig: BubbleConfig
+  bubbleConfig: BubbleConfig,
+  explicitRecipientRole?: DeliveryTargetRole
 ): EnvelopeTargetPaneResolution {
+  if (explicitRecipientRole !== undefined) {
+    const explicitPane = resolvePaneIndexByDeliveryTargetRole(explicitRecipientRole);
+    return {
+      targetPaneIndex: explicitPane,
+      recipientRole: resolveRecipientRoleFromDeliveryTargetRole(explicitRecipientRole),
+      ...(explicitPane === undefined
+        ? { deliveryTargetReasonCode: "DELIVERY_TARGET_ROLE_UNMAPPED" as const }
+        : {})
+    };
+  }
+
   const fallbackPane = resolveTargetPaneIndex(envelope.recipient, bubbleConfig);
   const fallbackRecipientRole = resolveRecipientRoleFromRecipient(
     envelope.recipient,

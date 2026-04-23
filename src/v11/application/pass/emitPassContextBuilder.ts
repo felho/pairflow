@@ -2,7 +2,6 @@ import type { AgentRole } from "../../../types/bubble.js";
 import type { Finding } from "../../../types/findings.js";
 import type { PassIntent } from "../../../types/protocol.js";
 import {
-  buildOptionalActorActivationProvenance,
   type ActorEmitContextSnapshot
 } from "../../shared/actorProtocol/actorEmitContext.js";
 import { normalizePassCommandInput } from "../../shared/pass/passCommandInputNormalization.js";
@@ -90,12 +89,7 @@ export async function buildEmitPassContext(
   const reviewer = workspaceContext.reviewer;
   const activation =
     handoff.senderRole === "implementer"
-      ? buildOptionalActorActivationProvenance({
-          ...(input.commandInput.authoritativeContext !== undefined
-            ? { authoritativeContext: input.commandInput.authoritativeContext }
-            : {}),
-          loadedState: workspaceContext.loadedState
-        })
+      ? workspaceContext.activation
       : undefined;
 
   const passRouting = await dependencies.preparePassRouting(

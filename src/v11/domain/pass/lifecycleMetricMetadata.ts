@@ -6,6 +6,7 @@ import type { ReviewerTestExecutionDirective } from "../../../v11/shared/reviewe
 import type { Finding } from "../../../types/findings.js";
 import type { PassIntent } from "../../../types/protocol.js";
 import type { AgentName } from "../../../types/bubble.js";
+import type { PassRecipientRole } from "./handoff.js";
 import { buildFindingCounts } from "./findingCounts.js";
 import { buildRepeatCleanLifecycleMetadata } from "./repeatCleanMetadata.js";
 
@@ -24,7 +25,7 @@ export interface BuildPassLifecycleMetricMetadataInput {
   inferredIntent: boolean;
   sender: AgentName;
   recipient: AgentName | "human";
-  recipientRole: "implementer" | "reviewer" | "human";
+  recipientRole: PassRecipientRole | "human";
   refsCount: number;
   hasFindings: boolean;
   noFindings: boolean;

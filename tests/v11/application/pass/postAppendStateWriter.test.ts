@@ -146,6 +146,47 @@ describe("writePostAppendPassState", () => {
     });
   });
 
+  it("writes canonical meta-review authority when bypass handoff targets meta-reviewer", async () => {
+    let capturedState: BubbleStateSnapshot | undefined;
+    await writePostAppendPassState(
+      {
+        statePath: "/tmp/state.json",
+        state: buildState(),
+        handoff: {
+          nextRound: 2,
+          recipientAgent: "codex",
+          recipientRole: "meta_reviewer"
+        },
+        nowIso: "2026-03-19T12:00:00.000Z",
+        watchdogTimeoutMinutes: 60,
+        expectedFingerprint: "fp_1",
+        envelopeId: "msg_meta",
+        createError
+      },
+      {
+        writeStateSnapshot: async (_path, state) => {
+          capturedState = state;
+          return {
+            state,
+            fingerprint: "fp_meta"
+          };
+        }
+      }
+    );
+
+    expect(capturedState).toMatchObject({
+      round: 2,
+      active_agent: "codex",
+      active_role: "meta_reviewer",
+      execution_context: {
+        active_role: "meta_reviewer",
+        awaited_output_type: "meta_review_result",
+        handoff_id: "meta_review:b_123:round:2:attempt:1",
+        round: 2
+      }
+    });
+  });
+
   it("wraps state write failure with post-append state error", async () => {
     await expect(
       writePostAppendPassState(

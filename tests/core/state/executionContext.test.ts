@@ -28,6 +28,27 @@ describe("buildRunningExecutionContext", () => {
     expect(executionContext.execution_id).toMatch(/^exec_[0-9a-f]{24}$/u);
   });
 
+  it("builds canonical running authority for meta-review actors", () => {
+    const executionContext = buildRunningExecutionContext({
+      bubbleId: "b_exec_ctx_meta_01",
+      round: 3,
+      activeRole: "meta_reviewer",
+      startedAt: "2026-03-19T12:00:00.000Z",
+      watchdogTimeoutMinutes: 45
+    });
+
+    expect(executionContext).toMatchObject({
+      active_role: "meta_reviewer",
+      awaited_output_type: "meta_review_result",
+      handoff_id: "meta_review:b_exec_ctx_meta_01:round:3:attempt:1",
+      round: 3,
+      started_at: "2026-03-19T12:00:00.000Z",
+      deadline_at: "2026-03-19T12:45:00.000Z",
+      attempt: 1
+    });
+    expect(executionContext.execution_id).toMatch(/^exec_[0-9a-f]{24}$/u);
+  });
+
   it("rejects zero-minute watchdog windows", () => {
     expect(() =>
       buildRunningExecutionContext({

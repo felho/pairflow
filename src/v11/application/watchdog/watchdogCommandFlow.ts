@@ -86,6 +86,7 @@ export async function escalateRunningWatchdog(
     bubbleConfig: context.resolved.bubbleConfig,
     sessionsPath: context.resolved.bubblePaths.sessionsPath,
     envelope: appended.envelope,
+    recipientRole: "status",
     messageRef: context.resolveDeliveryMessageRef({
       bubbleId: context.resolved.bubbleId,
       sessionsPath: context.resolved.bubblePaths.sessionsPath,
@@ -150,6 +151,7 @@ export async function escalateMetaReviewWatchdog(
     bubbleConfig: context.resolved.bubbleConfig,
     sessionsPath: context.resolved.bubblePaths.sessionsPath,
     envelope: appended.envelope,
+    recipientRole: "status",
     messageRef: context.resolveDeliveryMessageRef({
       bubbleId: context.resolved.bubbleId,
       sessionsPath: context.resolved.bubblePaths.sessionsPath,

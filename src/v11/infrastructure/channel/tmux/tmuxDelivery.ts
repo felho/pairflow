@@ -74,7 +74,8 @@ function buildRegistryReadFailedMessage(
       : {}),
     recipientRole: resolveEnvelopeRecipientRole(
       input.envelope,
-      input.bubbleConfig
+      input.bubbleConfig,
+      input.recipientRole
     )
   });
 }
@@ -96,7 +97,8 @@ function createDeliveryMessage(input: {
     });
   const targetResolution = resolveEnvelopeTargetPane(
     runtimeInput.envelope,
-    runtimeInput.bubbleConfig
+    runtimeInput.bubbleConfig,
+    runtimeInput.recipientRole
   );
   return {
     message: buildTmuxDeliveryMessage({

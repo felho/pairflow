@@ -54,6 +54,7 @@ export async function maybeApplyPendingReworkIntent(input: {
     bubbleConfig: input.resolved.bubbleConfig,
     sessionsPath: input.resolved.bubblePaths.sessionsPath,
     envelope: deliveryEnvelope,
+    recipientRole: "implementer",
     messageRef: input.resolveDeliveryMessageRef({
       bubbleId: input.resolved.bubbleId,
       sessionsPath: input.resolved.bubblePaths.sessionsPath,

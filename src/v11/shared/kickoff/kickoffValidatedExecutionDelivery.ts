@@ -46,7 +46,8 @@ export async function executeKickoffValidatedDelivery(input: {
     bubbleId: input.validation.resolved.bubbleId,
     bubbleConfig: input.validation.resolved.bubbleConfig,
     sessionsPath: input.validation.resolved.bubblePaths.sessionsPath,
-    envelope: input.envelope
+    envelope: input.envelope,
+    recipientRole: "implementer"
   }).catch(() => emitFallbackResult);
 
   return mapKickoffResultDelivery({

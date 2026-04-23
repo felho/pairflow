@@ -9,6 +9,16 @@ import {
   IDEATION_PASS_BLOCKED
 } from "../../shared/ideation/ideationReasonCodes.js";
 import {
+  buildOptionalActorActivationProvenance,
+  type ActorActivationProvenance,
+} from "../../shared/actorProtocol/actorEmitContext.js";
+import {
+  buildPassPathReviewPolicyRuntimeView
+} from "../../shared/reviewPolicy/reviewPolicyRuntime.js";
+import type {
+  BubbleReviewPolicyRuntimeView
+} from "../../../types/bubble.js";
+import {
   assertActorEmitContextSnapshotIntegrity
 } from "../../shared/actorProtocol/actorEmitContext.js";
 import type { ActorEmitContextSnapshot } from "../../shared/actorProtocol/actorEmitContext.js";
@@ -42,6 +52,8 @@ export interface PreparedPassWorkspaceContext {
   bubbleIdentity: EnsureBubbleInstanceIdForMutationResult;
   loadedState: LoadedStateSnapshot;
   state: BubbleStateSnapshot;
+  activation?: ActorActivationProvenance;
+  reviewPolicyRuntime: BubbleReviewPolicyRuntimeView;
   handoff: ResolvedPassHandoff;
   implementer: AgentName;
   reviewer: AgentName;
@@ -107,10 +119,21 @@ export async function preparePassWorkspaceContext(
   }
 
   const { implementer, reviewer } = resolved.bubbleConfig.agents;
+  const activation = buildOptionalActorActivationProvenance({
+    ...(input.authoritativeContext !== undefined
+      ? { authoritativeContext: input.authoritativeContext }
+      : {}),
+    loadedState
+  });
+  const reviewPolicyRuntime = buildPassPathReviewPolicyRuntimeView({
+    config: resolved.bubbleConfig,
+    activationProven: activation?.expected_role === "implementer"
+  });
   const handoff = resolveHandoff({
     state,
     implementer,
     reviewer,
+    effectiveLoopMode: reviewPolicyRuntime.effective_loop_mode,
     nowIso: input.nowIso,
     createError: input.createError
   });
@@ -120,6 +143,8 @@ export async function preparePassWorkspaceContext(
     bubbleIdentity,
     loadedState,
     state,
+    ...(activation !== undefined ? { activation } : {}),
+    reviewPolicyRuntime,
     handoff,
     implementer,
     reviewer

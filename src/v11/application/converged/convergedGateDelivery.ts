@@ -9,6 +9,7 @@ import type { ResolvedBubbleWorkspace } from "../../shared/ports/workspaceResolu
 import type { AgentName } from "../../../types/bubble.js";
 import {
   deliveryTargetRoleMetadataKey,
+  parseDeliveryTargetRoleMetadata,
   type DeliveryTargetRole,
   type ProtocolEnvelope
 } from "../../../types/protocol.js";
@@ -50,6 +51,24 @@ function withDeliveryTargetRole(
       }
     }
   };
+}
+
+function resolveConvergedDeliveryTargetRole(input: {
+  envelope: ProtocolEnvelope;
+  implementer: AgentName;
+  reviewer: AgentName;
+}): DeliveryTargetRole {
+  const parsed = parseDeliveryTargetRoleMetadata(input.envelope.payload.metadata);
+  if (parsed.status === "valid") {
+    return parsed.role;
+  }
+  if (input.envelope.recipient === input.implementer) {
+    return "implementer";
+  }
+  if (input.envelope.recipient === input.reviewer) {
+    return "reviewer";
+  }
+  return "status";
 }
 
 function normalizeConvergedDelivery(
@@ -154,6 +173,11 @@ export async function executeGateDelivery(input: {
       bubbleConfig: input.resolved.bubbleConfig,
       sessionsPath: input.resolved.bubblePaths.sessionsPath,
       envelope,
+      recipientRole: resolveConvergedDeliveryTargetRole({
+        envelope,
+        implementer: input.implementer,
+        reviewer: input.reviewer
+      }),
       messageRef: gateRef,
       ...(options?.initialDelayMs !== undefined
         ? { initialDelayMs: options.initialDelayMs }
@@ -174,6 +198,7 @@ export async function executeGateDelivery(input: {
       bubbleConfig: input.resolved.bubbleConfig,
       sessionsPath: input.resolved.bubblePaths.sessionsPath,
       envelope: input.gateResult.gateEnvelope,
+      recipientRole: "implementer",
       messageRef: gateRef
     } as const;
     const autoReworkDelivery = await executeImplementerHandoffDelivery({

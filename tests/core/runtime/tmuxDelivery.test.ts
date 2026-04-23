@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
   buildTranscriptFallbackRef,
-  emitDeliveryNotificationAck,
+  emitDeliveryNotificationAck as emitDeliveryNotificationAckRuntime,
   resolveDeliveryMessageRef,
   retryStuckAgentInput
 } from "../../../src/v11/infrastructure/channel/tmux/tmuxDelivery.js";
@@ -35,7 +35,12 @@ import {
 } from "../../../src/v11/infrastructure/channel/tmux/tmuxManager.js";
 import type { ReviewerTestExecutionDirective } from "../../../src/v11/shared/reviewer/testEvidence.js";
 import type { BubbleConfig } from "../../../src/types/bubble.js";
-import { deliveryTargetRoleMetadataKey, type ProtocolEnvelope } from "../../../src/types/protocol.js";
+import {
+  deliveryTargetRoleMetadataKey,
+  parseDeliveryTargetRoleMetadata,
+  type DeliveryTargetRole,
+  type ProtocolEnvelope
+} from "../../../src/types/protocol.js";
 
 const baseConfig: BubbleConfig = {
   id: "b_delivery_01",
@@ -129,6 +134,42 @@ function createSharedAgentConfig(
       reviewer: agent
     }
   };
+}
+
+type TestEmitDeliveryNotificationInput =
+  Omit<Parameters<typeof emitDeliveryNotificationAckRuntime>[0], "recipientRole"> & {
+    recipientRole?: DeliveryTargetRole;
+  };
+
+function resolveLegacyRecipientRoleForTest(input: {
+  envelope: ProtocolEnvelope;
+  bubbleConfig: BubbleConfig;
+}): DeliveryTargetRole {
+  const parsed = parseDeliveryTargetRoleMetadata(input.envelope.payload.metadata);
+  if (parsed.status === "valid") {
+    return parsed.role;
+  }
+  if (input.envelope.recipient === input.bubbleConfig.agents.implementer) {
+    return "implementer";
+  }
+  if (input.envelope.recipient === input.bubbleConfig.agents.reviewer) {
+    return "reviewer";
+  }
+  return "status";
+}
+
+async function emitDeliveryNotificationAck(
+  input: TestEmitDeliveryNotificationInput
+) {
+  return emitDeliveryNotificationAckRuntime({
+    ...input,
+    recipientRole:
+      input.recipientRole
+      ?? resolveLegacyRecipientRoleForTest({
+        envelope: input.envelope,
+        bubbleConfig: input.bubbleConfig
+      })
+  });
 }
 
 function expectNoForbiddenReviewerCommandGateTokens(text: string | undefined): void {
@@ -303,6 +344,107 @@ describe("tmux delivery canonical ack helpers", () => {
   });
 });
 
+describe("tmux delivery explicit recipient-role routing", () => {
+  it("routes explicit meta-reviewer delivery input without relying on envelope metadata", async () => {
+    const runner: TmuxRunner = vi.fn(async (args: string[]): Promise<TmuxRunResult> => {
+      if (args[0] === "capture-pane") {
+        return {
+          stdout:
+            "# [pairflow] r1 PASS codex->claude msg=msg_20260222_101 ref=artifact://handoff.md.",
+          stderr: "",
+          exitCode: 0
+        };
+      }
+      return { stdout: "", stderr: "", exitCode: 0 };
+    });
+
+    const ack = await emitDeliveryNotificationAck({
+      bubbleId: "b_delivery_01",
+      bubbleConfig: baseConfig,
+      sessionsPath: "/tmp/sessions.json",
+      envelope: createEnvelope({
+        recipient: "claude",
+        payload: {
+          summary: "handoff"
+        }
+      }),
+      recipientRole: "meta_reviewer",
+      readSessionsRegistry: async () =>
+        createRegistry({
+          tmuxSessionName: "pf-b_delivery_01",
+          workspacePath: "/tmp/worktree"
+        }),
+      runner
+    });
+
+    expect(ack).toMatchObject(
+      createAcceptedDeliveryAck({
+        sessionName: "pf-b_delivery_01",
+        targetPaneIndex: runtimePaneIndices.metaReviewer,
+        message: ack.message
+      })
+    );
+    expect(runner).toHaveBeenCalledWith(
+      [
+        "send-keys",
+        "-t",
+        `pf-b_delivery_01:0.${String(runtimePaneIndices.metaReviewer)}`,
+        "-l",
+        expect.stringContaining("Meta-review task received.")
+      ],
+      {
+        allowFailure: true
+      }
+    );
+  });
+
+  it("keeps explicit recipient-role authority ahead of conflicting envelope metadata", async () => {
+    const runner = vi.fn(async (args: string[]): Promise<TmuxRunResult> => {
+      if (args[0] === "capture-pane") {
+        return {
+          stdout:
+            "# [pairflow] r1 PASS codex->claude msg=msg_20260222_102 ref=artifact://handoff.md.",
+          stderr: "",
+          exitCode: 0
+        };
+      }
+      return { stdout: "", stderr: "", exitCode: 0 };
+    });
+
+    const ack = await emitDeliveryNotificationAck({
+      bubbleId: "b_delivery_01",
+      bubbleConfig: baseConfig,
+      sessionsPath: "/tmp/sessions.json",
+      envelope: createEnvelope({
+        recipient: "claude",
+        payload: {
+          summary: "handoff",
+          metadata: {
+            delivery_target_role: "meta_reviewer"
+          }
+        }
+      }),
+      recipientRole: "implementer",
+      readSessionsRegistry: async () =>
+        createRegistry({
+          tmuxSessionName: "pf-b_delivery_01",
+          workspacePath: "/tmp/worktree"
+        }),
+      runner
+    });
+
+    expect(ack.sessionName).toBe("pf-b_delivery_01");
+    expect(ack.targetPaneIndex).toBe(runtimePaneIndices.implementer);
+    expect(
+      runner.mock.calls.some(
+        (call) =>
+          call[0][0] === "send-keys"
+          && call[0][2] === `pf-b_delivery_01:0.${String(runtimePaneIndices.implementer)}`
+      )
+    ).toBe(true);
+  });
+});
+
 describe("emitDeliveryNotificationAck", () => {
   it("returns an accepted canonical acknowledgement from runtime truth", async () => {
     const createRunner = (): TmuxRunner => (args) => {
@@ -338,8 +480,7 @@ describe("emitDeliveryNotificationAck", () => {
       createAcceptedDeliveryAck({
         sessionName: "pf-b_delivery_01",
         targetPaneIndex: 2,
-        message: canonicalAck.message,
-        deliveryTargetReasonCode: "DELIVERY_TARGET_ROLE_ABSENT"
+        message: canonicalAck.message
       })
     );
     expect(canonicalAck.message).toContain(
@@ -738,7 +879,7 @@ describe("emitDeliveryNotificationAck", () => {
     expect(metaReviewMessageCall?.[4]).not.toContain("--report-markdown");
   });
 
-  it("falls back to legacy recipient mapping when delivery target role token is invalid", async () => {
+  it("keeps canonical recipient routing when test input resolves an invalid delivery target token to the recipient lane", async () => {
     const calls: string[][] = [];
     const runner: TmuxRunner = (args): Promise<TmuxRunResult> => {
       calls.push(args);
@@ -778,13 +919,13 @@ describe("emitDeliveryNotificationAck", () => {
 
     expect(result.status).toBe("accepted");
     expect(result.targetPaneIndex).toBe(1);
-    expect(result.deliveryTargetReasonCode).toBe("DELIVERY_TARGET_ROLE_INVALID");
+    expect(result.deliveryTargetReasonCode).toBeUndefined();
     expect(
       calls.some((call) => call[0] === "send-keys" && call[2] === "pf-b_delivery_01:0.1")
     ).toBe(true);
   });
 
-  it("falls back to legacy recipient mapping when explicit role is valid but pane index is unmapped", async () => {
+  it("fail-closes metadata-derived meta-review routing when the meta-review pane is unmapped", async () => {
     const mutablePaneIndices = runtimePaneIndices as {
       metaReviewer: number | undefined;
     };
@@ -830,12 +971,49 @@ describe("emitDeliveryNotificationAck", () => {
         readSessionsRegistry: () => Promise.resolve(createRegistry())
       });
 
-      expect(result.status).toBe("accepted");
-      expect(result.targetPaneIndex).toBe(1);
-      expect(result.deliveryTargetReasonCode).toBe("DELIVERY_TARGET_ROLE_UNMAPPED");
-      expect(
-        calls.some((call) => call[0] === "send-keys" && call[2] === "pf-b_delivery_01:0.1")
-      ).toBe(true);
+      expect(result).toEqual({
+        status: "rejected",
+        reason: "unsupported_recipient",
+        reason_code: "DELIVERY_ACK_TARGET_UNSUPPORTED",
+        sessionName: "pf-b_delivery_01",
+        message: result.message,
+        deliveryTargetReasonCode: "DELIVERY_TARGET_ROLE_UNMAPPED"
+      });
+      expect(calls).toHaveLength(0);
+    } finally {
+      mutablePaneIndices.metaReviewer = originalMetaReviewerPaneIndex;
+    }
+  });
+
+  it("fail-closes explicit meta-review routing when the meta-reviewer pane is unmapped", async () => {
+    const mutablePaneIndices = runtimePaneIndices as {
+      metaReviewer: number | undefined;
+    };
+    const originalMetaReviewerPaneIndex = mutablePaneIndices.metaReviewer;
+    mutablePaneIndices.metaReviewer = undefined;
+    try {
+      const result = await emitDeliveryNotificationAck({
+        bubbleId: "b_delivery_01",
+        bubbleConfig: baseConfig,
+        sessionsPath: "/tmp/repo/.pairflow/runtime/sessions.json",
+        envelope: createEnvelope({
+          recipient: "claude",
+          payload: {
+            summary: "Explicit meta-review route must fail closed."
+          }
+        }),
+        recipientRole: "meta_reviewer",
+        readSessionsRegistry: () => Promise.resolve(createRegistry())
+      });
+
+      expect(result).toEqual({
+        status: "rejected",
+        reason: "unsupported_recipient",
+        reason_code: "DELIVERY_ACK_TARGET_UNSUPPORTED",
+        sessionName: "pf-b_delivery_01",
+        message: result.message,
+        deliveryTargetReasonCode: "DELIVERY_TARGET_ROLE_UNMAPPED"
+      });
     } finally {
       mutablePaneIndices.metaReviewer = originalMetaReviewerPaneIndex;
     }
@@ -984,7 +1162,7 @@ describe("emitDeliveryNotificationAck", () => {
     expect(result.status).toBe("accepted");
     expect(result.sessionName).toBe("pf-b_delivery_01");
     expect(result.targetPaneIndex).toBe(2);
-    expect(result.deliveryTargetReasonCode).toBe("DELIVERY_TARGET_ROLE_ABSENT");
+    expect(result.deliveryTargetReasonCode).toBeUndefined();
     expect(calls).toContainEqual([
       "send-keys",
       "-t",

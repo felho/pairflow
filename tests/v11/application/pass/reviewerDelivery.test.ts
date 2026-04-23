@@ -344,4 +344,118 @@ describe("executePassDelivery", () => {
       retried: true
     });
   });
+
+  it("routes implementer -> meta-reviewer handoff through direct delivery without reviewer refresh", async () => {
+    const refreshCalls: unknown[] = [];
+    const emitCalls: unknown[] = [];
+    const emitDeliveryNotificationAck: NonNullable<
+      PassDeliveryDependencies["emitDeliveryNotificationAck"]
+    > = async (input) => {
+      emitCalls.push(input);
+      return {
+        status: "accepted",
+        message: "meta-review delivery confirmed",
+        sessionName: "pf_bubble",
+        targetPaneIndex: 3
+      };
+    };
+    const refreshReviewerContext: NonNullable<
+      PassDeliveryDependencies["refreshReviewerContext"]
+    > = async (input) => {
+      refreshCalls.push(input);
+      return {
+        refreshed: true
+      };
+    };
+
+    const result = await executePassDelivery(
+      {
+        bubbleId: "b_delivery_v11_01",
+        bubbleConfig: createBubbleConfig("fresh"),
+        sessionsPath: "/tmp/repo/.pairflow/runtime/sessions.json",
+        reviewerBriefArtifactPath: "/tmp/unused-brief.md",
+        reviewerFocusArtifactPath: "/tmp/unused-focus.json",
+        envelope: createEnvelope(),
+        senderRole: "implementer",
+        recipientRole: "meta_reviewer"
+      },
+      {
+        emitDeliveryNotificationAck,
+        refreshReviewerContext,
+        readReviewerBriefArtifact,
+        readReviewerFocusArtifact,
+        resolveDeliveryMessageRef
+      }
+    );
+
+    expect(refreshCalls).toHaveLength(0);
+    expect(emitCalls).toHaveLength(1);
+    expect(result).toEqual({
+      result: {
+        status: "accepted",
+        message: "meta-review delivery confirmed",
+        sessionName: "pf_bubble",
+        targetPaneIndex: 3
+      },
+      retried: false
+    });
+  });
+
+  it("retries once on unconfirmed delivery during implementer->meta-reviewer handoff", async () => {
+    const calls: unknown[] = [];
+    const emitDeliveryNotificationAck: NonNullable<
+      PassDeliveryDependencies["emitDeliveryNotificationAck"]
+    > = async (input) => {
+      calls.push(input);
+      if (calls.length === 1) {
+        return {
+          status: "rejected",
+          reason: "delivery_unconfirmed",
+          reason_code: "DELIVERY_ACK_REJECTED",
+          message: "first attempt unconfirmed"
+        };
+      }
+      return {
+        status: "accepted",
+        message: "second attempt confirmed",
+        sessionName: "pf_bubble",
+        targetPaneIndex: 3
+      };
+    };
+
+    const result = await executePassDelivery(
+      {
+        bubbleId: "b_delivery_v11_01",
+        bubbleConfig: createBubbleConfig("persistent"),
+        sessionsPath: "/tmp/repo/.pairflow/runtime/sessions.json",
+        reviewerBriefArtifactPath: "/tmp/unused-brief.md",
+        reviewerFocusArtifactPath: "/tmp/unused-focus.json",
+        envelope: createEnvelope(),
+        senderRole: "implementer",
+        recipientRole: "meta_reviewer"
+      },
+      {
+        emitDeliveryNotificationAck,
+        readReviewerBriefArtifact,
+        readReviewerFocusArtifact,
+        resolveDeliveryMessageRef
+      }
+    );
+
+    expect(calls).toHaveLength(2);
+    expect(calls[1]).toMatchObject({
+      recipientRole: "meta_reviewer",
+      initialDelayMs: 5000,
+      deliveryAttempts: 6
+    });
+    expect(result).toEqual({
+      result: {
+        status: "accepted",
+        message: "second attempt confirmed",
+        sessionName: "pf_bubble",
+        targetPaneIndex: 3
+      },
+      retried: true
+    });
+  });
 });

@@ -1,13 +1,17 @@
 import type { AgentName, BubbleConfig } from "../../../types/bubble.js";
-import type { ProtocolEnvelope } from "../../../types/protocol.js";
+import type {
+  DeliveryTargetRole,
+  ProtocolEnvelope
+} from "../../../types/protocol.js";
 import type { ReviewerTestExecutionDirective } from "../reviewer/testEvidence.js";
 import type { ReviewerFocusExtractionResult } from "../reviewer/reviewerBrief.js";
 
-export interface EmitDeliveryNotificationInput {
+interface EmitDeliveryNotificationInputBase {
   bubbleId: string;
   bubbleConfig: BubbleConfig;
   sessionsPath: string;
   envelope: ProtocolEnvelope;
+  recipientRole: DeliveryTargetRole;
   reviewerTestDirective?: ReviewerTestExecutionDirective;
   reviewerBrief?: string;
   reviewerFocus?: ReviewerFocusExtractionResult;
@@ -15,6 +19,8 @@ export interface EmitDeliveryNotificationInput {
   initialDelayMs?: number;
   deliveryAttempts?: number;
 }
+
+export type EmitDeliveryNotificationInput = EmitDeliveryNotificationInputBase;
 
 export type DeliveryFailureReason =
   | "no_runtime_session"

@@ -685,4 +685,105 @@ describe("emitPassContextBuilder", () => {
 
     expect(context.activation).toBeUndefined();
   });
+
+  it("reuses workspace activation provenance when activated meta-only bypass is resolved", async () => {
+    const context = await buildEmitPassContext(
+      {
+        commandInput: {
+          summary: "raw summary"
+        },
+        createError: (message: PairflowCommandErrorInput) => new Error(toErrorMessage(message)),
+        inferDefaultPassIntent: () => "review"
+      },
+      {
+        normalizePassCommandInput: () => ({
+          summary: "normalized summary",
+          refs: [],
+          now: new Date("2026-03-19T23:00:00.000Z")
+        }),
+        normalizePassCommandPayload: () => ({
+          findings: [],
+          hasFindings: false,
+          noFindings: false,
+          findingsPayloadInvalid: false
+        }),
+        preparePassWorkspaceContext: async () =>
+          ({
+            resolved: {
+              bubbleId: "b_emit_ctx_07",
+              repoPath: "/repo",
+              worktreePath: "/repo/.pairflow/worktrees/b_emit_ctx_07",
+              bubbleConfig: {
+                id: "b_emit_ctx_07",
+                review_artifact_type: "code",
+                severity_gate_round: 4
+              },
+              bubblePaths: {
+                worktreePath: "/repo/.pairflow/worktrees/b_emit_ctx_07",
+                transcriptPath: "/repo/.pairflow/bubbles/b_emit_ctx_07/transcript.ndjson"
+              }
+            },
+            bubbleIdentity: {
+              bubbleInstanceId: "bi_1234567890_abcdef0123456789"
+            },
+            loadedState: {
+              fingerprint: "fp_emit_ctx_07",
+              state: {}
+            },
+            state: {
+              state: "RUNNING",
+              round: 2,
+              active_role: "implementer"
+            },
+            activation: {
+              handoff_id: "implementer:b_emit_ctx_07:round:2:attempt:1",
+              execution_id: "exec_emit_ctx_07",
+              expected_role: "implementer",
+              expected_round: 2,
+              expected_state_fingerprint: "fp_emit_ctx_07"
+            },
+            reviewPolicyRuntime: {
+              requested_loop_mode: "meta_only",
+              effective_loop_mode: "meta_only",
+              support_status: "enabled",
+              meta_review_auto_rework_min_severity: "P2"
+            },
+            handoff: {
+              senderAgent: "codex",
+              senderRole: "implementer",
+              recipientAgent: "codex",
+              recipientRole: "meta_reviewer",
+              envelopeRound: 2,
+              nextRound: 2
+            },
+            implementer: "codex",
+            reviewer: "claude"
+          }) as never,
+        buildPassRoutingInput: (input) => input as never,
+        preparePassRouting: async () =>
+          ({
+            intent: "review",
+            inferredIntent: true,
+            reviewerVerification: undefined,
+            transcript: [],
+            repeatCleanTrigger: {
+              reasonCode: "REPEAT_CLEAN_TRIGGER_NOT_MET",
+              reasonDetail: "base_precondition_not_met",
+              trigger: false,
+              mostRecentPreviousReviewerCleanPassEnvelope: false
+            }
+          }) as never,
+        createPassRoutingDependencies: () => ({}) as never
+      }
+    );
+
+    expect(context.activation).toEqual({
+      handoff_id: "implementer:b_emit_ctx_07:round:2:attempt:1",
+      execution_id: "exec_emit_ctx_07",
+      expected_role: "implementer",
+      expected_round: 2,
+      expected_state_fingerprint: "fp_emit_ctx_07"
+    });
+    expect(context.handoff.recipientRole).toBe("meta_reviewer");
+  });
 });

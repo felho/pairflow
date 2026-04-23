@@ -18,6 +18,7 @@ export function shouldRetryImplementerHandoffDelivery(
     result !== undefined &&
     result.status === "rejected" &&
     (
+      result.reason === "no_runtime_session" ||
       result.reason === "delivery_unconfirmed" ||
       result.reason === "command_failed"
     )

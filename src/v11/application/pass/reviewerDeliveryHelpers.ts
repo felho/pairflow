@@ -18,6 +18,7 @@ import type {
 import type { BubbleConfig } from "../../../types/bubble.js";
 import type { ProtocolEnvelope } from "../../../types/protocol.js";
 import type { ReviewerTestExecutionDirective } from "../../../v11/shared/reviewer/testEvidence.js";
+import type { PassRecipientRole, PassSenderRole } from "../../domain/pass/handoff.js";
 
 export async function loadReviewerStartupPrompt(input: {
   reviewerBriefArtifactPath: string;
@@ -55,7 +56,7 @@ export async function loadReviewerStartupPrompt(input: {
 }
 
 function shouldRefreshReviewerContext(input: {
-  senderRole: "implementer" | "reviewer";
+  senderRole: PassSenderRole;
   bubbleConfig: BubbleConfig;
 }): boolean {
   return (
@@ -66,7 +67,7 @@ function shouldRefreshReviewerContext(input: {
 
 export async function resolveDeliveryInitialDelayMs(input: {
   executeInput: {
-    senderRole: "implementer" | "reviewer";
+    senderRole: PassSenderRole;
     bubbleId: string;
     bubbleConfig: BubbleConfig;
     sessionsPath: string;
@@ -101,6 +102,7 @@ export function buildPassDeliveryInput(input: {
     sessionsPath: string;
     envelope: ProtocolEnvelope;
     senderRole: "implementer" | "reviewer";
+    recipientRole: PassRecipientRole;
     reviewerTestDirective?: ReviewerTestExecutionDirective;
   };
   reviewerBriefText: string | undefined;
@@ -120,6 +122,7 @@ export function buildPassDeliveryInput(input: {
     bubbleConfig: input.executeInput.bubbleConfig,
     sessionsPath: input.executeInput.sessionsPath,
     envelope: input.executeInput.envelope,
+    recipientRole: input.executeInput.recipientRole,
     messageRef: input.resolveDeliveryMessageRef({
       bubbleId: input.executeInput.bubbleId,
       sessionsPath: input.executeInput.sessionsPath,
@@ -140,8 +143,8 @@ export function buildPassDeliveryInput(input: {
 
 export function shouldRetryPassDelivery(input: {
   executeInput: {
-    senderRole: "implementer" | "reviewer";
-    recipientRole: "implementer" | "reviewer";
+    senderRole: PassSenderRole;
+    recipientRole: PassRecipientRole;
   };
   deliveryResult: DeliveryAck | undefined;
 }): boolean {

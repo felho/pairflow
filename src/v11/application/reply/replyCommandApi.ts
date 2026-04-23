@@ -75,6 +75,7 @@ export async function emitHumanReply(
     bubbleConfig: resolved.bubbleConfig,
     sessionsPath: resolved.bubblePaths.sessionsPath,
     envelope: appended.envelope,
+    recipientRole: state.active_role,
     messageRef
   }).catch(() => undefined);
 

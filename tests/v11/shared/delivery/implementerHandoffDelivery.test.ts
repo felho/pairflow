@@ -53,6 +53,7 @@ function createDeliveryInput(): EmitDeliveryNotificationInput {
       },
       refs: []
     },
+    recipientRole: "meta_reviewer",
     messageRef: "artifact://handoff.md"
   };
 }
@@ -199,6 +200,13 @@ describe("implementerHandoffDelivery", () => {
       shouldRetryImplementerHandoffDelivery({
         status: "rejected",
         message: "",
+        reason: "no_runtime_session"
+      })
+    ).toBe(true);
+    expect(
+      shouldRetryImplementerHandoffDelivery({
+        status: "rejected",
+        message: "",
         reason: "registry_read_failed"
       })
     ).toBe(false);
@@ -209,12 +217,44 @@ describe("implementerHandoffDelivery", () => {
         reason: "unsupported_recipient"
       })
     ).toBe(false);
-    expect(
-      shouldRetryImplementerHandoffDelivery({
-        status: "rejected",
-        message: "",
-        reason: "no_runtime_session"
-      })
-    ).toBe(false);
+  });
+
+  it("retries once on no_runtime_session to preserve meta-review pane warm-up parity", async () => {
+    const calls: EmitDeliveryNotificationInput[] = [];
+    const result = await executeImplementerHandoffDelivery({
+      deliveryInput: createDeliveryInput(),
+      emitDelivery: async (input) => {
+        calls.push(input);
+        if (calls.length === 1) {
+          return {
+            status: "rejected" as const,
+            message: "pane not ready",
+            reason: "no_runtime_session",
+            reason_code: "DELIVERY_ACK_RUNTIME_SESSION_UNAVAILABLE" as const
+          };
+        }
+        return {
+          status: "accepted" as const,
+          message: "retry recovered",
+          sessionName: "pf_bubble",
+          targetPaneIndex: 3
+        };
+      }
+    });
+
+    expect(calls).toHaveLength(2);
+    expect(calls[1]).toMatchObject({
+      initialDelayMs: 5000,
+      deliveryAttempts: 6
+    });
+    expect(result).toEqual({
+      result: {
+        status: "accepted",
+        message: "retry recovered",
+        sessionName: "pf_bubble",
+        targetPaneIndex: 3
+      },
+      retried: true
+    });
   });
 });
