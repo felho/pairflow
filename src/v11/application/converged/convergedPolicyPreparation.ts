@@ -5,6 +5,7 @@ import {
 } from "../../../v11/domain/convergence/policy.js";
 import type {
   AgentName,
+  BubbleReviewLoopMode,
   ReviewArtifactType,
   RoundRoleHistoryEntry
 } from "../../../types/bubble.js";
@@ -18,6 +19,7 @@ export interface PrepareConvergedPolicyInput {
   reviewArtifactType: ReviewArtifactType;
   roundRoleHistory: RoundRoleHistoryEntry[];
   severityGateRound: number;
+  effectiveLoopMode: BubbleReviewLoopMode;
 }
 
 export interface PrepareConvergedPolicyDependencies {
@@ -88,7 +90,8 @@ export async function prepareConvergedPolicy(
     reviewArtifactType: input.reviewArtifactType,
     roundRoleHistory: input.roundRoleHistory,
     transcript,
-    severity_gate_round: input.severityGateRound
+    severity_gate_round: input.severityGateRound,
+    effectiveLoopMode: input.effectiveLoopMode
   });
   const convergencePolicyDiagnostics = policy.diagnostics.filter(
     (entry) => entry.trim().length > 0

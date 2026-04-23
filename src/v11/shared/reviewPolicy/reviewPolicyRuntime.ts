@@ -3,10 +3,16 @@ import {
   DEFAULT_REVIEW_POLICY_LOOP_MODE
 } from "../../../config/defaults.js";
 import type {
+  AgentName,
+  AgentRole,
+  BubbleExecutionContext,
   BubbleConfig,
   BubbleReviewPolicyConfig,
-  BubbleReviewPolicyRuntimeView
+  BubbleReviewPolicyRuntimeView,
+  RoundRoleHistoryEntry
 } from "../../../types/bubble.js";
+import { isAgentRole } from "../../../types/bubble.js";
+import { buildRunningExecutionContext } from "../state/executionContext.js";
 
 export const REVIEW_POLICY_META_ONLY_GUARDED =
   "REVIEW_POLICY_META_ONLY_GUARDED" as const;
@@ -26,6 +32,89 @@ export const REVIEW_POLICY_META_ONLY_ACTIVATION_UNRESOLVED_PROVENANCE_NOTE =
   ) as const;
 
 export type NormalizedBubbleReviewPolicy = BubbleReviewPolicyConfig;
+
+export interface RuntimeAlignedReviewPolicyExecutionContext {
+  activeRole: "implementer" | "reviewer" | "meta_reviewer";
+  round: number;
+  handoffId: string;
+  executionId: string;
+}
+
+export interface ResolveRuntimeAlignedNextRoundContinuationInput {
+  bubbleId: string;
+  currentRound: number;
+  roundRoleHistory: RoundRoleHistoryEntry[];
+  implementer: AgentName;
+  reviewer: AgentName;
+  nowIso: string;
+  watchdogTimeoutMinutes: number;
+}
+
+export interface RuntimeAlignedNextRoundContinuation {
+  nextRound: number;
+  activeAgent: AgentName;
+  activeRole: "implementer";
+  executionContext: BubbleExecutionContext;
+  appendRoundRoleEntry?: RoundRoleHistoryEntry;
+}
+
+export interface BuildRuntimeAlignedReviewPolicyRuntimeViewInput {
+  config: Pick<BubbleConfig, "review_policy">;
+  round: number;
+  activeRole: "implementer" | "reviewer" | "meta_reviewer" | null;
+  executionContext?: RuntimeAlignedReviewPolicyExecutionContext | null;
+  runtimeAvailability?: "active" | "inactive" | "missing";
+  runtimeStateInvalid?: boolean;
+}
+
+export function normalizeRuntimeAlignedRole(
+  value: string | null
+): AgentRole | null {
+  return isAgentRole(value) ? value : null;
+}
+
+export function normalizeRuntimeAlignedExecutionContext(
+  executionContext:
+    | {
+      activeRole: string;
+      round: number;
+      handoffId: string;
+      executionId: string;
+    }
+    | null
+    | undefined
+): RuntimeAlignedReviewPolicyExecutionContext | null {
+  if (executionContext === null || executionContext === undefined) {
+    return null;
+  }
+
+  const activeRole = normalizeRuntimeAlignedRole(executionContext.activeRole);
+  if (activeRole === null) {
+    return null;
+  }
+
+  return {
+    activeRole,
+    round: executionContext.round,
+    handoffId: executionContext.handoffId,
+    executionId: executionContext.executionId
+  };
+}
+
+export function toRuntimeAlignedReviewPolicyExecutionContext(
+  executionContext: BubbleExecutionContext | null | undefined
+): RuntimeAlignedReviewPolicyExecutionContext | null {
+  if (executionContext === null || executionContext === undefined) {
+    return null;
+  }
+
+  return {
+    activeRole: executionContext.active_role,
+    round: executionContext.round,
+    handoffId: executionContext.handoff_id,
+    executionId: executionContext.execution_id
+  };
+}
 
 export function normalizeBubbleReviewPolicy(
   config: Pick<BubbleConfig, "review_policy">
@@ -100,5 +189,92 @@ export function buildPassPathReviewPolicyRuntimeView(input: {
     blocked_prerequisites: [REVIEW_POLICY_META_ONLY_ACTIVATION_REQUIRED],
     provenance_note:
       REVIEW_POLICY_META_ONLY_ACTIVATION_UNRESOLVED_PROVENANCE_NOTE
+  };
+}
+
+function isRuntimeAlignedMetaOnlyActivationProven(
+  input: BuildRuntimeAlignedReviewPolicyRuntimeViewInput
+): boolean {
+  const normalized = normalizeBubbleReviewPolicy(input.config);
+  if (normalized.review_loop_mode !== "meta_only") {
+    return false;
+  }
+  if (input.runtimeStateInvalid === true) {
+    return false;
+  }
+  if (
+    input.runtimeAvailability !== undefined
+    && input.runtimeAvailability !== "active"
+  ) {
+    return false;
+  }
+  if (input.activeRole !== "implementer") {
+    return false;
+  }
+
+  const executionContext = input.executionContext;
+  if (executionContext === null || executionContext === undefined) {
+    return false;
+  }
+  if (
+    executionContext.activeRole !== "implementer"
+    || executionContext.round !== input.round
+  ) {
+    return false;
+  }
+  if (executionContext.handoffId === executionContext.executionId) {
+    return false;
+  }
+  return executionContext.executionId.trim().length > 0;
+}
+
+export function buildRuntimeAlignedReviewPolicyRuntimeView(
+  input: BuildRuntimeAlignedReviewPolicyRuntimeViewInput
+): BubbleReviewPolicyRuntimeView {
+  return buildPassPathReviewPolicyRuntimeView({
+    config: input.config,
+    activationProven: isRuntimeAlignedMetaOnlyActivationProven(input)
+  });
+}
+
+export function resolveRuntimeAlignedConvergedActiveRole(
+  input: BuildRuntimeAlignedReviewPolicyRuntimeViewInput
+): "implementer" | "reviewer" {
+  return buildRuntimeAlignedReviewPolicyRuntimeView(input)
+    .effective_loop_mode === "meta_only"
+    ? "implementer"
+    : "reviewer";
+}
+
+export function resolveRuntimeAlignedNextRoundContinuation(
+  input: ResolveRuntimeAlignedNextRoundContinuationInput
+): RuntimeAlignedNextRoundContinuation {
+  const nextRound = input.currentRound + 1;
+  const roundRoleHistory = input.roundRoleHistory ?? [];
+  const hasRoundEntry = roundRoleHistory.some(
+    (entry) => entry.round === nextRound
+  );
+
+  return {
+    nextRound,
+    activeAgent: input.implementer,
+    activeRole: "implementer",
+    executionContext: buildRunningExecutionContext({
+      bubbleId: input.bubbleId,
+      round: nextRound,
+      activeRole: "implementer",
+      startedAt: input.nowIso,
+      watchdogTimeoutMinutes: input.watchdogTimeoutMinutes
+    }),
+    ...(hasRoundEntry
+      ? {}
+      : {
+          appendRoundRoleEntry: {
+            round: nextRound,
+            implementer: input.implementer,
+            reviewer: input.reviewer,
+            switched_at: input.nowIso
+          }
+        })
   };
 }

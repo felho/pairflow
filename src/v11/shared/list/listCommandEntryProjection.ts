@@ -8,7 +8,10 @@ import { isNamedError } from "../errors/namedError.js";
 import { isMetaReviewExecutionContextActiveState } from "../metaReview/metaReviewExecutionContext.js";
 import { projectActiveMetaReviewRuntimeDelivery } from "../metaReview/metaReviewSnapshot.js";
 import {
-  buildBubbleReviewPolicyRuntimeView
+  buildRuntimeAlignedReviewPolicyRuntimeView,
+  normalizeRuntimeAlignedExecutionContext,
+  normalizeRuntimeAlignedRole,
+  toRuntimeAlignedReviewPolicyExecutionContext
 } from "../reviewPolicy/reviewPolicyRuntime.js";
 import type { RemoteBubbleStatusSnapshot } from "../status/remoteBubbleStatusContract.js";
 import { resolveBubbleAttention } from "../status/bubbleAttention.js";
@@ -98,6 +101,10 @@ export function buildLocalBubbleListEntry(input: {
     runtimeSession !== null
     && input.stateLoaded.stateValidation === null
     && !runtimeSessionExpectedStates.has(input.stateLoaded.state.state);
+  const runtimeAlignedExecutionContext =
+    toRuntimeAlignedReviewPolicyExecutionContext(
+      input.stateLoaded.state.execution_context
+    );
   const runtimeDelivery = projectActiveMetaReviewRuntimeDelivery({
     executionContext: input.stateLoaded.state.meta_review?.execution_context,
     runtimeDelivery: input.stateLoaded.state.meta_review?.runtime_delivery
@@ -144,7 +151,17 @@ export function buildLocalBubbleListEntry(input: {
           input.config.bubble_instance_id
         )
       }),
-      reviewPolicy: buildBubbleReviewPolicyRuntimeView(input.config),
+      reviewPolicy: buildRuntimeAlignedReviewPolicyRuntimeView({
+        config: input.config,
+        round: input.stateLoaded.state.round,
+        activeRole: input.stateLoaded.state.active_role,
+        ...(runtimeAlignedExecutionContext !== null
+          ? {
+              executionContext: runtimeAlignedExecutionContext
+            }
+          : {}),
+        runtimeStateInvalid: input.stateLoaded.stateValidation !== null
+      }),
       metaReview: {
         actor: "meta-reviewer",
         authorityActive: isMetaReviewExecutionContextActiveState(input.stateLoaded.state),
@@ -167,6 +184,10 @@ export function buildCreatedRemoteBubbleListEntry(input: {
   stateLoaded: Awaited<ReturnType<typeof listCommandDefaults.inspectStateSnapshot>>;
   remotePointer: Extract<BubbleRemotePointer, { kind: "created" }>;
 }): BubbleBuildResult {
+  const runtimeAlignedExecutionContext =
+    toRuntimeAlignedReviewPolicyExecutionContext(
+      input.stateLoaded.state.execution_context
+    );
   return {
     entry: {
       bubbleId: input.bubbleId,
@@ -181,7 +202,18 @@ export function buildCreatedRemoteBubbleListEntry(input: {
       stateValidation: input.stateLoaded.stateValidation,
       runtimeSession: null,
       attention: null,
-      reviewPolicy: buildBubbleReviewPolicyRuntimeView(input.config),
+      reviewPolicy: buildRuntimeAlignedReviewPolicyRuntimeView({
+        config: input.config,
+        round: input.stateLoaded.state.round,
+        activeRole: input.stateLoaded.state.active_role,
+        ...(runtimeAlignedExecutionContext !== null
+          ? {
+              executionContext: runtimeAlignedExecutionContext
+            }
+          : {}),
+        runtimeAvailability: "inactive",
+        runtimeStateInvalid: input.stateLoaded.stateValidation !== null
+      }),
       metaReview: neutralMetaReview(),
       remoteExecution: {
         alias: resolveRemoteAlias(input.config, input.remotePointer),
@@ -223,7 +255,12 @@ export function buildCachedRemoteBubbleListEntry(input: {
       stateValidation: null,
       runtimeSession: null,
       attention: null,
-      reviewPolicy: buildBubbleReviewPolicyRuntimeView(input.config),
+      reviewPolicy: buildRuntimeAlignedReviewPolicyRuntimeView({
+        config: input.config,
+        round: input.cache.round,
+        activeRole: null,
+        runtimeAvailability: "inactive"
+      }),
       metaReview: neutralMetaReview(),
       remoteExecution: {
         alias: resolveRemoteAlias(input.config, input.remotePointer),
@@ -269,7 +306,12 @@ export function buildUnavailableRemoteBubbleListEntry(input: {
       stateValidation: null,
       runtimeSession: null,
       attention: null,
-      reviewPolicy: buildBubbleReviewPolicyRuntimeView(input.config),
+      reviewPolicy: buildRuntimeAlignedReviewPolicyRuntimeView({
+        config: input.config,
+        round: input.stateLoaded.state.round,
+        activeRole: null,
+        runtimeAvailability: "missing"
+      }),
       metaReview: neutralMetaReview(),
       remoteExecution: {
         alias: resolveRemoteAlias(input.config, input.remotePointer),
@@ -353,6 +395,11 @@ export async function buildRefreshedRemoteBubbleListEntry(input: {
     remoteClonePath: input.remotePointer.remoteClonePath,
     remoteTarget
   });
+  const runtimeAlignedActiveRole = normalizeRuntimeAlignedRole(
+    remoteStatusSnapshot.activeRole
+  );
+  const runtimeAlignedExecutionContext =
+    normalizeRuntimeAlignedExecutionContext(remoteStatusSnapshot.executionContext);
 
   let cacheStatus: NonNullable<BubbleListEntry["remoteExecution"]>["cacheStatus"] = "present";
   let lastCacheCheckAt: string | undefined = remoteStatusSnapshot.lastCheckedAt;
@@ -408,7 +455,18 @@ export async function buildRefreshedRemoteBubbleListEntry(input: {
         runtimeExpectedOverride: false,
         bubbleStartedAt: remoteStatusSnapshot.bubbleStartedAt
       }),
-      reviewPolicy: buildBubbleReviewPolicyRuntimeView(input.config),
+      reviewPolicy: buildRuntimeAlignedReviewPolicyRuntimeView({
+        config: input.config,
+        round: remoteStatusSnapshot.round,
+        activeRole: runtimeAlignedActiveRole,
+        ...(runtimeAlignedExecutionContext !== null
+          ? {
+              executionContext: runtimeAlignedExecutionContext
+            }
+          : {}),
+        runtimeAvailability: remoteStatusSnapshot.runtimeAvailability,
+        runtimeStateInvalid: remoteStatusSnapshot.stateValidation !== null
+      }),
       metaReview: remoteStatusSnapshot.metaReview,
       remoteExecution: {
         alias: remoteTarget.alias,

@@ -28,7 +28,7 @@ import {
   REVIEW_POLICY_THRESHOLD_SOURCE_UNRESOLVED,
   resolveMetaReviewGateThresholdAuthority
 } from "./metaReviewGateThresholdAuthority.js";
-import { buildBubbleReviewPolicyRuntimeView } from "../reviewPolicy/reviewPolicyRuntime.js";
+import { normalizeBubbleReviewPolicy } from "../reviewPolicy/reviewPolicyRuntime.js";
 import {
   persistDispatchFailedHumanRoute,
   persistResolvedHumanRoute,
@@ -255,7 +255,7 @@ async function resolveAutoReworkThresholdDecision(input: {
   runResultForRouting: MetaReviewResult;
   parityMetadata: FindingsParityMetadata | null;
 }): Promise<AutoReworkThresholdDecision> {
-  const runtimePolicy = buildBubbleReviewPolicyRuntimeView(
+  const normalizedReviewPolicy = normalizeBubbleReviewPolicy(
     input.finalizeInput.resolved.bubbleConfig
   );
   const thresholdAuthority = await resolveMetaReviewGateThresholdAuthority({
@@ -289,7 +289,7 @@ async function resolveAutoReworkThresholdDecision(input: {
     if (
       thresholdMet({
         highestOpenSeverity: thresholdAuthority.highestOpenSeverity,
-        minSeverity: runtimePolicy.meta_review_auto_rework_min_severity
+        minSeverity: normalizedReviewPolicy.meta_review_auto_rework_min_severity
       })
     ) {
       return {
@@ -304,11 +304,11 @@ async function resolveAutoReworkThresholdDecision(input: {
       thresholdMetadata: {
         status: "not_met",
         reasonCode: REVIEW_POLICY_AUTO_REWORK_THRESHOLD_NOT_MET,
-        minSeverity: runtimePolicy.meta_review_auto_rework_min_severity,
+        minSeverity: normalizedReviewPolicy.meta_review_auto_rework_min_severity,
         highestOpenSeverity: thresholdAuthority.highestOpenSeverity
       },
       fallbackReason: buildThresholdNotMetSummary({
-        minSeverity: runtimePolicy.meta_review_auto_rework_min_severity,
+        minSeverity: normalizedReviewPolicy.meta_review_auto_rework_min_severity,
         highestOpenSeverity: thresholdAuthority.highestOpenSeverity
       })
     };

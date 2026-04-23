@@ -1891,6 +1891,31 @@ describe("validateConvergencePolicy", () => {
     ).toBe(true);
   });
 
+  it("uses bypass-specific minimum-round diagnostic when meta_only convergence evidence is incomplete", () => {
+    const result = validateConvergencePolicy({
+      currentRound: 2,
+      reviewer: "claude",
+      implementer: "codex",
+      reviewArtifactType: "code",
+      severity_gate_round: 4,
+      effectiveLoopMode: "meta_only",
+      roundRoleHistory: [
+        {
+          round: 2,
+          implementer: "codex",
+          reviewer: "claude",
+          switched_at: "2026-02-22T12:01:00.000Z"
+        }
+      ],
+      transcript: []
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.errors).toContain(
+      "Convergence requires evidence across at least two rounds before reviewer-bypass closure can be accepted."
+    );
+  });
+
   it("keeps structured-first routing for comma-separated mixed clauses with empty findings payload", () => {
     const result = validateConvergencePolicy({
       currentRound: 2,

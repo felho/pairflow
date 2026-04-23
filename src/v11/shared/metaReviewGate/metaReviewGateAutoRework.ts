@@ -1,5 +1,4 @@
 import { applyStateTransition } from "../../domain/state/machine.js";
-import { buildRunningExecutionContext } from "../../shared/state/executionContext.js";
 import { assertValidBubbleStateSnapshot } from "../../shared/state/stateSchema.js";
 import { clearLiveMetaReviewSnapshot } from "../metaReview/metaReviewSnapshot.js";
 import type { MetaReviewResult } from "../metaReview/metaReviewTypes.js";
@@ -29,6 +28,9 @@ import {
   MetaReviewGateError,
   type MetaReviewGateResult
 } from "./metaReviewGateTypes.js";
+import {
+  resolveRuntimeAlignedNextRoundContinuation
+} from "../reviewPolicy/reviewPolicyRuntime.js";
 
 interface AutoReworkFinalizeInput {
   resolved: {
@@ -36,8 +38,8 @@ interface AutoReworkFinalizeInput {
     bubbleConfig: {
       watchdog_timeout_minutes: number;
       agents: {
-        implementer: string;
-        reviewer: string;
+        implementer: AgentName;
+        reviewer: AgentName;
       };
     };
     bubblePaths: {
@@ -98,34 +100,34 @@ function buildAutoReworkResumedState(
   finalizeInput: AutoReworkFinalizeInput
 ): { resumed: BubbleStateSnapshot; nowIso: string } {
   const nowIso = finalizeInput.now.toISOString();
-  const nextRound = finalizeInput.loaded.state.round + 1;
+  const continuation = resolveRuntimeAlignedNextRoundContinuation({
+    bubbleId: finalizeInput.loaded.state.bubble_id,
+    currentRound: finalizeInput.loaded.state.round,
+    roundRoleHistory: finalizeInput.loaded.state.round_role_history,
+    implementer: finalizeInput.resolved.bubbleConfig.agents.implementer,
+    reviewer: finalizeInput.resolved.bubbleConfig.agents.reviewer,
+    nowIso,
+    watchdogTimeoutMinutes:
+      finalizeInput.resolved.bubbleConfig.watchdog_timeout_minutes
+  });
   return {
     nowIso,
     resumed: assertValidBubbleStateSnapshot({
       ...finalizeInput.loaded.state,
       state: "RUNNING",
-      round: nextRound,
-      active_agent: finalizeInput.resolved.bubbleConfig.agents.implementer,
-      active_role: "implementer",
-      execution_context: buildRunningExecutionContext({
-        bubbleId: finalizeInput.loaded.state.bubble_id,
-        round: nextRound,
-        activeRole: "implementer",
-        startedAt: nowIso,
-        watchdogTimeoutMinutes:
-          finalizeInput.resolved.bubbleConfig.watchdog_timeout_minutes
-      }),
+      round: continuation.nextRound,
+      active_agent: continuation.activeAgent,
+      active_role: continuation.activeRole,
+      execution_context: continuation.executionContext,
       active_since: nowIso,
       last_command_at: nowIso,
-      round_role_history: [
-        ...finalizeInput.loaded.state.round_role_history,
-        {
-          round: nextRound,
-          implementer: finalizeInput.resolved.bubbleConfig.agents.implementer,
-          reviewer: finalizeInput.resolved.bubbleConfig.agents.reviewer,
-          switched_at: nowIso
-        }
-      ],
+      round_role_history:
+        continuation.appendRoundRoleEntry === undefined
+          ? finalizeInput.loaded.state.round_role_history
+          : [
+              ...finalizeInput.loaded.state.round_role_history,
+              continuation.appendRoundRoleEntry
+            ],
       meta_review: clearLiveMetaReviewSnapshot(
         finalizeInput.loaded.state.meta_review
       )
@@ -172,8 +174,7 @@ async function appendAutoReworkDecision(input: {
     envelope: {
       bubble_id: input.finalizeInput.resolved.bubbleId,
       sender: "orchestrator",
-      recipient:
-        input.finalizeInput.resolved.bubbleConfig.agents.implementer as AgentName,
+      recipient: input.finalizeInput.resolved.bubbleConfig.agents.implementer,
       type: "APPROVAL_DECISION",
       // The resumed RUNNING state is already persisted on the next round,
       // so transcript authority must use that same round for later observation reconciliation.

@@ -51,6 +51,7 @@ export async function prepareResumeLaunchInput(input: {
 
   const resumeKickoffResolution = resolveResumeKickoffMessages({
     bubbleId: input.context.resolved.bubbleId,
+    repoPath: input.context.resolved.repoPath,
     workspacePath: input.launchWorkspacePath,
     taskArtifactPath: input.context.resolved.bubblePaths.taskArtifactPath,
     reviewArtifactType: input.context.resolved.bubbleConfig.review_artifact_type,

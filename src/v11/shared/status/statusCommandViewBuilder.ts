@@ -10,7 +10,10 @@ import type {
   BubbleSpecLockState
 } from "../../../types/bubble.js";
 import {
-  buildBubbleReviewPolicyRuntimeView
+  buildRuntimeAlignedReviewPolicyRuntimeView,
+  normalizeRuntimeAlignedExecutionContext,
+  normalizeRuntimeAlignedRole,
+  toRuntimeAlignedReviewPolicyExecutionContext
 } from "../reviewPolicy/reviewPolicyRuntime.js";
 import type { ProtocolEnvelope, ProtocolMessageType } from "../../../types/protocol.js";
 import type { UiBubbleStatusRemoteExecution } from "../../../types/uiRemoteExecution.js";
@@ -105,6 +108,8 @@ function buildLocalBubbleStatusView(
   input: LocalBubbleStatusViewInput
 ): BubbleStatusView {
   const lastMessage = input.transcript[input.transcript.length - 1] ?? null;
+  const runtimeAlignedExecutionContext =
+    toRuntimeAlignedReviewPolicyExecutionContext(input.state.execution_context);
   const watchdog =
     input.stateValidation === null
       ? computeWatchdogStatus(
@@ -137,7 +142,17 @@ function buildLocalBubbleStatusView(
     lastCommandAt: input.state.last_command_at,
     paneActivity,
     executionContext: buildStatusExecutionContextView(input.state.execution_context),
-    reviewPolicy: buildBubbleReviewPolicyRuntimeView(input.resolved.bubbleConfig),
+    reviewPolicy: buildRuntimeAlignedReviewPolicyRuntimeView({
+      config: input.resolved.bubbleConfig,
+      round: input.state.round,
+      activeRole: input.state.active_role,
+      ...(runtimeAlignedExecutionContext !== null
+        ? {
+            executionContext: runtimeAlignedExecutionContext
+          }
+        : {}),
+      runtimeStateInvalid: input.stateValidation !== null
+    }),
     watchdog,
     pendingInboxItems: {
       humanQuestions: input.pendingQuestions,
@@ -170,6 +185,13 @@ function buildLocalBubbleStatusView(
 function buildRemoteBubbleStatusView(
   input: RemoteBubbleStatusViewInput
 ): BubbleStatusView {
+  const runtimeAlignedExecutionContext =
+    normalizeRuntimeAlignedExecutionContext(
+      input.remoteStatusSnapshot.executionContext
+    );
+  const runtimeAlignedActiveRole = normalizeRuntimeAlignedRole(
+    input.remoteStatusSnapshot.activeRole
+  );
   return {
     bubbleId: input.resolved.bubbleId,
     repoPath: input.resolved.repoPath,
@@ -183,7 +205,18 @@ function buildRemoteBubbleStatusView(
     lastCommandAt: input.remoteStatusSnapshot.lastCommandAt,
     paneActivity: input.remoteStatusSnapshot.paneActivity,
     executionContext: input.remoteStatusSnapshot.executionContext,
-    reviewPolicy: buildBubbleReviewPolicyRuntimeView(input.resolved.bubbleConfig),
+    reviewPolicy: buildRuntimeAlignedReviewPolicyRuntimeView({
+      config: input.resolved.bubbleConfig,
+      round: input.remoteStatusSnapshot.round,
+      activeRole: runtimeAlignedActiveRole,
+      ...(runtimeAlignedExecutionContext !== null
+        ? {
+            executionContext: runtimeAlignedExecutionContext
+          }
+        : {}),
+      runtimeAvailability: input.remoteStatusSnapshot.runtimeAvailability,
+      runtimeStateInvalid: input.remoteStatusSnapshot.stateValidation !== null
+    }),
     watchdog: input.remoteStatusSnapshot.watchdog,
     pendingInboxItems: input.remoteStatusSnapshot.pendingInboxItems,
     transcript: input.remoteStatusSnapshot.transcript,
