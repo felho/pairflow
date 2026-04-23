@@ -163,6 +163,12 @@ async function handleUpdateReviewPolicyAction(
       bubbleId: input.bubbleId,
       repoPath: input.repoPath,
       reviewLoopMode: reviewPolicyInput.reviewLoopMode,
+      ...(reviewPolicyInput.metaReviewAutoReworkMinSeverity !== undefined
+        ? {
+            metaReviewAutoReworkMinSeverity:
+              reviewPolicyInput.metaReviewAutoReworkMinSeverity
+          }
+        : {}),
       ...(reviewPolicyInput.expectedBubbleToml !== undefined
         ? { expectedBubbleToml: reviewPolicyInput.expectedBubbleToml }
         : {}),

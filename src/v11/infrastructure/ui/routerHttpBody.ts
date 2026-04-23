@@ -1,6 +1,8 @@
 import type { IncomingMessage } from "node:http";
 import {
+  isBubbleReviewAutoReworkSeverity,
   isBubbleReviewLoopMode,
+  type BubbleReviewAutoReworkSeverity,
   type BubbleReviewLoopMode
 } from "../../../types/bubble.js";
 import { badRequest, throwApiError } from "./routerHttpErrors.js";
@@ -180,6 +182,7 @@ export function parseDeleteBody(body: unknown): {
 
 export function parseReviewPolicyBody(body: unknown): {
   reviewLoopMode: BubbleReviewLoopMode;
+  metaReviewAutoReworkMinSeverity?: BubbleReviewAutoReworkSeverity | undefined;
   expectedBubbleToml?: string | undefined;
 } {
   if (typeof body !== "object" || body === null || Array.isArray(body)) {
@@ -206,8 +209,25 @@ export function parseReviewPolicyBody(body: unknown): {
     );
   }
 
+  const metaReviewAutoReworkMinSeverity =
+    (body as { metaReviewAutoReworkMinSeverity?: unknown })
+      .metaReviewAutoReworkMinSeverity;
+  if (
+    metaReviewAutoReworkMinSeverity !== undefined
+    && !isBubbleReviewAutoReworkSeverity(metaReviewAutoReworkMinSeverity)
+  ) {
+    throwApiError(
+      badRequest(
+        "Field `metaReviewAutoReworkMinSeverity` must be one of: P1, P2, P3."
+      )
+    );
+  }
+
   return {
     reviewLoopMode,
+    ...(metaReviewAutoReworkMinSeverity !== undefined
+      ? { metaReviewAutoReworkMinSeverity }
+      : {}),
     ...(expectedBubbleToml !== undefined ? { expectedBubbleToml } : {})
   };
 }

@@ -153,6 +153,7 @@ export interface UiBubbleTranscriptSummary {
 }
 
 export type MetaReviewRuntimeDeliveryStatus = "confirmed" | "uncertain" | "failed";
+export type BubbleReviewAutoReworkSeverity = "P1" | "P2" | "P3";
 
 export interface UiBubbleMetaReviewSummary {
   actor: "meta-reviewer";
@@ -174,7 +175,7 @@ export interface UiBubbleReviewPolicy {
   requested_loop_mode: BubbleReviewLoopMode;
   effective_loop_mode: BubbleReviewLoopMode;
   support_status: BubbleReviewSupportStatus;
-  meta_review_auto_rework_min_severity: "P1" | "P2" | "P3";
+  meta_review_auto_rework_min_severity: BubbleReviewAutoReworkSeverity;
   blocked_reason_code?: string;
   blocked_prerequisites?: string[];
   provenance_note?: string;
@@ -309,6 +310,7 @@ export interface MergeActionInput {
 
 export interface UpdateReviewPolicyActionInput {
   reviewLoopMode: BubbleReviewLoopMode;
+  metaReviewAutoReworkMinSeverity?: BubbleReviewAutoReworkSeverity;
   expectedBubbleToml?: string;
 }
 

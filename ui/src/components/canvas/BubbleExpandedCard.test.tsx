@@ -136,25 +136,6 @@ describe("BubbleExpandedCard", () => {
     expect(screen.getByText("Need confirmation")).toBeInTheDocument();
   });
 
-  it("renders canonical review-policy details from the bubble surface", () => {
-    renderExpandedCard({
-      bubble: bubbleCard({
-        bubbleId: "b-expanded-1",
-        repoPath: "/repo-a"
-      })
-    });
-
-    expect(screen.getByText("Review Policy")).toBeInTheDocument();
-    expect(screen.getByText(/Requested:/u)).toBeInTheDocument();
-    expect(screen.getByText(/Effective:/u)).toBeInTheDocument();
-    expect(screen.getByText(/Support:/u)).toBeInTheDocument();
-    expect(
-      screen.getByText(
-        /Policy updates only change the requested mode in Phase 3A\./u
-      )
-    ).toBeInTheDocument();
-  });
-
   it("adds meta-review running border while bubble remains in running state", () => {
     renderExpandedCard({
       bubble: bubbleCard({

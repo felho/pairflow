@@ -6,13 +6,12 @@ import { ActionBar } from "./ActionBar";
 import { bubbleCard } from "../../test/fixtures";
 import type { BubbleActionKind, BubbleLifecycleState } from "../../lib/types";
 
-const actionLabels: Record<Exclude<BubbleActionKind, "delete">, string> = {
+const actionLabels: Partial<Record<Exclude<BubbleActionKind, "delete">, string>> = {
   start: "Start",
   approve: "Approve",
   "request-rework": "Request Rework",
   reply: "Reply",
   resume: "Resume",
-  "update-review-policy": "Meta-Only",
   restart: "Restart",
   commit: "Commit",
   merge: "Merge",
@@ -21,17 +20,29 @@ const actionLabels: Record<Exclude<BubbleActionKind, "delete">, string> = {
   stop: "Stop"
 };
 
+const allActions: Array<Exclude<BubbleActionKind, "delete">> = [
+  "start",
+  "approve",
+  "request-rework",
+  "reply",
+  "resume",
+  "update-review-policy",
+  "restart",
+  "commit",
+  "merge",
+  "open",
+  "attach",
+  "stop"
+];
+
 function resolveActionLabelForState(
   state: BubbleLifecycleState,
   action: Exclude<BubbleActionKind, "delete">
 ): string {
-  if (action === "update-review-policy") {
-    return "Meta-Only";
-  }
   if (state === "WAITING_HUMAN" && action === "request-rework") {
     return "Queue Rework";
   }
-  return actionLabels[action];
+  return actionLabels[action] ?? action;
 }
 
 const expectedMatrix: Record<BubbleLifecycleState, BubbleActionKind[]> = {
@@ -64,10 +75,6 @@ const expectedMatrix: Record<BubbleLifecycleState, BubbleActionKind[]> = {
 
 describe("ActionBar", () => {
   it("renders only matrix-allowed actions for each lifecycle state", () => {
-    const allActions = Object.keys(actionLabels) as Array<
-      Exclude<BubbleActionKind, "delete">
-    >;
-
     for (const [state, expectedActions] of Object.entries(expectedMatrix) as Array<
       [BubbleLifecycleState, BubbleActionKind[]]
     >) {
@@ -92,6 +99,17 @@ describe("ActionBar", () => {
       );
 
       for (const action of allActions) {
+        if (action === "update-review-policy") {
+          const policyToggle = screen.queryByRole("switch", {
+            name: "Meta review only"
+          });
+          if (expectedActions.includes(action)) {
+            expect(policyToggle).toBeInTheDocument();
+          } else {
+            expect(policyToggle).not.toBeInTheDocument();
+          }
+          continue;
+        }
         const button = screen.queryByRole("button", {
           name: resolveActionLabelForState(state, action)
         });
@@ -301,6 +319,73 @@ describe("ActionBar", () => {
     expect(screen.queryByText("Opening Warp terminal...")).not.toBeInTheDocument();
   });
 
+  it("renders attach as icon-only control with accessible name", () => {
+    render(
+      <ActionBar
+        bubble={bubbleCard({
+          bubbleId: "b-run-attach",
+          repoPath: "/repo-a",
+          state: "RUNNING"
+        })}
+        attach={{
+          visible: true,
+          enabled: true,
+          command: "tmux attach -t pf-b-run-attach",
+          hint: null
+        }}
+        isSubmitting={false}
+        actionError={null}
+        retryHint={null}
+        actionFailure={null}
+        onAction={vi.fn(() => Promise.resolve(undefined))}
+        onClearFeedback={vi.fn()}
+      />
+    );
+
+    const attachButton = screen.getByRole("button", { name: "Attach" });
+    expect(attachButton).toBeInTheDocument();
+    expect(attachButton).toHaveTextContent("");
+    expect(attachButton.querySelector("svg")).not.toBeNull();
+  });
+
+  it("orders running trailing controls as stop, restart, attach, open, then policy controls", () => {
+    const { container } = render(
+      <ActionBar
+        bubble={bubbleCard({
+          bubbleId: "b-run-order",
+          repoPath: "/repo-a",
+          state: "RUNNING"
+        })}
+        attach={{
+          visible: true,
+          enabled: true,
+          command: "tmux attach -t pf-b-run-order",
+          hint: null
+        }}
+        isSubmitting={false}
+        actionError={null}
+        retryHint={null}
+        actionFailure={null}
+        onAction={vi.fn(() => Promise.resolve(undefined))}
+        onClearFeedback={vi.fn()}
+        expectedBubbleToml={"id = \"b-run-order\""}
+      />
+    );
+
+    const controls = Array.from(
+      container.querySelectorAll("button, [role='switch'], select")
+    ).map((element) => element.getAttribute("aria-label") ?? element.textContent ?? "");
+
+    expect(controls).toEqual([
+      "Stop",
+      "Restart",
+      "Attach",
+      "Open",
+      "Meta review only",
+      "Meta auto-rework severity"
+    ]);
+  });
+
   it("toggles review policy action toward meta-only when the bubble is currently full", async () => {
     const user = userEvent.setup();
     const onAction = vi.fn(() => Promise.resolve(undefined));
@@ -328,12 +413,15 @@ describe("ActionBar", () => {
       />
     );
 
-    await user.click(screen.getByRole("button", { name: "Meta-Only" }));
+    const toggle = screen.getByRole("switch", { name: "Meta review only" });
+    expect(toggle).toHaveAttribute("aria-checked", "false");
+    await user.click(toggle);
 
     expect(onAction).toHaveBeenCalledWith({
       bubbleId: "b-policy",
       action: "update-review-policy",
       reviewLoopMode: "meta_only",
+      metaReviewAutoReworkMinSeverity: "P1",
       expectedBubbleToml: "id = \"b-policy\""
     });
   });
@@ -366,13 +454,61 @@ describe("ActionBar", () => {
       />
     );
 
-    await user.click(screen.getByRole("button", { name: "Meta-Only" }));
+    await user.click(screen.getByRole("switch", { name: "Meta review only" }));
 
     expect(onAction).toHaveBeenCalledWith({
       bubbleId: "b-policy",
       action: "update-review-policy",
       reviewLoopMode: "meta_only",
+      metaReviewAutoReworkMinSeverity: "P1",
       expectedBubbleToml
+    });
+  });
+
+  it("updates meta auto-rework severity from the compact dropdown", async () => {
+    const user = userEvent.setup();
+    const onAction = vi.fn(() => Promise.resolve(undefined));
+
+    render(
+      <ActionBar
+        bubble={bubbleCard({
+          bubbleId: "b-policy-severity",
+          repoPath: "/repo-a",
+          state: "RUNNING",
+          reviewPolicy: {
+            requested_loop_mode: "meta_only",
+            effective_loop_mode: "full",
+            support_status: "guarded",
+            meta_review_auto_rework_min_severity: "P1"
+          }
+        })}
+        attach={{
+          visible: false,
+          enabled: false,
+          command: "tmux attach -t pf-b-policy-severity",
+          hint: null
+        }}
+        isSubmitting={false}
+        actionError={null}
+        retryHint={null}
+        actionFailure={null}
+        onAction={onAction}
+        onClearFeedback={vi.fn()}
+        expectedBubbleToml={"id = \"b-policy-severity\""}
+      />
+    );
+
+    await user.selectOptions(
+      screen.getByRole("combobox", { name: "Meta auto-rework severity" }),
+      "P3"
+    );
+
+    expect(onAction).toHaveBeenCalledWith({
+      bubbleId: "b-policy-severity",
+      action: "update-review-policy",
+      reviewLoopMode: "meta_only",
+      metaReviewAutoReworkMinSeverity: "P3",
+      expectedBubbleToml: "id = \"b-policy-severity\""
     });
   });
 
@@ -400,10 +536,13 @@ describe("ActionBar", () => {
       />
     );
 
-    expect(screen.getByRole("button", { name: "Meta-Only" })).toBeDisabled();
+    expect(screen.getByRole("switch", { name: "Meta review only" })).toBeDisabled();
+    expect(
+      screen.getByRole("combobox", { name: "Meta auto-rework severity" })
+    ).toBeDisabled();
   });
 
-  it("keeps review policy action visible with an explicit unavailable label when policy data is missing", () => {
+  it("keeps review policy control visible but disabled when policy data is missing", () => {
     render(
       <ActionBar
         bubble={{
@@ -430,9 +569,9 @@ describe("ActionBar", () => {
       />
     );
 
-    expect(
-      screen.getByRole("button", { name: "Review Policy Unavailable" })
-    ).toBeDisabled();
+    const toggle = screen.getByRole("switch", { name: "Meta review only" });
+    expect(toggle).toBeDisabled();
+    expect(toggle).toHaveAttribute("aria-checked", "false");
   });
 
   it("renders disabled attach with its hint when availability is fail-closed", () => {
@@ -518,5 +657,63 @@ describe("ActionBar", () => {
     expect(restartButton).toBeInTheDocument();
     expect(restartButton).toHaveTextContent("");
     expect(restartButton.querySelector("svg")).not.toBeNull();
+  });
+
+  it("renders open as icon-only control with accessible name", () => {
+    render(
+      <ActionBar
+        bubble={bubbleCard({
+          bubbleId: "b-done",
+          repoPath: "/repo-a",
+          state: "DONE"
+        })}
+        attach={{
+          visible: false,
+          enabled: false,
+          command: "tmux attach -t pf-b-done",
+          hint: null
+        }}
+        isSubmitting={false}
+        actionError={null}
+        retryHint={null}
+        actionFailure={null}
+        onAction={vi.fn(() => Promise.resolve(undefined))}
+        onClearFeedback={vi.fn()}
+      />
+    );
+
+    const openButton = screen.getByRole("button", { name: "Open" });
+    expect(openButton).toBeInTheDocument();
+    expect(openButton).toHaveTextContent("");
+    expect(openButton.querySelector("svg")).not.toBeNull();
+  });
+
+  it("renders stop as icon-only control with accessible name", () => {
+    render(
+      <ActionBar
+        bubble={bubbleCard({
+          bubbleId: "b-run-stop",
+          repoPath: "/repo-a",
+          state: "RUNNING"
+        })}
+        attach={{
+          visible: false,
+          enabled: false,
+          command: "tmux attach -t pf-b-run-stop",
+          hint: null
+        }}
+        isSubmitting={false}
+        actionError={null}
+        retryHint={null}
+        actionFailure={null}
+        onAction={vi.fn(() => Promise.resolve(undefined))}
+        onClearFeedback={vi.fn()}
+      />
+    );
+
+    const stopButton = screen.getByRole("button", { name: "Stop" });
+    expect(stopButton).toBeInTheDocument();
+    expect(stopButton).toHaveTextContent("");
+    expect(stopButton.querySelector("svg")).not.toBeNull();
   });
 });

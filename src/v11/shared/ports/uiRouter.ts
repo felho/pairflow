@@ -1,6 +1,7 @@
 import type { DeleteBubbleResult } from "../../../contracts/deleteBubble.js";
 import type {
   BubbleLifecycleState,
+  BubbleReviewAutoReworkSeverity,
   BubbleReviewLoopMode,
   BubbleReviewPolicyRuntimeView,
   AttachLauncher,
@@ -208,6 +209,7 @@ export type AttachBubbleResult = UiAttachBubbleResult;
 
 export interface UiUpdateBubbleReviewPolicyInput extends UiBubbleMutationInput {
   reviewLoopMode: BubbleReviewLoopMode;
+  metaReviewAutoReworkMinSeverity?: BubbleReviewAutoReworkSeverity;
   expectedBubbleToml?: string | undefined;
 }
 

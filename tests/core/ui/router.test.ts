@@ -2987,6 +2987,7 @@ describe("createUiRouter review policy action", () => {
           },
           body: JSON.stringify({
             reviewLoopMode: "meta_only",
+            metaReviewAutoReworkMinSeverity: "P2",
             expectedBubbleToml: "id = \"b-router-policy-01\""
           })
         }
@@ -3015,6 +3016,7 @@ describe("createUiRouter review policy action", () => {
         bubbleId: "b-router-policy-01",
         repoPath,
         reviewLoopMode: "meta_only",
+        metaReviewAutoReworkMinSeverity: "P2",
         expectedBubbleToml: "id = \"b-router-policy-01\""
       });
     } finally {
@@ -3151,6 +3153,74 @@ describe("createUiRouter review policy action", () => {
       expect(response.status).toBe(400);
       expect(payload.error.code).toBe("bad_request");
       expect(payload.error.message).toContain("expectedBubbleToml");
+      expect(updateBubbleReviewPolicy).not.toHaveBeenCalled();
+    } finally {
+      await server.close();
+    }
+  });
+
+  it("rejects review-policy update when metaReviewAutoReworkMinSeverity is invalid", async () => {
+    const repoPath = "/tmp/pairflow-ui-router-review-policy-invalid-severity-repo";
+    const getBubbleStatus = vi.fn(async () =>
+      createReviewPolicyStatus({
+        repoPath,
+        bubbleId: "b-router-policy-invalid-severity-01"
+      })
+    );
+    const updateBubbleReviewPolicy = vi.fn(async () => {
+      throw new Error("should not be called");
+    });
+
+    const router = createUiRouter({
+      repoScope: {
+        repos: [repoPath],
+        has: (value: string) => Promise.resolve(value === repoPath)
+      },
+      events: {
+        subscribe: () => () => undefined,
+        getSnapshot: () => ({
+          id: 1,
+          ts: "2026-02-25T00:00:00.000Z",
+          type: "snapshot",
+          repos: [],
+          bubbles: []
+        }),
+        refreshNow: () => Promise.resolve(undefined),
+        addRepo: () => Promise.resolve(false),
+        removeRepo: () => Promise.resolve(false),
+        close: () => Promise.resolve(undefined)
+      },
+      dependencies: {
+        getBubbleStatus,
+        updateBubbleReviewPolicy
+      }
+    });
+    const server = await startRouterServer(router);
+
+    try {
+      const response = await fetch(
+        `${server.url}/api/bubbles/b-router-policy-invalid-severity-01/update-review-policy?repo=${encodeURIComponent(repoPath)}`,
+        {
+          method: "POST",
+          headers: {
+            "content-type": "application/json"
+          },
+          body: JSON.stringify({
+            reviewLoopMode: "meta_only",
+            metaReviewAutoReworkMinSeverity: "P0"
+          })
+        }
+      );
+      const payload = (await response.json()) as {
+        error: {
+          code: string;
+          message: string;
+        };
+      };
+
+      expect(response.status).toBe(400);
+      expect(payload.error.code).toBe("bad_request");
+      expect(payload.error.message).toContain("metaReviewAutoReworkMinSeverity");
       expect(updateBubbleReviewPolicy).not.toHaveBeenCalled();
     } finally {
       await server.close();

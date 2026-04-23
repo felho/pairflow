@@ -16,6 +16,7 @@ import {
 import type {
   BubbleLifecycleState,
   BubbleActionKind,
+  BubbleReviewAutoReworkSeverity,
   AttachActionResult,
   BubbleReviewLoopMode,
   BubbleCardModel,
@@ -60,6 +61,7 @@ export interface RunBubbleActionInput {
   push?: boolean;
   deleteRemote?: boolean;
   reviewLoopMode?: BubbleReviewLoopMode;
+  metaReviewAutoReworkMinSeverity?: BubbleReviewAutoReworkSeverity;
   expectedBubbleToml?: string;
 }
 
@@ -870,6 +872,12 @@ async function performBubbleAction(
       }
       return api.updateReviewPolicy(bubble.repoPath, bubble.bubbleId, {
         reviewLoopMode,
+        ...(input.metaReviewAutoReworkMinSeverity !== undefined
+          ? {
+              metaReviewAutoReworkMinSeverity:
+                input.metaReviewAutoReworkMinSeverity
+            }
+          : {}),
         ...(input.expectedBubbleToml !== undefined
           ? { expectedBubbleToml: input.expectedBubbleToml }
           : {})

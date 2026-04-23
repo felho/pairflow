@@ -353,6 +353,12 @@ export function createApiClient(baseUrl: string = ""): PairflowApiClient {
     ): Promise<UpdateReviewPolicyActionResult> {
       return postBubbleAction(baseUrl, repoPath, bubbleId, "update-review-policy", {
         reviewLoopMode: input.reviewLoopMode,
+        ...(input.metaReviewAutoReworkMinSeverity !== undefined
+          ? {
+              metaReviewAutoReworkMinSeverity:
+                input.metaReviewAutoReworkMinSeverity
+            }
+          : {}),
         ...(input.expectedBubbleToml !== undefined
           ? { expectedBubbleToml: input.expectedBubbleToml }
           : {})

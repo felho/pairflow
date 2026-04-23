@@ -1,9 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
+import {
+  FolderOpen,
+  OctagonX,
+  RefreshCcw,
+  SquareTerminal
+} from "lucide-react";
 
 import { getAvailableActionsForState } from "../../lib/actionAvailability";
 import type { AttachAvailability } from "../../lib/attachAvailability";
 import type {
   BubbleActionKind,
+  BubbleReviewAutoReworkSeverity,
   BubbleCardModel,
   CommitActionInput,
   MergeActionInput
@@ -19,7 +26,6 @@ const actionLabels: Partial<Record<BubbleActionKind, string>> = {
   "request-rework": "Request Rework",
   reply: "Reply",
   resume: "Resume",
-  "update-review-policy": "Review Policy",
   restart: "Restart",
   commit: "Commit",
   merge: "Merge",
@@ -37,62 +43,62 @@ function resolveActionLabel(
   if (action === "request-rework" && bubble.state === "WAITING_HUMAN") {
     return "Queue Rework";
   }
-  if (action === "update-review-policy") {
-    if (bubble.reviewPolicy === null) {
-      return "Review Policy Unavailable";
-    }
-    return bubble.reviewPolicy.requested_loop_mode === "meta_only"
-      ? "Full Review"
-      : "Meta-Only";
-  }
   return actionLabels[action];
 }
 
 function buttonTone(action: BubbleActionKind): string {
   switch (action) {
     case "stop":
-      return "border-rose-500/70 bg-rose-500/[0.08] text-rose-400";
+      return "border-rose-400/45 bg-rose-500/[0.05] text-rose-300";
     case "approve":
-      return "border-emerald-500/70 bg-emerald-500/[0.08] text-emerald-500";
+      return "border-emerald-400/45 bg-emerald-500/[0.05] text-emerald-300";
     case "commit":
     case "merge":
-      return "border-emerald-400/70 bg-emerald-400/[0.08] text-emerald-400";
+      return "border-emerald-400/45 bg-emerald-500/[0.05] text-emerald-300";
     case "request-rework":
-      return "border-amber-500/70 bg-amber-500/[0.08] text-amber-500";
+      return "border-amber-400/45 bg-amber-500/[0.05] text-amber-300";
     case "reply":
-      return "border-amber-500/70 bg-amber-500/[0.08] text-amber-500";
+      return "border-amber-400/45 bg-amber-500/[0.05] text-amber-300";
     case "restart":
-    case "update-review-policy":
-      return "border-cyan-500/70 bg-cyan-500/[0.08] text-cyan-400";
+      return "border-sky-400/45 bg-sky-500/[0.05] text-sky-300";
+    case "attach":
+    case "open":
+      return "border-[#4a4a4a] bg-[#202020] text-[#d0d0d0] hover:border-[#666] hover:text-white";
     default:
       return "border-[#333] bg-[#1a1a1a] text-[#aaa] hover:border-[#555] hover:text-white";
   }
 }
 
 function isIconOnlyAction(action: BubbleActionKind): boolean {
-  return action === "restart";
+  return (
+    action === "restart"
+    || action === "open"
+    || action === "stop"
+    || action === "attach"
+  );
 }
 
 function renderActionContent(action: BubbleActionKind, label: string): JSX.Element | string {
-  if (action !== "restart") {
-    return label;
+  switch (action) {
+    case "restart":
+      return (
+        <RefreshCcw aria-hidden="true" className="h-3.5 w-3.5" strokeWidth={1.8} />
+      );
+    case "open":
+      return (
+        <FolderOpen aria-hidden="true" className="h-3.5 w-3.5" strokeWidth={1.8} />
+      );
+    case "attach":
+      return (
+        <SquareTerminal aria-hidden="true" className="h-3.5 w-3.5" strokeWidth={1.8} />
+      );
+    case "stop":
+      return (
+        <OctagonX aria-hidden="true" className="h-3.5 w-3.5" strokeWidth={1.8} />
+      );
+    default:
+      return label;
   }
-
-  return (
-    <svg
-      aria-hidden="true"
-      viewBox="0 0 20 20"
-      className="h-3.5 w-3.5"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M16 10a6 6 0 1 1-2.1-4.57" />
-      <path d="M16 4v3.5h-3.5" />
-    </svg>
-  );
 }
 
 export interface ActionBarProps {
@@ -113,6 +119,20 @@ function hasExpectedBubbleTomlValue(
   return typeof expectedBubbleToml === "string" && expectedBubbleToml.length > 0;
 }
 
+function resolveRequestedLoopMode(
+  bubble: BubbleCardModel
+): "full" | "meta_only" {
+  return bubble.reviewPolicy?.requested_loop_mode ?? "full";
+}
+
+function resolveRequestedSeverity(
+  bubble: BubbleCardModel
+): BubbleReviewAutoReworkSeverity {
+  return bubble.reviewPolicy?.meta_review_auto_rework_min_severity ?? "P1";
+}
+
+const trailingIconActionOrder: BubbleActionKind[] = ["stop", "restart", "attach", "open"];
+
 export function ActionBar(props: ActionBarProps): JSX.Element {
   const [modalAction, setModalAction] = useState<ModalAction | null>(null);
   const [showCommitForm, setShowCommitForm] = useState(false);
@@ -129,31 +149,27 @@ export function ActionBar(props: ActionBarProps): JSX.Element {
     setModalAction(null);
   }, [props.bubble.state, props.bubble.bubbleId]);
 
+  const reviewPolicyAvailable = availableActions.includes("update-review-policy");
+  const reviewPolicyWritable =
+    props.bubble.reviewPolicy !== null
+    && hasExpectedBubbleTomlValue(props.expectedBubbleToml);
+  const requestedLoopMode = resolveRequestedLoopMode(props.bubble);
+  const requestedSeverity = resolveRequestedSeverity(props.bubble);
+  const regularActions = availableActions.filter(
+    (action) =>
+      action !== "update-review-policy"
+      && !trailingIconActionOrder.includes(action)
+  );
+  const trailingIconActions = trailingIconActionOrder.filter((action) => {
+    if (action === "attach") {
+      return props.attach.visible;
+    }
+    return availableActions.includes(action);
+  });
+
   const invokeAction = async (action: BubbleActionKind): Promise<void> => {
     props.onClearFeedback();
     try {
-      if (action === "update-review-policy") {
-        const reviewPolicy = props.bubble.reviewPolicy;
-        if (reviewPolicy === null) {
-          throw new Error("Review policy is unavailable until the latest bubble detail loads.");
-        }
-        const expectedBubbleToml = props.expectedBubbleToml;
-        if (!hasExpectedBubbleTomlValue(expectedBubbleToml)) {
-          throw new Error(
-            "Review policy update is unavailable until the latest bubble detail revision loads."
-          );
-        }
-        await props.onAction({
-          bubbleId: props.bubble.bubbleId,
-          action,
-          reviewLoopMode:
-            reviewPolicy.requested_loop_mode === "meta_only"
-              ? "full"
-              : "meta_only",
-          expectedBubbleToml
-        });
-        return;
-      }
       await props.onAction({
         bubbleId: props.bubble.bubbleId,
         action
@@ -161,6 +177,42 @@ export function ActionBar(props: ActionBarProps): JSX.Element {
     } catch {
       return;
     }
+  };
+
+  const invokeReviewPolicyUpdate = async (input: {
+    reviewLoopMode: "full" | "meta_only";
+    metaReviewAutoReworkMinSeverity: BubbleReviewAutoReworkSeverity;
+  }): Promise<void> => {
+    props.onClearFeedback();
+    try {
+      if (props.bubble.reviewPolicy === null) {
+        throw new Error("Review policy is unavailable until the latest bubble detail loads.");
+      }
+      const expectedBubbleToml = props.expectedBubbleToml;
+      if (!hasExpectedBubbleTomlValue(expectedBubbleToml)) {
+        throw new Error(
+          "Review policy update is unavailable until the latest bubble detail revision loads."
+        );
+      }
+      await props.onAction({
+        bubbleId: props.bubble.bubbleId,
+        action: "update-review-policy",
+        reviewLoopMode: input.reviewLoopMode,
+        metaReviewAutoReworkMinSeverity: input.metaReviewAutoReworkMinSeverity,
+        expectedBubbleToml
+      });
+    } catch {
+      return;
+    }
+  };
+
+  const invokeReviewPolicyMode = async (
+    reviewLoopMode: "full" | "meta_only"
+  ): Promise<void> => {
+    await invokeReviewPolicyUpdate({
+      reviewLoopMode,
+      metaReviewAutoReworkMinSeverity: requestedSeverity
+    });
   };
 
   const submitMessageModal = async (message: string): Promise<void> => {
@@ -215,8 +267,8 @@ export function ActionBar(props: ActionBarProps): JSX.Element {
 
   return (
     <div>
-      <div className="flex flex-wrap gap-1.5">
-        {availableActions.map((action) => {
+      <div className="flex flex-wrap items-center gap-1.5">
+        {regularActions.map((action) => {
           const openCommit = action === "commit";
           const openMerge = action === "merge";
           const needsModal = action === "request-rework" || action === "reply";
@@ -249,41 +301,110 @@ export function ActionBar(props: ActionBarProps): JSX.Element {
               }}
               aria-label={label}
               title={label}
-              disabled={
-                props.isSubmitting
-                || (
-                  action === "update-review-policy"
-                  && (
-                    props.bubble.reviewPolicy === null
-                    || !hasExpectedBubbleTomlValue(props.expectedBubbleToml)
-                  )
-                )
-              }
+              disabled={props.isSubmitting}
             >
               {renderActionContent(action, label)}
             </button>
           );
         })}
 
-        {props.attach.visible ? (
-          <button
-            type="button"
-            className="rounded-lg border border-[#333] bg-[#1a1a1a] px-2.5 py-1 text-[10px] text-[#aaa] transition hover:border-[#555] hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
-            disabled={!props.attach.enabled || props.isSubmitting}
-            onClick={() => {
-              props.onClearFeedback();
-              void props
-                .onAction({
-                  bubbleId: props.bubble.bubbleId,
-                  action: "attach"
-                })
-                .catch(() => {
-                  // Error is displayed by the generic actionError handler.
+        {trailingIconActions.map((action) => {
+          const label = resolveActionLabel(props.bubble, action);
+          if (label === undefined) {
+            return null;
+          }
+
+          const isAttachAction = action === "attach";
+
+          return (
+            <button
+              key={action}
+              type="button"
+              className={`flex h-6 w-6 items-center justify-center rounded-lg border p-0 text-[10px] transition hover:brightness-125 disabled:cursor-not-allowed disabled:opacity-60 ${buttonTone(action)}`}
+              onClick={() => {
+                if (isAttachAction) {
+                  props.onClearFeedback();
+                  void props
+                    .onAction({
+                      bubbleId: props.bubble.bubbleId,
+                      action: "attach"
+                    })
+                    .catch(() => {
+                      // Error is displayed by the generic actionError handler.
+                    });
+                  return;
+                }
+                void invokeAction(action);
+              }}
+              aria-label={label}
+              title={label}
+              disabled={props.isSubmitting || (isAttachAction && !props.attach.enabled)}
+            >
+              {renderActionContent(action, label)}
+            </button>
+          );
+        })}
+
+        {reviewPolicyAvailable ? (
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              role="switch"
+              aria-checked={requestedLoopMode === "meta_only"}
+              aria-label="Meta review only"
+              title={
+                reviewPolicyWritable
+                  ? "Meta review only"
+                  : "Review policy update is unavailable until the latest bubble detail revision loads."
+              }
+              className={`flex h-[18px] w-7 items-center self-center rounded-full border p-0.5 transition ${
+                requestedLoopMode === "meta_only"
+                  ? "border-cyan-500/70 bg-cyan-500/[0.14]"
+                  : "border-[#333] bg-[#1a1a1a] hover:border-[#555]"
+              } disabled:cursor-not-allowed disabled:opacity-60`}
+              disabled={props.isSubmitting || !reviewPolicyWritable}
+              onClick={() => {
+                void invokeReviewPolicyMode(
+                  requestedLoopMode === "meta_only" ? "full" : "meta_only"
+                );
+              }}
+            >
+              <span
+                aria-hidden="true"
+                className={`h-2.5 w-2.5 rounded-full transition-transform ${
+                  requestedLoopMode === "meta_only"
+                    ? "translate-x-[10px] bg-cyan-300"
+                    : "translate-x-0 bg-[#8a8a8a]"
+                }`}
+              />
+            </button>
+            <label className="sr-only" htmlFor={`review-severity-${props.bubble.bubbleId}`}>
+              Meta auto-rework severity
+            </label>
+            <select
+              id={`review-severity-${props.bubble.bubbleId}`}
+              aria-label="Meta auto-rework severity"
+              title={
+                reviewPolicyWritable
+                  ? "Meta auto-rework severity"
+                  : "Review policy update is unavailable until the latest bubble detail revision loads."
+              }
+              className="h-4 rounded-md border border-[#333] bg-[#1a1a1a] px-1 text-[9px] font-mono text-[#d7dde5] transition hover:border-[#555] disabled:cursor-not-allowed disabled:opacity-60"
+              value={requestedSeverity}
+              disabled={props.isSubmitting || !reviewPolicyWritable}
+              onChange={(event) => {
+                void invokeReviewPolicyUpdate({
+                  reviewLoopMode: requestedLoopMode,
+                  metaReviewAutoReworkMinSeverity:
+                    event.currentTarget.value as BubbleReviewAutoReworkSeverity
                 });
-            }}
-          >
-            Attach
-          </button>
+              }}
+            >
+              <option value="P1">P1</option>
+              <option value="P2">P2</option>
+              <option value="P3">P3</option>
+            </select>
+          </div>
         ) : null}
       </div>
 

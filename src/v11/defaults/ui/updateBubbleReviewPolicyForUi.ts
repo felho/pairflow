@@ -83,7 +83,13 @@ export async function updateBubbleReviewPolicyForUi(
       const result = await updateBubbleReviewPolicy({
         bubbleTomlPath: resolved.bubblePaths.bubbleTomlPath,
         patch: {
-          review_loop_mode: input.reviewLoopMode
+          review_loop_mode: input.reviewLoopMode,
+          ...(input.metaReviewAutoReworkMinSeverity !== undefined
+            ? {
+                meta_review_auto_rework_min_severity:
+                  input.metaReviewAutoReworkMinSeverity
+              }
+            : {})
         },
         ...(input.expectedBubbleToml !== undefined
           ? { expectedContent: input.expectedBubbleToml }

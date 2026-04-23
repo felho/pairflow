@@ -269,7 +269,8 @@ describe("createApiClient", () => {
     });
     await expect(
       client.updateReviewPolicy("/repo-a", "b-a", {
-        reviewLoopMode: "meta_only"
+        reviewLoopMode: "meta_only",
+        metaReviewAutoReworkMinSeverity: "P2"
       })
     ).resolves.toMatchObject({
       bubbleId: "b-a",
@@ -323,7 +324,8 @@ describe("createApiClient", () => {
       {
         method: "POST",
         body: JSON.stringify({
-          reviewLoopMode: "meta_only"
+          reviewLoopMode: "meta_only",
+          metaReviewAutoReworkMinSeverity: "P2"
         }),
         headers: {
           "content-type": "application/json"
@@ -455,6 +457,7 @@ describe("createApiClient", () => {
     const client = createApiClient();
     await client.updateReviewPolicy("/repo-a", "b-a", {
       reviewLoopMode: "meta_only",
+      metaReviewAutoReworkMinSeverity: "P3",
       expectedBubbleToml
     });
 
@@ -464,6 +467,7 @@ describe("createApiClient", () => {
         method: "POST",
         body: JSON.stringify({
           reviewLoopMode: "meta_only",
+          metaReviewAutoReworkMinSeverity: "P3",
           expectedBubbleToml
         }),
         headers: {
