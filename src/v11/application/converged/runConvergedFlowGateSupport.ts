@@ -184,7 +184,8 @@ export async function runConvergedGatePipeline(input: {
             implementer: routing.implementer,
             reviewArtifactType: routing.resolved.bubbleConfig.review_artifact_type,
             roundRoleHistory: routing.state.round_role_history,
-            severityGateRound: routing.resolved.bubbleConfig.severity_gate_round
+            severityGateRound: routing.resolved.bubbleConfig.severity_gate_round,
+            effectiveLoopMode: routing.effectiveLoopMode
           });
 
           return {

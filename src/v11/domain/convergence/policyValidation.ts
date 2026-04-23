@@ -51,7 +51,9 @@ function validateRoundAlternation(
   const distinctRounds = new Set(input.roundRoleHistory.map((entry) => entry.round));
   if (distinctRounds.size < 2) {
     errors.push(
-      "Convergence requires reviewer-role alternation evidence across at least two rounds."
+      input.effectiveLoopMode === "meta_only"
+        ? "Convergence requires evidence across at least two rounds before reviewer-bypass closure can be accepted."
+        : "Convergence requires reviewer-role alternation evidence across at least two rounds."
     );
   }
 }

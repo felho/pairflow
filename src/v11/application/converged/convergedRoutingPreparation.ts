@@ -6,7 +6,15 @@ import {
   resolveIdeationMetadata
 } from "../../domain/ideation/ideationMetadata.js";
 import type { ActorEmitContextSnapshot } from "../../shared/actorProtocol/actorEmitContext.js";
-import type { AgentName, BubbleStateSnapshot } from "../../../types/bubble.js";
+import type {
+  AgentName,
+  BubbleReviewLoopMode,
+  BubbleStateSnapshot
+} from "../../../types/bubble.js";
+import {
+  resolveRuntimeAlignedConvergedActiveRole,
+  toRuntimeAlignedReviewPolicyExecutionContext
+} from "../../shared/reviewPolicy/reviewPolicyRuntime.js";
 
 export interface PrepareConvergedRoutingInput {
   cwd?: string;
@@ -31,13 +39,23 @@ export interface PrepareConvergedRoutingResult {
   state: BubbleStateSnapshot;
   implementer: AgentName;
   reviewer: AgentName;
+  effectiveLoopMode: BubbleReviewLoopMode;
 }
 
-function assertConvergedReviewerContext(
+function assertConvergedActiveContext(input: {
   state: BubbleStateSnapshot,
+  configuredImplementer: AgentName,
   configuredReviewer: AgentName,
+  effectiveLoopMode: BubbleReviewLoopMode,
   createError: PairflowCreateCommandError
-): void {
+}): void {
+  const {
+    state,
+    configuredImplementer,
+    configuredReviewer,
+    effectiveLoopMode,
+    createError
+  } = input;
   if (state.state !== "RUNNING") {
     throw createError({
       reasonCode: "CONVERGED_STATE_NOT_RUNNING",
@@ -70,26 +88,45 @@ function assertConvergedReviewerContext(
     });
   }
 
-  if (state.active_role !== "reviewer") {
+  const expectedRole =
+    effectiveLoopMode === "meta_only" ? "implementer" : "reviewer";
+  if (state.active_role !== expectedRole) {
     throw createError({
       reasonCode: "CONVERGED_ACTIVE_ROLE_UNSUPPORTED",
-      message: `converged may only be invoked by the active reviewer (active role: ${state.active_role}).`,
+      message:
+        expectedRole === "implementer"
+          ? `converged may only be invoked by the active implementer while reviewer-bypass runtime activation is live (active role: ${state.active_role}).`
+          : `converged may only be invoked by the active reviewer (active role: ${state.active_role}).`,
       context: {
         command_name: "converged",
-        active_role: state.active_role
+        active_role: state.active_role,
+        expected_active_role: expectedRole,
+        effective_loop_mode: effectiveLoopMode
       }
     });
   }
 
-  if (state.active_agent !== configuredReviewer) {
+  const expectedAgent =
+    expectedRole === "implementer"
+      ? configuredImplementer
+      : configuredReviewer;
+  if (state.active_agent !== expectedAgent) {
     throw createError({
-      reasonCode: "CONVERGED_REVIEWER_CONTEXT_MISMATCH",
-      message: `Active reviewer must be configured reviewer agent (${configuredReviewer}).`,
+      reasonCode:
+        expectedRole === "implementer"
+          ? "CONVERGED_IMPLEMENTER_CONTEXT_MISMATCH"
+          : "CONVERGED_REVIEWER_CONTEXT_MISMATCH",
+      message:
+        expectedRole === "implementer"
+          ? `Active implementer must be configured implementer agent (${configuredImplementer}).`
+          : `Active reviewer must be configured reviewer agent (${configuredReviewer}).`,
       context: {
         command_name: "converged",
         round: state.round,
         active_agent: state.active_agent,
-        configured_reviewer: configuredReviewer
+        configured_agent: expectedAgent,
+        expected_active_role: expectedRole,
+        effective_loop_mode: effectiveLoopMode
       }
     });
   }
@@ -197,13 +234,30 @@ export async function prepareConvergedRouting(
   }
 
   const { implementer, reviewer } = resolved.bubbleConfig.agents;
-  assertConvergedReviewerContext(state, reviewer, input.createError);
+  const effectiveLoopMode = resolveRuntimeAlignedConvergedActiveRole({
+    config: resolved.bubbleConfig,
+    round: state.round,
+    activeRole: state.active_role,
+    executionContext: toRuntimeAlignedReviewPolicyExecutionContext(
+      state.execution_context
+    )
+  }) === "implementer"
+    ? "meta_only"
+    : "full";
+  assertConvergedActiveContext({
+    state,
+    configuredImplementer: implementer,
+    configuredReviewer: reviewer,
+    effectiveLoopMode,
+    createError: input.createError
+  });
 
   return {
     resolved,
     bubbleIdentity,
     state,
     implementer,
-    reviewer
+    reviewer,
+    effectiveLoopMode
   };
 }

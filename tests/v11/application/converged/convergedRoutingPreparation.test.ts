@@ -93,6 +93,79 @@ describe("prepareConvergedRouting", () => {
     ]);
     expect(result.implementer).toBe("codex");
     expect(result.reviewer).toBe("claude");
+    expect(result.effectiveLoopMode).toBe("full");
+  });
+
+  it("allows converged routing from the active implementer when meta_only activation is proven", async () => {
+    const result = await prepareConvergedRouting(
+      {
+        now: new Date("2026-03-19T10:00:00.000Z"),
+        createError: (input) => new Error(toErrorMessage(input))
+      },
+      {
+        resolveBubbleFromWorkspaceCwd: async () => ({
+          bubbleId: "b_test_meta_only_active",
+          repoPath: "/repo",
+          bubblePaths: {
+            statePath: "/repo/.pairflow/state.json"
+          },
+          bubbleConfig: {
+            review_policy: {
+              review_loop_mode: "meta_only",
+              meta_review_auto_rework_min_severity: "P2"
+            },
+            agents: {
+              implementer: "codex",
+              reviewer: "claude"
+            }
+          }
+        }) as never,
+        ensureBubbleInstanceIdForMutation: async () => ({
+          bubbleInstanceId: "bi_test_meta_only_active",
+          bubbleConfig: {
+            review_policy: {
+              review_loop_mode: "meta_only",
+              meta_review_auto_rework_min_severity: "P2"
+            },
+            agents: {
+              implementer: "codex",
+              reviewer: "claude"
+            }
+          }
+        }) as never,
+        readStateSnapshot: async () => ({
+          fingerprint: "fp-meta-only",
+          state: {
+            bubble_id: "b_test_meta_only_active",
+            state: "RUNNING",
+            round: 3,
+            active_role: "implementer",
+            active_agent: "codex",
+            active_since: "2026-03-19T09:55:00.000Z",
+            last_command_at: "2026-03-19T09:59:00.000Z",
+            round_role_history: [],
+            execution_context: {
+              active_role: "implementer",
+              awaited_output_type: "pass_result",
+              handoff_id: "implementer:b_test_meta_only_active:round:3:attempt:1",
+              execution_id: "exec_meta_only_active_round_3",
+              round: 3,
+              started_at: "2026-03-19T09:55:00.000Z",
+              deadline_at: "2026-03-19T10:25:00.000Z",
+              attempt: 1
+            }
+          }
+        }) as never,
+        resolveIdeationMetadata: () => ({
+          mode: false,
+          taskPending: false
+        })
+      }
+    );
+
+    expect(result.implementer).toBe("codex");
+    expect(result.reviewer).toBe("claude");
+    expect(result.effectiveLoopMode).toBe("meta_only");
   });
 
   it("throws stale-state error when expected fingerprint mismatches", async () => {
@@ -248,6 +321,78 @@ describe("prepareConvergedRouting", () => {
       )
     ).rejects.toThrow(
       "AUTO_CONVERGE_STATE_STALE: Convergence validation failed: expected reviewer other-reviewer, got claude."
+    );
+  });
+
+  it("fails closed to reviewer ownership when meta_only proof is incomplete", async () => {
+    await expect(
+      prepareConvergedRouting(
+        {
+          now: new Date("2026-03-19T10:00:00.000Z"),
+          createError: (input) => new Error(toErrorMessage(input))
+        },
+        {
+          resolveBubbleFromWorkspaceCwd: async () => ({
+            bubbleId: "b_test_meta_only_unproven",
+            repoPath: "/repo",
+            bubblePaths: {
+              statePath: "/repo/.pairflow/state.json"
+            },
+            bubbleConfig: {
+              review_policy: {
+                review_loop_mode: "meta_only",
+                meta_review_auto_rework_min_severity: "P2"
+              },
+              agents: {
+                implementer: "codex",
+                reviewer: "claude"
+              }
+            }
+          }) as never,
+          ensureBubbleInstanceIdForMutation: async () => ({
+            bubbleInstanceId: "bi_test_meta_only_unproven",
+            bubbleConfig: {
+              review_policy: {
+                review_loop_mode: "meta_only",
+                meta_review_auto_rework_min_severity: "P2"
+              },
+              agents: {
+                implementer: "codex",
+                reviewer: "claude"
+              }
+            }
+          }) as never,
+          readStateSnapshot: async () => ({
+            fingerprint: "fp-meta-only-unproven",
+            state: {
+              bubble_id: "b_test_meta_only_unproven",
+              state: "RUNNING",
+              round: 3,
+              active_role: "implementer",
+              active_agent: "codex",
+              active_since: "2026-03-19T09:55:00.000Z",
+              last_command_at: "2026-03-19T09:59:00.000Z",
+              round_role_history: [],
+              execution_context: {
+                active_role: "implementer",
+                awaited_output_type: "pass_result",
+                handoff_id: "implementer:b_test_meta_only_unproven:round:2:attempt:1",
+                execution_id: "exec_meta_only_unproven_round_3",
+                round: 2,
+                started_at: "2026-03-19T09:55:00.000Z",
+                deadline_at: "2026-03-19T10:25:00.000Z",
+                attempt: 1
+              }
+            }
+          }) as never,
+          resolveIdeationMetadata: () => ({
+            mode: false,
+            taskPending: false
+          })
+        }
+      )
+    ).rejects.toThrow(
+      "CONVERGED_ACTIVE_ROLE_UNSUPPORTED: converged may only be invoked by the active reviewer (active role: implementer)."
     );
   });
 

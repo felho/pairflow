@@ -138,4 +138,39 @@ describe("approvalResultMapping", () => {
       /^exec_[0-9a-f]{24}$/u
     );
   });
+
+  it("reuses an already-staged next-round history entry instead of appending a duplicate", () => {
+    const transitions: Array<Record<string, unknown>> = [];
+    resolveApprovalNextState({
+      state: {
+        bubble_id: "b_approval_04",
+        state: "READY_FOR_HUMAN_APPROVAL",
+        round: 2,
+        round_role_history: [
+          {
+            round: 3,
+            implementer: "codex",
+            reviewer: "claude",
+            switched_at: "2026-03-19T21:59:00.000Z"
+          }
+        ]
+      } as never,
+      decision: "rework",
+      nowIso: "2026-03-19T22:00:00.000Z",
+      implementer: "codex",
+      reviewer: "claude",
+      watchdogTimeoutMinutes: 60,
+      applyStateTransition: ((state: Record<string, unknown>, transition: Record<string, unknown>) => {
+        transitions.push(transition);
+        return {
+          ...state,
+          state: "RUNNING",
+          round: 3
+        };
+      }) as never
+    });
+
+    expect(transitions).toHaveLength(1);
+    expect(transitions[0]).not.toHaveProperty("appendRoundRoleEntry");
+  });
 });

@@ -199,7 +199,7 @@ describe("listBubbles", () => {
     expect(listed.bubbles[0]?.runtimeSession?.tmuxSessionName).toBe("pf-b_list_04");
   });
 
-  it("surfaces guarded meta-only review policy diagnostics in list projections", async () => {
+  it("surfaces guarded meta-only review policy diagnostics in created list projections", async () => {
     const repoPath = await createTempRepo();
     const bubble = await createBubble({
       id: "b_list_policy_01",
@@ -229,10 +229,40 @@ describe("listBubbles", () => {
       effective_loop_mode: "full",
       support_status: "guarded",
       meta_review_auto_rework_min_severity: "P2",
-      blocked_reason_code: "REVIEW_POLICY_META_ONLY_GUARDED",
-      blocked_prerequisites: ["reviewer_bypass_activation_phase3b_pending"],
+      blocked_reason_code: "REVIEW_POLICY_META_ONLY_ACTIVATION_UNRESOLVED",
+      blocked_prerequisites: ["reviewer_bypass_activation_provenance_required"],
       provenance_note:
-        "Requested meta-only review remains guarded in Phase 3A; runtime execution stays on the full review loop until Phase 3B activation closes scheduler/router handoff ownership."
+        "Requested meta-only review remains fail-closed on the full review loop until canonical implementer pass authority proves reviewer-bypass activation for the live pass path."
+    });
+  });
+
+  it("surfaces enabled meta-only review policy diagnostics in running list projections when runtime authority is proven", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_list_policy_running_01",
+      task: "Running list review policy"
+    });
+    const current = parseBubbleConfigToml(await readFile(bubble.paths.bubbleTomlPath, "utf8"));
+    await writeFile(
+      bubble.paths.bubbleTomlPath,
+      renderBubbleConfigToml({
+        ...current,
+        review_policy: {
+          review_loop_mode: "meta_only",
+          meta_review_auto_rework_min_severity: "P2"
+        }
+      }),
+      "utf8"
+    );
+
+    const listed = await listBubbles({ repoPath });
+
+    expect(listed.bubbles[0]?.reviewPolicy).toEqual({
+      requested_loop_mode: "meta_only",
+      effective_loop_mode: "meta_only",
+      support_status: "enabled",
+      meta_review_auto_rework_min_severity: "P2"
     });
   });
 
@@ -770,6 +800,18 @@ describe("listBubbles", () => {
       bubbleId: "b_list_legacy_meta_01",
       task: "Legacy inspectable meta-review state"
     });
+    const current = parseBubbleConfigToml(await readFile(bubble.paths.bubbleTomlPath, "utf8"));
+    await writeFile(
+      bubble.paths.bubbleTomlPath,
+      renderBubbleConfigToml({
+        ...current,
+        review_policy: {
+          review_loop_mode: "meta_only",
+          meta_review_auto_rework_min_severity: "P2"
+        }
+      }),
+      "utf8"
+    );
 
     await writeFile(
       bubble.paths.statePath,
@@ -814,6 +856,16 @@ describe("listBubbles", () => {
           "RUNNING meta-review state requires canonical execution_context authority"
       }
     ]);
+    expect(listed.bubbles[0]?.reviewPolicy).toEqual({
+      requested_loop_mode: "meta_only",
+      effective_loop_mode: "full",
+      support_status: "guarded",
+      meta_review_auto_rework_min_severity: "P2",
+      blocked_reason_code: "REVIEW_POLICY_META_ONLY_ACTIVATION_UNRESOLVED",
+      blocked_prerequisites: ["reviewer_bypass_activation_provenance_required"],
+      provenance_note:
+        "Requested meta-only review remains fail-closed on the full review loop until canonical implementer pass authority proves reviewer-bypass activation for the live pass path."
+    });
   });
 
   it("keeps started remote bubbles cache-first by default and avoids SSH refresh", async () => {
@@ -869,6 +921,20 @@ describe("listBubbles", () => {
       task: "Remote created list projection",
       cwd: repoPath
     });
+    const currentConfig = parseBubbleConfigToml(
+      await readFile(bubble.paths.bubbleTomlPath, "utf8")
+    );
+    await writeFile(
+      bubble.paths.bubbleTomlPath,
+      renderBubbleConfigToml({
+        ...currentConfig,
+        review_policy: {
+          review_loop_mode: "meta_only",
+          meta_review_auto_rework_min_severity: "P2"
+        }
+      }),
+      "utf8"
+    );
 
     await writeRemotePointer(bubble.paths.remotePointerPath, {
       kind: "created",
@@ -889,6 +955,13 @@ describe("listBubbles", () => {
       state: "CREATED",
       round: 0,
       attention: null,
+      reviewPolicy: {
+        requested_loop_mode: "meta_only",
+        effective_loop_mode: "full",
+        support_status: "guarded",
+        meta_review_auto_rework_min_severity: "P2",
+        blocked_reason_code: "REVIEW_POLICY_META_ONLY_ACTIVATION_UNRESOLVED"
+      },
       remoteExecution: {
         host: "ssh.example.com",
         pointerKind: "created",
@@ -1192,6 +1265,18 @@ describe("listBubbles", () => {
       startedAt: "2026-04-16T09:40:00.000Z"
     });
     await setBubbleExecutorRemoteAlias(bubble.paths.bubbleTomlPath);
+    const current = parseBubbleConfigToml(await readFile(bubble.paths.bubbleTomlPath, "utf8"));
+    await writeFile(
+      bubble.paths.bubbleTomlPath,
+      renderBubbleConfigToml({
+        ...current,
+        review_policy: {
+          review_loop_mode: "meta_only",
+          meta_review_auto_rework_min_severity: "P2"
+        }
+      }),
+      "utf8"
+    );
 
     vi.spyOn(
       listCommandDefaults,
@@ -1278,6 +1363,16 @@ describe("listBubbles", () => {
       state: "RUNNING",
       round: 3,
       lastCommandAt: "2026-04-16T09:58:00.000Z",
+      reviewPolicy: {
+        requested_loop_mode: "meta_only",
+        effective_loop_mode: "full",
+        support_status: "guarded",
+        meta_review_auto_rework_min_severity: "P2",
+        blocked_reason_code: "REVIEW_POLICY_META_ONLY_ACTIVATION_UNRESOLVED",
+        blocked_prerequisites: ["reviewer_bypass_activation_provenance_required"],
+        provenance_note:
+          "Requested meta-only review remains fail-closed on the full review loop until canonical implementer pass authority proves reviewer-bypass activation for the live pass path."
+      },
       remoteExecution: {
         stateSource: "refresh",
         cacheStatus: "present",

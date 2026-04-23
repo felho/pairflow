@@ -1,6 +1,8 @@
 import type { applyStateTransition } from "../../domain/state/machine.js";
-import { buildRunningExecutionContext } from "../../shared/state/executionContext.js";
 import { clearLiveMetaReviewSnapshot } from "../../shared/metaReview/metaReviewSnapshot.js";
+import {
+  resolveRuntimeAlignedNextRoundContinuation
+} from "../../shared/reviewPolicy/reviewPolicyRuntime.js";
 import type {
   AgentName,
   BubbleReworkIntentRecord,
@@ -32,27 +34,26 @@ export function resolveApprovalNextState(
     });
   }
 
-  const nextRound = input.state.round + 1;
+  const continuation = resolveRuntimeAlignedNextRoundContinuation({
+    bubbleId: input.state.bubble_id,
+    currentRound: input.state.round,
+    roundRoleHistory: input.state.round_role_history,
+    implementer: input.implementer,
+    reviewer: input.reviewer,
+    nowIso: input.nowIso,
+    watchdogTimeoutMinutes: input.watchdogTimeoutMinutes
+  });
   const resumed = input.applyStateTransition(input.state, {
     to: "RUNNING",
-    round: nextRound,
-    activeAgent: input.implementer,
-    activeRole: "implementer",
-    executionContext: buildRunningExecutionContext({
-      bubbleId: input.state.bubble_id,
-      round: nextRound,
-      activeRole: "implementer",
-      startedAt: input.nowIso,
-      watchdogTimeoutMinutes: input.watchdogTimeoutMinutes
-    }),
+    round: continuation.nextRound,
+    activeAgent: continuation.activeAgent,
+    activeRole: continuation.activeRole,
+    executionContext: continuation.executionContext,
     activeSince: input.nowIso,
     lastCommandAt: input.nowIso,
-    appendRoundRoleEntry: {
-      round: nextRound,
-      implementer: input.implementer,
-      reviewer: input.reviewer,
-      switched_at: input.nowIso
-    }
+    ...(continuation.appendRoundRoleEntry !== undefined
+      ? { appendRoundRoleEntry: continuation.appendRoundRoleEntry }
+      : {})
   });
   return {
     ...resumed,

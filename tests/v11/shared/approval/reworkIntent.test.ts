@@ -91,5 +91,58 @@ describe("v11 approval reworkIntent", () => {
       sticky_human_gate: false
     });
     expect(result.state.pending_rework_intent).toBeNull();
+    expect(result.state.round_role_history).toEqual([
+      expect.objectContaining({
+        round: 3,
+        implementer: "codex",
+        reviewer: "claude"
+      })
+    ]);
+  });
+
+  it("does not append duplicate next-round history when deferred rework resumes an already-staged round", () => {
+    const result = applyDeferredReworkIntent({
+      state: {
+        bubble_id: "b_rework_intent_02",
+        state: "WAITING_HUMAN",
+        round: 2,
+        active_agent: null,
+        active_since: null,
+        active_role: null,
+        round_role_history: [
+          {
+            round: 3,
+            implementer: "codex",
+            reviewer: "claude",
+            switched_at: "2026-03-21T10:04:00.000Z"
+          }
+        ],
+        last_command_at: "2026-03-21T10:00:00.000Z",
+        pending_rework_intent: {
+          intent_id: "intent_02",
+          message: "Resume without duplicating the staged round.",
+          requested_by: "human:request-rework",
+          requested_at: "2026-03-21T10:00:00.000Z",
+          status: "pending"
+        },
+        rework_intent_history: []
+      },
+      implementer: "codex",
+      reviewer: "claude",
+      watchdogTimeoutMinutes: 60,
+      now: new Date("2026-03-21T10:05:00.000Z")
+    });
+
+    expect(result).not.toBeNull();
+    if (result === null) {
+      throw new Error("Expected deferred rework intent to be applied.");
+    }
+
+    expect(result.state.round_role_history).toHaveLength(1);
+    expect(result.state.round_role_history[0]).toMatchObject({
+      round: 3,
+      implementer: "codex",
+      reviewer: "claude"
+    });
   });
 });

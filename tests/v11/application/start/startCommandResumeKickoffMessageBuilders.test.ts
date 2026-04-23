@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  buildResumeImplementerKickoffMessage,
+  buildResumeMetaReviewerKickoffMessage,
   buildResumeReviewerKickoffMessage,
   inferResumeReviewerProjectionVariant
 } from "../../../../src/v11/application/start/startCommandResumeKickoffMessageBuilders.js";
@@ -63,6 +65,7 @@ describe("startCommandResumeKickoffMessageBuilders", () => {
   it("renders findings projection kickoff text with blocker-pass requirement in round>=2", () => {
     const message = buildResumeReviewerKickoffMessage({
       bubbleId: "b_start_resume_projection_01",
+      repoPath: "/tmp/repo",
       workspacePath: "/tmp/worktree",
       round: 2,
       reviewArtifactType: "document",
@@ -72,7 +75,7 @@ describe("startCommandResumeKickoffMessageBuilders", () => {
 
     expect(message).toContain("resume kickoff (reviewer)");
     expect(message).toContain(
-      "Before direct canonical emit, refresh actor authority from this launch workspace with `pairflow bubble status --id b_start_resume_projection_01 --json`"
+      "Before direct canonical emit, refresh actor authority from this launch workspace with `pairflow bubble status --id b_start_resume_projection_01 --repo /tmp/repo --json`"
     );
     expect(message).toContain("`executionContext.executionId`");
     expect(message).toContain(
@@ -86,6 +89,7 @@ describe("startCommandResumeKickoffMessageBuilders", () => {
   it("renders round<=1 kickoff with pass-only explicit findings declaration line", () => {
     const message = buildResumeReviewerKickoffMessage({
       bubbleId: "b_start_resume_projection_02",
+      repoPath: "/tmp/repo",
       workspacePath: "/tmp/worktree",
       round: 1,
       reviewArtifactType: "document",
@@ -104,5 +108,39 @@ describe("startCommandResumeKickoffMessageBuilders", () => {
     expect(message).not.toContain(
       "Document scope: canonical `pairflow agent emit --kind pass ... --finding ...` for blockers is valid only"
     );
+  });
+
+  it("renders implementer kickoff guidance with canonical --repo authority lookup", () => {
+    const message = buildResumeImplementerKickoffMessage({
+      bubbleId: "b_start_resume_projection_03",
+      repoPath: "/tmp/repo",
+      workspacePath: "/tmp/worktree",
+      taskArtifactPath: "/tmp/worktree/.pairflow/task.md",
+      round: 2,
+      reviewArtifactType: "code",
+      pairflowCommandProfile: "external"
+    });
+
+    expect(message).toContain("resume kickoff (implementer)");
+    expect(message).toContain(
+      "`pairflow bubble status --id b_start_resume_projection_03 --repo /tmp/repo --json`"
+    );
+    expect(message).toContain("`executionContext.handoffId`");
+  });
+
+  it("renders meta-reviewer kickoff guidance with canonical --repo authority lookup", () => {
+    const message = buildResumeMetaReviewerKickoffMessage({
+      bubbleId: "b_start_resume_projection_04",
+      repoPath: "/tmp/repo",
+      workspacePath: "/tmp/worktree",
+      round: 4,
+      pairflowCommandProfile: "external"
+    });
+
+    expect(message).toContain("resume kickoff (meta-reviewer)");
+    expect(message).toContain(
+      "`pairflow bubble status --id b_start_resume_projection_04 --repo /tmp/repo --json`"
+    );
+    expect(message).toContain("`executionContext.executionId`");
   });
 });

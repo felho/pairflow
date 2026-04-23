@@ -52,6 +52,7 @@ interface PrepareConvergedRoutingResult {
   state: BubbleStateSnapshot;
   implementer: AgentName;
   reviewer: AgentName;
+  effectiveLoopMode: "full" | "meta_only";
 }
 
 interface PrepareConvergedPolicyResult {
@@ -111,6 +112,7 @@ export interface RunConvergedFlowDependencies
     reviewArtifactType: ResolvedBubbleWorkspace["bubbleConfig"]["review_artifact_type"];
     roundRoleHistory: BubbleStateSnapshot["round_role_history"];
     severityGateRound: number;
+    effectiveLoopMode: PrepareConvergedRoutingResult["effectiveLoopMode"];
   }) => Promise<PrepareConvergedPolicyResult>;
   prepareConvergedValidation: (input: {
     resolved: ResolvedBubbleWorkspace;

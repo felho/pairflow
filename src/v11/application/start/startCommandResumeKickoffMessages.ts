@@ -13,6 +13,7 @@ import {
 
 export function resolveResumeKickoffMessages(input: {
   bubbleId: string;
+  repoPath: string;
   workspacePath: string;
   taskArtifactPath: string;
   reviewArtifactType: ReviewArtifactType;
@@ -36,6 +37,7 @@ export function resolveResumeKickoffMessages(input: {
       return {
         metaReviewerKickoffMessage: buildResumeMetaReviewerKickoffMessage({
           bubbleId: input.bubbleId,
+          repoPath: input.repoPath,
           workspacePath: input.workspacePath,
           round: input.state.round,
           pairflowCommandProfile: input.pairflowCommandProfile
@@ -63,6 +65,7 @@ export function resolveResumeKickoffMessages(input: {
     return {
       implementerKickoffMessage: buildResumeImplementerKickoffMessage({
         bubbleId: input.bubbleId,
+        repoPath: input.repoPath,
         workspacePath: input.workspacePath,
         taskArtifactPath: input.taskArtifactPath,
         round: input.state.round,
@@ -83,6 +86,7 @@ export function resolveResumeKickoffMessages(input: {
     return {
       reviewerKickoffMessage: buildResumeReviewerKickoffMessage({
         bubbleId: input.bubbleId,
+        repoPath: input.repoPath,
         workspacePath: input.workspacePath,
         round: input.state.round,
         reviewArtifactType: input.reviewArtifactType,

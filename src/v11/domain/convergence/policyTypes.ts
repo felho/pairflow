@@ -1,5 +1,6 @@
 import type {
   AgentName,
+  BubbleReviewLoopMode,
   ReviewArtifactType,
   RoundRoleHistoryEntry
 } from "../../../types/bubble.js";
@@ -13,6 +14,7 @@ export interface ConvergencePolicyInput {
   roundRoleHistory: RoundRoleHistoryEntry[];
   transcript: ProtocolEnvelope[];
   severity_gate_round: number;
+  effectiveLoopMode?: BubbleReviewLoopMode;
 }
 
 export interface ConvergencePolicyResult {

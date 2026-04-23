@@ -18,7 +18,8 @@ describe("prepareConvergedPolicy", () => {
         implementer: "codex",
         reviewArtifactType: "document",
         roundRoleHistory: [] as never,
-        severityGateRound: 2
+        severityGateRound: 2,
+        effectiveLoopMode: "meta_only"
       },
       {
         readTranscriptEnvelopes: async (path, options) => {
@@ -37,6 +38,7 @@ describe("prepareConvergedPolicy", () => {
           expect(input.implementer).toBe("codex");
           expect(input.reviewArtifactType).toBe("document");
           expect(input.severity_gate_round).toBe(2);
+          expect(input.effectiveLoopMode).toBe("meta_only");
           expect(input.transcript).toBe(sampleTranscript);
           return {
             ok: true,
@@ -64,7 +66,8 @@ describe("prepareConvergedPolicy", () => {
         implementer: "codex",
         reviewArtifactType: "code",
         roundRoleHistory: [] as never,
-        severityGateRound: 2
+        severityGateRound: 2,
+        effectiveLoopMode: "full"
       },
       {
         readTranscriptEnvelopes: async () => [],
@@ -93,7 +96,8 @@ describe("prepareConvergedPolicy", () => {
         implementer: "codex",
         reviewArtifactType: "document",
         roundRoleHistory: [] as never,
-        severityGateRound: 1
+        severityGateRound: 1,
+        effectiveLoopMode: "full"
       })
     ).rejects.toMatchObject({
       name: "PrepareConvergedPolicyDependencyError",

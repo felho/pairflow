@@ -14,8 +14,11 @@ export function formatResumeStateValue(value: string | number | null): string {
   return value === null ? "none" : String(value);
 }
 
-function buildResumeCanonicalActorEmitLookupGuidance(bubbleId: string): string {
-  return `Before direct canonical emit, refresh actor authority from this launch workspace with \`pairflow bubble status --id ${bubbleId} --json\` and copy the current \`executionContext.handoffId\` and \`executionContext.executionId\`. Repeat this before each emit because authority can change after every successful handoff, convergence, meta-review transition, or human reply.`;
+function buildResumeCanonicalActorEmitLookupGuidance(input: {
+  bubbleId: string;
+  repoPath: string;
+}): string {
+  return `Before direct canonical emit, refresh actor authority from this launch workspace with \`pairflow bubble status --id ${input.bubbleId} --repo ${input.repoPath} --json\` and copy the current \`executionContext.handoffId\` and \`executionContext.executionId\`. Repeat this before each emit because authority can change after every successful handoff, convergence, meta-review transition, or human reply.`;
 }
 
 export function inferResumeReviewerProjectionVariant(input: {
@@ -45,6 +48,7 @@ export function inferResumeReviewerProjectionVariant(input: {
 
 export function buildResumeImplementerKickoffMessage(input: {
   bubbleId: string;
+  repoPath: string;
   workspacePath: string;
   taskArtifactPath: string;
   round: number;
@@ -69,7 +73,10 @@ export function buildResumeImplementerKickoffMessage(input: {
       input.workspacePath,
       input.pairflowCommandProfile
     ),
-    buildResumeCanonicalActorEmitLookupGuidance(input.bubbleId),
+    buildResumeCanonicalActorEmitLookupGuidance({
+      bubbleId: input.bubbleId,
+      repoPath: input.repoPath
+    }),
     buildImplementerEvidenceHandoffGuidance(input.reviewArtifactType),
     "Continue active implementation and hand off with `pairflow agent emit --kind pass --repo <repo> --bubble-id <id> --handoff-id <handoff-id> --execution-id <execution-id> --summary \"<what changed + validation>\"` plus available evidence `--ref` logs when ready."
   ].join(" ");
@@ -77,6 +84,7 @@ export function buildResumeImplementerKickoffMessage(input: {
 
 export function buildResumeReviewerKickoffMessage(input: {
   bubbleId: string;
+  repoPath: string;
   workspacePath: string;
   round: number;
   reviewArtifactType: ReviewArtifactType;
@@ -101,7 +109,10 @@ export function buildResumeReviewerKickoffMessage(input: {
       input.workspacePath,
       input.pairflowCommandProfile
     ),
-    buildResumeCanonicalActorEmitLookupGuidance(input.bubbleId),
+    buildResumeCanonicalActorEmitLookupGuidance({
+      bubbleId: input.bubbleId,
+      repoPath: input.repoPath
+    }),
     ...(input.reviewerTestDirectiveLine !== undefined
       ? [`Test directive: ${input.reviewerTestDirectiveLine}`]
       : []),
@@ -112,6 +123,7 @@ export function buildResumeReviewerKickoffMessage(input: {
 
 export function buildResumeMetaReviewerKickoffMessage(input: {
   bubbleId: string;
+  repoPath: string;
   workspacePath: string;
   round: number;
   pairflowCommandProfile: PairflowCommandProfile;
@@ -123,7 +135,10 @@ export function buildResumeMetaReviewerKickoffMessage(input: {
       input.workspacePath,
       input.pairflowCommandProfile
     ),
-    buildResumeCanonicalActorEmitLookupGuidance(input.bubbleId),
+    buildResumeCanonicalActorEmitLookupGuidance({
+      bubbleId: input.bubbleId,
+      repoPath: input.repoPath
+    }),
     "Continue the active gate run and submit via `pairflow agent emit --kind meta_review_result ...` (no pane marker output parsing)."
   ].join(" ");
 }

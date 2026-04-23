@@ -2,7 +2,9 @@ import { randomUUID } from "node:crypto";
 
 import { clearLiveMetaReviewSnapshot } from "../metaReview/metaReviewSnapshot.js";
 import { applyStateTransition } from "../../domain/state/machine.js";
-import { buildRunningExecutionContext } from "../state/executionContext.js";
+import {
+  resolveRuntimeAlignedNextRoundContinuation
+} from "../reviewPolicy/reviewPolicyRuntime.js";
 import type {
   AgentName,
   BubbleReworkIntentRecord,
@@ -110,35 +112,27 @@ export function applyDeferredReworkIntent(
   }
 
   const nowIso = input.now.toISOString();
-  const nextRound = input.state.round + 1;
-  const hasRoundEntry = input.state.round_role_history.some(
-    (entry) => entry.round === nextRound
-  );
+  const continuation = resolveRuntimeAlignedNextRoundContinuation({
+    bubbleId: input.state.bubble_id,
+    currentRound: input.state.round,
+    roundRoleHistory: input.state.round_role_history,
+    implementer: input.implementer,
+    reviewer: input.reviewer,
+    nowIso,
+    watchdogTimeoutMinutes: input.watchdogTimeoutMinutes
+  });
 
   const resumed = applyStateTransition(input.state, {
     to: "RUNNING",
-    round: nextRound,
-    activeAgent: input.implementer,
-    activeRole: "implementer",
-    executionContext: buildRunningExecutionContext({
-      bubbleId: input.state.bubble_id,
-      round: nextRound,
-      activeRole: "implementer",
-      startedAt: nowIso,
-      watchdogTimeoutMinutes: input.watchdogTimeoutMinutes
-    }),
+    round: continuation.nextRound,
+    activeAgent: continuation.activeAgent,
+    activeRole: continuation.activeRole,
+    executionContext: continuation.executionContext,
     activeSince: nowIso,
     lastCommandAt: nowIso,
-    ...(hasRoundEntry
-      ? {}
-      : {
-          appendRoundRoleEntry: {
-            round: nextRound,
-            implementer: input.implementer,
-            reviewer: input.reviewer,
-            switched_at: nowIso
-          }
-        })
+    ...(continuation.appendRoundRoleEntry !== undefined
+      ? { appendRoundRoleEntry: continuation.appendRoundRoleEntry }
+      : {})
   });
 
   const appliedIntent: BubbleReworkIntentRecord = {
