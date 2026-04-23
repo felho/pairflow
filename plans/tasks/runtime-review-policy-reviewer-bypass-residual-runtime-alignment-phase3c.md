@@ -127,6 +127,10 @@ Lezarni a reviewer bypass residual runtime alignmentot ugy, hogy:
    Phase 3C utan a bypass runtime Phase 3 closure mar nem hagy reviewer-owned residual branch-et maga utan; kesobbi munka mar inkabb cleanup, UX-polish vagy kulon UI follow-up lehet.
 4. Task-list impact:
    ez a Phase 3 residual closeout slice; nem activation-core es nem contract-authoring task, de ide tartozik a broad read-model consume hardening is.
+5. Primary artifact rule:
+   a Phase 3C implementacio elsodleges artefaktuma a task file marad; a parent plan csak sequencinget es successor-kapcsolatot szinkronizalhat, es nem vihet be kulon plusz acceptance vagy target-file scope-ot a taskon kivul.
+6. Archive rule:
+   a merged es archivalt Phase 3B predecessor baseline preserved marad; az archivalt predecessor dokumentum csak broken link vagy egyertelmu archival wording hiba javitasara erintheto, es ebben a Phase 3C plan-task syncben ez a carve-out kizarolag a Phase 3B archivalt predecessorra vonatkozik.
 
 ### Successor Inheritance Lock
 
@@ -136,6 +140,8 @@ Lezarni a reviewer bypass residual runtime alignmentot ugy, hogy:
 2. Emiatt a Phase 3C csak downstream consumer ownershipot vihet:
    residual route-ok, next-round state continuity, kickoff/projection parity, es broad read-model fail-closed parity.
 3. Ha a megvalositas uj activation-proof producerre, shared helper contract-atirasra vagy pass-path authority reinterpretaciora szorulna, az mar nem local Phase 3C refinement, hanem visszaroutes-olando 3B/plan kerdes.
+4. Parent-plan sync rule:
+   ha a parent plan wordingje es a task kozott feszules maradna, a task bounded contractja az elsodleges; a plan csak ezt kovetheti, nem forditva.
 
 ### Canonical Contract Anchors
 
@@ -289,6 +295,8 @@ Lezarni a reviewer bypass residual runtime alignmentot ugy, hogy:
 4. UI mutation route ownership-bovites vagy presentational redesign.
 5. A shared `buildBubbleReviewPolicyRuntimeView(...)` (`reviewPolicyRuntime.ts`) helper contract authority seamkent valo reinterpretacio, a compatibility-preserving consume-path alignment explicit carve-outjan kivul.
 6. Remote executor lifecycle, attach/restart recovery contract vagy command-profile ownership atirasa.
+7. Parent-plan altali utolagos scope-bovites vagy acceptance criteria duplikacioja.
+8. Archivalt predecessor dokumentumok tartalmi ujranyitasa broken-link/archival sync szuksegen kivul.
 
 ### Complexity Risk Gate
 

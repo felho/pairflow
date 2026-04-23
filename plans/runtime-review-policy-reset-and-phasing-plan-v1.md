@@ -136,6 +136,8 @@ Sikernek az szamit, ha a kovetkezo kor mar nem egyetlen bubble-ben mozgatja egys
 7. A Phase 3B es Phase 3C kozt explicit hatar maradjon:
    - Phase 3B: live pass-path activation core,
    - Phase 3C: residual runtime branches + broad status/list/remote fail-closed parity.
+8. Primary artifact rule:
+   a Phase 3C implementacio elsodleges artefaktuma a task file marad; a parent plan csak sequencinget es successor-kapcsolatot szinkronizalhat, es nem vihet be kulon plusz acceptance vagy target-file scope-ot a taskon kivul.
 
 ### Deferred / Future Work
 
@@ -146,11 +148,15 @@ Sikernek az szamit, ha a kovetkezo kor mar nem egyetlen bubble-ben mozgatja egys
 
 1. A current next bounded step a Phase 3C residual runtime alignment implementation bubble elinditasa erre a taskra:
    [runtime-review-policy-reviewer-bypass-residual-runtime-alignment-phase3c.md](/Users/felho/dev/pairflow/plans/tasks/runtime-review-policy-reviewer-bypass-residual-runtime-alignment-phase3c.md)
-   - delivery rule:
+   - Delivery rule:
      ez a task mar a merge-elt es archivalt Phase 3B activation-core truth-ra epuljon, es a residual convergence/meta-review/rework/start-resume branches mellett a broad status/list/remote fail-closed parityt is zarja le.
-   - inheritance rule:
+   - Inheritance rule:
      a Phase 3C csak downstream consume-alignmentot ownershipolhat; uj activation authority, shared-helper reinterpretacio vagy pass-path redesign mar nem fer bele.
-   - branch rule:
+   - Primary artifact rule:
+     a Phase 3C implementacio elsodleges artefaktuma a task file marad; a parent plan nem duplikalhat vagy bovithet acceptance criteria-t a taskon kivul.
+   - Archive rule:
+     a merged es archivalt Phase 3B predecessor baseline preserved marad; az archivalt predecessor dokumentum csak broken link vagy egyertelmu archival wording hiba javitasara erintheto, es ebben a Phase 3C plan-task syncben ez a carve-out kizarolag a Phase 3B archivalt predecessorra vonatkozik.
+   - Branch rule:
      clean `main`-rol induljon, uj bubble-ben.
 2. A merged es archivalt Phase 3B activation-core baseline:
    [runtime-review-policy-reviewer-bypass-activation-post-cutover-phase3b.md](/Users/felho/dev/pairflow/plans/archive/tasks/runtime-review-policy-reviewer-bypass-activation-post-cutover-phase3b.md)
