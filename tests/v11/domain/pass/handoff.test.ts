@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { metaReviewerAgent } from "../../../../src/v11/shared/metaReviewGate/metaReviewGateSnapshotHelpers.js";
 
 function toErrorMessage(input: PairflowCommandErrorInput): string {
   if (typeof input === "string") {
@@ -49,6 +50,7 @@ function resolveFromState(state: BubbleStateSnapshot) {
     state,
     implementer,
     reviewer,
+    effectiveLoopMode: "full",
     nowIso,
     createError: (message: PairflowCommandErrorInput) => new TestPassError(toErrorMessage(message))
   });
@@ -71,6 +73,31 @@ describe("resolvePassHandoff", () => {
       recipientRole: "reviewer",
       envelopeRound: 3,
       nextRound: 3
+    });
+  });
+
+  it("returns implementer -> meta-reviewer handoff when bypass activation is active", () => {
+    const resolved = resolvePassHandoff({
+      state: buildRunningState({
+        round: 4,
+        active_agent: implementer,
+        active_role: "implementer"
+      }),
+      implementer,
+      reviewer,
+      effectiveLoopMode: "meta_only",
+      nowIso,
+      createError: (message: PairflowCommandErrorInput) =>
+        new TestPassError(toErrorMessage(message))
+    });
+
+    expect(resolved).toEqual({
+      senderAgent: implementer,
+      senderRole: "implementer",
+      recipientAgent: metaReviewerAgent,
+      recipientRole: "meta_reviewer",
+      envelopeRound: 4,
+      nextRound: 4
     });
   });
 
@@ -185,6 +212,27 @@ describe("resolvePassHandoff", () => {
     ).toThrowError(
       new TestPassError(
         "PASS_HANDOFF_RESOLUTION_ERROR: RUNNING state must have round >= 1 (found 0)."
+      )
+    );
+  });
+
+  it("throws configured error when active role is meta-reviewer", () => {
+    expect(() =>
+      resolvePassHandoff({
+        state: buildRunningState({
+          active_role: "meta_reviewer",
+          active_agent: "codex"
+        }),
+        implementer,
+        reviewer,
+        effectiveLoopMode: "full",
+        nowIso,
+        createError: (message: PairflowCommandErrorInput) =>
+          new TestPassError(toErrorMessage(message))
+      })
+    ).toThrowError(
+      new TestPassError(
+        "PASS_HANDOFF_RESOLUTION_ERROR: Unsupported active role for PASS handoff resolution: meta_reviewer."
       )
     );
   });

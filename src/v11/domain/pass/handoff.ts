@@ -1,14 +1,19 @@
 import type {
+  BubbleReviewLoopMode,
   AgentName,
   BubbleStateSnapshot,
   RoundRoleHistoryEntry
 } from "../../../types/bubble.js";
+import { metaReviewerAgent } from "../../shared/metaReviewGate/metaReviewGateSnapshotHelpers.js";
+
+export type PassSenderRole = "implementer" | "reviewer";
+export type PassRecipientRole = PassSenderRole | "meta_reviewer";
 
 export interface ResolvedPassHandoff {
   senderAgent: AgentName;
-  senderRole: "implementer" | "reviewer";
+  senderRole: PassSenderRole;
   recipientAgent: AgentName;
-  recipientRole: "implementer" | "reviewer";
+  recipientRole: PassRecipientRole;
   envelopeRound: number;
   nextRound: number;
   appendRoundRoleEntry?: RoundRoleHistoryEntry;
@@ -18,6 +23,7 @@ export interface ResolvePassHandoffInput {
   state: BubbleStateSnapshot;
   implementer: AgentName;
   reviewer: AgentName;
+  effectiveLoopMode: BubbleReviewLoopMode;
   nowIso: string;
   createError: PairflowCreateCommandError;
 }
@@ -38,7 +44,14 @@ function raiseResolutionError(
 }
 
 export function resolvePassHandoff(input: ResolvePassHandoffInput): ResolvedPassHandoff {
-  const { state, implementer, reviewer, nowIso, createError } = input;
+  const {
+    state,
+    implementer,
+    reviewer,
+    effectiveLoopMode,
+    nowIso,
+    createError
+  } = input;
 
   if (state.state !== "RUNNING") {
     raiseResolutionError(
@@ -75,6 +88,17 @@ export function resolvePassHandoff(input: ResolvePassHandoffInput): ResolvedPass
   }
 
   if (state.active_role === "implementer") {
+    if (effectiveLoopMode === "meta_only") {
+      return {
+        senderAgent: implementer,
+        senderRole: "implementer",
+        recipientAgent: metaReviewerAgent,
+        recipientRole: "meta_reviewer",
+        envelopeRound: state.round,
+        nextRound: state.round
+      };
+    }
+
     return {
       senderAgent: implementer,
       senderRole: "implementer",

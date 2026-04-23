@@ -1,6 +1,7 @@
 import type { BubbleConfig } from "../../../types/bubble.js";
 import type { ProtocolEnvelope } from "../../../types/protocol.js";
 import type { ReviewerTestExecutionDirective } from "../../../v11/shared/reviewer/testEvidence.js";
+import type { PassRecipientRole, PassSenderRole } from "../../domain/pass/handoff.js";
 import type {
   ReadReviewerBriefArtifactPort,
   ReadReviewerFocusArtifactPort
@@ -20,7 +21,7 @@ import type {
 import type { RefreshReviewerContextPort } from "../../../v11/shared/ports/reviewerContext.js";
 
 export interface ExecuteNormalPassDeliveryInput {
-  senderRole: "implementer" | "reviewer";
+  senderRole: PassSenderRole;
   bubbleId: string;
   bubbleConfig: BubbleConfig;
   envelope: ProtocolEnvelope;
@@ -30,7 +31,7 @@ export interface ExecuteNormalPassDeliveryInput {
   sessionsPath: string;
   reviewerBriefArtifactPath: string;
   reviewerFocusArtifactPath: string;
-  recipientRole: "implementer" | "reviewer";
+  recipientRole: PassRecipientRole;
   now: Date;
   reviewerTestDirective?: ReviewerTestExecutionDirective;
 }
@@ -59,8 +60,8 @@ export interface ExecuteNormalPassDeliveryDependencies {
       reviewerBriefArtifactPath: string;
       reviewerFocusArtifactPath: string;
       envelope: ProtocolEnvelope;
-      senderRole: "implementer" | "reviewer";
-      recipientRole: "implementer" | "reviewer";
+      senderRole: PassSenderRole;
+      recipientRole: PassRecipientRole;
       reviewerTestDirective?: ReviewerTestExecutionDirective;
     },
     dependencies?: {

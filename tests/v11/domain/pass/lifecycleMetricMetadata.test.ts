@@ -92,4 +92,35 @@ describe("buildPassLifecycleMetricMetadata", () => {
       p3: 0
     });
   });
+
+  it("projects meta-review recipient role without collapsing it to reviewer semantics", () => {
+    const metadata = buildPassLifecycleMetricMetadata({
+      passIntent: "review",
+      inferredIntent: false,
+      sender: "claude",
+      recipient: "codex",
+      recipientRole: "meta_reviewer",
+      refsCount: 1,
+      hasFindings: false,
+      noFindings: true,
+      transitionDecision: "normal_pass",
+      repeatCleanReasonCode: "REPEAT_CLEAN_TRIGGER_NOT_MET",
+      repeatCleanReasonDetail: "base_precondition_not_met",
+      repeatCleanTrigger: false,
+      mostRecentPreviousReviewerCleanPassEnvelope: false,
+      findings: []
+    });
+
+    expect(metadata).toMatchObject({
+      recipient: "codex",
+      recipient_role: "meta_reviewer",
+      refs_count: 1,
+      has_findings: false,
+      no_findings: true,
+      p0: 0,
+      p1: 0,
+      p2: 0,
+      p3: 0
+    });
+  });
 });

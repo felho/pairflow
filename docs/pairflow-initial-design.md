@@ -96,7 +96,7 @@ Allowed transitions:
 
 RUNNING turn tracking (required):
 1. `state.json` must track `active_agent` (`claude` | `codex`) and `active_since` timestamp.
-2. `state.json` must track round-role metadata: `active_role` (`implementer` | `reviewer`) and `round_role_history`.
+2. `state.json` must track round-role metadata: `active_role` (`implementer` | `reviewer` | `meta_reviewer`) and `round_role_history`.
 3. Active autonomous work must persist a canonical top-level `execution_context` authority block with `active_role`, `handoff_id`, `execution_id`, `round`, `awaited_output_type`, `started_at`, `deadline_at`, and `attempt`.
 4. `active_role` remains a lifecycle/status mirror, but authority belongs to `execution_context.active_role`.
 5. The status pane shows high-level state, active turn owner, active role, and meta-review diagnostics when present.
@@ -212,12 +212,13 @@ Envelope schema:
 Required message types:
 1. `TASK`: scoped instruction with acceptance criteria (emitted by orchestrator, typically at bubble start or replan events).
 2. `PASS`: agent-to-agent handoff message with summary + artifact references.
-3. `HUMAN_QUESTION`: blocking question to user.
-4. `HUMAN_REPLY`: user decision/clarification.
-5. `CONVERGENCE`: no-critical-findings claim + evidence.
-6. `APPROVAL_REQUEST`: final package request to user.
-7. `APPROVAL_DECISION`: approve or rework.
-8. `DONE_PACKAGE`: final summary bundle.
+3. When `review_policy.review_loop_mode = "meta_only"` and canonical implementer pass authority is active, implementer-origin `PASS` bypasses reviewer relay and targets `meta_reviewer` directly.
+4. `HUMAN_QUESTION`: blocking question to user.
+5. `HUMAN_REPLY`: user decision/clarification.
+6. `CONVERGENCE`: no-critical-findings claim + evidence.
+7. `APPROVAL_REQUEST`: final package request to user.
+8. `APPROVAL_DECISION`: approve or rework.
+9. `DONE_PACKAGE`: final summary bundle.
 
 Type assignment rules:
 1. Canonical `pairflow agent emit --kind pass` emits `PASS` in MVP.

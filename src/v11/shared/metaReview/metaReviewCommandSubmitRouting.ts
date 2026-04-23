@@ -54,6 +54,7 @@ async function emitSubmitAutoReworkDelivery(input: {
       bubbleConfig: input.resolved.bubbleConfig,
       sessionsPath: input.resolved.bubblePaths.sessionsPath,
       envelope: input.routed.gateEnvelope,
+      recipientRole: "implementer",
       messageRef
     },
     emitDelivery: input.dependencies.emitDeliveryNotification

@@ -45,6 +45,7 @@ export async function emitOptionalAskHumanNotifications(
     bubbleConfig: input.bubbleConfig,
     sessionsPath: input.sessionsPath,
     envelope: input.envelope,
+    recipientRole: "status",
     messageRef: input.messageRef
   }).catch((error) => buildUnexpectedAskHumanDeliveryFailureResult(error));
   void bubbleNotificationPromise;

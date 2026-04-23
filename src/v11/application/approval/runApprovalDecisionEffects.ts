@@ -114,6 +114,7 @@ export async function emitApprovalDecisionDeliverySignals(input: {
     bubbleConfig: input.resolved.bubbleConfig,
     sessionsPath: input.resolved.bubblePaths.sessionsPath,
     envelope: input.appendedEnvelope,
+    recipientRole: "status",
     messageRef: input.messageRef
   }).catch(() =>
     buildFallbackDeliveryResult(
@@ -149,6 +150,7 @@ export async function emitApprovalDecisionDeliverySignals(input: {
         }
       }
     },
+    recipientRole: "implementer",
     messageRef: input.messageRef
   }).catch(() =>
     buildFallbackDeliveryResult(

@@ -16,6 +16,14 @@ export const REVIEW_POLICY_META_ONLY_PROVENANCE_NOTE =
   (
     "Requested meta-only review remains guarded in Phase 3A; runtime execution stays on the full review loop until Phase 3B activation closes scheduler/router handoff ownership."
   ) as const;
+export const REVIEW_POLICY_META_ONLY_ACTIVATION_UNRESOLVED =
+  "REVIEW_POLICY_META_ONLY_ACTIVATION_UNRESOLVED" as const;
+export const REVIEW_POLICY_META_ONLY_ACTIVATION_REQUIRED =
+  "reviewer_bypass_activation_provenance_required" as const;
+export const REVIEW_POLICY_META_ONLY_ACTIVATION_UNRESOLVED_PROVENANCE_NOTE =
+  (
+    "Requested meta-only review remains fail-closed on the full review loop until canonical implementer pass authority proves reviewer-bypass activation for the live pass path."
+  ) as const;
 
 export type NormalizedBubbleReviewPolicy = BubbleReviewPolicyConfig;
 
@@ -54,5 +62,43 @@ export function buildBubbleReviewPolicyRuntimeView(
     support_status: "enabled",
     meta_review_auto_rework_min_severity:
       normalized.meta_review_auto_rework_min_severity
+  };
+}
+
+export function buildPassPathReviewPolicyRuntimeView(input: {
+  config: Pick<BubbleConfig, "review_policy">;
+  activationProven: boolean;
+}): BubbleReviewPolicyRuntimeView {
+  const normalized = normalizeBubbleReviewPolicy(input.config);
+  if (normalized.review_loop_mode !== "meta_only") {
+    return {
+      requested_loop_mode: normalized.review_loop_mode,
+      effective_loop_mode: normalized.review_loop_mode,
+      support_status: "enabled",
+      meta_review_auto_rework_min_severity:
+        normalized.meta_review_auto_rework_min_severity
+    };
+  }
+
+  if (input.activationProven) {
+    return {
+      requested_loop_mode: normalized.review_loop_mode,
+      effective_loop_mode: normalized.review_loop_mode,
+      support_status: "enabled",
+      meta_review_auto_rework_min_severity:
+        normalized.meta_review_auto_rework_min_severity
+    };
+  }
+
+  return {
+    requested_loop_mode: normalized.review_loop_mode,
+    effective_loop_mode: "full",
+    support_status: "guarded",
+    meta_review_auto_rework_min_severity:
+      normalized.meta_review_auto_rework_min_severity,
+    blocked_reason_code: REVIEW_POLICY_META_ONLY_ACTIVATION_UNRESOLVED,
+    blocked_prerequisites: [REVIEW_POLICY_META_ONLY_ACTIVATION_REQUIRED],
+    provenance_note:
+      REVIEW_POLICY_META_ONLY_ACTIVATION_UNRESOLVED_PROVENANCE_NOTE
   };
 }

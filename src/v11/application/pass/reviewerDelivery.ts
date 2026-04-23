@@ -22,6 +22,7 @@ import type {
   VerifyImplementerTestEvidencePort,
   WriteReviewerTestEvidenceArtifactPort
 } from "../../../v11/shared/ports/reviewerTestEvidenceArtifacts.js";
+import type { PassRecipientRole, PassSenderRole } from "../../domain/pass/handoff.js";
 import {
   buildPassDeliveryInput,
   loadReviewerStartupPrompt,
@@ -52,8 +53,8 @@ export interface ExecutePassDeliveryInput {
   reviewerBriefArtifactPath: string;
   reviewerFocusArtifactPath: string;
   envelope: ProtocolEnvelope;
-  senderRole: "implementer" | "reviewer";
-  recipientRole: "implementer" | "reviewer";
+  senderRole: PassSenderRole;
+  recipientRole: PassRecipientRole;
   reviewerTestDirective?: ReviewerTestExecutionDirective;
 }
 
@@ -72,7 +73,7 @@ export async function executePassDelivery(
   const resolveMessageRef =
     dependencies.resolveDeliveryMessageRef
     ?? reviewerDeliveryDefaults.resolveDeliveryMessageRef;
-  if (input.recipientRole === "implementer") {
+  if (input.recipientRole !== "reviewer") {
     const deliveryInput = buildPassDeliveryInput({
       executeInput: input,
       reviewerBriefText: undefined,
