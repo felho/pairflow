@@ -213,6 +213,58 @@ describe("ActionBar", () => {
     );
   });
 
+  it("renders waiting-human decision actions on a dedicated row above secondary actions", () => {
+    render(
+      <ActionBar
+        bubble={bubbleCard({
+          bubbleId: "b-waiting-layout",
+          repoPath: "/repo-a",
+          state: "WAITING_HUMAN"
+        })}
+        attach={{
+          visible: false,
+          enabled: false,
+          command: "tmux attach -t pf-b-waiting-layout",
+          hint: null
+        }}
+        isSubmitting={false}
+        actionError={null}
+        retryHint={null}
+        actionFailure={null}
+        onAction={vi.fn(() => Promise.resolve(undefined))}
+        onClearFeedback={vi.fn()}
+      />
+    );
+
+    const decisionRow = screen.getByTestId("human-decision-row");
+    const secondaryRow = screen.getByTestId("secondary-action-row");
+
+    expect(decisionRow).toContainElement(
+      screen.getByRole("button", { name: "Queue Rework" })
+    );
+    expect(decisionRow).toContainElement(
+      screen.getByRole("button", { name: "Reply" })
+    );
+    expect(decisionRow).toContainElement(
+      screen.getByRole("button", { name: "Resume" })
+    );
+    expect(secondaryRow).not.toContainElement(
+      screen.getByRole("button", { name: "Queue Rework" })
+    );
+    expect(secondaryRow).not.toContainElement(
+      screen.getByRole("button", { name: "Reply" })
+    );
+    expect(secondaryRow).not.toContainElement(
+      screen.getByRole("button", { name: "Resume" })
+    );
+    expect(secondaryRow).toContainElement(
+      screen.getByRole("button", { name: "Restart" })
+    );
+    expect(secondaryRow).toContainElement(
+      screen.getByRole("switch", { name: "Meta review only" })
+    );
+  });
+
   it("explains that waiting-human rework is queued and distinct from reply", async () => {
     const user = userEvent.setup();
     const onAction = vi.fn(() => Promise.resolve(undefined));

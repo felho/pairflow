@@ -132,6 +132,12 @@ function resolveRequestedSeverity(
 }
 
 const trailingIconActionOrder: BubbleActionKind[] = ["stop", "restart", "attach", "open"];
+const waitingHumanDecisionActionOrder: BubbleActionKind[] = [
+  "request-rework",
+  "reply",
+  "resume"
+];
+const approvalDecisionActionOrder: BubbleActionKind[] = ["approve", "request-rework"];
 
 export function ActionBar(props: ActionBarProps): JSX.Element {
   const [modalAction, setModalAction] = useState<ModalAction | null>(null);
@@ -160,18 +166,26 @@ export function ActionBar(props: ActionBarProps): JSX.Element {
       action !== "update-review-policy"
       && !trailingIconActionOrder.includes(action)
   );
-  const showApprovalDecisionRow =
-    regularActions.includes("approve") && regularActions.includes("request-rework");
-  const approvalDecisionActions = showApprovalDecisionRow
-    ? regularActions.filter(
-        (action) => action === "approve" || action === "request-rework"
-      )
-    : [];
-  const secondaryRegularActions = showApprovalDecisionRow
-    ? regularActions.filter(
-        (action) => action !== "approve" && action !== "request-rework"
-      )
-    : regularActions;
+  const promotedDecisionActions =
+    props.bubble.state === "WAITING_HUMAN"
+      ? waitingHumanDecisionActionOrder.filter((action) =>
+          regularActions.includes(action)
+        )
+      : props.bubble.state === "READY_FOR_HUMAN_APPROVAL"
+        ? approvalDecisionActionOrder.filter((action) =>
+            regularActions.includes(action)
+          )
+        : [];
+  const promotedDecisionRowTestId =
+    props.bubble.state === "WAITING_HUMAN"
+      ? "human-decision-row"
+      : props.bubble.state === "READY_FOR_HUMAN_APPROVAL"
+        ? "approval-decision-row"
+        : null;
+  const secondaryRegularActions =
+    promotedDecisionActions.length > 0
+      ? regularActions.filter((action) => !promotedDecisionActions.includes(action))
+      : regularActions;
   const trailingIconActions = trailingIconActionOrder.filter((action) => {
     if (action === "attach") {
       return props.attach.visible;
@@ -280,12 +294,12 @@ export function ActionBar(props: ActionBarProps): JSX.Element {
   return (
     <div>
       <div className="space-y-1.5">
-        {showApprovalDecisionRow ? (
+        {promotedDecisionActions.length > 0 && promotedDecisionRowTestId !== null ? (
           <div
             className="flex flex-wrap items-center gap-1.5"
-            data-testid="approval-decision-row"
+            data-testid={promotedDecisionRowTestId}
           >
-            {approvalDecisionActions.map((action) => {
+            {promotedDecisionActions.map((action) => {
               const needsModal = action === "request-rework";
               const label = resolveActionLabel(props.bubble, action);
               if (label === undefined) {
