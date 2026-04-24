@@ -130,9 +130,13 @@ Sikernek az szamit, ha a kovetkezo kor mar nem egyetlen bubble-ben mozgatja egys
 ### Open Work
 
 1. A runtime review policy reset lane Phase 1 -> Phase 2 -> Phase 3A -> Phase 3B -> Phase 3C bounded closure-lanca current tree szinten lezart.
-2. Jelenleg nincs uj, materializalt kovetkezo implementacios successor task ezen a lane-en.
-3. Ha uj follow-up nyilik, azt kulon task artifactkent kell materializalni; implicit Phase 3D vagy opportunistic cleanup lane nem nyithato a parent plan szovegebol.
-4. A plan frontmatter tovabbra is `draft`, ezert barmely kesobbi successor csak explicit uj artifacttal es current-tree ownership checkkel nyithato meg.
+2. Uj materializalt successor follow-up nyilt a threshold semantics egy szuk policy-precedence gapjere:
+   [runtime-review-policy-meta-review-threshold-premature-approval-guard-phase2.md](/Users/felho/dev/pairflow/plans/tasks/runtime-review-policy-meta-review-threshold-premature-approval-guard-phase2.md)
+3. Ez a follow-up nem implicit Phase 3D, es nem is altalanos lane-reopen:
+   - szuk bugfix successor
+   - scope-ja a premature-approval guard
+   - nem nyitja ujra a bypass vagy a broad runtime review policy lane teljes closure-jet
+4. A plan frontmatter tovabbra is `draft`, ezert barmely tovabbi successor csak explicit uj artifacttal es current-tree ownership checkkel nyithato meg.
 
 ### Deferred / Future Work
 
@@ -141,14 +145,15 @@ Sikernek az szamit, ha a kovetkezo kor mar nem egyetlen bubble-ben mozgatja egys
 
 ## Immediate Next Step
 
-1. A runtime review policy reset lane-en jelenleg nincs uj, materializalt kovetkezo task.
+1. A runtime review policy reset lane current uj materializalt follow-upja:
+   [runtime-review-policy-meta-review-threshold-premature-approval-guard-phase2.md](/Users/felho/dev/pairflow/plans/tasks/runtime-review-policy-meta-review-threshold-premature-approval-guard-phase2.md)
 2. A legutobb lezart bounded successor baseline:
    [runtime-review-policy-reviewer-bypass-residual-runtime-alignment-phase3c.md](/Users/felho/dev/pairflow/plans/archive/tasks/runtime-review-policy-reviewer-bypass-residual-runtime-alignment-phase3c.md)
 3. A merged es archivalt Phase 3B activation-core baseline:
    [runtime-review-policy-reviewer-bypass-activation-post-cutover-phase3b.md](/Users/felho/dev/pairflow/plans/archive/tasks/runtime-review-policy-reviewer-bypass-activation-post-cutover-phase3b.md)
 4. A Phase 3B activation-core task tovabbra is csak a merged es archivalt Phase 3A contract utan vedheto successor:
    `plans/archive/tasks/runtime-review-policy-reviewer-bypass-contract-phase3a.md`
-5. Ha uj runtime-review-policy follow-up kell, ahhoz kulon task artifactot kell irni; a next step jelenleg nem bubble-start, hanem explicit successor-materializalas vagy lane-closeout elfogadasa.
+5. Ezen a lane-en a kozvetlen dokumentacios kovetkezo lepes mar nem successor-materializalas, mert az megtortent; a kovetkezo operativ lepes ennek a bounded follow-upnak az implementacios bubble-je lehet.
 
 ## Decision Baseline
 

@@ -62,6 +62,21 @@ owners:
 4. A current approval/human-gate path mar route-persisted envelope-re, converged metadata-ra es metrics route-countokra tamaszkodik, ezert a Phase 2 blast radius bounded, de tobb same-family consumerre at kell vezetni.
 5. A Phase 1 foundation mar lezart baseline; ez a task nem nyithat ujra config-schema vagy list/status foundation refactort.
 
+## Successor Note (2026-04-24)
+
+1. A Phase 2 szallitas merged current-tree baseline maradt, de utolag egy policy-precedence gap latszott:
+   - threshold-met `approve` recommendation nem volt fail-closed blockolva
+   - a threshold consult current tree-ben csak a `recommendation === "rework"` agban tortent
+2. Emiatt uj bounded successor task nyilt a premature-approval guard szemantikara:
+   [runtime-review-policy-meta-review-threshold-premature-approval-guard-phase2.md](/Users/felho/dev/pairflow/plans/tasks/runtime-review-policy-meta-review-threshold-premature-approval-guard-phase2.md)
+3. Ez a successor nem nyitja ujra a teljes Phase 2 delivery slice-ot; a narrow delta:
+   - submit-time reject guard threshold-met vagy threshold-unresolved open-findings `approve` esetre
+   - finalization backstop, hogy invalid `approve` ne mehessen `human_gate_approve` route-ra
+   - threshold-vs-advisory precedence explicit rogzitse
+4. A historical task current dokumentacios szerepe ezert ketreszes:
+   - authoritative baseline a shipped threshold deliveryhez
+   - predecessor anchor a premature-approval guard successor taskhoz
+
 ## L0 - Policy
 
 ### Goal
