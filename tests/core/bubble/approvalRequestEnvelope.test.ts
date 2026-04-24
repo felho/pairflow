@@ -407,6 +407,33 @@ describe("appendHumanApprovalRequestEnvelope", () => {
     ).rejects.toThrow(/requires latest_recommendation=rework/u);
   });
 
+  it("rejects approve-route envelopes that try to carry threshold diagnostics", async () => {
+    const now = new Date("2026-03-14T12:32:52.000Z");
+    const stub = createAppendEnvelopeStub(now);
+
+    await expect(
+      appendHumanApprovalRequestEnvelope({
+        appendEnvelope: stub.appendEnvelope,
+        transcriptPath: "/tmp/transcript.ndjson",
+        inboxPath: "/tmp/inbox.ndjson",
+        lockPath: "/tmp/bubble.lock",
+        now,
+        bubbleId: "b_approval_env_threshold_approve_guard_01",
+        round: 18,
+        summary: "Open advisory finding remains.",
+        route: "human_gate_approve",
+        refs: [],
+        recommendation: "approve",
+        thresholdMetadata: {
+          status: "not_met",
+          reasonCode: "REVIEW_POLICY_AUTO_REWORK_THRESHOLD_NOT_MET",
+          minSeverity: "P2",
+          highestOpenSeverity: "P3"
+        }
+      })
+    ).rejects.toThrow(/human_gate_approve cannot carry threshold diagnostic metadata/u);
+  });
+
   it("rejects threshold-not-met routes with a non-canonical reason code", async () => {
     const now = new Date("2026-03-14T12:32:55.000Z");
     const stub = createAppendEnvelopeStub(now);
@@ -505,6 +532,7 @@ describe("appendHumanApprovalRequestEnvelope", () => {
       route: "human_gate_dispatch_failed",
       refs: [],
       recommendation: "approve",
+      gateReasonCode: "META_REVIEW_APPROVE_THRESHOLD_BACKSTOP",
       parityMetadata: {
         findings_claimed_open_total: 4,
         findings_artifact_open_total: null,
@@ -523,6 +551,7 @@ describe("appendHumanApprovalRequestEnvelope", () => {
       [deliveryTargetRoleMetadataKey]: "status",
       latest_recommendation: "approve",
       meta_review_gate_route: "human_gate_dispatch_failed",
+      meta_review_gate_reason_code: "META_REVIEW_APPROVE_THRESHOLD_BACKSTOP",
       findings_claimed_open_total: 4,
       findings_blocking_open_total: 0,
       findings_advisory_open_total: 4

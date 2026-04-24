@@ -130,10 +130,14 @@ function resolveGateRouteMetadata(input: {
   route: string;
   recommendation?: MetaReviewRecommendation;
   thresholdMetadata?: MetaReviewGateThresholdMetadata;
+  gateReasonCode?: string;
 }): Record<string, unknown> {
   const metadata = {
     meta_review_gate_route: input.route,
-    ...resolveThresholdGateRouteMetadata(input)
+    ...resolveThresholdGateRouteMetadata(input),
+    ...(input.gateReasonCode !== undefined
+      ? { meta_review_gate_reason_code: input.gateReasonCode }
+      : {})
   };
   if (input.route !== "human_gate_run_failed") {
     return metadata;
@@ -159,10 +163,23 @@ export async function appendHumanApprovalRequestEnvelope(input: {
   recommendation?: MetaReviewRecommendation;
   parityMetadata?: FindingsParityMetadata | null | undefined;
   thresholdMetadata?: MetaReviewGateThresholdMetadata;
+  gateReasonCode?: string;
   findings?: ApprovalAdvisoryFinding[];
   reviewerSnapshot?: LatestSameRoundReviewerSnapshot;
 }): Promise<AppendProtocolEnvelopeResult> {
   const appendEnvelope = input.appendEnvelope ?? appendProtocolEnvelope;
+  if (
+    input.route === "human_gate_approve" &&
+    input.thresholdMetadata !== undefined
+  ) {
+    throw new MetaReviewGateError(
+      "META_REVIEW_GATE_TRANSITION_INVALID",
+      "META_REVIEW_GATE_TRANSITION_INVALID: human_gate_approve cannot carry threshold diagnostic metadata; threshold-guarded approve must fail closed before approval request emission.",
+      {
+        stageReasonCode: "META_REVIEW_GATE_TRANSITION_INVALID"
+      }
+    );
+  }
   const advisoryFindingsExplicitlyProvided = Object.prototype.hasOwnProperty.call(
     input,
     "findings"
@@ -233,6 +250,9 @@ export async function appendHumanApprovalRequestEnvelope(input: {
               : {}),
             ...(input.thresholdMetadata !== undefined
               ? { thresholdMetadata: input.thresholdMetadata }
+              : {}),
+            ...(input.gateReasonCode !== undefined
+              ? { gateReasonCode: input.gateReasonCode }
               : {})
           }),
           ...resolveFindingsParityMetadataForEnvelope(input.parityMetadata),

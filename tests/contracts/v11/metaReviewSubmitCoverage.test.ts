@@ -1,4 +1,4 @@
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createHash } from "node:crypto";
@@ -19,6 +19,7 @@ import type { Finding } from "../../../src/types/findings.js";
 import { DEFAULT_META_REVIEW_AUTO_REWORK_LIMIT } from "../../../src/types/bubble.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
 import { initGitRepository } from "../../helpers/git.js";
+import { renderBubbleConfigToml } from "../../../src/config/bubbleConfig.js";
 
 const tempDirs: string[] = [];
 
@@ -130,6 +131,48 @@ async function appendReviewerSnapshot(input: {
       refs: []
     }
   });
+}
+
+async function setReviewPolicyThreshold(input: {
+  bubble: Awaited<ReturnType<typeof setupRunningBubbleFixture>>;
+  minSeverity: "P1" | "P2" | "P3";
+}): Promise<void> {
+  const nextConfig = {
+    ...input.bubble.config,
+    review_policy: {
+      ...input.bubble.config.review_policy,
+      review_loop_mode:
+        input.bubble.config.review_policy?.review_loop_mode ?? "full",
+      meta_review_auto_rework_min_severity: input.minSeverity
+    }
+  };
+  await writeFile(
+    input.bubble.paths.bubbleTomlPath,
+    renderBubbleConfigToml(nextConfig),
+    "utf8"
+  );
+}
+
+async function writeFindingsArtifact(input: {
+  bubble: Awaited<ReturnType<typeof setupRunningBubbleFixture>>;
+  filename: string;
+  findings: Finding[];
+}): Promise<{ artifactRef: string; digest: string }> {
+  await mkdir(input.bubble.paths.artifactsDir, { recursive: true });
+  const artifactRef = `artifacts/${input.filename}`;
+  const raw = `${JSON.stringify(
+    {
+      findings: input.findings,
+      summary: { open_total: input.findings.length }
+    },
+    null,
+    2
+  )}\n`;
+  await writeFile(join(input.bubble.paths.bubbleDir, artifactRef), raw, "utf8");
+  return {
+    artifactRef,
+    digest: createHash("sha256").update(raw, "utf8").digest("hex")
+  };
 }
 
 afterEach(async () => {
@@ -282,6 +325,24 @@ describe("v11 meta-review submit contract", () => {
       ],
       advisoryFindingsOpenTotal: 2
     });
+    await setReviewPolicyThreshold({
+      bubble,
+      minSeverity: "P1"
+    });
+    const artifact = await writeFindingsArtifact({
+      bubble,
+      filename: "meta-review-submit-advisory-below-threshold.json",
+      findings: [
+        {
+          severity: "P2",
+          title: "Operator wording could be clearer"
+        },
+        {
+          severity: "P3",
+          title: "Runbook example can be tightened"
+        }
+      ]
+    });
 
     const result = await submitMetaReviewResult(
       {
@@ -296,7 +357,11 @@ describe("v11 meta-review submit contract", () => {
           findings_count: 2,
           findings_claimed_open_total: 2,
           findings_blocking_open_total: 0,
-          findings_advisory_open_total: 2
+          findings_advisory_open_total: 2,
+          findings_artifact_ref: artifact.artifactRef,
+          findings_artifact_status: "available",
+          findings_digest_sha256: artifact.digest,
+          meta_review_run_id: "run_meta_contract_submit_approve_advisory_01"
         }
       },
       {
@@ -358,6 +423,146 @@ describe("v11 meta-review submit contract", () => {
       findings_artifact_open_total: null,
       findings_parity_status: null
     });
+  });
+
+  it("rejects threshold-met advisory approve before canonical state write", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_meta_contract_submit_threshold_blocked_01",
+      task: "Contract: threshold-met advisory approve reject"
+    });
+    await writeMetaReviewRunningState({
+      statePath: bubble.paths.statePath,
+      activeAgent: "codex",
+      activeRole: "meta_reviewer",
+      nowIso: "2026-03-24T10:32:08.000Z"
+    });
+    await setReviewPolicyThreshold({
+      bubble,
+      minSeverity: "P3"
+    });
+    await appendReviewerSnapshot({
+      bubble,
+      nowIso: "2026-03-24T10:32:08.050Z",
+      findings: [
+        {
+          severity: "P3",
+          title: "Advisory threshold finding remains"
+        }
+      ],
+      advisoryFindingsOpenTotal: 1
+    });
+    const artifact = await writeFindingsArtifact({
+      bubble,
+      filename: "meta-review-submit-threshold-blocked.json",
+      findings: [
+        {
+          severity: "P3",
+          title: "Advisory threshold finding remains"
+        }
+      ]
+    });
+
+    await expect(
+      submitMetaReviewResult(
+        {
+          bubbleId: bubble.bubbleId,
+          repoPath,
+          round: 1,
+          recommendation: "approve",
+          summary: "1 advisory finding remains open.",
+          report_json: {
+            findings_claim_state: "open_findings",
+            findings_claim_source: "meta_review_artifact",
+            findings_count: 1,
+            findings_claimed_open_total: 1,
+            findings_blocking_open_total: 0,
+            findings_advisory_open_total: 1,
+            findings_artifact_ref: artifact.artifactRef,
+            findings_artifact_status: "available",
+            findings_digest_sha256: artifact.digest,
+            meta_review_run_id: "run_meta_contract_submit_threshold_blocked_01"
+          }
+        },
+        {
+          randomUUID: () => "run_meta_contract_submit_threshold_blocked_01",
+          readRuntimeSessionsRegistry: async () =>
+            buildActiveMetaReviewerSession({
+              bubbleId: bubble.bubbleId,
+              repoPath,
+              worktreePath: bubble.paths.worktreePath
+            })
+        }
+      )
+    ).rejects.toMatchObject({
+      reasonCode: "META_REVIEW_APPROVE_THRESHOLD_BLOCKED"
+    });
+
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    expect(loaded.state.state).toBe("RUNNING");
+    expect(loaded.state.meta_review?.execution_context).not.toBeNull();
+  });
+
+  it("rejects open-findings approve when threshold authority is unresolved", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_meta_contract_submit_threshold_unresolved_01",
+      task: "Contract: unresolved threshold authority reject"
+    });
+    await writeMetaReviewRunningState({
+      statePath: bubble.paths.statePath,
+      activeAgent: "codex",
+      activeRole: "meta_reviewer",
+      nowIso: "2026-03-24T10:32:10.000Z"
+    });
+    await appendReviewerSnapshot({
+      bubble,
+      nowIso: "2026-03-24T10:32:10.050Z",
+      findings: [
+        {
+          severity: "P3",
+          title: "Advisory finding without artifact authority"
+        }
+      ],
+      advisoryFindingsOpenTotal: 1
+    });
+
+    await expect(
+      submitMetaReviewResult(
+        {
+          bubbleId: bubble.bubbleId,
+          repoPath,
+          round: 1,
+          recommendation: "approve",
+          summary: "1 advisory finding remains open.",
+          report_json: {
+            findings_claim_state: "open_findings",
+            findings_claim_source: "meta_review_artifact",
+            findings_count: 1,
+            findings_claimed_open_total: 1,
+            findings_blocking_open_total: 0,
+            findings_advisory_open_total: 1
+          }
+        },
+        {
+          randomUUID: () => "run_meta_contract_submit_threshold_unresolved_01",
+          readRuntimeSessionsRegistry: async () =>
+            buildActiveMetaReviewerSession({
+              bubbleId: bubble.bubbleId,
+              repoPath,
+              worktreePath: bubble.paths.worktreePath
+            })
+        }
+      )
+    ).rejects.toMatchObject({
+      reasonCode: "META_REVIEW_APPROVE_THRESHOLD_CONTEXT_UNRESOLVED"
+    });
+
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    expect(loaded.state.state).toBe("RUNNING");
+    expect(loaded.state.meta_review?.execution_context).not.toBeNull();
   });
 
   it("accepts inconclusive submit contract as routed human-gate success", async () => {

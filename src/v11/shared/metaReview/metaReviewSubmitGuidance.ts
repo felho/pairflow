@@ -4,7 +4,8 @@ const metaReviewSubmitReportJsonParityFields =
 const metaReviewSubmitApproveParityNote = [
   "Clean approve requires zero open findings.",
   "For recommendation=approve, split fields are mandatory, findings_claimed_open_total = findings_blocking_open_total + findings_advisory_open_total, and findings_blocking_open_total must be 0.",
-  "Advisory-only approve is still recommendation=approve: use findings_claim_state=open_findings, keep findings_blocking_open_total=0, set a positive findings_advisory_open_total, and do not switch to inconclusive when the latest same-round reviewer snapshot is advisory-only."
+  "Advisory-only approve is still recommendation=approve only when the same-run highest open severity is below review_policy.meta_review_auto_rework_min_severity: use findings_claim_state=open_findings, keep findings_blocking_open_total=0, set a positive findings_advisory_open_total, and do not switch to inconclusive when the latest same-round reviewer snapshot is advisory-only.",
+  "When any same-run open finding meets or exceeds review_policy.meta_review_auto_rework_min_severity, do not emit recommendation=approve; emit recommendation=rework with a rework target message."
 ].join(" ");
 
 const metaReviewSubmitAdvisoryOnlyCorrectionNote =

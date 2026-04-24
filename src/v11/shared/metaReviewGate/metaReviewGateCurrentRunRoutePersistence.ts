@@ -71,6 +71,7 @@ export async function persistDispatchFailedHumanRoute(input: {
   runResultForRouting: MetaReviewResult;
   parityMetadata: FindingsParityMetadata | null;
   fallbackReason: string;
+  gateReasonCode?: string;
   rollbackStateOnAppendFailure?: BubbleStateSnapshot;
 }): Promise<MetaReviewGateResult> {
   const finalizeInput = input.finalizeInput;
@@ -96,6 +97,9 @@ export async function persistDispatchFailedHumanRoute(input: {
     expectedState: input.expectedState,
     route: "human_gate_dispatch_failed",
     metaReviewRun: input.runResultForRouting,
+    ...(input.gateReasonCode !== undefined
+      ? { gateReasonCode: input.gateReasonCode }
+      : {}),
     parityMetadata:
       input.parityMetadata
       ?? resolveFindingsParityMetadataFromReportJson(input.runResultForRouting.report_json),

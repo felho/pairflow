@@ -8,6 +8,8 @@ export type MetaReviewErrorReasonCode =
   | "META_REVIEW_SCHEMA_INVALID"
   | "META_REVIEW_SUMMARY_STRUCTURED_MISMATCH"
   | "META_REVIEW_SCHEMA_INVALID_COMBINATION"
+  | "META_REVIEW_APPROVE_THRESHOLD_BLOCKED"
+  | "META_REVIEW_APPROVE_THRESHOLD_CONTEXT_UNRESOLVED"
   | "META_REVIEW_GATE_REVIEWER_CONVERGENCE_CONFLICT"
   | "META_REVIEW_GATE_RUN_FAILED"
   | "META_REVIEW_IO_ERROR"
@@ -22,6 +24,11 @@ export interface MetaReviewErrorContext {
   bubbleDir?: string | undefined;
   artifactsDir?: string | undefined;
   reason?: string | undefined;
+  configuredMinSeverity?: string | undefined;
+  thresholdStatus?: string | undefined;
+  highestOpenSeverity?: string | undefined;
+  artifactRef?: string | null | undefined;
+  metaReviewRunId?: string | null | undefined;
 }
 
 export interface MetaReviewErrorInput {

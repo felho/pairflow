@@ -99,14 +99,17 @@ function createRunResult(input: {
   findingsCount: number;
   blockingOpenTotal?: number;
   advisoryOpenTotal?: number;
+  recommendation?: "approve" | "rework";
 }): MetaReviewResult {
+  const recommendation = input.recommendation ?? "rework";
   return {
     bubble_id: "b_meta_gate_finalize_threshold_01",
     run_id: input.runId,
-    recommendation: "rework",
+    recommendation,
     status: "success",
     summary: "Threshold-aware finalize fixture",
-    rework_target_message: "Fix the reported findings.",
+    rework_target_message:
+      recommendation === "rework" ? "Fix the reported findings." : null,
     updated_at: "2026-04-22T10:05:00.000Z",
     warnings: [],
     report_json: {
@@ -219,7 +222,7 @@ describe("finalizeCurrentRunMetaReviewGate", () => {
     expect(append.envelopes).toHaveLength(1);
   });
 
-  it("falls back to human_gate_threshold_not_met when the highest open severity is below the configured minimum", async () => {
+  it("does not threshold-gate the rework route when the highest open severity is below the configured minimum", async () => {
     const artifact = await createArtifactFixture({
       findings: [{ severity: "P3", title: "advisory" }],
       summary: { open_total: 1 }
@@ -267,28 +270,145 @@ describe("finalizeCurrentRunMetaReviewGate", () => {
       writeState: write.writeState
     });
 
-    expect(result.route).toBe("human_gate_threshold_not_met");
-    expect(result.gateEnvelope.type).toBe("APPROVAL_REQUEST");
-    expect(result.state.state).toBe("READY_FOR_HUMAN_APPROVAL");
+    expect(result.route).toBe("auto_rework");
+    expect(result.gateEnvelope.type).toBe("APPROVAL_DECISION");
+    expect(result.state.round).toBe(2);
+    expect(result.state.meta_review?.auto_rework_count).toBe(1);
+    expect(result.state.meta_review?.sticky_human_gate).toBe(false);
+  });
+
+  it("backstops threshold-met open-findings approve away from human_gate_approve", async () => {
+    const artifact = await createArtifactFixture({
+      findings: [{ severity: "P3", title: "advisory threshold finding" }],
+      summary: { open_total: 1 }
+    });
+    const append = createAppendEnvelopeStub();
+    const write = createWriteStateStub();
+
+    const result = await finalizeCurrentRunMetaReviewGate({
+      resolved: {
+        bubbleId: "b_meta_gate_finalize_threshold_01",
+        bubbleConfig: {
+          watchdog_timeout_minutes: 30,
+          agents: {
+            implementer: "claude",
+            reviewer: "codex"
+          },
+          review_policy: {
+            review_loop_mode: "full",
+            meta_review_auto_rework_min_severity: "P3"
+          }
+        },
+        bubblePaths: {
+          bubbleDir: artifact.bubbleDir,
+          artifactsDir: artifact.artifactsDir,
+          inboxPath: join(artifact.bubbleDir, "inbox.ndjson"),
+          locksDir: join(artifact.bubbleDir, "locks"),
+          statePath: join(artifact.bubbleDir, "state.json"),
+          transcriptPath: join(artifact.bubbleDir, "transcript.ndjson")
+        }
+      },
+      loaded: createLoadedRunningState(),
+      now: new Date("2026-04-22T10:05:00.000Z"),
+      refs: [],
+      summary: "Threshold-met approve backstop fixture",
+      runResult: createRunResult({
+        runId: "run_meta_gate_finalize_approve_backstop_01",
+        artifactRef: artifact.artifactRef,
+        digest: artifact.digest,
+        findingsCount: 1,
+        blockingOpenTotal: 0,
+        advisoryOpenTotal: 1,
+        recommendation: "approve"
+      }),
+      readFileFn: (path, encoding) => readFile(path, encoding),
+      appendEnvelope: append.appendEnvelope,
+      writeState: write.writeState
+    });
+
+    expect(result.route).toBe("human_gate_dispatch_failed");
+    expect(result.route).not.toBe("human_gate_approve");
     expect(result.state.meta_review?.auto_rework_count).toBe(0);
-    expect(result.state.meta_review?.sticky_human_gate).toBe(true);
     expect(result.gateEnvelope.payload.summary).toContain(
-      "Highest open severity P3 did not meet the configured minimum P2."
-    );
-    expect(result.gateEnvelope.payload.summary).toContain(
-      "Meta-review summary: Threshold-aware finalize fixture"
+      "META_REVIEW_APPROVE_THRESHOLD_BACKSTOP"
     );
     expect(result.gateEnvelope.payload.metadata).toMatchObject({
-      latest_recommendation: "rework",
-      meta_review_gate_route: "human_gate_threshold_not_met",
-      meta_review_gate_reason_code: "REVIEW_POLICY_AUTO_REWORK_THRESHOLD_NOT_MET",
-      meta_review_gate_threshold_status: "not_met",
-      meta_review_gate_threshold_min_severity: "P2",
-      meta_review_gate_threshold_highest_open_severity: "P3"
+      latest_recommendation: "approve",
+      meta_review_gate_route: "human_gate_dispatch_failed",
+      findings_claimed_open_total: 1,
+      findings_blocking_open_total: 0,
+      findings_advisory_open_total: 1,
+      findings_artifact_open_total: 1,
+      findings_parity_status: "ok"
     });
   });
 
-  it("fails closed to human_gate_threshold_unresolved when threshold authority becomes unavailable after parity validation", async () => {
+  it("applies the threshold backstop before sticky human-gate bypass", async () => {
+    const artifact = await createArtifactFixture({
+      findings: [{ severity: "P3", title: "sticky advisory threshold finding" }],
+      summary: { open_total: 1 }
+    });
+    const append = createAppendEnvelopeStub();
+    const write = createWriteStateStub();
+    const loaded = createLoadedRunningState();
+    loaded.state.meta_review = {
+      ...loaded.state.meta_review!,
+      sticky_human_gate: true
+    };
+
+    const result = await finalizeCurrentRunMetaReviewGate({
+      resolved: {
+        bubbleId: "b_meta_gate_finalize_threshold_01",
+        bubbleConfig: {
+          watchdog_timeout_minutes: 30,
+          agents: {
+            implementer: "claude",
+            reviewer: "codex"
+          },
+          review_policy: {
+            review_loop_mode: "full",
+            meta_review_auto_rework_min_severity: "P3"
+          }
+        },
+        bubblePaths: {
+          bubbleDir: artifact.bubbleDir,
+          artifactsDir: artifact.artifactsDir,
+          inboxPath: join(artifact.bubbleDir, "inbox.ndjson"),
+          locksDir: join(artifact.bubbleDir, "locks"),
+          statePath: join(artifact.bubbleDir, "state.json"),
+          transcriptPath: join(artifact.bubbleDir, "transcript.ndjson")
+        }
+      },
+      loaded,
+      now: new Date("2026-04-22T10:05:00.000Z"),
+      refs: [],
+      summary: "Sticky threshold-met approve backstop fixture",
+      runResult: createRunResult({
+        runId: "run_meta_gate_finalize_sticky_approve_backstop_01",
+        artifactRef: artifact.artifactRef,
+        digest: artifact.digest,
+        findingsCount: 1,
+        blockingOpenTotal: 0,
+        advisoryOpenTotal: 1,
+        recommendation: "approve"
+      }),
+      readFileFn: (path, encoding) => readFile(path, encoding),
+      appendEnvelope: append.appendEnvelope,
+      writeState: write.writeState
+    });
+
+    expect(result.route).toBe("human_gate_dispatch_failed");
+    expect(result.route).not.toBe("human_gate_sticky_bypass");
+    expect(result.gateEnvelope.payload.summary).toContain(
+      "META_REVIEW_APPROVE_THRESHOLD_BACKSTOP"
+    );
+    expect(result.gateEnvelope.payload.metadata).toMatchObject({
+      latest_recommendation: "approve",
+      meta_review_gate_route: "human_gate_dispatch_failed"
+    });
+  });
+
+  it("does not perform an extra threshold authority read for the rework route", async () => {
     const artifact = await createArtifactFixture({
       findings: [{ severity: "P1", title: "blocking" }],
       summary: { open_total: 1 }
@@ -341,21 +461,13 @@ describe("finalizeCurrentRunMetaReviewGate", () => {
       writeState: write.writeState
     });
 
-    expect(result.route).toBe("human_gate_threshold_unresolved");
-    expect(result.state.meta_review?.auto_rework_count).toBe(0);
-    expect(result.state.meta_review?.sticky_human_gate).toBe(true);
-    expect(result.gateEnvelope.payload.summary).toContain(
-      "Meta-review summary: Threshold-aware finalize fixture"
-    );
-    expect(result.gateEnvelope.payload.metadata).toMatchObject({
-      latest_recommendation: "rework",
-      meta_review_gate_route: "human_gate_threshold_unresolved",
-      meta_review_gate_reason_code: "REVIEW_POLICY_THRESHOLD_SOURCE_UNRESOLVED",
-      meta_review_gate_threshold_status: "unresolved"
-    });
+    expect(result.route).toBe("auto_rework");
+    expect(readCount).toBe(1);
+    expect(result.state.meta_review?.auto_rework_count).toBe(1);
+    expect(result.state.meta_review?.sticky_human_gate).toBe(false);
   });
 
-  it("fails closed to human_gate_threshold_unresolved when severity cannot be derived", async () => {
+  it("does not require severity derivation for the rework route", async () => {
     const artifact = await createArtifactFixture({
       findings: [{ title: "missing severity" }],
       summary: { open_total: 1 }
@@ -401,17 +513,8 @@ describe("finalizeCurrentRunMetaReviewGate", () => {
       writeState: write.writeState
     });
 
-    expect(result.route).toBe("human_gate_threshold_unresolved");
-    expect(result.state.meta_review?.auto_rework_count).toBe(0);
-    expect(result.state.meta_review?.sticky_human_gate).toBe(true);
-    expect(result.gateEnvelope.payload.summary).toContain(
-      "Meta-review summary: Threshold-aware finalize fixture"
-    );
-    expect(result.gateEnvelope.payload.metadata).toMatchObject({
-      latest_recommendation: "rework",
-      meta_review_gate_route: "human_gate_threshold_unresolved",
-      meta_review_gate_reason_code: "REVIEW_POLICY_THRESHOLD_CONTEXT_INCOMPLETE",
-      meta_review_gate_threshold_status: "incomplete"
-    });
+    expect(result.route).toBe("auto_rework");
+    expect(result.state.meta_review?.auto_rework_count).toBe(1);
+    expect(result.state.meta_review?.sticky_human_gate).toBe(false);
   });
 });

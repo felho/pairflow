@@ -43,28 +43,52 @@ export function resolveApprovalRecommendationFromRequest(
     : undefined;
 }
 
-export function hasParityInconsistencyMetadata(
+function readApprovalRequestMetadata(
   approvalRequest: ProtocolEnvelope | undefined
-): boolean {
+): Record<string, unknown> | undefined {
   if (approvalRequest === undefined || !isHumanApprovalRequest(approvalRequest)) {
-    return false;
+    return undefined;
   }
   const metadata = approvalRequest.payload.metadata;
   if (typeof metadata !== "object" || metadata === null) {
+    return undefined;
+  }
+  return metadata as Record<string, unknown>;
+}
+
+export function resolveApprovalGateRouteFromRequest(
+  approvalRequest: ProtocolEnvelope | undefined
+): string | undefined {
+  const metadata = readApprovalRequestMetadata(approvalRequest);
+  const route = metadata?.meta_review_gate_route;
+  return typeof route === "string" ? route : undefined;
+}
+
+export function resolveApprovalGateReasonCodeFromRequest(
+  approvalRequest: ProtocolEnvelope | undefined
+): string | undefined {
+  const metadata = readApprovalRequestMetadata(approvalRequest);
+  const reasonCode = metadata?.meta_review_gate_reason_code;
+  return typeof reasonCode === "string" ? reasonCode : undefined;
+}
+
+export function hasParityInconsistencyMetadata(
+  approvalRequest: ProtocolEnvelope | undefined
+): boolean {
+  const metadata = readApprovalRequestMetadata(approvalRequest);
+  if (metadata === undefined) {
     return false;
   }
-  const parityMetadata = metadata as Record<string, unknown>;
-  const summaryConsistencyStatus =
-    parityMetadata[approvalSummaryConsistencyStatusMetadataKey];
+  const summaryConsistencyStatus = metadata[approvalSummaryConsistencyStatusMetadataKey];
   if (summaryConsistencyStatus === "mismatch") {
     return true;
   }
-  const parityStatus = parityMetadata.findings_parity_status;
+  const parityStatus = metadata.findings_parity_status;
   if (parityStatus === "mismatch" || parityStatus === "guard_failed") {
     return true;
   }
-  const claimed = parityMetadata.findings_claimed_open_total;
-  const artifact = parityMetadata.findings_artifact_open_total;
+  const claimed = metadata.findings_claimed_open_total;
+  const artifact = metadata.findings_artifact_open_total;
   const hasClaimed =
     typeof claimed === "number" && Number.isInteger(claimed) && claimed >= 0;
   const hasArtifact =
