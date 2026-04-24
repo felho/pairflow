@@ -10,6 +10,7 @@ target_files:
   - src/v11/defaults/start/startBubbleDefaults.ts
   - src/v11/application/start/startCommandTmuxLaunch.ts
   - src/v11/infrastructure/channel/tmux/tmuxManager.ts
+  - src/v11/infrastructure/channel/tmux/tmuxRunner.ts
   - tests/core/bubble/startBubble.test.ts
   - tests/core/runtime/tmuxManager.test.ts
   - tests/v11/application/restart/runRestartFlow.test.ts
@@ -45,7 +46,7 @@ owners:
    - `restartBubble` -> `runRestartFlow`
    - `runRestartFlow` -> `startBubble`
 6. A current-tree default local session producer viszont nem a router vagy a restart wrapper, hanem a start default wiring:
-   - `startBubbleDefaults.launchBubbleSessionAck` -> `tmuxManager.launchBubbleSessionAck`
+   - `startBubbleDefaults.launchBubbleSessionAck` -> `tmuxManager.launchBubbleSessionAck` -> `tmuxRunner.runTmux`
    - ez a canonical shared tmux session materialization seam
 7. A `src/v11/application/start/startCommandTmuxLaunch.ts` current-tree shared start seam:
    - local start es remote start is consume-olja
@@ -94,6 +95,7 @@ owners:
 2. Erintett boundary-k:
    - UI process launch environment boundary
    - start default wiring + shared tmux session-materialization boundary
+   - tmux spawn-env neutrality source-check boundary
    - local bubble attach compatibility boundary
 
 ## L1 - Change Contract
@@ -105,12 +107,15 @@ owners:
 3. A tenyleges current-tree default local session-materialization ownership current tree-ben a `launchSessionAck` default wiringon ul:
    - `src/v11/defaults/start/startBubbleDefaults.ts`
    - `src/v11/infrastructure/channel/tmux/tmuxManager.ts`
-4. A `src/v11/application/start/startCommandTmuxLaunch.ts` current-tree shared start consume/assembly seam, amelyet local start es remote start is hasznal:
+4. A `src/v11/infrastructure/channel/tmux/tmuxRunner.ts` current-tree tmux spawn-env neutrality source-check seam:
+   - a `tmuxManager.ts` ezt consume-olja,
+   - de a session-materialization ownershiptol kulon current-tree seam marad.
+5. A `src/v11/application/start/startCommandTmuxLaunch.ts` current-tree shared start consume/assembly seam, amelyet local start es remote start is hasznal:
    - local owner path: `startBubble(...)`
    - retained compatibility consumer: `src/v11/application/start/startCommandRemoteExecution.ts`
-5. A `routerActionDispatch.ts` current tree-ben dispatch layer, nem bizonyitott root-cause owner; ezert nem required-now target ebben a taskban.
-6. A `startCommandDefaults.ts` current tree-ben bootstrap shell-spawn es helper boundary; ez optional guard-scope lehet, de nem a primer shared session-materialization owner.
-7. A real bounded slice ezert nem altalanos UI router hardening, hanem `UI authority producer + start default wiring + shared session-materialization hardening`, explicit remote consume-family preservation guarddal.
+6. A `routerActionDispatch.ts` current tree-ben dispatch layer, nem bizonyitott root-cause owner; ezert nem required-now target ebben a taskban.
+7. A `startCommandDefaults.ts` current tree-ben bootstrap shell-spawn es helper boundary; ez optional guard-scope lehet, de nem a primer shared session-materialization owner.
+8. A real bounded slice ezert nem altalanos UI router hardening, hanem `UI authority producer + start default wiring + shared session-materialization hardening`, explicit remote consume-family preservation guarddal es retained `tmuxRunner.ts` source-checkkel.
 
 ### Control Model
 
@@ -119,7 +124,7 @@ owners:
 2. `control_model`
    - UI-bol inditott lifecycle muvelet ugyanazt a canonical bubble authorityt kell hogy hasznalja, mint a nem-UI bubble start/restart.
    - a dispatcher layer nem lehet masodlagos authority source; a tenyleges session-materialization seam ownershipe a start familyben marad.
-   - a shared local session producer authorityja a `startBubbleDefaults.launchBubbleSessionAck -> tmuxManager.launchBubbleSessionAck` lancban marad; az application start layer ezt csak consume-olja.
+   - a shared local session producer authorityja a `startBubbleDefaults.launchBubbleSessionAck -> tmuxManager.launchBubbleSessionAck -> tmuxRunner.runTmux` lancban marad; az application start layer ezt csak consume-olja.
 3. `read_path_rule`
    - local attach/session resolution tovabbra is a bubble sessionnevhez kotodik, ezert a bubble sessiont a canonical local bubble authority alatt kell materializalni.
 4. `forbidden_fallback`
@@ -151,6 +156,7 @@ owners:
    - `src/v11/defaults/start/startBubbleDefaults.ts`
    - `src/v11/application/start/startCommandTmuxLaunch.ts`
    - `src/v11/infrastructure/channel/tmux/tmuxManager.ts`
+   - `src/v11/infrastructure/channel/tmux/tmuxRunner.ts`
    - retained compatibility consumer: `src/v11/application/start/startCommandRemoteExecution.ts`
 3. `workflow_orchestration_consumers`
    - `runRestartFlow.ts`
@@ -162,9 +168,12 @@ owners:
 
 Verdict:
 
-1. A bounded task shape itt `producer + default-wiring/shared-session-producer boundary + restart_recovery authority hardening`.
-2. A shared launch seam remote consume-ja current-tree valosag, de ebben a taskban compatibility fence, nem kulon remote activation closure.
-3. Az attach contract redesign tovabbra is kulon, nem required-now munka.
+1. A bounded task shape itt `producer + default-wiring/shared-session-producer boundary + spawn-env neutrality source-check seam + restart_recovery authority hardening`.
+2. A shared local producer boundary ket orthogonalis current-tree seamre bomlik:
+   - `tmuxManager.ts` ownershipolja a bubble session materialization / launch-ack producer API oldalat
+   - `tmuxRunner.ts` ownershipolja a tmux spawn-env neutrality source-check seamet
+3. A shared launch seam remote consume-ja current-tree valosag, de ebben a taskban compatibility fence, nem kulon remote activation closure.
+4. Az attach contract redesign tovabbra is kulon, nem required-now munka.
 
 ### Call-Site Matrix
 
@@ -172,20 +181,26 @@ Verdict:
 |---|---|---|---|
 | CS1 | `scripts/ui-server.sh` | a UI Node process launch kornyezete nem szivarogtathat bubble lifecycle authorityt a UI socket felol | P1 |
 | CS2 | `src/v11/defaults/start/startBubbleDefaults.ts` | a default local session producer explicitten a canonical shared `launchSessionAck` authorityt hasznalja UI-triggered start/restart alatt is; a task nem maradhat csak application-layer consume oldalon | P1 |
-| CS3 | `src/v11/infrastructure/channel/tmux/tmuxManager.ts` | a shared `launchBubbleSessionAck` producer nem materializalhat bubble sessiont a UI tmux authority alatt | P1 |
-| CS4 | `src/v11/application/start/startCommandTmuxLaunch.ts` | a shared start seam explicitten a canonical local producerre kotodjon UI-triggered local start/restart alatt, mikozben a remote consume baseline nem reinterpretalodik | P1 |
-| CS5 | `src/v11/application/restart/runRestartFlow.ts` | a restart path acceptance proofja a shared start/default-wiring authority boundaryre kotodjon, ne mockolt success route-ra hagyatkozzon | P1 |
-| CS6 | `tests/core/runtime/tmuxManager.test.ts` | required-now automated default-path proof kell a shared `launchSessionAck`/tmux producer boundaryre | P1 |
-| CS7 | `tests/core/bubble/startBubble.test.ts`, `tests/v11/application/restart/runRestartFlow.test.ts` | orchestration-level regresszios bizonyitas kell arra, hogy a start/restart path nem fogad el UI-authority leak eredmenyt canonical successkent | P1 |
+| CS3 | `src/v11/infrastructure/channel/tmux/tmuxRunner.ts` | a tmux spawn-env neutrality source-checkje required-now; ha a valasztott fix az env-neutralizalast ezen a retegen valtoztatja, akkor a diff ownership itt van | P1 |
+| CS4 | `src/v11/infrastructure/channel/tmux/tmuxManager.ts` | a shared `launchBubbleSessionAck` producer a retained tmux spawn-env neutrality mellett sem materializalhat bubble sessiont a UI tmux authority alatt; ez a session-materialization ownership, nem a `tmuxRunner.ts` source-check ownership | P1 |
+| CS5 | `src/v11/application/start/startCommandTmuxLaunch.ts` | a shared start seam explicitten a canonical local producerre kotodjon UI-triggered local start/restart alatt, mikozben a remote consume baseline nem reinterpretalodik | P1 |
+| CS6 | `src/v11/application/restart/runRestartFlow.ts` | a restart path acceptance proofja a shared start/default-wiring authority boundaryre kotodjon, ne mockolt success route-ra hagyatkozzon | P1 |
+| CS7 | `tests/core/runtime/tmuxManager.test.ts` | required-now automated default-path proof kell a shared `launchSessionAck`/tmux producer boundaryre, beleertve a tmux spawn-env hygiene-t | P1 |
+| CS8 | `tests/core/bubble/startBubble.test.ts`, `tests/v11/application/restart/runRestartFlow.test.ts` | orchestration-level regresszios bizonyitas kell arra, hogy a start/restart path nem fogad el UI-authority leak eredmenyt canonical successkent | P1 |
 
 Implementation notes:
 
 1. A task nem kotelezi el magat kizarlag egyetlen mechanizmus mellett, de a preferred irany a UI process launch env tovabbi semlegesitese.
 2. A `resume` current tree-ben nem session-materialization path; ezert nem required-now target ebben a taskban.
 3. Az attach workaround nem elfogadhato substitute; a session materialization authorityt kell javitani.
-4. A `startCommandDefaults.ts` ebben a taskban legfeljebb optional guard-seam; nem szabad a primer shared owner szerepet ra tolni.
-5. Ha a regresszios bizonyitas egy shell smoke-ot igenyel az automated default-path coverage mellett, az explicit legyen, ne implicit operatori tudaskent maradjon.
-6. Ha a shared `startCommandTmuxLaunch.ts` touched marad, a remote consume branch retained baseline-ja explicit no-reinterpretation guard; a `startCommandRemoteExecution.ts` nem valik required-now targette csak azert, mert ugyanazt a seamet consume-olja.
+4. A `tmuxManager.ts` a producer API surface, de a tenyleges tmux spawn-env neutrality source-check seam current tree-ben a `tmuxRunner.ts`; a ket seamet kulon ownershipkent kell kezelni.
+5. A `tmuxRunner.ts` current-tree source-checkje required-now, de kodszintu diff csak akkor kotelezo ott, ha a valasztott megoldas tenylegesen az env-neutralizalast ezen a retegen modosítja.
+6. Ha a `tmuxRunner.ts` no-delta marad, a PASS evidence explicit review note:
+   - a current-tree `runTmux()` tovabbra is torli a `TMUX` envet,
+   - es a retained `tests/core/runtime/tmuxManager.test.ts` env-isolation coverage ezt jelenleg is bizonyitja.
+7. A `startCommandDefaults.ts` ebben a taskban legfeljebb optional guard-seam; nem szabad a primer shared owner szerepet ra tolni.
+8. Ha a regresszios bizonyitas egy shell smoke-ot igenyel az automated default-path coverage mellett, az explicit legyen, ne implicit operatori tudaskent maradjon.
+9. Ha a shared `startCommandTmuxLaunch.ts` touched marad, a remote consume branch retained baseline-ja explicit no-reinterpretation guard; a `startCommandRemoteExecution.ts` nem valik required-now targette csak azert, mert ugyanazt a seamet consume-olja.
 
 ### Complexity-Risk Triage
 
@@ -265,7 +280,7 @@ Normative rules:
    - `internal_execution_consumers`
    - `cleanup_recovery_consumers`
 2. `intentionally_collapsed`
-   - UI launch env es a start-side session materialization ugyanannak a leaknek ket oldala, ezert egy taskban tarthato
+   - UI launch env, retained tmux spawn-env neutrality source-check, es a start-side session materialization ugyanannak a leaknek egymasra epulo current-tree seamjei, ezert egy taskban tarthatoak
 3. `explicitly_deferred`
    - attach redesign
    - stale registry self-healing
@@ -290,7 +305,7 @@ Normative rules:
 
 | ID | Scenario | Given | When | Then | Priority | Timing | Evidence |
 |---|---|---|---|---|---|---|---|
-| T1 | shared default producer proof | default `launchSessionAck` producer path hasznalatban van | tmux launch proof fut | a shared producer nem a UI socket alatt materializal bubble sessiont | P1 | required-now | automated test |
+| T1 | shared default producer proof | default `launchSessionAck` producer path hasznalatban van | tmux launch proof fut | a shared producer es a retained tmux spawn-env neutrality source-check nem a UI socket alatt materializal bubble sessiont | P1 | required-now | automated test, vagy no-delta esetben explicit source-check note + retained env-isolation test reference |
 | T2 | UI-triggered restart authority leak closed | UI process authority present es bubble session hianyzik | UI-bol restart fut | az uj bubble session nem a UI socket alatt jon letre, es a proof explicitten a default producer-pathra kotott | P1 | required-now | automated plus scripted evidence |
 | T3 | UI-triggered start authority leak closed | UI process authority present es bubble meg nincs futtatva | UI-bol start fut | a bubble session canonical bubble authorityn jon letre, es a proof explicitten a default producer-pathra kotott | P1 | required-now | automated or scripted evidence |
 | T4 | local attach baseline preserved | sikeres UI-bol inditott restart vagy start utan bubble session el | attach fut | az attach a sessionnev alapu retained modellen mukodik | P1 | required-now | manual or scripted smoke |
@@ -316,6 +331,9 @@ Normative rules:
 4. A review ne huzza vissza a dispatch-layer targeteket, ha a current-tree session-materialization ownership a start familyben marad.
 5. A task csak akkor zarhato, ha a UI-triggered start/restart utan a bubble session topologiaja tenylegesen canonicalis.
 6. A review ne fogadjon el pusztan mockolt start/restart orchestration proofot a shared producer-path evidence helyett.
+7. A review kezelje kulon seamkent a `tmuxRunner.ts` spawn-env neutrality source-checket es a `tmuxManager.ts` session-materialization ownershipet.
+8. A review ne hagyja ki a `tmuxRunner.ts` source-checket; kodszintu diffet ott csak akkor kerjen required-now, ha a valasztott fix tenylegesen azt a reteget modosítja.
+9. Ha a `tmuxRunner.ts` no-delta marad, a review fogadja el PASS evidence-kent az explicit source-check note-ot + a retained env-isolation test reference-t.
 
 ## Spec Lock
 
@@ -324,4 +342,5 @@ Task allapot `IMPLEMENTABLE`, ha:
 1. a UI-bol inditott local bubble `restart/start` nem hozza letre a bubble sessiont a UI tmux socket alatt,
 2. a local attach retained session-name alapu modellje valtozatlanul mukodokepes marad,
 3. a fix nem tereli at a megoldast attach oldali workaroundra,
-4. a stale registry/read-model kovetkezmenyek tovabbra is kulon follow-up scope-ban maradnak.
+4. a `tmuxRunner.ts` spawn-env neutrality source-checkje es a `tmuxManager.ts` session-materialization ownershipe kovetkezetesen, nem egymas helyett van leirva,
+5. a stale registry/read-model kovetkezmenyek tovabbra is kulon follow-up scope-ban maradnak.
