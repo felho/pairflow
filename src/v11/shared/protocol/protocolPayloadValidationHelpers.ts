@@ -24,14 +24,35 @@ const allowedPayloadKeys = new Set([
   "metadata"
 ]);
 
+const commitResultMetadataKeys = new Set([
+  "commit_sha",
+  "commit_message",
+  "staged_files"
+]);
+
+const donePackageFieldNames = new Set([
+  "donePackagePath",
+  "done_package_path",
+  "donePackageContent",
+  "done_package_content"
+]);
+
 function isNonNegativeIntegerOrNull(value: unknown): boolean {
   return value === null || (isInteger(value) && value >= 0);
 }
 
+function isNonEmptyStringArray(value: unknown): boolean {
+  return Array.isArray(value) && value.length > 0 && value.every(isNonEmptyString);
+}
+
 export function validateUnknownPayloadKeys(
+  envelopeType: string,
   payload: Record<string, unknown>,
   errors: ValidationError[]
 ): void {
+  if (envelopeType === "COMMIT_RESULT") {
+    return;
+  }
   const unknownKeys = Object.keys(payload).filter(
     (key) => !allowedPayloadKeys.has(key)
   );
@@ -138,6 +159,7 @@ function validateParityMetadataFields(
 }
 
 export function validatePayloadMetadata(
+  envelopeType: string,
   payload: Record<string, unknown>,
   errors: ValidationError[]
 ): void {
@@ -148,7 +170,7 @@ export function validatePayloadMetadata(
     });
     return;
   }
-  if (isRecord(payload.metadata)) {
+  if (isRecord(payload.metadata) && envelopeType !== "COMMIT_RESULT") {
     validateParityMetadataFields(payload.metadata, errors);
   }
 }
@@ -181,6 +203,72 @@ export function buildValidatedPayload(input: {
     ...(findings !== undefined ? { findings } : {}),
     ...(isRecord(payload.metadata) ? { metadata: payload.metadata } : {})
   };
+}
+
+function validateCommitResultPayload(
+  payload: Record<string, unknown>,
+  errors: ValidationError[]
+): void {
+  for (const key of Object.keys(payload)) {
+    if (key === "metadata") {
+      continue;
+    }
+    if (key === "summary") {
+      errors.push({
+        path: "payload.summary",
+        message: "COMMIT_RESULT payload must not include summary"
+      });
+      continue;
+    }
+    if (donePackageFieldNames.has(key)) {
+      errors.push({
+        path: `payload.${key}`,
+        message: "COMMIT_RESULT payload must not include done-package fields"
+      });
+      continue;
+    }
+    errors.push({
+      path: `payload.${key}`,
+      message: "COMMIT_RESULT payload only allows metadata"
+    });
+  }
+
+  const metadata = isRecord(payload.metadata) ? payload.metadata : undefined;
+  if (!metadata || !isNonEmptyString(metadata.commit_sha)) {
+    errors.push({
+      path: "payload.metadata.commit_sha",
+      message: "COMMIT_RESULT metadata requires non-empty commit_sha"
+    });
+  }
+  if (!metadata || !isNonEmptyString(metadata.commit_message)) {
+    errors.push({
+      path: "payload.metadata.commit_message",
+      message: "COMMIT_RESULT metadata requires non-empty commit_message"
+    });
+  }
+  if (!metadata || !isNonEmptyStringArray(metadata.staged_files)) {
+    errors.push({
+      path: "payload.metadata.staged_files",
+      message:
+        "COMMIT_RESULT metadata requires staged_files as a non-empty array of non-empty strings"
+    });
+  }
+
+  if (!metadata) {
+    return;
+  }
+
+  for (const key of Object.keys(metadata)) {
+    if (commitResultMetadataKeys.has(key)) {
+      continue;
+    }
+    errors.push({
+      path: `payload.metadata.${key}`,
+      message: donePackageFieldNames.has(key)
+        ? "COMMIT_RESULT metadata must not include done-package fields"
+        : "Unknown COMMIT_RESULT metadata field"
+    });
+  }
 }
 
 export function validateEnvelopeSpecificPayload(
@@ -218,6 +306,9 @@ export function validateEnvelopeSpecificPayload(
       path: "payload.decision",
       message: "APPROVAL_DECISION requires decision: approve|rework"
     });
+  }
+  if (envelopeType === "COMMIT_RESULT") {
+    validateCommitResultPayload(payload, errors);
   }
 
   return validatedPayload;
