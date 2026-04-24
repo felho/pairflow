@@ -225,7 +225,7 @@ Ez a kombinacio tul sok helyen nyitott ownership-kerdest egyszerre.
 
 | Phase | Goal | Inputs | Outputs | Exit Criteria |
 |---|---|---|---|---|
-| Phase 1 | Shared runtime review policy foundation + authority simplification | jelenlegi bubble tanulsagai, `plans/tasks/review-policy-runtime-surface-and-rollout-phase1.md`, actor-runtime migration plan, es ez a reset plan | canonical policy type/schema, single projection builder a jelenlegi `list/status` consume familyhez, single mutation seam, threshold authority resolver boundary | a policy/read/write/authority felelossegek explicitten szet vannak valasztva; nincs meg bypass behavior; `detail` nincs implicitten Phase 1-be huzva |
+| Phase 1 | Shared runtime review policy foundation + authority simplification | jelenlegi bubble tanulsagai, `plans/archive/tasks/review-policy-runtime-surface-and-rollout-phase1.md`, actor-runtime migration plan, es ez a reset plan | canonical policy type/schema, single projection builder a jelenlegi `list/status` consume familyhez, single mutation seam, threshold authority resolver boundary | a policy/read/write/authority felelossegek explicitten szet vannak valasztva; nincs meg bypass behavior; `detail` nincs implicitten Phase 1-be huzva |
 | Phase 2 | Auto-rework severity threshold delivery a canonical gate boundaryn | Phase 1 foundation | threshold-aware routing a meta-review gate boundaryn, bounded read-surface exposure, regressziozaras | a threshold feature reszertelmet ad clean mainrol, UI/store blast radius nelkul vagy minimalis operatori exposure-rel |
 | Phase 3 | Reviewer bypass contract, activation core, majd residual runtime alignment | Phase 1 foundation + historical reviewer/meta-reviewer cutover baseline + current-tree actor-runtime successor baseline | bypass policy/config/UI/state contract spec, majd kulon activation-core task, majd kulon residual runtime alignment + broad read-model fail-closed parity task | a bypass behavior nem csuszik vissza foundation/threshold slice-ba; az activation core es a residual runtime/read-model branches kulon taskban zarulnak |
 
@@ -364,7 +364,7 @@ Phase 1 authoring guard:
 4. Historical migration spine baseline:
    [plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-migration-spine-phaseD-plan.md](/Users/felho/dev/pairflow/plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-migration-spine-phaseD-plan.md)
 5. Discovery input / superseded wide-scope task:
-   [plans/tasks/review-policy-runtime-surface-and-rollout-phase1.md](/Users/felho/dev/pairflow/plans/tasks/review-policy-runtime-surface-and-rollout-phase1.md)
+   [plans/archive/tasks/review-policy-runtime-surface-and-rollout-phase1.md](/Users/felho/dev/pairflow/plans/archive/tasks/review-policy-runtime-surface-and-rollout-phase1.md)
 6. Historical reviewer es meta-reviewer Phase E cutover artifactok preserved baseline-kent a bypass activation sequencinghez
 
 ## Risks and Mitigations

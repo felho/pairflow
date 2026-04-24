@@ -43,7 +43,7 @@ plan_ref: plans/archive/plans/runtime-review-policy-reset-and-phasing-plan-v1.md
 system_context_ref: docs/pairflow-initial-design.md
 normative_refs:
   - plans/archive/plans/runtime-review-policy-reset-and-phasing-plan-v1.md
-  - plans/tasks/review-policy-runtime-surface-and-rollout-phase1.md
+  - plans/archive/tasks/review-policy-runtime-surface-and-rollout-phase1.md
   - plans/actor-runtime-interface-post-phaseE-successor-plan-v1.md
   - plans/archive/tasks/actor-runtime-interface-opportunity2-task9-meta-review-gate-workflow-runtime-capability-residual-closeout.md
   - docs/pairflow-initial-design.md

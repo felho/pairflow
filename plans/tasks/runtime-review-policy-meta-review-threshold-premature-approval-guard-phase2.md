@@ -22,7 +22,7 @@ system_context_ref: docs/pairflow-initial-design.md
 normative_refs:
   - plans/archive/plans/runtime-review-policy-reset-and-phasing-plan-v1.md
   - plans/archive/tasks/runtime-review-policy-auto-rework-threshold-phase2.md
-  - plans/tasks/review-policy-runtime-surface-and-rollout-phase1.md
+  - plans/archive/tasks/review-policy-runtime-surface-and-rollout-phase1.md
   - plans/archive/tasks/meta-review-gate/meta-review-approve-advisory-open-findings-semantic-support-phase2.md
   - docs/pairflow-initial-design.md
 owners:

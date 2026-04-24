@@ -2,7 +2,7 @@
 artifact_type: task
 artifact_id: task_review_policy_runtime_surface_and_rollout_phase1_v1
 title: "Review Policy Runtime Surface and Rollout (Phase 1)"
-status: draft
+status: superseded
 phase: phase1
 target_files:
   - src/types/bubble.ts
@@ -38,6 +38,9 @@ target_files:
   - docs/pairflow-initial-design.md
 prd_ref: null
 plan_ref: plans/actor-runtime-interface-discovery-and-migration-plan-v1.md
+superseded_by:
+  - plans/archive/plans/runtime-review-policy-reset-and-phasing-plan-v1.md
+  - plans/archive/tasks/runtime-review-policy-foundation-and-authority-refactor-phase1.md
 system_context_ref: README.md
 normative_refs:
   - plans/actor-runtime-interface-discovery-and-migration-plan-v1.md
