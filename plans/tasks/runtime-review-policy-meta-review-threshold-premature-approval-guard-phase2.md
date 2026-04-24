@@ -36,16 +36,20 @@ owners:
 1. A current bubble config/runtime surface valoban hordozza a threshold beallitast:
    - `review_policy.meta_review_auto_rework_min_severity`
    - a reprodukalt bubbleben ez `P3`
-2. A reprodukalt current artifact szerint a meta-review recommendation lehet `approve` ugy is, hogy ugyanabban a runban nyitott `P2` es `P3` findingok maradnak.
-3. A current finalization wiring a threshold authorityt csak ezen az agon consultalja:
+2. A threshold-authority producer/feloldo oldal nem hianyzik teljesen: a current tree-ben mar van canonical same-run threshold authority seam, amelyet reuse-olni kell.
+3. A reprodukalt current artifact szerint a meta-review recommendation lehet `approve` ugy is, hogy ugyanabban a runban nyitott `P2` es `P3` findingok maradnak.
+4. A current finalization wiring a threshold authorityt jelenleg foleg csak ezen az agon consultalja:
    - `recommendation === "rework" && budgetAvailable === true`
    Emiatt `approve` eseten a threshold nem blockolja a human approval route-ot.
-4. A current approve semantic path mar explicitten tamogatja az `approve + advisory_open_findings` kombinaciot, amennyiben `blocking_open_total == 0`.
-5. A current rendszerkovetkezmeny ezert hibas lehet:
+5. A current approve semantic path mar explicitten tamogatja az `approve + advisory_open_findings` kombinaciot, amennyiben `blocking_open_total == 0`.
+6. A current implementacios gap ezert nem "missing authority", hanem missing approve-path consumption:
+   - submit-time/preparation-time validalas nem utasitja el a threshold-met vagy threshold-unresolved open-findings `approve` payloadot,
+   - finalization backstop nem allitja meg az invalid `approve`-ot a `human_gate_approve` route elott.
+7. A current rendszerkovetkezmeny ezert hibas lehet:
    - threshold met
    - recommendation `approve`
    - human gate megis `READY_FOR_HUMAN_APPROVAL`
-6. A user-side policy decision ehhez a follow-uphoz explicit:
+8. A user-side policy decision ehhez a follow-uphoz explicit:
    - a configured threshold elsodlegesen premature-approval guard,
    - nem az a feladata, hogy a mar kimondott `rework` utat visszafogja.
 
@@ -88,6 +92,10 @@ owners:
 3. A teljes runtime review policy lane ujratervezese.
 4. Approve/advisory split schema altalanos ujranyitasa a threshold precedence-en tul.
 5. Uj workflow topology vagy reviewer-bypass semantics.
+6. Protocol result/schema contract munka, kulonosen:
+   - `src/types/protocol.ts`
+   - `src/v11/shared/protocol/**`
+   Ez ugyanaz a file-disjoint boundary, amelyet a Contract Boundary / Blast Radius `file_disjoint_parallel_bubble_guard` pontja normativan rogzit; ezek a fajlok ebben a taskban nem celpontok.
 
 ### Safety Defaults
 
@@ -110,6 +118,9 @@ owners:
    - meta-review gate finalization approval-route contract
    - approve+advisory compatibility precedence contract
    - operator/meta-reviewer submit guidance contract
+3. `file_disjoint_parallel_bubble_guard`:
+   - ez a task nem igenyelhet es nem validalhat modositasokat `src/types/protocol.ts` vagy `src/v11/shared/protocol/**` alatt.
+   - ha implementacio kozben protocol result shape hiany tunik fel, azt kulon follow-upkent kell kezelni; ebben a taskban a threshold guardot a meglevo submit/gate/meta-review boundaries kozott kell megoldani.
 
 ## L1 - Change Contract
 
@@ -118,11 +129,14 @@ owners:
 1. A current submit pipeline mar a canonical bubble configot, az active state-et es az artifact-read capabilityt is feloldja a `prepareMetaReviewSubmitContext(...)` boundaryben.
 2. Emiatt a threshold guard current-tree szerint nem kenyszerul kizlag a gate finalizationra; megvalosithato meg state-write elott.
 3. A current gate finalization ugyanakkor tovabbra is kotelezo backstop, mert a route truth ma ott dol el.
-4. A `metaReviewGateThresholdAuthority.ts` current baseline producer-anchor; ebben a follow-upban consume-orientalt reuse a cel, nem uj authority producer kitalalasa.
+4. A `metaReviewGateThresholdAuthority.ts` current baseline producer-anchor; ebben a follow-upban consume-orientalt reuse a cel, nem uj authority producer kitalalasa es nem uj protocol contract bevezetese.
 5. A `metaReviewSubmitGuidance.ts` mar ma is explicit approve/advisory guidance source; threshold guard copy ugyanitt tarthato aligned formaban.
 6. A `metaReviewCommandSubmitRouting.ts` csak integration seam:
    - akkor indokolt hozza nyulni, ha a submit-preparation vagy finalization contract-wire ezt tenylegesen megkoveteli,
    - kulonben maradhat erintetlen.
+7. A missing behavior ket kotelezo fogyasztasi pontja:
+   - submit-time vagy submit-preparation-time approve validation, amely canonical write elott rejectel,
+   - finalization-time backstop, amely invalid approve canonical state eseten sem engedi a human approval route-ot.
 
 ### Control Model
 
@@ -183,10 +197,18 @@ owners:
 | CS1 | `src/v11/shared/metaReview/metaReviewCommandSubmitPreparation.ts` | `prepareMetaReviewSubmitContext(...)` | submit-preparation szinten explicit threshold-guard consult current bubble policy + same-run authority alapjan, es threshold-sertett approve eseten fail-closed reject meg canonical state write elott | P1 | required-now | T1, T2, T3, T8 |
 | CS2 | `src/v11/shared/metaReview/metaReviewCommandSubmitValidation.ts` | submit validation helpers | a submit oldali payload invariant family explicit threshold-guard reason-code contracttal egeszul ki; a validation ne csak schema/split parityt, hanem premature-approval guardot is tudjon representalni | P1 | required-now | T1, T2 |
 | CS3 | `src/v11/shared/metaReview/metaReviewSubmitGuidance.ts` | shared guidance text | explicit guidance: threshold-met nyitott finding mellett ne `approve`, hanem `rework`; advisory-only approve csak threshold alatt valid | P1 | required-now | T6 |
-| CS4 | `src/v11/shared/metaReviewGate/metaReviewGateCurrentRunFinalization.ts` | `finalizeCurrentRunMetaReviewGate(...)` | finalization backstop: invalid threshold-met approve nem mehet `human_gate_approve`-ra, akkor sem, ha submit guard valamiert kihagyodott | P1 | required-now | T4, T5 |
-| CS5 | `src/v11/shared/metaReviewGate/metaReviewGateFindingsValidation.ts` | positive-claim validation orchestration | approve-path validation es current-run threshold consume kapcsolata explicit legyen; ne csak a `rework` path legyen threshold-aware | P1 | required-now | T4, T5 |
-| CS6 | `src/v11/shared/metaReviewGate/metaReviewGateThresholdAuthority.ts` | same-run threshold authority reuse seam | consume-side helper/export shape csak annyiban modosithato, amennyiben a submit guard es finalization backstop ugyanazt a canonical authority resultot tudja uj producer nelkul reuse-olni | P2 | required-now | T1, T4 |
-| CS7 | `tests/contracts/v11/metaReviewSubmitCoverage.test.ts`, `tests/v11/shared/metaReviewGate/metaReviewGateCurrentRunFinalization.test.ts`, `tests/core/runtime/metaReviewSubmitGuidance.test.ts`, `tests/core/bubble/approvalRequestEnvelope.test.ts` | regression coverage | a submit reject, finalization block, guidance alignment es human approval fail-closed proof explicit coverage-t kap | P1 | required-now | T1-T8 |
+| CS4 | `src/v11/shared/metaReview/metaReviewCommandSubmitRouting.ts` | submit command routing integration | csak akkor valtozhat, ha a preparation/validation reject contractot a routing boundarynek kell propagalnia; nem protocol-shape munka, es maradhat erintetlen, ha a guard a preparation/validation boundaryben teljesen lefedi a submit pathot | P2 | conditional | T1, T2, T3, T8 |
+| CS5 | `src/v11/shared/metaReviewGate/metaReviewGateCurrentRunFinalization.ts` | `finalizeCurrentRunMetaReviewGate(...)` | finalization backstop: invalid threshold-met approve nem mehet `human_gate_approve`-ra, akkor sem, ha submit guard valamiert kihagyodott | P1 | required-now | T4, T5 |
+| CS6 | `src/v11/shared/metaReviewGate/metaReviewGateFindingsValidation.ts` | positive-claim validation orchestration | approve-path validation es current-run threshold consume kapcsolata explicit legyen; ne csak a `rework` path legyen threshold-aware | P1 | required-now | T4, T5 |
+| CS7 | `src/v11/shared/metaReviewGate/metaReviewGateThresholdAuthority.ts` | same-run threshold authority reuse seam | consume-side helper/export shape csak annyiban modosithato, amennyiben a submit guard es finalization backstop ugyanazt a canonical authority resultot tudja uj producer nelkul reuse-olni | P2 | required-now | T1, T4 |
+| CS8 | `tests/contracts/v11/metaReviewSubmitCoverage.test.ts`, `tests/v11/shared/metaReviewGate/metaReviewGateCurrentRunFinalization.test.ts`, `tests/core/runtime/metaReviewSubmitGuidance.test.ts`, `tests/core/bubble/approvalRequestEnvelope.test.ts` | regression coverage | a submit reject, finalization block, guidance alignment es human approval fail-closed proof explicit coverage-t kap | P1 | required-now | T1-T9 |
+
+Non-target file families for this task:
+
+1. `src/types/protocol.ts`
+2. `src/v11/shared/protocol/**`
+
+Ezeket a parhuzamos commit-result protocol contract munka tulajdonolja. A jelen task implementacioja akkor is implementable kell maradjon, ha ezek a fajlok valtozatlanok.
 
 ### Data / Interface Contract
 
@@ -251,14 +273,15 @@ Reason-code precedence:
 
 | ID | Scenario | Given | When | Then | Priority | Timing | Evidence |
 |---|---|---|---|---|---|---|---|
-| T1 | Threshold-met advisory approve reject | configured threshold `P3`, approve payload nyitott `P2` findinggal, split metadata valid | meta-review submit fut | submit reject `META_REVIEW_APPROVE_THRESHOLD_BLOCKED`; canonical state write nem tortenik meg | P1 | required-now | automated test |
-| T2 | Threshold authority unresolved reject | configured threshold jelen van, approve payload open findingset allit, de same-run severity authority unresolved/incomplete | meta-review submit fut | submit reject `META_REVIEW_APPROVE_THRESHOLD_CONTEXT_UNRESOLVED` | P1 | required-now | automated test |
-| T3 | Threshold-alatti advisory approve marad valid | configured threshold `P2`, approve payload csak `P3` advisory open findinggal, split metadata valid | meta-review submit fut | submit sikeres; approve/advisory semantics megmarad | P1 | required-now | automated test |
-| T4 | Finalization backstop blocks invalid approve | invalid approve canonical run result valamiert megis finalizationra jut | gate finalization fut | nem keletkezik `human_gate_approve`, es nem keletkezik synthetic auto-rework envelope sem; explicit fail-closed outcome szuletik | P1 | required-now | automated test |
+| T1 | Threshold-met advisory approve submit reject | configured threshold `P3`, approve payload nyitott advisory-only `P3` findinggal, `blocking_open_total == 0`, split metadata valid, summary-vs-structured parity valid, same-run authority resolved threshold-met | meta-review submit fut | submit reject `META_REVIEW_APPROVE_THRESHOLD_BLOCKED`; canonical state write nem tortenik meg | P1 | required-now | automated test |
+| T2 | Unresolved open-findings approve submit reject | configured threshold jelen van, approve payload open advisory findinget allit, `blocking_open_total == 0`, split metadata valid, summary-vs-structured parity valid, de same-run severity authority unresolved/incomplete | meta-review submit fut | submit reject `META_REVIEW_APPROVE_THRESHOLD_CONTEXT_UNRESOLVED`; canonical state write nem tortenik meg | P1 | required-now | automated test |
+| T3 | Threshold-below advisory approve remains valid | configured threshold `P2`, approve payload csak `P3` advisory open findinggal, split metadata valid, same-run authority resolved below threshold | meta-review submit fut | submit sikeres; approve/advisory semantics megmarad | P1 | required-now | automated test |
+| T4 | Finalization backstop blocks invalid approve from `human_gate_approve` | invalid approve canonical run result valamiert megis finalizationra jut threshold-met open findinggal | gate finalization fut | nem keletkezik `human_gate_approve`; nem keletkezik synthetic auto-rework envelope; a backstop diagnostic/reason `META_REVIEW_APPROVE_THRESHOLD_BACKSTOP` | P1 | required-now | automated test |
 | T5 | Rework path no longer threshold-gated | configured threshold jelen van, recommendation `rework`, budget elerheto, threshold consult nincs mint extra gate | gate finalization fut | current rework route tovabbmegy threshold-triggeru block nelkul | P1 | required-now | automated test |
-| T6 | Shared guidance states threshold guard | startup/shared submit guidance renderelodik | guidance build fut | explicit szoveg mondja: threshold-met nyitott finding mellett ne emitelj `approve`-ot | P1 | required-now | automated test |
+| T6 | Shared guidance states threshold-met open findings require rework | startup/shared submit guidance renderelodik | guidance build fut | explicit szoveg mondja: threshold-met nyitott finding mellett ne emitelj `approve`-ot; helyette `rework` recommendationt kell adni | P1 | required-now | automated test |
 | T7 | Human approval envelope stays fail-closed | approve route envelope path invalid threshold-met approve metadata mellett | approval request append fut | human approval envelope nem epul fel csendben | P2 | required-now | automated test |
 | T8 | Clean approve baseline remains valid | configured threshold jelen van, approve payload zero-open structured claimmel es ervenyes parityval erkezik | meta-review submit fut | submit sikeres; nincs uj kotelezo open-findings threshold-authority reject csak a threshold config jelenlete miatt | P1 | required-now | automated test |
+| T9 | Inconclusive route preservation | configured threshold jelen van, recommendation `inconclusive`, payload egyebkent existing inconclusive contract szerint valid | meta-review submit/finalization relevans path fut | inconclusive semantics valtozatlan; threshold guard nem kezeli approve-kent es nem tereli rework/approval route-ra | P3 | later-hardening | automated or focused contract test |
 
 ## Acceptance Criteria (Binary)
 
@@ -266,9 +289,11 @@ Reason-code precedence:
 2. AC2: Threshold-authority unresolved/incomplete open-findings approve submit-time rejectre fut.
 3. AC3: Threshold-alatti advisory-only approve tovabbra is ervenyes.
 4. AC4: Rework route current baseline nem marad threshold-gated ugyanazzal a policyval.
-5. AC5: Finalization backstop akkor sem enged `human_gate_approve` route-ot, ha invalid approve atjutna a submit guardon.
+5. AC5: Finalization backstop akkor sem enged `human_gate_approve` route-ot, ha invalid approve atjutna a submit guardon, es nem kepez synthetic auto-rework shortcutot; a backstop diagnostic/reason `META_REVIEW_APPROVE_THRESHOLD_BACKSTOP`.
 6. AC6: A shared meta-review guidance explicitten kimondja a threshold-premature-approval guardot.
 7. AC7: Zero-open clean approve current baseline tovabbra is ervenyes marad threshold config mellett is, es nem kap uj open-findings authority-kotelezest.
+8. AC8: A config key szemantikaja a dokumentumban explicit premature-approval guardkent van rogzitve, nem missing-authority vagy rework-gate redesignkent.
+9. AC9: `recommendation=inconclusive` route baseline valtozatlan marad; a threshold guard nem kezeli approve-kent es nem tereli rework/approval route-ra.
 
 ## AC-Test Traceability
 
@@ -278,16 +303,22 @@ Reason-code precedence:
 | AC2 | T2 |
 | AC3 | T3 |
 | AC4 | T5 |
-| AC5 | T4, T7 |
+| AC5 | T4 |
 | AC6 | T6 |
 | AC7 | T8 |
+| AC8 | review-time contract inspection |
+| AC9 | T9 |
+
+Envelope-layer traceability:
+
+1. T7 nem AC5 finalization proof, hanem kulon hardening proof arra, hogy az approval-request envelope layer sem epit human approval requestet invalid threshold-met approve metadata mellett.
 
 ## Review Control
 
 1. A review ne tolja vissza ezt a taskot altalanos review-policy redesignba.
 2. A review ne koveteljen config key rename-t ebben a korben.
 3. A review ne fogadjon el olyan fixet, amely csak UI-status szinten rejti el a hibas `approve`-ot.
-4. A review ne fogadjon el olyan fixet, amely a rework utat tovabbra is ugyanazzal a threshold gate-tel blokkolo modon tartja eletben, ha a submit approve-guard mar be van vezetve.
+4. A review ne fogadjon el olyan fixet, amely a rework utat tovabbra is ugyanazzal a threshold gate-tel blokkolo modon tartja eletben.
 
 ## Spec Lock
 
