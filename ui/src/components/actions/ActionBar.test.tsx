@@ -167,6 +167,52 @@ describe("ActionBar", () => {
     });
   });
 
+  it("renders approval decisions on a dedicated row above secondary actions", () => {
+    render(
+      <ActionBar
+        bubble={bubbleCard({
+          bubbleId: "b-approval-layout",
+          repoPath: "/repo-a",
+          state: "READY_FOR_HUMAN_APPROVAL"
+        })}
+        attach={{
+          visible: false,
+          enabled: false,
+          command: "tmux attach -t pf-b-approval-layout",
+          hint: null
+        }}
+        isSubmitting={false}
+        actionError={null}
+        retryHint={null}
+        actionFailure={null}
+        onAction={vi.fn(() => Promise.resolve(undefined))}
+        onClearFeedback={vi.fn()}
+      />
+    );
+
+    const approvalRow = screen.getByTestId("approval-decision-row");
+    const secondaryRow = screen.getByTestId("secondary-action-row");
+
+    expect(approvalRow).toContainElement(
+      screen.getByRole("button", { name: "Approve" })
+    );
+    expect(approvalRow).toContainElement(
+      screen.getByRole("button", { name: "Request Rework" })
+    );
+    expect(secondaryRow).not.toContainElement(
+      screen.getByRole("button", { name: "Approve" })
+    );
+    expect(secondaryRow).not.toContainElement(
+      screen.getByRole("button", { name: "Request Rework" })
+    );
+    expect(secondaryRow).toContainElement(
+      screen.getByRole("button", { name: "Restart" })
+    );
+    expect(secondaryRow).toContainElement(
+      screen.getByRole("switch", { name: "Meta review only" })
+    );
+  });
+
   it("explains that waiting-human rework is queued and distinct from reply", async () => {
     const user = userEvent.setup();
     const onAction = vi.fn(() => Promise.resolve(undefined));

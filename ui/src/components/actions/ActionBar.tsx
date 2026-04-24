@@ -160,6 +160,18 @@ export function ActionBar(props: ActionBarProps): JSX.Element {
       action !== "update-review-policy"
       && !trailingIconActionOrder.includes(action)
   );
+  const showApprovalDecisionRow =
+    regularActions.includes("approve") && regularActions.includes("request-rework");
+  const approvalDecisionActions = showApprovalDecisionRow
+    ? regularActions.filter(
+        (action) => action === "approve" || action === "request-rework"
+      )
+    : [];
+  const secondaryRegularActions = showApprovalDecisionRow
+    ? regularActions.filter(
+        (action) => action !== "approve" && action !== "request-rework"
+      )
+    : regularActions;
   const trailingIconActions = trailingIconActionOrder.filter((action) => {
     if (action === "attach") {
       return props.attach.visible;
@@ -267,145 +279,182 @@ export function ActionBar(props: ActionBarProps): JSX.Element {
 
   return (
     <div>
-      <div className="flex flex-wrap items-center gap-1.5">
-        {regularActions.map((action) => {
-          const openCommit = action === "commit";
-          const openMerge = action === "merge";
-          const needsModal = action === "request-rework" || action === "reply";
-          const label = resolveActionLabel(props.bubble, action);
-          if (label === undefined) {
-            return null;
-          }
-
-          return (
-            <button
-              key={action}
-              type="button"
-              className={`rounded-lg border text-[10px] transition hover:brightness-125 disabled:cursor-not-allowed disabled:opacity-60 ${isIconOnlyAction(action) ? "flex h-6 w-6 items-center justify-center p-0" : "px-2.5 py-1"} ${buttonTone(action)}`}
-              onClick={() => {
-                if (openCommit) {
-                  setShowCommitForm((value) => !value);
-                  setShowMergePanel(false);
-                  return;
-                }
-                if (openMerge) {
-                  setShowMergePanel((value) => !value);
-                  setShowCommitForm(false);
-                  return;
-                }
-                if (needsModal) {
-                  setModalAction(action);
-                  return;
-                }
-                void invokeAction(action);
-              }}
-              aria-label={label}
-              title={label}
-              disabled={props.isSubmitting}
-            >
-              {renderActionContent(action, label)}
-            </button>
-          );
-        })}
-
-        {trailingIconActions.map((action) => {
-          const label = resolveActionLabel(props.bubble, action);
-          if (label === undefined) {
-            return null;
-          }
-
-          const isAttachAction = action === "attach";
-
-          return (
-            <button
-              key={action}
-              type="button"
-              className={`flex h-6 w-6 items-center justify-center rounded-lg border p-0 text-[10px] transition hover:brightness-125 disabled:cursor-not-allowed disabled:opacity-60 ${buttonTone(action)}`}
-              onClick={() => {
-                if (isAttachAction) {
-                  props.onClearFeedback();
-                  void props
-                    .onAction({
-                      bubbleId: props.bubble.bubbleId,
-                      action: "attach"
-                    })
-                    .catch(() => {
-                      // Error is displayed by the generic actionError handler.
-                    });
-                  return;
-                }
-                void invokeAction(action);
-              }}
-              aria-label={label}
-              title={label}
-              disabled={props.isSubmitting || (isAttachAction && !props.attach.enabled)}
-            >
-              {renderActionContent(action, label)}
-            </button>
-          );
-        })}
-
-        {reviewPolicyAvailable ? (
-          <div className="flex items-center gap-1.5">
-            <button
-              type="button"
-              role="switch"
-              aria-checked={requestedLoopMode === "meta_only"}
-              aria-label="Meta review only"
-              title={
-                reviewPolicyWritable
-                  ? "Meta review only"
-                  : "Review policy update is unavailable until the latest bubble detail revision loads."
+      <div className="space-y-1.5">
+        {showApprovalDecisionRow ? (
+          <div
+            className="flex flex-wrap items-center gap-1.5"
+            data-testid="approval-decision-row"
+          >
+            {approvalDecisionActions.map((action) => {
+              const needsModal = action === "request-rework";
+              const label = resolveActionLabel(props.bubble, action);
+              if (label === undefined) {
+                return null;
               }
-              className={`flex h-[18px] w-7 items-center self-center rounded-full border p-0.5 transition ${
-                requestedLoopMode === "meta_only"
-                  ? "border-cyan-500/70 bg-cyan-500/[0.14]"
-                  : "border-[#333] bg-[#1a1a1a] hover:border-[#555]"
-              } disabled:cursor-not-allowed disabled:opacity-60`}
-              disabled={props.isSubmitting || !reviewPolicyWritable}
-              onClick={() => {
-                void invokeReviewPolicyMode(
-                  requestedLoopMode === "meta_only" ? "full" : "meta_only"
-                );
-              }}
-            >
-              <span
-                aria-hidden="true"
-                className={`h-2.5 w-2.5 rounded-full transition-transform ${
-                  requestedLoopMode === "meta_only"
-                    ? "translate-x-[10px] bg-cyan-300"
-                    : "translate-x-0 bg-[#8a8a8a]"
-                }`}
-              />
-            </button>
-            <label className="sr-only" htmlFor={`review-severity-${props.bubble.bubbleId}`}>
-              Meta auto-rework severity
-            </label>
-            <select
-              id={`review-severity-${props.bubble.bubbleId}`}
-              aria-label="Meta auto-rework severity"
-              title={
-                reviewPolicyWritable
-                  ? "Meta auto-rework severity"
-                  : "Review policy update is unavailable until the latest bubble detail revision loads."
-              }
-              className="h-4 rounded-md border border-[#333] bg-[#1a1a1a] px-1 text-[9px] font-mono text-[#d7dde5] transition hover:border-[#555] disabled:cursor-not-allowed disabled:opacity-60"
-              value={requestedSeverity}
-              disabled={props.isSubmitting || !reviewPolicyWritable}
-              onChange={(event) => {
-                void invokeReviewPolicyUpdate({
-                  reviewLoopMode: requestedLoopMode,
-                  metaReviewAutoReworkMinSeverity:
-                    event.currentTarget.value as BubbleReviewAutoReworkSeverity
-                });
-              }}
-            >
-              <option value="P1">P1</option>
-              <option value="P2">P2</option>
-              <option value="P3">P3</option>
-            </select>
+
+              return (
+                <button
+                  key={action}
+                  type="button"
+                  className={`rounded-lg border px-2.5 py-1 text-[10px] transition hover:brightness-125 disabled:cursor-not-allowed disabled:opacity-60 ${buttonTone(action)}`}
+                  onClick={() => {
+                    if (needsModal) {
+                      setModalAction(action);
+                      return;
+                    }
+                    void invokeAction(action);
+                  }}
+                  aria-label={label}
+                  title={label}
+                  disabled={props.isSubmitting}
+                >
+                  {renderActionContent(action, label)}
+                </button>
+              );
+            })}
           </div>
         ) : null}
+
+        <div className="flex flex-wrap items-center gap-1.5" data-testid="secondary-action-row">
+          {secondaryRegularActions.map((action) => {
+            const openCommit = action === "commit";
+            const openMerge = action === "merge";
+            const needsModal = action === "request-rework" || action === "reply";
+            const label = resolveActionLabel(props.bubble, action);
+            if (label === undefined) {
+              return null;
+            }
+
+            return (
+              <button
+                key={action}
+                type="button"
+                className={`rounded-lg border text-[10px] transition hover:brightness-125 disabled:cursor-not-allowed disabled:opacity-60 ${isIconOnlyAction(action) ? "flex h-6 w-6 items-center justify-center p-0" : "px-2.5 py-1"} ${buttonTone(action)}`}
+                onClick={() => {
+                  if (openCommit) {
+                    setShowCommitForm((value) => !value);
+                    setShowMergePanel(false);
+                    return;
+                  }
+                  if (openMerge) {
+                    setShowMergePanel((value) => !value);
+                    setShowCommitForm(false);
+                    return;
+                  }
+                  if (needsModal) {
+                    setModalAction(action);
+                    return;
+                  }
+                  void invokeAction(action);
+                }}
+                aria-label={label}
+                title={label}
+                disabled={props.isSubmitting}
+              >
+                {renderActionContent(action, label)}
+              </button>
+            );
+          })}
+
+          {trailingIconActions.map((action) => {
+            const label = resolveActionLabel(props.bubble, action);
+            if (label === undefined) {
+              return null;
+            }
+
+            const isAttachAction = action === "attach";
+
+            return (
+              <button
+                key={action}
+                type="button"
+                className={`flex h-6 w-6 items-center justify-center rounded-lg border p-0 text-[10px] transition hover:brightness-125 disabled:cursor-not-allowed disabled:opacity-60 ${buttonTone(action)}`}
+                onClick={() => {
+                  if (isAttachAction) {
+                    props.onClearFeedback();
+                    void props
+                      .onAction({
+                        bubbleId: props.bubble.bubbleId,
+                        action: "attach"
+                      })
+                      .catch(() => {
+                        // Error is displayed by the generic actionError handler.
+                      });
+                    return;
+                  }
+                  void invokeAction(action);
+                }}
+                aria-label={label}
+                title={label}
+                disabled={props.isSubmitting || (isAttachAction && !props.attach.enabled)}
+              >
+                {renderActionContent(action, label)}
+              </button>
+            );
+          })}
+
+          {reviewPolicyAvailable ? (
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                role="switch"
+                aria-checked={requestedLoopMode === "meta_only"}
+                aria-label="Meta review only"
+                title={
+                  reviewPolicyWritable
+                    ? "Meta review only"
+                    : "Review policy update is unavailable until the latest bubble detail revision loads."
+                }
+                className={`flex h-[18px] w-7 items-center self-center rounded-full border p-0.5 transition ${
+                  requestedLoopMode === "meta_only"
+                    ? "border-cyan-500/70 bg-cyan-500/[0.14]"
+                    : "border-[#333] bg-[#1a1a1a] hover:border-[#555]"
+                } disabled:cursor-not-allowed disabled:opacity-60`}
+                disabled={props.isSubmitting || !reviewPolicyWritable}
+                onClick={() => {
+                  void invokeReviewPolicyMode(
+                    requestedLoopMode === "meta_only" ? "full" : "meta_only"
+                  );
+                }}
+              >
+                <span
+                  aria-hidden="true"
+                  className={`h-2.5 w-2.5 rounded-full transition-transform ${
+                    requestedLoopMode === "meta_only"
+                      ? "translate-x-[10px] bg-cyan-300"
+                      : "translate-x-0 bg-[#8a8a8a]"
+                  }`}
+                />
+              </button>
+              <label className="sr-only" htmlFor={`review-severity-${props.bubble.bubbleId}`}>
+                Meta auto-rework severity
+              </label>
+              <select
+                id={`review-severity-${props.bubble.bubbleId}`}
+                aria-label="Meta auto-rework severity"
+                title={
+                  reviewPolicyWritable
+                    ? "Meta auto-rework severity"
+                    : "Review policy update is unavailable until the latest bubble detail revision loads."
+                }
+                className="h-4 rounded-md border border-[#333] bg-[#1a1a1a] px-1 text-[9px] font-mono text-[#d7dde5] transition hover:border-[#555] disabled:cursor-not-allowed disabled:opacity-60"
+                value={requestedSeverity}
+                disabled={props.isSubmitting || !reviewPolicyWritable}
+                onChange={(event) => {
+                  void invokeReviewPolicyUpdate({
+                    reviewLoopMode: requestedLoopMode,
+                    metaReviewAutoReworkMinSeverity:
+                      event.currentTarget.value as BubbleReviewAutoReworkSeverity
+                  });
+                }}
+              >
+                <option value="P1">P1</option>
+                <option value="P2">P2</option>
+                <option value="P3">P3</option>
+              </select>
+            </div>
+          ) : null}
+        </div>
       </div>
 
       {showCommitForm ? (
