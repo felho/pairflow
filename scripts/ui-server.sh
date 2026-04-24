@@ -30,7 +30,7 @@ print_listener() {
 }
 
 ui_tmux() {
-  env -u TMUX tmux -L "$UI_TMUX_SOCKET_NAME" "$@"
+  env -u TMUX -u TMUX_PANE tmux -L "$UI_TMUX_SOCKET_NAME" "$@"
 }
 
 session_exists() {
@@ -55,7 +55,7 @@ start_ui() {
   else
     local launch_command
     printf -v launch_command \
-      "cd %q && exec node %q ui --host %q --port %q >> %q 2>&1" \
+      "cd %q && exec env -u TMUX -u TMUX_PANE node %q ui --host %q --port %q >> %q 2>&1" \
       "$ROOT_DIR" \
       "$UI_ENTRY" \
       "$HOST" \
