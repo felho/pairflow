@@ -27,6 +27,7 @@ owners:
 
 ## Revision Log
 
+5. `2026-04-25` (implementer docs-only refinement): tightened target-file reality alignment for the shared result contraction. Documented the remote commit port as a conditional compile-adapter surface only, added a positive conditional Test Matrix row for that adapter path, and clarified that `commitCliCommand` help/parser text plus start/resume prompt references remain successor-owned despite grep hits.
 4. `2026-04-25` (fresh-context ReviewSpec refinement 2): added the v11 commit API test target, classified shared result removal as explicit `shared_contract` closure, and clarified the `src/cli/index.ts` boundary: Phase 2 updates direct result projection labels to `COMMIT_RESULT`; Phase 3 keeps `--auto` help/parser/request activation.
 3. `2026-04-25` (fresh-context ReviewSpec refinement): aligned task to parent-plan routing. Phase 2 owns shared result contraction and direct CLI/UI-router compile consumers; Phase 3 owns public request/input activation and wording.
 2. `2026-04-25` (ReviewSpec refinement): clarified engineering sequencing decision after task-mode ReviewSpec. Phase 2 owns removal of local `donePackagePath` from the shared application result contract and local `bubble_committed` lifecycle metadata, with only minimal compile/runtime adaptation for remote route. Public CLI/API/UI request rename and remote transport hard cutover remain successors.
@@ -84,6 +85,8 @@ This is a local producer cutover slice with the necessary local application-resu
 4. Compat elements:
    - Remote SSH commit transport may remain on existing done-package continuity until `remote-commit-result-alignment`.
    - CLI help text and first-party UI/router request rename may remain successor scope unless they must change for compilation or direct local producer result correctness.
+   - `commitCliCommand.ts` may still expose current public `--auto` help/parser behavior in this Phase 2 slice; do not use the direct `src/cli/index.ts` result-label update as license to perform the Phase 3 public command cutover.
+   - Start/resume prompt/context references to done-package are live docs/runtime guidance and remain Phase 5 cleanup, not Phase 2 local producer work.
 5. Forbidden reinterpretations:
    - Do not make `COMMIT_RESULT` contain a prose `summary`.
    - Do not move done-package path/content into `COMMIT_RESULT` metadata.
@@ -98,6 +101,8 @@ This is a local producer cutover slice with the necessary local application-resu
    - `runCommitGitStep(...)` currently treats `auto` as stage-all and retains clone retry/source-sync behavior.
    - `appendDonePackageEnvelope(...)` and `appendDonePackageEnvelopeMutation(...)` currently write `DONE_PACKAGE`.
    - `persistCommittedThenDoneStateMutation(...)` currently names `DONE_PACKAGE` in post-`COMMITTED` failure text.
+   - `commitRemoteExecutionRoute(...)` currently maps remote continuity into the shared `CommitBubbleResult` shape and may need narrow adaptation after `donePackagePath` is removed from that shared result.
+   - `commitRemotePorts.ts` currently carries `donePackageContent` for the existing remote continuity path; this task may touch it only if the shared result contraction creates a direct compile/type mismatch, not to remove remote marker parsing or sync-back behavior.
    - `tests/core/bubble/commitBubble.test.ts` currently asserts done-package requirements, `DONE_PACKAGE` envelopes, auto-generation, clone retry, source-sync, and remote continuity.
    - `tests/v11/application/commit/commitCommandApi.test.ts` currently asserts local `DONE_PACKAGE`, `donePackagePath`, auto-generation, inner-remote, and remote-continuity behaviors that share the application result contract.
 2. Actual touched scope: local commit authority producer plus the same bounded local finalization mutation family.
@@ -109,7 +114,9 @@ This is a local producer cutover slice with the necessary local application-resu
    - remote SSH marker/output parsing,
    - remote sync-back removal of done-package content,
    - operator CLI rename from `--auto` to `--stage-all`,
+   - commit command help/parser wording in `src/v11/application/commit/commitCliCommand.ts`,
    - UI/router request-field migration,
+   - start/resume runtime prompt/context references,
    - live docs/prompt cleanup,
    - automatic crash recovery after git commit.
 5. Branch inventory note:
@@ -204,19 +211,21 @@ This is a local producer cutover slice with the necessary local application-resu
 10. Update shared `CommitBubbleResult` type to expose technical commit facts without `donePackagePath`; adapt remote route only enough to compile and preserve current remote behavior until Phase 4.
 11. Preserve existing local and clone retry/source-sync behavior.
 12. Update local commit and v11 application commit API tests to assert `COMMIT_RESULT`, no done-package generation, removed local result field, removed local lifecycle done-package metadata, direct CLI success label projection, and preserved failure/retry behavior.
+13. As a subordinate consequence of item 10, if remote-route compilation depends on the removed shared result field, adapt only the application result mapping or remote port typing needed to compile while preserving current remote continuity as explicitly successor-owned behavior.
 
 ### Out of Scope
 
 1. Remote SSH commit output parsing and marker protocol.
 2. Remote sync-back removal of done-package content.
 3. CLI public rename from `--auto` to `--stage-all`.
-4. UI/router request field rename from `auto` to `stageAll`.
-5. Removing `DONE_PACKAGE` from protocol validation.
-6. Full CLI/API/UI/router public wording cleanup beyond the direct `COMMIT_RESULT` success envelope label and the minimum compile/runtime changes required by the removed shared `donePackagePath` result field.
-7. Remote lifecycle/transport hard cutover; remote may remain mixed until Phase 4.
-8. Live docs, README, and runtime-generated prompt/context cleanup.
-9. New crash recovery or retry semantics after git commit.
-10. Archived historical task/doc rewriting.
+4. Commit command help/parser wording cleanup in `src/v11/application/commit/commitCliCommand.ts`.
+5. UI/router request field rename from `auto` to `stageAll`.
+6. Removing `DONE_PACKAGE` from protocol validation.
+7. Full CLI/API/UI/router public wording cleanup beyond the direct `COMMIT_RESULT` success envelope label and the minimum compile/runtime changes required by the removed shared `donePackagePath` result field.
+8. Remote lifecycle/transport hard cutover; remote may remain mixed until Phase 4.
+9. Live docs, README, and runtime-generated prompt/context cleanup, including start/resume implementer prompts.
+10. New crash recovery or retry semantics after git commit.
+11. Archived historical task/doc rewriting.
 
 ### Safety Defaults
 
@@ -307,6 +316,7 @@ This is a local producer cutover slice with the necessary local application-resu
 | Depends on | Phase 1 protocol contract. | Do not redefine `COMMIT_RESULT` payload shape. | P1 | required-now |
 | Unlocks Phase 3 | CLI/API/UI cutover. | Shared result no longer exposes `donePackagePath`; Phase 3 owns public `--stage-all` request rename and user-facing text cleanup. | P2 | successor |
 | Unlocks Phase 4 | Remote alignment. | Remote route may adapt to the shared result field removal, but remote transport remains explicitly not target-complete. | P2 | successor |
+| Unlocks Phase 5 | Live docs/runtime prompt cleanup. | `commitCliCommand.ts` help/parser and start/resume prompt references remain traceable successor work, not Phase 2 scope. | P2 | successor |
 | Overall hard cutover | Not complete after this task. | Summary must say integration slice only. | P1 | required-now |
 
 ### 0d) Shared Contract Compatibility
@@ -317,7 +327,9 @@ This is a local producer cutover slice with the necessary local application-resu
 | `CommitBubbleResult.donePackagePath` | CLI/root output, tests, remote route, UI/router ports | breaking shared application result change | remove from shared app result type now; update direct CLI/UI-router compile consumers minimally; public request migration remains successor scope | public wording polish in Phase 3 |
 | `bubble_committed` lifecycle metadata `done_package_path` | metrics/event consumers, tests | breaking local lifecycle metadata cleanup | remove for local commit events now; remote event/transport cleanup remains Phase 4/5 as applicable | broad live reference cleanup in Phase 5 |
 | `CommitBubbleInput.auto` | CLI parser, app API, remote port | compatibility-tightening | keep spelling if needed, but make it stage-all only locally | rename to `stageAll` in Phase 3 |
-| remote commit port done-package content | SSH remote route and sync-back | unchanged here | preserve or only minimally adapt for compile | remove in Phase 4 |
+| remote commit port done-package content | SSH remote route and sync-back | unchanged here unless direct shared-result compilation requires a type adapter | preserve `donePackageContent` and remote continuity; if touched, change only the narrow type/mapping seam needed after `CommitBubbleResult.donePackagePath` removal, not remote payload continuity fields | remove marker/parser/sync-back in Phase 4 |
+| commit command public help/parser | CLI command parser/help | unchanged here | leave `src/v11/application/commit/commitCliCommand.ts` public wording and `--auto` parser behavior to Phase 3 | replace with `--stage-all` in Phase 3 |
+| start/resume prompt done-package guidance | runtime implementer prompts/context | unchanged here | leave live runtime guidance cleanup to Phase 5 | remove done-package guidance in Phase 5 |
 
 ### 1) Call-Site Matrix
 
@@ -333,9 +345,10 @@ This is a local producer cutover slice with the necessary local application-resu
 | CS8 | `src/v11/application/commit/commitCommandApiContract.ts` | `CommitRuntimeContext` | local context type | remove local `donePackageContent` and done-package path dependence from local context | P1 | required-now | typecheck |
 | CS9 | `tests/core/bubble/commitBubble.test.ts` | local commit suite | local producer tests | update done-package assertions to `COMMIT_RESULT` and no artifact generation | P1 | required-now | focused test |
 | CS10 | `src/v11/application/commit/commitCommandFinalization.ts` | `emitCommitLifecycleEvent(...)` | local lifecycle metadata | local `bubble_committed` event contains commit facts and staged file count, but no `done_package_path` and no done-package-derived refs count | P1 | required-now | unit test or event-port assertion |
-| CS11 | `src/cli/index.ts` | commit output projection | result field fallout | remove direct reliance on `result.donePackagePath` if any and change the commit success envelope label from `DONE_PACKAGE` to `COMMIT_RESULT`; do not rename `--auto` help/parser/request behavior here | P2 | required-now | typecheck |
-| CS12 | `src/v11/shared/ports/uiRouter.ts` | `UiCommitBubbleResult` | result port typing | remove `donePackagePath` from UI-router result typing so direct adapters compile against the shared result contraction; do not rename request `auto` to `stageAll` here | P2 | required-now | typecheck |
+| CS11 | `src/cli/index.ts` | commit output projection | result field fallout | remove direct reliance on `result.donePackagePath` if any and change the commit success envelope label from `DONE_PACKAGE` to `COMMIT_RESULT`; do not rename `--auto` help/parser/request behavior here | P1 | required-now | typecheck |
+| CS12 | `src/v11/shared/ports/uiRouter.ts` | `UiCommitBubbleResult` | result port typing | remove `donePackagePath` from UI-router result typing so direct adapters compile against the shared result contraction; do not rename request `auto` to `stageAll` here | P1 | required-now | typecheck |
 | CS13 | `tests/v11/application/commit/commitCommandApi.test.ts` | application commit API tests | local and remote contract assertions | update local `DONE_PACKAGE`/`donePackagePath` assertions to `COMMIT_RESULT` and no result field; keep remote continuity assertions only as explicit Phase 4 successor behavior if still needed for compile/runtime parity | P1 | required-now | focused test/typecheck |
+| CS14 | `src/v11/application/commit/commitRemotePorts.ts` | `ExecuteRemoteBubbleCommitCommandResult` | optional remote compile adapter | do not remove remote done-package continuity here; touch only if the shared application result contraction otherwise leaves direct type fallout unresolved | P2 | conditional-now | typecheck |
 
 ### 2) Data and Interface Contract
 
@@ -346,6 +359,7 @@ This is a local producer cutover slice with the necessary local application-resu
 | local stage-all input spelling | `auto` means stage all + generate done-package | temporary `auto` means stage all only | boolean | temporary compat until Phase 3 | P2 | required-now |
 | application commit result facts | includes `donePackagePath` | technical facts only | bubble id, sequence, envelope, state, commit SHA/message/staged files | shared result cleanup now; public wording/activation later | P1 | required-now |
 | local lifecycle metadata | includes `done_package_path` and done-package-inflated `refs_count` | technical commit facts only | commit SHA/message/staged count | local cleanup now; broader live refs later | P1 | required-now |
+| remote port continuity fields | includes done-package content for remote sync-back | remains until Phase 4 | existing remote continuity payload, including `donePackageContent` when still present in the live port | only narrow compile adapters allowed; do not trim continuity fields under this task | P2 | conditional-now |
 
 ### 3) Side Effects Contract
 
@@ -395,8 +409,9 @@ This is a local producer cutover slice with the necessary local application-resu
 | T8 | Append failure after source sync remains retryable. | Existing simulated append failure. | First call fails before state transition; retry finalizes same retained SHA with `COMMIT_RESULT`. | P1 | required-now |
 | T9 | Application result field removed. | Local commit result returned to caller. | `donePackagePath` is absent; commit facts remain present. | P1 | required-now |
 | T10 | Local lifecycle metadata has no done-package reference. | Capture local `bubble_committed` event or inspect test double. | Metadata includes commit facts/staged count and excludes `done_package_path`. | P1 | required-now |
-| T11 | Remote route remains explicitly successor-owned. | Existing remote continuity test adjusted only if type/compile requires. | No claim that remote hard cutover is complete; remote transport may still sync legacy continuity until Phase 4. | P2 | required-now |
-| T12 | CLI success output names the new envelope. | Commit CLI output projection receives a result with `COMMIT_RESULT` envelope. | Output no longer reports `DONE_PACKAGE`; `--auto` help/parser behavior is unchanged until Phase 3. | P2 | required-now |
+| T11 | Conditional remote adapter compiles without reopening remote cutover. | Shared `CommitBubbleResult.donePackagePath` is removed. If remote-route result mapping/port typing is affected, adapt only the compile-facing mapper/type; if it is not affected, no remote-port edit is required. | Typecheck passes. When the conditional adapter is triggered, the remote result no longer depends on the removed shared result field, while remote marker parsing, sync-back, `donePackageContent`, and done-package continuity remain unchanged until Phase 4. | P2 | conditional-now |
+| T12 | Remote route remains explicitly successor-owned. | Existing remote continuity test adjusted only if type/compile requires. | No claim that remote hard cutover is complete; remote transport may still sync legacy continuity until Phase 4. | P2 | required-now |
+| T13 | CLI success output names the new envelope. | Commit CLI output projection receives a result with `COMMIT_RESULT` envelope. | Output no longer reports `DONE_PACKAGE`; `--auto` help/parser behavior is unchanged until Phase 3. | P2 | required-now |
 
 ### 7) Shared Contract Compatibility
 
@@ -429,7 +444,7 @@ This is a local producer cutover slice with the necessary local application-resu
 | Closure buckets touched | `authority_producer`, `persisted_authority`, explicit `shared_contract`, limited `workflow_orchestration_consumers`, narrow `read_model_consumers` |
 | Intentionally collapsed closures | local event append, local state finalization, shared app result field removal, local lifecycle metadata cleanup |
 | Explicitly deferred closures | remote transport, CLI/API/UI activation, broad read-model cleanup, docs/prompt cleanup, protocol hard removal |
-| Safe bounded proof | local commit producer already owns git facts, transcript append, state transition, lifecycle metadata, and returned application result in one path; direct CLI/UI-router/test fallout is limited to the removed shared result field and event label |
+| Safe bounded proof | local commit producer already owns git facts, transcript append, state transition, lifecycle metadata, and returned application result in one path; direct CLI/UI-router/test fallout is limited to the removed shared result field and event label. The remote-port item is conditional compile fallout only and does not expand the closure into remote transport, marker parsing, sync-back, or done-package continuity removal. |
 
 ### 10) Success / Completion Proof Boundary
 
