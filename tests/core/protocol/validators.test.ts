@@ -3,6 +3,312 @@ import { describe, expect, it } from "vitest";
 import { validateProtocolEnvelope } from "../../../src/v11/shared/protocol/validators.js";
 
 describe("protocol envelope schema", () => {
+  function buildCommitResultEnvelope(payload: Record<string, unknown> = {}) {
+    return {
+      id: "msg_commit_result_001",
+      ts: "2026-02-21T12:34:56.000Z",
+      bubble_id: "b_test_01",
+      sender: "orchestrator",
+      recipient: "human",
+      type: "COMMIT_RESULT",
+      round: 1,
+      payload: {
+        metadata: {
+          commit_sha: "abc1234",
+          commit_message: "Complete bubble",
+          staged_files: ["src/types/protocol.ts"]
+        },
+        ...payload
+      },
+      refs: []
+    };
+  }
+
+  it("accepts COMMIT_RESULT envelope with closed technical metadata", () => {
+    const result = validateProtocolEnvelope(buildCommitResultEnvelope());
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
+      return;
+    }
+    expect(result.value.payload.metadata).toEqual({
+      commit_sha: "abc1234",
+      commit_message: "Complete bubble",
+      staged_files: ["src/types/protocol.ts"]
+    });
+  });
+
+  it("rejects COMMIT_RESULT payload summary", () => {
+    const result = validateProtocolEnvelope(
+      buildCommitResultEnvelope({ summary: "Done package summary" })
+    );
+
+    expect(result.ok).toBe(false);
+    if (result.ok) {
+      return;
+    }
+    expect(result.errors.some((error) => error.path === "payload.summary")).toBe(
+      true
+    );
+  });
+
+  it.each([
+    ["message", "commit completed"],
+    ["question", "commit completed?"],
+    ["decision", "approve"],
+    ["pass_intent", "task"],
+    ["findings", []],
+    ["findings_claim_state", "clean"],
+    ["findings_claim_source", "payload_flags"],
+    ["extra_field", "unexpected"]
+  ])("rejects COMMIT_RESULT non-metadata payload field %s", (field, value) => {
+    const result = validateProtocolEnvelope(
+      buildCommitResultEnvelope({ [field]: value })
+    );
+
+    expect(result.ok).toBe(false);
+    if (result.ok) {
+      return;
+    }
+    const matchingErrors = result.errors.filter(
+      (error) => error.path === `payload.${field}`
+    );
+    expect(matchingErrors).toHaveLength(1);
+    expect(matchingErrors[0]?.message).toBe(
+      "COMMIT_RESULT payload only allows metadata"
+    );
+  });
+
+  it("rejects COMMIT_RESULT missing required commit metadata", () => {
+    const result = validateProtocolEnvelope(
+      buildCommitResultEnvelope({
+        metadata: {
+          staged_files: ["src/types/protocol.ts"]
+        }
+      })
+    );
+
+    expect(result.ok).toBe(false);
+    if (result.ok) {
+      return;
+    }
+    expect(
+      result.errors.some(
+        (error) => error.path === "payload.metadata.commit_sha"
+      )
+    ).toBe(true);
+    expect(
+      result.errors.some(
+        (error) => error.path === "payload.metadata.commit_message"
+      )
+    ).toBe(true);
+  });
+
+  it("rejects COMMIT_RESULT when metadata is absent", () => {
+    const envelope = buildCommitResultEnvelope();
+    const result = validateProtocolEnvelope({
+      ...envelope,
+      payload: {}
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) {
+      return;
+    }
+    expect(
+      result.errors.some(
+        (error) => error.path === "payload.metadata.commit_sha"
+      )
+    ).toBe(true);
+    expect(
+      result.errors.some(
+        (error) => error.path === "payload.metadata.commit_message"
+      )
+    ).toBe(true);
+    expect(
+      result.errors.some(
+        (error) => error.path === "payload.metadata.staged_files"
+      )
+    ).toBe(true);
+  });
+
+  it("rejects COMMIT_RESULT when metadata is not an object", () => {
+    const result = validateProtocolEnvelope(
+      buildCommitResultEnvelope({ metadata: "commit metadata" })
+    );
+
+    expect(result.ok).toBe(false);
+    if (result.ok) {
+      return;
+    }
+    expect(
+      result.errors.some((error) => error.path === "payload.metadata")
+    ).toBe(true);
+    expect(
+      result.errors.some(
+        (error) => error.path === "payload.metadata.commit_sha"
+      )
+    ).toBe(true);
+    expect(
+      result.errors.some(
+        (error) => error.path === "payload.metadata.commit_message"
+      )
+    ).toBe(true);
+    expect(
+      result.errors.some(
+        (error) => error.path === "payload.metadata.staged_files"
+      )
+    ).toBe(true);
+  });
+
+  it.each([
+    undefined,
+    [],
+    "src/types/protocol.ts",
+    ["src/types/protocol.ts", ""]
+  ])("rejects COMMIT_RESULT invalid staged_files value %#", (stagedFiles) => {
+    const result = validateProtocolEnvelope(
+      buildCommitResultEnvelope({
+        metadata: {
+          commit_sha: "abc1234",
+          commit_message: "Complete bubble",
+          staged_files: stagedFiles
+        }
+      })
+    );
+
+    expect(result.ok).toBe(false);
+    if (result.ok) {
+      return;
+    }
+    expect(
+      result.errors.some(
+        (error) => error.path === "payload.metadata.staged_files"
+      )
+    ).toBe(true);
+  });
+
+  it.each([
+    "donePackagePath",
+    "done_package_path",
+    "donePackageContent",
+    "done_package_content"
+  ])("rejects COMMIT_RESULT done-package payload field %s", (field) => {
+    const result = validateProtocolEnvelope(
+      buildCommitResultEnvelope({ [field]: "done-package.md" })
+    );
+
+    expect(result.ok).toBe(false);
+    if (result.ok) {
+      return;
+    }
+    const matchingErrors = result.errors.filter(
+      (error) => error.path === `payload.${field}`
+    );
+    expect(matchingErrors).toHaveLength(1);
+    expect(matchingErrors[0]?.message).toContain("done-package fields");
+  });
+
+  it.each([
+    "donePackagePath",
+    "done_package_path",
+    "donePackageContent",
+    "done_package_content"
+  ])("rejects COMMIT_RESULT done-package metadata field %s", (field) => {
+    const result = validateProtocolEnvelope(
+      buildCommitResultEnvelope({
+        metadata: {
+          commit_sha: "abc1234",
+          commit_message: "Complete bubble",
+          staged_files: ["src/types/protocol.ts"],
+          [field]: "done-package.md"
+        }
+      })
+    );
+
+    expect(result.ok).toBe(false);
+    if (result.ok) {
+      return;
+    }
+    const matchingErrors = result.errors.filter(
+      (error) => error.path === `payload.metadata.${field}`
+    );
+    expect(matchingErrors).toHaveLength(1);
+    expect(matchingErrors[0]?.message).toContain("done-package fields");
+  });
+
+  it("rejects COMMIT_RESULT unknown metadata keys", () => {
+    const result = validateProtocolEnvelope(
+      buildCommitResultEnvelope({
+        metadata: {
+          commit_sha: "abc1234",
+          commit_message: "Complete bubble",
+          staged_files: ["src/types/protocol.ts"],
+          extra: "not allowed"
+        }
+      })
+    );
+
+    expect(result.ok).toBe(false);
+    if (result.ok) {
+      return;
+    }
+    expect(
+      result.errors.some((error) => error.path === "payload.metadata.extra")
+    ).toBe(true);
+  });
+
+  it("rejects COMMIT_RESULT parity metadata as unknown metadata only", () => {
+    const result = validateProtocolEnvelope(
+      buildCommitResultEnvelope({
+        metadata: {
+          commit_sha: "abc1234",
+          commit_message: "Complete bubble",
+          staged_files: ["src/types/protocol.ts"],
+          findings_blocking_open_total: -1
+        }
+      })
+    );
+
+    expect(result.ok).toBe(false);
+    if (result.ok) {
+      return;
+    }
+    const matchingErrors = result.errors.filter(
+      (error) =>
+        error.path === "payload.metadata.findings_blocking_open_total"
+    );
+    expect(matchingErrors).toHaveLength(1);
+    expect(matchingErrors[0]?.message).toBe(
+      "Unknown COMMIT_RESULT metadata field"
+    );
+  });
+
+  it("reports COMMIT_RESULT in invalid type diagnostics", () => {
+    const result = validateProtocolEnvelope({
+      id: "msg_invalid_type",
+      ts: "2026-02-21T12:34:56.000Z",
+      bubble_id: "b_test_01",
+      sender: "codex",
+      recipient: "claude",
+      type: "UNKNOWN",
+      round: 1,
+      payload: {},
+      refs: []
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) {
+      return;
+    }
+    expect(
+      result.errors.some(
+        (error) =>
+          error.path === "type" && error.message.includes("COMMIT_RESULT")
+      )
+    ).toBe(true);
+  });
+
   it("accepts PASS envelope with optional intent and findings", () => {
     const result = validateProtocolEnvelope({
       id: "msg_001",

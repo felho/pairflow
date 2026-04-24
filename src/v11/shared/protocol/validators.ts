@@ -10,6 +10,7 @@ import {
   type ValidationResult
 } from "../validation/primitives.js";
 import {
+  protocolMessageTypes,
   isProtocolMessageType,
   isProtocolParticipant,
   type ProtocolEnvelope
@@ -68,8 +69,7 @@ export function validateProtocolEnvelope(
   if (!isProtocolMessageType(envelopeType)) {
     errors.push({
       path: "type",
-      message:
-        "Must be one of: TASK, PASS, HUMAN_QUESTION, HUMAN_REPLY, CONVERGENCE, APPROVAL_REQUEST, APPROVAL_DECISION, DONE_PACKAGE"
+      message: `Must be one of: ${protocolMessageTypes.join(", ")}`
     });
   }
 

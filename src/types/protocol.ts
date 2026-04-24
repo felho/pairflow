@@ -18,6 +18,7 @@ export const protocolMessageTypes = [
   "CONVERGENCE",
   "APPROVAL_REQUEST",
   "APPROVAL_DECISION",
+  "COMMIT_RESULT",
   "DONE_PACKAGE"
 ] as const;
 
