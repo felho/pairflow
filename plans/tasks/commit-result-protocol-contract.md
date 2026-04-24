@@ -2,7 +2,7 @@
 artifact_type: task
 artifact_id: task_commit_result_protocol_contract_v1
 title: "Commit Result Protocol Contract"
-status: draft
+status: implementable
 phase: phase1
 target_files:
   - "src/types/protocol.ts"
@@ -18,6 +18,11 @@ owners:
 ---
 
 # Task: Commit Result Protocol Contract
+
+## Revision Log
+
+1. `2026-04-24` (docs-refine pass): promoted the task to `implementable` after the latest ReviewSpec `approve_task` decision recorded in `/Users/felho/dev/pairflow/.pairflow/bubbles/commit-result-doc-refine/artifacts/task.md`, clarified that the parent plan reference is an approved review baseline while the parent plan frontmatter remains `draft`, and locked the implementation-ready boundary to the Phase 1 protocol contract slice.
+2. Downgrade trigger: return this task to `draft` or rerun task-mode ReviewSpec if the referenced ReviewSpec decision is superseded, the parent-plan baseline changes in a way that alters Phase 1 scope, or new required-now findings reopen producer/read-model/CLI/remote cutover scope.
 
 ## L0 - Policy
 
@@ -45,7 +50,7 @@ Introduce the `COMMIT_RESULT` protocol envelope contract as the technical commit
 ### Plan Linkage
 
 1. Parent plan gap closed: Phase 1, `commit-result-protocol-contract`.
-2. Depends on: Approved plan [plans/commit-snapshot-and-completion-artifact-retirement-plan-v1.md](/Users/felho/dev/pairflow/plans/commit-snapshot-and-completion-artifact-retirement-plan-v1.md).
+2. Depends on: ReviewSpec-approved parent-plan baseline [plans/commit-snapshot-and-completion-artifact-retirement-plan-v1.md](/Users/felho/dev/pairflow/plans/commit-snapshot-and-completion-artifact-retirement-plan-v1.md); approval anchor is the bubble task input at `/Users/felho/dev/pairflow/.pairflow/bubbles/commit-result-doc-refine/artifacts/task.md` (`approve_task`, Remaining Task Impact unchanged), and the parent plan file itself currently remains `status: draft`.
 3. Unlocks / impacts successors: `local-commit-done-package-removal`, `commit-cli-stage-all-cutover`, `remote-commit-result-alignment`, `done-package-live-reference-cleanup`.
 4. Task-list impact: replaces deleted obsolete Phase 1A-1D done-package compatibility tasks.
 5. Inherited validation / exit expectation: `COMMIT_RESULT` validates with required technical fields; prose summary, done-package fields, missing commit fields, and unknown metadata keys are rejected.
@@ -229,7 +234,7 @@ Introduce the `COMMIT_RESULT` protocol envelope contract as the technical commit
 | Item | Rule | Implementation / Review Consequence | Priority | Timing |
 |---|---|---|---|---|
 | Parent gap closed | Phase 1 `commit-result-protocol-contract`. | This task creates the event contract successor producers will use. | P1 | required-now |
-| Depends on | Approved parent plan. | No predecessor task required. | P1 | required-now |
+| Depends on | ReviewSpec-approved parent-plan baseline; approval anchor is `/Users/felho/dev/pairflow/.pairflow/bubbles/commit-result-doc-refine/artifacts/task.md` (`approve_task`, Remaining Task Impact unchanged), while parent plan frontmatter remains `status: draft`. | No predecessor task required. | P1 | required-now |
 | Unlocks / impacts successors | Local producer, CLI/API, remote alignment, live reference cleanup. | Successors inherit field names and rejection rules. | P1 | required-now |
 | Task-list impact | Replaces obsolete Phase 1A-1D compatibility task set. | Do not revive additive/compat done-package framing. | P1 | required-now |
 | Inherited validation / exit expectation | Valid `COMMIT_RESULT`; invalid summary/missing/unknown/done-package fields rejected. | Tests must prove each acceptance/rejection rule. | P1 | required-now |
@@ -283,9 +288,9 @@ Introduce the `COMMIT_RESULT` protocol envelope contract as the technical commit
 | `metadata.commit_sha` | N/A. | non-empty string. | yes | no | additive | P1 | required-now |
 | `metadata.commit_message` | N/A. | non-empty string. | yes | no | additive | P1 | required-now |
 | `metadata.staged_files` | N/A. | non-empty array of non-empty strings. | yes | no | additive | P1 | required-now |
-| `payload.summary` for `COMMIT_RESULT` | N/A. | forbidden. | N/A | no | breaking only for invalid future `COMMIT_RESULT` drafts | P1 | required-now |
-| Done-package fields for `COMMIT_RESULT` | N/A. | forbidden in payload and metadata. | N/A | no | breaking only for invalid future `COMMIT_RESULT` drafts | P1 | required-now |
-| Unknown `COMMIT_RESULT` metadata keys | N/A. | forbidden. | N/A | no | breaking only for invalid future `COMMIT_RESULT` drafts | P1 | required-now |
+| `payload.summary` for `COMMIT_RESULT` | N/A. | forbidden. | N/A | no | additive guard for the new `COMMIT_RESULT` envelope contract | P1 | required-now |
+| Done-package fields for `COMMIT_RESULT` | N/A. | forbidden in payload and metadata. | N/A | no | additive guard for the new `COMMIT_RESULT` envelope contract | P1 | required-now |
+| Unknown `COMMIT_RESULT` metadata keys | N/A. | forbidden. | N/A | no | additive guard for the new closed metadata fieldset | P1 | required-now |
 
 ### 3) Side Effects Contract
 
@@ -302,7 +307,7 @@ Constraint: implementation must not introduce runtime side effects.
 |---|---|---|---|---|---|---|---|
 | Missing `metadata.commit_sha` | N/A | result | validation error at `payload.metadata.commit_sha` | COMMIT_RESULT_MISSING_COMMIT_SHA | N/A | P1 | required-now |
 | Missing `metadata.commit_message` | N/A | result | validation error at `payload.metadata.commit_message` | COMMIT_RESULT_MISSING_COMMIT_MESSAGE | N/A | P1 | required-now |
-| Missing/empty `metadata.staged_files` | N/A | result | validation error at `payload.metadata.staged_files` | COMMIT_RESULT_INVALID_STAGED_FILES | N/A | P1 | required-now |
+| Missing, empty, non-array, or non-empty-array-with-empty-string `metadata.staged_files` | N/A | result | validation error at `payload.metadata.staged_files` | COMMIT_RESULT_INVALID_STAGED_FILES | N/A | P1 | required-now |
 | `payload.summary` present on `COMMIT_RESULT` | N/A | result | validation error at `payload.summary` | COMMIT_RESULT_SUMMARY_FORBIDDEN | N/A | P1 | required-now |
 | done-package field present | N/A | result | validation error at the offending path | COMMIT_RESULT_DONE_PACKAGE_FIELD_FORBIDDEN | N/A | P1 | required-now |
 | unknown metadata key present on `COMMIT_RESULT` | N/A | result | validation error at `payload.metadata.<key>` | COMMIT_RESULT_UNKNOWN_METADATA | N/A | P1 | required-now |
@@ -329,7 +334,7 @@ Constraint: implementation must not introduce runtime side effects.
 | T6 | Reject done-package fields. | `COMMIT_RESULT` includes `donePackagePath`, `done_package_path`, `donePackageContent`, or `done_package_content` in payload or metadata. | Validation fails at the offending path. | P1 | required-now |
 | T7 | Reject unknown metadata keys. | `COMMIT_RESULT` metadata includes `extra`. | Validation fails at `payload.metadata.extra`. | P1 | required-now |
 | T8 | Preserve existing envelope behavior. | Existing PASS/findings validation tests. | Existing tests remain passing. | P1 | required-now |
-| T9 | Temporary `DONE_PACKAGE` acceptance not target-state endorsement. | Existing current producers/tests may still reference `DONE_PACKAGE`. | This task does not remove `DONE_PACKAGE`; successor tasks own hard removal. | P2 | required-now |
+| T9 | Temporary `DONE_PACKAGE` validator acceptance is not target-state endorsement. | Existing current commit producers may still emit `DONE_PACKAGE`, and existing protocol tests may still cover that legacy event until producer cutover. | This task does not remove `DONE_PACKAGE`, add new producer tests, or bless producer behavior; successor tasks own hard removal and producer/read-model test updates. | P2 | required-now |
 
 ### 7) Shared Contract Compatibility
 
@@ -377,11 +382,24 @@ Constraint: implementation must not introduce runtime side effects.
 
 ## Assumptions
 
-1. This is the first task from the approved plan and maps to `commit-result-protocol-contract`.
+1. This is the first task from the ReviewSpec-approved parent-plan baseline and maps to `commit-result-protocol-contract`; the approval source for this refinement is `/Users/felho/dev/pairflow/.pairflow/bubbles/commit-result-doc-refine/artifacts/task.md`.
 2. Temporary `DONE_PACKAGE` validation may remain in this task because producer hard removal is explicitly assigned to successor tasks.
 3. The implementation will keep the current validator architecture unless the implementer finds a smaller equivalent seam.
+
+## Spec Lock
+
+In this task-artifact convention, `status: implementable` means specification-ready handoff, not that runtime code changes are already delivered.
+
+Task state is `IMPLEMENTABLE` because:
+
+1. The implementation scope is bounded to protocol type, payload validation, and protocol validator tests.
+2. The parent-plan dependency is explicit and auditable without claiming the parent plan frontmatter is no longer `draft`.
+3. The required acceptance/rejection branches are enumerated in the call-site matrix, data contract, error contract, and test matrix.
+4. Producer, read-model, CLI/API, remote, live-doc, and recovery closures are explicitly deferred to successor tasks.
+5. The latest ReviewSpec decision is `approve_task` with Remaining Task Impact unchanged.
+
+This implementable status must be downgraded back to `draft` or re-reviewed if the approval source is superseded, the parent-plan baseline changes Phase 1 scope, or required-now findings reopen out-of-scope producer/read-model/CLI/remote closures.
 
 ## Open Questions
 
 No blocking open questions.
-
