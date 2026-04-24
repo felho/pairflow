@@ -2,7 +2,7 @@
 artifact_type: task
 artifact_id: task_reviewer_handoff_full_ontology_inline_removal_bugfix_phase1_v2
 title: "Reviewer Handoff Policy Compaction: reminder + snapshot pointer (Phase 1)"
-status: implementable
+status: completed
 phase: phase1
 target_files:
   - src/v11/infrastructure/channel/tmux/tmuxDeliveryMessageBuilder.ts
