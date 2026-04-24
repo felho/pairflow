@@ -172,6 +172,16 @@ async function emitDeliveryNotificationAck(
   });
 }
 
+function expectStringOccurrence(
+  text: string | undefined,
+  snippet: string,
+  expectedCount: number
+): void {
+  expect(text).toBeDefined();
+  const actualCount = (text ?? "").split(snippet).length - 1;
+  expect(actualCount).toBe(expectedCount);
+}
+
 function expectNoForbiddenReviewerCommandGateTokens(text: string | undefined): void {
   expect(text).toBeDefined();
   for (const forbiddenToken of REVIEWER_COMMAND_GATE_FORBIDDEN) {
@@ -1112,7 +1122,7 @@ describe("emitDeliveryNotificationAck", () => {
     ).toBe(true);
   });
 
-  it("routes PASS delivery to recipient agent pane with full ontology in fresh mode", async () => {
+  it("routes PASS delivery to recipient agent pane with compact policy handoff in fresh mode", async () => {
     const calls: string[][] = [];
     const runner: TmuxRunner = (args): Promise<TmuxRunResult> => {
       calls.push(args);
@@ -1184,6 +1194,15 @@ describe("emitDeliveryNotificationAck", () => {
     );
     expect(messageCall?.[4]).toContain("Severity Ontology v1 reminder");
     expect(messageCall?.[4]).toContain(
+      "Reviewer policy file: /tmp/repo/.pairflow/bubbles/b_delivery_01/artifacts/reviewer-policy-snapshot.md"
+    );
+    expect(messageCall?.[4]).toContain("Read this file before first review action.");
+    expectStringOccurrence(
+      messageCall?.[4],
+      "Reviewer policy file: /tmp/repo/.pairflow/bubbles/b_delivery_01/artifacts/reviewer-policy-snapshot.md",
+      1
+    );
+    expect(messageCall?.[4]).not.toContain(
       "Full canonical ontology (embedded from `docs/reviewer-severity-ontology.md`)"
     );
     expect(messageCall?.[4]).toContain("Blocker severities (`P0/P1`) require concrete evidence");
@@ -1192,6 +1211,11 @@ describe("emitDeliveryNotificationAck", () => {
     expect(messageCall?.[4]).toContain("Out-of-scope observations should be notes (`P3`)");
     expect(messageCall?.[4]).toContain(
       "Implementer test evidence has been orchestrator-verified. Do not re-run full tests unless a trigger from the decision matrix applies."
+    );
+    expectStringOccurrence(
+      messageCall?.[4],
+      "Decision matrix triggers that still require tests:",
+      1
     );
     expect(messageCall?.[4]).toContain("Phase 1 reviewer round flow (prompt-level only):");
     expect(messageCall?.[4]).toContain("`Parallel Scout Scan`");
@@ -1538,6 +1562,12 @@ describe("emitDeliveryNotificationAck", () => {
     );
 
     expect(messageCall?.[4]).toContain("Severity Ontology v1 reminder");
+    expect(messageCall?.[4]).toContain(
+      "Run required checks before final judgment. Reason: reviewer test verification directive was unavailable."
+    );
+    expect(messageCall?.[4]).not.toContain(
+      "Decision matrix triggers that still require tests:"
+    );
     expect(messageCall?.[4]).toContain("Phase 1 reviewer round flow (prompt-level only):");
     expect(messageCall?.[4]).toContain(
       "Summary scope guardrail: scope statements must cover only current worktree changes."
@@ -1778,7 +1808,7 @@ describe("emitDeliveryNotificationAck", () => {
     expect(findingsMessage).not.toContain(REVIEWER_COMMAND_GATE_REQ_B);
   });
 
-  it("re-injects full ontology on every fresh-mode reviewer handoff round with directive", async () => {
+  it("keeps compact reviewer policy delivery on every fresh-mode reviewer handoff round with directive", async () => {
     const calls: string[][] = [];
     let lastDeliveryMessage = "";
     const reviewerTestDirective: ReviewerTestExecutionDirective = {
@@ -1849,10 +1879,24 @@ describe("emitDeliveryNotificationAck", () => {
     for (const messageCall of reviewerMessages) {
       expect(messageCall[4]).toContain("Severity Ontology v1 reminder");
       expect(messageCall[4]).toContain(
+        "Reviewer policy file: /tmp/repo/.pairflow/bubbles/b_delivery_01/artifacts/reviewer-policy-snapshot.md"
+      );
+      expect(messageCall[4]).toContain("Read this file before first review action.");
+      expectStringOccurrence(
+        messageCall[4],
+        "Reviewer policy file: /tmp/repo/.pairflow/bubbles/b_delivery_01/artifacts/reviewer-policy-snapshot.md",
+        1
+      );
+      expect(messageCall[4]).not.toContain(
         "Full canonical ontology (embedded from `docs/reviewer-severity-ontology.md`)"
       );
       expect(messageCall[4]).toContain(
         "Implementer test evidence has been orchestrator-verified. Do not re-run full tests unless a trigger from the decision matrix applies."
+      );
+      expectStringOccurrence(
+        messageCall[4],
+        "Decision matrix triggers that still require tests:",
+        1
       );
       expect(messageCall[4]).toContain(
         "For summary scope claims, do not use branch-range diffs such as `git diff <revA>..<revB>` (including `git diff main..HEAD`)."
@@ -1956,6 +2000,20 @@ describe("emitDeliveryNotificationAck", () => {
     );
     expectReviewerValidationClaimGuardrails(messageCall?.[4]);
     expect(messageCall?.[4]).toContain(
+      "Reviewer policy file: /tmp/repo/.pairflow/bubbles/b_delivery_01/artifacts/reviewer-policy-snapshot.md"
+    );
+    expect(messageCall?.[4]).toContain("Read this file before first review action.");
+    expectStringOccurrence(
+      messageCall?.[4],
+      "Reviewer policy file: /tmp/repo/.pairflow/bubbles/b_delivery_01/artifacts/reviewer-policy-snapshot.md",
+      1
+    );
+    expectStringOccurrence(
+      messageCall?.[4],
+      "Decision matrix triggers that still require tests:",
+      1
+    );
+    expect(messageCall?.[4]).not.toContain(
       "Full canonical ontology (embedded from `docs/reviewer-severity-ontology.md`)"
     );
   });

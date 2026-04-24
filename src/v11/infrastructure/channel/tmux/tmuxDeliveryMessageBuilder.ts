@@ -1,3 +1,5 @@
+import { resolve } from "node:path";
+
 import { buildReviewerAgentSelectionGuidance } from "../../../shared/reviewer/reviewerGuidance.js";
 import { buildReviewerSeverityOntologyReminder } from "../../../shared/reviewer/reviewerSeverityOntology.js";
 import {
@@ -33,6 +35,13 @@ export type DeliveryMessageRecipientRole =
   | "reviewer"
   | "meta-reviewer"
   | "status";
+
+function resolveReviewerPolicySnapshotPath(bubbleConfig: BubbleConfig): string {
+  return resolve(
+    bubbleConfig.repo_path,
+    `.pairflow/bubbles/${bubbleConfig.id}/artifacts/reviewer-policy-snapshot.md`
+  );
+}
 
 function resolvePayloadActor(envelope: ProtocolEnvelope): string | null {
   const metadata = envelope.payload.metadata;
@@ -108,12 +117,18 @@ function buildReviewerDeliveryAction(input: {
   reviewerFocus?: ReviewerFocusExtractionResult;
 }): string {
   if (input.envelope.type === "PASS") {
-    const useFullReviewerPolicyContext = input.bubbleConfig.reviewer_context_mode === "fresh";
+    const reviewerPolicySnapshotPath = resolveReviewerPolicySnapshotPath(
+      input.bubbleConfig
+    );
+    const includeFallbackDecisionMatrixReminder =
+      input.bubbleConfig.reviewer_context_mode === "fresh";
     const testDirective =
       input.reviewerTestDirective === undefined
         ? [
             "Run required checks before final judgment. Reason: reviewer test verification directive was unavailable.",
-            ...(useFullReviewerPolicyContext ? [buildReviewerDecisionMatrixReminder()] : [])
+            ...(includeFallbackDecisionMatrixReminder
+              ? [buildReviewerDecisionMatrixReminder()]
+              : [])
           ].join(" ")
         : formatReviewerTestExecutionDirective(input.reviewerTestDirective);
     const projectionVariant: ReviewerCommandGateProjectionVariant =
@@ -135,9 +150,9 @@ function buildReviewerDeliveryAction(input: {
     return [
       "Implementer handoff received. Run a fresh review now.",
       buildReviewerAgentSelectionGuidance(input.bubbleConfig.review_artifact_type),
-      buildReviewerSeverityOntologyReminder({
-        includeFullOntology: useFullReviewerPolicyContext
-      }),
+      buildReviewerSeverityOntologyReminder(),
+      `Reviewer policy file: ${reviewerPolicySnapshotPath}`,
+      "Read this file before first review action.",
       testDirective,
       buildReviewerScoutExpansionWorkflowGuidance(),
       buildReviewerPassOutputContractGuidance(),
