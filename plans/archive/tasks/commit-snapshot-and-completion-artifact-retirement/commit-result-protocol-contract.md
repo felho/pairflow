@@ -2,7 +2,7 @@
 artifact_type: task
 artifact_id: task_commit_result_protocol_contract_v1
 title: "Commit Result Protocol Contract"
-status: implementable
+status: completed
 phase: phase1
 target_files:
   - "src/types/protocol.ts"
@@ -21,6 +21,7 @@ owners:
 
 ## Revision Log
 
+1. `2026-04-25` (implementation complete): completed and merged via bubble `commit-result-protocol-contract`; bubble commit `ed250abf1ca0b78d94ad79c4733a1bd0f4c6a695`, merge commit `c300b8939f25b709afeafd7105d3d18ae85c10e5`. Archived from `plans/tasks/` after successful bubble merge/delete. Successor task is `local-commit-done-package-removal`.
 1. `2026-04-24` (docs-refine pass): promoted the task to `implementable` after the latest ReviewSpec `approve_task` decision recorded in `/Users/felho/dev/pairflow/.pairflow/bubbles/commit-result-doc-refine/artifacts/task.md`, clarified that the parent plan reference is an approved review baseline while the parent plan frontmatter remains `draft`, and locked the implementation-ready boundary to the Phase 1 protocol contract slice.
 2. Downgrade trigger: return this task to `draft` or rerun task-mode ReviewSpec if the referenced ReviewSpec decision is superseded, the parent-plan baseline changes in a way that alters Phase 1 scope, or new required-now findings reopen producer/read-model/CLI/remote cutover scope.
 
