@@ -47,7 +47,11 @@ owners:
 6. A current-tree default local session producer viszont nem a router vagy a restart wrapper, hanem a start default wiring:
    - `startBubbleDefaults.launchBubbleSessionAck` -> `tmuxManager.launchBubbleSessionAck`
    - ez a canonical shared tmux session materialization seam
-6. A bounded problema ebben a fazisban nem altalanos attach redesign, hanem az, hogy a UI-bol inditott bubble `start/restart` nem szivarogtathatja at a UI tmux authorityt a bubble uj sessionjere.
+7. A `src/v11/application/start/startCommandTmuxLaunch.ts` current-tree shared start seam:
+   - local start es remote start is consume-olja
+   - remote start current-tree consume familyje: `startCommandRemoteExecution.ts` -> `launchFreshTmuxSession(...)`
+   - ebben a taskban ez retained compatibility consumer, nem uj remote owner
+8. A bounded problema ebben a fazisban nem altalanos attach redesign, hanem az, hogy a UI-bol inditott bubble `start/restart` nem szivarogtathatja at a UI tmux authorityt a bubble uj sessionjere, mikozben a shared start seam remote consume baseline-ja valtozatlan marad.
 
 ## L0 - Policy
 
@@ -72,6 +76,7 @@ owners:
 3. Stale runtime registry auto-healing vagy reconcile redesign.
 4. Bubble state machine/protocol valtoztatas.
 5. Remote bubble topology, remote attach vagy remote tmux authority.
+6. Remote start/launch semantics vagy remote authority ownership ujraertelmezese.
 
 ### Safety Defaults
 
@@ -100,10 +105,12 @@ owners:
 3. A tenyleges current-tree default local session-materialization ownership current tree-ben a `launchSessionAck` default wiringon ul:
    - `src/v11/defaults/start/startBubbleDefaults.ts`
    - `src/v11/infrastructure/channel/tmux/tmuxManager.ts`
-4. A `src/v11/application/start/startCommandTmuxLaunch.ts` a start-family consume/assembly seam, amely a shared `launchSessionAck` producerre tamaszkodik.
-4. A `routerActionDispatch.ts` current tree-ben dispatch layer, nem bizonyitott root-cause owner; ezert nem required-now target ebben a taskban.
-5. A `startCommandDefaults.ts` current tree-ben bootstrap shell-spawn es helper boundary; ez optional guard-scope lehet, de nem a primer shared session-materialization owner.
-6. A real bounded slice ezert nem altalanos UI router hardening, hanem `UI authority producer + start default wiring + shared session-materialization hardening`.
+4. A `src/v11/application/start/startCommandTmuxLaunch.ts` current-tree shared start consume/assembly seam, amelyet local start es remote start is hasznal:
+   - local owner path: `startBubble(...)`
+   - retained compatibility consumer: `src/v11/application/start/startCommandRemoteExecution.ts`
+5. A `routerActionDispatch.ts` current tree-ben dispatch layer, nem bizonyitott root-cause owner; ezert nem required-now target ebben a taskban.
+6. A `startCommandDefaults.ts` current tree-ben bootstrap shell-spawn es helper boundary; ez optional guard-scope lehet, de nem a primer shared session-materialization owner.
+7. A real bounded slice ezert nem altalanos UI router hardening, hanem `UI authority producer + start default wiring + shared session-materialization hardening`, explicit remote consume-family preservation guarddal.
 
 ### Control Model
 
@@ -128,9 +135,11 @@ owners:
    - `pnpm ui:start|stop|restart|status` tovabbra is mukodik
    - local bubble attach sessionnev alapu marad
    - bubble restart tovabbra is recovery-friendly marad eltunt elozo tmux session eseten
+   - a shared `startCommandTmuxLaunch.ts` remote consume baseline-ja nem reinterpretalodik
 2. `forbidden_regression_interpretations`
    - a fix nem jelentheti azt, hogy a UI-bol inditott bubble lifecycle csak UI socket-aware attach mellett mukodik
    - a fix nem nyithat uj bubble config/env kovetelmenyt a felhasznalo fele
+   - a fix nem nevezheti at vagy cserelheti le a remote start authority semantics-et local UI authority bugfix cimen
 3. `replacement_proof_required_if_removed`
    - ha a UI process authorityjabol, a start default wiringbol vagy a shared tmux producerbol barmilyen implicit tmux oroklest kiveszunk, regresszios bizonyitas kell arra, hogy a bubble restart/session materializacio a canonical bubble authorityn marad
 
@@ -142,6 +151,7 @@ owners:
    - `src/v11/defaults/start/startBubbleDefaults.ts`
    - `src/v11/application/start/startCommandTmuxLaunch.ts`
    - `src/v11/infrastructure/channel/tmux/tmuxManager.ts`
+   - retained compatibility consumer: `src/v11/application/start/startCommandRemoteExecution.ts`
 3. `workflow_orchestration_consumers`
    - `runRestartFlow.ts`
 4. `read_model_consumers`
@@ -153,7 +163,8 @@ owners:
 Verdict:
 
 1. A bounded task shape itt `producer + default-wiring/shared-session-producer boundary + restart_recovery authority hardening`.
-2. Az attach contract redesign tovabbra is kulon, nem required-now munka.
+2. A shared launch seam remote consume-ja current-tree valosag, de ebben a taskban compatibility fence, nem kulon remote activation closure.
+3. Az attach contract redesign tovabbra is kulon, nem required-now munka.
 
 ### Call-Site Matrix
 
@@ -162,7 +173,7 @@ Verdict:
 | CS1 | `scripts/ui-server.sh` | a UI Node process launch kornyezete nem szivarogtathat bubble lifecycle authorityt a UI socket felol | P1 |
 | CS2 | `src/v11/defaults/start/startBubbleDefaults.ts` | a default local session producer explicitten a canonical shared `launchSessionAck` authorityt hasznalja UI-triggered start/restart alatt is; a task nem maradhat csak application-layer consume oldalon | P1 |
 | CS3 | `src/v11/infrastructure/channel/tmux/tmuxManager.ts` | a shared `launchBubbleSessionAck` producer nem materializalhat bubble sessiont a UI tmux authority alatt | P1 |
-| CS4 | `src/v11/application/start/startCommandTmuxLaunch.ts` | a start-family consume seam explicitten a canonical shared producerre kotodjon, ne rejtett alternative materialization pathra | P1 |
+| CS4 | `src/v11/application/start/startCommandTmuxLaunch.ts` | a shared start seam explicitten a canonical local producerre kotodjon UI-triggered local start/restart alatt, mikozben a remote consume baseline nem reinterpretalodik | P1 |
 | CS5 | `src/v11/application/restart/runRestartFlow.ts` | a restart path acceptance proofja a shared start/default-wiring authority boundaryre kotodjon, ne mockolt success route-ra hagyatkozzon | P1 |
 | CS6 | `tests/core/runtime/tmuxManager.test.ts` | required-now automated default-path proof kell a shared `launchSessionAck`/tmux producer boundaryre | P1 |
 | CS7 | `tests/core/bubble/startBubble.test.ts`, `tests/v11/application/restart/runRestartFlow.test.ts` | orchestration-level regresszios bizonyitas kell arra, hogy a start/restart path nem fogad el UI-authority leak eredmenyt canonical successkent | P1 |
@@ -174,6 +185,29 @@ Implementation notes:
 3. Az attach workaround nem elfogadhato substitute; a session materialization authorityt kell javitani.
 4. A `startCommandDefaults.ts` ebben a taskban legfeljebb optional guard-seam; nem szabad a primer shared owner szerepet ra tolni.
 5. Ha a regresszios bizonyitas egy shell smoke-ot igenyel az automated default-path coverage mellett, az explicit legyen, ne implicit operatori tudaskent maradjon.
+6. Ha a shared `startCommandTmuxLaunch.ts` touched marad, a remote consume branch retained baseline-ja explicit no-reinterpretation guard; a `startCommandRemoteExecution.ts` nem valik required-now targette csak azert, mert ugyanazt a seamet consume-olja.
+
+### Complexity-Risk Triage
+
+1. `risk_score`
+   - `5`
+2. `split_decision`
+   - `single_task_acceptable_with_explicit_remote_consumer_fence`
+3. `authority_risk`
+   - `2`
+4. `surface_spread`
+   - `1`
+5. `identity_join_risk`
+   - `1`
+6. `activation_coupling`
+   - `0`
+7. `prerequisite_risk`
+   - `1`
+8. `acceptance_multiplicity`
+   - `1`
+9. `why_no_further_split`
+   - a UI launch env hardening, a shared local session producer boundary, es a restart recovery acceptance proof ugyanannak a local authority leaknek a szukseges closure-ja
+   - a remote consume branch current-tree szerint ugyanazon shared seam passziv compatibility consume-ja; ettol meg nem lesz kulon remote activation ownership ebben a fazisban
 
 ### Data / Interface Contract
 
@@ -202,6 +236,27 @@ Normative rules:
 3. `alignment_now_or_later`
    - most az authority leak zarasa required-now a start/restart pathon
    - kesobb lehet attach/read-model hardening, ha marad residual issue
+4. `retained_compatibility_consumer`
+   - `src/v11/application/start/startCommandRemoteExecution.ts` current-tree consume familyje maradjon ugyanazon shared launch seam passziv kompatibilitasi consumerenek; nincs uj remote authority contract ebben a taskban
+
+### Precondition And Side-Effect Boundary
+
+1. `validations_before_irreversible_side_effects`
+   - UI-triggered local start/restart nem claimelhet canonical success proofot, amig nincs bizonyitva, hogy az uj bubble session a canonical local bubble authority alatt materializalodott
+   - ha a shared `startCommandTmuxLaunch.ts` seam touched, a remote consume baseline nem reinterpretalodhat local authority fix cimen
+2. `required_side_effect_ordering`
+   - a restart current-tree sorrendje megmarad: recovery marker persist -> elozo tmux terminate -> runtime session remove -> `startBubble(...)`
+   - a stale-session claim/remove/reclaim ordering tovabbra is a retained start-session path ownershipje; a task ezt rely-on boundarykent kezelheti, de nem redesignolja
+3. `forbidden_early_side_effects`
+   - nincs `running` / canonical success, ha az authority bizonyitas szerint a session a UI socket alatt jon letre vagy a canonical local authority nem feloldhato
+   - nincs attach oldali socket-aware workaround mint acceptance substitute
+   - nincs remote launch semantics mutacio pusztan a shared seam touched volta miatt
+4. `invalid_precondition_behavior`
+   - UI-authority contamination vagy canonical local authority hianya start/restart hibava fajul; fail-closed eredmeny kell, nem degraded success
+   - ha contamination csak launch-kiserlet utan eszlelheto, a task legfeljebb a transient contaminated runtime artifact fail-closed eltavolitasat ownershipolja; attach contractot, remote authority semantics-et vagy state-machine jelentest nem valtoztathat
+5. `coordination_primitives`
+   - retained `claimSession/removeSession` choreography reuse-olheto
+   - uj coordination/serialization primitive nincs required-now scope-ban
 
 ### Closure Budget
 
@@ -219,9 +274,17 @@ Normative rules:
 ### Bounded Task Shape
 
 1. `primary_shape`
-   - `ui_triggered_authority_leak_bugfix`
+   - `authority_producer`
 2. `secondary_shape`
-   - `restart_recovery_alignment`
+   - `consumer_family_alignment`
+3. `shape_fit`
+   - `single_task_acceptable`
+4. `why_primary_shape_is_safe`
+   - ugyanaz a local authority leak kapcsolja ossze a UI launch env producer oldalat a shared local session materialization seam-mel
+   - a start/restart acceptance proof ugyanennek a local leaknek a closure-ja, nem kulon workflow redesign
+5. `why_secondary_shape_is_safe`
+   - a restart/start orchestration consumer family csak annyiban touched, hogy a retained recovery path nem fogadhat el UI-authority leakelt sessiont canonical sikerkent
+   - ez nem nyit kulon stale-registry, attach vagy remote recovery ownershipet
 
 ### Test Matrix
 
@@ -233,6 +296,7 @@ Normative rules:
 | T4 | local attach baseline preserved | sikeres UI-bol inditott restart vagy start utan bubble session el | attach fut | az attach a sessionnev alapu retained modellen mukodik | P1 | required-now | manual or scripted smoke |
 | T5 | UI socket purity | UI fut a sajat dedikalt socketen | bubble restart/start lefut UI-bol | a UI socket only UI sessiont tartalmaz | P1 | required-now | scripted evidence |
 | T6 | restart recovery retained | elozo tmux/runtime ownership mar hianyzik | restart fut | a recovery tovabbra is mukodik, de nem UI-authority leakelt sessionnel | P1 | required-now | automated test |
+| T7 | shared remote consume baseline preserved | a shared `startCommandTmuxLaunch.ts` seam touched | existing remote start consume path compile/test baseline-je ellenorzodik | nincs uj remote authority reinterpretacio vagy UI-socket fallback a remote consume pathon | P2 | required-now if shared seam touched | existing automated baseline or explicit no-delta proof |
 
 ### Dependency Constraints
 
@@ -241,6 +305,7 @@ Normative rules:
 | must-use | UI authority leak explicit megszuntetese | P1 | required-now |
 | must-use | retained local attach contract preserve | P1 | required-now |
 | must-not-use | UI-socketes bubble session elfogadasa mint sikeres restart | P1 | required-now |
+| must-not-use | remote start authority reinterpretacio local UI bugfix cimen | P1 | required-now |
 | must-not-change | publikus attach command shape | P1 | required-now |
 
 ## Review Control
