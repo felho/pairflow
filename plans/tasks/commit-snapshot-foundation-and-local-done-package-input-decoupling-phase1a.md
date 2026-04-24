@@ -45,6 +45,31 @@ owners:
 3. A retained remote consume family ma explicit `DONE_PACKAGE` transcript tailt var, ezert a hard active envelope cutover nem Phase 1A ownership.
 4. Ezert a Phase 1A nem retirement task, hanem foundation-only slice: commit snapshot foundation + local input-decoupling, preserved compat surface mellett.
 
+## Closed-Contract Source Anchors
+
+1. `source_anchors`
+   - `src/types/protocol.ts`: az active protocol type family jelenleg explicit `DONE_PACKAGE` tipust tartalmaz.
+   - `src/v11/shared/commit/commitCommandFinalizationMutation.ts`: a local commit append path ma `DONE_PACKAGE` envelope-ot ir transcriptbe, `done_package_path`, `commit_message`, `commit_sha` metadata mellett.
+   - `src/v11/application/commit/commitDonePackage.ts`: a retained compat artifact materialization/local done-package handling authority itt el, ezert a missing/empty input tolerancia es a successful commit utani compat artifact guarantee closurejahoz ez is explicit Phase 1A anchor.
+   - `src/v11/application/commit/commitCommandApi.ts`: a local route ma `done-package.md` artifactot olvas/auto-general commit elott, a remote route pedig explicit `done-package` continuity sync-backot ownershipol.
+   - `src/cli/index.ts`, `tests/core/bubble/commitBubble.test.ts`, `tests/v11/application/commit/commitCommandApi.test.ts`, `tests/contracts/v11/commit.contract.runner.ts`: a current CLI/test baseline explicit `DONE_PACKAGE` es `done-package.md` continuity invariantokra ul.
+2. `canonical_elements_introduced_in_phase`
+   - `COMMIT_SNAPSHOT` additive foundation contract a local commit first-party tenyeinek leirasara.
+   - canonical snapshot fieldset minimuma: `commit_sha`; optionalis git fact: `commit_message`.
+3. `compat_elements_preserved_in_phase`
+   - active emitted `DONE_PACKAGE` transcript tail
+   - retained `donePackagePath`
+   - retained `artifacts/done-package.md`
+4. `closed_terms`
+   - `COMMIT_SNAPSHOT`
+   - `DONE_PACKAGE`
+   - `donePackagePath`
+   - `done-package.md`
+5. `forbidden_reinterpretations`
+   - a `COMMIT_SNAPSHOT` nem irhatja felul wordinggel azt a current baseline-t, hogy a sikeres local commit aktiv transcript tailja ma meg `DONE_PACKAGE`
+   - a `COMMIT_SNAPSHOT` closed additive vocabulary ebben a fazisban; nem vezetheto be melle uj implicit alias vagy felig-atallt replacement terminology
+   - a retained compat artifact nem minositheto Phase 1A-ban torolheto vagy opcionis successor-consumer surface-nek
+
 ## L0 - Policy
 
 ### Goal
@@ -126,8 +151,8 @@ owners:
 |---|---|---|---|
 | CS1 | `src/types/protocol.ts` | `COMMIT_SNAPSHOT` protocol foundation bejon az active type familybe anelkul, hogy retained consumereket csendben torjon | P1 |
 | CS2 | `src/v11/shared/protocol/validators.ts` | validator support az uj type-ra, compat preserved envelope reality mellett | P1 |
-| CS3 | `src/v11/application/commit/commitCommandFinalization.ts`, `src/v11/shared/commit/commitCommandFinalizationMutation.ts` | csak a local producer slice touched: a local commit snapshot facts mar nem a `done-package` summarybol szarmaznak; remote sync/continuity consume branch no-touch marad | P1 |
-| CS4 | `src/v11/application/commit/commitDonePackage.ts`, `src/v11/application/commit/commitCommandApi.ts` | csak a local pre-commit / local finalization path touched: a local commit flow nem koveteli a non-empty `done-package.md` inputot, de successful commit utan a compat artifact megmarad/materializalodik | P1 |
+| CS3 | `src/v11/application/commit/commitCommandFinalization.ts`, `src/v11/shared/commit/commitCommandFinalizationMutation.ts` | csak a local producer slice touched: a local commit snapshot facts mar nem a `done-package` summarybol szarmaznak, mikozben az active appended envelope type Phase 1A-ban tovabbra is `DONE_PACKAGE`; remote sync/continuity consume branch no-touch marad | P1 |
+| CS4 | `src/v11/application/commit/commitDonePackage.ts`, `src/v11/application/commit/commitCommandApi.ts` | csak a local pre-commit / local finalization path touched: a local commit flow nem koveteli a non-empty `done-package.md` inputot, de successful commit utan a compat artifact megmarad/materializalodik; a remote commit route es sync-back semantics no-touch maradnak | P1 |
 | CS5 | `src/v11/application/commit/commitCliCommand.ts`, `src/cli/index.ts` | CLI wording a snapshot-foundation szemantikahoz igazodik, hard global cutover claim nelkul | P2 |
 | CS6 | tests + docs | a commit snapshot foundation es a preserved compat boundary egyszerre latszik | P1 |
 
@@ -181,6 +206,8 @@ owners:
 7. A local commit input-decoupling nem gyengitheti a successful commit utani compat artifact guarantee-t.
 8. A shared commit result contract shape nem valtozhat ebben a fazisban.
 9. Mixed entrypoint fajlban csak a local producer slice touched; a remote continuity consume branch explicit no-touch.
+10. A `src/v11/shared/commit/commitCommandFinalizationMutation.ts` appended envelope type-ja Phase 1A-ban retained `DONE_PACKAGE` baseline marad; a `COMMIT_SNAPSHOT` additive foundation, nem active tail replacement.
+11. A CLI/human-readable wording Phase 1A-ban nem allithat teljes envelope/result cutovert, amig a transcript/result baseline retained `DONE_PACKAGE`-on ul.
 
 ### Test Matrix
 
@@ -194,6 +221,29 @@ owners:
 | T6 | retained compat untouched | a retained `donePackagePath` consume contract es explicit `DONE_PACKAGE`-ra ulo consumerek ebben a taskban nem tornek | P1 |
 | T7 | shared contract untouched | a shared commit result contract shape ebben a fazisban nem valtozik | P1 |
 | T8 | remote branch no-touch | mixed entrypoint fajlok local valtozasai mellett a remote continuity baseline regresszio nelkul marad | P1 |
+| T9 | active local transcript tail preserved | successful local commit utan az appended envelope/tail baseline tovabbra is `DONE_PACKAGE`, akkor is ha a `COMMIT_SNAPSHOT` foundation mar jelen van | P1 |
+
+## L2 - Implementation Notes (Optional)
+
+### Preferred Edit Order
+
+1. Eloszor az additive protocol/validator foundation zarjon: `COMMIT_SNAPSHOT` type + validator support explicit fieldsettel.
+2. Ezutan a local commit producer truth valjon le a `done-package` summary-rol ugy, hogy a commit fact sourcing csak first-party git/state/transcript tenyekre uljon.
+3. Csak ezutan lazulhat a local missing/empty `done-package` precondition, mikozben a successful commit utani compat artifact materialization/presence guarantee megmarad.
+4. A CLI/docs/tests wording legyen az utolso lepes, es explicit jelezze az additive foundation + retained `DONE_PACKAGE` baseline kombinaciot.
+
+### Explicit No-Touch Guidance
+
+1. A `commitCommandApi.ts` remote route-ja es a remote sync-back continuity ownership Phase 1C feladata; ne legyen opportunista mellekvaltozas Phase 1A-ban.
+2. A `commitCommandFinalizationMutation.ts` active emitted envelope replacementje nem Phase 1A scope; itt csak a local truth-forras es input gate valhat kesobbi cutoverre alkalmassa.
+3. A shared completion-artifact/result contract foundation (`commitCommandContract.ts`, `commitCommandApiContract.ts` es minden additive shared/exported replacement field) Phase 1B ownership; nem Phase 1A local task-resolve.
+4. A retained UI/start/non-commit consumer alignment (`UI result shape`, start/resume completion consume, nem-commit retained done-package refs) Phase 1D ownership; ne legyen Phase 1A opportunista cleanup vagy wording-cutover.
+
+### Successor Boundary Reminder
+
+1. Ha a megvalositas uj shared completion-artifact/result fieldet igenyel, az Phase 1B route-back trigger, nem Phase 1A belso reszlete.
+2. Ha a megvalositas remote consume vagy sync-back formatumot akar megmozditani, az Phase 1C trigger.
+3. Ha a megvalositas retained UI/start/non-commit consumer alignmentet vagy wording-cutovert igenyel, az Phase 1D trigger.
 
 ## Review Control
 
@@ -212,4 +262,6 @@ Task allapot `IMPLEMENTABLE`, ha:
 3. a snapshot payload nem hordoz generated summary/prose adatot,
 4. a successful local commit utani retained `done-package` / `donePackagePath` compat surface meg nem torik el ebben a fazisban,
 5. az active emitted envelope cutover nincs csendben ebbe a fazisba huzva, ha retained consumer meg explicit `DONE_PACKAGE` baseline-on ul,
-6. a shared commit result contract shape es a remote continuity branch no-touch baseline marad Phase 1A-ban.
+6. a `src/v11/shared/commit/commitCommandFinalizationMutation.ts` appended envelope type-ja tovabbra is retained `DONE_PACKAGE` baseline marad, vagyis a `COMMIT_SNAPSHOT` additive foundationkent jelenik meg, nem active tail replacementkent,
+7. a CLI/human-readable wording nem allit teljes envelope/result cutovert, amig a transcript/result baseline retained `DONE_PACKAGE`-on ul,
+8. a shared commit result contract shape, a remote continuity branch, valamint a retained UI/start/non-commit consumer family no-touch baseline marad Phase 1A-ban.
