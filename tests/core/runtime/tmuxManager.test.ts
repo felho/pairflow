@@ -1,3 +1,5 @@
+import { EventEmitter } from "node:events";
+
 import { describe, expect, it, vi } from "vitest";
 
 import {
@@ -28,6 +30,98 @@ function buildSplitPaneStdout(args: string[]): string {
   }
   return "%99\n";
 }
+
+class MockTmuxStream extends EventEmitter {
+  public setEncoding(): void {}
+}
+
+class MockTmuxChildProcess extends EventEmitter {
+  public readonly stdout = new MockTmuxStream();
+  public readonly stderr = new MockTmuxStream();
+}
+
+describe("runTmux", () => {
+  it("spawns tmux without inheriting TMUX while preserving neutral env", async () => {
+    const originalTmux = process.env.TMUX;
+    const originalClaudeCode = process.env.CLAUDECODE;
+    const originalNeutralEnv = process.env.PAIRFLOW_TEST_KEEP;
+    process.env.TMUX = "/tmp/fake,123,0";
+    process.env.CLAUDECODE = "enabled";
+    process.env.PAIRFLOW_TEST_KEEP = "keep-me";
+
+    let receivedCommand: string | undefined;
+    let receivedArgs: string[] | undefined;
+    let receivedEnv: NodeJS.ProcessEnv | undefined;
+    const spawnMock = vi.fn((command: string, args: string[], options: {
+      cwd?: string;
+      env?: NodeJS.ProcessEnv;
+      stdio?: string[];
+    }) => {
+      receivedCommand = command;
+      receivedArgs = args;
+      receivedEnv = options.env;
+      const child = new MockTmuxChildProcess();
+      queueMicrotask(() => {
+        child.stdout.emit("data", "stdout");
+        child.stderr.emit("data", "");
+        child.emit("close", 0);
+      });
+      return child;
+    });
+
+    vi.resetModules();
+    vi.doMock("node:child_process", () => ({
+      spawn: spawnMock
+    }));
+
+    try {
+      const { runTmux } = await import(
+        "../../../src/v11/infrastructure/channel/tmux/tmuxRunner.js"
+      );
+      const result = await runTmux(["has-session", "-t", "pf-runner-test"], {
+        cwd: "/tmp/worktree"
+      });
+
+      expect(spawnMock).toHaveBeenCalledWith(
+        "tmux",
+        ["has-session", "-t", "pf-runner-test"],
+        expect.objectContaining({
+          cwd: "/tmp/worktree",
+          stdio: ["ignore", "pipe", "pipe"]
+        })
+      );
+      expect(receivedEnv?.TMUX).toBeUndefined();
+      expect(receivedEnv?.CLAUDECODE).toBeUndefined();
+      expect(receivedEnv?.PAIRFLOW_TEST_KEEP).toBe("keep-me");
+      expect(receivedCommand).toBe("tmux");
+      expect(receivedArgs).toEqual(["has-session", "-t", "pf-runner-test"]);
+      expect(result).toEqual({
+        stdout: "stdout",
+        stderr: "",
+        exitCode: 0
+      });
+    } finally {
+      vi.doUnmock("node:child_process");
+      vi.resetModules();
+      vi.restoreAllMocks();
+      if (originalTmux === undefined) {
+        delete process.env.TMUX;
+      } else {
+        process.env.TMUX = originalTmux;
+      }
+      if (originalClaudeCode === undefined) {
+        delete process.env.CLAUDECODE;
+      } else {
+        process.env.CLAUDECODE = originalClaudeCode;
+      }
+      if (originalNeutralEnv === undefined) {
+        delete process.env.PAIRFLOW_TEST_KEEP;
+      } else {
+        process.env.PAIRFLOW_TEST_KEEP = originalNeutralEnv;
+      }
+    }
+  });
+});
 
 describe("buildBubbleTmuxSessionName", () => {
   it("normalizes unsafe characters", () => {
