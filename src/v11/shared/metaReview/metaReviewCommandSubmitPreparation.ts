@@ -21,6 +21,8 @@ import {
   assertMetaReviewSubmitterAuthority
 } from "./metaReviewCommandSubmitAuthority.js";
 import {
+  assertApproveThresholdPolicy,
+  metaReviewApproveClaimsOpenFindings,
   assertSubmitPayloadInvariants,
   assertSubmitStatusIsSuccess,
   resolveSubmitRunStatus,
@@ -32,6 +34,10 @@ import {
 import {
   resolveSubmitCanonicalRunId
 } from "./metaReviewCommandSubmitLink.js";
+import {
+  resolveMetaReviewGateThresholdAuthority
+} from "../metaReviewGate/metaReviewGateThresholdAuthority.js";
+import { normalizeBubbleReviewPolicy } from "../reviewPolicy/reviewPolicyRuntime.js";
 import type {
   MetaReviewCommandDependencies,
   MetaReviewSubmitInput
@@ -279,6 +285,39 @@ export async function prepareMetaReviewSubmitContext(input: {
     summary: validated.summary,
     reportJson: canonicalReportJson
   });
+  if (
+    validated.recommendation === "approve" &&
+    metaReviewApproveClaimsOpenFindings(canonicalReportJson)
+  ) {
+    const normalizedReviewPolicy = normalizeBubbleReviewPolicy(
+      resolved.bubbleConfig
+    );
+    const thresholdAuthority = await resolveMetaReviewGateThresholdAuthority({
+      runResult: {
+        bubble_id: resolved.bubbleId,
+        run_id: runId,
+        status: validated.status,
+        recommendation: validated.recommendation,
+        summary: validated.summary,
+        rework_target_message: validated.reworkTargetMessage,
+        updated_at: validated.updatedAt,
+        warnings: [],
+        report_json: canonicalReportJson
+      },
+      bubbleDir: resolved.bubblePaths.bubbleDir,
+      artifactsDir: resolved.bubblePaths.artifactsDir,
+      readFileFn
+    });
+    assertApproveThresholdPolicy({
+      recommendation: validated.recommendation,
+      reportJson: canonicalReportJson,
+      minSeverity:
+        normalizedReviewPolicy.meta_review_auto_rework_min_severity,
+      thresholdAuthority,
+      bubbleId: resolved.bubbleId,
+      round: input.submitInput.round
+    });
+  }
 
   return {
     resolved,

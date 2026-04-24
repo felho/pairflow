@@ -22,6 +22,9 @@ describe("metaReviewSubmitGuidance", () => {
     expect(prompt).toContain(buildMetaReviewSubmitCommandTemplate());
     expect(prompt).toContain(buildMetaReviewSubmitApproveParityNote());
     expect(prompt).toContain("Clean approve requires zero open findings.");
+    expect(prompt).toContain("review_policy.meta_review_auto_rework_min_severity");
+    expect(prompt).toContain("do not emit recommendation=approve");
+    expect(prompt).toContain("emit recommendation=rework");
     expect(prompt).toContain("do not switch to inconclusive");
     expect(prompt).not.toContain("--report-markdown");
     expect(prompt).toContain("`P0`, `P1`, `P2`, `P3`");

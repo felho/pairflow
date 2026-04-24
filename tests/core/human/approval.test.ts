@@ -1,6 +1,7 @@
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { createHash } from "node:crypto";
 
 import { afterEach, describe, expect, it } from "vitest";
 
@@ -44,6 +45,28 @@ async function createTempRepo(): Promise<string> {
   tempDirs.push(root);
   await initGitRepository(root);
   return root;
+}
+
+async function writeMetaReviewFindingsArtifact(input: {
+  bubble: Awaited<ReturnType<typeof setupRunningBubbleFixture>>;
+  filename: string;
+  findings: Array<{ severity: "P1" | "P2" | "P3"; title: string }>;
+}): Promise<{ artifactRef: string; digest: string }> {
+  await mkdir(input.bubble.paths.artifactsDir, { recursive: true });
+  const artifactRef = `artifacts/${input.filename}`;
+  const raw = `${JSON.stringify(
+    {
+      findings: input.findings,
+      summary: { open_total: input.findings.length }
+    },
+    null,
+    2
+  )}\n`;
+  await writeFile(join(input.bubble.paths.bubbleDir, artifactRef), raw, "utf8");
+  return {
+    artifactRef,
+    digest: createHash("sha256").update(raw, "utf8").digest("hex")
+  };
 }
 
 async function setupReadyForHumanApprovalBubble(repoPath: string, bubbleId: string) {
@@ -1004,6 +1027,98 @@ describe("approval decisions", () => {
     });
   });
 
+  it("requires override when latest approve request came from a threshold backstopped dispatch-failed route", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupReadyForHumanApprovalBubble(
+      repoPath,
+      "b_approval_threshold_backstop_override_01"
+    );
+
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    if (loaded.state.meta_review === undefined) {
+      throw new Error("Expected meta_review snapshot to exist.");
+    }
+    await writeStateSnapshot(
+      bubble.paths.statePath,
+      {
+        ...loaded.state,
+        meta_review: {
+          ...loaded.state.meta_review,
+        }
+      },
+      {
+        expectedFingerprint: loaded.fingerprint,
+        expectedState: "READY_FOR_HUMAN_APPROVAL"
+      }
+    );
+    await appendProtocolEnvelope({
+      transcriptPath: bubble.paths.transcriptPath,
+      mirrorPaths: [bubble.paths.inboxPath],
+      lockPath: join(bubble.paths.locksDir, `${bubble.bubbleId}.lock`),
+      now: new Date("2026-02-22T12:05:11.000Z"),
+      envelope: {
+        bubble_id: bubble.bubbleId,
+        sender: "orchestrator",
+        recipient: "human",
+        type: "APPROVAL_REQUEST",
+        round: loaded.state.round,
+        payload: {
+          summary:
+            "META_REVIEW_APPROVE_THRESHOLD_BACKSTOP: invalid open-findings approve cannot route to human_gate_approve.",
+          metadata: {
+            [deliveryTargetRoleMetadataKey]: "status",
+            actor: "meta-reviewer",
+            actor_agent: "codex",
+            latest_recommendation: "approve",
+            meta_review_gate_route: "human_gate_dispatch_failed",
+            meta_review_gate_reason_code:
+              "META_REVIEW_APPROVE_THRESHOLD_BACKSTOP",
+            findings_claimed_open_total: 1,
+            findings_artifact_open_total: 1,
+            findings_blocking_open_total: 0,
+            findings_advisory_open_total: 1,
+            findings_parity_status: "ok"
+          }
+        },
+        refs: []
+      }
+    });
+
+    await expect(
+      emitApprove({
+        bubbleId: bubble.bubbleId,
+        cwd: repoPath,
+        now: new Date("2026-02-22T12:05:12.000Z")
+      })
+    ).rejects.toThrow(/APPROVAL_OVERRIDE_REQUIRED/u);
+
+    await expect(
+      emitApprove({
+        bubbleId: bubble.bubbleId,
+        overrideNonApprove: true,
+        cwd: repoPath,
+        now: new Date("2026-02-22T12:05:12.500Z")
+      })
+    ).rejects.toThrow(/APPROVAL_OVERRIDE_REASON_REQUIRED/u);
+
+    const approved = await emitApprove({
+      bubbleId: bubble.bubbleId,
+      overrideNonApprove: true,
+      overrideReason:
+        "Human accepted threshold-backstopped dispatch-failed approval route.",
+      cwd: repoPath,
+      now: new Date("2026-02-22T12:05:13.000Z")
+    });
+    expect(approved.state.state).toBe("APPROVED_FOR_COMMIT");
+    expect(approved.envelope.payload.metadata).toMatchObject({
+      recommendation_at_decision: "approve",
+      meta_review_gate_route_at_decision: "human_gate_dispatch_failed",
+      meta_review_gate_reason_code_at_decision:
+        "META_REVIEW_APPROVE_THRESHOLD_BACKSTOP",
+      override_non_approve: true
+    });
+  });
+
   it("requires override when latest approval request carries parity inconsistency metadata", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupReadyForHumanApprovalBubble(
@@ -1378,6 +1493,20 @@ describe("approval decisions", () => {
     expect(gate.route).toBe("meta_review_running");
 
     const gatedState = await readStateSnapshot(bubble.paths.statePath);
+    const findingsArtifact = await writeMetaReviewFindingsArtifact({
+      bubble,
+      filename: "sticky-parity-override-findings.json",
+      findings: [
+        {
+          severity: "P3",
+          title: "Advisory parity override finding"
+        },
+        {
+          severity: "P3",
+          title: "Second advisory parity override finding"
+        }
+      ]
+    });
     const submitted = await submitMetaReviewResult(
       {
         bubbleId: bubble.bubbleId,
@@ -1393,9 +1522,9 @@ describe("approval decisions", () => {
           findings_artifact_open_total: 1,
           findings_blocking_open_total: 0,
           findings_advisory_open_total: 2,
+          findings_artifact_ref: findingsArtifact.artifactRef,
           findings_artifact_status: "available",
-          findings_digest_sha256:
-            "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          findings_digest_sha256: findingsArtifact.digest,
           meta_review_run_id: "run_sticky_parity_override_01",
           findings_parity_status: "guard_failed"
         }

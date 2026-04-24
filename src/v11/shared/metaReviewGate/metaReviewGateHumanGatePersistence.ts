@@ -58,6 +58,7 @@ export interface PersistHumanGateRouteInput {
   metaReviewRun?: MetaReviewResult;
   parityMetadata?: FindingsParityMetadata | null;
   thresholdMetadata?: MetaReviewGateThresholdMetadata;
+  gateReasonCode?: string;
   findings?: MetaReviewGateAdvisoryFinding[];
   fallbackRecommendation?: MetaReviewRecommendation;
   targetState?: "READY_FOR_HUMAN_APPROVAL";
@@ -111,6 +112,9 @@ async function appendHumanGateRequestForRoute(input: {
     refs: input.persistInput.refs,
     ...(input.persistInput.parityMetadata !== undefined
       ? { parityMetadata: input.persistInput.parityMetadata }
+      : {}),
+    ...(input.persistInput.gateReasonCode !== undefined
+      ? { gateReasonCode: input.persistInput.gateReasonCode }
       : {}),
     ...(input.advisoryFindings !== undefined ? { findings: input.advisoryFindings } : {})
   };

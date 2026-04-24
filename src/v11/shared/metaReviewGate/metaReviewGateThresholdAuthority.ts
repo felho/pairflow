@@ -18,6 +18,8 @@ export const REVIEW_POLICY_THRESHOLD_SOURCE_UNRESOLVED =
 export const REVIEW_POLICY_THRESHOLD_CONTEXT_INCOMPLETE =
   "REVIEW_POLICY_THRESHOLD_CONTEXT_INCOMPLETE" as const;
 
+const findingPriorityOrder: FindingPriority[] = ["P0", "P1", "P2", "P3"];
+
 export interface ResolveMetaReviewGateThresholdAuthorityInput {
   runResult: MetaReviewResult;
   bubbleDir: string;
@@ -113,7 +115,6 @@ function resolveHighestOpenSeverity(findings: unknown): FindingPriority | null {
     return null;
   }
 
-  const severityOrder: FindingPriority[] = ["P0", "P1", "P2", "P3"];
   let highestIndex: number | null = null;
 
   for (const entry of findings) {
@@ -127,7 +128,7 @@ function resolveHighestOpenSeverity(findings: unknown): FindingPriority | null {
     if (priority === undefined) {
       continue;
     }
-    const index = severityOrder.indexOf(priority);
+    const index = findingPriorityOrder.indexOf(priority);
     if (index === -1) {
       continue;
     }
@@ -136,7 +137,19 @@ function resolveHighestOpenSeverity(findings: unknown): FindingPriority | null {
     }
   }
 
-  return highestIndex === null ? null : (severityOrder[highestIndex] ?? null);
+  return highestIndex === null
+    ? null
+    : (findingPriorityOrder[highestIndex] ?? null);
+}
+
+export function metaReviewGateThresholdIsMet(input: {
+  highestOpenSeverity: FindingPriority;
+  minSeverity: FindingPriority;
+}): boolean {
+  return (
+    findingPriorityOrder.indexOf(input.highestOpenSeverity)
+    <= findingPriorityOrder.indexOf(input.minSeverity)
+  );
 }
 
 function buildThresholdAuthorityUnresolved(input: {

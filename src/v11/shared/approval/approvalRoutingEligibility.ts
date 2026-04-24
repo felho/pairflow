@@ -7,6 +7,8 @@ import {
 import {
   hasParityInconsistencyMetadata,
   readApprovalTranscriptContext,
+  resolveApprovalGateReasonCodeFromRequest,
+  resolveApprovalGateRouteFromRequest,
   resolveApprovalRecommendationFromRequest
 } from "./approvalTranscriptContext.js";
 import type { ReadTranscriptEnvelopesPort } from "../ports/transcript.js";
@@ -126,9 +128,25 @@ export async function resolveApprovalDecisionMetadata(
   if (parityInconsistencyAtDecision) {
     metadata.findings_parity_inconsistent = true;
   }
+  const gateRouteAtDecision = resolveApprovalGateRouteFromRequest(
+    transcriptContext.latestRoundApprovalRequest
+  );
+  const gateReasonCodeAtDecision = resolveApprovalGateReasonCodeFromRequest(
+    transcriptContext.latestRoundApprovalRequest
+  );
+  const gateRouteOverrideRequired =
+    gateRouteAtDecision !== undefined && gateRouteAtDecision !== "human_gate_approve";
+  if (gateRouteAtDecision !== undefined) {
+    metadata.meta_review_gate_route_at_decision = gateRouteAtDecision;
+  }
+  if (gateReasonCodeAtDecision !== undefined) {
+    metadata.meta_review_gate_reason_code_at_decision = gateReasonCodeAtDecision;
+  }
 
   const overrideRequired =
-    recommendationAtDecision !== "approve" || parityInconsistencyAtDecision;
+    recommendationAtDecision !== "approve" ||
+    parityInconsistencyAtDecision ||
+    gateRouteOverrideRequired;
   if (!overrideRequired) {
     return metadata;
   }
@@ -142,10 +160,18 @@ export async function resolveApprovalDecisionMetadata(
       message:
         parityInconsistencyAtDecision
           ? "approval requires --override-non-approve when findings parity metadata is inconsistent."
+          : gateRouteOverrideRequired
+            ? `approval requires --override-non-approve when latest approval request route is ${gateRouteAtDecision}.`
           : `approval requires --override-non-approve when latest recommendation is ${recommendationAtDecision}.`,
       context: {
         command_name: "approval",
-        recommendation_at_decision: recommendationAtDecision
+        recommendation_at_decision: recommendationAtDecision,
+        ...(gateRouteAtDecision !== undefined
+          ? { meta_review_gate_route_at_decision: gateRouteAtDecision }
+          : {}),
+        ...(gateReasonCodeAtDecision !== undefined
+          ? { meta_review_gate_reason_code_at_decision: gateReasonCodeAtDecision }
+          : {})
       }
     });
   }
@@ -155,10 +181,18 @@ export async function resolveApprovalDecisionMetadata(
       message:
         parityInconsistencyAtDecision
           ? "approval override requires --override-reason when findings parity metadata is inconsistent."
+          : gateRouteOverrideRequired
+            ? `approval override requires --override-reason when latest approval request route is ${gateRouteAtDecision}.`
           : `approval override requires --override-reason when latest recommendation is ${recommendationAtDecision}.`,
       context: {
         command_name: "approval",
-        recommendation_at_decision: recommendationAtDecision
+        recommendation_at_decision: recommendationAtDecision,
+        ...(gateRouteAtDecision !== undefined
+          ? { meta_review_gate_route_at_decision: gateRouteAtDecision }
+          : {}),
+        ...(gateReasonCodeAtDecision !== undefined
+          ? { meta_review_gate_reason_code_at_decision: gateReasonCodeAtDecision }
+          : {})
       }
     });
   }
