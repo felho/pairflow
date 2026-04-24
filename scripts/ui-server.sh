@@ -8,6 +8,10 @@ PORT="${PAIRFLOW_UI_PORT:-4173}"
 LOG_PATH="${PAIRFLOW_UI_LOG_PATH:-/tmp/pairflow-ui.log}"
 UI_ENTRY="$ROOT_DIR/dist/cli/index.js"
 PROCESS_PATTERN="$UI_ENTRY ui"
+UI_TMUX_SOCKET_NAME="$(
+  printf 'pairflow-ui-%s' "$SESSION_NAME" \
+    | LC_ALL=C tr -c 'A-Za-z0-9_.-' '_'
+)"
 
 require_command() {
   local cmd="$1"
@@ -25,8 +29,12 @@ print_listener() {
   lsof -nP -iTCP:"$PORT" -sTCP:LISTEN || true
 }
 
+ui_tmux() {
+  env -u TMUX tmux -L "$UI_TMUX_SOCKET_NAME" "$@"
+}
+
 session_exists() {
-  tmux has-session -t "$SESSION_NAME" 2>/dev/null
+  ui_tmux has-session -t "$SESSION_NAME" 2>/dev/null
 }
 
 kill_direct_ui_processes() {
@@ -53,7 +61,7 @@ start_ui() {
       "$HOST" \
       "$PORT" \
       "$LOG_PATH"
-    tmux new-session -d -s "$SESSION_NAME" "$launch_command"
+    ui_tmux new-session -d -s "$SESSION_NAME" "$launch_command"
     echo "Started UI tmux session: $SESSION_NAME"
   fi
 
@@ -73,7 +81,7 @@ start_ui() {
 
 stop_ui() {
   if session_exists; then
-    tmux kill-session -t "$SESSION_NAME"
+    ui_tmux kill-session -t "$SESSION_NAME"
     echo "Stopped UI tmux session: $SESSION_NAME"
   else
     echo "UI tmux session not found: $SESSION_NAME"
@@ -94,12 +102,13 @@ stop_ui() {
 status_ui() {
   echo "Root: $ROOT_DIR"
   echo "Session: $SESSION_NAME"
+  echo "Tmux socket: $UI_TMUX_SOCKET_NAME"
   echo "Host/port: ${HOST}:${PORT}"
   echo "Log: $LOG_PATH"
 
   if session_exists; then
     echo "Session status: running"
-    tmux list-sessions | rg "^${SESSION_NAME}:" || true
+    ui_tmux list-sessions | rg "^${SESSION_NAME}:" || true
   else
     echo "Session status: stopped"
   fi

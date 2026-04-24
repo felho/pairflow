@@ -22,16 +22,21 @@ export class TmuxCommandError extends Error {
   }
 }
 
+function buildTmuxSpawnEnvironment(): NodeJS.ProcessEnv {
+  const env = { ...process.env };
+  delete env.CLAUDECODE;
+  delete env.TMUX;
+  return env;
+}
+
 export const runTmux: TmuxRunner = async (
   args: string[],
   options: TmuxRunOptions = {}
 ): Promise<TmuxRunResult> =>
   new Promise((resolvePromise, rejectPromise) => {
-    const env = { ...process.env };
-    delete env.CLAUDECODE;
     const child = spawn("tmux", args, {
       cwd: options.cwd,
-      env,
+      env: buildTmuxSpawnEnvironment(),
       stdio: ["ignore", "pipe", "pipe"]
     });
 
