@@ -18,7 +18,8 @@ const runtimeExpectedStates = new Set<BubbleLifecycleState>([
   "COMMITTED"
 ]);
 const runtimeMismatchSuppressedStates = new Set<BubbleLifecycleState>([
-  "PREPARING_WORKSPACE"
+  "PREPARING_WORKSPACE",
+  "DONE"
 ]);
 
 function resolveElapsedSeconds(

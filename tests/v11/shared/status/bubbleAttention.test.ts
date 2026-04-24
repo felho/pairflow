@@ -110,6 +110,31 @@ describe("v11 status bubbleAttention", () => {
     expect(attention).toBeNull();
   });
 
+  it("suppresses runtime-mismatch attention for DONE bubbles awaiting merge cleanup", () => {
+    const attention = resolveBubbleAttention({
+      state: "DONE",
+      runtimeSession: {
+        bubbleId: "b_status_attention_done_01",
+        repoPath: "/repo",
+        worktreePath: "/repo/.pairflow-worktree",
+        tmuxSessionName: "pf-b_status_attention_done_01",
+        updatedAt: "2026-02-22T18:45:01.000Z"
+      },
+      stateValidation: null,
+      watchdog: {
+        monitored: false,
+        expired: false,
+        referenceTimestamp: "2026-02-22T18:45:00.000Z"
+      },
+      paneActivityRead: {
+        status: "missing"
+      },
+      now: new Date("2026-02-22T18:45:02.000Z")
+    });
+
+    expect(attention).toBeNull();
+  });
+
   it("surfaces startup-incomplete attention only after five minutes in PREPARING_WORKSPACE", () => {
     const freshAttention = resolveBubbleAttention({
       state: "PREPARING_WORKSPACE",
