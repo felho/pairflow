@@ -148,7 +148,8 @@ The behavior remains the same UI staging behavior: when the UI submits stage-all
 5. Update UI client request body to send `stageAll`.
 6. Update UI store action input/defaults to use `stageAll`.
 7. Update `ActionBar` and `CommitForm` submitted payload and visible label text to stage-all language.
-8. Update router/server/UI API/store/action tests, including store default behavior.
+8. Replace the live `CommitForm` refs placeholder/example away from `artifacts/done-package.md` to a neutral evidence/artifact ref example because the form wording surface is already in scope for this UI read-model alignment.
+9. Update router/server/UI API/store/action tests, including store default behavior.
 
 ### Out of Scope
 
@@ -212,7 +213,7 @@ The behavior remains the same UI staging behavior: when the UI submits stage-all
 | CS5 | `ui/src/lib/api.ts` | `commitBubble` request body | send `stageAll`, not `auto` | P1 | required-now | API test |
 | CS6 | `ui/src/state/useBubbleStore.ts` | `RunBubbleActionInput` and commit action case | rename store action input field from `auto` to `stageAll`; preserve current `input.auto ?? true` behavior as `input.stageAll ?? true` | P1 | required-now | store test |
 | CS7 | `ui/src/components/actions/ActionBar.tsx` | submit path | forward `stageAll` from `CommitForm` into `RunBubbleActionInput` | P1 | required-now | ActionBar test |
-| CS8 | `ui/src/components/actions/CommitForm.tsx` | control state/label | rename local state to `stageAll`, keep default checked, submit `stageAll`, and use visible stage-all wording without `auto=true` | P1 | required-now | component/typecheck |
+| CS8 | `ui/src/components/actions/CommitForm.tsx` | control state/label | rename local state to `stageAll`, keep default checked, submit `stageAll`, use visible stage-all wording without `auto=true`, and replace the live refs placeholder/example so it no longer names `artifacts/done-package.md` | P1 | required-now | component/typecheck |
 
 ### 2) Data And Interface Contract
 
@@ -243,7 +244,7 @@ The behavior remains the same UI staging behavior: when the UI submits stage-all
 | T4 | UI client sends `stageAll`. | `client.commitBubble(..., { stageAll: true })`. | request body contains `stageAll`, not `auto`. | P1 | required-now |
 | T5 | Store preserves default. | commit action from store without explicit override. | payload uses tested `stageAll` default equivalent to prior `auto` default. | P1 | required-now |
 | T6 | UI HTTP rejects invalid/missing `stageAll` according to parser policy. | invalid body. | clear validation error; no mutation call. Cover in router unit tests and server integration. | P1 | required-now |
-| T7 | ActionBar/CommitForm submit `stageAll`. | user submits commit form with default checkbox state. | submitted payload has `stageAll: true`; visible checkbox label is `Stage all changes`; visible label does not say `auto` or `auto=true`. Cover direct `CommitForm` test for the label/payload and `ActionBar` integration test for forwarding. | P1 | required-now |
+| T7 | ActionBar/CommitForm submit `stageAll`. | user submits commit form with default checkbox state. | submitted payload has `stageAll: true`; visible checkbox label is `Stage all changes`; visible label does not say `auto` or `auto=true`; live refs placeholder/example does not name `done-package.md`. Cover direct `CommitForm` test for the label/payload/placeholder and `ActionBar` integration test for forwarding. | P1 | required-now |
 | T8 | ActionBar/CommitForm submit disabled stage-all. | user clears the checkbox and submits. | submitted payload has `stageAll: false`; no `auto` key is emitted. Cover direct `CommitForm` test for unchecked payload and `ActionBar` integration test for forwarding. | P1 | required-now |
 
 ### 5) Shared Contract Compatibility

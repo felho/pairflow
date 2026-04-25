@@ -147,7 +147,7 @@ This plan separates implementation slicing from mergeability.
 
 ### Progress Update - 2026-04-25
 
-Phase 1 and Phase 2 are complete and merged.
+Phase 1, Phase 2, and Phase 3A are complete and merged.
 
 Completed slices:
 
@@ -165,15 +165,24 @@ Completed slices:
    - Completion proof: local `bubble commit` no longer reads, requires, generates, references, or emits `artifacts/done-package.md` as local commit completion authority. Local finalization now emits `COMMIT_RESULT` from finalized git commit facts, removes `donePackagePath` from the shared application/UI result shape, removes local `done_package_path` lifecycle metadata, and preserves deterministic commit creation, clone retry, and source-branch sync behavior.
    - Boundary note: remote commit continuity still intentionally remains on the successor-owned compatibility path, and public `--auto` / help-text request activation remains successor-owned.
    - Archived task: `plans/archive/tasks/local-commit-done-package-removal.md`
+3. `commit-cli-stage-all-cutover`
+   - Bubble: `impl-p3a-stage-all`
+   - Bubble commit: `7756dc290ee5532033ac6341c5be836f81203b6c`
+   - Merge commit: `a330bdedac12b5b777b8356241fe63c6a2c11eab`
+   - Archive follow-up commit: `0f232650`
+   - Completion proof: operator CLI commit activation now uses `--stage-all`, public `--auto`/`--no-auto` fail with `COMMIT_AUTO_REMOVED`, application commit input exposes preferred `stageAll`, explicit `stageAll` wins over temporary internal `auto` compatibility, local staging diagnostics use `stage_all`/`--stage-all`, and root CLI rendering remains truthful to the returned envelope type so remote legacy `DONE_PACKAGE` continuity is not masked before Phase 4.
+   - Boundary note: UI-router/frontend request producers remain successor-owned by Phase 3B. Remote SSH command construction, remote marker parsing, remote sync-back, and remote result hard cutover remain successor-owned by Phase 4.
+   - Archived task: `plans/archive/tasks/commit-cli-stage-all-cutover.md`
 
 Next task:
 
-1. `commit-cli-stage-all-cutover`
-   - Owns Phase 3A.
-   - Primary goal: activate `--stage-all` on the operator CLI and application commit input while retaining explicit internal compatibility only for not-yet-cut consumers.
-   - Required cleanup: remove operator-facing done-package language from commit help, reject public CLI `--auto`, keep local success output aligned with the returned envelope type/result contract, and ensure no public result surface reintroduces `donePackagePath`.
-   - Critical boundary: do not open UI-router/frontend request migration or remote SSH transport hard cutover in this task; those are Phase 3B and Phase 4 respectively.
-   - Non-goal: live start/resume prompt and broader docs cleanup remain Phase 5 unless a direct Phase 3 command/help consumer requires a bounded wording update.
+1. `commit-ui-stage-all-alignment`
+   - Owns Phase 3B.
+   - Task file: `plans/tasks/commit-ui-stage-all-alignment.md`
+   - Primary goal: move first-party UI-router HTTP/action dispatch and UI frontend request producers from temporary `auto` staging input to `stageAll`.
+   - Required cleanup: replace UI-router/body/client/store/action/form `auto` payloads and labels with `stageAll`, reject legacy HTTP `auto` clearly including dual-field bodies, preserve the UI's existing default stage-all behavior under the new field, and prove the router/client/store/component paths with tests.
+   - Critical boundary: do not change CLI parser/help, application commit producer semantics, remote SSH transport, remote marker parsing/sync-back, protocol validation, or lifecycle/event metadata in this task.
+   - Prerequisite status: Phase 3A is complete; `CommitBubbleInput.stageAll` exists on main, so the Phase 3B CS3a prerequisite probe should now pass before implementation starts.
 
 ### Phase 1: Commit Result Contract
 
