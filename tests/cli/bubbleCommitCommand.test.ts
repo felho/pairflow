@@ -15,9 +15,9 @@ describe("parseBubbleCommitCommandOptions", () => {
       "/tmp/repo",
       "--message",
       "feat: finalize",
-      "--auto",
+      "--stage-all",
       "--ref",
-      "artifact://done-package.md"
+      ".pairflow/evidence/typecheck.log"
     ]);
 
     expect(parsed.help).toBe(false);
@@ -28,14 +28,29 @@ describe("parseBubbleCommitCommandOptions", () => {
     expect(parsed.id).toBe("b_commit_01");
     expect(parsed.repo).toBe("/tmp/repo");
     expect(parsed.message).toBe("feat: finalize");
-    expect(parsed.auto).toBe(true);
-    expect(parsed.refs).toEqual(["artifact://done-package.md"]);
+    expect(parsed.stageAll).toBe(true);
+    expect(parsed.refs).toEqual([".pairflow/evidence/typecheck.log"]);
+  });
+
+  it("rejects removed --auto with stage-all guidance", () => {
+    expect(() =>
+      parseBubbleCommitCommandOptions(["--id", "b_commit_01", "--auto"])
+    ).toThrow(/COMMIT_AUTO_REMOVED:.*--stage-all/u);
+  });
+
+  it("rejects removed --no-auto with the same stage-all guidance", () => {
+    expect(() =>
+      parseBubbleCommitCommandOptions(["--id", "b_commit_01", "--no-auto"])
+    ).toThrow(/COMMIT_AUTO_REMOVED:.*--stage-all/u);
   });
 
   it("supports help", () => {
     const parsed = parseBubbleCommitCommandOptions(["--help"]);
     expect(parsed.help).toBe(true);
     expect(getBubbleCommitHelpText()).toContain("pairflow bubble commit");
+    expect(getBubbleCommitHelpText()).toContain("--stage-all");
+    expect(getBubbleCommitHelpText()).not.toContain("--auto");
+    expect(getBubbleCommitHelpText()).not.toMatch(/done-package|auto-generate/u);
   });
 
   it("requires --id", () => {

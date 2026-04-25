@@ -5,6 +5,11 @@ export interface CommitBubbleInput {
   bubbleId: string;
   refs?: string[] | undefined;
   message?: string | undefined;
+  stageAll?: boolean | undefined;
+  /**
+   * Temporary internal compatibility for first-party callers not yet migrated to
+   * stageAll. Public CLI use of --auto is removed.
+   */
   auto?: boolean | undefined;
   repoPath?: string | undefined;
   cwd?: string | undefined;

@@ -1,10 +1,10 @@
 {
-  "id": "commit-result-invariant-v11",
+  "id": "commit-auto-compat-v11",
   "command": "commit",
   "mode": "v11",
-  "description": "Commit v11 preserves COMMIT_RESULT invariant and commit artifacts.",
+  "description": "Commit v11 temporarily preserves internal auto compatibility as staging-only behavior.",
   "input": {
-    "stageAll": true,
+    "auto": true,
     "fixture": {
       "scenario": "commit_result_invariant"
     }
@@ -20,6 +20,6 @@
     "seed",
     "m0",
     "commit",
-    "invariant"
+    "compat"
   ]
 }

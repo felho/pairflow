@@ -4,7 +4,7 @@
   "mode": "v11",
   "description": "Seed commit v11 contract case for APPROVED_FOR_COMMIT to DONE baseline.",
   "input": {
-    "auto": true
+    "stageAll": true
   },
   "expected": {
     "status": "ok",

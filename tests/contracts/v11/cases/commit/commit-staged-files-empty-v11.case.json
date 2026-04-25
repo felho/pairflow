@@ -2,9 +2,9 @@
   "id": "commit-staged-files-empty-v11",
   "command": "commit",
   "mode": "v11",
-  "description": "Seed commit v11 contract case for rejection when no staged files exist and auto stage is disabled.",
+  "description": "Seed commit v11 contract case for rejection when no staged files exist and stage-all is disabled.",
   "input": {
-    "auto": false,
+    "stageAll": false,
     "fixture": {
       "scenario": "staged_files_empty"
     }

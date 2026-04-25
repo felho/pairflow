@@ -139,7 +139,7 @@ async function commitRemoteExecutionRoute(input: {
   dependencies: CommitBubbleDependencies;
   refs: string[];
   now: Date;
-  auto: boolean;
+  stageAll: boolean;
 }): Promise<CommitBubbleResult> {
   const donePackagePath = resolve(
     input.context.resolved.bubblePaths.artifactsDir,
@@ -151,7 +151,7 @@ async function commitRemoteExecutionRoute(input: {
     remoteTarget: input.context.remoteTarget,
     refs: input.refs,
     ...(input.command.message !== undefined ? { message: input.command.message } : {}),
-    auto: input.auto
+    auto: input.stageAll
   });
 
   try {
@@ -196,7 +196,7 @@ async function commitRemoteExecutionRoute(input: {
     stagedFiles: remoteResult.stagedFiles,
     refs: input.refs,
     now: input.now,
-    auto: input.auto
+    auto: input.stageAll
   });
 
   return {
@@ -217,12 +217,12 @@ async function commitLocalExecutionRoute(input: {
   refs: string[];
   now: Date;
   nowIso: string;
-  auto: boolean;
+  stageAll: boolean;
 }): Promise<CommitBubbleResult> {
   const { stagedFiles, commitMessage, commitSha } = await runCommitGitStep({
     command: input.command,
     context: input.context,
-    auto: input.auto,
+    stageAll: input.stageAll,
     runGit: input.dependencies.runGit
   });
 
@@ -252,7 +252,7 @@ async function commitLocalExecutionRoute(input: {
     stagedFiles,
     refs: input.refs,
     now: input.now,
-    auto: input.auto
+    auto: input.stageAll
   });
 
   return {
@@ -273,7 +273,9 @@ export async function commitBubble(
   try {
     const now = input.now ?? new Date();
     const nowIso = now.toISOString();
-    const auto = input.auto ?? false;
+    const stageAll = input.stageAll !== undefined
+      ? input.stageAll
+      : input.auto ?? false;
     const refs = normalizeStringList(input.refs ?? []);
 
     const context = await prepareCommitExecutionContext({
@@ -289,7 +291,7 @@ export async function commitBubble(
         dependencies,
         refs,
         now,
-        auto
+        stageAll
       });
     }
 
@@ -300,7 +302,7 @@ export async function commitBubble(
       refs,
       now,
       nowIso,
-      auto
+      stageAll
     });
   } catch (error) {
     return throwAsBubbleCommitError(error);

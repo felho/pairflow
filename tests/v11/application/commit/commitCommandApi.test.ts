@@ -323,6 +323,7 @@ describe("commitCommandApi", () => {
         bubbleId: "b_remote_commit_01",
         cwd: repoPath,
         refs: [".pairflow/evidence/typecheck.log"],
+        stageAll: true,
         now: new Date("2026-04-18T08:05:00.000Z")
       },
       {
@@ -392,7 +393,7 @@ describe("commitCommandApi", () => {
         event.event_type === "bubble_committed"
       );
     expect(commitEvent?.metadata).toEqual({
-      auto: false,
+      auto: true,
       commit_message: "bubble(b_remote_commit_01): finalize",
       commit_sha: "abcdef1234567890",
       done_package_path: donePackagePath,
@@ -400,7 +401,7 @@ describe("commitCommandApi", () => {
       staged_file_count: 1
     });
     expect(executeRemoteBubbleCommitCommand).toHaveBeenCalledWith({
-      auto: false,
+      auto: true,
       bubbleId: "b_remote_commit_01",
       refs: [".pairflow/evidence/typecheck.log"],
       remoteClonePath: "/srv/pairflow/repo--b_remote_commit_01",

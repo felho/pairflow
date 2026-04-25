@@ -4,7 +4,7 @@
   "mode": "v11",
   "description": "Seed commit v11 contract case for state guard when bubble is not APPROVED_FOR_COMMIT.",
   "input": {
-    "auto": false,
+    "stageAll": false,
     "fixture": {
       "scenario": "state_not_approved"
     }

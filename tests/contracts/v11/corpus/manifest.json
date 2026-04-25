@@ -429,6 +429,12 @@
       "kind": "seed_case"
     },
     {
+      "id": "commit-auto-compat-v11",
+      "command": "commit",
+      "source": "tests/contracts/v11/cases/commit/commit-auto-compat-v11.case.json",
+      "kind": "seed_case"
+    },
+    {
       "id": "kickoff-basic-v11",
       "command": "kickoff",
       "source": "tests/contracts/v11/cases/kickoff/kickoff-basic-v11.case.json",

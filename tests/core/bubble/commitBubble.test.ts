@@ -302,7 +302,7 @@ describe("commitBubble", () => {
     expect(result.envelope.type).toBe("COMMIT_RESULT");
   });
 
-  it("supports --auto style commit flow as stage-all without done-package generation", async () => {
+  it("supports stage-all commit flow without done-package generation", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupApprovedBubble(repoPath, "b_commit_04");
 
@@ -315,7 +315,7 @@ describe("commitBubble", () => {
     const result = await commitBubble({
       bubbleId: bubble.bubbleId,
       cwd: repoPath,
-      auto: true,
+      stageAll: true,
       now: new Date("2026-02-22T15:20:00.000Z")
     });
 
@@ -327,6 +327,59 @@ describe("commitBubble", () => {
     await expect(
       readFile(join(bubble.paths.artifactsDir, "done-package.md"), "utf8")
     ).rejects.toMatchObject({ code: "ENOENT" });
+  });
+
+  it("keeps temporary auto compatibility as staging-only", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupApprovedBubble(repoPath, "b_commit_04_compat");
+
+    await writeFile(
+      join(bubble.paths.worktreePath, "feature-compat.txt"),
+      "compat behavior\n",
+      "utf8"
+    );
+
+    const result = await commitBubble({
+      bubbleId: bubble.bubbleId,
+      cwd: repoPath,
+      auto: true,
+      now: new Date("2026-02-22T15:21:00.000Z")
+    });
+
+    expect(result.state.state).toBe("DONE");
+    expect(result.stagedFiles).toContain("feature-compat.txt");
+    expect(result.envelope.type).toBe("COMMIT_RESULT");
+
+    await expect(
+      readFile(join(bubble.paths.artifactsDir, "done-package.md"), "utf8")
+    ).rejects.toMatchObject({ code: "ENOENT" });
+  });
+
+  it("lets explicit stageAll false override temporary auto compatibility", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupApprovedBubble(repoPath, "b_commit_04_precedence");
+
+    await writeFile(
+      join(bubble.paths.worktreePath, "feature-precedence.txt"),
+      "precedence behavior\n",
+      "utf8"
+    );
+
+    try {
+      await commitBubble({
+        bubbleId: bubble.bubbleId,
+        cwd: repoPath,
+        stageAll: false,
+        auto: true,
+        now: new Date("2026-02-22T15:22:00.000Z")
+      });
+      throw new Error("Expected commit to fail with empty staged files.");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      expect(message).toMatch(/COMMIT_STAGED_FILES_EMPTY:.*--stage-all/u);
+      expect(message).toContain('"stage_all":false');
+      expect(message).not.toContain("auto_generate");
+    }
   });
 
   it("fails closed when clone source branch sync fails after local commit", async () => {
@@ -547,7 +600,7 @@ describe("commitBubble", () => {
         {
           bubbleId: bubble.bubbleId,
           cwd: repoPath,
-          auto: true,
+          stageAll: true,
           message: customCommitMessage,
           now: new Date("2026-02-22T15:40:00.000Z")
         },

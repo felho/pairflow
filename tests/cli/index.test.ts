@@ -259,6 +259,15 @@ describe("runCli", () => {
     expect(stdoutSpy).toHaveBeenCalled();
   });
 
+  it("surfaces removed bubble commit --auto through the command error path", async () => {
+    const exitCode = await runCli(["bubble", "commit", "--id", "b_cli_commit_01", "--auto"]);
+
+    expect(exitCode).toBe(1);
+    const output = stderrSpy.mock.calls.map((call) => String(call[0])).join("");
+    expect(output).toContain("COMMIT_AUTO_REMOVED");
+    expect(output).toContain("--stage-all");
+  });
+
   it("renders bubble commit output with the returned envelope type", () => {
     const output = renderBubbleCommitText({
       bubbleId: "b_cli_commit_remote_01",
