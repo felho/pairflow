@@ -156,7 +156,7 @@ This plan separates implementation slicing from mergeability.
 
 ### Progress Update - 2026-04-25
 
-Phase 1, Phase 2, Phase 3A, and Phase 3B are complete and merged.
+Phase 1, Phase 2, Phase 3A, Phase 3B, and Phase 4A are complete and merged.
 
 Completed slices:
 
@@ -189,15 +189,17 @@ Completed slices:
    - Completion proof: first-party UI-router and frontend commit request producers now use `stageAll`, the HTTP boundary rejects legacy `auto` including dual-field ambiguity before mutation dispatch, the UI store preserves the previous default stage-all behavior as `stageAll ?? true`, and router/server/API/store/ActionBar/CommitForm tests cover the enabled and disabled stage-all paths.
    - Boundary note: remote SSH command construction, remote marker parsing, remote sync-back, and remote result hard cutover remain successor-owned by Phase 4.
    - Archived task: `plans/archive/tasks/commit-ui-stage-all-alignment.md`
+5. `remote-commit-result-transport-cutover`
+   - Bubble: `remote-commit-impl`
+   - Bubble commit: `57cc7c4d96c570f847c280bc79d7fb1bb0f65e8f`
+   - Merge commit: `a3036a949e9907f49515fb0ed156a42f6ba6201f`
+   - Completion proof: the normal successful started-remote commit route now invokes remote commit with `--stage-all`, rejects legacy `DONE_PACKAGE` transcript tails, validates remote `DONE` state identity plus `COMMIT_RESULT` metadata against remote git facts, removes done-package transport/sync-back from the remote result contract, and syncs only remote state/transcript continuity artifacts.
+   - Boundary note: Phase 4B still owns partial-success refresh/import repair when the remote side completed but laptop-side import or local continuity is stale.
+   - Archived task: `plans/archive/tasks/remote-commit-result-transport-cutover.md`
 
 Next tasks:
 
-1. `remote-commit-result-transport-cutover`
-   - Owns Phase 4A.
-   - Task file: `plans/tasks/remote-commit-result-transport-cutover.md`.
-   - Primary goal: align remote commit execution, marker parsing, local sync-back, and remote result surfaces with the no-done-package `COMMIT_RESULT` model on the normal successful remote path.
-   - Critical boundary: do not reopen local commit producer authority, public CLI `--stage-all`, or first-party UI-router/frontend `stageAll` request semantics except for direct integration fallout found during Phase 4A.
-2. `remote-commit-partial-success-readiness`
+1. `remote-commit-partial-success-readiness`
    - Owns Phase 4B.
    - Task file: to be created after Phase 4A or together only if explicitly approved as a high-risk bundled implementation.
    - Primary goal: close the observed mixed-state bug class where a remote commit reaches `DONE` with commit facts, but the laptop-side command rejects the payload or leaves local `state.json` stale as `RUNNING`, causing immediate `bubble merge` to fail.
@@ -511,7 +513,7 @@ The work may be implemented in multiple integration slices. Because no active re
    - owns UI-router HTTP/action dispatch and UI frontend/store/form request migration from `auto` to `stageAll`.
    - proves legacy HTTP `auto` rejection and preserves UI default staging behavior under the new field.
 5. `remote-commit-result-transport-cutover`
-   - status: next.
+   - status: completed and archived.
    - owns Phase 4A.
    - slice type: `target_state_required`.
    - owns remote execution transport, remote command flag construction, SSH output parsing, remote marker handling, sync-back, and remote-to-local result mapping for the normal successful remote commit path.
