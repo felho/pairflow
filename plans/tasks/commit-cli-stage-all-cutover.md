@@ -30,6 +30,7 @@ owners:
 1. `2026-04-25` (initial task): created after Phase 2 `local-commit-done-package-removal` was merged and archived.
 2. `2026-04-25` (route-back refinement): narrowed from broad CLI/API/UI/router/remote activation to Phase 3A only. UI-router/frontend migration is successor task `commit-ui-stage-all-alignment`; remote command flag construction and remote result hard cutover stay in Phase 4.
 3. `2026-04-25` (task review refinement): added the explicit remote-route adapter rule for `stageAll` normalization and changed root CLI success rendering from implementation change to preserve/verify scope.
+4. `2026-04-25` (target-reality refinement): clarified `--auto` rejection shape, local diagnostic metadata, internal `stageAll` carrying scope, explicit-defined `stageAll` precedence including `stageAll: false` over `auto: true`, both-present coverage for that case, contract runner/case file-path enumeration, and the remote `auto` port adapter boundary so Phase 3A can introduce `CommitBubbleInput.stageAll` before Phase 3B UI/router migration.
 
 ## L0 - Policy
 
@@ -100,8 +101,10 @@ This is a CLI/application contract foundation and activation slice. It does not 
    - `CommitBubbleInput.auto?: boolean` in `commitCommandContract.ts`.
    - `const auto = input.auto ?? false` and local/remote route propagation in `commitCommandApi.ts`; Phase 3A must replace this with explicit staging normalization that prefers `stageAll` and can adapt to remote legacy `auto`.
    - `runCommitGitStep({ auto })` and `--auto` diagnostics in `commitCommandGitStep.ts`.
+   - `ExecuteRemoteBubbleCommitCommandInput.auto` in `commitRemotePorts.ts`; Phase 3A must not rename this remote port field, but the application route must feed it from normalized `stageAll`.
    - root CLI success text in `src/cli/index.ts`.
-   - direct commit contract fixtures/runners that send the staging field.
+   - direct commit contract fixtures/runners that currently parse and send `auto`.
+   - `tests/cli/index.test.ts` already verifies `renderBubbleCommitText()` uses the returned envelope type, including the remote legacy `DONE_PACKAGE` case.
 2. Actual touched scope: CLI/application staging input activation, direct local staging diagnostics, remote route adapter pass-through for the already-normalized staging boolean, and root CLI result rendering verification.
 3. Mutation boundary: the task does not change commit authority, transcript payload shape, state transition order, clone retry, source-branch sync, or crash recovery.
 4. Hidden scope ruled out:
@@ -159,15 +162,16 @@ This is a CLI/application contract foundation and activation slice. It does not 
 ### In Scope
 
 1. Add `stageAll?: boolean` to application commit input.
-2. Normalize staging input so `stageAll` is preferred; temporary `auto` remains compatibility only where needed for not-yet-cut consumers.
-3. For remote-route execution during Phase 3A, pass the normalized `stageAll` intent into the existing remote route's legacy `auto` port input without changing remote port types, SSH command construction, marker parsing, sync-back, or result continuity.
-4. Replace CLI `--auto` with `--stage-all`.
-5. Ensure CLI `--auto` fails clearly and points operators to `--stage-all`.
-6. Update CLI help to remove done-package requirement/generation language.
-7. Update local staging diagnostics to mention `--stage-all`, not `--auto`.
-8. Update direct CLI/application/local commit tests.
-9. Preserve and verify root CLI success rendering so it reports the actual returned envelope type and does not hardcode `COMMIT_RESULT` over a remote legacy `DONE_PACKAGE` result.
-10. Update commit contract runner/cases where they directly send application commit staging input.
+2. Normalize staging input once in the application route: an explicitly defined `stageAll` wins even when it is `false`; temporary `auto` is fallback compatibility only when `stageAll` is absent.
+3. Carry the normalized boolean internally as `stageAll` for local execution and diagnostics.
+4. For remote-route execution during Phase 3A, pass the normalized `stageAll` intent into the existing remote route's legacy `auto` port input without changing remote port type, SSH flag construction, marker parsing, sync-back, or result continuity.
+5. Replace CLI `--auto` with `--stage-all`.
+6. Ensure CLI `--auto` fails clearly and points operators to `--stage-all`; do not rely only on a generic unknown-option parser error.
+7. Update CLI help to remove done-package requirement/generation language.
+8. Update local staging diagnostics to mention `--stage-all`, not `--auto`; local commit error context should expose staging semantics (for example `stage_all`) rather than the old `auto_generate` done-package-era name.
+9. Update direct CLI/application/local commit tests.
+10. Preserve and verify root CLI success rendering so it reports the actual returned envelope type and does not hardcode `COMMIT_RESULT` over a remote legacy `DONE_PACKAGE` result.
+11. Update commit contract runner/cases where they directly send application commit staging input.
 
 ### Out of Scope
 
@@ -179,15 +183,16 @@ This is a CLI/application contract foundation and activation slice. It does not 
 6. Remote SSH output parsing from `DONE_PACKAGE` to `COMMIT_RESULT`.
 7. Remote sync-back removal of `done-package.md`.
 8. Protocol hard removal of `DONE_PACKAGE`.
-9. Lifecycle/event metadata key cleanup.
+9. Lifecycle/event metadata key cleanup, except the local commit error-context rename to staging terminology explicitly owned by this task.
 10. Broad README/docs/start/resume prompt cleanup.
 
 ### Safety Defaults
 
 1. If `stageAll` is absent and no explicit temporary compatibility `auto` is present, do not stage all.
-2. If public CLI `--auto` is used, fail clearly.
-3. If remote route receives `stageAll`, preserve that staging intent through the existing remote `auto` adapter until Phase 4.
-4. If implementation discovers UI/router or remote compile fallout that cannot be handled with the narrow adapter described above, stop and route to Phase 3B or Phase 4 rather than expanding this task.
+2. If `stageAll` is explicitly present, use that value even when it is `false`; do not let compatibility `auto` override it.
+3. If public CLI `--auto` is used, fail clearly.
+4. If remote route receives `stageAll`, preserve that staging intent through the existing remote `auto` adapter until Phase 4.
+5. If implementation discovers UI/router or remote compile fallout that cannot be handled with the narrow adapter described above, stop and route to Phase 3B or Phase 4 rather than expanding this task.
 
 ### Complexity Risk Gate
 
@@ -227,21 +232,21 @@ This is a CLI/application contract foundation and activation slice. It does not 
 
 | ID | File | Function / Entry | Expected Behavior | Priority | Timing | Evidence |
 |---|---|---|---|---|---|---|
-| CS1 | `src/v11/application/commit/commitCommandContract.ts` | `CommitBubbleInput` | add `stageAll?: boolean`; keep any `auto?: boolean` only as documented temporary compatibility | P1 | required-now | typecheck |
-| CS2 | `src/v11/application/commit/commitCliCommand.ts` | parse/help/run command | parse `--stage-all`; reject `--auto`; help has no done-package language | P1 | required-now | CLI tests |
-| CS3 | `src/v11/application/commit/commitCommandApi.ts` | shared `commitBubble` local/remote route selector | prefer `stageAll`; fallback to temporary `auto` only for internal compatibility; local route receives normalized staging boolean; remote route receives the same boolean through existing legacy `auto` adapter; do not change remote construction | P1 | required-now | API tests |
-| CS4 | `src/v11/application/commit/commitCommandGitStep.ts` | `runCommitGitStep` | accept normalized staging boolean / `stageAll` naming; diagnostics mention `--stage-all` | P1 | required-now | local commit tests |
+| CS1 | `src/v11/application/commit/commitCommandContract.ts` | `CommitBubbleInput` | add `stageAll?: boolean`; keep `auto?: boolean` only as documented temporary compatibility for first-party internal callers not yet migrated | P1 | required-now | typecheck |
+| CS2 | `src/v11/application/commit/commitCliCommand.ts` | parse/help/run command | parse `--stage-all`; reject `--auto` during parse with a dedicated `COMMIT_AUTO_REMOVED` error whose message names `--stage-all`; CLI invocation exits non-zero through the existing command error path; help has no done-package language | P1 | required-now | CLI tests |
+| CS3 | `src/v11/application/commit/commitCommandApi.ts` | shared `commitBubble` local/remote route selector | compute one normalized `stageAll` boolean with explicit-defined precedence: `input.stageAll !== undefined ? input.stageAll : input.auto ?? false`; local route receives it as `stageAll`; remote route maps it to the existing remote port `auto` field; do not change remote port type, SSH flag construction, marker parsing, sync-back, or result continuity | P1 | required-now | API tests |
+| CS4 | `src/v11/application/commit/commitCommandGitStep.ts` | `runCommitGitStep` | accept normalized `stageAll`; diagnostics mention `--stage-all`; local error context uses staging wording such as `stage_all`, not old done-package-era `auto_generate` | P1 | required-now | local commit tests |
 | CS5 | `src/cli/index.ts` | commit result rendering | preserve existing actual-envelope rendering; local may show `COMMIT_RESULT`, remote may still show `DONE_PACKAGE` until Phase 4 | P2 | verify-now | root CLI tests |
-| CS6 | contract/commit test harnesses | commit case input | update direct application staging input cases to use `stageAll` where this task owns the caller | P2 | required-now | contract tests |
+| CS6 | `tests/contracts/v11/commit.contract.runner.ts` and `tests/contracts/v11/cases/commit/*.case.json` | commit case input | parse/send `stageAll` as preferred input; migrate `commit-basic-v11.case.json`, `commit-result-invariant-v11.case.json`, `commit-staged-files-empty-v11.case.json`, and `commit-state-not-approved-v11.case.json` to `stageAll`; add any retained `auto` case only as explicit temporary legacy-compat coverage | P2 | required-now | contract tests |
 
 ### 2) Data And Interface Contract
 
 | Contract | Current | Target In This Task | Compatibility | Priority | Timing |
 |---|---|---|---|---|---|
-| CLI flag | `--auto` | `--stage-all` | breaking public CLI change; no alias | P1 | required-now |
-| Application input | `auto?: boolean` | `stageAll?: boolean` preferred | temporary internal `auto` compatibility only | P1 | required-now |
+| CLI flag | `--auto` | `--stage-all` | breaking public CLI change; no alias; rejection message names replacement | P1 | required-now |
+| Application input | `auto?: boolean` | `stageAll?: boolean` preferred | temporary internal `auto` compatibility only; an explicitly defined `stageAll` value always wins when present, including `false`; `auto` is read only when `stageAll` is absent | P1 | required-now |
 | UI HTTP body | `auto` | unchanged in this task | Phase 3B owns migration/rejection | P1 | successor |
-| Remote route adapter | application route passes `auto` to remote port | normalized `stageAll` may be passed into existing remote `auto` port input | temporary adapter only; no remote type/SSH rename | P1 | required-now |
+| Remote route adapter | application route passes `auto` to remote port | normalized `stageAll` is passed into existing remote `auto` port input | temporary adapter only; no remote type/SSH rename | P1 | required-now |
 | Remote command | emits `--auto` | unchanged in this task | Phase 4 owns remote command construction | P1 | successor |
 | Result object | technical commit facts, no `donePackagePath` | unchanged | preserve Phase 2 | P1 | required-now |
 
@@ -252,18 +257,18 @@ This is a CLI/application contract foundation and activation slice. It does not 
 | Git | `stageAll=true` runs `git add -A` before staged-file validation | staging when absent/false | same behavior as prior `auto` path | P1 | required-now |
 | Transcript | existing local `COMMIT_RESULT` append | payload shape change | Phase 2 contract remains closed | P1 | required-now |
 | State | existing transition ordering | state writes before valid commit facts | unchanged | P1 | required-now |
-| CLI parse | reject `--auto` | hidden alias/fallback | clear replacement message required | P1 | required-now |
-| Remote adapter | pass normalized stage-all intent to existing remote `auto` input | remote command construction/parser/sync-back changes | preserves staging intent without Phase 4 cutover | P1 | required-now |
+| CLI parse | reject `--auto` | hidden alias/fallback | dedicated `COMMIT_AUTO_REMOVED` parse error; message names `--stage-all`; CLI invocation exits non-zero through existing error handling; generic unknown-option-only output is insufficient | P1 | required-now |
+| Remote adapter | pass normalized stage-all intent to existing remote `auto` input | remote port type, SSH flag construction, marker parsing, sync-back, or result continuity changes | preserves staging intent without Phase 4 cutover | P1 | required-now |
 
 ### 4) Error And Fallback Contract
 
 | Trigger | Behavior | Reason / Message Rule | Priority | Timing |
 |---|---|---|---|---|
-| CLI uses `--auto` | fail parse clearly | mention `--stage-all` replacement | P1 | required-now |
+| CLI uses `--auto` | fail parse clearly | throw `COMMIT_AUTO_REMOVED`; message mentions `--stage-all`; command exits non-zero through the existing CLI error path | P1 | required-now |
 | `stageAll` is absent | do not stage all unless temporary internal `auto` compatibility is explicitly present | preserve default no-stage behavior | P1 | required-now |
 | no staged files and stage-all false | preserve `COMMIT_STAGED_FILES_EMPTY` | message suggests `--stage-all` | P1 | required-now |
 | no staged files after stage-all true | preserve fail-closed error | message names `--stage-all` | P1 | required-now |
-| remote bubble with `stageAll=true` before Phase 4 | preserve staging intent through remote `auto` adapter | SSH may still build `--auto`; no `--stage-all` remote construction yet | P1 | required-now |
+| remote bubble with `stageAll=true` before Phase 4 | preserve staging intent through remote `auto` adapter | do not change remote port type, SSH flag construction, marker parsing, sync-back, or result continuity; SSH may still build `--auto`; no `--stage-all` remote construction yet | P1 | required-now |
 | UI/router change needed | stop or route to Phase 3B | do not silently broaden task | P1 | required-now |
 | remote construction change needed | stop or route to Phase 4 | do not silently broaden task | P1 | required-now |
 
@@ -272,20 +277,22 @@ This is a CLI/application contract foundation and activation slice. It does not 
 | ID | Scenario | Setup | Expected Result | Priority | Timing |
 |---|---|---|---|---|---|
 | T1 | CLI parses `--stage-all`. | `pairflow bubble commit --id b --stage-all --ref x`. | parsed local input uses `stageAll=true`; no public `auto` option. | P1 | required-now |
-| T2 | CLI rejects `--auto`. | `parseBubbleCommitCommandOptions([\"--id\",\"b\",\"--auto\"])`. | clear parse/error path; no alias behavior. | P1 | required-now |
+| T2a | Parser rejects `--auto`. | `parseBubbleCommitCommandOptions([\"--id\",\"b\",\"--auto\"])`. | parser throws `COMMIT_AUTO_REMOVED`; error message contains `--stage-all`; no alias behavior and no generic-only unknown-option message. | P1 | required-now |
+| T2b | Root CLI surfaces `--auto` rejection through command error path. | root CLI invocation with `bubble commit --id b --auto`. | exits non-zero through the existing CLI error path; stderr includes `COMMIT_AUTO_REMOVED` and `--stage-all`. | P1 | required-now |
 | T3 | CLI help has no done-package/`--auto` language. | `getBubbleCommitHelpText()`. | contains `--stage-all`; does not contain `--auto`, `done-package`, or auto-generation text. | P1 | required-now |
 | T4 | Local stage-all commit succeeds. | approved local bubble with unstaged file and `stageAll: true`. | state `DONE`, file committed, `COMMIT_RESULT`, no done-package generated. | P1 | required-now |
-| T5 | No staged files without stage-all fails. | approved local bubble, no staged files, no `stageAll`. | `COMMIT_STAGED_FILES_EMPTY`; message suggests `--stage-all`. | P1 | required-now |
-| T6 | Temporary application `auto` compatibility remains staging-only if retained. | direct internal `commitBubble({ auto: true })` compatibility case. | stages all but does not read/generate done-package; marked for successor removal. | P2 | required-now-if-retained |
-| T7 | Remote `stageAll` intent uses adapter without SSH cutover. | remote route test with `stageAll: true` and mocked remote command. | existing remote command dependency receives `auto: true`; remote result continuity remains unchanged. | P1 | required-now |
-| T8 | Root CLI success rendering is envelope-truthful. | existing local and remote render tests. | preserve actual-envelope rendering; remote legacy result still shows `DONE_PACKAGE` until Phase 4. | P2 | verify-now |
-| T9 | Contract corpus direct commit input uses `stageAll`. | v11 commit contract case owned by CLI/application path. | runner sends `stageAll` and still proves commit result invariant. | P2 | required-now |
+| T5 | No staged files without stage-all fails. | approved local bubble, no staged files, no `stageAll`. | `COMMIT_STAGED_FILES_EMPTY`; message suggests `--stage-all`; local error context uses `stage_all` semantics instead of `auto_generate`. | P1 | required-now |
+| T6 | Temporary application `auto` compatibility remains staging-only until successor consumers are cut over. | direct internal `commitBubble({ auto: true })` compatibility case. | stages all but does not read/generate done-package; retained only to unlock Phase 3B UI/router migration and Phase 4 remote hard cutover, then removed by HB1. | P2 | required-now |
+| T7 | Explicit `stageAll` false overrides compatibility `auto` true. | direct internal `commitBubble({ stageAll: false, auto: true })` with no staged files. | does not run stage-all; preserves default no-stage behavior; fails with `COMMIT_STAGED_FILES_EMPTY`; message suggests `--stage-all`. | P1 | required-now |
+| T8 | Remote `stageAll` intent uses adapter without SSH cutover. | remote route test with `stageAll: true` and mocked remote command. | existing remote command dependency receives `auto: true`; remote port type, SSH flag construction, marker parsing, sync-back, or result continuity remain unchanged. | P1 | required-now |
+| T9 | Root CLI success rendering is envelope-truthful. | existing local and remote render tests. | preserve actual-envelope rendering; remote legacy result still shows `DONE_PACKAGE` until Phase 4. | P2 | verify-now |
+| T10 | Contract corpus direct commit input uses `stageAll`. | v11 commit contract cases `commit-basic-v11.case.json`, `commit-result-invariant-v11.case.json`, `commit-staged-files-empty-v11.case.json`, and `commit-state-not-approved-v11.case.json`. | runner parses/sends `stageAll` and still proves commit result invariant; any retained `auto` fixture is a separately named explicit legacy-compat case. | P2 | required-now |
 
 ### 6) Shared Contract Compatibility
 
 | Shared Contract | Current Consumers | Additive vs Breaking | Required Alignment | Out-of-Scope Consumers |
 |---|---|---|---|---|
-| `CommitBubbleInput` | CLI command, direct tests, UI router, remote path | additive/preferred in this task | CLI/application prefer `stageAll`; `auto` remains temporary compatibility only if needed; remote receives normalized staging intent through legacy `auto` adapter | UI/router Phase 3B, remote hard cutover Phase 4 |
+| `CommitBubbleInput` | CLI command, direct tests, UI router, remote path | additive/preferred in this task | CLI/application prefer explicitly defined `stageAll` over `auto`, including `stageAll: false`; `auto` remains temporary compatibility only until successor consumers cut over; remote receives normalized staging intent through legacy `auto` adapter | UI/router Phase 3B, remote hard cutover Phase 4 |
 | CLI options | operator CLI and CLI tests | breaking | `--stage-all` only; `--auto` rejected | none |
 | UI/router input | UI HTTP/action dispatch | unchanged | N/A | Phase 3B |
 | remote command input | remote executor/SSH command | unchanged | N/A | Phase 4 |
@@ -297,7 +304,7 @@ This is a CLI/application contract foundation and activation slice. It does not 
 | Closure buckets touched | `shared_contract`, `internal_execution_consumers`, `read_model_consumers` |
 | Intentionally collapsed closures | CLI/application request activation and direct local staging diagnostics |
 | Explicitly deferred closures | UI/router/frontend alignment, remote transport/result alignment, protocol hard removal, prompt/docs cleanup, cleanup/recovery |
-| Safe bounded proof | the task activates one staging control for the CLI/application path while preserving explicit temporary compatibility for not-yet-cut consumers. Remote route involvement is limited to passing the normalized boolean into the existing legacy `auto` adapter. It does not alter commit authority, persisted transcript payload, state transition, UI public HTTP body, remote SSH command construction, or remote transport continuity. |
+| Safe bounded proof | the task activates one staging control for the CLI/application path while preserving explicit temporary compatibility for not-yet-cut consumers. Remote route involvement is limited to passing the normalized boolean into the existing legacy `auto` adapter. It does not alter commit authority, persisted transcript payload, state transition, UI public HTTP body, remote port type, SSH flag construction, marker parsing, sync-back, or result continuity. |
 
 ## L2 - Hardening Backlog
 
