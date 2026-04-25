@@ -18,6 +18,7 @@ target_files:
   - "ui/src/lib/api.test.ts"
   - "ui/src/state/useBubbleStore.test.ts"
   - "ui/src/components/actions/ActionBar.test.tsx"
+  - "ui/src/components/actions/CommitForm.test.tsx"
 prd_ref: null
 plan_ref: plans/commit-snapshot-and-completion-artifact-retirement-plan-v1.md
 system_context_ref: docs/pairflow-initial-design.md
@@ -30,6 +31,7 @@ owners:
 ## Revision Log
 
 1. `2026-04-25` (initial task): created from `commit-cli-stage-all-cutover` route-back review. This task owns Phase 3B UI-router/frontend consumer-family alignment after Phase 3A introduces CLI/application `stageAll`.
+2. `2026-04-25` (task review refinement): tightened the Phase 3A prerequisite gate, made legacy HTTP `auto` rejection independent from `stageAll` presence including dual-field ambiguity, added call-site reality notes for current UI store/form/router producers, added the read-only CS3a prerequisite probe, and expanded explicit UI submission/default test coverage.
 
 ## L0 - Policy
 
@@ -84,6 +86,9 @@ The behavior remains the same UI staging behavior: when the UI submits stage-all
    - UI action dispatch forwards `auto`.
    - `UiCommitBubbleInput.auto` carries the router port field.
    - UI client/store/action/form currently use `auto`, including store default behavior.
+   - `CommitForm` owns the visible checkbox state and label and currently submits `auto`.
+   - `ActionBar` maps the `CommitForm` submit payload into `RunBubbleActionInput` and currently forwards `auto`.
+   - `useBubbleStore` currently applies the default before calling the API client with `auto: input.auto ?? true`.
 2. Actual touched scope: UI/router request field rename plus direct UI producer tests.
 3. Mutation boundary: UI dispatch still calls the same commit mutation after request validation; no transcript, state, git commit, or remote behavior changes are introduced here.
 4. Hidden scope ruled out:
@@ -117,6 +122,7 @@ The behavior remains the same UI staging behavior: when the UI submits stage-all
    - UI client/store/action/form `auto` payload and labels.
 3. Forbidden regressions:
    - no hidden HTTP `auto` alias;
+   - no acceptance of dual-field HTTP bodies containing both `stageAll` and legacy `auto`;
    - no mutation call after invalid legacy body;
    - no remote transport change.
 
@@ -153,12 +159,14 @@ The behavior remains the same UI staging behavior: when the UI submits stage-all
 5. Protocol `DONE_PACKAGE` hard removal.
 6. Lifecycle/event metadata key cleanup.
 7. Broad docs/prompt cleanup.
+8. Editing application commit contracts or behavior for the CS3a prerequisite probe; Phase 3B may inspect `CommitBubbleInput` but must not patch application-layer files.
 
 ### Safety Defaults
 
 1. Legacy HTTP `auto` fails clearly and does not dispatch mutation.
-2. Missing/non-boolean `stageAll` follows the parser's explicit validation rule.
-3. If implementation discovers application `stageAll` is not available, stop and route back to Phase 3A.
+2. Legacy HTTP `auto` must be rejected whenever present, including bodies that also include valid `stageAll`; this prevents ambiguous dual-field requests from being silently accepted.
+3. Missing/non-boolean `stageAll` follows the parser's explicit validation rule.
+4. If implementation discovers application `stageAll` is not available on `CommitBubbleInput`, stop and route back to Phase 3A instead of reintroducing router-level `auto` compatibility.
 
 ### Complexity Risk Gate
 
@@ -187,8 +195,9 @@ The behavior remains the same UI staging behavior: when the UI submits stage-all
 | Item | Rule | Implementation Consequence | Priority | Timing |
 |---|---|---|---|---|
 | Request rule | UI/router sends `stageAll`. | Replace UI/router `auto` request fields. | P1 | required-now |
-| Forbidden fallback | HTTP `auto` is not accepted. | Add rejection test before mutation dispatch. | P1 | required-now |
+| Forbidden fallback | HTTP `auto` is not accepted, including dual-field bodies that also contain `stageAll`. | Add rejection tests before mutation dispatch. | P1 | required-now |
 | Default rule | UI default staging behavior is explicit. | Preserve previous default as `stageAll` or document intentional change. | P1 | required-now |
+| Prerequisite gate | Application `CommitBubbleInput.stageAll` must exist before UI/router migration begins. | Verify Phase 3A contract first; route back if only `auto` exists. | P1 | required-now |
 | Remote boundary | Remote is Phase 4. | Do not touch SSH executor/parser/sync-back. | P1 | required-now |
 
 ### 1) Call-Site Matrix
@@ -198,11 +207,12 @@ The behavior remains the same UI staging behavior: when the UI submits stage-all
 | CS1 | `src/v11/infrastructure/ui/routerHttpBody.ts` | `parseCommitBody` | parse required/explicit `stageAll`; reject legacy `auto` clearly | P1 | required-now | router tests |
 | CS2 | `src/v11/infrastructure/ui/routerActionDispatch.ts` | commit action dispatch | forward `stageAll` into `commitBubble` | P1 | required-now | router tests |
 | CS3 | `src/v11/shared/ports/uiRouter.ts` | `UiCommitBubbleInput` | rename `auto` to `stageAll` | P1 | required-now | typecheck |
+| CS3a | `src/v11/application/commit/commitCommandContract.ts` | `CommitBubbleInput` prerequisite probe | confirm Phase 3A already exposes `stageAll`; do not edit this file in Phase 3B | P1 | required-now | typecheck/preflight inspection |
 | CS4 | `ui/src/lib/types.ts` | `CommitActionInput` | rename `auto` to `stageAll` | P1 | required-now | UI typecheck |
 | CS5 | `ui/src/lib/api.ts` | `commitBubble` request body | send `stageAll`, not `auto` | P1 | required-now | API test |
-| CS6 | `ui/src/state/useBubbleStore.ts` | commit action case | default and forward `stageAll` | P1 | required-now | store test |
-| CS7 | `ui/src/components/actions/ActionBar.tsx` | submit path | forward `stageAll` | P1 | required-now | ActionBar test |
-| CS8 | `ui/src/components/actions/CommitForm.tsx` | control state/label | use stage-all label/state and submitted field | P1 | required-now | component/typecheck |
+| CS6 | `ui/src/state/useBubbleStore.ts` | `RunBubbleActionInput` and commit action case | rename store action input field from `auto` to `stageAll`; preserve current `input.auto ?? true` behavior as `input.stageAll ?? true` | P1 | required-now | store test |
+| CS7 | `ui/src/components/actions/ActionBar.tsx` | submit path | forward `stageAll` from `CommitForm` into `RunBubbleActionInput` | P1 | required-now | ActionBar test |
+| CS8 | `ui/src/components/actions/CommitForm.tsx` | control state/label | rename local state to `stageAll`, keep default checked, submit `stageAll`, and use visible stage-all wording without `auto=true` | P1 | required-now | component/typecheck |
 
 ### 2) Data And Interface Contract
 
@@ -218,6 +228,7 @@ The behavior remains the same UI staging behavior: when the UI submits stage-all
 | Area | Allowed | Forbidden | Notes | Priority | Timing |
 |---|---|---|---|---|---|
 | HTTP parse | accept valid `stageAll` | accept legacy `auto` as alias | fail before mutation | P1 | required-now |
+| HTTP ambiguity | reject any body containing `auto`, even with `stageAll` | silently prefer one field | keeps public boundary breaking and unambiguous | P1 | required-now |
 | UI dispatch | call existing `commitBubble` with `stageAll` | mutate before valid body | unchanged mutation boundary | P1 | required-now |
 | UI default | preserve previous stage-all default under new name | accidental default flip | store test required | P1 | required-now |
 | Remote | none | command construction/parser/sync-back changes | Phase 4 owns remote | P1 | required-now |
@@ -226,12 +237,14 @@ The behavior remains the same UI staging behavior: when the UI submits stage-all
 
 | ID | Scenario | Setup | Expected Result | Priority | Timing |
 |---|---|---|---|---|---|
-| T1 | UI HTTP accepts `stageAll`. | commit action body `{ stageAll: true }`. | dispatch calls `commitBubble` with `stageAll: true`. | P1 | required-now |
-| T2 | UI HTTP rejects legacy `auto`. | commit action body `{ auto: true }`. | clear 400/error; no mutation call. | P1 | required-now |
-| T3 | UI HTTP rejects invalid/missing `stageAll` according to parser policy. | invalid body. | clear validation error; no mutation call. | P1 | required-now |
+| T1 | UI HTTP accepts `stageAll`. | commit action body `{ stageAll: true }`. | dispatch calls `commitBubble` with `stageAll: true`. Cover in router unit tests and server integration where commit body validation is already exercised. | P1 | required-now |
+| T2 | UI HTTP rejects legacy `auto`. | commit action body `{ auto: true }`. | clear 400/error; no mutation call. Cover in router unit tests and server integration. | P1 | required-now |
+| T3 | UI HTTP rejects ambiguous dual-field body. | commit action body `{ stageAll: true, auto: true }`. | clear 400/error naming legacy `auto`; no mutation call. Cover in router unit tests and server integration. | P1 | required-now |
 | T4 | UI client sends `stageAll`. | `client.commitBubble(..., { stageAll: true })`. | request body contains `stageAll`, not `auto`. | P1 | required-now |
 | T5 | Store preserves default. | commit action from store without explicit override. | payload uses tested `stageAll` default equivalent to prior `auto` default. | P1 | required-now |
-| T6 | ActionBar/CommitForm submit `stageAll`. | user submits commit form. | submitted payload has `stageAll`; visible label does not say `auto=true`. | P2 | required-now |
+| T6 | UI HTTP rejects invalid/missing `stageAll` according to parser policy. | invalid body. | clear validation error; no mutation call. Cover in router unit tests and server integration. | P1 | required-now |
+| T7 | ActionBar/CommitForm submit `stageAll`. | user submits commit form with default checkbox state. | submitted payload has `stageAll: true`; visible checkbox label is `Stage all changes`; visible label does not say `auto` or `auto=true`. Cover direct `CommitForm` test for the label/payload and `ActionBar` integration test for forwarding. | P1 | required-now |
+| T8 | ActionBar/CommitForm submit disabled stage-all. | user clears the checkbox and submits. | submitted payload has `stageAll: false`; no `auto` key is emitted. Cover direct `CommitForm` test for unchecked payload and `ActionBar` integration test for forwarding. | P1 | required-now |
 
 ### 5) Shared Contract Compatibility
 
@@ -247,6 +260,7 @@ The behavior remains the same UI staging behavior: when the UI submits stage-all
 |---|---|
 | Closure buckets touched | `shared_contract`, `workflow_orchestration_consumers`, `read_model_consumers` |
 | Intentionally collapsed closures | UI-router request validation and UI frontend request production |
+| Prerequisite-only surface | CS3a is read-only preflight evidence for the Phase 3A application contract; it does not expand Phase 3B edit scope or closure buckets. |
 | Explicitly deferred closures | CLI/application foundation, remote transport/result alignment, protocol hard removal, docs/prompt cleanup |
 | Safe bounded proof | all touched paths are one consumer family for the same request field. No producer authority, persisted transcript, git mutation ordering, or remote transport behavior changes. |
 
@@ -257,22 +271,23 @@ The behavior remains the same UI staging behavior: when the UI submits stage-all
 | HB1 | Remove any remaining application `auto` compatibility after remote cutover. | L2 | P1 | successor | parent plan | Phase 4 should close remote dependency. |
 | HB2 | Update broader docs/release notes for UI wording if needed. | L2 | P3 | later-docs | task drafting | Defer to Phase 5 unless direct UI tests require local text. |
 
-## Assumptions
+## Preconditions And Assumptions
 
-1. Phase 3A has introduced application `stageAll`.
+1. Phase 3A has introduced application `stageAll`; this is a prerequisite gate, not an editable Phase 3B deliverable.
 2. The UI's previous default staging behavior should remain functionally equivalent unless product evidence says otherwise.
 3. External HTTP clients are not separately supported for backward-compatible `auto` aliasing.
+4. The implementation should verify the current `CommitBubbleInput` application contract before editing UI/router consumers; this is anchored by L1 `Prerequisite gate` and `CS3a`. If only `auto` exists in the implementation base, this task is not implementable yet and must route back to Phase 3A.
 
 ## Spec Lock
 
-Task state is `IMPLEMENTABLE` because:
+Task state is `IMPLEMENTABLE` only when the CS3a prerequisite probe confirms application `stageAll`, because:
 
 1. The parent plan defines Phase 3B as UI-router/frontend consumer-family alignment.
 2. The target files are limited to UI-router and UI frontend request producers/validators.
-3. The test matrix covers accepted `stageAll`, rejected legacy `auto`, default preservation, and no mutation on invalid body.
+3. The test matrix covers accepted `stageAll`, rejected legacy `auto`, rejected dual-field ambiguity, default preservation, enabled and disabled UI stage-all submissions, and no mutation on invalid body.
 4. Remote transport and commit producer behavior remain successor/predecessor-owned.
 
-This task must be downgraded to `draft` if implementation requires changing CLI parser/help, remote SSH command construction, remote result parsing, protocol validation, lifecycle/event metadata keys, or commit producer authority.
+This task must be downgraded to `draft` if implementation requires changing CLI parser/help, application `CommitBubbleInput` to add `stageAll`, remote SSH command construction, remote result parsing, protocol validation, lifecycle/event metadata keys, or commit producer authority. A CS3a preflight result showing only application `auto` and no `stageAll` is a prerequisite-unmet route-back trigger, not permission to patch application code in this Phase 3B task.
 
 ## Open Questions
 
