@@ -68,8 +68,10 @@ Docs-only `O3-T1` szelet, amely:
    - `startup_prompt_concern_ids`,
    - `resume_prompt_concern_ids`,
    - opcionalis `handoff_id_format_id` es `active_agent_constraint_id` mezok azokra a role-okra, amelyek extra invariansot hordoznak.
-6. A 3 mai role closed-mapping matrixanak rogzitese a contract note-ban, mind a 9 mezovel a current-tree alapjan.
-7. A companion catalog naming proposal a contract note-ban: `promptConcernCatalog` es `topologySlotCatalog` source-anchor mintaval, **kod nelkul** (a tenyleges katalogus felepitese `O3-T2`).
+6. A 3 mai role closed-mapping matrixanak rogzitese a contract note-ban, mind a 9 mezovel a current-tree alapjan, beleertve az exact `startup_prompt_concern_ids` es `resume_prompt_concern_ids` ordered listakat.
+7. A companion catalog naming proposal a contract note-ban: `promptConcernCatalog` es `topologySlotCatalog` source-anchor mintaval, **kod nelkul** (a tenyleges katalogus felepitese `O3-T2`), ugy hogy a prompt concern ID-k explicitten lefedhetnek:
+   - kozvetlen reusable helper buildert,
+   - grouped builder-local fixed blockot, ha a current tree-ben meg nincs kisebb helperre bontva.
 8. A `O3-T2..T5` phasing rogzitese a contract note-ban tabular formaban (slice id, shape, goal, closure bucket, gating felteteleivel).
 
 ### Out of Scope
@@ -177,13 +179,16 @@ Docs-only `O3-T1` szelet, amely:
 #### Allowed Resolution Path
 
 1. Explicit name-binding a meglevo catalog-elemekre: `actorRuntimePolicyCheckCatalog` ID-k es `actorRuntimeAdapterExecutors` ID-k a current tree-bol.
-2. Companion catalog naming proposal (`promptConcernCatalog`, `topologySlotCatalog`) source-anchor mintaval, **kod nelkul**; a tenyleges katalogus felepitese `O3-T2`.
-3. A "configurability compass" vezérelv hasznalhato dontesi tradeoffoknal, ha az egyik ut nyitva tartja az utat a jovobeli workflow-konfigurabilitas fele.
+2. Companion catalog naming proposal (`promptConcernCatalog`, `topologySlotCatalog`) source-anchor mintaval, **kod nelkul**; a tenyleges katalogus felepitese `O3-T2`/`O3-T3` successor ownership.
+3. A prompt concern naming proposal lehet helper-szintu vagy grouped builder-local fixed block szintu, de minden ID-nek explicit current-tree source anchorja kell legyen.
+4. Az `O3-T1`-ben a 3 mai role exact startup/resume concern-setjeihez szukseges `promptConcernCatalog` concern-vocabulary mar normativan lockolando; az `O3-T2` csak ennek kod-szintu formalizalasat es registry/projection bekoteset ownershipolja.
+5. A "configurability compass" vezérelv hasznalhato dontesi tradeoffoknal, ha az egyik ut nyitva tartja az utat a jovobeli workflow-konfigurabilitas fele.
 
 #### Missing Data Rule
 
 1. Ha egy seamhez current-tree closed mapping van, az a contract note-ban kotelezo explicit mappingkent rogzul (nem `deferred`).
-2. `deferred mapping` csak olyan terminologyra engedett, amelyhez nincs current-tree closed source anchor (pl. a companion catalog tenyleges entry-listaja, ami `O3-T2`-ben kerul lockolasra).
+2. `deferred mapping` csak olyan terminologyra engedett, amelyhez nincs current-tree closed source anchor (peldaul a `topologySlotCatalog` tenyleges entry-listaja, ami `O3-T3`-ban kerul lockolasra).
+3. A 3 mai role exact startup/resume concern-setjeiben hasznalt `promptConcernCatalog` concern-ID-k nem maradhatnak `deferred` helykitoltok: ezeket az `O3-T1`-ben source-anchoroltan le kell zarni; az `O3-T2` csak a kod-szintu formalizalasukat ownershipolja.
 
 ### Task Shape
 
@@ -247,7 +252,7 @@ Docs-only `O3-T1` szelet, amely:
 
 1. `seam` (lookup-pont, ahol az `AgentRole` enum konkret ertekei a current tree-ben szetszivargak)
 2. `RoleDescriptor` (belso registry-bejegyzes, **nem** polimorfikus interface)
-3. `prompt concern` (reusable instruction-surface modul, mai source: `build*Guidance` family)
+3. `prompt concern` (reusable vagy grouped instruction-surface projection blokk; mai source lehet kozvetlen helper builder (`build*Guidance`, `build*Line`, `build*Reminder`) vagy grouped builder-local fixed block)
 4. `topology slot` (dedikalt pane mapping, mai source: `runtimePaneIndices`)
 5. `agent resolution` (`config_bound | hardcoded_runtime`; a role agentje hogyan kerul kiszamitasra)
 6. `dedicated panel baseline` (working assumption: egy active role = sajat dedikalt pane; multiplexing deferred post-O3)
@@ -375,14 +380,15 @@ Conclusion: a task bounded marad, mert nincs producer vagy shared-contract code 
 
 1. A task artifact docs-only contract clarification slice-kent zarul, nem runtime/CLI/protocol modositassal.
 2. A note explicit `RoleDescriptor` mezohalmaz table-t ad legalabb 9 mezovel, source-anchor referenciakkal.
-3. A note explicit closed-mapping table-t ad mindharom mai role-ra (`implementer`, `reviewer`, `meta_reviewer`) mind a 9 mezovel.
+3. A note explicit closed-mapping table-t ad mindharom mai role-ra (`implementer`, `reviewer`, `meta_reviewer`) mind a 9 mezovel, es a `startup_prompt_concern_ids` / `resume_prompt_concern_ids` mezok exact ordered concern-setkent szerepelnek.
 4. A note explicit phasing table-t ad `O3-T2..T5`-hoz, slice id + shape + goal + closure bucket + gating felteteleivel.
 5. A note explicit Source-Anchored 4-seam inventoryt ad table-formaban.
 6. A note explicit Configurability Compass vezérelvet rogzít.
-7. A note explicit `agent_resolution` `hardcoded_runtime` -> `config_bound` migracios pathot rogzít `O3-T4`-re.
-8. A parent plan `Opportunity Disposition` `Opportunity 3` entry-je az uj task path-ara es a uj note path-ara mutat, plusz a T2..T5 gating-et explicit nevesiti.
-9. A parent plan `Recommended Sequencing` szekcioja az `O3-T1`-et a kovetkezo bounded successor-kent jeloli, az `O3-T2..T5` lane-eket explicit gatinggel.
-10. A parent plan `Traceability` `Current source anchors` listaja az uj note path-at tartalmazza.
+7. A note explicit `promptConcernCatalog` naming proposal table-t ad, amely minden hasznalt concern ID-hoz current-tree source anchort rendel, akkor is, ha a concern jelenleg grouped builder-local fixed block.
+8. A note explicit `agent_resolution` `hardcoded_runtime` -> `config_bound` migracios pathot rogzít `O3-T4`-re.
+9. A parent plan `Opportunity Disposition` `Opportunity 3` entry-je az uj task path-ara es a uj note path-ara mutat, plusz a T2..T5 gating-et explicit nevesiti.
+10. A parent plan `Recommended Sequencing` szekcioja az `O3-T1`-et a kovetkezo bounded successor-kent jeloli, az `O3-T2..T5` lane-eket explicit gatinggel.
+11. A parent plan `Traceability` `Current closeout anchors` vagy `Current source anchors` listaja az uj task path-at es az uj note path-at tartalmazza.
 
 ## L2 - Evidence and Review
 
@@ -425,12 +431,13 @@ Conclusion: a task bounded marad, mert nincs producer vagy shared-contract code 
 1. A task maradjon bounded docs-only contract clarification.
 2. A 4 seam (S1..S4) source-anchored inventoryja maradjon explicit es teljes.
 3. A `RoleDescriptor` mezohalmaza maradjon zart (9 mezo) es source-anchored.
-4. A `agent_resolution` mezo `hardcoded_runtime` -> `config_bound` migracios pathja explicit `O3-T4`-re mutasson, ne tunjon el "configurability compass" cimsko alatt.
-5. A meta-reviewer `assertMetaReviewerActiveAgentCodexWhenPresent` guard explicit preserved-baseline-with-explicit-replacement-path-in-O3-T4 maradjon.
-6. A reviewer/implementer "must be different" konvencio explicit preserved-baseline-with-explicit-replacement-path-if-needed maradjon (nem domain-invariant cimsko alatt eltuntetheto).
-7. A companion catalog (`promptConcernCatalog`, `topologySlotCatalog`) naming proposalkent zarjon, **kod nelkul** ebben a slice-ban.
-8. A phasing table (`O3-T2..T5`) gating-feltetelei explicit es testable formaban szerepeljenek.
-9. Az `O3-T5` trigger-feltetel ("konkret uj output kind igeny vagy uj role saját kimenettel") explicit szerepeljen, automatikus indulas nelkul.
+4. A `startup_prompt_concern_ids` es `resume_prompt_concern_ids` ne maradjanak `deferred` helykitoltok: exact ordered concern-set kell, explicit `(conditional)` jelolessel ott, ahol a current tree input-gated overlayt hasznal.
+5. A `agent_resolution` mezo `hardcoded_runtime` -> `config_bound` migracios pathja explicit `O3-T4`-re mutasson, ne tunjon el "configurability compass" cimsko alatt.
+6. A meta-reviewer `assertMetaReviewerActiveAgentCodexWhenPresent` guard explicit preserved-baseline-with-explicit-replacement-path-in-O3-T4 maradjon.
+7. A reviewer/implementer "must be different" konvencio explicit preserved-baseline-with-explicit-replacement-path-if-needed maradjon (nem domain-invariant cimsko alatt eltuntetheto).
+8. A companion catalog (`promptConcernCatalog`, `topologySlotCatalog`) naming proposalkent zarjon, **kod nelkul** ebben a slice-ban.
+9. A phasing table (`O3-T2..T5`) gating-feltetelei explicit es testable formaban szerepeljenek.
+10. Az `O3-T5` trigger-feltetel ("konkret uj output kind igeny vagy uj role saját kimenettel") explicit szerepeljen, automatikus indulas nelkul.
 
 ### Hardening Backlog
 
