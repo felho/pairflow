@@ -46,3 +46,5 @@
 - https://github.com/stanford-iris-lab/meta-harness
 - https://github.com/Neon-Data/auto-context
 - https://github.com/vincentkoc
+- https://github.com/vercel-labs/agent-browser/pull/538/changes
+- https://github.com/CsabaKovacs/rulesmith
