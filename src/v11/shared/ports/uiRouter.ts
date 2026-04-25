@@ -129,7 +129,6 @@ export interface UiCommitBubbleResult {
   commitSha: string;
   commitMessage: string;
   stagedFiles: string[];
-  donePackagePath: string;
 }
 
 export interface UiCommitBubbleInput extends UiBubbleMutationInput {

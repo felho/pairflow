@@ -4,18 +4,17 @@ import { dirname } from "node:path";
 
 import { emitBubbleLifecycleEventBestEffort } from "../../shared/metrics/bubbleEvents.js";
 import { normalizeStringList } from "../../shared/normalization/stringNormalization.js";
-import { deriveDonePackageSummary } from "./commitDonePackage.js";
 import type {
   AppendedEnvelope,
   CommitRuntimeContext,
   WrittenState
 } from "./commitCommandApiContract.js";
 import {
-  appendDonePackageEnvelopeMutation,
+  appendCommitResultEnvelopeMutation,
   persistCommittedThenDoneStateMutation
 } from "../../shared/commit/commitCommandFinalizationMutation.js";
 
-export async function appendDonePackageEnvelope(input: {
+export async function appendCommitResultEnvelope(input: {
   context: CommitRuntimeContext;
   refs: string[];
   now: Date;
@@ -23,7 +22,7 @@ export async function appendDonePackageEnvelope(input: {
   commitMessage: string;
   commitSha: string;
 }): Promise<AppendedEnvelope> {
-  return appendDonePackageEnvelopeMutation({
+  return appendCommitResultEnvelopeMutation({
     context: {
       bubbleId: input.context.resolved.bubbleId,
       bubblePaths: {
@@ -31,7 +30,6 @@ export async function appendDonePackageEnvelope(input: {
         statePath: input.context.resolved.bubblePaths.statePath,
         transcriptPath: input.context.resolved.bubblePaths.transcriptPath
       },
-      donePackagePath: input.context.donePackagePath,
       round: input.context.state.round
     },
     refs: input.refs,
@@ -39,7 +37,6 @@ export async function appendDonePackageEnvelope(input: {
     stagedFiles: input.stagedFiles,
     commitMessage: input.commitMessage,
     commitSha: input.commitSha,
-    donePackageSummary: deriveDonePackageSummary(input.context.donePackageContent),
     appendProtocolEnvelope: input.context.appendProtocolEnvelope
   });
 }
@@ -67,8 +64,8 @@ export async function emitCommitLifecycleEvent(input: {
   context: {
     resolved: CommitRuntimeContext["resolved"];
     bubbleIdentity: CommitRuntimeContext["bubbleIdentity"];
-    donePackagePath: string;
     round: number;
+    donePackagePath?: string;
   };
   commitSha: string;
   commitMessage: string;
@@ -88,9 +85,14 @@ export async function emitCommitLifecycleEvent(input: {
       commit_sha: input.commitSha,
       commit_message: input.commitMessage,
       staged_file_count: input.stagedFiles.length,
-      done_package_path: input.context.donePackagePath,
       auto: input.auto,
-      refs_count: normalizeStringList([...input.refs, input.context.donePackagePath]).length
+      refs_count:
+        input.context.donePackagePath !== undefined
+          ? normalizeStringList([...input.refs, input.context.donePackagePath]).length
+          : input.refs.length,
+      ...(input.context.donePackagePath !== undefined
+        ? { done_package_path: input.context.donePackagePath }
+        : {})
     },
     now: input.now
   });

@@ -25,7 +25,6 @@ export interface CommitContractSuccessOutput {
   envelopeType: string;
   stagedFiles: string[];
   hasCommitSha: boolean;
-  donePackageSuffix: boolean;
 }
 
 export interface CommitContractErrorOutput {
@@ -49,7 +48,7 @@ type CommitContractScenario = "basic" | "staged_files_empty";
 type CommitContractExtendedScenario =
   | CommitContractScenario
   | "state_not_approved"
-  | "done_package_invariant";
+  | "commit_result_invariant";
 
 interface ParsedCommitCaseInput {
   auto: boolean;
@@ -78,10 +77,10 @@ function parseCommitCaseInput(input: ContractCase["input"]): ParsedCommitCaseInp
       scenarioRaw !== "basic" &&
       scenarioRaw !== "staged_files_empty" &&
       scenarioRaw !== "state_not_approved" &&
-      scenarioRaw !== "done_package_invariant"
+      scenarioRaw !== "commit_result_invariant"
     ) {
       throw new Error(
-        "commit contract input.fixture.scenario must be one of: basic, staged_files_empty, state_not_approved, done_package_invariant."
+        "commit contract input.fixture.scenario must be one of: basic, staged_files_empty, state_not_approved, commit_result_invariant."
       );
     }
     scenario = scenarioRaw ?? "basic";
@@ -109,8 +108,7 @@ function normalizeCommitResult(
     },
     envelopeType: result.envelope.type,
     stagedFiles: [...result.stagedFiles].sort(),
-    hasCommitSha: result.commitSha.length > 6,
-    donePackageSuffix: result.donePackagePath.endsWith("/artifacts/done-package.md")
+    hasCommitSha: result.commitSha.length > 6
   };
 }
 
@@ -170,23 +168,23 @@ function assertCommitScenarioInvariant(input: {
   scenario: CommitContractExtendedScenario;
   caseId: string;
 }): void {
-  if (input.scenario !== "done_package_invariant") {
+  if (input.scenario !== "commit_result_invariant") {
     return;
   }
 
   if (input.output.status !== "ok") {
     throw new Error(
-      `commit contract case=${input.caseId}: done_package_invariant requires success output.`
+      `commit contract case=${input.caseId}: commit_result_invariant requires success output.`
     );
   }
-  if (!input.output.donePackageSuffix) {
+  if (input.output.envelopeType !== "COMMIT_RESULT") {
     throw new Error(
-      `commit contract case=${input.caseId}: expected done-package artifact path suffix for done_package_invariant.`
+      `commit contract case=${input.caseId}: expected COMMIT_RESULT envelope for commit_result_invariant.`
     );
   }
   if (!input.output.hasCommitSha || input.output.stagedFiles.length < 1) {
     throw new Error(
-      `commit contract case=${input.caseId}: expected commit sha and staged file list for done_package_invariant.`
+      `commit contract case=${input.caseId}: expected commit sha and staged file list for commit_result_invariant.`
     );
   }
 }
@@ -297,7 +295,7 @@ async function executeCommitCase(input: {
         })
       : await setupApprovedBubble(repoPath, buildCommitContractBubbleId(input.caseDef.id));
 
-    if (parsedInput.scenario === "basic" || parsedInput.scenario === "done_package_invariant") {
+    if (parsedInput.scenario === "basic" || parsedInput.scenario === "commit_result_invariant") {
       await writeFile(
         join(bubble.paths.worktreePath, "feature-auto.txt"),
         `${input.caseDef.id}\n`,

@@ -5,7 +5,8 @@ import { join } from "node:path";
 import { afterAll, afterEach, describe, expect, it, vi } from "vitest";
 
 import { renderBubbleConfigToml } from "../../src/config/bubbleConfig.js";
-import { runCli } from "../../src/cli/index.js";
+import { renderBubbleCommitText, runCli } from "../../src/cli/index.js";
+import type { CommitBubbleResult } from "../../src/v11/application/commit/commitCommandContract.js";
 import { writeRemotePointer } from "../../src/v11/infrastructure/artifact/bubble/remoteExecutionArtifacts.js";
 import { mergeBubbleDependencyDefaults } from "../../src/v11/defaults/merge/mergeCommandDefaults.js";
 import { createBubble } from "../../src/v11/application/create/createBubble.js";
@@ -256,6 +257,46 @@ describe("runCli", () => {
 
     expect(exitCode).toBe(0);
     expect(stdoutSpy).toHaveBeenCalled();
+  });
+
+  it("renders bubble commit output with the returned envelope type", () => {
+    const output = renderBubbleCommitText({
+      bubbleId: "b_cli_commit_remote_01",
+      sequence: 7,
+      envelope: {
+        id: "msg_commit_remote_01",
+        ts: "2026-04-18T08:20:00.000Z",
+        bubble_id: "b_cli_commit_remote_01",
+        sender: "orchestrator",
+        recipient: "human",
+        type: "DONE_PACKAGE",
+        round: 2,
+        payload: {
+          summary: "Remote continuity."
+        },
+        refs: []
+      },
+      state: {
+        bubble_id: "b_cli_commit_remote_01",
+        state: "DONE",
+        round: 2,
+        active_agent: null,
+        active_role: null,
+        active_since: null,
+        execution_context: null,
+        round_role_history: [],
+        last_command_at: "2026-04-18T08:20:00.000Z",
+        pending_rework_intent: null,
+        rework_intent_history: []
+      },
+      commitSha: "abcdef1234567890",
+      commitMessage: "bubble(b_cli_commit_remote_01): finalize",
+      stagedFiles: ["feature-remote.txt"]
+    } satisfies CommitBubbleResult);
+
+    expect(output).toBe(
+      "Committed bubble b_cli_commit_remote_01: abcdef1234567890 (1 files), DONE_PACKAGE msg_commit_remote_01\n"
+    );
   });
 
   it("supports bubble merge help", async () => {

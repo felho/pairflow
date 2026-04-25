@@ -713,10 +713,18 @@ async function handleBubbleCommitCommand(args: string[]): Promise<number> {
     return 0;
   }
 
-  process.stdout.write(
-    `Committed bubble ${result.bubbleId}: ${result.commitSha} (${result.stagedFiles.length} files), DONE_PACKAGE ${result.envelope.id}\n`
-  );
+  process.stdout.write(renderBubbleCommitText(result));
   return 0;
+}
+
+export function renderBubbleCommitText(
+  result: NonNullable<Awaited<ReturnType<typeof runBubbleCommitCommand>>>
+): string {
+  return [
+    `Committed bubble ${result.bubbleId}: ${result.commitSha}`,
+    `(${result.stagedFiles.length} files),`,
+    `${result.envelope.type} ${result.envelope.id}\n`
+  ].join(" ");
 }
 
 async function handleBubbleMergeCommand(args: string[]): Promise<number> {

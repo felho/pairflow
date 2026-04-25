@@ -14,7 +14,7 @@ const commitCaseSources = [
   "tests/contracts/v11/cases/commit/commit-basic-v11.case.json",
   "tests/contracts/v11/cases/commit/commit-staged-files-empty-v11.case.json",
   "tests/contracts/v11/cases/commit/commit-state-not-approved-v11.case.json",
-  "tests/contracts/v11/cases/commit/commit-done-package-invariant-v11.case.json"
+  "tests/contracts/v11/cases/commit/commit-result-invariant-v11.case.json"
 ] as const;
 
 const commitExpectedSourcesSorted = [...commitCaseSources].sort();

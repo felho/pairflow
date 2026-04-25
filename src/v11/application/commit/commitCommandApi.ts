@@ -10,14 +10,11 @@ import {
   throwAsBubbleCommitError
 } from "./commitCommandRuntime.js";
 import {
-  appendDonePackageEnvelope,
+  appendCommitResultEnvelope,
   emitCommitLifecycleEvent,
   persistCommittedThenDoneState,
   syncRemoteCommitContinuityArtifacts
 } from "./commitCommandFinalization.js";
-import {
-  readOrCreateDonePackage
-} from "./commitDonePackage.js";
 import type {
   CommitExecutionContext,
   CommitBubbleDependencies
@@ -32,8 +29,6 @@ export { BubbleCommitError } from "./commitCommandRuntime.js";
 async function prepareCommitExecutionContext(input: {
   command: CommitBubbleInput;
   now: Date;
-  nowIso: string;
-  auto: boolean;
   dependencies: CommitBubbleDependencies;
 }): Promise<CommitExecutionContext> {
   const resolved = await input.dependencies.resolveBubbleById({
@@ -49,7 +44,6 @@ async function prepareCommitExecutionContext(input: {
     now: input.now
   });
   resolved.bubbleConfig = bubbleIdentity.bubbleConfig;
-  const donePackagePath = resolve(resolved.bubblePaths.artifactsDir, "done-package.md");
 
   if (resolved.bubbleConfig.executor?.type === "ssh") {
     const remoteCommitExecutionContext = resolveRemoteCommitExecutionContextFromEnv();
@@ -98,7 +92,6 @@ async function prepareCommitExecutionContext(input: {
         route: "remote",
         resolved,
         bubbleIdentity,
-        donePackagePath,
         remotePointer,
         remoteTarget
       };
@@ -114,18 +107,6 @@ async function prepareCommitExecutionContext(input: {
     );
   }
 
-  const donePackageContent = await readOrCreateDonePackage({
-    donePackagePath,
-    transcriptPath: resolved.bubblePaths.transcriptPath,
-    bubbleId: resolved.bubbleId,
-    round: state.round,
-    nowIso: input.nowIso,
-    autoGenerate: input.auto,
-    implementer: resolved.bubbleConfig.agents.implementer,
-    reviewer: resolved.bubbleConfig.agents.reviewer,
-    readTranscriptEnvelopes: input.dependencies.readTranscriptEnvelopes
-  });
-
   return {
     route: "local",
     resolved,
@@ -133,21 +114,22 @@ async function prepareCommitExecutionContext(input: {
     loadedState,
     state,
     appendProtocolEnvelope: input.dependencies.appendProtocolEnvelope,
-    writeStateSnapshot: input.dependencies.writeStateSnapshot,
-    donePackagePath,
-    donePackageContent
+    writeStateSnapshot: input.dependencies.writeStateSnapshot
   };
 }
 
 function buildCommitLifecycleContext(input: {
   context: CommitExecutionContext;
   round: number;
+  donePackagePath?: string;
 }) {
   return {
     resolved: input.context.resolved,
     bubbleIdentity: input.context.bubbleIdentity,
-    donePackagePath: input.context.donePackagePath,
-    round: input.round
+    round: input.round,
+    ...(input.donePackagePath !== undefined
+      ? { donePackagePath: input.donePackagePath }
+      : {})
   };
 }
 
@@ -159,6 +141,10 @@ async function commitRemoteExecutionRoute(input: {
   now: Date;
   auto: boolean;
 }): Promise<CommitBubbleResult> {
+  const donePackagePath = resolve(
+    input.context.resolved.bubblePaths.artifactsDir,
+    "done-package.md"
+  );
   const remoteResult = await input.dependencies.executeRemoteBubbleCommitCommand({
     bubbleId: input.command.bubbleId,
     remoteClonePath: input.context.remotePointer.remoteClonePath,
@@ -172,7 +158,7 @@ async function commitRemoteExecutionRoute(input: {
     await syncRemoteCommitContinuityArtifacts({
       statePath: input.context.resolved.bubblePaths.statePath,
       transcriptPath: input.context.resolved.bubblePaths.transcriptPath,
-      donePackagePath: input.context.donePackagePath,
+      donePackagePath,
       stateContent: remoteResult.stateContent,
       transcriptContent: remoteResult.transcriptContent,
       donePackageContent: remoteResult.donePackageContent,
@@ -193,7 +179,7 @@ async function commitRemoteExecutionRoute(input: {
         remote_clone_path: input.context.remotePointer.remoteClonePath,
         state_path: input.context.resolved.bubblePaths.statePath,
         transcript_path: input.context.resolved.bubblePaths.transcriptPath,
-        done_package_path: input.context.donePackagePath
+        done_package_path: donePackagePath
       },
       cause: error
     });
@@ -202,7 +188,8 @@ async function commitRemoteExecutionRoute(input: {
   await emitCommitLifecycleEvent({
     context: buildCommitLifecycleContext({
       context: input.context,
-      round: remoteResult.state.round
+      round: remoteResult.state.round,
+      donePackagePath
     }),
     commitSha: remoteResult.commitSha,
     commitMessage: remoteResult.commitMessage,
@@ -219,8 +206,7 @@ async function commitRemoteExecutionRoute(input: {
     state: remoteResult.state,
     commitSha: remoteResult.commitSha,
     commitMessage: remoteResult.commitMessage,
-    stagedFiles: remoteResult.stagedFiles,
-    donePackagePath: input.context.donePackagePath
+    stagedFiles: remoteResult.stagedFiles
   };
 }
 
@@ -240,7 +226,7 @@ async function commitLocalExecutionRoute(input: {
     runGit: input.dependencies.runGit
   });
 
-  const appended = await appendDonePackageEnvelope({
+  const appended = await appendCommitResultEnvelope({
     context: input.context,
     refs: input.refs,
     now: input.now,
@@ -276,8 +262,7 @@ async function commitLocalExecutionRoute(input: {
     state: written.state,
     commitSha,
     commitMessage,
-    stagedFiles,
-    donePackagePath: input.context.donePackagePath
+    stagedFiles
   };
 }
 
@@ -294,8 +279,6 @@ export async function commitBubble(
     const context = await prepareCommitExecutionContext({
       command: input,
       now,
-      nowIso,
-      auto,
       dependencies
     });
 

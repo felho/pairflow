@@ -423,9 +423,9 @@
       "kind": "seed_case"
     },
     {
-      "id": "commit-done-package-invariant-v11",
+      "id": "commit-result-invariant-v11",
       "command": "commit",
-      "source": "tests/contracts/v11/cases/commit/commit-done-package-invariant-v11.case.json",
+      "source": "tests/contracts/v11/cases/commit/commit-result-invariant-v11.case.json",
       "kind": "seed_case"
     },
     {

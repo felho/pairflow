@@ -14,10 +14,10 @@ import {
 const CLONE_SOURCE_BRANCH_SYNC_FAILED = "COMMIT_CLONE_SOURCE_BRANCH_SYNC_FAILED";
 
 function parseOutputLines(stdout: string): string[] {
-  return stdout
+  return [...new Set(stdout
     .split(/\r?\n/u)
     .map((line) => line.trim())
-    .filter((line) => line.length > 0);
+    .filter((line) => line.length > 0))];
 }
 
 function formatGitFailureDetail(result: {
@@ -185,7 +185,7 @@ async function maybeReuseCommittedCloneHead(input: {
   const stagedFiles = parseOutputLines(
     (
       await input.runGit(
-        ["diff-tree", "--no-commit-id", "--name-only", "-r", commitSha],
+        ["diff-tree", "--no-commit-id", "--name-only", "-r", "-m", commitSha],
         {
           cwd: worktreePath
         }
