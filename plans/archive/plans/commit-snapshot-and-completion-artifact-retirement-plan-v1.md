@@ -2,7 +2,7 @@
 artifact_type: plan
 artifact_id: plan_commit_snapshot_and_completion_artifact_retirement_v1
 title: "Done Package Hard Removal And Commit Result Cutover Plan"
-status: draft
+status: complete
 prd_ref: null
 owners:
   - "felho"
@@ -156,7 +156,7 @@ This plan separates implementation slicing from mergeability.
 
 ### Progress Update - 2026-04-25
 
-Phase 1, Phase 2, Phase 3A, Phase 3B, Phase 4A, and Phase 4B are complete and merged.
+Phase 1, Phase 2, Phase 3A, Phase 3B, Phase 4A, Phase 4B, and Phase 5 are complete and merged. The plan-level hard cutover is complete: first-party runtime commit completion now uses `COMMIT_RESULT` authority rather than a prose done-package boundary.
 
 Completed slices:
 
@@ -203,14 +203,17 @@ Completed slices:
    - Completion proof: started-remote commit retry and merge readiness can import same-authority remote `DONE` state, remote `COMMIT_RESULT` transcript, and matching git facts before enforcing local stale state. The repair path probes/imports before producer retry, fails closed for missing or mismatched remote authority, remains idempotent after remote completion, and does not synthesize a local completion envelope or create a second commit.
    - Boundary note: Phase 5 owns hard removal of active `DONE_PACKAGE` protocol validation plus live docs, tests, and runtime prompt/context cleanup.
    - Archived task: `plans/archive/tasks/remote-commit-partial-success-readiness.md`
+7. `done-package-live-reference-cleanup`
+   - Bubble: `done-package-impl`
+   - Bubble commit: `71d865aa77e4485ade548f2013236dd01c32b653`
+   - Merge commit: `c6a59122d21cc3556b205ba37a40fb00250c524d`
+   - Completion proof: `DONE_PACKAGE` is removed from the active protocol message type family, first-party start/resume prompt/context surfaces no longer pass or mention `donePackagePath`, the dead `commitDonePackage.ts` helper is deleted, live README/architecture/remote-execution docs describe commit completion through `COMMIT_RESULT`, and tests/fixtures now assert the no-done-package target state while preserving legacy `DONE_PACKAGE` only as rejected input or arbitrary artifact-ref test data.
+   - Boundary note: archived historical documents remain historical; remaining live mentions are negative guards, legacy fail-closed checks, or generic artifact-reference examples, not first-party commit authority.
+   - Archived task: `plans/archive/tasks/done-package-live-reference-cleanup.md`
 
 Next tasks:
 
-1. `done-package-live-reference-cleanup`
-   - Owns Phase 5.
-   - Task file: `plans/tasks/done-package-live-reference-cleanup.md`
-   - Primary goal: remove remaining live first-party references to done-package / `DONE_PACKAGE` from active protocol validation, runtime-generated start/resume guidance, README and live architecture docs, root CLI output expectations, and first-party tests/fixtures.
-   - Critical boundary: remove active commit-completion dependency only; leave archived historical documents unchanged and preserve generic artifact-reference tests/docs unless they instruct or validate first-party commit completion through done-package.
+None for this plan. The next useful work should come from a new plan or from an explicit hardening backlog item, not from the done-package cutover sequence.
 
 ### Phase 1: Commit Result Contract
 
@@ -532,12 +535,12 @@ The work may be implemented in multiple integration slices. Because no active re
    - owns bounded same-authority refresh/import behavior for started-remote commits whose remote side has completed but laptop-side local state is stale or import failed.
    - proves retry and merge-readiness import of remote `DONE` plus `COMMIT_RESULT` authority without git-only fallback, synthetic envelopes, or duplicate remote commits.
 7. `done-package-live-reference-cleanup`
-   - status: successor.
+   - status: completed and archived.
    - owns Phase 5.
    - slice type: `target_state_required`.
    - must cover active protocol type/validation removal, live docs, and runtime-generated prompt/context surfaces, because prompt/context generators can still steer agents toward the removed done-package model.
 
-The tasks may be worked as separate integration slices, but the plan does not authorize independently mergeable partial product states. Local-first sequencing is acceptable only because active remote bubbles are out of scope during the implementation window. Acceptance of the overall plan requires all first-party runtime paths to converge on the hard-cutover target before main is considered complete.
+The tasks were worked as separate integration slices. The accepted final state has all first-party runtime paths converged on the hard-cutover target: `COMMIT_RESULT` technical commit authority, no active `DONE_PACKAGE` protocol event, and no first-party runtime dependency on `artifacts/done-package.md`.
 
 ## Assumptions
 
