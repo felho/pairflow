@@ -196,6 +196,7 @@ owners:
    - onboarding simplification csak az `O1-T1` kernel boundary note-ra es az `O2-T1` delivery/executor boundary note-ra epulhet,
    - es csak az `O2` implementation lane enough-closureja utan nyithato biztonsagosan, amikor a retained `tmux` delivery/executor coupling mar nem keveredik a canonical boundaryval,
    - a zart baseline vocabulary explicit mappingjara es a topology/executor boundary explicit szetszalazasara kell tamaszkodnia,
+   - az `O3-T1` outputjanak a 4 seam (`S1..S4`) source-anchored inventoryjat, a `RoleDescriptor` 9 mezos closed mappingjat, valamint az exact startup/resume prompt concern-seteket is lockolnia kell,
    - az `Opportunity 4` alapertelmezetten ebbe a lane-be van beolvasztva mint core-vs-extension rationalization,
    - kulon `O4-T1` csak akkor nyithato, ha az `Opportunity 1 / O1-T1` outputja bizonyitja, hogy ez onallo bounded closure.
 11. A current tree-ben az `Opportunity 1` es az `Opportunity 2` implementacios successor lane-je is lezart.
@@ -509,16 +510,16 @@ owners:
    - disposition: closed on current tree
 3. `Opportunity 3`
    - active successor lane
-   - `O3-T1` first bounded slice drafted on 2026-04-25:
+   - `O3-T1` first bounded slice refined on 2026-04-25:
      - task artifact: `plans/tasks/actor-runtime-interface/actor-runtime-interface-opportunity3-task1-onboarding-extension-surface-contract-clarification.md`
      - normative note: `plans/actor-runtime-interface-onboarding-extension-surface-contract-note-v1.md`
      - shape: `contract_or_persisted_authority_foundation` (docs-only)
-     - closure: belso `RoleDescriptor` registry-mintazat normativ rogzitese + 4 seam (S1..S4) source-anchored inventory + `O3-T2..T5` phasing gatinggel
+     - closure: belso `RoleDescriptor` registry-mintazat normativ rogzitese + 4 seam (S1..S4) source-anchored inventory + per-role 9 mezos closed mapping exact startup/resume prompt concern-setekkel + `O3-T2..T5` phasing gatinggel
    - deferred successor slices (gating felteteleivel a contract note `Sequencing Consequences` szekciojaban):
-     - `O3-T2`: belso `RoleDescriptor` registry + `promptConcernCatalog` + projection helperek kod-szintu bevezetese; S1 + S4 atkotese; predecessor: `O3-T1`
+     - `O3-T2`: belso `RoleDescriptor` registry + `promptConcernCatalog` + projection helperek kod-szintu bevezetese; S1 + S4 atkotese; predecessor: `O3-T1`; az `O3-T1`-ben mar lockolt prompt concern-vocabulary es per-role exact concern-set kod-szintu formalizalasa, nem ujranyitasa
      - `O3-T3`: S2 (topology slot) atkotese; `topologySlotCatalog` kod-szintu bevezetese; predecessor: `O3-T2`
      - `O3-T4`: S3 (config binding) atkotese; `BubbleAgentsConfig` shape alignment; `agent_resolution` mind a 3 role-on `config_bound`-ra konvergal; explicit replacement proof a meta-reviewer codex-when-present guardra; predecessor: `O3-T3`
-     - `O3-T5`: public CLI/protocol surface kontrollalt nyitasa uj output kindokra; **trigger feltetel**: konkret uj output kind igeny VAGY uj role saját kimenettel; predecessor: `O3-T4`; ha trigger nem teljesul, ez a slice `deferred` disposition-ben marad
+     - `O3-T5`: public CLI/protocol surface kontrollalt nyitasa uj output kindokra; **trigger feltetel**: konkret uj output kind igeny VAGY uj role saját kimenettel; predecessor: `O3-T4`; ha trigger nem teljesul, ez a slice `deferred` disposition-ben marad, es automatikusan nem indul el
    - preserved baselines: `O1-T1` kernel boundary note, `O2-T1` topology-neutral delivery/executor note, `assertReviewerHumanQuestionRetainedFallback`, `assertMetaReviewerActiveAgentCodexWhenPresent` (preserved-baseline-with-explicit-replacement-path-in-O3-T4), dedicated-panel-per-active-role baseline
 4. `Opportunity 4`
    - default szerint `Opportunity 3` lane resze (core-vs-extension rationalization a `O3-T2..T5` szeleteken keresztul)
@@ -530,6 +531,7 @@ owners:
    - `plans/actor-runtime-interface-discovery-and-migration-plan-v1.md`
 2. Current closeout anchors:
    - `plans/tasks/actor-runtime-interface-pilot-cutover-phaseE.md`
+   - `plans/tasks/actor-runtime-interface/actor-runtime-interface-opportunity3-task1-onboarding-extension-surface-contract-clarification.md`
    - `plans/actor-runtime-interface-execution-authority-contract-note-v1.md`
    - `plans/actor-runtime-interface-generic-runtime-kernel-contract-note-v1.md`
    - `plans/actor-runtime-interface-topology-neutral-delivery-executor-contract-note-v1.md`
