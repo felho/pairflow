@@ -41,8 +41,8 @@ function isNonNegativeIntegerOrNull(value: unknown): boolean {
   return value === null || (isInteger(value) && value >= 0);
 }
 
-function isNonEmptyStringArray(value: unknown): boolean {
-  return Array.isArray(value) && value.length > 0 && value.every(isNonEmptyString);
+function isStringArray(value: unknown): boolean {
+  return Array.isArray(value) && value.every(isNonEmptyString);
 }
 
 export function validateUnknownPayloadKeys(
@@ -246,11 +246,11 @@ function validateCommitResultPayload(
       message: "COMMIT_RESULT metadata requires non-empty commit_message"
     });
   }
-  if (!metadata || !isNonEmptyStringArray(metadata.staged_files)) {
+  if (!metadata || !isStringArray(metadata.staged_files)) {
     errors.push({
       path: "payload.metadata.staged_files",
       message:
-        "COMMIT_RESULT metadata requires staged_files as a non-empty array of non-empty strings"
+        "COMMIT_RESULT metadata requires staged_files as an array of non-empty strings"
     });
   }
 

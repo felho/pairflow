@@ -163,7 +163,6 @@ describe("protocol envelope schema", () => {
 
   it.each([
     undefined,
-    [],
     "src/types/protocol.ts",
     ["src/types/protocol.ts", ""]
   ])("rejects COMMIT_RESULT invalid staged_files value %#", (stagedFiles) => {

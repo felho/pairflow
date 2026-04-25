@@ -1,6 +1,6 @@
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -95,6 +95,13 @@ function createStartedRemotePointer(
     tmuxSession: `pf-${bubbleId}`,
     startedAt: "2026-04-18T08:15:00.000Z"
   };
+}
+
+function noRemoteCommitCompletionEvidence() {
+  return vi.fn(async () => ({
+    classification: "no_remote_completion_evidence" as const,
+    reason: "remote completion not present"
+  }));
 }
 
 function buildActiveMetaReviewerSession(input: {
@@ -733,6 +740,16 @@ describe("commitBubble", () => {
       pending_rework_intent: null,
       rework_intent_history: []
     };
+    await mkdir(dirname(statePath), { recursive: true });
+    await writeFile(
+      statePath,
+      `${JSON.stringify({
+        ...remoteState,
+        state: "APPROVED_FOR_COMMIT",
+        last_command_at: "2026-04-18T08:19:00.000Z"
+      } satisfies BubbleStateSnapshot, null, 2)}\n`,
+      "utf8"
+    );
     const remoteEnvelope: ProtocolEnvelope = {
       id: "msg_commit_remote_public_01",
       ts: "2026-04-18T08:20:00.000Z",
@@ -776,6 +793,7 @@ describe("commitBubble", () => {
           user: "pairflow",
           pairflowCommand: "pairflow"
         })),
+        importRemoteBubbleCommitContinuity: noRemoteCommitCompletionEvidence(),
         executeRemoteBubbleCommitCommand: vi.fn(async () => ({
           bubbleId: "b_commit_remote_public_01",
           sequence: 5,
@@ -790,9 +808,7 @@ describe("commitBubble", () => {
         appendProtocolEnvelope: vi.fn(async () => {
           throw new Error("unused");
         }),
-        readStateSnapshot: vi.fn(async () => {
-          throw new Error("unused");
-        }),
+        readStateSnapshot,
         readTranscriptEnvelopes: vi.fn(async () => []),
         runGit: vi.fn(async () => {
           throw new Error("runGit should not be used for remote public routing");

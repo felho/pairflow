@@ -135,6 +135,57 @@ async function commitRemoteExecutionRoute(input: {
   now: Date;
   stageAll: boolean;
 }): Promise<CommitBubbleResult> {
+  const loadedStateBeforeImport = await input.dependencies.readStateSnapshot(
+    input.context.resolved.bubblePaths.statePath
+  );
+  const imported = await importRemoteCommitContinuityForCommit({
+    bubbleId: input.command.bubbleId,
+    remoteClonePath: input.context.remotePointer.remoteClonePath,
+    remoteTarget: input.context.remoteTarget,
+    importRemoteBubbleCommitContinuity:
+      input.dependencies.importRemoteBubbleCommitContinuity
+  });
+
+  if (imported.classification === "imported_remote_completion") {
+    await syncRemoteCommitContinuity({
+      result: imported,
+      context: input.context,
+      dependencies: input.dependencies,
+      syncFailureReasonCode: "REMOTE_COMMIT_SYNC_BACK_FAILED"
+    });
+
+    if (loadedStateBeforeImport.state.state !== "DONE") {
+      await emitCommitLifecycleEvent({
+        context: buildCommitLifecycleContext({
+          context: input.context,
+          round: imported.state.round
+        }),
+        commitSha: imported.commitSha,
+        commitMessage: imported.commitMessage,
+        stagedFiles: imported.stagedFiles,
+        refs: input.refs,
+        now: input.now,
+        auto: input.stageAll
+      });
+    }
+
+    return {
+      bubbleId: input.context.resolved.bubbleId,
+      sequence: imported.sequence,
+      envelope: imported.envelope,
+      state: imported.state,
+      commitSha: imported.commitSha,
+      commitMessage: imported.commitMessage,
+      stagedFiles: imported.stagedFiles
+    };
+  }
+
+  if (loadedStateBeforeImport.state.state !== "APPROVED_FOR_COMMIT") {
+    throw new BubbleCommitError(
+      `bubble commit can only be used while state is APPROVED_FOR_COMMIT (current: ${loadedStateBeforeImport.state.state}).`
+    );
+  }
+
   const remoteResult = await input.dependencies.executeRemoteBubbleCommitCommand({
     bubbleId: input.command.bubbleId,
     remoteClonePath: input.context.remotePointer.remoteClonePath,
@@ -144,33 +195,12 @@ async function commitRemoteExecutionRoute(input: {
     stageAll: input.stageAll
   });
 
-  try {
-    await syncRemoteCommitContinuityArtifacts({
-      statePath: input.context.resolved.bubblePaths.statePath,
-      transcriptPath: input.context.resolved.bubblePaths.transcriptPath,
-      stateContent: remoteResult.stateContent,
-      transcriptContent: remoteResult.transcriptContent,
-      ...(input.dependencies.renamePath !== undefined
-        ? { renamePath: input.dependencies.renamePath }
-        : {}),
-      writeTextFile: input.dependencies.writeTextFile
-    });
-  } catch (error) {
-    const reason = error instanceof Error ? error.message : String(error);
-    throw new BubbleCommitError({
-      reasonCode: "REMOTE_COMMIT_SYNC_BACK_FAILED",
-      message:
-        `Remote commit succeeded for '${input.context.resolved.bubbleId}', but local continuity sync-back failed: ${reason}`,
-      context: {
-        bubble_id: input.context.resolved.bubbleId,
-        command_name: "commit",
-        remote_clone_path: input.context.remotePointer.remoteClonePath,
-        state_path: input.context.resolved.bubblePaths.statePath,
-        transcript_path: input.context.resolved.bubblePaths.transcriptPath
-      },
-      cause: error
-    });
-  }
+  await syncRemoteCommitContinuity({
+    result: remoteResult,
+    context: input.context,
+    dependencies: input.dependencies,
+    syncFailureReasonCode: "REMOTE_COMMIT_SYNC_BACK_FAILED"
+  });
 
   await emitCommitLifecycleEvent({
     context: buildCommitLifecycleContext({
@@ -194,6 +224,80 @@ async function commitRemoteExecutionRoute(input: {
     commitMessage: remoteResult.commitMessage,
     stagedFiles: remoteResult.stagedFiles
   };
+}
+
+async function importRemoteCommitContinuityForCommit(input: {
+  bubbleId: string;
+  remoteClonePath: string;
+  remoteTarget: Extract<CommitExecutionContext, { route: "remote" }>["remoteTarget"];
+  importRemoteBubbleCommitContinuity:
+    CommitBubbleDependencies["importRemoteBubbleCommitContinuity"];
+}): ReturnType<CommitBubbleDependencies["importRemoteBubbleCommitContinuity"]> {
+  try {
+    return await input.importRemoteBubbleCommitContinuity({
+      bubbleId: input.bubbleId,
+      remoteClonePath: input.remoteClonePath,
+      remoteTarget: input.remoteTarget
+    });
+  } catch (error) {
+    const code = typeof (error as { code?: unknown }).code === "string"
+      ? (error as { code: string }).code
+      : undefined;
+    const reasonCode = code === "REMOTE_COMMIT_TRANSPORT_FAILED"
+      ? "REMOTE_COMMIT_CONTINUITY_IMPORT_UNAVAILABLE"
+      : "REMOTE_COMMIT_CONTINUITY_IMPORT_INVALID";
+    throw new BubbleCommitError({
+      reasonCode,
+      message:
+        `Remote commit continuity import failed for '${input.bubbleId}': ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      context: {
+        bubble_id: input.bubbleId,
+        command_name: "commit",
+        remote_clone_path: input.remoteClonePath
+      },
+      cause: error
+    });
+  }
+}
+
+async function syncRemoteCommitContinuity(input: {
+  result: {
+    stateContent: string;
+    transcriptContent: string;
+  };
+  context: Extract<CommitExecutionContext, { route: "remote" }>;
+  dependencies: CommitBubbleDependencies;
+  syncFailureReasonCode: string;
+}): Promise<void> {
+  try {
+    await syncRemoteCommitContinuityArtifacts({
+      statePath: input.context.resolved.bubblePaths.statePath,
+      transcriptPath: input.context.resolved.bubblePaths.transcriptPath,
+      stateContent: input.result.stateContent,
+      transcriptContent: input.result.transcriptContent,
+      ...(input.dependencies.renamePath !== undefined
+        ? { renamePath: input.dependencies.renamePath }
+        : {}),
+      writeTextFile: input.dependencies.writeTextFile
+    });
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    throw new BubbleCommitError({
+      reasonCode: input.syncFailureReasonCode,
+      message:
+        `Remote commit succeeded for '${input.context.resolved.bubbleId}', but local continuity sync-back failed: ${reason}`,
+      context: {
+        bubble_id: input.context.resolved.bubbleId,
+        command_name: "commit",
+        remote_clone_path: input.context.remotePointer.remoteClonePath,
+        state_path: input.context.resolved.bubblePaths.statePath,
+        transcript_path: input.context.resolved.bubblePaths.transcriptPath
+      },
+      cause: error
+    });
+  }
 }
 
 async function commitLocalExecutionRoute(input: {
