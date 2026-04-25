@@ -439,7 +439,7 @@ pairflow bubble approve --id <id> --repo <repo>
 pairflow bubble request-rework --id <id> --repo <repo> --message "<rework>"
 
 # Finalize
-pairflow bubble commit --id <id> --repo <repo> --auto
+pairflow bubble commit --id <id> --repo <repo> --stage-all
 pairflow bubble merge --id <id> --repo <repo> --push --delete-remote [--json]
 ```
 
@@ -544,14 +544,13 @@ pairflow bubble approve --id feat_login --repo /path/to/myapp
 #    → State becomes APPROVED_FOR_COMMIT
 
 # 8. Commit
-#    Fast path: auto-stage worktree changes + auto-generate done-package if missing
-pairflow bubble commit --id feat_login --repo /path/to/myapp --auto
+#    Fast path: stage all worktree changes before committing
+pairflow bubble commit --id feat_login --repo /path/to/myapp --stage-all
 #    → State becomes DONE
 
 #    Strict/manual path (if you prefer full manual control):
 #    - stage files yourself
-#    - write .pairflow/bubbles/<id>/artifacts/done-package.md
-#    - run pairflow bubble commit without --auto
+#    - run pairflow bubble commit without --stage-all
 
 # 9. Merge + cleanup
 #    Merge bubble branch into base branch and clean runtime/worktree artifacts.
@@ -873,7 +872,7 @@ Ideation note:
 | `bubble reply --id <id> --message <text> [--repo <path>] [--ref <path>]...` | Answer a human question |
 | `bubble approve --id <id> [--override-non-approve] [--override-reason <text>] [--repo <path>] [--ref <path>]...` | Approve for commit from `READY_FOR_HUMAN_APPROVAL` |
 | `bubble request-rework --id <id> --message <text> [--repo <path>] [--ref <path>]...` | Send back for rework (`READY_FOR_HUMAN_APPROVAL`: immediate; `WAITING_HUMAN`: queues deferred deterministic rework intent) |
-| `bubble commit --id <id> [--repo <path>] [--message <text>] [--ref <path>]...` | Commit and finalize |
+| `bubble commit --id <id> [--repo <path>] [--message <text>] [--ref <path>]... [--stage-all]` | Commit and finalize; `--stage-all` stages all worktree changes before staged-file validation |
 | `bubble merge --id <id> [--repo <path>] [--push] [--delete-remote] [--json]` | Merge bubble branch and clean up. `--push` / `--delete-remote` stay local-route only; started-remote merge completes the durable merge in the local repo and rejects those flags. |
 | `bubble reconcile [--repo <path>] [--dry-run] [--json]` | Clean up stale sessions |
 | `bubble watchdog --id <id> [--repo <path>] [--json]` | Check for stuck agents |
@@ -930,7 +929,7 @@ Actor emits must always use explicit repo, bubble, handoff, and execution author
       inbox.ndjson         # Pending human actions (questions + approvals)
       artifacts/
         task.md            # Original task description
-        done-package.md    # Required before commit
+        done-package.md    # Legacy remote continuity artifact during staged migration
     runtime/
       sessions.json        # Active tmux session registry
     locks/

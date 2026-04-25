@@ -130,7 +130,7 @@ pairflow bubble approve --id <id> --repo <abs_repo_path>
 
 Close:
 ```bash
-pairflow bubble commit --id <id> --repo <abs_repo_path> --auto
+pairflow bubble commit --id <id> --repo <abs_repo_path> --stage-all
 pairflow bubble merge --id <id> --repo <abs_repo_path>
 ```
 
