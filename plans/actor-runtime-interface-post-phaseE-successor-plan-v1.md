@@ -508,12 +508,21 @@ owners:
    - preserved baseline: a lezart typed ack/runtime-success semantics nem reopenolhato; a retained tmux naming current-tree szinten mar csak adapter/default/operatori ownershipot jelol, nem canonical topology-neutral truthot
    - disposition: closed on current tree
 3. `Opportunity 3`
-   - deferred successor lane `O3-T1`
-   - az `O2` lane lezarta utan ez a kovetkezo bounded successor, ha a follow-up tenylegesen prioritas lesz
-   - csak az `O1-T1` kernel boundary note-ra es az `O2-T1` delivery/executor boundary note-ra epulhet
+   - active successor lane
+   - `O3-T1` first bounded slice drafted on 2026-04-25:
+     - task artifact: `plans/tasks/actor-runtime-interface/actor-runtime-interface-opportunity3-task1-onboarding-extension-surface-contract-clarification.md`
+     - normative note: `plans/actor-runtime-interface-onboarding-extension-surface-contract-note-v1.md`
+     - shape: `contract_or_persisted_authority_foundation` (docs-only)
+     - closure: belso `RoleDescriptor` registry-mintazat normativ rogzitese + 4 seam (S1..S4) source-anchored inventory + `O3-T2..T5` phasing gatinggel
+   - deferred successor slices (gating felteteleivel a contract note `Sequencing Consequences` szekciojaban):
+     - `O3-T2`: belso `RoleDescriptor` registry + `promptConcernCatalog` + projection helperek kod-szintu bevezetese; S1 + S4 atkotese; predecessor: `O3-T1`
+     - `O3-T3`: S2 (topology slot) atkotese; `topologySlotCatalog` kod-szintu bevezetese; predecessor: `O3-T2`
+     - `O3-T4`: S3 (config binding) atkotese; `BubbleAgentsConfig` shape alignment; `agent_resolution` mind a 3 role-on `config_bound`-ra konvergal; explicit replacement proof a meta-reviewer codex-when-present guardra; predecessor: `O3-T3`
+     - `O3-T5`: public CLI/protocol surface kontrollalt nyitasa uj output kindokra; **trigger feltetel**: konkret uj output kind igeny VAGY uj role saját kimenettel; predecessor: `O3-T4`; ha trigger nem teljesul, ez a slice `deferred` disposition-ben marad
+   - preserved baselines: `O1-T1` kernel boundary note, `O2-T1` topology-neutral delivery/executor note, `assertReviewerHumanQuestionRetainedFallback`, `assertMetaReviewerActiveAgentCodexWhenPresent` (preserved-baseline-with-explicit-replacement-path-in-O3-T4), dedicated-panel-per-active-role baseline
 4. `Opportunity 4`
-   - default szerint `O3-T1` resze
-   - kulon lane csak akkor, ha az `O1-T1` boundary output kulon bounded closurekent bizonyitja
+   - default szerint `Opportunity 3` lane resze (core-vs-extension rationalization a `O3-T2..T5` szeleteken keresztul)
+   - kulon `O4-T1` csak akkor nyithato, ha az `Opportunity 3` lane explicit gating-feltetelei mar nem fedik le a maradek scope-ot
 
 ## Traceability
 
@@ -522,12 +531,29 @@ owners:
 2. Current closeout anchors:
    - `plans/tasks/actor-runtime-interface-pilot-cutover-phaseE.md`
    - `plans/actor-runtime-interface-execution-authority-contract-note-v1.md`
+   - `plans/actor-runtime-interface-generic-runtime-kernel-contract-note-v1.md`
+   - `plans/actor-runtime-interface-topology-neutral-delivery-executor-contract-note-v1.md`
+   - `plans/actor-runtime-interface-opportunity3-onboarding-discovery-summary-v1.md`
+   - `plans/actor-runtime-interface-onboarding-extension-surface-contract-note-v1.md`
 3. Current source anchors:
    - `src/v11/shared/actorProtocol/actorEmitContext.ts`
+   - `src/v11/application/actorProtocol/actorRuntimeKernel.ts`
+   - `src/v11/application/actorProtocol/actorRuntimeDispatchMatrix.ts`
+   - `src/v11/application/actorProtocol/actorProtocolEmitters.ts`
    - `src/v11/application/actorProtocol/emitActorProtocolV11.ts`
+   - `src/v11/shared/state/executionContext.ts`
    - `src/types/protocol.ts`
+   - `src/types/bubble.ts`
    - `src/cli/commands/agent/emit.ts`
+   - `src/config/bubbleConfig.ts`
+   - `src/v11/infrastructure/channel/tmux/tmuxManager.ts`
+   - `src/v11/infrastructure/channel/tmux/tmuxDeliveryTargeting.ts`
    - `src/v11/infrastructure/channel/tmux/tmuxDelivery.ts`
+   - `src/v11/application/start/startCommandPrompts.ts`
+   - `src/v11/application/start/startCommandImplementerPrompts.ts`
+   - `src/v11/application/start/startCommandResumePrompts.ts`
+   - `src/v11/application/start/startCommandResumeImplementerPrompt.ts`
+   - `src/v11/shared/command/agentCommand.ts`
    - `src/v11/shared/ports/uiRouter.ts`
    - `src/v11/defaults/ui/routerDefaults.ts`
    - `src/index.ts`
