@@ -18,7 +18,7 @@ export interface ExecuteRemoteBubbleCommitCommandInput {
   remoteTarget: CommitRemoteBubbleStatusTarget;
   refs: string[];
   message?: string;
-  auto: boolean;
+  stageAll: boolean;
 }
 
 export interface ExecuteRemoteBubbleCommitCommandResult {
@@ -28,7 +28,6 @@ export interface ExecuteRemoteBubbleCommitCommandResult {
   state: BubbleStateSnapshot;
   stateContent: string;
   transcriptContent: string;
-  donePackageContent: string;
   commitSha: string;
   commitMessage: string;
   stagedFiles: string[];

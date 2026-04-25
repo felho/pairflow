@@ -18,10 +18,6 @@ const remoteCommitTranscriptStartMarker =
   "__PAIRFLOW_REMOTE_COMMIT_TRANSCRIPT_START__";
 const remoteCommitTranscriptEndMarker =
   "__PAIRFLOW_REMOTE_COMMIT_TRANSCRIPT_END__";
-const remoteCommitDonePackageStartMarker =
-  "__PAIRFLOW_REMOTE_COMMIT_DONE_PACKAGE_START__";
-const remoteCommitDonePackageEndMarker =
-  "__PAIRFLOW_REMOTE_COMMIT_DONE_PACKAGE_END__";
 const remoteCommitHeadShaStartMarker =
   "__PAIRFLOW_REMOTE_COMMIT_HEAD_SHA_START__";
 const remoteCommitHeadShaEndMarker =
@@ -45,7 +41,7 @@ export interface ExecuteRemoteBubbleCommitCommandInput {
   remoteTarget: RemoteBubbleStatusTarget;
   refs: string[];
   message?: string;
-  auto: boolean;
+  stageAll: boolean;
 }
 
 export interface ExecuteRemoteBubbleCommitCommandResult {
@@ -55,11 +51,16 @@ export interface ExecuteRemoteBubbleCommitCommandResult {
   state: BubbleStateSnapshot;
   stateContent: string;
   transcriptContent: string;
-  donePackageContent: string;
   commitSha: string;
   commitMessage: string;
   stagedFiles: string[];
 }
+
+type CommitResultMetadata = {
+  readonly commitSha: string;
+  readonly commitMessage: string;
+  readonly stagedFiles: string[];
+};
 
 export interface RemoteBubbleCommitCommandDependencies {
   runCommand?: (
@@ -110,7 +111,7 @@ function buildRemoteBubbleCommitCommandLine(
     "--repo",
     input.remoteClonePath,
     ...(input.message !== undefined ? ["--message", input.message] : []),
-    ...(input.auto ? ["--auto"] : []),
+    ...(input.stageAll ? ["--stage-all"] : []),
     ...input.refs.flatMap((ref) => ["--ref", ref])
   ];
   return args.map((value) => shellQuote(value)).join(" ");
@@ -122,7 +123,6 @@ export function buildRemoteBubbleCommitScript(
   const bubbleDir = `${input.remoteClonePath}/.pairflow/bubbles/${input.bubbleId}`;
   const statePath = `${bubbleDir}/state.json`;
   const transcriptPath = `${bubbleDir}/transcript.ndjson`;
-  const donePackagePath = `${bubbleDir}/artifacts/done-package.md`;
   const remoteCommandLine = buildRemoteBubbleCommitCommandLine(input);
 
   return [
@@ -138,9 +138,6 @@ export function buildRemoteBubbleCommitScript(
     `printf '%s\\n' ${shellQuote(remoteCommitTranscriptStartMarker)}`,
     `cat ${shellQuote(transcriptPath)}`,
     `printf '%s\\n' ${shellQuote(remoteCommitTranscriptEndMarker)}`,
-    `printf '%s\\n' ${shellQuote(remoteCommitDonePackageStartMarker)}`,
-    `cat ${shellQuote(donePackagePath)}`,
-    `printf '%s\\n' ${shellQuote(remoteCommitDonePackageEndMarker)}`,
     `printf '%s\\n' ${shellQuote(remoteCommitHeadShaStartMarker)}`,
     "git rev-parse HEAD",
     `printf '%s\\n' ${shellQuote(remoteCommitHeadShaEndMarker)}`,
@@ -170,22 +167,21 @@ function describeTransportFailure(input: {
   return `ssh transport failed (exit ${input.exitCode}): ${summarizeTransportOutput(detailSource)}`;
 }
 
-function escapeRegExpLiteral(input: string): string {
-  return input.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&");
-}
-
 function extractMarkerPayload(input: {
   stdout: string;
   startMarker: string;
   endMarker: string;
   label: string;
 }): string {
-  const pattern = new RegExp(
-    `${escapeRegExpLiteral(input.startMarker)}\\n([\\s\\S]*?)\\n${escapeRegExpLiteral(input.endMarker)}`,
-    "gu"
-  );
-  const matches = [...input.stdout.matchAll(pattern)];
-  if (matches.length !== 1) {
+  const lines = input.stdout.split(/\r?\n/u);
+  const startIndexes = lines
+    .map((line, index) => (line === input.startMarker ? index : -1))
+    .filter((index) => index >= 0);
+  const endIndexes = lines
+    .map((line, index) => (line === input.endMarker ? index : -1))
+    .filter((index) => index >= 0);
+
+  if (startIndexes.length !== 1 || endIndexes.length !== 1) {
     throw new RemoteBubbleCommitCommandError({
       code: "REMOTE_COMMIT_PAYLOAD_INVALID",
       message:
@@ -193,11 +189,27 @@ function extractMarkerPayload(input: {
       context: {
         command_name: "commit",
         payload_label: input.label,
-        marker_count: matches.length
+        marker_count: Math.min(startIndexes.length, endIndexes.length)
       }
     });
   }
-  return matches[0]?.[1] ?? "";
+
+  const startIndex = startIndexes[0];
+  const endIndex = endIndexes[0];
+  if (startIndex === undefined || endIndex === undefined || startIndex >= endIndex) {
+    throw new RemoteBubbleCommitCommandError({
+      code: "REMOTE_COMMIT_PAYLOAD_INVALID",
+      message:
+        `Remote commit returned ${input.label} markers in an invalid order.`,
+      context: {
+        command_name: "commit",
+        payload_label: input.label,
+        marker_count: 1
+      }
+    });
+  }
+
+  return lines.slice(startIndex + 1, endIndex).join("\n");
 }
 
 function parseRemoteBubbleState(input: {
@@ -234,6 +246,7 @@ function parseTranscript(input: {
 }): {
   sequence: number;
   envelope: ProtocolEnvelope;
+  metadata: CommitResultMetadata;
 } {
   const lines = input.raw
     .split(/\r?\n/u)
@@ -269,17 +282,24 @@ function parseTranscript(input: {
         `Remote commit returned a transcript tail for the wrong bubble: expected ${input.bubbleId}.`
     });
   }
-  if (envelope.type !== "DONE_PACKAGE") {
+  if (envelope.type !== "COMMIT_RESULT") {
     throw new RemoteBubbleCommitCommandError({
       code: "REMOTE_COMMIT_PAYLOAD_INVALID",
       message:
-        `Remote commit did not finish with a DONE_PACKAGE envelope for bubble ${input.bubbleId}.`
+        `Remote commit did not finish with a COMMIT_RESULT envelope for bubble ${input.bubbleId}.`
     });
   }
 
+  const metadata = parseCommitResultMetadata({
+    envelope,
+    bubbleId: input.bubbleId
+  });
+
   return {
+    // Sequence follows transcript line-count semantics used by sibling SSH parsers.
     sequence: envelopes.length,
-    envelope
+    envelope,
+    metadata
   };
 }
 
@@ -304,6 +324,93 @@ function parseOutputLines(stdout: string): string[] {
     .split(/\r?\n/u)
     .map((line) => line.trim())
     .filter((line) => line.length > 0);
+}
+
+function isNonEmptyStringArray(value: unknown): value is string[] {
+  return (
+    Array.isArray(value) &&
+    value.length > 0 &&
+    value.every((entry) => typeof entry === "string" && entry.length > 0)
+  );
+}
+
+function haveSameStringSet(left: string[], right: string[]): boolean {
+  if (left.length !== right.length) {
+    return false;
+  }
+  const sortedLeft = [...left].sort();
+  const sortedRight = [...right].sort();
+  return sortedLeft.every((value, index) => value === sortedRight[index]);
+}
+
+function parseCommitResultMetadata(input: {
+  envelope: ProtocolEnvelope;
+  bubbleId: string;
+}): CommitResultMetadata {
+  const metadata = input.envelope.payload.metadata;
+  if (metadata === undefined) {
+    throw new RemoteBubbleCommitCommandError({
+      code: "REMOTE_COMMIT_PAYLOAD_INVALID",
+      message:
+        `Remote commit returned COMMIT_RESULT without metadata for bubble ${input.bubbleId}.`
+    });
+  }
+
+  const commitSha = metadata.commit_sha;
+  const rawCommitMessage = metadata.commit_message;
+  const stagedFiles = metadata.staged_files;
+  if (
+    typeof commitSha !== "string" ||
+    commitSha.length === 0 ||
+    typeof rawCommitMessage !== "string" ||
+    !isNonEmptyStringArray(stagedFiles)
+  ) {
+    throw new RemoteBubbleCommitCommandError({
+      code: "REMOTE_COMMIT_PAYLOAD_INVALID",
+      message:
+        `Remote commit returned invalid COMMIT_RESULT metadata for bubble ${input.bubbleId}.`
+    });
+  }
+  const commitMessage = rawCommitMessage.trim();
+  if (commitMessage.length === 0) {
+    throw new RemoteBubbleCommitCommandError({
+      code: "REMOTE_COMMIT_PAYLOAD_INVALID",
+      message:
+        `Remote commit returned invalid COMMIT_RESULT metadata for bubble ${input.bubbleId}.`
+    });
+  }
+
+  return {
+    commitSha,
+    commitMessage,
+    stagedFiles
+  };
+}
+
+function assertCommitResultMatchesGitFacts(input: {
+  bubbleId: string;
+  metadata: CommitResultMetadata;
+  commitSha: string;
+  commitMessage: string;
+  stagedFiles: string[];
+}): void {
+  if (
+    input.metadata.commitSha !== input.commitSha ||
+    input.metadata.commitMessage !== input.commitMessage ||
+    !haveSameStringSet(input.metadata.stagedFiles, input.stagedFiles)
+  ) {
+    throw new RemoteBubbleCommitCommandError({
+      code: "REMOTE_COMMIT_PAYLOAD_INVALID",
+      message:
+        `Remote commit COMMIT_RESULT metadata does not match remote git facts for bubble ${input.bubbleId}.`,
+      context: {
+        command_name: "commit",
+        payload_label: "commit-result",
+        transcript_commit_sha: input.metadata.commitSha,
+        git_commit_sha: input.commitSha
+      }
+    });
+  }
 }
 
 async function runRemoteBubbleCommitTransport(input: {
@@ -386,12 +493,6 @@ export async function executeRemoteBubbleCommitCommand(
     endMarker: remoteCommitTranscriptEndMarker,
     label: "transcript"
   });
-  const donePackageContent = extractMarkerPayload({
-    stdout: result.stdout,
-    startMarker: remoteCommitDonePackageStartMarker,
-    endMarker: remoteCommitDonePackageEndMarker,
-    label: "done-package"
-  });
   const commitSha = parseRequiredLine({
     raw: extractMarkerPayload({
       stdout: result.stdout,
@@ -424,6 +525,13 @@ export async function executeRemoteBubbleCommitCommand(
     raw: stateContent,
     bubbleId: input.bubbleId
   });
+  if (state.bubble_id !== input.bubbleId) {
+    throw new RemoteBubbleCommitCommandError({
+      code: "REMOTE_COMMIT_PAYLOAD_INVALID",
+      message:
+        `Remote commit returned state for the wrong bubble: expected ${input.bubbleId}.`
+    });
+  }
   if (state.state !== "DONE") {
     throw new RemoteBubbleCommitCommandError({
       code: "REMOTE_COMMIT_PAYLOAD_INVALID",
@@ -431,9 +539,16 @@ export async function executeRemoteBubbleCommitCommand(
         `Remote commit returned non-DONE state ${state.state} for bubble ${input.bubbleId}.`
     });
   }
-  const { sequence, envelope } = parseTranscript({
+  const { sequence, envelope, metadata } = parseTranscript({
     raw: transcriptContent,
     bubbleId: input.bubbleId
+  });
+  assertCommitResultMatchesGitFacts({
+    bubbleId: input.bubbleId,
+    metadata,
+    commitSha,
+    commitMessage,
+    stagedFiles
   });
 
   return {
@@ -443,7 +558,6 @@ export async function executeRemoteBubbleCommitCommand(
     state,
     stateContent,
     transcriptContent,
-    donePackageContent,
     commitSha,
     commitMessage,
     stagedFiles

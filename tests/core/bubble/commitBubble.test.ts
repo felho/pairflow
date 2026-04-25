@@ -382,6 +382,7 @@ describe("commitBubble", () => {
     }
   });
 
+  // Clone-path fixtures keep legacy done-package files only to prove retained artifacts are ignored.
   it("fails closed when clone source branch sync fails after local commit", async () => {
     const repoPath = await createTempRepo();
     const bubble = await convertApprovedBubbleToClone(
@@ -738,12 +739,10 @@ describe("commitBubble", () => {
       bubble_id: "b_commit_remote_public_01",
       sender: "orchestrator",
       recipient: "human",
-      type: "DONE_PACKAGE",
+      type: "COMMIT_RESULT",
       round: 2,
       payload: {
-        summary: "Remote public commit completed.",
         metadata: {
-          done_package_path: "/srv/pairflow/repo/.pairflow/bubbles/b_commit_remote_public_01/artifacts/done-package.md",
           staged_files: ["feature-public.txt"],
           commit_message: "bubble(b_commit_remote_public_01): finalize",
           commit_sha: "fedcba9876543210"
@@ -784,7 +783,6 @@ describe("commitBubble", () => {
           state: remoteState,
           stateContent: `${JSON.stringify(remoteState, null, 2)}\n`,
           transcriptContent: `${JSON.stringify(remoteEnvelope)}\n`,
-          donePackageContent: "# Done Package\n\nRemote public continuity.\n",
           commitSha: "fedcba9876543210",
           commitMessage: "bubble(b_commit_remote_public_01): finalize",
           stagedFiles: ["feature-public.txt"]
@@ -809,8 +807,10 @@ describe("commitBubble", () => {
     );
 
     expect(result.commitSha).toBe("fedcba9876543210");
-    expect(await readFile(donePackagePath, "utf8")).toContain("Remote public continuity.");
+    await expect(readFile(donePackagePath, "utf8")).rejects.toMatchObject({
+      code: "ENOENT"
+    });
     expect(await readFile(statePath, "utf8")).toContain("\"state\": \"DONE\"");
-    expect(await readFile(transcriptPath, "utf8")).toContain("\"DONE_PACKAGE\"");
+    expect(await readFile(transcriptPath, "utf8")).toContain("\"COMMIT_RESULT\"");
   });
 });

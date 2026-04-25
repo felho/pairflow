@@ -281,12 +281,10 @@ describe("commitCommandApi", () => {
       bubble_id: "b_remote_commit_01",
       sender: "orchestrator",
       recipient: "human",
-      type: "DONE_PACKAGE",
+      type: "COMMIT_RESULT",
       round: 2,
       payload: {
-        summary: "Remote commit completed.",
         metadata: {
-          done_package_path: "/srv/pairflow/repo/.pairflow/bubbles/b_remote_commit_01/artifacts/done-package.md",
           staged_files: ["feature-remote.txt"],
           commit_message: "bubble(b_remote_commit_01): finalize",
           commit_sha: "abcdef1234567890"
@@ -303,7 +301,6 @@ describe("commitCommandApi", () => {
       state: remoteState,
       stateContent: `${JSON.stringify(remoteState, null, 2)}\n`,
       transcriptContent: `${JSON.stringify(remoteEnvelope)}\n`,
-      donePackageContent: "# Done Package\n\nRemote continuity.\n",
       commitSha: "abcdef1234567890",
       commitMessage: "bubble(b_remote_commit_01): finalize",
       stagedFiles: ["feature-remote.txt"]
@@ -374,9 +371,9 @@ describe("commitCommandApi", () => {
     expect(await readFile(transcriptPath, "utf8")).toBe(
       `${JSON.stringify(remoteEnvelope)}\n`
     );
-    expect(await readFile(donePackagePath, "utf8")).toBe(
-      "# Done Package\n\nRemote continuity.\n"
-    );
+    await expect(readFile(donePackagePath, "utf8")).rejects.toMatchObject({
+      code: "ENOENT"
+    });
     const metricsShard = resolveMetricsShardPath({
       at: new Date("2026-04-18T08:05:00.000Z")
     });
@@ -396,12 +393,10 @@ describe("commitCommandApi", () => {
       auto: true,
       commit_message: "bubble(b_remote_commit_01): finalize",
       commit_sha: "abcdef1234567890",
-      done_package_path: donePackagePath,
-      refs_count: 2,
+      refs_count: 1,
       staged_file_count: 1
     });
     expect(executeRemoteBubbleCommitCommand).toHaveBeenCalledWith({
-      auto: true,
       bubbleId: "b_remote_commit_01",
       refs: [".pairflow/evidence/typecheck.log"],
       remoteClonePath: "/srv/pairflow/repo--b_remote_commit_01",
@@ -410,7 +405,8 @@ describe("commitCommandApi", () => {
         host: "ssh.example.com",
         user: "pairflow",
         pairflowCommand: "pairflow"
-      }
+      },
+      stageAll: true
     });
     expect(runGit).not.toHaveBeenCalled();
     expect(appendProtocolEnvelope).not.toHaveBeenCalled();
@@ -645,7 +641,6 @@ describe("commitCommandApi", () => {
     const bubblePaths = getBubblePaths(repoPath, "b_remote_commit_sync_fail_01");
     const statePath = bubblePaths.statePath;
     const transcriptPath = bubblePaths.transcriptPath;
-    const donePackagePath = join(bubblePaths.artifactsDir, "done-package.md");
     const approvedState: BubbleStateSnapshot = {
       bubble_id: "b_remote_commit_sync_fail_01",
       state: "APPROVED_FOR_COMMIT",
@@ -678,21 +673,16 @@ describe("commitCommandApi", () => {
       } satisfies ProtocolEnvelope)}\n`,
       "utf8"
     );
-    const originalDonePackage = "# Done Package\n\nOriginal local continuity.\n";
-    await mkdir(dirname(donePackagePath), { recursive: true });
-    await writeFile(donePackagePath, originalDonePackage, "utf8");
     const remoteEnvelope: ProtocolEnvelope = {
       id: "msg_remote_commit_sync_fail_01",
       ts: "2026-04-18T08:13:00.000Z",
       bubble_id: "b_remote_commit_sync_fail_01",
       sender: "orchestrator",
       recipient: "human",
-      type: "DONE_PACKAGE",
+      type: "COMMIT_RESULT",
       round: 2,
       payload: {
-        summary: "Remote commit completed.",
         metadata: {
-          done_package_path: "/srv/pairflow/repo/.pairflow/bubbles/b_remote_commit_sync_fail_01/artifacts/done-package.md",
           staged_files: ["feature.txt"],
           commit_message: "bubble(b_remote_commit_sync_fail_01): finalize",
           commit_sha: "1234567"
@@ -712,7 +702,6 @@ describe("commitCommandApi", () => {
       state: remoteDoneState,
       stateContent: `${JSON.stringify(remoteDoneState, null, 2)}\n`,
       transcriptContent: `${JSON.stringify(remoteEnvelope)}\n`,
-      donePackageContent: "# Done Package\n\nRemote continuity sync should fail.\n",
       commitSha: "1234567",
       commitMessage: "bubble(b_remote_commit_sync_fail_01): finalize",
       stagedFiles: ["feature.txt"]
@@ -774,7 +763,6 @@ describe("commitCommandApi", () => {
     expect(await readFile(transcriptPath, "utf8")).toContain(
       "\"msg_previous_remote_commit_sync_fail_01\""
     );
-    expect(await readFile(donePackagePath, "utf8")).toBe(originalDonePackage);
   });
 
   it("rolls back previously applied local continuity artifacts when a later rename apply fails", async () => {
@@ -786,7 +774,6 @@ describe("commitCommandApi", () => {
     const bubblePaths = getBubblePaths(repoPath, "b_remote_commit_sync_rename_fail_01");
     const statePath = bubblePaths.statePath;
     const transcriptPath = bubblePaths.transcriptPath;
-    const donePackagePath = join(bubblePaths.artifactsDir, "done-package.md");
     const approvedState: BubbleStateSnapshot = {
       bubble_id: "b_remote_commit_sync_rename_fail_01",
       state: "APPROVED_FOR_COMMIT",
@@ -819,21 +806,16 @@ describe("commitCommandApi", () => {
       } satisfies ProtocolEnvelope)}\n`,
       "utf8"
     );
-    const originalDonePackage = "# Done Package\n\nOriginal local continuity before rename failure.\n";
-    await mkdir(dirname(donePackagePath), { recursive: true });
-    await writeFile(donePackagePath, originalDonePackage, "utf8");
     const remoteEnvelope: ProtocolEnvelope = {
       id: "msg_remote_commit_sync_rename_fail_01",
       ts: "2026-04-18T08:15:00.000Z",
       bubble_id: "b_remote_commit_sync_rename_fail_01",
       sender: "orchestrator",
       recipient: "human",
-      type: "DONE_PACKAGE",
+      type: "COMMIT_RESULT",
       round: 2,
       payload: {
-        summary: "Remote commit completed.",
         metadata: {
-          done_package_path: "/srv/pairflow/repo/.pairflow/bubbles/b_remote_commit_sync_rename_fail_01/artifacts/done-package.md",
           staged_files: ["feature.txt"],
           commit_message: "bubble(b_remote_commit_sync_rename_fail_01): finalize",
           commit_sha: "2345678"
@@ -853,7 +835,6 @@ describe("commitCommandApi", () => {
       state: remoteDoneState,
       stateContent: `${JSON.stringify(remoteDoneState, null, 2)}\n`,
       transcriptContent: `${JSON.stringify(remoteEnvelope)}\n`,
-      donePackageContent: "# Done Package\n\nRemote continuity should roll back after rename failure.\n",
       commitSha: "2345678",
       commitMessage: "bubble(b_remote_commit_sync_rename_fail_01): finalize",
       stagedFiles: ["feature.txt"]
@@ -923,7 +904,6 @@ describe("commitCommandApi", () => {
     expect(await readFile(transcriptPath, "utf8")).toContain(
       "\"msg_previous_remote_commit_sync_rename_fail_01\""
     );
-    expect(await readFile(donePackagePath, "utf8")).toBe(originalDonePackage);
     expect(renamePath).toHaveBeenCalled();
   });
 
@@ -939,7 +919,6 @@ describe("commitCommandApi", () => {
     );
     const statePath = bubblePaths.statePath;
     const transcriptPath = bubblePaths.transcriptPath;
-    const donePackagePath = join(bubblePaths.artifactsDir, "done-package.md");
     const approvedState: BubbleStateSnapshot = {
       bubble_id: "b_remote_commit_sync_restore_retry_01",
       state: "APPROVED_FOR_COMMIT",
@@ -972,21 +951,16 @@ describe("commitCommandApi", () => {
       } satisfies ProtocolEnvelope)}\n`,
       "utf8"
     );
-    const originalDonePackage = "# Done Package\n\nOriginal local continuity before restore retry.\n";
-    await mkdir(dirname(donePackagePath), { recursive: true });
-    await writeFile(donePackagePath, originalDonePackage, "utf8");
     const remoteEnvelope: ProtocolEnvelope = {
       id: "msg_remote_commit_sync_restore_retry_01",
       ts: "2026-04-18T08:17:00.000Z",
       bubble_id: "b_remote_commit_sync_restore_retry_01",
       sender: "orchestrator",
       recipient: "human",
-      type: "DONE_PACKAGE",
+      type: "COMMIT_RESULT",
       round: 2,
       payload: {
-        summary: "Remote commit completed.",
         metadata: {
-          done_package_path: "/srv/pairflow/repo/.pairflow/bubbles/b_remote_commit_sync_restore_retry_01/artifacts/done-package.md",
           staged_files: ["feature.txt"],
           commit_message: "bubble(b_remote_commit_sync_restore_retry_01): finalize",
           commit_sha: "3456789"
@@ -1006,23 +980,22 @@ describe("commitCommandApi", () => {
       state: remoteDoneState,
       stateContent: `${JSON.stringify(remoteDoneState, null, 2)}\n`,
       transcriptContent: `${JSON.stringify(remoteEnvelope)}\n`,
-      donePackageContent: "# Done Package\n\nRemote continuity should restore after retry.\n",
       commitSha: "3456789",
       commitMessage: "bubble(b_remote_commit_sync_restore_retry_01): finalize",
       stagedFiles: ["feature.txt"]
     }));
-    let donePackageRestoreAttempts = 0;
+    let transcriptRestoreAttempts = 0;
     const renamePath = vi.fn(async (fromPath: string, toPath: string) => {
       if (
         fromPath.includes(".pairflow-sync-") &&
         fromPath.endsWith(".tmp") &&
-        toPath === transcriptPath
+        toPath === statePath
       ) {
-        throw new Error("simulated transcript rename apply failure");
+        throw new Error("simulated state rename apply failure");
       }
-      if (fromPath.includes(".pairflow-sync-") && fromPath.endsWith(".bak") && toPath === donePackagePath) {
-        donePackageRestoreAttempts += 1;
-        if (donePackageRestoreAttempts === 1) {
+      if (fromPath.includes(".pairflow-sync-") && fromPath.endsWith(".bak") && toPath === transcriptPath) {
+        transcriptRestoreAttempts += 1;
+        if (transcriptRestoreAttempts === 1) {
           throw new Error("simulated restore collision");
         }
       }
@@ -1079,16 +1052,15 @@ describe("commitCommandApi", () => {
       )
     ).rejects.toThrow(/REMOTE_COMMIT_SYNC_BACK_FAILED/u);
 
-    expect(donePackageRestoreAttempts).toBe(2);
+    expect(transcriptRestoreAttempts).toBe(2);
     expect(await readFile(statePath, "utf8")).toBe(
       `${JSON.stringify(approvedState, null, 2)}\n`
     );
     expect(await readFile(transcriptPath, "utf8")).toContain(
       "\"msg_previous_remote_commit_sync_restore_retry_01\""
     );
-    expect(await readFile(donePackagePath, "utf8")).toBe(originalDonePackage);
     expect(
-      (await readdir(bubblePaths.artifactsDir)).filter((name) =>
+      (await readdir(dirname(statePath))).filter((name) =>
         name.includes(".pairflow-sync-")
       )
     ).toEqual([]);
