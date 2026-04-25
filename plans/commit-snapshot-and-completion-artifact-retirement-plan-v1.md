@@ -117,7 +117,7 @@ This plan separates implementation slicing from mergeability.
 3. `contract_cutover_dependency`
    - The shared command input contract and shared command result contract are separate cutover axes.
    - The `donePackagePath` result-field removal is owned by the local producer cutover because keeping that result authority alive preserves the removed done-package model; Phase 2 must update direct compile consumers and projections that depend on `CommitBubbleResult`.
-   - The `auto` to `stageAll` request/input rename is owned by the public CLI/API/UI-router activation cutover in Phase 3.
+   - The `auto` to `stageAll` request/input rename is split across Phase 3A CLI/application foundation and Phase 3B UI-router/frontend consumer alignment.
    - Both axes must be closed across CLI, application API, and UI/router API before the target state is accepted.
    - Remote execution transport, SSH output parsing, remote marker handling, and sync-back are owned by remote alignment.
 
@@ -147,9 +147,9 @@ This plan separates implementation slicing from mergeability.
 
 ### Progress Update - 2026-04-25
 
-Phase 1 is complete and merged.
+Phase 1 and Phase 2 are complete and merged.
 
-Completed slice:
+Completed slices:
 
 1. `commit-result-protocol-contract`
    - Bubble: `commit-result-protocol-contract`
@@ -157,15 +157,23 @@ Completed slice:
    - Merge commit: `c300b8939f25b709afeafd7105d3d18ae85c10e5`
    - Completion proof: `COMMIT_RESULT` is in the protocol message type family and validates as a closed technical metadata payload. Existing `DONE_PACKAGE` validation remains only as temporary integration-slice compatibility until producer cutover.
    - Archived task: `plans/archive/tasks/commit-snapshot-and-completion-artifact-retirement/commit-result-protocol-contract.md`
+2. `local-commit-done-package-removal`
+   - Bubble: `local-commit-done-package-removal`
+   - Bubble commit: `d85dfd3329b76f6b80fbd85b931db02c91db5583`
+   - Merge commit: `3e25e97294d2501828eb6b8eda739a44930d3279`
+   - Archive follow-up commit: `8e0378c6`
+   - Completion proof: local `bubble commit` no longer reads, requires, generates, references, or emits `artifacts/done-package.md` as local commit completion authority. Local finalization now emits `COMMIT_RESULT` from finalized git commit facts, removes `donePackagePath` from the shared application/UI result shape, removes local `done_package_path` lifecycle metadata, and preserves deterministic commit creation, clone retry, and source-branch sync behavior.
+   - Boundary note: remote commit continuity still intentionally remains on the successor-owned compatibility path, and public `--auto` / help-text request activation remains successor-owned.
+   - Archived task: `plans/archive/tasks/local-commit-done-package-removal.md`
 
 Next task:
 
-1. `local-commit-done-package-removal`
-   - Owns Phase 2.
-   - Primary goal: make local `bubble commit` stop reading, requiring, generating, or emitting done-package artifacts and instead append `COMMIT_RESULT` after a valid finalized git commit.
-   - Engineering sequencing decision: Phase 2 also removes `donePackagePath` from the shared application commit result and removes local `done_package_path` lifecycle metadata, because leaving those surfaces in the local producer would preserve the removed authority shape. Public `--stage-all` activation text/UI-router request migration and remote transport hard cutover remain separate successor closures.
-   - Critical boundary: preserve existing deterministic commit reuse, clone retry, and source-branch sync behavior; do not introduce new crash-after-git-commit recovery.
-   - Non-goal: CLI/API/UI `auto` to `stageAll` cutover remains Phase 3 unless explicitly paired in the same integration closure.
+1. `commit-cli-stage-all-cutover`
+   - Owns Phase 3A.
+   - Primary goal: activate `--stage-all` on the operator CLI and application commit input while retaining explicit internal compatibility only for not-yet-cut consumers.
+   - Required cleanup: remove operator-facing done-package language from commit help, reject public CLI `--auto`, keep local success output aligned with the returned envelope type/result contract, and ensure no public result surface reintroduces `donePackagePath`.
+   - Critical boundary: do not open UI-router/frontend request migration or remote SSH transport hard cutover in this task; those are Phase 3B and Phase 4 respectively.
+   - Non-goal: live start/resume prompt and broader docs cleanup remain Phase 5 unless a direct Phase 3 command/help consumer requires a bounded wording update.
 
 ### Phase 1: Commit Result Contract
 
@@ -214,7 +222,7 @@ Required changes:
 5. Do not add new automatic recovery after the git commit point.
 6. Remove `donePackagePath` from the shared application commit result contract and update direct compile consumers/projections that read that type, including root CLI output and UI-router result typing as needed. This is result-surface contraction, not Phase 3 request/input activation.
 7. Remove local `done_package_path` lifecycle metadata from local `bubble_committed` events.
-8. Keep `auto` only as temporary local stage-all input spelling where needed; it must no longer generate, read, or imply done-package content. Public request/input rename to `stageAll` remains Phase 3.
+8. Keep `auto` only as temporary local stage-all input spelling where needed; it must no longer generate, read, or imply done-package content. Public request/input rename to `stageAll` is split across Phase 3A and Phase 3B.
 9. Do not claim this phase as independently mergeable target state unless the shared CLI/API/UI/router request contract, user-facing command text, and remote path are aligned in the same integration branch.
 10. Preserve existing deterministic git commit reuse, clone retry, and source-branch sync behavior:
    - if the existing baseline finalizes using a valid newly-created or deterministically reused commit SHA, emit `COMMIT_RESULT` for that finalized commit.
@@ -232,38 +240,66 @@ Exit criteria:
 7. Preserved baseline retry/reuse/source-sync paths finalize with the same `COMMIT_RESULT` contract when they finalize a valid commit SHA.
 8. `CommitBubbleResult` and direct CLI/UI-router compile consumers no longer require `donePackagePath`.
 
-### Phase 3: CLI And API Surface Cutover
+### Phase 3A: CLI And Application Stage-All Foundation
 
-Goal: make operator-facing and first-party API command behavior match the new model.
+Goal: make the operator-facing local CLI and application commit input understand the new staging model without forcing every first-party UI/router and remote consumer to move in the same task.
 
 Required changes:
 
 1. Add `--stage-all`.
 2. Remove `--auto` from the target CLI contract.
-3. Replace first-party API/UI/router request field `auto` with `stageAll`.
+3. Add `stageAll` as the application commit input spelling for the local commit route.
 4. Define old `auto` request handling:
-   - `auto` is not a supported target-state request field.
-   - first-party callers must send `stageAll`.
-   - if external request parsing sees `auto` after the cutover, it must fail clearly rather than silently generating done-package behavior.
+   - public CLI `--auto` is not a supported target-state operator flag.
+   - application-level `auto` may remain only as explicit temporary compatibility for not-yet-cut first-party consumers until Phase 3B/Phase 4.
+   - temporary compatibility must mean only "stage all before commit"; it must not generate, read, or imply done-package behavior.
 5. Update help text:
    - no done-package requirement
    - no auto-generation language
    - explain `--stage-all` as staging all worktree changes before commit
-6. Update CLI success output to report:
+6. Update direct local CLI success output to report:
    - bubble id
    - commit SHA
    - staged file count
-   - `COMMIT_RESULT` envelope id
-7. Keep public result projections aligned with the Phase 2 result contract, with no reintroduction of done-package wording.
-8. Update CLI/API/UI-router tests.
+   - the actual returned envelope id
+7. Keep CLI success rendering truthful to the result it receives:
+   - local commit output should report `COMMIT_RESULT`
+   - remote commit output may still truthfully report legacy `DONE_PACKAGE` until Phase 4 replaces the remote transport/result path
+   - output rendering must not hardcode `COMMIT_RESULT` over a remote legacy result
+8. Keep public result projections aligned with the Phase 2 local result contract, with no reintroduction of `donePackagePath`.
+9. Update CLI/application/local commit tests and commit contract fixtures/runners that directly exercise CLI/application commit input.
+10. Treat lifecycle event metadata key cleanup as out of scope for Phase 3A unless a separate task explicitly brings it in; Phase 3A owns CLI/application request activation, not broad event-payload cleanup.
+11. Do not update UI-router HTTP body, UI frontend/store/form payloads, or remote SSH command construction in Phase 3A except where compile-only type fallout requires an explicit adapter.
 
 Exit criteria:
 
-1. Operators no longer see done-package language in commit command help or success output.
-2. `--stage-all` is the only automatic staging option in the target contract.
+1. Operators no longer see done-package language in commit command help or local commit success output; remote commit success output may still truthfully report legacy `DONE_PACKAGE` until Phase 4.
+2. `--stage-all` is the only automatic staging option in the public CLI target contract.
 3. `--auto` is not preserved as a first-party supported alias.
-4. First-party API/UI/router callers use `stageAll`, not `auto`.
-5. First-party command result surfaces remain aligned with the Phase 2 technical result contract and do not reintroduce `donePackagePath`.
+4. Application local commit callers can use `stageAll`; any remaining `auto` application input is explicitly marked temporary compatibility for successor consumers.
+5. First-party local command result surfaces remain aligned with the Phase 2 technical result contract and do not reintroduce `donePackagePath`.
+6. CLI success output rendering reports the actual returned envelope type and does not mask remote continuity as `COMMIT_RESULT`.
+7. Event-payload metadata cleanup is either explicitly deferred or covered by a separate task with its own event-contract blast radius.
+
+### Phase 3B: UI-Router And Frontend Stage-All Alignment
+
+Goal: move first-party UI-router HTTP/action dispatch and UI frontend request producers from temporary `auto` compatibility to `stageAll`.
+
+Required changes:
+
+1. Replace UI-router commit input `auto` with `stageAll`.
+2. Replace HTTP commit action body `auto` with `stageAll`.
+3. Reject legacy HTTP `auto` clearly at the UI-router public request boundary.
+4. Replace UI client/store/action/form request payloads and labels from `auto` to stage-all language.
+5. Add or update store/action/form tests so UI default staging behavior is preserved under `stageAll`.
+6. Do not change remote SSH command construction, remote marker parsing, sync-back, or remote result continuity.
+
+Exit criteria:
+
+1. First-party UI-router and frontend request paths send `stageAll`, not `auto`.
+2. Legacy HTTP `auto` is rejected clearly instead of silently staging all.
+3. UI default stage-all behavior is preserved or intentionally changed with explicit product justification.
+4. The application-level temporary `auto` compatibility can be narrowed to remote-only compatibility after this phase, or removed if no remaining first-party consumer needs it.
 
 ### Phase 4: Remote Commit Alignment
 
@@ -279,6 +315,7 @@ Required changes:
 6. Remote SSH output parsing and marker handling no longer depend on done-package content.
 7. Remote-to-local result mapping feeds the shared first-party command result contract without `donePackagePath`.
 8. Remote tests prove local and remote commit results share the same event contract.
+9. Root CLI remote commit success output no longer needs to truthfully report `DONE_PACKAGE`, because the remote route now returns the target `COMMIT_RESULT` contract.
 
 Exit criteria:
 
@@ -286,6 +323,7 @@ Exit criteria:
 2. Remote sync-back preserves the canonical remote state/transcript without synthesizing done-package continuity.
 3. Target-state remote bubbles are supported under the same `COMMIT_RESULT` contract as local bubbles.
 4. Remote transport details are fully aligned before the plan is accepted as hard-cutover complete.
+5. No commit success output path remains forced to report `DONE_PACKAGE` for truthful remote continuity.
 
 ### Phase 5: First-Party Consumer And Documentation Cleanup
 
@@ -298,8 +336,8 @@ Required changes:
 3. Update start/resume runtime prompt and context generators that still name done-package as an active completion artifact.
    - These are active first-party runtime surfaces, not passive documentation.
    - Include prompt/context anchors such as `startCommandContext`, `startCommandImplementerPrompts`, and `startCommandResumeImplementerPrompt`.
-4. Update lifecycle event metadata references that still expose done-package fields.
-5. Update root CLI output and live command routing text that still names `DONE_PACKAGE`.
+4. Update lifecycle event metadata references that still expose done-package fields, unless a prior task has already closed that event-contract cleanup explicitly.
+5. Update any remaining root CLI output and live command routing text that still names `DONE_PACKAGE` after Phase 4.
 6. Update tests and contract fixtures that still expect done-package.
 7. Leave archived historical documents unchanged unless they are used as live operator instructions.
 
@@ -378,20 +416,27 @@ The work may be implemented in multiple integration slices. Because no active re
    - slice type: `integration_slice` unless paired with downstream producer and consumer cutover.
    - adds `COMMIT_RESULT` and records the target removal contract, but does not independently claim a mergeable mixed finalization state.
 2. `local-commit-done-package-removal`
-   - status: next.
+   - status: completed and archived.
    - owns Phase 2.
    - slice type: `integration_slice` unless paired with public request/input activation, remote alignment, and live docs cleanup.
    - owns shared application commit result removal of `donePackagePath`, local lifecycle metadata cleanup, and direct compile consumers of that result type.
 3. `commit-cli-stage-all-cutover`
-   - owns Phase 3.
-   - slice type: `contract_cutover`.
-   - owns the shared `auto` to `stageAll` request/input rename across CLI, application API, and UI/router surfaces, plus user-facing command/help/result wording alignment.
-4. `remote-commit-result-alignment`
+   - status: next.
+   - owns Phase 3A.
+   - slice type: `contract_foundation_activation`.
+   - owns public CLI `--stage-all`, application `stageAll` input activation for local commit, CLI/help/local result wording, and direct CLI/application contract fixtures/runners.
+   - may retain explicit temporary `auto` compatibility only for not-yet-cut first-party consumers; it does not own UI-router/frontend migration or remote command construction.
+4. `commit-ui-stage-all-alignment`
+   - owns Phase 3B.
+   - slice type: `consumer_family_alignment`.
+   - owns UI-router HTTP/action dispatch and UI frontend/store/form request migration from `auto` to `stageAll`.
+   - proves legacy HTTP `auto` rejection and preserves UI default staging behavior under the new field.
+5. `remote-commit-result-alignment`
    - owns Phase 4.
    - slice type: `target_state_required`.
-   - owns remote execution transport, SSH output parsing, remote marker handling, sync-back, and remote-to-local result mapping.
+   - owns remote execution transport, remote command flag construction, SSH output parsing, remote marker handling, sync-back, and remote-to-local result mapping.
    - required before the hard cutover can be accepted.
-5. `done-package-live-reference-cleanup`
+6. `done-package-live-reference-cleanup`
    - owns Phase 5.
    - slice type: `target_state_required`.
    - must cover both live docs and runtime-generated prompt/context surfaces, because prompt/context generators can still steer agents toward the removed done-package model.
