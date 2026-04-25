@@ -60,7 +60,7 @@ After this task, a successful remote commit must return and sync local continuit
    - Phase 4B `remote-commit-partial-success-readiness` can reason about target-state remote artifacts.
    - Phase 5 `done-package-live-reference-cleanup` can remove active `DONE_PACKAGE` validation only after local and remote producers both emit `COMMIT_RESULT`.
 4. Task-list impact: refines the parent plan's open task `remote-commit-result-transport-cutover` into an implementable task file.
-5. Inherited validation / exit expectation: remote normal success path must leave local state `DONE`, transcript tail `COMMIT_RESULT`, and immediate follow-up local merge eligibility unblocked when the commit command itself returns success.
+5. Inherited validation / exit expectation: remote normal success path must leave local state `DONE`, transcript tail `COMMIT_RESULT`, and immediate follow-up local merge eligibility unblocked only when the remote commit command returns success. A success return requires validated remote payload and completed local sync-back. If the remote side may have committed but the laptop-side command returns a payload/import or sync-back failure, retry, refresh, and merge-readiness repair remain Phase 4B.
 
 ### Canonical Contract Anchors
 
@@ -294,7 +294,7 @@ After this task, a successful remote commit must return and sync local continuit
 | Depends on | Phases 1, 2, 3A, and 3B completed. | Do not recreate earlier compatibility surfaces. | P1 | required-now |
 | Unlocks / impacts successors | Phase 4B and Phase 5. | Leave clear seams: no partial-success repair here, no protocol hard removal here. | P1 | required-now |
 | Task-list impact | Creates implementable task for `remote-commit-result-transport-cutover`. | Parent plan can point to this task file. | P2 | required-now |
-| Inherited validation / exit expectation | Remote success writes local `DONE` state and `COMMIT_RESULT` transcript. | Immediate merge eligibility is unblocked when commit command succeeds. | P1 | required-now |
+| Inherited validation / exit expectation | Remote normal success writes local `DONE` state and `COMMIT_RESULT` transcript only when the remote command returns success after validated payload and completed local sync-back. | Immediate merge eligibility is unblocked only for that success-return path; payload/import failure, sync-back failure, retry, refresh, and merge-readiness repair remain Phase 4B. | P1 | required-now |
 
 ### 0d) Shared Contract Compatibility
 
@@ -424,7 +424,7 @@ Constraint: implementation is not pure; side effects are limited to the remote c
 | AC2 | Remote command construction uses `--stage-all` and never `--auto`. | T1, T8 | P1 | required-now |
 | AC3 | Remote transcript tail must be `COMMIT_RESULT`. | T2, T3 | P1 | required-now |
 | AC4 | Remote transcript metadata and remote git facts must match. | T4, T5, T6 | P1 | required-now |
-| AC5 | Successful remote route syncs local state/transcript so local state is `DONE` and transcript tail is `COMMIT_RESULT`. | T7 | P1 | required-now |
+| AC5 | Successful remote route syncs local state/transcript so local state is `DONE` and transcript tail is `COMMIT_RESULT`; this is success-return continuity only, not Phase 4B stale-local repair after a payload/import or sync-back failure. | T7, T10, T11 | P1 | required-now |
 | AC6 | Remote route result conforms to shared `CommitBubbleResult` technical facts contract. | T7, typecheck | P1 | required-now |
 | AC7 | Sync-back failure remains fail-closed and does not emit a false local success. | T10 | P1 | required-now |
 | AC8 | Phase 4B concerns remain deferred with no retry/merge refresh implementation in this task. | code review against Out of Scope | P1 | required-now |
