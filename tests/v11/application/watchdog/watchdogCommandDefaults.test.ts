@@ -129,7 +129,7 @@ describe("watchdog command defaults", () => {
     expect(result.reason).toBe("not_expired");
     expect(readRuntimeSessionsRegistry).toHaveBeenCalledTimes(1);
     expect(runTmux).toHaveBeenCalledWith(
-      ["capture-pane", "-pt", "pf-watchdog-defaults:0.2"],
+      ["capture-pane", "-pt", "pf-watchdog-defaults:0.2", "-S", "-20"],
       { allowFailure: true }
     );
     expect(writeWatchdogPaneActivity).toHaveBeenCalledTimes(1);
