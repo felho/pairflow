@@ -3,7 +3,6 @@ import { mkdir, rename, rm, stat } from "node:fs/promises";
 import { dirname } from "node:path";
 
 import { emitBubbleLifecycleEventBestEffort } from "../../shared/metrics/bubbleEvents.js";
-import { normalizeStringList } from "../../shared/normalization/stringNormalization.js";
 import type {
   AppendedEnvelope,
   CommitRuntimeContext,
@@ -65,7 +64,6 @@ export async function emitCommitLifecycleEvent(input: {
     resolved: CommitRuntimeContext["resolved"];
     bubbleIdentity: CommitRuntimeContext["bubbleIdentity"];
     round: number;
-    donePackagePath?: string;
   };
   commitSha: string;
   commitMessage: string;
@@ -86,13 +84,7 @@ export async function emitCommitLifecycleEvent(input: {
       commit_message: input.commitMessage,
       staged_file_count: input.stagedFiles.length,
       auto: input.auto,
-      refs_count:
-        input.context.donePackagePath !== undefined
-          ? normalizeStringList([...input.refs, input.context.donePackagePath]).length
-          : input.refs.length,
-      ...(input.context.donePackagePath !== undefined
-        ? { done_package_path: input.context.donePackagePath }
-        : {})
+      refs_count: input.refs.length
     },
     now: input.now
   });
@@ -101,10 +93,8 @@ export async function emitCommitLifecycleEvent(input: {
 export async function syncRemoteCommitContinuityArtifacts(input: {
   statePath: string;
   transcriptPath: string;
-  donePackagePath: string;
   stateContent: string;
   transcriptContent: string;
-  donePackageContent: string;
   renamePath?: (fromPath: string, toPath: string) => Promise<void>;
   writeTextFile: (path: string, content: string) => Promise<void>;
 }): Promise<void> {
@@ -135,10 +125,6 @@ export async function syncRemoteCommitContinuityArtifacts(input: {
   };
 
   const targets = [
-    {
-      path: input.donePackagePath,
-      content: input.donePackageContent
-    },
     {
       path: input.transcriptPath,
       content: input.transcriptContent

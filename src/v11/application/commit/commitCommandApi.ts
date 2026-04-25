@@ -1,5 +1,3 @@
-import { resolve } from "node:path";
-
 import { normalizeStringList } from "../../shared/normalization/stringNormalization.js";
 import type {
   CommitBubbleInput,
@@ -121,15 +119,11 @@ async function prepareCommitExecutionContext(input: {
 function buildCommitLifecycleContext(input: {
   context: CommitExecutionContext;
   round: number;
-  donePackagePath?: string;
 }) {
   return {
     resolved: input.context.resolved,
     bubbleIdentity: input.context.bubbleIdentity,
-    round: input.round,
-    ...(input.donePackagePath !== undefined
-      ? { donePackagePath: input.donePackagePath }
-      : {})
+    round: input.round
   };
 }
 
@@ -141,27 +135,21 @@ async function commitRemoteExecutionRoute(input: {
   now: Date;
   stageAll: boolean;
 }): Promise<CommitBubbleResult> {
-  const donePackagePath = resolve(
-    input.context.resolved.bubblePaths.artifactsDir,
-    "done-package.md"
-  );
   const remoteResult = await input.dependencies.executeRemoteBubbleCommitCommand({
     bubbleId: input.command.bubbleId,
     remoteClonePath: input.context.remotePointer.remoteClonePath,
     remoteTarget: input.context.remoteTarget,
     refs: input.refs,
     ...(input.command.message !== undefined ? { message: input.command.message } : {}),
-    auto: input.stageAll
+    stageAll: input.stageAll
   });
 
   try {
     await syncRemoteCommitContinuityArtifacts({
       statePath: input.context.resolved.bubblePaths.statePath,
       transcriptPath: input.context.resolved.bubblePaths.transcriptPath,
-      donePackagePath,
       stateContent: remoteResult.stateContent,
       transcriptContent: remoteResult.transcriptContent,
-      donePackageContent: remoteResult.donePackageContent,
       ...(input.dependencies.renamePath !== undefined
         ? { renamePath: input.dependencies.renamePath }
         : {}),
@@ -178,8 +166,7 @@ async function commitRemoteExecutionRoute(input: {
         command_name: "commit",
         remote_clone_path: input.context.remotePointer.remoteClonePath,
         state_path: input.context.resolved.bubblePaths.statePath,
-        transcript_path: input.context.resolved.bubblePaths.transcriptPath,
-        done_package_path: donePackagePath
+        transcript_path: input.context.resolved.bubblePaths.transcriptPath
       },
       cause: error
     });
@@ -188,8 +175,7 @@ async function commitRemoteExecutionRoute(input: {
   await emitCommitLifecycleEvent({
     context: buildCommitLifecycleContext({
       context: input.context,
-      round: remoteResult.state.round,
-      donePackagePath
+      round: remoteResult.state.round
     }),
     commitSha: remoteResult.commitSha,
     commitMessage: remoteResult.commitMessage,
