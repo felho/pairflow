@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import { describe, expect, it, vi } from "vitest";
 
 import {
+  WATCHDOG_PANE_ACTIVITY_CAPTURE_START_LINE,
   sampleWatchdogPaneActivity
 } from "../../../../src/v11/application/watchdog/watchdogPaneActivitySampler.js";
 import type { TmuxRunner } from "../../../../src/v11/shared/ports/tmuxSessions.js";
@@ -96,7 +97,13 @@ describe("watchdogPaneActivitySampler", () => {
       target_pane: "pf-watchdog-sampler:0.2"
     });
     expect(runner).toHaveBeenCalledWith(
-      ["capture-pane", "-pt", "pf-watchdog-sampler:0.2"],
+      [
+        "capture-pane",
+        "-pt",
+        "pf-watchdog-sampler:0.2",
+        "-S",
+        WATCHDOG_PANE_ACTIVITY_CAPTURE_START_LINE
+      ],
       { allowFailure: true }
     );
   });
@@ -140,5 +147,15 @@ describe("watchdogPaneActivitySampler", () => {
       session_name: "pf-watchdog-sampler",
       target_pane: "pf-watchdog-sampler:0.1"
     });
+    expect(runner).toHaveBeenCalledWith(
+      [
+        "capture-pane",
+        "-pt",
+        "pf-watchdog-sampler:0.1",
+        "-S",
+        WATCHDOG_PANE_ACTIVITY_CAPTURE_START_LINE
+      ],
+      { allowFailure: true }
+    );
   });
 });

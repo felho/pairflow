@@ -12,6 +12,7 @@ import { createBubbleWatchdogError } from "./watchdogCommandRuntime.js";
 
 export const WATCHDOG_PANE_ACTIVITY_SAMPLE_INTERVAL_MS = 60_000;
 export const WATCHDOG_PANE_QUIET_WINDOW_MS = 10 * 60_000;
+export const WATCHDOG_PANE_ACTIVITY_CAPTURE_START_LINE = "-20";
 const watchdogActiveRoleInvalidReasonCode = "WATCHDOG_ACTIVE_ROLE_INVALID";
 
 export type PaneActivitySampleResult =
@@ -102,9 +103,18 @@ export async function sampleWatchdogPaneActivity(input: {
     input.activeRole
   );
   const targetPane = `${sessionName}:0.${paneIndex}`;
-  const capture = await input.runner(["capture-pane", "-pt", targetPane], {
-    allowFailure: true
-  });
+  const capture = await input.runner(
+    [
+      "capture-pane",
+      "-pt",
+      targetPane,
+      "-S",
+      WATCHDOG_PANE_ACTIVITY_CAPTURE_START_LINE
+    ],
+    {
+      allowFailure: true
+    }
+  );
   if (capture.exitCode !== 0) {
     const stderr = capture.stderr.trim();
     return {
