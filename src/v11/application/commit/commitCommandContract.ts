@@ -19,5 +19,4 @@ export interface CommitBubbleResult {
   commitSha: string;
   commitMessage: string;
   stagedFiles: string[];
-  donePackagePath: string;
 }

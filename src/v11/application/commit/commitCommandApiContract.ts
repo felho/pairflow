@@ -51,7 +51,6 @@ export interface CommitBubbleDependencies {
 interface CommitRuntimeContextBase {
   resolved: ResolvedBubbleContext;
   bubbleIdentity: BubbleIdentity;
-  donePackagePath: string;
 }
 
 export interface CommitRuntimeContext extends CommitRuntimeContextBase {
@@ -60,7 +59,6 @@ export interface CommitRuntimeContext extends CommitRuntimeContextBase {
   state: LoadedState["state"];
   appendProtocolEnvelope: AppendProtocolEnvelopePort;
   writeStateSnapshot: WriteStateSnapshotPort;
-  donePackageContent: string;
 }
 
 export interface RemoteCommitRuntimeContext extends CommitRuntimeContextBase {

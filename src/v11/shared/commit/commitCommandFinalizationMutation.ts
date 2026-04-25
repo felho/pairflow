@@ -16,7 +16,6 @@ export interface CommitFinalizationContext {
     statePath: string;
     transcriptPath: string;
   };
-  donePackagePath: string;
   round: number;
 }
 
@@ -35,14 +34,13 @@ export interface CommitFinalizationLoadedState {
   fingerprint: string;
 }
 
-export async function appendDonePackageEnvelopeMutation(input: {
+export async function appendCommitResultEnvelopeMutation(input: {
   context: CommitFinalizationContext;
   refs: string[];
   now: Date;
   stagedFiles: string[];
   commitMessage: string;
   commitSha: string;
-  donePackageSummary: string;
   appendProtocolEnvelope: (input: {
     transcriptPath: string;
     mirrorPaths?: string[];
@@ -51,10 +49,7 @@ export async function appendDonePackageEnvelopeMutation(input: {
     now?: Date;
   }) => Promise<CommitFinalizationAppendResult>;
 }): Promise<CommitFinalizationAppendResult> {
-  const envelopeRefs = normalizeStringList([
-    ...input.refs,
-    input.context.donePackagePath
-  ]);
+  const envelopeRefs = normalizeStringList(input.refs);
   const lockPath = join(
     input.context.bubblePaths.locksDir,
     `${input.context.bubbleId}.lock`
@@ -67,15 +62,13 @@ export async function appendDonePackageEnvelopeMutation(input: {
       bubble_id: input.context.bubbleId,
       sender: "orchestrator",
       recipient: "human",
-      type: "DONE_PACKAGE",
+      type: "COMMIT_RESULT",
       round: input.context.round,
       payload: {
-        summary: input.donePackageSummary,
         metadata: {
-          done_package_path: input.context.donePackagePath,
-          staged_files: input.stagedFiles,
           commit_message: input.commitMessage,
-          commit_sha: input.commitSha
+          commit_sha: input.commitSha,
+          staged_files: input.stagedFiles
         }
       },
       refs: envelopeRefs
@@ -130,7 +123,7 @@ export async function persistCommittedThenDoneStateMutation(input: {
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error);
     throw new BubbleCommitError(
-      `DONE_PACKAGE ${input.appended.envelope.id} was appended and git commit ${input.commitSha} completed, but DONE transition failed after COMMITTED state persisted. Transcript remains canonical; recover state from transcript tail. Root error: ${reason}`
+      `COMMIT_RESULT ${input.appended.envelope.id} was appended and git commit ${input.commitSha} completed, but DONE transition failed after COMMITTED state persisted. Transcript remains canonical; recover state from transcript tail. Root error: ${reason}`
     );
   }
 }

@@ -27,6 +27,7 @@ import {
 import { readStateSnapshot } from "../../../../src/v11/infrastructure/state/stateStore.js";
 import { readTranscriptEnvelopes } from "../../../../src/v11/infrastructure/artifact/transcript/transcriptStore.js";
 import { RemoteBubbleCommitCommandError } from "../../../../src/v11/infrastructure/executor/ssh/sshBubbleCommitCommand.js";
+import { resolveMetricsShardPath } from "../../../../src/v11/shared/metrics/events.js";
 import { buildCommitBubbleDependencies } from "../../../helpers/commit.js";
 import { initGitRepository, runGit } from "../../../helpers/git.js";
 import { setupRunningBubbleFixture } from "../../../helpers/bubble.js";
@@ -200,11 +201,7 @@ describe("commitCommandApi", () => {
       "utf8"
     );
     await runGit(bubble.paths.worktreePath, ["add", "feature.txt"]);
-    await writeFile(
-      join(bubble.paths.artifactsDir, "done-package.md"),
-      "# Done Package\n\nImplemented feature X with tests.\n",
-      "utf8"
-    );
+    const donePackagePath = join(bubble.paths.artifactsDir, "done-package.md");
 
     const result = await commitBubble({
       bubbleId: bubble.bubbleId,
@@ -215,13 +212,47 @@ describe("commitCommandApi", () => {
     expect(result.state.state).toBe("DONE");
     expect(result.commitSha.length).toBeGreaterThan(6);
     expect(result.stagedFiles).toEqual(["feature.txt"]);
-    expect(result.envelope.type).toBe("DONE_PACKAGE");
+    expect(result.envelope.type).toBe("COMMIT_RESULT");
+    expect("donePackagePath" in result).toBe(false);
+    expect(result.envelope.payload).toEqual({
+      metadata: {
+        commit_message: "bubble(b_commit_v11_01): finalize",
+        commit_sha: result.commitSha,
+        staged_files: ["feature.txt"]
+      }
+    });
 
     const loaded = await readStateSnapshot(bubble.paths.statePath);
     expect(loaded.state.state).toBe("DONE");
 
     const transcript = await readTranscriptEnvelopes(bubble.paths.transcriptPath);
-    expect(transcript.at(-1)?.type).toBe("DONE_PACKAGE");
+    expect(transcript.at(-1)?.type).toBe("COMMIT_RESULT");
+    await expect(readFile(donePackagePath, "utf8")).rejects.toMatchObject({
+      code: "ENOENT"
+    });
+
+    const metricsShard = resolveMetricsShardPath({
+      at: new Date("2026-02-22T15:10:00.000Z")
+    });
+    const commitEvent = (await readFile(metricsShard.filePath, "utf8"))
+      .trim()
+      .split(/\n/u)
+      .map((line) => JSON.parse(line) as {
+        bubble_id?: string;
+        event_type?: string;
+        metadata?: Record<string, unknown>;
+      })
+      .find((event) =>
+        event.bubble_id === bubble.bubbleId &&
+        event.event_type === "bubble_committed"
+      );
+    expect(commitEvent?.metadata).toEqual({
+      auto: false,
+      commit_message: "bubble(b_commit_v11_01): finalize",
+      commit_sha: result.commitSha,
+      refs_count: 0,
+      staged_file_count: 1
+    });
   });
 
   it("routes started remote commits through the remote authority and syncs local continuity artifacts", async () => {
@@ -334,8 +365,7 @@ describe("commitCommandApi", () => {
         state: "DONE"
       },
       commitSha: "abcdef1234567890",
-      stagedFiles: ["feature-remote.txt"],
-      donePackagePath
+      stagedFiles: ["feature-remote.txt"]
     });
     expect(await readFile(statePath, "utf8")).toBe(
       `${JSON.stringify(remoteState, null, 2)}\n`
@@ -346,6 +376,29 @@ describe("commitCommandApi", () => {
     expect(await readFile(donePackagePath, "utf8")).toBe(
       "# Done Package\n\nRemote continuity.\n"
     );
+    const metricsShard = resolveMetricsShardPath({
+      at: new Date("2026-04-18T08:05:00.000Z")
+    });
+    const commitEvent = (await readFile(metricsShard.filePath, "utf8"))
+      .trim()
+      .split(/\n/u)
+      .map((line) => JSON.parse(line) as {
+        bubble_id?: string;
+        event_type?: string;
+        metadata?: Record<string, unknown>;
+      })
+      .find((event) =>
+        event.bubble_id === "b_remote_commit_01" &&
+        event.event_type === "bubble_committed"
+      );
+    expect(commitEvent?.metadata).toEqual({
+      auto: false,
+      commit_message: "bubble(b_remote_commit_01): finalize",
+      commit_sha: "abcdef1234567890",
+      done_package_path: donePackagePath,
+      refs_count: 2,
+      staged_file_count: 1
+    });
     expect(executeRemoteBubbleCommitCommand).toHaveBeenCalledWith({
       auto: false,
       bubbleId: "b_remote_commit_01",
@@ -493,11 +546,6 @@ describe("commitCommandApi", () => {
       "utf8"
     );
     await runGit(bubble.paths.worktreePath, ["add", "feature-inner-remote.txt"]);
-    await writeFile(
-      join(bubble.paths.artifactsDir, "done-package.md"),
-      "# Done Package\n\nRemote clone local authority commit.\n",
-      "utf8"
-    );
 
     vi.stubEnv(remoteCommitModeEnvVar, remoteCommitModeInnerRemoteExecution);
     vi.stubEnv(remoteCommitWorkspaceRootEnvVar, repoPath);
@@ -514,10 +562,11 @@ describe("commitCommandApi", () => {
 
       expect(result.state.state).toBe("DONE");
       expect(result.stagedFiles).toEqual(["feature-inner-remote.txt"]);
-      expect(result.envelope.type).toBe("DONE_PACKAGE");
-      expect(result.donePackagePath).toBe(
-        join(bubble.paths.artifactsDir, "done-package.md")
-      );
+      expect(result.envelope.type).toBe("COMMIT_RESULT");
+      expect("donePackagePath" in result).toBe(false);
+      await expect(
+        readFile(join(bubble.paths.artifactsDir, "done-package.md"), "utf8")
+      ).rejects.toMatchObject({ code: "ENOENT" });
     } finally {
       vi.unstubAllEnvs();
     }
