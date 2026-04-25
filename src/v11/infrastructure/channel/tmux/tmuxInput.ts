@@ -21,6 +21,46 @@ export interface ConfirmTmuxPaneMarkerSubmissionInput {
   retryDelayMs?: number;
 }
 
+async function maybeExitTmuxCopyMode(input: {
+  runner: TmuxRunner;
+  targetPane: string;
+  requireSuccess: boolean;
+}): Promise<void> {
+  const paneMode = await input.runner(
+    ["display-message", "-p", "-t", input.targetPane, "#{pane_in_mode}"],
+    { allowFailure: true }
+  );
+  if (paneMode.exitCode !== 0) {
+    if (input.requireSuccess) {
+      throw new Error(
+        `TMUX_PANE_MODE_CHECK_FAILED: context operation_id=tmux_input_preflight target_pane=${input.targetPane}.`
+      );
+    }
+    return;
+  }
+
+  const paneModeValue = Number.parseInt(paneMode.stdout.trim(), 10);
+  if (!Number.isFinite(paneModeValue) || paneModeValue <= 0) {
+    return;
+  }
+
+  const cancelMode = await input.runner(
+    ["copy-mode", "-q", "-t", input.targetPane],
+    { allowFailure: true }
+  );
+  if (cancelMode.exitCode !== 0) {
+    if (input.requireSuccess) {
+      throw new Error(
+        `TMUX_COPY_MODE_CANCEL_FAILED: context operation_id=tmux_input_preflight target_pane=${input.targetPane}.`
+      );
+    }
+    return;
+  }
+
+  // Let tmux settle after exiting copy mode before sending keys into the pane.
+  await sleep(100);
+}
+
 /**
  * Send a message to a tmux pane and submit it via Enter.
  *
@@ -39,6 +79,11 @@ export async function sendAndSubmitTmuxPaneMessage(
   message: string,
   options: SendAndSubmitTmuxPaneMessageOptions = {}
 ): Promise<void> {
+  await maybeExitTmuxCopyMode({
+    runner,
+    targetPane,
+    requireSuccess: options.requireSuccess ?? false
+  });
   const writeResult = await runner(
     ["send-keys", "-t", targetPane, "-l", message],
     { allowFailure: true }

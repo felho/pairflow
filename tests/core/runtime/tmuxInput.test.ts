@@ -1,8 +1,66 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  sendAndSubmitTmuxPaneMessage,
   maybeAcceptClaudeTrustPrompt
 } from "../../../src/v11/infrastructure/channel/tmux/tmuxInput.js";
+
+describe("sendAndSubmitTmuxPaneMessage", () => {
+  it("exits copy mode before sending text to the pane", async () => {
+    const calls: string[][] = [];
+    const runner = async (args: string[]) => {
+      calls.push(args);
+      if (args[0] === "display-message") {
+        return {
+          stdout: "1",
+          stderr: "",
+          exitCode: 0
+        };
+      }
+      return {
+        stdout: "",
+        stderr: "",
+        exitCode: 0
+      };
+    };
+
+    await sendAndSubmitTmuxPaneMessage(runner, "pane-1", "hello");
+
+    expect(calls).toEqual([
+      ["display-message", "-p", "-t", "pane-1", "#{pane_in_mode}"],
+      ["copy-mode", "-q", "-t", "pane-1"],
+      ["send-keys", "-t", "pane-1", "-l", "hello"],
+      ["send-keys", "-t", "pane-1", "Enter"]
+    ]);
+  });
+
+  it("skips copy-mode reset when the pane is already in normal mode", async () => {
+    const calls: string[][] = [];
+    const runner = async (args: string[]) => {
+      calls.push(args);
+      if (args[0] === "display-message") {
+        return {
+          stdout: "0",
+          stderr: "",
+          exitCode: 0
+        };
+      }
+      return {
+        stdout: "",
+        stderr: "",
+        exitCode: 0
+      };
+    };
+
+    await sendAndSubmitTmuxPaneMessage(runner, "pane-1", "hello");
+
+    expect(calls).toEqual([
+      ["display-message", "-p", "-t", "pane-1", "#{pane_in_mode}"],
+      ["send-keys", "-t", "pane-1", "-l", "hello"],
+      ["send-keys", "-t", "pane-1", "Enter"]
+    ]);
+  });
+});
 
 describe("maybeAcceptClaudeTrustPrompt", () => {
   it("accepts Claude folder trust prompts with Enter", async () => {
@@ -86,6 +144,7 @@ describe("maybeAcceptClaudeTrustPrompt", () => {
     expect(accepted).toBe(true);
     expect(calls).toEqual([
       ["capture-pane", "-pt", "pane-1"],
+      ["display-message", "-p", "-t", "pane-1", "#{pane_in_mode}"],
       ["send-keys", "-t", "pane-1", "-l", "1"],
       ["send-keys", "-t", "pane-1", "Enter"],
       ["capture-pane", "-pt", "pane-1"]
@@ -145,6 +204,7 @@ describe("maybeAcceptClaudeTrustPrompt", () => {
       ["capture-pane", "-pt", "pane-1"],
       ["send-keys", "-t", "pane-1", "Enter"],
       ["capture-pane", "-pt", "pane-1"],
+      ["display-message", "-p", "-t", "pane-1", "#{pane_in_mode}"],
       ["send-keys", "-t", "pane-1", "-l", "2"],
       ["send-keys", "-t", "pane-1", "Enter"],
       ["capture-pane", "-pt", "pane-1"]
