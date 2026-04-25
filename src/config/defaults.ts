@@ -24,7 +24,7 @@ export const DEFAULT_LOCAL_OVERLAY_ENABLED = true;
 export const DEFAULT_LOCAL_OVERLAY_MODE: LocalOverlayMode = "symlink";
 export const DEFAULT_REVIEW_POLICY_LOOP_MODE: BubbleReviewLoopMode = "full";
 export const DEFAULT_REVIEW_POLICY_AUTO_REWORK_MIN_SEVERITY:
-  BubbleReviewAutoReworkSeverity = "P1";
+  BubbleReviewAutoReworkSeverity = "P3";
 export const DEFAULT_LOCAL_OVERLAY_ENTRIES = [
   ".claude",
   ".mcp.json",

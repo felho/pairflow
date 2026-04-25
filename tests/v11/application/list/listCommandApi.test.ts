@@ -69,7 +69,7 @@ describe("v11 list command api", () => {
       requested_loop_mode: "full",
       effective_loop_mode: "full",
       support_status: "enabled",
-      meta_review_auto_rework_min_severity: "P1"
+      meta_review_auto_rework_min_severity: "P3"
     });
     expect(listed.bubbles[1]?.runtimeSession?.tmuxSessionName).toBe(
       "pf-b_v11_list_02"

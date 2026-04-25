@@ -24,7 +24,7 @@ describe("reviewPolicyRuntime", () => {
   it("normalizes missing review_policy to deterministic defaults", () => {
     expect(normalizeBubbleReviewPolicy(createConfig(undefined))).toEqual({
       review_loop_mode: "full",
-      meta_review_auto_rework_min_severity: "P1"
+      meta_review_auto_rework_min_severity: "P3"
     });
   });
 
@@ -49,7 +49,7 @@ describe("reviewPolicyRuntime", () => {
       requested_loop_mode: "full",
       effective_loop_mode: "full",
       support_status: "enabled",
-      meta_review_auto_rework_min_severity: "P1"
+      meta_review_auto_rework_min_severity: "P3"
     });
   });
 
