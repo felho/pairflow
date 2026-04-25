@@ -707,14 +707,20 @@ async function handleBubbleReconcileCommand(args: string[]): Promise<number> {
 }
 
 async function handleBubbleCommitCommand(args: string[]): Promise<number> {
-  const result = await runBubbleCommitCommand(args);
-  if (result === null) {
-    process.stdout.write(`${getBubbleCommitHelpText()}\n`);
-    return 0;
-  }
+  try {
+    const result = await runBubbleCommitCommand(args);
+    if (result === null) {
+      process.stdout.write(`${getBubbleCommitHelpText()}\n`);
+      return 0;
+    }
 
-  process.stdout.write(renderBubbleCommitText(result));
-  return 0;
+    process.stdout.write(renderBubbleCommitText(result));
+    return 0;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    process.stderr.write(`${message}\n`);
+    return 1;
+  }
 }
 
 export function renderBubbleCommitText(

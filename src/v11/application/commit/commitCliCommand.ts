@@ -12,7 +12,7 @@ export interface BubbleCommitCommandOptions {
   refs: string[];
   repo?: string;
   message?: string;
-  auto: boolean;
+  stageAll: boolean;
   help: false;
 }
 
@@ -28,25 +28,37 @@ export type ParsedBubbleCommitCommandOptions =
 export function getBubbleCommitHelpText(): string {
   return [
     "Usage:",
-    '  pairflow bubble commit --id <id> [--repo <path>] [--message "<text>"] [--ref <artifact-path>]... [--auto]',
+    '  pairflow bubble commit --id <id> [--repo <path>] [--message "<text>"] [--ref <artifact-path>]... [--stage-all]',
     "",
     "Options:",
     "  --id <id>             Bubble id",
     "  --repo <path>         Optional repository path (defaults to cwd ancestry lookup)",
     "  --message <text>      Optional git commit message override",
     "  --ref <path>          Optional artifact reference (repeatable)",
-    "  --auto                Auto-stage all worktree changes and auto-generate done-package when missing/empty",
+    "  --stage-all           Stage all worktree changes before validating staged files",
     "  -h, --help            Show this help",
     "",
     "Notes:",
     "  Requires state APPROVED_FOR_COMMIT.",
-    "  Without --auto, commit expects staged files + non-empty artifacts/done-package.md."
+    "  Without --stage-all, commit expects staged files to already exist."
   ].join("\n");
 }
 
 export function parseBubbleCommitCommandOptions(
   args: string[]
 ): ParsedBubbleCommitCommandOptions {
+  if (
+    args.some((arg) =>
+      arg === "--auto" ||
+      arg === "--no-auto" ||
+      arg.startsWith("--auto=")
+    )
+  ) {
+    throw new Error(
+      "COMMIT_AUTO_REMOVED: Removed option --auto. Use --stage-all to stage all worktree changes before commit. context: command_name=commit."
+    );
+  }
+
   const parsed = parseArgs({
     args,
     options: {
@@ -59,7 +71,7 @@ export function parseBubbleCommitCommandOptions(
       message: {
         type: "string"
       },
-      auto: {
+      "stage-all": {
         type: "boolean"
       },
       ref: {
@@ -95,7 +107,7 @@ export function parseBubbleCommitCommandOptions(
     refs,
     ...(parsed.values.repo !== undefined ? { repo: parsed.values.repo } : {}),
     ...(parsed.values.message !== undefined ? { message: parsed.values.message } : {}),
-    auto: parsed.values.auto ?? false,
+    stageAll: parsed.values["stage-all"] ?? false,
     help: false
   };
 }
@@ -115,7 +127,7 @@ export async function runBubbleCommitCommand(
       refs: options.refs,
       repoPath: options.repo,
       message: options.message,
-      auto: options.auto,
+      stageAll: options.stageAll,
       cwd
     }, commitBubbleDependencyDefaults);
   } catch (error) {

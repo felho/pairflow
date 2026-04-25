@@ -51,7 +51,8 @@ type CommitContractExtendedScenario =
   | "commit_result_invariant";
 
 interface ParsedCommitCaseInput {
-  auto: boolean;
+  stageAll?: boolean;
+  auto?: boolean;
   scenario: CommitContractExtendedScenario;
 }
 
@@ -61,6 +62,10 @@ function buildCommitContractBubbleId(caseId: string): string {
 }
 
 function parseCommitCaseInput(input: ContractCase["input"]): ParsedCommitCaseInput {
+  const stageAllRaw = input.stageAll;
+  if (stageAllRaw !== undefined && typeof stageAllRaw !== "boolean") {
+    throw new Error("commit contract input.stageAll must be a boolean.");
+  }
   const autoRaw = input.auto;
   if (autoRaw !== undefined && typeof autoRaw !== "boolean") {
     throw new Error("commit contract input.auto must be a boolean.");
@@ -85,14 +90,19 @@ function parseCommitCaseInput(input: ContractCase["input"]): ParsedCommitCaseInp
     }
     scenario = scenarioRaw ?? "basic";
   }
-  const auto = autoRaw ?? true;
-  if (scenario === "staged_files_empty" && auto) {
+  const normalizedStageAll = stageAllRaw ?? autoRaw ?? true;
+  if (scenario === "staged_files_empty" && normalizedStageAll) {
     throw new Error(
-      "commit contract staged_files_empty scenario requires input.auto=false."
+      "commit contract staged_files_empty scenario requires input.stageAll=false."
     );
   }
   return {
-    auto,
+    ...(stageAllRaw !== undefined
+      ? { stageAll: normalizedStageAll }
+      : autoRaw === undefined
+        ? { stageAll: normalizedStageAll }
+        : {}),
+    ...(autoRaw !== undefined ? { auto: autoRaw } : {}),
     scenario
   };
 }
@@ -314,7 +324,10 @@ async function executeCommitCase(input: {
       const result = await input.executor({
         bubbleId: bubble.bubbleId,
         cwd: repoPath,
-        auto: parsedInput.auto,
+        ...(parsedInput.stageAll !== undefined
+          ? { stageAll: parsedInput.stageAll }
+          : {}),
+        ...(parsedInput.auto !== undefined ? { auto: parsedInput.auto } : {}),
         now: new Date("2026-03-20T13:10:00.000Z")
       });
       output = normalizeCommitResult(result);

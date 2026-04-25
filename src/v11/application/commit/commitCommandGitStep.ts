@@ -304,10 +304,10 @@ async function syncCloneSourceBranch(input: {
 export async function runCommitGitStep(input: {
   command: CommitBubbleInput;
   context: CommitRuntimeContext;
-  auto: boolean;
+  stageAll: boolean;
   runGit: RunGitPort;
 }): Promise<CommitGitResult> {
-  if (input.auto) {
+  if (input.stageAll) {
     await input.runGit(["add", "-A"], {
       cwd: input.context.resolved.bubblePaths.worktreePath
     });
@@ -336,13 +336,13 @@ export async function runCommitGitStep(input: {
       formatCommitErrorMessage({
         reasonCode: "COMMIT_STAGED_FILES_EMPTY",
         message:
-          input.auto
-            ? `No staged files found in bubble worktree even after --auto stage-all (bubble_id=${input.context.resolved.bubbleId}; command_name=commit).`
-            : `No staged files found in bubble worktree. Stage changes before commit, or use \`pairflow bubble commit --auto\` (bubble_id=${input.context.resolved.bubbleId}; command_name=commit).`,
+          input.stageAll
+            ? `No staged files found in bubble worktree even after --stage-all (bubble_id=${input.context.resolved.bubbleId}; command_name=commit).`
+            : `No staged files found in bubble worktree. Stage changes before commit, or use \`pairflow bubble commit --stage-all\` (bubble_id=${input.context.resolved.bubbleId}; command_name=commit).`,
         context: {
           bubble_id: input.context.resolved.bubbleId,
           command_name: "commit",
-          auto_generate: input.auto,
+          stage_all: input.stageAll,
           worktree_path: input.context.resolved.bubblePaths.worktreePath
         }
       })
