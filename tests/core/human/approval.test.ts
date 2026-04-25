@@ -31,6 +31,7 @@ import {
   appendProtocolEnvelope,
   readTranscriptEnvelopes
 } from "../../../src/v11/infrastructure/artifact/transcript/transcriptStore.js";
+import { renderBubbleConfigToml } from "../../../src/config/bubbleConfig.js";
 import { applyStateTransition } from "../../../src/v11/domain/state/machine.js";
 import { readStateSnapshot, writeStateSnapshot } from "../../../src/v11/infrastructure/state/stateStore.js";
 import { bootstrapWorktreeWorkspace } from "../../../src/v11/infrastructure/workspace/worktreeManager.js";
@@ -67,6 +68,25 @@ async function writeMetaReviewFindingsArtifact(input: {
     artifactRef,
     digest: createHash("sha256").update(raw, "utf8").digest("hex")
   };
+}
+
+async function setMetaReviewAutoReworkMinSeverity(input: {
+  bubble: Awaited<ReturnType<typeof setupRunningBubbleFixture>>;
+  minSeverity: "P1" | "P2" | "P3";
+}): Promise<void> {
+  await writeFile(
+    input.bubble.paths.bubbleTomlPath,
+    renderBubbleConfigToml({
+      ...input.bubble.config,
+      review_policy: {
+        ...input.bubble.config.review_policy,
+        review_loop_mode:
+          input.bubble.config.review_policy?.review_loop_mode ?? "full",
+        meta_review_auto_rework_min_severity: input.minSeverity
+      }
+    }),
+    "utf8"
+  );
 }
 
 async function setupReadyForHumanApprovalBubble(repoPath: string, bubbleId: string) {
@@ -1441,6 +1461,10 @@ describe("approval decisions", () => {
       repoPath,
       bubbleId: "b_approval_sticky_parity_override_01",
       task: "Sticky bypass parity override guard"
+    });
+    await setMetaReviewAutoReworkMinSeverity({
+      bubble,
+      minSeverity: "P2"
     });
 
     const loaded = await readStateSnapshot(bubble.paths.statePath);
