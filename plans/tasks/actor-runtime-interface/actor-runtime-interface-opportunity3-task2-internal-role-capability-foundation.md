@@ -264,10 +264,12 @@ owners:
    - authority policy check
    - startup prompt concerns
    - resume prompt concerns
-   - opcionisan handoff-id format es active-agent constraint, ha ez tisztan a registryben tarthato blast radius noveles nelkul
-5. Az S1 lookup atallitasa helper-based registry olvasasra.
-6. Az S4 startup/resume prompt compose atallitasa helper-based concern renderelesre.
-7. A relevans tesztek frissitese es/vagy uj tesztek hozzaadasa a registry/catalog drift ellen.
+5. A registry per-role entry-jei a note-ban lockolt teljes 9 mezos mappingot hordozzak akkor is, ha ebben a taskban nem minden mezo kap uj consume-at.
+6. `topology_slot_id`, `agent_resolution`, `handoff_id_format_id` es `active_agent_constraint_id` registry-fact mar ebben a taskban; ezek consume-atkotese viszont tovabbra is csak ott kotelezo, ahol az `O3-T2` scope ezt explicit ownershipolja.
+7. A `meta_reviewer.agent_resolution` current-tree baseline-ja ebben a taskban meg mindig `{ kind: "hardcoded_runtime", current_agent: "codex" }`; tilos ezt `config_bound` shape-re vagy `BubbleAgentsConfig` consume-ra elore konvergalni.
+8. Az S1 lookup atallitasa helper-based registry olvasasra.
+9. Az S4 startup/resume prompt compose atallitasa helper-based concern renderelesre.
+10. A relevans tesztek frissitese es/vagy uj tesztek hozzaadasa a registry/catalog drift ellen.
 
 ### Out of Scope
 
@@ -339,6 +341,7 @@ owners:
 3. Az exact `PromptConcernId` set az `O3-T1` note `Proposed Companion Catalogs / promptConcernCatalog` tablaja alapjan.
 4. Az S1 helper consume az `executionContext.ts`-ben.
 5. Az S4 helper consume a startup/resume prompt builder family-ben.
+6. A registry canonical source-of-truth entrypointja ebben a taskban `src/v11/application/actorProtocol/roleDescriptorRegistry.ts`; ha belso helper file-ok nyilnak, azok nem vezethetnek parhuzamos masodik role-registry truthhoz `shared/**` vagy `start/**` alatt.
 
 ### Registry Contract
 
@@ -346,6 +349,9 @@ owners:
 2. A registry-bejegyzesek nem tarthatnak nyers prompt szoveget; csak ID-ket, lookup metadata-t es zart vocabulary-tenyeket.
 3. A registry nem lehet class-hierarchia, strategy object graph vagy polymorphic role handler interface.
 4. A projection helper API legyen a hivoi consume surface; a legtobb hivo ne importalja kozvetlenul a teljes registry rekordot.
+5. A registry-bejegyzesek a note-ban lockolt teljes mezohalmazat kepviseljek, beleertve a jelen taskban meg nem atkotesre kerulo `topology_slot_id`, `agent_resolution`, `handoff_id_format_id` es `active_agent_constraint_id` mezoket is.
+6. `topology_slot_id` es `agent_resolution` ebben a taskban registry-fact, de S2/S3 consume tovabbra is out-of-scope; a jelen feladat nem adhat nekik uj authorityt a topology vagy config boundaryban.
+7. A `meta_reviewer` registry-entry `agent_resolution` mezoje current-tree parityval `hardcoded_runtime` marad; ennek `config_bound` replacementje kizarolag `O3-T4`.
 
 ### Prompt Concern Contract
 
@@ -361,6 +367,11 @@ owners:
    - reusable shared reminder
    kategoriakat oly modon, hogy a renderelesi sorrend vagy gating implicitte valjon.
 4. A role startup/resume concern-listak exact sorrendje a descriptorben legyen kod szinten olvashato es tesztelheto.
+5. Az `O3-T1` note concern-listaiban szereplo `(conditional)` suffix dokumentacios annotacio, nem a literal `PromptConcernId` string resze:
+   - literal ID pelda: `kickoff_diagnostic_line`
+   - nem elfogadhato literal ID pelda: `kickoff_diagnostic_line (conditional)`
+6. A conditionalitas explicit render/gating tulajdonsag marad; tilos azt string-manipulaciobol vagy duplikalt builder-local listabol visszakovetkeztetni.
+7. A registry/catalog cutover utan nem maradhat masodik, kulon hardcoded role -> concern-order truth a start/resume builder csaladban.
 
 ### Awaited Output Contract
 
@@ -405,6 +416,10 @@ owners:
    - ha a startup concern-order compose valtozik, ehhez parity assertion vagy explicit uj teszt kotelezo;
    - ha a `buildResumeMetaReviewerStartupPrompt` concern-order vagy conditional compose valtozik, existing RUNNING-resume consumer coverage-et kell bovitni vagy dedikalt resume parity tesztet kell adni.
 5. Az actor protocol runtime tesztjei maradjanak zoldben; ez bizonyitja, hogy a belso registry seam nem tor el retained authority/runtime routingot.
+6. A current tree-ben elfogadhato minimalis proof-matrix:
+   - implementer startup/resume parity: `tests/v11/application/start/startCommandImplementerPrompts.test.ts`
+   - reviewer startup/resume es conditional overlay parity: `tests/core/bubble/startBubble.test.ts` vagy ezzel ekvivalens dedikalt prompt-level coverage
+   - meta-reviewer startup submit-guidance parity: `tests/core/runtime/metaReviewSubmitGuidance.test.ts`
 
 ## L2 - Implementation Notes (Optional)
 
