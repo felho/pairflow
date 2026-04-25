@@ -22,7 +22,6 @@ export function buildImplementerStartupPrompt(input: {
   repoPath: string;
   workspacePath: string;
   taskArtifactPath: string;
-  donePackagePath: string;
   reviewArtifactType: ReviewArtifactType;
   pairflowCommandProfile: PairflowCommandProfile;
   ideationPending: boolean;
@@ -55,8 +54,7 @@ export function buildImplementerStartupPrompt(input: {
       input.pairflowCommandProfile
     ),
     evidenceHandoffGuidance,
-    `Keep done package updated at: ${input.donePackagePath}.`,
-    "Done package should summarize changes + validation results for final commit handoff.",
+    "Use the PASS summary plus evidence refs as the handoff package; do not create or depend on a prose handoff artifact.",
     buildRepositoryLaunchWorkspaceLine({
       repoPath: input.repoPath,
       workspacePath: input.workspacePath

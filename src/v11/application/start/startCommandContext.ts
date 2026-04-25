@@ -172,7 +172,6 @@ export interface StartExecutionContext {
   loadedState: StartLoadedState;
   startMode: ReturnType<typeof resolveStartBubbleMode>;
   expectedTmuxSessionName: string;
-  donePackagePath: string;
   policySnapshotPathAbs: string;
   runtimeSessionRecord?: RuntimeSessionRecord;
   reviewerBriefText?: string;
@@ -252,7 +251,6 @@ export async function loadStartExecutionContext(
     loadedState,
     startMode: resolveStartBubbleMode(loadedState.state.state),
     expectedTmuxSessionName: buildBubbleTmuxSessionName(resolved.bubbleId),
-    donePackagePath: join(resolved.bubblePaths.artifactsDir, "done-package.md"),
     policySnapshotPathAbs,
     ...(remoteStartContext !== undefined ? { remoteStartContext } : {}),
     ...(reviewerBriefText !== undefined ? { reviewerBriefText } : {}),
