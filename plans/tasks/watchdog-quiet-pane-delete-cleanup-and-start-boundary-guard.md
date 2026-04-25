@@ -2,18 +2,22 @@
 artifact_type: task
 artifact_id: task_watchdog_quiet_pane_delete_cleanup_and_start_boundary_guard_v1
 title: "Watchdog Quiet-Pane Delete Cleanup and Start-Boundary Guard"
-status: implementable
+status: completed
 phase: phase1
 target_files:
-  - src/v11/application/delete/deleteBubble.ts
+  - src/v11/application/delete/deleteBubbleFinalization.ts
   - src/v11/application/delete/deleteBubbleSupport.ts
   - src/v11/application/delete/deleteBubbleRemoteMissingTargetFallback.ts
+  - src/v11/application/delete/deleteBubble.ts
   - src/v11/defaults/delete/deleteBubbleDefaults.ts
+  - src/v11/shared/watchdog/watchdogPaneActivityStore.ts
   - src/v11/shared/status/bubbleAttention.ts
   - src/v11/shared/status/statusCommandViewBuilder.ts
+  - src/v11/shared/status/remoteBubbleStatusContract.ts
   - src/v11/shared/list/listCommandEntryProjection.ts
   - src/v11/infrastructure/ui/presenters/bubblePresenter.ts
   - tests/core/bubble/deleteBubble.test.ts
+  - tests/core/bubble/deleteBubble.removeBubbleDirectory.test.ts
   - tests/v11/shared/status/bubbleAttention.test.ts
   - tests/core/bubble/listBubbles.test.ts
   - tests/core/bubble/statusBubble.test.ts
@@ -40,46 +44,69 @@ owners:
 5. A secondary hardening: quiet-pane warning csak akkor jelenhet meg, ha a mintabol szarmazo `sampled_at` legalabb az aktualis bubble start idejenel ujabb.
 6. A `watchdog-history/<bubbleId>.ndjson` retained diagnosztikai artifact marad; ezt ez a task nem torli.
 
-## Current Codebase Check / Current-Tree Reality Check (2026-04-21)
+## Current Codebase Check / Current-Tree Reality Check (2026-04-25)
 
 1. A pane-activity canonical runtime record path bubble ID-ra kulcsolt:
-   - [src/v11/shared/watchdog/watchdogPaneActivityStore.ts](/Users/felho/dev/pairflow/src/v11/shared/watchdog/watchdogPaneActivityStore.ts:38)
-2. A delete flow ma runtime sessiont, tmux sessiont, worktree-t, branch-et es bubble directoryt takarit, de explicit `watchdog-health` cleanup nincs:
-   - [src/v11/application/delete/deleteBubble.ts](/Users/felho/dev/pairflow/src/v11/application/delete/deleteBubble.ts:312)
-   - [src/v11/application/delete/deleteBubbleFinalization.ts](/Users/felho/dev/pairflow/src/v11/application/delete/deleteBubbleFinalization.ts:195)
-3. A quiet-pane warning jelenleg csak a `last_changed_at` es az aktualis ido kulonbsegebol el, es nem ellenorzi, hogy a minta az aktualis bubble runhoz tartozik-e:
-   - [src/v11/shared/status/bubbleAttention.ts](/Users/felho/dev/pairflow/src/v11/shared/status/bubbleAttention.ts:167)
+   - `src/v11/shared/watchdog/watchdogPaneActivityStore.ts`
+2. A successful delete finalization mar explicit `watchdog-health` cleanupot futtat a support-contract seam es a defaults wiring mogott:
+   - `src/v11/application/delete/deleteBubbleFinalization.ts`
+   - `src/v11/application/delete/deleteBubbleSupport.ts`
+   - `src/v11/defaults/delete/deleteBubbleDefaults.ts`
+3. A quiet-pane warning mar ellenorzi, hogy a minta az aktualis bubble runhoz tartozik-e, es `sampled_at < bubbleStartedAt` eseten suppress-el:
+   - `src/v11/shared/status/bubbleAttention.ts`
 4. A local status surface mar tud bubble-start lower boundot adni a `bubble_instance_id` alapjan:
-   - [src/v11/shared/status/statusCommandViewBuilder.ts](/Users/felho/dev/pairflow/src/v11/shared/status/statusCommandViewBuilder.ts:122)
-5. A delete dependency shape ma a support-contractban el, nem pusztan a defaults objectben:
-   - [src/v11/application/delete/deleteBubbleSupport.ts](/Users/felho/dev/pairflow/src/v11/application/delete/deleteBubbleSupport.ts:61)
+   - `src/v11/shared/status/statusCommandViewBuilder.ts`
+5. A local list es detail/status consume surface mar ugyanazt a lower-bound policy-t a shared attention resolveren keresztul fogyasztja:
+   - `src/v11/shared/list/listCommandEntryProjection.ts`
+   - `src/v11/infrastructure/ui/presenters/bubblePresenter.ts`
 6. A remote delete sikeres local finalization familyje tartalmaz egy `missing-target` fallback success agat is:
-   - [src/v11/application/delete/deleteBubbleRemoteMissingTargetFallback.ts](/Users/felho/dev/pairflow/src/v11/application/delete/deleteBubbleRemoteMissingTargetFallback.ts:1)
-7. A list es a detail presenter ugyanazt a shared `resolveBubbleAttention(...)` logikat hasznalja, tehat a stale quiet-pane warning tobb consume surface-en is ugyanonnan ered:
-   - [src/v11/shared/list/listCommandEntryProjection.ts](/Users/felho/dev/pairflow/src/v11/shared/list/listCommandEntryProjection.ts:132)
-   - [src/v11/infrastructure/ui/presenters/bubblePresenter.ts](/Users/felho/dev/pairflow/src/v11/infrastructure/ui/presenters/bubblePresenter.ts:118)
+   - `src/v11/application/delete/deleteBubbleRemoteMissingTargetFallback.ts`
+7. A task altal leirt bounded closure ma mar jelen van a checked-out tree-ben; ha regresszio vagy tovabbi hardening nyilik, azt tovabbra is ettol kulon kell tartani a ket follow-up drafttol.
+   - `plans/tasks/watchdog-impossible-state-reconcile-and-escalation-followup.md`
+   - `plans/tasks/watchdog-runtime-surface-mismatch-self-healing-followup.md`
 8. A detail consume-hoz van direct presenter proof surface is:
-   - [tests/core/ui/bubblePresenter.test.ts](/Users/felho/dev/pairflow/tests/core/ui/bubblePresenter.test.ts:1)
+   - `tests/core/ui/bubblePresenter.test.ts`
 9. A remote refreshed list path is ugyanazt a shared attention resolver-t consume-olja, es mar kap `bubbleStartedAt` mezot a remote status snapshotbol:
-   - [src/v11/shared/list/listCommandEntryProjection.ts](/Users/felho/dev/pairflow/src/v11/shared/list/listCommandEntryProjection.ts:387)
-   - [src/v11/shared/status/remoteBubbleStatusContract.ts](/Users/felho/dev/pairflow/src/v11/shared/status/remoteBubbleStatusContract.ts:25)
+   - `src/v11/shared/list/listCommandEntryProjection.ts`
+   - `src/v11/shared/status/remoteBubbleStatusContract.ts`
 10. Target-file reality:
    - ez nem altalanos watchdog taxonomy task,
    - ez egy bounded cleanup + read-model hardening task,
-   - a shared warning logicot csak annyiban erinti, amennyiben a stale previous-run artifactot ki kell zarni.
+   - a ket masik follow-up draft tovabbra is kulon, jovobeli runtime/self-healing illetve impossible-state temakat ownershipol.
+
+## Closure Note
+
+1. A jelenlegi tree alapjan ez a task mar nem "missing implementation" jellegu, hanem completed closure record.
+2. A dokumentumot ezert ugy kell olvasni, mint a mar bevezetett bounded fix szerzodeset:
+   - successful delete pathok explicit local runtime-health cleanup,
+   - quiet-pane previous-run guard a shared attention resolverben,
+   - retained `watchdog-history` baseline megorzese.
+3. Ha kesobb regresszio vagy parity-hiany nyilik ezen a feluleten, azt ehhez a bounded closurehoz kell kotni, nem a ket kulon follow-up draft scope-jaba csusztatni.
+   - `plans/tasks/watchdog-impossible-state-reconcile-and-escalation-followup.md` tovabbra is az altalanos impossible-state reconcile/escalation iranyt ownershipolja.
+   - `plans/tasks/watchdog-runtime-surface-mismatch-self-healing-followup.md` tovabbra is a runtime-surface mismatch detect/recover vagy escalate kovetkezo korat ownershipolja.
 
 ## Source-Anchor Consistency
 
 1. Canonical source anchors:
-   - [src/v11/shared/watchdog/watchdogPaneActivityStore.ts](/Users/felho/dev/pairflow/src/v11/shared/watchdog/watchdogPaneActivityStore.ts)
-   - [src/v11/application/delete/deleteBubble.ts](/Users/felho/dev/pairflow/src/v11/application/delete/deleteBubble.ts)
-   - [src/v11/application/delete/deleteBubbleSupport.ts](/Users/felho/dev/pairflow/src/v11/application/delete/deleteBubbleSupport.ts)
-   - [src/v11/application/delete/deleteBubbleRemoteMissingTargetFallback.ts](/Users/felho/dev/pairflow/src/v11/application/delete/deleteBubbleRemoteMissingTargetFallback.ts)
-   - [src/v11/shared/status/bubbleAttention.ts](/Users/felho/dev/pairflow/src/v11/shared/status/bubbleAttention.ts)
-   - [src/v11/shared/status/statusCommandViewBuilder.ts](/Users/felho/dev/pairflow/src/v11/shared/status/statusCommandViewBuilder.ts)
-   - [src/v11/shared/status/remoteBubbleStatusContract.ts](/Users/felho/dev/pairflow/src/v11/shared/status/remoteBubbleStatusContract.ts)
-   - [tests/core/ui/bubblePresenter.test.ts](/Users/felho/dev/pairflow/tests/core/ui/bubblePresenter.test.ts)
-   - [docs/v1.1-boundary-simplification/task-m5-01-watchdog-timeout-pane-quiet-window.md](/Users/felho/dev/pairflow/docs/v1.1-boundary-simplification/task-m5-01-watchdog-timeout-pane-quiet-window.md)
+   - `src/v11/shared/watchdog/watchdogPaneActivityStore.ts`
+   - `src/v11/application/delete/deleteBubbleFinalization.ts`
+   - `src/v11/application/delete/deleteBubbleSupport.ts`
+   - `src/v11/application/delete/deleteBubbleRemoteMissingTargetFallback.ts`
+   - `src/v11/application/delete/deleteBubble.ts`
+   - `src/v11/defaults/delete/deleteBubbleDefaults.ts`
+   - `src/v11/shared/status/bubbleAttention.ts`
+   - `src/v11/shared/status/statusCommandViewBuilder.ts`
+   - `src/v11/shared/list/listCommandEntryProjection.ts`
+   - `src/v11/infrastructure/ui/presenters/bubblePresenter.ts`
+   - `src/v11/shared/status/remoteBubbleStatusContract.ts`
+   - `tests/core/bubble/deleteBubble.test.ts`
+   - `tests/core/bubble/deleteBubble.removeBubbleDirectory.test.ts`
+   - `tests/core/bubble/listBubbles.test.ts`
+   - `tests/core/bubble/statusBubble.test.ts`
+   - `tests/v11/shared/status/bubbleAttention.test.ts`
+   - `tests/core/ui/bubblePresenter.test.ts`
+   - `tests/core/ui/router.test.ts`
+   - `docs/v1.1-boundary-simplification/task-m5-01-watchdog-timeout-pane-quiet-window.md`
 2. Closed canonical elements, amelyeket ez a task nem ertelmezhet ujra:
    - a pane-activity runtime artifact tovabbra is `.pairflow/runtime/watchdog-health/<bubbleId>.json`,
    - a quiet-pane warning tovabbra is sampled pane activitybol szarmazik,
@@ -94,7 +121,7 @@ owners:
 ## Authority Boundary Map
 
 1. `authority_producer`
-   - `deleteBubble(...)` local finalization a stale `watchdog-health` artifact lifecycle producerje ebben a taskban.
+   - `removeWatchdogPaneActivity(...)` a `src/v11/application/delete/deleteBubbleFinalization.ts` local finalization cleanup primitive-en keresztul a stale `watchdog-health` artifact lifecycle producerje ebben a taskban.
 2. `persisted_authority`
    - in scope:
    - `.pairflow/runtime/watchdog-health/<bubbleId>.json`
@@ -274,12 +301,12 @@ Why this matters:
 
 | ID | File | Function/Entry | Exact Signature (args -> return) | Insertion Point | Expected Behavior | Priority | Timing | Evidence |
 |---|---|---|---|---|---|---|---|---|
-| CS1 | `src/v11/application/delete/deleteBubble.ts` | `deleteBubble(...)` | existing delete entrypoint | successful local delete finalization es successful remote force-delete local finalization utan | Torolje a local `.pairflow/runtime/watchdog-health/<bubbleId>.json` artifactot best-effort-nel szigorubb, de `ENOENT` tolerant modon; confirmation/failed path nem torolhet | P1 | required-now | current delete success path leaves stale health record |
+| CS1 | `src/v11/application/delete/deleteBubbleFinalization.ts` | `removeWatchdogPaneActivity(...)` via `removeDeleteBubbleDirectory(...)` | existing delete finalization cleanup primitive | successful local delete finalization es successful remote force-delete local finalization utan | Torolje a local `.pairflow/runtime/watchdog-health/<bubbleId>.json` artifactot best-effort-nel szigorubb, de `ENOENT` tolerant modon; confirmation/failed path nem torolhet | P1 | required-now | current tree cleanup primitive at deleteBubbleFinalization.ts |
 | CS2 | `src/v11/application/delete/deleteBubbleSupport.ts` | `DeleteBubbleDependencies` / `resolveDeleteDependencies(...)` | existing delete dependency contract | delete cleanup seam definition | Az explicit health-cleanup file-removal seamet a tenyleges dependency contract boundary ownershipolja; ne csak a defaults objectben jelenjen meg | P1 | required-now | actual delete dependency shape lives here |
 | CS3 | `src/v11/application/delete/deleteBubbleRemoteMissingTargetFallback.ts` | `maybeFinalizeRemoteDeleteMissingTargetFallback(...)` | existing remote fallback finalization seam | success fallback local finalization | A `missing-target` recovery-success utvonal ugyanabba a local health-cleanup paritybe essen, mint a tobbi successful delete finalization | P1 | required-now | hidden delete-success boundary today |
-| CS4 | `src/v11/defaults/delete/deleteBubbleDefaults.ts` | delete dependency defaults | existing defaults object | dependency implementation backing | A support-contract altal igenyelt health-cleanup default dependency itt kapjon konkret default wiringot | P1 | required-now | keep delete cleanup unit-testable |
+| CS4 | `src/v11/defaults/delete/deleteBubbleDefaults.ts` | `deleteBubbleDependencyDefaults` | existing defaults object | dependency implementation backing | A support-contract altal igenyelt health-cleanup default dependency itt kapjon konkret default wiringot | P1 | required-now | keep delete cleanup unit-testable |
 | CS5 | `src/v11/shared/status/bubbleAttention.ts` | `resolveQuietPaneAttention(...)` / `resolveBubbleAttention(...)` | existing shared attention resolver | quiet-pane warning gate | Quiet warning csak akkor jelenhet meg, ha a pane sample az aktualis bubble runhoz tartozik; `sampled_at < bubbleStartedAt` eseten a warning suppressed | P1 | required-now | stale previous-run sample should not count |
-| CS6 | `src/v11/shared/status/statusCommandViewBuilder.ts` | existing local status view build path | existing status builder internals | canonical start-boundary source reuse | A local consume path a mar letezo `bubbleStartedAt` canonical derivaciot reuse-olja vagy kozos helperbe emeli; ne vezessen be kulon dedukalt start-idot a list/detail guardhoz | P1 | required-now | avoid duplicated timestamp heuristics |
+| CS6 | `src/v11/shared/status/statusCommandViewBuilder.ts` | `buildLocalBubbleStatusView(...)` | existing local status builder internals | canonical start-boundary source reuse | A local consume path a mar letezo `bubbleStartedAt` canonical derivaciot reuse-olja vagy kozos helperbe emeli; ne vezessen be kulon dedukalt start-idot a list/detail guardhoz | P1 | required-now | avoid duplicated timestamp heuristics |
 | CS7 | `src/v11/shared/list/listCommandEntryProjection.ts` | `buildLocalBubbleListEntry(...)` es `buildRefreshedRemoteBubbleListEntry(...)` | existing list attention call-sites | start-boundary atadasa a shared attention resolvernek | A local list a canonical local start-boundaryt, a remote refreshed list pedig a remote snapshot `bubbleStartedAt` mezot adja at ugyanahhoz a guardhoz | P1 | required-now | shared attention parity across local + remote refresh |
 | CS8 | `src/v11/infrastructure/ui/presenters/bubblePresenter.ts` | `presentBubbleDetail(...)` | existing detail presenter | start-boundary atadasa a shared attention resolvernek | A bubble detail/status felulet se villanthasson stale quiet-pane warningot elozo run alapjan, es ugyanazt a lower-bound policy-t consume-olja, mint a list/status surfaces | P1 | required-now | screenshot-level observed symptom |
 
@@ -307,7 +334,9 @@ Field-role classification:
 | Area | Allowed | Forbidden | Notes | Priority | Timing |
 |---|---|---|---|---|---|
 | Delete success cleanup | local `watchdog-health` artifact torlese | `watchdog-history` torlese | only success path | P1 | required-now |
-| Delete confirmation / failed path | none | artifact torles | no speculative cleanup | P1 | required-now |
+| Delete confirmation path | none | artifact torles | no speculative cleanup | P1 | required-now |
+| Delete failed path | none | artifact torles | failed delete semantics remain symmetric with Safety Defaults item 2 | P1 | required-now |
+| Delete success-path cleanup hard error | fail-closed throw | silent partial-success claim | successful delete local finalization must fail closed if runtime-health cleanup cannot complete | P1 | required-now |
 | Quiet-pane warning | warning suppression when sample predates bubble start | broad warning disable | guard only previous-run stale sample ellen | P1 | required-now |
 
 ### 4) Error and Fallback Contract
@@ -337,22 +366,36 @@ Field-role classification:
 | T1 | local successful delete removes health snapshot | bubble-hoz letezik `watchdog-health/<bubbleId>.json` | local `deleteBubble(..., force:true)` success path lefut | a health file torlodik; delete result success marad | P1 | required-now | primary fix |
 | T2 | remote force-delete local finalization removes health snapshot | started remote bubble + local health file jelen van | remote force-delete success local finalization lefut | a local health file torlodik | P1 | required-now | parity with remote delete closure |
 | T3 | remote missing-target fallback finalization removes health snapshot | remote delete transport/fallback success pathra all, local health file jelen van | `missing-target` fallback successful finalization lefut | a local health file torlodik | P1 | required-now | hidden success branch parity |
+| T3a | dependency seam owns runtime-health cleanup contract | delete dependencies custom seam-mel vannak feloldva | success-path delete flow fut | a health-cleanup muvelet a `DeleteBubbleDependencies` / `resolveDeleteDependencies(...)` boundaryn keresztul ervenyesul | P1 | required-now | CS2 contract proof |
+| T3b | defaults wiring provides cleanup primitive | explicit health-cleanup dependency override nincs adva | default dependency resolution fut | a `deleteBubbleDependencyDefaults` a canonical `removeWatchdogPaneActivity(...)` wiringot adja | P1 | required-now | CS4 default wiring proof |
 | T4 | confirmation path preserves health snapshot | artifacts miatt delete confirmation kell | delete confirmation path fut | a health file megmarad | P1 | required-now | no speculative cleanup |
+| T4a | failed delete path does not delete runtime health artifact | delete flow non-success pathra fut vagy explicit failed-delete side effect rule ervenyesul | failed delete path fut | a runtime health artifact nem torlodik | P1 | required-now | failed-delete no-deletion rule |
+| T4b | successful delete runtime-health cleanup hard failure fails closed | successful delete local finalization `remove-runtime-health` lepcsojen hard failure tortenik | delete flow fut | a command throw-val megall, es nem claim-el csendes partial success-t | P1 | required-now | fail-closed hard-failure rule |
 | T5 | health history retained | bubble-hoz `watchdog-history/<bubbleId>.ndjson` jelen van | successful delete lefut | history file erintetlen | P1 | required-now | preserved diagnostics baseline |
+| T5a | remote force-delete success preserves retained history | remote force-delete success path mellett `watchdog-history/<bubbleId>.ndjson` jelen van | successful local finalization lefut | history file erintetlen marad | P1 | required-now | AC2 parity for remote force-delete success |
+| T5b | remote `missing-target` fallback success preserves retained history | remote `missing-target` fallback success path mellett `watchdog-history/<bubbleId>.ndjson` jelen van | successful local finalization lefut | history file erintetlen marad | P1 | required-now | AC2 parity for remote fallback success |
 | T6 | quiet-pane suppressed for previous-run sample | `sampled_at` korabbi, mint `bubbleStartedAt`; threshold egyebkent teljesulne | attention resolver fut | `quiet_pane` warning nincs | P1 | required-now | observed stale-banner class |
 | T7 | quiet-pane still appears for current-run inactivity | `sampled_at >= bubbleStartedAt` es `last_changed_at` thresholden tul van | attention resolver fut | `quiet_pane` warning megjelenik | P1 | required-now | preserve baseline |
 | T8 | missing start boundary preserves current behavior | `bubbleStartedAt=null`, sample egyebkent quiet | attention resolver fut | current quiet-pane result marad | P1 | required-now | compat guard |
 | T9 | local list reuses canonical start boundary | local bubble with existing `bubble_instance_id`-derived start lower bound | list build path fut | a guard ugyanazt a canonical `bubbleStartedAt` forrast hasznalja, nem uj local heuristicet | P1 | required-now | source-anchor parity |
+| T9a | refreshed remote list preserves the same guard parity | remote refreshed list entry `bubbleStartedAt`-tal es stale previous-run sample-lel | remote refreshed list build path fut | stale quiet-pane warning nem jelenik meg, es ugyanaz a shared guard ervenyesul | P1 | required-now | AC5 remote-refreshed parity |
 | T10 | detail/status consume path obeys the same guard | status/detail surface `bubbleStartedAt`-tal es stale previous-run sample-lel | UI/detail presentation fut | stale quiet-pane warning nem jelenik meg a detail/status consume surface-en sem | P1 | required-now | proof surface for presenter path |
 | T11 | direct presenter proof surface covers the same policy | presenter-level fixture stale previous-run sample-lel | `presentBubbleDetail(...)` fut | ugyanaz a lower-bound suppression ervenyesul direct presenter proofon is | P1 | required-now | direct proof, not only indirect router/status proof |
+| T12 | first-party router detail route preserves previous-run suppression | UI router detail route `bubbleStartedAt`-tal es previous-run quiet-pane sample-lel dolgozik | `tests/core/ui/router.test.ts` route-level proof fut | a previous-run quiet-pane warning a first-party detail route-on sem jelenik meg | P1 | required-now | router-level proof surface |
 
 ## Acceptance Criteria
 
-1. AC1: Sikeres delete utan nem marad vissza local `.pairflow/runtime/watchdog-health/<bubbleId>.json` artifact sem local, sem remote force-delete successful finalization, sem remote `missing-target` fallback successful finalization pathon.
+1. AC1: Sikeres delete utan nem marad vissza local `.pairflow/runtime/watchdog-health/<bubbleId>.json` artifact az alabbi success-path seam-ek egyikben sem, es a cleanup ownership/wiring a dedikalt contract boundaryn marad:
+   - local successful delete finalization (`src/v11/application/delete/deleteBubbleFinalization.ts`),
+   - remote force-delete successful local finalization (`src/v11/application/delete/deleteBubbleFinalization.ts` route parity),
+   - remote `missing-target` fallback successful local finalization (`src/v11/application/delete/deleteBubbleRemoteMissingTargetFallback.ts`),
+   - dependency seam ownership a `DeleteBubbleDependencies` / `resolveDeleteDependencies(...)` contractban,
+   - default wiring a `src/v11/defaults/delete/deleteBubbleDefaults.ts` alatt.
 2. AC2: `watchdog-history/<bubbleId>.ndjson` retained marad.
 3. AC3: A shared quiet-pane warning nem jelenik meg olyan sample alapjan, amelynek `sampled_at` idobelyege az aktualis `bubbleStartedAt` elott van.
 4. AC4: Ha a `bubbleStartedAt` nem elerheto, a quiet-pane warning jelenlegi viselkedese preserve-olodik.
 5. AC5: A list es a detail/status consume surface ugyanazt a lower-bound guardot hasznalja.
+   - ideertve a refreshed remote list consume pathot is, nem csak a local list es detail/status consume surface-eket.
 
 ## L2 - Implementation Notes (Optional)
 
@@ -369,16 +412,22 @@ Field-role classification:
 
 ## Review Control
 
-1. Ez implementalhato bounded task.
+1. Ez a dokumentum completed bounded closure record.
 2. A taskot nem kell tovabbi plan-szintu splitre bontani.
-3. A review soran a fo kerdes:
-   - eleg szuk marad-e a scope a `watchdog-health` cleanup + start-boundary guard ket closurejara.
+3. Review conclusion:
+   - a dokumentum vegig a `watchdog-health` cleanup + start-boundary guard ket closurejara marad szukitve.
+4. Current-tree conclusion:
+   - a bounded closure mar teljesult,
+   - a documentum fo celja most a standalone scope es a retained baseline rogzitese.
+5. Completed-closure note:
+   - a review-control szekcio mar nem nyit uj fo kerdeseket; csak a lezart bounded closuret es annak proof surface-eit rogziti.
 
 ## Assumptions
 
-1. A hamis quiet-pane banner fo observed oka a stale local `watchdog-health` artifact, nem a bubble directory.
+1. A hamis quiet-pane banner fo observed oka a stale local `watchdog-health` artifact volt, nem a bubble directory.
 2. A `bubbleStartedAt` eleg jo current-run lower bound a previous-run sample kizarasahoz, ha elerheto.
 
 ## Open Questions
 
-1. A delete oldali health-cleanup hard failuret milyen meglvo error taxonomy ala erdemes bekotni, ha nincs ma pontos delete-specific reason code erre?
+1. A docs-only refinement utan nem maradt nyitott kerdes ezen a bounded closureon belul.
+   - Closure basis: explicit `remove-runtime-health` failure lepcso a delete pathon, valamint coverage/proof surface a `tests/core/bubble/deleteBubble.test.ts` es `tests/core/bubble/deleteBubble.removeBubbleDirectory.test.ts` file-okban.
