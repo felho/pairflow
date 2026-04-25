@@ -147,7 +147,7 @@ This plan separates implementation slicing from mergeability.
 
 ### Progress Update - 2026-04-25
 
-Phase 1, Phase 2, and Phase 3A are complete and merged.
+Phase 1, Phase 2, Phase 3A, and Phase 3B are complete and merged.
 
 Completed slices:
 
@@ -173,16 +173,21 @@ Completed slices:
    - Completion proof: operator CLI commit activation now uses `--stage-all`, public `--auto`/`--no-auto` fail with `COMMIT_AUTO_REMOVED`, application commit input exposes preferred `stageAll`, explicit `stageAll` wins over temporary internal `auto` compatibility, local staging diagnostics use `stage_all`/`--stage-all`, and root CLI rendering remains truthful to the returned envelope type so remote legacy `DONE_PACKAGE` continuity is not masked before Phase 4.
    - Boundary note: UI-router/frontend request producers remain successor-owned by Phase 3B. Remote SSH command construction, remote marker parsing, remote sync-back, and remote result hard cutover remain successor-owned by Phase 4.
    - Archived task: `plans/archive/tasks/commit-cli-stage-all-cutover.md`
+4. `commit-ui-stage-all-alignment`
+   - Bubble: `impl-ui-stage-all`
+   - Bubble commit: `d54f302b16e7f633041c8f997a8c7d3f02b798e3`
+   - Merge commit: `1caf04aee0e181d425dbe6b6592156955ea9f917`
+   - Completion proof: first-party UI-router and frontend commit request producers now use `stageAll`, the HTTP boundary rejects legacy `auto` including dual-field ambiguity before mutation dispatch, the UI store preserves the previous default stage-all behavior as `stageAll ?? true`, and router/server/API/store/ActionBar/CommitForm tests cover the enabled and disabled stage-all paths.
+   - Boundary note: remote SSH command construction, remote marker parsing, remote sync-back, and remote result hard cutover remain successor-owned by Phase 4.
+   - Archived task: `plans/archive/tasks/commit-ui-stage-all-alignment.md`
 
 Next task:
 
-1. `commit-ui-stage-all-alignment`
-   - Owns Phase 3B.
-   - Task file: `plans/tasks/commit-ui-stage-all-alignment.md`
-   - Primary goal: move first-party UI-router HTTP/action dispatch and UI frontend request producers from temporary `auto` staging input to `stageAll`.
-   - Required cleanup: replace UI-router/body/client/store/action/form `auto` payloads and labels with `stageAll`, reject legacy HTTP `auto` clearly including dual-field bodies, preserve the UI's existing default stage-all behavior under the new field, and prove the router/client/store/component paths with tests.
-   - Critical boundary: do not change CLI parser/help, application commit producer semantics, remote SSH transport, remote marker parsing/sync-back, protocol validation, or lifecycle/event metadata in this task.
-   - Prerequisite status: Phase 3A is complete; `CommitBubbleInput.stageAll` exists on main, so the Phase 3B CS3a prerequisite probe should now pass before implementation starts.
+1. `remote-commit-result-alignment`
+   - Owns Phase 4.
+   - Task file: to be created before implementation.
+   - Primary goal: align remote commit execution, marker parsing, local sync-back, and remote result surfaces with the no-done-package `COMMIT_RESULT` model.
+   - Critical boundary: do not reopen local commit producer authority, public CLI `--stage-all`, or first-party UI-router/frontend `stageAll` request semantics except for direct integration fallout found during Phase 4.
 
 ### Phase 1: Commit Result Contract
 
