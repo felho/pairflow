@@ -278,10 +278,14 @@ describe("runCli", () => {
         bubble_id: "b_cli_commit_remote_01",
         sender: "orchestrator",
         recipient: "human",
-        type: "DONE_PACKAGE",
+        type: "COMMIT_RESULT",
         round: 2,
         payload: {
-          summary: "Remote continuity."
+          metadata: {
+            commit_sha: "abcdef1234567890",
+            commit_message: "bubble(b_cli_commit_remote_01): finalize",
+            staged_files: ["feature-remote.txt"]
+          }
         },
         refs: []
       },
@@ -304,7 +308,7 @@ describe("runCli", () => {
     } satisfies CommitBubbleResult);
 
     expect(output).toBe(
-      "Committed bubble b_cli_commit_remote_01: abcdef1234567890 (1 files), DONE_PACKAGE msg_commit_remote_01\n"
+      "Committed bubble b_cli_commit_remote_01: abcdef1234567890 (1 files), COMMIT_RESULT msg_commit_remote_01\n"
     );
   });
 

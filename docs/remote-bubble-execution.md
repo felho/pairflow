@@ -682,7 +682,7 @@ When a started remote bubble may have lost its runtime after reboot or tmux loss
 
 ### Manual smoke evidence expectation
 
-Rollout closure should include one short manual smoke note, stored by default in `.pairflow/bubbles/<id>/artifacts/done-package.md` or, if needed, in a separate evidence artifact that is referenced from the done package.
+Rollout closure should include one short manual smoke note, stored in a neutral evidence artifact under `.pairflow/bubbles/<id>/artifacts/` and referenced directly from the final `PASS` or approval package.
 
 That note should capture:
 

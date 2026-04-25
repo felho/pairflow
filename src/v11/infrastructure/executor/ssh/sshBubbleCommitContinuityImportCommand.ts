@@ -123,6 +123,14 @@ function transcriptTailType(raw: string): string | undefined {
     return undefined;
   }
   try {
+    const parsed = JSON.parse(tail) as { type?: unknown };
+    if (parsed.type === "DONE_PACKAGE") {
+      return parsed.type;
+    }
+  } catch {
+    // Fall through to validated envelope parsing to preserve invalid-line detection.
+  }
+  try {
     return parseEnvelopeLine(tail).type;
   } catch {
     return "invalid";

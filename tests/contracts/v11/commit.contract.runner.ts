@@ -313,8 +313,8 @@ async function executeCommitCase(input: {
       );
     } else {
       await writeFile(
-        join(bubble.paths.artifactsDir, "done-package.md"),
-        "Seed done package for empty staged-files contract case.\n",
+        join(bubble.paths.worktreePath, "unstaged-contract-fixture.txt"),
+        "Unstaged fixture for empty staged-files contract case.\n",
         "utf8"
       );
     }

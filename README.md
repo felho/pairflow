@@ -799,7 +799,7 @@ Every action is recorded as an NDJSON envelope in the transcript file. This is t
 | `CONVERGENCE` | Reviewer → Orchestrator | `converged` call |
 | `APPROVAL_REQUEST` | Orchestrator → Human | After convergence |
 | `APPROVAL_DECISION` | Human → Orchestrator | `approve` or `request-rework` |
-| `DONE_PACKAGE` | Orchestrator | At commit |
+| `COMMIT_RESULT` | Orchestrator | At commit, with commit SHA/message/staged-file facts |
 
 ### Convergence policy
 
@@ -929,7 +929,7 @@ Actor emits must always use explicit repo, bubble, handoff, and execution author
       inbox.ndjson         # Pending human actions (questions + approvals)
       artifacts/
         task.md            # Original task description
-        done-package.md    # Legacy remote continuity artifact during staged migration
+        ...                # Optional supporting evidence artifacts
     runtime/
       sessions.json        # Active tmux session registry
     locks/
@@ -1087,7 +1087,7 @@ Current snapshot scope:
 ├── inbox.ndjson                   [archived]
 └── artifacts/
     ├── task.md                    [archived]
-    ├── done-package.md            [not archived]
+    ├── ... optional evidence artifacts [not archived]
     ├── reviewer-test-verification.json [not archived]
     └── messages/                  [not archived]
 ```

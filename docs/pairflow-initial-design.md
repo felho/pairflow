@@ -198,7 +198,7 @@ Envelope schema:
   "bubble_id": "b_legal_search_01",
   "sender": "codex|claude|orchestrator|human",
   "recipient": "codex|claude|orchestrator|human",
-  "type": "TASK|PASS|HUMAN_QUESTION|HUMAN_REPLY|CONVERGENCE|APPROVAL_REQUEST|APPROVAL_DECISION|DONE_PACKAGE",
+  "type": "TASK|PASS|HUMAN_QUESTION|HUMAN_REPLY|CONVERGENCE|APPROVAL_REQUEST|APPROVAL_DECISION|COMMIT_RESULT",
   "round": 3,
   "payload": {
     "metadata": {
@@ -218,7 +218,7 @@ Required message types:
 6. `CONVERGENCE`: no-critical-findings claim + evidence.
 7. `APPROVAL_REQUEST`: final package request to user.
 8. `APPROVAL_DECISION`: approve or rework.
-9. `DONE_PACKAGE`: final summary bundle.
+9. `COMMIT_RESULT`: final commit completion envelope with technical commit facts (`metadata.commit_sha`, `metadata.commit_message`, `metadata.staged_files`).
 
 Type assignment rules:
 1. Canonical `pairflow agent emit --kind pass` emits `PASS` in MVP.
@@ -268,7 +268,7 @@ Repository-local control data:
           002-claude-review.md
         round-001.diff
         round-001.tests.txt
-        done-package.md
+        ... optional supporting evidence artifacts
   locks/
     <bubble_id>.lock
   runtime/
@@ -457,5 +457,5 @@ Acceptance:
 This was the original suggested start configuration:
 1. `max_rounds=8`
 2. mandatory alternating review at least once
-3. mandatory done-package before approval
+3. commit completion is authority-backed by `COMMIT_RESULT`, not by a prose done package
 4. manual commit approval required

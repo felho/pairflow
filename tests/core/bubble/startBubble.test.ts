@@ -491,6 +491,9 @@ describe("startBubble", () => {
     expect(implementerCommand).toContain("Pairflow implementer start");
     expect(implementerCommand).toContain(created.paths.taskArtifactPath);
     expect(implementerCommand).toContain(
+      "Use the PASS summary plus evidence refs as the handoff package"
+    );
+    expect(implementerCommand).not.toContain(
       join(created.paths.artifactsDir, "done-package.md")
     );
     expect(implementerCommand).toContain(

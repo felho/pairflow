@@ -132,7 +132,6 @@ export async function launchFreshTmuxSession(input: {
         repoPath: input.context.resolved.repoPath,
         workspacePath: input.launchWorkspacePath,
         taskArtifactPath: input.context.resolved.bubblePaths.taskArtifactPath,
-        donePackagePath: input.context.donePackagePath,
         reviewArtifactType: input.context.resolved.bubbleConfig.review_artifact_type,
         pairflowCommandProfile: input.context.resolved.bubbleConfig.pairflow_command_profile,
         ideationPending: input.ideationPending
@@ -246,7 +245,6 @@ export async function launchResumeTmuxSession(input: {
         repoPath: input.context.resolved.repoPath,
         workspacePath: input.launchWorkspacePath,
         taskArtifactPath: input.context.resolved.bubblePaths.taskArtifactPath,
-        donePackagePath: input.context.donePackagePath,
         reviewArtifactType: input.context.resolved.bubbleConfig.review_artifact_type,
         pairflowCommandProfile: input.context.resolved.bubbleConfig.pairflow_command_profile,
         state: input.context.loadedState.state,

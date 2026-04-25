@@ -59,7 +59,6 @@ export function buildResumeImplementerStartupPrompt(input: {
   repoPath: string;
   workspacePath: string;
   taskArtifactPath: string;
-  donePackagePath: string;
   reviewArtifactType: ReviewArtifactType;
   pairflowCommandProfile: PairflowCommandProfile;
   state: BubbleStateSnapshot;
@@ -78,7 +77,6 @@ export function buildResumeImplementerStartupPrompt(input: {
   const lines = [
     `Pairflow implementer resume for bubble ${input.bubbleId}.`,
     `Task: ${input.taskArtifactPath}.`,
-    `Done package: ${input.donePackagePath}.`,
     buildLaunchWorkspaceCommandScopeLine(input.workspacePath),
     buildPairflowCommandGuidance(
       input.workspacePath,
@@ -90,6 +88,7 @@ export function buildResumeImplementerStartupPrompt(input: {
     }),
     `State snapshot: ${buildResumeContextLine(input.state)}.`,
     `Transcript context: ${input.transcriptSummary}`,
+    "Use transcript state, the PASS summary, and evidence refs as the handoff boundary; do not create or depend on a prose handoff artifact.",
     ...(evidenceHandoffGuidance !== undefined
       ? [evidenceHandoffGuidance]
       : [

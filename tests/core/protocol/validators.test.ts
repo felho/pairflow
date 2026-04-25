@@ -306,6 +306,41 @@ describe("protocol envelope schema", () => {
           error.path === "type" && error.message.includes("COMMIT_RESULT")
       )
     ).toBe(true);
+    expect(
+      result.errors.every(
+        (error) =>
+          error.path !== "type" || !error.message.includes("DONE_PACKAGE")
+      )
+    ).toBe(true);
+  });
+
+  it("rejects DONE_PACKAGE as an inactive protocol message type", () => {
+    const result = validateProtocolEnvelope({
+      id: "msg_done_package_legacy",
+      ts: "2026-02-21T12:34:56.000Z",
+      bubble_id: "b_test_01",
+      sender: "orchestrator",
+      recipient: "human",
+      type: "DONE_PACKAGE",
+      round: 1,
+      payload: {
+        summary: "Legacy completion artifact"
+      },
+      refs: []
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) {
+      return;
+    }
+    expect(
+      result.errors.some(
+        (error) =>
+          error.path === "type" &&
+          error.message.includes("COMMIT_RESULT") &&
+          !error.message.includes("DONE_PACKAGE")
+      )
+    ).toBe(true);
   });
 
   it("accepts PASS envelope with optional intent and findings", () => {
