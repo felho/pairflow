@@ -306,7 +306,7 @@ export function createApiClient(baseUrl: string = ""): PairflowApiClient {
       input: CommitActionInput
     ): Promise<Record<string, unknown>> {
       return postBubbleAction(baseUrl, repoPath, bubbleId, "commit", {
-        auto: input.auto,
+        stageAll: input.stageAll,
         ...(input.message !== undefined ? { message: input.message } : {}),
         ...(input.refs !== undefined ? { refs: input.refs } : {})
       });

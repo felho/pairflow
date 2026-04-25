@@ -260,8 +260,8 @@ describe("createApiClient", () => {
     });
     await expect(
       client.commitBubble("/repo-a", "b-a", {
-        auto: true,
-        refs: ["artifacts/done-package.md"]
+        stageAll: true,
+        refs: ["artifacts/commit-evidence.md"]
       })
     ).resolves.toMatchObject({
       bubbleId: "b-a",
@@ -310,8 +310,8 @@ describe("createApiClient", () => {
       {
         method: "POST",
         body: JSON.stringify({
-          auto: true,
-          refs: ["artifacts/done-package.md"]
+          stageAll: true,
+          refs: ["artifacts/commit-evidence.md"]
         }),
         headers: {
           "content-type": "application/json"

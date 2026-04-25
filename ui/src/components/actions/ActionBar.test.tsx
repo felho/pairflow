@@ -345,7 +345,7 @@ describe("ActionBar", () => {
     expect(screen.getByRole("button", { name: "Queue Rework" })).toBeInTheDocument();
   });
 
-  it("submits commit form with default auto=true", async () => {
+  it("submits commit form with default stageAll=true", async () => {
     const user = userEvent.setup();
     const onAction = vi.fn(() => Promise.resolve(undefined));
 
@@ -378,8 +378,46 @@ describe("ActionBar", () => {
     expect(onAction).toHaveBeenCalledWith({
       bubbleId: "b-commit",
       action: "commit",
-      auto: true
+      stageAll: true
     });
+  });
+
+  it("submits commit form with disabled stageAll=false", async () => {
+    const user = userEvent.setup();
+    const onAction = vi.fn(() => Promise.resolve(undefined));
+
+    render(
+      <ActionBar
+        bubble={bubbleCard({
+          bubbleId: "b-commit",
+          repoPath: "/repo-a",
+          state: "APPROVED_FOR_COMMIT"
+        })}
+        attach={{
+          visible: false,
+          enabled: false,
+          command: "tmux attach -t pf-b-commit",
+          hint: null
+        }}
+        isSubmitting={false}
+        actionError={null}
+        retryHint={null}
+        actionFailure={null}
+        onAction={onAction}
+        onClearFeedback={vi.fn()}
+      />
+    );
+
+    await user.click(screen.getByRole("button", { name: "Commit" }));
+    await user.click(screen.getByRole("checkbox", { name: "Stage all changes" }));
+    await user.click(screen.getByRole("button", { name: "Submit Commit" }));
+
+    expect(onAction).toHaveBeenCalledWith({
+      bubbleId: "b-commit",
+      action: "commit",
+      stageAll: false
+    });
+    expect("auto" in (onAction.mock.calls[0]?.[0] as object)).toBe(false);
   });
 
   it("calls onAction with attach action when Attach button clicked", async () => {

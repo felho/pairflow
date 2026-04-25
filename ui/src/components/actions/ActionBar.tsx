@@ -264,7 +264,7 @@ export function ActionBar(props: ActionBarProps): JSX.Element {
       await props.onAction({
         bubbleId: props.bubble.bubbleId,
         action: "commit",
-        auto: commitInput.auto,
+        stageAll: commitInput.stageAll,
         ...(commitInput.message !== undefined ? { message: commitInput.message } : {}),
         ...(commitInput.refs !== undefined ? { refs: commitInput.refs } : {})
       });

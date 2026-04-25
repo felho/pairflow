@@ -134,7 +134,7 @@ export interface UiCommitBubbleResult {
 export interface UiCommitBubbleInput extends UiBubbleMutationInput {
   refs?: string[] | undefined;
   message?: string | undefined;
-  auto?: boolean | undefined;
+  stageAll: boolean;
 }
 
 export interface UiMergeBubbleResult {

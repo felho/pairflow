@@ -17,7 +17,7 @@ export interface CommitFormProps {
 }
 
 export function CommitForm(props: CommitFormProps): JSX.Element {
-  const [auto, setAuto] = useState(true);
+  const [stageAll, setStageAll] = useState(true);
   const [message, setMessage] = useState("");
   const [refsText, setRefsText] = useState("");
 
@@ -29,13 +29,13 @@ export function CommitForm(props: CommitFormProps): JSX.Element {
       <label className="mt-2 flex items-center gap-2 text-sm text-slate-200">
         <input
           type="checkbox"
-          checked={auto}
+          checked={stageAll}
           onChange={(event) => {
-            setAuto(event.target.checked);
+            setStageAll(event.target.checked);
           }}
           disabled={props.isSubmitting}
         />
-        Auto stage (`auto=true`)
+        Stage all changes
       </label>
 
       <label className="mt-3 block text-xs uppercase tracking-wide text-slate-400" htmlFor="commit-message">
@@ -63,7 +63,7 @@ export function CommitForm(props: CommitFormProps): JSX.Element {
           setRefsText(event.target.value);
         }}
         disabled={props.isSubmitting}
-        placeholder="artifacts/done-package.md"
+        placeholder="artifacts/commit-evidence.md"
       />
       <p className="mt-1 text-xs text-slate-400">Refs count: {parsedRefs.length}</p>
 
@@ -86,7 +86,7 @@ export function CommitForm(props: CommitFormProps): JSX.Element {
           onClick={() => {
             const trimmedMessage = message.trim();
             const payload: CommitActionInput = {
-              auto,
+              stageAll,
               ...(trimmedMessage.length > 0 ? { message: trimmedMessage } : {}),
               ...(parsedRefs.length > 0 ? { refs: parsedRefs } : {})
             };

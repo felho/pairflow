@@ -228,6 +228,65 @@ describe("createBubbleStore", () => {
     expect(client.refresh).toHaveBeenCalledTimes(1);
   });
 
+  it("uses stageAll for commit actions and preserves the default staging behavior", async () => {
+    const commitBubble = vi.fn(async () => ({}));
+    const api = createApiStub({
+      getRepos: vi.fn(async () => ["/repo-a"]),
+      getBubbles: vi.fn(async () => ({
+        repo: repoSummary("/repo-a"),
+        bubbles: [
+          bubbleSummary({
+            bubbleId: "b-a",
+            repoPath: "/repo-a",
+            state: "APPROVED_FOR_COMMIT"
+          })
+        ]
+      })),
+      commitBubble
+    });
+    const store = createBubbleStore({
+      api,
+      createEventsClient: () => ({
+        start: () => undefined,
+        stop: () => undefined,
+        refresh: () => undefined
+      })
+    });
+
+    await store.getState().initialize();
+
+    await store.getState().runBubbleAction({
+      bubbleId: "b-a",
+      action: "commit",
+      message: "  Ship it  ",
+      refs: ["artifacts/commit-evidence.md"]
+    });
+    await store.getState().runBubbleAction({
+      bubbleId: "b-a",
+      action: "commit",
+      stageAll: false
+    });
+
+    expect(commitBubble).toHaveBeenNthCalledWith(
+      1,
+      "/repo-a",
+      "b-a",
+      {
+        stageAll: true,
+        message: "Ship it",
+        refs: ["artifacts/commit-evidence.md"]
+      }
+    );
+    expect(commitBubble).toHaveBeenNthCalledWith(
+      2,
+      "/repo-a",
+      "b-a",
+      {
+        stageAll: false
+      }
+    );
+  });
+
   it("auto-selects newly discovered repos on reinitialize without re-enabling manually hidden repos", async () => {
     let repos = ["/repo-a", "/repo-b"];
     const bubblesByRepo = new Map([
