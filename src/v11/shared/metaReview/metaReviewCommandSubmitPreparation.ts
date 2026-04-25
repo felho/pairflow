@@ -43,6 +43,16 @@ import type {
   MetaReviewSubmitInput
 } from "./metaReviewCommandContract.js";
 
+type MetaReviewSubmitPreparationPorts = {
+  resolveBubble: NonNullable<MetaReviewCommandDependencies["resolveBubbleById"]>;
+  readState: NonNullable<MetaReviewCommandDependencies["readStateSnapshot"]>;
+  readRuntimeSessions: NonNullable<
+    MetaReviewCommandDependencies["readRuntimeSessionsRegistry"]
+  >;
+  readFileFn: NonNullable<MetaReviewCommandDependencies["readFile"]>;
+  randomUuidFn: () => string;
+};
+
 export interface PreparedMetaReviewSubmitContext {
   resolved: Awaited<ReturnType<typeof metaReviewCommandSubmitDefaults.resolveBubbleById>>;
   loadedState: Awaited<ReturnType<typeof metaReviewCommandSubmitDefaults.readStateSnapshot>>;
@@ -78,6 +88,28 @@ function resolveMetaReviewArtifactReadPort(
       reason: "artifact_read_capability_unavailable"
     }
   });
+}
+
+function resolveMetaReviewSubmitPreparationPorts(input: {
+  submitInput: MetaReviewSubmitInput;
+  dependencies: MetaReviewCommandDependencies;
+}): MetaReviewSubmitPreparationPorts {
+  return {
+    resolveBubble:
+      input.dependencies.resolveBubbleById ??
+      metaReviewCommandSubmitDefaults.resolveBubbleById,
+    readState:
+      input.dependencies.readStateSnapshot ??
+      metaReviewCommandSubmitDefaults.readStateSnapshot,
+    readRuntimeSessions:
+      input.dependencies.readRuntimeSessionsRegistry ??
+      metaReviewCommandSubmitDefaults.readRuntimeSessionsRegistry,
+    readFileFn: resolveMetaReviewArtifactReadPort(
+      input.submitInput.bubbleId,
+      input.dependencies
+    ),
+    randomUuidFn: input.dependencies.randomUUID ?? randomUUID
+  };
 }
 
 function resolveValidatedSubmitShape(input: {
@@ -200,25 +232,60 @@ function resolveValidatedSubmitShape(input: {
   };
 }
 
+async function assertApproveThresholdPolicyIfNeeded(input: {
+  resolved: Awaited<
+    ReturnType<typeof metaReviewCommandSubmitDefaults.resolveBubbleById>
+  >;
+  validated: ReturnType<typeof resolveValidatedSubmitShape>;
+  runId: string;
+  canonicalReportJson: Record<string, unknown>;
+  readFileFn: NonNullable<MetaReviewCommandDependencies["readFile"]>;
+  round: number;
+}): Promise<void> {
+  if (
+    input.validated.recommendation !== "approve" ||
+    !metaReviewApproveClaimsOpenFindings(input.canonicalReportJson)
+  ) {
+    return;
+  }
+
+  const normalizedReviewPolicy = normalizeBubbleReviewPolicy(
+    input.resolved.bubbleConfig
+  );
+  const thresholdAuthority = await resolveMetaReviewGateThresholdAuthority({
+    runResult: {
+      bubble_id: input.resolved.bubbleId,
+      run_id: input.runId,
+      status: input.validated.status,
+      recommendation: input.validated.recommendation,
+      summary: input.validated.summary,
+      rework_target_message: input.validated.reworkTargetMessage,
+      updated_at: input.validated.updatedAt,
+      warnings: [],
+      report_json: input.canonicalReportJson
+    },
+    bubbleDir: input.resolved.bubblePaths.bubbleDir,
+    artifactsDir: input.resolved.bubblePaths.artifactsDir,
+    readFileFn: input.readFileFn
+  });
+  assertApproveThresholdPolicy({
+    recommendation: input.validated.recommendation,
+    reportJson: input.canonicalReportJson,
+    minSeverity: normalizedReviewPolicy.meta_review_auto_rework_min_severity,
+    thresholdAuthority,
+    bubbleId: input.resolved.bubbleId,
+    round: input.round
+  });
+}
+
 export async function prepareMetaReviewSubmitContext(input: {
   submitInput: MetaReviewSubmitInput;
   dependencies: MetaReviewCommandDependencies;
   now: Date;
 }): Promise<PreparedMetaReviewSubmitContext> {
-  const resolveBubble =
-    input.dependencies.resolveBubbleById ?? metaReviewCommandSubmitDefaults.resolveBubbleById;
-  const readState =
-    input.dependencies.readStateSnapshot ?? metaReviewCommandSubmitDefaults.readStateSnapshot;
-  const readRuntimeSessions =
-    input.dependencies.readRuntimeSessionsRegistry
-    ?? metaReviewCommandSubmitDefaults.readRuntimeSessionsRegistry;
-  const readFileFn = resolveMetaReviewArtifactReadPort(
-    input.submitInput.bubbleId,
-    input.dependencies
-  );
-  const randomUuidFn = input.dependencies.randomUUID ?? randomUUID;
+  const ports = resolveMetaReviewSubmitPreparationPorts(input);
 
-  const resolved = await resolveBubble({
+  const resolved = await ports.resolveBubble({
     bubbleId: input.submitInput.bubbleId,
     ...(input.submitInput.repoPath !== undefined
       ? { repoPath: input.submitInput.repoPath }
@@ -226,11 +293,11 @@ export async function prepareMetaReviewSubmitContext(input: {
     ...(input.submitInput.cwd !== undefined ? { cwd: input.submitInput.cwd } : {})
   });
 
-  const loadedState = await readState(resolved.bubblePaths.statePath);
+  const loadedState = await ports.readState(resolved.bubblePaths.statePath);
   await assertMetaReviewSubmitterAuthority({
     bubbleId: resolved.bubbleId,
     sessionsPath: resolved.bubblePaths.sessionsPath,
-    readRuntimeSessions,
+    readRuntimeSessions: ports.readRuntimeSessions,
     state: loadedState.state,
     ...(input.dependencies.now !== undefined ? { now: input.now } : {})
   });
@@ -262,7 +329,7 @@ export async function prepareMetaReviewSubmitContext(input: {
     submitInput: input.submitInput,
     loadedState,
     now: input.now,
-    randomUuidFn
+    randomUuidFn: ports.randomUuidFn
   });
 
   const runId = resolveSubmitCanonicalRunId({
@@ -285,44 +352,19 @@ export async function prepareMetaReviewSubmitContext(input: {
     summary: validated.summary,
     reportJson: canonicalReportJson
   });
-  if (
-    validated.recommendation === "approve" &&
-    metaReviewApproveClaimsOpenFindings(canonicalReportJson)
-  ) {
-    const normalizedReviewPolicy = normalizeBubbleReviewPolicy(
-      resolved.bubbleConfig
-    );
-    const thresholdAuthority = await resolveMetaReviewGateThresholdAuthority({
-      runResult: {
-        bubble_id: resolved.bubbleId,
-        run_id: runId,
-        status: validated.status,
-        recommendation: validated.recommendation,
-        summary: validated.summary,
-        rework_target_message: validated.reworkTargetMessage,
-        updated_at: validated.updatedAt,
-        warnings: [],
-        report_json: canonicalReportJson
-      },
-      bubbleDir: resolved.bubblePaths.bubbleDir,
-      artifactsDir: resolved.bubblePaths.artifactsDir,
-      readFileFn
-    });
-    assertApproveThresholdPolicy({
-      recommendation: validated.recommendation,
-      reportJson: canonicalReportJson,
-      minSeverity:
-        normalizedReviewPolicy.meta_review_auto_rework_min_severity,
-      thresholdAuthority,
-      bubbleId: resolved.bubbleId,
-      round: input.submitInput.round
-    });
-  }
+  await assertApproveThresholdPolicyIfNeeded({
+    resolved,
+    validated,
+    runId,
+    canonicalReportJson,
+    readFileFn: ports.readFileFn,
+    round: input.submitInput.round
+  });
 
   return {
     resolved,
     loadedState,
-    readFileFn,
+    readFileFn: ports.readFileFn,
     recommendation: validated.recommendation,
     status: validated.status,
     summary: validated.summary,
