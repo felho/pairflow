@@ -1,7 +1,7 @@
 import type {
   ImportRemoteBubbleCommitContinuityInput,
   ImportRemoteBubbleCommitContinuityResult
-} from "../../../application/commit/commitRemotePorts.js";
+} from "../../../shared/commit/commitRemoteExecution.js";
 import { shellQuote } from "../../../shared/foundation/shellQuote.js";
 import { parseEnvelopeLine } from "../../../shared/protocol/envelope.js";
 import {
@@ -13,7 +13,7 @@ import {
   RemoteBubbleCommitCommandError,
   summarizeRemoteCommitTransportOutput,
   validateRemoteCommitCompletionPayload
-} from "./sshBubbleCommitCommand.js";
+} from "./sshBubbleCommitPayload.js";
 import { runCommandDefault } from "./sshBubbleStatus.js";
 
 const remoteCommitImportStateStartMarker =

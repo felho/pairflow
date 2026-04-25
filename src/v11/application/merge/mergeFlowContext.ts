@@ -81,10 +81,27 @@ export type MergeFlowExecutionContext =
   | LocalMergeFlowExecutionContext
   | RemoteMergeFlowExecutionContext;
 
-export async function initializeMergeFlowExecutionContext(input: {
+interface MergeFlowInitializationInput {
   params: RunMergeFlowInput;
   dependencies: ResolvedMergeCommandDependencies;
-}): Promise<MergeFlowExecutionContext> {
+}
+
+interface MergeFlowInitializationBase {
+  resolved: Awaited<ReturnType<ResolvedMergeCommandDependencies["resolveBubbleById"]>>;
+  bubbleIdentity: Awaited<
+    ReturnType<ResolvedMergeCommandDependencies["ensureBubbleInstanceIdForMutation"]>
+  >;
+  loaded: LoadedStateSnapshot;
+  state: BubbleStateSnapshot;
+  baseBranch: string;
+  bubbleBranch: string;
+  nowIso: string;
+  resolvedRepoPath: string;
+}
+
+async function initializeMergeFlowBaseContext(
+  input: MergeFlowInitializationInput
+): Promise<MergeFlowInitializationBase> {
   const resolved = await input.dependencies.resolveBubbleById({
     bubbleId: input.params.bubbleId,
     ...(input.params.repoPath !== undefined ? { repoPath: input.params.repoPath } : {}),
@@ -99,127 +116,187 @@ export async function initializeMergeFlowExecutionContext(input: {
   });
   resolved.bubbleConfig = bubbleIdentity.bubbleConfig;
 
-  let loaded = await input.dependencies.readStateSnapshot(resolved.bubblePaths.statePath);
-  let state = loaded.state;
+  const loaded = await input.dependencies.readStateSnapshot(resolved.bubblePaths.statePath);
+  const state = loaded.state;
 
   const baseBranch = resolved.bubbleConfig.base_branch;
   const bubbleBranch = resolved.bubbleConfig.bubble_branch;
   const nowIso = input.params.nowIso;
   const resolvedRepoPath = canonicalizeMergeExecutionPath(resolved.repoPath);
 
-  if (resolved.bubbleConfig.executor?.type === "ssh") {
-    const remoteMergeExecutionContext = resolveRemoteMergeExecutionContextFromEnv();
-    const remotePointer = await input.dependencies.readRemotePointer(resolved.bubblePaths.remotePointerPath);
+  return {
+    resolved,
+    bubbleIdentity,
+    loaded,
+    state,
+    baseBranch,
+    bubbleBranch,
+    nowIso,
+    resolvedRepoPath
+  };
+}
 
-    if (
-      remoteMergeExecutionContext?.kind === "remote_clone"
-      && remoteMergeExecutionContext.workspaceRoot === resolvedRepoPath
-    ) {
-      if (remotePointer !== null) {
-        throw input.params.createError({
-          reasonCode: "MERGE_REMOTE_START_REQUIRED",
-          message:
-            `Remote inner merge for '${resolved.bubbleId}' refused to continue because source-repo remote artifacts are still present.`,
-          context: {
-            command_name: "merge",
-            bubble_id: resolved.bubbleId,
-            remote_pointer_kind: remotePointer.kind,
-            remote_workspace_root: remoteMergeExecutionContext.workspaceRoot
-          }
-        });
-      }
-    } else {
-      if (remotePointer?.kind !== "started") {
-        throw input.params.createError({
-          reasonCode: "MERGE_REMOTE_START_REQUIRED",
-          message:
-            `Remote merge for '${resolved.bubbleId}' requires a started remote pointer. Run \`pairflow bubble start --id ${resolved.bubbleId}\` first.`,
-          context: {
-            command_name: "merge",
-            bubble_id: resolved.bubbleId,
-            remote_pointer_kind: remotePointer?.kind ?? "missing"
-          }
-        });
-      }
+function createLocalMergeFlowExecutionContext(
+  base: MergeFlowInitializationBase
+): LocalMergeFlowExecutionContext {
+  return {
+    route: "local",
+    resolved: base.resolved,
+    bubbleIdentity: base.bubbleIdentity,
+    loaded: base.loaded,
+    state: base.state,
+    nowIso: base.nowIso,
+    repoPath: base.resolvedRepoPath,
+    baseBranch: base.baseBranch,
+    bubbleBranch: base.bubbleBranch
+  };
+}
 
-      const remoteTarget = await input.dependencies.resolveRemoteBubbleStatusTarget({
-        bubbleId: resolved.bubbleId,
-        remoteAlias: resolved.bubbleConfig.executor.remote,
-        expectedHost: remotePointer.host
-      });
+async function resolveRemoteMergeFlowExecutionContext(
+  input: MergeFlowInitializationInput & {
+    base: MergeFlowInitializationBase;
+  }
+): Promise<RemoteMergeFlowExecutionContext | "continue_local" | null> {
+  const { base } = input;
+  if (base.resolved.bubbleConfig.executor?.type !== "ssh") {
+    return null;
+  }
 
-      await assertRemoteMergeLocalPrerequisites({
-        repoPath: resolvedRepoPath,
-        baseBranch,
-        bubbleBranch,
-        dependencies: input.dependencies,
-        createError: input.params.createError
-      });
+  const remoteMergeExecutionContext = resolveRemoteMergeExecutionContextFromEnv();
+  const remotePointer = await input.dependencies.readRemotePointer(
+    base.resolved.bubblePaths.remotePointerPath
+  );
 
-      if (state.state !== "DONE") {
-        const importResult = await importRemoteCommitContinuityForMerge({
-          bubbleId: resolved.bubbleId,
-          remoteClonePath: remotePointer.remoteClonePath,
-          remoteTarget,
-          statePath: resolved.bubblePaths.statePath,
-          transcriptPath: resolved.bubblePaths.transcriptPath,
-          dependencies: input.dependencies,
-          createError: input.params.createError
-        });
-        if (importResult !== null) {
-          loaded = importResult.loaded;
-          state = importResult.state;
+  if (
+    remoteMergeExecutionContext?.kind === "remote_clone"
+    && remoteMergeExecutionContext.workspaceRoot === base.resolvedRepoPath
+  ) {
+    if (remotePointer !== null) {
+      throw input.params.createError({
+        reasonCode: "MERGE_REMOTE_START_REQUIRED",
+        message:
+          `Remote inner merge for '${base.resolved.bubbleId}' refused to continue because source-repo remote artifacts are still present.`,
+        context: {
+          command_name: "merge",
+          bubble_id: base.resolved.bubbleId,
+          remote_pointer_kind: remotePointer.kind,
+          remote_workspace_root: remoteMergeExecutionContext.workspaceRoot
         }
+      });
+    }
+    return "continue_local";
+  }
+
+  if (remotePointer?.kind !== "started") {
+    throw input.params.createError({
+      reasonCode: "MERGE_REMOTE_START_REQUIRED",
+      message:
+        `Remote merge for '${base.resolved.bubbleId}' requires a started remote pointer. Run \`pairflow bubble start --id ${base.resolved.bubbleId}\` first.`,
+      context: {
+        command_name: "merge",
+        bubble_id: base.resolved.bubbleId,
+        remote_pointer_kind: remotePointer?.kind ?? "missing"
       }
+    });
+  }
 
-      assertMergeStateEligibility(state, input.params.createError);
+  const remoteTarget = await input.dependencies.resolveRemoteBubbleStatusTarget({
+    bubbleId: base.resolved.bubbleId,
+    remoteAlias: base.resolved.bubbleConfig.executor.remote,
+    expectedHost: remotePointer.host
+  });
 
-      return {
-        route: "remote",
-        resolved,
-        bubbleIdentity,
-        loaded,
-        state,
-        nowIso,
-        repoPath: resolvedRepoPath,
-        remotePointer,
-        remoteTarget,
-        baseBranch,
-        bubbleBranch,
-        localImportRef: buildMergeImportRef(resolved.bubbleId)
-      };
+  await assertRemoteMergeLocalPrerequisites({
+    repoPath: base.resolvedRepoPath,
+    baseBranch: base.baseBranch,
+    bubbleBranch: base.bubbleBranch,
+    dependencies: input.dependencies,
+    createError: input.params.createError
+  });
+
+  let loaded = base.loaded;
+  let state = base.state;
+  if (state.state !== "DONE") {
+    const importResult = await importRemoteCommitContinuityForMerge({
+      bubbleId: base.resolved.bubbleId,
+      remoteClonePath: remotePointer.remoteClonePath,
+      remoteTarget,
+      statePath: base.resolved.bubblePaths.statePath,
+      transcriptPath: base.resolved.bubblePaths.transcriptPath,
+      dependencies: input.dependencies,
+      createError: input.params.createError
+    });
+    if (importResult !== null) {
+      loaded = importResult.loaded;
+      state = importResult.state;
     }
   }
 
   assertMergeStateEligibility(state, input.params.createError);
 
+  return {
+    route: "remote",
+    resolved: base.resolved,
+    bubbleIdentity: base.bubbleIdentity,
+    loaded,
+    state,
+    nowIso: base.nowIso,
+    repoPath: base.resolvedRepoPath,
+    remotePointer,
+    remoteTarget,
+    baseBranch: base.baseBranch,
+    bubbleBranch: base.bubbleBranch,
+    localImportRef: buildMergeImportRef(base.resolved.bubbleId)
+  };
+}
+
+async function assertLocalMergePrerequisites(input: MergeFlowInitializationInput & {
+  base: MergeFlowInitializationBase;
+}): Promise<void> {
+  assertMergeStateEligibility(input.base.state, input.params.createError);
+
   await assertCleanRepoWorkingTree(
-    resolvedRepoPath,
+    input.base.resolvedRepoPath,
     input.dependencies.runGit,
     input.params.createError
   );
 
-  const baseBranchExists = await input.dependencies.branchExists(resolvedRepoPath, baseBranch);
-  const bubbleBranchExists = await input.dependencies.branchExists(resolvedRepoPath, bubbleBranch);
+  const baseBranchExists = await input.dependencies.branchExists(
+    input.base.resolvedRepoPath,
+    input.base.baseBranch
+  );
+  const bubbleBranchExists = await input.dependencies.branchExists(
+    input.base.resolvedRepoPath,
+    input.base.bubbleBranch
+  );
   assertMergeBranchEligibility({
-    baseBranch,
-    bubbleBranch,
+    baseBranch: input.base.baseBranch,
+    bubbleBranch: input.base.bubbleBranch,
     baseBranchExists,
     bubbleBranchExists,
     createError: input.params.createError
   });
+}
 
-  return {
-    route: "local",
-    resolved,
-    bubbleIdentity,
-    loaded,
-    state,
-    nowIso,
-    repoPath: resolvedRepoPath,
-    baseBranch,
-    bubbleBranch
-  };
+export async function initializeMergeFlowExecutionContext(
+  input: MergeFlowInitializationInput
+): Promise<MergeFlowExecutionContext> {
+  const base = await initializeMergeFlowBaseContext(input);
+
+  const remoteContext = await resolveRemoteMergeFlowExecutionContext({
+    ...input,
+    base
+  });
+  if (remoteContext !== null && remoteContext !== "continue_local") {
+    return remoteContext;
+  }
+
+  await assertLocalMergePrerequisites({
+    ...input,
+    base
+  });
+
+  return createLocalMergeFlowExecutionContext(base);
 }
 
 async function importRemoteCommitContinuityForMerge(input: {
