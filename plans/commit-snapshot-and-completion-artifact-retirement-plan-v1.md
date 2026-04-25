@@ -43,6 +43,11 @@ No compatibility rollout is intended. The final merged state must not require, g
 10. The old `--auto` meaning is removed from the target model because it included done-package generation.
 11. Local worktree crash recovery after a successful git commit is not expanded by this plan.
 12. If `git commit` succeeds and Pairflow crashes before final state completion, the existing class of problem remains operator/manual recovery; this removal plan must not introduce a new automatic recovery mechanism.
+13. Started-remote commit completion is accepted only when the remote route returns the same target technical contract as local commit:
+   - remote state is `DONE`,
+   - remote transcript tail is `COMMIT_RESULT`,
+   - remote commit SHA/message/staged-file facts are present,
+   - local continuity artifacts are updated so the next lifecycle command can proceed without manual artifact sync.
 
 ## Current Codebase Check
 
@@ -94,6 +99,10 @@ These bindings are implementation debt from a wrong product idea. The plan remov
    - Existing deterministic git commit reuse, clone retry, and source-branch sync behavior is preserved baseline behavior.
    - This plan does not expand that behavior into new automatic crash recovery.
    - When the preserved baseline finalizes a valid commit SHA, finalization writes `COMMIT_RESULT` instead of `DONE_PACKAGE`.
+8. `remote_partial_success_rule`
+   - If a started-remote commit has already completed remotely but the laptop-side transport/import path fails after the remote commit point, Pairflow must not leave the operator with only stale local `RUNNING` state when a deterministic same-authority remote state refresh can prove `DONE`.
+   - The target behavior is not broad automatic crash recovery; it is bounded remote continuity repair using the already-authoritative remote bubble artifacts and commit facts.
+   - At minimum, a retry of the remote commit route or the immediate follow-up merge route must refresh/import the remote `DONE` state and `COMMIT_RESULT` transcript before enforcing local merge eligibility.
 
 ## Implementation Window Assumption
 
@@ -181,13 +190,18 @@ Completed slices:
    - Boundary note: remote SSH command construction, remote marker parsing, remote sync-back, and remote result hard cutover remain successor-owned by Phase 4.
    - Archived task: `plans/archive/tasks/commit-ui-stage-all-alignment.md`
 
-Next task:
+Next tasks:
 
-1. `remote-commit-result-alignment`
-   - Owns Phase 4.
-   - Task file: to be created before implementation.
-   - Primary goal: align remote commit execution, marker parsing, local sync-back, and remote result surfaces with the no-done-package `COMMIT_RESULT` model.
-   - Critical boundary: do not reopen local commit producer authority, public CLI `--stage-all`, or first-party UI-router/frontend `stageAll` request semantics except for direct integration fallout found during Phase 4.
+1. `remote-commit-result-transport-cutover`
+   - Owns Phase 4A.
+   - Task file: `plans/tasks/remote-commit-result-transport-cutover.md`.
+   - Primary goal: align remote commit execution, marker parsing, local sync-back, and remote result surfaces with the no-done-package `COMMIT_RESULT` model on the normal successful remote path.
+   - Critical boundary: do not reopen local commit producer authority, public CLI `--stage-all`, or first-party UI-router/frontend `stageAll` request semantics except for direct integration fallout found during Phase 4A.
+2. `remote-commit-partial-success-readiness`
+   - Owns Phase 4B.
+   - Task file: to be created after Phase 4A or together only if explicitly approved as a high-risk bundled implementation.
+   - Primary goal: close the observed mixed-state bug class where a remote commit reaches `DONE` with commit facts, but the laptop-side command rejects the payload or leaves local `state.json` stale as `RUNNING`, causing immediate `bubble merge` to fail.
+   - Critical boundary: bounded same-authority repair only; do not synthesize `COMMIT_RESULT` locally and do not introduce broad crash recovery.
 
 ### Phase 1: Commit Result Contract
 
@@ -315,9 +329,9 @@ Exit criteria:
 3. UI default stage-all behavior is preserved or intentionally changed with explicit product justification.
 4. The application-level temporary `auto` compatibility can be narrowed to remote-only compatibility after this phase, or removed if no remaining first-party consumer needs it.
 
-### Phase 4: Remote Commit Alignment
+### Phase 4A: Remote Commit Result Transport Cutover
 
-Goal: remote commit behavior matches local commit behavior without done-package continuity before the hard cutover is accepted.
+Goal: remote commit's normal successful path matches local commit behavior without done-package continuity.
 
 Required changes:
 
@@ -330,14 +344,50 @@ Required changes:
 7. Remote-to-local result mapping feeds the shared first-party command result contract without `donePackagePath`.
 8. Remote tests prove local and remote commit results share the same event contract.
 9. Root CLI remote commit success output no longer needs to truthfully report `DONE_PACKAGE`, because the remote route now returns the target `COMMIT_RESULT` contract.
+10. Remote sync-back imports the authoritative remote `state.json` and `transcript.ndjson` atomically enough that a successful remote commit result leaves the laptop-side bubble state as `DONE`.
+11. The remote route removes application-level temporary `auto` compatibility if no first-party caller remains after Phase 3B; if any internal compatibility remains, it must be explicitly limited to non-public test/adapter fallout and must not reach SSH command construction.
+12. Remote commit result parsing must validate consistency between the transcript tail and git facts:
+   - envelope type is `COMMIT_RESULT`,
+   - metadata `commit_sha` matches the returned remote HEAD commit SHA,
+   - metadata `commit_message` matches the returned remote commit message,
+   - metadata `staged_files` matches the returned remote changed-file list, after applying the same normalization rules as local commit.
 
 Exit criteria:
 
 1. Remote commit no longer depends on done-package output.
 2. Remote sync-back preserves the canonical remote state/transcript without synthesizing done-package continuity.
 3. Target-state remote bubbles are supported under the same `COMMIT_RESULT` contract as local bubbles.
-4. Remote transport details are fully aligned before the plan is accepted as hard-cutover complete.
+4. Remote transport details are fully aligned for the normal successful remote commit path.
 5. No commit success output path remains forced to report `DONE_PACKAGE` for truthful remote continuity.
+6. A started-remote commit followed immediately by laptop-side `bubble merge` succeeds through the normal lifecycle path when the remote commit command itself returns a successful result and the remote produced a valid `COMMIT_RESULT` and `DONE` state.
+
+### Phase 4B: Remote Commit Partial-Success Readiness
+
+Goal: started-remote commit partial-success paths are bounded, retryable, and do not leave laptop-side lifecycle state stale after the remote authority proves completion.
+
+Required changes:
+
+1. Remote partial-success handling must be deterministic and same-authority:
+   - if the remote command transport reports a payload/import failure after the remote command may have run, a subsequent remote status/commit/merge path must be able to refresh the remote state/transcript and recognize `DONE` when the remote artifacts prove it;
+   - this recovery must not synthesize `COMMIT_RESULT` locally and must not infer success only from git HEAD without the remote transcript/state authority;
+   - failure remains fail-closed when remote state, transcript tail, and commit facts disagree.
+2. Immediate follow-up merge readiness is part of Phase 4B acceptance:
+   - after a proven remote commit completion, `pairflow bubble merge` from the laptop/local control plane must not fail only because local `state.json` is stale;
+   - if the commit command reports a bounded sync/import failure after a proven remote success, the documented retry/repair path must make the next merge eligibility check consume the refreshed remote `DONE` state.
+3. Merge eligibility for started-remote bubbles must refresh/import remote authority before enforcing local `DONE` state when the local control-plane state is stale and a started remote pointer exists.
+4. The repair path must preserve the normal fail-closed taxonomy:
+   - remote missing/unavailable remains unavailable/fail-closed,
+   - transcript/state/commit-fact mismatch remains fail-closed,
+   - unproven git-only success remains fail-closed.
+5. The repair path must be idempotent: retrying after a successful remote commit must not create another git commit or append another completion envelope.
+
+Exit criteria:
+
+1. A regression test covers the observed stale-local-state bug class: remote commit reaches `DONE`, local continuity state starts stale/non-`DONE`, and the supported retry/refresh path imports the remote authority so merge eligibility no longer fails with stale `MERGE_STATE_DONE_REQUIRED`.
+2. A retry of the remote commit route after remote completion returns or reconstructs the same technical commit facts from remote authority without creating a second commit.
+3. A laptop-side `bubble merge` after proven remote completion can refresh/import remote `DONE` state before local merge eligibility rejects the command.
+4. Mismatch tests prove that git HEAD alone is insufficient: remote transcript tail and state must also prove completion.
+5. Phase 4B does not introduce general local worktree crash recovery and does not alter local commit producer retry semantics.
 
 ### Phase 5: First-Party Consumer And Documentation Cleanup
 
@@ -352,15 +402,17 @@ Required changes:
    - Include prompt/context anchors such as `startCommandContext`, `startCommandImplementerPrompts`, and `startCommandResumeImplementerPrompt`.
 4. Update lifecycle event metadata references that still expose done-package fields, unless a prior task has already closed that event-contract cleanup explicitly.
 5. Update any remaining root CLI output and live command routing text that still names `DONE_PACKAGE` after Phase 4.
-6. Update tests and contract fixtures that still expect done-package.
-7. Leave archived historical documents unchanged unless they are used as live operator instructions.
+6. Remove `DONE_PACKAGE` from the active protocol message type family and protocol payload validation once both local and remote producers emit `COMMIT_RESULT`.
+7. Update tests and contract fixtures that still expect done-package.
+8. Leave archived historical documents unchanged unless they are used as live operator instructions.
 
 Exit criteria:
 
 1. Live docs describe `COMMIT_RESULT`, not done-package.
 2. Runtime code has no first-party done-package dependency.
 3. Runtime-generated agent guidance no longer instructs implementers or resumptions to produce, review, or rely on done-package.
-4. Tests assert absence of done-package generation and `DONE_PACKAGE` emission.
+4. Active protocol validation no longer accepts `DONE_PACKAGE` as a first-party runtime message type.
+5. Tests assert absence of done-package generation and `DONE_PACKAGE` emission.
 
 ## Hard Cutover Rule
 
@@ -371,6 +423,7 @@ The final mergeable implementation must not leave Pairflow in a mixed runtime st
 3. docs describe done-package as active commit behavior,
 4. command result still exposes `donePackagePath` as a first-party runtime field,
 5. protocol validation accepts `DONE_PACKAGE` as the active commit finalization event.
+6. started-remote commit can leave remote state `DONE` while laptop-side state remains stale/non-`DONE` and blocks the next normal lifecycle command.
 
 The work may be implemented in multiple integration slices. Because no active remote bubbles need to be supported during the implementation window, local-first work is allowed on development branches. The final accepted product state is still a hard cutover: main must not be left in a partial target state where local commit has moved to `COMMIT_RESULT` but remote commit, shared result surfaces, CLI/API/UI-router request handling, tests, or live docs still depend on done-package.
 
@@ -401,13 +454,22 @@ The work may be implemented in multiple integration slices. Because no active re
    - post-cutover `auto` request handling fails clearly rather than invoking old done-package behavior
    - public result projection stays aligned with the Phase 2 no-`donePackagePath` result contract
 5. Remote tests:
+   - Phase 4A normal success path:
    - remote commit accepts `COMMIT_RESULT`
    - sync-back excludes done-package content
    - remote SSH output parsing and marker handling do not require done-package content
    - result parity with local commit facts
    - remote commit works in the target state, even though active remote bubbles were not supported during implementation
+   - remote command construction uses `--stage-all` and never emits `--auto`
+   - remote parser rejects `DONE_PACKAGE` as a target-state remote completion event
+   - local sync-back writes remote `DONE` state and `COMMIT_RESULT` transcript so immediate local merge eligibility succeeds
+   - Phase 4B partial-success path:
+   - partial-success retry/repair uses refreshed remote state/transcript authority and does not synthesize a local success event from git-only evidence
+   - retry after remote completion is idempotent and does not create a second git commit or append a second completion envelope
+   - merge eligibility refresh/imports remote `DONE` before rejecting a started-remote bubble solely because local state is stale
 6. Documentation checks:
    - live docs no longer instruct operators to create or review done-package for commit.
+   - protocol validation no longer accepts `DONE_PACKAGE` after local and remote producers are both cut over.
 
 ## Risks And Mitigations
 
@@ -418,9 +480,11 @@ The work may be implemented in multiple integration slices. Because no active re
 3. Risk: `--auto` removal surprises operators.
    Mitigation: replace it with explicit `--stage-all` language and tests.
 4. Risk: remote commit remains on old continuity behavior.
-   Mitigation: local-first implementation is allowed only under the no-active-remote-bubbles implementation-window assumption; remote alignment remains mandatory before the hard cutover is accepted.
+   Mitigation: local-first implementation is allowed only under the no-active-remote-bubbles implementation-window assumption; Phase 4A remote transport alignment remains mandatory before the hard cutover is accepted.
 5. Risk: `COMMIT_RESULT` becomes a new prose artifact in disguise.
    Mitigation: close the payload fieldset to technical commit facts only.
+6. Risk: remote partial success leaves split-brain lifecycle state (`remote DONE`, laptop stale `RUNNING`).
+   Mitigation: Phase 4B must include same-authority remote refresh/import coverage and an immediate commit-then-merge regression test. The repair path may refresh canonical remote state/transcript, but must fail closed when remote transcript/state/commit facts disagree.
 
 ## Task Breakdown
 
@@ -435,25 +499,33 @@ The work may be implemented in multiple integration slices. Because no active re
    - slice type: `integration_slice` unless paired with public request/input activation, remote alignment, and live docs cleanup.
    - owns shared application commit result removal of `donePackagePath`, local lifecycle metadata cleanup, and direct compile consumers of that result type.
 3. `commit-cli-stage-all-cutover`
-   - status: next.
+   - status: completed and archived.
    - owns Phase 3A.
    - slice type: `contract_foundation_activation`.
    - owns public CLI `--stage-all`, application `stageAll` input activation for local commit, CLI/help/local result wording, and direct CLI/application contract fixtures/runners.
    - may retain explicit temporary `auto` compatibility only for not-yet-cut first-party consumers; it does not own UI-router/frontend migration or remote command construction.
 4. `commit-ui-stage-all-alignment`
+   - status: completed and archived.
    - owns Phase 3B.
    - slice type: `consumer_family_alignment`.
    - owns UI-router HTTP/action dispatch and UI frontend/store/form request migration from `auto` to `stageAll`.
    - proves legacy HTTP `auto` rejection and preserves UI default staging behavior under the new field.
-5. `remote-commit-result-alignment`
-   - owns Phase 4.
+5. `remote-commit-result-transport-cutover`
+   - status: next.
+   - owns Phase 4A.
    - slice type: `target_state_required`.
-   - owns remote execution transport, remote command flag construction, SSH output parsing, remote marker handling, sync-back, and remote-to-local result mapping.
-   - required before the hard cutover can be accepted.
-6. `done-package-live-reference-cleanup`
+   - owns remote execution transport, remote command flag construction, SSH output parsing, remote marker handling, sync-back, and remote-to-local result mapping for the normal successful remote commit path.
+   - required before the partial-success readiness task can safely reason about target-state remote commit artifacts.
+6. `remote-commit-partial-success-readiness`
+   - status: successor.
+   - owns Phase 4B.
+   - slice type: `fail_closed_hardening`.
+   - owns bounded same-authority refresh/import behavior for started-remote commits whose remote side has completed but laptop-side local state is stale or import failed.
+   - required before the hard cutover can be accepted because the observed `remote DONE` / `local RUNNING` split-brain class blocks normal lifecycle closeout.
+7. `done-package-live-reference-cleanup`
    - owns Phase 5.
    - slice type: `target_state_required`.
-   - must cover both live docs and runtime-generated prompt/context surfaces, because prompt/context generators can still steer agents toward the removed done-package model.
+   - must cover active protocol type/validation removal, live docs, and runtime-generated prompt/context surfaces, because prompt/context generators can still steer agents toward the removed done-package model.
 
 The tasks may be worked as separate integration slices, but the plan does not authorize independently mergeable partial product states. Local-first sequencing is acceptable only because active remote bubbles are out of scope during the implementation window. Acceptance of the overall plan requires all first-party runtime paths to converge on the hard-cutover target before main is considered complete.
 
