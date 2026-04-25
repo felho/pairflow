@@ -10,6 +10,7 @@ target_files:
   - "src/v11/application/commit/commitCommandDefaults.ts"
   - "src/v11/application/commit/commitCommandFinalization.ts"
   - "src/v11/application/commit/commitRemotePorts.ts"
+  - "src/v11/shared/commit/commitCommandFinalizationMutation.ts"
   - "src/v11/application/merge/mergeFlowContext.ts"
   - "src/v11/application/merge/runMergeFlow.ts"
   - "src/v11/application/merge/mergeCommandContract.ts"
@@ -72,7 +73,7 @@ After this task, if a remote commit reaches remote `DONE` with a valid `COMMIT_R
    - `plans/archive/tasks/remote-commit-result-transport-cutover.md`: Phase 4A target remote `COMMIT_RESULT` transport contract.
    - `src/v11/application/commit/commitRemotePorts.ts`: remote commit result contract.
    - `src/v11/infrastructure/executor/ssh/sshBubbleCommitCommand.ts`: Phase 4A remote state/transcript/git fact parser and validation behavior.
-   - `src/v11/application/commit/commitCommandFinalization.ts`: local continuity sync-back helper for state/transcript.
+   - `src/v11/application/commit/commitCommandFinalization.ts` and `src/v11/shared/commit/commitCommandFinalizationMutation.ts`: local continuity sync-back helper and underlying state/transcript mutation behavior.
    - `src/v11/application/merge/mergeFlowContext.ts`: current local `DONE` eligibility gate.
 2. Canonical elements:
    - remote `state.json` with matching `bubble_id` and `state === "DONE"`.
@@ -96,7 +97,7 @@ After this task, if a remote commit reaches remote `DONE` with a valid `COMMIT_R
 1. Inspected entrypoints / call-sites:
    - `commitCommandApi.ts`: remote route currently calls remote commit, syncs state/transcript on success, and fails with `REMOTE_COMMIT_SYNC_BACK_FAILED` when local sync-back breaks.
    - `commitRemotePorts.ts`: remote commit port currently returns validated state/transcript/git facts only from a normal command success.
-   - `commitCommandFinalization.ts`: sync-back already writes state/transcript with rollback semantics.
+   - `commitCommandFinalization.ts` and `shared/commit/commitCommandFinalizationMutation.ts`: sync-back already writes state/transcript through rollback-capable mutation semantics.
    - `mergeFlowContext.ts`: merge currently checks local `state.json` for `DONE` before started-remote dispatch, so stale local state blocks remote merge before the remote can prove completion.
    - `runMergeFlow.ts`: started-remote merge dispatch/import occurs after the local eligibility context is initialized.
    - `mergeCommandDependencyResolution.ts`: resolved merge dependencies must include any new remote continuity import dependency before production merge can use it.
@@ -119,6 +120,7 @@ After this task, if a remote commit reaches remote `DONE` with a valid `COMMIT_R
    - retry after remote already `DONE`.
    - immediate merge with stale local non-`DONE` state but remote `DONE` proven.
    - remote unavailable/missing state/missing transcript/non-`DONE`/legacy `DONE_PACKAGE`/metadata mismatch/git-only success.
+   - remote status/list summary reporting `DONE` without full remote state/transcript/git-fact proof.
 6. Why the declared task shape matches reality: the producer and shared `COMMIT_RESULT` contract already exist; this task only repairs stale local continuity by importing the same remote authority under strict fail-closed validation.
 
 ### Authority Boundary Map
@@ -180,6 +182,7 @@ After this task, if a remote commit reaches remote `DONE` with a valid `COMMIT_R
 3. Preconditions that must pass before side effects:
    - local bubble resolves and executor is started-remote.
    - remote pointer kind is `started` and host matches configured remote target.
+   - remote clone path comes from the started pointer and remains the clone inspected for state, transcript, and git facts.
    - remote state content parses and has matching `bubble_id` and `state === "DONE"`.
    - remote transcript content parses and tail is matching `COMMIT_RESULT`.
    - remote git facts are present and match transcript metadata.
@@ -195,8 +198,8 @@ After this task, if a remote commit reaches remote `DONE` with a valid `COMMIT_R
    - if the probe validates remote `DONE` + `COMMIT_RESULT` + matching git facts, import continuity and return imported facts without invoking the producer.
    - if the probe finds no remote completion evidence and local state is still commit-eligible (`APPROVED_FOR_COMMIT`), use the normal first-commit producer path.
    - if the probe finds no remote completion evidence and local state is not commit-eligible, fail closed with the existing local state/commit eligibility error; do not invoke the producer as recovery.
-   - if the probe sees a remote `DONE` state or `COMMIT_RESULT`-like tail but validation fails, fail closed as invalid remote authority and do not invoke the producer.
-   - if the probe cannot reach the remote, surface remote unavailable/transport failure and do not fall back to git-only or local stale success.
+   - if the probe sees a remote `DONE` state, a `COMMIT_RESULT`/legacy completion-like tail, a status/list summary that suggests completion, or git facts that suggest a candidate commit, but the reachable remote artifacts are missing, incomplete, or fail validation, fail closed as invalid remote authority and do not invoke the producer.
+   - if the probe cannot reach the remote or cannot execute the required remote reads, surface remote unavailable/transport failure and do not fall back to git-only, status-only, or local stale success.
 6. Invalid/precondition-failure behavior: fail closed with the existing command error family where possible; do not silently downgrade to local stale state success.
 7. Coordination primitives in scope: idempotent read-only import behavior only; no lock/lease/mutex or broad retry scheduler is introduced.
 
@@ -349,16 +352,17 @@ After this task, if a remote commit reaches remote `DONE` with a valid `COMMIT_R
 | ID | File | Function/Entry | Exact Signature (args -> return) | Insertion Point | Expected Behavior | Priority | Timing | Evidence |
 |---|---|---|---|---|---|---|---|---|
 | CS1 | `src/v11/application/commit/commitRemotePorts.ts` | remote continuity import port | `(input: { bubbleId; remoteClonePath; remoteTarget }) -> Promise<ExecuteRemoteBubbleCommitCommandResult-like>` | Additive internal port or exported type | Represents read-only import of remote state/transcript/git facts. | P1 | required-now | typecheck + unit tests |
-| CS2 | `src/v11/infrastructure/executor/ssh/sshBubbleCommitContinuityImportCommand.ts` | `executeRemoteBubbleCommitContinuityImportCommand` | read-only SSH input -> validated remote commit facts | New file or factored from `sshBubbleCommitCommand.ts` | Reads remote artifacts without running `bubble commit`; validates with Phase 4A rules. | P1 | required-now | parser tests |
+| CS2 | `src/v11/infrastructure/executor/ssh/sshBubbleCommitContinuityImportCommand.ts` | `executeRemoteBubbleCommitContinuityImportCommand` | read-only SSH input -> validated remote commit facts | New file or factored from `sshBubbleCommitCommand.ts` | Reads remote artifacts and git facts from the started remote clone without running `bubble commit`; remote status/list summaries may be diagnostics only and must not be accepted as completion proof. | P1 | required-now | parser tests |
 | CS3 | `src/v11/infrastructure/executor/ssh/sshBubbleCommitCommand.ts` | shared parser/validator | existing exported or factored helpers | Factor validation carefully | Normal commit and import paths use equivalent validation. | P1 | required-now | existing + new tests |
-| CS4 | `src/v11/application/commit/commitCommandApi.ts` | `commitRemoteExecutionRoute` | existing | Before remote producer invocation, after started remote pointer/target resolution and local state read | Classify route as imported completion, normal first commit, invalid remote authority, or unavailable remote; retry after proven remote completion imports continuity and returns same facts without a second remote commit producer invocation, second git commit, or synthetic envelope. | P1 | required-now | commit API tests |
-| CS5 | `src/v11/application/commit/commitCommandDefaults.ts` | dependency defaults | existing object | Add lazy import for new port if introduced | Production path can execute read-only import. | P1 | required-now | typecheck |
-| CS6 | `src/v11/application/merge/mergeCommandContract.ts` | `MergeBubbleDependencies` | existing dependency bag | Add optional/required remote continuity import dependency as needed | Merge workflow can request the same validated remote authority as commit retry. | P1 | required-now | typecheck |
-| CS7 | `src/v11/application/merge/mergeCommandDependencyResolution.ts` | dependency resolution | existing resolver | Resolve the new merge import dependency into `ResolvedMergeCommandDependencies` | Production and tests use the same dependency surface. | P1 | required-now | typecheck |
-| CS8 | `src/v11/defaults/merge/mergeCommandDefaults.ts` | production defaults | existing defaults object | Add production lazy/default implementation for the merge import dependency | Production merge path can execute read-only import; application wrapper remains a loader only. | P1 | required-now | typecheck |
-| CS9 | `src/v11/application/merge/mergeFlowContext.ts` | `initializeMergeFlowExecutionContext` | existing | Before `assertMergeStateEligibility` rejects stale local non-`DONE` for started-remote bubbles | Started-remote stale local state can import remote proof before final state eligibility. | P1 | required-now | merge tests |
-| CS10 | `src/v11/application/merge/runMergeFlow.ts` | started-remote route | existing | After context initialization | Merge proceeds only after local continuity is repaired and all existing remote handoff checks remain. | P1 | required-now | merge tests |
-| CS11 | tests | targeted regression tests | N/A | Add focused tests | Cover stale local state, retry idempotency, mismatch, unavailable. | P1 | required-now | test run |
+| CS4 | `src/v11/shared/commit/commitCommandFinalizationMutation.ts` | remote continuity mutation helper(s) | existing mutation input -> rollback-capable write result | Reuse through `syncRemoteCommitContinuityArtifacts` rather than new ad hoc writes | Import writes use the same state/transcript mutation and rollback behavior as normal remote sync-back; no lifecycle event is synthesized locally. | P1 | required-now | typecheck + sync-back tests |
+| CS5 | `src/v11/application/commit/commitCommandApi.ts` | `commitRemoteExecutionRoute` | existing | Before remote producer invocation, after started remote pointer/target resolution and local state read | Classify route as imported completion, normal first commit, invalid remote authority, or unavailable remote; retry after proven remote completion imports continuity and returns same facts without a second remote commit producer invocation, second git commit, synthetic envelope, or status/list-only proof. | P1 | required-now | commit API tests |
+| CS6 | `src/v11/application/commit/commitCommandDefaults.ts` | dependency defaults | existing object | Add lazy import for new port if introduced | Production path can execute read-only import. | P1 | required-now | typecheck |
+| CS7 | `src/v11/application/merge/mergeCommandContract.ts` | `MergeBubbleDependencies` | existing dependency bag | Add optional/required remote continuity import dependency as needed | Merge workflow can request the same validated remote authority as commit retry. | P1 | required-now | typecheck |
+| CS8 | `src/v11/application/merge/mergeCommandDependencyResolution.ts` | dependency resolution | existing resolver | Resolve the new merge import dependency into `ResolvedMergeCommandDependencies` | Production and tests use the same dependency surface. | P1 | required-now | typecheck |
+| CS9 | `src/v11/defaults/merge/mergeCommandDefaults.ts` | production defaults | existing defaults object | Add production lazy/default implementation for the merge import dependency | Production merge path can execute read-only import; application wrapper remains a loader only. | P1 | required-now | typecheck |
+| CS10 | `src/v11/application/merge/mergeFlowContext.ts` | `initializeMergeFlowExecutionContext` | existing | Before `assertMergeStateEligibility` rejects stale local non-`DONE` for started-remote bubbles | Started-remote stale local state can import remote proof before final state eligibility. | P1 | required-now | merge tests |
+| CS11 | `src/v11/application/merge/runMergeFlow.ts` | started-remote route | existing | After context initialization | Merge proceeds only after local continuity is repaired and all existing remote handoff checks remain. | P1 | required-now | merge tests |
+| CS12 | tests | targeted regression tests | N/A | Add focused tests | Cover stale local state, retry idempotency, mismatch, unavailable, status/list-only rejection, started-pointer clone scoping, and no local lifecycle event synthesis. | P1 | required-now | test run |
 
 ### 1a) Commit Retry Branch Order
 
@@ -366,7 +370,7 @@ After this task, if a remote commit reaches remote `DONE` with a valid `COMMIT_R
 |---|---|---|---|---|---|---|
 | Normal started-remote commit, no remote completion evidence, local state commit-eligible | Resolve started pointer/target, read local state, run read-only import/probe; if probe returns `no_remote_completion_evidence` and local state is `APPROVED_FOR_COMMIT`, run existing remote commit command, then sync returned validated state/transcript. | yes, exactly existing producer path | yes, after existing Phase 4A validation | existing `CommitBubbleResult`; existing sync-back failure behavior | P1 | required-now |
 | Retry after prior sync-back failure or local stale cache, remote import proof valid | Resolve started pointer/target, read local state, run read-only import/probe; if probe validates remote `DONE`, write local continuity and return imported facts. | no | yes, after import validation | existing `CommitBubbleResult` from imported facts | P1 | required-now |
-| Remote completion-like evidence exists but is invalid | If remote state is `DONE`, transcript tail is `COMMIT_RESULT`/legacy completion-like, or git facts indicate a candidate completion, but state/transcript/git validation fails, stop before producer invocation. | no | no | remote payload/import invalid error | P1 | required-now |
+| Remote completion-like evidence exists but is invalid or proof-incomplete | If remote state is `DONE`, transcript tail is `COMMIT_RESULT`/legacy completion-like, remote status/list summary suggests completion, or git facts indicate a candidate completion, but reachable remote artifacts are missing, incomplete, or fail state/transcript/git validation, stop before producer invocation. | no | no | remote payload/import invalid error | P1 | required-now |
 | No remote completion evidence and local state is not commit-eligible | After import/probe returns `no_remote_completion_evidence`, enforce the existing local commit eligibility gate. | no | no | existing local commit state/eligibility error | P1 | required-now |
 | Remote unavailable during preflight import/probe | Surface unavailable/transport failure; do not infer success from local stale state or git-only evidence. | no | no | remote transport/config or import unavailable error | P1 | required-now |
 | Fresh remote command failure before completion can be proven | Existing producer failure behavior remains after the normal first-commit branch has legitimately invoked the producer; optional post-failure import may be attempted only as read-only proof gathering. | already attempted by the normal path | only if import later validates full remote proof | existing remote command error, or imported result if full proof validates | P1 | required-now |
@@ -378,8 +382,8 @@ After this task, if a remote commit reaches remote `DONE` with a valid `COMMIT_R
 |---|---|---|---|---|---|
 | `imported_remote_completion` | Remote state `DONE`, transcript tail `COMMIT_RESULT`, bubble identity matches, and git facts match metadata. | Sync local continuity and return imported `CommitBubbleResult` facts without producer invocation. | Sync local continuity before merge eligibility and continue existing merge preconditions. | P1 | required-now |
 | `no_remote_completion_evidence` | Remote state/transcript are absent or not yet complete in a way that does not present `DONE` or completion-like evidence. | Producer may run only if local state is `APPROVED_FOR_COMMIT`; otherwise fail with existing local eligibility error. | Do not repair; continue to existing local `MERGE_STATE_DONE_REQUIRED`/eligibility failure. | P1 | required-now |
-| `invalid_remote_completion_evidence` | Remote state is `DONE`, transcript tail is `COMMIT_RESULT`/legacy completion-like, or git facts indicate candidate completion, but required state/transcript/git agreement fails. | Fail closed; no producer invocation and no local write. | Fail closed; no merge dispatch and no local write. | P1 | required-now |
-| `remote_unavailable` | Remote target cannot be reached or required remote reads cannot be executed. | Fail with remote transport/config or import unavailable error; no producer fallback. | Fail with remote transport/config or import unavailable error; no merge dispatch. | P1 | required-now |
+| `invalid_remote_completion_evidence` | Remote is reachable and artifacts can be read, but remote state is `DONE`, transcript tail is `COMMIT_RESULT`/legacy completion-like, remote status/list summary suggests completion, or git facts indicate candidate completion, and required state/transcript/git agreement is missing, incomplete, or mismatched. | Fail closed; no producer invocation and no local write. | Fail closed; no merge dispatch and no local write. | P1 | required-now |
+| `remote_unavailable` | Remote target cannot be reached or required remote read commands for state, transcript, or git facts cannot be executed. | Fail with remote transport/config or import unavailable error; no producer fallback. | Fail with remote transport/config or import unavailable error; no merge dispatch. | P1 | required-now |
 
 ### 2) Data and Interface Contract
 
@@ -394,7 +398,7 @@ After this task, if a remote commit reaches remote `DONE` with a valid `COMMIT_R
 
 | Area | Allowed | Forbidden | Notes | Priority | Timing |
 |---|---|---|---|---|---|
-| Remote SSH | Read state, transcript, git facts; optionally detect already-DONE remote completion. | Invoking the remote commit producer, running another git commit, or appending another completion envelope after completion is proven. | Import command must be read-only. | P1 | required-now |
+| Remote SSH | Read state, transcript, git facts from the started pointer's remote clone; optionally detect already-DONE remote completion. | Invoking the remote commit producer, running another git commit, appending another completion envelope after completion is proven, or accepting remote status/list output as proof. | Import command must be read-only and proof-complete. | P1 | required-now |
 | Local FS | Write/rollback local `state.json` and `transcript.ndjson` after validation. | Writing before full proof; writing done-package. | Reuse sync helper where possible. | P1 | required-now |
 | Git | Existing merge fetch/import after eligibility. | Git-only success inference; local commit producer changes. | Merge git behavior remains existing route. | P1 | required-now |
 | Protocol/events | No synthetic completion envelope. | Appending a fake local `COMMIT_RESULT`. | Remote transcript is copied, not recreated. | P1 | required-now |
@@ -421,16 +425,19 @@ After this task, if a remote commit reaches remote `DONE` with a valid `COMMIT_R
 
 | ID | Scenario | Setup | Expected Result | Priority | Timing |
 |---|---|---|---|---|---|
-| T1 | Commit retry imports remote DONE after previous sync-back failure. | Local state stale/non-`DONE`; started remote pointer; remote state `DONE`; transcript tail `COMMIT_RESULT`; git facts match. | `commitBubble` returns technical commit facts, writes local state/transcript, and does not invoke the remote commit producer. | P1 | required-now |
+| T1 | Commit retry imports remote DONE after previous sync-back failure. | Local state stale/non-`DONE`; started remote pointer; remote state `DONE`; transcript tail `COMMIT_RESULT`; git facts match; any status/list summary is ignored as proof. | `commitBubble` returns technical commit facts, writes local state/transcript, and does not invoke the remote commit producer. | P1 | required-now |
 | T2 | Commit retry is idempotent. | Remote already has `COMMIT_RESULT`; retry path invoked more than once. | Same commit SHA/message/files returned; no duplicate remote commit producer invocation, git commit, or synthetic envelope. | P1 | required-now |
 | T3 | Fresh started-remote commit still runs producer when no remote completion evidence exists. | Local state `APPROVED_FOR_COMMIT`; started remote pointer; import/probe returns `no_remote_completion_evidence`. | Existing remote commit producer is invoked once; normal Phase 4A validation and sync-back still apply. | P1 | required-now |
 | T4 | No remote completion evidence plus non-commit-eligible local state does not invoke producer. | Local state is not `APPROVED_FOR_COMMIT`; started remote pointer; import/probe returns `no_remote_completion_evidence`. | Existing local eligibility error; no remote producer invocation and no local write. | P1 | required-now |
-| T5 | Merge eligibility refreshes stale local state. | Local `state.json` is stale/non-`DONE`; started remote pointer; remote proof valid. | `mergeBubble` imports state/transcript before local stale-state rejection and proceeds to remote merge dispatch. | P1 | required-now |
+| T5 | Merge eligibility refreshes stale local state. | Local `state.json` is stale/non-`DONE`; started remote pointer; remote proof valid; any status/list summary is ignored as proof. | `mergeBubble` imports state/transcript before local stale-state rejection and proceeds to remote merge dispatch. | P1 | required-now |
 | T6 | Merge does not bypass other prerequisites. | Remote proof valid but repo dirty or base branch missing. | Existing merge errors still occur; no remote merge dispatch when later preconditions fail. | P1 | required-now |
-| T7 | Git-only success rejected as repair proof. | Remote git HEAD exists, but local state is not commit-eligible and remote state/transcript do not provide valid `DONE` + `COMMIT_RESULT` proof. | No local write; no producer invocation; command fails closed instead of importing or succeeding from git facts alone. | P1 | required-now |
-| T8 | Mismatch rejected. | Remote state/transcript/git facts disagree. | No local write; command fails closed. | P1 | required-now |
+| T7 | Git-only success rejected as repair proof. | Remote git HEAD exists and status/list may suggest completion, but local state is not commit-eligible and remote state/transcript do not provide valid `DONE` + `COMMIT_RESULT` proof. | No local write; no producer invocation; command fails closed instead of importing or succeeding from git facts or status/list alone. | P1 | required-now |
+| T8 | Mismatch rejected. | Remote state/transcript/git facts disagree, even if status/list summary reports `DONE`. | No local write; command fails closed. | P1 | required-now |
 | T9 | Legacy `DONE_PACKAGE` rejected. | Remote transcript tail `DONE_PACKAGE`. | No local write; command fails closed. | P1 | required-now |
-| T10 | Normal Phase 4A remote commit still works. | Existing normal remote commit success fixture. | Existing tests pass unchanged except dependency injection additions. | P1 | required-now |
+| T10 | Status/list-only completion rejected. | Remote status/list summary reports `DONE`, but remote state/transcript/git facts do not provide full same-authority proof. | No local write; no producer invocation when completion is suggested but proof is incomplete; command fails closed rather than accepting status-only authority. | P1 | required-now |
+| T11 | Started-pointer clone scoping enforced. | Started pointer clone path differs from another repo or source-repo artifact path that contains plausible state/transcript/git facts. | Import reads only the started pointer's remote clone; mismatched/source-repo artifacts are ignored or rejected, with no local write. | P1 | required-now |
+| T12 | Import does not synthesize lifecycle events. | Valid remote proof is imported after stale local continuity; local transcript initially lacks the remote completion tail. | Local transcript is copied from remote authority, not appended with a locally synthesized lifecycle/`COMMIT_RESULT` event. | P1 | required-now |
+| T13 | Normal Phase 4A remote commit still works. | Existing normal remote commit success fixture. | Existing tests pass unchanged except dependency injection additions. | P1 | required-now |
 
 ### 7) Validation Commands
 
