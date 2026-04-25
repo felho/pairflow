@@ -32,6 +32,7 @@ owners:
 
 1. `2026-04-25` (initial task): created from `commit-cli-stage-all-cutover` route-back review. This task owns Phase 3B UI-router/frontend consumer-family alignment after Phase 3A introduces CLI/application `stageAll`.
 2. `2026-04-25` (task review refinement): tightened the Phase 3A prerequisite gate, made legacy HTTP `auto` rejection independent from `stageAll` presence including dual-field ambiguity, added call-site reality notes for current UI store/form/router producers, added the read-only CS3a prerequisite probe, and expanded explicit UI submission/default test coverage.
+3. `2026-04-25` (docs-only implementer refinement): recorded target-file reality for the missing direct `CommitForm.test.tsx` test file, clarified the in-scope vs out-of-scope `auto` rule, tightened CS8/T7/T8 to require direct `CommitForm` test coverage, and gave the refs placeholder a positive replacement contract.
 
 ## L0 - Policy
 
@@ -89,6 +90,9 @@ The behavior remains the same UI staging behavior: when the UI submits stage-all
    - `CommitForm` owns the visible checkbox state and label and currently submits `auto`.
    - `ActionBar` maps the `CommitForm` submit payload into `RunBubbleActionInput` and currently forwards `auto`.
    - `useBubbleStore` currently applies the default before calling the API client with `auto: input.auto ?? true`.
+   - `ui/src/components/actions/CommitForm.test.tsx` is not present in the current tree; because it is listed in `target_files`, this task must create it for direct `CommitForm` coverage.
+   - In-scope `auto` symbols/identifiers/strings are only those reachable from CS1-CS8 and referring to the UI commit staging request field. Out-of-scope `auto` terms include unrelated UI/repo/runtime concepts such as repo auto-registration, attach auto-restart hints, meta auto-rework controls, and CSS utility text like `mt-auto`.
+   - Remote/application temporary `auto` compatibility internals are separately out of scope by the Phase 4 remote boundary, the `CommitBubbleInput` compat note, and HB1.
 2. Actual touched scope: UI/router request field rename plus direct UI producer tests.
 3. Mutation boundary: UI dispatch still calls the same commit mutation after request validation; no transcript, state, git commit, or remote behavior changes are introduced here.
 4. Hidden scope ruled out:
@@ -148,7 +152,7 @@ The behavior remains the same UI staging behavior: when the UI submits stage-all
 5. Update UI client request body to send `stageAll`.
 6. Update UI store action input/defaults to use `stageAll`.
 7. Update `ActionBar` and `CommitForm` submitted payload and visible label text to stage-all language.
-8. Replace the live `CommitForm` refs placeholder/example away from `artifacts/done-package.md` to a neutral evidence/artifact ref example because the form wording surface is already in scope for this UI read-model alignment.
+8. Replace the live `CommitForm` refs placeholder/example away from `artifacts/done-package.md` to `artifacts/commit-evidence.md` because the form wording surface is already in scope for this UI read-model alignment.
 9. Update router/server/UI API/store/action tests, including store default behavior.
 
 ### Out of Scope
@@ -213,7 +217,7 @@ The behavior remains the same UI staging behavior: when the UI submits stage-all
 | CS5 | `ui/src/lib/api.ts` | `commitBubble` request body | send `stageAll`, not `auto` | P1 | required-now | API test |
 | CS6 | `ui/src/state/useBubbleStore.ts` | `RunBubbleActionInput` and commit action case | rename store action input field from `auto` to `stageAll`; preserve current `input.auto ?? true` behavior as `input.stageAll ?? true` | P1 | required-now | store test |
 | CS7 | `ui/src/components/actions/ActionBar.tsx` | submit path | forward `stageAll` from `CommitForm` into `RunBubbleActionInput` | P1 | required-now | ActionBar test |
-| CS8 | `ui/src/components/actions/CommitForm.tsx` | control state/label | rename local state to `stageAll`, keep default checked, submit `stageAll`, use visible stage-all wording without `auto=true`, and replace the live refs placeholder/example so it no longer names `artifacts/done-package.md` | P1 | required-now | component/typecheck |
+| CS8 | `ui/src/components/actions/CommitForm.tsx` | control state/label | rename local state to `stageAll`, keep default checked, submit `stageAll`, use visible stage-all wording without `auto=true`, and replace the live refs placeholder/example with `artifacts/commit-evidence.md` | P1 | required-now | component/typecheck plus direct component test coverage in newly created `ui/src/components/actions/CommitForm.test.tsx` |
 
 ### 2) Data And Interface Contract
 
@@ -244,8 +248,10 @@ The behavior remains the same UI staging behavior: when the UI submits stage-all
 | T4 | UI client sends `stageAll`. | `client.commitBubble(..., { stageAll: true })`. | request body contains `stageAll`, not `auto`. | P1 | required-now |
 | T5 | Store preserves default. | commit action from store without explicit override. | payload uses tested `stageAll` default equivalent to prior `auto` default. | P1 | required-now |
 | T6 | UI HTTP rejects invalid/missing `stageAll` according to parser policy. | invalid body. | clear validation error; no mutation call. Cover in router unit tests and server integration. | P1 | required-now |
-| T7 | ActionBar/CommitForm submit `stageAll`. | user submits commit form with default checkbox state. | submitted payload has `stageAll: true`; visible checkbox label is `Stage all changes`; visible label does not say `auto` or `auto=true`; live refs placeholder/example does not name `done-package.md`. Cover direct `CommitForm` test for the label/payload/placeholder and `ActionBar` integration test for forwarding. | P1 | required-now |
-| T8 | ActionBar/CommitForm submit disabled stage-all. | user clears the checkbox and submits. | submitted payload has `stageAll: false`; no `auto` key is emitted. Cover direct `CommitForm` test for unchecked payload and `ActionBar` integration test for forwarding. | P1 | required-now |
+| T7 | ActionBar/CommitForm submit `stageAll`. | user submits commit form with default checkbox state. | submitted payload has `stageAll: true`; no `auto` key is emitted; visible checkbox label is `Stage all changes`; visible label does not say `auto` or `auto=true`; live refs placeholder/example is `artifacts/commit-evidence.md` and does not name `done-package.md`. | P1 | required-now |
+| T8 | ActionBar/CommitForm submit disabled stage-all. | user clears the checkbox and submits. | submitted payload has `stageAll: false`; no `auto` key is emitted; the T7 visible-label and refs-placeholder invariants still hold. | P1 | required-now |
+
+Test placement rule: T7/T8 require direct `CommitForm` coverage in newly created `ui/src/components/actions/CommitForm.test.tsx` plus `ActionBar` integration forwarding coverage in `ui/src/components/actions/ActionBar.test.tsx`.
 
 ### 5) Shared Contract Compatibility
 
