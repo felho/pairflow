@@ -25,7 +25,10 @@ import { createUiRouter, resolveStaticAssetPath } from "../../../src/v11/infrast
 import type { UiEventsBroker } from "../../../src/v11/infrastructure/ui/events.js";
 import type { UiRepoScope } from "../../../src/v11/infrastructure/ui/repoScope.js";
 import type { BubbleInboxView } from "../../../src/v11/shared/inbox/inboxCommandApi.js";
-import type { UiBubbleListView } from "../../../src/v11/shared/ports/uiRouter.js";
+import type {
+  UiBubbleListView,
+  UiCommitBubbleResult
+} from "../../../src/v11/shared/ports/uiRouter.js";
 import type { BubbleStatusView } from "../../../src/v11/shared/status/statusCommandApi.js";
 
 function createDeferred<T>(): {
@@ -1922,6 +1925,114 @@ describe("createUiRouter action routes", () => {
     });
   });
 
+  it("accepts stageAll commit bodies and rejects legacy auto before dispatch", async () => {
+    const repoPath = "/tmp/pairflow-ui-router-commit-stage-all";
+    const commitBubble = vi.fn(() =>
+      Promise.resolve({
+        bubbleId: "b-router-commit-stage-all",
+        commitSha: "abc123"
+      } as UiCommitBubbleResult)
+    );
+    const router = createUiRouter({
+      repoScope: {
+        repos: [repoPath],
+        has: (value: string) => Promise.resolve(value === repoPath)
+      },
+      events: {
+        subscribe: () => () => undefined,
+        getSnapshot: () => ({
+          id: 1,
+          ts: "2026-02-25T00:00:00.000Z",
+          type: "snapshot",
+          repos: [],
+          bubbles: []
+        }),
+        refreshNow: () => Promise.resolve(undefined),
+        addRepo: () => Promise.resolve(false),
+        removeRepo: () => Promise.resolve(false),
+        close: () => Promise.resolve(undefined)
+      },
+      dependencies: {
+        commitBubble
+      }
+    });
+    const server = await startRouterServer(router);
+    const commitUrl =
+      `${server.url}/api/bubbles/b-router-commit-stage-all/commit?repo=${encodeURIComponent(repoPath)}`;
+
+    try {
+      const legacyAuto = await fetch(commitUrl, {
+        method: "POST",
+        headers: {
+          "content-type": "application/json"
+        },
+        body: JSON.stringify({
+          auto: true
+        })
+      });
+      expect(legacyAuto.status).toBe(400);
+      await expect(legacyAuto.json()).resolves.toMatchObject({
+        error: {
+          message:
+            "Commit request field `auto` is no longer supported; use boolean field `stageAll`."
+        }
+      });
+
+      const dualField = await fetch(commitUrl, {
+        method: "POST",
+        headers: {
+          "content-type": "application/json"
+        },
+        body: JSON.stringify({
+          stageAll: true,
+          auto: true
+        })
+      });
+      expect(dualField.status).toBe(400);
+      await expect(dualField.json()).resolves.toMatchObject({
+        error: {
+          message:
+            "Commit request cannot include both `stageAll` and legacy `auto`; remove `auto`."
+        }
+      });
+
+      const missingStageAll = await fetch(commitUrl, {
+        method: "POST",
+        headers: {
+          "content-type": "application/json"
+        },
+        body: JSON.stringify({})
+      });
+      expect(missingStageAll.status).toBe(400);
+
+      const valid = await fetch(commitUrl, {
+        method: "POST",
+        headers: {
+          "content-type": "application/json"
+        },
+        body: JSON.stringify({
+          stageAll: true,
+          message: "Commit message",
+          refs: ["artifacts/commit-evidence.md"]
+        })
+      });
+
+      expect(valid.status).toBe(200);
+      expect(commitBubble).toHaveBeenCalledTimes(1);
+      expect(commitBubble).toHaveBeenCalledWith(
+        expect.objectContaining({
+          bubbleId: "b-router-commit-stage-all",
+          repoPath,
+          stageAll: true,
+          message: "Commit message",
+          refs: ["artifacts/commit-evidence.md"]
+        })
+      );
+    } finally {
+      await server.close();
+    }
+  });
+
   it("maps remote commit start-required failures to HTTP 409 conflict with commit taxonomy", async () => {
     const repoPath = "/tmp/pairflow-ui-router-commit-remote-created";
     const commitBubble = vi.fn(() =>
@@ -2052,7 +2163,7 @@ describe("createUiRouter action routes", () => {
             "content-type": "application/json"
           },
           body: JSON.stringify({
-            auto: false
+            stageAll: false
           })
         }
       );
@@ -2119,7 +2230,7 @@ describe("createUiRouter action routes", () => {
             "content-type": "application/json"
           },
           body: JSON.stringify({
-            auto: false
+            stageAll: false
           })
         }
       );
@@ -2185,7 +2296,7 @@ describe("createUiRouter action routes", () => {
             "content-type": "application/json"
           },
           body: JSON.stringify({
-            auto: false
+            stageAll: false
           })
         }
       );
@@ -2251,7 +2362,7 @@ describe("createUiRouter action routes", () => {
             "content-type": "application/json"
           },
           body: JSON.stringify({
-            auto: false
+            stageAll: false
           })
         }
       );
@@ -2317,7 +2428,7 @@ describe("createUiRouter action routes", () => {
             "content-type": "application/json"
           },
           body: JSON.stringify({
-            auto: false
+            stageAll: false
           })
         }
       );

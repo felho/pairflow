@@ -561,12 +561,37 @@ describe("UI server integration", () => {
         {
           method: "POST",
           body: JSON.stringify({
-            auto: "yes",
+            stageAll: "yes",
             refs: "not-array"
           })
         }
       );
       expect(commitInvalid.status).toBe(400);
+
+      const commitLegacyAuto = await requestJson(
+        server.url,
+        `/api/bubbles/${fixture.bubbleId}/commit?repo=${encodeURIComponent(fixture.repoPath)}`,
+        {
+          method: "POST",
+          body: JSON.stringify({
+            auto: true
+          })
+        }
+      );
+      expect(commitLegacyAuto.status).toBe(400);
+
+      const commitDualField = await requestJson(
+        server.url,
+        `/api/bubbles/${fixture.bubbleId}/commit?repo=${encodeURIComponent(fixture.repoPath)}`,
+        {
+          method: "POST",
+          body: JSON.stringify({
+            stageAll: true,
+            auto: true
+          })
+        }
+      );
+      expect(commitDualField.status).toBe(400);
 
       const commit = await requestJson(
         server.url,
@@ -574,13 +599,19 @@ describe("UI server integration", () => {
         {
           method: "POST",
           body: JSON.stringify({
-            auto: true,
-            refs: ["artifacts/done-package.md"]
+            stageAll: true,
+            refs: ["artifacts/commit-evidence.md"]
           })
         }
       );
       expect(commit.status).toBe(200);
       expect(commitBubbleMock).toHaveBeenCalledTimes(1);
+      expect(commitBubbleMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          stageAll: true,
+          refs: ["artifacts/commit-evidence.md"]
+        })
+      );
 
       const merge = await requestJson(
         server.url,

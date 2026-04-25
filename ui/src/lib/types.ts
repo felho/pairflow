@@ -298,7 +298,7 @@ export interface BubbleCardModel extends UiBubbleSummary {
 }
 
 export interface CommitActionInput {
-  auto: boolean;
+  stageAll: boolean;
   message?: string;
   refs?: string[];
 }

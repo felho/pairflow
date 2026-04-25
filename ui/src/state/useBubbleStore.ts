@@ -57,7 +57,7 @@ export interface RunBubbleActionInput {
   refs?: string[];
   overrideNonApprove?: boolean;
   overrideReason?: string;
-  auto?: boolean;
+  stageAll?: boolean;
   push?: boolean;
   deleteRemote?: boolean;
   reviewLoopMode?: BubbleReviewLoopMode;
@@ -888,7 +888,7 @@ async function performBubbleAction(
       return null;
     case "commit": {
       const commitInput: CommitActionInput = {
-        auto: input.auto ?? true,
+        stageAll: input.stageAll ?? true,
         ...(input.message !== undefined && input.message.trim().length > 0
           ? { message: input.message.trim() }
           : {}),

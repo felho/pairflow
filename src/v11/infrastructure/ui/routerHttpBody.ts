@@ -99,19 +99,32 @@ export function parseApproveBody(body: unknown): {
 }
 
 export function parseCommitBody(body: unknown): {
-  auto: boolean;
+  stageAll: boolean;
   message?: string | undefined;
   refs?: string[] | undefined;
 } {
   if (typeof body !== "object" || body === null || Array.isArray(body)) {
     throwApiError(badRequest("Commit request body must be a JSON object."));
   }
-  const autoValue = (body as { auto?: unknown }).auto;
-  if (typeof autoValue !== "boolean") {
-    throwApiError(badRequest("Commit request requires boolean field `auto`."));
+  const typedBody = body as Record<string, unknown>;
+  if (Object.hasOwn(typedBody, "auto")) {
+    const hasStageAll = Object.hasOwn(typedBody, "stageAll");
+    throwApiError(
+      badRequest(
+        hasStageAll
+          ? "Commit request cannot include both `stageAll` and legacy `auto`; remove `auto`."
+          : "Commit request field `auto` is no longer supported; use boolean field `stageAll`."
+      )
+    );
   }
-  const messageValue = (body as { message?: unknown }).message;
-  const refsValue = (body as { refs?: unknown }).refs;
+  const stageAllValue = typedBody.stageAll;
+  if (typeof stageAllValue !== "boolean") {
+    throwApiError(
+      badRequest("Commit request requires boolean field `stageAll`.")
+    );
+  }
+  const messageValue = typedBody.message;
+  const refsValue = typedBody.refs;
   if (messageValue !== undefined && typeof messageValue !== "string") {
     throwApiError(
       badRequest("Commit field `message` must be a string when provided.")
@@ -120,7 +133,7 @@ export function parseCommitBody(body: unknown): {
   const refs =
     refsValue === undefined ? undefined : ensureStringArray(refsValue, "refs");
   return {
-    auto: autoValue,
+    stageAll: stageAllValue,
     ...(messageValue !== undefined ? { message: messageValue } : {}),
     ...(refs !== undefined ? { refs } : {})
   };

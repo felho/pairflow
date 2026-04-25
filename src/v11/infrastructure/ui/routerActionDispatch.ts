@@ -111,7 +111,7 @@ async function handleCommitAction(
         ? { message: commitInput.message }
         : {}),
       ...(commitInput.refs !== undefined ? { refs: commitInput.refs } : {}),
-      auto: commitInput.auto,
+      stageAll: commitInput.stageAll,
       ...resolveOptionalCwd(input.environment)
     })
   };
