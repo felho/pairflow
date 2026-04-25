@@ -25,6 +25,12 @@ let remoteCommitCommandModulePromise:
         CommitBubbleDependencies["executeRemoteBubbleCommitCommand"];
     }>
   | undefined;
+let remoteCommitContinuityImportCommandModulePromise:
+  | Promise<{
+      importRemoteBubbleCommitContinuity:
+        CommitBubbleDependencies["importRemoteBubbleCommitContinuity"];
+    }>
+  | undefined;
 
 function getRemoteExecutionArtifactsModulePath(): string {
   return [
@@ -45,6 +51,17 @@ function getRemoteCommitCommandModulePath(): string {
     "executor",
     "ssh",
     "sshBubbleCommitCommand.js"
+  ].join("/");
+}
+
+function getRemoteCommitContinuityImportCommandModulePath(): string {
+  return [
+    "..",
+    "..",
+    "infrastructure",
+    "executor",
+    "ssh",
+    "sshBubbleCommitContinuityImportCommand.js"
   ].join("/");
 }
 
@@ -70,6 +87,18 @@ async function loadRemoteCommitCommandModule(): Promise<{
   return remoteCommitCommandModulePromise;
 }
 
+async function loadRemoteCommitContinuityImportCommandModule(): Promise<{
+  importRemoteBubbleCommitContinuity:
+    CommitBubbleDependencies["importRemoteBubbleCommitContinuity"];
+}> {
+  remoteCommitContinuityImportCommandModulePromise ??=
+    import(getRemoteCommitContinuityImportCommandModulePath()) as Promise<{
+      importRemoteBubbleCommitContinuity:
+        CommitBubbleDependencies["importRemoteBubbleCommitContinuity"];
+    }>;
+  return remoteCommitContinuityImportCommandModulePromise;
+}
+
 const readRemotePointer: CommitBubbleDependencies["readRemotePointer"] =
   async (path) => {
     const module = await loadRemoteExecutionArtifactsModule();
@@ -83,9 +112,17 @@ const executeRemoteBubbleCommitCommand:
       return module.executeRemoteBubbleCommitCommand(input);
     };
 
+const importRemoteBubbleCommitContinuity:
+  CommitBubbleDependencies["importRemoteBubbleCommitContinuity"] =
+    async (input) => {
+      const module = await loadRemoteCommitContinuityImportCommandModule();
+      return module.importRemoteBubbleCommitContinuity(input);
+    };
+
 export const commitBubbleDependencyDefaults = {
   appendProtocolEnvelope,
   executeRemoteBubbleCommitCommand,
+  importRemoteBubbleCommitContinuity,
   ensureBubbleInstanceIdForMutation,
   readRemotePointer,
   readStateSnapshot,

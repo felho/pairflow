@@ -2,6 +2,7 @@ import { appendProtocolEnvelope, readTranscriptEnvelopes } from "../../src/v11/i
 import { ensureBubbleInstanceIdForMutation } from "../../src/v11/infrastructure/artifact/bubble/bubbleInstanceId.js";
 import { readRemotePointer } from "../../src/v11/infrastructure/artifact/bubble/remoteExecutionArtifacts.js";
 import { executeRemoteBubbleCommitCommand } from "../../src/v11/infrastructure/executor/ssh/sshBubbleCommitCommand.js";
+import { importRemoteBubbleCommitContinuity } from "../../src/v11/infrastructure/executor/ssh/sshBubbleCommitContinuityImportCommand.js";
 import { resolveBubbleById } from "../../src/v11/infrastructure/executor/workspace/bubbleLookup.js";
 import { readStateSnapshot, writeStateSnapshot } from "../../src/v11/infrastructure/state/stateStore.js";
 import { runGit } from "../../src/v11/infrastructure/workspace/git.js";
@@ -13,6 +14,7 @@ export function buildCommitBubbleDependencies(): CommitBubbleDependencies {
   return {
     appendProtocolEnvelope,
     executeRemoteBubbleCommitCommand,
+    importRemoteBubbleCommitContinuity,
     ensureBubbleInstanceIdForMutation,
     readRemotePointer,
     readStateSnapshot,

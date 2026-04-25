@@ -37,6 +37,25 @@ export type ExecuteRemoteBubbleCommitCommandPort = (
   input: ExecuteRemoteBubbleCommitCommandInput
 ) => Promise<ExecuteRemoteBubbleCommitCommandResult>;
 
+export interface ImportRemoteBubbleCommitContinuityInput {
+  bubbleId: string;
+  remoteClonePath: string;
+  remoteTarget: CommitRemoteBubbleStatusTarget;
+}
+
+export type ImportRemoteBubbleCommitContinuityResult =
+  | ({
+      classification: "imported_remote_completion";
+    } & ExecuteRemoteBubbleCommitCommandResult)
+  | {
+      classification: "no_remote_completion_evidence";
+      reason: string;
+    };
+
+export type ImportRemoteBubbleCommitContinuityPort = (
+  input: ImportRemoteBubbleCommitContinuityInput
+) => Promise<ImportRemoteBubbleCommitContinuityResult>;
+
 export type ResolveRemoteBubbleStatusTargetPort = (input: {
   bubbleId: string;
   remoteAlias: string;

@@ -1,3 +1,5 @@
+import { rename, writeFile } from "node:fs/promises";
+
 import {
   branchExists,
   runGit
@@ -18,6 +20,7 @@ import {
   executeRemoteBubbleMergeCleanupCommand,
   executeRemoteBubbleMergeCommand
 } from "../../infrastructure/executor/ssh/sshBubbleMergeCommand.js";
+import { importRemoteBubbleCommitContinuity } from "../../infrastructure/executor/ssh/sshBubbleCommitContinuityImportCommand.js";
 import { statusCommandDependencyDefaults } from "../../shared/status/statusCommandDependencyDefaults.js";
 
 type MergeBubbleDependencyDefaults = {
@@ -30,6 +33,7 @@ export const mergeBubbleDependencyDefaults = {
   cleanupWorktreeWorkspace,
   executeRemoteBubbleMergeCleanupCommand,
   executeRemoteBubbleMergeCommand,
+  importRemoteBubbleCommitContinuity,
   emitBubbleLifecycleEventBestEffort,
   ensureBubbleInstanceIdForMutation,
   readRemotePointer,
@@ -40,5 +44,9 @@ export const mergeBubbleDependencyDefaults = {
   resolveBubbleById,
   runGit,
   terminateBubbleTmuxSession,
+  renamePath: rename,
+  writeTextFile: async (path: string, content: string) => {
+    await writeFile(path, content, "utf8");
+  },
   writeStateSnapshot
 } as const satisfies MergeBubbleDependencyDefaults;

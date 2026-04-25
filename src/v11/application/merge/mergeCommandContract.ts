@@ -27,6 +27,7 @@ import type {
   ExecuteRemoteBubbleMergeCommandResult,
   RemoteMergeStatusTarget
 } from "../../shared/merge/remoteMergeContract.js";
+import type { ImportRemoteBubbleCommitContinuityPort } from "../commit/commitRemotePorts.js";
 export type {
   ExecuteRemoteBubbleMergeCleanupCommandInput,
   ExecuteRemoteBubbleMergeCleanupCommandResult,
@@ -95,4 +96,7 @@ export interface MergeBubbleDependencies {
   executeRemoteBubbleMergeCleanupCommand?: (
     input: ExecuteRemoteBubbleMergeCleanupCommandInput
   ) => Promise<ExecuteRemoteBubbleMergeCleanupCommandResult>;
+  importRemoteBubbleCommitContinuity?: ImportRemoteBubbleCommitContinuityPort;
+  renamePath?: (fromPath: string, toPath: string) => Promise<void>;
+  writeTextFile?: (path: string, content: string) => Promise<void>;
 }

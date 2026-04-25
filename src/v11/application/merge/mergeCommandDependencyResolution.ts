@@ -26,6 +26,10 @@ export interface ResolvedMergeCommandDependencies {
     MergeBubbleDependencyDefaults["executeRemoteBubbleMergeCommand"];
   executeRemoteBubbleMergeCleanupCommand:
     MergeBubbleDependencyDefaults["executeRemoteBubbleMergeCleanupCommand"];
+  importRemoteBubbleCommitContinuity:
+    MergeBubbleDependencyDefaults["importRemoteBubbleCommitContinuity"];
+  renamePath: MergeBubbleDependencyDefaults["renamePath"];
+  writeTextFile: MergeBubbleDependencyDefaults["writeTextFile"];
 }
 
 export async function resolveMergeCommandDependencies(
@@ -65,6 +69,12 @@ export async function resolveMergeCommandDependencies(
       ?? mergeBubbleDependencyDefaults.executeRemoteBubbleMergeCommand,
     executeRemoteBubbleMergeCleanupCommand:
       dependencies.executeRemoteBubbleMergeCleanupCommand
-      ?? mergeBubbleDependencyDefaults.executeRemoteBubbleMergeCleanupCommand
+      ?? mergeBubbleDependencyDefaults.executeRemoteBubbleMergeCleanupCommand,
+    importRemoteBubbleCommitContinuity:
+      dependencies.importRemoteBubbleCommitContinuity
+      ?? mergeBubbleDependencyDefaults.importRemoteBubbleCommitContinuity,
+    renamePath: dependencies.renamePath ?? mergeBubbleDependencyDefaults.renamePath,
+    writeTextFile:
+      dependencies.writeTextFile ?? mergeBubbleDependencyDefaults.writeTextFile
   };
 }

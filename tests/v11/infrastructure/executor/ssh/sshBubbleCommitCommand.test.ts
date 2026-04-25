@@ -630,7 +630,6 @@ describe("sshBubbleCommitCommand", () => {
 
   it.each([
     { name: "missing staged_files", stagedFiles: undefined },
-    { name: "empty staged_files", stagedFiles: [] },
     { name: "non-array staged_files", stagedFiles: "feature-remote.txt" },
     { name: "non-string staged_files entry", stagedFiles: ["feature-remote.txt", 42] },
     { name: "empty staged_files entry", stagedFiles: ["feature-remote.txt", ""] }

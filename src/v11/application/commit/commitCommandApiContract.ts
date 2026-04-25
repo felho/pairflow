@@ -23,6 +23,7 @@ import type { RunGitPort } from "../../shared/ports/git.js";
 import type {
   CommitRemoteBubbleStatusTarget,
   ExecuteRemoteBubbleCommitCommandPort,
+  ImportRemoteBubbleCommitContinuityPort,
   ReadRemoteCommitPointerPort,
   ResolveRemoteBubbleStatusTargetPort
 } from "./commitRemotePorts.js";
@@ -36,6 +37,7 @@ export type WrittenState = LoadedStateSnapshot;
 export interface CommitBubbleDependencies {
   appendProtocolEnvelope: AppendProtocolEnvelopePort;
   executeRemoteBubbleCommitCommand: ExecuteRemoteBubbleCommitCommandPort;
+  importRemoteBubbleCommitContinuity: ImportRemoteBubbleCommitContinuityPort;
   ensureBubbleInstanceIdForMutation: EnsureBubbleInstanceIdForMutationPort;
   readRemotePointer: ReadRemoteCommitPointerPort;
   readStateSnapshot: ReadStateSnapshotPort;

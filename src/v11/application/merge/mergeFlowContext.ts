@@ -8,6 +8,7 @@ import {
   assertMergeBranchEligibility,
   assertMergeStateEligibility
 } from "../../shared/merge/mergeRoutingEligibility.js";
+import { syncRemoteCommitContinuityArtifacts } from "../commit/commitCommandFinalization.js";
 import {
   buildMergeImportRef,
   type RemoteMergeStatusTarget
@@ -98,9 +99,8 @@ export async function initializeMergeFlowExecutionContext(input: {
   });
   resolved.bubbleConfig = bubbleIdentity.bubbleConfig;
 
-  const loaded = await input.dependencies.readStateSnapshot(resolved.bubblePaths.statePath);
-  const state = loaded.state;
-  assertMergeStateEligibility(state, input.params.createError);
+  let loaded = await input.dependencies.readStateSnapshot(resolved.bubblePaths.statePath);
+  let state = loaded.state;
 
   const baseBranch = resolved.bubbleConfig.base_branch;
   const bubbleBranch = resolved.bubbleConfig.bubble_branch;
@@ -147,6 +147,7 @@ export async function initializeMergeFlowExecutionContext(input: {
         remoteAlias: resolved.bubbleConfig.executor.remote,
         expectedHost: remotePointer.host
       });
+
       await assertRemoteMergeLocalPrerequisites({
         repoPath: resolvedRepoPath,
         baseBranch,
@@ -154,6 +155,24 @@ export async function initializeMergeFlowExecutionContext(input: {
         dependencies: input.dependencies,
         createError: input.params.createError
       });
+
+      if (state.state !== "DONE") {
+        const importResult = await importRemoteCommitContinuityForMerge({
+          bubbleId: resolved.bubbleId,
+          remoteClonePath: remotePointer.remoteClonePath,
+          remoteTarget,
+          statePath: resolved.bubblePaths.statePath,
+          transcriptPath: resolved.bubblePaths.transcriptPath,
+          dependencies: input.dependencies,
+          createError: input.params.createError
+        });
+        if (importResult !== null) {
+          loaded = importResult.loaded;
+          state = importResult.state;
+        }
+      }
+
+      assertMergeStateEligibility(state, input.params.createError);
 
       return {
         route: "remote",
@@ -171,6 +190,8 @@ export async function initializeMergeFlowExecutionContext(input: {
       };
     }
   }
+
+  assertMergeStateEligibility(state, input.params.createError);
 
   await assertCleanRepoWorkingTree(
     resolvedRepoPath,
@@ -199,4 +220,108 @@ export async function initializeMergeFlowExecutionContext(input: {
     baseBranch,
     bubbleBranch
   };
+}
+
+async function importRemoteCommitContinuityForMerge(input: {
+  bubbleId: string;
+  remoteClonePath: string;
+  remoteTarget: RemoteMergeStatusTarget;
+  statePath: string;
+  transcriptPath: string;
+  dependencies: ResolvedMergeCommandDependencies;
+  createError: RunMergeFlowInput["createError"];
+}): Promise<{ loaded: LoadedStateSnapshot; state: BubbleStateSnapshot } | null> {
+  let result: Awaited<
+    ReturnType<ResolvedMergeCommandDependencies["importRemoteBubbleCommitContinuity"]>
+  >;
+  try {
+    result = await input.dependencies.importRemoteBubbleCommitContinuity({
+      bubbleId: input.bubbleId,
+      remoteClonePath: input.remoteClonePath,
+      remoteTarget: input.remoteTarget
+    });
+  } catch (error) {
+    const code = typeof (error as { code?: unknown }).code === "string"
+      ? (error as { code: string }).code
+      : undefined;
+    const reasonCode = code === "REMOTE_COMMIT_TRANSPORT_FAILED"
+      ? "MERGE_REMOTE_COMMIT_CONTINUITY_IMPORT_UNAVAILABLE"
+      : "MERGE_REMOTE_COMMIT_CONTINUITY_IMPORT_INVALID";
+    throw input.createError({
+      reasonCode,
+      message:
+        `Remote commit continuity import failed for '${input.bubbleId}': ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      context: {
+        command_name: "merge",
+        bubble_id: input.bubbleId,
+        remote_clone_path: input.remoteClonePath
+      },
+      cause: sanitizeRemoteCommitContinuityImportCauseForMerge(error)
+    });
+  }
+
+  if (result.classification === "no_remote_completion_evidence") {
+    return null;
+  }
+
+  try {
+    await syncRemoteCommitContinuityArtifacts({
+      statePath: input.statePath,
+      transcriptPath: input.transcriptPath,
+      stateContent: result.stateContent,
+      transcriptContent: result.transcriptContent,
+      renamePath: input.dependencies.renamePath,
+      writeTextFile: input.dependencies.writeTextFile
+    });
+  } catch (error) {
+    throw input.createError({
+      reasonCode: "MERGE_REMOTE_COMMIT_CONTINUITY_SYNC_BACK_FAILED",
+      message:
+        `Remote commit continuity import succeeded for '${input.bubbleId}', but local sync-back failed: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      context: {
+        command_name: "merge",
+        bubble_id: input.bubbleId,
+        remote_clone_path: input.remoteClonePath,
+        state_path: input.statePath,
+        transcript_path: input.transcriptPath
+      },
+      cause: error
+    });
+  }
+
+  const loaded = await input.dependencies.readStateSnapshot(input.statePath);
+  return { loaded, state: loaded.state };
+}
+
+function sanitizeRemoteCommitContinuityImportCauseForMerge(error: unknown): unknown {
+  if (!(error instanceof Error)) {
+    return error;
+  }
+
+  const context = (error as { context?: unknown }).context;
+  if (
+    context === undefined ||
+    typeof context !== "object" ||
+    context === null
+  ) {
+    return error;
+  }
+
+  const sanitized = new Error(error.message, {
+    cause: (error as { cause?: unknown }).cause
+  });
+  sanitized.name = error.name;
+  const code = (error as { code?: unknown }).code;
+  Object.assign(sanitized, {
+    ...(typeof code === "string" ? { code } : {}),
+    context: {
+      ...(context as Record<string, unknown>),
+      command_name: "merge"
+    }
+  });
+  return sanitized;
 }

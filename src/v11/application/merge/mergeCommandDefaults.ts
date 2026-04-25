@@ -24,6 +24,10 @@ export interface MergeBubbleDependencyDefaults {
     NonNullable<MergeBubbleDependencies["executeRemoteBubbleMergeCommand"]>;
   executeRemoteBubbleMergeCleanupCommand:
     NonNullable<MergeBubbleDependencies["executeRemoteBubbleMergeCleanupCommand"]>;
+  importRemoteBubbleCommitContinuity:
+    NonNullable<MergeBubbleDependencies["importRemoteBubbleCommitContinuity"]>;
+  renamePath: NonNullable<MergeBubbleDependencies["renamePath"]>;
+  writeTextFile: NonNullable<MergeBubbleDependencies["writeTextFile"]>;
 }
 
 let mergeBubbleDependencyDefaultsPromise:

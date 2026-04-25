@@ -606,6 +606,363 @@ describe("mergeBubble", () => {
     expect(state.state.last_command_at).toBe("2026-04-18T08:05:00.000Z");
   });
 
+  it("imports proven remote commit continuity before rejecting stale local state for started remote merge", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await convertDoneBubbleToRemoteStarted(
+      await setupDoneBubble(repoPath, "b_merge_remote_import_state_01")
+    );
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    const staleState = {
+      ...loaded.state,
+      state: "APPROVED_FOR_COMMIT" as const,
+      last_command_at: "2026-04-18T08:05:00.000Z"
+    };
+    const remoteDoneState = {
+      ...loaded.state,
+      state: "DONE" as const,
+      last_command_at: "2026-04-18T08:06:00.000Z"
+    };
+    await writeStateSnapshot(bubble.paths.statePath, staleState, {
+      expectedFingerprint: loaded.fingerprint,
+      expectedState: "DONE"
+    });
+
+    const remoteEnvelope = {
+      id: "msg_remote_merge_import_state_01",
+      ts: "2026-04-18T08:06:00.000Z",
+      bubble_id: bubble.bubbleId,
+      sender: "orchestrator" as const,
+      recipient: "human" as const,
+      type: "COMMIT_RESULT" as const,
+      round: remoteDoneState.round,
+      payload: {
+        metadata: {
+          staged_files: ["feature.txt"],
+          commit_message: "bubble(b_merge_remote_import_state_01): finalize",
+          commit_sha: "abcdef1234567890"
+        }
+      },
+      refs: []
+    };
+    const importRemoteBubbleCommitContinuity = vi.fn(async () => ({
+      classification: "imported_remote_completion" as const,
+      bubbleId: bubble.bubbleId,
+      sequence: 3,
+      envelope: remoteEnvelope,
+      state: remoteDoneState,
+      stateContent: `${JSON.stringify(remoteDoneState, null, 2)}\n`,
+      transcriptContent: `${JSON.stringify(remoteEnvelope)}\n`,
+      commitSha: "abcdef1234567890",
+      commitMessage: "bubble(b_merge_remote_import_state_01): finalize",
+      stagedFiles: ["feature.txt"]
+    }));
+    const executeRemoteBubbleMergeCommand = vi.fn(async () =>
+      buildRemoteMergeHandoffResult(bubble)
+    );
+    const executeRemoteBubbleMergeCleanupCommand = vi.fn(async () =>
+      buildRemoteMergeCleanupResult(bubble)
+    );
+    const runGitSpy = createRemoteRouteGitMock({
+      bubbleId: bubble.bubbleId
+    });
+
+    const result = await mergeBubble(
+      {
+        bubbleId: bubble.bubbleId,
+        cwd: repoPath,
+        now: new Date("2026-04-18T08:07:00.000Z")
+      },
+      {
+        runGit: runGitSpy,
+        importRemoteBubbleCommitContinuity,
+        executeRemoteBubbleMergeCommand,
+        executeRemoteBubbleMergeCleanupCommand,
+        resolveRemoteBubbleStatusTarget: vi.fn(async () => ({
+          alias: "prod",
+          host: "ssh.example.com",
+          user: "pairflow",
+          pairflowCommand: "pairflow"
+        })),
+        writeTextFile: vi.fn(async (path: string, content: string) => {
+          await writeFile(path, content, "utf8");
+        })
+      }
+    );
+
+    expect(importRemoteBubbleCommitContinuity).toHaveBeenCalledOnce();
+    expect(executeRemoteBubbleMergeCommand).toHaveBeenCalledOnce();
+    expect(result.presentationRoute).toBe("started_remote");
+    expect((await readStateSnapshot(bubble.paths.statePath)).state.state).toBe("DONE");
+  });
+
+  it("checks dirty local source repo before importing stale remote commit continuity", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await convertDoneBubbleToRemoteStarted(
+      await setupDoneBubble(repoPath, "b_merge_remote_dirty_import_01")
+    );
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    const staleState = {
+      ...loaded.state,
+      state: "APPROVED_FOR_COMMIT" as const,
+      last_command_at: "2026-04-18T08:05:00.000Z"
+    };
+    await writeStateSnapshot(bubble.paths.statePath, staleState, {
+      expectedFingerprint: loaded.fingerprint,
+      expectedState: "DONE"
+    });
+    await writeFile(join(repoPath, "dirty.txt"), "dirty\n", "utf8");
+
+    const importRemoteBubbleCommitContinuity = vi.fn(async () => {
+      throw new Error("import must not run before dirty-tree guard");
+    });
+    const executeRemoteBubbleMergeCommand = vi.fn(async () =>
+      buildRemoteMergeHandoffResult(bubble)
+    );
+
+    await expect(
+      mergeBubble(
+        {
+          bubbleId: bubble.bubbleId,
+          cwd: repoPath
+        },
+        {
+          importRemoteBubbleCommitContinuity,
+          executeRemoteBubbleMergeCommand,
+          resolveRemoteBubbleStatusTarget: vi.fn(async () => ({
+            alias: "prod",
+            host: "ssh.example.com",
+            user: "pairflow",
+            pairflowCommand: "pairflow"
+          }))
+        }
+      )
+    ).rejects.toMatchObject({
+      name: "BubbleMergeError",
+      reasonCode: "MERGE_REPO_DIRTY"
+    } satisfies Partial<BubbleMergeError>);
+
+    expect(importRemoteBubbleCommitContinuity).not.toHaveBeenCalled();
+    expect(executeRemoteBubbleMergeCommand).not.toHaveBeenCalled();
+    expect((await readStateSnapshot(bubble.paths.statePath)).state.state).toBe(
+      "APPROVED_FOR_COMMIT"
+    );
+  });
+
+  it("wraps unavailable remote commit continuity import with merge reason code", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await convertDoneBubbleToRemoteStarted(
+      await setupDoneBubble(repoPath, "b_merge_remote_import_unavailable_01")
+    );
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    await writeStateSnapshot(
+      bubble.paths.statePath,
+      {
+        ...loaded.state,
+        state: "APPROVED_FOR_COMMIT",
+        last_command_at: "2026-04-18T08:05:00.000Z"
+      },
+      {
+        expectedFingerprint: loaded.fingerprint,
+        expectedState: "DONE"
+      }
+    );
+
+    const importError = Object.assign(new Error("ssh unavailable"), {
+      code: "REMOTE_COMMIT_TRANSPORT_FAILED",
+      context: {
+        command_name: "commit",
+        bubble_id: bubble.bubbleId
+      }
+    });
+    const executeRemoteBubbleMergeCommand = vi.fn(async () =>
+      buildRemoteMergeHandoffResult(bubble)
+    );
+
+    let caught: unknown;
+    try {
+      await mergeBubble(
+        {
+          bubbleId: bubble.bubbleId,
+          cwd: repoPath
+        },
+        {
+          runGit: createRemoteRouteGitMock({ bubbleId: bubble.bubbleId }),
+          importRemoteBubbleCommitContinuity: vi.fn(async () => {
+            throw importError;
+          }),
+          executeRemoteBubbleMergeCommand,
+          resolveRemoteBubbleStatusTarget: vi.fn(async () => ({
+            alias: "prod",
+            host: "ssh.example.com",
+            user: "pairflow",
+            pairflowCommand: "pairflow"
+          }))
+        }
+      );
+    } catch (error) {
+      caught = error;
+    }
+
+    expect(caught).toMatchObject({
+      name: "BubbleMergeError",
+      reasonCode: "MERGE_REMOTE_COMMIT_CONTINUITY_IMPORT_UNAVAILABLE",
+      context: {
+        command_name: "merge"
+      }
+    } satisfies Partial<BubbleMergeError>);
+    expect((caught as Error | undefined)?.cause).toMatchObject({
+      name: "Error",
+      message: "ssh unavailable",
+      code: "REMOTE_COMMIT_TRANSPORT_FAILED",
+      context: {
+        command_name: "merge",
+        bubble_id: bubble.bubbleId
+      }
+    });
+    expect(executeRemoteBubbleMergeCommand).not.toHaveBeenCalled();
+  });
+
+  it("wraps invalid remote commit continuity import with merge reason code", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await convertDoneBubbleToRemoteStarted(
+      await setupDoneBubble(repoPath, "b_merge_remote_import_invalid_01")
+    );
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    await writeStateSnapshot(
+      bubble.paths.statePath,
+      {
+        ...loaded.state,
+        state: "APPROVED_FOR_COMMIT",
+        last_command_at: "2026-04-18T08:05:00.000Z"
+      },
+      {
+        expectedFingerprint: loaded.fingerprint,
+        expectedState: "DONE"
+      }
+    );
+
+    const executeRemoteBubbleMergeCommand = vi.fn(async () =>
+      buildRemoteMergeHandoffResult(bubble)
+    );
+
+    await expect(
+      mergeBubble(
+        {
+          bubbleId: bubble.bubbleId,
+          cwd: repoPath
+        },
+        {
+          runGit: createRemoteRouteGitMock({ bubbleId: bubble.bubbleId }),
+          importRemoteBubbleCommitContinuity: vi.fn(async () => {
+            throw new Error("COMMIT_RESULT metadata mismatch");
+          }),
+          executeRemoteBubbleMergeCommand,
+          resolveRemoteBubbleStatusTarget: vi.fn(async () => ({
+            alias: "prod",
+            host: "ssh.example.com",
+            user: "pairflow",
+            pairflowCommand: "pairflow"
+          }))
+        }
+      )
+    ).rejects.toMatchObject({
+      name: "BubbleMergeError",
+      reasonCode: "MERGE_REMOTE_COMMIT_CONTINUITY_IMPORT_INVALID",
+      context: {
+        command_name: "merge",
+        bubble_id: bubble.bubbleId
+      }
+    } satisfies Partial<BubbleMergeError>);
+
+    expect(executeRemoteBubbleMergeCommand).not.toHaveBeenCalled();
+  });
+
+  it("fails closed when remote commit continuity import cannot sync local artifacts", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await convertDoneBubbleToRemoteStarted(
+      await setupDoneBubble(repoPath, "b_merge_remote_import_sync_fail_01")
+    );
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    const staleState = {
+      ...loaded.state,
+      state: "APPROVED_FOR_COMMIT" as const,
+      last_command_at: "2026-04-18T08:05:00.000Z"
+    };
+    const remoteDoneState = {
+      ...loaded.state,
+      state: "DONE" as const,
+      last_command_at: "2026-04-18T08:06:00.000Z"
+    };
+    await writeStateSnapshot(bubble.paths.statePath, staleState, {
+      expectedFingerprint: loaded.fingerprint,
+      expectedState: "DONE"
+    });
+
+    const remoteEnvelope = {
+      id: "msg_remote_merge_import_sync_fail_01",
+      ts: "2026-04-18T08:06:00.000Z",
+      bubble_id: bubble.bubbleId,
+      sender: "orchestrator" as const,
+      recipient: "human" as const,
+      type: "COMMIT_RESULT" as const,
+      round: remoteDoneState.round,
+      payload: {
+        metadata: {
+          staged_files: ["feature.txt"],
+          commit_message: "bubble(b_merge_remote_import_sync_fail_01): finalize",
+          commit_sha: "abcdef1234567890"
+        }
+      },
+      refs: []
+    };
+    const executeRemoteBubbleMergeCommand = vi.fn(async () =>
+      buildRemoteMergeHandoffResult(bubble)
+    );
+
+    await expect(
+      mergeBubble(
+        {
+          bubbleId: bubble.bubbleId,
+          cwd: repoPath
+        },
+        {
+          runGit: createRemoteRouteGitMock({ bubbleId: bubble.bubbleId }),
+          importRemoteBubbleCommitContinuity: vi.fn(async () => ({
+            classification: "imported_remote_completion" as const,
+            bubbleId: bubble.bubbleId,
+            sequence: 3,
+            envelope: remoteEnvelope,
+            state: remoteDoneState,
+            stateContent: `${JSON.stringify(remoteDoneState, null, 2)}\n`,
+            transcriptContent: `${JSON.stringify(remoteEnvelope)}\n`,
+            commitSha: "abcdef1234567890",
+            commitMessage: "bubble(b_merge_remote_import_sync_fail_01): finalize",
+            stagedFiles: ["feature.txt"]
+          })),
+          executeRemoteBubbleMergeCommand,
+          resolveRemoteBubbleStatusTarget: vi.fn(async () => ({
+            alias: "prod",
+            host: "ssh.example.com",
+            user: "pairflow",
+            pairflowCommand: "pairflow"
+          })),
+          writeTextFile: vi.fn(async () => {
+            throw new Error("disk full");
+          })
+        }
+      )
+    ).rejects.toMatchObject({
+      name: "BubbleMergeError",
+      reasonCode: "MERGE_REMOTE_COMMIT_CONTINUITY_SYNC_BACK_FAILED",
+      context: {
+        command_name: "merge",
+        bubble_id: bubble.bubbleId
+      }
+    } satisfies Partial<BubbleMergeError>);
+
+    expect(executeRemoteBubbleMergeCommand).not.toHaveBeenCalled();
+  });
+
   it.each([
     {
       name: "--push",
