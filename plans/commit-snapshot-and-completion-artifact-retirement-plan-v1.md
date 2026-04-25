@@ -156,7 +156,7 @@ This plan separates implementation slicing from mergeability.
 
 ### Progress Update - 2026-04-25
 
-Phase 1, Phase 2, Phase 3A, Phase 3B, and Phase 4A are complete and merged.
+Phase 1, Phase 2, Phase 3A, Phase 3B, Phase 4A, and Phase 4B are complete and merged.
 
 Completed slices:
 
@@ -194,16 +194,23 @@ Completed slices:
    - Bubble commit: `57cc7c4d96c570f847c280bc79d7fb1bb0f65e8f`
    - Merge commit: `a3036a949e9907f49515fb0ed156a42f6ba6201f`
    - Completion proof: the normal successful started-remote commit route now invokes remote commit with `--stage-all`, rejects legacy `DONE_PACKAGE` transcript tails, validates remote `DONE` state identity plus `COMMIT_RESULT` metadata against remote git facts, removes done-package transport/sync-back from the remote result contract, and syncs only remote state/transcript continuity artifacts.
-   - Boundary note: Phase 4B still owns partial-success refresh/import repair when the remote side completed but laptop-side import or local continuity is stale.
+   - Boundary note: Phase 4B later closed partial-success refresh/import repair when the remote side completed but laptop-side import or local continuity was stale.
    - Archived task: `plans/archive/tasks/remote-commit-result-transport-cutover.md`
+6. `remote-commit-partial-success-readiness`
+   - Bubble: `remote-commit-partial-success`
+   - Bubble commit: `70c0bbd8669d41c3e9fcc6b3157279a01812ec33`
+   - Merge commit: `31576f8b50e673553ed76312d0820ffc1bf39947`
+   - Completion proof: started-remote commit retry and merge readiness can import same-authority remote `DONE` state, remote `COMMIT_RESULT` transcript, and matching git facts before enforcing local stale state. The repair path probes/imports before producer retry, fails closed for missing or mismatched remote authority, remains idempotent after remote completion, and does not synthesize a local completion envelope or create a second commit.
+   - Boundary note: Phase 5 owns hard removal of active `DONE_PACKAGE` protocol validation plus live docs, tests, and runtime prompt/context cleanup.
+   - Archived task: `plans/archive/tasks/remote-commit-partial-success-readiness.md`
 
 Next tasks:
 
-1. `remote-commit-partial-success-readiness`
-   - Owns Phase 4B.
-   - Task file: to be created after Phase 4A or together only if explicitly approved as a high-risk bundled implementation.
-   - Primary goal: close the observed mixed-state bug class where a remote commit reaches `DONE` with commit facts, but the laptop-side command rejects the payload or leaves local `state.json` stale as `RUNNING`, causing immediate `bubble merge` to fail.
-   - Critical boundary: bounded same-authority repair only; do not synthesize `COMMIT_RESULT` locally and do not introduce broad crash recovery.
+1. `done-package-live-reference-cleanup`
+   - Owns Phase 5.
+   - Task file: `plans/tasks/done-package-live-reference-cleanup.md`
+   - Primary goal: remove remaining live first-party references to done-package / `DONE_PACKAGE` from active protocol validation, runtime-generated start/resume guidance, README and live architecture docs, root CLI output expectations, and first-party tests/fixtures.
+   - Critical boundary: remove active commit-completion dependency only; leave archived historical documents unchanged and preserve generic artifact-reference tests/docs unless they instruct or validate first-party commit completion through done-package.
 
 ### Phase 1: Commit Result Contract
 
@@ -519,12 +526,13 @@ The work may be implemented in multiple integration slices. Because no active re
    - owns remote execution transport, remote command flag construction, SSH output parsing, remote marker handling, sync-back, and remote-to-local result mapping for the normal successful remote commit path.
    - required before the partial-success readiness task can safely reason about target-state remote commit artifacts.
 6. `remote-commit-partial-success-readiness`
-   - status: successor.
+   - status: completed and archived.
    - owns Phase 4B.
    - slice type: `fail_closed_hardening`.
    - owns bounded same-authority refresh/import behavior for started-remote commits whose remote side has completed but laptop-side local state is stale or import failed.
-   - required before the hard cutover can be accepted because the observed `remote DONE` / `local RUNNING` split-brain class blocks normal lifecycle closeout.
+   - proves retry and merge-readiness import of remote `DONE` plus `COMMIT_RESULT` authority without git-only fallback, synthetic envelopes, or duplicate remote commits.
 7. `done-package-live-reference-cleanup`
+   - status: successor.
    - owns Phase 5.
    - slice type: `target_state_required`.
    - must cover active protocol type/validation removal, live docs, and runtime-generated prompt/context surfaces, because prompt/context generators can still steer agents toward the removed done-package model.
