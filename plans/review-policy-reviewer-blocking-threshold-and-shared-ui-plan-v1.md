@@ -46,7 +46,8 @@ Szetszalazni a review severity policy-t ugy, hogy:
 7. Sequencing note:
    producer-first bontas kell:
    - eloszor a persisted contract + mutation/read-model surface
-   - utana a reviewer workflow consume + ontology/runtime-guidance alignment
+   - utana a reviewer workflow consume authority atkotese
+   - es csak ezutan a reviewer-facing ontology/runtime-guidance/doc parity alignment
    cleanup/recovery kulon fazist most nem igenyel; a remote UI mutation path az elso task resze.
 
 ## Canonical Contract Anchors
@@ -71,8 +72,8 @@ Szetszalazni a review severity policy-t ugy, hogy:
    - ez a reinterpretation alaphelyzetben a routing gate-re vonatkozik, nem az ontology severity definiciok hallgatolagos atirasara
 4. Downstream task impact:
    - az elso task nem viheti at a reviewer consume logikat feluton
-   - a masodik task nem nyithat ujra config/mutation/read-model foundation kerdeseket
-   - a masodik tasknak explicit paritasba kell hoznia a reviewer routingot, a command guidance-ot, a canonical severity ontology docot, az embedded runtime reminder feluletet es a kapcsolodo teszteket
+   - a masodik task nem nyithat ujra config/mutation/read-model foundation kerdeseket; csak a canonical reviewer threshold consume authorityt es a routing seam-eket zarhatja le
+   - a harmadik task nem irhat ujra routing truth-ot; csak a mar atkotott reviewer authority reviewer-facing projection/parity feluleteit zarhatja le
 
 ## Current Codebase Check (2026-04-26)
 
@@ -102,7 +103,8 @@ Szetszalazni a review severity policy-t ugy, hogy:
 1. A persisted review-policy shape ketszereplosse teve explicitte kell tenni a reviewer thresholdot.
 2. A runtime/read-model/mutate surfaceset at kell vezetni az uj ketmezos policyre.
 3. A reviewer post-gate routingot es guidance-ot at kell kotni az uj reviewer threshold authorityra.
-4. A docs/test contractokat frissiteni kell a tudatos default-valtozas miatt, beleertve a canonical reviewer severity ontology es az embedded runtime reminder parityjat.
+4. A reviewer-facing prompt/delivery/docs feluleteket kulon parity lane-ben at kell vezetni az uj threshold authorityra, beleertve a canonical reviewer severity ontologyt es az embedded runtime reminder parityjat.
+5. A korabban draftolt egyutas Phase 2 artifactot le kell valtani ket replacement taskra; a plan elfogadasa utan implementation mar nem futhat a regi egyrészes Phase 2 spec alapjan.
 
 ### Deferred / Future Work
 
@@ -113,8 +115,19 @@ Szetszalazni a review severity policy-t ugy, hogy:
 
 1. `review-policy-reviewer-blocking-threshold-foundation-and-ui-phase1`
    - cel: uj reviewer policy mezo bevezetese, create/parse/render/update/runtime-view/list/status/UI mutate alignment
-2. `review-policy-reviewer-blocking-threshold-reviewer-routing-phase2`
-   - cel: reviewer post-gate routing, guidance, canonical reviewer ontology/runtime reminder, docs es teszt contract atkotese az uj reviewer thresholdra
+2. `review-policy-reviewer-blocking-threshold-routing-consume-phase2a`
+   - cel: reviewer post-gate routing authority, threshold threading seam-ek es scope-policy aggregate consume atkotese az uj reviewer thresholdra
+3. `review-policy-reviewer-blocking-threshold-reviewer-facing-parity-phase2b`
+   - cel: reviewer-facing guidance/prompt/delivery, canonical reviewer ontology/runtime reminder, docs es parity-tesztek atkotese a mar lezart Phase 2A authorityra
+
+## Task Transition Note
+
+1. A korabban draftolt `review-policy-reviewer-blocking-threshold-reviewer-routing-phase2` artifact mar nem tekintheto vegrehajtasi tasknak.
+2. Statusza plan-szinten: `must_split`.
+3. Replacement path:
+   - `review-policy-reviewer-blocking-threshold-routing-consume-phase2a`
+   - `review-policy-reviewer-blocking-threshold-reviewer-facing-parity-phase2b`
+4. A regi Phase 2 artifact legfeljebb input-forras lehet a replacement taskokhoz; uj implementation vagy approval loop nem indulhat belole valtozatlan formaban.
 
 ## Coverage Map
 
@@ -123,16 +136,19 @@ Szetszalazni a review severity policy-t ugy, hogy:
 | persisted config contract dual-threshold shape | Task 1 | producer closure |
 | UI/shared mutate semantics | Task 1 | ugyanaz a shared severity irja mindket mezot |
 | runtime view + read-model transparency | Task 1 | status/list/detail projections |
-| reviewer threshold consume semantics | Task 2 | workflow/orchestration closure |
-| reviewer prompt/guidance/doc parity | Task 2 | read-model/documentation alignment a reviewer lane-ben |
-| reviewer severity ontology + embedded runtime reminder parity | Task 2 | canonical docs/codegen/runtime prompt alignment |
+| reviewer threshold consume semantics | Task 2A | workflow/orchestration + internal execution consume closure |
+| routing input/threading seam completeness | Task 2A | explicit threshold-atadas, side-channel nelkul |
+| reviewer prompt/guidance/doc parity | Task 2B | reviewer-facing projection alignment a mar lezart authorityhoz |
+| reviewer severity ontology + embedded runtime reminder parity | Task 2B | canonical docs/codegen/runtime prompt alignment |
 
 ## Dependencies / Order
 
-1. Task 1 -> Task 2 kotelezo.
-2. Task 2 csak a merged dual-threshold policy surface-re epulhet; nem tarthat fent sajat interim reviewer threshold fallbackot.
-3. Ha Task 1 a UI input namingot is csereli, Task 2 mar csak az uj mutate contractot hivatkozhatja.
-4. Task 2 csak akkor tekintheto lezartnak, ha a routing semantics es a reviewer severity ontology/runtime reminder feluletek ugyanazt a closed jelentest hordozzak, vagy az explicit uj jelentest ugyanazzal a source-anchor authorizacioval vezetik at.
+1. Task 1 -> Task 2A -> Task 2B kotelezo.
+2. Task 2A csak a merged dual-threshold policy surface-re epulhet; nem tarthat fent sajat interim reviewer threshold fallbackot.
+3. Ha Task 1 a UI input namingot is csereli, Task 2A es Task 2B mar csak az uj mutate/runtime contractot hivatkozhatjak.
+4. Task 2A zarja le a canonical reviewer threshold consume authorityt; Task 2B ezt mar nem irhatja felul, csak reviewer-facing projection/parity feluleteken viheti at.
+5. Task 2B csak akkor tekintheto lezartnak, ha a routing semantics es a reviewer severity ontology/runtime reminder feluletek ugyanazt a closed jelentest hordozzak, vagy az explicit uj jelentest ugyanazzal a source-anchor authorizacioval vezetik at.
+6. A korabbi egyrészes Phase 2 artifact phase orderje ezzel ervenytelen lett; a helyes folytatas mar csak a 2A -> 2B replacement sorrend.
 
 ## Risks / Assumptions
 
@@ -144,6 +160,8 @@ Szetszalazni a review severity policy-t ugy, hogy:
    ha a runtime view csak az egyik mezot mutatja ki, az operatori debugging felig vak marad; ezert a read-model alignmentet nem szabad elhalasztani.
 4. Kockazat:
    ha a reviewer routing atall, de a canonical ontology / embedded reminder `P2/P3 advisory-only` nyelven marad, a reviewer lane mixed-truth allapotba kerul.
+5. Kockazat:
+   ha a routing consume authority es a reviewer-facing parity ugyanabba a bounded taskba marad osszehuzva, konnyen kiesik egy threshold-threading seam vagy egy reviewer-facing projection surface a deklaralt ownershipbol.
 
 ## Validation Strategy
 
@@ -152,8 +170,11 @@ Szetszalazni a review severity policy-t ugy, hogy:
    - runtime view tests
    - UI router/update local+remote tests
    - list/status projection tests
-2. Task 2 utan:
+2. Task 2A utan:
    - reviewer pass gating tests
+   - scope-policy aggregate + threshold threading tests
+   - routing seam completeness review
+3. Task 2B utan:
    - reviewer guidance/prompt tests
    - reviewer severity ontology + embedded runtime reminder parity tests / codegen refresh
    - docs/spec parity review
