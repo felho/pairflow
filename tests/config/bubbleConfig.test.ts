@@ -55,6 +55,60 @@ describe("bubble config schema", () => {
       ".env.production"
     ]);
     expect(config.doc_contract_gates.round_gate_applies_after).toBe(2);
+    expect(config.agents.meta_reviewer).toBe("codex");
+  });
+
+  it("normalizes legacy two-agent TOML to a canonical meta-reviewer binding", () => {
+    const config = parseBubbleConfigToml(baseToml);
+
+    expect(config.agents).toEqual({
+      implementer: "codex",
+      reviewer: "claude",
+      meta_reviewer: "codex"
+    });
+
+    const rendered = renderBubbleConfigToml(config);
+    expect(rendered).toContain('meta_reviewer = "codex"');
+  });
+
+  it("roundtrips an explicit non-default meta-reviewer binding", () => {
+    const config = parseBubbleConfigToml(
+      baseToml.replace(
+        '[agents]\nimplementer = "codex"\nreviewer = "claude"',
+        '[agents]\nimplementer = "codex"\nreviewer = "claude"\nmeta_reviewer = "claude"'
+      )
+    );
+
+    expect(config.agents).toEqual({
+      implementer: "codex",
+      reviewer: "claude",
+      meta_reviewer: "claude"
+    });
+
+    const rendered = renderBubbleConfigToml(config);
+    expect(rendered).toContain('meta_reviewer = "claude"');
+    expect(parseBubbleConfigToml(rendered).agents.meta_reviewer).toBe("claude");
+  });
+
+  it("fails closed when agents.meta_reviewer is invalid", () => {
+    const result = validateBubbleConfig(
+      parseToml(
+        `${baseToml.replace(
+          '[agents]\nimplementer = "codex"\nreviewer = "claude"',
+          '[agents]\nimplementer = "codex"\nreviewer = "claude"\nmeta_reviewer = "gpt"'
+        )}`
+      )
+    );
+
+    expect(result.ok).toBe(false);
+    if (result.ok) {
+      return;
+    }
+
+    expect(result.errors).toContainEqual({
+      path: "agents.meta_reviewer",
+      message: "Must be one of: codex, claude"
+    });
   });
 
   it("roundtrips explicit severity_gate_round above default", () => {
@@ -207,7 +261,8 @@ round_gate_applies_after = -1
       accuracy_critical: false,
       agents: {
         implementer: "codex",
-        reviewer: "claude"
+        reviewer: "claude",
+        meta_reviewer: "codex"
       },
       commands: {
         test: "pnpm test",
@@ -243,7 +298,8 @@ round_gate_applies_after = -1
       severity_gate_round: 3,
       agents: {
         implementer: "codex",
-        reviewer: "claude"
+        reviewer: "claude",
+        meta_reviewer: "codex"
       },
       commands: {
         test: "pnpm test",
@@ -279,7 +335,8 @@ round_gate_applies_after = -1
       },
       agents: {
         implementer: "codex",
-        reviewer: "claude"
+        reviewer: "claude",
+        meta_reviewer: "codex"
       },
       commands: {
         test: "pnpm test",
@@ -315,7 +372,8 @@ round_gate_applies_after = -1
       },
       agents: {
         implementer: "codex",
-        reviewer: "claude"
+        reviewer: "claude",
+        meta_reviewer: "codex"
       },
       commands: {
         test: "pnpm test",
@@ -347,7 +405,8 @@ round_gate_applies_after = -1
       bubble_branch: "bubble/b_test_01",
       agents: {
         implementer: "codex",
-        reviewer: "claude"
+        reviewer: "claude",
+        meta_reviewer: "codex"
       },
       commands: {
         test: "pnpm test",
@@ -385,7 +444,8 @@ round_gate_applies_after = -1
       severity_gate_round: 4.5,
       agents: {
         implementer: "codex",
-        reviewer: "claude"
+        reviewer: "claude",
+        meta_reviewer: "codex"
       },
       commands: {
         test: "pnpm test",
@@ -423,7 +483,8 @@ round_gate_applies_after = -1
       attach_launcher: "auto",
       agents: {
         implementer: "codex",
-        reviewer: "claude"
+        reviewer: "claude",
+        meta_reviewer: "codex"
       },
       commands: {
         test: "pnpm test",
@@ -452,7 +513,8 @@ round_gate_applies_after = -1
       bubble_branch: "bubble/b_test_01",
       agents: {
         implementer: "codex",
-        reviewer: "claude"
+        reviewer: "claude",
+        meta_reviewer: "codex"
       },
       commands: {
         test: "pnpm test",
@@ -496,7 +558,8 @@ round_gate_applies_after = -1
       bubble_branch: "bubble/b_test_01",
       agents: {
         implementer: "codex",
-        reviewer: "claude"
+        reviewer: "claude",
+        meta_reviewer: "codex"
       },
       commands: {
         test: "pnpm test",
@@ -658,7 +721,8 @@ remote = "homelab"
       commit_requires_approval: true,
       agents: {
         implementer: "codex",
-        reviewer: "claude"
+        reviewer: "claude",
+        meta_reviewer: "codex"
       },
       commands: {
         test: "pnpm test",
@@ -698,7 +762,8 @@ remote = "homelab"
       attach_launcher: "auto",
       agents: {
         implementer: "codex",
-        reviewer: "claude"
+        reviewer: "claude",
+        meta_reviewer: "codex"
       },
       commands: {
         test: "pnpm test",
@@ -762,7 +827,8 @@ remote = "homelab"
       attach_launcher: "auto",
       agents: {
         implementer: "codex",
-        reviewer: "claude"
+        reviewer: "claude",
+        meta_reviewer: "codex"
       },
       commands: {
         test: "pnpm test",
@@ -812,7 +878,8 @@ remote = "homelab"
         attach_launcher: value,
         agents: {
           implementer: "codex",
-          reviewer: "claude"
+          reviewer: "claude",
+          meta_reviewer: "codex"
         },
         commands: {
           test: "pnpm test",
@@ -849,7 +916,8 @@ remote = "homelab"
       attach_launcher: "wezterm",
       agents: {
         implementer: "codex",
-        reviewer: "claude"
+        reviewer: "claude",
+        meta_reviewer: "codex"
       },
       commands: {
         test: "pnpm test",
@@ -909,7 +977,8 @@ typecheck = "pnpm typecheck"
       attach_launcher: "auto",
       agents: {
         implementer: "codex",
-        reviewer: "claude"
+        reviewer: "claude",
+        meta_reviewer: "codex"
       },
       commands: {
         test: "pnpm test",
@@ -1001,7 +1070,8 @@ typecheck = "pnpm typecheck"
         'code --folder-uri "vscode-remote://ssh-remote+{{remote_authority}}{{remote_clone_path}}"',
       agents: {
         implementer: "codex",
-        reviewer: "claude"
+        reviewer: "claude",
+        meta_reviewer: "codex"
       },
       commands: {
         test: "pnpm test",
@@ -1051,7 +1121,8 @@ typecheck = "pnpm typecheck"
       commit_requires_approval: true,
       agents: {
         implementer: "codex",
-        reviewer: "claude"
+        reviewer: "claude",
+        meta_reviewer: "codex"
       },
       commands: {
         test: "pnpm test",
@@ -1126,7 +1197,8 @@ typecheck = "pnpm typecheck"
       open_command: "   ",
       agents: {
         implementer: "codex",
-        reviewer: "claude"
+        reviewer: "claude",
+        meta_reviewer: "codex"
       },
       commands: {
         test: "pnpm test",
@@ -1152,7 +1224,8 @@ typecheck = "pnpm typecheck"
       open_remote_command: "   ",
       agents: {
         implementer: "codex",
-        reviewer: "claude"
+        reviewer: "claude",
+        meta_reviewer: "codex"
       },
       commands: {
         test: "pnpm test",
@@ -1188,7 +1261,8 @@ typecheck = "pnpm typecheck"
       attach_launcher: "auto",
       agents: {
         implementer: "codex",
-        reviewer: "claude"
+        reviewer: "claude",
+        meta_reviewer: "codex"
       },
       commands: {
         test: "pnpm test",
@@ -1229,7 +1303,8 @@ typecheck = "pnpm typecheck"
       attach_launcher: "auto",
       agents: {
         implementer: "codex",
-        reviewer: "claude"
+        reviewer: "claude",
+        meta_reviewer: "codex"
       },
       commands: {
         test: "pnpm test",
@@ -1263,7 +1338,8 @@ typecheck = "pnpm typecheck"
       commit_requires_approval: true,
       agents: {
         implementer: "codex",
-        reviewer: "claude"
+        reviewer: "claude",
+        meta_reviewer: "codex"
       },
       commands: {
         test: "pnpm test",

@@ -58,6 +58,7 @@ describe("stageMetaReviewRunningState", () => {
     const result = await stageMetaReviewRunningState({
       bubbleId: "b_meta_gate_stage_01",
       loadedRunning: createLoadedRunningState(),
+      metaReviewerAgent: "codex",
       nowIso: "2026-03-19T10:03:30.000Z",
       watchdogTimeoutMinutes: 15,
       statePath: "/tmp/b_meta_gate_stage_01/state.json",
@@ -98,6 +99,7 @@ describe("stageMetaReviewRunningState", () => {
         ...loadedRunning,
         state: stateWithoutMetaReview
       },
+      metaReviewerAgent: "codex",
       nowIso: "2026-03-19T10:03:30.000Z",
       watchdogTimeoutMinutes: 15,
       statePath: "/tmp/b_meta_gate_stage_01/state.json",
@@ -121,7 +123,7 @@ describe("stageMetaReviewRunningState", () => {
       },
       runtime_delivery: null,
       auto_rework_count: 0,
-      auto_rework_limit: 5,
+      auto_rework_limit: 10,
       sticky_human_gate: false
     });
     expect(result.state.meta_review?.execution_context?.execution_id).toMatch(

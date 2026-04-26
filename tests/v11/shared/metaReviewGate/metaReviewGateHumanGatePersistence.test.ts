@@ -75,6 +75,7 @@ describe("persistHumanGateRoute", () => {
         bubbleId: loaded.state.bubble_id,
         summary: "Missing recommendation source should fail closed.",
         refs: [],
+        metaReviewerAgent: "codex",
         loaded,
         expectedState: "RUNNING",
         route: "human_gate_budget_exhausted"
@@ -114,6 +115,7 @@ describe("persistHumanGateRoute", () => {
       bubbleId: loaded.state.bubble_id,
       summary: "Fallback route preserved the rework target.",
       refs: [],
+      metaReviewerAgent: "codex",
       loaded,
       expectedState: "RUNNING",
       route: "human_gate_inconclusive",
@@ -134,6 +136,10 @@ describe("persistHumanGateRoute", () => {
       auto_rework_count: 0,
       auto_rework_limit: 5,
       sticky_human_gate: true
+    });
+    expect(result.gateEnvelope.payload.metadata).toMatchObject({
+      actor: "meta-reviewer",
+      actor_agent: "codex"
     });
   });
 });

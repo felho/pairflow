@@ -37,7 +37,7 @@ describe("state schema", () => {
       execution_context: null,
       runtime_delivery: null,
       auto_rework_count: 0,
-      auto_rework_limit: 5,
+      auto_rework_limit: 10,
       sticky_human_gate: false
     });
   });
@@ -406,7 +406,7 @@ describe("state schema", () => {
     expect(result.errors.some((error) => error.path === "active_role")).toBe(true);
   });
 
-  it("rejects RUNNING meta-review authority when meta_reviewer ownership is not bound to codex", () => {
+  it("accepts RUNNING meta-review authority when meta_reviewer ownership uses a non-empty agent", () => {
     const result = validateBubbleStateSnapshot({
       bubble_id: "b_test_meta_state_04b",
       state: "RUNNING",
@@ -415,14 +415,29 @@ describe("state schema", () => {
       active_since: "2026-03-08T10:00:00.000Z",
       active_role: "meta_reviewer",
       round_role_history: [],
-      last_command_at: "2026-03-08T10:01:00.000Z"
+      last_command_at: "2026-03-08T10:01:00.000Z",
+      execution_context: buildRunningExecutionContext({
+        bubbleId: "b_test_meta_state_04b",
+        round: 2,
+        activeRole: "meta_reviewer",
+        startedAt: "2026-03-08T10:00:00.000Z",
+        watchdogTimeoutMinutes: 60
+      }),
+      meta_review: {
+        execution_context: buildMetaReviewExecutionContext({
+          bubbleId: "b_test_meta_state_04b",
+          round: 2,
+          startedAt: "2026-03-08T10:00:00.000Z",
+          watchdogTimeoutMinutes: 60,
+          attempt: 1
+        }),
+        auto_rework_count: 0,
+        auto_rework_limit: 10,
+        sticky_human_gate: false
+      }
     });
 
-    expect(result.ok).toBe(false);
-    if (result.ok) {
-      return;
-    }
-    expect(result.errors.some((error) => error.path === "active_agent")).toBe(true);
+    expect(result.ok).toBe(true);
   });
 
   it("rejects RUNNING state when active fields are missing", () => {

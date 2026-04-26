@@ -16,9 +16,10 @@ import {
 import type { resolveResumeKickoffMessages } from "./startCommandResumePrompts.js";
 import type { ResolvedStartBubbleDependencies } from "./startCommandOrchestration.js";
 import type { StartExecutionContext } from "./startCommandContext.js";
+import type { AgentName } from "../../../types/bubble.js";
 import type { PairflowRemoteWorkspaceAuthority } from "../../shared/command/pairflowCommandBootstrap.js";
 
-function shouldSubmitStartupPrompt(agentName: "codex" | "claude"): boolean {
+function shouldSubmitStartupPrompt(agentName: AgentName): boolean {
   return agentName === "codex";
 }
 
@@ -43,7 +44,7 @@ function resolveRemoteWorkspaceAuthority(
 }
 
 function buildAgentLaunchCommand(input: {
-  agentName: "codex" | "claude";
+  agentName: AgentName;
   bubbleId: string;
   workspacePath: string;
   pairflowCommandProfile: StartExecutionContext["resolved"]["bubbleConfig"]["pairflow_command_profile"];
@@ -99,6 +100,7 @@ export async function launchFreshTmuxSession(input: {
   const externalPairflowCommand =
     input.context.remoteStartContext?.externalPairflowCommand;
   const remoteWorkspaceAuthority = resolveRemoteWorkspaceAuthority(input.context);
+  const metaReviewerAgent = input.context.resolved.bubbleConfig.agents.meta_reviewer;
   const ack = await input.deps.launchSessionAck({
     bubbleId: input.context.resolved.bubbleId,
     workspacePath: input.launchWorkspacePath,
@@ -112,14 +114,14 @@ export async function launchFreshTmuxSession(input: {
     statusPaneLabel: buildStatusPaneLabel(input.context.resolved.bubbleId),
     implementerPaneLabel: `[${input.context.resolved.bubbleConfig.agents.implementer}/implementer]`,
     reviewerPaneLabel: `[${input.context.resolved.bubbleConfig.agents.reviewer}/reviewer]`,
-    metaReviewerPaneLabel: "[codex/meta-reviewer]",
+    metaReviewerPaneLabel: `[${metaReviewerAgent}/meta-reviewer]`,
     implementerSubmitStartupPrompt: shouldSubmitStartupPrompt(
       input.context.resolved.bubbleConfig.agents.implementer
     ),
     reviewerSubmitStartupPrompt: shouldSubmitStartupPrompt(
       input.context.resolved.bubbleConfig.agents.reviewer
     ),
-    metaReviewerSubmitStartupPrompt: true,
+    metaReviewerSubmitStartupPrompt: shouldSubmitStartupPrompt(metaReviewerAgent),
     implementerCommand: buildAgentLaunchCommand({
       agentName: input.context.resolved.bubbleConfig.agents.implementer,
       bubbleId: input.context.resolved.bubbleId,
@@ -161,7 +163,7 @@ export async function launchFreshTmuxSession(input: {
       })
     }),
     metaReviewerCommand: buildAgentLaunchCommand({
-      agentName: "codex",
+      agentName: metaReviewerAgent,
       bubbleId: input.context.resolved.bubbleId,
       workspacePath: input.launchWorkspacePath,
       pairflowCommandProfile: input.context.resolved.bubbleConfig.pairflow_command_profile,
@@ -212,6 +214,7 @@ export async function launchResumeTmuxSession(input: {
   const externalPairflowCommand =
     input.context.remoteStartContext?.externalPairflowCommand;
   const remoteWorkspaceAuthority = resolveRemoteWorkspaceAuthority(input.context);
+  const metaReviewerAgent = input.context.resolved.bubbleConfig.agents.meta_reviewer;
   const ack = await input.deps.launchSessionAck({
     bubbleId: input.context.resolved.bubbleId,
     workspacePath: input.launchWorkspacePath,
@@ -225,14 +228,14 @@ export async function launchResumeTmuxSession(input: {
     statusPaneLabel: buildStatusPaneLabel(input.context.resolved.bubbleId),
     implementerPaneLabel: `[${input.context.resolved.bubbleConfig.agents.implementer}/implementer]`,
     reviewerPaneLabel: `[${input.context.resolved.bubbleConfig.agents.reviewer}/reviewer]`,
-    metaReviewerPaneLabel: "[codex/meta-reviewer]",
+    metaReviewerPaneLabel: `[${metaReviewerAgent}/meta-reviewer]`,
     implementerSubmitStartupPrompt: shouldSubmitStartupPrompt(
       input.context.resolved.bubbleConfig.agents.implementer
     ),
     reviewerSubmitStartupPrompt: shouldSubmitStartupPrompt(
       input.context.resolved.bubbleConfig.agents.reviewer
     ),
-    metaReviewerSubmitStartupPrompt: true,
+    metaReviewerSubmitStartupPrompt: shouldSubmitStartupPrompt(metaReviewerAgent),
     implementerCommand: buildAgentLaunchCommand({
       agentName: input.context.resolved.bubbleConfig.agents.implementer,
       bubbleId: input.context.resolved.bubbleId,
@@ -282,7 +285,7 @@ export async function launchResumeTmuxSession(input: {
       })
     }),
     metaReviewerCommand: buildAgentLaunchCommand({
-      agentName: "codex",
+      agentName: metaReviewerAgent,
       bubbleId: input.context.resolved.bubbleId,
       workspacePath: input.launchWorkspacePath,
       pairflowCommandProfile: input.context.resolved.bubbleConfig.pairflow_command_profile,

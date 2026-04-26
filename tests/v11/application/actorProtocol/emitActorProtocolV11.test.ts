@@ -157,17 +157,19 @@ function buildSyntheticAuthoritativeContext(input: {
   fingerprint: string;
   worktreePath?: string;
   activeAgent?: AgentName | null;
+  metaReviewerAgent?: AgentName;
 }): ActorEmitContextSnapshot {
   const repo = input.repo ?? "/repo";
   const worktreePath =
     input.worktreePath ?? `${repo}/.pairflow/worktrees/${input.bubbleId}`;
+  const metaReviewerAgent = input.metaReviewerAgent ?? "codex";
   const activeAgent =
     input.activeAgent === undefined
       ? input.expectedRole === "implementer"
         ? "codex"
         : input.expectedRole === "reviewer"
           ? "claude"
-          : "codex"
+          : metaReviewerAgent
       : input.activeAgent;
 
   return {
@@ -190,7 +192,8 @@ function buildSyntheticAuthoritativeContext(input: {
         id: input.bubbleId,
         agents: {
           implementer: "codex",
-          reviewer: "claude"
+          reviewer: "claude",
+          meta_reviewer: metaReviewerAgent
         }
       }
     } as never,
@@ -335,7 +338,7 @@ describe("emitActorProtocolV11 runtime", () => {
           "context_snapshot_integrity",
           "input_context_match",
           "meta_reviewer_authority",
-          "meta_reviewer_active_agent_codex_when_present"
+          "meta_reviewer_active_agent_matches_config_when_present"
         ]
       }
     ];
@@ -540,8 +543,47 @@ describe("emitActorProtocolV11 runtime", () => {
         authoritativeContext
       })
     ).toThrowErrorMatchingInlineSnapshot(
-      "[ActorEmitContextError: ACTOR_EMIT_CONTEXT_INVALID: canonical meta-reviewer authority requires codex when active_agent is present (active_agent=claude).]"
+      "[ActorEmitContextError: ACTOR_EMIT_CONTEXT_INVALID: canonical meta-reviewer authority requires the configured meta-reviewer agent when active_agent is present (active_agent=claude, configured=codex).]"
     );
+  });
+
+  it("accepts a configured non-default meta-reviewer agent in dispatch plan policies", () => {
+    const actorInput = {
+      kind: "meta_review_result",
+      repo: "/repo",
+      bubble_id: "b_actor_protocol_policy_meta_claude_01",
+      handoff_id:
+        "meta_review:b_actor_protocol_policy_meta_claude_01:round:2:attempt:1",
+      execution_id: "exec_actor_protocol_policy_meta_claude_01",
+      round: 2,
+      recommendation: "approve",
+      summary:
+        "Dispatch-plan policy enforcement should accept configured claude ownership",
+      report_json: buildApproveMetaReviewReportJson(
+        "meta-review-policy-enforcement-claude"
+      )
+    } as const;
+    const authoritativeContext = buildSyntheticAuthoritativeContext({
+      bubbleId: actorInput.bubble_id,
+      handoffId: actorInput.handoff_id,
+      executionId: actorInput.execution_id,
+      expectedRole: "meta_reviewer",
+      expectedRound: 2,
+      fingerprint: "fp_actor_protocol_policy_meta_claude_01",
+      metaReviewerAgent: "claude"
+    });
+    const plan = resolveActorRuntimeDispatchPlan({
+      expectedRole: authoritativeContext.expected_role,
+      inputKind: actorInput.kind
+    });
+
+    expect(() =>
+      assertActorRuntimeDispatchPlanPolicies({
+        plan,
+        actorInput,
+        authoritativeContext
+      })
+    ).not.toThrow();
   });
 
   it("routes implementer human_question through the shared runtime kernel from the outer dispatcher", async () => {
@@ -925,7 +967,7 @@ describe("emitActorProtocolV11 runtime", () => {
     } satisfies Partial<ActorEmitContextError>);
   });
 
-  it("rejects meta_review_result from the outer dispatcher when a non-codex live agent claims meta-review authority", async () => {
+  it("rejects meta_review_result from the outer dispatcher when a non-configured live agent claims meta-review authority", async () => {
     await expect(
       actorProtocolModule.emitActorProtocolFromWorkspaceV11({
         input: {
@@ -936,7 +978,7 @@ describe("emitActorProtocolV11 runtime", () => {
           execution_id: "exec_actor_protocol_dispatch_meta_review_non_codex_01",
           round: 2,
           recommendation: "approve",
-          summary: "Outer dispatcher should enforce codex live meta-review authority",
+          summary: "Outer dispatcher should enforce configured live meta-review authority",
           report_json: buildApproveMetaReviewReportJson(
             "meta-review-outer-dispatch-live-agent-reject"
           )
@@ -952,7 +994,7 @@ describe("emitActorProtocolV11 runtime", () => {
         }) as never
       })
     ).rejects.toThrow(
-      /canonical meta-reviewer authority requires codex when active_agent is present/u
+      /canonical meta-reviewer authority requires the configured meta-reviewer agent when active_agent is present/u
     );
   });
 

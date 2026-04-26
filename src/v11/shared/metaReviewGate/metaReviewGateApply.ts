@@ -34,6 +34,7 @@ export async function applyMetaReviewGateOnConvergence(
     metaReviewRunningState = await stageMetaReviewRunningState({
       bubbleId: context.resolved.bubbleId,
       loadedRunning: context.loadedRunning,
+      metaReviewerAgent: context.resolved.bubbleConfig.agents.meta_reviewer,
       nowIso: context.nowIso,
       watchdogTimeoutMinutes: context.resolved.bubbleConfig.watchdog_timeout_minutes,
       statePath: context.resolved.bubblePaths.statePath,
@@ -67,7 +68,8 @@ export async function applyMetaReviewGateOnConvergence(
     round: kickoffResult.state.round,
     now: context.now,
     taskArtifactPath: context.resolved.bubblePaths.taskArtifactPath,
-    pairflowCommandProfile: context.resolved.bubbleConfig.pairflow_command_profile
+    pairflowCommandProfile: context.resolved.bubbleConfig.pairflow_command_profile,
+    metaReviewerAgent: context.resolved.bubbleConfig.agents.meta_reviewer
   });
   if (paneBinding.shouldDeactivate && paneBinding.delivery.status !== "confirmed") {
     await context.deactivateMetaReviewerPane();

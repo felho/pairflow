@@ -55,6 +55,7 @@ export async function persistRunFailedHumanRoute(
       metaReviewRun: input.runResult
     }),
     refs: input.refs,
+    metaReviewerAgent: input.resolved.bubbleConfig.agents.meta_reviewer,
     loaded: input.loaded,
     expectedState: "RUNNING",
     route: "human_gate_run_failed",
@@ -93,6 +94,7 @@ export async function persistDispatchFailedHumanRoute(input: {
       fallbackReason: input.fallbackReason
     }),
     refs: finalizeInput.refs,
+    metaReviewerAgent: finalizeInput.resolved.bubbleConfig.agents.meta_reviewer,
     loaded: input.loaded,
     expectedState: input.expectedState,
     route: "human_gate_dispatch_failed",
@@ -148,6 +150,7 @@ export async function persistResolvedHumanRoute(input: {
         : {})
     }),
     refs: finalizeInput.refs,
+    metaReviewerAgent: finalizeInput.resolved.bubbleConfig.agents.meta_reviewer,
     loaded: finalizeInput.loaded,
     expectedState: "RUNNING",
     route: humanGateDecision,

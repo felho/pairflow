@@ -1,10 +1,13 @@
 import type {
+  AgentName,
   AgentRole,
+  BubbleAgentsConfig,
   BubbleExecutionContextAwaitedOutputType,
   BubbleStateSnapshot,
   PairflowCommandProfile,
   ReviewArtifactType
 } from "../../../types/bubble.js";
+import { resolveConfiguredAgentForRole } from "../../../types/bubble.js";
 import type { ActorRuntimePolicyCheckId } from "./actorRuntimeDispatchMatrix.js";
 import { buildPairflowCommandGuidance } from "../start/startCommandPromptRuntime.js";
 import {
@@ -76,7 +79,7 @@ export type PromptConcernId =
   | "meta_review_no_manual_state_edits"
   | "meta_reviewer_resume_activation_contract";
 
-export type ActiveAgentConstraintId = "codex_when_present";
+export type ActiveAgentConstraintId = "configured_when_present";
 
 export interface RoleExecutionProjectionDescriptor {
   primary_awaited_output_type: BubbleExecutionContextAwaitedOutputType;
@@ -88,11 +91,7 @@ type NonReviewerRole = Exclude<AgentRole, "reviewer">;
 export type AgentResolutionDescriptor =
   | {
       kind: "config_bound";
-      config_key: "implementer" | "reviewer";
-    }
-  | {
-      kind: "hardcoded_runtime";
-      current_agent: "codex";
+      config_key: AgentRole;
     };
 
 export interface RoleDescriptor {
@@ -305,13 +304,13 @@ const roleDescriptorRegistry = {
     topology_slot_id: "meta_reviewer",
     authority_policy_check_id: "meta_reviewer_authority",
     agent_resolution: {
-      kind: "hardcoded_runtime",
-      current_agent: "codex"
+      kind: "config_bound",
+      config_key: "meta_reviewer"
     },
     startup_prompt_concern_ids: metaReviewerStartupPromptConcernIds,
     resume_prompt_concern_ids: metaReviewerResumePromptConcernIds,
     handoff_id_format_id: "meta_review",
-    active_agent_constraint_id: "codex_when_present"
+    active_agent_constraint_id: "configured_when_present"
   })
 } as const satisfies Readonly<Record<AgentRole, RoleDescriptor>>;
 
@@ -487,8 +486,8 @@ function resolveActiveAgentConstraintPolicyCheckId(
   constraintId: ActiveAgentConstraintId
 ): ActorRuntimePolicyCheckId {
   switch (constraintId) {
-    case "codex_when_present":
-      return "meta_reviewer_active_agent_codex_when_present";
+    case "configured_when_present":
+      return "meta_reviewer_active_agent_matches_config_when_present";
   }
 }
 
@@ -739,6 +738,13 @@ export function getTopologySlotPaneIndex(slotId: TopologySlotId): number {
 
 export function getTopologySlotPaneIndexForRole(role: AgentRole): number {
   return getTopologySlotDescriptorForRole(role).pane_index;
+}
+
+export function resolveRoleConfiguredAgent(input: {
+  role: AgentRole;
+  agents: BubbleAgentsConfig;
+}): AgentName {
+  return resolveConfiguredAgentForRole(input);
 }
 
 export function getRoleExecutionProjectionDescriptor(

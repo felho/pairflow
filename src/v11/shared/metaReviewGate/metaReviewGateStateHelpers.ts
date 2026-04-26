@@ -15,8 +15,8 @@ import {
 import { clearLiveMetaReviewSnapshot } from "../metaReview/metaReviewSnapshot.js";
 export {
   buildHumanGateSummary,
-  metaReviewerAgent,
   normalizeMetaReviewSnapshot,
+  resolveMetaReviewerAgent,
   resolveFindingsParityMetadataForEnvelope
 } from "./metaReviewGateSnapshotHelpers.js";
 const metaReviewGateAutoReworkRetryRoundInvariantReasonCode =

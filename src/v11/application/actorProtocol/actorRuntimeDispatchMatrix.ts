@@ -8,7 +8,10 @@ import {
   assertActorEmitContextMatches,
   assertActorEmitContextSnapshotIntegrity
 } from "../../shared/actorProtocol/actorEmitContext.js";
-import { getPrimaryRoutePolicyCheckIdsForRole } from "./roleDescriptorRegistry.js";
+import {
+  getPrimaryRoutePolicyCheckIdsForRole,
+  resolveRoleConfiguredAgent
+} from "./roleDescriptorRegistry.js";
 import type {
   ActorEmitContextSnapshot
 } from "../../shared/actorProtocol/actorEmitContext.js";
@@ -20,7 +23,7 @@ export type ActorRuntimePolicyCheckId =
   | "reviewer_authority"
   | "reviewer_human_question_retained_fallback"
   | "meta_reviewer_authority"
-  | "meta_reviewer_active_agent_codex_when_present";
+  | "meta_reviewer_active_agent_matches_config_when_present";
 
 export type ActorRuntimePolicyOwner =
   | "canonical_authority_context"
@@ -140,7 +143,7 @@ function assertMetaReviewerAuthority(
   }
 }
 
-function assertMetaReviewerActiveAgentCodexWhenPresent(
+function assertMetaReviewerActiveAgentMatchesConfigWhenPresent(
   context: ActorEmitContextSnapshot
 ): void {
   const activeAgent = context.loaded_state.state.active_agent;
@@ -148,10 +151,14 @@ function assertMetaReviewerActiveAgentCodexWhenPresent(
     // Recovery may keep canonical execution authority while clearing live ownership.
     return;
   }
-  if (activeAgent !== "codex") {
+  const configuredMetaReviewer = resolveRoleConfiguredAgent({
+    role: "meta_reviewer",
+    agents: context.resolved.bubbleConfig.agents
+  });
+  if (activeAgent !== configuredMetaReviewer) {
     throw new ActorEmitContextError(
       "ACTOR_EMIT_CONTEXT_INVALID",
-      `ACTOR_EMIT_CONTEXT_INVALID: canonical meta-reviewer authority requires codex when active_agent is present (active_agent=${activeAgent}).`
+      `ACTOR_EMIT_CONTEXT_INVALID: canonical meta-reviewer authority requires the configured meta-reviewer agent when active_agent is present (active_agent=${activeAgent}, configured=${configuredMetaReviewer}).`
     );
   }
 }
@@ -270,14 +277,15 @@ const actorRuntimePolicyCheckCatalog: Readonly<
       assertMetaReviewerAuthority(authoritativeContext);
     }
   },
-  meta_reviewer_active_agent_codex_when_present: {
+  meta_reviewer_active_agent_matches_config_when_present: {
     metadata: {
-      id: "meta_reviewer_active_agent_codex_when_present",
+      id: "meta_reviewer_active_agent_matches_config_when_present",
       owner: "runtime_route_policy",
-      description: "Meta-reviewer authority requires codex when active_agent is present."
+      description:
+        "Meta-reviewer authority requires the configured meta-reviewer agent when active_agent is present."
     },
     assert: ({ authoritativeContext }) => {
-      assertMetaReviewerActiveAgentCodexWhenPresent(authoritativeContext);
+      assertMetaReviewerActiveAgentMatchesConfigWhenPresent(authoritativeContext);
     }
   }
 };

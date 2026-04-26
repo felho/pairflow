@@ -3,6 +3,7 @@ import {
   type WriteStateSnapshotPort
 } from "../ports/stateSnapshots.js";
 import type {
+  AgentName,
   BubbleStateSnapshot,
   MetaReviewRecommendation
 } from "../../../types/bubble.js";
@@ -52,6 +53,7 @@ export interface PersistHumanGateRouteInput {
   bubbleId: string;
   summary: string;
   refs: string[];
+  metaReviewerAgent: AgentName;
   loaded: LoadedStateSnapshot;
   expectedState: BubbleStateSnapshot["state"];
   route: MetaReviewGateRoute;
@@ -110,6 +112,7 @@ async function appendHumanGateRequestForRoute(input: {
     round: input.persistInput.loaded.state.round,
     summary: input.persistInput.summary,
     refs: input.persistInput.refs,
+    metaReviewerAgent: input.persistInput.metaReviewerAgent,
     ...(input.persistInput.parityMetadata !== undefined
       ? { parityMetadata: input.persistInput.parityMetadata }
       : {}),

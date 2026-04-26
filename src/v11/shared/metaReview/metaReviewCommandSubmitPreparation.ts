@@ -296,6 +296,7 @@ export async function prepareMetaReviewSubmitContext(input: {
   const loadedState = await ports.readState(resolved.bubblePaths.statePath);
   await assertMetaReviewSubmitterAuthority({
     bubbleId: resolved.bubbleId,
+    metaReviewerAgent: resolved.bubbleConfig.agents.meta_reviewer,
     sessionsPath: resolved.bubblePaths.sessionsPath,
     readRuntimeSessions: ports.readRuntimeSessions,
     state: loadedState.state,

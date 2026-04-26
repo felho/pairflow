@@ -692,6 +692,25 @@ export function validateBubbleConfig(input: unknown): ValidationResult<BubbleCon
     });
   }
 
+  const metaReviewerCandidate = agents
+    ? readString(
+        agents,
+        "meta_reviewer",
+        "agents.meta_reviewer",
+        errors,
+        false
+      )
+    : undefined;
+  // Legacy two-agent bubble.toml files normalize here so downstream runtime
+  // consumers never need their own role-specific meta-reviewer fallback.
+  const metaReviewer = metaReviewerCandidate ?? "codex";
+  if (metaReviewerCandidate !== undefined && !isAgentName(metaReviewerCandidate)) {
+    errors.push({
+      path: "agents.meta_reviewer",
+      message: "Must be one of: codex, claude"
+    });
+  }
+
   if (implementer !== undefined && reviewer !== undefined && implementer === reviewer) {
     errors.push({
       path: "agents",
@@ -1047,7 +1066,8 @@ export function validateBubbleConfig(input: unknown): ValidationResult<BubbleCon
       : {}),
     agents: {
       implementer: implementer as "codex" | "claude",
-      reviewer: reviewer as "codex" | "claude"
+      reviewer: reviewer as "codex" | "claude",
+      meta_reviewer: metaReviewer as "codex" | "claude"
     },
     commands: {
       ...(bootstrapCommand !== undefined
@@ -1297,6 +1317,7 @@ export function renderBubbleConfigToml(config: BubbleConfig): string {
     "[agents]",
     `implementer = ${tomlString(config.agents.implementer)}`,
     `reviewer = ${tomlString(config.agents.reviewer)}`,
+    `meta_reviewer = ${tomlString(config.agents.meta_reviewer)}`,
     "",
     "[commands]",
     config.commands.bootstrap

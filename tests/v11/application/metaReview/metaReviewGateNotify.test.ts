@@ -4,6 +4,18 @@ import {
   notifyMetaReviewerSubmissionRequest
 } from "../../../../src/v11/application/metaReviewGate/metaReviewGateNotify.js";
 
+async function notifyMetaReviewer(input: {
+  bubbleId: string;
+  round: number;
+  targetPane: string;
+  metaReviewerAgent?: "codex" | "claude";
+}, dependencies?: Parameters<typeof notifyMetaReviewerSubmissionRequest>[1]) {
+  return await notifyMetaReviewerSubmissionRequest({
+    ...input,
+    metaReviewerAgent: input.metaReviewerAgent ?? "codex"
+  }, dependencies);
+}
+
 afterEach(() => {
   vi.useRealTimers();
 });
@@ -38,7 +50,7 @@ describe("metaReviewGateNotify", () => {
       }
     }
   ])("fails closed when notify runtime capabilities are incomplete: $label", async ({ runtime }) => {
-    const result = await notifyMetaReviewerSubmissionRequest({
+    const result = await notifyMetaReviewer({
       bubbleId: "b_meta_review_notify_runtime_missing",
       round: 2,
       targetPane: "pf-b_meta_review_notify_runtime_missing:0.3"
@@ -68,7 +80,7 @@ describe("metaReviewGateNotify", () => {
     const sendSubmissionRequestMessage = vi.fn(async () => undefined);
     const submitPaneInput = vi.fn(async () => undefined);
 
-    const resultPromise = notifyMetaReviewerSubmissionRequest({
+    const resultPromise = notifyMetaReviewer({
       bubbleId,
       round,
       targetPane
@@ -107,7 +119,7 @@ describe("metaReviewGateNotify", () => {
     const sendSubmissionRequestMessage = vi.fn(async () => undefined);
     const submitPaneInput = vi.fn(async () => undefined);
 
-    const resultPromise = notifyMetaReviewerSubmissionRequest({
+    const resultPromise = notifyMetaReviewer({
       bubbleId,
       round,
       targetPane
@@ -153,7 +165,7 @@ describe("metaReviewGateNotify", () => {
     const sendSubmissionRequestMessage = vi.fn(async () => undefined);
     const submitPaneInput = vi.fn(async () => undefined);
 
-    const resultPromise = notifyMetaReviewerSubmissionRequest({
+    const resultPromise = notifyMetaReviewer({
       bubbleId,
       round,
       targetPane
@@ -179,24 +191,25 @@ describe("metaReviewGateNotify", () => {
     expect(runTmux).toHaveBeenCalledTimes(2);
   });
 
-  it("returns failed when pane scrollback shows Codex exited before confirmation", async () => {
+  it("returns failed when pane scrollback shows the configured meta-reviewer exited before confirmation", async () => {
     vi.useFakeTimers();
 
     const bubbleId = "b_meta_review_notify_pane_exited";
     const round = 5;
     const targetPane = "pf-b_meta_review_notify_pane_exited:0.3";
     const runTmux = vi.fn(async () => ({
-      stdout: "codex exited (code 1). Dropping to interactive shell.",
+      stdout: "claude exited (code 1). Dropping to interactive shell.",
       stderr: "",
       exitCode: 0
     }));
     const sendSubmissionRequestMessage = vi.fn(async () => undefined);
     const submitPaneInput = vi.fn(async () => undefined);
 
-    const resultPromise = notifyMetaReviewerSubmissionRequest({
+    const resultPromise = notifyMetaReviewer({
       bubbleId,
       round,
-      targetPane
+      targetPane,
+      metaReviewerAgent: "claude"
     }, {
       runtime: {
         tmux: {
@@ -212,7 +225,7 @@ describe("metaReviewGateNotify", () => {
     await expect(resultPromise).resolves.toEqual({
       status: "failed",
       reasonCode: "META_REVIEWER_PANE_EXITED",
-      message: "meta-reviewer pane fell back to interactive shell after Codex exit."
+      message: "meta-reviewer pane fell back to interactive shell after claude exit."
     });
     expect(sendSubmissionRequestMessage).toHaveBeenCalledTimes(1);
     expect(submitPaneInput).not.toHaveBeenCalled();

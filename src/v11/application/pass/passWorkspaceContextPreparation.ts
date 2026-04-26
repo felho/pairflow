@@ -57,6 +57,7 @@ export interface PreparedPassWorkspaceContext {
   handoff: ResolvedPassHandoff;
   implementer: AgentName;
   reviewer: AgentName;
+  metaReviewer: AgentName;
 }
 
 export async function preparePassWorkspaceContext(
@@ -118,7 +119,11 @@ export async function preparePassWorkspaceContext(
     );
   }
 
-  const { implementer, reviewer } = resolved.bubbleConfig.agents;
+  const {
+    implementer,
+    reviewer,
+    meta_reviewer: metaReviewer
+  } = resolved.bubbleConfig.agents;
   const activation = buildOptionalActorActivationProvenance({
     ...(input.authoritativeContext !== undefined
       ? { authoritativeContext: input.authoritativeContext }
@@ -133,6 +138,7 @@ export async function preparePassWorkspaceContext(
     state,
     implementer,
     reviewer,
+    metaReviewer,
     effectiveLoopMode: reviewPolicyRuntime.effective_loop_mode,
     nowIso: input.nowIso,
     createError: input.createError
@@ -147,6 +153,7 @@ export async function preparePassWorkspaceContext(
     reviewPolicyRuntime,
     handoff,
     implementer,
-    reviewer
+    reviewer,
+    metaReviewer
   };
 }

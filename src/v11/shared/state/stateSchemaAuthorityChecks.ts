@@ -183,11 +183,14 @@ function validateMetaReviewActiveOwnership(
     });
   }
 
-  if (input.activeRole === "meta_reviewer" && input.activeAgent !== "codex") {
+  if (
+    input.activeRole === "meta_reviewer" &&
+    (typeof input.activeAgent !== "string" || input.activeAgent.trim().length === 0)
+  ) {
     input.errors.push({
       path: "active_agent",
       message:
-        "RUNNING meta-review state requires active_agent=codex when active_role=meta_reviewer"
+        "RUNNING meta-review state requires a non-empty active_agent when active_role=meta_reviewer"
     });
   }
 }

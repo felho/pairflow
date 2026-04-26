@@ -141,6 +141,21 @@ export type AttachLauncher = (typeof attachLaunchers)[number];
 export interface BubbleAgentsConfig {
   implementer: AgentName;
   reviewer: AgentName;
+  meta_reviewer: AgentName;
+}
+
+export function resolveConfiguredAgentForRole(input: {
+  agents: BubbleAgentsConfig;
+  role: AgentRole;
+}): AgentName {
+  switch (input.role) {
+    case "implementer":
+      return input.agents.implementer;
+    case "reviewer":
+      return input.agents.reviewer;
+    case "meta_reviewer":
+      return input.agents.meta_reviewer;
+  }
 }
 
 export interface BubbleCommandsConfig {

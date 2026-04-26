@@ -34,8 +34,19 @@ function findLastIndex(arr: string[], predicate: (item: string) => boolean): num
   return -1;
 }
 
-function paneShowsExitedCodexShell(text: string): boolean {
-  return /codex exited \(code \d+\)\. Dropping to interactive shell\./u.test(text);
+function escapeRegex(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&");
+}
+
+function paneShowsExitedAgentShell(input: {
+  text: string;
+  metaReviewerAgent: string;
+}): boolean {
+  const pattern = new RegExp(
+    `${escapeRegex(input.metaReviewerAgent)} exited \\(code \\d+\\)\\. Dropping to interactive shell\\.`,
+    "u"
+  );
+  return pattern.test(input.text);
 }
 
 type MarkerStatus = "submitted" | "stuck_in_input" | "not_found";
@@ -76,6 +87,7 @@ async function assertMetaReviewRequestSubmitted(input: {
   >;
   targetPane: string;
   marker: string;
+  metaReviewerAgent: string;
 }): Promise<MetaReviewRuntimeDeliveryObservation> {
   for (let attempt = 0; attempt < 3; attempt += 1) {
     await sleep(800);
@@ -86,12 +98,15 @@ async function assertMetaReviewRequestSubmitted(input: {
       }
     );
     if (capture.exitCode === 0) {
-      if (paneShowsExitedCodexShell(capture.stdout)) {
+      if (paneShowsExitedAgentShell({
+        text: capture.stdout,
+        metaReviewerAgent: input.metaReviewerAgent
+      })) {
         return {
           status: "failed",
           reasonCode: metaReviewerPaneExitedReasonCode,
           message:
-            "meta-reviewer pane fell back to interactive shell after Codex exit."
+            `meta-reviewer pane fell back to interactive shell after ${input.metaReviewerAgent} exit.`
         };
       }
 
@@ -165,6 +180,7 @@ export async function notifyMetaReviewerSubmissionRequest(
     paneRunner: runner,
     submitPaneInput,
     targetPane: input.targetPane,
-    marker: requestMarker
+    marker: requestMarker,
+    metaReviewerAgent: input.metaReviewerAgent
   });
 }

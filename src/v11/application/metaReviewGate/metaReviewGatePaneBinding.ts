@@ -7,7 +7,10 @@ import {
 import type {
   ResolveMetaReviewerPaneWarning
 } from "../../shared/metaReviewGate/metaReviewGateTypes.js";
-import type { PairflowCommandProfile } from "../../../types/bubble.js";
+import type {
+  AgentName,
+  PairflowCommandProfile
+} from "../../../types/bubble.js";
 import {
   resolveMetaReviewGateNotifyTmuxCapabilities,
   resolveMetaReviewGatePaneBindingTmuxCapabilities
@@ -106,6 +109,7 @@ type MetaReviewGatePaneBindingTmux = NonNullable<
 
 function buildMetaReviewerCommand(input: {
   buildAgentCommand: MetaReviewGateCommandBuilder;
+  metaReviewerAgent: AgentName;
   bubbleId: string;
   workspacePath: string;
   repoPath: string;
@@ -113,7 +117,7 @@ function buildMetaReviewerCommand(input: {
   pairflowCommandProfile: PairflowCommandProfile;
 }): string {
   return input.buildAgentCommand({
-    agentName: "codex",
+    agentName: input.metaReviewerAgent,
     bubbleId: input.bubbleId,
     workspacePath: input.workspacePath,
     pairflowCommandProfile: input.pairflowCommandProfile,
@@ -267,6 +271,7 @@ export const resolveMetaReviewerPaneWarning: ResolveMetaReviewerPaneWarning = as
   const workspacePath = workspaceAuthority.workspacePath;
   const metaReviewerCommand = buildMetaReviewerCommand({
     buildAgentCommand,
+    metaReviewerAgent: input.metaReviewerAgent,
     bubbleId: input.bubbleId,
     workspacePath,
     repoPath: bindStart.record.repoPath,
@@ -305,7 +310,8 @@ export const resolveMetaReviewerPaneWarning: ResolveMetaReviewerPaneWarning = as
     {
       bubbleId: input.bubbleId,
       round: input.round,
-      targetPane
+      targetPane,
+      metaReviewerAgent: input.metaReviewerAgent
     },
     {
       runtime: {

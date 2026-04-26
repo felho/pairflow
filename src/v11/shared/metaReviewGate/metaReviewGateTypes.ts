@@ -13,7 +13,10 @@ import type {
   ReadTranscriptEnvelopesPort
 } from "../ports/transcript.js";
 import type { BubbleStateSnapshot } from "../../../types/bubble.js";
-import type { PairflowCommandProfile } from "../../../types/bubble.js";
+import type {
+  AgentName,
+  PairflowCommandProfile
+} from "../../../types/bubble.js";
 import type { BubbleReviewAutoReworkSeverity } from "../../../types/bubble.js";
 import type { FindingPriority } from "../../../types/findings.js";
 import type {
@@ -64,6 +67,7 @@ export interface NotifyMetaReviewerSubmissionRequestInput {
   bubbleId: string;
   round: number;
   targetPane: string;
+  metaReviewerAgent: AgentName;
 }
 
 export interface MetaReviewGateNotifyTmuxCapabilities {
@@ -140,7 +144,7 @@ export interface MetaReviewGatePaneBindingTmuxCapabilities {
 
 export interface MetaReviewGatePaneBindingRuntimeCapabilities {
   buildAgentCommand?: (input: {
-    agentName: "codex";
+    agentName: AgentName;
     bubbleId: string;
     workspacePath?: string;
     worktreePath?: string;
@@ -178,6 +182,7 @@ export interface ResolveMetaReviewerPaneWarningInput {
   now: Date;
   taskArtifactPath: string;
   pairflowCommandProfile: PairflowCommandProfile;
+  metaReviewerAgent: AgentName;
 }
 
 export type ResolveMetaReviewerPaneWarning = (

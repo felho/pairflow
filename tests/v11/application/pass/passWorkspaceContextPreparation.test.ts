@@ -26,14 +26,16 @@ describe("passWorkspaceContextPreparation", () => {
       id: "b_pass_ctx_01",
       agents: {
         implementer: "codex",
-        reviewer: "claude"
+        reviewer: "claude",
+        meta_reviewer: "codex"
       }
     } as never;
     const backfilledConfig = {
       id: "b_pass_ctx_01",
       agents: {
         implementer: "claude",
-        reviewer: "codex"
+        reviewer: "codex",
+        meta_reviewer: "claude"
       }
     } as never;
     const resolved = {
@@ -50,6 +52,7 @@ describe("passWorkspaceContextPreparation", () => {
     let handoffInput: {
       implementer: string;
       reviewer: string;
+      metaReviewer: string;
       effectiveLoopMode: string;
       nowIso: string;
     } | undefined;
@@ -86,6 +89,7 @@ describe("passWorkspaceContextPreparation", () => {
           handoffInput = {
             implementer: input.implementer,
             reviewer: input.reviewer,
+            metaReviewer: input.metaReviewer,
             effectiveLoopMode: input.effectiveLoopMode,
             nowIso: input.nowIso
           };
@@ -105,10 +109,12 @@ describe("passWorkspaceContextPreparation", () => {
     expect(prepared.bubbleIdentity.bubbleConfig).toBe(backfilledConfig);
     expect(prepared.implementer).toBe("claude");
     expect(prepared.reviewer).toBe("codex");
+    expect(prepared.metaReviewer).toBe("claude");
     expect(prepared.handoff.senderAgent).toBe("claude");
     expect(handoffInput).toEqual({
       implementer: "claude",
       reviewer: "codex",
+      metaReviewer: "claude",
       effectiveLoopMode: "full",
       nowIso
     });
@@ -134,7 +140,8 @@ describe("passWorkspaceContextPreparation", () => {
                 id: "b_pass_ctx_02",
                 agents: {
                   implementer: "codex",
-                  reviewer: "claude"
+                  reviewer: "claude",
+                  meta_reviewer: "codex"
                 }
               },
               bubblePaths: {
@@ -151,7 +158,8 @@ describe("passWorkspaceContextPreparation", () => {
                 id: "b_pass_ctx_02",
                 agents: {
                   implementer: "codex",
-                  reviewer: "claude"
+                  reviewer: "claude",
+                  meta_reviewer: "codex"
                 }
               },
               backfilled: false
@@ -206,7 +214,8 @@ describe("passWorkspaceContextPreparation", () => {
               id: "b_pass_ctx_03",
               agents: {
                 implementer: "codex",
-                reviewer: "claude"
+                reviewer: "claude",
+                meta_reviewer: "codex"
               }
             }
           } as never,
@@ -247,7 +256,8 @@ describe("passWorkspaceContextPreparation", () => {
               id: "b_pass_ctx_03",
               agents: {
                 implementer: "codex",
-                reviewer: "claude"
+                reviewer: "claude",
+                meta_reviewer: "codex"
               }
             },
             backfilled: false
@@ -309,7 +319,8 @@ describe("passWorkspaceContextPreparation", () => {
                 id: "b_pass_ctx_04",
                 agents: {
                   implementer: "codex",
-                  reviewer: "claude"
+                  reviewer: "claude",
+                  meta_reviewer: "codex"
                 }
               }
             } as never,
@@ -389,7 +400,8 @@ describe("passWorkspaceContextPreparation", () => {
                 id: "b_pass_ctx_05",
                 agents: {
                   implementer: "codex",
-                  reviewer: "claude"
+                  reviewer: "claude",
+                  meta_reviewer: "codex"
                 }
               }
             } as never,
@@ -459,7 +471,8 @@ describe("passWorkspaceContextPreparation", () => {
                 },
                 agents: {
                   implementer: "codex",
-                  reviewer: "claude"
+                  reviewer: "claude",
+                  meta_reviewer: "codex"
                 }
               }
             } as never,
@@ -554,7 +567,8 @@ describe("passWorkspaceContextPreparation", () => {
               },
               agents: {
                 implementer: "claude",
-                reviewer: "codex"
+                reviewer: "codex",
+                meta_reviewer: "codex"
               }
             },
             bubblePaths: {
@@ -575,7 +589,8 @@ describe("passWorkspaceContextPreparation", () => {
               },
               agents: {
                 implementer: "claude",
-                reviewer: "codex"
+                reviewer: "codex",
+                meta_reviewer: "codex"
               }
             },
             backfilled: false
@@ -661,7 +676,8 @@ describe("passWorkspaceContextPreparation", () => {
               },
               agents: {
                 implementer: "codex",
-                reviewer: "claude"
+                reviewer: "claude",
+                meta_reviewer: "codex"
               }
             },
             bubblePaths: {
@@ -682,7 +698,8 @@ describe("passWorkspaceContextPreparation", () => {
               },
               agents: {
                 implementer: "codex",
-                reviewer: "claude"
+                reviewer: "claude",
+                meta_reviewer: "codex"
               }
             },
             backfilled: false
@@ -766,7 +783,8 @@ describe("passWorkspaceContextPreparation", () => {
               },
               agents: {
                 implementer: "codex",
-                reviewer: "claude"
+                reviewer: "claude",
+                meta_reviewer: "codex"
               }
             },
             bubblePaths: {
@@ -787,7 +805,8 @@ describe("passWorkspaceContextPreparation", () => {
               },
               agents: {
                 implementer: "codex",
-                reviewer: "claude"
+                reviewer: "claude",
+                meta_reviewer: "codex"
               }
             },
             backfilled: false

@@ -23,7 +23,8 @@ function createConfig(overrides: Partial<BubbleConfig> = {}): BubbleConfig {
     commit_requires_approval: true,
     agents: {
       implementer: "codex",
-      reviewer: "claude"
+      reviewer: "claude",
+      meta_reviewer: "codex"
     },
     commands: {
       test: "pnpm test",

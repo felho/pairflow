@@ -3,6 +3,7 @@ import {
   type WriteStateSnapshotPort
 } from "../ports/stateSnapshots.js";
 import type {
+  AgentName,
   BubbleStateSnapshot,
   MetaReviewRecommendation
 } from "../../../types/bubble.js";
@@ -61,6 +62,7 @@ export type AppendHumanGateApprovalRequestInput = {
   round: number;
   summary: string;
   refs: string[];
+  metaReviewerAgent: AgentName;
   parityMetadata?: FindingsParityMetadata | null;
   findings?: MetaReviewGateAdvisoryFinding[];
   gateReasonCode?: string;
@@ -99,6 +101,7 @@ export async function appendHumanGateApprovalRequest(
       summary: input.summary,
       route: input.route,
       refs: input.refs,
+      metaReviewerAgent: input.metaReviewerAgent,
       recommendation: input.recommendation,
       parityMetadata: input.parityMetadata,
       thresholdMetadata: input.thresholdMetadata,
@@ -120,6 +123,7 @@ export async function appendHumanGateApprovalRequest(
     summary: input.summary,
     route: input.route,
     refs: input.refs,
+    metaReviewerAgent: input.metaReviewerAgent,
     ...(input.recommendation !== undefined
       ? { recommendation: input.recommendation }
       : {}),
