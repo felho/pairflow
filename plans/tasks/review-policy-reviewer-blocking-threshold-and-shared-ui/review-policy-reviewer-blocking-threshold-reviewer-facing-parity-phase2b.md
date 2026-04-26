@@ -75,7 +75,7 @@ Vigyük at a mar lezart reviewer threshold authorityt minden reviewer-facing pro
 1. Parent plan gap closed:
    reviewer prompt/guidance/doc parity + canonical reviewer ontology/runtime reminder parity.
 2. Depends on:
-   [review-policy-reviewer-blocking-threshold-routing-consume-phase2a.md](/Users/felho/dev/pairflow/plans/tasks/review-policy-reviewer-blocking-threshold-routing-consume-phase2a.md)
+   [review-policy-reviewer-blocking-threshold-routing-consume-phase2a.md](/Users/felho/dev/pairflow/plans/tasks/review-policy-reviewer-blocking-threshold-and-shared-ui/review-policy-reviewer-blocking-threshold-routing-consume-phase2a.md)
 3. Unlocks / impacts successors:
    kulon successor nem kotelezo; ez a reviewer-facing parity closure.
 4. Task-list impact:

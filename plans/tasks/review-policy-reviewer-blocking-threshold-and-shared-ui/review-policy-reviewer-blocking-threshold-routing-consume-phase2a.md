@@ -79,9 +79,9 @@ Kossuk at a reviewer post-gate routing authorityt az uj canonical reviewer thres
 1. Parent plan gap closed:
    reviewer threshold consume semantics + routing input/threading seam completeness.
 2. Depends on:
-   [review-policy-reviewer-blocking-threshold-foundation-and-ui-phase1.md](/Users/felho/dev/pairflow/plans/tasks/review-policy-reviewer-blocking-threshold-foundation-and-ui-phase1.md)
+   [review-policy-reviewer-blocking-threshold-foundation-and-ui-phase1.md](/Users/felho/dev/pairflow/plans/tasks/review-policy-reviewer-blocking-threshold-and-shared-ui/review-policy-reviewer-blocking-threshold-foundation-and-ui-phase1.md)
 3. Unlocks / impacts successors:
-   [review-policy-reviewer-blocking-threshold-reviewer-facing-parity-phase2b.md](/Users/felho/dev/pairflow/plans/tasks/review-policy-reviewer-blocking-threshold-reviewer-facing-parity-phase2b.md)
+   [review-policy-reviewer-blocking-threshold-reviewer-facing-parity-phase2b.md](/Users/felho/dev/pairflow/plans/tasks/review-policy-reviewer-blocking-threshold-and-shared-ui/review-policy-reviewer-blocking-threshold-reviewer-facing-parity-phase2b.md)
 4. Task-list impact:
    ez a task nem ownershipolja a reviewer-facing guidance, ontology, runtime reminder vagy docs parity feluleteit; azokat a Phase 2B successor zarja le.
 
