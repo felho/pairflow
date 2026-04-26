@@ -1,7 +1,7 @@
 import {
-  getTopologySlotPaneIndex,
-  getTopologySlotPaneIndexForRole
-} from "../../../application/actorProtocol/roleDescriptorRegistry.js";
+  getSharedTopologySlotPaneIndex,
+  getSharedTopologySlotPaneIndexForRole
+} from "../../../shared/topology/topologySlotPaneProjection.js";
 import {
   RuntimeSessionsRegistryError,
   readRuntimeSessionsRegistry,
@@ -59,11 +59,11 @@ function requireNonEmptyString(value: unknown, fieldName: string): string {
 
 function hasSharedRuntimePaneCollision(): boolean {
   const metaReviewerPaneIndex = Number(
-    getTopologySlotPaneIndexForRole("meta_reviewer")
+    getSharedTopologySlotPaneIndexForRole("meta_reviewer")
   );
-  const statusPaneIndex = Number(getTopologySlotPaneIndex("status"));
+  const statusPaneIndex = Number(getSharedTopologySlotPaneIndex("status"));
   const implementerPaneIndex = Number(
-    getTopologySlotPaneIndexForRole("implementer")
+    getSharedTopologySlotPaneIndexForRole("implementer")
   );
   return (
     metaReviewerPaneIndex === statusPaneIndex ||
@@ -99,7 +99,7 @@ export async function setMetaReviewerPaneBinding(
       const nowIso = (input.now ?? new Date()).toISOString();
       const metaReviewerPane: RuntimeMetaReviewerPaneBinding = {
         role: "meta-reviewer",
-        paneIndex: getTopologySlotPaneIndexForRole("meta_reviewer"),
+        paneIndex: getSharedTopologySlotPaneIndexForRole("meta_reviewer"),
         active: input.active,
         updatedAt: nowIso
       };

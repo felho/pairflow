@@ -8,6 +8,7 @@ import {
   assertActorEmitContextMatches,
   assertActorEmitContextSnapshotIntegrity
 } from "../../shared/actorProtocol/actorEmitContext.js";
+import type { ActorRuntimePolicyCheckId } from "../../shared/actorProtocol/actorRuntimePolicyTypes.js";
 import {
   getPrimaryRoutePolicyCheckIdsForRole,
   resolveRoleConfiguredAgent
@@ -15,15 +16,6 @@ import {
 import type {
   ActorEmitContextSnapshot
 } from "../../shared/actorProtocol/actorEmitContext.js";
-
-export type ActorRuntimePolicyCheckId =
-  | "context_snapshot_integrity"
-  | "input_context_match"
-  | "implementer_authority"
-  | "reviewer_authority"
-  | "reviewer_human_question_retained_fallback"
-  | "meta_reviewer_authority"
-  | "meta_reviewer_active_agent_matches_config_when_present";
 
 export type ActorRuntimePolicyOwner =
   | "canonical_authority_context"

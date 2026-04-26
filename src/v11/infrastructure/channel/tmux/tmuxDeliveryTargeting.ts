@@ -4,9 +4,9 @@ import {
   resolveUniquelyConfiguredRoleForAgent
 } from "../../../../types/bubble.js";
 import {
-  getTopologySlotPaneIndex,
-  getTopologySlotPaneIndexForRole
-} from "../../../application/actorProtocol/roleDescriptorRegistry.js";
+  getSharedTopologySlotPaneIndex,
+  getSharedTopologySlotPaneIndexForRole
+} from "../../../shared/topology/topologySlotPaneProjection.js";
 import {
   isLegacyMetaReviewerProtocolRecipient,
   parseDeliveryTargetRoleMetadata,
@@ -65,8 +65,8 @@ export function resolveTargetPaneIndex(
   }
   return normalizePaneIndex(
     resolvedRole === "status"
-      ? getTopologySlotPaneIndex("status")
-      : getTopologySlotPaneIndexForRole(resolvedRole)
+      ? getSharedTopologySlotPaneIndex("status")
+      : getSharedTopologySlotPaneIndexForRole(resolvedRole)
   );
 }
 
@@ -116,7 +116,7 @@ export function resolveEnvelopeRecipientRole(
 }
 
 function resolvePaneIndexByDeliveryTargetRole(role: DeliveryTargetRole): number | undefined {
-  return normalizePaneIndex(getTopologySlotPaneIndex(role));
+  return normalizePaneIndex(getSharedTopologySlotPaneIndex(role));
 }
 
 export interface EnvelopeTargetPaneResolution {

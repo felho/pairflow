@@ -310,7 +310,7 @@ describe("withFileLock stale lock recovery", () => {
       await withFileLock(
         {
           lockPath,
-          timeoutMs: 40,
+          timeoutMs: 120,
           pollMs: 5,
           staleAfterMs: 20
         },

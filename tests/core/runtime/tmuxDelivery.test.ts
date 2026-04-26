@@ -37,7 +37,10 @@ import {
   type TmuxRunResult,
   type TmuxRunner
 } from "../../../src/v11/infrastructure/channel/tmux/tmuxManager.js";
-import * as roleDescriptorRegistry from "../../../src/v11/application/actorProtocol/roleDescriptorRegistry.js";
+import {
+  topologySlotPaneIndexCatalog
+} from "../../../src/v11/shared/topology/topologySlotPaneProjection.js";
+import * as topologySlotPaneProjection from "../../../src/v11/shared/topology/topologySlotPaneProjection.js";
 import type { ReviewerTestExecutionDirective } from "../../../src/v11/shared/reviewer/testEvidence.js";
 import {
   resolveUniquelyConfiguredRoleForAgent,
@@ -142,12 +145,12 @@ function mockUnmappedMetaReviewerPane(): {
   restore: () => void;
 } {
   const getTopologySlotPaneIndexSpy = vi.spyOn(
-    roleDescriptorRegistry,
-    "getTopologySlotPaneIndex"
+    topologySlotPaneProjection,
+    "getSharedTopologySlotPaneIndex"
   );
   const getTopologySlotPaneIndexForRoleSpy = vi.spyOn(
-    roleDescriptorRegistry,
-    "getTopologySlotPaneIndexForRole"
+    topologySlotPaneProjection,
+    "getSharedTopologySlotPaneIndexForRole"
   );
 
   getTopologySlotPaneIndexSpy.mockImplementation((slotId) => {
@@ -155,11 +158,11 @@ function mockUnmappedMetaReviewerPane(): {
       case "meta_reviewer":
         return undefined as unknown as number;
       case "status":
-        return roleDescriptorRegistry.topologySlotCatalog.status.pane_index;
+        return topologySlotPaneIndexCatalog.status;
       case "implementer":
-        return roleDescriptorRegistry.topologySlotCatalog.implementer.pane_index;
+        return topologySlotPaneIndexCatalog.implementer;
       case "reviewer":
-        return roleDescriptorRegistry.topologySlotCatalog.reviewer.pane_index;
+        return topologySlotPaneIndexCatalog.reviewer;
     }
   });
   getTopologySlotPaneIndexForRoleSpy.mockImplementation((role) => {
@@ -167,9 +170,9 @@ function mockUnmappedMetaReviewerPane(): {
       case "meta_reviewer":
         return undefined as unknown as number;
       case "implementer":
-        return roleDescriptorRegistry.topologySlotCatalog.implementer.pane_index;
+        return topologySlotPaneIndexCatalog.implementer;
       case "reviewer":
-        return roleDescriptorRegistry.topologySlotCatalog.reviewer.pane_index;
+        return topologySlotPaneIndexCatalog.reviewer;
     }
   });
 

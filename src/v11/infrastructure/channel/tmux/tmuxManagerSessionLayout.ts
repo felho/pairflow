@@ -1,8 +1,8 @@
 import type { TmuxRunner } from "../../../shared/ports/tmuxSessions.js";
 import {
-  getTopologySlotPaneIndex,
-  type TopologySlotId
-} from "../../../application/actorProtocol/roleDescriptorRegistry.js";
+  getSharedTopologySlotPaneIndex,
+  type SharedTopologySlotId
+} from "../../../shared/topology/topologySlotPaneProjection.js";
 import {
   applyBubbleTmuxSessionFrameHooks,
   applyBubbleTmuxSessionFrameSetup
@@ -39,9 +39,9 @@ function parseTmuxPaneId(stdout: string, command: string[]): string {
 
 function buildSessionPaneSelector(
   sessionName: string,
-  slotId: TopologySlotId
+  slotId: SharedTopologySlotId
 ): string {
-  return `${sessionName}:0.${String(getTopologySlotPaneIndex(slotId))}`;
+  return `${sessionName}:0.${String(getSharedTopologySlotPaneIndex(slotId))}`;
 }
 
 export async function launchBubbleSessionLayout(

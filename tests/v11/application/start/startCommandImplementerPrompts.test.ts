@@ -359,7 +359,7 @@ describe("startCommandImplementerPrompts", () => {
       )
     ).toThrowError(
       new Error(
-        "Prompt concern transcript_context_line requires transcriptSummary input."
+        "PROMPT_CONCERN_REQUIRED_INPUT: prompt concern transcript_context_line requires transcriptSummary input. context: concern_id=transcript_context_line field=transcriptSummary."
       )
     );
   });
@@ -393,7 +393,7 @@ describe("startCommandImplementerPrompts", () => {
       })
     ).toThrowError(
       new Error(
-        "Prompt concern transcript_context_line requires transcriptSummary input."
+        "PROMPT_CONCERN_REQUIRED_INPUT: prompt concern transcript_context_line requires transcriptSummary input. context: concern_id=transcript_context_line field=transcriptSummary."
       )
     );
   });

@@ -5,9 +5,9 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
-  topologySlotCatalog
-} from "../../../src/v11/application/actorProtocol/roleDescriptorRegistry.js";
-import * as roleDescriptorRegistry from "../../../src/v11/application/actorProtocol/roleDescriptorRegistry.js";
+  topologySlotPaneIndexCatalog
+} from "../../../src/v11/shared/topology/topologySlotPaneProjection.js";
+import * as topologySlotPaneProjection from "../../../src/v11/shared/topology/topologySlotPaneProjection.js";
 import {
   claimRuntimeSession,
   readRuntimeSessionsRegistry,
@@ -390,17 +390,17 @@ describe("sessionsRegistry", () => {
     });
 
     const getTopologySlotPaneIndexForRoleSpy = vi.spyOn(
-      roleDescriptorRegistry,
-      "getTopologySlotPaneIndexForRole"
+      topologySlotPaneProjection,
+      "getSharedTopologySlotPaneIndexForRole"
     );
     getTopologySlotPaneIndexForRoleSpy.mockImplementation((role) => {
       switch (role) {
         case "meta_reviewer":
-          return topologySlotCatalog.status.pane_index;
+          return topologySlotPaneIndexCatalog.status;
         case "implementer":
-          return topologySlotCatalog.implementer.pane_index;
+          return topologySlotPaneIndexCatalog.implementer;
         case "reviewer":
-          return topologySlotCatalog.reviewer.pane_index;
+          return topologySlotPaneIndexCatalog.reviewer;
       }
     });
     try {

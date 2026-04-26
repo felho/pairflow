@@ -1,7 +1,7 @@
 import { readRuntimeSessionsRegistry } from "../../executor/sessionRuntime/runtimeSessionsRegistry.js";
 import {
-  getTopologySlotPaneIndexForRole
-} from "../../../application/actorProtocol/roleDescriptorRegistry.js";
+  getSharedTopologySlotPaneIndexForRole
+} from "../../../shared/topology/topologySlotPaneProjection.js";
 import {
   respawnTmuxPaneCommand,
   runTmux,
@@ -78,7 +78,7 @@ export async function refreshReviewerContext(
   try {
     await respawnTmuxPaneCommand({
       sessionName,
-      paneIndex: getTopologySlotPaneIndexForRole("reviewer"),
+      paneIndex: getSharedTopologySlotPaneIndexForRole("reviewer"),
       cwd: workspacePath,
       command: reviewerCommand,
       runner
