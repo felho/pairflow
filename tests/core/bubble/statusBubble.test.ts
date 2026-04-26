@@ -26,6 +26,7 @@ import { writeWatchdogPaneActivity } from "../../../src/v11/infrastructure/artif
 import { buildMetaReviewExecutionContext } from "../../../src/v11/shared/metaReview/metaReviewExecutionContext.js";
 import { resolveWorktreePairflowEntrypoint } from "../../../src/v11/shared/command/pairflowCommandPathAssessment.js";
 import { metaReviewExecutionContextToRunningContext } from "../../../src/v11/shared/state/executionContext.js";
+import * as watchdogStatusModule from "../../../src/v11/shared/watchdog/watchdogStatus.js";
 import { initGitRepository } from "../../helpers/git.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
 
@@ -1091,6 +1092,42 @@ describe("getBubbleStatus", () => {
     expect(status.commandPath.status).toBe("missing");
     expect(status.commandPath.reasonCode).toBe(
       "PAIRFLOW_COMMAND_EXTERNAL_UNAVAILABLE"
+    );
+  });
+
+  it("degrades watchdog rendering when watchdog projection throws", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_status_watchdog_degraded_01",
+      task: "Status watchdog degradation"
+    });
+
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    vi.spyOn(watchdogStatusModule, "computeWatchdogStatus").mockImplementation(() => {
+      throw new Error("watchdog projection failed");
+    });
+
+    const status = await getBubbleStatus({
+      bubbleId: bubble.bubbleId,
+      cwd: repoPath
+    });
+
+    expect(status.state).toBe("RUNNING");
+    expect(status.watchdog.monitored).toBe(false);
+    expect(status.watchdog.monitoredAgent).toBe("codex");
+    expect(status.watchdog.timeoutMinutes).toBe(30);
+    expect(status.watchdog.referenceTimestamp).toBe(
+      status.lastCommandAt ?? status.activeSince
+    );
+    expect(status.watchdog.deadlineTimestamp).toBeNull();
+    expect(status.watchdog.remainingSeconds).toBeNull();
+    expect(status.watchdog.expired).toBe(false);
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining(
+        "STATUS_WATCHDOG_DEGRADED: bubble b_status_watchdog_degraded_01 watchdog projection failed"
+      ),
+      expect.any(Error)
     );
   });
 

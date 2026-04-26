@@ -104,28 +104,51 @@ type RemoteBubbleStatusViewInput = {
   remoteExecution: NonNullable<BubbleStatusView["remoteExecution"]>;
 };
 
+function buildDegradedWatchdogStatus(input: {
+  state: BubbleStatusState;
+  timeoutMinutes: number;
+}): WatchdogStatus {
+  return {
+    monitored: false,
+    monitoredAgent: input.state.active_agent,
+    timeoutMinutes: input.timeoutMinutes,
+    referenceTimestamp: input.state.last_command_at ?? input.state.active_since,
+    deadlineTimestamp: null,
+    remainingSeconds: null,
+    expired: false
+  };
+}
+
 function buildLocalBubbleStatusView(
   input: LocalBubbleStatusViewInput
 ): BubbleStatusView {
   const lastMessage = input.transcript[input.transcript.length - 1] ?? null;
   const runtimeAlignedExecutionContext =
     toRuntimeAlignedReviewPolicyExecutionContext(input.state.execution_context);
-  const watchdog =
-    input.stateValidation === null
-      ? computeWatchdogStatus(
-          input.state,
-          input.resolved.bubbleConfig.watchdog_timeout_minutes,
-          input.now
-        )
-      : {
-          monitored: false,
-          monitoredAgent: input.state.active_agent,
-          timeoutMinutes: input.resolved.bubbleConfig.watchdog_timeout_minutes,
-          referenceTimestamp: input.state.last_command_at ?? input.state.active_since,
-          deadlineTimestamp: null,
-          remainingSeconds: null,
-          expired: false
-        };
+  let watchdog: WatchdogStatus;
+  if (input.stateValidation !== null) {
+    watchdog = buildDegradedWatchdogStatus({
+      state: input.state,
+      timeoutMinutes: input.resolved.bubbleConfig.watchdog_timeout_minutes
+    });
+  } else {
+    try {
+      watchdog = computeWatchdogStatus(
+        input.state,
+        input.resolved.bubbleConfig.watchdog_timeout_minutes,
+        input.now
+      );
+    } catch (error) {
+      console.warn(
+        `STATUS_WATCHDOG_DEGRADED: bubble ${input.resolved.bubbleId} watchdog projection failed; falling back to degraded status view.`,
+        error
+      );
+      watchdog = buildDegradedWatchdogStatus({
+        state: input.state,
+        timeoutMinutes: input.resolved.bubbleConfig.watchdog_timeout_minutes
+      });
+    }
+  }
   const paneActivity = buildStatusPaneActivityView(input.paneActivityRead, input.now);
   return {
     bubbleId: input.resolved.bubbleId,
