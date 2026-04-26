@@ -16,7 +16,7 @@ describe("v11 shared state schema", () => {
       execution_context: null,
       runtime_delivery: null,
       auto_rework_count: 0,
-      auto_rework_limit: 5,
+      auto_rework_limit: 10,
       sticky_human_gate: false
     });
   });

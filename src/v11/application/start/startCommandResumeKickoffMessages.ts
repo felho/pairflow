@@ -1,4 +1,5 @@
 import type {
+  AgentName,
   BubbleStateSnapshot,
   PairflowCommandProfile,
   ReviewArtifactType
@@ -20,8 +21,9 @@ export function resolveResumeKickoffMessages(input: {
   pairflowCommandProfile: PairflowCommandProfile;
   state: BubbleStateSnapshot;
   transcriptSummary: string;
-  implementerAgent: string;
-  reviewerAgent: string;
+  implementerAgent: AgentName;
+  reviewerAgent: AgentName;
+  metaReviewerAgent: AgentName;
   reviewerTestDirectiveLine?: string;
 }): {
   implementerKickoffMessage?: string;
@@ -33,7 +35,7 @@ export function resolveResumeKickoffMessages(input: {
     input.state.state === "RUNNING" &&
     input.state.active_role === "meta_reviewer"
   ) {
-    if (input.state.active_agent === "codex") {
+    if (input.state.active_agent === input.metaReviewerAgent) {
       return {
         metaReviewerKickoffMessage: buildResumeMetaReviewerKickoffMessage({
           bubbleId: input.bubbleId,
@@ -49,6 +51,7 @@ export function resolveResumeKickoffMessages(input: {
         "RUNNING meta-review state active context is inconsistent;",
         `active_role=${formatResumeStateValue(input.state.active_role)},`,
         `active_agent=${formatResumeStateValue(input.state.active_agent)}.`,
+        `configured_meta_reviewer=${input.metaReviewerAgent}.`,
         "No meta-review kickoff was sent; continue from transcript/state and reconcile lifecycle ownership before acting."
       ].join(" ")
     };

@@ -29,7 +29,8 @@ function createBubbleConfig(
     attach_launcher: "auto",
     agents: {
       implementer: "codex",
-      reviewer: "claude"
+      reviewer: "claude",
+      meta_reviewer: "codex"
     },
     commands: {
       test: "pnpm test",

@@ -102,7 +102,8 @@ describe("metaReviewGate V11 defaults", () => {
     const result = await notifyMetaReviewerSubmissionRequestV11({
       bubbleId: "b_meta_review_notify_v11_runner_default",
       round: 4,
-      targetPane: "pf-b_meta_review_notify_v11_runner_default:0.3"
+      targetPane: "pf-b_meta_review_notify_v11_runner_default:0.3",
+      metaReviewerAgent: "codex"
     }, {
       runtime
     });

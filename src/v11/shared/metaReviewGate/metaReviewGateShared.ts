@@ -23,9 +23,9 @@ export {
 export {
   buildHumanGateSummary,
   incrementAutoReworkCount,
-  metaReviewerAgent,
   metaReviewGateAutoReworkRetryRunIdentityInvariantReasonCode,
   normalizeMetaReviewSnapshot,
+  resolveMetaReviewerAgent,
   resolveAutoReworkRetryInvariantViolation,
   resolveDefaultStickyHumanGateForRoute,
   resolveFindingsParityMetadataForEnvelope,

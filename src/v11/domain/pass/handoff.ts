@@ -4,7 +4,6 @@ import type {
   BubbleStateSnapshot,
   RoundRoleHistoryEntry
 } from "../../../types/bubble.js";
-import { metaReviewerAgent } from "../../shared/metaReviewGate/metaReviewGateSnapshotHelpers.js";
 
 export type PassSenderRole = "implementer" | "reviewer";
 export type PassRecipientRole = PassSenderRole | "meta_reviewer";
@@ -23,6 +22,7 @@ export interface ResolvePassHandoffInput {
   state: BubbleStateSnapshot;
   implementer: AgentName;
   reviewer: AgentName;
+  metaReviewer: AgentName;
   effectiveLoopMode: BubbleReviewLoopMode;
   nowIso: string;
   createError: PairflowCreateCommandError;
@@ -92,7 +92,7 @@ export function resolvePassHandoff(input: ResolvePassHandoffInput): ResolvedPass
       return {
         senderAgent: implementer,
         senderRole: "implementer",
-        recipientAgent: metaReviewerAgent,
+        recipientAgent: input.metaReviewer,
         recipientRole: "meta_reviewer",
         envelopeRound: state.round,
         nextRound: state.round

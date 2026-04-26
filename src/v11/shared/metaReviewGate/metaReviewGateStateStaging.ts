@@ -5,11 +5,11 @@ import {
   type LoadedStateSnapshot,
   type WriteStateSnapshotPort
 } from "../ports/stateSnapshots.js";
-import type { BubbleStateSnapshot } from "../../../types/bubble.js";
+import type {
+  AgentName,
+  BubbleStateSnapshot
+} from "../../../types/bubble.js";
 import { toMetaReviewGateError } from "./metaReviewGateErrorConversion.js";
-import {
-  metaReviewerAgent
-} from "./metaReviewGateShared.js";
 import { MetaReviewGateError } from "./metaReviewGateTypes.js";
 
 export function throwMetaReviewRunningStageFailure(input: {
@@ -30,6 +30,7 @@ export function throwMetaReviewRunningStageFailure(input: {
 export async function stageMetaReviewRunningState(input: {
   bubbleId: string;
   loadedRunning: LoadedStateSnapshot;
+  metaReviewerAgent: AgentName;
   nowIso: string;
   watchdogTimeoutMinutes: number;
   statePath: string;
@@ -49,7 +50,7 @@ export async function stageMetaReviewRunningState(input: {
   const nextState: BubbleStateSnapshot = {
     ...input.loadedRunning.state,
     state: "RUNNING" as const,
-    active_agent: metaReviewerAgent,
+    active_agent: input.metaReviewerAgent,
     active_role: "meta_reviewer" as const,
     active_since: input.nowIso,
     last_command_at: input.nowIso,

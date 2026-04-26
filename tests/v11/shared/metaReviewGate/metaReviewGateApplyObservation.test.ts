@@ -122,7 +122,8 @@ function createApplyObservationContext(
         commit_requires_approval: true,
         agents: {
           implementer: "claude",
-          reviewer: "codex"
+          reviewer: "codex",
+          meta_reviewer: "codex"
         },
         commands: {
           test: "pnpm test",

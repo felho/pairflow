@@ -1,4 +1,7 @@
-import type { MetaReviewRecommendation } from "../../../types/bubble.js";
+import type {
+  AgentName,
+  MetaReviewRecommendation
+} from "../../../types/bubble.js";
 import {
   deliveryTargetRoleMetadataKey,
   resolveFindingsParityMetadataForEnvelope,
@@ -161,6 +164,7 @@ export async function appendHumanApprovalRequestEnvelope(input: {
   route: string;
   refs: string[];
   recommendation?: MetaReviewRecommendation;
+  metaReviewerAgent: AgentName;
   parityMetadata?: FindingsParityMetadata | null | undefined;
   thresholdMetadata?: MetaReviewGateThresholdMetadata;
   gateReasonCode?: string;
@@ -239,7 +243,7 @@ export async function appendHumanApprovalRequestEnvelope(input: {
         metadata: {
           [deliveryTargetRoleMetadataKey]: "status",
           actor: "meta-reviewer",
-          actor_agent: "codex",
+          actor_agent: input.metaReviewerAgent,
           ...(input.recommendation !== undefined
             ? { latest_recommendation: input.recommendation }
             : {}),

@@ -2,10 +2,11 @@ import {
   validateActiveMetaReviewExecutionContext
 } from "./metaReviewExecutionContext.js";
 import { MetaReviewError } from "./metaReviewError.js";
-import type { BubbleStateSnapshot } from "../../../types/bubble.js";
+import type {
+  AgentName,
+  BubbleStateSnapshot
+} from "../../../types/bubble.js";
 import type { MetaReviewCommandDependencies } from "./metaReviewCommandContract.js";
-
-const metaReviewerSubmitterAgent = "codex" as const;
 
 export function assertActiveMetaReviewExecutionContext(
   state: BubbleStateSnapshot
@@ -54,6 +55,7 @@ export function assertMetaReviewExecutionWindowActive(input: {
 
 export async function assertMetaReviewSubmitterAuthority(input: {
   bubbleId: string;
+  metaReviewerAgent: AgentName;
   sessionsPath: string;
   readRuntimeSessions: NonNullable<MetaReviewCommandDependencies["readRuntimeSessionsRegistry"]>;
   state: BubbleStateSnapshot;
@@ -110,11 +112,11 @@ export async function assertMetaReviewSubmitterAuthority(input: {
     });
   }
 
-  if (input.state.active_agent !== metaReviewerSubmitterAgent) {
+  if (input.state.active_agent !== input.metaReviewerAgent) {
     const activeAgent = input.state.active_agent ?? "null";
     throw new MetaReviewError({
       reasonCode: "META_REVIEW_SENDER_MISMATCH",
-      message: `meta-review submit rejected: active meta-review ownership is missing or stale (active_agent=${activeAgent}; expected active_agent=${metaReviewerSubmitterAgent}).`,
+      message: `meta-review submit rejected: active meta-review ownership is missing or stale (active_agent=${activeAgent}; expected active_agent=${input.metaReviewerAgent}).`,
       context: {
         source: "assert_meta_review_submitter_authority",
         reason: "active_agent_mismatch",

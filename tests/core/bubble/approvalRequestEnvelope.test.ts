@@ -4,8 +4,9 @@ import { join } from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { appendHumanApprovalRequestEnvelope } from "../../../src/v11/shared/metaReviewGate/approvalRequestEnvelope.js";
+import { appendHumanApprovalRequestEnvelope as appendHumanApprovalRequestEnvelopeImpl } from "../../../src/v11/shared/metaReviewGate/approvalRequestEnvelope.js";
 import type { Finding } from "../../../src/types/findings.js";
+import type { AgentName } from "../../../src/types/bubble.js";
 import {
   deliveryTargetRoleMetadataKey,
   type FindingsParityMetadata,
@@ -56,6 +57,21 @@ function createAppendEnvelopeStub(now: Date): {
     },
     calls
   };
+}
+
+type AppendHumanApprovalRequestEnvelopeInput = Parameters<
+  typeof appendHumanApprovalRequestEnvelopeImpl
+>[0];
+
+async function appendHumanApprovalRequestEnvelope(
+  input: Omit<AppendHumanApprovalRequestEnvelopeInput, "metaReviewerAgent"> & {
+    metaReviewerAgent?: AgentName;
+  }
+) {
+  return await appendHumanApprovalRequestEnvelopeImpl({
+    ...input,
+    metaReviewerAgent: input.metaReviewerAgent ?? "codex"
+  });
 }
 
 async function appendReviewerSnapshot(input: {
@@ -131,6 +147,78 @@ describe("appendHumanApprovalRequestEnvelope", () => {
       meta_review_gate_route: "human_gate_approve"
     });
     expect(result.envelope.payload.metadata?.approval_summary_normalized).toBeUndefined();
+  });
+
+  it("emits the configured meta-reviewer agent in approval-request metadata", async () => {
+    const now = new Date("2026-03-14T12:30:30.000Z");
+    const stub = createAppendEnvelopeStub(now);
+
+    const result = await appendHumanApprovalRequestEnvelope({
+      appendEnvelope: stub.appendEnvelope,
+      transcriptPath: "/tmp/transcript.ndjson",
+      inboxPath: "/tmp/inbox.ndjson",
+      lockPath: "/tmp/bubble.lock",
+      now,
+      bubbleId: "b_approval_env_meta_reviewer_agent_01",
+      round: 18,
+      summary: "Reviewer recommends approval after meta-review.",
+      route: "human_gate_approve",
+      refs: [],
+      recommendation: "approve",
+      metaReviewerAgent: "claude",
+      parityMetadata: {
+        findings_claimed_open_total: 0,
+        findings_artifact_open_total: 0,
+        findings_blocking_open_total: 0,
+        findings_advisory_open_total: 0,
+        findings_artifact_status: "available",
+        findings_digest_sha256:
+          "acacacacacacacacacacacacacacacacacacacacacacacacacacacacacacacac",
+        meta_review_run_id: "run_approval_env_meta_reviewer_agent_01",
+        findings_parity_status: "ok"
+      }
+    });
+
+    expect(result.envelope.payload.metadata).toMatchObject({
+      actor: "meta-reviewer",
+      actor_agent: "claude",
+      latest_recommendation: "approve",
+      meta_review_gate_route: "human_gate_approve"
+    });
+  });
+
+  it("requires explicit meta-reviewer authority on the builder boundary", async () => {
+    const now = new Date("2026-03-14T12:30:45.000Z");
+    const stub = createAppendEnvelopeStub(now);
+
+    const inputWithoutAuthority = {
+      appendEnvelope: stub.appendEnvelope,
+      transcriptPath: "/tmp/transcript.ndjson",
+      inboxPath: "/tmp/inbox.ndjson",
+      lockPath: "/tmp/bubble.lock",
+      now,
+      bubbleId: "b_approval_env_missing_meta_reviewer_agent_01",
+      round: 18,
+      summary: "Builder boundary must require explicit meta-reviewer authority.",
+      route: "human_gate_approve",
+      refs: [],
+      recommendation: "approve" as const,
+      parityMetadata: {
+        findings_claimed_open_total: 0,
+        findings_artifact_open_total: 0,
+        findings_blocking_open_total: 0,
+        findings_advisory_open_total: 0,
+        findings_artifact_status: "available",
+        findings_digest_sha256:
+          "adadadadadadadadadadadadadadadadadadadadadadadadadadadadadadadad",
+        meta_review_run_id: "run_approval_env_missing_meta_reviewer_agent_01",
+        findings_parity_status: "ok"
+      }
+    };
+
+    void inputWithoutAuthority;
+    // @ts-expect-error metaReviewerAgent is mandatory on the builder boundary
+    await appendHumanApprovalRequestEnvelopeImpl(inputWithoutAuthority);
   });
 
   it("normalizes approve-route summary when parity guard invariants are inconsistent", async () => {

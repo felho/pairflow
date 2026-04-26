@@ -40,6 +40,7 @@ interface AutoReworkFinalizeInput {
       agents: {
         implementer: AgentName;
         reviewer: AgentName;
+        meta_reviewer: AgentName;
       };
     };
     bubblePaths: {
@@ -185,7 +186,8 @@ async function appendAutoReworkDecision(input: {
         metadata: {
           [deliveryTargetRoleMetadataKey]: "implementer",
           actor: "meta-reviewer",
-          actor_agent: "codex",
+          actor_agent:
+            input.finalizeInput.resolved.bubbleConfig.agents.meta_reviewer,
           recommendation: input.runResultForRouting.recommendation,
           ...(input.runResultForRouting.run_id !== undefined
             ? { run_id: input.runResultForRouting.run_id }

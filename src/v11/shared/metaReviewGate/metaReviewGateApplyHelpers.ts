@@ -2,6 +2,7 @@ import type {
   AppendProtocolEnvelopePort,
   AppendProtocolEnvelopeResult
 } from "../ports/transcript.js";
+import type { AgentName } from "../../../types/bubble.js";
 import { buildMetaReviewSubmitCommandTemplate } from "../metaReview/metaReviewSubmitGuidance.js";
 import {
   type LoadedStateSnapshot,
@@ -16,7 +17,6 @@ export {
 } from "./metaReviewGateStateStaging.js";
 import {
   buildHumanGateSummary,
-  metaReviewerAgent,
   persistHumanGateRoute
 } from "./metaReviewGateShared.js";
 import type { MetaReviewGateResult } from "./metaReviewGateTypes.js";
@@ -30,6 +30,7 @@ export async function appendMetaReviewKickoffEnvelope(input: {
   bubbleId: string;
   round: number;
   handoffId: string;
+  metaReviewerAgent: AgentName;
   refs: string[];
 }): Promise<AppendProtocolEnvelopeResult> {
   const kickoffSummary = [
@@ -46,7 +47,7 @@ export async function appendMetaReviewKickoffEnvelope(input: {
     envelope: {
       bubble_id: input.bubbleId,
       sender: "orchestrator",
-      recipient: metaReviewerAgent,
+      recipient: input.metaReviewerAgent,
       type: "TASK",
       round: input.round,
       payload: {
@@ -74,6 +75,7 @@ export async function persistMetaReviewRunFailedRoute(input: {
   now: Date;
   nowIso: string;
   bubbleId: string;
+  metaReviewerAgent: AgentName;
   convergenceSummary: string;
   fallbackReason: string;
   refs: string[];
@@ -94,6 +96,7 @@ export async function persistMetaReviewRunFailedRoute(input: {
       fallbackReason: input.fallbackReason
     }),
     refs: input.refs,
+    metaReviewerAgent: input.metaReviewerAgent,
     loaded: input.loaded,
     expectedState: "RUNNING",
     route: "human_gate_run_failed",

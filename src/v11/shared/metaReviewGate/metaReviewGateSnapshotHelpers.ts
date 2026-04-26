@@ -1,12 +1,20 @@
 import {
   DEFAULT_META_REVIEW_AUTO_REWORK_LIMIT,
+  type BubbleAgentsConfig,
   type BubbleMetaReviewSnapshotState
 } from "../../../types/bubble.js";
+import { resolveConfiguredAgentForRole } from "../../../types/bubble.js";
 import {
   resolveFindingsParityMetadataForEnvelope as resolveFindingsParityMetadataForEnvelopeFromProtocol,
   type FindingsParityMetadata
 } from "../../../types/protocol.js";
-export const metaReviewerAgent = "codex";
+
+export function resolveMetaReviewerAgent(agents: BubbleAgentsConfig) {
+  return resolveConfiguredAgentForRole({
+    agents,
+    role: "meta_reviewer"
+  });
+}
 
 export function normalizeMetaReviewSnapshot(
   snapshot: BubbleMetaReviewSnapshotState | undefined

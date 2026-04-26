@@ -60,6 +60,7 @@ export async function prepareResumeLaunchInput(input: {
     transcriptSummary,
     implementerAgent: input.context.resolved.bubbleConfig.agents.implementer,
     reviewerAgent: input.context.resolved.bubbleConfig.agents.reviewer,
+    metaReviewerAgent: input.context.resolved.bubbleConfig.agents.meta_reviewer,
     ...(reviewerTestDirectiveLine !== undefined
       ? { reviewerTestDirectiveLine }
       : {})

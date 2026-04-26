@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-import { metaReviewerAgent } from "../../../../src/v11/shared/metaReviewGate/metaReviewGateSnapshotHelpers.js";
 
 function toErrorMessage(input: PairflowCommandErrorInput): string {
   if (typeof input === "string") {
@@ -13,6 +12,7 @@ import { resolvePassHandoff } from "../../../../src/v11/domain/pass/handoff.js";
 
 const implementer: AgentName = "codex";
 const reviewer: AgentName = "claude";
+const metaReviewer: AgentName = "codex";
 const nowIso = "2026-03-19T12:00:00.000Z";
 
 class TestPassError extends Error {
@@ -50,6 +50,7 @@ function resolveFromState(state: BubbleStateSnapshot) {
     state,
     implementer,
     reviewer,
+    metaReviewer,
     effectiveLoopMode: "full",
     nowIso,
     createError: (message: PairflowCommandErrorInput) => new TestPassError(toErrorMessage(message))
@@ -85,6 +86,7 @@ describe("resolvePassHandoff", () => {
       }),
       implementer,
       reviewer,
+      metaReviewer,
       effectiveLoopMode: "meta_only",
       nowIso,
       createError: (message: PairflowCommandErrorInput) =>
@@ -94,7 +96,7 @@ describe("resolvePassHandoff", () => {
     expect(resolved).toEqual({
       senderAgent: implementer,
       senderRole: "implementer",
-      recipientAgent: metaReviewerAgent,
+      recipientAgent: metaReviewer,
       recipientRole: "meta_reviewer",
       envelopeRound: 4,
       nextRound: 4
@@ -221,10 +223,11 @@ describe("resolvePassHandoff", () => {
       resolvePassHandoff({
         state: buildRunningState({
           active_role: "meta_reviewer",
-          active_agent: "codex"
+          active_agent: metaReviewer
         }),
         implementer,
         reviewer,
+        metaReviewer,
         effectiveLoopMode: "full",
         nowIso,
         createError: (message: PairflowCommandErrorInput) =>

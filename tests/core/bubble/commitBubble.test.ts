@@ -65,7 +65,8 @@ function createRemoteBubbleConfig(repoPath: string, bubbleId: string): BubbleCon
     commit_requires_approval: true,
     agents: {
       implementer: "codex",
-      reviewer: "claude"
+      reviewer: "claude",
+      meta_reviewer: "codex"
     },
     commands: {
       test: "pnpm test",

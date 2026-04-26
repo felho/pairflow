@@ -36,7 +36,8 @@ function createResolvedBubbleFixture(input: {
       : {}),
     agents: {
       implementer: "codex",
-      reviewer: "claude"
+      reviewer: "claude",
+      meta_reviewer: "codex"
     },
     commands: {
       test: "pnpm test",

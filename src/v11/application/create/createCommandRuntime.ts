@@ -65,6 +65,7 @@ export interface CreateBubbleConfigInput {
   ideationStartedAt?: string;
   implementer?: AgentName;
   reviewer?: AgentName;
+  metaReviewer?: AgentName;
   testCommand?: string;
   typecheckCommand?: string;
   bootstrapCommand?: string;
@@ -304,7 +305,12 @@ export function buildBubbleConfig(input: CreateBubbleConfigInput): BubbleConfig 
     },
     agents: {
       implementer: input.implementer ?? "codex",
-      reviewer: input.reviewer ?? "claude"
+      reviewer: input.reviewer ?? "claude",
+      // Keep create-path compat normalization anchored to the canonical config
+      // validator instead of duplicating a producer-local fallback here.
+      ...(input.metaReviewer !== undefined
+        ? { meta_reviewer: input.metaReviewer }
+        : {})
     },
     commands: {
       ...(input.bootstrapCommand !== undefined

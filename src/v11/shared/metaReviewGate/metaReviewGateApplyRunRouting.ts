@@ -26,6 +26,7 @@ export async function routeMetaReviewKickoffOrRunFailed(
       handoffId:
         input.metaReviewRunningState.state.meta_review?.execution_context?.handoff_id ??
         `meta_review:${input.context.resolved.bubbleId}:round:${input.metaReviewRunningState.state.round}`,
+      metaReviewerAgent: input.context.resolved.bubbleConfig.agents.meta_reviewer,
       refs: input.context.refs
     });
 
@@ -49,6 +50,7 @@ export async function routeMetaReviewKickoffOrRunFailed(
         now: input.context.now,
         nowIso: input.context.nowIso,
         bubbleId: input.context.resolved.bubbleId,
+        metaReviewerAgent: input.context.resolved.bubbleConfig.agents.meta_reviewer,
         convergenceSummary: input.convergenceSummary,
         fallbackReason: `META_REVIEW_GATE_RUN_FAILED: ${runFailureReason}`,
         refs: input.context.refs,

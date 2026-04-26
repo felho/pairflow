@@ -6,10 +6,12 @@ import {
 } from "../../../../src/v11/application/start/startCommandImplementerPrompts.js";
 import { buildResumeImplementerStartupPrompt } from "../../../../src/v11/application/start/startCommandResumeImplementerPrompt.js";
 import {
-  buildReviewerPolicySnapshotContractLines,
   buildRolePromptConcernLines,
   buildTranscriptContextLine,
   type ResumePromptConcernBuildInput
+} from "../../../../src/v11/application/actorProtocol/roleDescriptorRegistry.js";
+import type {
+  buildReviewerPolicySnapshotContractLines
 } from "../../../../src/v11/application/actorProtocol/roleDescriptorRegistry.js";
 import {
   buildMetaReviewerStartupPrompt,

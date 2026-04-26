@@ -210,7 +210,7 @@ function buildLaunchBubbleSessionRuntimeConfig(
     implementerPaneLabel: input.implementerPaneLabel ?? "[codex/implementer]",
     reviewerPaneLabel: input.reviewerPaneLabel ?? "[claude/reviewer]",
     metaReviewerPaneLabel:
-      input.metaReviewerPaneLabel ?? "[codex/meta-reviewer]",
+      input.metaReviewerPaneLabel ?? "[meta-reviewer]",
     placeholderCommand: buildLaunchPanePlaceholderCommand()
   };
 }

@@ -44,7 +44,7 @@ describe("buildRunningExecutionContext", () => {
       topology_slot_id: "meta_reviewer",
       authority_policy_check_id: "meta_reviewer_authority",
       handoff_id_format_id: "meta_review",
-      active_agent_constraint_id: "codex_when_present"
+      active_agent_constraint_id: "configured_when_present"
     });
     expect(topologySlotCatalog.status).toEqual({
       id: "status",
@@ -128,7 +128,7 @@ describe("buildRunningExecutionContext", () => {
       "context_snapshot_integrity",
       "input_context_match",
       "meta_reviewer_authority",
-      "meta_reviewer_active_agent_codex_when_present"
+      "meta_reviewer_active_agent_matches_config_when_present"
     ]);
   });
 

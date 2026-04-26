@@ -32,7 +32,8 @@ describe("metaReviewGatePaneBinding", () => {
       round: 1,
       now: new Date("2026-04-13T00:00:00.000Z"),
       taskArtifactPath: "/repo/.pairflow/bubbles/b_meta_review_gate_missing_builder/artifacts/task.md",
-      pairflowCommandProfile: "external"
+      pairflowCommandProfile: "external",
+      metaReviewerAgent: "codex"
     });
 
     expect(result).toEqual({
@@ -59,7 +60,8 @@ describe("metaReviewGatePaneBinding", () => {
       round: 1,
       now: new Date("2026-04-13T00:00:00.000Z"),
       taskArtifactPath: "/repo/.pairflow/bubbles/b_meta_review_gate_missing_respawn/artifacts/task.md",
-      pairflowCommandProfile: "external"
+      pairflowCommandProfile: "external",
+      metaReviewerAgent: "codex"
     });
 
     expect(result).toEqual({
@@ -93,7 +95,8 @@ describe("metaReviewGatePaneBinding", () => {
       round: 1,
       now: new Date("2026-04-13T00:00:00.000Z"),
       taskArtifactPath: "/repo/.pairflow/bubbles/b_meta_review_gate_no_runtime/artifacts/task.md",
-      pairflowCommandProfile: "external"
+      pairflowCommandProfile: "external",
+      metaReviewerAgent: "codex"
     });
 
     expect(result).toEqual({
@@ -127,7 +130,8 @@ describe("metaReviewGatePaneBinding", () => {
       round: 1,
       now: new Date("2026-04-13T00:00:00.000Z"),
       taskArtifactPath: "/repo/.pairflow/bubbles/b_meta_review_gate_durable_handoff/artifacts/task.md",
-      pairflowCommandProfile: "external"
+      pairflowCommandProfile: "external",
+      metaReviewerAgent: "codex"
     });
 
     expect(result).toEqual({
@@ -164,7 +168,8 @@ describe("metaReviewGatePaneBinding", () => {
       round: 1,
       now: new Date("2026-04-13T00:00:00.000Z"),
       taskArtifactPath: "/repo/.pairflow/bubbles/b_meta_review_gate_invalid_updated_without_record/artifacts/task.md",
-      pairflowCommandProfile: "external"
+      pairflowCommandProfile: "external",
+      metaReviewerAgent: "codex"
     });
 
     expect(result).toEqual({
@@ -219,7 +224,8 @@ describe("metaReviewGatePaneBinding", () => {
       round: 2,
       now: new Date("2026-04-13T00:00:00.000Z"),
       taskArtifactPath: "/repo/.pairflow/bubbles/b_meta_review_gate_legacy_workspace/artifacts/task.md",
-      pairflowCommandProfile: "external"
+      pairflowCommandProfile: "external",
+      metaReviewerAgent: "codex"
     });
 
     expect(result).toEqual({
@@ -277,7 +283,8 @@ describe("metaReviewGatePaneBinding", () => {
       round: 2,
       now: new Date("2026-04-13T00:05:00.000Z"),
       taskArtifactPath: "/repo/.pairflow/bubbles/b_meta_review_gate_clone_fallback_forbidden/artifacts/task.md",
-      pairflowCommandProfile: "external"
+      pairflowCommandProfile: "external",
+      metaReviewerAgent: "codex"
     });
 
     expect(result).toEqual({
@@ -336,7 +343,8 @@ describe("metaReviewGatePaneBinding", () => {
       round: 3,
       now: new Date("2026-04-13T00:10:00.000Z"),
       taskArtifactPath: "/repo/.pairflow/bubbles/b_meta_review_gate_respawn_fail/artifacts/task.md",
-      pairflowCommandProfile: "external"
+      pairflowCommandProfile: "external",
+      metaReviewerAgent: "codex"
     });
 
     expect(result.shouldDeactivate).toBe(true);
@@ -382,7 +390,8 @@ describe("metaReviewGatePaneBinding", () => {
       round: 3,
       now: new Date("2026-04-13T00:12:00.000Z"),
       taskArtifactPath: "/repo/.pairflow/bubbles/b_meta_review_gate_notify_missing_after_respawn/artifacts/task.md",
-      pairflowCommandProfile: "external"
+      pairflowCommandProfile: "external",
+      metaReviewerAgent: "codex"
     });
 
     expect(result).toEqual({
@@ -447,7 +456,8 @@ describe("metaReviewGatePaneBinding", () => {
       round: 4,
       now: new Date("2026-04-13T00:15:00.000Z"),
       taskArtifactPath: "/repo/.pairflow/bubbles/b_meta_review_gate_notify_forwarding/artifacts/task.md",
-      pairflowCommandProfile: "external"
+      pairflowCommandProfile: "external",
+      metaReviewerAgent: "codex"
     });
 
     expect(result).toEqual({
@@ -468,6 +478,7 @@ describe("metaReviewGatePaneBinding", () => {
     });
     expect(notifySubmissionRequest).toHaveBeenCalledWith({
       bubbleId: "b_meta_review_gate_notify_forwarding",
+      metaReviewerAgent: "codex",
       round: 4,
       targetPane: `pf-b_meta_review_gate_notify_forwarding:0.${String(
         getTopologySlotPaneIndexForRole("meta_reviewer")
@@ -529,7 +540,8 @@ describe("metaReviewGatePaneBinding", () => {
       round: 2,
       now: new Date("2026-04-13T00:20:00.000Z"),
       taskArtifactPath: "/repo/.pairflow/bubbles/b_meta_review_gate_notify_runner_fallback/artifacts/task.md",
-      pairflowCommandProfile: "external"
+      pairflowCommandProfile: "external",
+      metaReviewerAgent: "codex"
     });
 
     expect(notifySubmissionRequest).toHaveBeenCalledWith(expect.anything(), expect.anything());

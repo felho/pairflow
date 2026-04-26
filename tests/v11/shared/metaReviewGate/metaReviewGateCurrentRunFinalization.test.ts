@@ -184,7 +184,8 @@ describe("finalizeCurrentRunMetaReviewGate", () => {
           watchdog_timeout_minutes: 30,
           agents: {
             implementer: "claude",
-            reviewer: "codex"
+            reviewer: "codex",
+            meta_reviewer: "codex"
           },
           review_policy: {
             review_loop_mode: "full",
@@ -222,6 +223,62 @@ describe("finalizeCurrentRunMetaReviewGate", () => {
     expect(append.envelopes).toHaveLength(1);
   });
 
+  it("emits the configured meta-reviewer agent in auto-rework decision metadata", async () => {
+    const artifact = await createArtifactFixture({
+      findings: [{ severity: "P1", title: "blocking" }],
+      summary: { open_total: 1 }
+    });
+    const append = createAppendEnvelopeStub();
+    const write = createWriteStateStub();
+
+    const result = await finalizeCurrentRunMetaReviewGate({
+      resolved: {
+        bubbleId: "b_meta_gate_finalize_threshold_01",
+        bubbleConfig: {
+          watchdog_timeout_minutes: 30,
+          agents: {
+            implementer: "claude",
+            reviewer: "codex",
+            meta_reviewer: "claude"
+          },
+          review_policy: {
+            review_loop_mode: "full",
+            meta_review_auto_rework_min_severity: "P2"
+          }
+        },
+        bubblePaths: {
+          bubbleDir: artifact.bubbleDir,
+          artifactsDir: artifact.artifactsDir,
+          inboxPath: join(artifact.bubbleDir, "inbox.ndjson"),
+          locksDir: join(artifact.bubbleDir, "locks"),
+          statePath: join(artifact.bubbleDir, "state.json"),
+          transcriptPath: join(artifact.bubbleDir, "transcript.ndjson")
+        }
+      },
+      loaded: createLoadedRunningState(),
+      now: new Date("2026-04-22T10:05:00.000Z"),
+      refs: [],
+      summary: "Configured meta-reviewer auto-rework fixture",
+      runResult: createRunResult({
+        runId: "run_meta_gate_finalize_meta_reviewer_agent_01",
+        artifactRef: artifact.artifactRef,
+        digest: artifact.digest,
+        findingsCount: 1
+      }),
+      readFileFn: (path, encoding) => readFile(path, encoding),
+      appendEnvelope: append.appendEnvelope,
+      writeState: write.writeState
+    });
+
+    expect(result.route).toBe("auto_rework");
+    expect(result.gateEnvelope.type).toBe("APPROVAL_DECISION");
+    expect(result.gateEnvelope.payload.metadata).toMatchObject({
+      actor: "meta-reviewer",
+      actor_agent: "claude",
+      recommendation: "rework"
+    });
+  });
+
   it("does not threshold-gate the rework route when the highest open severity is below the configured minimum", async () => {
     const artifact = await createArtifactFixture({
       findings: [{ severity: "P3", title: "advisory" }],
@@ -237,7 +294,8 @@ describe("finalizeCurrentRunMetaReviewGate", () => {
           watchdog_timeout_minutes: 30,
           agents: {
             implementer: "claude",
-            reviewer: "codex"
+            reviewer: "codex",
+            meta_reviewer: "codex"
           },
           review_policy: {
             review_loop_mode: "full",
@@ -292,7 +350,8 @@ describe("finalizeCurrentRunMetaReviewGate", () => {
           watchdog_timeout_minutes: 30,
           agents: {
             implementer: "claude",
-            reviewer: "codex"
+            reviewer: "codex",
+            meta_reviewer: "codex"
           },
           review_policy: {
             review_loop_mode: "full",
@@ -363,7 +422,8 @@ describe("finalizeCurrentRunMetaReviewGate", () => {
           watchdog_timeout_minutes: 30,
           agents: {
             implementer: "claude",
-            reviewer: "codex"
+            reviewer: "codex",
+            meta_reviewer: "codex"
           },
           review_policy: {
             review_loop_mode: "full",
@@ -424,7 +484,8 @@ describe("finalizeCurrentRunMetaReviewGate", () => {
           watchdog_timeout_minutes: 30,
           agents: {
             implementer: "claude",
-            reviewer: "codex"
+            reviewer: "codex",
+            meta_reviewer: "codex"
           },
           review_policy: {
             review_loop_mode: "full",
@@ -482,7 +543,8 @@ describe("finalizeCurrentRunMetaReviewGate", () => {
           watchdog_timeout_minutes: 30,
           agents: {
             implementer: "claude",
-            reviewer: "codex"
+            reviewer: "codex",
+            meta_reviewer: "codex"
           },
           review_policy: {
             review_loop_mode: "full",
