@@ -140,6 +140,49 @@ Vezessuk be a reviewer kulon persisted thresholdjat ugy, hogy:
 4. Explicit out-of-scope consumers:
    reviewer routing, reviewer prompt guidance, meta-review gate threshold consume.
 
+### Complexity Risk Triage
+
+1. `risk_score`: `6`
+2. Axis breakdown:
+   - `authority_risk = 1`
+   - `surface_spread = 2`
+   - `identity_join_risk = 0`
+   - `activation_coupling = 1`
+   - `prerequisite_risk = 0`
+   - `acceptance_multiplicity = 2`
+3. Split decision:
+   marad kulon Phase 1 task az existing `Plan -> Task` bontason belul; nem huzhato ossze a reviewer workflow consume closure-rel.
+4. Authority/source-of-truth note:
+   ez a szelet uj canonical persisted fieldet vezet be es ugyanebben a bounded valtozasban zarja le a producer + mutation/read-model foundationt, de nem aktival reviewer routing authorityt.
+
+### Closure-Budget Triage
+
+1. Touched closures:
+   - `authority_producer`
+   - `shared_contract`
+   - `internal_execution_consumers`
+   - `read_model_consumers`
+   - `persisted_authority_or_schema`
+2. Intentionally collapsed closures:
+   - `authority_producer` + `persisted_authority_or_schema`
+   - `internal_execution_consumers` + `read_model_consumers`
+3. Why this collapse is safe:
+   ugyanaz a bounded codepath-csalad ownershipolja a parse/render/default/update/runtime-view/projection valtozasokat, es ezek nem nyitnak kulon workflow-orchestration vagy cleanup contractot.
+4. Explicitly deferred closures:
+   - `workflow_orchestration_consumers`
+   - `cleanup_recovery_consumers`
+5. No-split proof:
+   a shared contract valtozas ebben a taskban nem lep at reviewer routing vagy ontology/guidance consume surface-re, ezert a plan-szintu ketfazisu split eleg.
+
+### Bounded-Task-Shape Classification
+
+1. Primary shape:
+   `authority_producer`
+2. Secondary shape:
+   `activation_or_read_model`
+3. Why the mix is safe:
+   a secondary shape csak a producer altal ugyanebben a phase-ben ownershipolt status/list/detail/UI projection transzparenciara terjed ki; nincs kulon activation gate, workflow consume vagy uj side-effect ordering branch.
+
 ## L1 - Change Contract
 
 ### 1) Call-site Matrix
@@ -152,8 +195,8 @@ Vezessuk be a reviewer kulon persisted thresholdjat ugy, hogy:
 | CS4 | `src/v11/shared/reviewPolicy/reviewPolicyRuntime.ts` | normalization/runtime view | normalized reviewer threshold + runtime projection | missing field -> `P3`, runtime view transzparensen mutatja reviewer/meta thresholdot | P1 | T4 |
 | CS5 | `src/v11/application/create/createCommandRuntime.ts` | create default config | create-time persisted baseline | uj bubbles defaultbol reviewer=`P3`, meta=`P3` | P1 | T3 |
 | CS6 | `src/v11/shared/reviewPolicy/updateBubbleReviewPolicy.ts` | patch contract | shared UI patch mindket persisted mezot irhatja | update helper deterministic dual-field patchinget tamogat | P1 | T5 |
-| CS7 | `src/v11/shared/ports/uiRouter.ts`, `routerHttpBody.ts`, `routerActionDispatch.ts` | UI mutate API | shared request field | single input mezo canonical mutation requestkent mindket thresholdot beallitja | P1 | T6 |
-| CS8 | `src/v11/defaults/ui/updateBubbleReviewPolicyForUi.ts`, `sshBubbleReviewPolicyCommand.ts` | local+remote mutation orchestration | local es remote parity | ugyanaz a single-control write semantics local es remote bubble-re | P1 | T6,T7 |
+| CS7 | `src/v11/shared/ports/uiRouter.ts`, `routerHttpBody.ts`, `routerActionDispatch.ts` | UI mutate API | shared request field | exact public request shape: `reviewLoopMode` + optional `reviewBlockingMinSeverity` + optional `expectedBubbleToml`; ha a shared field jelen van, canonical mutation requestkent mindket thresholdot beallitja | P1 | T6 |
+| CS8 | `src/v11/defaults/ui/updateBubbleReviewPolicyForUi.ts`, `sshBubbleReviewPolicyCommand.ts` | local+remote mutation orchestration | local es remote parity | ugyanaz a shared field -> dual-persisted-field mapping megy local es remote bubble-re is; threshold-omission preserve semantics explicit | P1 | T6,T7 |
 | CS9 | `status/list/presenter` files | read-model output | projection alignment | status/list/detail response-ben reviewer es meta threshold is lathato | P1 | T4,T8 |
 
 ### 2) Data and Interface Contract
@@ -162,7 +205,9 @@ Vezessuk be a reviewer kulon persisted thresholdjat ugy, hogy:
 |---|---|---|---|---|---|
 | Persisted review policy | `review_loop_mode`, `meta_review_auto_rework_min_severity` | `review_loop_mode`, `reviewer_blocking_min_severity`, `meta_review_auto_rework_min_severity` | both thresholds | none | additive persisted contract |
 | Runtime view | meta-only threshold visible | dual threshold visible | reviewer + meta fields | guarded diagnostics unchanged | additive read-model contract |
-| UI mutate body | meta-only severity field | shared single severity field | one shared severity input | expectedBubbleToml | intentional API rename/tightening within same repo |
+| UI mutate body | `metaReviewAutoReworkMinSeverity?` | `reviewBlockingMinSeverity?` | one shared severity input | `expectedBubbleToml` | intentional API rename/tightening within same repo |
+| UI router port | `UiUpdateBubbleReviewPolicyInput { reviewLoopMode, metaReviewAutoReworkMinSeverity?, expectedBubbleToml? }` | `UiUpdateBubbleReviewPolicyInput { reviewLoopMode, reviewBlockingMinSeverity?, expectedBubbleToml? }` | exact shared input shape | none | intentional port rename/tightening within same repo |
+| Internal patch shape | `patch.review_loop_mode`, optional `patch.meta_review_auto_rework_min_severity` | `patch.review_loop_mode`, optional `patch.reviewer_blocking_min_severity`, optional `patch.meta_review_auto_rework_min_severity` | dual-field internal patch | none | additive internal contract |
 
 Normative rules:
 1. Reviewer canonical field neve:
@@ -171,8 +216,18 @@ Normative rules:
    `P3`
 3. Meta-review field neve valtozatlan:
    `meta_review_auto_rework_min_severity`
-4. Shared UI/operator mutate input egyetlen severity field; ennek hatasara mindket persisted threshold ugyanarra az ertekre all.
-5. A runtime viewben a ket persisted threshold kulon mezokent jelenik meg; shared UI input nem lesz persisted/runtime alias.
+4. A public UI/operator mutate request pontos threshold field neve:
+   `reviewBlockingMinSeverity`
+5. A Phase 1 public UI port exact shape-je:
+   `UiUpdateBubbleReviewPolicyInput { bubbleId, repoPath|cwd, reviewLoopMode, reviewBlockingMinSeverity?, expectedBubbleToml? }`
+6. A HTTP `update-review-policy` request body exact threshold shape-je:
+   `reviewLoopMode` kotelezo, `reviewBlockingMinSeverity` optional, `expectedBubbleToml` optional.
+7. Ha `reviewBlockingMinSeverity` jelen van, a mutation seam kotelezoen erre a ket internal persisted patch keyre fordit:
+   - `review_policy.reviewer_blocking_min_severity = reviewBlockingMinSeverity`
+   - `review_policy.meta_review_auto_rework_min_severity = reviewBlockingMinSeverity`
+8. Ha `reviewBlockingMinSeverity` nincs jelen, a mutation seam nem irhat threshold change-et egyik persisted mezo fele sem; a meglévő reviewer/meta threshold ertekek preserved maradnak.
+9. A local es remote update path ugyanazt a shared-input -> dual-persisted-field mappingot kell hasznalja; nem maradhat meta-only remote vagy local special-case.
+10. A runtime viewben a ket persisted threshold kulon mezokent jelenik meg; shared UI input nem lesz persisted/runtime alias.
 
 ### 3) Error Contract
 
@@ -182,7 +237,45 @@ Normative rules:
 | unknown extra `review_policy` key | reject | existing `REVIEW_POLICY_INVALID` path | P1 |
 | remote/local write conflict | conflict result | existing review-policy write conflict/state conflict | P1 |
 
-### 4) Test and Acceptance Matrix
+### 4) Baseline Preservation
+
+1. `must_preserve_behaviors`:
+   - `review_loop_mode` parse/render/update semantics valtozatlan marad
+   - `meta_review_auto_rework_min_severity` kulon persisted canonical mezokent megmarad
+   - local/remote update path conflict es lock behavior preserved marad
+   - status/list/detail surfaces tovabbra is normalized review-policy helperbol olvasnak
+2. `allowed_resolution_paths`:
+   - hianyzo reviewer threshold -> normalized default `P3`
+   - shared UI severity input -> deterministic dual-field patch -> parse/render/normalize -> projection
+3. `forbidden_regression_interpretations`:
+   - a shared UI input nem downgrade-olhatja a dual-threshold persisted contractot UI-only aliasra
+   - a reviewer threshold hianya nem oldodhat legacy meta-only mezobol visszafejtett truth-ra
+4. `replacement_proof_required_if_removed`:
+   ha barmely existing local/remote conflict vagy normalized projection path kikerulne, explicit parity proof kell arra, hogy az uj path ugyanazt a fail-closed/transparent viselkedest adja.
+
+### 5) Precondition and Side-Effect Boundary
+
+1. Validations that must pass before side effects:
+   - UI/request body severity input valid domainba essen
+   - current review-policy object parse/normalize sikeres legyen
+   - remote update es local expected-content preconditions teljesuljenek
+2. Side effects forbidden before those validations pass:
+   - nincs bubble.toml rewrite invalid reviewer severity eseten
+   - nincs local persisted patch conflict eseten
+   - nincs remote write, ha az input shape vagy expected current state invalid
+3. Invalid/precondition-failure behavior:
+   - invalid input -> reject, side effect nelkul
+   - unknown key / invalid TOML field -> reject, side effect nelkul
+   - write conflict / state conflict -> explicit conflict result, reszleges dual-threshold atiras nelkul
+4. Coordination primitives in scope:
+   - local update lock authority `in scope`, preserved baseline behavior
+   - remote update parity `in scope`, de nem uj concurrency modelkent, hanem existing conflict semantics parityjakent
+5. Pure-by-default side-effect rule:
+   parse/normalize/projection helpers purek maradnak; csak a designated local/remote mutation seam vegezhet persisted irast.
+6. Dependency-failure fallback:
+   dependency vagy transport failure eseten a task nem engedhet csendes single-field fallbackot; fail-closed reject/conflict path kell, partial persisted success nelkul.
+
+### 6) Test and Acceptance Matrix
 
 | ID | Scenario | Given | When | Then |
 |---|---|---|---|---|
@@ -191,31 +284,41 @@ Normative rules:
 | T3 | create default reviewer threshold | uj bubble create | config materializalodik | reviewer threshold default `P3` |
 | T4 | runtime view dual threshold | config hianyos vagy explicit | normalize/runtime view fut | reviewer defaultol vagy explicit latszik, meta kulon latszik |
 | T5 | local update writes both persisted fields | shared UI severity input = `P2` | local update-review-policy fut | reviewer=`P2`, meta=`P2` kerul bubble.toml-ba |
-| T6 | router accepts shared field and forwards | HTTP update-review-policy body | router dispatch fut | canonical UI input a dual-field patchre mapelodik |
+| T6 | router accepts exact shared field and forwards | HTTP body `reviewBlockingMinSeverity=P2` | router dispatch fut | canonical UI input a dual-field patchre mapelodik local+remote parityval |
 | T7 | remote update parity | remote bubble update same inputtal | ssh script fut | remote bubble.toml-ban is reviewer=`X`, meta=`X` |
 | T8 | status/list/detail projection transparency | updated bubble config | list/status/detail build fut | reviewPolicy projection reviewer + meta thresholdot is tartalmaz |
+| T9 | invalid UI severity causes zero side effect | invalid shared severity input | local/remote update indulna | reject vagy conflict jon, bubble.toml nem iródik at reszlegesen |
+| T10 | expected-content conflict preserves zero partial write | stale current review policy / competing update | local dual-threshold patch fut | explicit conflict result jon, reviewer/meta threshold nem valik szet |
+| T11 | threshold omission preserves both persisted values | HTTP body contains only `reviewLoopMode` change | update-review-policy fut | reviewer/meta threshold unchanged marad local es remote pathon is |
 
-### 5) Review Control
+### 7) Review Control
 
 Reviewer akkor adhat `IMPLEMENTABLE` allapotot, ha:
 1. a dual-threshold contract minden producer/mutation/read-model surface-en konzisztens,
 2. a reviewer default `P3` explicit es tudatos behavior-valtozaskent szerepel,
 3. a shared UI control nem mossa ossze a persisted canonical dual-threshold shape-et,
-4. a reviewer workflow consume nincs felig idehuzva ebbe a taskba.
+4. a reviewer workflow consume nincs felig idehuzva ebbe a taskba,
+5. a mutation boundary explicit bizonyitja a zero-partial-write / fail-closed elvart viselkedest.
 
 ## L2 - Implementation Notes (Optional)
 
-1. A shared UI request field neve lehet `reviewBlockingMinSeverity`; ennek szerepe operator convenience input, nem canonical persisted field.
+1. A `reviewBlockingMinSeverity` operator convenience input, nem canonical persisted field.
 2. Ha a backend/API rename blast radius indokolja, legacy alias csak atmeneti guardkent johet szoba, de nem kotelezo baseline.
 
 ## Spec Lock
 
 Task `IMPLEMENTABLE`, ha:
 1. a dual-threshold contract es a single-control mutate semantics ellentmondasmentes,
-2. T1-T8 teljesen fedik a producer/mutation/read-model blast radiust,
+2. T1-T11 teljesen fedik a producer/mutation/read-model blast radiust, az exact UI/port/patch contractot es a zero-partial-write mutation boundaryt,
 3. nincs reviewer routing logika scope-creep ebben a phase1 szeletben.
 
 ## Assumptions
 
 1. A UI request field rename ugyanabban a repo-surface-ben kontrollalhato.
 2. A current operatori transparency miatt a runtime view bovitese required-now, nem optional polish.
+
+## Hardening Backlog
+
+1. `later-hardening`: kulon compatibility alias policy csak akkor kell, ha kesobb kulso consumer jelenik meg a shared UI request fieldre.
+2. `later-hardening`: kulon operator UI a reviewer es meta-review threshold szetvalasztott allitasara successor task lehet.
+3. `later-hardening`: additional recovery/rollback instrumentation csak akkor kell, ha a local/remote update parity rollout kozben uj diagnostics gap jelenik meg.

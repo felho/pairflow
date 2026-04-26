@@ -16,7 +16,7 @@ Szetszalazni a review severity policy-t ugy, hogy:
 1. a reviewer kulon persisted thresholdot kapjon `review_policy.reviewer_blocking_min_severity` neven,
 2. a meta-review megtartsa a sajat `review_policy.meta_review_auto_rework_min_severity` mezot,
 3. a UI/operator egyetlen shared severity kontrollal mindket mezot ugyanarra az ertekre tudja allitani,
-4. a reviewer post-gate routing ne fix `P0/P1` szabalyra, hanem az uj reviewer thresholdra epuljon,
+4. a reviewer post-gate routing ne fix `P0/P1` routing-szabalyra, hanem az uj reviewer thresholdra epuljon ugy, hogy a severity ontology `P0/P1/P2/P3` jelentese es a document-scope qualifier normalizalas explicit maradjon,
 5. az uj reviewer default tudatosan `P3` legyen, nem kompatibilitasi `P1`.
 
 ## Done Definition
@@ -26,8 +26,8 @@ Szetszalazni a review severity policy-t ugy, hogy:
    - `meta_review_auto_rework_min_severity`
 2. A create/parse/render/update/runtime-view/list/status/UI mutate surfaces ugyanazt a ketmezos policy contractot hasznaljak.
 3. Az operatori UI update path egyetlen shared severity inputtal irja mindket persisted mezot ugyanarra az ertekre.
-4. A reviewer post-gate decision path ugyanebbol a canonical policy-bol olvassa a blocking thresholdot; fix `P0/P1` literal policy nem marad reviewer routing authoritykent.
-5. A spec-ek es a tesztmatrix explicit rogziti, hogy az uj reviewer default `P3`, es ez viselkedesvaltozas, nem accidental drift.
+4. A reviewer post-gate decision path ugyanebbol a canonical policy-bol olvassa a routing thresholdot; fix `P0/P1` literal policy nem marad reviewer routing authoritykent, de a severity ontology closed jelentese nem lehet implicit collateral drift.
+5. A spec-ek es a tesztmatrix explicit rogziti, hogy az uj reviewer default `P3`, es ez post-gate routing viselkedesvaltozas, nem accidental ontology-drift.
 
 ## Guiding Principles
 
@@ -36,17 +36,17 @@ Szetszalazni a review severity policy-t ugy, hogy:
 2. Control model:
    a persisted `bubble.toml` `review_policy` blokk a canonical source-of-truth; a UI shared severity control csak write-time convenience surface, nem harmadik authority.
 3. Read-path rule:
-   reviewer routing csak normalized review-policy helperen keresztul olvashat thresholdot; prompt/guidance szoveg, status projection vagy UI local state nem lehet canonical truth.
+   reviewer routing csak normalized review-policy helperen keresztul olvashat thresholdot; a threshold compare a structured findings aggregate mar fennallo scope-policy normalizalasa utan futhat; prompt/guidance szoveg, status projection vagy UI local state nem lehet canonical truth.
 4. Forbidden fallback:
-   fix `P0/P1` reviewer blocker szabaly, promptba egetett `P2/P3 advisory-only` matrix, vagy barmilyen summary-derived severity allitas nem maradhat canonical reviewer threshold authority.
+   fix `P0/P1` reviewer blocker szabaly, promptba egetett `P2/P3 advisory-only` matrix, embedded ontology reminderbol kozvetlenul visszafejtett routing truth, vagy barmilyen summary-derived severity allitas nem maradhat canonical reviewer threshold authority.
 5. Allowed resolution path:
-   UI shared severity input -> mutation seam -> mindket persisted mezore ugyanaz az ertek -> normalized runtime view -> role-specifikus consume (reviewer vagy meta-review).
+   UI shared severity input -> mutation seam -> mindket persisted mezore ugyanaz az ertek -> normalized runtime view -> reviewer oldalon normalized findings aggregate + threshold compare, meta-review oldalon role-specifikus consume.
 6. Missing-data rule:
    ha a reviewer threshold nincs persisteden jelen, a normalized review-policy default `P3`; nincs legacy `P1` fallback preserve kotelezettseg.
 7. Sequencing note:
    producer-first bontas kell:
    - eloszor a persisted contract + mutation/read-model surface
-   - utana a reviewer workflow consume alignment
+   - utana a reviewer workflow consume + ontology/runtime-guidance alignment
    cleanup/recovery kulon fazist most nem igenyel; a remote UI mutation path az elso task resze.
 
 ## Canonical Contract Anchors
@@ -56,16 +56,23 @@ Szetszalazni a review severity policy-t ugy, hogy:
    - [src/types/bubble.ts](/Users/felho/dev/pairflow/src/types/bubble.ts)
    - [src/v11/shared/reviewPolicy/reviewPolicyRuntime.ts](/Users/felho/dev/pairflow/src/v11/shared/reviewPolicy/reviewPolicyRuntime.ts)
    - [src/v11/domain/pass/reviewerDecision.ts](/Users/felho/dev/pairflow/src/v11/domain/pass/reviewerDecision.ts)
+   - [src/v11/domain/convergence/policyReviewerAggregate.ts](/Users/felho/dev/pairflow/src/v11/domain/convergence/policyReviewerAggregate.ts)
    - [src/v11/shared/reviewer/reviewerCommandGateGuidance.ts](/Users/felho/dev/pairflow/src/v11/shared/reviewer/reviewerCommandGateGuidance.ts)
+   - [src/v11/shared/reviewer/reviewerSeverityOntology.ts](/Users/felho/dev/pairflow/src/v11/shared/reviewer/reviewerSeverityOntology.ts)
+   - [docs/reviewer-severity-ontology.md](/Users/felho/dev/pairflow/docs/reviewer-severity-ontology.md)
 2. Closed canonical elements that must stay explicit:
    - `review_policy.meta_review_auto_rework_min_severity` megmarad kulon persisted mezokent
    - `severity_gate_round` tovabbra is kulon round gate, nem severity replacement
    - reviewer post-gate clean path tovabbra is canonical convergence
+   - a reviewer severity ontologyban `P3` tovabbra is severity-szintu non-blocking improvement kategoria, hacsak ez a lane explicit at nem irja
+   - document scope blocker qualifier tovabbra is explicit scope-policy normalizalas (`timing=required-now` + `layer=L1`)
 3. Explicit reinterpretation in this plan:
-   - a reviewer post-gate blocker authority mar nem fix `P0/P1`, hanem configurable threshold
+   - a reviewer post-gate implementer-fele routing authority mar nem fix `P0/P1`, hanem configurable threshold
+   - ez a reinterpretation alaphelyzetben a routing gate-re vonatkozik, nem az ontology severity definiciok hallgatolagos atirasara
 4. Downstream task impact:
    - az elso task nem viheti at a reviewer consume logikat feluton
    - a masodik task nem nyithat ujra config/mutation/read-model foundation kerdeseket
+   - a masodik tasknak explicit paritasba kell hoznia a reviewer routingot, a command guidance-ot, a canonical severity ontology docot, az embedded runtime reminder feluletet es a kapcsolodo teszteket
 
 ## Current Codebase Check (2026-04-26)
 
@@ -73,10 +80,10 @@ Szetszalazni a review severity policy-t ugy, hogy:
    `meta_review_auto_rework_min_severity`.
 2. A UI mutate surface ugyanazt az egy mezot irja local + remote update seamen keresztul.
 3. A reviewer post-gate decision ma fixen ugy kezeli a blocker fogalmat, hogy ha nincs blocker, akkor convergence kotelezo; ez nincs a policy mezore kotve.
-4. A reviewer prompt/guidance tobb helyen szoveg szerint `P2/P3 advisory-only` logikat tanit.
+4. A reviewer prompt/guidance es a canonical severity ontology tobb helyen szoveg szerint `P0/P1` blocker / `P2/P3` advisory-only logikat tanit.
 5. Emiatt a jelenlegi blast radius ket valos consume familyre bomlik:
    - policy producer / mutation / read-model surfaces
-   - reviewer workflow-orchestration consume surface
+   - reviewer workflow-orchestration + runtime-guidance consume surface
 
 ## Current Status
 
@@ -95,7 +102,7 @@ Szetszalazni a review severity policy-t ugy, hogy:
 1. A persisted review-policy shape ketszereplosse teve explicitte kell tenni a reviewer thresholdot.
 2. A runtime/read-model/mutate surfaceset at kell vezetni az uj ketmezos policyre.
 3. A reviewer post-gate routingot es guidance-ot at kell kotni az uj reviewer threshold authorityra.
-4. A docs/test contractokat frissiteni kell a tudatos default-valtozas miatt.
+4. A docs/test contractokat frissiteni kell a tudatos default-valtozas miatt, beleertve a canonical reviewer severity ontology es az embedded runtime reminder parityjat.
 
 ### Deferred / Future Work
 
@@ -107,7 +114,7 @@ Szetszalazni a review severity policy-t ugy, hogy:
 1. `review-policy-reviewer-blocking-threshold-foundation-and-ui-phase1`
    - cel: uj reviewer policy mezo bevezetese, create/parse/render/update/runtime-view/list/status/UI mutate alignment
 2. `review-policy-reviewer-blocking-threshold-reviewer-routing-phase2`
-   - cel: reviewer post-gate routing, guidance, docs es teszt contract atkotese az uj reviewer thresholdra
+   - cel: reviewer post-gate routing, guidance, canonical reviewer ontology/runtime reminder, docs es teszt contract atkotese az uj reviewer thresholdra
 
 ## Coverage Map
 
@@ -118,21 +125,25 @@ Szetszalazni a review severity policy-t ugy, hogy:
 | runtime view + read-model transparency | Task 1 | status/list/detail projections |
 | reviewer threshold consume semantics | Task 2 | workflow/orchestration closure |
 | reviewer prompt/guidance/doc parity | Task 2 | read-model/documentation alignment a reviewer lane-ben |
+| reviewer severity ontology + embedded runtime reminder parity | Task 2 | canonical docs/codegen/runtime prompt alignment |
 
 ## Dependencies / Order
 
 1. Task 1 -> Task 2 kotelezo.
 2. Task 2 csak a merged dual-threshold policy surface-re epulhet; nem tarthat fent sajat interim reviewer threshold fallbackot.
 3. Ha Task 1 a UI input namingot is csereli, Task 2 mar csak az uj mutate contractot hivatkozhatja.
+4. Task 2 csak akkor tekintheto lezartnak, ha a routing semantics es a reviewer severity ontology/runtime reminder feluletek ugyanazt a closed jelentest hordozzak, vagy az explicit uj jelentest ugyanazzal a source-anchor authorizacioval vezetik at.
 
 ## Risks / Assumptions
 
 1. Szandekos viselkedesvaltozas:
-   reviewer default `P3`, tehat post-gate korben mar a `P3` finding is blocking lehet.
+   reviewer default `P3`, tehat post-gate routing szinten barmely nyitott finding implementer-fele fix-requestet tarthat fenn; ezt nem szabad hallgatolagos severity-ontology atiraskent dokumentalni.
 2. Feltetelezes:
    nincs olyan kulso/public consumer, amelyhez kotelezo lenne a regi UI request mezot hosszu ideig kompatibilitasi alias formaban megtartani.
 3. Kockazat:
    ha a runtime view csak az egyik mezot mutatja ki, az operatori debugging felig vak marad; ezert a read-model alignmentet nem szabad elhalasztani.
+4. Kockazat:
+   ha a reviewer routing atall, de a canonical ontology / embedded reminder `P2/P3 advisory-only` nyelven marad, a reviewer lane mixed-truth allapotba kerul.
 
 ## Validation Strategy
 
@@ -144,4 +155,5 @@ Szetszalazni a review severity policy-t ugy, hogy:
 2. Task 2 utan:
    - reviewer pass gating tests
    - reviewer guidance/prompt tests
+   - reviewer severity ontology + embedded runtime reminder parity tests / codegen refresh
    - docs/spec parity review
