@@ -493,6 +493,7 @@ owners:
      - a retained `codex`-special-case runtime truth a lane in-scope workflow/internal consume csaladjabol kikerult, es a megmarado state/schema guard csak nem-authority, fail-closed consistency boundary maradt.
 26. Az `O3-T4` merge utani purpose-based codebase audit egy szuk residual consume-seamet mutatott:
    - `src/v11/infrastructure/channel/tmux/tmuxDeliveryTargeting.ts` a recipient -> recipientRole consume-ban meg mindig kezi role truthot hordoz,
+   - `src/v11/application/converged/convergedGateDelivery.ts` metadata-hiany eseten meg mindig sajat recipient -> `DeliveryTargetRole` fallback consume-ot ownershipol,
    - `src/v11/application/watchdog/watchdogPaneActivitySampler.ts` es `src/v11/application/watchdog/watchdogPaneActivityMonitoring.ts` watchdog/recovery consume-ban meg mindig explicit role/pane truthot hordoz.
 27. Emiatt a current tree-ben egy bounded, nem-public follow-up slice meg legitim:
    - `O3-T4a` residual role/topology consume closeout
@@ -558,6 +559,7 @@ owners:
        - task artifact: `plans/tasks/actor-runtime-interface/actor-runtime-interface-opportunity3-task4a-residual-role-topology-consume-closeout.md`
        - closure:
          - a delivery recipient -> recipientRole consume ugyanarra a canonical role/config projection truthra all at, mint a pane-target projection,
+         - a converged fallback delivery consume ugyanarra a canonical role/config projection truthra all at, mint a tobbi delivery orchestration path,
          - a watchdog sampling/monitoring consume ugyanarra a canonical topology projection truthra all at, mint a mar lezart O3-T3 family,
          - nincs public protocol/CLI vagy config-shape ujranyitas.
    - triggered successor slice:

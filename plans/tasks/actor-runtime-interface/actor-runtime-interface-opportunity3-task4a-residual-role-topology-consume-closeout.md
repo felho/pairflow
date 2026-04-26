@@ -8,9 +8,12 @@ target_files:
   - src/v11/infrastructure/channel/tmux/tmuxDeliveryTargeting.ts
   - src/v11/infrastructure/channel/tmux/tmuxDelivery.ts
   - src/v11/infrastructure/channel/tmux/tmuxDeliveryMessageBuilder.ts
+  - src/v11/application/converged/convergedGateDelivery.ts
   - src/v11/application/watchdog/watchdogPaneActivitySampler.ts
   - src/v11/application/watchdog/watchdogPaneActivityMonitoring.ts
   - tests/core/runtime/tmuxDelivery.test.ts
+  - tests/core/agent/converged.test.ts
+  - tests/v11/application/converged/runConvergedFlow.test.ts
   - tests/core/runtime/watchdog.test.ts
   - tests/v11/shared/watchdog/watchdogPaneActivitySampler.test.ts
   - tests/v11/application/watchdog/watchdogCommandApi.test.ts
@@ -39,10 +42,13 @@ owners:
 4. Ez nem csak esztetikai duplikacio:
    - `src/v11/infrastructure/channel/tmux/tmuxDelivery.ts` ezt a recipient-role truthot tovabbadja a delivery message compose-nak es a retry pathnak
    - `src/v11/infrastructure/channel/tmux/tmuxDeliveryMessageBuilder.ts` a recipientRole alapjan kulon workflow-action szoveget epit
+   - `src/v11/application/converged/convergedGateDelivery.ts` metadata-hiany eseten ugyanugy `recipient -> DeliveryTargetRole` fallback consume-ot ownershipol a converged gate delivery lane-ben
 5. A cleanup/recovery familyben kulon residual consume maradt:
    - `src/v11/application/watchdog/watchdogPaneActivitySampler.ts` role-switch alapjan valaszt pane-t
    - `src/v11/application/watchdog/watchdogPaneActivityMonitoring.ts` nyers `1 | 2 | 3` pane index literalokra epitett expected-target projectiont hasznal
-6. Emiatt a current residual gap nem producer closure, nem public protocol/CLI bovites, es nem config-shape munka:
+6. A workflow-orchestration familyben adjacent residual consume maradt:
+   - `src/v11/application/converged/convergedGateDelivery.ts` metadata-hiany eseten explicit `recipient -> DeliveryTargetRole` fallback consume-ot tart fenn
+7. Emiatt a current residual gap nem producer closure, nem public protocol/CLI bovites, es nem config-shape munka:
    - ez egy szuk `Opportunity 3` residual consume-closeout slice a workflow-orchestration es cleanup/recovery consume csaladban
 
 ## L0 - Policy
@@ -67,6 +73,7 @@ owners:
    - a canonical role -> configured agent truth az `O3-T4` utan a bubble config projection;
    - a canonical role -> topology slot -> pane truth az `O3-T3` utan a topology projection;
    - a delivery es watchdog consume csak ezek projectionjeit hasznalhatja, nem sajat alternativ truthot;
+   - a converged gate delivery fallback consume ugyanebbe a canonical role/config projection-lancba tartozik, nem kulon converged-only role truth;
    - a delivery canonical mutation pathon az explicit `recipientRole` / `DeliveryTargetRole` marad az elsodleges role-truth; az `envelope.recipient` agent-identitas csak compat/projection input lehet, nem meta-reviewer role-guess authority.
 3. Read-path rule:
    - explicit delivery target metadata absent/invalid/unmapped viselkedese preserved marad;
@@ -86,7 +93,7 @@ owners:
 ### Plan Linkage
 
 1. Parent plan gap:
-   - az `O3-T3` es `O3-T4` utan a current tree-ben maradt egy kesoi felfedezesu residual consume seam a delivery es watchdog familyben.
+   - az `O3-T3` es `O3-T4` utan a current tree-ben maradt egy kesoi felfedezesu residual consume seam a delivery, converged es watchdog familyben.
 2. Depends on:
    - `plans/actor-runtime-interface-post-phaseE-successor-plan-v1.md`
    - `docs/actor-runtime-interface/onboarding-extension-surface-contract-note-v1.md`
@@ -110,6 +117,7 @@ owners:
    - `src/v11/infrastructure/channel/tmux/tmuxDeliveryTargeting.ts`
    - `src/v11/infrastructure/channel/tmux/tmuxDelivery.ts`
    - `src/v11/infrastructure/channel/tmux/tmuxDeliveryMessageBuilder.ts`
+   - `src/v11/application/converged/convergedGateDelivery.ts`
    - `src/v11/application/watchdog/watchdogPaneActivitySampler.ts`
    - `src/v11/application/watchdog/watchdogPaneActivityMonitoring.ts`
 2. Canonical elements:
@@ -133,6 +141,7 @@ owners:
    - `src/v11/infrastructure/channel/tmux/tmuxDeliveryTargeting.ts`
    - `src/v11/infrastructure/channel/tmux/tmuxDelivery.ts`
    - `src/v11/infrastructure/channel/tmux/tmuxDeliveryMessageBuilder.ts`
+   - `src/v11/application/converged/convergedGateDelivery.ts`
    - `src/v11/application/watchdog/watchdogPaneActivitySampler.ts`
    - `src/v11/application/watchdog/watchdogPaneActivityMonitoring.ts`
    - adjacent canonical-delivery call-sites:
@@ -140,6 +149,8 @@ owners:
      - `src/v11/application/reply/replyCommandApi.ts`
      - `src/v11/application/approval/runApprovalDecisionEffects.ts`
    - `tests/core/runtime/tmuxDelivery.test.ts`
+   - `tests/core/agent/converged.test.ts`
+   - `tests/v11/application/converged/runConvergedFlow.test.ts`
    - `tests/core/runtime/watchdog.test.ts`
    - `tests/v11/shared/watchdog/watchdogPaneActivitySampler.test.ts`
    - `tests/v11/application/watchdog/watchdogCommandApi.test.ts`
@@ -151,19 +162,19 @@ owners:
 4. Read-model/public surface touched:
    - `no`
 5. Why the declared shape matches reality:
-   - ugyanaz a mar lezart canonical role/topology truth sugarzik ket megmaradt consume-familybe;
+   - ugyanaz a mar lezart canonical role/topology truth sugarzik a megmaradt workflow-orchestration es cleanup/recovery consume-familykbe;
    - a residual nem igenyel producer, config, vagy public protocol ujranyitast;
-   - a workflow-orchestration es cleanup/recovery closure ugyanannak a role/topology consume residualnak ket oldala;
+   - a delivery targeting, a converged fallback delivery consume es a watchdog closure ugyanannak a role/topology consume residualnak a szetszorodott fogyasztoi;
    - a `tmuxDelivery.ts::retryStuckAgentInput(...)` retry path ugyanebbe a same-authority recovery consume-familybe tartozik, nem kulon activation vagy producer lane.
    - a `fail_closed_hardening` secondary shape csak annyiban justified, hogy a retry/watchdog recovery consume is ugyanarra a canonical target truthra all at synthetic pane guess vagy synthetic success nelkul; ez nem nyit uj coordination vagy rollout lane-t.
-   - az adjacent delivery mutation call-site-ok mar ma is explicit `recipientRole`-t adnak a canonical write pathon, ezert a task local refinementtel lezarhato: a fallback `envelope.recipient` consume compat-only marad, nem kell hozza public contract vagy producer sequence ujranyitas.
+   - az adjacent delivery mutation call-site-ok mar ma is explicit `recipientRole`-t adnak a canonical write pathon, a converged gate pedig metadata-hiany eseten sajat fallback consume-ot ownershipol; emiatt a task local refinementtel lezarhato, de a converged fallbackot is ugyanarra a canonical role/config projection truthra kell visszahuzni public contract vagy producer sequence ujranyitas nelkul.
 
 ### Complexity-Risk Triage
 
 1. `authority_risk`: `1`
    - nem uj authority-forras jon be, hanem a mar lezart role/config es role/topology canonical truth sugarzik tovabb residual consume-familybe.
 2. `surface_spread`: `2`
-   - delivery orchestration es watchdog/recovery consume egyszerre erintett, kulon tesztcsaladokkal.
+   - delivery-plus-converged orchestration es watchdog/recovery consume egyszerre erintett, kulon tesztcsaladokkal.
 3. `identity_join_risk`: `2`
    - recipient -> configured agent -> workflow role es active role -> pane target join marad in-scope; a task pont ezek consume-truthjat zarja ossze.
 4. `activation_coupling`: `0`
@@ -188,6 +199,7 @@ owners:
    - watchdog pane sampling target consume
 4. `workflow_orchestration_consumers`
    - delivery recipient-role / pane target consume
+   - converged fallback recipient -> `DeliveryTargetRole` consume
 5. `read_model_consumers`
    - explicit out of scope
 6. `cleanup_recovery_consumers`
@@ -209,6 +221,7 @@ owners:
    - `src/v11/infrastructure/channel/tmux/tmuxDeliveryTargeting.ts`
    - `src/v11/infrastructure/channel/tmux/tmuxDelivery.ts`
    - same-family projection consume: `src/v11/infrastructure/channel/tmux/tmuxDeliveryMessageBuilder.ts`
+   - `src/v11/application/converged/convergedGateDelivery.ts`
 5. `cleanup_recovery_consumers`
    - `src/v11/application/watchdog/watchdogPaneActivityMonitoring.ts`
    - `src/v11/infrastructure/channel/tmux/tmuxDelivery.ts::retryStuckAgentInput(...)`
@@ -269,9 +282,10 @@ owners:
 1. `tmuxDeliveryTargeting.ts` recipient -> recipientRole feloldasanak alignmentje ugyanarra a canonical role/config projection truthra.
 2. `tmuxDelivery.ts` same-family alignmentje annyiban, amennyiben a targeting helper shape vagy retry path ezt megkivanja.
 3. `tmuxDeliveryMessageBuilder.ts` same-family alignmentje annyiban, amennyiben a recipientRole projection tipus vagy semantics explicit proofot igenyel.
-4. `watchdogPaneActivitySampler.ts` pane target consume alignmentje a canonical topology projectionra.
-5. `watchdogPaneActivityMonitoring.ts` expected-target pane projection alignmentje ugyanarra a canonical topology truthra, nyers `1 | 2 | 3` literálok nelkul.
-6. Celozott regresszios tesztek a delivery es watchdog consume-familyben.
+4. `convergedGateDelivery.ts` metadata-hiany eseti fallback consume alignmentje ugyanarra a canonical role/config projection truthra, mint a tobbi delivery orchestration path.
+5. `watchdogPaneActivitySampler.ts` pane target consume alignmentje a canonical topology projectionra.
+6. `watchdogPaneActivityMonitoring.ts` expected-target pane projection alignmentje ugyanarra a canonical topology truthra, nyers `1 | 2 | 3` literálok nelkul.
+7. Celozott regresszios tesztek a delivery, converged es watchdog consume-familyben.
 
 ### Out of Scope
 
@@ -317,13 +331,21 @@ owners:
      - ha tipus- vagy naming-igazitast kap, az csak projection/compat szintu lehet
    - forbidden:
      - workflow-role truth ujraauthorolasa human-facing label layerben
-4. `src/v11/application/watchdog/watchdogPaneActivitySampler.ts`
+4. `src/v11/application/converged/convergedGateDelivery.ts`
+   - ownership: converged fallback delivery-target consume closeout
+   - required:
+     - metadata-hiany eseten a fallback recipient -> `DeliveryTargetRole` consume ugyanarra a canonical role/config truthra epuljon, mint a tobbi delivery orchestration path
+     - ahol explicit `recipientRole` metadata mar jelen van, az tovabbra is elsobbseget elvezo canonical role-truth maradjon
+   - forbidden:
+     - converged-only special-case role ladder
+     - fallback `status` routing workflow role-ra pusztan shared agent-identitas miatt
+5. `src/v11/application/watchdog/watchdogPaneActivitySampler.ts`
    - ownership: sampling target pane consume
    - required:
      - a pane index role-projection alapon jojjon
    - forbidden:
      - role-switchben eltetett masodik canonical mapping
-5. `src/v11/application/watchdog/watchdogPaneActivityMonitoring.ts`
+6. `src/v11/application/watchdog/watchdogPaneActivityMonitoring.ts`
    - ownership: expected-target pane projection consume
    - required:
      - ne maradjon nyers `1 | 2 | 3` pane literal truth
@@ -338,6 +360,8 @@ owners:
    - `pnpm typecheck`
 2. Mandatory targeted tests:
    - `pnpm test -- --runInBand tests/core/runtime/tmuxDelivery.test.ts`
+   - `pnpm test -- --runInBand tests/core/agent/converged.test.ts`
+   - `pnpm test -- --runInBand tests/v11/application/converged/runConvergedFlow.test.ts`
    - `pnpm test -- --runInBand tests/core/runtime/watchdog.test.ts`
    - `pnpm test -- --runInBand tests/v11/shared/watchdog/watchdogPaneActivitySampler.test.ts`
    - `pnpm test -- --runInBand tests/v11/application/watchdog/watchdogCommandApi.test.ts`
@@ -360,9 +384,10 @@ owners:
    - meta-review routing tovabbra is meta-reviewer actiont kap
    - explicit `recipientRole` / `delivery_target_role` tovabbra is elsobbseget elvez akkor is, ha a recipient agent-identitas egy masik role-lal megosztott
 3. Explicit `delivery_target_role` metadata absent/invalid/unmapped eseten a mai reason-code viselkedes retained marad.
-4. A delivery retry/stuck-input path ugyanazt a canonical pane-target truthot hasznalja, mint a normal delivery targeting.
-5. A watchdog sampler a 3 workflow-role eseten a canonical topology projectionbol kepzi a `target_pane` erteket.
-6. A watchdog monitoring expected-target projectionja ugyanazt a canonical pane-target truthot hasznalja, mint a sampler.
+4. A converged fallback delivery consume ugyanarra a canonical role/config projectionra ul, mint a tobbi delivery targeting path.
+5. A delivery retry/stuck-input path ugyanazt a canonical pane-target truthot hasznalja, mint a normal delivery targeting.
+6. A watchdog sampler a 3 workflow-role eseten a canonical topology projectionbol kepzi a `target_pane` erteket.
+7. A watchdog monitoring expected-target projectionja ugyanazt a canonical pane-target truthot hasznalja, mint a sampler.
 
 ### Negative Proof
 
@@ -387,12 +412,13 @@ owners:
 ### Completion Signal
 
 1. A task akkor tekintheto kesznek, ha:
-   - a delivery residual consume mar nem authorol kulon recipient-role truthot,
+   - a delivery es converged residual consume mar nem authorol kulon recipient-role / delivery-target truthot,
    - a watchdog residual consume mar nem authorol kulon pane-literal truthot,
-   - es mindket family ugyanarra a mar letezo canonical role/topology projectionre ul.
+   - es mindharom same-authority family ugyanarra a mar letezo canonical role/topology projectionre ul.
 2. A task nem tekintheto kesznek, ha:
-   - a fix csak az egyik familyt zarja le,
-   - vagy a masik familyben megmarad egy masodik hardcoded role/pane truth.
+   - a fix csak a delivery vagy csak a watchdog familyt zarja le,
+   - vagy a converged fallback consume-ban megmarad egy masodik hardcoded role truth,
+   - vagy barmelyik masik familyben megmarad egy masodik hardcoded role/pane truth.
 
 ## Hardening Backlog
 
