@@ -104,7 +104,6 @@ Szetszalazni a review severity policy-t ugy, hogy:
 2. A runtime/read-model/mutate surfaceset at kell vezetni az uj ketmezos policyre.
 3. A reviewer post-gate routingot es guidance-ot at kell kotni az uj reviewer threshold authorityra.
 4. A reviewer-facing prompt/delivery/docs feluleteket kulon parity lane-ben at kell vezetni az uj threshold authorityra, beleertve a canonical reviewer severity ontologyt es az embedded runtime reminder parityjat.
-5. A korabban draftolt egyutas Phase 2 artifactot le kell valtani ket replacement taskra; a plan elfogadasa utan implementation mar nem futhat a regi egyrészes Phase 2 spec alapjan.
 
 ### Deferred / Future Work
 
@@ -119,15 +118,6 @@ Szetszalazni a review severity policy-t ugy, hogy:
    - cel: reviewer post-gate routing authority, threshold threading seam-ek es scope-policy aggregate consume atkotese az uj reviewer thresholdra
 3. `review-policy-reviewer-blocking-threshold-reviewer-facing-parity-phase2b`
    - cel: reviewer-facing guidance/prompt/delivery, canonical reviewer ontology/runtime reminder, docs es parity-tesztek atkotese a mar lezart Phase 2A authorityra
-
-## Task Transition Note
-
-1. A korabban draftolt `review-policy-reviewer-blocking-threshold-reviewer-routing-phase2` artifact mar nem tekintheto vegrehajtasi tasknak.
-2. Statusza plan-szinten: `must_split`.
-3. Replacement path:
-   - `review-policy-reviewer-blocking-threshold-routing-consume-phase2a`
-   - `review-policy-reviewer-blocking-threshold-reviewer-facing-parity-phase2b`
-4. A regi Phase 2 artifact legfeljebb input-forras lehet a replacement taskokhoz; uj implementation vagy approval loop nem indulhat belole valtozatlan formaban.
 
 ## Coverage Map
 
@@ -148,7 +138,7 @@ Szetszalazni a review severity policy-t ugy, hogy:
 3. Ha Task 1 a UI input namingot is csereli, Task 2A es Task 2B mar csak az uj mutate/runtime contractot hivatkozhatjak.
 4. Task 2A zarja le a canonical reviewer threshold consume authorityt; Task 2B ezt mar nem irhatja felul, csak reviewer-facing projection/parity feluleteken viheti at.
 5. Task 2B csak akkor tekintheto lezartnak, ha a routing semantics es a reviewer severity ontology/runtime reminder feluletek ugyanazt a closed jelentest hordozzak, vagy az explicit uj jelentest ugyanazzal a source-anchor authorizacioval vezetik at.
-6. A korabbi egyrészes Phase 2 artifact phase orderje ezzel ervenytelen lett; a helyes folytatas mar csak a 2A -> 2B replacement sorrend.
+6. A reviewer-facing parity lane nem kezdodhet el addig, amig a routing consume authority es a threshold-threading seam-ek Phase 2A-ban le nem zartak.
 
 ## Risks / Assumptions
 

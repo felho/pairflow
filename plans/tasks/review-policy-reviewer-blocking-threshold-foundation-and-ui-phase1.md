@@ -26,11 +26,16 @@ target_files:
   - tests/core/bubble/bubbleInstanceId.test.ts
   - tests/core/bubble/listBubbles.test.ts
   - tests/core/bubble/statusBubble.test.ts
+  - tests/core/human/approval.test.ts
   - tests/core/ui/updateBubbleReviewPolicyForUi.test.ts
   - tests/core/ui/router.test.ts
+  - tests/contracts/v11/metaReviewSubmitCoverage.test.ts
+  - tests/v11/application/converged/convergedRoutingPreparation.test.ts
   - tests/v11/application/kickoff/kickoffPersistencePreparation.test.ts
   - tests/v11/application/list/listCommandApi.test.ts
+  - tests/v11/application/pass/passWorkspaceContextPreparation.test.ts
   - tests/v11/infrastructure/executor/ssh/sshBubbleReviewPolicyCommand.test.ts
+  - tests/v11/shared/metaReviewGate/metaReviewGateCurrentRunFinalization.test.ts
   - tests/v11/shared/reviewPolicy/reviewPolicyRuntime.test.ts
   - tests/v11/shared/reviewPolicy/updateBubbleReviewPolicy.test.ts
 prd_ref: null
@@ -137,7 +142,9 @@ Vezessuk be a reviewer kulon persisted thresholdjat ugy, hogy:
    local bubble.toml rewrite, remote bubble.toml rewrite, UI HTTP update-review-policy action.
 4. Hidden scope ruled out:
    reviewer pass/convergence routing, prompt/guidance, meta-review gate semantics.
-5. Why the declared task shape matches reality:
+5. Typed-fixture collateral in scope:
+   a `BubbleReviewPolicyConfig` required shape-bovitese miatt minden kozvetlen `review_policy` objektumliteralt tartalmazo teszt-fixure ebbe a taskba tartozik akkor is, ha a teszt mas consume lane-t ved; ez compile/contract collateral, nem uj workflow ownership.
+6. Why the declared task shape matches reality:
    ugyanaz a codepath csalad ownershipolja a persisted contractot, a mutation seamet es az operatori projectiont; reviewer workflow consume kulon successor.
 
 ### Authority Boundary Map
@@ -153,17 +160,35 @@ Vezessuk be a reviewer kulon persisted thresholdjat ugy, hogy:
 
 ### Successor Boundary Proof
 
-Ez a task csak akkor marad implementalhato es bounded, ha az alabbi consume-anchorok explicit Phase 2 ownershipben maradnak:
+Ez a task csak akkor marad implementalhato es bounded, ha a reviewer consume es reviewer-facing parity anchorok explicit Phase 2A/2B ownershipben maradnak.
+
+Phase 2A (`review-policy-reviewer-blocking-threshold-routing-consume-phase2a`) ownership:
 1. `src/v11/domain/pass/reviewerDecision.ts`
 2. `src/v11/domain/convergence/policyReviewerAggregate.ts`
-3. `src/v11/shared/reviewer/reviewerCommandGateGuidance.ts`
-4. `src/v11/shared/reviewer/reviewerSeverityOntology.ts`
-5. `docs/reviewer-severity-ontology.md`
-6. Barmely reviewer-routing vagy reviewer-guidance teszt, amely a blocker jelentest vagy a `P0/P1` vs `P2/P3` consume szemantikat modositana
+3. `src/v11/application/pass/reviewerPassPreparation.ts`
+4. `src/v11/application/pass/passRoutingPreparation.ts`
+5. `src/v11/application/pass/passRoutingPreparationTypes.ts`
+6. `src/v11/application/pass/passRoutingInvocationBuilders.ts`
+7. `src/v11/application/pass/emitPassContextBuilder.ts`
+8. Barmely reviewer-routing vagy threshold-threading teszt, amely a blocker jelentest vagy a consume seamet modositana
+
+Phase 2B (`review-policy-reviewer-blocking-threshold-reviewer-facing-parity-phase2b`) ownership:
+1. `src/v11/shared/reviewer/reviewerCommandGateGuidance.ts`
+2. `src/v11/shared/reviewer/reviewerSeverityOntology.ts`
+3. `src/v11/shared/reviewer/reviewerSeverityOntology.generated.ts`
+4. `src/v11/application/actorProtocol/roleDescriptorRegistry.ts`
+5. `src/v11/application/start/startCommandContext.ts`
+6. `src/v11/application/start/startCommandResumeKickoffMessageBuilders.ts`
+7. `src/v11/infrastructure/channel/tmux/tmuxDeliveryMessageBuilder.ts`
+8. `docs/reviewer-severity-ontology.md`
+9. `docs/pairflow-initial-design.md`
+10. `README.md`
+11. Barmely reviewer-guidance, ontology, snapshot vagy tmux-delivery parity teszt, amely a reviewer-facing consume szemantikat modositana
 
 Normative boundary rule:
 1. Phase 1 nem irhatja at a reviewer blocker fogalmat, csak elokesziti a persisted dual-threshold authorityt es a shared UI/read-model paritast.
-2. Ha a tervezett implementacio a fenti anchorok barmelyiket erinti, az scope-creep, es vissza kell terelni a Phase 2 successor taskba.
+2. Ha a tervezett implementacio a Phase 2A ownership elemeit erinti, az scope-creep, es vissza kell terelni a routing-consume successor taskba.
+3. Ha a tervezett implementacio a Phase 2B ownership elemeit erinti, az scope-creep, es vissza kell terelni a reviewer-facing parity successor taskba.
 
 ### Complexity Risk Triage
 
@@ -197,7 +222,7 @@ Normative boundary rule:
    - `workflow_orchestration_consumers`
    - `cleanup_recovery_consumers`
 5. No-split proof:
-   a shared contract valtozas ebben a taskban nem lep at reviewer routing vagy ontology/guidance consume surface-re, ezert a plan-szintu ketfazisu split eleg.
+   a shared contract valtozas ebben a taskban nem lep at reviewer routing vagy ontology/guidance consume surface-re, ezert a plan szerinti `Task 1 -> Task 2A -> Task 2B` bontas eleg.
 
 ### Bounded-Task-Shape Classification
 
@@ -341,7 +366,7 @@ Reviewer akkor adhat `IMPLEMENTABLE` allapotot, ha:
 
 Task `IMPLEMENTABLE`, ha:
 1. a dual-threshold contract es a single-control mutate semantics ellentmondasmentes,
-2. T1-T11 teljesen fedik a producer/mutation/read-model blast radiust, az exact UI/port/patch contractot es a zero-partial-write mutation boundaryt,
+2. T1-T13 teljesen fedik a producer/mutation/read-model blast radiust, az exact UI/port/patch contractot es a zero-partial-write mutation boundaryt,
 3. nincs reviewer routing logika scope-creep ebben a phase1 szeletben.
 
 ## Assumptions
