@@ -554,14 +554,14 @@ owners:
        - task artifact: `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-opportunity3-task3-topology-slot-catalog-and-tmux-consumer-alignment.md`
      - `O3-T4` config-bound role resolution alignment
        - task artifact: `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-opportunity3-task4-config-bound-role-resolution-alignment.md`
-   - active residual slice:
      - `O3-T4a` residual role/topology consume closeout
-       - task artifact: `plans/tasks/actor-runtime-interface/actor-runtime-interface-opportunity3-task4a-residual-role-topology-consume-closeout.md`
+       - task artifact: `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-opportunity3-task4a-residual-role-topology-consume-closeout.md`
        - closure:
          - a delivery recipient -> recipientRole consume ugyanarra a canonical role/config projection truthra all at, mint a pane-target projection,
          - a converged fallback delivery consume ugyanarra a canonical role/config projection truthra all at, mint a tobbi delivery orchestration path,
          - a watchdog sampling/monitoring consume ugyanarra a canonical topology projection truthra all at, mint a mar lezart O3-T3 family,
          - nincs public protocol/CLI vagy config-shape ujranyitas.
+   - current-tree status: nincs nyitott implementation slice; a lane-ben mar csak a triggerelt `O3-T5` marad deferred allapotban a kifejezett nyitofeltetelere varva
    - triggered successor slice:
      - `O3-T5`: public CLI/protocol surface kontrollalt nyitasa uj output kindokra; **trigger feltetel**: konkret uj output kind igeny VAGY uj role sajat kimenettel; predecessor: `O3-T4a`; ha trigger nem teljesul, ez a slice `deferred` disposition-ben marad, es automatikusan nem indul el
    - preserved baselines: `O1-T1` kernel boundary note, `O2-T1` topology-neutral delivery/executor note, `assertReviewerHumanQuestionRetainedFallback`, `assertMetaReviewerActiveAgentCodexWhenPresent` (preserved-baseline-with-explicit-replacement-path-in-O3-T4), dedicated-panel-per-active-role baseline
