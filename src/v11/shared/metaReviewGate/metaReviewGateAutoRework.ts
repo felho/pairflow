@@ -14,6 +14,7 @@ import type {
   AgentName,
   BubbleStateSnapshot
 } from "../../../types/bubble.js";
+import type { Finding } from "../../../types/findings.js";
 import {
   deliveryTargetRoleMetadataKey,
   type FindingsParityMetadata
@@ -70,6 +71,7 @@ interface DispatchAutoReworkInput {
   finalizeInput: AutoReworkFinalizeInput;
   runResultForRouting: MetaReviewResult;
   parityMetadata: FindingsParityMetadata | null;
+  findingsForPayload: Finding[] | undefined;
   persistDispatchFailedHumanRoute: (
     input: PersistDispatchFailedHumanRouteInput
   ) => Promise<MetaReviewGateResult>;
@@ -162,6 +164,7 @@ async function appendAutoReworkDecision(input: {
   resumedWritten: LoadedStateSnapshot;
   runResultForRouting: MetaReviewResult;
   parityMetadata: FindingsParityMetadata | null;
+  findingsForPayload: Finding[] | undefined;
   reworkMessage: string;
 }): Promise<Awaited<ReturnType<AppendProtocolEnvelopePort>>> {
   return await input.finalizeInput.appendEnvelope({
@@ -183,6 +186,9 @@ async function appendAutoReworkDecision(input: {
       payload: {
         decision: "rework",
         message: input.reworkMessage,
+        ...(input.findingsForPayload !== undefined
+          ? { findings: input.findingsForPayload }
+          : {}),
         metadata: {
           [deliveryTargetRoleMetadataKey]: "implementer",
           actor: "meta-reviewer",
@@ -299,6 +305,7 @@ export async function dispatchAutoRework(
       resumedWritten,
       runResultForRouting: input.runResultForRouting,
       parityMetadata: input.parityMetadata,
+      findingsForPayload: input.findingsForPayload,
       reworkMessage
     });
     const written = await writeHydratedAutoReworkState({

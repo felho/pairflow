@@ -1,4 +1,5 @@
 import type { MetaReviewResult } from "../metaReview/metaReviewTypes.js";
+import type { Finding } from "../../../types/findings.js";
 import { type FindingsParityMetadata } from "../../../types/protocol.js";
 import type { MetaReviewGateArtifactReadFn } from "./metaReviewGateFindingsMetadata.js";
 import {
@@ -19,6 +20,26 @@ export {
   metaReviewApproveAdvisorySplitFormatInvalidReasonCode
 } from "./metaReviewGateApproveClaimValidation.js";
 
+type PositiveMetaReviewClaimValidationSuccess =
+  | {
+      ok: true;
+      diagnostics: string[];
+      metadata: null;
+      findingsForPayload?: never;
+    }
+  | {
+      ok: true;
+      diagnostics: string[];
+      metadata: FindingsParityMetadata;
+      findingsForPayload?: never;
+    }
+  | {
+      ok: true;
+      diagnostics: string[];
+      metadata: FindingsParityMetadata;
+      findingsForPayload?: Finding[];
+    };
+
 export async function validateStructuredMetaReviewPositiveClaim(input: {
   runResult: MetaReviewResult;
   reportJson?: Record<string, unknown>;
@@ -27,7 +48,7 @@ export async function validateStructuredMetaReviewPositiveClaim(input: {
   readFileFn: MetaReviewGateArtifactReadFn;
   sleepForRetryMs?: (delayMs: number) => Promise<void>;
 }): Promise<
-  | { ok: true; diagnostics: string[]; metadata: FindingsParityMetadata | null }
+  | PositiveMetaReviewClaimValidationSuccess
   | { ok: false; reason: string; metadata: FindingsParityMetadata | null }
 > {
   const recommendation = input.runResult.recommendation;
