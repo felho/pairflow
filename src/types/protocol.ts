@@ -9,6 +9,9 @@ export const protocolParticipants = [
 ] as const;
 
 export type ProtocolParticipant = (typeof protocolParticipants)[number];
+export const legacyMetaReviewerProtocolRecipient = "meta-reviewer" as const;
+export type LegacyMetaReviewerProtocolRecipient =
+  typeof legacyMetaReviewerProtocolRecipient;
 
 export const protocolMessageTypes = [
   "TASK",
@@ -262,6 +265,12 @@ export function isProtocolParticipant(
     typeof value === "string" &&
     (protocolParticipants as readonly string[]).includes(value)
   );
+}
+
+export function isLegacyMetaReviewerProtocolRecipient(
+  value: unknown
+): value is LegacyMetaReviewerProtocolRecipient {
+  return value === legacyMetaReviewerProtocolRecipient;
 }
 
 export function isProtocolMessageType(

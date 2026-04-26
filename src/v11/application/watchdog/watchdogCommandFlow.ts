@@ -18,6 +18,7 @@ import type {
   ReadStateSnapshotPort,
   WriteStateSnapshotPort
 } from "../../shared/ports/stateSnapshots.js";
+import { BubbleWatchdogError } from "./watchdogCommandRuntime.js";
 
 export interface WatchdogRuntimeContext {
   now: Date;
@@ -37,16 +38,27 @@ export interface WatchdogRuntimeContext {
 export async function buildNotExpiredResult(
   context: WatchdogRuntimeContext
 ): Promise<BubbleWatchdogResult> {
-  // Best-effort: if a pairflow message is stuck in the active agent's
+  // Best-effort: if a pairflow message is stuck in the active role's
   // input buffer (Enter didn't register during delivery), retry it now.
   let stuckRetried: boolean | undefined;
-  if (context.state.state === "RUNNING" && context.state.active_agent !== null) {
-    const retryResult = await context.retryStuckAgentInput({
-      bubbleId: context.resolved.bubbleId,
-      bubbleConfig: context.resolved.bubbleConfig,
-      sessionsPath: context.resolved.bubblePaths.sessionsPath,
-      activeAgent: context.state.active_agent
-    }).catch(() => undefined);
+  if (context.state.state === "RUNNING" && context.state.active_role !== null) {
+    let retryResult:
+      | Awaited<ReturnType<WatchdogRuntimeContext["retryStuckAgentInput"]>>
+      | undefined;
+    try {
+      retryResult = await context.retryStuckAgentInput({
+        bubbleId: context.resolved.bubbleId,
+        bubbleConfig: context.resolved.bubbleConfig,
+        sessionsPath: context.resolved.bubblePaths.sessionsPath,
+        activeRole: context.state.active_role
+      });
+    } catch (error) {
+      if (error instanceof BubbleWatchdogError) {
+        throw error;
+      }
+      // Retry remains a best-effort delivery recovery path. Generic tmux/runtime
+      // faults must not mutate watchdog state or block the canonical route.
+    }
     if (retryResult?.retried) {
       stuckRetried = true;
     }

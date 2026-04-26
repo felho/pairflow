@@ -141,6 +141,196 @@ describe("executeConvergedExecution", () => {
     expect(notifications).toEqual(["converged"]);
   });
 
+  it("routes retained literal meta-reviewer recipients through the meta-review role fallback", async () => {
+    const deliveryCalls: Array<{
+      recipient: string;
+      recipientRole: unknown;
+    }> = [];
+
+    await executeConvergedExecution(
+      {
+        resolved: {
+          bubbleId: "b_exec_meta_literal_001",
+          repoPath: "/repo",
+          bubblePaths: {
+            transcriptPath: "/repo/.pairflow/transcript.ndjson",
+            locksDir: "/repo/.pairflow/locks",
+            sessionsPath: "/repo/.pairflow/sessions.json",
+            worktreePath: "/repo/worktree"
+          },
+          bubbleConfig: {},
+          worktreePath: "/repo/worktree",
+          cwd: "/repo/worktree"
+        } as never,
+        state: {
+          round: 3
+        } as never,
+        reviewer: "claude",
+        implementer: "codex",
+        summary: "converged summary",
+        refs: [],
+        now: new Date("2026-03-19T11:05:00.000Z"),
+        convergencePolicyDiagnostics: [],
+        gatePipelineDiagnostics: []
+      },
+      {
+        appendProtocolEnvelope: async () => ({
+          sequence: 21,
+          envelope: {
+            id: "env_conv_meta_literal_1"
+          }
+        }) as never,
+        applyMetaReviewGateOnConvergence: async () => ({
+          bubbleId: "b_exec_meta_literal_001",
+          route: "human_gate_approve",
+          gateSequence: 22,
+          gateEnvelope: {
+            id: "env_gate_meta_literal_1",
+            ts: "2026-03-19T11:05:01.000Z",
+            bubble_id: "b_exec_meta_literal_001",
+            sender: "orchestrator",
+            recipient: "meta-reviewer",
+            type: "APPROVAL_REQUEST",
+            round: 3,
+            payload: {
+              summary: "approval"
+            },
+            refs: []
+          },
+          state: {}
+        }) as never,
+        emitDeliveryNotificationAck: async (input) => {
+          deliveryCalls.push({
+            recipient: input.envelope.recipient,
+            recipientRole: input.recipientRole
+          });
+          return {
+            status: "accepted",
+            message: "",
+            sessionName: "pf_bubble",
+            targetPaneIndex: 3
+          };
+        },
+        emitBubbleNotification: () =>
+          Promise.resolve({
+            kind: "converged",
+            attempted: false,
+            delivered: false,
+            soundPath: null,
+            reason: "disabled"
+          })
+      }
+    );
+
+    expect(deliveryCalls).toEqual([
+      {
+        recipient: "meta-reviewer",
+        recipientRole: "meta_reviewer"
+      },
+      {
+        recipient: "codex",
+        recipientRole: "implementer"
+      },
+      {
+        recipient: "claude",
+        recipientRole: "reviewer"
+      }
+    ]);
+  });
+
+  it("keeps shared-agent converged fallback role resolution fail-closed when no explicit target metadata exists", async () => {
+    const deliveryCalls: Array<{
+      recipient: string;
+      recipientRole: unknown;
+    }> = [];
+
+    await executeConvergedExecution(
+      {
+        resolved: {
+          bubbleId: "b_exec_shared_fallback_001",
+          repoPath: "/repo",
+          bubblePaths: {
+            transcriptPath: "/repo/.pairflow/transcript.ndjson",
+            locksDir: "/repo/.pairflow/locks",
+            sessionsPath: "/repo/.pairflow/sessions.json",
+            worktreePath: "/repo/worktree"
+          },
+          bubbleConfig: {
+            agents: {
+              implementer: "codex",
+              reviewer: "codex",
+              meta_reviewer: "claude"
+            }
+          },
+          worktreePath: "/repo/worktree",
+          cwd: "/repo/worktree"
+        } as never,
+        state: {
+          round: 3
+        } as never,
+        reviewer: "codex",
+        implementer: "codex",
+        summary: "converged summary",
+        refs: [],
+        now: new Date("2026-03-19T11:06:00.000Z"),
+        convergencePolicyDiagnostics: [],
+        gatePipelineDiagnostics: []
+      },
+      {
+        appendProtocolEnvelope: async () => ({
+          sequence: 23,
+          envelope: {
+            id: "env_conv_shared_fallback_1"
+          }
+        }) as never,
+        applyMetaReviewGateOnConvergence: async () => ({
+          bubbleId: "b_exec_shared_fallback_001",
+          route: "human_gate_approve",
+          gateSequence: 24,
+          gateEnvelope: {
+            id: "env_gate_shared_fallback_1",
+            ts: "2026-03-19T11:06:01.000Z",
+            bubble_id: "b_exec_shared_fallback_001",
+            sender: "orchestrator",
+            recipient: "codex",
+            type: "APPROVAL_REQUEST",
+            round: 3,
+            payload: {
+              summary: "approval"
+            },
+            refs: []
+          },
+          state: {}
+        }) as never,
+        emitDeliveryNotificationAck: async (input) => {
+          deliveryCalls.push({
+            recipient: input.envelope.recipient,
+            recipientRole: input.recipientRole
+          });
+          return {
+            status: "accepted",
+            message: "",
+            sessionName: "pf_bubble",
+            targetPaneIndex: 0
+          };
+        },
+        emitBubbleNotification: () =>
+          Promise.resolve({
+            kind: "converged",
+            attempted: false,
+            delivered: false,
+            soundPath: null,
+            reason: "disabled"
+          })
+      }
+    );
+
+    expect(deliveryCalls[0]).toEqual({
+      recipient: "codex",
+      recipientRole: undefined
+    });
+  });
+
   it("retries auto-rework delivery once with warm-up options", async () => {
     const deliveryOptions: Array<{
       initialDelayMs?: number;

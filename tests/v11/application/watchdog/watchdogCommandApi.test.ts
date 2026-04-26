@@ -5,6 +5,7 @@ import { dirname, join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import {
+  BubbleWatchdogErrorV11,
   runBubbleWatchdogV11,
   type BubbleWatchdogV11Dependencies
 } from "../../../../src/v11/application/watchdog/emitWatchdogV11.js";
@@ -76,6 +77,7 @@ describe("watchdogCommandApi", () => {
 
   function baseDependencies(input: {
     sampleWatchdogPaneActivity?: () => Promise<PaneActivitySampleResult>;
+    retryStuckAgentInput?: BubbleWatchdogV11Dependencies["retryStuckAgentInput"];
   } = {}): BubbleWatchdogV11Dependencies {
     return {
       emitDeliveryNotificationAck: () =>
@@ -102,6 +104,11 @@ describe("watchdogCommandApi", () => {
       ...(input.sampleWatchdogPaneActivity !== undefined
         ? {
             sampleWatchdogPaneActivity: input.sampleWatchdogPaneActivity
+          }
+        : {}),
+      ...(input.retryStuckAgentInput !== undefined
+        ? {
+            retryStuckAgentInput: input.retryStuckAgentInput
           }
         : {})
     };
@@ -377,6 +384,58 @@ describe("watchdogCommandApi", () => {
     expect(stored.record.target_pane).toBe("pf-watchdog-v11:0.2");
     expect(stored.record.sampled_at).toBe("2026-02-22T12:03:30.000Z");
     expect(stored.record.last_changed_at).toBe("2026-02-22T12:03:30.000Z");
+  });
+
+  it("surfaces BubbleWatchdogError from retryStuckAgentInput instead of swallowing the fail-closed boundary", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_watchdog_v11_retry_fail_closed_01",
+      task: "Watchdog v11 should preserve retry fail-closed errors",
+      startedAt: "2026-02-22T12:00:00.000Z"
+    });
+
+    await expect(
+      runBubbleWatchdogV11(
+        {
+          bubbleId: bubble.bubbleId,
+          cwd: repoPath,
+          now: new Date("2026-02-22T12:03:00.000Z")
+        },
+        baseDependencies({
+          retryStuckAgentInput: async () => {
+            throw new BubbleWatchdogErrorV11("WATCHDOG_ACTIVE_ROLE_INVALID");
+          }
+        })
+      )
+    ).rejects.toBeInstanceOf(BubbleWatchdogErrorV11);
+  });
+
+  it("keeps generic retryStuckAgentInput failures best-effort and returns not_expired", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_watchdog_v11_retry_best_effort_01",
+      task: "Watchdog v11 should ignore generic retry transport failures",
+      startedAt: "2026-02-22T12:00:00.000Z"
+    });
+
+    const result = await runBubbleWatchdogV11(
+      {
+        bubbleId: bubble.bubbleId,
+        cwd: repoPath,
+        now: new Date("2026-02-22T12:03:00.000Z")
+      },
+      baseDependencies({
+        retryStuckAgentInput: async () => {
+          throw new Error("tmux transport flake");
+        }
+      })
+    );
+
+    expect(result.escalated).toBe(false);
+    expect(result.reason).toBe("not_expired");
+    expect(result.stuckRetried).toBeUndefined();
   });
 
   it("keeps RUNNING bubble active after timeout when pane changed recently", async () => {
