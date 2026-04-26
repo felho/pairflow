@@ -7,9 +7,11 @@ phase: phase1
 target_files:
   - "src/v11/shared/metaReviewGate/metaReviewGateFindingsValidation.ts"
   - "src/v11/shared/metaReviewGate/metaReviewGateFindingsValidationParity.ts"
+  - "src/v11/shared/metaReviewGate/metaReviewGateFindingsParityHelpers.ts"
   - "src/v11/shared/metaReviewGate/metaReviewGateCurrentRunFinalization.ts"
   - "src/v11/shared/metaReviewGate/metaReviewGateAutoRework.ts"
   - "tests/v11/shared/metaReviewGate/metaReviewGateCurrentRunFinalization.test.ts"
+  - "ui/src/components/expanded/BubbleTimeline.tsx"
   - "ui/src/components/expanded/BubbleTimeline.test.tsx"
 prd_ref: docs/meta-review-gate-prd.md
 plan_ref: null
@@ -37,8 +39,8 @@ Celzott eredmeny:
 2. Control model: auto-rework eseten a same-run findings artifact a canonical source-of-truth a nyitott findingokrol; az `APPROVAL_DECISION.payload.findings` ennek read-model projectionje.
 3. Read-path rule: `meta_review_result.report_json.findings_artifact_ref` -> validalt artifact -> auto-rework transcript envelope `payload.findings` -> UI timeline severity badge render.
 4. Forbidden fallback: tilos a `findings_claimed_open_total`, `findings_blocking_open_total`, `findings_advisory_open_total`, `recommendation`, vagy `summary` alapjan synthetic findingot vagy severity taget generalni.
-5. Allowed resolution path: a gate parity-validalt artifact payload ugyanabban a current-run finalize lancban atadhato az auto-rework append pontig; ha explicit `severity`-vel renderelheto finding nem nyerheto ki, akkor marad a jelenlegi `rework` decision findings nelkul.
-6. Missing-data rule: ha a parity sikeres, de a findings artifactban nincs renderelheto finding (`severity + title`), a route maradhat `auto_rework`, de a rendszer nem talalhat ki UI tageket.
+5. Allowed resolution path: a gate parity-validalt artifact payload ugyanabban a current-run finalize lancban atadhato az auto-rework append pontig; renderelheto finding ugyanabbol a canonical artifact entrybol nyerheto ki, ha van nem ures `title` es explicit `severity`, vagy ugyanabbol az entrybol determinisztikusan feloldhato canonical `priority` (`P0|P1|P2|P3`) alapjan ugyanilyen emitted `severity`.
+6. Missing-data rule: ha a parity sikeres, de a findings artifactban nincs renderelheto finding (`title` + emitted `severity`, ahol az emitted `severity` ugyanazon entry `severity` vagy `priority` mezőjéből jon), a route maradhat `auto_rework`, de a rendszer nem talalhat ki UI tageket.
 7. Phase boundary:
    - `workflow_orchestration_closure`: meta-review current-run finalize -> auto-rework transcript append
    - `read_model_closure`: UI timeline severity projection ugyanazon canonical findings listabol
@@ -47,7 +49,9 @@ Celzott eredmeny:
 
 1. Source anchors:
    - `docs/meta-review-gate-prd.md`
+   - `src/types/findings.ts`
    - `src/types/protocol.ts`
+   - `src/v11/shared/metaReviewGate/metaReviewGateFindingsParityHelpers.ts`
    - `src/v11/shared/metaReviewGate/metaReviewGateCurrentRunFinalization.ts`
    - `src/v11/shared/metaReviewGate/metaReviewGateAutoRework.ts`
    - `ui/src/components/expanded/BubbleTimeline.tsx`
@@ -80,9 +84,11 @@ Celzott eredmeny:
    - `metaReviewGateAutoRework.ts` jelenleg `APPROVAL_DECISION` envelope-et ir `decision + message + metadata` payload-dal, `findings` nelkul.
    - `BubbleTimeline.tsx` mar tud severity tageket kirajzolni `entry.payload.findings` alapjan, de a jelenlegi anchor csak explicit `finding.severity` mezot fogyaszt; ez compatibility anchor, nem elsodleges mutation target.
    - `metaReviewGateFindingsValidationParity.ts` a rework artifact parityt mar validalja, de a sikeres return shape jelenleg csak metadata/diagnostics adatot visz tovabb.
+   - `metaReviewGateFindingsParityHelpers.ts` parity-siker eseten mar visszaadja a parsed artifactot; a finding projection ugyanebben a canonical read lane-ben tarthato, kulon append-time artifact reread nelkul.
    - `metaReviewGateCurrentRunFinalization.test.ts` mar rendelkezik artifact-backed auto-rework fixture-ekkel, ez a legkozelebbi bizonyitasi felulet.
 2. Actual bounded scope:
    - validated findings artifact projection atvitele az auto-rework transcript eventbe,
+   - ugyanannak a parity-validalt artifact-read eredmenynek a tovabbadasa a finalize -> append lancban, masodik artifact read nelkul,
    - bubble timeline read-model kompatibilitasanak bizonyitasa ugyanennek az existing payload mezonek a hasznalataval.
 3. Hidden scope ruled out:
    - human-gate `APPROVAL_REQUEST` advisory finding contract ujranyitasa,
@@ -187,19 +193,22 @@ Celzott eredmeny:
 | Canonical finding source | Auto-rework finding visibility csak a validalt findings artifactbol johet. | A finalize parity pathnak at kell vinnie a displayable finding listat az auto-rework appendig. | P1 | required-now |
 | No synthetic severity | Counts/recommendation/summary nem helyettesitheti a finding listat. | Nincs UI-only severity inference vagy backend synthetic finding generation. | P1 | required-now |
 | Existing payload reuse | Uj field nyitasa tilos; a meglovo `payload.findings` mezot kell hasznalni. | Protocol surface additive marad ugyanazon payloadon belul. | P1 | required-now |
+| Single canonical read | A finding projection ugyanabbol a parity-validalt artifact read eredmenybol jojjon. | Ne legyen kulon append-time artifact reread vagy uj truth-surface. | P1 | required-now |
+| Canonical field normalization | A renderelheto finding severity ugyanazon artifact entry `severity` vagy `priority` mezőjéből jojjon. | A producer normalized emitted `severity`-t adhat, de nem talalhat ki aggregate vagy recommendation alapu severityt. | P1 | required-now |
 | Dedupe preservation | `rework` badge deduplikacio maradjon. | Finding tagek ne okozzanak duplikalt recommendation/decision badge regressziot. | P1 | required-now |
 
 ### 1) Call-Site Matrix
 
 | ID | File | Function / Entry | Expected Behavior | Priority | Timing | Evidence |
 |---|---|---|---|---|---|---|
-| CS1 | `src/v11/shared/metaReviewGate/metaReviewGateFindingsValidationParity.ts` | `validateStructuredMetaReviewPositiveClaimReworkPath(...)` | A parity-sikeres rework path ne csak metadata-t, hanem a validalt artifactbol szarmazo displayable findingokat is vissza tudja adni a current-run finalize retegnek. | P1 | required-now | no second heuristic read downstream |
-| CS2 | `src/v11/shared/metaReviewGate/metaReviewGateFindingsValidation.ts` | `validateStructuredMetaReviewPositiveClaim(...)` | A rework success-path shape vigye tovabb a finding projectiont anelkul, hogy approve/inconclusive path contract driftet okozna. | P1 | required-now | typed finalize input stays explicit |
-| CS3 | `src/v11/shared/metaReviewGate/metaReviewGateCurrentRunFinalization.ts` | `resolveCurrentRunParity(...)`, `finalizeCurrentRunMetaReviewGate(...)` | A parity resolution eredmeny tartalmazza a displayable finding listat, es ezt kizarolag az auto-rework route kapja meg. | P1 | required-now | canonical current-run routing owns projection handoff |
-| CS4 | `src/v11/shared/metaReviewGate/metaReviewGateAutoRework.ts` | `appendAutoReworkDecision(...)` | Az `APPROVAL_DECISION.payload` a jelenlegi `decision/message/metadata` mellett `findings` mezot is ir, ha a finalize path displayable findingokat adott. | P1 | required-now | transcript event now carries severity list |
-| CS5 | `ui/src/components/expanded/BubbleTimeline.tsx` | `extractFindingTags(...)`, meta-reviewer decision row render | Compatibility anchor: a meta-reviewer `APPROVAL_DECISION` sor a backend altal feltoltott payload findingokbol ugyanugy severity tageket rajzoljon, ha az emitted findingok explicit `severity` mezot hordoznak. A meglovo `rework` badge visibility/non-duplication maradjon meg. Kulon UI kodvaltozas csak consume-gap eseten engedelyezett. | P1 | required-now | current renderer consumes explicit `finding.severity`; no extra synthetic path |
-| CS6 | `tests/v11/shared/metaReviewGate/metaReviewGateCurrentRunFinalization.test.ts` | auto-rework finalize fixtures | Bizonyitsa, hogy threshold-met auto-rework eseten a gate envelope `payload.findings` tartalmazza a validalt artifact findingjait. | P1 | required-now | backend regression coverage |
-| CS7 | `ui/src/components/expanded/BubbleTimeline.test.tsx` | expanded timeline render tests | Bizonyitsa, hogy meta-reviewer `APPROVAL_DECISION` findingokkal `P1/P2/P3` tageket mutat, es a `rework` badge nem duplazodik. | P1 | required-now | UI regression coverage |
+| CS1 | `src/v11/shared/metaReviewGate/metaReviewGateFindingsParityHelpers.ts` | `validateFindingsArtifactParity(...)` success result | A parity-sikeres path explicit parsed artifact outputjat a downstream finalize/projection reteg reuse-olhassa; failed path nem allit parsed-artifact availabilityt. | P1 | required-now | success-only artifact availability stays closed |
+| CS2 | `src/v11/shared/metaReviewGate/metaReviewGateFindingsValidationParity.ts` | `validateStructuredMetaReviewPositiveClaimReworkPath(...)` | A parity-sikeres rework path ne csak metadata-t, hanem a validalt artifactbol szarmazo displayable findingokat is vissza tudja adni a current-run finalize retegnek. | P1 | required-now | no second heuristic read downstream |
+| CS3 | `src/v11/shared/metaReviewGate/metaReviewGateFindingsValidation.ts` | `validateStructuredMetaReviewPositiveClaim(...)` | A rework success-path shape vigye tovabb a finding projectiont anelkul, hogy approve/inconclusive path contract driftet okozna. | P1 | required-now | typed finalize input stays explicit |
+| CS4 | `src/v11/shared/metaReviewGate/metaReviewGateCurrentRunFinalization.ts` | `resolveCurrentRunParity(...)`, `finalizeCurrentRunMetaReviewGate(...)` | A parity resolution eredmeny tartalmazza a displayable finding listat, es ezt kizarolag az auto-rework route kapja meg. | P1 | required-now | canonical current-run routing owns projection handoff |
+| CS5 | `src/v11/shared/metaReviewGate/metaReviewGateAutoRework.ts` | `appendAutoReworkDecision(...)` | Az `APPROVAL_DECISION.payload` a jelenlegi `decision/message/metadata` mellett `findings` mezot is ir, ha a finalize path displayable findingokat adott. | P1 | required-now | transcript event now carries severity list |
+| CS6 | `ui/src/components/expanded/BubbleTimeline.tsx` | `extractFindingTags(...)`, meta-reviewer decision row render | Compatibility anchor: a meta-reviewer `APPROVAL_DECISION` sor a backend altal feltoltott payload findingokbol ugyanugy severity tageket rajzoljon, ha az emitted findingok explicit `severity` mezot hordoznak. A meglovo `rework` badge visibility/non-duplication maradjon meg. Kulon UI kodvaltozas csak consume-gap eseten engedelyezett. | P1 | required-now | current renderer consumes explicit `finding.severity`; no extra synthetic path |
+| CS7 | `tests/v11/shared/metaReviewGate/metaReviewGateCurrentRunFinalization.test.ts` | auto-rework finalize fixtures | Bizonyitsa, hogy threshold-met auto-rework eseten a gate envelope `payload.findings` tartalmazza a validalt artifact findingjait. | P1 | required-now | backend regression coverage |
+| CS8 | `ui/src/components/expanded/BubbleTimeline.test.tsx` | expanded timeline render tests | Bizonyitsa, hogy meta-reviewer `APPROVAL_DECISION` findingokkal `P1/P2/P3` tageket mutat, es a `rework` badge nem duplazodik. | P1 | required-now | UI regression coverage |
 
 ### 2) Data and Interface Contract
 
@@ -207,6 +216,8 @@ Celzott eredmeny:
 |---|---|---|---|---|---|
 | Auto-rework `APPROVAL_DECISION.payload.findings` | altalaban hianyzik | feltoltodik validalt, displayable artifact findingokkal | additive existing field population | P1 | required-now |
 | Rework parity success result | metadata + diagnostics | metadata + diagnostics + displayable findings | internal typed contract alignment | P1 | required-now |
+| Parity artifact handoff | parity-siker eseten a parsed artifact parity-helper szinten mar elerheto, de projection inputkent nincs tovabbvive | a projection input ugyanebbol az olvasasbol jut el a finalize/append lancba; failed path nem nyit parsed-artifact contractot | single-read same-authority projection | P1 | required-now |
+| Shared `payload.findings` consumer surface | protocol-szinten shared `Finding[]` carrier, tobb actor/read-model fogyaszto potencialis anchorja | ez a task csak az auto-rework producer pathot modositja; a shared field shape `Finding[]` es actor-agnostic consume marad | additive shared-contract compatibility | P1 | required-now |
 | Timeline severity read-model | findingok hianyaban csak `rework` badge latszik | findingok jelenletekor severity tagek is latszanak ugyanabban a sorban | user-visible read-model fix | P1 | required-now |
 
 Constraint:
@@ -216,24 +227,30 @@ approve/inconclusive vagy human-gate advisory-only route contract nem nyithato u
 1. carrier type: a meglevo `ProtocolEnvelopePayload.findings` `Finding[]` contractja marad ervenyben; uj UI-only DTO tilos.
 2. required per emitted entry:
    - `title` nem ures string,
-   - explicit `severity` `P0|P1|P2|P3` ertekkel.
+   - explicit emitted `severity` `P0|P1|P2|P3` ertekkel.
 3. optional pass-through:
    - `priority`, ha a source artifact hordozza,
    - `refs`,
    - mar meglevo `detail`, `code`, `timing`, `layer`, `evidence`, `effective_priority`, ha secondary enrichment nelkul atvihetok.
-4. forbidden:
-   - priority-only artifact entry emitted findingga alakitasa `severity` nelkul,
-   - olyan artifact entry projectionje, amelybol explicit renderelheto `severity` nem all rendelkezesre,
+4. deterministic normalization rule:
+   - emitted `severity` johet ugyanazon canonical artifact entry explicit `severity` mezojebol,
+   - vagy ugyanazon canonical artifact entry `priority` mezojebol, ha az `P0|P1|P2|P3` canonical ertek es a projection ezt vesztesegmentesen emeli at emitted `severity`-ve,
+   - mas mezobol, aggregate metadata-bol vagy recommendationbol severity nem kepezheto.
+5. ordering rule:
+   - a surviving emitted findingok orizzek meg a canonical artifactbeli sorrendet; severity szerinti badge-deduplikacio tovabbra is UI-felelosseg.
+6. forbidden:
+   - olyan artifact entry projectionje, amelybol ugyanazon entry `severity` vagy `priority` mezojebol nem all rendelkezesre canonical emitted `severity`,
    - title nelkuli synthetic placeholder finding,
    - aggregate metadata finding entryve alakitasa.
-5. projection presence rule:
+7. projection presence rule:
    - a `payload.findings` mezot csak akkor szabad irni, ha legalabb egy valid projected finding marad.
 
 ### 3) Side Effects Contract
 
 | Area | Allowed | Forbidden | Notes | Priority | Timing |
 |---|---|---|---|---|---|
-| Findings source | validalt artifact payload tovabbitasa | summary/count/recommendation alapu finding-szintezis | canonical artifact chain only | P1 | required-now |
+| Findings source | validalt artifact payload tovabbitasa | `findings_claimed_open_total` / `findings_blocking_open_total` / `findings_advisory_open_total` / `recommendation` / `summary` alapu finding-szintezis | canonical artifact chain only | P1 | required-now |
+| Artifact read path | parity-validalt artifact read eredmenyen beluli projection | append-time kulon artifact ujraolvasas vagy UI-oldali artifact lookup | same authority, single read | P1 | required-now |
 | Transcript append | existing auto-rework `APPROVAL_DECISION` payload bovites `findings`-szel | uj envelope type vagy uj metadata-only pseudo contract | existing event family marad | P1 | required-now |
 | UI rendering | existing finding-tag renderer reuse | meta-reviewer special-case severity hardcode | actor-agnostic tag rule preserved | P1 | required-now |
 
@@ -242,7 +259,7 @@ approve/inconclusive vagy human-gate advisory-only route contract nem nyithato u
 1. Validations that must pass before findings-bearing side effect:
    - a rework parity validation sikeres legyen,
    - a findings artifactbol csak olyan findingok maradjanak a projectionben, amelyek megfelelnek a fenti `payload.findings` required-now contractnak,
-   - explicit `severity` nelkuli artifact finding nem emittalhato UI-renderelheto findingkent ebben a taskban.
+   - ugyanazon artifact entrybol determinisztikusan feloldhato canonical emitted `severity` nelkul finding nem emittalhato UI-renderelheto findingkent ebben a taskban.
 2. Side effects forbidden before those validations pass:
    - findings-bearing `APPROVAL_DECISION` transcript append,
    - barmilyen synthetic severity/finding metadata beirasa a payloadba.
@@ -266,10 +283,12 @@ approve/inconclusive vagy human-gate advisory-only route contract nem nyithato u
 | ID | Scenario | Given | When | Then | Priority | Timing |
 |---|---|---|---|---|---|---|
 | T1 | blocking auto-rework findings are surfaced | validated findings artifact `[{ severity: \"P1\", title: ... }]` | `finalizeCurrentRunMetaReviewGate(...)` auto-rework route-ra fut | a gate envelope `APPROVAL_DECISION.payload.findings` tartalmazza a `P1` findingot a `rework` message mellett | P1 | required-now |
-| T2 | mixed displayable findings stay ordered and additive | validated findings artifact legalabb ket displayable findinggal (`P1` + `P2` vagy `P3`) | auto-rework append megtortenik | a payload finding lista nem redukalodik aggregate countokra; a title/ref adatok megmaradnak | P1 | required-now |
-| T3 | non-displayable artifact entries do not create fake badges | parity ok, de a findings artifactban nincs renderelheto `severity + title` kombinacio | auto-rework append megtortenik | a route marad `auto_rework`, de nincs synthetic `payload.findings` | P2 | required-now |
-| T4 | UI renders severity tags on meta-reviewer rework row | `APPROVAL_DECISION` entry meta-reviewer metadata-val es `payload.findings`-szel | `BubbleTimeline` render | a `P1/P2/P3` tagek latszanak ugyanabban a sorban | P1 | required-now |
-| T5 | rework badge visibility stays non-duplicated beside findings | `APPROVAL_DECISION` entry meta-reviewer recommendation-path badge-del es findingokkal | `BubbleTimeline` render | pontosan egy lathato `rework` badge marad, mellette a severity tagek | P1 | required-now |
+| T2 | mixed displayable findings preserve canonical artifact order in `payload.findings` | validated findings artifact legalabb ket displayable findinggal, ahol a canonical artifactbeli finding-sorrend explicit es ellenorizheto (`P1` majd `P2` vagy `P3`) | auto-rework append megtortenik | a `payload.findings` lista a canonical artifact finding-sorrendet orzi meg; a surviving findingok nem redukalodnak aggregate countokra, es a title/ref adatok ugyanebben a sorrendben megmaradnak | P1 | required-now |
+| T3 | single canonical read path is preserved | parity-sikeres helper eredmeny parsed artifacttal | finalize -> append auto-rework path vegigfut | a finding projection ugyanebbol a parity-read eredmenybol tortenik; nincs masodik artifact read ugyanarra a finding truth-surface-re | P1 | required-now |
+| T4 | non-displayable artifact entries do not create fake badges | parity ok, de a findings artifactban nincs renderelheto `title` + emitted `severity` kombinacio, ahol az emitted `severity` csak ugyanazon entry `severity` vagy `priority` mezojebol johetne | auto-rework append megtortenik | a route marad `auto_rework`, de nincs synthetic `payload.findings` | P1 | required-now |
+| T5 | priority-only canonical finding is still projectable through same-entry normalization | validated findings artifact `[{ priority: \"P2\", title: ... }]` explicit `severity` nelkul | auto-rework append megtortenik | az emitted finding explicit `severity: \"P2\"`-t hordoz ugyanazon entry canonical `priority` mezoje alapjan; nincs aggregate/recommendation fallback | P1 | required-now |
+| T6 | UI renders severity tags on meta-reviewer rework row | `APPROVAL_DECISION` entry meta-reviewer metadata-val es `payload.findings`-szel | `BubbleTimeline` render | a `P1/P2/P3` tagek latszanak ugyanabban a sorban | P1 | required-now |
+| T7 | rework badge visibility stays non-duplicated beside findings | `APPROVAL_DECISION` entry meta-reviewer recommendation-path badge-del es findingokkal | `BubbleTimeline` render | pontosan egy lathato `rework` badge marad, mellette a severity tagek | P1 | required-now |
 
 ## L2 - Implementation Notes (Optional)
 
