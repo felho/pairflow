@@ -1,4 +1,4 @@
-import type { AgentName, BubbleConfig } from "../../../types/bubble.js";
+import type { AgentRole, BubbleConfig } from "../../../types/bubble.js";
 import type {
   DeliveryTargetRole,
   ProtocolEnvelope
@@ -11,7 +11,7 @@ interface EmitDeliveryNotificationInputBase {
   bubbleConfig: BubbleConfig;
   sessionsPath: string;
   envelope: ProtocolEnvelope;
-  recipientRole: DeliveryTargetRole;
+  recipientRole?: DeliveryTargetRole;
   reviewerTestDirective?: ReviewerTestExecutionDirective;
   reviewerBrief?: string;
   reviewerFocus?: ReviewerFocusExtractionResult;
@@ -75,10 +75,10 @@ export interface RetryStuckAgentInputOptions {
   bubbleId: string;
   bubbleConfig: BubbleConfig;
   sessionsPath: string;
-  activeAgent: AgentName;
+  activeRole: AgentRole;
 }
 
 export interface RetryStuckAgentInputResult {
   retried: boolean;
-  reason?: "no_session" | "no_pane" | "not_stuck" | "pane_read_failed";
+  reason?: "no_session" | "not_stuck" | "pane_read_failed";
 }

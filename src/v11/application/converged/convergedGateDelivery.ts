@@ -6,18 +6,31 @@ import type {
 } from "../../shared/ports/tmuxDelivery.js";
 import type { applyMetaReviewGateOnConvergence } from "../../shared/metaReviewGate/metaReviewGateCommandApi.js";
 import type { ResolvedBubbleWorkspace } from "../../shared/ports/workspaceResolution.js";
-import type { AgentName } from "../../../types/bubble.js";
+import {
+  isAgentName,
+  resolveUniquelyConfiguredRoleForAgent,
+  type AgentName,
+  type BubbleConfig
+} from "../../../types/bubble.js";
 import {
   deliveryTargetRoleMetadataKey,
+  isLegacyMetaReviewerProtocolRecipient,
   parseDeliveryTargetRoleMetadata,
   type DeliveryTargetRole,
-  type ProtocolEnvelope
+  type LegacyMetaReviewerProtocolRecipient,
+  type ProtocolEnvelope,
+  type ProtocolParticipant
 } from "../../../types/protocol.js";
 import { executeImplementerHandoffDelivery } from "../../shared/delivery/implementerHandoffDelivery.js";
 import {
   buildDefaultConvergedGateDeliveryDependencies,
   type ResolvedConvergedGateDeliveryDependencies
 } from "./convergedDefaultDependencies.js";
+
+const compatPrimaryDeliveryRoles = ["implementer", "reviewer"] as const;
+type CompatProtocolRecipient =
+  | ProtocolParticipant
+  | LegacyMetaReviewerProtocolRecipient;
 
 export interface ConvergedDeliveryResult {
   status: DeliveryAckStatus;
@@ -53,22 +66,41 @@ function withDeliveryTargetRole(
   };
 }
 
+function resolveCompatParticipantRoleFromAgents(input: {
+  recipient: CompatProtocolRecipient;
+  bubbleConfig: BubbleConfig;
+}): DeliveryTargetRole | undefined {
+  if (input.recipient === "human" || input.recipient === "orchestrator") {
+    return "status";
+  }
+  if (isLegacyMetaReviewerProtocolRecipient(input.recipient)) {
+    return "meta_reviewer";
+  }
+  if (isAgentName(input.recipient)) {
+    // Bare agent identity fallback only recovers implementer/reviewer parity.
+    // Meta-review stays explicit through retained literal recipient or
+    // delivery_target_role metadata.
+    return resolveUniquelyConfiguredRoleForAgent({
+      agents: input.bubbleConfig.agents,
+      agent: input.recipient,
+      roles: compatPrimaryDeliveryRoles
+    });
+  }
+  return undefined;
+}
+
 function resolveConvergedDeliveryTargetRole(input: {
   envelope: ProtocolEnvelope;
-  implementer: AgentName;
-  reviewer: AgentName;
-}): DeliveryTargetRole {
+  bubbleConfig: BubbleConfig;
+}): DeliveryTargetRole | undefined {
   const parsed = parseDeliveryTargetRoleMetadata(input.envelope.payload.metadata);
   if (parsed.status === "valid") {
     return parsed.role;
   }
-  if (input.envelope.recipient === input.implementer) {
-    return "implementer";
-  }
-  if (input.envelope.recipient === input.reviewer) {
-    return "reviewer";
-  }
-  return "status";
+  return resolveCompatParticipantRoleFromAgents({
+    recipient: input.envelope.recipient,
+    bubbleConfig: input.bubbleConfig
+  });
 }
 
 function normalizeConvergedDelivery(
@@ -167,17 +199,17 @@ export async function executeGateDelivery(input: {
       initialDelayMs?: number;
       deliveryAttempts?: number;
     }
-  ): Promise<DeliveryAck> =>
-    resolvedDependencies.emitDeliveryNotificationAck({
+  ): Promise<DeliveryAck> => {
+    const recipientRole = resolveConvergedDeliveryTargetRole({
+      envelope,
+      bubbleConfig: input.resolved.bubbleConfig
+    });
+    return resolvedDependencies.emitDeliveryNotificationAck({
       bubbleId: input.resolved.bubbleId,
       bubbleConfig: input.resolved.bubbleConfig,
       sessionsPath: input.resolved.bubblePaths.sessionsPath,
       envelope,
-      recipientRole: resolveConvergedDeliveryTargetRole({
-        envelope,
-        implementer: input.implementer,
-        reviewer: input.reviewer
-      }),
+      ...(recipientRole !== undefined ? { recipientRole } : {}),
       messageRef: gateRef,
       ...(options?.initialDelayMs !== undefined
         ? { initialDelayMs: options.initialDelayMs }
@@ -191,6 +223,7 @@ export async function executeGateDelivery(input: {
       reason: "command_failed",
       reason_code: "DELIVERY_ACK_REJECTED"
     }));
+  };
 
   if (input.gateResult.route === "auto_rework") {
     const autoReworkDeliveryInput = {

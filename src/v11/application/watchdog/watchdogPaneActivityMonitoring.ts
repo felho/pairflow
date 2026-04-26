@@ -1,9 +1,13 @@
 import type {
   BubbleWatchdogDependencies
 } from "./watchdogCommandContract.js";
+import type { AgentRole } from "../../../types/bubble.js";
 import { BubbleWatchdogError } from "./watchdogCommandRuntime.js";
 import { type WatchdogRuntimeContext } from "./watchdogCommandFlow.js";
 import type { sampleWatchdogPaneActivity } from "./watchdogPaneActivitySampler.js";
+import {
+  resolveWatchdogTargetPaneIndex
+} from "../../shared/watchdog/watchdogPaneTargeting.js";
 import {
   WATCHDOG_PANE_ACTIVITY_SAMPLE_INTERVAL_MS,
   type PaneActivitySampleResult
@@ -31,24 +35,18 @@ function parseIsoTimestamp(value: string | undefined): number | null {
 
 function resolveExpectedTargetPane(
   sessionName: string | undefined,
-  activeRole: "implementer" | "reviewer" | "meta_reviewer"
+  activeRole: AgentRole
 ): string | null {
   if (sessionName === undefined || sessionName.trim().length === 0) {
     return null;
   }
-  const paneIndex =
-    activeRole === "implementer"
-      ? 1
-      : activeRole === "reviewer"
-        ? 2
-        : 3;
-  return `${sessionName}:0.${paneIndex}`;
+  return `${sessionName}:0.${String(resolveWatchdogTargetPaneIndex(activeRole))}`;
 }
 
 function shouldSamplePaneActivity(
   readResult: ReadWatchdogPaneActivityResult,
   now: Date,
-  activeRole: "implementer" | "reviewer" | "meta_reviewer"
+  activeRole: AgentRole
 ): boolean {
   if (readResult.status !== "ok") {
     return true;

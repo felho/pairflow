@@ -1,19 +1,17 @@
 import { createHash } from "node:crypto";
 
 import type { AgentRole, BubbleConfig } from "../../../types/bubble.js";
-import {
-  getTopologySlotPaneIndexForRole
-} from "../actorProtocol/roleDescriptorRegistry.js";
 import type {
   ReadRuntimeSessionsRegistryPort
 } from "../../shared/ports/runtimeSessions.js";
 import type { TmuxRunner } from "../../shared/ports/tmuxSessions.js";
-import { createBubbleWatchdogError } from "./watchdogCommandRuntime.js";
+import {
+  resolveWatchdogTargetPaneIndex
+} from "../../shared/watchdog/watchdogPaneTargeting.js";
 
 export const WATCHDOG_PANE_ACTIVITY_SAMPLE_INTERVAL_MS = 60_000;
 export const WATCHDOG_PANE_QUIET_WINDOW_MS = 10 * 60_000;
 export const WATCHDOG_PANE_ACTIVITY_CAPTURE_START_LINE = "-20";
-const watchdogActiveRoleInvalidReasonCode = "WATCHDOG_ACTIVE_ROLE_INVALID";
 
 export type PaneActivitySampleResult =
   | {
@@ -36,33 +34,6 @@ export type PaneActivitySampleResult =
       session_name: string;
       target_pane: string;
     };
-
-function resolveWatchdogTargetPaneIndex(
-  activeRole: AgentRole
-): number {
-  switch (activeRole) {
-    case "implementer":
-      return getTopologySlotPaneIndexForRole("implementer");
-    case "reviewer":
-      return getTopologySlotPaneIndexForRole("reviewer");
-    case "meta_reviewer":
-      return getTopologySlotPaneIndexForRole("meta_reviewer");
-    default:
-      return assertUnreachable(activeRole);
-  }
-}
-
-function assertUnreachable(value: never): never {
-  throw createBubbleWatchdogError({
-    reasonCode: watchdogActiveRoleInvalidReasonCode,
-    message: `Unhandled watchdog agent role: ${String(value)}.`,
-    context: {
-      subsystem: "watchdog_pane_activity_sampler",
-      function_name: "resolveWatchdogTargetPaneIndex",
-      active_role: String(value)
-    }
-  });
-}
 
 export async function sampleWatchdogPaneActivity(input: {
   bubbleId: string;

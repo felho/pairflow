@@ -1,16 +1,27 @@
 import type { BubbleConfig } from "../../../../types/bubble.js";
 import {
+  isAgentName,
+  resolveUniquelyConfiguredRoleForAgent
+} from "../../../../types/bubble.js";
+import {
   getTopologySlotPaneIndex,
   getTopologySlotPaneIndexForRole
 } from "../../../application/actorProtocol/roleDescriptorRegistry.js";
 import {
+  isLegacyMetaReviewerProtocolRecipient,
   parseDeliveryTargetRoleMetadata,
   type DeliveryTargetRole,
+  type LegacyMetaReviewerProtocolRecipient,
   type ProtocolEnvelope,
   type ProtocolParticipant
 } from "../../../../types/protocol.js";
 import type { DeliveryTargetReasonCode } from "../../../shared/delivery/tmuxDeliveryContract.js";
 import type { DeliveryMessageRecipientRole } from "./tmuxDeliveryMessageBuilder.js";
+
+const compatPrimaryDeliveryRoles = ["implementer", "reviewer"] as const;
+type CompatProtocolRecipient =
+  | ProtocolParticipant
+  | LegacyMetaReviewerProtocolRecipient;
 
 function normalizePaneIndex(value: unknown): number | undefined {
   return typeof value === "number" && Number.isInteger(value) && value >= 0
@@ -18,34 +29,60 @@ function normalizePaneIndex(value: unknown): number | undefined {
     : undefined;
 }
 
-export function resolveTargetPaneIndex(
-  recipient: ProtocolParticipant | "meta-reviewer",
+function resolveCompatDeliveryTargetRoleFromRecipient(
+  recipient: CompatProtocolRecipient,
   bubbleConfig: BubbleConfig
-): number | undefined {
-  if (recipient === bubbleConfig.agents.implementer) {
-    return normalizePaneIndex(getTopologySlotPaneIndexForRole("implementer"));
-  }
-  if (recipient === bubbleConfig.agents.reviewer) {
-    return normalizePaneIndex(getTopologySlotPaneIndexForRole("reviewer"));
-  }
-  if (recipient === "meta-reviewer") {
-    return normalizePaneIndex(getTopologySlotPaneIndexForRole("meta_reviewer"));
-  }
+): DeliveryTargetRole | undefined {
   if (recipient === "human" || recipient === "orchestrator") {
-    return normalizePaneIndex(getTopologySlotPaneIndex("status"));
+    return "status";
+  }
+  if (isLegacyMetaReviewerProtocolRecipient(recipient)) {
+    return "meta_reviewer";
+  }
+  if (isAgentName(recipient)) {
+    // Bare agent identity fallback is only allowed to recover the primary
+    // implementer/reviewer lanes. Meta-review routing must remain explicit
+    // through metadata or the retained literal "meta-reviewer" recipient.
+    return resolveUniquelyConfiguredRoleForAgent({
+      agents: bubbleConfig.agents,
+      agent: recipient,
+      roles: compatPrimaryDeliveryRoles
+    });
   }
   return undefined;
 }
 
+export function resolveTargetPaneIndex(
+  recipient: CompatProtocolRecipient,
+  bubbleConfig: BubbleConfig
+): number | undefined {
+  const resolvedRole = resolveCompatDeliveryTargetRoleFromRecipient(
+    recipient,
+    bubbleConfig
+  );
+  if (resolvedRole === undefined) {
+    return undefined;
+  }
+  return normalizePaneIndex(
+    resolvedRole === "status"
+      ? getTopologySlotPaneIndex("status")
+      : getTopologySlotPaneIndexForRole(resolvedRole)
+  );
+}
+
 function resolveRecipientRoleFromRecipient(
-  recipient: ProtocolParticipant | "meta-reviewer",
+  recipient: CompatProtocolRecipient,
   bubbleConfig: BubbleConfig
 ): DeliveryMessageRecipientRole {
-  if (recipient === bubbleConfig.agents.implementer) {
-    return "implementer";
+  const resolvedRole = resolveCompatDeliveryTargetRoleFromRecipient(
+    recipient,
+    bubbleConfig
+  );
+  if (resolvedRole === "meta_reviewer") {
+    return "meta-reviewer";
   }
-  if (recipient === bubbleConfig.agents.reviewer) {
-    return "reviewer";
+  if (resolvedRole === "implementer" || resolvedRole === "reviewer") {
+    return resolvedRole;
   }
   return recipient;
 }

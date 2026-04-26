@@ -18,14 +18,16 @@ import {
 } from "./tmuxDeliveryRefs.js";
 import {
   resolveEnvelopeRecipientRole,
-  resolveEnvelopeTargetPane,
-  resolveTargetPaneIndex
+  resolveEnvelopeTargetPane
 } from "./tmuxDeliveryTargeting.js";
-import type { BubbleConfig } from "../../../../types/bubble.js";
-import type { AgentName } from "../../../../types/bubble.js";
+import {
+  resolveWatchdogTargetPaneIndex
+} from "../../../shared/watchdog/watchdogPaneTargeting.js";
 import type {
   DeliveryAck,
   EmitDeliveryNotificationInput,
+  RetryStuckAgentInputOptions,
+  RetryStuckAgentInputResult,
 } from "../../../shared/delivery/tmuxDeliveryContract.js";
 
 interface EmitDeliveryNotificationRuntimeDependencies {
@@ -35,6 +37,14 @@ interface EmitDeliveryNotificationRuntimeDependencies {
 
 export type EmitDeliveryNotificationRuntimeInput =
   EmitDeliveryNotificationInput & EmitDeliveryNotificationRuntimeDependencies;
+
+interface RetryStuckAgentInputRuntimeDependencies {
+  runner?: TmuxRunner;
+  readSessionsRegistry?: typeof readRuntimeSessionsRegistry;
+}
+
+type RetryStuckAgentInputRuntimeOptions = RetryStuckAgentInputOptions &
+  RetryStuckAgentInputRuntimeDependencies;
 
 export type {
   AcceptedDeliveryAck,
@@ -193,22 +203,8 @@ export async function emitDeliveryNotificationAck(
 // Stuck-input retry — called periodically by the watchdog loop
 // ---------------------------------------------------------------------------
 
-export interface RetryStuckAgentInputOptions {
-  bubbleId: string;
-  bubbleConfig: BubbleConfig;
-  sessionsPath: string;
-  activeAgent: AgentName;
-  runner?: TmuxRunner;
-  readSessionsRegistry?: typeof readRuntimeSessionsRegistry;
-}
-
-export interface RetryStuckAgentInputResult {
-  retried: boolean;
-  reason?: "no_session" | "no_pane" | "not_stuck" | "pane_read_failed";
-}
-
 /**
- * Check whether the active agent's tmux pane has a pairflow message stuck
+ * Check whether the active role's tmux pane has a pairflow message stuck
  * in its input buffer (text visible after the prompt but not submitted).
  * If so, press Enter to unstick it.
  *
@@ -216,7 +212,7 @@ export interface RetryStuckAgentInputResult {
  * best-effort safety net for delivery failures.
  */
 export async function retryStuckAgentInput(
-  options: RetryStuckAgentInputOptions
+  options: RetryStuckAgentInputRuntimeOptions
 ): Promise<RetryStuckAgentInputResult> {
   const runner = options.runner ?? runTmux;
   const readSessions = options.readSessionsRegistry ?? readRuntimeSessionsRegistry;
@@ -235,13 +231,7 @@ export async function retryStuckAgentInput(
     return { retried: false, reason: "no_session" };
   }
 
-  const paneIndex = resolveTargetPaneIndex(
-    options.activeAgent,
-    options.bubbleConfig
-  );
-  if (paneIndex === undefined) {
-    return { retried: false, reason: "no_pane" };
-  }
+  const paneIndex = resolveWatchdogTargetPaneIndex(options.activeRole);
 
   const targetPane = `${sessionName}:0.${paneIndex}`;
   const capture = await runner(["capture-pane", "-pt", targetPane], {

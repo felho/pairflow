@@ -7,6 +7,10 @@ import {
   sampleWatchdogPaneActivity
 } from "../../../../src/v11/application/watchdog/watchdogPaneActivitySampler.js";
 import type { TmuxRunner } from "../../../../src/v11/shared/ports/tmuxSessions.js";
+import { BubbleWatchdogError } from "../../../../src/v11/shared/watchdog/watchdogCommandError.js";
+import {
+  resolveWatchdogTargetPaneIndex
+} from "../../../../src/v11/shared/watchdog/watchdogPaneTargeting.js";
 import type { BubbleConfig } from "../../../../src/types/bubble.js";
 
 const bubbleConfig: BubbleConfig = {
@@ -41,6 +45,16 @@ const bubbleConfig: BubbleConfig = {
 };
 
 describe("watchdogPaneActivitySampler", () => {
+  it("resolves the meta_reviewer pane index from canonical topology bindings", () => {
+    expect(resolveWatchdogTargetPaneIndex("meta_reviewer")).toBe(3);
+  });
+
+  it("preserves BubbleWatchdogError fail-closed boundary for invalid active roles", () => {
+    expect(() => resolveWatchdogTargetPaneIndex("human" as never)).toThrow(
+      BubbleWatchdogError
+    );
+  });
+
   it("returns no_session when the runtime session is missing", async () => {
     const runner = vi.fn<TmuxRunner>();
 

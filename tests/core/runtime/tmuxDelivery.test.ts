@@ -12,9 +12,13 @@ import {
   createRejectedDeliveryAck,
 } from "../../../src/v11/infrastructure/channel/tmux/tmuxDeliveryRuntime.js";
 import {
+  resolveEnvelopeTargetPane
+} from "../../../src/v11/infrastructure/channel/tmux/tmuxDeliveryTargeting.js";
+import {
   buildMetaReviewSubmitApproveParityNote,
   buildMetaReviewSubmitCommandTemplate
 } from "../../../src/v11/shared/metaReview/metaReviewSubmitGuidance.js";
+import { BubbleWatchdogError } from "../../../src/v11/shared/watchdog/watchdogCommandError.js";
 import {
   REVIEWER_COMMAND_GATE_FORBIDDEN,
   REVIEWER_COMMAND_GATE_REQ_A,
@@ -35,9 +39,13 @@ import {
 } from "../../../src/v11/infrastructure/channel/tmux/tmuxManager.js";
 import * as roleDescriptorRegistry from "../../../src/v11/application/actorProtocol/roleDescriptorRegistry.js";
 import type { ReviewerTestExecutionDirective } from "../../../src/v11/shared/reviewer/testEvidence.js";
-import type { BubbleConfig } from "../../../src/types/bubble.js";
+import {
+  resolveUniquelyConfiguredRoleForAgent,
+  type BubbleConfig
+} from "../../../src/types/bubble.js";
 import {
   deliveryTargetRoleMetadataKey,
+  type LegacyMetaReviewerProtocolRecipient,
   parseDeliveryTargetRoleMetadata,
   type DeliveryTargetRole,
   type ProtocolEnvelope
@@ -91,6 +99,10 @@ function createEnvelope(overrides: Partial<ProtocolEnvelope> = {}): ProtocolEnve
     ...overrides
   };
 }
+
+type CompatProtocolEnvelope = Omit<ProtocolEnvelope, "recipient"> & {
+  recipient: ProtocolEnvelope["recipient"] | LegacyMetaReviewerProtocolRecipient;
+};
 
 type RuntimeSessionRecordOverrides = {
   [Key in keyof RuntimeSessionRecord]?: RuntimeSessionRecord[Key] | undefined;
@@ -188,20 +200,27 @@ type TestEmitDeliveryNotificationInput =
   };
 
 function resolveLegacyRecipientRoleForTest(input: {
-  envelope: ProtocolEnvelope;
+  envelope: CompatProtocolEnvelope;
   bubbleConfig: BubbleConfig;
-}): DeliveryTargetRole {
+}): DeliveryTargetRole | undefined {
   const parsed = parseDeliveryTargetRoleMetadata(input.envelope.payload.metadata);
   if (parsed.status === "valid") {
     return parsed.role;
   }
-  if (input.envelope.recipient === input.bubbleConfig.agents.implementer) {
-    return "implementer";
+  if (input.envelope.recipient === "human" || input.envelope.recipient === "orchestrator") {
+    return "status";
   }
-  if (input.envelope.recipient === input.bubbleConfig.agents.reviewer) {
-    return "reviewer";
+  if (input.envelope.recipient === "meta-reviewer") {
+    return "meta_reviewer";
   }
-  return "status";
+  if (input.envelope.recipient === "codex" || input.envelope.recipient === "claude") {
+    return resolveUniquelyConfiguredRoleForAgent({
+      agents: input.bubbleConfig.agents,
+      agent: input.envelope.recipient,
+      roles: ["implementer", "reviewer"]
+    });
+  }
+  return undefined;
 }
 
 async function emitDeliveryNotificationAck(
@@ -209,12 +228,15 @@ async function emitDeliveryNotificationAck(
 ) {
   return emitDeliveryNotificationAckRuntime({
     ...input,
-    recipientRole:
-      input.recipientRole
-      ?? resolveLegacyRecipientRoleForTest({
-        envelope: input.envelope,
-        bubbleConfig: input.bubbleConfig
-      })
+    ...(input.recipientRole !== undefined
+      ? { recipientRole: input.recipientRole }
+      : (() => {
+          const resolvedRole = resolveLegacyRecipientRoleForTest({
+            envelope: input.envelope,
+            bubbleConfig: input.bubbleConfig
+          });
+          return resolvedRole !== undefined ? { recipientRole: resolvedRole } : {};
+        })())
   });
 }
 
@@ -401,6 +423,28 @@ describe("tmux delivery canonical ack helpers", () => {
 });
 
 describe("tmux delivery explicit recipient-role routing", () => {
+  it("keeps bare agent recipients from implicitly resolving meta-review routing", async () => {
+    const resolution = resolveEnvelopeTargetPane(
+      createEnvelope({
+        id: "msg_20260222_100",
+        sender: "orchestrator",
+        recipient: "codex",
+        type: "TASK",
+        payload: {
+          summary: "Meta-review fallback route."
+        },
+        refs: ["artifact://meta-review-task.md"]
+      }),
+      createSharedAgentConfig("claude")
+    );
+
+    expect(resolution).toEqual({
+      targetPaneIndex: undefined,
+      recipientRole: "codex",
+      deliveryTargetReasonCode: "DELIVERY_TARGET_ROLE_ABSENT"
+    });
+  });
+
   it("routes explicit meta-reviewer delivery input without relying on envelope metadata", async () => {
     const runner: TmuxRunner = vi.fn(async (args: string[]): Promise<TmuxRunResult> => {
       if (args[0] === "capture-pane") {
@@ -927,7 +971,7 @@ describe("emitDeliveryNotificationAck", () => {
     expect(metaReviewMessageCall?.[4]).not.toContain("--report-markdown");
   });
 
-  it("keeps canonical recipient routing when test input resolves an invalid delivery target token to the recipient lane", async () => {
+  it("falls back to the unique recipient lane when delivery_target_role metadata is invalid", async () => {
     const calls: string[][] = [];
     const runner: TmuxRunner = (args): Promise<TmuxRunResult> => {
       calls.push(args);
@@ -948,7 +992,7 @@ describe("emitDeliveryNotificationAck", () => {
 
     const result = await emitDeliveryNotificationAck({
       bubbleId: "b_delivery_01",
-      bubbleConfig: createSharedAgentConfig("codex"),
+      bubbleConfig: baseConfig,
       sessionsPath: "/tmp/repo/.pairflow/runtime/sessions.json",
       envelope: createEnvelope({
         id: "msg_20260222_202",
@@ -971,6 +1015,33 @@ describe("emitDeliveryNotificationAck", () => {
     expect(
       calls.some((call) => call[0] === "send-keys" && call[2] === "pf-b_delivery_01:0.1")
     ).toBe(true);
+  });
+
+  it("fail-closes ambiguous shared-agent fallback when delivery_target_role metadata is invalid", async () => {
+    const result = await emitDeliveryNotificationAck({
+      bubbleId: "b_delivery_01",
+      bubbleConfig: createSharedAgentConfig("codex"),
+      sessionsPath: "/tmp/repo/.pairflow/runtime/sessions.json",
+      envelope: createEnvelope({
+        id: "msg_20260222_202_shared",
+        sender: "claude",
+        recipient: "codex",
+        payload: {
+          summary: "Ambiguous fallback must fail closed.",
+          metadata: {
+            [deliveryTargetRoleMetadataKey]: "meta-reviewer"
+          }
+        }
+      }),
+      readSessionsRegistry: () => Promise.resolve(createRegistry())
+    });
+
+    expect(result).toMatchObject({
+      status: "rejected",
+      reason: "unsupported_recipient",
+      reason_code: "DELIVERY_ACK_TARGET_UNSUPPORTED",
+      deliveryTargetReasonCode: "DELIVERY_TARGET_ROLE_INVALID"
+    });
   });
 
   it("fail-closes metadata-derived meta-review routing when the meta-review pane is unmapped", async () => {
@@ -3409,7 +3480,7 @@ describe("retryStuckAgentInput", () => {
       bubbleId: "b_delivery_01",
       bubbleConfig: baseConfig,
       sessionsPath: "/tmp/sessions.json",
-      activeAgent: "claude",
+      activeRole: "reviewer",
       runner,
       readSessionsRegistry: () => Promise.resolve(createRegistry())
     });
@@ -3445,7 +3516,7 @@ describe("retryStuckAgentInput", () => {
       bubbleId: "b_delivery_01",
       bubbleConfig: baseConfig,
       sessionsPath: "/tmp/sessions.json",
-      activeAgent: "claude",
+      activeRole: "reviewer",
       runner,
       readSessionsRegistry: () => Promise.resolve(createRegistry())
     });
@@ -3481,7 +3552,7 @@ describe("retryStuckAgentInput", () => {
       bubbleId: "b_delivery_01",
       bubbleConfig: baseConfig,
       sessionsPath: "/tmp/sessions.json",
-      activeAgent: "claude",
+      activeRole: "reviewer",
       runner,
       readSessionsRegistry: () => Promise.resolve(createRegistry())
     });
@@ -3507,7 +3578,7 @@ describe("retryStuckAgentInput", () => {
       bubbleId: "b_delivery_01",
       bubbleConfig: baseConfig,
       sessionsPath: "/tmp/sessions.json",
-      activeAgent: "claude",
+      activeRole: "reviewer",
       runner,
       readSessionsRegistry: () => Promise.resolve(createRegistry())
     });
@@ -3520,7 +3591,7 @@ describe("retryStuckAgentInput", () => {
       bubbleId: "b_delivery_01",
       bubbleConfig: baseConfig,
       sessionsPath: "/tmp/sessions.json",
-      activeAgent: "claude",
+      activeRole: "reviewer",
       readSessionsRegistry: () => Promise.resolve({})
     });
 
@@ -3548,7 +3619,7 @@ describe("retryStuckAgentInput", () => {
       bubbleId: "b_delivery_01",
       bubbleConfig: baseConfig,
       sessionsPath: "/tmp/sessions.json",
-      activeAgent: "codex",
+      activeRole: "implementer",
       runner,
       readSessionsRegistry: () => Promise.resolve(createRegistry())
     });
@@ -3565,5 +3636,97 @@ describe("retryStuckAgentInput", () => {
       "pf-b_delivery_01:0.1",
       "Enter"
     ]);
+  });
+
+  it("routes shared agent retries from explicit active role instead of agent identity guess", async () => {
+    const calls: string[][] = [];
+    const runner: TmuxRunner = (args): Promise<TmuxRunResult> => {
+      calls.push(args);
+      if (args[0] === "capture-pane") {
+        return Promise.resolve({
+          stdout: [
+            "",
+            "❯ # [pairflow] r2 HUMAN_REPLY human->codex msg=msg_456 ref=reply.md."
+          ].join("\n"),
+          stderr: "",
+          exitCode: 0
+        });
+      }
+      return Promise.resolve({ stdout: "", stderr: "", exitCode: 0 });
+    };
+
+    const result = await retryStuckAgentInput({
+      bubbleId: "b_delivery_01",
+      bubbleConfig: createSharedAgentConfig("codex"),
+      sessionsPath: "/tmp/sessions.json",
+      activeRole: "reviewer",
+      runner,
+      readSessionsRegistry: () => Promise.resolve(createRegistry())
+    });
+
+    expect(result.retried).toBe(true);
+    expect(calls).toContainEqual([
+      "capture-pane",
+      "-pt",
+      "pf-b_delivery_01:0.2"
+    ]);
+    expect(calls).toContainEqual([
+      "send-keys",
+      "-t",
+      "pf-b_delivery_01:0.2",
+      "Enter"
+    ]);
+  });
+
+  it("routes meta-reviewer retries from explicit active role to pane 3", async () => {
+    const calls: string[][] = [];
+    const runner: TmuxRunner = (args): Promise<TmuxRunResult> => {
+      calls.push(args);
+      if (args[0] === "capture-pane") {
+        return Promise.resolve({
+          stdout: [
+            "",
+            "❯ # [pairflow] r2 PASS claude->codex msg=msg_789 ref=meta-review.md."
+          ].join("\n"),
+          stderr: "",
+          exitCode: 0
+        });
+      }
+      return Promise.resolve({ stdout: "", stderr: "", exitCode: 0 });
+    };
+
+    const result = await retryStuckAgentInput({
+      bubbleId: "b_delivery_01",
+      bubbleConfig: createSharedAgentConfig("codex"),
+      sessionsPath: "/tmp/sessions.json",
+      activeRole: "meta_reviewer",
+      runner,
+      readSessionsRegistry: () => Promise.resolve(createRegistry())
+    });
+
+    expect(result.retried).toBe(true);
+    expect(calls).toContainEqual([
+      "capture-pane",
+      "-pt",
+      "pf-b_delivery_01:0.3"
+    ]);
+    expect(calls).toContainEqual([
+      "send-keys",
+      "-t",
+      "pf-b_delivery_01:0.3",
+      "Enter"
+    ]);
+  });
+
+  it("fails closed with BubbleWatchdogError when retry receives an invalid active role", async () => {
+    await expect(
+      retryStuckAgentInput({
+        bubbleId: "b_delivery_01",
+        bubbleConfig: baseConfig,
+        sessionsPath: "/tmp/sessions.json",
+        activeRole: "human" as never,
+        readSessionsRegistry: () => Promise.resolve(createRegistry())
+      })
+    ).rejects.toBeInstanceOf(BubbleWatchdogError);
   });
 });

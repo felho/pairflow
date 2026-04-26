@@ -48,15 +48,17 @@ let watchdogPendingReworkDefaultsPromise:
   | undefined;
 
 export async function loadWatchdogCommandDefaults(): Promise<CoreWatchdogCommandDefaults> {
-  watchdogCommandDefaultsPromise ??= import(
+  const defaultsPromise =
+    watchdogCommandDefaultsPromise ??= import(
     "../../defaults/watchdog/watchdogCommandDefaults.js"
   ).then(({ watchdogCommandDefaults }) => watchdogCommandDefaults);
-  return watchdogCommandDefaultsPromise;
+  return defaultsPromise;
 }
 
 export async function loadWatchdogPendingReworkDefaults(): Promise<CoreWatchdogPendingReworkDefaults> {
-  watchdogPendingReworkDefaultsPromise ??= import(
+  const defaultsPromise =
+    watchdogPendingReworkDefaultsPromise ??= import(
     "../../defaults/watchdog/watchdogPendingReworkDefaults.js"
   ).then(({ watchdogPendingReworkDefaults }) => watchdogPendingReworkDefaults);
-  return watchdogPendingReworkDefaultsPromise;
+  return defaultsPromise;
 }

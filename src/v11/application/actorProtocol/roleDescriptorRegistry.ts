@@ -8,6 +8,10 @@ import type {
   ReviewArtifactType
 } from "../../../types/bubble.js";
 import { resolveConfiguredAgentForRole } from "../../../types/bubble.js";
+import {
+  getSharedTopologySlotPaneIndex,
+  getSharedTopologySlotPaneIndexForRole
+} from "../../shared/topology/topologySlotPaneProjection.js";
 import type { ActorRuntimePolicyCheckId } from "./actorRuntimeDispatchMatrix.js";
 import { buildPairflowCommandGuidance } from "../start/startCommandPromptRuntime.js";
 import {
@@ -317,22 +321,22 @@ const roleDescriptorRegistry = {
 export const topologySlotCatalog = Object.freeze({
   status: freezeTopologySlotDescriptor({
     id: "status",
-    pane_index: 0,
+    pane_index: getSharedTopologySlotPaneIndex("status"),
     bound_role_id: null
   }),
   implementer: freezeTopologySlotDescriptor({
     id: "implementer",
-    pane_index: 1,
+    pane_index: getSharedTopologySlotPaneIndex("implementer"),
     bound_role_id: "implementer"
   }),
   reviewer: freezeTopologySlotDescriptor({
     id: "reviewer",
-    pane_index: 2,
+    pane_index: getSharedTopologySlotPaneIndex("reviewer"),
     bound_role_id: "reviewer"
   }),
   meta_reviewer: freezeTopologySlotDescriptor({
     id: "meta_reviewer",
-    pane_index: 3,
+    pane_index: getSharedTopologySlotPaneIndex("meta_reviewer"),
     bound_role_id: "meta_reviewer"
   })
 } as const satisfies Readonly<Record<TopologySlotId, TopologySlotDescriptor>>);
@@ -733,11 +737,11 @@ export function getTopologySlotDescriptorForRole(
 }
 
 export function getTopologySlotPaneIndex(slotId: TopologySlotId): number {
-  return getTopologySlotDescriptor(slotId).pane_index;
+  return getSharedTopologySlotPaneIndex(slotId);
 }
 
 export function getTopologySlotPaneIndexForRole(role: AgentRole): number {
-  return getTopologySlotDescriptorForRole(role).pane_index;
+  return getSharedTopologySlotPaneIndexForRole(role);
 }
 
 export function resolveRoleConfiguredAgent(input: {
