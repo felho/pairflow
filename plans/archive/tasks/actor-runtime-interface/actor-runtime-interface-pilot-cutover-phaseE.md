@@ -1,298 +1,330 @@
 ---
 artifact_type: task
 artifact_id: task_actor_runtime_interface_pilot_cutover_phaseE_v1
-title: "Actor Runtime Interface Pilot Cutover (Phase E, Implementer-First)"
-status: draft
+title: "Actor Runtime Interface Pilot Cutover Sequencing (Phase E)"
+status: completed
 phase: phaseE
 target_files:
-  - src/core/bubble/actorEmitContext.ts
-  - src/core/state/executionContext.ts
-  - src/core/runtime/tmuxDelivery.ts
-  - src/cli/commands/agent/emit.ts
-  - src/v11/application/actorProtocol/emitActorProtocolV11.ts
-  - src/v11/shared/pass/passWorkspaceContextPreparation.ts
-  - src/v11/shared/askHuman/askHumanWorkspaceContextPreparation.ts
-  - tests/cli/agentEmitCommand.test.ts
-  - tests/cli/askHumanCommand.test.ts
-  - tests/core/state/executionContext.test.ts
-  - tests/core/runtime/tmuxDelivery.test.ts
-  - tests/core/runtime/restartRecovery.test.ts
-  - tests/core/agent/pass.test.ts
-  - README.md
-  - docs/pairflow-initial-design.md
+  - plans/archive/plans/actor-runtime-interface-discovery-and-migration-plan-v1.md
+  - plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-pilot-cutover-phaseE.md
 prd_ref: null
-plan_ref: plans/actor-runtime-interface-discovery-and-migration-plan-v1.md
+plan_ref: plans/archive/plans/actor-runtime-interface-discovery-and-migration-plan-v1.md
 system_context_ref: README.md
 owners:
   - "felho"
 ---
 
-# Task: Actor Runtime Interface Pilot Cutover (Phase E, Implementer-First)
+# Task: Actor Runtime Interface Pilot Cutover Sequencing (Phase E)
+
+## Current Tree Progress Update (2026-04-17)
+
+1. Az eredeti sequencing proof sorrendje ervenyben maradt, es a current tree kozben le is zarta a teljes E1-E4 closure-lancot:
+   - `E1` execution-scoped authority foundation,
+   - `E2a` delivery / launch producer + shared contract closure,
+   - `E2b` direct runtime/orchestration consumer alignment.
+2. Az `E2b` consume-family alignment a `b72242cc3e63a2316738f5e131f81aefcb0ff4c8` merge-ben zart, es a relevant code/test diff a kickoff, ask-human, pass/converged, watchdog, start/restart seam-eket erinti.
+3. Az `E2c` persisted diagnostics / meta-review / read-model fallout closure szinten lezart current-tree predecessor, es az implementer-lane koveto closurei is lezarultak:
+   - `E3a` implementer foundation hardening archival traceability path: `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-implementer-pilot-foundation-hardening-phaseE3a.md`
+   - `E3b` implementer pilot activation archival traceability path: `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-implementer-pilot-activation-phaseE3b.md`
+   - `E3c` implementer pilot parity + fail-closed hardening archival traceability path: `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-implementer-pilot-parity-and-fail-closed-hardening-phaseE3c.md`
+4. Az `E4` reviewer + meta-reviewer rollout / retained adapter cleanup bubble szinten lezart, merged es archivalt current-tree predecessor lett: `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-reviewer-meta-rollout-and-adapter-cleanup-phaseE4.md`.
+5. Emiatt ez a sequencing artifact mar nem kovetkezo aktiv lepeseket jelol ki, hanem historical Phase E closeout anchor: azt rogzíti, hogy a split logika helyes volt, es a maradek lane vegul az archivalt `E4`-ben zarult le.
+6. A sequencing logika ettol nem valtozik: az archivalt `E2c` sem csuszhatott vissza producer-contract vagy pilot-activation workbe, es a korabban kulon kezelt `E3b0` refaktor-szelet sem bizonyult onallo implementalhato closure-nek. Uj actor-runtime scope mar csak kulon successor artifactban nyithato.
+7. Review authority note:
+   - approval/review refreshnel a current worktree docs-allapot az authority,
+   - a korabbi approval snapshot csak historical trace, nem aktiv sequencing baseline.
 
 ## L0 - Policy
 
 ### Goal
 
-Induljon el a Phase E implementacios fazisa egy szuk, implementer-first pilot slice-szal ugy, hogy a Phase D migration spine-bol az elso tenyleges cutover mar kodszinten is lathato legyen, de ne nyissa ujra a core boundaryt es ne probalja egy korben atvinni a reviewer/meta-reviewer pathokat.
+Current-tree historical sequencing closeout anchor keszitese a discovery utan lezart actor-runtime implementation lancrol ugy, hogy:
+1. a stale parent-plan statusz helyere current-state sequencing keruljon,
+2. explicit legyen, hogy a discoverybol kinott implementation scope miert nem viheto egyetlen bundled taskban,
+3. a historical successor taskok boundaryje, sorrendje es ownershipje review-loop nelkul kovetheto legyen.
 
-Ez a task akkor sikeres, ha:
-1. az `implementer` canonical emit pathja explicit actor runtime wrapper boundaryn megy at,
-2. a pilothoz szukseges delivery/ack boundary explicittebb, mint a mai pane-derived retained topology,
-3. a retained tmux/runtime surface observability-only adapter marad,
-4. a stale authority, duplicate delivery es restart recovery invariansok az implementer piloton bizonyitottan megmaradnak,
-5. a scope nem dagad teljes Phase E rolloutta vagy altalanos runtime-rewrite-ta.
+### Domain / Control Model Summary
 
-### Context
+1. Business invariant: az `implementer`, `reviewer` es `meta_reviewer` ugyanazon actor-runtime boundaryt kell hogy hasznalja; role-nev alapjan nem maradhat kulon runtime truth vagy special-case lifecycle.
+2. Control model: a canonical actor write authority explicit execution-contexthez kotott. A Phase E closure-lanc ezt execution-scoped boundaryve erositi; nem uj authorityforrast vezet be.
+3. Read-path rule: actor authority, delivery truth es workflow-step allapot csak a canonical state/execution-context + actor-protocol + runtime-ack boundaryrol olvashato.
+4. Forbidden fallback:
+   - tmux pane-visible activity mint authority truth,
+   - prompt/pane-marker mint canonical delivery ack,
+   - role-specifikus uj actor API a generic boundary helyett,
+   - bundled “do the whole pilot in one task” delivery.
+5. Allowed resolution path:
+   - a canonical authority source-of-truth a top-level `execution_context`, ennek first-class execution identityje pedig a `handoff_id` + explicit `execution_id`,
+   - az optional `expected_role`, `expected_round` es `expected_state_fingerprint` guardok fail-closed verification mezok; megorizhetok, de nem valthatjak ki a canonical execution identityt,
+   - a compat workspace/CWD path csak teljes canonical context rehidratacios bridge lehet, nem kulon authorityforras,
+   - restart/recovery explicit uj execution authorityval tovabbra is megengedett,
+   - tmux retained topology observability/debug surface maradhat, de nem control source,
+   - a jelenlegi non-implementer `human_question` / human-gate baseline preserved marad, amig kulon successor task explicit nem szukiti vagy csereli.
+6. Missing-data rule:
+   - authority hiany vagy mismatch -> fail-closed,
+   - explicit delivery/launch ack hiany -> unavailable vagy failed state, nem heuristic success,
+   - nincs pane-derived “probably accepted” fallback.
+7. Sequencing authority:
+   - `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-pilot-cutover-phaseE.md`
+8. Phase boundary:
+   - authority_contract_foundation_closure: historical predecessor `E1`
+   - delivery_launch_producer_closure: historical predecessor `E2a`
+   - internal_execution_closure: historical predecessor `E2b`
+   - read_model_diagnostics_fallout_closure: historical predecessor `E2c`, minimalis fallout alignment csak ott, ahol az explicit boundary projection/status carryovert kenyszerit
+   - workflow_orchestration_closure: historical predecessor `E3a`, archive traceability path = `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-implementer-pilot-foundation-hardening-phaseE3a.md`
+   - activation_closure: historical predecessor `E3b`, archive traceability path = `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-implementer-pilot-activation-phaseE3b.md`
+   - cleanup_recovery_closure: historical predecessor `E3c`, archive traceability path = `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-implementer-pilot-parity-and-fail-closed-hardening-phaseE3c.md`
+   - multi_role_rollout_and_cleanup_closure: historical predecessor `E4`, archive traceability path = `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-reviewer-meta-rollout-and-adapter-cleanup-phaseE4.md`
 
-1. A parent plan Phase E-kent mar a tenyleges pilot cutovert varja el a Phase D docs-only migration spine utan.
-2. A merged Phase D terv implementer-first sorrendet rogzitett: elobb az `implementer`, utana a `reviewer`, vegul a `meta_reviewer`.
-3. A Phase B contract mar rogziti a minimalis actor core-t: explicit execution context, handoff, protocol snapshot, `result` es `human_input_request`.
-4. A Phase C matrix szerint az `implementer` a legkisebb policy-kockazatu pilot, mert nincs reviewer-only convergence gate vagy retained meta-review operator special-case a canonical outputhoz kotve.
-5. A jelenlegi kodban a canonical emit path mar reszben explicit: `actorEmitContext`, `emitActorProtocolFromWorkspaceV11`, `executionContext` es az implementer pass/ask-human workspace-prep mar tud authoritative contexttel dolgozni, de retained compat/runtime seam-ek tovabbra is latszanak.
+### Authority Boundary Map
+
+1. Authority producer:
+   - `state.execution_context`
+   - start/resume mutation pathok
+   - actor emit context materialization
+2. Stored authority:
+   - bubble state snapshot fingerprint
+   - execution context mezok
+3. In-scope consumers:
+   - `src/v11/shared/actorProtocol/actorEmitContext.ts`
+   - `src/v11/application/actorProtocol/emitActorProtocolV11.ts`
+   - `src/types/protocol.ts`
+   - runtime delivery / restart / watchdog consume seams
+   - pilot actor rollout guardok
+4. Explicit out-of-scope consumers:
+   - lezart meta-review cached/public cleanup lane-ek
+   - broad docs cleanup a current-tree plan closure felett
+   - teljes topology-csere vagy tmux azonnali eltavolitasa
+5. Export surfaces closed in this phase: `no`; ez sequencing artifact, nem source/runtime closure task.
+
+### Baseline Preservation
+
+1. Must-preserve behaviors:
+   - canonical `pairflow agent emit --kind ...` actor-facing surface,
+   - explicit state-derived actor authority fail-closed ellenorzessel,
+   - restart/recovery retained operator path, ameddig az uj delivery/ack boundary nem erkezik meg,
+   - tmux observability/debug retained szerepe,
+   - current non-implementer `human_question` / human-gate baseline explicit successor proof nelkul.
+2. Allowed resolution paths:
+   - current `execution_context` + `handoff_id` + `expected_state_fingerprint` authority path,
+   - explicit restart -> uj authority materialization -> canonical actor emit,
+   - delivery confirmation csak explicit runtime boundaryrol,
+   - outer dispatcher fallback routing retained vagy tightened statusza csak explicit task-level contracttal valtozhat.
+3. Forbidden regression interpretations:
+   - a tmux marker-confirmation nem nevezheto at canonical typed acknak implementacios foundation nelkul,
+   - a role-specifikus wrapperhalmaz nem tekintheto automatikusan kesz role-neutral cutovernek,
+   - a pilot convenience nem igazolhat bundled contract + activation taskot.
+4. Replacement proof required if removed:
+   - ha a current `execution_context` + `handoff_id` baseline barmely resze kikerul, az uj replacementnek explicit execution-scoped authority proofot kell adnia.
 
 ### In Scope
 
-1. Az `implementer` pilot slice implementacios contractja.
-2. Az explicit actor runtime wrapper boundary kodszintu megerositese a canonical emit path korul.
-3. Az implementerhez szukseges explicit delivery/ack boundary megerositese a retained tmux launch felett.
-4. A stale authority, duplicate delivery es restart recovery implementer-szintu parity megorzese.
-5. A touched codepathokhoz kotelezo regresszios tesztek es evidence.
-6. Minimalis operator-facing dokumentacios frissites, ha a canonical emit/delivery szemantika lathatoan pontosodik.
+1. A parent plan current-state es statusz frissitese.
+2. A remaining implementation split explicit rogzítese.
+3. Successor task boundaryk, sorrend es ownership dokumentalasa.
+4. A code-read alapjan azonosithato current implementation gapek sequencingre forditasa.
 
 ### Out of Scope
 
-1. Reviewer vagy meta-reviewer teljes Phase E cutover.
-2. Teljes retained adapter cleanup.
-3. Uj actor primitive vagy uj output family bevezetese.
-4. Teljes topology-csere vagy tmux eltavolitasa.
-5. Altalanos runtime-seam rewrite a pilothoz szukseges hataron tul.
-6. Olyan refaktor, amelynek csak vegallapot-leirasa van, de nincs implementer-pilothoz kotott bizonyiteka.
+1. Barmilyen source/runtime/test implementation.
+2. Uj runtime contract vagy CLI path bevezetese.
+3. A successor implementation taskok teljes kidolgozasa.
+4. Reviewer/meta-reviewer rollout tenyleges specifikacioja az umbrella sequencingen tul.
 
 ### Safety Defaults
 
-1. A Phase B core contract a target; ezt a task nem irhatja at.
-2. Az actor-write authority explicit marad; implicit `cwd`, pane, shell vagy prompt allapot nem lehet canonical authority-forras.
-3. A retained tmux/runtime surface csak observability- es transport-adapter maradhat, nem acceptance- vagy ack-forras.
-4. Duplicate masodik delivery nem hozhat letre masodik sikeres elfogadott/running executiont ugyanarra a handoffra.
-5. Restart recovery utan csak uj execution authorityval mehet tovabb a flow; a regi authority stale marad.
-6. A task implementacios contract, de nem micromanaged refaktor script: kotelezo boundary-ket, invariansokat, evidence-et es tilalmakat rogzit, mikozben a lokalis kodalakitas az implementalora marad.
+1. A fennmarado implementation munka egyetlen taskban nem viheto.
+2. Az explicit authority foundation meg kell eloze a typed delivery/ack boundary aktivalasat.
+3. A typed delivery/ack boundary meg kell eloze az implementer pilot cutovert.
+4. A multi-role rollout es retained adapter cleanup csak a pilot utan nyithato.
 
 ### Contract Boundary / Blast Radius
 
 1. `contract_boundary_override`: `yes`
 2. Erintett contractok:
-   - actor emit CLI/input contract,
-   - actor runtime wrapper invocation contract,
-   - implementer delivery/ack boundary semantics,
-   - execution-context authority contract,
-   - restart/duplicate delivery parity contract.
+   - actor input authority contract
+   - delivery / launch ack contract
+   - pilot activation / rollout sequencing contract
 
-### Normative Reference Policy
+### Complexity Risk Gate
 
-1. `plan_ref`: `plans/actor-runtime-interface-discovery-and-migration-plan-v1.md`
-   - Ez a canonical forras a Phase E pilot-cutover helyenek es a Phase D utani kovetkezo lepesnek.
-2. Binding migration input:
-   - `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-migration-spine-phaseD-plan.md`
-   - Ez rogzitette az implementer-first sorrendet, a wrapper -> delivery/ack -> core freeze -> policy split -> implementer pilot lepessorat, es a bounded policy ownershipot.
-3. Binding target contract:
-   - `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-capability-contract-phaseB-draft.md`
-   - Ez az authoritative core boundary.
-4. Binding scenario/parity input:
-   - `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-scenario-simulation-phaseC-matrix.md`
-   - Az implementer pilot kotelezo parity inputjai innen jonnek.
-5. Binding current-state grounding:
-   - `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-behavior-inventory-phaseA-inventory.md`
-   - Ez mutatja, mely runtime/operator surface-ek maradnak retained adapterek.
-6. Precedence rule:
-   - target boundaryhoz a Phase B authoritative,
-   - pilot sorrendhez es retained ownershiphoz a Phase D authoritative,
-   - parity coverage-hez a Phase C authoritative,
-   - a kodbeli jelen allapot csak grounding evidence.
-
-### Terminology Lock
-
-1. `implementer pilot` = a Phase E elso, szandekosan szuk actor-cutover slice-a.
-2. `wrapper boundary` = az a kodszintu reteg, amely a canonical actor emit inputbol explicit runtime invocation boundaryt kepez.
-3. `delivery/ack boundary` = az a gepi boundary, amely explicitten kulon kezeli a trigger, acceptance/rejection es launch-allapot visszajelzest.
-4. `retained adapter` = olyan runtime/operator surface, amely Phase E pilot alatt megmaradhat, de nem canonical authority.
-5. `parity evidence` = olyan teszt vagy runtime bizonyitek, amely igazolja, hogy az implementer pilot nem serti a canonical viselkedest.
-6. `implementer-first slice` = olyan Phase E feladat, amely csak az `implementer` pathot viszi at, es tudatosan nem terjeszkedik a tobbi actorra.
-7. `human_question` = current transport/CLI emit kind a human-input kerdeshez; ennek canonical targetje a Phase B szerinti `human_input_request` output family.
-
-### Deliverable Shape Lock
-
-1. A kotelezo deliverable az implementer `pass` es human-input (`human_question` transport shape -> `human_input_request` canonical family) canonical emit ut explicit wrapper + explicit authority + explicit delivery/ack boundary melletti kodszintu megerositese.
-2. A kotelezo bizonyitas az automated parity evidence a `T1`-`T7` matrix szerint; a task nem zarhato le puszta codepath-atnevezessel vagy doc-only rationale-lal.
-3. `README.md` es `docs/pairflow-initial-design.md` csak akkor kotelezoen touched, ha az implementacio user-visible canonical authority-, ack- vagy retained-adapter szemantikaja tenylegesen valtozik vagy pontosodik.
-4. Nem kotelezo minden frontmatter `target_files` elemet modositani; a lista implementation surface-budget, nem "minden felsorolt file-hoz nyulni kell" checklista.
-5. Ha a pilot sikeres es nincs user-visible operatori szemantika-valtozas, a docs diff elhagyhato; ezt az implementacio summarynek explicitten ki kell mondania.
+1. `authority_risk`: `2`
+2. `surface_spread`: `2`
+3. `identity_join_risk`: `2`
+4. `activation_coupling`: `2`
+5. `prerequisite_risk`: `1`
+6. `acceptance_multiplicity`: `2`
+7. `risk_score`: `11`
+8. `single-task allowed`: `no`
+9. Required split:
+   - `E1 authority foundation`
+   - `E2a delivery / launch producer + shared contract closure`
+   - `E2b direct runtime/orchestration consumer alignment`
+   - `E2c persisted diagnostics / meta-review / read-model fallout closure`
+   - `E3a implementer wrapper/authority foundation hardening`
+   - `E3b implementer pilot activation`
+   - `E3c implementer pilot parity + fail-closed hardening`
+   - `E4 reviewer + meta-reviewer rollout / retained adapter cleanup`
+10. Identity/join note:
+   - canonical identity path: `state.execution_context` -> `ActorEmitContextSnapshot` -> canonical actor emit
+   - competing identifiers or fallback identities: tmux pane state, prompt-visible authority, marker-confirmation, actor/role-specific wrapper assumptions
+11. Authority/source-of-truth note:
+   - canonical source: state/execution-context + canonical actor protocol
+   - forbidden secondary sources: tmux pane activity, prompt text, retained role-special-case runtime seams
 
 ## L1 - Change Contract
 
+### 0) Domain / Control Contract
+
+| Item | Rule | Implementation Consequence | Priority | Timing |
+|---|---|---|---|---|
+| Business invariant | Minden role ugyanarra a runtime boundaryre all ra. | Nem maradhat szerep-specifikus special-case activation task a foundation elott. | P1 | required-now |
+| Control model | Authority truth explicit execution-contextbol jon. | A sequencing elso lepesenek ezt kell formalizalnia. | P1 | required-now |
+| Read-path rule | Ack truth explicit runtime boundaryrol jon, nem tmux-bol. | A typed ack producer closure es a consume-family fallout kulon closure marad. | P1 | required-now |
+| Forbidden fallback | Nincs pane-derived authority vagy success fallback. | A pilot task nem epithet heuristic acceptance-re. | P1 | required-now |
+| Allowed resolution path | A canonical authority a top-level `execution_context`; a minimum execution identity `handoff_id` + explicit `execution_id`, a guardok pedig csak fail-closed verification mezok. | Az E1/E3 utani docs nem downgrade-olhatjak az `execution_id`-t guard vagy compat szerepbe. | P1 | required-now |
+| Missing-data rule | Hianyzo authority vagy ack fail-closed / explicit unavailable. | A sequencing nem enged bundled shortcutot. | P1 | required-now |
+| Phase boundary | Foundation -> ack producer/contract -> runtime consumer alignment -> persisted/read-model fallout -> implementer foundation -> implementer pilot activation (including only the minimal `askHuman` command-to-flow mainline seam needed to close activation ownership) -> parity/fail-closed hardening -> multi-role cleanup. | A successor split kotelezo. | P1 | required-now |
+
+### 0a) Shared Contract Compatibility
+
+| Shared Contract | Current Consumers | Change Type (`additive|breaking|N/A`) | This Task Action | Deferred Alignment |
+|---|---|---|---|---|
+| `ActorEmitContextSnapshot` shape | actor emit wrappers, CLI `agent emit` path | breaking successor | sequencing only; foundation task owns change | `E1` |
+| `ActorEmitBaseInput` authority fields | canonical actor emit input | breaking successor | sequencing only; foundation task owns change | `E1` |
+| tmux delivery confirmation contract | delivery runtime, restart/watchdog fallout | breaking successor | sequencing only; contract source-of-truth closure `E2a`, downstream consume/read-model fallout `E2b`/`E2c` | `E2a` contract source, `E2b`/`E2c` downstream fallout |
+| pilot actor routing foundation | implementer flow first | additive hardening | sequencing only | `E3a` |
+| `askHuman` command-to-flow mainline seam | implementer `human_question` command/orchestration consumer family | additive activation-owned tightening | sequencing only; az `E3b` activation task owns-olja annyiban, amennyiben ez a fresh-path activation bounded mainline-jahoz szukseges | `E3b` |
+| implementer pilot activation | implementer flow first | additive activation | sequencing only | `E3b` |
+| implementer pilot parity + fail-closed hardening | implementer runtime parity/recovery | fail-closed after activation | sequencing only | `E3c` |
+| reviewer/meta-reviewer retained adapter cleanup | rollout / cleanup consumers | breaking successor | sequencing only | `E4` |
+
+### 0b) Baseline Preservation
+
+| Current Behavior | Preserve/Replace/Forbid | Required Proof | Priority | Timing |
+|---|---|---|---|---|
+| `state.execution_context`-alapu canonical actor authority | preserve until explicit replacement | successor foundation task explicit replacement proof | P1 | required-now |
+| tmux marker-confirmation mint best-effort runtime confirmation | preserve csak observability/runtime adapterkent | successor ack task explicit typed-boundary replacement proof | P1 | required-now |
+| role-specific wrapper layer (`implementerPilotActorProtocolV11`, `reviewerActorProtocolV11`, `metaReviewerActorProtocolV11`) | replace fokozatosan | pilot es rollout tasks explicit parity evidence | P1 | required-now |
+
+### 0c) Sequencing / Successor Split
+
+| Step | Successor File | Dominant Boundary | Why it must be separate | Must not include |
+|---|---|---|---|---|
+| `E1` | `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-execution-authority-foundation-phaseE1.md` | execution-scoped authority contract | A canonical authority shape formalizalasa megelőzi az osszes consume/activation munkat. | delivery/ack activation, pilot rollout |
+| `E2a` | `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-delivery-ack-producer-contract-phaseE2a.md` | typed delivery / launch producer + shared contract closure | A runtime acceptance truth producer seamje kulon closure; ezt nem szabad consumer rollouttal vagy pilot aktivalassal osszecsomagolni. | runtime/orchestration consume fallout, persisted diagnostics, implementer pilot |
+| `E2b` | `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-direct-runtime-orchestration-consumer-alignment-phaseE2b.md` | direct runtime/orchestration consumer alignment | A lezart typed ack contract consume-family atallasa kulon compatibility closure; ezt nem szabad a producer semanticszel vagy read-model fallouttal osszemosni. | producer semantics reopen, persisted diagnostics/read-model fallout, implementer pilot |
+| `E2c` | `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-persisted-diagnostics-meta-review-read-model-fallout-phaseE2c.md` | persisted diagnostics + meta-review + read-model fallout | A persisted/projection/status fallout kulon read-model closure volt; itt mar nem szabadott uj ack truthot definialni. | producer contract ujranyitasa, implementer pilot, multi-role cleanup |
+| `E3a` | `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-implementer-pilot-foundation-hardening-phaseE3a.md` | implementer wrapper/authority foundation hardening | A magas risk-score mellett a pilot activation elott kulon kellett lezarni a wrapper + authoritative-context primary route hardeninget ugy, hogy a non-implementer `human_question` baseline ne szukuljon neman, es a dispatcher fallback policy explicit legyen. | runtime activation claim, duplicate/restart parity closure, reviewer/meta-reviewer rollout, non-implementer human-gate baseline rewrite |
+| `E3b` | `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-implementer-pilot-activation-phaseE3b.md` | implementer pilot activation | Az aktiv pilot fresh-path proof lezart implementer same-authority foundation felett volt vedheto, es owns-olta a `human_question` command-to-flow mainline szukseges minimalis explicitte tetelet is addig, ameddig ez ugyanannak az activation-owned bounded seamnek a resze maradt. | authority/wrapper-shape reopen, broad builder-only cleanup, stale/duplicate/restart parity closure, reviewer/meta-reviewer rollout, full adapter cleanup |
+| `E3c` | `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-implementer-pilot-parity-and-fail-closed-hardening-phaseE3c.md` | implementer pilot parity + fail-closed hardening | A stale/duplicate/restart parity es a no-second-success minimum contract kulon closure maradt, mert activation utan is sajat fail-closed/recovery kockazatot hordozott. | authority/wrapper-shape reopen, fresh-path activation redesign, reviewer/meta-reviewer rollout, broad adapter cleanup |
+| `E4` | `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-reviewer-meta-rollout-and-adapter-cleanup-phaseE4.md` | multi-role rollout + retained cleanup | A policy-heavy role-ok es a retained adapter cleanup csak a lezart implementer activation + parity utan volt vedheto, es ez a closure bubbleben zarult le. | uj authority foundation vagy uj ack contract |
+
+Normative sequencing rules:
+
+1. `E1` merge nelkul `E2a` nem nyithato implementacios taskkent.
+2. `E2a` merge nelkul `E2b` nem owns-olhat consume-family alignmentet canonical truth claim mellett.
+3. `E2b` merge nelkul `E2c` nem allithat persisted/meta-review/status closuret lezart runtime boundaryre hivatkozva.
+4. `E2c` merge nelkul `E3a` csak historical spike lehetne, canonical implementer foundation hardening nem.
+5. `E3a` merge nelkul `E3b` nem nyithat implementer pilot activationt implementer foundation claim mellett.
+6. `E3b` merge nelkul `E3c` nem nyithat implementer parity/fail-closed hardeninget aktiv pilot claim mellett.
+7. `E3c` merge nelkul `E4` nem nyithat retained cleanupot role-neutral completion claim mellett.
+9. Ha current-tree implementation kozben minimalis status/diagnostics fallout jelenik meg, azt az eppen aktiv successor task owns-olja, nem uj bundled cleanup task.
+
+### 0d) Sequencing Simulation
+
+| Simulation ID | Starting Point | Attempted Move | Expected Result | Why this proves the split |
+|---|---|---|---|---|
+| `SIM1_HAPPY_PATH` | current tree: state-derived authority, tmux delivery confirm, no typed ack boundary | `E1 -> E2a -> E2b -> E2c -> E3a -> E3b -> E3c -> E4` sorrendben haladunk | minden lepes a kovetkezo egyetlen valos blokkolo prereqjet zarja le: authority -> producer ack truth -> consume-family alignment -> persisted/read-model fallout -> implementer foundation -> implementer fresh-path activation, benne a legszuksegesebb askHuman mainline seam explicitte tetele -> implementer parity/fail-closed hardening -> multi-role cleanup | Ez a sorrend koveti a current-tree boundary spreadet, es nem kever authority hardeninget broad builder-cleanuppal, a runtime activation parityval vagy a recovery hardeninggel. |
+| `SIM2_SKIP_E1` | current tree-ben nincs explicit `execution_id` / emit-capability shape | kozvetlenul `E2a`, `E2b`, `E3a`, `E3b` vagy `E3c` nyitas | a task review-loopba csuszik, mert az ack vagy pilot tasknak sajat authority-shape dontest kellene hoznia | Bizonyitja, hogy az authority foundation nem optional hygiene, hanem producer-first prerequisite. |
+| `SIM3_SKIP_E2A` | `E1` utan mar van explicit authority shape, de a runtime acceptance meg mindig tmux-confirmation/best-effort | kozvetlen consume-family alignment vagy implementer pilot | a consumer task kenytelen lenne sajat maga definialni, mi szamit `accepted` / `running` truthnak, vagy visszacsuszik pane-derived heuristikara | Bizonyitja, hogy a typed delivery/launch producer boundary kulon closure, nem a consume rollout mellektermeke. |
+| `SIM4_BUNDLE_E2A_E2C` | current tree high-risk fan-out | producer contract + persisted/status/meta-review fallout egy taskban | ugyanabban a taskban vitatnank a canonical ack truthot es annak read-model projectionjet | Bizonyitja, hogy a closure-budget gate tiltja a producer + read-model bundled closuret. |
+| `SIM5_OPEN_E4_EARLY` | implementer pilot meg nincs parityval lezárva | reviewer/meta-reviewer rollout + retained adapter cleanup korai nyitasa | a task nem tudja kulon valasztani, hogy reviewer/meta-review drift vagy foundation/ack hiba okozza a regressziot | Bizonyitja, hogy a policy-heavy role rollout es a retained cleanup csak a pilot utan vedheto. |
+
+Simulation readout:
+
+1. A current tree-ben a foundation gap es a producer/direct-consume prereq closurek mar nem nyitottak: az explicit `execution_id` authority-shape, a typed delivery/launch ack producer seam es a direct runtime/orchestration consume alignment mar merged.
+2. A legerosebb korabban nyitott gap a reviewer + meta-reviewer consume-family rollout es a retained adapter cleanup volt, es ez azota az archivalt `E4` closureban lezarult.
+3. Emiatt a current tree-ben mar nincs megmaradt aktiv implementation lepes ezen a sequencing artifacton belul.
+4. Az archivalt `E3a`, `E3b`, `E3c` es `E4` kimeneti contractjai egyutt azt bizonyitjak, hogy a discoverybol kinott Phase E actor-runtime implementation program current-tree szinten lezart.
+5. Ha uj actor-runtime scope jelenik meg, azt mar nem ez a sequencing artifact owns-olja, hanem kulon successor plan/task.
+
 ### 1) Call-site Matrix
 
-| ID | File | Function/Entry | Contract delta | Priority | Timing | Evidence |
-|---|---|---|---|---|---|---|
-| CS1 | `src/core/bubble/actorEmitContext.ts` | canonical actor authority materialization | Az implementer emit path canonical authority-snapshotja maradjon explicit es fail-closed; Phase E-ben az implementer pilot ne dependaljon workspace-derived compat authorityra mint canonical route-ra | P1 | required-now | T1, T3 |
-| CS2 | `src/v11/application/actorProtocol/emitActorProtocolV11.ts` | actor runtime wrapper entry | Az implementer `pass` es human-input emit a wrapper boundary canonical route-ja legyen; a current `human_question` transport shape a Phase B target szerinti `human_input_request` family-re mapeljen, uj output family nelkul | P1 | required-now | T1, T2 |
-| CS3 | `src/cli/commands/agent/emit.ts` | CLI / runtime authority bridge | A CLI/runtime entry materializalja vagy tovabbitja a Phase B-vel kompatibilis explicit execution-contextet illetve emit capabilityt, mikozben az actor-facing canonical `emit` surface current-execution-scoped marad, es nem nyit explicit target-authority override parametereket | P1 | required-now | T1, T7 |
-| CS4 | `src/v11/shared/pass/passWorkspaceContextPreparation.ts` | implementer pass workspace prep | Az implementer pass path authoritative contexttel is teljes ertekubb canonical route legyen; ne fallback workspace-guess pathkent maradjon a pilot alatt | P1 | required-now | T2, T3 |
-| CS5 | `src/v11/shared/askHuman/askHumanWorkspaceContextPreparation.ts` | implementer human-input workspace prep | Az implementer human-input path ugyanazon explicit wrapper/authority modellen menjen at, mint a pass path | P1 | required-now | T2, T4 |
-| CS6 | `src/core/runtime/tmuxDelivery.ts` | retained delivery adapter | A retained tmux delivery tovabbra is transport/observability reteg marad; explicit metadata/ack semantics ne pane-derived health shortcutra epuljenek | P1 | required-now | T5, T6 |
-| CS7 | `src/core/state/executionContext.ts` | running execution authority | Az implementer pilot authority-windowja, handoff-azonossaga es restart utani uj execution kovetelmenye explicit maradjon; a task nem lazithat a stale authority fail-closed modellen | P1 | required-now | T3, T6 |
-| CS8 | `tests/cli/agentEmitCommand.test.ts`, `tests/cli/askHumanCommand.test.ts`, `tests/core/agent/pass.test.ts`, `tests/core/runtime/tmuxDelivery.test.ts`, `tests/core/runtime/restartRecovery.test.ts`, `tests/core/state/executionContext.test.ts` | pilot regression surface | Az implementer pilothoz kotelezo tesztfedezet kell a canonical emit, stale authority, duplicate delivery, restart recovery es retained tmux observability-only invariansok korul | P1 | required-now | T1-T7 |
-| CS9 | `README.md`, `docs/pairflow-initial-design.md` | operator-facing behavior docs | Csak akkor frissitendo, ha a pilot utan a canonical authority/ack boundary leirasa pontosodik vagy a retained adapter szerepe user-visible modon valtozik | P2 | required-now | T8 |
+| ID | File | Function/Entry | Exact Signature (args -> return) | Insertion Point | Expected Behavior | Priority | Timing | Evidence |
+|---|---|---|---|---|---|---|---|---|
+| CS1 | `plans/archive/plans/actor-runtime-interface-discovery-and-migration-plan-v1.md` | current-state / ownership sections | markdown -> markdown | stale Phase E status block helye | A plan lezárja a discoveryt, es az implementation sequencinget erre a taskra horgonyozza. | P1 | required-now | doc diff |
+| CS2 | `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-pilot-cutover-phaseE.md` | sequencing anchor | markdown -> markdown | uj task artifact | A remaining implementation split explicit, current-tree code-readre epulo es successor-file szintu legyen. | P1 | required-now | doc diff |
 
 ### 2) Data and Interface Contract
 
 | Contract | Current | Target | Required Fields | Optional Fields | Compatibility | Priority | Timing |
 |---|---|---|---|---|---|---|---|
-| Implementer canonical execution input / authority materialization | explicit mezok mar leteznek, de retained compat/workspace seam-ek latszanak | az implementer pilot explicit execution-contexten vagy equivalent execution-scoped emit capabilityn fut; ez a canonical authority minimumot a runtime/bridge retegben materializalja, nem actor-facing target-override API-kent | `repo`, `bubble_id`, `handoff_id` + explicit current-execution authority (`execution_id`, `role`, `actor_id`) vagy olyan equivalent authoritative context / emit capability, amely legalabb ugyanennek a Phase B minimum-halmaznak a current-execution kotezettseget bizonyitja | `expected_role`, `expected_round`, `expected_state_fingerprint`, `emit_capability_ref`, `protocol_snapshot_ref`, `refs` | compatible szukites a canonical route javara, a Phase B authority-minimum gyengitese nelkul es az actor-facing `emit` surface explicit target-authority override nelkul | P1 | required-now |
-| Implementer wrapper invocation | wrapper mar dispatchol pass/human_question iranyba | implementer pass es human-input ugyanazon explicit wrapper seamet hasznalja | authoritative context + actor emit input | role/policy metadata | compatible internal hardening | P1 | required-now |
-| Delivery target metadata | tmux delivery mar olvassa a `delivery_target_role` metadata-t, fallbackkal | explicit delivery target metadata retained adapter marad, nem authority-forras | valid delivery target role, envelope recipient | diagnostics metadata | compatible retained adapter | P1 | required-now |
-| Ack semantics | typed ack nyelv a Phase B/C-ben rogzitett, runtime retained topology mellett | implementer pilot legalabb acceptance/rejection es running/failed_to_start semanticat explicit boundarykent kezeli, nem pane-lathatosagbol kovetkeztet | `accepted` / `rejected`, `running` / `failed_to_start` szemantika | debug/provenance projection | compatibility-tightening | P1 | required-now |
-| Execution authority window | current execution context explicit, restart recovery kulon runtime concern | restart utan uj execution authority kell; regi emit stale marad | `handoff_id`, `round`, `started_at`, `deadline_at`, `attempt` | none | existing contract preservation | P1 | required-now |
-| Duplicate delivery handling | bounded Phase D owner-domain dontes mar van, exact kodositas meg nincs | implementer pilot alatt ugyanarra a handoffra masodik accepted/running execution nem johet letre | handoff/execution identity, ack outcome | no-op projection metadata | new enforcement within pilot slice | P1 | required-now |
-
-Normative rules:
-
-1. A task nem vezetheti be azt, hogy a canonical implementer authority `cwd`-bol vagy tmux pane-bol legyen visszafejtve.
-2. Az implementer pilotnak ugyanazon wrapper boundaryn kell kezelnie a `pass` es human-input emitet; a current `human_question` transport shape nem torheti meg a canonical `human_input_request` familyhez tartozo kozos boundaryt.
-3. A retained tmux pane activity nem valhat acceptance- vagy running-bizonyitekkent canonical actor boundaryn.
-4. Restart recovery utan regi execution authorityval erkezo emit fail-closed marad.
-5. Duplicate masodik delivery ugyanarra a handoffra legfeljebb explicit `rejected` vagy suppresszalt no-op lehet; masodik sikeres `accepted`/`running` nem megengedett.
-6. A task nem nyithat ujra reviewer-only vagy meta-review special-case output familyt az implementer pilot convenience miatt.
-7. Az implementer canonical emit contract nem szukitheti a Phase B authority-minimumot puszta `repo` + `bubble_id` + `handoff_id` triova; a current-execution identity explicit vagy equivalent execution-scoped capability formajaban kotelezoen megmarad.
-8. `Equivalent authoritative context / emit capability` csak akkor elfogadhato, ha legalabb `execution_id`, `role`, `actor_id`, `handoff_id`, `bubble_id` kotest hordoz, es mismatch/hiany eseten fail-closed modon viselkedik; puszta worktree-, pane-, cwd- vagy session-helyzet nem minosul ekvivalensnek.
-9. Az actor-facing canonical `emit` surface Phase B-kompatibilisen current-execution-scoped marad: a bridge/runtime reteg materializalhat explicit authorityt vagy capabilityt, de a pilot nem kovetelhet es nem reopenelhet actor-facing explicit `bubble_id`/`handoff_id`/`execution_id`/`role` target-override API-t.
-
-### 2.5) Traceability Lock
-
-| Source | This task must realize | Why this is binding here | Evidence |
-|---|---|---|---|
-| Phase D `S1_WRAPPER_BOUNDARY` | implementer `pass` + `human_question` ugyanazon explicit wrapper boundaryn menjen at | a pilot csak akkor bounded, ha nem kulon-kulon, actor-specifikus shortcutokkal valosul meg | T1, T2 |
-| Phase D `S2_DELIVERY_ACK_BOUNDARY` | acceptance/rejection es running/failed_to_start explicit boundary maradjon, pane-derived shortcut nelkul | a pilot nem lehet "tmux activity == success" atnevezett retained flow; az auditlanc explicitten visszamutat a Phase C `SC8_DUPLICATE_DELIVERY`, `SC10_RESTART_RECOVERY` es `SC11_TMUX_OBSERVABILITY_WITH_MISSING_OR_DELAYED_ACK` sorokra | T4, T5, T6 |
-| Phase D `S3_CORE_FREEZE` | a pilot ne nyisson uj actor primitive-t, uj output familyt vagy implicit authority-forrast; a Phase B minimum core maradjon elegendo | a wrapper + ack boundary hardening csak akkor bounded, ha a core capability lista es authority-minimum nem lazul vagy dagad a pilot convenience miatt | T1, T2, T3, T7 |
-| Phase D `S4_BOUNDARY_SPLIT_AND_POLICY` | duplicate delivery policy minimuma itt mar kodszintu enforcement legyen: nincs masodik successful execution ugyanarra a handoffra | Phase C `SC8` gapet ez a task bounded modon zarja le az implementer slice-ban | T4 |
-| Phase D `S5_PILOT_IMPLEMENTER_FIRST` | stale authority, conflicting context es restart recovery parity megmaradjon | ettol marad a pilot implementer-first es nem rewrite-szeru | T1, T3, T6, T7 |
-| Phase C `SC1_IMPLEMENTER_RESULT`, `SC5_HUMAN_INPUT_REQUEST`, `SC6_STALE_AUTHORITY_EMIT`, `SC7_CONFLICTING_CONTEXT`, `SC8_DUPLICATE_DELIVERY`, `SC10_RESTART_RECOVERY`, `SC11_TMUX_OBSERVABILITY_WITH_MISSING_OR_DELAYED_ACK` | a pilot acceptance matrixanak kotelezo scenario-inputjai | review soran ezek adjak a minimum parity-csomagot, beleertve hogy a pane-lathatosag tovabbra sem lehet acceptance- vagy ack-forras | T1, T2, T3, T4, T5, T6, T7 |
-
-Normative rules:
-
-1. Ha implementacios dontes tobbfelekepp is vedheto, azt a valtozatot kell valasztani, amelyik kozvetlenebbul teljesiti a Phase D `S1` -> `S5` spine sorrendet uj abstraction layer nelkul.
-2. A task review-stabil csak akkor, ha a vegso implementer delivery artefakt egyetlen kanonikus helyen vissza tud mutatni a fenti traceability sorokra; ennek alapertelmezett helye a Pairflow done-package / completion summary artefakt, de ezzel ekvivalens completion artefakt is elfogadhato, ha ugyanilyen egyertelmuen es auditálhatóan hordozza a hivatkozast.
-3. Az `S2_DELIVERY_ACK_BOUNDARY` traceability minimuma explicitten le kell fedje: `SC8` duplicate suppression, `SC10` restart utani uj authority/launch, `SC11` tmux-observability-only ack-source tilalom.
+| Remaining-work ownership | implicit / stale parent-plan prose | explicit successor split | phase id, boundary, successor artifact, must-not-include | rationale note | docs-only | P1 | required-now |
+| Current-tree gap summary | szetszort code evidence | sequencing-ready synthesis | authority gap, ack gap, activation gap, cleanup gap | code refs | docs-only | P1 | required-now |
 
 ### 3) Side Effects Contract
 
 | Area | Allowed | Forbidden | Notes | Priority | Timing |
 |---|---|---|---|---|---|
-| Canonical emit path | explicit wrapper-seam megerositese az implementer pilothoz | workspace-guess compat path visszaemelese canonical route-va | pilot hardening, nem UX shortcut | P1 | required-now |
-| Runtime delivery | explicit delivery/ack szemantika erositese retained adapter mellett | pane-visibilitybol vagy shell-statebol levezetett acceptance | retained tmux marad, de nem canonical source | P1 | required-now |
-| Recovery behavior | restart recovery authority es duplicate handling szigoritas | implicit replay vagy old authority ujrahasznalata | fail-closed alapertelmezett | P1 | required-now |
-| Docs | operator-facing szemantika pontositasa, ha kell | migration spine ujranyitasa vagy teljes rollout docs update | csak pilot-szintu doc delta | P2 | required-now |
+| Plan/task docs | frontmatter + sequencing + status cleanup | source/runtime/test edit | docs-only scope | P1 | required-now |
 
-Pure-by-default rule:
+Constraint:
 
-1. Ha egy helper vagy bridge csak implicit compat authority miatt maradna eletben a pilot canonical pathjaban, a default az egyszerusites vagy leszukites, nem uj retained reteg hozzaadasa.
+1. Ez a sequencing task nem nyithat implementation commandlistat es nem foglalhatja magaba a successor taskok kodszeletet.
 
 ### 4) Error and Fallback Contract
 
-| Trigger | Dependency | Behavior | Fallback | Reason Code | Log Level | Priority | Timing |
+| Trigger | Dependency (if any) | Behavior (`throw|result|fallback`) | Fallback Value/Action | Reason Code | Log Level | Priority | Timing |
 |---|---|---|---|---|---|---|---|
-| implementer emit explicit authority snapshot nelkul probal futni | actor emit input + state | throw | nincs implicit cwd/worktree authority fallback a canonical pathon | existing `ACTOR_EMIT_CONTEXT_INVALID` family | error | P1 | required-now |
-| expected handoff/round/fingerprint nem egyezik az aktiv executionnel | execution context | throw | fail-closed emit reject | existing canonical mismatch path | error | P1 | required-now |
-| duplicate masodik delivery ugyanarra a handoffra erkezik | delivery identity + runtime state | none | explicit delivery-boundary `rejected` vagy suppresszalt no-op; nincs masodik canonical actor output es nincs masodik running execution | existing duplicate-delivery reason-code family (pelda: `PHASEE_IMPLEMENTER_DUPLICATE_DELIVERY`) | warn | P1 | required-now |
-| restart recovery utan regi authorityval jon emit | recovery + execution context | throw | friss authority snapshot szukseges | stale authority existing fail-closed path | error | P1 | required-now |
-| delivery target metadata hianyzik vagy invalid | retained tmux adapter | fallback | retained route fallback lehet, de ez nem acceptance-bizonyitek es nem authority-forras | existing `DELIVERY_TARGET_ROLE_*` codes | info/warn | P2 | required-now |
-
-Normative rules:
-
-1. A duplicate delivery fallback csak explicit delivery-boundary `rejected` vagy suppresszalt no-op lehet; ez nem vezethet be uj typed actor outputot, uj ack familyt vagy uj workflow-state szemantikat.
-2. A retained adapter fallback csak route/provenance szintu compat viselkedes lehet; canonical acceptance, authority vagy state-transition kovetkeztetest nem adhat.
-3. A duplicate-delivery reason code konkret literal alakja implementation detail maradhat, de szemantikailag duplicate-delivery suppresszio/reject osztalyba kell essen; a task nem kovetel uj, Phase B/C/D-ben nem rogzitett taxonomiat pusztan naming okbol.
+| a current-tree code ellentmond a discovery artifacts valamely allitasanak | source read | result | sequencing explicit current-tree first alapon frissul | `CURRENT_TREE_DRIFT_DETECTED` | warn | P1 | required-now |
+| a fennmarado scope egy taskba lenne visszacsomagolva | complexity gate | throw | split kotelezo | `PHASEE_BUNDLED_TASK_FORBIDDEN` | error | P1 | required-now |
+| valamely successor boundary nem kulonitheto el egyertelmuen | authority fan-out read | result | boundary note explicit out-of-scope listaval maradjon | `PHASEE_BOUNDARY_NEEDS_FOLLOWUP` | warn | P2 | required-now |
 
 ### 5) Dependency Constraints
 
 | Type | Items | Priority | Timing |
 |---|---|---|---|
-| must-use | `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-migration-spine-phaseD-plan.md` implementer-first pilot sorrendje es retained adapter policyja | P1 | required-now |
-| must-use | `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-capability-contract-phaseB-draft.md` minimalis core capability es explicit authority contractja | P1 | required-now |
-| must-use | `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-scenario-simulation-phaseC-matrix.md` implementer parity inputjai (`SC1`, `SC5`, `SC6`, `SC7`, `SC8`, `SC10`, `SC11`) | P1 | required-now |
-| must-use | meglovo `actorEmitContext` + `executionContext` fail-closed authority modell | P1 | required-now |
-| must-not-use | implicit workspace/pane/shell authority fallback a canonical implementer pathban | P1 | required-now |
-| must-not-use | reviewer vagy meta-reviewer cutover scope becsempeszese ugyanebbe a taskba | P1 | required-now |
-| must-not-use | uj actor primitive vagy uj output family a pilot egyszerusitese erdekeben | P1 | required-now |
-| must-not-use | pane-visibility == acceptance/running shortcut | P1 | required-now |
-| must-not-use | teljes tmux/runtime adapter cleanup ebben a slice-ban | P2 | required-now |
+| must-use | `plans/archive/plans/actor-runtime-interface-discovery-and-migration-plan-v1.md` | P1 | required-now |
+| must-use | `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-capability-contract-phaseB-draft.md` | P1 | required-now |
+| must-use | `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-scenario-simulation-phaseC-matrix.md` | P1 | required-now |
+| must-use | `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-migration-spine-phaseD-plan.md` | P1 | required-now |
+| must-use | current-tree code evidence: `src/v11/shared/actorProtocol/actorEmitContext.ts`, `src/v11/application/actorProtocol/emitActorProtocolV11.ts`, `src/types/protocol.ts`, `src/v11/shared/delivery/tmuxDeliveryContract.ts`, `src/v11/infrastructure/channel/tmux/tmuxDeliveryRuntime.ts`, `src/v11/application/start/startCommandTmuxLaunch.ts`, `src/v11/application/askHuman/askHumanCommandApi.ts`, `src/v11/application/askHuman/askHumanCommandOrchestration.ts`, `src/v11/shared/askHuman/askHumanCommandFlowOrchestration.ts`, `src/v11/application/askHuman/runAskHumanFlow.ts` | P1 | required-now |
+| must-not-use | stale 2026-04-12 Phase E state claims current-state factkent | P1 | required-now |
+| must-not-use | bundled single-task pilot implementation | P1 | required-now |
 
 ### 6) Test Matrix
 
 | ID | Scenario | Given | When | Then | Priority | Timing | Evidence |
 |---|---|---|---|---|---|---|---|
-| T1 | implementer canonical emit explicit authorityval fut | aktiv implementer execution context letezik | `pairflow agent emit --kind pass` vagy `--kind human_question` canonical route-on fut | a wrapper path explicit authority-snapshotot hasznal, es nem implicit workspace-guessre epul | P1 | required-now | automated test |
-| T2 | implementer pass es human-input ugyanazon wrapper modellben marad | aktiv implementer handoff | pass es human-input emit is lefut | a ket path ugyanazon explicit wrapper/authority boundaryra epul | P1 | required-now | automated test |
-| T3 | stale authority es conflicting context fail-closed marad | aktiv execution valtott, fingerprint/handoff mismatch van, vagy az explicit authority es a cwd/pane/prompt runtime jelek ellentmondanak egymasnak | regi authorityval vagy conflicting passive runtime context mellett emit tortenik | a rendszer rejectel; nincs silent accept, nincs implicit reroute, es nincs passziv runtime jelbol levezetett authority-fallback | P1 | required-now | automated test |
-| T4 | duplicate delivery nem indit masodik sikeres executiont | ugyanarra a handoffra ket delivery signal jon | a masodik feldolgozas megtortenik | nincs masodik `accepted`/`running`; explicit reject vagy suppresszalt no-op jon | P1 | required-now | automated test |
-| T5 | retained tmux observability-only marad delayed/missing ack mellett is | delivery target metadata hianyzik, invalid, vagy explicit ack hianyzik/kesik mikozben pane activity latszik vagy nem latszik | delivery/ack allapot ertelmezese megtortenik | `accepted` / `rejected` es `running` / `failed_to_start` csak explicit ack boundarybol szarmazhat; sem pane activity, sem pane-csend nem acceptance-bizonyitek, es nem canonical authority-forras | P1 | required-now | automated test |
-| T6 | restart recovery uj authorityt igenyel | runtime/session restart tortent | regi authorityval, majd uj authorityval emit fut | regi stale, uj authority route valid | P1 | required-now | automated test |
-| T7 | CLI/runtime bridge nem reopeneli az actor-facing target authority API-t | authority materializalas hianyos vagy mismatched, illetve a hivasi felulet explicit target-authority override iranyba csuszna | CLI parse + run vagy runtime bridge feldolgozas megtortenik | a hiany/capability mismatch explicit hiba; nincs implicit fallback, es az actor-facing `emit` surface tovabbra sem igenyel vagy fogad explicit `bubble_id` / `handoff_id` / `execution_id` / `role` target-override mezoket | P1 | required-now | automated test |
-| T8 | docs csak pilot-szintu szemantikat pontositanak | a canonical authority vagy ack boundary user-visible modon pontosodik | docs diff keszul | a dokumentacio az implementer-first pilotot es a retained tmux observability-only szerepet kovetkezetesen irja le | P2 | required-now | doc diff |
-
-### 6.5) Review Stability Gates
-
-1. A review nem kerhet "opportunistic" wrapper/runtime cleanupot olyan file-okban, amelyekre a `T1`-`T7` parity csomag nem mutat kozvetlen bizonyitas-igenyt.
-2. Ha a duplicate delivery enforcement pontos shape-je `explicit rejected` vagy `suppressed no-op` kozott valaszt, barmelyik elfogadhato, ha:
-   - ugyanarra a handoffra nincs masodik successful `accepted`/`running`,
-   - a valasztott shape teszttel vedett,
-   - a valasztott shape explicitten delivery-boundary reject/no-op marad, nem canonical actor output vagy workflow-state transition.
-3. Ha a docs nem valtoznak, a Pairflow done-package / completion summary artefaktnak explicitten allitania kell, hogy az implementacio nem valtoztatta vagy pontositotta user-visible modon a canonical authority-, ack- vagy retained-adapter szemantikat olyan mertekben, amely README/design diffet igenyelne.
-4. Ha a docs valtoznak, azoknak csak a pilot altal tenylegesen modositott canonical szemantikat szabad leirniuk; Phase E rollout-jovoideju vagy reviewer/meta-reviewer tartalmat nem szabad elorehozni.
-5. A `SC7_CONFLICTING_CONTEXT` review csak akkor tekintheto lezartnak, ha van explicit bizonyitek arra, hogy ellentmondo cwd/pane/prompt jel nem tudja felulirni az execution-context authorityt, es nem csak stale-id jellegu mismatch teszt ved a pathot.
+| T1 | parent plan no longer reports removed surfaces as live current blockers | stale plan top section exists | docs review fut | a current-state summary mar nem allit public `bubble meta-review` vagy live-run residue-t current blockernek | P1 | required-now | doc review |
+| T2 | sequencing anchor exists | parent plan item 5 hivatkozik a Phase E taskra | docs review fut | letezik a checked-in `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-pilot-cutover-phaseE.md` artifact | P1 | required-now | doc review |
+| T3 | split is explicit | remaining scope authority + ack + pilot + cleanup fan-outot erint | docs review fut | a task explicit `E1, E2a, E2b, E2c, E3a, E3b, E3c, E4` successor splitet ad, es kimondja hogy az `E3b0` kulon predecessor-szelet superseded | P1 | required-now | doc review |
+| T4 | current-tree code evidence is reflected | actor wrapper + tmux delivery + missing typed ack ma is current codeben latszik | docs review fut | a sequencing ezeket named current gapskent rogzíti | P1 | required-now | doc review |
+| T5 | bundled Phase E task is explicitly forbidden | high-risk scope maradt hatra | docs review fut | a task kimondja, hogy a maradek implementation nem viheto egy taskban | P1 | required-now | doc review |
 
 ## L2 - Implementation Notes (Optional)
 
-1. [later-hardening] Ha a wrapper boundary tisztitasa soran tovabbi shared helper-ek latszanak, kulon Phase E follow-up task keszulhet a reviewer/meta-reviewer pathokra.
-2. [later-hardening] Ha a duplicate suppression enforcementhez kulon helper absztrakcio kell, azt csak akkor erdemes kivezetni, ha a reviewer path is ugyanarra konvergal.
-3. [later-hardening] Ha a retained tmux ack/provenance projection tul zajos, kesobb kulon debug-vs-canonical view note johet.
-
-## Assumptions
-
-1. Ez a task szandekosan csak az implementer pilot slice-a, nem a teljes Phase E.
-2. A generic `plans/tasks/actor-runtime-interface-pilot-cutover-phaseE.md` path eleg arra, hogy ezen belul az elso implementer-first szeletet rogzitse; a kesobbi reviewer/meta-reviewer koveto taskok kulon is johetnek.
-3. A meglovo `authoritativeContext`-et fogadni tudo shared pathok a wrapper boundary fokozatos megszigoritasat teszik lehetove, nem teljes ujrakezdest igenyelnek.
-
-## Locked Decisions
-
-1. Ebben a slice-ban a duplicate delivery minimum enforce-olt szerzodese a "nincs masodik successful `accepted`/`running` ugyanarra a handoffra" szabaly; a masodik signal explicit `rejected` vagy suppresszalt no-op alakja implementacios dontes lehet, de uj typed outcome nem kotelezo.
-2. A docs kotelezo frissitesi felulete legfeljebb `README.md` es `docs/pairflow-initial-design.md`; kulon runtime note csak akkor indokolt, ha az implementacio user-visible canonical authority-, ack- vagy retained-adapter szemantikajat tenylegesen valtoztatna vagy pontositana, illetve emiatt uj operatori akciot vagy recovery leirast tenne kotelezove.
-3. A frontmatter `target_files` lista maximalis erintesi felulet, nem kotelezo touched-file checklista; a review a szerzodes teljesuleset ne parity-irrelevans file-counttal merje.
-4. A pilot elfogadhato akkor is, ha a retained tmux adapter jelen marad, felteteve hogy a canonical authority- es ack-szemantika mar nem belole szarmazik.
+1. [later-hardening] Ha a successor taskok megnyitasa elhuzodik, erdemes lehet kulon appendixben fagyasztani a current-tree code referenceset commit SHA-val.
+2. [later-hardening] Ha a read-model fallout a pilot alatt nagyobbnak latszik, kulon diagnostics-alignment task nyithato `E3c` utan.
 
 ## Hardening Backlog (Optional)
 
 | ID | Item | Layer | Priority | Timing | Source | Proposed Action |
 |---|---|---|---|---|---|---|
-| HB1 | Reviewer pilot follow-up task | L2 | P3 | later-hardening | Phase D `S6` | kulon task a reviewer policy-gate retained surface Phase E cutoverjahoz |
-| HB2 | Meta-reviewer pilot follow-up task | L2 | P3 | later-hardening | Phase D `S6` | kulon task a retained meta-review diagnostics es submit path konvergenciajahoz |
-| HB3 | Shared duplicate suppression helper | L2 | P3 | later-hardening | possible code reuse | csak akkor emeljuk ki, ha tobb actor path tenylegesen ugyanazt a mintat kezdi hasznalni |
+| H1 | remaining successor task files explicit karbantartasa | L2 | P2 | later-hardening | sequencing anchor | Tartsd karban az archivalt `E3a`/`E3b`/`E3c` traceabilityt, a superseded `E3b0` note-ot, es a megmaradt aktiv `E4` taskot current-tree allapot szerint |
 
 ## Review Control
 
-1. Ne fogadjunk el olyan implementaciot, amely az implementer pilot neve alatt reviewer vagy meta-reviewer scope-ot is athoz.
-2. Ne fogadjunk el olyan “sikeres” pilotot, amely csak target-allapotot allit, de nincs stale/duplicate/restart parity evidence-je.
-3. Ne fogadjunk el olyan megoldast, amely pane-lathatosagbol vagy shell-contextbol visszafejti a canonical actor authorityt.
-4. Ne fogadjunk el olyan refaktort, amely uj actor primitive-t vagy uj output family-t vezet be a pilot egyszerusiteseert.
-5. Ne fogadjunk el olyan megoldast, amely a retained tmux surface-et acceptance vagy ack source-sza emeli.
+1. Every finding must include: `priority`, `timing`, `layer`, `evidence`.
+2. Ne fogadjunk el olyan follow-upot, amely a sequencing anchorra hivatkozva megis egy taskban akarja vinni az authority + ack producer + consume fallout + pilot + cleanup scope-ot.
+3. A current-tree code-read priorityje magasabb, mint a historical task prose-e.
 
 ## Spec Lock
 
-Task allapot `IMPLEMENTABLE`, ha:
-1. a task scope-ja explicit implementer-first pilot slice;
-2. a touched canonical emit/delivery/execution-context boundary-k egyertelmuen meg vannak nevezve;
-3. a task kotelezoen elovarja a stale authority, duplicate delivery es restart recovery parity bizonyitasat;
-4. a retained tmux/runtime surface observability-only adapterkent van kezelve;
-5. a deliverable nem nyitja ujra a Phase B core contractot es nem dagad teljes Phase E rolloutta;
-6. a duplicate delivery minimum enforce-olt szerzodese explicitten a "nincs masodik successful `accepted`/`running` ugyanarra a handoffra" garanciara van szukitve, es a masodik signal `explicit rejected` vs `suppresszalt no-op` alakja tudatosan implementacios szabadsagkent van rogzitve;
-7. a docs delta conditionalis es explicit user-visible szemantikahoz kotott;
-8. a review traceability visszamutathato a Phase D `S1`-`S5` spine-re es a Phase C `SC1_IMPLEMENTER_RESULT`, `SC5_HUMAN_INPUT_REQUEST`, `SC6_STALE_AUTHORITY_EMIT`, `SC7_CONFLICTING_CONTEXT`, `SC8_DUPLICATE_DELIVERY`, `SC10_RESTART_RECOVERY`, `SC11_TMUX_OBSERVABILITY_WITH_MISSING_OR_DELAYED_ACK` scenario-bemeneteire.
+Task allapot `completed`, ha:
+
+1. a parent plan current-state es statusz allitasa current-tree igazsagra van allitva;
+2. a Phase E sequencing anchor file checked-in allapotban letezik;
+3. az `E1, E2a, E2b, E2c, E3a, E3b, E3c, E4` successor split explicit boundary-kkel es must-not-include guardokkal rogzitett, es az `E3b0` superseded traceability note-kent szerepel;
+4. a sequencing current-tree code evidence-re epul, nem historical stale statuszra.

@@ -48,7 +48,7 @@ target_files:
   - tests/v11/shared/metaReviewGate/metaReviewGateStateStaging.test.ts
   - tests/v11/shared/state/stateSchema.test.ts
 prd_ref: null
-plan_ref: plans/actor-runtime-interface-discovery-and-migration-plan-v1.md
+plan_ref: plans/archive/plans/actor-runtime-interface-discovery-and-migration-plan-v1.md
 system_context_ref: docs/pairflow-initial-design.md
 owners:
   - "felho"
@@ -68,7 +68,7 @@ Target file interpretation:
 3. A cleanup/recovery familyben a `src/v11/shared/metaReviewGate/metaReviewGateSnapshotHelpers.ts`, `metaReviewGateRunResultArtifacts.ts` es `metaReviewGateStateHelpers.ts` ma meg a removed scalarokbol epit snapshotot vagy run-result fallbackot, igy ez a task valoban ugyanazt a reduced shared shape-et owns-olja a helper family oldalrol is.
 4. Az inspect/load seam a `src/v11/infrastructure/state/stateSnapshotInspection.ts` file-ban jelenleg tolerant legacy inputot olvas be ugy, hogy kozben vissza is teszi a `last_autonomous_*` mezoket az inspectable outputba; ezt a tasknak explicit input-tolerancia + reduced-output modellre kell szukitenie.
 5. A direct in-repo consumers kozul a listed `tests/**` contract/core/v11 fixturek es a `tests/cli/agentEmitCommand.test.ts` ma meg sok helyen seedelik vagy ellenorzik a cached scalar blokkot, ezert a consumer alignment ennek a tasknak kotelezo resze, nem kulon follow-up.
-6. A `plans/actor-runtime-interface-discovery-and-migration-plan-v1.md` 2026-04-12-es resequencingje szerint ez a replacement lane Phase E4 persisted-authority + cleanup/recovery closure szelete; a public read-model closure Phase E3-ban, a repo-surface wording cleanup Phase E5-ben marad.
+6. A `plans/archive/plans/actor-runtime-interface-discovery-and-migration-plan-v1.md` 2026-04-12-es resequencingje szerint ez a replacement lane Phase E4 persisted-authority + cleanup/recovery closure szelete; a public read-model closure Phase E3-ban, a repo-surface wording cleanup Phase E5-ben marad.
 
 ## L0 - Policy
 
@@ -188,7 +188,7 @@ Normative sequencing rules:
 
 | Source | Binding requirement for this task | Why it matters |
 |---|---|---|
-| `plans/actor-runtime-interface-discovery-and-migration-plan-v1.md` Remaining Phase E Resequencing Update | Ez a task a replacement lane Phase E4 persisted authority + cleanup/recovery closure szelete. | Megakadalyozza, hogy a task public read-model vagy repo-surface cleanupba csusszon. |
+| `plans/archive/plans/actor-runtime-interface-discovery-and-migration-plan-v1.md` Remaining Phase E Resequencing Update | Ez a task a replacement lane Phase E4 persisted authority + cleanup/recovery closure szelete. | Megakadalyozza, hogy a task public read-model vagy repo-surface cleanupba csusszon. |
 | `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-meta-review-cached-public-read-model-removal-phaseE.md` | Phase E3 predecessor: a public cached read/export surface closure kulon boundary marad, es ennek mar elobb be kell zarulnia. | A current task nem tarthat vissza CLI/read-model cleanup ownershipot. |
 | `plans/archive/tasks/actor-runtime-interface-meta-review-cached-current-round-authority-and-runtime-consumer-cutover-phaseE.md` | Pre-Phase E4 archived prereq: a live authority/runtime producer cutover mar lezart foundation. | A reduced persisted shape nem irhatja ujra a live authority control modellt. |
 | `plans/archive/tasks/actor-runtime-interface-meta-review-cached-approval-and-projection-consumer-cutover-phaseE.md` | Pre-Phase E4 archived prereq: az approval/status/list/UI source-of-truth cutover mar lezart consumer-side foundation. | Ez a task csak residual shared-shape consumers alignmentjet owns-olja, nem a lezart projection boundaryt. |

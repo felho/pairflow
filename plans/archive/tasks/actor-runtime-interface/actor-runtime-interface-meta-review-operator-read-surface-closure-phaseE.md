@@ -20,7 +20,7 @@ target_files:
   - README.md
   - docs/pairflow-initial-design.md
 prd_ref: null
-plan_ref: plans/actor-runtime-interface-discovery-and-migration-plan-v1.md
+plan_ref: plans/archive/plans/actor-runtime-interface-discovery-and-migration-plan-v1.md
 system_context_ref: README.md
 owners:
   - "felho"
@@ -151,7 +151,7 @@ Ez a task akkor sikeres, ha:
 ### Normative Reference Policy
 
 1. Canonical plan:
-   - `plans/actor-runtime-interface-discovery-and-migration-plan-v1.md`
+   - `plans/archive/plans/actor-runtime-interface-discovery-and-migration-plan-v1.md`
 2. Parent cleanup contract:
    - `plans/archive/tasks/actor-runtime-interface-meta-review-operator-projection-cleanup-phaseE.md`
 3. Binding migration/context refs:

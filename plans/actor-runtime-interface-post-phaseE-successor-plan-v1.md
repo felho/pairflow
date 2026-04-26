@@ -12,7 +12,7 @@ owners:
 
 ## Why This Plan Exists
 
-1. A `plans/actor-runtime-interface-discovery-and-migration-plan-v1.md` ala tartozó Phase E closure-lanc current-tree szinten lezarult.
+1. A `plans/archive/plans/actor-runtime-interface-discovery-and-migration-plan-v1.md` ala tartozó Phase E closure-lanc current-tree szinten lezarult.
 2. Ettol fuggetlenul az eredeti north star csak reszben teljesult:
    - a canonical authority es multi-role consume parity megvan,
    - de a runtime boundary tovabbra is erosen role- es tmux-formaju,
@@ -469,7 +469,7 @@ owners:
    - a megmaradt `tmux` nev csak retained adapter/default/operatori ownershipot jelol.
 21. Emiatt az `Opportunity 2` implementation lane current-tree szinten lezart lett, es a successor ownership az `O3` lane-re kerult at.
 22. Az `O3-T1` docs-only onboarding extension surface clarification 2026-04-25-en current-tree baseline lett:
-   - task artifact: `plans/tasks/actor-runtime-interface/actor-runtime-interface-opportunity3-task1-onboarding-extension-surface-contract-clarification.md`
+   - task artifact: `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-opportunity3-task1-onboarding-extension-surface-contract-clarification.md`
    - normative note: `docs/actor-runtime-interface/onboarding-extension-surface-contract-note-v1.md`
    - closure: belso `RoleDescriptor` registry-mintazat, 4 seam (S1..S4) inventory, es az akkori `O3-T2..T5` sequencing/gating explicit lezarasa
 23. Az `O3-T2` internal role/capability foundation 2026-04-26-an merge-olve lett a `main` branchre:
@@ -544,7 +544,7 @@ owners:
    - active successor lane
    - completed slices:
      - `O3-T1` onboarding extension surface contract clarification
-     - task artifact: `plans/tasks/actor-runtime-interface/actor-runtime-interface-opportunity3-task1-onboarding-extension-surface-contract-clarification.md`
+     - task artifact: `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-opportunity3-task1-onboarding-extension-surface-contract-clarification.md`
      - normative note: `docs/actor-runtime-interface/onboarding-extension-surface-contract-note-v1.md`
      - shape: `contract_or_persisted_authority_foundation` (docs-only)
      - closure: belso `RoleDescriptor` registry-mintazat normativ rogzitese + 4 seam (S1..S4) source-anchored inventory + per-role 9 mezos closed mapping exact startup/resume prompt concern-setekkel + az eredeti `O3-T2..T5` phasing gatinggel, amelyet a current tree residual closeout `O3-T4a`-val finomitottunk
@@ -572,10 +572,10 @@ owners:
 ## Traceability
 
 1. Historical predecessor:
-   - `plans/actor-runtime-interface-discovery-and-migration-plan-v1.md`
-2. Current closeout anchors:
-   - `plans/tasks/actor-runtime-interface-pilot-cutover-phaseE.md`
-   - `plans/tasks/actor-runtime-interface/actor-runtime-interface-opportunity3-task1-onboarding-extension-surface-contract-clarification.md`
+   - `plans/archive/plans/actor-runtime-interface-discovery-and-migration-plan-v1.md`
+2. Closeout anchors:
+   - `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-pilot-cutover-phaseE.md`
+   - `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-opportunity3-task1-onboarding-extension-surface-contract-clarification.md`
    - `docs/actor-runtime-interface/execution-authority-contract-note-v1.md`
    - `docs/actor-runtime-interface/generic-runtime-kernel-contract-note-v1.md`
    - `docs/actor-runtime-interface/topology-neutral-delivery-executor-contract-note-v1.md`

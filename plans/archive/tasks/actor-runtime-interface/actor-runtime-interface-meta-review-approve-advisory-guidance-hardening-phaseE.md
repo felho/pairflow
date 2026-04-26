@@ -21,7 +21,7 @@ target_files:
   - tests/core/bubble/metaReviewGate.test.ts
   - tests/contracts/v11/metaReviewSubmitCoverage.test.ts
 prd_ref: null
-plan_ref: plans/actor-runtime-interface-discovery-and-migration-plan-v1.md
+plan_ref: plans/archive/plans/actor-runtime-interface-discovery-and-migration-plan-v1.md
 system_context_ref: docs/pairflow-initial-design.md
 owners:
   - "felho"

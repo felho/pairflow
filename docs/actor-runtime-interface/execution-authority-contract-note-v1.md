@@ -19,7 +19,7 @@ owners:
 ## Canonical Contract Anchors
 
 1. `docs/pairflow-initial-design.md`
-2. `plans/actor-runtime-interface-discovery-and-migration-plan-v1.md`
+2. `plans/archive/plans/actor-runtime-interface-discovery-and-migration-plan-v1.md`
 3. `src/types/protocol.ts`
 4. `src/cli/commands/agent/emit.ts`
 5. `src/v11/shared/actorProtocol/actorEmitContext.ts`

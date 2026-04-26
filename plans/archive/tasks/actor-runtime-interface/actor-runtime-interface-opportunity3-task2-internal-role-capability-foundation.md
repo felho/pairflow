@@ -29,7 +29,7 @@ owners:
 ## Current Codebase Check (2026-04-25)
 
 1. Az `O3-T1` docs-only clarification lezart es `main`-re merge-olt:
-   - task artifact: `plans/tasks/actor-runtime-interface/actor-runtime-interface-opportunity3-task1-onboarding-extension-surface-contract-clarification.md`
+   - task artifact: `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-opportunity3-task1-onboarding-extension-surface-contract-clarification.md`
    - normative note: `docs/actor-runtime-interface/onboarding-extension-surface-contract-note-v1.md`
 2. Az `O3-T1` note mar normativan lockolja:
    - a `RoleDescriptor` exact 9 mezos mezohalmazat,
@@ -94,7 +94,7 @@ owners:
 1. Parent plan source:
    - `plans/actor-runtime-interface-post-phaseE-successor-plan-v1.md`
 2. Normative predecessor:
-   - `plans/tasks/actor-runtime-interface/actor-runtime-interface-opportunity3-task1-onboarding-extension-surface-contract-clarification.md`
+   - `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-opportunity3-task1-onboarding-extension-surface-contract-clarification.md`
    - `docs/actor-runtime-interface/onboarding-extension-surface-contract-note-v1.md`
 3. This task closes:
    - `Opportunity 3 / O3-T2`

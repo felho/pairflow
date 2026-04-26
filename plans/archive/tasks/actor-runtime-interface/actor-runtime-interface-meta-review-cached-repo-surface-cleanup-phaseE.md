@@ -7,13 +7,13 @@ phase: phaseE
 target_files:
   - .claude/skills/UsePairflow/SKILL.md
   - .claude/skills/UsePairflow/Workflows/ReviewBubble.md
-  - plans/actor-runtime-interface-discovery-and-migration-plan-v1.md
+  - plans/archive/plans/actor-runtime-interface-discovery-and-migration-plan-v1.md
   - ui/src/components/canvas/BubbleExpandedCard.tsx
   - ui/src/components/canvas/BubbleExpandedCard.test.tsx
   - ui/src/components/canvas/BubbleCanvas.tsx
   - ui/src/components/canvas/BubbleCanvas.test.tsx
 prd_ref: null
-plan_ref: plans/actor-runtime-interface-discovery-and-migration-plan-v1.md
+plan_ref: plans/archive/plans/actor-runtime-interface-discovery-and-migration-plan-v1.md
 system_context_ref: docs/pairflow-initial-design.md
 owners:
   - "felho"
@@ -32,7 +32,7 @@ Target file interpretation:
 2. A UI copied review prompt surfaces ma is explicit `--meta-review-source=cached` kapcsolot masolnak a `ui/src/components/canvas/BubbleExpandedCard.tsx` es `ui/src/components/canvas/BubbleCanvas.tsx` seamjeiben, a megfelelo tesztekkel egyutt.
 3. A `README.md` jelenlegi tree-ben meg mindig dokumentalja a public `pairflow bubble meta-review status|last-report` operator surface-et; ezert a README cleanup ebben a taskban csak a public read-model removal predecessor utan zarhato le.
 4. A jelen task sajat frontmattere meg stale traceability-t hordoz: superseded umbrella/foundation taskokra mutat target ownershipkent ahelyett, hogy a 2026-04-12-es replacement sequencinget kovetne.
-5. A `plans/actor-runtime-interface-discovery-and-migration-plan-v1.md` mar explicitten E3 -> E4 -> E5 sorrendet ir elo, vagyis ez a task Phase E5 repo-surface successor, de nem irhatja felul a Phase E3 public read-model closure elofeltetelt.
+5. A `plans/archive/plans/actor-runtime-interface-discovery-and-migration-plan-v1.md` mar explicitten E3 -> E4 -> E5 sorrendet ir elo, vagyis ez a task Phase E5 repo-surface successor, de nem irhatja felul a Phase E3 public read-model closure elofeltetelt.
 6. A repo-local `.claude/skills/UsePairflow/Workflows/InterveneBubble.md` es `CloseBubble.md` workflowban maradt cached autonomous recommendation hivatkozasok nem `--meta-review-source` operator mode-ot reklamoznak, hanem approval override/allapotkiolvasasi contextet; ezek nem tartoznak ennek a tasknak a primer edit ownershipebe.
 
 ## L0 - Policy
@@ -135,7 +135,7 @@ Tisztitsa ki a repo-local workflow, active docs es copied prompt surfaces wordin
 |---|---|---|---|
 | 1. Repo-local `ReviewBubble` wording cleanup | A removed source-mode contractot eloszor a source-of-truth workflow docsbol kell kivezetni. | `.claude/skills/UsePairflow/SKILL.md`, `.claude/skills/UsePairflow/Workflows/ReviewBubble.md` | public read-model code removal |
 | 2. UI copied prompt cleanup | A copied prompt csak a source-of-truth review wording utan tisztithato stabilan. | `ui/src/components/canvas/BubbleExpandedCard.tsx`, `BubbleCanvas.tsx` es tesztjeik | runtime/state seam-ek |
-| 3. Active traceability alignment | A plan/task traceability csak akkor stabil, ha a repo-surface wording mar a replacement lane-t koveti. | `plans/actor-runtime-interface-discovery-and-migration-plan-v1.md`, aktiv traceability docs | superseded historical artifact rewrite beyond note-level |
+| 3. Active traceability alignment | A plan/task traceability csak akkor stabil, ha a repo-surface wording mar a replacement lane-t koveti. | `plans/archive/plans/actor-runtime-interface-discovery-and-migration-plan-v1.md`, aktiv traceability docs | superseded historical artifact rewrite beyond note-level |
 | 4. README cleanup gate | A command reference csak akkor irhato at, ha a public `bubble meta-review` surface mar predecessorben eltunt. | `README.md` follow-on repo-surface wording cleanup a predecessor merge utan | Phase E3 elotti docs drift vagy public command removal |
 
 Normative sequencing rules:
@@ -149,7 +149,7 @@ Normative sequencing rules:
 
 | Source | Binding requirement for this task | Why it matters |
 |---|---|---|
-| `plans/actor-runtime-interface-discovery-and-migration-plan-v1.md` Remaining Phase E Resequencing Update | Ez a task a replacement lane Phase E5 repo-surface cleanup szelete, es nem override-olja az E3 -> E4 -> E5 sorrendet. | Megakadalyozza, hogy a task "azonnali kovetkezo" cimen atlepje a public read-model predecessort. |
+| `plans/archive/plans/actor-runtime-interface-discovery-and-migration-plan-v1.md` Remaining Phase E Resequencing Update | Ez a task a replacement lane Phase E5 repo-surface cleanup szelete, es nem override-olja az E3 -> E4 -> E5 sorrendet. | Megakadalyozza, hogy a task "azonnali kovetkezo" cimen atlepje a public read-model predecessort. |
 | `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-meta-review-cached-public-read-model-removal-phaseE.md` | Phase E3 predecessor: a public `bubble meta-review` surface es a hozza tartozo retained read stack elobb zarando le. | A README command reference follow-on cleanup ehhez kotott, nem pusztan a Phase E4 archive-hoz. |
 | `.claude/skills/UsePairflow/Workflows/InterveneBubble.md`, `.claude/skills/UsePairflow/Workflows/CloseBubble.md` | Ezekben a cached terminology approval/status contextet jelent, nem removed `--meta-review-source` operator mode-ot. | Megakadalyozza, hogy a task tevesen visszahuzza ezeket a workflowkat repo-surface mode-cleanup cim alatt. |
 | `plans/archive/tasks/actor-runtime-interface-meta-review-cached-persisted-authority-and-cleanup-recovery-removal-phaseE.md` | Phase E4 archived predecessor: a persisted authority + cleanup/recovery closure mar lezart boundary. | A jelen task nem nyithatja vissza a runtime/state cleanup scope-ot. |
@@ -161,7 +161,7 @@ Normative sequencing rules:
 |---|---|---|---|---|---|---|---|---|
 | CS1 | `.claude/skills/UsePairflow/SKILL.md`, `.claude/skills/UsePairflow/Workflows/ReviewBubble.md` | repo-local review workflow docs | markdown -> markdown | repo-local skill source | Cached source-mode es stale mode matrix eltunik; surviving review flow marad. | P1 | required-now | docs diff |
 | CS2 | `ui/src/components/canvas/BubbleExpandedCard.tsx`, `BubbleCanvas.tsx` es tesztjeik | copied review prompt wording | UI copy -> UI copy | browser copied prompt | Nincs `--meta-review-source=cached` vagy stale cached wording. | P1 | required-now | UI tests |
-| CS3 | `plans/actor-runtime-interface-discovery-and-migration-plan-v1.md`, active traceability docs | active docs traceability | markdown -> markdown | active repo docs | Az active docs az uj replacement tasklancot nevezik meg; superseded task pathra nincs aktiv hivatkozas. | P1 | required-now | docs diff |
+| CS3 | `plans/archive/plans/actor-runtime-interface-discovery-and-migration-plan-v1.md`, active traceability docs | active docs traceability | markdown -> markdown | active repo docs | Az active docs az uj replacement tasklancot nevezik meg; superseded task pathra nincs aktiv hivatkozas. | P1 | required-now | docs diff |
 | CS4 | `README.md` | command/reference wording | markdown -> markdown | repo root command reference | A README follow-on cleanup csak a public read-model predecessor merge utan lep aktiv edit scope-ba, es akkor sem hivatkozik removed cached source-mode-ra vagy stale task framingre. | P1 | required-now | docs diff |
 
 ### 2) Data and Interface Contract

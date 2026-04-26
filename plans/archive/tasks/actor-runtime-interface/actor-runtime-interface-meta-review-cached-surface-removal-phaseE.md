@@ -34,13 +34,13 @@ target_files:
   - ui/src/components/canvas/BubbleExpandedCard.test.tsx
   - ui/src/components/canvas/BubbleCanvas.tsx
   - ui/src/components/canvas/BubbleCanvas.test.tsx
-  - plans/actor-runtime-interface-discovery-and-migration-plan-v1.md
+  - plans/archive/plans/actor-runtime-interface-discovery-and-migration-plan-v1.md
   - plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-meta-review-operator-read-surface-closure-phaseE.md
   - tests/cli/bubbleMetaReviewCommand.test.ts
   - tests/v11/application/metaReview/metaReviewCliEntrypointParity.test.ts
   - tests/v11/shared/metaReview/metaReviewCommandReadArtifacts.test.ts
 prd_ref: null
-plan_ref: plans/actor-runtime-interface-discovery-and-migration-plan-v1.md
+plan_ref: plans/archive/plans/actor-runtime-interface-discovery-and-migration-plan-v1.md
 system_context_ref: docs/pairflow-initial-design.md
 owners:
   - "felho"

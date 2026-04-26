@@ -38,7 +38,7 @@ owners:
    - `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-implementer-pilot-parity-and-fail-closed-hardening-phaseE3c.md`
    - `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-reviewer-meta-rollout-and-adapter-cleanup-phaseE4.md`
 8. A Phase E closeout historical traceability anchorjai:
-   - `plans/tasks/actor-runtime-interface-pilot-cutover-phaseE.md`
+   - `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-pilot-cutover-phaseE.md`
    - `docs/actor-runtime-interface/execution-authority-contract-note-v1.md`
    - `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-reviewer-meta-rollout-and-adapter-cleanup-phaseE4.md`
 9. Review authority note:
@@ -106,7 +106,7 @@ owners:
    - delivery/launch ack hiany -> explicit runtime-level unavailable/failure allapot,
    - nincs pane-lathatosagbol visszakovetkeztetett “valoszinuleg accepted” fallback.
 7. Phase-close traceability:
-   - `plans/tasks/actor-runtime-interface-pilot-cutover-phaseE.md`
+   - `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-pilot-cutover-phaseE.md`
    - `docs/actor-runtime-interface/execution-authority-contract-note-v1.md`
    - `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-reviewer-meta-rollout-and-adapter-cleanup-phaseE4.md`
 8. Phase boundary:
@@ -207,7 +207,7 @@ Ez a plan discovery- es preparation-jellegu. Nem celja a Phase 4 vagy Phase 5 le
    - nincs CLI help reminder,
    - nincs skill guidance, amely a `cached` modra vagy a `last-report` / `status` commandokra hivatkozik,
    - nincs UI prompt, amely removed cached source-mode kapcsolot masol.
-5. Ez a checkpoint mar historical context: a 2026-04-12-es replacement lancot dokumentalja, de a current-tree remaining implementation sequencinget mar a `plans/tasks/actor-runtime-interface-pilot-cutover-phaseE.md` anchor task rogzitette.
+5. Ez a checkpoint mar historical context: a 2026-04-12-es replacement lancot dokumentalja, de a current-tree remaining implementation sequencinget mar a `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-pilot-cutover-phaseE.md` anchor task rogzitette.
 
 ## Decision Baseline
 
@@ -437,7 +437,7 @@ Ez a plan discovery- es preparation-jellegu. Nem celja a Phase 4 vagy Phase 5 le
 2. `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-capability-contract-phaseB.md`
 3. `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-scenario-simulation-phaseC.md`
 4. `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-migration-spine-phaseD.md`
-5. `plans/tasks/actor-runtime-interface-pilot-cutover-phaseE.md` (historical Phase E sequencing closeout anchor; a current-tree implementation lanchosszt mar lezartnak tekinti)
+5. `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-pilot-cutover-phaseE.md` (historical Phase E sequencing closeout anchor; a current-tree implementation lanchosszt mar lezartnak tekinti)
 
 ## Dependencies
 

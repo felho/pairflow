@@ -7,7 +7,7 @@ phase: phaseB
 target_files:
   - plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-capability-contract-phaseB-draft.md
 prd_ref: null
-plan_ref: plans/actor-runtime-interface-discovery-and-migration-plan-v1.md
+plan_ref: plans/archive/plans/actor-runtime-interface-discovery-and-migration-plan-v1.md
 system_context_ref: README.md
 owners:
   - "felho"
@@ -76,7 +76,7 @@ Phase B akkor sikeres, ha letrejon egy jol olvashato contract draft, amely:
 
 ### Normative Reference Policy
 
-1. `plan_ref`: `plans/actor-runtime-interface-discovery-and-migration-plan-v1.md`
+1. `plan_ref`: `plans/archive/plans/actor-runtime-interface-discovery-and-migration-plan-v1.md`
    - Ez a canonical forras a Phase B capability contract scope-jahoz, a role-neutrality policyhoz, a core-vs-extension policyhoz es a delivery/ack boundaryhoz.
 2. Binding current-state input:
    - `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-behavior-inventory-phaseA-inventory.md`
@@ -114,7 +114,7 @@ Phase B akkor sikeres, ha letrejon egy jol olvashato contract draft, amely:
 |---|---|---|---|---|---|---|---|---|
 | CS1 | `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-capability-contract-phaseB-draft.md` | checked-in contract draft artifact | markdown contract schema -> checked-in artifact | uj Phase B draft artifact | Egyetlen normativ contract draft keszul, amely capability modellel, authority boundaryval, output contracttal, delivery/ack modellel, actor-vs-executor separationnel es extension policyval irja le a target actor runtime interface-et | P1 | required-now | Phase B deliverable definicio |
 | CS2 | `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-behavior-inventory-phaseA-inventory.md` | Phase A evidence synthesis | inventory rows + synthesis -> contract decisions | Phase B draft current-state grounding section | A draft explicitten levezeti, hogy a Phase A `core` / `adapt` / `remove` megfigyeleseibol mi lesz target core capability, mi kerul executorba, mi marad bounded extension, es mi marad transitional adapter/removal tema | P1 | required-now | Phase A -> Phase B traceability |
-| CS3 | `plans/actor-runtime-interface-discovery-and-migration-plan-v1.md` | capability + authority + role model derivation | plan workstream requirements -> contract sections | Phase B draft normative sections | A draft explicitten rogziti az input authorityt, a role-neutral modellt, a canonical outputokat, a delivery trigger es ack boundaryt, valamint a tiltott actor-muveleteket | P1 | required-now | Workstream 2 alignment |
+| CS3 | `plans/archive/plans/actor-runtime-interface-discovery-and-migration-plan-v1.md` | capability + authority + role model derivation | plan workstream requirements -> contract sections | Phase B draft normative sections | A draft explicitten rogziti az input authorityt, a role-neutral modellt, a canonical outputokat, a delivery trigger es ack boundaryt, valamint a tiltott actor-muveleteket | P1 | required-now | Workstream 2 alignment |
 | CS4 | `plans/archive/plans/protocol-first-bubble-runtime-and-meta-review-unification-plan-v1.md` + `plans/archive/tasks/protocol-first/protocol-first-cli-and-protocol-surface-unification-phase4.md` + `plans/archive/tasks/protocol-first/protocol-first-legacy-meta-review-model-removal-phase5.md` | protocol-first companion synthesis | binding protocol-first refs -> contract constraints | Phase B draft compatibility section | A draft nem epulhet retained aliasokra, legacy lifecycle-re vagy special-case meta-review actor API-ra; a canonical actor boundary Phase 4/5 kompatibilis marad | P1 | required-now | protocol-first compatibility |
 | CS5 | `docs/v2/pairflow-v2-architecture-plan-joint.md` | informational architecture comparison | informational input -> non-normative synthesis | Phase B draft comparison note | A draft roviden jelzi, hogyan illeszkedik a role/kernel/capability thinking a v2 iranyhoz, de nem teszi a v2-t normativ override-da | P2 | required-now | informational consistency |
 
@@ -167,7 +167,7 @@ Constraint:
 
 | Type | Items | Priority | Timing |
 |---|---|---|---|
-| must-use | `plans/actor-runtime-interface-discovery-and-migration-plan-v1.md` | P1 | required-now |
+| must-use | `plans/archive/plans/actor-runtime-interface-discovery-and-migration-plan-v1.md` | P1 | required-now |
 | must-use | `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-behavior-inventory-phaseA-inventory.md` | P1 | required-now |
 | must-use | `plans/archive/plans/protocol-first-bubble-runtime-and-meta-review-unification-plan-v1.md` | P1 | required-now |
 | must-use | `plans/archive/tasks/protocol-first/protocol-first-cli-and-protocol-surface-unification-phase4.md` | P1 | required-now |

@@ -166,7 +166,7 @@ Docs-only, implementalhato `O1-T1` sequencing szelet keszitese az `Opportunity 1
 2. Preserved authority baseline:
    - `docs/actor-runtime-interface/execution-authority-contract-note-v1.md`
 3. Historical predecessor context:
-   - `plans/actor-runtime-interface-discovery-and-migration-plan-v1.md`
+   - `plans/archive/plans/actor-runtime-interface-discovery-and-migration-plan-v1.md`
 
 ## L1 - Implementation Contract
 

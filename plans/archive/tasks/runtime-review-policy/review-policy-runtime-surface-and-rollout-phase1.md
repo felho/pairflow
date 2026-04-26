@@ -37,13 +37,13 @@ target_files:
   - README.md
   - docs/pairflow-initial-design.md
 prd_ref: null
-plan_ref: plans/actor-runtime-interface-discovery-and-migration-plan-v1.md
+plan_ref: plans/archive/plans/actor-runtime-interface-discovery-and-migration-plan-v1.md
 superseded_by:
   - plans/archive/plans/runtime-review-policy-reset-and-phasing-plan-v1.md
   - plans/archive/tasks/runtime-review-policy-foundation-and-authority-refactor-phase1.md
 system_context_ref: README.md
 normative_refs:
-  - plans/actor-runtime-interface-discovery-and-migration-plan-v1.md
+  - plans/archive/plans/actor-runtime-interface-discovery-and-migration-plan-v1.md
   - plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-migration-spine-phaseD-plan.md
   - plans/archive/tasks/actor-runtime-interface-reviewer-cutover-phaseE.md
   - plans/archive/tasks/actor-runtime-interface-meta-reviewer-cutover-phaseE.md
@@ -149,7 +149,7 @@ Ez a task akkor sikeres, ha:
 
 ### Normative Reference Policy
 
-1. `plan_ref`: `plans/actor-runtime-interface-discovery-and-migration-plan-v1.md`
+1. `plan_ref`: `plans/archive/plans/actor-runtime-interface-discovery-and-migration-plan-v1.md`
    - Ez a canonical umbrella a reviewer/meta-reviewer cutover sequencinghez.
 2. Binding rollout input:
    - `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-migration-spine-phaseD-plan.md`
@@ -285,7 +285,7 @@ Normative rules:
 
 | Type | Items | Priority | Timing |
 |---|---|---|---|
-| must-use | `plans/actor-runtime-interface-discovery-and-migration-plan-v1.md` | P1 | required-now |
+| must-use | `plans/archive/plans/actor-runtime-interface-discovery-and-migration-plan-v1.md` | P1 | required-now |
 | must-use | `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-migration-spine-phaseD-plan.md` | P1 | required-now |
 | must-use | `plans/archive/tasks/actor-runtime-interface-reviewer-cutover-phaseE.md` | P1 | required-now |
 | must-use | `plans/archive/tasks/actor-runtime-interface-meta-reviewer-cutover-phaseE.md` | P1 | required-now |

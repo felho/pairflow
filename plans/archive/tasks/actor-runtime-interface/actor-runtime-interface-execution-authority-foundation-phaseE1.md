@@ -27,7 +27,7 @@ target_files:
   - tests/v11/application/actorProtocol/emitActorProtocolV11.test.ts
   - plans/tasks/actor-runtime-interface-execution-authority-foundation-phaseE1.md
 prd_ref: null
-plan_ref: plans/actor-runtime-interface-discovery-and-migration-plan-v1.md
+plan_ref: plans/archive/plans/actor-runtime-interface-discovery-and-migration-plan-v1.md
 system_context_ref: README.md
 owners:
   - "felho"
@@ -284,7 +284,7 @@ Dependency type semantics:
 
 | Type | Items | Priority | Timing |
 |---|---|---|---|
-| reference-only | `plans/tasks/actor-runtime-interface-pilot-cutover-phaseE.md` | P1 | required-now |
+| reference-only | `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-pilot-cutover-phaseE.md` | P1 | required-now |
 | must-use | `src/types/bubble.ts` | P1 | required-now |
 | must-use | `src/types/protocol.ts` | P1 | required-now |
 | must-use | `src/cli/commands/agent/emit.ts` | P1 | required-now |

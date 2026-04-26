@@ -26,7 +26,7 @@ target_files:
   - tests/core/human/approval.test.ts
   - tests/core/runtime/metaReviewSubmitGuidance.test.ts
 prd_ref: null
-plan_ref: plans/actor-runtime-interface-discovery-and-migration-plan-v1.md
+plan_ref: plans/archive/plans/actor-runtime-interface-discovery-and-migration-plan-v1.md
 system_context_ref: docs/pairflow-initial-design.md
 owners:
   - "felho"
@@ -163,7 +163,7 @@ Normative sequencing rules:
 
 | Source | Binding requirement for this task | Why it matters |
 |---|---|---|
-| `plans/actor-runtime-interface-discovery-and-migration-plan-v1.md` Remaining Phase E Resequencing Update | Ez a task a replacement remaining tasklanc Phase E3 read-model closure szelete. | Megakadalyozza, hogy a task persisted-authority vagy repo-surface cleanupba csusszon. |
+| `plans/archive/plans/actor-runtime-interface-discovery-and-migration-plan-v1.md` Remaining Phase E Resequencing Update | Ez a task a replacement remaining tasklanc Phase E3 read-model closure szelete. | Megakadalyozza, hogy a task persisted-authority vagy repo-surface cleanupba csusszon. |
 | `plans/archive/tasks/actor-runtime-interface-meta-review-cached-current-round-authority-and-runtime-consumer-cutover-phaseE.md` | A live authority/runtime producer mar lezart prereq; ezt nem lehet ujranyitni. | A public read removal nem irhatja at a canonical authority kontrollmodellt. |
 | `plans/archive/tasks/actor-runtime-interface-meta-review-cached-approval-and-projection-consumer-cutover-phaseE.md` | Az approval/projection source-of-truth cutover mar lezart prereq. | A task csak residual direct read-consumer cleanupot owns-olhat, nem a mar lezart approval/list/status/UI cutovert. |
 | `src/cli/commands/agent/emit.ts` + `src/v11/shared/metaReview/metaReviewSubmitGuidance.ts` | A canonical `agent emit --kind meta_review_result` usage line es parse contract valtozatlanul tul kell elje a cleanupot. | Ez a surviving public contract. |

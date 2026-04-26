@@ -13,7 +13,7 @@ target_files:
   - "src/v11/infrastructure/channel/tmux/tmuxManager.ts"
   - "tests/core/runtime/tmuxDelivery.test.ts"
   - "tests/core/runtime/tmuxManager.test.ts"
-plan_ref: plans/actor-runtime-interface-discovery-and-migration-plan-v1.md
+plan_ref: plans/archive/plans/actor-runtime-interface-discovery-and-migration-plan-v1.md
 prd_ref: null
 system_context_ref: docs/pairflow-initial-design.md
 owners:
@@ -206,8 +206,8 @@ owners:
 
 | Type | Items | Priority | Timing |
 |---|---|---|---|
-| must-use | `plans/actor-runtime-interface-discovery-and-migration-plan-v1.md` | P1 | required-now |
-| must-use | `plans/tasks/actor-runtime-interface-pilot-cutover-phaseE.md` | P1 | required-now |
+| must-use | `plans/archive/plans/actor-runtime-interface-discovery-and-migration-plan-v1.md` | P1 | required-now |
+| must-use | `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-pilot-cutover-phaseE.md` | P1 | required-now |
 | must-use | `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-capability-contract-phaseB-draft.md` | P1 | required-now |
 | must-use | `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-scenario-simulation-phaseC-matrix.md` | P1 | required-now |
 | must-use | `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-migration-spine-phaseD-plan.md` | P1 | required-now |

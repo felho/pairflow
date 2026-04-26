@@ -7,7 +7,7 @@ phase: phaseD
 target_files:
   - plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-migration-spine-phaseD-plan.md
 prd_ref: null
-plan_ref: plans/actor-runtime-interface-discovery-and-migration-plan-v1.md
+plan_ref: plans/archive/plans/actor-runtime-interface-discovery-and-migration-plan-v1.md
 system_context_ref: README.md
 owners:
   - "felho"
@@ -91,7 +91,7 @@ Phase D akkor sikeres, ha letrejon egy jol olvashato migration-plan artifact, am
 
 ### Normative Reference Policy
 
-1. `plan_ref`: `plans/actor-runtime-interface-discovery-and-migration-plan-v1.md`
+1. `plan_ref`: `plans/archive/plans/actor-runtime-interface-discovery-and-migration-plan-v1.md`
    - Ez a canonical forras a Workstream 4 migration spine sorrendhez es a Phase D elvart kimenetehez.
 2. Binding target contract input:
    - `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-capability-contract-phaseB-draft.md`
@@ -135,7 +135,7 @@ Phase D akkor sikeres, ha letrejon egy jol olvashato migration-plan artifact, am
 | CS1 | `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-migration-spine-phaseD-plan.md` | checked-in Phase D migration artifact | markdown migration spine -> checked-in artifact | uj Phase D plan artifact | Egyetlen artifact keszul, amely migration lepesekre bontja a target boundary bevezeteset, parity gate-ekkel es retained adapter ownershippel | P1 | required-now | Phase D deliverable definicio |
 | CS2 | `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-capability-contract-phaseB-draft.md` | target boundary lock | Phase B contract -> migration invariants | Phase D invariants section | A migration spine explicitten Phase B core contract invariansaihoz kotodik, es nem nyitja ujra a target boundaryt | P1 | required-now | Phase B -> Phase D lock |
 | CS3 | `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-scenario-simulation-phaseC-matrix.md` | migration risk inputs | Phase C coverage/gaps -> migration ordering | Phase D retained adapter / open question sections | A Phase C covered-with-adapter es gap megfigyelesei explicit migration-step inputokka valnak | P1 | required-now | Phase C -> Phase D grounding |
-| CS4 | `plans/actor-runtime-interface-discovery-and-migration-plan-v1.md` | Workstream 4 realization | migration workstream -> migration steps | Phase D step list | A lepesek az elvi sorrendet kovetik: wrapper, delivery/ack boundary, core freeze, boundary split, pilot, rollout | P1 | required-now | plan alignment |
+| CS4 | `plans/archive/plans/actor-runtime-interface-discovery-and-migration-plan-v1.md` | Workstream 4 realization | migration workstream -> migration steps | Phase D step list | A lepesek az elvi sorrendet kovetik: wrapper, delivery/ack boundary, core freeze, boundary split, pilot, rollout | P1 | required-now | plan alignment |
 | CS5 | protocol-first companion refs | protocol-first compatibility | retained surfaces -> cleanup ownership | Phase D cleanup section | A migration spine nem hozhat vissza legacy alias, implicit authority vagy special-case meta-review modellt | P1 | required-now | protocol-first compatibility |
 
 ### 2) Data and Interface Contract
@@ -184,7 +184,7 @@ Constraint:
 
 | Type | Items | Priority | Timing |
 |---|---|---|---|
-| must-use | `plans/actor-runtime-interface-discovery-and-migration-plan-v1.md` | P1 | required-now |
+| must-use | `plans/archive/plans/actor-runtime-interface-discovery-and-migration-plan-v1.md` | P1 | required-now |
 | must-use | `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-capability-contract-phaseB-draft.md` | P1 | required-now |
 | must-use | `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-scenario-simulation-phaseC-matrix.md` | P1 | required-now |
 | must-use | `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-behavior-inventory-phaseA-inventory.md` | P1 | required-now |

@@ -25,7 +25,7 @@ target_files:
   - src/v11/shared/status/statusCommandViewProjection.ts
   - src/v11/shared/list/listCommandApi.ts
 prd_ref: null
-plan_ref: plans/actor-runtime-interface-discovery-and-migration-plan-v1.md
+plan_ref: plans/archive/plans/actor-runtime-interface-discovery-and-migration-plan-v1.md
 system_context_ref: docs/pairflow-initial-design.md
 owners:
   - "felho"

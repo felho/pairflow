@@ -360,7 +360,7 @@ Phase 1 authoring guard:
 2. Current-tree adjacent residual task:
    [plans/archive/tasks/actor-runtime-interface-opportunity2-task9-meta-review-gate-workflow-runtime-capability-residual-closeout.md](/Users/felho/dev/pairflow/plans/archive/tasks/actor-runtime-interface-opportunity2-task9-meta-review-gate-workflow-runtime-capability-residual-closeout.md)
 3. Historical actor-runtime sequencing baseline:
-   [plans/actor-runtime-interface-discovery-and-migration-plan-v1.md](/Users/felho/dev/pairflow/plans/actor-runtime-interface-discovery-and-migration-plan-v1.md)
+   [plans/archive/plans/actor-runtime-interface-discovery-and-migration-plan-v1.md](/Users/felho/dev/pairflow/plans/archive/plans/actor-runtime-interface-discovery-and-migration-plan-v1.md)
 4. Historical migration spine baseline:
    [plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-migration-spine-phaseD-plan.md](/Users/felho/dev/pairflow/plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-migration-spine-phaseD-plan.md)
 5. Discovery input / superseded wide-scope task:

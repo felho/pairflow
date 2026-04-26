@@ -28,7 +28,7 @@ target_files:
   - src/v11/infrastructure/executor/sessionRuntime/metaReviewLiveRunnerRuntime.ts
   - tests/core/bubble/metaReview.test.ts
 prd_ref: null
-plan_ref: plans/actor-runtime-interface-discovery-and-migration-plan-v1.md
+plan_ref: plans/archive/plans/actor-runtime-interface-discovery-and-migration-plan-v1.md
 system_context_ref: docs/pairflow-initial-design.md
 owners:
   - "felho"
@@ -187,8 +187,8 @@ Normative sequencing rules:
 
 | Source | Binding requirement for this task | Why it matters |
 |---|---|---|
-| `plans/actor-runtime-interface-discovery-and-migration-plan-v1.md` Decision Baseline | A meta-review nem special-case subsystem, hanem role projection ugyanazon canonical actor modellben. | Ez tiltja a kulon central live-run subsystem fenntartasat. |
-| `plans/actor-runtime-interface-discovery-and-migration-plan-v1.md` Phase E lane-guard note | Ez a task csak internal live-run removal lane lehet; nem nyithatja ujra a public cached read-model, a persisted authority + cleanup/recovery, vagy a repo-surface cleanup tracket. | Megakadalyozza a Phase E closurek visszakevereset. |
+| `plans/archive/plans/actor-runtime-interface-discovery-and-migration-plan-v1.md` Decision Baseline | A meta-review nem special-case subsystem, hanem role projection ugyanazon canonical actor modellben. | Ez tiltja a kulon central live-run subsystem fenntartasat. |
+| `plans/archive/plans/actor-runtime-interface-discovery-and-migration-plan-v1.md` Phase E lane-guard note | Ez a task csak internal live-run removal lane lehet; nem nyithatja ujra a public cached read-model, a persisted authority + cleanup/recovery, vagy a repo-surface cleanup tracket. | Megakadalyozza a Phase E closurek visszakevereset. |
 | `src/v11/shared/metaReview/metaReviewExecutionContext.ts` | A surviving authority modell a `meta_review_result` awaited outputon marad. | Ez a removal baseline-je. |
 | `src/v11/application/actorProtocol/actorProtocolEmitters.ts` | A canonical submit ut nem serulhet. | Ez a must-preserve path. |
 | `src/v11/application/start/startCommandResumeKickoffMessageBuilders.ts` | A resume flow mar most is submit-alapu. | Bizonyitja, hogy nincs uj replacementre szukseg. |

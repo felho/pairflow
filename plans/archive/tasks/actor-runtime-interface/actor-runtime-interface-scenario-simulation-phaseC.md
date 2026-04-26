@@ -7,7 +7,7 @@ phase: phaseC
 target_files:
   - plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-scenario-simulation-phaseC-matrix.md
 prd_ref: null
-plan_ref: plans/actor-runtime-interface-discovery-and-migration-plan-v1.md
+plan_ref: plans/archive/plans/actor-runtime-interface-discovery-and-migration-plan-v1.md
 system_context_ref: README.md
 owners:
   - "felho"
@@ -92,7 +92,7 @@ Phase C akkor sikeres, ha letrejon egy jol olvashato matrix artifact, amely:
 
 ### Normative Reference Policy
 
-1. `plan_ref`: `plans/actor-runtime-interface-discovery-and-migration-plan-v1.md`
+1. `plan_ref`: `plans/archive/plans/actor-runtime-interface-discovery-and-migration-plan-v1.md`
    - Ez a canonical forras a Phase C scope-jahoz, a minimum szcenariokhoz es a gap-analysis szerepehez.
 2. Binding target contract input:
    - `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-capability-contract-phaseB-draft.md`
@@ -134,7 +134,7 @@ Phase C akkor sikeres, ha letrejon egy jol olvashato matrix artifact, amely:
 | CS1 | `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-scenario-simulation-phaseC-matrix.md` | checked-in Phase C matrix artifact | markdown scenario matrix -> checked-in artifact | uj Phase C matrix artifact | Egyetlen artifact keszul, amely szcenariorow-kon vegigjatsza a Phase B contractot, es a vegere explicit coverage/gap synthesis-t ad | P1 | required-now | Phase C deliverable definicio |
 | CS2 | `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-capability-contract-phaseB-draft.md` | target contract simulation input | Phase B boundary sections -> scenario rows | Phase C matrix contract-mapping resz | Minden fo scenario explicitten Phase B capability-, authority-, output- es ack boundarykhoz kotodik | P1 | required-now | Phase B -> Phase C traceability |
 | CS3 | `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-behavior-inventory-phaseA-inventory.md` | current-state use-case seed | inventory synthesis -> representative scenarios | Phase C matrix scenario seed resz | A matrix nem elvont peldakon alapul, hanem a mai fo actor-use-case-eket, retained adapter-szalasakat es edge-case-eit szimulalja | P1 | required-now | Phase A -> Phase C grounding |
-| CS4 | `plans/actor-runtime-interface-discovery-and-migration-plan-v1.md` | workstream 3 realization | workstream requirements -> scenario categories | Phase C matrix scope sections | A matrix lefedi a parent plan altal minimumkent kert fo szcenariokat es gap-analysis kerdeseket | P1 | required-now | plan alignment |
+| CS4 | `plans/archive/plans/actor-runtime-interface-discovery-and-migration-plan-v1.md` | workstream 3 realization | workstream requirements -> scenario categories | Phase C matrix scope sections | A matrix lefedi a parent plan altal minimumkent kert fo szcenariokat es gap-analysis kerdeseket | P1 | required-now | plan alignment |
 | CS5 | `plans/archive/plans/protocol-first-bubble-runtime-and-meta-review-unification-plan-v1.md` + protocol-first Phase 4/5 taskok | protocol-first compatibility check | binding refs -> scenario guardrails | Phase C synthesis note | A matrix nem huz vissza legacy alias, implicit authority vagy special-case meta-review modelleket a target boundaryba | P1 | required-now | protocol-first compatibility |
 
 ### 2) Data and Interface Contract
@@ -184,7 +184,7 @@ Constraint:
 
 | Type | Items | Priority | Timing |
 |---|---|---|---|
-| must-use | `plans/actor-runtime-interface-discovery-and-migration-plan-v1.md` | P1 | required-now |
+| must-use | `plans/archive/plans/actor-runtime-interface-discovery-and-migration-plan-v1.md` | P1 | required-now |
 | must-use | `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-capability-contract-phaseB-draft.md` | P1 | required-now |
 | must-use | `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-behavior-inventory-phaseA-inventory.md` | P1 | required-now |
 | must-use | `plans/archive/plans/protocol-first-bubble-runtime-and-meta-review-unification-plan-v1.md` | P1 | required-now |

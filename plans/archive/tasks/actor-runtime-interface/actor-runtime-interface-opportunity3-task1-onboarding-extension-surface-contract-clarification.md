@@ -2,10 +2,10 @@
 artifact_type: task
 artifact_id: task_actor_runtime_interface_opportunity3_task1_onboarding_extension_surface_v1
 title: "Actor Runtime Interface Opportunity 3 Task 1: Onboarding/Extension Surface Contract Clarification"
-status: draft
+status: completed
 phase: post-phaseE
 target_files:
-  - plans/tasks/actor-runtime-interface/actor-runtime-interface-opportunity3-task1-onboarding-extension-surface-contract-clarification.md
+  - plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-opportunity3-task1-onboarding-extension-surface-contract-clarification.md
   - docs/actor-runtime-interface/onboarding-extension-surface-contract-note-v1.md
   - plans/actor-runtime-interface-post-phaseE-successor-plan-v1.md
 prd_ref: null
@@ -52,7 +52,7 @@ Docs-only `O3-T1` szelet, amely:
 
 ### In Scope
 
-1. Az uj task artifact ezen a path-on: `plans/tasks/actor-runtime-interface/actor-runtime-interface-opportunity3-task1-onboarding-extension-surface-contract-clarification.md`.
+1. Az uj task artifact ezen a path-on: `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-opportunity3-task1-onboarding-extension-surface-contract-clarification.md`.
 2. Az uj contract note ezen a path-on: `docs/actor-runtime-interface/onboarding-extension-surface-contract-note-v1.md`.
 3. A parent plan `Opportunity Disposition`, `Recommended Sequencing` es `Traceability` szekcioinak frissitese az `O3-T1` task path-aval, a contract note path-aval es az `O3-T2..T5` phasing iranyaval.
 4. A 4 seam (S1..S4) source-anchored inventoryjanak formalizalasa a contract note-ban, legalabb erre a tengelyre:
@@ -353,7 +353,7 @@ Conclusion: a task bounded marad, mert nincs producer vagy shared-contract code 
 
 ### Deliverables
 
-1. `plans/tasks/actor-runtime-interface/actor-runtime-interface-opportunity3-task1-onboarding-extension-surface-contract-clarification.md`
+1. `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-opportunity3-task1-onboarding-extension-surface-contract-clarification.md`
    - primary task artifact
 2. `docs/actor-runtime-interface/onboarding-extension-surface-contract-note-v1.md`
    - kotelezo szekciok:

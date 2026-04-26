@@ -22,7 +22,7 @@ target_files:
   - tests/core/runtime/restartRecovery.test.ts
   - tests/core/runtime/tmuxDelivery.test.ts
 prd_ref: null
-plan_ref: plans/actor-runtime-interface-discovery-and-migration-plan-v1.md
+plan_ref: plans/archive/plans/actor-runtime-interface-discovery-and-migration-plan-v1.md
 system_context_ref: docs/pairflow-initial-design.md
 owners:
   - "felho"
@@ -59,7 +59,7 @@ owners:
 ### Canonical Contract Anchors
 
 1. `docs/actor-runtime-interface/execution-authority-contract-note-v1.md`
-2. `plans/actor-runtime-interface-discovery-and-migration-plan-v1.md`
+2. `plans/archive/plans/actor-runtime-interface-discovery-and-migration-plan-v1.md`
 3. `docs/pairflow-initial-design.md`
 4. `src/v11/shared/state/executionContext.ts`
 5. `src/v11/shared/actorProtocol/actorEmitContext.ts`

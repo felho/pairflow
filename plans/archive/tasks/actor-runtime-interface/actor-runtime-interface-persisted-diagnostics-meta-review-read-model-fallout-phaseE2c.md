@@ -30,7 +30,7 @@ target_files:
   - tests/cli/bubbleStatusCommand.test.ts
   - tests/core/ui/bubblePresenter.test.ts
 prd_ref: null
-plan_ref: plans/actor-runtime-interface-discovery-and-migration-plan-v1.md
+plan_ref: plans/archive/plans/actor-runtime-interface-discovery-and-migration-plan-v1.md
 system_context_ref: docs/pairflow-initial-design.md
 owners:
   - "felho"
@@ -241,8 +241,8 @@ Normative sequencing rules:
 
 | Source | Binding requirement for this task | Why it matters |
 |---|---|---|
-| `plans/actor-runtime-interface-discovery-and-migration-plan-v1.md` | Az `E2c` a persisted diagnostics / meta-review / read-model fallout closure. | Megakadalyozza, hogy a task generic runtime consume vagy pilot activation workbe csusszon. |
-| `plans/tasks/actor-runtime-interface-pilot-cutover-phaseE.md` | `E2c` csak `E2b` merge utan nyithato. | A task nem allithat producer truthot vagy direct consume closure-t sajat predecessorkent. |
+| `plans/archive/plans/actor-runtime-interface-discovery-and-migration-plan-v1.md` | Az `E2c` a persisted diagnostics / meta-review / read-model fallout closure. | Megakadalyozza, hogy a task generic runtime consume vagy pilot activation workbe csusszon. |
+| `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-pilot-cutover-phaseE.md` | `E2c` csak `E2b` merge utan nyithato. | A task nem allithat producer truthot vagy direct consume closure-t sajat predecessorkent. |
 | `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-direct-runtime-orchestration-consumer-alignment-phaseE2b.md` | Generic direct consume closure mar lezart predecessor. | Az `E2c` nem nyithatja ujra kickoff/pass/converged/start/restart canonical truthjat. |
 | `docs/pairflow-initial-design.md` meta-review authority szakasz | `runtime_delivery` observability-only block, active correlation gate-tel. | Ez a control-model baseline. |
 | current code helper: `src/v11/shared/metaReview/metaReviewSnapshot.ts` | Same-authority correlation helper preserved baseline. | Ez a read-path lock, nem ad hoc renderer-local fallback. |
@@ -309,8 +309,8 @@ Constraint:
 
 | Type | Items | Priority | Timing |
 |---|---|---|---|
-| must-use | `plans/actor-runtime-interface-discovery-and-migration-plan-v1.md` | P1 | required-now |
-| must-use | `plans/tasks/actor-runtime-interface-pilot-cutover-phaseE.md` | P1 | required-now |
+| must-use | `plans/archive/plans/actor-runtime-interface-discovery-and-migration-plan-v1.md` | P1 | required-now |
+| must-use | `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-pilot-cutover-phaseE.md` | P1 | required-now |
 | must-use | `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-direct-runtime-orchestration-consumer-alignment-phaseE2b.md` predecessor context | P1 | required-now |
 | must-use | `docs/pairflow-initial-design.md` meta-review authority/runtime_delivery rules | P1 | required-now |
 | must-use | `src/v11/shared/metaReview/metaReviewSnapshot.ts` same-authority helper preserved baseline | P1 | required-now |

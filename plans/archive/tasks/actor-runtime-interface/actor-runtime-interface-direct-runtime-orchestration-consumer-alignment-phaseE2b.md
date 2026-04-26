@@ -52,7 +52,7 @@ target_files:
   - tests/contracts/v11/converged.contract.runner.ts
   - tests/contracts/v11/restart.contract.runner.ts
 prd_ref: null
-plan_ref: plans/actor-runtime-interface-discovery-and-migration-plan-v1.md
+plan_ref: plans/archive/plans/actor-runtime-interface-discovery-and-migration-plan-v1.md
 system_context_ref: docs/pairflow-initial-design.md
 owners:
   - "felho"
@@ -321,8 +321,8 @@ Constraint:
 
 | Type | Items | Priority | Timing |
 |---|---|---|---|
-| must-use | `plans/actor-runtime-interface-discovery-and-migration-plan-v1.md` | P1 | required-now |
-| must-use | `plans/tasks/actor-runtime-interface-pilot-cutover-phaseE.md` | P1 | required-now |
+| must-use | `plans/archive/plans/actor-runtime-interface-discovery-and-migration-plan-v1.md` | P1 | required-now |
+| must-use | `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-pilot-cutover-phaseE.md` | P1 | required-now |
 | must-use | `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-delivery-ack-producer-contract-phaseE2a.md` | P1 | required-now |
 | must-use | `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-scenario-simulation-phaseC-matrix.md` rows `SC10_RESTART_RECOVERY`, `SC11_TMUX_OBSERVABILITY_WITH_MISSING_OR_DELAYED_ACK` | P1 | required-now |
 | must-use | current-tree code evidence: kickoff, ask-human, pass, converged, watchdog, start, restart direct consume seams, beleertve a `src/v11/shared/ports/tmuxDelivery.ts`, `src/v11/shared/delivery/tmuxDeliveryContract.ts`, `src/v11/shared/ports/tmuxSessions.ts`, `src/v11/application/start/startCommandApi.ts`, `src/v11/application/start/startCommandOrchestration.ts`, `src/v11/application/start/startCommandTmuxLaunch.ts`, `src/v11/defaults/start/startBubbleDefaults.ts` seam-eket is | P1 | required-now |

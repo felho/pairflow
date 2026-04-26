@@ -6,7 +6,7 @@ status: completed
 phase: phaseB
 source_task_ref: plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-capability-contract-phaseB.md
 source_inventory_ref: plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-behavior-inventory-phaseA-inventory.md
-plan_ref: plans/actor-runtime-interface-discovery-and-migration-plan-v1.md
+plan_ref: plans/archive/plans/actor-runtime-interface-discovery-and-migration-plan-v1.md
 system_context_ref: README.md
 normative_refs:
   - plans/archive/plans/protocol-first-bubble-runtime-and-meta-review-unification-plan-v1.md

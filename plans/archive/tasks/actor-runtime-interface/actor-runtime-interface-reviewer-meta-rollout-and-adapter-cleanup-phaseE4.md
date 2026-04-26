@@ -31,7 +31,7 @@ target_files:
   - tests/core/agent/converged.test.ts
   - tests/core/runtime/tmuxDelivery.test.ts
 prd_ref: null
-plan_ref: plans/actor-runtime-interface-discovery-and-migration-plan-v1.md
+plan_ref: plans/archive/plans/actor-runtime-interface-discovery-and-migration-plan-v1.md
 system_context_ref: docs/pairflow-initial-design.md
 owners:
   - "felho"
@@ -41,7 +41,7 @@ owners:
 
 ## Current Tree Position (2026-04-17)
 
-1. A current-tree sequencing authority a `plans/tasks/actor-runtime-interface-pilot-cutover-phaseE.md` es a `plans/actor-runtime-interface-discovery-and-migration-plan-v1.md`; mindketto azt rogzíti, hogy az egyetlen megmaradt aktiv implementation closure mar `E4`.
+1. A current-tree sequencing authority a `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-pilot-cutover-phaseE.md` es a `plans/archive/plans/actor-runtime-interface-discovery-and-migration-plan-v1.md`; mindketto azt rogzíti, hogy az egyetlen megmaradt aktiv implementation closure mar `E4`.
 2. `E2c` persisted diagnostics / meta-review / read-model fallout archival traceability pathja: `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-persisted-diagnostics-meta-review-read-model-fallout-phaseE2c.md`.
 3. `E3a` canonical execution authority vocabulary closure archival traceability pathja: `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-implementer-pilot-foundation-hardening-phaseE3a.md`.
 4. `E3b` implementer activation archival traceability pathja: `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-implementer-pilot-activation-phaseE3b.md`.
