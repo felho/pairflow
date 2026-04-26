@@ -467,7 +467,24 @@ owners:
    - a delivery es launch canonical ack contract topology-neutral maradt,
    - a public/shared failure taxonomyban nincs retained `tmux` compatibility token,
    - a megmaradt `tmux` nev csak retained adapter/default/operatori ownershipot jelol.
-21. Emiatt az `Opportunity 2` implementation lane current-tree szinten lezart, es a kovetkezo bounded successor mar az `O3-T1`, ha a follow-up tenylegesen prioritas lesz.
+21. Emiatt az `Opportunity 2` implementation lane current-tree szinten lezart lett, es a successor ownership az `O3` lane-re kerult at.
+22. Az `O3-T1` docs-only onboarding extension surface clarification 2026-04-25-en current-tree baseline lett:
+   - task artifact: `plans/tasks/actor-runtime-interface/actor-runtime-interface-opportunity3-task1-onboarding-extension-surface-contract-clarification.md`
+   - normative note: `plans/actor-runtime-interface-onboarding-extension-surface-contract-note-v1.md`
+   - closure: belso `RoleDescriptor` registry-mintazat, 4 seam (S1..S4) inventory, es az `O3-T2..T5` sequencing/gating explicit lezárása
+23. Az `O3-T2` internal role/capability foundation 2026-04-26-an merge-olve lett a `main` branchre:
+   - archived task artifact: `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-opportunity3-task2-internal-role-capability-foundation.md`
+   - bounded closure:
+     - a belso `RoleDescriptor` registry seam current-tree source-of-truth-kent bevezetesre kerult,
+     - az awaited-output, route-policy es startup/resume prompt concern projection mar registry-driven consume-pathra allt,
+     - a per-role prompt concern-vocabulary es exact concern-set nem reopenolodott, hanem kod-szinten formalizalodott.
+24. Az `O3-T3` topology slot catalog + retained tmux consumer alignment 2026-04-26-an merge-olve lett a `main` branchre:
+   - archived task artifact: `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-opportunity3-task3-topology-slot-catalog-and-tmux-consumer-alignment.md`
+   - bounded closure:
+     - a canonical `topology_slot_id -> pane_index` projection kulon catalog-seamre allt,
+     - a retained tmux consume-family (`tmuxManager`, `tmuxManagerSessionLayout`, `tmuxDeliveryTargeting`, `metaReviewGatePaneBinding`, `metaReviewerPaneBinding`, `reviewerContext`) erre az egyetlen truthra allt at,
+     - a dedicated-panel-per-active-role baseline preserved maradt.
+25. Emiatt a current next bounded successor task mar az `O3-T4`, ha az `Opportunity 3` lane tovabb prioritas marad.
 
 ## Done Definition
 
@@ -510,16 +527,21 @@ owners:
    - disposition: closed on current tree
 3. `Opportunity 3`
    - active successor lane
-   - `O3-T1` first bounded slice refined on 2026-04-25:
+   - completed slices:
+     - `O3-T1` onboarding extension surface contract clarification
      - task artifact: `plans/tasks/actor-runtime-interface/actor-runtime-interface-opportunity3-task1-onboarding-extension-surface-contract-clarification.md`
      - normative note: `plans/actor-runtime-interface-onboarding-extension-surface-contract-note-v1.md`
      - shape: `contract_or_persisted_authority_foundation` (docs-only)
      - closure: belso `RoleDescriptor` registry-mintazat normativ rogzitese + 4 seam (S1..S4) source-anchored inventory + per-role 9 mezos closed mapping exact startup/resume prompt concern-setekkel + `O3-T2..T5` phasing gatinggel
-   - deferred successor slices (gating felteteleivel a contract note `Sequencing Consequences` szekciojaban):
-     - `O3-T2`: belso `RoleDescriptor` registry + `promptConcernCatalog` + projection helperek kod-szintu bevezetese; S1 + S4 atkotese; predecessor: `O3-T1`; az `O3-T1`-ben mar lockolt prompt concern-vocabulary es per-role exact concern-set kod-szintu formalizalasa, nem ujranyitasa
-     - `O3-T3`: S2 (topology slot) atkotese; `topologySlotCatalog` kod-szintu bevezetese; a retained tmux consume-family (`tmuxManager.ts`, `tmuxManagerSessionLayout.ts`, `tmuxDeliveryTargeting.ts`, `metaReviewGatePaneBinding.ts`, `metaReviewerPaneBinding.ts`, `reviewerContext.ts`, es ha szukseges a `shared/ports/tmuxSessions.ts` compat export) canonical projection truthra allitasa; predecessor: `O3-T2`
+     - `O3-T2` internal role/capability foundation
+       - task artifact: `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-opportunity3-task2-internal-role-capability-foundation.md`
+     - `O3-T3` topology slot catalog and tmux consumer alignment
+       - task artifact: `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-opportunity3-task3-topology-slot-catalog-and-tmux-consumer-alignment.md`
+   - current next bounded successor:
      - `O3-T4`: S3 (config binding) atkotese; `BubbleAgentsConfig` shape alignment; `agent_resolution` mind a 3 role-on `config_bound`-ra konvergal; explicit replacement proof a meta-reviewer codex-when-present guardra; predecessor: `O3-T3`
-     - `O3-T5`: public CLI/protocol surface kontrollalt nyitasa uj output kindokra; **trigger feltetel**: konkret uj output kind igeny VAGY uj role saját kimenettel; predecessor: `O3-T4`; ha trigger nem teljesul, ez a slice `deferred` disposition-ben marad, es automatikusan nem indul el
+       - task artifact: `plans/tasks/actor-runtime-interface/actor-runtime-interface-opportunity3-task4-config-bound-role-resolution-alignment.md`
+   - deferred successor slice:
+     - `O3-T5`: public CLI/protocol surface kontrollalt nyitasa uj output kindokra; **trigger feltetel**: konkret uj output kind igeny VAGY uj role sajat kimenettel; predecessor: `O3-T4`; ha trigger nem teljesul, ez a slice `deferred` disposition-ben marad, es automatikusan nem indul el
    - preserved baselines: `O1-T1` kernel boundary note, `O2-T1` topology-neutral delivery/executor note, `assertReviewerHumanQuestionRetainedFallback`, `assertMetaReviewerActiveAgentCodexWhenPresent` (preserved-baseline-with-explicit-replacement-path-in-O3-T4), dedicated-panel-per-active-role baseline
 4. `Opportunity 4`
    - default szerint `Opportunity 3` lane resze (core-vs-extension rationalization a `O3-T2..T5` szeleteken keresztul)
