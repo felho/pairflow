@@ -1,6 +1,9 @@
 import type {
   RuntimeSessionRecord
 } from "../../shared/ports/runtimeSessions.js";
+import {
+  getTopologySlotPaneIndexForRole
+} from "../actorProtocol/roleDescriptorRegistry.js";
 import type {
   ResolveMetaReviewerPaneWarning
 } from "../../shared/metaReviewGate/metaReviewGateTypes.js";
@@ -248,7 +251,7 @@ export const resolveMetaReviewerPaneWarning: ResolveMetaReviewerPaneWarning = as
   }
 
   const shouldDeactivate = true;
-  const paneIndex = bindStart.record.metaReviewerPane?.paneIndex ?? 3;
+  const paneIndex = getTopologySlotPaneIndexForRole("meta_reviewer");
   const targetPane = `${bindStart.record.tmuxSessionName}:0.${paneIndex}`;
   const workspaceAuthority = resolveMetaReviewerWorkspaceAuthority({
     bubbleId: input.bubbleId,

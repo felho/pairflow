@@ -1,11 +1,14 @@
 import type { BubbleConfig } from "../../../../types/bubble.js";
 import {
+  getTopologySlotPaneIndex,
+  getTopologySlotPaneIndexForRole
+} from "../../../application/actorProtocol/roleDescriptorRegistry.js";
+import {
   parseDeliveryTargetRoleMetadata,
   type DeliveryTargetRole,
   type ProtocolEnvelope,
   type ProtocolParticipant
 } from "../../../../types/protocol.js";
-import { runtimePaneIndices } from "./tmuxManager.js";
 import type { DeliveryTargetReasonCode } from "../../../shared/delivery/tmuxDeliveryContract.js";
 import type { DeliveryMessageRecipientRole } from "./tmuxDeliveryMessageBuilder.js";
 
@@ -20,16 +23,16 @@ export function resolveTargetPaneIndex(
   bubbleConfig: BubbleConfig
 ): number | undefined {
   if (recipient === bubbleConfig.agents.implementer) {
-    return normalizePaneIndex(runtimePaneIndices.implementer);
+    return normalizePaneIndex(getTopologySlotPaneIndexForRole("implementer"));
   }
   if (recipient === bubbleConfig.agents.reviewer) {
-    return normalizePaneIndex(runtimePaneIndices.reviewer);
+    return normalizePaneIndex(getTopologySlotPaneIndexForRole("reviewer"));
   }
   if (recipient === "meta-reviewer") {
-    return normalizePaneIndex(runtimePaneIndices.metaReviewer);
+    return normalizePaneIndex(getTopologySlotPaneIndexForRole("meta_reviewer"));
   }
   if (recipient === "human" || recipient === "orchestrator") {
-    return normalizePaneIndex(runtimePaneIndices.status);
+    return normalizePaneIndex(getTopologySlotPaneIndex("status"));
   }
   return undefined;
 }
@@ -76,16 +79,7 @@ export function resolveEnvelopeRecipientRole(
 }
 
 function resolvePaneIndexByDeliveryTargetRole(role: DeliveryTargetRole): number | undefined {
-  if (role === "implementer") {
-    return normalizePaneIndex(runtimePaneIndices.implementer);
-  }
-  if (role === "reviewer") {
-    return normalizePaneIndex(runtimePaneIndices.reviewer);
-  }
-  if (role === "meta_reviewer") {
-    return normalizePaneIndex(runtimePaneIndices.metaReviewer);
-  }
-  return normalizePaneIndex(runtimePaneIndices.status);
+  return normalizePaneIndex(getTopologySlotPaneIndex(role));
 }
 
 export interface EnvelopeTargetPaneResolution {

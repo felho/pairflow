@@ -1,13 +1,13 @@
 import { createHash } from "node:crypto";
 
 import type { AgentRole, BubbleConfig } from "../../../types/bubble.js";
+import {
+  getTopologySlotPaneIndexForRole
+} from "../actorProtocol/roleDescriptorRegistry.js";
 import type {
   ReadRuntimeSessionsRegistryPort
 } from "../../shared/ports/runtimeSessions.js";
-import {
-  runtimePaneIndices,
-  type TmuxRunner
-} from "../../shared/ports/tmuxSessions.js";
+import type { TmuxRunner } from "../../shared/ports/tmuxSessions.js";
 import { createBubbleWatchdogError } from "./watchdogCommandRuntime.js";
 
 export const WATCHDOG_PANE_ACTIVITY_SAMPLE_INTERVAL_MS = 60_000;
@@ -42,11 +42,11 @@ function resolveWatchdogTargetPaneIndex(
 ): number {
   switch (activeRole) {
     case "implementer":
-      return runtimePaneIndices.implementer;
+      return getTopologySlotPaneIndexForRole("implementer");
     case "reviewer":
-      return runtimePaneIndices.reviewer;
+      return getTopologySlotPaneIndexForRole("reviewer");
     case "meta_reviewer":
-      return runtimePaneIndices.metaReviewer;
+      return getTopologySlotPaneIndexForRole("meta_reviewer");
     default:
       return assertUnreachable(activeRole);
   }

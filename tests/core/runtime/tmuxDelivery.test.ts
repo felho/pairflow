@@ -33,6 +33,7 @@ import {
   type TmuxRunResult,
   type TmuxRunner
 } from "../../../src/v11/infrastructure/channel/tmux/tmuxManager.js";
+import * as roleDescriptorRegistry from "../../../src/v11/application/actorProtocol/roleDescriptorRegistry.js";
 import type { ReviewerTestExecutionDirective } from "../../../src/v11/shared/reviewer/testEvidence.js";
 import type { BubbleConfig } from "../../../src/types/bubble.js";
 import {
@@ -120,6 +121,49 @@ function createRegistry(
         : {}),
       tmuxSessionName: record.tmuxSessionName ?? "pf-b_delivery_01",
       updatedAt: record.updatedAt ?? "2026-02-22T12:00:00.000Z"
+    }
+  };
+}
+
+function mockUnmappedMetaReviewerPane(): {
+  restore: () => void;
+} {
+  const getTopologySlotPaneIndexSpy = vi.spyOn(
+    roleDescriptorRegistry,
+    "getTopologySlotPaneIndex"
+  );
+  const getTopologySlotPaneIndexForRoleSpy = vi.spyOn(
+    roleDescriptorRegistry,
+    "getTopologySlotPaneIndexForRole"
+  );
+
+  getTopologySlotPaneIndexSpy.mockImplementation((slotId) => {
+    switch (slotId) {
+      case "meta_reviewer":
+        return undefined as unknown as number;
+      case "status":
+        return roleDescriptorRegistry.topologySlotCatalog.status.pane_index;
+      case "implementer":
+        return roleDescriptorRegistry.topologySlotCatalog.implementer.pane_index;
+      case "reviewer":
+        return roleDescriptorRegistry.topologySlotCatalog.reviewer.pane_index;
+    }
+  });
+  getTopologySlotPaneIndexForRoleSpy.mockImplementation((role) => {
+    switch (role) {
+      case "meta_reviewer":
+        return undefined as unknown as number;
+      case "implementer":
+        return roleDescriptorRegistry.topologySlotCatalog.implementer.pane_index;
+      case "reviewer":
+        return roleDescriptorRegistry.topologySlotCatalog.reviewer.pane_index;
+    }
+  });
+
+  return {
+    restore: () => {
+      getTopologySlotPaneIndexSpy.mockRestore();
+      getTopologySlotPaneIndexForRoleSpy.mockRestore();
     }
   };
 }
@@ -527,11 +571,7 @@ describe("emitDeliveryNotificationAck", () => {
   });
 
   it("returns unsupported_recipient canonical ack when no pane can be resolved", async () => {
-    const mutablePaneIndices = runtimePaneIndices as {
-      metaReviewer: number | undefined;
-    };
-    const originalMetaReviewerPaneIndex = mutablePaneIndices.metaReviewer;
-    mutablePaneIndices.metaReviewer = undefined;
+    const metaReviewerPaneMock = mockUnmappedMetaReviewerPane();
     try {
       const calls: string[][] = [];
       const runner: TmuxRunner = (args): Promise<TmuxRunResult> => {
@@ -572,7 +612,7 @@ describe("emitDeliveryNotificationAck", () => {
       });
       expect(calls).toHaveLength(0);
     } finally {
-      mutablePaneIndices.metaReviewer = originalMetaReviewerPaneIndex;
+      metaReviewerPaneMock.restore();
     }
   });
 
@@ -606,11 +646,7 @@ describe("emitDeliveryNotificationAck", () => {
   });
 
   it("keeps registry_read_failed message on explicit meta-review role even when the pane is unmapped", async () => {
-    const mutablePaneIndices = runtimePaneIndices as {
-      metaReviewer: number | undefined;
-    };
-    const originalMetaReviewerPaneIndex = mutablePaneIndices.metaReviewer;
-    mutablePaneIndices.metaReviewer = undefined;
+    const metaReviewerPaneMock = mockUnmappedMetaReviewerPane();
     try {
       const calls: string[][] = [];
       const runner: TmuxRunner = (args): Promise<TmuxRunResult> => {
@@ -652,7 +688,7 @@ describe("emitDeliveryNotificationAck", () => {
       expect(result.message).toContain("Meta-review task received.");
       expect(calls).toHaveLength(0);
     } finally {
-      mutablePaneIndices.metaReviewer = originalMetaReviewerPaneIndex;
+      metaReviewerPaneMock.restore();
     }
   });
 
@@ -936,11 +972,7 @@ describe("emitDeliveryNotificationAck", () => {
   });
 
   it("fail-closes metadata-derived meta-review routing when the meta-review pane is unmapped", async () => {
-    const mutablePaneIndices = runtimePaneIndices as {
-      metaReviewer: number | undefined;
-    };
-    const originalMetaReviewerPaneIndex = mutablePaneIndices.metaReviewer;
-    mutablePaneIndices.metaReviewer = undefined;
+    const metaReviewerPaneMock = mockUnmappedMetaReviewerPane();
     try {
       const calls: string[][] = [];
       const runner: TmuxRunner = (args): Promise<TmuxRunResult> => {
@@ -991,16 +1023,12 @@ describe("emitDeliveryNotificationAck", () => {
       });
       expect(calls).toHaveLength(0);
     } finally {
-      mutablePaneIndices.metaReviewer = originalMetaReviewerPaneIndex;
+      metaReviewerPaneMock.restore();
     }
   });
 
   it("fail-closes explicit meta-review routing when the meta-reviewer pane is unmapped", async () => {
-    const mutablePaneIndices = runtimePaneIndices as {
-      metaReviewer: number | undefined;
-    };
-    const originalMetaReviewerPaneIndex = mutablePaneIndices.metaReviewer;
-    mutablePaneIndices.metaReviewer = undefined;
+    const metaReviewerPaneMock = mockUnmappedMetaReviewerPane();
     try {
       const result = await emitDeliveryNotificationAck({
         bubbleId: "b_delivery_01",
@@ -1025,7 +1053,7 @@ describe("emitDeliveryNotificationAck", () => {
         deliveryTargetReasonCode: "DELIVERY_TARGET_ROLE_UNMAPPED"
       });
     } finally {
-      mutablePaneIndices.metaReviewer = originalMetaReviewerPaneIndex;
+      metaReviewerPaneMock.restore();
     }
   });
 
@@ -2904,11 +2932,7 @@ describe("emitDeliveryNotificationAck", () => {
   });
 
   it("preserves unsupported-recipient behavior when explicit role and legacy recipient routes are both unavailable", async () => {
-    const mutablePaneIndices = runtimePaneIndices as {
-      metaReviewer: number | undefined;
-    };
-    const originalMetaReviewerPaneIndex = mutablePaneIndices.metaReviewer;
-    mutablePaneIndices.metaReviewer = undefined;
+    const metaReviewerPaneMock = mockUnmappedMetaReviewerPane();
     try {
       const result = await emitDeliveryNotificationAck({
         bubbleId: "b_delivery_01",
@@ -2937,7 +2961,7 @@ describe("emitDeliveryNotificationAck", () => {
         deliveryTargetReasonCode: "DELIVERY_TARGET_ROLE_UNMAPPED"
       });
     } finally {
-      mutablePaneIndices.metaReviewer = originalMetaReviewerPaneIndex;
+      metaReviewerPaneMock.restore();
     }
   });
 

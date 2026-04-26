@@ -11,7 +11,13 @@ import {
   getResumePromptConcernsForRole,
   getRoleDescriptor,
   getRoleExecutionProjectionDescriptor,
-  getStartupPromptConcernsForRole
+  getStartupPromptConcernsForRole,
+  getTopologySlotDescriptor,
+  getTopologySlotDescriptorForRole,
+  getTopologySlotIdForRole,
+  getTopologySlotPaneIndex,
+  getTopologySlotPaneIndexForRole,
+  topologySlotCatalog
 } from "../../../src/v11/application/actorProtocol/roleDescriptorRegistry.js";
 
 describe("buildRunningExecutionContext", () => {
@@ -40,6 +46,43 @@ describe("buildRunningExecutionContext", () => {
       handoff_id_format_id: "meta_review",
       active_agent_constraint_id: "codex_when_present"
     });
+    expect(topologySlotCatalog.status).toEqual({
+      id: "status",
+      pane_index: 0,
+      bound_role_id: null
+    });
+    expect(topologySlotCatalog.implementer).toEqual({
+      id: "implementer",
+      pane_index: 1,
+      bound_role_id: "implementer"
+    });
+    expect(topologySlotCatalog.reviewer).toEqual({
+      id: "reviewer",
+      pane_index: 2,
+      bound_role_id: "reviewer"
+    });
+    expect(topologySlotCatalog.meta_reviewer).toEqual({
+      id: "meta_reviewer",
+      pane_index: 3,
+      bound_role_id: "meta_reviewer"
+    });
+    expect(Object.keys(topologySlotCatalog).sort()).toEqual([
+      "implementer",
+      "meta_reviewer",
+      "reviewer",
+      "status"
+    ]);
+    expect(Object.isFrozen(topologySlotCatalog)).toBe(true);
+    expect(Object.isFrozen(topologySlotCatalog.meta_reviewer)).toBe(true);
+    expect(getTopologySlotIdForRole("meta_reviewer")).toBe("meta_reviewer");
+    expect(getTopologySlotDescriptor("status")).toEqual(topologySlotCatalog.status);
+    expect(getTopologySlotDescriptorForRole("reviewer")).toEqual(
+      topologySlotCatalog.reviewer
+    );
+    expect(getTopologySlotPaneIndex("status")).toBe(0);
+    expect(getTopologySlotPaneIndexForRole("implementer")).toBe(1);
+    expect(getTopologySlotPaneIndexForRole("reviewer")).toBe(2);
+    expect(getTopologySlotPaneIndexForRole("meta_reviewer")).toBe(3);
 
     expect(getRoleExecutionProjectionDescriptor("implementer")).toEqual({
       primary_awaited_output_type: "pass_result",

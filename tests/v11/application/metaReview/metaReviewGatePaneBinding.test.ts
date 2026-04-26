@@ -1,6 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
 
 import {
+  getTopologySlotPaneIndexForRole
+} from "../../../../src/v11/application/actorProtocol/roleDescriptorRegistry.js";
+import {
   resolveMetaReviewerPaneWarning
 } from "../../../../src/v11/application/metaReviewGate/metaReviewGatePaneBinding.js";
 import type {
@@ -458,7 +461,7 @@ describe("metaReviewGatePaneBinding", () => {
     expect(buildAgentCommand).toHaveBeenCalledTimes(1);
     expect(respawnPaneCommand).toHaveBeenCalledWith({
       sessionName: "pf-b_meta_review_gate_notify_forwarding",
-      paneIndex: 5,
+      paneIndex: getTopologySlotPaneIndexForRole("meta_reviewer"),
       cwd: "/workspace",
       command: "codex meta-review",
       runner: paneRunner
@@ -466,7 +469,9 @@ describe("metaReviewGatePaneBinding", () => {
     expect(notifySubmissionRequest).toHaveBeenCalledWith({
       bubbleId: "b_meta_review_gate_notify_forwarding",
       round: 4,
-      targetPane: "pf-b_meta_review_gate_notify_forwarding:0.5"
+      targetPane: `pf-b_meta_review_gate_notify_forwarding:0.${String(
+        getTopologySlotPaneIndexForRole("meta_reviewer")
+      )}`
     }, expect.anything());
     const notifyForwardingCall = notifySubmissionRequest.mock.calls.at(-1);
     expect(notifyForwardingCall).toBeDefined();

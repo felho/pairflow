@@ -6,10 +6,15 @@ import {
   buildBubbleTmuxSessionName,
   launchBubbleSessionAck,
   respawnTmuxPaneCommand,
+  runtimePaneIndices,
   terminateBubbleTmuxSession,
   type TmuxRunResult,
   type TmuxRunner
 } from "../../../src/v11/infrastructure/channel/tmux/tmuxManager.js";
+import {
+  getTopologySlotPaneIndex,
+  topologySlotCatalog
+} from "../../../src/v11/application/actorProtocol/roleDescriptorRegistry.js";
 
 const launchPanePlaceholderCommand = "sh -lc 'while :; do sleep 3600; done'";
 
@@ -146,6 +151,19 @@ describe("buildBubbleTmuxSessionName", () => {
     expect(nameA).not.toBe(nameB);
     expect(nameA.length).toBeLessThanOrEqual(32);
     expect(nameB.length).toBeLessThanOrEqual(32);
+  });
+});
+
+describe("runtimePaneIndices", () => {
+  it("mirrors the canonical topology slot catalog through the compat facade", () => {
+    expect(runtimePaneIndices.status).toBe(topologySlotCatalog.status.pane_index);
+    expect(runtimePaneIndices.implementer).toBe(
+      topologySlotCatalog.implementer.pane_index
+    );
+    expect(runtimePaneIndices.reviewer).toBe(topologySlotCatalog.reviewer.pane_index);
+    expect(runtimePaneIndices.metaReviewer).toBe(
+      topologySlotCatalog.meta_reviewer.pane_index
+    );
   });
 });
 
@@ -480,7 +498,7 @@ describe("launchBubbleSessionAck orchestration", () => {
       "-F",
       "#{pane_id}",
       "-t",
-      "pf-b_start_01:0.0",
+      `pf-b_start_01:0.${String(getTopologySlotPaneIndex("status"))}`,
       "-c",
       "/tmp/worktree",
       launchPanePlaceholderCommand
@@ -489,7 +507,7 @@ describe("launchBubbleSessionAck orchestration", () => {
     expect(calls[10]?.args).toEqual([
       "resize-pane",
       "-t",
-      "pf-b_start_01:0.0",
+      `pf-b_start_01:0.${String(getTopologySlotPaneIndex("status"))}`,
       "-y",
       "13"
     ]);
@@ -501,7 +519,7 @@ describe("launchBubbleSessionAck orchestration", () => {
       "-F",
       "#{pane_id}",
       "-t",
-      "pf-b_start_01:0.1",
+      `pf-b_start_01:0.${String(getTopologySlotPaneIndex("implementer"))}`,
       "-c",
       "/tmp/worktree",
       launchPanePlaceholderCommand
@@ -514,7 +532,7 @@ describe("launchBubbleSessionAck orchestration", () => {
       "-F",
       "#{pane_id}",
       "-t",
-      "pf-b_start_01:0.2",
+      `pf-b_start_01:0.${String(getTopologySlotPaneIndex("reviewer"))}`,
       "-c",
       "/tmp/worktree",
       launchPanePlaceholderCommand
@@ -544,7 +562,7 @@ describe("launchBubbleSessionAck orchestration", () => {
       "respawn-pane",
       "-k",
       "-t",
-      "pf-b_start_01:0.1",
+      `pf-b_start_01:0.${String(getTopologySlotPaneIndex("implementer"))}`,
       "-c",
       "/tmp/worktree",
       "codex"
@@ -553,7 +571,7 @@ describe("launchBubbleSessionAck orchestration", () => {
       "respawn-pane",
       "-k",
       "-t",
-      "pf-b_start_01:0.2",
+      `pf-b_start_01:0.${String(getTopologySlotPaneIndex("reviewer"))}`,
       "-c",
       "/tmp/worktree",
       "claude"
@@ -562,7 +580,7 @@ describe("launchBubbleSessionAck orchestration", () => {
       "respawn-pane",
       "-k",
       "-t",
-      "pf-b_start_01:0.3",
+      `pf-b_start_01:0.${String(getTopologySlotPaneIndex("meta_reviewer"))}`,
       "-c",
       "/tmp/worktree",
       "claude"

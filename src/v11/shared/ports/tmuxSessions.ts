@@ -9,13 +9,6 @@ export interface TmuxRunOptions {
   allowFailure?: boolean;
 }
 
-export const runtimePaneIndices = {
-  status: 0,
-  implementer: 1,
-  reviewer: 2,
-  metaReviewer: 3
-} as const;
-
 export type TmuxRunner = (
   args: string[],
   options?: TmuxRunOptions

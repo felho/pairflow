@@ -1,4 +1,7 @@
 import { buildBubbleTmuxSessionName } from "../../../shared/bubble/tmuxSessionName.js";
+import {
+  topologySlotCatalog
+} from "../../../application/actorProtocol/roleDescriptorRegistry.js";
 import type {
   LaunchBubbleSessionAck,
   LaunchBubbleSessionInput,
@@ -36,12 +39,12 @@ export type {
 export { runTmux, TmuxCommandError } from "./tmuxRunner.js";
 export type { RespawnTmuxPaneCommandInput } from "./tmuxManagerRuntime.js";
 
-export const runtimePaneIndices = {
-  status: 0,
-  implementer: 1,
-  reviewer: 2,
-  metaReviewer: 3
-} as const;
+export const runtimePaneIndices = Object.freeze({
+  status: topologySlotCatalog.status.pane_index,
+  implementer: topologySlotCatalog.implementer.pane_index,
+  reviewer: topologySlotCatalog.reviewer.pane_index,
+  metaReviewer: topologySlotCatalog.meta_reviewer.pane_index
+} as const);
 
 function buildStatusPaneLabel(bubbleId: string): string {
   return `[orchestrator/status]-[${bubbleId}]`;

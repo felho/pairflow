@@ -2,8 +2,12 @@ import { mkdtemp, mkdir, open, readFile, rm, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
+import {
+  topologySlotCatalog
+} from "../../../src/v11/application/actorProtocol/roleDescriptorRegistry.js";
+import * as roleDescriptorRegistry from "../../../src/v11/application/actorProtocol/roleDescriptorRegistry.js";
 import {
   claimRuntimeSession,
   readRuntimeSessionsRegistry,
@@ -385,12 +389,20 @@ describe("sessionsRegistry", () => {
       now: new Date("2026-02-22T16:07:00.000Z")
     });
 
-    const mutablePaneIndices = runtimePaneIndices as {
-      metaReviewer: number;
-      status: number;
-    };
-    const originalMetaReviewerIndex = mutablePaneIndices.metaReviewer;
-    mutablePaneIndices.metaReviewer = mutablePaneIndices.status;
+    const getTopologySlotPaneIndexForRoleSpy = vi.spyOn(
+      roleDescriptorRegistry,
+      "getTopologySlotPaneIndexForRole"
+    );
+    getTopologySlotPaneIndexForRoleSpy.mockImplementation((role) => {
+      switch (role) {
+        case "meta_reviewer":
+          return topologySlotCatalog.status.pane_index;
+        case "implementer":
+          return topologySlotCatalog.implementer.pane_index;
+        case "reviewer":
+          return topologySlotCatalog.reviewer.pane_index;
+      }
+    });
     try {
       const result = await setMetaReviewerPaneBinding({
         sessionsPath,
@@ -404,7 +416,7 @@ describe("sessionsRegistry", () => {
         reason: "shared_runtime_pane"
       });
     } finally {
-      mutablePaneIndices.metaReviewer = originalMetaReviewerIndex;
+      getTopologySlotPaneIndexForRoleSpy.mockRestore();
     }
   });
 
