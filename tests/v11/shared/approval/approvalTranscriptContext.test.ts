@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   hasParityInconsistencyMetadata,
   readApprovalTranscriptContext,
+  resolveApprovalGateRouteFromRequest,
   resolveApprovalRecommendationFromRequest
 } from "../../../../src/v11/shared/approval/approvalTranscriptContext.js";
 import type { ProtocolEnvelope } from "../../../../src/types/protocol.js";
@@ -65,6 +66,33 @@ describe("approvalTranscriptContext", () => {
       resolveApprovalRecommendationFromRequest({
         ...createApprovalRequest("env_wrong_type", 2, "2026-04-11T20:05:00.000Z"),
         recipient: "claude"
+      })
+    ).toBeUndefined();
+  });
+
+  it("accepts only known gate-route metadata values", () => {
+    expect(
+      resolveApprovalGateRouteFromRequest({
+        ...createApprovalRequest("env_known_route", 2, "2026-04-11T20:06:00.000Z"),
+        payload: {
+          summary: "Known route",
+          metadata: {
+            latest_recommendation: "rework",
+            meta_review_gate_route: "human_gate_budget_exhausted"
+          }
+        }
+      })
+    ).toBe("human_gate_budget_exhausted");
+    expect(
+      resolveApprovalGateRouteFromRequest({
+        ...createApprovalRequest("env_unknown_route", 2, "2026-04-11T20:07:00.000Z"),
+        payload: {
+          summary: "Unknown route",
+          metadata: {
+            latest_recommendation: "rework",
+            meta_review_gate_route: "future_route_not_in_union"
+          }
+        }
       })
     ).toBeUndefined();
   });

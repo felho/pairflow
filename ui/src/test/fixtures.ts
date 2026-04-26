@@ -124,8 +124,28 @@ export function bubbleDetail(input: {
   remoteExecution?: UiBubbleSummary["remoteExecution"];
   bubbleToml?: string;
   watchdog?: Partial<UiBubbleDetail["watchdog"]>;
+  inboxItems?: UiBubbleDetail["inbox"]["items"];
+  pendingInboxItems?: Partial<UiBubbleDetail["pendingInboxItems"]>;
 }): UiBubbleDetail {
   const summary = bubbleSummary(input);
+  const inboxItems =
+    input.inboxItems ??
+    [
+      {
+        envelopeId: "env-1",
+        type: "HUMAN_QUESTION" as const,
+        ts: "2026-02-24T12:01:00.000Z",
+        round: 3,
+        sender: "human",
+        summary: "Need confirmation",
+        refs: []
+      }
+    ];
+  const computedPendingInboxItems = {
+    humanQuestions: inboxItems.filter((item) => item.type === "HUMAN_QUESTION").length,
+    approvalRequests: inboxItems.filter((item) => item.type === "APPROVAL_REQUEST").length,
+    total: inboxItems.length
+  };
   return {
     ...summary,
     bubbleToml: input.bubbleToml ?? `id = "${input.bubbleId}"`,
@@ -140,27 +160,15 @@ export function bubbleDetail(input: {
       ...input.watchdog
     },
     pendingInboxItems: {
-      humanQuestions: 1,
-      approvalRequests: 0,
-      total: 1
+      ...computedPendingInboxItems,
+      ...input.pendingInboxItems
     },
     inbox: {
       pending: {
-        humanQuestions: 1,
-        approvalRequests: 0,
-        total: 1
+        ...computedPendingInboxItems,
+        ...input.pendingInboxItems
       },
-      items: [
-        {
-          envelopeId: "env-1",
-          type: "HUMAN_QUESTION",
-          ts: "2026-02-24T12:01:00.000Z",
-          round: 3,
-          sender: "human",
-          summary: "Need confirmation",
-          refs: []
-        }
-      ]
+      items: inboxItems
     },
     transcript: {
       totalMessages: 7,

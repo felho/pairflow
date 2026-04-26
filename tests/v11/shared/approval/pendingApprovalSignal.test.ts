@@ -117,4 +117,29 @@ describe("pendingApprovalSignal", () => {
 
     expect(pendingApproval).toBeUndefined();
   });
+
+  it("projects current-round approval recommendation and gate route metadata", () => {
+    const pendingApproval = resolveCanonicalPendingApprovalSignal({
+      round: 1,
+      envelopes: [
+        createApprovalRequestEnvelope({
+          id: "env_budget_exhausted",
+          ts: "2026-02-22T10:15:00.000Z",
+          payload: {
+            summary: "Human decision required after meta-review.",
+            metadata: {
+              latest_recommendation: "rework",
+              meta_review_gate_route: "human_gate_budget_exhausted"
+            }
+          }
+        })
+      ]
+    });
+
+    expect(pendingApproval).toMatchObject({
+      envelopeId: "env_budget_exhausted",
+      latestRecommendation: "rework",
+      gateRoute: "human_gate_budget_exhausted"
+    });
+  });
 });

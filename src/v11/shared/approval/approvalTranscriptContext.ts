@@ -1,9 +1,18 @@
 import type { MetaReviewRecommendation } from "../../../types/bubble.js";
 import type { ProtocolEnvelope } from "../../../types/protocol.js";
+import {
+  metaReviewGateRoutes,
+  type MetaReviewGateRoute
+} from "../metaReviewGate/metaReviewGateTypes.js";
 import type { ReadTranscriptEnvelopesPort } from "../ports/transcript.js";
 
 const approvalSummaryConsistencyStatusMetadataKey =
   "approval_summary_consistency_status";
+const metaReviewGateRouteSet: ReadonlySet<string> = new Set(metaReviewGateRoutes);
+
+function isMetaReviewGateRoute(value: unknown): value is MetaReviewGateRoute {
+  return typeof value === "string" && metaReviewGateRouteSet.has(value);
+}
 
 export interface ApprovalTranscriptContext {
   latestRoundApprovalRequest?: ProtocolEnvelope;
@@ -58,10 +67,10 @@ function readApprovalRequestMetadata(
 
 export function resolveApprovalGateRouteFromRequest(
   approvalRequest: ProtocolEnvelope | undefined
-): string | undefined {
+): MetaReviewGateRoute | undefined {
   const metadata = readApprovalRequestMetadata(approvalRequest);
   const route = metadata?.meta_review_gate_route;
-  return typeof route === "string" ? route : undefined;
+  return isMetaReviewGateRoute(route) ? route : undefined;
 }
 
 export function resolveApprovalGateReasonCodeFromRequest(

@@ -300,6 +300,138 @@ describe("UI server integration", () => {
     }
   });
 
+  it("serves approval route-aware inbox context through the detail API", async () => {
+    const fixture = await createRepoFixture();
+    const assetsDir = await createAssetsFixture();
+    const getBubbleStatusMock = vi.fn(async () => ({
+      bubbleId: fixture.bubbleId,
+      repoPath: fixture.repoPath,
+      worktreePath: "/tmp/worktree",
+      bubbleStartedAt: "2026-04-26T09:00:00.000Z",
+      state: "READY_FOR_HUMAN_APPROVAL",
+      round: 4,
+      activeAgent: null,
+      activeRole: null,
+      activeSince: null,
+      lastCommandAt: "2026-04-26T09:05:00.000Z",
+      paneActivity: {
+        readStatus: "missing",
+        lastChangedAt: null,
+        sampledAt: null,
+        sinceLastChangedSeconds: null,
+        sinceSampledSeconds: null,
+        lastSampleStatus: null,
+        lastSampleError: null,
+        sessionName: null,
+        targetPane: null
+      },
+      executionContext: null,
+      watchdog: {
+        monitored: false,
+        monitoredAgent: null,
+        timeoutMinutes: 30,
+        referenceTimestamp: null,
+        deadlineTimestamp: null,
+        remainingSeconds: null,
+        expired: false
+      },
+      pendingInboxItems: {
+        humanQuestions: 0,
+        approvalRequests: 1,
+        total: 1
+      },
+      transcript: {
+        totalMessages: 4,
+        lastMessageType: "APPROVAL_REQUEST",
+        lastMessageTs: "2026-04-26T09:05:00.000Z",
+        lastMessageId: "msg_approval_ui_01"
+      },
+      metaReview: {
+        actor: "meta-reviewer",
+        authorityActive: false,
+        runtimeDelivery: null
+      },
+      commandPath: {
+        status: "external",
+        profile: "external",
+        localEntrypoint: "/tmp/worktree/dist/cli/index.js",
+        activeEntrypoint: "/usr/local/bin/pairflow",
+        message: "external Pairflow CLI active",
+        pinnedCommand: "pairflow"
+      },
+      accuracy_critical: false,
+      last_review_verification: "missing",
+      failing_gates: [],
+      spec_lock_state: {
+        state: "IMPLEMENTABLE",
+        open_blocker_count: 0,
+        open_required_now_count: 0
+      },
+      round_gate_state: {
+        applies: false,
+        violated: false,
+        round: 4
+      },
+      stateValidation: null
+    }));
+    const getBubbleInboxMock = vi.fn(async () => ({
+      bubbleId: fixture.bubbleId,
+      repoPath: fixture.repoPath,
+      state: "READY_FOR_HUMAN_APPROVAL",
+      pending: {
+        humanQuestions: 0,
+        approvalRequests: 1,
+        total: 1
+      },
+      items: [
+        {
+          envelopeId: "msg_approval_ui_01",
+          type: "APPROVAL_REQUEST" as const,
+          ts: "2026-04-26T09:05:00.000Z",
+          round: 4,
+          sender: "orchestrator",
+          summary: "Approval package ready for human decision.",
+          refs: [],
+          latestRecommendation: "rework" as const,
+          gateRoute: "human_gate_budget_exhausted" as const
+        }
+      ]
+    }));
+    const server = await startServer({
+      repoPath: fixture.repoPath,
+      assetsDir,
+      routerDependencies: {
+        getBubbleStatus: getBubbleStatusMock,
+        getBubbleInbox: getBubbleInboxMock,
+        readRuntimeSessionsRegistry: vi.fn(async () => ({}))
+      } as unknown as StartUiServerInput["routerDependencies"]
+    });
+
+    try {
+      const detail = await requestJson(
+        server.url,
+        `/api/bubbles/${fixture.bubbleId}?repo=${encodeURIComponent(fixture.repoPath)}`
+      );
+      expect(detail.status).toBe(200);
+      expect(detail.body).toMatchObject({
+        bubble: {
+          state: "READY_FOR_HUMAN_APPROVAL",
+          inbox: {
+            items: [
+              {
+                type: "APPROVAL_REQUEST",
+                latestRecommendation: "rework",
+                gateRoute: "human_gate_budget_exhausted"
+              }
+            ]
+          }
+        }
+      });
+    } finally {
+      await server.close();
+    }
+  });
+
   it("starts with empty repo registry and returns empty /api/repos", async () => {
     const assetsDir = await createAssetsFixture();
     const registryPath = await createRegistryPath();

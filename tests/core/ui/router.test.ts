@@ -334,7 +334,19 @@ describe("createUiRouter bubble detail resource", () => {
         approvalRequests: 1,
         total: 1
       },
-      items: []
+      items: [
+        {
+          envelopeId: "msg_approval_01",
+          type: "APPROVAL_REQUEST",
+          ts: "2026-02-24T12:00:30.000Z",
+          round: 2,
+          sender: "orchestrator",
+          summary: "Human approval required after meta-review.",
+          refs: [],
+          latestRecommendation: "rework",
+          gateRoute: "human_gate_budget_exhausted"
+        }
+      ]
     };
     const getBubbleStatus = vi.fn(async () => status);
     const getBubbleInbox = vi.fn(async () => inbox);
@@ -405,6 +417,17 @@ describe("createUiRouter bubble detail resource", () => {
         remoteClonePath: "/srv/pairflow/repo--b-router-detail-01",
         lastLiveCheckAt: "2026-02-24T12:00:31.000Z",
         lastCacheCheckAt: "2026-02-24T12:00:30.000Z"
+      });
+      expect(payload.bubble).toMatchObject({
+        inbox: {
+          items: [
+            {
+              type: "APPROVAL_REQUEST",
+              latestRecommendation: "rework",
+              gateRoute: "human_gate_budget_exhausted"
+            }
+          ]
+        }
       });
       expect(getBubbleStatus).toHaveBeenCalledWith({
         bubbleId,

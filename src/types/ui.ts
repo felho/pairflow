@@ -1,11 +1,13 @@
 import type { RuntimeSessionRecord } from "../v11/infrastructure/executor/sessionRuntime/runtimeSessionsRegistry.js";
 import type {
   BubbleLifecycleState,
-  BubbleReviewPolicyRuntimeView
+  BubbleReviewPolicyRuntimeView,
+  MetaReviewRecommendation
 } from "./bubble.js";
 import type {
   MetaReviewRuntimeDeliveryStatus
 } from "./bubble.js";
+import type { MetaReviewGateRoute } from "../v11/shared/metaReviewGate/metaReviewGateTypes.js";
 import type {
   PendingInboxItemV11 as PendingInboxItem,
   PendingInboxItemV11Type as PendingInboxItemType
@@ -98,6 +100,8 @@ export interface UiBubbleInboxItem {
   sender: string;
   summary: string;
   refs: string[];
+  latestRecommendation?: MetaReviewRecommendation;
+  gateRoute?: MetaReviewGateRoute;
 }
 
 export interface UiBubbleInbox {
@@ -210,6 +214,12 @@ export function mapPendingInboxItems(items: PendingInboxItem[]): UiBubbleInboxIt
     round: item.round,
     sender: item.sender,
     summary: item.summary,
-    refs: item.refs
+    refs: item.refs,
+    ...(item.latestRecommendation !== undefined
+      ? { latestRecommendation: item.latestRecommendation }
+      : {}),
+    ...(item.gateRoute !== undefined
+      ? { gateRoute: item.gateRoute }
+      : {})
   }));
 }

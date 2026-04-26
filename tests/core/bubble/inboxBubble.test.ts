@@ -374,4 +374,73 @@ describe("getBubbleInbox", () => {
     });
     expect(view.items).toEqual([]);
   });
+
+  it("preserves current-round approval route context on the pending approval item", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await createBubble({
+      id: "b_inbox_06",
+      repoPath,
+      baseBranch: "main",
+      reviewArtifactType: "code",
+      task: "Inbox approval route context",
+      cwd: repoPath
+    });
+    const lockPath = join(bubble.paths.locksDir, `${bubble.bubbleId}.lock`);
+
+    await appendProtocolEnvelope({
+      transcriptPath: bubble.paths.transcriptPath,
+      mirrorPaths: [bubble.paths.inboxPath],
+      lockPath,
+      now: new Date("2026-02-22T10:20:00.000Z"),
+      envelope: {
+        bubble_id: bubble.bubbleId,
+        sender: "orchestrator",
+        recipient: "human",
+        type: "APPROVAL_REQUEST",
+        round: 0,
+        payload: {
+          summary: "Historical approval summary",
+          metadata: {
+            latest_recommendation: "approve",
+            meta_review_gate_route: "human_gate_approve"
+          }
+        },
+        refs: []
+      }
+    });
+    await appendProtocolEnvelope({
+      transcriptPath: bubble.paths.transcriptPath,
+      mirrorPaths: [bubble.paths.inboxPath],
+      lockPath,
+      now: new Date("2026-02-22T10:21:00.000Z"),
+      envelope: {
+        bubble_id: bubble.bubbleId,
+        sender: "orchestrator",
+        recipient: "human",
+        type: "APPROVAL_REQUEST",
+        round: 0,
+        payload: {
+          summary: "Budget exhausted approval summary",
+          metadata: {
+            latest_recommendation: "rework",
+            meta_review_gate_route: "human_gate_budget_exhausted"
+          }
+        },
+        refs: []
+      }
+    });
+
+    const view = await getBubbleInbox({
+      bubbleId: bubble.bubbleId,
+      cwd: repoPath
+    });
+
+    expect(view.pending.approvalRequests).toBe(1);
+    expect(view.items).toHaveLength(1);
+    expect(view.items[0]).toMatchObject({
+      summary: "Budget exhausted approval summary",
+      latestRecommendation: "rework",
+      gateRoute: "human_gate_budget_exhausted"
+    });
+  });
 });

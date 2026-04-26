@@ -1,5 +1,11 @@
 import type { ProtocolEnvelope } from "../../../types/protocol.js";
-import { isHumanApprovalRequest } from "./approvalTranscriptContext.js";
+import type { MetaReviewRecommendation } from "../../../types/bubble.js";
+import type { MetaReviewGateRoute } from "../metaReviewGate/metaReviewGateTypes.js";
+import {
+  isHumanApprovalRequest,
+  resolveApprovalGateRouteFromRequest,
+  resolveApprovalRecommendationFromRequest
+} from "./approvalTranscriptContext.js";
 
 export interface PendingApprovalSignal {
   envelopeId: string;
@@ -8,6 +14,8 @@ export interface PendingApprovalSignal {
   sender: string;
   summary: string;
   refs: string[];
+  latestRecommendation?: MetaReviewRecommendation;
+  gateRoute?: MetaReviewGateRoute;
 }
 
 export interface ResolveCanonicalPendingApprovalSignalInput {
@@ -37,6 +45,9 @@ export function resolveLatestPendingApprovalRequest(
     }
 
     if (isHumanApprovalRequest(envelope)) {
+      const latestRecommendation =
+        resolveApprovalRecommendationFromRequest(envelope);
+      const gateRoute = resolveApprovalGateRouteFromRequest(envelope);
       return {
         envelopeId: envelope.id,
         ts: envelope.ts,
@@ -45,7 +56,11 @@ export function resolveLatestPendingApprovalRequest(
         summary: deriveApprovalSummary(
           envelope.payload as unknown as Record<string, unknown>
         ),
-        refs: envelope.refs
+        refs: envelope.refs,
+        ...(latestRecommendation !== undefined
+          ? { latestRecommendation }
+          : {}),
+        ...(gateRoute !== undefined ? { gateRoute } : {})
       };
     }
   }

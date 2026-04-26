@@ -6,6 +6,7 @@ import type {
 } from "./contracts/bubbleLifecycle.js";
 import type { StateValidationDiagnostics } from "./contracts/stateValidation.js";
 import type { UiBubbleRemoteExecution } from "./contracts/uiRemoteExecution.js";
+import type { MetaReviewGateRoute as BackendMetaReviewGateRoute } from "../../../src/v11/shared/metaReviewGate/metaReviewGateTypes.js";
 export { bubbleLifecycleStates };
 export type { BubbleLifecycleState };
 export type {
@@ -119,6 +120,20 @@ export interface UiPendingInboxCounts {
 }
 
 export type UiPendingInboxItemType = "HUMAN_QUESTION" | "APPROVAL_REQUEST";
+export type UiApprovalRequestRecommendation = "rework" | "approve" | "inconclusive";
+export const uiApprovalRequestGateRoutes = [
+  "meta_review_running",
+  "auto_rework",
+  "human_gate_sticky_bypass",
+  "human_gate_approve",
+  "human_gate_budget_exhausted",
+  "human_gate_threshold_not_met",
+  "human_gate_threshold_unresolved",
+  "human_gate_inconclusive",
+  "human_gate_run_failed",
+  "human_gate_dispatch_failed"
+] as const satisfies readonly BackendMetaReviewGateRoute[];
+export type UiApprovalRequestGateRoute = (typeof uiApprovalRequestGateRoutes)[number];
 
 export interface UiBubbleInboxItem {
   envelopeId: string;
@@ -128,6 +143,8 @@ export interface UiBubbleInboxItem {
   sender: string;
   summary: string;
   refs: string[];
+  latestRecommendation?: UiApprovalRequestRecommendation;
+  gateRoute?: UiApprovalRequestGateRoute;
 }
 
 export interface UiBubbleInbox {

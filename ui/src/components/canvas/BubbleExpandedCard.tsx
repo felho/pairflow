@@ -8,6 +8,7 @@ import type {
   BubbleLifecycleState,
   BubblePosition,
   UiBubbleDetail,
+  UiBubbleInboxItem,
   UiTimelineEntry
 } from "../../lib/types";
 import { bubbleDimensions } from "../../lib/canvasLayout";
@@ -42,6 +43,33 @@ function repoLabel(repoPath: string): string {
 
 function asMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
+}
+
+function resolveApprovalPackageCopy(
+  approvalRequest: UiBubbleInboxItem | null
+): string {
+  if (
+    approvalRequest?.gateRoute === "human_gate_budget_exhausted"
+    && approvalRequest.latestRecommendation === "rework"
+  ) {
+    return "Meta-review recommended rework, but the auto-rework budget is exhausted. Human decision is required to approve or request rework.";
+  }
+
+  return "Meta-review is complete. Review the approval package, then choose Approve or Request Rework to continue.";
+}
+
+function findLatestInboxItemByType(
+  items: UiBubbleInboxItem[],
+  type: UiBubbleInboxItem["type"]
+): UiBubbleInboxItem | null {
+  for (let index = items.length - 1; index >= 0; index -= 1) {
+    const item = items[index];
+    if (item?.type === type) {
+      return item;
+    }
+  }
+
+  return null;
 }
 
 function isDragDisabledTarget(target: EventTarget | null): boolean {
@@ -159,7 +187,11 @@ export function BubbleExpandedCard(props: BubbleExpandedCardProps): JSX.Element 
 
   const pendingQuestion =
     attachSource.state === "WAITING_HUMAN" && props.detail !== null
-      ? props.detail.inbox.items.find((item) => item.type === "HUMAN_QUESTION") ?? null
+      ? findLatestInboxItemByType(props.detail.inbox.items, "HUMAN_QUESTION")
+      : null;
+  const pendingApprovalRequest =
+    attachSource.state === "READY_FOR_HUMAN_APPROVAL" && props.detail !== null
+      ? findLatestInboxItemByType(props.detail.inbox.items, "APPROVAL_REQUEST")
       : null;
   // Keep expanded cards at a fixed rendered footprint so canvas collision/layout
   // dimensions match what users see on screen.
@@ -299,6 +331,17 @@ export function BubbleExpandedCard(props: BubbleExpandedCardProps): JSX.Element 
           </div>
           <div className="text-[11px] leading-relaxed text-[#ccc]">
             {pendingQuestion.summary}
+          </div>
+        </div>
+      ) : null}
+
+      {attachSource.state === "READY_FOR_HUMAN_APPROVAL" ? (
+        <div className="mx-4 mb-2.5 rounded-[10px] border border-emerald-500/20 bg-emerald-500/[0.05] px-3 py-2.5">
+          <div className="mb-1 text-[9px] font-semibold uppercase tracking-wider text-emerald-400">
+            Approval Package
+          </div>
+          <div className="text-[11px] leading-relaxed text-[#ccc]">
+            {resolveApprovalPackageCopy(pendingApprovalRequest)}
           </div>
         </div>
       ) : null}

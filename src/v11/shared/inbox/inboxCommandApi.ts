@@ -1,5 +1,9 @@
 import { statusCommandDependencyDefaults } from "../status/statusCommandDependencyDefaults.js";
-import type { BubbleLifecycleState } from "../../../types/bubble.js";
+import type {
+  BubbleLifecycleState,
+  MetaReviewRecommendation
+} from "../../../types/bubble.js";
+import type { MetaReviewGateRoute } from "../metaReviewGate/metaReviewGateTypes.js";
 import { resolveCanonicalPendingApprovalSignal } from "../approval/pendingApprovalSignal.js";
 import { isNamedError } from "../errors/namedError.js";
 
@@ -13,6 +17,8 @@ export interface PendingInboxItem {
   sender: string;
   summary: string;
   refs: string[];
+  latestRecommendation?: MetaReviewRecommendation;
+  gateRoute?: MetaReviewGateRoute;
 }
 
 export interface BubbleInboxInput {
