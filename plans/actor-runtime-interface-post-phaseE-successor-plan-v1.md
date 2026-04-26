@@ -579,7 +579,6 @@ owners:
    - `docs/actor-runtime-interface/execution-authority-contract-note-v1.md`
    - `docs/actor-runtime-interface/generic-runtime-kernel-contract-note-v1.md`
    - `docs/actor-runtime-interface/topology-neutral-delivery-executor-contract-note-v1.md`
-   - `plans/actor-runtime-interface-opportunity3-onboarding-discovery-summary-v1.md`
    - `docs/actor-runtime-interface/onboarding-extension-surface-contract-note-v1.md`
 3. Current source anchors:
    - `src/v11/shared/actorProtocol/actorEmitContext.ts`

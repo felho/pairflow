@@ -30,7 +30,7 @@ owners:
    - S3: role -> bubble config binding in `src/config/bubbleConfig.ts` + `src/types/bubble.ts::BubbleAgentsConfig`
    - S4: role -> startup/resume prompt composition in `src/v11/application/start/startCommandPrompts.ts` + `src/v11/application/start/startCommandImplementerPrompts.ts` + `src/v11/application/start/startCommandResumePrompts.ts` + `src/v11/application/start/startCommandResumeImplementerPrompt.ts`
 3. A 4 seamen az `AgentRole` enum konkret ertekei egyetlen kozos lookup-pont nelkul jelennek meg: uj role bevezetese mind a negy helyen kulon-kulon valtoztatast kerne, es nincs olyan compile-time error, ami egyutt felsorolna a hianyzo bejegyzeseket.
-4. A discovery summary (`plans/actor-runtime-interface-opportunity3-onboarding-discovery-summary-v1.md`) lezarasa utan a working olvasat az, hogy ez nem a runtime kernel ujraepiteset igenyli, hanem egy belso `RoleDescriptor` registry mintazat felvezeteset, amely a meglevo catalog-pattern (`actorRuntimePolicyCheckCatalog`, `actorRuntimeAdapterExecutors`) mintajara mukodne, csak role szinten.
+4. A lezart `Opportunity 3` discovery/ideation kor utan a working olvasat az, hogy ez nem a runtime kernel ujraepiteset igenyli, hanem egy belso `RoleDescriptor` registry mintazat felvezeteset, amely a meglevo catalog-pattern (`actorRuntimePolicyCheckCatalog`, `actorRuntimeAdapterExecutors`) mintajara mukodne, csak role szinten.
 5. Emiatt az `Opportunity 3` first bounded slice-a docs-only contract clarification: a registry mintazat normativ rogzitese + a 4 seam source-anchored inventory + a phasing (T2..T5) explicit gatinge.
 
 ## L0 - Policy
@@ -116,7 +116,7 @@ Docs-only `O3-T1` szelet, amely:
    - `docs/actor-runtime-interface/topology-neutral-delivery-executor-contract-note-v1.md` (`O2-T1` topology-neutral boundary)
    - `docs/actor-runtime-interface/execution-authority-contract-note-v1.md` (canonical authority baseline)
 3. Historical predecessor:
-   - `plans/actor-runtime-interface-opportunity3-onboarding-discovery-summary-v1.md` (zart discovery)
+   - lezart `Opportunity 3` discovery/ideation kor
 
 ## L1 - Implementation Contract
 
@@ -222,7 +222,6 @@ Docs-only `O3-T1` szelet, amely:
 20. `docs/actor-runtime-interface/generic-runtime-kernel-contract-note-v1.md`
 21. `docs/actor-runtime-interface/topology-neutral-delivery-executor-contract-note-v1.md`
 22. `docs/actor-runtime-interface/execution-authority-contract-note-v1.md`
-23. `plans/actor-runtime-interface-opportunity3-onboarding-discovery-summary-v1.md`
 
 #### Canonical Elements
 
@@ -400,7 +399,6 @@ Conclusion: a task bounded marad, mert nincs producer vagy shared-contract code 
 | must-use | `docs/actor-runtime-interface/generic-runtime-kernel-contract-note-v1.md` | P1 | required-now |
 | must-use | `docs/actor-runtime-interface/topology-neutral-delivery-executor-contract-note-v1.md` | P1 | required-now |
 | must-use | `docs/actor-runtime-interface/execution-authority-contract-note-v1.md` | P1 | required-now |
-| must-use | `plans/actor-runtime-interface-opportunity3-onboarding-discovery-summary-v1.md` | P1 | required-now |
 | must-use | `src/v11/application/actorProtocol/actorRuntimeKernel.ts` | P1 | required-now |
 | must-use | `src/v11/application/actorProtocol/actorRuntimeDispatchMatrix.ts` | P1 | required-now |
 | must-use | `src/v11/application/actorProtocol/actorProtocolEmitters.ts` | P1 | required-now |

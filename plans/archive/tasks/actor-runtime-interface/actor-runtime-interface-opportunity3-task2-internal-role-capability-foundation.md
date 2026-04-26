@@ -112,7 +112,6 @@ owners:
 1. Docs/source anchors:
    - `docs/actor-runtime-interface/onboarding-extension-surface-contract-note-v1.md`
    - `plans/actor-runtime-interface-post-phaseE-successor-plan-v1.md`
-   - `plans/actor-runtime-interface-opportunity3-onboarding-discovery-summary-v1.md`
 2. Current code anchors:
    - `src/v11/shared/state/executionContext.ts`
    - `src/v11/application/actorProtocol/actorRuntimeDispatchMatrix.ts`

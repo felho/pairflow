@@ -29,7 +29,7 @@ owners:
    - `docs/actor-runtime-interface/topology-neutral-delivery-executor-contract-note-v1.md` (`O2-T1` topology-neutral delivery/executor boundary)
    - `docs/actor-runtime-interface/execution-authority-contract-note-v1.md` (canonical execution authority baseline)
 3. Historical predecessor:
-   - `plans/actor-runtime-interface-opportunity3-onboarding-discovery-summary-v1.md`
+   - az `Opportunity 3` lezart discovery/ideation kore
 4. Current-tree source anchors (kernel + dispatch + adapter):
    - `src/v11/application/actorProtocol/actorRuntimeKernel.ts`
    - `src/v11/application/actorProtocol/actorRuntimeDispatchMatrix.ts`
