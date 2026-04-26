@@ -1,21 +1,4 @@
 import {
-  buildReviewerCanonicalCommandGateLines
-} from "../../shared/reviewer/reviewerCommandGateGuidance.js";
-import { buildReviewerAgentSelectionGuidance } from "../../shared/reviewer/reviewerGuidance.js";
-import {
-  buildReviewerPassOutputContractGuidance,
-  buildReviewerScoutExpansionWorkflowGuidance
-} from "../../shared/reviewer/reviewerScoutExpansionGuidance.js";
-import { buildReviewerSeverityOntologyReminder } from "../../shared/reviewer/reviewerSeverityOntology.js";
-import {
-  buildPairflowCommandGuidance
-} from "./startCommandPromptRuntime.js";
-import {
-  buildReviewerDecisionMatrixReminder
-} from "../../shared/reviewer/testEvidence.js";
-import {
-  formatReviewerFocusBridgeBlock,
-  formatReviewerBriefPrompt,
   type ReviewerFocusExtractionResult
 } from "../../shared/reviewer/reviewerBrief.js";
 import type {
@@ -23,18 +6,8 @@ import type {
   PairflowCommandProfile,
   ReviewArtifactType
 } from "../../../types/bubble.js";
-import {
-  buildDocumentPrimaryArtifactReviewerGuardrail
-} from "./startCommandPrompts.js";
-import {
-  appendKickoffDiagnosticLine,
-  buildResumeContextLine,
-  joinPromptLines
-} from "./startCommandResumePromptShared.js";
-import {
-  buildLaunchWorkspaceCommandScopeLine,
-  buildRepositoryLaunchWorkspaceLine
-} from "./startCommandWorkspacePromptLines.js";
+import { buildRolePromptConcernLines } from "../actorProtocol/roleDescriptorRegistry.js";
+import { joinPromptLines } from "./startCommandResumePromptShared.js";
 export { buildResumeImplementerStartupPrompt } from "./startCommandResumeImplementerPrompt.js";
 
 export function buildResumeMetaReviewerStartupPrompt(input: {
@@ -47,25 +20,13 @@ export function buildResumeMetaReviewerStartupPrompt(input: {
   transcriptSummary: string;
   kickoffDiagnostic?: string;
 }): string {
-  const lines = [
-    `Pairflow meta-reviewer resume for bubble ${input.bubbleId}.`,
-    "This pane is static across rounds; do not restart unless explicitly instructed.",
-    "Stay idle until orchestration signals a meta-review run.",
-    "When signaled, return result only through structured Pairflow submit command (no pane marker output parsing).",
-    buildPairflowCommandGuidance(
-      input.workspacePath,
-      input.pairflowCommandProfile
-    ),
-    `Task: ${input.taskArtifactPath}.`,
-    buildRepositoryLaunchWorkspaceLine({
-      repoPath: input.repoPath,
-      workspacePath: input.workspacePath
-    }),
-    `State snapshot: ${buildResumeContextLine(input.state)}.`,
-    `Transcript context: ${input.transcriptSummary}`
-  ];
-  appendKickoffDiagnosticLine(lines, input.kickoffDiagnostic);
-  return joinPromptLines(lines);
+  return joinPromptLines(
+    buildRolePromptConcernLines({
+      role: "meta_reviewer",
+      phase: "resume",
+      context: input
+    })
+  );
 }
 
 export function buildResumeReviewerStartupPrompt(input: {
@@ -83,52 +44,13 @@ export function buildResumeReviewerStartupPrompt(input: {
   reviewerBriefText?: string;
   reviewerFocus?: ReviewerFocusExtractionResult;
 }): string {
-  const documentPrimaryArtifactGuardrail = buildDocumentPrimaryArtifactReviewerGuardrail(
-    input.reviewArtifactType
+  return joinPromptLines(
+    buildRolePromptConcernLines({
+      role: "reviewer",
+      phase: "resume",
+      context: input
+    })
   );
-  const roleInstruction =
-    input.state.state === "RUNNING" && input.state.active_role === "reviewer"
-      ? "You are currently active. Continue review now."
-      : "Stand by unless you are active or receive a handoff.";
-  const lines = [
-    `Pairflow reviewer resume for bubble ${input.bubbleId}.`,
-    `Task: ${input.taskArtifactPath}.`,
-    buildRepositoryLaunchWorkspaceLine({
-      repoPath: input.repoPath,
-      workspacePath: input.workspacePath
-    }),
-    buildLaunchWorkspaceCommandScopeLine(input.workspacePath),
-    buildPairflowCommandGuidance(
-      input.workspacePath,
-      input.pairflowCommandProfile
-    ),
-    `State snapshot: ${buildResumeContextLine(input.state)}.`,
-    `Transcript context: ${input.transcriptSummary}`,
-    "Follow orchestrator test-evidence skip/run directive for test execution.",
-    buildReviewerSeverityOntologyReminder(),
-    `Reviewer policy file: ${input.policySnapshotPathAbs}`,
-    "Read this file before first review action.",
-    buildReviewerDecisionMatrixReminder(),
-    ...(input.reviewerTestDirectiveLine !== undefined
-      ? [`Current directive: ${input.reviewerTestDirectiveLine}`]
-      : []),
-    buildReviewerAgentSelectionGuidance(input.reviewArtifactType),
-    ...(documentPrimaryArtifactGuardrail !== undefined
-      ? [documentPrimaryArtifactGuardrail]
-      : []),
-    buildReviewerScoutExpansionWorkflowGuidance(),
-    buildReviewerPassOutputContractGuidance(),
-    ...(input.reviewerBriefText !== undefined
-      ? [formatReviewerBriefPrompt(input.reviewerBriefText)]
-      : []),
-    ...(input.reviewerFocus?.status === "present"
-      ? [formatReviewerFocusBridgeBlock(input.reviewerFocus)]
-      : []),
-    ...buildReviewerCanonicalCommandGateLines(),
-    roleInstruction
-  ];
-  appendKickoffDiagnosticLine(lines, input.kickoffDiagnostic);
-  return joinPromptLines(lines);
 }
 
 export { resolveResumeKickoffMessages } from "./startCommandResumeKickoffMessages.js";

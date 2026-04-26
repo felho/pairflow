@@ -1,39 +1,16 @@
 import { homedir } from "node:os";
 
 import { shellQuote } from "../../shared/foundation/shellQuote.js";
-import {
-  buildPairflowCommandGuidance,
-  buildPinnedPairflowCommand
-} from "./startCommandPromptRuntime.js";
-import { buildReviewerAgentSelectionGuidance } from "../../shared/reviewer/reviewerGuidance.js";
-import { buildReviewerSeverityOntologyReminder } from "../../shared/reviewer/reviewerSeverityOntology.js";
-import {
-  buildReviewerPassOutputContractGuidance,
-  buildReviewerScoutExpansionWorkflowGuidance
-} from "../../shared/reviewer/reviewerScoutExpansionGuidance.js";
-import {
-  buildMetaReviewSubmitApproveParityNote,
-  buildMetaReviewSubmitCommandTemplate
-} from "../../shared/metaReview/metaReviewSubmitGuidance.js";
-import {
-  buildReviewerCanonicalCommandGateLines,
-  buildReviewerFindingsPassInstruction
-} from "../../shared/reviewer/reviewerCommandGateGuidance.js";
-import { buildReviewerDecisionMatrixReminder } from "../../shared/reviewer/testEvidence.js";
-import {
-  formatReviewerFocusBridgeBlock,
-  formatReviewerBriefPrompt,
-  type ReviewerFocusExtractionResult
-} from "../../shared/reviewer/reviewerBrief.js";
+import { buildPinnedPairflowCommand } from "./startCommandPromptRuntime.js";
+import type { ReviewerFocusExtractionResult } from "../../shared/reviewer/reviewerBrief.js";
 import type {
   PairflowCommandProfile,
   ReviewArtifactType
 } from "../../../types/bubble.js";
 import {
-  buildLaunchWorkspaceCommandScopeLine,
-  buildRepositoryLaunchWorkspaceLine,
-  buildRepoLaunchWorkspaceTaskLine
-} from "./startCommandWorkspacePromptLines.js";
+  buildDocumentPrimaryArtifactReviewerGuardrail,
+  buildRolePromptConcernLines
+} from "../actorProtocol/roleDescriptorRegistry.js";
 export {
   buildImplementerEvidenceHandoffGuidance,
   buildImplementerIdeationKickoffMessage,
@@ -112,13 +89,6 @@ function formatStatusPaneLaunchWorkspacePath(workspacePath: string): string {
   return workspacePath;
 }
 
-function buildCanonicalActorEmitLookupGuidance(input: {
-  bubbleId: string;
-  repoPath: string;
-}): string {
-  return `Before direct canonical emit, fetch fresh actor authority via \`pairflow bubble status --id ${input.bubbleId} --repo ${input.repoPath} --json\` and copy both \`executionContext.handoffId\` and \`executionContext.executionId\` (plus optional guards) from the JSON output. If no explicit authority snapshot is available yet, refresh status and wait for a current handoff instead of falling back to removed aliases.`;
-}
-
 export function buildMetaReviewerStartupPrompt(input: {
   bubbleId: string;
   repoPath: string;
@@ -126,29 +96,11 @@ export function buildMetaReviewerStartupPrompt(input: {
   taskArtifactPath: string;
   pairflowCommandProfile: PairflowCommandProfile;
 }): string {
-  return [
-    `Pairflow meta-reviewer start for bubble ${input.bubbleId}.`,
-    "This is a dedicated static worker pane for autonomous meta-review tasks.",
-    "Stay idle until orchestration signals a meta-review run.",
-    `When signaled, submit only through structured Pairflow CLI and always include required report-json parity fields: \`${buildMetaReviewSubmitCommandTemplate()}\`.`,
-    buildMetaReviewSubmitApproveParityNote(),
-    "In findings artifacts, use canonical finding severity/priority values only: `P0`, `P1`, `P2`, `P3`.",
-    "Do not emit alias severities such as `blocking` or `advisory` in findings artifact entries.",
-    "Do not modify transcript/inbox/state files manually.",
-    buildCanonicalActorEmitLookupGuidance({
-      bubbleId: input.bubbleId,
-      repoPath: input.repoPath
-    }),
-    buildPairflowCommandGuidance(
-      input.workspacePath,
-      input.pairflowCommandProfile
-    ),
-    `Task: ${input.taskArtifactPath}.`,
-    buildRepositoryLaunchWorkspaceLine({
-      repoPath: input.repoPath,
-      workspacePath: input.workspacePath
-    })
-  ].join(" ");
+  return buildRolePromptConcernLines({
+    role: "meta_reviewer",
+    phase: "startup",
+    context: input
+  }).join(" ");
 }
 
 export function buildReviewerStartupPrompt(input: {
@@ -162,59 +114,11 @@ export function buildReviewerStartupPrompt(input: {
   reviewerBriefText?: string;
   reviewerFocus?: ReviewerFocusExtractionResult;
 }): string {
-  const documentPrimaryArtifactGuardrail = buildDocumentPrimaryArtifactReviewerGuardrail(
-    input.reviewArtifactType
-  );
-  return [
-    `Pairflow reviewer start for bubble ${input.bubbleId}.`,
-    "Stand by first. Do not start reviewing until implementer handoff (`PASS`) arrives.",
-    "When PASS arrives, run a fresh review.",
-    "When PASS arrives, follow the orchestrator test-evidence skip/run directive for test execution.",
-    buildReviewerSeverityOntologyReminder(),
-    `Reviewer policy file: ${input.policySnapshotPathAbs}`,
-    "Read this file before first review action.",
-    buildReviewerDecisionMatrixReminder(),
-    buildReviewerAgentSelectionGuidance(input.reviewArtifactType),
-    ...(documentPrimaryArtifactGuardrail !== undefined
-      ? [documentPrimaryArtifactGuardrail]
-      : []),
-    buildReviewerScoutExpansionWorkflowGuidance(),
-    buildReviewerPassOutputContractGuidance(),
-    ...(input.reviewerBriefText !== undefined
-      ? [formatReviewerBriefPrompt(input.reviewerBriefText)]
-      : []),
-    ...(input.reviewerFocus?.status === "present"
-      ? [formatReviewerFocusBridgeBlock(input.reviewerFocus)]
-      : []),
-    buildCanonicalActorEmitLookupGuidance({
-      bubbleId: input.bubbleId,
-      repoPath: input.repoPath
-    }),
-    buildReviewerFindingsPassInstruction(input.reviewArtifactType),
-    ...buildReviewerCanonicalCommandGateLines(),
-    buildLaunchWorkspaceCommandScopeLine(input.workspacePath),
-    buildPairflowCommandGuidance(
-      input.workspacePath,
-      input.pairflowCommandProfile
-    ),
-    "Never edit transcript/inbox/state files manually.",
-    buildRepoLaunchWorkspaceTaskLine({
-      repoPath: input.repoPath,
-      workspacePath: input.workspacePath,
-      taskArtifactPath: input.taskArtifactPath
-    })
-  ].join(" ");
+  return buildRolePromptConcernLines({
+    role: "reviewer",
+    phase: "startup",
+    context: input
+  }).join(" ");
 }
 
-export function buildDocumentPrimaryArtifactReviewerGuardrail(
-  reviewArtifactType: ReviewArtifactType
-): string | undefined {
-  if (reviewArtifactType !== "document") {
-    return undefined;
-  }
-
-  return [
-    "Primary artifact review rule (docs-only): treat a PASS as out-of-scope if it only adds a new standalone review/synthesis document while the referenced source task/document file is unchanged.",
-    "In that case, request rework so the primary referenced artifact is refined directly."
-  ].join(" ");
-}
+export { buildDocumentPrimaryArtifactReviewerGuardrail };

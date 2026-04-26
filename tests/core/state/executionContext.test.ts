@@ -5,8 +5,177 @@ import {
   buildRestartedExecutionContext,
   buildRunningExecutionContext
 } from "../../../src/v11/shared/state/executionContext.js";
+import {
+  buildExecutionContextHandoffIdForRole,
+  getPrimaryRoutePolicyCheckIdsForRole,
+  getResumePromptConcernsForRole,
+  getRoleDescriptor,
+  getRoleExecutionProjectionDescriptor,
+  getStartupPromptConcernsForRole
+} from "../../../src/v11/application/actorProtocol/roleDescriptorRegistry.js";
 
 describe("buildRunningExecutionContext", () => {
+  it("keeps the internal role descriptor registry aligned with awaited-output, policy, and prompt projections", () => {
+    expect(getRoleDescriptor("implementer")).toMatchObject({
+      id: "implementer",
+      primary_awaited_output_type: "pass_result",
+      topology_slot_id: "implementer",
+      authority_policy_check_id: "implementer_authority",
+      handoff_id_format_id: null,
+      active_agent_constraint_id: null
+    });
+    expect(getRoleDescriptor("reviewer")).toMatchObject({
+      id: "reviewer",
+      primary_awaited_output_type: "pass_result",
+      topology_slot_id: "reviewer",
+      authority_policy_check_id: "reviewer_authority",
+      handoff_id_format_id: null,
+      active_agent_constraint_id: null
+    });
+    expect(getRoleDescriptor("meta_reviewer")).toMatchObject({
+      id: "meta_reviewer",
+      primary_awaited_output_type: "meta_review_result",
+      topology_slot_id: "meta_reviewer",
+      authority_policy_check_id: "meta_reviewer_authority",
+      handoff_id_format_id: "meta_review",
+      active_agent_constraint_id: "codex_when_present"
+    });
+
+    expect(getRoleExecutionProjectionDescriptor("implementer")).toEqual({
+      primary_awaited_output_type: "pass_result",
+      handoff_id_format_id: null
+    });
+    expect(getRoleExecutionProjectionDescriptor("reviewer")).toEqual({
+      primary_awaited_output_type: "pass_result",
+      handoff_id_format_id: null
+    });
+    expect(getRoleExecutionProjectionDescriptor("meta_reviewer")).toEqual({
+      primary_awaited_output_type: "meta_review_result",
+      handoff_id_format_id: "meta_review"
+    });
+
+    expect(
+      buildExecutionContextHandoffIdForRole({
+        bubbleId: "b_exec_projection_impl_01",
+        activeRole: "implementer",
+        round: 2,
+        attempt: 1
+      })
+    ).toBe("implementer:b_exec_projection_impl_01:round:2:attempt:1");
+    expect(
+      buildExecutionContextHandoffIdForRole({
+        bubbleId: "b_exec_projection_meta_01",
+        activeRole: "meta_reviewer",
+        round: 3,
+        attempt: 2
+      })
+    ).toBe("meta_review:b_exec_projection_meta_01:round:3:attempt:2");
+
+    expect(getPrimaryRoutePolicyCheckIdsForRole("implementer")).toEqual([
+      "context_snapshot_integrity",
+      "input_context_match",
+      "implementer_authority"
+    ]);
+    expect(getPrimaryRoutePolicyCheckIdsForRole("reviewer")).toEqual([
+      "context_snapshot_integrity",
+      "input_context_match",
+      "reviewer_authority"
+    ]);
+    expect(getPrimaryRoutePolicyCheckIdsForRole("meta_reviewer")).toEqual([
+      "context_snapshot_integrity",
+      "input_context_match",
+      "meta_reviewer_authority",
+      "meta_reviewer_active_agent_codex_when_present"
+    ]);
+  });
+
+  it("keeps the startup and resume prompt concern order closed per role", () => {
+    expect(getStartupPromptConcernsForRole("implementer")).toEqual([
+      "implementer_start_activation_contract",
+      "launch_workspace_command_scope_line",
+      "pairflow_command_guidance",
+      "implementer_evidence_handoff_guidance",
+      "done_package_update_contract",
+      "repository_launch_workspace_line",
+      "canonical_actor_emit_lookup_guidance",
+      "implementer_emit_handoff_contract"
+    ]);
+    expect(getResumePromptConcernsForRole("implementer")).toEqual([
+      "implementer_resume_artifact_context",
+      "launch_workspace_command_scope_line",
+      "pairflow_command_guidance",
+      "repository_launch_workspace_line",
+      "resume_state_context_line",
+      "transcript_context_line",
+      "implementer_evidence_handoff_guidance",
+      "implementer_resume_role_instruction",
+      "kickoff_diagnostic_line"
+    ]);
+
+    expect(getStartupPromptConcernsForRole("reviewer")).toEqual([
+      "reviewer_start_activation_contract",
+      "reviewer_test_execution_directive",
+      "reviewer_severity_ontology_reminder",
+      "reviewer_policy_snapshot_contract",
+      "reviewer_decision_matrix_reminder",
+      "reviewer_agent_selection_guidance",
+      "document_primary_artifact_reviewer_guardrail",
+      "reviewer_scout_expansion_workflow_guidance",
+      "reviewer_pass_output_contract_guidance",
+      "reviewer_brief_overlay",
+      "reviewer_focus_bridge_overlay",
+      "canonical_actor_emit_lookup_guidance",
+      "reviewer_findings_pass_instruction",
+      "reviewer_canonical_command_gate_lines",
+      "launch_workspace_command_scope_line",
+      "pairflow_command_guidance",
+      "reviewer_no_manual_state_edits",
+      "repo_launch_workspace_task_line"
+    ]);
+    expect(getResumePromptConcernsForRole("reviewer")).toEqual([
+      "reviewer_resume_artifact_context",
+      "repository_launch_workspace_line",
+      "launch_workspace_command_scope_line",
+      "pairflow_command_guidance",
+      "resume_state_context_line",
+      "transcript_context_line",
+      "reviewer_test_execution_directive",
+      "reviewer_severity_ontology_reminder",
+      "reviewer_policy_snapshot_contract",
+      "reviewer_decision_matrix_reminder",
+      "reviewer_agent_selection_guidance",
+      "document_primary_artifact_reviewer_guardrail",
+      "reviewer_scout_expansion_workflow_guidance",
+      "reviewer_pass_output_contract_guidance",
+      "reviewer_brief_overlay",
+      "reviewer_focus_bridge_overlay",
+      "reviewer_canonical_command_gate_lines",
+      "reviewer_resume_role_instruction",
+      "kickoff_diagnostic_line"
+    ]);
+
+    expect(getStartupPromptConcernsForRole("meta_reviewer")).toEqual([
+      "meta_reviewer_idle_contract",
+      "meta_review_submit_command_template",
+      "meta_review_submit_approve_parity_note",
+      "meta_review_finding_severity_contract",
+      "meta_review_no_manual_state_edits",
+      "canonical_actor_emit_lookup_guidance",
+      "pairflow_command_guidance",
+      "meta_reviewer_task_artifact_context",
+      "repository_launch_workspace_line"
+    ]);
+    expect(getResumePromptConcernsForRole("meta_reviewer")).toEqual([
+      "meta_reviewer_resume_activation_contract",
+      "pairflow_command_guidance",
+      "meta_reviewer_task_artifact_context",
+      "repository_launch_workspace_line",
+      "resume_state_context_line",
+      "transcript_context_line",
+      "kickoff_diagnostic_line"
+    ]);
+  });
+
   it("builds canonical running authority for pass actors", () => {
     const executionContext = buildRunningExecutionContext({
       bubbleId: "b_exec_ctx_01",
