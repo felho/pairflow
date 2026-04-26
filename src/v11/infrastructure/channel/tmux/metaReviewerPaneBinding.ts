@@ -1,4 +1,7 @@
-import { runtimePaneIndices } from "./tmuxManager.js";
+import {
+  getTopologySlotPaneIndex,
+  getTopologySlotPaneIndexForRole
+} from "../../../application/actorProtocol/roleDescriptorRegistry.js";
 import {
   RuntimeSessionsRegistryError,
   readRuntimeSessionsRegistry,
@@ -55,9 +58,13 @@ function requireNonEmptyString(value: unknown, fieldName: string): string {
 }
 
 function hasSharedRuntimePaneCollision(): boolean {
-  const metaReviewerPaneIndex = Number(runtimePaneIndices.metaReviewer);
-  const statusPaneIndex = Number(runtimePaneIndices.status);
-  const implementerPaneIndex = Number(runtimePaneIndices.implementer);
+  const metaReviewerPaneIndex = Number(
+    getTopologySlotPaneIndexForRole("meta_reviewer")
+  );
+  const statusPaneIndex = Number(getTopologySlotPaneIndex("status"));
+  const implementerPaneIndex = Number(
+    getTopologySlotPaneIndexForRole("implementer")
+  );
   return (
     metaReviewerPaneIndex === statusPaneIndex ||
     metaReviewerPaneIndex === implementerPaneIndex
@@ -92,7 +99,7 @@ export async function setMetaReviewerPaneBinding(
       const nowIso = (input.now ?? new Date()).toISOString();
       const metaReviewerPane: RuntimeMetaReviewerPaneBinding = {
         role: "meta-reviewer",
-        paneIndex: runtimePaneIndices.metaReviewer,
+        paneIndex: getTopologySlotPaneIndexForRole("meta_reviewer"),
         active: input.active,
         updatedAt: nowIso
       };

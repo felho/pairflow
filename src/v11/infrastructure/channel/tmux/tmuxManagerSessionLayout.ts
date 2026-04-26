@@ -1,5 +1,9 @@
 import type { TmuxRunner } from "../../../shared/ports/tmuxSessions.js";
 import {
+  getTopologySlotPaneIndex,
+  type TopologySlotId
+} from "../../../application/actorProtocol/roleDescriptorRegistry.js";
+import {
   applyBubbleTmuxSessionFrameHooks,
   applyBubbleTmuxSessionFrameSetup
 } from "./tmuxManagerSessionFrame.js";
@@ -33,12 +37,22 @@ function parseTmuxPaneId(stdout: string, command: string[]): string {
   return paneId;
 }
 
+function buildSessionPaneSelector(
+  sessionName: string,
+  slotId: TopologySlotId
+): string {
+  return `${sessionName}:0.${String(getTopologySlotPaneIndex(slotId))}`;
+}
+
 export async function launchBubbleSessionLayout(
   input: LaunchBubbleSessionLayoutInput
 ): Promise<LaunchBubbleSessionLayoutResult> {
-  const statusPane = `${input.sessionName}:0.0`;
-  const implementerPane = `${input.sessionName}:0.1`;
-  const reviewerPane = `${input.sessionName}:0.2`;
+  const statusPane = buildSessionPaneSelector(input.sessionName, "status");
+  const implementerPane = buildSessionPaneSelector(
+    input.sessionName,
+    "implementer"
+  );
+  const reviewerPane = buildSessionPaneSelector(input.sessionName, "reviewer");
   await applyBubbleTmuxSessionFrameSetup({
     runner: input.runner,
     sessionName: input.sessionName,

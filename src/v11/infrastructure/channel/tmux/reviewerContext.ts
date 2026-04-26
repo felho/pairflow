@@ -1,8 +1,10 @@
 import { readRuntimeSessionsRegistry } from "../../executor/sessionRuntime/runtimeSessionsRegistry.js";
 import {
+  getTopologySlotPaneIndexForRole
+} from "../../../application/actorProtocol/roleDescriptorRegistry.js";
+import {
   respawnTmuxPaneCommand,
   runTmux,
-  runtimePaneIndices,
   type TmuxRunner
 } from "./tmuxManager.js";
 import { buildAgentCommand } from "../../../shared/command/agentCommand.js";
@@ -76,7 +78,7 @@ export async function refreshReviewerContext(
   try {
     await respawnTmuxPaneCommand({
       sessionName,
-      paneIndex: runtimePaneIndices.reviewer,
+      paneIndex: getTopologySlotPaneIndexForRole("reviewer"),
       cwd: workspacePath,
       command: reviewerCommand,
       runner

@@ -2,6 +2,9 @@ import { describe, expect, it } from "vitest";
 
 import { refreshReviewerContext } from "../../../src/v11/infrastructure/channel/tmux/reviewerContext.js";
 import type { BubbleConfig } from "../../../src/types/bubble.js";
+import {
+  getTopologySlotPaneIndexForRole
+} from "../../../src/v11/application/actorProtocol/roleDescriptorRegistry.js";
 import type { RuntimeSessionRecord } from "../../../src/v11/shared/ports/runtimeSessions.js";
 import type { TmuxRunResult, TmuxRunner } from "../../../src/v11/shared/ports/tmuxSessions.js";
 import { shellQuote } from "../../../src/v11/shared/foundation/shellQuote.js";
@@ -90,7 +93,9 @@ describe("refreshReviewerContext", () => {
       refreshed: true
     });
     expect(calls[0]?.[0]).toBe("respawn-pane");
-    expect(calls[0]?.[3]).toBe("pf-b_reviewer_ctx_01:0.2");
+    expect(calls[0]?.[3]).toBe(
+      `pf-b_reviewer_ctx_01:0.${String(getTopologySlotPaneIndexForRole("reviewer"))}`
+    );
     expect(calls[0]?.[5]).toBe("/tmp/runtime-workspace");
     expect(calls[0]?.join(" ")).toContain(
       "Reviewer brief (persisted artifact `reviewer-brief.md`): Verify each claim."

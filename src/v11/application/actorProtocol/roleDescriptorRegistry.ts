@@ -34,7 +34,7 @@ import {
   type ReviewerFocusExtractionResult
 } from "../../shared/reviewer/reviewerBrief.js";
 
-export type TopologySlotId = AgentRole;
+export type TopologySlotId = "status" | AgentRole;
 export type HandoffIdFormatId = "meta_review";
 
 export type PromptConcernId =
@@ -105,6 +105,18 @@ export interface RoleDescriptor {
   resume_prompt_concern_ids: readonly PromptConcernId[];
   handoff_id_format_id: HandoffIdFormatId | null;
   active_agent_constraint_id: ActiveAgentConstraintId | null;
+}
+
+export interface TopologySlotDescriptor {
+  id: TopologySlotId;
+  pane_index: number;
+  bound_role_id: AgentRole | null;
+}
+
+function freezeTopologySlotDescriptor<T extends TopologySlotDescriptor>(
+  descriptor: T
+): Readonly<T> {
+  return Object.freeze(descriptor);
 }
 
 export type RolePromptPhase = "startup" | "resume";
@@ -302,6 +314,29 @@ const roleDescriptorRegistry = {
     active_agent_constraint_id: "codex_when_present"
   })
 } as const satisfies Readonly<Record<AgentRole, RoleDescriptor>>;
+
+export const topologySlotCatalog = Object.freeze({
+  status: freezeTopologySlotDescriptor({
+    id: "status",
+    pane_index: 0,
+    bound_role_id: null
+  }),
+  implementer: freezeTopologySlotDescriptor({
+    id: "implementer",
+    pane_index: 1,
+    bound_role_id: "implementer"
+  }),
+  reviewer: freezeTopologySlotDescriptor({
+    id: "reviewer",
+    pane_index: 2,
+    bound_role_id: "reviewer"
+  }),
+  meta_reviewer: freezeTopologySlotDescriptor({
+    id: "meta_reviewer",
+    pane_index: 3,
+    bound_role_id: "meta_reviewer"
+  })
+} as const satisfies Readonly<Record<TopologySlotId, TopologySlotDescriptor>>);
 
 function requirePromptValue(
   value: string | undefined,
@@ -680,6 +715,30 @@ export function buildReviewerPolicySnapshotContractLines(
 
 export function getRoleDescriptor(role: AgentRole): RoleDescriptor {
   return roleDescriptorRegistry[role];
+}
+
+export function getTopologySlotIdForRole(role: AgentRole): TopologySlotId {
+  return getRoleDescriptor(role).topology_slot_id;
+}
+
+export function getTopologySlotDescriptor(
+  slotId: TopologySlotId
+): TopologySlotDescriptor {
+  return topologySlotCatalog[slotId];
+}
+
+export function getTopologySlotDescriptorForRole(
+  role: AgentRole
+): TopologySlotDescriptor {
+  return getTopologySlotDescriptor(getTopologySlotIdForRole(role));
+}
+
+export function getTopologySlotPaneIndex(slotId: TopologySlotId): number {
+  return getTopologySlotDescriptor(slotId).pane_index;
+}
+
+export function getTopologySlotPaneIndexForRole(role: AgentRole): number {
+  return getTopologySlotDescriptorForRole(role).pane_index;
 }
 
 export function getRoleExecutionProjectionDescriptor(
