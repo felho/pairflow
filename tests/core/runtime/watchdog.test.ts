@@ -147,6 +147,34 @@ describe("computeWatchdogStatus", () => {
     expect(metaRunningRecovery.expired).toBe(true);
   });
 
+  it("does not require active meta-review execution context after watchdog escalation to WAITING_HUMAN", () => {
+    const status = computeWatchdogStatus(
+      createState({
+        state: "WAITING_HUMAN",
+        active_role: "meta_reviewer",
+        active_since: "2026-02-22T12:00:00.000Z",
+        last_command_at: "2026-02-22T12:05:00.000Z",
+        execution_context: null,
+        meta_review: {
+          execution_context: null,
+          runtime_delivery: null,
+          auto_rework_count: 1,
+          auto_rework_limit: 5,
+          sticky_human_gate: false
+        }
+      }),
+      5,
+      new Date("2026-02-22T12:08:00.000Z")
+    );
+
+    expect(status.monitored).toBe(true);
+    expect(status.monitoredAgent).toBe("codex");
+    expect(status.referenceTimestamp).toBe("2026-02-22T12:05:00.000Z");
+    expect(status.deadlineTimestamp).toBe("2026-02-22T12:10:00.000Z");
+    expect(status.remainingSeconds).toBe(120);
+    expect(status.expired).toBe(false);
+  });
+
   it("disables watchdog monitoring for RUNNING ideation round (round=0)", () => {
     const status = computeWatchdogStatus(
       createState({

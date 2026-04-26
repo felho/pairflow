@@ -72,6 +72,7 @@ export function resolveWatchdogStatusTiming(
     referenceTimestamp = metaReviewExecutionContextResult.value.started_at;
     deadlineTimestamp = metaReviewExecutionContextResult.value.deadline_at;
   } else if (
+    input.state.state === "RUNNING" &&
     input.state.active_role === "meta_reviewer" &&
     input.state.execution_context == null &&
     !metaReviewExecutionContextResult.ok
