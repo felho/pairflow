@@ -128,7 +128,7 @@ function resolveRequestedLoopMode(
 function resolveRequestedSeverity(
   bubble: BubbleCardModel
 ): BubbleReviewAutoReworkSeverity {
-  return bubble.reviewPolicy?.meta_review_auto_rework_min_severity ?? "P1";
+  return bubble.reviewPolicy?.reviewer_blocking_min_severity ?? "P3";
 }
 
 const trailingIconActionOrder: BubbleActionKind[] = ["stop", "restart", "attach", "open"];
@@ -207,7 +207,7 @@ export function ActionBar(props: ActionBarProps): JSX.Element {
 
   const invokeReviewPolicyUpdate = async (input: {
     reviewLoopMode: "full" | "meta_only";
-    metaReviewAutoReworkMinSeverity: BubbleReviewAutoReworkSeverity;
+    reviewBlockingMinSeverity: BubbleReviewAutoReworkSeverity;
   }): Promise<void> => {
     props.onClearFeedback();
     try {
@@ -224,7 +224,7 @@ export function ActionBar(props: ActionBarProps): JSX.Element {
         bubbleId: props.bubble.bubbleId,
         action: "update-review-policy",
         reviewLoopMode: input.reviewLoopMode,
-        metaReviewAutoReworkMinSeverity: input.metaReviewAutoReworkMinSeverity,
+        reviewBlockingMinSeverity: input.reviewBlockingMinSeverity,
         expectedBubbleToml
       });
     } catch {
@@ -237,7 +237,7 @@ export function ActionBar(props: ActionBarProps): JSX.Element {
   ): Promise<void> => {
     await invokeReviewPolicyUpdate({
       reviewLoopMode,
-      metaReviewAutoReworkMinSeverity: requestedSeverity
+      reviewBlockingMinSeverity: requestedSeverity
     });
   };
 
@@ -457,7 +457,7 @@ export function ActionBar(props: ActionBarProps): JSX.Element {
                 onChange={(event) => {
                   void invokeReviewPolicyUpdate({
                     reviewLoopMode: requestedLoopMode,
-                    metaReviewAutoReworkMinSeverity:
+                    reviewBlockingMinSeverity:
                       event.currentTarget.value as BubbleReviewAutoReworkSeverity
                   });
                 }}

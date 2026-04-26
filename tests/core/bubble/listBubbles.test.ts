@@ -133,6 +133,7 @@ describe("listBubbles", () => {
       requested_loop_mode: "full",
       effective_loop_mode: "full",
       support_status: "enabled",
+      reviewer_blocking_min_severity: "P3",
       meta_review_auto_rework_min_severity: "P3"
     });
     expect(listed.bubbles[1]?.runtimeSession?.tmuxSessionName).toBe("pf-b_list_02");
@@ -216,6 +217,7 @@ describe("listBubbles", () => {
         ...current,
         review_policy: {
           review_loop_mode: "meta_only",
+          reviewer_blocking_min_severity: "P2",
           meta_review_auto_rework_min_severity: "P2"
         }
       }),
@@ -228,6 +230,7 @@ describe("listBubbles", () => {
       requested_loop_mode: "meta_only",
       effective_loop_mode: "full",
       support_status: "guarded",
+      reviewer_blocking_min_severity: "P2",
       meta_review_auto_rework_min_severity: "P2",
       blocked_reason_code: "REVIEW_POLICY_META_ONLY_ACTIVATION_UNRESOLVED",
       blocked_prerequisites: ["reviewer_bypass_activation_provenance_required"],
@@ -250,6 +253,7 @@ describe("listBubbles", () => {
         ...current,
         review_policy: {
           review_loop_mode: "meta_only",
+          reviewer_blocking_min_severity: "P2",
           meta_review_auto_rework_min_severity: "P2"
         }
       }),
@@ -262,6 +266,7 @@ describe("listBubbles", () => {
       requested_loop_mode: "meta_only",
       effective_loop_mode: "meta_only",
       support_status: "enabled",
+      reviewer_blocking_min_severity: "P2",
       meta_review_auto_rework_min_severity: "P2"
     });
   });
@@ -807,6 +812,7 @@ describe("listBubbles", () => {
         ...current,
         review_policy: {
           review_loop_mode: "meta_only",
+          reviewer_blocking_min_severity: "P2",
           meta_review_auto_rework_min_severity: "P2"
         }
       }),
@@ -860,6 +866,7 @@ describe("listBubbles", () => {
       requested_loop_mode: "meta_only",
       effective_loop_mode: "full",
       support_status: "guarded",
+      reviewer_blocking_min_severity: "P2",
       meta_review_auto_rework_min_severity: "P2",
       blocked_reason_code: "REVIEW_POLICY_META_ONLY_ACTIVATION_UNRESOLVED",
       blocked_prerequisites: ["reviewer_bypass_activation_provenance_required"],
@@ -930,6 +937,7 @@ describe("listBubbles", () => {
         ...currentConfig,
         review_policy: {
           review_loop_mode: "meta_only",
+          reviewer_blocking_min_severity: "P2",
           meta_review_auto_rework_min_severity: "P2"
         }
       }),
@@ -959,6 +967,7 @@ describe("listBubbles", () => {
         requested_loop_mode: "meta_only",
         effective_loop_mode: "full",
         support_status: "guarded",
+        reviewer_blocking_min_severity: "P2",
         meta_review_auto_rework_min_severity: "P2",
         blocked_reason_code: "REVIEW_POLICY_META_ONLY_ACTIVATION_UNRESOLVED"
       },
@@ -1272,6 +1281,7 @@ describe("listBubbles", () => {
         ...current,
         review_policy: {
           review_loop_mode: "meta_only",
+          reviewer_blocking_min_severity: "P2",
           meta_review_auto_rework_min_severity: "P2"
         }
       }),
@@ -1367,6 +1377,7 @@ describe("listBubbles", () => {
         requested_loop_mode: "meta_only",
         effective_loop_mode: "full",
         support_status: "guarded",
+        reviewer_blocking_min_severity: "P2",
         meta_review_auto_rework_min_severity: "P2",
         blocked_reason_code: "REVIEW_POLICY_META_ONLY_ACTIVATION_UNRESOLVED",
         blocked_prerequisites: ["reviewer_bypass_activation_provenance_required"],

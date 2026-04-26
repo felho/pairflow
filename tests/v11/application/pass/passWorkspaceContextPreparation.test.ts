@@ -467,6 +467,7 @@ describe("passWorkspaceContextPreparation", () => {
                 id: "b_pass_ctx_spoof_01",
                 review_policy: {
                   review_loop_mode: "meta_only",
+                  reviewer_blocking_min_severity: "P2",
                   meta_review_auto_rework_min_severity: "P2"
                 },
                 agents: {
@@ -563,6 +564,7 @@ describe("passWorkspaceContextPreparation", () => {
               id: "b_pass_ctx_04",
               review_policy: {
                 review_loop_mode: "meta_only",
+                reviewer_blocking_min_severity: "P2",
                 meta_review_auto_rework_min_severity: "P2"
               },
               agents: {
@@ -585,6 +587,7 @@ describe("passWorkspaceContextPreparation", () => {
               id: "b_pass_ctx_04",
               review_policy: {
                 review_loop_mode: "meta_only",
+                reviewer_blocking_min_severity: "P2",
                 meta_review_auto_rework_min_severity: "P2"
               },
               agents: {
@@ -647,6 +650,7 @@ describe("passWorkspaceContextPreparation", () => {
       requested_loop_mode: "meta_only",
       effective_loop_mode: "meta_only",
       support_status: "enabled",
+      reviewer_blocking_min_severity: "P2",
       meta_review_auto_rework_min_severity: "P2"
     });
   });
@@ -672,6 +676,7 @@ describe("passWorkspaceContextPreparation", () => {
               id: "b_pass_ctx_05",
               review_policy: {
                 review_loop_mode: "meta_only",
+                reviewer_blocking_min_severity: "P3",
                 meta_review_auto_rework_min_severity: "P3"
               },
               agents: {
@@ -694,6 +699,7 @@ describe("passWorkspaceContextPreparation", () => {
               id: "b_pass_ctx_05",
               review_policy: {
                 review_loop_mode: "meta_only",
+                reviewer_blocking_min_severity: "P3",
                 meta_review_auto_rework_min_severity: "P3"
               },
               agents: {
@@ -750,6 +756,7 @@ describe("passWorkspaceContextPreparation", () => {
       requested_loop_mode: "meta_only",
       effective_loop_mode: "full",
       support_status: "guarded",
+      reviewer_blocking_min_severity: "P3",
       meta_review_auto_rework_min_severity: "P3",
       blocked_reason_code: "REVIEW_POLICY_META_ONLY_ACTIVATION_UNRESOLVED",
       blocked_prerequisites: ["reviewer_bypass_activation_provenance_required"],
@@ -779,6 +786,7 @@ describe("passWorkspaceContextPreparation", () => {
               id: "b_pass_ctx_06",
               review_policy: {
                 review_loop_mode: "meta_only",
+                reviewer_blocking_min_severity: "P2",
                 meta_review_auto_rework_min_severity: "P2"
               },
               agents: {
@@ -801,6 +809,7 @@ describe("passWorkspaceContextPreparation", () => {
               id: "b_pass_ctx_06",
               review_policy: {
                 review_loop_mode: "meta_only",
+                reviewer_blocking_min_severity: "P2",
                 meta_review_auto_rework_min_severity: "P2"
               },
               agents: {
@@ -857,6 +866,7 @@ describe("passWorkspaceContextPreparation", () => {
       requested_loop_mode: "meta_only",
       effective_loop_mode: "full",
       support_status: "guarded",
+      reviewer_blocking_min_severity: "P2",
       meta_review_auto_rework_min_severity: "P2",
       blocked_reason_code: "REVIEW_POLICY_META_ONLY_ACTIVATION_UNRESOLVED",
       blocked_prerequisites: ["reviewer_bypass_activation_provenance_required"],

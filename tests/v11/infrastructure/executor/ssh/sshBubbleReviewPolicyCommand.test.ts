@@ -17,14 +17,35 @@ describe("sshBubbleReviewPolicyCommand", () => {
         pairflowCommand: "pairflow"
       },
       reviewLoopMode: "meta_only",
-      metaReviewAutoReworkMinSeverity: "P2"
+      reviewBlockingMinSeverity: "P2",
+      expectedBubbleToml: "[review_policy]\nreview_loop_mode = \"full\"\n"
     });
 
     expect(script).toContain("cd '/srv/pairflow/b_remote_policy_01'");
     expect(script).toContain("dist/v11/shared/reviewPolicy/updateBubbleReviewPolicy.js");
     expect(script).toContain("dist/v11/infrastructure/state/stateStore.js");
     expect(script).toContain("reviewLoopMode = \"meta_only\"");
-    expect(script).toContain("metaReviewAutoReworkMinSeverity = \"P2\"");
+    expect(script).toContain("reviewBlockingMinSeverity = \"P2\"");
+    expect(script).toContain("const expectedBubbleToml = ");
+    expect(script).toContain("review_loop_mode = \\\"full\\\"");
+    expect(script).toContain("expectedContent: expectedBubbleToml");
+  });
+
+  it("builds the omission-preserve branch with reviewBlockingMinSeverity set to undefined", () => {
+    const script = buildRemoteBubbleReviewPolicyScript({
+      bubbleId: "b_remote_policy_undefined_01",
+      remoteClonePath: "/srv/pairflow/b_remote_policy_undefined_01",
+      remoteTarget: {
+        alias: "lab",
+        host: "remote.example",
+        pairflowCommand: "pairflow"
+      },
+      reviewLoopMode: "full"
+    });
+
+    expect(script).toContain("const reviewBlockingMinSeverity = undefined;");
+    expect(script).toContain("...(reviewBlockingMinSeverity === undefined");
+    expect(script).not.toContain("reviewBlockingMinSeverity = \"P");
   });
 
   it("executes over ssh and parses the marked update result", async () => {
@@ -55,6 +76,7 @@ describe("sshBubbleReviewPolicyCommand", () => {
                   requested_loop_mode: "meta_only",
                   effective_loop_mode: "full",
                   support_status: "guarded",
+                  reviewer_blocking_min_severity: "P3",
                   meta_review_auto_rework_min_severity: "P3"
                 },
                 previousRequestedLoopMode: "full",

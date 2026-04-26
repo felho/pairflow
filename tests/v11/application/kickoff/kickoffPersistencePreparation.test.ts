@@ -68,7 +68,7 @@ describe("prepareKickoffPersistence", () => {
     const withoutReviewPolicy = (
       await readFile(created.paths.bubbleTomlPath, "utf8")
     ).replace(
-      /\n\[review_policy\]\nreview_loop_mode = ".*?"\nmeta_review_auto_rework_min_severity = ".*?"\n/u,
+      /\n\[review_policy\]\nreview_loop_mode = ".*?"\nreviewer_blocking_min_severity = ".*?"\nmeta_review_auto_rework_min_severity = ".*?"\n/u,
       "\n"
     );
     await writeFile(created.paths.bubbleTomlPath, withoutReviewPolicy, "utf8");

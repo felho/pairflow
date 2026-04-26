@@ -82,6 +82,7 @@ async function setMetaReviewAutoReworkMinSeverity(input: {
         ...input.bubble.config.review_policy,
         review_loop_mode:
           input.bubble.config.review_policy?.review_loop_mode ?? "full",
+        reviewer_blocking_min_severity: input.minSeverity,
         meta_review_auto_rework_min_severity: input.minSeverity
       }
     }),

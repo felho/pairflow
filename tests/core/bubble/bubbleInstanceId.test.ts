@@ -39,7 +39,7 @@ async function removeBubbleInstanceIdFromToml(path: string): Promise<void> {
 async function removeReviewPolicyFromToml(path: string): Promise<void> {
   const current = await readFile(path, "utf8");
   const updated = current.replace(
-    /\n\[review_policy\]\nreview_loop_mode = ".*?"\nmeta_review_auto_rework_min_severity = ".*?"\n/u,
+    /\n\[review_policy\]\nreview_loop_mode = ".*?"\nreviewer_blocking_min_severity = ".*?"\nmeta_review_auto_rework_min_severity = ".*?"\n/u,
     "\n"
   );
   await writeFile(path, updated, "utf8");

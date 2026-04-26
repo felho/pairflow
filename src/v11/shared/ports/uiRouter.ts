@@ -208,7 +208,7 @@ export type AttachBubbleResult = UiAttachBubbleResult;
 
 export interface UiUpdateBubbleReviewPolicyInput extends UiBubbleMutationInput {
   reviewLoopMode: BubbleReviewLoopMode;
-  metaReviewAutoReworkMinSeverity?: BubbleReviewAutoReworkSeverity;
+  reviewBlockingMinSeverity?: BubbleReviewAutoReworkSeverity;
   expectedBubbleToml?: string | undefined;
 }
 

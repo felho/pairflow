@@ -69,6 +69,7 @@ describe("v11 list command api", () => {
       requested_loop_mode: "full",
       effective_loop_mode: "full",
       support_status: "enabled",
+      reviewer_blocking_min_severity: "P3",
       meta_review_auto_rework_min_severity: "P3"
     });
     expect(listed.bubbles[1]?.runtimeSession?.tmuxSessionName).toBe(

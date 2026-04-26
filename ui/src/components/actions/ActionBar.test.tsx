@@ -566,7 +566,7 @@ describe("ActionBar", () => {
       bubbleId: "b-policy",
       action: "update-review-policy",
       reviewLoopMode: "meta_only",
-      metaReviewAutoReworkMinSeverity: "P1",
+      reviewBlockingMinSeverity: "P3",
       expectedBubbleToml: "id = \"b-policy\""
     });
   });
@@ -605,7 +605,7 @@ describe("ActionBar", () => {
       bubbleId: "b-policy",
       action: "update-review-policy",
       reviewLoopMode: "meta_only",
-      metaReviewAutoReworkMinSeverity: "P1",
+      reviewBlockingMinSeverity: "P3",
       expectedBubbleToml
     });
   });
@@ -624,6 +624,7 @@ describe("ActionBar", () => {
             requested_loop_mode: "meta_only",
             effective_loop_mode: "full",
             support_status: "guarded",
+            reviewer_blocking_min_severity: "P1",
             meta_review_auto_rework_min_severity: "P1"
           }
         })}
@@ -652,9 +653,43 @@ describe("ActionBar", () => {
       bubbleId: "b-policy-severity",
       action: "update-review-policy",
       reviewLoopMode: "meta_only",
-      metaReviewAutoReworkMinSeverity: "P3",
+      reviewBlockingMinSeverity: "P3",
       expectedBubbleToml: "id = \"b-policy-severity\""
     });
+  });
+
+  it("uses P3 as the fail-closed requested severity when no review policy is present", () => {
+    const onAction = vi.fn(() => Promise.resolve(undefined));
+
+    render(
+      <ActionBar
+        bubble={{
+          ...bubbleCard({
+            bubbleId: "b-policy-fallback",
+            repoPath: "/repo-a",
+            state: "RUNNING"
+          }),
+          reviewPolicy: null
+        }}
+        attach={{
+          visible: false,
+          enabled: false,
+          command: "tmux attach -t pf-b-policy-fallback",
+          hint: null
+        }}
+        isSubmitting={false}
+        actionError={null}
+        retryHint={null}
+        actionFailure={null}
+        onAction={onAction}
+        onClearFeedback={vi.fn()}
+        expectedBubbleToml={"id = \"b-policy-fallback\""}
+      />
+    );
+
+    expect(
+      screen.getByRole("combobox", { name: "Meta auto-rework severity" })
+    ).toHaveValue("P3");
   });
 
   it("disables review policy action until the latest bubble detail revision is loaded", () => {

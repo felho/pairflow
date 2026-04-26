@@ -175,6 +175,7 @@ export interface UiBubbleReviewPolicy {
   requested_loop_mode: BubbleReviewLoopMode;
   effective_loop_mode: BubbleReviewLoopMode;
   support_status: BubbleReviewSupportStatus;
+  reviewer_blocking_min_severity: BubbleReviewAutoReworkSeverity;
   meta_review_auto_rework_min_severity: BubbleReviewAutoReworkSeverity;
   blocked_reason_code?: string;
   blocked_prerequisites?: string[];
@@ -310,7 +311,7 @@ export interface MergeActionInput {
 
 export interface UpdateReviewPolicyActionInput {
   reviewLoopMode: BubbleReviewLoopMode;
-  metaReviewAutoReworkMinSeverity?: BubbleReviewAutoReworkSeverity;
+  reviewBlockingMinSeverity?: BubbleReviewAutoReworkSeverity;
   expectedBubbleToml?: string;
 }
 

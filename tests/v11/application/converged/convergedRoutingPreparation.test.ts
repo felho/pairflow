@@ -112,6 +112,7 @@ describe("prepareConvergedRouting", () => {
           bubbleConfig: {
             review_policy: {
               review_loop_mode: "meta_only",
+              reviewer_blocking_min_severity: "P2",
               meta_review_auto_rework_min_severity: "P2"
             },
             agents: {
@@ -125,6 +126,7 @@ describe("prepareConvergedRouting", () => {
           bubbleConfig: {
             review_policy: {
               review_loop_mode: "meta_only",
+              reviewer_blocking_min_severity: "P2",
               meta_review_auto_rework_min_severity: "P2"
             },
             agents: {
@@ -341,6 +343,7 @@ describe("prepareConvergedRouting", () => {
             bubbleConfig: {
               review_policy: {
                 review_loop_mode: "meta_only",
+                reviewer_blocking_min_severity: "P2",
                 meta_review_auto_rework_min_severity: "P2"
               },
               agents: {
@@ -354,6 +357,7 @@ describe("prepareConvergedRouting", () => {
             bubbleConfig: {
               review_policy: {
                 review_loop_mode: "meta_only",
+                reviewer_blocking_min_severity: "P2",
                 meta_review_auto_rework_min_severity: "P2"
               },
               agents: {

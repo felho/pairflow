@@ -21,7 +21,8 @@ export interface ExecuteRemoteBubbleReviewPolicyCommandInput {
   remoteClonePath: string;
   remoteTarget: RemoteBubbleStatusTarget;
   reviewLoopMode: BubbleReviewLoopMode;
-  metaReviewAutoReworkMinSeverity?: BubbleReviewAutoReworkSeverity;
+  reviewBlockingMinSeverity?: BubbleReviewAutoReworkSeverity;
+  expectedBubbleToml?: string;
 }
 
 export interface RemoteBubbleReviewPolicyUpdatedResult {
@@ -110,10 +111,14 @@ function extractMarkerPayload(input: {
 export function buildRemoteBubbleReviewPolicyScript(
   input: ExecuteRemoteBubbleReviewPolicyCommandInput
 ): string {
-  const metaSeverity =
-    input.metaReviewAutoReworkMinSeverity === undefined
+  const reviewBlockingSeverity =
+    input.reviewBlockingMinSeverity === undefined
       ? "undefined"
-      : JSON.stringify(input.metaReviewAutoReworkMinSeverity);
+      : JSON.stringify(input.reviewBlockingMinSeverity);
+  const expectedBubbleToml =
+    input.expectedBubbleToml === undefined
+      ? "undefined"
+      : JSON.stringify(input.expectedBubbleToml);
 
   const nodeScript = `
 import { pathToFileURL } from "node:url";
@@ -121,9 +126,10 @@ import { pathToFileURL } from "node:url";
 const bubbleId = ${JSON.stringify(input.bubbleId)};
 const repoPath = ${JSON.stringify(input.remoteClonePath)};
 const reviewLoopMode = ${JSON.stringify(input.reviewLoopMode)};
-const metaReviewAutoReworkMinSeverity = ${metaSeverity};
+const reviewBlockingMinSeverity = ${reviewBlockingSeverity};
+const expectedBubbleToml = ${expectedBubbleToml};
 const baseUrl = pathToFileURL(repoPath.endsWith("/") ? repoPath : repoPath + "/");
-const { updateBubbleReviewPolicy } = await import(new URL("dist/v11/shared/reviewPolicy/updateBubbleReviewPolicy.js", baseUrl).href);
+const { buildSharedUiReviewPolicyPatch, updateBubbleReviewPolicy } = await import(new URL("dist/v11/shared/reviewPolicy/updateBubbleReviewPolicy.js", baseUrl).href);
 const { buildBubbleReviewPolicyRuntimeView } = await import(new URL("dist/v11/shared/reviewPolicy/reviewPolicyRuntime.js", baseUrl).href);
 const { isReviewPolicyMutableState } = await import(new URL("dist/v11/shared/reviewPolicy/reviewPolicyMutationEligibility.js", baseUrl).href);
 const { readStateSnapshot, withStateWriteLock } = await import(new URL("dist/v11/infrastructure/state/stateStore.js", baseUrl).href);
@@ -144,12 +150,15 @@ const result = await withStateWriteLock(statePath, 5000, async () => {
 
   const updated = await updateBubbleReviewPolicy({
     bubbleTomlPath,
-    patch: {
-      review_loop_mode: reviewLoopMode,
-      ...(metaReviewAutoReworkMinSeverity === undefined
+    patch: buildSharedUiReviewPolicyPatch({
+      reviewLoopMode,
+      ...(reviewBlockingMinSeverity === undefined
         ? {}
-        : { meta_review_auto_rework_min_severity: metaReviewAutoReworkMinSeverity })
-    }
+        : { reviewBlockingMinSeverity })
+    }),
+    ...(expectedBubbleToml === undefined
+      ? {}
+      : { expectedContent: expectedBubbleToml })
   });
 
   if (updated.kind === "conflict") {

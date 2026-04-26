@@ -1,5 +1,6 @@
 import {
   DEFAULT_REVIEW_POLICY_AUTO_REWORK_MIN_SEVERITY,
+  DEFAULT_REVIEW_POLICY_REVIEWER_BLOCKING_MIN_SEVERITY,
   DEFAULT_REVIEW_POLICY_LOOP_MODE
 } from "../../../config/defaults.js";
 import type {
@@ -122,6 +123,9 @@ export function normalizeBubbleReviewPolicy(
   return {
     review_loop_mode:
       config.review_policy?.review_loop_mode ?? DEFAULT_REVIEW_POLICY_LOOP_MODE,
+    reviewer_blocking_min_severity:
+      config.review_policy?.reviewer_blocking_min_severity
+      ?? DEFAULT_REVIEW_POLICY_REVIEWER_BLOCKING_MIN_SEVERITY,
     meta_review_auto_rework_min_severity:
       config.review_policy?.meta_review_auto_rework_min_severity
       ?? DEFAULT_REVIEW_POLICY_AUTO_REWORK_MIN_SEVERITY
@@ -137,6 +141,8 @@ export function buildBubbleReviewPolicyRuntimeView(
       requested_loop_mode: normalized.review_loop_mode,
       effective_loop_mode: "full",
       support_status: "guarded",
+      reviewer_blocking_min_severity:
+        normalized.reviewer_blocking_min_severity,
       meta_review_auto_rework_min_severity:
         normalized.meta_review_auto_rework_min_severity,
       blocked_reason_code: REVIEW_POLICY_META_ONLY_GUARDED,
@@ -149,6 +155,7 @@ export function buildBubbleReviewPolicyRuntimeView(
     requested_loop_mode: normalized.review_loop_mode,
     effective_loop_mode: normalized.review_loop_mode,
     support_status: "enabled",
+    reviewer_blocking_min_severity: normalized.reviewer_blocking_min_severity,
     meta_review_auto_rework_min_severity:
       normalized.meta_review_auto_rework_min_severity
   };
@@ -164,6 +171,8 @@ export function buildPassPathReviewPolicyRuntimeView(input: {
       requested_loop_mode: normalized.review_loop_mode,
       effective_loop_mode: normalized.review_loop_mode,
       support_status: "enabled",
+      reviewer_blocking_min_severity:
+        normalized.reviewer_blocking_min_severity,
       meta_review_auto_rework_min_severity:
         normalized.meta_review_auto_rework_min_severity
     };
@@ -174,6 +183,8 @@ export function buildPassPathReviewPolicyRuntimeView(input: {
       requested_loop_mode: normalized.review_loop_mode,
       effective_loop_mode: normalized.review_loop_mode,
       support_status: "enabled",
+      reviewer_blocking_min_severity:
+        normalized.reviewer_blocking_min_severity,
       meta_review_auto_rework_min_severity:
         normalized.meta_review_auto_rework_min_severity
     };
@@ -183,6 +194,7 @@ export function buildPassPathReviewPolicyRuntimeView(input: {
     requested_loop_mode: normalized.review_loop_mode,
     effective_loop_mode: "full",
     support_status: "guarded",
+    reviewer_blocking_min_severity: normalized.reviewer_blocking_min_severity,
     meta_review_auto_rework_min_severity:
       normalized.meta_review_auto_rework_min_severity,
     blocked_reason_code: REVIEW_POLICY_META_ONLY_ACTIVATION_UNRESOLVED,

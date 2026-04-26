@@ -6,8 +6,10 @@ import type {
 import { buildBubbleReviewPolicyRuntimeView } from "../../shared/reviewPolicy/reviewPolicyRuntime.js";
 import { isReviewPolicyMutableState } from "../../shared/reviewPolicy/reviewPolicyMutationEligibility.js";
 import {
+  buildSharedUiReviewPolicyPatch,
   REVIEW_POLICY_WRITE_CONFLICT,
-  updateBubbleReviewPolicy
+  updateBubbleReviewPolicy,
+  writeBubbleTomlAtomically
 } from "../../shared/reviewPolicy/updateBubbleReviewPolicy.js";
 import { statusCommandDependencyDefaults } from "../../shared/status/statusCommandDependencyDefaults.js";
 import {
@@ -75,15 +77,12 @@ export interface UpdateBubbleReviewPolicyForUiDependencies {
 }
 
 function buildReviewPolicyPatch(input: UiUpdateBubbleReviewPolicyInput) {
-  return {
-    review_loop_mode: input.reviewLoopMode,
-    ...(input.metaReviewAutoReworkMinSeverity !== undefined
-      ? {
-          meta_review_auto_rework_min_severity:
-            input.metaReviewAutoReworkMinSeverity
-        }
+  return buildSharedUiReviewPolicyPatch({
+    reviewLoopMode: input.reviewLoopMode,
+    ...(input.reviewBlockingMinSeverity !== undefined
+      ? { reviewBlockingMinSeverity: input.reviewBlockingMinSeverity }
       : {})
-  };
+  });
 }
 
 async function updateLocalBubbleReviewPolicy(input: {
@@ -122,21 +121,54 @@ async function updateRemoteBubbleReviewPolicyForUi(input: {
       expectedHost: remotePointer.host
     });
 
-  const remoteResult =
-    await input.dependencies.executeRemoteBubbleReviewPolicyCommand({
+  const localResult = await updateLocalBubbleReviewPolicy({
+    command: input.command,
+    bubbleTomlPath: input.resolved.bubblePaths.bubbleTomlPath,
+    ...(input.command.expectedBubbleToml !== undefined
+      ? { expectedBubbleToml: input.command.expectedBubbleToml }
+      : {})
+  });
+  if (localResult.kind === "conflict") {
+    throw new UiBubbleReviewPolicyConflictError({
       bubbleId: input.command.bubbleId,
-      remoteClonePath: remotePointer.remoteClonePath,
-      remoteTarget,
-      reviewLoopMode: input.command.reviewLoopMode,
-      ...(input.command.metaReviewAutoReworkMinSeverity !== undefined
-        ? {
-            metaReviewAutoReworkMinSeverity:
-              input.command.metaReviewAutoReworkMinSeverity
-          }
-        : {})
+      currentBubbleToml: localResult.currentBubbleToml,
+      currentReviewPolicy: buildBubbleReviewPolicyRuntimeView(
+        localResult.currentConfig
+      )
     });
+  }
+
+  let remoteResult;
+  try {
+    remoteResult =
+      await input.dependencies.executeRemoteBubbleReviewPolicyCommand({
+        bubbleId: input.command.bubbleId,
+        remoteClonePath: remotePointer.remoteClonePath,
+        remoteTarget,
+        reviewLoopMode: input.command.reviewLoopMode,
+        ...(input.command.expectedBubbleToml !== undefined
+          ? { expectedBubbleToml: input.command.expectedBubbleToml }
+          : {}),
+        ...(input.command.reviewBlockingMinSeverity !== undefined
+          ? {
+              reviewBlockingMinSeverity:
+                input.command.reviewBlockingMinSeverity
+            }
+          : {})
+      });
+  } catch (error) {
+    await writeBubbleTomlAtomically({
+      bubbleTomlPath: input.resolved.bubblePaths.bubbleTomlPath,
+      nextBubbleToml: localResult.previousBubbleToml
+    });
+    throw error;
+  }
 
   if (remoteResult.kind === "conflict") {
+    await writeBubbleTomlAtomically({
+      bubbleTomlPath: input.resolved.bubblePaths.bubbleTomlPath,
+      nextBubbleToml: localResult.previousBubbleToml
+    });
     if (remoteResult.reasonCode === REVIEW_POLICY_STATE_CONFLICT) {
       throw new UiBubbleReviewPolicyStateConflictError({
         bubbleId: input.command.bubbleId,
@@ -151,20 +183,6 @@ async function updateRemoteBubbleReviewPolicyForUi(input: {
       currentReviewPolicy:
         remoteResult.currentReviewPolicy
         ?? buildBubbleReviewPolicyRuntimeView(input.resolved.bubbleConfig)
-    });
-  }
-
-  const localResult = await updateLocalBubbleReviewPolicy({
-    command: input.command,
-    bubbleTomlPath: input.resolved.bubblePaths.bubbleTomlPath
-  });
-  if (localResult.kind === "conflict") {
-    throw new UiBubbleReviewPolicyConflictError({
-      bubbleId: input.command.bubbleId,
-      currentBubbleToml: localResult.currentBubbleToml,
-      currentReviewPolicy: buildBubbleReviewPolicyRuntimeView(
-        localResult.currentConfig
-      )
     });
   }
 

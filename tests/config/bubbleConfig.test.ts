@@ -144,11 +144,13 @@ describe("bubble config schema", () => {
     const config = parseBubbleConfigToml(`${baseToml}
 [review_policy]
 review_loop_mode = "meta_only"
+reviewer_blocking_min_severity = "P2"
 meta_review_auto_rework_min_severity = "P2"
 `);
 
     expect(config.review_policy).toEqual({
       review_loop_mode: "meta_only",
+      reviewer_blocking_min_severity: "P2",
       meta_review_auto_rework_min_severity: "P2"
     });
 
@@ -158,6 +160,7 @@ meta_review_auto_rework_min_severity = "P2"
     expect(rendered).toContain('meta_review_auto_rework_min_severity = "P2"');
     expect(parseBubbleConfigToml(rendered).review_policy).toEqual({
       review_loop_mode: "meta_only",
+      reviewer_blocking_min_severity: "P2",
       meta_review_auto_rework_min_severity: "P2"
     });
   });
@@ -331,6 +334,7 @@ round_gate_applies_after = -1
       bubble_branch: "bubble/b_test_01",
       review_policy: {
         review_loop_mode: "invalid",
+        reviewer_blocking_min_severity: "P1",
         meta_review_auto_rework_min_severity: "P1"
       },
       agents: {
@@ -368,6 +372,7 @@ round_gate_applies_after = -1
       bubble_branch: "bubble/b_test_01",
       review_policy: {
         review_loop_mode: "full",
+        reviewer_blocking_min_severity: "P0",
         meta_review_auto_rework_min_severity: "P0"
       },
       agents: {
@@ -388,6 +393,13 @@ round_gate_applies_after = -1
     if (result.ok) {
       return;
     }
+    expect(
+      result.errors.some(
+        (error) =>
+          error.path === "review_policy.reviewer_blocking_min_severity"
+          && error.message.includes("REVIEW_POLICY_THRESHOLD_INVALID")
+      )
+    ).toBe(true);
     expect(
       result.errors.some(
         (error) =>
@@ -417,6 +429,7 @@ round_gate_applies_after = -1
       },
       review_policy: {
         review_loop_mode: "full",
+        reviewer_blocking_min_severity: "P1",
         meta_review_auto_rework_min_severity: "P1",
         unsupported_flag: true
       }

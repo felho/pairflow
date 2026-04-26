@@ -195,7 +195,7 @@ export function parseDeleteBody(body: unknown): {
 
 export function parseReviewPolicyBody(body: unknown): {
   reviewLoopMode: BubbleReviewLoopMode;
-  metaReviewAutoReworkMinSeverity?: BubbleReviewAutoReworkSeverity | undefined;
+  reviewBlockingMinSeverity?: BubbleReviewAutoReworkSeverity | undefined;
   expectedBubbleToml?: string | undefined;
 } {
   if (typeof body !== "object" || body === null || Array.isArray(body)) {
@@ -211,6 +211,17 @@ export function parseReviewPolicyBody(body: unknown): {
     );
   }
 
+  const legacyMetaReviewAutoReworkMinSeverity =
+    (body as { metaReviewAutoReworkMinSeverity?: unknown })
+      .metaReviewAutoReworkMinSeverity;
+  if (legacyMetaReviewAutoReworkMinSeverity !== undefined) {
+    throwApiError(
+      badRequest(
+        "Field `metaReviewAutoReworkMinSeverity` is no longer supported; use `reviewBlockingMinSeverity`."
+      )
+    );
+  }
+
   const expectedBubbleToml =
     (body as { expectedBubbleToml?: unknown }).expectedBubbleToml;
   if (
@@ -222,24 +233,23 @@ export function parseReviewPolicyBody(body: unknown): {
     );
   }
 
-  const metaReviewAutoReworkMinSeverity =
-    (body as { metaReviewAutoReworkMinSeverity?: unknown })
-      .metaReviewAutoReworkMinSeverity;
+  const reviewBlockingMinSeverity =
+    (body as { reviewBlockingMinSeverity?: unknown }).reviewBlockingMinSeverity;
   if (
-    metaReviewAutoReworkMinSeverity !== undefined
-    && !isBubbleReviewAutoReworkSeverity(metaReviewAutoReworkMinSeverity)
+    reviewBlockingMinSeverity !== undefined
+    && !isBubbleReviewAutoReworkSeverity(reviewBlockingMinSeverity)
   ) {
     throwApiError(
       badRequest(
-        "Field `metaReviewAutoReworkMinSeverity` must be one of: P1, P2, P3."
+        "Field `reviewBlockingMinSeverity` must be one of: P1, P2, P3."
       )
     );
   }
 
   return {
     reviewLoopMode,
-    ...(metaReviewAutoReworkMinSeverity !== undefined
-      ? { metaReviewAutoReworkMinSeverity }
+    ...(reviewBlockingMinSeverity !== undefined
+      ? { reviewBlockingMinSeverity }
       : {}),
     ...(expectedBubbleToml !== undefined ? { expectedBubbleToml } : {})
   };

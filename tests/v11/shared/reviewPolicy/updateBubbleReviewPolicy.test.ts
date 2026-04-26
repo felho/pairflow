@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { parseBubbleConfigToml } from "../../../../src/config/bubbleConfig.js";
 import {
+  buildSharedUiReviewPolicyPatch,
   REVIEW_POLICY_WRITE_CONFLICT,
   updateBubbleReviewPolicy
 } from "../../../../src/v11/shared/reviewPolicy/updateBubbleReviewPolicy.js";
@@ -42,6 +43,29 @@ async function createBubbleTomlFixture(content = baseToml): Promise<string> {
 }
 
 describe("updateBubbleReviewPolicy", () => {
+  it("maps reviewBlockingMinSeverity into both persisted thresholds", () => {
+    expect(
+      buildSharedUiReviewPolicyPatch({
+        reviewLoopMode: "meta_only",
+        reviewBlockingMinSeverity: "P2"
+      })
+    ).toEqual({
+      review_loop_mode: "meta_only",
+      reviewer_blocking_min_severity: "P2",
+      meta_review_auto_rework_min_severity: "P2"
+    });
+  });
+
+  it("omits both threshold fields when reviewBlockingMinSeverity is not provided", () => {
+    expect(
+      buildSharedUiReviewPolicyPatch({
+        reviewLoopMode: "full"
+      })
+    ).toEqual({
+      review_loop_mode: "full"
+    });
+  });
+
   it("updates only the review_policy block and keeps the rest of the config stable", async () => {
     const bubbleTomlPath = await createBubbleTomlFixture();
     const previousBubbleToml = await readFile(bubbleTomlPath, "utf8");
@@ -51,6 +75,7 @@ describe("updateBubbleReviewPolicy", () => {
       expectedContent: previousBubbleToml,
       patch: {
         review_loop_mode: "meta_only",
+        reviewer_blocking_min_severity: "P2",
         meta_review_auto_rework_min_severity: "P2"
       }
     });
@@ -65,10 +90,12 @@ describe("updateBubbleReviewPolicy", () => {
     expect(result.nextConfig.commands).toEqual(result.previousConfig.commands);
     expect(result.nextConfig.review_policy).toEqual({
       review_loop_mode: "meta_only",
+      reviewer_blocking_min_severity: "P2",
       meta_review_auto_rework_min_severity: "P2"
     });
     expect(parseBubbleConfigToml(result.nextBubbleToml).review_policy).toEqual({
       review_loop_mode: "meta_only",
+      reviewer_blocking_min_severity: "P2",
       meta_review_auto_rework_min_severity: "P2"
     });
   });
@@ -86,6 +113,7 @@ describe("updateBubbleReviewPolicy", () => {
       bubbleTomlPath,
       expectedContent: original,
       patch: {
+        reviewer_blocking_min_severity: "P3",
         meta_review_auto_rework_min_severity: "P3"
       }
     });
@@ -103,6 +131,7 @@ describe("updateBubbleReviewPolicy", () => {
     const result = await updateBubbleReviewPolicy({
       bubbleTomlPath,
       patch: {
+        reviewer_blocking_min_severity: "P3",
         meta_review_auto_rework_min_severity: "P3"
       }
     });
@@ -114,11 +143,73 @@ describe("updateBubbleReviewPolicy", () => {
 
     expect(result.nextConfig.review_policy).toEqual({
       review_loop_mode: "full",
+      reviewer_blocking_min_severity: "P3",
       meta_review_auto_rework_min_severity: "P3"
     });
     expect(parseBubbleConfigToml(await readFile(bubbleTomlPath, "utf8")).review_policy).toEqual({
       review_loop_mode: "full",
+      reviewer_blocking_min_severity: "P3",
       meta_review_auto_rework_min_severity: "P3"
+    });
+  });
+
+  it("preserves the meta-review threshold when only the reviewer threshold patch is provided", async () => {
+    const bubbleTomlPath = await createBubbleTomlFixture();
+
+    await updateBubbleReviewPolicy({
+      bubbleTomlPath,
+      patch: {
+        reviewer_blocking_min_severity: "P2",
+        meta_review_auto_rework_min_severity: "P3"
+      }
+    });
+
+    const result = await updateBubbleReviewPolicy({
+      bubbleTomlPath,
+      patch: {
+        reviewer_blocking_min_severity: "P1"
+      }
+    });
+
+    expect(result.kind).toBe("success");
+    if (result.kind !== "success") {
+      return;
+    }
+
+    expect(result.nextConfig.review_policy).toEqual({
+      review_loop_mode: "full",
+      reviewer_blocking_min_severity: "P1",
+      meta_review_auto_rework_min_severity: "P3"
+    });
+  });
+
+  it("preserves the reviewer threshold when only the meta-review threshold patch is provided", async () => {
+    const bubbleTomlPath = await createBubbleTomlFixture();
+
+    await updateBubbleReviewPolicy({
+      bubbleTomlPath,
+      patch: {
+        reviewer_blocking_min_severity: "P2",
+        meta_review_auto_rework_min_severity: "P3"
+      }
+    });
+
+    const result = await updateBubbleReviewPolicy({
+      bubbleTomlPath,
+      patch: {
+        meta_review_auto_rework_min_severity: "P1"
+      }
+    });
+
+    expect(result.kind).toBe("success");
+    if (result.kind !== "success") {
+      return;
+    }
+
+    expect(result.nextConfig.review_policy).toEqual({
+      review_loop_mode: "full",
+      reviewer_blocking_min_severity: "P2",
+      meta_review_auto_rework_min_severity: "P1"
     });
   });
 
@@ -130,6 +221,7 @@ describe("updateBubbleReviewPolicy", () => {
     const result = await updateBubbleReviewPolicy({
       bubbleTomlPath,
       patch: {
+        reviewer_blocking_min_severity: "P2",
         meta_review_auto_rework_min_severity: "P2"
       },
       writeFile: async (path, content, encoding) => {
@@ -163,6 +255,7 @@ describe("updateBubbleReviewPolicy", () => {
       updateBubbleReviewPolicy({
         bubbleTomlPath,
         patch: {
+          reviewer_blocking_min_severity: "P2",
           meta_review_auto_rework_min_severity: "P2"
         },
         writeFile: async (path, content, encoding) => {
@@ -196,6 +289,7 @@ describe("updateBubbleReviewPolicy", () => {
       updateBubbleReviewPolicy({
         bubbleTomlPath,
         patch: {
+          reviewer_blocking_min_severity: "P2",
           meta_review_auto_rework_min_severity: "P2"
         },
         rename: async () => {
