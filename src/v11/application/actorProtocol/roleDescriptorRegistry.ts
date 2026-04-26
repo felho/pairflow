@@ -2,6 +2,7 @@ import type {
   AgentName,
   AgentRole,
   BubbleAgentsConfig,
+  BubbleReviewAutoReworkSeverity,
   BubbleExecutionContextAwaitedOutputType,
   BubbleStateSnapshot,
   PairflowCommandProfile,
@@ -131,6 +132,7 @@ interface PromptConcernBuildInputBase {
   pairflowCommandProfile: PairflowCommandProfile;
   taskArtifactPath: string;
   reviewArtifactType?: ReviewArtifactType;
+  reviewerBlockingMinSeverity?: BubbleReviewAutoReworkSeverity;
   policySnapshotPathAbs?: string;
   kickoffDiagnostic?: string;
   reviewerTestDirectiveLine?: string;
@@ -663,10 +665,21 @@ const promptConcernCatalog: Readonly<
     buildReviewerPassOutputContractGuidance(),
   reviewer_findings_pass_instruction: (input) =>
     buildReviewerFindingsPassInstruction(
-      input.reviewArtifactType ?? "code"
+      input.reviewArtifactType ?? "code",
+      input.reviewerBlockingMinSeverity !== undefined
+        ? {
+            reviewerBlockingMinSeverity: input.reviewerBlockingMinSeverity
+          }
+        : {}
     ),
-  reviewer_canonical_command_gate_lines: () =>
-    buildReviewerCanonicalCommandGateLines(),
+  reviewer_canonical_command_gate_lines: (input) =>
+    buildReviewerCanonicalCommandGateLines(
+      input.reviewerBlockingMinSeverity !== undefined
+        ? {
+            reviewerBlockingMinSeverity: input.reviewerBlockingMinSeverity
+          }
+        : {}
+    ),
   reviewer_no_manual_state_edits: () =>
     "Never edit transcript/inbox/state files manually.",
   document_primary_artifact_reviewer_guardrail: (input) =>

@@ -17,6 +17,7 @@ import type { resolveResumeKickoffMessages } from "./startCommandResumePrompts.j
 import type { ResolvedStartBubbleDependencies } from "./startCommandOrchestration.js";
 import type { StartExecutionContext } from "./startCommandContext.js";
 import type { AgentName } from "../../../types/bubble.js";
+import { DEFAULT_REVIEW_POLICY_REVIEWER_BLOCKING_MIN_SEVERITY } from "../../../config/defaults.js";
 import type { PairflowRemoteWorkspaceAuthority } from "../../shared/command/pairflowCommandBootstrap.js";
 
 function shouldSubmitStartupPrompt(agentName: AgentName): boolean {
@@ -154,6 +155,9 @@ export async function launchFreshTmuxSession(input: {
         policySnapshotPathAbs: input.context.policySnapshotPathAbs,
         pairflowCommandProfile: input.context.resolved.bubbleConfig.pairflow_command_profile,
         reviewArtifactType: input.context.resolved.bubbleConfig.review_artifact_type,
+        reviewerBlockingMinSeverity:
+          input.context.resolved.bubbleConfig.review_policy?.reviewer_blocking_min_severity
+          ?? DEFAULT_REVIEW_POLICY_REVIEWER_BLOCKING_MIN_SEVERITY,
         ...(input.context.reviewerFocus !== undefined
           ? { reviewerFocus: input.context.reviewerFocus }
           : {}),
@@ -272,6 +276,9 @@ export async function launchResumeTmuxSession(input: {
         state: input.context.loadedState.state,
         transcriptSummary: input.transcriptSummary,
         reviewArtifactType: input.context.resolved.bubbleConfig.review_artifact_type,
+        reviewerBlockingMinSeverity:
+          input.context.resolved.bubbleConfig.review_policy?.reviewer_blocking_min_severity
+          ?? DEFAULT_REVIEW_POLICY_REVIEWER_BLOCKING_MIN_SEVERITY,
         ...(input.reviewerTestDirectiveLine !== undefined
           ? { reviewerTestDirectiveLine: input.reviewerTestDirectiveLine }
           : {}),

@@ -1909,6 +1909,117 @@ describe("emitDeliveryNotificationAck", () => {
     expect(findingsMessage).not.toContain(REVIEWER_COMMAND_GATE_REQ_B);
   });
 
+  it("projects non-default reviewer thresholds into tmux reviewer delivery without forbidden drift", async () => {
+    const calls: string[][] = [];
+    let lastDeliveryMessage = "";
+    const runner: TmuxRunner = (args): Promise<TmuxRunResult> => {
+      calls.push(args);
+      if (args[0] === "send-keys" && args[3] === "-l") {
+        lastDeliveryMessage = args[4] ?? "";
+      }
+      if (args[0] === "capture-pane") {
+        return Promise.resolve({
+          stdout: lastDeliveryMessage,
+          stderr: "",
+          exitCode: 0
+        });
+      }
+      return Promise.resolve({
+        stdout: "",
+        stderr: "",
+        exitCode: 0
+      });
+    };
+
+    await emitDeliveryNotificationAck({
+      bubbleId: "b_delivery_01",
+      bubbleConfig: {
+        ...baseConfig,
+        reviewer_context_mode: "fresh",
+        review_policy: {
+          review_loop_mode: "full",
+          reviewer_blocking_min_severity: "P2",
+          meta_review_auto_rework_min_severity: "P3"
+        }
+      },
+      sessionsPath: "/tmp/repo/.pairflow/runtime/sessions.json",
+      envelope: createEnvelope({
+        id: "msg_20260222_106",
+        round: 2
+      }),
+      runner,
+      readSessionsRegistry: () => Promise.resolve(createRegistry())
+    });
+    await emitDeliveryNotificationAck({
+      bubbleId: "b_delivery_01",
+      bubbleConfig: {
+        ...baseConfig,
+        reviewer_context_mode: "fresh",
+        review_policy: {
+          review_loop_mode: "full",
+          reviewer_blocking_min_severity: "P1",
+          meta_review_auto_rework_min_severity: "P3"
+        }
+      },
+      sessionsPath: "/tmp/repo/.pairflow/runtime/sessions.json",
+      envelope: createEnvelope({
+        id: "msg_20260222_107",
+        round: 2,
+        payload: {
+          summary: "handoff findings branch",
+          findings: [
+            {
+              severity: "P2",
+              title: "finding"
+            }
+          ]
+        }
+      }),
+      runner,
+      readSessionsRegistry: () => Promise.resolve(createRegistry())
+    });
+
+    const reviewerMessages = calls.filter(
+      (call) =>
+        call[0] === "send-keys" &&
+        call[2] === "pf-b_delivery_01:0.2" &&
+        call[3] === "-l" &&
+        call[4]?.includes("PASS codex->claude")
+    );
+    expect(reviewerMessages).toHaveLength(2);
+
+    const cleanMessage = reviewerMessages[0]?.[4] ?? "";
+    const findingsMessage = reviewerMessages[1]?.[4] ?? "";
+
+    expect(cleanMessage).toContain(
+      "If review round is at or above `severity_gate_round` and no findings meet the current post-gate blocking threshold (`review_policy.reviewer_blocking_min_severity=P2`)"
+    );
+    expect(cleanMessage).toContain(
+      "Routing matrix (copy-paste after resolving `executionContext` from `pairflow bubble status --json`)"
+    );
+    expect(cleanMessage).toContain(
+      "review_policy.reviewer_blocking_min_severity=P2"
+    );
+    expect(cleanMessage).toContain(
+      "Findings below that threshold (for example `P3`-only sets) are advisory for routing after `severity_gate_round`"
+    );
+    expectNoForbiddenReviewerCommandGateTokens(cleanMessage);
+
+    expect(findingsMessage).toContain(
+      "If findings meeting the current post-gate blocking threshold remain under current scope policy, keep using `pairflow agent emit --kind pass ... --finding ...`."
+    );
+    expect(findingsMessage).toContain(
+      "Routing matrix (copy-paste after resolving `executionContext` from `pairflow bubble status --json`)"
+    );
+    expect(findingsMessage).toContain(
+      "review_policy.reviewer_blocking_min_severity=P1"
+    );
+    expect(findingsMessage).toContain(
+      "Findings below that threshold (for example `P2/P3`-only sets) are advisory for routing after `severity_gate_round`"
+    );
+    expectNoForbiddenReviewerCommandGateTokens(findingsMessage);
+  });
+
   it("keeps compact reviewer policy delivery on every fresh-mode reviewer handoff round with directive", async () => {
     const calls: string[][] = [];
     let lastDeliveryMessage = "";

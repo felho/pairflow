@@ -23,6 +23,12 @@ describe("buildReviewerSeverityOntologyReminder", () => {
       "Blocker severities (`P0/P1`) require concrete evidence"
     );
     expect(reviewerSeverityOntologyRuntimeBlockMarkdown).toContain(
+      "Post-gate reviewer routing is controlled by `review_policy.reviewer_blocking_min_severity`"
+    );
+    expect(reviewerSeverityOntologyRuntimeBlockMarkdown).toContain(
+      "Default baseline `review_policy.reviewer_blocking_min_severity=P3`"
+    );
+    expect(reviewerSeverityOntologyRuntimeBlockMarkdown).toContain(
       "Out-of-scope observations should be notes (`P3`)"
     );
     expect(reviewerSeverityOntologyFullMarkdown).toContain(
@@ -35,13 +41,13 @@ describe("buildReviewerSeverityOntologyReminder", () => {
       "Reviewer Severity Ontology (v1)"
     );
     expect(reviewerSeverityOntologyFullPromptText).toContain(
-      "Round `>= severity_gate_round` with blocker findings under scope policy: reviewer should request a fix cycle with canonical pass emit (`pairflow agent emit --kind pass ...`)."
+      "Round `>= severity_gate_round` with one or more findings that meet `review_policy.reviewer_blocking_min_severity` under scope policy: reviewer should request a fix cycle with canonical pass emit (`pairflow agent emit --kind pass ...`)."
     );
     expect(reviewerSeverityOntologyFullPromptText).toContain(
-      "Document scope blocker means `P0/P1` with strict qualifiers (`timing=required-now` + `layer=L1`)."
+      "Document scope blocker-grade `P0/P1` still requires strict qualifiers (`timing=required-now` + `layer=L1`); without those qualifiers the finding is treated as `P2` for routing-threshold evaluation."
     );
     expect(reviewerSeverityOntologyFullPromptText).toContain(
-      "Round `>= severity_gate_round` with only non-blocking findings (`P2/P3`) or clean result: reviewer should use canonical convergence emit (`pairflow agent emit --kind convergence ...`)."
+      "Round `>= severity_gate_round` with only findings below the current threshold or clean result: reviewer should use canonical convergence emit (`pairflow agent emit --kind convergence ...`)."
     );
     expect(reviewerSeverityOntologyFullPromptText).not.toContain(
       "pairflow:runtime-reminder:start"
@@ -89,5 +95,31 @@ describe("buildReviewerSeverityOntologyReminder", () => {
     );
 
     expect(reviewerSeverityOntologyFullMarkdown).toBe(canonicalDoc.trimEnd());
+  });
+
+  it("keeps the generated runtime block structurally anchored to the canonical marker slice", async () => {
+    const repoRoot = resolve(
+      dirname(fileURLToPath(import.meta.url)),
+      "../../.."
+    );
+    const canonicalDoc = await readFile(
+      resolve(repoRoot, reviewerSeverityOntologySourceDoc),
+      "utf8"
+    );
+    const startMarker = "<!-- pairflow:runtime-reminder:start -->";
+    const endMarker = "<!-- pairflow:runtime-reminder:end -->";
+    const startIndex = canonicalDoc.indexOf(startMarker);
+    const endIndex = canonicalDoc.indexOf(endMarker);
+
+    expect(startIndex).toBeGreaterThanOrEqual(0);
+    expect(endIndex).toBeGreaterThan(startIndex);
+
+    const canonicalRuntimeBlock = canonicalDoc
+      .slice(startIndex + startMarker.length, endIndex)
+      .trim();
+
+    expect(reviewerSeverityOntologyRuntimeBlockMarkdown).toBe(
+      canonicalRuntimeBlock
+    );
   });
 });

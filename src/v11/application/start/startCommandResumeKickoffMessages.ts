@@ -1,5 +1,6 @@
 import type {
   AgentName,
+  BubbleReviewAutoReworkSeverity,
   BubbleStateSnapshot,
   PairflowCommandProfile,
   ReviewArtifactType
@@ -25,6 +26,7 @@ export function resolveResumeKickoffMessages(input: {
   reviewerAgent: AgentName;
   metaReviewerAgent: AgentName;
   reviewerTestDirectiveLine?: string;
+  reviewerBlockingMinSeverity?: BubbleReviewAutoReworkSeverity;
 }): {
   implementerKickoffMessage?: string;
   reviewerKickoffMessage?: string;
@@ -95,6 +97,12 @@ export function resolveResumeKickoffMessages(input: {
         reviewArtifactType: input.reviewArtifactType,
         pairflowCommandProfile: input.pairflowCommandProfile,
         projectionVariant,
+        ...(input.reviewerBlockingMinSeverity !== undefined
+          ? {
+              reviewerBlockingMinSeverity:
+                input.reviewerBlockingMinSeverity
+            }
+          : {}),
         ...(input.reviewerTestDirectiveLine !== undefined
           ? { reviewerTestDirectiveLine: input.reviewerTestDirectiveLine }
           : {})
