@@ -108,7 +108,7 @@ Pain points:
 
 ## Auto-Rework Budget Contract
 
-1. `auto_rework_limit` default: `5`.
+1. `auto_rework_limit` default: `10`.
 2. `auto_rework_count` increments only when Pairflow successfully dispatches automatic `request-rework`.
 3. Manual human-triggered rework does not increment `auto_rework_count`.
 4. Auto-review trigger repeats on each new reviewer convergence while lifecycle remains `RUNNING` until budget is exhausted.

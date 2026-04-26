@@ -76,7 +76,7 @@ export const gateSignalLevels = ["warning", "info"] as const;
 
 export type GateSignalLevel = (typeof gateSignalLevels)[number];
 
-export const DEFAULT_META_REVIEW_AUTO_REWORK_LIMIT = 5;
+export const DEFAULT_META_REVIEW_AUTO_REWORK_LIMIT = 10;
 
 export const metaReviewRunStatuses = [
   "success",
