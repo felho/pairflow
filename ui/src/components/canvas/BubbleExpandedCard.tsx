@@ -161,20 +161,6 @@ export function BubbleExpandedCard(props: BubbleExpandedCardProps): JSX.Element 
     attachSource.state === "WAITING_HUMAN" && props.detail !== null
       ? props.detail.inbox.items.find((item) => item.type === "HUMAN_QUESTION") ?? null
       : null;
-  const timelineExtras =
-    attachSource.state === "READY_FOR_HUMAN_APPROVAL" &&
-    props.detail !== null ? (
-      <div className="space-y-2 pb-1">
-        <div className="rounded-[10px] border border-emerald-500/15 bg-emerald-500/[0.05] px-3 py-2.5">
-          <div className="mb-1 text-[9px] font-semibold uppercase tracking-wider text-emerald-500">
-            Approval Package
-          </div>
-          <div className="text-[10px] leading-relaxed text-[#888]">
-            Human gate is active after meta-reviewer. Approve or request rework.
-          </div>
-        </div>
-      </div>
-    ) : null;
   // Keep expanded cards at a fixed rendered footprint so canvas collision/layout
   // dimensions match what users see on screen.
 
@@ -350,7 +336,6 @@ export function BubbleExpandedCard(props: BubbleExpandedCardProps): JSX.Element 
           isLoading={props.timelineLoading}
           error={props.timelineError}
           compact={timelineCompact}
-          extras={timelineExtras}
         />
       </div>
     </article>

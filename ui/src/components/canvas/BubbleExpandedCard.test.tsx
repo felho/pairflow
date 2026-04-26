@@ -81,7 +81,7 @@ describe("BubbleExpandedCard", () => {
     });
   });
 
-  it("shows approval package in detail surface without dedicated meta-review card", () => {
+  it("does not render a separate approval package card in ready-for-human-approval", () => {
     renderExpandedCard({
       bubbleState: "READY_FOR_HUMAN_APPROVAL",
       detail: bubbleDetail({
@@ -92,10 +92,10 @@ describe("BubbleExpandedCard", () => {
     });
 
     expect(screen.queryByText("Meta Review")).not.toBeInTheDocument();
-    expect(screen.getByText("Approval Package")).toBeInTheDocument();
+    expect(screen.queryByText("Approval Package")).not.toBeInTheDocument();
   });
 
-  it("prefers detail state and round for approval package rendering", () => {
+  it("prefers detail state and round for header rendering", () => {
     renderExpandedCard({
       bubble: bubbleCard({
         bubbleId: "b-expanded-1",
@@ -113,7 +113,6 @@ describe("BubbleExpandedCard", () => {
       }
     });
 
-    expect(screen.getByText("Approval Package")).toBeInTheDocument();
     expect(screen.getByText("R6")).toBeInTheDocument();
     expect(screen.queryByText("R2")).not.toBeInTheDocument();
   });
