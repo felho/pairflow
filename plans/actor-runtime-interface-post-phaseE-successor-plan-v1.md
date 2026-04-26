@@ -538,7 +538,7 @@ owners:
      - `O3-T3` topology slot catalog and tmux consumer alignment
        - task artifact: `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-opportunity3-task3-topology-slot-catalog-and-tmux-consumer-alignment.md`
    - current next bounded successor:
-     - `O3-T4`: S3 (config binding) atkotese; `BubbleAgentsConfig` shape alignment; `agent_resolution` mind a 3 role-on `config_bound`-ra konvergal; explicit replacement proof a meta-reviewer codex-when-present guardra; predecessor: `O3-T3`
+     - `O3-T4`: S3 (config binding) atkotese; additive `BubbleAgentsConfig` shape alignment + create-path `authority_producer` closure + `workflow_orchestration_consumers` es `internal_execution_consumers` explicit replacement proofja a `meta_reviewer_active_agent_codex_when_present` / `assertMetaReviewerActiveAgentCodexWhenPresent` current-tree baseline-re; `agent_resolution` mind a 3 role-on `config_bound`-ra konvergal; a state/start/meta-review touch csak ennek a fail-closed closure-nak a kovetkezmenye, nem kulon topology/public lane; predecessor: `O3-T3`
        - task artifact: `plans/tasks/actor-runtime-interface/actor-runtime-interface-opportunity3-task4-config-bound-role-resolution-alignment.md`
    - deferred successor slice:
      - `O3-T5`: public CLI/protocol surface kontrollalt nyitasa uj output kindokra; **trigger feltetel**: konkret uj output kind igeny VAGY uj role sajat kimenettel; predecessor: `O3-T4`; ha trigger nem teljesul, ez a slice `deferred` disposition-ben marad, es automatikusan nem indul el

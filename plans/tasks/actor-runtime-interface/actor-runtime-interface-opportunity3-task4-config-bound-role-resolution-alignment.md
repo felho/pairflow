@@ -182,7 +182,7 @@ owners:
 3. Canonical elements consumed here:
    - `BubbleAgentsConfig`
    - `RoleDescriptor.agent_resolution`
-   - `meta_reviewer_active_agent_codex_when_present` policy check id mint current-tree baseline replacement target
+   - `meta_reviewer_active_agent_codex_when_present` policy check id / `assertMetaReviewerActiveAgentCodexWhenPresent` current-tree baseline replacement target
    - `meta_review_result` authority-only route baseline
    - implementer/reviewer config-bound role ownership baseline.
 
@@ -196,6 +196,7 @@ owners:
    - a topology-slot consume family mar `O3-T3`-ban lezart;
    - az `O3-T4` fo munkaja a meglevo `agent_resolution` registry fact, a bubble-config authority producer, es a shared runtime consumers alignmentja;
    - a config shape valtozas es a create-path producer update ugyanennek a bounded closure-nak az authority-producer elofeltetele, nem kulon public API lane.
+   - a "state" erintettseg ebben a taskban nem kulon state-generalization lane, hanem csak a config-bound replacement proofhoz es a `workflow_orchestration_consumers` + `internal_execution_consumers` closurehoz szukseges kovetkezmeny.
 3. Mutation entrypoints / consume points:
    - `src/config/bubbleConfig.ts` parse/validate/render path
    - `src/v11/application/create/createBubblePreparation.ts` create-input -> config-input producer path
@@ -215,6 +216,7 @@ owners:
    - `src/types/protocol.ts` es `src/cli/commands/agent/emit.ts` public role/output surface nem `O3-T4`
    - `topologySlotCatalog`, pane index, tmux pane binding es dedicated-panel baseline nem `O3-T4`
    - prompt concern compose es awaited-output projection nem `O3-T4`
+   - altalanos state-schema vagy inspection-surface bovites nem cel; csak a config-bound meta-review ownership replacement proofhoz szukseges validation/invariant boundary pontok erinthetok
    - `round_role_history` shape bovitese nem cel; csak akkor erintheto, ha explicit proof mutatja, hogy kulonben a config-bound replacement nem zarhato fail-closed modon
 5. Reality note:
    - a current-tree codex-only truth negy kulon authority-kornyezetben el:
@@ -272,6 +274,7 @@ owners:
    - actor emit meta-review policy guard
    - meta-review submit authority guard
    - state snapshot authority validation
+   - configot nem lato RUNNING/meta-review ownership replacement proof
 6. Miert safe ez a collapse:
    - ugyanaz a role -> configured agent truth zarja oket;
    - a create producer es a runtime consume family ugyanannak a bubble-local config authoritynak ket oldala;
