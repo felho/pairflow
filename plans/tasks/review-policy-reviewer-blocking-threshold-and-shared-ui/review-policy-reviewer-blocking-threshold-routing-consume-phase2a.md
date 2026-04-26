@@ -39,6 +39,7 @@ owners:
 4. A pass-routing seam ma nem ownershipolja eleg expliciten a reviewer threshold threadeleset a minimalis routing inputtol a reviewer validationig.
 5. A `severity_gate_round` gate megkulonbozteti a pre-gate es post-gate koroket; ezt a task nem torolheti el.
 6. Az emit-pass orchestration caller ma a teljes `resolved.bubbleConfig` objektumot adja at a routing input buildernek, de a specnek explicit ownershiptel kell rogzitenie, hogy a threshold-threading upstream caller-seamje is ehhez a phase-hez tartozik.
+7. A canonical review-policy baseline Phase 1 ota mar `P1|P2|P3` reviewer threshold domaint es producer-oldali default `P3`-at hordoz; ez a task nem nyithat ujra sem local consumer-defaultolast, sem `P0`-val bovitett config-typet.
 
 ## L0 - Policy
 
@@ -64,8 +65,10 @@ Kossuk at a reviewer post-gate routing authorityt az uj canonical reviewer thres
 5. Allowed resolution path:
    round >= `severity_gate_round` -> scope-policy normalized structured findings aggregate -> highest effective open severity -> compare with normalized `reviewer_blocking_min_severity`.
 6. Missing-data rule:
-   reviewer threshold hianya a normalized producer miatt `P3`-ra oldodik.
-7. Phase boundary:
+   a `P3` default producer-owned Phase 1 baseline; Phase 2A consumer oldalon a thresholdnek mar explicit, normalized inputkent kell megerkeznie, es hianyzo explicit threadeles nem valthat ki uj local fallbackot.
+7. Threshold domain rule:
+   a configurable reviewer threshold domain tovabbra is `P1|P2|P3`; `P0` finding ettol fuggetlenul minden ervenyes thresholdot meetel, de ez nem indok a persisted threshold tipus vagy a Phase 1 producer-contract ujranyitasara.
+8. Phase boundary:
    - contract closure: inherited from phase1
    - producer closure: predecessor-owned
    - internal execution closure: owned here
@@ -79,7 +82,8 @@ Kossuk at a reviewer post-gate routing authorityt az uj canonical reviewer thres
 1. Parent plan gap closed:
    reviewer threshold consume semantics + routing input/threading seam completeness.
 2. Depends on:
-   [review-policy-reviewer-blocking-threshold-foundation-and-ui-phase1.md](/Users/felho/dev/pairflow/plans/tasks/review-policy-reviewer-blocking-threshold-and-shared-ui/review-policy-reviewer-blocking-threshold-foundation-and-ui-phase1.md)
+   merged and archived predecessor task:
+   [review-policy-reviewer-blocking-threshold-foundation-and-ui-phase1.md](/Users/felho/dev/pairflow/plans/archive/tasks/review-policy-reviewer-blocking-threshold-and-shared-ui/review-policy-reviewer-blocking-threshold-foundation-and-ui-phase1.md)
 3. Unlocks / impacts successors:
    [review-policy-reviewer-blocking-threshold-reviewer-facing-parity-phase2b.md](/Users/felho/dev/pairflow/plans/tasks/review-policy-reviewer-blocking-threshold-and-shared-ui/review-policy-reviewer-blocking-threshold-reviewer-facing-parity-phase2b.md)
 4. Task-list impact:
@@ -88,6 +92,7 @@ Kossuk at a reviewer post-gate routing authorityt az uj canonical reviewer thres
 ### Canonical Contract Anchors
 
 1. Source-of-truth anchors:
+   - [src/v11/shared/reviewPolicy/reviewPolicyRuntime.ts](/Users/felho/dev/pairflow/src/v11/shared/reviewPolicy/reviewPolicyRuntime.ts)
    - [src/v11/domain/pass/reviewerDecision.ts](/Users/felho/dev/pairflow/src/v11/domain/pass/reviewerDecision.ts)
    - [src/v11/domain/convergence/policyReviewerAggregate.ts](/Users/felho/dev/pairflow/src/v11/domain/convergence/policyReviewerAggregate.ts)
    - [src/v11/application/pass/reviewerPassPreparation.ts](/Users/felho/dev/pairflow/src/v11/application/pass/reviewerPassPreparation.ts)
@@ -121,13 +126,15 @@ Kossuk at a reviewer post-gate routing authorityt az uj canonical reviewer thres
    nincs uj persisted config mutation; csak command validation/routing authority es explicit input-threading valtozik.
 4. Hidden scope ruled out:
    reviewer-facing prompt/guidance surfaces, canonical ontology markdown, generated runtime reminder, operator docs, UI mutate API, meta-review gate routing.
-5. Why the declared task shape matches reality:
+5. Shared-helper compatibility note:
+   a `policyReviewerAggregate` helpernek van nem reviewer-facing downstream consume-ja is (peldaul `src/v11/domain/convergence/policyValidationSupport.ts`); ez a task nem ownershipolja azok szemantikajanak ujratervezeset, csak azt koveteli meg, hogy a reviewer routing consume lane a mar letezo aggregate contractot threshold-aware modon hasznalja, a nem reviewer-routingos consume pathok blocker/claim-parity orzese mellett.
+6. Why the declared task shape matches reality:
    a bounded slice ugyanannak a routing authority lancnak a consume oldalat zarja le a normalized review-policy outputtol a reviewer validationig, reviewer-facing projection ownership nelkul.
 
 ### Authority Boundary Map
 
 1. Authority producer:
-   phase1-ben normalizalt `review_policy.reviewer_blocking_min_severity`.
+   a Phase 1-ben lezart, `normalizeBubbleReviewPolicy(...)` helperen at normalizalt `review_policy.reviewer_blocking_min_severity`.
 2. Persisted authority:
    `.pairflow/bubbles/<id>/bubble.toml` `review_policy` blokk, predecessor ownershiptal.
 3. In-scope consumers:
@@ -207,6 +214,10 @@ Normative rules:
    unqualified document `P0/P1` finding tovabbra sem valik automatikus blockerre; elobb canonical non-blocking effective severityre downgrade-olodik, es csak ezutan ertekelheto threshold ellen.
 5. Threshold threading explicit:
    a reviewer threshold a routing input seamen es a reviewer prep call chainen is explicit adatkent jelenik meg; implicit side-channel truth nem maradhat.
+6. Consumer defaulting forbidden:
+   ha a caller seam nem tud explicit normalized reviewer thresholdot atadni, az implementacio fail-closed refinementet igenyel: a consume seamet kell szukiteni vagy explicitten threadelni, nem szabad uj local fallback thresholdot szintetizalni, es nem szabad nem ownershipolt `bubbleConfig` mellekmezokbol truth-ot visszafejteni.
+7. Threshold type stays closed:
+   a consume lane `P1|P2|P3` threshold-domainnel dolgozik; `P0` csak finding oldali severity marad.
 
 ### 3) Error Contract
 
@@ -259,6 +270,7 @@ Normative rules:
 | T5 | document-scope qualifier downgrade preserved before threshold compare | round >= gate, review artifact=`document`, declared `P0/P1` finding strict qualifier nelkul | reviewer aggregate + pass validation fut | a finding non-blocking effective severityre downgrade-olodik; routing ezt a normalized erteket fogyasztja |
 | T6 | threshold explicit routing seamre threadelve | updated review policy runtime view | `buildEmitPassContext` + `buildPassRoutingInput` + `preparePassRouting` + reviewer prep fut | a reviewer threshold explicit inputkent eljut a reviewer pass validationig |
 | T7 | clean post-gate path remains convergence | round >= gate, threshold akarmi, nincs finding | reviewer post-gate command validation/routing fut | reviewer `pass --no-findings` tiltott marad, es a canonical clean path explicit convergence |
+| T8 | flow-level pass surface proves threshold consume truth | round >= gate, workspace-level pass emit, threshold=`P2`, only `P3` findings | actual `emitPassFromWorkspace` / agent pass surface fut; kulonosen a `tests/core/agent/pass.test.ts` `"rejects reviewer non-blocking-only pass at round>=severity_gate_round with no side effects"` scenarioban | a reviewer `pass` ugyanazt a threshold-aware rejectet kapja es convergence guidance-ra terelodik; nem csak unit seam-szinten, hanem a valos command surface-en is ugyanaz a truth ervenyesul |
 
 ### 7) Review Control
 
@@ -267,24 +279,31 @@ Reviewer akkor adhat `IMPLEMENTABLE` allapotot, ha:
 2. a task nem nyitja ujra a dual-threshold producer/mutation/read-model foundationt,
 3. a pre-gate es clean-path baseline preserved behavior explicit marad,
 4. a threshold routing seam a minimalis routing input buildertol a reviewer validationig explicit,
-5. a document-scope strict qualifier downgrade es a threshold compare kapcsolata explicit source anchorral zarva van.
+5. a document-scope strict qualifier downgrade es a threshold compare kapcsolata explicit source anchorral zarva van,
+6. legalabb egy flow-szintu acceptance bizonyitja, hogy a `tests/core/agent/pass.test.ts` surface ugyanazt a threshold-driven truth-ot ervenyesiti, mint a belso unit seam-ek.
+   A minimum elvart proof a `"rejects reviewer non-blocking-only pass at round>=severity_gate_round with no side effects"` scenario vagy annak egyertelmu, ugyanilyen erossegu utodja.
 
 ## L2 - Implementation Notes (Optional)
 
 1. A threshold compare helper erdemes a meta-review severity orderinggel konzisztens maradjon, de anelkul, hogy a reviewer runtime a meta-review gate resolverre dependalna.
 2. A routing input threadelest erdemes a legkisebb stabil input seamre lehorgonyozni, ne kesobbi projection surface-re.
+3. Ha a legszukebb stabil seam mar ismerten normalized `review_policy` reszobjektumot hordoz, az elfogadhato; de a tasknak ekkor is explicitten bizonyitania kell, hogy a reviewer threshold nem implicit teljes-`bubbleConfig` oldalsavbol van visszafejtve, es nem lazitja fel a CS4-ben elvart explicit-threading szerzodest.
 
 ## Spec Lock
 
 Task `IMPLEMENTABLE`, ha:
 1. a post-gate reviewer semantics teljesen threshold-driven,
-2. T1-T7 teljesen lefedik a viselkedesvaltozast, a scope-policy normalized threshold compare-t es a threshold threading seamet,
-3. nincs hard-coded `P0/P1` authority maradek a reviewer routing consume lane-ben.
+2. T1-T8 teljesen lefedik a viselkedesvaltozast, a scope-policy normalized threshold compare-t, a threshold threading seamet es a flow-level command surface proofot,
+3. nincs hard-coded `P0/P1` authority maradek a reviewer routing consume lane-ben,
+4. nincs uj consumer-oldali threshold defaultolas vagy `P0`-ra tagitott threshold-contract drift.
+   Minimalis audit pattern: az erintett consume filesetben nincs uj `?? DEFAULT_REVIEW_POLICY_REVIEWER_BLOCKING_MIN_SEVERITY` / `?? "P3"` fallback, es nincs `P0`-t is engedo reviewer-threshold tipus- vagy parser-bovites.
 
 ## Assumptions
 
 1. A reviewer threshold compare ugyanazzal a severity orderinggel mukodik, mint a tobbi review-policy threshold logika.
 2. A reviewer-facing guidance, ontology es docs parity minimuma kulon successor ownershipben marad.
+3. A Phase 1 producer lane mar garantalja, hogy a reviewer threshold explicit normalized formaban elerheto anelkul, hogy Phase 2A-nak a read-model/runtime-view contractot ujra kellene nyitnia.
+   Ennek canonical anchorja a `src/v11/shared/reviewPolicy/reviewPolicyRuntime.ts` `normalizeBubbleReviewPolicy(...)` helper.
 
 ## Hardening Backlog
 
