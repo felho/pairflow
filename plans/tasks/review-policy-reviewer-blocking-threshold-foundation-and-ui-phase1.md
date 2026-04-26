@@ -13,10 +13,13 @@ target_files:
   - src/v11/shared/reviewPolicy/updateBubbleReviewPolicy.ts
   - src/v11/defaults/ui/updateBubbleReviewPolicyForUi.ts
   - src/v11/shared/ports/uiRouter.ts
+  - src/v11/infrastructure/ui/routerHttp.ts
   - src/v11/infrastructure/ui/routerHttpBody.ts
   - src/v11/infrastructure/ui/routerActionDispatch.ts
   - src/v11/infrastructure/executor/ssh/sshBubbleReviewPolicyCommand.ts
+  - src/v11/shared/status/statusCommandApi.ts
   - src/v11/shared/status/statusCommandViewBuilder.ts
+  - src/v11/shared/list/listCommandEntryBuilder.ts
   - src/v11/shared/list/listCommandEntryProjection.ts
   - src/v11/infrastructure/ui/presenters/bubblePresenter.ts
   - tests/config/bubbleConfig.test.ts
@@ -25,6 +28,8 @@ target_files:
   - tests/core/bubble/statusBubble.test.ts
   - tests/core/ui/updateBubbleReviewPolicyForUi.test.ts
   - tests/core/ui/router.test.ts
+  - tests/v11/application/kickoff/kickoffPersistencePreparation.test.ts
+  - tests/v11/application/list/listCommandApi.test.ts
   - tests/v11/infrastructure/executor/ssh/sshBubbleReviewPolicyCommand.test.ts
   - tests/v11/shared/reviewPolicy/reviewPolicyRuntime.test.ts
   - tests/v11/shared/reviewPolicy/updateBubbleReviewPolicy.test.ts
@@ -46,6 +51,12 @@ owners:
 3. A UI update path local es remote oldalon ugyanazt az egy mezot patch-eli.
 4. A status/list/detail runtime view szinten szinten csak a meta-review threshold latszik.
 5. Emiatt az uj reviewer threshold producer + mutation + read-model closure itt egyben bounded.
+6. A UI request/router surface ma meg explicit meta-only namingot hasznal:
+   - `UiUpdateBubbleReviewPolicyInput.metaReviewAutoReworkMinSeverity`
+   - `parseReviewPolicyBody()`
+   - `dispatchBubbleAction()`
+   - local/remote update seam
+7. A jelenlegi one-field persisted contract snapshot/serialization assertionok nem csak config tesztekben, hanem bubble create/kickoff es list/status wrapper tesztekben is megjelennek.
 
 ## L0 - Policy
 
@@ -140,6 +151,20 @@ Vezessuk be a reviewer kulon persisted thresholdjat ugy, hogy:
 4. Explicit out-of-scope consumers:
    reviewer routing, reviewer prompt guidance, meta-review gate threshold consume.
 
+### Successor Boundary Proof
+
+Ez a task csak akkor marad implementalhato es bounded, ha az alabbi consume-anchorok explicit Phase 2 ownershipben maradnak:
+1. `src/v11/domain/pass/reviewerDecision.ts`
+2. `src/v11/domain/convergence/policyReviewerAggregate.ts`
+3. `src/v11/shared/reviewer/reviewerCommandGateGuidance.ts`
+4. `src/v11/shared/reviewer/reviewerSeverityOntology.ts`
+5. `docs/reviewer-severity-ontology.md`
+6. Barmely reviewer-routing vagy reviewer-guidance teszt, amely a blocker jelentest vagy a `P0/P1` vs `P2/P3` consume szemantikat modositana
+
+Normative boundary rule:
+1. Phase 1 nem irhatja at a reviewer blocker fogalmat, csak elokesziti a persisted dual-threshold authorityt es a shared UI/read-model paritast.
+2. Ha a tervezett implementacio a fenti anchorok barmelyiket erinti, az scope-creep, es vissza kell terelni a Phase 2 successor taskba.
+
 ### Complexity Risk Triage
 
 1. `risk_score`: `6`
@@ -198,6 +223,8 @@ Vezessuk be a reviewer kulon persisted thresholdjat ugy, hogy:
 | CS7 | `src/v11/shared/ports/uiRouter.ts`, `routerHttpBody.ts`, `routerActionDispatch.ts` | UI mutate API | shared request field | exact public request shape: `reviewLoopMode` + optional `reviewBlockingMinSeverity` + optional `expectedBubbleToml`; ha a shared field jelen van, canonical mutation requestkent mindket thresholdot beallitja | P1 | T6 |
 | CS8 | `src/v11/defaults/ui/updateBubbleReviewPolicyForUi.ts`, `sshBubbleReviewPolicyCommand.ts` | local+remote mutation orchestration | local es remote parity | ugyanaz a shared field -> dual-persisted-field mapping megy local es remote bubble-re is; threshold-omission preserve semantics explicit | P1 | T6,T7 |
 | CS9 | `status/list/presenter` files | read-model output | projection alignment | status/list/detail response-ben reviewer es meta threshold is lathato | P1 | T4,T8 |
+| CS10 | `tests/core/bubble/bubbleInstanceId.test.ts`, `tests/v11/application/kickoff/kickoffPersistencePreparation.test.ts` | persisted serialization snapshots | one-field review_policy block mar nem eleg | a persisted review-policy regex/snapshot assertionoknak explicit dual-threshold blockra kell valtaniuk | P1 | T12 |
+| CS11 | `tests/v11/application/list/listCommandApi.test.ts`, `src/v11/shared/status/statusCommandApi.ts`, `src/v11/shared/list/listCommandEntryBuilder.ts` | wrapper/API passthrough | read-model wrapper parity | ne csak a projection builder, hanem az API/wrapper szint is ket thresholdos payloadot adjon tovabb | P1 | T8,T13 |
 
 ### 2) Data and Interface Contract
 
@@ -228,6 +255,8 @@ Normative rules:
 8. Ha `reviewBlockingMinSeverity` nincs jelen, a mutation seam nem irhat threshold change-et egyik persisted mezo fele sem; a meglévő reviewer/meta threshold ertekek preserved maradnak.
 9. A local es remote update path ugyanazt a shared-input -> dual-persisted-field mappingot kell hasznalja; nem maradhat meta-only remote vagy local special-case.
 10. A runtime viewben a ket persisted threshold kulon mezokent jelenik meg; shared UI input nem lesz persisted/runtime alias.
+11. A status/list API wrapper es presenter payload ugyanazt a dual-threshold runtime viewt adja tovabb; nem maradhat olyan wrapper, amely csak a meta-review fieldet serializalja.
+12. A create/kickoff altal elallitott vagy snapshotolt `review_policy` blokk explicit ket severity sort tartalmaz, nem eleg az egymezos legacy regex megtartasa.
 
 ### 3) Error Contract
 
@@ -290,6 +319,8 @@ Normative rules:
 | T9 | invalid UI severity causes zero side effect | invalid shared severity input | local/remote update indulna | reject vagy conflict jon, bubble.toml nem iródik at reszlegesen |
 | T10 | expected-content conflict preserves zero partial write | stale current review policy / competing update | local dual-threshold patch fut | explicit conflict result jon, reviewer/meta threshold nem valik szet |
 | T11 | threshold omission preserves both persisted values | HTTP body contains only `reviewLoopMode` change | update-review-policy fut | reviewer/meta threshold unchanged marad local es remote pathon is |
+| T12 | create/kickoff serialization reflects dual-threshold block | uj bubble config vagy kickoff persistence snapshot | TOML/assertion fut | `reviewer_blocking_min_severity` es `meta_review_auto_rework_min_severity` is explicit szerepel |
+| T13 | status/list API wrappers preserve dual-threshold payload | projection builder mar dual-threshold viewt ad | list/status API wrapper fut | a kifele adott payload nem vesziti el a reviewer threshold mezot |
 
 ### 7) Review Control
 
@@ -299,6 +330,7 @@ Reviewer akkor adhat `IMPLEMENTABLE` allapotot, ha:
 3. a shared UI control nem mossa ossze a persisted canonical dual-threshold shape-et,
 4. a reviewer workflow consume nincs felig idehuzva ebbe a taskba,
 5. a mutation boundary explicit bizonyitja a zero-partial-write / fail-closed elvart viselkedest.
+6. a successor boundary proof egyertelmu: reviewer routing/guidance/ontology anchorok erintetlenek maradnak ebben a phase-ben.
 
 ## L2 - Implementation Notes (Optional)
 
@@ -316,6 +348,7 @@ Task `IMPLEMENTABLE`, ha:
 
 1. A UI request field rename ugyanabban a repo-surface-ben kontrollalhato.
 2. A current operatori transparency miatt a runtime view bovitese required-now, nem optional polish.
+3. A create/kickoff/list/status snapshot- es wrapper-tesztek a producer/read-model closure reszei, nem kulon follow-up polish.
 
 ## Hardening Backlog
 
