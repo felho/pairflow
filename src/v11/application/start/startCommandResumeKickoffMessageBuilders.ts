@@ -5,6 +5,7 @@ import {
 } from "../../shared/reviewer/reviewerCommandGateGuidance.js";
 import { buildPairflowCommandGuidance } from "./startCommandPromptRuntime.js";
 import type {
+  BubbleReviewAutoReworkSeverity,
   PairflowCommandProfile,
   ReviewArtifactType
 } from "../../../types/bubble.js";
@@ -87,9 +88,17 @@ export function buildResumeReviewerKickoffMessage(input: {
   pairflowCommandProfile: PairflowCommandProfile;
   reviewerTestDirectiveLine?: string;
   projectionVariant?: ReviewerCommandGateProjectionVariant;
+  reviewerBlockingMinSeverity?: BubbleReviewAutoReworkSeverity;
 }): string {
+  const thresholdInput =
+    input.reviewerBlockingMinSeverity !== undefined
+      ? {
+          reviewerBlockingMinSeverity: input.reviewerBlockingMinSeverity
+        }
+      : {};
   const roundActionLine = buildReviewerRoundCommandGateProjection({
     round: input.round,
+    ...thresholdInput,
     ...(input.projectionVariant !== undefined
       ? { variant: input.projectionVariant }
       : {})
@@ -97,7 +106,10 @@ export function buildResumeReviewerKickoffMessage(input: {
   const findingsDetailLine =
     input.round <= 1
       ? "In round 1, use `pairflow agent emit --kind pass ...` and declare findings explicitly (`--finding` when findings exist, `--no-findings` only when truly clean)."
-      : buildReviewerFindingsPassInstruction(input.reviewArtifactType);
+      : buildReviewerFindingsPassInstruction(
+          input.reviewArtifactType,
+          thresholdInput
+        );
   return [
     `# [pairflow] bubble=${input.bubbleId} resume kickoff (reviewer).`,
     `State is RUNNING at round ${input.round}.`,

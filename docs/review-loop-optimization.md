@@ -7,6 +7,13 @@
 Canonical severity policy:
 - `docs/reviewer-severity-ontology.md`
 
+Current authority note for this tracker:
+- Post-gate reviewer routing is threshold-driven, not a fixed `P0/P1` blocker vs `P2/P3` advisory split.
+- The authoritative routing input is `review_policy.reviewer_blocking_min_severity`.
+- Default baseline `review_policy.reviewer_blocking_min_severity=P3` means a `P3`-only post-gate finding set can still remain reviewer-blocking; this is a configuration baseline, not a redefinition of `P3`.
+- In document scope, `P0/P1` is blocker-grade post-gate only with strict qualifiers (`timing=required-now` + `layer=L1`); otherwise the finding is treated as `P2` for routing-threshold evaluation.
+- Older shorthand in this tracker that talks about "`P0/P1` blockers" or "`P2/P3`-only rounds" should be read as historical analysis unless it is explicitly restated in threshold-driven terms.
+
 Terminology mapping (historical -> current):
 - "Approve with notes" / `APPROVE_WITH_NOTES` references in this tracker map to canonical convergence emit (`pairflow agent emit --kind convergence --summary ...`) + notes artifact flow; historical `pairflow converged` mentions refer to the retained compatibility adapter for the same behavior.
 
@@ -32,7 +39,7 @@ The reviewer produces high-quality findings (real bugs, race conditions, event o
 | 5 | Combined flow | Not implemented | Depends on #1-#4. |
 | 6 | Skip redundant reviewer test runs | Implemented | Orchestrator verifies implementer evidence and emits reviewer skip/run directive. |
 | 7 | Task-level acceptance criteria boundary | In progress | Used operationally in tasking; hard enforcement not implemented yet. |
-| 8 | Round-based severity gate | Implemented (Phase 1) | Doc-contract gate keeps advisory round-policy normalization (`ROUND_GATE_AUTODEMOTE`/`ROUND_GATE_WARNING`) with status diagnostics, and reviewer canonical pass emit (`pairflow agent emit --kind pass ...`) is hard-stopped post-gate for clean/non-blocking outcomes via canonical convergence routing (`pairflow agent emit --kind convergence ...` required). Legacy `pairflow pass` / `pairflow converged` remain compatibility adapters only. |
+| 8 | Round-based severity gate | Implemented (Phase 1) | Post-gate reviewer routing is threshold-driven via `review_policy.reviewer_blocking_min_severity`, not a fixed `P0/P1` blocker split. At or after `severity_gate_round`, reviewer canonical PASS (`pairflow agent emit --kind pass ...`) remains valid only when open findings still meet the configured threshold under scope policy; otherwise reviewer must use canonical convergence (`pairflow agent emit --kind convergence ...`). Default baseline is `P3`, so a `P3`-only post-gate set can still remain reviewer-blocking unless policy is tightened. Document scope still requires `timing=required-now` + `layer=L1` for blocker-grade `P0/P1`; otherwise those findings route as effective `P2`. Legacy `pairflow pass` / `pairflow converged` remain compatibility adapters only. |
 | 9 | Issue-class expansion scan | Implemented (Phase 1 prompt-level experiment) | Reviewer startup/resume/handoff guidance now enforces scout -> dedupe/classify -> conditional class expansion -> consolidation, with local-scope guardrails and required PASS output contract. Runtime/orchestrator automation remains out of scope. |
 
 Recent control-plane improvement:
@@ -51,11 +58,20 @@ Provide explicit severity definitions to reduce misclassification:
 
 **Scope rule:** Only review changes within the PRD scope. Flag out-of-scope observations as informational notes, never as findings that require fixes.
 
+**Post-gate routing note:** Severity labels alone do not decide reviewer routing after `severity_gate_round`. The controlling question is whether any open findings meet `review_policy.reviewer_blocking_min_severity` under scope policy.
+
 **Expected impact:** Eliminates rounds like R9 (4 findings, 3 were "add comment" → full round for cosmetics).
 
 ### 2. "Good Enough" Threshold — Converge with Notes
 
-When a review round finds **only P2/P3 issues and no P0/P1**, the reviewer should use a "converged with notes" path (`pairflow agent emit --kind convergence --summary ...` + suggestions artifact) instead of `fix_request`:
+Current shipped rule first:
+- At or after `severity_gate_round`, reviewer convergence vs PASS is already threshold-driven by `review_policy.reviewer_blocking_min_severity`.
+- Reviewer should use canonical PASS only when open findings still meet the configured threshold under scope policy.
+- Reviewer should use canonical convergence when the result is clean or all remaining findings are below the configured threshold.
+- Default baseline is `review_policy.reviewer_blocking_min_severity=P3`, so "only `P2/P3` findings remain" is not, by itself, enough to force convergence under the default config.
+- In document scope, shorthand CLI `P0/P1` is still advisory post-gate unless strict blocker qualifiers are present (`timing=required-now` + `layer=L1`), because otherwise it is treated as effective `P2` for routing-threshold evaluation.
+
+With that current rule in place, a future "converged with notes" optimization could still refine the reviewer UX when a round ends with only below-threshold findings:
 
 - P2/P3 findings go into a `suggestions.md` artifact
 - Implementer can optionally address them
@@ -120,9 +136,10 @@ The optimized review flow per round:
    - Adds concrete fix suggestion
 
 4. DECISION
-   If `P0/P1` findings exist → canonical PASS emit with fix_request (`pairflow agent emit --kind pass ...`) for blockers + P2s
-   If only P2/P3 findings exist → `pairflow agent emit --kind convergence --summary ...` + suggestions.md notes
-   If clean (no findings) → `pairflow agent emit --kind convergence --summary ...`
+   If open findings meet `review_policy.reviewer_blocking_min_severity` under scope policy → canonical PASS emit with fix_request (`pairflow agent emit --kind pass ...`)
+   If no open findings meet the current threshold → `pairflow agent emit --kind convergence --summary ...`
+   Default baseline note: `review_policy.reviewer_blocking_min_severity=P3`, so a `P3`-only post-gate finding set can still stay on canonical PASS unless policy is tightened
+   Document-scope qualifier note: `P0/P1` is blocker-grade post-gate only with `timing=required-now` + `layer=L1`; otherwise it routes as effective `P2`
 ```
 
 ### Trade-offs
@@ -189,7 +206,9 @@ The reviewer rated the same pattern differently depending on where it appeared:
 | Event ordering issue | **P1** (R5) | **P1** (R8) | Consistent |
 | In-flight dedup cleanup | not found | **P1** (R15) | Only found on one side |
 
-### P1-Only vs P2/P3-Only Rounds
+### Historical Round Mix (Pre-Threshold Shorthand)
+
+This table uses the historical shorthand that was in use during the analyzed bubble. It is useful for archaeology, but it is not the normative post-gate routing rule anymore.
 
 | Round type | Rounds | Count |
 |---|---|---|

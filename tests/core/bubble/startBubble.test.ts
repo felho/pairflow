@@ -606,7 +606,7 @@ describe("startBubble", () => {
     expect(reviewerCommand).toContain(
       "--handoff-id <handoff-id> --execution-id <execution-id> --summary"
     );
-    expect(reviewerCommand).toContain("P1:...|artifact://...");
+    expect(reviewerCommand).toContain("<severity>:...|artifact://...");
     expect(reviewerCommand).toContain(REVIEWER_COMMAND_GATE_REQ_A);
     expect(reviewerCommand).toContain(REVIEWER_COMMAND_GATE_REQ_B);
     expect(reviewerCommand).toContain(REVIEWER_COMMAND_GATE_REQ_C);
@@ -621,9 +621,111 @@ describe("startBubble", () => {
       reviewerPolicySnapshotFileName
     );
     const policySnapshot = await readFile(policySnapshotPath, "utf8");
-    expect(policySnapshot).toBe(`${reviewerSeverityOntologyFullMarkdown}\n`);
+    expect(policySnapshot).toContain("# Reviewer Policy Snapshot");
+    expect(policySnapshot).toContain(
+      "Current post-gate routing threshold: `review_policy.reviewer_blocking_min_severity=P3`."
+    );
+    expect(policySnapshot).toContain(reviewerSeverityOntologyFullMarkdown);
     await assertBashParses(implementerCommand);
     await assertBashParses(reviewerCommand);
+  });
+
+  it("projects non-default reviewer threshold into startup prompt and persisted policy snapshot", async () => {
+    const repoPath = await createTempRepo();
+    const created = await createBubble({
+      id: "b_start_reviewer_threshold_01",
+      repoPath,
+      baseBranch: "main",
+      reviewArtifactType: "code",
+      task: "Threshold-aware reviewer startup prompt",
+      cwd: repoPath
+    });
+
+    await writeFile(
+      created.paths.bubbleTomlPath,
+      renderBubbleConfigToml({
+        ...created.config,
+        review_policy: {
+          review_loop_mode:
+            created.config.review_policy?.review_loop_mode ?? "full",
+          reviewer_blocking_min_severity: "P2",
+          meta_review_auto_rework_min_severity:
+            created.config.review_policy?.meta_review_auto_rework_min_severity ?? "P3"
+        }
+      }),
+      "utf8"
+    );
+
+    let reviewerCommand: string | undefined;
+
+    await startBubble(
+      {
+        bubbleId: created.bubbleId,
+        cwd: repoPath,
+        now: new Date("2026-03-23T10:02:00.000Z")
+      },
+      {
+        bootstrapWorktreeWorkspace: () =>
+          Promise.resolve(
+            buildWorktreeBootstrapResult({
+              repoPath,
+              bubbleBranch: created.config.bubble_branch,
+              worktreePath: created.paths.worktreePath
+            })
+          ),
+        launchBubbleSessionAck: (input) => {
+          reviewerCommand = input.reviewerCommand;
+          return Promise.resolve({
+            status: "running" as const,
+            sessionName: "pf-b_start_reviewer_threshold_01"
+          });
+        },
+        claimRuntimeSession: (input) =>
+          Promise.resolve({
+            claimed: true,
+            record: {
+              bubbleId: input.bubbleId,
+              repoPath: input.repoPath,
+              worktreePath: input.worktreePath,
+              tmuxSessionName: input.tmuxSessionName,
+              updatedAt: "2026-03-23T10:02:00.000Z"
+            }
+          })
+      }
+    );
+
+    expect(reviewerCommand).toContain(
+      "review_policy.reviewer_blocking_min_severity=P2"
+    );
+    expect(reviewerCommand).toContain(
+      "Findings below that threshold (for example `P3`-only sets) are advisory for routing after `severity_gate_round`"
+    );
+    expect(reviewerCommand).toContain(
+      "Routing matrix (copy-paste after resolving `executionContext` from `pairflow bubble status --json`)"
+    );
+    expect(reviewerCommand).toContain(
+      "meets-threshold findings -> `pairflow agent emit --kind pass"
+    );
+    expectNoForbiddenReviewerCommandGateTokens(reviewerCommand);
+
+    const policySnapshotPath = join(
+      created.paths.artifactsDir,
+      reviewerPolicySnapshotFileName
+    );
+    const policySnapshot = await readFile(policySnapshotPath, "utf8");
+    const [snapshotHeader = ""] = policySnapshot.split(
+      "\n## Canonical Severity Ontology\n",
+      1
+    );
+    expect(policySnapshot).toContain(
+      "Current post-gate routing threshold: `review_policy.reviewer_blocking_min_severity=P2`."
+    );
+    expect(policySnapshot).toContain(
+      "Findings below that threshold (for example `P3`-only sets) are advisory for routing after `severity_gate_round`"
+    );
+    expect(snapshotHeader).not.toContain(
+      "Current post-gate routing threshold: `review_policy.reviewer_blocking_min_severity=P3`."
+    );
   });
 
   it("runs remote first-start through the remote execution seam and persists started artifacts", async () => {
@@ -2770,13 +2872,13 @@ describe("startBubble", () => {
     expect(reviewerCommand).toContain("document/task artifacts");
     expect(reviewerCommand).toContain("Do not force `feature-dev:code-reviewer`");
     expect(reviewerCommand).toContain(
-      "Document scope: canonical `pairflow agent emit --kind pass ... --finding ...` for blockers is valid only when structured findings include strict qualifiers (`timing=required-now` + `layer=L1`)."
+      "Document scope: canonical `pairflow agent emit --kind pass ... --finding ...` for blocker-grade `P0/P1` requires strict qualifiers (`timing=required-now` + `layer=L1`)."
     );
     expect(reviewerCommand).toContain(
-      "CLI `--finding` cannot encode these qualifiers"
+      "CLI `--finding` cannot encode those qualifiers"
     );
     expect(reviewerCommand).toContain(
-      "`pairflow agent emit --kind convergence ... --finding ...` (`P2/P3` only)"
+      "unqualified document-scope `P0/P1` entries are treated as `P2` for post-gate routing-threshold evaluation"
     );
     expect(reviewerCommand).toContain(REVIEWER_COMMAND_GATE_REQ_F);
     expect(reviewerCommand).toContain(
@@ -3118,7 +3220,11 @@ describe("startBubble", () => {
     );
 
     const snapshot = await readFile(policySnapshotPath, "utf8");
-    expect(snapshot).toBe(`${reviewerSeverityOntologyFullMarkdown}\n`);
+    expect(snapshot).toContain("# Reviewer Policy Snapshot");
+    expect(snapshot).toContain(
+      "Current post-gate routing threshold: `review_policy.reviewer_blocking_min_severity=P3`."
+    );
+    expect(snapshot).toContain(reviewerSeverityOntologyFullMarkdown);
   });
 
   it("fails fast with snapshot reasonCode when reviewer policy snapshot write fails during context load", async () => {

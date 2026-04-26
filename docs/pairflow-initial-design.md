@@ -124,16 +124,18 @@ Each loop round:
 1. Implementer agent proposes changes and rationale.
 2. Reviewer agent performs strict review with severity tags (`P0` to `P3`).
 3. If any `P0` or `P1` exists, loop continues.
-4. If only `P2/P3`, orchestrator decides:
-   - continue loop if risk touches core logic, security, data integrity
-   - otherwise request human tie-break
+4. At or after `severity_gate_round`, reviewer routing is threshold-driven:
+   - findings meeting `review_policy.reviewer_blocking_min_severity` stay on canonical PASS/rework
+   - findings below that threshold can converge with structured notes
+   - default baseline `review_policy.reviewer_blocking_min_severity=P3` means a `P3`-only post-gate set can still remain reviewer-blocking because of config, not because `P3` severity changed meaning
+   - in document scope, blocker-grade `P0/P1` still requires `timing=required-now` + `layer=L1`; without those qualifiers the finding is treated as `P2` for routing-threshold evaluation
 5. Alternate reviewer role at least once before convergence.
 
 Convergence criteria (MVP):
 1. Two consecutive review passes with no open `P0/P1`.
-2. Round-sensitive `P2` gate on convergence:
-   - round 2-3: convergence blocked if the last reviewer pass contains `P2`
-   - round 4+: convergence allowed again (`P0/P1` block still applies)
+2. Round-sensitive post-gate routing threshold on convergence:
+   - round 2-3: pre-gate loop behavior can still continue for broader non-blocking review iteration
+   - round 4+ (`severity_gate_round` default): convergence is blocked only when the last reviewer pass still contains findings that meet `review_policy.reviewer_blocking_min_severity` under scope policy
 3. Test command set for bubble completed (or explicitly marked "not available").
 4. Explanation pack generated (what changed, why, risks, manual test plan).
 5. No unresolved human questions.
@@ -181,9 +183,9 @@ Required checks:
 
 PRD/PRV convergence criteria:
 1. Two consecutive review passes with no open `P0/P1`.
-2. Round-sensitive `P2` gate on convergence:
-   - round 2-3: convergence blocked if the last reviewer pass contains `P2`
-   - round 4+: convergence allowed again (`P0/P1` block still applies)
+2. Round-sensitive post-gate routing threshold on convergence:
+   - round 2-3: broader non-blocking review iteration can still continue
+   - round 4+ (`severity_gate_round` default): convergence is blocked only when the last reviewer pass still contains findings that meet `review_policy.reviewer_blocking_min_severity` under scope policy
 3. All required document checks passed or explicitly waived by user.
 4. Human comprehension gate approved.
 

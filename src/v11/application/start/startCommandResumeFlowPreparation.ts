@@ -6,6 +6,7 @@ import {
 import { resolveResumeKickoffMessages } from "./startCommandResumePrompts.js";
 import type { ResolvedStartBubbleDependencies } from "./startCommandOrchestration.js";
 import type { StartExecutionContext } from "./startCommandContext.js";
+import { DEFAULT_REVIEW_POLICY_REVIEWER_BLOCKING_MIN_SEVERITY } from "../../../config/defaults.js";
 
 export interface PreparedResumeLaunchInput {
   transcriptSummary: string;
@@ -61,6 +62,9 @@ export async function prepareResumeLaunchInput(input: {
     implementerAgent: input.context.resolved.bubbleConfig.agents.implementer,
     reviewerAgent: input.context.resolved.bubbleConfig.agents.reviewer,
     metaReviewerAgent: input.context.resolved.bubbleConfig.agents.meta_reviewer,
+    reviewerBlockingMinSeverity:
+      input.context.resolved.bubbleConfig.review_policy?.reviewer_blocking_min_severity
+      ?? DEFAULT_REVIEW_POLICY_REVIEWER_BLOCKING_MIN_SEVERITY,
     ...(reviewerTestDirectiveLine !== undefined
       ? { reviewerTestDirectiveLine }
       : {})

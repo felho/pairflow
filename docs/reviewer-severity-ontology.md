@@ -26,6 +26,9 @@ prompts do not depend on reading this markdown file from disk.
 <!-- pairflow:runtime-reminder:start -->
 - Blocker severities (`P0/P1`) require concrete evidence (repro, failing check output, or precise code-path proof).
 - Without blocker-grade evidence (`P0/P1`), downgrade to `P2` by default.
+- Post-gate reviewer routing is controlled by `review_policy.reviewer_blocking_min_severity`, not by a fixed `P0/P1` blocker vs `P2/P3` advisory split.
+- Default baseline `review_policy.reviewer_blocking_min_severity=P3` means a `P3`-only post-gate finding set can still remain reviewer-blocking; that is a configuration baseline, not a redefinition of `P3`.
+- In document scope, `P0/P1` is blocker-grade post-gate only with strict qualifiers (`timing=required-now` + `layer=L1`); otherwise it is treated as `P2` for routing-threshold evaluation.
 - Cosmetic/comment-only findings are `P3`.
 - Out-of-scope observations should be notes (`P3`), not mandatory fix findings.
 <!-- pairflow:runtime-reminder:end -->
@@ -95,12 +98,14 @@ Reviewer PASS with any `P0/P1` finding must have evidence bound at finding level
 ## Decision Mapping
 
 1. Round `< severity_gate_round` (default `4`): reviewer canonical pass emit (`pairflow agent emit --kind pass ...`) remains allowed (including non-blocking findings), while canonical convergence emit (`pairflow agent emit --kind convergence ...`) is still allowed when policy preconditions are met.
-2. Round `>= severity_gate_round` with blocker findings under scope policy: reviewer should request a fix cycle with canonical pass emit (`pairflow agent emit --kind pass ...`).
-   Document scope blocker means `P0/P1` with strict qualifiers (`timing=required-now` + `layer=L1`).
-   Operational command form: `pairflow agent emit --kind pass --repo <repo> --bubble-id <id> --handoff-id <handoff-id> --execution-id <execution-id> --summary "..." --finding "P1:Title|artifact://ref"` (repeat `--finding` as needed).
-3. Round `>= severity_gate_round` with only non-blocking findings (`P2/P3`) or clean result: reviewer should use canonical convergence emit (`pairflow agent emit --kind convergence ...`).
+2. Round `>= severity_gate_round` with one or more findings that meet `review_policy.reviewer_blocking_min_severity` under scope policy: reviewer should request a fix cycle with canonical pass emit (`pairflow agent emit --kind pass ...`).
+   Default baseline note: `review_policy.reviewer_blocking_min_severity=P3`, so a `P3`-only post-gate finding set can still remain reviewer-blocking because of configuration.
+   If the threshold is tightened to `P2` or `P1`, findings below that threshold become advisory for routing while the severity ontology itself stays unchanged.
+   Document scope blocker-grade `P0/P1` still requires strict qualifiers (`timing=required-now` + `layer=L1`); without those qualifiers the finding is treated as `P2` for routing-threshold evaluation.
+   Operational command form: `pairflow agent emit --kind pass --repo <repo> --bubble-id <id> --handoff-id <handoff-id> --execution-id <execution-id> --summary "..." --finding "<severity>:Title|artifact://ref"` (repeat `--finding` as needed).
+3. Round `>= severity_gate_round` with only findings below the current threshold or clean result: reviewer should use canonical convergence emit (`pairflow agent emit --kind convergence ...`).
    Operational command forms:
-   - Advisory-only (`P2/P3`): `pairflow agent emit --kind convergence --repo <repo> --bubble-id <id> --handoff-id <handoff-id> --execution-id <execution-id> --summary "..." --finding "P2:Title|artifact://ref"`.
+   - Below-threshold findings: `pairflow agent emit --kind convergence --repo <repo> --bubble-id <id> --handoff-id <handoff-id> --execution-id <execution-id> --summary "..." --finding "<severity>:Title|artifact://ref"`.
    - Clean (no findings): `pairflow agent emit --kind convergence --repo <repo> --bubble-id <id> --handoff-id <handoff-id> --execution-id <execution-id> --summary "..."` (without `--finding`).
 
 ## Command Consistency Guardrails

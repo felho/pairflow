@@ -26,6 +26,7 @@ import {
   buildMetaReviewSubmitApproveParityNote,
   buildMetaReviewSubmitCommandTemplate
 } from "../../../shared/metaReview/metaReviewSubmitGuidance.js";
+import { reviewerPolicySnapshotFileName } from "../../../application/start/startCommandContext.js";
 import type { BubbleConfig } from "../../../../types/bubble.js";
 import type { ProtocolEnvelope, ProtocolParticipant } from "../../../../types/protocol.js";
 
@@ -39,7 +40,7 @@ export type DeliveryMessageRecipientRole =
 function resolveReviewerPolicySnapshotPath(bubbleConfig: BubbleConfig): string {
   return resolve(
     bubbleConfig.repo_path,
-    `.pairflow/bubbles/${bubbleConfig.id}/artifacts/reviewer-policy-snapshot.md`
+    `.pairflow/bubbles/${bubbleConfig.id}/artifacts/${reviewerPolicySnapshotFileName}`
   );
 }
 
@@ -135,14 +136,26 @@ function buildReviewerDeliveryAction(input: {
       Array.isArray(input.envelope.payload.findings) && input.envelope.payload.findings.length > 0
         ? "findings"
         : "clean";
+    const thresholdInput =
+      input.bubbleConfig.review_policy?.reviewer_blocking_min_severity
+        !== undefined
+        ? {
+            reviewerBlockingMinSeverity:
+              input.bubbleConfig.review_policy.reviewer_blocking_min_severity
+          }
+        : {};
     const convergenceInstruction = buildReviewerRoundCommandGateProjection({
       round: input.envelope.round,
+      ...thresholdInput,
       variant: projectionVariant
     });
     const findingsDetailInstruction =
       input.envelope.round <= 1
         ? "In round 1, use canonical pass emit (`pairflow agent emit --kind pass ...`) and declare findings explicitly (`--finding` when findings exist, `--no-findings` only when truly clean)."
-        : buildReviewerFindingsPassInstruction(input.bubbleConfig.review_artifact_type);
+        : buildReviewerFindingsPassInstruction(
+            input.bubbleConfig.review_artifact_type,
+            thresholdInput
+          );
     const reviewerFocusReminder =
       input.reviewerFocus === undefined
         ? ""

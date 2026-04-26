@@ -88,10 +88,39 @@ describe("startCommandResumeKickoffMessageBuilders", () => {
       buildExpectedCanonicalActorEmitLookupGuidance({ bubbleId, repoPath })
     );
     expect(message).toContain(
-      "If blocker findings remain under current scope policy, keep using `pairflow agent emit --kind pass ... --finding ...`."
+      "If findings meeting the current post-gate blocking threshold remain under current scope policy, keep using `pairflow agent emit --kind pass ... --finding ...`."
     );
     expect(message).toContain(
       "Routing matrix (copy-paste after resolving `executionContext` from `pairflow bubble status --json`)"
+    );
+  });
+
+  it("projects non-default reviewer threshold authority into reviewer resume kickoff", () => {
+    const message = buildResumeReviewerKickoffMessage({
+      bubbleId: "b_start_resume_projection_threshold_01",
+      repoPath: "/tmp/repo",
+      workspacePath: "/tmp/worktree",
+      round: 2,
+      reviewArtifactType: "document",
+      pairflowCommandProfile: "external",
+      projectionVariant: "findings",
+      reviewerBlockingMinSeverity: "P1"
+    });
+
+    expect(message).toContain(
+      "review_policy.reviewer_blocking_min_severity=P1"
+    );
+    expect(message).toContain(
+      "Findings below that threshold (for example `P2/P3`-only sets) are advisory for routing after `severity_gate_round`"
+    );
+    expect(message).toContain(
+      "Document scope: canonical `pairflow agent emit --kind pass ... --finding ...` for blocker-grade `P0/P1` requires strict qualifiers"
+    );
+    expect(message).toContain(
+      "unqualified document-scope `P0/P1` entries are treated as `P2` for post-gate routing-threshold evaluation"
+    );
+    expect(message).not.toContain(
+      "review_policy.reviewer_blocking_min_severity=P3"
     );
   });
 
@@ -117,7 +146,7 @@ describe("startCommandResumeKickoffMessageBuilders", () => {
       "In round 1, use `pairflow agent emit --kind pass ...` and declare findings explicitly"
     );
     expect(message).not.toContain(
-      "Document scope: canonical `pairflow agent emit --kind pass ... --finding ...` for blockers is valid only"
+      "Document scope: canonical `pairflow agent emit --kind pass ... --finding ...` for blocker-grade `P0/P1` requires strict qualifiers"
     );
   });
 

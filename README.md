@@ -808,10 +808,11 @@ The reviewer can only call `converged` when specific conditions are met:
 1. The active role must be `reviewer`
 2. At least 2 rounds of implementer↔reviewer exchange must have happened
 3. The reviewer's last `PASS` must declare findings explicitly (`--finding` or `--no-findings`)
-4. The reviewer's last review must not contain P0/P1 severity findings
-5. Blocker semantics:
-   - Non-document scope: convergence is blocked by canonical `P0/P1` findings.
-   - Document scope: only strict blockers (`effective_priority=P0|P1` + `timing=required-now` + `layer=L1`) block convergence.
+4. At or after `severity_gate_round`, the reviewer's last review must not contain any findings that meet the current `review_policy.reviewer_blocking_min_severity` threshold under scope policy
+5. Threshold semantics:
+   - Default baseline `review_policy.reviewer_blocking_min_severity=P3` means a `P3`-only post-gate finding set can still remain reviewer-blocking; this is a configuration baseline, not a redefinition of `P3`.
+   - If the threshold is tightened to `P2` or `P1`, findings below that threshold become advisory for routing after `severity_gate_round`.
+   - Document scope: blocker-grade `P0/P1` still requires `timing=required-now` + `layer=L1`; without those qualifiers the finding is treated as `P2` for post-gate routing-threshold evaluation.
    - Doc-contract round gate (advisory) can auto-demote non-blocker `required-now` findings after the configured threshold (`doc_contract_gates.round_gate_applies_after`, default: round > 2) and reports warnings in status output.
 6. No unanswered `HUMAN_QUESTION` may be pending
 7. If `accuracy_critical=true`, latest reviewer verification must be `pass`

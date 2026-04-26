@@ -1,5 +1,6 @@
 import type {
   AgentRole,
+  BubbleReviewAutoReworkSeverity,
   BubbleStateSnapshot,
   PairflowCommandProfile,
   ReviewArtifactType
@@ -56,6 +57,7 @@ interface PromptConcernBuildInputBase {
   pairflowCommandProfile: PairflowCommandProfile;
   taskArtifactPath: string;
   reviewArtifactType?: ReviewArtifactType;
+  reviewerBlockingMinSeverity?: BubbleReviewAutoReworkSeverity;
   policySnapshotPathAbs?: string;
   kickoffDiagnostic?: string;
   reviewerTestDirectiveLine?: string;

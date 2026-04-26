@@ -2,6 +2,7 @@ import {
   type ReviewerFocusExtractionResult
 } from "../../shared/reviewer/reviewerBrief.js";
 import type {
+  BubbleReviewAutoReworkSeverity,
   BubbleStateSnapshot,
   PairflowCommandProfile,
   ReviewArtifactType
@@ -40,6 +41,7 @@ export function buildResumeReviewerStartupPrompt(input: {
   transcriptSummary: string;
   kickoffDiagnostic?: string;
   reviewArtifactType: ReviewArtifactType;
+  reviewerBlockingMinSeverity?: BubbleReviewAutoReworkSeverity;
   reviewerTestDirectiveLine?: string;
   reviewerBriefText?: string;
   reviewerFocus?: ReviewerFocusExtractionResult;

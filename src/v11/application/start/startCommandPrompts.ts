@@ -4,6 +4,7 @@ import { shellQuote } from "../../shared/foundation/shellQuote.js";
 import { buildPinnedPairflowCommand } from "./startCommandPromptRuntime.js";
 import type { ReviewerFocusExtractionResult } from "../../shared/reviewer/reviewerBrief.js";
 import type {
+  BubbleReviewAutoReworkSeverity,
   PairflowCommandProfile,
   ReviewArtifactType
 } from "../../../types/bubble.js";
@@ -110,6 +111,7 @@ export function buildReviewerStartupPrompt(input: {
   taskArtifactPath: string;
   policySnapshotPathAbs: string;
   reviewArtifactType: ReviewArtifactType;
+  reviewerBlockingMinSeverity?: BubbleReviewAutoReworkSeverity;
   pairflowCommandProfile: PairflowCommandProfile;
   reviewerBriefText?: string;
   reviewerFocus?: ReviewerFocusExtractionResult;
