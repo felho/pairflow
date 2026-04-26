@@ -9,7 +9,9 @@ target_files:
   - src/v11/shared/inbox/inboxCommandApi.ts
   - src/types/ui.ts
   - src/v11/infrastructure/ui/presenters/bubblePresenter.ts
+  - tests/core/bubble/inboxBubble.test.ts
   - tests/core/ui/bubblePresenter.test.ts
+  - tests/core/ui/router.test.ts
   - tests/core/ui/server.integration.test.ts
   - ui/src/lib/types.ts
   - ui/src/components/canvas/BubbleExpandedCard.tsx
@@ -32,20 +34,21 @@ owners:
    - `meta_review_gate_route`
    - opcionisan parity es reason-code mezok.
 2. A pending approval projection ma ezt az authority-t levagja, es csak `summary` + `refs` + envelope alapszintu mezok maradnak.
-3. Az expanded bubble card approval package blokkja ma fix, generikus szoveget renderel:
-   - "Human gate is active after meta-reviewer. Approve or request rework."
-4. Emiatt a UI nem tudja megkulonboztetni a sima human gate-et attol az esettol, amikor a meta-review `rework` ajanlast adott, de az auto-rework budget kimerult.
+3. Az expanded bubble card ma nem renderel kulon `READY_FOR_HUMAN_APPROVAL` approval-package szekciot; specializalt inbox-contentet csak `WAITING_HUMAN` alatt mutat.
+4. A frontend tesztbaseline ezt explicit rogziti: jelenleg nincs kulon approval package card az expanded cardon `READY_FOR_HUMAN_APPROVAL` esetben.
+5. Emiatt a UI nem tudja megkulonboztetni a sima human gate-et attol az esettol, amikor a meta-review `rework` ajanlast adott, de az auto-rework budget kimerult.
 
 ## L0 - Policy
 
 ### Goal
 
-Tegyük route-aware-vá a `READY_FOR_HUMAN_APPROVAL` expanded approval package UI-ját ugy, hogy:
+Vezessunk be egy bounded `READY_FOR_HUMAN_APPROVAL` expanded approval package surface-t, es tegyuk route-aware-va ugy, hogy:
 1. a human gate oka a canonical current-round approval request metadata-bol jojjon,
-2. a `human_gate_budget_exhausted` eset explicit operator copyval jelenjen meg,
-3. metadata hianya vagy ismeretlen route eseten a mai generikus approval package fallback maradjon,
-4. ne valtozzon lifecycle, action availability vagy approval/rework backend szemantika,
-5. a valtozas bounded maradjon az approval-request consume/read-model lane-en.
+2. az expanded card dedikalt approval package szekciot kapjon ehhez a state-hez,
+3. a `human_gate_budget_exhausted` eset explicit operator copyval jelenjen meg,
+4. metadata hianya vagy ismeretlen route eseten a mai generikus approval package fallback maradjon,
+5. ne valtozzon lifecycle, action availability vagy approval/rework backend szemantika,
+6. a valtozas bounded maradjon az approval-request consume/read-model lane-en.
 
 ### Domain / Control Model Summary
 
@@ -55,20 +58,22 @@ Tegyük route-aware-vá a `READY_FOR_HUMAN_APPROVAL` expanded approval package U
    a backend a canonical pending approval requestbol additive, opcionális route/recommendation contextet projektal a UI detail contractba; a frontend csak ezt a projected authority-t rendereli.
 3. Read-path rule:
    approval package route-aware copy csak a current-round canonical pending approval request metadata-jat olvashatja.
-4. Forbidden fallback:
+4. Helper reuse rule:
+   a metadata interpretation a meglevo approval-request helper authorityra tamaszkodik; nem nyithat uj, parhuzamos transcript- vagy UI-helyi metadata-parse utat.
+5. Forbidden fallback:
    - `READY_FOR_HUMAN_APPROVAL` state onmagaban nem eleg a gate okanak megallapitasara,
    - `meta_review.auto_rework_count/limit` statebol vagy egyeb runtime statebol nem szabad ujra levezetni a route-ot,
    - summary string parse vagy fix text-match nem lehet canonical source.
-5. Allowed resolution path:
-   transcript/inbox canonical approval request -> `PendingApprovalSignal` -> `BubbleInboxView` -> `UiBubbleDetail.inbox.items[]` -> expanded card approval package copy.
-6. Missing-data rule:
+6. Allowed resolution path:
+   transcript canonical approval request -> approval transcript helpers -> `PendingApprovalSignal` -> `BubbleInboxView` -> `UiBubbleDetail.inbox.items[]` -> expanded card approval package section/copy.
+7. Missing-data rule:
    ha a current-round approval request metadata-ja nem tartalmaz route/recommendation contextet, a UI a mai generikus approval package szoveget tartja meg.
-7. Phase boundary:
+8. Phase boundary:
    - contract closure: owned here, additive first-party UI payload mezokkel
    - producer closure: none, a canonical approval request metadata mar letezik
-   - internal execution closure: owned here, pending approval projection / presenter threading
+   - internal execution closure: owned here, pending approval projection / presenter threading / helper reuse
    - workflow/orchestration closure: none, state machine es action eligibility valtozatlan
-   - read-model closure: owned here, expanded approval package rendering
+   - read-model closure: owned here, expanded approval package section/rendering
    - activation closure: none
    - cleanup/recovery closure: none
 
@@ -93,17 +98,20 @@ Tegyük route-aware-vá a `READY_FOR_HUMAN_APPROVAL` expanded approval package U
    - [docs/pairflow-ui-prd.md](/Users/felho/dev/pairflow/docs/pairflow-ui-prd.md)
 2. Canonical elements:
    - current-round pending approval signal tovabbra is a canonical approval request projectionja
+   - approval-request metadata interpretation tovabbra is az approval transcript helper authorityhoz kotott
    - `READY_FOR_HUMAN_APPROVAL` action matrix valtozatlan
-   - approval package tovabbra is expanded-card read-model surface
+   - az uj approval package surface csak expanded-card read-model surface lehet ebben a taskban
 3. Guard elements:
    - projected approval route mezok opcionálisak
    - unknown/missing route eseten generic copy fallback kotelezo
+   - nincs uj transcript-walking vagy UI-helyi metadata interpretation
 4. Compat elements:
    - `summary`, `refs`, `envelopeId`, `round`, `sender` mezok preserved
    - list view es non-expanded surfaces jelen taskban nem kapnak uj UI behavior-t
 5. Forbidden reinterpretations:
    - a UI nem nevezheti `budget_exhausted`-nek azt az esetet, amit a canonical approval request nem mond ki
    - elozo round approval metadata nem szivaroghat at a jelenlegi approval package-be
+   - az implementation nem hozhat letre uj, helper-kerulo metadata olvasasi utat ugyanarra a canonical requestre
    - az approval package route-aware szovege nem valthat ki lifecycle vagy action gating logikat
 6. Drift status:
    no_drift, mert a task a meglevo canonical metadata-t viszi tovabb, nem irja at a gate szemantikat.
@@ -111,9 +119,9 @@ Tegyük route-aware-vá a `READY_FOR_HUMAN_APPROVAL` expanded approval package U
 ### Scope Reality / Shape Proof
 
 1. Inspected entrypoints / call-sites:
-   `resolveLatestPendingApprovalRequest`, `getBubbleInbox`, `mapPendingInboxItems`, `presentBubbleDetail`, `BubbleExpandedCard`.
+   `resolveLatestPendingApprovalRequest`, approval transcript helper functions, `getBubbleInbox`, `mapPendingInboxItems`, `presentBubbleDetail`, `BubbleExpandedCard`, router/detail consumers, inbox proof tests.
 2. Actual touched scope:
-   approval-request consume-family + UI read-model alignment.
+   approval-request consume-family + expanded-card approval-package surface bevezetese + UI read-model alignment.
 3. Mutation entrypoints in scope:
    nincs lifecycle mutation vagy approval decision mutation.
 4. Shared contract in scope:
@@ -121,6 +129,8 @@ Tegyük route-aware-vá a `READY_FOR_HUMAN_APPROVAL` expanded approval package U
    - backend UI payload
    - frontend mirrored UI types
    - expanded card consume path
+   - router/detail serialization proof surfaces
+   - inbox read-model proof surfaces
 5. Hidden scope ruled out:
    - meta-review gate producer
    - approval action dispatch
@@ -128,7 +138,7 @@ Tegyük route-aware-vá a `READY_FOR_HUMAN_APPROVAL` expanded approval package U
    - timeline protocol contract
    - runtime state persistence
 6. Why the declared task shape matches reality:
-   a canonical metadata mar letezik; ez a task csak ugyanannak az authority-nak a projection/rendering hianyat zarja le.
+   a canonical metadata mar letezik; ez a task ugyanannak az authority-nak a projection hianyat zarja le, es bounded modon itt vezeti be a hianyzo expanded-card approval-package surface-t anelkul, hogy producer vagy mutation lane-eket ujranyitna.
 
 ## L1 - Change Contract
 
@@ -136,12 +146,14 @@ Tegyük route-aware-vá a `READY_FOR_HUMAN_APPROVAL` expanded approval package U
 
 | ID | File | Entry | Contract Delta | Required Behavior | Priority | Evidence |
 |---|---|---|---|---|---|---|
-| CS1 | `src/v11/shared/approval/pendingApprovalSignal.ts` | `resolveLatestPendingApprovalRequest(...)` | approval signal additive metadata threading | current-round canonical approval requestbol optional `latestRecommendation` es `gateRoute` projected legyen | P1 | T1,T2,T6 |
-| CS2 | `src/v11/shared/inbox/inboxCommandApi.ts` | `BubbleInboxView.items[]` | backend inbox view shape additive bovitese | approval inbox item vigye a projected route-aware contextet | P1 | T1,T3 |
+| CS1 | `src/v11/shared/approval/pendingApprovalSignal.ts` | `resolveLatestPendingApprovalRequest(...)` | approval signal additive metadata threading | current-round canonical approval requestbol optional `latestRecommendation` es `gateRoute` projected legyen, a meglevo approval helper authority reuse-val | P1 | T1,T2,T8 |
+| CS2 | `src/v11/shared/inbox/inboxCommandApi.ts` | `BubbleInboxView.items[]` | backend inbox view shape additive bovitese | approval inbox item vigye a projected route-aware contextet | P1 | T1,T3,T7 |
 | CS3 | `src/types/ui.ts`, `ui/src/lib/types.ts` | `UiBubbleInboxItem` | shared first-party UI contract additive update | optional approval context mezok mirrorozva legyenek backend es frontend oldalon is | P1 | T3 |
 | CS4 | `src/v11/infrastructure/ui/presenters/bubblePresenter.ts` | `presentBubbleDetail(...)` | detail presenter preserves approval context | inbox itemek projected approval mezoi elvesztes nelkul jussanak el a frontendhez | P1 | T3 |
-| CS5 | `ui/src/components/canvas/BubbleExpandedCard.tsx` | approval package rendering | route-aware copy selection | `human_gate_budget_exhausted` + `rework` eseten explicit budget-exhausted copy; egyebkent generic fallback | P1 | T4,T5 |
-| CS6 | `docs/pairflow-ui-prd.md` | expanded card / pending item highlight wording | UX contract parity | optional, de ha implementation kozben szukseges, a PRD jelezze hogy approval package oka canonical approval metadata-bol jon | P2 | T7 |
+| CS5 | `ui/src/components/canvas/BubbleExpandedCard.tsx` | `READY_FOR_HUMAN_APPROVAL` approval package section | uj expanded-card read-model section + route-aware copy selection | a card kapjon dedikalt approval package szekciot; `human_gate_budget_exhausted` + `rework` eseten explicit budget-exhausted copy; egyebkent generic fallback | P1 | T4,T5,T6 |
+| CS6 | `tests/core/bubble/inboxBubble.test.ts` | pending approval inbox proofs | proof-surface alignment | inbox read-model proof fedje az additive approval context fennmaradasat es current-round-only behavior-t | P1 | T1,T2,T7,T8 |
+| CS7 | `tests/core/ui/bubblePresenter.test.ts`, `tests/core/ui/router.test.ts`, `tests/core/ui/server.integration.test.ts` | presenter/router/detail serialization proofs | proof-surface alignment | backend detail payload serialization preserve-olja az approval contextet a UI consume pathig | P1 | T3,T8 |
+| CS8 | `docs/pairflow-ui-prd.md` | expanded card / pending item highlight wording | UX contract parity | optional, de ha implementation kozben szukseges, a PRD jelezze hogy approval package oka canonical approval metadata-bol jon | P2 | T9 |
 
 ### 2) Data and Interface Contract
 
@@ -149,33 +161,37 @@ Tegyük route-aware-vá a `READY_FOR_HUMAN_APPROVAL` expanded approval package U
 |---|---|---|---|---|---|
 | Pending approval signal | envelope alapszintu adatok | envelope adatok + route-aware approval context | `latestRecommendation?`, `gateRoute?` | `gateReasonCode?` csak ha tenyleg kell a copyhoz | additive |
 | UI inbox item | generic item shape | generic item shape + approval-only optional fields | approval route/recommendation only | future parity counts nem kotelezok ebben a taskban | additive |
-| Approval package copy | fix generic text | route-aware text + generic fallback | budget-exhausted explicit text | later extra route copy map | backward-compatible fallback |
+| Approval package surface | nincs kulon `READY_FOR_HUMAN_APPROVAL` expanded section | uj expanded approval-package section + route-aware text + generic fallback | dedicated section only on expanded card | later extra route copy map | backward-compatible fallback |
 
 Normative rules:
 1. A projected approval context csak `APPROVAL_REQUEST` itemeken jelenhet meg.
 2. A route-aware approval package copy csak a current-round canonical pending approval requestre epulhet.
-3. `human_gate_budget_exhausted` es `latestRecommendation=rework` esetben a UI-nek explicit ki kell mondania, hogy:
+3. A metadata interpretationnak a meglevo approval transcript helper authorityt kell reuse-olnia; ugyanarra a requestre nem johet letre kulon parse ut.
+4. `human_gate_budget_exhausted` es `latestRecommendation=rework` esetben a UI-nek explicit ki kell mondania, hogy:
    - meta-review rework ajanlast adott,
    - az auto-rework budget kimerult,
    - emiatt most emberi dontes szukseges.
-4. A task nem vezeti be kotelezoen az `auto_rework_count/limit` numerikus kiirasat; a bounded scope egyelore csak a route-ok explicit copy parityja.
-5. Ismeretlen vagy hianyzo route eseten a jelenlegi generikus approval package szoveg preserved fallback.
-6. A `READY_FOR_HUMAN_APPROVAL` action matrix, modal behavior, es approval/request-rework API surface valtozatlan.
+5. A task nem vezeti be kotelezoen az `auto_rework_count/limit` numerikus kiirasat; a bounded scope egyelore csak a route-ok explicit copy parityja.
+6. Ismeretlen vagy hianyzo route eseten a jelenlegi generikus approval package szoveg preserved fallback.
+7. A dedikalt approval package surface csak az expanded cardon jelenik meg; list view es mas feluletek nem valtoznak ebben a taskban.
+8. A `READY_FOR_HUMAN_APPROVAL` action matrix, modal behavior, es approval/request-rework API surface valtozatlan.
 
 ### 3) Shared Contract Compatibility Gate
 
 1. Current consumers inventory:
    - backend UI presenter
    - backend UI/server tests
+   - backend inbox read-model proofs
    - frontend mirrored UI types
    - expanded bubble card
    - frontend fixtures/tests
+   - router/detail serialization proofs
 2. Additive vs breaking:
    additive only; existing consumers optional mezok nelkul tovabbra is validak.
 3. Alignment strategy:
-   backend projection + frontend type mirror + expanded-card consume ugyanebben a taskban tortenik.
+   backend projection + inbox proof alignment + frontend type mirror + presenter/router serialization proof + expanded-card consume ugyanebben a taskban tortenik.
 4. Forbidden compatibility shortcut:
-   ne legyen backend-only mezobovites frontend type alignment nelkul.
+   ne legyen backend-only mezobovites frontend type alignment es proof-surface refresh nelkul.
 
 ### 4) Error / Fallback Contract
 
@@ -192,19 +208,22 @@ Normative rules:
 | T1 | pending approval signal projects budget-exhausted route | current round canonical approval request metadata includes `latest_recommendation=rework` and `meta_review_gate_route=human_gate_budget_exhausted` | pending approval signal resolve fut | projected signal tartalmazza a route-aware approval contextet |
 | T2 | missing approval metadata falls back cleanly | approval request summary van, metadata nincs vagy partial | projection fut | optional route mezok `undefined`, summary preserved |
 | T3 | UI detail contract preserves additive fields | backend detail view built from inbox item with approval context | presenter/detail serialization fut | frontend detail payloadban ugyanaz az approval context jelenik meg |
-| T4 | expanded card shows budget exhausted copy | detail bubble `READY_FOR_HUMAN_APPROVAL`, approval item route=`human_gate_budget_exhausted`, recommendation=`rework` | expanded card render | approval package explicit budget-exhausted + human-decision-required szoveget mutat |
-| T5 | expanded card preserves generic fallback copy | detail bubble approval item route hianyzik vagy ismeretlen | expanded card render | jelenlegi generic approval package copy marad |
-| T6 | stale previous-round approval context does not leak | previous round approval request exists, current round decision/resolution mar megtortent | pending approval resolution fut | current detailben nincs stale approval route context |
-| T7 | PRD parity optional update | implementation explicit canonical approval metadata read-pathot bevezet | docs review | UI PRD szoveg nem mond ellent a canonical read-pathnak |
+| T4 | expanded card introduces approval package section | detail bubble `READY_FOR_HUMAN_APPROVAL` with pending approval item | expanded card render | dedikalt approval package section jelenik meg ezen a surface-en |
+| T5 | expanded card shows budget exhausted copy | detail bubble `READY_FOR_HUMAN_APPROVAL`, approval item route=`human_gate_budget_exhausted`, recommendation=`rework` | expanded card render | approval package explicit budget-exhausted + human-decision-required szoveget mutat |
+| T6 | expanded card preserves generic fallback copy | detail bubble approval item route hianyzik vagy ismeretlen | expanded card render | jelenlegi generic approval package copy marad |
+| T7 | inbox read-model proof keeps current-round-only approval context | previous round approval request exists, current round request is still pending | inbox view build fut | csak a current-round unresolved approval item viszi a projected route-aware contextet |
+| T8 | stale previous-round approval context does not leak | previous round approval request exists, current round decision/resolution mar megtortent | pending approval resolution fut | current detailben nincs stale approval route context |
+| T9 | PRD parity optional update | implementation explicit canonical approval metadata read-pathot bevezet | docs review | UI PRD szoveg nem mond ellent a canonical read-pathnak |
 
 ### 6) Review Control
 
 Reviewer csak akkor adhat `IMPLEMENTABLE` allapotot, ha:
 1. a task egyertelmuen kimondja, hogy a gate oka a canonical approval request metadata-bol jon,
 2. a bounded scope nem nyitja ujra a meta-review gate producer vagy approval mutation lane-eket,
-3. a shared UI contract additive marad es minden first-party consumer ugyanebben a taskban alignalodik,
+3. a shared UI contract additive marad es minden first-party consumer ugyanebben a taskban alignalodik, beleertve az inbox es router/detail proof surface-eket,
 4. a missing metadata fallback explicit es preserved,
-5. a `human_gate_budget_exhausted` operator copy mar nem osszekeverheto egy generic human gate-tel.
+5. a task explicit kimondja, hogy itt uj expanded-card approval package surface jon letre, nem csak copy-csere egy mar meglevo blokkon,
+6. a `human_gate_budget_exhausted` operator copy mar nem osszekeverheto egy generic human gate-tel.
 
 ## L2 - Implementation Notes (Optional)
 
@@ -213,16 +232,18 @@ Reviewer csak akkor adhat `IMPLEMENTABLE` allapotot, ha:
    - `gateRoute`
    optional field threading.
 2. `gateReasonCode` csak akkor erdemes most felvenni, ha a copyhoz tenylegesen kell; kulonben felesleges contract-noise.
-3. A frontend copyban jobb explicit route-aware mondatot hasznalni, mint numerikus state-internals-t kiirni, mert az utobbi uj consume-family terhelest nyitna.
-4. Ha a cardban helper keszul a copyhoz, legyen egy helyen a generic fallback es a `human_gate_budget_exhausted` override.
+3. A pending approval projection metadata olvasasa reuse-olja a meglevo `approvalTranscriptContext` helper authorityt, ne vezessen be uj parhuzamos parse logikat.
+4. A frontend copyban jobb explicit route-aware mondatot hasznalni, mint numerikus state-internals-t kiirni, mert az utobbi uj consume-family terhelest nyitna.
+5. Ha a cardban helper keszul a copyhoz, legyen egy helyen a generic fallback es a `human_gate_budget_exhausted` override.
 
 ## Spec Lock
 
 Task `IMPLEMENTABLE`, ha:
 1. a route-aware approval package oka a canonical pending approval request authorityhoz kotott,
-2. a budget-exhausted UX explicit, de bounded marad,
-3. a shared UI contract additive es tesztekkel vedett,
-4. lifecycle/action semantics valtozatlanul maradnak.
+2. a task egyertelmuen bounded modon uj expanded-card approval-package surface-kent kezeli ezt a UI-t,
+3. a budget-exhausted UX explicit, de bounded marad,
+4. a shared UI contract additive es tesztekkel vedett,
+5. lifecycle/action semantics valtozatlanul maradnak.
 
 ## Assumptions
 
