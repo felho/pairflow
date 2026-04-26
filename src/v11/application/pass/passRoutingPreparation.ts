@@ -33,6 +33,7 @@ export async function preparePassRouting(
     findingsPayloadInvalid: input.findingsPayloadInvalid,
     reviewArtifactType: input.bubbleConfig.review_artifact_type,
     severityGateRound: input.bubbleConfig.severity_gate_round,
+    reviewerBlockingMinSeverity: input.reviewerBlockingMinSeverity,
     summary: input.summary,
     createError: input.createError
   });

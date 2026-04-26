@@ -36,6 +36,12 @@ function expectDecisionError(action: () => void, expected: RegExp): void {
   }
 }
 
+function isCommandErrorObject(
+  value: PairflowCommandErrorInput
+): value is Exclude<PairflowCommandErrorInput, string> {
+  return typeof value !== "string";
+}
+
 describe("inferReviewerPassIntent", () => {
   it("rejects mutually exclusive findings inputs", () => {
     expectDecisionError(
@@ -89,6 +95,10 @@ describe("validateReviewerPassGate", () => {
     severity: "P2",
     title: "Non-blocking issue"
   };
+  const p3Finding: Finding = {
+    severity: "P3",
+    title: "Minor cleanup"
+  };
 
   it("allows pre-gate clean reviewer pass", () => {
     expect(() =>
@@ -99,6 +109,7 @@ describe("validateReviewerPassGate", () => {
         findingsPayloadInvalid: false,
         reviewArtifactType: "code",
         severityGateRound: 3,
+        reviewerBlockingMinSeverity: "P3",
         createError
       })
     ).not.toThrow();
@@ -114,6 +125,7 @@ describe("validateReviewerPassGate", () => {
           findingsPayloadInvalid: false,
           reviewArtifactType: "code",
           severityGateRound: 3,
+          reviewerBlockingMinSeverity: "P3",
           createError
         }),
       /^REVIEWER_PASS_NO_FINDINGS_POST_GATE:/u
@@ -130,37 +142,89 @@ describe("validateReviewerPassGate", () => {
           findingsPayloadInvalid: true,
           reviewArtifactType: "code",
           severityGateRound: 3,
+          reviewerBlockingMinSeverity: "P3",
           createError
         }),
       /^FINDINGS_PAYLOAD_INVALID: Reviewer PASS findings payload is invalid\./u
     );
   });
 
-  it("rejects post-gate non-blocking finding set", () => {
+  it("allows post-gate P3-only findings when reviewer threshold is P3", () => {
+    expect(() =>
+      validateReviewerPassGate({
+        round: 3,
+        noFindings: false,
+        findings: [p3Finding],
+        findingsPayloadInvalid: false,
+        reviewArtifactType: "code",
+        severityGateRound: 3,
+        reviewerBlockingMinSeverity: "P3",
+        createError
+      })
+    ).not.toThrow();
+  });
+
+  it("rejects post-gate P3-only finding set when reviewer threshold is P2", () => {
     expectDecisionError(
       () =>
         validateReviewerPassGate({
           round: 3,
           noFindings: false,
-          findings: [p2Finding],
+          findings: [p3Finding],
           findingsPayloadInvalid: false,
           reviewArtifactType: "code",
           severityGateRound: 3,
+          reviewerBlockingMinSeverity: "P2",
           createError
         }),
       /^REVIEWER_PASS_NON_BLOCKING_POST_GATE:/u
     );
   });
 
-  it("allows post-gate blocking findings", () => {
+  it("includes structured threshold context in post-gate non-blocking reject errors", () => {
+    let captured: Exclude<PairflowCommandErrorInput, string> | undefined;
+
+    expectDecisionError(
+      () =>
+        validateReviewerPassGate({
+          round: 3,
+          noFindings: false,
+          findings: [p3Finding],
+          findingsPayloadInvalid: false,
+          reviewArtifactType: "code",
+          severityGateRound: 3,
+          reviewerBlockingMinSeverity: "P2",
+          createError: (input) => {
+            if (isCommandErrorObject(input)) {
+              captured = input;
+            }
+            return createError(input);
+          }
+        }),
+      /highest effective open severity=P3/u
+    );
+
+    expect(captured?.reasonCode).toBe("REVIEWER_PASS_NON_BLOCKING_POST_GATE");
+    expect(captured?.context).toMatchObject({
+      guard: "reviewer_pass_decision_input",
+      configuredMinSeverity: "P2",
+      highestEffectiveOpenSeverity: "P3",
+      thresholdCategory: "p3_only",
+      reviewArtifactType: "code",
+      declaredCanonicalBlockerPresent: false
+    });
+  });
+
+  it("allows post-gate P2 findings when reviewer threshold is P2", () => {
     expect(() =>
       validateReviewerPassGate({
         round: 3,
         noFindings: false,
-        findings: [p1Finding],
+        findings: [p2Finding],
         findingsPayloadInvalid: false,
         reviewArtifactType: "code",
         severityGateRound: 3,
+        reviewerBlockingMinSeverity: "P2",
         createError
       })
     ).not.toThrow();
@@ -176,6 +240,7 @@ describe("validateReviewerPassGate", () => {
           findingsPayloadInvalid: false,
           reviewArtifactType: "document",
           severityGateRound: 3,
+          reviewerBlockingMinSeverity: "P1",
           createError
         }),
       /Document scope qualifier: blocker findings require strict `timing=required-now` \+ `layer=L1`/u

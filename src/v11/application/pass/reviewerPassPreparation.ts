@@ -1,6 +1,9 @@
 import type { Finding } from "../../../types/findings.js";
 import type { PassIntent } from "../../../types/protocol.js";
-import type { ReviewArtifactType } from "../../../types/bubble.js";
+import type {
+  BubbleReviewAutoReworkSeverity,
+  ReviewArtifactType
+} from "../../../types/bubble.js";
 import {
   assertReviewerNoFindingsSummaryConsistency,
   inferReviewerPassIntent,
@@ -22,6 +25,7 @@ export interface PrepareReviewerPassInput {
   findingsPayloadInvalid: boolean;
   reviewArtifactType: ReviewArtifactType;
   severityGateRound: number;
+  reviewerBlockingMinSeverity: BubbleReviewAutoReworkSeverity;
   summary: string;
   createError: PairflowCreateCommandError;
 }
@@ -77,6 +81,7 @@ export function prepareReviewerPass(
     findingsPayloadInvalid: input.findingsPayloadInvalid,
     reviewArtifactType: input.reviewArtifactType,
     severityGateRound: input.severityGateRound,
+    reviewerBlockingMinSeverity: input.reviewerBlockingMinSeverity,
     createError: input.createError
   });
   assertReviewerNoFindingsSummary({

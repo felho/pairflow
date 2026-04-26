@@ -4,7 +4,12 @@ import {
 } from "../../../v11/domain/convergence/repeatCleanAutoconverge.js";
 import type { ReviewVerificationInputResolution } from "../../../v11/shared/reviewer/reviewVerification.js";
 import type { ReadTranscriptEnvelopesPort } from "../../../v11/shared/ports/transcript.js";
-import type { AgentName, AgentRole, BubbleConfig } from "../../../types/bubble.js";
+import type {
+  AgentName,
+  AgentRole,
+  BubbleConfig,
+  BubbleReviewAutoReworkSeverity
+} from "../../../types/bubble.js";
 import type { Finding } from "../../../types/findings.js";
 import type { PassIntent, ProtocolEnvelope } from "../../../types/protocol.js";
 import type {
@@ -22,6 +27,7 @@ export interface PreparePassRoutingInput {
   hasFindings: boolean;
   noFindings: boolean;
   findingsPayloadInvalid: boolean;
+  reviewerBlockingMinSeverity: BubbleReviewAutoReworkSeverity;
   bubbleConfig: Pick<
     BubbleConfig,
     "review_artifact_type" | "severity_gate_round" | "accuracy_critical"
@@ -53,6 +59,7 @@ export interface PreparePassRoutingDependencies {
     findingsPayloadInvalid: boolean;
     reviewArtifactType: BubbleConfig["review_artifact_type"];
     severityGateRound: number;
+    reviewerBlockingMinSeverity: BubbleReviewAutoReworkSeverity;
     summary: string;
     createError: PairflowCreateCommandError;
   }) => {

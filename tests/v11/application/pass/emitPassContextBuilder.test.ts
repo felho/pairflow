@@ -54,7 +54,12 @@ describe("emitPassContextBuilder", () => {
             bubbleConfig: {
               id: "b_emit_ctx_01",
               review_artifact_type: "code",
-              severity_gate_round: 4
+              severity_gate_round: 4,
+              review_policy: {
+                review_loop_mode: "full",
+                reviewer_blocking_min_severity: "P2",
+                meta_review_auto_rework_min_severity: "P3"
+              }
             },
             bubblePaths: {
               worktreePath: "/repo/.pairflow/worktrees/b_emit_ctx_01",
@@ -127,6 +132,7 @@ describe("emitPassContextBuilder", () => {
     expect(capturedRoutingInput?.inputIntent).toBe("review");
     expect(capturedRoutingInput?.senderRole).toBe("reviewer");
     expect(capturedRoutingInput?.round).toBe(2);
+    expect(capturedRoutingInput?.reviewerBlockingMinSeverity).toBe("P2");
     expect(capturedRoutingInput?.worktreePath).toBe("/remote/repo");
     expect(capturedRoutingDependencies).toBeDefined();
     expect(context.activation).toBeUndefined();
@@ -217,6 +223,7 @@ describe("emitPassContextBuilder", () => {
     );
 
     expect(capturedRoutingInput).toBeDefined();
+    expect(capturedRoutingInput?.reviewerBlockingMinSeverity).toBe("P3");
     expect(
       Object.prototype.hasOwnProperty.call(capturedRoutingInput ?? {}, "inputIntent")
     ).toBe(false);

@@ -1,4 +1,7 @@
-import type { BubbleConfig } from "../../../types/bubble.js";
+import type {
+  BubbleConfig,
+  BubbleReviewAutoReworkSeverity
+} from "../../../types/bubble.js";
 import type { Finding } from "../../../types/findings.js";
 import type { PassIntent, ProtocolEnvelope } from "../../../types/protocol.js";
 import type { ReadTranscriptOptions } from "../../shared/ports/transcript.js";
@@ -17,6 +20,7 @@ export interface BuildPassRoutingInputInput {
   hasFindings: boolean;
   noFindings: boolean;
   findingsPayloadInvalid: boolean;
+  reviewerBlockingMinSeverity: BubbleReviewAutoReworkSeverity;
   bubbleConfig: Pick<
     BubbleConfig,
     "review_artifact_type" | "severity_gate_round" | "accuracy_critical"
@@ -43,6 +47,7 @@ export function buildPassRoutingInput(
     hasFindings: input.hasFindings,
     noFindings: input.noFindings,
     findingsPayloadInvalid: input.findingsPayloadInvalid,
+    reviewerBlockingMinSeverity: input.reviewerBlockingMinSeverity,
     bubbleConfig: {
       review_artifact_type: input.bubbleConfig.review_artifact_type,
       severity_gate_round: input.bubbleConfig.severity_gate_round,

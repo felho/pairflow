@@ -2067,6 +2067,20 @@ describe("emitPassFromWorkspace", { timeout: 20_000 }, () => {
       bubbleId: "b_pass_post_gate_non_blocking_01",
       task: "Post-gate non-blocking pass reject"
     });
+    await writeFile(
+      bubble.paths.bubbleTomlPath,
+      renderBubbleConfigToml({
+        ...bubble.config,
+        review_policy: {
+          review_loop_mode:
+            bubble.config.review_policy?.review_loop_mode ?? "full",
+          reviewer_blocking_min_severity: "P2",
+          meta_review_auto_rework_min_severity:
+            bubble.config.review_policy?.meta_review_auto_rework_min_severity ?? "P3"
+        }
+      }),
+      "utf8"
+    );
 
     const loaded = await readStateSnapshot(bubble.paths.statePath);
     await writeStateSnapshot(
@@ -2099,10 +2113,6 @@ describe("emitPassFromWorkspace", { timeout: 20_000 }, () => {
         summary: "Only non-blocking findings remain",
         findings: [
           {
-            severity: "P2",
-            title: "Non-blocking gap"
-          },
-          {
             severity: "P3",
             title: "Minor cleanup"
           }
@@ -2115,6 +2125,144 @@ describe("emitPassFromWorkspace", { timeout: 20_000 }, () => {
     expect(transcriptAfter).toEqual(transcriptBefore);
     const stateAfter = await readStateSnapshot(bubble.paths.statePath);
     expect(stateAfter.state).toEqual(stateBefore.state);
+  });
+
+  it("allows reviewer pass at round>=severity_gate_round when configured reviewer threshold is P3 and only P3 findings remain", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_pass_post_gate_p3_threshold_01",
+      task: "Post-gate P3 threshold allows advisory-only pass"
+    });
+    await writeFile(
+      bubble.paths.bubbleTomlPath,
+      renderBubbleConfigToml({
+        ...bubble.config,
+        review_policy: {
+          review_loop_mode:
+            bubble.config.review_policy?.review_loop_mode ?? "full",
+          reviewer_blocking_min_severity: "P3",
+          meta_review_auto_rework_min_severity:
+            bubble.config.review_policy?.meta_review_auto_rework_min_severity ?? "P3"
+        }
+      }),
+      "utf8"
+    );
+
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    await writeStateSnapshot(
+      bubble.paths.statePath,
+      {
+        ...loaded.state,
+        state: "RUNNING",
+        round: 4,
+        active_agent: bubble.config.agents.reviewer,
+        active_role: "reviewer",
+        active_since: "2026-03-01T12:07:00.000Z",
+        last_command_at: "2026-03-01T12:07:00.000Z",
+        round_role_history: buildRoundRoleHistoryThroughRound({
+          throughRound: 4,
+          implementer: bubble.config.agents.implementer,
+          reviewer: bubble.config.agents.reviewer
+        })
+      },
+      {
+        expectedFingerprint: loaded.fingerprint,
+        expectedState: "RUNNING"
+      }
+    );
+
+    const result = await emitPassFromWorkspace({
+      summary: "Only P3 follow-up notes remain",
+      findings: [
+        {
+          severity: "P3",
+          title: "Minor cleanup"
+        }
+      ],
+      cwd: bubble.paths.worktreePath
+    });
+
+    expect(result.envelope.type).toBe("PASS");
+    expect(result.envelope.payload.pass_intent).toBe("fix_request");
+    expect(result.envelope.payload.findings).toEqual([
+      {
+        priority: "P3",
+        severity: "P3",
+        title: "Minor cleanup"
+      }
+    ]);
+    expect(result.state.active_role).toBe("implementer");
+    expect(result.state.round).toBe(5);
+  });
+
+  it("allows reviewer pass at round>=severity_gate_round when configured reviewer threshold is P2 and P2 findings remain", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_pass_post_gate_p2_threshold_01",
+      task: "Post-gate P2 threshold allows P2 findings pass"
+    });
+    await writeFile(
+      bubble.paths.bubbleTomlPath,
+      renderBubbleConfigToml({
+        ...bubble.config,
+        review_policy: {
+          review_loop_mode:
+            bubble.config.review_policy?.review_loop_mode ?? "full",
+          reviewer_blocking_min_severity: "P2",
+          meta_review_auto_rework_min_severity:
+            bubble.config.review_policy?.meta_review_auto_rework_min_severity ?? "P3"
+        }
+      }),
+      "utf8"
+    );
+
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    await writeStateSnapshot(
+      bubble.paths.statePath,
+      {
+        ...loaded.state,
+        state: "RUNNING",
+        round: 4,
+        active_agent: bubble.config.agents.reviewer,
+        active_role: "reviewer",
+        active_since: "2026-03-01T12:08:00.000Z",
+        last_command_at: "2026-03-01T12:08:00.000Z",
+        round_role_history: buildRoundRoleHistoryThroughRound({
+          throughRound: 4,
+          implementer: bubble.config.agents.implementer,
+          reviewer: bubble.config.agents.reviewer
+        })
+      },
+      {
+        expectedFingerprint: loaded.fingerprint,
+        expectedState: "RUNNING"
+      }
+    );
+
+    const result = await emitPassFromWorkspace({
+      summary: "P2 fix work remains",
+      findings: [
+        {
+          severity: "P2",
+          title: "Functional gap remains"
+        }
+      ],
+      cwd: bubble.paths.worktreePath
+    });
+
+    expect(result.envelope.type).toBe("PASS");
+    expect(result.envelope.payload.pass_intent).toBe("fix_request");
+    expect(result.envelope.payload.findings).toEqual([
+      {
+        priority: "P2",
+        severity: "P2",
+        title: "Functional gap remains"
+      }
+    ]);
+    expect(result.state.active_role).toBe("implementer");
+    expect(result.state.round).toBe(5);
   });
 
   it("rejects document-scope reviewer --no-findings at gate round with no side effects", async () => {
@@ -2227,6 +2375,20 @@ describe("emitPassFromWorkspace", { timeout: 20_000 }, () => {
       task: "Doc scope post-gate CLI blocker downgrade",
       reviewArtifactType: "document"
     });
+    await writeFile(
+      bubble.paths.bubbleTomlPath,
+      renderBubbleConfigToml({
+        ...bubble.config,
+        review_policy: {
+          review_loop_mode:
+            bubble.config.review_policy?.review_loop_mode ?? "full",
+          reviewer_blocking_min_severity: "P1",
+          meta_review_auto_rework_min_severity:
+            bubble.config.review_policy?.meta_review_auto_rework_min_severity ?? "P3"
+        }
+      }),
+      "utf8"
+    );
 
     const loaded = await readStateSnapshot(bubble.paths.statePath);
     await writeStateSnapshot(

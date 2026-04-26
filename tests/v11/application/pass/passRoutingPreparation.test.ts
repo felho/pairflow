@@ -24,6 +24,7 @@ describe("preparePassRouting", () => {
         hasFindings: false,
         noFindings: true,
         findingsPayloadInvalid: false,
+        reviewerBlockingMinSeverity: "P2",
         bubbleConfig: {
           review_artifact_type: "code",
           severity_gate_round: 2,
@@ -39,6 +40,7 @@ describe("preparePassRouting", () => {
         prepareReviewerPass: (input) => {
           callOrder.push("prepareReviewerPass");
           expect(input.senderRole).toBe("reviewer");
+          expect(input.reviewerBlockingMinSeverity).toBe("P2");
           return {
             inferredReviewerIntent: "review",
             reviewerFindingsClaim: {
@@ -126,6 +128,7 @@ describe("preparePassRouting", () => {
         hasFindings: false,
         noFindings: false,
         findingsPayloadInvalid: false,
+        reviewerBlockingMinSeverity: "P3",
         bubbleConfig: {
           review_artifact_type: "document",
           severity_gate_round: 2,
