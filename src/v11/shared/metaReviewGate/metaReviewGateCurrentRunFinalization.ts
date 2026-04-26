@@ -8,6 +8,7 @@ import type {
   WriteStateSnapshotPort
 } from "../ports/stateSnapshots.js";
 import type { BubbleConfig } from "../../../types/bubble.js";
+import type { Finding } from "../../../types/findings.js";
 import {
   type FindingsParityMetadata
 } from "../../../types/protocol.js";
@@ -112,6 +113,7 @@ async function resolveCurrentRunParity(input: {
       ok: true;
       budgetAvailable: boolean;
       parityMetadata: FindingsParityMetadata | null;
+      findingsForPayload: Finding[] | undefined;
       runResultForRouting: MetaReviewResult;
     }
   | {
@@ -148,6 +150,7 @@ async function resolveCurrentRunParity(input: {
     ok: true,
     budgetAvailable: input.snapshot.auto_rework_count < input.snapshot.auto_rework_limit,
     parityMetadata: parity.metadata,
+    findingsForPayload: parity.findingsForPayload,
     runResultForRouting: mergeRunResultWithParityResolution({
       runResult: input.runResult,
       metadata: parity.metadata,
@@ -276,6 +279,7 @@ export async function finalizeCurrentRunMetaReviewGate(
       finalizeInput: input,
       runResultForRouting: parity.runResultForRouting,
       parityMetadata: parity.parityMetadata,
+      findingsForPayload: parity.findingsForPayload,
       persistDispatchFailedHumanRoute: (dispatchInput) =>
         persistDispatchFailedHumanRoute({
           finalizeInput: input,

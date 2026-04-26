@@ -1,9 +1,11 @@
 import { resolveLegacySummaryFindingsClaimState } from "../../../v11/domain/convergence/policy.js";
+import type { Finding } from "../../../types/findings.js";
 import type { MetaReviewResult } from "../metaReview/metaReviewTypes.js";
 import { type FindingsParityMetadata } from "../../../types/protocol.js";
 import type { MetaReviewGateArtifactReadFn } from "./metaReviewGateFindingsMetadata.js";
 import {
   buildFindingsParityMetadata,
+  projectDisplayableFindingsFromArtifact,
   resolveReworkFindingsParityInput,
   validateFindingsArtifactParity
 } from "./metaReviewGateFindingsParityHelpers.js";
@@ -23,7 +25,12 @@ export async function validateStructuredMetaReviewPositiveClaimReworkPath(input:
   readFileFn: MetaReviewGateArtifactReadFn;
   sleepForRetryMs?: (delayMs: number) => Promise<void>;
 }): Promise<
-  | { ok: true; diagnostics: string[]; metadata: FindingsParityMetadata | null }
+  | {
+      ok: true;
+      diagnostics: string[];
+      metadata: FindingsParityMetadata;
+      findingsForPayload?: Finding[];
+    }
   | { ok: false; reason: string; metadata: FindingsParityMetadata | null }
 > {
   const parityInput = resolveReworkFindingsParityInput({
@@ -65,10 +72,14 @@ export async function validateStructuredMetaReviewPositiveClaimReworkPath(input:
     : [
         `CLAIM_PARSER_DIVERGENCE_DIAGNOSTIC: parser_state=${parserState} structured_state=open_findings structured_source=meta_review_artifact`
       ];
+  const findingsForPayload = projectDisplayableFindingsFromArtifact(
+    artifactParity.artifact.findings
+  );
 
   return {
     ok: true,
     diagnostics,
+    ...(findingsForPayload !== undefined ? { findingsForPayload } : {}),
     metadata: buildFindingsParityMetadata({
       findingsCount: parityInput.value.findingsCount,
       artifactOpenTotal: artifactParity.artifactOpenTotal,

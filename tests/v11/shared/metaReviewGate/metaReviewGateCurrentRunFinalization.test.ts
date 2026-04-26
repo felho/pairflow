@@ -281,6 +281,156 @@ describe("finalizeCurrentRunMetaReviewGate", () => {
     });
   });
 
+  it("projects canonical findings into the auto-rework approval decision payload", async () => {
+    const artifact = await createArtifactFixture({
+      findings: [
+        {
+          priority: "P1",
+          title: " blocking finding ",
+          refs: [" docs/a.md ", "", 42]
+        },
+        {
+          severity: "P3",
+          title: "advisory finding",
+          detail: "Needs follow-up",
+          timing: "later-hardening",
+          layer: "L1"
+        },
+        {
+          severity: "blocking",
+          title: "alias-only severity should not project"
+        },
+        {
+          title: "missing severity and priority"
+        }
+      ],
+      summary: { open_total: 4 }
+    });
+    const append = createAppendEnvelopeStub();
+    const write = createWriteStateStub();
+
+    const result = await finalizeCurrentRunMetaReviewGate({
+      resolved: {
+        bubbleId: "b_meta_gate_finalize_threshold_01",
+        bubbleConfig: {
+          watchdog_timeout_minutes: 30,
+          agents: {
+            implementer: "claude",
+            reviewer: "codex",
+            meta_reviewer: "codex"
+          },
+          review_policy: {
+            review_loop_mode: "full",
+            reviewer_blocking_min_severity: "P2",
+            meta_review_auto_rework_min_severity: "P2"
+          }
+        },
+        bubblePaths: {
+          bubbleDir: artifact.bubbleDir,
+          artifactsDir: artifact.artifactsDir,
+          inboxPath: join(artifact.bubbleDir, "inbox.ndjson"),
+          locksDir: join(artifact.bubbleDir, "locks"),
+          statePath: join(artifact.bubbleDir, "state.json"),
+          transcriptPath: join(artifact.bubbleDir, "transcript.ndjson")
+        }
+      },
+      loaded: createLoadedRunningState(),
+      now: new Date("2026-04-22T10:05:00.000Z"),
+      refs: [],
+      summary: "Canonical findings payload projection fixture",
+      runResult: createRunResult({
+        runId: "run_meta_gate_finalize_payload_findings_01",
+        artifactRef: artifact.artifactRef,
+        digest: artifact.digest,
+        findingsCount: 4,
+        blockingOpenTotal: 2,
+        advisoryOpenTotal: 2
+      }),
+      readFileFn: (path, encoding) => readFile(path, encoding),
+      appendEnvelope: append.appendEnvelope,
+      writeState: write.writeState
+    });
+
+    expect(result.route).toBe("auto_rework");
+    expect(result.gateEnvelope.payload.findings).toEqual([
+      {
+        priority: "P1",
+        severity: "P1",
+        title: "blocking finding",
+        refs: ["docs/a.md"]
+      },
+      {
+        severity: "P3",
+        title: "advisory finding",
+        detail: "Needs follow-up",
+        timing: "later-hardening",
+        layer: "L1"
+      }
+    ]);
+  });
+
+  it("keeps auto-rework valid without payload findings when the artifact has no displayable entries", async () => {
+    const artifact = await createArtifactFixture({
+      findings: [
+        {
+          severity: "blocking",
+          title: "alias-only severity should not project"
+        },
+        {
+          title: "missing severity and priority"
+        }
+      ],
+      summary: { open_total: 2 }
+    });
+    const append = createAppendEnvelopeStub();
+    const write = createWriteStateStub();
+
+    const result = await finalizeCurrentRunMetaReviewGate({
+      resolved: {
+        bubbleId: "b_meta_gate_finalize_threshold_01",
+        bubbleConfig: {
+          watchdog_timeout_minutes: 30,
+          agents: {
+            implementer: "claude",
+            reviewer: "codex",
+            meta_reviewer: "codex"
+          },
+          review_policy: {
+            review_loop_mode: "full",
+            reviewer_blocking_min_severity: "P2",
+            meta_review_auto_rework_min_severity: "P2"
+          }
+        },
+        bubblePaths: {
+          bubbleDir: artifact.bubbleDir,
+          artifactsDir: artifact.artifactsDir,
+          inboxPath: join(artifact.bubbleDir, "inbox.ndjson"),
+          locksDir: join(artifact.bubbleDir, "locks"),
+          statePath: join(artifact.bubbleDir, "state.json"),
+          transcriptPath: join(artifact.bubbleDir, "transcript.ndjson")
+        }
+      },
+      loaded: createLoadedRunningState(),
+      now: new Date("2026-04-22T10:05:00.000Z"),
+      refs: [],
+      summary: "No displayable findings projection fixture",
+      runResult: createRunResult({
+        runId: "run_meta_gate_finalize_payload_findings_missing_01",
+        artifactRef: artifact.artifactRef,
+        digest: artifact.digest,
+        findingsCount: 2,
+        blockingOpenTotal: 2,
+        advisoryOpenTotal: 0
+      }),
+      readFileFn: (path, encoding) => readFile(path, encoding),
+      appendEnvelope: append.appendEnvelope,
+      writeState: write.writeState
+    });
+
+    expect(result.route).toBe("auto_rework");
+    expect(result.gateEnvelope.payload.findings).toBeUndefined();
+  });
+
   it("does not threshold-gate the rework route when the highest open severity is below the configured minimum", async () => {
     const artifact = await createArtifactFixture({
       findings: [{ severity: "P3", title: "advisory" }],

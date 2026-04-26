@@ -82,6 +82,45 @@ describe("BubbleTimeline", () => {
     expect(reworkBadges).toHaveLength(1);
   });
 
+  it("renders severity tags from payload findings on meta-review auto-rework rows", () => {
+    render(
+      <BubbleTimeline
+        entries={[
+          timelineEntry({
+            id: "env-decision-findings-1",
+            type: "APPROVAL_DECISION",
+            sender: "orchestrator",
+            recipient: "codex",
+            payload: {
+              decision: "rework",
+              message: "Apply rework.",
+              findings: [
+                { title: "blocking", severity: "P1" },
+                { title: "advisory", severity: "P3" },
+                { title: "duplicate", severity: "P1" }
+              ],
+              metadata: {
+                actor: "meta-reviewer",
+                recommendation: "rework"
+              }
+            }
+          })
+        ]}
+        isLoading={false}
+        error={null}
+        compact={false}
+      />
+    );
+
+    const reworkBadges = screen
+      .getAllByText("rework")
+      .filter((node) => node.className.includes("inline-block"));
+
+    expect(reworkBadges).toHaveLength(1);
+    expect(screen.getByText("P1")).toBeInTheDocument();
+    expect(screen.getByText("P3")).toBeInTheDocument();
+  });
+
   it("renders extras inside the same scroll container as timeline entries", () => {
     render(
       <BubbleTimeline

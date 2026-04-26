@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   deriveFindingsOpenSplit,
+  projectDisplayableFindingsFromArtifact,
   validateFindingsArtifactParity
 } from "../../../../src/v11/shared/metaReviewGate/metaReviewGateFindingsParityHelpers.js";
 
@@ -138,5 +139,66 @@ describe("deriveFindingsOpenSplit", () => {
       findings_blocking_open_total: null,
       findings_advisory_open_total: null
     });
+  });
+});
+
+describe("projectDisplayableFindingsFromArtifact", () => {
+  it("projects only displayable findings and emits canonical severity", () => {
+    const projected = projectDisplayableFindingsFromArtifact([
+      {
+        priority: "P1",
+        title: " blocking finding ",
+        refs: [" docs/a.md ", "", 42],
+        evidence: [" artifact-1 ", "", null]
+      },
+      {
+        priority: "P2",
+        severity: "P3",
+        title: "advisory finding",
+        detail: "Needs follow-up",
+        timing: "later-hardening",
+        layer: "L1"
+      },
+      {
+        severity: "blocking",
+        title: "alias-only severity should not project"
+      },
+      {
+        severity: "P2",
+        title: "   "
+      },
+      {
+        title: "missing severity and priority"
+      }
+    ]);
+
+    expect(projected).toEqual([
+      {
+        priority: "P1",
+        severity: "P1",
+        title: "blocking finding",
+        refs: ["docs/a.md"],
+        evidence: ["artifact-1"]
+      },
+      {
+        priority: "P2",
+        severity: "P3",
+        title: "advisory finding",
+        detail: "Needs follow-up",
+        timing: "later-hardening",
+        layer: "L1"
+      }
+    ]);
+  });
+
+  it("collapses non-array, empty, and fully-filtered findings inputs to undefined", () => {
+    expect(projectDisplayableFindingsFromArtifact({ findings: [] })).toBeUndefined();
+    expect(projectDisplayableFindingsFromArtifact([])).toBeUndefined();
+    expect(
+      projectDisplayableFindingsFromArtifact([
+        { severity: "blocking", title: "alias-only severity should not project" },
+        { title: "missing severity and priority" }
+      ])
+    ).toBeUndefined();
   });
 });
