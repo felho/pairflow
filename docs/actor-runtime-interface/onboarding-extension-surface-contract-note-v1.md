@@ -17,8 +17,8 @@ owners:
    - a 4 seam, ahol az `AgentRole` enum konkret ertekei a current tree-ben szetszivargak, source-anchored inventoryt kap,
    - egy belso `RoleDescriptor` registry mezohalmaz lockolasra kerul, amely a meglevo catalog-pattern (`actorRuntimePolicyCheckCatalog`, `actorRuntimeAdapterExecutors`) mintajara mukodik,
    - a 3 mai role (`implementer`, `reviewer`, `meta_reviewer`) closed-mapping matrixot kap az uj descriptor mezokkel,
-   - a `O3-T2..T5` phasing gating-felteteleivel rogziti.
-3. A note addig normativ az `O3-T2..T5` elokesziteseben, amig explicit successor artifact maskepp nem rendelkezik.
+   - a `O3-T2..T4a`, valamint a triggerelt `O3-T5` phasing gating-felteteleivel rogziti.
+3. A note addig normativ az `O3-T2..T4a` es a triggerelt `O3-T5` elokesziteseben, amig explicit successor artifact maskepp nem rendelkezik.
 
 ## Normative References
 
@@ -312,9 +312,10 @@ Megjegyzes: a `promptConcernId` listak source-anchorolt, ordered concern-szettek
 | `O3-T2` | `shared_contract` + `authority_producer` | belso `RoleDescriptor` registry + `promptConcernCatalog` + projection helperek kod-szintu bevezetese; S1 (awaited output) + S4 (prompt composition) atkotese a registry-re | `shared_contract` + `authority_producer` (foundation) | predecessor: `O3-T1` lezart; `O3-T2` ownershipolja a `RoleDescriptor` source-file path-at, es kod szinten formalizalja az `O3-T1`-ben lockolt `promptConcernCatalog` concern-vocabularyt valamint a 3 role descriptor zart mappingjat, ujraertelmezes nelkul |
 | `O3-T3` | `consumer_family_alignment` | S2 (topology slot) atkotese a registry-re; `topologySlotCatalog` kod-szintu bevezetese; `tmuxManager.ts::runtimePaneIndices` es `tmuxDeliveryTargeting.ts` atallitasa registry-olvasasra | `internal_execution_consumers` + `workflow_orchestration_consumers` | predecessor: `O3-T2` lezart; nem nyitja ujra a `O2-T13` topology-neutral delivery contract zart truthjat |
 | `O3-T4` | `shared_contract` + `workflow_orchestration_consumers` | S3 (config binding) atkotese; `BubbleAgentsConfig` shape kiterjesztese (`agents.meta_reviewer` mezo vagy uniform `Record<AgentRole, AgentName>` shape - a pontos design `O3-T4`-ben rogzul); `agent_resolution` mind a 3 role-on `config_bound`-ra konvergal; `assertMetaReviewerActiveAgentCodexWhenPresent` runtime guard explicit replacement proof-fal lebontasra vagy lazitasra kerul | `shared_contract` + `workflow_orchestration_consumers` | predecessor: `O3-T3` lezart; contract-boundary override (config schema change); kotelezo replacement proof a meta-reviewer guardra |
-| `O3-T5` | `read_model_consumers` | public CLI/protocol surface kontrollalt nyitasa uj output kindokra; az `ActorOutputKind` enum bovitese, `actorRuntimeRouteMatrix` uj sor(ok), uj adapter, uj CLI parser ag, uj typed `ActorEmitInput` variant | `read_model_consumers` | predecessor: `O3-T4` lezart; **trigger feltetel**: konkret uj output kind igeny VAGY uj role saját kimenettel; **automatikus indulas tilos**, ha trigger nem teljesul, az `O3` lane `O3-T4`-gyel lezarhato es `O3-T5` `deferred` disposition-ben marad a parent planban |
+| `O3-T4a` | `consumer_family_alignment` | residual role/topology consume closeout; a delivery recipient -> recipientRole consume es a watchdog sampling/monitoring target pane consume ugyanarra a canonical role/topology projection truthra all at, mint amit az `O3-T3` es `O3-T4` mar bevezetett | `workflow_orchestration_consumers` + `cleanup_recovery_consumers` | predecessor: `O3-T4` lezart; nincs public protocol vagy config-shape modositas; a dedicated-panel baseline preserved marad |
+| `O3-T5` | `read_model_consumers` | public CLI/protocol surface kontrollalt nyitasa uj output kindokra; az `ActorOutputKind` enum bovitese, `actorRuntimeRouteMatrix` uj sor(ok), uj adapter, uj CLI parser ag, uj typed `ActorEmitInput` variant | `read_model_consumers` | predecessor: `O3-T4a` lezart; **trigger feltetel**: konkret uj output kind igeny VAGY uj role saját kimenettel; **automatikus indulas tilos**, ha trigger nem teljesul, az `O3` lane `O3-T4a`-val lezarhato es `O3-T5` `deferred` disposition-ben marad a parent planban |
 
-## Onboarding Walkthrough (uj role hozzaadasa post-O3-T4)
+## Onboarding Walkthrough (uj role hozzaadasa post-O3-T4a)
 
 1. Felveszed az uj role-t az `agentRoles` tuple-be (`src/types/bubble.ts`).
 2. A `Record<AgentRole, RoleDescriptor>` registry tipus compile-time hibat ad: "Property '<new_role>' is missing".
@@ -335,5 +336,6 @@ Megjegyzes: a `promptConcernId` listak source-anchorolt, ordered concern-szettek
 1. `O3-T2` csak ezen note exact `RoleDescriptor` mezohalmazat, az itt mar lockolt prompt concern-vocabularyt, es a per-role closed mappingot formalizalhatja kod szinten.
 2. `O3-T3` csak ezen note `topologySlotCatalog` naming proposaljat formalizalhatja kod szinten; nem nyithatja ujra a `O2-T13` topology-neutral closure-t.
 3. `O3-T4` csak ezen note `agent_resolution` `hardcoded_runtime` -> `config_bound` migracios pathjat ervenyesitheti; explicit replacement proof a `assertMetaReviewerActiveAgentCodexWhenPresent` guardra kotelezo.
-4. `O3-T5` csak akkor nyithato, ha a trigger feltetel (konkret uj output kind igeny vagy uj role saját kimenettel) teljesul; addig `deferred` disposition-ben marad.
-5. Az `Opportunity 4` ("Core vs Extension Surface Rationalization") ebbe a lane-be van beolvasztva mint core-vs-extension rationalization (parent plan disposition); kulon `O4-T1` csak akkor nyithato, ha a fenti `O3-T2..T5` lane explicit gating-feltetelei mar nem fedik le a maradek scope-ot.
+4. `O3-T4a` a maradek role/topology consume residualt zarhatja le, de nem nyithat public CLI/protocol vagy config scope-ot.
+5. `O3-T5` csak akkor nyithato, ha a trigger feltetel (konkret uj output kind igeny vagy uj role saját kimenettel) teljesul; addig `deferred` disposition-ben marad.
+6. Az `Opportunity 4` ("Core vs Extension Surface Rationalization") ebbe a lane-be van beolvasztva mint core-vs-extension rationalization (parent plan disposition); kulon `O4-T1` csak akkor nyithato, ha a fenti `O3-T2..T4a` + triggerelt `O3-T5` lane explicit gating-feltetelei mar nem fedik le a maradek scope-ot.

@@ -471,7 +471,7 @@ owners:
 22. Az `O3-T1` docs-only onboarding extension surface clarification 2026-04-25-en current-tree baseline lett:
    - task artifact: `plans/tasks/actor-runtime-interface/actor-runtime-interface-opportunity3-task1-onboarding-extension-surface-contract-clarification.md`
    - normative note: `docs/actor-runtime-interface/onboarding-extension-surface-contract-note-v1.md`
-   - closure: belso `RoleDescriptor` registry-mintazat, 4 seam (S1..S4) inventory, es az `O3-T2..T5` sequencing/gating explicit lezárása
+   - closure: belso `RoleDescriptor` registry-mintazat, 4 seam (S1..S4) inventory, es az akkori `O3-T2..T5` sequencing/gating explicit lezarasa
 23. Az `O3-T2` internal role/capability foundation 2026-04-26-an merge-olve lett a `main` branchre:
    - archived task artifact: `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-opportunity3-task2-internal-role-capability-foundation.md`
    - bounded closure:
@@ -484,7 +484,21 @@ owners:
      - a canonical `topology_slot_id -> pane_index` projection kulon catalog-seamre allt,
      - a retained tmux consume-family (`tmuxManager`, `tmuxManagerSessionLayout`, `tmuxDeliveryTargeting`, `metaReviewGatePaneBinding`, `metaReviewerPaneBinding`, `reviewerContext`) erre az egyetlen truthra allt at,
      - a dedicated-panel-per-active-role baseline preserved maradt.
-25. Emiatt a current next bounded successor task mar az `O3-T4`, ha az `Opportunity 3` lane tovabb prioritas marad.
+25. Az `O3-T4` config-bound role resolution alignment 2026-04-26-an merge-olve lett a `main` branchre:
+   - archived task artifact: `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-opportunity3-task4-config-bound-role-resolution-alignment.md`
+   - merge commit: `b9749a4adc3f859e43156b836edbb859486a52a9`
+   - bounded closure:
+     - az `agents.meta_reviewer` bubble-config authority first-class, canonical config-bound truth lett legacy parse/validate boundary normalization mellett,
+     - a create-path producer, actor-runtime policy, submit authority, PASS handoff, meta-review gate envelope/persistence, start/resume launch es notify consume-family explicit replacement proof mellett erre az egyetlen binding truthra allt at,
+     - a retained `codex`-special-case runtime truth a lane in-scope workflow/internal consume csaladjabol kikerult, es a megmarado state/schema guard csak nem-authority, fail-closed consistency boundary maradt.
+26. Az `O3-T4` merge utani purpose-based codebase audit egy szuk residual consume-seamet mutatott:
+   - `src/v11/infrastructure/channel/tmux/tmuxDeliveryTargeting.ts` a recipient -> recipientRole consume-ban meg mindig kezi role truthot hordoz,
+   - `src/v11/application/watchdog/watchdogPaneActivitySampler.ts` es `src/v11/application/watchdog/watchdogPaneActivityMonitoring.ts` watchdog/recovery consume-ban meg mindig explicit role/pane truthot hordoz.
+27. Emiatt a current tree-ben egy bounded, nem-public follow-up slice meg legitim:
+   - `O3-T4a` residual role/topology consume closeout
+   - ez nem nyit uj role-t, uj output kindot, es nem foglalja el a triggerelt `O3-T5` helyet.
+28. Az `O3-T5` ettol fuggetlenul tovabbra is explicit triggerhez kotott:
+   - trigger nelkul a public CLI/protocol onboarding surface current-tree szinten tovabbra is deferred marad.
 
 ## Done Definition
 
@@ -532,19 +546,25 @@ owners:
      - task artifact: `plans/tasks/actor-runtime-interface/actor-runtime-interface-opportunity3-task1-onboarding-extension-surface-contract-clarification.md`
      - normative note: `docs/actor-runtime-interface/onboarding-extension-surface-contract-note-v1.md`
      - shape: `contract_or_persisted_authority_foundation` (docs-only)
-     - closure: belso `RoleDescriptor` registry-mintazat normativ rogzitese + 4 seam (S1..S4) source-anchored inventory + per-role 9 mezos closed mapping exact startup/resume prompt concern-setekkel + `O3-T2..T5` phasing gatinggel
+     - closure: belso `RoleDescriptor` registry-mintazat normativ rogzitese + 4 seam (S1..S4) source-anchored inventory + per-role 9 mezos closed mapping exact startup/resume prompt concern-setekkel + az eredeti `O3-T2..T5` phasing gatinggel, amelyet a current tree residual closeout `O3-T4a`-val finomitottunk
      - `O3-T2` internal role/capability foundation
        - task artifact: `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-opportunity3-task2-internal-role-capability-foundation.md`
      - `O3-T3` topology slot catalog and tmux consumer alignment
        - task artifact: `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-opportunity3-task3-topology-slot-catalog-and-tmux-consumer-alignment.md`
-   - current next bounded successor:
-     - `O3-T4`: S3 (config binding) atkotese; additive `BubbleAgentsConfig` shape alignment + create-path `authority_producer` closure + `workflow_orchestration_consumers` es `internal_execution_consumers` explicit replacement proofja a `meta_reviewer_active_agent_codex_when_present` / `assertMetaReviewerActiveAgentCodexWhenPresent` current-tree baseline-re; `agent_resolution` mind a 3 role-on `config_bound`-ra konvergal; a state/start/meta-review touch csak ennek a fail-closed closure-nak a kovetkezmenye, nem kulon topology/public lane; predecessor: `O3-T3`
-       - task artifact: `plans/tasks/actor-runtime-interface/actor-runtime-interface-opportunity3-task4-config-bound-role-resolution-alignment.md`
-   - deferred successor slice:
-     - `O3-T5`: public CLI/protocol surface kontrollalt nyitasa uj output kindokra; **trigger feltetel**: konkret uj output kind igeny VAGY uj role sajat kimenettel; predecessor: `O3-T4`; ha trigger nem teljesul, ez a slice `deferred` disposition-ben marad, es automatikusan nem indul el
+     - `O3-T4` config-bound role resolution alignment
+       - task artifact: `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-opportunity3-task4-config-bound-role-resolution-alignment.md`
+   - active residual slice:
+     - `O3-T4a` residual role/topology consume closeout
+       - task artifact: `plans/tasks/actor-runtime-interface/actor-runtime-interface-opportunity3-task4a-residual-role-topology-consume-closeout.md`
+       - closure:
+         - a delivery recipient -> recipientRole consume ugyanarra a canonical role/config projection truthra all at, mint a pane-target projection,
+         - a watchdog sampling/monitoring consume ugyanarra a canonical topology projection truthra all at, mint a mar lezart O3-T3 family,
+         - nincs public protocol/CLI vagy config-shape ujranyitas.
+   - triggered successor slice:
+     - `O3-T5`: public CLI/protocol surface kontrollalt nyitasa uj output kindokra; **trigger feltetel**: konkret uj output kind igeny VAGY uj role sajat kimenettel; predecessor: `O3-T4a`; ha trigger nem teljesul, ez a slice `deferred` disposition-ben marad, es automatikusan nem indul el
    - preserved baselines: `O1-T1` kernel boundary note, `O2-T1` topology-neutral delivery/executor note, `assertReviewerHumanQuestionRetainedFallback`, `assertMetaReviewerActiveAgentCodexWhenPresent` (preserved-baseline-with-explicit-replacement-path-in-O3-T4), dedicated-panel-per-active-role baseline
 4. `Opportunity 4`
-   - default szerint `Opportunity 3` lane resze (core-vs-extension rationalization a `O3-T2..T5` szeleteken keresztul)
+   - default szerint `Opportunity 3` lane resze (core-vs-extension rationalization a `O3-T2..T4a` szeleteken es a triggerelt `O3-T5`-on keresztul)
    - kulon `O4-T1` csak akkor nyithato, ha az `Opportunity 3` lane explicit gating-feltetelei mar nem fedik le a maradek scope-ot
 
 ## Traceability
