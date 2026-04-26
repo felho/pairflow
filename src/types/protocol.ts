@@ -199,6 +199,11 @@ export interface MetaReviewSubmissionPayload {
   report_json: Record<string, unknown>;
 }
 
+// New ActorOutputKind values are successor-owned, not local widenings.
+// If a future change needs a new output kind, activate the deferred `O3-T5`
+// slice from:
+// - plans/actor-runtime-interface-post-phaseE-successor-plan-v1.md
+// - docs/actor-runtime-interface/onboarding-extension-surface-contract-note-v1.md
 export const actorOutputKinds = [
   "pass",
   "human_question",

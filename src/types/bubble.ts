@@ -23,6 +23,10 @@ export const bubbleLifecycleStates = [
 
 export type BubbleLifecycleState = (typeof bubbleLifecycleStates)[number];
 
+// Adding a new AgentRole is not a local enum-only change. Re-open the deferred
+// Opportunity 3 successor slice first:
+// - plans/actor-runtime-interface-post-phaseE-successor-plan-v1.md (`O3-T5`)
+// - docs/actor-runtime-interface/onboarding-extension-surface-contract-note-v1.md
 export const agentRoles = ["implementer", "reviewer", "meta_reviewer"] as const;
 
 export type AgentRole = (typeof agentRoles)[number];

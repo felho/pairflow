@@ -290,6 +290,9 @@ const actorRuntimePolicyCheckCatalog: Readonly<
   }
 };
 
+// Route-matrix widening for a new role/output pairing is the concrete code
+// trigger for the deferred Opportunity 3 `O3-T5` slice. Do not treat edits
+// here as isolated local cleanup; align them with the O3 successor plan/note.
 const actorRuntimeRouteMatrix: readonly ActorRuntimeRoute[] = [
   {
     id: "implementer_pass",
