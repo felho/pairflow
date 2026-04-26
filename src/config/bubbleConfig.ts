@@ -19,6 +19,7 @@ import {
   DEFAULT_PAIRFLOW_COMMAND_PROFILE,
   DEFAULT_QUALITY_MODE,
   DEFAULT_REVIEW_POLICY_AUTO_REWORK_MIN_SEVERITY,
+  DEFAULT_REVIEW_POLICY_REVIEWER_BLOCKING_MIN_SEVERITY,
   DEFAULT_REVIEW_POLICY_LOOP_MODE,
   DEFAULT_REVIEW_ARTIFACT_TYPE,
   DEFAULT_REVIEWER_CONTEXT_MODE,
@@ -907,6 +908,7 @@ export function validateBubbleConfig(input: unknown): ValidationResult<BubbleCon
   if (reviewPolicy !== undefined) {
     const allowedKeys = new Set([
       "review_loop_mode",
+      "reviewer_blocking_min_severity",
       "meta_review_auto_rework_min_severity"
     ]);
     for (const key of Object.keys(reviewPolicy)) {
@@ -926,6 +928,7 @@ export function validateBubbleConfig(input: unknown): ValidationResult<BubbleCon
     reviewPolicy !== undefined &&
     (
       reviewPolicy.review_loop_mode !== undefined ||
+      reviewPolicy.reviewer_blocking_min_severity !== undefined ||
       reviewPolicy.meta_review_auto_rework_min_severity !== undefined
     );
 
@@ -941,6 +944,22 @@ export function validateBubbleConfig(input: unknown): ValidationResult<BubbleCon
   const reviewPolicyLoopMode = isBubbleReviewLoopMode(reviewPolicyLoopModeCandidate)
     ? reviewPolicyLoopModeCandidate
     : DEFAULT_REVIEW_POLICY_LOOP_MODE;
+
+  const reviewPolicyReviewerSeverityCandidate =
+    reviewPolicy?.reviewer_blocking_min_severity
+    ?? DEFAULT_REVIEW_POLICY_REVIEWER_BLOCKING_MIN_SEVERITY;
+  if (!isBubbleReviewAutoReworkSeverity(reviewPolicyReviewerSeverityCandidate)) {
+    errors.push({
+      path: "review_policy.reviewer_blocking_min_severity",
+      message:
+        `${REVIEW_POLICY_THRESHOLD_INVALID}: Must be one of: P1, P2, P3`
+    });
+  }
+  const reviewPolicyReviewerSeverity = isBubbleReviewAutoReworkSeverity(
+    reviewPolicyReviewerSeverityCandidate
+  )
+    ? reviewPolicyReviewerSeverityCandidate
+    : DEFAULT_REVIEW_POLICY_REVIEWER_BLOCKING_MIN_SEVERITY;
 
   const reviewPolicySeverityCandidate =
     reviewPolicy?.meta_review_auto_rework_min_severity
@@ -1034,6 +1053,7 @@ export function validateBubbleConfig(input: unknown): ValidationResult<BubbleCon
       ? undefined
       : {
           review_loop_mode: reviewPolicyLoopMode,
+          reviewer_blocking_min_severity: reviewPolicyReviewerSeverity,
           meta_review_auto_rework_min_severity: reviewPolicySeverity
         };
 
@@ -1300,6 +1320,9 @@ export function renderBubbleConfigToml(config: BubbleConfig): string {
           "",
           "[review_policy]",
           `review_loop_mode = ${tomlString(reviewPolicy.review_loop_mode)}`,
+          `reviewer_blocking_min_severity = ${tomlString(
+            reviewPolicy.reviewer_blocking_min_severity
+          )}`,
           `meta_review_auto_rework_min_severity = ${tomlString(
             reviewPolicy.meta_review_auto_rework_min_severity
           )}`

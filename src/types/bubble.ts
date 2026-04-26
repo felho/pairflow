@@ -186,6 +186,7 @@ export interface BubbleDocContractGatesConfig {
 
 export interface BubbleReviewPolicyConfig {
   review_loop_mode: BubbleReviewLoopMode;
+  reviewer_blocking_min_severity: BubbleReviewAutoReworkSeverity;
   meta_review_auto_rework_min_severity: BubbleReviewAutoReworkSeverity;
 }
 
@@ -193,6 +194,7 @@ export interface BubbleReviewPolicyRuntimeView {
   requested_loop_mode: BubbleReviewLoopMode;
   effective_loop_mode: BubbleReviewLoopMode;
   support_status: BubbleReviewSupportStatus;
+  reviewer_blocking_min_severity: BubbleReviewAutoReworkSeverity;
   meta_review_auto_rework_min_severity: BubbleReviewAutoReworkSeverity;
   blocked_reason_code?: string;
   blocked_prerequisites?: string[];

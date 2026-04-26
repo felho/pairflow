@@ -189,6 +189,7 @@ describe("finalizeCurrentRunMetaReviewGate", () => {
           },
           review_policy: {
             review_loop_mode: "full",
+            reviewer_blocking_min_severity: "P2",
             meta_review_auto_rework_min_severity: "P2"
           }
         },
@@ -243,6 +244,7 @@ describe("finalizeCurrentRunMetaReviewGate", () => {
           },
           review_policy: {
             review_loop_mode: "full",
+            reviewer_blocking_min_severity: "P2",
             meta_review_auto_rework_min_severity: "P2"
           }
         },
@@ -299,6 +301,7 @@ describe("finalizeCurrentRunMetaReviewGate", () => {
           },
           review_policy: {
             review_loop_mode: "full",
+            reviewer_blocking_min_severity: "P2",
             meta_review_auto_rework_min_severity: "P2"
           }
         },
@@ -355,6 +358,7 @@ describe("finalizeCurrentRunMetaReviewGate", () => {
           },
           review_policy: {
             review_loop_mode: "full",
+            reviewer_blocking_min_severity: "P3",
             meta_review_auto_rework_min_severity: "P3"
           }
         },
@@ -427,6 +431,7 @@ describe("finalizeCurrentRunMetaReviewGate", () => {
           },
           review_policy: {
             review_loop_mode: "full",
+            reviewer_blocking_min_severity: "P3",
             meta_review_auto_rework_min_severity: "P3"
           }
         },
@@ -489,6 +494,7 @@ describe("finalizeCurrentRunMetaReviewGate", () => {
           },
           review_policy: {
             review_loop_mode: "full",
+            reviewer_blocking_min_severity: "P2",
             meta_review_auto_rework_min_severity: "P2"
           }
         },
@@ -548,6 +554,7 @@ describe("finalizeCurrentRunMetaReviewGate", () => {
           },
           review_policy: {
             review_loop_mode: "full",
+            reviewer_blocking_min_severity: "P2",
             meta_review_auto_rework_min_severity: "P2"
           }
         },

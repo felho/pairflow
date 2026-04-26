@@ -746,6 +746,7 @@ describe("emitPassContextBuilder", () => {
               requested_loop_mode: "meta_only",
               effective_loop_mode: "meta_only",
               support_status: "enabled",
+              reviewer_blocking_min_severity: "P2",
               meta_review_auto_rework_min_severity: "P2"
             },
             handoff: {

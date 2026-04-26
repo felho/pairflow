@@ -24,6 +24,7 @@ describe("reviewPolicyRuntime", () => {
   it("normalizes missing review_policy to deterministic defaults", () => {
     expect(normalizeBubbleReviewPolicy(createConfig(undefined))).toEqual({
       review_loop_mode: "full",
+      reviewer_blocking_min_severity: "P3",
       meta_review_auto_rework_min_severity: "P3"
     });
   });
@@ -33,6 +34,7 @@ describe("reviewPolicyRuntime", () => {
       buildBubbleReviewPolicyRuntimeView(
         createConfig({
           review_loop_mode: "full",
+          reviewer_blocking_min_severity: "P2",
           meta_review_auto_rework_min_severity: "P2"
         })
       )
@@ -40,7 +42,26 @@ describe("reviewPolicyRuntime", () => {
       requested_loop_mode: "full",
       effective_loop_mode: "full",
       support_status: "enabled",
+      reviewer_blocking_min_severity: "P2",
       meta_review_auto_rework_min_severity: "P2"
+    });
+  });
+
+  it("preserves divergent reviewer and meta thresholds in the runtime view", () => {
+    expect(
+      buildBubbleReviewPolicyRuntimeView(
+        createConfig({
+          review_loop_mode: "full",
+          reviewer_blocking_min_severity: "P1",
+          meta_review_auto_rework_min_severity: "P3"
+        })
+      )
+    ).toEqual({
+      requested_loop_mode: "full",
+      effective_loop_mode: "full",
+      support_status: "enabled",
+      reviewer_blocking_min_severity: "P1",
+      meta_review_auto_rework_min_severity: "P3"
     });
   });
 
@@ -49,6 +70,7 @@ describe("reviewPolicyRuntime", () => {
       requested_loop_mode: "full",
       effective_loop_mode: "full",
       support_status: "enabled",
+      reviewer_blocking_min_severity: "P3",
       meta_review_auto_rework_min_severity: "P3"
     });
   });
@@ -58,6 +80,7 @@ describe("reviewPolicyRuntime", () => {
       buildBubbleReviewPolicyRuntimeView(
         createConfig({
           review_loop_mode: "meta_only",
+          reviewer_blocking_min_severity: "P3",
           meta_review_auto_rework_min_severity: "P3"
         })
       )
@@ -65,6 +88,7 @@ describe("reviewPolicyRuntime", () => {
       requested_loop_mode: "meta_only",
       effective_loop_mode: "full",
       support_status: "guarded",
+      reviewer_blocking_min_severity: "P3",
       meta_review_auto_rework_min_severity: "P3",
       blocked_reason_code: "REVIEW_POLICY_META_ONLY_GUARDED",
       blocked_prerequisites: [REVIEW_POLICY_META_ONLY_PHASE3B_PENDING],
@@ -77,6 +101,7 @@ describe("reviewPolicyRuntime", () => {
       buildPassPathReviewPolicyRuntimeView({
         config: createConfig({
           review_loop_mode: "meta_only",
+          reviewer_blocking_min_severity: "P2",
           meta_review_auto_rework_min_severity: "P2"
         }),
         activationProven: true
@@ -85,6 +110,7 @@ describe("reviewPolicyRuntime", () => {
       requested_loop_mode: "meta_only",
       effective_loop_mode: "meta_only",
       support_status: "enabled",
+      reviewer_blocking_min_severity: "P2",
       meta_review_auto_rework_min_severity: "P2"
     });
   });
@@ -94,6 +120,7 @@ describe("reviewPolicyRuntime", () => {
       buildPassPathReviewPolicyRuntimeView({
         config: createConfig({
           review_loop_mode: "full",
+          reviewer_blocking_min_severity: "P3",
           meta_review_auto_rework_min_severity: "P3"
         }),
         activationProven: false
@@ -102,6 +129,7 @@ describe("reviewPolicyRuntime", () => {
       requested_loop_mode: "full",
       effective_loop_mode: "full",
       support_status: "enabled",
+      reviewer_blocking_min_severity: "P3",
       meta_review_auto_rework_min_severity: "P3"
     });
   });
@@ -111,6 +139,7 @@ describe("reviewPolicyRuntime", () => {
       buildPassPathReviewPolicyRuntimeView({
         config: createConfig({
           review_loop_mode: "meta_only",
+          reviewer_blocking_min_severity: "P3",
           meta_review_auto_rework_min_severity: "P3"
         }),
         activationProven: false
@@ -119,6 +148,7 @@ describe("reviewPolicyRuntime", () => {
       requested_loop_mode: "meta_only",
       effective_loop_mode: "full",
       support_status: "guarded",
+      reviewer_blocking_min_severity: "P3",
       meta_review_auto_rework_min_severity: "P3",
       blocked_reason_code: "REVIEW_POLICY_META_ONLY_ACTIVATION_UNRESOLVED",
       blocked_prerequisites: [REVIEW_POLICY_META_ONLY_ACTIVATION_REQUIRED],
@@ -132,6 +162,7 @@ describe("reviewPolicyRuntime", () => {
       buildRuntimeAlignedReviewPolicyRuntimeView({
         config: createConfig({
           review_loop_mode: "meta_only",
+          reviewer_blocking_min_severity: "P2",
           meta_review_auto_rework_min_severity: "P2"
         }),
         round: 2,
@@ -147,6 +178,7 @@ describe("reviewPolicyRuntime", () => {
       requested_loop_mode: "meta_only",
       effective_loop_mode: "meta_only",
       support_status: "enabled",
+      reviewer_blocking_min_severity: "P2",
       meta_review_auto_rework_min_severity: "P2"
     });
   });
@@ -156,6 +188,7 @@ describe("reviewPolicyRuntime", () => {
       requested_loop_mode: "meta_only",
       effective_loop_mode: "full",
       support_status: "guarded",
+      reviewer_blocking_min_severity: "P3",
       meta_review_auto_rework_min_severity: "P3",
       blocked_reason_code: "REVIEW_POLICY_META_ONLY_ACTIVATION_UNRESOLVED",
       blocked_prerequisites: [REVIEW_POLICY_META_ONLY_ACTIVATION_REQUIRED],
@@ -167,6 +200,7 @@ describe("reviewPolicyRuntime", () => {
       buildRuntimeAlignedReviewPolicyRuntimeView({
         config: createConfig({
           review_loop_mode: "meta_only",
+          reviewer_blocking_min_severity: "P3",
           meta_review_auto_rework_min_severity: "P3"
         }),
         round: 2,
@@ -185,6 +219,7 @@ describe("reviewPolicyRuntime", () => {
       buildRuntimeAlignedReviewPolicyRuntimeView({
         config: createConfig({
           review_loop_mode: "meta_only",
+          reviewer_blocking_min_severity: "P3",
           meta_review_auto_rework_min_severity: "P3"
         }),
         round: 2,
@@ -203,6 +238,7 @@ describe("reviewPolicyRuntime", () => {
       buildRuntimeAlignedReviewPolicyRuntimeView({
         config: createConfig({
           review_loop_mode: "meta_only",
+          reviewer_blocking_min_severity: "P3",
           meta_review_auto_rework_min_severity: "P3"
         }),
         round: 2,
@@ -223,6 +259,7 @@ describe("reviewPolicyRuntime", () => {
       requested_loop_mode: "meta_only",
       effective_loop_mode: "full",
       support_status: "guarded",
+      reviewer_blocking_min_severity: "P3",
       meta_review_auto_rework_min_severity: "P3",
       blocked_reason_code: "REVIEW_POLICY_META_ONLY_ACTIVATION_UNRESOLVED",
       blocked_prerequisites: [REVIEW_POLICY_META_ONLY_ACTIVATION_REQUIRED],
@@ -234,6 +271,7 @@ describe("reviewPolicyRuntime", () => {
       buildRuntimeAlignedReviewPolicyRuntimeView({
         config: createConfig({
           review_loop_mode: "meta_only",
+          reviewer_blocking_min_severity: "P3",
           meta_review_auto_rework_min_severity: "P3"
         }),
         round: 2,
@@ -251,6 +289,7 @@ describe("reviewPolicyRuntime", () => {
       buildRuntimeAlignedReviewPolicyRuntimeView({
         config: createConfig({
           review_loop_mode: "meta_only",
+          reviewer_blocking_min_severity: "P3",
           meta_review_auto_rework_min_severity: "P3"
         }),
         round: 2,
@@ -268,6 +307,7 @@ describe("reviewPolicyRuntime", () => {
       buildRuntimeAlignedReviewPolicyRuntimeView({
         config: createConfig({
           review_loop_mode: "meta_only",
+          reviewer_blocking_min_severity: "P3",
           meta_review_auto_rework_min_severity: "P3"
         }),
         round: 2,
@@ -285,6 +325,7 @@ describe("reviewPolicyRuntime", () => {
       buildRuntimeAlignedReviewPolicyRuntimeView({
         config: createConfig({
           review_loop_mode: "meta_only",
+          reviewer_blocking_min_severity: "P3",
           meta_review_auto_rework_min_severity: "P3"
         }),
         round: 2,
@@ -302,6 +343,7 @@ describe("reviewPolicyRuntime", () => {
       buildRuntimeAlignedReviewPolicyRuntimeView({
         config: createConfig({
           review_loop_mode: "meta_only",
+          reviewer_blocking_min_severity: "P3",
           meta_review_auto_rework_min_severity: "P3"
         }),
         round: 2,

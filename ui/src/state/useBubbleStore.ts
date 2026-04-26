@@ -61,7 +61,7 @@ export interface RunBubbleActionInput {
   push?: boolean;
   deleteRemote?: boolean;
   reviewLoopMode?: BubbleReviewLoopMode;
-  metaReviewAutoReworkMinSeverity?: BubbleReviewAutoReworkSeverity;
+  reviewBlockingMinSeverity?: BubbleReviewAutoReworkSeverity;
   expectedBubbleToml?: string;
 }
 
@@ -167,7 +167,9 @@ function normalizeReviewPolicy(
         && rawSupportStatus === "unsupported"
         ? "guarded"
         : rawSupportStatus;
-  const severity = candidate.meta_review_auto_rework_min_severity;
+  const reviewerBlockingSeverity =
+    candidate.reviewer_blocking_min_severity ?? "P3";
+  const metaReviewSeverity = candidate.meta_review_auto_rework_min_severity;
   if (
     options.allowUnsupportedSupportStatusAlias === true
     && rawSupportStatus === "unsupported"
@@ -189,7 +191,16 @@ function normalizeReviewPolicy(
     (requestedLoopMode !== "full" && requestedLoopMode !== "meta_only")
     || (effectiveLoopMode !== "full" && effectiveLoopMode !== "meta_only")
     || (supportStatus !== "enabled" && supportStatus !== "guarded")
-    || (severity !== "P1" && severity !== "P2" && severity !== "P3")
+    || (
+      reviewerBlockingSeverity !== "P1"
+      && reviewerBlockingSeverity !== "P2"
+      && reviewerBlockingSeverity !== "P3"
+    )
+    || (
+      metaReviewSeverity !== "P1"
+      && metaReviewSeverity !== "P2"
+      && metaReviewSeverity !== "P3"
+    )
   ) {
     return null;
   }
@@ -197,7 +208,8 @@ function normalizeReviewPolicy(
     requested_loop_mode: requestedLoopMode,
     effective_loop_mode: effectiveLoopMode,
     support_status: supportStatus,
-    meta_review_auto_rework_min_severity: severity,
+    reviewer_blocking_min_severity: reviewerBlockingSeverity,
+    meta_review_auto_rework_min_severity: metaReviewSeverity,
     ...(typeof candidate.blocked_reason_code === "string"
       ? { blocked_reason_code: candidate.blocked_reason_code }
       : {}),
@@ -872,10 +884,10 @@ async function performBubbleAction(
       }
       return api.updateReviewPolicy(bubble.repoPath, bubble.bubbleId, {
         reviewLoopMode,
-        ...(input.metaReviewAutoReworkMinSeverity !== undefined
+        ...(input.reviewBlockingMinSeverity !== undefined
           ? {
-              metaReviewAutoReworkMinSeverity:
-                input.metaReviewAutoReworkMinSeverity
+              reviewBlockingMinSeverity:
+                input.reviewBlockingMinSeverity
             }
           : {}),
         ...(input.expectedBubbleToml !== undefined

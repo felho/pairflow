@@ -20,6 +20,7 @@ export interface UpdateBubbleReviewPolicyInput {
   bubbleTomlPath: string;
   patch: {
     review_loop_mode?: BubbleReviewLoopMode;
+    reviewer_blocking_min_severity?: BubbleReviewAutoReworkSeverity;
     meta_review_auto_rework_min_severity?: BubbleReviewAutoReworkSeverity;
   };
   expectedContent?: string;
@@ -32,6 +33,38 @@ export interface UpdateBubbleReviewPolicyInput {
   rename?: (fromPath: string, toPath: string) => Promise<void>;
   removeFile?: (path: string) => Promise<void>;
   randomUuid?: () => string;
+}
+
+export interface WriteBubbleTomlAtomicallyInput {
+  bubbleTomlPath: string;
+  nextBubbleToml: string;
+  writeFile?: (
+    path: string,
+    content: string,
+    encoding: "utf8"
+  ) => Promise<void>;
+  rename?: (fromPath: string, toPath: string) => Promise<void>;
+  removeFile?: (path: string) => Promise<void>;
+  randomUuid?: () => string;
+}
+
+export interface SharedUiReviewPolicyPatchInput {
+  reviewLoopMode: BubbleReviewLoopMode;
+  reviewBlockingMinSeverity?: BubbleReviewAutoReworkSeverity;
+}
+
+export function buildSharedUiReviewPolicyPatch(
+  input: SharedUiReviewPolicyPatchInput
+): UpdateBubbleReviewPolicyInput["patch"] {
+  return {
+    review_loop_mode: input.reviewLoopMode,
+    ...(input.reviewBlockingMinSeverity !== undefined
+      ? {
+          reviewer_blocking_min_severity: input.reviewBlockingMinSeverity,
+          meta_review_auto_rework_min_severity: input.reviewBlockingMinSeverity
+        }
+      : {})
+  };
 }
 
 export type UpdateBubbleReviewPolicyResult =
@@ -49,16 +82,33 @@ export type UpdateBubbleReviewPolicyResult =
       currentConfig: BubbleConfig;
     };
 
-export async function updateBubbleReviewPolicy(
-  input: UpdateBubbleReviewPolicyInput
-): Promise<UpdateBubbleReviewPolicyResult> {
-  const readFileFn = input.readFile ?? readFile;
+export async function writeBubbleTomlAtomically(
+  input: WriteBubbleTomlAtomicallyInput
+): Promise<void> {
   const writeFileFn = input.writeFile ?? writeFile;
   const renameFn = input.rename ?? rename;
   const removeFileFn =
     input.removeFile
     ?? ((path: string) => rm(path, { force: true }));
   const randomUuidFn = input.randomUuid ?? randomUUID;
+  const tempPath = join(
+    dirname(input.bubbleTomlPath),
+    `.tmp-review-policy-${randomUuidFn()}.bubble.toml`
+  );
+
+  try {
+    await writeFileFn(tempPath, input.nextBubbleToml, "utf8");
+    await renameFn(tempPath, input.bubbleTomlPath);
+  } catch (error) {
+    await removeFileFn(tempPath).catch(() => undefined);
+    throw error;
+  }
+}
+
+export async function updateBubbleReviewPolicy(
+  input: UpdateBubbleReviewPolicyInput
+): Promise<UpdateBubbleReviewPolicyResult> {
+  const readFileFn = input.readFile ?? readFile;
   const previousBubbleToml = await readFileFn(input.bubbleTomlPath, "utf8");
 
   if (
@@ -80,24 +130,23 @@ export async function updateBubbleReviewPolicy(
     review_policy: {
       review_loop_mode:
         input.patch.review_loop_mode ?? currentPolicy.review_loop_mode,
+      reviewer_blocking_min_severity:
+        input.patch.reviewer_blocking_min_severity
+        ?? currentPolicy.reviewer_blocking_min_severity,
       meta_review_auto_rework_min_severity:
         input.patch.meta_review_auto_rework_min_severity
         ?? currentPolicy.meta_review_auto_rework_min_severity
     }
   };
   const nextBubbleToml = renderBubbleConfigToml(nextConfig);
-  const tempPath = join(
-    dirname(input.bubbleTomlPath),
-    `.tmp-review-policy-${randomUuidFn()}.bubble.toml`
-  );
-
-  try {
-    await writeFileFn(tempPath, nextBubbleToml, "utf8");
-    await renameFn(tempPath, input.bubbleTomlPath);
-  } catch (error) {
-    await removeFileFn(tempPath).catch(() => undefined);
-    throw error;
-  }
+  await writeBubbleTomlAtomically({
+    bubbleTomlPath: input.bubbleTomlPath,
+    nextBubbleToml,
+    ...(input.writeFile !== undefined ? { writeFile: input.writeFile } : {}),
+    ...(input.rename !== undefined ? { rename: input.rename } : {}),
+    ...(input.removeFile !== undefined ? { removeFile: input.removeFile } : {}),
+    ...(input.randomUuid !== undefined ? { randomUuid: input.randomUuid } : {})
+  });
 
   return {
     kind: "success",

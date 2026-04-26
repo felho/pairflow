@@ -14,6 +14,7 @@ import {
   DEFAULT_PAIRFLOW_COMMAND_PROFILE,
   DEFAULT_QUALITY_MODE,
   DEFAULT_REVIEW_POLICY_AUTO_REWORK_MIN_SEVERITY,
+  DEFAULT_REVIEW_POLICY_REVIEWER_BLOCKING_MIN_SEVERITY,
   DEFAULT_REVIEW_POLICY_LOOP_MODE,
   DEFAULT_REVIEWER_CONTEXT_MODE,
   DEFAULT_SEVERITY_GATE_ROUND,
@@ -300,6 +301,8 @@ export function buildBubbleConfig(input: CreateBubbleConfigInput): BubbleConfig 
       : {}),
     review_policy: {
       review_loop_mode: DEFAULT_REVIEW_POLICY_LOOP_MODE,
+      reviewer_blocking_min_severity:
+        DEFAULT_REVIEW_POLICY_REVIEWER_BLOCKING_MIN_SEVERITY,
       meta_review_auto_rework_min_severity:
         DEFAULT_REVIEW_POLICY_AUTO_REWORK_MIN_SEVERITY
     },

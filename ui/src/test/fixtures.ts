@@ -77,7 +77,8 @@ export function bubbleSummary(input: {
       requested_loop_mode: "full",
       effective_loop_mode: "full",
       support_status: "enabled",
-      meta_review_auto_rework_min_severity: "P1"
+      reviewer_blocking_min_severity: "P3",
+      meta_review_auto_rework_min_severity: "P3"
     },
     ...(input.remoteExecution !== undefined
       ? { remoteExecution: input.remoteExecution }
