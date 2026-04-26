@@ -25,7 +25,7 @@ owners:
 1. Sequencing owner:
    - `plans/actor-runtime-interface-post-phaseE-successor-plan-v1.md`
 2. Preserved baselines:
-   - `plans/actor-runtime-interface-generic-runtime-kernel-contract-note-v1.md` (`O1-T1` kernel boundary)
+   - `docs/actor-runtime-interface/generic-runtime-kernel-contract-note-v1.md` (`O1-T1` kernel boundary)
    - `docs/actor-runtime-interface/topology-neutral-delivery-executor-contract-note-v1.md` (`O2-T1` topology-neutral delivery/executor boundary)
    - `docs/actor-runtime-interface/execution-authority-contract-note-v1.md` (canonical execution authority baseline)
 3. Historical predecessor:

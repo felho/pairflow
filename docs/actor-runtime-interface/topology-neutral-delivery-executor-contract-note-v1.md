@@ -21,7 +21,7 @@ owners:
 1. Sequencing owner:
    - `plans/actor-runtime-interface-post-phaseE-successor-plan-v1.md`
 2. Preserved upstream kernel boundary:
-   - `plans/actor-runtime-interface-generic-runtime-kernel-contract-note-v1.md`
+   - `docs/actor-runtime-interface/generic-runtime-kernel-contract-note-v1.md`
 3. Preserved delivery/launch ack closure:
    - `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-delivery-ack-producer-contract-phaseE2a.md`
 4. Current-tree source anchors:

@@ -178,7 +178,7 @@ owners:
 5. Az `Opportunity 1` elso bounded taskja:
    - historical task artifact: `plans/archive/tasks/actor-runtime-interface-opportunity1-task1-generic-runtime-kernel-boundary-clarification.md`
 6. Az `O1-T1` docs-only outputja source-anchored boundary note-ot kotelez:
-   - `plans/actor-runtime-interface-generic-runtime-kernel-contract-note-v1.md`
+   - `docs/actor-runtime-interface/generic-runtime-kernel-contract-note-v1.md`
 7. `O1-T2` es `O1-T3` csak az `O1-T1` altal lezart exact route/policy matrixon es preserved baseline-okon ulhet:
    - nem nyithatjak ujra az execution authority note closed jelenteset,
    - nem lazithatjak a reviewer fallback vagy meta-reviewer guard preserved baseline-jat implicit cleanup cimszo alatt.
@@ -350,14 +350,14 @@ owners:
 4. Ennek a historical docs-only first slice-nak a task anchorja:
    - `plans/archive/tasks/actor-runtime-interface-opportunity1-task1-generic-runtime-kernel-boundary-clarification.md`
 5. Ennek a historical first slice-nak a normativ boundary note-ja:
-   - `plans/actor-runtime-interface-generic-runtime-kernel-contract-note-v1.md`
+   - `docs/actor-runtime-interface/generic-runtime-kernel-contract-note-v1.md`
 6. A current tree-ben ez a slice mar lezart baseline; az alatti progress update es disposition szekcio a historical `O2` closure utan a jelenlegi kovetkezo bounded successort mar `O3-T1`-kent jeloli.
 
 ## Current Tree Progress Update (2026-04-22)
 
 1. Az `O1-T1` docs-only boundary clarification mar lezart baseline:
    - archived task artifact: `plans/archive/tasks/actor-runtime-interface-opportunity1-task1-generic-runtime-kernel-boundary-clarification.md`
-   - normative note: `plans/actor-runtime-interface-generic-runtime-kernel-contract-note-v1.md`
+   - normative note: `docs/actor-runtime-interface/generic-runtime-kernel-contract-note-v1.md`
 2. Az `O1-T2` code-level matrix slice 2026-04-17-en merge-olve lett a `main` branchre:
    - merge commit: `afa6558d622540e842986e44cab68ad6af91c2d8`
    - bounded closure: a typed internal authority / route / policy matrix explicit current-tree source-of-truth-ja mar kulon file-ban el:
@@ -555,7 +555,7 @@ owners:
    - `plans/tasks/actor-runtime-interface-pilot-cutover-phaseE.md`
    - `plans/tasks/actor-runtime-interface/actor-runtime-interface-opportunity3-task1-onboarding-extension-surface-contract-clarification.md`
    - `docs/actor-runtime-interface/execution-authority-contract-note-v1.md`
-   - `plans/actor-runtime-interface-generic-runtime-kernel-contract-note-v1.md`
+   - `docs/actor-runtime-interface/generic-runtime-kernel-contract-note-v1.md`
    - `docs/actor-runtime-interface/topology-neutral-delivery-executor-contract-note-v1.md`
    - `plans/actor-runtime-interface-opportunity3-onboarding-discovery-summary-v1.md`
    - `docs/actor-runtime-interface/onboarding-extension-surface-contract-note-v1.md`

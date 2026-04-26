@@ -82,7 +82,7 @@ Docs-only, implementalhato `O2-T1` successor task keszitese az `Opportunity 2` a
 1. Parent plan gap closed: az `Opportunity 1` lezarta utan a kovetkezo sequencing gap az, hogy az `Opportunity 2` pontosan mit jelent anelkul, hogy a Phase `E2a` typed ack closure ujranyilna.
 2. Depends on:
    - `plans/actor-runtime-interface-post-phaseE-successor-plan-v1.md`
-   - `plans/actor-runtime-interface-generic-runtime-kernel-contract-note-v1.md`
+   - `docs/actor-runtime-interface/generic-runtime-kernel-contract-note-v1.md`
    - `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-delivery-ack-producer-contract-phaseE2a.md`
 3. Unlocks / impacts successors:
    - barmely jovobeli topology-neutral delivery/executor implementation slice,
@@ -98,7 +98,7 @@ Docs-only, implementalhato `O2-T1` successor task keszitese az `Opportunity 2` a
 
 1. Source-of-truth anchors:
    - `plans/actor-runtime-interface-post-phaseE-successor-plan-v1.md`
-   - `plans/actor-runtime-interface-generic-runtime-kernel-contract-note-v1.md`
+   - `docs/actor-runtime-interface/generic-runtime-kernel-contract-note-v1.md`
    - `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-delivery-ack-producer-contract-phaseE2a.md`
    - `src/v11/shared/delivery/tmuxDeliveryContract.ts`
    - `src/v11/shared/ports/tmuxDelivery.ts`
@@ -356,7 +356,7 @@ Docs-only, implementalhato `O2-T1` successor task keszitese az `Opportunity 2` a
 | Type | Items | Priority | Timing |
 |---|---|---|---|
 | must-use | `plans/actor-runtime-interface-post-phaseE-successor-plan-v1.md` | P1 | required-now |
-| must-use | `plans/actor-runtime-interface-generic-runtime-kernel-contract-note-v1.md` | P1 | required-now |
+| must-use | `docs/actor-runtime-interface/generic-runtime-kernel-contract-note-v1.md` | P1 | required-now |
 | must-use | `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-delivery-ack-producer-contract-phaseE2a.md` | P1 | required-now |
 | must-use | current-tree code anchors: `src/v11/shared/delivery/tmuxDeliveryContract.ts`, `src/v11/shared/ports/tmuxDelivery.ts`, `src/v11/infrastructure/channel/tmux/tmuxDeliveryRuntime.ts`, `src/v11/infrastructure/channel/tmux/tmuxDelivery.ts`, `src/v11/application/start/startCommandTmuxLaunch.ts`, `src/v11/defaults/metaReviewGate/metaReviewGateCommandDefaults.ts`, `src/v11/shared/runtimeSessionWorkspaceAuthority.ts`, `src/v11/shared/ports/uiRouter.ts` | P1 | required-now |
 | must-not-use | `src/**` implementation edit | P1 | required-now |

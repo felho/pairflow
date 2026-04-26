@@ -112,7 +112,7 @@ Docs-only `O3-T1` szelet, amely:
 
 1. `plan_ref`: `plans/actor-runtime-interface-post-phaseE-successor-plan-v1.md` (owns `Opportunity 3` sequencing)
 2. Preserved baselines:
-   - `plans/actor-runtime-interface-generic-runtime-kernel-contract-note-v1.md` (`O1-T1` kernel boundary)
+   - `docs/actor-runtime-interface/generic-runtime-kernel-contract-note-v1.md` (`O1-T1` kernel boundary)
    - `docs/actor-runtime-interface/topology-neutral-delivery-executor-contract-note-v1.md` (`O2-T1` topology-neutral boundary)
    - `docs/actor-runtime-interface/execution-authority-contract-note-v1.md` (canonical authority baseline)
 3. Historical predecessor:
@@ -219,7 +219,7 @@ Docs-only `O3-T1` szelet, amely:
 17. `src/v11/application/start/startCommandResumePrompts.ts`
 18. `src/v11/application/start/startCommandResumeImplementerPrompt.ts`
 19. `src/v11/shared/command/agentCommand.ts`
-20. `plans/actor-runtime-interface-generic-runtime-kernel-contract-note-v1.md`
+20. `docs/actor-runtime-interface/generic-runtime-kernel-contract-note-v1.md`
 21. `docs/actor-runtime-interface/topology-neutral-delivery-executor-contract-note-v1.md`
 22. `docs/actor-runtime-interface/execution-authority-contract-note-v1.md`
 23. `plans/actor-runtime-interface-opportunity3-onboarding-discovery-summary-v1.md`
@@ -397,7 +397,7 @@ Conclusion: a task bounded marad, mert nincs producer vagy shared-contract code 
 | Type | Items | Priority | Timing |
 |---|---|---|---|
 | must-use | `plans/actor-runtime-interface-post-phaseE-successor-plan-v1.md` | P1 | required-now |
-| must-use | `plans/actor-runtime-interface-generic-runtime-kernel-contract-note-v1.md` | P1 | required-now |
+| must-use | `docs/actor-runtime-interface/generic-runtime-kernel-contract-note-v1.md` | P1 | required-now |
 | must-use | `docs/actor-runtime-interface/topology-neutral-delivery-executor-contract-note-v1.md` | P1 | required-now |
 | must-use | `docs/actor-runtime-interface/execution-authority-contract-note-v1.md` | P1 | required-now |
 | must-use | `plans/actor-runtime-interface-opportunity3-onboarding-discovery-summary-v1.md` | P1 | required-now |
