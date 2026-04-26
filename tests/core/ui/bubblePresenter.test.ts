@@ -327,7 +327,19 @@ describe("bubblePresenter", () => {
           approvalRequests: 1,
           total: 1
         },
-        items: []
+        items: [
+          {
+            envelopeId: "msg_approval_01",
+            type: "APPROVAL_REQUEST",
+            ts: "2026-02-24T12:00:30.000Z",
+            round: 2,
+            sender: "orchestrator",
+            summary: "Human approval required after meta-review.",
+            refs: [],
+            latestRecommendation: "rework",
+            gateRoute: "human_gate_budget_exhausted"
+          }
+        ]
       },
       runtimeSession: null
     });
@@ -361,6 +373,19 @@ describe("bubblePresenter", () => {
       stale: false
     });
     expect(detail.attention).toBeNull();
+    expect(detail.inbox.items).toStrictEqual([
+      {
+        envelopeId: "msg_approval_01",
+        type: "APPROVAL_REQUEST",
+        ts: "2026-02-24T12:00:30.000Z",
+        round: 2,
+        sender: "orchestrator",
+        summary: "Human approval required after meta-review.",
+        refs: [],
+        latestRecommendation: "rework",
+        gateRoute: "human_gate_budget_exhausted"
+      }
+    ]);
   });
 
   it("suppresses stale quiet-pane attention in the direct detail presenter path", () => {

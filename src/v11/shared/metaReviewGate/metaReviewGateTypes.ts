@@ -45,17 +45,20 @@ export type MetaReviewGateThresholdMetadata =
       reasonCode: "REVIEW_POLICY_THRESHOLD_CONTEXT_INCOMPLETE";
     };
 
-export type MetaReviewGateRoute =
-  | "meta_review_running"
-  | "auto_rework"
-  | "human_gate_sticky_bypass"
-  | "human_gate_approve"
-  | "human_gate_budget_exhausted"
-  | "human_gate_threshold_not_met"
-  | "human_gate_threshold_unresolved"
-  | "human_gate_inconclusive"
-  | "human_gate_run_failed"
-  | "human_gate_dispatch_failed";
+export const metaReviewGateRoutes = [
+  "meta_review_running",
+  "auto_rework",
+  "human_gate_sticky_bypass",
+  "human_gate_approve",
+  "human_gate_budget_exhausted",
+  "human_gate_threshold_not_met",
+  "human_gate_threshold_unresolved",
+  "human_gate_inconclusive",
+  "human_gate_run_failed",
+  "human_gate_dispatch_failed"
+] as const;
+
+export type MetaReviewGateRoute = (typeof metaReviewGateRoutes)[number];
 
 export type MetaReviewGateReasonCode =
   | "META_REVIEW_GATE_RUN_FAILED"

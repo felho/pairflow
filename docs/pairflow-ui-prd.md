@@ -198,8 +198,9 @@ The HTML mockup is directionally good, but V1 fidelity requires:
 
 1. Operator sees all active bubbles for selected repos in one browser tab.
 2. Operator can clear `WAITING_HUMAN` and `READY_FOR_HUMAN_APPROVAL` blockers without terminal context switching.
-3. End-to-end action latency from seeing blocker to sending action is under 10 seconds for typical flows.
-4. UI and CLI remain behaviorally equivalent because both delegate to shared core logic.
+3. Expanded `READY_FOR_HUMAN_APPROVAL` cards show an approval package sourced from the current-round canonical approval request metadata, with a dedicated Phase 1 copy override for `human_gate_budget_exhausted` + `rework`.
+4. End-to-end action latency from seeing blocker to sending action is under 10 seconds for typical flows.
+5. UI and CLI remain behaviorally equivalent because both delegate to shared core logic.
 
 ## Risks and mitigations
 
