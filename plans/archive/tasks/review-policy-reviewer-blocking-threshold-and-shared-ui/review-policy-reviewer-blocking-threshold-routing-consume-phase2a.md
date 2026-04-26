@@ -2,7 +2,7 @@
 artifact_type: task
 artifact_id: task_review_policy_reviewer_blocking_threshold_routing_consume_phase2a_v1
 title: "Review Policy Reviewer Blocking Threshold Routing Consume (Phase 2A)"
-status: draft
+status: completed
 phase: phase2a
 target_files:
   - src/v11/domain/pass/reviewerDecision.ts

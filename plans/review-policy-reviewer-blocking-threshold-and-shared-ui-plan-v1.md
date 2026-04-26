@@ -77,14 +77,15 @@ Szetszalazni a review severity policy-t ugy, hogy:
 
 ## Current Codebase Check (2026-04-26)
 
-1. A canonical `review_policy` current tree-ben csak egy severity mezot hordoz:
-   `meta_review_auto_rework_min_severity`.
-2. A UI mutate surface ugyanazt az egy mezot irja local + remote update seamen keresztul.
-3. A reviewer post-gate decision ma fixen ugy kezeli a blocker fogalmat, hogy ha nincs blocker, akkor convergence kotelezo; ez nincs a policy mezore kotve.
-4. A reviewer prompt/guidance es a canonical severity ontology tobb helyen szoveg szerint `P0/P1` blocker / `P2/P3` advisory-only logikat tanit.
-5. Emiatt a jelenlegi blast radius ket valos consume familyre bomlik:
-   - policy producer / mutation / read-model surfaces
-   - reviewer workflow-orchestration + runtime-guidance consume surface
+1. A canonical `review_policy` current tree-ben mar explicit ket severity mezot hordoz:
+   - `reviewer_blocking_min_severity`
+   - `meta_review_auto_rework_min_severity`
+2. A UI mutate surface mar a shared severity inputon keresztul mindket persisted mezot irja local + remote update seamen.
+3. A reviewer post-gate decision mar a canonical `review_policy.reviewer_blocking_min_severity` thresholdra van kotve, explicit threshold-threadinggel a routing inputtol a reviewer validacioig.
+4. A document-scope qualifier-normalized aggregate marad a threshold compare canonical inputja; a strict qualifier nelkuli `P0/P1` document finding tovabbra is non-blocking effective severityre downgrade-olodik.
+5. A meg nyitott blast radius mar a reviewer-facing projection familyre szukult:
+   - reviewer guidance / prompt / delivery surfaces
+   - canonical reviewer ontology + generated runtime reminder + docs parity
 
 ## Current Status
 
@@ -103,12 +104,16 @@ Szetszalazni a review severity policy-t ugy, hogy:
    - a shared UI write path a canonical `reviewBlockingMinSeverity` mezon keresztul mindket persisted thresholdot ugyanarra az ertekre irja
    - a Phase 1 task archivalva lett:
      `plans/archive/tasks/review-policy-reviewer-blocking-threshold-and-shared-ui/review-policy-reviewer-blocking-threshold-foundation-and-ui-phase1.md`
+4. A `review-policy-reviewer-blocking-threshold-routing-consume-phase2a` slice implementalva, validalva es archivalva lett:
+   - a reviewer post-gate routing authority mar a canonical `review_policy.reviewer_blocking_min_severity` thresholdot fogyasztja
+   - a threshold explicit routing inputkent threadelodik a normalized review-policy helperbol a reviewer validacioig
+   - a document-scope qualifier-normalized aggregate marad a threshold compare canonical inputja
+   - a Phase 2A task archivalva lett:
+     `plans/archive/tasks/review-policy-reviewer-blocking-threshold-and-shared-ui/review-policy-reviewer-blocking-threshold-routing-consume-phase2a.md`
 
 ### Open Work
 
-1. A reviewer post-gate routingot at kell kotni az uj reviewer threshold authorityra.
-2. A threshold threading seam-eket es a scope-policy aggregate consume utjat le kell zarni interim fallback nelkul.
-3. A reviewer-facing prompt/delivery/docs feluleteket kulon parity lane-ben at kell vezetni az uj threshold authorityra, beleertve a canonical reviewer severity ontologyt es az embedded runtime reminder parityjat.
+1. A reviewer-facing prompt/delivery/docs feluleteket kulon parity lane-ben at kell vezetni az uj threshold authorityra, beleertve a canonical reviewer severity ontologyt es az embedded runtime reminder parityjat.
 
 ### Deferred / Future Work
 
@@ -121,10 +126,10 @@ Szetszalazni a review severity policy-t ugy, hogy:
    - status: completed and archived
    - cel: uj reviewer policy mezo bevezetese, create/parse/render/update/runtime-view/list/status/UI mutate alignment
 2. `review-policy-reviewer-blocking-threshold-routing-consume-phase2a`
-   - status: next
+   - status: completed and archived
    - cel: reviewer post-gate routing authority, threshold threading seam-ek es scope-policy aggregate consume atkotese az uj reviewer thresholdra
 3. `review-policy-reviewer-blocking-threshold-reviewer-facing-parity-phase2b`
-   - status: queued after Phase 2A
+   - status: next
    - cel: reviewer-facing guidance/prompt/delivery, canonical reviewer ontology/runtime reminder, docs es parity-tesztek atkotese a mar lezart Phase 2A authorityra
 
 ## Coverage Map
