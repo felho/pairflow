@@ -2,7 +2,7 @@
 artifact_type: task
 artifact_id: task_review_policy_reviewer_blocking_threshold_reviewer_facing_parity_phase2b_v1
 title: "Review Policy Reviewer Blocking Threshold Reviewer-Facing Parity (Phase 2B)"
-status: draft
+status: completed
 phase: phase2b
 target_files:
   - src/v11/shared/reviewer/reviewerCommandGateGuidance.ts
@@ -21,7 +21,7 @@ target_files:
   - tests/core/runtime/tmuxDelivery.test.ts
   - tests/v11/application/start/startCommandResumeKickoffMessageBuilders.test.ts
 prd_ref: null
-plan_ref: plans/review-policy-reviewer-blocking-threshold-and-shared-ui-plan-v1.md
+plan_ref: plans/archive/plans/review-policy-reviewer-blocking-threshold-and-shared-ui-plan-v1.md
 system_context_ref: docs/pairflow-initial-design.md
 owners:
   - "felho"
@@ -29,12 +29,16 @@ owners:
 
 # Task: Review Policy Reviewer Blocking Threshold Reviewer-Facing Parity (Phase 2B)
 
-## Current Codebase Check (2026-04-26)
+## Current Codebase Check (2026-04-26, post-merge)
 
-1. A reviewer guidance/prompt tobb helyen explicit `P2/P3 advisory-only` szabalyokat tanit.
-2. A canonical reviewer ontology `Decision Mapping` szakasza es az abbol generalt runtime reminder meg mindig fix `P0/P1` blocker vs `P2/P3` advisory nyelvet hordoz a post-gate reviewer lane-ben.
-3. A reviewer startup/resume/tmux prompt surfaces ugyanabból a reviewer-facing guidance csaladbol projekttalnak, ezert mixed-truth kockazat keletkezik, ha csak egy reszuk frissul.
-4. A Phase 2A utan a routing authority mar explicit threshold consume truthkent rendelkezesre all; ebben a phase-ben ennek reviewer-facing projection/parity alignmentje zarodik.
+1. A reviewer guidance/prompt mar nem tanit fix `P2/P3 advisory-only` reviewer routing szabalyokat.
+2. A canonical reviewer ontology `Decision Mapping` szakasza es az abbol generalt runtime reminder threshold-driven reviewer post-gate szemantikat hordoz, mikozben a severity definiciok closed jelentese valtozatlan marad.
+3. A reviewer startup/resume/tmux prompt surfaces ugyanabból a reviewer-facing guidance csaladbol projekttalnak, es a parity closure megtortent.
+4. A Phase 2A altal lezart routing authority reviewer-facing projection/parity alignmentje ebben a phase-ben lezarult.
+5. A current tree-ben a reviewer-facing parity mar le van zarva:
+   - a reviewer startup/resume/tmux/policy snapshot surfaces threshold-driven authorityt projekttalnak
+   - a reviewer ontology + generated reminder + docs ugyanazt a reviewer threshold semantics-et hordozza
+   - a lane validacioja `pnpm build`, celzott reviewer-parity tesztek es `pnpm ci:local` futasokkal megtortent
 
 ## L0 - Policy
 
@@ -83,6 +87,8 @@ Vigyük at a mar lezart reviewer threshold authorityt minden reviewer-facing pro
    kulon successor nem kotelezo; ez a reviewer-facing parity closure.
 4. Task-list impact:
    ez a task nem irja ujra a routing authorityt; a Phase 2A truth-ot reviewer-facing surfacesre projekttalja es dokumentalja.
+5. Closure status:
+   a bounded Phase 2B closure teljesult; ez a task successor nelkul archivalhato.
 
 ### Canonical Contract Anchors
 

@@ -40,7 +40,7 @@ target_files:
   - tests/v11/shared/reviewPolicy/reviewPolicyRuntime.test.ts
   - tests/v11/shared/reviewPolicy/updateBubbleReviewPolicy.test.ts
 prd_ref: null
-plan_ref: plans/review-policy-reviewer-blocking-threshold-and-shared-ui-plan-v1.md
+plan_ref: plans/archive/plans/review-policy-reviewer-blocking-threshold-and-shared-ui-plan-v1.md
 system_context_ref: docs/pairflow-initial-design.md
 owners:
   - "felho"

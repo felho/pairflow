@@ -20,7 +20,7 @@ target_files:
   - tests/v11/application/pass/passRoutingInvocationBuilders.test.ts
   - tests/v11/application/pass/emitPassContextBuilder.test.ts
 prd_ref: null
-plan_ref: plans/review-policy-reviewer-blocking-threshold-and-shared-ui-plan-v1.md
+plan_ref: plans/archive/plans/review-policy-reviewer-blocking-threshold-and-shared-ui-plan-v1.md
 system_context_ref: docs/pairflow-initial-design.md
 owners:
   - "felho"
@@ -85,7 +85,7 @@ Kossuk at a reviewer post-gate routing authorityt az uj canonical reviewer thres
    merged and archived predecessor task:
    [review-policy-reviewer-blocking-threshold-foundation-and-ui-phase1.md](/Users/felho/dev/pairflow/plans/archive/tasks/review-policy-reviewer-blocking-threshold-and-shared-ui/review-policy-reviewer-blocking-threshold-foundation-and-ui-phase1.md)
 3. Unlocks / impacts successors:
-   [review-policy-reviewer-blocking-threshold-reviewer-facing-parity-phase2b.md](/Users/felho/dev/pairflow/plans/tasks/review-policy-reviewer-blocking-threshold-and-shared-ui/review-policy-reviewer-blocking-threshold-reviewer-facing-parity-phase2b.md)
+   [review-policy-reviewer-blocking-threshold-reviewer-facing-parity-phase2b.md](/Users/felho/dev/pairflow/plans/archive/tasks/review-policy-reviewer-blocking-threshold-and-shared-ui/review-policy-reviewer-blocking-threshold-reviewer-facing-parity-phase2b.md)
 4. Task-list impact:
    ez a task nem ownershipolja a reviewer-facing guidance, ontology, runtime reminder vagy docs parity feluleteit; azokat a Phase 2B successor zarja le.
 

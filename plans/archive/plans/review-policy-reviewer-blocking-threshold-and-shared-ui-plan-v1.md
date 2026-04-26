@@ -2,7 +2,7 @@
 artifact_type: plan
 artifact_id: plan_review_policy_reviewer_blocking_threshold_shared_ui_v1
 title: "Review Policy Reviewer Blocking Threshold + Shared UI Severity Plan"
-status: active
+status: completed
 prd_ref: null
 owners:
   - "felho"
@@ -75,7 +75,7 @@ Szetszalazni a review severity policy-t ugy, hogy:
    - a masodik task nem nyithat ujra config/mutation/read-model foundation kerdeseket; csak a canonical reviewer threshold consume authorityt es a routing seam-eket zarhatja le
    - a harmadik task nem irhat ujra routing truth-ot; csak a mar atkotott reviewer authority reviewer-facing projection/parity feluleteit zarhatja le
 
-## Current Codebase Check (2026-04-26)
+## Current Codebase Check (2026-04-26, post-Phase-2B-close)
 
 1. A canonical `review_policy` current tree-ben mar explicit ket severity mezot hordoz:
    - `reviewer_blocking_min_severity`
@@ -83,9 +83,21 @@ Szetszalazni a review severity policy-t ugy, hogy:
 2. A UI mutate surface mar a shared severity inputon keresztul mindket persisted mezot irja local + remote update seamen.
 3. A reviewer post-gate decision mar a canonical `review_policy.reviewer_blocking_min_severity` thresholdra van kotve, explicit threshold-threadinggel a routing inputtol a reviewer validacioig.
 4. A document-scope qualifier-normalized aggregate marad a threshold compare canonical inputja; a strict qualifier nelkuli `P0/P1` document finding tovabbra is non-blocking effective severityre downgrade-olodik.
-5. A meg nyitott blast radius mar a reviewer-facing projection familyre szukult:
-   - reviewer guidance / prompt / delivery surfaces
-   - canonical reviewer ontology + generated runtime reminder + docs parity
+5. A korabban nyitott reviewer-facing projection family mar le van zarva:
+   - reviewer guidance / prompt / delivery surfaces threshold-driven authorityt projekttalnak
+   - canonical reviewer ontology + generated runtime reminder + docs parity alignment megtortent
+
+## Progress Update (2026-04-26, post-Phase-2B-close)
+
+1. A `review-policy-reviewer-blocking-threshold-reviewer-facing-parity-phase2b` slice le lett zarva, merge-elve `main`-re, validalva, majd archivalasra kesz lett:
+   - a reviewer-facing guidance/prompt/delivery surfaces mar a canonical `review_policy.reviewer_blocking_min_severity` authorityt projekttaljak
+   - a canonical reviewer ontology, a generated runtime reminder es a reviewer policy snapshot ugyanazt a threshold-driven reviewer post-gate jelentest hordozza
+   - a default `P3` baseline explicit konfiguracios thresholdkent dokumentalt, nem severity-ontology reinterpretaciokent
+2. A lane plan-szintu coverage-je ezzel teljes:
+   - producer / persisted contract closure: Phase 1
+   - reviewer consume authority closure: Phase 2A
+   - reviewer-facing projection + docs/codegen parity closure: Phase 2B
+3. A planhez nem maradt nyitott bounded successor task; a lane archivalhato.
 
 ## Current Status
 
@@ -110,10 +122,16 @@ Szetszalazni a review severity policy-t ugy, hogy:
    - a document-scope qualifier-normalized aggregate marad a threshold compare canonical inputja
    - a Phase 2A task archivalva lett:
      `plans/archive/tasks/review-policy-reviewer-blocking-threshold-and-shared-ui/review-policy-reviewer-blocking-threshold-routing-consume-phase2a.md`
+5. A `review-policy-reviewer-blocking-threshold-reviewer-facing-parity-phase2b` slice implementalva, validalva es archivalva lett:
+   - a reviewer guidance/prompt/delivery surfaces threshold-driven authority projectionre alltak at
+   - a reviewer severity ontology, generated runtime reminder es reviewer policy snapshot parityja lezarult
+   - a docs/spec reviewer-facing wording mar nem fix `P0/P1 blocker` vs `P2/P3 advisory` authorityt projekttal
+   - a Phase 2B task archivalva lett:
+     `plans/archive/tasks/review-policy-reviewer-blocking-threshold-and-shared-ui/review-policy-reviewer-blocking-threshold-reviewer-facing-parity-phase2b.md`
 
 ### Open Work
 
-1. A reviewer-facing prompt/delivery/docs feluleteket kulon parity lane-ben at kell vezetni az uj threshold authorityra, beleertve a canonical reviewer severity ontologyt es az embedded runtime reminder parityjat.
+1. Nincs nyitott munka ezen a lane-en; a plan bounded closure-ja lezart.
 
 ### Deferred / Future Work
 
@@ -129,7 +147,7 @@ Szetszalazni a review severity policy-t ugy, hogy:
    - status: completed and archived
    - cel: reviewer post-gate routing authority, threshold threading seam-ek es scope-policy aggregate consume atkotese az uj reviewer thresholdra
 3. `review-policy-reviewer-blocking-threshold-reviewer-facing-parity-phase2b`
-   - status: next
+   - status: completed and archived
    - cel: reviewer-facing guidance/prompt/delivery, canonical reviewer ontology/runtime reminder, docs es parity-tesztek atkotese a mar lezart Phase 2A authorityra
 
 ## Coverage Map
@@ -146,12 +164,13 @@ Szetszalazni a review severity policy-t ugy, hogy:
 
 ## Dependencies / Order
 
-1. Task 1 -> Task 2A -> Task 2B kotelezo.
+1. Task 1 -> Task 2A -> Task 2B kotelezo volt, es a lanc lezarult.
 2. Task 2A csak a merged dual-threshold policy surface-re epulhet; nem tarthat fent sajat interim reviewer threshold fallbackot.
 3. Ha Task 1 a UI input namingot is csereli, Task 2A es Task 2B mar csak az uj mutate/runtime contractot hivatkozhatjak.
 4. Task 2A zarja le a canonical reviewer threshold consume authorityt; Task 2B ezt mar nem irhatja felul, csak reviewer-facing projection/parity feluleteken viheti at.
 5. Task 2B csak akkor tekintheto lezartnak, ha a routing semantics es a reviewer severity ontology/runtime reminder feluletek ugyanazt a closed jelentest hordozzak, vagy az explicit uj jelentest ugyanazzal a source-anchor authorizacioval vezetik at.
 6. A reviewer-facing parity lane nem kezdodhet el addig, amig a routing consume authority es a threshold-threading seam-ek Phase 2A-ban le nem zartak.
+7. Tovabbi munka csak explicit uj successor plan/task artifacttal nyithato, ez a plan onmagaban nem jelol ki kovetkezo implementacios lepeset.
 
 ## Risks / Assumptions
 
