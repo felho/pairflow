@@ -104,7 +104,7 @@ owners:
 1. Parent plan gap closed: az `O2-T4` utan a kovetkezo blokkolo gap az, hogy a start consume-family current-tree szinten meg mindig retained `tmux` launch port naminget fogyaszt, es a repo-root/public export surface sem huzza fel a neutral launch contractot.
 2. Depends on:
    - `plans/actor-runtime-interface-post-phaseE-successor-plan-v1.md`
-   - `plans/actor-runtime-interface-topology-neutral-delivery-executor-contract-note-v1.md`
+   - `docs/actor-runtime-interface/topology-neutral-delivery-executor-contract-note-v1.md`
    - `plans/archive/tasks/actor-runtime-interface-opportunity2-task4-topology-neutral-launch-executor-contract-foundation.md`
 3. Unlocks / impacts successors:
    - retained `tmux` launch compat bridge kesobbi cleanupja, ha mar nincs current consumer rajta
@@ -124,7 +124,7 @@ owners:
 
 1. Source-of-truth anchors:
    - `plans/actor-runtime-interface-post-phaseE-successor-plan-v1.md`
-   - `plans/actor-runtime-interface-topology-neutral-delivery-executor-contract-note-v1.md`
+   - `docs/actor-runtime-interface/topology-neutral-delivery-executor-contract-note-v1.md`
    - `plans/archive/tasks/actor-runtime-interface-opportunity2-task4-topology-neutral-launch-executor-contract-foundation.md`
    - `src/v11/shared/ports/tmuxSessions.ts`
    - `src/v11/infrastructure/channel/tmux/tmuxManager.ts`

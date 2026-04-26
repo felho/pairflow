@@ -6,7 +6,7 @@ status: implementable
 updated_at: 2026-04-16
 phase: phaseE3a
 target_files:
-  - plans/actor-runtime-interface-execution-authority-contract-note-v1.md
+  - docs/actor-runtime-interface/execution-authority-contract-note-v1.md
   - src/cli/commands/agent/emit.ts
   - src/v11/shared/actorProtocol/actorEmitContext.ts
   - src/v11/application/actorProtocol/emitActorProtocolV11.ts
@@ -46,7 +46,7 @@ owners:
 
 ### Canonical Contract Anchors
 
-1. `plans/actor-runtime-interface-execution-authority-contract-note-v1.md`
+1. `docs/actor-runtime-interface/execution-authority-contract-note-v1.md`
 2. `docs/pairflow-initial-design.md`
 3. `src/types/protocol.ts`
 4. `src/cli/commands/agent/emit.ts`

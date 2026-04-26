@@ -211,7 +211,7 @@ owners:
    - `O2-T3` es `O2-T7` utan maradt retained delivery consume contract ownership a workflow/internal familyben.
 2. Depends on:
    - `plans/actor-runtime-interface-post-phaseE-successor-plan-v1.md`
-   - `plans/actor-runtime-interface-topology-neutral-delivery-executor-contract-note-v1.md`
+   - `docs/actor-runtime-interface/topology-neutral-delivery-executor-contract-note-v1.md`
    - `plans/archive/tasks/actor-runtime-interface-opportunity2-task3-topology-neutral-delivery-consume-family-alignment.md`
    - `plans/archive/tasks/actor-runtime-interface-opportunity2-task7-ui-router-and-public-delivery-read-model-export-alignment.md`
 3. Unlocks / impacts successors:
@@ -225,7 +225,7 @@ owners:
 
 1. Source-of-truth anchors:
    - `plans/actor-runtime-interface-post-phaseE-successor-plan-v1.md`
-   - `plans/actor-runtime-interface-topology-neutral-delivery-executor-contract-note-v1.md`
+   - `docs/actor-runtime-interface/topology-neutral-delivery-executor-contract-note-v1.md`
    - `plans/archive/tasks/actor-runtime-interface-opportunity2-task3-topology-neutral-delivery-consume-family-alignment.md`
    - `src/v11/shared/delivery/tmuxDeliveryContract.ts`
    - `src/v11/shared/ports/tmuxDelivery.ts`

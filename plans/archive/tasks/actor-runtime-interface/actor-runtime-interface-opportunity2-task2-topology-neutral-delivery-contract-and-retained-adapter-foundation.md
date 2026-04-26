@@ -79,7 +79,7 @@ owners:
 1. Parent plan gap closed: az `O2-T1` docs-only boundary note utan az elso implementacios gap az, hogy a delivery canonical contract mar topology-neutral naminggel letezzen, mikozben a retained `tmux` adapter es a current consumers meg nem migralodnak.
 2. Depends on:
    - `plans/actor-runtime-interface-post-phaseE-successor-plan-v1.md`
-   - `plans/actor-runtime-interface-topology-neutral-delivery-executor-contract-note-v1.md`
+   - `docs/actor-runtime-interface/topology-neutral-delivery-executor-contract-note-v1.md`
    - `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-delivery-ack-producer-contract-phaseE2a.md`
 3. Unlocks / impacts successors:
    - `O2-T3` delivery consume-family alignment
@@ -99,7 +99,7 @@ owners:
 
 1. Source-of-truth anchors:
    - `plans/actor-runtime-interface-post-phaseE-successor-plan-v1.md`
-   - `plans/actor-runtime-interface-topology-neutral-delivery-executor-contract-note-v1.md`
+   - `docs/actor-runtime-interface/topology-neutral-delivery-executor-contract-note-v1.md`
    - `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-delivery-ack-producer-contract-phaseE2a.md`
    - `src/v11/shared/delivery/tmuxDeliveryContract.ts`
    - `src/v11/shared/ports/tmuxDelivery.ts`
@@ -374,7 +374,7 @@ owners:
 | Type | Items | Priority | Timing |
 |---|---|---|---|
 | must-use | `plans/actor-runtime-interface-post-phaseE-successor-plan-v1.md` | P1 | required-now |
-| must-use | `plans/actor-runtime-interface-topology-neutral-delivery-executor-contract-note-v1.md` | P1 | required-now |
+| must-use | `docs/actor-runtime-interface/topology-neutral-delivery-executor-contract-note-v1.md` | P1 | required-now |
 | must-use | `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-delivery-ack-producer-contract-phaseE2a.md` | P1 | required-now |
 | must-use | current-tree code evidence: `src/v11/shared/delivery/tmuxDeliveryContract.ts`, `src/v11/shared/ports/tmuxDelivery.ts`, `src/v11/infrastructure/channel/tmux/tmuxDeliveryRuntime.ts`, `src/v11/infrastructure/channel/tmux/tmuxDelivery.ts`, `tests/core/runtime/tmuxDelivery.test.ts` | P1 | required-now |
 | must-not-use | workflow consume-family alignment in kickoff/pass/converged/approval/watchdog/ask-human/meta-review | P1 | required-now |

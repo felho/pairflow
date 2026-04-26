@@ -84,7 +84,7 @@ owners:
    - a current tree UI/router es repo-root/public delivery surface meg mindig retained vocabularyt visz.
 2. Depends on:
    - `plans/actor-runtime-interface-post-phaseE-successor-plan-v1.md`
-   - `plans/actor-runtime-interface-topology-neutral-delivery-executor-contract-note-v1.md`
+   - `docs/actor-runtime-interface/topology-neutral-delivery-executor-contract-note-v1.md`
    - `plans/archive/tasks/actor-runtime-interface-opportunity2-task6-meta-review-gate-runtime-capability-decoupling.md`
    - `plans/archive/tasks/actor-runtime-interface-opportunity2-task5-topology-neutral-launch-executor-consume-family-alignment.md`
 3. Unlocks / impacts successors:
@@ -98,7 +98,7 @@ owners:
 
 1. Source-of-truth anchors:
    - `plans/actor-runtime-interface-post-phaseE-successor-plan-v1.md`
-   - `plans/actor-runtime-interface-topology-neutral-delivery-executor-contract-note-v1.md`
+   - `docs/actor-runtime-interface/topology-neutral-delivery-executor-contract-note-v1.md`
    - `src/v11/application/approval/approvalCommandContract.ts`
    - `src/v11/shared/delivery/tmuxDeliveryContract.ts`
    - `src/v11/shared/ports/tmuxDelivery.ts`

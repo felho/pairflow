@@ -115,7 +115,7 @@ owners:
 1. Parent plan source:
    - `plans/actor-runtime-interface-post-phaseE-successor-plan-v1.md`
 2. Normative predecessor:
-   - `plans/actor-runtime-interface-onboarding-extension-surface-contract-note-v1.md`
+   - `docs/actor-runtime-interface/onboarding-extension-surface-contract-note-v1.md`
    - `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-opportunity3-task2-internal-role-capability-foundation.md`
 3. This task closes:
    - `Opportunity 3 / O3-T3`
@@ -130,7 +130,7 @@ owners:
 ### Canonical Contract Anchors
 
 1. Docs/source anchors:
-   - `plans/actor-runtime-interface-onboarding-extension-surface-contract-note-v1.md`
+   - `docs/actor-runtime-interface/onboarding-extension-surface-contract-note-v1.md`
    - `plans/actor-runtime-interface-post-phaseE-successor-plan-v1.md`
    - `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-opportunity3-task2-internal-role-capability-foundation.md`
 2. Current code anchors:

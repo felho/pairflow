@@ -6,7 +6,7 @@ status: draft
 phase: post-phaseE
 target_files:
   - plans/tasks/actor-runtime-interface/actor-runtime-interface-opportunity3-task1-onboarding-extension-surface-contract-clarification.md
-  - plans/actor-runtime-interface-onboarding-extension-surface-contract-note-v1.md
+  - docs/actor-runtime-interface/onboarding-extension-surface-contract-note-v1.md
   - plans/actor-runtime-interface-post-phaseE-successor-plan-v1.md
 prd_ref: null
 plan_ref: plans/actor-runtime-interface-post-phaseE-successor-plan-v1.md
@@ -53,7 +53,7 @@ Docs-only `O3-T1` szelet, amely:
 ### In Scope
 
 1. Az uj task artifact ezen a path-on: `plans/tasks/actor-runtime-interface/actor-runtime-interface-opportunity3-task1-onboarding-extension-surface-contract-clarification.md`.
-2. Az uj contract note ezen a path-on: `plans/actor-runtime-interface-onboarding-extension-surface-contract-note-v1.md`.
+2. Az uj contract note ezen a path-on: `docs/actor-runtime-interface/onboarding-extension-surface-contract-note-v1.md`.
 3. A parent plan `Opportunity Disposition`, `Recommended Sequencing` es `Traceability` szekcioinak frissitese az `O3-T1` task path-aval, a contract note path-aval es az `O3-T2..T5` phasing iranyaval.
 4. A 4 seam (S1..S4) source-anchored inventoryjanak formalizalasa a contract note-ban, legalabb erre a tengelyre:
    - seam id (`S1`..`S4`),
@@ -88,7 +88,7 @@ Docs-only `O3-T1` szelet, amely:
 ### Safety Defaults
 
 1. Docs-only task; product- vagy runtime-kod nem modosithato.
-2. A canonical execution authority baseline (`O1-T1` kernel boundary note + `plans/actor-runtime-interface-execution-authority-contract-note-v1.md`) preserved marad; az uj note nem reinterpretalhatja lazabb compat language-gge.
+2. A canonical execution authority baseline (`O1-T1` kernel boundary note + `docs/actor-runtime-interface/execution-authority-contract-note-v1.md`) preserved marad; az uj note nem reinterpretalhatja lazabb compat language-gge.
 3. A topology-neutral delivery/executor closure (`O2-T1..T13`) preserved marad; az `O3` nem nyitja ujra a delivery vagy launch contract zart truthjat.
 4. A `assertReviewerHumanQuestionRetainedFallback` retained fallback explicit preserved-baseline.
 5. A `assertMetaReviewerActiveAgentCodexWhenPresent` guard explicit preserved-baseline-with-explicit-replacement-path-in-O3-T4.
@@ -113,8 +113,8 @@ Docs-only `O3-T1` szelet, amely:
 1. `plan_ref`: `plans/actor-runtime-interface-post-phaseE-successor-plan-v1.md` (owns `Opportunity 3` sequencing)
 2. Preserved baselines:
    - `plans/actor-runtime-interface-generic-runtime-kernel-contract-note-v1.md` (`O1-T1` kernel boundary)
-   - `plans/actor-runtime-interface-topology-neutral-delivery-executor-contract-note-v1.md` (`O2-T1` topology-neutral boundary)
-   - `plans/actor-runtime-interface-execution-authority-contract-note-v1.md` (canonical authority baseline)
+   - `docs/actor-runtime-interface/topology-neutral-delivery-executor-contract-note-v1.md` (`O2-T1` topology-neutral boundary)
+   - `docs/actor-runtime-interface/execution-authority-contract-note-v1.md` (canonical authority baseline)
 3. Historical predecessor:
    - `plans/actor-runtime-interface-opportunity3-onboarding-discovery-summary-v1.md` (zart discovery)
 
@@ -220,8 +220,8 @@ Docs-only `O3-T1` szelet, amely:
 18. `src/v11/application/start/startCommandResumeImplementerPrompt.ts`
 19. `src/v11/shared/command/agentCommand.ts`
 20. `plans/actor-runtime-interface-generic-runtime-kernel-contract-note-v1.md`
-21. `plans/actor-runtime-interface-topology-neutral-delivery-executor-contract-note-v1.md`
-22. `plans/actor-runtime-interface-execution-authority-contract-note-v1.md`
+21. `docs/actor-runtime-interface/topology-neutral-delivery-executor-contract-note-v1.md`
+22. `docs/actor-runtime-interface/execution-authority-contract-note-v1.md`
 23. `plans/actor-runtime-interface-opportunity3-onboarding-discovery-summary-v1.md`
 
 #### Canonical Elements
@@ -356,7 +356,7 @@ Conclusion: a task bounded marad, mert nincs producer vagy shared-contract code 
 
 1. `plans/tasks/actor-runtime-interface/actor-runtime-interface-opportunity3-task1-onboarding-extension-surface-contract-clarification.md`
    - primary task artifact
-2. `plans/actor-runtime-interface-onboarding-extension-surface-contract-note-v1.md`
+2. `docs/actor-runtime-interface/onboarding-extension-surface-contract-note-v1.md`
    - kotelezo szekciok:
      - Purpose
      - Normative References
@@ -398,8 +398,8 @@ Conclusion: a task bounded marad, mert nincs producer vagy shared-contract code 
 |---|---|---|---|
 | must-use | `plans/actor-runtime-interface-post-phaseE-successor-plan-v1.md` | P1 | required-now |
 | must-use | `plans/actor-runtime-interface-generic-runtime-kernel-contract-note-v1.md` | P1 | required-now |
-| must-use | `plans/actor-runtime-interface-topology-neutral-delivery-executor-contract-note-v1.md` | P1 | required-now |
-| must-use | `plans/actor-runtime-interface-execution-authority-contract-note-v1.md` | P1 | required-now |
+| must-use | `docs/actor-runtime-interface/topology-neutral-delivery-executor-contract-note-v1.md` | P1 | required-now |
+| must-use | `docs/actor-runtime-interface/execution-authority-contract-note-v1.md` | P1 | required-now |
 | must-use | `plans/actor-runtime-interface-opportunity3-onboarding-discovery-summary-v1.md` | P1 | required-now |
 | must-use | `src/v11/application/actorProtocol/actorRuntimeKernel.ts` | P1 | required-now |
 | must-use | `src/v11/application/actorProtocol/actorRuntimeDispatchMatrix.ts` | P1 | required-now |

@@ -89,7 +89,7 @@ owners:
 1. Parent plan gap closed: az `O2-T1` docs-only boundary note utan az elso implementacios gap a launch lane-ben az, hogy a canonical launch contract topology-neutral naminggel letezzen, mikozben a retained `tmux` producer es a current consumers meg nem migralodnak.
 2. Depends on:
    - `plans/actor-runtime-interface-post-phaseE-successor-plan-v1.md`
-   - `plans/actor-runtime-interface-topology-neutral-delivery-executor-contract-note-v1.md`
+   - `docs/actor-runtime-interface/topology-neutral-delivery-executor-contract-note-v1.md`
    - `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-delivery-ack-producer-contract-phaseE2a.md`
 3. Unlocks / impacts successors:
    - `O2-T5` launch/executor consume-family alignment
@@ -109,7 +109,7 @@ owners:
 
 1. Source-of-truth anchors:
    - `plans/actor-runtime-interface-post-phaseE-successor-plan-v1.md`
-   - `plans/actor-runtime-interface-topology-neutral-delivery-executor-contract-note-v1.md`
+   - `docs/actor-runtime-interface/topology-neutral-delivery-executor-contract-note-v1.md`
    - `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-delivery-ack-producer-contract-phaseE2a.md`
    - `src/v11/shared/ports/tmuxSessions.ts`
    - `src/v11/infrastructure/channel/tmux/tmuxManager.ts`
@@ -378,7 +378,7 @@ owners:
 | Type | Items | Priority | Timing |
 |---|---|---|---|
 | must-use | `plans/actor-runtime-interface-post-phaseE-successor-plan-v1.md` | P1 | required-now |
-| must-use | `plans/actor-runtime-interface-topology-neutral-delivery-executor-contract-note-v1.md` | P1 | required-now |
+| must-use | `docs/actor-runtime-interface/topology-neutral-delivery-executor-contract-note-v1.md` | P1 | required-now |
 | must-use | `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-delivery-ack-producer-contract-phaseE2a.md` | P1 | required-now |
 | must-use | current-tree code evidence: `src/v11/shared/ports/tmuxSessions.ts`, `src/v11/infrastructure/channel/tmux/tmuxManager.ts`, `src/v11/defaults/start/startBubbleDefaults.ts`, `tests/core/runtime/tmuxManager.test.ts`, `tests/core/bubble/startBubble.test.ts`, `tests/v11/application/start/startCommandOrchestration.test.ts` | P1 | required-now |
 | must-not-use | start/restart consume-family alignment vagy dependency contract rename | P1 | required-now |

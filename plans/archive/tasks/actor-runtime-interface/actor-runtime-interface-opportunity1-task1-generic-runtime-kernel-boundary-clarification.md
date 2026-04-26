@@ -164,7 +164,7 @@ Docs-only, implementalhato `O1-T1` sequencing szelet keszitese az `Opportunity 1
 1. `plan_ref`: `plans/actor-runtime-interface-post-phaseE-successor-plan-v1.md`
    - Ez owns-olja az Opportunity 1 sequencinget.
 2. Preserved authority baseline:
-   - `plans/actor-runtime-interface-execution-authority-contract-note-v1.md`
+   - `docs/actor-runtime-interface/execution-authority-contract-note-v1.md`
 3. Historical predecessor context:
    - `plans/actor-runtime-interface-discovery-and-migration-plan-v1.md`
 
@@ -424,7 +424,7 @@ Conclusion:
 | Type | Items | Priority | Timing |
 |---|---|---|---|
 | must-use | `plans/actor-runtime-interface-post-phaseE-successor-plan-v1.md` | P1 | required-now |
-| must-use | `plans/actor-runtime-interface-execution-authority-contract-note-v1.md` | P1 | required-now |
+| must-use | `docs/actor-runtime-interface/execution-authority-contract-note-v1.md` | P1 | required-now |
 | must-use | `src/v11/shared/actorProtocol/actorEmitContext.ts` | P1 | required-now |
 | must-use | `src/v11/application/actorProtocol/emitActorProtocolV11.ts` | P1 | required-now |
 | must-use | `src/v11/application/actorProtocol/actorProtocolEmitters.ts` | P1 | required-now |

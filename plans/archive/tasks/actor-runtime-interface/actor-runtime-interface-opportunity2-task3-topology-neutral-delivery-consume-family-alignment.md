@@ -148,7 +148,7 @@ owners:
 1. Parent plan gap closed: az `O2-T2` utan a kovetkezo blokkolo gap az, hogy a delivery consume family meg mindig retained `tmux` vocabularyt es `delivered` projectiont fogyaszt canonical consume szerepben.
 2. Depends on:
    - `plans/actor-runtime-interface-post-phaseE-successor-plan-v1.md`
-   - `plans/actor-runtime-interface-topology-neutral-delivery-executor-contract-note-v1.md`
+   - `docs/actor-runtime-interface/topology-neutral-delivery-executor-contract-note-v1.md`
    - `plans/archive/tasks/actor-runtime-interface-opportunity2-task2-topology-neutral-delivery-contract-and-retained-adapter-foundation.md`
 3. Unlocks / impacts successors:
    - retained `tmux` delivery wrapper kesobbi cleanupja, ha mar nincs in-scope consumer rajta
@@ -167,7 +167,7 @@ owners:
 
 1. Source-of-truth anchors:
    - `plans/actor-runtime-interface-post-phaseE-successor-plan-v1.md`
-   - `plans/actor-runtime-interface-topology-neutral-delivery-executor-contract-note-v1.md`
+   - `docs/actor-runtime-interface/topology-neutral-delivery-executor-contract-note-v1.md`
    - `plans/archive/tasks/actor-runtime-interface-opportunity2-task2-topology-neutral-delivery-contract-and-retained-adapter-foundation.md`
    - `src/v11/shared/delivery/tmuxDeliveryContract.ts`
    - `src/v11/shared/ports/tmuxDelivery.ts`

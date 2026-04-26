@@ -6,7 +6,7 @@ status: implementable
 updated_at: 2026-04-17
 phase: phaseE3c
 target_files:
-  - plans/actor-runtime-interface-execution-authority-contract-note-v1.md
+  - docs/actor-runtime-interface/execution-authority-contract-note-v1.md
   - src/v11/shared/state/executionContext.ts
   - src/v11/shared/start/startStateMutation.ts
   - src/v11/shared/actorProtocol/actorEmitContext.ts
@@ -58,7 +58,7 @@ owners:
 
 ### Canonical Contract Anchors
 
-1. `plans/actor-runtime-interface-execution-authority-contract-note-v1.md`
+1. `docs/actor-runtime-interface/execution-authority-contract-note-v1.md`
 2. `plans/actor-runtime-interface-discovery-and-migration-plan-v1.md`
 3. `docs/pairflow-initial-design.md`
 4. `src/v11/shared/state/executionContext.ts`
@@ -189,12 +189,12 @@ owners:
 
 | Item | Classification | Source Anchor | Preserved Meaning | Forbidden Reinterpretation |
 |---|---|---|---|---|
-| `execution_context` | canonical | `plans/actor-runtime-interface-execution-authority-contract-note-v1.md` | top-level authority source-of-truth | tmux/pane/runtime session metadata authorityforrassa emelese |
+| `execution_context` | canonical | `docs/actor-runtime-interface/execution-authority-contract-note-v1.md` | top-level authority source-of-truth | tmux/pane/runtime session metadata authorityforrassa emelese |
 | `handoff_id` + `execution_id` | canonical | `src/v11/shared/state/executionContext.ts` | minimum execution identity | `execution_id` optional vagy `handoff_id`-bol derivalt |
 | `ActorEmitContextSnapshot` | canonical snapshot | `src/v11/shared/actorProtocol/actorEmitContext.ts` | a teljes emit authority + guard + integrity snapshot egyben mozog | partial vagy `execution_id` nelkuli `compat_bridge` rehidratacio |
 | `expected_role`, `expected_round`, `expected_state_fingerprint` | guard | `src/v11/shared/actorProtocol/actorEmitContext.ts` | fail-closed verification mezok | canonical identity replace-ese vagy diagnostics-only downgrade |
 | tmux ack status/reason | shared contract | `src/v11/shared/delivery/tmuxDeliveryContract.ts` | explicit runtime outcome accepted/rejected shape-ben | pane activitybol vagy trust-prompt visibilitybol inferred success |
-| workspace/session resolution | `compat_bridge` | `plans/actor-runtime-interface-execution-authority-contract-note-v1.md` | preserved compatibility baselinekent csak teljes `ActorEmitContextSnapshot` rehidratacios same-authority bridge lehet | kulon authority source, `execution_id` nelkuli path vagy success truth |
+| workspace/session resolution | `compat_bridge` | `docs/actor-runtime-interface/execution-authority-contract-note-v1.md` | preserved compatibility baselinekent csak teljes `ActorEmitContextSnapshot` rehidratacios same-authority bridge lehet | kulon authority source, `execution_id` nelkuli path vagy success truth |
 
 `drift_status: no_drift`
 

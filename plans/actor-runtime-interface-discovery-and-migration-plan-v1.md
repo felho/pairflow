@@ -39,7 +39,7 @@ owners:
    - `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-reviewer-meta-rollout-and-adapter-cleanup-phaseE4.md`
 8. A Phase E closeout historical traceability anchorjai:
    - `plans/tasks/actor-runtime-interface-pilot-cutover-phaseE.md`
-   - `plans/actor-runtime-interface-execution-authority-contract-note-v1.md`
+   - `docs/actor-runtime-interface/execution-authority-contract-note-v1.md`
    - `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-reviewer-meta-rollout-and-adapter-cleanup-phaseE4.md`
 9. Review authority note:
    - a current bubble worktree docs-allapota a review/approval source-of-truth,
@@ -107,7 +107,7 @@ owners:
    - nincs pane-lathatosagbol visszakovetkeztetett “valoszinuleg accepted” fallback.
 7. Phase-close traceability:
    - `plans/tasks/actor-runtime-interface-pilot-cutover-phaseE.md`
-   - `plans/actor-runtime-interface-execution-authority-contract-note-v1.md`
+   - `docs/actor-runtime-interface/execution-authority-contract-note-v1.md`
    - `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-reviewer-meta-rollout-and-adapter-cleanup-phaseE4.md`
 8. Phase boundary:
    - authority_contract_foundation_closure: historical predecessor `E1`

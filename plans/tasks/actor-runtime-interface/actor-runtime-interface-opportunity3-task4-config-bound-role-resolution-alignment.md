@@ -46,7 +46,7 @@ owners:
 ## Current Codebase Check (2026-04-26)
 
 1. Az `O3-T1` note, az `O3-T2` internal registry foundation, es az `O3-T3` topology slot consume-family alignment mar current-tree baseline:
-   - `plans/actor-runtime-interface-onboarding-extension-surface-contract-note-v1.md`
+   - `docs/actor-runtime-interface/onboarding-extension-surface-contract-note-v1.md`
    - `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-opportunity3-task2-internal-role-capability-foundation.md`
    - `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-opportunity3-task3-topology-slot-catalog-and-tmux-consumer-alignment.md`
 2. A `RoleDescriptor` registry ma mar explicitten hordozza az `agent_resolution` mezot mindharom role-ra, de a `meta_reviewer` meg mindig special-case:
@@ -78,7 +78,7 @@ owners:
    - van, ahol actor emit authority snapshot mellett a resolved bubble context is elerheto (`ActorEmitContextSnapshot.resolved`),
    - es van, ahol runtime command/pane-binding type boundary meg ma is explicit `agentName: "codex"` shape-et var.
 8. Az `O3-T1` note explicitten lockolja, hogy az `agent_resolution` mai `hardcoded_runtime -> codex` allapota csak atmeneti baseline, es az `O3-T4`-ben mind a 3 role `config_bound`-ra konvergal replacement proof-fal:
-   - source anchor: `plans/actor-runtime-interface-onboarding-extension-surface-contract-note-v1.md`
+   - source anchor: `docs/actor-runtime-interface/onboarding-extension-surface-contract-note-v1.md`
 9. Emiatt az `O3-T4` valos scope-ja nem pusztan config parser modositas, hanem producer-first S3 shared contract + workflow/internal consumer alignment:
    - additive config shape alignment
    - create-path authority producer alignment
@@ -138,7 +138,7 @@ owners:
 1. Parent plan source:
    - `plans/actor-runtime-interface-post-phaseE-successor-plan-v1.md`
 2. Normative predecessor:
-   - `plans/actor-runtime-interface-onboarding-extension-surface-contract-note-v1.md`
+   - `docs/actor-runtime-interface/onboarding-extension-surface-contract-note-v1.md`
    - `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-opportunity3-task2-internal-role-capability-foundation.md`
    - `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-opportunity3-task3-topology-slot-catalog-and-tmux-consumer-alignment.md`
 3. This task closes:
@@ -156,7 +156,7 @@ owners:
 ### Canonical Contract Anchors
 
 1. Docs/source anchors:
-   - `plans/actor-runtime-interface-onboarding-extension-surface-contract-note-v1.md`
+   - `docs/actor-runtime-interface/onboarding-extension-surface-contract-note-v1.md`
    - `plans/actor-runtime-interface-post-phaseE-successor-plan-v1.md`
    - `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-opportunity3-task2-internal-role-capability-foundation.md`
    - `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-opportunity3-task3-topology-slot-catalog-and-tmux-consumer-alignment.md`

@@ -133,7 +133,7 @@ owners:
    - API/IPC delivery,
    - vagy non-tmux actor launch irany felmerul.
 4. Az `O2-T1` docs-only boundary note-ja:
-   - `plans/actor-runtime-interface-topology-neutral-delivery-executor-contract-note-v1.md`
+   - `docs/actor-runtime-interface/topology-neutral-delivery-executor-contract-note-v1.md`
 5. Az `Opportunity 2` current-tree reality check alapjan nem egyetlen implementacios task:
    - a shared delivery/launch contract retained `tmux` naminggel ma is tobb consume familyre sugarzik szet,
    - kulon producer/adapter foundation, workflow-orchestration consume es read-model/public compat closure latszik,
@@ -186,7 +186,7 @@ owners:
    - a lezart delivery ack baseline-t (`accepted | rejected`) nem nyithatja ujra,
    - a lezart launch ack baseline-t (`running | failed_to_start`) nem nyithatja ujra,
    - csak a topology/executor-boundary es retained adapter ownership pontositasat ownershipolja.
-   - normativ note path: `plans/actor-runtime-interface-topology-neutral-delivery-executor-contract-note-v1.md`
+   - normativ note path: `docs/actor-runtime-interface/topology-neutral-delivery-executor-contract-note-v1.md`
 9. `O2-T2`-`O2-T9` producer-first sorrendben kellett nyilniuk es zarulniuk:
    - elobb a topology-neutral delivery es launch/executor foundation szeletek,
    - utana a workflow-orchestration consume-family alignment,
@@ -207,7 +207,7 @@ owners:
 1. `O2-T1`
    - status: completed docs-only boundary clarification
    - artifact path: `plans/archive/tasks/actor-runtime-interface-opportunity2-task1-topology-neutral-delivery-executor-clarification.md`
-   - output: `plans/actor-runtime-interface-topology-neutral-delivery-executor-contract-note-v1.md`
+   - output: `docs/actor-runtime-interface/topology-neutral-delivery-executor-contract-note-v1.md`
 2. `O2-T2`
    - status: completed foundation slice
    - shape: `shared_contract` + `authority_producer` foundation
@@ -377,7 +377,7 @@ owners:
 6. Emiatt az `Opportunity 1` current-tree successor lane lezarhato.
 7. Az `Opportunity 2` docs-only first slice-a mar lezart baseline:
    - archived task artifact: `plans/archive/tasks/actor-runtime-interface-opportunity2-task1-topology-neutral-delivery-executor-clarification.md`
-   - normative note: `plans/actor-runtime-interface-topology-neutral-delivery-executor-contract-note-v1.md`
+   - normative note: `docs/actor-runtime-interface/topology-neutral-delivery-executor-contract-note-v1.md`
    - closure: topology-neutral delivery/executor contract boundary clarification retained `tmux` adapter ownership explicit source-anchor inventoryval
    - preserved baseline: a `Phase E2a`-ban lezart typed delivery/launch ack semantics tovabbra sem reopenolhato
 8. Az `O2-T2` code-level delivery foundation 2026-04-18-an merge-olve lett a `main` branchre:
@@ -470,7 +470,7 @@ owners:
 21. Emiatt az `Opportunity 2` implementation lane current-tree szinten lezart lett, es a successor ownership az `O3` lane-re kerult at.
 22. Az `O3-T1` docs-only onboarding extension surface clarification 2026-04-25-en current-tree baseline lett:
    - task artifact: `plans/tasks/actor-runtime-interface/actor-runtime-interface-opportunity3-task1-onboarding-extension-surface-contract-clarification.md`
-   - normative note: `plans/actor-runtime-interface-onboarding-extension-surface-contract-note-v1.md`
+   - normative note: `docs/actor-runtime-interface/onboarding-extension-surface-contract-note-v1.md`
    - closure: belso `RoleDescriptor` registry-mintazat, 4 seam (S1..S4) inventory, es az `O3-T2..T5` sequencing/gating explicit lezárása
 23. Az `O3-T2` internal role/capability foundation 2026-04-26-an merge-olve lett a `main` branchre:
    - archived task artifact: `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-opportunity3-task2-internal-role-capability-foundation.md`
@@ -530,7 +530,7 @@ owners:
    - completed slices:
      - `O3-T1` onboarding extension surface contract clarification
      - task artifact: `plans/tasks/actor-runtime-interface/actor-runtime-interface-opportunity3-task1-onboarding-extension-surface-contract-clarification.md`
-     - normative note: `plans/actor-runtime-interface-onboarding-extension-surface-contract-note-v1.md`
+     - normative note: `docs/actor-runtime-interface/onboarding-extension-surface-contract-note-v1.md`
      - shape: `contract_or_persisted_authority_foundation` (docs-only)
      - closure: belso `RoleDescriptor` registry-mintazat normativ rogzitese + 4 seam (S1..S4) source-anchored inventory + per-role 9 mezos closed mapping exact startup/resume prompt concern-setekkel + `O3-T2..T5` phasing gatinggel
      - `O3-T2` internal role/capability foundation
@@ -554,11 +554,11 @@ owners:
 2. Current closeout anchors:
    - `plans/tasks/actor-runtime-interface-pilot-cutover-phaseE.md`
    - `plans/tasks/actor-runtime-interface/actor-runtime-interface-opportunity3-task1-onboarding-extension-surface-contract-clarification.md`
-   - `plans/actor-runtime-interface-execution-authority-contract-note-v1.md`
+   - `docs/actor-runtime-interface/execution-authority-contract-note-v1.md`
    - `plans/actor-runtime-interface-generic-runtime-kernel-contract-note-v1.md`
-   - `plans/actor-runtime-interface-topology-neutral-delivery-executor-contract-note-v1.md`
+   - `docs/actor-runtime-interface/topology-neutral-delivery-executor-contract-note-v1.md`
    - `plans/actor-runtime-interface-opportunity3-onboarding-discovery-summary-v1.md`
-   - `plans/actor-runtime-interface-onboarding-extension-surface-contract-note-v1.md`
+   - `docs/actor-runtime-interface/onboarding-extension-surface-contract-note-v1.md`
 3. Current source anchors:
    - `src/v11/shared/actorProtocol/actorEmitContext.ts`
    - `src/v11/application/actorProtocol/actorRuntimeKernel.ts`

@@ -75,7 +75,7 @@ owners:
 
 ### Canonical Contract Anchors
 
-1. `plans/actor-runtime-interface-execution-authority-contract-note-v1.md`
+1. `docs/actor-runtime-interface/execution-authority-contract-note-v1.md`
 2. `docs/pairflow-initial-design.md`
 3. `src/types/protocol.ts`
 4. `src/v11/shared/actorProtocol/actorEmitContext.ts`

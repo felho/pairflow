@@ -82,7 +82,7 @@ owners:
    - `plans/actor-runtime-interface-post-phaseE-successor-plan-v1.md`
 2. Closed-contract source anchors:
    - `plans/actor-runtime-interface-generic-runtime-kernel-contract-note-v1.md`
-   - `plans/actor-runtime-interface-execution-authority-contract-note-v1.md`
+   - `docs/actor-runtime-interface/execution-authority-contract-note-v1.md`
 3. Current-tree source anchors:
    - `src/v11/application/actorProtocol/emitActorProtocolV11.ts`
    - `src/v11/application/actorProtocol/actorProtocolEmitters.ts`

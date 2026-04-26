@@ -122,7 +122,7 @@ owners:
    - `O2-T6` utan current-tree szinten megmaradt raw `tmux` primitive nev ownership a meta-review gate nested runtime capability es defaults/wrapper wiring contractban.
 2. Depends on:
    - `plans/actor-runtime-interface-post-phaseE-successor-plan-v1.md`
-   - `plans/actor-runtime-interface-topology-neutral-delivery-executor-contract-note-v1.md`
+   - `docs/actor-runtime-interface/topology-neutral-delivery-executor-contract-note-v1.md`
    - `plans/archive/tasks/actor-runtime-interface-opportunity2-task6-meta-review-gate-runtime-capability-decoupling.md`
 3. Unlocks / impacts successors:
    - az archived `O2-T8` mar lezart sibling slice; ez a task a megmaradt meta-review gate residualt pontosítja, nem az archived slice ujranyitasat.
@@ -136,7 +136,7 @@ owners:
 
 1. Source-of-truth anchors:
    - `plans/actor-runtime-interface-post-phaseE-successor-plan-v1.md`
-   - `plans/actor-runtime-interface-topology-neutral-delivery-executor-contract-note-v1.md`
+   - `docs/actor-runtime-interface/topology-neutral-delivery-executor-contract-note-v1.md`
    - `plans/archive/tasks/actor-runtime-interface-opportunity2-task6-meta-review-gate-runtime-capability-decoupling.md`
    - `src/v11/shared/metaReviewGate/metaReviewGateTmuxCapabilities.ts`
    - `src/v11/shared/metaReviewGate/metaReviewGateTypes.ts`
