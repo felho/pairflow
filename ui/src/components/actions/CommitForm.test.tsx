@@ -2,6 +2,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
+import type { CommitActionInput } from "../../lib/types";
 import { CommitForm } from "./CommitForm";
 
 describe("CommitForm", () => {
@@ -20,7 +21,9 @@ describe("CommitForm", () => {
 
   it("submits default stage-all intent and stage-all wording", async () => {
     const user = userEvent.setup();
-    const onSubmit = vi.fn(() => Promise.resolve(undefined));
+    const onSubmit = vi.fn<(input: CommitActionInput) => Promise<void>>(() =>
+      Promise.resolve(undefined)
+    );
 
     render(
       <CommitForm
@@ -40,12 +43,20 @@ describe("CommitForm", () => {
     expect(onSubmit).toHaveBeenCalledWith({
       stageAll: true
     });
-    expect("auto" in (onSubmit.mock.calls[0]?.[0] as object)).toBe(false);
+    const firstSubmit = onSubmit.mock.calls[0]?.[0];
+    expect(firstSubmit).toBeDefined();
+    expect(firstSubmit).toBeTypeOf("object");
+    if (firstSubmit === undefined || typeof firstSubmit !== "object") {
+      throw new Error("Expected first commit submit payload to be an object.");
+    }
+    expect("auto" in firstSubmit).toBe(false);
   });
 
   it("submits disabled stage-all intent without legacy auto", async () => {
     const user = userEvent.setup();
-    const onSubmit = vi.fn(() => Promise.resolve(undefined));
+    const onSubmit = vi.fn<(input: CommitActionInput) => Promise<void>>(() =>
+      Promise.resolve(undefined)
+    );
 
     render(
       <CommitForm
@@ -71,6 +82,12 @@ describe("CommitForm", () => {
       stageAll: false,
       refs: ["artifacts/commit-evidence.md"]
     });
-    expect("auto" in (onSubmit.mock.calls[0]?.[0] as object)).toBe(false);
+    const secondSubmit = onSubmit.mock.calls[0]?.[0];
+    expect(secondSubmit).toBeDefined();
+    expect(secondSubmit).toBeTypeOf("object");
+    if (secondSubmit === undefined || typeof secondSubmit !== "object") {
+      throw new Error("Expected second commit submit payload to be an object.");
+    }
+    expect("auto" in secondSubmit).toBe(false);
   });
 });

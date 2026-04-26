@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
 import { ActionBar } from "./ActionBar";
+import type { RunBubbleActionInput } from "../../state/useBubbleStore";
 import { bubbleCard } from "../../test/fixtures";
 import type { BubbleActionKind, BubbleLifecycleState } from "../../lib/types";
 
@@ -384,7 +385,9 @@ describe("ActionBar", () => {
 
   it("submits commit form with disabled stageAll=false", async () => {
     const user = userEvent.setup();
-    const onAction = vi.fn(() => Promise.resolve(undefined));
+    const onAction = vi.fn<(input: RunBubbleActionInput) => Promise<void>>(() =>
+      Promise.resolve(undefined)
+    );
 
     render(
       <ActionBar
@@ -417,7 +420,13 @@ describe("ActionBar", () => {
       action: "commit",
       stageAll: false
     });
-    expect("auto" in (onAction.mock.calls[0]?.[0] as object)).toBe(false);
+    const actionInput = onAction.mock.calls[0]?.[0];
+    expect(actionInput).toBeDefined();
+    expect(actionInput).toBeTypeOf("object");
+    if (actionInput === undefined || typeof actionInput !== "object") {
+      throw new Error("Expected first onAction call input to be an object.");
+    }
+    expect("auto" in actionInput).toBe(false);
   });
 
   it("calls onAction with attach action when Attach button clicked", async () => {
