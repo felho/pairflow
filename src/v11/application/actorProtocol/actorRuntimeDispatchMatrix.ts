@@ -8,6 +8,7 @@ import {
   assertActorEmitContextMatches,
   assertActorEmitContextSnapshotIntegrity
 } from "../../shared/actorProtocol/actorEmitContext.js";
+import { getPrimaryRoutePolicyCheckIdsForRole } from "./roleDescriptorRegistry.js";
 import type {
   ActorEmitContextSnapshot
 } from "../../shared/actorProtocol/actorEmitContext.js";
@@ -289,11 +290,7 @@ const actorRuntimeRouteMatrix: readonly ActorRuntimeRoute[] = [
     handler: "implementer_route",
     adapter: "pass_adapter",
     routePolicy: "primary_route",
-    policyCheckIds: [
-      "context_snapshot_integrity",
-      "input_context_match",
-      "implementer_authority"
-    ]
+    policyCheckIds: getPrimaryRoutePolicyCheckIdsForRole("implementer")
   },
   {
     id: "implementer_human_question",
@@ -302,11 +299,7 @@ const actorRuntimeRouteMatrix: readonly ActorRuntimeRoute[] = [
     handler: "implementer_route",
     adapter: "human_question_adapter",
     routePolicy: "primary_route",
-    policyCheckIds: [
-      "context_snapshot_integrity",
-      "input_context_match",
-      "implementer_authority"
-    ]
+    policyCheckIds: getPrimaryRoutePolicyCheckIdsForRole("implementer")
   },
   {
     id: "reviewer_pass",
@@ -315,11 +308,7 @@ const actorRuntimeRouteMatrix: readonly ActorRuntimeRoute[] = [
     handler: "reviewer_route",
     adapter: "pass_adapter",
     routePolicy: "primary_route",
-    policyCheckIds: [
-      "context_snapshot_integrity",
-      "input_context_match",
-      "reviewer_authority"
-    ]
+    policyCheckIds: getPrimaryRoutePolicyCheckIdsForRole("reviewer")
   },
   {
     id: "reviewer_convergence",
@@ -328,11 +317,7 @@ const actorRuntimeRouteMatrix: readonly ActorRuntimeRoute[] = [
     handler: "reviewer_route",
     adapter: "convergence_adapter",
     routePolicy: "primary_route",
-    policyCheckIds: [
-      "context_snapshot_integrity",
-      "input_context_match",
-      "reviewer_authority"
-    ]
+    policyCheckIds: getPrimaryRoutePolicyCheckIdsForRole("reviewer")
   },
   {
     id: "reviewer_human_question_fallback",
@@ -354,12 +339,7 @@ const actorRuntimeRouteMatrix: readonly ActorRuntimeRoute[] = [
     handler: "meta_reviewer_route",
     adapter: "meta_review_result_adapter",
     routePolicy: "primary_route",
-    policyCheckIds: [
-      "context_snapshot_integrity",
-      "input_context_match",
-      "meta_reviewer_authority",
-      "meta_reviewer_active_agent_codex_when_present"
-    ]
+    policyCheckIds: getPrimaryRoutePolicyCheckIdsForRole("meta_reviewer")
   }
 ] as const;
 

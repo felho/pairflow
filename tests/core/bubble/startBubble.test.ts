@@ -4768,6 +4768,13 @@ describe("startBubble", () => {
           expect(input.reviewerCommand).toContain(
             "Implementer test evidence has been orchestrator-verified."
           );
+          expect(
+            input.reviewerCommand.indexOf(
+              "Decision matrix triggers that still require tests:"
+            )
+          ).toBeLessThan(
+            input.reviewerCommand.indexOf("Current directive:")
+          );
           return Promise.resolve({ status: "running" as const, sessionName: "pf-b_start_resume_06" });
         }
       }
@@ -4826,6 +4833,13 @@ describe("startBubble", () => {
           expect(input.reviewerCommand).toContain("Current directive:");
           expect(input.reviewerCommand).toContain(
             "docs-only scope, runtime checks not required"
+          );
+          expect(
+            input.reviewerCommand.indexOf(
+              "Decision matrix triggers that still require tests:"
+            )
+          ).toBeLessThan(
+            input.reviewerCommand.indexOf("Current directive:")
           );
           expectReviewerValidationClaimGuardrails(input.reviewerCommand);
           expect(input.reviewerKickoffMessage).toContain("resume kickoff (reviewer)");

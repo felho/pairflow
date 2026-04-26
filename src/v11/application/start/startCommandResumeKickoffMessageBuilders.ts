@@ -8,17 +8,13 @@ import type {
   PairflowCommandProfile,
   ReviewArtifactType
 } from "../../../types/bubble.js";
-import { buildImplementerEvidenceHandoffGuidance } from "./startCommandPrompts.js";
+import {
+  buildCanonicalActorEmitLookupGuidance,
+  buildImplementerEvidenceHandoffGuidance
+} from "../actorProtocol/roleDescriptorRegistry.js";
 
 export function formatResumeStateValue(value: string | number | null): string {
   return value === null ? "none" : String(value);
-}
-
-function buildResumeCanonicalActorEmitLookupGuidance(input: {
-  bubbleId: string;
-  repoPath: string;
-}): string {
-  return `Before direct canonical emit, refresh actor authority from this launch workspace with \`pairflow bubble status --id ${input.bubbleId} --repo ${input.repoPath} --json\` and copy the current \`executionContext.handoffId\` and \`executionContext.executionId\`. Repeat this before each emit because authority can change after every successful handoff, convergence, meta-review transition, or human reply.`;
 }
 
 export function inferResumeReviewerProjectionVariant(input: {
@@ -73,7 +69,7 @@ export function buildResumeImplementerKickoffMessage(input: {
       input.workspacePath,
       input.pairflowCommandProfile
     ),
-    buildResumeCanonicalActorEmitLookupGuidance({
+    buildCanonicalActorEmitLookupGuidance({
       bubbleId: input.bubbleId,
       repoPath: input.repoPath
     }),
@@ -109,7 +105,7 @@ export function buildResumeReviewerKickoffMessage(input: {
       input.workspacePath,
       input.pairflowCommandProfile
     ),
-    buildResumeCanonicalActorEmitLookupGuidance({
+    buildCanonicalActorEmitLookupGuidance({
       bubbleId: input.bubbleId,
       repoPath: input.repoPath
     }),
@@ -135,7 +131,7 @@ export function buildResumeMetaReviewerKickoffMessage(input: {
       input.workspacePath,
       input.pairflowCommandProfile
     ),
-    buildResumeCanonicalActorEmitLookupGuidance({
+    buildCanonicalActorEmitLookupGuidance({
       bubbleId: input.bubbleId,
       repoPath: input.repoPath
     }),

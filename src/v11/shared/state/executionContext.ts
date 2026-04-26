@@ -3,9 +3,12 @@ import { createHash } from "node:crypto";
 import type {
   AgentRole,
   BubbleExecutionContext,
-  BubbleExecutionContextAwaitedOutputType,
   BubbleMetaReviewExecutionContext
 } from "../../../types/bubble.js";
+import {
+  buildExecutionContextHandoffIdForRole,
+  getRoleExecutionProjectionDescriptor
+} from "../../application/actorProtocol/roleDescriptorRegistry.js";
 
 export interface RunningExecutionContextInput {
   bubbleId: string;
@@ -25,29 +28,10 @@ export interface RestartedExecutionContextInput {
   previousExecutionContext: BubbleExecutionContext;
 }
 
-export function resolveAwaitedOutputTypeForRole(
-  activeRole: AgentRole
-): BubbleExecutionContextAwaitedOutputType {
-  return activeRole === "meta_reviewer" ? "meta_review_result" : "pass_result";
-}
-
-function buildExecutionContextHandoffId(input: {
-  bubbleId: string;
-  activeRole: AgentRole;
-  round: number;
-  attempt: number;
-}): string {
-  if (input.activeRole === "meta_reviewer") {
-    return `meta_review:${input.bubbleId}:round:${input.round}:attempt:${input.attempt}`;
-  }
-
-  return `${input.activeRole}:${input.bubbleId}:round:${input.round}:attempt:${input.attempt}`;
-}
-
 function buildExecutionContextId(input: {
   bubbleId: string;
   activeRole: AgentRole;
-  awaitedOutputType: BubbleExecutionContextAwaitedOutputType;
+  awaitedOutputType: BubbleExecutionContext["awaited_output_type"];
   round: number;
   attempt: number;
   startedAt: string;
@@ -96,12 +80,13 @@ export function buildRunningExecutionContext(
       `running execution context requires attempt >= 1: ${String(attempt)}`
     );
   }
-  const awaitedOutputType = resolveAwaitedOutputTypeForRole(input.activeRole);
+  const awaitedOutputType =
+    getRoleExecutionProjectionDescriptor(input.activeRole).primary_awaited_output_type;
   const deadlineAt = new Date(startedAtMs + watchdogTimeoutMs).toISOString();
   return {
     active_role: input.activeRole,
     awaited_output_type: awaitedOutputType,
-    handoff_id: buildExecutionContextHandoffId({
+    handoff_id: buildExecutionContextHandoffIdForRole({
       bubbleId: input.bubbleId,
       activeRole: input.activeRole,
       round: input.round,
@@ -126,7 +111,8 @@ export function buildRunningExecutionContext(
 export function buildRestartedExecutionContext(
   input: RestartedExecutionContextInput
 ): BubbleExecutionContext {
-  const awaitedOutputType = resolveAwaitedOutputTypeForRole(input.activeRole);
+  const awaitedOutputType =
+    getRoleExecutionProjectionDescriptor(input.activeRole).primary_awaited_output_type;
   if (input.previousExecutionContext.active_role !== input.activeRole) {
     throw new RangeError(
       `restarted execution context requires matching active role: ${input.previousExecutionContext.active_role} !== ${input.activeRole}`

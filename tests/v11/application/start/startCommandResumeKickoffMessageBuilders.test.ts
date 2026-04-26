@@ -1,11 +1,19 @@
 import { describe, expect, it } from "vitest";
 
+import { buildCanonicalActorEmitLookupGuidance } from "../../../../src/v11/application/actorProtocol/roleDescriptorRegistry.js";
 import {
   buildResumeImplementerKickoffMessage,
   buildResumeMetaReviewerKickoffMessage,
   buildResumeReviewerKickoffMessage,
   inferResumeReviewerProjectionVariant
 } from "../../../../src/v11/application/start/startCommandResumeKickoffMessageBuilders.js";
+
+function buildExpectedCanonicalActorEmitLookupGuidance(input: {
+  bubbleId: string;
+  repoPath: string;
+}): string {
+  return buildCanonicalActorEmitLookupGuidance(input);
+}
 
 describe("startCommandResumeKickoffMessageBuilders", () => {
   it("keeps clean projection for round<=1 regardless of summary tokens", () => {
@@ -63,9 +71,11 @@ describe("startCommandResumeKickoffMessageBuilders", () => {
   });
 
   it("renders findings projection kickoff text with blocker-pass requirement in round>=2", () => {
+    const bubbleId = "b_start_resume_projection_01";
+    const repoPath = "/tmp/repo";
     const message = buildResumeReviewerKickoffMessage({
-      bubbleId: "b_start_resume_projection_01",
-      repoPath: "/tmp/repo",
+      bubbleId,
+      repoPath,
       workspacePath: "/tmp/worktree",
       round: 2,
       reviewArtifactType: "document",
@@ -75,9 +85,8 @@ describe("startCommandResumeKickoffMessageBuilders", () => {
 
     expect(message).toContain("resume kickoff (reviewer)");
     expect(message).toContain(
-      "Before direct canonical emit, refresh actor authority from this launch workspace with `pairflow bubble status --id b_start_resume_projection_01 --repo /tmp/repo --json`"
+      buildExpectedCanonicalActorEmitLookupGuidance({ bubbleId, repoPath })
     );
-    expect(message).toContain("`executionContext.executionId`");
     expect(message).toContain(
       "If blocker findings remain under current scope policy, keep using `pairflow agent emit --kind pass ... --finding ...`."
     );
@@ -87,9 +96,11 @@ describe("startCommandResumeKickoffMessageBuilders", () => {
   });
 
   it("renders round<=1 kickoff with pass-only explicit findings declaration line", () => {
+    const bubbleId = "b_start_resume_projection_02";
+    const repoPath = "/tmp/repo";
     const message = buildResumeReviewerKickoffMessage({
-      bubbleId: "b_start_resume_projection_02",
-      repoPath: "/tmp/repo",
+      bubbleId,
+      repoPath,
       workspacePath: "/tmp/worktree",
       round: 1,
       reviewArtifactType: "document",
@@ -100,7 +111,7 @@ describe("startCommandResumeKickoffMessageBuilders", () => {
     expect(message).toContain("State is RUNNING at round 1.");
     expect(message).toContain("If review round is 1: do not use canonical convergence emit yet");
     expect(message).toContain(
-      "Repeat this before each emit because authority can change after every successful handoff"
+      buildExpectedCanonicalActorEmitLookupGuidance({ bubbleId, repoPath })
     );
     expect(message).toContain(
       "In round 1, use `pairflow agent emit --kind pass ...` and declare findings explicitly"
@@ -111,9 +122,11 @@ describe("startCommandResumeKickoffMessageBuilders", () => {
   });
 
   it("renders implementer kickoff guidance with canonical --repo authority lookup", () => {
+    const bubbleId = "b_start_resume_projection_03";
+    const repoPath = "/tmp/repo";
     const message = buildResumeImplementerKickoffMessage({
-      bubbleId: "b_start_resume_projection_03",
-      repoPath: "/tmp/repo",
+      bubbleId,
+      repoPath,
       workspacePath: "/tmp/worktree",
       taskArtifactPath: "/tmp/worktree/.pairflow/task.md",
       round: 2,
@@ -123,15 +136,16 @@ describe("startCommandResumeKickoffMessageBuilders", () => {
 
     expect(message).toContain("resume kickoff (implementer)");
     expect(message).toContain(
-      "`pairflow bubble status --id b_start_resume_projection_03 --repo /tmp/repo --json`"
+      buildExpectedCanonicalActorEmitLookupGuidance({ bubbleId, repoPath })
     );
-    expect(message).toContain("`executionContext.handoffId`");
   });
 
   it("renders meta-reviewer kickoff guidance with canonical --repo authority lookup", () => {
+    const bubbleId = "b_start_resume_projection_04";
+    const repoPath = "/tmp/repo";
     const message = buildResumeMetaReviewerKickoffMessage({
-      bubbleId: "b_start_resume_projection_04",
-      repoPath: "/tmp/repo",
+      bubbleId,
+      repoPath,
       workspacePath: "/tmp/worktree",
       round: 4,
       pairflowCommandProfile: "external"
@@ -139,8 +153,48 @@ describe("startCommandResumeKickoffMessageBuilders", () => {
 
     expect(message).toContain("resume kickoff (meta-reviewer)");
     expect(message).toContain(
-      "`pairflow bubble status --id b_start_resume_projection_04 --repo /tmp/repo --json`"
+      buildExpectedCanonicalActorEmitLookupGuidance({ bubbleId, repoPath })
     );
-    expect(message).toContain("`executionContext.executionId`");
+  });
+
+  it("keeps the same canonical authority lookup copy across reviewer, implementer, and meta-reviewer resume kickoffs", () => {
+    const bubbleId = "b_start_resume_projection_05";
+    const repoPath = "/tmp/repo";
+    const expectedGuidance = buildExpectedCanonicalActorEmitLookupGuidance({
+      bubbleId,
+      repoPath
+    });
+    const reviewerMessage = buildResumeReviewerKickoffMessage({
+      bubbleId,
+      repoPath,
+      workspacePath: "/tmp/worktree",
+      round: 2,
+      reviewArtifactType: "code",
+      pairflowCommandProfile: "external",
+      projectionVariant: "clean"
+    });
+    const implementerMessage = buildResumeImplementerKickoffMessage({
+      bubbleId,
+      repoPath,
+      workspacePath: "/tmp/worktree",
+      taskArtifactPath: "/tmp/worktree/.pairflow/task.md",
+      round: 2,
+      reviewArtifactType: "code",
+      pairflowCommandProfile: "external"
+    });
+    const metaReviewerMessage = buildResumeMetaReviewerKickoffMessage({
+      bubbleId,
+      repoPath,
+      workspacePath: "/tmp/worktree",
+      round: 2,
+      pairflowCommandProfile: "external"
+    });
+
+    expect(reviewerMessage).toContain(expectedGuidance);
+    expect(implementerMessage).toContain(expectedGuidance);
+    expect(metaReviewerMessage).toContain(expectedGuidance);
+    expect(expectedGuidance).toContain(
+      "Repeat this before each emit because authority can change after every successful handoff, convergence, meta-review transition, or human reply."
+    );
   });
 });
