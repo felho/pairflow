@@ -10,6 +10,7 @@ target_files:
   - src/types/bubble.ts
   - src/v11/shared/reviewPolicy/reviewPolicyRuntime.ts
   - src/v11/application/create/createCommandRuntime.ts
+  - src/v11/shared/kickoff/kickoffPersistencePreparation.ts
   - src/v11/shared/reviewPolicy/updateBubbleReviewPolicy.ts
   - src/v11/defaults/ui/updateBubbleReviewPolicyForUi.ts
   - src/v11/shared/ports/uiRouter.ts
@@ -62,6 +63,21 @@ owners:
    - `dispatchBubbleAction()`
    - local/remote update seam
 7. A jelenlegi one-field persisted contract snapshot/serialization assertionok nem csak config tesztekben, hanem bubble create/kickoff es list/status wrapper tesztekben is megjelennek.
+
+## Target File Interpretation
+
+1. A `target_files` lista Phase 1 ownership-map, nem kotelezo "mindegyiket erinteni" checklista.
+2. A primer ownership a dual-threshold producer/mutation/read-model codepath csalad:
+   - config/defaults/parse-render
+   - create-time materialization
+   - local+remote update seam
+   - status/list/detail/presenter projection
+3. A Phase 1-en kivul eso workflow-orchestration vagy reviewer-facing consume/guidance file-ok csak akkor erinthetok, ha kozvetlen `review_policy` typed-fixture vagy serialization collateral miatt compile/contract igazitas kell.
+4. Az ilyen collateral teszt-edit nem hozhat be uj reviewer-routing, reviewer-guidance vagy ontology-parity allitast; ugyanazt az elozo consume szemantikat kell megtartania az uj ketmezos config shape mellett.
+5. Sibling-lane tesztfajlok tie-breaker szabaly:
+   ha egy `pass`/`converged`/meta-review gate kozeli tesztfajlban a modositas kizarolag `review_policy` objektumliteralt, fixture shape-et vagy serialization snapshotot igazitan a mar deklaralt Phase 1 contracthoz, az Phase 1 collateral marad; ha a modositas routing kimenetet, blocker-jelentest, threshold-threadinget vagy consume-seam assertiont vezet be/ir at, az mar Phase 2A vagy Phase 2B ownership.
+6. `consume-seam assertion` definicio:
+   olyan tesztassert, amely nem a config-shape-et vagy serializationt, hanem a normalized review-policy output threshold-adatanak tovabbadasat, consume-olasat vagy az abbol kovetkezo blocker/routing dontest ellenorzi valamely reviewer vagy meta-review gate boundaryn.
 
 ## L0 - Policy
 
@@ -135,16 +151,19 @@ Vezessuk be a reviewer kulon persisted thresholdjat ugy, hogy:
 ### Scope Reality / Shape Proof
 
 1. Inspected entrypoints / call-sites:
-   `parseBubbleConfigToml`, `renderBubbleConfigToml`, `normalizeBubbleReviewPolicy`, `buildBubbleReviewPolicyRuntimeView`, `updateBubbleReviewPolicyForUi`, `parseReviewPolicyBody`, remote SSH update script, status/list projections, bubble presenter.
+   `parseBubbleConfigToml`, `renderBubbleConfigToml`, `normalizeBubbleReviewPolicy`, `buildBubbleReviewPolicyRuntimeView`, `prepareKickoffPersistence`, `updateBubbleReviewPolicyForUi`, `parseReviewPolicyBody`, remote SSH update script, status/list projections, bubble presenter.
 2. Actual touched scope:
    `producer + mutation/read-model alignment`.
 3. Mutation entrypoints in scope:
    local bubble.toml rewrite, remote bubble.toml rewrite, UI HTTP update-review-policy action.
-4. Hidden scope ruled out:
+4. Named materializing paths in scope:
+   - create-time baseline materialization: `src/v11/application/create/createCommandRuntime.ts`
+   - update-review-policy render/write path local+remote parityval: `src/v11/shared/reviewPolicy/updateBubbleReviewPolicy.ts`
+5. Hidden scope ruled out:
    reviewer pass/convergence routing, prompt/guidance, meta-review gate semantics.
-5. Typed-fixture collateral in scope:
-   a `BubbleReviewPolicyConfig` required shape-bovitese miatt minden kozvetlen `review_policy` objektumliteralt tartalmazo teszt-fixure ebbe a taskba tartozik akkor is, ha a teszt mas consume lane-t ved; ez compile/contract collateral, nem uj workflow ownership.
-6. Why the declared task shape matches reality:
+6. Typed-fixture collateral in scope:
+   a `BubbleReviewPolicyConfig` required shape-bovitese miatt minden kozvetlen `review_policy` objektumliteralt vagy explicit `review_policy` TOML-assertiont tartalmazo teszt-fixure ebbe a taskba tartozik akkor is, ha a teszt mas consume lane-t ved; ez compile/contract collateral, nem uj workflow ownership. Tie-breaker: ha ugyanebben a fajlban uj consume/routing jelentesu assert is kellene, az mar successor ownership es nem Phase 1 collateral.
+7. Why the declared task shape matches reality:
    ugyanaz a codepath csalad ownershipolja a persisted contractot, a mutation seamet es az operatori projectiont; reviewer workflow consume kulon successor.
 
 ### Authority Boundary Map
@@ -243,13 +262,14 @@ Normative boundary rule:
 | CS2 | `src/config/defaults.ts` | defaults | uj reviewer default | `DEFAULT_REVIEW_POLICY_REVIEWER_BLOCKING_MIN_SEVERITY = "P3"` | P1 | T1 |
 | CS3 | `src/config/bubbleConfig.ts` | parse/render/validation | dual-threshold TOML contract | parse/render/update `reviewer_blocking_min_severity`, unknown-key es invalid-value guards | P1 | T1,T2 |
 | CS4 | `src/v11/shared/reviewPolicy/reviewPolicyRuntime.ts` | normalization/runtime view | normalized reviewer threshold + runtime projection | missing field -> `P3`, runtime view transzparensen mutatja reviewer/meta thresholdot | P1 | T4 |
-| CS5 | `src/v11/application/create/createCommandRuntime.ts` | create default config | create-time persisted baseline | uj bubbles defaultbol reviewer=`P3`, meta=`P3` | P1 | T3 |
-| CS6 | `src/v11/shared/reviewPolicy/updateBubbleReviewPolicy.ts` | patch contract | shared UI patch mindket persisted mezot irhatja | update helper deterministic dual-field patchinget tamogat | P1 | T5 |
-| CS7 | `src/v11/shared/ports/uiRouter.ts`, `routerHttpBody.ts`, `routerActionDispatch.ts` | UI mutate API | shared request field | exact public request shape: `reviewLoopMode` + optional `reviewBlockingMinSeverity` + optional `expectedBubbleToml`; ha a shared field jelen van, canonical mutation requestkent mindket thresholdot beallitja | P1 | T6 |
-| CS8 | `src/v11/defaults/ui/updateBubbleReviewPolicyForUi.ts`, `sshBubbleReviewPolicyCommand.ts` | local+remote mutation orchestration | local es remote parity | ugyanaz a shared field -> dual-persisted-field mapping megy local es remote bubble-re is; threshold-omission preserve semantics explicit | P1 | T6,T7 |
+| CS5 | `src/v11/application/create/createCommandRuntime.ts` | create default config | create-time persisted baseline | uj bubbles defaultbol reviewer=`P3`, meta=`P3`, es a materializalt `review_policy` blokk explicit dual-threshold shape-et kap | P1 | T3,T12a |
+| CS6 | `src/v11/shared/reviewPolicy/updateBubbleReviewPolicy.ts` | patch contract | shared UI patch mindket persisted mezot irhatja | update helper deterministic dual-field patchinget tamogat, invalid input / stale expected-content es threshold omission eseten is zero-partial-write vagy preserve semantics marad | P1 | T5,T9,T10,T11 |
+| CS7 | `src/v11/shared/ports/uiRouter.ts`, `routerHttpBody.ts`, `routerActionDispatch.ts` | UI mutate API | shared request field | exact public request shape: `reviewLoopMode` + optional `reviewBlockingMinSeverity` + optional `expectedBubbleToml`; ha a shared field jelen van, canonical mutation requestkent mindket thresholdot beallitja, invalid input pedig side effect nelkul elbukik | P1 | T6,T9,T11 |
+| CS8 | `src/v11/defaults/ui/updateBubbleReviewPolicyForUi.ts`, `sshBubbleReviewPolicyCommand.ts` | local+remote mutation orchestration | local es remote parity | ugyanaz a shared field -> dual-persisted-field mapping megy local es remote bubble-re is; threshold-omission preserve semantics explicit, es nincs single-field fallback vagy reszleges write | P1 | T6,T7,T9,T11 |
 | CS9 | `status/list/presenter` files | read-model output | projection alignment | status/list/detail response-ben reviewer es meta threshold is lathato | P1 | T4,T8 |
-| CS10 | `tests/core/bubble/bubbleInstanceId.test.ts`, `tests/v11/application/kickoff/kickoffPersistencePreparation.test.ts` | persisted serialization snapshots | one-field review_policy block mar nem eleg | a persisted review-policy regex/snapshot assertionoknak explicit dual-threshold blockra kell valtaniuk | P1 | T12 |
-| CS11 | `tests/v11/application/list/listCommandApi.test.ts`, `src/v11/shared/status/statusCommandApi.ts`, `src/v11/shared/list/listCommandEntryBuilder.ts` | wrapper/API passthrough | read-model wrapper parity | ne csak a projection builder, hanem az API/wrapper szint is ket thresholdos payloadot adjon tovabb | P1 | T8,T13 |
+| CS10 | `src/v11/application/create/createCommandRuntime.ts`, `src/v11/shared/reviewPolicy/updateBubbleReviewPolicy.ts`, `tests/core/bubble/bubbleInstanceId.test.ts` | named materializing persistence paths | a dual-threshold persisted contract pozitiv serialization ownershipe explicit legyen a named materializing pathokon | a Phase 1-ben review_policy blokkot explicit materializalo pathok a create baseline materialization es az update-review-policy render/write path; ha ezek review_policy blokkot irnak vagy snapshotolnak, az explicit ket severity sort tartalmaz | P1 | T12a |
+| CS11 | `src/v11/shared/kickoff/kickoffPersistencePreparation.ts`, `tests/v11/application/kickoff/kickoffPersistencePreparation.test.ts` | rewrite-only preservation path | az unrelated kickoff rewrite-only path nem kezdhet review_policy blokkot synthesize-olni | `prepareKickoffPersistence(...)` preserve-olja a no-review-policy baseline-t, es a rewrite-only path nem valik implicit materializing patha | P1 | T12b |
+| CS12 | `tests/v11/application/list/listCommandApi.test.ts`, `src/v11/shared/status/statusCommandApi.ts`, `src/v11/shared/list/listCommandEntryBuilder.ts` | wrapper/API passthrough | read-model wrapper parity | ne csak a projection builder, hanem az API/wrapper szint is ket thresholdos payloadot adjon tovabb | P1 | T8,T13 |
 
 ### 2) Data and Interface Contract
 
@@ -278,10 +298,14 @@ Normative rules:
    - `review_policy.reviewer_blocking_min_severity = reviewBlockingMinSeverity`
    - `review_policy.meta_review_auto_rework_min_severity = reviewBlockingMinSeverity`
 8. Ha `reviewBlockingMinSeverity` nincs jelen, a mutation seam nem irhat threshold change-et egyik persisted mezo fele sem; a meglévő reviewer/meta threshold ertekek preserved maradnak.
-9. A local es remote update path ugyanazt a shared-input -> dual-persisted-field mappingot kell hasznalja; nem maradhat meta-only remote vagy local special-case.
-10. A runtime viewben a ket persisted threshold kulon mezokent jelenik meg; shared UI input nem lesz persisted/runtime alias.
-11. A status/list API wrapper es presenter payload ugyanazt a dual-threshold runtime viewt adja tovabb; nem maradhat olyan wrapper, amely csak a meta-review fieldet serializalja.
-12. A create/kickoff altal elallitott vagy snapshotolt `review_policy` blokk explicit ket severity sort tartalmaz, nem eleg az egymezos legacy regex megtartasa.
+9. Azok a persistence/rewrite pathok, amelyeknek nincs feladata `review_policy` materializalasa, tovabbra sem synthesize-olhatnak uj `review_policy` blokkot csak azert, mert a canonical shape mar ketthresholdos lett.
+10. A local es remote update path ugyanazt a shared-input -> dual-persisted-field mappingot kell hasznalja; nem maradhat meta-only remote vagy local special-case.
+11. A runtime viewben a ket persisted threshold kulon mezokent jelenik meg; shared UI input nem lesz persisted/runtime alias.
+12. A status/list API wrapper es presenter payload ugyanazt a dual-threshold runtime viewt adja tovabb; nem maradhat olyan wrapper, amely csak a meta-review fieldet serializalja.
+13. A Phase 1-ben named materializing pathnak csak ez a ket codepath szamit:
+   - create-time baseline materialization: `src/v11/application/create/createCommandRuntime.ts`
+   - update-review-policy render/write path: `src/v11/shared/reviewPolicy/updateBubbleReviewPolicy.ts`
+14. Ha a 13. pontban felsorolt named materializing pathok barmelyike `review_policy` blokkot ir vagy snapshotol, annak explicit `reviewer_blocking_min_severity` es `meta_review_auto_rework_min_severity` sorokat kell tartalmaznia.
 
 ### 3) Error Contract
 
@@ -344,7 +368,8 @@ Normative rules:
 | T9 | invalid UI severity causes zero side effect | invalid shared severity input | local/remote update indulna | reject vagy conflict jon, bubble.toml nem iródik at reszlegesen |
 | T10 | expected-content conflict preserves zero partial write | stale current review policy / competing update | local dual-threshold patch fut | explicit conflict result jon, reviewer/meta threshold nem valik szet |
 | T11 | threshold omission preserves both persisted values | HTTP body contains only `reviewLoopMode` change | update-review-policy fut | reviewer/meta threshold unchanged marad local es remote pathon is |
-| T12 | create/kickoff serialization reflects dual-threshold block | uj bubble config vagy kickoff persistence snapshot | TOML/assertion fut | `reviewer_blocking_min_severity` es `meta_review_auto_rework_min_severity` is explicit szerepel |
+| T12a | named materializing paths emit explicit dual-threshold block | create baseline materialization vagy update-review-policy render/write path review_policy blokkot ir/snapshotol | TOML/assertion fut | a materializalt `review_policy` blokk explicit `reviewer_blocking_min_severity` es `meta_review_auto_rework_min_severity` sorokat tartalmaz |
+| T12b | unrelated kickoff rewrite preserves no-review-policy baseline | bubble configban nincs `review_policy`, es kickoff only unrelated persistence rewrite fut | `prepareKickoffPersistence(...)` lefut | `previousBubbleToml` es `nextBubbleToml` tovabbra sem tartalmaz `[review_policy]` blokkot, es a parse-olt `updatedConfig.review_policy` `undefined` marad |
 | T13 | status/list API wrappers preserve dual-threshold payload | projection builder mar dual-threshold viewt ad | list/status API wrapper fut | a kifele adott payload nem vesziti el a reviewer threshold mezot |
 
 ### 7) Review Control
@@ -356,6 +381,8 @@ Reviewer akkor adhat `IMPLEMENTABLE` allapotot, ha:
 4. a reviewer workflow consume nincs felig idehuzva ebbe a taskba,
 5. a mutation boundary explicit bizonyitja a zero-partial-write / fail-closed elvart viselkedest.
 6. a successor boundary proof egyertelmu: reviewer routing/guidance/ontology anchorok erintetlenek maradnak ebben a phase-ben.
+7. a collateral teszt-edit csak config-shape vagy serialization igazitas; nem csuszik be uj reviewer consume vagy reviewer-facing parity assert ebbe a phase-be.
+8. routing-közeli sibling-lane tesztfajlban a compile/serialization collateral Phase 1-ben maradhat, de barmely uj consume-seam assertiont vagy blocker-jelentes assertet successor phase-be kell terelni.
 
 ## L2 - Implementation Notes (Optional)
 
@@ -366,7 +393,7 @@ Reviewer akkor adhat `IMPLEMENTABLE` allapotot, ha:
 
 Task `IMPLEMENTABLE`, ha:
 1. a dual-threshold contract es a single-control mutate semantics ellentmondasmentes,
-2. T1-T13 teljesen fedik a producer/mutation/read-model blast radiust, az exact UI/port/patch contractot es a zero-partial-write mutation boundaryt,
+2. T1-T11 + T12a + T12b + T13 teljesen fedik a producer/mutation/read-model blast radiust, az exact UI/port/patch contractot, a zero-partial-write mutation boundaryt es a no-spurious-materialization serialization szabalyat,
 3. nincs reviewer routing logika scope-creep ebben a phase1 szeletben.
 
 ## Assumptions
