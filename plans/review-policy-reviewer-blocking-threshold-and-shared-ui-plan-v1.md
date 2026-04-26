@@ -2,7 +2,7 @@
 artifact_type: plan
 artifact_id: plan_review_policy_reviewer_blocking_threshold_shared_ui_v1
 title: "Review Policy Reviewer Blocking Threshold + Shared UI Severity Plan"
-status: draft
+status: active
 prd_ref: null
 owners:
   - "felho"
@@ -97,13 +97,18 @@ Szetszalazni a review severity policy-t ugy, hogy:
    - reviewer mezonev: `reviewer_blocking_min_severity`
    - reviewer default: `P3`
    - UI single-control update: mindket persisted mezot ugyanarra az ertekre irja
+3. A `review-policy-reviewer-blocking-threshold-foundation-and-ui-phase1` slice merged es archivalt:
+   - a persisted `review_policy` shape mar explicit dual-threshold contract
+   - a create/parse/render/update/runtime-view/list/status/UI mutate surfaces mar ugyanazt a ketmezos authorityt hasznaljak
+   - a shared UI write path a canonical `reviewBlockingMinSeverity` mezon keresztul mindket persisted thresholdot ugyanarra az ertekre irja
+   - a Phase 1 task archivalva lett:
+     `plans/archive/tasks/review-policy-reviewer-blocking-threshold-and-shared-ui/review-policy-reviewer-blocking-threshold-foundation-and-ui-phase1.md`
 
 ### Open Work
 
-1. A persisted review-policy shape ketszereplosse teve explicitte kell tenni a reviewer thresholdot.
-2. A runtime/read-model/mutate surfaceset at kell vezetni az uj ketmezos policyre.
-3. A reviewer post-gate routingot es guidance-ot at kell kotni az uj reviewer threshold authorityra.
-4. A reviewer-facing prompt/delivery/docs feluleteket kulon parity lane-ben at kell vezetni az uj threshold authorityra, beleertve a canonical reviewer severity ontologyt es az embedded runtime reminder parityjat.
+1. A reviewer post-gate routingot at kell kotni az uj reviewer threshold authorityra.
+2. A threshold threading seam-eket es a scope-policy aggregate consume utjat le kell zarni interim fallback nelkul.
+3. A reviewer-facing prompt/delivery/docs feluleteket kulon parity lane-ben at kell vezetni az uj threshold authorityra, beleertve a canonical reviewer severity ontologyt es az embedded runtime reminder parityjat.
 
 ### Deferred / Future Work
 
@@ -113,10 +118,13 @@ Szetszalazni a review severity policy-t ugy, hogy:
 ## Open Task List
 
 1. `review-policy-reviewer-blocking-threshold-foundation-and-ui-phase1`
+   - status: completed and archived
    - cel: uj reviewer policy mezo bevezetese, create/parse/render/update/runtime-view/list/status/UI mutate alignment
 2. `review-policy-reviewer-blocking-threshold-routing-consume-phase2a`
+   - status: next
    - cel: reviewer post-gate routing authority, threshold threading seam-ek es scope-policy aggregate consume atkotese az uj reviewer thresholdra
 3. `review-policy-reviewer-blocking-threshold-reviewer-facing-parity-phase2b`
+   - status: queued after Phase 2A
    - cel: reviewer-facing guidance/prompt/delivery, canonical reviewer ontology/runtime reminder, docs es parity-tesztek atkotese a mar lezart Phase 2A authorityra
 
 ## Coverage Map
