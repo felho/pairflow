@@ -17,6 +17,7 @@ target_files:
   - tests/core/runtime/tmuxDelivery.test.ts
   - tests/core/runtime/sessionsRegistry.test.ts
   - tests/core/runtime/reviewerContext.test.ts
+  - tests/core/state/executionContext.test.ts
   - tests/v11/application/metaReview/metaReviewGatePaneBinding.test.ts
 prd_ref: null
 plan_ref: plans/actor-runtime-interface-post-phaseE-successor-plan-v1.md
@@ -51,12 +52,16 @@ owners:
    - direct application gate consume: `src/v11/application/metaReviewGate/metaReviewGatePaneBinding.ts::bindStart.record.metaReviewerPane?.paneIndex ?? 3`
    - direct tmux consume: `src/v11/infrastructure/channel/tmux/metaReviewerPaneBinding.ts`
    - direct tmux consume: `src/v11/infrastructure/channel/tmux/reviewerContext.ts`
+   - naming mismatch reality: a current runtime/compat surface ma `metaReviewer` camelCase propertyt exportal, mikozben a `RoleDescriptor.topology_slot_id` es az `O3-T1` note canonical slot-ID-ja `meta_reviewer`
 5. A must-preserve baseline ma explicit:
    - `status=0`
    - `implementer=1`
    - `reviewer=2`
    - `meta_reviewer=3`
    - dedikalt pane per active role baseline retained marad; a meta-reviewer nem oszthatja a status vagy implementer pane-t.
+6. Implementability caveat a current tree-ben:
+   - `src/v11/application/actorProtocol/roleDescriptorRegistry.ts` ma `TopologySlotId = AgentRole` alias-szal el, mikozben az `O3-T1` note szerinti `topologySlotCatalog` 4 slotot ker (`status`-szal egyutt);
+   - az `O3-T3`-nak ezt explicitten fel kell oldania ugy, hogy a `status` topology slot legyen, ne uj workflow-role.
 
 ## L0 - Policy
 
@@ -77,22 +82,29 @@ owners:
    - role -> `topology_slot_id` truth mar a `RoleDescriptor` registryben van;
    - `topology_slot_id` -> `pane_index` truth az `O3-T3` utan egy zart `topologySlotCatalog` lesz;
    - a tmux consumer family projection helperen keresztul olvas, nem sajat literal mapet authorol.
+   - a `status` slot topology-only entry; nem `AgentRole`, nem `RoleDescriptor` bejegyzes.
 3. Read-path rule:
    - az `O3-T1` note exact naming proposalja es a current-tree baseline pane-index mapping a normativ input;
    - az `O3-T3` ezt kod-szinten formalizalja, nem uj topology-shape brainstormingkent kezeli.
-4. Forbidden fallback:
+4. Compat / naming rule:
+   - a canonical slot-ID vocabulary snake_case marad (`status`, `implementer`, `reviewer`, `meta_reviewer`);
+   - ha retained `runtimePaneIndices` export marad, a `metaReviewer` camelCase property csak derived compat projection lehet a canonical `meta_reviewer` slotbol, nem kulon truth source.
+5. Forbidden fallback:
    - tilos uj pane-indexet bubble configbol, recipient string-osszehasonlitasbol vagy opportunista tmux metadata-bol "kitalalni";
    - tilos a `meta_reviewer` slotot shared pane fallbackre visszacsusztatni;
    - tilos a topology-neutral `delivery`/`launch` contract terminologiajat vagy ack semantics-et ujranyitni;
    - tilos az `O3-T3` cimke alatt `BubbleAgentsConfig`, `ActorOutputKind`, CLI vagy protocol shape modositast behuzni.
-5. Allowed resolution path:
+6. Allowed resolution path:
    - internal typed `TopologySlotDescriptor`/`topologySlotCatalog` bevezetese;
    - projection helper(ek) bevezetese a registry seam kornyeken;
-   - retained `runtimePaneIndices` export megtartasa csak akkor, ha mar registry/catalogbol szarmaztatott compat projection lesz, nem duplikalt truth.
-6. Missing-data rule:
+   - retained `runtimePaneIndices` export megtartasa csak akkor, ha:
+     - mar registry/catalogbol szarmaztatott compat projection lesz, nem duplikalt truth;
+     - es eltavolitasa ebben a slice-ban olyan tobblet consumer/public-surface churnt nyitna, amely mar nem tiszta S2 consume-family alignment, hanem kulon cleanup/remove closure.
+   - ha ez a ket feltetel nem all fenn, a preferalt kimenet a compat export megszuntetese ugyanebben a taskban.
+7. Missing-data rule:
    - ha barmely current-tree tmux consumer nem rendelheto a 4 zart slot egyikere (`status`, `implementer`, `reviewer`, `meta_reviewer`), a task nincs keszen;
    - ilyenkor docs/plan clarification kell, nem ad-hoc otodik slot vagy implicit fallback.
-7. Phase boundary:
+8. Phase boundary:
    - this task owns: S2 topology-slot consume family alignment;
    - explicit predecessor: `O3-T2` belso role registry foundation;
    - explicit successor: `O3-T4` config binding alignment;
@@ -124,13 +136,15 @@ owners:
 2. Current code anchors:
    - `src/v11/application/actorProtocol/roleDescriptorRegistry.ts`
    - `src/v11/infrastructure/channel/tmux/tmuxManager.ts`
+   - `src/v11/infrastructure/channel/tmux/tmuxManagerSessionLayout.ts`
    - `src/v11/infrastructure/channel/tmux/tmuxDeliveryTargeting.ts`
+   - `src/v11/application/metaReviewGate/metaReviewGatePaneBinding.ts`
    - `src/v11/shared/ports/tmuxSessions.ts`
    - `src/v11/infrastructure/channel/tmux/metaReviewerPaneBinding.ts`
    - `src/v11/infrastructure/channel/tmux/reviewerContext.ts`
 3. Canonical elements consumed here:
    - `RoleDescriptor.topology_slot_id`
-   - `TopologySlotId`
+   - `TopologySlotId` mint 4-slot topology vocabulary, ahol a `status` topology-only slot es nem role
    - dedicated-panel-per-active-role baseline
    - `status=0`, `implementer=1`, `reviewer=2`, `meta_reviewer=3`
 
@@ -193,10 +207,12 @@ owners:
    - szukitett `shared_contract` compat projection
 2. `internal_execution_consumers`
    - `tmuxManager.ts`
+   - `tmuxManagerSessionLayout.ts`
    - `metaReviewerPaneBinding.ts`
    - `reviewerContext.ts`
 3. `workflow_orchestration_consumers`
    - `tmuxDeliveryTargeting.ts`
+   - `metaReviewGatePaneBinding.ts`
 4. Szukitett `shared_contract` compat projection:
    - `shared/ports/tmuxSessions.ts::runtimePaneIndices` retained export, ha marad
 5. Miert safe ez a collapse:
@@ -257,13 +273,23 @@ owners:
 
 ### In Scope
 
-1. `topologySlotCatalog` kod-szintu bevezetese a belso role/slot registry seam mellett vagy annak kozvetlen kozeleben.
+1. `topologySlotCatalog` kod-szintu bevezetese a `src/v11/application/actorProtocol/roleDescriptorRegistry.ts` ownershipjaban; ebben a slice-ban nem maradhat bizonytalan vagy alternativ file-placement.
 2. Projection helper(ek) bevezetese a slot/pane index olvasashoz.
-3. `tmuxManager.ts` atallitasa registry/catalogbol szarmaztatott pane-index truthra.
-4. `tmuxDeliveryTargeting.ts` atallitasa ugyanarra a projection helperre.
-5. `metaReviewerPaneBinding.ts` es `reviewerContext.ts` alignmentje ugyanarra a projection truthra.
-6. `shared/ports/tmuxSessions.ts` retained compat export alignmentje, ha a current tree-ben tovabbra is szukseges.
-7. Celozott parity/regression tesztek a tmux consume csaladban.
+3. Owned consumer inventory ebben a slice-ban explicit es teljes:
+   - `src/v11/infrastructure/channel/tmux/tmuxManager.ts`
+   - `src/v11/infrastructure/channel/tmux/tmuxManagerSessionLayout.ts`
+   - `src/v11/infrastructure/channel/tmux/tmuxDeliveryTargeting.ts`
+   - `src/v11/application/metaReviewGate/metaReviewGatePaneBinding.ts`
+   - `src/v11/infrastructure/channel/tmux/metaReviewerPaneBinding.ts`
+   - `src/v11/infrastructure/channel/tmux/reviewerContext.ts`
+   - `src/v11/shared/ports/tmuxSessions.ts` retained compat export only, ha megmarad
+4. `tmuxManager.ts` atallitasa registry/catalogbol szarmaztatott pane-index truthra.
+5. `tmuxManagerSessionLayout.ts` explicit launch-layout consume-kent ugyanarra a canonical projection truthra allitasa.
+6. `tmuxDeliveryTargeting.ts` atallitasa ugyanarra a projection helperre.
+7. `metaReviewGatePaneBinding.ts` alignmentje ugyanarra a canonical projection truthra.
+8. `metaReviewerPaneBinding.ts` es `reviewerContext.ts` alignmentje ugyanarra a projection truthra.
+9. `shared/ports/tmuxSessions.ts` retained compat export alignmentje, ha a current tree-ben tovabbra is szukseges.
+10. Celozott parity/regression tesztek a tmux consume csaladban es a registry/topology seamen.
 
 ### Out of Scope
 
@@ -282,7 +308,11 @@ owners:
    - ownership: S2 internal topology-slot registry/projection helper surface
    - required:
      - `TopologySlotDescriptor` exact typed shape
+     - `TopologySlotId` exact type-form explicitten zart 4-slot topology vocabulary legyen; elfogadhato pelda:
+       - kulon 4-ertekes literal union (`"status" | "implementer" | "reviewer" | "meta_reviewer"`)
+       - vagy azzal ekvivalens alias (`"status" | AgentRole`)
      - `topologySlotCatalog` zart 4-entry mapping
+     - a `status` slot explicit topology-only entrykent legyen modellezve; ne valjon uj `AgentRole`-la vagy uj `RoleDescriptor` role entry-ve
      - helper a role -> slot projectionhoz
      - helper a slot -> pane index projectionhoz
    - forbidden:
@@ -293,6 +323,7 @@ owners:
    - required:
      - a canonical pane-index truth ne local literal legyen
      - ha `runtimePaneIndices` export megmarad, az derived/compat projection legyen
+     - ha a compat export megszuntetheto az `O3-T3` bounded slice-on belul kulon cleanup lane nyitasa nelkul, az elfogadhato es preferalt closeout
    - forbidden:
      - status/implementer/reviewer/meta-reviewer ordering megvaltoztatasa
 3. `src/v11/infrastructure/channel/tmux/tmuxDeliveryTargeting.ts`
@@ -307,12 +338,15 @@ owners:
    - required:
      - a split ordering es pane ancestry explicitten a canonical topology-slot truthhoz kotodjon
      - a launch layout tovabbra is ugyanazt a 4-pane baseline-t eredmenyezze
+     - a `:0.0` / `:0.1` / `:0.2` tmux selectorok retained implementacios reszletkent megmaradhatnak, de csak akkor, ha ugyanabbol a canonical slot -> pane projectionbol szarmaznak, mint a tobbi consume pont
    - forbidden:
      - uj implicit topology truth megtartasa parity proof nelkul
 5. `src/v11/shared/ports/tmuxSessions.ts`
    - ownership: retained shared-port compat projection
    - required:
      - ha a `runtimePaneIndices` export marad, ne authoroljon sajat duplikalt literal truthot
+     - a retained property-shape (`metaReviewer`) csak compat facade lehet a canonical `meta_reviewer` slot felett
+     - ha a compat export remove-olhato anelkul, hogy a slice tullepne az S2 consume-family alignment hataran, az is megfelelo closure
    - forbidden:
      - uj public contract terminology vagy status semantics
 6. `src/v11/application/metaReviewGate/metaReviewGatePaneBinding.ts`
@@ -337,12 +371,24 @@ owners:
    - `pnpm build`
    - `pnpm typecheck`
 2. Mandatory targeted tests:
+   - direct catalog/parity anchor: `tests/core/state/executionContext.test.ts`, amely explicitten vedi:
+     - a 3 role `topology_slot_id` mappingjat
+     - a `TopologySlotId` 4-slot closure-t
+     - a `status` topology-only slot kezeleset
    - `tests/core/runtime/tmuxManager.test.ts`
    - `tests/core/runtime/tmuxDelivery.test.ts`
    - `tests/core/runtime/sessionsRegistry.test.ts`
    - `tests/core/runtime/reviewerContext.test.ts`
    - `tests/v11/application/metaReview/metaReviewGatePaneBinding.test.ts`
-3. If an adjacent regression appears:
+3. Per-consumer assertion strategy kotelezo:
+   - `tmuxManager.test.ts` a derived canonical source / retained compat behaviorrol adjon parity proofot, es explicitten vedje:
+     - a `tmuxManagerSessionLayout.ts` `:0.X` selectorainak canonical projection-derived jellegét
+     - ha a compat export retained marad, a `shared/ports/tmuxSessions.ts::runtimePaneIndices` facade ugyanazt a canonical projectiont tukrozi, mint a tmux runtime consume
+   - `tmuxDelivery.test.ts` a canonical slot->pane projection consume-rol adjon parity proofot
+   - `sessionsRegistry.test.ts` a meta-reviewer pane binding canonical projection consume-rol adjon parity proofot, beleertve a `shared_runtime_pane` collision guard retained fail-closed viselkedeset
+   - `reviewerContext.test.ts` a reviewer respawn canonical projection consume-rol adjon parity proofot
+   - `metaReviewGatePaneBinding.test.ts` a hardcoded `?? 3` fallback megszuneserol vagy compat-only projectionre csereleserol adjon proofot
+4. If an adjacent regression appears:
    - add or refresh the narrowest parity test that proves the preserved slot baseline
    - do not widen the task into config/protocol alignment to "make the suite green"
 
@@ -351,29 +397,34 @@ owners:
 ### Positive Proof
 
 1. `role -> topology_slot_id -> pane_index` exact mapping exists for all 3 current roles plus `status`.
-2. Tmux launch/runtime layout still binds panes as:
+2. A `status` slot topology-only marad; nem jelenik meg uj workflow-role-kent vagy config-bound agent slotkent.
+3. Tmux launch/runtime layout still binds panes as:
    - status `0`
    - implementer `1`
    - reviewer `2`
    - meta-reviewer `3`
-3. Tmux launch layout split ancestry still proves the same topology:
+4. Tmux launch layout split ancestry still proves the same topology:
    - implementer split target = status pane
    - reviewer split target = implementer pane
    - meta-reviewer split target = reviewer pane
-4. Envelope delivery targeting still resolves:
+5. A `tmuxManagerSessionLayout.ts` retained `:0.X` selectorai, ha megmaradnak, ugyanabbol a canonical slot -> pane projectionbol szarmaznak, mint a tobbi consume pont; nem kulon implicit truthkent elnek tovabb.
+6. Envelope delivery targeting still resolves:
    - implementer recipient -> implementer pane
    - reviewer recipient -> reviewer pane
    - explicit `meta_reviewer` target -> meta-reviewer pane
    - human/orchestrator -> status pane
-5. Reviewer context respawn still targets the reviewer pane from the same canonical projection.
-6. Meta-reviewer pane binding still records the meta-reviewer pane with the preserved index.
-7. Meta-review gate pane respawn still targets the preserved meta-reviewer pane index from the same canonical projection, without a separate hardcoded fallback branch.
+7. Reviewer context respawn still targets the reviewer pane from the same canonical projection.
+8. Meta-reviewer pane binding still records the meta-reviewer pane with the preserved index.
+9. Meta-review gate pane respawn still targets the preserved meta-reviewer pane index from the same canonical projection, without a separate hardcoded fallback branch.
+10. Ha retained compat export marad, a canonical `meta_reviewer` slot es a retained `metaReviewer` property kozott nincs naming drift vagy masodik truth source.
+11. Ha a compat export remove-olodik ebben a slice-ban, a task acceptance ugyanugy teljesul, feltéve hogy nincs megmaradt duplikalt canonical pane-index truth es minden target consumer a canonical projectionrol olvas.
 
 ### Negative Proof
 
 1. Undefined/unmapped slot projection remains fail-closed; no silent pane guess.
 2. Meta-reviewer pane collision with status or implementer still returns `shared_runtime_pane`.
 3. Invalid or absent delivery target metadata still preserves the existing reason-code behavior instead of inventing a new fallback ladder.
+4. A `status` slot tovabbra sem csuszhat vissza workflow-role-kent vagy config-bound agent slotkent; topology-only marad, es nincs role-level fallback, amely `status`-t active-role consume-kent hasznalna.
 
 ### Baseline / Non-Regression Proof
 
@@ -384,6 +435,10 @@ owners:
    - no awaited-output mapping drift
    - no prompt concern drift
 3. The only canonical pane mapping after the task is the registry/catalogbol szarmaztatott projection; any retained `runtimePaneIndices` export is compat-only.
+4. A `status` slot kezelese explicitten lezart: topology-only slot, nem role-bovites.
+5. A compat-export closeout ket kimenete explicitten elfogadott:
+   - retained export csak compat-only facade-kent marad
+   - vagy az export teljesen megszunik ugyanebben a slice-ban, ha ez nem nyit kulon cleanup closure-t
 
 ### Completion Signal
 
@@ -392,3 +447,18 @@ owners:
    - a target consume family ugyanarra a projection truthra all at,
    - a 4-slot baseline explicit tesztekkel vedett,
    - es nincs nyitva maradt duplikalt canonical pane-index literal a target familyben.
+2. A compat-export closeout explicit branchkent legyen bizonyitva:
+   - retained branch:
+     - `shared/ports/tmuxSessions.ts::runtimePaneIndices` csak compat-only facade
+     - a retained facade parityja explicit teszttel vedett
+   - remove branch:
+     - a compat export megszunt
+     - nincs megmaradt consumer vagy parity-elvaras, amely a torolt exportra tamaszkodik
+3. A per-consumer closeout explicitten teljesitett legyen:
+   - `tmuxManager.ts`
+   - `tmuxManagerSessionLayout.ts`
+   - `tmuxDeliveryTargeting.ts`
+   - `metaReviewGatePaneBinding.ts`
+   - `metaReviewerPaneBinding.ts`
+   - `reviewerContext.ts`
+   - retained branch eseten `shared/ports/tmuxSessions.ts`
