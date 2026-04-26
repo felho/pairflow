@@ -48,3 +48,4 @@
 - https://github.com/vincentkoc
 - https://github.com/vercel-labs/agent-browser/pull/538/changes
 - https://github.com/CsabaKovacs/rulesmith
+- For example, we made the app bootable per git worktree, so Codex could launch and drive one instance per change. We also wired the Chrome DevTools Protocol into the agent runtime and created skills for working with DOM snapshots, screenshots, and navigation. This enabled Codex to reproduce bugs, validate fixes, and reason about UI behavior directly.
