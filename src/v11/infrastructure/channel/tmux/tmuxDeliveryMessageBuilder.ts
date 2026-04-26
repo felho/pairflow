@@ -26,7 +26,7 @@ import {
   buildMetaReviewSubmitApproveParityNote,
   buildMetaReviewSubmitCommandTemplate
 } from "../../../shared/metaReview/metaReviewSubmitGuidance.js";
-import { reviewerPolicySnapshotFileName } from "../../../application/start/startCommandContext.js";
+import { reviewerPolicySnapshotFileName } from "../../../shared/reviewer/reviewerPolicySnapshot.js";
 import type { BubbleConfig } from "../../../../types/bubble.js";
 import type { ProtocolEnvelope, ProtocolParticipant } from "../../../../types/protocol.js";
 

@@ -59,9 +59,9 @@ import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
 import { writeEvidenceLog } from "../../helpers/evidence.js";
 import { buildWorktreeBootstrapResult } from "../../helpers/worktreeBootstrapResult.js";
 import {
-  reviewerPolicySnapshotFileName,
   reviewerPolicySnapshotUnavailableReasonCode
 } from "../../../src/v11/application/start/startCommandContext.js";
+import { reviewerPolicySnapshotFileName } from "../../../src/v11/shared/reviewer/reviewerPolicySnapshot.js";
 import { buildResumedState } from "../../../src/v11/application/start/startCommandFlows.js";
 import { startCommandContextDefaults } from "../../../src/v11/application/start/startCommandDependencyDefaults.js";
 import type { UpsertRuntimeSessionInput } from "../../../src/v11/shared/ports/runtimeSessions.js";

@@ -5,6 +5,7 @@ import { startCommandContextDefaults } from "./startCommandDependencyDefaults.js
 import { buildBubbleTmuxSessionName } from "../../shared/bubble/tmuxSessionName.js";
 import { DEFAULT_REVIEW_POLICY_REVIEWER_BLOCKING_MIN_SEVERITY } from "../../../config/defaults.js";
 import type { ReviewerFocusExtractionResult } from "../../shared/reviewer/reviewerBrief.js";
+import { reviewerPolicySnapshotFileName } from "../../shared/reviewer/reviewerPolicySnapshot.js";
 import type { BubbleReviewAutoReworkSeverity } from "../../../types/bubble.js";
 import {
   reviewerSeverityOntologyFullMarkdown,
@@ -33,7 +34,6 @@ export type StartLoadedState =
   Awaited<ReturnType<typeof startCommandContextDefaults.readStateSnapshot>>;
 export type ResolvedStartBubble =
   Awaited<ReturnType<typeof startCommandContextDefaults.resolveBubbleById>>;
-export const reviewerPolicySnapshotFileName = "reviewer-policy-snapshot.md";
 export const reviewerPolicySnapshotUnavailableReasonCode =
   "REVIEWER_POLICY_SNAPSHOT_UNAVAILABLE";
 const pairflowWorktreeRootEnvVar = "PAIRFLOW_WORKTREE_ROOT";

@@ -2,6 +2,7 @@ import { readFile } from "node:fs/promises";
 
 import { renderBubbleConfigToml } from "../../../config/bubbleConfig.js";
 import { resolveDocContractGateArtifactPath } from "../../shared/gates/docContractGateArtifactDefaults.js";
+import { reviewerPolicySnapshotFileName } from "../../shared/reviewer/reviewerPolicySnapshot.js";
 import type { RemoteStartControlFile } from "./startCommandContract.js";
 import type { StartExecutionContext } from "./startCommandContext.js";
 import {
@@ -110,7 +111,7 @@ function buildOptionalArtifactSpecs(
       required: false
     },
     {
-      relativePath: `.pairflow/bubbles/${context.resolved.bubbleId}/artifacts/reviewer-policy-snapshot.md`,
+      relativePath: `.pairflow/bubbles/${context.resolved.bubbleId}/artifacts/${reviewerPolicySnapshotFileName}`,
       sourcePath: context.policySnapshotPathAbs,
       artifactKind: "reviewer_policy_snapshot",
       required: false
