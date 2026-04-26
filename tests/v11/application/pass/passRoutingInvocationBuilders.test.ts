@@ -25,6 +25,7 @@ describe("passRoutingInvocationBuilders", () => {
       hasFindings: false,
       noFindings: false,
       findingsPayloadInvalid: false,
+      reviewerBlockingMinSeverity: "P2",
       bubbleConfig: {
         review_artifact_type: "code",
         severity_gate_round: 4
@@ -45,6 +46,7 @@ describe("passRoutingInvocationBuilders", () => {
       hasFindings: false,
       noFindings: false,
       findingsPayloadInvalid: false,
+      reviewerBlockingMinSeverity: "P2",
       bubbleConfig: {
         review_artifact_type: "code",
         severity_gate_round: 4
@@ -72,6 +74,7 @@ describe("passRoutingInvocationBuilders", () => {
       hasFindings: false,
       noFindings: true,
       findingsPayloadInvalid: false,
+      reviewerBlockingMinSeverity: "P1",
       bubbleConfig: {
         review_artifact_type: "document",
         severity_gate_round: 4,
@@ -85,6 +88,7 @@ describe("passRoutingInvocationBuilders", () => {
     });
 
     expect(routingInput.inputIntent).toBe("review");
+    expect(routingInput.reviewerBlockingMinSeverity).toBe("P1");
     expect(routingInput.bubbleConfig.accuracy_critical).toBe(true);
   });
 

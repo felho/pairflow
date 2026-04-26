@@ -6,6 +6,7 @@ import {
 } from "../../shared/actorProtocol/actorEmitContext.js";
 import { normalizePassCommandInput } from "../../shared/pass/passCommandInputNormalization.js";
 import { normalizePassCommandPayload } from "../../shared/pass/passCommandPayloadNormalization.js";
+import { normalizeBubbleReviewPolicy } from "../../shared/reviewPolicy/reviewPolicyRuntime.js";
 import type { BuildFlowBaseInput } from "./flowInvocationBuilderBase.js";
 import { buildPassRoutingInput, type BuildPassRoutingInputInput } from "./passRoutingInvocationBuilders.js";
 import { createPassRoutingDependencies } from "./passFlowDependencyWiring.js";
@@ -81,6 +82,7 @@ export async function buildEmitPassContext(
     createError: input.createError
   });
   const resolved = workspaceContext.resolved;
+  const normalizedReviewPolicy = normalizeBubbleReviewPolicy(resolved.bubbleConfig);
   const bubbleIdentity = workspaceContext.bubbleIdentity;
   const loadedState = workspaceContext.loadedState;
   const state = workspaceContext.state;
@@ -102,6 +104,8 @@ export async function buildEmitPassContext(
       hasFindings,
       noFindings,
       findingsPayloadInvalid: normalizedPayload.findingsPayloadInvalid,
+      reviewerBlockingMinSeverity:
+        normalizedReviewPolicy.reviewer_blocking_min_severity,
       bubbleConfig: resolved.bubbleConfig,
       worktreePath: resolved.worktreePath,
       transcriptPath: resolved.bubblePaths.transcriptPath,

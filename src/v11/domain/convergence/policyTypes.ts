@@ -4,6 +4,7 @@ import type {
   ReviewArtifactType,
   RoundRoleHistoryEntry
 } from "../../../types/bubble.js";
+import type { FindingPriority } from "../../../types/findings.js";
 import type { ProtocolEnvelope } from "../../../types/protocol.js";
 
 export interface ConvergencePolicyInput {
@@ -31,6 +32,7 @@ export interface ReviewerFindingsAggregate {
   p1: number;
   p2: number;
   p3: number;
+  highestEffectivePriority: FindingPriority | null;
   hasBlocking: boolean;
   hasNonBlocking: boolean;
 }

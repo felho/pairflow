@@ -564,8 +564,31 @@ describe("validateConvergencePolicy", () => {
     expect(aggregate.p1).toBe(0);
     expect(aggregate.p2).toBe(1);
     expect(aggregate.p3).toBe(0);
+    expect(aggregate.highestEffectivePriority).toBe("P2");
     expect(aggregate.hasBlocking).toBe(false);
     expect(aggregate.hasNonBlocking).toBe(true);
+  });
+
+  it("uses effective_priority as the threshold compare source for code review findings while preserving legacy blocking parity", () => {
+    const aggregate = evaluateReviewerFindingsAggregate({
+      reviewArtifactType: "code",
+      findings: [
+        {
+          severity: "P1",
+          effective_priority: "P2",
+          title: "Declared blocker downgraded by prior normalization"
+        }
+      ]
+    });
+
+    expect(aggregate.invalid).toBe(false);
+    expect(aggregate.p0).toBe(0);
+    expect(aggregate.p1).toBe(1);
+    expect(aggregate.p2).toBe(0);
+    expect(aggregate.p3).toBe(0);
+    expect(aggregate.highestEffectivePriority).toBe("P2");
+    expect(aggregate.hasBlocking).toBe(true);
+    expect(aggregate.hasNonBlocking).toBe(false);
   });
 
   it("requires explicit findings declaration on previous reviewer PASS", () => {

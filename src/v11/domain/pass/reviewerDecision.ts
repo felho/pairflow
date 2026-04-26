@@ -1,5 +1,13 @@
-import type { BubbleConfig } from "../../../types/bubble.js";
-import { resolveFindingPriority, type Finding } from "../../../types/findings.js";
+import type {
+  BubbleConfig,
+  BubbleReviewAutoReworkSeverity
+} from "../../../types/bubble.js";
+import {
+  findingPriorities,
+  resolveFindingPriority,
+  type Finding,
+  type FindingPriority
+} from "../../../types/findings.js";
 import type { PassIntent } from "../../../types/protocol.js";
 import {
   evaluatePositiveSummaryFindingsAssertion,
@@ -40,6 +48,24 @@ function buildPostGateConvergedGuidance(input: {
   return `Use canonical convergence emit (\`pairflow agent emit --kind convergence ...\`) instead (round ${input.round} >= severity_gate_round ${input.severityGateRound}).`;
 }
 
+function priorityMeetsReviewerThreshold(input: {
+  priority: FindingPriority;
+  minSeverity: BubbleReviewAutoReworkSeverity;
+}): boolean {
+  return (
+    findingPriorities.indexOf(input.priority)
+    <= findingPriorities.indexOf(input.minSeverity)
+  );
+}
+
+function resolveReviewerPostGateThresholdCategory(input: {
+  highestEffectivePriority: FindingPriority | null;
+}): "p3_only" | "below_threshold" {
+  return input.highestEffectivePriority === "P3"
+    ? "p3_only"
+    : "below_threshold";
+}
+
 export function inferReviewerPassIntent(input: {
   hasFindings: boolean;
   noFindings: boolean;
@@ -76,6 +102,7 @@ export function validateReviewerPassGate(input: {
   findingsPayloadInvalid: boolean;
   reviewArtifactType: BubbleConfig["review_artifact_type"];
   severityGateRound: number;
+  reviewerBlockingMinSeverity: BubbleReviewAutoReworkSeverity;
   createError: PairflowCreateCommandError;
 }): void {
   const postGate = input.round >= input.severityGateRound;
@@ -150,11 +177,20 @@ export function validateReviewerPassGate(input: {
       }
     );
   }
-  if (aggregate.hasBlocking) {
+  if (
+    aggregate.highestEffectivePriority !== null
+    && priorityMeetsReviewerThreshold({
+      priority: aggregate.highestEffectivePriority,
+      minSeverity: input.reviewerBlockingMinSeverity
+    })
+  ) {
     return;
   }
 
-  const p3Only = aggregate.p3 > 0 && aggregate.p0 === 0 && aggregate.p1 === 0 && aggregate.p2 === 0;
+  const thresholdCategory = resolveReviewerPostGateThresholdCategory({
+    highestEffectivePriority: aggregate.highestEffectivePriority
+  });
+  const p3Only = thresholdCategory === "p3_only";
   const hasDeclaredCanonicalBlocker = input.findings.some((finding) => {
     const priority = resolveFindingPriority({
       priority: finding.priority,
@@ -171,10 +207,17 @@ export function validateReviewerPassGate(input: {
     {
       reasonCode: reviewerPassNonBlockingPostGateReasonCode,
       message:
-        `Reviewer PASS is not allowed after severity gate when no blocker findings remain${p3Only ? " (P3-only finding set)." : "."}${docScopeQualifierNote} ${buildPostGateConvergedGuidance({
+        `Reviewer PASS is not allowed after severity gate when no findings meet review_policy.reviewer_blocking_min_severity=${input.reviewerBlockingMinSeverity}${aggregate.highestEffectivePriority !== null ? ` (highest effective open severity=${aggregate.highestEffectivePriority})` : ""}${p3Only ? " (P3-only finding set)." : "."}${docScopeQualifierNote} ${buildPostGateConvergedGuidance({
           round: input.round,
           severityGateRound: input.severityGateRound
-        })}`
+        })}`,
+      context: {
+        configuredMinSeverity: input.reviewerBlockingMinSeverity,
+        highestEffectiveOpenSeverity: aggregate.highestEffectivePriority,
+        thresholdCategory,
+        reviewArtifactType: input.reviewArtifactType,
+        declaredCanonicalBlockerPresent: hasDeclaredCanonicalBlocker
+      }
     }
   );
 }

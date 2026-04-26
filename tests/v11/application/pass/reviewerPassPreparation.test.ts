@@ -21,6 +21,7 @@ describe("prepareReviewerPass", () => {
       findingsPayloadInvalid: false,
       reviewArtifactType: "code",
       severityGateRound: 2,
+      reviewerBlockingMinSeverity: "P3",
       summary: "handoff",
       createError: (message: PairflowCommandErrorInput) => new Error(toErrorMessage(message))
     });
@@ -41,6 +42,7 @@ describe("prepareReviewerPass", () => {
         findingsPayloadInvalid: false,
         reviewArtifactType: "document",
         severityGateRound: 2,
+        reviewerBlockingMinSeverity: "P3",
         summary: "handoff",
         createError: (message: PairflowCommandErrorInput) => new Error(toErrorMessage(message))
       })
@@ -61,12 +63,14 @@ describe("prepareReviewerPass", () => {
         findingsPayloadInvalid: false,
         reviewArtifactType: "document",
         severityGateRound: 2,
+        reviewerBlockingMinSeverity: "P2",
         summary: "Reviewer found one issue.",
         createError: (message: PairflowCommandErrorInput) => new Error(toErrorMessage(message))
       },
       {
-        validateReviewerPassGate: () => {
+        validateReviewerPassGate: (input) => {
           callOrder.push("validate");
+          expect(input.reviewerBlockingMinSeverity).toBe("P2");
         },
         assertReviewerNoFindingsSummaryConsistency: () => {
           callOrder.push("summary-consistency");

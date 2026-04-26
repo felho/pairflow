@@ -1,5 +1,6 @@
 import type { ReviewArtifactType } from "../../../types/bubble.js";
 import {
+  findingPriorities,
   isFindingLayer,
   isFindingTiming,
   resolveFindingPriority,
@@ -29,6 +30,20 @@ function resolvePolicyPriority(input: {
   return strictDocBlocker ? candidate : "P2";
 }
 
+function resolveThresholdPriority(input: {
+  reviewArtifactType: ReviewArtifactType;
+  priority: FindingPriority;
+  effectivePriority: FindingPriority;
+  timing: "required-now" | "later-hardening";
+  layer?: "L0" | "L1" | "L2";
+}): FindingPriority {
+  if (input.reviewArtifactType !== "document") {
+    return input.effectivePriority;
+  }
+
+  return resolvePolicyPriority(input);
+}
+
 export function evaluateReviewerFindingsAggregate(input: {
   findings: unknown;
   reviewArtifactType: ReviewArtifactType;
@@ -42,6 +57,7 @@ export function evaluateReviewerFindingsAggregate(input: {
       p1: 0,
       p2: 0,
       p3: 0,
+      highestEffectivePriority: null,
       hasBlocking: false,
       hasNonBlocking: false
     };
@@ -56,6 +72,7 @@ export function evaluateReviewerFindingsAggregate(input: {
   let invalid = false;
   let hasBlocking = false;
   let hasNonBlocking = false;
+  let highestEffectivePriorityIndex: number | null = null;
 
   for (const finding of input.findings) {
     if (!isRecord(finding)) {
@@ -88,6 +105,20 @@ export function evaluateReviewerFindingsAggregate(input: {
       timing,
       ...(layer !== undefined ? { layer } : {})
     });
+    const thresholdPriority = resolveThresholdPriority({
+      reviewArtifactType: input.reviewArtifactType,
+      priority,
+      effectivePriority,
+      timing,
+      ...(layer !== undefined ? { layer } : {})
+    });
+    const priorityIndex = findingPriorities.indexOf(thresholdPriority);
+    if (
+      priorityIndex !== -1
+      && (highestEffectivePriorityIndex === null || priorityIndex < highestEffectivePriorityIndex)
+    ) {
+      highestEffectivePriorityIndex = priorityIndex;
+    }
 
     if (policyPriority === "P0") {
       counts.p0 += 1;
@@ -116,6 +147,10 @@ export function evaluateReviewerFindingsAggregate(input: {
     p1: counts.p1,
     p2: counts.p2,
     p3: counts.p3,
+    highestEffectivePriority:
+      highestEffectivePriorityIndex === null
+        ? null
+        : (findingPriorities[highestEffectivePriorityIndex] ?? null),
     hasBlocking,
     hasNonBlocking
   };
