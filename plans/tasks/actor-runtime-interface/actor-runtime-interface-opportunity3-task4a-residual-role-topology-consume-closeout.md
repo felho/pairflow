@@ -36,20 +36,24 @@ owners:
    - `src/types/bubble.ts::resolveConfiguredAgentForRole`
    - `BubbleAgentsConfig.agents.meta_reviewer`
    - az in-scope workflow/internal consume csalad explicit replacement proof mellett erre allt at
-3. Ennek ellenere a current tree-ben maradt egy szuk residual seam, ahol a role/topology consume meg mindig kezi, special-case feloldast hasznal:
+3. Ennek ellenere a current tree-ben maradt egy szuk residual seam, ahol a role/topology consume meg mindig kezi, special-case feloldast hasznal.
+4. A workflow-orchestration familyben ez a residual a delivery-target consume korul latszik:
    - `src/v11/infrastructure/channel/tmux/tmuxDeliveryTargeting.ts`
    - itt a pane index mar projection-driven, de a recipient -> recipientRole feloldas meg mindig kezi `bubbleConfig.agents.implementer` / `bubbleConfig.agents.reviewer` comparison es `meta-reviewer` special-case alapjan tortenik
-4. Ez nem csak esztetikai duplikacio:
    - `src/v11/infrastructure/channel/tmux/tmuxDelivery.ts` ezt a recipient-role truthot tovabbadja a delivery message compose-nak es a retry pathnak
    - `src/v11/infrastructure/channel/tmux/tmuxDeliveryMessageBuilder.ts` a recipientRole alapjan kulon workflow-action szoveget epit
    - `src/v11/application/converged/convergedGateDelivery.ts` metadata-hiany eseten ugyanugy `recipient -> DeliveryTargetRole` fallback consume-ot ownershipol a converged gate delivery lane-ben
-5. A cleanup/recovery familyben kulon residual consume maradt:
+5. Az `internal_execution_consumers` bucketben kulon residual consume maradt:
    - `src/v11/application/watchdog/watchdogPaneActivitySampler.ts` role-switch alapjan valaszt pane-t
+6. A `cleanup_recovery_consumers` bucketben kulon residual consume maradt:
    - `src/v11/application/watchdog/watchdogPaneActivityMonitoring.ts` nyers `1 | 2 | 3` pane index literalokra epitett expected-target projectiont hasznal
-6. A workflow-orchestration familyben adjacent residual consume maradt:
-   - `src/v11/application/converged/convergedGateDelivery.ts` metadata-hiany eseten explicit `recipient -> DeliveryTargetRole` fallback consume-ot tart fenn
-7. Emiatt a current residual gap nem producer closure, nem public protocol/CLI bovites, es nem config-shape munka:
-   - ez egy szuk `Opportunity 3` residual consume-closeout slice a workflow-orchestration es cleanup/recovery consume csaladban
+7. Ez nem csak esztetikai duplikacio:
+   - a delivery familyben a normal delivery, a retry path es a converged fallback ugyanannak a canonical role/config + role/topology projection truthnak kulon consume-olvasatai
+   - a watchdog sampler ugyanennek a topology truthnak kulon internal-execution consume-ja
+   - a watchdog monitoring/resample path ugyanennek a topology truthnak kulon cleanup/recovery consume-ja
+   - emiatt a residual gap ugyanazon bounded consume-family closeouttal zarhato le
+8. Emiatt a current residual gap nem producer closure, nem public protocol/CLI bovites, es nem config-shape munka:
+   - ez egy szuk `Opportunity 3` residual consume-closeout slice a workflow-orchestration, internal-execution es cleanup/recovery consume csaladban
 
 ## L0 - Policy
 
@@ -57,7 +61,7 @@ owners:
 
 1. A megmaradt role/topology consume-seamek lezárása ugyanarra a canonical truthra, amelyet az `O3-T3` es `O3-T4` mar bevezetett.
 2. A delivery oldalon a recipient -> recipientRole -> pane target feloldas ne maradjon kezi, kulon consume-truth.
-3. A watchdog oldalon az expected target pane es a sampling target ugyanabbrol a canonical topology projectionrol jojjon, nyers pane literálok nelkul.
+3. Az `internal_execution_consumers` bucketben a watchdog sampling target, a `cleanup_recovery_consumers` bucketben pedig a watchdog expected-target pane ugyanabbol a canonical topology projectionbol jojjon, nyers pane literálok nelkul.
 4. Ne csusszon ebbe a taskba:
    - public CLI/protocol surface nyitasa,
    - uj role vagy uj output kind,
@@ -162,19 +166,19 @@ owners:
 4. Read-model/public surface touched:
    - `no`
 5. Why the declared shape matches reality:
-   - ugyanaz a mar lezart canonical role/topology truth sugarzik a megmaradt workflow-orchestration es cleanup/recovery consume-familykbe;
+   - ugyanaz a mar lezart canonical role/topology truth sugarzik a megmaradt workflow-orchestration, internal-execution es cleanup/recovery consume-familykbe;
    - a residual nem igenyel producer, config, vagy public protocol ujranyitast;
-   - a delivery targeting, a converged fallback delivery consume es a watchdog closure ugyanannak a role/topology consume residualnak a szetszorodott fogyasztoi;
-   - a `tmuxDelivery.ts::retryStuckAgentInput(...)` retry path ugyanebbe a same-authority recovery consume-familybe tartozik, nem kulon activation vagy producer lane.
-   - a `fail_closed_hardening` secondary shape csak annyiban justified, hogy a retry/watchdog recovery consume is ugyanarra a canonical target truthra all at synthetic pane guess vagy synthetic success nelkul; ez nem nyit uj coordination vagy rollout lane-t.
-   - az adjacent delivery mutation call-site-ok mar ma is explicit `recipientRole`-t adnak a canonical write pathon, a converged gate pedig metadata-hiany eseten sajat fallback consume-ot ownershipol; emiatt a task local refinementtel lezarhato, de a converged fallbackot is ugyanarra a canonical role/config projection truthra kell visszahuzni public contract vagy producer sequence ujranyitas nelkul.
+   - a delivery targeting, a `tmuxDelivery.ts::retryStuckAgentInput(...)` retry path es a converged fallback delivery consume ugyanannak a workflow-orchestration residualnak a szetszorodott fogyasztoi;
+   - a watchdog sampler kulon `internal_execution_consumers` consume, a watchdog monitoring pedig kulon `cleanup_recovery_consumers` consume, de mindketto ugyanarra a canonical topology truthra kell visszaalljon;
+   - a `fail_closed_hardening` secondary shape csak annyiban justified, hogy sem a `workflow_orchestration_consumers` retry/fallback consume-ja, sem az `internal_execution_consumers` sampler consume-ja, sem a `cleanup_recovery_consumers` monitoring/recovery consume-ja nem tarthat fenn synthetic pane guess vagy synthetic success utat; ez nem nyit uj coordination vagy rollout lane-t;
+   - az adjacent delivery mutation call-site-ok mar ma is explicit `recipientRole`-t adnak a canonical write pathon, a converged gate pedig metadata-hiany eseten sajat fallback consume-ot ownershipol; emiatt a task local refinementtel lezarhato, de a delivery family normal + retry + converged consume-jat ugyanarra a canonical role/config projection truthra kell visszahuzni public contract vagy producer sequence ujranyitas nelkul.
 
 ### Complexity-Risk Triage
 
 1. `authority_risk`: `1`
    - nem uj authority-forras jon be, hanem a mar lezart role/config es role/topology canonical truth sugarzik tovabb residual consume-familybe.
 2. `surface_spread`: `2`
-   - delivery-plus-converged orchestration es watchdog/recovery consume egyszerre erintett, kulon tesztcsaladokkal.
+   - a `workflow_orchestration_consumers`, `internal_execution_consumers` es `cleanup_recovery_consumers` bucket egyszerre erintett, kulon tesztcsaladokkal.
 3. `identity_join_risk`: `2`
    - recipient -> configured agent -> workflow role es active role -> pane target join marad in-scope; a task pont ezek consume-truthjat zarja ossze.
 4. `activation_coupling`: `0`
@@ -185,7 +189,7 @@ owners:
    - kulon proof kell a delivery targeting/retry es a watchdog sampling/monitoring oldalon.
 7. `risk_score`: `6`
 8. Split decision:
-   - a touched consume pontok ugyanannak a residual role/topology truthnak a workflow-orchestration es recovery oldalai;
+   - a touched consume pontok ugyanannak a residual role/topology truthnak a workflow-orchestration, internal-execution es cleanup/recovery oldalai;
    - kulon task csak akkor kellene, ha producer/config/public surface is mozogna;
    - emiatt az `O3-T4a` egy taskkent megtarthato.
 
@@ -199,12 +203,12 @@ owners:
    - watchdog pane sampling target consume
 4. `workflow_orchestration_consumers`
    - delivery recipient-role / pane target consume
+   - `tmuxDelivery.ts::retryStuckAgentInput(...)` same-authority retry consume
    - converged fallback recipient -> `DeliveryTargetRole` consume
 5. `read_model_consumers`
    - explicit out of scope
 6. `cleanup_recovery_consumers`
    - watchdog expected-target / resample decision path
-   - `tmuxDelivery.ts::retryStuckAgentInput(...)` same-authority recovery path
 
 ### Authority Boundary Map
 
@@ -220,11 +224,11 @@ owners:
 4. `workflow_orchestration_consumers`
    - `src/v11/infrastructure/channel/tmux/tmuxDeliveryTargeting.ts`
    - `src/v11/infrastructure/channel/tmux/tmuxDelivery.ts`
+     - including `retryStuckAgentInput(...)`
    - same-family projection consume: `src/v11/infrastructure/channel/tmux/tmuxDeliveryMessageBuilder.ts`
    - `src/v11/application/converged/convergedGateDelivery.ts`
 5. `cleanup_recovery_consumers`
    - `src/v11/application/watchdog/watchdogPaneActivityMonitoring.ts`
-   - `src/v11/infrastructure/channel/tmux/tmuxDelivery.ts::retryStuckAgentInput(...)`
 6. `read_model_consumers`
    - explicit out of scope
 7. Export/public surfaces
@@ -280,7 +284,7 @@ owners:
 ### In Scope
 
 1. `tmuxDeliveryTargeting.ts` recipient -> recipientRole feloldasanak alignmentje ugyanarra a canonical role/config projection truthra.
-2. `tmuxDelivery.ts` same-family alignmentje annyiban, amennyiben a targeting helper shape vagy retry path ezt megkivanja.
+2. `tmuxDelivery.ts` workflow-orchestration same-family alignmentje annyiban, amennyiben a targeting helper shape vagy retry path ezt megkivanja.
 3. `tmuxDeliveryMessageBuilder.ts` same-family alignmentje annyiban, amennyiben a recipientRole projection tipus vagy semantics explicit proofot igenyel.
 4. `convergedGateDelivery.ts` metadata-hiany eseti fallback consume alignmentje ugyanarra a canonical role/config projection truthra, mint a tobbi delivery orchestration path.
 5. `watchdogPaneActivitySampler.ts` pane target consume alignmentje a canonical topology projectionra.
@@ -360,6 +364,7 @@ owners:
    - `pnpm typecheck`
 2. Mandatory targeted tests:
    - `pnpm test -- --runInBand tests/core/runtime/tmuxDelivery.test.ts`
+     - ez ownershipolja a normal delivery targeting + retry/stuck-input same-target-truth parity proofot
    - `pnpm test -- --runInBand tests/core/agent/converged.test.ts`
    - `pnpm test -- --runInBand tests/v11/application/converged/runConvergedFlow.test.ts`
    - `pnpm test -- --runInBand tests/core/runtime/watchdog.test.ts`
@@ -393,7 +398,7 @@ owners:
 
 1. Undefined/unmapped delivery target tovabbra is fail-closed; nincs silent pane guess.
 2. Watchdog missing session vagy pane unreadable retained fail-closed marad.
-3. A cleanup/recovery path nem vezethet be `status` vagy mas shared pane fallbacket workflow role-oknak.
+3. A `cleanup_recovery_consumers` monitoring/resample path nem vezethet be `status` vagy mas shared pane fallbacket workflow role-oknak.
 4. Public role/output vocabulary nem valtozik.
 5. A fallback recipient consume nem kovetkeztethet `meta_reviewer` workflow truthra pusztan `ProtocolParticipant` agentnevbol.
 
@@ -412,14 +417,15 @@ owners:
 ### Completion Signal
 
 1. A task akkor tekintheto kesznek, ha:
-   - a delivery es converged residual consume mar nem authorol kulon recipient-role / delivery-target truthot,
-   - a watchdog residual consume mar nem authorol kulon pane-literal truthot,
-   - es mindharom same-authority family ugyanarra a mar letezo canonical role/topology projectionre ul.
+   - a `workflow_orchestration_consumers` bucketben a delivery family (`tmuxDeliveryTargeting`, `tmuxDelivery`, `tmuxDeliveryMessageBuilder`) normal + retry consume-ja, valamint a converged fallback consume mar nem authorol kulon recipient-role / delivery-target / pane-target truthot,
+   - az `internal_execution_consumers` bucketben a `watchdogPaneActivitySampler.ts` mar a canonical topology projectionbol kepzi a target pane-t,
+   - a `cleanup_recovery_consumers` bucketben a `watchdogPaneActivityMonitoring.ts` mar nem authorol kulon pane-literal truthot,
+   - es mindharom materially touched closure bucket ugyanarra a mar letezo canonical role/topology projectionre ul.
 2. A task nem tekintheto kesznek, ha:
-   - a fix csak a delivery vagy csak a watchdog familyt zarja le,
+   - a fix csak a `workflow_orchestration_consumers`, csak az `internal_execution_consumers`, vagy csak a `cleanup_recovery_consumers` bucketet zarja le,
    - vagy a converged fallback consume-ban megmarad egy masodik hardcoded role truth,
    - vagy barmelyik masik familyben megmarad egy masodik hardcoded role/pane truth.
 
 ## Hardening Backlog
 
-1. `later-hardening`: ha a canonical projection consume a delivery es watchdog family utan tovabbi retained recovery pathokban is megmarad, kesobbi audit nyithato a teljes cleanup/recovery familyre.
+1. `later-hardening`: ha a canonical projection consume a workflow-orchestration, internal-execution es cleanup/recovery family utan tovabbi retained recovery pathokban is megmarad, kesobbi audit nyithato a teljes cleanup/recovery familyre.
