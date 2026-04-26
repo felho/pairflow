@@ -45,7 +45,7 @@ Vigyük at a mar lezart reviewer threshold authorityt minden reviewer-facing pro
 2. a canonical reviewer severity ontology `P0/P1/P2/P3` jelentese ne drifteljen,
 3. a generated runtime reminder a canonical markdown source-szal paritasban maradjon,
 4. a startup/resume/tmux/doc surfaces ugyanazt a closed jelentest hordozzak,
-5. a default reviewer threshold `P3` tudatos viselkedesvaltozaskent legyen dokumentalva, ne ontology-ujraertelmezesnek tunjon.
+5. a default reviewer threshold `P3` explicit baseline policy-beallitaskent legyen dokumentalva: a default alatt a `P3`-only post-gate findings maradhatnak reviewer-blockingek, de ez nem irhatja at a `P3` severity ontology-jelenteset.
 
 ### Domain / Control Model Summary
 
@@ -58,10 +58,13 @@ Vigyük at a mar lezart reviewer threshold authorityt minden reviewer-facing pro
 4. Forbidden fallback:
    fix `P2/P3 advisory-only` prompt matrix, fix `P0/P1` blocker/advisory decision mapping, vagy stale generated reminder nem maradhat reviewer-facing authoritykent.
 5. Allowed resolution path:
-   Phase 2A threshold-driven routing truth -> reviewer command guidance -> canonical ontology markdown + generated runtime reminder -> startup/resume/tmux/doc projection.
+   - Phase 2A threshold-driven routing truth -> reviewer command guidance -> startup/resume/tmux/docs projection
+   - canonical reviewer ontology markdown -> generated runtime reminder -> policy snapshot / delivery projection
 6. Missing-data rule:
    ha a reviewer-facing projection nem tudja egyertelmuen a Phase 2A authorityt projekttalni, nem talalhat ki sajat fallback routing matrixot; a task ilyenkor refinementre szorul.
-7. Phase boundary:
+7. Default-baseline rule:
+   reviewer-facing parity szovegben a default `reviewer_blocking_min_severity = P3` csak a jelenlegi baseline konfiguraciot magyarazza; ugyanaz a `P3` findinghalmaz `P2` threshold mellett advisory-only lehet, anelkul hogy a severity ontology jelentese valtozna.
+8. Phase boundary:
    - contract closure: inherited from phase1/phase2a
    - producer closure: predecessor-owned
    - internal execution closure: none
@@ -107,6 +110,7 @@ Vigyük at a mar lezart reviewer threshold authorityt minden reviewer-facing pro
    - implementer pass semantics
 5. Forbidden reinterpretations:
    - a projection surfaces nem allithatjak, hogy `P2/P3` fixen advisory-only, ha a canonical reviewer threshold ettol elterhet
+   - a default `P3` baseline dokumentalasa nem fordithato le ugy, mintha a `P3` severity onmagaban blocker-level jelentest vagy fix advisory-only szerepet hordozna
    - a generated runtime reminder es a docs nem irhatjak at hallgatolag a `P3` severity kategoriat blocker-level jelentesevre
    - a reviewer-facing copy nem valthat vissza fix `P0/P1` blocker vs `P2/P3` advisory decision mappingra
 
@@ -182,27 +186,29 @@ Vigyük at a mar lezart reviewer threshold authorityt minden reviewer-facing pro
 
 | ID | File | Entry | Contract Delta | Required Behavior | Priority | Evidence |
 |---|---|---|---|---|---|---|
-| CS1 | `src/v11/shared/reviewer/reviewerCommandGateGuidance.ts` | guidance builders | threshold-driven reviewer text | fix `P2/P3 advisory-only` routing matrix helyett a Phase 2A authorityt projekttalo threshold-driven semantics jelenjen meg | P1 | T1,T3 |
-| CS2 | `src/v11/application/actorProtocol/roleDescriptorRegistry.ts`, `src/v11/application/start/startCommandResumeKickoffMessageBuilders.ts`, `src/v11/infrastructure/channel/tmux/tmuxDeliveryMessageBuilder.ts` | startup/resume/runtime prompt projection | reviewer-facing prompt parity | a startup concern registry, a resume kickoff es a tmux reviewer pane ugyanazt a threshold policy-t vigye | P1 | T3 |
-| CS3 | `src/v11/application/start/startCommandContext.ts` | reviewer policy snapshot artifact | canonical snapshot parity | a reviewer policy snapshot ne stale ontology truthot tartalmazzon; a generated canonical reviewer policy snapshot a friss source-hoz igazodjon | P1 | T4 |
-| CS4 | `src/v11/shared/reviewer/reviewerSeverityOntology.ts`, `src/v11/shared/reviewer/reviewerSeverityOntology.generated.ts`, `docs/reviewer-severity-ontology.md` | ontology + generated reminder | canonical ontology/runtime reminder parity | a `Decision Mapping` es a runtime reminder embed ugyanazt a threshold-driven reviewer post-gate semantics-et hordozza, mikozben a severity definiciok closed jelentese nem lazul el | P1 | T2,T4,T5 |
-| CS5 | `docs/pairflow-initial-design.md`, `README.md` | spec/operator docs | protocol parity | a reviewer convergence szabaly explicit threshold-driven legyen, es ne hagyjon mixed-truth parafrazist | P2 | T6 |
+| CS1 | `src/v11/shared/reviewer/reviewerCommandGateGuidance.ts` | guidance builders | threshold-driven reviewer text | fix `P2/P3 advisory-only` routing matrix helyett a Phase 2A authorityt projekttalo threshold-driven semantics jelenjen meg, es a default `P3` baseline konfiguracios thresholdkent legyen kimondva, ne severity-jelenteskent | P1 | T1,T3,T7 |
+| CS2 | `src/v11/application/actorProtocol/roleDescriptorRegistry.ts`, `src/v11/application/start/startCommandResumeKickoffMessageBuilders.ts`, `src/v11/infrastructure/channel/tmux/tmuxDeliveryMessageBuilder.ts` | startup/resume/runtime prompt projection | reviewer-facing prompt parity | a startup concern registry, a resume kickoff es a tmux reviewer pane ugyanazt a threshold policy-t vigye | P1 | T3,T7 |
+| CS3 | `src/v11/application/start/startCommandContext.ts` | reviewer policy snapshot artifact | canonical snapshot parity | a reviewer policy snapshot ne stale ontology truthot tartalmazzon; a generated canonical reviewer policy snapshot a friss source-hoz igazodjon, es default `P3` baseline eseten is konfiguracios threshold-nyelvet vigyen tovabb | P1 | T4,T7 |
+| CS4 | `src/v11/shared/reviewer/reviewerSeverityOntology.ts`, `src/v11/shared/reviewer/reviewerSeverityOntology.generated.ts`, `docs/reviewer-severity-ontology.md` | ontology + generated reminder | canonical ontology/runtime reminder parity | a `Decision Mapping` es a runtime reminder embed ugyanazt a threshold-driven reviewer post-gate semantics-et hordozza, mikozben a severity definiciok closed jelentese nem lazul el | P1 | T2,T4,T5,T7 |
+| CS5 | `docs/pairflow-initial-design.md`, `README.md` | spec/operator docs | protocol parity | a reviewer convergence szabaly explicit threshold-driven legyen, es ne hagyjon mixed-truth parafrazist | P2 | T6,T7 |
 
 ### 2) Data and Interface Contract
 
 | Contract | Current | Target | Required | Optional | Compatibility |
 |---|---|---|---|---|---|
-| Reviewer guidance | `P2/P3 advisory-only` text | threshold-driven text | threshold semantics + clean path | examples by threshold | intentional text update |
-| Reviewer ontology/runtime reminder | fix blocker/advisory decision mapping | threshold-driven decision mapping, preserved severity definitions | canonical reviewer ontology parity + regenerated runtime embed | extra examples | intentional docs/codegen update |
+| Reviewer guidance | `P2/P3 advisory-only` text | threshold-driven text that names the configured threshold as the routing cause | threshold semantics + clean path + explicit default-`P3` baseline wording | examples by threshold | intentional text update |
+| Reviewer ontology/runtime reminder | fix blocker/advisory decision mapping | threshold-driven decision mapping with preserved severity definitions | canonical reviewer ontology parity + regenerated runtime embed + explicit separation of threshold-vs-severity meaning | extra examples | intentional docs/codegen update |
 | Reviewer-facing prompt projection | mixed reviewer surfaces with possible stale legacy truth | unified threshold-driven projection across startup/resume/tmux/snapshot | same source-authorized truth on every reviewer-facing surface | formatting polish | intentional projection alignment |
 
 Normative rules:
 1. A reviewer-facing projection surfaces nem hozhatnak letre sajat routing authorityt; csak a Phase 2A altal lezart truth-ot projekttalhatjak.
 2. A clean post-gate reviewer path reviewer-facing kommunikacioja tovabbra is canonical convergence.
 3. A threshold-driven routing only a routing authorityt irja at, nem a severity ontology `P2/P3` definiciojat es nem a document-scope qualifier policyt.
-4. Runtime reminder/codegen parity:
+4. Default-baseline wording rule:
+   ha reviewer-facing szoveg a default `reviewer_blocking_min_severity = P3` baseline-t emliti, explicitten ki kell mondania, hogy ez konfiguracios baseline, nem severity-jelentes; ugyanennek a szovegnek kompatibilisnek kell maradnia a `P2` vagy `P1` threshold-esetekkel is.
+5. Runtime reminder/codegen parity:
    ha a routing semantics vagy a blocker/advisory explainer szoveg valtozik, a canonical markdown runtime-reminder blokk es a generated TypeScript artifact ugyanabban a lane-ben frissul.
-5. Equality-proof requirement:
+6. Equality-proof requirement:
    a reviewer-facing parity nem elegedhet meg laza tematikus restatementtel; explicit ugyanazt-az-allitast jellegu proof kell a command guidance, snapshot, startup/resume/tmux projection, generated reminder es docs kozott.
 
 ### 3) Error Contract
@@ -253,7 +259,8 @@ Normative rules:
 | T3 | startup/resume/tmux prompt parity | reviewer active startup vagy resume context | role descriptor registry, resume kickoff es tmux delivery build fut | minden reviewer-facing prompt ugyanazt a threshold-driven routing igazsagot projekttalja |
 | T4 | reviewer policy snapshot parity | bubble start reviewer snapshot build | `startCommandContext` + start bubble flow fut | a snapshot a friss canonical reviewer ontology source-bol szarmazo truth-ot tartalmazza |
 | T5 | generated runtime reminder parity | updated ontology markdown | `buildReviewerSeverityOntologyReminder` fut | a beagyazott reminder ugyanarra a canonical ontology source-ra mutat es nem stale |
-| T6 | docs/spec parity | implementation merged | docs review | initial design, README es reviewer ontology ugyanazt a threshold-driven reviewer semantics-et irja le |
+| T6 | docs/spec parity | implementation merged | docs review | initial design, README es reviewer ontology ugyanazt a threshold-driven reviewer semantics-et irja le, es a default `P3` baseline-t konfiguracios policykent nevezik meg, nem severity-ujraertelmezeskent |
+| T7 | non-doc reviewer-facing default-baseline wording uniformity | default `reviewer_blocking_min_severity = P3` legalabb egy nem-doc reviewer-facing projection surface-en megjelenik | guidance, snapshot, startup/resume/tmux prompt es runtime reminder parity review fut | minden default-`P3`-at megjelenito nem-doc reviewer-facing surface ugyanazzal a "configured threshold, not ontology meaning" allitassal nevezi meg a defaultot; nincs olyan surface, amely csak `P3`-hoz kotott specialis ontology-jelentest sugall |
 
 ### 7) Review Control
 
@@ -261,12 +268,15 @@ Reviewer akkor adhat `IMPLEMENTABLE` allapotot, ha:
 1. a reviewer-facing guidance/prompt/docs ugyanazt a semantics-et tukrozik, mint a Phase 2A authority,
 2. a canonical ontology markdown, a generated runtime reminder es a reviewer policy snapshot explicit parity ownershipot kap,
 3. a startup/resume/tmux projection ugyanazt a threshold-driven command-gate truth-ot viszi,
-4. a severity ontology es a document-scope qualifier semantics nem kap hallgatolagos uj jelentest.
+4. a severity ontology es a document-scope qualifier semantics nem kap hallgatolagos uj jelentest,
+5. a default `P3` baseline minden reviewer-facing feluleten konfiguracios policykent van leirva, nem severity-atdefinialaskent.
 
 ## L2 - Implementation Notes (Optional)
 
-1. A guidanceben erdemes peldamondattal illusztralni:
-   `configured reviewer_blocking_min_severity = P2` eseten `P3` mar advisory-only.
+1. Peldaszovegek command guidance / startup-resume / tmux feluletekre:
+   - `Default reviewer threshold: P3. Post-gate P3-only findings may remain reviewer-blocking because the configured threshold allows them.`
+   - `Configured reviewer threshold: P2. The same P3-only findings are advisory-only because they fall below the configured threshold, not because P3 changed meaning.`
+   - `Configured reviewer threshold: P1. The message still names the threshold as the reason, and does not restate P2/P3 as ontology-level advisory severities.`
 2. Ha a canonical reviewer ontology markdown valtozik, futtatni kell a reviewer severity ontology codegen refresh-t is, hogy a generated embed ne stale allapotban maradjon.
 3. A resume/startup prompt consumerok frissitese ugyanazt a reviewer command gate tokenkeszletet kell hasznalja, mint a tmux delivery guidance.
 
@@ -274,8 +284,9 @@ Reviewer akkor adhat `IMPLEMENTABLE` allapotot, ha:
 
 Task `IMPLEMENTABLE`, ha:
 1. a reviewer-facing parity teljesen threshold-driven,
-2. T1-T6 teljesen lefedik a reviewer guidance, snapshot, startup/resume/tmux projection, ontology/runtime reminder es docs parity closure-t,
-3. nincs fix `P2/P3 advisory-only` vagy fix `P0/P1` blocker/advisory truth maradek a reviewer-facing surfacesen.
+2. T1-T7 teljesen lefedik a reviewer guidance, snapshot, startup/resume/tmux projection, ontology/runtime reminder es docs parity closure-t,
+3. nincs fix `P2/P3 advisory-only` vagy fix `P0/P1` blocker/advisory truth maradek a reviewer-facing surfacesen, es egyetlen surface sem sugall default `P3` mellett specialis severity-jelentest,
+4. a default `P3` baseline mindenhol ugyanazzal a "configured threshold, not ontology meaning" nyelvvel jelenik meg.
 
 ## Assumptions
 
