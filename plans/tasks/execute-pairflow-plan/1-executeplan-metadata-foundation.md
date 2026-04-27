@@ -30,6 +30,19 @@ Define the first executable metadata foundation for `ExecutePairflowPlan` by wri
 
 This task must close the metadata gap without pulling in the top-level orchestrator skeleton, next-workflow routing, or bubble lifecycle routing details that belong to successor tasks.
 
+### Primary Deliverable Shape
+
+1. Produce exactly two repo-local markdown artifacts under `.claude/skills/ExecutePairflowPlan/**`:
+   - `references/Plan-Task-Metadata-Contract.md`
+   - `Workflows/FixPlanMetadata.md`
+2. `Plan-Task-Metadata-Contract.md` must own field definitions, status-domain rules, identity derivation, archive/lineage rules, disagreement handling, and the representation default for routing-relevant metadata.
+3. `FixPlanMetadata.md` must own only the bootstrap/repair entry conditions, the minimum repaired output shape, and the fail-closed exit when repair cannot produce trustworthy plan metadata.
+4. This task is done when a future implementer can determine:
+   - whether a plan is execution-ready vs bootstrap-required,
+   - how `task_id` / filename / bubble IDs are derived,
+   - and when disagreement is auto-resolved vs routed to a human checkpoint,
+   without inventing extra orchestrator or bubble-routing behavior.
+
 ### Domain / Control Model Summary
 
 1. Business invariant: the executor must reduce operator-held orchestration state without weakening review gates, human checkpoints, or Pairflow lifecycle contracts.
@@ -166,6 +179,7 @@ N/A. This task does not modify an existing runtime mutation flow or introduce co
 2. Bubble lifecycle state must remain external authority and must not be duplicated as competing manual metadata.
 3. If `task_id`, archive path, or lineage cannot be derived deterministically, the task must require refinement instead of inventing fallback naming.
 4. Metadata disagreement that crosses authority boundaries must stop at a human checkpoint.
+5. Metadata used by machine routing or identity resolution must be defined as frontmatter keys in the contract; body prose may explain those keys but must not replace them as routing truth.
 
 ### Contract Boundary / Blast Radius
 
@@ -281,13 +295,16 @@ N/A. This task does not modify an existing runtime mutation flow or introduce co
 
 | Contract | Current | Target | Required Fields | Optional Fields | Compatibility | Priority | Timing |
 |---|---|---|---|---|---|---|---|
-| Plan metadata minimum | not encoded in repo-local skill files | explicit contract in new reference doc | `plan_id`, `plan_status`, `task_order`, `task_tracker`, `active_task_id`, `archive_group` | `last_completed_task_id`, `notes` | additive | P1 | required-now |
-| Plan task-tracker entry | currently implicit in design docs only | explicit tracker row contract | `task_id`, `task_path|null`, high-level `status` | `notes` | additive | P1 | required-now |
-| Task metadata minimum | not encoded in repo-local skill files | explicit contract in new reference doc | `artifact_id`, `task_family_id`, `sequence_key`, `task_id`, `status`, `plan_ref`, `doc_bubble_id`, `impl_bubble_id`, `supersedes`, `superseded_by` | `archive_group`, `archive_path` | additive | P1 | required-now |
-| Task identity derivation | discussed in draft only | explicit derivation rule | `task_family_id`, `sequence_key` | short examples | additive | P1 | required-now |
+| Plan metadata minimum | not encoded in repo-local skill files | explicit contract in new reference doc | `plan_id`, `plan_status`, `task_order`, `task_tracker`, `active_task_id`, `archive_group` as routing-relevant frontmatter keys | `last_completed_task_id`, `notes` | additive | P1 | required-now |
+| Plan task-tracker entry | currently implicit in design docs only | explicit tracker row contract | `task_id`, `task_path|null`, high-level `status` limited to `not_created|draft|under_review|approved|in_progress|done|superseded|archived` | `notes` | additive | P1 | required-now |
+| Task metadata minimum | not encoded in repo-local skill files | explicit contract in new reference doc | `artifact_id`, `task_family_id`, `sequence_key`, `task_id`, task-local `status`, `plan_ref`, `doc_bubble_id|null`, `impl_bubble_id|null`, `supersedes`, `superseded_by` | `archive_group`, `archive_path` | additive | P1 | required-now |
+| Task status domain | currently implicit and partially conflated with plan tracker state | explicit task-local status rule | task-level `status` must exclude `not_created` and must not mirror Pairflow lifecycle states | short examples | additive | P1 | required-now |
+| Task identity derivation | discussed in draft only | explicit derivation rule | `task_family_id`, `sequence_key`, canonical `task_id=<sequence_key>-<task_family_id>`, filename `<task_id>.md` | short examples | additive | P1 | required-now |
 | Bubble ID derivation | implicit future behavior | explicit derived contract | `<task_id>-doc`, `<task_id>-impl` | persisted concrete IDs after creation | additive | P1 | required-now |
 | Archive contract | discussed in draft only | explicit path contract | `archive_group`, `task_id`, date-prefixed plan slug | `archive_path` | additive | P1 | required-now |
 | Metadata disagreement handling | currently only in plan prose | explicit precedence + fail-closed rule | authority split, deterministic precedence, human-checkpoint cases | worked examples | additive | P1 | required-now |
+| Representation default | frontmatter-vs-body placement is still open in the draft | explicit frontmatter-first routing contract | all plan/task fields used for machine routing, identity, or archive mapping | explanatory body examples/snippets | additive | P1 | required-now |
+| Explicitly deferred plan hint fields | draft mentions possible hint/note fields | minimum trustworthy V1 contract stays narrow | `N/A` | `next_action_hint`, `execution_notes`, or equivalent hints may be documented only as non-authoritative future extensions | additive | P1 | required-now |
 
 ### 3) Side Effects Contract
 
@@ -330,22 +347,28 @@ Constraint: if no allowed side effects are listed above, implementation must be 
 | T4 | cross-authority disagreement | plan sequencing points to X but task metadata implies a different sequencing truth | disagreement rule is applied | workflow fails closed to human checkpoint | P1 | required-now | missing-data rule |
 | T5 | task identity derivation | `task_family_id` and `sequence_key` are present | task metadata contract is evaluated | canonical `task_id`, filename, and derived bubble IDs are unambiguous | P1 | required-now | draft task identity model |
 | T6 | archive lineage for superseded task | task is superseded before completion | archive contract is evaluated | original task stays `superseded` and archives under plan-grouped date-prefixed path | P1 | required-now | approved archive decision |
+| T7 | routing metadata representation | required routing fields exist in frontmatter and explanatory prose also exists in body | the contract is applied | frontmatter remains canonical and body prose is treated as explanatory only | P1 | required-now | draft frontmatter open question |
+| T8 | task bubble linkage without lifecycle mirroring | task metadata contains bubble IDs and Pairflow remains the lifecycle source | the contract is evaluated | bubble IDs are treated as linkage only and no competing lifecycle status field is required in plan/task metadata | P1 | required-now | approved authority split |
+| T9 | minimal V1 plan stays narrow | a plan lacks `next_action_hint` and `execution_notes` but has all required minimum metadata | execution-readiness is evaluated | the plan is still considered compliant and no bootstrap is required solely for missing hint fields | P1 | required-now | draft candidate field list |
 
 ## Acceptance Criteria
 
 1. AC1: A repo-local reference file explicitly defines the minimum trustworthy plan metadata set and plan task-tracker shape.
-2. AC2: The same contract explicitly defines the minimum trustworthy task metadata set, including lineage and bubble reference fields.
+2. AC2: The same contract explicitly defines the minimum trustworthy task metadata set, including lineage fields, nullable bubble reference fields, and a task-local status domain that does not reuse `not_created` or Pairflow lifecycle states.
 3. AC3: The contract explicitly defines canonical task identity, filename, and bubble-ID derivation rules.
 4. AC4: The contract explicitly defines archive grouping and archive path rules for both completed and superseded tasks.
 5. AC5: The contract explicitly defines when plan/task disagreement is resolved deterministically and when it fails closed to a human checkpoint.
-6. AC6: A repo-local `FixPlanMetadata` workflow file defines how legacy or incomplete plan metadata is bootstrapped before normal execution starts.
-7. AC7: The task does not absorb top-level orchestrator skeleton or bubble-routing behavior that belongs to successor tasks.
+6. AC6: A repo-local `FixPlanMetadata` workflow file defines the bootstrap trigger, the repaired minimum output shape, and the fail-closed exit when trustworthy metadata still cannot be reconstructed.
+7. AC7: The contract explicitly states that routing-relevant metadata is frontmatter-level truth and that body prose cannot substitute for missing required keys.
+8. AC8: The minimum trustworthy V1 contract stays narrow and does not require non-authoritative hint fields such as `next_action_hint` or `execution_notes`.
+9. AC9: The task does not absorb top-level orchestrator skeleton or bubble-routing behavior that belongs to successor tasks.
 
 ## L2 - Implementation Notes (Optional)
 
 1. Keep the metadata reference file compact and example-driven so Task 2 can depend on it without restating the same rules.
 2. Prefer one canonical metadata reference doc plus one bootstrap workflow file over many micro-reference files in the first pass.
 3. If examples are added, include at least one compliant plan snippet and one legacy-bootstrap snippet.
+4. If examples are added, include one example showing task bubble linkage fields without any mirrored lifecycle status fields.
 
 ## Hardening Backlog (Optional)
 
