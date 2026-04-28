@@ -111,13 +111,7 @@ describe("getBubbleStatus", () => {
     expect(status.pendingInboxItems.humanQuestions).toBe(1);
     expect(status.pendingInboxItems.total).toBe(1);
     expect(status.transcript.lastMessageType).toBe("HUMAN_QUESTION");
-    expect(status.reviewPolicy).toEqual({
-      requested_loop_mode: "full",
-      effective_loop_mode: "full",
-      support_status: "enabled",
-      reviewer_blocking_min_severity: "P3",
-      meta_review_auto_rework_min_severity: "P3"
-    });
+    expect(status.reviewPolicy).toBeUndefined();
     expect(status.watchdog.timeoutMinutes).toBe(30);
     expect(status.watchdog.remainingSeconds).toBe(1620);
   });
@@ -185,6 +179,43 @@ describe("getBubbleStatus", () => {
       reviewer_blocking_min_severity: "P3",
       meta_review_auto_rework_min_severity: "P3"
     });
+  });
+
+  it("omits review policy from WAITING_HUMAN detail status when live runtime authority is closed", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_status_waiting_human_review_policy_01",
+      task: "Status waiting human review policy"
+    });
+    const current = parseBubbleConfigToml(await readFile(bubble.paths.bubbleTomlPath, "utf8"));
+    await writeFile(
+      bubble.paths.bubbleTomlPath,
+      renderBubbleConfigToml({
+        ...current,
+        review_policy: {
+          review_loop_mode: "meta_only",
+          reviewer_blocking_min_severity: "P2",
+          meta_review_auto_rework_min_severity: "P2"
+        }
+      }),
+      "utf8"
+    );
+
+    await emitAskHumanFromWorkspace({
+      question: "Need approval?",
+      cwd: bubble.paths.worktreePath,
+      now: new Date("2026-02-22T14:00:00.000Z")
+    });
+
+    const status = await getBubbleStatus({
+      bubbleId: bubble.bubbleId,
+      cwd: repoPath
+    });
+
+    expect(status.state).toBe("WAITING_HUMAN");
+    expect(status.executionContext).toBeNull();
+    expect(status.reviewPolicy).toBeUndefined();
   });
 
   it("surfaces watchdog pane activity timing from runtime health record", async () => {
@@ -293,6 +324,55 @@ describe("getBubbleStatus", () => {
       provenance_note:
         "Requested meta-only review remains fail-closed on the full review loop until canonical implementer pass authority proves reviewer-bypass activation for the live pass path."
     });
+  });
+
+  it("omits review policy from READY_FOR_HUMAN_APPROVAL detail status when live runtime authority is closed", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_status_ready_approval_review_policy_01",
+      task: "Status approval-ready review policy"
+    });
+    const current = parseBubbleConfigToml(await readFile(bubble.paths.bubbleTomlPath, "utf8"));
+    await writeFile(
+      bubble.paths.bubbleTomlPath,
+      renderBubbleConfigToml({
+        ...current,
+        review_policy: {
+          review_loop_mode: "meta_only",
+          reviewer_blocking_min_severity: "P2",
+          meta_review_auto_rework_min_severity: "P2"
+        }
+      }),
+      "utf8"
+    );
+
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    await writeStateSnapshot(
+      bubble.paths.statePath,
+      {
+        ...loaded.state,
+        state: "READY_FOR_HUMAN_APPROVAL",
+        active_agent: null,
+        active_role: null,
+        active_since: null,
+        execution_context: null,
+        last_command_at: "2026-02-22T14:30:00.000Z"
+      },
+      {
+        expectedFingerprint: loaded.fingerprint,
+        expectedState: "RUNNING"
+      }
+    );
+
+    const status = await getBubbleStatus({
+      bubbleId: bubble.bubbleId,
+      cwd: repoPath
+    });
+
+    expect(status.state).toBe("READY_FOR_HUMAN_APPROVAL");
+    expect(status.executionContext).toBeNull();
+    expect(status.reviewPolicy).toBeUndefined();
   });
 
   it("counts only the latest unresolved approval request as pending", async () => {
@@ -1284,6 +1364,7 @@ describe("getBubbleStatus", () => {
 
     expect(status.state).toBe("WAITING_HUMAN");
     expect(status.round).toBe(3);
+    expect(status.reviewPolicy).toBeUndefined();
     expect(status.remoteExecution).toMatchObject({
       pointerKind: "started",
       viewKind: "status",
@@ -1415,6 +1496,7 @@ describe("getBubbleStatus", () => {
 
     expect(status.state).toBe("WAITING_HUMAN");
     expect(status.round).toBe(3);
+    expect(status.reviewPolicy).toBeUndefined();
     expect(status.remoteExecution).toMatchObject({
       pointerKind: "started",
       viewKind: "status",
@@ -1536,6 +1618,7 @@ describe("getBubbleStatus", () => {
 
     expect(status.state).toBe("WAITING_HUMAN");
     expect(status.round).toBe(3);
+    expect(status.reviewPolicy).toBeUndefined();
     expect(status.remoteExecution).toMatchObject({
       pointerKind: "started",
       viewKind: "status",
