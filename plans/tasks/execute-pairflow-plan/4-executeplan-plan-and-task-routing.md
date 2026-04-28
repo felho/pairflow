@@ -2,7 +2,7 @@
 artifact_type: task
 artifact_id: task_execute_pairflow_plan_plan_and_task_routing_v1
 title: "ExecutePairflowPlan Plan and Task Routing"
-status: draft
+status: completed
 phase: phase4
 target_files:
   - .claude/skills/ExecutePairflowPlan/SKILL.md
