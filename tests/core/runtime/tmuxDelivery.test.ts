@@ -3676,6 +3676,42 @@ describe("retryStuckAgentInput", () => {
     expect(enterCalls).toHaveLength(0);
   });
 
+  it("retries when the same marker is already in scrollback but still stuck in the live prompt", async () => {
+    const calls: string[][] = [];
+    const runner: TmuxRunner = (args): Promise<TmuxRunResult> => {
+      calls.push(args);
+      if (args[0] === "capture-pane") {
+        return Promise.resolve({
+          stdout: [
+            "# [pairflow] r1 PASS codex->claude msg=msg_123 ref=handoff.md.",
+            "Claude Code welcome screen",
+            "❯ # [pairflow] r1 PASS codex->claude msg=msg_123 ref=handoff.md."
+          ].join("\n"),
+          stderr: "",
+          exitCode: 0
+        });
+      }
+      return Promise.resolve({ stdout: "", stderr: "", exitCode: 0 });
+    };
+
+    const result = await retryStuckAgentInput({
+      bubbleId: "b_delivery_01",
+      bubbleConfig: baseConfig,
+      sessionsPath: "/tmp/sessions.json",
+      activeRole: "reviewer",
+      runner,
+      readSessionsRegistry: () => Promise.resolve(createRegistry())
+    });
+
+    expect(result.retried).toBe(true);
+    expect(calls).toContainEqual([
+      "send-keys",
+      "-t",
+      "pf-b_delivery_01:0.2",
+      "Enter"
+    ]);
+  });
+
   it("does not retry when no pairflow marker is present", async () => {
     const runner: TmuxRunner = (args): Promise<TmuxRunResult> => {
       if (args[0] === "capture-pane") {

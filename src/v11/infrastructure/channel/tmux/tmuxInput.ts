@@ -162,12 +162,17 @@ export async function checkTmuxPaneMarkerStatus(
     return "submitted";
   }
 
+  const promptAndAfter = lines.slice(lastPromptIdx).join("\n");
+  if (promptAndAfter.includes(marker)) {
+    return "stuck_in_input";
+  }
+
   const beforePrompt = lines.slice(0, lastPromptIdx).join("\n");
   if (beforePrompt.includes(marker)) {
     return "submitted";
   }
 
-  return "stuck_in_input";
+  return "not_found";
 }
 
 export async function confirmTmuxPaneMarkerSubmission(
