@@ -48,14 +48,21 @@ This task must close the orchestrator-shell gap without absorbing downstream pla
    - artifact responsibilities,
    - workflow routing inventory,
    - orchestrator execution style,
+   - the stable naming of downstream route surfaces as routing labels and workflow targets only,
    - and the rule that downstream specialized workflows run in fresh context rather than being inlined.
 3. `ResolvePlanState.md` must own only:
    - state assessment inputs,
    - normalized route taxonomy,
+   - normalized route output shape containing route class, target workflow surface, continuation mode, reason code, and handoff boundary note,
    - next-workflow selection rules,
    - auto-continue vs human-checkpoint rules,
    - and fail-closed exits for unresolved ambiguity.
-4. This task is done when a future implementer can determine:
+4. The normalized route taxonomy must stay at the route-class / ownership level. It may name downstream routes such as plan review, task creation/review, document bubble, implementation bubble, normalized replanning, troubleshooting, and plan completion, but it must not absorb:
+   - raw bubble-detail interpretation,
+   - task supersede/archive execution,
+   - progress/archive aftermath behavior,
+   - or downstream workflow body text.
+5. This task is done when a future implementer can determine:
    - which top-level workflow route should run next,
    - which routes can continue automatically,
    - which routes must stop at a human checkpoint,
@@ -141,6 +148,7 @@ This task must close the orchestrator-shell gap without absorbing downstream pla
    - plan review required vs task create required
    - task review required vs bubble workflow required
    - normalized replanning signal vs human checkpoint
+   - troubleshooting route vs fail-closed checkpoint
    - plan complete vs continue
 6. Why the declared task shape matches reality: the touched scope is the top-level orchestration consumer family and its route taxonomy. It does not write canonical runtime authority, classify raw bubble exits, or own downstream workflow bodies, so it remains a bounded orchestration-shell slice.
 
@@ -200,7 +208,8 @@ This task must close the orchestrator-shell gap without absorbing downstream pla
 4. Define the normalized route taxonomy used by the orchestrator.
 5. Define which route classes continue automatically vs stop at a human checkpoint.
 6. Define how metadata bootstrap, task-review routing, bubble workflow routing, normalized replanning, and plan completion are represented at the top level.
-7. Preserve the rule that downstream specialized workflows run in fresh context rather than being inlined.
+7. Define the normalized route-output contract for `ResolvePlanState` at the level of route class, owner workflow, and continuation mode only.
+8. Preserve the rule that downstream specialized workflows run in fresh context rather than being inlined.
 
 ### Out of Scope
 
@@ -209,6 +218,7 @@ This task must close the orchestrator-shell gap without absorbing downstream pla
 3. Implementing progress/archive/update aftermath behavior.
 4. Implementing remote execution support.
 5. Editing global `~/.claude/skills` or `~/.codex/skills` copies.
+6. Executing task supersede/archive/recreate mutations in response to normalized replanning signals.
 
 ### Safety Defaults
 
@@ -309,18 +319,19 @@ This task must close the orchestrator-shell gap without absorbing downstream pla
 | Contract | Current | Target | Required Fields | Optional Fields | Compatibility | Priority | Timing |
 |---|---|---|---|---|---|---|---|
 | Top-level skill shell | missing | explicit repo-local skill contract | purpose, workflow inventory, execution style, orchestration-only boundary | short examples | additive | P1 | required-now |
-| Workflow inventory | currently only in draft/plan prose | explicit inventory in `SKILL.md` | `FixPlanMetadata`, `ResolvePlanState`, plan/task delegation routes, document/implementation bubble routes, progress route, troubleshoot route | naming notes | additive | P1 | required-now |
-| Normalized route taxonomy | implicit in plan/draft | explicit route list in `ResolvePlanState.md` | route id, target workflow, auto-continue vs checkpoint behavior, trigger summary | examples | additive | P1 | required-now |
-| State resolution inputs | implicit in prose | explicit workflow contract | plan metadata, task metadata, persisted bubble linkage, Pairflow lifecycle state, optional operator hint | diagnostics notes | additive | P1 | required-now |
-| Checkpoint contract | currently only described narratively | explicit checkpoint rule | ambiguous disagreement, missing metadata, blocked-state refinement need, unresolved workflow ownership | examples | additive | P1 | required-now |
+| Workflow inventory | currently only in draft/plan prose | explicit inventory in `SKILL.md` | `FixPlanMetadata`, `ResolvePlanState`, stable names for plan/task delegation routes, stable names for document/implementation bubble route surfaces, normalized replanning route surface, plan-complete route surface, troubleshoot/checkpoint route surface | ownership notes clarifying that these names are routing labels and workflow targets only | additive | P1 | required-now |
+| Normalized route taxonomy | implicit in plan/draft | explicit route list in `ResolvePlanState.md` | route class, target workflow, owner layer, auto-continue vs checkpoint behavior, trigger summary | examples | additive | P1 | required-now |
+| Normalized route output | currently not explicit | explicit workflow result contract | selected route class, selected workflow surface, continuation mode, reason code, handoff boundary note | diagnostics notes | additive | P1 | required-now |
+| State resolution inputs | implicit in prose | explicit workflow contract | plan metadata, task metadata, persisted bubble linkage, Pairflow lifecycle state, normalized replanning signals, optional explicit operator hint | diagnostics notes | additive | P1 | required-now |
+| Checkpoint contract | currently only described narratively | explicit checkpoint rule | ambiguous disagreement, missing metadata, blocked-state refinement need, unresolved workflow ownership, explicit operator hint requesting troubleshooting or checkpoint routing | examples | additive | P1 | required-now |
 
 ### 3) Side Effects Contract
 
 | Area | Allowed | Forbidden | Notes | Priority | Timing |
 |---|---|---|---|---|---|
 | Repo-local skill docs | create new files under `.claude/skills/ExecutePairflowPlan/**` | editing global installed skill copies | repo-local source-of-truth only | P1 | required-now |
-| Top-level route contract | define route taxonomy and workflow inventory | implementing downstream workflow bodies | keep shell lean | P1 | required-now |
-| ResolvePlanState | define state-assessment and route-selection rules | performing bubble/task/plan mutations inside the workflow | selection only | P1 | required-now |
+| Top-level route contract | define route taxonomy, workflow inventory, and route ownership boundaries | implementing downstream workflow bodies or successor-owned mutation semantics | keep shell lean and ownership-explicit | P1 | required-now |
+| ResolvePlanState | define state-assessment, normalized route output, and route-selection rules | performing bubble/task/plan mutations inside the workflow or reclassifying raw bubble detail | selection only | P1 | required-now |
 
 ### 4) Error and Fallback Contract
 
@@ -331,7 +342,7 @@ This task must close the orchestrator-shell gap without absorbing downstream pla
 | cross-authority disagreement with no safe precedence | plan/task metadata | result | stop at human checkpoint | CROSS_AUTHORITY_METADATA_CONFLICT | warn | P1 | required-now |
 | planned-but-not-created task lacks explicit canonical `task_id` | plan metadata | result | fail closed checkpoint | PLAN_TASK_ID_REQUIRED_FOR_NOT_CREATED | error | P1 | required-now |
 | blocked-state semantics needed outside approved V1 domains | legacy or active artifacts | result | fail closed checkpoint for contract refinement | BLOCKED_STATE_REQUIRES_CONTRACT_REFINEMENT | warn | P1 | required-now |
-| route ownership is ambiguous between top-level shell and successor tasks | route taxonomy | throw | refine the task/plan instead of silently broadening scope | ROUTE_OWNERSHIP_AMBIGUOUS | error | P1 | required-now |
+| route ownership is ambiguous between top-level shell and successor tasks | route taxonomy | result | fail closed to a human checkpoint and require task/plan refinement instead of silently broadening scope | ROUTE_OWNERSHIP_AMBIGUOUS | error | P1 | required-now |
 
 ### 5) Dependency Constraints
 
@@ -351,12 +362,12 @@ This task must close the orchestrator-shell gap without absorbing downstream pla
 | T2 | plan not ready for task creation | plan requires plan-level review or correction | `ResolvePlanState` evaluates plan/task state | the route taxonomy returns the plan-review path rather than task creation | P1 | required-now | plan + draft routing notes |
 | T3 | no current task exists | plan is ready and the next task has not been created | `ResolvePlanState` evaluates state | the route taxonomy returns task-create | P1 | required-now | draft create-task branch |
 | T4 | current task exists but is not task-approved | task artifact exists and is not ready for bubble work | `ResolvePlanState` evaluates state | the route taxonomy returns task-review | P1 | required-now | draft task-review branch |
-| T5 | approved task with no document bubble | task is ready and no doc bubble linkage exists | `ResolvePlanState` evaluates state | the route taxonomy returns document-bubble-create | P1 | required-now | plan Task 2 scope |
-| T6 | normalized bubble route requires review/close | bubble layer later supplies a normalized route class from Task 3 | `ResolvePlanState` consumes the normalized route | the route taxonomy preserves the correct bubble review/close target without reclassifying raw detail | P1 | required-now | downstream ownership boundary |
-| T7 | route-back-to-plan style normalized replanning | task or bubble layer yields a normalized plan-refinement signal | `ResolvePlanState` consumes the normalized route | it selects plan-level follow-through without treating it as generic failure | P1 | required-now | gradual consistency model |
+| T5 | approved task with no document bubble | task is ready and no doc bubble linkage exists | `ResolvePlanState` evaluates state | the route taxonomy returns the document-bubble route surface with explicit owner and continuation mode, without embedding Task 3 lifecycle detail | P1 | required-now | plan Task 2 scope |
+| T6 | normalized bubble route requires review/close | bubble layer later supplies a normalized route class from Task 3 | `ResolvePlanState` consumes the normalized route | the route taxonomy preserves the correct bubble review/close target and handoff boundary without reclassifying raw detail | P1 | required-now | downstream ownership boundary |
+| T7 | route-back-to-plan style normalized replanning | task or bubble layer yields a normalized replanning signal | `ResolvePlanState` consumes the normalized route | it selects the plan-level follow-through route without treating it as generic failure and without performing Task 4 supersession/archive behavior itself | P1 | required-now | gradual consistency model |
 | T8 | blocked-state refinement need appears | artifacts require blocked-state semantics beyond approved V1 domains | `ResolvePlanState` evaluates state | it fails closed to a human checkpoint rather than widening the contract | P1 | required-now | Task 1 blocked-state rule |
 | T9 | plan is complete | all tasks are terminal and no open work remains | `ResolvePlanState` evaluates state | the route taxonomy returns plan-complete / stop boundary | P1 | required-now | parent plan done path |
-| T10 | operator hint or lifecycle problem | explicit hint says the bubble is stuck or too broad | `ResolvePlanState` evaluates state | the route taxonomy returns the troubleshooting / human-checkpoint path instead of blind continuation | P1 | required-now | draft operator-hint branch |
+| T10 | operator hint or lifecycle problem | explicit hint says the bubble is stuck or too broad | `ResolvePlanState` evaluates state | the route taxonomy returns the troubleshooting / human-checkpoint path only from explicit hint or normalized replanning signal, not from automatic raw bubble-detail diagnosis | P1 | required-now | draft operator-hint branch |
 
 ## Acceptance Criteria
 
@@ -369,12 +380,15 @@ This task must close the orchestrator-shell gap without absorbing downstream pla
 7. AC7: The task explicitly preserves fresh-context downstream workflow execution as the default orchestrator behavior.
 8. AC8: The task does not absorb downstream workflow bodies, progress/archive aftermath behavior, or remote execution support.
 9. AC9: The normalized route taxonomy is explicit enough that Tasks 3 and 4 can consume it without redefining route ownership.
+10. AC10: `ResolvePlanState` defines an explicit normalized route-output contract that includes route class, target workflow surface, continuation mode, reason-code semantics, and handoff-boundary semantics.
+11. AC11: Named downstream route surfaces are defined only as routing labels and workflow targets; Task 2 keeps raw bubble-detail mapping, supersession/archive execution, and progress aftermath out of its ownership.
+12. AC12: Explicit operator hints may steer troubleshooting or checkpoint routing, but they do not authorize automatic raw bubble-detail diagnosis or silent scope expansion.
 
 ## L2 - Implementation Notes (Optional)
 
 1. Keep `SKILL.md` short and routing-oriented; detailed operational procedures belong in dedicated workflow files.
-2. Prefer route ids that map cleanly to later downstream workflow names, but keep the taxonomy stable enough that Tasks 3 and 4 can inherit it.
-3. Include at least one worked example that shows `ResolvePlanState` choosing `FixPlanMetadata`, one that chooses task creation/review, and one that chooses a bubble-oriented route.
+2. Prefer route ids that map cleanly to later downstream workflow names, but keep the taxonomy stable enough that Tasks 3 and 4 can inherit it without re-opening ownership boundaries.
+3. Include at least one worked example that shows `ResolvePlanState` choosing `FixPlanMetadata`, one that chooses task creation/review, and one that chooses a bubble-oriented route surface with explicit owner and continuation mode.
 4. If examples mention blocked-state needs, they should route to fail-closed refinement rather than normalize blocked status into the current V1 domains.
 
 ## Hardening Backlog (Optional)
