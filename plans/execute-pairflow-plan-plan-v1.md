@@ -2,7 +2,7 @@
 artifact_type: plan
 artifact_id: plan_execute_pairflow_plan_v1
 title: "ExecutePairflowPlan Skill Plan (V1)"
-status: draft
+status: in_progress
 prd_ref: null
 owners:
   - "felho"
@@ -78,14 +78,18 @@ owners:
    - Pairflow is bubble lifecycle authority.
 3. The intended skill structure, workflow naming style, archive direction, task identity model, and orchestrator-mode behavior were discussed and refined.
 4. A legacy-plan metadata bootstrap need was identified.
+5. Task 1 landed on `main` and created the first repo-local `ExecutePairflowPlan` artifacts:
+   - `.claude/skills/ExecutePairflowPlan/references/Plan-Task-Metadata-Contract.md`
+   - `.claude/skills/ExecutePairflowPlan/Workflows/FixPlanMetadata.md`
+6. The minimum metadata contract, legacy bootstrap path, task identity derivation, and fail-closed disagreement rules are now encoded in repo-local skill source.
 
 ### Open Work
 
-1. The draft decisions are not yet captured in a proper skill source.
-2. The exact plan/task metadata contract is not yet encoded into templates or workflow files.
-3. No `ExecutePairflowPlan` workflow files exist yet.
-4. No task files have been created for implementing this plan.
-5. V1 validation and piloting strategy is not yet formalized as executable tasks.
+1. No top-level `ExecutePairflowPlan` `SKILL.md` exists yet.
+2. No `ResolvePlanState` workflow exists yet, so the normalized route taxonomy and next-workflow decision contract are still implicit.
+3. Downstream workflow delegation for plan/task review loops and bubble routing is not yet encoded into repo-local skill source.
+4. Progress/archive/pilot follow-through remains unimplemented.
+5. V1 validation and piloting strategy is not yet formalized in executable orchestration behavior.
 
 ### Deferred / Future Work
 
@@ -113,8 +117,8 @@ Boundary note:
 
 | Task | Purpose | Depends On | Closes Gap | Status |
 |---|---|---|---|---|
-| `plans/tasks/execute-pairflow-plan/1-executeplan-metadata-foundation.md` | Define the minimum plan/task metadata contract, legacy plan metadata bootstrap path, task identity model, and archive linkage rules required for trustworthy state resolution. This task also defines the minimum metadata needed to support supersession and archive linkage for review-loop outcomes before any bubble phase begins, plus the precedence/fail-closed rule for plan/task metadata disagreement. | `N/A` | Missing authoritative metadata contract, disagreement handling, and repair/bootstrap flow. | open |
-| `plans/tasks/execute-pairflow-plan/2-executeplan-orchestrator-skeleton.md` | Create the repo-local `ExecutePairflowPlan` skill skeleton, top-level routing contract, workflow inventory, and `ResolvePlanState` behavior including next-workflow selection. This task owns the normalized route taxonomy used by the orchestrator in V1, including which route classes are auto-routed vs human-checkpointed, and keeps automatic non-convergence detection out of scope. It does not own bubble-detail classification. | `plans/tasks/execute-pairflow-plan/1-executeplan-metadata-foundation.md` | Missing top-level orchestrator skill structure and state-routing logic. | open |
+| `plans/tasks/execute-pairflow-plan/1-executeplan-metadata-foundation.md` | Define the minimum plan/task metadata contract, legacy plan metadata bootstrap path, task identity model, and archive linkage rules required for trustworthy state resolution. This task also defines the minimum metadata needed to support supersession and archive linkage for review-loop outcomes before any bubble phase begins, plus the precedence/fail-closed rule for plan/task metadata disagreement. | `N/A` | Missing authoritative metadata contract, disagreement handling, and repair/bootstrap flow. | completed |
+| `plans/tasks/execute-pairflow-plan/2-executeplan-orchestrator-skeleton.md` | Create the repo-local `ExecutePairflowPlan` skill skeleton, top-level routing contract, workflow inventory, and `ResolvePlanState` behavior including next-workflow selection. This task owns the normalized route taxonomy used by the orchestrator in V1, including which route classes are auto-routed vs human-checkpointed, and keeps automatic non-convergence detection out of scope. It does not own bubble-detail classification. | `plans/tasks/execute-pairflow-plan/1-executeplan-metadata-foundation.md` | Missing top-level orchestrator skill structure and state-routing logic. | draft |
 | `plans/tasks/execute-pairflow-plan/3-executeplan-bubble-routing.md` | Implement document refinement and implementation bubble routing that delegates to `UsePairflow` for bubble create/review/close while preserving orchestrator-only control in the parent skill. This task owns bubble-side lifecycle interpretation and the mapping from raw bubble detail into the normalized continuation, checkpoint, or replanning route classes defined by Task 2. It ends when bubble-oriented settled checkpoints and normalized lifecycle handoff behavior are correctly routed. | `plans/tasks/execute-pairflow-plan/2-executeplan-orchestrator-skeleton.md` | Missing bubble lifecycle delegation, exit classification, and settled-checkpoint stop behavior. | open |
 | `plans/tasks/execute-pairflow-plan/4-executeplan-plan-and-task-routing.md` | Implement the plan/task orchestration flow that delegates to `CreatePairflowSpec` for plan review, task creation, task review, and plan-level correction loops. This task owns the review-triggered supersede/archive/recreate handoff when task review routes back to plan before any bubble is started, and it consumes normalized replanning signals after the bubble layer has already mapped raw bubble detail into the orchestrator route taxonomy. It does not interpret raw bubble lifecycle detail itself. | `plans/tasks/execute-pairflow-plan/2-executeplan-orchestrator-skeleton.md`, `plans/tasks/execute-pairflow-plan/3-executeplan-bubble-routing.md` | Missing document-artifact workflow delegation and gradual-consistency refinement loop handling. | open |
 | `plans/tasks/execute-pairflow-plan/5-executeplan-progress-archive-and-pilot.md` | Implement progress reporting, post-implementation archive/update behavior, and a pilot validation path for local-only V1 execution. This task starts after bubble-routing behavior and the downstream plan/task follow-through contract are in place and owns orchestration aftermath, reporting, archive proof for normal bubble-completion paths, and pilot trust-building rather than pre-bubble supersession/archive handling or bubble lifecycle routing itself. | `plans/tasks/execute-pairflow-plan/4-executeplan-plan-and-task-routing.md` | Missing end-to-end closeout, archive contract proof, and trusted local V1 pilot readiness. | open |
