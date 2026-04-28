@@ -250,6 +250,15 @@ This task must close the bubble-routing gap without reopening the merged metadat
 3. If document-bubble completion is required before implementation-bubble creation, that proof must come from the bubble-routing / normalized route contract, not from bubble absence or prose interpretation.
 4. The plan/task layer must not consume raw Pairflow lifecycle detail directly after this task lands.
 
+Document-completion proof rule:
+
+1. The minimum trustworthy `DOC_BUBBLE_COMPLETION_PROOF` shape for this task is a normalized `document_bubble_close` result with:
+   - `route_class=document_bubble_close`
+   - `target_workflow_surface=CloseDocumentBubble`
+   - `approval_gate_state=already_satisfied`
+   - `reason_code=DOC_BUBBLE_CLOSE_REQUIRED`
+2. A successor-owned persisted equivalent may stand in for that same proof later, but this task must not require a new metadata field just to define the seam.
+
 ### Contract Boundary / Blast Radius
 
 1. `contract_boundary_override`: `no`
@@ -342,9 +351,10 @@ This task must close the bubble-routing gap without reopening the merged metadat
 | Contract | Current | Target | Required Fields | Optional Fields | Compatibility | Priority | Timing |
 |---|---|---|---|---|---|---|---|
 | Bubble-routing workflow inventory | missing | explicit repo-local workflow contracts | document bubble routing, implementation bubble routing, `UsePairflow` delegation boundaries | examples | additive | P1 | required-now |
-| Bubble-side normalized route emission | only Task 2 acceptance contract exists | exact bubble-routing output contract aligned to `ResolvePlanState` | `route_class`, `target_workflow_surface`, `reason_code`, `source_owner=bubble_routing_layer`, `scope`, `source_scope`, `approval_gate_state` | diagnostics notes, local lifecycle observation notes | additive | P1 | required-now |
+| Bubble-side normalized route emission | only Task 2 acceptance contract exists | exact bubble-routing output contract aligned to `ResolvePlanState` | `route_class`, `target_workflow_surface`, `reason_code`, `source_owner=bubble_routing_layer`, `scope`, `source_scope`, `approval_gate_state` | `delegated_use_pairflow_surface`, diagnostics notes, local lifecycle observation notes | additive | P1 | required-now |
+| Bubble-side non-normalized boundary reporting | implicit | explicit structured local boundary report for active-hold and fail-closed stops | `boundary_status`, `continuation_mode`, `source_owner=bubble_routing_layer`, `scope`, `boundary_reason`, `handoff_boundary_note` | optional `escalation_reason_code` for top-level human-checkpoint handoff | additive | P1 | required-now |
 | Bubble-side delegated action result | implicit in draft/task prose | explicit workflow-local result contract | delegated `UsePairflow` surface, stop/continue boundary, handoff note explaining whether the next owner is human approval, `ResolvePlanState`, or bubble troubleshooting | evidence refs | additive | P1 | required-now |
-| Bubble routing inputs | implicit in plan/draft prose | explicit workflow contract | task linkage, Pairflow lifecycle truth, optional operator hint, top-level route context | reviewer notes | additive | P1 | required-now |
+| Bubble routing inputs | implicit in plan/draft prose | explicit workflow contract | task linkage, Pairflow lifecycle truth, optional operator hint, top-level route context, repo path | reviewer notes | additive | P1 | required-now |
 | No-new-metadata baseline | user instruction, not yet written | explicit task guard | merged Task 1 / Task 2 baseline is sufficient unless blocker proven | blocker proof note | additive | P1 | required-now |
 
 Normalized bubble-output parity rule:
@@ -366,7 +376,20 @@ Normalized bubble-output parity rule:
    - `approval_gate_state` must be `review_required` for review routes
    - `approval_gate_state` must be `already_satisfied` for close routes
    - `approval_gate_state` must be `not_applicable` for normalized replanning and troubleshooting handoff
+   - `delegated_use_pairflow_surface` must be `ReviewBubble`, `CloseBubble`, or `none` for normalized outputs in this task slice
 4. No second intermediate bubble-output shape may be introduced in implementation. Task 4 must consume the same normalized output contract that Task 2 already expects.
+5. Bubble-create and bubble-troubleshooting execution boundaries may use the same field family for local reporting, but `ResolvePlanState` must consume only normalized continuation or replanning outputs and must not reopen raw Pairflow interpretation.
+
+Structured local-boundary reporting rule:
+
+1. Active-bubble hold and fail-closed branches must still emit a structured local boundary report even when they do not emit a normalized continuation route back into `ResolvePlanState`.
+2. That boundary report must not be treated as a second normalized route taxonomy for Task 4 consumption.
+3. `continuation_mode` in handler-local reports must mirror the stable policy already owned by `ResolvePlanState`; the handlers report the value, but do not redefine the policy.
+4. Create/start and troubleshooting execution results are handler-local action results, not `NORMALIZED_BUBBLE_ROUTE` payloads for `ResolvePlanState`.
+5. `ResolvePlanState` may ignore handler-local extra fields such as delegated `UsePairflow` surface names or boundary-only fields when a normalized continuation route is otherwise valid.
+6. Handler-local boundary reports should prefer `boundary_reason` over route-taxonomy `reason_code`; use `escalation_reason_code` only when a human-checkpoint stop needs to hand an already-anchored reason back upward.
+7. Bubble-origin normalized replanning in this Task 3 slice must flow through `NORMALIZED_BUBBLE_ROUTE`; `NORMALIZED_REPLANNING_SIGNAL` is reserved for task-origin replanning until a successor layer explicitly lifts bubble-origin replanning into that separate slot.
+8. Handler sections may emit one primary action/route result and, when stopping without a normalized continuation route, an additional local boundary report in the same documented branch.
 
 ### 3) Side Effects Contract
 
@@ -380,7 +403,7 @@ Normalized bubble-output parity rule:
 
 | Trigger | Dependency (if any) | Behavior (`throw|result|fallback`) | Fallback Value/Action | Reason Code | Log Level | Priority | Timing |
 |---|---|---|---|---|---|---|---|
-| bubble linkage missing where a linked continuation is required | task metadata | result | fail closed to checkpoint | `BUBBLE_ROUTE_NORMALIZATION_REQUIRED` | warn | P1 | required-now |
+| bubble linkage missing where a linked continuation is required | task metadata | result | fail closed to checkpoint | `BUBBLE_ROUTE_NORMALIZATION_REQUIRED` or `NO_TRUSTWORTHY_ROUTE`, depending on whether a linked bubble exists but lacks safe normalization | warn | P1 | required-now |
 | Pairflow lifecycle truth unavailable and the runtime issue is explicit | Pairflow status | result | route to `TroubleshootBubble` | `PAIRFLOW_STATUS_UNAVAILABLE` | warn | P1 | required-now |
 | explicit operator troubleshooting request | operator hint | result | route to `TroubleshootBubble` | `OPERATOR_TROUBLESHOOT_HINT` | info | P1 | required-now |
 | Pairflow lifecycle truth unavailable but the situation is not clearly a runtime issue | Pairflow status | result | fail closed checkpoint | `NO_TRUSTWORTHY_ROUTE` | warn | P1 | required-now |
@@ -391,8 +414,10 @@ Reason-code anchor rule:
 
 1. Task 3 must consume the Task 2 reason-code surface as a closed contract.
 2. The bubble-routing layer may emit only the already-anchored bubble-side / checkpoint / troubleshooting codes unless a higher-level plan refinement explicitly authorizes a new code:
+   - `DOC_BUBBLE_CREATE_REQUIRED`
    - `DOC_BUBBLE_REVIEW_REQUIRED`
    - `DOC_BUBBLE_CLOSE_REQUIRED`
+   - `IMPL_BUBBLE_CREATE_REQUIRED`
    - `IMPL_BUBBLE_REVIEW_REQUIRED`
    - `IMPL_BUBBLE_CLOSE_REQUIRED`
    - `BUBBLE_NORMALIZED_REPLAN_REQUIRED`
