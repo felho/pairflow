@@ -165,7 +165,7 @@ Field rules:
 | `implementation_bubble_create` | `CreateImplementationBubble` | `UsePairflow` | `stop_at_settled_checkpoint` | `implementation_bubble` | `not_applicable` | `not_applicable` | trusted upstream input proves document refinement is complete and no impl bubble linkage exists yet | create/start the impl bubble; raw lifecycle follow-up stays with successor bubble routing |
 | `implementation_bubble_review` | `ReviewImplementationBubble` | `UsePairflow` | `stop_at_human_checkpoint` | `implementation_bubble` | `not_applicable` | `review_required` | normalized bubble signal says the impl bubble reached its review gate | produce deep-review output for human approval/rework; do not close the bubble here |
 | `implementation_bubble_close` | `CloseImplementationBubble` | `UsePairflow` | `auto_continue` | `implementation_bubble` | `not_applicable` | `already_satisfied` | normalized bubble signal says impl bubble is approved and ready to close after the separate review/approval path has already been satisfied | close/merge cleanup only; progress/archive aftermath remains successor-owned |
-| `normalized_replanning` | `HandleNormalizedReplan` | successor plan/task routing layer | `auto_continue` | `task`, `document_bubble`, or `implementation_bubble` according to normalized source authority | `task` or bubble-origin `document_bubble` / `implementation_bubble` | `not_applicable` | task review or bubble layer produced a normalized replanning signal | consume the normalized signal only; successor-owned follow-through may decide supersede/archive, but raw bubble detail and archive execution remain out of scope here |
+| `normalized_replanning` | `HandleNormalizedReplan` | repo-local `Workflows/HandleNormalizedReplan.md` | `auto_continue` | `task`, `document_bubble`, or `implementation_bubble` according to normalized source authority | `task` or bubble-origin `document_bubble` / `implementation_bubble` | `not_applicable` | task review or bubble layer produced a normalized replanning signal | consume the normalized signal only; repo-local follow-through may delegate `CreatePairflowSpec` work and prepare supersede/archive handoff, but raw bubble detail and normal aftermath remain out of scope here |
 | `troubleshoot_bubble` | `TroubleshootBubble` | repo-local bubble handler -> `UsePairflow` troubleshooting surface | `stop_at_human_checkpoint` | `bubble_runtime` | `not_applicable` | `not_applicable` | explicit operator hint requires lifecycle troubleshooting | troubleshoot the bubble path only; do not silently resume normal orchestration here |
 | `human_checkpoint` | `HumanCheckpoint` | human decision boundary | `stop_at_human_checkpoint` | `orchestration` | `not_applicable` | `not_applicable` | ambiguity, contract refinement need, or cross-authority conflict remains unresolved | stop and explain why no trustworthy automatic route exists |
 | `plan_complete` | `PlanComplete` | top-level stop boundary | `stop_at_settled_checkpoint` | `plan` | `not_applicable` | `not_applicable` | all tasks are terminal and the plan is complete | stop cleanly; no further route is selected in this run |
@@ -230,7 +230,7 @@ Source-scope rule:
 
 1. task-review replanning must preserve `source_scope=task`
 2. bubble-origin replanning that reaches this rule must already have arrived through `NORMALIZED_BUBBLE_ROUTE` with `source_scope=document_bubble` or `source_scope=implementation_bubble`
-3. when present, normalized replanning supersedes same-source review/close continuation for this decision, but successor-owned follow-through still decides any supersede/archive execution
+3. when present, normalized replanning supersedes same-source review/close continuation for this decision, but repo-local `HandleNormalizedReplan` still decides any supersede/archive follow-through
 
 Reason codes:
 
@@ -576,7 +576,7 @@ route_scope: task
 source_scope: task
 approval_gate_state: not_applicable
 reason_code: TASK_REVIEW_ROUTE_BACK_TO_PLAN
-handoff_boundary_note: Hand control to the successor-owned plan/task follow-through layer; that layer may decide supersede/archive, but this workflow does not execute it here.
+handoff_boundary_note: Hand control to repo-local HandleNormalizedReplan; that workflow may delegate CreatePairflowSpec follow-through and prepare supersede/archive handoff, but this workflow does not execute it here.
 ```
 
 ### Example 8: Document bubble close already approved
