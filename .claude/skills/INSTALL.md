@@ -1,6 +1,6 @@
 ---
 description: Install or update Pairflow skills into global ~/.claude/skills or ~/.codex/skills, with optional cross-agent symlinks
-argument-hint: [--skills all|UsePairflow|CreatePairflowSpec[,<name>...]] [--target-dir .claude|.codex] [--link-other true|false]
+argument-hint: [--skills all|UsePairflow|CreatePairflowSpec|ExecutePairflowPlan[,<name>...]] [--target-dir .claude|.codex] [--link-other true|false]
 allowed-tools: Bash
 ---
 
@@ -16,6 +16,7 @@ LINK_OTHER: extracted from `--link-other`, default `false`
 SUPPORTED_SKILLS:
 1. `UsePairflow`
 2. `CreatePairflowSpec`
+3. `ExecutePairflowPlan`
 
 ## Instructions
 
@@ -41,7 +42,7 @@ SUPPORTED_SKILLS:
    ```
 2. Validate `TARGET_DIR_NAME` is either `.claude` or `.codex`.
 3. Resolve `INSTALL_SKILLS`:
-   - if `SKILLS_ARG=all`, use both supported skills
+   - if `SKILLS_ARG=all`, use all supported skills
    - otherwise parse comma-separated values and validate each against `SUPPORTED_SKILLS`
 4. Prepare target:
    ```bash
@@ -65,12 +66,16 @@ SUPPORTED_SKILLS:
 
 ## Usage Examples
 
-1. Install both skills into `~/.claude/skills` (default):
+1. Install all skills into `~/.claude/skills` (default):
    - `--skills all --target-dir .claude --link-other false`
 2. Install only `CreatePairflowSpec` into `~/.codex/skills` and symlink to `.claude`:
    - `--skills CreatePairflowSpec --target-dir .codex --link-other true`
-3. Install both skills into `~/.claude/skills` and symlink to `.codex`:
+3. Install `UsePairflow` and `CreatePairflowSpec` into `~/.claude/skills` and symlink to `.codex`:
    - `--skills UsePairflow,CreatePairflowSpec --target-dir .claude --link-other true`
+4. Install only `ExecutePairflowPlan` into `~/.claude/skills`:
+   - `--skills ExecutePairflowPlan --target-dir .claude --link-other false`
+5. Install only `ExecutePairflowPlan` into `~/.claude/skills` and symlink to `.codex`:
+   - `--skills ExecutePairflowPlan --target-dir .claude --link-other true`
 
 ## Report
 
