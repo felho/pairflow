@@ -46,7 +46,7 @@ This skill does not own:
 | `CreateImplementationBubble` | stable route surface for implementation-bubble create/start | `HandleImplementationBubble` -> `UsePairflow` `CreateBubble` |
 | `ReviewImplementationBubble` | stable route surface for implementation-bubble deep review at the approval gate | `HandleImplementationBubble` -> `UsePairflow` `ReviewBubble` |
 | `CloseImplementationBubble` | stable route surface for implementation-bubble approve/merge/cleanup after approval is already satisfied | `HandleImplementationBubble` -> `UsePairflow` `CloseBubble` |
-| `HandleNormalizedReplan` | consume a normalized replanning signal without reclassifying raw bubble detail | repo-local successor `ExecutePairflowPlan` follow-through workflow surface (Task 4, not yet implemented) |
+| `HandleNormalizedReplan` | consume a normalized replanning signal without reclassifying raw bubble detail | repo-local `Workflows/HandleNormalizedReplan.md` |
 | `TroubleshootBubble` | stable route surface for explicit bubble-runtime or lifecycle troubleshooting | active bubble handler -> `UsePairflow` troubleshooting surface |
 | `HumanCheckpoint` | stop for ambiguity, contract refinement, or real operator judgment | explicit stop boundary, not an auto-run workflow |
 | `PlanComplete` | stop after the plan reaches a complete terminal boundary | explicit stop boundary, not a downstream workflow |
@@ -128,7 +128,7 @@ Policy notes:
 3. `CreateDocumentBubble` and `CreateImplementationBubble` stop at a settled checkpoint because bubble creation hands control into the Pairflow lifecycle layer, where later review/close routing depends on successor-owned normalized bubble outputs rather than immediate top-level continuation
 4. `ReviewDocumentBubble` and `ReviewImplementationBubble` stop at a human checkpoint because they sit on the explicit bubble approval/rework gate that the current quality model keeps human-controlled
 5. `document_bubble_close` and `implementation_bubble_close` may auto-continue only when `ResolvePlanState` returns them with `approval_gate_state=already_satisfied`; the top-level skill must never infer approval from raw Pairflow state
-6. `normalized_replanning` remains `auto_continue` because it hands control to successor-owned plan/task follow-through while preserving the normalized source scope rather than dropping back to heuristic routing
+6. `normalized_replanning` remains `auto_continue` because it hands control to repo-local `HandleNormalizedReplan` follow-through while preserving the normalized source scope rather than dropping back to heuristic routing
 
 See `Workflows/ResolvePlanState.md` for the canonical per-route output fields, including `route_scope`, `source_scope`, `approval_gate_state`, and the full `Auto-Continue vs Checkpoint Rules`.
 
@@ -161,5 +161,5 @@ This skill preserves the following V1 boundaries:
 Out-of-scope route ownership remains explicit:
 
 1. Task 3 owns raw bubble lifecycle interpretation inside `HandleDocumentBubble` and `HandleImplementationBubble`, then maps it into the normalized route taxonomy
-2. Task 4 owns plan/task follow-through after review loops or normalized replanning signals
+2. Task 4 ownership is encoded in repo-local `HandleNormalizedReplan`, which owns plan/task follow-through after review loops or normalized replanning signals
 3. Task 5 owns progress reporting, archive aftermath, and local pilot hardening

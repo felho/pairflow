@@ -29,9 +29,9 @@ owners:
 4. The merged Task 3 bubble-routing baseline is already encoded in:
    - `.claude/skills/ExecutePairflowPlan/Workflows/HandleDocumentBubble.md`
    - `.claude/skills/ExecutePairflowPlan/Workflows/HandleImplementationBubble.md`
-5. `HandleNormalizedReplan` already exists as a stable route surface in the top-level taxonomy, but no repo-local workflow file owns that follow-through behavior yet.
-6. The next missing slice is normalized replanning consumption and plan/task follow-through, not raw bubble-detail interpretation and not additional metadata expansion.
-7. New metadata ideas may exist in parallel discussion, but they are not yet required to start or finish this task unless a concrete blocker proves otherwise against the current merged baseline.
+5. `HandleNormalizedReplan` now exists as a repo-local workflow source under `.claude/skills/ExecutePairflowPlan/Workflows/HandleNormalizedReplan.md` and owns normalized-replanning follow-through.
+6. The remaining downstream slice after this task is normal progress/archive aftermath and pilot hardening, not raw bubble-detail interpretation and not additional metadata expansion.
+7. New metadata ideas may exist in parallel discussion, but they remain optional and non-blocking for this Task 4 contract unless a concrete blocker is proven against the merged baseline.
 
 ## L0 - Policy
 
@@ -359,6 +359,7 @@ Supersede/archive handoff rule:
 | Follow-through delegated action result | implicit in plan/draft prose | explicit workflow-local delegated result contract | delegated `CreatePairflowSpec` surface, `continuation_mode`, `source_owner=plan_task_followthrough_layer`, `source_scope`, `followthrough_action`, `handoff_boundary_note` | lineage/archive notes | additive | P1 | required-now |
 | Supersede/archive handoff | baseline metadata exists but Task 4 ownership is not written | explicit identity-change and archive-handoff contract | `supersedes`, `superseded_by`, canonical `archive_group`, canonical derived `archive_path` when persisted | `closed_at` | preserve-and-consume | P1 | required-now |
 | No-new-metadata baseline | user instruction, not yet written for Task 4 | explicit task guard | merged Task 1 / Task 2 / Task 3 baseline is sufficient unless blocker proven | blocker proof note | additive | P1 | required-now |
+| Post-delegation reroute | implicit in orchestrator commentary | explicit reroute-after-delegation rule | rerun `ResolvePlanState` from fresh authoritative plan/task artifacts after delegated follow-through returns | diagnostics notes | additive | P1 | required-now |
 
 Normalized-replanning parity rule:
 
@@ -386,11 +387,17 @@ Normalized-replanning parity rule:
    - `route_class` must be `normalized_replanning`
    - `target_workflow_surface` must be `HandleNormalizedReplan`
    - `approval_gate_state` must remain `not_applicable`
-   - task-origin replanning may arrive through `NORMALIZED_REPLANNING_SIGNAL` only when `source_owner=task_routing_layer` and `source_scope=task`
-   - bubble-origin replanning must continue to arrive through `NORMALIZED_BUBBLE_ROUTE` with `source_owner=bubble_routing_layer` and `source_scope=document_bubble|implementation_bubble`; this task must not duplicate that carrier into a second signal family
+   - task-origin replanning may arrive through `NORMALIZED_REPLANNING_SIGNAL` only when `source_owner=task_routing_layer`, `route_scope=task`, and `source_scope=task`
+   - bubble-origin replanning must continue to arrive through `NORMALIZED_BUBBLE_ROUTE` with `source_owner=bubble_routing_layer`, `route_scope=document_bubble|implementation_bubble`, and `source_scope=document_bubble|implementation_bubble`; this task must not duplicate that carrier into a second signal family
    - bubble-origin replanning must never be reclassified from raw Pairflow state here
    - `handoff_boundary_note` is required on the resolved route-output handoff from `ResolvePlanState`, not on the minimum upstream carrier contract itself
 6. No second intermediate replanning route contract may be introduced. Task 5 must consume Task 4 aftermath ownership through explicit handoff notes or archive/lineage state, not through a parallel replanning taxonomy.
+
+Post-delegation reroute rule:
+
+1. `HandleNormalizedReplan` must not chain the next route from stale local assumptions after `ReviewPlan`, `CreateTask`, or `ReviewTask` returns.
+2. After any delegated `auto_continue` result, the orchestrator must reread authoritative plan/task state and rerun `ResolvePlanState`.
+3. This keeps top-level route ownership centralized in Task 2 while still letting Task 4 own the follow-through decision boundary.
 
 Executable-identity decision rule:
 
@@ -471,6 +478,7 @@ Reason-code anchor rule:
 6. AC6: Bubble-origin replanning from Task 3 can re-enter the plan/task follow-through loop without reopening bubble-detail ownership.
 7. AC7: The task does not absorb normal post-implementation progress/archive aftermath or remote execution support.
 8. AC8: The top-level skill and `ResolvePlanState` remain aligned with the new repo-local follow-through workflow surface.
+9. AC9: After delegated Task 4 follow-through returns, the orchestrator reruns `ResolvePlanState` from fresh authoritative artifacts instead of continuing from stale local assumptions.
 
 ## L2 - Implementation Notes (Optional)
 
