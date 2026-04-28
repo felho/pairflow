@@ -1,7 +1,7 @@
 ---
-description: ResolvePlanState route selection for ExecutePairflowPlan from plan metadata, task metadata, bubble linkage, and normalized signals without performing downstream mutations
+description: ResolvePlanState route selection for ExecutePairflowPlan from plan metadata, task metadata, bubble linkage, and normalized bubble-routing signals without performing downstream mutations
 argument-hint: <plan-path>
-allowed-tools: Read, Bash
+allowed-tools: Read
 ---
 
 # ResolvePlanState
@@ -34,7 +34,7 @@ Invocation note:
 
 Tooling note:
 
-1. `Bash` is allowed only for read-only inspection such as `pairflow bubble status --json` when `PAIRFLOW_STATUS` must be refreshed
+1. raw Pairflow lifecycle refresh belongs to `HandleDocumentBubble` or `HandleImplementationBubble`, not to this workflow
 2. lifecycle mutation commands remain out of scope because this workflow selects the route only
 
 ## Inputs
@@ -51,28 +51,27 @@ Read only the minimum authoritative inputs needed for routing:
    - active task frontmatter when the task exists
 5. `PERSISTED_BUBBLE_LINKAGE`
    - `doc_bubble_id` / `impl_bubble_id` from task metadata
-6. `PAIRFLOW_STATUS`
-   - bubble lifecycle truth when a linked bubble exists and the current caller can read it
-7. `NORMALIZED_BUBBLE_ROUTE`
-   - optional normalized signal already produced by the bubble layer
-8. `NORMALIZED_REPLANNING_SIGNAL`
+6. `NORMALIZED_BUBBLE_ROUTE`
+   - optional normalized continuation signal already produced by `HandleDocumentBubble` or `HandleImplementationBubble`
+7. `NORMALIZED_REPLANNING_SIGNAL`
    - optional plan/task-level signal that says the next step is replanning rather than generic failure
-9. `OPERATOR_HINT`
+8. `OPERATOR_HINT`
    - optional explicit hint such as "bubble stuck" or "too broad"
-10. `METADATA_AUTHORITY_CONTRACT`
+9. `METADATA_AUTHORITY_CONTRACT`
    - `references/Plan-Task-Metadata-Contract.md`, which defines the deterministic precedence rules behind `AUTHORITY_PRECEDENCE_APPLIED`
 
 Input rules:
 
 1. plan metadata decides sequencing and active task order
 2. task metadata decides detailed local execution state
-3. Pairflow decides linked bubble lifecycle truth
-4. `ResolvePlanState` may consume normalized bubble outputs, but it must not derive them from raw bubble detail
-5. chat history, filename order, or operator memory are forbidden fallback routing sources
+3. Pairflow remains the lifecycle authority for linked bubbles
+4. repo-local bubble handlers read that raw lifecycle truth and emit normalized outputs or explicit stop boundaries
+5. `ResolvePlanState` may consume only the normalized outputs, and it must not derive them from raw bubble detail
+6. chat history, filename order, or operator memory are forbidden fallback routing sources
 
 ### Normalized bubble-input acceptance contract
 
-`NORMALIZED_BUBBLE_ROUTE` must be treated as valid only when it supplies, at minimum:
+`NORMALIZED_BUBBLE_ROUTE` must be treated as valid only when it comes from repo-local `HandleDocumentBubble` or `HandleImplementationBubble` and supplies, at minimum:
 
 ```yaml
 route_class: <document_bubble_review|document_bubble_close|implementation_bubble_review|implementation_bubble_close|normalized_replanning>
@@ -86,13 +85,16 @@ approval_gate_state: <not_applicable|review_required|already_satisfied>
 
 Acceptance rules:
 
-1. the route must already be normalized by the successor-owned bubble routing layer
+1. the route must already be normalized by the repo-local bubble routing layer
 2. `route_class` and `target_workflow_surface` must agree with the taxonomy below
 3. close routes are acceptable only when the normalized input explicitly says the relevant bubble is close-ready and that the separate review/approval path is already satisfied; for those routes `approval_gate_state` must be `already_satisfied`, and `ResolvePlanState` must not infer either condition from raw Pairflow state
 4. review routes are acceptable only when `approval_gate_state=review_required`
 5. `route_class=normalized_replanning` is acceptable only when the input explicitly signals replanning as the normalized outcome rather than a bubble review/close continuation; for bubble-origin replanning, `source_scope` must preserve whether the signal came from `document_bubble` or `implementation_bubble`
 6. for `route_class` values other than `normalized_replanning`, `source_scope` must be `not_applicable`
-7. if the normalized bubble input is absent, partial, or inconsistent, this workflow must not classify raw bubble detail on its own
+7. create/start and troubleshooting outputs remain terminal execution boundaries in the bubble-handler layer and are not reinterpreted here as continuation input
+8. extra handler-local fields such as `delegated_use_pairflow_surface`, `boundary_status`, or other non-taxonomy reporting fields may be present and must be ignored for route selection
+9. in this Task 3 slice, bubble-origin replanning must travel through `NORMALIZED_BUBBLE_ROUTE`, not through `NORMALIZED_REPLANNING_SIGNAL`
+10. if the normalized bubble input is absent, partial, or inconsistent, this workflow must not classify raw bubble detail on its own
 
 ### Normalized replanning-input acceptance contract
 
@@ -102,15 +104,15 @@ Acceptance rules:
 route_class: normalized_replanning
 target_workflow_surface: HandleNormalizedReplan
 reason_code: <stable reason code>
-source_owner: <task_routing_layer|bubble_routing_layer>
-source_scope: <task|document_bubble|implementation_bubble>
+source_owner: task_routing_layer
+source_scope: task
 approval_gate_state: not_applicable
 ```
 
 Acceptance rules:
 
 1. task-origin replanning must use `source_scope=task`
-2. bubble-origin replanning must preserve `source_scope=document_bubble` or `source_scope=implementation_bubble`
+2. bubble-origin replanning belongs in `NORMALIZED_BUBBLE_ROUTE` during this Task 3 slice and must not be duplicated here
 3. the signal must tell `ResolvePlanState` that replanning supersedes same-source continuation for this routing decision
 4. the signal authorizes routing only; it does not authorize supersede/archive execution here
 5. if the normalized replanning signal is absent, partial, or inconsistent, this workflow must not treat replanning as selected
@@ -164,7 +166,7 @@ Field rules:
 | `implementation_bubble_review` | `ReviewImplementationBubble` | `UsePairflow` | `stop_at_human_checkpoint` | `implementation_bubble` | `not_applicable` | `review_required` | normalized bubble signal says the impl bubble reached its review gate | produce deep-review output for human approval/rework; do not close the bubble here |
 | `implementation_bubble_close` | `CloseImplementationBubble` | `UsePairflow` | `auto_continue` | `implementation_bubble` | `not_applicable` | `already_satisfied` | normalized bubble signal says impl bubble is approved and ready to close after the separate review/approval path has already been satisfied | close/merge cleanup only; progress/archive aftermath remains successor-owned |
 | `normalized_replanning` | `HandleNormalizedReplan` | successor plan/task routing layer | `auto_continue` | `task`, `document_bubble`, or `implementation_bubble` according to normalized source authority | `task` or bubble-origin `document_bubble` / `implementation_bubble` | `not_applicable` | task review or bubble layer produced a normalized replanning signal | consume the normalized signal only; successor-owned follow-through may decide supersede/archive, but raw bubble detail and archive execution remain out of scope here |
-| `troubleshoot_bubble` | `TroubleshootBubble` | `UsePairflow` troubleshooting surface | `stop_at_human_checkpoint` | `bubble_runtime` | `not_applicable` | `not_applicable` | explicit operator hint or unresolved bubble-runtime truth requires lifecycle troubleshooting | troubleshoot the bubble path only; do not silently resume normal orchestration here |
+| `troubleshoot_bubble` | `TroubleshootBubble` | repo-local bubble handler -> `UsePairflow` troubleshooting surface | `stop_at_human_checkpoint` | `bubble_runtime` | `not_applicable` | `not_applicable` | explicit operator hint requires lifecycle troubleshooting | troubleshoot the bubble path only; do not silently resume normal orchestration here |
 | `human_checkpoint` | `HumanCheckpoint` | human decision boundary | `stop_at_human_checkpoint` | `orchestration` | `not_applicable` | `not_applicable` | ambiguity, contract refinement need, or cross-authority conflict remains unresolved | stop and explain why no trustworthy automatic route exists |
 | `plan_complete` | `PlanComplete` | top-level stop boundary | `stop_at_settled_checkpoint` | `plan` | `not_applicable` | `not_applicable` | all tasks are terminal and the plan is complete | stop cleanly; no further route is selected in this run |
 
@@ -212,26 +214,23 @@ Reason codes:
 Select `troubleshoot_bubble` only when a troubleshooting route is justified explicitly:
 
 1. `OPERATOR_HINT` contains an explicit troubleshooting request such as "bubble stuck"
-2. a linked bubble exists, but Pairflow lifecycle truth cannot be read cleanly and the caller already knows this is a runtime/lifecycle problem rather than a routing ambiguity
-3. no normalized replanning signal is already present for the same routing decision and source scope
+2. no normalized replanning signal is already present for the same routing decision and source scope
 
 Reason codes:
 
 1. `OPERATOR_TROUBLESHOOT_HINT`
-2. `PAIRFLOW_STATUS_UNAVAILABLE`
 
-If the lifecycle uncertainty is not clearly a troubleshooting case, fail closed to `human_checkpoint` instead of guessing.
+Lifecycle-read failures discovered while interpreting a linked bubble belong to the repo-local bubble handlers. If the uncertainty reaches this workflow without a normalized bubble output, fail closed to `human_checkpoint` instead of guessing.
 
 ### 4. Normalized replanning input
 
-Select `normalized_replanning` when task review or the bubble layer already produced a normalized replanning signal with an explicit source scope.
+Select `normalized_replanning` when a trusted normalized replanning signal is already present for this routing decision.
 
 Source-scope rule:
 
 1. task-review replanning must preserve `source_scope=task`
-2. document-bubble replanning must preserve `source_scope=document_bubble`
-3. implementation-bubble replanning must preserve `source_scope=implementation_bubble`
-4. when present, normalized replanning supersedes same-source review/close continuation for this decision, but successor-owned follow-through still decides any supersede/archive execution
+2. bubble-origin replanning that reaches this rule must already have arrived through `NORMALIZED_BUBBLE_ROUTE` with `source_scope=document_bubble` or `source_scope=implementation_bubble`
+3. when present, normalized replanning supersedes same-source review/close continuation for this decision, but successor-owned follow-through still decides any supersede/archive execution
 
 Reason codes:
 
@@ -307,13 +306,17 @@ Select `document_bubble_create` when:
 1. the active task is approved
 2. no document bubble linkage exists yet
 
+Execution note:
+
+1. `CreateDocumentBubble` remains the stable route surface, but the actual create/start delegation is owned by repo-local `HandleDocumentBubble`, which then calls `UsePairflow`
+
 Reason code:
 
 1. `DOC_BUBBLE_CREATE_REQUIRED`
 
 ### 10. Normalized document-bubble continuation
 
-Consume only normalized bubble-route input here.
+Consume only normalized bubble-route input here, already emitted by `HandleDocumentBubble`.
 
 Select:
 
@@ -340,13 +343,17 @@ Select `implementation_bubble_create` when:
 3. no implementation bubble linkage exists yet
 4. completion is not inferred from bubble absence, filename guesses, or raw Pairflow lifecycle detail alone
 
+Execution note:
+
+1. `CreateImplementationBubble` remains the stable route surface, but the actual create/start delegation is owned by repo-local `HandleImplementationBubble`, which then calls `UsePairflow`
+
 Reason code:
 
 1. `IMPL_BUBBLE_CREATE_REQUIRED`
 
 ### 12. Normalized implementation-bubble continuation
 
-Consume only normalized bubble-route input here.
+Consume only normalized bubble-route input here, already emitted by `HandleImplementationBubble`.
 
 Select:
 
@@ -515,7 +522,7 @@ handoff_boundary_note: Start the doc bubble through UsePairflow and stop at the 
 Input shape:
 
 1. task has a persisted document bubble id
-2. bubble layer supplies `NORMALIZED_BUBBLE_ROUTE=document_bubble_review`
+2. `HandleDocumentBubble` supplies `NORMALIZED_BUBBLE_ROUTE=document_bubble_review`
 
 Output:
 
@@ -577,7 +584,7 @@ handoff_boundary_note: Hand control to the successor-owned plan/task follow-thro
 Input shape:
 
 1. task has a persisted document bubble id
-2. bubble layer supplies `NORMALIZED_BUBBLE_ROUTE=document_bubble_close`
+2. `HandleDocumentBubble` supplies `NORMALIZED_BUBBLE_ROUTE=document_bubble_close`
 3. normalized input explicitly proves `approval_gate_state=already_satisfied`
 
 Output:
@@ -598,7 +605,7 @@ handoff_boundary_note: Close the approved document bubble only; select the next 
 Input shape:
 
 1. task has a persisted implementation bubble id
-2. bubble layer supplies `NORMALIZED_BUBBLE_ROUTE=implementation_bubble_close`
+2. `HandleImplementationBubble` supplies `NORMALIZED_BUBBLE_ROUTE=implementation_bubble_close`
 3. normalized input explicitly proves `approval_gate_state=already_satisfied`
 
 Output:

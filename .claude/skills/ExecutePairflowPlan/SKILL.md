@@ -15,7 +15,7 @@ Canonical metadata authority for the inputs named below lives in:
 
 This skill owns only the top-level orchestration contract:
 
-1. determine the next correct workflow route from plan metadata, task metadata, persisted bubble linkage, and Pairflow lifecycle authority
+1. determine the next correct workflow route from plan metadata, task metadata, persisted bubble linkage, and normalized bubble-routing outputs
 2. delegate the selected work to the correct specialized workflow surface
 3. continue automatically only when the route contract allows it
 4. stop cleanly at a settled checkpoint, real human checkpoint, or real blocker
@@ -31,32 +31,39 @@ This skill does not own:
 
 ## Workflow Routing
 
-`ExecutePairflowPlan` keeps the route surface inventory stable, but many surfaces are delegated rather than implemented locally.
+`ExecutePairflowPlan` keeps the route-surface inventory stable, while some repo-local workflows exist only as backing handlers behind those route surfaces.
 
-| Workflow Surface | Role in This Skill | Owner / Backing Workflow |
+| Route Surface Returned By `ResolvePlanState` | Role in This Skill | Owner / Backing Workflow |
 |---|---|---|
 | `FixPlanMetadata` | bootstrap or repair missing plan metadata before normal execution | repo-local `Workflows/FixPlanMetadata.md` |
 | `ResolvePlanState` | assess current state and choose the next normalized route | repo-local `Workflows/ResolvePlanState.md` |
 | `ReviewPlan` | review or refine plan-level readiness before task progression | `CreatePairflowSpec` `ReviewSpec` in `plan-mode` |
 | `CreateTask` | create the next executable task from the plan | `CreatePairflowSpec` `CreateTask` |
 | `ReviewTask` | review/refine the active task before bubble work | `CreatePairflowSpec` `ReviewSpec` in `task-mode` |
-| `CreateDocumentBubble` | start the document-refinement bubble for the active task | `UsePairflow` `CreateBubble` |
-| `ReviewDocumentBubble` | run deep review at the document-bubble approval gate | `UsePairflow` `ReviewBubble` |
-| `CloseDocumentBubble` | approve/merge/clean the document-refinement bubble | `UsePairflow` `CloseBubble` |
-| `CreateImplementationBubble` | start the implementation bubble for the active task | `UsePairflow` `CreateBubble` |
-| `ReviewImplementationBubble` | run deep review at the implementation approval gate | `UsePairflow` `ReviewBubble` |
-| `CloseImplementationBubble` | approve/merge/clean the implementation bubble | `UsePairflow` `CloseBubble` |
+| `CreateDocumentBubble` | stable route surface for document-bubble create/start | `HandleDocumentBubble` -> `UsePairflow` `CreateBubble` |
+| `ReviewDocumentBubble` | stable route surface for document-bubble deep review at the approval gate | `HandleDocumentBubble` -> `UsePairflow` `ReviewBubble` |
+| `CloseDocumentBubble` | stable route surface for document-bubble approve/merge/cleanup after approval is already satisfied | `HandleDocumentBubble` -> `UsePairflow` `CloseBubble` |
+| `CreateImplementationBubble` | stable route surface for implementation-bubble create/start | `HandleImplementationBubble` -> `UsePairflow` `CreateBubble` |
+| `ReviewImplementationBubble` | stable route surface for implementation-bubble deep review at the approval gate | `HandleImplementationBubble` -> `UsePairflow` `ReviewBubble` |
+| `CloseImplementationBubble` | stable route surface for implementation-bubble approve/merge/cleanup after approval is already satisfied | `HandleImplementationBubble` -> `UsePairflow` `CloseBubble` |
 | `HandleNormalizedReplan` | consume a normalized replanning signal without reclassifying raw bubble detail | repo-local successor `ExecutePairflowPlan` follow-through workflow surface (Task 4, not yet implemented) |
-| `TroubleshootBubble` | handle explicit bubble-runtime or lifecycle troubleshooting requests | `UsePairflow` troubleshooting surface; concrete workflow naming remains successor-owned |
+| `TroubleshootBubble` | stable route surface for explicit bubble-runtime or lifecycle troubleshooting | active bubble handler -> `UsePairflow` troubleshooting surface |
 | `HumanCheckpoint` | stop for ambiguity, contract refinement, or real operator judgment | explicit stop boundary, not an auto-run workflow |
 | `PlanComplete` | stop after the plan reaches a complete terminal boundary | explicit stop boundary, not a downstream workflow |
+
+| Repo-local Backing Workflow | Role in This Skill | Returned As `target_workflow_surface`? |
+|---|---|---|
+| `HandleDocumentBubble` | repo-local owner for document-bubble lifecycle interpretation, `UsePairflow` delegation, and normalized bubble outputs | no; it backs document-bubble route surfaces |
+| `HandleImplementationBubble` | repo-local owner for implementation-bubble lifecycle interpretation, `UsePairflow` delegation, and normalized bubble outputs | no; it backs implementation-bubble route surfaces |
 
 Route-surface rule:
 
 1. the names above are stable routing labels and workflow targets only
 2. they do not authorize this top-level skill to inline downstream workflow bodies
 3. successor tasks may implement their internals, but they must not silently rename or reinterpret the route surfaces
-4. naming convention is deliberate:
+4. `HandleDocumentBubble` and `HandleImplementationBubble` are backing workflows, not `target_workflow_surface` values returned by `ResolvePlanState`
+5. raw Pairflow lifecycle truth is never classified directly by this top-level skill; repo-local bubble handlers own that read-path and then delegate into `UsePairflow`
+6. naming convention is deliberate:
    - `target_workflow_surface` names stay in PascalCase
    - `route_class` values returned by `ResolvePlanState` stay in snake_case
    - example: `route_class=troubleshoot_bubble` targets `TroubleshootBubble`
@@ -69,9 +76,10 @@ Before every meaningful action:
 
 1. read sequencing truth from plan metadata
 2. read detailed local execution truth from task metadata
-3. read bubble lifecycle truth from Pairflow, using persisted bubble linkage only to identify the relevant bubble
-4. apply deterministic precedence only inside the declared metadata authority split
-5. route to `FixPlanMetadata` or `HumanCheckpoint` instead of guessing when the contract does not close the ambiguity
+3. use persisted bubble linkage only to identify which repo-local bubble handler owns the next bubble-side read/decision
+4. consume only normalized bubble outputs at the top level; raw Pairflow lifecycle truth is read inside `HandleDocumentBubble` or `HandleImplementationBubble`, not here
+5. apply deterministic precedence only inside the declared metadata authority split
+6. route to `FixPlanMetadata` or `HumanCheckpoint` instead of guessing when the contract does not close the ambiguity
 
 ### 2. Drive until a real boundary
 
@@ -107,11 +115,11 @@ Practical rule:
 
 ### 4. Continuation-mode policy
 
-Continuation-mode classification is intentional across the full V1 route inventory:
+Continuation-mode classification is intentional across the full V1 route taxonomy:
 
-1. `auto_continue`: `FixPlanMetadata`, `ReviewPlan`, `CreateTask`, `ReviewTask`, `CloseDocumentBubble` only with `approval_gate_state=already_satisfied`, `CloseImplementationBubble` only with `approval_gate_state=already_satisfied`, `HandleNormalizedReplan`
-2. `stop_at_settled_checkpoint`: `CreateDocumentBubble`, `CreateImplementationBubble`, `PlanComplete`
-3. `stop_at_human_checkpoint`: `ReviewDocumentBubble`, `ReviewImplementationBubble`, `TroubleshootBubble`, `HumanCheckpoint`
+1. `auto_continue`: `metadata_bootstrap`, `plan_review`, `task_create`, `task_review`, `document_bubble_close` only with `approval_gate_state=already_satisfied`, `implementation_bubble_close` only with `approval_gate_state=already_satisfied`, `normalized_replanning`
+2. `stop_at_settled_checkpoint`: `document_bubble_create`, `implementation_bubble_create`, `plan_complete`
+3. `stop_at_human_checkpoint`: `document_bubble_review`, `implementation_bubble_review`, `troubleshoot_bubble`, `human_checkpoint`
 
 Policy notes:
 
@@ -119,8 +127,8 @@ Policy notes:
 2. `CreateTask` remains `auto_continue` because task creation extends the same plan/task artifact loop and usually leaves the orchestrator with enough trusted local state to continue directly into task review
 3. `CreateDocumentBubble` and `CreateImplementationBubble` stop at a settled checkpoint because bubble creation hands control into the Pairflow lifecycle layer, where later review/close routing depends on successor-owned normalized bubble outputs rather than immediate top-level continuation
 4. `ReviewDocumentBubble` and `ReviewImplementationBubble` stop at a human checkpoint because they sit on the explicit bubble approval/rework gate that the current quality model keeps human-controlled
-5. `CloseDocumentBubble` and `CloseImplementationBubble` may auto-continue only when `ResolvePlanState` returns them with `approval_gate_state=already_satisfied`; the top-level skill must never infer approval from raw Pairflow state
-6. `HandleNormalizedReplan` remains `auto_continue` because it hands control to successor-owned plan/task follow-through while preserving the normalized source scope rather than dropping back to heuristic routing
+5. `document_bubble_close` and `implementation_bubble_close` may auto-continue only when `ResolvePlanState` returns them with `approval_gate_state=already_satisfied`; the top-level skill must never infer approval from raw Pairflow state
+6. `normalized_replanning` remains `auto_continue` because it hands control to successor-owned plan/task follow-through while preserving the normalized source scope rather than dropping back to heuristic routing
 
 See `Workflows/ResolvePlanState.md` for the canonical per-route output fields, including `route_scope`, `source_scope`, `approval_gate_state`, and the full `Auto-Continue vs Checkpoint Rules`.
 
@@ -130,7 +138,7 @@ Allowed same-authority resolution:
 
 1. plan sequencing fields remain plan authority
 2. task-local status remains task authority
-3. bubble lifecycle remains Pairflow authority
+3. bubble lifecycle remains Pairflow authority, but raw lifecycle interpretation is consumed only inside the repo-local bubble handlers
 
 Fail-closed cases:
 
@@ -152,6 +160,6 @@ This skill preserves the following V1 boundaries:
 
 Out-of-scope route ownership remains explicit:
 
-1. Task 3 owns raw bubble lifecycle interpretation and maps it into the normalized route taxonomy
+1. Task 3 owns raw bubble lifecycle interpretation inside `HandleDocumentBubble` and `HandleImplementationBubble`, then maps it into the normalized route taxonomy
 2. Task 4 owns plan/task follow-through after review loops or normalized replanning signals
 3. Task 5 owns progress reporting, archive aftermath, and local pilot hardening
