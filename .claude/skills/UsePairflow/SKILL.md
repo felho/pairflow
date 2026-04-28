@@ -98,7 +98,7 @@ This skill exists to avoid lifecycle mistakes (wrong command in wrong state, los
   - For remote bubbles, this still means the laptop-side routed command from the local repo by default, not manual lifecycle mutation inside the remote clone.
   - `pairflow bubble approve` enforces override requirements from transcript context.
   - If approve fails with `APPROVAL_OVERRIDE_REQUIRED` or `APPROVAL_PARITY_OVERRIDE_REQUIRED`, rerun only with explicit human justification via `--override-non-approve --override-reason "<reason>"`.
-- `APPROVED_FOR_COMMIT` -> `pairflow bubble commit --auto`
+- `APPROVED_FOR_COMMIT` -> `pairflow bubble commit --stage-all`
   - For remote bubbles, run the routed command from the laptop/local repo; do not `ssh` into the remote clone and commit manually.
 - `DONE` -> `pairflow bubble merge`
   - For remote bubbles, run the routed command from the laptop/local repo; Pairflow imports the started-remote merge handoff, completes the durable merge in the local repo, then performs remote cleanup.

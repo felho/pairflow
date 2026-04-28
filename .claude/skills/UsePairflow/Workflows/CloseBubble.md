@@ -95,7 +95,7 @@ pairflow bubble status --id <BUBBLE_ID> --repo <REPO_PATH> --json
 - Re-read status.
 - If state is `APPROVED_FOR_COMMIT`:
   ```bash
-  pairflow bubble commit --id <BUBBLE_ID> --repo <REPO_PATH> --auto
+  pairflow bubble commit --id <BUBBLE_ID> --repo <REPO_PATH> --stage-all
   ```
   Remote bubble note: still run this from the laptop/local repo; do not commit lifecycle state by manually invoking Pairflow inside the remote clone.
 - Else if state is already `COMMITTED` or `DONE`, skip commit.
@@ -154,7 +154,7 @@ Bubble <BUBBLE_ID> close summary:
 
 - Initial state: <STATE>
 - Approved: <yes / skipped (state was <STATE>)>
-- Committed: <yes (--auto) / skipped (state was <STATE>)>
+- Committed: <yes (--stage-all) / skipped (state was <STATE>)>
 - Merged: <yes / no>
 - Merge target: bubble/<BUBBLE_ID> -> <base-branch or n/a>
 - Cleanup: <performed / skipped>

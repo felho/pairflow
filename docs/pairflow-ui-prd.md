@@ -32,7 +32,7 @@ Priority order:
    - `request-rework` (message required)
    - `reply` (message required)
    - `resume` (default reply)
-   - `commit` (`--auto` path by default)
+   - `commit` (`--stage-all` path by default)
    - `merge` (optional `push` / `delete-remote`)
    - `open`
    - `stop`
