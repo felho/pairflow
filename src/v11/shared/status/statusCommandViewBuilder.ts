@@ -104,6 +104,20 @@ type RemoteBubbleStatusViewInput = {
   remoteExecution: NonNullable<BubbleStatusView["remoteExecution"]>;
 };
 
+const noLiveReviewPolicyStatusStates = new Set<BubbleLifecycleState>([
+  "WAITING_HUMAN",
+  "READY_FOR_HUMAN_APPROVAL",
+  "APPROVED_FOR_COMMIT",
+  "COMMITTED",
+  "DONE"
+]);
+
+function shouldProjectLiveReviewPolicyForStatusDetail(
+  state: BubbleLifecycleState
+): boolean {
+  return !noLiveReviewPolicyStatusStates.has(state);
+}
+
 function buildDegradedWatchdogStatus(input: {
   state: BubbleStatusState;
   timeoutMinutes: number;
@@ -165,17 +179,21 @@ function buildLocalBubbleStatusView(
     lastCommandAt: input.state.last_command_at,
     paneActivity,
     executionContext: buildStatusExecutionContextView(input.state.execution_context),
-    reviewPolicy: buildRuntimeAlignedReviewPolicyRuntimeView({
-      config: input.resolved.bubbleConfig,
-      round: input.state.round,
-      activeRole: input.state.active_role,
-      ...(runtimeAlignedExecutionContext !== null
-        ? {
-            executionContext: runtimeAlignedExecutionContext
-          }
-        : {}),
-      runtimeStateInvalid: input.stateValidation !== null
-    }),
+    ...(shouldProjectLiveReviewPolicyForStatusDetail(input.state.state)
+      ? {
+          reviewPolicy: buildRuntimeAlignedReviewPolicyRuntimeView({
+            config: input.resolved.bubbleConfig,
+            round: input.state.round,
+            activeRole: input.state.active_role,
+            ...(runtimeAlignedExecutionContext !== null
+              ? {
+                  executionContext: runtimeAlignedExecutionContext
+                }
+              : {}),
+            runtimeStateInvalid: input.stateValidation !== null
+          })
+        }
+      : {}),
     watchdog,
     pendingInboxItems: {
       humanQuestions: input.pendingQuestions,
@@ -228,18 +246,24 @@ function buildRemoteBubbleStatusView(
     lastCommandAt: input.remoteStatusSnapshot.lastCommandAt,
     paneActivity: input.remoteStatusSnapshot.paneActivity,
     executionContext: input.remoteStatusSnapshot.executionContext,
-    reviewPolicy: buildRuntimeAlignedReviewPolicyRuntimeView({
-      config: input.resolved.bubbleConfig,
-      round: input.remoteStatusSnapshot.round,
-      activeRole: runtimeAlignedActiveRole,
-      ...(runtimeAlignedExecutionContext !== null
-        ? {
-            executionContext: runtimeAlignedExecutionContext
-          }
-        : {}),
-      runtimeAvailability: input.remoteStatusSnapshot.runtimeAvailability,
-      runtimeStateInvalid: input.remoteStatusSnapshot.stateValidation !== null
-    }),
+    ...(shouldProjectLiveReviewPolicyForStatusDetail(
+      input.remoteStatusSnapshot.state
+    )
+      ? {
+          reviewPolicy: buildRuntimeAlignedReviewPolicyRuntimeView({
+            config: input.resolved.bubbleConfig,
+            round: input.remoteStatusSnapshot.round,
+            activeRole: runtimeAlignedActiveRole,
+            ...(runtimeAlignedExecutionContext !== null
+              ? {
+                  executionContext: runtimeAlignedExecutionContext
+                }
+              : {}),
+            runtimeAvailability: input.remoteStatusSnapshot.runtimeAvailability,
+            runtimeStateInvalid: input.remoteStatusSnapshot.stateValidation !== null
+          })
+        }
+      : {}),
     watchdog: input.remoteStatusSnapshot.watchdog,
     pendingInboxItems: input.remoteStatusSnapshot.pendingInboxItems,
     transcript: input.remoteStatusSnapshot.transcript,
