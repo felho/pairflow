@@ -82,6 +82,13 @@ Run this workflow only when the active task has entered the document-bubble rout
 
 If the task is not approved and there is no persisted `doc_bubble_id`, do not start document-bubble handling here. Route back to top-level task planning/review instead.
 
+Status model:
+
+1. `doc_bubble_id` is linkage only and must be persisted as soon as create/start succeeds.
+2. `doc_bubble_id` never proves document-refinement completion.
+3. `status=approved` means the task is eligible for document-bubble routing.
+4. `status=implementable` is the durable task-local proof that document refinement was approved, closed, and merged; it is written only by the document close path.
+
 ## Output Contracts
 
 Return one primary result shape from sections `A` or `B` below.
@@ -129,6 +136,7 @@ source_owner: bubble_routing_layer
 scope: document
 reason_code: <DOC_BUBBLE_CREATE_REQUIRED|OPERATOR_TROUBLESHOOT_HINT|PAIRFLOW_STATUS_UNAVAILABLE>
 delegated_use_pairflow_surface: <CreateBubble|TroubleshootBubble>
+metadata_postcondition: <doc_bubble_id_persisted|not_applicable>
 handoff_boundary_note: <short note describing why the handler stops here>
 ```
 
@@ -136,6 +144,7 @@ Normalization note:
 
 1. `ResolvePlanState` consumes only normalized continuation or replanning outputs from this workflow
 2. create/start and troubleshooting results are terminal execution boundaries for the current pass and must remain handler-local action results rather than normalized continuation routes
+3. create/start may return a settled boundary only after `metadata_postcondition=doc_bubble_id_persisted`
 
 ### Structured Local Boundary Report
 
@@ -244,7 +253,9 @@ Choose create when:
 Delegation:
 
 1. delegate create/start through `UsePairflow` `CreateBubble`
-2. preserve the document-bubble quality model and stop after the bubble-started boundary
+2. persist the created bubble id into task metadata as `doc_bubble_id`
+3. preserve `status=approved`; the created id is linkage only and does not prove refinement completion
+4. preserve the document-bubble quality model and stop after the bubble-started boundary
 
 Output:
 
@@ -255,8 +266,14 @@ source_owner: bubble_routing_layer
 scope: document
 reason_code: DOC_BUBBLE_CREATE_REQUIRED
 delegated_use_pairflow_surface: CreateBubble
-handoff_boundary_note: Start the document-refinement bubble through UsePairflow and stop at the settled bubble-started boundary.
+metadata_postcondition: doc_bubble_id_persisted
+handoff_boundary_note: Start the document-refinement bubble through UsePairflow, persist doc_bubble_id, and stop at the settled bubble-started boundary.
 ```
+
+Fail-closed rule:
+
+1. if create/start succeeds but task metadata cannot be updated with `doc_bubble_id`, the handler must not report a settled create boundary
+2. return a human checkpoint or troubleshooting result that names the missing linkage persistence as the blocker
 
 ### 4. Read the linked bubble and classify only document-owned routes
 
@@ -309,6 +326,8 @@ Authoritative trigger anchors:
 Delegation:
 
 1. delegate close/merge/cleanup through `UsePairflow` `CloseBubble`
+2. after successful close/merge cleanup, update task metadata to `status=implementable`
+3. preserve the existing `doc_bubble_id` as historical linkage; do not clear it
 
 Output:
 
@@ -322,8 +341,14 @@ source_scope: not_applicable
 approval_gate_state: already_satisfied
 reason_code: DOC_BUBBLE_CLOSE_REQUIRED
 delegated_use_pairflow_surface: CloseBubble
-handoff_boundary_note: Close the approved document bubble only; the caller may continue orchestration after authoritative close state returns.
+metadata_postcondition: task_status_implementable
+handoff_boundary_note: Close the approved document bubble, persist status=implementable, and then allow fresh route selection.
 ```
+
+Fail-closed rule:
+
+1. if close/merge succeeds but task metadata cannot be updated to `status=implementable`, the handler must not emit an auto-continuable close result
+2. later implementation-bubble routing must never infer document completion from `doc_bubble_id`, deleted bubble artifacts, or prose-only memory
 
 ### 7. Normalized replanning path
 

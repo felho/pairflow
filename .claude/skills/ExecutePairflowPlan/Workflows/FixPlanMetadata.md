@@ -137,7 +137,7 @@ The date component must be the plan creation date. If an existing `archive_group
 
 1. existing valid frontmatter value when it does not contradict the repaired tracker
 2. `done` when every tracker entry is terminal
-3. `in_progress` when any tracker entry is `in_progress`, `done`, `superseded`, or `archived` and open work still remains
+3. `in_progress` when any tracker entry is `implementable`, `in_progress`, `done`, `superseded`, or `archived` and open work still remains
 4. `approved` when the plan is execution-ready and the next task exists but no execution has started yet
 5. `under_review` or `draft` only when the plan artifact itself clearly remains in that phase
 
@@ -164,7 +164,7 @@ archive_group: <created_on-plan-id>
 task_tracker:
   - task_id: <task-id>
     task_path: <path-or-null>
-    status: <not_created|draft|under_review|approved|in_progress|done|superseded|archived>
+    status: <not_created|draft|under_review|approved|implementable|in_progress|done|superseded|archived>
 ```
 
 Example bootstrap result:

@@ -75,7 +75,7 @@ Each `task_tracker` entry must contain the required keys below and may contain t
 |---|---|---|
 | `task_id` | string | Must exist in `task_order`. |
 | `task_path` | string or null | Canonical task path when created, else `null` for `not_created`. |
-| `status` | string | Allowed values: `not_created`, `draft`, `under_review`, `approved`, `in_progress`, `done`, `superseded`, `archived`. |
+| `status` | string | Allowed values: `not_created`, `draft`, `under_review`, `approved`, `implementable`, `in_progress`, `done`, `superseded`, `archived`. |
 | `notes` | string | Optional short summary only. Never canonical authority over task-local state. |
 
 Plan tracker interpretation rules:
@@ -97,7 +97,7 @@ Plan tracker interpretation rules:
 | `task_family_id` | string | Stable family slug for the logical slice. Shared by split siblings when appropriate. |
 | `sequence_key` | string | Short sequencing label such as `1`, `1a`, `1b`, `2`. |
 | `task_id` | string | Canonical executable task id derived as `<sequence_key>-<task_family_id>`. |
-| `status` | string | Task-local status only. Allowed values: `draft`, `under_review`, `approved`, `in_progress`, `done`, `superseded`, `archived`. |
+| `status` | string | Task-local status only. Allowed values: `draft`, `under_review`, `approved`, `implementable`, `in_progress`, `done`, `superseded`, `archived`. |
 | `plan_ref` | string | Canonical path to the parent plan. |
 | `doc_bubble_id` | string or null | Linkage only. Use the canonical derived id for fresh V1 runs, or persist the concrete compat id of a pre-contract bubble. |
 | `impl_bubble_id` | string or null | Linkage only. Use the canonical derived id for fresh V1 runs, or persist the concrete compat id of a pre-contract bubble. |
@@ -117,12 +117,16 @@ Plan tracker interpretation rules:
 1. `status` in task metadata must never be `not_created`.
 2. `status` in task metadata must never mirror Pairflow lifecycle states such as `CREATED`, `RUNNING`, `WAITING_HUMAN`, or `READY_FOR_HUMAN_APPROVAL`.
 3. Bubble state remains external authority in Pairflow; task metadata stores only bubble linkage refs.
-4. `superseded` means executable identity was replaced.
-5. Repeated refinement alone does not cause `superseded`.
-6. `done` means task-local execution is complete, but archive aftermath may still be pending.
-7. `archived` means the task file has moved to its canonical archive path.
-8. `blocked` is intentionally out of scope for this V1 metadata foundation slice.
-9. If a future workflow needs explicit blocked-state semantics, that must come from an upstream task/plan contract refinement rather than silent widening here.
+4. `doc_bubble_id` and `impl_bubble_id` are linkage-only fields. They identify the associated bubble, but never prove approval, completion, or implementation readiness by themselves.
+5. `approved` means the task artifact is approved for document-refinement routing. It is not yet implementation-ready unless the document-refinement phase is explicitly skipped by a higher-level contract.
+6. `implementable` means document refinement has been approved, closed, and merged under the document-bubble close workflow. It is the durable task-local proof that implementation-bubble creation may begin when `impl_bubble_id=null`.
+7. `in_progress` means implementation work has started or is linked for the task.
+8. `superseded` means executable identity was replaced.
+9. Repeated refinement alone does not cause `superseded`.
+10. `done` means task-local execution is complete, but archive aftermath may still be pending.
+11. `archived` means the task file has moved to the canonical archive path.
+12. `blocked` is intentionally out of scope for this V1 metadata foundation slice.
+13. If a future workflow needs explicit blocked-state semantics, that must come from an upstream task/plan contract refinement rather than silent widening here.
 
 ### Terminal vs Settled Status
 
@@ -130,6 +134,7 @@ The V1 status domain separates execution terminality from plan-level settlement:
 
 | Status | Execution Terminal? | Plan-Completion Settled? | Meaning |
 |---|---:|---:|---|
+| `implementable` | no | no | Document refinement is complete and approved; implementation work may be created or resumed. |
 | `done` | yes | no | Work is complete, but the artifact still needs archive aftermath before normal `PlanComplete`. |
 | `superseded` | yes | no unless archive/lineage aftermath is settled | Executable identity was replaced; the replacement lineage and canonical archive aftermath must be settled before plan completion. |
 | `archived` | yes | yes | Work is complete and the task artifact is at the canonical archive path. |
@@ -137,8 +142,21 @@ The V1 status domain separates execution terminality from plan-level settlement:
 Normal lifecycle:
 
 ```text
-draft -> under_review -> approved -> in_progress -> done -> archived
+draft -> under_review -> approved -> implementable -> in_progress -> done -> archived
 ```
+
+Document-refinement lifecycle:
+
+1. `CreateDocumentBubble` persists `doc_bubble_id` immediately after successful create/start while leaving `status=approved`.
+2. `doc_bubble_id` alone never authorizes implementation-bubble creation.
+3. `CloseDocumentBubble` sets `status=implementable` only after the document bubble's approval path is satisfied and close/merge cleanup succeeds.
+4. If a linked document bubble is missing or unreadable while `status=approved`, route to troubleshooting or a human checkpoint. Do not infer document refinement from bubble absence.
+
+Implementation lifecycle:
+
+1. `CreateImplementationBubble` may start only from `status=implementable` with `impl_bubble_id=null`.
+2. `CreateImplementationBubble` persists `impl_bubble_id` after successful create/start and moves task status to `in_progress`.
+3. `impl_bubble_id` alone never proves implementation completion.
 
 Plan-completion rule:
 

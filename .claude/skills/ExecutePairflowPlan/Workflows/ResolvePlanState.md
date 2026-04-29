@@ -159,10 +159,10 @@ Field rules:
 | `plan_review` | `ReviewPlan` | `CreatePairflowSpec` | `auto_continue` | `plan` | `not_applicable` | `not_applicable` | plan exists but is not execution-ready for task progression | delegate plan review/refinement only; do not create or mutate task execution state here |
 | `task_create` | `CreateTask` | `CreatePairflowSpec` | `auto_continue` | `task` | `not_applicable` | `not_applicable` | next canonical task is planned but no task artifact exists yet | create the next task only; do not start bubble work here |
 | `task_review` | `ReviewTask` | `CreatePairflowSpec` | `auto_continue` | `task` | `not_applicable` | `not_applicable` | active task exists but is not yet ready for bubble routing | review/refine task only; do not invent plan/bubble mutations here |
-| `document_bubble_create` | `CreateDocumentBubble` | `UsePairflow` | `stop_at_settled_checkpoint` | `document_bubble` | `not_applicable` | `not_applicable` | approved task has no document bubble linkage yet | create/start the doc bubble; raw lifecycle follow-up stays with successor bubble routing |
+| `document_bubble_create` | `CreateDocumentBubble` | `UsePairflow` | `stop_at_settled_checkpoint` | `document_bubble` | `not_applicable` | `not_applicable` | approved task has no document bubble linkage yet | create/start the doc bubble and persist `doc_bubble_id`; raw lifecycle follow-up stays with successor bubble routing |
 | `document_bubble_review` | `ReviewDocumentBubble` | `UsePairflow` | `stop_at_human_checkpoint` | `document_bubble` | `not_applicable` | `review_required` | normalized bubble signal says the doc bubble reached its review gate | produce deep-review output for human approval/rework; do not close the bubble here |
 | `document_bubble_close` | `CloseDocumentBubble` | `UsePairflow` | `auto_continue` | `document_bubble` | `not_applicable` | `already_satisfied` | normalized bubble signal says doc bubble is approved and ready to close after the separate review/approval path has already been satisfied | close/merge cleanup only; on successful return the same-run owner goes back to top-level `ResolvePlanState` for fresh route selection |
-| `implementation_bubble_create` | `CreateImplementationBubble` | `UsePairflow` | `stop_at_settled_checkpoint` | `implementation_bubble` | `not_applicable` | `not_applicable` | trusted upstream input proves document refinement is complete and no impl bubble linkage exists yet | create/start the impl bubble; raw lifecycle follow-up stays with successor bubble routing |
+| `implementation_bubble_create` | `CreateImplementationBubble` | `UsePairflow` | `stop_at_settled_checkpoint` | `implementation_bubble` | `not_applicable` | `not_applicable` | task status is `implementable` and no impl bubble linkage exists yet | create/start the impl bubble, persist `impl_bubble_id`, and move task status to `in_progress`; raw lifecycle follow-up stays with successor bubble routing |
 | `implementation_bubble_review` | `ReviewImplementationBubble` | `UsePairflow` | `stop_at_human_checkpoint` | `implementation_bubble` | `not_applicable` | `review_required` | normalized bubble signal says the impl bubble reached its review gate | produce deep-review output for human approval/rework; do not close the bubble here |
 | `implementation_bubble_close` | `CloseImplementationBubble` | `UsePairflow` | `auto_continue` | `implementation_bubble` | `not_applicable` | `already_satisfied` | normalized bubble signal says impl bubble is approved and ready to close after the separate review/approval path has already been satisfied | close/merge cleanup only; on successful return the top-level auto-continue handoff goes to repo-local `UpdateProgress` |
 | `normalized_replanning` | `HandleNormalizedReplan` | repo-local `Workflows/HandleNormalizedReplan.md` | `auto_continue` | `task`, `document_bubble`, or `implementation_bubble` according to normalized source authority | `task` or bubble-origin `document_bubble` / `implementation_bubble` | `not_applicable` | task review or bubble layer produced a normalized replanning signal | consume the normalized signal only; repo-local follow-through may delegate `CreatePairflowSpec` work and prepare supersede/archive handoff, but raw bubble detail and normal aftermath remain out of scope here |
@@ -328,6 +328,8 @@ Select `document_bubble_create` when:
 Execution note:
 
 1. `CreateDocumentBubble` remains the stable route surface, but the actual create/start delegation is owned by repo-local `HandleDocumentBubble`, which then calls `UsePairflow`
+2. successful create/start is not settled until the handler has persisted the created bubble id into task metadata as `doc_bubble_id`
+3. task status remains `approved`; the document bubble id is linkage only and does not prove document refinement
 
 Reason code:
 
@@ -355,16 +357,14 @@ If only raw Pairflow state exists and no normalized mapping has been produced ye
 
 Select `implementation_bubble_create` when:
 
-1. document refinement is complete for the active task under a trusted upstream authority surface
-2. that completion proof comes from:
-   - a normalized close-ready or close-completed document-bubble continuation returned by the successor-owned bubble routing layer in the current orchestration pass, or
-   - a trustworthy persisted result of an already-completed document-bubble close path that remains within the same declared authority split
-3. no implementation bubble linkage exists yet
-4. completion is not inferred from bubble absence, filename guesses, or raw Pairflow lifecycle detail alone
+1. active task metadata has `status=implementable`
+2. no implementation bubble linkage exists yet
+3. implementation readiness is not inferred from `doc_bubble_id`, bubble absence, filename guesses, or raw Pairflow lifecycle detail alone
 
 Execution note:
 
 1. `CreateImplementationBubble` remains the stable route surface, but the actual create/start delegation is owned by repo-local `HandleImplementationBubble`, which then calls `UsePairflow`
+2. successful create/start is not settled until the handler has persisted the created bubble id into task metadata as `impl_bubble_id` and moved task status to `in_progress`
 
 Reason code:
 
@@ -533,7 +533,7 @@ route_scope: document_bubble
 source_scope: not_applicable
 approval_gate_state: not_applicable
 reason_code: DOC_BUBBLE_CREATE_REQUIRED
-handoff_boundary_note: Start the doc bubble through UsePairflow and stop at the bubble-started boundary.
+handoff_boundary_note: Start the doc bubble through UsePairflow, persist doc_bubble_id, and stop at the bubble-started boundary.
 ```
 
 ### Example 5: Bubble layer already normalized a review gate
@@ -618,6 +618,11 @@ approval_gate_state: already_satisfied
 reason_code: DOC_BUBBLE_CLOSE_REQUIRED
 handoff_boundary_note: Close the approved document bubble only; on successful return hand control back to top-level ResolvePlanState for fresh route selection.
 ```
+
+Close result requirement:
+
+1. successful `CloseDocumentBubble` must refresh task metadata to prove `status=implementable`
+2. without that durable task-local status, a later session must not infer document refinement from the prior `doc_bubble_id` or from missing bubble artifacts
 
 ### Example 9: Implementation bubble close already approved
 

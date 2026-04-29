@@ -90,10 +90,10 @@ Mandatory route-to-delegation mapping:
 | `ReviewPlan` | `CreatePairflowSpec` `ReviewSpec` in `plan-mode` | `approve_plan`, `refine_plan`, `split_plan`, or `block_not_ready` |
 | `CreateTask` | `CreatePairflowSpec` `CreateTask` | created/refined task path plus task metadata status |
 | `ReviewTask` | `CreatePairflowSpec` `ReviewSpec` in `task-mode` | `approve_task`, `refine_task`, `route_back_to_plan`, or `block_not_ready` |
-| `CreateDocumentBubble` | repo-local `HandleDocumentBubble` delegating to `UsePairflow` `CreateBubble` | created/started document bubble id and boundary status |
+| `CreateDocumentBubble` | repo-local `HandleDocumentBubble` delegating to `UsePairflow` `CreateBubble` | created/started document bubble id, persisted `doc_bubble_id` linkage, and boundary status |
 | `ReviewDocumentBubble` | repo-local `HandleDocumentBubble` delegating to `UsePairflow` `ReviewBubble` | review result and human approval/rework checkpoint |
-| `CloseDocumentBubble` | repo-local `HandleDocumentBubble` delegating to `UsePairflow` `CloseBubble` | close/merge result and refreshed task linkage/status evidence |
-| `CreateImplementationBubble` | repo-local `HandleImplementationBubble` delegating to `UsePairflow` `CreateBubble` | created/started implementation bubble id and boundary status |
+| `CloseDocumentBubble` | repo-local `HandleDocumentBubble` delegating to `UsePairflow` `CloseBubble` | close/merge result and refreshed task status evidence proving `status=implementable` |
+| `CreateImplementationBubble` | repo-local `HandleImplementationBubble` delegating to `UsePairflow` `CreateBubble` | created/started implementation bubble id, persisted `impl_bubble_id` linkage, `status=in_progress`, and boundary status |
 | `ReviewImplementationBubble` | repo-local `HandleImplementationBubble` delegating to `UsePairflow` `ReviewBubble` | review result and human approval/rework checkpoint |
 | `CloseImplementationBubble` | repo-local `HandleImplementationBubble` delegating to `UsePairflow` `CloseBubble` | close/merge result before `UpdateProgress` aftermath |
 | `HandleNormalizedReplan` | repo-local `Workflows/HandleNormalizedReplan.md` | normalized replanning follow-through result |
@@ -170,7 +170,7 @@ Default mode is `drive-until-blocked`.
 One invocation should continue through obvious next steps until it reaches one of these boundaries:
 
 1. a plan-settled boundary such as `PlanComplete`
-2. a settled bubble boundary such as "bubble started" or "bubble handed to approval review"
+2. a settled bubble boundary such as "bubble started with task linkage persisted" or "bubble handed to approval review"
 3. `HumanCheckpoint`
 4. a real blocker that requires explicit troubleshooting
 
@@ -233,7 +233,7 @@ Policy notes:
 
 1. `ReviewPlan` and `ReviewTask` remain `auto_continue` routes because their outputs can often be consumed mechanically inside the same artifact-refinement loop without crossing a human approval gate
 2. `CreateTask` remains `auto_continue` because task creation extends the same plan/task artifact loop and usually leaves the orchestrator with enough trusted local state to continue directly into task review
-3. `CreateDocumentBubble` and `CreateImplementationBubble` stop at a settled checkpoint because bubble creation hands control into the Pairflow lifecycle layer, where later review/close routing depends on successor-owned normalized bubble outputs rather than immediate top-level continuation
+3. `CreateDocumentBubble` and `CreateImplementationBubble` stop at a settled checkpoint because bubble creation hands control into the Pairflow lifecycle layer after required task-metadata linkage/status postconditions are persisted; later review/close routing depends on successor-owned normalized bubble outputs rather than immediate top-level continuation
 4. `ReviewDocumentBubble` and `ReviewImplementationBubble` stop at a human checkpoint because they sit on the explicit bubble approval/rework gate that the current quality model keeps human-controlled
 5. `document_bubble_close` and `implementation_bubble_close` may auto-continue only when `ResolvePlanState` returns them with `approval_gate_state=already_satisfied`; the top-level skill must never infer approval from raw Pairflow state
 6. after successful `implementation_bubble_close`, the next same-run owner is repo-local `UpdateProgress`; only the refreshed aftermath result may then rerun `ResolvePlanState`, stop at `PlanComplete`, or fail closed to `HumanCheckpoint`

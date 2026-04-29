@@ -100,7 +100,10 @@ Status rule:
    same-artifact `ReviewSpec task-mode` result with `decision=approve_task`, or
    when the caller supplies an explicit delegated task-creation contract that
    says the task is already approved.
-4. When `status: approved` is set, state the approval provenance in the summary.
+4. Do not set `status: implementable` from CreateTask or ReviewSpec. That status
+   is an execution-lifecycle result owned by `ExecutePairflowPlan`
+   `CloseDocumentBubble` after document-bubble approval/close.
+5. When `status: approved` is set, state the approval provenance in the summary.
 
 ### 1a) Run the Target-File Reality Check
 
@@ -369,7 +372,10 @@ Required blockers for Task output:
 4. If `status: approved`, approval provenance is mandatory:
    - same-artifact `ReviewSpec task-mode` `approve_task` result, or
    - explicit delegated task-creation contract that says already approved
-5. If `plan_ref` exists, `Plan Linkage` is mandatory:
+5. If `status: implementable`, treat it as invalid for CreateTask output unless
+   the caller is applying an explicit `ExecutePairflowPlan` document-bubble close
+   result; otherwise route back to lifecycle handling.
+6. If `plan_ref` exists, `Plan Linkage` is mandatory:
    - parent plan gap closed,
    - predecessor dependency or `N/A`,
    - successor tasks unlocked or impacted,

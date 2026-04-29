@@ -49,8 +49,8 @@ Read only the minimum authoritative inputs needed for the implementation-bubble 
    - active task artifact
 3. `TASK_METADATA`
    - task frontmatter from `TASK_PATH`
-4. `DOC_BUBBLE_COMPLETION_PROOF`
-   - trusted upstream proof that the document-refinement phase is complete for this task
+4. `TASK_STATUS`
+   - task-local status from `TASK_METADATA`; `implementable` is the durable proof that the document-refinement phase is complete for this task
 5. `IMPL_BUBBLE_ID`
    - `task_metadata.impl_bubble_id`
 6. `TOP_LEVEL_ROUTE_CONTEXT`
@@ -71,36 +71,31 @@ Input rules:
 1. task metadata stores linkage only; it is not lifecycle authority
 2. Pairflow remains the canonical lifecycle authority for the linked implementation bubble
 3. `TOP_LEVEL_ROUTE_CONTEXT` narrows this workflow to the implementation-bubble branch only; it does not authorize plan/task routing here
-4. implementation-bubble creation requires trusted document-phase completion proof from the already-approved authority split
+4. implementation-bubble creation requires `status=implementable`; `doc_bubble_id` and raw document-bubble lifecycle detail are not completion proof
 5. this workflow may use `OPERATOR_HINT` only to choose among already-authorized troubleshooting or replanning branches; it must not invent new lifecycle meaning
 
-`DOC_BUBBLE_COMPLETION_PROOF` minimum trustworthy shape for this Task 3 slice:
+Document-completion proof for this slice:
 
 ```yaml
-proof_kind: <normalized_document_bubble_close|trusted_persisted_document_phase_complete>
-source_owner: <bubble_routing_layer|task_routing_layer>
-route_class: document_bubble_close
-target_workflow_surface: CloseDocumentBubble
-approval_gate_state: already_satisfied
-source_scope: not_applicable
-reason_code: DOC_BUBBLE_CLOSE_REQUIRED
+proof_kind: task_status_implementable
+source_owner: task_metadata
+task_status: implementable
 ```
 
 Proof rules:
 
-1. `proof_kind=normalized_document_bubble_close` means the proof comes directly from `HandleDocumentBubble` in the current orchestration pass
-2. `proof_kind=trusted_persisted_document_phase_complete` means a successor-owned task layer already consumed that normalized close output and preserved an equivalent trustworthy completion result
-3. bubble absence, prose-only memory, or raw lifecycle state alone are never valid proof artifacts
+1. `proof_kind=task_status_implementable` means `CloseDocumentBubble` already consumed the approved document-bubble close path and persisted `status=implementable`
+2. bubble absence, prose-only memory, raw lifecycle state alone, a normalized close route that has not yet been executed, or `doc_bubble_id` alone are never valid proof artifacts
 
 ## Entry Conditions
 
 Run this workflow only when the active task has entered the implementation-bubble route family:
 
-1. trusted document-phase completion proof exists and `impl_bubble_id=null`
+1. task metadata has `status=implementable` and `impl_bubble_id=null`
 2. a persisted `impl_bubble_id` exists
 3. an explicit operator hint refers to an already-linked implementation bubble that needs troubleshooting or bubble-origin replanning review
 
-If document-phase completion is not proven yet, do not start implementation-bubble handling here.
+If document-phase completion is not proven by `status=implementable`, do not start implementation-bubble handling here.
 
 ## Output Contracts
 
@@ -149,6 +144,7 @@ source_owner: bubble_routing_layer
 scope: implementation
 reason_code: <IMPL_BUBBLE_CREATE_REQUIRED|OPERATOR_TROUBLESHOOT_HINT|PAIRFLOW_STATUS_UNAVAILABLE>
 delegated_use_pairflow_surface: <CreateBubble|TroubleshootBubble>
+metadata_postcondition: <impl_bubble_id_persisted_and_status_in_progress|not_applicable>
 handoff_boundary_note: <short note describing why the handler stops here>
 ```
 
@@ -156,6 +152,7 @@ Normalization note:
 
 1. `ResolvePlanState` consumes only normalized continuation or replanning outputs from this workflow
 2. create/start and troubleshooting results are terminal execution boundaries for the current pass and must remain handler-local action results rather than normalized continuation routes
+3. create/start may return a settled boundary only after `metadata_postcondition=impl_bubble_id_persisted_and_status_in_progress`
 
 ### Structured Local Boundary Report
 
@@ -202,13 +199,13 @@ Apply the first matching rule in this order.
 Fail closed before reading implementation lifecycle truth when any of the following is true and Rule 2 does not already match for an already-linked implementation bubble:
 
 1. the task lacks trustworthy metadata required by the merged Task 1 contract
-2. document-phase completion is not proven by a trusted upstream authority surface
+2. document-phase completion is not proven by task metadata `status=implementable`
 3. implementation-bubble routing would require inventing new metadata fields or hidden lifecycle state
 
 Proof rule:
 
-1. implementation-bubble creation may rely on a normalized document-bubble close-ready or close-completed outcome, or another trustworthy persisted result that stays within the approved authority split
-2. it must not rely on bubble absence, filename guesses, or prose-only operator memory
+1. implementation-bubble creation relies on `status=implementable` as the durable persisted result of document-bubble close
+2. it must not rely on `doc_bubble_id`, bubble absence, filename guesses, raw Pairflow lifecycle state, or prose-only operator memory
 
 Boundary report:
 
@@ -259,13 +256,15 @@ Reason-code selection:
 
 Choose create when:
 
-1. trusted document-phase completion proof exists
+1. task metadata has `status=implementable`
 2. `impl_bubble_id=null`
 
 Delegation:
 
 1. delegate create/start through `UsePairflow` `CreateBubble`
-2. preserve the implementation-bubble quality model and stop after the bubble-started boundary
+2. persist the created bubble id into task metadata as `impl_bubble_id`
+3. move task metadata to `status=in_progress`
+4. preserve the implementation-bubble quality model and stop after the bubble-started boundary
 
 Output:
 
@@ -276,8 +275,14 @@ source_owner: bubble_routing_layer
 scope: implementation
 reason_code: IMPL_BUBBLE_CREATE_REQUIRED
 delegated_use_pairflow_surface: CreateBubble
-handoff_boundary_note: Start the implementation bubble through UsePairflow and stop at the settled bubble-started boundary.
+metadata_postcondition: impl_bubble_id_persisted_and_status_in_progress
+handoff_boundary_note: Start the implementation bubble through UsePairflow, persist impl_bubble_id, set status=in_progress, and stop at the settled bubble-started boundary.
 ```
+
+Fail-closed rule:
+
+1. if create/start succeeds but task metadata cannot be updated with `impl_bubble_id` and `status=in_progress`, the handler must not report a settled create boundary
+2. return a human checkpoint or troubleshooting result that names the missing implementation linkage/status persistence as the blocker
 
 ### 4. Read the linked bubble and classify only implementation-owned routes
 

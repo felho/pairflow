@@ -86,6 +86,9 @@ When drafting, refining, or reviewing a Plan or Task that is intended to be exec
    Set `status: approved` only when applying a concrete `ReviewSpec task-mode`
    `approve_task` result for the exact reviewed artifact, or when a higher-level
    delegated workflow explicitly supplies an already-approved task-creation result.
+   Do not set `status: implementable` during spec creation or review; that status
+   is reserved for `ExecutePairflowPlan` document-bubble close after the approved
+   document-refinement bubble has been closed and merged.
 8. Any mismatch between `sequence_key`, `task_family_id`, `task_id`, filename,
    plan tracker, and plan task order is a blocking metadata issue, not a style issue.
 

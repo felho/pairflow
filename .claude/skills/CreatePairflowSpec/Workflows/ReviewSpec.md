@@ -100,6 +100,9 @@ For tasks, verify:
    path when `plan_ref` exists
 6. lineage fields are present and consistent
 7. bubble ids are linkage-only values and do not encode lifecycle state
+8. task review may approve a task for document-bubble routing, but it must not
+   set `status: implementable`; that status is owned by ExecutePairflowPlan
+   document-bubble close after approval/merge
 
 Outcome:
 
