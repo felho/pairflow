@@ -5,7 +5,6 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
-CURRENT_MILESTONE="${PAIRFLOW_CI_MILESTONE:-${PAIRFLOW_LOCAL_CI_MILESTONE:-}}"
 CI_VERBOSE="${PAIRFLOW_CI_VERBOSE:-0}"
 EVIDENCE_ROOT="${PAIRFLOW_CI_EVIDENCE_DIR:-.pairflow/evidence/ci-local}"
 RUN_ID="$(date -u +"%Y%m%dT%H%M%SZ")"
@@ -180,7 +179,7 @@ run_step() {
   echo
 }
 
-echo "ci:local start (milestone=${CURRENT_MILESTONE:-policy-default})"
+echo "ci:local start"
 echo "ci:local run logs: $RUN_DIR"
 if [[ "$CI_VERBOSE" != "1" ]]; then
   echo "ci:local mode: compact (set PAIRFLOW_CI_VERBOSE=1 for live command output)"
@@ -190,10 +189,6 @@ echo
 run_step "install" "dependency lock validation" pnpm install --frozen-lockfile
 run_step "check" "quality suite (pnpm check)" pnpm check
 
-if [[ -n "${CURRENT_MILESTONE}" ]]; then
-  run_step "fitness" "fitness gate" env PAIRFLOW_CI_MILESTONE="${CURRENT_MILESTONE}" pnpm fitness:check:ci
-else
-  run_step "fitness" "fitness gate" pnpm fitness:check:ci
-fi
+run_step "fitness" "fitness gate" pnpm fitness:check:ci
 
 echo "ci:local passed"

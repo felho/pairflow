@@ -1179,22 +1179,13 @@ pnpm dev:ui     # Rebuild CLI + restart web UI server on port 4173
 
 Validation commands write evidence logs to `.pairflow/evidence/` (lint/typecheck/test), which can be attached in canonical actor emit refs such as `pairflow agent emit --kind pass ... --ref ...`.
 
-### CI (milestone-aware fitness gate)
+### CI fitness gate
 
-Use the CI entrypoint to ensure the fitness check always receives an explicit milestone:
+Use the CI entrypoint to run the repository fitness policy and write the report under `.pairflow/evidence/fitness-report.json`:
 
 ```bash
-# Default fallback milestone is M0 when no env is provided
 pnpm fitness:check:ci
-
-# Recommended in CI: pass milestone explicitly from pipeline input
-PAIRFLOW_CI_MILESTONE=M2 pnpm fitness:check:ci
 ```
-
-Milestone precedence used by `fitness:check:ci`:
-1. `PAIRFLOW_CI_MILESTONE`
-2. `PAIRFLOW_FITNESS_CURRENT_MILESTONE`
-3. `M0` (fallback)
 
 ### Local CI gate (main push before)
 
@@ -1223,12 +1214,6 @@ Use verbose mode if you want fully streamed command output:
 
 ```bash
 PAIRFLOW_CI_VERBOSE=1 pnpm ci:local
-```
-
-Optional milestone override for local run:
-
-```bash
-PAIRFLOW_CI_MILESTONE=M2 pnpm ci:local
 ```
 
 ## Roadmap

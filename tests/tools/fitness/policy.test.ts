@@ -30,17 +30,12 @@ describe("fitness policy loader", () => {
       policyPath,
       JSON.stringify(
         {
-          defaults: { mode: "report-only", current_milestone: "M1" },
+          defaults: { mode: "report-only" },
           checks: [
             {
               id: "boundary",
               metric: "x",
               mode: "hard-fail",
-              mode_by_milestone: {
-                M2: "soft-fail",
-                M3: "hard-fail"
-              },
-              exception_lifecycle_mode: "soft-fail",
               owner: "architecture",
               scope: ["src/v11/**"],
               exceptions: [
@@ -49,7 +44,6 @@ describe("fitness policy loader", () => {
                   kind: "allow-edge",
                   owner: "architecture",
                   reason: "temporary migration bridge",
-                  expires_milestone: "M2",
                   from: "src/v11/domain/legacy-bridge.ts",
                   to: "src/v11/application/migration-bridge.ts"
                 }
@@ -65,17 +59,10 @@ describe("fitness policy loader", () => {
 
     const policy = await readPolicy(policyPath);
     expect(policy.defaults?.mode).toBe("report-only");
-    expect(policy.defaults?.current_milestone).toBe("M1");
     expect(policy.checks).toHaveLength(1);
     expect(policy.checks[0]?.id).toBe("boundary");
     expect(policy.checks[0]?.scope).toEqual(["src/v11/**"]);
-    expect(policy.checks[0]?.mode_by_milestone).toEqual({
-      M2: "soft-fail",
-      M3: "hard-fail"
-    });
-    expect(policy.checks[0]?.exception_lifecycle_mode).toBe("soft-fail");
     expect(policy.checks[0]?.exceptions?.[0]?.id).toBe("dep-allow-edge-001");
-    expect(policy.checks[0]?.exceptions?.[0]?.expires_milestone).toBe("M2");
   });
 
   it("rejects invalid check entries", async () => {
@@ -129,35 +116,7 @@ describe("fitness policy loader", () => {
     );
 
     await expect(readPolicy(policyPath)).rejects.toThrow(
-      "Fitness policy exception must define id, kind, owner, reason, expires_milestone."
-    );
-  });
-
-  it("rejects malformed mode_by_milestone entries", async () => {
-    const root = await createTempRoot();
-    const policyPath = join(root, "policy-invalid-mode-by-milestone.json");
-    await writeFile(
-      policyPath,
-      JSON.stringify(
-        {
-          checks: [
-            {
-              id: "critical_side_effect",
-              metric: "x",
-              mode_by_milestone: {
-                M2: 123
-              }
-            }
-          ]
-        },
-        null,
-        2
-      ),
-      "utf8"
-    );
-
-    await expect(readPolicy(policyPath)).rejects.toThrow(
-      "Fitness policy mode_by_milestone entries must be strings."
+      "Fitness policy exception must define id, kind, owner, reason."
     );
   });
 });

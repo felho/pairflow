@@ -12,7 +12,7 @@ This document defines:
 
 - what each check is trying to protect,
 - which checks are authoritative versus heuristic,
-- how rollout modes work,
+- how enforcement modes work,
 - and how the dependency fitness model must evolve to avoid superficial compliance.
 
 The fitness system is a guardrail, not the architecture itself.
@@ -24,7 +24,7 @@ The fitness system is a guardrail, not the architecture itself.
 - placement policy: [v11-placement-and-extraction-governance.md](/Users/felho/dev/pairflow/docs/architecture/v11-placement-and-extraction-governance.md)
 - ports policy: [v11-ports-governance.md](/Users/felho/dev/pairflow/docs/architecture/v11-ports-governance.md)
 
-## Rollout Modes
+## Enforcement Modes
 
 1. `report-only`: always produce report, never block
 2. `soft-fail`: warning in CI and PR summary, merge still allowed
@@ -32,18 +32,18 @@ The fitness system is a guardrail, not the architecture itself.
 
 ## Current Effective Policy
 
-Current milestone is `M6` in `tools/fitness/policy.json`.
+`tools/fitness/policy.json` is explicit: each check carries its effective `mode` directly.
 
-At this milestone the effective posture is:
+The current posture is:
 
-- `boundary`: hard-fail via `mode_by_milestone`
-- `mutation`: hard-fail via `mode_by_milestone`
-- `transition`: hard-fail via `mode_by_milestone`
-- `error`: hard-fail via `mode_by_milestone`
-- `complexity`: hard-fail directly
-- `contract_timeout_policy`: hard-fail via `mode_by_milestone`
-- `dependency`: hard-fail via `mode_by_milestone`
-- `critical_side_effect`: hard-fail via `mode_by_milestone`
+- `boundary`: hard-fail
+- `mutation`: hard-fail
+- `transition`: hard-fail
+- `error`: hard-fail
+- `complexity`: hard-fail
+- `contract_timeout_policy`: hard-fail
+- `dependency`: hard-fail
+- `critical_side_effect`: hard-fail
 
 This means the system is already operating as an enforcement gate, not only as advisory reporting.
 
@@ -57,7 +57,6 @@ This means the system is already operating as an enforcement gate, not only as a
   "kind": "allow-edge",
   "owner": "architecture",
   "reason": "temporary migration bridge",
-  "expires_milestone": "M2",
   "from": "src/v11/domain/legacy-bridge.ts",
   "to": "src/v11/application/migration-bridge.ts"
 }
@@ -65,12 +64,11 @@ This means the system is already operating as an enforcement gate, not only as a
 
 Rules:
 
-- `id`, `kind`, `owner`, `reason`, `expires_milestone` are mandatory
+- `id`, `kind`, `owner`, `reason` are mandatory
 - `dependency` check supports:
   - `allow-edge` with `from` + `to`
   - `allow-cycle` with `paths`
-- exceptions must remain temporary and milestone-bound
-- exception lifecycle behavior is controlled by policy, not by ad hoc CI decisions
+- exception cleanup is handled by ordinary policy review, not milestone metadata
 
 ## Check Definitions
 

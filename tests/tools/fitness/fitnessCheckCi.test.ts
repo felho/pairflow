@@ -61,9 +61,9 @@ afterEach(async () => {
   );
 });
 
-describe("fitness:check:ci milestone gate behavior", () => {
+describe("fitness:check:ci", () => {
   it(
-    "keeps merge-allowed at M2 soft-fail but blocks at M3 hard-fail",
+    "passes through configured policy and report paths",
     async () => {
       const root = await createTempRoot();
       const policyPath = join(root, "policy.json");
@@ -76,31 +76,16 @@ describe("fitness:check:ci milestone gate behavior", () => {
           {
             version: 1,
             defaults: {
-              mode: "report-only",
-              current_milestone: "M0"
+              mode: "hard-fail"
             },
             checks: [
               {
                 id: "dependency",
                 metric: "cycle and forbidden import direction detection",
-                mode: "report-only",
-                mode_by_milestone: {
-                  M2: "soft-fail",
-                  M3: "hard-fail"
-                },
+                mode: "hard-fail",
                 owner: "architecture",
                 scope: ["src/no-files/**"],
-                exceptions: [
-                  {
-                    id: "dep-expired-seed",
-                    kind: "allow-edge",
-                    owner: "architecture",
-                    reason: "seed lifecycle for ci-gate e2e",
-                    expires_milestone: "M1",
-                    from: "src/v11/domain/a.ts",
-                    to: "src/v11/application/b.ts"
-                  }
-                ]
+                exceptions: []
               }
             ]
           },
@@ -110,63 +95,35 @@ describe("fitness:check:ci milestone gate behavior", () => {
         "utf8"
       );
 
-      const baseEnv = {
-        ...process.env,
-        PAIRFLOW_FITNESS_POLICY_PATH: policyPath,
-        PAIRFLOW_FITNESS_REPORT_PATH: reportPath
-      };
-
-      const softFailRun = await runCommand({
+      const run = await runCommand({
         command: "bash",
         args: [scriptPath],
         cwd: process.cwd(),
         env: {
-          ...baseEnv,
-          PAIRFLOW_CI_MILESTONE: "M2"
+          ...process.env,
+          PAIRFLOW_FITNESS_POLICY_PATH: policyPath,
+          PAIRFLOW_FITNESS_REPORT_PATH: reportPath
         }
       });
 
-      expect(softFailRun.exitCode).toBe(0);
-      expect(softFailRun.stderr).toContain("soft-fail warnings");
-      expect(softFailRun.stdout).toContain("milestone=M2");
+      expect(run.exitCode).toBe(0);
+      expect(run.stderr).not.toContain("blocked");
+      expect(run.stdout).toContain(`policy=${policyPath}`);
+      expect(run.stdout).toContain(`out=${reportPath}`);
 
-      const softFailReport = JSON.parse(await readFile(reportPath, "utf8")) as {
-        checks: Array<{ id: string; mode: string; status: string }>;
+      const report = JSON.parse(await readFile(reportPath, "utf8")) as {
+        checks: Array<{ id: string; mode: string; status: string; summary: string }>;
       };
-      const softFailDependency = softFailReport.checks.find(
-        (check) => check.id === "dependency"
-      );
-      expect(softFailDependency?.mode).toBe("soft-fail");
-      expect(softFailDependency?.status).toBe("warn");
-
-      const hardFailRun = await runCommand({
-        command: "bash",
-        args: [scriptPath],
-        cwd: process.cwd(),
-        env: {
-          ...baseEnv,
-          PAIRFLOW_CI_MILESTONE: "M3"
-        }
-      });
-
-      expect(hardFailRun.exitCode).toBe(1);
-      expect(hardFailRun.stderr).toContain("blocked");
-      expect(hardFailRun.stdout).toContain("milestone=M3");
-
-      const hardFailReport = JSON.parse(await readFile(reportPath, "utf8")) as {
-        checks: Array<{ id: string; mode: string; status: string }>;
-      };
-      const hardFailDependency = hardFailReport.checks.find(
-        (check) => check.id === "dependency"
-      );
-      expect(hardFailDependency?.mode).toBe("hard-fail");
-      expect(hardFailDependency?.status).toBe("fail");
+      const dependency = report.checks.find((check) => check.id === "dependency");
+      expect(dependency?.mode).toBe("hard-fail");
+      expect(dependency?.status).toBe("pass");
+      expect(dependency?.summary).toContain("passed");
     },
     30_000
   );
 
   it(
-    "keeps complexity merge-allowed at M2 soft-fail but blocks at M3 hard-fail",
+    "blocks when an explicit hard-fail policy check fails",
     async () => {
       const root = await createTempRoot();
       const policyPath = join(root, "policy.json");
@@ -193,132 +150,13 @@ describe("fitness:check:ci milestone gate behavior", () => {
           {
             version: 1,
             defaults: {
-              mode: "report-only",
-              current_milestone: "M0"
+              mode: "hard-fail"
             },
             checks: [
               {
                 id: "complexity",
                 metric: "file and function complexity budget with top offenders",
-                mode: "report-only",
-                mode_by_milestone: {
-                  M2: "soft-fail",
-                  M3: "hard-fail"
-                },
-                owner: "architecture",
-                scope: [`${fixtureRelativePath}/**`],
-                exceptions: []
-              }
-            ]
-          },
-          null,
-          2
-        ),
-        "utf8"
-      );
-
-      const baseEnv = {
-        ...process.env,
-        PAIRFLOW_FITNESS_POLICY_PATH: policyPath,
-        PAIRFLOW_FITNESS_REPORT_PATH: reportPath
-      };
-
-      const softFailRun = await runCommand({
-        command: "bash",
-        args: [scriptPath],
-        cwd: process.cwd(),
-        env: {
-          ...baseEnv,
-          PAIRFLOW_CI_MILESTONE: "M2"
-        }
-      });
-
-      expect(softFailRun.exitCode).toBe(0);
-      expect(softFailRun.stderr).toContain("soft-fail warnings");
-      expect(softFailRun.stdout).toContain("milestone=M2");
-
-      const softFailReport = JSON.parse(await readFile(reportPath, "utf8")) as {
-        checks: Array<{ id: string; mode: string; status: string }>;
-      };
-      const softFailComplexity = softFailReport.checks.find(
-        (check) => check.id === "complexity"
-      );
-      expect(softFailComplexity?.mode).toBe("soft-fail");
-      expect(softFailComplexity?.status).toBe("fail");
-
-      const hardFailRun = await runCommand({
-        command: "bash",
-        args: [scriptPath],
-        cwd: process.cwd(),
-        env: {
-          ...baseEnv,
-          PAIRFLOW_CI_MILESTONE: "M3"
-        }
-      });
-
-      expect(hardFailRun.exitCode).toBe(1);
-      expect(hardFailRun.stderr).toContain("blocked");
-      expect(hardFailRun.stdout).toContain("milestone=M3");
-
-      const hardFailReport = JSON.parse(await readFile(reportPath, "utf8")) as {
-        checks: Array<{ id: string; mode: string; status: string }>;
-      };
-      const hardFailComplexity = hardFailReport.checks.find(
-        (check) => check.id === "complexity"
-      );
-      expect(hardFailComplexity?.mode).toBe("hard-fail");
-      expect(hardFailComplexity?.status).toBe("fail");
-    },
-    30_000
-  );
-
-  it(
-    "does not block CI when dependency check has no hard-fail findings at M6",
-    async () => {
-      const root = await createTempRoot();
-      const policyPath = join(root, "policy.json");
-      const reportPath = join(root, "fitness-report.json");
-      const scriptPath = resolve(process.cwd(), "scripts/fitness-check-ci.sh");
-
-      const fixtureDir = await mkdtemp(
-        join(process.cwd(), "src/v11/infrastructure/.fitness-dependency-ci-")
-      );
-      tempRepoArtifacts.push(fixtureDir);
-      const fixtureRelativePath = fixtureDir
-        .replace(`${process.cwd()}/`, "")
-        .replaceAll("\\", "/");
-      const fixtureFilePath = join(fixtureDir, "pathExists.ts");
-      await writeFile(
-        fixtureFilePath,
-        [
-          "import { access } from 'node:fs/promises';",
-          "export const pathExists = async (path: string): Promise<boolean> => {",
-          "  await access(path);",
-          "  return true;",
-          "};",
-          ""
-        ].join("\n"),
-        "utf8"
-      );
-
-      await writeFile(
-        policyPath,
-        JSON.stringify(
-          {
-            version: 1,
-            defaults: {
-              mode: "report-only",
-              current_milestone: "M6"
-            },
-            checks: [
-              {
-                id: "dependency",
-                metric: "cycle and forbidden import direction detection",
-                mode: "report-only",
-                mode_by_milestone: {
-                  M2: "soft-fail",
-                  M3: "hard-fail"
-                },
+                mode: "hard-fail",
                 owner: "architecture",
                 scope: [`${fixtureRelativePath}/**`],
                 exceptions: []
@@ -338,22 +176,19 @@ describe("fitness:check:ci milestone gate behavior", () => {
         env: {
           ...process.env,
           PAIRFLOW_FITNESS_POLICY_PATH: policyPath,
-          PAIRFLOW_FITNESS_REPORT_PATH: reportPath,
-          PAIRFLOW_CI_MILESTONE: "M6"
+          PAIRFLOW_FITNESS_REPORT_PATH: reportPath
         }
       });
 
-      expect(run.exitCode).toBe(0);
-      expect(run.stderr).not.toContain("blocked");
-      expect(run.stdout).toContain("milestone=M6");
+      expect(run.exitCode).toBe(1);
+      expect(run.stderr).toContain("blocked");
 
       const report = JSON.parse(await readFile(reportPath, "utf8")) as {
-        checks: Array<{ id: string; mode: string; status: string; summary: string }>;
+        checks: Array<{ id: string; mode: string; status: string }>;
       };
-      const dependency = report.checks.find((check) => check.id === "dependency");
-      expect(dependency?.mode).toBe("hard-fail");
-      expect(dependency?.status).toBe("pass");
-      expect(dependency?.summary).toContain("passed");
+      const complexity = report.checks.find((check) => check.id === "complexity");
+      expect(complexity?.mode).toBe("hard-fail");
+      expect(complexity?.status).toBe("fail");
     },
     30_000
   );

@@ -51,7 +51,6 @@ describe("transition fitness check", () => {
         id: "transition",
         metric: "state transition validation before persist",
         mode: "report-only",
-        exception_lifecycle_mode: undefined,
         owner: "architecture/runtime",
         scope: ["src/v11/application/**"],
         exceptions: []
@@ -81,7 +80,6 @@ describe("transition fitness check", () => {
         id: "transition",
         metric: "state transition validation before persist",
         mode: "report-only",
-        exception_lifecycle_mode: undefined,
         owner: "architecture/runtime",
         scope: ["src/v11/application/**"],
         exceptions: []
@@ -119,7 +117,6 @@ describe("transition fitness check", () => {
         id: "transition",
         metric: "state transition validation before persist",
         mode: "report-only",
-        exception_lifecycle_mode: undefined,
         owner: "architecture/runtime",
         scope: ["src/v11/application/**"],
         exceptions: []
@@ -152,7 +149,6 @@ describe("transition fitness check", () => {
         id: "transition",
         metric: "state transition validation before persist",
         mode: "report-only",
-        exception_lifecycle_mode: undefined,
         owner: "architecture/runtime",
         scope: ["src/v11/application/**"],
         exceptions: []
@@ -186,7 +182,6 @@ describe("transition fitness check", () => {
         id: "transition",
         metric: "state transition validation before persist",
         mode: "report-only",
-        exception_lifecycle_mode: undefined,
         owner: "architecture/runtime",
         scope: ["src/v11/application/**"],
         exceptions: []

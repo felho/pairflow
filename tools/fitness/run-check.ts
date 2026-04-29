@@ -8,14 +8,12 @@ import { runReport, type FitnessReport } from "./run-report.js";
 interface CliArgs {
   policy: string | undefined;
   out: string | undefined;
-  currentMilestone: string | undefined;
 }
 
 function parseArgs(argv: readonly string[]): CliArgs {
   const args: CliArgs = {
     policy: undefined,
-    out: undefined,
-    currentMilestone: undefined
+    out: undefined
   };
   for (let index = 0; index < argv.length; index += 1) {
     const token = argv[index];
@@ -26,11 +24,6 @@ function parseArgs(argv: readonly string[]): CliArgs {
     }
     if (token === "--out") {
       args.out = argv[index + 1];
-      index += 1;
-      continue;
-    }
-    if (token === "--current-milestone") {
-      args.currentMilestone = argv[index + 1];
       index += 1;
       continue;
     }
@@ -62,13 +55,9 @@ async function main() {
     repoRoot,
     args.out ?? ".pairflow/evidence/fitness-report.json"
   );
-  const currentMilestoneOverride =
-    args.currentMilestone ?? process.env.PAIRFLOW_FITNESS_CURRENT_MILESTONE;
-
   const report = await runReport({
     policyPath,
-    outPath,
-    currentMilestoneOverride
+    outPath
   });
 
   const blockingFailures = report.checks.filter(shouldBlock);

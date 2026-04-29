@@ -75,7 +75,6 @@ describe("critical side-effect fitness check", () => {
         id: "critical_side_effect",
         metric: "critical command side-effect invariant coverage",
         mode: "report-only",
-        exception_lifecycle_mode: undefined,
         owner: "architecture/runtime",
         scope: ["src/v11/application/**"],
         exceptions: []
@@ -130,7 +129,6 @@ describe("critical side-effect fitness check", () => {
         id: "critical_side_effect",
         metric: "critical command side-effect invariant coverage",
         mode: "report-only",
-        exception_lifecycle_mode: undefined,
         owner: "architecture/runtime",
         scope: ["src/v11/application/**"],
         exceptions: []
@@ -149,7 +147,6 @@ describe("critical side-effect fitness check", () => {
         id: "critical_side_effect",
         metric: "critical command side-effect invariant coverage",
         mode: undefined,
-        exception_lifecycle_mode: undefined,
         owner: "architecture/runtime",
         scope: undefined,
         exceptions: undefined
@@ -199,7 +196,6 @@ describe("critical side-effect fitness check", () => {
         id: "critical_side_effect",
         metric: "critical command side-effect invariant coverage",
         mode: "report-only",
-        exception_lifecycle_mode: undefined,
         owner: "architecture/runtime",
         scope: ["src/v11/application/**"],
         exceptions: []
@@ -254,7 +250,6 @@ describe("critical side-effect fitness check", () => {
         id: "critical_side_effect",
         metric: "critical command side-effect invariant coverage",
         mode: "report-only",
-        exception_lifecycle_mode: undefined,
         owner: "architecture/runtime",
         scope: ["src/v11/application/**"],
         exceptions: []
@@ -312,7 +307,6 @@ describe("critical side-effect fitness check", () => {
         id: "critical_side_effect",
         metric: "critical command side-effect invariant coverage",
         mode: "report-only",
-        exception_lifecycle_mode: undefined,
         owner: "architecture/runtime",
         scope: ["src/v11/application/**"],
         exceptions: []
@@ -363,7 +357,6 @@ describe("critical side-effect fitness check", () => {
         id: "critical_side_effect",
         metric: "critical command side-effect invariant coverage",
         mode: "report-only",
-        exception_lifecycle_mode: undefined,
         owner: "architecture/runtime",
         scope: ["src/v11/application/**"],
         exceptions: []
@@ -428,7 +421,6 @@ describe("critical side-effect fitness check", () => {
         id: "critical_side_effect",
         metric: "critical command side-effect invariant coverage",
         mode: "report-only",
-        exception_lifecycle_mode: undefined,
         owner: "architecture/runtime",
         scope: ["src/v11/application/**"],
         exceptions: []

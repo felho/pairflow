@@ -50,7 +50,6 @@ describe("contract timeout policy fitness check", () => {
         metric:
           "v11 contract tests must use shared timeout constants (no raw timeout literals)",
         mode: "report-only",
-        exception_lifecycle_mode: undefined,
         owner: "architecture/runtime",
         scope: ["tests/contracts/v11/*.contract.test.ts"],
         exceptions: []
@@ -85,7 +84,6 @@ describe("contract timeout policy fitness check", () => {
         metric:
           "v11 contract tests must use shared timeout constants (no raw timeout literals)",
         mode: "report-only",
-        exception_lifecycle_mode: undefined,
         owner: "architecture/runtime",
         scope: ["tests/contracts/v11/*.contract.test.ts"],
         exceptions: []
@@ -121,7 +119,6 @@ describe("contract timeout policy fitness check", () => {
         metric:
           "v11 contract tests must use shared timeout constants (no raw timeout literals)",
         mode: "report-only",
-        exception_lifecycle_mode: undefined,
         owner: "architecture/runtime",
         scope: ["tests/contracts/v11/*.contract.test.ts"],
         exceptions: []
@@ -141,7 +138,6 @@ describe("contract timeout policy fitness check", () => {
         metric:
           "v11 contract tests must use shared timeout constants (no raw timeout literals)",
         mode: "report-only",
-        exception_lifecycle_mode: undefined,
         owner: "architecture/runtime",
         scope: undefined,
         exceptions: []

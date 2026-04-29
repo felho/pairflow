@@ -221,12 +221,12 @@ A fitness findingok kezelesere kotelezo triage sorrend:
 
 1. **Refactor first** (alapertelmezett), ha a finding valos runtime/architecture kockazatot jelez.
 2. **Policy/checker refinement**, ha igazolt, reprodukalhato false positive mintat latunk.
-3. **Temporary exception**, ha az elozo ketto idoben vagy kockazatban nem vallalhato az adott milestone-ban.
+3. **Temporary exception**, ha az elozo ketto idoben vagy kockazatban nem vallalhato.
 
 Kotelezo guardrailok:
 
 1. Nincs csendes downgrade `fail` -> `warn` indoklas es teszt nelkul.
-2. Nincs hatarozatlan ideju exception; `owner + reason + expires_milestone` kotelezo.
+2. Nincs indoklas nelkuli exception; `owner + reason` kotelezo.
 3. Minden checker-semantika valtozasnal audit nyom kell:
    - commit,
    - checker/test artifact,

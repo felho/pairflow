@@ -2,8 +2,7 @@
   "version": 1,
   "updated_at": "2026-03-21T09:05:00.000Z",
   "defaults": {
-    "mode": "report-only",
-    "current_milestone": "M6"
+    "mode": "hard-fail"
   },
   "checks": [
     {
@@ -13,11 +12,7 @@
         "src/v11/application/**",
         "src/v11/domain/**"
       ],
-      "mode": "report-only",
-      "mode_by_milestone": {
-        "M2": "soft-fail",
-        "M3": "hard-fail"
-      },
+      "mode": "hard-fail",
       "owner": "architecture",
       "exceptions": []
     },
@@ -28,11 +23,7 @@
         "src/v11/application/**",
         "src/v11/infrastructure/**"
       ],
-      "mode": "report-only",
-      "mode_by_milestone": {
-        "M2": "soft-fail",
-        "M3": "hard-fail"
-      },
+      "mode": "hard-fail",
       "owner": "architecture/runtime",
       "exceptions": []
     },
@@ -43,11 +34,7 @@
         "src/v11/application/**",
         "src/v11/domain/**"
       ],
-      "mode": "report-only",
-      "mode_by_milestone": {
-        "M2": "soft-fail",
-        "M3": "hard-fail"
-      },
+      "mode": "hard-fail",
       "owner": "architecture/runtime",
       "exceptions": []
     },
@@ -57,11 +44,7 @@
       "scope": [
         "src/v11/**"
       ],
-      "mode": "report-only",
-      "mode_by_milestone": {
-        "M2": "soft-fail",
-        "M3": "hard-fail"
-      },
+      "mode": "hard-fail",
       "owner": "architecture/observability",
       "exceptions": []
     },
@@ -81,10 +64,7 @@
       "scope": [
         "tests/contracts/v11/*.contract.test.ts"
       ],
-      "mode": "report-only",
-      "mode_by_milestone": {
-        "M3": "hard-fail"
-      },
+      "mode": "hard-fail",
       "owner": "architecture/runtime",
       "exceptions": []
     },
@@ -94,12 +74,7 @@
       "scope": [
         "src/v11/**"
       ],
-      "mode": "report-only",
-      "mode_by_milestone": {
-        "M2": "soft-fail",
-        "M3": "hard-fail"
-      },
-      "exception_lifecycle_mode": "hard-fail",
+      "mode": "hard-fail",
       "owner": "architecture",
       "exceptions": []
     },
@@ -109,11 +84,7 @@
       "scope": [
         "src/v11/application/**"
       ],
-      "mode": "report-only",
-      "mode_by_milestone": {
-        "M2": "soft-fail",
-        "M3": "hard-fail"
-      },
+      "mode": "hard-fail",
       "owner": "architecture/runtime",
       "exceptions": []
     }

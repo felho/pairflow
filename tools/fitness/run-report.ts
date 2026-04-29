@@ -12,14 +12,12 @@ import type { FitnessPolicy, FitnessReport, FitnessReportCheck } from "./types.j
 interface CliArgs {
   policy: string | undefined;
   out: string | undefined;
-  currentMilestone: string | undefined;
 }
 
 function parseArgs(argv: readonly string[]): CliArgs {
   const args: CliArgs = {
     policy: undefined,
-    out: undefined,
-    currentMilestone: undefined
+    out: undefined
   };
   for (let index = 0; index < argv.length; index += 1) {
     const token = argv[index];
@@ -30,11 +28,6 @@ function parseArgs(argv: readonly string[]): CliArgs {
     }
     if (token === "--out") {
       args.out = argv[index + 1];
-      index += 1;
-      continue;
-    }
-    if (token === "--current-milestone") {
-      args.currentMilestone = argv[index + 1];
       index += 1;
       continue;
     }
@@ -59,19 +52,15 @@ export function buildReport(
 export async function runReport({
   policyPath,
   outPath,
-  repoRoot,
-  currentMilestoneOverride
+  repoRoot
 }: {
   policyPath: string;
   outPath: string | undefined;
   repoRoot?: string;
-  currentMilestoneOverride?: string | undefined;
 }): Promise<FitnessReport> {
   const resolvedRepoRoot = repoRoot ?? process.cwd();
   const policy = await readPolicy(policyPath);
-  const checks = await buildReportChecks(policy, resolvedRepoRoot, {
-    currentMilestoneOverride
-  });
+  const checks = await buildReportChecks(policy, resolvedRepoRoot);
   const report = buildReport(policy, policyPath, checks);
   const reportText = JSON.stringify(report, null, 2);
   if (outPath !== undefined) {
@@ -92,14 +81,10 @@ async function main() {
   );
   const outPath =
     args.out === undefined ? undefined : resolve(repoRoot, args.out);
-  const currentMilestoneOverride =
-    args.currentMilestone ?? process.env.PAIRFLOW_FITNESS_CURRENT_MILESTONE;
-
   await runReport({
     policyPath,
     outPath,
-    repoRoot,
-    currentMilestoneOverride
+    repoRoot
   });
 }
 

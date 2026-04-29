@@ -28,22 +28,6 @@ function asStringArray(value: unknown): string[] | undefined {
   return values;
 }
 
-function asStringRecord(
-  value: unknown
-): Record<string, string> | undefined {
-  if (!isRecord(value)) {
-    return undefined;
-  }
-  const mapped: Record<string, string> = {};
-  for (const [key, entry] of Object.entries(value)) {
-    if (typeof entry !== "string") {
-      throw new Error("Fitness policy mode_by_milestone entries must be strings.");
-    }
-    mapped[key] = entry;
-  }
-  return mapped;
-}
-
 function parseException(rawException: unknown): FitnessPolicyException {
   if (!isRecord(rawException)) {
     throw new Error("Fitness policy exception entries must be objects.");
@@ -52,16 +36,14 @@ function parseException(rawException: unknown): FitnessPolicyException {
   const kind = asString(rawException.kind);
   const owner = asString(rawException.owner);
   const reason = asString(rawException.reason);
-  const expiresMilestone = asString(rawException.expires_milestone);
   if (
     id === undefined
     || kind === undefined
     || owner === undefined
     || reason === undefined
-    || expiresMilestone === undefined
   ) {
     throw new Error(
-      "Fitness policy exception must define id, kind, owner, reason, expires_milestone."
+      "Fitness policy exception must define id, kind, owner, reason."
     );
   }
   return {
@@ -69,7 +51,6 @@ function parseException(rawException: unknown): FitnessPolicyException {
     kind,
     owner,
     reason,
-    expires_milestone: expiresMilestone,
     from: asString(rawException.from),
     to: asString(rawException.to),
     paths: asStringArray(rawException.paths)
@@ -99,8 +80,6 @@ function parseCheck(rawCheck: unknown): FitnessPolicyCheck {
     id,
     metric,
     mode: asString(rawCheck.mode),
-    mode_by_milestone: asStringRecord(rawCheck.mode_by_milestone),
-    exception_lifecycle_mode: asString(rawCheck.exception_lifecycle_mode),
     owner: asString(rawCheck.owner),
     scope: asStringArray(rawCheck.scope),
     exceptions: parseExceptions(rawCheck.exceptions)
@@ -120,8 +99,7 @@ export async function readPolicy(policyPath: string): Promise<FitnessPolicy> {
   const checks = checksRaw.map((check) => parseCheck(check));
   const defaults = isRecord(parsed.defaults)
     ? {
-        mode: asString(parsed.defaults.mode),
-        current_milestone: asString(parsed.defaults.current_milestone)
+        mode: asString(parsed.defaults.mode)
       }
     : undefined;
   return {
