@@ -139,7 +139,7 @@ export async function updateBubbleReviewPolicy(
     )
   ) {
     throw new Error(
-      `${REVIEW_POLICY_PATCH_INVALID}: review_policy.meta_review_consecutive_clean_runs_required: ${REVIEW_POLICY_CONSECUTIVE_CLEAN_RUNS_REQUIRED_INVALID}: Must be an integer >= 1`
+      `${REVIEW_POLICY_PATCH_INVALID}: review_policy.meta_review_consecutive_clean_runs_required: ${REVIEW_POLICY_CONSECUTIVE_CLEAN_RUNS_REQUIRED_INVALID}: Must be an integer >= 1; context=${JSON.stringify({ bubbleTomlPath: input.bubbleTomlPath })}`
     );
   }
 

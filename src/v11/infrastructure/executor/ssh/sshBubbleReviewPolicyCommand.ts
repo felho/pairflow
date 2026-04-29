@@ -63,6 +63,7 @@ export class RemoteBubbleReviewPolicyCommandError extends Error {
     | "REMOTE_REVIEW_POLICY_TRANSPORT_FAILED"
     | "REMOTE_REVIEW_POLICY_PAYLOAD_INVALID";
   public readonly reasonCode?: string;
+  public readonly context?: Record<string, unknown>;
 
   public constructor(input: {
     code:
@@ -70,11 +71,15 @@ export class RemoteBubbleReviewPolicyCommandError extends Error {
       | "REMOTE_REVIEW_POLICY_PAYLOAD_INVALID";
     message: string;
     cause?: unknown;
+    context?: Record<string, unknown>;
     reasonCode?: string;
   }) {
     super(input.message, input.cause === undefined ? undefined : { cause: input.cause });
     this.name = "RemoteBubbleReviewPolicyCommandError";
     this.code = input.code;
+    if (input.context !== undefined) {
+      this.context = input.context;
+    }
     if (input.reasonCode !== undefined) {
       this.reasonCode = input.reasonCode;
     }
@@ -100,7 +105,12 @@ function extractMarkerPayload(input: {
     throw new RemoteBubbleReviewPolicyCommandError({
       code: "REMOTE_REVIEW_POLICY_PAYLOAD_INVALID",
       reasonCode: "REMOTE_REVIEW_POLICY_MARKERS_MISSING",
-      message: "Remote review-policy update did not return a marked result payload."
+      message: "Remote review-policy update did not return a marked result payload.",
+      context: {
+        stdoutLength: input.stdout.length,
+        startMarker: input.startMarker,
+        endMarker: input.endMarker
+      }
     });
   }
   return input.stdout
@@ -215,13 +225,19 @@ function parseRemoteBubbleReviewPolicyResult(
       code: "REMOTE_REVIEW_POLICY_PAYLOAD_INVALID",
       reasonCode: "REMOTE_REVIEW_POLICY_JSON_INVALID",
       message: "Remote review-policy update returned invalid JSON.",
+      context: {
+        payloadLength: payload.length
+      },
       cause: error
     });
   }
   throw new RemoteBubbleReviewPolicyCommandError({
     code: "REMOTE_REVIEW_POLICY_PAYLOAD_INVALID",
     reasonCode: "REMOTE_REVIEW_POLICY_KIND_INVALID",
-    message: "Remote review-policy update returned an unsupported result kind."
+    message: "Remote review-policy update returned an unsupported result kind.",
+    context: {
+      payloadLength: payload.length
+    }
   });
 }
 
@@ -247,6 +263,11 @@ export async function executeRemoteBubbleReviewPolicyCommand(
       reasonCode: "REMOTE_REVIEW_POLICY_TRANSPORT_INVOKE_FAILED",
       message:
         `ssh transport failed before completion: ${summarizeTransportOutput(reason)}`,
+      context: {
+        bubbleId: input.bubbleId,
+        remoteAlias: input.remoteTarget.alias,
+        remoteClonePath: input.remoteClonePath
+      },
       cause: error
     });
   }
@@ -259,7 +280,13 @@ export async function executeRemoteBubbleReviewPolicyCommand(
       reasonCode: "REMOTE_REVIEW_POLICY_TRANSPORT_EXIT_FAILED",
       message:
         `ssh transport failed (exit ${result.exitCode}): `
-        + summarizeTransportOutput(detailSource)
+        + summarizeTransportOutput(detailSource),
+      context: {
+        bubbleId: input.bubbleId,
+        remoteAlias: input.remoteTarget.alias,
+        remoteClonePath: input.remoteClonePath,
+        exitCode: result.exitCode
+      }
     });
   }
 
