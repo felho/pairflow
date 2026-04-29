@@ -69,6 +69,87 @@ Route-surface rule:
    - `route_class` values returned by `ResolvePlanState` stay in snake_case
    - example: `route_class=troubleshoot_bubble` targets `TroubleshootBubble`
 
+## Delegation Enforcement Contract
+
+`ExecutePairflowPlan` is an orchestrator, not a substitute implementation of the
+workflow surfaces it routes to.
+
+Hard rules:
+
+1. every route whose `target_workflow_surface` is owned by another workflow must be executed as a distinct delegated workflow step before the orchestrator may advance
+2. reading a downstream workflow file and applying its rules locally does not count as executing that workflow
+3. the orchestrator must not approve, refine, create, close, or troubleshoot artifacts by approximating the downstream workflow in its own context
+4. each delegated workflow step must return a concrete result that can be recorded in the route ledger before `ResolvePlanState` is run again
+5. if a delegated workflow cannot be executed in the required surface, stop at `HumanCheckpoint` or a real blocker instead of silently downgrading to inline reasoning
+
+Mandatory route-to-delegation mapping:
+
+| Route Surface | Required Delegated Execution | Minimum Result Needed Before Continuing |
+|---|---|---|
+| `FixPlanMetadata` | repo-local `Workflows/FixPlanMetadata.md` | repaired metadata or fail-closed checkpoint |
+| `ReviewPlan` | `CreatePairflowSpec` `ReviewSpec` in `plan-mode` | `approve_plan`, `refine_plan`, `split_plan`, or `block_not_ready` |
+| `CreateTask` | `CreatePairflowSpec` `CreateTask` | created/refined task path plus task metadata status |
+| `ReviewTask` | `CreatePairflowSpec` `ReviewSpec` in `task-mode` | `approve_task`, `refine_task`, `route_back_to_plan`, or `block_not_ready` |
+| `CreateDocumentBubble` | repo-local `HandleDocumentBubble` delegating to `UsePairflow` `CreateBubble` | created/started document bubble id and boundary status |
+| `ReviewDocumentBubble` | repo-local `HandleDocumentBubble` delegating to `UsePairflow` `ReviewBubble` | review result and human approval/rework checkpoint |
+| `CloseDocumentBubble` | repo-local `HandleDocumentBubble` delegating to `UsePairflow` `CloseBubble` | close/merge result and refreshed task linkage/status evidence |
+| `CreateImplementationBubble` | repo-local `HandleImplementationBubble` delegating to `UsePairflow` `CreateBubble` | created/started implementation bubble id and boundary status |
+| `ReviewImplementationBubble` | repo-local `HandleImplementationBubble` delegating to `UsePairflow` `ReviewBubble` | review result and human approval/rework checkpoint |
+| `CloseImplementationBubble` | repo-local `HandleImplementationBubble` delegating to `UsePairflow` `CloseBubble` | close/merge result before `UpdateProgress` aftermath |
+| `HandleNormalizedReplan` | repo-local `Workflows/HandleNormalizedReplan.md` | normalized replanning follow-through result |
+| `TroubleshootBubble` | active bubble handler delegating to `UsePairflow` troubleshooting surface | troubleshooting result and explicit stop boundary |
+
+Plan/task review gates:
+
+1. `plan_review` is not satisfied by the orchestrator reading the plan and deciding it looks ready
+2. `task_review` is not satisfied by the orchestrator creating a task with `status=approved`
+3. `CreateTask` output may leave a task in `draft`, `under_review`, or another workflow-defined state; any transition to bubble-ready status must come from the delegated task review result or an explicitly delegated task-creation contract that says the task is already approved
+4. no bubble route may be executed unless every upstream plan/task route in the current execution chain has a route-ledger entry with a delegated result
+
+Fresh-context requirement:
+
+1. downstream specialized workflows must run in fresh context whenever feasible
+2. if the execution environment cannot spawn a fresh context, the orchestrator must still create a distinct workflow step with a compact input packet and a compact returned result
+3. the returned result, not the orchestrator's private reasoning, is the authority for the next routing decision
+
+### Route Ledger
+
+Maintain a route ledger during every invocation.
+
+Before delegating a route, append:
+
+```yaml
+route_step: <number>
+resolved_route:
+  route_class: <route_class>
+  target_workflow_surface: <target_workflow_surface>
+  continuation_mode: <continuation_mode>
+  reason_code: <reason_code>
+delegation:
+  required_workflow: <workflow name>
+  input_artifacts:
+    - <path or id>
+```
+
+After the delegated workflow returns, update the same entry:
+
+```yaml
+delegation_result:
+  status: <completed|checkpoint|blocked>
+  decision: <workflow-specific decision>
+  changed_artifacts:
+    - <path or id>
+  evidence_summary: <short factual summary>
+next_resolution_allowed: <true|false>
+```
+
+Ledger rules:
+
+1. a route with `continuation_mode=auto_continue` may continue only when `next_resolution_allowed=true`
+2. if the same route repeats with no material new state recorded in the ledger, stop at `HumanCheckpoint` or troubleshooting
+3. final reports must include the route ledger summary when any route was delegated
+4. if a bubble lifecycle action is attempted without ledger proof of prior plan/task review gates, treat that as a workflow violation and stop
+
 ## Orchestrator Execution Style
 
 ### 1. Resolve before acting
@@ -124,7 +205,7 @@ Plan-completion rule:
 
 ### 3. Fresh-context downstream execution
 
-Downstream specialized workflows should run in fresh context by default.
+Downstream specialized workflows must run in fresh context whenever feasible.
 
 Reasons:
 
@@ -136,7 +217,9 @@ Practical rule:
 
 1. keep only orchestration state in the top-level context
 2. pass the minimum correct artifact context to the delegated workflow
-3. prefer a fresh sub-agent execution whenever feasible
+3. use a fresh sub-agent execution whenever the runtime supports it and the user has authorized delegated/sub-agent workflow execution
+4. when fresh sub-agent execution is unavailable or not authorized, create a distinct local workflow step with a compact input packet and a compact returned result instead of blending the downstream workflow into orchestration reasoning
+5. do not advance from `ReviewPlan`, `CreateTask`, `ReviewTask`, bubble handler, or aftermath routes without a route-ledger result from that distinct workflow step
 
 ### 4. Continuation-mode policy
 
