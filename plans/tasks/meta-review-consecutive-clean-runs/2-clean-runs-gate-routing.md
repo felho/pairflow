@@ -5,7 +5,7 @@ task_family_id: clean-runs-gate-routing
 sequence_key: "2"
 task_id: 2-clean-runs-gate-routing
 title: "Meta-Review Consecutive Clean Runs Gate Routing"
-status: implementable
+status: in_progress
 phase: phase2
 target_files:
   - src/v11/shared/metaReviewGate/metaReviewGateCurrentRunFinalization.ts
@@ -30,7 +30,7 @@ system_context_ref: docs/pairflow-initial-design.md
 owners:
   - "felho"
 doc_bubble_id: clean-runs-gate-routing-doc
-impl_bubble_id: null
+impl_bubble_id: 2-clean-runs-gate-routing-impl
 supersedes: []
 superseded_by: null
 archive_group: 2026-04-27-meta-review-consecutive-clean-runs-plan-v1
