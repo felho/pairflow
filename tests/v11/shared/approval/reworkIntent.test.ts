@@ -69,7 +69,8 @@ describe("v11 approval reworkIntent", () => {
         meta_review: {
           auto_rework_count: 2,
           auto_rework_limit: 5,
-          sticky_human_gate: true
+          sticky_human_gate: true,
+          consecutive_clean_runs: 0,
         }
       },
       implementer: "codex",
@@ -88,7 +89,8 @@ describe("v11 approval reworkIntent", () => {
     expect(result.state.meta_review).toMatchObject({
       auto_rework_count: 2,
       auto_rework_limit: 5,
-      sticky_human_gate: false
+      sticky_human_gate: false,
+      consecutive_clean_runs: 0,
     });
     expect(result.state.pending_rework_intent).toBeNull();
     expect(result.state.round_role_history).toEqual([

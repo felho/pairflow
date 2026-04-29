@@ -74,6 +74,8 @@ export const REVIEW_POLICY_LOOP_MODE_INVALID =
   "REVIEW_POLICY_LOOP_MODE_INVALID" as const;
 export const REVIEW_POLICY_THRESHOLD_INVALID =
   "REVIEW_POLICY_THRESHOLD_INVALID" as const;
+export const REVIEW_POLICY_CONSECUTIVE_CLEAN_RUNS_REQUIRED_INVALID =
+  "REVIEW_POLICY_CONSECUTIVE_CLEAN_RUNS_REQUIRED_INVALID" as const;
 
 function formatCreateReviewArtifactTypeError(
   reasonCode:
@@ -459,6 +461,33 @@ function readStringArray(
   });
 
   return result;
+}
+
+function readReviewPolicyConsecutiveCleanRunsRequired(
+  source: Record<string, unknown>,
+  key: string,
+  path: string,
+  errors: ValidationError[],
+  required: boolean
+): number | undefined {
+  const value = source[key];
+  if (value === undefined) {
+    if (required) {
+      errors.push({ path, message: "Missing required field" });
+    }
+    return undefined;
+  }
+
+  if (!isInteger(value) || value < 1) {
+    errors.push({
+      path,
+      message:
+        `${REVIEW_POLICY_CONSECUTIVE_CLEAN_RUNS_REQUIRED_INVALID}: Must be an integer >= 1`
+    });
+    return undefined;
+  }
+
+  return value;
 }
 
 function isSafeLocalOverlayEntry(value: string): boolean {
@@ -905,14 +934,15 @@ export function validateBubbleConfig(input: unknown): ValidationResult<BubbleCon
     ideationTaskPending = false;
   }
 
+  const allowedReviewPolicyKeys = new Set([
+    "review_loop_mode",
+    "reviewer_blocking_min_severity",
+    "meta_review_auto_rework_min_severity",
+    "meta_review_consecutive_clean_runs_required"
+  ]);
   if (reviewPolicy !== undefined) {
-    const allowedKeys = new Set([
-      "review_loop_mode",
-      "reviewer_blocking_min_severity",
-      "meta_review_auto_rework_min_severity"
-    ]);
     for (const key of Object.keys(reviewPolicy)) {
-      if (allowedKeys.has(key)) {
+      if (allowedReviewPolicyKeys.has(key)) {
         continue;
       }
 
@@ -926,11 +956,7 @@ export function validateBubbleConfig(input: unknown): ValidationResult<BubbleCon
 
   const hasExplicitReviewPolicyFields =
     reviewPolicy !== undefined &&
-    (
-      reviewPolicy.review_loop_mode !== undefined ||
-      reviewPolicy.reviewer_blocking_min_severity !== undefined ||
-      reviewPolicy.meta_review_auto_rework_min_severity !== undefined
-    );
+    Object.keys(reviewPolicy).some((key) => allowedReviewPolicyKeys.has(key));
 
   const reviewPolicyLoopModeCandidate =
     reviewPolicy?.review_loop_mode ?? DEFAULT_REVIEW_POLICY_LOOP_MODE;
@@ -976,6 +1002,19 @@ export function validateBubbleConfig(input: unknown): ValidationResult<BubbleCon
   )
     ? reviewPolicySeverityCandidate
     : DEFAULT_REVIEW_POLICY_AUTO_REWORK_MIN_SEVERITY;
+
+  const reviewPolicyConsecutiveCleanRunsRequired =
+    reviewPolicy === undefined
+      ? undefined
+      : (
+          readReviewPolicyConsecutiveCleanRunsRequired(
+            reviewPolicy,
+            "meta_review_consecutive_clean_runs_required",
+            "review_policy.meta_review_consecutive_clean_runs_required",
+            errors,
+            false
+          )
+        );
 
   let validatedExecutor: BubbleConfig["executor"] | undefined;
   if (executor !== undefined) {
@@ -1054,7 +1093,13 @@ export function validateBubbleConfig(input: unknown): ValidationResult<BubbleCon
       : {
           review_loop_mode: reviewPolicyLoopMode,
           reviewer_blocking_min_severity: reviewPolicyReviewerSeverity,
-          meta_review_auto_rework_min_severity: reviewPolicySeverity
+          meta_review_auto_rework_min_severity: reviewPolicySeverity,
+          ...(reviewPolicyConsecutiveCleanRunsRequired !== undefined
+            ? {
+                meta_review_consecutive_clean_runs_required:
+                  reviewPolicyConsecutiveCleanRunsRequired
+              }
+            : {})
         };
 
   const validatedConfig: BubbleConfig = {
@@ -1325,7 +1370,10 @@ export function renderBubbleConfigToml(config: BubbleConfig): string {
           )}`,
           `meta_review_auto_rework_min_severity = ${tomlString(
             reviewPolicy.meta_review_auto_rework_min_severity
-          )}`
+          )}`,
+          reviewPolicy.meta_review_consecutive_clean_runs_required !== undefined
+            ? `meta_review_consecutive_clean_runs_required = ${reviewPolicy.meta_review_consecutive_clean_runs_required}`
+            : undefined
         ]
       : []),
     ...(executor !== undefined

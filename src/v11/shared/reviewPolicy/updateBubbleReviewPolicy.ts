@@ -4,6 +4,7 @@ import { dirname, join } from "node:path";
 
 import {
   parseBubbleConfigToml,
+  REVIEW_POLICY_CONSECUTIVE_CLEAN_RUNS_REQUIRED_INVALID,
   renderBubbleConfigToml
 } from "../../../config/bubbleConfig.js";
 import type {
@@ -15,6 +16,7 @@ import { normalizeBubbleReviewPolicy } from "./reviewPolicyRuntime.js";
 
 export const REVIEW_POLICY_WRITE_CONFLICT =
   "REVIEW_POLICY_WRITE_CONFLICT" as const;
+export const REVIEW_POLICY_PATCH_INVALID = "REVIEW_POLICY_PATCH_INVALID" as const;
 
 export interface UpdateBubbleReviewPolicyInput {
   bubbleTomlPath: string;
@@ -22,6 +24,7 @@ export interface UpdateBubbleReviewPolicyInput {
     review_loop_mode?: BubbleReviewLoopMode;
     reviewer_blocking_min_severity?: BubbleReviewAutoReworkSeverity;
     meta_review_auto_rework_min_severity?: BubbleReviewAutoReworkSeverity;
+    meta_review_consecutive_clean_runs_required?: number;
   };
   expectedContent?: string;
   readFile?: (path: string, encoding: "utf8") => Promise<string>;
@@ -125,18 +128,44 @@ export async function updateBubbleReviewPolicy(
 
   const previousConfig = parseBubbleConfigToml(previousBubbleToml);
   const currentPolicy = normalizeBubbleReviewPolicy(previousConfig);
+  const currentStoredPolicy = previousConfig.review_policy;
+  const patchedConsecutiveCleanRunsRequired =
+    input.patch.meta_review_consecutive_clean_runs_required;
+  if (
+    patchedConsecutiveCleanRunsRequired !== undefined
+    && (
+      !Number.isInteger(patchedConsecutiveCleanRunsRequired)
+      || patchedConsecutiveCleanRunsRequired < 1
+    )
+  ) {
+    throw new Error(
+      `${REVIEW_POLICY_PATCH_INVALID}: review_policy.meta_review_consecutive_clean_runs_required: ${REVIEW_POLICY_CONSECUTIVE_CLEAN_RUNS_REQUIRED_INVALID}: Must be an integer >= 1`
+    );
+  }
+
+  const nextReviewPolicy: BubbleConfig["review_policy"] = {
+    review_loop_mode:
+      input.patch.review_loop_mode ?? currentPolicy.review_loop_mode,
+    reviewer_blocking_min_severity:
+      input.patch.reviewer_blocking_min_severity
+      ?? currentPolicy.reviewer_blocking_min_severity,
+    meta_review_auto_rework_min_severity:
+      input.patch.meta_review_auto_rework_min_severity
+      ?? currentPolicy.meta_review_auto_rework_min_severity,
+    ...(
+      input.patch.meta_review_consecutive_clean_runs_required !== undefined
+      || currentStoredPolicy?.meta_review_consecutive_clean_runs_required !== undefined
+        ? {
+            meta_review_consecutive_clean_runs_required:
+              patchedConsecutiveCleanRunsRequired
+              ?? currentPolicy.meta_review_consecutive_clean_runs_required
+          }
+        : {}
+    )
+  };
   const nextConfig: BubbleConfig = {
     ...previousConfig,
-    review_policy: {
-      review_loop_mode:
-        input.patch.review_loop_mode ?? currentPolicy.review_loop_mode,
-      reviewer_blocking_min_severity:
-        input.patch.reviewer_blocking_min_severity
-        ?? currentPolicy.reviewer_blocking_min_severity,
-      meta_review_auto_rework_min_severity:
-        input.patch.meta_review_auto_rework_min_severity
-        ?? currentPolicy.meta_review_auto_rework_min_severity
-    }
+    review_policy: nextReviewPolicy
   };
   const nextBubbleToml = renderBubbleConfigToml(nextConfig);
   await writeBubbleTomlAtomically({

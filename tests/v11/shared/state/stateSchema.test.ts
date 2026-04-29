@@ -17,7 +17,8 @@ describe("v11 shared state schema", () => {
       runtime_delivery: null,
       auto_rework_count: 0,
       auto_rework_limit: 10,
-      sticky_human_gate: false
+      sticky_human_gate: false,
+      consecutive_clean_runs: 0,
     });
   });
 
@@ -72,11 +73,48 @@ describe("v11 shared state schema", () => {
         }),
         auto_rework_count: 0,
         auto_rework_limit: 5,
-        sticky_human_gate: false
+        sticky_human_gate: false,
+        consecutive_clean_runs: 0,
       }
     });
 
     expect(result.ok).toBe(true);
+  });
+
+  it("preserves non-zero meta-review clean-run streaks through the v11 shared schema", () => {
+    const executionContext = buildMetaReviewExecutionContext({
+      bubbleId: "b_v11_state_schema_clean_runs_01",
+      round: 2,
+      startedAt: "2026-04-06T10:00:00.000Z",
+      watchdogTimeoutMinutes: 60,
+      attempt: 1
+    });
+
+    const result = validateBubbleStateSnapshot({
+      bubble_id: "b_v11_state_schema_clean_runs_01",
+      state: "RUNNING",
+      round: 2,
+      active_agent: "codex",
+      active_since: "2026-04-06T10:00:00.000Z",
+      active_role: "meta_reviewer",
+      execution_context: metaReviewExecutionContextToRunningContext(executionContext),
+      round_role_history: [],
+      last_command_at: "2026-04-06T10:01:00.000Z",
+      meta_review: {
+        execution_context: executionContext,
+        runtime_delivery: null,
+        auto_rework_count: 0,
+        auto_rework_limit: 5,
+        sticky_human_gate: false,
+        consecutive_clean_runs: 3,
+      }
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
+      return;
+    }
+    expect(result.value.meta_review?.consecutive_clean_runs).toBe(3);
   });
 
   it("rejects partially correlated meta-review runtime-delivery diagnostics", () => {
@@ -110,7 +148,8 @@ describe("v11 shared state schema", () => {
         },
         auto_rework_count: 0,
         auto_rework_limit: 5,
-        sticky_human_gate: false
+        sticky_human_gate: false,
+        consecutive_clean_runs: 0,
       }
     });
 
@@ -161,7 +200,8 @@ describe("v11 shared state schema", () => {
         },
         auto_rework_count: 0,
         auto_rework_limit: 5,
-        sticky_human_gate: false
+        sticky_human_gate: false,
+        consecutive_clean_runs: 0,
       }
     });
 

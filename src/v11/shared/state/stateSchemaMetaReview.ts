@@ -42,8 +42,13 @@ export function validateMetaReviewSnapshot(
     `${pathPrefix}.runtime_delivery`,
     errors
   );
+  const consecutiveCleanRunsRaw =
+    input.consecutive_clean_runs === undefined ? 0 : input.consecutive_clean_runs;
   const autonomousSnapshot = validateMetaReviewAutonomousSnapshot(
-    input,
+    {
+      ...input,
+      consecutive_clean_runs: consecutiveCleanRunsRaw
+    },
     pathPrefix,
     errors
   );

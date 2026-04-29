@@ -401,7 +401,8 @@ describe("v11 meta-review submit contract", () => {
       runtime_delivery: null,
       auto_rework_count: 0,
       auto_rework_limit: DEFAULT_META_REVIEW_AUTO_REWORK_LIMIT,
-      sticky_human_gate: true
+      sticky_human_gate: true,
+      consecutive_clean_runs: 0,
     });
     expect(loaded.state.meta_review).not.toHaveProperty("last_autonomous_run_id");
 
@@ -620,7 +621,8 @@ describe("v11 meta-review submit contract", () => {
       runtime_delivery: null,
       auto_rework_count: 0,
       auto_rework_limit: DEFAULT_META_REVIEW_AUTO_REWORK_LIMIT,
-      sticky_human_gate: true
+      sticky_human_gate: true,
+      consecutive_clean_runs: 0,
     });
     expect(loaded.state.meta_review).not.toHaveProperty("last_autonomous_run_id");
 

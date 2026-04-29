@@ -37,7 +37,8 @@ function createLoadedRunningState(): LoadedStateSnapshot {
       runtime_delivery: null,
       auto_rework_count: 0,
       auto_rework_limit: 5,
-      sticky_human_gate: false
+      sticky_human_gate: false,
+      consecutive_clean_runs: 0,
     }
   };
 
@@ -128,14 +129,16 @@ describe("persistHumanGateRoute", () => {
       runtime_delivery: null,
       auto_rework_count: 0,
       auto_rework_limit: 5,
-      sticky_human_gate: true
+      sticky_human_gate: true,
+      consecutive_clean_runs: 0,
     });
     expect(result.state.meta_review).toStrictEqual({
       execution_context: null,
       runtime_delivery: null,
       auto_rework_count: 0,
       auto_rework_limit: 5,
-      sticky_human_gate: true
+      sticky_human_gate: true,
+      consecutive_clean_runs: 0,
     });
     expect(result.gateEnvelope.payload.metadata).toMatchObject({
       actor: "meta-reviewer",

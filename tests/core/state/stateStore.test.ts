@@ -121,7 +121,8 @@ describe("state store", () => {
           last_autonomous_updated_at: "2026-03-08T10:01:00.000Z",
           auto_rework_count: 1,
           auto_rework_limit: 5,
-          sticky_human_gate: false
+          sticky_human_gate: false,
+          consecutive_clean_runs: 0,
         }
       }, null, 2)}\n`,
       "utf8"
@@ -135,7 +136,8 @@ describe("state store", () => {
       runtime_delivery: null,
       auto_rework_count: 1,
       auto_rework_limit: 5,
-      sticky_human_gate: false
+      sticky_human_gate: false,
+      consecutive_clean_runs: 0,
     });
 
     const written = await writeStateSnapshot(
@@ -144,7 +146,8 @@ describe("state store", () => {
         ...inspected.state,
         meta_review: {
           ...inspected.state.meta_review!,
-          sticky_human_gate: true
+          sticky_human_gate: true,
+          consecutive_clean_runs: 0,
         }
       },
       {
@@ -158,7 +161,8 @@ describe("state store", () => {
       runtime_delivery: null,
       auto_rework_count: 1,
       auto_rework_limit: 5,
-      sticky_human_gate: true
+      sticky_human_gate: true,
+      consecutive_clean_runs: 0,
     });
 
     const rawState = await readFile(statePath, "utf8");
@@ -212,7 +216,8 @@ describe("state store", () => {
           runtime_delivery: null,
           auto_rework_count: 0,
           auto_rework_limit: 5,
-          sticky_human_gate: false
+          sticky_human_gate: false,
+          consecutive_clean_runs: 0,
         }
       }, null, 2)}\n`,
       "utf8"
@@ -267,7 +272,8 @@ describe("state store", () => {
           },
           auto_rework_count: 0,
           auto_rework_limit: 5,
-          sticky_human_gate: false
+          sticky_human_gate: false,
+          consecutive_clean_runs: 0,
         }
       }, null, 2)}\n`,
       "utf8"
@@ -341,7 +347,8 @@ describe("state store", () => {
           },
           auto_rework_count: 0,
           auto_rework_limit: 5,
-          sticky_human_gate: false
+          sticky_human_gate: false,
+          consecutive_clean_runs: 0,
         }
       }, null, 2)}\n`,
       "utf8"
@@ -415,7 +422,8 @@ describe("state store", () => {
           },
           auto_rework_count: 0,
           auto_rework_limit: 5,
-          sticky_human_gate: false
+          sticky_human_gate: false,
+          consecutive_clean_runs: 0,
         }
       }, null, 2)}\n`,
       "utf8"
@@ -527,7 +535,8 @@ describe("state store", () => {
           runtime_delivery: null,
           auto_rework_count: 0,
           auto_rework_limit: 5,
-          sticky_human_gate: false
+          sticky_human_gate: false,
+          consecutive_clean_runs: 0,
         }
       }, null, 2)}\n`,
       "utf8"

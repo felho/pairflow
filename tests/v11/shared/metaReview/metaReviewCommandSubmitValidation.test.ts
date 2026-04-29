@@ -40,7 +40,8 @@ function createMetaReviewRunningState(
       execution_context: nestedExecutionContext,
       auto_rework_count: 0,
       auto_rework_limit: 10,
-      sticky_human_gate: false
+      sticky_human_gate: false,
+      consecutive_clean_runs: 0,
     },
     ...partial
   };

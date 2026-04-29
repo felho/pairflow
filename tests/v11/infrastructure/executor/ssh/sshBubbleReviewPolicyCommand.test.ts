@@ -77,7 +77,8 @@ describe("sshBubbleReviewPolicyCommand", () => {
                   effective_loop_mode: "full",
                   support_status: "guarded",
                   reviewer_blocking_min_severity: "P3",
-                  meta_review_auto_rework_min_severity: "P3"
+                  meta_review_auto_rework_min_severity: "P3",
+                  meta_review_consecutive_clean_runs_required: 1,
                 },
                 previousRequestedLoopMode: "full",
                 nextRequestedLoopMode: "meta_only",

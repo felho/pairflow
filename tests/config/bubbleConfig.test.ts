@@ -11,6 +11,7 @@ import {
   parseBubbleConfigToml,
   parseToml,
   REVIEW_POLICY_INVALID,
+  REVIEW_POLICY_CONSECUTIVE_CLEAN_RUNS_REQUIRED_INVALID,
   REVIEW_ARTIFACT_TYPE_AUTO_REMOVED,
   renderBubbleConfigToml,
   validateBubbleConfigRemoteReferences,
@@ -158,10 +159,38 @@ meta_review_auto_rework_min_severity = "P2"
     expect(rendered).toContain("[review_policy]");
     expect(rendered).toContain('review_loop_mode = "meta_only"');
     expect(rendered).toContain('meta_review_auto_rework_min_severity = "P2"');
+    expect(rendered).not.toContain(
+      "meta_review_consecutive_clean_runs_required"
+    );
     expect(parseBubbleConfigToml(rendered).review_policy).toEqual({
       review_loop_mode: "meta_only",
       reviewer_blocking_min_severity: "P2",
       meta_review_auto_rework_min_severity: "P2"
+    });
+  });
+
+  it("parses and roundtrips explicit consecutive clean-run review policy metadata", () => {
+    const config = parseBubbleConfigToml(`${baseToml}
+[review_policy]
+meta_review_consecutive_clean_runs_required = 2
+`);
+
+    expect(config.review_policy).toEqual({
+      review_loop_mode: "full",
+      reviewer_blocking_min_severity: "P3",
+      meta_review_auto_rework_min_severity: "P3",
+      meta_review_consecutive_clean_runs_required: 2,
+    });
+
+    const rendered = renderBubbleConfigToml(config);
+    expect(rendered).toContain(
+      "meta_review_consecutive_clean_runs_required = 2"
+    );
+    expect(parseBubbleConfigToml(rendered).review_policy).toEqual({
+      review_loop_mode: "full",
+      reviewer_blocking_min_severity: "P3",
+      meta_review_auto_rework_min_severity: "P3",
+      meta_review_consecutive_clean_runs_required: 2,
     });
   });
 
@@ -335,7 +364,8 @@ round_gate_applies_after = -1
       review_policy: {
         review_loop_mode: "invalid",
         reviewer_blocking_min_severity: "P1",
-        meta_review_auto_rework_min_severity: "P1"
+        meta_review_auto_rework_min_severity: "P1",
+        meta_review_consecutive_clean_runs_required: 1,
       },
       agents: {
         implementer: "codex",
@@ -409,6 +439,61 @@ round_gate_applies_after = -1
     ).toBe(true);
   });
 
+  it("rejects invalid consecutive clean-run review policy counts", () => {
+    for (const value of [0, -1, 1.5, "2", false]) {
+      const result = validateBubbleConfig({
+        id: "b_test_01",
+        repo_path: "/tmp/repo",
+        base_branch: "main",
+        bubble_branch: "bubble/b_test_01",
+        review_policy: {
+          meta_review_consecutive_clean_runs_required: value
+        },
+        agents: {
+          implementer: "codex",
+          reviewer: "claude",
+          meta_reviewer: "codex"
+        },
+        commands: {
+          test: "pnpm test",
+          typecheck: "pnpm typecheck"
+        },
+        notifications: {
+          enabled: true
+        }
+      });
+
+      expect(result.ok).toBe(false);
+      if (result.ok) {
+        continue;
+      }
+      expect(result.errors).toContainEqual({
+        path: "review_policy.meta_review_consecutive_clean_runs_required",
+        message:
+          `${REVIEW_POLICY_CONSECUTIVE_CLEAN_RUNS_REQUIRED_INVALID}: Must be an integer >= 1`
+      });
+    }
+  });
+
+  it("rejects invalid consecutive clean-run review policy counts from TOML parse paths", () => {
+    for (const tomlValue of ["false", '"2"', "0", "-1"]) {
+      const result = validateBubbleConfig(parseToml(`${baseToml}
+[review_policy]
+meta_review_consecutive_clean_runs_required = ${tomlValue}
+`));
+
+      expect(result.ok).toBe(false);
+      if (result.ok) {
+        continue;
+      }
+      expect(result.errors).toContainEqual({
+        path: "review_policy.meta_review_consecutive_clean_runs_required",
+        message:
+          `${REVIEW_POLICY_CONSECUTIVE_CLEAN_RUNS_REQUIRED_INVALID}: Must be an integer >= 1`
+      });
+    }
+  });
+
   it("rejects unknown extra fields in [review_policy]", () => {
     const result = validateBubbleConfig({
       id: "b_test_01",
@@ -431,6 +516,7 @@ round_gate_applies_after = -1
         review_loop_mode: "full",
         reviewer_blocking_min_severity: "P1",
         meta_review_auto_rework_min_severity: "P1",
+        meta_review_consecutive_clean_runs_required: 1,
         unsupported_flag: true
       }
     });

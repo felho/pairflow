@@ -113,7 +113,8 @@ describe("prepareConvergedRouting", () => {
             review_policy: {
               review_loop_mode: "meta_only",
               reviewer_blocking_min_severity: "P2",
-              meta_review_auto_rework_min_severity: "P2"
+              meta_review_auto_rework_min_severity: "P2",
+              meta_review_consecutive_clean_runs_required: 1,
             },
             agents: {
               implementer: "codex",
@@ -127,7 +128,8 @@ describe("prepareConvergedRouting", () => {
             review_policy: {
               review_loop_mode: "meta_only",
               reviewer_blocking_min_severity: "P2",
-              meta_review_auto_rework_min_severity: "P2"
+              meta_review_auto_rework_min_severity: "P2",
+              meta_review_consecutive_clean_runs_required: 1,
             },
             agents: {
               implementer: "codex",
@@ -344,7 +346,8 @@ describe("prepareConvergedRouting", () => {
               review_policy: {
                 review_loop_mode: "meta_only",
                 reviewer_blocking_min_severity: "P2",
-                meta_review_auto_rework_min_severity: "P2"
+                meta_review_auto_rework_min_severity: "P2",
+                meta_review_consecutive_clean_runs_required: 1,
               },
               agents: {
                 implementer: "codex",
@@ -358,7 +361,8 @@ describe("prepareConvergedRouting", () => {
               review_policy: {
                 review_loop_mode: "meta_only",
                 reviewer_blocking_min_severity: "P2",
-                meta_review_auto_rework_min_severity: "P2"
+                meta_review_auto_rework_min_severity: "P2",
+                meta_review_consecutive_clean_runs_required: 1,
               },
               agents: {
                 implementer: "codex",

@@ -59,7 +59,8 @@ function createLoadedRunningState(): LoadedStateSnapshot {
       runtime_delivery: null,
       auto_rework_count: 0,
       auto_rework_limit: 5,
-      sticky_human_gate: false
+      sticky_human_gate: false,
+      consecutive_clean_runs: 0,
     }
   };
 
@@ -190,7 +191,8 @@ describe("finalizeCurrentRunMetaReviewGate", () => {
           review_policy: {
             review_loop_mode: "full",
             reviewer_blocking_min_severity: "P2",
-            meta_review_auto_rework_min_severity: "P2"
+            meta_review_auto_rework_min_severity: "P2",
+            meta_review_consecutive_clean_runs_required: 1,
           }
         },
         bubblePaths: {
@@ -245,7 +247,8 @@ describe("finalizeCurrentRunMetaReviewGate", () => {
           review_policy: {
             review_loop_mode: "full",
             reviewer_blocking_min_severity: "P2",
-            meta_review_auto_rework_min_severity: "P2"
+            meta_review_auto_rework_min_severity: "P2",
+            meta_review_consecutive_clean_runs_required: 1,
           }
         },
         bubblePaths: {
@@ -322,7 +325,8 @@ describe("finalizeCurrentRunMetaReviewGate", () => {
           review_policy: {
             review_loop_mode: "full",
             reviewer_blocking_min_severity: "P2",
-            meta_review_auto_rework_min_severity: "P2"
+            meta_review_auto_rework_min_severity: "P2",
+            meta_review_consecutive_clean_runs_required: 1,
           }
         },
         bubblePaths: {
@@ -398,7 +402,8 @@ describe("finalizeCurrentRunMetaReviewGate", () => {
           review_policy: {
             review_loop_mode: "full",
             reviewer_blocking_min_severity: "P2",
-            meta_review_auto_rework_min_severity: "P2"
+            meta_review_auto_rework_min_severity: "P2",
+            meta_review_consecutive_clean_runs_required: 1,
           }
         },
         bubblePaths: {
@@ -452,7 +457,8 @@ describe("finalizeCurrentRunMetaReviewGate", () => {
           review_policy: {
             review_loop_mode: "full",
             reviewer_blocking_min_severity: "P2",
-            meta_review_auto_rework_min_severity: "P2"
+            meta_review_auto_rework_min_severity: "P2",
+            meta_review_consecutive_clean_runs_required: 1,
           }
         },
         bubblePaths: {
@@ -509,7 +515,8 @@ describe("finalizeCurrentRunMetaReviewGate", () => {
           review_policy: {
             review_loop_mode: "full",
             reviewer_blocking_min_severity: "P3",
-            meta_review_auto_rework_min_severity: "P3"
+            meta_review_auto_rework_min_severity: "P3",
+            meta_review_consecutive_clean_runs_required: 1,
           }
         },
         bubblePaths: {
@@ -566,7 +573,8 @@ describe("finalizeCurrentRunMetaReviewGate", () => {
     const loaded = createLoadedRunningState();
     loaded.state.meta_review = {
       ...loaded.state.meta_review!,
-      sticky_human_gate: true
+      sticky_human_gate: true,
+      consecutive_clean_runs: 0,
     };
 
     const result = await finalizeCurrentRunMetaReviewGate({
@@ -582,7 +590,8 @@ describe("finalizeCurrentRunMetaReviewGate", () => {
           review_policy: {
             review_loop_mode: "full",
             reviewer_blocking_min_severity: "P3",
-            meta_review_auto_rework_min_severity: "P3"
+            meta_review_auto_rework_min_severity: "P3",
+            meta_review_consecutive_clean_runs_required: 1,
           }
         },
         bubblePaths: {
@@ -645,7 +654,8 @@ describe("finalizeCurrentRunMetaReviewGate", () => {
           review_policy: {
             review_loop_mode: "full",
             reviewer_blocking_min_severity: "P2",
-            meta_review_auto_rework_min_severity: "P2"
+            meta_review_auto_rework_min_severity: "P2",
+            meta_review_consecutive_clean_runs_required: 1,
           }
         },
         bubblePaths: {
@@ -705,7 +715,8 @@ describe("finalizeCurrentRunMetaReviewGate", () => {
           review_policy: {
             review_loop_mode: "full",
             reviewer_blocking_min_severity: "P2",
-            meta_review_auto_rework_min_severity: "P2"
+            meta_review_auto_rework_min_severity: "P2",
+            meta_review_consecutive_clean_runs_required: 1,
           }
         },
         bubblePaths: {
