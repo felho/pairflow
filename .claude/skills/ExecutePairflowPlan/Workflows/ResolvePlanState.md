@@ -200,6 +200,7 @@ Select `human_checkpoint` when any of the following is true and Rule 3's explici
 5. a planned-but-not-created task lacks an explicit canonical `task_id`
 6. `plan_status=done` while any tracker row is still non-terminal or any active task artifact still reports a non-terminal task-local status
 7. `plan_status=done` while any normally completed task remains `done` at its live task path and no deterministic archive-aftermath owner or evidence is available
+8. `plan_status=done` while the plan artifact remains at a live path and no deterministic plan-archive aftermath owner or evidence is available
 
 Reason codes:
 
@@ -251,8 +252,12 @@ Select `plan_complete` when:
    - tracker `status=archived`
    - tracker `task_path` points to `plans/archive/tasks/<archive_group>/<task_id>.md`
    - task metadata, when read at that path, has `status=archived`
-6. superseded tasks have deterministic lineage and archive aftermath already settled
-7. no other trusted input contradicts the complete settled boundary
+6. the plan artifact is archive-settled:
+   - `created_on` is present and trustworthy
+   - `archive_group` equals `<created_on>-<plan_id>`
+   - `PLAN_PATH` points to `plans/archive/plans/<created_on>-<live-plan-filename-stem>.md`
+7. superseded tasks have deterministic lineage and archive aftermath already settled
+8. no other trusted input contradicts the complete settled boundary
 
 Reason code:
 
@@ -263,6 +268,7 @@ Archive-settlement note:
 1. `done` is terminal for task execution but not settled for `PlanComplete`
 2. if completed tasks remain `done`, route through the normal archive aftermath owner when that owner has valid settled-close provenance; otherwise stop at `HumanCheckpoint` with `ARCHIVE_AFTERMATH_REQUIRED`
 3. do not silently promote `done` to `archived` without moving the task artifact to the canonical archive path and updating the tracker path
+4. do not emit `PlanComplete` while the plan artifact remains at a live `plans/*.md` path; deterministic plan archival belongs to the normal archive aftermath path
 
 ### 6. Plan-level readiness
 
@@ -662,7 +668,9 @@ Input shape:
 2. every normally completed tracker row is `archived`
 3. `active_task_id=null`
 4. each archived tracker row points at `plans/archive/tasks/<archive_group>/<task_id>.md`
-5. no active task artifact contradicts completion
+5. `created_on` is trustworthy and `archive_group=<created_on>-<plan_id>`
+6. `PLAN_PATH` points at `plans/archive/plans/<created_on>-<live-plan-filename-stem>.md`
+7. no active task artifact contradicts completion
 
 Output:
 
@@ -674,7 +682,7 @@ route_scope: plan
 source_scope: not_applicable
 approval_gate_state: not_applicable
 reason_code: PLAN_COMPLETE
-handoff_boundary_note: Stop cleanly because the plan has reached a consistent settled boundary: execution is terminal and completed task artifacts are canonically archived.
+handoff_boundary_note: Stop cleanly because the plan has reached a consistent settled boundary: execution is terminal, completed task artifacts are canonically archived, and the plan artifact itself is canonically archived.
 ```
 
 ### Example 12: Explicit troubleshooting hint

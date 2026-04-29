@@ -53,11 +53,12 @@ Non-authoritative future hints such as `next_action_hint` or `execution_notes` a
 | Key | Type | Rule |
 |---|---|---|
 | `plan_id` | string | Stable canonical plan slug. Fresh plans should set this explicitly; legacy repair may derive it from the plan filename stem. |
+| `created_on` | string | Plan creation date in `YYYY-MM-DD` format. Fresh plans must set this explicitly; legacy repair may derive it only from trustworthy existing metadata or committed artifact history. |
 | `plan_status` | string | High-level plan status only. Allowed values: `draft`, `under_review`, `approved`, `in_progress`, `done`. |
 | `task_order` | string[] | Ordered list of canonical `task_id` values. This is the canonical sequencing list. |
 | `task_tracker` | object[] | Minimal tracker summary keyed by canonical `task_id`. Each entry must follow the tracker contract below. |
 | `active_task_id` | string or null | Canonical `task_id` currently active for execution. Must be non-null while open work remains. May be `null` only when `plan_status=done`. |
-| `archive_group` | string | Canonical plan-group archive root name in the form `YYYY-MM-DD-<plan_id>`. |
+| `archive_group` | string | Canonical plan-group archive root name in the form `<created_on>-<plan_id>`. The date is the plan creation date, not the archive execution date. |
 
 ### Optional Plan Frontmatter
 
@@ -200,10 +201,29 @@ Canonical task filename:
 ### Archive Group
 
 1. The plan owns canonical `archive_group`.
-2. `archive_group` format is `YYYY-MM-DD-<plan_id>`.
-3. The date is the archive-group creation date, not the task creation date.
+2. `archive_group` format is `<created_on>-<plan_id>`.
+3. The date component is the plan creation date, not the task creation date and not the date when archive aftermath runs.
+4. Fresh plans must persist `created_on` so `archive_group` can be derived without filesystem or chat-history guessing.
+5. Legacy plans without `created_on` may be repaired only when the creation date can be derived from trustworthy existing metadata or committed artifact history. If multiple plausible dates exist, fail closed to a human checkpoint instead of choosing the current date.
 
-### Archive Path
+### Plan Archive Path
+
+Canonical archived plan shape:
+
+```text
+plans/archive/plans/<created_on>-<live-plan-filename-stem>.md
+```
+
+Rules:
+
+1. A settled completed plan must move from its live `plans/*.md` path to the canonical archived plan path.
+2. The archived plan filename must include the plan creation date as a prefix.
+3. The archived plan filename preserves the live plan filename stem after the date prefix unless doing so would create a collision.
+4. If preserving the live stem would collide, stop at a human checkpoint unless an explicit plan-side rule resolves the collision.
+5. `PlanComplete` is not settled while the plan artifact remains only at its live path.
+6. Plan body links and tracker paths should be updated when deterministic, but routing authority remains in frontmatter and canonical paths.
+
+### Task Archive Path
 
 Canonical archive shape:
 
@@ -240,6 +260,7 @@ Use deterministic precedence only when the conflict stays inside the declared au
 | task-local status vs plan tracker summary for the same task | task | treat plan tracker as stale summary |
 | bubble lifecycle inferred from task metadata vs Pairflow status | Pairflow | ignore mirrored lifecycle interpretation in task/plan metadata |
 | missing optional task archive fields when `archive_group` + `task_id` already determine path | deterministic derivation | compute the canonical archive path mechanically |
+| missing optional plan archive fields when `created_on` + live plan filename already determine path | deterministic derivation | compute the canonical archived plan path mechanically |
 | legacy material implies blocked state not represented in the approved V1 domains | fail-closed checkpoint | require explicit contract refinement instead of widening tracker or task status domains |
 
 ### Fail-Closed Cases
@@ -248,7 +269,7 @@ Stop at a human checkpoint when any of the following is true:
 
 1. resolving the disagreement would change plan sequencing truth without a declared plan-side rule
 2. task metadata implies a different next executable task than the plan declares
-3. `task_id`, filename, or archive mapping cannot be derived deterministically
+3. `task_id`, filename, plan creation date, or archive mapping cannot be derived deterministically
 4. multiple plausible task identities or tracker orderings exist
 5. a task attempts to store bubble lifecycle state as competing authority rather than linkage
 6. a planned-but-not-created task has no explicit canonical `task_id`
@@ -268,6 +289,7 @@ Recommended reason codes:
 
 ```yaml
 plan_id: execute-pairflow-plan
+created_on: 2026-04-28
 plan_status: in_progress
 task_order:
   - 1-executeplan-metadata-foundation

@@ -108,14 +108,17 @@ Definitions:
 2. `archived` means task execution is complete and the task artifact has moved to its canonical archive path.
 3. `superseded` means executable identity was replaced; it is terminal for execution, but its archive/lineage aftermath must still be settled before plan completion.
 4. `PlanComplete` is a settled plan boundary, not merely a task-execution boundary.
+5. A completed plan is settled only after both its task artifacts and the plan artifact itself are at their canonical archive paths.
 
 Plan-completion rule:
 
 1. a normal completed task must be `archived` before `PlanComplete`
 2. a task left as `done` at a live task path is not settled enough for `PlanComplete`
-3. if archive settlement is deterministic, the next owner is the normal aftermath path, not direct completion
-4. if archive settlement is not deterministic, stop at `HumanCheckpoint` with an explicit archive blocker
-5. the only acceptable reason to report `done` after completion is as fail-closed evidence that task work finished but archive settlement did not
+3. the plan artifact must be archived to `plans/archive/plans/<created_on>-<live-plan-filename-stem>.md` before `PlanComplete`
+4. the date used for task archive groups and archived plan filenames is the plan creation date, not the archive execution date
+5. if archive settlement is deterministic, the next owner is the normal aftermath path, not direct completion
+6. if archive settlement is not deterministic, stop at `HumanCheckpoint` with an explicit archive blocker
+7. the only acceptable reason to report `done` after completion is as fail-closed evidence that task work finished but archive settlement did not
 
 ### 3. Fresh-context downstream execution
 

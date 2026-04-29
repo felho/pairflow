@@ -33,11 +33,12 @@ TASK_REFERENCES: task paths or task ids referenced by the plan, when present
 Run this workflow before any normal execution routing when one or more required plan metadata fields are missing, malformed, or non-trustworthy:
 
 1. `plan_id`
-2. `plan_status`
-3. `task_order`
-4. `task_tracker`
-5. `active_task_id`
-6. `archive_group`
+2. `created_on`
+3. `plan_status`
+4. `task_order`
+5. `task_tracker`
+6. `active_task_id`
+7. `archive_group`
 
 Also enter this workflow when:
 
@@ -65,6 +66,14 @@ Apply the first trustworthy source in this order:
 
 1. existing valid frontmatter value
 2. deterministic slug from the plan filename stem
+
+#### `created_on`
+
+1. existing valid frontmatter value in `YYYY-MM-DD` format
+2. trustworthy existing metadata that explicitly records the plan creation date
+3. committed artifact history for `PLAN_PATH` when it yields one unambiguous first-added date
+
+If `created_on` cannot be derived uniquely, fail closed. Do not use the current date, the archive execution date, or the first date found in body prose as a fallback.
 
 #### `task_order`
 
@@ -113,7 +122,9 @@ Blocked-state rule:
 #### `archive_group`
 
 1. existing valid frontmatter value
-2. bootstrap-created value `YYYY-MM-DD-<plan_id>` using the date on which the archive group is first established
+2. bootstrap-created value `<created_on>-<plan_id>` after `created_on` has been derived trustworthily
+
+The date component must be the plan creation date. If an existing `archive_group` date disagrees with `created_on`, fail closed unless a deterministic repair source proves which field is stale.
 
 #### `plan_status`
 
@@ -137,11 +148,12 @@ The repaired plan must contain, at minimum:
 
 ```yaml
 plan_id: <canonical-plan-slug>
+created_on: <YYYY-MM-DD>
 plan_status: <draft|under_review|approved|in_progress|done>
 task_order:
   - <task-id>
 active_task_id: <task-id-or-null>
-archive_group: <YYYY-MM-DD-plan-id>
+archive_group: <created_on-plan-id>
 task_tracker:
   - task_id: <task-id>
     task_path: <path-or-null>
@@ -152,6 +164,7 @@ Example bootstrap result:
 
 ```yaml
 plan_id: execute-pairflow-plan
+created_on: 2026-04-28
 plan_status: approved
 task_order:
   - 1-executeplan-metadata-foundation
@@ -175,7 +188,7 @@ Stop and route to a human checkpoint instead of inventing metadata when any of t
 2. referenced tasks do not yield unique canonical `task_id` values
 3. `active_task_id` remains ambiguous after tracker repair
 4. the plan body and task artifacts imply conflicting sequencing truths
-5. archive group or task identity would require non-deterministic naming
+5. archive group, plan creation date, plan archive path, or task identity would require non-deterministic naming
 6. required source anchors are missing from the repo
 7. a planned-but-not-created task lacks an explicit canonical `task_id`
 8. legacy material requires explicit blocked-state semantics outside the approved V1 domains
