@@ -5,7 +5,7 @@ task_family_id: clean-runs-policy-state
 sequence_key: "1"
 task_id: 1-clean-runs-policy-state
 title: "Meta-Review Consecutive Clean Runs Policy + State Foundation"
-status: in_progress
+status: archived
 phase: phase1
 target_files:
   - src/types/bubble.ts
