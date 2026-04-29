@@ -207,7 +207,7 @@ describe("metaReviewGate V11 defaults", () => {
     }).paneBinding?.tmux?.respawnPaneCommand).toBe("function");
   });
 
-  it("keeps explicit notify overrides canonical while avoiding default helper injection", async () => {
+  it("leaves explicit notify overrides unused when pane-binding delivers the launch prompt", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({
       repoPath,
@@ -276,19 +276,20 @@ describe("metaReviewGate V11 defaults", () => {
     });
 
     expect(result.route).toBe("meta_review_running");
-    expect(observedRuntime).toHaveLength(1);
-    expect(typeof observedRuntime[0]?.tmux?.runner).toBe("function");
-    expect(typeof observedRuntime[0]?.tmux?.sendSubmissionRequestMessage).toBe("function");
-    expect(typeof observedRuntime[0]?.tmux?.submitPaneInput).toBe("function");
-    expect(observedRuntime[0]?.tmux?.maybeAcceptTrustPrompt).toBeUndefined();
+    expect(observedRuntime).toHaveLength(0);
+    expect(result.state.meta_review?.runtime_delivery).toMatchObject({
+      status: "confirmed",
+      reason_code: null,
+      message: "meta-review submit request delivered as meta-reviewer launch prompt."
+    });
   });
 
-  it("confirms built-in pane-binding and notify delivery without trust-prompt helper", async () => {
+  it("confirms built-in pane-binding through the meta-reviewer launch prompt", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({
       repoPath,
       bubbleId: "b_meta_review_apply_v11_builtin_delivery",
-      task: "Verify built-in pane-binding and notify delivery."
+      task: "Verify built-in pane-binding launch-prompt delivery."
     });
     const submittedMessages: string[] = [];
     const notifyRunner = async () => ({
@@ -315,7 +316,8 @@ describe("metaReviewGate V11 defaults", () => {
           }
         },
         paneBinding: {
-          buildAgentCommand: () => "codex meta-review",
+          buildAgentCommand: ({ startupPrompt }) =>
+            `codex meta-review ${startupPrompt ?? ""}`,
           tmux: {
             runner: async () => ({
               stdout: "",
@@ -350,16 +352,23 @@ describe("metaReviewGate V11 defaults", () => {
     });
 
     expect(result.route).toBe("meta_review_running");
-    expect(paneRunnerCalls).toEqual(["codex meta-review"]);
-    expect(submittedMessages).toHaveLength(1);
-    expect(submittedMessages[0]).toContain(
+    expect(paneRunnerCalls).toHaveLength(1);
+    expect(paneRunnerCalls[0]).toContain(
+      "Perform autonomous meta-review now"
+    );
+    expect(paneRunnerCalls[0]).toContain(
       "bubble=b_meta_review_apply_v11_builtin_delivery meta-review request round=1."
     );
+    expect(paneRunnerCalls[0]).not.toContain(
+      "Stay idle until orchestration signals"
+    );
+    expect(submittedMessages).toHaveLength(0);
     expect(
       result.state.meta_review?.runtime_delivery
     ).toMatchObject({
       status: "confirmed",
-      reason_code: null
+      reason_code: null,
+      message: "meta-review submit request delivered as meta-reviewer launch prompt."
     });
   });
 

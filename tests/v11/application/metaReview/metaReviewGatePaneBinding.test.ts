@@ -9,19 +9,6 @@ import {
 import type {
   SetMetaReviewerPaneBindingPort
 } from "../../../../src/v11/shared/ports/runtimeSessions.js";
-import type {
-  NotifyMetaReviewerSubmissionRequestDependencies
-} from "../../../../src/v11/shared/metaReviewGate/metaReviewGateTypes.js";
-
-function resolveRuntimeFromNotifyCall(
-  call: unknown
-): NotifyMetaReviewerSubmissionRequestDependencies["runtime"] {
-  if (!Array.isArray(call) || call.length < 2) {
-    throw new Error("notifySubmissionRequest call is missing dependency payload.");
-  }
-  return (call[1] as NotifyMetaReviewerSubmissionRequestDependencies).runtime;
-}
-
 describe("metaReviewGatePaneBinding", () => {
   it("returns runtime-unavailable when agent command builder is missing", async () => {
     const result = await resolveMetaReviewerPaneWarning({
@@ -184,7 +171,12 @@ describe("metaReviewGatePaneBinding", () => {
   });
 
   it("fails closed when runtime workspace authority is absent", async () => {
-    const buildAgentCommand = vi.fn(() => "codex meta-review");
+    const buildAgentCommand = vi.fn(
+      (input: { startupPrompt?: string | undefined }) => {
+        void input;
+        return "codex meta-review";
+      }
+    );
     const notifySubmissionRequest = vi.fn(async () => ({
       status: "confirmed" as const,
       reasonCode: null,
@@ -356,7 +348,7 @@ describe("metaReviewGatePaneBinding", () => {
     expect(notifySubmissionRequest).not.toHaveBeenCalled();
   });
 
-  it("fails closed after respawn when notify capability is absent on the active pane path", async () => {
+  it("confirms launch-prompt delivery without post-respawn notify capability", async () => {
     const result = await resolveMetaReviewerPaneWarning({
       setMetaReviewerPane: async () => ({
         updated: true,
@@ -396,18 +388,22 @@ describe("metaReviewGatePaneBinding", () => {
 
     expect(result).toEqual({
       delivery: {
-        status: "failed",
-        reasonCode: "META_REVIEW_REQUEST_DELIVERY_RUNTIME_UNAVAILABLE",
-        message: "meta-review gate notify capability is unavailable."
+        status: "confirmed",
+        reasonCode: null,
+        message: "meta-review submit request delivered as meta-reviewer launch prompt."
       },
       shouldDeactivate: true
     });
   });
 
-  it("forwards notify runtime and falls back to pane-binding runner on successful rebinding", async () => {
+  it("launches the active meta-review request as the meta-reviewer startup prompt", async () => {
     const paneRunner = vi.fn();
-    const notifyRunner = vi.fn();
-    const buildAgentCommand = vi.fn(() => "codex meta-review");
+    const buildAgentCommand = vi.fn(
+      (input: { startupPrompt?: string | undefined }) => {
+        void input;
+        return "codex meta-review";
+      }
+    );
     const respawnPaneCommand = vi.fn(async () => undefined);
     const notifySubmissionRequest = vi.fn(async () => ({
       status: "confirmed" as const,
@@ -436,13 +432,6 @@ describe("metaReviewGatePaneBinding", () => {
       }),
       notifySubmissionRequest,
       runtime: {
-        notify: {
-          tmux: {
-            runner: notifyRunner,
-            sendSubmissionRequestMessage: vi.fn(async () => undefined),
-            submitPaneInput: vi.fn(async () => undefined)
-          }
-        },
         paneBinding: {
           buildAgentCommand,
           tmux: {
@@ -464,11 +453,23 @@ describe("metaReviewGatePaneBinding", () => {
       delivery: {
         status: "confirmed",
         reasonCode: null,
-        message: "delivered"
+        message: "meta-review submit request delivered as meta-reviewer launch prompt."
       },
       shouldDeactivate: true
     });
     expect(buildAgentCommand).toHaveBeenCalledTimes(1);
+    const commandInput = buildAgentCommand.mock.calls[0]?.[0] as
+      | { startupPrompt?: string }
+      | undefined;
+    expect(commandInput?.startupPrompt).toContain(
+      "Perform autonomous meta-review now"
+    );
+    expect(commandInput?.startupPrompt).toContain(
+      "bubble=b_meta_review_gate_notify_forwarding meta-review request round=4."
+    );
+    expect(commandInput?.startupPrompt).not.toContain(
+      "Stay idle until orchestration signals"
+    );
     expect(respawnPaneCommand).toHaveBeenCalledWith({
       sessionName: "pf-b_meta_review_gate_notify_forwarding",
       paneIndex: getTopologySlotPaneIndexForRole("meta_reviewer"),
@@ -476,23 +477,10 @@ describe("metaReviewGatePaneBinding", () => {
       command: "codex meta-review",
       runner: paneRunner
     });
-    expect(notifySubmissionRequest).toHaveBeenCalledWith({
-      bubbleId: "b_meta_review_gate_notify_forwarding",
-      metaReviewerAgent: "codex",
-      round: 4,
-      targetPane: `pf-b_meta_review_gate_notify_forwarding:0.${String(
-        getTopologySlotPaneIndexForRole("meta_reviewer")
-      )}`
-    }, expect.anything());
-    const notifyForwardingCall = notifySubmissionRequest.mock.calls.at(-1);
-    expect(notifyForwardingCall).toBeDefined();
-    const notifyRuntime = resolveRuntimeFromNotifyCall(notifyForwardingCall);
-    expect(notifyRuntime?.tmux?.runner).toBe(notifyRunner);
-    expect(typeof notifyRuntime?.tmux?.sendSubmissionRequestMessage).toBe("function");
-    expect(typeof notifyRuntime?.tmux?.submitPaneInput).toBe("function");
+    expect(notifySubmissionRequest).not.toHaveBeenCalled();
   });
 
-  it("falls back to pane-binding runner when notify runtime has no runner", async () => {
+  it("does not require notify runtime forwarding when request is delivered at launch", async () => {
     const paneRunner = vi.fn();
     const notifySubmissionRequest = vi.fn(async () => ({
       status: "confirmed" as const,
@@ -500,7 +488,7 @@ describe("metaReviewGatePaneBinding", () => {
       message: "delivered"
     }));
 
-    await resolveMetaReviewerPaneWarning({
+    const result = await resolveMetaReviewerPaneWarning({
       setMetaReviewerPane: async () => ({
         updated: true,
         record: {
@@ -544,13 +532,12 @@ describe("metaReviewGatePaneBinding", () => {
       metaReviewerAgent: "codex"
     });
 
-    expect(notifySubmissionRequest).toHaveBeenCalledWith(expect.anything(), expect.anything());
-    const fallbackCall = notifySubmissionRequest.mock.calls.at(-1);
-    expect(fallbackCall).toBeDefined();
-    const fallbackRuntime = resolveRuntimeFromNotifyCall(fallbackCall);
-    expect(fallbackRuntime?.tmux?.runner).toBe(paneRunner);
-    expect(typeof fallbackRuntime?.tmux?.sendSubmissionRequestMessage).toBe("function");
-    expect(typeof fallbackRuntime?.tmux?.submitPaneInput).toBe("function");
+    expect(result.delivery).toMatchObject({
+      status: "confirmed",
+      reasonCode: null
+    });
+    expect(paneRunner).not.toHaveBeenCalled();
+    expect(notifySubmissionRequest).not.toHaveBeenCalled();
   });
 
 });

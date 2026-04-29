@@ -1,7 +1,6 @@
 import {
-  buildMetaReviewSubmitApproveParityNote,
-  buildMetaReviewSubmitCommandTemplate
-} from "../../shared/metaReview/metaReviewSubmitGuidance.js";
+  buildMetaReviewGateRunPrompt
+} from "./metaReviewGatePrompt.js";
 import type {
   MetaReviewRuntimeDeliveryObservation,
   NotifyMetaReviewerSubmissionRequestDependencies,
@@ -156,11 +155,12 @@ export async function notifyMetaReviewerSubmissionRequest(
     };
   }
   const requestMarker = `bubble=${input.bubbleId} meta-review request round=${input.round}.`;
-  const message = [
-    `# [pairflow] ${requestMarker}`,
-    "Perform autonomous meta-review now, then submit through structured Pairflow CLI (no pane markers).",
-    `Required command (include --report-json parity fields): ${buildMetaReviewSubmitCommandTemplate({ bubbleId: input.bubbleId, round: input.round })}. ${buildMetaReviewSubmitApproveParityNote()}`
-  ].join(" ");
+  const message = buildMetaReviewGateRunPrompt({
+    bubbleId: input.bubbleId,
+    round: input.round,
+    repoPath: "<repo>",
+    taskArtifactPath: "artifacts/task.md"
+  });
 
   if (maybeAcceptTrustPrompt !== undefined) {
     await maybeAcceptTrustPrompt(runner, input.targetPane).catch(

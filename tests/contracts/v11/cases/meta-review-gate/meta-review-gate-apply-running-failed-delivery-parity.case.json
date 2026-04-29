@@ -2,12 +2,12 @@
   "id": "meta-review-gate-apply-running-failed-delivery-parity",
   "command": "metaReviewGate",
   "mode": "parity",
-  "description": "Seed contract case for meta-review gate apply running route with failed runtime delivery parity baseline.",
+  "description": "Seed contract case for meta-review gate apply running route with obsolete failed notify delivery ignored by launch prompt delivery.",
   "input": {
     "route": "apply",
     "applyScenario": "meta_review_running",
     "notifyDelivery": "failed",
-    "summary": "Seed apply running contract summary with failed notify delivery",
+    "summary": "Seed apply running contract summary with obsolete failed notify delivery",
     "refs": []
   },
   "expected": {
@@ -17,7 +17,7 @@
       "state": "RUNNING",
       "meta_review": {
         "runtime_delivery": {
-          "status": "failed"
+          "status": "confirmed"
         }
       }
     }

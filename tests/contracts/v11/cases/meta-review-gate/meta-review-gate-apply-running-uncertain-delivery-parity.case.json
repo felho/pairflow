@@ -2,12 +2,12 @@
   "id": "meta-review-gate-apply-running-uncertain-delivery-parity",
   "command": "metaReviewGate",
   "mode": "parity",
-  "description": "Seed contract case for meta-review gate apply running route with uncertain runtime delivery parity baseline.",
+  "description": "Seed contract case for meta-review gate apply running route with obsolete uncertain notify delivery ignored by launch prompt delivery.",
   "input": {
     "route": "apply",
     "applyScenario": "meta_review_running",
     "notifyDelivery": "uncertain",
-    "summary": "Seed apply running contract summary with uncertain notify delivery",
+    "summary": "Seed apply running contract summary with obsolete uncertain notify delivery",
     "refs": []
   },
   "expected": {
@@ -17,7 +17,7 @@
       "state": "RUNNING",
       "meta_review": {
         "runtime_delivery": {
-          "status": "uncertain"
+          "status": "confirmed"
         }
       }
     }

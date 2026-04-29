@@ -12,13 +12,12 @@ import type {
   PairflowCommandProfile
 } from "../../../types/bubble.js";
 import {
-  resolveMetaReviewGateNotifyTmuxCapabilities,
   resolveMetaReviewGatePaneBindingTmuxCapabilities
 } from "../../shared/metaReviewGate/metaReviewGateTypes.js";
 import {
   resolveRuntimeSessionWorkspaceAuthority
 } from "../../shared/runtimeSessionWorkspaceAuthority.js";
-import { buildMetaReviewerStartupPrompt } from "../start/startCommandPrompts.js";
+import { buildMetaReviewGateRunPrompt } from "./metaReviewGatePrompt.js";
 
 function resolveMetaReviewerWorkspaceAuthority(input: {
   bubbleId: string;
@@ -111,6 +110,7 @@ function buildMetaReviewerCommand(input: {
   buildAgentCommand: MetaReviewGateCommandBuilder;
   metaReviewerAgent: AgentName;
   bubbleId: string;
+  round: number;
   workspacePath: string;
   repoPath: string;
   taskArtifactPath: string;
@@ -121,42 +121,13 @@ function buildMetaReviewerCommand(input: {
     bubbleId: input.bubbleId,
     workspacePath: input.workspacePath,
     pairflowCommandProfile: input.pairflowCommandProfile,
-    startupPrompt: buildMetaReviewerStartupPrompt({
+    startupPrompt: buildMetaReviewGateRunPrompt({
       bubbleId: input.bubbleId,
+      round: input.round,
       repoPath: input.repoPath,
-      workspacePath: input.workspacePath,
-      taskArtifactPath: input.taskArtifactPath,
-      pairflowCommandProfile: input.pairflowCommandProfile
+      taskArtifactPath: input.taskArtifactPath
     })
   });
-}
-
-function resolveNotifyRuntimeForPaneBinding(input: {
-  notifyRuntime: Parameters<ResolveMetaReviewerPaneWarning>[0]["runtime"];
-  paneBindingRuntime: NonNullable<
-    NonNullable<Parameters<ResolveMetaReviewerPaneWarning>[0]["runtime"]>["paneBinding"]
-  >;
-}) {
-  const notifyTmux = resolveMetaReviewGateNotifyTmuxCapabilities(
-    input.notifyRuntime?.notify
-  );
-  const paneBindingTmux = resolveMetaReviewGatePaneBindingTmuxCapabilities(
-    input.paneBindingRuntime
-  );
-  const tmux = (
-    notifyTmux !== undefined || paneBindingTmux?.runner !== undefined
-      ? {
-          ...(notifyTmux ?? {}),
-          // Pane-binding only shares runner authority; submit helpers stay notify-owned.
-          ...(notifyTmux?.runner !== undefined || paneBindingTmux?.runner === undefined
-            ? {}
-            : { runner: paneBindingTmux.runner })
-        }
-      : undefined
-  );
-  return {
-    ...(tmux !== undefined ? { tmux } : {})
-  };
 }
 
 function resolvePaneBindingPrerequisites(input: {
@@ -218,7 +189,6 @@ export const resolveMetaReviewerPaneWarning: ResolveMetaReviewerPaneWarning = as
     return prerequisites.failure;
   }
   const {
-    paneBindingRuntime,
     paneBindingTmux,
     buildAgentCommand,
     respawnPaneCommand
@@ -256,7 +226,6 @@ export const resolveMetaReviewerPaneWarning: ResolveMetaReviewerPaneWarning = as
 
   const shouldDeactivate = true;
   const paneIndex = getTopologySlotPaneIndexForRole("meta_reviewer");
-  const targetPane = `${bindStart.record.tmuxSessionName}:0.${paneIndex}`;
   const workspaceAuthority = resolveMetaReviewerWorkspaceAuthority({
     bubbleId: input.bubbleId,
     runtimeSessionRecord: bindStart.record
@@ -273,6 +242,7 @@ export const resolveMetaReviewerPaneWarning: ResolveMetaReviewerPaneWarning = as
     buildAgentCommand,
     metaReviewerAgent: input.metaReviewerAgent,
     bubbleId: input.bubbleId,
+    round: input.round,
     workspacePath,
     repoPath: bindStart.record.repoPath,
     taskArtifactPath: input.taskArtifactPath,
@@ -296,35 +266,12 @@ export const resolveMetaReviewerPaneWarning: ResolveMetaReviewerPaneWarning = as
       shouldDeactivate
     });
   }
-  if (input.notifySubmissionRequest === undefined) {
-    return {
-      delivery: {
-        status: "failed",
-        reasonCode: "META_REVIEW_REQUEST_DELIVERY_RUNTIME_UNAVAILABLE",
-        message: "meta-review gate notify capability is unavailable."
-      },
-      shouldDeactivate
-    };
-  }
-  const delivery = await input.notifySubmissionRequest(
-    {
-      bubbleId: input.bubbleId,
-      round: input.round,
-      targetPane,
-      metaReviewerAgent: input.metaReviewerAgent
+  return {
+    delivery: {
+      status: "confirmed",
+      reasonCode: null,
+      message: "meta-review submit request delivered as meta-reviewer launch prompt."
     },
-    {
-      runtime: {
-        ...resolveNotifyRuntimeForPaneBinding({
-          notifyRuntime: input.runtime,
-          paneBindingRuntime
-        })
-      }
-    }
-  ).catch((error: unknown) => ({
-    status: "failed" as const,
-    reasonCode: "META_REVIEW_REQUEST_DELIVERY_FAILED",
-    message: error instanceof Error ? error.message : String(error)
-  }));
-  return { delivery, shouldDeactivate };
+    shouldDeactivate
+  };
 };
