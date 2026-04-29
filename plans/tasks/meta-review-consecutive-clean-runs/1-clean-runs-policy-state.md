@@ -15,9 +15,14 @@ target_files:
   - src/v11/shared/metaReview/metaReviewSnapshot.ts
   - src/v11/shared/metaReviewGate/metaReviewGateSnapshotHelpers.ts
   - src/v11/shared/state/stateSchema.ts
+  - src/v11/shared/state/stateSchemaMetaReview.ts
+  - src/v11/shared/state/stateSchemaMetaReviewAutonomous.ts
+  - src/v11/shared/state/stateSchemaMetaReviewAutonomousSupport.ts
   - tests/config/bubbleConfig.test.ts
   - tests/v11/shared/reviewPolicy/reviewPolicyRuntime.test.ts
+  - tests/v11/shared/metaReview/metaReviewSnapshot.test.ts
   - tests/v11/shared/metaReviewGate/metaReviewGateStateStaging.test.ts
+  - tests/v11/shared/state/stateSchema.test.ts
 prd_ref: null
 plan_ref: plans/meta-review-consecutive-clean-runs-plan-v1.md
 system_context_ref: docs/pairflow-initial-design.md
@@ -63,7 +68,7 @@ This task introduces the persisted config field, defaulting, parsing, runtime no
 2. Depends on: current merged review-policy and meta-review snapshot baseline.
 3. Unlocks / impacts successors: `2-clean-runs-gate-routing` may consume normalized requirement and streak without inventing local fallback semantics.
 4. Task-list impact: refines `1-clean-runs-policy-state`.
-5. Inherited validation / exit expectation: config parsing/validation, runtime normalization, and state normalization tests must prove default `1`, invalid count rejection, and missing state -> streak `0`.
+5. Inherited validation / exit expectation for the later implementation bubble: config parsing/validation, runtime normalization, and state normalization tests must prove default `1`, invalid count rejection, and missing state -> streak `0`.
 
 ### Canonical Contract Anchors
 
@@ -75,6 +80,9 @@ This task introduces the persisted config field, defaulting, parsing, runtime no
    - `src/v11/shared/metaReview/metaReviewSnapshot.ts`
    - `src/v11/shared/metaReviewGate/metaReviewGateSnapshotHelpers.ts`
    - `src/v11/shared/state/stateSchema.ts`
+   - `src/v11/shared/state/stateSchemaMetaReview.ts`
+   - `src/v11/shared/state/stateSchemaMetaReviewAutonomous.ts`
+   - `src/v11/shared/state/stateSchemaMetaReviewAutonomousSupport.ts`
 2. Canonical elements:
    - `review_policy.meta_review_auto_rework_min_severity` remains threshold authority.
    - `review_policy.meta_review_consecutive_clean_runs_required` is the configured clean-run requirement.
@@ -83,7 +91,7 @@ This task introduces the persisted config field, defaulting, parsing, runtime no
    - validation errors for invalid config values
    - schema/state validation for malformed streak state
 4. Compat-only elements:
-   - missing `review_policy` remains valid and normalizes to existing defaults plus clean-run requirement `1`
+   - missing `review_policy` or empty `[review_policy]` remains valid as absent storage and normalizes to existing defaults plus clean-run requirement `1`
    - missing `meta_review` snapshot remains valid and normalizes to the baseline snapshot plus streak `0`
 5. Forbidden reinterpretations:
    - do not treat `auto_rework_count` or `auto_rework_limit` as confidence-streak controls
@@ -96,8 +104,9 @@ This task introduces the persisted config field, defaulting, parsing, runtime no
 2. Actual touched scope: contract and persisted-authority foundation.
 3. Mutation entrypoints in scope: TOML parse/render and state snapshot normalization/validation only; no lifecycle transition or route mutation entrypoint is in scope.
 4. Hidden scope ruled out: `metaReviewGateCurrentRunFinalization` routing, current-run route persistence, status/list projections, and UI presenter/action surfaces remain successor ownership.
-5. Branch inventory note: missing config, explicit valid config, invalid config, missing snapshot, explicit snapshot, and malformed state branches must be represented.
+5. Branch inventory note: missing `review_policy`, empty `[review_policy]`, explicit valid config, invalid config, missing snapshot, legacy-shaped snapshot with missing `consecutive_clean_runs`, explicit snapshot, and malformed state branches must be represented.
 6. Why the declared task shape matches reality: the foundation fields can be added and normalized without deciding how a clean `approve` reruns or unlocks human approval.
+7. State-validation fan-out note: `stateSchemaMetaReview.ts` is the meta-review snapshot validation entrypoint; `stateSchemaMetaReviewAutonomous.ts` carries the autonomous-control slice; `stateSchemaMetaReviewAutonomousSupport.ts` owns the adjacent numeric guard helpers and is the owner file for the new non-negative `meta_review.consecutive_clean_runs` guard.
 
 ### Authority Boundary Map
 
@@ -106,6 +115,7 @@ This task introduces the persisted config field, defaulting, parsing, runtime no
 3. In-scope consumers: runtime normalization helpers and state/schema validation consumers needed to preserve the new fields.
 4. Explicit out-of-scope consumers: meta-review gate routing, route persistence, status/list/UI projection, and UI preset mapping.
 5. Export surfaces closed in this phase: TypeScript config/state types and normalized runtime/state helper outputs.
+6. Storage compat rule: a missing `review_policy` section or empty `[review_policy]` section remains absent storage; runtime normalization must still expose the new requirement as default `1`.
 
 ### Baseline Preservation
 
@@ -125,8 +135,8 @@ This task introduces the persisted config field, defaulting, parsing, runtime no
 
 1. Current canonical success proof source: successful config/state normalization and schema validation.
 2. Target canonical success proof source: same, expanded to include the new requirement and streak fields.
-3. Current canonical completion proof source: targeted tests plus type/build checks.
-4. Target canonical completion proof source: targeted tests for config and state foundation plus build.
+3. Current canonical completion proof source for implementation: targeted tests plus type/build checks.
+4. Target canonical completion proof source for implementation: targeted tests for config and state foundation plus build.
 5. Reused proof contract: existing review-policy and meta-review snapshot normalization tests.
 6. Proof-parity rule: `inherit_full_parity`.
 7. Final truth surfaces affected: typed config/state helper outputs only.
@@ -231,7 +241,7 @@ This task introduces the persisted config field, defaulting, parsing, runtime no
 | Actual touched scope               | contract/persisted-authority foundation                                       | avoid routing/read-model changes    | P1       | required-now |
 | Mutation entrypoints in scope      | config render and state normalization only                                    | no lifecycle transition changes     | P1       | required-now |
 | Hidden scope ruled out             | gate finalization, route persistence, status/UI left to successors            | no broad consume-family drift       | P1       | required-now |
-| Branch inventory note              | missing/valid/invalid config and missing/valid/invalid state                  | add focused tests                   | P1       | required-now |
+| Branch inventory note              | missing `review_policy`, empty `[review_policy]`, valid config, invalid config, missing state, legacy-shaped state with missing streak, valid state, and malformed state | add focused tests | P1       | required-now |
 | Shape proof                        | fields are not behaviorally consumed here                                     | task remains bounded                | P1       | required-now |
 
 ### 0c) Plan Linkage and Successor Impact
@@ -242,14 +252,14 @@ This task introduces the persisted config field, defaulting, parsing, runtime no
 | Depends on                              | current review-policy baseline         | preserve existing threshold fields                 | P1       | required-now   |
 | Unlocks / impacts successors            | task 02 consumes requirement/streak    | successor must not invent fallback                 | P1       | required-now   |
 | Task-list impact                        | refines task-01                        | tracker can move to in-progress when bubble starts | P2       | after approval |
-| Inherited validation / exit expectation | targeted config/state tests plus build | evidence must be recorded by implementation bubble | P1       | required-now   |
+| Inherited validation / exit expectation | targeted config/state tests plus build | evidence must be recorded by the implementation bubble | P1       | required-now   |
 
 ### 0d) Shared Contract Compatibility
 
 | Shared Contract                 | Current Consumers                                          | Change Type (`additive | breaking                                          | N/A`)                                       | This Task Action | Deferred Alignment |
 | ------------------------------- | ---------------------------------------------------------- | ---------------------- | ------------------------------------------------- | ------------------------------------------- | ---------------- | ------------------ |
 | `BubbleReviewPolicyConfig`      | config parser, create/update/status/list/UI typed fixtures | additive with default  | add required normalized field with legacy default | routing/read-model/UI consume in successors |
-| `BubbleMetaReviewSnapshotState` | state schema, meta-review gate helpers/tests               | additive with default  | add streak field and normalization                | increment/reset semantics in task 02        |
+| `BubbleMetaReviewSnapshotState` | state schema, meta-review snapshot helpers, meta-review gate helpers/tests | additive with default | add streak field and normalization | increment/reset semantics in task 02 |
 
 ### 0e) Baseline Preservation
 
@@ -280,24 +290,28 @@ This task introduces the persisted config field, defaulting, parsing, runtime no
 2. Add a default constant in `src/config/defaults.ts` with value `1`.
 3. Parse and render `review_policy.meta_review_consecutive_clean_runs_required` in TOML.
 4. Validate the required count as an integer `>= 1`.
-5. Normalize missing review-policy field to the default in `normalizeBubbleReviewPolicy`.
-6. Extend runtime view types only if current view surfaces are already normalized contract carriers; do not add UI preset semantics.
+5. Normalize a missing `review_policy` section or empty `[review_policy]` section to the default in `normalizeBubbleReviewPolicy`; preserve the existing storage behavior where that input parses as absent.
+6. Extend runtime view types only where current view surfaces are already normalized contract carriers; do not add UI preset semantics, status/list projections, or compact preset mapping in this task.
 7. Extend `BubbleMetaReviewSnapshotState` with `consecutive_clean_runs: number`.
 8. Normalize missing `consecutive_clean_runs` to `0` when snapshot is absent or legacy-shaped.
-9. Preserve `consecutive_clean_runs` in snapshot clear/live-reset helpers unless the helper is specifically supposed to clear only live execution state.
-10. Update state schema validation to require a non-negative integer when the field is present in canonical state.
+9. Preserve `consecutive_clean_runs` in both `src/v11/shared/metaReview/metaReviewSnapshot.ts` and `src/v11/shared/metaReviewGate/metaReviewGateSnapshotHelpers.ts` snapshot normalization paths.
+10. Do not clear `consecutive_clean_runs` in snapshot clear/live-reset helpers; those helpers clear only live execution state in this task.
+11. Update state schema validation through the actual meta-review validation helpers, with the integer guard owned in `src/v11/shared/state/stateSchemaMetaReviewAutonomousSupport.ts`, to require a non-negative integer at `meta_review.consecutive_clean_runs` when the field is present in canonical state.
 
 ### 2) Acceptance Criteria
 
-1. Missing `review_policy` normalizes to:
+1. A missing `review_policy` section or empty `[review_policy]` section normalizes at runtime to:
    - existing loop/severity defaults
    - `meta_review_consecutive_clean_runs_required = 1`
-2. Explicit TOML with `meta_review_consecutive_clean_runs_required = 2` parses and roundtrips.
-3. Invalid TOML values such as `0`, `-1`, non-integer, or unsupported type fail with a path naming `review_policy.meta_review_consecutive_clean_runs_required`.
-4. Missing meta-review snapshot normalizes with `consecutive_clean_runs = 0`.
-5. Existing snapshot data preserves a non-zero `consecutive_clean_runs`.
-6. Existing live-state clear helpers do not accidentally erase the streak.
-7. No meta-review gate routing behavior changes in this task.
+2. A missing `review_policy` section or empty `[review_policy]` section remains absent storage.
+3. Explicit TOML with `meta_review_consecutive_clean_runs_required = 2` parses and roundtrips.
+4. Invalid TOML values such as `0`, `-1`, non-integer, or unsupported type fail with a path naming `review_policy.meta_review_consecutive_clean_runs_required`.
+5. Missing meta-review snapshot normalizes with `consecutive_clean_runs = 0`.
+6. Legacy-shaped meta-review snapshot data that omits `consecutive_clean_runs` normalizes that field to `0` while preserving existing snapshot fields.
+7. Existing snapshot data preserves a non-zero `consecutive_clean_runs`.
+8. Existing live-state clear helpers do not erase the streak.
+9. Canonical state schema validation rejects malformed `meta_review.consecutive_clean_runs` with a path naming that field.
+10. No meta-review gate routing behavior changes in this task.
 
 ### 3) Validation
 
@@ -306,8 +320,11 @@ This task introduces the persisted config field, defaulting, parsing, runtime no
 2. Run targeted review-policy runtime tests:
    - `pnpm test -- tests/v11/shared/reviewPolicy/reviewPolicyRuntime.test.ts`
 3. Run targeted meta-review state/schema tests:
+   - `pnpm test -- tests/v11/shared/metaReview/metaReviewSnapshot.test.ts`
    - `pnpm test -- tests/v11/shared/metaReviewGate/metaReviewGateStateStaging.test.ts`
-4. Run `pnpm build`.
+   - `pnpm test -- tests/v11/shared/state/stateSchema.test.ts`
+4. Review the implementation diff and changed test list to confirm no routing/read-model/UI files or tests are touched beyond direct typed-fixture or snapshot updates for the new field.
+5. Run `pnpm build`.
 
 ## L2 - Handoff
 
