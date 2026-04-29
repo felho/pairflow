@@ -80,6 +80,11 @@ This task changes workflow/orchestration behavior only. It must not change the c
 1. Source-of-truth anchors:
    - `src/v11/shared/metaReviewGate/metaReviewGateCurrentRunFinalization.ts`
    - `src/v11/shared/metaReviewGate/metaReviewGateCurrentRunRoutePersistence.ts`
+   - `src/v11/shared/metaReviewGate/metaReviewGateAutoRework.ts`
+   - `src/v11/shared/metaReviewGate/metaReviewGateApply.ts`
+   - `src/v11/shared/metaReviewGate/metaReviewGateApplyRunRouting.ts`
+   - `src/v11/shared/metaReviewGate/metaReviewGateApplyPersistence.ts`
+   - `src/v11/shared/metaReviewGate/metaReviewGateStateStaging.ts`
    - `src/v11/shared/metaReviewGate/metaReviewGateStateHelpers.ts`
    - `src/v11/shared/metaReviewGate/metaReviewGateShared.ts`
    - `src/v11/shared/reviewPolicy/reviewPolicyRuntime.ts`
@@ -109,7 +114,7 @@ This task changes workflow/orchestration behavior only. It must not change the c
    - `dispatchAutoRework` owns implementer/reviewer rework dispatch and budget increments.
    - `metaReviewGateApply*` and `metaReviewGateStateStaging` own the existing entry into `meta_review_running` from convergence, including active meta-review execution context and runtime delivery observation.
    - `transitionToGateState` clears live meta-review state when entering human approval.
-2. Actual touched scope: current-run finalization and state persistence helpers for meta-review rerun routing.
+2. Actual touched scope: current-run finalization plus the existing meta-review running staging/dispatch helpers needed to start a clean rerun without implementer/reviewer handoff.
 3. Mutation entrypoints in scope:
    - state writes from finalization
    - protocol envelope append for approval/rework/rerun transitions
@@ -130,7 +135,7 @@ This task changes workflow/orchestration behavior only. It must not change the c
    - run error
    - parity/dispatch failure
    - sticky human gate
-6. Why the declared task shape matches reality: the needed behavior is concentrated in meta-review gate finalization and immediate route persistence; downstream read surfaces can consume the resulting canonical state later without changing routing.
+6. Why the declared task shape matches reality: the needed behavior is concentrated in meta-review gate finalization and the existing meta-review running staging path; downstream read surfaces can consume the resulting canonical state later without changing routing.
 
 ### Authority Boundary Map
 
@@ -327,6 +332,8 @@ This task changes workflow/orchestration behavior only. It must not change the c
 CreatePairflowSpec `ReviewSpec` task-mode approval recorded during `ExecutePairflowPlan` orchestration:
 
 1. Execution metadata gate passed for task identity, filename, parent plan tracker, lineage, and bubble linkage fields.
-2. Target-file reality check passed after adding the existing meta-review apply/staging path to the declared scope.
-3. Control model, closed-contract drift, authority fan-out, closure budget, and bounded-task-shape checks are satisfied for an implementation bubble.
-4. Remaining downstream tasks remain viable as sequenced: read-model/UI after routing, docs/validation after routing plus UI/read-model.
+2. First review pass found a local scope/source-anchor issue: the clean-rerun path also needs the existing meta-review apply/staging route family, not only finalization/persistence.
+3. The task was refined to include the apply/staging target files, source anchors, and scope wording.
+4. Repeat ReviewSpec task-mode pass found no remaining findings.
+5. Control model, closed-contract drift, authority fan-out, closure budget, and bounded-task-shape checks are satisfied for an implementation bubble.
+6. Remaining downstream tasks remain viable as sequenced: read-model/UI after routing, docs/validation after routing plus UI/read-model.
