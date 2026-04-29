@@ -53,3 +53,4 @@
 - https://developers.openai.com/codex/use-cases
 - https://developers.openai.com/cookbook/examples/gpt-5/codex_prompting_guide
 - https://github.com/sentrux/sentrux
+- https://github.com/getagentseal/codeburn
