@@ -205,6 +205,9 @@ Canonical task filename:
 3. The date component is the plan creation date, not the task creation date and not the date when archive aftermath runs.
 4. Fresh plans must persist `created_on` so `archive_group` can be derived without filesystem or chat-history guessing.
 5. Legacy plans without `created_on` may be repaired only when the creation date can be derived from trustworthy existing metadata or committed artifact history. If multiple plausible dates exist, fail closed to a human checkpoint instead of choosing the current date.
+6. An existing `archive_group` is not, by itself, trustworthy evidence for a missing `created_on`. Treat its date prefix as a consistency claim to verify against stronger sources, not as the source of creation truth.
+7. When `created_on` is missing and committed artifact history is available, the plan file's unambiguous first-added date outranks an existing `archive_group` date prefix. If those two values disagree, repair `archive_group` from the first-added date or fail closed if the history is ambiguous.
+8. Before moving any completed plan or task into an archive path, prove and record the `created_on` source used for the archive group. If the candidate date equals the current date, do an explicit source check instead of assuming today is correct.
 
 ### Plan Archive Path
 
@@ -261,6 +264,8 @@ Use deterministic precedence only when the conflict stays inside the declared au
 | bubble lifecycle inferred from task metadata vs Pairflow status | Pairflow | ignore mirrored lifecycle interpretation in task/plan metadata |
 | missing optional task archive fields when `archive_group` + `task_id` already determine path | deterministic derivation | compute the canonical archive path mechanically |
 | missing optional plan archive fields when `created_on` + live plan filename already determine path | deterministic derivation | compute the canonical archived plan path mechanically |
+| missing `created_on` but `archive_group` carries a date prefix | committed artifact history or explicit creation metadata | verify the prefix as a consistency claim; do not derive creation date from `archive_group` alone |
+| committed first-added date disagrees with an existing `archive_group` prefix | committed first-added date when unambiguous | repair `archive_group` to `<created_on>-<plan_id>` before archive aftermath |
 | legacy material implies blocked state not represented in the approved V1 domains | fail-closed checkpoint | require explicit contract refinement instead of widening tracker or task status domains |
 
 ### Fail-Closed Cases

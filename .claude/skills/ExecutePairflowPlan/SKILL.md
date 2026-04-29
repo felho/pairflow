@@ -116,9 +116,11 @@ Plan-completion rule:
 2. a task left as `done` at a live task path is not settled enough for `PlanComplete`
 3. the plan artifact must be archived to `plans/archive/plans/<created_on>-<live-plan-filename-stem>.md` before `PlanComplete`
 4. the date used for task archive groups and archived plan filenames is the plan creation date, not the archive execution date
-5. if archive settlement is deterministic, the next owner is the normal aftermath path, not direct completion
-6. if archive settlement is not deterministic, stop at `HumanCheckpoint` with an explicit archive blocker
-7. the only acceptable reason to report `done` after completion is as fail-closed evidence that task work finished but archive settlement did not
+5. an existing `archive_group` date prefix may verify a known `created_on`, but it must not be used as the source for a missing `created_on`
+6. when `created_on` is missing, derive it from explicit creation metadata or unambiguous committed first-added history before any archive move; if the only candidate is today's date, the archive execution date, body prose, or `archive_group`, fail closed
+7. if archive settlement is deterministic, the next owner is the normal aftermath path, not direct completion
+8. if archive settlement is not deterministic, stop at `HumanCheckpoint` with an explicit archive blocker
+9. the only acceptable reason to report `done` after completion is as fail-closed evidence that task work finished but archive settlement did not
 
 ### 3. Fresh-context downstream execution
 

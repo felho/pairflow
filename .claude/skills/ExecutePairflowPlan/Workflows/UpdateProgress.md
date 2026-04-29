@@ -66,6 +66,8 @@ Input rules:
 3. `SETTLED_IMPLEMENTATION_CLOSE_RESULT` is a boundary proof only; it does not authorize reopening raw Pairflow status
 4. stale pre-close assumptions, operator memory, generic "merged means done" shortcuts, and metadata-expansion wishlists are forbidden as aftermath authority
 5. this workflow must not mark a task `superseded`; that ownership remains with `HandleNormalizedReplan`
+6. if `created_on` is missing, do not derive it from `archive_group`; route to metadata repair first, where committed first-added history or explicit creation metadata must prove the date
+7. if a candidate archive date equals the current date, verify its source before moving files; archive aftermath must not turn today's date into plan creation truth by default
 
 ### Settled-close result minimum shape
 
@@ -281,6 +283,8 @@ Plan archive rules:
 6. if the plan remains at a live `plans/*.md` path and `created_on` plus the live filename stem determine a unique archive target, move it and return `plan_archive_resolution=reconciled_to_canonical`.
 7. if `created_on` is missing, ambiguous, contradicted by `archive_group`, or would produce a colliding archive path, return `human_checkpoint` with `NON_DETERMINISTIC_TASK_IDENTITY` or `PLAN_COMPLETE_STATE_STALE` as the narrower reason.
 8. never emit `PlanComplete` while the completed plan artifact remains only at its live path.
+9. an `archive_group` prefix may confirm a previously proven `created_on`, but it must not create or overwrite `created_on` during archive aftermath.
+10. if committed first-added history proves a different date than `archive_group`, stop and repair metadata before archive moves rather than archiving under the stale group.
 
 ## Plan-Completion Gate
 
@@ -376,6 +380,7 @@ Fail closed when refreshed authoritative metadata does not support deterministic
 3. `created_on` is missing, ambiguous, or contradicted by `archive_group`
 4. the canonical task or plan archive path cannot be derived from the current Task 1 baseline
 5. plan completion would require guessing around stale or contradictory refreshed artifacts
+6. the only evidence for `created_on` is the existing `archive_group` prefix or the current archive-run date
 
 Reason-code selection:
 
@@ -482,6 +487,7 @@ Choose `human_checkpoint` when:
 2. `archive_group` does not equal `<created_on>-<plan_id>`
 3. the canonical plan archive path would collide
 4. the plan artifact path cannot be classified as live or canonical archived path
+5. `created_on` was inferred from `archive_group` instead of explicit creation metadata or committed first-added history
 
 Intermediate branch state (not returned workflow output):
 

@@ -73,7 +73,14 @@ Apply the first trustworthy source in this order:
 2. trustworthy existing metadata that explicitly records the plan creation date
 3. committed artifact history for `PLAN_PATH` when it yields one unambiguous first-added date
 
-If `created_on` cannot be derived uniquely, fail closed. Do not use the current date, the archive execution date, or the first date found in body prose as a fallback.
+Verification rules:
+
+1. an existing `archive_group` date prefix is not an acceptable source for a missing `created_on`
+2. treat an existing `archive_group` date prefix only as a consistency check after `created_on` is derived from a stronger source
+3. when committed artifact history is the source, use the unambiguous first-added date for the plan artifact, following renames when needed
+4. if the candidate `created_on` equals the current date, explicitly verify that the source is existing frontmatter, explicit creation metadata, or first-added committed history before accepting it
+
+If `created_on` cannot be derived uniquely, fail closed. Do not use the current date, the archive execution date, the `archive_group` date prefix, or the first date found in body prose as a fallback.
 
 #### `task_order`
 
@@ -121,10 +128,10 @@ Blocked-state rule:
 
 #### `archive_group`
 
-1. existing valid frontmatter value
-2. bootstrap-created value `<created_on>-<plan_id>` after `created_on` has been derived trustworthily
+1. existing valid frontmatter value only when its prefix equals the already-derived trustworthy `created_on`
+2. bootstrap-created or repaired value `<created_on>-<plan_id>` after `created_on` has been derived trustworthily
 
-The date component must be the plan creation date. If an existing `archive_group` date disagrees with `created_on`, fail closed unless a deterministic repair source proves which field is stale.
+The date component must be the plan creation date. If an existing `archive_group` date disagrees with a trustworthy `created_on`, treat `archive_group` as stale and repair it to `<created_on>-<plan_id>` when no collision or downstream ambiguity is introduced; otherwise fail closed.
 
 #### `plan_status`
 
@@ -192,6 +199,7 @@ Stop and route to a human checkpoint instead of inventing metadata when any of t
 6. required source anchors are missing from the repo
 7. a planned-but-not-created task lacks an explicit canonical `task_id`
 8. legacy material requires explicit blocked-state semantics outside the approved V1 domains
+9. `created_on` is missing and the only available date candidate is the current date, archive execution date, body prose date, or `archive_group` prefix
 
 Recommended reason codes:
 
