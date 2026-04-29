@@ -16,7 +16,10 @@ The plan is a coverage and dependency artifact, not a duplicate task-spec reposi
 
 1. Read explicit refs from the user.
 2. If `TARGET_PATH` exists, use it as baseline.
-3. Extract:
+3. If the plan is intended for `ExecutePairflowPlan` execution, read
+   `../ExecutePairflowPlan/references/Plan-Task-Metadata-Contract.md` and apply
+   its required plan frontmatter contract.
+4. Extract:
    - overarching objective,
    - done definition,
    - current completed work,
@@ -24,7 +27,7 @@ The plan is a coverage and dependency artifact, not a duplicate task-spec reposi
    - sequencing/dependency constraints,
    - validation needs that matter at plan level,
    - and any plan-level control-model clauses that all downstream tasks must inherit.
-4. If authority/read-model/runtime work is involved, extract only the minimum plan-level control model needed to keep downstream tasks aligned:
+5. If authority/read-model/runtime work is involved, extract only the minimum plan-level control model needed to keep downstream tasks aligned:
    - `business_invariant`
    - `control_model`
    - `read_path_rule`
@@ -32,12 +35,36 @@ The plan is a coverage and dependency artifact, not a duplicate task-spec reposi
    - `allowed_resolution_path`
    - `missing_data_rule`
    - repo-local source anchors for any already-closed contract being refined
-5. Add a lightweight sequencing note only when task ordering depends on it:
+6. Add a lightweight sequencing note only when task ordering depends on it:
    - producer-first boundary,
    - which downstream consume families remain,
    - whether cleanup/recovery is included now or deferred,
    - whether success/completion proof cutover is included now or deferred.
-6. Do not duplicate task-internal bounded-slice reasoning in the plan unless remaining-task viability or ordering depends on it.
+7. Do not duplicate task-internal bounded-slice reasoning in the plan unless remaining-task viability or ordering depends on it.
+
+### 1a.0) Establish execution metadata
+
+For `ExecutePairflowPlan`-routed plans:
+
+1. Set `plan_id` to the stable plan slug, normally the live filename stem without
+   `.md`.
+2. Set `created_on` from explicit creation metadata or trustworthy committed
+   history when refining an existing plan. For new plans, use the actual creation
+   date.
+3. Set `archive_group` to `<created_on>-<plan_id>`.
+4. Use `plan_status` for routing status. Keep legacy `status` aligned when present,
+   but do not let `status` replace `plan_status`.
+5. Create `task_order` from explicit canonical task ids only.
+6. Create `task_tracker` rows keyed by those same canonical task ids.
+7. For planned-but-not-created tasks, set `task_path: null` and `status:
+   not_created`.
+8. Set `active_task_id` to the first non-terminal canonical task id, or `null`
+   only when `plan_status=done`.
+
+Do not use human-readable titles, table row labels, or filenames as hidden task
+identity. If a planned task lacks a canonical `task_id`, stop and ask for or
+record an explicit compliant `sequence_key` plus `task_family_id` before
+finalizing the plan.
 
 ### 1a) Run the Plan-Level Control-Model Check
 
@@ -79,6 +106,7 @@ Policy:
 
 1. Identify the remaining plan-level gaps that must be closed to reach the objective.
 2. Create or refine the open task list so each task has:
+   - a canonical `task_id` that is valid under the execution metadata contract,
    - one clear purpose,
    - a clear predecessor/dependency position,
    - and a clear plan-level gap it closes.
@@ -110,6 +138,7 @@ The plan is valid only if all are true:
 
 1. Use `Templates/plan-template.md`.
 2. Fill:
+   - required execution metadata frontmatter when the plan is execution-routed,
    - objective,
    - done definition,
    - current status,
@@ -137,21 +166,27 @@ Ask only if blocker data is missing:
 ### 4) Final Validation
 
 1. `prd_ref` present when a PRD exists.
-2. The plan clearly separates:
+2. For execution-routed plans, required metadata is present and deterministic:
+   - `plan_id`, `created_on`, `plan_status`, `task_order`, `task_tracker`,
+     `active_task_id`, and `archive_group`
+   - every tracker `task_id` appears in `task_order`
+   - every planned task has an explicit canonical `task_id`
+   - `archive_group` equals `<created_on>-<plan_id>`
+3. The plan clearly separates:
    - completed work,
    - open work,
    - deferred/future work.
-3. The open task list is actionable.
-4. The coverage map reaches the done definition.
-5. The plan does not jump to route/UI/runtime tasks before the control model is explicit.
-6. Missing-data behavior is explicit before surfacing/cutover tasks are treated as implementation-ready.
-7. If multi-consumer authority sequencing matters, the plan records that boundary in a lightweight sequencing note rather than hiding it in task-local detail.
-8. If success/completion proof cutover and cleanup/result alignment are both needed, the plan must say whether they remain in one bounded task or are split, and why.
-9. Remaining-task viability is preserved:
+4. The open task list is actionable.
+5. The coverage map reaches the done definition.
+6. The plan does not jump to route/UI/runtime tasks before the control model is explicit.
+7. Missing-data behavior is explicit before surfacing/cutover tasks are treated as implementation-ready.
+8. If multi-consumer authority sequencing matters, the plan records that boundary in a lightweight sequencing note rather than hiding it in task-local detail.
+9. If success/completion proof cutover and cleanup/result alignment are both needed, the plan must say whether they remain in one bounded task or are split, and why.
+10. Remaining-task viability is preserved:
    - no dangling predecessor assumptions,
    - no obsolete task left active without note,
    - no missing successor created by a recent split.
-10. If the plan refines an already-closed canonical contract, the wording must still match repo-local source anchors or explicitly cite an authorized reinterpretation.
+11. If the plan refines an already-closed canonical contract, the wording must still match repo-local source anchors or explicitly cite an authorized reinterpretation.
 
 ### 5) Finalize
 

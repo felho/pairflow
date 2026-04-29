@@ -1,11 +1,22 @@
 ---
 artifact_type: plan
 artifact_id: plan_<feature>_v1
+plan_id: <stable-plan-slug>
+created_on: "<YYYY-MM-DD>"
 title: "<Feature Plan>"
 status: draft
+plan_status: draft
 prd_ref: docs/prd/<feature>-prd.md
 owners:
   - "<owner>"
+task_order:
+  - <task-id>
+active_task_id: <task-id-or-null>
+archive_group: <created_on>-<plan_id>
+task_tracker:
+  - task_id: <task-id>
+    task_path: null
+    status: not_created
 ---
 
 # Plan: <Feature Name>
@@ -63,9 +74,9 @@ Use only when progress tracking benefits from phase grouping. Otherwise say `N/A
 
 ## Open Task List
 
-| Task | Purpose | Depends On | Closes Gap | Status |
-|---|---|---|---|---|
-| `plans/tasks/<feature>/<task>.md` | <why this task exists> | <task/ref or `N/A`> | <plan-level gap> | open |
+| Task ID | Task Path | Purpose | Depends On | Closes Gap | Status |
+|---|---|---|---|---|---|
+| `<task-id>` | `null` or `plans/tasks/<feature>/<task-id>.md` | <why this task exists> | <task/ref or `N/A`> | <plan-level gap> | not_created |
 
 ## Coverage Map
 

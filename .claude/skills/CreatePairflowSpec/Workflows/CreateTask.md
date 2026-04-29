@@ -36,15 +36,19 @@ Create or refine a Pairflow task file using `L0 -> L1 -> L2`.
 
 1. Read any explicit references from the user.
 2. If `TARGET_PATH` exists, read and treat as baseline.
-3. If `plan_ref` exists, read it to extract only the task-relevant parent context:
+3. If the task is plan-linked or intended for `ExecutePairflowPlan`, read
+   `../ExecutePairflowPlan/references/Plan-Task-Metadata-Contract.md` and treat
+   it as the canonical metadata authority for plan/task identity, linkage,
+   lineage, status domain, and archive mapping.
+4. If `plan_ref` exists, read it to extract only the task-relevant parent context:
    - overarching objective,
    - the plan gap this task is supposed to close,
    - predecessor/successor expectations,
    - any plan-level validation or exit expectations this task contributes to,
    - whether a split/replacement would obsolete or refine an existing open task.
-4. Extract known values before asking questions:
+5. Extract known values before asking questions:
    - title, scope, refs, likely target files, constraints.
-5. Extract likely:
+6. Extract likely:
    - canonical source-of-truth candidates,
    - repo-local source anchors for any already-closed contract being refined,
    - business invariant and control model,
@@ -63,6 +67,40 @@ Create or refine a Pairflow task file using `L0 -> L1 -> L2`.
    - shared contract consumers and compatibility risk,
    - prerequisite milestones,
    - distinct acceptance goals.
+
+### 1.0a) Establish execution metadata
+
+For plan-linked or `ExecutePairflowPlan`-routed tasks, establish identity before
+drafting the body:
+
+1. Resolve the canonical `task_id` from the parent plan's `task_order` /
+   `task_tracker` when the task is already planned.
+2. Resolve `sequence_key` and `task_family_id` so `task_id` equals
+   `<sequence_key>-<task_family_id>`.
+3. Use a short `sequence_key` such as `1`, `1a`, or `2`; do not use display
+   labels like `task-01`.
+4. Set the task filename to `<task_id>.md`.
+5. Set `doc_bubble_id: null`, `impl_bubble_id: null`, `supersedes: []`, and
+   `superseded_by: null` for fresh tasks unless the workflow is explicitly
+   creating a replacement/supersession task.
+6. Copy `archive_group` from the parent plan when present; otherwise derive it
+   only from trustworthy `created_on` and `plan_id`.
+7. If the parent plan names a non-compliant or ambiguous planned task id, stop
+   and route to plan refinement instead of silently creating a task under a
+   different identity.
+8. If refining an existing task, preserve the existing canonical identity unless
+   the artifact is explicitly being superseded; repeated refinement alone must
+   not change `task_id`.
+
+Status rule:
+
+1. Default new task output to `status: draft` or `status: under_review`.
+2. Do not set `status: approved` from CreateTask alone.
+3. `status: approved` is allowed only when this workflow is applying a concrete
+   same-artifact `ReviewSpec task-mode` result with `decision=approve_task`, or
+   when the caller supplies an explicit delegated task-creation contract that
+   says the task is already approved.
+4. When `status: approved` is set, state the approval provenance in the summary.
 
 ### 1a) Run the Target-File Reality Check
 
@@ -297,13 +335,16 @@ Policy:
 
 1. Generate a draft using `Templates/task-template.md`.
 2. Fill as much as possible from known context.
-3. Mark unknown required fields as `TODO_BLOCKER`.
-4. When the Closed-Contract Drift Check applies, populate canonical contract anchors and field-role classifications explicitly instead of summarizing them vaguely.
-5. If risk gate requires split:
+3. Fill required execution metadata before body sections for plan-linked tasks:
+   `task_family_id`, `sequence_key`, `task_id`, `doc_bubble_id`,
+   `impl_bubble_id`, `supersedes`, `superseded_by`, and `archive_group`.
+4. Mark unknown required fields as `TODO_BLOCKER`.
+5. When the Closed-Contract Drift Check applies, populate canonical contract anchors and field-role classifications explicitly instead of summarizing them vaguely.
+6. If risk gate requires split:
    - draft only the bounded task you are currently creating,
    - state the split decision explicitly,
    - do not silently keep the full original scope inside one task.
-6. If `plan_ref` exists:
+7. If `plan_ref` exists:
    - include a `Plan Linkage` section,
    - state the parent gap this task closes,
    - state predecessor/successor expectations,
@@ -318,36 +359,46 @@ Required blockers for Task output:
    - task-only flows: `prd_ref`/`plan_ref` may be `null`
    - contract-boundary override flows: `plan_ref` required
    - large/new-app flows: both refs required
-3. If `plan_ref` exists, `Plan Linkage` is mandatory:
+3. For plan-linked or `ExecutePairflowPlan`-routed tasks, execution metadata is mandatory:
+   - `task_family_id`, `sequence_key`, and `task_id`
+   - `task_id` exactly equals `<sequence_key>-<task_family_id>`
+   - task filename exactly equals `<task_id>.md`
+   - `doc_bubble_id`, `impl_bubble_id`, `supersedes`, and `superseded_by`
+   - `archive_group` when parent plan has one
+   - parent plan `task_order` / `task_tracker` agrees with the task identity
+4. If `status: approved`, approval provenance is mandatory:
+   - same-artifact `ReviewSpec task-mode` `approve_task` result, or
+   - explicit delegated task-creation contract that says already approved
+5. If `plan_ref` exists, `Plan Linkage` is mandatory:
    - parent plan gap closed,
    - predecessor dependency or `N/A`,
    - successor tasks unlocked or impacted,
    - obsolete/refined task IDs if the current split/replacement changes the task list,
    - plan-level validation or exit expectation inherited by this task.
-4. Target-file reality proof is mandatory when `target_files` are known:
+6. Target-file reality proof is mandatory when `target_files` are known:
    - actual mutation entrypoints reviewed,
    - touched producer/fail-closed/coordination scope explicitly stated,
    - precondition-before-side-effect changes called out when present,
    - and any mismatch between requested label and actual scope is resolved in favor of actual scope.
-5. `L0`: goal, in-scope, out-of-scope, safety default
-6. `L1`: call-site/entry points, data/interface contract, error/fallback, test matrix
-7. If contract-boundary override is active:
+7. `L0`: goal, in-scope, out-of-scope, safety default
+8. `L1`: call-site/entry points, data/interface contract, error/fallback, test matrix
+9. If contract-boundary override is active:
    - L1 `Data and Interface Contract` must have impacted contract rows
    - L1 test matrix must include at least one compatibility or migration scenario
-8. L1 contract details must be explicit:
+10. L1 contract details must be explicit:
    - required vs optional fields for impacted schemas/types
    - exact function signature for changed public entry points
    - if no allowed side effects are listed, mark pure behavior
    - if dependency exists, include dependency-failure fallback row
-9. Cross-reference and token integrity must be explicit:
+11. Cross-reference and token integrity must be explicit:
    - referenced IDs must resolve to existing rows/clauses/tokens,
    - canonical token names must be used consistently (no shorthand aliases).
-10. Complexity-risk blockers must be explicit:
+12. Complexity-risk blockers must be explicit:
    - if `risk_score >= 4`, split decision must be recorded,
    - if `identity_join_risk >= 1`, the task must state the matching seam and forbidden fallback identities,
    - if `risk_score >= 8` or hard-stop applies, task must not pretend to be direct one-shot delivery,
    - authority/source-of-truth note is mandatory when authority risk is non-zero.
-11. Control-model blockers must be explicit whenever applicable:
+13. Control-model blockers must be explicit whenever applicable:
    - `business_invariant`
    - `control_model`
    - `read_path_rule`
@@ -355,37 +406,37 @@ Required blockers for Task output:
    - `allowed_resolution_path`
    - `missing_data_rule`
    - `phase_boundary`
-12. If any control-model blocker is missing and correctness depends on it, the task is not ready. Ask focused blocker questions instead of drafting around the gap.
-13. If a shared contract is changing, blockers also include:
+14. If any control-model blocker is missing and correctness depends on it, the task is not ready. Ask focused blocker questions instead of drafting around the gap.
+15. If a shared contract is changing, blockers also include:
    - current consumers inventory,
    - additive vs breaking decision,
    - explicit alignment ownership.
-14. If the task refines or replaces an existing canonicalization/resolution path, blockers also include:
+16. If the task refines or replaces an existing canonicalization/resolution path, blockers also include:
    - `must_preserve_behaviors`,
    - `allowed_resolution_paths`,
    - `forbidden_regression_interpretations`,
    - `replacement_proof_required_if_removed`.
-15. If authority/runtime/read-model/shared-contract work is in scope, blockers also include closure-budget triage:
+17. If authority/runtime/read-model/shared-contract work is in scope, blockers also include closure-budget triage:
    - closure buckets touched,
    - collapsed closures,
    - deferred closures,
    - why the remaining bounded task is safe.
-16. If the task modifies an existing mutation flow, blockers also include a `Precondition and Side-Effect Boundary`:
+18. If the task modifies an existing mutation flow, blockers also include a `Precondition and Side-Effect Boundary`:
    - validations that must pass before mutations,
    - side effects forbidden before those validations pass,
    - invalid/precondition-failure behavior,
    - coordination primitives in scope or explicitly deferred.
-17. If three or more consume families are implicated, blockers also include explicit sequencing ownership:
+19. If three or more consume families are implicated, blockers also include explicit sequencing ownership:
    - whether this task is producer, consumer-family alignment, activation, read-model, or cleanup,
    - what producer/predecessor closure it depends on,
    - and which downstream closures remain for successor tasks.
-18. If the task cannot name a primary bounded-task shape, or mixes producer with fail-closed/coordination work without an explicit bounded proof, the task is not ready.
-19. If the Closed-Contract Drift Check applies, blockers also include:
+20. If the task cannot name a primary bounded-task shape, or mixes producer with fail-closed/coordination work without an explicit bounded proof, the task is not ready.
+21. If the Closed-Contract Drift Check applies, blockers also include:
    - repo-local source anchors,
    - canonical vs guard vs compat classification,
    - forbidden reinterpretations,
    - drift status proving there is no unauthorized semantic change.
-20. If the task changes an existing mutable flow's success/completion semantics, blockers also include:
+22. If the task changes an existing mutable flow's success/completion semantics, blockers also include:
    - current canonical success/completion proof source,
    - target canonical success/completion proof source,
    - final result/status/event truth-surface mapping,
@@ -468,56 +519,62 @@ Rules:
 ### 5a) Consistency Gate (mandatory before L2)
 
 Run a document-level consistency gate:
-1. Build an identifier registry from declared IDs/tokens (`AC*`, `T*`, `CS*`, `SL*`, `RC*`, `REQ_*`, `FORBID_*`).
-2. Verify every cross-reference in mappings/spec-lock/test/evidence tables resolves exactly.
-3. Reject shorthand alias use where canonical token IDs exist.
-4. Detect implicit test dependency:
+1. Verify execution metadata determinism for plan-linked tasks:
+   - `task_id` equals `<sequence_key>-<task_family_id>`
+   - filename equals `<task_id>.md`
+   - parent plan tracker row points at the same path and task id
+   - `doc_bubble_id` / `impl_bubble_id` are linkage-only values
+   - lineage fields are present and consistent
+2. Build an identifier registry from declared IDs/tokens (`AC*`, `T*`, `CS*`, `SL*`, `RC*`, `REQ_*`, `FORBID_*`).
+3. Verify every cross-reference in mappings/spec-lock/test/evidence tables resolves exactly.
+4. Reject shorthand alias use where canonical token IDs exist.
+5. Detect implicit test dependency:
    - if a required-now test row is only valid because another row carries core invariants,
    - require explicit `depends_on` style normative note in that row.
-5. If any gate item fails, fix the document before proceeding.
-6. Re-check that complexity-risk decision, target files, and L1 scope all agree:
+6. If any gate item fails, fix the document before proceeding.
+7. Re-check that complexity-risk decision, target files, and L1 scope all agree:
    - no hidden delivery behavior inside a foundation task,
    - no hidden activation inside a contract-only task,
    - no mixed authority-refactor + runtime-activation scope when split was required.
-7. Re-check that the control model and the implementation seam still align:
+8. Re-check that the control model and the implementation seam still align:
    - business invariant is not contradicted by the proposed read-path,
    - forbidden fallback sources do not reappear in L1,
    - missing-data behavior is explicit and matches the safety default,
    - the task is not solving route/UI/runtime work before the control model is closed.
-8. Re-check shared contract compatibility:
+9. Re-check shared contract compatibility:
    - every changed shared interface/result shape has a current-consumers inventory,
    - additive vs breaking decision is explicit,
    - any out-of-scope consumers are named,
    - no hidden downstream alignment has leaked into a bounded producer task.
-9. Re-check target-file reality fit:
+10. Re-check target-file reality fit:
    - the declared task label and primary shape still match the touched scope,
    - hidden producer work has not been left under consumer-only wording,
    - rollback/retry/cleanup/shared-state preservation is not hiding outside the declared shape,
    - coordination primitives are not hiding outside the declared shape,
    - and mutation boundary changes are reflected in the precondition/side-effect section.
-10. Re-check authority fan-out fit:
+11. Re-check authority fan-out fit:
    - the task’s in-scope consumers match the declared authority boundary map,
    - export surfaces claimed as “closed in this phase” are truly in scope,
    - read-model and cleanup consume have not been pulled into a producer task by accident.
-11. Re-check bounded-task shape fit:
+12. Re-check bounded-task shape fit:
    - the declared primary shape matches the actual L1 contract,
    - producer work has not silently absorbed fail-closed hardening or coordination work,
    - any secondary shape is explicitly justified.
-12. Re-check precondition and side-effect ordering:
+13. Re-check precondition and side-effect ordering:
    - invalid/precondition-failure behavior is explicit,
    - forbidden early side effects do not reappear elsewhere in L1,
    - any new lock/mutex/serialization primitive is reflected in the bounded task shape and test matrix.
-13. Re-check success/completion proof fit:
+14. Re-check success/completion proof fit:
    - current vs target proof boundary is explicit,
    - final result/status/event surfaces are mapped,
    - no field is silently populated from a different proof phase than its surrounding surface implies,
    - reused proof contracts keep full parity unless explicit narrowing is proven.
-14. Re-check plan linkage fit when `plan_ref` exists:
+15. Re-check plan linkage fit when `plan_ref` exists:
    - the declared parent gap matches the actual bounded task,
    - predecessor/successor expectations are still coherent after any local split,
    - obsolete/refined tasks are named explicitly,
    - and inherited plan-level validation expectations are reflected in L1.
-15. Re-check closed-contract drift when applicable:
+16. Re-check closed-contract drift when applicable:
    - source anchors are cited,
    - canonical elements have not been downgraded to guard/compat language,
    - new terminology is explicitly mapped,

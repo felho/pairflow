@@ -61,7 +61,9 @@ Read, in this order:
 2. referenced parent artifact(s)
 3. directly referenced sibling/downstream task artifacts when needed for viability review
 4. repo-local source-of-truth anchors when canonical contract meaning may have been refined
-5. only the minimum extra references needed to judge boundary correctness
+5. `../ExecutePairflowPlan/references/Plan-Task-Metadata-Contract.md` when
+   the artifact is plan-linked or intended for `ExecutePairflowPlan`
+6. only the minimum extra references needed to judge boundary correctness
 
 Additional mode-specific load:
 1. In `plan-mode`, load only the minimum downstream task refs needed to judge coverage, dependency, and remaining-task viability.
@@ -69,22 +71,63 @@ Additional mode-specific load:
 
 For `task` review, parent plan context is mandatory when `plan_ref` exists.
 
+### 1a) Execution metadata gate
+
+Apply this gate before content-level approval when the artifact is plan-linked or
+intended for `ExecutePairflowPlan`.
+
+For plans, verify:
+
+1. required plan frontmatter exists:
+   `plan_id`, `created_on`, `plan_status`, `task_order`, `task_tracker`,
+   `active_task_id`, and `archive_group`
+2. `archive_group` equals `<created_on>-<plan_id>`
+3. every tracker `task_id` appears exactly once in `task_order`
+4. planned-but-not-created tracker rows use `task_path: null` and
+   `status: not_created`
+5. no future task identity is prose-only or filename-only
+
+For tasks, verify:
+
+1. required task frontmatter exists:
+   `task_family_id`, `sequence_key`, `task_id`, `doc_bubble_id`,
+   `impl_bubble_id`, `supersedes`, and `superseded_by`
+2. `sequence_key` is a short ordering key such as `1`, `1a`, or `2`, not a
+   display label such as `task-01`
+3. `task_id` equals `<sequence_key>-<task_family_id>`
+4. the task filename equals `<task_id>.md`
+5. parent plan `task_order` / `task_tracker` agrees with the task identity and
+   path when `plan_ref` exists
+6. lineage fields are present and consistent
+7. bubble ids are linkage-only values and do not encode lifecycle state
+
+Outcome:
+
+1. If the execution metadata is missing, malformed, or non-deterministic, return
+   `refine_plan` / `refine_task` unless the artifact cannot safely be repaired
+   locally.
+2. If repairing the task identity would require changing the parent plan's
+   canonical task order/tracker, return `route_back_to_plan`.
+3. Do not return `approve_plan` or `approve_task` while this gate fails.
+
 ### 2) Apply Review Gates by Mode
 
 For `plan-mode`, apply:
-1. `Control-Model Readiness Gate`
-2. `Closed-Contract Drift Check` when applicable
-3. `Remaining-Task Viability Check`
-
-For `task-mode`, apply:
-1. `Target-File Reality Check`
+1. Execution metadata gate when applicable
 2. `Control-Model Readiness Gate`
 3. `Closed-Contract Drift Check` when applicable
-4. `Authority Fan-out Scan`
-5. `Closure-Budget Gate`
-6. `Bounded-Task-Shape Gate`
-7. `Complexity-Risk Gate`
-8. `Remaining-Task Viability Check`
+4. `Remaining-Task Viability Check`
+
+For `task-mode`, apply:
+1. Execution metadata gate when applicable
+2. `Target-File Reality Check`
+3. `Control-Model Readiness Gate`
+4. `Closed-Contract Drift Check` when applicable
+5. `Authority Fan-out Scan`
+6. `Closure-Budget Gate`
+7. `Bounded-Task-Shape Gate`
+8. `Complexity-Risk Gate`
+9. `Remaining-Task Viability Check`
 
 Policy:
 1. Review whether the artifact still fits the planning shape it claims.
@@ -205,6 +248,7 @@ Always include:
 8. decision
 9. remaining-task impact summary
 10. downstream task statuses when applicable
+11. execution metadata gate result when applicable
 
 ### 7) Output rules
 
@@ -220,6 +264,8 @@ Additional task-mode rule:
 2. Phrase the issue as bounded-slice drift, hidden scope, or parent-plan mismatch, not as a code bug.
 3. If the issue is contract-meaning drift, phrase it as unauthorized reinterpretation, ambiguous drift, or source-anchor mismatch rather than as a style nit.
 4. If the issue is a success/completion proof cutover mixed with cleanup or final truth-surface alignment, phrase it as a split-trigger or sequencing problem, not as an implementation detail.
+5. If the issue is execution metadata drift, phrase it as non-deterministic
+   plan/task identity or parent-plan mismatch, not as a naming nit.
 
 ## Output
 

@@ -1,6 +1,9 @@
 ---
 artifact_type: task
 artifact_id: task_<feature>_<phase>_<slug>_v1
+task_family_id: <stable-task-family-slug>
+sequence_key: "<short-sequence-key>"
+task_id: <sequence_key>-<task_family_id>
 title: "<Task Title>"
 status: draft
 phase: phase1
@@ -11,6 +14,11 @@ plan_ref: plans/<feature>-plan.md
 system_context_ref: docs/pairflow-initial-design.md
 owners:
   - "<owner>"
+doc_bubble_id: null
+impl_bubble_id: null
+supersedes: []
+superseded_by: null
+archive_group: <created_on>-<plan_id-or-null>
 ---
 
 # Task: <Task Title>

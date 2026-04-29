@@ -63,6 +63,32 @@ Override policy:
 2. `plan_ref` must not be `null`.
 3. L1 must explicitly capture the changed interface contract and test coverage.
 
+## Pairflow Execution Metadata Contract (Mandatory for plan-linked work)
+
+When drafting, refining, or reviewing a Plan or Task that is intended to be executed by
+`ExecutePairflowPlan`, apply the repo-local metadata authority contract:
+
+1. Read `.claude/skills/ExecutePairflowPlan/references/Plan-Task-Metadata-Contract.md`.
+2. Plan frontmatter must include the required plan metadata from that contract:
+   `plan_id`, `created_on`, `plan_status`, `task_order`, `task_tracker`,
+   `active_task_id`, and `archive_group`.
+3. Task frontmatter must include the required task metadata from that contract:
+   `task_family_id`, `sequence_key`, `task_id`, `doc_bubble_id`,
+   `impl_bubble_id`, `supersedes`, and `superseded_by`.
+4. `task_id` must be mechanically derived as `<sequence_key>-<task_family_id>`.
+   The task filename must be `<task_id>.md`.
+5. `sequence_key` is a short ordering key such as `1`, `1a`, or `2`; do not use
+   display labels such as `task-01`.
+6. Planned-but-not-created tasks in a plan must already carry explicit canonical
+   `task_id` values in `task_order` and `task_tracker`; do not invent them later
+   from prose or filenames.
+7. New or refined task artifacts default to `status: draft` or `status: under_review`.
+   Set `status: approved` only when applying a concrete `ReviewSpec task-mode`
+   `approve_task` result for the exact reviewed artifact, or when a higher-level
+   delegated workflow explicitly supplies an already-approved task-creation result.
+8. Any mismatch between `sequence_key`, `task_family_id`, `task_id`, filename,
+   plan tracker, and plan task order is a blocking metadata issue, not a style issue.
+
 ## Control-Model Readiness Gate (Mandatory)
 
 Before drafting or refining a PRD, Plan, or Task for implementation-oriented work, run the `Control-Model Readiness Gate`.
@@ -426,6 +452,8 @@ Policy:
 - Complexity risk gate: `references/Complexity-Risk-Gate.md`
 - Bounded-task-shape gate: `references/Bounded-Task-Shape-Gate.md`
 - Remaining-task viability check: `references/Remaining-Task-Viability-Check.md`
+- Pairflow execution metadata contract:
+  `../ExecutePairflowPlan/references/Plan-Task-Metadata-Contract.md`
 
 ## Examples
 
