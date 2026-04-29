@@ -65,6 +65,7 @@ export interface PersistHumanGateRouteInput {
   fallbackRecommendation?: MetaReviewRecommendation;
   targetState?: "READY_FOR_HUMAN_APPROVAL";
   stickyHumanGate?: boolean;
+  consecutiveCleanRuns?: number;
   rollbackStateOnAppendFailure?: BubbleStateSnapshot;
 }
 
@@ -161,7 +162,10 @@ export async function persistHumanGateRoute(
     current: input.loaded.state,
     nowIso: input.nowIso,
     targetState,
-    stickyHumanGate
+    stickyHumanGate,
+    ...(input.consecutiveCleanRuns !== undefined
+      ? { consecutiveCleanRuns: input.consecutiveCleanRuns }
+      : {})
   });
 
   const recommendation = resolveHumanGateRecommendation({

@@ -402,7 +402,7 @@ describe("v11 meta-review submit contract", () => {
       auto_rework_count: 0,
       auto_rework_limit: DEFAULT_META_REVIEW_AUTO_REWORK_LIMIT,
       sticky_human_gate: true,
-      consecutive_clean_runs: 0,
+      consecutive_clean_runs: 1,
     });
     expect(loaded.state.meta_review).not.toHaveProperty("last_autonomous_run_id");
 
@@ -422,8 +422,8 @@ describe("v11 meta-review submit contract", () => {
       findings_claimed_open_total: 2,
       findings_blocking_open_total: 0,
       findings_advisory_open_total: 2,
-      findings_artifact_open_total: null,
-      findings_parity_status: null
+      findings_artifact_open_total: 2,
+      findings_parity_status: "ok"
     });
   });
 

@@ -61,7 +61,8 @@ export async function persistRunFailedHumanRoute(
     route: "human_gate_run_failed",
     metaReviewRun: input.runResult,
     parityMetadata: null,
-    stickyHumanGate: false
+    stickyHumanGate: false,
+    consecutiveCleanRuns: 0
   });
 }
 
@@ -105,6 +106,7 @@ export async function persistDispatchFailedHumanRoute(input: {
     parityMetadata:
       input.parityMetadata
       ?? resolveFindingsParityMetadataFromReportJson(input.runResultForRouting.report_json),
+    consecutiveCleanRuns: 0,
     ...(input.rollbackStateOnAppendFailure !== undefined
       ? { rollbackStateOnAppendFailure: input.rollbackStateOnAppendFailure }
       : {})
@@ -119,6 +121,7 @@ export async function persistResolvedHumanRoute(input: {
   forceStickyHumanGateBypass: boolean;
   thresholdMetadata?: MetaReviewGateThresholdMetadata;
   fallbackReason?: string;
+  consecutiveCleanRuns?: number;
 }): Promise<MetaReviewGateResult> {
   const finalizeInput = input.finalizeInput;
   const humanGateDecision = resolveHumanGatePersistenceDecision({
@@ -158,6 +161,9 @@ export async function persistResolvedHumanRoute(input: {
     parityMetadata:
       input.parityMetadata
       ?? resolveFindingsParityMetadataFromReportJson(input.runResultForRouting.report_json),
+    ...(input.consecutiveCleanRuns !== undefined
+      ? { consecutiveCleanRuns: input.consecutiveCleanRuns }
+      : { consecutiveCleanRuns: 0 }),
     ...(input.thresholdMetadata !== undefined
       ? { thresholdMetadata: input.thresholdMetadata }
       : {})
