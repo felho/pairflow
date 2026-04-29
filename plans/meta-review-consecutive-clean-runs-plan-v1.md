@@ -10,23 +10,23 @@ prd_ref: null
 owners:
   - "felho"
 task_order:
-  - 1-meta-review-consecutive-clean-runs-policy-state-foundation
-  - 2-meta-review-consecutive-clean-runs-gate-routing-streak-semantics
-  - 3-meta-review-consecutive-clean-runs-read-model-status-ui-preset-surface
-  - 4-meta-review-consecutive-clean-runs-docs-validation
-active_task_id: 1-meta-review-consecutive-clean-runs-policy-state-foundation
+  - 1-clean-runs-policy-state
+  - 2-clean-runs-gate-routing
+  - 3-clean-runs-read-model-ui
+  - 4-clean-runs-docs-validation
+active_task_id: 1-clean-runs-policy-state
 archive_group: 2026-04-27-meta-review-consecutive-clean-runs-plan-v1
 task_tracker:
-  - task_id: 1-meta-review-consecutive-clean-runs-policy-state-foundation
-    task_path: plans/tasks/meta-review-consecutive-clean-runs/1-meta-review-consecutive-clean-runs-policy-state-foundation.md
+  - task_id: 1-clean-runs-policy-state
+    task_path: plans/tasks/meta-review-consecutive-clean-runs/1-clean-runs-policy-state.md
     status: approved
-  - task_id: 2-meta-review-consecutive-clean-runs-gate-routing-streak-semantics
+  - task_id: 2-clean-runs-gate-routing
     task_path: null
     status: not_created
-  - task_id: 3-meta-review-consecutive-clean-runs-read-model-status-ui-preset-surface
+  - task_id: 3-clean-runs-read-model-ui
     task_path: null
     status: not_created
-  - task_id: 4-meta-review-consecutive-clean-runs-docs-validation
+  - task_id: 4-clean-runs-docs-validation
     task_path: null
     status: not_created
 ---
@@ -119,23 +119,23 @@ task_tracker:
 
 | Task | Purpose | Depends On | Closes Gap | Status |
 |---|---|---|---|---|
-| `plans/tasks/meta-review-consecutive-clean-runs/1-meta-review-consecutive-clean-runs-policy-state-foundation.md` | Add the new review-policy field, defaults, parsing, runtime normalization, and canonical meta-review streak state shape. | `N/A` | Missing config/state foundation for the feature. | open |
-| `plans/tasks/meta-review-consecutive-clean-runs/2-meta-review-consecutive-clean-runs-gate-routing-streak-semantics.md` | Update current-run meta-review finalization to increment/reset the streak and route directly to another meta-review run until the configured requirement is met. | `1-meta-review-consecutive-clean-runs-policy-state-foundation.md` | Missing workflow-orchestration behavior for consecutive clean runs. | open |
-| `plans/tasks/meta-review-consecutive-clean-runs/3-meta-review-consecutive-clean-runs-read-model-status-ui-preset-surface.md` | Expose the configured requirement and current streak in status/read-model projections, add the compact UI preset selector mapping (`P1`, `P2`, `P3`, `P3+2`), and update the control label/tooltip to quality-level language. | `2-meta-review-consecutive-clean-runs-gate-routing-streak-semantics.md` | Missing operator observability and compact UI control for the new gate behavior. | open |
-| `plans/tasks/meta-review-consecutive-clean-runs/4-meta-review-consecutive-clean-runs-docs-validation.md` | Update repo docs/spec references and close the validation matrix across unit/integration/build and UI mapping checks. | `2-meta-review-consecutive-clean-runs-gate-routing-streak-semantics.md`, `3-meta-review-consecutive-clean-runs-read-model-status-ui-preset-surface.md` | Missing documentation and completion evidence. | open |
+| `plans/tasks/meta-review-consecutive-clean-runs/1-clean-runs-policy-state.md` | Add the new review-policy field, defaults, parsing, runtime normalization, and canonical meta-review streak state shape. | `N/A` | Missing config/state foundation for the feature. | open |
+| `plans/tasks/meta-review-consecutive-clean-runs/2-clean-runs-gate-routing.md` | Update current-run meta-review finalization to increment/reset the streak and route directly to another meta-review run until the configured requirement is met. | `1-clean-runs-policy-state.md` | Missing workflow-orchestration behavior for consecutive clean runs. | open |
+| `plans/tasks/meta-review-consecutive-clean-runs/3-clean-runs-read-model-ui.md` | Expose the configured requirement and current streak in status/read-model projections, add the compact UI preset selector mapping (`P1`, `P2`, `P3`, `P3+2`), and update the control label/tooltip to quality-level language. | `2-clean-runs-gate-routing.md` | Missing operator observability and compact UI control for the new gate behavior. | open |
+| `plans/tasks/meta-review-consecutive-clean-runs/4-clean-runs-docs-validation.md` | Update repo docs/spec references and close the validation matrix across unit/integration/build and UI mapping checks. | `2-clean-runs-gate-routing.md`, `3-clean-runs-read-model-ui.md` | Missing documentation and completion evidence. | open |
 
 ## Coverage Map
 
 | Plan Gap | Closed By | Notes |
 |---|---|---|
-| New review-policy contract for required consecutive clean runs | `1-meta-review-consecutive-clean-runs-policy-state-foundation.md` | Includes default `1` and `>= 1` validation. |
-| Canonical persistence of current clean streak | `1-meta-review-consecutive-clean-runs-policy-state-foundation.md` | Must remain separate from `auto_rework_count`. |
-| Direct meta-review rerun path for threshold-clean approvals below required streak | `2-meta-review-consecutive-clean-runs-gate-routing-streak-semantics.md` | Must bypass implementer/reviewer on clean reruns. |
-| Reset semantics for threshold-meeting findings and non-clean terminal outcomes | `2-meta-review-consecutive-clean-runs-gate-routing-streak-semantics.md` | Includes `inconclusive` and failure-style outcomes. |
-| Operator visibility into requirement vs current streak | `3-meta-review-consecutive-clean-runs-read-model-status-ui-preset-surface.md` | Avoids opaque autonomous-loop behavior. |
-| Compact single-dropdown UI encoding for supported quality presets | `3-meta-review-consecutive-clean-runs-read-model-status-ui-preset-surface.md` | Must map exact backend pairs only; unsupported pairs need non-misleading fallback handling. |
-| UI control naming that reflects combined threshold-plus-streak semantics | `3-meta-review-consecutive-clean-runs-read-model-status-ui-preset-surface.md` | Label/tooltip should shift toward `metaReviewQualityLevel` semantics. |
-| Spec/docs alignment and implementation proof | `4-meta-review-consecutive-clean-runs-docs-validation.md` | Must update docs because workflow semantics change. |
+| New review-policy contract for required consecutive clean runs | `1-clean-runs-policy-state.md` | Includes default `1` and `>= 1` validation. |
+| Canonical persistence of current clean streak | `1-clean-runs-policy-state.md` | Must remain separate from `auto_rework_count`. |
+| Direct meta-review rerun path for threshold-clean approvals below required streak | `2-clean-runs-gate-routing.md` | Must bypass implementer/reviewer on clean reruns. |
+| Reset semantics for threshold-meeting findings and non-clean terminal outcomes | `2-clean-runs-gate-routing.md` | Includes `inconclusive` and failure-style outcomes. |
+| Operator visibility into requirement vs current streak | `3-clean-runs-read-model-ui.md` | Avoids opaque autonomous-loop behavior. |
+| Compact single-dropdown UI encoding for supported quality presets | `3-clean-runs-read-model-ui.md` | Must map exact backend pairs only; unsupported pairs need non-misleading fallback handling. |
+| UI control naming that reflects combined threshold-plus-streak semantics | `3-clean-runs-read-model-ui.md` | Label/tooltip should shift toward `metaReviewQualityLevel` semantics. |
+| Spec/docs alignment and implementation proof | `4-clean-runs-docs-validation.md` | Must update docs because workflow semantics change. |
 
 ## Dependencies and Order
 
