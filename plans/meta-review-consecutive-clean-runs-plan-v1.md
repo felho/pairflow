@@ -21,8 +21,8 @@ task_tracker:
     task_path: plans/archive/tasks/2026-04-27-meta-review-consecutive-clean-runs-plan-v1/1-clean-runs-policy-state.md
     status: archived
   - task_id: 2-clean-runs-gate-routing
-    task_path: null
-    status: not_created
+    task_path: plans/tasks/meta-review-consecutive-clean-runs/2-clean-runs-gate-routing.md
+    status: approved
   - task_id: 3-clean-runs-read-model-ui
     task_path: null
     status: not_created
