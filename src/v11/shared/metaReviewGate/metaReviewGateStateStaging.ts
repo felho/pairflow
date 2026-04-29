@@ -11,6 +11,7 @@ import type {
 } from "../../../types/bubble.js";
 import { toMetaReviewGateError } from "./metaReviewGateErrorConversion.js";
 import { MetaReviewGateError } from "./metaReviewGateTypes.js";
+import { normalizeMetaReviewSnapshot } from "./metaReviewGateSnapshotHelpers.js";
 
 export function throwMetaReviewRunningStageFailure(input: {
   rootError: unknown;
@@ -36,10 +37,15 @@ export async function stageMetaReviewRunningState(input: {
   statePath: string;
   writeState: WriteStateSnapshotPort;
 }): Promise<LoadedStateSnapshot> {
+  const normalizedMetaReview = normalizeMetaReviewSnapshot(
+    input.loadedRunning.state.meta_review
+  );
   const previousMetaReview = clearLiveMetaReviewSnapshot(
     input.loadedRunning.state.meta_review
   );
-  const attempt = previousMetaReview.auto_rework_count + 1;
+  const attempt =
+    (normalizedMetaReview.execution_context?.attempt
+      ?? normalizedMetaReview.auto_rework_count) + 1;
   const metaReviewExecutionContext = buildMetaReviewExecutionContext({
     bubbleId: input.bubbleId,
     round: input.loadedRunning.state.round,

@@ -30,6 +30,7 @@ export {
   resolveDefaultStickyHumanGateForRoute,
   resolveFindingsParityMetadataForEnvelope,
   resolveHumanGateRoute,
+  setMetaReviewConsecutiveCleanRuns,
   transitionToGateState
 } from "./metaReviewGateStateHelpers.js";
 

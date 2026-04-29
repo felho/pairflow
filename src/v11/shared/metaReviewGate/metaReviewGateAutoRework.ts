@@ -23,7 +23,8 @@ import {
   buildGateLockPath,
   incrementAutoReworkCount,
   normalizeMetaReviewSnapshot,
-  resolveFindingsParityMetadataForEnvelope
+  resolveFindingsParityMetadataForEnvelope,
+  setMetaReviewConsecutiveCleanRuns
 } from "./metaReviewGateShared.js";
 import {
   MetaReviewGateError,
@@ -103,6 +104,10 @@ function buildAutoReworkResumedState(
   finalizeInput: AutoReworkFinalizeInput
 ): { resumed: BubbleStateSnapshot; nowIso: string } {
   const nowIso = finalizeInput.now.toISOString();
+  const streakResetState = setMetaReviewConsecutiveCleanRuns(
+    finalizeInput.loaded.state,
+    0
+  );
   const continuation = resolveRuntimeAlignedNextRoundContinuation({
     bubbleId: finalizeInput.loaded.state.bubble_id,
     currentRound: finalizeInput.loaded.state.round,
@@ -113,26 +118,32 @@ function buildAutoReworkResumedState(
     watchdogTimeoutMinutes:
       finalizeInput.resolved.bubbleConfig.watchdog_timeout_minutes
   });
+  const resumedBase = assertValidBubbleStateSnapshot({
+    ...streakResetState,
+    state: "RUNNING",
+    round: continuation.nextRound,
+    active_agent: continuation.activeAgent,
+    active_role: continuation.activeRole,
+    execution_context: continuation.executionContext,
+    active_since: nowIso,
+    last_command_at: nowIso,
+    round_role_history:
+      continuation.appendRoundRoleEntry === undefined
+        ? streakResetState.round_role_history
+        : [
+            ...streakResetState.round_role_history,
+            continuation.appendRoundRoleEntry
+          ],
+    meta_review: clearLiveMetaReviewSnapshot(
+      streakResetState.meta_review
+    )
+  });
   return {
     nowIso,
     resumed: assertValidBubbleStateSnapshot({
-      ...finalizeInput.loaded.state,
-      state: "RUNNING",
-      round: continuation.nextRound,
-      active_agent: continuation.activeAgent,
-      active_role: continuation.activeRole,
-      execution_context: continuation.executionContext,
-      active_since: nowIso,
-      last_command_at: nowIso,
-      round_role_history:
-        continuation.appendRoundRoleEntry === undefined
-          ? finalizeInput.loaded.state.round_role_history
-          : [
-              ...finalizeInput.loaded.state.round_role_history,
-              continuation.appendRoundRoleEntry
-            ],
-      meta_review: clearLiveMetaReviewSnapshot(
-        finalizeInput.loaded.state.meta_review
+      ...resumedBase,
+      meta_review: normalizeMetaReviewSnapshot(
+        incrementAutoReworkCount(resumedBase).meta_review
       )
     })
   };
@@ -206,29 +217,6 @@ async function appendAutoReworkDecision(input: {
   });
 }
 
-async function writeHydratedAutoReworkState(input: {
-  finalizeInput: AutoReworkFinalizeInput;
-  resumedWritten: LoadedStateSnapshot;
-}): Promise<LoadedStateSnapshot> {
-  const hydratedMetaReview = incrementAutoReworkCount({
-    ...input.resumedWritten.state,
-    meta_review: normalizeMetaReviewSnapshot(input.resumedWritten.state.meta_review)
-  }).meta_review;
-  const hydratedResumed: BubbleStateSnapshot = {
-    ...input.resumedWritten.state,
-    meta_review: normalizeMetaReviewSnapshot(hydratedMetaReview)
-  };
-
-  return await input.finalizeInput.writeState(
-    input.finalizeInput.resolved.bubblePaths.statePath,
-    hydratedResumed,
-    {
-      expectedFingerprint: input.resumedWritten.fingerprint,
-      expectedState: "RUNNING"
-    }
-  );
-}
-
 function buildRestoredReadyState(input: {
   resumedState: BubbleStateSnapshot;
   loadedState: BubbleStateSnapshot;
@@ -245,7 +233,7 @@ function buildRestoredReadyState(input: {
     ...restoredReady,
     round: input.loadedState.round,
     round_role_history: input.loadedState.round_role_history,
-    meta_review: normalizeMetaReviewSnapshot(restoredReady.meta_review)
+    meta_review: normalizeMetaReviewSnapshot(input.loadedState.meta_review)
   };
 }
 
@@ -308,17 +296,13 @@ export async function dispatchAutoRework(
       findingsForPayload: input.findingsForPayload,
       reworkMessage
     });
-    const written = await writeHydratedAutoReworkState({
-      finalizeInput: input.finalizeInput,
-      resumedWritten
-    });
 
     return {
       bubbleId: input.finalizeInput.resolved.bubbleId,
       route: "auto_rework",
       gateSequence: dispatched.sequence,
       gateEnvelope: dispatched.envelope,
-      state: written.state,
+      state: resumedWritten.state,
       metaReviewRun: input.runResultForRouting
     };
   } catch (error) {

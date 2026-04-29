@@ -33,6 +33,7 @@ export function transitionToGateState(input: {
   nowIso: string;
   targetState: "READY_FOR_HUMAN_APPROVAL";
   stickyHumanGate: boolean;
+  consecutiveCleanRuns?: number;
 }): BubbleStateSnapshot {
   const transitioned =
     input.current.state === input.targetState
@@ -58,7 +59,10 @@ export function transitionToGateState(input: {
     ...transitioned,
     meta_review: {
       ...metaReview,
-      sticky_human_gate: input.stickyHumanGate
+      sticky_human_gate: input.stickyHumanGate,
+      ...(input.consecutiveCleanRuns !== undefined
+        ? { consecutive_clean_runs: input.consecutiveCleanRuns }
+        : {})
     }
   };
 }
@@ -70,6 +74,20 @@ export function incrementAutoReworkCount(input: BubbleStateSnapshot): BubbleStat
     meta_review: {
       ...metaReview,
       auto_rework_count: metaReview.auto_rework_count + 1
+    }
+  };
+}
+
+export function setMetaReviewConsecutiveCleanRuns(
+  input: BubbleStateSnapshot,
+  consecutiveCleanRuns: number
+): BubbleStateSnapshot {
+  const metaReview = normalizeMetaReviewSnapshot(input.meta_review);
+  return {
+    ...input,
+    meta_review: {
+      ...metaReview,
+      consecutive_clean_runs: consecutiveCleanRuns
     }
   };
 }
