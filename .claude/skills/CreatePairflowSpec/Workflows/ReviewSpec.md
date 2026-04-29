@@ -194,6 +194,12 @@ Decision outcomes:
 3. `split_plan`
 4. `block_not_ready`
 
+Refinement loop rule:
+
+1. If this workflow returns `refine_plan` and the plan artifact is modified, the caller must run `ReviewSpec` again in `plan-mode` from a fresh context over the refreshed plan artifact.
+2. The plan is not approved merely because the requested refinement was applied; approval requires a later `approve_plan` result from the repeated review pass.
+3. If fresh sub-agent context is unavailable, the caller must still create a distinct review step that rereads the refreshed artifact and returns a new explicit decision.
+
 ### 4) Review in `task-mode`
 
 When reviewing a `task`, check:
@@ -212,6 +218,13 @@ Decision outcomes:
 2. `refine_task`
 3. `route_back_to_plan`
 4. `block_not_ready`
+
+Refinement loop rule:
+
+1. If this workflow returns `refine_task` and the task artifact is modified, the caller must run `ReviewSpec` again in `task-mode` from a fresh context over the refreshed task artifact and parent plan.
+2. The task is not approved merely because the requested refinement was applied; approval requires a later `approve_task` result from the repeated review pass.
+3. If the repeated pass finds another issue and modifies the artifact again, repeat the same fresh-context review loop until the result is `approve_task`, `route_back_to_plan`, `block_not_ready`, or a real blocker.
+4. If fresh sub-agent context is unavailable, the caller must still create a distinct review step that rereads the refreshed task and parent plan and returns a new explicit decision.
 
 ### 5) Run the Remaining-Task Viability Check
 
@@ -252,6 +265,7 @@ Always include:
 9. remaining-task impact summary
 10. downstream task statuses when applicable
 11. execution metadata gate result when applicable
+12. when the decision is `refine_plan` or `refine_task`, whether a repeated fresh-context ReviewSpec pass is required before approval or downstream execution
 
 ### 7) Output rules
 

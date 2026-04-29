@@ -326,7 +326,8 @@ Authoritative trigger anchors:
 Delegation:
 
 1. delegate close/merge/cleanup through `UsePairflow` `CloseBubble`
-2. after successful close/merge cleanup, update task metadata to `status=implementable`
+2. require the returned close result to prove finalized bubble artifact deletion, or to provide an explicit retained-bubble reason that prevents reporting a settled close
+3. after successful close/merge cleanup, update task metadata to `status=implementable`
 3. preserve the existing `doc_bubble_id` as historical linkage; do not clear it
 
 Output:
@@ -342,13 +343,15 @@ approval_gate_state: already_satisfied
 reason_code: DOC_BUBBLE_CLOSE_REQUIRED
 delegated_use_pairflow_surface: CloseBubble
 metadata_postcondition: task_status_implementable
+cleanup_postcondition: <bubble_deleted|retained_with_reason>
 handoff_boundary_note: Close the approved document bubble, persist status=implementable, and then allow fresh route selection.
 ```
 
 Fail-closed rule:
 
 1. if close/merge succeeds but task metadata cannot be updated to `status=implementable`, the handler must not emit an auto-continuable close result
-2. later implementation-bubble routing must never infer document completion from `doc_bubble_id`, deleted bubble artifacts, or prose-only memory
+2. if close/merge succeeds but the finalized bubble artifact remains present without an explicit retained-bubble reason, the handler must not emit an auto-continuable close result
+3. later implementation-bubble routing must never infer document completion from `doc_bubble_id`, deleted bubble artifacts, or prose-only memory
 
 ### 7. Normalized replanning path
 

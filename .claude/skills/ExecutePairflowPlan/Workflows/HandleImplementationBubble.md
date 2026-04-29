@@ -335,6 +335,7 @@ Authoritative trigger anchors:
 Delegation:
 
 1. delegate close/merge/cleanup through `UsePairflow` `CloseBubble`
+2. require the returned close result to prove finalized bubble artifact deletion, or to provide an explicit retained-bubble reason that prevents reporting a settled close
 
 Output:
 
@@ -348,8 +349,14 @@ source_scope: not_applicable
 approval_gate_state: already_satisfied
 reason_code: IMPL_BUBBLE_CLOSE_REQUIRED
 delegated_use_pairflow_surface: CloseBubble
+cleanup_postcondition: <bubble_deleted|retained_with_reason>
 handoff_boundary_note: Close the approved implementation bubble only; the caller may continue orchestration after authoritative close state returns.
 ```
+
+Fail-closed rule:
+
+1. if close/merge succeeds but the finalized bubble artifact remains present without an explicit retained-bubble reason, do not emit an auto-continuable close result
+2. return a human checkpoint or cleanup blocker instead; `UpdateProgress` must not run from a close result that still leaves the closed implementation bubble as an ordinary `DONE` artifact
 
 ### 7. Normalized replanning path
 

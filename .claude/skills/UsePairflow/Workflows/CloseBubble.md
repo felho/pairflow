@@ -8,7 +8,7 @@ allowed-tools: Bash, Read, AskUserQuestion
 
 ## Purpose
 
-Finalize a bubble after review using pairflow state-transition commands in strict order: approve -> commit -> merge. Skip steps that are already complete. For implementation bubbles, also perform post-merge doc/progress checks and archive the source task file.
+Finalize a bubble after review using pairflow state-transition commands in strict order: approve -> commit -> merge -> delete finalized bubble artifacts. Skip steps that are already complete. For implementation bubbles, also perform post-merge doc/progress checks and archive the source task file.
 
 ## Variables
 
@@ -33,6 +33,7 @@ BASE_BRANCH: base branch read from bubble metadata before merge when available
 - If merge conflict appears during merge, STOP immediately and report.
 - Do not pass `--push` / `--delete-remote` unless explicitly requested.
 - Raw `git commit` is allowed only for post-merge follow-up changes on `main` (README/docs/progress/task archive), not for lifecycle state transitions.
+- After successful merge, delete the finalized local bubble artifact with `pairflow bubble delete --force` unless a concrete safety blocker requires retaining it. A retained DONE/merged bubble is not a normal settled close result; report the explicit retained-bubble reason and stop or checkpoint according to the caller contract.
 
 ## Workflow
 
@@ -113,9 +114,15 @@ pairflow bubble status --id <BUBBLE_ID> --repo <REPO_PATH> --json
   - Remote bubble note: this routed merge still runs from the laptop/local repo, imports the started-remote handoff, completes the durable merge in that local repo, then performs remote cleanup. Do not describe it as remote merge/push plus later local checkout sync.
 - If merge returns conflict/error indicating manual conflict resolution is required, STOP and report exact error.
 
-### 5. Post-merge verification
+### 5. Post-merge cleanup and verification
 
-- Verify bubble no longer appears as active in list.
+- If merge succeeded, run:
+  ```bash
+  pairflow bubble delete --id <BUBBLE_ID> --repo <REPO_PATH> --force
+  ```
+- If delete reports that the bubble no longer exists because merge already cleaned it up, treat that as `cleanup=already_absent` and continue.
+- If delete fails for any other reason, STOP and report the retained-bubble reason. Do not report a fully settled close unless the caller explicitly accepts the retained bubble.
+- Verify bubble no longer appears in `pairflow bubble list --repo <REPO_PATH>`.
 - Verify repository is clean and no leftover merge/rebase/cherry-pick state exists.
 
 ### 6. Implementation follow-up (only for `REVIEW_ARTIFACT_TYPE=code`)
@@ -141,10 +148,11 @@ Apply only if merge succeeded.
 
 ### 7. Special cases
 
-- If bubble is already merged/cleaned but forced cleanup is explicitly requested:
+- If bubble is already merged but still present as `DONE`, perform the same post-merge cleanup:
   ```bash
   pairflow bubble delete --id <BUBBLE_ID> --repo <REPO_PATH> --force
   ```
+- If bubble is already merged/cleaned and no artifact remains, report `cleanup=already_absent`.
 - If state is `CANCELLED` and the user wants to salvage code, route to `RecoverBubble` instead.
 
 ## Report
@@ -157,7 +165,7 @@ Bubble <BUBBLE_ID> close summary:
 - Committed: <yes (--stage-all) / skipped (state was <STATE>)>
 - Merged: <yes / no>
 - Merge target: bubble/<BUBBLE_ID> -> <base-branch or n/a>
-- Cleanup: <performed / skipped>
+- Cleanup: <deleted finalized bubble / already absent / retained with reason / skipped because merge did not complete>
 - Implementation follow-up: <n/a (document bubble) / completed / skipped with reason>
 - Task archive: <n/a / moved to plans/archive/tasks/... / skipped with reason>
 - Follow-up commit on main: <yes / no>

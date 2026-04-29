@@ -83,6 +83,7 @@ approval_gate_state: already_satisfied
 close_result: success
 closed_bubble_id: <persisted implementation bubble id or null>
 closed_task_id: <canonical task id>
+cleanup_postcondition: <bubble_deleted|retained_with_explicit_reason>
 reentry_identity_key: <closed_task_id>::<closed_bubble_id-or-null>
 ```
 
@@ -93,7 +94,8 @@ Validation rules:
 3. `closed_task_id` must match the refreshed post-close task artifact deterministically
 4. `closed_bubble_id` must match the persisted implementation linkage when that linkage exists; otherwise it must be `null`
 5. `reentry_identity_key` must use the deterministic format `<closed_task_id>::<closed_bubble_id-or-null>`
-6. extra diagnostics may be present, but they are not routing authority here
+6. the close result must include `cleanup_postcondition=bubble_deleted` or an explicit retained-bubble reason accepted by the close workflow; a plain merged/DONE bubble artifact is not settled enough for aftermath
+7. extra diagnostics may be present, but they are not routing authority here
 
 ## Entry Conditions
 
@@ -116,7 +118,7 @@ Additional entry rules:
 
 1. do not enter from raw Pairflow state
 2. do not enter from a merely close-ready signal that has not yet produced a successful close result
-3. do not treat a failed merge or unresolved cleanup warning as settled success; that belongs to the close workflow or a human checkpoint first
+3. do not treat a failed merge, retained DONE bubble artifact, or unresolved cleanup warning as settled success; that belongs to the close workflow or a human checkpoint first
 4. if refreshed plan/task artifacts are absent after close returns, fail closed instead of reconstructing the aftermath from memory
 5. `SETTLED_IMPLEMENTATION_CLOSE_RESULT` and the required upstream route shape must agree on `route_class=implementation_bubble_close`, `target_workflow_surface=CloseImplementationBubble`, `continuation_mode=auto_continue`, `route_scope=implementation_bubble`, `source_scope=not_applicable`, and `approval_gate_state=already_satisfied`
 

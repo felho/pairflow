@@ -87,15 +87,15 @@ Mandatory route-to-delegation mapping:
 | Route Surface | Required Delegated Execution | Minimum Result Needed Before Continuing |
 |---|---|---|
 | `FixPlanMetadata` | repo-local `Workflows/FixPlanMetadata.md` | repaired metadata or fail-closed checkpoint |
-| `ReviewPlan` | `CreatePairflowSpec` `ReviewSpec` in `plan-mode` | `approve_plan`, `refine_plan`, `split_plan`, or `block_not_ready` |
+| `ReviewPlan` | `CreatePairflowSpec` `ReviewSpec` in `plan-mode` | `approve_plan`, `refine_plan`, `split_plan`, or `block_not_ready`; if `refine_plan` changes the plan, rerun `ReviewSpec` in fresh `plan-mode` context before any downstream route may advance |
 | `CreateTask` | `CreatePairflowSpec` `CreateTask` | created/refined task path plus task metadata status |
-| `ReviewTask` | `CreatePairflowSpec` `ReviewSpec` in `task-mode` | `approve_task`, `refine_task`, `route_back_to_plan`, or `block_not_ready` |
+| `ReviewTask` | `CreatePairflowSpec` `ReviewSpec` in `task-mode` | `approve_task`, `refine_task`, `route_back_to_plan`, or `block_not_ready`; if `refine_task` changes the task, rerun `ReviewSpec` in fresh `task-mode` context before any downstream route may advance |
 | `CreateDocumentBubble` | repo-local `HandleDocumentBubble` delegating to `UsePairflow` `CreateBubble` | created/started document bubble id, persisted `doc_bubble_id` linkage, and boundary status |
 | `ReviewDocumentBubble` | repo-local `HandleDocumentBubble` delegating to `UsePairflow` `ReviewBubble` | review result and human approval/rework checkpoint |
-| `CloseDocumentBubble` | repo-local `HandleDocumentBubble` delegating to `UsePairflow` `CloseBubble` | close/merge result and refreshed task status evidence proving `status=implementable` |
+| `CloseDocumentBubble` | repo-local `HandleDocumentBubble` delegating to `UsePairflow` `CloseBubble` | close/merge result, bubble artifact deletion or explicit retained-bubble reason, and refreshed task status evidence proving `status=implementable` |
 | `CreateImplementationBubble` | repo-local `HandleImplementationBubble` delegating to `UsePairflow` `CreateBubble` | created/started implementation bubble id, persisted `impl_bubble_id` linkage, `status=in_progress`, and boundary status |
 | `ReviewImplementationBubble` | repo-local `HandleImplementationBubble` delegating to `UsePairflow` `ReviewBubble` | review result and human approval/rework checkpoint |
-| `CloseImplementationBubble` | repo-local `HandleImplementationBubble` delegating to `UsePairflow` `CloseBubble` | close/merge result before `UpdateProgress` aftermath |
+| `CloseImplementationBubble` | repo-local `HandleImplementationBubble` delegating to `UsePairflow` `CloseBubble` | close/merge result plus bubble artifact deletion or explicit retained-bubble reason before `UpdateProgress` aftermath |
 | `HandleNormalizedReplan` | repo-local `Workflows/HandleNormalizedReplan.md` | normalized replanning follow-through result |
 | `TroubleshootBubble` | active bubble handler delegating to `UsePairflow` troubleshooting surface | troubleshooting result and explicit stop boundary |
 
@@ -105,12 +105,15 @@ Plan/task review gates:
 2. `task_review` is not satisfied by the orchestrator creating a task with `status=approved`
 3. `CreateTask` output may leave a task in `draft`, `under_review`, or another workflow-defined state; any transition to bubble-ready status must come from the delegated task review result or an explicitly delegated task-creation contract that says the task is already approved
 4. no bubble route may be executed unless every upstream plan/task route in the current execution chain has a route-ledger entry with a delegated result
+5. if a delegated `ReviewSpec` returns `refine_plan` or `refine_task` and the artifact is modified, the same review mode must be delegated again from a fresh context using the refreshed artifact before the route can be considered approved
+6. a refinement loop is settled only by `approve_plan`, `approve_task`, `split_plan`, `route_back_to_plan`, `block_not_ready`, or a real blocker; the orchestrator must not treat its own post-edit inspection as a replacement for the repeated `ReviewSpec` result
 
 Fresh-context requirement:
 
 1. downstream specialized workflows must run in fresh context whenever feasible
 2. if the execution environment cannot spawn a fresh context, the orchestrator must still create a distinct workflow step with a compact input packet and a compact returned result
 3. the returned result, not the orchestrator's private reasoning, is the authority for the next routing decision
+4. every repeated `ReviewSpec` pass after a refinement must use a fresh context whenever feasible; if a fresh sub-agent is unavailable, create a distinct compact workflow step that rereads the refreshed artifact and returns a new explicit ReviewSpec decision
 
 ### Route Ledger
 
@@ -149,6 +152,8 @@ Ledger rules:
 2. if the same route repeats with no material new state recorded in the ledger, stop at `HumanCheckpoint` or troubleshooting
 3. final reports must include the route ledger summary when any route was delegated
 4. if a bubble lifecycle action is attempted without ledger proof of prior plan/task review gates, treat that as a workflow violation and stop
+5. for `ReviewPlan` and `ReviewTask`, `next_resolution_allowed=true` after `refine_plan` or `refine_task` only authorizes rerunning the same ReviewSpec route from refreshed artifacts; it does not authorize task creation, bubble creation, or lifecycle actions
+6. after a repeated ReviewSpec pass returns `approve_plan` or `approve_task`, the ledger entry must mention the latest reviewed artifact version or commit/evidence summary so downstream routing is tied to the approved content, not an older pre-refinement version
 
 ## Orchestrator Execution Style
 
@@ -236,8 +241,9 @@ Policy notes:
 3. `CreateDocumentBubble` and `CreateImplementationBubble` stop at a settled checkpoint because bubble creation hands control into the Pairflow lifecycle layer after required task-metadata linkage/status postconditions are persisted; later review/close routing depends on successor-owned normalized bubble outputs rather than immediate top-level continuation
 4. `ReviewDocumentBubble` and `ReviewImplementationBubble` stop at a human checkpoint because they sit on the explicit bubble approval/rework gate that the current quality model keeps human-controlled
 5. `document_bubble_close` and `implementation_bubble_close` may auto-continue only when `ResolvePlanState` returns them with `approval_gate_state=already_satisfied`; the top-level skill must never infer approval from raw Pairflow state
-6. after successful `implementation_bubble_close`, the next same-run owner is repo-local `UpdateProgress`; only the refreshed aftermath result may then rerun `ResolvePlanState`, stop at `PlanComplete`, or fail closed to `HumanCheckpoint`
-7. `normalized_replanning` remains `auto_continue` because it hands control to repo-local `HandleNormalizedReplan` follow-through while preserving the normalized source scope rather than dropping back to heuristic routing
+6. a close route is not settled merely because merge succeeded; the delegated close result must also prove bubble artifact deletion/cleanup or provide an explicit retained-bubble reason that is safe to carry forward
+7. after successful `implementation_bubble_close`, the next same-run owner is repo-local `UpdateProgress`; only the refreshed aftermath result may then rerun `ResolvePlanState`, stop at `PlanComplete`, or fail closed to `HumanCheckpoint`
+8. `normalized_replanning` remains `auto_continue` because it hands control to repo-local `HandleNormalizedReplan` follow-through while preserving the normalized source scope rather than dropping back to heuristic routing
 
 See `Workflows/ResolvePlanState.md` for the canonical per-route output fields, including `route_scope`, `source_scope`, `approval_gate_state`, and the full `Auto-Continue vs Checkpoint Rules`.
 

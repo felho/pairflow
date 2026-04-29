@@ -44,7 +44,7 @@ This skill exists to avoid lifecycle mistakes (wrong command in wrong state, los
 5. Treat workflow boundaries as strict contracts: do only what the selected workflow is for.
 6. For any bubble message payload (`reply`, `request-rework`, `ask-human`), use shell-safe message passing. Never inline raw text containing backticks or `$` directly in `--message "..."`.
 7. For bubble creation, always include `--review-artifact-type <document|code>` in `pairflow bubble create`.
-8. For implementation bubbles (`review_artifact_type=code`), `CloseBubble` includes mandatory post-merge completion: README/docs/progress check + required updates + task archival under `plans/archive/tasks/` with mirrored relative path.
+8. For implementation bubbles (`review_artifact_type=code`), `CloseBubble` includes mandatory post-merge completion: finalized bubble artifact deletion, README/docs/progress check + required updates, and task archival under `plans/archive/tasks/` with mirrored relative path.
 9. In `ReviewBubble` outputs, every finding must include source label: `[Bubble]` (from bubble transcript/tool output, e.g. reviewer findings) or `[MetaReview]` (from meta-reviewer artifacts already present in bubble context).
 10. `ReviewBubble` uses the surviving direct review contract only; do not expose or suggest any removed source-selection flag.
 11. Hard rule: do not route `ReviewBubble` through `pairflow bubble meta-review *` read-model commands as an operator source-selection path.
@@ -102,6 +102,7 @@ This skill exists to avoid lifecycle mistakes (wrong command in wrong state, los
   - For remote bubbles, run the routed command from the laptop/local repo; do not `ssh` into the remote clone and commit manually.
 - `DONE` -> `pairflow bubble merge`
   - For remote bubbles, run the routed command from the laptop/local repo; Pairflow imports the started-remote merge handoff, completes the durable merge in the local repo, then performs remote cleanup.
+  - After successful merge, run finalized bubble cleanup through `pairflow bubble delete --force` unless the close workflow reports a concrete retained-bubble reason.
 - `CANCELLED` with needed changes -> recovery workflow (manual git path from bubble worktree)
 
 ## Practical Guardrails
@@ -141,6 +142,7 @@ This skill exists to avoid lifecycle mistakes (wrong command in wrong state, los
   - Pattern: start with lowercase letter, then lowercase letters, digits, `_` or `-`.
   - This validation is create-time only; do not block lifecycle operations for already existing bubbles that may have longer IDs.
 - CloseBubble post-merge completion for `code` bubbles:
+  - Delete the finalized bubble artifact after successful merge unless there is a concrete retained-bubble reason.
   - Determine whether `README.md`, relevant `docs/`, or progress tracker files must be updated based on merged behavior changes, then apply required updates.
   - Archive the completed task from `plans/tasks/...` into `plans/archive/tasks/...` while preserving subdirectory structure (`plans/tasks/FOO/x.md` -> `plans/archive/tasks/FOO/x.md`).
 
