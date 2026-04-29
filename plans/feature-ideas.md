@@ -52,3 +52,4 @@
 - We did the same for observability tooling. Logs, metrics, and traces are exposed to Codex via a local observability stack that’s ephemeral for any given worktree. Codex works on a fully isolated version of that app—including its logs and metrics, which get torn down once that task is complete. Agents can query logs with LogQL and metrics with PromQL. With this context available, prompts like “ensure service startup completes in under 800ms” or “no span in these four critical user journeys exceeds two seconds” become tractable.
 - https://developers.openai.com/codex/use-cases
 - https://developers.openai.com/cookbook/examples/gpt-5/codex_prompting_guide
+- https://github.com/sentrux/sentrux
