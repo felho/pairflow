@@ -1388,6 +1388,22 @@ describe("createBubble", () => {
     ).rejects.toThrow(/Invalid bubble id/u);
   });
 
+  it("accepts bubble ids that start with a digit", async () => {
+    const repoPath = await createTempRepo();
+
+    const result = await createBubble({
+      id: "1-clean-runs-policy-state",
+      repoPath,
+      baseBranch: "main",
+      reviewArtifactType: "code",
+      task: "Task",
+      cwd: repoPath
+    });
+
+    expect(result.bubbleId).toBe("1-clean-runs-policy-state");
+    expect(result.config.bubble_branch).toBe("bubble/1-clean-runs-policy-state");
+  });
+
   it("rejects bubble ids longer than 40 characters with explicit limit message", async () => {
     const repoPath = await createTempRepo();
 

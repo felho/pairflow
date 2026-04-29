@@ -81,10 +81,10 @@ export interface ResolvedCreateBubbleRemoteExecution {
 }
 
 export function validateBubbleId(id: string): void {
-  if (!/^[a-z][a-z0-9_-]{2,39}$/u.test(id)) {
+  if (!/^[a-z0-9][a-z0-9_-]{2,39}$/u.test(id)) {
     throw toBubbleCreateError({
       message:
-        "Invalid bubble id. Maximum length is 40 characters. Use 3-40 chars, starting with a lowercase letter, then lowercase letters, digits, '_' or '-'.",
+        "Invalid bubble id. Maximum length is 40 characters. Use 3-40 chars, starting with a lowercase letter or digit, then lowercase letters, digits, '_' or '-'.",
       context: { id }
     });
   }
