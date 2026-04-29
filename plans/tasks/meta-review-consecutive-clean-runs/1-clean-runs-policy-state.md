@@ -5,7 +5,7 @@ task_family_id: clean-runs-policy-state
 sequence_key: "1"
 task_id: 1-clean-runs-policy-state
 title: "Meta-Review Consecutive Clean Runs Policy + State Foundation"
-status: approved
+status: implementable
 phase: phase1
 target_files:
   - src/types/bubble.ts
@@ -235,31 +235,31 @@ This task introduces the persisted config field, defaulting, parsing, runtime no
 
 ### 0b) Scope Reality and Shape Proof
 
-| Item                               | Rule                                                                          | Implementation / Review Consequence | Priority | Timing       |
-| ---------------------------------- | ----------------------------------------------------------------------------- | ----------------------------------- | -------- | ------------ |
-| Inspected entrypoints / call-sites | config parse/render and snapshot normalize/schema paths define the foundation | keep edits in foundation surfaces   | P1       | required-now |
-| Actual touched scope               | contract/persisted-authority foundation                                       | avoid routing/read-model changes    | P1       | required-now |
-| Mutation entrypoints in scope      | config render and state normalization only                                    | no lifecycle transition changes     | P1       | required-now |
-| Hidden scope ruled out             | gate finalization, route persistence, status/UI left to successors            | no broad consume-family drift       | P1       | required-now |
-| Branch inventory note              | missing `review_policy`, empty `[review_policy]`, valid config, invalid config, missing state, legacy-shaped state with missing streak, valid state, and malformed state | add focused tests | P1       | required-now |
-| Shape proof                        | fields are not behaviorally consumed here                                     | task remains bounded                | P1       | required-now |
+| Item                               | Rule                                                                                                                                                                     | Implementation / Review Consequence | Priority | Timing       |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------- | -------- | ------------ |
+| Inspected entrypoints / call-sites | config parse/render and snapshot normalize/schema paths define the foundation                                                                                            | keep edits in foundation surfaces   | P1       | required-now |
+| Actual touched scope               | contract/persisted-authority foundation                                                                                                                                  | avoid routing/read-model changes    | P1       | required-now |
+| Mutation entrypoints in scope      | config render and state normalization only                                                                                                                               | no lifecycle transition changes     | P1       | required-now |
+| Hidden scope ruled out             | gate finalization, route persistence, status/UI left to successors                                                                                                       | no broad consume-family drift       | P1       | required-now |
+| Branch inventory note              | missing `review_policy`, empty `[review_policy]`, valid config, invalid config, missing state, legacy-shaped state with missing streak, valid state, and malformed state | add focused tests                   | P1       | required-now |
+| Shape proof                        | fields are not behaviorally consumed here                                                                                                                                | task remains bounded                | P1       | required-now |
 
 ### 0c) Plan Linkage and Successor Impact
 
-| Item                                    | Rule                                   | Implementation / Review Consequence                | Priority | Timing         |
-| --------------------------------------- | -------------------------------------- | -------------------------------------------------- | -------- | -------------- |
-| Parent gap closed                       | config/state foundation                | closes plan gap 1 and state part of gap 2          | P1       | required-now   |
-| Depends on                              | current review-policy baseline         | preserve existing threshold fields                 | P1       | required-now   |
-| Unlocks / impacts successors            | task 02 consumes requirement/streak    | successor must not invent fallback                 | P1       | required-now   |
-| Task-list impact                        | refines task-01                        | tracker can move to in-progress when bubble starts | P2       | after approval |
+| Item                                    | Rule                                   | Implementation / Review Consequence                    | Priority | Timing         |
+| --------------------------------------- | -------------------------------------- | ------------------------------------------------------ | -------- | -------------- |
+| Parent gap closed                       | config/state foundation                | closes plan gap 1 and state part of gap 2              | P1       | required-now   |
+| Depends on                              | current review-policy baseline         | preserve existing threshold fields                     | P1       | required-now   |
+| Unlocks / impacts successors            | task 02 consumes requirement/streak    | successor must not invent fallback                     | P1       | required-now   |
+| Task-list impact                        | refines task-01                        | tracker can move to in-progress when bubble starts     | P2       | after approval |
 | Inherited validation / exit expectation | targeted config/state tests plus build | evidence must be recorded by the implementation bubble | P1       | required-now   |
 
 ### 0d) Shared Contract Compatibility
 
-| Shared Contract                 | Current Consumers                                          | Change Type (`additive | breaking                                          | N/A`)                                       | This Task Action | Deferred Alignment |
-| ------------------------------- | ---------------------------------------------------------- | ---------------------- | ------------------------------------------------- | ------------------------------------------- | ---------------- | ------------------ |
-| `BubbleReviewPolicyConfig`      | config parser, create/update/status/list/UI typed fixtures | additive with default  | add required normalized field with legacy default | routing/read-model/UI consume in successors |
-| `BubbleMetaReviewSnapshotState` | state schema, meta-review snapshot helpers, meta-review gate helpers/tests | additive with default | add streak field and normalization | increment/reset semantics in task 02 |
+| Shared Contract                 | Current Consumers                                                          | Change Type (`additive | breaking                                          | N/A`)                                       | This Task Action | Deferred Alignment |
+| ------------------------------- | -------------------------------------------------------------------------- | ---------------------- | ------------------------------------------------- | ------------------------------------------- | ---------------- | ------------------ |
+| `BubbleReviewPolicyConfig`      | config parser, create/update/status/list/UI typed fixtures                 | additive with default  | add required normalized field with legacy default | routing/read-model/UI consume in successors |
+| `BubbleMetaReviewSnapshotState` | state schema, meta-review snapshot helpers, meta-review gate helpers/tests | additive with default  | add streak field and normalization                | increment/reset semantics in task 02        |
 
 ### 0e) Baseline Preservation
 
