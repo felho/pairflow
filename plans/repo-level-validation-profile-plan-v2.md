@@ -4,15 +4,15 @@ artifact_id: plan_repo_level_validation_profile_v2
 plan_id: repo-level-validation-profile-plan-v2
 created_on: "2026-04-29"
 title: "Repo-Level Validation Profile Plan V2"
-plan_status: draft
+plan_status: approved
 prd_ref: null
 task_order:
   - 1-repo-validation-profile-foundation
   - 2-validation-target-resolution
 task_tracker:
   - task_id: 1-repo-validation-profile-foundation
-    task_path: null
-    status: not_created
+    task_path: plans/tasks/repo-level-validation-profile-plan-v2/1-repo-validation-profile-foundation.md
+    status: approved
     notes: "First implementation slice: parse repo-level validation config and inherit it into new bubble command config."
   - task_id: 2-validation-target-resolution
     task_path: null
@@ -84,6 +84,67 @@ Missing data rule:
 3. Multi-target validation config is rejected in Task 1 and deferred to Task 2.
 
 ## Contract
+
+### Closed Contract Inventory
+
+Task 1 intentionally widens two existing contracts. This is an authorized
+reinterpretation of the current fixed validation-command surface, not an
+incidental implementation detail.
+
+Source anchors:
+
+1. `src/types/bubble.ts` currently defines `BubbleCommandsConfig` with fixed
+   command fields: `bootstrap`, `lint`, `test`, `typecheck`,
+   `validation_required`, and `validation_required_explicit`.
+2. `src/config/bubbleConfig.ts` currently parses and renders only those fixed
+   `[commands]` keys in `bubble.toml`.
+3. `src/v11/infrastructure/artifact/validation/passValidationEvidenceContract.ts`
+   currently closes PASS validation command ids to `lint`, `typecheck`, and
+   `test`.
+4. `src/v11/infrastructure/artifact/validation/passValidationEvidence.ts`
+   currently rejects `commands.validation_required` entries that are outside
+   that closed id set.
+
+Canonical elements after Task 1:
+
+1. `bubble.toml` `[commands]` remains the created-bubble execution authority.
+2. Built-in command ids remain canonical: `lint`, `typecheck`, `test`, and
+   `bootstrap`.
+3. `validation_required` remains the canonical ordered list of PASS-required
+   validation command ids.
+4. `validation_required_explicit=true` remains the only way an empty
+   `validation_required = []` represents an explicit empty policy.
+5. Custom validation command ids become canonical only after they are
+   materialized into the created bubble's `[commands]` map.
+
+Guard elements:
+
+1. Repo-level `[validation]` is a create-time default source only; it is not a
+   runtime fallback authority after bubble creation.
+2. `validation.required` references are validation guards during bubble
+   creation: every required id must resolve to an explicit repo command or a
+   legacy built-in default before the bubble config is written.
+3. Unsupported multi-target fields are phase-boundary guards and must fail
+   fast in Task 1.
+
+Compat elements:
+
+1. Existing bubbles with only fixed `lint`, `typecheck`, and `test` fields must
+   continue to parse and run.
+2. Missing repo-level `[validation]` must keep the legacy create behavior.
+3. PASS evidence may keep a `kind` field for command ids, but the type/contract
+   must no longer reject custom ids that are present in the same bubble config.
+
+Forbidden reinterpretations:
+
+1. Do not treat repo-level `pairflow.toml` as PASS runtime authority.
+2. Do not fall back to built-in commands after a repo profile command was
+   selected and written for a created bubble.
+3. Do not make `lint` or any custom id required unless it appears in
+   `validation.required`.
+4. Do not silently accept multi-target config in Task 1.
+5. Do not treat implementer-reported validation output as authoritative PASS
+   evidence.
 
 ### Repo Config Shape
 
@@ -186,6 +247,18 @@ Expected target areas:
 5. create-path tests that already cover bubble config generation
 6. `src/v11/application/pass/**` and `src/v11/infrastructure/artifact/validation/**` where needed to support custom validation command ids
 7. implementer start/resume prompt builder paths where required validation guidance is rendered
+
+Inherited contract-boundary requirements:
+
+1. Preserve the fixed-field compatibility contract for existing bubble configs.
+2. Add custom validation command id support without making repo config a runtime
+   PASS authority.
+3. Update PASS validation evidence/types so a custom id such as `fitness` can
+   be represented, executed, logged, and reported when listed in the created
+   bubble config's `commands.validation_required`.
+4. Keep built-in command defaults explicit and bounded to create-time
+   resolution.
+5. Keep unsupported multi-target config rejected with a phase-boundary error.
 
 Acceptance:
 
