@@ -5,7 +5,7 @@ task_family_id: meta-review-consecutive-clean-runs-policy-state-foundation
 sequence_key: task-01
 task_id: task-01-policy-and-state-foundation
 title: "Meta-Review Consecutive Clean Runs Policy + State Foundation"
-status: approved
+status: under_review
 phase: phase1
 target_files:
   - src/types/bubble.ts
@@ -204,75 +204,75 @@ This task introduces the persisted config field, defaulting, parsing, runtime no
 
 ### 0) Domain / Control Contract
 
-| Item | Rule | Implementation Consequence | Priority | Timing |
-|---|---|---|---|---|
-| Business invariant | configurable clean-run confidence must have separate config and streak authority | add separate requirement and current-streak fields | P1 | required-now |
-| Control model | config owns required count; state owns current streak | no derived counters from auto-rework or UI labels | P1 | required-now |
-| Read-path rule | consumers read normalized helpers | expose fields through existing normalization functions | P1 | required-now |
-| Forbidden fallback | no transcript/recommendation/UI/auto-rework fallback | validation and defaults must be explicit | P1 | required-now |
-| Allowed resolution path | absent requirement -> `1`; absent streak -> `0` | legacy config/state remain valid | P1 | required-now |
-| Missing-data rule | invalid config fails; missing state normalizes safe | tests cover both branches | P1 | required-now |
-| Phase boundary | foundation only | no gate-routing changes | P1 | required-now |
+| Item                    | Rule                                                                             | Implementation Consequence                             | Priority | Timing       |
+| ----------------------- | -------------------------------------------------------------------------------- | ------------------------------------------------------ | -------- | ------------ |
+| Business invariant      | configurable clean-run confidence must have separate config and streak authority | add separate requirement and current-streak fields     | P1       | required-now |
+| Control model           | config owns required count; state owns current streak                            | no derived counters from auto-rework or UI labels      | P1       | required-now |
+| Read-path rule          | consumers read normalized helpers                                                | expose fields through existing normalization functions | P1       | required-now |
+| Forbidden fallback      | no transcript/recommendation/UI/auto-rework fallback                             | validation and defaults must be explicit               | P1       | required-now |
+| Allowed resolution path | absent requirement -> `1`; absent streak -> `0`                                  | legacy config/state remain valid                       | P1       | required-now |
+| Missing-data rule       | invalid config fails; missing state normalizes safe                              | tests cover both branches                              | P1       | required-now |
+| Phase boundary          | foundation only                                                                  | no gate-routing changes                                | P1       | required-now |
 
 ### 0a) Canonical Contract Preservation
 
-| Element | Source Anchor | Required Interpretation | This Task Action | Priority | Timing |
-|---|---|---|---|---|---|
-| `meta_review_auto_rework_min_severity` | `src/types/bubble.ts`, `src/v11/shared/reviewPolicy/reviewPolicyRuntime.ts` | threshold authority remains unchanged | preserve | P1 | required-now |
-| `meta_review_consecutive_clean_runs_required` | new review-policy field | configured count, integer `>= 1` | add | P1 | required-now |
-| `consecutive_clean_runs` | new meta-review snapshot field | current persisted streak, integer `>= 0` | add | P1 | required-now |
-| `auto_rework_count` | `src/v11/shared/metaReview/metaReviewSnapshot.ts` | budget counter, not confidence streak | preserve | P1 | required-now |
+| Element                                       | Source Anchor                                                               | Required Interpretation                  | This Task Action | Priority | Timing       |
+| --------------------------------------------- | --------------------------------------------------------------------------- | ---------------------------------------- | ---------------- | -------- | ------------ |
+| `meta_review_auto_rework_min_severity`        | `src/types/bubble.ts`, `src/v11/shared/reviewPolicy/reviewPolicyRuntime.ts` | threshold authority remains unchanged    | preserve         | P1       | required-now |
+| `meta_review_consecutive_clean_runs_required` | new review-policy field                                                     | configured count, integer `>= 1`         | add              | P1       | required-now |
+| `consecutive_clean_runs`                      | new meta-review snapshot field                                              | current persisted streak, integer `>= 0` | add              | P1       | required-now |
+| `auto_rework_count`                           | `src/v11/shared/metaReview/metaReviewSnapshot.ts`                           | budget counter, not confidence streak    | preserve         | P1       | required-now |
 
 ### 0b) Scope Reality and Shape Proof
 
-| Item | Rule | Implementation / Review Consequence | Priority | Timing |
-|---|---|---|---|---|
-| Inspected entrypoints / call-sites | config parse/render and snapshot normalize/schema paths define the foundation | keep edits in foundation surfaces | P1 | required-now |
-| Actual touched scope | contract/persisted-authority foundation | avoid routing/read-model changes | P1 | required-now |
-| Mutation entrypoints in scope | config render and state normalization only | no lifecycle transition changes | P1 | required-now |
-| Hidden scope ruled out | gate finalization, route persistence, status/UI left to successors | no broad consume-family drift | P1 | required-now |
-| Branch inventory note | missing/valid/invalid config and missing/valid/invalid state | add focused tests | P1 | required-now |
-| Shape proof | fields are not behaviorally consumed here | task remains bounded | P1 | required-now |
+| Item                               | Rule                                                                          | Implementation / Review Consequence | Priority | Timing       |
+| ---------------------------------- | ----------------------------------------------------------------------------- | ----------------------------------- | -------- | ------------ |
+| Inspected entrypoints / call-sites | config parse/render and snapshot normalize/schema paths define the foundation | keep edits in foundation surfaces   | P1       | required-now |
+| Actual touched scope               | contract/persisted-authority foundation                                       | avoid routing/read-model changes    | P1       | required-now |
+| Mutation entrypoints in scope      | config render and state normalization only                                    | no lifecycle transition changes     | P1       | required-now |
+| Hidden scope ruled out             | gate finalization, route persistence, status/UI left to successors            | no broad consume-family drift       | P1       | required-now |
+| Branch inventory note              | missing/valid/invalid config and missing/valid/invalid state                  | add focused tests                   | P1       | required-now |
+| Shape proof                        | fields are not behaviorally consumed here                                     | task remains bounded                | P1       | required-now |
 
 ### 0c) Plan Linkage and Successor Impact
 
-| Item | Rule | Implementation / Review Consequence | Priority | Timing |
-|---|---|---|---|---|
-| Parent gap closed | config/state foundation | closes plan gap 1 and state part of gap 2 | P1 | required-now |
-| Depends on | current review-policy baseline | preserve existing threshold fields | P1 | required-now |
-| Unlocks / impacts successors | task 02 consumes requirement/streak | successor must not invent fallback | P1 | required-now |
-| Task-list impact | refines task-01 | tracker can move to in-progress when bubble starts | P2 | after approval |
-| Inherited validation / exit expectation | targeted config/state tests plus build | evidence must be recorded by implementation bubble | P1 | required-now |
+| Item                                    | Rule                                   | Implementation / Review Consequence                | Priority | Timing         |
+| --------------------------------------- | -------------------------------------- | -------------------------------------------------- | -------- | -------------- |
+| Parent gap closed                       | config/state foundation                | closes plan gap 1 and state part of gap 2          | P1       | required-now   |
+| Depends on                              | current review-policy baseline         | preserve existing threshold fields                 | P1       | required-now   |
+| Unlocks / impacts successors            | task 02 consumes requirement/streak    | successor must not invent fallback                 | P1       | required-now   |
+| Task-list impact                        | refines task-01                        | tracker can move to in-progress when bubble starts | P2       | after approval |
+| Inherited validation / exit expectation | targeted config/state tests plus build | evidence must be recorded by implementation bubble | P1       | required-now   |
 
 ### 0d) Shared Contract Compatibility
 
-| Shared Contract | Current Consumers | Change Type (`additive|breaking|N/A`) | This Task Action | Deferred Alignment |
-|---|---|---|---|---|
-| `BubbleReviewPolicyConfig` | config parser, create/update/status/list/UI typed fixtures | additive with default | add required normalized field with legacy default | routing/read-model/UI consume in successors |
-| `BubbleMetaReviewSnapshotState` | state schema, meta-review gate helpers/tests | additive with default | add streak field and normalization | increment/reset semantics in task 02 |
+| Shared Contract                 | Current Consumers                                          | Change Type (`additive | breaking                                          | N/A`)                                       | This Task Action | Deferred Alignment |
+| ------------------------------- | ---------------------------------------------------------- | ---------------------- | ------------------------------------------------- | ------------------------------------------- | ---------------- | ------------------ |
+| `BubbleReviewPolicyConfig`      | config parser, create/update/status/list/UI typed fixtures | additive with default  | add required normalized field with legacy default | routing/read-model/UI consume in successors |
+| `BubbleMetaReviewSnapshotState` | state schema, meta-review gate helpers/tests               | additive with default  | add streak field and normalization                | increment/reset semantics in task 02        |
 
 ### 0e) Baseline Preservation
 
-| Current Behavior | Preserve/Replace/Forbid | Required Proof | Priority | Timing |
-|---|---|---|---|---|
-| Missing review policy normalizes to defaults | preserve | runtime normalization test | P1 | required-now |
-| Existing severity parse/render | preserve | config roundtrip tests | P1 | required-now |
-| Missing meta-review snapshot normalizes safely | preserve | snapshot normalization test | P1 | required-now |
-| Auto-rework counters model budget only | preserve | no implementation dependency on counters for streak | P1 | required-now |
+| Current Behavior                               | Preserve/Replace/Forbid | Required Proof                                      | Priority | Timing       |
+| ---------------------------------------------- | ----------------------- | --------------------------------------------------- | -------- | ------------ |
+| Missing review policy normalizes to defaults   | preserve                | runtime normalization test                          | P1       | required-now |
+| Existing severity parse/render                 | preserve                | config roundtrip tests                              | P1       | required-now |
+| Missing meta-review snapshot normalizes safely | preserve                | snapshot normalization test                         | P1       | required-now |
+| Auto-rework counters model budget only         | preserve                | no implementation dependency on counters for streak | P1       | required-now |
 
 ### 0f) Success / Completion Proof Boundary
 
-| Surface | Current Proof Source | Target Proof Source | Canonical / Compat / Guard | Mixed-Truth Allowed? | Priority | Timing |
-|---|---|---|---|---|---|---|
-| config normalized review policy | default/explicit parse tests | same plus required clean-run count | canonical | no | P1 | required-now |
-| meta-review snapshot | normalization/state tests | same plus streak field | canonical | no | P1 | required-now |
+| Surface                         | Current Proof Source         | Target Proof Source                | Canonical / Compat / Guard | Mixed-Truth Allowed? | Priority | Timing       |
+| ------------------------------- | ---------------------------- | ---------------------------------- | -------------------------- | -------------------- | -------- | ------------ |
+| config normalized review policy | default/explicit parse tests | same plus required clean-run count | canonical                  | no                   | P1       | required-now |
+| meta-review snapshot            | normalization/state tests    | same plus streak field             | canonical                  | no                   | P1       | required-now |
 
 ### 0g) Precondition and Side-Effect Boundary
 
-| Case | Must Be Validated Before | Forbidden Early Side Effects | Required Failure Behavior | Priority | Timing |
-|---|---|---|---|---|
-| invalid required clean-run count | parsed config is accepted | route or state mutation consumes value | validation error | P1 | required-now |
-| malformed streak state | state snapshot is accepted | routing consumes streak | schema validation error or safe normalization for missing-only legacy state | P1 | required-now |
+| Case                             | Must Be Validated Before   | Forbidden Early Side Effects           | Required Failure Behavior                                                   | Priority | Timing       |
+| -------------------------------- | -------------------------- | -------------------------------------- | --------------------------------------------------------------------------- | -------- | ------------ |
+| invalid required clean-run count | parsed config is accepted  | route or state mutation consumes value | validation error                                                            | P1       | required-now |
+| malformed streak state           | state snapshot is accepted | routing consumes streak                | schema validation error or safe normalization for missing-only legacy state | P1       | required-now |
 
 ### 1) Implementation Requirements
 
