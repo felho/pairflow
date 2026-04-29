@@ -19,7 +19,7 @@ archive_group: 2026-04-27-meta-review-consecutive-clean-runs-plan-v1
 task_tracker:
   - task_id: 1-clean-runs-policy-state
     task_path: plans/tasks/meta-review-consecutive-clean-runs/1-clean-runs-policy-state.md
-    status: approved
+    status: in_progress
   - task_id: 2-clean-runs-gate-routing
     task_path: null
     status: not_created

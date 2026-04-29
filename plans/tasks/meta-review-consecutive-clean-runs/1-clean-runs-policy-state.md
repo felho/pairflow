@@ -5,7 +5,7 @@ task_family_id: clean-runs-policy-state
 sequence_key: "1"
 task_id: 1-clean-runs-policy-state
 title: "Meta-Review Consecutive Clean Runs Policy + State Foundation"
-status: implementable
+status: in_progress
 phase: phase1
 target_files:
   - src/types/bubble.ts
@@ -29,7 +29,7 @@ system_context_ref: docs/pairflow-initial-design.md
 owners:
   - "felho"
 doc_bubble_id: clean-runs-policy-state-doc
-impl_bubble_id: null
+impl_bubble_id: clean-runs-policy-state-impl
 supersedes: []
 superseded_by: null
 archive_group: 2026-04-27-meta-review-consecutive-clean-runs-plan-v1
