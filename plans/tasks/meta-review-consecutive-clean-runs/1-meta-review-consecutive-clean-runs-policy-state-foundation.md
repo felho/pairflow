@@ -2,10 +2,10 @@
 artifact_type: task
 artifact_id: task_meta_review_consecutive_clean_runs_policy_state_foundation_v1
 task_family_id: meta-review-consecutive-clean-runs-policy-state-foundation
-sequence_key: task-01
-task_id: task-01-policy-and-state-foundation
+sequence_key: "1"
+task_id: 1-meta-review-consecutive-clean-runs-policy-state-foundation
 title: "Meta-Review Consecutive Clean Runs Policy + State Foundation"
-status: under_review
+status: approved
 phase: phase1
 target_files:
   - src/types/bubble.ts
@@ -61,8 +61,8 @@ This task introduces the persisted config field, defaulting, parsing, runtime no
 
 1. Parent plan gap closed: new review-policy contract and canonical persistence of the current clean streak.
 2. Depends on: current merged review-policy and meta-review snapshot baseline.
-3. Unlocks / impacts successors: `task-02-gate-routing-and-streak-semantics` may consume normalized requirement and streak without inventing local fallback semantics.
-4. Task-list impact: refines `task-01-policy-and-state-foundation`.
+3. Unlocks / impacts successors: `2-meta-review-consecutive-clean-runs-gate-routing-streak-semantics` may consume normalized requirement and streak without inventing local fallback semantics.
+4. Task-list impact: refines `1-meta-review-consecutive-clean-runs-policy-state-foundation`.
 5. Inherited validation / exit expectation: config parsing/validation, runtime normalization, and state normalization tests must prove default `1`, invalid count rejection, and missing state -> streak `0`.
 
 ### Canonical Contract Anchors
