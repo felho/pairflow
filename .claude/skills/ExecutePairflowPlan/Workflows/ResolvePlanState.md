@@ -161,10 +161,10 @@ Field rules:
 | `task_review` | `ReviewTask` | `CreatePairflowSpec` | `auto_continue` | `task` | `not_applicable` | `not_applicable` | active task exists but is not yet ready for bubble routing | review/refine task only; do not invent plan/bubble mutations here |
 | `document_bubble_create` | `CreateDocumentBubble` | `UsePairflow` | `stop_at_settled_checkpoint` | `document_bubble` | `not_applicable` | `not_applicable` | approved task has no document bubble linkage yet | create/start the doc bubble; raw lifecycle follow-up stays with successor bubble routing |
 | `document_bubble_review` | `ReviewDocumentBubble` | `UsePairflow` | `stop_at_human_checkpoint` | `document_bubble` | `not_applicable` | `review_required` | normalized bubble signal says the doc bubble reached its review gate | produce deep-review output for human approval/rework; do not close the bubble here |
-| `document_bubble_close` | `CloseDocumentBubble` | `UsePairflow` | `auto_continue` | `document_bubble` | `not_applicable` | `already_satisfied` | normalized bubble signal says doc bubble is approved and ready to close after the separate review/approval path has already been satisfied | close/merge cleanup only; next-route selection happens after the close result returns |
+| `document_bubble_close` | `CloseDocumentBubble` | `UsePairflow` | `auto_continue` | `document_bubble` | `not_applicable` | `already_satisfied` | normalized bubble signal says doc bubble is approved and ready to close after the separate review/approval path has already been satisfied | close/merge cleanup only; on successful return the same-run owner goes back to top-level `ResolvePlanState` for fresh route selection |
 | `implementation_bubble_create` | `CreateImplementationBubble` | `UsePairflow` | `stop_at_settled_checkpoint` | `implementation_bubble` | `not_applicable` | `not_applicable` | trusted upstream input proves document refinement is complete and no impl bubble linkage exists yet | create/start the impl bubble; raw lifecycle follow-up stays with successor bubble routing |
 | `implementation_bubble_review` | `ReviewImplementationBubble` | `UsePairflow` | `stop_at_human_checkpoint` | `implementation_bubble` | `not_applicable` | `review_required` | normalized bubble signal says the impl bubble reached its review gate | produce deep-review output for human approval/rework; do not close the bubble here |
-| `implementation_bubble_close` | `CloseImplementationBubble` | `UsePairflow` | `auto_continue` | `implementation_bubble` | `not_applicable` | `already_satisfied` | normalized bubble signal says impl bubble is approved and ready to close after the separate review/approval path has already been satisfied | close/merge cleanup only; progress/archive aftermath remains successor-owned |
+| `implementation_bubble_close` | `CloseImplementationBubble` | `UsePairflow` | `auto_continue` | `implementation_bubble` | `not_applicable` | `already_satisfied` | normalized bubble signal says impl bubble is approved and ready to close after the separate review/approval path has already been satisfied | close/merge cleanup only; on successful return the top-level auto-continue handoff goes to repo-local `UpdateProgress` |
 | `normalized_replanning` | `HandleNormalizedReplan` | repo-local `Workflows/HandleNormalizedReplan.md` | `auto_continue` | `task`, `document_bubble`, or `implementation_bubble` according to normalized source authority | `task` or bubble-origin `document_bubble` / `implementation_bubble` | `not_applicable` | task review or bubble layer produced a normalized replanning signal | consume the normalized signal only; repo-local follow-through may delegate `CreatePairflowSpec` work and prepare supersede/archive handoff, but raw bubble detail and normal aftermath remain out of scope here |
 | `troubleshoot_bubble` | `TroubleshootBubble` | repo-local bubble handler -> `UsePairflow` troubleshooting surface | `stop_at_human_checkpoint` | `bubble_runtime` | `not_applicable` | `not_applicable` | explicit operator hint requires lifecycle troubleshooting | troubleshoot the bubble path only; do not silently resume normal orchestration here |
 | `human_checkpoint` | `HumanCheckpoint` | human decision boundary | `stop_at_human_checkpoint` | `orchestration` | `not_applicable` | `not_applicable` | ambiguity, contract refinement need, or cross-authority conflict remains unresolved | stop and explain why no trustworthy automatic route exists |
@@ -597,7 +597,7 @@ route_scope: document_bubble
 source_scope: not_applicable
 approval_gate_state: already_satisfied
 reason_code: DOC_BUBBLE_CLOSE_REQUIRED
-handoff_boundary_note: Close the approved document bubble only; select the next route after close returns authoritative state.
+handoff_boundary_note: Close the approved document bubble only; on successful return hand control back to top-level ResolvePlanState for fresh route selection.
 ```
 
 ### Example 9: Implementation bubble close already approved
@@ -618,7 +618,7 @@ route_scope: implementation_bubble
 source_scope: not_applicable
 approval_gate_state: already_satisfied
 reason_code: IMPL_BUBBLE_CLOSE_REQUIRED
-handoff_boundary_note: Close the approved implementation bubble only; progress/archive aftermath stays successor-owned.
+handoff_boundary_note: Close the approved implementation bubble only; on successful return hand control to repo-local UpdateProgress for normal aftermath reconciliation.
 ```
 
 ### Example 10: Blocked-state refinement need
