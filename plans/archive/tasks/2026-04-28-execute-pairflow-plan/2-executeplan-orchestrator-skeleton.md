@@ -5,19 +5,20 @@ title: "ExecutePairflowPlan Orchestrator Skeleton"
 task_family_id: executeplan-orchestrator-skeleton
 sequence_key: "2"
 task_id: 2-executeplan-orchestrator-skeleton
-status: done
+status: archived
 phase: phase2
 target_files:
   - .claude/skills/ExecutePairflowPlan/SKILL.md
   - .claude/skills/ExecutePairflowPlan/Workflows/ResolvePlanState.md
 prd_ref: null
-plan_ref: plans/execute-pairflow-plan-plan-v1.md
+plan_ref: plans/archive/plans/2026-04-28-execute-pairflow-plan-plan-v1.md
 system_context_ref: docs/pairflow-initial-design.md
 doc_bubble_id: null
 impl_bubble_id: executeplan-orchestrator-skeleton-impl
 supersedes: []
 superseded_by: null
-archive_group: 2026-04-29-execute-pairflow-plan
+archive_group: 2026-04-28-execute-pairflow-plan
+archive_path: plans/archive/tasks/2026-04-28-execute-pairflow-plan/2-executeplan-orchestrator-skeleton.md
 owners:
   - "felho"
 ---
@@ -96,19 +97,19 @@ This task must close the orchestrator-shell gap without absorbing downstream pla
 
 1. Parent plan gap closed: missing top-level orchestrator skill shell, workflow inventory, and explicit `ResolvePlanState` route taxonomy.
 2. Depends on:
-   - `plans/tasks/execute-pairflow-plan/1-executeplan-metadata-foundation.md`
+   - `plans/archive/tasks/2026-04-28-execute-pairflow-plan/1-executeplan-metadata-foundation.md`
 3. Unlocks / impacts successors:
-   - `plans/tasks/execute-pairflow-plan/3-executeplan-bubble-routing.md`
-   - `plans/tasks/execute-pairflow-plan/4-executeplan-plan-and-task-routing.md`
-   - `plans/tasks/execute-pairflow-plan/5-executeplan-progress-archive-and-pilot.md`
+   - `plans/archive/tasks/2026-04-28-execute-pairflow-plan/3-executeplan-bubble-routing.md`
+   - `plans/archive/tasks/2026-04-28-execute-pairflow-plan/4-executeplan-plan-and-task-routing.md`
+   - `plans/archive/tasks/2026-04-28-execute-pairflow-plan/5-executeplan-progress-archive-and-pilot.md`
 4. Task-list impact: adds the executable Task 2 artifact promised by the plan and establishes the route taxonomy that Tasks 3 and 4 must consume rather than redefine.
 5. Inherited validation / exit expectation: this task must prove that route ownership is explicit enough that later tasks can implement workflow delegation without reopening the top-level orchestration model.
 
 ### Canonical Contract Anchors
 
 1. Source-of-truth anchors:
-   - `plans/execute-pairflow-plan-plan-v1.md`
-   - `plans/tasks/execute-pairflow-plan/1-executeplan-metadata-foundation.md`
+   - `plans/archive/plans/2026-04-28-execute-pairflow-plan-plan-v1.md`
+   - `plans/archive/tasks/2026-04-28-execute-pairflow-plan/1-executeplan-metadata-foundation.md`
    - `docs/execute-pairflow-plan-draft.md`
    - `.claude/skills/ExecutePairflowPlan/references/Plan-Task-Metadata-Contract.md`
    - `.claude/skills/ExecutePairflowPlan/Workflows/FixPlanMetadata.md`
@@ -136,8 +137,8 @@ This task must close the orchestrator-shell gap without absorbing downstream pla
 ### Scope Reality / Shape Proof
 
 1. Inspected entrypoints / call-sites:
-   - `plans/execute-pairflow-plan-plan-v1.md`
-   - `plans/tasks/execute-pairflow-plan/1-executeplan-metadata-foundation.md`
+   - `plans/archive/plans/2026-04-28-execute-pairflow-plan-plan-v1.md`
+   - `plans/archive/tasks/2026-04-28-execute-pairflow-plan/1-executeplan-metadata-foundation.md`
    - `docs/execute-pairflow-plan-draft.md`
    - `.claude/skills/ExecutePairflowPlan/references/Plan-Task-Metadata-Contract.md`
    - `.claude/skills/ExecutePairflowPlan/Workflows/FixPlanMetadata.md`
@@ -289,10 +290,10 @@ This task must close the orchestrator-shell gap without absorbing downstream pla
 
 | Element | Source Anchor | Required Interpretation | This Task Action | Priority | Timing |
 |---|---|---|---|---|---|
-| Orchestrator-only model | `plans/execute-pairflow-plan-plan-v1.md`, `docs/execute-pairflow-plan-draft.md` | The top-level skill decides what happens next, but delegates execution details. | preserve | P1 | required-now |
+| Orchestrator-only model | `plans/archive/plans/2026-04-28-execute-pairflow-plan-plan-v1.md`, `docs/execute-pairflow-plan-draft.md` | The top-level skill decides what happens next, but delegates execution details. | preserve | P1 | required-now |
 | Metadata authority split | `1-executeplan-metadata-foundation.md`, `Plan-Task-Metadata-Contract.md` | Routing inputs must respect plan/task/Pairflow authority boundaries. | preserve | P1 | required-now |
 | Fresh-context downstream execution | `docs/execute-pairflow-plan-draft.md`, `CreatePairflowSpec` and `UsePairflow` skills | Specialized workflows should usually run in fresh context. | preserve | P1 | required-now |
-| `ResolvePlanState` ownership | `plans/execute-pairflow-plan-plan-v1.md` | The normalized route taxonomy and next-workflow decision belong here. | preserve | P1 | required-now |
+| `ResolvePlanState` ownership | `plans/archive/plans/2026-04-28-execute-pairflow-plan-plan-v1.md` | The normalized route taxonomy and next-workflow decision belong here. | preserve | P1 | required-now |
 
 ### 0b) Scope Reality and Shape Proof
 

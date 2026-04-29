@@ -5,20 +5,21 @@ title: "ExecutePairflowPlan Progress, Archive, and Pilot"
 task_family_id: executeplan-progress-archive-and-pilot
 sequence_key: "5"
 task_id: 5-executeplan-progress-archive-and-pilot
-status: done
+status: archived
 phase: phase4
 target_files:
   - .claude/skills/ExecutePairflowPlan/SKILL.md
   - .claude/skills/ExecutePairflowPlan/Workflows/ResolvePlanState.md
   - .claude/skills/ExecutePairflowPlan/Workflows/UpdateProgress.md
 prd_ref: null
-plan_ref: plans/execute-pairflow-plan-plan-v1.md
+plan_ref: plans/archive/plans/2026-04-28-execute-pairflow-plan-plan-v1.md
 system_context_ref: docs/pairflow-initial-design.md
 doc_bubble_id: executeplan-task5-docs
 impl_bubble_id: null
 supersedes: []
 superseded_by: null
-archive_group: 2026-04-29-execute-pairflow-plan
+archive_group: 2026-04-28-execute-pairflow-plan
+archive_path: plans/archive/tasks/2026-04-28-execute-pairflow-plan/5-executeplan-progress-archive-and-pilot.md
 owners:
   - "felho"
 ---
@@ -111,10 +112,10 @@ This task must close the post-implementation aftermath gap without reopening raw
 
 1. Parent plan gap closed: missing progress reporting, normal post-implementation archive/update aftermath, and local pilot trust proof.
 2. Depends on:
-   - `plans/tasks/execute-pairflow-plan/1-executeplan-metadata-foundation.md`
-   - `plans/tasks/execute-pairflow-plan/2-executeplan-orchestrator-skeleton.md`
-   - `plans/tasks/execute-pairflow-plan/3-executeplan-bubble-routing.md`
-   - `plans/tasks/execute-pairflow-plan/4-executeplan-plan-and-task-routing.md`
+   - `plans/archive/tasks/2026-04-28-execute-pairflow-plan/1-executeplan-metadata-foundation.md`
+   - `plans/archive/tasks/2026-04-28-execute-pairflow-plan/2-executeplan-orchestrator-skeleton.md`
+   - `plans/archive/tasks/2026-04-28-execute-pairflow-plan/3-executeplan-bubble-routing.md`
+   - `plans/archive/tasks/2026-04-28-execute-pairflow-plan/4-executeplan-plan-and-task-routing.md`
 3. Unlocks / impacts successors:
    - `N/A` for the current V1 plan; this is the final planned execution slice
 4. Task-list impact: adds the executable Task 5 artifact promised by the plan and closes the remaining aftermath seam that currently sits after implementation merge.
@@ -123,11 +124,11 @@ This task must close the post-implementation aftermath gap without reopening raw
 ### Canonical Contract Anchors
 
 1. Source-of-truth anchors:
-   - `plans/execute-pairflow-plan-plan-v1.md`
-   - `plans/tasks/execute-pairflow-plan/1-executeplan-metadata-foundation.md`
-   - `plans/tasks/execute-pairflow-plan/2-executeplan-orchestrator-skeleton.md`
-   - `plans/tasks/execute-pairflow-plan/3-executeplan-bubble-routing.md`
-   - `plans/tasks/execute-pairflow-plan/4-executeplan-plan-and-task-routing.md`
+   - `plans/archive/plans/2026-04-28-execute-pairflow-plan-plan-v1.md`
+   - `plans/archive/tasks/2026-04-28-execute-pairflow-plan/1-executeplan-metadata-foundation.md`
+   - `plans/archive/tasks/2026-04-28-execute-pairflow-plan/2-executeplan-orchestrator-skeleton.md`
+   - `plans/archive/tasks/2026-04-28-execute-pairflow-plan/3-executeplan-bubble-routing.md`
+   - `plans/archive/tasks/2026-04-28-execute-pairflow-plan/4-executeplan-plan-and-task-routing.md`
    - `docs/execute-pairflow-plan-draft.md`
    - `.claude/skills/ExecutePairflowPlan/SKILL.md`
    - `.claude/skills/ExecutePairflowPlan/Workflows/ResolvePlanState.md`
@@ -155,11 +156,11 @@ This task must close the post-implementation aftermath gap without reopening raw
 ### Scope Reality / Shape Proof
 
 1. Inspected entrypoints / call-sites:
-   - `plans/execute-pairflow-plan-plan-v1.md`
-   - `plans/tasks/execute-pairflow-plan/1-executeplan-metadata-foundation.md`
-   - `plans/tasks/execute-pairflow-plan/2-executeplan-orchestrator-skeleton.md`
-   - `plans/tasks/execute-pairflow-plan/3-executeplan-bubble-routing.md`
-   - `plans/tasks/execute-pairflow-plan/4-executeplan-plan-and-task-routing.md`
+   - `plans/archive/plans/2026-04-28-execute-pairflow-plan-plan-v1.md`
+   - `plans/archive/tasks/2026-04-28-execute-pairflow-plan/1-executeplan-metadata-foundation.md`
+   - `plans/archive/tasks/2026-04-28-execute-pairflow-plan/2-executeplan-orchestrator-skeleton.md`
+   - `plans/archive/tasks/2026-04-28-execute-pairflow-plan/3-executeplan-bubble-routing.md`
+   - `plans/archive/tasks/2026-04-28-execute-pairflow-plan/4-executeplan-plan-and-task-routing.md`
    - `docs/execute-pairflow-plan-draft.md`
    - `.claude/skills/ExecutePairflowPlan/SKILL.md`
    - `.claude/skills/ExecutePairflowPlan/Workflows/ResolvePlanState.md`

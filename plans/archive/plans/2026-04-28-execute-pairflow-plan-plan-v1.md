@@ -4,6 +4,7 @@ artifact_id: plan_execute_pairflow_plan_v1
 title: "ExecutePairflowPlan Skill Plan (V1)"
 status: done
 plan_id: execute-pairflow-plan
+created_on: 2026-04-28
 plan_status: done
 task_order:
   - 1-executeplan-metadata-foundation
@@ -13,23 +14,23 @@ task_order:
   - 5-executeplan-progress-archive-and-pilot
 active_task_id: null
 last_completed_task_id: 5-executeplan-progress-archive-and-pilot
-archive_group: 2026-04-29-execute-pairflow-plan
+archive_group: 2026-04-28-execute-pairflow-plan
 task_tracker:
   - task_id: 1-executeplan-metadata-foundation
-    task_path: plans/tasks/execute-pairflow-plan/1-executeplan-metadata-foundation.md
-    status: done
+    task_path: plans/archive/tasks/2026-04-28-execute-pairflow-plan/1-executeplan-metadata-foundation.md
+    status: archived
   - task_id: 2-executeplan-orchestrator-skeleton
-    task_path: plans/tasks/execute-pairflow-plan/2-executeplan-orchestrator-skeleton.md
-    status: done
+    task_path: plans/archive/tasks/2026-04-28-execute-pairflow-plan/2-executeplan-orchestrator-skeleton.md
+    status: archived
   - task_id: 3-executeplan-bubble-routing
-    task_path: plans/tasks/execute-pairflow-plan/3-executeplan-bubble-routing.md
-    status: done
+    task_path: plans/archive/tasks/2026-04-28-execute-pairflow-plan/3-executeplan-bubble-routing.md
+    status: archived
   - task_id: 4-executeplan-plan-and-task-routing
-    task_path: plans/tasks/execute-pairflow-plan/4-executeplan-plan-and-task-routing.md
-    status: done
+    task_path: plans/archive/tasks/2026-04-28-execute-pairflow-plan/4-executeplan-plan-and-task-routing.md
+    status: archived
   - task_id: 5-executeplan-progress-archive-and-pilot
-    task_path: plans/tasks/execute-pairflow-plan/5-executeplan-progress-archive-and-pilot.md
-    status: done
+    task_path: plans/archive/tasks/2026-04-28-execute-pairflow-plan/5-executeplan-progress-archive-and-pilot.md
+    status: archived
 prd_ref: null
 owners:
   - "felho"
@@ -158,11 +159,11 @@ Boundary note:
 
 | Task | Purpose | Depends On | Closes Gap | Status |
 |---|---|---|---|---|
-| `plans/tasks/execute-pairflow-plan/1-executeplan-metadata-foundation.md` | Define the minimum plan/task metadata contract, legacy plan metadata bootstrap path, task identity model, and archive linkage rules required for trustworthy state resolution. This task also defines the minimum metadata needed to support supersession and archive linkage for review-loop outcomes before any bubble phase begins, plus the precedence/fail-closed rule for plan/task metadata disagreement. | `N/A` | Missing authoritative metadata contract, disagreement handling, and repair/bootstrap flow. | completed |
-| `plans/tasks/execute-pairflow-plan/2-executeplan-orchestrator-skeleton.md` | Create the repo-local `ExecutePairflowPlan` skill skeleton, top-level routing contract, workflow inventory, and `ResolvePlanState` behavior including next-workflow selection. This task owns the normalized route taxonomy used by the orchestrator in V1, including which route classes are auto-routed vs human-checkpointed, and keeps automatic non-convergence detection out of scope. It does not own bubble-detail classification. | `plans/tasks/execute-pairflow-plan/1-executeplan-metadata-foundation.md` | Missing top-level orchestrator skill structure and state-routing logic. | completed |
-| `plans/tasks/execute-pairflow-plan/3-executeplan-bubble-routing.md` | Implement document refinement and implementation bubble routing that delegates to `UsePairflow` for bubble create/review/close while preserving orchestrator-only control in the parent skill. This task owns bubble-side lifecycle interpretation and the mapping from raw bubble detail into the normalized continuation, checkpoint, or replanning route classes defined by Task 2. It must consume the merged Task 1/Task 2 contract as-is and must not introduce new metadata prerequisites unless a concrete blocker proves they are required. It ends when bubble-oriented settled checkpoints and normalized lifecycle handoff behavior are correctly routed. | `plans/tasks/execute-pairflow-plan/2-executeplan-orchestrator-skeleton.md` | Missing bubble lifecycle delegation, exit classification, and settled-checkpoint stop behavior. | completed |
-| `plans/tasks/execute-pairflow-plan/4-executeplan-plan-and-task-routing.md` | Implement the plan/task orchestration follow-through that consumes normalized replanning and delegates to `CreatePairflowSpec` for plan review, task creation, task review, and plan-level correction loops. This task owns the review-triggered supersede/archive/recreate handoff when task review or bubble-origin normalized replanning changes executable task identity, but it must consume the merged Task 1 / Task 2 / Task 3 baseline as-is and must not interpret raw bubble lifecycle detail or require new metadata work unless a concrete blocker proves it. | `plans/tasks/execute-pairflow-plan/2-executeplan-orchestrator-skeleton.md`, `plans/tasks/execute-pairflow-plan/3-executeplan-bubble-routing.md` | Missing plan/task follow-through, normalized replanning consumption, and pre-aftermath supersede/archive handoff. | completed |
-| `plans/tasks/execute-pairflow-plan/5-executeplan-progress-archive-and-pilot.md` | Implement the normal post-implementation aftermath layer that consumes an already-closed implementation bubble result, reconciles plan/task/archive state on the existing Task 1 / Task 2 / Task 3 / Task 4 baseline, and defines the first local pilot validation path. This task owns progress reporting, normal archive/update aftermath, and local trust-building for V1, but it must not reopen raw bubble lifecycle routing, pre-aftermath supersession, or the newer metadata ideas unless a concrete blocker proves they are required. | `plans/tasks/execute-pairflow-plan/4-executeplan-plan-and-task-routing.md` | Missing end-to-end closeout, archive contract proof, and trusted local V1 pilot readiness. | completed |
+| `plans/archive/tasks/2026-04-28-execute-pairflow-plan/1-executeplan-metadata-foundation.md` | Define the minimum plan/task metadata contract, legacy plan metadata bootstrap path, task identity model, and archive linkage rules required for trustworthy state resolution. This task also defines the minimum metadata needed to support supersession and archive linkage for review-loop outcomes before any bubble phase begins, plus the precedence/fail-closed rule for plan/task metadata disagreement. | `N/A` | Missing authoritative metadata contract, disagreement handling, and repair/bootstrap flow. | completed |
+| `plans/archive/tasks/2026-04-28-execute-pairflow-plan/2-executeplan-orchestrator-skeleton.md` | Create the repo-local `ExecutePairflowPlan` skill skeleton, top-level routing contract, workflow inventory, and `ResolvePlanState` behavior including next-workflow selection. This task owns the normalized route taxonomy used by the orchestrator in V1, including which route classes are auto-routed vs human-checkpointed, and keeps automatic non-convergence detection out of scope. It does not own bubble-detail classification. | `plans/archive/tasks/2026-04-28-execute-pairflow-plan/1-executeplan-metadata-foundation.md` | Missing top-level orchestrator skill structure and state-routing logic. | completed |
+| `plans/archive/tasks/2026-04-28-execute-pairflow-plan/3-executeplan-bubble-routing.md` | Implement document refinement and implementation bubble routing that delegates to `UsePairflow` for bubble create/review/close while preserving orchestrator-only control in the parent skill. This task owns bubble-side lifecycle interpretation and the mapping from raw bubble detail into the normalized continuation, checkpoint, or replanning route classes defined by Task 2. It must consume the merged Task 1/Task 2 contract as-is and must not introduce new metadata prerequisites unless a concrete blocker proves they are required. It ends when bubble-oriented settled checkpoints and normalized lifecycle handoff behavior are correctly routed. | `plans/archive/tasks/2026-04-28-execute-pairflow-plan/2-executeplan-orchestrator-skeleton.md` | Missing bubble lifecycle delegation, exit classification, and settled-checkpoint stop behavior. | completed |
+| `plans/archive/tasks/2026-04-28-execute-pairflow-plan/4-executeplan-plan-and-task-routing.md` | Implement the plan/task orchestration follow-through that consumes normalized replanning and delegates to `CreatePairflowSpec` for plan review, task creation, task review, and plan-level correction loops. This task owns the review-triggered supersede/archive/recreate handoff when task review or bubble-origin normalized replanning changes executable task identity, but it must consume the merged Task 1 / Task 2 / Task 3 baseline as-is and must not interpret raw bubble lifecycle detail or require new metadata work unless a concrete blocker proves it. | `plans/archive/tasks/2026-04-28-execute-pairflow-plan/2-executeplan-orchestrator-skeleton.md`, `plans/archive/tasks/2026-04-28-execute-pairflow-plan/3-executeplan-bubble-routing.md` | Missing plan/task follow-through, normalized replanning consumption, and pre-aftermath supersede/archive handoff. | completed |
+| `plans/archive/tasks/2026-04-28-execute-pairflow-plan/5-executeplan-progress-archive-and-pilot.md` | Implement the normal post-implementation aftermath layer that consumes an already-closed implementation bubble result, reconciles plan/task/archive state on the existing Task 1 / Task 2 / Task 3 / Task 4 baseline, and defines the first local pilot validation path. This task owns progress reporting, normal archive/update aftermath, and local trust-building for V1, but it must not reopen raw bubble lifecycle routing, pre-aftermath supersession, or the newer metadata ideas unless a concrete blocker proves they are required. | `plans/archive/tasks/2026-04-28-execute-pairflow-plan/4-executeplan-plan-and-task-routing.md` | Missing end-to-end closeout, archive contract proof, and trusted local V1 pilot readiness. | completed |
 
 ## Coverage Map
 

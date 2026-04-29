@@ -5,7 +5,7 @@ title: "ExecutePairflowPlan Bubble Routing"
 task_family_id: executeplan-bubble-routing
 sequence_key: "3"
 task_id: 3-executeplan-bubble-routing
-status: done
+status: archived
 phase: phase3
 target_files:
   - .claude/skills/ExecutePairflowPlan/SKILL.md
@@ -13,13 +13,14 @@ target_files:
   - .claude/skills/ExecutePairflowPlan/Workflows/HandleDocumentBubble.md
   - .claude/skills/ExecutePairflowPlan/Workflows/HandleImplementationBubble.md
 prd_ref: null
-plan_ref: plans/execute-pairflow-plan-plan-v1.md
+plan_ref: plans/archive/plans/2026-04-28-execute-pairflow-plan-plan-v1.md
 system_context_ref: docs/pairflow-initial-design.md
 doc_bubble_id: executeplan-bubble-routing-doc
 impl_bubble_id: null
 supersedes: []
 superseded_by: null
-archive_group: 2026-04-29-execute-pairflow-plan
+archive_group: 2026-04-28-execute-pairflow-plan
+archive_path: plans/archive/tasks/2026-04-28-execute-pairflow-plan/3-executeplan-bubble-routing.md
 owners:
   - "felho"
 ---
@@ -108,20 +109,20 @@ This task must close the bubble-routing gap without reopening the merged metadat
 
 1. Parent plan gap closed: missing bubble lifecycle delegation, exit classification, and settled-checkpoint stop behavior.
 2. Depends on:
-   - `plans/tasks/execute-pairflow-plan/1-executeplan-metadata-foundation.md`
-   - `plans/tasks/execute-pairflow-plan/2-executeplan-orchestrator-skeleton.md`
+   - `plans/archive/tasks/2026-04-28-execute-pairflow-plan/1-executeplan-metadata-foundation.md`
+   - `plans/archive/tasks/2026-04-28-execute-pairflow-plan/2-executeplan-orchestrator-skeleton.md`
 3. Unlocks / impacts successors:
-   - `plans/tasks/execute-pairflow-plan/4-executeplan-plan-and-task-routing.md`
-   - `plans/tasks/execute-pairflow-plan/5-executeplan-progress-archive-and-pilot.md`
+   - `plans/archive/tasks/2026-04-28-execute-pairflow-plan/4-executeplan-plan-and-task-routing.md`
+   - `plans/archive/tasks/2026-04-28-execute-pairflow-plan/5-executeplan-progress-archive-and-pilot.md`
 4. Task-list impact: adds the executable Task 3 artifact promised by the plan and closes the bubble-side ownership gap that Task 4 must not reopen.
 5. Inherited validation / exit expectation: this task must prove that raw bubble lifecycle interpretation now has a single owner and that the plan/task layer can later consume only normalized outputs rather than raw Pairflow state.
 
 ### Canonical Contract Anchors
 
 1. Source-of-truth anchors:
-   - `plans/execute-pairflow-plan-plan-v1.md`
-   - `plans/tasks/execute-pairflow-plan/1-executeplan-metadata-foundation.md`
-   - `plans/tasks/execute-pairflow-plan/2-executeplan-orchestrator-skeleton.md`
+   - `plans/archive/plans/2026-04-28-execute-pairflow-plan-plan-v1.md`
+   - `plans/archive/tasks/2026-04-28-execute-pairflow-plan/1-executeplan-metadata-foundation.md`
+   - `plans/archive/tasks/2026-04-28-execute-pairflow-plan/2-executeplan-orchestrator-skeleton.md`
    - `docs/execute-pairflow-plan-draft.md`
    - `.claude/skills/ExecutePairflowPlan/SKILL.md`
    - `.claude/skills/ExecutePairflowPlan/Workflows/ResolvePlanState.md`
@@ -150,9 +151,9 @@ This task must close the bubble-routing gap without reopening the merged metadat
 ### Scope Reality / Shape Proof
 
 1. Inspected entrypoints / call-sites:
-   - `plans/execute-pairflow-plan-plan-v1.md`
-   - `plans/tasks/execute-pairflow-plan/1-executeplan-metadata-foundation.md`
-   - `plans/tasks/execute-pairflow-plan/2-executeplan-orchestrator-skeleton.md`
+   - `plans/archive/plans/2026-04-28-execute-pairflow-plan-plan-v1.md`
+   - `plans/archive/tasks/2026-04-28-execute-pairflow-plan/1-executeplan-metadata-foundation.md`
+   - `plans/archive/tasks/2026-04-28-execute-pairflow-plan/2-executeplan-orchestrator-skeleton.md`
    - `docs/execute-pairflow-plan-draft.md`
    - `.claude/skills/ExecutePairflowPlan/SKILL.md`
    - `.claude/skills/ExecutePairflowPlan/Workflows/ResolvePlanState.md`
@@ -321,7 +322,7 @@ Document-completion proof rule:
 
 | Element | Source Anchor | Required Interpretation | This Task Action | Priority | Timing |
 |---|---|---|---|---|---|
-| Orchestrator-only model | `plans/execute-pairflow-plan-plan-v1.md`, Task 2 | The top-level skill routes work; downstream workflows execute specialized behavior. | preserve | P1 | required-now |
+| Orchestrator-only model | `plans/archive/plans/2026-04-28-execute-pairflow-plan-plan-v1.md`, Task 2 | The top-level skill routes work; downstream workflows execute specialized behavior. | preserve | P1 | required-now |
 | Metadata authority split | Task 1 metadata foundation | Task metadata stores linkage only; Pairflow stores lifecycle truth. | preserve | P1 | required-now |
 | Normalized route taxonomy ownership | Task 2 `ResolvePlanState.md` | Bubble routing feeds the taxonomy; it does not replace it. | preserve | P1 | required-now |
 | No new metadata prerequisite | current user instruction + current merged baseline | New metadata work is deferred unless a blocker is proven. | preserve | P1 | required-now |

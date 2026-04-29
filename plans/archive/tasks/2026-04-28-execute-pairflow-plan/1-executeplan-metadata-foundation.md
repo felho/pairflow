@@ -5,19 +5,20 @@ title: "ExecutePairflowPlan Metadata Foundation"
 task_family_id: executeplan-metadata-foundation
 sequence_key: "1"
 task_id: 1-executeplan-metadata-foundation
-status: done
+status: archived
 phase: phase1
 target_files:
   - .claude/skills/ExecutePairflowPlan/references/Plan-Task-Metadata-Contract.md
   - .claude/skills/ExecutePairflowPlan/Workflows/FixPlanMetadata.md
 prd_ref: null
-plan_ref: plans/execute-pairflow-plan-plan-v1.md
+plan_ref: plans/archive/plans/2026-04-28-execute-pairflow-plan-plan-v1.md
 system_context_ref: docs/pairflow-initial-design.md
 doc_bubble_id: null
 impl_bubble_id: executeplan-metadata-foundation-impl
 supersedes: []
 superseded_by: null
-archive_group: 2026-04-29-execute-pairflow-plan
+archive_group: 2026-04-28-execute-pairflow-plan
+archive_path: plans/archive/tasks/2026-04-28-execute-pairflow-plan/1-executeplan-metadata-foundation.md
 owners:
   - "felho"
 ---
@@ -73,16 +74,16 @@ This task must close the metadata gap without pulling in the top-level orchestra
 1. Parent plan gap closed: missing minimum metadata contract for plans/tasks, disagreement handling, archive linkage, and repair/bootstrap flow.
 2. Depends on: `N/A`
 3. Unlocks / impacts successors:
-   - `plans/tasks/execute-pairflow-plan/2-executeplan-orchestrator-skeleton.md`
-   - `plans/tasks/execute-pairflow-plan/3-executeplan-bubble-routing.md`
-   - `plans/tasks/execute-pairflow-plan/4-executeplan-plan-and-task-routing.md`
-4. Task-list impact: refines `plans/tasks/execute-pairflow-plan/1-executeplan-metadata-foundation.md` only.
+   - `plans/archive/tasks/2026-04-28-execute-pairflow-plan/2-executeplan-orchestrator-skeleton.md`
+   - `plans/archive/tasks/2026-04-28-execute-pairflow-plan/3-executeplan-bubble-routing.md`
+   - `plans/archive/tasks/2026-04-28-execute-pairflow-plan/4-executeplan-plan-and-task-routing.md`
+4. Task-list impact: refines `plans/archive/tasks/2026-04-28-execute-pairflow-plan/1-executeplan-metadata-foundation.md` only.
 5. Inherited validation / exit expectation: this task must prove that the metadata contract is explicit enough for trustworthy state resolution and that legacy plan entry can be repaired before the normal executor path runs.
 
 ### Canonical Contract Anchors
 
 1. Source-of-truth anchors:
-   - `plans/execute-pairflow-plan-plan-v1.md`
+   - `plans/archive/plans/2026-04-28-execute-pairflow-plan-plan-v1.md`
    - `docs/execute-pairflow-plan-draft.md`
    - `.claude/skills/CreatePairflowSpec/SKILL.md`
    - `.claude/skills/UsePairflow/SKILL.md`
@@ -107,7 +108,7 @@ This task must close the metadata gap without pulling in the top-level orchestra
 ### Scope Reality / Shape Proof
 
 1. Inspected entrypoints / call-sites:
-   - `plans/execute-pairflow-plan-plan-v1.md`
+   - `plans/archive/plans/2026-04-28-execute-pairflow-plan-plan-v1.md`
    - `docs/execute-pairflow-plan-draft.md`
    - `.claude/skills/CreatePairflowSpec/SKILL.md`
    - `.claude/skills/CreatePairflowSpec/Workflows/CreateTask.md`
@@ -241,9 +242,9 @@ N/A. This task does not modify an existing runtime mutation flow or introduce co
 
 | Element | Source Anchor | Required Interpretation | This Task Action | Priority | Timing |
 |---|---|---|---|---|---|
-| Plan sequencing authority | `plans/execute-pairflow-plan-plan-v1.md` | The plan decides next task and sequencing. | preserve | P1 | required-now |
-| Task detailed execution authority | `plans/execute-pairflow-plan-plan-v1.md` | The task owns detailed execution state and lineage fields. | preserve | P1 | required-now |
-| Pairflow bubble authority | `plans/execute-pairflow-plan-plan-v1.md`, `.claude/skills/UsePairflow/SKILL.md` | Bubble lifecycle state is external authority, not duplicated metadata truth. | preserve | P1 | required-now |
+| Plan sequencing authority | `plans/archive/plans/2026-04-28-execute-pairflow-plan-plan-v1.md` | The plan decides next task and sequencing. | preserve | P1 | required-now |
+| Task detailed execution authority | `plans/archive/plans/2026-04-28-execute-pairflow-plan-plan-v1.md` | The task owns detailed execution state and lineage fields. | preserve | P1 | required-now |
+| Pairflow bubble authority | `plans/archive/plans/2026-04-28-execute-pairflow-plan-plan-v1.md`, `.claude/skills/UsePairflow/SKILL.md` | Bubble lifecycle state is external authority, not duplicated metadata truth. | preserve | P1 | required-now |
 | `task_id` derivation model | `docs/execute-pairflow-plan-draft.md` | `task_id` is the executable canonical ID derived from family + sequence. | preserve | P1 | required-now |
 
 ### 0b) Scope Reality and Shape Proof
@@ -338,7 +339,7 @@ Constraint: if no allowed side effects are listed above, implementation must be 
 
 | Type | Items | Priority | Timing |
 |---|---|---|---|
-| must-use | approved parent plan `plans/execute-pairflow-plan-plan-v1.md` | P1 | required-now |
+| must-use | approved parent plan `plans/archive/plans/2026-04-28-execute-pairflow-plan-plan-v1.md` | P1 | required-now |
 | must-use | repo-local draft `docs/execute-pairflow-plan-draft.md` for metadata examples and archive decisions | P1 | required-now |
 | must-use | repo-local skill source-of-truth policy from `AGENTS.md` and `.claude/skills/INSTALL.md` | P1 | required-now |
 | must-not-use | direct edits in `~/.claude/skills` or `~/.codex/skills` | P1 | required-now |

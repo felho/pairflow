@@ -5,20 +5,21 @@ title: "ExecutePairflowPlan Plan and Task Routing"
 task_family_id: executeplan-plan-and-task-routing
 sequence_key: "4"
 task_id: 4-executeplan-plan-and-task-routing
-status: done
+status: archived
 phase: phase4
 target_files:
   - .claude/skills/ExecutePairflowPlan/SKILL.md
   - .claude/skills/ExecutePairflowPlan/Workflows/ResolvePlanState.md
   - .claude/skills/ExecutePairflowPlan/Workflows/HandleNormalizedReplan.md
 prd_ref: null
-plan_ref: plans/execute-pairflow-plan-plan-v1.md
+plan_ref: plans/archive/plans/2026-04-28-execute-pairflow-plan-plan-v1.md
 system_context_ref: docs/pairflow-initial-design.md
 doc_bubble_id: executeplan-plan-task-routing-doc
 impl_bubble_id: null
 supersedes: []
 superseded_by: null
-archive_group: 2026-04-29-execute-pairflow-plan
+archive_group: 2026-04-28-execute-pairflow-plan
+archive_path: plans/archive/tasks/2026-04-28-execute-pairflow-plan/4-executeplan-plan-and-task-routing.md
 owners:
   - "felho"
 ---
@@ -109,21 +110,21 @@ This task must close the plan/task follow-through gap without reopening the merg
 
 1. Parent plan gap closed: missing plan/task follow-through, normalized replanning consumption, and pre-aftermath supersede/archive handoff.
 2. Depends on:
-   - `plans/tasks/execute-pairflow-plan/1-executeplan-metadata-foundation.md`
-   - `plans/tasks/execute-pairflow-plan/2-executeplan-orchestrator-skeleton.md`
-   - `plans/tasks/execute-pairflow-plan/3-executeplan-bubble-routing.md`
+   - `plans/archive/tasks/2026-04-28-execute-pairflow-plan/1-executeplan-metadata-foundation.md`
+   - `plans/archive/tasks/2026-04-28-execute-pairflow-plan/2-executeplan-orchestrator-skeleton.md`
+   - `plans/archive/tasks/2026-04-28-execute-pairflow-plan/3-executeplan-bubble-routing.md`
 3. Unlocks / impacts successors:
-   - `plans/tasks/execute-pairflow-plan/5-executeplan-progress-archive-and-pilot.md`
+   - `plans/archive/tasks/2026-04-28-execute-pairflow-plan/5-executeplan-progress-archive-and-pilot.md`
 4. Task-list impact: adds the executable Task 4 artifact promised by the plan and closes the follow-through seam that Task 5 must consume rather than reopen.
 5. Inherited validation / exit expectation: this task must prove that normalized replanning can be consumed without raw bubble detail and that review-triggered supersession/archive handoff stays deterministic under the already-merged metadata baseline.
 
 ### Canonical Contract Anchors
 
 1. Source-of-truth anchors:
-   - `plans/execute-pairflow-plan-plan-v1.md`
-   - `plans/tasks/execute-pairflow-plan/1-executeplan-metadata-foundation.md`
-   - `plans/tasks/execute-pairflow-plan/2-executeplan-orchestrator-skeleton.md`
-   - `plans/tasks/execute-pairflow-plan/3-executeplan-bubble-routing.md`
+   - `plans/archive/plans/2026-04-28-execute-pairflow-plan-plan-v1.md`
+   - `plans/archive/tasks/2026-04-28-execute-pairflow-plan/1-executeplan-metadata-foundation.md`
+   - `plans/archive/tasks/2026-04-28-execute-pairflow-plan/2-executeplan-orchestrator-skeleton.md`
+   - `plans/archive/tasks/2026-04-28-execute-pairflow-plan/3-executeplan-bubble-routing.md`
    - `docs/execute-pairflow-plan-draft.md`
    - `.claude/skills/ExecutePairflowPlan/SKILL.md`
    - `.claude/skills/ExecutePairflowPlan/Workflows/ResolvePlanState.md`
@@ -152,10 +153,10 @@ This task must close the plan/task follow-through gap without reopening the merg
 ### Scope Reality / Shape Proof
 
 1. Inspected entrypoints / call-sites:
-   - `plans/execute-pairflow-plan-plan-v1.md`
-   - `plans/tasks/execute-pairflow-plan/1-executeplan-metadata-foundation.md`
-   - `plans/tasks/execute-pairflow-plan/2-executeplan-orchestrator-skeleton.md`
-   - `plans/tasks/execute-pairflow-plan/3-executeplan-bubble-routing.md`
+   - `plans/archive/plans/2026-04-28-execute-pairflow-plan-plan-v1.md`
+   - `plans/archive/tasks/2026-04-28-execute-pairflow-plan/1-executeplan-metadata-foundation.md`
+   - `plans/archive/tasks/2026-04-28-execute-pairflow-plan/2-executeplan-orchestrator-skeleton.md`
+   - `plans/archive/tasks/2026-04-28-execute-pairflow-plan/3-executeplan-bubble-routing.md`
    - `docs/execute-pairflow-plan-draft.md`
    - `.claude/skills/ExecutePairflowPlan/SKILL.md`
    - `.claude/skills/ExecutePairflowPlan/Workflows/ResolvePlanState.md`
