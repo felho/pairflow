@@ -22,7 +22,7 @@ task_tracker:
     status: archived
   - task_id: 2-clean-runs-gate-routing
     task_path: plans/tasks/meta-review-consecutive-clean-runs/2-clean-runs-gate-routing.md
-    status: approved
+    status: implementable
   - task_id: 3-clean-runs-read-model-ui
     task_path: null
     status: not_created
