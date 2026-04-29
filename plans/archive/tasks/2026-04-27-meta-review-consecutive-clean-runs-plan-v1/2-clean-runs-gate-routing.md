@@ -5,7 +5,7 @@ task_family_id: clean-runs-gate-routing
 sequence_key: "2"
 task_id: 2-clean-runs-gate-routing
 title: "Meta-Review Consecutive Clean Runs Gate Routing"
-status: in_progress
+status: archived
 phase: phase2
 target_files:
   - src/v11/shared/metaReviewGate/metaReviewGateCurrentRunFinalization.ts

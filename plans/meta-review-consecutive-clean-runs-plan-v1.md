@@ -14,15 +14,15 @@ task_order:
   - 2-clean-runs-gate-routing
   - 3-clean-runs-read-model-ui
   - 4-clean-runs-docs-validation
-active_task_id: 2-clean-runs-gate-routing
+active_task_id: 3-clean-runs-read-model-ui
 archive_group: 2026-04-27-meta-review-consecutive-clean-runs-plan-v1
 task_tracker:
   - task_id: 1-clean-runs-policy-state
     task_path: plans/archive/tasks/2026-04-27-meta-review-consecutive-clean-runs-plan-v1/1-clean-runs-policy-state.md
     status: archived
   - task_id: 2-clean-runs-gate-routing
-    task_path: plans/tasks/meta-review-consecutive-clean-runs/2-clean-runs-gate-routing.md
-    status: in_progress
+    task_path: plans/archive/tasks/2026-04-27-meta-review-consecutive-clean-runs-plan-v1/2-clean-runs-gate-routing.md
+    status: archived
   - task_id: 3-clean-runs-read-model-ui
     task_path: null
     status: not_created
@@ -111,7 +111,7 @@ task_tracker:
 ## Progress / Phase Summary
 
 1. Phase 1: policy and canonical state introduction completed and archived from `clean-runs-policy-state-impl`.
-2. Phase 2: gate-routing behavior change for clean reruns and unlocks.
+2. Phase 2: gate-routing behavior change for clean reruns and unlocks completed and archived from `2-clean-runs-gate-routing-impl`.
 3. Phase 3: observability and UI preset surfacing.
 4. Phase 4: docs and final validation.
 
@@ -120,7 +120,7 @@ task_tracker:
 | Task | Purpose | Depends On | Closes Gap | Status |
 |---|---|---|---|---|
 | `plans/archive/tasks/2026-04-27-meta-review-consecutive-clean-runs-plan-v1/1-clean-runs-policy-state.md` | Add the new review-policy field, defaults, parsing, runtime normalization, and canonical meta-review streak state shape. | `N/A` | Missing config/state foundation for the feature. | archived |
-| `plans/tasks/meta-review-consecutive-clean-runs/2-clean-runs-gate-routing.md` | Update current-run meta-review finalization to increment/reset the streak and route directly to another meta-review run until the configured requirement is met. | `1-clean-runs-policy-state.md` | Missing workflow-orchestration behavior for consecutive clean runs. | open |
+| `plans/archive/tasks/2026-04-27-meta-review-consecutive-clean-runs-plan-v1/2-clean-runs-gate-routing.md` | Update current-run meta-review finalization to increment/reset the streak and route directly to another meta-review run until the configured requirement is met. | `1-clean-runs-policy-state.md` | Missing workflow-orchestration behavior for consecutive clean runs. | archived |
 | `plans/tasks/meta-review-consecutive-clean-runs/3-clean-runs-read-model-ui.md` | Expose the configured requirement and current streak in status/read-model projections, add the compact UI preset selector mapping (`P1`, `P2`, `P3`, `P3+2`), and update the control label/tooltip to quality-level language. | `2-clean-runs-gate-routing.md` | Missing operator observability and compact UI control for the new gate behavior. | open |
 | `plans/tasks/meta-review-consecutive-clean-runs/4-clean-runs-docs-validation.md` | Update repo docs/spec references and close the validation matrix across unit/integration/build and UI mapping checks. | `2-clean-runs-gate-routing.md`, `3-clean-runs-read-model-ui.md` | Missing documentation and completion evidence. | open |
 
