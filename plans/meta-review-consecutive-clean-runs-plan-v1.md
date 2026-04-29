@@ -1,11 +1,34 @@
 ---
 artifact_type: plan
 artifact_id: plan_meta_review_consecutive_clean_runs_v1
+plan_id: meta-review-consecutive-clean-runs-plan-v1
+created_on: "2026-04-27"
 title: "Meta-Review Consecutive Clean Runs Plan"
-status: draft
+status: approved
+plan_status: approved
 prd_ref: null
 owners:
   - "felho"
+task_order:
+  - task-01-policy-and-state-foundation
+  - task-02-gate-routing-and-streak-semantics
+  - task-03-read-model-status-and-ui-preset-surface
+  - task-04-docs-and-validation
+active_task_id: task-01-policy-and-state-foundation
+archive_group: 2026-04-27-meta-review-consecutive-clean-runs-plan-v1
+task_tracker:
+  - task_id: task-01-policy-and-state-foundation
+    task_path: plans/tasks/meta-review-consecutive-clean-runs/task-01-policy-and-state-foundation.md
+    status: approved
+  - task_id: task-02-gate-routing-and-streak-semantics
+    task_path: null
+    status: not_created
+  - task_id: task-03-read-model-status-and-ui-preset-surface
+    task_path: null
+    status: not_created
+  - task_id: task-04-docs-and-validation
+    task_path: null
+    status: not_created
 ---
 
 # Plan: Meta-Review Consecutive Clean Runs
