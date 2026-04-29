@@ -30,7 +30,8 @@ function createLoadedRunningState(
         },
         auto_rework_count: 2,
         auto_rework_limit: 5,
-        sticky_human_gate: false
+        sticky_human_gate: false,
+        consecutive_clean_runs: 0,
       },
       ...partial
     }
@@ -124,7 +125,8 @@ describe("stageMetaReviewRunningState", () => {
       runtime_delivery: null,
       auto_rework_count: 0,
       auto_rework_limit: 10,
-      sticky_human_gate: false
+      sticky_human_gate: false,
+      consecutive_clean_runs: 0,
     });
     expect(result.state.meta_review?.execution_context?.execution_id).toMatch(
       /^exec_[0-9a-f]{24}$/u

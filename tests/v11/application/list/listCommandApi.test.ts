@@ -70,10 +70,14 @@ describe("v11 list command api", () => {
       effective_loop_mode: "full",
       support_status: "enabled",
       reviewer_blocking_min_severity: "P3",
-      meta_review_auto_rework_min_severity: "P3"
+      meta_review_auto_rework_min_severity: "P3",
+      meta_review_consecutive_clean_runs_required: 1,
     });
     expect(listed.bubbles[1]?.runtimeSession?.tmuxSessionName).toBe(
       "pf-b_v11_list_02"
     );
+    for (const entry of listed.bubbles) {
+      expect(entry.metaReview).not.toHaveProperty("consecutive_clean_runs");
+    }
   });
 });

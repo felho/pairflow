@@ -3012,7 +3012,8 @@ describe("createUiRouter review policy action", () => {
         effective_loop_mode: "full" as const,
         support_status: "enabled" as const,
         reviewer_blocking_min_severity: "P1" as const,
-        meta_review_auto_rework_min_severity: "P1" as const
+        meta_review_auto_rework_min_severity: "P1" as const,
+        meta_review_consecutive_clean_runs_required: 1
       },
       watchdog: {
         monitored: true,
@@ -3076,6 +3077,7 @@ describe("createUiRouter review policy action", () => {
         support_status: "guarded" as const,
         reviewer_blocking_min_severity: "P1" as const,
         meta_review_auto_rework_min_severity: "P1" as const,
+        meta_review_consecutive_clean_runs_required: 1,
         blocked_reason_code: "REVIEW_POLICY_META_ONLY_GUARDED",
         blocked_prerequisites: [
           "reviewer_bypass_activation_phase3b_pending"
@@ -3653,6 +3655,7 @@ describe("createUiRouter review policy action", () => {
           support_status: "guarded",
           reviewer_blocking_min_severity: "P1",
           meta_review_auto_rework_min_severity: "P1",
+          meta_review_consecutive_clean_runs_required: 1,
           blocked_reason_code: "REVIEW_POLICY_META_ONLY_GUARDED"
         }
       });
@@ -3779,6 +3782,7 @@ describe("createUiRouter review policy action", () => {
           support_status: "guarded",
           reviewer_blocking_min_severity: "P1",
           meta_review_auto_rework_min_severity: "P1",
+          meta_review_consecutive_clean_runs_required: 1,
           blocked_reason_code: "REVIEW_POLICY_META_ONLY_GUARDED"
         }
       });

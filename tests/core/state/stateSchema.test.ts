@@ -17,6 +17,7 @@ function expectCanonicalMetaReviewSnapshot(
     auto_rework_count?: number;
     auto_rework_limit?: number;
     sticky_human_gate?: boolean;
+    consecutive_clean_runs?: number;
   } = {}
 ): void {
   expect(actual).toEqual({
@@ -25,6 +26,7 @@ function expectCanonicalMetaReviewSnapshot(
     auto_rework_count: 0,
     auto_rework_limit: 5,
     sticky_human_gate: false,
+    consecutive_clean_runs: 0,
     ...overrides
   });
 }
@@ -38,7 +40,8 @@ describe("state schema", () => {
       runtime_delivery: null,
       auto_rework_count: 0,
       auto_rework_limit: 10,
-      sticky_human_gate: false
+      sticky_human_gate: false,
+      consecutive_clean_runs: 0,
     });
   });
 
@@ -103,7 +106,8 @@ describe("state schema", () => {
         }),
         auto_rework_count: 0,
         auto_rework_limit: 5,
-        sticky_human_gate: false
+        sticky_human_gate: false,
+        consecutive_clean_runs: 0,
       }
     });
     const humanGate = validateBubbleStateSnapshot({
@@ -236,7 +240,8 @@ describe("state schema", () => {
         last_autonomous_updated_at: "2026-03-08T10:01:00.000Z",
         auto_rework_count: 0,
         auto_rework_limit: 5,
-        sticky_human_gate: false
+        sticky_human_gate: false,
+        consecutive_clean_runs: 0,
       }
     });
 
@@ -310,7 +315,8 @@ describe("state schema", () => {
         last_autonomous_updated_at: "2026-03-08T10:01:00.000Z",
         auto_rework_count: 0,
         auto_rework_limit: 5,
-        sticky_human_gate: false
+        sticky_human_gate: false,
+        consecutive_clean_runs: 0,
       }
     });
 
@@ -355,7 +361,8 @@ describe("state schema", () => {
         }),
         auto_rework_count: 0,
         auto_rework_limit: 5,
-        sticky_human_gate: false
+        sticky_human_gate: false,
+        consecutive_clean_runs: 0,
       }
     });
 
@@ -395,7 +402,8 @@ describe("state schema", () => {
         }),
         auto_rework_count: 0,
         auto_rework_limit: 5,
-        sticky_human_gate: false
+        sticky_human_gate: false,
+        consecutive_clean_runs: 0,
       }
     });
 
@@ -433,7 +441,8 @@ describe("state schema", () => {
         }),
         auto_rework_count: 0,
         auto_rework_limit: 10,
-        sticky_human_gate: false
+        sticky_human_gate: false,
+        consecutive_clean_runs: 0,
       }
     });
 
@@ -572,7 +581,8 @@ describe("state schema", () => {
         }),
         auto_rework_count: 0,
         auto_rework_limit: 5,
-        sticky_human_gate: false
+        sticky_human_gate: false,
+        consecutive_clean_runs: 0,
       }
     });
 
@@ -774,7 +784,8 @@ describe("state schema", () => {
         last_autonomous_updated_at: "2026-03-08T10:01:00.000Z",
         auto_rework_count: 1,
         auto_rework_limit: 5,
-        sticky_human_gate: false
+        sticky_human_gate: false,
+        consecutive_clean_runs: 0,
       }
     });
 
@@ -785,6 +796,91 @@ describe("state schema", () => {
     expectCanonicalMetaReviewSnapshot(result.value.meta_review, {
       auto_rework_count: 1
     });
+  });
+
+  it("normalizes legacy meta-review snapshots with missing clean-run streak", () => {
+    const result = validateBubbleStateSnapshot({
+      bubble_id: "b_test_meta_clean_runs_01",
+      state: "WAITING_HUMAN",
+      round: 2,
+      active_agent: "codex",
+      active_since: "2026-03-08T10:00:00.000Z",
+      active_role: "reviewer",
+      round_role_history: [],
+      last_command_at: "2026-03-08T10:01:00.000Z",
+      meta_review: {
+        execution_context: null,
+        runtime_delivery: null,
+        auto_rework_count: 0,
+        auto_rework_limit: 5,
+        sticky_human_gate: false
+      }
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
+      return;
+    }
+    expect(result.value.meta_review?.consecutive_clean_runs).toBe(0);
+  });
+
+  it("preserves non-zero meta-review clean-run streak state", () => {
+    const result = validateBubbleStateSnapshot({
+      bubble_id: "b_test_meta_clean_runs_nonzero_01",
+      state: "WAITING_HUMAN",
+      round: 2,
+      active_agent: "codex",
+      active_since: "2026-03-08T10:00:00.000Z",
+      active_role: "reviewer",
+      round_role_history: [],
+      last_command_at: "2026-03-08T10:01:00.000Z",
+      meta_review: {
+        execution_context: null,
+        runtime_delivery: null,
+        auto_rework_count: 0,
+        auto_rework_limit: 5,
+        sticky_human_gate: false,
+        consecutive_clean_runs: 3
+      }
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
+      return;
+    }
+    expect(result.value.meta_review?.consecutive_clean_runs).toBe(3);
+  });
+
+  it("rejects malformed meta-review clean-run streak state", () => {
+    for (const consecutiveCleanRuns of [1.5, -1]) {
+      const result = validateBubbleStateSnapshot({
+        bubble_id: "b_test_meta_clean_runs_02",
+        state: "WAITING_HUMAN",
+        round: 2,
+        active_agent: "codex",
+        active_since: "2026-03-08T10:00:00.000Z",
+        active_role: "reviewer",
+        round_role_history: [],
+        last_command_at: "2026-03-08T10:01:00.000Z",
+        meta_review: {
+          execution_context: null,
+          runtime_delivery: null,
+          auto_rework_count: 0,
+          auto_rework_limit: 5,
+          sticky_human_gate: false,
+          consecutive_clean_runs: consecutiveCleanRuns
+        }
+      });
+
+      expect(result.ok).toBe(false);
+      if (result.ok) {
+        continue;
+      }
+      expect(result.errors).toContainEqual({
+        path: "meta_review.consecutive_clean_runs",
+        message: "Must be a non-negative integer"
+      });
+    }
   });
 
   it("rejects invalid meta-review snapshot values with field-level paths", () => {
@@ -850,7 +946,8 @@ describe("state schema", () => {
         last_autonomous_updated_at: "2026-03-08T10:01:00.000Z",
         auto_rework_count: 1,
         auto_rework_limit: 5,
-        sticky_human_gate: false
+        sticky_human_gate: false,
+        consecutive_clean_runs: 0,
       }
     });
 
@@ -882,7 +979,8 @@ describe("state schema", () => {
         last_autonomous_updated_at: "2026-03-08T10:01:00.000Z",
         auto_rework_count: 1,
         auto_rework_limit: 5,
-        sticky_human_gate: false
+        sticky_human_gate: false,
+        consecutive_clean_runs: 0,
       }
     });
 
@@ -914,7 +1012,8 @@ describe("state schema", () => {
         last_autonomous_updated_at: "2026-03-08T10:01:00.000Z",
         auto_rework_count: 1,
         auto_rework_limit: 5,
-        sticky_human_gate: false
+        sticky_human_gate: false,
+        consecutive_clean_runs: 0,
       }
     });
 
@@ -946,7 +1045,8 @@ describe("state schema", () => {
         last_autonomous_updated_at: "2026-03-08T10:01:00.000Z",
         auto_rework_count: 1,
         auto_rework_limit: 5,
-        sticky_human_gate: false
+        sticky_human_gate: false,
+        consecutive_clean_runs: 0,
       }
     });
 
@@ -978,7 +1078,8 @@ describe("state schema", () => {
         last_autonomous_updated_at: "2026-03-08T10:01:00.000Z",
         auto_rework_count: 0,
         auto_rework_limit: 5,
-        sticky_human_gate: false
+        sticky_human_gate: false,
+        consecutive_clean_runs: 0,
       }
     });
 
@@ -1008,7 +1109,8 @@ describe("state schema", () => {
         last_autonomous_updated_at: "2026-03-08T10:01:00.000Z",
         auto_rework_count: 0,
         auto_rework_limit: 5,
-        sticky_human_gate: false
+        sticky_human_gate: false,
+        consecutive_clean_runs: 0,
       }
     });
 
@@ -1038,7 +1140,8 @@ describe("state schema", () => {
         last_autonomous_updated_at: null,
         auto_rework_count: 0,
         auto_rework_limit: 5,
-        sticky_human_gate: false
+        sticky_human_gate: false,
+        consecutive_clean_runs: 0,
       }
     });
 
@@ -1068,7 +1171,8 @@ describe("state schema", () => {
         last_autonomous_updated_at: null,
         auto_rework_count: 0,
         auto_rework_limit: 5,
-        sticky_human_gate: false
+        sticky_human_gate: false,
+        consecutive_clean_runs: 0,
       }
     });
 

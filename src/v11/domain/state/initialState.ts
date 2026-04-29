@@ -21,7 +21,8 @@ export function createInitialBubbleState(bubbleId: string): BubbleStateSnapshot 
       runtime_delivery: null,
       auto_rework_count: 0,
       auto_rework_limit: DEFAULT_META_REVIEW_AUTO_REWORK_LIMIT,
-      sticky_human_gate: false
+      sticky_human_gate: false,
+      consecutive_clean_runs: 0
     }
   };
 }

@@ -216,6 +216,7 @@ export interface BubbleReviewPolicyConfig {
   review_loop_mode: BubbleReviewLoopMode;
   reviewer_blocking_min_severity: BubbleReviewAutoReworkSeverity;
   meta_review_auto_rework_min_severity: BubbleReviewAutoReworkSeverity;
+  meta_review_consecutive_clean_runs_required?: number;
 }
 
 export interface BubbleReviewPolicyRuntimeView {
@@ -224,6 +225,7 @@ export interface BubbleReviewPolicyRuntimeView {
   support_status: BubbleReviewSupportStatus;
   reviewer_blocking_min_severity: BubbleReviewAutoReworkSeverity;
   meta_review_auto_rework_min_severity: BubbleReviewAutoReworkSeverity;
+  meta_review_consecutive_clean_runs_required: number;
   blocked_reason_code?: string;
   blocked_prerequisites?: string[];
   provenance_note?: string;
@@ -407,6 +409,7 @@ export interface BubbleMetaReviewSnapshotState {
   auto_rework_count: number;
   auto_rework_limit: number;
   sticky_human_gate: boolean;
+  consecutive_clean_runs?: number;
 }
 
 export interface BubbleStateSnapshot {

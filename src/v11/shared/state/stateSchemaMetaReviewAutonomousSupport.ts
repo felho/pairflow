@@ -5,12 +5,14 @@ export function validateMetaReviewAutonomousControls(input: {
   autoReworkCount: unknown;
   autoReworkLimit: unknown;
   stickyHumanGate: unknown;
+  consecutiveCleanRuns: unknown;
   pathPrefix: string;
   errors: ValidationError[];
 }): {
   auto_rework_count: BubbleMetaReviewSnapshotState["auto_rework_count"];
   auto_rework_limit: BubbleMetaReviewSnapshotState["auto_rework_limit"];
   sticky_human_gate: BubbleMetaReviewSnapshotState["sticky_human_gate"];
+  consecutive_clean_runs: number;
 } | undefined {
   const errorCountAtStart = input.errors.length;
 
@@ -35,20 +37,21 @@ export function validateMetaReviewAutonomousControls(input: {
     });
   }
 
+  if (!(isInteger(input.consecutiveCleanRuns) && input.consecutiveCleanRuns >= 0)) {
+    input.errors.push({
+      path: `${input.pathPrefix}.consecutive_clean_runs`,
+      message: "Must be a non-negative integer"
+    });
+  }
+
   if (input.errors.length > errorCountAtStart) {
     return undefined;
   }
 
   return {
-    auto_rework_count:
-      isInteger(input.autoReworkCount) && input.autoReworkCount >= 0
-        ? input.autoReworkCount
-        : 0,
-    auto_rework_limit:
-      isInteger(input.autoReworkLimit) && input.autoReworkLimit >= 1
-        ? input.autoReworkLimit
-        : 1,
-    sticky_human_gate:
-      typeof input.stickyHumanGate === "boolean" ? input.stickyHumanGate : false
+    auto_rework_count: input.autoReworkCount as number,
+    auto_rework_limit: input.autoReworkLimit as number,
+    sticky_human_gate: input.stickyHumanGate as boolean,
+    consecutive_clean_runs: input.consecutiveCleanRuns as number
   };
 }

@@ -7,6 +7,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { parseBubbleConfigToml } from "../../../../src/config/bubbleConfig.js";
 import {
   buildSharedUiReviewPolicyPatch,
+  REVIEW_POLICY_PATCH_INVALID,
   REVIEW_POLICY_WRITE_CONFLICT,
   updateBubbleReviewPolicy
 } from "../../../../src/v11/shared/reviewPolicy/updateBubbleReviewPolicy.js";
@@ -76,7 +77,8 @@ describe("updateBubbleReviewPolicy", () => {
       patch: {
         review_loop_mode: "meta_only",
         reviewer_blocking_min_severity: "P2",
-        meta_review_auto_rework_min_severity: "P2"
+        meta_review_auto_rework_min_severity: "P2",
+        meta_review_consecutive_clean_runs_required: 1,
       }
     });
 
@@ -91,12 +93,14 @@ describe("updateBubbleReviewPolicy", () => {
     expect(result.nextConfig.review_policy).toEqual({
       review_loop_mode: "meta_only",
       reviewer_blocking_min_severity: "P2",
-      meta_review_auto_rework_min_severity: "P2"
+      meta_review_auto_rework_min_severity: "P2",
+      meta_review_consecutive_clean_runs_required: 1,
     });
     expect(parseBubbleConfigToml(result.nextBubbleToml).review_policy).toEqual({
       review_loop_mode: "meta_only",
       reviewer_blocking_min_severity: "P2",
-      meta_review_auto_rework_min_severity: "P2"
+      meta_review_auto_rework_min_severity: "P2",
+      meta_review_consecutive_clean_runs_required: 1,
     });
   });
 
@@ -114,7 +118,8 @@ describe("updateBubbleReviewPolicy", () => {
       expectedContent: original,
       patch: {
         reviewer_blocking_min_severity: "P3",
-        meta_review_auto_rework_min_severity: "P3"
+        meta_review_auto_rework_min_severity: "P3",
+        meta_review_consecutive_clean_runs_required: 1,
       }
     });
 
@@ -132,7 +137,8 @@ describe("updateBubbleReviewPolicy", () => {
       bubbleTomlPath,
       patch: {
         reviewer_blocking_min_severity: "P3",
-        meta_review_auto_rework_min_severity: "P3"
+        meta_review_auto_rework_min_severity: "P3",
+        meta_review_consecutive_clean_runs_required: 1,
       }
     });
 
@@ -144,12 +150,14 @@ describe("updateBubbleReviewPolicy", () => {
     expect(result.nextConfig.review_policy).toEqual({
       review_loop_mode: "full",
       reviewer_blocking_min_severity: "P3",
-      meta_review_auto_rework_min_severity: "P3"
+      meta_review_auto_rework_min_severity: "P3",
+      meta_review_consecutive_clean_runs_required: 1,
     });
     expect(parseBubbleConfigToml(await readFile(bubbleTomlPath, "utf8")).review_policy).toEqual({
       review_loop_mode: "full",
       reviewer_blocking_min_severity: "P3",
-      meta_review_auto_rework_min_severity: "P3"
+      meta_review_auto_rework_min_severity: "P3",
+      meta_review_consecutive_clean_runs_required: 1,
     });
   });
 
@@ -160,7 +168,8 @@ describe("updateBubbleReviewPolicy", () => {
       bubbleTomlPath,
       patch: {
         reviewer_blocking_min_severity: "P2",
-        meta_review_auto_rework_min_severity: "P3"
+        meta_review_auto_rework_min_severity: "P3",
+        meta_review_consecutive_clean_runs_required: 1,
       }
     });
 
@@ -179,7 +188,8 @@ describe("updateBubbleReviewPolicy", () => {
     expect(result.nextConfig.review_policy).toEqual({
       review_loop_mode: "full",
       reviewer_blocking_min_severity: "P1",
-      meta_review_auto_rework_min_severity: "P3"
+      meta_review_auto_rework_min_severity: "P3",
+      meta_review_consecutive_clean_runs_required: 1,
     });
   });
 
@@ -190,14 +200,16 @@ describe("updateBubbleReviewPolicy", () => {
       bubbleTomlPath,
       patch: {
         reviewer_blocking_min_severity: "P2",
-        meta_review_auto_rework_min_severity: "P3"
+        meta_review_auto_rework_min_severity: "P3",
+        meta_review_consecutive_clean_runs_required: 1,
       }
     });
 
     const result = await updateBubbleReviewPolicy({
       bubbleTomlPath,
       patch: {
-        meta_review_auto_rework_min_severity: "P1"
+        meta_review_auto_rework_min_severity: "P1",
+        meta_review_consecutive_clean_runs_required: 1,
       }
     });
 
@@ -209,8 +221,36 @@ describe("updateBubbleReviewPolicy", () => {
     expect(result.nextConfig.review_policy).toEqual({
       review_loop_mode: "full",
       reviewer_blocking_min_severity: "P2",
-      meta_review_auto_rework_min_severity: "P1"
+      meta_review_auto_rework_min_severity: "P1",
+      meta_review_consecutive_clean_runs_required: 1,
     });
+  });
+
+  it("rejects invalid consecutive clean-run requirement patches before writing", async () => {
+    for (const value of [0, -1, 1.5]) {
+      const bubbleTomlPath = await createBubbleTomlFixture();
+      const originalBubbleToml = await readFile(bubbleTomlPath, "utf8");
+      const writes: string[] = [];
+
+      await expect(
+        updateBubbleReviewPolicy({
+          bubbleTomlPath,
+          patch: {
+            meta_review_consecutive_clean_runs_required: value
+          },
+          writeFile: async (path, content, encoding) => {
+            writes.push(path);
+            await writeFile(path, content, encoding);
+          }
+        })
+      ).rejects.toThrow(
+        `${REVIEW_POLICY_PATCH_INVALID}: review_policy.meta_review_consecutive_clean_runs_required: REVIEW_POLICY_CONSECUTIVE_CLEAN_RUNS_REQUIRED_INVALID: Must be an integer >= 1`
+      );
+
+      expect(writes).toEqual([]);
+      expect(await readFile(bubbleTomlPath, "utf8")).toBe(originalBubbleToml);
+      expect(parseBubbleConfigToml(await readFile(bubbleTomlPath, "utf8")).review_policy).toBeUndefined();
+    }
   });
 
   it("writes bubble.toml atomically through temp-file rename", async () => {
@@ -222,7 +262,8 @@ describe("updateBubbleReviewPolicy", () => {
       bubbleTomlPath,
       patch: {
         reviewer_blocking_min_severity: "P2",
-        meta_review_auto_rework_min_severity: "P2"
+        meta_review_auto_rework_min_severity: "P2",
+        meta_review_consecutive_clean_runs_required: 1,
       },
       writeFile: async (path, content, encoding) => {
         writes.push(path);
@@ -256,7 +297,8 @@ describe("updateBubbleReviewPolicy", () => {
         bubbleTomlPath,
         patch: {
           reviewer_blocking_min_severity: "P2",
-          meta_review_auto_rework_min_severity: "P2"
+          meta_review_auto_rework_min_severity: "P2",
+          meta_review_consecutive_clean_runs_required: 1,
         },
         writeFile: async (path, content, encoding) => {
           await writeFile(path, content, encoding);
@@ -290,7 +332,8 @@ describe("updateBubbleReviewPolicy", () => {
         bubbleTomlPath,
         patch: {
           reviewer_blocking_min_severity: "P2",
-          meta_review_auto_rework_min_severity: "P2"
+          meta_review_auto_rework_min_severity: "P2",
+          meta_review_consecutive_clean_runs_required: 1,
         },
         rename: async () => {
           throw new Error("simulated rename failure");

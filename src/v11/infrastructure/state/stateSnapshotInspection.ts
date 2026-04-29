@@ -182,7 +182,8 @@ function normalizeInspectableMetaReviewSnapshot(
       runtime_delivery: null,
       auto_rework_count: 0,
       auto_rework_limit: DEFAULT_META_REVIEW_AUTO_REWORK_LIMIT,
-      sticky_human_gate: false
+      sticky_human_gate: false,
+      consecutive_clean_runs: 0
     };
   }
 
@@ -191,7 +192,8 @@ function normalizeInspectableMetaReviewSnapshot(
     runtime_delivery: normalizeInspectableMetaReviewRuntimeDelivery(value.runtime_delivery),
     auto_rework_count: isInteger(value.auto_rework_count) && value.auto_rework_count >= 0 ? value.auto_rework_count : 0,
     auto_rework_limit: isInteger(value.auto_rework_limit) && value.auto_rework_limit >= 1 ? value.auto_rework_limit : DEFAULT_META_REVIEW_AUTO_REWORK_LIMIT,
-    sticky_human_gate: value.sticky_human_gate === true
+    sticky_human_gate: value.sticky_human_gate === true,
+    consecutive_clean_runs: isInteger(value.consecutive_clean_runs) && value.consecutive_clean_runs >= 0 ? value.consecutive_clean_runs : 0
   };
 }
 

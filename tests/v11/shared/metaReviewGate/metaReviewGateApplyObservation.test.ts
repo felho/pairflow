@@ -25,7 +25,8 @@ function createObservedReadyState(round: number): LoadedStateSnapshot {
         runtime_delivery: null,
         auto_rework_count: 0,
         auto_rework_limit: 5,
-        sticky_human_gate: true
+        sticky_human_gate: true,
+        consecutive_clean_runs: 0,
       }
     }
   };

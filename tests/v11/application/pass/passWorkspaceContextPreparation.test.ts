@@ -468,7 +468,8 @@ describe("passWorkspaceContextPreparation", () => {
                 review_policy: {
                   review_loop_mode: "meta_only",
                   reviewer_blocking_min_severity: "P2",
-                  meta_review_auto_rework_min_severity: "P2"
+                  meta_review_auto_rework_min_severity: "P2",
+                  meta_review_consecutive_clean_runs_required: 1,
                 },
                 agents: {
                   implementer: "codex",
@@ -565,7 +566,8 @@ describe("passWorkspaceContextPreparation", () => {
               review_policy: {
                 review_loop_mode: "meta_only",
                 reviewer_blocking_min_severity: "P2",
-                meta_review_auto_rework_min_severity: "P2"
+                meta_review_auto_rework_min_severity: "P2",
+                meta_review_consecutive_clean_runs_required: 1,
               },
               agents: {
                 implementer: "claude",
@@ -588,7 +590,8 @@ describe("passWorkspaceContextPreparation", () => {
               review_policy: {
                 review_loop_mode: "meta_only",
                 reviewer_blocking_min_severity: "P2",
-                meta_review_auto_rework_min_severity: "P2"
+                meta_review_auto_rework_min_severity: "P2",
+                meta_review_consecutive_clean_runs_required: 1,
               },
               agents: {
                 implementer: "claude",
@@ -651,7 +654,8 @@ describe("passWorkspaceContextPreparation", () => {
       effective_loop_mode: "meta_only",
       support_status: "enabled",
       reviewer_blocking_min_severity: "P2",
-      meta_review_auto_rework_min_severity: "P2"
+      meta_review_auto_rework_min_severity: "P2",
+      meta_review_consecutive_clean_runs_required: 1,
     });
   });
 
@@ -677,7 +681,8 @@ describe("passWorkspaceContextPreparation", () => {
               review_policy: {
                 review_loop_mode: "meta_only",
                 reviewer_blocking_min_severity: "P3",
-                meta_review_auto_rework_min_severity: "P3"
+                meta_review_auto_rework_min_severity: "P3",
+                meta_review_consecutive_clean_runs_required: 1,
               },
               agents: {
                 implementer: "codex",
@@ -700,7 +705,8 @@ describe("passWorkspaceContextPreparation", () => {
               review_policy: {
                 review_loop_mode: "meta_only",
                 reviewer_blocking_min_severity: "P3",
-                meta_review_auto_rework_min_severity: "P3"
+                meta_review_auto_rework_min_severity: "P3",
+                meta_review_consecutive_clean_runs_required: 1,
               },
               agents: {
                 implementer: "codex",
@@ -758,6 +764,7 @@ describe("passWorkspaceContextPreparation", () => {
       support_status: "guarded",
       reviewer_blocking_min_severity: "P3",
       meta_review_auto_rework_min_severity: "P3",
+      meta_review_consecutive_clean_runs_required: 1,
       blocked_reason_code: "REVIEW_POLICY_META_ONLY_ACTIVATION_UNRESOLVED",
       blocked_prerequisites: ["reviewer_bypass_activation_provenance_required"],
       provenance_note:
@@ -787,7 +794,8 @@ describe("passWorkspaceContextPreparation", () => {
               review_policy: {
                 review_loop_mode: "meta_only",
                 reviewer_blocking_min_severity: "P2",
-                meta_review_auto_rework_min_severity: "P2"
+                meta_review_auto_rework_min_severity: "P2",
+                meta_review_consecutive_clean_runs_required: 1,
               },
               agents: {
                 implementer: "codex",
@@ -810,7 +818,8 @@ describe("passWorkspaceContextPreparation", () => {
               review_policy: {
                 review_loop_mode: "meta_only",
                 reviewer_blocking_min_severity: "P2",
-                meta_review_auto_rework_min_severity: "P2"
+                meta_review_auto_rework_min_severity: "P2",
+                meta_review_consecutive_clean_runs_required: 1,
               },
               agents: {
                 implementer: "codex",
@@ -868,6 +877,7 @@ describe("passWorkspaceContextPreparation", () => {
       support_status: "guarded",
       reviewer_blocking_min_severity: "P2",
       meta_review_auto_rework_min_severity: "P2",
+      meta_review_consecutive_clean_runs_required: 1,
       blocked_reason_code: "REVIEW_POLICY_META_ONLY_ACTIVATION_UNRESOLVED",
       blocked_prerequisites: ["reviewer_bypass_activation_provenance_required"],
       provenance_note:

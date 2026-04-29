@@ -277,7 +277,8 @@ async function executeMetaReviewGateCase(input: {
           ...stateForApply.state,
           meta_review: {
             ...normalizeMetaReviewSnapshot(stateForApply.state.meta_review),
-            sticky_human_gate: true
+            sticky_human_gate: true,
+            consecutive_clean_runs: 0,
           }
         },
         {

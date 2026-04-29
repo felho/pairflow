@@ -77,7 +77,8 @@ describe("approvalResultMapping", () => {
           runtime_delivery: null,
           auto_rework_count: 1,
           auto_rework_limit: 5,
-          sticky_human_gate: true
+          sticky_human_gate: true,
+          consecutive_clean_runs: 0,
         }
       } as never,
       decision: "rework",
@@ -100,7 +101,8 @@ describe("approvalResultMapping", () => {
       runtime_delivery: null,
       auto_rework_count: 1,
       auto_rework_limit: 5,
-      sticky_human_gate: false
+      sticky_human_gate: false,
+      consecutive_clean_runs: 0,
     });
     expect(next.meta_review).not.toHaveProperty("last_autonomous_run_id");
     expect(transitions).toHaveLength(1);

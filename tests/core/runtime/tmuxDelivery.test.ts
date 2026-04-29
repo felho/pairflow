@@ -1942,7 +1942,8 @@ describe("emitDeliveryNotificationAck", () => {
         review_policy: {
           review_loop_mode: "full",
           reviewer_blocking_min_severity: "P2",
-          meta_review_auto_rework_min_severity: "P3"
+          meta_review_auto_rework_min_severity: "P3",
+          meta_review_consecutive_clean_runs_required: 1,
         }
       },
       sessionsPath: "/tmp/repo/.pairflow/runtime/sessions.json",
@@ -1961,7 +1962,8 @@ describe("emitDeliveryNotificationAck", () => {
         review_policy: {
           review_loop_mode: "full",
           reviewer_blocking_min_severity: "P1",
-          meta_review_auto_rework_min_severity: "P3"
+          meta_review_auto_rework_min_severity: "P3",
+          meta_review_consecutive_clean_runs_required: 1,
         }
       },
       sessionsPath: "/tmp/repo/.pairflow/runtime/sessions.json",

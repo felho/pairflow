@@ -674,7 +674,8 @@ describe("runAgentEmitCommand", () => {
       runtime_delivery: null,
       auto_rework_count: 0,
       auto_rework_limit: 10,
-      sticky_human_gate: true
+      sticky_human_gate: true,
+      consecutive_clean_runs: 0,
     });
   });
 });

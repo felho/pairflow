@@ -171,7 +171,8 @@ async function seedReadyForHumanApprovalState(input: {
           runtime_delivery: null,
           auto_rework_count: 0,
           auto_rework_limit: 5,
-          sticky_human_gate: false
+          sticky_human_gate: false,
+          consecutive_clean_runs: 0,
         }),
         execution_context: null,
         runtime_delivery: null,

@@ -19,7 +19,8 @@ describe("metaReviewSnapshot", () => {
       runtime_delivery: null,
       auto_rework_count: 0,
       auto_rework_limit: DEFAULT_META_REVIEW_AUTO_REWORK_LIMIT,
-      sticky_human_gate: false
+      sticky_human_gate: false,
+      consecutive_clean_runs: 0,
     });
   });
 
@@ -44,14 +45,108 @@ describe("metaReviewSnapshot", () => {
         },
         auto_rework_count: 2,
         auto_rework_limit: 5,
-        sticky_human_gate: true
+        sticky_human_gate: true,
+        consecutive_clean_runs: 2,
       })
     ).toEqual({
       execution_context: null,
       runtime_delivery: null,
       auto_rework_count: 2,
       auto_rework_limit: 5,
-      sticky_human_gate: false
+      sticky_human_gate: false,
+      consecutive_clean_runs: 2,
+    });
+  });
+
+  it("normalizes a legacy snapshot with missing consecutive clean runs to zero", () => {
+    expect(
+      normalizeMetaReviewSnapshot({
+        execution_context: null,
+        runtime_delivery: null,
+        auto_rework_count: 1,
+        auto_rework_limit: 5,
+        sticky_human_gate: false
+      })
+    ).toEqual({
+      execution_context: null,
+      runtime_delivery: null,
+      auto_rework_count: 1,
+      auto_rework_limit: 5,
+      sticky_human_gate: false,
+      consecutive_clean_runs: 0
+    });
+  });
+
+  it("validates explicit consecutive clean-run streak state", () => {
+    const errors: { path: string; message: string }[] = [];
+
+    expect(
+      validateMetaReviewSnapshot(
+        {
+          execution_context: null,
+          runtime_delivery: null,
+          auto_rework_count: 1,
+          auto_rework_limit: 5,
+          sticky_human_gate: false,
+          consecutive_clean_runs: 2
+        },
+        errors
+      )
+    ).toEqual({
+      execution_context: null,
+      runtime_delivery: null,
+      auto_rework_count: 1,
+      auto_rework_limit: 5,
+      sticky_human_gate: false,
+      consecutive_clean_runs: 2
+    });
+    expect(errors).toEqual([]);
+  });
+
+  it("validates a legacy snapshot with missing consecutive clean runs as zero", () => {
+    const errors: { path: string; message: string }[] = [];
+
+    expect(
+      validateMetaReviewSnapshot(
+        {
+          execution_context: null,
+          runtime_delivery: null,
+          auto_rework_count: 1,
+          auto_rework_limit: 5,
+          sticky_human_gate: false
+        },
+        errors
+      )
+    ).toEqual({
+      execution_context: null,
+      runtime_delivery: null,
+      auto_rework_count: 1,
+      auto_rework_limit: 5,
+      sticky_human_gate: false,
+      consecutive_clean_runs: 0
+    });
+    expect(errors).toEqual([]);
+  });
+
+  it("rejects malformed consecutive clean-run streak state", () => {
+    const errors: { path: string; message: string }[] = [];
+
+    expect(
+      validateMetaReviewSnapshot(
+        {
+          execution_context: null,
+          runtime_delivery: null,
+          auto_rework_count: 1,
+          auto_rework_limit: 5,
+          sticky_human_gate: false,
+          consecutive_clean_runs: -1
+        },
+        errors
+      )
+    ).toBeUndefined();
+    expect(errors).toContainEqual({
+      path: "meta_review.consecutive_clean_runs",
+      message: "Must be a non-negative integer"
     });
   });
 
@@ -270,7 +365,8 @@ describe("metaReviewSnapshot", () => {
         runtime_delivery: null,
         auto_rework_count: 0,
         auto_rework_limit: DEFAULT_META_REVIEW_AUTO_REWORK_LIMIT,
-        sticky_human_gate: false
+        sticky_human_gate: false,
+        consecutive_clean_runs: 0,
       },
       errors
     );

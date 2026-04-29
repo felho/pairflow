@@ -1,5 +1,6 @@
 import {
   DEFAULT_REVIEW_POLICY_AUTO_REWORK_MIN_SEVERITY,
+  DEFAULT_REVIEW_POLICY_CONSECUTIVE_CLEAN_RUNS_REQUIRED,
   DEFAULT_REVIEW_POLICY_REVIEWER_BLOCKING_MIN_SEVERITY,
   DEFAULT_REVIEW_POLICY_LOOP_MODE
 } from "../../../config/defaults.js";
@@ -32,7 +33,10 @@ export const REVIEW_POLICY_META_ONLY_ACTIVATION_UNRESOLVED_PROVENANCE_NOTE =
     "Requested meta-only review remains fail-closed on the full review loop until canonical implementer pass authority proves reviewer-bypass activation for the live pass path."
   ) as const;
 
-export type NormalizedBubbleReviewPolicy = BubbleReviewPolicyConfig;
+export type NormalizedBubbleReviewPolicy =
+  BubbleReviewPolicyConfig & {
+    meta_review_consecutive_clean_runs_required: number;
+  };
 
 export interface RuntimeAlignedReviewPolicyExecutionContext {
   activeRole: "implementer" | "reviewer" | "meta_reviewer";
@@ -128,7 +132,10 @@ export function normalizeBubbleReviewPolicy(
       ?? DEFAULT_REVIEW_POLICY_REVIEWER_BLOCKING_MIN_SEVERITY,
     meta_review_auto_rework_min_severity:
       config.review_policy?.meta_review_auto_rework_min_severity
-      ?? DEFAULT_REVIEW_POLICY_AUTO_REWORK_MIN_SEVERITY
+      ?? DEFAULT_REVIEW_POLICY_AUTO_REWORK_MIN_SEVERITY,
+    meta_review_consecutive_clean_runs_required:
+      config.review_policy?.meta_review_consecutive_clean_runs_required
+      ?? DEFAULT_REVIEW_POLICY_CONSECUTIVE_CLEAN_RUNS_REQUIRED
   };
 }
 
@@ -145,6 +152,8 @@ export function buildBubbleReviewPolicyRuntimeView(
         normalized.reviewer_blocking_min_severity,
       meta_review_auto_rework_min_severity:
         normalized.meta_review_auto_rework_min_severity,
+      meta_review_consecutive_clean_runs_required:
+        normalized.meta_review_consecutive_clean_runs_required,
       blocked_reason_code: REVIEW_POLICY_META_ONLY_GUARDED,
       blocked_prerequisites: [REVIEW_POLICY_META_ONLY_PHASE3B_PENDING],
       provenance_note: REVIEW_POLICY_META_ONLY_PROVENANCE_NOTE
@@ -157,7 +166,9 @@ export function buildBubbleReviewPolicyRuntimeView(
     support_status: "enabled",
     reviewer_blocking_min_severity: normalized.reviewer_blocking_min_severity,
     meta_review_auto_rework_min_severity:
-      normalized.meta_review_auto_rework_min_severity
+      normalized.meta_review_auto_rework_min_severity,
+    meta_review_consecutive_clean_runs_required:
+      normalized.meta_review_consecutive_clean_runs_required
   };
 }
 
@@ -174,7 +185,9 @@ export function buildPassPathReviewPolicyRuntimeView(input: {
       reviewer_blocking_min_severity:
         normalized.reviewer_blocking_min_severity,
       meta_review_auto_rework_min_severity:
-        normalized.meta_review_auto_rework_min_severity
+        normalized.meta_review_auto_rework_min_severity,
+      meta_review_consecutive_clean_runs_required:
+        normalized.meta_review_consecutive_clean_runs_required
     };
   }
 
@@ -186,7 +199,9 @@ export function buildPassPathReviewPolicyRuntimeView(input: {
       reviewer_blocking_min_severity:
         normalized.reviewer_blocking_min_severity,
       meta_review_auto_rework_min_severity:
-        normalized.meta_review_auto_rework_min_severity
+        normalized.meta_review_auto_rework_min_severity,
+      meta_review_consecutive_clean_runs_required:
+        normalized.meta_review_consecutive_clean_runs_required
     };
   }
 
@@ -197,6 +212,8 @@ export function buildPassPathReviewPolicyRuntimeView(input: {
     reviewer_blocking_min_severity: normalized.reviewer_blocking_min_severity,
     meta_review_auto_rework_min_severity:
       normalized.meta_review_auto_rework_min_severity,
+    meta_review_consecutive_clean_runs_required:
+      normalized.meta_review_consecutive_clean_runs_required,
     blocked_reason_code: REVIEW_POLICY_META_ONLY_ACTIVATION_UNRESOLVED,
     blocked_prerequisites: [REVIEW_POLICY_META_ONLY_ACTIVATION_REQUIRED],
     provenance_note:

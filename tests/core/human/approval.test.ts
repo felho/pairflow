@@ -417,6 +417,7 @@ describe("approval decisions", () => {
     expect(result.state.state).toBe("RUNNING");
     expect(result.state.meta_review).toMatchObject({
       sticky_human_gate: false,
+      consecutive_clean_runs: 0,
     });
 
   });
@@ -469,7 +470,8 @@ describe("approval decisions", () => {
           ...(legacyReadyState.meta_review ?? {
             auto_rework_count: 0,
             auto_rework_limit: 5,
-            sticky_human_gate: false
+            sticky_human_gate: false,
+            consecutive_clean_runs: 0,
           }),
         }
       },
@@ -546,9 +548,11 @@ describe("approval decisions", () => {
           ...(legacyReadyState.meta_review ?? {
             auto_rework_count: 0,
             auto_rework_limit: 5,
-            sticky_human_gate: false
+            sticky_human_gate: false,
+            consecutive_clean_runs: 0,
           }),
           sticky_human_gate: true,
+          consecutive_clean_runs: 0,
         }
       },
       {
@@ -619,9 +623,11 @@ describe("approval decisions", () => {
           ...(legacyReadyState.meta_review ?? {
             auto_rework_count: 0,
             auto_rework_limit: 5,
-            sticky_human_gate: false
+            sticky_human_gate: false,
+            consecutive_clean_runs: 0,
           }),
           sticky_human_gate: true,
+          consecutive_clean_runs: 0,
         }
       },
       {
@@ -748,9 +754,11 @@ describe("approval decisions", () => {
           ...(loaded.state.meta_review ?? {
             auto_rework_count: 0,
             auto_rework_limit: 5,
-            sticky_human_gate: false
+            sticky_human_gate: false,
+            consecutive_clean_runs: 0,
           }),
           sticky_human_gate: true,
+          consecutive_clean_runs: 0,
         }
       },
       {
@@ -1477,9 +1485,11 @@ describe("approval decisions", () => {
           ...(loaded.state.meta_review ?? {
             auto_rework_count: 0,
             auto_rework_limit: 5,
-            sticky_human_gate: false
+            sticky_human_gate: false,
+            consecutive_clean_runs: 0,
           }),
           sticky_human_gate: true,
+          consecutive_clean_runs: 0,
         }
       },
       {

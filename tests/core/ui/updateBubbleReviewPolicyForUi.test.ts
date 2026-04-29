@@ -86,6 +86,7 @@ describe("updateBubbleReviewPolicyForUi", () => {
               support_status: "guarded",
               reviewer_blocking_min_severity: "P2",
               meta_review_auto_rework_min_severity: "P2",
+              meta_review_consecutive_clean_runs_required: 1,
               blocked_reason_code: "REVIEW_POLICY_META_ONLY_GUARDED",
               blocked_prerequisites: [
                 "reviewer_bypass_activation_phase3b_pending"
@@ -116,7 +117,7 @@ describe("updateBubbleReviewPolicyForUi", () => {
     expect(localConfig.review_policy).toEqual({
       review_loop_mode: "meta_only",
       reviewer_blocking_min_severity: "P2",
-      meta_review_auto_rework_min_severity: "P2"
+      meta_review_auto_rework_min_severity: "P2",
     });
   });
 
@@ -252,7 +253,8 @@ describe("updateBubbleReviewPolicyForUi", () => {
         review_policy: {
           review_loop_mode: "full",
           reviewer_blocking_min_severity: "P1",
-          meta_review_auto_rework_min_severity: "P1"
+          meta_review_auto_rework_min_severity: "P1",
+          meta_review_consecutive_clean_runs_required: 1,
         }
       }),
       "utf8"
@@ -292,6 +294,7 @@ describe("updateBubbleReviewPolicyForUi", () => {
               support_status: "guarded",
               reviewer_blocking_min_severity: "P1",
               meta_review_auto_rework_min_severity: "P1",
+              meta_review_consecutive_clean_runs_required: 1,
               blocked_reason_code: "REVIEW_POLICY_META_ONLY_GUARDED",
               blocked_prerequisites: [
                 "reviewer_bypass_activation_phase3b_pending"
@@ -322,7 +325,8 @@ describe("updateBubbleReviewPolicyForUi", () => {
     expect(localConfig.review_policy).toEqual({
       review_loop_mode: "meta_only",
       reviewer_blocking_min_severity: "P1",
-      meta_review_auto_rework_min_severity: "P1"
+      meta_review_auto_rework_min_severity: "P1",
+      meta_review_consecutive_clean_runs_required: 1,
     });
   });
 
