@@ -1,7 +1,7 @@
 ---
 description: Reconcile normal post-implementation aftermath for ExecutePairflowPlan from a settled implementation-close result and refreshed authoritative plan/task metadata into canonical archive resolution and the next trustworthy owner
 argument-hint: <plan-path>
-allowed-tools: Read
+allowed-tools: Read, Edit, Bash
 ---
 
 # Update Progress
@@ -14,7 +14,7 @@ This workflow owns only:
 
 1. consuming the settled aftermath boundary after a successful `CloseImplementationBubble` return
 2. reconciling refreshed plan summary and task-local terminal truth under the existing Task 1 authority split
-3. reconciling completed-task archive aftermath onto the canonical Task 1 archive path when that is already deterministic
+3. reconciling completed-task archive aftermath onto the canonical Task 1 archive path when that is deterministic
 4. deciding whether the next trustworthy owner is a fresh `ResolvePlanState` pass, `PlanComplete`, or `HumanCheckpoint`
 5. defining the lightweight workflow-local pilot proof boundary for a first trustworthy local V1 run
 
@@ -139,7 +139,7 @@ reentry_identity_key: <same deterministic identity key carried from settled clos
 Field rules:
 
 1. `aftermath_action=rerun_resolve_plan_state` is the normal non-terminal continuation path after deterministic reconciliation
-2. `aftermath_action=plan_complete` is valid only when refreshed authoritative state proves the plan terminal boundary
+2. `aftermath_action=plan_complete` is valid only when refreshed authoritative state proves the plan settled boundary
 3. `aftermath_action=human_checkpoint` is required whenever refreshed aftermath truth is absent, inconsistent, or not deterministic enough for safe continuation
 4. `next_owner` must be:
    - `ResolvePlanState` for `rerun_resolve_plan_state`
@@ -171,6 +171,13 @@ Field rules:
 28. `reason_code=PLAN_COMPLETE_STATE_STALE` requires `task_terminal_status=done` as the local terminal detail of the just-closed task artifact, not as proof that the wider plan-completion gate succeeded
 29. `reason_code=NON_DETERMINISTIC_TASK_IDENTITY` requires `task_terminal_status=unresolved`
 
+Terminal-settlement rule:
+
+1. `done` is task-execution terminal only
+2. `archived` is the normal settled task state after successful post-close aftermath
+3. `PlanComplete` and `rerun_resolve_plan_state` outputs require `task_terminal_status=archived`
+4. `task_terminal_status=done` may appear only in fail-closed `human_checkpoint` output to show that implementation work finished but archive settlement did not
+
 ## Reason-Code Anchor Set
 
 This workflow may emit only these reason codes:
@@ -187,7 +194,7 @@ Usage notes:
 
 1. use `AUTHORITY_PRECEDENCE_APPLIED` when refreshed task-local terminal truth is trustworthy and the plan tracker summary needed deterministic reconciliation
 2. use `POST_CLOSE_AFTERMATH_READY` when post-close aftermath is trustworthy and ready to rerun `ResolvePlanState` without needing a precedence correction
-3. use `PLAN_COMPLETE` only when refreshed plan/task state proves the terminal boundary cleanly
+3. use `PLAN_COMPLETE` only when refreshed plan/task/archive state proves the settled boundary cleanly
 4. use `PLAN_COMPLETE_STATE_STALE` when the plan claims completion but refreshed authoritative state disproves it
 5. use `CROSS_AUTHORITY_METADATA_CONFLICT` when plan/task disagreement crosses the approved authority split and no deterministic same-authority reconciliation closes it
 6. use `NON_DETERMINISTIC_TASK_IDENTITY` when the active post-close task identity or canonical archive path cannot be derived uniquely on the current Task 1 baseline
@@ -243,10 +250,11 @@ plans/archive/tasks/<archive_group>/<task_id>.md
 Rules:
 
 1. if the refreshed task already sits at the canonical path, return `archive_resolution=already_canonical`
-2. if a generic close-flow side effect or close-side follow-up owned by `CloseImplementationBubble` left the task at a different but deterministic completed-task location, reconcile it conceptually to the canonical Task 1 target and return `archive_resolution=reconciled_to_canonical`
+2. if a generic close-flow side effect or close-side follow-up owned by `CloseImplementationBubble` left the task at a different but deterministic completed-task location, move the task artifact to the canonical Task 1 target, update task metadata to `status=archived`, update the plan tracker row to `status=archived` and the canonical `task_path`, then return `archive_resolution=reconciled_to_canonical`
 3. if `archive_group` plus canonical `task_id` cannot determine a unique canonical archive path, return `human_checkpoint` with `NON_DETERMINISTIC_TASK_IDENTITY`
 4. do not widen metadata just because a generic close flow used a mirrored path that differs from the Task 1 canonical rule
 5. when refreshed task metadata already persists `archive_path`, accept it only if it equals the canonical derived path
+6. never emit `PlanComplete` from a `done` task at a live task path; complete the deterministic archive reconciliation first or stop at `HumanCheckpoint`
 
 ## Plan-Completion Gate
 
@@ -255,15 +263,18 @@ Rules:
 Use it only when all of the following are true after refreshed aftermath reconciliation:
 
 1. `plan_status=done`
-2. every tracker row is terminal
+2. every normally completed tracker row is `archived`
 3. `active_task_id=null`
-4. no active task artifact exists with non-terminal task-local status
-5. no other trusted input contradicts the complete terminal boundary
+4. each archived tracker row points at `plans/archive/tasks/<archive_group>/<task_id>.md`
+5. each readable archived task artifact has `status=archived`
+6. superseded tasks have deterministic lineage and archive aftermath already settled
+7. no other trusted input contradicts the complete settled boundary
 
 Fail-closed rule:
 
 1. if the plan claims `done` but refreshed tracker or task truth is still non-terminal, do not emit `PlanComplete`
-2. return `human_checkpoint` with `PLAN_COMPLETE_STATE_STALE` unless a deterministic non-terminal reroute is already proven by refreshed artifacts; this fail-closed outcome may still report `task_terminal_status=done` when the just-closed task itself is terminal and the stale condition comes from tracker, active-task, or broader plan-boundary contradiction elsewhere
+2. if the plan claims `done` but completed tasks remain `done` at live paths, do not emit `PlanComplete`; perform deterministic archive reconciliation first or return `human_checkpoint` with `NO_TRUSTWORTHY_ROUTE`
+3. return `human_checkpoint` with `PLAN_COMPLETE_STATE_STALE` unless a deterministic non-terminal reroute is already proven by refreshed artifacts; this fail-closed outcome may still report `task_terminal_status=done` when the just-closed task itself is terminal and the stale condition comes from tracker, active-task, archive settlement, or broader plan-boundary contradiction elsewhere
 
 ## Pilot Evidence Contract
 
@@ -392,15 +403,15 @@ Choose this branch when:
 2. the task is not yet at the canonical Task 1 archive path
 3. `archive_group` plus `task_id` still determine a unique canonical archive target
 4. no new metadata is required to normalize the aftermath
-5. this workflow names the deterministic reconciliation outcome only; any actual archive move remains outside this Read-only workflow and must already be performed by `CloseImplementationBubble` or an equivalent close-side follow-up, then reflected in refreshed authoritative artifacts before final owner selection
+5. the archive move and metadata updates can be performed as the normal aftermath step without crossing ownership boundaries
 
 Output rules:
 
 1. `archive_resolution=reconciled_to_canonical`
 2. `canonical_archive_path` must equal the Task 1 derived target
-3. prefer `task_terminal_status=archived` once the deterministic reconciliation is complete
+3. set `task_terminal_status=archived` once the deterministic reconciliation is complete
 4. keep the explanation explicit that this is normal completion aftermath, not Task 4 supersession logic
-5. continue into Rule 5 or Rule 6 based on refreshed plan terminality after the deterministic reconciliation outcome is known
+5. continue into Rule 5 or Rule 6 based on refreshed plan terminality after the deterministic reconciliation outcome is written and re-read
 
 Intermediate branch state (not returned workflow output):
 
@@ -427,7 +438,7 @@ active_task_id_after: null
 task_terminal_status: archived
 archive_resolution: <already_canonical|reconciled_to_canonical>
 reason_code: PLAN_COMPLETE
-handoff_boundary_note: Stop cleanly because post-close plan, task, and archive truth now prove the plan terminal boundary without reopening lifecycle or metadata scope.
+handoff_boundary_note: Stop cleanly because post-close plan, task, and archive truth now prove the plan settled boundary without reopening lifecycle or metadata scope.
 pilot_evidence_note: Local pilot proof remains lightweight here because the same refreshed artifact set satisfies the full Plan-Completion Gate without hidden lifecycle reads.
 canonical_archive_path: <required canonical path when archive_resolution=reconciled_to_canonical; otherwise omit or echo only when already explicit>
 reentry_identity_key: <same deterministic identity key carried from settled close input>

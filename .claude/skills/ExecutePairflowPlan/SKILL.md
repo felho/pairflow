@@ -49,7 +49,7 @@ This skill does not own:
 | `HandleNormalizedReplan` | consume a normalized replanning signal without reclassifying raw bubble detail | repo-local `Workflows/HandleNormalizedReplan.md` |
 | `TroubleshootBubble` | stable route surface for explicit bubble-runtime or lifecycle troubleshooting | active bubble handler -> `UsePairflow` troubleshooting surface |
 | `HumanCheckpoint` | stop for ambiguity, contract refinement, or real operator judgment | explicit stop boundary, not an auto-run workflow |
-| `PlanComplete` | stop after the plan reaches a complete terminal boundary | explicit stop boundary, not a downstream workflow |
+| `PlanComplete` | stop after the plan reaches a complete settled boundary | explicit stop boundary, not a downstream workflow |
 
 | Repo-local Backing Workflow | Role in This Skill | Returned As `target_workflow_surface`? |
 |---|---|---|
@@ -88,7 +88,7 @@ Default mode is `drive-until-blocked`.
 
 One invocation should continue through obvious next steps until it reaches one of these boundaries:
 
-1. a plan-terminal boundary such as `PlanComplete`
+1. a plan-settled boundary such as `PlanComplete`
 2. a settled bubble boundary such as "bubble started" or "bubble handed to approval review"
 3. `HumanCheckpoint`
 4. a real blocker that requires explicit troubleshooting
@@ -97,6 +97,25 @@ Loop-bound rule:
 
 1. `auto_continue` is allowed only while each delegated step returns materially new authoritative state for the next routing decision
 2. if the same normalized route would repeat without a trustworthy state advance, the orchestrator must fail closed to a checkpoint or troubleshooting path instead of spinning
+
+### 2a. Terminal vs settled completion
+
+`ExecutePairflowPlan` distinguishes task-local terminal state from plan-level settled completion.
+
+Definitions:
+
+1. `done` means task execution is complete, but archive aftermath may still be pending.
+2. `archived` means task execution is complete and the task artifact has moved to its canonical archive path.
+3. `superseded` means executable identity was replaced; it is terminal for execution, but its archive/lineage aftermath must still be settled before plan completion.
+4. `PlanComplete` is a settled plan boundary, not merely a task-execution boundary.
+
+Plan-completion rule:
+
+1. a normal completed task must be `archived` before `PlanComplete`
+2. a task left as `done` at a live task path is not settled enough for `PlanComplete`
+3. if archive settlement is deterministic, the next owner is the normal aftermath path, not direct completion
+4. if archive settlement is not deterministic, stop at `HumanCheckpoint` with an explicit archive blocker
+5. the only acceptable reason to report `done` after completion is as fail-closed evidence that task work finished but archive settlement did not
 
 ### 3. Fresh-context downstream execution
 

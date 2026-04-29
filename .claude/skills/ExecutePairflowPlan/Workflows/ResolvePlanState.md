@@ -168,7 +168,7 @@ Field rules:
 | `normalized_replanning` | `HandleNormalizedReplan` | repo-local `Workflows/HandleNormalizedReplan.md` | `auto_continue` | `task`, `document_bubble`, or `implementation_bubble` according to normalized source authority | `task` or bubble-origin `document_bubble` / `implementation_bubble` | `not_applicable` | task review or bubble layer produced a normalized replanning signal | consume the normalized signal only; repo-local follow-through may delegate `CreatePairflowSpec` work and prepare supersede/archive handoff, but raw bubble detail and normal aftermath remain out of scope here |
 | `troubleshoot_bubble` | `TroubleshootBubble` | repo-local bubble handler -> `UsePairflow` troubleshooting surface | `stop_at_human_checkpoint` | `bubble_runtime` | `not_applicable` | `not_applicable` | explicit operator hint requires lifecycle troubleshooting | troubleshoot the bubble path only; do not silently resume normal orchestration here |
 | `human_checkpoint` | `HumanCheckpoint` | human decision boundary | `stop_at_human_checkpoint` | `orchestration` | `not_applicable` | `not_applicable` | ambiguity, contract refinement need, or cross-authority conflict remains unresolved | stop and explain why no trustworthy automatic route exists |
-| `plan_complete` | `PlanComplete` | top-level stop boundary | `stop_at_settled_checkpoint` | `plan` | `not_applicable` | `not_applicable` | all tasks are terminal and the plan is complete | stop cleanly; no further route is selected in this run |
+| `plan_complete` | `PlanComplete` | top-level stop boundary | `stop_at_settled_checkpoint` | `plan` | `not_applicable` | `not_applicable` | all tasks are terminal and archive-settled, and the plan is complete | stop cleanly; no further route is selected in this run |
 
 Taxonomy guardrails:
 
@@ -199,6 +199,7 @@ Select `human_checkpoint` when any of the following is true and Rule 3's explici
 4. the plan and task disagree across authority boundaries with no declared precedence rule
 5. a planned-but-not-created task lacks an explicit canonical `task_id`
 6. `plan_status=done` while any tracker row is still non-terminal or any active task artifact still reports a non-terminal task-local status
+7. `plan_status=done` while any normally completed task remains `done` at its live task path and no deterministic archive-aftermath owner or evidence is available
 
 Reason codes:
 
@@ -208,6 +209,7 @@ Reason codes:
 4. `CROSS_AUTHORITY_METADATA_CONFLICT`
 5. `PLAN_TASK_ID_REQUIRED_FOR_NOT_CREATED`
 6. `PLAN_COMPLETE_STATE_STALE`
+7. `ARCHIVE_AFTERMATH_REQUIRED`
 
 ### 3. Explicit troubleshooting path
 
@@ -242,14 +244,25 @@ Reason codes:
 Select `plan_complete` when:
 
 1. `plan_status=done`
-2. every tracker entry is terminal
+2. every tracker entry is terminal for execution
 3. `active_task_id=null`
 4. no active task artifact exists with non-terminal task-local status
-5. no other trusted input contradicts the complete terminal boundary
+5. every normally completed task is archive-settled:
+   - tracker `status=archived`
+   - tracker `task_path` points to `plans/archive/tasks/<archive_group>/<task_id>.md`
+   - task metadata, when read at that path, has `status=archived`
+6. superseded tasks have deterministic lineage and archive aftermath already settled
+7. no other trusted input contradicts the complete settled boundary
 
 Reason code:
 
 1. `PLAN_COMPLETE`
+
+Archive-settlement note:
+
+1. `done` is terminal for task execution but not settled for `PlanComplete`
+2. if completed tasks remain `done`, route through the normal archive aftermath owner when that owner has valid settled-close provenance; otherwise stop at `HumanCheckpoint` with `ARCHIVE_AFTERMATH_REQUIRED`
+3. do not silently promote `done` to `archived` without moving the task artifact to the canonical archive path and updating the tracker path
 
 ### 6. Plan-level readiness
 
@@ -646,9 +659,10 @@ handoff_boundary_note: Stop and request contract refinement instead of widening 
 Input shape:
 
 1. `plan_status=done`
-2. every tracker row is terminal
+2. every normally completed tracker row is `archived`
 3. `active_task_id=null`
-4. no active task artifact contradicts completion
+4. each archived tracker row points at `plans/archive/tasks/<archive_group>/<task_id>.md`
+5. no active task artifact contradicts completion
 
 Output:
 
@@ -660,7 +674,7 @@ route_scope: plan
 source_scope: not_applicable
 approval_gate_state: not_applicable
 reason_code: PLAN_COMPLETE
-handoff_boundary_note: Stop cleanly because the plan has reached a consistent terminal boundary.
+handoff_boundary_note: Stop cleanly because the plan has reached a consistent settled boundary: execution is terminal and completed task artifacts are canonically archived.
 ```
 
 ### Example 12: Explicit troubleshooting hint
@@ -694,6 +708,7 @@ Return `human_checkpoint` instead of inventing a route when any of the following
 5. downstream ownership is unclear -> `ROUTE_OWNERSHIP_AMBIGUOUS`
 6. a planned-but-not-created task lacks an explicit canonical `task_id` -> `PLAN_TASK_ID_REQUIRED_FOR_NOT_CREATED`
 7. `plan_status=done` while any tracker row or active task artifact remains non-terminal -> `PLAN_COMPLETE_STATE_STALE`
-8. no narrower fail-closed condition explains the miss -> `NO_TRUSTWORTHY_ROUTE`
+8. `plan_status=done` while completed tasks remain `done` at live paths and archive aftermath is not settled or not deterministically owned -> `ARCHIVE_AFTERMATH_REQUIRED`
+9. no narrower fail-closed condition explains the miss -> `NO_TRUSTWORTHY_ROUTE`
 
 Do not continue into downstream execution from this workflow. It selects the route only.

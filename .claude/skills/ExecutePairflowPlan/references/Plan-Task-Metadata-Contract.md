@@ -118,9 +118,33 @@ Plan tracker interpretation rules:
 3. Bubble state remains external authority in Pairflow; task metadata stores only bubble linkage refs.
 4. `superseded` means executable identity was replaced.
 5. Repeated refinement alone does not cause `superseded`.
-6. `archived` means the task file has moved to its canonical archive path.
-7. `blocked` is intentionally out of scope for this V1 metadata foundation slice.
-8. If a future workflow needs explicit blocked-state semantics, that must come from an upstream task/plan contract refinement rather than silent widening here.
+6. `done` means task-local execution is complete, but archive aftermath may still be pending.
+7. `archived` means the task file has moved to its canonical archive path.
+8. `blocked` is intentionally out of scope for this V1 metadata foundation slice.
+9. If a future workflow needs explicit blocked-state semantics, that must come from an upstream task/plan contract refinement rather than silent widening here.
+
+### Terminal vs Settled Status
+
+The V1 status domain separates execution terminality from plan-level settlement:
+
+| Status | Execution Terminal? | Plan-Completion Settled? | Meaning |
+|---|---:|---:|---|
+| `done` | yes | no | Work is complete, but the artifact still needs archive aftermath before normal `PlanComplete`. |
+| `superseded` | yes | no unless archive/lineage aftermath is settled | Executable identity was replaced; the replacement lineage and canonical archive aftermath must be settled before plan completion. |
+| `archived` | yes | yes | Work is complete and the task artifact is at the canonical archive path. |
+
+Normal lifecycle:
+
+```text
+draft -> under_review -> approved -> in_progress -> done -> archived
+```
+
+Plan-completion rule:
+
+1. `PlanComplete` is a settled boundary.
+2. Normal completed tasks must be `archived` before `PlanComplete`.
+3. A task that remains `done` at its live task path is terminal for execution but not settled for plan completion.
+4. If a plan claims completion while any completed task remains `done`, route to normal archive aftermath when deterministic, or fail closed with an archive-settlement checkpoint when not deterministic.
 
 ## Identity Derivation
 
@@ -193,6 +217,8 @@ Rules:
 2. `archive_path`, when persisted, must equal the canonical path above.
 3. The task filename remains `<task_id>.md` after archive.
 4. `archive_group` may be copied into task metadata, but the plan remains canonical for the group root.
+5. A task tracker row with `status=archived` must point `task_path` at the canonical archive path.
+6. A task tracker row with `status=done` may point at the live task path only before archive aftermath is settled.
 
 ### Lineage Rules
 
