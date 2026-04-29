@@ -2,7 +2,10 @@
 artifact_type: task
 artifact_id: task_execute_pairflow_plan_progress_archive_and_pilot_v1
 title: "ExecutePairflowPlan Progress, Archive, and Pilot"
-status: draft
+task_family_id: executeplan-progress-archive-and-pilot
+sequence_key: "5"
+task_id: 5-executeplan-progress-archive-and-pilot
+status: done
 phase: phase4
 target_files:
   - .claude/skills/ExecutePairflowPlan/SKILL.md
@@ -11,6 +14,11 @@ target_files:
 prd_ref: null
 plan_ref: plans/execute-pairflow-plan-plan-v1.md
 system_context_ref: docs/pairflow-initial-design.md
+doc_bubble_id: executeplan-task5-docs
+impl_bubble_id: null
+supersedes: []
+superseded_by: null
+archive_group: 2026-04-29-execute-pairflow-plan
 owners:
   - "felho"
 ---

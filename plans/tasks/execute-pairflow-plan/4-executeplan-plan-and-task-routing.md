@@ -2,7 +2,10 @@
 artifact_type: task
 artifact_id: task_execute_pairflow_plan_plan_and_task_routing_v1
 title: "ExecutePairflowPlan Plan and Task Routing"
-status: completed
+task_family_id: executeplan-plan-and-task-routing
+sequence_key: "4"
+task_id: 4-executeplan-plan-and-task-routing
+status: done
 phase: phase4
 target_files:
   - .claude/skills/ExecutePairflowPlan/SKILL.md
@@ -11,6 +14,11 @@ target_files:
 prd_ref: null
 plan_ref: plans/execute-pairflow-plan-plan-v1.md
 system_context_ref: docs/pairflow-initial-design.md
+doc_bubble_id: executeplan-plan-task-routing-doc
+impl_bubble_id: null
+supersedes: []
+superseded_by: null
+archive_group: 2026-04-29-execute-pairflow-plan
 owners:
   - "felho"
 ---

@@ -2,7 +2,10 @@
 artifact_type: task
 artifact_id: task_execute_pairflow_plan_bubble_routing_v1
 title: "ExecutePairflowPlan Bubble Routing"
-status: draft
+task_family_id: executeplan-bubble-routing
+sequence_key: "3"
+task_id: 3-executeplan-bubble-routing
+status: done
 phase: phase3
 target_files:
   - .claude/skills/ExecutePairflowPlan/SKILL.md
@@ -12,6 +15,11 @@ target_files:
 prd_ref: null
 plan_ref: plans/execute-pairflow-plan-plan-v1.md
 system_context_ref: docs/pairflow-initial-design.md
+doc_bubble_id: executeplan-bubble-routing-doc
+impl_bubble_id: null
+supersedes: []
+superseded_by: null
+archive_group: 2026-04-29-execute-pairflow-plan
 owners:
   - "felho"
 ---
