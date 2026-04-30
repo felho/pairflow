@@ -5,7 +5,7 @@ task_family_id: cli-entrypoint-boundary-guard
 sequence_key: "2"
 task_id: 2-cli-entrypoint-boundary-guard
 title: "CLI Entrypoint Boundary Guard"
-status: implementable
+status: in_progress
 phase: phase1
 target_files:
   - tests/contracts/v11/cli-entrypoint-parity-coverage.test.ts
@@ -30,7 +30,7 @@ normative_refs:
 owners:
   - "felho"
 doc_bubble_id: 2-cli-entrypoint-boundary-guard-doc
-impl_bubble_id: null
+impl_bubble_id: cli-entrypoint-boundary-guard-impl
 supersedes: []
 superseded_by: null
 archive_group: 2026-04-30-parity-test-retirement-plan-v1
