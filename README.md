@@ -1235,7 +1235,6 @@ Pairflow now injects startup protocol instructions into both agent panes, but ag
 ```bash
 pnpm lint       # ESLint
 pnpm typecheck  # TypeScript
-pnpm test:v11:facades # v11 facade parity + coverage guard
 pnpm test       # Vitest
 pnpm check      # All of the above
 pnpm dev:ui     # Rebuild CLI + restart web UI server on port 4173
