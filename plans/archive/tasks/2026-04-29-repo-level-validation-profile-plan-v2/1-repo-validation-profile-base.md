@@ -5,7 +5,7 @@ task_family_id: repo-validation-profile-base
 sequence_key: "1"
 task_id: 1-repo-validation-profile-base
 title: "Repo Validation Profile Foundation"
-status: in_progress
+status: archived
 phase: phase1
 target_files:
   - "src/config/repoConfig.ts"
@@ -41,6 +41,7 @@ impl_bubble_id: 1-repo-validation-profile-base-impl
 supersedes: []
 superseded_by: null
 archive_group: 2026-04-29-repo-level-validation-profile-plan-v2
+archive_path: plans/archive/tasks/2026-04-29-repo-level-validation-profile-plan-v2/1-repo-validation-profile-base.md
 ---
 
 # Task: Repo Validation Profile Foundation
