@@ -367,6 +367,49 @@ This task updates operator-facing and architecture documentation so the implemen
 4. Changed the UI PRD legacy default wording to canonical "normalizes to" phrasing.
 5. Runtime validation remains intentionally not executed in this docs-only PASS. No `.pairflow/evidence/*.log` refs are claimed.
 
+### clean-runs-docs-validation-impl PASS
+
+1. Re-ran the targeted clean-runs validation matrix after bootstrapping UI dependencies with `pnpm --dir ui install --frozen-lockfile`:
+   - root targeted suite: 11 files, 390 tests passed.
+   - UI targeted suite: 4 files, 117 tests passed.
+   - evidence: `.pairflow/evidence/clean-runs-targeted.log`, git SHA `a22feaf12e1804f4ef3942fd80cd1df28365012c`.
+2. Ran full repository validation:
+   - `pnpm lint` passed; evidence: `.pairflow/evidence/lint.log`, git SHA `a22feaf12e1804f4ef3942fd80cd1df28365012c`.
+   - `pnpm typecheck` passed; evidence: `.pairflow/evidence/typecheck.log`, git SHA `a22feaf12e1804f4ef3942fd80cd1df28365012c`.
+   - `pnpm test` passed; root 422 files / 3183 tests and UI 17 files / 208 tests; evidence: `.pairflow/evidence/test.log`, git SHA `a22feaf12e1804f4ef3942fd80cd1df28365012c`.
+   - `pnpm build` passed; evidence: `.pairflow/evidence/build.log`, git SHA `a22feaf12e1804f4ef3942fd80cd1df28365012c`.
+3. No runtime, UI, schema, test, or CLI behavior files were modified in this implementation handoff. The only final implementation edits are progress/evidence notes for task and plan closure.
+
+### r1 implementation reviewer feedback fixes
+
+1. Added the missing Phase 3 completed-and-archived annotation to the parent plan progress summary so Phase 3 is symmetric with Phases 1, 2, and 4.
+2. No runtime, UI, schema, test, or CLI behavior files were modified for this reviewer-feedback fix.
+
+### r2 implementation reviewer feedback fixes
+
+1. Re-ran the targeted clean-runs validation matrix from the launch worktree and refreshed `.pairflow/evidence/clean-runs-targeted.log`:
+   - root targeted suite: 11 files, 390 tests passed.
+   - UI targeted suite: 4 files, 117 tests passed.
+2. Re-ran full repository validation from the launch worktree and refreshed all claimed evidence logs; closure notes intentionally cite mutable evidence by path, pass status, and git SHA instead of exact log timestamps:
+   - `pnpm lint` passed; evidence: `.pairflow/evidence/lint.log`, git SHA `a22feaf12e1804f4ef3942fd80cd1df28365012c`.
+   - `pnpm typecheck` passed; evidence: `.pairflow/evidence/typecheck.log`, git SHA `a22feaf12e1804f4ef3942fd80cd1df28365012c`.
+   - `pnpm test` passed; root 422 files / 3183 tests and UI 17 files / 208 tests; evidence: `.pairflow/evidence/test.log`, git SHA `a22feaf12e1804f4ef3942fd80cd1df28365012c`.
+   - `pnpm build` passed; evidence: `.pairflow/evidence/build.log`, git SHA `a22feaf12e1804f4ef3942fd80cd1df28365012c`.
+3. Updated the parent plan final validation evidence section to use path + pass status + git SHA `a22feaf12e1804f4ef3942fd80cd1df28365012c`, resolving stale/missing evidence packaging ambiguity without runtime, UI, schema, test, or CLI behavior edits.
+
+### r3 human rework fixes
+
+1. Removed exact timestamp references for mutable `.pairflow/evidence/*.log` validation artifacts from the parent plan and task closure notes.
+2. Evidence packaging policy after this rework is path + pass status + git SHA, with exact test counts retained only for the stable `pnpm test` summary values.
+3. No runtime, UI, schema, test, or CLI behavior files were modified for this evidence-packaging fix.
+
+### r4 implementation reviewer feedback fixes
+
+1. Added git SHA `a22feaf12e1804f4ef3942fd80cd1df28365012c` to the task closure evidence rows so the task notes match the declared path + pass status + SHA evidence policy.
+2. Kept the r3 human rework description accurate by making the task evidence rows follow that policy and by leaving exact timestamps out of the mutable evidence notes.
+3. Updated the parent plan Phase 3 progress annotation to cite bubble `clean-runs-read-model-ui-impl`.
+4. No runtime, UI, schema, test, or CLI behavior files were modified for this reviewer-feedback fix.
+
 ## Hardening Backlog
 
 | ID | Item | Layer | Priority | Timing | Source | Proposed Action |

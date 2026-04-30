@@ -98,11 +98,8 @@ task_tracker:
 
 ### Open Work
 
-1. No review-policy field currently defines the required consecutive clean meta-review run count.
-2. No canonical meta-review state field currently persists a clean-run streak.
-3. Current meta-review gate finalization is single-pass with respect to clean approvals; it cannot intentionally re-run meta-review without involving implementer/reviewer or human approval.
-4. Operator/read-model surfaces do not yet explain clean-streak progress or the configured requirement.
-5. The current UI severity dropdown does not yet support compact quality presets or naming that reflects combined threshold-plus-streak semantics.
+1. Runtime, routing, read-model/UI, documentation, and final validation slices have all produced implementation evidence.
+2. Remaining work is lifecycle closure for `4-clean-runs-docs-validation`: review, archive the task under the plan archive group, and move the parent plan to done/archive after the bubble is merged.
 
 ### Deferred / Future Work
 
@@ -112,8 +109,8 @@ task_tracker:
 
 1. Phase 1: policy and canonical state introduction completed and archived from `clean-runs-policy-state-impl`.
 2. Phase 2: gate-routing behavior change for clean reruns and unlocks completed and archived from `2-clean-runs-gate-routing-impl`.
-3. Phase 3: observability and UI preset surfacing.
-4. Phase 4: documentation refinement closed via `clean-runs-docs-validation-doc`; final validation implementation bubble `clean-runs-docs-validation-impl` is running.
+3. Phase 3: observability and UI preset surfacing completed and archived from `clean-runs-read-model-ui-impl`.
+4. Phase 4: documentation refinement closed via `clean-runs-docs-validation-doc`; final validation completed in `clean-runs-docs-validation-impl` and is awaiting lifecycle review/closure.
 
 ## Open Task List
 
@@ -175,3 +172,16 @@ task_tracker:
    - unsupported backend pairs projecting to a non-misleading fallback/custom state
    - updated label/tooltip/copy reflecting quality-level semantics
 7. Run targeted test suites, then `pnpm build`, and any broader lint/typecheck suites needed by touched surface area.
+
+## Final Validation Evidence
+
+1. Targeted clean-runs validation passed after UI dependency bootstrap and was refreshed from the launch worktree after r2 reviewer feedback:
+   - root targeted suite: 11 files, 390 tests.
+   - UI targeted suite: 4 files, 117 tests.
+   - evidence: `.pairflow/evidence/clean-runs-targeted.log`, pass status, git SHA `a22feaf12e1804f4ef3942fd80cd1df28365012c`.
+2. Repository checks passed and evidence logs were refreshed from `/Users/felho/dev/.pairflow-worktrees/pairflow/clean-runs-docs-validation-impl`; closure notes intentionally cite mutable evidence by path, pass status, and git SHA instead of exact log timestamps:
+   - `pnpm lint`: `.pairflow/evidence/lint.log`, pass status, git SHA `a22feaf12e1804f4ef3942fd80cd1df28365012c`.
+   - `pnpm typecheck`: `.pairflow/evidence/typecheck.log`, pass status, git SHA `a22feaf12e1804f4ef3942fd80cd1df28365012c`.
+   - `pnpm test`: `.pairflow/evidence/test.log`, pass status, git SHA `a22feaf12e1804f4ef3942fd80cd1df28365012c` (root 422 files / 3183 tests; UI 17 files / 208 tests).
+   - `pnpm build`: `.pairflow/evidence/build.log`, pass status, git SHA `a22feaf12e1804f4ef3942fd80cd1df28365012c`.
+3. No validation command was intentionally skipped.
