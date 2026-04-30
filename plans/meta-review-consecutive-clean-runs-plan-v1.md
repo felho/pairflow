@@ -14,7 +14,7 @@ task_order:
   - 2-clean-runs-gate-routing
   - 3-clean-runs-read-model-ui
   - 4-clean-runs-docs-validation
-active_task_id: 3-clean-runs-read-model-ui
+active_task_id: 4-clean-runs-docs-validation
 archive_group: 2026-04-27-meta-review-consecutive-clean-runs-plan-v1
 task_tracker:
   - task_id: 1-clean-runs-policy-state
@@ -24,8 +24,8 @@ task_tracker:
     task_path: plans/archive/tasks/2026-04-27-meta-review-consecutive-clean-runs-plan-v1/2-clean-runs-gate-routing.md
     status: archived
   - task_id: 3-clean-runs-read-model-ui
-    task_path: plans/tasks/meta-review-consecutive-clean-runs/3-clean-runs-read-model-ui.md
-    status: in_progress
+    task_path: plans/archive/tasks/2026-04-27-meta-review-consecutive-clean-runs-plan-v1/3-clean-runs-read-model-ui.md
+    status: archived
   - task_id: 4-clean-runs-docs-validation
     task_path: null
     status: not_created
