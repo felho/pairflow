@@ -5,7 +5,7 @@ task_family_id: facade-migration-map-cleanup
 sequence_key: "1"
 task_id: 1-facade-migration-map-cleanup
 title: "Facade Migration Map Cleanup"
-status: approved
+status: implementable
 phase: phase1
 target_files:
   - package.json
