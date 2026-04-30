@@ -5,7 +5,7 @@ task_family_id: cli-entrypoint-boundary-guard
 sequence_key: "2"
 task_id: 2-cli-entrypoint-boundary-guard
 title: "CLI Entrypoint Boundary Guard"
-status: approved
+status: implementable
 phase: phase1
 target_files:
   - tests/contracts/v11/cli-entrypoint-parity-coverage.test.ts
