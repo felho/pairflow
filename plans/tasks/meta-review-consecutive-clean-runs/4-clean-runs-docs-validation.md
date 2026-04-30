@@ -5,7 +5,7 @@ task_family_id: clean-runs-docs-validation
 sequence_key: "4"
 task_id: 4-clean-runs-docs-validation
 title: "Meta-Review Consecutive Clean Runs Docs and Validation"
-status: under_review
+status: approved
 phase: phase4
 target_files:
   - README.md
@@ -355,4 +355,9 @@ N/A.
 
 ## Spec Lock
 
-This task is ready for `ReviewSpec task-mode`; it must not enter bubble creation until task review approves it.
+CreatePairflowSpec `ReviewSpec` task-mode approval recorded during `ExecutePairflowPlan` orchestration:
+
+1. Execution metadata gate passed for task identity, filename, parent tracker path, lineage, and bubble linkage fields.
+2. Target-file reality check supports the declared docs-only/final-validation scope; product/runtime source edits remain forbidden.
+3. Control-model, closed-contract drift, authority fan-out, closure-budget, and bounded-task-shape checks are satisfied because Tasks 1-3 already closed runtime, routing, read-model, and UI implementation.
+4. Remaining-task viability is unchanged: this is the final planned task before parent plan archive aftermath.

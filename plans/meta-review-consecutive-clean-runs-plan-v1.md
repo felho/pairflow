@@ -28,7 +28,7 @@ task_tracker:
     status: archived
   - task_id: 4-clean-runs-docs-validation
     task_path: plans/tasks/meta-review-consecutive-clean-runs/4-clean-runs-docs-validation.md
-    status: under_review
+    status: approved
 ---
 
 # Plan: Meta-Review Consecutive Clean Runs
@@ -122,7 +122,7 @@ task_tracker:
 | `plans/archive/tasks/2026-04-27-meta-review-consecutive-clean-runs-plan-v1/1-clean-runs-policy-state.md` | Add the new review-policy field, defaults, parsing, runtime normalization, and canonical meta-review streak state shape. | `N/A` | Missing config/state foundation for the feature. | archived |
 | `plans/archive/tasks/2026-04-27-meta-review-consecutive-clean-runs-plan-v1/2-clean-runs-gate-routing.md` | Update current-run meta-review finalization to increment/reset the streak and route directly to another meta-review run until the configured requirement is met. | `1-clean-runs-policy-state.md` | Missing workflow-orchestration behavior for consecutive clean runs. | archived |
 | `plans/archive/tasks/2026-04-27-meta-review-consecutive-clean-runs-plan-v1/3-clean-runs-read-model-ui.md` | Expose the configured requirement and current streak in status/read-model projections, add the compact UI preset selector mapping (`P1`, `P2`, `P3`, `P3+2`), and update the control label/tooltip to quality-level language. | `2-clean-runs-gate-routing.md` | Missing operator observability and compact UI control for the new gate behavior. | archived |
-| `plans/tasks/meta-review-consecutive-clean-runs/4-clean-runs-docs-validation.md` | Update repo docs/spec references and close the validation matrix across unit/integration/build and UI mapping checks. | `2-clean-runs-gate-routing.md`, `3-clean-runs-read-model-ui.md` | Missing documentation and completion evidence. | under_review |
+| `plans/tasks/meta-review-consecutive-clean-runs/4-clean-runs-docs-validation.md` | Update repo docs/spec references and close the validation matrix across unit/integration/build and UI mapping checks. | `2-clean-runs-gate-routing.md`, `3-clean-runs-read-model-ui.md` | Missing documentation and completion evidence. | approved |
 
 ## Coverage Map
 
