@@ -54,3 +54,5 @@
 - https://developers.openai.com/cookbook/examples/gpt-5/codex_prompting_guide
 - https://github.com/sentrux/sentrux
 - https://github.com/getagentseal/codeburn
+- Megcsinálni azt, hogy a taskon belül a feladatok legyenek még kisebb lépésekre bontva, annak érdekében, hogy egyszerűbb modellek is meg tudják őket csinálni.
+- De előbb ki kéne próbálni, hogy ha az implementer nem a legjobb modell, akkor mi történik. Pl. konvergál-e, hány körben konvergál, lehetne tök jól nézni ilyen infókat.
