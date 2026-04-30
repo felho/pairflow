@@ -22,8 +22,8 @@ task_tracker:
     status: archived
     notes: "Remove the exhausted facade parity/migration-map layer and related script wiring."
   - task_id: 2-cli-entrypoint-boundary-guard
-    task_path: null
-    status: not_created
+    task_path: plans/tasks/2-cli-entrypoint-boundary-guard.md
+    status: approved
     notes: "Replace per-command CLI entrypoint parity sentinels with one explicit boundary/inventory guard."
   - task_id: 3-reconcile-contract-v11-only
     task_path: null
