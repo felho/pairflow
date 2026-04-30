@@ -15,8 +15,8 @@ task_tracker:
     status: archived
     notes: "First implementation slice: parse repo-level validation config and inherit it into new bubble command config."
   - task_id: 2-validation-target-resolution
-    task_path: null
-    status: not_created
+    task_path: plans/tasks/repo-level-validation-profile-plan-v2/2-validation-target-resolution.md
+    status: draft
     notes: "Deferred multi-target/monorepo slice. Do not implement before Task 1 is complete."
 active_task_id: 2-validation-target-resolution
 archive_group: 2026-04-29-repo-level-validation-profile-plan-v2
