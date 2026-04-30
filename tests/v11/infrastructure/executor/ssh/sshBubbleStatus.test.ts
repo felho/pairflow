@@ -11,7 +11,75 @@ import {
   runCommandDefault,
   resolveRemoteBubbleStatusTarget
 } from "../../../../../src/v11/infrastructure/executor/ssh/sshBubbleStatus.js";
+import {
+  normalizeRemoteBubbleStatusSnapshot
+} from "../../../../../src/v11/infrastructure/executor/ssh/sshBubbleStatusPayload.js";
 import type { RemoteBubbleStatusError } from "../../../../../src/v11/infrastructure/executor/ssh/sshBubbleStatus.js";
+
+function remoteStatusPayload(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+  return {
+    bubbleStartedAt: "2026-04-16T09:45:00.000Z",
+    state: "RUNNING",
+    round: 2,
+    activeAgent: "codex",
+    activeRole: "implementer",
+    activeSince: "2026-04-16T09:46:00.000Z",
+    lastCommandAt: "2026-04-16T09:58:00.000Z",
+    paneActivity: {
+      readStatus: "ok",
+      lastChangedAt: "2026-04-16T09:57:00.000Z",
+      sampledAt: "2026-04-16T09:59:30.000Z",
+      sinceLastChangedSeconds: 180,
+      sinceSampledSeconds: 30,
+      lastSampleStatus: "sampled",
+      lastSampleError: null,
+      sessionName: "pf-b_remote_status_payload_01",
+      targetPane: "pf-b_remote_status_payload_01:0.1"
+    },
+    executionContext: null,
+    watchdog: {
+      monitored: false,
+      monitoredAgent: "codex",
+      timeoutMinutes: 30,
+      referenceTimestamp: "2026-04-16T09:58:00.000Z",
+      deadlineTimestamp: null,
+      remainingSeconds: null,
+      expired: false
+    },
+    pendingInboxItems: {
+      humanQuestions: 0,
+      approvalRequests: 0,
+      total: 0
+    },
+    transcript: {
+      totalMessages: 5,
+      lastMessageType: "PASS",
+      lastMessageTs: "2026-04-16T09:58:00.000Z",
+      lastMessageId: "msg_remote_status_payload_01"
+    },
+    metaReview: {
+      actor: "meta-reviewer",
+      authorityActive: false,
+      consecutiveCleanRuns: 1,
+      runtimeDelivery: null
+    },
+    accuracy_critical: false,
+    last_review_verification: "missing",
+    failing_gates: [],
+    spec_lock_state: {
+      state: "IMPLEMENTABLE",
+      open_blocker_count: 0,
+      open_required_now_count: 0
+    },
+    round_gate_state: {
+      applies: false,
+      violated: false,
+      round: 2
+    },
+    stateValidation: null,
+    ...overrides
+  };
+}
 
 describe("sshBubbleStatus", () => {
   it("resolves the remote target from global config and validates host consistency", async () => {
@@ -166,6 +234,48 @@ describe("sshBubbleStatus", () => {
     expect(status.runtimeAvailability).toBe("missing");
     expect(status.lastCheckedAt).toBe("2026-04-16T10:00:00.000Z");
   });
+
+  it("validates additive remote meta-review clean-run streak payloads", () => {
+    const status = normalizeRemoteBubbleStatusSnapshot({
+      payload: remoteStatusPayload({
+        metaReview: {
+          actor: "meta-reviewer",
+          authorityActive: false,
+          consecutiveCleanRuns: 2,
+          runtimeDelivery: null
+        }
+      }),
+      lastCheckedAt: "2026-04-16T10:00:00.000Z"
+    });
+
+    expect(status.metaReview.consecutiveCleanRuns).toBe(2);
+  });
+
+  it.each([
+    ["string", "2"],
+    ["null", null],
+    ["negative", -1],
+    ["fractional", 1.5]
+  ] as const)(
+    "rejects malformed remote meta-review clean-run streak payloads (%s)",
+    (_caseName, consecutiveCleanRuns) => {
+    expect(() =>
+      normalizeRemoteBubbleStatusSnapshot({
+        payload: remoteStatusPayload({
+          metaReview: {
+            actor: "meta-reviewer",
+            authorityActive: false,
+            consecutiveCleanRuns,
+            runtimeDelivery: null
+          }
+        }),
+        lastCheckedAt: "2026-04-16T10:00:00.000Z"
+      })
+    ).toThrow(
+      "Remote bubble status payload has invalid metaReview.consecutiveCleanRuns; expected integer >= 0."
+    );
+    }
+  );
 
   it("keeps watchdog-expired runtime snapshots active when pane sampling still looks readable", async () => {
     const status = await executeRemoteBubbleStatus(

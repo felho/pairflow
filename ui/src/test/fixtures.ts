@@ -78,7 +78,8 @@ export function bubbleSummary(input: {
       effective_loop_mode: "full",
       support_status: "enabled",
       reviewer_blocking_min_severity: "P3",
-      meta_review_auto_rework_min_severity: "P3"
+      meta_review_auto_rework_min_severity: "P3",
+      meta_review_consecutive_clean_runs_required: 1
     },
     ...(input.remoteExecution !== undefined
       ? { remoteExecution: input.remoteExecution }
@@ -86,6 +87,7 @@ export function bubbleSummary(input: {
     metaReview: {
       actor: "meta-reviewer",
       authorityActive: state === "RUNNING" && (input.activeRole ?? "implementer") === "meta_reviewer",
+      consecutiveCleanRuns: 0,
       runtimeDelivery: null,
       ...input.metaReview
     }

@@ -25,6 +25,7 @@ import type {
 import type {
   ReadRuntimeSessionsRegistryPort
 } from "./runtimeSessions.js";
+import type { MetaReviewQualityPreset } from "../reviewPolicy/updateBubbleReviewPolicy.js";
 import type {
   PassValidationRecoveryMarkerPersistWarning
 } from "./passValidationRecovery.js";
@@ -209,6 +210,7 @@ export type AttachBubbleResult = UiAttachBubbleResult;
 export interface UiUpdateBubbleReviewPolicyInput extends UiBubbleMutationInput {
   reviewLoopMode: BubbleReviewLoopMode;
   reviewBlockingMinSeverity?: BubbleReviewAutoReworkSeverity;
+  metaReviewQualityPreset?: MetaReviewQualityPreset;
   expectedBubbleToml?: string | undefined;
 }
 

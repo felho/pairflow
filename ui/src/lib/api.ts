@@ -359,6 +359,9 @@ export function createApiClient(baseUrl: string = ""): PairflowApiClient {
                 input.reviewBlockingMinSeverity
             }
           : {}),
+        ...(input.metaReviewQualityPreset !== undefined
+          ? { metaReviewQualityPreset: input.metaReviewQualityPreset }
+          : {}),
         ...(input.expectedBubbleToml !== undefined
           ? { expectedBubbleToml: input.expectedBubbleToml }
           : {})

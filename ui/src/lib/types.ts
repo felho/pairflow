@@ -175,6 +175,7 @@ export type BubbleReviewAutoReworkSeverity = "P1" | "P2" | "P3";
 export interface UiBubbleMetaReviewSummary {
   actor: "meta-reviewer";
   authorityActive: boolean;
+  consecutiveCleanRuns: number;
   runtimeDelivery: {
     status: MetaReviewRuntimeDeliveryStatus;
     reasonCode: string | null;
@@ -187,6 +188,17 @@ export interface UiBubbleMetaReviewSummary {
 
 export type BubbleReviewLoopMode = "full" | "meta_only";
 export type BubbleReviewSupportStatus = "enabled" | "guarded";
+export type MetaReviewQualityPreset = "P1" | "P2" | "P3" | "P3+2";
+export type MetaReviewQualityPresetState =
+  | {
+      kind: "supported";
+      preset: MetaReviewQualityPreset;
+    }
+  | {
+      kind: "custom";
+      severity: BubbleReviewAutoReworkSeverity;
+      consecutiveCleanRunsRequired: number;
+    };
 
 export interface UiBubbleReviewPolicy {
   requested_loop_mode: BubbleReviewLoopMode;
@@ -194,6 +206,7 @@ export interface UiBubbleReviewPolicy {
   support_status: BubbleReviewSupportStatus;
   reviewer_blocking_min_severity: BubbleReviewAutoReworkSeverity;
   meta_review_auto_rework_min_severity: BubbleReviewAutoReworkSeverity;
+  meta_review_consecutive_clean_runs_required: number;
   blocked_reason_code?: string;
   blocked_prerequisites?: string[];
   provenance_note?: string;
@@ -329,6 +342,7 @@ export interface MergeActionInput {
 export interface UpdateReviewPolicyActionInput {
   reviewLoopMode: BubbleReviewLoopMode;
   reviewBlockingMinSeverity?: BubbleReviewAutoReworkSeverity;
+  metaReviewQualityPreset?: MetaReviewQualityPreset;
   expectedBubbleToml?: string;
 }
 

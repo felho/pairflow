@@ -9,6 +9,7 @@ import {
   renderBubbleConfigToml
 } from "../../../src/config/bubbleConfig.js";
 import {
+  UiBubbleReviewPolicyConflictError,
   REVIEW_POLICY_STATE_CONFLICT,
   updateBubbleReviewPolicyForUi
 } from "../../../src/v11/defaults/ui/updateBubbleReviewPolicyForUi.js";
@@ -174,6 +175,86 @@ describe("updateBubbleReviewPolicyForUi", () => {
       name: "UiBubbleReviewPolicyStateConflictError",
       reasonCode: REVIEW_POLICY_STATE_CONFLICT,
       currentState: "DONE"
+    });
+    await expect(readFile(bubble.paths.bubbleTomlPath, "utf8")).resolves.toBe(
+      initialBubbleToml
+    );
+  });
+
+  it("uses the prepared local policy as remote conflict fallback when the remote omits policy context", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      bubbleId: "b-update-policy-remote-conflict-fallback-01",
+      repoPath,
+      task: "Remote review-policy fallback conflict test."
+    });
+    await writeFile(
+      bubble.paths.bubbleTomlPath,
+      renderBubbleConfigToml({
+        ...bubble.config,
+        executor: {
+          type: "ssh",
+          remote: "lab"
+        },
+        review_policy: {
+          review_loop_mode: "full",
+          reviewer_blocking_min_severity: "P1",
+          meta_review_auto_rework_min_severity: "P1",
+          meta_review_consecutive_clean_runs_required: 1,
+        }
+      }),
+      "utf8"
+    );
+    const initialBubbleToml = await readFile(bubble.paths.bubbleTomlPath, "utf8");
+    let capturedError: unknown;
+
+    try {
+      await updateBubbleReviewPolicyForUi(
+        {
+          bubbleId: bubble.bubbleId,
+          repoPath,
+          reviewLoopMode: "meta_only",
+          reviewBlockingMinSeverity: "P3",
+          metaReviewQualityPreset: "P3+2",
+          expectedBubbleToml: initialBubbleToml
+        },
+        {
+          readRemotePointer: async () => ({
+            kind: "started",
+            host: "remote.example",
+            instanceId: "inst_remote_policy_conflict_fallback",
+            remoteClonePath:
+              "/srv/pairflow/b-update-policy-remote-conflict-fallback-01",
+            tmuxSession:
+              "pairflow-b-update-policy-remote-conflict-fallback-01",
+            startedAt: "2026-02-21T12:00:00.000Z"
+          }),
+          resolveRemoteBubbleStatusTarget: async () => ({
+            alias: "lab",
+            host: "remote.example",
+            pairflowCommand: "pairflow"
+          }),
+          executeRemoteBubbleReviewPolicyCommand: async () => ({
+            kind: "conflict",
+            reasonCode: "REMOTE_REVIEW_POLICY_UNKNOWN_CONFLICT",
+            currentBubbleToml: "remote current bubble.toml"
+          })
+        }
+      );
+    } catch (error) {
+      capturedError = error;
+    }
+
+    expect(capturedError).toBeInstanceOf(UiBubbleReviewPolicyConflictError);
+    expect(capturedError).toMatchObject({
+      currentBubbleToml: "remote current bubble.toml",
+      currentReviewPolicy: {
+        requested_loop_mode: "meta_only",
+        effective_loop_mode: "full",
+        reviewer_blocking_min_severity: "P3",
+        meta_review_auto_rework_min_severity: "P3",
+        meta_review_consecutive_clean_runs_required: 2
+      }
     });
     await expect(readFile(bubble.paths.bubbleTomlPath, "utf8")).resolves.toBe(
       initialBubbleToml

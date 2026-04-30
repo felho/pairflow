@@ -332,6 +332,39 @@ describe("getBubbleStatus", () => {
     });
   });
 
+  it("does not derive clean-run streak from auto_rework_count", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_status_clean_streak_source_01",
+      task: "Status clean streak source"
+    });
+
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    await writeStateSnapshot(
+      bubble.paths.statePath,
+      {
+        ...loaded.state,
+        meta_review: {
+          ...loaded.state.meta_review!,
+          auto_rework_count: 5,
+          consecutive_clean_runs: 0
+        }
+      },
+      {
+        expectedFingerprint: loaded.fingerprint,
+        expectedState: "RUNNING"
+      }
+    );
+
+    const status = await getBubbleStatus({
+      bubbleId: bubble.bubbleId,
+      cwd: repoPath
+    });
+
+    expect(status.metaReview.consecutiveCleanRuns).toBe(0);
+  });
+
   it("omits review policy from READY_FOR_HUMAN_APPROVAL detail status when live runtime authority is closed", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({
@@ -483,6 +516,7 @@ describe("getBubbleStatus", () => {
     expect(status.metaReview).toStrictEqual({
       actor: "meta-reviewer",
       authorityActive: false,
+      consecutiveCleanRuns: 0,
       runtimeDelivery: null
     });
   });
@@ -540,6 +574,7 @@ describe("getBubbleStatus", () => {
     expect(status.metaReview).toStrictEqual({
       actor: "meta-reviewer",
       authorityActive: true,
+      consecutiveCleanRuns: 0,
       runtimeDelivery: null
     });
   });
@@ -597,6 +632,7 @@ describe("getBubbleStatus", () => {
     expect(status.metaReview).toStrictEqual({
       actor: "meta-reviewer",
       authorityActive: true,
+      consecutiveCleanRuns: 0,
       runtimeDelivery: {
         status: "failed",
         reasonCode: "META_REVIEW_REQUEST_DELIVERY_FAILED",
@@ -658,6 +694,7 @@ describe("getBubbleStatus", () => {
     expect(status.metaReview).toStrictEqual({
       actor: "meta-reviewer",
       authorityActive: true,
+      consecutiveCleanRuns: 0,
       runtimeDelivery: null
     });
   });
@@ -712,6 +749,7 @@ describe("getBubbleStatus", () => {
     expect(status.metaReview).toStrictEqual({
       actor: "meta-reviewer",
       authorityActive: true,
+      consecutiveCleanRuns: 0,
       runtimeDelivery: null
     });
   });
@@ -1345,6 +1383,7 @@ describe("getBubbleStatus", () => {
       metaReview: {
         actor: "meta-reviewer",
         authorityActive: false,
+        consecutiveCleanRuns: 0,
         runtimeDelivery: null
       },
       accuracyCritical: false,
@@ -1474,6 +1513,7 @@ describe("getBubbleStatus", () => {
       metaReview: {
         actor: "meta-reviewer",
         authorityActive: false,
+        consecutiveCleanRuns: 0,
         runtimeDelivery: null
       },
       accuracyCritical: false,
@@ -1596,6 +1636,7 @@ describe("getBubbleStatus", () => {
       metaReview: {
         actor: "meta-reviewer",
         authorityActive: false,
+        consecutiveCleanRuns: 0,
         runtimeDelivery: null
       },
       accuracyCritical: false,
@@ -1713,6 +1754,7 @@ describe("getBubbleStatus", () => {
       metaReview: {
         actor: "meta-reviewer",
         authorityActive: false,
+        consecutiveCleanRuns: 0,
         runtimeDelivery: null
       },
       accuracyCritical: false,
@@ -1841,6 +1883,7 @@ describe("getBubbleStatus", () => {
       metaReview: {
         actor: "meta-reviewer",
         authorityActive: false,
+        consecutiveCleanRuns: 0,
         runtimeDelivery: null
       },
       accuracyCritical: false,
@@ -1968,6 +2011,7 @@ describe("getBubbleStatus", () => {
       metaReview: {
         actor: "meta-reviewer",
         authorityActive: false,
+        consecutiveCleanRuns: 0,
         runtimeDelivery: null
       },
       accuracyCritical: false,
@@ -2082,6 +2126,7 @@ describe("getBubbleStatus", () => {
       metaReview: {
         actor: "meta-reviewer",
         authorityActive: false,
+        consecutiveCleanRuns: 0,
         runtimeDelivery: null
       },
       accuracyCritical: false,
@@ -2292,6 +2337,7 @@ describe("getBubbleStatus", () => {
       metaReview: {
         actor: "meta-reviewer",
         authorityActive: false,
+        consecutiveCleanRuns: 0,
         runtimeDelivery: null
       },
       accuracyCritical: false,

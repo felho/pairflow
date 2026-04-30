@@ -57,6 +57,7 @@ export interface UiBubbleAttention {
 export interface UiBubbleMetaReviewSummary {
   actor: "meta-reviewer";
   authorityActive: boolean;
+  consecutiveCleanRuns: number;
   runtimeDelivery: {
     status: MetaReviewRuntimeDeliveryStatus;
     reasonCode: string | null;

@@ -81,6 +81,9 @@ function buildReviewPolicyPatch(input: UiUpdateBubbleReviewPolicyInput) {
     reviewLoopMode: input.reviewLoopMode,
     ...(input.reviewBlockingMinSeverity !== undefined
       ? { reviewBlockingMinSeverity: input.reviewBlockingMinSeverity }
+      : {}),
+    ...(input.metaReviewQualityPreset !== undefined
+      ? { metaReviewQualityPreset: input.metaReviewQualityPreset }
       : {})
   });
 }
@@ -154,6 +157,9 @@ async function updateRemoteBubbleReviewPolicyForUi(input: {
               reviewBlockingMinSeverity:
                 input.command.reviewBlockingMinSeverity
             }
+          : {}),
+        ...(input.command.metaReviewQualityPreset !== undefined
+          ? { metaReviewQualityPreset: input.command.metaReviewQualityPreset }
           : {})
       });
   } catch (error) {
@@ -182,7 +188,7 @@ async function updateRemoteBubbleReviewPolicyForUi(input: {
       currentBubbleToml: remoteResult.currentBubbleToml ?? "",
       currentReviewPolicy:
         remoteResult.currentReviewPolicy
-        ?? buildBubbleReviewPolicyRuntimeView(input.resolved.bubbleConfig)
+        ?? buildBubbleReviewPolicyRuntimeView(localResult.nextConfig)
     });
   }
 

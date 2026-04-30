@@ -17,6 +17,7 @@ import type {
   BubbleLifecycleState,
   BubbleActionKind,
   BubbleReviewAutoReworkSeverity,
+  MetaReviewQualityPreset,
   AttachActionResult,
   BubbleReviewLoopMode,
   BubbleCardModel,
@@ -62,6 +63,7 @@ export interface RunBubbleActionInput {
   deleteRemote?: boolean;
   reviewLoopMode?: BubbleReviewLoopMode;
   reviewBlockingMinSeverity?: BubbleReviewAutoReworkSeverity;
+  metaReviewQualityPreset?: MetaReviewQualityPreset;
   expectedBubbleToml?: string;
 }
 
@@ -138,6 +140,7 @@ function defaultMetaReviewSummary(): UiBubbleSummary["metaReview"] {
   return {
     actor: "meta-reviewer",
     authorityActive: false,
+    consecutiveCleanRuns: 0,
     runtimeDelivery: null
   };
 }
@@ -168,8 +171,29 @@ function normalizeReviewPolicy(
         ? "guarded"
         : rawSupportStatus;
   const reviewerBlockingSeverity =
-    candidate.reviewer_blocking_min_severity ?? "P3";
+    candidate.reviewer_blocking_min_severity;
   const metaReviewSeverity = candidate.meta_review_auto_rework_min_severity;
+  const consecutiveCleanRunsRequired =
+    candidate.meta_review_consecutive_clean_runs_required;
+  if (
+    (requestedLoopMode !== "full" && requestedLoopMode !== "meta_only")
+    || (effectiveLoopMode !== "full" && effectiveLoopMode !== "meta_only")
+    || (supportStatus !== "enabled" && supportStatus !== "guarded")
+    || (
+      reviewerBlockingSeverity !== "P1"
+      && reviewerBlockingSeverity !== "P2"
+      && reviewerBlockingSeverity !== "P3"
+    )
+    || (
+      metaReviewSeverity !== "P1"
+      && metaReviewSeverity !== "P2"
+      && metaReviewSeverity !== "P3"
+    )
+    || !Number.isInteger(consecutiveCleanRunsRequired)
+    || (consecutiveCleanRunsRequired as number) < 1
+  ) {
+    return null;
+  }
   if (
     options.allowUnsupportedSupportStatusAlias === true
     && rawSupportStatus === "unsupported"
@@ -187,29 +211,14 @@ function normalizeReviewPolicy(
       }
     );
   }
-  if (
-    (requestedLoopMode !== "full" && requestedLoopMode !== "meta_only")
-    || (effectiveLoopMode !== "full" && effectiveLoopMode !== "meta_only")
-    || (supportStatus !== "enabled" && supportStatus !== "guarded")
-    || (
-      reviewerBlockingSeverity !== "P1"
-      && reviewerBlockingSeverity !== "P2"
-      && reviewerBlockingSeverity !== "P3"
-    )
-    || (
-      metaReviewSeverity !== "P1"
-      && metaReviewSeverity !== "P2"
-      && metaReviewSeverity !== "P3"
-    )
-  ) {
-    return null;
-  }
   return {
     requested_loop_mode: requestedLoopMode,
     effective_loop_mode: effectiveLoopMode,
     support_status: supportStatus,
     reviewer_blocking_min_severity: reviewerBlockingSeverity,
     meta_review_auto_rework_min_severity: metaReviewSeverity,
+    meta_review_consecutive_clean_runs_required:
+      consecutiveCleanRunsRequired as number,
     ...(typeof candidate.blocked_reason_code === "string"
       ? { blocked_reason_code: candidate.blocked_reason_code }
       : {}),
@@ -399,6 +408,7 @@ function normalizeBubbleSummary(input: UiBubbleSummary): UiBubbleSummary {
     };
   }
   const meta = candidate as Partial<UiBubbleSummary["metaReview"]>;
+  const consecutiveCleanRuns = meta.consecutiveCleanRuns;
   return {
     ...input,
     attention: normalizeAttention((input as Partial<UiBubbleSummary>).attention),
@@ -406,6 +416,11 @@ function normalizeBubbleSummary(input: UiBubbleSummary): UiBubbleSummary {
     metaReview: {
       actor: "meta-reviewer",
       authorityActive: meta.authorityActive === true,
+      consecutiveCleanRuns:
+        Number.isInteger(consecutiveCleanRuns)
+        && (consecutiveCleanRuns as number) >= 0
+          ? consecutiveCleanRuns as number
+          : 0,
       runtimeDelivery:
         meta.runtimeDelivery !== null &&
         meta.runtimeDelivery !== undefined &&
@@ -890,6 +905,9 @@ async function performBubbleAction(
                 input.reviewBlockingMinSeverity
             }
           : {}),
+        ...(input.metaReviewQualityPreset !== undefined
+          ? { metaReviewQualityPreset: input.metaReviewQualityPreset }
+          : {}),
         ...(input.expectedBubbleToml !== undefined
           ? { expectedBubbleToml: input.expectedBubbleToml }
           : {})
@@ -1155,7 +1173,11 @@ export function createBubbleStore(
           timelineLoadingById
         };
 
-        if (detailResult.status === "fulfilled") {
+        if (
+          detailResult.status === "fulfilled"
+          && detailResult.value !== undefined
+          && detailResult.value !== null
+        ) {
           const detail = mergeExpandedDetailWithIncomingDetail(
             state.bubbleDetails[bubbleId],
             normalizeBubbleDetail(detailResult.value)
@@ -1174,7 +1196,10 @@ export function createBubbleStore(
         } else {
           next.detailErrorById = {
             ...state.detailErrorById,
-            [bubbleId]: asMessage(detailResult.reason)
+            [bubbleId]:
+              detailResult.status === "fulfilled"
+                ? "Bubble detail response was empty."
+                : asMessage(detailResult.reason)
           };
         }
 

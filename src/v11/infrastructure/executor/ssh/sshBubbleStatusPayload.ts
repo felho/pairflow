@@ -139,6 +139,13 @@ function normalizeMetaReview(value: unknown): StatusMetaReviewView {
       metaReview.authorityActive,
       "metaReview.authorityActive"
     ),
+    consecutiveCleanRuns:
+      metaReview.consecutiveCleanRuns === undefined
+        ? 0
+        : asNonNegativeInteger(
+            metaReview.consecutiveCleanRuns,
+            "metaReview.consecutiveCleanRuns"
+          ),
     runtimeDelivery: normalizeRuntimeDelivery(metaReview.runtimeDelivery)
   };
 }

@@ -20,6 +20,7 @@ function createRemoteBubbleEntry(overrides: Partial<BubbleListEntry["remoteExecu
     metaReview: {
       actor: "meta-reviewer",
       authorityActive: false,
+      consecutiveCleanRuns: 0,
       runtimeDelivery: null
     },
     remoteExecution: {

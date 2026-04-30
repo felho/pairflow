@@ -13,7 +13,9 @@ import type {
   BubbleReviewAutoReworkSeverity,
   BubbleCardModel,
   CommitActionInput,
-  MergeActionInput
+  MergeActionInput,
+  MetaReviewQualityPreset,
+  MetaReviewQualityPresetState
 } from "../../lib/types";
 import type { RunBubbleActionInput } from "../../state/useBubbleStore";
 import { CommitForm } from "./CommitForm";
@@ -131,6 +133,43 @@ function resolveRequestedSeverity(
   return bubble.reviewPolicy?.reviewer_blocking_min_severity ?? "P3";
 }
 
+function resolveMetaReviewQualityPreset(
+  bubble: BubbleCardModel
+): MetaReviewQualityPresetState {
+  if (bubble.reviewPolicy === null) {
+    return {
+      kind: "supported",
+      preset: "P3"
+    };
+  }
+  const severity = bubble.reviewPolicy.meta_review_auto_rework_min_severity;
+  const consecutiveCleanRunsRequired =
+    bubble.reviewPolicy.meta_review_consecutive_clean_runs_required;
+  if (consecutiveCleanRunsRequired === 1) {
+    return {
+      kind: "supported",
+      preset: severity
+    };
+  }
+  if (severity === "P3" && consecutiveCleanRunsRequired === 2) {
+    return {
+      kind: "supported",
+      preset: "P3+2"
+    };
+  }
+  return {
+    kind: "custom",
+    severity,
+    consecutiveCleanRunsRequired
+  };
+}
+
+function isMetaReviewQualityPresetValue(
+  value: string
+): value is MetaReviewQualityPreset {
+  return value === "P1" || value === "P2" || value === "P3" || value === "P3+2";
+}
+
 const trailingIconActionOrder: BubbleActionKind[] = ["stop", "restart", "attach", "open"];
 const waitingHumanDecisionActionOrder: BubbleActionKind[] = [
   "request-rework",
@@ -161,6 +200,7 @@ export function ActionBar(props: ActionBarProps): JSX.Element {
     && hasExpectedBubbleTomlValue(props.expectedBubbleToml);
   const requestedLoopMode = resolveRequestedLoopMode(props.bubble);
   const requestedSeverity = resolveRequestedSeverity(props.bubble);
+  const requestedQualityPreset = resolveMetaReviewQualityPreset(props.bubble);
   const regularActions = availableActions.filter(
     (action) =>
       action !== "update-review-policy"
@@ -208,6 +248,7 @@ export function ActionBar(props: ActionBarProps): JSX.Element {
   const invokeReviewPolicyUpdate = async (input: {
     reviewLoopMode: "full" | "meta_only";
     reviewBlockingMinSeverity: BubbleReviewAutoReworkSeverity;
+    metaReviewQualityPreset?: MetaReviewQualityPreset;
   }): Promise<void> => {
     props.onClearFeedback();
     try {
@@ -225,6 +266,9 @@ export function ActionBar(props: ActionBarProps): JSX.Element {
         action: "update-review-policy",
         reviewLoopMode: input.reviewLoopMode,
         reviewBlockingMinSeverity: input.reviewBlockingMinSeverity,
+        ...(input.metaReviewQualityPreset !== undefined
+          ? { metaReviewQualityPreset: input.metaReviewQualityPreset }
+          : {}),
         expectedBubbleToml
       });
     } catch {
@@ -441,31 +485,59 @@ export function ActionBar(props: ActionBarProps): JSX.Element {
                 />
               </button>
               <label className="sr-only" htmlFor={`review-severity-${props.bubble.bubbleId}`}>
-                Meta auto-rework severity
+                Meta-review quality preset
               </label>
               <select
                 id={`review-severity-${props.bubble.bubbleId}`}
-                aria-label="Meta auto-rework severity"
+                aria-label="Meta-review quality preset"
                 title={
                   reviewPolicyWritable
-                    ? "Meta auto-rework severity"
+                    ? requestedQualityPreset.kind === "custom"
+                      ? `Custom quality preset (${requestedQualityPreset.severity}, ${requestedQualityPreset.consecutiveCleanRunsRequired} clean runs)`
+                      : "Meta-review quality preset"
                     : "Review policy update is unavailable until the latest bubble detail revision loads."
                 }
                 className="h-4 rounded-md border border-[#333] bg-[#1a1a1a] px-1 text-[9px] font-mono text-[#d7dde5] transition hover:border-[#555] disabled:cursor-not-allowed disabled:opacity-60"
-                value={requestedSeverity}
+                value={
+                  requestedQualityPreset.kind === "supported"
+                    ? requestedQualityPreset.preset
+                    : "custom"
+                }
                 disabled={props.isSubmitting || !reviewPolicyWritable}
                 onChange={(event) => {
+                  const preset = event.currentTarget.value;
+                  if (!isMetaReviewQualityPresetValue(preset)) {
+                    return;
+                  }
                   void invokeReviewPolicyUpdate({
                     reviewLoopMode: requestedLoopMode,
                     reviewBlockingMinSeverity:
-                      event.currentTarget.value as BubbleReviewAutoReworkSeverity
+                      preset === "P3+2"
+                        ? "P3"
+                        : preset,
+                    metaReviewQualityPreset: preset
                   });
                 }}
               >
                 <option value="P1">P1</option>
                 <option value="P2">P2</option>
                 <option value="P3">P3</option>
+                <option value="P3+2">P3+2</option>
+                {requestedQualityPreset.kind === "custom" ? (
+                  <option value="custom">
+                    Custom
+                  </option>
+                ) : null}
               </select>
+              {requestedQualityPreset.kind === "custom" ? (
+                <span
+                  className="text-[9px] font-mono text-amber-300"
+                  data-testid="review-quality-custom"
+                >
+                  Custom {requestedQualityPreset.severity}/
+                  {requestedQualityPreset.consecutiveCleanRunsRequired} clean
+                </span>
+              ) : null}
             </div>
           ) : null}
         </div>

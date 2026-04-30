@@ -4,6 +4,7 @@ import type {
   BubbleReviewLoopMode,
   BubbleReviewPolicyRuntimeView
 } from "../../../../types/bubble.js";
+import type { MetaReviewQualityPreset } from "../../../shared/reviewPolicy/updateBubbleReviewPolicy.js";
 import type { RemoteBubbleStatusTarget } from "./sshBubbleStatus.js";
 import { runCommandDefault } from "./sshBubbleStatus.js";
 import {
@@ -22,6 +23,7 @@ export interface ExecuteRemoteBubbleReviewPolicyCommandInput {
   remoteTarget: RemoteBubbleStatusTarget;
   reviewLoopMode: BubbleReviewLoopMode;
   reviewBlockingMinSeverity?: BubbleReviewAutoReworkSeverity;
+  metaReviewQualityPreset?: MetaReviewQualityPreset;
   expectedBubbleToml?: string;
 }
 
@@ -125,6 +127,10 @@ export function buildRemoteBubbleReviewPolicyScript(
     input.reviewBlockingMinSeverity === undefined
       ? "undefined"
       : JSON.stringify(input.reviewBlockingMinSeverity);
+  const metaReviewQualityPreset =
+    input.metaReviewQualityPreset === undefined
+      ? "undefined"
+      : JSON.stringify(input.metaReviewQualityPreset);
   const expectedBubbleToml =
     input.expectedBubbleToml === undefined
       ? "undefined"
@@ -137,6 +143,7 @@ const bubbleId = ${JSON.stringify(input.bubbleId)};
 const repoPath = ${JSON.stringify(input.remoteClonePath)};
 const reviewLoopMode = ${JSON.stringify(input.reviewLoopMode)};
 const reviewBlockingMinSeverity = ${reviewBlockingSeverity};
+const metaReviewQualityPreset = ${metaReviewQualityPreset};
 const expectedBubbleToml = ${expectedBubbleToml};
 const baseUrl = pathToFileURL(repoPath.endsWith("/") ? repoPath : repoPath + "/");
 const { buildSharedUiReviewPolicyPatch, updateBubbleReviewPolicy } = await import(new URL("dist/v11/shared/reviewPolicy/updateBubbleReviewPolicy.js", baseUrl).href);
@@ -164,7 +171,10 @@ const result = await withStateWriteLock(statePath, 5000, async () => {
       reviewLoopMode,
       ...(reviewBlockingMinSeverity === undefined
         ? {}
-        : { reviewBlockingMinSeverity })
+        : { reviewBlockingMinSeverity }),
+      ...(metaReviewQualityPreset === undefined
+        ? {}
+        : { metaReviewQualityPreset })
     }),
     ...(expectedBubbleToml === undefined
       ? {}

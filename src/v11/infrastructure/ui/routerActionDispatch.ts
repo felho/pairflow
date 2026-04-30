@@ -169,6 +169,9 @@ async function handleUpdateReviewPolicyAction(
               reviewPolicyInput.reviewBlockingMinSeverity
           }
         : {}),
+      ...(reviewPolicyInput.metaReviewQualityPreset !== undefined
+        ? { metaReviewQualityPreset: reviewPolicyInput.metaReviewQualityPreset }
+        : {}),
       ...(reviewPolicyInput.expectedBubbleToml !== undefined
         ? { expectedBubbleToml: reviewPolicyInput.expectedBubbleToml }
         : {}),

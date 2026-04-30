@@ -527,7 +527,7 @@ describe("ActionBar", () => {
       "Attach",
       "Open",
       "Meta review only",
-      "Meta auto-rework severity"
+      "Meta-review quality preset"
     ]);
   });
 
@@ -610,7 +610,7 @@ describe("ActionBar", () => {
     });
   });
 
-  it("updates meta auto-rework severity from the compact dropdown", async () => {
+  it("updates the meta-review quality preset from the compact dropdown", async () => {
     const user = userEvent.setup();
     const onAction = vi.fn(() => Promise.resolve(undefined));
 
@@ -625,7 +625,8 @@ describe("ActionBar", () => {
             effective_loop_mode: "full",
             support_status: "guarded",
             reviewer_blocking_min_severity: "P1",
-            meta_review_auto_rework_min_severity: "P1"
+            meta_review_auto_rework_min_severity: "P1",
+            meta_review_consecutive_clean_runs_required: 1
           }
         })}
         attach={{
@@ -645,8 +646,8 @@ describe("ActionBar", () => {
     );
 
     await user.selectOptions(
-      screen.getByRole("combobox", { name: "Meta auto-rework severity" }),
-      "P3"
+      screen.getByRole("combobox", { name: "Meta-review quality preset" }),
+      "P3+2"
     );
 
     expect(onAction).toHaveBeenCalledWith({
@@ -654,8 +655,85 @@ describe("ActionBar", () => {
       action: "update-review-policy",
       reviewLoopMode: "meta_only",
       reviewBlockingMinSeverity: "P3",
+      metaReviewQualityPreset: "P3+2",
       expectedBubbleToml: "id = \"b-policy-severity\""
     });
+  });
+
+  it("shows unsupported quality-preset pairs as visible custom truth", () => {
+    render(
+      <ActionBar
+        bubble={bubbleCard({
+          bubbleId: "b-policy-custom",
+          repoPath: "/repo-a",
+          state: "RUNNING",
+          reviewPolicy: {
+            requested_loop_mode: "meta_only",
+            effective_loop_mode: "full",
+            support_status: "guarded",
+            reviewer_blocking_min_severity: "P2",
+            meta_review_auto_rework_min_severity: "P2",
+            meta_review_consecutive_clean_runs_required: 2
+          }
+        })}
+        attach={{
+          visible: false,
+          enabled: false,
+          command: "tmux attach -t pf-b-policy-custom",
+          hint: null
+        }}
+        isSubmitting={false}
+        actionError={null}
+        retryHint={null}
+        actionFailure={null}
+        onAction={vi.fn(() => Promise.resolve(undefined))}
+        onClearFeedback={vi.fn()}
+        expectedBubbleToml={"id = \"b-policy-custom\""}
+      />
+    );
+
+    expect(
+      screen.getByRole("combobox", { name: "Meta-review quality preset" })
+    ).toHaveValue("custom");
+    expect(screen.getByTestId("review-quality-custom")).toHaveTextContent(
+      "Custom P2/2 clean"
+    );
+  });
+
+  it("rejects unknown quality preset values before dispatch", async () => {
+    const user = userEvent.setup();
+    const onAction = vi.fn(() => Promise.resolve(undefined));
+    render(
+      <ActionBar
+        bubble={bubbleCard({
+          bubbleId: "b-policy-unknown-preset",
+          repoPath: "/repo-a",
+          state: "RUNNING"
+        })}
+        attach={{
+          visible: false,
+          enabled: false,
+          command: "tmux attach -t pf-b-policy-unknown-preset",
+          hint: null
+        }}
+        isSubmitting={false}
+        actionError={null}
+        retryHint={null}
+        actionFailure={null}
+        onAction={onAction}
+        onClearFeedback={vi.fn()}
+        expectedBubbleToml={"id = \"b-policy-unknown-preset\""}
+      />
+    );
+
+    const presetSelect = screen.getByRole("combobox", {
+      name: "Meta-review quality preset"
+    });
+    presetSelect.append(new Option("P2+2", "P2+2"));
+
+    await user.selectOptions(presetSelect, "P2+2");
+
+    expect(onAction).not.toHaveBeenCalled();
   });
 
   it("uses P3 as the fail-closed requested severity when no review policy is present", () => {
@@ -688,7 +766,7 @@ describe("ActionBar", () => {
     );
 
     expect(
-      screen.getByRole("combobox", { name: "Meta auto-rework severity" })
+      screen.getByRole("combobox", { name: "Meta-review quality preset" })
     ).toHaveValue("P3");
   });
 
@@ -718,7 +796,7 @@ describe("ActionBar", () => {
 
     expect(screen.getByRole("switch", { name: "Meta review only" })).toBeDisabled();
     expect(
-      screen.getByRole("combobox", { name: "Meta auto-rework severity" })
+      screen.getByRole("combobox", { name: "Meta-review quality preset" })
     ).toBeDisabled();
   });
 
