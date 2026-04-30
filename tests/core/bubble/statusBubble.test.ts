@@ -365,7 +365,7 @@ describe("getBubbleStatus", () => {
     expect(status.metaReview.consecutiveCleanRuns).toBe(0);
   });
 
-  it("omits review policy from READY_FOR_HUMAN_APPROVAL detail status when live runtime authority is closed", async () => {
+  it("surfaces review policy from READY_FOR_HUMAN_APPROVAL detail status after live runtime authority is closed", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({
       repoPath,
@@ -412,7 +412,18 @@ describe("getBubbleStatus", () => {
 
     expect(status.state).toBe("READY_FOR_HUMAN_APPROVAL");
     expect(status.executionContext).toBeNull();
-    expect(status.reviewPolicy).toBeUndefined();
+    expect(status.reviewPolicy).toEqual({
+      requested_loop_mode: "meta_only",
+      effective_loop_mode: "full",
+      support_status: "guarded",
+      reviewer_blocking_min_severity: "P2",
+      meta_review_auto_rework_min_severity: "P2",
+      meta_review_consecutive_clean_runs_required: 1,
+      blocked_reason_code: "REVIEW_POLICY_META_ONLY_ACTIVATION_UNRESOLVED",
+      blocked_prerequisites: ["reviewer_bypass_activation_provenance_required"],
+      provenance_note:
+        "Requested meta-only review remains fail-closed on the full review loop until canonical implementer pass authority proves reviewer-bypass activation for the live pass path."
+    });
   });
 
   it("counts only the latest unresolved approval request as pending", async () => {

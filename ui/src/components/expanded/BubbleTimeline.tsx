@@ -91,6 +91,31 @@ function readMetadataInteger(
   return null;
 }
 
+function extractMetaReviewHandoffAttempt(entry: UiTimelineEntry): number | null {
+  const metadata = entry.payload.metadata;
+  if (!isRecord(metadata)) {
+    return null;
+  }
+  const handoffId = metadata.meta_review_handoff_id;
+  if (typeof handoffId !== "string") {
+    return null;
+  }
+  const match = /:attempt:(\d+)$/u.exec(handoffId);
+  if (match === null) {
+    return null;
+  }
+  const attempt = Number.parseInt(match[1] ?? "", 10);
+  return Number.isInteger(attempt) && attempt > 0 ? attempt : null;
+}
+
+function shouldRenderTimelineEntry(entry: UiTimelineEntry): boolean {
+  if (entry.type !== "TASK") {
+    return true;
+  }
+  const metaReviewAttempt = extractMetaReviewHandoffAttempt(entry);
+  return metaReviewAttempt === null || metaReviewAttempt > 1;
+}
+
 function extractMetaRecommendationTag(input: {
   entry: UiTimelineEntry;
   cleanRunCount: number | null;
@@ -196,6 +221,13 @@ const roleIcons: Record<RoleKind, string> = {
 
 function resolveDisplaySender(entry: UiTimelineEntry): string {
   const metadata = entry.payload.metadata;
+  if (
+    isRecord(metadata)
+    && typeof metadata.meta_review_handoff_id === "string"
+    && metadata.delivery_target_role === "meta_reviewer"
+  ) {
+    return entry.recipient;
+  }
   if (isRecord(metadata) && typeof metadata.actor_agent === "string") {
     return metadata.actor_agent;
   }
@@ -216,7 +248,19 @@ function resolveRole(entry: UiTimelineEntry): RoleKind {
     typeof metadata === "object" && metadata !== null
       ? (metadata as { actor?: unknown }).actor
       : undefined;
-  if (actor === "meta-reviewer") {
+  const deliveryTargetRole =
+    typeof metadata === "object" && metadata !== null
+      ? (metadata as { delivery_target_role?: unknown }).delivery_target_role
+      : undefined;
+  const metaReviewHandoffId =
+    typeof metadata === "object" && metadata !== null
+      ? (metadata as { meta_review_handoff_id?: unknown }).meta_review_handoff_id
+      : undefined;
+  if (
+    actor === "meta-reviewer"
+    || deliveryTargetRole === "meta_reviewer"
+    || typeof metaReviewHandoffId === "string"
+  ) {
     return "meta";
   }
   const type: ProtocolMessageType = entry.type;
@@ -258,6 +302,8 @@ export function BubbleTimeline(props: BubbleTimelineProps): JSX.Element {
   const hasExtras = props.extras !== null && props.extras !== undefined;
   const hasEmptyState =
     !showError && props.entries !== null && props.entries.length === 0;
+  const displayEntries =
+    props.entries === null ? null : props.entries.filter(shouldRenderTimelineEntry);
 
   useEffect(() => {
     const el = scrollRef.current;
@@ -266,7 +312,8 @@ export function BubbleTimeline(props: BubbleTimelineProps): JSX.Element {
     }
   }, [props.entries, props.extras]);
 
-  const hasEntries = !showError && props.entries !== null && props.entries.length > 0;
+  const hasEntries =
+    !showError && displayEntries !== null && displayEntries.length > 0;
   const showScrollable = hasEntries || hasEmptyState || hasExtras;
   let metaCleanRuns = 0;
 
@@ -301,9 +348,9 @@ export function BubbleTimeline(props: BubbleTimelineProps): JSX.Element {
             <div className="py-2 text-[10px] text-[#555]">No timeline entries yet.</div>
           ) : null}
 
-          {hasEntries && props.entries !== null ? (
+          {hasEntries && displayEntries !== null ? (
             <>
-          {props.entries.map((entry) => {
+          {displayEntries.map((entry) => {
             const role = resolveRole(entry);
             const displaySender = resolveDisplaySender(entry);
             const isConvergence = entry.type === "CONVERGENCE";
@@ -314,7 +361,11 @@ export function BubbleTimeline(props: BubbleTimelineProps): JSX.Element {
               : null;
             const metaRecommendation = extractMetaRecommendation(entry);
             let cleanRunCount: number | null = null;
-            if (metaRecommendation === "approve") {
+            const metaReviewHandoffAttempt = extractMetaReviewHandoffAttempt(entry);
+            if (metaReviewHandoffAttempt !== null && metaReviewHandoffAttempt > 1) {
+              metaCleanRuns = metaReviewHandoffAttempt - 1;
+              cleanRunCount = metaCleanRuns;
+            } else if (metaRecommendation === "approve") {
               const explicitCleanRunCount =
                 metadata === null
                   ? null
@@ -343,6 +394,13 @@ export function BubbleTimeline(props: BubbleTimelineProps): JSX.Element {
               metaRecommendationTag.label === decisionTag.label
                 ? null
                 : metaRecommendationTag;
+            const metaReviewRerunTag =
+              metaReviewHandoffAttempt !== null && cleanRunCount !== null
+                ? {
+                    label: `clean ${cleanRunCount}`,
+                    style: "border-emerald-500/20 bg-emerald-500/10 text-emerald-500"
+                  }
+                : null;
             const cleanPass = isCleanPass(entry);
             return (
               <div
@@ -383,6 +441,13 @@ export function BubbleTimeline(props: BubbleTimelineProps): JSX.Element {
                         {tag.label}
                       </span>
                     ))}
+                    {metaReviewRerunTag !== null ? (
+                      <span
+                        className={`inline-block rounded px-1 text-[9px] font-semibold leading-tight border ${metaReviewRerunTag.style}`}
+                      >
+                        {metaReviewRerunTag.label}
+                      </span>
+                    ) : null}
                     {effectiveMetaRecommendationTag !== null ? (
                       <span
                         className={`inline-block rounded px-1 text-[9px] font-semibold leading-tight border ${effectiveMetaRecommendationTag.style}`}

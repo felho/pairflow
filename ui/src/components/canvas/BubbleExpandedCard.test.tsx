@@ -117,6 +117,41 @@ describe("BubbleExpandedCard", () => {
     expect(screen.queryByText("R2")).not.toBeInTheDocument();
   });
 
+  it("uses final-state detail review policy for the quality preset control", () => {
+    renderExpandedCard({
+      bubble: bubbleCard({
+        bubbleId: "b-expanded-1",
+        repoPath: "/repo-a",
+        state: "READY_FOR_HUMAN_APPROVAL",
+        reviewPolicy: {
+          requested_loop_mode: "full",
+          effective_loop_mode: "full",
+          support_status: "enabled",
+          reviewer_blocking_min_severity: "P3",
+          meta_review_auto_rework_min_severity: "P3",
+          meta_review_consecutive_clean_runs_required: 1
+        }
+      }),
+      detail: bubbleDetail({
+        bubbleId: "b-expanded-1",
+        repoPath: "/repo-a",
+        state: "READY_FOR_HUMAN_APPROVAL",
+        reviewPolicy: {
+          requested_loop_mode: "full",
+          effective_loop_mode: "full",
+          support_status: "enabled",
+          reviewer_blocking_min_severity: "P3",
+          meta_review_auto_rework_min_severity: "P3",
+          meta_review_consecutive_clean_runs_required: 2
+        }
+      })
+    });
+
+    expect(
+      screen.getByRole("combobox", { name: "Meta-review quality preset" })
+    ).toHaveValue("P3+2");
+  });
+
   it("does not render the expanded clean-run summary strip", () => {
     renderExpandedCard({
       bubble: bubbleCard({
