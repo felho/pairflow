@@ -117,7 +117,7 @@ describe("BubbleExpandedCard", () => {
     expect(screen.queryByText("R2")).not.toBeInTheDocument();
   });
 
-  it("renders meta-review clean-run streak and requirement in the expanded status summary", () => {
+  it("does not render the expanded clean-run summary strip", () => {
     renderExpandedCard({
       bubble: bubbleCard({
         bubbleId: "b-expanded-1",
@@ -136,62 +136,9 @@ describe("BubbleExpandedCard", () => {
       })
     });
 
-    expect(screen.getByTestId("expanded-review-quality-summary")).toHaveTextContent(
-      "Quality P3+2"
-    );
-    expect(screen.getByTestId("expanded-review-quality-summary")).toHaveTextContent(
-      "Clean 1/2"
-    );
-  });
-
-  it("renders unsupported meta-review quality pairs as raw custom truth", () => {
-    renderExpandedCard({
-      bubble: bubbleCard({
-        bubbleId: "b-expanded-1",
-        repoPath: "/repo-a",
-        reviewPolicy: {
-          requested_loop_mode: "meta_only",
-          effective_loop_mode: "full",
-          support_status: "guarded",
-          reviewer_blocking_min_severity: "P2",
-          meta_review_auto_rework_min_severity: "P2",
-          meta_review_consecutive_clean_runs_required: 2
-        },
-        metaReview: {
-          consecutiveCleanRuns: 1
-        }
-      })
-    });
-
-    expect(screen.getByTestId("expanded-review-quality-summary")).toHaveTextContent(
-      "Custom P2/2 clean"
-    );
-    expect(screen.getByTestId("expanded-review-quality-summary")).toHaveTextContent(
-      "Clean 1/2"
-    );
-  });
-
-  it("renders retained clean-run streak when closed status omits live review policy", () => {
-    renderExpandedCard({
-      bubble: {
-        ...bubbleCard({
-          bubbleId: "b-expanded-1",
-          repoPath: "/repo-a",
-          state: "READY_FOR_HUMAN_APPROVAL",
-          metaReview: {
-            consecutiveCleanRuns: 2
-          }
-        }),
-        reviewPolicy: null
-      }
-    });
-
-    expect(screen.getByTestId("expanded-review-quality-summary")).toHaveTextContent(
-      "Quality unavailable"
-    );
-    expect(screen.getByTestId("expanded-review-quality-summary")).toHaveTextContent(
-      "Clean 2/-"
-    );
+    expect(screen.queryByTestId("expanded-review-quality-summary")).not.toBeInTheDocument();
+    expect(screen.queryByText("Quality P3+2")).not.toBeInTheDocument();
+    expect(screen.queryByText("Clean 1/2")).not.toBeInTheDocument();
   });
 
   it("prefers detail state when deciding whether to show the pending human question", () => {

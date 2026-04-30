@@ -531,7 +531,7 @@ describe("createBubbleStore", () => {
       getRepos: vi.fn(async () => ["/repo-a"]),
       getBubbles: vi.fn(async () => ({
         repo: repoSummary("/repo-a"),
-        bubbles: [malformedPolicyBubble]
+        bubbles: [malformedPolicyBubble as unknown as ReturnType<typeof bubbleSummary>]
       }))
     });
 
@@ -569,7 +569,7 @@ describe("createBubbleStore", () => {
       getRepos: vi.fn(async () => ["/repo-a"]),
       getBubbles: vi.fn(async () => ({
         repo: repoSummary("/repo-a"),
-        bubbles: [malformedPolicyBubble]
+        bubbles: [malformedPolicyBubble as unknown as ReturnType<typeof bubbleSummary>]
       }))
     });
 
@@ -1670,7 +1670,8 @@ describe("createBubbleStore", () => {
         effective_loop_mode: "full" as const,
         support_status: "guarded" as const,
         reviewer_blocking_min_severity: "P1" as const,
-        meta_review_auto_rework_min_severity: "P1" as const
+        meta_review_auto_rework_min_severity: "P1" as const,
+        meta_review_consecutive_clean_runs_required: 1
       },
       previousRequestedLoopMode: "full" as const,
       nextRequestedLoopMode: "meta_only" as const,
@@ -1973,7 +1974,8 @@ describe("createBubbleStore", () => {
         effective_loop_mode: "full" as const,
         support_status: "guarded" as const,
         reviewer_blocking_min_severity: "P1" as const,
-        meta_review_auto_rework_min_severity: "P1" as const
+        meta_review_auto_rework_min_severity: "P1" as const,
+        meta_review_consecutive_clean_runs_required: 1
       },
       previousRequestedLoopMode: "full" as const,
       nextRequestedLoopMode: "meta_only" as const,
@@ -3309,6 +3311,7 @@ describe("deleteBubble store method", () => {
       metaReview: {
         actor: "meta-reviewer" as const,
         authorityActive: true,
+        consecutiveCleanRuns: 0,
         runtimeDelivery: null
       }
     };
@@ -3319,6 +3322,7 @@ describe("deleteBubble store method", () => {
       metaReview: {
         actor: "meta-reviewer" as const,
         authorityActive: false,
+        consecutiveCleanRuns: 0,
         runtimeDelivery: null
       }
     };

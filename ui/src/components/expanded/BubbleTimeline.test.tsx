@@ -121,6 +121,164 @@ describe("BubbleTimeline", () => {
     expect(screen.getByText("P3")).toBeInTheDocument();
   });
 
+  it("renders clean-run count instead of approve until the required streak is met", () => {
+    render(
+      <BubbleTimeline
+        entries={[
+          timelineEntry({
+            id: "env-meta-clean-1",
+            type: "APPROVAL_REQUEST",
+            sender: "orchestrator",
+            recipient: "human",
+            payload: {
+              summary: "First clean meta-review.",
+              metadata: {
+                actor: "meta-reviewer",
+                latest_recommendation: "approve"
+              }
+            }
+          }),
+          timelineEntry({
+            id: "env-meta-clean-2",
+            type: "APPROVAL_REQUEST",
+            sender: "orchestrator",
+            recipient: "human",
+            payload: {
+              summary: "Second clean meta-review.",
+              metadata: {
+                actor: "meta-reviewer",
+                latest_recommendation: "approve"
+              }
+            }
+          })
+        ]}
+        isLoading={false}
+        error={null}
+        compact={false}
+        metaReviewCleanRunsRequired={2}
+      />
+    );
+
+    expect(screen.getByText("clean 1")).toBeInTheDocument();
+    expect(screen.getByText("approve")).toBeInTheDocument();
+    expect(screen.queryByText("clean 2")).not.toBeInTheDocument();
+  });
+
+  it("renders intermediate clean-run counts for longer clean-run requirements", () => {
+    render(
+      <BubbleTimeline
+        entries={[
+          timelineEntry({
+            id: "env-meta-clean-1",
+            type: "APPROVAL_REQUEST",
+            sender: "orchestrator",
+            recipient: "human",
+            payload: {
+              summary: "First clean meta-review.",
+              metadata: {
+                actor: "meta-reviewer",
+                latest_recommendation: "approve"
+              }
+            }
+          }),
+          timelineEntry({
+            id: "env-meta-clean-2",
+            type: "APPROVAL_REQUEST",
+            sender: "orchestrator",
+            recipient: "human",
+            payload: {
+              summary: "Second clean meta-review.",
+              metadata: {
+                actor: "meta-reviewer",
+                latest_recommendation: "approve"
+              }
+            }
+          }),
+          timelineEntry({
+            id: "env-meta-clean-3",
+            type: "APPROVAL_REQUEST",
+            sender: "orchestrator",
+            recipient: "human",
+            payload: {
+              summary: "Third clean meta-review.",
+              metadata: {
+                actor: "meta-reviewer",
+                latest_recommendation: "approve"
+              }
+            }
+          })
+        ]}
+        isLoading={false}
+        error={null}
+        compact={false}
+        metaReviewCleanRunsRequired={3}
+      />
+    );
+
+    expect(screen.getByText("clean 1")).toBeInTheDocument();
+    expect(screen.getByText("clean 2")).toBeInTheDocument();
+    expect(screen.getByText("approve")).toBeInTheDocument();
+  });
+
+  it("resets clean-run count after a meta-review rework recommendation", () => {
+    render(
+      <BubbleTimeline
+        entries={[
+          timelineEntry({
+            id: "env-meta-clean-1",
+            type: "APPROVAL_REQUEST",
+            sender: "orchestrator",
+            recipient: "human",
+            payload: {
+              summary: "First clean meta-review.",
+              metadata: {
+                actor: "meta-reviewer",
+                latest_recommendation: "approve"
+              }
+            }
+          }),
+          timelineEntry({
+            id: "env-meta-rework",
+            type: "APPROVAL_DECISION",
+            sender: "orchestrator",
+            recipient: "codex",
+            payload: {
+              decision: "rework",
+              message: "Apply rework.",
+              metadata: {
+                actor: "meta-reviewer",
+                recommendation: "rework"
+              }
+            }
+          }),
+          timelineEntry({
+            id: "env-meta-clean-2",
+            type: "APPROVAL_REQUEST",
+            sender: "orchestrator",
+            recipient: "human",
+            payload: {
+              summary: "Clean after rework.",
+              metadata: {
+                actor: "meta-reviewer",
+                latest_recommendation: "approve"
+              }
+            }
+          })
+        ]}
+        isLoading={false}
+        error={null}
+        compact={false}
+        metaReviewCleanRunsRequired={2}
+      />
+    );
+
+    const cleanOneBadges = screen
+      .getAllByText("clean 1")
+      .filter((node) => node.className.includes("inline-block"));
+    expect(cleanOneBadges).toHaveLength(2);
+    expect(screen.queryByText("approve")).not.toBeInTheDocument();
+  });
+
   it("renders extras inside the same scroll container as timeline entries", () => {
     render(
       <BubbleTimeline

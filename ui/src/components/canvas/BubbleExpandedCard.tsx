@@ -7,7 +7,6 @@ import type {
   BubbleCardModel,
   BubbleLifecycleState,
   BubblePosition,
-  BubbleReviewAutoReworkSeverity,
   UiBubbleDetail,
   UiBubbleInboxItem,
   UiTimelineEntry
@@ -44,19 +43,6 @@ function repoLabel(repoPath: string): string {
 
 function asMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
-}
-
-function resolveQualityLabel(input: {
-  severity: BubbleReviewAutoReworkSeverity;
-  required: number;
-}): string {
-  if (input.required === 1) {
-    return input.severity;
-  }
-  if (input.severity === "P3" && input.required === 2) {
-    return "P3+2";
-  }
-  return `Custom ${input.severity}/${input.required} clean`;
 }
 
 function findLatestInboxItemByType(
@@ -320,28 +306,6 @@ export function BubbleExpandedCard(props: BubbleExpandedCardProps): JSX.Element 
         </div>
       ) : null}
 
-      {attachSource.reviewPolicy !== null || attachSource.metaReview.consecutiveCleanRuns > 0 ? (
-        <div
-          className="mx-4 mb-2 flex items-center justify-between gap-2 rounded-[8px] border border-[#2c2c2c] bg-[#151515] px-3 py-1.5 text-[10px] text-[#c9d1d9]"
-          data-testid="expanded-review-quality-summary"
-        >
-          <span className="font-mono">
-            {attachSource.reviewPolicy !== null
-              ? `Quality ${resolveQualityLabel({
-                  severity:
-                    attachSource.reviewPolicy.meta_review_auto_rework_min_severity,
-                  required:
-                    attachSource.reviewPolicy.meta_review_consecutive_clean_runs_required
-                })}`
-              : "Quality unavailable"}
-          </span>
-          <span className="font-mono text-[#8f9aa6]">
-            Clean {attachSource.metaReview.consecutiveCleanRuns}/
-            {attachSource.reviewPolicy?.meta_review_consecutive_clean_runs_required ?? "-"}
-          </span>
-        </div>
-      ) : null}
-
       {/* Question card (WAITING_HUMAN only) */}
       {pendingQuestion !== null ? (
         <div className="mx-4 mb-2.5 rounded-[10px] border border-amber-500/20 bg-amber-500/[0.05] px-3 py-2.5">
@@ -387,6 +351,10 @@ export function BubbleExpandedCard(props: BubbleExpandedCardProps): JSX.Element 
           isLoading={props.timelineLoading}
           error={props.timelineError}
           compact={timelineCompact}
+          metaReviewCleanRunsRequired={
+            attachSource.reviewPolicy?.meta_review_consecutive_clean_runs_required
+            ?? null
+          }
         />
       </div>
     </article>

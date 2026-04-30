@@ -69,13 +69,46 @@ function extractFindingTags(entry: UiTimelineEntry): FindingTag[] {
   return tags;
 }
 
-function extractMetaRecommendationTag(entry: UiTimelineEntry): FindingTag | null {
+function extractMetaRecommendation(entry: UiTimelineEntry): string | null {
   const metadata = entry.payload.metadata;
   if (!isRecord(metadata)) {
     return null;
   }
   const recommendation = metadata.latest_recommendation ?? metadata.recommendation;
+  return typeof recommendation === "string" ? recommendation : null;
+}
+
+function readMetadataInteger(
+  metadata: Record<string, unknown>,
+  keys: string[]
+): number | null {
+  for (const key of keys) {
+    const value = metadata[key];
+    if (Number.isInteger(value) && (value as number) >= 0) {
+      return value as number;
+    }
+  }
+  return null;
+}
+
+function extractMetaRecommendationTag(input: {
+  entry: UiTimelineEntry;
+  cleanRunCount: number | null;
+  cleanRunsRequired: number | null | undefined;
+}): FindingTag | null {
+  const recommendation = extractMetaRecommendation(input.entry);
   if (recommendation === "approve") {
+    if (
+      input.cleanRunCount !== null
+      && input.cleanRunsRequired !== null
+      && input.cleanRunsRequired !== undefined
+      && input.cleanRunCount < input.cleanRunsRequired
+    ) {
+      return {
+        label: `clean ${input.cleanRunCount}`,
+        style: "border-emerald-500/20 bg-emerald-500/10 text-emerald-500"
+      };
+    }
     return {
       label: "approve",
       style: "border-emerald-500/20 bg-emerald-500/10 text-emerald-500"
@@ -212,6 +245,7 @@ export interface BubbleTimelineProps {
   error: string | null;
   compact: boolean;
   extras?: ReactNode;
+  metaReviewCleanRunsRequired?: number | null;
 }
 
 export function BubbleTimeline(props: BubbleTimelineProps): JSX.Element {
@@ -234,6 +268,7 @@ export function BubbleTimeline(props: BubbleTimelineProps): JSX.Element {
 
   const hasEntries = !showError && props.entries !== null && props.entries.length > 0;
   const showScrollable = hasEntries || hasEmptyState || hasExtras;
+  let metaCleanRuns = 0;
 
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
@@ -274,7 +309,33 @@ export function BubbleTimeline(props: BubbleTimelineProps): JSX.Element {
             const isConvergence = entry.type === "CONVERGENCE";
             const blocked = isBlockedEntry(entry);
             const findingTags = extractFindingTags(entry);
-            const metaRecommendationTag = extractMetaRecommendationTag(entry);
+            const metadata = isRecord(entry.payload.metadata)
+              ? entry.payload.metadata
+              : null;
+            const metaRecommendation = extractMetaRecommendation(entry);
+            let cleanRunCount: number | null = null;
+            if (metaRecommendation === "approve") {
+              const explicitCleanRunCount =
+                metadata === null
+                  ? null
+                  : readMetadataInteger(metadata, [
+                      "consecutive_clean_runs",
+                      "consecutiveCleanRuns",
+                      "meta_review_consecutive_clean_runs"
+                    ]);
+              metaCleanRuns = explicitCleanRunCount ?? metaCleanRuns + 1;
+              cleanRunCount = metaCleanRuns;
+            } else if (
+              metaRecommendation === "rework"
+              || metaRecommendation === "inconclusive"
+            ) {
+              metaCleanRuns = 0;
+            }
+            const metaRecommendationTag = extractMetaRecommendationTag({
+              entry,
+              cleanRunCount,
+              cleanRunsRequired: props.metaReviewCleanRunsRequired
+            });
             const decisionTag = extractDecisionTag(entry);
             const effectiveMetaRecommendationTag =
               metaRecommendationTag !== null &&
