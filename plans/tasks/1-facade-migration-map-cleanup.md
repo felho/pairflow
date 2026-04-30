@@ -72,9 +72,15 @@ and script/documentation references that keep that migration-era layer active.
 3. Unlocks / impacts successors: task 2 must not rely on the removed migration
    map; tasks 3 and 4 keep their own contract-runner/corpus scopes.
 4. Task-list impact: refines `1-facade-migration-map-cleanup`.
-5. Inherited validation / exit expectation: targeted contract cleanup checks,
+5. Inherited validation / exit expectation for the implementation pass:
+   targeted stale-reference search, targeted current contract-test selection,
    `pnpm typecheck`, and `pnpm lint`; broader plan validation remains for later
    tasks and final closure.
+6. `docs_only_context` means a Pairflow bubble pass with
+   `review_artifact_type=document` where the only edited artifact is this task
+   document. In `docs_only_context`, T1-T4 are not run, not satisfied, and not
+   claimed; agents must attach no runtime validation log refs and must
+   affirmatively state `runtime checks were intentionally not executed`.
 
 ### Canonical Contract Anchors
 
@@ -169,6 +175,8 @@ N/A; this task does not modify a mutation flow.
 3. Meta-review-gate parity-named behavior case rename; task 4 owns it.
 4. Runtime/domain parity modules under `src/v11/shared/metaReview*`.
 5. Historical docs cleanup unless a doc is active execution guidance.
+6. In `docs_only_context`, edits to `package.json`, `README.md`, and
+   `tests/**` are out of scope; only this task document may be refined.
 
 ### Safety Defaults
 
@@ -256,7 +264,7 @@ N/A; this task does not modify a mutation flow.
 | Depends on | N/A. | This is the producer-first cleanup task. | P1 | required-now |
 | Unlocks / impacts successors | Tasks 2, 3, and 4 must not depend on the removed migration map. | Keep their scopes separate. | P1 | required-now |
 | Task-list impact | Refines existing planned task 1. | No new task identity. | P1 | required-now |
-| Inherited validation / exit expectation | Targeted search, typecheck, lint. | Run and report skipped checks explicitly. | P1 | required-now |
+| Inherited validation / exit expectation | Implementation pass requires targeted search, targeted current contract tests, typecheck, and lint. | In `docs_only_context`, only this task document may be edited; T1-T4 are not run, not satisfied, and not claimed; no runtime validation log refs are attached; and the handoff must state `runtime checks were intentionally not executed`. | P1 | required-now |
 
 ### 0d) Shared Contract Compatibility
 
@@ -335,6 +343,9 @@ N/A.
 | T3 | Contract test inventory | Retired tests are gone. | Run targeted current contract tests or an equivalent vitest selection that excludes deleted files. | Current contract tests still pass. | P1 | required-now |
 | T4 | Lint/script health | Package scripts changed. | Run `pnpm lint`. | Lint passes and scripts do not point to missing files. | P1 | required-now |
 
+T1-T4 apply to implementation passes only. In `docs_only_context`, T1-T4 are not
+run, not satisfied, and not claimed.
+
 ## Acceptance Criteria
 
 1. The exhausted facade parity coverage test and all-v11 migration map layer are
@@ -343,10 +354,19 @@ N/A.
    `test:v11:facades` target.
 3. Active README guidance no longer recommends the retired facade parity script.
 4. No runtime/domain parity files are touched.
-5. Validation evidence is recorded for targeted stale-reference search,
-   `pnpm typecheck`, and `pnpm lint`; any skipped broader test is explicit.
+5. Implementation validation reports the targeted stale-reference search result
+   and targeted current contract-test result in the canonical handoff summary,
+   and attaches canonical actor emit `--ref` log paths for every executed
+   `pnpm` validation command, including at minimum the targeted current
+   contract-test command, `pnpm typecheck`, and `pnpm lint`. Any skipped broader
+   test is explicit.
+6. In `docs_only_context`, T1-T4 are not run, not satisfied, and not claimed;
+   handoffs attach no runtime validation log refs and affirmatively state
+   `runtime checks were intentionally not executed`.
 
 ## L2 - Implementation Notes
+
+Implementation pass:
 
 1. Start with a search for all migration-map exports and script references.
 2. Delete the retired map and sentinel test files only after consumers are
@@ -354,3 +374,12 @@ N/A.
 3. Update `package.json` aggregate scripts before running validation.
 4. Update README command guidance to match the new script surface.
 5. Run targeted stale-reference search before typecheck/lint.
+
+Document-only refinement pass:
+
+1. Use this mode only in `docs_only_context`.
+2. Edit only this task document.
+3. T1-T4 are not run, not satisfied, and not claimed.
+4. Attach no runtime validation log refs.
+5. Hand off with the affirmative statement
+   `runtime checks were intentionally not executed`.
