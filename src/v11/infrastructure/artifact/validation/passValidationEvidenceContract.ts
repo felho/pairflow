@@ -1,7 +1,7 @@
 import type { ReviewerTestExecutionDirective } from "../../../../v11/shared/reviewer/testEvidence.js"
 import type { ValidationCommandId } from "../../../shared/validation/validationCommandId.js"
 
-export const passValidationEvidenceSchemaVersion = 1 as const
+export const passValidationEvidenceSchemaVersion = 2 as const
 
 export type PassValidationCommandId = ValidationCommandId
 
@@ -13,6 +13,9 @@ export type PassValidationPolicyState =
 export interface PassValidationCommandSpec {
   kind: PassValidationCommandId
   command: string
+  targetId?: string
+  cwd?: string
+  targetPaths?: string[]
 }
 
 export interface PassValidationCommandResult {
@@ -21,6 +24,9 @@ export interface PassValidationCommandResult {
   exitCode: number
   logPath: string
   durationMs: number
+  targetId?: string
+  cwd?: string
+  targetPaths?: string[]
 }
 
 export interface PassValidationEvidenceArtifact {
@@ -37,6 +43,9 @@ export interface PassValidationEvidenceArtifact {
     exit_code?: number
     log_path?: string
     duration_ms?: number
+    target_id?: string
+    cwd?: string
+    target_paths?: string[]
   }>
   required_command_set_id: string | null
   trust_level: "trusted" | "untrusted"

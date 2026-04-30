@@ -636,6 +636,70 @@ describe("createBubble", () => {
     ]);
   });
 
+  it("materializes selected validation target metadata and commands into bubble config", async () => {
+    const repoPath = await createTempRepo();
+    await writeFile(
+      join(repoPath, "pairflow.toml"),
+      [
+        "[validation]",
+        'required = ["test"]',
+        "",
+        "[validation.commands]",
+        'typecheck = "pnpm typecheck:root"',
+        'test = "pnpm test:root"',
+        "",
+        "[validation.targets.web]",
+        'cwd = "apps/web"',
+        'paths = ["apps/web/**"]',
+        'required = ["lint", "typecheck", "test", "bootstrap"]',
+        "",
+        "[validation.targets.web.commands]",
+        'lint = "pnpm lint:web"',
+        'test = "pnpm test:web"',
+        'bootstrap = "pnpm bootstrap:web"',
+        ""
+      ].join("\n"),
+      "utf8"
+    );
+
+    const result = await createBubble({
+      id: "b_create_validation_target",
+      repoPath,
+      baseBranch: "main",
+      reviewArtifactType: "code",
+      task: "Validation target",
+      cwd: repoPath,
+      validationTarget: "web",
+      bootstrapCommand: "pnpm bootstrap:explicit"
+    });
+
+    expect(result.config.validation_target).toEqual({
+      id: "web",
+      cwd: "apps/web",
+      paths: ["apps/web/**"]
+    });
+    expect(result.config.commands).toMatchObject({
+      lint: "pnpm lint:web",
+      typecheck: "pnpm typecheck:root",
+      test: "pnpm test:web",
+      bootstrap: "pnpm bootstrap:explicit",
+      validation_required: ["lint", "typecheck", "test", "bootstrap"]
+    });
+    expect(result.config.commands.validation_required_explicit).toBeUndefined();
+
+    const bubbleToml = await readFile(result.paths.bubbleTomlPath, "utf8");
+    expect(bubbleToml).toContain("[validation_target]");
+    expect(bubbleToml).toContain('cwd = "apps/web"');
+    const reparsedConfig = parseBubbleConfigToml(bubbleToml);
+    expect(reparsedConfig.validation_target?.id).toBe("web");
+    expect(reparsedConfig.commands.validation_required).toEqual([
+      "lint",
+      "typecheck",
+      "test",
+      "bootstrap"
+    ]);
+  });
+
   it("persists explicit empty repo validation required policy into bubble config", async () => {
     const repoPath = await createTempRepo();
     await writeFile(

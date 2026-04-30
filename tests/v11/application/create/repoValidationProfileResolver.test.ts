@@ -1,6 +1,18 @@
-import { describe, expect, it } from "vitest";
+import { mkdir, mkdtemp, rm, symlink } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+
+import { afterEach, describe, expect, it } from "vitest";
 
 import { resolveRepoValidationProfileCommands } from "../../../../src/v11/application/create/repoValidationProfileResolver.js";
+
+const cleanupPaths: string[] = [];
+
+afterEach(async () => {
+  await Promise.all(
+    cleanupPaths.splice(0).map((path) => rm(path, { recursive: true, force: true }))
+  );
+});
 
 describe("resolveRepoValidationProfileCommands", () => {
   it("applies explicit, repo, then legacy precedence and preserves required order", () => {
@@ -176,5 +188,270 @@ describe("resolveRepoValidationProfileCommands", () => {
         }
       })
     ).toThrow(/Invalid validation command id/u);
+  });
+
+  it("materializes an explicit validation target with target/root/explicit precedence", () => {
+    const result = resolveRepoValidationProfileCommands({
+      explicitCommands: {
+        bootstrap: "pnpm bootstrap:explicit"
+      },
+      validationTarget: "web",
+      worktreePath: process.cwd(),
+      repoValidation: {
+        required: ["test"],
+        commands: {
+          typecheck: "pnpm typecheck:root",
+          test: "pnpm test:root",
+          bootstrap: "pnpm bootstrap:root"
+        },
+        targets: {
+          web: {
+            cwd: "apps/web",
+            paths: ["apps/web/**"],
+            required: ["lint", "typecheck", "test", "bootstrap"],
+            commands: {
+              lint: "pnpm lint:web",
+              test: "pnpm test:web",
+              bootstrap: "pnpm bootstrap:web"
+            }
+          }
+        }
+      },
+      legacyDefaults: {
+        test: "pnpm test",
+        typecheck: "pnpm typecheck"
+      }
+    });
+
+    expect(result).toEqual({
+      commands: {
+        test: "pnpm test:web",
+        typecheck: "pnpm typecheck:root",
+        lint: "pnpm lint:web",
+        bootstrap: "pnpm bootstrap:explicit"
+      },
+      validationRequired: ["lint", "typecheck", "test", "bootstrap"],
+      validationTarget: {
+        id: "web",
+        cwd: "apps/web",
+        paths: ["apps/web/**"]
+      }
+    });
+    expect(result.validationRequiredExplicit).toBeUndefined();
+  });
+
+  it("uses selected target required order instead of root validation.required", () => {
+    const result = resolveRepoValidationProfileCommands({
+      explicitCommands: {},
+      validationTarget: "web",
+      repoValidation: {
+        required: ["test"],
+        commands: {
+          lint: "pnpm lint",
+          test: "pnpm test:root"
+        },
+        targets: {
+          web: {
+            required: ["lint"],
+            commands: {}
+          }
+        }
+      },
+      legacyDefaults: {
+        test: "pnpm test",
+        typecheck: "pnpm typecheck"
+      }
+    });
+
+    expect(result.validationRequired).toEqual(["lint"]);
+    expect(result.commands.test).toBe("pnpm test:root");
+    expect(result.commands.lint).toBe("pnpm lint");
+  });
+
+  it("selects a unique default target and preserves explicit empty target policy", () => {
+    const result = resolveRepoValidationProfileCommands({
+      explicitCommands: {},
+      repoValidation: {
+        targets: {
+          web: {
+            default: true,
+            required: [],
+            commands: {}
+          }
+        }
+      },
+      legacyDefaults: {
+        test: "pnpm test",
+        typecheck: "pnpm typecheck"
+      }
+    });
+
+    expect(result.validationTarget).toEqual({ id: "web" });
+    expect(result.validationRequired).toEqual([]);
+    expect(result.validationRequiredExplicit).toBe(true);
+  });
+
+  it("fails fast for missing, unknown, ambiguous, and unresolved targets", () => {
+    expect(() =>
+      resolveRepoValidationProfileCommands({
+        explicitCommands: {},
+        validationTarget: "web",
+        legacyDefaults: {
+          test: "pnpm test",
+          typecheck: "pnpm typecheck"
+        }
+      })
+    ).toThrow(/VALIDATION_TARGETS_NOT_CONFIGURED/u);
+
+    expect(() =>
+      resolveRepoValidationProfileCommands({
+        explicitCommands: {},
+        validationTarget: "web",
+        repoValidation: {
+          targets: {
+            api: {
+              required: [],
+              commands: {}
+            }
+          }
+        },
+        legacyDefaults: {
+          test: "pnpm test",
+          typecheck: "pnpm typecheck"
+        }
+      })
+    ).toThrow(/VALIDATION_TARGET_UNKNOWN/u);
+
+    expect(() =>
+      resolveRepoValidationProfileCommands({
+        explicitCommands: {},
+        repoValidation: {
+          targets: {
+            web: { required: [], commands: {} }
+          }
+        },
+        legacyDefaults: {
+          test: "pnpm test",
+          typecheck: "pnpm typecheck"
+        }
+      })
+    ).toThrow(/VALIDATION_TARGET_DEFAULT_MISSING/u);
+
+    expect(() =>
+      resolveRepoValidationProfileCommands({
+        explicitCommands: {},
+        repoValidation: {
+          targets: {
+            web: { required: [], commands: {} },
+            api: { required: [], commands: {} }
+          }
+        },
+        legacyDefaults: {
+          test: "pnpm test",
+          typecheck: "pnpm typecheck"
+        }
+      })
+    ).toThrow(/VALIDATION_TARGET_AMBIGUOUS/u);
+
+    expect(() =>
+      resolveRepoValidationProfileCommands({
+        explicitCommands: {},
+        validationTarget: "web",
+        repoValidation: {
+          targets: {
+            web: {
+              required: ["fitness"],
+              commands: {}
+            }
+          }
+        },
+        legacyDefaults: {
+          test: "pnpm test",
+          typecheck: "pnpm typecheck"
+        }
+      })
+    ).toThrow(/VALIDATION_TARGET_REQUIRED_COMMAND_UNRESOLVED/u);
+  });
+
+  it("fails fast when a selected target cwd cannot be checked against a worktree", () => {
+    expect(() =>
+      resolveRepoValidationProfileCommands({
+        explicitCommands: {},
+        validationTarget: "web",
+        repoValidation: {
+          targets: {
+            web: {
+              cwd: "apps/web",
+              required: [],
+              commands: {}
+            }
+          }
+        },
+        legacyDefaults: {
+          test: "pnpm test",
+          typecheck: "pnpm typecheck"
+        }
+      })
+    ).toThrow(/VALIDATION_TARGET_CWD_OUTSIDE_WORKTREE/u);
+  });
+
+  it("can validate selected target cwd against a planned worktree path before it exists", async () => {
+    const repoParentPath = await mkdtemp(join(tmpdir(), "pairflow-target-parent-"));
+    cleanupPaths.push(repoParentPath);
+    const plannedWorktreePath = join(repoParentPath, "worktrees", "b_target");
+
+    const result = resolveRepoValidationProfileCommands({
+      explicitCommands: {},
+      validationTarget: "web",
+      worktreePath: plannedWorktreePath,
+      allowMissingWorktreePath: true,
+      repoValidation: {
+        targets: {
+          web: {
+            cwd: "apps/web",
+            required: ["typecheck"],
+            commands: {}
+          }
+        }
+      },
+      legacyDefaults: {
+        test: "pnpm test",
+        typecheck: "pnpm typecheck"
+      }
+    });
+
+    expect(result.validationTarget).toEqual({
+      id: "web",
+      cwd: "apps/web"
+    });
+  });
+
+  it("rejects selected target cwd that resolves through a symlink outside the worktree", async () => {
+    const worktreePath = await mkdtemp(join(tmpdir(), "pairflow-target-worktree-"));
+    const outsidePath = await mkdtemp(join(tmpdir(), "pairflow-target-outside-"));
+    cleanupPaths.push(worktreePath, outsidePath);
+    await mkdir(join(worktreePath, "apps"), { recursive: true });
+    await symlink(outsidePath, join(worktreePath, "apps", "web"));
+
+    expect(() =>
+      resolveRepoValidationProfileCommands({
+        explicitCommands: {},
+        validationTarget: "web",
+        worktreePath,
+        repoValidation: {
+          targets: {
+            web: {
+              cwd: "apps/web",
+              required: [],
+              commands: {}
+            }
+          }
+        },
+        legacyDefaults: {
+          test: "pnpm test",
+          typecheck: "pnpm typecheck"
+        }
+      })
+    ).toThrow(/VALIDATION_TARGET_CWD_OUTSIDE_WORKTREE/u);
   });
 });

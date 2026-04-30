@@ -20,6 +20,7 @@ export interface BubbleCreateCommandRuntimeOptions {
   reviewerBrief?: string;
   reviewerBriefFile?: string;
   bootstrapCommand?: string;
+  validationTarget?: string;
   pairflowCommandProfile?: BubbleCreateInput["pairflowCommandProfile"];
   accuracyCritical?: boolean;
   remote?: string;
@@ -78,6 +79,9 @@ export function buildCreateBubbleInput(
       : {}),
     ...(options.bootstrapCommand !== undefined
       ? { bootstrapCommand: options.bootstrapCommand }
+      : {}),
+    ...(options.validationTarget !== undefined
+      ? { validationTarget: options.validationTarget }
       : {}),
     ...(options.pairflowCommandProfile !== undefined
       ? { pairflowCommandProfile: options.pairflowCommandProfile }

@@ -18,6 +18,7 @@ import {
   CREATE_REMOTE_ALIAS_INVALID,
   parseCreateRemoteAlias
 } from "./createRemoteAlias.js";
+import { isValidationTargetId } from "../../shared/validation/validationTargetId.js";
 
 export interface BubbleCreateParsedValues {
   id?: string;
@@ -31,6 +32,7 @@ export interface BubbleCreateParsedValues {
   "reviewer-brief"?: string;
   "reviewer-brief-file"?: string;
   "bootstrap-command"?: string;
+  "validation-target"?: string;
   "pairflow-command-profile"?: string;
   "accuracy-critical"?: boolean;
   remote?: string;
@@ -42,6 +44,7 @@ export interface CreateValidationState {
   reviewArtifactTypeValidationError: string | undefined;
   pairflowCommandProfileValidationError: string | undefined;
   remoteValidationError: string | undefined;
+  validationTargetValidationError: string | undefined;
 }
 
 function parseRemoteAlias(
@@ -79,6 +82,19 @@ export function collectCreateValidationState(
   if (remote !== undefined) {
     options.remote = remote;
   }
+  let validationTargetValidationError: string | undefined;
+  if (values["validation-target"] !== undefined) {
+    const validationTarget = values["validation-target"].trim();
+    if (validationTarget.length === 0) {
+      validationTargetValidationError =
+        "VALIDATION_TARGET_ID_INVALID: --validation-target must be a non-empty validation target id.";
+    } else if (!isValidationTargetId(validationTarget)) {
+      validationTargetValidationError =
+        "VALIDATION_TARGET_ID_INVALID: --validation-target must use a valid validation target id.";
+    } else {
+      options.validationTarget = validationTarget;
+    }
+  }
 
   const {
     isReviewArtifactTypeMissing,
@@ -96,7 +112,8 @@ export function collectCreateValidationState(
     isReviewArtifactTypeMissing,
     reviewArtifactTypeValidationError,
     pairflowCommandProfileValidationError,
-    remoteValidationError
+    remoteValidationError,
+    validationTargetValidationError
   };
 }
 
@@ -171,6 +188,12 @@ export function throwMissingCreateOptionsError(state: CreateValidationState): ne
       CREATE_REMOTE_ALIAS_INVALID
     );
   }
+  if (state.validationTargetValidationError !== undefined) {
+    throw toCreateCommandReasonCodeError(
+      `${state.validationTargetValidationError}${formatAlsoMissingOptions(state.missing)}`,
+      "VALIDATION_TARGET_ID_INVALID"
+    );
+  }
   throw toCreateCommandError(
     `CREATE_REQUIRED_OPTIONS_MISSING: Missing required options: ${state.missing.join(", ")}`
   );
@@ -193,6 +216,12 @@ export function throwCreateValidationErrors(state: CreateValidationState): void 
     throw toCreateCommandReasonCodeError(
       state.remoteValidationError,
       CREATE_REMOTE_ALIAS_INVALID
+    );
+  }
+  if (state.validationTargetValidationError !== undefined) {
+    throw toCreateCommandReasonCodeError(
+      state.validationTargetValidationError,
+      "VALIDATION_TARGET_ID_INVALID"
     );
   }
 }

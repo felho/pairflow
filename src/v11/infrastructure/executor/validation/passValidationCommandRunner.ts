@@ -3,11 +3,13 @@ import { mkdir, open, type FileHandle } from "node:fs/promises"
 import { join } from "node:path"
 
 import type { PassValidationCommandId } from "../../artifact/validation/passValidationEvidence.js"
+import { resolveValidationTargetCwd } from "../../../shared/validation/validationTargetPaths.js"
 
 interface PassValidationRunnerErrorContext {
   command?: string
   reason?: string
   worktreePath?: string
+  cwd?: string
 }
 
 export class PassValidationRunnerExecutionError extends Error {
@@ -43,6 +45,7 @@ export interface RunPassValidationCommandInput {
   kind: PassValidationCommandId
   command: string
   worktreePath: string
+  cwd?: string
 }
 
 export interface RunPassValidationCommandDependencies {
@@ -84,6 +87,36 @@ function toPassValidationStageError(input: {
   return new PassValidationRunnerExecutionError(input)
 }
 
+function hasNestedFilesystemErrorCode(
+  error: unknown,
+  codes: readonly string[]
+): boolean {
+  if (typeof error !== "object" || error === null) {
+    return false
+  }
+  const maybeError = error as { code?: unknown; cause?: unknown }
+  if (
+    typeof maybeError.code === "string"
+    && codes.includes(maybeError.code)
+  ) {
+    return true
+  }
+  return hasNestedFilesystemErrorCode(maybeError.cause, codes)
+}
+
+function classifyPreHeaderFailureReason(input: {
+  cwd?: string
+  error: unknown
+}): string {
+  if (
+    input.cwd !== undefined
+    && hasNestedFilesystemErrorCode(input.error, ["ENOENT", "ENOTDIR"])
+  ) {
+    return "validation_target_worktree_missing"
+  }
+  return "prepare_log_file_failed"
+}
+
 async function appendStreamToHandle(
   stream: NodeJS.ReadableStream,
   appendChunk: (chunk: string | Buffer) => Promise<void>
@@ -97,6 +130,7 @@ async function preparePassValidationLogFile(input: {
   kind: PassValidationCommandId
   command: string
   worktreePath: string
+  executionCwd: string
   mkdirFn: typeof mkdir
   openFn: typeof open
   relativeLogPath: string
@@ -106,15 +140,21 @@ async function preparePassValidationLogFile(input: {
     recursive: true
   })
   const fileHandle = await input.openFn(absoluteLogPath, "w")
-  await fileHandle.writeFile(
-    [
-      `# pairflow pass validation`,
-      `kind=${input.kind}`,
-      `command=${input.command}`,
-      `cwd=${input.worktreePath}`,
-      ""
-    ].join("\n")
-  )
+  try {
+    await fileHandle.writeFile(
+      [
+        `# pairflow pass validation`,
+        `kind=${input.kind}`,
+        `command=${input.command}`,
+        `cwd=${input.executionCwd}`,
+        `worktree=${input.worktreePath}`,
+        ""
+      ].join("\n")
+    )
+  } catch (error) {
+    await fileHandle.close().catch(() => undefined)
+    throw error
+  }
   return fileHandle
 }
 
@@ -169,6 +209,7 @@ async function executePassValidationChild(input: {
   runInput: RunPassValidationCommandInput
   relativeLogPath: string
   startedAt: number
+  executionCwd: string
   now: () => number
   settle: Promise<
     { exitCode: number } | { error: PassValidationRunnerExecutionError }
@@ -178,6 +219,7 @@ async function executePassValidationChild(input: {
   exitCode: number
   logPath: string
   durationMs: number
+  executionCwd: string
 }> {
   const stdout = input.child.stdout
   const stderr = input.child.stderr
@@ -256,7 +298,8 @@ async function executePassValidationChild(input: {
     command: input.runInput.command,
     exitCode,
     logPath: input.relativeLogPath,
-    durationMs
+    durationMs,
+    executionCwd: input.executionCwd
   }
 }
 
@@ -268,6 +311,7 @@ export async function runPassValidationCommand(
   exitCode: number
   logPath: string
   durationMs: number
+  executionCwd: string
 }> {
   const mkdirFn = dependencies.mkdir ?? mkdir
   const openFn = dependencies.open ?? open
@@ -275,13 +319,21 @@ export async function runPassValidationCommand(
   const now = dependencies.now ?? (() => Date.now())
 
   const relativeLogPath = buildLogPath(input.kind)
-
   let fileHandle: FileHandle | undefined
+  let executionCwd: string
   try {
+    executionCwd =
+      input.cwd !== undefined
+        ? resolveValidationTargetCwd({
+            worktreePath: input.worktreePath,
+            cwd: input.cwd
+          })
+        : input.worktreePath
     fileHandle = await preparePassValidationLogFile({
       kind: input.kind,
       command: input.command,
       worktreePath: input.worktreePath,
+      executionCwd,
       mkdirFn,
       openFn,
       relativeLogPath
@@ -295,8 +347,12 @@ export async function runPassValidationCommand(
       cause: error,
       context: {
         command: input.command,
-        reason: "prepare_log_file_failed",
-        worktreePath: input.worktreePath
+        reason: classifyPreHeaderFailureReason({
+          ...(input.cwd !== undefined ? { cwd: input.cwd } : {}),
+          error
+        }),
+        worktreePath: input.worktreePath,
+        ...(input.cwd !== undefined ? { cwd: input.cwd } : {})
       }
     })
   }
@@ -306,7 +362,7 @@ export async function runPassValidationCommand(
   let child: ReturnType<typeof spawnFn>
   try {
     child = spawnFn("bash", ["-lc", input.command], {
-      cwd: input.worktreePath,
+      cwd: executionCwd,
       stdio: ["ignore", "pipe", "pipe"]
     })
   } catch (error) {
@@ -319,7 +375,8 @@ export async function runPassValidationCommand(
       context: {
         command: input.command,
         reason: "spawn_call_failed",
-        worktreePath: input.worktreePath
+        worktreePath: input.worktreePath,
+        ...(input.cwd !== undefined ? { cwd: input.cwd } : {})
       }
     })
   }
@@ -337,6 +394,7 @@ export async function runPassValidationCommand(
       runInput: input,
       relativeLogPath,
       startedAt,
+      executionCwd,
       now,
       settle
     })

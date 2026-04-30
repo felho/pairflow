@@ -33,6 +33,7 @@ export interface BubbleCreateInput {
   testCommand?: string;
   typecheckCommand?: string;
   bootstrapCommand?: string;
+  validationTarget?: string;
   openCommand?: string;
   pairflowCommandProfile?: PairflowCommandProfile;
 }

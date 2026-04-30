@@ -116,7 +116,8 @@ describe("normalPassFlowInvocationBuilders", () => {
         command: "pnpm typecheck",
         exitCode: 0,
         logPath: ".pairflow/evidence/pass-validation-typecheck.log",
-        durationMs: 1
+        durationMs: 1,
+        executionCwd: "/tmp/worktree"
       }),
       buildPassValidationEvidenceArtifact: async () => ({}) as never,
       writePassValidationEvidenceArtifact: async () => undefined,

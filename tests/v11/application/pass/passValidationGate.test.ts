@@ -73,7 +73,8 @@ describe("resolvePassValidationForPass", () => {
           command,
           exitCode: 0,
           logPath: `.pairflow/evidence/pass-validation-${kind}.log`,
-          durationMs: 5
+          durationMs: 5,
+          executionCwd: "/tmp/worktree"
         }),
         buildPassValidationEvidenceArtifact: async () => ({}) as never,
         writePassValidationEvidenceArtifact: async (path) => {
@@ -130,7 +131,8 @@ describe("resolvePassValidationForPass", () => {
             command,
             exitCode: 0,
             logPath: `.pairflow/evidence/pass-validation-${kind}.log`,
-            durationMs: 5
+            durationMs: 5,
+            executionCwd: "/tmp/worktree"
           };
         },
         buildPassValidationEvidenceArtifact: async () => ({}) as never,
@@ -144,6 +146,73 @@ describe("resolvePassValidationForPass", () => {
       ".pairflow/evidence/pass-validation-fitness.log"
     ]);
     expect(result.reviewerTestDirective?.reason_detail).toContain("fitness");
+  });
+
+  it("preserves selected target paths through execution result and evidence build input", async () => {
+    const runnerInputs: Array<{ cwd?: string }> = [];
+    let evidenceCommands:
+      | Array<{
+          targetId?: string;
+          cwd?: string;
+          targetPaths?: string[];
+        }>
+      | undefined;
+
+    await resolvePassValidationForPass(
+      {
+        senderRole: "implementer",
+        bubbleId: "b_pass_validation_gate_01",
+        bubbleConfig: {
+          ...createBubbleConfig(),
+          validation_target: {
+            id: "web",
+            cwd: "apps/web",
+            paths: ["apps/web/**", "packages/ui/**"]
+          },
+          commands: {
+            ...createBubbleConfig().commands,
+            validation_required: ["typecheck"]
+          }
+        },
+        worktreePath: "/tmp/worktree",
+        artifactsDir: "/tmp/artifacts",
+        round: 2,
+        now: new Date("2026-03-28T10:00:00.000Z"),
+        createError: (input) => new Error(toErrorMessage(input))
+      },
+      {
+        runPassValidationCommand: async ({ command, cwd }) => {
+          runnerInputs.push(cwd !== undefined ? { cwd } : {});
+          return {
+            command,
+            exitCode: 0,
+            logPath: ".pairflow/evidence/pass-validation-typecheck.log",
+            durationMs: 5,
+            executionCwd: "/tmp/worktree/apps/web"
+          };
+        },
+        buildPassValidationEvidenceArtifact: async (input) => {
+          evidenceCommands = input.commands;
+          return {} as never;
+        },
+        writePassValidationEvidenceArtifact: async () => undefined,
+        writePassValidationReviewerCompatibilityArtifact: async () => undefined
+      }
+    );
+
+    expect(runnerInputs).toEqual([{ cwd: "apps/web" }]);
+    expect(evidenceCommands).toEqual([
+      {
+        kind: "typecheck",
+        command: "pnpm typecheck",
+        exitCode: 0,
+        logPath: ".pairflow/evidence/pass-validation-typecheck.log",
+        durationMs: 5,
+        targetId: "web",
+        cwd: "/tmp/worktree/apps/web",
+        targetPaths: ["apps/web/**", "packages/ui/**"]
+      }
+    ]);
   });
 
   it("fails closed when configured policy references a missing command", async () => {
@@ -199,7 +268,8 @@ describe("resolvePassValidationForPass", () => {
             command: "noop",
             exitCode: 0,
             logPath: ".pairflow/evidence/noop.log",
-            durationMs: 0
+            durationMs: 0,
+            executionCwd: "/tmp/worktree"
           };
         },
         buildPassValidationEvidenceArtifact: async () => ({}) as never,
@@ -391,7 +461,8 @@ describe("resolvePassValidationForPass", () => {
               command: "noop",
               exitCode: 0,
               logPath: ".pairflow/evidence/noop.log",
-              durationMs: 0
+              durationMs: 0,
+              executionCwd: "/tmp/worktree"
             };
           }
         }
@@ -428,7 +499,8 @@ describe("resolvePassValidationForPass", () => {
               command: "noop",
               exitCode: 0,
               logPath: ".pairflow/evidence/noop.log",
-              durationMs: 0
+              durationMs: 0,
+              executionCwd: "/tmp/worktree"
             };
           }
         }

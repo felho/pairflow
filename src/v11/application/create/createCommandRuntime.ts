@@ -310,6 +310,9 @@ export function buildBubbleConfig(input: CreateBubbleConfigInput): BubbleConfig 
       meta_review_auto_rework_min_severity:
         DEFAULT_REVIEW_POLICY_AUTO_REWORK_MIN_SEVERITY
     },
+    ...(input.resolvedValidationCommands?.validationTarget !== undefined
+      ? { validation_target: input.resolvedValidationCommands.validationTarget }
+      : {}),
     agents: {
       implementer: input.implementer ?? "codex",
       reviewer: input.reviewer ?? "claude",

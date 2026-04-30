@@ -329,6 +329,7 @@ Rules:
 | No `validation.targets` and no explicit target | Preserve Task 1 behavior. | repo config parser + create resolver | P1 | required-now |
 | Explicit target but no `validation.targets` or an empty target map | Fail create with `VALIDATION_TARGETS_NOT_CONFIGURED`; do not silently ignore the option. This error takes precedence over unknown-target wording. | create CLI validation / create resolver before persistence | P1 | required-now |
 | Explicit unknown target when a non-empty target map exists | Fail create with `VALIDATION_TARGET_UNKNOWN`. | create resolver before persistence | P1 | required-now |
+| Single target and no explicit/default target | Fail create with `VALIDATION_TARGET_DEFAULT_MISSING`; do not silently choose the only target unless it is declared default. | create resolver before persistence | P1 | required-now |
 | Multiple targets and no explicit/default target | Fail create with `VALIDATION_TARGET_AMBIGUOUS`. | create resolver before persistence | P1 | required-now |
 | More than one default target | Fail config validation with `VALIDATION_TARGET_DEFAULT_NOT_UNIQUE`. | repo config parser/validator | P1 | required-now |
 | Malformed or reserved target id | Fail config validation with `VALIDATION_TARGET_ID_INVALID`. | repo config parser/validator | P1 | required-now |

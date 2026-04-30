@@ -156,10 +156,15 @@ export async function prepareCreateBubbleFlowContext(input: {
         ...(input.command.typecheckCommand !== undefined
           ? { typecheck: input.command.typecheckCommand }
           : {}),
-        ...(input.command.bootstrapCommand !== undefined
+      ...(input.command.bootstrapCommand !== undefined
           ? { bootstrap: input.command.bootstrapCommand }
           : {})
       },
+      ...(input.command.validationTarget !== undefined
+        ? { validationTarget: input.command.validationTarget }
+        : {}),
+      worktreePath: paths.worktreePath,
+      allowMissingWorktreePath: true,
       ...(repoConfig.validation !== undefined
         ? { repoValidation: repoConfig.validation }
         : {}),

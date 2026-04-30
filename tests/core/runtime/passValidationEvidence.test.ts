@@ -11,8 +11,10 @@ import {
   readPassValidationRecoveryMarker,
   resolvePassValidationRecoveryRepoMarkerPath,
   resolvePassValidationRecoveryWorktreeMarkerPath,
+  resolvePassValidationPolicy,
   type PassValidationEvidenceArtifact
 } from "../../../src/v11/infrastructure/artifact/validation/passValidationEvidence.js"
+import { parseBubbleConfigToml } from "../../../src/config/bubbleConfig.js"
 import { initGitRepository } from "../../helpers/git.js"
 
 async function createRepoFixture() {
@@ -76,6 +78,159 @@ afterEach(async () => {
       await rm(next, { recursive: true, force: true })
     }
   }
+})
+
+describe("resolvePassValidationPolicy target metadata", () => {
+  it("copies selected target audit metadata without inferring missing policy", () => {
+    const config = parseBubbleConfigToml(`
+id = "b_target_policy"
+repo_path = "/tmp/repo"
+base_branch = "main"
+bubble_branch = "bubble/b_target_policy"
+
+[validation_target]
+id = "web"
+cwd = "apps/web"
+paths = ["apps/web/**", "packages/ui/**"]
+
+[agents]
+implementer = "codex"
+reviewer = "claude"
+
+[commands]
+test = "pnpm test"
+typecheck = "pnpm typecheck"
+validation_required = ["typecheck"]
+`)
+
+    expect(resolvePassValidationPolicy(config).commands).toEqual([
+      {
+        kind: "typecheck",
+        command: "pnpm typecheck",
+        targetId: "web",
+        cwd: "apps/web",
+        targetPaths: ["apps/web/**", "packages/ui/**"]
+      }
+    ])
+
+    const missingPolicy = resolvePassValidationPolicy({
+      ...config,
+      commands: {
+        test: "pnpm test",
+        typecheck: "pnpm typecheck"
+      }
+    })
+    expect(missingPolicy.policyState).toBe("policy_missing")
+    expect(missingPolicy.commands).toEqual([])
+  })
+
+  it("treats validation_required_explicit=false as configured empty policy, not explicit null", () => {
+    const config = parseBubbleConfigToml(`
+id = "b_false_explicit"
+repo_path = "/tmp/repo"
+base_branch = "main"
+bubble_branch = "bubble/b_false_explicit"
+
+[agents]
+implementer = "codex"
+reviewer = "claude"
+
+[commands]
+test = "pnpm test"
+typecheck = "pnpm typecheck"
+validation_required = []
+validation_required_explicit = false
+`)
+
+    const policy = resolvePassValidationPolicy(config)
+    expect(policy.policyState).toBe("policy_configured")
+    expect(policy.requiredCommandSetId).toBe("configured-empty")
+    expect(policy.invalidReason).toContain("validation_required_explicit=true")
+  })
+
+  it("uses only bubble config authority even when repo pairflow.toml conflicts", async () => {
+    const fixture = await createRepoFixture()
+    tempDirs.push(fixture.repoPath)
+    await writeFile(
+      join(fixture.repoPath, "pairflow.toml"),
+      [
+        "[validation.targets.api]",
+        'cwd = "outside"',
+        'required = ["lint"]',
+        "",
+        "[validation.targets.api.commands]",
+        'lint = "pnpm lint:repo"',
+        ""
+      ].join("\n"),
+      "utf8"
+    )
+
+    const config = parseBubbleConfigToml(`
+id = "b_bubble_authority"
+repo_path = "${fixture.repoPath}"
+base_branch = "main"
+bubble_branch = "bubble/b_bubble_authority"
+
+[validation_target]
+id = "web"
+cwd = "apps/web"
+paths = ["apps/web/**"]
+
+[agents]
+implementer = "codex"
+reviewer = "claude"
+
+[commands]
+test = "pnpm test"
+typecheck = "pnpm typecheck:bubble"
+validation_required = ["typecheck"]
+`)
+
+    expect(resolvePassValidationPolicy(config).commands).toEqual([
+      {
+        kind: "typecheck",
+        command: "pnpm typecheck:bubble",
+        targetId: "web",
+        cwd: "apps/web",
+        targetPaths: ["apps/web/**"]
+      }
+    ])
+  })
+
+  it("includes selected target audit metadata in PASS evidence artifacts", async () => {
+    const fixture = await createRepoFixture()
+    tempDirs.push(fixture.repoPath)
+
+    const artifact = await buildPassValidationEvidenceArtifact({
+      bubbleId: "b_target_evidence",
+      round: 1,
+      generatedAt: "2026-03-28T10:00:00.000Z",
+      worktreePath: fixture.repoPath,
+      policyState: "policy_configured",
+      requiredCommandSetId: "typecheck",
+      trustLevel: "trusted",
+      trustReasonCode: "no_trigger",
+      commands: [
+        {
+          kind: "typecheck",
+          command: "pnpm typecheck",
+          exitCode: 0,
+          logPath: ".pairflow/evidence/typecheck.log",
+          durationMs: 5,
+          targetId: "web",
+          cwd: "apps/web",
+          targetPaths: ["apps/web/**", "packages/ui/**"]
+        }
+      ]
+    })
+
+    expect(artifact.commands[0]).toMatchObject({
+      target_id: "web",
+      cwd: "apps/web",
+      target_paths: ["apps/web/**", "packages/ui/**"]
+    })
+    expect(artifact.schema_version).toBe(2)
+  })
 })
 
 describe("evaluatePassValidationEvidenceReuse", () => {

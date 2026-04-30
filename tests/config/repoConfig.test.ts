@@ -167,11 +167,157 @@ validation_required = "pnpm test"
     ).toThrow(SchemaValidationError);
   });
 
-  it("rejects unsupported target-specific validation fields", () => {
+  it("parses validation targets using supported section syntax", () => {
+    const parsed = parsePairflowRepoConfigToml(`
+[validation]
+required = ["typecheck"]
+
+[validation.commands]
+typecheck = "pnpm typecheck"
+
+[validation.targets.web]
+default = true
+cwd = "apps/web"
+paths = ["apps/web/**", "packages/ui/**"]
+required = ["lint", "typecheck", "test"]
+
+[validation.targets.web.commands]
+lint = "pnpm --filter web lint"
+test = "pnpm --filter web test"
+`);
+
+    expect(parsed.validation?.targets?.web).toEqual({
+      default: true,
+      cwd: "apps/web",
+      paths: ["apps/web/**", "packages/ui/**"],
+      required: ["lint", "typecheck", "test"],
+      commands: {
+        lint: "pnpm --filter web lint",
+        test: "pnpm --filter web test"
+      }
+    });
+  });
+
+  it("rejects duplicate default targets", () => {
+    try {
+      parsePairflowRepoConfigToml(`
+[validation.targets.web]
+default = true
+required = []
+
+[validation.targets.web.commands]
+lint = "pnpm lint"
+
+[validation.targets.api]
+default = true
+required = []
+
+[validation.targets.api.commands]
+test = "pnpm test"
+`);
+      throw new Error("Expected parsePairflowRepoConfigToml to throw.");
+    } catch (error) {
+      expect(error).toBeInstanceOf(SchemaValidationError);
+      expect((error as SchemaValidationError).errors[0]?.message).toMatch(
+        /VALIDATION_TARGET_DEFAULT_NOT_UNIQUE/u
+      );
+    }
+  });
+
+  it("rejects malformed target ids, cwd, selectors, and commands shape", () => {
+    try {
+      parsePairflowRepoConfigToml(`
+[validation.targets.lint]
+required = []
+
+[validation.targets.lint.commands]
+test = "pnpm test"
+`);
+      throw new Error("Expected parsePairflowRepoConfigToml to throw.");
+    } catch (error) {
+      expect(error).toBeInstanceOf(SchemaValidationError);
+      expect((error as SchemaValidationError).errors[0]?.message).toMatch(
+        /VALIDATION_TARGET_ID_INVALID/u
+      );
+    }
+
+    try {
+      parsePairflowRepoConfigToml(`
+[validation.targets.web]
+cwd = "apps/*"
+required = []
+
+[validation.targets.web.commands]
+test = "pnpm test"
+`);
+      throw new Error("Expected parsePairflowRepoConfigToml to throw.");
+    } catch (error) {
+      expect(error).toBeInstanceOf(SchemaValidationError);
+      expect((error as SchemaValidationError).errors[0]?.message).toMatch(
+        /VALIDATION_TARGET_CWD_INVALID/u
+      );
+    }
+
+    try {
+      parsePairflowRepoConfigToml(`
+[validation.targets.web]
+cwd = 123
+required = []
+
+[validation.targets.web.commands]
+test = "pnpm test"
+`);
+      throw new Error("Expected parsePairflowRepoConfigToml to throw.");
+    } catch (error) {
+      expect(error).toBeInstanceOf(SchemaValidationError);
+      expect((error as SchemaValidationError).errors[0]?.message).toMatch(
+        /VALIDATION_TARGET_CWD_INVALID/u
+      );
+    }
+
+    try {
+      parsePairflowRepoConfigToml(`
+[validation.targets.web]
+cwd = "../web"
+required = []
+
+[validation.targets.web.commands]
+test = "pnpm test"
+`);
+      throw new Error("Expected parsePairflowRepoConfigToml to throw.");
+    } catch (error) {
+      expect(error).toBeInstanceOf(SchemaValidationError);
+      const messages = (error as SchemaValidationError).errors
+        .map((entry) => entry.message)
+        .join("\n");
+      expect(messages).toMatch(/VALIDATION_TARGET_CWD_INVALID/u);
+      expect(messages).not.toMatch(/VALIDATION_TARGET_PATH_SELECTOR_INVALID/u);
+    }
+
+    try {
+      parsePairflowRepoConfigToml(`
+[validation.targets.web]
+paths = ["apps\\\\web"]
+required = []
+
+[validation.targets.web.commands]
+test = "pnpm test"
+`);
+      throw new Error("Expected parsePairflowRepoConfigToml to throw.");
+    } catch (error) {
+      expect(error).toBeInstanceOf(SchemaValidationError);
+      const messages = (error as SchemaValidationError).errors
+        .map((entry) => entry.message)
+        .join("\n");
+      expect(messages).toMatch(/VALIDATION_TARGET_PATH_SELECTOR_INVALID/u);
+      expect(messages).not.toMatch(/VALIDATION_TARGET_CWD_INVALID/u);
+    }
+
     expect(() =>
       parsePairflowRepoConfigToml(`
-[validation]
-targets = ["web"]
+[validation.targets.web]
+commands = "pnpm test"
+required = []
 `)
     ).toThrow(SchemaValidationError);
   });

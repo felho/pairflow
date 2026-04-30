@@ -17,6 +17,7 @@ import {
   validateBubbleConfigRemoteReferences,
   validateBubbleConfig
 } from "../../src/config/bubbleConfig.js";
+import { SchemaValidationError } from "../../src/v11/shared/validation/primitives.js";
 
 const baseToml = `
 id = "b_test_01"
@@ -229,6 +230,71 @@ meta_review_consecutive_clean_runs_required = 2
     expect(rendered).toContain('lint = "pnpm lint"');
     expect(rendered).toContain('validation_required = ["lint", "typecheck", "test"]');
     expect(rendered).not.toContain("validation_required_explicit = false");
+  });
+
+  it("roundtrips explicit empty pass validation policy", () => {
+    const config = parseBubbleConfigToml(
+      `${baseToml}validation_required = []\nvalidation_required_explicit = true\n`
+    );
+
+    expect(config.commands.validation_required).toEqual([]);
+    expect(config.commands.validation_required_explicit).toBe(true);
+
+    const rendered = renderBubbleConfigToml(config);
+    expect(rendered).toContain("validation_required = []");
+    expect(rendered).toContain("validation_required_explicit = true");
+    expect(parseBubbleConfigToml(rendered).commands).toMatchObject({
+      validation_required: [],
+      validation_required_explicit: true
+    });
+  });
+
+  it("parses and roundtrips selected validation target metadata", () => {
+    const config = parseBubbleConfigToml(`${baseToml}
+[validation_target]
+id = "web"
+cwd = "apps/web"
+paths = ["apps/web/**", "packages/ui/**"]
+`);
+
+    expect(config.validation_target).toEqual({
+      id: "web",
+      cwd: "apps/web",
+      paths: ["apps/web/**", "packages/ui/**"]
+    });
+
+    const rendered = renderBubbleConfigToml(config);
+    expect(rendered).toContain("[validation_target]");
+    expect(rendered).toContain('id = "web"');
+    expect(rendered).toContain('cwd = "apps/web"');
+    expect(parseBubbleConfigToml(rendered).validation_target).toEqual(
+      config.validation_target
+    );
+  });
+
+  it("rejects validation target metadata without id", () => {
+    expect(() =>
+      parseBubbleConfigToml(`${baseToml}
+[validation_target]
+cwd = "apps/web"
+`)
+    ).toThrow(/Invalid bubble config/u);
+  });
+
+  it("rejects reserved validation target ids", () => {
+    try {
+      parseBubbleConfigToml(`${baseToml}
+[validation_target]
+id = "test"
+cwd = "apps/web"
+`)
+      throw new Error("Expected parseBubbleConfigToml to throw.");
+    } catch (error) {
+      expect(error).toBeInstanceOf(SchemaValidationError);
+      expect((error as SchemaValidationError).errors[0]?.message).toMatch(
+        /Target id must not be reserved/u
+      );
+    }
   });
 
   it("parses and renders custom validation commands", () => {
