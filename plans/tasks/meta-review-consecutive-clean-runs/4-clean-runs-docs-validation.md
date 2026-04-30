@@ -5,7 +5,7 @@ task_family_id: clean-runs-docs-validation
 sequence_key: "4"
 task_id: 4-clean-runs-docs-validation
 title: "Meta-Review Consecutive Clean Runs Docs and Validation"
-status: implementable
+status: in_progress
 phase: phase4
 target_files:
   - README.md
@@ -20,7 +20,7 @@ system_context_ref: docs/pairflow-initial-design.md
 owners:
   - "felho"
 doc_bubble_id: clean-runs-docs-validation-doc
-impl_bubble_id: null
+impl_bubble_id: clean-runs-docs-validation-impl
 supersedes: []
 superseded_by: null
 archive_group: 2026-04-27-meta-review-consecutive-clean-runs-plan-v1
