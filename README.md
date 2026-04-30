@@ -412,7 +412,7 @@ For command-level details and full end-to-end CLI flows, see [API & CLI referenc
 # Choose one create variant, then run start
 
 # Create (inline task)
-pairflow bubble create --id <id> --repo <repo> --base main --review-artifact-type <document|code> --task "<task>"
+pairflow bubble create --id <id> --repo <repo> --base main --review-artifact-type <document|code> --task "<task>" [--validation-target <id>]
 
 # Create (task file)
 pairflow bubble create --id <id> --repo <repo> --base main --review-artifact-type <document|code> --task-file <path>
@@ -888,7 +888,7 @@ Unsupported pairs such as `(P2, 2)` must display as custom/unsupported rather th
 
 | Command | Description |
 |---------|-------------|
-| `bubble create --id <id> --repo <path> --base <branch> --review-artifact-type <document\|code> ((--task <text> \| --task-file <path>) \| --ideation) [--remote <host>] [--reviewer-brief <text> \| --reviewer-brief-file <path>] [--accuracy-critical]` | Initialize a new bubble (task-based or taskless ideation mode, local or remote) |
+| `bubble create --id <id> --repo <path> --base <branch> --review-artifact-type <document\|code> ((--task <text> \| --task-file <path>) \| --ideation) [--validation-target <id>] [--remote <host>] [--reviewer-brief <text> \| --reviewer-brief-file <path>] [--accuracy-critical]` | Initialize a new bubble (task-based or taskless ideation mode, local or remote); `--validation-target` selects a configured repo validation target at create time |
 | `bubble kickoff --id <id> (--task <text> \| --task-file <path>) [--repo <path>]` | Activate a taskless ideation bubble (round `0` -> `1`) |
 | `bubble start --id <id> [--repo <path>]` | Start a bubble (worktree + tmux) |
 | `bubble restart --id <id> [--repo <path>]` | Restart a bubble runtime (tmux/session cleanup + start) |

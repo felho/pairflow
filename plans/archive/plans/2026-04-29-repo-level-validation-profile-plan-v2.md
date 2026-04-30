@@ -4,7 +4,7 @@ artifact_id: plan_repo_level_validation_profile_v2
 plan_id: repo-level-validation-profile-plan-v2
 created_on: "2026-04-29"
 title: "Repo-Level Validation Profile Plan V2"
-plan_status: in_progress
+plan_status: done
 prd_ref: null
 task_order:
   - 1-repo-validation-profile-base
@@ -15,10 +15,10 @@ task_tracker:
     status: archived
     notes: "First implementation slice: parse repo-level validation config and inherit it into new bubble command config."
   - task_id: 2-validation-target-resolution
-    task_path: plans/tasks/repo-level-validation-profile-plan-v2/2-validation-target-resolution.md
-    status: in_progress
-    notes: "Deferred multi-target/monorepo slice. Do not implement before Task 1 is complete."
-active_task_id: 2-validation-target-resolution
+    task_path: plans/archive/tasks/2026-04-29-repo-level-validation-profile-plan-v2/2-validation-target-resolution.md
+    status: archived
+    notes: "Implemented deterministic validation target resolution, create-time target selection, persisted target metadata, and PASS target cwd execution."
+active_task_id: null
 archive_group: 2026-04-29-repo-level-validation-profile-plan-v2
 supersedes: []
 owners:
@@ -275,6 +275,8 @@ Acceptance:
 11. Unsupported multi-target fields fail with a phase-boundary error.
 
 ### Task 2: Validation Target Resolution
+
+Status: archived. Implemented deterministic multi-target validation target resolution, `--validation-target` create-time selection, selected target metadata persistence, and PASS target cwd execution from the created bubble config.
 
 Goal: add deterministic multi-target support after Task 1 is complete.
 
