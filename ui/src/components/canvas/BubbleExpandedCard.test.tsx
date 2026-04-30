@@ -81,7 +81,7 @@ describe("BubbleExpandedCard", () => {
     });
   });
 
-  it("renders the generic approval package card in ready-for-human-approval", () => {
+  it("does not render a separate approval package card in ready-for-human-approval", () => {
     renderExpandedCard({
       bubbleState: "READY_FOR_HUMAN_APPROVAL",
       detail: bubbleDetail({
@@ -91,132 +91,8 @@ describe("BubbleExpandedCard", () => {
       })
     });
 
-    expect(screen.getByText("Approval Package")).toBeInTheDocument();
-    expect(
-      screen.getByText(
-        "Meta-review is complete. Review the approval package, then choose Approve or Request Rework to continue."
-      )
-    ).toBeInTheDocument();
-  });
-
-  it("renders budget-exhausted approval copy when the approval route context matches", () => {
-    renderExpandedCard({
-      bubbleState: "READY_FOR_HUMAN_APPROVAL",
-      detail: bubbleDetail({
-        bubbleId: "b-expanded-1",
-        repoPath: "/repo-a",
-        state: "READY_FOR_HUMAN_APPROVAL",
-        inboxItems: [
-          {
-            envelopeId: "env-approval-1",
-            type: "APPROVAL_REQUEST",
-            ts: "2026-02-24T12:01:00.000Z",
-            round: 3,
-            sender: "orchestrator",
-            summary: "Approval package ready for human decision.",
-            refs: [],
-            latestRecommendation: "rework",
-            gateRoute: "human_gate_budget_exhausted"
-          }
-        ]
-      })
-    });
-
-    expect(
-      screen.getByText(
-        "Meta-review recommended rework, but the auto-rework budget is exhausted. Human decision is required to approve or request rework."
-      )
-    ).toBeInTheDocument();
-  });
-
-  it("falls back to generic approval package copy for unsupported routes", () => {
-    renderExpandedCard({
-      bubbleState: "READY_FOR_HUMAN_APPROVAL",
-      detail: bubbleDetail({
-        bubbleId: "b-expanded-1",
-        repoPath: "/repo-a",
-        state: "READY_FOR_HUMAN_APPROVAL",
-        inboxItems: [
-          {
-            envelopeId: "env-approval-1",
-            type: "APPROVAL_REQUEST",
-            ts: "2026-02-24T12:01:00.000Z",
-            round: 3,
-            sender: "orchestrator",
-            summary: "Approval package ready for human decision.",
-            refs: [],
-            latestRecommendation: "rework",
-            gateRoute: "human_gate_approve"
-          }
-        ]
-      })
-    });
-
-    expect(
-      screen.getByText(
-        "Meta-review is complete. Review the approval package, then choose Approve or Request Rework to continue."
-      )
-    ).toBeInTheDocument();
-  });
-
-  it("falls back to generic approval package copy when recommendation mismatches the route", () => {
-    renderExpandedCard({
-      bubbleState: "READY_FOR_HUMAN_APPROVAL",
-      detail: bubbleDetail({
-        bubbleId: "b-expanded-1",
-        repoPath: "/repo-a",
-        state: "READY_FOR_HUMAN_APPROVAL",
-        inboxItems: [
-          {
-            envelopeId: "env-approval-1",
-            type: "APPROVAL_REQUEST",
-            ts: "2026-02-24T12:01:00.000Z",
-            round: 3,
-            sender: "orchestrator",
-            summary: "Approval package ready for human decision.",
-            refs: [],
-            latestRecommendation: "approve",
-            gateRoute: "human_gate_budget_exhausted"
-          }
-        ]
-      })
-    });
-
-    expect(
-      screen.getByText(
-        "Meta-review is complete. Review the approval package, then choose Approve or Request Rework to continue."
-      )
-    ).toBeInTheDocument();
-  });
-
-  it("falls back to generic approval package copy for budget-exhausted plus inconclusive", () => {
-    renderExpandedCard({
-      bubbleState: "READY_FOR_HUMAN_APPROVAL",
-      detail: bubbleDetail({
-        bubbleId: "b-expanded-1",
-        repoPath: "/repo-a",
-        state: "READY_FOR_HUMAN_APPROVAL",
-        inboxItems: [
-          {
-            envelopeId: "env-approval-1",
-            type: "APPROVAL_REQUEST",
-            ts: "2026-02-24T12:01:00.000Z",
-            round: 3,
-            sender: "orchestrator",
-            summary: "Approval package ready for human decision.",
-            refs: [],
-            latestRecommendation: "inconclusive",
-            gateRoute: "human_gate_budget_exhausted"
-          }
-        ]
-      })
-    });
-
-    expect(
-      screen.getByText(
-        "Meta-review is complete. Review the approval package, then choose Approve or Request Rework to continue."
-      )
-    ).toBeInTheDocument();
+    expect(screen.queryByText("Meta Review")).not.toBeInTheDocument();
+    expect(screen.queryByText("Approval Package")).not.toBeInTheDocument();
   });
 
   it("prefers detail state and round for header rendering", () => {
