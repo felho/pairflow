@@ -5,7 +5,7 @@ task_family_id: validation-target-resolution
 sequence_key: "2"
 task_id: 2-validation-target-resolution
 title: "Validation Target Resolution"
-status: implementable
+status: in_progress
 phase: phase2
 target_files:
   - "src/config/repoConfig.ts"
@@ -35,7 +35,7 @@ system_context_ref: docs/pairflow-initial-design.md
 owners:
   - "felho"
 doc_bubble_id: 2-validation-target-resolution-doc
-impl_bubble_id: null
+impl_bubble_id: 2-validation-target-resolution-impl
 supersedes: []
 superseded_by: null
 archive_group: 2026-04-29-repo-level-validation-profile-plan-v2
