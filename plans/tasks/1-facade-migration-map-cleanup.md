@@ -20,7 +20,7 @@ normative_refs:
   - docs/architecture/v11-placement-and-extraction-governance.md
 owners:
   - "felho"
-doc_bubble_id: null
+doc_bubble_id: 1-facade-migration-map-cleanup-doc
 impl_bubble_id: null
 supersedes: []
 superseded_by: null
