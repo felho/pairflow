@@ -77,19 +77,25 @@ When drafting, refining, or reviewing a Plan or Task that is intended to be exec
    `impl_bubble_id`, `supersedes`, and `superseded_by`.
 4. `task_id` must be mechanically derived as `<sequence_key>-<task_family_id>`.
    The task filename must be `<task_id>.md`.
-5. `sequence_key` is a short ordering key such as `1`, `1a`, or `2`; do not use
-   display labels such as `task-01`.
-6. Planned-but-not-created tasks in a plan must already carry explicit canonical
+5. `sequence_key` is a short ordering key such as `1`, `1a`, `2`, `100`,
+   `100a`, or `100a1`; do not use display labels such as `task-01`.
+6. Fresh task identities must satisfy the derived bubble-id length budget:
+   `sequence_key` is 1-5 characters, fresh `task_family_id` is at most 29
+   characters, `task_id` is at most 35 characters, and derived
+   `<task_id>-doc` / `<task_id>-impl` are each at most 40 characters.
+   If a parent plan's planned task id violates this budget, route to plan
+   refinement before creating or approving the task.
+7. Planned-but-not-created tasks in a plan must already carry explicit canonical
    `task_id` values in `task_order` and `task_tracker`; do not invent them later
    from prose or filenames.
-7. New or refined task artifacts default to `status: draft` or `status: under_review`.
+8. New or refined task artifacts default to `status: draft` or `status: under_review`.
    Set `status: approved` only when applying a concrete `ReviewSpec task-mode`
    `approve_task` result for the exact reviewed artifact, or when a higher-level
    delegated workflow explicitly supplies an already-approved task-creation result.
    Do not set `status: implementable` during spec creation or review; that status
    is reserved for `ExecutePairflowPlan` document-bubble close after the approved
    document-refinement bubble has been closed and merged.
-8. Any mismatch between `sequence_key`, `task_family_id`, `task_id`, filename,
+9. Any mismatch between `sequence_key`, `task_family_id`, `task_id`, filename,
    plan tracker, and plan task order is a blocking metadata issue, not a style issue.
 
 ## Control-Model Readiness Gate (Mandatory)

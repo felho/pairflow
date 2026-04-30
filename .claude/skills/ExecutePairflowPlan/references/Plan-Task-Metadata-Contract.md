@@ -177,6 +177,29 @@ Plan-completion rule:
 6. Implementation bubble id is derived mechanically as `<task_id>-impl`.
 7. If a legacy bubble already exists with a different id, persist the real id as a compat linkage value, but treat the derived form as the forward-looking naming contract.
 
+### Bubble ID Length Budget
+
+Fresh V1 task identities must reserve enough room for the longest derived bubble
+suffix and for future sequence splits.
+
+Rules:
+
+1. Pairflow bubble ids may be at most 40 characters.
+2. The longest required derived suffix is `-impl` at 5 characters.
+3. Therefore fresh `task_id` values must be at most 35 characters so
+   `<task_id>-impl` remains valid.
+4. Reserve up to 5 characters for `sequence_key` so future split keys such as
+   `100`, `100a`, or `100a1` remain valid without renaming the family.
+5. Because `task_id=<sequence_key>-<task_family_id>` includes the separator,
+   fresh `task_family_id` values should be at most 29 characters:
+   `5 + 1 + 29 + 5 = 40`.
+6. `sequence_key` itself must be 1-5 characters.
+7. A task id that is otherwise deterministic is still not execution-ready when
+   either derived bubble id would exceed 40 characters.
+8. For legacy or already-created bubbles, persist the concrete bubble id when it
+   differs from the derived form, but do not use that compatibility escape hatch
+   to approve new over-budget task identities.
+
 ### Determinism Rules
 
 1. `task_id` must be derivable without chat-history or operator-memory fallback.

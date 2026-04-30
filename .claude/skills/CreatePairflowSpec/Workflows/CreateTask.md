@@ -77,18 +77,27 @@ drafting the body:
    `task_tracker` when the task is already planned.
 2. Resolve `sequence_key` and `task_family_id` so `task_id` equals
    `<sequence_key>-<task_family_id>`.
-3. Use a short `sequence_key` such as `1`, `1a`, or `2`; do not use display
-   labels like `task-01`.
-4. Set the task filename to `<task_id>.md`.
-5. Set `doc_bubble_id: null`, `impl_bubble_id: null`, `supersedes: []`, and
+3. Use a short `sequence_key` such as `1`, `1a`, `2`, `100`, `100a`, or
+   `100a1`; do not use display labels like `task-01`.
+4. Enforce the bubble-id length budget before drafting:
+   - `sequence_key` must be 1-5 characters,
+   - fresh `task_family_id` should be at most 29 characters,
+   - `task_id` must be at most 35 characters,
+   - derived `<task_id>-doc` and `<task_id>-impl` must both be at most 40
+     characters.
+5. If the parent plan's planned task id violates this budget, route to plan
+   refinement instead of creating a task that cannot later start its derived
+   document or implementation bubble.
+6. Set the task filename to `<task_id>.md`.
+7. Set `doc_bubble_id: null`, `impl_bubble_id: null`, `supersedes: []`, and
    `superseded_by: null` for fresh tasks unless the workflow is explicitly
    creating a replacement/supersession task.
-6. Copy `archive_group` from the parent plan when present; otherwise derive it
+8. Copy `archive_group` from the parent plan when present; otherwise derive it
    only from trustworthy `created_on` and `plan_id`.
-7. If the parent plan names a non-compliant or ambiguous planned task id, stop
+9. If the parent plan names a non-compliant or ambiguous planned task id, stop
    and route to plan refinement instead of silently creating a task under a
    different identity.
-8. If refining an existing task, preserve the existing canonical identity unless
+10. If refining an existing task, preserve the existing canonical identity unless
    the artifact is explicitly being superseded; repeated refinement alone must
    not change `task_id`.
 
@@ -365,6 +374,9 @@ Required blockers for Task output:
 3. For plan-linked or `ExecutePairflowPlan`-routed tasks, execution metadata is mandatory:
    - `task_family_id`, `sequence_key`, and `task_id`
    - `task_id` exactly equals `<sequence_key>-<task_family_id>`
+   - `sequence_key` is 1-5 characters, fresh `task_family_id` is at most 29
+     characters, `task_id` is at most 35 characters, and derived
+     `<task_id>-doc` / `<task_id>-impl` are each at most 40 characters
    - task filename exactly equals `<task_id>.md`
    - `doc_bubble_id`, `impl_bubble_id`, `supersedes`, and `superseded_by`
    - `archive_group` when parent plan has one

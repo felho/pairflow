@@ -96,11 +96,17 @@ For tasks, verify:
    display label such as `task-01`
 3. `task_id` equals `<sequence_key>-<task_family_id>`
 4. the task filename equals `<task_id>.md`
-5. parent plan `task_order` / `task_tracker` agrees with the task identity and
+5. the task identity satisfies the derived bubble-id length budget:
+   - `sequence_key` is 1-5 characters, allowing future split keys such as
+     `100`, `100a`, and `100a1`
+   - fresh `task_family_id` is at most 29 characters
+   - `task_id` is at most 35 characters
+   - derived `<task_id>-doc` and `<task_id>-impl` are each at most 40 characters
+6. parent plan `task_order` / `task_tracker` agrees with the task identity and
    path when `plan_ref` exists
-6. lineage fields are present and consistent
-7. bubble ids are linkage-only values and do not encode lifecycle state
-8. task review may approve a task for document-bubble routing, but it must not
+7. lineage fields are present and consistent
+8. bubble ids are linkage-only values and do not encode lifecycle state
+9. task review may approve a task for document-bubble routing, but it must not
    set `status: implementable`; that status is owned by ExecutePairflowPlan
    document-bubble close after approval/merge
 
