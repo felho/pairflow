@@ -25,7 +25,7 @@ task_tracker:
     status: archived
   - task_id: 3-clean-runs-read-model-ui
     task_path: plans/tasks/meta-review-consecutive-clean-runs/3-clean-runs-read-model-ui.md
-    status: implementable
+    status: in_progress
   - task_id: 4-clean-runs-docs-validation
     task_path: null
     status: not_created

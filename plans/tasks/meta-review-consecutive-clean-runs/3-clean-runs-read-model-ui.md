@@ -5,7 +5,7 @@ task_family_id: clean-runs-read-model-ui
 sequence_key: "3"
 task_id: 3-clean-runs-read-model-ui
 title: "Meta-Review Consecutive Clean Runs Read-Model and UI"
-status: implementable
+status: in_progress
 phase: phase3
 target_files:
   - src/v11/shared/status/statusCommandViewBuilder.ts
@@ -49,7 +49,7 @@ system_context_ref: docs/pairflow-initial-design.md
 owners:
   - "felho"
 doc_bubble_id: clean-runs-read-model-ui-doc
-impl_bubble_id: null
+impl_bubble_id: clean-runs-read-model-ui-impl
 supersedes: []
 superseded_by: null
 archive_group: 2026-04-27-meta-review-consecutive-clean-runs-plan-v1
