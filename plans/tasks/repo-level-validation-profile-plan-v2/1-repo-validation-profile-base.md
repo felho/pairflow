@@ -1,9 +1,9 @@
 ---
 artifact_type: task
-artifact_id: task_repo_validation_profile_foundation_v1
-task_family_id: repo-validation-profile-foundation
+artifact_id: task_repo_validation_profile_base_v1
+task_family_id: repo-validation-profile-base
 sequence_key: "1"
-task_id: 1-repo-validation-profile-foundation
+task_id: 1-repo-validation-profile-base
 title: "Repo Validation Profile Foundation"
 status: implementable
 phase: phase1
@@ -73,7 +73,7 @@ Implement the first repo-level validation profile slice: parse a single default 
 1. Parent plan gap closed: Task 1 closes the single-profile foundation gap from `plans/repo-level-validation-profile-plan-v2.md`: repo config parsing, create-time inheritance, bubble config persistence, PASS custom-id execution, and implementer prompt visibility.
 2. Depends on: N/A.
 3. Unlocks / impacts successors: unlocks `2-validation-target-resolution`; Task 2 must not reopen single-profile authority and must build multi-target selection on top of the materialized bubble config authority.
-4. Task-list impact: refines planned task id `1-repo-validation-profile-foundation`; does not replace or obsolete another live task artifact.
+4. Task-list impact: refines planned task id `1-repo-validation-profile-base`; does not replace or obsolete another live task artifact.
 5. Inherited validation / exit expectation: relevant unit tests for repo config, create path, bubble config rendering/parsing, PASS validation policy/execution, implementer guidance, plus `pnpm lint`, `pnpm typecheck`, and `pnpm build` before implementation lifecycle commands.
 
 ### Canonical Contract Anchors
@@ -251,7 +251,7 @@ N/A. This task does not change Pairflow lifecycle success/completion proof; it c
 | Parent gap closed | Single-profile repo validation defaults and created-bubble materialization. | Completion should satisfy Task 1 acceptance items 1-11 in the parent plan. | P1 | required-now |
 | Depends on | N/A | No predecessor task must be complete. | P2 | required-now |
 | Unlocks / impacts successors | `2-validation-target-resolution` depends on this materialized authority. | Task 2 must add target resolution without changing runtime authority away from bubble config. | P1 | required-now |
-| Task-list impact | Refines planned task `1-repo-validation-profile-foundation`. | Parent tracker must point at this file; `status: approved` remains valid only while this refined task continues to satisfy ReviewSpec task-mode readiness. If review requires further refinement, the lifecycle/review workflow owns any temporary status downgrade. | P1 | required-now |
+| Task-list impact | Refines planned task `1-repo-validation-profile-base`. | Parent tracker must point at this file; `status: approved` remains valid only while this refined task continues to satisfy ReviewSpec task-mode readiness. If review requires further refinement, the lifecycle/review workflow owns any temporary status downgrade. | P1 | required-now |
 | Inherited validation / exit expectation | Parent validation strategy and manual checks apply. | Implementation summary must state relevant unit tests plus lint/typecheck/build. | P1 | required-now |
 
 ### 0d) Shared Contract Compatibility

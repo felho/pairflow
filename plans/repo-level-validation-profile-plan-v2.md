@@ -7,18 +7,18 @@ title: "Repo-Level Validation Profile Plan V2"
 plan_status: approved
 prd_ref: null
 task_order:
-  - 1-repo-validation-profile-foundation
+  - 1-repo-validation-profile-base
   - 2-validation-target-resolution
 task_tracker:
-  - task_id: 1-repo-validation-profile-foundation
-    task_path: plans/tasks/repo-level-validation-profile-plan-v2/1-repo-validation-profile-foundation.md
+  - task_id: 1-repo-validation-profile-base
+    task_path: plans/tasks/repo-level-validation-profile-plan-v2/1-repo-validation-profile-base.md
     status: implementable
     notes: "First implementation slice: parse repo-level validation config and inherit it into new bubble command config."
   - task_id: 2-validation-target-resolution
     task_path: null
     status: not_created
     notes: "Deferred multi-target/monorepo slice. Do not implement before Task 1 is complete."
-active_task_id: 1-repo-validation-profile-foundation
+active_task_id: 1-repo-validation-profile-base
 archive_group: 2026-04-29-repo-level-validation-profile-plan-v2
 supersedes: []
 owners:
