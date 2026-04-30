@@ -5,7 +5,7 @@ task_family_id: clean-runs-read-model-ui
 sequence_key: "3"
 task_id: 3-clean-runs-read-model-ui
 title: "Meta-Review Consecutive Clean Runs Read-Model and UI"
-status: approved
+status: implementable
 phase: phase3
 target_files:
   - src/v11/shared/status/statusCommandViewBuilder.ts
