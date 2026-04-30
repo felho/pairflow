@@ -1,0 +1,9 @@
+[validation]
+required = ["lint", "typecheck", "test", "fitness"]
+
+[validation.commands]
+lint = "pnpm lint"
+typecheck = "pnpm typecheck"
+test = "pnpm test"
+fitness = "pnpm fitness:check:ci"
+bootstrap = "pnpm install --frozen-lockfile && pnpm build"
