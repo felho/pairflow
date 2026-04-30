@@ -14,6 +14,7 @@ target_files:
   - "src/v11/application/create/createCommandRuntime.ts"
   - "src/config/bubbleConfig.ts"
   - "src/types/bubble.ts"
+  - "src/v11/application/create/repoValidationProfileResolver.ts"
   - "src/v11/infrastructure/artifact/validation/passValidationEvidenceContract.ts"
   - "src/v11/infrastructure/artifact/validation/passValidationEvidence.ts"
   - "src/v11/infrastructure/executor/validation/passValidationCommandRunner.ts"
@@ -21,6 +22,15 @@ target_files:
   - "src/v11/application/start/startCommandResumeImplementerPrompt.ts"
   - "src/v11/application/start/startCommandTmuxLaunch.ts"
   - "src/v11/infrastructure/channel/tmux/tmuxDeliveryMessageBuilder.ts"
+  - "tests/config/bubbleConfig.test.ts"
+  - "tests/v11/application/create/repoValidationProfileResolver.test.ts"
+  - "tests/v11/application/start/startCommandResumeImplementerPrompt.test.ts"
+  - "tests/v11/infrastructure/executor/validation/passValidationCommandRunner.test.ts"
+  - "tests/core/agent/pass.test.ts"
+  - "tests/core/bubble/createBubble.test.ts"
+  - "tests/core/runtime/passValidationEvidence.test.ts"
+  - "tests/core/bubble/startBubble.test.ts"
+  - "tests/core/runtime/tmuxDelivery.test.ts"
 prd_ref: null
 plan_ref: plans/repo-level-validation-profile-plan-v2.md
 system_context_ref: docs/pairflow-initial-design.md
@@ -74,6 +84,7 @@ Implement the first repo-level validation profile slice: parse a single default 
    - `tests/config/repoConfig.test.ts`
    - `src/types/bubble.ts`
    - `src/config/bubbleConfig.ts`
+   - `src/v11/application/create/repoValidationProfileResolver.ts`
    - `src/v11/application/create/createBubbleFlowContext.ts`
    - `src/v11/application/create/createCommandRuntime.ts`
    - `src/v11/infrastructure/artifact/validation/passValidationEvidenceContract.ts`
@@ -83,7 +94,16 @@ Implement the first repo-level validation profile slice: parse a single default 
    - `src/v11/application/start/startCommandResumeImplementerPrompt.ts`
    - `src/v11/application/start/startCommandTmuxLaunch.ts`
    - `src/v11/infrastructure/channel/tmux/tmuxDeliveryMessageBuilder.ts`
-2. Canonical elements: created bubble `[commands]`, built-in ids `lint`, `typecheck`, `test`, `bootstrap`, ordered `validation_required`, and `validation_required_explicit=true` for explicit empty policy.
+   - `tests/config/bubbleConfig.test.ts`
+   - `tests/v11/application/create/repoValidationProfileResolver.test.ts`
+   - `tests/v11/application/start/startCommandResumeImplementerPrompt.test.ts`
+   - `tests/v11/infrastructure/executor/validation/passValidationCommandRunner.test.ts`
+   - `tests/core/agent/pass.test.ts`
+   - `tests/core/bubble/createBubble.test.ts`
+   - `tests/core/runtime/passValidationEvidence.test.ts`
+   - `tests/core/bubble/startBubble.test.ts`
+   - `tests/core/runtime/tmuxDelivery.test.ts`
+2. Canonical elements: created bubble `[commands]`, built-in ids `lint`, `typecheck`, `test`, `bootstrap`, ordered `validation_required`, `validation_required_explicit=true` for explicit empty policy, and existing PASS evidence/log path safety rooted in the PASS validation artifact/runner anchors above.
 3. Guard elements: repo-level `validation.required` reference validation, unsupported multi-target field rejection, invalid command-id/empty command checks.
 4. Compat-only elements: existing fixed fields in `BubbleCommandsConfig`, existing bubbles with fixed `lint`/`typecheck`/`test`/`bootstrap`, and PASS evidence `kind` naming for command ids.
 5. Forbidden reinterpretations: do not make repo config runtime authority, do not make `lint` or custom ids required unless listed in `validation.required`, do not silently accept multi-target config, and do not treat implementer-reported output as authoritative PASS evidence.
@@ -94,7 +114,7 @@ Implement the first repo-level validation profile slice: parse a single default 
 2. Actual touched scope: mixed but bounded to `contract_or_persisted_authority_foundation` plus adjacent `authority_producer` and internal execution consumer compatibility for the same validation command authority.
 3. Mutation entrypoints in scope: create-time bubble config persistence through `buildBubbleConfig` consumers; PASS validation evidence/log writes for required commands.
 4. Hidden scope ruled out: lifecycle state-machine changes, reviewer evidence reuse semantics, cleanup/recovery, remote execution topology, UI/status/list read models, and multi-target resolution remain out of scope.
-5. Branch inventory note: missing profile vs present profile, explicit create override vs repo profile vs legacy default, invalid config vs valid config, explicit empty required policy vs missing policy, built-in required ids vs custom required ids, unsupported multi-target fields, PASS success vs unsupported/missing required command failure.
+5. Branch inventory note: missing profile vs present profile, explicit create override vs repo profile vs legacy default, invalid config vs valid config, explicit empty required policy vs missing policy, built-in required ids vs custom required ids, unsupported multi-target fields, PASS success vs unsupported/missing required command failure, and runtime bubble config requiring an unsupported/invalid command id.
 6. Why the declared task shape matches reality: the plan explicitly authorizes widening the validation command contract and requires create-time materialization plus PASS custom-id compatibility in the same Task 1 slice; the task does not include target selection, lifecycle routing, cleanup, or read-model fallout.
 
 ### Authority Boundary Map
@@ -103,7 +123,8 @@ Implement the first repo-level validation profile slice: parse a single default 
 2. Stored authority: `.pairflow/bubbles/<id>/bubble.toml` `[commands]`.
 3. In-scope consumers: PASS validation policy/execution consumer and implementer prompt guidance consumer.
 4. Explicit out-of-scope consumers: repo target resolver, target-specific cwd consumers, UI/status/read-model consumers, reviewer evidence reuse beyond existing PASS artifact compatibility, cleanup/recovery consumers.
-5. Export surfaces closed in this phase: yes, the created bubble config and PASS validation evidence must represent custom command ids that are present in `commands.validation_required`.
+5. Runtime authority assertion: PASS must not consult repo-root `pairflow.toml`, repo validation defaults, or legacy built-in defaults after bubble creation; it may use only the created bubble config plus existing PASS execution dependencies.
+6. Export surfaces closed in this phase: yes, the created bubble config and PASS validation evidence must represent custom command ids that are present in `commands.validation_required`.
 
 ### Baseline Preservation
 
@@ -130,11 +151,12 @@ N/A. This task does not change Pairflow lifecycle success/completion proof; it c
 1. Parse and validate the single default repo `[validation]` shape with `required` and `[validation.commands]`.
 2. Reject unsupported multi-target/target-specific config in Task 1 with actionable phase-boundary errors.
 3. Resolve command precedence during create: explicit input, repo profile, then legacy built-in defaults.
-4. Persist resolved commands and `validation_required`/`validation_required_explicit` into created bubble config.
+4. Persist resolved commands and `validation_required`/`validation_required_explicit` into created bubble config, preserving `validation.required` order exactly after materialization.
 5. Preserve existing fixed-field bubble config compatibility while allowing custom validation command ids materialized into the created bubble commands map.
-6. Update PASS validation evidence/types/resolution so custom ids present in bubble config can be executed and reported.
-7. Add implementer start/resume guidance that lists required validation command ids and shell commands as local feedback commands while saying PASS re-runs them.
-8. Add focused tests for repo config, create inheritance, bubble config parse/render compatibility, PASS custom command execution/resolution, and prompt guidance.
+6. Materialize `bootstrap` when configured or explicitly provided without making it required unless `bootstrap` is explicitly listed in `validation.required`.
+7. Update PASS validation evidence/types/resolution so custom ids present in bubble config can be executed and reported.
+8. Add implementer start/resume guidance that lists required validation command ids and shell commands as local feedback commands while saying PASS re-runs them.
+9. Add focused tests for repo config, create inheritance, bubble config parse/render compatibility, PASS custom command execution/resolution, and prompt guidance.
 
 ### Out of Scope
 
@@ -153,6 +175,7 @@ N/A. This task does not change Pairflow lifecycle success/completion proof; it c
 2. Invalid repo validation config fails fast before bubble config persistence.
 3. Runtime validation uses created bubble config only.
 4. Custom ids are valid only when a non-empty command is materialized in the same bubble config.
+5. `bootstrap` is materialized when configured or explicitly provided, but it is not required by default and is not PASS-required unless listed in `validation.required`.
 
 ### Contract Boundary / Blast Radius
 
@@ -204,9 +227,9 @@ N/A. This task does not change Pairflow lifecycle success/completion proof; it c
 | Element | Source Anchor | Required Interpretation | This Task Action | Priority | Timing |
 |---|---|---|---|---|---|
 | `bubble.toml` `[commands]` | `src/config/bubbleConfig.ts`, `src/types/bubble.ts`, parent plan | Runtime validation authority. | preserve and widen to include materialized custom command ids | P1 | required-now |
-| `validation_required` | `src/types/bubble.ts`, `src/config/bubbleConfig.ts`, parent plan | Ordered list of PASS-required command ids. | preserve semantics; allow custom ids when command exists in same config | P1 | required-now |
+| `validation_required` | `src/types/bubble.ts`, `src/config/bubbleConfig.ts`, parent plan | Ordered list of PASS-required command ids. | preserve semantics and ordering through create materialization and render/parse; allow custom ids when command exists in same config | P1 | required-now |
 | `validation_required_explicit` | `src/config/bubbleConfig.ts`, parent plan | Only proof that empty required list is explicit policy. | preserve | P1 | required-now |
-| Fixed ids `lint`, `typecheck`, `test`, `bootstrap` | `src/types/bubble.ts`, parent plan | Built-in command ids; only `test` and `typecheck` have legacy defaults. | preserve; do not make `lint` required by default | P1 | required-now |
+| Fixed ids `lint`, `typecheck`, `test`, `bootstrap` | `src/types/bubble.ts`, parent plan | Built-in command ids; only `test` and `typecheck` have legacy defaults. | preserve; do not make `lint` or `bootstrap` required by default | P1 | required-now |
 | Repo `[validation]` | parent plan, `src/config/repoConfig.ts` | Create-time default/guard, not runtime authority. | authorized new contract | P1 | required-now |
 | PASS `kind` | `passValidationEvidenceContract.ts`, `passValidationEvidence.ts` | Command id label in evidence/log reporting. | widen from closed union to validated materialized command id | P1 | required-now |
 
@@ -228,7 +251,7 @@ N/A. This task does not change Pairflow lifecycle success/completion proof; it c
 | Parent gap closed | Single-profile repo validation defaults and created-bubble materialization. | Completion should satisfy Task 1 acceptance items 1-11 in the parent plan. | P1 | required-now |
 | Depends on | N/A | No predecessor task must be complete. | P2 | required-now |
 | Unlocks / impacts successors | `2-validation-target-resolution` depends on this materialized authority. | Task 2 must add target resolution without changing runtime authority away from bubble config. | P1 | required-now |
-| Task-list impact | Refines planned task `1-repo-validation-profile-foundation`. | Parent tracker should point at this file and status should mirror `under_review` until ReviewSpec approves. | P1 | required-now |
+| Task-list impact | Refines planned task `1-repo-validation-profile-foundation`. | Parent tracker must point at this file; `status: approved` remains valid only while this refined task continues to satisfy ReviewSpec task-mode readiness. If review requires further refinement, the lifecycle/review workflow owns any temporary status downgrade. | P1 | required-now |
 | Inherited validation / exit expectation | Parent validation strategy and manual checks apply. | Implementation summary must state relevant unit tests plus lint/typecheck/build. | P1 | required-now |
 
 ### 0d) Shared Contract Compatibility
@@ -237,18 +260,18 @@ N/A. This task does not change Pairflow lifecycle success/completion proof; it c
 |---|---|---|---|---|
 | `PairflowRepoConfig` / `pairflow.toml` | create-time repo config loader | additive, with strict rejection for unsupported validation fields | Add optional single-profile validation schema. | multi-target fields in Task 2 |
 | `BubbleCommandsConfig` / `[commands]` | create, bubble config parser/renderer, PASS, start prompts, existing bubbles | additive if existing fixed fields remain accepted | Support materialized custom validation command ids while preserving fixed fields. | target-aware command selection |
-| PASS validation evidence command id | PASS artifact builder/reuse checks, reviewer compatibility output, runner logs | additive contract widening | Allow custom ids from bubble config; keep evidence schema version decision explicit in implementation. | reuse of implementer-run evidence |
+| PASS validation evidence command id | PASS artifact builder/reuse checks, reviewer compatibility output, runner logs | additive contract widening | Allow custom ids from bubble config using the validation command-id predicate; keep the existing evidence schema version if persisted field names and value types stay unchanged, and bump the version only if implementation changes serialized evidence shape beyond widening `kind` string values. | reuse of implementer-run evidence |
 | Implementer guidance text | start/resume/kickoff delivery consumers | additive | List required commands and state PASS re-runs them. | richer UX/read-model surfacing |
 
 ### 0e) Baseline Preservation
 
 | Current Behavior | Preserve/Replace/Forbid | Required Proof | Priority | Timing |
 |---|---|---|---|---|
-| Missing `pairflow.toml` loads `{}` | preserve | repo config test | P1 | required-now |
-| Missing `[validation]` keeps `test=pnpm test`, `typecheck=pnpm typecheck` | preserve | create/bubble config regression test | P1 | required-now |
-| Existing fixed `[commands]` parse/render | preserve | bubble config tests | P1 | required-now |
-| PASS rejects required id with no command in bubble config | preserve as invalid, widen id support | PASS policy tests | P1 | required-now |
-| PASS closed id list rejects `fitness` even when configured | replace | custom id policy/execution/evidence test | P1 | required-now |
+| Missing `pairflow.toml` loads `{}` | preserve | `tests/config/repoConfig.test.ts` | P1 | required-now |
+| Missing `[validation]` keeps `test=pnpm test`, `typecheck=pnpm typecheck` | preserve | `tests/core/bubble/createBubble.test.ts` and `tests/config/bubbleConfig.test.ts` | P1 | required-now |
+| Existing fixed `[commands]` parse/render | preserve | `tests/config/bubbleConfig.test.ts` | P1 | required-now |
+| PASS rejects required id with no command in bubble config | preserve as invalid, widen id support | `tests/core/runtime/passValidationEvidence.test.ts` | P1 | required-now |
+| PASS closed id list rejects `fitness` even when configured | replace | same-bubble-config command resolution in `src/v11/infrastructure/artifact/validation/passValidationEvidence.ts`, covered by `tests/core/runtime/passValidationEvidence.test.ts` and `tests/core/agent/pass.test.ts` | P1 | required-now |
 | Repo config as runtime fallback | forbid | test or code review proof that PASS accepts no repo config dependency | P1 | required-now |
 
 ### 0f) Success / Completion Proof Boundary
@@ -272,16 +295,16 @@ N/A. This task does not change Pairflow lifecycle success/completion proof; it c
 | ID | File | Function/Entry | Exact Signature (args -> return) | Insertion Point | Expected Behavior | Priority | Timing | Evidence |
 |---|---|---|---|---|---|---|---|---|
 | CS1 | `src/config/repoConfig.ts` | `validatePairflowRepoConfig` | `(input: unknown) -> ValidationResult<PairflowRepoConfig>` | repo config validation | Accept missing validation, parse single-profile validation, reject invalid/target-specific fields. | P1 | required-now | `tests/config/repoConfig.test.ts` |
-| CS2 | `src/config/repoConfig.ts` | `parsePairflowRepoConfigToml` / `loadPairflowRepoConfig` | `(input: string) -> PairflowRepoConfig`; `(repoPath: string, path?: string) -> Promise<PairflowRepoConfig>` | TOML parse/load | Preserve absent file behavior and surface schema errors for invalid validation config. | P1 | required-now | repo config tests |
-| CS3 | new narrow `src/v11/**` resolver | `resolve...Validation...` | explicit typed input -> resolved command config | create boundary | Apply explicit > repo > legacy precedence and required-id validation. | P1 | required-now | resolver/create tests |
-| CS4 | `src/v11/application/create/createBubbleFlowContext.ts` | create flow context builder | existing create context input -> prepared context | before `config: buildBubbleConfig(prepared.bubbleConfigInput)` | Load/resolve repo validation defaults before bubble config construction and prove invalid profile fails before config persistence. | P1 | required-now | create path tests |
-| CS5 | `src/v11/application/create/createCommandRuntime.ts` | `buildBubbleConfig` | `(input: CreateBubbleConfigInput) -> BubbleConfig` | commands construction | Consume resolved validation defaults and persist commands/required policy into bubble config. | P1 | required-now | create path tests |
-| CS6 | `src/config/bubbleConfig.ts` | `validateBubbleConfig` / render parser | `(input: unknown) -> ValidationResult<BubbleConfig>` and renderer | `[commands]` parse/render | Preserve fixed fields and support materialized custom validation commands. | P1 | required-now | bubble config tests |
+| CS2 | `src/config/repoConfig.ts` | `parsePairflowRepoConfigToml` / `loadPairflowRepoConfig` | `(input: string) -> PairflowRepoConfig`; `(repoPath: string, path?: string) -> Promise<PairflowRepoConfig>` | TOML parse/load | Preserve absent file behavior and surface schema errors for invalid validation config. | P1 | required-now | `tests/config/repoConfig.test.ts` |
+| CS3 | `src/v11/application/create/repoValidationProfileResolver.ts` | `resolveRepoValidationProfileCommands` | `(input: { explicitCommands: Partial<Record<"lint" \| "typecheck" \| "test" \| "bootstrap", string>>; repoValidation?: RepoValidationConfig; legacyDefaults: { typecheck: string; test: string } }) -> ResolvedRepoValidationProfileCommands` | create boundary, before `buildBubbleConfig` input is finalized | Apply explicit > repo > legacy precedence per command id, distinguish missing `required` from explicit `required=[]`, validate command ids with the shared predicate, reject duplicate required ids, and validate every required id before config persistence. | P1 | required-now | `tests/v11/application/create/repoValidationProfileResolver.test.ts` and `tests/core/bubble/createBubble.test.ts` |
+| CS4 | `src/v11/application/create/createBubbleFlowContext.ts` | create flow context builder | existing create context input -> prepared context | before `config: buildBubbleConfig(prepared.bubbleConfigInput)` | Load/resolve repo validation defaults before bubble config construction and prove invalid profile fails before any bubble directory/config persistence. | P1 | required-now | `tests/core/bubble/createBubble.test.ts` |
+| CS5 | `src/v11/application/create/createCommandRuntime.ts` | `buildBubbleConfig` | `(input: CreateBubbleConfigInput) -> BubbleConfig` | commands construction | Consume already-resolved validation defaults and persist commands/required policy into bubble config; do not read repo config here. | P1 | required-now | `tests/v11/application/create/repoValidationProfileResolver.test.ts` and `tests/core/bubble/createBubble.test.ts` |
+| CS6 | `src/config/bubbleConfig.ts` | `validateBubbleConfig` / render parser | `(input: unknown) -> ValidationResult<BubbleConfig>` and renderer | `[commands]` parse/render | Preserve fixed fields; parse/render unknown `[commands]` keys as custom command ids only when they satisfy the validation command-id predicate and have non-empty string values; reject reserved/invalid keys instead of silently dropping them. | P1 | required-now | `tests/config/bubbleConfig.test.ts` |
 | CS7 | `src/types/bubble.ts` | `BubbleCommandsConfig` | interface | type contract | Represent fixed built-ins plus custom materialized validation commands without weakening required built-ins. | P1 | required-now | typecheck |
-| CS8 | `src/v11/infrastructure/artifact/validation/passValidationEvidence.ts` | `resolvePassValidationPolicy` | `(bubbleConfig: BubbleConfig) -> ResolvedPassValidationPolicy` | PASS policy resolution | Resolve required ids from same bubble config, including custom ids. | P1 | required-now | PASS tests |
-| CS9 | `src/v11/infrastructure/executor/validation/passValidationCommandRunner.ts` | `runPassValidationCommand` and log path helper | existing runner input -> result | PASS command execution | Accept validated custom ids and produce safe evidence log paths. | P1 | required-now | runner/PASS tests |
-| CS10 | `src/v11/application/start/startCommandImplementerPrompts.ts` and `src/v11/infrastructure/channel/tmux/tmuxDeliveryMessageBuilder.ts` | start implementer prompt/delivery builders | existing prompt inputs -> string | start guidance | Include required validation commands from bubble config and clarify PASS re-runs them. | P1 | required-now | prompt tests |
-| CS11 | `src/v11/application/start/startCommandResumeImplementerPrompt.ts` and `src/v11/application/start/startCommandTmuxLaunch.ts` | `buildResumeImplementerStartupPrompt` and tmux launch call-site | existing resume prompt input -> string | resume guidance | Carry the same required validation guidance into resume startup prompts without changing lifecycle state. | P1 | required-now | resume prompt tests |
+| CS8 | `src/v11/infrastructure/artifact/validation/passValidationEvidence.ts` | `resolvePassValidationPolicy` | `(bubbleConfig: BubbleConfig) -> ResolvedPassValidationPolicy` | PASS policy resolution | Resolve required ids from same bubble config, including custom ids; reject missing or unsupported runtime required ids without repo-config or built-in fallback. | P1 | required-now | `tests/core/runtime/passValidationEvidence.test.ts` |
+| CS9 | `src/v11/infrastructure/executor/validation/passValidationCommandRunner.ts` | `runPassValidationCommand` and log path helper | existing runner input -> result | PASS command execution | Accept validated custom ids and produce safe PASS-owned evidence log paths without accepting implementer-supplied log locations. | P1 | required-now | `tests/v11/infrastructure/executor/validation/passValidationCommandRunner.test.ts` and `tests/core/agent/pass.test.ts` |
+| CS10 | `src/v11/application/start/startCommandImplementerPrompts.ts` and `src/v11/infrastructure/channel/tmux/tmuxDeliveryMessageBuilder.ts` | start implementer prompt/delivery builders | existing prompt inputs -> string | start guidance | Include required validation commands from bubble config, clarify PASS re-runs them, and avoid implying implementer-run output/log refs are authoritative PASS evidence. | P1 | required-now | `tests/core/bubble/startBubble.test.ts` and `tests/core/runtime/tmuxDelivery.test.ts` |
+| CS11 | `src/v11/application/start/startCommandResumeImplementerPrompt.ts` and `src/v11/application/start/startCommandTmuxLaunch.ts` | `buildResumeImplementerStartupPrompt` and tmux launch call-site | existing resume prompt input -> string | resume guidance | Carry the same required validation guidance, PASS re-run wording, and no-authoritative-implementer-output/log-ref wording into resume startup prompts without changing lifecycle state. | P1 | required-now | `tests/v11/application/start/startCommandResumeImplementerPrompt.test.ts` |
 
 ### 2) Data and Interface Contract
 
@@ -290,7 +313,11 @@ N/A. This task does not change Pairflow lifecycle success/completion proof; it c
 | Repo config `[validation]` | `PairflowRepoConfig = {}` and arbitrary objects normalize to `{}` | Optional `validation` object with optional `required` and optional `commands` map | command values, when present, must be non-empty strings; required ids must be strings | `validation.required`, `validation.commands.bootstrap`, built-in/custom command ids | additive for missing config; stricter for invalid `[validation]` | P1 | required-now |
 | Bubble config `[commands]` | fixed `bootstrap`, `lint`, `test`, `typecheck`, `validation_required`, `validation_required_explicit` | fixed fields preserved plus materialized custom validation command ids | `test`, `typecheck` remain required for existing config contract | `bootstrap`, `lint`, custom ids, validation policy fields | additive; existing fixed configs must parse | P1 | required-now |
 | PASS command spec/result | `kind` is closed to `lint|typecheck|test` | `kind` may be any validated command id from bubble config policy | `kind`, `command`; result also `exitCode`, `logPath`, `durationMs` | N/A | additive in behavior; type/evidence schema version decision must be deliberate | P1 | required-now |
-| Create input | explicit `testCommand`, `typecheckCommand`, `bootstrapCommand` | same explicit inputs continue to win over repo profile | existing explicit fields | repo profile resolved values | non-breaking | P1 | required-now |
+| Create input | explicit command overrides materialized at the create resolver boundary, including existing `testCommand`, `typecheckCommand`, and `bootstrapCommand` fields | explicit override map covers `lint`, `typecheck`, `test`, and `bootstrap`; existing create CLI fields continue to win over repo profile where present | existing explicit fields and resolver-bound command ids | repo profile resolved values | non-breaking; does not require adding a new CLI field before the resolver can represent `lint` | P1 | required-now |
+
+`RepoValidationConfig` is the exported repo validation profile type owned by `src/config/repoConfig.ts`; CS3 consumes that profile after CS1/CS2 parse and validate repo config input.
+
+Validation command-id predicate: a command id must match `^[a-z][a-z0-9_-]{0,63}$`; the reserved-name set is closed in Task 1 to `validation_required` and `validation_required_explicit`, and those names are not command ids. Built-in ids `lint`, `typecheck`, `test`, and `bootstrap` are valid command ids with built-in identity; explicit create input or repo profile commands may override their command strings through normal precedence, but they must not be reclassified as custom ids or given alternate semantics. Duplicate entries in `validation.required` are invalid.
 
 ### 3) Side Effects Contract
 
@@ -298,7 +325,9 @@ N/A. This task does not change Pairflow lifecycle success/completion proof; it c
 |---|---|---|---|---|---|
 | FS: repo config read | Read repo-root `pairflow.toml` during create. | Re-read repo config during PASS/runtime validation. | Missing file is non-error. | P1 | required-now |
 | FS: bubble config write | Write resolved `[commands]` into new bubble config after validation passes. | Write partial config when validation fails. | Precondition-before-side-effect tests required. | P1 | required-now |
-| FS: PASS evidence/logs | Write PASS validation evidence and command logs for configured required ids. | Trust implementer-reported output as PASS evidence. | Existing evidence directories/path safety must be preserved. | P1 | required-now |
+| FS: explicit empty required policy | Write `validation_required=[]` and `validation_required_explicit=true` when repo `validation.required=[]` is present. | Treat explicit empty required policy as missing policy or omit the explicit marker. | This is a valid side effect after repo validation passes. | P1 | required-now |
+| FS: PASS evidence/logs | Write PASS-owned validation evidence and command logs for configured required ids. | Trust implementer-reported output as PASS evidence, or commingle implementer-run logs/refs into the PASS-owned evidence artifact/log set. | Existing evidence directories/path safety must be preserved. | P1 | required-now |
+| PASS evidence schema | Preserve existing persisted evidence schema when only widening command-id values. | Change persisted field names/value shapes without an explicit schema-version bump in the evidence contract and matching tests. | Schema decision is enforced at the PASS evidence contract boundary. | P1 | required-now |
 | Network/DB | N/A | New DB/network side effects. | Implementation should remain local FS/process only. | P2 | required-now |
 
 ### 4) Error and Fallback Contract
@@ -307,10 +336,15 @@ N/A. This task does not change Pairflow lifecycle success/completion proof; it c
 |---|---|---|---|---|---|---|---|
 | missing `pairflow.toml` | FS read | fallback | `{}` repo config and legacy create defaults | N/A | N/A | P1 | required-now |
 | missing `[validation]` | repo config | fallback | legacy create defaults | N/A | N/A | P1 | required-now |
+| explicit `validation.required=[]` | repo config | result | explicit empty required policy; persist `validation_required=[]` plus `validation_required_explicit=true` | N/A | N/A | P1 | required-now |
 | invalid `[validation]` | repo config parser | throw | no bubble config write | schema validation error | N/A | P1 | required-now |
 | unsupported target/multi-target fields | repo config parser | throw | no bubble config write | phase-boundary validation error | N/A | P1 | required-now |
+| duplicate id in `validation.required` | repo config parser or create resolver | throw | zero side effects on new bubble config | validation config error | N/A | P1 | required-now |
+| unknown key in repo `validation.commands` | repo config parser | throw only when key fails the validation command-id predicate or is reserved; otherwise accept as custom command id | zero side effects on new bubble config for invalid/reserved key | schema validation error | N/A | P1 | required-now |
 | `validation.required` references unresolved id | resolver | throw | no bubble config write | validation config error | N/A | P1 | required-now |
+| unknown key in bubble `[commands]` | bubble config parser | result/throw per parser contract | accept as custom command id only when key satisfies the validation command-id predicate and value is a non-empty string; reject reserved/invalid keys | bubble config validation error | N/A | P1 | required-now |
 | PASS required id missing command in bubble config | bubble config | result | invalid policy result; do not fallback | existing/custom PASS invalid policy reason | warn/error per existing PASS path | P1 | required-now |
+| PASS evidence schema change | PASS evidence contract | throw/fail test | schema version must stay unchanged for value-only command-id widening; any serialized shape change requires explicit schema-version bump | evidence contract mismatch | N/A | P1 | required-now |
 | dependency failure | process runner | result/throw per existing runner | preserve existing PASS runner failure handling | existing runner error | existing behavior | P1 | required-now |
 
 ### 5) Dependency Constraints
@@ -325,14 +359,24 @@ N/A. This task does not change Pairflow lifecycle success/completion proof; it c
 | ID | Scenario | Given | When | Then | Priority | Timing | Evidence |
 |---|---|---|---|---|---|---|---|
 | T1 | repo config parse success | `pairflow.toml` with `[validation]`, `required`, and `[validation.commands]` including `fitness` | parse/load repo config | structured config preserves required order and command strings | P1 | required-now | `tests/config/repoConfig.test.ts` |
-| T2 | missing config fallback | no `pairflow.toml` or no `[validation]` | create bubble config | legacy `test` and `typecheck` defaults remain, no required policy is invented | P1 | required-now | repo/create tests |
-| T3 | invalid input | invalid command value, invalid required item, or unsupported multi-target key | parse/load or create | actionable error before bubble config persistence | P1 | required-now | repo/create tests |
-| T4 | precedence matrix | explicit create input, repo command, and built-in default candidates exist | create resolves commands | explicit wins, repo wins over built-in, built-in applies only when no explicit/repo value exists | P1 | required-now | resolver/create tests |
-| T5 | explicit empty required policy | `validation.required = []` | create persists bubble config | `validation_required=[]` and `validation_required_explicit=true` are written | P1 | required-now | create/bubble config tests |
-| T6 | custom required command execution | bubble config has `validation_required=["fitness"]` and `fitness` command | PASS resolves/runs validation | PASS executes `fitness`, writes evidence/logs, and reports required id | P1 | required-now | PASS tests |
-| T7 | unresolved required id | bubble config or repo profile requires id with no command/default | create or PASS policy resolve | failure/invalid policy without built-in fallback | P1 | required-now | resolver/PASS tests |
-| T8 | implementer prompt guidance | bubble config has required commands | start/resume delivery guidance is built | prompt lists ids and commands for local feedback and says PASS re-runs them | P1 | required-now | prompt tests |
-| T9 | compatibility | existing bubble config with fixed commands only | parse/render and PASS current policy | existing behavior remains accepted | P1 | required-now | bubble config/PASS regression tests |
+| T2 | missing config fallback | no `pairflow.toml` or no `[validation]` | load repo config and create/render bubble config | missing file loads `{}`; legacy `test` and `typecheck` defaults remain; no required policy is invented; fixed bubble command rendering remains compatible | P1 | required-now | `tests/config/repoConfig.test.ts`, `tests/core/bubble/createBubble.test.ts`, and `tests/config/bubbleConfig.test.ts` |
+| T3a | invalid command value | repo `validation.commands` contains an empty or non-string command value | parse/load repo config | actionable schema error and zero side effects on new bubble config | P1 | required-now | `tests/config/repoConfig.test.ts` |
+| T3b | invalid required item | repo `validation.required` contains a non-string item | parse/load repo config | actionable schema error and zero side effects on new bubble config | P1 | required-now | `tests/config/repoConfig.test.ts` |
+| T3c | duplicate required id | repo `validation.required` repeats the same id | parse/load or create resolution | validation config error and zero side effects on new bubble config | P1 | required-now | `tests/config/repoConfig.test.ts` and `tests/v11/application/create/repoValidationProfileResolver.test.ts` |
+| T3d | unsupported multi-target key | repo `[validation]` contains target-specific or multi-target fields | parse/load repo config | phase-boundary error and zero side effects on new bubble config | P1 | required-now | `tests/config/repoConfig.test.ts` and `tests/core/bubble/createBubble.test.ts` |
+| T3e | reserved or invalid command id | repo `validation.commands` uses a reserved name or an id that fails the validation command-id predicate | parse/load repo config | schema error and zero side effects on new bubble config | P1 | required-now | `tests/config/repoConfig.test.ts` |
+| T3f | unresolved create-time required id | repo profile `validation.required` references an id with no explicit input, repo command, or legacy default | create resolves profile | validation config error and zero side effects on new bubble config | P1 | required-now | `tests/v11/application/create/repoValidationProfileResolver.test.ts` and `tests/core/bubble/createBubble.test.ts` |
+| T4 | precedence matrix | explicit create input and repo command candidates exist for `test`, `typecheck`, optional `bootstrap`, optional `lint`, and one custom id; legacy built-in default candidates exist only for `test` and `typecheck` | create resolves commands | explicit wins, repo wins over built-in, built-in applies only when no explicit/repo value exists, `lint`/`bootstrap`/custom ids are not invented by legacy defaults, and runtime PASS later uses only the materialized bubble config with no post-materialization legacy fallback | P1 | required-now | `tests/v11/application/create/repoValidationProfileResolver.test.ts` and `tests/core/bubble/createBubble.test.ts` |
+| T5 | explicit empty required policy | `validation.required = []` | create persists bubble config | `validation_required=[]` and `validation_required_explicit=true` are written | P1 | required-now | `tests/v11/application/create/repoValidationProfileResolver.test.ts`, `tests/core/bubble/createBubble.test.ts`, and `tests/config/bubbleConfig.test.ts` |
+| T5b | non-empty required policy persistence | `validation.required = ["lint", "fitness", "typecheck"]` and all commands resolve | create persists bubble config and render/parse round-trips it | `commands.validation_required` is written as the same ordered non-empty list and no implicit required ids are added | P1 | required-now | `tests/v11/application/create/repoValidationProfileResolver.test.ts`, `tests/core/bubble/createBubble.test.ts`, and `tests/config/bubbleConfig.test.ts` |
+| T6 | custom required command execution | bubble config has `validation_required=["fitness"]` and `fitness` command | PASS resolves/runs validation | PASS executes `fitness`, writes evidence/logs through the existing PASS validation evidence root/path-safety code, and reports required id | P1 | required-now | `tests/core/runtime/passValidationEvidence.test.ts` and `tests/v11/infrastructure/executor/validation/passValidationCommandRunner.test.ts` |
+| T7 | runtime missing-command policy | existing or hand-edited bubble config parses successfully but `validation_required` names an id that has no command in the same bubble config | PASS policy resolve and implementer PASS flow reaches validation gate | policy resolver, not bubble parser, returns the existing invalid-policy result shape with a reason/detail naming the missing command id; gate-level test spies that no command runner invocation occurs, no PASS evidence/log is written for that id, and no built-in or repo-config fallback is attempted | P1 | required-now | `tests/core/runtime/passValidationEvidence.test.ts`, `tests/core/agent/pass.test.ts`, and `tests/v11/infrastructure/executor/validation/passValidationCommandRunner.test.ts` |
+| T8 | implementer prompt guidance | bubble config has required commands | start/resume delivery guidance is built | prompt lists ids and commands for local feedback and says PASS re-runs them; both start and resume prompt paths must not imply implementer-run logs can be attached as authoritative PASS evidence | P1 | required-now | `tests/core/bubble/startBubble.test.ts`, `tests/core/runtime/tmuxDelivery.test.ts`, and `tests/v11/application/start/startCommandResumeImplementerPrompt.test.ts` |
+| T9 | compatibility | existing bubble config with fixed commands only, plus existing/future bubble configs with unknown `[commands]` keys that satisfy or fail the validation command-id predicate | parse/render and PASS current policy | fixed-field behavior remains accepted; valid unknown keys round-trip as custom command ids; invalid/reserved unknown keys fail config validation instead of being silently dropped | P1 | required-now | `tests/config/bubbleConfig.test.ts` and `tests/core/runtime/passValidationEvidence.test.ts` |
+| T10 | unsupported runtime required id | existing or hand-edited bubble config has `validation_required` containing an id that fails the validation command-id predicate or is reserved | bubble config parse or PASS policy resolve, depending on where the invalid value is detected | invalid config/policy result names the unsupported id, no command runner invocation occurs, no PASS evidence/log is written for that id, and no repo-config or built-in fallback is attempted | P1 | required-now | `tests/config/bubbleConfig.test.ts`, `tests/core/runtime/passValidationEvidence.test.ts`, `tests/core/agent/pass.test.ts`, and `tests/v11/infrastructure/executor/validation/passValidationCommandRunner.test.ts` |
+| T11 | built-in id override is not custom-id reclassification | repo profile overrides built-in `test`, `typecheck`, `lint`, or `bootstrap` command strings | create resolves and persists commands, then PASS resolves required ids | built-in ids keep built-in identity and evidence kind while using overridden command strings; no built-in id is reclassified as custom | P1 | required-now | `tests/v11/application/create/repoValidationProfileResolver.test.ts`, `tests/config/bubbleConfig.test.ts`, and `tests/core/runtime/passValidationEvidence.test.ts` |
+| T12 | materialized custom id and bootstrap round-trip | repo profile defines custom `fitness`, optional `bootstrap`, and ordered `validation.required` that omits `bootstrap` | create writes bubble config and bubble config render/parse round-trips it | custom id and `bootstrap` command strings round-trip through `[commands]`; `validation_required` order is preserved exactly; `bootstrap` is not PASS-required unless explicitly listed | P1 | required-now | `tests/core/bubble/createBubble.test.ts`, `tests/config/bubbleConfig.test.ts`, and `tests/v11/application/create/repoValidationProfileResolver.test.ts` |
+| T13 | PASS evidence schema version preservation | custom command id widening changes only command id string values and does not change serialized evidence field names or value shapes | build/read PASS validation evidence | existing evidence schema version remains unchanged; any serialized shape change requires an explicit schema-version bump and matching contract test update | P1 | required-now | `tests/core/runtime/passValidationEvidence.test.ts` |
 
 ## L2 - Implementation Notes (Optional)
 
@@ -350,7 +394,7 @@ N/A. This task does not change Pairflow lifecycle success/completion proof; it c
 
 1. The parent plan's `plan_status: approved` and closed contract inventory are authoritative even though the plan file already had uncommitted edits before this task was created.
 2. Task 1 may remain a single high-risk foundation slice because the parent plan explicitly authorizes this collapsed boundary and defers target/read-model/cleanup concerns.
-3. `status: under_review` is used so ReviewSpec task-mode can validate target-file reality and approve or require refinement later.
+3. Frontmatter `status: approved` records the current task metadata state. The Spec Lock section below describes the lifecycle close condition for future document-bubble handling; it is not a separate competing status field and does not authorize ad hoc implementer status edits.
 
 ## Open Questions
 
@@ -373,4 +417,4 @@ N/A.
 
 ## Spec Lock
 
-Mark task as `IMPLEMENTABLE` only after ReviewSpec task-mode approval and the document-bubble close workflow set the lifecycle-owned status.
+The task is implementation-ready only while frontmatter `status: approved` remains aligned with ReviewSpec task-mode approval. If a future document-bubble review reopens required refinement, the document-bubble close workflow owns the lifecycle status update back to an implementable/approved state.
