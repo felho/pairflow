@@ -5,7 +5,7 @@ task_family_id: facade-migration-map-cleanup
 sequence_key: "1"
 task_id: 1-facade-migration-map-cleanup
 title: "Facade Migration Map Cleanup"
-status: implementable
+status: in_progress
 phase: phase1
 target_files:
   - package.json
@@ -21,7 +21,7 @@ normative_refs:
 owners:
   - "felho"
 doc_bubble_id: 1-facade-migration-map-cleanup-doc
-impl_bubble_id: null
+impl_bubble_id: 1-facade-migration-map-cleanup-impl
 supersedes: []
 superseded_by: null
 archive_group: 2026-04-30-parity-test-retirement-plan-v1
