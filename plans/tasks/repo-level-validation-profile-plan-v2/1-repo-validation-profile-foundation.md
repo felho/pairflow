@@ -5,7 +5,7 @@ task_family_id: repo-validation-profile-foundation
 sequence_key: "1"
 task_id: 1-repo-validation-profile-foundation
 title: "Repo Validation Profile Foundation"
-status: approved
+status: implementable
 phase: phase1
 target_files:
   - "src/config/repoConfig.ts"
