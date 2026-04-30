@@ -69,6 +69,8 @@ function buildPassValidationErrorContext(input: {
   commandPath?: string
   artifactPath?: string
   policyState?: string
+  cwd?: string
+  executionCwd?: string
 }): Record<string, unknown> {
   return {
     bubble_id: input.bubbleId,
@@ -79,7 +81,9 @@ function buildPassValidationErrorContext(input: {
     ...(input.commandKind !== undefined ? { command_kind: input.commandKind } : {}),
     ...(input.commandPath !== undefined ? { command_path: input.commandPath } : {}),
     ...(input.artifactPath !== undefined ? { artifact_path: input.artifactPath } : {}),
-    ...(input.policyState !== undefined ? { policy_state: input.policyState } : {})
+    ...(input.policyState !== undefined ? { policy_state: input.policyState } : {}),
+    ...(input.cwd !== undefined ? { cwd: input.cwd } : {}),
+    ...(input.executionCwd !== undefined ? { execution_cwd: input.executionCwd } : {})
   }
 }
 
@@ -104,7 +108,8 @@ async function executeConfiguredValidationCommands(input: {
       result = await input.runValidationCommand({
         kind: command.kind,
         command: command.command,
-        worktreePath: input.worktreePath
+        worktreePath: input.worktreePath,
+        ...(command.cwd !== undefined ? { cwd: command.cwd } : {})
       })
     } catch (error: unknown) {
       if (error instanceof PassValidationRunnerExecutionError) {
@@ -120,6 +125,7 @@ async function executeConfiguredValidationCommands(input: {
             artifactsDir: input.artifactsDir,
             commandKind: command.kind,
             commandPath: command.command,
+            ...(error.context?.cwd !== undefined ? { cwd: error.context.cwd } : {}),
             policyState: input.resolvedPolicy.policyState
           })
         )
@@ -147,7 +153,14 @@ async function executeConfiguredValidationCommands(input: {
       command: result.command,
       exitCode: result.exitCode,
       logPath: result.logPath,
-      durationMs: result.durationMs
+      durationMs: result.durationMs,
+      ...(command.targetId !== undefined ? { targetId: command.targetId } : {}),
+      ...(command.cwd !== undefined
+        ? { cwd: result.executionCwd }
+        : {}),
+      ...(command.targetPaths !== undefined
+        ? { targetPaths: [...command.targetPaths] }
+        : {})
     }
     executedCommands.push(executed)
 

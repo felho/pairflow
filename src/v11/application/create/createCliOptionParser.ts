@@ -45,6 +45,9 @@ function parseBubbleCreateArgs(args: string[]) {
       "bootstrap-command": {
         type: "string"
       },
+      "validation-target": {
+        type: "string"
+      },
       remote: {
         type: "string"
       },
@@ -95,6 +98,11 @@ function buildCreateOptions(values: BubbleCreateParsedValues): BubbleCreateComma
     options,
     "bootstrapCommand",
     values["bootstrap-command"]
+  );
+  assignIfDefined(
+    options,
+    "validationTarget",
+    values["validation-target"]
   );
   assignIfDefined(
     options,

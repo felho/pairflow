@@ -185,7 +185,16 @@ export function resolvePassValidationPolicy(
 
     resolvedCommands.push({
       kind: rawId,
-      command: resolvedCommand
+      command: resolvedCommand,
+      ...(bubbleConfig.validation_target !== undefined
+        ? { targetId: bubbleConfig.validation_target.id }
+        : {}),
+      ...(bubbleConfig.validation_target?.cwd !== undefined
+        ? { cwd: bubbleConfig.validation_target.cwd }
+        : {}),
+      ...(bubbleConfig.validation_target?.paths !== undefined
+        ? { targetPaths: [...bubbleConfig.validation_target.paths] }
+        : {})
     })
   }
 
@@ -220,6 +229,11 @@ export async function buildPassValidationEvidenceArtifact(input: {
     commands: input.commands.map((command) => ({
       kind: command.kind,
       command: command.command,
+      ...(command.targetId !== undefined ? { target_id: command.targetId } : {}),
+      ...(command.cwd !== undefined ? { cwd: command.cwd } : {}),
+      ...(command.targetPaths !== undefined
+        ? { target_paths: [...command.targetPaths] }
+        : {}),
       ...("exitCode" in command
         ? {
             exit_code: command.exitCode,

@@ -196,6 +196,12 @@ export interface BubbleCommandsConfig {
   validation_required_explicit?: true;
 }
 
+export interface BubbleValidationTargetConfig {
+  id: string;
+  cwd?: string;
+  paths?: string[];
+}
+
 export interface BubbleNotificationsConfig {
   enabled: boolean;
   waiting_human_sound?: string;
@@ -340,6 +346,7 @@ export interface BubbleConfig {
   open_command?: string;
   open_remote_command?: string;
   review_policy?: BubbleReviewPolicyConfig;
+  validation_target?: BubbleValidationTargetConfig;
   agents: BubbleAgentsConfig;
   commands: BubbleCommandsConfig;
   notifications: BubbleNotificationsConfig;

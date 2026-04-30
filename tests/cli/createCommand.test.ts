@@ -138,6 +138,63 @@ describe("parseBubbleCreateCommandOptions", () => {
     );
   });
 
+  it("parses optional validation target", () => {
+    const parsed = parseBubbleCreateCommandOptions([
+      "--id",
+      "b_create_01",
+      "--repo",
+      "/tmp/repo",
+      "--base",
+      "main",
+      "--review-artifact-type",
+      "code",
+      "--task",
+      "Implement X",
+      "--validation-target",
+      "web"
+    ]);
+
+    expect(parsed.validationTarget).toBe("web");
+  });
+
+  it("rejects structurally invalid validation target ids before create resolution", () => {
+    expect(() =>
+      parseBubbleCreateCommandOptions([
+        "--id",
+        "b_create_01",
+        "--repo",
+        "/tmp/repo",
+        "--base",
+        "main",
+        "--review-artifact-type",
+        "code",
+        "--task",
+        "Implement X",
+        "--validation-target",
+        "../web"
+      ])
+    ).toThrow(/^VALIDATION_TARGET_ID_INVALID:/u);
+  });
+
+  it("rejects reserved validation target ids before create resolution", () => {
+    expect(() =>
+      parseBubbleCreateCommandOptions([
+        "--id",
+        "b_create_01",
+        "--repo",
+        "/tmp/repo",
+        "--base",
+        "main",
+        "--review-artifact-type",
+        "code",
+        "--task",
+        "Implement X",
+        "--validation-target",
+        "test"
+      ])
+    ).toThrow(/^VALIDATION_TARGET_ID_INVALID:/u);
+  });
+
   it("parses optional pairflow command profile", () => {
     const parsed = parseBubbleCreateCommandOptions([
       "--id",

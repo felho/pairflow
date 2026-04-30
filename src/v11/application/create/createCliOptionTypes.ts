@@ -14,6 +14,7 @@ export interface BubbleCreateCommandOptions {
   reviewerBrief?: string;
   reviewerBriefFile?: string;
   bootstrapCommand?: string;
+  validationTarget?: string;
   pairflowCommandProfile?: PairflowCommandProfile;
   accuracyCritical?: boolean;
   remote?: string;
