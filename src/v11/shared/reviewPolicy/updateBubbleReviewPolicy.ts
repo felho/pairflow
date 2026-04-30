@@ -57,7 +57,7 @@ export interface SharedUiReviewPolicyPatchInput {
   metaReviewQualityPreset?: MetaReviewQualityPreset;
 }
 
-export const metaReviewQualityPresets = ["P1", "P2", "P3", "P3+2"] as const;
+export const metaReviewQualityPresets = ["P1", "P2", "P3", "P3+1", "P3+2"] as const;
 export type MetaReviewQualityPreset = (typeof metaReviewQualityPresets)[number];
 
 export function isMetaReviewQualityPreset(
@@ -80,7 +80,7 @@ export function buildSharedUiReviewPolicyPatch(
       );
     }
     const severity =
-      metaReviewQualityPreset === "P3+2"
+      metaReviewQualityPreset === "P3+1" || metaReviewQualityPreset === "P3+2"
         ? "P3"
         : metaReviewQualityPreset;
     if (
@@ -96,7 +96,11 @@ export function buildSharedUiReviewPolicyPatch(
       reviewer_blocking_min_severity: severity,
       meta_review_auto_rework_min_severity: severity,
       meta_review_consecutive_clean_runs_required:
-        metaReviewQualityPreset === "P3+2" ? 2 : 1
+        metaReviewQualityPreset === "P3+1"
+          ? 2
+          : metaReviewQualityPreset === "P3+2"
+            ? 3
+            : 1
     };
   }
 

@@ -258,12 +258,14 @@ export function parseReviewPolicyBody(body: unknown): {
   ) {
     throwApiError(
       badRequest(
-        "Field `metaReviewQualityPreset` must be one of: P1, P2, P3, P3+2."
+        "Field `metaReviewQualityPreset` must be one of: P1, P2, P3, P3+1, P3+2."
       )
     );
   }
   const metaReviewQualityPresetSeverity =
-    metaReviewQualityPreset === "P3+2" ? "P3" : metaReviewQualityPreset;
+    metaReviewQualityPreset === "P3+1" || metaReviewQualityPreset === "P3+2"
+      ? "P3"
+      : metaReviewQualityPreset;
   if (
     reviewBlockingMinSeverity !== undefined
     && metaReviewQualityPresetSeverity !== undefined

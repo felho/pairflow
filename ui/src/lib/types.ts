@@ -188,7 +188,7 @@ export interface UiBubbleMetaReviewSummary {
 
 export type BubbleReviewLoopMode = "full" | "meta_only";
 export type BubbleReviewSupportStatus = "enabled" | "guarded";
-export type MetaReviewQualityPreset = "P1" | "P2" | "P3" | "P3+2";
+export type MetaReviewQualityPreset = "P1" | "P2" | "P3" | "P3+1" | "P3+2";
 export type MetaReviewQualityPresetState =
   | {
       kind: "supported";

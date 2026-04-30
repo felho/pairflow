@@ -3133,7 +3133,7 @@ describe("createUiRouter review policy action", () => {
           body: JSON.stringify({
             reviewLoopMode: "meta_only",
             reviewBlockingMinSeverity: "P3",
-            metaReviewQualityPreset: "P3+2",
+            metaReviewQualityPreset: "P3+1",
             expectedBubbleToml: "id = \"b-router-policy-01\""
           })
         }
@@ -3165,7 +3165,7 @@ describe("createUiRouter review policy action", () => {
         repoPath,
         reviewLoopMode: "meta_only",
         reviewBlockingMinSeverity: "P3",
-        metaReviewQualityPreset: "P3+2",
+        metaReviewQualityPreset: "P3+1",
         expectedBubbleToml: "id = \"b-router-policy-01\""
       });
     } finally {

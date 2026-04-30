@@ -149,7 +149,7 @@ describe("BubbleExpandedCard", () => {
 
     expect(
       screen.getByRole("combobox", { name: "Meta-review quality preset" })
-    ).toHaveValue("P3+2");
+    ).toHaveValue("P3+1");
   });
 
   it("does not render the expanded clean-run summary strip", () => {
@@ -172,7 +172,7 @@ describe("BubbleExpandedCard", () => {
     });
 
     expect(screen.queryByTestId("expanded-review-quality-summary")).not.toBeInTheDocument();
-    expect(screen.queryByText("Quality P3+2")).not.toBeInTheDocument();
+    expect(screen.queryByText("Quality P3+1")).not.toBeInTheDocument();
     expect(screen.queryByText("Clean 1/2")).not.toBeInTheDocument();
   });
 

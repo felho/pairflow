@@ -215,7 +215,7 @@ describe("updateBubbleReviewPolicyForUi", () => {
           repoPath,
           reviewLoopMode: "meta_only",
           reviewBlockingMinSeverity: "P3",
-          metaReviewQualityPreset: "P3+2",
+          metaReviewQualityPreset: "P3+1",
           expectedBubbleToml: initialBubbleToml
         },
         {

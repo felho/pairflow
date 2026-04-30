@@ -647,7 +647,7 @@ describe("ActionBar", () => {
 
     await user.selectOptions(
       screen.getByRole("combobox", { name: "Meta-review quality preset" }),
-      "P3+2"
+      "P3+1"
     );
 
     expect(onAction).toHaveBeenCalledWith({
@@ -655,9 +655,46 @@ describe("ActionBar", () => {
       action: "update-review-policy",
       reviewLoopMode: "meta_only",
       reviewBlockingMinSeverity: "P3",
-      metaReviewQualityPreset: "P3+2",
+      metaReviewQualityPreset: "P3+1",
       expectedBubbleToml: "id = \"b-policy-severity\""
     });
+  });
+
+  it("renders the P3+2 quality preset for three required clean runs", () => {
+    render(
+      <ActionBar
+        bubble={bubbleCard({
+          bubbleId: "b-policy-p3-plus-two",
+          repoPath: "/repo-a",
+          state: "RUNNING",
+          reviewPolicy: {
+            requested_loop_mode: "meta_only",
+            effective_loop_mode: "full",
+            support_status: "guarded",
+            reviewer_blocking_min_severity: "P3",
+            meta_review_auto_rework_min_severity: "P3",
+            meta_review_consecutive_clean_runs_required: 3
+          }
+        })}
+        attach={{
+          visible: false,
+          enabled: false,
+          command: "tmux attach -t pf-b-policy-p3-plus-two",
+          hint: null
+        }}
+        isSubmitting={false}
+        actionError={null}
+        retryHint={null}
+        actionFailure={null}
+        onAction={vi.fn(() => Promise.resolve(undefined))}
+        onClearFeedback={vi.fn()}
+        expectedBubbleToml={"id = \"b-policy-p3-plus-two\""}
+      />
+    );
+
+    expect(
+      screen.getByRole("combobox", { name: "Meta-review quality preset" })
+    ).toHaveValue("P3+2");
   });
 
   it("shows unsupported quality-preset pairs as visible custom truth", () => {

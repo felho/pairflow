@@ -876,9 +876,10 @@ UI quality presets are compact encodings of exact backend pairs:
 | `P1` | `(meta_review_auto_rework_min_severity=P1, meta_review_consecutive_clean_runs_required=1)` |
 | `P2` | `(P2, 1)` |
 | `P3` | `(P3, 1)` |
-| `P3+2` | `(P3, 2)` |
+| `P3+1` | `(P3, 2)` |
+| `P3+2` | `(P3, 3)` |
 
-Unsupported pairs such as `(P2, 2)` must display as custom/unsupported rather than being coerced to one of the supported presets. `P3+2` is not a severity label; it means threshold `P3` plus two required consecutive clean runs.
+Unsupported pairs such as `(P2, 2)` must display as custom/unsupported rather than being coerced to one of the supported presets. `P3+1` and `P3+2` are not severity labels; they mean threshold `P3` plus one or two additional required consecutive clean runs beyond the baseline `P3` clean run.
 
 ---
 

@@ -82,9 +82,10 @@ The UI quality preset is an exact compact encoding of `(meta_review_auto_rework_
 | `P1` | `(P1, 1)` |
 | `P2` | `(P2, 1)` |
 | `P3` | `(P3, 1)` |
-| `P3+2` | `(P3, 2)` |
+| `P3+1` | `(P3, 2)` |
+| `P3+2` | `(P3, 3)` |
 
-Unsupported backend pairs, such as `(P2, 2)`, must display as custom/unsupported and must not be coerced to a supported preset. `P3+2` means threshold `P3` plus two required clean runs; it is not a new severity.
+Unsupported backend pairs, such as `(P2, 2)`, must display as custom/unsupported and must not be coerced to a supported preset. `P3+1` and `P3+2` mean threshold `P3` plus one or two additional required clean runs beyond the baseline `P3` clean run; they are not new severities.
 
 ## Pre-flight
 

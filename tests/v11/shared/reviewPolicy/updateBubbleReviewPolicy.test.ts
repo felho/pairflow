@@ -61,7 +61,8 @@ describe("updateBubbleReviewPolicy", () => {
     ["P1", "P1", 1],
     ["P2", "P2", 1],
     ["P3", "P3", 1],
-    ["P3+2", "P3", 2]
+    ["P3+1", "P3", 2],
+    ["P3+2", "P3", 3]
   ] as const)(
     "maps supported UI quality preset %s into the exact backend threshold and streak pair",
     (preset, severity, requiredCleanRuns) => {
@@ -93,7 +94,7 @@ describe("updateBubbleReviewPolicy", () => {
       buildSharedUiReviewPolicyPatch({
         reviewLoopMode: "meta_only",
         reviewBlockingMinSeverity: "P2",
-        metaReviewQualityPreset: "P3+2"
+        metaReviewQualityPreset: "P3+1"
       })
     ).toThrow(REVIEW_POLICY_PATCH_INVALID);
   });

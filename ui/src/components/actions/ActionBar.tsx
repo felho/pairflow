@@ -154,6 +154,12 @@ function resolveMetaReviewQualityPreset(
   if (severity === "P3" && consecutiveCleanRunsRequired === 2) {
     return {
       kind: "supported",
+      preset: "P3+1"
+    };
+  }
+  if (severity === "P3" && consecutiveCleanRunsRequired === 3) {
+    return {
+      kind: "supported",
       preset: "P3+2"
     };
   }
@@ -167,7 +173,13 @@ function resolveMetaReviewQualityPreset(
 function isMetaReviewQualityPresetValue(
   value: string
 ): value is MetaReviewQualityPreset {
-  return value === "P1" || value === "P2" || value === "P3" || value === "P3+2";
+  return (
+    value === "P1"
+    || value === "P2"
+    || value === "P3"
+    || value === "P3+1"
+    || value === "P3+2"
+  );
 }
 
 const trailingIconActionOrder: BubbleActionKind[] = ["stop", "restart", "attach", "open"];
@@ -512,7 +524,7 @@ export function ActionBar(props: ActionBarProps): JSX.Element {
                   void invokeReviewPolicyUpdate({
                     reviewLoopMode: requestedLoopMode,
                     reviewBlockingMinSeverity:
-                      preset === "P3+2"
+                      preset === "P3+1" || preset === "P3+2"
                         ? "P3"
                         : preset,
                     metaReviewQualityPreset: preset
@@ -522,6 +534,7 @@ export function ActionBar(props: ActionBarProps): JSX.Element {
                 <option value="P1">P1</option>
                 <option value="P2">P2</option>
                 <option value="P3">P3</option>
+                <option value="P3+1">P3+1</option>
                 <option value="P3+2">P3+2</option>
                 {requestedQualityPreset.kind === "custom" ? (
                   <option value="custom">
