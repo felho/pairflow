@@ -5,7 +5,7 @@ task_family_id: validation-target-resolution
 sequence_key: "2"
 task_id: 2-validation-target-resolution
 title: "Validation Target Resolution"
-status: approved
+status: implementable
 phase: phase2
 target_files:
   - "src/config/repoConfig.ts"
