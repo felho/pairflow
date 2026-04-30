@@ -590,6 +590,132 @@ describe("createBubble", () => {
     expect(reparsedConfig.commands.bootstrap).toBe(bootstrapCommand);
   });
 
+  it("materializes repo validation profile commands into bubble config", async () => {
+    const repoPath = await createTempRepo();
+    await writeFile(
+      join(repoPath, "pairflow.toml"),
+      [
+        "[validation]",
+        'required = ["lint", "fitness", "typecheck"]',
+        "",
+        "[validation.commands]",
+        'lint = "pnpm lint"',
+        'fitness = "pnpm fitness"',
+        'typecheck = "pnpm typecheck:repo"',
+        ""
+      ].join("\n"),
+      "utf8"
+    );
+
+    const result = await createBubble({
+      id: "b_create_validation_profile",
+      repoPath,
+      baseBranch: "main",
+      reviewArtifactType: "code",
+      task: "Validation profile",
+      cwd: repoPath,
+      typecheckCommand: "pnpm typecheck:explicit"
+    });
+
+    expect(result.config.commands).toMatchObject({
+      lint: "pnpm lint",
+      fitness: "pnpm fitness",
+      test: "pnpm test",
+      typecheck: "pnpm typecheck:explicit",
+      validation_required: ["lint", "fitness", "typecheck"]
+    });
+    expect(result.config.commands.validation_required_explicit).toBeUndefined();
+    const bubbleToml = await readFile(result.paths.bubbleTomlPath, "utf8");
+    expect(bubbleToml).not.toContain("validation_required_explicit = false");
+    const reparsedConfig = parseBubbleConfigToml(bubbleToml);
+    expect(reparsedConfig.commands.fitness).toBe("pnpm fitness");
+    expect(reparsedConfig.commands.validation_required).toEqual([
+      "lint",
+      "fitness",
+      "typecheck"
+    ]);
+  });
+
+  it("persists explicit empty repo validation required policy into bubble config", async () => {
+    const repoPath = await createTempRepo();
+    await writeFile(
+      join(repoPath, "pairflow.toml"),
+      ["[validation]", "required = []", ""].join("\n"),
+      "utf8"
+    );
+
+    const result = await createBubble({
+      id: "b_create_validation_empty",
+      repoPath,
+      baseBranch: "main",
+      reviewArtifactType: "code",
+      task: "Explicit empty validation policy",
+      cwd: repoPath
+    });
+
+    expect(result.config.commands.validation_required).toEqual([]);
+    expect(result.config.commands.validation_required_explicit).toBe(true);
+    const bubbleToml = await readFile(result.paths.bubbleTomlPath, "utf8");
+    expect(bubbleToml).toContain("validation_required = []");
+    expect(bubbleToml).toContain("validation_required_explicit = true");
+    const reparsedConfig = parseBubbleConfigToml(bubbleToml);
+    expect(reparsedConfig.commands.validation_required).toEqual([]);
+    expect(reparsedConfig.commands.validation_required_explicit).toBe(true);
+  });
+
+  it("fails before bubble config persistence for unresolved repo validation required id", async () => {
+    const repoPath = await createTempRepo();
+    await writeFile(
+      join(repoPath, "pairflow.toml"),
+      '[validation]\nrequired = ["fitness"]\n',
+      "utf8"
+    );
+
+    await expect(
+      createBubble({
+        id: "b_create_validation_invalid",
+        repoPath,
+        baseBranch: "main",
+        reviewArtifactType: "code",
+        task: "Invalid validation profile",
+        cwd: repoPath
+      })
+    ).rejects.toThrow(/no command was resolved/u);
+    await expect(
+      stat(join(repoPath, ".pairflow", "bubbles", "b_create_validation_invalid", "bubble.toml"))
+    ).rejects.toMatchObject({ code: "ENOENT" });
+  });
+
+  it("fails before bubble config persistence for invalid repo validation config", async () => {
+    const repoPath = await createTempRepo();
+    await writeFile(
+      join(repoPath, "pairflow.toml"),
+      [
+        "[validation]",
+        'required = ["fitness"]',
+        "",
+        "[validation.commands]",
+        'fitness = ""',
+        ""
+      ].join("\n"),
+      "utf8"
+    );
+
+    await expect(
+      createBubble({
+        id: "b_create_validation_bad_config",
+        repoPath,
+        baseBranch: "main",
+        reviewArtifactType: "code",
+        task: "Invalid validation config",
+        cwd: repoPath
+      })
+    ).rejects.toThrow(SchemaValidationError);
+    await expect(
+      stat(join(repoPath, ".pairflow", "bubbles", "b_create_validation_bad_config", "bubble.toml"))
+    ).rejects.toMatchObject({ code: "ENOENT" });
+  });
+
   it("supports injectable creation timestamp", async () => {
     const repoPath = await createTempRepo();
     const now = new Date("2026-02-26T22:00:00.000Z");

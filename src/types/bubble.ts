@@ -187,12 +187,13 @@ export function resolveUniquelyConfiguredRoleForAgent(input: {
 }
 
 export interface BubbleCommandsConfig {
+  [commandId: string]: string | string[] | boolean | undefined;
   bootstrap?: string;
   lint?: string;
   test: string;
   typecheck: string;
   validation_required?: string[];
-  validation_required_explicit?: boolean;
+  validation_required_explicit?: true;
 }
 
 export interface BubbleNotificationsConfig {

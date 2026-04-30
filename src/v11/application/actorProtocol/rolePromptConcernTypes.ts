@@ -1,6 +1,7 @@
 import type {
   AgentRole,
   BubbleReviewAutoReworkSeverity,
+  BubbleCommandsConfig,
   BubbleStateSnapshot,
   PairflowCommandProfile,
   ReviewArtifactType
@@ -63,6 +64,7 @@ interface PromptConcernBuildInputBase {
   reviewerTestDirectiveLine?: string;
   reviewerBriefText?: string;
   reviewerFocus?: ReviewerFocusExtractionResult;
+  validationCommands?: BubbleCommandsConfig;
 }
 
 export interface StartupPromptConcernBuildInput

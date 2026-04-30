@@ -223,12 +223,41 @@ meta_review_consecutive_clean_runs_required = 2
       "typecheck",
       "test"
     ]);
-    expect(config.commands.validation_required_explicit).toBe(false);
+    expect(config.commands.validation_required_explicit).toBeUndefined();
 
     const rendered = renderBubbleConfigToml(config);
     expect(rendered).toContain('lint = "pnpm lint"');
     expect(rendered).toContain('validation_required = ["lint", "typecheck", "test"]');
-    expect(rendered).toContain("validation_required_explicit = false");
+    expect(rendered).not.toContain("validation_required_explicit = false");
+  });
+
+  it("parses and renders custom validation commands", () => {
+    const config = parseBubbleConfigToml(
+      `${baseToml}fitness = "pnpm fitness"\nvalidation_required = ["fitness"]\nvalidation_required_explicit = false\n`
+    );
+
+    expect(config.commands.fitness).toBe("pnpm fitness");
+    expect(config.commands.validation_required).toEqual(["fitness"]);
+
+    const rendered = renderBubbleConfigToml(config);
+    expect(rendered).toContain('fitness = "pnpm fitness"');
+    expect(parseBubbleConfigToml(rendered).commands.fitness).toBe("pnpm fitness");
+  });
+
+  it("rejects invalid custom validation command ids", () => {
+    expect(() =>
+      parseBubbleConfigToml(
+        `${baseToml}Fitness = "pnpm fitness"\nvalidation_required = ["Fitness"]\n`
+      )
+    ).toThrow(/Invalid bubble config/u);
+  });
+
+  it("rejects duplicate validation_required ids", () => {
+    expect(() =>
+      parseBubbleConfigToml(
+        `${baseToml}validation_required = ["typecheck", "typecheck"]\n`
+      )
+    ).toThrow(/Invalid bubble config/u);
   });
 
   it("parses and roundtrips optional [executor] metadata", () => {

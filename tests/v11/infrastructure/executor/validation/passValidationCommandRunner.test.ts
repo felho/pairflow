@@ -34,4 +34,20 @@ describe("runPassValidationCommand", () => {
     expect(log).toContain("typecheck ok");
     expect(log).toContain("exit_code=0");
   });
+
+  it("writes custom command id logs under the PASS evidence root", async () => {
+    const worktreePath = await mkdtemp(join(tmpdir(), "pairflow-pass-validation-runner-"));
+    cleanupPaths.push(worktreePath);
+
+    const result = await runPassValidationCommand({
+      kind: "fitness",
+      command: "printf 'fitness ok\\n'",
+      worktreePath
+    });
+
+    expect(result.logPath).toBe(".pairflow/evidence/pass-validation-fitness.log");
+    const log = await readFile(join(worktreePath, result.logPath), "utf8");
+    expect(log).toContain("kind=fitness");
+    expect(log).toContain("fitness ok");
+  });
 });

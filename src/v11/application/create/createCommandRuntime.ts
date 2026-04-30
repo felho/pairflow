@@ -28,12 +28,14 @@ import type {
   CreateReviewArtifactType,
   PairflowCommandProfile
 } from "../../../types/bubble.js";
+import type { ResolvedRepoValidationProfileCommands } from "./repoValidationProfileResolver.js";
 import { GitRepositoryError } from "../../shared/ports/gitRepository.js";
 import type { AssertGitRepositoryPort } from "../../shared/ports/gitRepository.js";
 import {
   isNonEmptyString,
   SchemaValidationError
 } from "../../shared/validation/primitives.js";
+import { builtInValidationCommandIds } from "../../shared/validation/validationCommandId.js";
 import type { ResolvedTaskInput } from "./createCommandContract.js";
 import {
   parseCreateRemoteAlias
@@ -70,6 +72,7 @@ export interface CreateBubbleConfigInput {
   testCommand?: string;
   typecheckCommand?: string;
   bootstrapCommand?: string;
+  resolvedValidationCommands?: ResolvedRepoValidationProfileCommands;
   openCommand?: string;
   pairflowCommandProfile?: PairflowCommandProfile;
   executorRemote?: string;
@@ -279,6 +282,7 @@ export async function resolveReviewerBriefInput(input: {
 }
 
 export function buildBubbleConfig(input: CreateBubbleConfigInput): BubbleConfig {
+  const resolvedCommands = input.resolvedValidationCommands?.commands;
   return assertValidBubbleConfig({
     id: input.id,
     bubble_instance_id: input.bubbleInstanceId,
@@ -316,11 +320,31 @@ export function buildBubbleConfig(input: CreateBubbleConfigInput): BubbleConfig 
         : {})
     },
     commands: {
-      ...(input.bootstrapCommand !== undefined
-        ? { bootstrap: input.bootstrapCommand }
+      ...(resolvedCommands?.bootstrap !== undefined || input.bootstrapCommand !== undefined
+        ? { bootstrap: resolvedCommands?.bootstrap ?? input.bootstrapCommand }
         : {}),
-      test: input.testCommand ?? "pnpm test",
-      typecheck: input.typecheckCommand ?? "pnpm typecheck"
+      ...(resolvedCommands?.lint !== undefined
+        ? { lint: resolvedCommands.lint }
+        : {}),
+      test: resolvedCommands?.test ?? input.testCommand ?? "pnpm test",
+      typecheck: resolvedCommands?.typecheck ?? input.typecheckCommand ?? "pnpm typecheck",
+      ...Object.fromEntries(
+        Object.entries(resolvedCommands ?? {}).filter(
+          ([id]) => !(builtInValidationCommandIds as readonly string[]).includes(id)
+        )
+      ),
+      ...(input.resolvedValidationCommands?.validationRequired !== undefined
+        ? {
+            validation_required:
+              input.resolvedValidationCommands.validationRequired
+          }
+        : {}),
+      ...(input.resolvedValidationCommands?.validationRequiredExplicit !== undefined
+        ? {
+            validation_required_explicit:
+              input.resolvedValidationCommands.validationRequiredExplicit
+          }
+        : {})
     },
     notifications: {
       enabled: true

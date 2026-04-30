@@ -5,8 +5,8 @@ import { dirname, join } from "node:path"
 import type { ReviewerTestExecutionDirective } from "../../../../v11/shared/reviewer/testEvidence.js"
 import { runGit } from "../../workspace/git.js"
 import type { BubbleConfig } from "../../../../types/bubble.js"
+import { isValidationCommandId } from "../../../shared/validation/validationCommandId.js"
 import {
-  passValidationCommandIds,
   passValidationEvidenceSchemaVersion,
   type PassValidationCommandId,
   type PassValidationCommandResult,
@@ -18,7 +18,6 @@ import {
 } from "./passValidationEvidenceContract.js"
 
 export {
-  passValidationCommandIds,
   passValidationEvidenceSchemaVersion,
   type PassValidationCommandId,
   type PassValidationCommandResult,
@@ -53,10 +52,6 @@ export interface ResolvedPassValidationPolicy {
   commands: PassValidationCommandSpec[]
   requiredCommandSetId: string | null
   invalidReason?: string
-}
-
-function isPassValidationCommandId(value: string): value is PassValidationCommandId {
-  return (passValidationCommandIds as readonly string[]).includes(value)
 }
 
 function normalizeCommand(command: string | undefined): string | undefined {
@@ -154,7 +149,7 @@ export function resolvePassValidationPolicy(
   const orderedRequiredIds: PassValidationCommandId[] = []
   const seenRequiredIds = new Set<PassValidationCommandId>()
   for (const rawId of validationRequired) {
-    if (!isPassValidationCommandId(rawId)) {
+    if (!isValidationCommandId(rawId)) {
       return {
         policyState: "policy_configured",
         commands: [],
@@ -162,8 +157,20 @@ export function resolvePassValidationPolicy(
         invalidReason: `commands.validation_required references unsupported id '${rawId}'.`
       }
     }
+    if (seenRequiredIds.has(rawId)) {
+      return {
+        policyState: "policy_configured",
+        commands: [],
+        requiredCommandSetId: validationRequired.join("__"),
+        invalidReason: `commands.validation_required contains duplicate id '${rawId}'.`
+      }
+    }
+    const commandCandidate = bubbleConfig.commands[rawId]
 
-    const resolvedCommand = normalizeCommand(bubbleConfig.commands[rawId])
+    const resolvedCommand =
+      typeof commandCandidate === "string"
+        ? normalizeCommand(commandCandidate)
+        : undefined
     if (resolvedCommand === undefined) {
       return {
         policyState: "policy_configured",
@@ -173,9 +180,6 @@ export function resolvePassValidationPolicy(
       }
     }
 
-    if (seenRequiredIds.has(rawId)) {
-      continue
-    }
     seenRequiredIds.add(rawId)
     orderedRequiredIds.push(rawId)
 
