@@ -57,6 +57,47 @@ describe("updateBubbleReviewPolicy", () => {
     });
   });
 
+  it.each([
+    ["P1", "P1", 1],
+    ["P2", "P2", 1],
+    ["P3", "P3", 1],
+    ["P3+2", "P3", 2]
+  ] as const)(
+    "maps supported UI quality preset %s into the exact backend threshold and streak pair",
+    (preset, severity, requiredCleanRuns) => {
+      expect(
+        buildSharedUiReviewPolicyPatch({
+          reviewLoopMode: "meta_only",
+          metaReviewQualityPreset: preset
+        })
+      ).toEqual({
+        review_loop_mode: "meta_only",
+        reviewer_blocking_min_severity: severity,
+        meta_review_auto_rework_min_severity: severity,
+        meta_review_consecutive_clean_runs_required: requiredCleanRuns
+      });
+    }
+  );
+
+  it("rejects unknown UI quality presets before constructing a backend patch", () => {
+    expect(() =>
+      buildSharedUiReviewPolicyPatch({
+        reviewLoopMode: "meta_only",
+        metaReviewQualityPreset: "P2+2" as never
+      })
+    ).toThrow(REVIEW_POLICY_PATCH_INVALID);
+  });
+
+  it("rejects mismatched explicit reviewer severity when a quality preset is also provided", () => {
+    expect(() =>
+      buildSharedUiReviewPolicyPatch({
+        reviewLoopMode: "meta_only",
+        reviewBlockingMinSeverity: "P2",
+        metaReviewQualityPreset: "P3+2"
+      })
+    ).toThrow(REVIEW_POLICY_PATCH_INVALID);
+  });
+
   it("omits both threshold fields when reviewBlockingMinSeverity is not provided", () => {
     expect(
       buildSharedUiReviewPolicyPatch({

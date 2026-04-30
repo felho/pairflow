@@ -431,6 +431,7 @@ describe("listBubbles", () => {
     expect(listed.bubbles[0]?.metaReview).toEqual({
       actor: "meta-reviewer",
       authorityActive: false,
+      consecutiveCleanRuns: 0,
       runtimeDelivery: null
     });
   });
@@ -903,7 +904,10 @@ describe("listBubbles", () => {
       lastCheckedAt: "2026-04-16T10:00:00.000Z",
       state: "WAITING_HUMAN",
       round: 3,
-      maxRounds: 5
+      maxRounds: 5,
+      metaReview: {
+        consecutiveCleanRuns: 2
+      }
     });
 
     const remoteStatusSpy = vi.spyOn(
@@ -915,6 +919,7 @@ describe("listBubbles", () => {
 
     expect(remoteStatusSpy).not.toHaveBeenCalled();
     expect(listed.bubbles[0]?.state).toBe("WAITING_HUMAN");
+    expect(listed.bubbles[0]?.metaReview.consecutiveCleanRuns).toBe(2);
     expect(listed.bubbles[0]?.lastCommandAt).toBeNull();
     expect(listed.bubbles[0]?.remoteExecution).toMatchObject({
       stateSource: "cache",
@@ -1214,6 +1219,7 @@ describe("listBubbles", () => {
         metaReview: {
           actor: "meta-reviewer",
           authorityActive: false,
+          consecutiveCleanRuns: 0,
           runtimeDelivery: null
         },
         accuracyCritical: false,
@@ -1354,6 +1360,7 @@ describe("listBubbles", () => {
       metaReview: {
         actor: "meta-reviewer",
         authorityActive: false,
+        consecutiveCleanRuns: 0,
         runtimeDelivery: null
       },
       accuracyCritical: false,
@@ -1484,6 +1491,7 @@ describe("listBubbles", () => {
       metaReview: {
         actor: "meta-reviewer",
         authorityActive: false,
+        consecutiveCleanRuns: 0,
         runtimeDelivery: null
       },
       accuracyCritical: false,
@@ -1600,6 +1608,7 @@ describe("listBubbles", () => {
       metaReview: {
         actor: "meta-reviewer",
         authorityActive: false,
+        consecutiveCleanRuns: 0,
         runtimeDelivery: null
       },
       accuracyCritical: false,
@@ -1717,6 +1726,7 @@ describe("listBubbles", () => {
       metaReview: {
         actor: "meta-reviewer",
         authorityActive: false,
+        consecutiveCleanRuns: 0,
         runtimeDelivery: null
       },
       accuracyCritical: false,
@@ -1844,6 +1854,7 @@ describe("listBubbles", () => {
       metaReview: {
         actor: "meta-reviewer",
         authorityActive: false,
+        consecutiveCleanRuns: 0,
         runtimeDelivery: null
       },
       accuracyCritical: false,
@@ -1973,6 +1984,7 @@ describe("listBubbles", () => {
       metaReview: {
         actor: "meta-reviewer",
         authorityActive: false,
+        consecutiveCleanRuns: 0,
         runtimeDelivery: null
       },
       accuracyCritical: false,
@@ -2107,6 +2119,7 @@ describe("listBubbles", () => {
       metaReview: {
         actor: "meta-reviewer",
         authorityActive: false,
+        consecutiveCleanRuns: 0,
         runtimeDelivery: null
       },
       accuracyCritical: false,
@@ -2230,6 +2243,7 @@ describe("listBubbles", () => {
       metaReview: {
         actor: "meta-reviewer",
         authorityActive: false,
+        consecutiveCleanRuns: 0,
         runtimeDelivery: null
       },
       accuracyCritical: false,
@@ -2346,6 +2360,7 @@ describe("listBubbles", () => {
       metaReview: {
         actor: "meta-reviewer",
         authorityActive: false,
+        consecutiveCleanRuns: 0,
         runtimeDelivery: null
       },
       accuracyCritical: false,

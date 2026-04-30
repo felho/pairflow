@@ -87,6 +87,7 @@ function createBubbleListEntry(input: {
     metaReview: {
       actor: "meta-reviewer",
       authorityActive: false,
+      consecutiveCleanRuns: 0,
       runtimeDelivery: null
     },
     remoteExecution: {

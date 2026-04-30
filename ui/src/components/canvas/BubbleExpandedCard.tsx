@@ -7,6 +7,7 @@ import type {
   BubbleCardModel,
   BubbleLifecycleState,
   BubblePosition,
+  BubbleReviewAutoReworkSeverity,
   UiBubbleDetail,
   UiBubbleInboxItem,
   UiTimelineEntry
@@ -56,6 +57,19 @@ function resolveApprovalPackageCopy(
   }
 
   return "Meta-review is complete. Review the approval package, then choose Approve or Request Rework to continue.";
+}
+
+function resolveQualityLabel(input: {
+  severity: BubbleReviewAutoReworkSeverity;
+  required: number;
+}): string {
+  if (input.required === 1) {
+    return input.severity;
+  }
+  if (input.severity === "P3" && input.required === 2) {
+    return "P3+2";
+  }
+  return `Custom ${input.severity}/${input.required} clean`;
 }
 
 function findLatestInboxItemByType(
@@ -320,6 +334,28 @@ export function BubbleExpandedCard(props: BubbleExpandedCardProps): JSX.Element 
           >
             Dismiss copy error
           </button>
+        </div>
+      ) : null}
+
+      {attachSource.reviewPolicy !== null || attachSource.metaReview.consecutiveCleanRuns > 0 ? (
+        <div
+          className="mx-4 mb-2 flex items-center justify-between gap-2 rounded-[8px] border border-[#2c2c2c] bg-[#151515] px-3 py-1.5 text-[10px] text-[#c9d1d9]"
+          data-testid="expanded-review-quality-summary"
+        >
+          <span className="font-mono">
+            {attachSource.reviewPolicy !== null
+              ? `Quality ${resolveQualityLabel({
+                  severity:
+                    attachSource.reviewPolicy.meta_review_auto_rework_min_severity,
+                  required:
+                    attachSource.reviewPolicy.meta_review_consecutive_clean_runs_required
+                })}`
+              : "Quality unavailable"}
+          </span>
+          <span className="font-mono text-[#8f9aa6]">
+            Clean {attachSource.metaReview.consecutiveCleanRuns}/
+            {attachSource.reviewPolicy?.meta_review_consecutive_clean_runs_required ?? "-"}
+          </span>
         </div>
       ) : null}
 

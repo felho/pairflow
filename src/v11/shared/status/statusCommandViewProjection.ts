@@ -24,6 +24,7 @@ export interface StatusPaneActivityView {
 export interface StatusMetaReviewView {
   actor: "meta-reviewer";
   authorityActive: boolean;
+  consecutiveCleanRuns: number;
   runtimeDelivery: ActiveMetaReviewRuntimeDeliveryView | null;
 }
 
@@ -87,11 +88,7 @@ export function buildStatusPaneActivityView(
 
 export function buildStatusMetaReviewView(
   state: BubbleStatusState
-) : {
-  actor: "meta-reviewer";
-  authorityActive: boolean;
-  runtimeDelivery: ActiveMetaReviewRuntimeDeliveryView | null;
-} {
+): StatusMetaReviewView {
   const runtimeDelivery = projectActiveMetaReviewRuntimeDelivery({
     executionContext: state.meta_review?.execution_context,
     runtimeDelivery: state.meta_review?.runtime_delivery
@@ -99,6 +96,7 @@ export function buildStatusMetaReviewView(
   return {
     actor: "meta-reviewer" as const,
     authorityActive: isMetaReviewExecutionContextActiveState(state),
+    consecutiveCleanRuns: state.meta_review?.consecutive_clean_runs ?? 0,
     runtimeDelivery
   };
 }

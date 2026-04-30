@@ -84,7 +84,8 @@ function createApiStub(overrides: Partial<PairflowApiClient>): PairflowApiClient
         effective_loop_mode: "full" as const,
         support_status: "guarded" as const,
         reviewer_blocking_min_severity: "P1" as const,
-        meta_review_auto_rework_min_severity: "P1" as const
+        meta_review_auto_rework_min_severity: "P1" as const,
+        meta_review_consecutive_clean_runs_required: 1
       },
       previousRequestedLoopMode: "full" as const,
       nextRequestedLoopMode: "meta_only" as const,
@@ -423,8 +424,43 @@ describe("createBubbleStore", () => {
     ).toEqual({
       actor: "meta-reviewer",
       authorityActive: false,
+      consecutiveCleanRuns: 0,
       runtimeDelivery: null
     });
+  });
+
+  it("falls back to zero when a legacy metaReview payload omits consecutiveCleanRuns", async () => {
+    const malformedBubble = bubbleSummary({
+      bubbleId: "b-missing-clean-streak",
+      repoPath: "/repo-a"
+    }) as unknown as Record<string, unknown>;
+    malformedBubble.metaReview = {
+      actor: "meta-reviewer",
+      authorityActive: false,
+      runtimeDelivery: null
+    };
+    const api = createApiStub({
+      getRepos: vi.fn(async () => ["/repo-a"]),
+      getBubbles: vi.fn(async () => ({
+        repo: repoSummary("/repo-a"),
+        bubbles: [malformedBubble as unknown as ReturnType<typeof bubbleSummary>]
+      }))
+    });
+
+    const store = createBubbleStore({
+      api,
+      createEventsClient: () => ({
+        start: () => undefined,
+        stop: () => undefined,
+        refresh: () => undefined
+      })
+    });
+
+    await store.getState().initialize();
+
+    expect(
+      store.getState().bubblesById["b-missing-clean-streak"]?.metaReview
+    ).toHaveProperty("consecutiveCleanRuns", 0);
   });
 
   it("drops empty blocked_prerequisites arrays from incoming reviewPolicy payloads", async () => {
@@ -439,6 +475,7 @@ describe("createBubbleStore", () => {
         support_status: "guarded" as const,
         reviewer_blocking_min_severity: "P1" as const,
         meta_review_auto_rework_min_severity: "P1" as const,
+        meta_review_consecutive_clean_runs_required: 2,
         blocked_reason_code: "REVIEW_POLICY_META_ONLY_GUARDED",
         blocked_prerequisites: [],
         provenance_note: "Guarded until activation ownership lands."
@@ -470,8 +507,129 @@ describe("createBubbleStore", () => {
       support_status: "guarded",
       reviewer_blocking_min_severity: "P1",
       meta_review_auto_rework_min_severity: "P1",
+      meta_review_consecutive_clean_runs_required: 2,
       blocked_reason_code: "REVIEW_POLICY_META_ONLY_GUARDED",
       provenance_note: "Guarded until activation ownership lands."
+    });
+  });
+
+  it("rejects reviewPolicy payloads that omit consecutive clean-run requirement", async () => {
+    const malformedPolicyBubble = {
+      ...bubbleSummary({
+        bubbleId: "b-missing-clean-requirement",
+        repoPath: "/repo-a"
+      }),
+      reviewPolicy: {
+        requested_loop_mode: "meta_only" as const,
+        effective_loop_mode: "full" as const,
+        support_status: "guarded" as const,
+        reviewer_blocking_min_severity: "P1" as const,
+        meta_review_auto_rework_min_severity: "P1" as const
+      }
+    };
+    const api = createApiStub({
+      getRepos: vi.fn(async () => ["/repo-a"]),
+      getBubbles: vi.fn(async () => ({
+        repo: repoSummary("/repo-a"),
+        bubbles: [malformedPolicyBubble]
+      }))
+    });
+
+    const store = createBubbleStore({
+      api,
+      createEventsClient: () => ({
+        start: () => undefined,
+        stop: () => undefined,
+        refresh: () => undefined
+      })
+    });
+
+    await store.getState().initialize();
+
+    expect(
+      store.getState().bubblesById["b-missing-clean-requirement"]?.reviewPolicy
+    ).toBeNull();
+  });
+
+  it("rejects reviewPolicy payloads that omit reviewer blocking severity", async () => {
+    const malformedPolicyBubble = {
+      ...bubbleSummary({
+        bubbleId: "b-missing-reviewer-severity",
+        repoPath: "/repo-a"
+      }),
+      reviewPolicy: {
+        requested_loop_mode: "meta_only" as const,
+        effective_loop_mode: "full" as const,
+        support_status: "guarded" as const,
+        meta_review_auto_rework_min_severity: "P1" as const,
+        meta_review_consecutive_clean_runs_required: 1
+      }
+    };
+    const api = createApiStub({
+      getRepos: vi.fn(async () => ["/repo-a"]),
+      getBubbles: vi.fn(async () => ({
+        repo: repoSummary("/repo-a"),
+        bubbles: [malformedPolicyBubble]
+      }))
+    });
+
+    const store = createBubbleStore({
+      api,
+      createEventsClient: () => ({
+        start: () => undefined,
+        stop: () => undefined,
+        refresh: () => undefined
+      })
+    });
+
+    await store.getState().initialize();
+
+    expect(
+      store.getState().bubblesById["b-missing-reviewer-severity"]?.reviewPolicy
+    ).toBeNull();
+  });
+
+  it("preserves unsupported quality pairs in store state without coercing them", async () => {
+    const customPairBubble = {
+      ...bubbleSummary({
+        bubbleId: "b-custom-pair",
+        repoPath: "/repo-a"
+      }),
+      reviewPolicy: {
+        requested_loop_mode: "meta_only" as const,
+        effective_loop_mode: "full" as const,
+        support_status: "guarded" as const,
+        reviewer_blocking_min_severity: "P2" as const,
+        meta_review_auto_rework_min_severity: "P2" as const,
+        meta_review_consecutive_clean_runs_required: 2
+      }
+    };
+    const api = createApiStub({
+      getRepos: vi.fn(async () => ["/repo-a"]),
+      getBubbles: vi.fn(async () => ({
+        repo: repoSummary("/repo-a"),
+        bubbles: [customPairBubble]
+      }))
+    });
+
+    const store = createBubbleStore({
+      api,
+      createEventsClient: () => ({
+        start: () => undefined,
+        stop: () => undefined,
+        refresh: () => undefined
+      })
+    });
+
+    await store.getState().initialize();
+
+    expect(store.getState().bubblesById["b-custom-pair"]?.reviewPolicy).toEqual({
+      requested_loop_mode: "meta_only",
+      effective_loop_mode: "full",
+      support_status: "guarded",
+      reviewer_blocking_min_severity: "P2",
+      meta_review_auto_rework_min_severity: "P2",
+      meta_review_consecutive_clean_runs_required: 2
     });
   });
 
@@ -518,6 +676,7 @@ describe("createBubbleStore", () => {
     expect(metaReview).toStrictEqual({
       actor: "meta-reviewer",
       authorityActive: true,
+      consecutiveCleanRuns: 0,
       runtimeDelivery: null
     });
     const metaReviewRecord = metaReview as unknown as Record<string, unknown>;
@@ -998,9 +1157,10 @@ describe("createBubbleStore", () => {
             reviewPolicy: {
               requested_loop_mode: "meta_only",
               effective_loop_mode: "full",
-              support_status: "guarded",
+              support_status: "unsupported",
               reviewer_blocking_min_severity: "P1",
               meta_review_auto_rework_min_severity: "P1",
+              meta_review_consecutive_clean_runs_required: 1,
               blocked_reason_code: "REVIEW_POLICY_META_ONLY_GUARDED"
             }
           }
@@ -1087,6 +1247,7 @@ describe("createBubbleStore", () => {
               support_status: "guarded",
               reviewer_blocking_min_severity: "P1",
               meta_review_auto_rework_min_severity: "P1",
+              meta_review_consecutive_clean_runs_required: 1,
               blocked_reason_code: "REVIEW_POLICY_META_ONLY_GUARDED"
             }
           }
@@ -1175,7 +1336,8 @@ describe("createBubbleStore", () => {
               effective_loop_mode: "full",
               support_status: "unsupported",
               reviewer_blocking_min_severity: "P1",
-              meta_review_auto_rework_min_severity: "P1"
+              meta_review_auto_rework_min_severity: "P1",
+              meta_review_consecutive_clean_runs_required: 1
             }
           }
         }
@@ -1228,7 +1390,8 @@ describe("createBubbleStore", () => {
     consoleWarnSpy.mockRestore();
   });
 
-  it("defaults a missing reviewer threshold in 409 review-policy conflict payloads to P3", async () => {
+  it("treats a missing reviewer threshold in 409 review-policy conflict payloads as malformed", async () => {
+    const consoleWarnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
     const getBubbles = vi.fn(async () => ({
       repo: repoSummary("/repo-a"),
       bubbles: [
@@ -1255,7 +1418,8 @@ describe("createBubbleStore", () => {
               requested_loop_mode: "meta_only",
               effective_loop_mode: "full",
               support_status: "guarded",
-              meta_review_auto_rework_min_severity: "P2"
+              meta_review_auto_rework_min_severity: "P2",
+              meta_review_consecutive_clean_runs_required: 1
             }
           }
         }
@@ -1289,12 +1453,20 @@ describe("createBubbleStore", () => {
     ).rejects.toBeInstanceOf(PairflowApiError);
 
     expect(store.getState().bubblesById["b-a"]?.reviewPolicy).toMatchObject({
-      requested_loop_mode: "meta_only",
+      requested_loop_mode: "full",
       effective_loop_mode: "full",
-      support_status: "guarded",
+      support_status: "enabled",
       reviewer_blocking_min_severity: "P3",
-      meta_review_auto_rework_min_severity: "P2"
+      meta_review_auto_rework_min_severity: "P3"
     });
+    expect(store.getState().actionRetryHintById["b-a"]).toContain(
+      "reviewPolicy payload was malformed"
+    );
+    expect(consoleWarnSpy).not.toHaveBeenCalledWith(
+      "Normalizing non-canonical review-policy support_status 'unsupported' from a 409 conflict payload to canonical 'guarded'.",
+      expect.anything()
+    );
+    consoleWarnSpy.mockRestore();
   });
 
   it("warns but keeps direct conflict context when the 409 reviewPolicy payload is malformed", async () => {
@@ -1361,7 +1533,8 @@ describe("createBubbleStore", () => {
             effective_loop_mode: "full",
             support_status: "enabled",
             reviewer_blocking_min_severity: "P1",
-            meta_review_auto_rework_min_severity: "P1"
+            meta_review_auto_rework_min_severity: "P1",
+            meta_review_consecutive_clean_runs_required: 1
           }
         })
       }
@@ -1385,7 +1558,8 @@ describe("createBubbleStore", () => {
       effective_loop_mode: "full",
       support_status: "enabled",
       reviewer_blocking_min_severity: "P1",
-      meta_review_auto_rework_min_severity: "P1"
+      meta_review_auto_rework_min_severity: "P1",
+      meta_review_consecutive_clean_runs_required: 1
     });
     expect(store.getState().actionRetryHintById["b-a"]).toContain(
       "reviewPolicy payload was malformed"
@@ -1556,6 +1730,7 @@ describe("createBubbleStore", () => {
         support_status: "guarded" as const,
         reviewer_blocking_min_severity: "P1" as const,
         meta_review_auto_rework_min_severity: "P1" as const,
+        meta_review_consecutive_clean_runs_required: 1,
         blocked_reason_code: "REVIEW_POLICY_META_ONLY_GUARDED"
       },
       previousRequestedLoopMode: "full" as const,
@@ -1639,6 +1814,7 @@ describe("createBubbleStore", () => {
               support_status: "guarded",
               reviewer_blocking_min_severity: "P1",
               meta_review_auto_rework_min_severity: "P1",
+              meta_review_consecutive_clean_runs_required: 1,
               blocked_reason_code: "REVIEW_POLICY_META_ONLY_GUARDED"
             }
           })
@@ -1723,6 +1899,7 @@ describe("createBubbleStore", () => {
               support_status: "guarded",
               reviewer_blocking_min_severity: "P1",
               meta_review_auto_rework_min_severity: "P1",
+              meta_review_consecutive_clean_runs_required: 1,
               blocked_reason_code: "REVIEW_POLICY_META_ONLY_GUARDED"
             }
           })

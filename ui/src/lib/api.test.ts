@@ -120,6 +120,7 @@ describe("createApiClient", () => {
                   support_status: "guarded",
                   reviewer_blocking_min_severity: "P1",
                   meta_review_auto_rework_min_severity: "P1",
+                  meta_review_consecutive_clean_runs_required: 1,
                   blocked_reason_code: "REVIEW_POLICY_META_ONLY_GUARDED"
                 }
               }
@@ -156,6 +157,7 @@ describe("createApiClient", () => {
             support_status: "guarded",
             reviewer_blocking_min_severity: "P1",
             meta_review_auto_rework_min_severity: "P1",
+            meta_review_consecutive_clean_runs_required: 1,
             blocked_reason_code: "REVIEW_POLICY_META_ONLY_GUARDED"
           }
         }
@@ -203,6 +205,7 @@ describe("createApiClient", () => {
                 support_status: "guarded",
                 reviewer_blocking_min_severity: "P1",
                 meta_review_auto_rework_min_severity: "P1",
+                meta_review_consecutive_clean_runs_required: 1,
                 blocked_reason_code: "REVIEW_POLICY_META_ONLY_GUARDED"
               },
               previousRequestedLoopMode: "full",
@@ -273,7 +276,8 @@ describe("createApiClient", () => {
     await expect(
       client.updateReviewPolicy("/repo-a", "b-a", {
         reviewLoopMode: "meta_only",
-        reviewBlockingMinSeverity: "P2"
+        reviewBlockingMinSeverity: "P2",
+        metaReviewQualityPreset: "P3+2"
       })
     ).resolves.toMatchObject({
       bubbleId: "b-a",
@@ -328,7 +332,8 @@ describe("createApiClient", () => {
         method: "POST",
         body: JSON.stringify({
           reviewLoopMode: "meta_only",
-          reviewBlockingMinSeverity: "P2"
+          reviewBlockingMinSeverity: "P2",
+          metaReviewQualityPreset: "P3+2"
         }),
         headers: {
           "content-type": "application/json"

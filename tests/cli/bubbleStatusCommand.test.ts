@@ -154,6 +154,7 @@ describe("renderBubbleStatusText", () => {
       metaReview: {
         actor: "meta-reviewer",
         authorityActive: true,
+        consecutiveCleanRuns: 0,
         runtimeDelivery: null
       },
       commandPath: {
@@ -287,6 +288,7 @@ describe("renderBubbleStatusText", () => {
         metaReview: {
           actor: "meta-reviewer",
           authorityActive: false,
+          consecutiveCleanRuns: 0,
           runtimeDelivery: {
             status: "uncertain",
             reasonCode: "META_REVIEW_REQUEST_DELIVERY_UNCONFIRMED",
@@ -433,6 +435,7 @@ describe("renderBubbleStatusTable", () => {
       metaReview: {
         actor: "meta-reviewer",
         authorityActive: false,
+        consecutiveCleanRuns: 0,
         runtimeDelivery: null
       },
       commandPath: {
@@ -575,6 +578,7 @@ describe("renderBubbleStatusTable", () => {
         metaReview: {
           actor: "meta-reviewer",
           authorityActive: false,
+          consecutiveCleanRuns: 0,
           runtimeDelivery: {
             status: "failed",
             reasonCode: "META_REVIEW_REQUEST_DELIVERY_FAILED",

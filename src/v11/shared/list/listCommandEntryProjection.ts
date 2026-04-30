@@ -62,7 +62,17 @@ function neutralMetaReview(): BubbleListEntry["metaReview"] {
   return {
     actor: "meta-reviewer",
     authorityActive: false,
+    consecutiveCleanRuns: 0,
     runtimeDelivery: null
+  };
+}
+
+function cachedMetaReview(
+  cache: BubbleRemoteStateCache
+): BubbleListEntry["metaReview"] {
+  return {
+    ...neutralMetaReview(),
+    consecutiveCleanRuns: cache.metaReview?.consecutiveCleanRuns ?? 0
   };
 }
 
@@ -165,6 +175,8 @@ export function buildLocalBubbleListEntry(input: {
       metaReview: {
         actor: "meta-reviewer",
         authorityActive: isMetaReviewExecutionContextActiveState(input.stateLoaded.state),
+        consecutiveCleanRuns:
+          input.stateLoaded.state.meta_review?.consecutive_clean_runs ?? 0,
         runtimeDelivery
       }
     },
@@ -261,7 +273,7 @@ export function buildCachedRemoteBubbleListEntry(input: {
         activeRole: null,
         runtimeAvailability: "inactive"
       }),
-      metaReview: neutralMetaReview(),
+      metaReview: cachedMetaReview(input.cache),
       remoteExecution: {
         alias: resolveRemoteAlias(input.config, input.remotePointer),
         host: input.remotePointer.host,
@@ -409,7 +421,10 @@ export async function buildRefreshedRemoteBubbleListEntry(input: {
       lastCheckedAt: remoteStatusSnapshot.lastCheckedAt,
       state: remoteStatusSnapshot.state,
       round: remoteStatusSnapshot.round,
-      maxRounds: input.config.max_rounds
+      maxRounds: input.config.max_rounds,
+      metaReview: {
+        consecutiveCleanRuns: remoteStatusSnapshot.metaReview.consecutiveCleanRuns
+      }
     });
   } catch {
     const cacheResult = await readRemoteStateCacheSafe(

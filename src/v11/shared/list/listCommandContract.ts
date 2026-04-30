@@ -34,6 +34,7 @@ export interface BubbleListEntry {
   metaReview: {
     actor: "meta-reviewer";
     authorityActive: boolean;
+    consecutiveCleanRuns: number;
     runtimeDelivery: ActiveMetaReviewRuntimeDeliveryView | null;
   };
   remoteExecution?: UiBubbleListRemoteExecution;

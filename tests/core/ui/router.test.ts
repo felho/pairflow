@@ -287,6 +287,7 @@ describe("createUiRouter bubble detail resource", () => {
       metaReview: {
         actor: "meta-reviewer",
         authorityActive: false,
+        consecutiveCleanRuns: 0,
         runtimeDelivery: null
       },
       commandPath: {
@@ -492,6 +493,7 @@ describe("createUiRouter bubble detail resource", () => {
       metaReview: {
         actor: "meta-reviewer",
         authorityActive: false,
+        consecutiveCleanRuns: 0,
         runtimeDelivery: null
       },
       commandPath: {
@@ -1617,6 +1619,7 @@ describe("createUiRouter action routes", () => {
       metaReview: {
         actor: "meta-reviewer",
         authorityActive: false,
+        consecutiveCleanRuns: 0,
         runtimeDelivery: null
       },
       commandPath: {
@@ -1775,6 +1778,7 @@ describe("createUiRouter action routes", () => {
       metaReview: {
         actor: "meta-reviewer",
         authorityActive: false,
+        consecutiveCleanRuns: 0,
         runtimeDelivery: null
       },
       commandPath: {
@@ -2113,6 +2117,7 @@ describe("createUiRouter action routes", () => {
       metaReview: {
         actor: "meta-reviewer",
         authorityActive: false,
+        consecutiveCleanRuns: 0,
         runtimeDelivery: null
       },
       commandPath: {
@@ -2542,6 +2547,7 @@ describe("createUiRouter action routes", () => {
           metaReview: {
             actor: "meta-reviewer",
             authorityActive: false,
+            consecutiveCleanRuns: 0,
             runtimeDelivery: null
           },
           commandPath: {
@@ -3038,6 +3044,7 @@ describe("createUiRouter review policy action", () => {
       metaReview: {
         actor: "meta-reviewer" as const,
         authorityActive: false,
+        consecutiveCleanRuns: 0,
         runtimeDelivery: null
       },
       commandPath: {
@@ -3075,9 +3082,9 @@ describe("createUiRouter review policy action", () => {
         requested_loop_mode: "meta_only" as const,
         effective_loop_mode: "full" as const,
         support_status: "guarded" as const,
-        reviewer_blocking_min_severity: "P1" as const,
-        meta_review_auto_rework_min_severity: "P1" as const,
-        meta_review_consecutive_clean_runs_required: 1,
+        reviewer_blocking_min_severity: "P3" as const,
+        meta_review_auto_rework_min_severity: "P3" as const,
+        meta_review_consecutive_clean_runs_required: 2,
         blocked_reason_code: "REVIEW_POLICY_META_ONLY_GUARDED",
         blocked_prerequisites: [
           "reviewer_bypass_activation_phase3b_pending"
@@ -3125,7 +3132,8 @@ describe("createUiRouter review policy action", () => {
           },
           body: JSON.stringify({
             reviewLoopMode: "meta_only",
-            reviewBlockingMinSeverity: "P2",
+            reviewBlockingMinSeverity: "P3",
+            metaReviewQualityPreset: "P3+2",
             expectedBubbleToml: "id = \"b-router-policy-01\""
           })
         }
@@ -3137,6 +3145,7 @@ describe("createUiRouter review policy action", () => {
           reviewPolicy: {
             requested_loop_mode: string;
             effective_loop_mode: string;
+            meta_review_consecutive_clean_runs_required: number;
           };
         };
       };
@@ -3147,14 +3156,16 @@ describe("createUiRouter review policy action", () => {
         activationChange: "none",
         reviewPolicy: {
           requested_loop_mode: "meta_only",
-          effective_loop_mode: "full"
+          effective_loop_mode: "full",
+          meta_review_consecutive_clean_runs_required: 2
         }
       });
       expect(updateBubbleReviewPolicy).toHaveBeenCalledWith({
         bubbleId: "b-router-policy-01",
         repoPath,
         reviewLoopMode: "meta_only",
-        reviewBlockingMinSeverity: "P2",
+        reviewBlockingMinSeverity: "P3",
+        metaReviewQualityPreset: "P3+2",
         expectedBubbleToml: "id = \"b-router-policy-01\""
       });
     } finally {
@@ -3359,6 +3370,75 @@ describe("createUiRouter review policy action", () => {
       expect(response.status).toBe(400);
       expect(payload.error.code).toBe("bad_request");
       expect(payload.error.message).toContain("reviewBlockingMinSeverity");
+      expect(updateBubbleReviewPolicy).not.toHaveBeenCalled();
+    } finally {
+      await server.close();
+    }
+  });
+
+  it("rejects review-policy update when reviewer severity conflicts with quality preset", async () => {
+    const repoPath = "/tmp/pairflow-ui-router-review-policy-preset-mismatch-repo";
+    const getBubbleStatus = vi.fn(async () =>
+      createReviewPolicyStatus({
+        repoPath,
+        bubbleId: "b-router-policy-preset-mismatch-01"
+      })
+    );
+    const updateBubbleReviewPolicy = vi.fn(async () => {
+      throw new Error("should not be called");
+    });
+
+    const router = createUiRouter({
+      repoScope: {
+        repos: [repoPath],
+        has: (value: string) => Promise.resolve(value === repoPath)
+      },
+      events: {
+        subscribe: () => () => undefined,
+        getSnapshot: () => ({
+          id: 1,
+          ts: "2026-02-25T00:00:00.000Z",
+          type: "snapshot",
+          repos: [],
+          bubbles: []
+        }),
+        refreshNow: () => Promise.resolve(undefined),
+        addRepo: () => Promise.resolve(false),
+        removeRepo: () => Promise.resolve(false),
+        close: () => Promise.resolve(undefined)
+      },
+      dependencies: {
+        getBubbleStatus,
+        updateBubbleReviewPolicy
+      }
+    });
+    const server = await startRouterServer(router);
+
+    try {
+      const response = await fetch(
+        `${server.url}/api/bubbles/b-router-policy-preset-mismatch-01/update-review-policy?repo=${encodeURIComponent(repoPath)}`,
+        {
+          method: "POST",
+          headers: {
+            "content-type": "application/json"
+          },
+          body: JSON.stringify({
+            reviewLoopMode: "meta_only",
+            reviewBlockingMinSeverity: "P2",
+            metaReviewQualityPreset: "P3+2"
+          })
+        }
+      );
+      const payload = (await response.json()) as {
+        error: {
+          code: string;
+          message: string;
+        };
+      };
+
+      expect(response.status).toBe(400);
+      expect(payload.error.code).toBe("bad_request");
+      expect(payload.error.message).toContain("must match");
       expect(updateBubbleReviewPolicy).not.toHaveBeenCalled();
     } finally {
       await server.close();
@@ -3754,6 +3834,20 @@ describe("createUiRouter review policy action", () => {
             support_status: "guarded"
           }
         }
+      });
+      const details = payload.error.details as {
+        bubble?: {
+          reviewPolicy?: unknown;
+        };
+        reviewPolicyConflict?: {
+          reviewPolicy?: unknown;
+        };
+      };
+      expect(details.bubble?.reviewPolicy).toEqual(
+        details.reviewPolicyConflict?.reviewPolicy
+      );
+      expect(details.bubble?.reviewPolicy).toMatchObject({
+        meta_review_consecutive_clean_runs_required: 1
       });
       expect(getBubbleStatus).toHaveBeenCalledWith({
         bubbleId,

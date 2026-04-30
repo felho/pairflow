@@ -21,12 +21,13 @@ import {
 function presentMetaReviewSummary(
   metaReview: Pick<
     UiBubbleSummary["metaReview"],
-    "actor" | "authorityActive" | "runtimeDelivery"
+    "actor" | "authorityActive" | "consecutiveCleanRuns" | "runtimeDelivery"
   >
 ): UiBubbleSummary["metaReview"] {
   return {
     actor: metaReview.actor,
     authorityActive: metaReview.authorityActive,
+    consecutiveCleanRuns: metaReview.consecutiveCleanRuns,
     runtimeDelivery: metaReview.runtimeDelivery
   };
 }

@@ -72,6 +72,7 @@ describe("bubblePresenter", () => {
       metaReview: {
         actor: "meta-reviewer",
         authorityActive: false,
+        consecutiveCleanRuns: 0,
         runtimeDelivery: null
       },
       attention: null,
@@ -111,6 +112,7 @@ describe("bubblePresenter", () => {
       metaReview: {
         actor: "meta-reviewer",
         authorityActive: false,
+        consecutiveCleanRuns: 0,
         runtimeDelivery: null
       },
       attention: null,
@@ -130,11 +132,13 @@ describe("bubblePresenter", () => {
     expect(presented.metaReview).toStrictEqual({
       actor: "meta-reviewer",
       authorityActive: false,
+      consecutiveCleanRuns: 0,
       runtimeDelivery: null
     });
     expect(Object.keys(presented.metaReview).sort()).toStrictEqual([
       "actor",
       "authorityActive",
+      "consecutiveCleanRuns",
       "runtimeDelivery"
     ]);
   });
@@ -154,6 +158,7 @@ describe("bubblePresenter", () => {
       metaReview: {
         actor: "meta-reviewer",
         authorityActive: false,
+        consecutiveCleanRuns: 0,
         runtimeDelivery: null
       },
       attention: null,
@@ -280,6 +285,7 @@ describe("bubblePresenter", () => {
         metaReview: {
           actor: "meta-reviewer",
           authorityActive: false,
+          consecutiveCleanRuns: 0,
           runtimeDelivery: null
         },
         commandPath: {
@@ -347,11 +353,13 @@ describe("bubblePresenter", () => {
     expect(detail.metaReview).toStrictEqual({
       actor: "meta-reviewer",
       authorityActive: false,
+      consecutiveCleanRuns: 0,
       runtimeDelivery: null
     });
     expect(Object.keys(detail.metaReview).sort()).toStrictEqual([
       "actor",
       "authorityActive",
+      "consecutiveCleanRuns",
       "runtimeDelivery"
     ]);
     expect(detail.remoteExecution).toStrictEqual({
@@ -436,6 +444,7 @@ describe("bubblePresenter", () => {
         metaReview: {
           actor: "meta-reviewer",
           authorityActive: false,
+          consecutiveCleanRuns: 0,
           runtimeDelivery: null
         },
         commandPath: {
@@ -533,6 +542,7 @@ describe("bubblePresenter", () => {
         metaReview: {
           actor: "meta-reviewer",
           authorityActive: false,
+          consecutiveCleanRuns: 0,
           runtimeDelivery: null
         },
         commandPath: {
@@ -644,6 +654,7 @@ describe("bubblePresenter", () => {
         metaReview: {
           actor: "meta-reviewer",
           authorityActive: false,
+          consecutiveCleanRuns: 0,
           runtimeDelivery: null
         },
         commandPath: {

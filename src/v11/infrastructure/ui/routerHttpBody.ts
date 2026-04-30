@@ -5,6 +5,10 @@ import {
   type BubbleReviewAutoReworkSeverity,
   type BubbleReviewLoopMode
 } from "../../../types/bubble.js";
+import {
+  isMetaReviewQualityPreset,
+  type MetaReviewQualityPreset
+} from "../../shared/reviewPolicy/updateBubbleReviewPolicy.js";
 import { badRequest, throwApiError } from "./routerHttpErrors.js";
 
 const maxJsonBodyBytes = 1_000_000;
@@ -196,6 +200,7 @@ export function parseDeleteBody(body: unknown): {
 export function parseReviewPolicyBody(body: unknown): {
   reviewLoopMode: BubbleReviewLoopMode;
   reviewBlockingMinSeverity?: BubbleReviewAutoReworkSeverity | undefined;
+  metaReviewQualityPreset?: MetaReviewQualityPreset | undefined;
   expectedBubbleToml?: string | undefined;
 } {
   if (typeof body !== "object" || body === null || Array.isArray(body)) {
@@ -245,11 +250,39 @@ export function parseReviewPolicyBody(body: unknown): {
       )
     );
   }
+  const metaReviewQualityPreset =
+    (body as { metaReviewQualityPreset?: unknown }).metaReviewQualityPreset;
+  if (
+    metaReviewQualityPreset !== undefined
+    && !isMetaReviewQualityPreset(metaReviewQualityPreset)
+  ) {
+    throwApiError(
+      badRequest(
+        "Field `metaReviewQualityPreset` must be one of: P1, P2, P3, P3+2."
+      )
+    );
+  }
+  const metaReviewQualityPresetSeverity =
+    metaReviewQualityPreset === "P3+2" ? "P3" : metaReviewQualityPreset;
+  if (
+    reviewBlockingMinSeverity !== undefined
+    && metaReviewQualityPresetSeverity !== undefined
+    && reviewBlockingMinSeverity !== metaReviewQualityPresetSeverity
+  ) {
+    throwApiError(
+      badRequest(
+        "Field `reviewBlockingMinSeverity` must match `metaReviewQualityPreset` severity when both are provided."
+      )
+    );
+  }
 
   return {
     reviewLoopMode,
     ...(reviewBlockingMinSeverity !== undefined
       ? { reviewBlockingMinSeverity }
+      : {}),
+    ...(metaReviewQualityPreset !== undefined
+      ? { metaReviewQualityPreset }
       : {}),
     ...(expectedBubbleToml !== undefined ? { expectedBubbleToml } : {})
   };

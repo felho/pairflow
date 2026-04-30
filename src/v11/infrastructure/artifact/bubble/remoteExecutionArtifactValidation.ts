@@ -43,6 +43,7 @@ const remoteStateCacheAllowedKeys = new Set([
   "state",
   "round",
   "maxRounds",
+  "metaReview",
   "implementerStatus",
   "reviewerStatus"
 ]);
@@ -374,6 +375,41 @@ function validateOptionalRemoteStateCacheStatuses(
   }
 }
 
+function validateOptionalRemoteStateCacheMetaReview(
+  input: Record<string, unknown>,
+  errors: ValidationError[]
+): BubbleRemoteStateCache["metaReview"] | undefined {
+  if (input.metaReview === undefined) {
+    return undefined;
+  }
+  if (!isRecord(input.metaReview)) {
+    errors.push({
+      path: "metaReview",
+      message: "Must be an object"
+    });
+    return undefined;
+  }
+  for (const key of Object.keys(input.metaReview)) {
+    if (key !== "consecutiveCleanRuns") {
+      errors.push({
+        path: `metaReview.${key}`,
+        message: "Unknown remote state cache metaReview field"
+      });
+    }
+  }
+  const consecutiveCleanRuns = input.metaReview.consecutiveCleanRuns;
+  if (!isInteger(consecutiveCleanRuns) || consecutiveCleanRuns < 0) {
+    errors.push({
+      path: "metaReview.consecutiveCleanRuns",
+      message: "Must be an integer >= 0"
+    });
+    return undefined;
+  }
+  return {
+    consecutiveCleanRuns
+  };
+}
+
 export function validateRemoteStateCache(
   input: unknown
 ): ValidationResult<BubbleRemoteStateCache> {
@@ -391,6 +427,7 @@ export function validateRemoteStateCache(
   const { lastCheckedAt, state, round, maxRounds } =
     validateRemoteStateCacheScalarFields(input, errors);
   validateOptionalRemoteStateCacheStatuses(input, errors);
+  const metaReview = validateOptionalRemoteStateCacheMetaReview(input, errors);
 
   if (errors.length > 0) {
     return validationFail(errors);
@@ -401,6 +438,7 @@ export function validateRemoteStateCache(
     state: state as BubbleLifecycleState,
     round: round as number,
     maxRounds: maxRounds as number,
+    ...(metaReview !== undefined ? { metaReview } : {}),
     ...(input.implementerStatus !== undefined
       ? { implementerStatus: (input.implementerStatus as string).trim() }
       : {}),
