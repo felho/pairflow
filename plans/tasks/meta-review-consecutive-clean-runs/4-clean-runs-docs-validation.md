@@ -5,7 +5,7 @@ task_family_id: clean-runs-docs-validation
 sequence_key: "4"
 task_id: 4-clean-runs-docs-validation
 title: "Meta-Review Consecutive Clean Runs Docs and Validation"
-status: approved
+status: in_progress
 phase: phase4
 target_files:
   - README.md
@@ -277,10 +277,10 @@ This task updates operator-facing and architecture documentation so the implemen
 | ID | Scenario | Command / Evidence | Required Result | Priority | Timing |
 | --- | --- | --- | --- | --- | --- |
 | V1 | Documentation-only diff review | manual review of targeted docs | docs match implemented field names and behavior | P1 | required-now |
-| V2 | Policy/config/state foundation still passes | `pnpm test tests/config/bubbleConfig.test.ts tests/v11/shared/reviewPolicy/reviewPolicyRuntime.test.ts tests/v11/shared/metaReview/metaReviewSnapshot.test.ts tests/v11/shared/state/stateSchema.test.ts` | pass | P1 | required-now |
-| V3 | Gate routing behavior still passes | `pnpm test tests/v11/shared/metaReviewGate/metaReviewGateCurrentRunFinalization.test.ts tests/core/agent/converged.test.ts tests/core/agent/pass.test.ts` | pass | P1 | required-now |
-| V4 | Read-model/UI behavior still passes | `pnpm test tests/core/bubble/statusBubble.test.ts tests/core/bubble/listBubbles.test.ts tests/core/ui/bubblePresenter.test.ts tests/v11/infrastructure/executor/ssh/sshBubbleStatus.test.ts ui/src/state/useBubbleStore.test.ts ui/src/components/actions/ActionBar.test.tsx ui/src/components/canvas/BubbleExpandedCard.test.tsx ui/src/lib/api.test.ts` | pass | P1 | required-now |
-| V5 | Repository checks | `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build` | pass or explicitly skipped with reason | P1 | required-now |
+| V2 | Policy/config/state foundation still passes | `pnpm test tests/config/bubbleConfig.test.ts tests/v11/shared/reviewPolicy/reviewPolicyRuntime.test.ts tests/v11/shared/metaReview/metaReviewSnapshot.test.ts tests/v11/shared/state/stateSchema.test.ts` | pass or explicitly skipped with reason | P1 | close-time |
+| V3 | Gate routing behavior still passes | `pnpm test tests/v11/shared/metaReviewGate/metaReviewGateCurrentRunFinalization.test.ts tests/core/agent/converged.test.ts tests/core/agent/pass.test.ts` | pass or explicitly skipped with reason | P1 | close-time |
+| V4 | Read-model/UI behavior still passes | `pnpm test tests/core/bubble/statusBubble.test.ts tests/core/bubble/listBubbles.test.ts tests/core/ui/bubblePresenter.test.ts tests/v11/infrastructure/executor/ssh/sshBubbleStatus.test.ts ui/src/state/useBubbleStore.test.ts ui/src/components/actions/ActionBar.test.tsx ui/src/components/canvas/BubbleExpandedCard.test.tsx ui/src/lib/api.test.ts` | pass or explicitly skipped with reason | P1 | close-time |
+| V5 | Repository checks | `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build` | pass or explicitly skipped with reason | P1 | close-time |
 
 ### 8) Shared Contract Compatibility
 
@@ -330,6 +330,42 @@ This task updates operator-facing and architecture documentation so the implemen
 4. Run the validation matrix in L1.
 5. Record validation evidence in the implementation summary and parent plan close context.
 6. During close workflow, archive this task and, if all tracker rows are archived, move the plan to canonical archive path.
+
+## Implementation Progress
+
+### clean-runs-docs-validation-doc PASS
+
+1. Updated operator-facing README state-machine docs to describe the consecutive clean-run gate, canonical fields, defaults, reset/unlock behavior, and exact quality preset mapping.
+2. Updated architecture/runbook/validation/UI docs to preserve the distinction between:
+   - `review_policy.meta_review_auto_rework_min_severity` as the meta-review clean-run threshold,
+   - `review_policy.reviewer_blocking_min_severity` as the reviewer post-gate blocking threshold,
+   - `meta_review.consecutive_clean_runs` as the persisted current streak,
+   - `auto_rework_count` / `auto_rework_limit` as auto-rework budget controls.
+3. Updated the parent plan tracker to mark this final documentation task as in progress.
+4. Runtime validation was intentionally not executed in this docs-only PASS because the bubble is `review_artifact_type=document`, the current handoff is documentation-only, and the handoff used the skip-claim mode. No `.pairflow/evidence/*.log` refs are claimed.
+
+### r1 reviewer feedback fixes
+
+1. Tightened README routing bullets to compare the requirement against the updated post-increment clean-run streak.
+2. Made the task validation matrix explicit that V2-V4 may be skipped only with a stated reason.
+3. Replaced indirect/generic validation and runbook wording with canonical field names and specific evidence log paths.
+4. Runtime validation remains intentionally not executed in this docs-only PASS. No `.pairflow/evidence/*.log` refs are claimed.
+
+### r2 reviewer feedback fixes
+
+1. Harmonized initial-design `RUNNING -> READY_FOR_HUMAN_APPROVAL` transition wording with the clean-run gate and made item 18 use the same updated post-increment streak comparison as README.
+2. Expanded AC11 explicit sources to include `sshBubbleStatus.test.ts` and `useBubbleStore.test.ts`.
+3. Moved task validation rows V2-V5 to `close-time` timing so skipped-with-reason results do not contradict required-now documentation-only passes.
+4. Normalized e2e command rows to marker/log-ref content only and split rollout runbook targeted checks into one numbered command per step.
+5. Runtime validation remains intentionally not executed in this docs-only PASS. No `.pairflow/evidence/*.log` refs are claimed.
+
+### r3 reviewer feedback fixes
+
+1. Expanded the e2e clean-run forbidden-authority list to match peer docs.
+2. Aligned AC11 evidence sources with the task V4 read-model/UI suite.
+3. Added `meta_review.consecutive_clean_runs` to the initial-design `state.json` directory-layout comment.
+4. Changed the UI PRD legacy default wording to canonical "normalizes to" phrasing.
+5. Runtime validation remains intentionally not executed in this docs-only PASS. No `.pairflow/evidence/*.log` refs are claimed.
 
 ## Hardening Backlog
 

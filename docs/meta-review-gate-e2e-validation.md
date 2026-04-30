@@ -40,6 +40,10 @@ Record every executed command with timestamp and raw marker lines.
 | `pnpm lint` |  | `exit=0`, `.pairflow/evidence/lint.log` |  |
 | `pnpm typecheck` |  | `exit=0`, `.pairflow/evidence/typecheck.log` |  |
 | `pnpm test` |  | `exit=0`, `.pairflow/evidence/test.log` |  |
+| `pnpm test tests/config/bubbleConfig.test.ts tests/v11/shared/reviewPolicy/reviewPolicyRuntime.test.ts tests/v11/shared/metaReview/metaReviewSnapshot.test.ts tests/v11/shared/state/stateSchema.test.ts` |  | `exit=0`, `.pairflow/evidence/clean-runs-policy-state.log` | `.pairflow/evidence/clean-runs-policy-state.log` |
+| `pnpm test tests/v11/shared/metaReviewGate/metaReviewGateCurrentRunFinalization.test.ts tests/core/agent/converged.test.ts tests/core/agent/pass.test.ts` |  | `exit=0`, `.pairflow/evidence/clean-runs-gate-routing.log` | `.pairflow/evidence/clean-runs-gate-routing.log` |
+| `pnpm test tests/core/bubble/statusBubble.test.ts tests/core/bubble/listBubbles.test.ts tests/core/ui/bubblePresenter.test.ts tests/v11/infrastructure/executor/ssh/sshBubbleStatus.test.ts ui/src/state/useBubbleStore.test.ts ui/src/components/actions/ActionBar.test.tsx ui/src/components/canvas/BubbleExpandedCard.test.tsx ui/src/lib/api.test.ts` |  | `exit=0`, `.pairflow/evidence/clean-runs-read-model-ui.log` | `.pairflow/evidence/clean-runs-read-model-ui.log` |
+| `pnpm build` |  | `exit=0`, `.pairflow/evidence/build.log` | `.pairflow/evidence/build.log` |
 | `<pairflow-command> bubble status --id <bubble-id> --repo <repo-path>` |  | `profile=external -> Command path: external`, no `PAIRFLOW_COMMAND_EXTERNAL_UNAVAILABLE`, no `PAIRFLOW_COMMAND_PATH_STALE`; `profile=self_host -> Command path: worktree_local`, no `PAIRFLOW_COMMAND_PATH_STALE` |  |
 | `<pairflow-command> bubble status --id <bubble-id> --repo <repo-path> --json` |  | active `executionContext` is present when authority is active; meta-review diagnostics remain observational only |  |
 | `<pairflow-command> bubble restart --id <bubble-id> --repo <repo-path>` |  | restart completes without authority/profile fallback errors; follow-up projection commands remain current-round consistent |  |
@@ -59,6 +63,8 @@ Record every executed command with timestamp and raw marker lines.
 | AC8 | Rollout metrics/events are emitted and reportable | `tests/core/metrics/report/report.test.ts`, `tests/core/metrics/report/format.test.ts` |
 | AC9 | Runbook exists with smoke + rollback + incident steps | `docs/meta-review-gate-rollout-runbook.md` |
 | AC10 | Evidence template maps every AC to verifiable artifacts | this document |
+| AC11 | Consecutive clean meta-review requirement is enforced before human approval | `tests/config/bubbleConfig.test.ts`, `tests/v11/shared/reviewPolicy/reviewPolicyRuntime.test.ts`, `tests/v11/shared/metaReview/metaReviewSnapshot.test.ts`, `tests/v11/shared/state/stateSchema.test.ts`, `tests/v11/shared/metaReviewGate/metaReviewGateCurrentRunFinalization.test.ts`, `tests/core/agent/converged.test.ts`, `tests/core/agent/pass.test.ts`, `tests/core/bubble/statusBubble.test.ts`, `tests/core/bubble/listBubbles.test.ts`, `tests/core/ui/bubblePresenter.test.ts`, `tests/v11/infrastructure/executor/ssh/sshBubbleStatus.test.ts`, `ui/src/state/useBubbleStore.test.ts`, `ui/src/components/actions/ActionBar.test.tsx`, `ui/src/components/canvas/BubbleExpandedCard.test.tsx`, `ui/src/lib/api.test.ts` |
+| AC12 | UI quality preset projection is exact and unsupported backend pairs are not mislabeled | `ui/src/components/actions/ActionBar.test.tsx`, `ui/src/components/canvas/BubbleExpandedCard.test.tsx`, `ui/src/lib/api.test.ts`, `tests/core/ui/bubblePresenter.test.ts` |
 
 ## AC Completion
 
@@ -74,6 +80,35 @@ Record every executed command with timestamp and raw marker lines.
 | AC8 |  |  |  |
 | AC9 |  |  |  |
 | AC10 |  |  |  |
+| AC11 |  |  |  |
+| AC12 |  |  |  |
+
+## Consecutive Clean-Run Gate Checks
+
+Use these expectations when filling the AC rows and reviewing status/list/UI projections:
+
+1. `review_policy.meta_review_consecutive_clean_runs_required` is the configured unlock count; missing legacy config normalizes to `1`.
+2. `meta_review.consecutive_clean_runs` is the persisted current streak; missing legacy state normalizes to `0`.
+3. `review_policy.meta_review_auto_rework_min_severity` is the threshold authority for deciding whether a finalized meta-review result is clean.
+4. A threshold-clean `approve` below the required streak starts another meta-review run directly, without an implementer/reviewer round.
+5. A threshold-clean `approve` that reaches the required streak routes to `READY_FOR_HUMAN_APPROVAL`.
+6. Threshold-meeting findings, `rework`, `inconclusive`, parity/threshold failures, run failures, and auto-rework paths reset the streak to `0`.
+7. `auto_rework_count` / `auto_rework_limit` are budget controls only and must not be used as streak evidence.
+8. `review_policy.reviewer_blocking_min_severity` remains separate from `review_policy.meta_review_auto_rework_min_severity`.
+9. Clean-run authority must not be inferred from transcript prose, pane text, prior human-gate state, UI labels, quality preset labels, or `auto_rework_count`.
+
+## Quality Preset Checks
+
+Supported UI preset mappings are exact backend pairs:
+
+| Preset | Backend pair |
+|---|---|
+| `P1` | `(meta_review_auto_rework_min_severity=P1, meta_review_consecutive_clean_runs_required=1)` |
+| `P2` | `(P2, 1)` |
+| `P3` | `(P3, 1)` |
+| `P3+2` | `(P3, 2)` |
+
+Unsupported pairs, for example `(P2, 2)`, must display as custom/unsupported rather than a supported preset. `P3+2` is not a new severity; it is threshold `P3` with two required consecutive clean meta-review runs.
 
 ## Command-Path Determinism Check
 

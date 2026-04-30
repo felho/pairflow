@@ -69,6 +69,13 @@ Priority order:
 8. Canonical truth remains file-backed (`state.json`, `transcript.ndjson`, `inbox.ndjson`, runtime session registry).
 9. Transcript reader tolerates partial trailing NDJSON line; UI must not hard-fail on this.
 10. `open` means invoking the same behavior as `pairflow bubble open`: local bubbles use `open_command` + `{{worktree_path}}`, while started remote bubbles use `open_remote_command` and the persisted remote clone authority. UI should surface command errors directly.
+11. Meta-review clean-run authority remains backend-owned:
+   - configured requirement: `review_policy.meta_review_consecutive_clean_runs_required`, missing legacy config normalizes to `1`
+   - current streak: `meta_review.consecutive_clean_runs`, missing legacy state normalizes to `0`
+   - clean-run threshold: `review_policy.meta_review_auto_rework_min_severity`
+   - reviewer convergence threshold: `review_policy.reviewer_blocking_min_severity`
+12. UI must not infer clean-run progress from transcript prose, pane text, previous human-gate state, quality preset labels, or `auto_rework_count`.
+13. UI projection may display why human approval is not yet available, but the unlock decision is still the finalized backend route.
 
 ## Retained implementation decisions
 
@@ -131,6 +138,24 @@ Notes:
 2. In `WAITING_HUMAN`, `Queue Rework` must be clearly distinct from `Reply`; UI copy must state that `Reply` does not guarantee rework.
 3. Merge panel text must explicitly say: "Merge includes runtime/worktree cleanup."
 4. Attach in V1 delegates to backend attach behavior; when launcher resolves to `copy`, it copies `tmux attach -t pf-<bubble-id>` to clipboard.
+
+### Review policy quality preset
+
+The review-policy UI exposes a compact meta-review quality preset, not a plain severity selector. Each supported option writes an exact backend pair:
+
+| Preset | Backend pair |
+|---|---|
+| `P1` | `(meta_review_auto_rework_min_severity=P1, meta_review_consecutive_clean_runs_required=1)` |
+| `P2` | `(P2, 1)` |
+| `P3` | `(P3, 1)` |
+| `P3+2` | `(P3, 2)` |
+
+Rules:
+1. Preset projection is exact-match only.
+2. Unsupported pairs such as `(P2, 2)` render as custom/unsupported, not as `P2`.
+3. `P3+2` is threshold `P3` with two required consecutive clean meta-review runs; it is not a new severity.
+4. The UI can show `meta_review.consecutive_clean_runs` against `meta_review_consecutive_clean_runs_required`, but writes to the configured requirement only through supported preset actions.
+5. `auto_rework_count` / `auto_rework_limit` are shown, if at all, as auto-rework budget data and never as clean-run streak progress.
 
 ## API/Backend Contract (thin layer over existing core)
 
