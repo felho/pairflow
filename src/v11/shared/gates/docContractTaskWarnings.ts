@@ -146,7 +146,7 @@ export function evaluateTaskContractWarnings(taskContent: string): BubbleFailing
   const missingExtension = ["title"]
     .filter((key) => !hasNonEmptyFrontmatterField(parsed.fields, key))
     .concat(
-      ["target_files", "normative_refs", "owners"].filter((key) => !parsed.fields.has(key))
+      ["target_files", "owners"].filter((key) => !parsed.fields.has(key))
     );
   const missingLevels: string[] = [];
   if (!hasSectionWithContent(parsed.body, "L0")) {

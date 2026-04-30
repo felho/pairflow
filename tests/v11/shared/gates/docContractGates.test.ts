@@ -87,6 +87,32 @@ At least one concrete behavior statement.
     expect(warnings).toEqual([]);
   });
 
+  it("does not require optional normative refs for Phase 1 task contract warnings", () => {
+    const warnings = evaluateTaskContractWarnings(`---
+artifact_type: task
+artifact_id: task_without_normative_refs
+status: draft
+phase: phase1
+prd_ref: null
+plan_ref: plans/tasks/example.md
+system_context_ref: docs/pairflow-initial-design.md
+title: Example task
+target_files:
+  - src/example.ts
+owners:
+  - felho
+---
+
+## L0 - Policy
+Structured task with optional normative refs omitted.
+
+## L1 - Change Contract
+At least one concrete behavior statement.
+`);
+
+    expect(warnings).toEqual([]);
+  });
+
   it("does not treat generic markdown horizontal rules as structured task contract input", () => {
     const warnings = evaluateTaskContractWarnings(`
 # Notes
