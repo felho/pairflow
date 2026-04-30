@@ -57,6 +57,35 @@ These codes are expected informational or route-shaping signals for the round-lo
 4. `META_REVIEW_CURRENT_ROUND_PENDING`
 
 `META_REVIEW_RECOVERY_REQUIRES_CURRENT_ROUND_RESULT` is not a generic rollout blocker by itself. Treat it as a diagnostic that the bubble lacks canonical current-round output and route operations toward `restart` or a fresh current-round meta-review run rather than trying to replay prior-round artifacts.
+
+## Consecutive Clean-Run Gate Authority
+
+Rollout interpretation must preserve the implemented clean-run contract:
+
+1. `review_policy.meta_review_consecutive_clean_runs_required` is the configured number of consecutive threshold-clean meta-review runs required before human approval can unlock. Missing legacy config normalizes to `1`.
+2. `meta_review.consecutive_clean_runs` is the persisted current streak. Missing legacy state normalizes to `0`.
+3. `review_policy.meta_review_auto_rework_min_severity` is the threshold authority for clean-run evaluation.
+4. `review_policy.reviewer_blocking_min_severity` remains the reviewer post-gate blocking threshold; it does not define whether a meta-review result is clean.
+5. A finalized threshold-clean `approve` increments `meta_review.consecutive_clean_runs`; if the updated streak is still below `review_policy.meta_review_consecutive_clean_runs_required`, lifecycle stays `RUNNING` and Pairflow starts another meta-review run directly, without an implementer/reviewer round.
+6. A finalized threshold-clean `approve` increments `meta_review.consecutive_clean_runs`; if the updated streak is at or above `review_policy.meta_review_consecutive_clean_runs_required`, Pairflow routes to `READY_FOR_HUMAN_APPROVAL`.
+7. Threshold-meeting findings, `rework`, `inconclusive`, parity/threshold failures, run failures, and auto-rework paths reset `meta_review.consecutive_clean_runs` to `0`.
+8. `auto_rework_count` and `auto_rework_limit` are budget controls only. They are not clean-run streak authority.
+
+Operator status/list/UI checks should verify both the configured requirement and current streak. Do not infer streak authority from transcript prose, pane text, prior human-gate state, or UI labels.
+
+## Quality Preset Authority
+
+The UI quality preset is an exact compact encoding of `(meta_review_auto_rework_min_severity, meta_review_consecutive_clean_runs_required)`:
+
+| Preset | Backend pair |
+|---|---|
+| `P1` | `(P1, 1)` |
+| `P2` | `(P2, 1)` |
+| `P3` | `(P3, 1)` |
+| `P3+2` | `(P3, 2)` |
+
+Unsupported backend pairs, such as `(P2, 2)`, must display as custom/unsupported and must not be coerced to a supported preset. `P3+2` means threshold `P3` plus two required clean runs; it is not a new severity.
+
 ## Pre-flight
 
 1. Start from the target worktree/release checkout.
@@ -156,7 +185,25 @@ Run each command from the release worktree root and capture the command, timesta
    `exit=0`
    `.pairflow/evidence/test.log`
 
-4. `<pairflow-command> bubble status --id <bubble-id> --repo <repo-path>`
+4. `pnpm test tests/config/bubbleConfig.test.ts tests/v11/shared/reviewPolicy/reviewPolicyRuntime.test.ts tests/v11/shared/metaReview/metaReviewSnapshot.test.ts tests/v11/shared/state/stateSchema.test.ts`
+   Expected markers:
+   `pnpm test tests/config/bubbleConfig.test.ts tests/v11/shared/reviewPolicy/reviewPolicyRuntime.test.ts tests/v11/shared/metaReview/metaReviewSnapshot.test.ts tests/v11/shared/state/stateSchema.test.ts`
+   `exit=0`
+   `.pairflow/evidence/clean-runs-policy-state.log`
+
+5. `pnpm test tests/v11/shared/metaReviewGate/metaReviewGateCurrentRunFinalization.test.ts tests/core/agent/converged.test.ts tests/core/agent/pass.test.ts`
+   Expected markers:
+   `pnpm test tests/v11/shared/metaReviewGate/metaReviewGateCurrentRunFinalization.test.ts tests/core/agent/converged.test.ts tests/core/agent/pass.test.ts`
+   `exit=0`
+   `.pairflow/evidence/clean-runs-gate-routing.log`
+
+6. `pnpm test tests/core/bubble/statusBubble.test.ts tests/core/bubble/listBubbles.test.ts tests/core/ui/bubblePresenter.test.ts tests/v11/infrastructure/executor/ssh/sshBubbleStatus.test.ts ui/src/state/useBubbleStore.test.ts ui/src/components/actions/ActionBar.test.tsx ui/src/components/canvas/BubbleExpandedCard.test.tsx ui/src/lib/api.test.ts`
+   Expected markers:
+   `pnpm test tests/core/bubble/statusBubble.test.ts tests/core/bubble/listBubbles.test.ts tests/core/ui/bubblePresenter.test.ts tests/v11/infrastructure/executor/ssh/sshBubbleStatus.test.ts ui/src/state/useBubbleStore.test.ts ui/src/components/actions/ActionBar.test.tsx ui/src/components/canvas/BubbleExpandedCard.test.tsx ui/src/lib/api.test.ts`
+   `exit=0`
+   `.pairflow/evidence/clean-runs-read-model-ui.log`
+
+7. `<pairflow-command> bubble status --id <bubble-id> --repo <repo-path>`
    Expected markers:
    `profile=external`: `Command path: external`
    no `PAIRFLOW_COMMAND_EXTERNAL_UNAVAILABLE`
@@ -165,13 +212,13 @@ Run each command from the release worktree root and capture the command, timesta
    no `PAIRFLOW_COMMAND_PATH_STALE`
    lifecycle/report data renders without fallback errors
 
-5. `<pairflow-command> bubble status --id <bubble-id> --repo <repo-path> --json`
+8. `<pairflow-command> bubble status --id <bubble-id> --repo <repo-path> --json`
    Expected markers:
    active `executionContext` remains the only authority source
    meta-review diagnostics appear only as observational fields (`authorityActive`, optional `runtimeDelivery`)
    no separate cached status/report surface is required for current-round decisions
 
-7. `<pairflow-command> bubble restart --id <bubble-id> --repo <repo-path>`
+9. `<pairflow-command> bubble restart --id <bubble-id> --repo <repo-path>`
    Preconditions:
    bubble is stuck in `RUNNING` after snapshot persistence or pane/runtime loss.
    Expected markers:
@@ -179,7 +226,7 @@ Run each command from the release worktree root and capture the command, timesta
    no implicit snapshot replay reroute is suggested or required
    follow-up `bubble status --json` remains consistent with current-round authority and diagnostics
 
-8. `<pairflow-command> metrics report --from <iso-from> --to <iso-to>`
+10. `<pairflow-command> metrics report --from <iso-from> --to <iso-to>`
    Expected markers:
    `meta_review_rollout.route_counts`
    `meta_review_rollout.rollout_blocked_events: 0`

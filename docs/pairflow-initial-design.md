@@ -86,7 +86,7 @@ Allowed transitions:
 3. `WAITING_HUMAN -> RUNNING` after human reply
 4. `RUNNING -> RUNNING` on reviewer convergence criteria pass when autonomous meta-review gate starts (`execution_context.active_role=meta_reviewer` while lifecycle remains `RUNNING`)
 5. `RUNNING -> RUNNING` on autonomous rework dispatch
-6. `RUNNING -> READY_FOR_HUMAN_APPROVAL` when convergence must hand back to a human decision (approve/inconclusive/budget exhausted/run-failed diagnostics/sticky human gate)
+6. `RUNNING -> READY_FOR_HUMAN_APPROVAL` when convergence must hand back to a human decision: sticky human gate, explicit safe human-gate fallback for inconclusive/budget-exhausted/run-failed diagnostics, or a threshold-clean meta-review `approve` whose updated `meta_review.consecutive_clean_runs` meets `review_policy.meta_review_consecutive_clean_runs_required`
 7. `READY_FOR_HUMAN_APPROVAL -> APPROVED_FOR_COMMIT` on explicit user approval
 8. `READY_FOR_HUMAN_APPROVAL -> RUNNING` on explicit immediate rework decision (`APPROVAL_DECISION=rework`)
 9. `WAITING_HUMAN` supports deferred deterministic rework intent queue; scheduler consumes pending intent and routes next actionable handoff to implementer (`WAITING_HUMAN -> RUNNING`) without reviewer relay
@@ -118,6 +118,12 @@ Meta-review authority while lifecycle remains `RUNNING`:
 12. Canonical `pairflow agent emit --kind meta_review_result` authorization must not depend on runtime pane-binding freshness. Missing or deactivated `metaReviewerPane` state after delivery failure, restart, or resume is a runtime diagnostic, not a submit gate, as long as the current-round execution context is still valid.
 13. Recovery may temporarily clear live `active_agent` / `active_role` ownership while keeping `RUNNING` plus a valid canonical execution context. In that state canonical submit remains allowed; conflicting live ownership is still rejected, but missing live ownership is not an authority failure by itself.
 14. Status and recovery surfaces must project runtime-delivery diagnostics only when their correlation fields still match the active execution context; stale diagnostics are archival only.
+15. Human approval after autonomous meta-review requires the normalized `review_policy.meta_review_consecutive_clean_runs_required` count of consecutive threshold-clean current-run finalizations. Missing legacy config normalizes the requirement to `1`.
+16. The persisted streak authority is `meta_review.consecutive_clean_runs`. Missing legacy state normalizes the current streak to `0`.
+17. Clean-run classification is derived from the finalized current-run meta-review result plus threshold evaluation against `review_policy.meta_review_auto_rework_min_severity`; a recommendation word, pane transcript, prior human-gate state, UI preset label, or `auto_rework_count` is not sufficient authority.
+18. A threshold-clean `approve` increments `meta_review.consecutive_clean_runs`. Pairflow compares the updated post-increment streak to `meta_review_consecutive_clean_runs_required`: if the updated streak remains below the requirement, Pairflow starts another meta-review run directly while lifecycle remains `RUNNING`; if the updated streak is at or above the requirement, it routes to `READY_FOR_HUMAN_APPROVAL`.
+19. Threshold-meeting findings, `rework`, `inconclusive`, parity or threshold failures, run-failed terminal outcomes, and auto-rework dispatch reset `meta_review.consecutive_clean_runs` to `0`.
+20. `auto_rework_count` and `auto_rework_limit` remain auto-rework budget controls. They must not be read as confidence-streak state.
 
 ## Convergence Policy (Quality-First)
 Each loop round:
@@ -130,6 +136,8 @@ Each loop round:
    - default baseline `review_policy.reviewer_blocking_min_severity=P3` means a `P3`-only post-gate set can still remain reviewer-blocking because of config, not because `P3` severity changed meaning
    - in document scope, blocker-grade `P0/P1` still requires `timing=required-now` + `layer=L1`; without those qualifiers the finding is treated as `P2` for routing-threshold evaluation
 5. Alternate reviewer role at least once before convergence.
+
+Reviewer convergence threshold and meta-review clean-run threshold are separate controls. `review_policy.reviewer_blocking_min_severity` decides whether reviewer findings can converge after `severity_gate_round`; `review_policy.meta_review_auto_rework_min_severity` decides whether a finalized meta-review result is threshold-clean for the consecutive clean-run gate.
 
 Convergence criteria (MVP):
 1. Two consecutive review passes with no open `P0/P1`.
@@ -261,7 +269,7 @@ Repository-local control data:
   bubbles/
     <bubble_id>/
       bubble.toml
-      state.json              # includes: state, active_agent, active_since, active_role, execution_context, round_role_history, last_command_at, meta_review.execution_context (compat), meta_review.runtime_delivery
+      state.json              # includes: state, active_agent, active_since, active_role, execution_context, round_role_history, last_command_at, meta_review.consecutive_clean_runs, meta_review.execution_context (compat), meta_review.runtime_delivery
       transcript.ndjson
       inbox.ndjson
       artifacts/

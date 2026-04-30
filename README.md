@@ -850,6 +850,36 @@ Ideation note:
 - `bubble create --ideation` starts in `RUNNING` with round `0`.
 - Before first handoff, run `pairflow bubble kickoff --id <id> --task <text>` (or `--task-file <path>`) to activate round `1`.
 
+### Autonomous meta-review clean-run gate
+
+When reviewer convergence starts autonomous meta-review and `sticky_human_gate=false`, human approval is unlocked only after the configured number of consecutive threshold-clean meta-review runs.
+
+Canonical fields:
+- configured requirement: `review_policy.meta_review_consecutive_clean_runs_required` (missing legacy config normalizes to `1`)
+- current streak: `meta_review.consecutive_clean_runs` (missing legacy state normalizes to `0`)
+- meta-review threshold: `review_policy.meta_review_auto_rework_min_severity`
+- reviewer blocking threshold: `review_policy.reviewer_blocking_min_severity`
+
+A meta-review result is clean for streak purposes only after current-run finalization confirms `recommendation=approve` and no open finding meets `review_policy.meta_review_auto_rework_min_severity`. A generic `approve` recommendation, transcript prose, pane output, prior human-gate status, UI labels, or `auto_rework_count` is not clean-run authority.
+
+Routing rules:
+- clean approve increments `meta_review.consecutive_clean_runs`; if the updated streak is still below `meta_review_consecutive_clean_runs_required`, Pairflow runs another meta-review directly, without an implementer/reviewer round
+- clean approve increments `meta_review.consecutive_clean_runs`; if the updated streak is at or above `meta_review_consecutive_clean_runs_required`, Pairflow routes to `READY_FOR_HUMAN_APPROVAL`
+- threshold-meeting findings, `rework`, `inconclusive`, parity/threshold failures, run failures, and auto-rework paths reset `meta_review.consecutive_clean_runs` to `0`
+
+`auto_rework_count` / `auto_rework_limit` remain auto-rework budget controls and are not confidence-streak counters. The reviewer blocking threshold controls reviewer convergence after `severity_gate_round`; it is separate from the meta-review threshold used by the clean-run gate.
+
+UI quality presets are compact encodings of exact backend pairs:
+
+| Preset | Backend pair |
+|---|---|
+| `P1` | `(meta_review_auto_rework_min_severity=P1, meta_review_consecutive_clean_runs_required=1)` |
+| `P2` | `(P2, 1)` |
+| `P3` | `(P3, 1)` |
+| `P3+2` | `(P3, 2)` |
+
+Unsupported pairs such as `(P2, 2)` must display as custom/unsupported rather than being coerced to one of the supported presets. `P3+2` is not a severity label; it means threshold `P3` plus two required consecutive clean runs.
+
 ---
 
 ### CLI command reference
