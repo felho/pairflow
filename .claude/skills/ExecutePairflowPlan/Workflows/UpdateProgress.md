@@ -268,6 +268,7 @@ Rules:
 4. do not widen metadata just because a generic close flow used a mirrored path that differs from the Task 1 canonical rule
 5. when refreshed task metadata already persists `archive_path`, accept it only if it equals the canonical derived path
 6. never emit `PlanComplete` from a `done` task at a live task path; complete the deterministic archive reconciliation first or stop at `HumanCheckpoint`
+7. when task archive reconciliation leaves behind the live task grouping directory under `plans/tasks/<plan-or-task-group>/`, remove that directory only if it is empty; if it is non-empty, stop at `HumanCheckpoint` because an unarchived or unclassified artifact remains
 
 Canonical plan archive target:
 
@@ -287,6 +288,8 @@ Plan archive rules:
 8. never emit `PlanComplete` while the completed plan artifact remains only at its live path.
 9. an `archive_group` prefix may confirm a previously proven `created_on`, but it must not create or overwrite `created_on` during archive aftermath.
 10. if committed first-added history proves a different date than `archive_group`, stop and repair metadata before archive moves rather than archiving under the stale group.
+11. when the completed plan is moved to its canonical archive path, the matching live task grouping directory under `plans/tasks/` must already be absent or be removed with empty-directory semantics; a non-empty live task grouping directory blocks `PlanComplete`.
+12. never use recursive deletion for this cleanup; the safe operation is equivalent to `rmdir <live-task-group-dir>`, so unexpected files force an explicit checkpoint instead of being deleted.
 
 ## Plan-Completion Gate
 
@@ -302,15 +305,17 @@ Use it only when all of the following are true after refreshed aftermath reconci
 6. `created_on` is trustworthy
 7. `archive_group` equals `<created_on>-<plan_id>`
 8. the plan artifact sits at `plans/archive/plans/<created_on>-<live-plan-filename-stem>.md`
-9. superseded tasks have deterministic lineage and archive aftermath already settled
-10. no other trusted input contradicts the complete settled boundary
+9. the live task grouping directory associated with the archived plan is absent after empty-directory cleanup, or it never existed
+10. superseded tasks have deterministic lineage and archive aftermath already settled
+11. no other trusted input contradicts the complete settled boundary
 
 Fail-closed rule:
 
 1. if the plan claims `done` but refreshed tracker or task truth is still non-terminal, do not emit `PlanComplete`
 2. if the plan claims `done` but completed tasks remain `done` at live paths, do not emit `PlanComplete`; perform deterministic archive reconciliation first or return `human_checkpoint` with `NO_TRUSTWORTHY_ROUTE`
 3. if the plan claims `done` but the plan artifact remains at a live path, do not emit `PlanComplete`; perform deterministic plan archive reconciliation first or return `human_checkpoint`
-4. return `human_checkpoint` with `PLAN_COMPLETE_STATE_STALE` unless a deterministic non-terminal reroute is already proven by refreshed artifacts; this fail-closed outcome may still report `task_terminal_status=done` when the just-closed task itself is terminal and the stale condition comes from tracker, active-task, archive settlement, or broader plan-boundary contradiction elsewhere
+4. if the live task grouping directory still exists and is non-empty, do not emit `PlanComplete`; return `human_checkpoint` with `PLAN_COMPLETE_STATE_STALE` because archive settlement is incomplete
+5. return `human_checkpoint` with `PLAN_COMPLETE_STATE_STALE` unless a deterministic non-terminal reroute is already proven by refreshed artifacts; this fail-closed outcome may still report `task_terminal_status=done` when the just-closed task itself is terminal and the stale condition comes from tracker, active-task, archive settlement, live task directory cleanup, or broader plan-boundary contradiction elsewhere
 
 ## Pilot Evidence Contract
 
@@ -481,7 +486,7 @@ Choose `plan_archive_resolution=reconciled_to_canonical` when:
 2. `active_task_id=null`
 3. all task tracker rows and readable task artifacts are archive-settled
 4. `created_on` and the live plan filename stem determine a unique canonical plan archive target
-5. moving the plan artifact and updating deterministic internal references can be performed without crossing ownership boundaries
+5. moving the plan artifact, updating deterministic internal references, and removing the now-empty live task grouping directory can be performed without crossing ownership boundaries
 
 Choose `human_checkpoint` when:
 
@@ -490,13 +495,14 @@ Choose `human_checkpoint` when:
 3. the canonical plan archive path would collide
 4. the plan artifact path cannot be classified as live or canonical archived path
 5. `created_on` was inferred from `archive_group` instead of explicit creation metadata or committed first-added history
+6. the live task grouping directory under `plans/tasks/` still contains files or subdirectories after task archive reconciliation
 
 Intermediate branch state (not returned workflow output):
 
 ```yaml
 branch_plan_archive_resolution: <already_canonical|reconciled_to_canonical>
 branch_canonical_plan_archive_path: plans/archive/plans/<created_on>-<live-plan-filename-stem>.md
-branch_handoff_boundary_note: Completed-plan archive reconciliation is settled; this intermediate branch passes control to Rule 6 for final PlanComplete output.
+branch_handoff_boundary_note: Completed-plan archive reconciliation and empty live task directory cleanup are settled; this intermediate branch passes control to Rule 6 for final PlanComplete output.
 branch_pilot_evidence_note: Local pilot proof remains lightweight here because plan completion includes the plan artifact itself at its canonical archive path.
 ```
 
