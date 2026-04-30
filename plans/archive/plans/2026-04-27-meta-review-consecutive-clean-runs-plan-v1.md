@@ -5,7 +5,7 @@ plan_id: meta-review-consecutive-clean-runs-plan-v1
 created_on: "2026-04-27"
 title: "Meta-Review Consecutive Clean Runs Plan"
 status: approved
-plan_status: in_progress
+plan_status: done
 prd_ref: null
 owners:
   - "felho"
@@ -14,7 +14,7 @@ task_order:
   - 2-clean-runs-gate-routing
   - 3-clean-runs-read-model-ui
   - 4-clean-runs-docs-validation
-active_task_id: 4-clean-runs-docs-validation
+active_task_id: null
 archive_group: 2026-04-27-meta-review-consecutive-clean-runs-plan-v1
 task_tracker:
   - task_id: 1-clean-runs-policy-state
@@ -27,8 +27,8 @@ task_tracker:
     task_path: plans/archive/tasks/2026-04-27-meta-review-consecutive-clean-runs-plan-v1/3-clean-runs-read-model-ui.md
     status: archived
   - task_id: 4-clean-runs-docs-validation
-    task_path: plans/tasks/meta-review-consecutive-clean-runs/4-clean-runs-docs-validation.md
-    status: in_progress
+    task_path: plans/archive/tasks/2026-04-27-meta-review-consecutive-clean-runs-plan-v1/4-clean-runs-docs-validation.md
+    status: archived
 ---
 
 # Plan: Meta-Review Consecutive Clean Runs
@@ -98,8 +98,7 @@ task_tracker:
 
 ### Open Work
 
-1. Runtime, routing, read-model/UI, documentation, and final validation slices have all produced implementation evidence.
-2. Remaining work is lifecycle closure for `4-clean-runs-docs-validation`: review, archive the task under the plan archive group, and move the parent plan to done/archive after the bubble is merged.
+1. None. Runtime, routing, read-model/UI, documentation, final validation, lifecycle closure, and archive aftermath are complete.
 
 ### Deferred / Future Work
 
@@ -110,7 +109,7 @@ task_tracker:
 1. Phase 1: policy and canonical state introduction completed and archived from `clean-runs-policy-state-impl`.
 2. Phase 2: gate-routing behavior change for clean reruns and unlocks completed and archived from `2-clean-runs-gate-routing-impl`.
 3. Phase 3: observability and UI preset surfacing completed and archived from `clean-runs-read-model-ui-impl`.
-4. Phase 4: documentation refinement closed via `clean-runs-docs-validation-doc`; final validation completed in `clean-runs-docs-validation-impl` and is awaiting lifecycle review/closure.
+4. Phase 4: documentation refinement closed via `clean-runs-docs-validation-doc`; final validation completed and archived from `clean-runs-docs-validation-impl`.
 
 ## Open Task List
 

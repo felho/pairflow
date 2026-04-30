@@ -5,7 +5,7 @@ task_family_id: clean-runs-docs-validation
 sequence_key: "4"
 task_id: 4-clean-runs-docs-validation
 title: "Meta-Review Consecutive Clean Runs Docs and Validation"
-status: in_progress
+status: archived
 phase: phase4
 target_files:
   - README.md
