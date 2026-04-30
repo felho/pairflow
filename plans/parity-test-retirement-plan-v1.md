@@ -14,12 +14,12 @@ task_order:
   - 2-cli-entrypoint-boundary-guard
   - 3-reconcile-contract-v11-only
   - 4-meta-review-gate-case-rename
-active_task_id: 1-facade-migration-map-cleanup
+active_task_id: 2-cli-entrypoint-boundary-guard
 archive_group: 2026-04-30-parity-test-retirement-plan-v1
 task_tracker:
   - task_id: 1-facade-migration-map-cleanup
-    task_path: plans/tasks/1-facade-migration-map-cleanup.md
-    status: in_progress
+    task_path: plans/archive/tasks/2026-04-30-parity-test-retirement-plan-v1/1-facade-migration-map-cleanup.md
+    status: archived
     notes: "Remove the exhausted facade parity/migration-map layer and related script wiring."
   - task_id: 2-cli-entrypoint-boundary-guard
     task_path: null
