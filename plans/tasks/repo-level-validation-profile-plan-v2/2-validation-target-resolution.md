@@ -5,7 +5,7 @@ task_family_id: validation-target-resolution
 sequence_key: "2"
 task_id: 2-validation-target-resolution
 title: "Validation Target Resolution"
-status: draft
+status: approved
 phase: phase2
 target_files:
   - "src/config/repoConfig.ts"
@@ -314,6 +314,12 @@ N/A. This task does not change Pairflow lifecycle success/completion semantics. 
 ## Open Questions
 
 None blocking for draft review.
+
+## Review Status
+
+ReviewSpec task-mode decision: `approve_task`.
+
+Approval provenance: local delegated ReviewSpec pass over `plans/tasks/repo-level-validation-profile-plan-v2/2-validation-target-resolution.md` and parent plan `plans/repo-level-validation-profile-plan-v2.md` after Task 1 archive aftermath. Execution metadata, parent-plan linkage, target-file reality, control model, closed-contract drift, authority fan-out, closure budget, bounded-task shape, and remaining-task viability gates passed for document-bubble routing.
 
 ## Hardening Backlog
 
