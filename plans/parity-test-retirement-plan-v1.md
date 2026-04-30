@@ -106,23 +106,27 @@ without weakening:
 
 1. Source-of-truth anchors:
    - `tests/contracts/v11/core-shim-boundary-coverage.test.ts`
-   - `tests/contracts/v11/cli-entrypoint-parity-coverage.test.ts`
-   - `tests/contracts/v11/facade-parity-coverage.test.ts`
-   - `tests/contracts/v11/migration-map.ts`
+   - `tests/contracts/v11/cli-entrypoint-boundary-guard.test.ts`
    - `tests/contracts/v11/reconcile.contract.runner.ts`
    - `tests/contracts/v11/metaReviewGate.contract.runner.ts`
    - `docs/architecture/v11-placement-and-extraction-governance.md`
-2. Closed canonical elements / terms:
+2. Historical replacement inputs, deleted by task 1:
+   - `tests/contracts/v11/facade-parity-coverage.test.ts`
+   - `tests/contracts/v11/migration-map.ts`
+3. Historical replacement inputs, deleted by task 2:
+   - `tests/contracts/v11/cli-entrypoint-parity-coverage.test.ts`
+   - `tests/v11/application/*/*CliEntrypointParity.test.ts`
+4. Closed canonical elements / terms:
    - `v11` is the current implementation authority for migrated commands.
    - `src/core/**` is not an active implementation baseline.
    - `parity` in meta-review findings modules means structured claim/artifact
      consistency, not legacy-vs-v11 migration comparison.
-3. Explicitly authorized reinterpretation:
+5. Explicitly authorized reinterpretation:
    - Migration-era "parity" tests may be reclassified as boundary guards or v11
      behavior tests when they no longer compare independent implementations.
    - Reclassified tests should be renamed so future readers do not infer a
      legacy baseline that no longer exists.
-4. Downstream task impact:
+6. Downstream task impact:
    - Tasks must not delete runtime/domain parity modules under
      `src/v11/shared/metaReview*` solely because of their names.
    - Tasks must not remove legacy command removal tests for `pass`,

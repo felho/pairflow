@@ -9,6 +9,7 @@ status: implementable
 phase: phase1
 target_files:
   - tests/contracts/v11/cli-entrypoint-parity-coverage.test.ts
+  - tests/contracts/v11/cli-entrypoint-boundary-guard.test.ts
   - tests/v11/application/attach/attachCliEntrypointParity.test.ts
   - tests/v11/application/commit/commitCliEntrypointParity.test.ts
   - tests/v11/application/create/createCliEntrypointParity.test.ts
@@ -139,25 +140,25 @@ validation log refs and states `runtime checks were intentionally not executed`.
 ### Canonical Contract Anchors
 
 1. Source-of-truth anchors:
-   - `tests/contracts/v11/cli-entrypoint-parity-coverage.test.ts`
-   - `tests/v11/application/*/*CliEntrypointParity.test.ts`
+   - `tests/contracts/v11/cli-entrypoint-boundary-guard.test.ts`
    - `src/cli/commands/bubble/**`
    - `src/v11/application/**`
    - `docs/architecture/v11-placement-and-extraction-governance.md`
-2. Canonical elements: v11 application command modules are current behavior
+2. Historical replacement inputs, deleted by this task:
+   - `tests/v11/application/*/*CliEntrypointParity.test.ts`
+3. Canonical elements: v11 application command modules are current behavior
    authority; CLI wrappers are boundary surfaces.
-3. Guard elements: the direct shim inventory is a boundary guard, not an
+4. Guard elements: the direct shim inventory is a boundary guard, not an
    independent legacy baseline.
-4. Compat-only elements: migration-era `parity` test names are historical and
+5. Compat-only elements: migration-era `parity` test names are historical and
    should not remain active naming when no independent baseline is compared.
-5. Forbidden reinterpretations: do not delete non-shim wrapper behavior tests,
+6. Forbidden reinterpretations: do not delete non-shim wrapper behavior tests,
    removed-alias tests, or runtime/domain `parity` modules by name search.
 
 ### Scope Reality / Shape Proof
 
 1. Inspected entrypoints / call-sites:
-   - `tests/contracts/v11/cli-entrypoint-parity-coverage.test.ts`
-   - `tests/v11/application/start/startCliEntrypointParity.test.ts`
+   - `tests/contracts/v11/cli-entrypoint-boundary-guard.test.ts`
    - `src/cli/commands/bubble/start.ts`
    - `src/cli/commands/bubble/reply.ts`
    - `src/cli/commands/bubble/**` inventory
@@ -210,7 +211,7 @@ N/A; this task does not modify a mutation flow.
 
 Implementation context:
 
-1. Rename or rewrite `tests/contracts/v11/cli-entrypoint-parity-coverage.test.ts`
+1. Rename or rewrite `tests/contracts/v11/cli-entrypoint-boundary-guard.test.ts`
    into a current-purpose CLI boundary/inventory guard.
 2. Delete the 12 per-command `*CliEntrypointParity.test.ts` identity tests after
    their useful boundary intent is represented centrally.
@@ -358,7 +359,7 @@ N/A.
 
 | ID | File | Function/Entry | Expected Behavior | Priority | Timing | Evidence |
 |---|---|---|---|---|---|---|
-| CS1 | `tests/contracts/v11/cli-entrypoint-parity-coverage.test.ts` | central contract suite | Renamed/reworded to boundary/inventory coverage while preserving direct shim and import-boundary checks. | P1 | required-now | T1,T2 |
+| CS1 | `tests/contracts/v11/cli-entrypoint-boundary-guard.test.ts` | central contract suite | Renamed/reworded to boundary/inventory coverage while preserving direct shim and import-boundary checks. | P1 | required-now | T1,T2 |
 | CS2 | `tests/v11/application/*/*CliEntrypointParity.test.ts` | per-command identity suites | Deleted after replacement proof. | P1 | required-now | T1,T2 |
 | CS3 | `src/cli/commands/bubble/*.ts` | wrapper import/export surface | Reads only allowed `node:` or v11 application boundaries unless intentionally classified. | P1 | required-now | T2,T3 |
 | CS4 | `package.json` / README / manifests | active test references | No stale references to renamed/deleted parity tests. | P1 | required-now | T1,T4 |
@@ -446,7 +447,7 @@ Implementation pass:
 
 1. Start with an inventory of `src/cli/commands/bubble/*.ts`, v11
    `*CliCommand.ts` modules, and current per-command parity tests.
-2. Rename or replace `tests/contracts/v11/cli-entrypoint-parity-coverage.test.ts`
+2. Rename or replace `tests/contracts/v11/cli-entrypoint-boundary-guard.test.ts`
    with boundary terminology before deleting per-command sentinels.
 3. Keep the central guard strict enough to catch unexpected wrapper imports.
 4. Delete the 12 per-command `*CliEntrypointParity.test.ts` files only after the
