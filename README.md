@@ -412,7 +412,7 @@ For command-level details and full end-to-end CLI flows, see [API & CLI referenc
 # Choose one create variant, then run start
 
 # Create (inline task)
-pairflow bubble create --id <id> --repo <repo> --base main --review-artifact-type <document|code> --task "<task>" [--validation-target <id>]
+pairflow bubble create --id <id> --repo <repo> --base main --review-artifact-type <document|code> --task "<task>"
 
 # Create (task file)
 pairflow bubble create --id <id> --repo <repo> --base main --review-artifact-type <document|code> --task-file <path>
@@ -888,7 +888,7 @@ Unsupported pairs such as `(P2, 2)` must display as custom/unsupported rather th
 
 | Command | Description |
 |---------|-------------|
-| `bubble create --id <id> --repo <path> --base <branch> --review-artifact-type <document\|code> ((--task <text> \| --task-file <path>) \| --ideation) [--validation-target <id>] [--remote <host>] [--reviewer-brief <text> \| --reviewer-brief-file <path>] [--accuracy-critical]` | Initialize a new bubble (task-based or taskless ideation mode, local or remote); `--validation-target` selects a configured repo validation target at create time |
+| `bubble create --id <id> --repo <path> --base <branch> --review-artifact-type <document\|code> ((--task <text> \| --task-file <path>) \| --ideation) [--remote <host>] [--reviewer-brief <text> \| --reviewer-brief-file <path>] [--accuracy-critical]` | Initialize a new bubble (task-based or taskless ideation mode, local or remote) |
 | `bubble kickoff --id <id> (--task <text> \| --task-file <path>) [--repo <path>]` | Activate a taskless ideation bubble (round `0` -> `1`) |
 | `bubble start --id <id> [--repo <path>]` | Start a bubble (worktree + tmux) |
 | `bubble restart --id <id> [--repo <path>]` | Restart a bubble runtime (tmux/session cleanup + start) |
@@ -1004,6 +1004,40 @@ Behavior:
 
 - Runs after workspace/bootstrap prep, before tmux session launch.
 - If the command fails, startup fails and Pairflow rolls back start state for a clean retry.
+
+### Repository validation profile
+
+A repository can define the default validation commands for newly created
+bubbles in repo-root `pairflow.toml`:
+
+```toml
+[validation]
+required = ["lint", "typecheck", "test", "fitness"]
+
+[validation.commands]
+lint = "pnpm lint"
+typecheck = "pnpm typecheck"
+test = "pnpm test"
+fitness = "pnpm fitness:check:ci"
+bootstrap = "pnpm install --frozen-lockfile && pnpm build"
+```
+
+At `bubble create` time, Pairflow reads this profile and writes the resolved
+commands into `.pairflow/bubbles/<id>/bubble.toml`. Later PASS validation uses
+that bubble config as the execution authority; it does not re-read repo-root
+`pairflow.toml`.
+
+Behavior:
+
+- `validation.required` is the ordered list of commands PASS must run for code
+  bubbles.
+- Custom command ids such as `fitness` are allowed when they have an explicit
+  command under `[validation.commands]`.
+- Missing `[validation]` preserves the built-in defaults.
+- Existing bubbles are not updated retroactively; create a new bubble or update
+  its `bubble.toml` explicitly.
+- Target-specific validation profiles are not part of the stable documented
+  workflow yet.
 
 Default behavior:
 
