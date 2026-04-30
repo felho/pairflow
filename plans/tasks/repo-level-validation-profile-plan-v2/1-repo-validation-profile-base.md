@@ -5,7 +5,7 @@ task_family_id: repo-validation-profile-base
 sequence_key: "1"
 task_id: 1-repo-validation-profile-base
 title: "Repo Validation Profile Foundation"
-status: implementable
+status: in_progress
 phase: phase1
 target_files:
   - "src/config/repoConfig.ts"
@@ -37,7 +37,7 @@ system_context_ref: docs/pairflow-initial-design.md
 owners:
   - "felho"
 doc_bubble_id: 1-repo-validation-profile-foundation-doc
-impl_bubble_id: null
+impl_bubble_id: 1-repo-validation-profile-base-impl
 supersedes: []
 superseded_by: null
 archive_group: 2026-04-29-repo-level-validation-profile-plan-v2

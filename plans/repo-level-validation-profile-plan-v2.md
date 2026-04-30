@@ -12,7 +12,7 @@ task_order:
 task_tracker:
   - task_id: 1-repo-validation-profile-base
     task_path: plans/tasks/repo-level-validation-profile-plan-v2/1-repo-validation-profile-base.md
-    status: implementable
+    status: in_progress
     notes: "First implementation slice: parse repo-level validation config and inherit it into new bubble command config."
   - task_id: 2-validation-target-resolution
     task_path: null
