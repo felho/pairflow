@@ -1,17 +1,7 @@
-import type { MetaReviewArtifactReadPort } from "../metaReview/metaReviewArtifactIo.js";
 import type { MetaReviewResult } from "../metaReview/metaReviewTypes.js";
-import type {
-  AppendProtocolEnvelopePort
-} from "../ports/transcript.js";
-import type {
-  LoadedStateSnapshot,
-  WriteStateSnapshotPort
-} from "../ports/stateSnapshots.js";
-import type { BubbleConfig } from "../../../types/bubble.js";
+import type { LoadedStateSnapshot } from "../ports/stateSnapshots.js";
 import type { Finding } from "../../../types/findings.js";
-import {
-  type FindingsParityMetadata
-} from "../../../types/protocol.js";
+import type { FindingsParityMetadata } from "../../../types/protocol.js";
 import {
   appendMetaReviewKickoffEnvelope,
   stageMetaReviewRunningState,
@@ -39,68 +29,11 @@ import {
   persistResolvedHumanRoute,
   persistRunFailedHumanRoute
 } from "./metaReviewGateCurrentRunRoutePersistence.js";
+import type { FinalizeCurrentRunMetaReviewGateInput } from "./metaReviewGateCurrentRunTypes.js";
+import { mergeRunResultWithParityResolution } from "./metaReviewGateRunResultParity.js";
 
 export const META_REVIEW_APPROVE_THRESHOLD_BACKSTOP =
   "META_REVIEW_APPROVE_THRESHOLD_BACKSTOP" as const;
-
-interface FinalizeCurrentRunMetaReviewGateInput {
-  resolved: {
-    bubbleId: string;
-    bubbleConfig: Pick<
-      BubbleConfig,
-      "watchdog_timeout_minutes" | "agents" | "review_policy"
-    >;
-    bubblePaths: {
-      artifactsDir: string;
-      bubbleDir: string;
-      inboxPath: string;
-      locksDir: string;
-      statePath: string;
-      transcriptPath: string;
-    };
-  };
-  loaded: LoadedStateSnapshot;
-  now: Date;
-  refs: string[];
-  summary: string;
-  runResult: MetaReviewResult;
-  readFileFn: MetaReviewArtifactReadPort;
-  appendEnvelope: AppendProtocolEnvelopePort;
-  writeState: WriteStateSnapshotPort;
-}
-
-function mergeRunResultWithParityResolution(input: {
-  runResult: MetaReviewResult;
-  metadata: FindingsParityMetadata | null;
-  diagnostics: string[];
-}): MetaReviewResult {
-  if (input.metadata === null && input.diagnostics.length === 0) {
-    return input.runResult;
-  }
-  const reportJson = { ...(input.runResult.report_json ?? {}) };
-  if (input.metadata !== null) {
-    reportJson.findings_claimed_open_total = input.metadata.findings_claimed_open_total;
-    reportJson.findings_artifact_open_total = input.metadata.findings_artifact_open_total;
-    reportJson.findings_blocking_open_total = input.metadata.findings_blocking_open_total;
-    reportJson.findings_advisory_open_total = input.metadata.findings_advisory_open_total;
-    reportJson.findings_artifact_status = input.metadata.findings_artifact_status;
-    reportJson.findings_digest_sha256 = input.metadata.findings_digest_sha256;
-    reportJson.meta_review_run_id = input.metadata.meta_review_run_id;
-    reportJson.findings_parity_status = input.metadata.findings_parity_status;
-  }
-  const existingDiagnostics = Array.isArray(reportJson.claim_diagnostics)
-    ? reportJson.claim_diagnostics.filter(
-        (entry): entry is string => typeof entry === "string"
-      )
-    : [];
-  if (existingDiagnostics.length > 0 || input.diagnostics.length > 0) {
-    reportJson.claim_diagnostics = [...existingDiagnostics, ...input.diagnostics];
-  }
-  return {
-    ...input.runResult,
-    report_json: reportJson
-  };
-}
 
 function callMetaReviewGateArtifactReadFn(
   readFileFn: MetaReviewGateArtifactReadFn,
@@ -114,7 +47,7 @@ async function resolveCurrentRunParity(input: {
   resolved: FinalizeCurrentRunMetaReviewGateInput["resolved"];
   snapshot: ReturnType<typeof normalizeMetaReviewSnapshot>;
   runResult: MetaReviewResult;
-  readFileFn: MetaReviewArtifactReadPort;
+  readFileFn: MetaReviewGateArtifactReadFn;
 }): Promise<
   | {
       ok: true;
@@ -391,6 +324,60 @@ async function routeCleanMetaReviewRerun(input: {
   }
 }
 
+async function routeApproveMetaReviewResult(input: {
+  finalizeInput: FinalizeCurrentRunMetaReviewGateInput;
+  snapshot: ReturnType<typeof normalizeMetaReviewSnapshot>;
+  runResultForRouting: MetaReviewResult;
+  budgetAvailable: boolean;
+  parityMetadata: FindingsParityMetadata | null;
+  thresholdAuthority?: MetaReviewGateThresholdAuthorityResolution;
+}): Promise<MetaReviewGateResult> {
+  const cleanApproval = await resolveThresholdCleanApproval({
+    finalizeInput: input.finalizeInput,
+    runResultForRouting: input.runResultForRouting,
+    parityMetadata: input.parityMetadata,
+    ...(input.thresholdAuthority !== undefined
+      ? { thresholdAuthority: input.thresholdAuthority }
+      : {})
+  });
+  if (!cleanApproval.clean) {
+    return persistDispatchFailedHumanRoute({
+      finalizeInput: input.finalizeInput,
+      loaded: input.finalizeInput.loaded,
+      expectedState: "RUNNING",
+      runResultForRouting: input.runResultForRouting,
+      parityMetadata: cleanApproval.parityMetadata,
+      fallbackReason: cleanApproval.fallbackReason,
+      rollbackStateOnAppendFailure: input.finalizeInput.loaded.state
+    });
+  }
+
+  const normalizedReviewPolicy = normalizeBubbleReviewPolicy(
+    input.finalizeInput.resolved.bubbleConfig
+  );
+  const updatedStreak = (input.snapshot.consecutive_clean_runs ?? 0) + 1;
+  if (
+    updatedStreak <
+    normalizedReviewPolicy.meta_review_consecutive_clean_runs_required
+  ) {
+    return routeCleanMetaReviewRerun({
+      finalizeInput: input.finalizeInput,
+      runResultForRouting: input.runResultForRouting,
+      parityMetadata: cleanApproval.parityMetadata,
+      updatedStreak
+    });
+  }
+
+  return persistResolvedHumanRoute({
+    finalizeInput: input.finalizeInput,
+    runResultForRouting: input.runResultForRouting,
+    budgetAvailable: input.budgetAvailable,
+    parityMetadata: cleanApproval.parityMetadata,
+    forceStickyHumanGateBypass: false,
+    consecutiveCleanRuns: updatedStreak
+  });
+}
+
 export async function finalizeCurrentRunMetaReviewGate(
   input: FinalizeCurrentRunMetaReviewGateInput
 ): Promise<MetaReviewGateResult> {
@@ -480,49 +467,15 @@ export async function finalizeCurrentRunMetaReviewGate(
   }
 
   if (parity.runResultForRouting.recommendation === "approve") {
-    const cleanApproval = await resolveThresholdCleanApproval({
+    return routeApproveMetaReviewResult({
       finalizeInput: input,
+      snapshot,
       runResultForRouting: parity.runResultForRouting,
+      budgetAvailable: parity.budgetAvailable,
       parityMetadata: approveBackstop.parityMetadata,
       ...(approveBackstop.thresholdAuthority !== undefined
         ? { thresholdAuthority: approveBackstop.thresholdAuthority }
         : {})
-    });
-    if (!cleanApproval.clean) {
-      return persistDispatchFailedHumanRoute({
-        finalizeInput: input,
-        loaded: input.loaded,
-        expectedState: "RUNNING",
-        runResultForRouting: parity.runResultForRouting,
-        parityMetadata: cleanApproval.parityMetadata,
-        fallbackReason: cleanApproval.fallbackReason,
-        rollbackStateOnAppendFailure: input.loaded.state
-      });
-    }
-
-    const normalizedReviewPolicy = normalizeBubbleReviewPolicy(
-      input.resolved.bubbleConfig
-    );
-    const updatedStreak = (snapshot.consecutive_clean_runs ?? 0) + 1;
-    if (
-      updatedStreak <
-      normalizedReviewPolicy.meta_review_consecutive_clean_runs_required
-    ) {
-      return routeCleanMetaReviewRerun({
-        finalizeInput: input,
-        runResultForRouting: parity.runResultForRouting,
-        parityMetadata: cleanApproval.parityMetadata,
-        updatedStreak
-      });
-    }
-
-    return persistResolvedHumanRoute({
-      finalizeInput: input,
-      runResultForRouting: parity.runResultForRouting,
-      budgetAvailable: parity.budgetAvailable,
-      parityMetadata: cleanApproval.parityMetadata,
-      forceStickyHumanGateBypass: false,
-      consecutiveCleanRuns: updatedStreak
     });
   }
 

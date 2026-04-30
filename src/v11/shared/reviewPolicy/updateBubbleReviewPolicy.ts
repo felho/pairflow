@@ -73,21 +73,22 @@ export function buildSharedUiReviewPolicyPatch(
   input: SharedUiReviewPolicyPatchInput
 ): UpdateBubbleReviewPolicyInput["patch"] {
   if (input.metaReviewQualityPreset !== undefined) {
-    if (!isMetaReviewQualityPreset(input.metaReviewQualityPreset)) {
+    const metaReviewQualityPreset: unknown = input.metaReviewQualityPreset;
+    if (!isMetaReviewQualityPreset(metaReviewQualityPreset)) {
       throw new Error(
-        `${REVIEW_POLICY_PATCH_INVALID}: metaReviewQualityPreset must be one of ${metaReviewQualityPresets.join(", ")}`
+        `${REVIEW_POLICY_PATCH_INVALID}: metaReviewQualityPreset must be one of ${metaReviewQualityPresets.join(", ")}. context: meta_review_quality_preset=${String(metaReviewQualityPreset)}.`
       );
     }
     const severity =
-      input.metaReviewQualityPreset === "P3+2"
+      metaReviewQualityPreset === "P3+2"
         ? "P3"
-        : input.metaReviewQualityPreset;
+        : metaReviewQualityPreset;
     if (
       input.reviewBlockingMinSeverity !== undefined
       && input.reviewBlockingMinSeverity !== severity
     ) {
       throw new Error(
-        `${REVIEW_POLICY_PATCH_INVALID}: reviewBlockingMinSeverity must match the selected metaReviewQualityPreset severity (${severity}) when both fields are provided.`
+        `${REVIEW_POLICY_PATCH_INVALID}: reviewBlockingMinSeverity must match the selected metaReviewQualityPreset severity (${severity}) when both fields are provided. context: meta_review_quality_preset=${input.metaReviewQualityPreset} reviewer_blocking_min_severity=${input.reviewBlockingMinSeverity}.`
       );
     }
     return {
@@ -95,7 +96,7 @@ export function buildSharedUiReviewPolicyPatch(
       reviewer_blocking_min_severity: severity,
       meta_review_auto_rework_min_severity: severity,
       meta_review_consecutive_clean_runs_required:
-        input.metaReviewQualityPreset === "P3+2" ? 2 : 1
+        metaReviewQualityPreset === "P3+2" ? 2 : 1
     };
   }
 

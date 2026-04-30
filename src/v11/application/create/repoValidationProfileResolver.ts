@@ -51,7 +51,7 @@ function normalizeCommand(command: string | undefined): string | undefined {
 function assertValidCommandId(id: string): void {
   if (!isValidationCommandId(id)) {
     throw new Error(
-      `Invalid validation command id "${id}". ${describeValidationCommandIdRule()}`
+      `VALIDATION_COMMAND_ID_INVALID: Invalid validation command id "${id}". ${describeValidationCommandIdRule()} context: command_id=${id}.`
     );
   }
 }
@@ -60,7 +60,9 @@ function assertNoDuplicateRequired(required: readonly string[]): void {
   const seen = new Set<string>();
   for (const id of required) {
     if (seen.has(id)) {
-      throw new Error(`Duplicate validation.required id "${id}".`);
+      throw new Error(
+        `VALIDATION_REQUIRED_DUPLICATE: Duplicate validation.required id "${id}". context: command_id=${id}.`
+      );
     }
     seen.add(id);
   }
@@ -74,13 +76,13 @@ function resolveSelectedValidationTarget(
   if (requestedTarget !== undefined && requestedTarget.length > 0) {
     if (targets === undefined || Object.keys(targets).length === 0) {
       throw new Error(
-        `VALIDATION_TARGETS_NOT_CONFIGURED: --validation-target was provided but validation.targets is not configured.`
+        `VALIDATION_TARGETS_NOT_CONFIGURED: --validation-target was provided but validation.targets is not configured. context: validation_target=${requestedTarget}.`
       );
     }
     const target = targets[requestedTarget];
     if (target === undefined) {
       throw new Error(
-        `VALIDATION_TARGET_UNKNOWN: validation target "${requestedTarget}" is not configured.`
+        `VALIDATION_TARGET_UNKNOWN: validation target "${requestedTarget}" is not configured. context: validation_target=${requestedTarget}.`
       );
     }
     return { id: requestedTarget, target };
@@ -103,12 +105,12 @@ function resolveSelectedValidationTarget(
 
   if (Object.keys(targets).length === 1) {
     throw new Error(
-      `VALIDATION_TARGET_DEFAULT_MISSING: validation targets are configured but the only target is not default and no explicit target was selected.`
+      `VALIDATION_TARGET_DEFAULT_MISSING: validation targets are configured but the only target is not default and no explicit target was selected. context: target_count=1.`
     );
   }
 
   throw new Error(
-    `VALIDATION_TARGET_AMBIGUOUS: validation targets are configured but no explicit target or unique default target was selected.`
+    `VALIDATION_TARGET_AMBIGUOUS: validation targets are configured but no explicit target or unique default target was selected. context: target_count=${Object.keys(targets).length}.`
   );
 }
 
@@ -122,7 +124,7 @@ function assertValidationTargetCwdInsideWorktree(input: {
   }
   if (input.worktreePath === undefined) {
     throw new Error(
-      `VALIDATION_TARGET_CWD_OUTSIDE_WORKTREE: validation target cwd requires a worktree path for containment validation.`
+      `VALIDATION_TARGET_CWD_OUTSIDE_WORKTREE: validation target cwd requires a worktree path for containment validation. context: cwd=${input.cwd}.`
     );
   }
   resolveValidationTargetCwd({
@@ -132,6 +134,61 @@ function assertValidationTargetCwdInsideWorktree(input: {
       ? { allowMissingWorktreePath: true }
       : {})
   });
+}
+
+function applyExplicitValidationCommands(input: {
+  commands: Record<string, string>;
+  explicitCommands: Partial<Record<ExplicitValidationCommandId, string>>;
+}): void {
+  for (const id of explicitValidationCommandIds) {
+    const normalized = normalizeCommand(input.explicitCommands[id]);
+    if (normalized !== undefined) {
+      input.commands[id] = normalized;
+    }
+  }
+}
+
+function resolveTargetValidationResult(input: {
+  selectedTarget: NonNullable<ReturnType<typeof resolveSelectedValidationTarget>>;
+  commands: Record<string, string>;
+  worktreePath?: string;
+  allowMissingWorktreePath?: boolean;
+}): ResolvedRepoValidationProfileCommands {
+  const targetRequired = input.selectedTarget.target.required;
+  assertNoDuplicateRequired(targetRequired);
+  for (const id of targetRequired) {
+    assertValidCommandId(id);
+    if (normalizeCommand(input.commands[id]) === undefined) {
+      throw new Error(
+        `VALIDATION_TARGET_REQUIRED_COMMAND_UNRESOLVED: validation target "${input.selectedTarget.id}" required command "${id}" could not be resolved. context: validation_target=${input.selectedTarget.id} command_id=${id}.`
+      );
+    }
+  }
+  assertValidationTargetCwdInsideWorktree({
+    ...(input.worktreePath !== undefined
+      ? { worktreePath: input.worktreePath }
+      : {}),
+    ...(input.allowMissingWorktreePath === true
+      ? { allowMissingWorktreePath: true }
+      : {}),
+    ...(input.selectedTarget.target.cwd !== undefined
+      ? { cwd: input.selectedTarget.target.cwd }
+      : {})
+  });
+  return {
+    commands: input.commands,
+    validationRequired: [...targetRequired],
+    ...(targetRequired.length === 0 ? { validationRequiredExplicit: true } : {}),
+    validationTarget: {
+      id: input.selectedTarget.id,
+      ...(input.selectedTarget.target.cwd !== undefined
+        ? { cwd: input.selectedTarget.target.cwd }
+        : {}),
+      ...(input.selectedTarget.target.paths !== undefined
+        ? { paths: [...input.selectedTarget.target.paths] }
+        : {})
+    }
+  };
 }
 
 export function resolveRepoValidationProfileCommands(
@@ -147,7 +204,9 @@ export function resolveRepoValidationProfileCommands(
     assertValidCommandId(id);
     const normalized = normalizeCommand(command);
     if (normalized === undefined) {
-      throw new Error(`validation.commands.${id} must be a non-empty string.`);
+      throw new Error(
+        `VALIDATION_COMMAND_EMPTY: validation.commands.${id} must be a non-empty string. context: command_id=${id}.`
+      );
     }
     commands[id] = normalized;
   }
@@ -158,59 +217,30 @@ export function resolveRepoValidationProfileCommands(
       const normalized = normalizeCommand(command);
       if (normalized === undefined) {
         throw new Error(
-          `validation.targets.${selectedTarget.id}.commands.${id} must be a non-empty string.`
+          `VALIDATION_TARGET_COMMAND_EMPTY: validation.targets.${selectedTarget.id}.commands.${id} must be a non-empty string. context: validation_target=${selectedTarget.id} command_id=${id}.`
         );
       }
       commands[id] = normalized;
     }
   }
 
-  for (const id of explicitValidationCommandIds) {
-    const normalized = normalizeCommand(input.explicitCommands[id]);
-    if (normalized !== undefined) {
-      commands[id] = normalized;
-    }
-  }
+  applyExplicitValidationCommands({
+    commands,
+    explicitCommands: input.explicitCommands
+  });
 
   const required = input.repoValidation?.required;
   if (selectedTarget !== undefined) {
-    const targetRequired = selectedTarget.target.required;
-    assertNoDuplicateRequired(targetRequired);
-    for (const id of targetRequired) {
-      assertValidCommandId(id);
-      if (normalizeCommand(commands[id]) === undefined) {
-        throw new Error(
-          `VALIDATION_TARGET_REQUIRED_COMMAND_UNRESOLVED: validation target "${selectedTarget.id}" required command "${id}" could not be resolved.`
-        );
-      }
-    }
-    assertValidationTargetCwdInsideWorktree({
+    return resolveTargetValidationResult({
+      selectedTarget,
+      commands,
       ...(input.worktreePath !== undefined
         ? { worktreePath: input.worktreePath }
         : {}),
       ...(input.allowMissingWorktreePath === true
         ? { allowMissingWorktreePath: true }
         : {}),
-      ...(selectedTarget.target.cwd !== undefined
-        ? { cwd: selectedTarget.target.cwd }
-        : {})
     });
-    return {
-      commands,
-      validationRequired: [...targetRequired],
-      ...(targetRequired.length === 0
-        ? { validationRequiredExplicit: true }
-        : {}),
-      validationTarget: {
-        id: selectedTarget.id,
-        ...(selectedTarget.target.cwd !== undefined
-          ? { cwd: selectedTarget.target.cwd }
-          : {}),
-        ...(selectedTarget.target.paths !== undefined
-          ? { paths: [...selectedTarget.target.paths] }
-          : {})
-      }
-    };
   }
 
   if (required === undefined) {
@@ -222,7 +252,7 @@ export function resolveRepoValidationProfileCommands(
     assertValidCommandId(id);
     if (normalizeCommand(commands[id]) === undefined) {
       throw new Error(
-        `validation.required references "${id}", but no command was resolved for that id.`
+        `VALIDATION_REQUIRED_COMMAND_UNRESOLVED: validation.required references "${id}", but no command was resolved for that id. context: command_id=${id}.`
       );
     }
   }

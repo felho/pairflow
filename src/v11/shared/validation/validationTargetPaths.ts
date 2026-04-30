@@ -50,14 +50,14 @@ function assertPathInsideWorktree(input: {
     relativePath.startsWith(`..${sep}`)
   ) {
     throw new Error(
-      `VALIDATION_TARGET_CWD_OUTSIDE_WORKTREE: validation target cwd resolves outside the worktree.`
+      `VALIDATION_TARGET_CWD_OUTSIDE_WORKTREE: validation target cwd resolves outside the worktree. context: worktree_path=${input.worktreePath} candidate_path=${input.candidatePath}.`
     );
   }
 }
 
-function validationTargetCwdOutsideWorktreeError(cause?: unknown): Error {
+function toValidationTargetCwdOutsideWorktreeError(cause?: unknown): Error {
   return new Error(
-    `VALIDATION_TARGET_CWD_OUTSIDE_WORKTREE: validation target cwd resolves outside the worktree.`,
+    `VALIDATION_TARGET_CWD_OUTSIDE_WORKTREE: validation target cwd resolves outside the worktree. context: cwd_containment=failed.`,
     cause === undefined ? undefined : { cause }
   );
 }
@@ -66,7 +66,7 @@ function realpathNativeInsideWorktree(path: string): string {
   try {
     return realpathSync.native(path);
   } catch (error) {
-    throw validationTargetCwdOutsideWorktreeError(error);
+    throw toValidationTargetCwdOutsideWorktreeError(error);
   }
 }
 
@@ -85,15 +85,15 @@ function resolveExistingPathPrefix(input: {
     } catch (error) {
       const typedError = error as NodeJS.ErrnoException;
       if (typedError.code !== "ENOENT" && typedError.code !== "ENOTDIR") {
-        throw validationTargetCwdOutsideWorktreeError(error);
+        throw toValidationTargetCwdOutsideWorktreeError(error);
       }
       if (current === input.worktreePath && input.allowMissingWorktreePath !== true) {
-        throw validationTargetCwdOutsideWorktreeError(error);
+        throw toValidationTargetCwdOutsideWorktreeError(error);
       }
       current = dirname(current);
     }
   }
-  throw validationTargetCwdOutsideWorktreeError();
+  throw toValidationTargetCwdOutsideWorktreeError();
 }
 
 export function resolveValidationTargetCwd(input: {
@@ -104,7 +104,7 @@ export function resolveValidationTargetCwd(input: {
   const normalizedCwd = normalizeValidationTargetCwd(input.cwd);
   if (normalizedCwd === undefined) {
     throw new Error(
-      `VALIDATION_TARGET_CWD_INVALID: validation target cwd must be a non-empty normalized relative path.`
+      `VALIDATION_TARGET_CWD_INVALID: validation target cwd must be a non-empty normalized relative path. context: cwd=${input.cwd}.`
     );
   }
 

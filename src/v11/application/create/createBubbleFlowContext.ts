@@ -19,7 +19,6 @@ import type {
 } from "./createCommandContract.js";
 import {
   buildBubbleConfig,
-  buildIdeationPlaceholderTaskContent,
   ensureBubbleDoesNotExist,
   ensureRepoPathIsGitRepo,
   resolveCreateReviewArtifactType,
@@ -29,6 +28,7 @@ import {
   toBubbleCreateError,
   validateBubbleId
 } from "./createCommandRuntime.js";
+import { buildIdeationPlaceholderTaskContent } from "./createTaskArtifacts.js";
 import {
   prepareCreateBubbleInput,
   type PreparedCreateBubbleInput
@@ -46,6 +46,81 @@ export interface CreateBubbleFlowContext {
   prepared: PreparedCreateBubbleInput;
   config: BubbleConfig;
   state: BubbleStateSnapshot;
+}
+
+async function resolveTaskForCreateCommand(
+  command: BubbleCreateInput
+): Promise<ResolvedTaskInput> {
+  if (command.ideation === true) {
+    return {
+      content: buildIdeationPlaceholderTaskContent(command.id),
+      source: "ideation_placeholder"
+    };
+  }
+  return resolveTaskInput({
+    cwd: command.cwd ?? process.cwd(),
+    ...(command.task !== undefined ? { task: command.task } : {}),
+    ...(command.taskFile !== undefined ? { taskFile: command.taskFile } : {})
+  });
+}
+
+async function resolveRemoteExecutionForCreateCommand(input: {
+  command: BubbleCreateInput;
+  dependencies: BubbleCreateDependencies;
+}): Promise<Awaited<ReturnType<typeof resolveCreateBubbleRemoteExecution>> | undefined> {
+  if (input.command.remote === undefined) {
+    return undefined;
+  }
+  if (input.dependencies.loadPairflowGlobalConfig === undefined) {
+    throw toBubbleCreateError({
+      message: "Missing required create bubble dependency: loadPairflowGlobalConfig.",
+      context: {
+        dependency: "loadPairflowGlobalConfig",
+        command_name: "create",
+        bubble_id: input.command.id,
+        remote: input.command.remote
+      }
+    });
+  }
+  return resolveCreateBubbleRemoteExecution({
+    remote: input.command.remote,
+    loadPairflowGlobalConfig: input.dependencies.loadPairflowGlobalConfig
+  });
+}
+
+async function applyValidationProfileCommands(input: {
+  command: BubbleCreateInput;
+  prepared: PreparedCreateBubbleInput;
+  repoPath: string;
+  worktreePath: string;
+}): Promise<void> {
+  const repoConfig = await loadPairflowRepoConfig(input.repoPath);
+  input.prepared.bubbleConfigInput.resolvedValidationCommands =
+    resolveRepoValidationProfileCommands({
+      explicitCommands: {
+        ...(input.command.testCommand !== undefined
+          ? { test: input.command.testCommand }
+          : {}),
+        ...(input.command.typecheckCommand !== undefined
+          ? { typecheck: input.command.typecheckCommand }
+          : {}),
+        ...(input.command.bootstrapCommand !== undefined
+          ? { bootstrap: input.command.bootstrapCommand }
+          : {})
+      },
+      ...(input.command.validationTarget !== undefined
+        ? { validationTarget: input.command.validationTarget }
+        : {}),
+      worktreePath: input.worktreePath,
+      allowMissingWorktreePath: true,
+      ...(repoConfig.validation !== undefined
+        ? { repoValidation: repoConfig.validation }
+        : {}),
+      legacyDefaults: {
+        test: "pnpm test",
+        typecheck: "pnpm typecheck"
+      }
+    });
 }
 
 export async function prepareCreateBubbleFlowContext(input: {
@@ -89,19 +164,7 @@ export async function prepareCreateBubbleFlowContext(input: {
   const paths = getBubblePaths(repoPath, input.command.id);
   await ensureBubbleDoesNotExist(paths.bubbleDir);
 
-  const ideationMode = input.command.ideation === true;
-  const task = ideationMode
-    ? {
-        content: buildIdeationPlaceholderTaskContent(input.command.id),
-        source: "ideation_placeholder" as const
-      }
-    : await resolveTaskInput({
-        cwd: input.command.cwd ?? process.cwd(),
-        ...(input.command.task !== undefined ? { task: input.command.task } : {}),
-        ...(input.command.taskFile !== undefined
-          ? { taskFile: input.command.taskFile }
-          : {})
-      });
+  const task = await resolveTaskForCreateCommand(input.command);
   const reviewerFocus = extractReviewerFocus(task.content);
   const reviewerBrief = await resolveReviewerBriefInput({
     ...(input.command.reviewerBrief !== undefined
@@ -112,28 +175,8 @@ export async function prepareCreateBubbleFlowContext(input: {
       : {}),
     accuracyCritical: input.command.accuracyCritical === true,
     cwd: input.command.cwd ?? process.cwd()
-  });
-
-  let remoteExecution:
-    | Awaited<ReturnType<typeof resolveCreateBubbleRemoteExecution>>
-    | undefined;
-  if (input.command.remote !== undefined) {
-    if (input.dependencies.loadPairflowGlobalConfig === undefined) {
-      throw toBubbleCreateError({
-        message: "Missing required create bubble dependency: loadPairflowGlobalConfig.",
-        context: {
-          dependency: "loadPairflowGlobalConfig",
-          command_name: "create",
-          bubble_id: input.command.id,
-          remote: input.command.remote
-        }
       });
-    }
-    remoteExecution = await resolveCreateBubbleRemoteExecution({
-      remote: input.command.remote,
-      loadPairflowGlobalConfig: input.dependencies.loadPairflowGlobalConfig
-    });
-  }
+  const remoteExecution = await resolveRemoteExecutionForCreateCommand(input);
 
   const prepared = prepareCreateBubbleInput({
     command: input.command,
@@ -146,33 +189,12 @@ export async function prepareCreateBubbleFlowContext(input: {
       ? { executorRemote: remoteExecution.remoteAlias }
       : {})
   });
-  const repoConfig = await loadPairflowRepoConfig(repoPath);
-  prepared.bubbleConfigInput.resolvedValidationCommands =
-    resolveRepoValidationProfileCommands({
-      explicitCommands: {
-        ...(input.command.testCommand !== undefined
-          ? { test: input.command.testCommand }
-          : {}),
-        ...(input.command.typecheckCommand !== undefined
-          ? { typecheck: input.command.typecheckCommand }
-          : {}),
-      ...(input.command.bootstrapCommand !== undefined
-          ? { bootstrap: input.command.bootstrapCommand }
-          : {})
-      },
-      ...(input.command.validationTarget !== undefined
-        ? { validationTarget: input.command.validationTarget }
-        : {}),
-      worktreePath: paths.worktreePath,
-      allowMissingWorktreePath: true,
-      ...(repoConfig.validation !== undefined
-        ? { repoValidation: repoConfig.validation }
-        : {}),
-      legacyDefaults: {
-        test: "pnpm test",
-        typecheck: "pnpm typecheck"
-      }
-    });
+  await applyValidationProfileCommands({
+    command: input.command,
+    prepared,
+    repoPath,
+    worktreePath: paths.worktreePath
+  });
 
   return {
     repoPath,

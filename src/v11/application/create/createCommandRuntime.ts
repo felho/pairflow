@@ -83,6 +83,40 @@ export interface ResolvedCreateBubbleRemoteExecution {
   remotePointer: BubbleRemotePointerCreated;
 }
 
+function buildValidationCommandsConfig(
+  input: CreateBubbleConfigInput
+): BubbleConfig["commands"] {
+  const resolvedCommands = input.resolvedValidationCommands?.commands;
+  const customCommands = Object.fromEntries(
+    Object.entries(resolvedCommands ?? {}).filter(
+      ([id]) => !(builtInValidationCommandIds as readonly string[]).includes(id)
+    )
+  );
+  return {
+    ...(resolvedCommands?.bootstrap !== undefined || input.bootstrapCommand !== undefined
+      ? { bootstrap: resolvedCommands?.bootstrap ?? input.bootstrapCommand }
+      : {}),
+    ...(resolvedCommands?.lint !== undefined
+      ? { lint: resolvedCommands.lint }
+      : {}),
+    test: resolvedCommands?.test ?? input.testCommand ?? "pnpm test",
+    typecheck: resolvedCommands?.typecheck ?? input.typecheckCommand ?? "pnpm typecheck",
+    ...customCommands,
+    ...(input.resolvedValidationCommands?.validationRequired !== undefined
+      ? {
+          validation_required:
+            input.resolvedValidationCommands.validationRequired
+        }
+      : {}),
+    ...(input.resolvedValidationCommands?.validationRequiredExplicit !== undefined
+      ? {
+          validation_required_explicit:
+            input.resolvedValidationCommands.validationRequiredExplicit
+        }
+      : {})
+  };
+}
+
 export function validateBubbleId(id: string): void {
   if (!/^[a-z0-9][a-z0-9_-]{2,39}$/u.test(id)) {
     throw toBubbleCreateError({
@@ -282,7 +316,6 @@ export async function resolveReviewerBriefInput(input: {
 }
 
 export function buildBubbleConfig(input: CreateBubbleConfigInput): BubbleConfig {
-  const resolvedCommands = input.resolvedValidationCommands?.commands;
   return assertValidBubbleConfig({
     id: input.id,
     bubble_instance_id: input.bubbleInstanceId,
@@ -322,33 +355,7 @@ export function buildBubbleConfig(input: CreateBubbleConfigInput): BubbleConfig 
         ? { meta_reviewer: input.metaReviewer }
         : {})
     },
-    commands: {
-      ...(resolvedCommands?.bootstrap !== undefined || input.bootstrapCommand !== undefined
-        ? { bootstrap: resolvedCommands?.bootstrap ?? input.bootstrapCommand }
-        : {}),
-      ...(resolvedCommands?.lint !== undefined
-        ? { lint: resolvedCommands.lint }
-        : {}),
-      test: resolvedCommands?.test ?? input.testCommand ?? "pnpm test",
-      typecheck: resolvedCommands?.typecheck ?? input.typecheckCommand ?? "pnpm typecheck",
-      ...Object.fromEntries(
-        Object.entries(resolvedCommands ?? {}).filter(
-          ([id]) => !(builtInValidationCommandIds as readonly string[]).includes(id)
-        )
-      ),
-      ...(input.resolvedValidationCommands?.validationRequired !== undefined
-        ? {
-            validation_required:
-              input.resolvedValidationCommands.validationRequired
-          }
-        : {}),
-      ...(input.resolvedValidationCommands?.validationRequiredExplicit !== undefined
-        ? {
-            validation_required_explicit:
-              input.resolvedValidationCommands.validationRequiredExplicit
-          }
-        : {})
-    },
+    commands: buildValidationCommandsConfig(input),
     notifications: {
       enabled: true
     },
@@ -455,30 +462,6 @@ export function resolveCreateReviewArtifactType(
       context: { value }
     });
   }
-}
-
-export function renderTaskArtifact(task: ResolvedTaskInput): string {
-  const sourceLine =
-    task.source === "file"
-      ? `Source: file (${task.sourcePath})`
-      : task.source === "ideation_placeholder"
-      ? "Source: ideation placeholder (kickoff required before implementation)"
-      : "Source: inline text";
-
-  return `# Bubble Task\n\n${sourceLine}\n\n${task.content}\n`;
-}
-
-export function buildIdeationPlaceholderTaskContent(bubbleId: string): string {
-  return [
-    "## Ideation Placeholder",
-    "",
-    "This bubble was created with `--ideation`; there is no active implementation task yet.",
-    "Run kickoff before implementation handoff:",
-    `- pairflow bubble kickoff --id ${bubbleId} --task "<task text>"`,
-    `- pairflow bubble kickoff --id ${bubbleId} --task-file <path>`,
-    "",
-    "metadata_source: ideation_placeholder"
-  ].join("\n");
 }
 
 export async function ensureBubbleDoesNotExist(bubbleDir: string): Promise<void> {

@@ -22,9 +22,9 @@ import type {
 } from "./createCommandContract.js";
 import {
   ensureRuntimeSessionFile,
-  renderTaskArtifact,
   toBubbleCreateError
 } from "./createCommandRuntime.js";
+import { renderTaskArtifact } from "./createTaskArtifacts.js";
 import type { ReviewerFocusExtractionResult } from "../../../v11/shared/reviewer/reviewerBrief.js";
 
 export interface CreateBubblePersistenceInput {
