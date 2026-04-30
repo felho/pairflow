@@ -137,7 +137,8 @@ export async function launchFreshTmuxSession(input: {
         taskArtifactPath: input.context.resolved.bubblePaths.taskArtifactPath,
         reviewArtifactType: input.context.resolved.bubbleConfig.review_artifact_type,
         pairflowCommandProfile: input.context.resolved.bubbleConfig.pairflow_command_profile,
-        ideationPending: input.ideationPending
+        ideationPending: input.ideationPending,
+        validationCommands: input.context.resolved.bubbleConfig.commands
       })
     }),
     reviewerCommand: buildAgentLaunchCommand({
@@ -193,7 +194,8 @@ export async function launchFreshTmuxSession(input: {
           workspacePath: input.launchWorkspacePath,
           taskArtifactPath: input.context.resolved.bubblePaths.taskArtifactPath,
           reviewArtifactType: input.context.resolved.bubbleConfig.review_artifact_type,
-          pairflowCommandProfile: input.context.resolved.bubbleConfig.pairflow_command_profile
+          pairflowCommandProfile: input.context.resolved.bubbleConfig.pairflow_command_profile,
+          validationCommands: input.context.resolved.bubbleConfig.commands
         })
   });
 
@@ -256,6 +258,7 @@ export async function launchResumeTmuxSession(input: {
         pairflowCommandProfile: input.context.resolved.bubbleConfig.pairflow_command_profile,
         state: input.context.loadedState.state,
         transcriptSummary: input.transcriptSummary,
+        validationCommands: input.context.resolved.bubbleConfig.commands,
         ...(input.kickoffDiagnostic !== undefined ? { kickoffDiagnostic: input.kickoffDiagnostic } : {})
       })
     }),

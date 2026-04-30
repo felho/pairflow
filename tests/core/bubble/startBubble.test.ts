@@ -2861,7 +2861,7 @@ describe("startBubble", () => {
       "Mode A (skip-claim): summary says runtime checks were intentionally not executed -> attach no `.pairflow/evidence/*.log` refs."
     );
     expect(implementerCommand).toContain(
-      "Mode B (checks executed): if you run validation"
+      "Mode B (checks executed): Run validation via"
     );
     expect(implementerCommand).not.toContain(
       "Missing expected evidence logs should be treated as incomplete validation packaging."
@@ -4561,7 +4561,7 @@ describe("startBubble", () => {
             "Mode A (skip-claim): summary says runtime checks were intentionally not executed -> attach no `.pairflow/evidence/*.log` refs."
           );
           expect(input.implementerCommand).toContain(
-            "Mode B (checks executed): if you run validation"
+            "Mode B (checks executed): Run validation via"
           );
           expect(input.implementerKickoffMessage).toContain(
             "runtime checks are not required in this round"

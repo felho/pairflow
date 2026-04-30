@@ -1,5 +1,6 @@
 import { resolve } from "node:path";
 
+import { loadPairflowRepoConfig } from "../../../config/repoConfig.js";
 import { getBubblePaths, type BubblePaths } from "../../shared/bubble/bubblePaths.js";
 import type { ReviewerFocusExtractionResult } from "../../../v11/shared/reviewer/reviewerBrief.js";
 import { createInitialBubbleState } from "../../domain/state/initialState.js";
@@ -33,6 +34,7 @@ import {
   type PreparedCreateBubbleInput
 } from "./createBubblePreparation.js";
 import { extractReviewerFocus } from "./createReviewerFocus.js";
+import { resolveRepoValidationProfileCommands } from "./repoValidationProfileResolver.js";
 
 export interface CreateBubbleFlowContext {
   repoPath: string;
@@ -144,6 +146,28 @@ export async function prepareCreateBubbleFlowContext(input: {
       ? { executorRemote: remoteExecution.remoteAlias }
       : {})
   });
+  const repoConfig = await loadPairflowRepoConfig(repoPath);
+  prepared.bubbleConfigInput.resolvedValidationCommands =
+    resolveRepoValidationProfileCommands({
+      explicitCommands: {
+        ...(input.command.testCommand !== undefined
+          ? { test: input.command.testCommand }
+          : {}),
+        ...(input.command.typecheckCommand !== undefined
+          ? { typecheck: input.command.typecheckCommand }
+          : {}),
+        ...(input.command.bootstrapCommand !== undefined
+          ? { bootstrap: input.command.bootstrapCommand }
+          : {})
+      },
+      ...(repoConfig.validation !== undefined
+        ? { repoValidation: repoConfig.validation }
+        : {}),
+      legacyDefaults: {
+        test: "pnpm test",
+        typecheck: "pnpm typecheck"
+      }
+    });
 
   return {
     repoPath,

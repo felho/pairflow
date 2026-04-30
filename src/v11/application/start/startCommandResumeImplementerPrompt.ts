@@ -1,4 +1,5 @@
 import type {
+  BubbleCommandsConfig,
   PairflowCommandProfile,
   ReviewArtifactType
 } from "../../../types/bubble.js";
@@ -16,6 +17,7 @@ export function buildResumeImplementerStartupPrompt(input: {
   state: BubbleStateSnapshot;
   transcriptSummary: string;
   kickoffDiagnostic?: string;
+  validationCommands?: BubbleCommandsConfig;
 }): string {
   return joinPromptLines(
     buildRolePromptConcernLines({

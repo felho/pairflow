@@ -59,6 +59,15 @@ all_gate = "advisory"
     expect(result.value).toEqual({});
   });
 
+  it("rejects unsupported top-level sections so typos fail fast", () => {
+    expect(() =>
+      parsePairflowRepoConfigToml(`
+[validaton]
+required = ["test"]
+`)
+    ).toThrow(SchemaValidationError);
+  });
+
   it("ignores legacy docs_gate values when present in repo config", () => {
     const result = validatePairflowRepoConfig({
       enforcement_mode: {
@@ -119,6 +128,52 @@ enforcement_mode.all_gate = "required"
 
     const loaded = await loadPairflowRepoConfig(repoPath);
     expect(loaded).toEqual({});
+  });
+
+  it("parses single-profile validation defaults", () => {
+    const parsed = parsePairflowRepoConfigToml(`
+[validation]
+required = ["lint", "fitness", "typecheck"]
+
+[validation.commands]
+lint = "pnpm lint"
+fitness = "pnpm fitness"
+`);
+
+    expect(parsed).toEqual({
+      validation: {
+        required: ["lint", "fitness", "typecheck"],
+        commands: {
+          lint: "pnpm lint",
+          fitness: "pnpm fitness"
+        }
+      }
+    });
+  });
+
+  it("rejects invalid validation command ids and duplicate required ids", () => {
+    expect(() =>
+      parsePairflowRepoConfigToml(`
+[validation]
+required = ["fitness", "fitness"]
+`)
+    ).toThrow(SchemaValidationError);
+
+    expect(() =>
+      parsePairflowRepoConfigToml(`
+[validation.commands]
+validation_required = "pnpm test"
+`)
+    ).toThrow(SchemaValidationError);
+  });
+
+  it("rejects unsupported target-specific validation fields", () => {
+    expect(() =>
+      parsePairflowRepoConfigToml(`
+[validation]
+targets = ["web"]
+`)
+    ).toThrow(SchemaValidationError);
   });
 
   it("resolves default repository config path to <repo>/pairflow.toml", async () => {

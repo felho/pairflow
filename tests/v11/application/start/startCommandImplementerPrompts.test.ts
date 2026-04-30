@@ -86,6 +86,91 @@ describe("startCommandImplementerPrompts", () => {
     );
   });
 
+  it("lists required validation commands in startup, kickoff, and resume prompts", () => {
+    const validationCommands = {
+      test: "pnpm test",
+      typecheck: "pnpm typecheck",
+      fitness: "pnpm fitness",
+      validation_required: ["fitness", "typecheck"]
+    };
+    const state: BubbleStateSnapshot = {
+      bubble_id: "bubble_prompt_validation_01",
+      state: "RUNNING",
+      round: 2,
+      active_agent: "codex",
+      active_since: "2026-04-25T21:00:42.033Z",
+      active_role: "implementer",
+      execution_context: null,
+      round_role_history: [],
+      last_command_at: "2026-04-25T21:00:42.033Z"
+    };
+
+    const startup = buildImplementerStartupPrompt({
+      bubbleId: "bubble_prompt_validation_01",
+      repoPath: "/tmp/repo",
+      workspacePath: "/tmp/worktree",
+      taskArtifactPath: "/tmp/worktree/task.md",
+      reviewArtifactType: "code",
+      pairflowCommandProfile: "external",
+      ideationPending: false,
+      validationCommands
+    });
+    const kickoff = buildImplementerKickoffMessage({
+      bubbleId: "bubble_prompt_validation_01",
+      workspacePath: "/tmp/worktree",
+      taskArtifactPath: "/tmp/worktree/task.md",
+      reviewArtifactType: "code",
+      pairflowCommandProfile: "external",
+      validationCommands
+    });
+    const resume = buildResumeImplementerStartupPrompt({
+      bubbleId: "bubble_prompt_validation_01",
+      repoPath: "/tmp/repo",
+      workspacePath: "/tmp/worktree",
+      taskArtifactPath: "/tmp/worktree/task.md",
+      reviewArtifactType: "code",
+      pairflowCommandProfile: "external",
+      state,
+      transcriptSummary: "resume",
+      validationCommands
+    });
+
+    for (const prompt of [startup, kickoff, resume]) {
+      expect(prompt).toContain("fitness: `pnpm fitness`");
+      expect(prompt).toContain("typecheck: `pnpm typecheck`");
+      expect(prompt).toContain("PASS will re-run");
+      expect(prompt).toContain("PASS-owned evidence logs are authoritative");
+      expect(prompt).toContain("Run the bubble-level validation commands listed above");
+      expect(prompt).not.toContain(
+        "Run validation via `pnpm lint`, `pnpm typecheck`, `pnpm test`, or `pnpm check`"
+      );
+    }
+  });
+
+  it("warns on invalid empty required validation policy instead of rendering empty required commands", () => {
+    const prompt = buildImplementerStartupPrompt({
+      bubbleId: "bubble_prompt_invalid_validation_01",
+      repoPath: "/tmp/repo",
+      workspacePath: "/tmp/worktree",
+      taskArtifactPath: "/tmp/worktree/task.md",
+      reviewArtifactType: "code",
+      pairflowCommandProfile: "external",
+      ideationPending: false,
+      validationCommands: {
+        test: "pnpm test",
+        typecheck: "pnpm typecheck",
+        validation_required: []
+      }
+    });
+
+    expect(prompt).toContain("Bubble-level PASS validation policy is invalid");
+    expect(prompt).toContain(
+      "commands.validation_required=[] requires commands.validation_required_explicit=true"
+    );
+    expect(prompt).toContain("PASS will fail closed until the bubble config is corrected");
+    expect(prompt).not.toContain("Required PASS validation commands for this bubble:  You may run them locally");
+  });
+
   it("keeps resume implementer startup prompt free of retired done-package tokens", () => {
     const state: BubbleStateSnapshot = {
       bubble_id: "bubble_prompt_resume_01",

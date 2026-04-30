@@ -103,6 +103,49 @@ describe("resolvePassValidationForPass", () => {
     );
   });
 
+  it("runs custom required validation commands from bubble config authority", async () => {
+    const runnerCalls: string[] = [];
+    const result = await resolvePassValidationForPass(
+      {
+        senderRole: "implementer",
+        bubbleId: "b_pass_validation_gate_01",
+        bubbleConfig: {
+          ...createBubbleConfig(),
+          commands: {
+            ...createBubbleConfig().commands,
+            fitness: "pnpm fitness",
+            validation_required: ["fitness"]
+          }
+        },
+        worktreePath: "/tmp/worktree",
+        artifactsDir: "/tmp/artifacts",
+        round: 2,
+        now: new Date("2026-03-28T10:00:00.000Z"),
+        createError: (input) => new Error(toErrorMessage(input))
+      },
+      {
+        runPassValidationCommand: async ({ kind, command }) => {
+          runnerCalls.push(`${kind}:${command}`);
+          return {
+            command,
+            exitCode: 0,
+            logPath: `.pairflow/evidence/pass-validation-${kind}.log`,
+            durationMs: 5
+          };
+        },
+        buildPassValidationEvidenceArtifact: async () => ({}) as never,
+        writePassValidationEvidenceArtifact: async () => undefined,
+        writePassValidationReviewerCompatibilityArtifact: async () => undefined
+      }
+    );
+
+    expect(runnerCalls).toEqual(["fitness:pnpm fitness"]);
+    expect(result.validationRefs).toEqual([
+      ".pairflow/evidence/pass-validation-fitness.log"
+    ]);
+    expect(result.reviewerTestDirective?.reason_detail).toContain("fitness");
+  });
+
   it("fails closed when configured policy references a missing command", async () => {
     await expect(
       resolvePassValidationForPass(
@@ -320,47 +363,77 @@ describe("resolvePassValidationForPass", () => {
     );
   });
 
-  it("deduplicates validation_required entries while preserving first-seen order", async () => {
-    const runnerCalls: string[] = [];
+  it("fails closed when validation_required contains duplicate ids", async () => {
+    let runnerCalls = 0;
 
-    const result = await resolvePassValidationForPass(
-      {
-        senderRole: "implementer",
-        bubbleId: "b_pass_validation_gate_01",
-        bubbleConfig: {
-          ...createBubbleConfig(),
-          commands: {
-            ...createBubbleConfig().commands,
-            validation_required: ["typecheck", "typecheck", "test", "test"]
+    await expect(
+      resolvePassValidationForPass(
+        {
+          senderRole: "implementer",
+          bubbleId: "b_pass_validation_gate_01",
+          bubbleConfig: {
+            ...createBubbleConfig(),
+            commands: {
+              ...createBubbleConfig().commands,
+              validation_required: ["typecheck", "typecheck"]
+            }
+          },
+          worktreePath: "/tmp/worktree",
+          artifactsDir: "/tmp/artifacts",
+          round: 2,
+          now: new Date("2026-03-28T10:00:00.000Z"),
+          createError: (input) => new Error(toErrorMessage(input))
+        },
+        {
+          runPassValidationCommand: async () => {
+            runnerCalls += 1;
+            return {
+              command: "noop",
+              exitCode: 0,
+              logPath: ".pairflow/evidence/noop.log",
+              durationMs: 0
+            };
           }
-        },
-        worktreePath: "/tmp/worktree",
-        artifactsDir: "/tmp/artifacts",
-        round: 2,
-        now: new Date("2026-03-28T10:00:00.000Z"),
-        createError: (input) => new Error(toErrorMessage(input))
-      },
-      {
-        runPassValidationCommand: async ({ kind, command }) => {
-          runnerCalls.push(kind);
-          return {
-            command,
-            exitCode: 0,
-            logPath: `.pairflow/evidence/pass-validation-${kind}.log`,
-            durationMs: 5
-          };
-        },
-        buildPassValidationEvidenceArtifact: async () => ({}) as never,
-        writePassValidationEvidenceArtifact: async () => undefined,
-        writePassValidationReviewerCompatibilityArtifact: async () => undefined
-      }
-    );
+        }
+      )
+    ).rejects.toThrow(/duplicate id 'typecheck'/u);
+    expect(runnerCalls).toBe(0);
+  });
 
-    expect(runnerCalls).toEqual(["typecheck", "test"]);
-    expect(result.validationRefs).toEqual([
-      ".pairflow/evidence/pass-validation-typecheck.log",
-      ".pairflow/evidence/pass-validation-test.log"
-    ]);
-    expect(result.reviewerTestDirective?.reason_detail).toContain("typecheck, test");
+  it("fails closed without running commands when validation_required references a reserved id", async () => {
+    let runnerCalls = 0;
+
+    await expect(
+      resolvePassValidationForPass(
+        {
+          senderRole: "implementer",
+          bubbleId: "b_pass_validation_gate_01",
+          bubbleConfig: {
+            ...createBubbleConfig(),
+            commands: {
+              ...createBubbleConfig().commands,
+              validation_required: ["validation_required"]
+            }
+          },
+          worktreePath: "/tmp/worktree",
+          artifactsDir: "/tmp/artifacts",
+          round: 2,
+          now: new Date("2026-03-28T10:00:00.000Z"),
+          createError: (input) => new Error(toErrorMessage(input))
+        },
+        {
+          runPassValidationCommand: async () => {
+            runnerCalls += 1;
+            return {
+              command: "noop",
+              exitCode: 0,
+              logPath: ".pairflow/evidence/noop.log",
+              durationMs: 0
+            };
+          }
+        }
+      )
+    ).rejects.toThrow(/unsupported id 'validation_required'/u);
+    expect(runnerCalls).toBe(0);
   });
 });

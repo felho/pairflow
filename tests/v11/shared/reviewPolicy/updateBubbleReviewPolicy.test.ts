@@ -109,7 +109,7 @@ describe("updateBubbleReviewPolicy", () => {
     const original = await readFile(bubbleTomlPath, "utf8");
     await writeFile(
       bubbleTomlPath,
-      `${original.trimEnd()}\naccuracy_critical = true\n`,
+      `${original.trimEnd()}\nfitness = "pnpm fitness"\n`,
       "utf8"
     );
 
@@ -127,7 +127,7 @@ describe("updateBubbleReviewPolicy", () => {
       kind: "conflict",
       reasonCode: REVIEW_POLICY_WRITE_CONFLICT
     });
-    expect(await readFile(bubbleTomlPath, "utf8")).toContain("accuracy_critical = true");
+    expect(await readFile(bubbleTomlPath, "utf8")).toContain('fitness = "pnpm fitness"');
   });
 
   it("updates review policy when no expected content guard is provided", async () => {

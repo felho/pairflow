@@ -66,14 +66,35 @@ function resolveImplementerReworkOrigin(
 function buildImplementerReworkActionText(input: {
   docsOnly: boolean;
   origin: "meta_review_auto_rework" | "unknown";
+  validationGuidance: string;
 }): string {
   const intro =
     input.origin === "meta_review_auto_rework"
       ? "Meta-review auto-rework received."
       : "Rework received.";
   return input.docsOnly
-    ? `${intro} Continue implementation now and address the requested changes, then hand off with canonical actor emit (\`pairflow agent emit --kind pass ...\`) directly. Primary artifact rule (docs-only): apply the rework on the referenced source task/document file directly, not only in a new standalone review note. Docs-only scope: keep summary and refs consistent; skip-claim means no \`.pairflow/evidence/*.log\` refs in that PASS.`
-    : `${intro} Continue implementation now and address the requested changes, then hand off with canonical actor emit (\`pairflow agent emit --kind pass ...\`) directly. Include available \`.pairflow/evidence/*.log\` refs on PASS.`;
+    ? `${intro} Continue implementation now and address the requested changes, then hand off with canonical actor emit (\`pairflow agent emit --kind pass ...\`) directly. ${input.validationGuidance} Primary artifact rule (docs-only): apply the rework on the referenced source task/document file directly, not only in a new standalone review note. Docs-only scope: keep summary and refs consistent; skip-claim means no \`.pairflow/evidence/*.log\` refs in that PASS.`
+    : `${intro} Continue implementation now and address the requested changes, then hand off with canonical actor emit (\`pairflow agent emit --kind pass ...\`) directly. ${input.validationGuidance} Include available \`.pairflow/evidence/*.log\` refs on PASS.`;
+}
+
+function buildImplementerValidationGuidance(bubbleConfig: BubbleConfig): string {
+  const required = bubbleConfig.commands.validation_required;
+  if (required === undefined) {
+    return "No bubble-level PASS validation policy is configured; run relevant local validation before handoff.";
+  }
+  if (required.length === 0 && bubbleConfig.commands.validation_required_explicit === true) {
+    return "Bubble-level PASS validation explicitly requires no commands; state any local checks you ran.";
+  }
+  if (required.length === 0) {
+    return "Bubble-level PASS validation policy is invalid: commands.validation_required=[] requires commands.validation_required_explicit=true. PASS will fail closed until the bubble config is corrected.";
+  }
+  const entries = required.map((id) => {
+    const command = bubbleConfig.commands[id];
+    return typeof command === "string" && command.trim().length > 0
+      ? `${id}: \`${command.trim()}\``
+      : `${id}: <missing command in bubble config>`;
+  });
+  return `Required PASS validation commands: ${entries.join("; ")}. You may run them locally for feedback, but PASS re-runs them and PASS-owned evidence logs are authoritative.`;
 }
 
 function buildImplementerDeliveryAction(input: {
@@ -82,21 +103,23 @@ function buildImplementerDeliveryAction(input: {
   actorLabel: string | null;
 }): string {
   const docsOnly = input.bubbleConfig.review_artifact_type === "document";
+  const validationGuidance = buildImplementerValidationGuidance(input.bubbleConfig);
   if (input.envelope.type === "PASS") {
     return docsOnly
-      ? "Reviewer feedback received. Implement fixes, then hand off with canonical actor emit (`pairflow agent emit --kind pass ...`) directly (no confirmation prompt). Primary artifact rule (docs-only): when the task references an existing source document/task file, refine that file directly (in-place) as the main output. Do not replace primary artifact refinement with a new standalone review/synthesis document unless the task explicitly requests creating a new file path. Docs-only scope: choose one mode and keep it consistent in the same PASS. Mode A (skip-claim): summary says runtime checks were intentionally not executed -> attach no `.pairflow/evidence/*.log` refs. Mode B (checks executed): attach refs only for commands actually run and do not claim checks were intentionally not executed."
-      : "Reviewer feedback received. Implement fixes, then hand off with canonical actor emit (`pairflow agent emit --kind pass ...`) directly (no confirmation prompt). If `.pairflow/evidence/*.log` files exist, include them as `--ref` (lint/typecheck/test). If only a subset ran, attach refs for that subset and state what was intentionally not executed.";
+      ? `Reviewer feedback received. Implement fixes, then hand off with canonical actor emit (\`pairflow agent emit --kind pass ...\`) directly (no confirmation prompt). ${validationGuidance} Primary artifact rule (docs-only): when the task references an existing source document/task file, refine that file directly (in-place) as the main output. Do not replace primary artifact refinement with a new standalone review/synthesis document unless the task explicitly requests creating a new file path. Docs-only scope: choose one mode and keep it consistent in the same PASS. Mode A (skip-claim): summary says runtime checks were intentionally not executed -> attach no \`.pairflow/evidence/*.log\` refs. Mode B (checks executed): attach refs only for commands actually run and do not claim checks were intentionally not executed.`
+      : `Reviewer feedback received. Implement fixes, then hand off with canonical actor emit (\`pairflow agent emit --kind pass ...\`) directly (no confirmation prompt). ${validationGuidance} If \`.pairflow/evidence/*.log\` files exist, include them as \`--ref\` (lint/typecheck/test). If only a subset ran, attach refs for that subset and state what was intentionally not executed.`;
   }
   if (input.envelope.type === "HUMAN_REPLY") {
     return docsOnly
-      ? "Human response received. Continue implementation using this input, then hand off with canonical actor emit (`pairflow agent emit --kind pass ...`) directly. Primary artifact rule (docs-only): refine the referenced source task/document file directly, not only a new standalone review note. Docs-only scope: keep summary and refs consistent; skip-claim means no `.pairflow/evidence/*.log` refs in that PASS."
-      : "Human response received. Continue implementation using this input, then hand off with canonical actor emit (`pairflow agent emit --kind pass ...`) directly. Include available `.pairflow/evidence/*.log` refs on PASS.";
+      ? `Human response received. Continue implementation using this input, then hand off with canonical actor emit (\`pairflow agent emit --kind pass ...\`) directly. ${validationGuidance} Primary artifact rule (docs-only): refine the referenced source task/document file directly, not only a new standalone review note. Docs-only scope: keep summary and refs consistent; skip-claim means no \`.pairflow/evidence/*.log\` refs in that PASS.`
+      : `Human response received. Continue implementation using this input, then hand off with canonical actor emit (\`pairflow agent emit --kind pass ...\`) directly. ${validationGuidance} Include available \`.pairflow/evidence/*.log\` refs on PASS.`;
   }
   if (input.envelope.type === "APPROVAL_DECISION") {
     if (input.envelope.payload.decision === "rework") {
       return buildImplementerReworkActionText({
         docsOnly,
-        origin: resolveImplementerReworkOrigin(input.envelope)
+        origin: resolveImplementerReworkOrigin(input.envelope),
+        validationGuidance
       });
     }
     return "Human approved this bubble. Wait for commit/merge flow and do not continue new implementation in this round.";

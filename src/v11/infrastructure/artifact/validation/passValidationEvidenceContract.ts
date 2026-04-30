@@ -1,10 +1,9 @@
 import type { ReviewerTestExecutionDirective } from "../../../../v11/shared/reviewer/testEvidence.js"
+import type { ValidationCommandId } from "../../../shared/validation/validationCommandId.js"
 
 export const passValidationEvidenceSchemaVersion = 1 as const
 
-export const passValidationCommandIds = ["lint", "typecheck", "test"] as const
-
-export type PassValidationCommandId = (typeof passValidationCommandIds)[number]
+export type PassValidationCommandId = ValidationCommandId
 
 export type PassValidationPolicyState =
   | "policy_missing"

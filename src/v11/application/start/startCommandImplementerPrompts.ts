@@ -5,6 +5,7 @@ import {
 } from "../actorProtocol/roleDescriptorRegistry.js";
 import { buildPairflowCommandGuidance } from "./startCommandPromptRuntime.js";
 import type {
+  BubbleCommandsConfig,
   PairflowCommandProfile,
   ReviewArtifactType
 } from "../../../types/bubble.js";
@@ -17,6 +18,7 @@ export function buildImplementerStartupPrompt(input: {
   reviewArtifactType: ReviewArtifactType;
   pairflowCommandProfile: PairflowCommandProfile;
   ideationPending: boolean;
+  validationCommands?: BubbleCommandsConfig;
 }): string {
   return buildRolePromptConcernLines({
     role: "implementer",
@@ -31,6 +33,7 @@ export function buildImplementerKickoffMessage(input: {
   taskArtifactPath: string;
   reviewArtifactType: ReviewArtifactType;
   pairflowCommandProfile: PairflowCommandProfile;
+  validationCommands?: BubbleCommandsConfig;
 }): string {
   return [
     `# [pairflow] bubble=${input.bubbleId} kickoff.`,
@@ -40,7 +43,10 @@ export function buildImplementerKickoffMessage(input: {
       input.workspacePath,
       input.pairflowCommandProfile
     ),
-    buildImplementerEvidenceHandoffGuidance(input.reviewArtifactType),
+    buildImplementerEvidenceHandoffGuidance(
+      input.reviewArtifactType,
+      input.validationCommands
+    ),
     buildCanonicalActorEmitLookupGuidance({
       bubbleId: input.bubbleId,
       repoPath: "<repo>"
@@ -64,9 +70,11 @@ export function buildImplementerIdeationKickoffMessage(input: {
 }
 
 export function buildImplementerEvidenceHandoffGuidance(
-  reviewArtifactType: ReviewArtifactType
+  reviewArtifactType: ReviewArtifactType,
+  validationCommands?: BubbleCommandsConfig
 ): string {
   return buildImplementerEvidenceHandoffGuidanceFromRegistry(
-    reviewArtifactType
+    reviewArtifactType,
+    validationCommands
   );
 }

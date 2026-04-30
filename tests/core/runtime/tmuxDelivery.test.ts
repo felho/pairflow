@@ -2780,6 +2780,67 @@ describe("emitDeliveryNotificationAck", () => {
     expect(passToImplementerCall?.[4]).not.toContain("Mode A (skip-claim)");
   });
 
+  it("warns implementer delivery on invalid empty required validation policy", async () => {
+    const calls: string[][] = [];
+    const runner: TmuxRunner = (args): Promise<TmuxRunResult> => {
+      calls.push(args);
+      if (args[0] === "capture-pane") {
+        return Promise.resolve({
+          stdout:
+            "# [pairflow] r1 PASS claude->codex msg=msg_20260222_101 ref=artifact://handoff.md.",
+          stderr: "",
+          exitCode: 0
+        });
+      }
+      return Promise.resolve({
+        stdout: "",
+        stderr: "",
+        exitCode: 0
+      });
+    };
+
+    const result = await emitDeliveryNotificationAck({
+      bubbleId: "b_delivery_01",
+      bubbleConfig: {
+        ...baseConfig,
+        review_artifact_type: "code",
+        commands: {
+          ...baseConfig.commands,
+          validation_required: []
+        }
+      },
+      sessionsPath: "/tmp/repo/.pairflow/runtime/sessions.json",
+      envelope: createEnvelope({
+        sender: "claude",
+        recipient: "codex",
+        type: "PASS",
+        payload: {
+          summary: "Please apply reviewer fixes."
+        }
+      }),
+      runner,
+      readSessionsRegistry: () => Promise.resolve(createRegistry())
+    });
+
+    expect(result.status).toBe("accepted");
+    const passToImplementerCall = calls.find(
+      (call) =>
+        call[0] === "send-keys" &&
+        call[2] === "pf-b_delivery_01:0.1" &&
+        call[3] === "-l" &&
+        call[4]?.includes("PASS claude->codex")
+    );
+    expect(passToImplementerCall?.[4]).toContain(
+      "Bubble-level PASS validation policy is invalid"
+    );
+    expect(passToImplementerCall?.[4]).toContain(
+      "commands.validation_required=[] requires commands.validation_required_explicit=true"
+    );
+    expect(passToImplementerCall?.[4]).not.toContain(
+      "Required PASS validation commands: . You may run them locally"
+    );
+  });
+
   it("uses absolute transcript path fallback ref when envelope has no refs", async () => {
     const fallbackRef = buildTranscriptFallbackRef(
       "b_delivery_01",

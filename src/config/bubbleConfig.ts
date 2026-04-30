@@ -46,6 +46,10 @@ import {
 } from "../types/bubble.js";
 import type { PairflowGlobalConfig } from "./pairflowConfig.js";
 import { IDEATION_METADATA_PARSE_WARNING } from "../v11/shared/ideation/ideationReasonCodes.js";
+import {
+  describeValidationCommandIdRule,
+  isValidationCommandId
+} from "../v11/shared/validation/validationCommandId.js";
 
 export const TOML_PARSER_LIMITATIONS = [
   "No multiline strings (\"\"\"...\"\"\" / '''...''')",
@@ -769,7 +773,7 @@ export function validateBubbleConfig(input: unknown): ValidationResult<BubbleCon
         false
       )
     : undefined;
-  const validationRequiredExplicit = commands
+  const validationRequiredExplicitCandidate = commands
     ? readBoolean(
         commands,
         "validation_required_explicit",
@@ -778,6 +782,59 @@ export function validateBubbleConfig(input: unknown): ValidationResult<BubbleCon
         false
       )
     : undefined;
+  const validationRequiredExplicit =
+    validationRequiredExplicitCandidate === true ? true : undefined;
+  const customCommands: Record<string, string> = {};
+  if (commands !== undefined) {
+    const fixedCommandKeys = new Set([
+      "bootstrap",
+      "lint",
+      "test",
+      "typecheck",
+      "validation_required",
+      "validation_required_explicit"
+    ]);
+    for (const [key, value] of Object.entries(commands)) {
+      if (fixedCommandKeys.has(key)) {
+        continue;
+      }
+      if (!isValidationCommandId(key)) {
+        errors.push({
+          path: `commands.${key}`,
+          message: describeValidationCommandIdRule()
+        });
+        continue;
+      }
+      if (!isNonEmptyString(value)) {
+        errors.push({
+          path: `commands.${key}`,
+          message: "Must be a non-empty string"
+        });
+        continue;
+      }
+      customCommands[key] = value.trim();
+    }
+  }
+  if (validationRequired !== undefined) {
+    const seenValidationRequired = new Set<string>();
+    validationRequired.forEach((id, index) => {
+      if (!isValidationCommandId(id)) {
+        errors.push({
+          path: `commands.validation_required[${index}]`,
+          message: describeValidationCommandIdRule()
+        });
+        return;
+      }
+      if (seenValidationRequired.has(id)) {
+        errors.push({
+          path: `commands.validation_required[${index}]`,
+          message: `Duplicate validation command id "${id}"`
+        });
+        return;
+      }
+      seenValidationRequired.add(id);
+    });
+  }
 
   const notificationsEnabled = notifications
     ? (readBoolean(
@@ -1143,6 +1200,7 @@ export function validateBubbleConfig(input: unknown): ValidationResult<BubbleCon
         : {}),
       test: testCommand as string,
       typecheck: typecheckCommand as string,
+      ...customCommands,
       ...(validationRequired !== undefined
         ? { validation_required: validationRequired }
         : {}),
@@ -1300,6 +1358,26 @@ function tomlStringArray(values: string[]): string {
   return `[${values.map((value) => tomlString(value)).join(", ")}]`;
 }
 
+function renderCustomCommandLines(commands: BubbleConfig["commands"]): string[] {
+  const fixedCommandKeys = new Set([
+    "bootstrap",
+    "lint",
+    "test",
+    "typecheck",
+    "validation_required",
+    "validation_required_explicit"
+  ]);
+  return Object.keys(commands)
+    .filter((key) => !fixedCommandKeys.has(key))
+    .sort()
+    .flatMap((key) => {
+      const command = commands[key];
+      return typeof command === "string" && command.trim().length > 0
+        ? [`${key} = ${tomlString(command)}`]
+        : [];
+    });
+}
+
 function normalizeTomlLines(lines: Array<string | undefined>): string[] {
   const normalized: string[] = [];
   for (const line of lines) {
@@ -1399,6 +1477,7 @@ export function renderBubbleConfigToml(config: BubbleConfig): string {
       : undefined,
     `test = ${tomlString(config.commands.test)}`,
     `typecheck = ${tomlString(config.commands.typecheck)}`,
+    ...renderCustomCommandLines(config.commands),
     config.commands.validation_required !== undefined
       ? `validation_required = ${tomlStringArray(config.commands.validation_required)}`
       : undefined,

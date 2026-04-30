@@ -5199,8 +5199,7 @@ present`,
           lint: "printf 'lint ok\\n'",
           typecheck: "printf 'typecheck ok\\n'",
           test: "printf 'test ok\\n'",
-          validation_required: ["lint", "typecheck", "test"],
-          validation_required_explicit: false
+          validation_required: ["lint", "typecheck", "test"]
         }
       }),
       "utf8"
@@ -5285,8 +5284,7 @@ present`,
         commands: {
           ...bubble.config.commands,
           typecheck: "printf 'typecheck ok\\n'",
-          validation_required: ["typecheck"],
-          validation_required_explicit: false
+          validation_required: ["typecheck"]
         }
       }),
       "utf8"
