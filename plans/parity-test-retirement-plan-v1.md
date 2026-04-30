@@ -167,7 +167,7 @@ without weakening:
 | Task ID | Task Path | Purpose | Depends On | Closes Gap | Status |
 |---|---|---|---|---|---|
 | `1-facade-migration-map-cleanup` | `plans/tasks/1-facade-migration-map-cleanup.md` | Remove the empty facade parity map, all-v11 migration map, and obsolete script wiring. | `N/A` | Exhausted migration metadata remains active. | approved |
-| `2-cli-entrypoint-boundary-guard` | `null` | Replace per-command `*CliEntrypointParity.test.ts` files with one current-purpose CLI boundary/inventory test. | `1-facade-migration-map-cleanup` | CLI parity tests duplicate one-line shims but still contain useful boundary intent. | not_created |
+| `2-cli-entrypoint-boundary-guard` | `plans/tasks/2-cli-entrypoint-boundary-guard.md` | Replace per-command `*CliEntrypointParity.test.ts` files with one current-purpose CLI boundary/inventory test. | `1-facade-migration-map-cleanup` | CLI parity tests duplicate one-line shims but still contain useful boundary intent. | approved |
 | `3-reconcile-contract-v11-only` | `null` | Remove reconcile `baseline`/`parity` contract cases and runner branches that compare aliases to the same v11 implementation. | `1-facade-migration-map-cleanup` | Reconcile contract harness still carries tautological legacy comparison modes. | not_created |
 | `4-meta-review-gate-case-rename` | `null` | Rename/reclassify meta-review-gate parity-named behavior cases as v11 cases and update corpus expectations. | `3-reconcile-contract-v11-only` | Useful meta-review-gate cases still look like migration parity cases. | not_created |
 
@@ -216,6 +216,13 @@ without weakening:
    - relevant CLI command tests,
    - `pnpm typecheck`,
    - `pnpm lint`.
+   - In `docs_only_context`, these implementation checks are not run, not
+     satisfied, and not claimed. Use the authoritative
+     `docs_only_context` definition and allowed parent-plan alignment field
+     scope from
+     `plans/tasks/2-cli-entrypoint-boundary-guard.md#docs-only-context-definition`;
+     the canonical PASS summary must include `Context mode: docs_only_context`
+     and state `runtime checks were intentionally not executed`.
 3. Task 3:
    - `pnpm exec vitest run tests/contracts/v11/reconcile.contract.test.ts`,
    - corpus manifest build/check,

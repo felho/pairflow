@@ -34,6 +34,9 @@ impl_bubble_id: null
 supersedes: []
 superseded_by: null
 archive_group: 2026-04-30-parity-test-retirement-plan-v1
+context_mode_selector:
+  implementation_context: "implementation pass for AC1-AC5"
+  docs_only_context: "document-refinement pass with canonical PASS summary marker"
 ---
 
 # Task: CLI Entrypoint Boundary Guard
@@ -74,6 +77,50 @@ migration-era parity vocabulary.
      renamed/deleted test.
    - cleanup/recovery closure: N/A.
 
+### Docs-Only Context Definition
+
+Context mode selector:
+
+1. `docs_only_context` is selected by the bubble/task instruction before edits
+   when the pass is a document-refinement pass and its intended edit set is
+   limited to this task document plus explicitly allowed parent-plan alignment
+   fields.
+2. `implementation_context` is selected when the pass attempts AC1-AC5, changes
+   product/app/runtime code, changes tests/scripts/package files/generated
+   artifacts, or changes implementation-context CLI boundary cleanup work.
+3. Precedence rule: if any implementation-context signal and any
+   `docs_only_context` signal conflict, `implementation_context` wins and the
+   pass must not claim `docs_only_context`.
+4. Bootstrap/mixed-mode rule: a document pass that introduces or refines this
+   selector still uses `docs_only_context` when its actual edits remain within
+   the allowed docs-only edit set.
+5. Handoff rule: after `docs_only_context` is selected, the canonical PASS
+   summary must include `Context mode: docs_only_context` as evidence of the
+   selected mode; the marker reports the mode, it does not select it.
+
+`docs_only_context` means a document-refinement bubble or review pass whose
+allowed edits are limited to the task document and explicitly allowed
+parent-plan alignment fields, with product/app/runtime code, tests, scripts,
+package files, generated artifacts, and implementation-context CLI boundary
+cleanup work out of scope.
+
+Implementation-context CLI boundary cleanup work means AC1-AC5 work that renames
+or rewrites active tests, deletes per-command sentinels, updates active
+scripts/manifests/docs references, or otherwise changes the actual CLI boundary
+coverage implementation.
+
+Explicitly allowed parent-plan alignment fields means only:
+
+1. `2-cli-entrypoint-boundary-guard` task path/status fields in the parent plan
+   frontmatter `task_tracker` and Open Task List row when those fields are stale
+   against this task artifact.
+2. The Task 2 Validation Strategy docs-only pointer that references this task's
+   authoritative `docs_only_context` contract without redefining it.
+
+In `docs_only_context`, implementation validation matrix checks are not run, not
+satisfied, and not claimed; the canonical PASS summary attaches no runtime
+validation log refs and states `runtime checks were intentionally not executed`.
+
 ### Plan Linkage
 
 1. Parent plan gap closed: CLI parity tests duplicate one-line shims but still
@@ -82,8 +129,12 @@ migration-era parity vocabulary.
 3. Unlocks / impacts successors: task 3 and task 4 must not rely on
    per-command CLI parity sentinel files.
 4. Task-list impact: refines `2-cli-entrypoint-boundary-guard`.
-5. Inherited validation / exit expectation: targeted CLI boundary coverage test,
-   relevant CLI command tests, `pnpm typecheck`, and `pnpm lint`.
+5. Inherited validation / exit expectation: in implementation context, targeted
+   CLI boundary coverage test, relevant CLI command tests, `pnpm typecheck`,
+   and `pnpm lint`; in `docs_only_context`, runtime checks are not run, not
+   satisfied, and not claimed, no runtime validation log refs are attached, and
+   the canonical PASS summary includes `Context mode: docs_only_context` plus
+   `runtime checks were intentionally not executed`.
 
 ### Canonical Contract Anchors
 
@@ -157,6 +208,8 @@ N/A; this task does not modify a mutation flow.
 
 ### In Scope
 
+Implementation context:
+
 1. Rename or rewrite `tests/contracts/v11/cli-entrypoint-parity-coverage.test.ts`
    into a current-purpose CLI boundary/inventory guard.
 2. Delete the 12 per-command `*CliEntrypointParity.test.ts` identity tests after
@@ -167,13 +220,26 @@ N/A; this task does not modify a mutation flow.
 5. Run targeted stale-reference search for `CliEntrypointParity` and
    `cli-entrypoint-parity`.
 
+`docs_only_context`:
+
+6. Refine this task document for implementation readiness.
+7. Update explicitly allowed parent-plan alignment fields only when stale or
+   needed to point at this task's authoritative `docs_only_context` contract.
+
 ### Out of Scope
+
+Implementation context:
 
 1. Changing CLI command runtime behavior.
 2. Removing non-shim wrapper tests.
 3. Reconcile contract `baseline` / `parity` mode cleanup.
 4. Meta-review-gate parity-named case cleanup.
 5. Runtime/domain parity modules under `src/v11/shared/metaReview*`.
+
+`docs_only_context`:
+
+6. Product/app/runtime code, tests, scripts, package files, generated artifacts,
+   and implementation-context CLI boundary cleanup work.
 
 ### Safety Defaults
 
@@ -261,7 +327,8 @@ N/A; this task does not modify a mutation flow.
 | Depends on | `1-facade-migration-map-cleanup` | No migration-map dependency may be reintroduced. | P1 | required-now |
 | Unlocks / impacts successors | Tasks 3 and 4 | Later contract cleanup should not see CLI parity sentinels as active pattern. | P1 | required-now |
 | Task-list impact | Refines `2-cli-entrypoint-boundary-guard`. | No new task identity. | P1 | required-now |
-| Inherited validation / exit expectation | Targeted boundary/CLI tests plus typecheck/lint. | Evidence summary must name any skipped broader tests. | P1 | required-now |
+| Inherited validation / exit expectation - implementation context | Targeted boundary/CLI tests plus typecheck/lint. | Evidence summary must name any skipped broader tests. | P1 | required-now |
+| Inherited validation / exit expectation - `docs_only_context` | Implementation validation is out of scope. | Document-scope PASS must include `Context mode: docs_only_context`, attach no runtime validation log refs, and state `runtime checks were intentionally not executed`. | P2 | required-now |
 
 ### 0d) Shared Contract Compatibility
 
@@ -340,19 +407,42 @@ N/A.
 | T2 | Central boundary guard | Per-command identity tests are removed. | Run the renamed/current central CLI boundary contract test. | Direct shim inventory and allowed import boundaries pass. | P1 | required-now |
 | T3 | Relevant CLI command tests | Non-shim wrappers remain in place. | Run affected `tests/cli/bubble*Command.test.ts` selection or justified subset. | Existing wrapper behavior still passes. | P1 | required-now |
 | T4 | Type/lint health | Test files are renamed/deleted. | Run `pnpm typecheck` and `pnpm lint`. | No unresolved imports or lint failures. | P1 | required-now |
+| T5 | Docs-only selector | Bubble/task instruction selects document refinement and intended edits are docs-only. | Review the actual diff and handoff. | No implementation-context signal is present, and the canonical PASS summary includes `Context mode: docs_only_context`. | P2 | required-now |
+| T6 | Docs-only edit scope | `docs_only_context` is selected. | Review changed files. | Edits are limited to the task document and explicitly allowed parent-plan alignment fields. | P2 | required-now |
+| T7 | Docs-only validation claim | `docs_only_context` is selected. | Emit the handoff. | No runtime validation log refs are attached and the canonical PASS summary states `runtime checks were intentionally not executed`. | P2 | required-now |
+
+T1-T4 apply to implementation passes only. T5-T7 apply to `docs_only_context`.
 
 ## Acceptance Criteria
+
+Implementation context:
 
 1. Per-command `*CliEntrypointParity.test.ts` identity tests are removed.
 2. The central CLI entrypoint contract no longer uses migration-era parity naming
    and preserves direct-shim inventory plus import-boundary protection.
 3. Active scripts/manifests/docs no longer reference deleted CLI parity tests.
 4. CLI runtime behavior and runtime/domain parity modules are untouched.
-5. Implementation validation reports stale-reference search, the central
-   boundary test, relevant CLI command tests or a justified subset, `pnpm
-   typecheck`, and `pnpm lint`.
+5. Validation reports stale-reference search, the central boundary test,
+   relevant CLI command tests or a justified subset, `pnpm typecheck`, and
+   `pnpm lint`.
+
+`docs_only_context`:
+
+6. Implementation-context AC1-AC5 are not satisfied or claimed.
+7. Edits are limited to the task document and explicitly allowed parent-plan
+   alignment fields.
+8. Product/app/runtime code, tests, scripts, package files, generated artifacts,
+   and implementation-context CLI boundary cleanup work remain out of scope.
+9. The canonical PASS summary attaches no runtime validation log refs and
+   includes `Context mode: docs_only_context`.
+10. The canonical PASS summary affirmatively states
+    `runtime checks were intentionally not executed`.
+
+Docs-only AC6-AC10 are P2 required-now document-scope requirements.
 
 ## L2 - Implementation Notes
+
+Implementation pass:
 
 1. Start with an inventory of `src/cli/commands/bubble/*.ts`, v11
    `*CliCommand.ts` modules, and current per-command parity tests.
@@ -362,3 +452,15 @@ N/A.
 4. Delete the 12 per-command `*CliEntrypointParity.test.ts` files only after the
    central guard represents their useful protection.
 5. Run stale-reference search before typecheck/lint.
+
+Document-only refinement pass:
+
+1. Use this mode only in `docs_only_context`.
+2. Edit only the task document and explicitly allowed parent-plan alignment
+   fields.
+3. T1-T4 are not run, not satisfied, and not claimed; T5-T7 are the applicable
+   docs-only checks.
+4. Attach no runtime validation log refs.
+5. Hand off in the canonical PASS summary with `Context mode: docs_only_context`
+   and the affirmative statement
+   `runtime checks were intentionally not executed`.
