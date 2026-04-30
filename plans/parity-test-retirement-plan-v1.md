@@ -4,8 +4,8 @@ artifact_id: plan_parity_test_retirement_v1
 plan_id: parity-test-retirement-plan-v1
 created_on: "2026-04-30"
 title: "Parity Test Retirement Plan V1"
-status: draft
-plan_status: draft
+status: approved
+plan_status: approved
 prd_ref: null
 owners:
   - "felho"
@@ -18,8 +18,8 @@ active_task_id: 1-facade-migration-map-cleanup
 archive_group: 2026-04-30-parity-test-retirement-plan-v1
 task_tracker:
   - task_id: 1-facade-migration-map-cleanup
-    task_path: null
-    status: not_created
+    task_path: plans/tasks/1-facade-migration-map-cleanup.md
+    status: approved
     notes: "Remove the exhausted facade parity/migration-map layer and related script wiring."
   - task_id: 2-cli-entrypoint-boundary-guard
     task_path: null
@@ -166,7 +166,7 @@ without weakening:
 
 | Task ID | Task Path | Purpose | Depends On | Closes Gap | Status |
 |---|---|---|---|---|---|
-| `1-facade-migration-map-cleanup` | `null` | Remove the empty facade parity map, all-v11 migration map, and obsolete script wiring. | `N/A` | Exhausted migration metadata remains active. | not_created |
+| `1-facade-migration-map-cleanup` | `plans/tasks/1-facade-migration-map-cleanup.md` | Remove the empty facade parity map, all-v11 migration map, and obsolete script wiring. | `N/A` | Exhausted migration metadata remains active. | approved |
 | `2-cli-entrypoint-boundary-guard` | `null` | Replace per-command `*CliEntrypointParity.test.ts` files with one current-purpose CLI boundary/inventory test. | `1-facade-migration-map-cleanup` | CLI parity tests duplicate one-line shims but still contain useful boundary intent. | not_created |
 | `3-reconcile-contract-v11-only` | `null` | Remove reconcile `baseline`/`parity` contract cases and runner branches that compare aliases to the same v11 implementation. | `1-facade-migration-map-cleanup` | Reconcile contract harness still carries tautological legacy comparison modes. | not_created |
 | `4-meta-review-gate-case-rename` | `null` | Rename/reclassify meta-review-gate parity-named behavior cases as v11 cases and update corpus expectations. | `3-reconcile-contract-v11-only` | Useful meta-review-gate cases still look like migration parity cases. | not_created |
