@@ -108,12 +108,79 @@ function extractMetaReviewHandoffAttempt(entry: UiTimelineEntry): number | null 
   return Number.isInteger(attempt) && attempt > 0 ? attempt : null;
 }
 
-function shouldRenderTimelineEntry(entry: UiTimelineEntry): boolean {
-  if (entry.type !== "TASK") {
-    return true;
+function isMetaReviewHandoff(entry: UiTimelineEntry): boolean {
+  return entry.type === "TASK" && extractMetaReviewHandoffAttempt(entry) !== null;
+}
+
+interface DisplayTimelineItem {
+  entry: UiTimelineEntry;
+  metaReviewRerunCleanRunCount: number | null;
+}
+
+function buildDisplayTimelineItems(input: {
+  entries: UiTimelineEntry[];
+  cleanRunsRequired: number | null | undefined;
+}): DisplayTimelineItem[] {
+  const cleanRunsRequired =
+    input.cleanRunsRequired !== null && input.cleanRunsRequired !== undefined
+      ? input.cleanRunsRequired
+      : 1;
+  const items: DisplayTimelineItem[] = [];
+  let metaCleanRuns = 0;
+  let metaRunPending = false;
+
+  for (const entry of input.entries) {
+    const metaRecommendation = extractMetaRecommendation(entry);
+    const decisionTag = extractDecisionTag(entry);
+
+    if (isMetaReviewHandoff(entry)) {
+      if (!metaRunPending) {
+        metaRunPending = true;
+        continue;
+      }
+
+      const nextCleanRunCount = metaCleanRuns + 1;
+      if (cleanRunsRequired > 1 && nextCleanRunCount < cleanRunsRequired) {
+        metaCleanRuns = nextCleanRunCount;
+        metaRunPending = true;
+        items.push({
+          entry,
+          metaReviewRerunCleanRunCount: nextCleanRunCount
+        });
+      }
+      continue;
+    }
+
+    if (metaRecommendation === "approve") {
+      const metadata = isRecord(entry.payload.metadata)
+        ? entry.payload.metadata
+        : null;
+      const explicitCleanRunCount =
+        metadata === null
+          ? null
+          : readMetadataInteger(metadata, [
+              "consecutive_clean_runs",
+              "consecutiveCleanRuns",
+              "meta_review_consecutive_clean_runs"
+            ]);
+      metaCleanRuns = explicitCleanRunCount ?? metaCleanRuns + 1;
+      metaRunPending = false;
+    } else if (
+      metaRecommendation === "rework"
+      || metaRecommendation === "inconclusive"
+      || decisionTag?.label === "rework"
+    ) {
+      metaCleanRuns = 0;
+      metaRunPending = false;
+    }
+
+    items.push({
+      entry,
+      metaReviewRerunCleanRunCount: null
+    });
   }
-  const metaReviewAttempt = extractMetaReviewHandoffAttempt(entry);
-  return metaReviewAttempt === null || metaReviewAttempt > 1;
+
+  return items;
 }
 
 function extractMetaRecommendationTag(input: {
@@ -302,8 +369,13 @@ export function BubbleTimeline(props: BubbleTimelineProps): JSX.Element {
   const hasExtras = props.extras !== null && props.extras !== undefined;
   const hasEmptyState =
     !showError && props.entries !== null && props.entries.length === 0;
-  const displayEntries =
-    props.entries === null ? null : props.entries.filter(shouldRenderTimelineEntry);
+  const displayItems =
+    props.entries === null
+      ? null
+      : buildDisplayTimelineItems({
+          entries: props.entries,
+          cleanRunsRequired: props.metaReviewCleanRunsRequired
+        });
 
   useEffect(() => {
     const el = scrollRef.current;
@@ -313,7 +385,7 @@ export function BubbleTimeline(props: BubbleTimelineProps): JSX.Element {
   }, [props.entries, props.extras]);
 
   const hasEntries =
-    !showError && displayEntries !== null && displayEntries.length > 0;
+    !showError && displayItems !== null && displayItems.length > 0;
   const showScrollable = hasEntries || hasEmptyState || hasExtras;
   let metaCleanRuns = 0;
 
@@ -348,9 +420,10 @@ export function BubbleTimeline(props: BubbleTimelineProps): JSX.Element {
             <div className="py-2 text-[10px] text-[#555]">No timeline entries yet.</div>
           ) : null}
 
-          {hasEntries && displayEntries !== null ? (
+          {hasEntries && displayItems !== null ? (
             <>
-          {displayEntries.map((entry) => {
+          {displayItems.map((item) => {
+            const entry = item.entry;
             const role = resolveRole(entry);
             const displaySender = resolveDisplaySender(entry);
             const isConvergence = entry.type === "CONVERGENCE";
@@ -361,10 +434,9 @@ export function BubbleTimeline(props: BubbleTimelineProps): JSX.Element {
               : null;
             const metaRecommendation = extractMetaRecommendation(entry);
             let cleanRunCount: number | null = null;
-            const metaReviewHandoffAttempt = extractMetaReviewHandoffAttempt(entry);
-            if (metaReviewHandoffAttempt !== null && metaReviewHandoffAttempt > 1) {
-              metaCleanRuns = metaReviewHandoffAttempt - 1;
-              cleanRunCount = metaCleanRuns;
+            if (item.metaReviewRerunCleanRunCount !== null) {
+              metaCleanRuns = item.metaReviewRerunCleanRunCount;
+              cleanRunCount = item.metaReviewRerunCleanRunCount;
             } else if (metaRecommendation === "approve") {
               const explicitCleanRunCount =
                 metadata === null
@@ -395,7 +467,7 @@ export function BubbleTimeline(props: BubbleTimelineProps): JSX.Element {
                 ? null
                 : metaRecommendationTag;
             const metaReviewRerunTag =
-              metaReviewHandoffAttempt !== null && cleanRunCount !== null
+              item.metaReviewRerunCleanRunCount !== null && cleanRunCount !== null
                 ? {
                     label: `clean ${cleanRunCount}`,
                     style: "border-emerald-500/20 bg-emerald-500/10 text-emerald-500"

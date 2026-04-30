@@ -107,6 +107,75 @@ describe("BubbleTimeline", () => {
     expect(screen.queryByText("Meta-review gate opened.")).not.toBeInTheDocument();
   });
 
+  it("does not render a clean-run progress row for a final single-run approval after prior rework", () => {
+    render(
+      <BubbleTimeline
+        entries={[
+          timelineEntry({
+            id: "env-meta-rework",
+            type: "APPROVAL_DECISION",
+            round: 2,
+            sender: "orchestrator",
+            recipient: "codex",
+            payload: {
+              decision: "rework",
+              message: "Apply rework.",
+              metadata: {
+                actor: "meta-reviewer",
+                recommendation: "rework"
+              }
+            }
+          }),
+          timelineEntry({
+            id: "env-meta-gate-after-rework",
+            type: "TASK",
+            round: 6,
+            sender: "orchestrator",
+            recipient: "codex",
+            payload: {
+              summary: "Meta-review gate opened after rework.",
+              metadata: {
+                delivery_target_role: "meta_reviewer",
+                actor: "meta-review-gate",
+                actor_agent: "orchestrator",
+                meta_review_handoff_id:
+                  "meta_review:b-meta-gate:round:6:attempt:2"
+              }
+            }
+          }),
+          timelineEntry({
+            id: "env-meta-approve",
+            type: "APPROVAL_REQUEST",
+            round: 6,
+            sender: "orchestrator",
+            recipient: "human",
+            payload: {
+              summary: "Clean meta-review approved.",
+              metadata: {
+                actor: "meta-reviewer",
+                actor_agent: "codex",
+                latest_recommendation: "approve"
+              }
+            }
+          })
+        ]}
+        isLoading={false}
+        error={null}
+        compact={false}
+        metaReviewCleanRunsRequired={1}
+      />
+    );
+
+    const metaRows = screen.getAllByText("meta-reviewer", {
+      selector: "span.font-medium"
+    });
+    expect(metaRows).toHaveLength(2);
+    expect(screen.getByText("rework")).toBeInTheDocument();
+    expect(screen.getByText("approve")).toBeInTheDocument();
+    expect(screen.queryByText("clean 1")).not.toBeInTheDocument();
+    expect(screen.queryByText("Meta-review gate opened after rework.")).not.toBeInTheDocument();
+  });
+
   it("shows empty-state text when no timeline entries exist", () => {
     render(
       <BubbleTimeline
