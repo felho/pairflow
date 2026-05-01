@@ -69,10 +69,23 @@ These documents preserve why a policy or feature changed. They should not
 override active contract documents unless an active document explicitly points
 to them as authority:
 
-- [reviewbubble-task-hardening-dontesi-keret-2026-03-12.md](./reviewbubble-task-hardening-dontesi-keret-2026-03-12.md)
-- [reviewer-pass-converged-issue-assessment-2026-03-21.md](./reviewer-pass-converged-issue-assessment-2026-03-21.md)
 - [spec-skill-evolution.md](./spec-skill-evolution.md)
 - [cmux-ideas.md](./cmux-ideas.md)
+
+## Removed Historical ReviewBubble / Reviewer Notes
+
+The active ReviewBubble decision policy now lives in the repo-local
+[`UsePairflow/ReviewBubble`](../.claude/skills/UsePairflow/Workflows/ReviewBubble.md)
+workflow. Active reviewer severity and `pass` / `converged` routing policy
+lives in [reviewer-severity-ontology.md](./reviewer-severity-ontology.md) and
+the runtime guards. The following historical notes were removed from the
+working tree because they used older proposed taxonomy or incident language that
+could be mistaken for current output schema:
+
+- `docs/reviewbubble-task-hardening-dontesi-keret-2026-03-12.md`
+- `docs/reviewer-pass-converged-issue-assessment-2026-03-21.md`
+
+Use git history only for original rationale.
 
 ## Removed Historical Meta-Review Docs
 
