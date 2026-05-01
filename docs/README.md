@@ -20,6 +20,7 @@ Use these as current contract or governance inputs:
 - [reviewer-evidence-governance.md](./reviewer-evidence-governance.md) - active review/evidence trust, skip/run, and docs-only evidence policy.
 - [architecture/architecture-fitness-checks.md](./architecture/architecture-fitness-checks.md) - active architecture fitness policy and CI gate documentation.
 - [architecture/v11-placement-and-extraction-governance.md](./architecture/v11-placement-and-extraction-governance.md) - active placement rules for `src/v11/**`.
+- [architecture/v11-boundary-decisions.md](./architecture/v11-boundary-decisions.md) - retained decisions from the completed v1.1 boundary simplification rollout.
 - [architecture/sandbox-compatibility-gate.md](./architecture/sandbox-compatibility-gate.md) - active sandbox compatibility gate.
 - [actor-runtime-interface/](./actor-runtime-interface/) - active actor-runtime contract notes.
 - [remote-bubble-execution.md](./remote-bubble-execution.md) - retained remote-bubble design baseline; newer phase task artifacts may narrow authority for specific implementation details.
@@ -29,9 +30,6 @@ Use these as current contract or governance inputs:
 These are useful for ongoing architecture direction, but they may contain
 implementation-era snapshots:
 
-- [v1.1-boundary-simplification/v1.1-implementation-roadmap.md](./v1.1-boundary-simplification/v1.1-implementation-roadmap.md)
-- [v1.1-boundary-simplification/decision-log.md](./v1.1-boundary-simplification/decision-log.md)
-- [v1.1-boundary-simplification/component-one-pagers/](./v1.1-boundary-simplification/component-one-pagers/)
 - [v2/pairflow-v2-architecture-plan-joint.md](./v2/pairflow-v2-architecture-plan-joint.md)
 
 ## Product / Feature PRDs And Runbooks
@@ -58,6 +56,14 @@ approved plan/task or implementation adopts the contract:
 These were removed from the working tree because newer implementation artifacts
 are the current authority and the old drafts add LLM context noise:
 
+- `docs/v1.1-boundary-simplification/` - completed v1.1 rollout material.
+  Current authority is consolidated into
+  [architecture-fitness-checks.md](./architecture/architecture-fitness-checks.md),
+  [v11-placement-and-extraction-governance.md](./architecture/v11-placement-and-extraction-governance.md),
+  [v11-ports-governance.md](./architecture/v11-ports-governance.md), and
+  [v11-boundary-decisions.md](./architecture/v11-boundary-decisions.md).
+  Use git history for the old roadmap, component one-pagers, and task evidence
+  only.
 - `docs/execute-pairflow-plan-draft.md` - superseded by repo-local
   [`ExecutePairflowPlan`](../.claude/skills/ExecutePairflowPlan/SKILL.md)
   skill source and the archived implementation plan/tasks. Use git history for
@@ -134,10 +140,8 @@ Do not use removed files as current policy authority.
 
 These are retained for traceability but are not current authority:
 
-- [v1.1-boundary-simplification/archive/](./v1.1-boundary-simplification/archive/)
 - [v2/claude/](./v2/claude/) and [v2/codex/](./v2/codex/) - source drafts behind the joint v2 architecture plan.
 - [mockups/pairflow-ui-mockup.html](./mockups/pairflow-ui-mockup.html) - standalone UI mockup; verify whether the implemented UI still uses it as design reference before deleting.
-- [v1.1-boundary-simplification/component-one-pagers/component-one-pager-template.md](./v1.1-boundary-simplification/component-one-pagers/component-one-pager-template.md) - retained template only.
 
 ## Maintenance Rules
 

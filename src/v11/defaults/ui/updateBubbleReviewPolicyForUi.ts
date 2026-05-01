@@ -7,10 +7,12 @@ import { buildBubbleReviewPolicyRuntimeView } from "../../shared/reviewPolicy/re
 import { isReviewPolicyMutableState } from "../../shared/reviewPolicy/reviewPolicyMutationEligibility.js";
 import {
   buildSharedUiReviewPolicyPatch,
-  REVIEW_POLICY_WRITE_CONFLICT,
+  REVIEW_POLICY_WRITE_CONFLICT
+} from "../../shared/reviewPolicy/updateBubbleReviewPolicy.js";
+import {
   updateBubbleReviewPolicy,
   writeBubbleTomlAtomically
-} from "../../shared/reviewPolicy/updateBubbleReviewPolicy.js";
+} from "../../infrastructure/artifact/reviewPolicy/updateBubbleReviewPolicy.js";
 import { statusCommandDependencyDefaults } from "../../shared/status/statusCommandDependencyDefaults.js";
 import {
   readStateSnapshot,

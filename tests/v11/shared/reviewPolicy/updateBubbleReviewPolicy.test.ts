@@ -8,9 +8,11 @@ import { parseBubbleConfigToml } from "../../../../src/config/bubbleConfig.js";
 import {
   buildSharedUiReviewPolicyPatch,
   REVIEW_POLICY_PATCH_INVALID,
-  REVIEW_POLICY_WRITE_CONFLICT,
-  updateBubbleReviewPolicy
+  REVIEW_POLICY_WRITE_CONFLICT
 } from "../../../../src/v11/shared/reviewPolicy/updateBubbleReviewPolicy.js";
+import {
+  updateBubbleReviewPolicy
+} from "../../../../src/v11/infrastructure/artifact/reviewPolicy/updateBubbleReviewPolicy.js";
 
 const tempDirs: string[] = [];
 

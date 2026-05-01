@@ -23,6 +23,7 @@ describe("sshBubbleReviewPolicyCommand", () => {
 
     expect(script).toContain("cd '/srv/pairflow/b_remote_policy_01'");
     expect(script).toContain("dist/v11/shared/reviewPolicy/updateBubbleReviewPolicy.js");
+    expect(script).toContain("dist/v11/infrastructure/artifact/reviewPolicy/updateBubbleReviewPolicy.js");
     expect(script).toContain("dist/v11/infrastructure/state/stateStore.js");
     expect(script).toContain("reviewLoopMode = \"meta_only\"");
     expect(script).toContain("reviewBlockingMinSeverity = \"P2\"");

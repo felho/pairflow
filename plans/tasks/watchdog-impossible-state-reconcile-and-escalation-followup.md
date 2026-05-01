@@ -5,22 +5,20 @@ title: "Watchdog Impossible-State Reconcile + Escalation Follow-up"
 status: draft
 phase: phase1
 target_files:
-  - src/core/runtime/watchdog.ts
-  - src/core/runtime/startupReconciler.ts
-  - src/v11/shared/watchdog/watchdogCommandApi.ts
-  - src/v11/shared/watchdog/watchdogCommandRouting.ts
+  - src/v11/application/watchdog/watchdogCommandApi.ts
+  - src/v11/application/watchdog/watchdogCommandRouting.ts
   - src/v11/application/reconcile/runReconcileFlow.ts
   - src/v11/application/reconcile/reconcileCommandContract.ts
   - docs/pairflow-initial-design.md
-  - docs/v1.1-boundary-simplification/v1.1 architecture context.md
-  - docs/v1.1-boundary-simplification/component-one-pagers/m0-05-transcript-state-reconciler.md
+  - docs/architecture/architecture-fitness-checks.md
+  - docs/architecture/v11-boundary-decisions.md
   - tests/contracts/v11/watchdog.contract.test.ts
   - tests/contracts/v11/reconcile.contract.test.ts
   - tests/v11/application/watchdog/watchdogCommandApi.test.ts
   - tests/v11/application/reconcile/reconcileFacadeParity.test.ts
 prd_ref: null
-plan_ref: docs/v1.1-boundary-simplification/v1.1-implementation-roadmap.md
-system_context_ref: docs/v1.1-boundary-simplification/v1.1 architecture context.md
+plan_ref: null
+system_context_ref: docs/architecture/v11-boundary-decisions.md
 owners:
   - "felho"
 ---
@@ -30,7 +28,7 @@ owners:
 ## Current Codebase Check (2026-04-10)
 
 1. A mai watchdog/reconcile canonical kod `src/v11/application/watchdog/**` es `src/v11/application/reconcile/**` alatt el.
-2. A task `target_files` listajaban szereplo `src/core/**` es `src/v11/shared/watchdog/**` pathok kozul tobb mar nem a jelenlegi owner.
+2. A korabbi v1.1 rollout doksik torolve lettek; a megorzott dontesek es fitness policy az aktiv `docs/architecture/**` authority alatt vannak.
 3. A task tovabbra is iranyrogzito `draft`, de a concrete implementation scope-ot frissiteni kell a mai topologyra.
 
 ## L0 - Policy
@@ -90,10 +88,10 @@ Provisional only. Exact required-now call-site contractot a jelenlegi watchdog m
 
 | ID | File | Function/Entry | Exact Signature (args -> return) | Insertion Point | Expected Behavior | Priority | Timing | Evidence |
 |---|---|---|---|---|---|---|---|---|
-| CS1 | `src/v11/shared/watchdog/watchdogCommandRouting.ts` | watchdog lifecycle routing | existing watchdog routing entrypoint | impossible-state branch (future) | Kulonitse el a normal liveness/timeouthoz tartozo donteseket az impossible-state detection/reconcile logikatol | P1 | later-refine | architectural direction agreed in review |
+| CS1 | `src/v11/application/watchdog/watchdogCommandRouting.ts` | watchdog lifecycle routing | existing watchdog routing entrypoint | impossible-state branch (future) | Kulonitse el a normal liveness/timeouthoz tartozo donteseket az impossible-state detection/reconcile logikatol | P1 | later-refine | architectural direction agreed in review |
 | CS2 | `src/v11/application/reconcile/runReconcileFlow.ts` | reconcile flow | existing reconcile entrypoint | shared recovery contract (future) | A deterministic runtime reconcile es a watchdog altal felismert impossible-state treatment kozos boundary moge kerulhessen | P1 | later-refine | avoid duplicate recovery engines |
-| CS3 | `src/core/runtime/startupReconciler.ts` | startup reconcile | existing startup entrypoint | invariant inventory alignment (future) | Startup recovery es watchdog impossible-state inventory ugyanazt a canonical szabalykeszletet hasznalja | P2 | later-refine | one invariant source |
-| CS4 | `src/core/runtime/watchdog.ts` | monitoring model | `computeWatchdogStatus(...) -> WatchdogStatus` | model/contract review (future) | Tisztan kulonuljon a liveness monitoring es a future impossible-state capability | P2 | later-refine | semantic separation |
+| CS3 | `src/v11/application/reconcile/**` | startup/runtime reconcile boundary | existing reconcile entrypoints | invariant inventory alignment (future) | Startup recovery es watchdog impossible-state inventory ugyanazt a canonical szabalykeszletet hasznalja | P2 | later-refine | one invariant source |
+| CS4 | `src/v11/application/watchdog/**` | monitoring model | existing watchdog status/routing model | model/contract review (future) | Tisztan kulonuljon a liveness monitoring es a future impossible-state capability | P2 | later-refine | semantic separation |
 
 ### 2) Data and Interface Contract
 
