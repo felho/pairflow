@@ -1,9 +1,10 @@
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
+import { renderBubbleConfigToml } from "../../../src/config/bubbleConfig.js";
 import { emitConvergedFromWorkspaceV11 as emitConvergedFromWorkspace } from "../../../src/v11/application/converged/emitConvergedV11.js";
 import { emitPassFromWorkspaceV11 as emitPassFromWorkspace } from "../../../src/v11/application/pass/emitPassV11.js";
 import { runAgentEmitCommand } from "../../../src/cli/commands/agent/emit.js";
@@ -12,6 +13,7 @@ import { submitMetaReviewResultV11 as submitMetaReviewResult } from "../../../sr
 import { applyMetaReviewGateOnConvergenceV11 as applyMetaReviewGateOnConvergence } from "../../../src/v11/application/metaReviewGate/emitMetaReviewGateV11.js";
 import { startBubbleV11 as startBubble } from "../../../src/v11/application/start/emitStartV11.js";
 import { buildMetaReviewExecutionContext } from "../../../src/v11/shared/metaReview/metaReviewExecutionContext.js";
+import { normalizeBubbleReviewPolicy } from "../../../src/v11/shared/reviewPolicy/reviewPolicyRuntime.js";
 import {
   readRuntimeSessionsRegistry,
   upsertRuntimeSession
@@ -377,7 +379,10 @@ describe("restart recovery", () => {
     const bubble = await setupRunningBubbleFixture({
       repoPath,
       bubbleId: "b_restart_reviewer_01",
-      task: "Restart recovery reviewer authority task"
+      task: "Restart recovery reviewer authority task",
+      reviewPolicy: {
+        meta_review_consecutive_clean_runs_required: 1
+      }
     });
     const loaded = await readStateSnapshot(bubble.paths.statePath);
     const reviewerExecutionContext = buildRunningExecutionContext({
@@ -499,6 +504,21 @@ describe("restart recovery", () => {
       task: "Smoke meta-review restart recovery submit",
       cwd: repoPath
     });
+    await writeFile(
+      bubble.paths.bubbleTomlPath,
+      renderBubbleConfigToml({
+        ...bubble.config,
+        review_policy: {
+          ...normalizeBubbleReviewPolicy({
+            ...(bubble.config.review_policy !== undefined
+              ? { review_policy: bubble.config.review_policy }
+              : {})
+          }),
+          meta_review_consecutive_clean_runs_required: 1
+        }
+      }),
+      "utf8"
+    );
 
     await startBubble(
       {

@@ -225,7 +225,10 @@ async function setupApprovedBubble(repoPath: string, bubbleId: string) {
   const bubble = await setupRunningBubbleFixture({
     repoPath,
     bubbleId,
-    task: "Commit contract parity fixture"
+    task: "Commit contract parity fixture",
+    reviewPolicy: {
+      meta_review_consecutive_clean_runs_required: 1
+    }
   });
 
   await emitPassFromWorkspaceV11({

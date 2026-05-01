@@ -132,7 +132,10 @@ async function setupApprovedBubble(repoPath: string, bubbleId: string) {
   const bubble = await setupRunningBubbleFixture({
     repoPath,
     bubbleId,
-    task: "Finalize task"
+    task: "Finalize task",
+    reviewPolicy: {
+      meta_review_consecutive_clean_runs_required: 1
+    }
   });
 
   await emitPassFromWorkspace({

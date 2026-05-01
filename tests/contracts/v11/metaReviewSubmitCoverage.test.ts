@@ -248,7 +248,10 @@ describe("v11 meta-review submit contract", () => {
     const bubble = await setupRunningBubbleFixture({
       repoPath,
       bubbleId: "b_meta_contract_submit_accept_01",
-      task: "Contract: successful structured submit"
+      task: "Contract: successful structured submit",
+      reviewPolicy: {
+        meta_review_consecutive_clean_runs_required: 1
+      }
     });
     await writeMetaReviewRunningState({
       statePath: bubble.paths.statePath,
@@ -303,7 +306,10 @@ describe("v11 meta-review submit contract", () => {
     const bubble = await setupRunningBubbleFixture({
       repoPath,
       bubbleId: "b_meta_contract_submit_approve_advisory_01",
-      task: "Contract: advisory-only approve submit"
+      task: "Contract: advisory-only approve submit",
+      reviewPolicy: {
+        meta_review_consecutive_clean_runs_required: 1
+      }
     });
     await writeMetaReviewRunningState({
       statePath: bubble.paths.statePath,
@@ -835,7 +841,10 @@ describe("v11 meta-review submit contract", () => {
     const bubble = await setupRunningBubbleFixture({
       repoPath,
       bubbleId: "b_meta_contract_submit_recovery_ownership_01",
-      task: "Contract: recovery submit without live ownership"
+      task: "Contract: recovery submit without live ownership",
+      reviewPolicy: {
+        meta_review_consecutive_clean_runs_required: 1
+      }
     });
 
     const loaded = await readStateSnapshot(bubble.paths.statePath);

@@ -813,7 +813,10 @@ describe("emitActorProtocolV11 runtime", () => {
     const bubble = await setupRunningBubbleFixture({
       repoPath,
       bubbleId: "b_actor_protocol_dispatch_meta_review_01",
-      task: "Outer dispatcher should use meta-review route"
+      task: "Outer dispatcher should use meta-review route",
+      reviewPolicy: {
+        meta_review_consecutive_clean_runs_required: 1
+      }
     });
     await switchFixtureToMetaReviewerAuthority({
       bubbleId: bubble.bubbleId,

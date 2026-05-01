@@ -4,10 +4,12 @@ import { writeFile } from "node:fs/promises";
 import { renderBubbleConfigToml } from "../../src/config/bubbleConfig.js";
 import { createBubble } from "../../src/v11/application/create/createBubble.js";
 import type { BubbleCreateResult } from "../../src/v11/application/create/createCommandContract.js";
+import { normalizeBubbleReviewPolicy } from "../../src/v11/shared/reviewPolicy/reviewPolicyRuntime.js";
 import { buildRunningExecutionContext } from "../../src/v11/shared/state/executionContext.js";
 import { readStateSnapshot, writeStateSnapshot } from "../../src/v11/infrastructure/state/stateStore.js";
 import { bootstrapWorktreeWorkspace } from "../../src/v11/infrastructure/workspace/worktreeManager.js";
 import type {
+  BubbleReviewPolicyConfig,
   CreateReviewArtifactType,
   PairflowCommandProfile,
   ReviewArtifactType
@@ -21,6 +23,7 @@ export interface SetupRunningBubbleFixtureInput {
   reviewerBrief?: string;
   accuracyCritical?: boolean;
   reviewArtifactType?: CreateReviewArtifactType;
+  reviewPolicy?: Partial<BubbleReviewPolicyConfig>;
   pairflowCommandProfile?: PairflowCommandProfile;
 }
 
@@ -57,6 +60,27 @@ function normalizeTestBubbleId(id: string): string {
   return `bubble-${hashSuffix}`.slice(0, 40);
 }
 
+function mergeTestReviewPolicy(
+  base: BubbleReviewPolicyConfig | undefined,
+  override: Partial<BubbleReviewPolicyConfig>
+): BubbleReviewPolicyConfig {
+  const normalized = normalizeBubbleReviewPolicy(
+    base === undefined ? {} : { review_policy: base }
+  );
+  return {
+    review_loop_mode: override.review_loop_mode ?? normalized.review_loop_mode,
+    reviewer_blocking_min_severity:
+      override.reviewer_blocking_min_severity
+      ?? normalized.reviewer_blocking_min_severity,
+    meta_review_auto_rework_min_severity:
+      override.meta_review_auto_rework_min_severity
+      ?? normalized.meta_review_auto_rework_min_severity,
+    meta_review_consecutive_clean_runs_required:
+      override.meta_review_consecutive_clean_runs_required
+      ?? normalized.meta_review_consecutive_clean_runs_required
+  };
+}
+
 async function setupRunningBubbleFixtureWithOverride(
   input: SetupRunningBubbleFixtureInput,
   options: SetupRunningBubbleFixtureOverrideOptions = {}
@@ -79,13 +103,23 @@ async function setupRunningBubbleFixtureWithOverride(
   });
 
   const overrideReviewArtifactType = options.configReviewArtifactTypeOverride;
-  if (
+  const shouldOverrideReviewArtifactType =
     overrideReviewArtifactType !== undefined
-    && overrideReviewArtifactType !== createReviewArtifactType
-  ) {
+    && overrideReviewArtifactType !== createReviewArtifactType;
+  if (shouldOverrideReviewArtifactType || input.reviewPolicy !== undefined) {
     const overriddenConfig = {
       ...created.config,
-      review_artifact_type: overrideReviewArtifactType
+      ...(shouldOverrideReviewArtifactType
+        ? { review_artifact_type: overrideReviewArtifactType }
+        : {}),
+      ...(input.reviewPolicy !== undefined
+        ? {
+            review_policy: mergeTestReviewPolicy(
+              created.config.review_policy,
+              input.reviewPolicy
+            )
+          }
+        : {})
     };
     await writeFile(
       created.paths.bubbleTomlPath,

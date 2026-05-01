@@ -592,7 +592,10 @@ describe("runAgentEmitCommand", () => {
     const bubble = await setupRunningBubbleFixture({
       repoPath,
       bubbleId: "b_agent_emit_meta_recovery_01",
-      task: "Canonical meta review recovery emit"
+      task: "Canonical meta review recovery emit",
+      reviewPolicy: {
+        meta_review_consecutive_clean_runs_required: 1
+      }
     });
     const loaded = await readStateSnapshot(bubble.paths.statePath);
     const metaReviewExecutionContext = buildMetaReviewExecutionContext({
