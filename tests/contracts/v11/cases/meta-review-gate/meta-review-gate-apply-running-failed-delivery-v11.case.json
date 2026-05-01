@@ -1,8 +1,8 @@
 {
-  "id": "meta-review-gate-apply-running-failed-delivery-parity",
+  "id": "meta-review-gate-apply-running-failed-delivery-v11",
   "command": "metaReviewGate",
-  "mode": "parity",
-  "description": "Seed contract case for meta-review gate apply running route with obsolete failed notify delivery ignored by launch prompt delivery.",
+  "mode": "v11",
+  "description": "Seed contract case for meta-review gate running apply behavior with failed notify delivery normalized by launch prompt delivery.",
   "input": {
     "route": "apply",
     "applyScenario": "meta_review_running",
@@ -25,7 +25,6 @@
   "tags": [
     "seed",
     "m3",
-    "meta-review-gate",
-    "parity"
+    "meta-review-gate"
   ]
 }
