@@ -37,14 +37,14 @@ Add the application-layer read path that discovers bubbles linked to a watched p
 
 1. Business invariant: the watcher may trigger continuation only from trustworthy linked-bubble evidence; it must not compute or approximate `ExecutePairflowPlan` routes.
 2. Control model: plan metadata owns task sequencing and tracker paths, task metadata owns `doc_bubble_id` / `impl_bubble_id` linkage, Pairflow status owns bubble lifecycle state, and this task owns only the trigger-index projection over those sources.
-3. Read-path rule: implementation may read the watched plan frontmatter, task frontmatter for tracker-linked task paths, and Pairflow status for persisted linked bubble ids through an explicit dependency port.
-4. Forbidden fallback: do not infer bubble ids from filenames, chat history, operator memory, raw remote clone state, bubble list order, or task prose; do not emit route classes such as `CreateTask`, `CloseImplementationBubble`, or `HandleNormalizedReplan`.
+3. Read-path rule: implementation may read the watched plan frontmatter, task frontmatter for tracker-linked task paths, and Pairflow status for persisted linked bubble ids through an explicit dependency port; the core trigger-index function must not shell out or call Pairflow commands directly.
+4. Forbidden fallback: do not infer bubble ids from filenames, chat history, operator memory, raw remote clone state, bubble list order, or task prose; do not emit route classes such as `CreateTask`, `CreateDocumentBubble`, or `CloseImplementationBubble`.
 5. Allowed resolution path: deterministic same-authority lookup is allowed from plan tracker `task_path` to task frontmatter linkage, and from persisted linkage to Pairflow status for that exact bubble id.
 6. Missing-data rule: missing, unreadable, malformed, or contradictory metadata must produce a fail-closed diagnostic/no-trigger result for that source; missing Pairflow status must not be treated as approval-ready.
 7. Phase boundary:
    - contract closure: owned here for linked-bubble trigger evidence types and status classification.
    - producer closure: owned here for producing trigger candidates from plan/task/status inputs.
-   - internal execution closure: owned here only for read-path orchestration and status-port calls.
+   - internal execution closure: owned here only for read-path orchestration and injected status-port calls.
    - workflow/orchestration closure: successor; `ExecutePairflowPlan` remains the route authority.
    - read-model closure: successor watch loop consumes this projection and persists dedupe.
    - activation closure: successor `plan watch` command.
@@ -79,8 +79,8 @@ Add the application-layer read path that discovers bubbles linked to a watched p
 1. Inspected entrypoints / call-sites: `src/v11/application/planWatch/agentRunnerBridge.ts`, `src/v11/application/planWatch/agentRunnerBridgeContract.ts`, `src/v11/defaults/planWatch/agentRunnerBridgeDefaults.ts`, `tests/v11/application/planWatch/agentRunnerBridge.test.ts`, and `src/index.ts`.
 2. Actual touched scope: producer/read-model foundation for trigger evidence.
 3. Mutation entrypoints in scope: N/A; this task must not mutate plan/task files, Pairflow lifecycle state, watch ledgers, or runner results.
-4. Hidden scope ruled out: no `plan watch` CLI, no persisted dedupe ledger, no runner invocation, no lifecycle approve/rework/close, no full `ResolvePlanState` clone.
-5. Branch inventory note: no task paths, missing task file, malformed plan frontmatter, malformed task frontmatter, no linked bubbles, local approval-ready bubble, legacy approval-ready bubble, non-approval lifecycle state, status read failure, remote unavailable/stale status.
+4. Hidden scope ruled out: no `plan watch` CLI, no persisted dedupe ledger, no runner invocation, no lifecycle approve/rework/close, no default Pairflow command shell adapter of any kind, no full `ResolvePlanState` clone.
+5. Branch inventory note: no task paths, missing task file, malformed plan frontmatter, malformed task frontmatter, no linked bubbles, local approval-ready bubble, legacy approval-ready bubble, non-approval lifecycle states including `CREATED`, `RUNNING`, `WAITING_HUMAN`, `META_REVIEW_RUNNING`, `APPROVED_FOR_COMMIT`, `DONE`, and `CANCELLED`, status read failure, remote unavailable/stale status.
 6. Why the declared task shape matches reality: the first planWatch slice already exposes runner invocation; this slice produces the bounded trigger input that the later watcher can consume without widening workflow authority.
 
 ### Authority Boundary Map
@@ -115,8 +115,9 @@ Add the application-layer read path that discovers bubbles linked to a watched p
 2. Secondary shape (if any): activation_or_read_model, limited to an in-memory read projection with no persistence.
 3. Preconditions that must pass before side effects: N/A; no side effects are allowed.
 4. Side effects forbidden before preconditions pass: child process spawn, lifecycle commands, file writes, watch ledger writes, runner invocation.
-5. Invalid/precondition-failure behavior: zero side effects with structured diagnostics and no approval-ready trigger.
-6. Coordination primitives in scope: N/A; dedupe/idempotency is successor watcher work.
+5. Core side-effect rule: `resolveLinkedBubbleTriggerIndex` remains read-only apart from dependency calls for file reads and exact-id status lookup; any future shell-backed status adapter belongs behind the port and must be read-only, but this task must not implement, ship, or require a Pairflow command adapter.
+6. Invalid/precondition-failure behavior: zero side effects with structured diagnostics and no approval-ready trigger.
+7. Coordination primitives in scope: N/A; dedupe/idempotency is successor watcher work.
 
 ### In Scope
 
@@ -187,11 +188,11 @@ Add the application-layer read path that discovers bubbles linked to a watched p
 |---|---|---|---|---|
 | Business invariant | Trigger discovery may help automation only when it preserves existing workflow authority. | Code must emit trigger evidence, not route decisions or lifecycle actions. | P1 | required-now |
 | Control model | Plan/task metadata own linkage; Pairflow status owns lifecycle state. | The index must join these authorities without promoting one into the other's role. | P1 | required-now |
-| Read-path rule | Read plan tracker, task frontmatter linkage, and exact linked-bubble status. | Do not scan arbitrary bubbles or infer ids from names. | P1 | required-now |
-| Forbidden fallback | No prose, chat history, branch names, bubble list order, or stale remote clone state. | Missing/malformed data becomes diagnostic/no-trigger. | P1 | required-now |
+| Read-path rule | Read plan tracker, task frontmatter linkage, and exact linked-bubble status through injected dependencies only. | Do not scan arbitrary bubbles, infer ids from names, shell out, or call Pairflow commands in the core resolver. | P1 | required-now |
+| Forbidden fallback | No prose, chat history, branch names, bubble list order, stale remote clone state, or route-surface examples outside the parent plan's route vocabulary. | Missing/malformed data becomes diagnostic/no-trigger, and trigger output must not include `CreateTask`, `CreateDocumentBubble`, `CloseImplementationBubble`, or other route decisions. | P1 | required-now |
 | Allowed resolution path | Deterministic same-authority tracker-to-task-to-linkage lookup is allowed. | Use explicit paths and persisted ids only. | P1 | required-now |
 | Missing-data rule | Missing metadata/status fails closed per source. | Result must preserve diagnostics without fabricating trigger candidates. | P1 | required-now |
-| Phase boundary | This task owns read-only trigger projection; successors own dedupe, runner execution, and CLI activation. | No persistence, no polling loop, no runner call. | P1 | required-now |
+| Phase boundary | This task owns read-only trigger projection; successors own dedupe, runner execution, CLI activation, and any shell-backed status adapter. | No persistence, no polling loop, no runner call, no default Pairflow command adapter. | P1 | required-now |
 
 ### 0a) Canonical Contract Preservation
 
@@ -210,8 +211,8 @@ Add the application-layer read path that discovers bubbles linked to a watched p
 | Inspected entrypoints / call-sites | Existing `planWatch` modules are application-layer typed APIs exported from `src/index.ts`. | Add sibling typed module and tests; do not fold into CLI yet. | P2 | required-now |
 | Actual touched scope | Read-only projection plus contract types. | No mutation dependencies should appear in the module contract. | P1 | required-now |
 | Mutation entrypoints in scope | N/A. | Tests should assert no runner/lifecycle dependency is required for trigger discovery. | P1 | required-now |
-| Hidden scope ruled out | Watch loop, dedupe ledger, runner invocation, and lifecycle routing are successor scopes. | Reject implementation that persists actions or calls runner bridge. | P1 | required-now |
-| Branch inventory note | Linked, unlinked, malformed, approval-ready, legacy-ready, non-ready, unavailable. | Tests must cover every branch family. | P1 | required-now |
+| Hidden scope ruled out | Watch loop, dedupe ledger, runner invocation, lifecycle routing, and default Pairflow command shell adapters are successor scopes. | Reject implementation that persists actions, calls runner bridge, or ships a command-backed status adapter. | P1 | required-now |
+| Branch inventory note | Linked, unlinked, malformed, approval-ready, legacy-ready, non-ready including `CREATED`, `RUNNING`, `WAITING_HUMAN`, `META_REVIEW_RUNNING`, `APPROVED_FOR_COMMIT`, `DONE`, and `CANCELLED`, unavailable. | Tests must cover every branch family. | P1 | required-now |
 | Shape proof | This is the producer consumed by the later watcher loop. | Keep API sufficient for successor dedupe but not responsible for dedupe. | P1 | required-now |
 
 ### 0c) Plan Linkage and Successor Impact
@@ -230,8 +231,8 @@ Add the application-layer read path that discovers bubbles linked to a watched p
 |---|---|---|---|---|
 | `LinkedBubbleTriggerIndexInput` | none yet | additive | define repo/plan path and dependency input | watcher CLI in task 3 |
 | `LinkedBubbleTriggerIndexResult` | none yet | additive | define candidates, linked bubbles, diagnostics | watcher ledger/dedupe in task 3 |
-| status port | none yet | additive | define exact bubble-id status lookup contract | default shell adapter or CLI adapter alignment in task 3 if needed |
-| runner trigger metadata | agent runner bridge | additive-compatible | shape evidence so successor can map it into `AgentRunnerBridgeTriggerContext` | runner invocation in task 3 |
+| status port | none yet | additive | define exact bubble-id status lookup contract; core resolver consumes the injected port only and this task ships no default Pairflow command adapter | default shell adapter or CLI adapter alignment in task 3 if needed |
+| runner trigger metadata | agent runner bridge | additive-compatible | shape evidence so successor can map it into `AgentRunnerBridgeTriggerContext` without importing agent-runner bridge types in the trigger-index module | runner invocation in task 3 |
 
 ### 0e) Baseline Preservation
 
@@ -254,12 +255,18 @@ Add the application-layer read path that discovers bubbles linked to a watched p
 ### 0g) Precondition and Side-Effect Boundary
 
 | Case | Must Be Validated Before | Forbidden Early Side Effects | Required Failure Behavior | Priority | Timing |
-|---|---|---|---|---|
-| missing plan path | reading plan metadata | status calls and any mutation | diagnostic/no-trigger | P1 | required-now |
-| malformed plan metadata | task path reads | status calls and any mutation | diagnostic/no-trigger | P1 | required-now |
-| missing task path/file | status calls for that task | lifecycle mutation | source diagnostic/no-trigger | P1 | required-now |
-| missing bubble linkage | status calls for absent id | synthetic bubble id creation | skip with no trigger or informational diagnostic | P1 | required-now |
-| status read failure | trigger classification | runner invocation | diagnostic/no-trigger for that bubble | P1 | required-now |
+|---|---|---|---|---|---|
+| missing plan path | reading plan metadata | status calls and any mutation | `PLAN_UNREADABLE` diagnostic/no-trigger | P1 | required-now |
+| malformed plan frontmatter | task path reads | status calls and any mutation | `PLAN_FRONTMATTER_INVALID` diagnostic/no-trigger | P1 | required-now |
+| malformed or contradictory plan tracker | task path reads | status calls and any mutation | `PLAN_TRACKER_INVALID` diagnostic/no-trigger | P1 | required-now |
+| missing task path/file | status calls for that task | lifecycle mutation | `TASK_PATH_MISSING` or `TASK_UNREADABLE` diagnostic/no-trigger for that task | P1 | required-now |
+| malformed task frontmatter | status calls for that task | lifecycle mutation | `TASK_FRONTMATTER_INVALID` diagnostic/no-trigger for that task | P1 | required-now |
+| task id mismatch | status calls for that task | lifecycle mutation | `TASK_ID_MISMATCH` diagnostic/no-trigger for that task | P1 | required-now |
+| missing bubble linkage | status calls for absent id | synthetic bubble id creation | `BUBBLE_LINKAGE_MISSING` informational diagnostic or skipped no-trigger result | P1 | required-now |
+| status read failure | trigger classification | runner invocation | `BUBBLE_STATUS_UNAVAILABLE` diagnostic/no-trigger for that bubble | P1 | required-now |
+| stale status | trigger classification | runner invocation | `BUBBLE_STATUS_STALE` diagnostic/no-trigger for that bubble | P1 | required-now |
+| unsupported status payload | trigger classification | runner invocation | `BUBBLE_STATUS_UNSUPPORTED` diagnostic/no-trigger for that bubble | P1 | required-now |
+| resolver dependency construction | invoking trigger-index resolver | child process spawn, Pairflow command execution, runner bridge import/call | dependency-injected read/status ports only | P1 | required-now |
 
 ### 0h) Canonical Contract Matrix
 
@@ -283,6 +290,69 @@ Add the application-layer read path that discovers bubbles linked to a watched p
 5. `LinkedBubbleStatusPort`
 6. `LinkedBubbleStatusSnapshot`
 
+### Public Type Field Contracts
+
+1. `LinkedBubbleTriggerIndexInput`:
+   - `repoPath: string`
+   - `planPath: string`
+   - `now?: Date`
+2. `LinkedBubbleTriggerIndexResult`:
+   - `planPath: string`
+   - `candidates: readonly LinkedBubbleTriggerCandidate[]`
+   - `linkedBubbles: readonly LinkedBubbleStatusSnapshot[]`
+   - `diagnostics: readonly LinkedBubbleTriggerDiagnostic[]`
+3. `LinkedBubbleTriggerCandidate`:
+   - `planPath: string`
+   - `taskId: string`
+   - `taskPath: string`
+   - `bubbleId: string`
+   - `bubbleRole: "document" | "implementation"`
+   - `observedState: "READY_FOR_HUMAN_APPROVAL" | "READY_FOR_APPROVAL"`
+   - `observedAt?: string`
+   - `statusRef?: string`
+   - `statusMetadata?: Readonly<Record<string, unknown>>`
+4. `LinkedBubbleStatusSnapshot`:
+   - `planPath: string`
+   - `taskId: string`
+   - `taskPath: string`
+   - `bubbleId: string`
+   - `bubbleRole: "document" | "implementation"`
+   - `state: string`
+   - `observedAt?: string`
+   - `current: boolean`
+   - `statusRef?: string`
+   - `metadata?: Readonly<Record<string, unknown>>`
+5. `LinkedBubbleTriggerDiagnostic`:
+   - `scope: "plan" | "task" | "bubble"`
+   - `code: "PLAN_UNREADABLE" | "PLAN_FRONTMATTER_INVALID" | "PLAN_TRACKER_INVALID" | "TASK_PATH_MISSING" | "TASK_UNREADABLE" | "TASK_FRONTMATTER_INVALID" | "TASK_ID_MISMATCH" | "BUBBLE_LINKAGE_MISSING" | "BUBBLE_STATUS_UNAVAILABLE" | "BUBBLE_STATUS_STALE" | "BUBBLE_STATUS_UNSUPPORTED"`
+   - `severity: "info" | "warning" | "error"`
+   - `message: string`
+   - `taskId?: string`
+   - `taskPath?: string`
+   - `bubbleId?: string`
+   - `bubbleRole?: "document" | "implementation"`
+6. `LinkedBubbleStatusPort`:
+   - function type `(input: { repoPath: string; bubbleId: string; now?: Date }) => Promise<{ state: string; observedAt?: string; current: boolean; statusRef?: string; metadata?: Readonly<Record<string, unknown>> } | LinkedBubbleTriggerDiagnostic>`
+   - must be exact-id lookup only; list/scan semantics are forbidden.
+   - the resolver, not the status port, attaches `planPath`, `taskId`, `taskPath`, `bubbleRole`, and missing `bubbleId` context to form each `LinkedBubbleStatusSnapshot` or bubble-scoped diagnostic.
+   - when the port returns a `LinkedBubbleTriggerDiagnostic`, the resolver must enrich it with the linked task/bubble context before adding it to `result.diagnostics`.
+
+### Diagnostic Branch Mapping
+
+| Code | Trigger Condition | Scope |
+|---|---|---|
+| `PLAN_UNREADABLE` | Plan file cannot be read or does not exist. | plan |
+| `PLAN_FRONTMATTER_INVALID` | Plan frontmatter is missing, malformed, or not parseable as the expected object. | plan |
+| `PLAN_TRACKER_INVALID` | Plan `task_tracker` is missing, not an array, has invalid row shape, or contradicts `task_order` for rows being inspected. | plan |
+| `TASK_PATH_MISSING` | Tracker row has no usable `task_path` for a row that otherwise participates in linked-bubble discovery. | task |
+| `TASK_UNREADABLE` | Tracker-linked task file cannot be read or does not exist. | task |
+| `TASK_FRONTMATTER_INVALID` | Task frontmatter is missing, malformed, or lacks required linkage fields. | task |
+| `TASK_ID_MISMATCH` | Task frontmatter `task_id` disagrees with the tracker row `task_id`. | task |
+| `BUBBLE_LINKAGE_MISSING` | Task has neither `doc_bubble_id` nor `impl_bubble_id`. | task |
+| `BUBBLE_STATUS_UNAVAILABLE` | Status port throws, returns an unavailable diagnostic, or cannot read exact-id status. | bubble |
+| `BUBBLE_STATUS_STALE` | Status port marks the status as not current, including stale remote/local cache evidence. | bubble |
+| `BUBBLE_STATUS_UNSUPPORTED` | Status port returns a payload that cannot be classified into a lifecycle `state` string. | bubble |
+
 ### Expected Functions
 
 1. `resolveLinkedBubbleTriggerIndex(input, dependencies)`
@@ -295,19 +365,24 @@ Add the application-layer read path that discovers bubbles linked to a watched p
 2. `result.linkedBubbles` may include non-ready linked bubbles for successor observability.
 3. `result.diagnostics` records fail-closed misses without making the entire plan unreadable unless the plan itself cannot be parsed.
 4. No field may be named `route_class`, `target_workflow_surface`, `approval_gate_state`, or `continuation_mode`; those belong to `ExecutePairflowPlan`.
+5. The core resolver must not depend on `agentRunnerBridge`, watcher ledger code, CLI commands, Pairflow command adapters, or runtime lifecycle mutation modules.
+6. The trigger-index module must not import `AgentRunnerBridgeTriggerContext`; successor watcher code may map trigger candidates into that type outside this module.
 
 ### Validation Matrix
 
 1. Plan with one task linked to a document bubble at `READY_FOR_HUMAN_APPROVAL` emits one document candidate.
-2. Plan with one task linked to an implementation bubble at `READY_FOR_APPROVAL` emits one implementation candidate and marks the state as legacy-compatible.
-3. Plan with linked bubble in `RUNNING`, `WAITING_HUMAN`, `META_REVIEW_RUNNING`, `APPROVED_FOR_COMMIT`, or `DONE` emits no candidate.
+2. Plan with one task linked to an implementation bubble at `READY_FOR_APPROVAL` emits one implementation candidate whose `observedState` preserves the legacy-compatible state.
+3. Plan with linked bubble in `CREATED`, `RUNNING`, `WAITING_HUMAN`, `META_REVIEW_RUNNING`, `APPROVED_FOR_COMMIT`, `DONE`, or `CANCELLED` emits no candidate.
 4. Plan with no task paths or no bubble ids emits no candidate and no synthetic ids.
 5. Missing or malformed plan frontmatter emits a plan diagnostic and no status calls.
 6. Missing task file emits a task diagnostic and continues with other tracker rows when possible.
 7. Malformed task frontmatter emits a task diagnostic and no status calls for that task.
 8. Status-port failure emits a bubble diagnostic and no candidate for that bubble.
 9. Remote unavailable/stale status from the port emits a diagnostic/no-trigger unless the status port supplies a current authoritative approval-ready state.
-10. Result type/export test proves the module is available through `src/index.ts` without changing existing runner exports.
+10. Unsupported status payload emits `BUBBLE_STATUS_UNSUPPORTED` and no candidate.
+11. Task id mismatch emits `TASK_ID_MISMATCH` and no status call for that task.
+12. Resolver dependency-construction test proves `resolveLinkedBubbleTriggerIndex` can run with injected read/status ports only and does not import runner bridge, command adapters, or lifecycle mutation modules.
+13. Result type/export test proves the module is available through `src/index.ts` without changing existing runner exports.
 
 ### Review Checklist
 
