@@ -265,7 +265,46 @@ Policy:
    - route back to plan refinement.
 3. Do not let a foundation task smuggle in downstream consumer alignment just because the changed contract is shared.
 
-### 1d.1) Run the Closure-Budget Gate
+### 1d.1) Run the Contract-Dense Task Gate
+
+Use `references/Contract-Dense-Task-Gate.md`.
+
+Run this gate when two or more of these are true:
+1. a public or internal API/interface/result shape changes,
+2. a status/result taxonomy changes or is newly introduced,
+3. structured input/output parsing, payload validation, or schema acceptance changes,
+4. error, fallback, timeout, cancellation, precedence, or reason-code behavior changes,
+5. one component emits or records data but another component owns interpretation,
+   lifecycle, routing, display, dedupe, or persistence semantics,
+6. multiple downstream consumers or successor tasks inherit the changed contract,
+7. the same contract must appear in multiple mirrored surfaces.
+
+Required output when active:
+1. `Canonical Contract Matrix` as the single source of truth for the dense contract.
+2. `Ownership and Deferred Semantics` naming:
+   - what this task owns now,
+   - what this task emits/records but does not interpret,
+   - what successor tasks or consumers own later,
+   - and forbidden inference/fallback/lifecycle decisions.
+3. `Structured Contract Rules` when structured input/output is involved:
+   - required and optional fields,
+   - allowed top-level fields or accepted variants,
+   - unknown-field behavior,
+   - malformed/partial/duplicate/multi-candidate behavior,
+   - retention/drop behavior,
+   - exact fallback status/reason/test expectation.
+4. `Mirrored Surface Checklist` naming every section that must stay aligned with
+   the canonical matrix.
+
+Policy:
+1. Do not use prose-only terms such as `valid`, `parseable`, `compatible`, or
+   `lifecycle claim` when deterministic implementation behavior is needed.
+2. If the task cannot name one canonical source-of-truth matrix, do not finalize
+   L1; refine the task or route back to plan.
+3. If a reviewer finding changes a canonical matrix row, update every mirrored
+   surface named by the checklist before handoff.
+
+### 1d.2) Run the Closure-Budget Gate
 
 Run this gate when the task touches authority/runtime/read-model/shared-contract work.
 
@@ -289,7 +328,7 @@ Policy:
 5. If that proof is not available from the loaded context, do not guess; route back to `CreatePlan`.
 6. If the task changes canonical success/completion proof source and also changes cleanup/recovery or final result/status/event semantics, do not finalize as one bounded task unless the artifact includes an explicit proof-boundary mapping and mixed-truth justification.
 
-### 1d.2) Run the Bounded-Task-Shape Gate
+### 1d.3) Run the Bounded-Task-Shape Gate
 
 Use `references/Bounded-Task-Shape-Gate.md`.
 
@@ -429,32 +468,37 @@ Required blockers for Task output:
    - current consumers inventory,
    - additive vs breaking decision,
    - explicit alignment ownership.
-16. If the task refines or replaces an existing canonicalization/resolution path, blockers also include:
+16. If the Contract-Dense Task Gate triggers, blockers also include:
+   - canonical contract matrix,
+   - ownership and deferred semantics,
+   - structured contract rules when applicable,
+   - mirrored surface checklist.
+17. If the task refines or replaces an existing canonicalization/resolution path, blockers also include:
    - `must_preserve_behaviors`,
    - `allowed_resolution_paths`,
    - `forbidden_regression_interpretations`,
    - `replacement_proof_required_if_removed`.
-17. If authority/runtime/read-model/shared-contract work is in scope, blockers also include closure-budget triage:
+18. If authority/runtime/read-model/shared-contract work is in scope, blockers also include closure-budget triage:
    - closure buckets touched,
    - collapsed closures,
    - deferred closures,
    - why the remaining bounded task is safe.
-18. If the task modifies an existing mutation flow, blockers also include a `Precondition and Side-Effect Boundary`:
+19. If the task modifies an existing mutation flow, blockers also include a `Precondition and Side-Effect Boundary`:
    - validations that must pass before mutations,
    - side effects forbidden before those validations pass,
    - invalid/precondition-failure behavior,
    - coordination primitives in scope or explicitly deferred.
-19. If three or more consume families are implicated, blockers also include explicit sequencing ownership:
+20. If three or more consume families are implicated, blockers also include explicit sequencing ownership:
    - whether this task is producer, consumer-family alignment, activation, read-model, or cleanup,
    - what producer/predecessor closure it depends on,
    - and which downstream closures remain for successor tasks.
-20. If the task cannot name a primary bounded-task shape, or mixes producer with fail-closed/coordination work without an explicit bounded proof, the task is not ready.
-21. If the Closed-Contract Drift Check applies, blockers also include:
+21. If the task cannot name a primary bounded-task shape, or mixes producer with fail-closed/coordination work without an explicit bounded proof, the task is not ready.
+22. If the Closed-Contract Drift Check applies, blockers also include:
    - repo-local source anchors,
    - canonical vs guard vs compat classification,
    - forbidden reinterpretations,
    - drift status proving there is no unauthorized semantic change.
-22. If the task changes an existing mutable flow's success/completion semantics, blockers also include:
+23. If the task changes an existing mutable flow's success/completion semantics, blockers also include:
    - current canonical success/completion proof source,
    - target canonical success/completion proof source,
    - final result/status/event truth-surface mapping,
@@ -507,6 +551,10 @@ Fill each section or mark `N/A`:
 13. Closure-budget summary (required when authority/runtime/read-model/shared-contract work is in scope; otherwise `N/A`)
 14. Precondition and side-effect boundary (required when an existing mutation flow is modified or coordination primitives are introduced; otherwise `N/A`)
 15. Success / completion proof boundary (required when an existing mutable flow's completion semantics or final truth surfaces change; otherwise `N/A`)
+16. Canonical contract matrix (required when the Contract-Dense Task Gate triggers; otherwise `N/A`)
+17. Ownership and deferred semantics (required when the Contract-Dense Task Gate triggers; otherwise `N/A`)
+18. Structured contract rules (required when the gate triggers and structured input/output is involved; otherwise `N/A`)
+19. Mirrored surface checklist (required when the Contract-Dense Task Gate triggers; otherwise `N/A`)
 
 Rules:
 1. `target_files` must align with call-site matrix.
@@ -533,6 +581,14 @@ Rules:
    - what proves completion now,
    - which final result/status/event surfaces use which proof,
    - and whether any compat surface intentionally remains mixed-truth or must stay single-truth.
+18. If the Contract-Dense Task Gate triggers, L1 must make one canonical matrix
+   the source of truth and must keep mirrored prose, fallback, classification,
+   and test sections subordinate to it.
+19. If structured input/output is involved, L1 must state unknown-field,
+   malformed/partial/duplicate/multi-candidate, and retention/drop behavior
+   explicitly rather than relying on `valid`/`parseable` prose.
+20. If ownership is split across this task and successors, L1 tests must not
+   assert successor-owned semantics as current-task behavior.
 
 ### 5a) Consistency Gate (mandatory before L2)
 
@@ -597,6 +653,13 @@ Run a document-level consistency gate:
    - canonical elements have not been downgraded to guard/compat language,
    - new terminology is explicitly mapped,
    - and downstream inheritance notes do not silently change meaning.
+17. Re-check contract-dense fit when applicable:
+   - the canonical contract matrix exists and is the only source of truth,
+   - ownership/deferred semantics prevent successor-owned behavior from leaking
+     into current-task assertions,
+   - structured rules use explicit schema/allowlist and rejection behavior,
+   - and every mirrored surface named by the checklist reflects the current
+     matrix rows.
 
 ### 6) L2 pass
 
@@ -617,6 +680,8 @@ Run a document-level consistency gate:
    - authority/source-of-truth note when applicable
    - authority fan-out note when applicable
 6. If the control-model gate applied, include a short note explaining whether the control model was inherited cleanly or had to be clarified during drafting.
+7. If the Contract-Dense Task Gate applied, include a short note naming the
+   canonical matrix and the mirrored surfaces it controls.
 
 ## Output
 
@@ -627,6 +692,7 @@ Run a document-level consistency gate:
 3. Short summary:
    - contract-boundary override decision (`yes|no`) and reason,
    - complexity-risk decision and score,
+   - contract-dense decision (`yes|no`) and mirrored-surface impact,
    - what was inferred,
    - what was asked,
    - what remains `later-hardening`.

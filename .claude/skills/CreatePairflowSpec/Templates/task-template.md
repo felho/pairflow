@@ -163,6 +163,11 @@ Include this section when the task modifies an existing mutation flow or introdu
    - primary shape: `<text>`
    - secondary shape: `<text or N/A>`
    - why this bounded mix is safe: `<text or N/A>`
+14. Contract-dense decision:
+   - gate triggered: `<yes|no>`
+   - trigger reasons: `<API/result shape|status taxonomy|structured payload|fallback/precedence|split ownership|downstream consumers|mirrored surfaces|N/A>`
+   - canonical matrix source: `<section/ref or N/A>`
+   - mirrored surfaces: `<list or N/A>`
 
 ## L1 - Change Contract
 
@@ -228,6 +233,33 @@ Include this section when the task modifies an existing mutation flow or introdu
 | Case | Must Be Validated Before | Forbidden Early Side Effects | Required Failure Behavior | Priority | Timing |
 |---|---|---|---|---|---|
 | invalid input / unmet precondition | <validation or `N/A`> | <forbidden mutation(s) or `N/A`> | <zero-side-effect or bounded failure rule> | P1 | required-now |
+
+### 0h) Canonical Contract Matrix (if Contract-Dense Task Gate applies)
+
+Use this as the source of truth for dense contracts. Other sections may
+summarize or reference these rows, but must not define conflicting behavior.
+
+| ID | Condition / Input | Owner | Output / Status | Reason / Error Code | Retained / Dropped Data | Side Effects | Required Test |
+|---|---|---|---|---|---|---|---|
+| CCM1 | <condition or `N/A`> | <current task|successor|consumer|N/A> | <status/result> | <code or `N/A`> | <fields retained/dropped> | <allowed/forbidden> | <T* or `N/A`> |
+
+### 0i) Ownership and Deferred Semantics (if Contract-Dense Task Gate applies)
+
+| Surface / Decision | Owned By This Task | Emits / Records Only | Deferred Owner | Forbidden Interpretation / Fallback | Priority | Timing |
+|---|---|---|---|---|---|---|
+| <contract surface or `N/A`> | <yes/no + rule> | <data emitted but not interpreted> | <successor/consumer or `N/A`> | <forbidden inference> | P1 | required-now |
+
+### 0j) Structured Contract Rules (if applicable)
+
+| Structured Contract | Required Fields | Optional Fields | Allowed Top-Level Fields / Variants | Unknown / Malformed / Duplicate Behavior | Retention / Drop Rule | Fallback Status / Reason | Priority | Timing |
+|---|---|---|---|---|---|---|---|---|
+| <schema/payload/result or `N/A`> | <fields> | <fields> | <allowlist> | <behavior> | <retained/dropped> | <status/code> | P1 | required-now |
+
+### 0k) Mirrored Surface Checklist (if Contract-Dense Task Gate applies)
+
+| Canonical Matrix Row | Mirrored Surfaces | Required Alignment Rule | Summary-Only Surface? | Verification |
+|---|---|---|---|---|
+| <CCM*> | <L0/branch inventory/§2/§4/§4a/§6/parent plan/etc.> | <what must stay aligned> | <yes/no + source row> | <how checked> |
 
 ### 1) Call-site Matrix
 
@@ -299,6 +331,12 @@ Use this section to track non-blocking review items (`later-hardening`) that sho
 10. If `target_files` are known, `Scope Reality / Shape Proof` is mandatory and the declared task shape must match the inspected touched scope.
 11. If the task refines an already-closed authority/shared contract, `Canonical Contract Anchors` and `Canonical Contract Preservation` are mandatory.
 12. New terminology for an existing contract must map back to source anchors and field roles explicitly before it can become `required-now`.
+13. If the Contract-Dense Task Gate triggers, `Canonical Contract Matrix`,
+   `Ownership and Deferred Semantics`, and `Mirrored Surface Checklist` are
+   mandatory.
+14. If structured input/output is part of a dense contract, `Structured Contract
+   Rules` is mandatory and must use allowlist/rejection behavior instead of
+   prose-only validity language.
 
 ## Spec Lock
 

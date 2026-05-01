@@ -136,7 +136,8 @@ For `task-mode`, apply:
 6. `Closure-Budget Gate`
 7. `Bounded-Task-Shape Gate`
 8. `Complexity-Risk Gate`
-9. `Remaining-Task Viability Check`
+9. `Contract-Dense Task Gate` when applicable
+10. `Remaining-Task Viability Check`
 
 Policy:
 1. Review whether the artifact still fits the planning shape it claims.
@@ -145,6 +146,9 @@ Policy:
 4. In `task-mode`, if the target-file reality check disagrees with the task label, trust the reality check.
 5. Do not hide a widened scope behind the phrase "implementation review is forbidden." Scope-reality validation is mandatory in `task-mode`.
 6. Do not approve a refined artifact just because the wording reads cleaner if it silently reinterprets a closed contract.
+7. Do not approve a contract-dense task just because each section is locally
+   plausible; review the canonical matrix first, then verify all mirrored
+   surfaces remain subordinate to it.
 
 ### 2a) Closed-Contract Drift Check (`plan-mode|task-mode` when applicable)
 
@@ -183,6 +187,39 @@ Outcome:
 1. Record whether the task is still correctly classified.
 2. If not, require `refine_task` or `route_back_to_plan`.
 
+### 2c) Contract-Dense Task Gate (`task-mode` when applicable)
+
+Use `references/Contract-Dense-Task-Gate.md`.
+
+Run this when two or more of these are true in the reviewed task:
+1. API/interface/result shape change,
+2. status/result taxonomy change,
+3. structured input/output parsing or schema acceptance change,
+4. error/fallback/timeout/cancellation/precedence/reason-code behavior change,
+5. split ownership between current task and downstream interpretation/lifecycle
+   consumers,
+6. multiple downstream consumers or successor tasks inherit the contract,
+7. one contract appears in multiple mirrored task sections.
+
+Required checks:
+1. The task has one `Canonical Contract Matrix` for the dense contract.
+2. L0 prose, branch inventory, data/interface rows, fallback/status rows, and
+   test matrix rows do not create independent conflicting sources of truth.
+3. Ownership/deferred semantics prevent successor-owned behavior from becoming
+   current-task acceptance criteria.
+4. Structured input/output rules use explicit schema/allowlist, unknown-field,
+   malformed/partial/duplicate/multi-candidate, and retention/drop behavior when
+   those cases are implementation-significant.
+5. A `Mirrored Surface Checklist` names every section that must be updated when
+   a canonical matrix row changes.
+
+Outcome:
+1. If the canonical matrix is missing or ambiguous, require `refine_task`.
+2. If ownership is actually split wrong across plan tasks, return
+   `route_back_to_plan`.
+3. If only a mirrored surface is stale while the matrix is clear, require local
+   `refine_task` and cite the stale surface.
+
 ### 3) Review in `plan-mode`
 
 When reviewing a `plan`, check:
@@ -218,6 +255,8 @@ When reviewing a `task`, check:
 7. whether the task changes success/completion proof boundary and, if so, whether that cutover is isolated cleanly enough
 8. whether reused cleanup/delete/reconcile proof contracts retain validation parity or prove an explicit narrowed contract
 9. whether downstream open tasks remain viable if this task is accepted as written
+10. whether contract-dense tasks have one canonical matrix and a complete
+    mirrored-surface checklist
 
 Decision outcomes:
 1. `approve_task`
@@ -272,6 +311,8 @@ Always include:
 10. downstream task statuses when applicable
 11. execution metadata gate result when applicable
 12. when the decision is `refine_plan` or `refine_task`, whether a repeated fresh-context ReviewSpec pass is required before approval or downstream execution
+13. when the Contract-Dense Task Gate applies, the canonical matrix status and
+    mirrored-surface checklist status
 
 ### 7) Output rules
 
@@ -289,6 +330,9 @@ Additional task-mode rule:
 4. If the issue is a success/completion proof cutover mixed with cleanup or final truth-surface alignment, phrase it as a split-trigger or sequencing problem, not as an implementation detail.
 5. If the issue is execution metadata drift, phrase it as non-deterministic
    plan/task identity or parent-plan mismatch, not as a naming nit.
+6. If the issue is contract-dense drift, phrase it as missing canonical matrix,
+   stale mirrored surface, or leaked successor-owned semantics, not as generic
+   wording polish.
 
 ## Output
 

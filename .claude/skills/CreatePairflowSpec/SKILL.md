@@ -63,6 +63,39 @@ Override policy:
 2. `plan_ref` must not be `null`.
 3. L1 must explicitly capture the changed interface contract and test coverage.
 
+## Contract-Dense Task Gate (Mandatory When Triggered)
+
+When contract-boundary work is dense enough that one contract can be mirrored
+across multiple sections, run the `Contract-Dense Task Gate`.
+
+Use `references/Contract-Dense-Task-Gate.md`.
+
+Run this gate before drafting or approving a Task when two or more of the
+following are true:
+1. A public or internal API/interface/result shape changes.
+2. A status/result taxonomy changes or is newly introduced.
+3. Structured input/output parsing, payload validation, or schema acceptance changes.
+4. Error, fallback, timeout, cancellation, precedence, or reason-code behavior changes.
+5. One component emits or records data but another component owns interpretation,
+   lifecycle, routing, display, dedupe, or persistence semantics.
+6. Multiple downstream consumers or successor tasks inherit the changed contract.
+7. The same contract appears in multiple mirrored surfaces such as L0 policy,
+   branch inventory, data contract, fallback table, status binding, and test matrix.
+
+Policy:
+1. The Task must include a single `Canonical Contract Matrix` as the source of
+   truth for the changed contract.
+2. The Task must include `Ownership and Deferred Semantics` for boundaries where
+   this task emits/records data without owning downstream interpretation.
+3. Structured input/output contracts must be expressed as schema or allowlist
+   rules, not only prose words such as `valid`, `parseable`, or `compatible`.
+4. The Task must include a `Mirrored Surface Checklist` naming every section
+   that must stay aligned when the canonical matrix changes.
+5. ReviewSpec task-mode must review against the canonical matrix first; mirrored
+   prose sections are consistency surfaces, not independent sources of truth.
+6. If no single canonical matrix can be stated, route to task refinement or plan
+   refinement before approving implementation.
+
 ## Pairflow Execution Metadata Contract (Mandatory for plan-linked work)
 
 When drafting, refining, or reviewing a Plan or Task that is intended to be executed by
@@ -365,6 +398,15 @@ Policy:
 25. Review must be mode-specific: `plan-mode` validates coverage/dependency/viability, `task-mode` validates artifact plus scope reality.
 26. Closed-contract meaning must be preserved explicitly: a refinement may not silently reinterpret canonical fields, guards, compat paths, or inherited terms.
 27. If a contract is already closed upstream, new wording must anchor back to those source artifacts before it can become `required-now`.
+28. Dense contracts need one source of truth: write the canonical matrix first,
+    then make prose, fallback tables, and tests mirror it.
+29. Ownership boundaries must say what this task emits or records without
+    interpreting; successor-owned semantics must not leak into current-task tests.
+30. Structured payload/input/output rules should use explicit allowlists,
+    required/optional fields, unknown-field handling, and rejection behavior
+    before narrative wording.
+31. When one contract is mirrored across L0, L1, fallback, classification, and
+    tests, maintain an explicit mirrored-surface checklist.
 
 ## Minimum Contract Rules
 
@@ -395,59 +437,64 @@ Policy:
    - current consumers,
    - additive vs breaking decision,
    - whether alignment happens now or in a successor task.
-18. For Plans with authority/read-model/multi-consumer relevance, a control-model section is mandatory. It must explicitly state:
+18. When the `Contract-Dense Task Gate` triggers, the artifact must record:
+   - canonical contract matrix,
+   - ownership and deferred semantics,
+   - structured contract rules when applicable,
+   - mirrored surface checklist.
+19. For Plans with authority/read-model/multi-consumer relevance, a control-model section is mandatory. It must explicitly state:
    - business invariant,
    - control model,
    - read-path rule,
    - forbidden fallback,
    - allowed resolution path when deterministic same-authority resolution matters,
    - missing-data rule.
-19. For Tasks with authority/read-model/multi-consumer relevance, the task must either inherit or restate those same control-model clauses explicitly enough for implementation.
-20. Tasks with authority/read-model/multi-consumer relevance should include an `Authority Boundary Map` capturing:
+20. For Tasks with authority/read-model/multi-consumer relevance, the task must either inherit or restate those same control-model clauses explicitly enough for implementation.
+21. Tasks with authority/read-model/multi-consumer relevance should include an `Authority Boundary Map` capturing:
    - authority producer,
    - stored authority,
    - in-scope consumers,
    - explicit out-of-scope consumers,
    - whether export surfaces are closed in this phase.
-21. If any of those control-model clauses are missing and materially affect correctness, the artifact must remain blocked until clarified.
-22. Tasks that refine or replace an existing canonicalization/resolution path must include a `Baseline Preservation` section with:
+22. If any of those control-model clauses are missing and materially affect correctness, the artifact must remain blocked until clarified.
+23. Tasks that refine or replace an existing canonicalization/resolution path must include a `Baseline Preservation` section with:
    - `must_preserve_behaviors`,
    - `allowed_resolution_paths`,
    - `forbidden_regression_interpretations`,
    - `replacement_proof_required_if_removed`.
-23. If a current behavior is being removed, the artifact must identify the exact replacement path and the equivalence or intentional-difference proof expected from validation.
-24. Tasks must record closure-budget triage explicitly when authority/runtime/read-model/shared-contract work is in scope:
+24. If a current behavior is being removed, the artifact must identify the exact replacement path and the equivalence or intentional-difference proof expected from validation.
+25. Tasks must record closure-budget triage explicitly when authority/runtime/read-model/shared-contract work is in scope:
    - closure buckets touched,
    - which closures are intentionally collapsed,
    - why that collapse is safe,
    - which closures are explicitly deferred.
-25. Tasks for mutable/runtime flows must record bounded-task-shape classification explicitly:
+26. Tasks for mutable/runtime flows must record bounded-task-shape classification explicitly:
    - primary shape,
    - secondary shape (if any),
    - why that mix is safe when present.
-26. Tasks that modify an existing mutation flow must include a `Precondition and Side-Effect Boundary` section capturing:
+27. Tasks that modify an existing mutation flow must include a `Precondition and Side-Effect Boundary` section capturing:
    - validations that must pass before side effects,
    - side effects forbidden before those validations pass,
    - invalid/precondition-failure behavior,
    - coordination primitives in scope or explicitly deferred.
-27. If a task changes mutation ordering or introduces coordination primitives, the test matrix must include at least one required-now invalid/precondition-failure scenario proving the expected zero-side-effect or bounded-side-effect behavior.
-28. `ReviewSpec plan-mode` is planning-only:
+28. If a task changes mutation ordering or introduces coordination primitives, the test matrix must include at least one required-now invalid/precondition-failure scenario proving the expected zero-side-effect or bounded-side-effect behavior.
+29. `ReviewSpec plan-mode` is planning-only:
    - check coverage, dependency, sequencing, and downstream viability,
    - do not turn it into implementation or code-review workflow.
-29. `ReviewSpec task-mode` must load the parent plan when `plan_ref` exists and treat parent-plan fit as mandatory review context, not optional background.
-30. `ReviewSpec task-mode` must inspect `target_files` when available and use the real touched scope to validate the bounded slice.
-31. Plan/task review must include a remaining-task viability check:
+30. `ReviewSpec task-mode` must load the parent plan when `plan_ref` exists and treat parent-plan fit as mandatory review context, not optional background.
+31. `ReviewSpec task-mode` must inspect `target_files` when available and use the real touched scope to validate the bounded slice.
+32. Plan/task review must include a remaining-task viability check:
    - whether downstream open tasks remain valid as written,
    - whether a plan/task refinement is needed,
    - whether a new split task is required,
    - whether a downstream task became obsolete,
    - whether phase ordering is invalidated.
-32. When a refined Plan or Task touches an already-closed authority/shared contract, a `Closed-Contract Drift Check` is mandatory:
+33. When a refined Plan or Task touches an already-closed authority/shared contract, a `Closed-Contract Drift Check` is mandatory:
    - source anchors,
    - canonical vs guard vs compat classification,
    - forbidden reinterpretations,
    - and drift status.
-33. A refined artifact must not be marked implementable/approvable if it is only locally coherent but contradicts repo-local source anchors for the same contract.
+34. A refined artifact must not be marked implementable/approvable if it is only locally coherent but contradicts repo-local source anchors for the same contract.
 
 ## Templates and References
 
@@ -460,6 +507,7 @@ Policy:
 - Reviewer tags snippet: `references/Reviewer-Guidelines.md`
 - Complexity risk gate: `references/Complexity-Risk-Gate.md`
 - Bounded-task-shape gate: `references/Bounded-Task-Shape-Gate.md`
+- Contract-dense task gate: `references/Contract-Dense-Task-Gate.md`
 - Remaining-task viability check: `references/Remaining-Task-Viability-Check.md`
 - Pairflow execution metadata contract:
   `../ExecutePairflowPlan/references/Plan-Task-Metadata-Contract.md`
