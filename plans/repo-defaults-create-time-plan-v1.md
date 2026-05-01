@@ -11,7 +11,7 @@ task_order:
 task_tracker:
   - task_id: 1-repo-defaults-create-time
     task_path: plans/tasks/1-repo-defaults-create-time.md
-    status: approved
+    status: implementable
     notes: "Add repo-root pairflow.toml [defaults] support and materialize supported defaults into newly created bubble.toml files."
 active_task_id: 1-repo-defaults-create-time
 archive_group: 2026-05-01-repo-defaults-create-time-plan-v1

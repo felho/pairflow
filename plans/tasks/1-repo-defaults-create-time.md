@@ -5,7 +5,7 @@ task_family_id: repo-defaults-create-time
 sequence_key: "1"
 task_id: 1-repo-defaults-create-time
 title: "Repo Defaults Create-Time Materialization"
-status: approved
+status: implementable
 phase: phase1
 target_files:
   - "src/config/repoConfig.ts"
