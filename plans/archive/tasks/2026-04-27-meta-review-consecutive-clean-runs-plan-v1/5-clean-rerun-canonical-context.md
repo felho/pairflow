@@ -24,7 +24,7 @@ plan_ref: plans/archive/plans/2026-04-27-meta-review-consecutive-clean-runs-plan
 system_context_ref: docs/pairflow-initial-design.md
 owners:
   - "felho"
-doc_bubble_id: null
+doc_bubble_id: 5-clean-rerun-canonical-context-doc
 impl_bubble_id: null
 supersedes: []
 superseded_by: null
