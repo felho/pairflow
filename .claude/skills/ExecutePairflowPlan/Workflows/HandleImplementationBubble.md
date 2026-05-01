@@ -177,6 +177,27 @@ Boundary rules:
 5. `escalation_reason_code` is optional and should be present only when the handler is handing an already-anchored human-checkpoint reason back upward
 6. allowed `escalation_reason_code` values in this workflow are exactly `BUBBLE_ROUTE_NORMALIZATION_REQUIRED` or `NO_TRUSTWORTHY_ROUTE`
 
+### Auto-approval Gate Proof
+
+When `PAIRFLOW_STATUS.state` is `READY_FOR_HUMAN_APPROVAL` or legacy
+`READY_FOR_APPROVAL`, the handler may treat the separate approval/review path as
+already satisfied only when Pairflow status proves all of the following:
+
+1. `reviewPolicy.meta_review_consecutive_clean_runs_required > 1`
+2. `metaReview.consecutiveCleanRuns >= reviewPolicy.meta_review_consecutive_clean_runs_required`
+3. no `failing_gates` are present
+4. the status still has an approval request at the human gate rather than an
+   active reviewer/implementer handoff
+
+This proof means Pairflow has already run the configured extra clean
+meta-review rounds that replaced the manual extra review pass. If any required
+field is absent, malformed, or below threshold, route to
+`implementation_bubble_review` instead of auto-approving.
+
+The actual lifecycle approval must still be delegated through `UsePairflow`
+`CloseBubble`, which runs `pairflow bubble approve` before commit/merge. The
+handler emits only the normalized close route; it must not inline approval.
+
 ### Reason-Code Anchor Set
 
 This workflow may emit only the already-anchored implementation-scope reason codes:
@@ -184,11 +205,12 @@ This workflow may emit only the already-anchored implementation-scope reason cod
 1. `IMPL_BUBBLE_CREATE_REQUIRED`
 2. `IMPL_BUBBLE_REVIEW_REQUIRED`
 3. `IMPL_BUBBLE_CLOSE_REQUIRED`
-4. `BUBBLE_NORMALIZED_REPLAN_REQUIRED`
-5. `BUBBLE_ROUTE_NORMALIZATION_REQUIRED`
-6. `PAIRFLOW_STATUS_UNAVAILABLE`
-7. `OPERATOR_TROUBLESHOOT_HINT`
-8. `NO_TRUSTWORTHY_ROUTE`
+4. `IMPL_BUBBLE_AUTO_APPROVAL_CLOSE_REQUIRED`
+5. `BUBBLE_NORMALIZED_REPLAN_REQUIRED`
+6. `BUBBLE_ROUTE_NORMALIZATION_REQUIRED`
+7. `PAIRFLOW_STATUS_UNAVAILABLE`
+8. `OPERATOR_TROUBLESHOOT_HINT`
+9. `NO_TRUSTWORTHY_ROUTE`
 
 ## Decision Order
 
@@ -292,7 +314,50 @@ When `impl_bubble_id` exists:
 2. use Pairflow lifecycle truth only for implementation-bubble review, close, troubleshooting, or fail-closed classification
 3. do not reopen document-phase completion, plan sequencing, or archive ownership here
 
-### 5. Review-gate path
+### 5. Auto-approval close path
+
+Choose close when Pairflow truth shows the linked implementation bubble reached
+the explicit approval gate and the auto-approval gate proof above is satisfied.
+
+Authoritative trigger anchors:
+
+1. `READY_FOR_HUMAN_APPROVAL`
+2. legacy-compatible `READY_FOR_APPROVAL`
+
+Required proof:
+
+1. `reviewPolicy.meta_review_consecutive_clean_runs_required > 1`
+2. `metaReview.consecutiveCleanRuns >= reviewPolicy.meta_review_consecutive_clean_runs_required`
+3. `failing_gates` is absent or empty
+4. there is no active handoff in `executionContext`
+
+Delegation:
+
+1. delegate approve/commit/merge/cleanup through `UsePairflow` `CloseBubble`
+2. require the returned close result to prove finalized bubble artifact deletion,
+   or to provide an explicit retained-bubble reason that prevents reporting a
+   settled close
+
+Output:
+
+```yaml
+route_class: implementation_bubble_close
+target_workflow_surface: CloseImplementationBubble
+continuation_mode: auto_continue
+source_owner: bubble_routing_layer
+scope: implementation
+source_scope: not_applicable
+approval_gate_state: already_satisfied
+reason_code: IMPL_BUBBLE_AUTO_APPROVAL_CLOSE_REQUIRED
+delegated_use_pairflow_surface: CloseBubble
+cleanup_postcondition: <bubble_deleted|retained_with_reason>
+auto_approval_proof:
+  required_clean_runs: <reviewPolicy.meta_review_consecutive_clean_runs_required>
+  observed_clean_runs: <metaReview.consecutiveCleanRuns>
+handoff_boundary_note: Auto-approve through UsePairflow CloseBubble because Pairflow already satisfied the configured multi-clean-meta-review gate; the caller may continue orchestration after authoritative close state returns.
+```
+
+### 6. Review-gate path
 
 Choose review when Pairflow truth shows the linked implementation bubble reached its explicit approval-review gate.
 
@@ -320,7 +385,7 @@ delegated_use_pairflow_surface: ReviewBubble
 handoff_boundary_note: Run deep review at the implementation-bubble approval gate and stop for human approve/rework judgment.
 ```
 
-### 6. Close path
+### 7. Close path
 
 Choose close only when the bubble-side route contract proves both of the following:
 
@@ -331,6 +396,7 @@ Authoritative trigger anchors:
 
 1. Pairflow state is `APPROVED_FOR_COMMIT`
 2. or the linked bubble is at `DONE` and the current context already carries a trusted structured approval-proof producer such as a clean `UsePairflow` `ReviewBubble` result followed by an explicit human approval outcome recorded in authoritative workflow context rather than prose-only notes
+3. or Rule 5 produced a trusted multi-clean-meta-review auto-approval proof while the linked bubble was at `READY_FOR_HUMAN_APPROVAL` or legacy `READY_FOR_APPROVAL`
 
 Delegation:
 
@@ -358,7 +424,7 @@ Fail-closed rule:
 1. if close/merge succeeds but the finalized bubble artifact remains present without an explicit retained-bubble reason, do not emit an auto-continuable close result
 2. return a human checkpoint or cleanup blocker instead; `UpdateProgress` must not run from a close result that still leaves the closed implementation bubble as an ordinary `DONE` artifact
 
-### 7. Normalized replanning path
+### 8. Normalized replanning path
 
 Choose normalized replanning only when the bubble-side route contract proves that continuation should hand back upward instead of continuing the current implementation-bubble path.
 

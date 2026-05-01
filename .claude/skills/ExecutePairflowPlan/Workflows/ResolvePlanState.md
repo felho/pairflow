@@ -88,6 +88,8 @@ Acceptance rules:
 1. the route must already be normalized by the repo-local bubble routing layer
 2. `route_class` and `target_workflow_surface` must agree with the taxonomy below
 3. close routes are acceptable only when the normalized input explicitly says the relevant bubble is close-ready and that the separate review/approval path is already satisfied; for those routes `approval_gate_state` must be `already_satisfied`, and `ResolvePlanState` must not infer either condition from raw Pairflow state
+   - `already_satisfied` may come from explicit operator approval already recorded by Pairflow, or from a bubble handler's structured auto-approval proof that `reviewPolicy.meta_review_consecutive_clean_runs_required > 1` and `metaReview.consecutiveCleanRuns` met or exceeded that threshold at the `READY_FOR_HUMAN_APPROVAL` gate
+   - absent, malformed, or below-threshold auto-approval fields must remain a review route, not a close route
 4. review routes are acceptable only when `approval_gate_state=review_required`
 5. `route_class=normalized_replanning` is acceptable only when the input explicitly signals replanning as the normalized outcome rather than a bubble review/close continuation; for bubble-origin replanning, `source_scope` must preserve whether the signal came from `document_bubble` or `implementation_bubble`
 6. for `route_class` values other than `normalized_replanning`, `source_scope` must be `not_applicable`
@@ -160,11 +162,11 @@ Field rules:
 | `task_create` | `CreateTask` | `CreatePairflowSpec` | `auto_continue` | `task` | `not_applicable` | `not_applicable` | next canonical task is planned but no task artifact exists yet | create the next task only; do not start bubble work here |
 | `task_review` | `ReviewTask` | `CreatePairflowSpec` | `auto_continue` | `task` | `not_applicable` | `not_applicable` | active task exists but is not yet ready for bubble routing | review/refine task only; do not invent plan/bubble mutations here |
 | `document_bubble_create` | `CreateDocumentBubble` | `UsePairflow` | `stop_at_settled_checkpoint` | `document_bubble` | `not_applicable` | `not_applicable` | approved task has no document bubble linkage yet | create/start the doc bubble and persist `doc_bubble_id`; raw lifecycle follow-up stays with successor bubble routing |
-| `document_bubble_review` | `ReviewDocumentBubble` | `UsePairflow` | `stop_at_human_checkpoint` | `document_bubble` | `not_applicable` | `review_required` | normalized bubble signal says the doc bubble reached its review gate | produce deep-review output for human approval/rework; do not close the bubble here |
-| `document_bubble_close` | `CloseDocumentBubble` | `UsePairflow` | `auto_continue` | `document_bubble` | `not_applicable` | `already_satisfied` | normalized bubble signal says doc bubble is approved and ready to close after the separate review/approval path has already been satisfied | close/merge cleanup only; on successful return the same-run owner goes back to top-level `ResolvePlanState` for fresh route selection |
+| `document_bubble_review` | `ReviewDocumentBubble` | `UsePairflow` | `stop_at_human_checkpoint` | `document_bubble` | `not_applicable` | `review_required` | normalized bubble signal says the doc bubble reached its review gate and no trusted multi-clean-meta-review auto-approval proof is present | produce deep-review output for human approval/rework; do not close the bubble here |
+| `document_bubble_close` | `CloseDocumentBubble` | `UsePairflow` | `auto_continue` | `document_bubble` | `not_applicable` | `already_satisfied` | normalized bubble signal says doc bubble is approved and ready to close after the separate review/approval path has already been satisfied, including trusted multi-clean-meta-review auto-approval proof when configured | close/merge cleanup only; on successful return the same-run owner goes back to top-level `ResolvePlanState` for fresh route selection |
 | `implementation_bubble_create` | `CreateImplementationBubble` | `UsePairflow` | `stop_at_settled_checkpoint` | `implementation_bubble` | `not_applicable` | `not_applicable` | task status is `implementable` and no impl bubble linkage exists yet | create/start the impl bubble, persist `impl_bubble_id`, and move task status to `in_progress`; raw lifecycle follow-up stays with successor bubble routing |
-| `implementation_bubble_review` | `ReviewImplementationBubble` | `UsePairflow` | `stop_at_human_checkpoint` | `implementation_bubble` | `not_applicable` | `review_required` | normalized bubble signal says the impl bubble reached its review gate | produce deep-review output for human approval/rework; do not close the bubble here |
-| `implementation_bubble_close` | `CloseImplementationBubble` | `UsePairflow` | `auto_continue` | `implementation_bubble` | `not_applicable` | `already_satisfied` | normalized bubble signal says impl bubble is approved and ready to close after the separate review/approval path has already been satisfied | close/merge cleanup only; on successful return the top-level auto-continue handoff goes to repo-local `UpdateProgress` |
+| `implementation_bubble_review` | `ReviewImplementationBubble` | `UsePairflow` | `stop_at_human_checkpoint` | `implementation_bubble` | `not_applicable` | `review_required` | normalized bubble signal says the impl bubble reached its review gate and no trusted multi-clean-meta-review auto-approval proof is present | produce deep-review output for human approval/rework; do not close the bubble here |
+| `implementation_bubble_close` | `CloseImplementationBubble` | `UsePairflow` | `auto_continue` | `implementation_bubble` | `not_applicable` | `already_satisfied` | normalized bubble signal says impl bubble is approved and ready to close after the separate review/approval path has already been satisfied, including trusted multi-clean-meta-review auto-approval proof when configured | close/merge cleanup only; on successful return the top-level auto-continue handoff goes to repo-local `UpdateProgress` |
 | `normalized_replanning` | `HandleNormalizedReplan` | repo-local `Workflows/HandleNormalizedReplan.md` | `auto_continue` | `task`, `document_bubble`, or `implementation_bubble` according to normalized source authority | `task` or bubble-origin `document_bubble` / `implementation_bubble` | `not_applicable` | task review or bubble layer produced a normalized replanning signal | consume the normalized signal only; repo-local follow-through may delegate `CreatePairflowSpec` work and prepare supersede/archive handoff, but raw bubble detail and normal aftermath remain out of scope here |
 | `troubleshoot_bubble` | `TroubleshootBubble` | repo-local bubble handler -> `UsePairflow` troubleshooting surface | `stop_at_human_checkpoint` | `bubble_runtime` | `not_applicable` | `not_applicable` | explicit operator hint requires lifecycle troubleshooting | troubleshoot the bubble path only; do not silently resume normal orchestration here |
 | `human_checkpoint` | `HumanCheckpoint` | human decision boundary | `stop_at_human_checkpoint` | `orchestration` | `not_applicable` | `not_applicable` | ambiguity, contract refinement need, or cross-authority conflict remains unresolved | stop and explain why no trustworthy automatic route exists |
@@ -447,7 +449,7 @@ These routes must stop for explicit human judgment or because trustworthy automa
 
 Why:
 
-1. bubble review routes end at the human approval/rework gate by policy
+1. bubble review routes end at the human approval/rework gate by policy unless the relevant bubble handler emitted a close route with trusted multi-clean-meta-review auto-approval proof
 2. troubleshoot and human-checkpoint routes stop because the route contract is no longer safely self-advancing
 
 ## Worked Examples
@@ -605,6 +607,8 @@ Input shape:
 1. task has a persisted document bubble id
 2. `HandleDocumentBubble` supplies `NORMALIZED_BUBBLE_ROUTE=document_bubble_close`
 3. normalized input explicitly proves `approval_gate_state=already_satisfied`
+4. the proof source is either recorded lifecycle approval or trusted
+   multi-clean-meta-review auto-approval proof from the handler
 
 Output:
 
@@ -631,6 +635,8 @@ Input shape:
 1. task has a persisted implementation bubble id
 2. `HandleImplementationBubble` supplies `NORMALIZED_BUBBLE_ROUTE=implementation_bubble_close`
 3. normalized input explicitly proves `approval_gate_state=already_satisfied`
+4. the proof source is either recorded lifecycle approval or trusted
+   multi-clean-meta-review auto-approval proof from the handler
 
 Output:
 
