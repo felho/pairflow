@@ -5,7 +5,7 @@ task_family_id: reconcile-contract-v11-only
 sequence_key: "3"
 task_id: 3-reconcile-contract-v11-only
 title: "Reconcile Contract V11 Only"
-status: approved
+status: implementable
 phase: phase1
 target_files:
   - tests/contracts/v11/reconcile.contract.runner.ts
