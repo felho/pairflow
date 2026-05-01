@@ -17,6 +17,7 @@ Use these as current contract or governance inputs:
 
 - [pairflow-initial-design.md](./pairflow-initial-design.md) - implemented MVP baseline and retained protocol contract anchors.
 - [reviewer-severity-ontology.md](./reviewer-severity-ontology.md) - canonical reviewer severity policy and source for generated runtime ontology.
+- [reviewer-evidence-governance.md](./reviewer-evidence-governance.md) - active review/evidence trust, skip/run, and docs-only evidence policy.
 - [architecture/architecture-fitness-checks.md](./architecture/architecture-fitness-checks.md) - active architecture fitness policy and CI gate documentation.
 - [architecture/v11-placement-and-extraction-governance.md](./architecture/v11-placement-and-extraction-governance.md) - active placement rules for `src/v11/**`.
 - [architecture/sandbox-compatibility-gate.md](./architecture/sandbox-compatibility-gate.md) - active sandbox compatibility gate.
@@ -53,14 +54,34 @@ These documents preserve why a policy or feature changed. They should not
 override active contract documents unless an active document explicitly points
 to them as authority:
 
-- [review-loop-optimization.md](./review-loop-optimization.md)
 - [review-loop-ws-d-pilot-report-2026-03.md](./review-loop-ws-d-pilot-report-2026-03.md)
 - [reviewbubble-task-hardening-dontesi-keret-2026-03-12.md](./reviewbubble-task-hardening-dontesi-keret-2026-03-12.md)
 - [reviewer-pass-converged-issue-assessment-2026-03-21.md](./reviewer-pass-converged-issue-assessment-2026-03-21.md)
-- [pairflow-evidence-governance-context-2026-03-03.md](./pairflow-evidence-governance-context-2026-03-03.md)
-- [pairflow-docs-only-evidence-gating-context-2026-03-03.md](./pairflow-docs-only-evidence-gating-context-2026-03-03.md)
 - [spec-skill-evolution.md](./spec-skill-evolution.md)
 - [cmux-ideas.md](./cmux-ideas.md)
+
+## Removed Historical Review/Evidence Docs
+
+The current review/evidence policy was consolidated into
+[reviewer-evidence-governance.md](./reviewer-evidence-governance.md). The
+following historical notes, drafts, and trackers were removed from the working
+tree so LLM context does not accidentally treat them as current authority:
+
+- `docs/review-loop-optimization.md`
+- `docs/pairflow-evidence-governance-context-2026-03-03.md`
+- `docs/pairflow-docs-only-evidence-gating-context-2026-03-03.md`
+- `docs/reviewer-test-execution-skip-spec.md`
+- `docs/reviewer-evidence-autolog-task.md`
+- `docs/structural-enforcement-ideas.md`
+
+Use git history only for incident detail:
+
+```bash
+git log --diff-filter=D -- docs/review-loop-optimization.md
+git show <deletion-commit>^:docs/review-loop-optimization.md
+```
+
+Do not use removed files as current policy authority.
 
 ## Archive / Cleanup Candidates
 

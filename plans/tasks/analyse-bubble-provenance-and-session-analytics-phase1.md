@@ -32,7 +32,7 @@ system_context_ref: docs/pairflow-initial-design.md
 normative_refs:
   - docs/pairflow-initial-design.md
   - docs/bubble-metrics-archive-strategy.md
-  - docs/review-loop-optimization.md
+  - docs/reviewer-evidence-governance.md
 owners:
   - "felho"
 ---

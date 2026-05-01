@@ -7,7 +7,7 @@ phase: phase1
 target_files:
   - plans/tasks/architecture-boundary-simplification-discovery-phase1.md
   - docs/pairflow-initial-design.md
-  - docs/review-loop-optimization.md
+  - docs/reviewer-evidence-governance.md
   - docs/llm-doc-workflow-v1.md
   - docs/v2/architecture-simplification-notes.md
 prd_ref: null
@@ -59,7 +59,7 @@ Keszitsunk egy minimal, de vegrehajthato alapdokumentumot arrol, hogyan lehet a 
 |---|---|---|---|---|---|---|---|---|
 | CS1 | docs/v2/architecture-simplification-notes.md | N/A (docs section) | N/A | uj dokumentum | canonical cel-architektura es boundary elvek rogzitese | P1 | required-now | review diff |
 | CS2 | docs/pairflow-initial-design.md | N/A (architecture appendix update) | N/A | architecture/boundary resz | jelenlegi vs cel felelossegi hatar tisztazasa | P1 | required-now | review diff |
-| CS3 | docs/review-loop-optimization.md | N/A (program linkage) | N/A | stabilization/program fejezet | discovery outputok bekotese roadmap szintre | P2 | required-now | review diff |
+| CS3 | docs/reviewer-evidence-governance.md | N/A (program linkage) | N/A | stabilization/program fejezet | discovery outputok bekotese roadmap szintre | P2 | required-now | review diff |
 | CS4 | plans/tasks/architecture-boundary-simplification-discovery-phase1.md | N/A (task spec) | N/A | jelen task | vegrehajthato L0/L1/L2 contract fenntartasa | P1 | required-now | reviewer check |
 
 ### 2) Data and Interface Contract
@@ -91,7 +91,7 @@ Constraint: ha nincs explicit allowed side effect kodra, implementacio tisztan d
 | Type | Items | Priority | Timing |
 |---|---|---|---|
 | must-use | docs/pairflow-initial-design.md mint baseline | P1 | required-now |
-| must-use | docs/review-loop-optimization.md es aktualis task/pilot tanulsagok | P1 | required-now |
+| must-use | docs/reviewer-evidence-governance.md es aktualis task/pilot tanulsagok | P1 | required-now |
 | must-not-use | implicit "big-bang rewrite" terv | P1 | required-now |
 | must-not-use | bizonyitatlan P0/P1 allitasok discovery fazisban | P1 | required-now |
 
