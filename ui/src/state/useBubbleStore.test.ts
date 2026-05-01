@@ -883,6 +883,65 @@ describe("createBubbleStore", () => {
     expect(store.getState().bubblesById["b-historical"]).toBeUndefined();
   });
 
+  it("accepts low-id realtime events after a reconnect snapshot from a restarted server", async () => {
+    const originalBubble = bubbleSummary({ bubbleId: "b-a", repoPath: "/repo-a" });
+    const restartedBubble = {
+      ...originalBubble,
+      state: "META_REVIEW_RUNNING"
+    } as unknown as typeof originalBubble;
+
+    const api = createApiStub({
+      getRepos: vi.fn(async () => ["/repo-a"]),
+      getBubbles: vi.fn(async () => ({
+        repo: repoSummary("/repo-a"),
+        bubbles: [originalBubble]
+      }))
+    });
+
+    let emitEvent: (event: UiEvent) => void = () => undefined;
+
+    const store = createBubbleStore({
+      api,
+      createEventsClient: (input) => {
+        emitEvent = input.onEvent;
+        return {
+          start: () => undefined,
+          stop: () => undefined,
+          refresh: () => undefined
+        };
+      }
+    });
+
+    await store.getState().initialize();
+
+    emitEvent({
+      id: 100,
+      ts: "2026-02-24T13:00:00.000Z",
+      type: "snapshot",
+      repos: [repoSummary("/repo-a")],
+      bubbles: [originalBubble]
+    });
+
+    emitEvent({
+      id: 0,
+      ts: "2026-02-24T13:05:00.000Z",
+      type: "snapshot",
+      repos: [repoSummary("/repo-a")],
+      bubbles: [originalBubble]
+    });
+
+    emitEvent({
+      id: 1,
+      ts: "2026-02-24T13:05:01.000Z",
+      type: "bubble.updated",
+      repoPath: "/repo-a",
+      bubbleId: "b-a",
+      bubble: restartedBubble
+    });
+
+    expect(store.getState().bubblesById["b-a"]?.state).toBe("META_REVIEW_RUNNING");
+  });
+
   it("persists positions only when explicitly committed", () => {
     const storage = new MemoryStorage();
     const store = createBubbleStore({

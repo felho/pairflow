@@ -1260,9 +1260,13 @@ export function createBubbleStore(
             return;
           }
 
-          latestAppliedEventId = Math.max(latestAppliedEventId, event.id);
-          if (isSnapshot && event.ts > latestAppliedSnapshotTs) {
-            latestAppliedSnapshotTs = event.ts;
+          if (isSnapshot) {
+            latestAppliedEventId = event.id;
+            if (event.ts > latestAppliedSnapshotTs) {
+              latestAppliedSnapshotTs = event.ts;
+            }
+          } else {
+            latestAppliedEventId = Math.max(latestAppliedEventId, event.id);
           }
 
           set((state) => {
