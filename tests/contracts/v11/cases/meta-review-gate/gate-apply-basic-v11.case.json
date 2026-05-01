@@ -1,8 +1,8 @@
 {
-  "id": "gate-apply-basic-parity",
+  "id": "gate-apply-basic-v11",
   "command": "gate",
-  "mode": "parity",
-  "description": "Seed contract case for gate alias apply baseline-v11 parity baseline.",
+  "mode": "v11",
+  "description": "Seed contract case for gate alias apply behavior in v11 mode.",
   "input": {
     "route": "apply",
     "summary": "Seed gate alias apply contract summary",
@@ -19,7 +19,6 @@
     "seed",
     "m3",
     "gate",
-    "meta-review-gate",
-    "parity"
+    "meta-review-gate"
   ]
 }

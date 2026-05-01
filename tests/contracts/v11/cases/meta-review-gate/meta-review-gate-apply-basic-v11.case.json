@@ -2,7 +2,7 @@
   "id": "meta-review-gate-apply-basic-v11",
   "command": "metaReviewGate",
   "mode": "v11",
-  "description": "Seed contract case for meta-review gate apply baseline in v11 mode.",
+  "description": "Seed contract case for meta-review gate basic apply behavior in v11 mode.",
   "input": {
     "route": "apply",
     "summary": "Seed apply contract summary",

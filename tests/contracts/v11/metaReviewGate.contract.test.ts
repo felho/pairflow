@@ -10,13 +10,12 @@ import { readContractCase } from "./runner.js";
 
 const execFileAsync = promisify(execFile);
 const metaReviewGateCaseSources = [
-  "tests/contracts/v11/cases/meta-review-gate/gate-apply-basic-parity.case.json",
+  "tests/contracts/v11/cases/meta-review-gate/gate-apply-basic-v11.case.json",
   "tests/contracts/v11/cases/meta-review-gate/meta-review-gate-apply-basic-v11.case.json",
-  "tests/contracts/v11/cases/meta-review-gate/meta-review-gate-apply-basic-parity.case.json",
-  "tests/contracts/v11/cases/meta-review-gate/meta-review-gate-apply-running-failed-delivery-parity.case.json",
-  "tests/contracts/v11/cases/meta-review-gate/meta-review-gate-apply-running-parity.case.json",
-  "tests/contracts/v11/cases/meta-review-gate/meta-review-gate-apply-running-uncertain-delivery-parity.case.json",
-  "tests/contracts/v11/cases/meta-review-gate/meta-review-gate-apply-sticky-bypass-parity.case.json"
+  "tests/contracts/v11/cases/meta-review-gate/meta-review-gate-apply-running-v11.case.json",
+  "tests/contracts/v11/cases/meta-review-gate/meta-review-gate-apply-running-failed-delivery-v11.case.json",
+  "tests/contracts/v11/cases/meta-review-gate/meta-review-gate-apply-running-uncertain-delivery-v11.case.json",
+  "tests/contracts/v11/cases/meta-review-gate/meta-review-gate-apply-sticky-bypass-v11.case.json"
 ] as const;
 const metaReviewGateExpectedSourcesSorted = metaReviewGateCaseSources.filter(
   (source) => !source.includes("/gate-")

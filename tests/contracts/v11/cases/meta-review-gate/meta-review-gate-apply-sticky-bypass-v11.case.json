@@ -1,8 +1,8 @@
 {
-  "id": "meta-review-gate-apply-sticky-bypass-parity",
+  "id": "meta-review-gate-apply-sticky-bypass-v11",
   "command": "metaReviewGate",
-  "mode": "parity",
-  "description": "Seed contract case for meta-review gate round-local rerun parity baseline.",
+  "mode": "v11",
+  "description": "Seed contract case for meta-review gate sticky human gate bypass behavior in v11 mode.",
   "input": {
     "route": "apply",
     "applyScenario": "sticky_bypass",
@@ -19,7 +19,6 @@
   "tags": [
     "seed",
     "m3",
-    "meta-review-gate",
-    "parity"
+    "meta-review-gate"
   ]
 }
