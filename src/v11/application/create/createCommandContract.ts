@@ -11,13 +11,15 @@ import type {
   BubbleConfig,
   BubbleStateSnapshot,
   CreateReviewArtifactType,
+  BubbleDocContractGatesConfig,
+  BubbleReviewPolicyConfig,
   PairflowCommandProfile
 } from "../../../types/bubble.js";
 
 export interface BubbleCreateInput {
   id: string;
   repoPath: string;
-  baseBranch: string;
+  baseBranch?: string;
   reviewArtifactType: CreateReviewArtifactType;
   ideation?: boolean;
   task?: string;
@@ -30,6 +32,13 @@ export interface BubbleCreateInput {
   now?: Date;
   implementer?: AgentName;
   reviewer?: AgentName;
+  metaReviewer?: AgentName;
+  watchdogTimeoutMinutes?: number;
+  maxRounds?: number;
+  severityGateRound?: number;
+  reviewerContextMode?: BubbleConfig["reviewer_context_mode"];
+  reviewPolicy?: Partial<BubbleReviewPolicyConfig>;
+  docContractGates?: Partial<BubbleDocContractGatesConfig>;
   testCommand?: string;
   typecheckCommand?: string;
   bootstrapCommand?: string;

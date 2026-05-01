@@ -151,6 +151,137 @@ fitness = "pnpm fitness"
     });
   });
 
+  it("parses full create-time repo defaults", () => {
+    const parsed = parsePairflowRepoConfigToml(`
+[defaults]
+base_branch = "main"
+watchdog_timeout_minutes = 40
+max_rounds = 8
+severity_gate_round = 4
+pairflow_command_profile = "external"
+reviewer_context_mode = "fresh"
+
+[defaults.agents]
+implementer = "codex"
+reviewer = "claude"
+meta_reviewer = "codex"
+
+[defaults.review_policy]
+review_loop_mode = "full"
+reviewer_blocking_min_severity = "P3"
+meta_review_auto_rework_min_severity = "P3"
+meta_review_consecutive_clean_runs_required = 2
+
+[defaults.doc_contract_gates]
+round_gate_applies_after = 2
+`);
+
+    expect(parsed.defaults).toEqual({
+      base_branch: "main",
+      watchdog_timeout_minutes: 40,
+      max_rounds: 8,
+      severity_gate_round: 4,
+      pairflow_command_profile: "external",
+      reviewer_context_mode: "fresh",
+      agents: {
+        implementer: "codex",
+        reviewer: "claude",
+        meta_reviewer: "codex"
+      },
+      review_policy: {
+        review_loop_mode: "full",
+        reviewer_blocking_min_severity: "P3",
+        meta_review_auto_rework_min_severity: "P3",
+        meta_review_consecutive_clean_runs_required: 2
+      },
+      doc_contract_gates: {
+        round_gate_applies_after: 2
+      }
+    });
+  });
+
+  it("rejects unsupported and invalid create-time repo defaults", () => {
+    try {
+      parsePairflowRepoConfigToml(`
+[defaults]
+base_branch = "main"
+open_command = "code ."
+watchdog_timeout_minutes = 0
+severity_gate_round = 3
+pairflow_command_profile = "local"
+
+[defaults.agents]
+implementer = "codex"
+reviewer = "codex"
+unknown = "claude"
+
+[defaults.review_policy]
+review_loop_mode = "unsupported"
+meta_review_consecutive_clean_runs_required = 0
+
+[defaults.doc_contract_gates]
+round_gate_applies_after = -1
+extra = 1
+`);
+      throw new Error("Expected parsePairflowRepoConfigToml to throw.");
+    } catch (error) {
+      expect(error).toBeInstanceOf(SchemaValidationError);
+      const paths = (error as SchemaValidationError).errors.map(
+        (entry) => entry.path
+      );
+      expect(paths).toContain("defaults.open_command");
+      expect(paths).toContain("defaults.watchdog_timeout_minutes");
+      expect(paths).toContain("defaults.severity_gate_round");
+      expect(paths).toContain("defaults.pairflow_command_profile");
+      expect(paths).toContain("defaults.agents");
+      expect(paths).toContain("defaults.agents.unknown");
+      expect(paths).toContain("defaults.review_policy.review_loop_mode");
+      expect(paths).toContain(
+        "defaults.review_policy.meta_review_consecutive_clean_runs_required"
+      );
+      expect(paths).toContain(
+        "defaults.doc_contract_gates.round_gate_applies_after"
+      );
+      expect(paths).toContain("defaults.doc_contract_gates.extra");
+    }
+  });
+
+  it("does not materialize empty nested defaults sections", () => {
+    const parsed = parsePairflowRepoConfigToml(`
+[defaults]
+base_branch = "main"
+
+[defaults.agents]
+
+[defaults.review_policy]
+
+[defaults.doc_contract_gates]
+`);
+
+    expect(parsed.defaults).toEqual({
+      base_branch: "main"
+    });
+  });
+
+  it("keeps defaults validation errors when validation section is invalid", () => {
+    const result = validatePairflowRepoConfig({
+      defaults: {
+        open_command: "code .",
+        watchdog_timeout_minutes: 0
+      },
+      validation: "invalid"
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) {
+      return;
+    }
+    const paths = result.errors.map((entry) => entry.path);
+    expect(paths).toContain("defaults.open_command");
+    expect(paths).toContain("defaults.watchdog_timeout_minutes");
+    expect(paths).toContain("validation");
+  });
+
   it("rejects invalid validation command ids and duplicate required ids", () => {
     expect(() =>
       parsePairflowRepoConfigToml(`

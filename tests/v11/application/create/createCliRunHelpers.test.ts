@@ -40,4 +40,33 @@ describe("create CLI run helpers", () => {
 
     expect(built.input.remote).toBe("homelab");
   });
+
+  it("omits baseBranch from create input when --base is absent", () => {
+    const built = buildCreateBubbleInput(
+      {
+        id: "b_create_repo_default_base",
+        repo: "/tmp/repo",
+        reviewArtifactType: "code",
+        task: "Use repo default base"
+      },
+      "/tmp"
+    );
+
+    expect(built.input).not.toHaveProperty("baseBranch");
+  });
+
+  it("forwards normalized explicit baseBranch into create input", () => {
+    const built = buildCreateBubbleInput(
+      {
+        id: "b_create_normalized_base",
+        repo: "/tmp/repo",
+        base: "main",
+        reviewArtifactType: "code",
+        task: "Normalized base"
+      },
+      "/tmp"
+    );
+
+    expect(built.input.baseBranch).toBe("main");
+  });
 });

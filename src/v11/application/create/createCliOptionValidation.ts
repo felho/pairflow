@@ -69,7 +69,14 @@ export function collectCreateValidationState(
   const missing: string[] = [];
   appendMissingOption(missing, options.id, "--id");
   appendMissingOption(missing, options.repo, "--repo");
-  appendMissingOption(missing, options.base, "--base");
+  if (values.base !== undefined) {
+    const baseBranch = values.base.trim();
+    if (baseBranch.length === 0) {
+      missing.push("--base=<non-empty branch>");
+    } else {
+      options.base = baseBranch;
+    }
+  }
 
   const {
     pairflowCommandProfile,

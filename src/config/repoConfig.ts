@@ -4,12 +4,25 @@ import { join } from "node:path";
 import {
   SchemaValidationError,
   assertValidation,
+  isInteger,
   isRecord,
   validationFail,
   validationOk,
   type ValidationError,
   type ValidationResult
 } from "../v11/shared/validation/primitives.js";
+import {
+  isAgentName,
+  isBubbleReviewAutoReworkSeverity,
+  isBubbleReviewLoopMode,
+  isPairflowCommandProfile,
+  isReviewerContextMode,
+  type AgentName,
+  type BubbleReviewAutoReworkSeverity,
+  type BubbleReviewLoopMode,
+  type PairflowCommandProfile,
+  type ReviewerContextMode
+} from "../types/bubble.js";
 import {
   describeValidationCommandIdRule,
   isValidationCommandId
@@ -49,8 +62,362 @@ export interface RepoValidationConfig {
   targets?: Record<string, RepoValidationTargetConfig>;
 }
 
+export interface RepoDefaultsAgentsConfig {
+  implementer?: AgentName;
+  reviewer?: AgentName;
+  meta_reviewer?: AgentName;
+}
+
+export interface RepoDefaultsReviewPolicyConfig {
+  review_loop_mode?: BubbleReviewLoopMode;
+  reviewer_blocking_min_severity?: BubbleReviewAutoReworkSeverity;
+  meta_review_auto_rework_min_severity?: BubbleReviewAutoReworkSeverity;
+  meta_review_consecutive_clean_runs_required?: number;
+}
+
+export interface RepoDefaultsDocContractGatesConfig {
+  round_gate_applies_after?: number;
+}
+
+export interface RepoDefaultsConfig {
+  base_branch?: string;
+  watchdog_timeout_minutes?: number;
+  max_rounds?: number;
+  severity_gate_round?: number;
+  pairflow_command_profile?: PairflowCommandProfile;
+  reviewer_context_mode?: ReviewerContextMode;
+  agents?: RepoDefaultsAgentsConfig;
+  review_policy?: RepoDefaultsReviewPolicyConfig;
+  doc_contract_gates?: RepoDefaultsDocContractGatesConfig;
+}
+
 export interface PairflowRepoConfig {
+  defaults?: RepoDefaultsConfig;
   validation?: RepoValidationConfig;
+}
+
+function readOptionalNonEmptyString(input: {
+  source: Record<string, unknown>;
+  key: string;
+  path: string;
+  errors: ValidationError[];
+}): string | undefined {
+  const value = input.source[input.key];
+  if (value === undefined) {
+    return undefined;
+  }
+  if (typeof value !== "string" || value.trim().length === 0) {
+    input.errors.push({
+      path: input.path,
+      message: "Must be a non-empty string"
+    });
+    return undefined;
+  }
+  return value.trim();
+}
+
+function readOptionalInteger(input: {
+  source: Record<string, unknown>;
+  key: string;
+  path: string;
+  errors: ValidationError[];
+  isValid: (value: number) => boolean;
+  message: string;
+}): number | undefined {
+  const value = input.source[input.key];
+  if (value === undefined) {
+    return undefined;
+  }
+  if (!isInteger(value) || !input.isValid(value)) {
+    input.errors.push({
+      path: input.path,
+      message: input.message
+    });
+    return undefined;
+  }
+  return value;
+}
+
+function readOptionalEnum<T extends string>(input: {
+  source: Record<string, unknown>;
+  key: string;
+  path: string;
+  errors: ValidationError[];
+  isValid: (value: unknown) => value is T;
+  message: string;
+}): T | undefined {
+  const value = input.source[input.key];
+  if (value === undefined) {
+    return undefined;
+  }
+  if (!input.isValid(value)) {
+    input.errors.push({
+      path: input.path,
+      message: input.message
+    });
+    return undefined;
+  }
+  return value;
+}
+
+function validateRepoDefaultsConfig(
+  defaults: unknown,
+  errors: ValidationError[]
+): RepoDefaultsConfig | undefined {
+  if (defaults === undefined) {
+    return undefined;
+  }
+  if (!isRecord(defaults)) {
+    errors.push({
+      path: "defaults",
+      message: "Must be an object/section"
+    });
+    return undefined;
+  }
+
+  const allowedDefaultsKeys = new Set([
+    "base_branch",
+    "watchdog_timeout_minutes",
+    "max_rounds",
+    "severity_gate_round",
+    "pairflow_command_profile",
+    "reviewer_context_mode",
+    "agents",
+    "review_policy",
+    "doc_contract_gates"
+  ]);
+  for (const key of Object.keys(defaults)) {
+    if (!allowedDefaultsKeys.has(key)) {
+      errors.push({
+        path: `defaults.${key}`,
+        message: `Unsupported defaults field "${key}".`
+      });
+    }
+  }
+
+  const validated: RepoDefaultsConfig = {};
+  const baseBranch = readOptionalNonEmptyString({
+    source: defaults,
+    key: "base_branch",
+    path: "defaults.base_branch",
+    errors
+  });
+  if (baseBranch !== undefined) {
+    validated.base_branch = baseBranch;
+  }
+  const watchdogTimeoutMinutes = readOptionalInteger({
+    source: defaults,
+    key: "watchdog_timeout_minutes",
+    path: "defaults.watchdog_timeout_minutes",
+    errors,
+    isValid: (value) => value > 0,
+    message: "Must be a positive integer"
+  });
+  if (watchdogTimeoutMinutes !== undefined) {
+    validated.watchdog_timeout_minutes = watchdogTimeoutMinutes;
+  }
+  const maxRounds = readOptionalInteger({
+    source: defaults,
+    key: "max_rounds",
+    path: "defaults.max_rounds",
+    errors,
+    isValid: (value) => value > 0,
+    message: "Must be a positive integer"
+  });
+  if (maxRounds !== undefined) {
+    validated.max_rounds = maxRounds;
+  }
+  const severityGateRound = readOptionalInteger({
+    source: defaults,
+    key: "severity_gate_round",
+    path: "defaults.severity_gate_round",
+    errors,
+    isValid: (value) => value >= 4,
+    message: "SEVERITY_GATE_ROUND_INVALID: Must be an integer >= 4"
+  });
+  if (severityGateRound !== undefined) {
+    validated.severity_gate_round = severityGateRound;
+  }
+  const pairflowCommandProfile = readOptionalEnum({
+    source: defaults,
+    key: "pairflow_command_profile",
+    path: "defaults.pairflow_command_profile",
+    errors,
+    isValid: isPairflowCommandProfile,
+    message: "PAIRFLOW_COMMAND_PROFILE_INVALID: Must be one of: external, self_host"
+  });
+  if (pairflowCommandProfile !== undefined) {
+    validated.pairflow_command_profile = pairflowCommandProfile;
+  }
+  const reviewerContextMode = readOptionalEnum({
+    source: defaults,
+    key: "reviewer_context_mode",
+    path: "defaults.reviewer_context_mode",
+    errors,
+    isValid: isReviewerContextMode,
+    message: "Must be one of: fresh, persistent"
+  });
+  if (reviewerContextMode !== undefined) {
+    validated.reviewer_context_mode = reviewerContextMode;
+  }
+
+  const agents = defaults.agents;
+  if (agents !== undefined) {
+    if (!isRecord(agents)) {
+      errors.push({ path: "defaults.agents", message: "Must be an object/section" });
+    } else {
+      const allowedAgentKeys = new Set(["implementer", "reviewer", "meta_reviewer"]);
+      for (const key of Object.keys(agents)) {
+        if (!allowedAgentKeys.has(key)) {
+          errors.push({
+            path: `defaults.agents.${key}`,
+            message: `Unsupported defaults.agents field "${key}".`
+          });
+        }
+      }
+      const validatedAgents: RepoDefaultsAgentsConfig = {};
+      const agentKeys = [
+        "implementer",
+        "reviewer",
+        "meta_reviewer"
+      ] as const;
+      for (const key of agentKeys) {
+        const value = readOptionalEnum({
+          source: agents,
+          key,
+          path: `defaults.agents.${key}`,
+          errors,
+          isValid: isAgentName,
+          message: "Must be one of: codex, claude"
+        });
+        if (value !== undefined) {
+          validatedAgents[key] = value;
+        }
+      }
+      if (
+        validatedAgents.implementer !== undefined &&
+        validatedAgents.reviewer !== undefined &&
+        validatedAgents.implementer === validatedAgents.reviewer
+      ) {
+        errors.push({
+          path: "defaults.agents",
+          message: "implementer and reviewer must be different agents"
+        });
+      }
+      if (Object.keys(validatedAgents).length > 0) {
+        validated.agents = validatedAgents;
+      }
+    }
+  }
+
+  const reviewPolicy = defaults.review_policy;
+  if (reviewPolicy !== undefined) {
+    if (!isRecord(reviewPolicy)) {
+      errors.push({
+        path: "defaults.review_policy",
+        message: "Must be an object/section"
+      });
+    } else {
+      const allowedReviewPolicyKeys = new Set([
+        "review_loop_mode",
+        "reviewer_blocking_min_severity",
+        "meta_review_auto_rework_min_severity",
+        "meta_review_consecutive_clean_runs_required"
+      ]);
+      for (const key of Object.keys(reviewPolicy)) {
+        if (!allowedReviewPolicyKeys.has(key)) {
+          errors.push({
+            path: `defaults.review_policy.${key}`,
+            message: `Unsupported defaults.review_policy field "${key}".`
+          });
+        }
+      }
+      const validatedPolicy: RepoDefaultsReviewPolicyConfig = {};
+      const reviewLoopMode = readOptionalEnum({
+        source: reviewPolicy,
+        key: "review_loop_mode",
+        path: "defaults.review_policy.review_loop_mode",
+        errors,
+        isValid: isBubbleReviewLoopMode,
+        message: "REVIEW_POLICY_LOOP_MODE_INVALID: Must be one of: full, meta_only"
+      });
+      if (reviewLoopMode !== undefined) {
+        validatedPolicy.review_loop_mode = reviewLoopMode;
+      }
+      const reviewerSeverity = readOptionalEnum({
+        source: reviewPolicy,
+        key: "reviewer_blocking_min_severity",
+        path: "defaults.review_policy.reviewer_blocking_min_severity",
+        errors,
+        isValid: isBubbleReviewAutoReworkSeverity,
+        message: "REVIEW_POLICY_THRESHOLD_INVALID: Must be one of: P1, P2, P3"
+      });
+      if (reviewerSeverity !== undefined) {
+        validatedPolicy.reviewer_blocking_min_severity = reviewerSeverity;
+      }
+      const metaSeverity = readOptionalEnum({
+        source: reviewPolicy,
+        key: "meta_review_auto_rework_min_severity",
+        path: "defaults.review_policy.meta_review_auto_rework_min_severity",
+        errors,
+        isValid: isBubbleReviewAutoReworkSeverity,
+        message: "REVIEW_POLICY_THRESHOLD_INVALID: Must be one of: P1, P2, P3"
+      });
+      if (metaSeverity !== undefined) {
+        validatedPolicy.meta_review_auto_rework_min_severity = metaSeverity;
+      }
+      const cleanRuns = readOptionalInteger({
+        source: reviewPolicy,
+        key: "meta_review_consecutive_clean_runs_required",
+        path: "defaults.review_policy.meta_review_consecutive_clean_runs_required",
+        errors,
+        isValid: (value) => value >= 1,
+        message:
+          "REVIEW_POLICY_CONSECUTIVE_CLEAN_RUNS_REQUIRED_INVALID: Must be an integer >= 1"
+      });
+      if (cleanRuns !== undefined) {
+        validatedPolicy.meta_review_consecutive_clean_runs_required = cleanRuns;
+      }
+      if (Object.keys(validatedPolicy).length > 0) {
+        validated.review_policy = validatedPolicy;
+      }
+    }
+  }
+
+  const docContractGates = defaults.doc_contract_gates;
+  if (docContractGates !== undefined) {
+    if (!isRecord(docContractGates)) {
+      errors.push({
+        path: "defaults.doc_contract_gates",
+        message: "Must be an object/section"
+      });
+    } else {
+      const allowedDocContractGateKeys = new Set(["round_gate_applies_after"]);
+      for (const key of Object.keys(docContractGates)) {
+        if (!allowedDocContractGateKeys.has(key)) {
+          errors.push({
+            path: `defaults.doc_contract_gates.${key}`,
+            message: `Unsupported defaults.doc_contract_gates field "${key}".`
+          });
+        }
+      }
+      const roundGateAppliesAfter = readOptionalInteger({
+        source: docContractGates,
+        key: "round_gate_applies_after",
+        path: "defaults.doc_contract_gates.round_gate_applies_after",
+        errors,
+        isValid: (value) => value >= 0,
+        message: "Must be a non-negative integer"
+      });
+      if (roundGateAppliesAfter !== undefined) {
+        validated.doc_contract_gates = {
+          round_gate_applies_after: roundGateAppliesAfter
+        };
+      }
+    }
+  }
+
+  return validated;
 }
 
 export function resolvePairflowRepoConfigPath(repoPath: string): string {
@@ -73,28 +440,32 @@ export function validatePairflowRepoConfig(
     };
   }
 
-  const allowedTopLevelKeys = new Set(["enforcement_mode", "validation"]);
+  const allowedTopLevelKeys = new Set(["enforcement_mode", "validation", "defaults"]);
   for (const key of Object.keys(input)) {
     if (!allowedTopLevelKeys.has(key)) {
       errors.push({
         path: key,
         message:
-          `Unsupported top-level Pairflow repo config section "${key}". Supported sections are [validation] and legacy [enforcement_mode].`
+          `Unsupported top-level Pairflow repo config section "${key}". Supported sections are [defaults], [validation], and legacy [enforcement_mode].`
       });
     }
   }
 
+  const defaults = validateRepoDefaultsConfig(input.defaults, errors);
   const validation = input.validation;
   if (validation === undefined) {
-    return errors.length > 0 ? validationFail(errors) : validationOk({});
+    return errors.length > 0
+      ? validationFail(errors)
+      : validationOk({
+          ...(defaults !== undefined ? { defaults } : {})
+        });
   }
   if (!isRecord(validation)) {
-    return validationFail([
-      {
-        path: "validation",
-        message: "Must be an object/section"
-      }
-    ]);
+    errors.push({
+      path: "validation",
+      message: "Must be an object/section"
+    });
+    return validationFail(errors);
   }
 
   const allowedValidationKeys = new Set(["required", "commands", "targets"]);
@@ -363,7 +734,10 @@ export function validatePairflowRepoConfig(
     return validationFail(errors);
   }
 
-  return validationOk({ validation: validatedValidation });
+  return validationOk({
+    ...(defaults !== undefined ? { defaults } : {}),
+    validation: validatedValidation
+  });
 }
 
 export function assertValidPairflowRepoConfig(input: unknown): PairflowRepoConfig {

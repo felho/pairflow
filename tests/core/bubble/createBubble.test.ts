@@ -8,6 +8,7 @@ import {
   createBubble,
   extractReviewerFocus
 } from "../../../src/v11/application/create/createBubble.js";
+import { getBubbleStatusV11 as getBubbleStatus } from "../../../src/v11/application/status/emitStatusV11.js";
 import { SchemaValidationError } from "../../../src/v11/shared/validation/primitives.js";
 import { getBubblePaths } from "../../../src/v11/infrastructure/artifact/bubble/paths.js";
 import {
@@ -634,6 +635,439 @@ describe("createBubble", () => {
       "fitness",
       "typecheck"
     ]);
+  });
+
+  it("materializes create-time repo defaults into bubble config", async () => {
+    const repoPath = await createTempRepo();
+    await writeFile(
+      join(repoPath, "pairflow.toml"),
+      [
+        "[defaults]",
+        'base_branch = "develop"',
+        "watchdog_timeout_minutes = 45",
+        "max_rounds = 11",
+        "severity_gate_round = 5",
+        'pairflow_command_profile = "self_host"',
+        'reviewer_context_mode = "persistent"',
+        "",
+        "[defaults.agents]",
+        'implementer = "claude"',
+        'reviewer = "codex"',
+        'meta_reviewer = "claude"',
+        "",
+        "[defaults.review_policy]",
+        'review_loop_mode = "meta_only"',
+        'reviewer_blocking_min_severity = "P2"',
+        'meta_review_auto_rework_min_severity = "P1"',
+        "meta_review_consecutive_clean_runs_required = 3",
+        "",
+        "[defaults.doc_contract_gates]",
+        "round_gate_applies_after = 4",
+        ""
+      ].join("\n"),
+      "utf8"
+    );
+
+    const result = await createBubble({
+      id: "b_create_repo_defaults",
+      repoPath,
+      reviewArtifactType: "code",
+      task: "Repo defaults",
+      cwd: repoPath
+    });
+
+    expect(result.config).toMatchObject({
+      base_branch: "develop",
+      watchdog_timeout_minutes: 45,
+      max_rounds: 11,
+      severity_gate_round: 5,
+      pairflow_command_profile: "self_host",
+      reviewer_context_mode: "persistent",
+      agents: {
+        implementer: "claude",
+        reviewer: "codex",
+        meta_reviewer: "claude"
+      },
+      review_policy: {
+        review_loop_mode: "meta_only",
+        reviewer_blocking_min_severity: "P2",
+        meta_review_auto_rework_min_severity: "P1",
+        meta_review_consecutive_clean_runs_required: 3
+      },
+      doc_contract_gates: {
+        round_gate_applies_after: 4
+      }
+    });
+    const bubbleToml = await readFile(result.paths.bubbleTomlPath, "utf8");
+    expect(bubbleToml).toContain('base_branch = "develop"');
+    expect(bubbleToml).toContain("watchdog_timeout_minutes = 45");
+    expect(bubbleToml).toContain("meta_review_consecutive_clean_runs_required = 3");
+    const reparsedConfig = parseBubbleConfigToml(bubbleToml);
+    expect(reparsedConfig.base_branch).toBe("develop");
+    expect(reparsedConfig.watchdog_timeout_minutes).toBe(45);
+    expect(reparsedConfig.max_rounds).toBe(11);
+    expect(reparsedConfig.severity_gate_round).toBe(5);
+    expect(reparsedConfig.pairflow_command_profile).toBe("self_host");
+    expect(reparsedConfig.reviewer_context_mode).toBe("persistent");
+    expect(reparsedConfig.agents.implementer).toBe("claude");
+    expect(reparsedConfig.agents.reviewer).toBe("codex");
+    expect(reparsedConfig.agents.meta_reviewer).toBe("claude");
+    expect(reparsedConfig.review_policy?.review_loop_mode).toBe("meta_only");
+    expect(reparsedConfig.review_policy?.reviewer_blocking_min_severity).toBe("P2");
+    expect(reparsedConfig.review_policy?.meta_review_auto_rework_min_severity).toBe("P1");
+    expect(
+      reparsedConfig.review_policy?.meta_review_consecutive_clean_runs_required
+    ).toBe(3);
+    expect(reparsedConfig.doc_contract_gates.round_gate_applies_after).toBe(4);
+  });
+
+  it("keeps explicit create input ahead of repo defaults", async () => {
+    const repoPath = await createTempRepo();
+    await writeFile(
+      join(repoPath, "pairflow.toml"),
+      [
+        "[defaults]",
+        'base_branch = "develop"',
+        "watchdog_timeout_minutes = 45",
+        "max_rounds = 11",
+        "severity_gate_round = 5",
+        'pairflow_command_profile = "self_host"',
+        'reviewer_context_mode = "persistent"',
+        "",
+        "[defaults.agents]",
+        'implementer = "claude"',
+        'reviewer = "codex"',
+        "",
+        "[defaults.review_policy]",
+        'review_loop_mode = "meta_only"',
+        'reviewer_blocking_min_severity = "P2"',
+        'meta_review_auto_rework_min_severity = "P1"',
+        "meta_review_consecutive_clean_runs_required = 3",
+        "",
+        "[defaults.doc_contract_gates]",
+        "round_gate_applies_after = 4",
+        ""
+      ].join("\n"),
+      "utf8"
+    );
+
+    const result = await createBubble({
+      id: "b_create_defaults_explicit",
+      repoPath,
+      baseBranch: "main",
+      reviewArtifactType: "code",
+      task: "Explicit wins",
+      cwd: repoPath,
+      implementer: "codex",
+      reviewer: "claude",
+      watchdogTimeoutMinutes: 60,
+      maxRounds: 12,
+      severityGateRound: 6,
+      reviewerContextMode: "fresh",
+      pairflowCommandProfile: "external",
+      reviewPolicy: {
+        review_loop_mode: "full",
+        reviewer_blocking_min_severity: "P3",
+        meta_review_auto_rework_min_severity: "P2",
+        meta_review_consecutive_clean_runs_required: 5
+      },
+      docContractGates: {
+        round_gate_applies_after: 1
+      }
+    });
+
+    expect(result.config.base_branch).toBe("main");
+    expect(result.config.agents.implementer).toBe("codex");
+    expect(result.config.agents.reviewer).toBe("claude");
+    expect(result.config.watchdog_timeout_minutes).toBe(60);
+    expect(result.config.max_rounds).toBe(12);
+    expect(result.config.severity_gate_round).toBe(6);
+    expect(result.config.reviewer_context_mode).toBe("fresh");
+    expect(result.config.pairflow_command_profile).toBe("external");
+    expect(result.config.review_policy).toMatchObject({
+      review_loop_mode: "full",
+      reviewer_blocking_min_severity: "P3",
+      meta_review_auto_rework_min_severity: "P2",
+      meta_review_consecutive_clean_runs_required: 5
+    });
+    expect(result.config.doc_contract_gates.round_gate_applies_after).toBe(1);
+  });
+
+  it("merges partial nested repo defaults with built-in config defaults", async () => {
+    const repoPath = await createTempRepo();
+    await writeFile(
+      join(repoPath, "pairflow.toml"),
+      [
+        "[defaults]",
+        'base_branch = "main"',
+        "",
+        "[defaults.agents]",
+        'meta_reviewer = "claude"',
+        "",
+        "[defaults.review_policy]",
+        'reviewer_blocking_min_severity = "P2"',
+        ""
+      ].join("\n"),
+      "utf8"
+    );
+
+    const result = await createBubble({
+      id: "b_create_defaults_partial_nested",
+      repoPath,
+      reviewArtifactType: "code",
+      task: "Partial nested defaults",
+      cwd: repoPath
+    });
+
+    expect(result.config.agents).toEqual({
+      implementer: "codex",
+      reviewer: "claude",
+      meta_reviewer: "claude"
+    });
+    expect(result.config.review_policy).toMatchObject({
+      review_loop_mode: "full",
+      reviewer_blocking_min_severity: "P2",
+      meta_review_auto_rework_min_severity: "P3"
+    });
+  });
+
+  it("merges explicit partial review policy field-by-field over repo defaults", async () => {
+    const repoPath = await createTempRepo();
+    await writeFile(
+      join(repoPath, "pairflow.toml"),
+      [
+        "[defaults]",
+        'base_branch = "main"',
+        "",
+        "[defaults.review_policy]",
+        'review_loop_mode = "meta_only"',
+        'reviewer_blocking_min_severity = "P2"',
+        'meta_review_auto_rework_min_severity = "P1"',
+        "meta_review_consecutive_clean_runs_required = 4",
+        ""
+      ].join("\n"),
+      "utf8"
+    );
+
+    const result = await createBubble({
+      id: "b_create_partial_policy_explicit",
+      repoPath,
+      reviewArtifactType: "code",
+      task: "Partial explicit policy",
+      cwd: repoPath,
+      reviewPolicy: {
+        reviewer_blocking_min_severity: "P1"
+      }
+    });
+
+    expect(result.config.review_policy).toEqual({
+      review_loop_mode: "meta_only",
+      reviewer_blocking_min_severity: "P1",
+      meta_review_auto_rework_min_severity: "P1",
+      meta_review_consecutive_clean_runs_required: 4
+    });
+  });
+
+  it("allows meta-reviewer identity to overlap while keeping implementer and reviewer distinct", async () => {
+    const repoPath = await createTempRepo();
+    await writeFile(
+      join(repoPath, "pairflow.toml"),
+      [
+        "[defaults]",
+        'base_branch = "main"',
+        "",
+        "[defaults.agents]",
+        'implementer = "claude"',
+        'reviewer = "codex"',
+        'meta_reviewer = "claude"',
+        ""
+      ].join("\n"),
+      "utf8"
+    );
+
+    const result = await createBubble({
+      id: "b_create_defaults_meta_overlap",
+      repoPath,
+      reviewArtifactType: "code",
+      task: "Meta overlap",
+      cwd: repoPath
+    });
+
+    expect(result.config.agents).toEqual({
+      implementer: "claude",
+      reviewer: "codex",
+      meta_reviewer: "claude"
+    });
+  });
+
+  it("fails before persistence when base branch is unresolved", async () => {
+    const repoPath = await createTempRepo();
+    const bubbleId = "b_create_missing_base";
+
+    await expect(
+      createBubble({
+        id: bubbleId,
+        repoPath,
+        reviewArtifactType: "code",
+        task: "Missing base",
+        cwd: repoPath
+      })
+    ).rejects.toThrow(/--base <branch>.*\[defaults\]\.base_branch/u);
+    await expect(
+      stat(join(repoPath, ".pairflow", "bubbles", bubbleId))
+    ).rejects.toMatchObject({ code: "ENOENT" });
+  });
+
+  it("rejects explicit empty base branch instead of falling through to repo defaults", async () => {
+    const repoPath = await createTempRepo();
+    const bubbleId = "b_create_empty_base";
+    await writeFile(
+      join(repoPath, "pairflow.toml"),
+      '[defaults]\nbase_branch = "develop"\n',
+      "utf8"
+    );
+
+    await expect(
+      createBubble({
+        id: bubbleId,
+        repoPath,
+        baseBranch: "   ",
+        reviewArtifactType: "code",
+        task: "Empty base",
+        cwd: repoPath
+      })
+    ).rejects.toThrow(/Base branch cannot be empty/u);
+    await expect(
+      stat(join(repoPath, ".pairflow", "bubbles", bubbleId))
+    ).rejects.toMatchObject({ code: "ENOENT" });
+  });
+
+  it("fails invalid repo defaults before bubble identity collision checks", async () => {
+    const repoPath = await createTempRepo();
+    const bubbleId = "b_create_defaults_invalid";
+    await writeFile(
+      join(repoPath, "pairflow.toml"),
+      "[defaults]\nwatchdog_timeout_minutes = 0\n",
+      "utf8"
+    );
+
+    await expect(
+      createBubble({
+        id: bubbleId,
+        repoPath,
+        baseBranch: "main",
+        reviewArtifactType: "code",
+        task: "Invalid defaults",
+        cwd: repoPath
+      })
+    ).rejects.toThrow(SchemaValidationError);
+    await expectRemoteCreateArtifactsAbsent(repoPath, bubbleId);
+  });
+
+  it("rejects explicit/default agent collisions before bubble config validation", async () => {
+    const repoPath = await createTempRepo();
+    const bubbleId = "b_create_defaults_agent_collision";
+    await writeFile(
+      join(repoPath, "pairflow.toml"),
+      [
+        "[defaults]",
+        'base_branch = "main"',
+        "",
+        "[defaults.agents]",
+        'implementer = "claude"',
+        ""
+      ].join("\n"),
+      "utf8"
+    );
+
+    await expect(
+      createBubble({
+        id: bubbleId,
+        repoPath,
+        reviewer: "claude",
+        reviewArtifactType: "code",
+        task: "Agent collision",
+        cwd: repoPath
+      })
+    ).rejects.toThrow(
+      /Create agents are invalid.*implementer and reviewer must be different agents/u
+    );
+    await expectRemoteCreateArtifactsAbsent(repoPath, bubbleId);
+  });
+
+  it("rejects repo-default agent collisions against built-in create agents before bubble config validation", async () => {
+    const repoPath = await createTempRepo();
+    const bubbleId = "b_create_agent_builtin_collision";
+    await writeFile(
+      join(repoPath, "pairflow.toml"),
+      [
+        "[defaults]",
+        'base_branch = "main"',
+        "",
+        "[defaults.agents]",
+        'reviewer = "codex"',
+        ""
+      ].join("\n"),
+      "utf8"
+    );
+
+    await expect(
+      createBubble({
+        id: bubbleId,
+        repoPath,
+        reviewArtifactType: "code",
+        task: "Built-in agent collision",
+        cwd: repoPath
+      })
+    ).rejects.toThrow(
+      /Create agents are invalid.*implementer and reviewer must be different agents/u
+    );
+    await expectRemoteCreateArtifactsAbsent(repoPath, bubbleId);
+  });
+
+  it("keeps runtime status reads anchored to materialized bubble config after repo defaults change", async () => {
+    const repoPath = await createTempRepo();
+    await writeFile(
+      join(repoPath, "pairflow.toml"),
+      [
+        "[defaults]",
+        'base_branch = "main"',
+        "watchdog_timeout_minutes = 45",
+        'reviewer_context_mode = "persistent"',
+        ""
+      ].join("\n"),
+      "utf8"
+    );
+
+    const result = await createBubble({
+      id: "b_create_defaults_runtime_no_leak",
+      repoPath,
+      reviewArtifactType: "code",
+      task: "Runtime no leak",
+      cwd: repoPath
+    });
+
+    await writeFile(
+      join(repoPath, "pairflow.toml"),
+      [
+        "[defaults]",
+        "watchdog_timeout_minutes = 0",
+        'pairflow_command_profile = "invalid"',
+        ""
+      ].join("\n"),
+      "utf8"
+    );
+
+    const status = await getBubbleStatus({
+      bubbleId: result.bubbleId,
+      cwd: repoPath,
+      now: new Date("2026-02-22T14:03:00.000Z")
+    });
+
+    expect(status.watchdog.timeoutMinutes).toBe(45);
+    expect(status.bubbleToml).toContain('base_branch = "main"');
+    expect(status.bubbleToml).toContain("watchdog_timeout_minutes = 45");
+    expect(status.bubbleToml).toContain('reviewer_context_mode = "persistent"');
   });
 
   it("materializes selected validation target metadata and commands into bubble config", async () => {

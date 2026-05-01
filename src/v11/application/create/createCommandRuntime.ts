@@ -10,6 +10,7 @@ import type { PairflowGlobalConfig } from "../../../config/pairflowConfig.js";
 import { PAIRFLOW_REMOTE_CONFIG_INVALID } from "../../../config/pairflowConfig.js";
 import {
   DEFAULT_DOC_CONTRACT_ROUND_GATE_APPLIES_AFTER,
+  DEFAULT_IMPLEMENTER_AGENT,
   DEFAULT_MAX_ROUNDS,
   DEFAULT_PAIRFLOW_COMMAND_PROFILE,
   DEFAULT_QUALITY_MODE,
@@ -17,6 +18,7 @@ import {
   DEFAULT_REVIEW_POLICY_REVIEWER_BLOCKING_MIN_SEVERITY,
   DEFAULT_REVIEW_POLICY_LOOP_MODE,
   DEFAULT_REVIEWER_CONTEXT_MODE,
+  DEFAULT_REVIEWER_AGENT,
   DEFAULT_SEVERITY_GATE_ROUND,
   DEFAULT_WATCHDOG_TIMEOUT_MINUTES,
   DEFAULT_WORK_MODE
@@ -24,7 +26,9 @@ import {
 import type {
   AgentName,
   BubbleConfig,
+  BubbleDocContractGatesConfig,
   BubbleRemotePointerCreated,
+  BubbleReviewPolicyConfig,
   CreateReviewArtifactType,
   PairflowCommandProfile
 } from "../../../types/bubble.js";
@@ -35,11 +39,11 @@ import {
   isNonEmptyString,
   SchemaValidationError
 } from "../../shared/validation/primitives.js";
-import { builtInValidationCommandIds } from "../../shared/validation/validationCommandId.js";
 import type { ResolvedTaskInput } from "./createCommandContract.js";
 import {
   parseCreateRemoteAlias
 } from "./createRemoteAlias.js";
+import { buildValidationCommandsConfig } from "./createValidationCommandsConfig.js";
 
 export class BubbleCreateError extends Error {
   public constructor(message: string) {
@@ -69,6 +73,12 @@ export interface CreateBubbleConfigInput {
   implementer?: AgentName;
   reviewer?: AgentName;
   metaReviewer?: AgentName;
+  watchdogTimeoutMinutes?: number;
+  maxRounds?: number;
+  severityGateRound?: number;
+  reviewerContextMode?: BubbleConfig["reviewer_context_mode"];
+  reviewPolicy?: Partial<BubbleReviewPolicyConfig>;
+  docContractGates?: Partial<BubbleDocContractGatesConfig>;
   testCommand?: string;
   typecheckCommand?: string;
   bootstrapCommand?: string;
@@ -81,40 +91,6 @@ export interface CreateBubbleConfigInput {
 export interface ResolvedCreateBubbleRemoteExecution {
   remoteAlias: string;
   remotePointer: BubbleRemotePointerCreated;
-}
-
-function buildValidationCommandsConfig(
-  input: CreateBubbleConfigInput
-): BubbleConfig["commands"] {
-  const resolvedCommands = input.resolvedValidationCommands?.commands;
-  const customCommands = Object.fromEntries(
-    Object.entries(resolvedCommands ?? {}).filter(
-      ([id]) => !(builtInValidationCommandIds as readonly string[]).includes(id)
-    )
-  );
-  return {
-    ...(resolvedCommands?.bootstrap !== undefined || input.bootstrapCommand !== undefined
-      ? { bootstrap: resolvedCommands?.bootstrap ?? input.bootstrapCommand }
-      : {}),
-    ...(resolvedCommands?.lint !== undefined
-      ? { lint: resolvedCommands.lint }
-      : {}),
-    test: resolvedCommands?.test ?? input.testCommand ?? "pnpm test",
-    typecheck: resolvedCommands?.typecheck ?? input.typecheckCommand ?? "pnpm typecheck",
-    ...customCommands,
-    ...(input.resolvedValidationCommands?.validationRequired !== undefined
-      ? {
-          validation_required:
-            input.resolvedValidationCommands.validationRequired
-        }
-      : {}),
-    ...(input.resolvedValidationCommands?.validationRequiredExplicit !== undefined
-      ? {
-          validation_required_explicit:
-            input.resolvedValidationCommands.validationRequiredExplicit
-        }
-      : {})
-  };
 }
 
 export function validateBubbleId(id: string): void {
@@ -327,28 +303,39 @@ export function buildBubbleConfig(input: CreateBubbleConfigInput): BubbleConfig 
     review_artifact_type: input.reviewArtifactType,
     pairflow_command_profile:
       input.pairflowCommandProfile ?? DEFAULT_PAIRFLOW_COMMAND_PROFILE,
-    reviewer_context_mode: DEFAULT_REVIEWER_CONTEXT_MODE,
-    watchdog_timeout_minutes: DEFAULT_WATCHDOG_TIMEOUT_MINUTES,
-    max_rounds: DEFAULT_MAX_ROUNDS,
-    severity_gate_round: DEFAULT_SEVERITY_GATE_ROUND,
+    reviewer_context_mode:
+      input.reviewerContextMode ?? DEFAULT_REVIEWER_CONTEXT_MODE,
+    watchdog_timeout_minutes:
+      input.watchdogTimeoutMinutes ?? DEFAULT_WATCHDOG_TIMEOUT_MINUTES,
+    max_rounds: input.maxRounds ?? DEFAULT_MAX_ROUNDS,
+    severity_gate_round: input.severityGateRound ?? DEFAULT_SEVERITY_GATE_ROUND,
     commit_requires_approval: true,
     accuracy_critical: input.accuracyCritical,
     ...(input.openCommand !== undefined
       ? { open_command: input.openCommand }
       : {}),
     review_policy: {
-      review_loop_mode: DEFAULT_REVIEW_POLICY_LOOP_MODE,
+      review_loop_mode:
+        input.reviewPolicy?.review_loop_mode ?? DEFAULT_REVIEW_POLICY_LOOP_MODE,
       reviewer_blocking_min_severity:
-        DEFAULT_REVIEW_POLICY_REVIEWER_BLOCKING_MIN_SEVERITY,
+        input.reviewPolicy?.reviewer_blocking_min_severity
+        ?? DEFAULT_REVIEW_POLICY_REVIEWER_BLOCKING_MIN_SEVERITY,
       meta_review_auto_rework_min_severity:
-        DEFAULT_REVIEW_POLICY_AUTO_REWORK_MIN_SEVERITY
+        input.reviewPolicy?.meta_review_auto_rework_min_severity
+        ?? DEFAULT_REVIEW_POLICY_AUTO_REWORK_MIN_SEVERITY,
+      ...(input.reviewPolicy?.meta_review_consecutive_clean_runs_required !== undefined
+        ? {
+            meta_review_consecutive_clean_runs_required:
+              input.reviewPolicy.meta_review_consecutive_clean_runs_required
+          }
+        : {})
     },
     ...(input.resolvedValidationCommands?.validationTarget !== undefined
       ? { validation_target: input.resolvedValidationCommands.validationTarget }
       : {}),
     agents: {
-      implementer: input.implementer ?? "codex",
-      reviewer: input.reviewer ?? "claude",
+      implementer: input.implementer ?? DEFAULT_IMPLEMENTER_AGENT,
+      reviewer: input.reviewer ?? DEFAULT_REVIEWER_AGENT,
       // Keep create-path compat normalization anchored to the canonical config
       // validator instead of duplicating a producer-local fallback here.
       ...(input.metaReviewer !== undefined
@@ -360,7 +347,9 @@ export function buildBubbleConfig(input: CreateBubbleConfigInput): BubbleConfig 
       enabled: true
     },
     doc_contract_gates: {
-      round_gate_applies_after: DEFAULT_DOC_CONTRACT_ROUND_GATE_APPLIES_AFTER
+      round_gate_applies_after:
+        input.docContractGates?.round_gate_applies_after
+        ?? DEFAULT_DOC_CONTRACT_ROUND_GATE_APPLIES_AFTER
     },
     ...(input.ideationMode === true
       ? {
