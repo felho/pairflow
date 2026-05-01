@@ -4,7 +4,7 @@ artifact_id: plan_repo_defaults_create_time_v1
 plan_id: repo-defaults-create-time-plan-v1
 created_on: "2026-05-01"
 title: "Repo Defaults Create-Time Plan V1"
-plan_status: draft
+plan_status: approved
 prd_ref: null
 task_order:
   - 1-repo-defaults-create-time
