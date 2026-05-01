@@ -1,11 +1,16 @@
 # ExecutePairflowPlan Draft
 
-Status: exploratory draft
+Status: superseded exploratory draft
 Date: 2026-04-27
+
+Current authority: repo-local `ExecutePairflowPlan` skill source under
+`.claude/skills/ExecutePairflowPlan/**`, plus the archived implementation plan
+and tasks for the 2026-04-28 ExecutePairflowPlan work. This draft is retained
+for early design rationale only.
 
 ## Purpose
 
-This document is a thinking draft for a future `ExecutePairflowPlan` skill.
+This document was a thinking draft for a future `ExecutePairflowPlan` skill.
 
 It is intentionally **not** a PairflowSpec artifact yet. The goal here is to:
 

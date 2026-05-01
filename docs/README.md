@@ -36,16 +36,31 @@ implementation-era snapshots:
 
 ## Product / Feature PRDs And Runbooks
 
-Keep these while the corresponding feature, rollout, or plan family is still
-operationally relevant:
+These are feature documents whose status is mixed. Prefer current code/README
+or the linked active governance document when they disagree with an implemented
+historical PRD.
 
 - [meta-review-gate-prd.md](./meta-review-gate-prd.md)
 - [meta-review-governance.md](./meta-review-governance.md)
-- [artifact-session-provenance-prd.md](./artifact-session-provenance-prd.md)
 - [pairflow-ui-prd.md](./pairflow-ui-prd.md)
 - [repo-registry-prd.md](./repo-registry-prd.md)
 - [bubble-metrics-archive-strategy.md](./bubble-metrics-archive-strategy.md)
-- [execute-pairflow-plan-draft.md](./execute-pairflow-plan-draft.md)
+
+## Draft / Future Design
+
+These are not current runtime authority. Use them as design input only until an
+approved plan/task or implementation adopts the contract:
+
+- [artifact-session-provenance-prd.md](./artifact-session-provenance-prd.md)
+
+## Superseded Exploratory Drafts
+
+These are retained for design rationale, but a newer implementation artifact is
+the current authority:
+
+- [execute-pairflow-plan-draft.md](./execute-pairflow-plan-draft.md) - superseded by repo-local
+  [`ExecutePairflowPlan`](../.claude/skills/ExecutePairflowPlan/SKILL.md)
+  skill source and the archived implementation plan/tasks.
 
 ## Historical Context / Incident Notes
 

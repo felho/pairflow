@@ -1,8 +1,14 @@
 # Bubble Metrics and Archive Strategy
 
 **Date:** 2026-02-26  
-**Status:** Draft (implementation planning)  
+**Status:** Implemented historical architecture baseline
 **Scope:** Pairflow bubble lifecycle, metrics durability, archive retention, and reporting foundations
+
+Current note: durable metrics events, `metrics report`, archive-before-delete,
+and global archive index behavior are implemented. For current CLI and archive
+scope details, prefer `README.md` and the archive/metrics implementation/tests.
+This document remains useful as the strategy baseline and rationale, not as a
+complete current command reference.
 
 ## Why This Document Exists
 

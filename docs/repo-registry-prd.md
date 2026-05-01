@@ -2,7 +2,11 @@
 
 **Date:** 2026-02-25
 **Author:** felho
-**Status:** Draft
+**Status:** Implemented historical PRD
+
+Current note: repo registry behavior is implemented. For operator-facing
+commands and current defaults, prefer `README.md` and the `src/v11/**` registry
+implementation/tests. This PRD is retained for original design rationale.
 
 ## Problem
 

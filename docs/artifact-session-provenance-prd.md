@@ -11,6 +11,12 @@ owners:
 
 **Date:** 2026-04-27
 **Author:** felho
+**Status:** Draft / future design. Not implemented runtime authority.
+
+Current note: this PRD remains useful design input for artifact-level session
+provenance, but existing Pairflow runtime provenance work is bubble-side and
+does not implement this frontmatter recorder contract. Use an approved plan/task
+or implementation artifact before treating this as active behavior.
 
 ## Context
 
