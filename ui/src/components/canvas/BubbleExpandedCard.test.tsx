@@ -10,7 +10,7 @@ vi.mock("../../lib/clipboard", () => ({
 }));
 
 import { bubbleDimensions } from "../../lib/canvasLayout";
-import { bubbleCard, bubbleDetail } from "../../test/fixtures";
+import { bubbleCard, bubbleDetail, timelineEntry } from "../../test/fixtures";
 import { BubbleExpandedCard } from "./BubbleExpandedCard";
 
 interface RenderExpandedCardOverrides {
@@ -19,6 +19,7 @@ interface RenderExpandedCardOverrides {
   onClose?: () => void;
   bubble?: ReturnType<typeof bubbleCard>;
   detail?: ReturnType<typeof bubbleDetail> | null;
+  timeline?: ReturnType<typeof timelineEntry>[];
   bubbleState?: "READY_FOR_HUMAN_APPROVAL";
 }
 
@@ -36,7 +37,7 @@ function renderExpandedCard(overrides: RenderExpandedCardOverrides = {}): void {
         })
       }
       detail={overrides.detail ?? null}
-      timeline={null}
+      timeline={overrides.timeline ?? null}
       position={{
         x: 72,
         y: 96
@@ -192,6 +193,49 @@ describe("BubbleExpandedCard", () => {
 
     expect(screen.getByText(/Question from human/u)).toBeInTheDocument();
     expect(screen.getByText("Need confirmation")).toBeInTheDocument();
+  });
+
+  it("keeps expanded body scrollable when a pending human question is long", () => {
+    const longQuestion = Array.from({ length: 24 }, (_, index) => {
+      return `Question detail ${index + 1}`;
+    }).join(" ");
+
+    renderExpandedCard({
+      bubble: bubbleCard({
+        bubbleId: "b-expanded-1",
+        repoPath: "/repo-a",
+        state: "WAITING_HUMAN"
+      }),
+      detail: bubbleDetail({
+        bubbleId: "b-expanded-1",
+        repoPath: "/repo-a",
+        state: "WAITING_HUMAN",
+        inboxItems: [
+          {
+            envelopeId: "env-long",
+            type: "HUMAN_QUESTION",
+            ts: "2026-02-24T12:01:00.000Z",
+            round: 3,
+            sender: "codex",
+            summary: longQuestion,
+            refs: []
+          }
+        ]
+      }),
+      timeline: [
+        timelineEntry({
+          id: "env-after-question",
+          payload: {
+            question: "Timeline remains reachable after a long question"
+          }
+        })
+      ]
+    });
+
+    expect(screen.getByTestId("expanded-card-body-scroll")).toHaveClass("overflow-y-auto");
+    expect(screen.getByText(longQuestion)).toHaveClass("max-h-28", "overflow-y-auto");
+    expect(screen.getByRole("button", { name: "Attach" })).toBeInTheDocument();
+    expect(screen.getByTestId("bubble-timeline-scroll")).toBeInTheDocument();
   });
 
   it("adds meta-review running border while bubble remains in running state", () => {

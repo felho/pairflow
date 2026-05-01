@@ -285,77 +285,82 @@ export function BubbleExpandedCard(props: BubbleExpandedCardProps): JSX.Element 
         </div>
       </div>
 
-      {attention !== null ? (
-        <div className="mx-4 mb-2 rounded-[10px] border border-rose-500/30 bg-rose-950/30 px-3 py-2 text-[10px] leading-relaxed text-rose-100">
-          {attention.detail ?? attention.label}
-        </div>
-      ) : null}
-
-      {copyError !== null ? (
-        <div className="mx-4 mb-2 rounded-[10px] border border-amber-500/60 bg-amber-950/40 px-3 py-2 text-xs text-amber-100">
-          <div>{copyError}</div>
-          <button
-            type="button"
-            className="mt-2 rounded border border-amber-300/70 px-2 py-0.5 font-semibold text-amber-50 hover:border-amber-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300"
-            onClick={() => {
-              setCopyError(null);
-            }}
-          >
-            Dismiss copy error
-          </button>
-        </div>
-      ) : null}
-
-      {/* Question card (WAITING_HUMAN only) */}
-      {pendingQuestion !== null ? (
-        <div className="mx-4 mb-2.5 rounded-[10px] border border-amber-500/20 bg-amber-500/[0.05] px-3 py-2.5">
-          <div className="mb-1 text-[9px] font-semibold uppercase tracking-wider text-amber-500">
-            &#x2753; Question from {pendingQuestion.sender}
+      <div
+        className="flex min-h-0 flex-1 flex-col overflow-y-auto"
+        data-testid="expanded-card-body-scroll"
+      >
+        {attention !== null ? (
+          <div className="mx-4 mb-2 flex-shrink-0 rounded-[10px] border border-rose-500/30 bg-rose-950/30 px-3 py-2 text-[10px] leading-relaxed text-rose-100">
+            {attention.detail ?? attention.label}
           </div>
-          <div className="text-[11px] leading-relaxed text-[#ccc]">
-            {pendingQuestion.summary}
+        ) : null}
+
+        {copyError !== null ? (
+          <div className="mx-4 mb-2 flex-shrink-0 rounded-[10px] border border-amber-500/60 bg-amber-950/40 px-3 py-2 text-xs text-amber-100">
+            <div>{copyError}</div>
+            <button
+              type="button"
+              className="mt-2 rounded border border-amber-300/70 px-2 py-0.5 font-semibold text-amber-50 hover:border-amber-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300"
+              onClick={() => {
+                setCopyError(null);
+              }}
+            >
+              Dismiss copy error
+            </button>
+          </div>
+        ) : null}
+
+        {/* Question card (WAITING_HUMAN only) */}
+        {pendingQuestion !== null ? (
+          <div className="mx-4 mb-2.5 flex-shrink-0 rounded-[10px] border border-amber-500/20 bg-amber-500/[0.05] px-3 py-2.5">
+            <div className="mb-1 text-[9px] font-semibold uppercase tracking-wider text-amber-500">
+              &#x2753; Question from {pendingQuestion.sender}
+            </div>
+            <div className="max-h-28 overflow-y-auto pr-1 text-[11px] leading-relaxed text-[#ccc]">
+              {pendingQuestion.summary}
+            </div>
+          </div>
+        ) : null}
+
+        {/* Action buttons + timeline toggle */}
+        <div className="mb-2.5 flex-shrink-0 px-4">
+          <div className="flex items-center justify-between">
+            <div className="flex-1">
+              <ActionBar
+                bubble={actionBubble}
+                expectedBubbleToml={props.detail?.bubbleToml ?? null}
+                attach={attach}
+                isSubmitting={props.actionLoading}
+                actionError={props.actionError}
+                retryHint={props.actionRetryHint}
+                actionFailure={props.actionFailure}
+                onAction={props.onAction}
+                onClearFeedback={props.onClearActionFeedback}
+              />
+            </div>
+            <button
+              type="button"
+              onClick={() => setTimelineCompact((v) => !v)}
+              className="ml-2 flex-shrink-0 text-[9px] text-[#555] transition-colors hover:text-[#888]"
+            >
+              {timelineCompact ? "Show messages" : "Hide messages"}
+            </button>
           </div>
         </div>
-      ) : null}
 
-      {/* Action buttons + timeline toggle */}
-      <div className="mb-2.5 px-4">
-        <div className="flex items-center justify-between">
-          <div className="flex-1">
-            <ActionBar
-              bubble={actionBubble}
-              expectedBubbleToml={props.detail?.bubbleToml ?? null}
-              attach={attach}
-              isSubmitting={props.actionLoading}
-              actionError={props.actionError}
-              retryHint={props.actionRetryHint}
-              actionFailure={props.actionFailure}
-              onAction={props.onAction}
-              onClearFeedback={props.onClearActionFeedback}
-            />
-          </div>
-          <button
-            type="button"
-            onClick={() => setTimelineCompact((v) => !v)}
-            className="ml-2 flex-shrink-0 text-[9px] text-[#555] hover:text-[#888] transition-colors"
-          >
-            {timelineCompact ? "Show messages" : "Hide messages"}
-          </button>
+        {/* Timeline */}
+        <div className="flex min-h-24 flex-1 flex-col overflow-hidden px-4 pb-4">
+          <BubbleTimeline
+            entries={props.timeline}
+            isLoading={props.timelineLoading}
+            error={props.timelineError}
+            compact={timelineCompact}
+            metaReviewCleanRunsRequired={
+              attachSource.reviewPolicy?.meta_review_consecutive_clean_runs_required
+              ?? null
+            }
+          />
         </div>
-      </div>
-
-      {/* Timeline */}
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-4 pb-4">
-        <BubbleTimeline
-          entries={props.timeline}
-          isLoading={props.timelineLoading}
-          error={props.timelineError}
-          compact={timelineCompact}
-          metaReviewCleanRunsRequired={
-            attachSource.reviewPolicy?.meta_review_consecutive_clean_runs_required
-            ?? null
-          }
-        />
       </div>
     </article>
   );
