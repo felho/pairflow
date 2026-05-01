@@ -5,7 +5,7 @@ task_family_id: reconcile-contract-v11-only
 sequence_key: "3"
 task_id: 3-reconcile-contract-v11-only
 title: "Reconcile Contract V11 Only"
-status: in_progress
+status: archived
 phase: phase1
 target_files:
   - tests/contracts/v11/reconcile.contract.runner.ts
@@ -28,6 +28,7 @@ impl_bubble_id: 3-reconcile-contract-v11-only-impl
 supersedes: []
 superseded_by: null
 archive_group: 2026-04-30-parity-test-retirement-plan-v1
+archive_path: plans/archive/tasks/2026-04-30-parity-test-retirement-plan-v1/3-reconcile-contract-v11-only.md
 ---
 
 # Task: Reconcile Contract V11 Only

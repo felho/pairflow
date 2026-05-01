@@ -14,7 +14,7 @@ task_order:
   - 2-cli-entrypoint-boundary-guard
   - 3-reconcile-contract-v11-only
   - 4-meta-review-gate-case-rename
-active_task_id: 3-reconcile-contract-v11-only
+active_task_id: 4-meta-review-gate-case-rename
 archive_group: 2026-04-30-parity-test-retirement-plan-v1
 task_tracker:
   - task_id: 1-facade-migration-map-cleanup
@@ -26,8 +26,8 @@ task_tracker:
     status: archived
     notes: "Replace per-command CLI entrypoint parity sentinels with one explicit boundary/inventory guard."
   - task_id: 3-reconcile-contract-v11-only
-    task_path: plans/tasks/3-reconcile-contract-v11-only.md
-    status: in_progress
+    task_path: plans/archive/tasks/2026-04-30-parity-test-retirement-plan-v1/3-reconcile-contract-v11-only.md
+    status: archived
     notes: "Remove tautological reconcile baseline/parity contract modes and keep v11 contract cases only."
   - task_id: 4-meta-review-gate-case-rename
     task_path: null
@@ -141,13 +141,13 @@ without weakening:
    strict fail mode and protects against reintroducing direct core imports.
 3. `pnpm typecheck`, `pnpm lint`, `pnpm test:v11:facades`, `pnpm test`, and
    `pnpm fitness:check` passed on the reviewed baseline.
+4. Task 3 archived after implementation bubble close:
+   `3-reconcile-contract-v11-only-impl` merged on 2026-05-01 and the task
+   artifact moved to the canonical archive group.
 
 ### Open Work
 
-1. Remove exhausted facade parity and migration-map scaffolding.
-2. Replace per-command CLI parity identity tests with a smaller boundary guard.
-3. Convert reconcile contract coverage to v11-only cases.
-4. Rename/reclassify meta-review-gate parity-named cases that are still useful
+1. Rename/reclassify meta-review-gate parity-named cases that are still useful
    behavior cases.
 
 ### Deferred / Future Work
@@ -172,7 +172,7 @@ without weakening:
 |---|---|---|---|---|---|
 | `1-facade-migration-map-cleanup` | `plans/tasks/1-facade-migration-map-cleanup.md` | Remove the empty facade parity map, all-v11 migration map, and obsolete script wiring. | `N/A` | Exhausted migration metadata remains active. | approved |
 | `2-cli-entrypoint-boundary-guard` | `plans/archive/tasks/2026-04-30-parity-test-retirement-plan-v1/2-cli-entrypoint-boundary-guard.md` | Replace per-command `*CliEntrypointParity.test.ts` files with one current-purpose CLI boundary/inventory test. | `1-facade-migration-map-cleanup` | CLI parity tests duplicate one-line shims but still contain useful boundary intent. | archived |
-| `3-reconcile-contract-v11-only` | `plans/tasks/3-reconcile-contract-v11-only.md` | Remove reconcile `baseline`/`parity` contract cases and runner branches that compare aliases to the same v11 implementation. | `1-facade-migration-map-cleanup` | Reconcile contract harness still carries tautological legacy comparison modes. | in_progress |
+| `3-reconcile-contract-v11-only` | `plans/archive/tasks/2026-04-30-parity-test-retirement-plan-v1/3-reconcile-contract-v11-only.md` | Remove reconcile `baseline`/`parity` contract cases and runner branches that compare aliases to the same v11 implementation. | `1-facade-migration-map-cleanup` | Reconcile contract harness still carries tautological legacy comparison modes. | archived |
 | `4-meta-review-gate-case-rename` | `null` | Rename/reclassify meta-review-gate parity-named behavior cases as v11 cases and update corpus expectations. | `3-reconcile-contract-v11-only` | Useful meta-review-gate cases still look like migration parity cases. | not_created |
 
 ## Coverage Map
