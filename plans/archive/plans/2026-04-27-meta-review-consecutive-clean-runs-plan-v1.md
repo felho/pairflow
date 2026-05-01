@@ -32,7 +32,7 @@ task_tracker:
     status: archived
   - task_id: 5-clean-rerun-canonical-context
     task_path: plans/archive/tasks/2026-04-27-meta-review-consecutive-clean-runs-plan-v1/5-clean-rerun-canonical-context.md
-    status: approved
+    status: implementable
 ---
 
 # Plan: Meta-Review Consecutive Clean Runs

@@ -5,7 +5,7 @@ task_family_id: clean-rerun-canonical-context
 sequence_key: "5"
 task_id: 5-clean-rerun-canonical-context
 title: "Meta-Review Clean Rerun Canonical Execution Context"
-status: approved
+status: implementable
 phase: phase5
 target_files:
   - src/v11/shared/metaReviewGate/metaReviewGateCurrentRunFinalization.ts
