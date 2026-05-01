@@ -410,6 +410,48 @@ describe("agentRunnerBridge", () => {
     });
   });
 
+  it("passes the stop signal to the runner command invocation", async () => {
+    const controller = new AbortController();
+    const invocations: AgentRunnerProcessInvocation[] = [];
+
+    await runExecutePairflowPlanContinuation(
+      { ...baseInput(), stopSignal: controller.signal },
+      { command: "agent" },
+      deps({
+        runCommand: vi.fn(async (invocation: AgentRunnerProcessInvocation) => {
+          invocations.push(invocation);
+          return {
+            exitCode: 0,
+            stdout:
+              '{"status":"settled_checkpoint","reason_code":"PLAN_SETTLED"}\n',
+            stderr: ""
+          };
+        })
+      })
+    );
+
+    expect(invocations[0]?.signal).toBe(controller.signal);
+  });
+
+  it("classifies pre-aborted runner input without spawning", async () => {
+    const controller = new AbortController();
+    controller.abort();
+    const dependencies = deps();
+
+    const result = await runExecutePairflowPlanContinuation(
+      { ...baseInput(), stopSignal: controller.signal },
+      { command: "agent" },
+      dependencies
+    );
+
+    expect(result).toMatchObject({
+      status: "blocked",
+      reasonCode: "AGENT_RUNNER_ABORTED",
+      failureStage: "abort"
+    });
+    expect(dependencies.runCommand).not.toHaveBeenCalled();
+  });
+
   it("classifies non-zero exit as blocker and ignores success-like prose", async () => {
     const result = await runExecutePairflowPlanContinuation(
       baseInput(),
@@ -550,6 +592,60 @@ describe("agentRunnerBridge", () => {
       status: "blocked",
       reasonCode: "AGENT_RUNNER_TIMEOUT",
       failureStage: "timeout",
+      exitCode: null
+    });
+  });
+
+  it("aborts the default child process adapter when the stop signal fires", async () => {
+    const controller = new AbortController();
+    const resultPromise = runAgentRunnerCommand({
+      command: process.execPath,
+      args: ["-e", "setInterval(() => undefined, 1000);"],
+      cwd: process.cwd(),
+      timeoutMs: 60_000,
+      signal: controller.signal
+    });
+
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    controller.abort();
+    const result = await resultPromise;
+
+    expect(result.aborted).toBe(true);
+    expect(result.exitCode).toBeNull();
+  });
+
+  it("classifies default-adapter abort through runExecutePairflowPlanContinuation", async () => {
+    const controller = new AbortController();
+    const resultPromise = runExecutePairflowPlanContinuation(
+      {
+        ...baseInput(),
+        planPath: process.cwd(),
+        repoPath: process.cwd(),
+        stopSignal: controller.signal
+      },
+      {
+        command: process.execPath,
+        args: ["-e", "setInterval(() => undefined, 1000);"],
+        timeoutMs: 60_000
+      },
+      {
+        pathExists: async () => true,
+        runCommand: runAgentRunnerCommand,
+        now: vi
+          .fn()
+          .mockReturnValueOnce(new Date("2026-05-01T10:00:00.000Z"))
+          .mockReturnValue(new Date("2026-05-01T10:00:05.000Z"))
+      }
+    );
+
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    controller.abort();
+    const result = await resultPromise;
+
+    expect(result).toMatchObject({
+      status: "blocked",
+      reasonCode: "AGENT_RUNNER_ABORTED",
+      failureStage: "abort",
       exitCode: null
     });
   });

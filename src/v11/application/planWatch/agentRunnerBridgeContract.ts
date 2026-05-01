@@ -6,6 +6,7 @@ export type AgentRunnerBridgeStatus =
 export type AgentRunnerBridgeFailureReasonCode =
   | "AGENT_RUNNER_CONFIG_MISSING"
   | "PLAN_PATH_UNAVAILABLE"
+  | "AGENT_RUNNER_ABORTED"
   | "AGENT_RUNNER_SPAWN_FAILED"
   | "AGENT_RUNNER_TIMEOUT"
   | "AGENT_RUNNER_NON_ZERO_EXIT"
@@ -50,6 +51,7 @@ export interface AgentRunnerBridgeInput {
   trigger: AgentRunnerBridgeTriggerContext;
   now?: Date;
   timeoutMs?: number;
+  stopSignal?: AbortSignal | undefined;
 }
 
 export interface AgentRunnerCommandConfig {
@@ -92,6 +94,7 @@ export interface AgentRunnerProcessInvocation {
   env?: Readonly<Record<string, string | undefined>> | undefined;
   stdin?: string | undefined;
   timeoutMs: number;
+  signal?: AbortSignal | undefined;
 }
 
 export interface AgentRunnerProcessResult {
@@ -99,6 +102,7 @@ export interface AgentRunnerProcessResult {
   stdout: string;
   stderr: string;
   timedOut?: boolean | undefined;
+  aborted?: boolean | undefined;
 }
 
 export type RunAgentRunnerCommandPort = (
@@ -121,6 +125,7 @@ export interface AgentRunnerBridgeResult {
   exitCode?: number | null | undefined;
   failureStage?:
     | "precondition"
+    | "abort"
     | "spawn"
     | "timeout"
     | "exit"
