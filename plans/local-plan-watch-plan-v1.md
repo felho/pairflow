@@ -19,7 +19,7 @@ archive_group: 2026-05-01-local-plan-watch
 task_tracker:
   - task_id: 1-agent-runner-bridge
     task_path: plans/tasks/1-agent-runner-bridge.md
-    status: approved
+    status: not_created
   - task_id: 2-bubble-trigger-index
     task_path: null
     status: not_created
@@ -116,25 +116,25 @@ V1 is intentionally local-first: it may observe and operate remote bubbles only 
 
 ## Open Task List
 
-| Task ID | Task Path | Purpose | Depends On | Closes Gap | Status |
-|---|---|---|---|---|---|
-| `1-agent-runner-bridge` | `null` | Add a local supervised agent-runner bridge that invokes `ExecutePairflowPlan` with compact continuation input, captures the result, and distinguishes settled checkpoints from blockers. | `N/A` | Missing executable bridge between trigger detection and the existing orchestration skill. | not_created |
-| `2-bubble-trigger-index` | `null` | Add lightweight plan-linked bubble discovery and trigger evidence collection for approval-ready bubble states without resolving full plan routes. | `1-agent-runner-bridge` | Missing trustworthy trigger source for automatic continuation after a bubble reaches the human approval gate. | not_created |
-| `3-watch-loop` | `null` | Add local foreground `plan watch` polling with configurable interval, persisted watcher ledger, approval-ready trigger handling, dedupe, and autonomous runner invocation. | `2-bubble-trigger-index` | Missing local trigger process and duplicate-invocation guard. | not_created |
-| `4-pilot-docs` | `null` | Validate the local watcher on a representative plan, document V1 boundaries, and record deferred remote-control-plane follow-up. | `3-watch-loop` | Missing pilot evidence and operator-facing guidance. | not_created |
+| Task ID                  | Task Path | Purpose                                                                                                                                                                                  | Depends On               | Closes Gap                                                                                                    | Status      |
+| ------------------------ | --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------ | ------------------------------------------------------------------------------------------------------------- | ----------- |
+| `1-agent-runner-bridge`  | `null`    | Add a local supervised agent-runner bridge that invokes `ExecutePairflowPlan` with compact continuation input, captures the result, and distinguishes settled checkpoints from blockers. | `N/A`                    | Missing executable bridge between trigger detection and the existing orchestration skill.                     | not_created |
+| `2-bubble-trigger-index` | `null`    | Add lightweight plan-linked bubble discovery and trigger evidence collection for approval-ready bubble states without resolving full plan routes.                                        | `1-agent-runner-bridge`  | Missing trustworthy trigger source for automatic continuation after a bubble reaches the human approval gate. | not_created |
+| `3-watch-loop`           | `null`    | Add local foreground `plan watch` polling with configurable interval, persisted watcher ledger, approval-ready trigger handling, dedupe, and autonomous runner invocation.               | `2-bubble-trigger-index` | Missing local trigger process and duplicate-invocation guard.                                                 | not_created |
+| `4-pilot-docs`           | `null`    | Validate the local watcher on a representative plan, document V1 boundaries, and record deferred remote-control-plane follow-up.                                                         | `3-watch-loop`           | Missing pilot evidence and operator-facing guidance.                                                          | not_created |
 
 ## Coverage Map
 
-| Plan Gap | Closed By | Notes |
-|---|---|---|
-| Missing executable bridge to existing orchestration | `1-agent-runner-bridge` | Must invoke `ExecutePairflowPlan` rather than replace downstream skill workflows with CLI approximations. |
-| Missing trigger evidence after bubble completion gates | `2-bubble-trigger-index` | Must discover linked bubbles and approval-ready transitions without becoming a full route resolver. |
-| Missing always-running local trigger | `3-watch-loop` | Polling is acceptable in V1; event hooks are deferred. |
-| Need to avoid over-polling long-running bubbles | `3-watch-loop` | Default polling interval is 60 seconds and must be configurable. |
-| Risk of watcher repeating the same action | `3-watch-loop` | Requires persisted ledger keyed by plan, trigger kind, bubble id/state evidence where applicable, runner invocation id, and result. |
-| Risk of degrading back to manual notification | `3-watch-loop` | Watch mode must invoke the runner by default; handoff-only output is dry-run/checkpoint/blocker behavior, not the success path. |
-| Ambiguous remote story | `4-pilot-docs` | Documentation must say remote bubbles can be observed/routed only through local control plane; remote-only creation/start is out of scope. |
-| Missing confidence that V1 helps locally | `4-pilot-docs` | Pilot should use a real or fixture plan and include transcript/command evidence. |
+| Plan Gap                                               | Closed By                | Notes                                                                                                                                      |
+| ------------------------------------------------------ | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| Missing executable bridge to existing orchestration    | `1-agent-runner-bridge`  | Must invoke `ExecutePairflowPlan` rather than replace downstream skill workflows with CLI approximations.                                  |
+| Missing trigger evidence after bubble completion gates | `2-bubble-trigger-index` | Must discover linked bubbles and approval-ready transitions without becoming a full route resolver.                                        |
+| Missing always-running local trigger                   | `3-watch-loop`           | Polling is acceptable in V1; event hooks are deferred.                                                                                     |
+| Need to avoid over-polling long-running bubbles        | `3-watch-loop`           | Default polling interval is 60 seconds and must be configurable.                                                                           |
+| Risk of watcher repeating the same action              | `3-watch-loop`           | Requires persisted ledger keyed by plan, trigger kind, bubble id/state evidence where applicable, runner invocation id, and result.        |
+| Risk of degrading back to manual notification          | `3-watch-loop`           | Watch mode must invoke the runner by default; handoff-only output is dry-run/checkpoint/blocker behavior, not the success path.            |
+| Ambiguous remote story                                 | `4-pilot-docs`           | Documentation must say remote bubbles can be observed/routed only through local control plane; remote-only creation/start is out of scope. |
+| Missing confidence that V1 helps locally               | `4-pilot-docs`           | Pilot should use a real or fixture plan and include transcript/command evidence.                                                           |
 
 ## Dependencies and Order
 
