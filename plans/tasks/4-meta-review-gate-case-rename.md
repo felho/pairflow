@@ -5,7 +5,7 @@ task_family_id: meta-review-gate-case-rename
 sequence_key: "4"
 task_id: 4-meta-review-gate-case-rename
 title: "Meta Review Gate Case Rename"
-status: implementable
+status: in_progress
 phase: phase1
 target_files:
   - tests/contracts/v11/metaReviewGate.contract.test.ts
@@ -21,7 +21,7 @@ normative_refs:
 owners:
   - "felho"
 doc_bubble_id: 4-meta-review-gate-case-rename-doc
-impl_bubble_id: null
+impl_bubble_id: 4-meta-review-gate-case-rename-impl
 supersedes: []
 superseded_by: null
 archive_group: 2026-04-30-parity-test-retirement-plan-v1
