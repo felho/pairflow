@@ -25,7 +25,7 @@ task_tracker:
     status: archived
   - task_id: 3-watch-loop
     task_path: plans/tasks/3-watch-loop.md
-    status: approved
+    status: implementable
   - task_id: 4-pilot-docs
     task_path: null
     status: not_created
