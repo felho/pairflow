@@ -24,10 +24,26 @@
 - Important `v11` extracts must have explicit typed boundaries; do not rely on implicit meaning reconstructed from call sites.
 - If protocol or state machine behavior changes, update the spec in the same work.
 
-## Verification Before Commit
+## Local Change Verification
 
-- Run lint, typecheck, and tests relevant to changed code.
-- If any check is skipped, state it explicitly in the summary.
+During implementation, use the narrowest relevant tests for fast feedback as needed.
+Before declaring non-docs code changes complete, use this default verification order:
+
+1. Run `pnpm typecheck`.
+2. Run `pnpm lint`.
+3. Run `pnpm fitness:check:ci`.
+4. Run the narrowest relevant tests for the changed behavior.
+5. Run the broader affected test suite when one exists.
+   - UI changes: `pnpm --dir ui test`
+   - Core/runtime changes: relevant root Vitest files or suites.
+6. Run `pnpm test`.
+7. Rebuild affected runtime artifacts:
+   - Pairflow CLI/runtime source changes (`src/**`, `scripts/**`, CLI/runtime config): `pnpm build`
+   - UI source changes (`ui/src/**`): `pnpm --dir ui build`
+8. If UI source changes affect the running local UI, restart it with `pnpm ui:restart`.
+
+If any step is skipped, explain why in the final summary.
+If `pnpm test` fails, do not describe the repository as fully validated. Either fix the failure or report the exact failing command, failing suites/count, and why it is believed unrelated to the current change.
 
 ## Build Freshness Policy
 
