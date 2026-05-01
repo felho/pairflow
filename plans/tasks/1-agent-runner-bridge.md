@@ -5,7 +5,7 @@ task_family_id: agent-runner-bridge
 sequence_key: "1"
 task_id: 1-agent-runner-bridge
 title: "Local Agent Runner Bridge"
-status: approved
+status: implementable
 phase: phase1
 target_files:
   - "src/v11/application/planWatch/agentRunnerBridge.ts"
