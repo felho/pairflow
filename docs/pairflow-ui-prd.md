@@ -4,6 +4,10 @@
 **Author:** felho  
 **Status:** Draft
 
+Current meta-review operational policy, including clean-run and quality-preset
+authority, lives in [meta-review-governance.md](./meta-review-governance.md).
+This PRD keeps UI-facing requirements only.
+
 ## Problem
 
 Operating multiple Pairflow bubbles currently requires frequent terminal switching and repetitive CLI checks (`bubble list`, `status`, `inbox`, `approve`, `commit`, `merge`). As bubble count grows, operators lose context, react slower to blockers, and occasionally miss post-approval cleanup steps.

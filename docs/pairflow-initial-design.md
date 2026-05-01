@@ -2,7 +2,8 @@
 
 > Historical baseline: the initial MVP scope from this spec is implemented.  
 > Last status review: 2026-03-07.  
-> For current behavior and CLI/API surface, use `README.md` as canonical.
+> For current behavior and CLI/API surface, use `README.md` as canonical. For
+> meta-review operational policy, use `docs/meta-review-governance.md`.
 
 ## Status
 - Date: 2026-02-21

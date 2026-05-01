@@ -35,19 +35,24 @@ Core intent:
 4. Persist the latest recommendation so users can read it without rerunning costly review.
 5. Reuse the existing `UsePairflow/ReviewBubble` workflow as the review engine (do not invent a separate review logic path).
 
-## Decision Snapshot (Locked from current discussion)
+## Decision Snapshot (Historical)
 
-1. `max_auto_rework_rounds = 5`.
+This section records the original MVP decision shape. Current operational
+policy lives in `docs/meta-review-governance.md`; implemented defaults and
+public CLI surface may differ from early rollout wording below.
+
+1. Original `max_auto_rework_rounds` target: `5`; the implemented default
+   `meta_review.auto_rework_limit` is now `10`.
 2. If recommendation is `rework`, Pairflow auto-executes `request-rework` (no human confirmation required).
 3. Auto-rework applies regardless of severity (`P0`-`P3`).
 4. Every reviewer convergence while `sticky_human_gate=false` triggers autonomous review while lifecycle remains `RUNNING`.
 5. When budget is exhausted, flow moves to `READY_FOR_HUMAN_APPROVAL`.
 6. `approve` is never auto-executed in MVP; final approval remains human-driven.
 7. A dedicated meta-reviewer pane runs autonomous review execution and shows live progress.
-8. Pairflow CLI meta-review surface is limited to one canonical actor submit path and two read-only projection commands:
+8. Pairflow CLI meta-review surface is limited to one canonical actor submit path plus generic inspection/remediation surfaces:
    - `agent emit --kind meta_review_result`: canonical autonomous gate write path.
-   - `status`: cached last-autonomous snapshot read (no live review execution).
-   - `last-report`: cached last-autonomous report read (no live review execution).
+   - `bubble status`: current lifecycle snapshot and non-generative diagnostics.
+   - `bubble restart`: supported runtime remediation.
 9. Latest review recommendation must be readable from state/artifacts without rerun.
 10. Once bubble reaches `READY_FOR_HUMAN_APPROVAL`, it enters sticky human-gate mode for the remainder of that bubble lifecycle.
 
@@ -272,13 +277,18 @@ Fleet-level:
 3. Human gate recommendation mix (`approve|rework|inconclusive`).
 4. Time-to-human-gate delta vs manual-only baseline.
 
-## Rollout Plan
+## Historical Rollout Plan
 
-### Phase 1: Persistence + Command Split (`run|status|last-report`)
+The original rollout plan below is retained for implementation history. The
+current public operator surface is canonical submit plus generic `bubble status`
+and `bubble restart`; removed `meta-review status` / `meta-review last-report`
+commands must not be treated as current authority.
+
+### Phase 1: Persistence + Inspection
 
 1. Add rolling last-autonomous snapshot storage + state fields.
-2. Add `meta-review status` and `meta-review last-report` retrieval commands.
-3. Ensure no-rerun retrieval path works end-to-end from the last autonomous snapshot.
+2. Expose no-rerun inspection through generic status/report artifact surfaces.
+3. Ensure no-rerun retrieval works end-to-end from the last autonomous snapshot.
 
 ### Phase 2: Autonomous Rework Loop
 
@@ -297,10 +307,10 @@ Fleet-level:
 
 1. Each reviewer convergence triggers autonomous review while `sticky_human_gate=false` and until auto-rework budget is exhausted.
 2. `rework` recommendation auto-dispatches `request-rework` without human confirmation when budget allows.
-3. Auto-rework budget default is `5`, and dispatch stops automatically at limit.
+3. Auto-rework budget default is `10`, and dispatch stops automatically at limit.
 4. Final approval is never auto-executed in MVP.
-5. `meta-review status` and `meta-review last-report` return latest autonomous snapshot data without running a new review.
-6. Pairflow CLI supports canonical submit plus `status` and `last-report`; fresh manual deep review remains an external workflow.
+5. Generic inspection surfaces return latest autonomous snapshot data without running a new review.
+6. Pairflow CLI supports canonical submit plus `bubble status` / `bubble restart`; fresh manual deep review remains an external workflow.
 7. When budget is exhausted or review is inconclusive, bubble routes to `READY_FOR_HUMAN_APPROVAL` and sets sticky human gate.
 8. Autonomous run execution failure routes bubble to `READY_FOR_HUMAN_APPROVAL` with persisted run-failed diagnostics.
 9. Human decision paths remain explicit (`request-rework` or override-aware `approve`).
@@ -314,11 +324,11 @@ Fleet-level:
 ## Risks and Mitigations
 
 1. Risk: excessive looping from aggressive rework policy.
-   - Mitigation: strict `max_auto_rework_rounds=5` budget and human gate fallback.
+   - Mitigation: strict `meta_review.auto_rework_limit` budget and human gate fallback.
 2. Risk: behavior drift between autonomous execution and external manual review usage patterns.
    - Mitigation: keep both paths on the same `UsePairflow/ReviewBubble` logic source and monitor recommendation deltas in operator practice.
 3. Risk: users accidentally rerun expensive reviews just to check status.
-   - Mitigation: explicit cached `meta-review status` and `meta-review last-report` commands.
+   - Mitigation: explicit non-generative status/report artifact inspection.
 4. Risk: autonomous flow opacity.
    - Mitigation: meta-reviewer pane + persisted last autonomous snapshot.
 5. Risk: bubble stuck in `RUNNING` with meta-review authority after partial gate failure.

@@ -826,7 +826,8 @@ Each time the reviewer sends a `PASS` back to the implementer, a new **round** s
 ### Watchdog
 
 The status pane runs a watchdog loop. If an agent hasn't produced a protocol message within the configured timeout, the watchdog escalates the bubble to `WAITING_HUMAN` so you know something is stuck.
-Default timeout is 40 minutes (`watchdog_timeout_minutes` in `bubble.toml`).
+Built-in default timeout is 30 minutes (`watchdog_timeout_minutes` in
+`bubble.toml`); repository defaults may override it for newly created bubbles.
 
 ---
 
@@ -851,6 +852,10 @@ Ideation note:
 - Before first handoff, run `pairflow bubble kickoff --id <id> --task <text>` (or `--task-file <path>`) to activate round `1`.
 
 ### Autonomous meta-review clean-run gate
+
+Current detailed operational policy lives in
+[`docs/meta-review-governance.md`](docs/meta-review-governance.md). This README
+keeps the user-facing summary and CLI surface.
 
 When reviewer convergence starts autonomous meta-review and `sticky_human_gate=false`, human approval is unlocked only after the configured number of consecutive threshold-clean meta-review runs.
 
