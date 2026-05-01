@@ -5,7 +5,7 @@ task_family_id: watch-loop
 sequence_key: "3"
 task_id: 3-watch-loop
 title: "Local Plan Watch Loop"
-status: in_progress
+status: archived
 phase: phase3
 target_files:
   - "src/v11/application/planWatch/planWatchLoop.ts"
