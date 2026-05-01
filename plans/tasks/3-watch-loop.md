@@ -22,7 +22,7 @@ plan_ref: plans/local-plan-watch-plan-v1.md
 system_context_ref: docs/pairflow-initial-design.md
 owners:
   - "felho"
-doc_bubble_id: null
+doc_bubble_id: 3-watch-loop-doc
 impl_bubble_id: null
 supersedes: []
 superseded_by: null
