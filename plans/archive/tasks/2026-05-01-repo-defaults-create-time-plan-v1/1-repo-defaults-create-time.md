@@ -5,7 +5,7 @@ task_family_id: repo-defaults-create-time
 sequence_key: "1"
 task_id: 1-repo-defaults-create-time
 title: "Repo Defaults Create-Time Materialization"
-status: in_progress
+status: archived
 phase: phase1
 target_files:
   - "src/config/repoConfig.ts"
@@ -31,6 +31,7 @@ impl_bubble_id: 1-repo-defaults-create-time-impl
 supersedes: []
 superseded_by: null
 archive_group: 2026-05-01-repo-defaults-create-time-plan-v1
+archive_path: plans/archive/tasks/2026-05-01-repo-defaults-create-time-plan-v1/1-repo-defaults-create-time.md
 ---
 
 # Task: Repo Defaults Create-Time Materialization

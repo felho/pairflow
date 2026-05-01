@@ -4,16 +4,16 @@ artifact_id: plan_repo_defaults_create_time_v1
 plan_id: repo-defaults-create-time-plan-v1
 created_on: "2026-05-01"
 title: "Repo Defaults Create-Time Plan V1"
-plan_status: approved
+plan_status: done
 prd_ref: null
 task_order:
   - 1-repo-defaults-create-time
 task_tracker:
   - task_id: 1-repo-defaults-create-time
-    task_path: plans/tasks/1-repo-defaults-create-time.md
-    status: in_progress
-    notes: "Add repo-root pairflow.toml [defaults] support and materialize supported defaults into newly created bubble.toml files."
-active_task_id: 1-repo-defaults-create-time
+    task_path: plans/archive/tasks/2026-05-01-repo-defaults-create-time-plan-v1/1-repo-defaults-create-time.md
+    status: archived
+    notes: "Implemented repo-root pairflow.toml [defaults] support and materialized supported defaults into newly created bubble.toml files."
+active_task_id: null
 archive_group: 2026-05-01-repo-defaults-create-time-plan-v1
 supersedes: []
 owners:
@@ -73,3 +73,7 @@ Missing data rule: missing `pairflow.toml` or missing `[defaults]` preserves cur
 3. CLI create tests proving `--base` may be omitted only when repo defaults provide `base_branch`, and fails clearly otherwise.
 4. Existing validation-profile tests remain green.
 5. Run relevant unit tests plus `pnpm lint`, `pnpm typecheck`, and `pnpm build`.
+
+## Progress Update
+
+2026-05-01: Implementation bubble `1-repo-defaults-create-time-impl` closed and merged. The implementation added repo `[defaults]` parsing/validation, create-time precedence resolution, materialized bubble config output, CLI coverage for optional `--base`, runtime-isolation tests, and README usage notes.

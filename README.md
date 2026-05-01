@@ -889,7 +889,7 @@ Unsupported pairs such as `(P2, 2)` must display as custom/unsupported rather th
 
 | Command | Description |
 |---------|-------------|
-| `bubble create --id <id> --repo <path> --base <branch> --review-artifact-type <document\|code> ((--task <text> \| --task-file <path>) \| --ideation) [--remote <host>] [--reviewer-brief <text> \| --reviewer-brief-file <path>] [--accuracy-critical]` | Initialize a new bubble (task-based or taskless ideation mode, local or remote) |
+| `bubble create --id <id> --repo <path> [--base <branch>] --review-artifact-type <document\|code> ((--task <text> \| --task-file <path>) \| --ideation) [--remote <host>] [--reviewer-brief <text> \| --reviewer-brief-file <path>] [--accuracy-critical]` | Initialize a new bubble (task-based or taskless ideation mode, local or remote). `--base` may be omitted only when repo-root `[defaults].base_branch` is configured. |
 | `bubble kickoff --id <id> (--task <text> \| --task-file <path>) [--repo <path>]` | Activate a taskless ideation bubble (round `0` -> `1`) |
 | `bubble start --id <id> [--repo <path>]` | Start a bubble (worktree + tmux) |
 | `bubble restart --id <id> [--repo <path>]` | Restart a bubble runtime (tmux/session cleanup + start) |
@@ -1039,6 +1039,43 @@ Behavior:
   its `bubble.toml` explicitly.
 - Target-specific validation profiles are not part of the stable documented
   workflow yet.
+
+### Repository create-time defaults
+
+A repository can define selected defaults for newly created bubbles in
+repo-root `pairflow.toml`:
+
+```toml
+[defaults]
+base_branch = "main"
+watchdog_timeout_minutes = 40
+max_rounds = 8
+severity_gate_round = 4
+pairflow_command_profile = "external"
+reviewer_context_mode = "fresh"
+
+[defaults.agents]
+implementer = "codex"
+reviewer = "claude"
+meta_reviewer = "codex"
+
+[defaults.review_policy]
+review_loop_mode = "full"
+reviewer_blocking_min_severity = "P3"
+meta_review_auto_rework_min_severity = "P3"
+meta_review_consecutive_clean_runs_required = 2
+
+[defaults.doc_contract_gates]
+round_gate_applies_after = 2
+```
+
+At `bubble create` time, Pairflow resolves explicit create input first, then
+repo `[defaults]`, then built-in defaults, and writes the resolved values into
+`.pairflow/bubbles/<id>/bubble.toml`. Later lifecycle commands use that bubble
+config as the authority; they do not re-read repo-root `pairflow.toml`.
+
+Missing `[defaults]` preserves built-in behavior. Unknown or invalid supported
+default fields fail create before the new bubble is persisted.
 
 Default behavior:
 
