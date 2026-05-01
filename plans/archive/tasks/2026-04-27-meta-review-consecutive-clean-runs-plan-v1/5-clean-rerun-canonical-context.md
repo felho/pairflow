@@ -14,8 +14,11 @@ target_files:
   - src/v11/shared/metaReviewGate/metaReviewGateApplyHelpers.ts
   - src/v11/shared/metaReviewGate/metaReviewGateApplyRunRouting.ts
   - src/v11/shared/metaReviewGate/metaReviewGateApplyPersistence.ts
+  - src/v11/shared/metaReviewGate/metaReviewGateApplyObservation.ts
   - src/v11/shared/metaReviewGate/metaReviewGateStateStaging.ts
   - src/v11/shared/metaReviewGate/metaReviewGateTypes.ts
+  - src/v11/shared/metaReview/metaReviewExecutionContext.ts
+  - src/v11/shared/state/executionContext.ts
   - tests/v11/shared/metaReviewGate/metaReviewGateCurrentRunFinalization.test.ts
   - tests/v11/shared/metaReviewGate/metaReviewGateStateStaging.test.ts
   - tests/v11/application/metaReview/metaReviewGateEmit.test.ts
@@ -24,7 +27,7 @@ plan_ref: plans/archive/plans/2026-04-27-meta-review-consecutive-clean-runs-plan
 system_context_ref: docs/pairflow-initial-design.md
 owners:
   - "felho"
-doc_bubble_id: null
+doc_bubble_id: 5-clean-rerun-canonical-context-doc
 impl_bubble_id: null
 supersedes: []
 superseded_by: null
@@ -66,7 +69,9 @@ This task does not require restarting the meta-reviewer pane or creating a fresh
    - `src/v11/shared/metaReviewGate/metaReviewGateApplyHelpers.ts`
    - `src/v11/shared/metaReviewGate/metaReviewGateApplyRunRouting.ts`
    - `src/v11/shared/metaReviewGate/metaReviewGateApplyPersistence.ts`
+   - `src/v11/shared/metaReviewGate/metaReviewGateApplyObservation.ts`
    - `src/v11/shared/metaReviewGate/metaReviewGateStateStaging.ts`
+   - `src/v11/shared/metaReviewGate/metaReviewGateTypes.ts`
    - `src/v11/shared/metaReview/metaReviewExecutionContext.ts`
    - `src/v11/shared/state/executionContext.ts`
 2. Canonical elements:
@@ -76,6 +81,7 @@ This task does not require restarting the meta-reviewer pane or creating a fresh
 3. Guard elements:
    - existing submit stale guards must continue rejecting mismatched handoff/execution identities.
    - runtime delivery observation must remain correlated to the active meta-review handoff.
+   - observed-result reconciliation means the existing `reconcileObservedGateResult` flow in `metaReviewGateApplyObservation.ts`; this task may reuse that flow or prove equivalent behavior, but must not introduce a separate success definition.
 4. Compat elements:
    - static meta-reviewer pane reuse remains valid.
    - requirement `1` still allows the normal single-clean human approval path.
@@ -88,14 +94,15 @@ This task does not require restarting the meta-reviewer pane or creating a fresh
 
 ### Scope Reality / Shape Proof
 
-1. Current normal path: `applyMetaReviewGateOnConvergence` stages meta-review authority, appends a kickoff envelope, resolves pane binding, notifies the meta-reviewer, persists runtime delivery observation, and returns `meta_review_running`.
-2. Current clean-rerun path: current-run finalization can call rerun staging/append logic directly after a clean `approve` below the required streak.
+1. Current normal path: `applyMetaReviewGateOnConvergence` stages meta-review authority, appends a kickoff envelope, resolves pane binding, notifies the meta-reviewer, persists runtime delivery observation, reconciles the observed gate result through `reconcileObservedGateResult`, and returns `meta_review_running`.
+2. Current clean-rerun path: current-run finalization can call rerun staging/append logic directly after a clean `approve` below the required streak. This is the divergence to remove or wrap; staging plus transcript append alone is not enough to satisfy this task.
 3. Required target shape: the clean-rerun path must either reuse a factored common orchestrator-owned start helper or otherwise prove exact parity with the normal start path for:
    - state stage to `RUNNING` with `active_role=meta_reviewer`
    - fresh `state.execution_context`
    - fresh `meta_review.execution_context`
    - kickoff `TASK` envelope with the new handoff id
    - runtime delivery observation correlated to the new handoff id
+   - observed-result reconciliation through the existing normal-start reconciliation contract
 4. Out of scope:
    - config parsing/default changes
    - status/list/UI projection changes
@@ -109,6 +116,7 @@ This task does not require restarting the meta-reviewer pane or creating a fresh
 3. In-scope consumers: clean-rerun finalization path, meta-review submit stale guard compatibility, runtime delivery observation correlation.
 4. Out-of-scope consumers: UI presets, status copy, list projection, docs beyond this task and parent plan update.
 5. Boundary rule: meta-review result finalization may decide that another run is required, but must delegate attempt creation to orchestrator-owned start semantics.
+6. Delivery parity rule: the same started attempt must flow through state staging, kickoff envelope append, pane binding/notification, runtime delivery observation persistence, and observed-result reconciliation before `meta_review_running` is returned.
 
 ### Baseline Preservation
 
@@ -120,10 +128,12 @@ This task does not require restarting the meta-reviewer pane or creating a fresh
    - static meta-reviewer pane reuse remains allowed.
 2. Allowed replacement:
    - direct clean-rerun staging may be replaced with a shared meta-review start helper if that reduces divergence from the normal convergence path.
+   - if the implementation keeps separate route functions instead, targeted tests must prove equivalent side effects, ordering, and failure handling against the normal start contract.
 3. Forbidden regression:
    - clean rerun reuses the prior `handoff_id`.
    - clean rerun reuses the prior `execution_id`.
    - clean rerun records no delivery observation when the normal start path would record one.
+   - clean rerun violates the delivery parity rule by returning success before runtime delivery observation has been persisted and reconciled for the new handoff.
    - clean rerun increments `auto_rework_count`.
 
 ### Closure-Budget Gate
@@ -185,6 +195,7 @@ This task does not require restarting the meta-reviewer pane or creating a fresh
    - append a new meta-review kickoff `TASK` envelope referencing the new handoff.
    - notify/bind the static meta-reviewer pane through the same runtime delivery contract used by normal reviewer-convergence meta-review start.
    - persist runtime delivery observation correlated to the new handoff.
+   - reconcile the observed result through the same normal-start reconciliation contract before returning `meta_review_running`.
 3. Side effects forbidden before preconditions pass:
    - do not increment clean streak.
    - do not create a new meta-review execution context.
@@ -195,7 +206,7 @@ This task does not require restarting the meta-reviewer pane or creating a fresh
    - a failed rerun dispatch must not preserve a positive clean streak unless the existing rollback contract explicitly proves that state is canonical and fail-closed.
    - stale or reused `handoff_id` / `execution_id` must be treated as invalid rerun authority, not as a successful rerun.
 5. Ordering rule:
-   - the final implementation must avoid a success result where state says `meta_review_running` for a new clean rerun but runtime delivery observation is missing when the normal meta-review start path would have persisted it.
+   - apply the delivery parity rule from the Authority Boundary Map; do not rely on route string equality as proof that all normal-start side effects completed.
 
 ## L2 - Verification Contract
 
@@ -204,14 +215,30 @@ This task does not require restarting the meta-reviewer pane or creating a fresh
 1. Add or update targeted meta-review gate tests proving a clean rerun below the required streak:
    - returns `route=meta_review_running`,
    - persists `consecutive_clean_runs=1`,
-   - creates a new `handoff_id` different from the submitted run,
-   - creates a new `execution_id` different from the submitted run,
+   - creates a new `state.execution_context.handoff_id` and `meta_review.execution_context.handoff_id` different from the submitted run,
+   - creates a new `state.execution_context.execution_id` and `meta_review.execution_context.execution_id` different from the submitted run,
+   - keeps `state.execution_context` and `meta_review.execution_context` aligned for active role, awaited output type, round, attempt, handoff id, and execution id,
    - increments `attempt`,
    - preserves the same `round`.
 2. Add or update tests proving the clean-rerun kickoff envelope metadata references the new handoff id.
 3. Add or update tests proving runtime delivery observation is persisted and correlated to the new handoff id for the clean-rerun path.
-4. Add or update regression coverage proving the clean-rerun path does not increment `auto_rework_count`.
-5. Preserve existing tests for requirement `1`, final unlock, non-clean reset, parity failure, threshold failure, and auto-rework routing.
+4. Add or update submit stale-guard compatibility tests proving the previous run's handoff/execution ids are rejected after the clean rerun stages fresh authority, and only the new active handoff/execution ids are accepted.
+5. Add or update regression coverage proving the clean-rerun path does not increment `auto_rework_count`.
+6. Add or update failure-path tests for each dispatch surface named in L1: state staging failure, kickoff append failure, pane notification failure, and runtime delivery observation persistence failure. Each must prove:
+   - the failed rerun cannot return `route=meta_review_running`,
+   - the failed rerun cannot count as a successful clean attempt, and
+   - the failed rerun does not preserve a positive clean streak unless an existing rollback contract explicitly proves that state is canonical and fail-closed.
+7. Add or update pane-lifecycle regression coverage proving clean reruns may reuse the static meta-reviewer pane and do not require pane/session recreation as the freshness mechanism.
+8. Add or update parity-shape tests proving whichever implementation shape is chosen:
+   - shared helper path: the shared contract covers the normal-start side effects, ordering, and failure handling needed by both reviewer-convergence and clean-rerun entrypoints, or
+   - separate route functions: the clean-rerun route performs equivalent side effects, ordering, and failure handling.
+9. Add or update ordering coverage proving the clean-rerun path completes every delivery parity step in order before returning `route=meta_review_running`:
+   - state staging,
+   - kickoff envelope append,
+   - pane binding/notification,
+   - runtime delivery observation persistence,
+   - observed-result reconciliation.
+10. Preserve existing tests for requirement `1`, final unlock, non-clean reset, parity failure, threshold failure, and auto-rework routing.
 
 ### Validation Commands
 
