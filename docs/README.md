@@ -55,12 +55,13 @@ approved plan/task or implementation adopts the contract:
 
 ## Superseded Exploratory Drafts
 
-These are retained for design rationale, but a newer implementation artifact is
-the current authority:
+These were removed from the working tree because newer implementation artifacts
+are the current authority and the old drafts add LLM context noise:
 
-- [execute-pairflow-plan-draft.md](./execute-pairflow-plan-draft.md) - superseded by repo-local
+- `docs/execute-pairflow-plan-draft.md` - superseded by repo-local
   [`ExecutePairflowPlan`](../.claude/skills/ExecutePairflowPlan/SKILL.md)
-  skill source and the archived implementation plan/tasks.
+  skill source and the archived implementation plan/tasks. Use git history for
+  early design rationale only.
 
 ## Historical Context / Incident Notes
 
