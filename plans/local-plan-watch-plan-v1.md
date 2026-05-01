@@ -4,8 +4,8 @@ artifact_id: plan_local_plan_watch_v1
 plan_id: local-plan-watch
 created_on: "2026-05-01"
 title: "Local Plan Watch Plan (V1)"
-status: draft
-plan_status: draft
+status: approved
+plan_status: approved
 prd_ref: null
 owners:
   - "felho"
@@ -18,8 +18,8 @@ active_task_id: 1-agent-runner-bridge
 archive_group: 2026-05-01-local-plan-watch
 task_tracker:
   - task_id: 1-agent-runner-bridge
-    task_path: null
-    status: not_created
+    task_path: plans/tasks/1-agent-runner-bridge.md
+    status: approved
   - task_id: 2-bubble-trigger-index
     task_path: null
     status: not_created
