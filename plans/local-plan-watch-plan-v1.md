@@ -14,12 +14,12 @@ task_order:
   - 2-bubble-trigger-index
   - 3-watch-loop
   - 4-pilot-docs
-active_task_id: 1-agent-runner-bridge
+active_task_id: 2-bubble-trigger-index
 archive_group: 2026-05-01-local-plan-watch
 task_tracker:
   - task_id: 1-agent-runner-bridge
-    task_path: plans/tasks/1-agent-runner-bridge.md
-    status: in_progress
+    task_path: plans/archive/tasks/2026-05-01-local-plan-watch/1-agent-runner-bridge.md
+    status: archived
   - task_id: 2-bubble-trigger-index
     task_path: null
     status: not_created
