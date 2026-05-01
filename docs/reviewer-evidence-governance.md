@@ -71,6 +71,22 @@ Current implementation has two evidence paths:
    whitelisted `.pairflow/evidence/*.log` refs. Summary-only command matches are
    downgraded to unverifiable; trusted command evidence must come from refs.
 
+Reviewer test evidence trust is fail-closed:
+
+1. Only in-scope `.pairflow/evidence/*.log` refs are trust-eligible for
+   manually attached reviewer evidence.
+2. Summary text is never a trust anchor; summary-only command claims are
+   untrusted until ref-backed evidence verifies them.
+3. Completion markers are mandatory for each required command family.
+4. Accepted alias-equivalent command forms are closed-set:
+   - typecheck: `pnpm typecheck`, `pnpm run typecheck`, `tsc --noEmit`
+   - test: `pnpm test`, `pnpm run test`, `vitest`, `vitest run`
+   - lint: `pnpm lint`, `pnpm run lint`, `eslint`
+5. Script extensions outside the closed set, for example
+   `pnpm run typecheck:ci` or `pnpm run test:ci`, are not accepted as
+   equivalent required-command evidence unless explicitly configured as the
+   required command.
+
 ## Summary And Artifact Consistency
 
 Human-facing summaries must not contradict machine evidence status:

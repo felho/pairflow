@@ -148,12 +148,13 @@ The review-policy UI exposes a compact meta-review quality preset, not a plain s
 | `P1` | `(meta_review_auto_rework_min_severity=P1, meta_review_consecutive_clean_runs_required=1)` |
 | `P2` | `(P2, 1)` |
 | `P3` | `(P3, 1)` |
-| `P3+2` | `(P3, 2)` |
+| `P3+1` | `(P3, 2)` |
+| `P3+2` | `(P3, 3)` |
 
 Rules:
 1. Preset projection is exact-match only.
 2. Unsupported pairs such as `(P2, 2)` render as custom/unsupported, not as `P2`.
-3. `P3+2` is threshold `P3` with two required consecutive clean meta-review runs; it is not a new severity.
+3. `P3+1` and `P3+2` are threshold `P3` plus one or two additional required clean runs beyond the baseline `P3` clean run; they are not new severities.
 4. The UI can show `meta_review.consecutive_clean_runs` against `meta_review_consecutive_clean_runs_required`, but writes to the configured requirement only through supported preset actions.
 5. `auto_rework_count` / `auto_rework_limit` are shown, if at all, as auto-rework budget data and never as clean-run streak progress.
 

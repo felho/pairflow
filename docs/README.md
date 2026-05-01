@@ -40,8 +40,7 @@ Keep these while the corresponding feature, rollout, or plan family is still
 operationally relevant:
 
 - [meta-review-gate-prd.md](./meta-review-gate-prd.md)
-- [meta-review-gate-rollout-runbook.md](./meta-review-gate-rollout-runbook.md)
-- [meta-review-gate-e2e-validation.md](./meta-review-gate-e2e-validation.md)
+- [meta-review-governance.md](./meta-review-governance.md)
 - [artifact-session-provenance-prd.md](./artifact-session-provenance-prd.md)
 - [pairflow-ui-prd.md](./pairflow-ui-prd.md)
 - [repo-registry-prd.md](./repo-registry-prd.md)
@@ -54,11 +53,30 @@ These documents preserve why a policy or feature changed. They should not
 override active contract documents unless an active document explicitly points
 to them as authority:
 
-- [review-loop-ws-d-pilot-report-2026-03.md](./review-loop-ws-d-pilot-report-2026-03.md)
 - [reviewbubble-task-hardening-dontesi-keret-2026-03-12.md](./reviewbubble-task-hardening-dontesi-keret-2026-03-12.md)
 - [reviewer-pass-converged-issue-assessment-2026-03-21.md](./reviewer-pass-converged-issue-assessment-2026-03-21.md)
 - [spec-skill-evolution.md](./spec-skill-evolution.md)
 - [cmux-ideas.md](./cmux-ideas.md)
+
+## Removed Historical Meta-Review Docs
+
+The active meta-review operational policy was consolidated into
+[meta-review-governance.md](./meta-review-governance.md). The following
+rollout-era notes, templates, and pilot reports were removed from the working
+tree so LLM context does not accidentally treat them as current authority:
+
+- `docs/meta-review-gate-rollout-runbook.md`
+- `docs/meta-review-gate-e2e-validation.md`
+- `docs/review-loop-ws-d-pilot-report-2026-03.md`
+
+Use git history only for rollout detail:
+
+```bash
+git log --diff-filter=D -- docs/meta-review-gate-rollout-runbook.md
+git show <deletion-commit>^:docs/meta-review-gate-rollout-runbook.md
+```
+
+Do not use removed files as current policy authority.
 
 ## Removed Historical Review/Evidence Docs
 

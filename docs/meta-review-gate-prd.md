@@ -5,6 +5,11 @@
 **Owner:** Pairflow Core  
 **Type:** Large feature
 
+Current operational policy lives in
+[`docs/meta-review-governance.md`](./meta-review-governance.md). This PRD is
+retained as implemented feature history and should not override the governance
+document when current runtime policy changes.
+
 ## Implementation Snapshot (2026-03-09)
 
 1. Phase 1 delivered: `6d6ac06` (merged by `3f5b08c`).
@@ -15,9 +20,9 @@
 
 ## WS-D Pilot Tracking Note (2026-03-09)
 
-1. WS-D pilot report linkage: `docs/review-loop-ws-d-pilot-report-2026-03.md`.
-2. Historical WS-D pilot outcome: the March 2026 Phase 2 `required-for-doc-gates` decision was `go` (WS-D docs-workflow scope only); this later became rollout history only after `9fab8f1` and `c55a90c` removed the enforcement config surface on `2026-03-27`.
-3. Meta-review rollout blockers remain tracked in a separate rollout-readiness lane (runbook/e2e validation path).
+1. Historical WS-D pilot outcome: the March 2026 Phase 2 `required-for-doc-gates` decision was `go` (WS-D docs-workflow scope only); this later became rollout history only after `9fab8f1` and `c55a90c` removed the enforcement config surface on `2026-03-27`.
+2. The WS-D pilot report and rollout validation templates were removed from the working tree. Use git history for historical detail only.
+3. Current meta-review operational policy, including clean-run gates and command-authority blockers, is tracked in `docs/meta-review-governance.md`.
 
 ## Summary
 
