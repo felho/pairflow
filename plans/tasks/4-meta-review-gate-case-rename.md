@@ -20,7 +20,7 @@ normative_refs:
   - docs/architecture/v11-placement-and-extraction-governance.md
 owners:
   - "felho"
-doc_bubble_id: null
+doc_bubble_id: 4-meta-review-gate-case-rename-doc
 impl_bubble_id: null
 supersedes: []
 superseded_by: null
@@ -90,6 +90,11 @@ behavior. Preserve useful behavior coverage and the gate alias case.
    artifact during the `ExecutePairflowPlan` route on 2026-05-01 after checking
    execution metadata, parent-plan fit, target-file reality, closed-contract
    drift, and remaining-task viability.
+7. Docs-only refinement context: when this artifact is refined in a document
+   bubble, the implementation validation commands above are not satisfied by
+   the document bubble. A docs-only PASS may state `Context mode:
+   docs_only_context` and `runtime checks were intentionally not executed`.
+   The commands remain mandatory for the later implementation bubble.
 
 ### Canonical Contract Anchors
 
@@ -133,21 +138,35 @@ behavior. Preserve useful behavior coverage and the gate alias case.
 6. Why the declared task shape matches reality: the active parity vocabulary is
    in case identity, mode, tags, descriptions, test lists, and manifest rows;
    the v11 runner path is already the behavior authority.
+7. Source-reality observation for the corpus check: `build-corpus.ts` validates
+   checked-in manifest entry shape and source existence, then emits a normalized
+   manifest under `.pairflow/evidence/`; it does not discover case files from
+   the filesystem. Therefore the implementation must update both the checked-in
+   manifest rows and the test source lists explicitly.
+8. Duplicate-basic proof observed during document refinement: the current
+   `meta-review-gate-apply-basic-parity.case.json` and
+   `meta-review-gate-apply-basic-v11.case.json` have the same
+   behavior-relevant `input` and `expected` payload. The implementation should
+   preserve that proof in reviewable changes when deleting the duplicate.
 
 ### Current Case Disposition
 
 1. Retain and reclassify the `gate` alias behavior case:
    - from `tests/contracts/v11/cases/meta-review-gate/gate-apply-basic-parity.case.json`
-   - to a v11-named alias case such as
+   - to the v11-named alias case
      `tests/contracts/v11/cases/meta-review-gate/gate-apply-basic-v11.case.json`.
 2. Retain the existing v11 basic meta-review-gate case path:
    - `tests/contracts/v11/cases/meta-review-gate/meta-review-gate-apply-basic-v11.case.json`.
 3. Reclassify the remaining useful behavior cases from parity-named files to
    v11-named files:
-   - `meta-review-gate-apply-running-parity.case.json`
-   - `meta-review-gate-apply-running-failed-delivery-parity.case.json`
-   - `meta-review-gate-apply-running-uncertain-delivery-parity.case.json`
-   - `meta-review-gate-apply-sticky-bypass-parity.case.json`.
+   - `meta-review-gate-apply-running-parity.case.json` ->
+     `meta-review-gate-apply-running-v11.case.json`
+   - `meta-review-gate-apply-running-failed-delivery-parity.case.json` ->
+     `meta-review-gate-apply-running-failed-delivery-v11.case.json`
+   - `meta-review-gate-apply-running-uncertain-delivery-parity.case.json` ->
+     `meta-review-gate-apply-running-uncertain-delivery-v11.case.json`
+   - `meta-review-gate-apply-sticky-bypass-parity.case.json` ->
+     `meta-review-gate-apply-sticky-bypass-v11.case.json`.
 4. Remove the redundant
    `meta-review-gate-apply-basic-parity.case.json` only after confirming its
    behavior-relevant `input` and `expected` payload are covered by
@@ -276,8 +295,8 @@ N/A. This task does not modify a runtime mutation flow.
    descriptions/tags that do not describe their purpose as parity or baseline
    comparison.
 3. The `gate` alias behavior case remains present and is renamed/reclassified
-   to v11 naming while preserving command `gate`, route `apply`, and expected
-   `gateRoute: "meta_review_running"`.
+   to `gate-apply-basic-v11.case.json` while preserving command `gate`, route
+   `apply`, and expected `gateRoute: "meta_review_running"`.
 4. The basic meta-review-gate duplicate parity file is deleted only if the
    retained basic v11 case proves the same behavior-relevant `input` and
    `expected` payload.
@@ -295,6 +314,17 @@ N/A. This task does not modify a runtime mutation flow.
    not renamed or deleted by this task.
 10. The generated corpus manifest check and checked-in manifest source list
     agree after the rename.
+11. The final retained meta-review-gate case source order in
+    `metaReviewGate.contract.test.ts` is:
+    `gate-apply-basic-v11.case.json`,
+    `meta-review-gate-apply-basic-v11.case.json`,
+    `meta-review-gate-apply-running-v11.case.json`,
+    `meta-review-gate-apply-running-failed-delivery-v11.case.json`,
+    `meta-review-gate-apply-running-uncertain-delivery-v11.case.json`,
+    `meta-review-gate-apply-sticky-bypass-v11.case.json`.
+12. No changes are made to `src/v11/shared/metaReviewGate/*Parity*` modules or
+    to structured findings parity behavior; that terminology is not migration
+    case identity.
 
 ### Test Plan
 
@@ -308,6 +338,10 @@ N/A. This task does not modify a runtime mutation flow.
      `tests/contracts/v11/cases/meta-review-gate/*-parity.case.json`,
    - no retained meta-review-gate case JSON has `mode: "parity"`,
    - runtime/domain parity helper names outside the contract case corpus remain untouched.
+6. In a docs-only refinement bubble, do not claim the implementation commands
+   above passed unless they were actually run. The normal docs-only handoff is
+   `Context mode: docs_only_context; runtime checks were intentionally not
+   executed`.
 
 ## L2 - Implementation Notes
 
@@ -325,6 +359,10 @@ N/A. This task does not modify a runtime mutation flow.
 6. If validation exposes a behavior case with unique expected output not covered
    by a retained v11 case, add or keep a v11-named replacement rather than
    deleting the behavior.
+7. Use search proof after the rename rather than broad name-based deletion:
+   `rg -n 'mode": "parity"|parity' tests/contracts/v11/cases/meta-review-gate tests/contracts/v11/metaReviewGate.contract.test.ts tests/contracts/v11/corpus/manifest.json`
+   should not report retained meta-review-gate case identity, mode, description,
+   tag, or manifest references.
 
 ## Review Checklist
 
