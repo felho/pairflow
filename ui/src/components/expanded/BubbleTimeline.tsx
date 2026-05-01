@@ -315,17 +315,12 @@ function resolveRole(entry: UiTimelineEntry): RoleKind {
     typeof metadata === "object" && metadata !== null
       ? (metadata as { actor?: unknown }).actor
       : undefined;
-  const deliveryTargetRole =
-    typeof metadata === "object" && metadata !== null
-      ? (metadata as { delivery_target_role?: unknown }).delivery_target_role
-      : undefined;
   const metaReviewHandoffId =
     typeof metadata === "object" && metadata !== null
       ? (metadata as { meta_review_handoff_id?: unknown }).meta_review_handoff_id
       : undefined;
   if (
     actor === "meta-reviewer"
-    || deliveryTargetRole === "meta_reviewer"
     || typeof metaReviewHandoffId === "string"
   ) {
     return "meta";

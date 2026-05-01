@@ -38,6 +38,41 @@ describe("BubbleTimeline", () => {
     expect(screen.getByText("rework")).toBeInTheDocument();
   });
 
+  it("keeps implementer role for passes delivered to the meta-reviewer", () => {
+    render(
+      <BubbleTimeline
+        entries={[
+          timelineEntry({
+            id: "env-impl-to-meta",
+            type: "PASS",
+            sender: "codex",
+            recipient: "codex",
+            payload: {
+              summary: "Ready for meta-review.",
+              pass_intent: "review",
+              metadata: {
+                delivery_target_role: "meta_reviewer"
+              }
+            }
+          })
+        ]}
+        isLoading={false}
+        error={null}
+        compact
+      />
+    );
+
+    const actorLabel = screen.getByText("implementer", {
+      selector: "span.font-medium"
+    });
+
+    expect(actorLabel).toHaveTextContent(/implementer/u);
+    expect(actorLabel).toHaveTextContent(/\(codex\)/u);
+    expect(
+      screen.queryByText("meta-reviewer", { selector: "span.font-medium" })
+    ).not.toBeInTheDocument();
+  });
+
   it("renders only rerun meta-review gate handoffs as clean-run progress", () => {
     render(
       <BubbleTimeline
