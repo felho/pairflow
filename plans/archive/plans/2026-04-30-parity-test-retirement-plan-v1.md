@@ -4,8 +4,8 @@ artifact_id: plan_parity_test_retirement_v1
 plan_id: parity-test-retirement-plan-v1
 created_on: "2026-04-30"
 title: "Parity Test Retirement Plan V1"
-status: in_progress
-plan_status: in_progress
+status: done
+plan_status: done
 prd_ref: null
 owners:
   - "felho"
@@ -14,7 +14,7 @@ task_order:
   - 2-cli-entrypoint-boundary-guard
   - 3-reconcile-contract-v11-only
   - 4-meta-review-gate-case-rename
-active_task_id: 4-meta-review-gate-case-rename
+active_task_id: null
 archive_group: 2026-04-30-parity-test-retirement-plan-v1
 task_tracker:
   - task_id: 1-facade-migration-map-cleanup
@@ -30,8 +30,8 @@ task_tracker:
     status: archived
     notes: "Remove tautological reconcile baseline/parity contract modes and keep v11 contract cases only."
   - task_id: 4-meta-review-gate-case-rename
-    task_path: plans/tasks/4-meta-review-gate-case-rename.md
-    status: in_progress
+    task_path: plans/archive/tasks/2026-04-30-parity-test-retirement-plan-v1/4-meta-review-gate-case-rename.md
+    status: archived
     notes: "Normalize meta-review-gate parity-named contract cases to v11 behavior cases without touching runtime parity metadata."
 ---
 
@@ -144,11 +144,13 @@ without weakening:
 4. Task 3 archived after implementation bubble close:
    `3-reconcile-contract-v11-only-impl` merged on 2026-05-01 and the task
    artifact moved to the canonical archive group.
+5. Task 4 archived after implementation bubble close:
+   `4-meta-review-gate-case-rename-impl` merged on 2026-05-01 and the task
+   artifact moved to the canonical archive group.
 
 ### Open Work
 
-1. Rename/reclassify meta-review-gate parity-named cases that are still useful
-   behavior cases.
+1. None. All planned parity-test-retirement tasks are archived.
 
 ### Deferred / Future Work
 
@@ -165,15 +167,17 @@ without weakening:
    sentinels.
 3. Phase 3: simplify contract harnesses and corpus manifests to current v11
    behavior naming.
+4. Plan closed on 2026-05-01 after the final implementation bubble merged and
+   archive aftermath reconciled.
 
 ## Open Task List
 
 | Task ID | Task Path | Purpose | Depends On | Closes Gap | Status |
 |---|---|---|---|---|---|
-| `1-facade-migration-map-cleanup` | `plans/tasks/1-facade-migration-map-cleanup.md` | Remove the empty facade parity map, all-v11 migration map, and obsolete script wiring. | `N/A` | Exhausted migration metadata remains active. | approved |
+| `1-facade-migration-map-cleanup` | `plans/archive/tasks/2026-04-30-parity-test-retirement-plan-v1/1-facade-migration-map-cleanup.md` | Remove the empty facade parity map, all-v11 migration map, and obsolete script wiring. | `N/A` | Exhausted migration metadata remains active. | archived |
 | `2-cli-entrypoint-boundary-guard` | `plans/archive/tasks/2026-04-30-parity-test-retirement-plan-v1/2-cli-entrypoint-boundary-guard.md` | Replace per-command `*CliEntrypointParity.test.ts` files with one current-purpose CLI boundary/inventory test. | `1-facade-migration-map-cleanup` | CLI parity tests duplicate one-line shims but still contain useful boundary intent. | archived |
 | `3-reconcile-contract-v11-only` | `plans/archive/tasks/2026-04-30-parity-test-retirement-plan-v1/3-reconcile-contract-v11-only.md` | Remove reconcile `baseline`/`parity` contract cases and runner branches that compare aliases to the same v11 implementation. | `1-facade-migration-map-cleanup` | Reconcile contract harness still carries tautological legacy comparison modes. | archived |
-| `4-meta-review-gate-case-rename` | `plans/tasks/4-meta-review-gate-case-rename.md` | Rename/reclassify meta-review-gate parity-named behavior cases as v11 cases and update corpus expectations. | `3-reconcile-contract-v11-only` | Useful meta-review-gate cases still look like migration parity cases. | in_progress |
+| `4-meta-review-gate-case-rename` | `plans/archive/tasks/2026-04-30-parity-test-retirement-plan-v1/4-meta-review-gate-case-rename.md` | Rename/reclassify meta-review-gate parity-named behavior cases as v11 cases and update corpus expectations. | `3-reconcile-contract-v11-only` | Useful meta-review-gate cases still look like migration parity cases. | archived |
 
 ## Coverage Map
 

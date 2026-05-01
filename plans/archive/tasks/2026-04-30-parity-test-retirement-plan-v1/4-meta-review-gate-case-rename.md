@@ -5,7 +5,7 @@ task_family_id: meta-review-gate-case-rename
 sequence_key: "4"
 task_id: 4-meta-review-gate-case-rename
 title: "Meta Review Gate Case Rename"
-status: in_progress
+status: archived
 phase: phase1
 target_files:
   - tests/contracts/v11/metaReviewGate.contract.test.ts
@@ -14,7 +14,7 @@ target_files:
   - tests/contracts/v11/corpus/manifest.json
   - tests/contracts/v11/corpus/build-corpus.ts
 prd_ref: null
-plan_ref: plans/parity-test-retirement-plan-v1.md
+plan_ref: plans/archive/plans/2026-04-30-parity-test-retirement-plan-v1.md
 system_context_ref: docs/pairflow-initial-design.md
 normative_refs:
   - docs/architecture/v11-placement-and-extraction-governance.md
@@ -25,6 +25,7 @@ impl_bubble_id: 4-meta-review-gate-case-rename-impl
 supersedes: []
 superseded_by: null
 archive_group: 2026-04-30-parity-test-retirement-plan-v1
+archive_path: plans/archive/tasks/2026-04-30-parity-test-retirement-plan-v1/4-meta-review-gate-case-rename.md
 ---
 
 # Task: Meta Review Gate Case Rename

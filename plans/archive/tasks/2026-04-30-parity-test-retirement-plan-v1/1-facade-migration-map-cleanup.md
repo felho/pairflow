@@ -14,7 +14,7 @@ target_files:
   - tests/contracts/v11/migration-map.ts
   - tests/contracts/v11/migration-map.test.ts
 prd_ref: null
-plan_ref: plans/parity-test-retirement-plan-v1.md
+plan_ref: plans/archive/plans/2026-04-30-parity-test-retirement-plan-v1.md
 system_context_ref: docs/pairflow-initial-design.md
 normative_refs:
   - docs/architecture/v11-placement-and-extraction-governance.md
