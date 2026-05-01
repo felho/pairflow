@@ -105,6 +105,13 @@ export {
 export {
   agentRunnerBridgeDefaults
 } from "./v11/defaults/planWatch/agentRunnerBridgeDefaults.js";
+export {
+  isApprovalReadyBubbleState,
+  resolveLinkedBubbleTriggerIndex
+} from "./v11/application/planWatch/linkedBubbleTriggerIndex.js";
+export {
+  linkedBubbleTriggerIndexDefaults
+} from "./v11/defaults/planWatch/linkedBubbleTriggerIndexDefaults.js";
 export type {
   AgentRunnerBridgeDependencies,
   AgentRunnerBridgeFailureReasonCode,
@@ -125,6 +132,20 @@ export type {
 export {
   asAgentRunnerBridgeRunnerReasonCode
 } from "./v11/application/planWatch/agentRunnerBridgeContract.js";
+export type {
+  LinkedBubbleApprovalReadyState,
+  LinkedBubbleRole,
+  LinkedBubbleStatusPort,
+  LinkedBubbleStatusSnapshot,
+  LinkedBubbleTriggerCandidate,
+  LinkedBubbleTriggerDiagnostic,
+  LinkedBubbleTriggerDiagnosticCode,
+  LinkedBubbleTriggerDiagnosticScope,
+  LinkedBubbleTriggerDiagnosticSeverity,
+  LinkedBubbleTriggerIndexDependencies,
+  LinkedBubbleTriggerIndexInput,
+  LinkedBubbleTriggerIndexResult
+} from "./v11/application/planWatch/linkedBubbleTriggerIndexContract.js";
 export {
   resolveBubbleFromWorkspaceCwd,
   WorkspaceResolutionError
