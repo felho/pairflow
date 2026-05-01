@@ -12,13 +12,24 @@ import type {
   MetaReviewArtifactReadPort
 } from "./metaReviewArtifactIo.js";
 import type { MetaReviewResult } from "./metaReviewTypes.js";
-import type { AppendProtocolEnvelopePort } from "../ports/transcript.js";
+import type {
+  AppendProtocolEnvelopePort,
+  ReadTranscriptEnvelopesPort
+} from "../ports/transcript.js";
 import type { ResolveBubbleByIdPort } from "../ports/bubbleLookup.js";
-import type { ReadRuntimeSessionsRegistryPort } from "../ports/runtimeSessions.js";
+import type {
+  ReadRuntimeSessionsRegistryPort,
+  SetMetaReviewerPaneBindingPort
+} from "../ports/runtimeSessions.js";
 import type {
   ReadStateSnapshotPort,
   WriteStateSnapshotPort
 } from "../ports/stateSnapshots.js";
+import type {
+  MetaReviewGateRuntimeCapabilities,
+  NotifyMetaReviewerSubmissionRequest,
+  ResolveMetaReviewerPaneWarning
+} from "../metaReviewGate/metaReviewGateTypes.js";
 
 export type { MetaReviewResult, MetaReviewRunWarning } from "./metaReviewTypes.js";
 
@@ -54,7 +65,13 @@ export interface MetaReviewCommandDependencies {
   readStateSnapshot?: ReadStateSnapshotPort;
   writeStateSnapshot?: WriteStateSnapshotPort;
   appendProtocolEnvelope?: AppendProtocolEnvelopePort;
+  readTranscriptEnvelopes?: ReadTranscriptEnvelopesPort;
   readRuntimeSessionsRegistry?: ReadRuntimeSessionsRegistryPort;
+  setMetaReviewerPaneBinding?: SetMetaReviewerPaneBindingPort;
+  notifyMetaReviewerSubmissionRequest?: NotifyMetaReviewerSubmissionRequest;
+  resolveMetaReviewerPaneWarning?: ResolveMetaReviewerPaneWarning;
+  runtime?: MetaReviewGateRuntimeCapabilities;
+  observeGateResultReconciled?: () => void;
   emitDeliveryNotification?: MetaReviewDeliveryEmitter;
   buildDeliveryMessageRef?: MetaReviewDeliveryMessageRefBuilder;
   readFile?: MetaReviewArtifactReadPort;

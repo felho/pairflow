@@ -1,15 +1,8 @@
 import type { MetaReviewResult } from "../metaReview/metaReviewTypes.js";
-import type { LoadedStateSnapshot } from "../ports/stateSnapshots.js";
 import type { Finding } from "../../../types/findings.js";
 import type { FindingsParityMetadata } from "../../../types/protocol.js";
 import {
-  appendMetaReviewKickoffEnvelope,
-  stageMetaReviewRunningState,
-} from "./metaReviewGateApplyHelpers.js";
-import {
-  buildGateLockPath,
   normalizeMetaReviewSnapshot,
-  setMetaReviewConsecutiveCleanRuns,
 } from "./metaReviewGateShared.js";
 import {
   type MetaReviewGateResult
@@ -31,6 +24,7 @@ import {
 } from "./metaReviewGateCurrentRunRoutePersistence.js";
 import type { FinalizeCurrentRunMetaReviewGateInput } from "./metaReviewGateCurrentRunTypes.js";
 import { mergeRunResultWithParityResolution } from "./metaReviewGateRunResultParity.js";
+import { routeCleanMetaReviewRerun } from "./metaReviewGateCurrentRunCleanRerun.js";
 
 export const META_REVIEW_APPROVE_THRESHOLD_BACKSTOP =
   "META_REVIEW_APPROVE_THRESHOLD_BACKSTOP" as const;
@@ -236,92 +230,6 @@ async function resolveThresholdCleanApproval(input: {
   }
 
   return { clean: true, parityMetadata: thresholdParityMetadata };
-}
-
-async function routeCleanMetaReviewRerun(input: {
-  finalizeInput: FinalizeCurrentRunMetaReviewGateInput;
-  runResultForRouting: MetaReviewResult;
-  parityMetadata: FindingsParityMetadata | null;
-  updatedStreak: number;
-}): Promise<MetaReviewGateResult> {
-  const finalizeInput = input.finalizeInput;
-  const loadedWithUpdatedStreak: LoadedStateSnapshot = {
-    ...finalizeInput.loaded,
-    state: setMetaReviewConsecutiveCleanRuns(
-      finalizeInput.loaded.state,
-      input.updatedStreak
-    )
-  };
-
-  let metaReviewRunningState: LoadedStateSnapshot;
-  try {
-    metaReviewRunningState = await stageMetaReviewRunningState({
-      bubbleId: finalizeInput.resolved.bubbleId,
-      loadedRunning: loadedWithUpdatedStreak,
-      metaReviewerAgent: finalizeInput.resolved.bubbleConfig.agents.meta_reviewer,
-      nowIso: finalizeInput.now.toISOString(),
-      watchdogTimeoutMinutes:
-        finalizeInput.resolved.bubbleConfig.watchdog_timeout_minutes,
-      statePath: finalizeInput.resolved.bubblePaths.statePath,
-      writeState: finalizeInput.writeState
-    });
-  } catch (error) {
-    const reason = error instanceof Error ? error.message : String(error);
-    return persistDispatchFailedHumanRoute({
-      finalizeInput,
-      loaded: finalizeInput.loaded,
-      expectedState: "RUNNING",
-      runResultForRouting: input.runResultForRouting,
-      parityMetadata: input.parityMetadata,
-      fallbackReason:
-        `META_REVIEW_GATE_CLEAN_RERUN_DISPATCH_FAILED: stage_error=${reason}`,
-      rollbackStateOnAppendFailure: finalizeInput.loaded.state
-    });
-  }
-
-  try {
-    const appended = await appendMetaReviewKickoffEnvelope({
-      appendEnvelope: finalizeInput.appendEnvelope,
-      transcriptPath: finalizeInput.resolved.bubblePaths.transcriptPath,
-      inboxPath: finalizeInput.resolved.bubblePaths.inboxPath,
-      lockPath: buildGateLockPath({
-        locksDir: finalizeInput.resolved.bubblePaths.locksDir,
-        bubbleId: finalizeInput.resolved.bubbleId
-      }),
-      now: finalizeInput.now,
-      bubbleId: finalizeInput.resolved.bubbleId,
-      round: metaReviewRunningState.state.round,
-      handoffId:
-        metaReviewRunningState.state.meta_review?.execution_context?.handoff_id
-        ?? `meta_review:${finalizeInput.resolved.bubbleId}:round:${metaReviewRunningState.state.round}`,
-      metaReviewerAgent: finalizeInput.resolved.bubbleConfig.agents.meta_reviewer,
-      refs: finalizeInput.refs
-    });
-
-    return {
-      bubbleId: finalizeInput.resolved.bubbleId,
-      route: "meta_review_running",
-      gateSequence: appended.sequence,
-      gateEnvelope: appended.envelope,
-      state: metaReviewRunningState.state,
-      metaReviewRun: input.runResultForRouting
-    };
-  } catch (error) {
-    const reason = error instanceof Error ? error.message : String(error);
-    return persistDispatchFailedHumanRoute({
-      finalizeInput,
-      loaded: metaReviewRunningState,
-      expectedState: "RUNNING",
-      runResultForRouting: input.runResultForRouting,
-      parityMetadata: input.parityMetadata,
-      fallbackReason:
-        `META_REVIEW_GATE_CLEAN_RERUN_DISPATCH_FAILED: append_error=${reason}`,
-      rollbackStateOnAppendFailure: setMetaReviewConsecutiveCleanRuns(
-        finalizeInput.loaded.state,
-        0
-      )
-    });
-  }
 }
 
 async function routeApproveMetaReviewResult(input: {

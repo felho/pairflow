@@ -463,6 +463,55 @@ describe("createBubbleStore", () => {
     ).toHaveProperty("consecutiveCleanRuns", 0);
   });
 
+  it("normalizes meta-review runtime delivery correlation fields from incoming payloads", async () => {
+    const api = createApiStub({
+      getRepos: vi.fn(async () => ["/repo-a"]),
+      getBubbles: vi.fn(async () => ({
+        repo: repoSummary("/repo-a"),
+        bubbles: [
+          bubbleSummary({
+            bubbleId: "b-runtime-delivery",
+            repoPath: "/repo-a",
+            metaReview: {
+              runtimeDelivery: {
+                status: "uncertain",
+                reasonCode: "META_REVIEW_REQUEST_DELIVERY_UNCONFIRMED",
+                message: "delivery marker was not observed",
+                observedAt: "2026-02-24T12:45:00.000Z",
+                observedForHandoffId:
+                  "meta_review:b-runtime-delivery:round:3:attempt:2",
+                observedForRound: 3
+              }
+            }
+          })
+        ]
+      }))
+    });
+
+    const store = createBubbleStore({
+      api,
+      createEventsClient: () => ({
+        start: () => undefined,
+        stop: () => undefined,
+        refresh: () => undefined
+      })
+    });
+
+    await store.getState().initialize();
+
+    expect(
+      store.getState().bubblesById["b-runtime-delivery"]?.metaReview.runtimeDelivery
+    ).toEqual({
+      status: "uncertain",
+      reasonCode: "META_REVIEW_REQUEST_DELIVERY_UNCONFIRMED",
+      message: "delivery marker was not observed",
+      observedAt: "2026-02-24T12:45:00.000Z",
+      observedForHandoffId:
+        "meta_review:b-runtime-delivery:round:3:attempt:2",
+      observedForRound: 3
+    });
+  });
+
   it("drops empty blocked_prerequisites arrays from incoming reviewPolicy payloads", async () => {
     const guardedBubble = {
       ...bubbleSummary({
@@ -3000,6 +3049,51 @@ describe("createBubbleStore", () => {
     expect(store.getState().bubblesById["b-a"]?.remoteExecution).toEqual(
       diagnosticDetail.remoteExecution
     );
+  });
+
+  it("records a detail error when expanded detail refresh fulfills without a body", async () => {
+    const initialSummary = bubbleSummary({
+      bubbleId: "b-a",
+      repoPath: "/repo-a",
+      state: "RUNNING"
+    });
+    const getBubble = vi
+      .fn<(repoPath: string, bubbleId: string) => Promise<UiBubbleDetail>>()
+      .mockResolvedValueOnce(undefined as unknown as UiBubbleDetail);
+    const getBubbleTimeline = vi.fn(async () => [
+      timelineEntry({
+        id: "msg_001",
+        type: "TASK",
+        sender: "orchestrator",
+        recipient: "codex"
+      })
+    ]);
+    const api = createApiStub({
+      getRepos: vi.fn(async () => ["/repo-a"]),
+      getBubbles: vi.fn(async () => ({
+        repo: repoSummary("/repo-a"),
+        bubbles: [initialSummary]
+      })),
+      getBubble,
+      getBubbleTimeline
+    });
+
+    const store = createBubbleStore({
+      api,
+      createEventsClient: () => ({
+        start: () => undefined,
+        stop: () => undefined,
+        refresh: () => undefined
+      })
+    });
+
+    await store.getState().initialize();
+    await store.getState().toggleBubbleExpanded("b-a");
+
+    expect(store.getState().detailErrorById["b-a"]).toBe(
+      "Bubble detail response was empty."
+    );
+    expect(store.getState().bubbleTimelines["b-a"]).toHaveLength(1);
   });
 
   it("clears expanded detail attention when a later detail refresh resolves it", async () => {

@@ -2,11 +2,33 @@ import type { LoadedStateSnapshot } from "../ports/stateSnapshots.js";
 import { isMetaReviewExecutionContextActiveState } from "../metaReview/metaReviewExecutionContext.js";
 import { resolveActiveMetaReviewRuntimeDelivery } from "../metaReview/metaReviewSnapshot.js";
 import type { BubbleMetaReviewRuntimeDeliveryState } from "../../../types/bubble.js";
-import type { ApplyMetaReviewGateExecutionContext } from "./metaReviewGateApplyContext.js";
 import { isNamedError } from "../errors/namedError.js";
 
+interface RuntimeDeliveryObservationPersistenceContext {
+  readState: ApplyMetaReviewGateStateReadPort;
+  writeState: ApplyMetaReviewGateStateWritePort;
+  resolved: {
+    bubblePaths: {
+      statePath: string;
+    };
+  };
+}
+
+type ApplyMetaReviewGateStateReadPort = (
+  path: string
+) => Promise<LoadedStateSnapshot>;
+
+type ApplyMetaReviewGateStateWritePort = (
+  path: string,
+  state: LoadedStateSnapshot["state"],
+  options: {
+    expectedFingerprint: string;
+    expectedState: "RUNNING";
+  }
+) => Promise<LoadedStateSnapshot>;
+
 export async function persistRuntimeDeliveryObservation(input: {
-  context: ApplyMetaReviewGateExecutionContext;
+  context: RuntimeDeliveryObservationPersistenceContext;
   loaded: LoadedStateSnapshot;
   runtimeDelivery: BubbleMetaReviewRuntimeDeliveryState;
 }): Promise<LoadedStateSnapshot> {
