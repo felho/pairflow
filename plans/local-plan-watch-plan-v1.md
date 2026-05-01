@@ -19,7 +19,7 @@ archive_group: 2026-05-01-local-plan-watch
 task_tracker:
   - task_id: 1-agent-runner-bridge
     task_path: plans/tasks/1-agent-runner-bridge.md
-    status: not_created
+    status: approved
   - task_id: 2-bubble-trigger-index
     task_path: null
     status: not_created
