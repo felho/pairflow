@@ -5,7 +5,7 @@ task_family_id: repo-defaults-create-time
 sequence_key: "1"
 task_id: 1-repo-defaults-create-time
 title: "Repo Defaults Create-Time Materialization"
-status: implementable
+status: in_progress
 phase: phase1
 target_files:
   - "src/config/repoConfig.ts"
@@ -27,7 +27,7 @@ system_context_ref: docs/pairflow-initial-design.md
 owners:
   - "felho"
 doc_bubble_id: 1-repo-defaults-create-time-doc
-impl_bubble_id: null
+impl_bubble_id: 1-repo-defaults-create-time-impl
 supersedes: []
 superseded_by: null
 archive_group: 2026-05-01-repo-defaults-create-time-plan-v1
