@@ -120,7 +120,6 @@ function finalizeRequiredCreateOptions(
     ...options,
     id: options.id as string,
     repo: options.repo as string,
-    base: options.base as string,
     reviewArtifactType: options.reviewArtifactType as CreateReviewArtifactType
   };
 }

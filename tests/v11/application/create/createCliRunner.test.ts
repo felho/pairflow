@@ -4,7 +4,11 @@ import { join } from "node:path";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import type { BubbleCreateResult } from "../../../../src/v11/application/create/createCommandContract.js";
+import type {
+  CreateBubbleImplementation,
+  BubbleCreateInput,
+  BubbleCreateResult
+} from "../../../../src/v11/application/create/createCommandContract.js";
 import { CREATE_REMOTE_ALIAS_INVALID } from "../../../../src/v11/application/create/createCliOptionValidation.js";
 import { runBubbleCreateCommand } from "../../../../src/v11/application/create/createCliRunner.js";
 import { initGitRepository } from "../../../helpers/git.js";
@@ -97,6 +101,62 @@ describe("create CLI runner", () => {
         remote: "homelab"
       })
     );
+  });
+
+  it("allows --base to be omitted so repo defaults can resolve it later", async () => {
+    const createBubble = vi.fn<CreateBubbleImplementation>(
+      async () => ({
+        bubbleId: "b_create_runner_default_base"
+      }) as unknown as BubbleCreateResult
+    );
+
+    const result = await runBubbleCreateCommand(
+      [
+        "--id",
+        "b_create_runner_default_base",
+        "--repo",
+        "/tmp/repo",
+        "--review-artifact-type",
+        "code",
+        "--task",
+        "Implement X"
+      ],
+      "/tmp",
+      {
+        createBubble
+      }
+    );
+
+    expect(result?.bubbleId).toBe("b_create_runner_default_base");
+    const createInput: BubbleCreateInput | undefined =
+      createBubble.mock.calls[0]?.[0];
+    expect(createInput).toBeDefined();
+    expect(createInput).not.toHaveProperty("baseBranch");
+  });
+
+  it("fails through CLI/createBubble integration when --base and repo default base are missing", async () => {
+    const repoPath = await createTempRepo();
+    const bubbleId = "b_create_runner_missing_base";
+
+    await expect(
+      runBubbleCreateCommand(
+        [
+          "--id",
+          bubbleId,
+          "--repo",
+          repoPath,
+          "--review-artifact-type",
+          "code",
+          "--task",
+          "Implement X"
+        ],
+        "/tmp"
+      )
+    ).rejects.toThrow(/--base <branch>.*\[defaults\]\.base_branch/u);
+
+    await expect(
+      stat(join(repoPath, ".pairflow", "bubbles", bubbleId))
+    ).rejects.toMatchObject({ code: "ENOENT" });
   });
 
   it("rejects whitespace-only remote alias before calling createBubble", async () => {

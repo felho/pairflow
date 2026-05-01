@@ -1,6 +1,9 @@
 import { resolve } from "node:path";
 
-import { loadPairflowRepoConfig } from "../../../config/repoConfig.js";
+import {
+  loadPairflowRepoConfig,
+  type PairflowRepoConfig
+} from "../../../config/repoConfig.js";
 import { getBubblePaths, type BubblePaths } from "../../shared/bubble/bubblePaths.js";
 import type { ReviewerFocusExtractionResult } from "../../../v11/shared/reviewer/reviewerBrief.js";
 import { createInitialBubbleState } from "../../domain/state/initialState.js";
@@ -35,6 +38,10 @@ import {
 } from "./createBubblePreparation.js";
 import { extractReviewerFocus } from "./createReviewerFocus.js";
 import { resolveRepoValidationProfileCommands } from "./repoValidationProfileResolver.js";
+import {
+  resolveBaseBranch,
+  resolveRepoDefaultedCreateInput
+} from "./createRepoDefaultsResolver.js";
 
 export interface CreateBubbleFlowContext {
   repoPath: string;
@@ -88,13 +95,12 @@ async function resolveRemoteExecutionForCreateCommand(input: {
   });
 }
 
-async function applyValidationProfileCommands(input: {
+function applyValidationProfileCommands(input: {
   command: BubbleCreateInput;
   prepared: PreparedCreateBubbleInput;
-  repoPath: string;
+  repoConfig: PairflowRepoConfig;
   worktreePath: string;
-}): Promise<void> {
-  const repoConfig = await loadPairflowRepoConfig(input.repoPath);
+}): void {
   input.prepared.bubbleConfigInput.resolvedValidationCommands =
     resolveRepoValidationProfileCommands({
       explicitCommands: {
@@ -113,8 +119,8 @@ async function applyValidationProfileCommands(input: {
         : {}),
       worktreePath: input.worktreePath,
       allowMissingWorktreePath: true,
-      ...(repoConfig.validation !== undefined
-        ? { repoValidation: repoConfig.validation }
+      ...(input.repoConfig.validation !== undefined
+        ? { repoValidation: input.repoConfig.validation }
         : {}),
       legacyDefaults: {
         test: "pnpm test",
@@ -149,37 +155,43 @@ export async function prepareCreateBubbleFlowContext(input: {
     input.dependencies.assertGitRepository
   );
 
-  const baseBranch = input.command.baseBranch.trim();
-  if (baseBranch.length === 0) {
-    throw toBubbleCreateError({
-      message: "Base branch cannot be empty.",
-      context: {
-        command_name: "create",
-        bubble_id: input.command.id,
-        base_branch: input.command.baseBranch
-      }
-    });
-  }
+  const repoConfig = await loadPairflowRepoConfig(repoPath);
+  const baseBranch = resolveBaseBranch({
+    command: input.command,
+    ...(repoConfig.defaults !== undefined
+      ? { repoDefaults: repoConfig.defaults }
+      : {})
+  });
+  const resolvedCommand = resolveRepoDefaultedCreateInput({
+    command: input.command,
+    ...(repoConfig.defaults !== undefined
+      ? { repoDefaults: repoConfig.defaults }
+      : {}),
+    baseBranch
+  });
 
-  const paths = getBubblePaths(repoPath, input.command.id);
+  const paths = getBubblePaths(repoPath, resolvedCommand.id);
   await ensureBubbleDoesNotExist(paths.bubbleDir);
 
-  const task = await resolveTaskForCreateCommand(input.command);
+  const task = await resolveTaskForCreateCommand(resolvedCommand);
   const reviewerFocus = extractReviewerFocus(task.content);
   const reviewerBrief = await resolveReviewerBriefInput({
-    ...(input.command.reviewerBrief !== undefined
-      ? { reviewerBrief: input.command.reviewerBrief }
+    ...(resolvedCommand.reviewerBrief !== undefined
+      ? { reviewerBrief: resolvedCommand.reviewerBrief }
       : {}),
-    ...(input.command.reviewerBriefFile !== undefined
-      ? { reviewerBriefFile: input.command.reviewerBriefFile }
+    ...(resolvedCommand.reviewerBriefFile !== undefined
+      ? { reviewerBriefFile: resolvedCommand.reviewerBriefFile }
       : {}),
-    accuracyCritical: input.command.accuracyCritical === true,
-    cwd: input.command.cwd ?? process.cwd()
+    accuracyCritical: resolvedCommand.accuracyCritical === true,
+    cwd: resolvedCommand.cwd ?? process.cwd()
       });
-  const remoteExecution = await resolveRemoteExecutionForCreateCommand(input);
+  const remoteExecution = await resolveRemoteExecutionForCreateCommand({
+    command: resolvedCommand,
+    dependencies: input.dependencies
+  });
 
   const prepared = prepareCreateBubbleInput({
-    command: input.command,
+    command: resolvedCommand,
     createdAt: input.createdAt,
     repoPath,
     baseBranch,
@@ -189,10 +201,10 @@ export async function prepareCreateBubbleFlowContext(input: {
       ? { executorRemote: remoteExecution.remoteAlias }
       : {})
   });
-  await applyValidationProfileCommands({
-    command: input.command,
+  applyValidationProfileCommands({
+    command: resolvedCommand,
     prepared,
-    repoPath,
+    repoConfig,
     worktreePath: paths.worktreePath
   });
 
@@ -208,7 +220,7 @@ export async function prepareCreateBubbleFlowContext(input: {
     prepared,
     config: buildBubbleConfig(prepared.bubbleConfigInput),
     state: assertValidBubbleStateSnapshot(
-      createInitialBubbleState(input.command.id)
+      createInitialBubbleState(resolvedCommand.id)
     )
   };
 }

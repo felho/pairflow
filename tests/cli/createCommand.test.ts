@@ -327,19 +327,53 @@ describe("parseBubbleCreateCommandOptions", () => {
     expect(parsed.pairflowCommandProfile).toBeUndefined();
   });
 
-  it("throws when a required flag is missing", () => {
+  it("allows --base to be omitted for repo default resolution", () => {
+    const parsed = parseBubbleCreateCommandOptions([
+      "--id",
+      "b_create_01",
+      "--repo",
+      "/tmp/repo",
+      "--review-artifact-type",
+      "code",
+      "--task",
+      "Implement X"
+    ]);
+
+    expect(parsed.base).toBeUndefined();
+  });
+
+  it("rejects an explicitly empty --base value", () => {
     expect(() =>
       parseBubbleCreateCommandOptions([
         "--id",
         "b_create_01",
         "--repo",
         "/tmp/repo",
+        "--base",
+        "   ",
         "--review-artifact-type",
         "code",
         "--task",
         "Implement X"
       ])
-    ).toThrow(/--base/u);
+    ).toThrow(/--base=<non-empty branch>/u);
+  });
+
+  it("trims an explicitly provided --base value", () => {
+    const parsed = parseBubbleCreateCommandOptions([
+      "--id",
+      "b_create_01",
+      "--repo",
+      "/tmp/repo",
+      "--base",
+      "  main  ",
+      "--review-artifact-type",
+      "code",
+      "--task",
+      "Implement X"
+    ]);
+
+    expect(parsed.base).toBe("main");
   });
 
   it("throws when review-artifact-type option is missing", () => {
@@ -369,7 +403,7 @@ describe("parseBubbleCreateCommandOptions", () => {
       ])
     ).toThrow(
       new RegExp(
-        `^${MISSING_REVIEW_ARTIFACT_TYPE_OPTION}:.*Also missing: --base`,
+        `^${MISSING_REVIEW_ARTIFACT_TYPE_OPTION}:`,
         "u"
       )
     );
@@ -406,7 +440,7 @@ describe("parseBubbleCreateCommandOptions", () => {
       ])
     ).toThrow(
       new RegExp(
-        `^${REVIEW_ARTIFACT_TYPE_AUTO_REMOVED}:.*Also missing: --base`,
+        `^${REVIEW_ARTIFACT_TYPE_AUTO_REMOVED}:`,
         "u"
       )
     );
@@ -443,7 +477,7 @@ describe("parseBubbleCreateCommandOptions", () => {
       ])
     ).toThrow(
       new RegExp(
-        `^${INVALID_REVIEW_ARTIFACT_TYPE_OPTION}:.*Also missing: --base`,
+        `^${INVALID_REVIEW_ARTIFACT_TYPE_OPTION}:`,
         "u"
       )
     );
@@ -534,7 +568,7 @@ describe("parseBubbleCreateCommandOptions", () => {
         "hosted"
       ])
     ).toThrow(
-      new RegExp(`^${PAIRFLOW_COMMAND_PROFILE_INVALID}:.*Also missing: --base`, "u")
+      new RegExp(`^${PAIRFLOW_COMMAND_PROFILE_INVALID}:`, "u")
     );
   });
 

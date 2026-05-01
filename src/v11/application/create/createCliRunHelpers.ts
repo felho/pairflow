@@ -66,8 +66,8 @@ export function buildCreateBubbleInput(
   const input: BubbleCreateInput = {
     id: options.id as string,
     repoPath,
-    baseBranch: options.base as string,
     reviewArtifactType: options.reviewArtifactType as CreateReviewArtifactType,
+    ...(options.base !== undefined ? { baseBranch: options.base } : {}),
     ...(options.ideation === true ? { ideation: true } : {}),
     ...(options.task !== undefined ? { task: options.task } : {}),
     ...(options.taskFile !== undefined ? { taskFile: options.taskFile } : {}),

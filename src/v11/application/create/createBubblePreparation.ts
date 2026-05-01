@@ -47,6 +47,28 @@ export function prepareCreateBubbleInput(input: {
   if (input.command.reviewer !== undefined) {
     bubbleConfigInput.reviewer = input.command.reviewer;
   }
+  if (input.command.metaReviewer !== undefined) {
+    bubbleConfigInput.metaReviewer = input.command.metaReviewer;
+  }
+  if (input.command.watchdogTimeoutMinutes !== undefined) {
+    bubbleConfigInput.watchdogTimeoutMinutes =
+      input.command.watchdogTimeoutMinutes;
+  }
+  if (input.command.maxRounds !== undefined) {
+    bubbleConfigInput.maxRounds = input.command.maxRounds;
+  }
+  if (input.command.severityGateRound !== undefined) {
+    bubbleConfigInput.severityGateRound = input.command.severityGateRound;
+  }
+  if (input.command.reviewerContextMode !== undefined) {
+    bubbleConfigInput.reviewerContextMode = input.command.reviewerContextMode;
+  }
+  if (input.command.reviewPolicy !== undefined) {
+    bubbleConfigInput.reviewPolicy = input.command.reviewPolicy;
+  }
+  if (input.command.docContractGates !== undefined) {
+    bubbleConfigInput.docContractGates = input.command.docContractGates;
+  }
   if (input.command.testCommand !== undefined) {
     bubbleConfigInput.testCommand = input.command.testCommand;
   }
