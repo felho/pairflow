@@ -5,7 +5,7 @@ task_family_id: watch-loop
 sequence_key: "3"
 task_id: 3-watch-loop
 title: "Local Plan Watch Loop"
-status: implementable
+status: in_progress
 phase: phase3
 target_files:
   - "src/v11/application/planWatch/planWatchLoop.ts"
@@ -24,7 +24,7 @@ system_context_ref: docs/pairflow-initial-design.md
 owners:
   - "felho"
 doc_bubble_id: 3-watch-loop-doc
-impl_bubble_id: null
+impl_bubble_id: 3-watch-loop-impl
 supersedes: []
 superseded_by: null
 archive_group: 2026-05-01-local-plan-watch
