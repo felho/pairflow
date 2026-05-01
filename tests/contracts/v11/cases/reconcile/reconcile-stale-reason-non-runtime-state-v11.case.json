@@ -2,7 +2,7 @@
   "id": "reconcile-stale-reason-non-runtime-state-v11",
   "command": "reconcile",
   "mode": "v11",
-  "description": "Reconcile v11 marks runtime session stale when bubble state is non-runtime.",
+  "description": "Non-runtime state stale reason behavior.",
   "input": {
     "fixture": {
       "scenario": "stale_reason_non_runtime_state"
@@ -16,6 +16,7 @@
     "seed",
     "m0",
     "reconcile",
+    "v11",
     "stale-reason"
   ]
 }

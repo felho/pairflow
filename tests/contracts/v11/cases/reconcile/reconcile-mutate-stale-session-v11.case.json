@@ -2,7 +2,7 @@
   "id": "reconcile-mutate-stale-session-v11",
   "command": "reconcile",
   "mode": "v11",
-  "description": "Seed reconcile v11 contract case for stale-session removal mutation flow.",
+  "description": "Mutating stale runtime-session cleanup behavior.",
   "input": {
     "dryRun": false
   },

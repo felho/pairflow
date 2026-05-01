@@ -1,4 +1,5 @@
 export const CONTRACT_TEST_TIMEOUT = {
+  v11StandardMs: 20_000,
   parityStandardMs: 20_000,
   parityHeavyMs: 20_000,
   parityGitHeavyMs: 30_000,
