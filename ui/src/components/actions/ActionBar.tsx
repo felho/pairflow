@@ -356,7 +356,7 @@ export function ActionBar(props: ActionBarProps): JSX.Element {
             data-testid={promotedDecisionRowTestId}
           >
             {promotedDecisionActions.map((action) => {
-              const needsModal = action === "request-rework";
+              const needsModal = action === "request-rework" || action === "reply";
               const label = resolveActionLabel(props.bubble, action);
               if (label === undefined) {
                 return null;

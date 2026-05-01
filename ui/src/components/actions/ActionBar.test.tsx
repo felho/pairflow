@@ -305,6 +305,45 @@ describe("ActionBar", () => {
     expect(onAction).not.toHaveBeenCalled();
   });
 
+  it("opens the reply modal from the waiting-human decision row and submits message", async () => {
+    const user = userEvent.setup();
+    const onAction = vi.fn(() => Promise.resolve(undefined));
+
+    render(
+      <ActionBar
+        bubble={bubbleCard({
+          bubbleId: "b-waiting-reply",
+          repoPath: "/repo-a",
+          state: "WAITING_HUMAN"
+        })}
+        attach={{
+          visible: false,
+          enabled: false,
+          command: "tmux attach -t pf-b-waiting-reply",
+          hint: null
+        }}
+        isSubmitting={false}
+        actionError={null}
+        retryHint={null}
+        actionFailure={null}
+        onAction={onAction}
+        onClearFeedback={vi.fn()}
+      />
+    );
+
+    await user.click(screen.getByRole("button", { name: "Reply" }));
+    expect(screen.getByRole("heading", { name: "Reply to Bubble" })).toBeInTheDocument();
+
+    await user.type(screen.getByLabelText("Message"), "Treat it as pre-existing.");
+    await user.click(screen.getByRole("button", { name: "Send Reply" }));
+
+    expect(onAction).toHaveBeenCalledWith({
+      bubbleId: "b-waiting-reply",
+      action: "reply",
+      message: "Treat it as pre-existing."
+    });
+  });
+
   it("keeps reply and resume actions available for waiting-human meta-review timeout bubbles", () => {
     render(
       <ActionBar
