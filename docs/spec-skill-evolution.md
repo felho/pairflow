@@ -2,7 +2,29 @@
 
 Research log documenting the context behind each gate/rule added to `.claude/skills/CreatePairflowSpec/` between 2026-04-05 and 2026-04-16. Each section captures the triggering bubble (if any), the authoring Codex session, verbatim quotes from that session, the concept-level delta between session and commit, and a synthesis of the problem solved.
 
-Methodology, prompt templates, and progress tracker live in [`docs/spec-skill-evolution-plan.md`](./spec-skill-evolution-plan.md).
+Status: historical research log
+Owner: Pairflow core
+Scope: provenance for CreatePairflowSpec skill-rule changes from 2026-04-05 through 2026-04-16.
+
+The temporary research plan that produced this log has been retired. The durable methodology is preserved below so this document remains self-contained.
+
+---
+
+## Methodology
+
+Each section below was produced from the same evidence discipline:
+
+1. Read the committed diff for the relevant skill change first, using `git show <hash> -- .claude/skills/CreatePairflowSpec/`.
+2. Derive the "what changed" summary only from that commit, not from the current skill state.
+3. Locate the authoring Codex session in `~/.codex/sessions/YYYY/MM/DD/rollout-*.jsonl`, usually within eight hours before the commit and widened only when necessary.
+4. Prefer user wording for the problem framing and label agent-proposed solution text as agent voice.
+5. If the session names a Pairflow bubble, inspect the archived bubble state/transcript under `~/.pairflow/archive/<repo_key>/bi_*/` and cite only what the archive directly supports.
+6. Record deltas between session discussion and committed text instead of smoothing them over.
+7. Mark gaps explicitly when the authoring session, bubble archive, or finding-level data is missing.
+
+Operational search note: `~/.codex/.gitignore` ignores sessions by default, so directory searches under `~/.codex/sessions/**` must use `rg --no-ignore` or `rg -uuu`.
+
+The output shape for each entry is: commit message, committed diff summary, authoring session, selected quotes, session-vs-commit delta, incident evidence, synthesized problem solved, related prior sessions, and known uncertainty.
 
 ---
 

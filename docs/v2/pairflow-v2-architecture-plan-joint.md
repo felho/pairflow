@@ -3,6 +3,7 @@
 Status: draft
 Date: 2026-03-07
 Sources: claude/pairflow-v2-architecture-plan.md, codex/pairflow-v2-architecture-plan.md, session discussion
+Authority: current consolidated v2 architecture draft. The `docs/v2/claude/**` and `docs/v2/codex/**` files are source drafts and historical comparison inputs unless this document links to them for a specific unresolved topic.
 
 ---
 

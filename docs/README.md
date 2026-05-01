@@ -1,0 +1,79 @@
+# Pairflow Documentation Index
+
+Status: active
+Owner: Pairflow core
+Scope: navigation and authority map for `docs/**`
+
+## Purpose
+
+This index separates current source-of-truth documents from historical context,
+working drafts, and archived planning material. When documents disagree, prefer
+the most specific active architecture/spec document for the affected subsystem,
+then the relevant implemented task/plan artifact, then historical context.
+
+## Canonical / Active
+
+Use these as current contract or governance inputs:
+
+- [pairflow-initial-design.md](./pairflow-initial-design.md) - implemented MVP baseline and retained protocol contract anchors.
+- [reviewer-severity-ontology.md](./reviewer-severity-ontology.md) - canonical reviewer severity policy and source for generated runtime ontology.
+- [architecture/architecture-fitness-checks.md](./architecture/architecture-fitness-checks.md) - active architecture fitness policy and CI gate documentation.
+- [architecture/v11-placement-and-extraction-governance.md](./architecture/v11-placement-and-extraction-governance.md) - active placement rules for `src/v11/**`.
+- [architecture/sandbox-compatibility-gate.md](./architecture/sandbox-compatibility-gate.md) - active sandbox compatibility gate.
+- [actor-runtime-interface/](./actor-runtime-interface/) - active actor-runtime contract notes.
+- [remote-bubble-execution.md](./remote-bubble-execution.md) - retained remote-bubble design baseline; newer phase task artifacts may narrow authority for specific implementation details.
+
+## Active Roadmaps And Design Baselines
+
+These are useful for ongoing architecture direction, but they may contain
+implementation-era snapshots:
+
+- [v1.1-boundary-simplification/v1.1-implementation-roadmap.md](./v1.1-boundary-simplification/v1.1-implementation-roadmap.md)
+- [v1.1-boundary-simplification/decision-log.md](./v1.1-boundary-simplification/decision-log.md)
+- [v1.1-boundary-simplification/component-one-pagers/](./v1.1-boundary-simplification/component-one-pagers/)
+- [v2/pairflow-v2-architecture-plan-joint.md](./v2/pairflow-v2-architecture-plan-joint.md)
+
+## Product / Feature PRDs And Runbooks
+
+Keep these while the corresponding feature, rollout, or plan family is still
+operationally relevant:
+
+- [meta-review-gate-prd.md](./meta-review-gate-prd.md)
+- [meta-review-gate-rollout-runbook.md](./meta-review-gate-rollout-runbook.md)
+- [meta-review-gate-e2e-validation.md](./meta-review-gate-e2e-validation.md)
+- [artifact-session-provenance-prd.md](./artifact-session-provenance-prd.md)
+- [pairflow-ui-prd.md](./pairflow-ui-prd.md)
+- [repo-registry-prd.md](./repo-registry-prd.md)
+- [bubble-metrics-archive-strategy.md](./bubble-metrics-archive-strategy.md)
+- [execute-pairflow-plan-draft.md](./execute-pairflow-plan-draft.md)
+
+## Historical Context / Incident Notes
+
+These documents preserve why a policy or feature changed. They should not
+override active contract documents unless an active document explicitly points
+to them as authority:
+
+- [review-loop-optimization.md](./review-loop-optimization.md)
+- [review-loop-ws-d-pilot-report-2026-03.md](./review-loop-ws-d-pilot-report-2026-03.md)
+- [reviewbubble-task-hardening-dontesi-keret-2026-03-12.md](./reviewbubble-task-hardening-dontesi-keret-2026-03-12.md)
+- [reviewer-pass-converged-issue-assessment-2026-03-21.md](./reviewer-pass-converged-issue-assessment-2026-03-21.md)
+- [pairflow-evidence-governance-context-2026-03-03.md](./pairflow-evidence-governance-context-2026-03-03.md)
+- [pairflow-docs-only-evidence-gating-context-2026-03-03.md](./pairflow-docs-only-evidence-gating-context-2026-03-03.md)
+- [spec-skill-evolution.md](./spec-skill-evolution.md)
+- [cmux-ideas.md](./cmux-ideas.md)
+
+## Archive / Cleanup Candidates
+
+These are retained for traceability but are not current authority:
+
+- [v1.1-boundary-simplification/archive/](./v1.1-boundary-simplification/archive/)
+- [v2/claude/](./v2/claude/) and [v2/codex/](./v2/codex/) - source drafts behind the joint v2 architecture plan.
+- [mockups/pairflow-ui-mockup.html](./mockups/pairflow-ui-mockup.html) - standalone UI mockup; verify whether the implemented UI still uses it as design reference before deleting.
+- [v1.1-boundary-simplification/component-one-pagers/component-one-pager-template.md](./v1.1-boundary-simplification/component-one-pagers/component-one-pager-template.md) - retained template only.
+
+## Maintenance Rules
+
+1. Add a short status block to new substantial docs: `Status`, `Owner`, and `Scope`.
+2. If a document is superseded, mark the replacement at the top before moving or deleting it.
+3. Keep one current source of truth per policy area; move old drafts to an archive folder or link them from this index as historical context.
+4. Do not use historical incident notes as implementation authority without an active spec, plan, or task artifact that re-adopts the relevant rule.

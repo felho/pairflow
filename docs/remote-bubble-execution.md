@@ -2,6 +2,7 @@
 
 Status: draft
 Date: 2026-04-11
+Authority: retained V1 design baseline. Newer phase task/plan artifacts may narrow or supersede specific implementation details; use this document for the high-level model unless a task artifact explicitly states a stricter contract.
 
 ---
 

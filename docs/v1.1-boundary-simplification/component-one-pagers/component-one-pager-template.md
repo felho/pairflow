@@ -3,6 +3,7 @@
 Status: draft
 Owner: TBD
 Scope: M0|M1|Later
+Authority: retained template only. Existing component one-pagers are the active baseline; do not treat this template as a live component contract.
 
 ## 1) Purpose
 
