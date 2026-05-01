@@ -11,21 +11,11 @@ import { readContractCase } from "./runner.js";
 
 const execFileAsync = promisify(execFile);
 const reconcileCaseSources = [
-  "tests/contracts/v11/cases/reconcile/reconcile-basic.case.json",
   "tests/contracts/v11/cases/reconcile/reconcile-basic-v11.case.json",
-  "tests/contracts/v11/cases/reconcile/reconcile-basic-parity.case.json",
-  "tests/contracts/v11/cases/reconcile/reconcile-mutate-stale-session.case.json",
   "tests/contracts/v11/cases/reconcile/reconcile-mutate-stale-session-v11.case.json",
-  "tests/contracts/v11/cases/reconcile/reconcile-mutate-stale-session-parity.case.json",
-  "tests/contracts/v11/cases/reconcile/reconcile-mutate-no-stale-session.case.json",
   "tests/contracts/v11/cases/reconcile/reconcile-mutate-no-stale-session-v11.case.json",
-  "tests/contracts/v11/cases/reconcile/reconcile-mutate-no-stale-session-parity.case.json",
-  "tests/contracts/v11/cases/reconcile/reconcile-stale-reason-final-state.case.json",
   "tests/contracts/v11/cases/reconcile/reconcile-stale-reason-final-state-v11.case.json",
-  "tests/contracts/v11/cases/reconcile/reconcile-stale-reason-final-state-parity.case.json",
-  "tests/contracts/v11/cases/reconcile/reconcile-stale-reason-non-runtime-state.case.json",
-  "tests/contracts/v11/cases/reconcile/reconcile-stale-reason-non-runtime-state-v11.case.json",
-  "tests/contracts/v11/cases/reconcile/reconcile-stale-reason-non-runtime-state-parity.case.json"
+  "tests/contracts/v11/cases/reconcile/reconcile-stale-reason-non-runtime-state-v11.case.json"
 ] as const;
 
 const reconcileExpectedSourcesSorted = [...reconcileCaseSources].sort();
@@ -40,53 +30,48 @@ function parseReconcileSourcesFromManifest(
   return (manifest.entries ?? [])
     .filter((entry) => entry.command === "reconcile")
     .map((entry) => entry.source)
-    .filter((source): source is string => typeof source === "string")
-    .sort();
+    .filter((source): source is string => typeof source === "string");
 }
 
-describe("v11 reconcile contract harness skeleton", () => {
+describe("v11 reconcile contract harness", () => {
   it("loads seed contract case metadata", async () => {
     const casePath = resolve(process.cwd(), reconcileCaseSources[0]);
     const caseDef = await readContractCase(casePath);
     expect(caseDef.command).toBe("reconcile");
-    expect(caseDef.mode).toBe("baseline");
+    expect(caseDef.mode).toBe("v11");
     expect(caseDef.expected.status).toBe("ok");
   });
 
   it(
-    "executes baseline and parity assertions via shared runner",
-    { timeout: CONTRACT_TEST_TIMEOUT.parityStandardMs },
+    "executes retained v11 behavior cases via shared runner",
+    { timeout: CONTRACT_TEST_TIMEOUT.v11StandardMs },
     async () => {
-    const casePaths = reconcileCaseSources.map((source) =>
-      resolve(process.cwd(), source)
-    );
+      const casePaths = reconcileCaseSources.map((source) =>
+        resolve(process.cwd(), source)
+      );
 
-    for (const casePath of casePaths) {
-      const caseDef = await readContractCase(casePath);
-      const run = await runReconcileContractCase(caseDef);
-      if (caseDef.mode === "baseline") {
-        expect(run.baseline?.status).toBe(caseDef.expected.status);
+      for (const casePath of casePaths) {
+        const caseDef = await readContractCase(casePath);
+        const run = await runReconcileContractCase(caseDef);
+        expect(caseDef.mode).toBe("v11");
+        expect(run.v11.status).toBe(caseDef.expected.status);
         if (caseDef.expected.reasonCode !== undefined) {
-          expect(run.baseline?.reasonCode).toBe(caseDef.expected.reasonCode);
+          expect(run.v11.reasonCode).toBe(caseDef.expected.reasonCode);
         }
-        expect(run.v11).toBeUndefined();
-        continue;
       }
-      if (caseDef.mode === "v11") {
-        expect(run.v11?.status).toBe(caseDef.expected.status);
-        if (caseDef.expected.reasonCode !== undefined) {
-          expect(run.v11?.reasonCode).toBe(caseDef.expected.reasonCode);
-        }
-        expect(run.baseline).toBeUndefined();
-        continue;
-      }
-
-      expect(run.baseline).toBeDefined();
-      expect(run.v11).toBeDefined();
-      expect(run.baseline).toEqual(run.v11);
-    }
     }
   );
+
+  it("keeps reconcile manifest sources in canonical scenario order", async () => {
+    const manifestPath = resolve(
+      process.cwd(),
+      "tests/contracts/v11/corpus/manifest.json"
+    );
+    const manifestRaw = await readFile(manifestPath, "utf8");
+    const reconcileSources = parseReconcileSourcesFromManifest(manifestRaw);
+
+    expect(reconcileSources).toEqual([...reconcileCaseSources]);
+  });
 
   it("includes reconcile seed entries in corpus manifest", async () => {
     const manifestPath = resolve(
@@ -94,7 +79,7 @@ describe("v11 reconcile contract harness skeleton", () => {
       "tests/contracts/v11/corpus/manifest.json"
     );
     const manifestRaw = await readFile(manifestPath, "utf8");
-    const reconcileSources = parseReconcileSourcesFromManifest(manifestRaw);
+    const reconcileSources = parseReconcileSourcesFromManifest(manifestRaw).sort();
 
     expect(reconcileSources).toEqual(reconcileExpectedSourcesSorted);
   });
@@ -111,7 +96,7 @@ describe("v11 reconcile contract harness skeleton", () => {
       ".pairflow/evidence/contracts-v11-corpus-manifest.json"
     );
     const outputRaw = await readFile(outputManifestPath, "utf8");
-    const reconcileSources = parseReconcileSourcesFromManifest(outputRaw);
+    const reconcileSources = parseReconcileSourcesFromManifest(outputRaw).sort();
 
     expect(reconcileSources).toEqual(reconcileExpectedSourcesSorted);
   });

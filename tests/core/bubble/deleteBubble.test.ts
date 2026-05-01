@@ -172,20 +172,38 @@ async function readArchiveIndexFromRepo(
   return JSON.parse(await readFile(paths.archiveIndexPath, "utf8")) as ArchiveIndexDocument;
 }
 
-async function readMetricsEventsForDate(at: Date): Promise<Record<string, unknown>[]> {
+function metricsEventsShardPathForDate(at: Date): string {
   const metricsRoot = process.env.PAIRFLOW_METRICS_EVENTS_ROOT;
   if (metricsRoot === undefined) {
     throw new Error("PAIRFLOW_METRICS_EVENTS_ROOT is not configured.");
   }
   const year = at.getUTCFullYear().toString();
   const month = String(at.getUTCMonth() + 1).padStart(2, "0");
-  const shardPath = join(metricsRoot, year, month, `events-${year}-${month}.ndjson`);
-  const raw = await readFile(shardPath, "utf8");
+  return join(metricsRoot, year, month, `events-${year}-${month}.ndjson`);
+}
+
+async function readMetricsEventsForDate(at: Date): Promise<Record<string, unknown>[]> {
+  const raw = await readFile(metricsEventsShardPathForDate(at), "utf8");
   return raw
     .split("\n")
     .map((line) => line.trim())
     .filter((line) => line.length > 0)
     .map((line) => JSON.parse(line) as Record<string, unknown>);
+}
+
+async function expectNoBubbleDeletedEventForDate(at: Date): Promise<void> {
+  const events = await readMetricsEventsForDate(at).catch((error: unknown) => {
+    if (
+      typeof error === "object"
+      && error !== null
+      && "code" in error
+      && error.code === "ENOENT"
+    ) {
+      return [];
+    }
+    throw error;
+  });
+  expect(events.find((event) => event.event_type === "bubble_deleted")).toBeUndefined();
 }
 
 function buildArchiveManifest(input: {
@@ -356,11 +374,7 @@ describe("deleteBubble", () => {
     await expect(stat(bubble.paths.bubbleDir)).rejects.toMatchObject({
       code: "ENOENT"
     });
-    expect(
-      (await readMetricsEventsForDate(now)).find(
-        (event) => event.event_type === "bubble_deleted"
-      )
-    ).toBeUndefined();
+    await expectNoBubbleDeletedEventForDate(now);
   });
 
   it("fills archive index created_at from bubble metadata when available", async () => {
@@ -1701,11 +1715,7 @@ describe("deleteBubble", () => {
       "{\"sample\":\"remote-health-fail-keep\"}\n"
     );
     await expect(stat(healthPath)).resolves.toBeDefined();
-    expect(
-      (await readMetricsEventsForDate(now)).find(
-        (event) => event.event_type === "bubble_deleted"
-      )
-    ).toBeUndefined();
+    await expectNoBubbleDeletedEventForDate(now);
   });
 
   it("fails closed when remote delete finalization cannot remove the local bubble directory", async () => {
@@ -2753,11 +2763,7 @@ describe("deleteBubble", () => {
       "{\"sample\":\"remote-fallback-health-fail-keep\"}\n"
     );
     await expect(stat(healthPath)).resolves.toBeDefined();
-    expect(
-      (await readMetricsEventsForDate(now)).find(
-        (event) => event.event_type === "bubble_deleted"
-      )
-    ).toBeUndefined();
+    await expectNoBubbleDeletedEventForDate(now);
   });
 
   it("uses the local canonical delete path inside a verified remote clone execution context", async () => {

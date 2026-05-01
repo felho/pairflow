@@ -4,9 +4,6 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { reconcileRuntimeSessions } from "../../../src/v11/application/reconcile/reconcileCommandApi.js";
-import {
-  reconcileRuntimeSessionsV11
-} from "../../../src/v11/application/reconcile/emitReconcileV11.js";
 import { upsertRuntimeSession } from "../../../src/v11/infrastructure/executor/sessionRuntime/runtimeSessionsRegistry.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
 import { initGitRepository } from "../../helpers/git.js";
@@ -28,9 +25,8 @@ export interface ReconcileContractOutput {
 }
 
 export interface ReconcileContractRunResult {
-  mode: ContractCase["mode"];
-  baseline?: ReconcileContractOutput;
-  v11?: ReconcileContractOutput;
+  mode: "v11";
+  v11: ReconcileContractOutput;
 }
 
 interface ParsedReconcileCaseInput {
@@ -187,18 +183,6 @@ function assertContractExpectedSubset(input: {
   }
 }
 
-function assertParityEquivalent(input: {
-  baseline: ReconcileContractOutput;
-  v11: ReconcileContractOutput;
-  caseId: string;
-}): void {
-  if (JSON.stringify(input.baseline) !== JSON.stringify(input.v11)) {
-    throw new Error(
-      `reconcile parity mismatch for case=${input.caseId}: baseline=${JSON.stringify(input.baseline)} v11=${JSON.stringify(input.v11)}`
-    );
-  }
-}
-
 async function seedRuntimeSessionsFixture(input: {
   repoPath: string;
   bubbleId: string;
@@ -207,7 +191,7 @@ async function seedRuntimeSessionsFixture(input: {
   const bubble = await setupRunningBubbleFixture({
     repoPath: input.repoPath,
     bubbleId: input.bubbleId,
-    task: "Reconcile contract parity fixture"
+    task: "Reconcile contract v11 fixture"
   });
 
   await upsertRuntimeSession({
@@ -290,64 +274,23 @@ export async function runReconcileContractCase(
     );
   }
 
-  if (caseDef.mode === "baseline") {
-    const baseline = await executeReconcileCase({
-      caseDef,
-      executor: reconcileRuntimeSessions
-    });
-    assertContractExpectedSubset({
-      output: baseline,
-      expected: caseDef.expected,
-      label: "baseline"
-    });
-    return {
-      mode: caseDef.mode,
-      baseline
-    };
+  if (caseDef.mode !== "v11") {
+    throw new Error(
+      `Unsupported reconcile contract mode: ${caseDef.mode}. Reconcile contract cases must be v11-only.`
+    );
   }
 
-  if (caseDef.mode === "v11") {
-    const v11 = await executeReconcileCase({
-      caseDef,
-      executor: reconcileRuntimeSessionsV11
-    });
-    assertContractExpectedSubset({
-      output: v11,
-      expected: caseDef.expected,
-      label: "v11"
-    });
-    return {
-      mode: caseDef.mode,
-      v11
-    };
-  }
-
-  const baseline = await executeReconcileCase({
-    caseDef,
-    executor: reconcileRuntimeSessions
-  });
   const v11 = await executeReconcileCase({
     caseDef,
-    executor: reconcileRuntimeSessionsV11
-  });
-  assertContractExpectedSubset({
-    output: baseline,
-    expected: caseDef.expected,
-    label: "parity/baseline"
+    executor: reconcileRuntimeSessions
   });
   assertContractExpectedSubset({
     output: v11,
     expected: caseDef.expected,
-    label: "parity/v11"
-  });
-  assertParityEquivalent({
-    baseline,
-    v11,
-    caseId: caseDef.id
+    label: "v11"
   });
   return {
     mode: caseDef.mode,
-    baseline,
     v11
   };
 }

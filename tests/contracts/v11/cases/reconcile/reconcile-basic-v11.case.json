@@ -2,7 +2,7 @@
   "id": "reconcile-basic-v11",
   "command": "reconcile",
   "mode": "v11",
-  "description": "Seed reconcile v11 contract case for runtime session cleanup parity.",
+  "description": "Dry-run runtime-session cleanup behavior.",
   "input": {
     "dryRun": true
   },
@@ -13,6 +13,7 @@
   "tags": [
     "seed",
     "m0",
-    "reconcile"
+    "reconcile",
+    "v11"
   ]
 }

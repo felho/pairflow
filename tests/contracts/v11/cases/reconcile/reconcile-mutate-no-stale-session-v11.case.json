@@ -2,7 +2,7 @@
   "id": "reconcile-mutate-no-stale-session-v11",
   "command": "reconcile",
   "mode": "v11",
-  "description": "Seed reconcile v11 contract case for mutation mode with no stale runtime sessions.",
+  "description": "Mutating no-stale runtime-session behavior.",
   "input": {
     "dryRun": false,
     "fixture": {
