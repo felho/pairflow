@@ -195,21 +195,31 @@ The existing `[validation]` contract remains separate and unchanged.
 |---|---|---|---|---|---|
 | CS1 | `src/config/repoConfig.ts` | `PairflowRepoConfig`, `validatePairflowRepoConfig`, `parsePairflowRepoConfigToml` | Accept optional `[defaults]` with supported nested sections; reject unknown/invalid fields with paths under `defaults.*`. | P1 | required-now |
 | CS2 | `src/v11/application/create/createCommandContract.ts` | `BubbleCreateInput` | Allow `baseBranch` to be absent at the API contract boundary so repo defaults can supply it. | P1 | required-now |
-| CS3 | `src/v11/application/create/createBubbleFlowContext.ts` | `prepareCreateBubbleFlowContext` | Load repo config once, resolve defaults before `prepareCreateBubbleInput`, fail if base branch remains empty/missing. | P1 | required-now |
-| CS4 | `src/v11/application/create/createBubblePreparation.ts` | `prepareCreateBubbleInput` | Pass resolved/defaulted config values into `CreateBubbleConfigInput`. | P1 | required-now |
-| CS5 | `src/v11/application/create/createCommandRuntime.ts` | `CreateBubbleConfigInput`, `buildBubbleConfig` | Use resolved defaults for supported fields and built-ins only when no explicit/repo value exists. | P1 | required-now |
-| CS6 | `src/v11/application/create/createCliOptionValidation.ts` | create option validation | Do not reject missing `--base` before repo config can be read; still reject invalid explicit values. | P1 | required-now |
+| CS3 | `src/v11/application/create/createBubbleFlowContext.ts` | `prepareCreateBubbleFlowContext` | Load repo config once after repo-path resolution/git assertion and before final create input preparation; resolve supported defaults before `prepareCreateBubbleInput`; fail if base branch remains empty/missing. | P1 | required-now |
+| CS4 | `src/v11/application/create/createBubblePreparation.ts` | `prepareCreateBubbleInput` | Pass resolved/defaulted config values into `CreateBubbleConfigInput`, including scalar defaults, nested agents, review policy, and doc contract gates. | P1 | required-now |
+| CS5 | `src/v11/application/create/createCommandRuntime.ts` | `CreateBubbleConfigInput`, `buildBubbleConfig` | Use already-resolved create config values and built-ins only when no explicit/repo value exists; do not load repo config from this lower-level config builder. | P1 | required-now |
+| CS6 | `src/v11/application/create/createCliOptionValidation.ts` | `collectCreateValidationState`, missing-option handling | Stop adding absent `--base` to the pre-repo-load missing list; when `--base` is present, trim/validate it and reject an empty or blank value before create execution. | P1 | required-now |
 | CS7 | `src/v11/application/create/createCliRunHelpers.ts` | CLI options -> `BubbleCreateInput` | Omit `baseBranch` when `--base` is absent; preserve explicit value when present. | P1 | required-now |
-| CS8 | `src/v11/application/create/createCliOptions.ts` | help text | Clarify `--base` can come from repo `[defaults].base_branch` if the implementation changes required-option wording. | P2 | required-now |
+| CS8 | `src/v11/application/create/createCliOptions.ts` | help text | Change usage/options wording so `--base` is optional when repo `[defaults].base_branch` is configured. | P2 | required-now |
+| CS9 | `src/v11/application/create/createBubbleFlowContext.ts`, `src/v11/application/create/createCliRunHelpers.ts` | base-branch normalization and create input construction | Treat absent `baseBranch` as eligible for repo default resolution, but reject an explicitly empty/blank `baseBranch` as invalid input rather than falling through to repo defaults. | P1 | required-now |
 
 ### 2) Data and Interface Contract
 
 | Contract | Required Fields | Optional Fields | Compatibility | Priority | Timing |
 |---|---|---|---|---|---|
 | `PairflowRepoConfig` | none | `defaults`, existing `validation` | additive top-level schema extension; unknown fields still rejected | P1 | required-now |
-| `RepoDefaultsConfig` | none | supported scalar and nested fields listed in L0 | partial defaults allowed; missing nested fields use built-ins | P1 | required-now |
+| `RepoDefaultsConfig` | none | supported scalar and nested fields listed below | partial defaults allowed; missing nested fields use built-ins | P1 | required-now |
 | `BubbleCreateInput.baseBranch` | no longer required at input type boundary | `baseBranch?: string` | explicit CLI/API callers continue to work | P1 | required-now |
 | Created `BubbleConfig` | all existing required fields remain required | N/A | resolved repo defaults are materialized to the same existing bubble config fields | P1 | required-now |
+
+`RepoDefaultsConfig` supported fields are exactly:
+
+1. scalars: `base_branch`, `watchdog_timeout_minutes`, `max_rounds`, `severity_gate_round`, `pairflow_command_profile`, `reviewer_context_mode`;
+2. `agents`: `implementer`, `reviewer`, `meta_reviewer`;
+3. `review_policy`: `review_loop_mode`, `reviewer_blocking_min_severity`, `meta_review_auto_rework_min_severity`, `meta_review_consecutive_clean_runs_required`;
+4. `doc_contract_gates`: `round_gate_applies_after`.
+
+Name mapping contract: TOML/defaults fields remain snake_case at repo-config parse and `BubbleConfig` persistence boundaries, but create-flow TypeScript inputs use the existing camelCase contract (`baseBranch`, `watchdogTimeoutMinutes`, `maxRounds`, `severityGateRound`, `pairflowCommandProfile`, `reviewerContextMode`, `metaReviewer`, `reviewPolicy`, `docContractGates`). The resolver must be the explicit mapping boundary; call sites must not reconstruct meaning from ad hoc string keys.
 
 Validation rules:
 
@@ -223,11 +233,22 @@ Validation rules:
 3. `defaults.agents.*` must use existing agent names and `agents.implementer !== agents.reviewer` behavior must remain enforced by bubble config validation.
 4. Unknown fields under `[defaults]` or nested defaults sections must fail.
 
+Current-code alignment requirements:
+
+1. `PairflowRepoConfig` currently permits only `[validation]` plus legacy `[enforcement_mode]`; extend its allowed top-level key set and unsupported-section message to include `[defaults]` while preserving legacy enforcement-mode ignore behavior.
+2. `prepareCreateBubbleFlowContext` currently calls `loadPairflowRepoConfig` inside `applyValidationProfileCommands`; refactor so repo config is loaded once and the same parsed object is used for both `[defaults]` resolution and existing validation-profile resolution.
+3. Repo config parse/defaults validation and final base-branch enforcement belong after repo-path resolution/git assertion and before `ensureBubbleDoesNotExist` or any `getBubblePaths`-backed persistence side effects. The missing-base failure path must produce a create error mentioning both `--base` and `[defaults].base_branch`.
+4. `buildCreateBubbleInput` currently casts `options.base` to a required string; make this field conditional so API callers can also omit `baseBranch` and rely on the same create-flow resolver.
+5. `CreateBubbleConfigInput` currently lacks fields for most supported defaults. Add only the required narrow fields: `watchdogTimeoutMinutes`, `maxRounds`, `severityGateRound`, `reviewerContextMode`, `implementer`, `reviewer`, `metaReviewer`, `pairflowCommandProfile`, `reviewPolicy`, and `docContractGates` or equivalent typed sub-objects. Do not add generic passthrough for arbitrary `BubbleConfig` keys.
+6. Existing explicit CLI/API inputs for every exposed create option must retain their current precedence and behavior. At minimum this includes `baseBranch`, `implementer`, `reviewer`, `pairflowCommandProfile`, validation commands, bootstrap command, remote executor, task inputs, reviewer brief, and ideation. If this task adds explicit API-only fields for supported defaults, those fields also use explicit input > repo default > built-in default.
+7. `DEFAULT_*` constants in `src/config/defaults.ts` remain the built-in fallback source; this task must not change their values.
+
 ### 3) Side Effects Contract
 
 | Area | Allowed | Forbidden | Notes | Priority | Timing |
 |---|---|---|---|---|---|
 | Repo config read | Read repo-root `pairflow.toml` during create. | Read repo defaults during runtime/lifecycle commands. | Same file already read for `[validation]`. | P1 | required-now |
+| Repo config validation ordering | Parse and validate `[defaults]` before checking whether the target bubble directory already exists. | Mask invalid repo defaults behind a "bubble already exists" error. | Config errors are repository preconditions and must fail before bubble identity collision checks. | P1 | required-now |
 | Bubble config write | Persist resolved defaults into `bubble.toml`. | Persist invalid or unresolved defaults. | Existing create persistence path should remain the only writer. | P1 | required-now |
 | Existing bubbles | No mutation. | Backfill/migrate existing bubble configs. | Explicitly deferred. | P1 | required-now |
 
@@ -240,6 +261,7 @@ Validation rules:
 | Unknown default field | throw config validation error | none | path names `defaults.<field>` | P1 | required-now |
 | Invalid enum/numeric default | throw config validation error | none | path names exact default field | P1 | required-now |
 | Missing explicit `--base` and no repo default | create validation error | none | actionable message mentions `--base` or `[defaults].base_branch` | P1 | required-now |
+| Empty explicit base input | create validation error | none | explicit empty CLI `--base` or API `baseBranch` is invalid and must not silently fall through to repo defaults | P1 | required-now |
 | Explicit input conflicts with repo default | continue | explicit input wins | no warning required | P2 | required-now |
 
 ### 5) Dependency Constraints
@@ -273,10 +295,15 @@ Validation rules:
 | T3 | Reject unknown defaults | unsupported key under `[defaults]` or nested section | parse repo config | validation error path names exact key | P1 | required-now |
 | T4 | Reject invalid defaults | invalid enum, invalid number, invalid agent | parse repo config | validation fails before create persistence | P1 | required-now |
 | T5 | Create materializes defaults | repo has supported `[defaults]`, CLI omits optional values | create bubble | `result.config` and rendered `bubble.toml` contain resolved values | P1 | required-now |
-| T6 | Explicit input wins | repo default conflicts with explicit `--base`, agents, or `pairflowCommandProfile` | create bubble | explicit value appears in `bubble.toml` | P1 | required-now |
+| T6 | Explicit input wins across exposed defaults | repo default conflicts with explicit create input for `baseBranch`, agents, `pairflowCommandProfile`, validation commands, bootstrap command, remote executor, task inputs, reviewer brief, ideation, and any newly exposed API-only supported default field | create bubble | explicit value/behavior appears in the created artifacts; repo default appears only for fields without explicit input; task/reviewer-brief/ideation mode and remote executor behavior are unchanged by repo defaults | P1 | required-now |
 | T7 | Missing base without default fails | no `--base`, no `[defaults].base_branch` | CLI create | actionable error, no bubble artifacts | P1 | required-now |
 | T8 | Missing base with default succeeds | no `--base`, repo default has `base_branch` | CLI create | bubble config uses repo default branch | P1 | required-now |
 | T9 | Existing validation profile unaffected | repo has `[validation]` only or `[validation]` plus `[defaults]` | create bubble | validation commands still resolve as before | P1 | required-now |
+| T10 | API input can omit base with default | `createBubble` input omits `baseBranch`, repo default has `base_branch` | create bubble | bubble config uses repo default branch and TypeScript accepts the call | P1 | required-now |
+| T11 | Invalid defaults leave no artifacts | repo has invalid `[defaults]`, valid create input otherwise | create bubble | create rejects before `.pairflow/bubbles/<id>` exists | P1 | required-now |
+| T12 | Nested partial defaults merge correctly | repo default supplies one nested review-policy or agent field | create bubble | supplied field is materialized and sibling fields use explicit or built-in values | P1 | required-now |
+| T13 | Empty explicit base fails | explicit CLI/API base is empty or blank, repo default also exists | create bubble | create rejects because explicit empty input is invalid and no bubble artifacts are created | P1 | required-now |
+| T14 | Runtime paths ignore repo defaults | existing bubble config has materialized values and repo `pairflow.toml` is later changed to conflicting `[defaults]` | run `startCommandContext`/status read-model coverage or the narrowest equivalent lifecycle read-path test with a spy/failing stub on `loadPairflowRepoConfig` | the read path uses `bubble.toml` values and proves repo defaults are not consulted after create; a call to repo-config loading outside create fails the test | P1 | required-now |
 
 ### 8) Baseline Preservation
 
@@ -297,9 +324,12 @@ N/A. This task does not change Pairflow lifecycle success/completion proof.
 
 1. Prefer a small `RepoDefaultsConfig` type inside `src/config/repoConfig.ts` or adjacent to it, not a generic "any bubble config defaults" object.
 2. Avoid allowing arbitrary `BubbleConfig` keys in repo defaults; unsupported defaults should fail closed so future expansion is deliberate.
-3. Consider a resolver helper, for example `resolveRepoDefaultedCreateConfig`, to keep precedence logic out of `buildBubbleConfig`.
+3. Add a resolver helper, for example `resolveRepoDefaultedCreateConfig`, near the create application layer. It should take `BubbleCreateInput`, parsed `RepoDefaultsConfig | undefined`, and built-in defaults, then return explicit resolved fields for `prepareCreateBubbleInput`.
 4. Keep `[validation]` and `[defaults]` independent. A repo may define either or both.
 5. If bubble config validation already normalizes a field, reuse that path after constructing the candidate `BubbleConfig`; repo config validation should still catch invalid defaults with repo-config paths before persistence.
+6. For repo defaults validation, prefer existing enum guards/assertions from `src/types/bubble.ts` and `src/config/bubbleConfig.ts`; when mirroring numeric rules, keep repo-config error paths at `defaults.*` rather than leaking `bubble.toml` paths.
+7. Preserve TOML parser limitations already tested for repo config: supported nested sections are `[defaults.agents]`, `[defaults.review_policy]`, and `[defaults.doc_contract_gates]`; dotted keys and array-of-tables remain unsupported through the existing parser.
+8. When updating CLI help, remove `--base <branch>` from the required usage segment and describe it as "Base branch; defaults to repo [defaults].base_branch when configured."
 
 ## Acceptance Criteria
 
