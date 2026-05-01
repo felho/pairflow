@@ -7,6 +7,7 @@ import {
   stageMetaReviewRunningState,
   throwMetaReviewRunningStageFailure
 } from "./metaReviewGateApplyHelpers.js";
+import { setMetaReviewConsecutiveCleanRuns } from "./metaReviewGateShared.js";
 import { routeMetaReviewKickoffOrRunFailed } from "./metaReviewGateApplyRunRouting.js";
 import {
   initializeApplyMetaReviewGateExecutionContext
@@ -31,9 +32,13 @@ export async function applyMetaReviewGateOnConvergence(
 
   let metaReviewRunningState: LoadedStateSnapshot;
   try {
+    const loadedRunningWithFreshCleanStreak: LoadedStateSnapshot = {
+      ...context.loadedRunning,
+      state: setMetaReviewConsecutiveCleanRuns(context.loadedRunning.state, 0)
+    };
     metaReviewRunningState = await stageMetaReviewRunningState({
       bubbleId: context.resolved.bubbleId,
-      loadedRunning: context.loadedRunning,
+      loadedRunning: loadedRunningWithFreshCleanStreak,
       metaReviewerAgent: context.resolved.bubbleConfig.agents.meta_reviewer,
       nowIso: context.nowIso,
       watchdogTimeoutMinutes: context.resolved.bubbleConfig.watchdog_timeout_minutes,

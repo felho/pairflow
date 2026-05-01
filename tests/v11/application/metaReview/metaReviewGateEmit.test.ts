@@ -14,7 +14,10 @@ import type {
   NotifyMetaReviewerSubmissionRequestDependencies,
   ResolveMetaReviewerPaneWarning
 } from "../../../../src/v11/application/metaReviewGate/metaReviewGateCommandContract.js";
-import { readStateSnapshot } from "../../../../src/v11/infrastructure/state/stateStore.js";
+import {
+  readStateSnapshot,
+  writeStateSnapshot
+} from "../../../../src/v11/infrastructure/state/stateStore.js";
 import { setupRunningBubbleFixture } from "../../../helpers/bubble.js";
 import { initGitRepository } from "../../../helpers/git.js";
 
@@ -282,6 +285,63 @@ describe("metaReviewGate V11 defaults", () => {
       reason_code: null,
       message: "meta-review submit request delivered as meta-reviewer launch prompt."
     });
+  });
+
+  it("resets stale clean-run streaks when opening a fresh meta-review after implementer work", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_meta_review_apply_v11_streak_reset",
+      task: "Verify fresh meta-review dispatch resets stale clean-run streaks.",
+      reviewPolicy: {
+        meta_review_consecutive_clean_runs_required: 2
+      }
+    });
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    await writeStateSnapshot(
+      bubble.paths.statePath,
+      {
+        ...loaded.state,
+        meta_review: {
+          ...loaded.state.meta_review!,
+          consecutive_clean_runs: 1
+        }
+      },
+      {
+        expectedFingerprint: loaded.fingerprint,
+        expectedState: "RUNNING"
+      }
+    );
+
+    const result = await applyMetaReviewGateOnConvergenceV11({
+      bubbleId: bubble.bubbleId,
+      repoPath,
+      summary: "Ready for fresh meta-review after implementer work.",
+      now: new Date("2026-03-13T12:07:00.000Z")
+    }, {
+      resolveMetaReviewerPaneWarning: async () => ({
+        delivery: {
+          status: "confirmed",
+          reasonCode: null,
+          message: "ok"
+        },
+        shouldDeactivate: false
+      }),
+      setMetaReviewerPaneBinding: async () => ({
+        updated: false as const,
+        reason: "no_runtime_session" as const
+      }),
+      notifyMetaReviewerSubmissionRequest: async () => ({
+        status: "confirmed" as const,
+        reasonCode: null,
+        message: "ok"
+      })
+    });
+
+    const persisted = await readStateSnapshot(bubble.paths.statePath);
+    expect(result.route).toBe("meta_review_running");
+    expect(result.state.meta_review?.consecutive_clean_runs).toBe(0);
+    expect(persisted.state.meta_review?.consecutive_clean_runs).toBe(0);
   });
 
   it("confirms built-in pane-binding through the meta-reviewer launch prompt", async () => {
