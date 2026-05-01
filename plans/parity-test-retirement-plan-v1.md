@@ -31,7 +31,7 @@ task_tracker:
     notes: "Remove tautological reconcile baseline/parity contract modes and keep v11 contract cases only."
   - task_id: 4-meta-review-gate-case-rename
     task_path: plans/tasks/4-meta-review-gate-case-rename.md
-    status: approved
+    status: implementable
     notes: "Normalize meta-review-gate parity-named contract cases to v11 behavior cases without touching runtime parity metadata."
 ---
 

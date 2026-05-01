@@ -5,7 +5,7 @@ task_family_id: meta-review-gate-case-rename
 sequence_key: "4"
 task_id: 4-meta-review-gate-case-rename
 title: "Meta Review Gate Case Rename"
-status: approved
+status: implementable
 phase: phase1
 target_files:
   - tests/contracts/v11/metaReviewGate.contract.test.ts
