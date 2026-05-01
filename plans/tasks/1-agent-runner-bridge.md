@@ -5,7 +5,7 @@ task_family_id: agent-runner-bridge
 sequence_key: "1"
 task_id: 1-agent-runner-bridge
 title: "Local Agent Runner Bridge"
-status: implementable
+status: in_progress
 phase: phase1
 target_files:
   - "src/v11/application/planWatch/agentRunnerBridge.ts"
@@ -19,7 +19,7 @@ system_context_ref: docs/pairflow-initial-design.md
 owners:
   - "felho"
 doc_bubble_id: 1-agent-runner-bridge-doc
-impl_bubble_id: null
+impl_bubble_id: 1-agent-runner-bridge-impl
 supersedes: []
 superseded_by: null
 archive_group: 2026-05-01-local-plan-watch
