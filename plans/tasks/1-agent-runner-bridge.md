@@ -117,7 +117,7 @@ Add the local application-layer bridge that can invoke a configured local agent 
 
 ### In Scope
 
-1. Define a typed compact continuation input for invoking `ExecutePairflowPlan` with the watched plan path and trigger context fields supplied by later phases.
+1. Define a typed compact continuation input for invoking `ExecutePairflowPlan` with the watched plan path and caller-supplied trigger context fields; this bridge must not discover triggers or inspect bubble lifecycle state itself.
 2. Define a local agent-runner command contract that supports a configured executable/args/env/cwd and deterministic input delivery.
 3. Implement process invocation with stdout/stderr capture, timeout handling, cancellation cleanup, and spawn/non-zero-exit classification.
 4. Classify settled runner outcomes into `settled_checkpoint`, `human_checkpoint`, or `blocked` from an explicit structured output envelope.
