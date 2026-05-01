@@ -5,7 +5,7 @@ plan_id: meta-review-consecutive-clean-runs-plan-v1
 created_on: "2026-04-27"
 title: "Meta-Review Consecutive Clean Runs Plan"
 status: approved
-plan_status: in_progress
+plan_status: done
 prd_ref: null
 owners:
   - "felho"
@@ -15,7 +15,7 @@ task_order:
   - 3-clean-runs-read-model-ui
   - 4-clean-runs-docs-validation
   - 5-clean-rerun-canonical-context
-active_task_id: 5-clean-rerun-canonical-context
+active_task_id: null
 archive_group: 2026-04-27-meta-review-consecutive-clean-runs-plan-v1
 task_tracker:
   - task_id: 1-clean-runs-policy-state
@@ -32,7 +32,7 @@ task_tracker:
     status: archived
   - task_id: 5-clean-rerun-canonical-context
     task_path: plans/archive/tasks/2026-04-27-meta-review-consecutive-clean-runs-plan-v1/5-clean-rerun-canonical-context.md
-    status: in_progress
+    status: archived
 ---
 
 # Plan: Meta-Review Consecutive Clean Runs
@@ -99,10 +99,11 @@ task_tracker:
 1. Pairflow already has canonical review-policy normalization for `reviewer_blocking_min_severity` and `meta_review_auto_rework_min_severity`.
 2. Meta-review gate finalization already evaluates threshold authority and routes either to auto-rework or human-gate outcomes.
 3. Meta-review state already persists gate-local runtime state such as execution context, runtime delivery observation, sticky human gate, and auto-rework budget counters.
+4. Clean-rerun hardening now starts consecutive clean meta-review attempts through fresh canonical execution context authority with kickoff and delivery parity to the normal reviewer-convergence meta-review start path.
 
 ### Open Work
 
-1. Canonical clean-rerun hardening remains open: consecutive clean meta-review reruns must use the same orchestrator-owned fresh canonical execution context path as the normal reviewer-convergence meta-review start.
+1. N/A.
 
 ### Deferred / Future Work
 
@@ -114,7 +115,7 @@ task_tracker:
 2. Phase 2: gate-routing behavior change for clean reruns and unlocks completed and archived from `2-clean-runs-gate-routing-impl`.
 3. Phase 3: observability and UI preset surfacing completed and archived from `clean-runs-read-model-ui-impl`.
 4. Phase 4: documentation refinement closed via `clean-runs-docs-validation-doc`; final validation completed and archived from `clean-runs-docs-validation-impl`.
-5. Phase 5: retroactive follow-up opened to harden clean-rerun orchestration so every consecutive clean attempt has a fresh canonical execution context and the same kickoff/delivery contract as a meta-review started after reviewer convergence.
+5. Phase 5: clean-rerun canonical-context hardening completed and archived from `5-clean-rerun-canonical-context-impl`.
 
 ## Open Task List
 
@@ -124,7 +125,7 @@ task_tracker:
 | `plans/archive/tasks/2026-04-27-meta-review-consecutive-clean-runs-plan-v1/2-clean-runs-gate-routing.md` | Update current-run meta-review finalization to increment/reset the streak and route directly to another meta-review run until the configured requirement is met. | `1-clean-runs-policy-state.md` | Missing workflow-orchestration behavior for consecutive clean runs. | archived |
 | `plans/archive/tasks/2026-04-27-meta-review-consecutive-clean-runs-plan-v1/3-clean-runs-read-model-ui.md` | Expose the configured requirement and current streak in status/read-model projections, add the compact UI preset selector mapping (`P1`, `P2`, `P3`, `P3+2`), and update the control label/tooltip to quality-level language. | `2-clean-runs-gate-routing.md` | Missing operator observability and compact UI control for the new gate behavior. | archived |
 | `plans/archive/tasks/2026-04-27-meta-review-consecutive-clean-runs-plan-v1/4-clean-runs-docs-validation.md` | Update repo docs/spec references and close the validation matrix across unit/integration/build and UI mapping checks. | `2-clean-runs-gate-routing.md`, `3-clean-runs-read-model-ui.md` | Missing documentation and completion evidence. | archived |
-| `plans/archive/tasks/2026-04-27-meta-review-consecutive-clean-runs-plan-v1/5-clean-rerun-canonical-context.md` | Harden clean-rerun routing so consecutive clean meta-review attempts are orchestrator-owned fresh canonical execution contexts with the same kickoff/delivery contract as reviewer-convergence meta-review starts. | `2-clean-runs-gate-routing.md`, `4-clean-runs-docs-validation.md` | Missing explicit fresh canonical execution context parity for consecutive clean reruns. | approved |
+| `plans/archive/tasks/2026-04-27-meta-review-consecutive-clean-runs-plan-v1/5-clean-rerun-canonical-context.md` | Harden clean-rerun routing so consecutive clean meta-review attempts are orchestrator-owned fresh canonical execution contexts with the same kickoff/delivery contract as reviewer-convergence meta-review starts. | `2-clean-runs-gate-routing.md`, `4-clean-runs-docs-validation.md` | Missing explicit fresh canonical execution context parity for consecutive clean reruns. | archived |
 
 ## Coverage Map
 
@@ -133,7 +134,7 @@ task_tracker:
 | New review-policy contract for required consecutive clean runs | `1-clean-runs-policy-state.md` | Includes default `1` and `>= 1` validation. |
 | Canonical persistence of current clean streak | `1-clean-runs-policy-state.md` | Must remain separate from `auto_rework_count`. |
 | Direct meta-review rerun path for threshold-clean approvals below required streak | `2-clean-runs-gate-routing.md` | Must bypass implementer/reviewer on clean reruns. |
-| Fresh canonical execution context parity for consecutive clean reruns | `5-clean-rerun-canonical-context.md` | Must use the same orchestrator-owned meta-review start contract as reviewer-convergence meta-review entry. |
+| Fresh canonical execution context parity for consecutive clean reruns | `5-clean-rerun-canonical-context.md` | Completed via shared clean-rerun start path with fresh handoff/execution identity, kickoff envelope, delivery observation, and submit stale-guard coverage. |
 | Reset semantics for threshold-meeting findings and non-clean terminal outcomes | `2-clean-runs-gate-routing.md` | Includes `inconclusive` and failure-style outcomes. |
 | Operator visibility into requirement vs current streak | `3-clean-runs-read-model-ui.md` | Avoids opaque autonomous-loop behavior. |
 | Compact single-dropdown UI encoding for supported quality presets | `3-clean-runs-read-model-ui.md` | Must map exact backend pairs only; unsupported pairs need non-misleading fallback handling. |
@@ -199,3 +200,4 @@ task_tracker:
    - `pnpm test`: `.pairflow/evidence/test.log`, pass status, git SHA `a22feaf12e1804f4ef3942fd80cd1df28365012c` (root 422 files / 3183 tests; UI 17 files / 208 tests).
    - `pnpm build`: `.pairflow/evidence/build.log`, pass status, git SHA `a22feaf12e1804f4ef3942fd80cd1df28365012c`.
 3. No validation command was intentionally skipped.
+4. Phase 5 implementation was finalized from `5-clean-rerun-canonical-context-impl` and merged at `95a5a6b9628c6c2fa2dd5083594d02a2dfe179e5`; the close route used Pairflow auto-approval proof with `meta_review_consecutive_clean_runs_required=2` and `consecutiveCleanRuns=2`.
