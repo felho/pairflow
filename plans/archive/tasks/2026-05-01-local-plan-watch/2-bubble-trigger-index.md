@@ -5,7 +5,7 @@ task_family_id: bubble-trigger-index
 sequence_key: "2"
 task_id: 2-bubble-trigger-index
 title: "Plan-Linked Bubble Trigger Index"
-status: in_progress
+status: archived
 phase: phase2
 target_files:
   - "src/v11/application/planWatch/linkedBubbleTriggerIndex.ts"
