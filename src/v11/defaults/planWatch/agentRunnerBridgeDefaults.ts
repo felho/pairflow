@@ -1,4 +1,4 @@
-import { spawn } from "node:child_process";
+import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
 import { access } from "node:fs/promises";
 
 import type {
@@ -30,114 +30,177 @@ export async function pathExists(path: string): Promise<boolean> {
 export function runAgentRunnerCommand(
   invocation: AgentRunnerProcessInvocation
 ): Promise<AgentRunnerProcessResult> {
-  return new Promise((resolve, reject) => {
-    let stdout: CapturedOutput = { tail: "" };
-    let stderr: CapturedOutput = { tail: "" };
-    let settled = false;
-    let timedOut = false;
-    let killTimer: NodeJS.Timeout | undefined;
-    let finalizationTimer: NodeJS.Immediate | undefined;
+  if (invocation.signal?.aborted) {
+    return Promise.resolve(abortedBeforeSpawnResult());
+  }
+  return new AgentRunnerCommandProcess(invocation).run();
+}
 
-    const child = spawn(invocation.command, invocation.args, {
-      cwd: invocation.cwd,
-      ...(invocation.env !== undefined ? { env: invocation.env } : {}),
-      stdio: ["pipe", "pipe", "pipe"]
+class AgentRunnerCommandProcess {
+  private stdout: CapturedOutput = { tail: "" };
+  private stderr: CapturedOutput = { tail: "" };
+  private settled = false;
+  private timedOut = false;
+  private aborted = false;
+  private timeoutTimer: NodeJS.Timeout | undefined;
+  private killTimer: NodeJS.Timeout | undefined;
+  private finalizationTimer: NodeJS.Immediate | undefined;
+  private child: ChildProcessWithoutNullStreams | undefined;
+  private resolve:
+    | ((result: AgentRunnerProcessResult) => void)
+    | undefined;
+  private reject: ((error: Error) => void) | undefined;
+
+  public constructor(private readonly invocation: AgentRunnerProcessInvocation) {}
+
+  public run(): Promise<AgentRunnerProcessResult> {
+    return new Promise((resolve, reject) => {
+      this.resolve = resolve;
+      this.reject = reject;
+      this.child = spawn(this.invocation.command, this.invocation.args, {
+        cwd: this.invocation.cwd,
+        ...(this.invocation.env !== undefined ? { env: this.invocation.env } : {}),
+        stdio: ["pipe", "pipe", "pipe"]
+      });
+      this.startTimeoutTimer();
+      this.invocation.signal?.addEventListener("abort", this.abortRunner, {
+        once: true
+      });
+      this.attachOutputHandlers(this.child);
+      this.attachExitHandlers(this.child);
+      this.writeStdin(this.child);
     });
+  }
 
-    const timer = setTimeout(() => {
-      timedOut = true;
-      child.kill("SIGTERM");
-      killTimer = setTimeout(() => {
-        if (settled) {
-          return;
-        }
-        child.kill("SIGKILL");
-        forceResolveTimedOut();
-      }, TIMEOUT_KILL_GRACE_MS);
-      killTimer.unref();
-    }, invocation.timeoutMs);
-    timer.unref();
+  private startTimeoutTimer(): void {
+    this.timeoutTimer = setTimeout(() => {
+      this.timedOut = true;
+      this.child?.kill("SIGTERM");
+      this.startKillTimer(() => this.forceResolve("timeout"));
+    }, this.invocation.timeoutMs);
+    this.timeoutTimer.unref();
+  }
 
-    function clearTimers(): void {
-      clearTimeout(timer);
-      if (killTimer !== undefined) {
-        clearTimeout(killTimer);
-      }
-      if (finalizationTimer !== undefined) {
-        clearImmediate(finalizationTimer);
-      }
-    }
-
-    function forceResolveTimedOut(): void {
-      if (settled) {
+  private startKillTimer(onExpired: () => void): void {
+    this.killTimer = setTimeout(() => {
+      if (this.settled) {
         return;
       }
-      settled = true;
-      clearTimers();
-      resolve({
-        exitCode: null,
-        stdout: capturedOutputToString(stdout),
-        stderr: capturedOutputToString(stderr),
-        timedOut: true
-      });
-    }
+      this.child?.kill("SIGKILL");
+      onExpired();
+    }, TIMEOUT_KILL_GRACE_MS);
+    this.killTimer.unref();
+  }
 
+  private readonly abortRunner = (): void => {
+    if (this.settled) {
+      return;
+    }
+    this.aborted = true;
+    this.child?.kill("SIGTERM");
+    this.startKillTimer(() => this.forceResolve("abort"));
+  };
+
+  private attachOutputHandlers(child: ChildProcessWithoutNullStreams): void {
     child.stdout.setEncoding("utf8");
     child.stderr.setEncoding("utf8");
     child.stdout.on("data", (chunk: string) => {
-      stdout = appendCapturedOutput(stdout, chunk);
+      this.stdout = appendCapturedOutput(this.stdout, chunk);
     });
     child.stderr.on("data", (chunk: string) => {
-      stderr = appendCapturedOutput(stderr, chunk);
+      this.stderr = appendCapturedOutput(this.stderr, chunk);
     });
+    child.stdin.once("error", (error) => {
+      if (!this.settled) {
+        this.stderr = appendCapturedOutput(
+          this.stderr,
+          `${capturedOutputToString(this.stderr).length > 0 ? "\n" : ""}${error.message}`
+        );
+      }
+    });
+  }
 
+  private attachExitHandlers(child: ChildProcessWithoutNullStreams): void {
     child.once("error", (error) => {
-      if (settled) {
-        return;
+      if (this.markSettled()) {
+        this.reject?.(error);
       }
-      settled = true;
-      clearTimers();
-      reject(error);
     });
-
     child.once("close", (exitCode) => {
-      if (settled) {
+      if (this.settled) {
         return;
       }
-      finalizationTimer = setImmediate(() => {
-        if (settled) {
-          return;
+      this.finalizationTimer = setImmediate(() => {
+        if (this.markSettled()) {
+          this.resolve?.(this.result(exitCode));
         }
-        settled = true;
-        clearTimers();
-        resolve({
-          exitCode,
-          stdout: capturedOutputToString(stdout),
-          stderr: capturedOutputToString(stderr),
-          ...(timedOut ? { timedOut: true } : {})
-        });
       });
     });
+  }
 
-    child.stdin.once("error", (error) => {
-      if (settled) {
-        return;
-      }
-      stderr = appendCapturedOutput(
-        stderr,
-        `${capturedOutputToString(stderr).length > 0 ? "\n" : ""}${error.message}`
-      );
-    });
-
+  private writeStdin(child: ChildProcessWithoutNullStreams): void {
     if (!child.stdin.writable) {
-      settled = true;
-      clearTimers();
-      child.kill("SIGTERM");
-      reject(new Error("child stdin is not writable"));
+      if (this.markSettled()) {
+        child.kill("SIGTERM");
+        this.reject?.(new Error("child stdin is not writable"));
+      }
       return;
     }
-    child.stdin.end(invocation.stdin ?? "");
-  });
+    child.stdin.end(this.invocation.stdin ?? "");
+  }
+
+  private forceResolve(reason: "timeout" | "abort"): void {
+    if (!this.markSettled()) {
+      return;
+    }
+    this.resolve?.({
+      exitCode: null,
+      stdout: capturedOutputToString(this.stdout),
+      stderr: capturedOutputToString(this.stderr),
+      ...(reason === "timeout" ? { timedOut: true } : { aborted: true })
+    });
+  }
+
+  private markSettled(): boolean {
+    if (this.settled) {
+      return false;
+    }
+    this.settled = true;
+    this.clearTimers();
+    return true;
+  }
+
+  private clearTimers(): void {
+    if (this.timeoutTimer !== undefined) {
+      clearTimeout(this.timeoutTimer);
+    }
+    this.invocation.signal?.removeEventListener("abort", this.abortRunner);
+    if (this.killTimer !== undefined) {
+      clearTimeout(this.killTimer);
+    }
+    if (this.finalizationTimer !== undefined) {
+      clearImmediate(this.finalizationTimer);
+    }
+  }
+
+  private result(exitCode: number | null): AgentRunnerProcessResult {
+    return {
+      exitCode,
+      stdout: capturedOutputToString(this.stdout),
+      stderr: capturedOutputToString(this.stderr),
+      ...(this.aborted ? { aborted: true } : {}),
+      ...(this.timedOut ? { timedOut: true } : {})
+    };
+  }
+}
+
+function abortedBeforeSpawnResult(): AgentRunnerProcessResult {
+  return {
+    exitCode: null,
+    stdout: "",
+    stderr: "Agent runner invocation was aborted before spawn.",
+    aborted: true
+  };
 }
 
 export const agentRunnerBridgeDefaults: AgentRunnerBridgeDependencies = {

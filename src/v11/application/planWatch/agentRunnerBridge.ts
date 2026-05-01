@@ -60,6 +60,17 @@ export async function runExecutePairflowPlanContinuation(
     preconditions.config,
     input.now ?? startedAtDate
   );
+  if (input.stopSignal?.aborted) {
+    return blocked({
+      input,
+      startedAt,
+      completedAt: clock().toISOString(),
+      reasonCode: "AGENT_RUNNER_ABORTED",
+      failureStage: "abort",
+      command: invocation.commandIdentity,
+      payload: invocation.payload
+    });
+  }
 
   try {
     const processResult = await dependencies.runCommand(invocation.processInvocation);
@@ -166,7 +177,8 @@ function buildRunnerInvocation(
       cwd,
       env: config.env,
       stdin: inputMode === "stdin_json" ? `${JSON.stringify(payload)}\n` : undefined,
-      timeoutMs
+      timeoutMs,
+      ...(input.stopSignal !== undefined ? { signal: input.stopSignal } : {})
     }
   };
 }
@@ -179,6 +191,21 @@ function classifyProcessResult(input: {
   command: AgentRunnerCommandIdentity;
   payload: AgentRunnerContinuationPayload;
 }): AgentRunnerBridgeResult {
+  if (input.processResult.aborted) {
+    return blocked({
+      input: input.input,
+      startedAt: input.startedAt,
+      completedAt: input.completedAt,
+      reasonCode: "AGENT_RUNNER_ABORTED",
+      failureStage: "abort",
+      command: input.command,
+      exitCode: input.processResult.exitCode,
+      stdout: input.processResult.stdout,
+      stderr: input.processResult.stderr,
+      payload: input.payload
+    });
+  }
+
   if (input.processResult.timedOut) {
     return blocked({
       input: input.input,

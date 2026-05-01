@@ -112,6 +112,26 @@ export {
 export {
   linkedBubbleTriggerIndexDefaults
 } from "./v11/defaults/planWatch/linkedBubbleTriggerIndexDefaults.js";
+export {
+  DEFAULT_PLAN_WATCH_INTERVAL_MS,
+  runPlanWatchIteration,
+  runPlanWatchLoop
+} from "./v11/application/planWatch/planWatchLoop.js";
+export {
+  buildCompletedPlanWatchLedgerRecord,
+  buildDryRunPlanWatchLedgerRecord,
+  buildPlanWatchTriggerEvidence,
+  buildReservedPlanWatchLedgerRecord,
+  hasCompletedRunForKey,
+  hasReservedRunForKey,
+  validatePlanWatchLedgerData
+} from "./v11/application/planWatch/planWatchLedger.js";
+export {
+  createDefaultPlanWatchLoopDependencies,
+  createFilePlanWatchLedgerPort,
+  localBubbleStatusPort,
+  resolvePlanWatchLedgerPath
+} from "./v11/defaults/planWatch/planWatchLoopDefaults.js";
 export type {
   AgentRunnerBridgeDependencies,
   AgentRunnerBridgeFailureReasonCode,
@@ -146,6 +166,27 @@ export type {
   LinkedBubbleTriggerIndexInput,
   LinkedBubbleTriggerIndexResult
 } from "./v11/application/planWatch/linkedBubbleTriggerIndexContract.js";
+export type {
+  PlanWatchBlockedReasonKind,
+  PlanWatchDiagnostic,
+  PlanWatchInput,
+  PlanWatchIterationResult,
+  PlanWatchIterationStatus,
+  PlanWatchLoopDependencies,
+  PlanWatchLoopResult
+} from "./v11/application/planWatch/planWatchLoopContract.js";
+export type {
+  PlanWatchLedgerData,
+  PlanWatchLedgerMode,
+  PlanWatchLedgerPort,
+  PlanWatchLedgerRecord,
+  PlanWatchLedgerRecordState,
+  PlanWatchTriggerEvidence
+} from "./v11/application/planWatch/planWatchLedgerContract.js";
+export {
+  PLAN_WATCH_LEDGER_SCHEMA_VERSION,
+  PlanWatchLedgerError
+} from "./v11/application/planWatch/planWatchLedgerContract.js";
 export {
   resolveBubbleFromWorkspaceCwd,
   WorkspaceResolutionError
@@ -304,6 +345,12 @@ export {
   parseRepoRemoveCommandOptions,
   runRepoRemoveCommand
 } from "./cli/commands/repo/remove.js";
+export {
+  getPlanWatchHelpText,
+  parsePlanWatchCommandOptions,
+  renderPlanWatchText,
+  runPlanWatchCommand
+} from "./cli/commands/plan/watch.js";
 export {
   TOML_PARSER_LIMITATIONS,
   assertValidBubbleConfigRemoteReferences,

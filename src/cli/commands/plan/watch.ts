@@ -1,0 +1,210 @@
+import { parseArgs } from "node:util";
+
+import {
+  runPlanWatchLoop
+} from "../../../v11/application/planWatch/planWatchLoop.js";
+import {
+  DEFAULT_PLAN_WATCH_INTERVAL_MS,
+  type PlanWatchInput,
+  type PlanWatchIterationResult,
+  type PlanWatchLoopDependencies
+} from "../../../v11/application/planWatch/planWatchLoopContract.js";
+import {
+  createDefaultPlanWatchLoopDependencies
+} from "../../../v11/defaults/planWatch/planWatchLoopDefaults.js";
+import type {
+  AgentRunnerBridgeInputMode
+} from "../../../v11/application/planWatch/agentRunnerBridgeContract.js";
+
+export interface PlanWatchCommandOptions {
+  planPath: string;
+  repo: string;
+  intervalSeconds: number;
+  once: boolean;
+  dryRun: boolean;
+  runnerCommand?: string | undefined;
+  runnerArgs: readonly string[];
+  runnerInputMode: AgentRunnerBridgeInputMode;
+  help: false;
+}
+
+export interface PlanWatchHelpCommandOptions {
+  help: true;
+}
+
+export type ParsedPlanWatchCommandOptions =
+  | PlanWatchCommandOptions
+  | PlanWatchHelpCommandOptions;
+
+export function getPlanWatchHelpText(): string {
+  return [
+    "Usage:",
+    "  pairflow plan watch <plan-path> [--repo <path>] [--interval-seconds <n>] [--once] [--dry-run]",
+    "",
+    "Options:",
+    "  --repo <path>                     Repository path (defaults to cwd)",
+    "  --interval-seconds <n>            Poll interval in seconds (default 60)",
+    "  --once                            Run one iteration and exit",
+    "  --dry-run                         Discover and ledger without invoking the runner",
+    "  --runner-command <cmd>            Local ExecutePairflowPlan runner command",
+    "  --runner-arg <arg>                Runner argument; may be repeated",
+    "  --runner-input-mode <mode>        stdin_json or arg_json (default stdin_json)",
+    "  -h, --help                        Show this help"
+  ].join("\n");
+}
+
+export function parsePlanWatchCommandOptions(
+  args: string[],
+  cwd: string = process.cwd()
+): ParsedPlanWatchCommandOptions {
+  const parsed = parseArgs({
+    args,
+    options: {
+      repo: { type: "string" },
+      "interval-seconds": { type: "string" },
+      once: { type: "boolean" },
+      "dry-run": { type: "boolean" },
+      "runner-command": { type: "string" },
+      "runner-arg": { type: "string", multiple: true },
+      "runner-input-mode": { type: "string" },
+      help: { type: "boolean", short: "h" }
+    },
+    strict: true,
+    allowPositionals: true
+  });
+
+  if (parsed.values.help ?? false) {
+    return { help: true };
+  }
+
+  const planPath = parsed.positionals[0];
+  if (planPath === undefined) {
+    throw new Error("PLAN_WATCH_PLAN_PATH_REQUIRED: Missing required plan path.");
+  }
+
+  const intervalSeconds = parseIntervalSeconds(parsed.values["interval-seconds"]);
+  const runnerInputMode = parseRunnerInputMode(parsed.values["runner-input-mode"]);
+
+  return {
+    planPath,
+    repo: parsed.values.repo ?? cwd,
+    intervalSeconds,
+    once: parsed.values.once ?? false,
+    dryRun: parsed.values["dry-run"] ?? false,
+    ...(parsed.values["runner-command"] !== undefined
+      ? { runnerCommand: parsed.values["runner-command"] }
+      : {}),
+    runnerArgs: parsed.values["runner-arg"] ?? [],
+    runnerInputMode,
+    help: false
+  };
+}
+
+export async function runPlanWatchCommand(
+  args: string[] | PlanWatchCommandOptions,
+  cwd: string = process.cwd(),
+  createDependencies: (repo: string) => PlanWatchLoopDependencies =
+    createDefaultPlanWatchLoopDependencies
+): Promise<PlanWatchIterationResult | null> {
+  const options = Array.isArray(args) ? parsePlanWatchCommandOptions(args, cwd) : args;
+  if (options.help) {
+    return null;
+  }
+
+  const stop = createPlanWatchStopSignal();
+  const input: PlanWatchInput = {
+    repoPath: options.repo,
+    planPath: options.planPath,
+    intervalMs: options.intervalSeconds * 1000,
+    once: options.once,
+    dryRun: options.dryRun,
+    runnerConfig: {
+      ...(options.runnerCommand !== undefined
+        ? { command: options.runnerCommand }
+        : {}),
+      args: options.runnerArgs,
+      inputMode: options.runnerInputMode,
+      cwd: options.repo
+    },
+    ...(stop.signal !== undefined ? { stopSignal: stop.signal } : {})
+  };
+  try {
+    const loop = await runPlanWatchLoop(
+      input,
+      createDependencies(options.repo)
+    );
+    return loop.iterations[loop.iterations.length - 1] ?? null;
+  } finally {
+    stop.cleanup();
+  }
+}
+
+function createPlanWatchStopSignal(): {
+  signal?: AbortSignal | undefined;
+  cleanup: () => void;
+} {
+  if (typeof process.once !== "function") {
+    return { cleanup: () => undefined };
+  }
+  const controller = new AbortController();
+  const abort = (): void => {
+    controller.abort();
+  };
+  const cleanup = (): void => {
+    process.off("SIGINT", abort);
+    process.off("SIGTERM", abort);
+  };
+  process.once("SIGINT", abort);
+  process.once("SIGTERM", abort);
+  controller.signal.addEventListener("abort", cleanup, { once: true });
+  return {
+    signal: controller.signal,
+    cleanup
+  };
+}
+
+export function renderPlanWatchText(result: PlanWatchIterationResult): string {
+  const parts = [
+    `plan watch: ${result.status}`,
+    `candidates=${result.scannedCandidateCount}`,
+    `deferred=${result.deferredCandidateCount}`
+  ];
+  if (result.selectedCandidate !== undefined) {
+    parts.push(
+      `task=${result.selectedCandidate.taskId}`,
+      `bubble=${result.selectedCandidate.bubbleId}`
+    );
+  }
+  if (result.blockedReasonKind !== undefined) {
+    parts.push(`blocked_reason=${result.blockedReasonKind}`);
+  }
+  if (result.runnerResult !== undefined) {
+    parts.push(`runner_reason=${result.runnerResult.reasonCode}`);
+  }
+  return parts.join(" ");
+}
+
+function parseIntervalSeconds(value: string | undefined): number {
+  if (value === undefined) {
+    return DEFAULT_PLAN_WATCH_INTERVAL_MS / 1000;
+  }
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    throw new Error(
+      "PLAN_WATCH_INTERVAL_INVALID: --interval-seconds must be a positive number."
+    );
+  }
+  return parsed;
+}
+
+function parseRunnerInputMode(value: string | undefined): AgentRunnerBridgeInputMode {
+  if (value === undefined) {
+    return "stdin_json";
+  }
+  if (value === "stdin_json" || value === "arg_json") {
+    return value;
+  }
+  throw new Error(
+    "PLAN_WATCH_RUNNER_INPUT_MODE_INVALID: --runner-input-mode must be stdin_json or arg_json."
+  );
+}

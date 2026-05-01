@@ -129,6 +129,11 @@ import {
   getMetricsReportHelpText,
   runMetricsReportCommand
 } from "./commands/metrics/report.js";
+import {
+  getPlanWatchHelpText,
+  renderPlanWatchText,
+  runPlanWatchCommand
+} from "./commands/plan/watch.js";
 import { isMainCliEntrypoint } from "./isMainCliEntrypoint.js";
 import type { ActorEmitResultV11 } from "../v11/application/actorProtocol/emitActorProtocolV11.js";
 
@@ -361,6 +366,23 @@ async function handleMetricsReportCommand(args: string[]): Promise<number> {
 
     process.stdout.write(`${result.output}\n`);
     return 0;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    process.stderr.write(`${message}\n`);
+    return 1;
+  }
+}
+
+async function handlePlanWatchCommand(args: string[]): Promise<number> {
+  try {
+    const result = await runPlanWatchCommand(args);
+    if (result === null) {
+      process.stdout.write(`${getPlanWatchHelpText()}\n`);
+      return 0;
+    }
+
+    process.stdout.write(`${renderPlanWatchText(result)}\n`);
+    return result.status === "blocked" ? 1 : 0;
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     process.stderr.write(`${message}\n`);
@@ -812,6 +834,12 @@ const metricsSubcommandHandlers: Readonly<
   report: handleMetricsReportCommand
 };
 
+const planSubcommandHandlers: Readonly<
+  Record<string, (args: string[]) => Promise<number>>
+> = {
+  watch: handlePlanWatchCommand
+};
+
 function buildSupportedCommandsText(): string {
   const bubbleCommands = Object.keys(bubbleSubcommandHandlers).map(
     (subcommand) => `bubble ${subcommand}`
@@ -822,11 +850,15 @@ function buildSupportedCommandsText(): string {
   const metricsCommands = Object.keys(metricsSubcommandHandlers).map(
     (subcommand) => `metrics ${subcommand}`
   );
+  const planCommands = Object.keys(planSubcommandHandlers).map(
+    (subcommand) => `plan ${subcommand}`
+  );
   return [
     "ui",
     ...bubbleCommands,
     ...repoCommands,
     ...metricsCommands,
+    ...planCommands,
     "agent emit"
   ].join(", ");
 }
@@ -886,6 +918,13 @@ export async function runCli(argv: string[]): Promise<number> {
     const metricsHandler = metricsSubcommandHandlers[subcommand];
     if (metricsHandler !== undefined) {
       return metricsHandler(rest);
+    }
+  }
+
+  if (command === "plan" && subcommand !== undefined) {
+    const planHandler = planSubcommandHandlers[subcommand];
+    if (planHandler !== undefined) {
+      return planHandler(rest);
     }
   }
 
