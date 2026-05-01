@@ -99,6 +99,33 @@ export {
   runBubbleWatchdogV11 as runBubbleWatchdog
 } from "./v11/application/watchdog/emitWatchdogV11.js";
 export {
+  buildAgentRunnerContinuationPayload,
+  runExecutePairflowPlanContinuation
+} from "./v11/application/planWatch/agentRunnerBridge.js";
+export {
+  agentRunnerBridgeDefaults
+} from "./v11/defaults/planWatch/agentRunnerBridgeDefaults.js";
+export type {
+  AgentRunnerBridgeDependencies,
+  AgentRunnerBridgeFailureReasonCode,
+  AgentRunnerBridgeInput,
+  AgentRunnerBridgeInputMode,
+  AgentRunnerBridgeReasonCode,
+  AgentRunnerBridgeRunnerReasonCode,
+  AgentRunnerBridgeResult,
+  AgentRunnerBridgeStatus,
+  AgentRunnerBridgeTriggerContext,
+  AgentRunnerCommandConfig,
+  AgentRunnerCommandIdentity,
+  AgentRunnerContinuationPayload,
+  RequiredAgentRunnerCommandConfig,
+  StructuredAgentRunnerOutput,
+  RunAgentRunnerCommandPort
+} from "./v11/application/planWatch/agentRunnerBridgeContract.js";
+export {
+  asAgentRunnerBridgeRunnerReasonCode
+} from "./v11/application/planWatch/agentRunnerBridgeContract.js";
+export {
   resolveBubbleFromWorkspaceCwd,
   WorkspaceResolutionError
 } from "./v11/infrastructure/executor/workspace/workspaceResolution.js";
