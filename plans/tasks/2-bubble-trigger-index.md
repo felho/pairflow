@@ -5,7 +5,7 @@ task_family_id: bubble-trigger-index
 sequence_key: "2"
 task_id: 2-bubble-trigger-index
 title: "Plan-Linked Bubble Trigger Index"
-status: implementable
+status: in_progress
 phase: phase2
 target_files:
   - "src/v11/application/planWatch/linkedBubbleTriggerIndex.ts"
@@ -19,7 +19,7 @@ system_context_ref: docs/pairflow-initial-design.md
 owners:
   - "felho"
 doc_bubble_id: 2-bubble-trigger-index-doc
-impl_bubble_id: null
+impl_bubble_id: 2-bubble-trigger-index-impl
 supersedes: []
 superseded_by: null
 archive_group: 2026-05-01-local-plan-watch
