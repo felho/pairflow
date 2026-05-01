@@ -6,7 +6,27 @@ import type {
   MetaReviewGateResult
 } from "./metaReviewGateTypes.js";
 import { MetaReviewGateError } from "./metaReviewGateTypes.js";
-import type { ApplyMetaReviewGateExecutionContext } from "./metaReviewGateApplyContext.js";
+
+interface ObservedGateResultReconciliationContext {
+  readTranscript: (
+    path: string,
+    options: {
+      allowMissing: boolean;
+      tolerateInvalidEnvelopeLines: boolean;
+    }
+  ) => Promise<ProtocolEnvelope[]>;
+  resolved: {
+    bubbleId: string;
+    bubbleConfig: {
+      agents: {
+        implementer: string;
+      };
+    };
+    bubblePaths: {
+      transcriptPath: string;
+    };
+  };
+}
 
 const persistedHumanGateRoutes = new Set<
   Exclude<MetaReviewGateRoute, "meta_review_running" | "auto_rework">
@@ -32,7 +52,7 @@ function resolvePersistedHumanGateRoute(
 }
 
 export async function reconcileObservedGateResult(input: {
-  context: ApplyMetaReviewGateExecutionContext;
+  context: ObservedGateResultReconciliationContext;
   kickoffResult: MetaReviewGateResult;
   observedState: LoadedStateSnapshot;
 }): Promise<MetaReviewGateResult> {

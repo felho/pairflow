@@ -108,6 +108,18 @@ export async function recoverMetaReviewSubmitRoute(input: {
         }
       });
     }
+    if (input.dependencies.readTranscriptEnvelopes === undefined) {
+      throw new MetaReviewError({
+        reasonCode: "META_REVIEW_GATE_RUN_FAILED",
+        message:
+          "meta-review submit transcript read capability is unavailable for clean-rerun delivery reconciliation.",
+        context: {
+          source: "recoverMetaReviewSubmitRoute",
+          bubbleId: input.resolved.bubbleId,
+          reason: "readTranscriptEnvelopes_unavailable"
+        }
+      });
+    }
     const loaded = await input.dependencies.readStateSnapshot(
       input.resolved.bubblePaths.statePath
     );
@@ -122,7 +134,30 @@ export async function recoverMetaReviewSubmitRoute(input: {
       readFileFn: input.dependencies.readFile,
       appendEnvelope:
         input.dependencies.appendProtocolEnvelope ?? appendProtocolEnvelope,
-      writeState: input.dependencies.writeStateSnapshot
+      readState: input.dependencies.readStateSnapshot,
+      readTranscript: input.dependencies.readTranscriptEnvelopes,
+      writeState: input.dependencies.writeStateSnapshot,
+      ...(input.dependencies.setMetaReviewerPaneBinding !== undefined
+        ? { setMetaReviewerPane: input.dependencies.setMetaReviewerPaneBinding }
+        : {}),
+      ...(input.dependencies.notifyMetaReviewerSubmissionRequest !== undefined
+        ? {
+            notifySubmissionRequest:
+              input.dependencies.notifyMetaReviewerSubmissionRequest
+          }
+        : {}),
+      ...(input.dependencies.resolveMetaReviewerPaneWarning !== undefined
+        ? { resolvePaneWarning: input.dependencies.resolveMetaReviewerPaneWarning }
+        : {}),
+      ...(input.dependencies.runtime !== undefined
+        ? { runtime: input.dependencies.runtime }
+        : {}),
+      ...(input.dependencies.observeGateResultReconciled !== undefined
+        ? {
+            observeGateResultReconciled:
+              input.dependencies.observeGateResultReconciled
+          }
+        : {})
     });
   } catch (error) {
     throw toMetaReviewError(error);

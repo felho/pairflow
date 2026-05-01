@@ -1225,7 +1225,12 @@ export function createBubbleStore(
         return;
       }
 
-      if (detailResult.status === "fulfilled" && timelineResult.status === "fulfilled") {
+      if (
+        detailResult.status === "fulfilled" &&
+        detailResult.value !== undefined &&
+        detailResult.value !== null &&
+        timelineResult.status === "fulfilled"
+      ) {
         const expectedTimelineCount = detailResult.value.transcript.totalMessages;
         const actualTimelineCount = timelineResult.value.length;
         if (actualTimelineCount < expectedTimelineCount) {
