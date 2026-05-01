@@ -79,7 +79,7 @@ export function bubbleSummary(input: {
       support_status: "enabled",
       reviewer_blocking_min_severity: "P3",
       meta_review_auto_rework_min_severity: "P3",
-      meta_review_consecutive_clean_runs_required: 1
+      meta_review_consecutive_clean_runs_required: 2
     },
     ...(input.remoteExecution !== undefined
       ? { remoteExecution: input.remoteExecution }

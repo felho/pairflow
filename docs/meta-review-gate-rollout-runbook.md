@@ -62,7 +62,7 @@ These codes are expected informational or route-shaping signals for the round-lo
 
 Rollout interpretation must preserve the implemented clean-run contract:
 
-1. `review_policy.meta_review_consecutive_clean_runs_required` is the configured number of consecutive threshold-clean meta-review runs required before human approval can unlock. Missing legacy config normalizes to `1`.
+1. `review_policy.meta_review_consecutive_clean_runs_required` is the configured number of consecutive threshold-clean meta-review runs required before human approval can unlock. Missing legacy config normalizes to `2`.
 2. `meta_review.consecutive_clean_runs` is the persisted current streak. Missing legacy state normalizes to `0`.
 3. `review_policy.meta_review_auto_rework_min_severity` is the threshold authority for clean-run evaluation.
 4. `review_policy.reviewer_blocking_min_severity` remains the reviewer post-gate blocking threshold; it does not define whether a meta-review result is clean.

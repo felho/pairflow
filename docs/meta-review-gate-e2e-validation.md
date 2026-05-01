@@ -87,7 +87,7 @@ Record every executed command with timestamp and raw marker lines.
 
 Use these expectations when filling the AC rows and reviewing status/list/UI projections:
 
-1. `review_policy.meta_review_consecutive_clean_runs_required` is the configured unlock count; missing legacy config normalizes to `1`.
+1. `review_policy.meta_review_consecutive_clean_runs_required` is the configured unlock count; missing legacy config normalizes to `2`.
 2. `meta_review.consecutive_clean_runs` is the persisted current streak; missing legacy state normalizes to `0`.
 3. `review_policy.meta_review_auto_rework_min_severity` is the threshold authority for deciding whether a finalized meta-review result is clean.
 4. A threshold-clean `approve` below the required streak starts another meta-review run directly, without an implementer/reviewer round.

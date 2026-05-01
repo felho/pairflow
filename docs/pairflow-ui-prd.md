@@ -70,7 +70,7 @@ Priority order:
 9. Transcript reader tolerates partial trailing NDJSON line; UI must not hard-fail on this.
 10. `open` means invoking the same behavior as `pairflow bubble open`: local bubbles use `open_command` + `{{worktree_path}}`, while started remote bubbles use `open_remote_command` and the persisted remote clone authority. UI should surface command errors directly.
 11. Meta-review clean-run authority remains backend-owned:
-   - configured requirement: `review_policy.meta_review_consecutive_clean_runs_required`, missing legacy config normalizes to `1`
+   - configured requirement: `review_policy.meta_review_consecutive_clean_runs_required`, missing legacy config normalizes to `2`
    - current streak: `meta_review.consecutive_clean_runs`, missing legacy state normalizes to `0`
    - clean-run threshold: `review_policy.meta_review_auto_rework_min_severity`
    - reviewer convergence threshold: `review_policy.reviewer_blocking_min_severity`

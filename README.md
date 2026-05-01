@@ -855,7 +855,7 @@ Ideation note:
 When reviewer convergence starts autonomous meta-review and `sticky_human_gate=false`, human approval is unlocked only after the configured number of consecutive threshold-clean meta-review runs.
 
 Canonical fields:
-- configured requirement: `review_policy.meta_review_consecutive_clean_runs_required` (missing legacy config normalizes to `1`)
+- configured requirement: `review_policy.meta_review_consecutive_clean_runs_required` (missing legacy config normalizes to `2`)
 - current streak: `meta_review.consecutive_clean_runs` (missing legacy state normalizes to `0`)
 - meta-review threshold: `review_policy.meta_review_auto_rework_min_severity`
 - reviewer blocking threshold: `review_policy.reviewer_blocking_min_severity`
