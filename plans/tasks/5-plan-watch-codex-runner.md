@@ -5,7 +5,7 @@ task_family_id: plan-watch-codex-runner
 sequence_key: "5"
 task_id: 5-plan-watch-codex-runner
 title: "Local Plan Watch Built-In Codex Runner"
-status: approved
+status: implementable
 phase: phase5-retrofit
 target_files:
   - "pairflow.toml"
