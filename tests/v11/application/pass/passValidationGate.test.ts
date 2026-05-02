@@ -148,6 +148,57 @@ describe("resolvePassValidationForPass", () => {
     expect(result.reviewerTestDirective?.reason_detail).toContain("fitness");
   });
 
+  it("does not run meta-review approve-only commands during PASS validation", async () => {
+    const runnerCalls: string[] = [];
+    const result = await resolvePassValidationForPass(
+      {
+        senderRole: "implementer",
+        bubbleId: "b_pass_validation_gate_01",
+        bubbleConfig: {
+          ...createBubbleConfig(),
+          commands: {
+            ...createBubbleConfig().commands,
+            fitness: "pnpm fitness:check:ci",
+            validation_required: ["lint", "typecheck", "fitness"],
+            meta_review_approve_required: ["test"]
+          }
+        },
+        worktreePath: "/tmp/worktree",
+        artifactsDir: "/tmp/artifacts",
+        round: 2,
+        now: new Date("2026-05-02T10:00:00.000Z"),
+        createError: (input) => new Error(toErrorMessage(input))
+      },
+      {
+        runPassValidationCommand: async ({ kind, command }) => {
+          runnerCalls.push(`${kind}:${command}`);
+          return {
+            command,
+            exitCode: 0,
+            logPath: `.pairflow/evidence/pass-validation-${kind}.log`,
+            durationMs: 5,
+            executionCwd: "/tmp/worktree"
+          };
+        },
+        buildPassValidationEvidenceArtifact: async () => ({}) as never,
+        writePassValidationEvidenceArtifact: async () => undefined,
+        writePassValidationReviewerCompatibilityArtifact: async () => undefined
+      }
+    );
+
+    expect(runnerCalls).toEqual([
+      "lint:pnpm lint",
+      "typecheck:pnpm typecheck",
+      "fitness:pnpm fitness:check:ci"
+    ]);
+    expect(runnerCalls).not.toContain("test:pnpm test");
+    expect(result.validationRefs).toEqual([
+      ".pairflow/evidence/pass-validation-lint.log",
+      ".pairflow/evidence/pass-validation-typecheck.log",
+      ".pairflow/evidence/pass-validation-fitness.log"
+    ]);
+  });
+
   it("preserves selected target paths through execution result and evidence build input", async () => {
     const runnerInputs: Array<{ cwd?: string }> = [];
     let evidenceCommands:
