@@ -7,7 +7,7 @@ import {
   IDEATION_KICKOFF_REQUIRES_RUNNING
 } from "../../../../src/v11/shared/ideation/ideationReasonCodes.js";
 import type { BubbleStateSnapshot } from "../../../../src/types/bubble.js";
-import { resolveKickoffEligibilityFailureReason } from "../../../../src/v11/shared/kickoff/kickoffEligibility.js";
+import { resolveKickoffEligibilityFailureReason } from "../../../../src/v11/application/kickoff/kickoffEligibility.js";
 
 const baseState = {
   bubble_id: "b_test",

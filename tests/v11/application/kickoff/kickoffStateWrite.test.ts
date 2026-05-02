@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { StateStoreConflictError } from "../../../../src/v11/infrastructure/state/stateStore.js";
 import type { BubbleStateSnapshot } from "../../../../src/types/bubble.js";
-import { writeKickoffState } from "../../../../src/v11/shared/kickoff/kickoffStateWrite.js";
+import { writeKickoffState } from "../../../../src/v11/application/kickoff/kickoffStateWrite.js";
 
 function createState(round: number): BubbleStateSnapshot {
   return {

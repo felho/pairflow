@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { buildKickoffEntrypointInvocation } from "../../../../src/v11/shared/kickoff/kickoffEntrypointInvocationBuilder.js";
+import { buildKickoffEntrypointInvocation } from "../../../../src/v11/application/kickoff/kickoffEntrypointInvocationBuilder.js";
 
 describe("kickoffEntrypointInvocationBuilder", () => {
   it("maps normalized kickoff entrypoint input to run-flow contract", () => {

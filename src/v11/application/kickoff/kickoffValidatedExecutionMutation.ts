@@ -1,4 +1,4 @@
-import { IDEATION_KICKOFF_PERSISTENCE_FAILED } from "../ideation/ideationReasonCodes.js";
+import { IDEATION_KICKOFF_PERSISTENCE_FAILED } from "../../shared/ideation/ideationReasonCodes.js";
 import type { ProtocolEnvelope } from "../../../types/protocol.js";
 import type { ResolvedKickoffDependencies } from "./kickoffDependencyContract.js";
 import type { KickoffPreparedValidation } from "./kickoffValidationPreparation.js";

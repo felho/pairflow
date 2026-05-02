@@ -3,7 +3,7 @@ import {
   IDEATION_KICKOFF_NOT_ALLOWED,
   IDEATION_KICKOFF_NOT_ELIGIBLE,
   IDEATION_KICKOFF_REQUIRES_RUNNING
-} from "../ideation/ideationReasonCodes.js";
+} from "../../shared/ideation/ideationReasonCodes.js";
 import type { BubbleStateSnapshot } from "../../../types/bubble.js";
 
 export interface ResolveKickoffEligibilityInput {

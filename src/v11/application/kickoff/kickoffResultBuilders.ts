@@ -3,7 +3,7 @@ import type {
   DeliveryAckReasonCode,
   DeliveryAckStatus,
   DeliveryFailureReason
-} from "../delivery/tmuxDeliveryContract.js";
+} from "../../shared/delivery/tmuxDeliveryContract.js";
 import {
   buildKickoffResultBase,
   type BuildKickoffResultBaseInput

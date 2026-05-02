@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import type { BubbleStateSnapshot } from "../../../../src/types/bubble.js";
-import { executeKickoffMutationPipeline } from "../../../../src/v11/shared/kickoff/kickoffMutationPipeline.js";
+import { executeKickoffMutationPipeline } from "../../../../src/v11/application/kickoff/kickoffMutationPipeline.js";
 
 function createState(round: number): BubbleStateSnapshot {
   return {

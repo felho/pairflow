@@ -8,9 +8,9 @@ import { createBubble } from "../../../../src/v11/application/create/createComma
 import { IDEATION_KICKOFF_STATE_CONFLICT } from "../../../../src/v11/shared/ideation/ideationReasonCodes.js";
 import { renderBubbleConfigToml } from "../../../../src/config/bubbleConfig.js";
 import type { BubbleStateSnapshot } from "../../../../src/types/bubble.js";
-import type { ResolvedKickoffDependencies } from "../../../../src/v11/shared/kickoff/kickoffDependencyContract.js";
-import type { KickoffPreparedValidation } from "../../../../src/v11/shared/kickoff/kickoffValidationPreparation.js";
-import { executeKickoffValidatedFlow } from "../../../../src/v11/shared/kickoff/kickoffValidatedExecution.js";
+import type { ResolvedKickoffDependencies } from "../../../../src/v11/application/kickoff/kickoffDependencyContract.js";
+import type { KickoffPreparedValidation } from "../../../../src/v11/application/kickoff/kickoffValidationPreparation.js";
+import { executeKickoffValidatedFlow } from "../../../../src/v11/application/kickoff/kickoffValidatedExecution.js";
 import { initGitRepository } from "../../../helpers/git.js";
 
 const tempDirs: string[] = [];

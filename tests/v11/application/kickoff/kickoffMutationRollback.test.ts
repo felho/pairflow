@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import type { BubbleStateSnapshot } from "../../../../src/types/bubble.js";
-import { executeKickoffMutationRollback } from "../../../../src/v11/shared/kickoff/kickoffMutationRollback.js";
+import { executeKickoffMutationRollback } from "../../../../src/v11/application/kickoff/kickoffMutationRollback.js";
 
 const baseState = {
   bubble_id: "b_kickoff_rollback_01",

@@ -4,7 +4,7 @@ import { kickoffDefaults } from "./kickoffDependencyDefaults.js";
 import type {
   KickoffDependencyOverrides,
   ResolvedKickoffDependencies
-} from "../../shared/kickoff/kickoffDependencyContract.js";
+} from "./kickoffDependencyContract.js";
 
 function buildKickoffDefaultDependencies(): ResolvedKickoffDependencies {
   return {

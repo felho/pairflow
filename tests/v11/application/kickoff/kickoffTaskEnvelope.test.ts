@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { buildKickoffTaskEnvelope } from "../../../../src/v11/shared/kickoff/kickoffTaskEnvelope.js";
+import { buildKickoffTaskEnvelope } from "../../../../src/v11/application/kickoff/kickoffTaskEnvelope.js";
 
 describe("buildKickoffTaskEnvelope", () => {
   it("builds TASK envelope for inline kickoff input", () => {

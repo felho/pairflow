@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { createBubble } from "../../../../src/v11/application/create/createCommandApi.js";
 import { readStateSnapshot } from "../../../../src/v11/infrastructure/state/stateStore.js";
-import { buildKickoffNextState } from "../../../../src/v11/shared/kickoff/kickoffStateTransition.js";
+import { buildKickoffNextState } from "../../../../src/v11/application/kickoff/kickoffStateTransition.js";
 import { initGitRepository } from "../../../helpers/git.js";
 
 const tempDirs: string[] = [];

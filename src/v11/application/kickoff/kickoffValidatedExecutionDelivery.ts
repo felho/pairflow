@@ -1,7 +1,7 @@
 import type { ProtocolEnvelope } from "../../../types/protocol.js";
 import type {
   DeliveryAck
-} from "../delivery/tmuxDeliveryContract.js";
+} from "../../shared/delivery/tmuxDeliveryContract.js";
 import type { ResolvedKickoffDependencies } from "./kickoffDependencyContract.js";
 import type { KickoffResultDelivery } from "./kickoffResultBuilders.js";
 import type { KickoffPreparedValidation } from "./kickoffValidationPreparation.js";

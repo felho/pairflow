@@ -3,8 +3,8 @@ import { describe, expect, it } from "vitest";
 import {
   buildKickoffExecutionStepInput,
   buildKickoffValidationStepInput
-} from "../../../../src/v11/shared/kickoff/kickoffFlowStepInputBuilders.js";
-import type { KickoffPreparedValidation } from "../../../../src/v11/shared/kickoff/kickoffValidationPreparation.js";
+} from "../../../../src/v11/application/kickoff/kickoffFlowStepInputBuilders.js";
+import type { KickoffPreparedValidation } from "../../../../src/v11/application/kickoff/kickoffValidationPreparation.js";
 
 describe("kickoffFlowStepInputBuilders", () => {
   it("builds validation-step input from kickoff flow input", () => {
