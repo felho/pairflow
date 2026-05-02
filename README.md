@@ -782,6 +782,57 @@ Notes:
 - Metrics shards are read from `~/.pairflow/metrics/events` by default (override: `PAIRFLOW_METRICS_EVENTS_ROOT`).
 - Report includes archive context from `~/.pairflow/archive/index.json` (override: `PAIRFLOW_ARCHIVE_ROOT`).
 
+### Scenario 11: Watching a local plan for approval-ready bubbles
+
+`pairflow plan watch` runs in the local control plane and polls a plan for linked
+document or implementation bubbles that have reached `READY_FOR_HUMAN_APPROVAL`
+or the legacy-compatible `READY_FOR_APPROVAL` state. When it finds eligible
+trigger evidence, it invokes the configured local runner for `ExecutePairflowPlan`;
+the watcher does not compute routes, approve bubbles, or mutate lifecycle state.
+
+```bash
+# One foreground watch process with the default 60 second interval
+pairflow plan watch plans/local-plan-watch-plan-v1.md \
+  --repo /path/to/repo \
+  --runner-command pairflow-plan-runner
+
+# Single iteration for cron, smoke checks, or operator diagnostics
+pairflow plan watch plans/local-plan-watch-plan-v1.md \
+  --repo /path/to/repo \
+  --once \
+  --runner-command pairflow-plan-runner
+
+# Discover trigger evidence and record a dry-run ledger observation only
+pairflow plan watch plans/local-plan-watch-plan-v1.md \
+  --repo /path/to/repo \
+  --once \
+  --dry-run
+
+# Faster polling for a local pilot
+pairflow plan watch plans/local-plan-watch-plan-v1.md \
+  --repo /path/to/repo \
+  --interval-seconds 10 \
+  --runner-command pairflow-plan-runner
+```
+
+Runner configuration:
+- `--runner-command <cmd>` is required for non-dry-run invocations.
+- `--runner-arg <arg>` may be repeated and is appended to the runner command.
+- `--runner-input-mode stdin_json` is the default; `arg_json` passes the same
+  continuation payload as a JSON argument.
+- `--dry-run` records observation evidence without invoking the runner.
+
+The canonical watch evidence is the typed iteration result and the local ledger
+at `.pairflow/runtime/plan-watch/ledger.json`. Human-readable output such as
+`plan watch: runner_settled_checkpoint ... runner_reason=...` is only a summary.
+Duplicate suppression is ledger-backed: a completed run for the same watched
+plan path, task id/path, bubble id/role, approval-ready state, and status
+evidence is skipped until materially new evidence appears.
+
+V1 is local-control-plane automation. It can observe remote bubbles only through
+the laptop/local routed Pairflow status path; it does not provide remote-only
+plan progression, remote-only bubble creation/start, or a remote supervisor.
+
 ---
 
 ## How the evaluation works during the flow
@@ -938,6 +989,12 @@ The registry is stored at `~/.pairflow/repos.json` (override with `PAIRFLOW_REPO
 | Command | Description |
 |---------|-------------|
 | `metrics report --from <date> --to <date> [--repo <path>] [--format table\|json]` | Generate loop-quality and throughput metrics from local event shards |
+
+#### Plan workflow automation
+
+| Command | Description |
+|---------|-------------|
+| `plan watch <plan-path> [--repo <path>] [--interval-seconds <n>] [--once] [--dry-run] [--runner-command <cmd>] [--runner-arg <arg>]... [--runner-input-mode stdin_json\|arg_json]` | Poll a local plan for approval-ready linked bubbles, dedupe trigger evidence in the local watch ledger, and invoke the configured local `ExecutePairflowPlan` runner unless `--dry-run` is set. Default interval is 60 seconds. |
 
 #### Agent-facing commands
 
