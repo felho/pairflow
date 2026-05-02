@@ -106,8 +106,8 @@ V1 is intentionally local-first: it may observe and operate remote bubbles only 
 2. Remote control-plane or remote supervisor mode for laptop-independent plan progression.
 3. Event-driven lifecycle hooks replacing or supplementing polling.
 4. Full native reimplementation of `ExecutePairflowPlan` route resolution inside Pairflow CLI.
-5. Manual nudge / one-shot continue surfaces such as `--run-now`, `plan nudge`, or `plan continue`.
-6. Initial-run automation when starting a watcher before any linked bubble exists.
+5. Dedicated command aliases such as `plan nudge` or `plan continue`; the watch command's explicit `--run-now` nudge is supported.
+6. Automatic initial-run continuation without explicit operator opt-in.
 7. UI integration for plan-watch status and checkpoint inboxes.
 
 ## Progress / Phase Summary
@@ -132,6 +132,8 @@ Progress update (2026-05-02): document bubble `5-plan-watch-codex-runner-doc` cl
 Progress update (2026-05-02): implementation bubble `5-plan-watch-codex-runner-impl` was created and started with the required bootstrap command. Task `5-plan-watch-codex-runner` is now in progress.
 
 Progress update (2026-05-02): implementation bubble `5-plan-watch-codex-runner-impl` closed and merged after satisfying the configured multi-clean-meta-review gate. Task `5-plan-watch-codex-runner` is archived, and the local plan watch V1 plan is complete.
+
+Progress update (2026-05-02): follow-up runtime smoke exposed that no-trigger plan continuation was still missing. `plan watch --run-now` was added as an explicit operator nudge so the same built-in Codex runner path can start or resume `ExecutePairflowPlan` even before any linked bubble reaches approval-ready state.
 
 ## Task List
 
@@ -163,8 +165,8 @@ Progress update (2026-05-02): implementation bubble `5-plan-watch-codex-runner-i
 2. Linked-bubble trigger discovery must land before the watch loop, because V1 trigger value comes mainly from noticing when an existing doc or implementation bubble reaches the human approval gate.
 3. The watcher ledger must land with the watch loop before repeated runner invocation is enabled, because duplicate continuation attempts against the same trigger evidence would create state inconsistency.
 4. The runner bridge must preserve delegated workflow ownership: it may launch an `ExecutePairflowPlan` continuation, but it must not inline or approximate `CreatePairflowSpec`, `UsePairflow`, or `ResolvePlanState` decisions in CLI code.
-5. The first minimal watcher does not need a manual nudge or initial-run trigger. The operator may start the first `ExecutePairflowPlan` run separately; after that, the watcher owns approval-ready bubble triggers.
-6. Manual nudge, one-shot continue, and initial-run automation are deferred unless a later task proves they are required for the first pilot.
+5. The watcher owns approval-ready bubble triggers by default.
+6. Explicit no-trigger continuation is supported through `plan watch --run-now`, which uses the same built-in Codex runner path without making the watcher compute routes itself.
 7. Remote bubble support in this plan is observation and lifecycle routing through existing local routed commands only. New remote-only control-plane authority must be handled by a separate future plan.
 8. The pilot/docs task must run after the code path exists so the documented boundary reflects tested behavior, not intended behavior.
 9. The retrofit runner task must run after the pilot because it closes a last-mile activation gap discovered by attempting to use `plan watch` against a new plan.

@@ -180,7 +180,7 @@ Retrofit the local `plan watch` V1 feature with a Pairflow-provided built-in Cod
 
 1. Reimplementing `ExecutePairflowPlan` route selection in TypeScript or shell.
 2. Adding remote-only plan execution or a remote supervisor.
-3. Adding manual nudge/continue CLI surfaces.
+3. Adding separate `plan nudge` / `plan continue` command aliases; the explicit watch-scope `--run-now` operator nudge is supported by the runner path.
 4. Changing watch trigger detection or linked-bubble discovery semantics.
 5. Changing Pairflow lifecycle approve/commit/merge behavior.
 6. Supporting a `--runner` CLI flag or non-Codex backend in this slice.
@@ -225,7 +225,7 @@ Retrofit the local `plan watch` V1 feature with a Pairflow-provided built-in Cod
 12. Closure-budget triage:
    - closure buckets touched: config contract, activation, subprocess adapter, read-model docs, pilot proof.
    - intentionally collapsed closures: config plus Codex adapter plus docs plus proof, because the missing value is a built-in executable path.
-   - explicitly deferred closures: remote supervisor, UI, nudge commands.
+   - explicitly deferred closures: remote supervisor, UI, separate nudge command aliases.
 13. Bounded-task-shape decision:
    - primary shape: activation_or_read_model.
    - secondary shape: subprocess_adapter.

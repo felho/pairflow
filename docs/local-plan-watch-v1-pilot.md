@@ -255,7 +255,8 @@ Deferred or unsupported:
 - Remote-only bubble creation/start/progression.
 - Event-driven lifecycle hooks.
 - UI checkpoint inboxes.
-- Manual nudge/continue commands.
+- Dedicated `plan nudge` / `plan continue` command aliases. The supported
+  no-trigger nudge surface is `pairflow plan watch --run-now`.
 
 If a pilot run cannot produce trustworthy status, ledger, or runner evidence,
 the correct result is a documented blocker, not a successful automation claim.
