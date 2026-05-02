@@ -19,7 +19,7 @@ task_tracker:
   - task_id: 2-core-ui-contracts
     task_path: plans/tasks/2-core-ui-contracts.md
     status: approved
-    notes: "Task artifact created after 1-ui-contract-foundation archive aftermath; ReviewSpec task-mode approved."
+    notes: "Document bubble running: 2-core-ui-contracts-doc."
   - task_id: 3-ui-readmodel-contracts
     task_path: null
     status: not_created
