@@ -87,6 +87,26 @@
       "mode": "hard-fail",
       "owner": "architecture/runtime",
       "exceptions": []
+    },
+    {
+      "id": "ui_contract_boundary",
+      "metric": "UI/backend contract boundary import direction",
+      "scope": [
+        "ui/src/**",
+        "src/contracts/ui/**"
+      ],
+      "mode": "hard-fail",
+      "owner": "architecture/ui-contracts",
+      "exceptions": [
+        {
+          "id": "ui-contract-boundary-known-meta-review-drift-001",
+          "kind": "allow-import",
+          "owner": "architecture/ui-contracts",
+          "reason": "Temporary pre-existing UI-local mirror drift retained until successor DTO migration tasks move this contract behind src/contracts/ui.",
+          "from": "ui/src/lib/types.ts",
+          "to": "src/v11/shared/metaReviewGate/metaReviewGateTypes.ts"
+        }
+      ]
     }
   ]
 }
