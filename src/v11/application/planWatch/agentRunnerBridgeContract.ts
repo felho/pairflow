@@ -6,6 +6,14 @@ export type AgentRunnerBridgeStatus =
 export type AgentRunnerBridgeFailureReasonCode =
   | "AGENT_RUNNER_CONFIG_MISSING"
   | "PLAN_PATH_UNAVAILABLE"
+  | "PLAN_WATCH_RUNNER_CONFIG_MISSING"
+  | "PLAN_WATCH_RUNNER_BACKEND_UNSUPPORTED"
+  | "PLAN_WATCH_RUNNER_PAYLOAD_INVALID"
+  | "PLAN_WATCH_RUNNER_WORKFLOW_UNSUPPORTED"
+  | "PLAN_WATCH_RUNNER_FILE_IO_FAILED"
+  | "PLAN_WATCH_PLAN_PATH_UNAVAILABLE"
+  | "PLAN_WATCH_REPO_PATH_UNAVAILABLE"
+  | "PLAN_WATCH_CODEX_UNAVAILABLE"
   | "AGENT_RUNNER_ABORTED"
   | "AGENT_RUNNER_SPAWN_FAILED"
   | "AGENT_RUNNER_TIMEOUT"
@@ -26,7 +34,7 @@ export function asAgentRunnerBridgeRunnerReasonCode(
   return value as AgentRunnerBridgeRunnerReasonCode;
 }
 
-export type AgentRunnerBridgeInputMode = "stdin_json" | "arg_json";
+export type AgentRunnerBridgeInputMode = "stdin_json" | "arg_json" | "none";
 
 export interface AgentRunnerBridgeTriggerContext {
   source: string;
@@ -49,18 +57,21 @@ export interface AgentRunnerBridgeInput {
   repoPath: string;
   invocationId: string;
   trigger: AgentRunnerBridgeTriggerContext;
+  workflow?: string | undefined;
   now?: Date;
   timeoutMs?: number;
   stopSignal?: AbortSignal | undefined;
 }
 
 export interface AgentRunnerCommandConfig {
+  backend?: string | undefined;
   command?: string | undefined;
   args?: readonly string[] | undefined;
   cwd?: string | undefined;
   env?: Readonly<Record<string, string | undefined>> | undefined;
   timeoutMs?: number | undefined;
   inputMode?: AgentRunnerBridgeInputMode | undefined;
+  resultFilePath?: string | undefined;
 }
 
 export interface RequiredAgentRunnerCommandConfig
@@ -69,8 +80,8 @@ export interface RequiredAgentRunnerCommandConfig
 }
 
 export interface AgentRunnerContinuationPayload {
-  kind: "pairflow.execute_pairflow_plan.continuation";
-  workflow: "ExecutePairflowPlan";
+  kind: string;
+  workflow: string;
   invocation_id: string;
   plan_path: string;
   repo_path: string;
@@ -112,6 +123,13 @@ export type RunAgentRunnerCommandPort = (
 export interface AgentRunnerBridgeDependencies {
   pathExists: (path: string) => Promise<boolean>;
   runCommand: RunAgentRunnerCommandPort;
+  prepareCodexRunnerFiles?:
+    | ((payload: AgentRunnerContinuationPayload) => Promise<{
+        schemaFilePath: string;
+        resultFilePath: string;
+      }>)
+    | undefined;
+  readTextFile?: ((path: string) => Promise<string>) | undefined;
   now?: (() => Date) | undefined;
 }
 

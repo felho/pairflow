@@ -789,18 +789,23 @@ document or implementation bubbles that have reached `READY_FOR_HUMAN_APPROVAL`
 or the legacy-compatible `READY_FOR_APPROVAL` state. When it finds eligible
 trigger evidence, it invokes the configured local runner for `ExecutePairflowPlan`;
 the watcher does not compute routes, approve bubbles, or mutate lifecycle state.
+The supported V1 automation path selects the built-in Codex backend from
+`pairflow.toml`:
+
+```toml
+[plan_watch.runner]
+backend = "codex"
+```
 
 ```bash
 # One foreground watch process with the default 60 second interval
 pairflow plan watch plans/my-plan.md \
-  --repo /path/to/repo \
-  --runner-command pairflow-plan-runner
+  --repo /path/to/repo
 
 # Single iteration for cron, smoke checks, or operator diagnostics
 pairflow plan watch plans/my-plan.md \
   --repo /path/to/repo \
-  --once \
-  --runner-command pairflow-plan-runner
+  --once
 
 # Discover trigger evidence and record a dry-run ledger observation only
 pairflow plan watch plans/my-plan.md \
@@ -811,15 +816,22 @@ pairflow plan watch plans/my-plan.md \
 # Faster polling for a local pilot
 pairflow plan watch plans/my-plan.md \
   --repo /path/to/repo \
-  --interval-seconds 10 \
-  --runner-command pairflow-plan-runner
+  --interval-seconds 10
 ```
 
 Runner configuration:
-- `--runner-command <cmd>` is required for non-dry-run invocations.
-- `--runner-arg <arg>` may be repeated and is appended to the runner command.
-- `--runner-input-mode stdin_json` is the default; `arg_json` passes the same
-  continuation payload as a JSON argument.
+- `[plan_watch.runner] backend = "codex"` selects Pairflow's built-in local
+  Codex runner for non-dry-run invocations.
+- The built-in runner invokes `codex --dangerously-bypass-approvals-and-sandbox
+  exec --cd <repo-path> --output-schema <schema-file>
+  --output-last-message <result-file> ...` with an argv array. The continuation
+  payload is embedded as fenced JSON data in the prompt; trigger strings are
+  explicitly treated as untrusted data, not instructions. This is trusted local
+  operator execution.
+- Missing runner config blocks with `PLAN_WATCH_RUNNER_CONFIG_MISSING`;
+  unsupported backends block with `PLAN_WATCH_RUNNER_BACKEND_UNSUPPORTED`.
+- `--runner-command`, `--runner-arg`, and `--runner-input-mode` are retained as
+  legacy/internal escape hatches, not the primary V1 automation contract.
 - `--dry-run` records observation evidence without invoking the runner.
 
 The canonical watch evidence is the typed iteration result and the local ledger
@@ -994,7 +1006,7 @@ The registry is stored at `~/.pairflow/repos.json` (override with `PAIRFLOW_REPO
 
 | Command | Description |
 |---------|-------------|
-| `plan watch <plan-path> [--repo <path>] [--interval-seconds <n>] [--once] [--dry-run] [--runner-command <cmd>] [--runner-arg <arg>]... [--runner-input-mode stdin_json\|arg_json]` | Poll a local plan for approval-ready linked bubbles, dedupe trigger evidence in the local watch ledger, and invoke the configured local `ExecutePairflowPlan` runner unless `--dry-run` is set. Default interval is 60 seconds. |
+| `plan watch <plan-path> [--repo <path>] [--interval-seconds <n>] [--once] [--dry-run] [--runner-command <cmd>] [--runner-arg <arg>]... [--runner-input-mode stdin_json\|arg_json]` | Poll a local plan for approval-ready linked bubbles, dedupe trigger evidence in the local watch ledger, and invoke the config-selected built-in Codex `ExecutePairflowPlan` runner unless `--dry-run` is set. The runner flags are legacy/internal overrides. Default interval is 60 seconds. |
 
 #### Agent-facing commands
 

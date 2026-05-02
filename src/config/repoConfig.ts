@@ -91,9 +91,18 @@ export interface RepoDefaultsConfig {
   doc_contract_gates?: RepoDefaultsDocContractGatesConfig;
 }
 
+export interface RepoPlanWatchRunnerConfig {
+  backend?: string;
+}
+
+export interface RepoPlanWatchConfig {
+  runner?: RepoPlanWatchRunnerConfig;
+}
+
 export interface PairflowRepoConfig {
   defaults?: RepoDefaultsConfig;
   validation?: RepoValidationConfig;
+  plan_watch?: RepoPlanWatchConfig;
 }
 
 function readOptionalNonEmptyString(input: {
@@ -420,6 +429,67 @@ function validateRepoDefaultsConfig(
   return validated;
 }
 
+function validateRepoPlanWatchConfig(
+  planWatch: unknown,
+  errors: ValidationError[]
+): RepoPlanWatchConfig | undefined {
+  if (planWatch === undefined) {
+    return undefined;
+  }
+  if (!isRecord(planWatch)) {
+    errors.push({
+      path: "plan_watch",
+      message: "Must be an object/section"
+    });
+    return undefined;
+  }
+
+  const allowedPlanWatchKeys = new Set(["runner"]);
+  for (const key of Object.keys(planWatch)) {
+    if (!allowedPlanWatchKeys.has(key)) {
+      errors.push({
+        path: `plan_watch.${key}`,
+        message: `Unsupported plan_watch field "${key}".`
+      });
+    }
+  }
+
+  const runner = planWatch.runner;
+  if (runner === undefined) {
+    return {};
+  }
+  if (!isRecord(runner)) {
+    errors.push({
+      path: "plan_watch.runner",
+      message: "Must be an object/section"
+    });
+    return undefined;
+  }
+
+  const allowedRunnerKeys = new Set(["backend"]);
+  for (const key of Object.keys(runner)) {
+    if (!allowedRunnerKeys.has(key)) {
+      errors.push({
+        path: `plan_watch.runner.${key}`,
+        message: `Unsupported plan_watch.runner field "${key}".`
+      });
+    }
+  }
+
+  const validatedRunner: RepoPlanWatchRunnerConfig = {};
+  const backend = readOptionalNonEmptyString({
+    source: runner,
+    key: "backend",
+    path: "plan_watch.runner.backend",
+    errors
+  });
+  if (backend !== undefined) {
+    validatedRunner.backend = backend;
+  }
+
+  return { runner: validatedRunner };
+}
+
 export function resolvePairflowRepoConfigPath(repoPath: string): string {
   return join(repoPath, "pairflow.toml");
 }
@@ -440,24 +510,31 @@ export function validatePairflowRepoConfig(
     };
   }
 
-  const allowedTopLevelKeys = new Set(["enforcement_mode", "validation", "defaults"]);
+  const allowedTopLevelKeys = new Set([
+    "enforcement_mode",
+    "validation",
+    "defaults",
+    "plan_watch"
+  ]);
   for (const key of Object.keys(input)) {
     if (!allowedTopLevelKeys.has(key)) {
       errors.push({
         path: key,
         message:
-          `Unsupported top-level Pairflow repo config section "${key}". Supported sections are [defaults], [validation], and legacy [enforcement_mode].`
+          `Unsupported top-level Pairflow repo config section "${key}". Supported sections are [defaults], [plan_watch], [validation], and legacy [enforcement_mode].`
       });
     }
   }
 
   const defaults = validateRepoDefaultsConfig(input.defaults, errors);
+  const planWatch = validateRepoPlanWatchConfig(input.plan_watch, errors);
   const validation = input.validation;
   if (validation === undefined) {
     return errors.length > 0
       ? validationFail(errors)
       : validationOk({
-          ...(defaults !== undefined ? { defaults } : {})
+          ...(defaults !== undefined ? { defaults } : {}),
+          ...(planWatch !== undefined ? { plan_watch: planWatch } : {})
         });
   }
   if (!isRecord(validation)) {
@@ -736,6 +813,7 @@ export function validatePairflowRepoConfig(
 
   return validationOk({
     ...(defaults !== undefined ? { defaults } : {}),
+    ...(planWatch !== undefined ? { plan_watch: planWatch } : {}),
     validation: validatedValidation
   });
 }

@@ -200,6 +200,47 @@ round_gate_applies_after = 2
     });
   });
 
+  it("parses plan-watch runner backend selection", () => {
+    const parsed = parsePairflowRepoConfigToml(`
+[plan_watch.runner]
+backend = "codex"
+`);
+
+    expect(parsed.plan_watch).toEqual({
+      runner: {
+        backend: "codex"
+      }
+    });
+  });
+
+  it("preserves an explicitly empty plan-watch runner section", () => {
+    const parsed = parsePairflowRepoConfigToml(`
+[plan_watch.runner]
+`);
+
+    expect(parsed.plan_watch).toEqual({
+      runner: {}
+    });
+  });
+
+  it("rejects invalid plan-watch runner config shape", () => {
+    try {
+      parsePairflowRepoConfigToml(`
+[plan_watch.runner]
+backend = ""
+extra = "ignored"
+`);
+      throw new Error("Expected parsePairflowRepoConfigToml to throw.");
+    } catch (error) {
+      expect(error).toBeInstanceOf(SchemaValidationError);
+      const paths = (error as SchemaValidationError).errors.map(
+        (entry) => entry.path
+      );
+      expect(paths).toContain("plan_watch.runner.backend");
+      expect(paths).toContain("plan_watch.runner.extra");
+    }
+  });
+
   it("rejects unsupported and invalid create-time repo defaults", () => {
     try {
       parsePairflowRepoConfigToml(`

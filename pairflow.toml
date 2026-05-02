@@ -7,3 +7,6 @@ typecheck = "pnpm typecheck"
 test = "pnpm test"
 fitness = "pnpm fitness:check:ci"
 bootstrap = "pnpm install --frozen-lockfile && pnpm build"
+
+[plan_watch.runner]
+backend = "codex"

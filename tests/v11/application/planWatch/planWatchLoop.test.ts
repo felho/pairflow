@@ -380,6 +380,7 @@ describe("planWatchLoop", () => {
     );
 
     expect(dryRun.status).toBe("dry_run");
+    expect(dryRunDependencies.runExecutePairflowPlanContinuation).not.toHaveBeenCalled();
     expect(realRun.status).toBe("runner_settled_checkpoint");
     expect(ledger.records.map((record) => record.mode)).toEqual(["dry_run", "run"]);
   });
@@ -475,7 +476,13 @@ describe("planWatchLoop", () => {
 
     expect(result.status).toBe("blocked");
     expect(result.blockedReasonKind).toBe("runner_config_missing");
-    expect(result.invocationId).toBeUndefined();
+    expect(result.invocationId).toBe("invocation-1");
+    expect(result.runnerResult).toMatchObject({
+      status: "blocked",
+      reasonCode: "PLAN_WATCH_RUNNER_CONFIG_MISSING",
+      failureStage: "precondition",
+      command: null
+    });
     expect(ledger.records).toEqual([]);
     expect(dependencies.runExecutePairflowPlanContinuation).not.toHaveBeenCalled();
   });
@@ -537,6 +544,30 @@ describe("planWatchLoop", () => {
     });
 
     expect(key).toContain("status=no-status-ref");
+  });
+
+  it("uses the same no-status-ref dedupe key for repeated observations without status evidence", () => {
+    const first = buildPlanWatchDedupeKey({
+      repoPath: "/repo",
+      planPath: "/repo/plans/local-plan-watch-plan-v1.md",
+      candidate: candidate({
+        observedAt: undefined,
+        statusRef: undefined,
+        statusMetadata: { round: 2 }
+      })
+    });
+    const second = buildPlanWatchDedupeKey({
+      repoPath: "/repo",
+      planPath: "/repo/plans/local-plan-watch-plan-v1.md",
+      candidate: candidate({
+        observedAt: undefined,
+        statusRef: undefined,
+        statusMetadata: { round: 3 }
+      })
+    });
+
+    expect(first).toBe(second);
+    expect(first).toContain("status=no-status-ref");
   });
 
   it("uses candidate observedAt in dedupe key when statusRef is absent", () => {

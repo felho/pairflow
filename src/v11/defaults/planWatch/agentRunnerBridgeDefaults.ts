@@ -1,11 +1,14 @@
 import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
-import { access } from "node:fs/promises";
+import { access, readFile } from "node:fs/promises";
 
 import type {
   AgentRunnerBridgeDependencies,
   AgentRunnerProcessInvocation,
   AgentRunnerProcessResult
 } from "../../application/planWatch/agentRunnerBridgeContract.js";
+import {
+  prepareCodexRunnerFiles
+} from "../../application/planWatch/codexAgentRunnerBridge.js";
 
 const TIMEOUT_KILL_GRACE_MS = 100;
 const MAX_CAPTURED_OUTPUT_CHARS = 64 * 1024;
@@ -82,6 +85,9 @@ class AgentRunnerCommandProcess {
   }
 
   private startKillTimer(onExpired: () => void): void {
+    if (this.killTimer !== undefined) {
+      clearTimeout(this.killTimer);
+    }
     this.killTimer = setTimeout(() => {
       if (this.settled) {
         return;
@@ -185,7 +191,7 @@ class AgentRunnerCommandProcess {
 
   private result(exitCode: number | null): AgentRunnerProcessResult {
     return {
-      exitCode,
+      exitCode: this.timedOut || this.aborted ? null : exitCode,
       stdout: capturedOutputToString(this.stdout),
       stderr: capturedOutputToString(this.stderr),
       ...(this.aborted ? { aborted: true } : {}),
@@ -205,7 +211,9 @@ function abortedBeforeSpawnResult(): AgentRunnerProcessResult {
 
 export const agentRunnerBridgeDefaults: AgentRunnerBridgeDependencies = {
   pathExists,
-  runCommand: runAgentRunnerCommand
+  runCommand: runAgentRunnerCommand,
+  prepareCodexRunnerFiles,
+  readTextFile: (path) => readFile(path, "utf8")
 };
 
 function appendCapturedOutput(
@@ -216,8 +224,7 @@ function appendCapturedOutput(
   const structuredEnvelope =
     extractLastStructuredEnvelopeCandidate(next) ?? current.structuredEnvelope;
   const retainedStructuredEnvelope =
-    structuredEnvelope !== undefined &&
-    structuredEnvelope.length < MAX_CAPTURED_OUTPUT_CHARS
+    structuredEnvelope !== undefined
       ? structuredEnvelope
       : undefined;
   const prefixLength =

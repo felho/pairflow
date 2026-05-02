@@ -63,13 +63,42 @@ export async function executePlanWatchCandidate(
     )();
     return handleDryRunCandidate(context, invocationId);
   }
-  if (!hasRunnerCommand(input.input.runnerConfig?.command)) {
-    return runnerConfigMissingResult(context);
-  }
   const invocationId = (
     input.dependencies.generateInvocationId ?? defaultInvocationId
   )();
+  if (!hasRunnerAuthority(input.input.runnerConfig)) {
+    return runnerConfigMissingResult(context, invocationId);
+  }
   return handleRunCandidate(context, invocationId);
+}
+
+function runnerConfigMissingResult(
+  context: CandidateContext,
+  invocationId: string
+): PlanWatchIterationResult {
+  const timestamp = context.now.toISOString();
+  return planWatchBlockedResult({
+    ...baseCandidateResult(context),
+    invocationId,
+    runnerResult: {
+      status: "blocked",
+      invocationId,
+      startedAt: timestamp,
+      completedAt: timestamp,
+      reasonCode: "PLAN_WATCH_RUNNER_CONFIG_MISSING",
+      command: null,
+      failureStage: "precondition"
+    },
+    blockedReasonKind: "runner_config_missing",
+    diagnostics: [
+      ...context.diagnostics,
+      planWatchDiagnostic(
+        "PLAN_WATCH_RUNNER_CONFIG_MISSING",
+        "error",
+        "Missing [plan_watch.runner] backend config for non-dry-run plan watch invocation."
+      )
+    ]
+  });
 }
 
 export function planWatchBlockedResult(input: {
@@ -264,23 +293,6 @@ function interruptedAttemptResult(context: CandidateContext): PlanWatchIteration
   });
 }
 
-function runnerConfigMissingResult(
-  context: CandidateContext
-): PlanWatchIterationResult {
-  return planWatchBlockedResult({
-    ...baseCandidateResult(context),
-    blockedReasonKind: "runner_config_missing",
-    diagnostics: [
-      ...context.diagnostics,
-      planWatchDiagnostic(
-        "AGENT_RUNNER_CONFIG_MISSING",
-        "error",
-        "Missing --runner-command for non-dry-run plan watch invocation."
-      )
-    ]
-  });
-}
-
 async function reservationContentionResult(
   context: CandidateContext,
   error: unknown
@@ -369,6 +381,9 @@ function mapRunnerStatus(
 function mapRunnerBlockedReason(
   result: AgentRunnerBridgeResult
 ): PlanWatchBlockedReasonKind {
+  if (result.reasonCode === "PLAN_WATCH_RUNNER_CONFIG_MISSING") {
+    return "runner_config_missing";
+  }
   if (result.failureStage === "output") {
     return "runner_output_invalid";
   }
@@ -434,6 +449,11 @@ function defaultInvocationId(): string {
   return `plan-watch-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
-function hasRunnerCommand(command: string | undefined): boolean {
-  return command !== undefined && command.trim().length > 0;
+function hasRunnerAuthority(
+  config: CandidateContext["input"]["runnerConfig"]
+): boolean {
+  return (
+    (config?.backend !== undefined && config.backend.trim().length > 0)
+    || (config?.command !== undefined && config.command.trim().length > 0)
+  );
 }
