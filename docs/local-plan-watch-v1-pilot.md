@@ -4,6 +4,7 @@ Status: pilot evidence
 Date: 2026-05-02
 Plan: `plans/local-plan-watch-plan-v1.md`
 Task: `plans/archive/tasks/2026-05-01-local-plan-watch/4-pilot-docs.md`
+Retrofit task: `plans/tasks/5-plan-watch-codex-runner.md`
 
 ---
 
@@ -12,7 +13,8 @@ Task: `plans/archive/tasks/2026-05-01-local-plan-watch/4-pilot-docs.md`
 This pilot records the V1 operator boundary for `pairflow plan watch`. The
 watcher is validated as a local-control-plane polling process that detects
 approval-ready linked bubbles, writes local ledger evidence, suppresses duplicate
-trigger evidence, and invokes a configured local `ExecutePairflowPlan` runner.
+trigger evidence, and invokes the config-selected built-in Codex
+`ExecutePairflowPlan` runner.
 
 The watcher is not a route authority or lifecycle mutator. `ExecutePairflowPlan`
 continues to own workflow route selection and delegated progression. Pairflow
@@ -20,7 +22,7 @@ bubble status remains the lifecycle authority.
 
 ## Command Surface
 
-Pre-retrofit dry-run command shape observed by this pilot:
+Dry-run command shape:
 
 ```bash
 pairflow plan watch <plan-path> \
@@ -30,19 +32,23 @@ pairflow plan watch <plan-path> \
   --dry-run
 ```
 
-Observed pre-retrofit contract from `src/cli/commands/plan/watch.ts`:
+Observed contract from `src/cli/commands/plan/watch.ts`:
 
 - Default interval: `60` seconds.
 - `--once`: exits after one iteration.
 - `--dry-run`: discovers and ledgers trigger evidence without invoking the runner.
-- Legacy `--runner-command` / `--runner-arg`: required for non-dry-run execution before task
-  `5-plan-watch-codex-runner`; this is legacy/hook-only behavior, not the
-  target built-in Codex runner path.
-- `--runner-input-mode`: `stdin_json` by default; `arg_json` is also accepted.
+- `[plan_watch.runner] backend = "codex"` selects the built-in Codex backend for
+  non-dry-run execution.
+- Legacy `--runner-command` / `--runner-arg` / `--runner-input-mode` remain
+  internal escape hatches, not the primary V1 automation path.
 
-This evidence document records the pilot state before the built-in Codex runner
-retrofit. Task `5-plan-watch-codex-runner` owns the replacement of the
-hook-only command contract with config-driven built-in Codex runner evidence.
+Primary non-dry-run command shape:
+
+```bash
+pairflow plan watch <plan-path> \
+  --repo <repo-path> \
+  --once
+```
 
 ## Evidence Sources
 
@@ -72,11 +78,13 @@ bash ./scripts/run-evidence.sh .pairflow/evidence/plan-watch-focused.log \
     tests/v11/application/planWatch/planWatchLoop.test.ts
 ```
 
-Observed result on 2026-05-02:
+Observed focused result on 2026-05-02 after the Codex runner retrofit:
 
+- `tests/config/repoConfig.test.ts`: 21 tests passed.
 - `tests/cli/planWatchCommand.test.ts`: 5 tests passed.
 - `tests/v11/application/planWatch/planWatchLoop.test.ts`: 36 tests passed.
-- Total: 2 test files passed, 41 tests passed.
+- `tests/v11/application/planWatch/agentRunnerBridge.test.ts`: 33 tests passed.
+- Total: 4 test files passed, 95 tests passed.
 - Evidence log: `.pairflow/evidence/plan-watch-focused.log`.
 
 Safe live dry-run command:
@@ -102,37 +110,68 @@ the no-trigger case on the representative plan at the time of the pilot. It is
 not a successful automation claim because no approval-ready trigger was present
 and no runner was invoked.
 
-Live mutation boundary:
+Built-in Codex runner pilot boundary:
 
-- This docs-only bubble did not run a non-dry-run watcher against a live
-  approval-ready bubble in `/Users/felho/dev/pairflow`, because doing so would
-  invoke the configured runner and could mutate unrelated plan or bubble state.
-- No live production watch ledger record is claimed in this document.
-- The absence of a live production ledger record is a fail-closed pilot boundary,
-  not a successful automation claim.
-- Ledger reservation, completion, dry-run observation, and duplicate suppression
-  evidence comes from the focused watch-loop tests listed above.
-- This pre-retrofit pilot does not include disposable approval-ready built-in
-  runner ledger evidence. The required future evidence fields are specified by
-  task `5-plan-watch-codex-runner` rather than claimed in this historical pilot.
+- The configured local built-in backend is `[plan_watch.runner] backend = "codex"`.
+- The bridge validates payload shape, workflow target, repo path, and plan path
+  before invoking Codex.
+- Codex is invoked as an argv array using `codex
+  --dangerously-bypass-approvals-and-sandbox exec --cd <repo-path>
+  --output-schema <schema-file> --output-last-message <result-file> <prompt>`.
+  The payload is included as fenced JSON data, and trigger strings are treated
+  as untrusted data rather than instructions.
+- Missing config, unsupported backend, missing repo path, missing plan path,
+  missing Codex, timeout, non-zero exit, and invalid output all return blocked
+  runner results with explicit reason codes.
+- Disposable approval-ready non-dry-run status on 2026-05-02:
+  completed as a blocked runner proof against
+  `.pairflow/runtime/plan-watch/codex-pilot/plan.md` in the launch workspace.
+  The disposable task linked `impl_bubble_id=plan-watch-codex-runner-pilot`;
+  the linked bubble status was `READY_FOR_HUMAN_APPROVAL`, round `1`.
+- Dedupe key:
+  `plan=.pairflow/runtime/plan-watch/codex-pilot/plan.md|task=plan-watch-codex-runner-pilot|taskPath=.pairflow/runtime/plan-watch/codex-pilot/task.md|bubble=plan-watch-codex-runner-pilot|role=implementation|state=READY_FOR_HUMAN_APPROVAL|status=bubble:plan-watch-codex-runner-pilot:state:READY_FOR_HUMAN_APPROVAL:round:1`.
+- Invocation id: `plan-watch-1777716903564-114b03d19721a`.
+- Runner status: `blocked`.
+- Runner reason code: `PLAN_WATCH_CODEX_UNAVAILABLE`.
+- Changed artifacts: none recorded by the runner.
+- Route ledger summary: none emitted because the runner blocked before a route
+  checkpoint.
+- Duplicate suppression evidence: repeating the same command with the same
+  trigger returned `plan watch: duplicate_skipped candidates=1 deferred=0
+  task=plan-watch-codex-runner-pilot bubble=plan-watch-codex-runner-pilot`
+  without adding another run record to the ledger.
+- Evidence logs: `.pairflow/evidence/plan-watch-codex-pilot-worktree.log` and
+  `.pairflow/evidence/plan-watch-codex-pilot-duplicate.log`.
+- External command profile caveat: the PATH-authority external CLI in this
+  launch pane resolved to the canonical repo build and returned
+  `blocked_reason=runner_config_missing` for the same fixture, captured in
+  `.pairflow/evidence/plan-watch-codex-pilot.log`. The worktree-built command
+  path was used for the implementation proof because the active external build
+  had not yet picked up this bubble's `[plan_watch.runner] backend = "codex"`
+  implementation.
+- If Codex cannot emit a bridge-compatible structured envelope, the accepted
+  pilot result is a blocked ledger record with `AGENT_RUNNER_OUTPUT_INVALID`.
+  This run blocked earlier at executable discovery, so the exact recorded
+  reason is `PLAN_WATCH_CODEX_UNAVAILABLE`.
 
 | Behavior | Evidence | Result |
 |---|---|---|
 | No trigger | `runPlanWatchIteration` with no candidates returns `status="idle"` and does not invoke the runner; the safe live dry-run produced `plan watch: idle candidates=0 deferred=0`. | Verified by focused watch-loop test run and `.pairflow/evidence/plan-watch-live-dry-run.log`. |
-| Approval-ready trigger | Candidate with `observedState="READY_FOR_HUMAN_APPROVAL"` reserves a ledger record, invokes the runner once, and completes the same record. The same trigger contract also accepts legacy `READY_FOR_APPROVAL`; this pilot mirrors that compatibility as a documented alias rather than claiming a separate live run. | Verified by focused watch-loop test run plus the `LinkedBubbleApprovalReadyState` contract. |
-| Runner result capture | Completed run record stores `runnerStatus`, `runnerReasonCode`, `changedArtifacts` when present, and `routeLedgerSummary` when emitted. | Verified by focused watch-loop test run and ledger contract assertions. |
-| Duplicate suppression | Existing completed run record for the same dedupe key returns `status="duplicate_skipped"` and does not invoke the runner again. | Verified by focused watch-loop test run. |
+| Approval-ready trigger | Candidate with `observedState="READY_FOR_HUMAN_APPROVAL"` reserves a ledger record, invokes the config-selected runner once, and completes the same record. The same trigger contract also accepts legacy `READY_FOR_APPROVAL`; this pilot mirrors that compatibility as a documented alias rather than claiming a separate live run. | Verified by focused watch-loop test run, the `LinkedBubbleApprovalReadyState` contract, and the disposable non-dry-run pilot ledger. |
+| Built-in Codex invocation | `backend="codex"` derives `command="codex"` and argv args for full-access non-interactive `exec --cd <repo-path> --output-schema <schema-file> --output-last-message <result-file>` using only validated payload authority. | Verified by focused bridge tests and the disposable non-dry-run pilot, which reached Codex executable discovery and recorded `PLAN_WATCH_CODEX_UNAVAILABLE`. |
+| Built-in Codex blockers | Unsupported backend, missing repo path, missing plan path, missing Codex/spawn failure, timeout, non-zero exit, and invalid output all fail closed with bridge-compatible blocked results. | Verified by focused config and bridge tests plus `.pairflow/evidence/plan-watch-codex-pilot-worktree.log`. |
+| Runner result capture | Completed run record stores `runnerStatus`, `runnerReasonCode`, `changedArtifacts` when present, and `routeLedgerSummary` when emitted. | Verified by focused watch-loop test run, ledger contract assertions, and the disposable pilot ledger record with `runnerStatus="blocked"` and `runnerReasonCode="PLAN_WATCH_CODEX_UNAVAILABLE"`. |
+| Duplicate suppression | Existing completed run record for the same dedupe key returns `status="duplicate_skipped"` and does not invoke the runner again. | Verified by focused watch-loop test run and `.pairflow/evidence/plan-watch-codex-pilot-duplicate.log`. |
 | Dry-run distinction | Dry-run persists or reuses a ledger record with `mode="dry_run"` and `recordState="dry_run_observed"` when trigger evidence exists; it does not reserve a `mode="run"` record or invoke the runner. In the live no-trigger dry-run, no runner was invoked and no successful automation was claimed. | Verified by focused watch-loop test run, CLI option assertions, and `.pairflow/evidence/plan-watch-live-dry-run.log`. |
 | Interval behavior | Default interval is `60_000` ms; configured `--interval-seconds <n>` maps to `intervalMs=n*1000`; `--once` exits after one iteration. The live dry-run used `--once` to prove single-iteration operator behavior without waiting for the default interval. | Verified by focused CLI parser, watch-loop test run, and `.pairflow/evidence/plan-watch-live-dry-run.log`. |
 | Human/checkpoint/blocker wording | Runner statuses map to `runner_settled_checkpoint`, `runner_human_checkpoint`, or `blocked`; blocked results carry `blockedReasonKind`. | Proven by `PlanWatchIterationStatus` and runner bridge result contract. |
 | Remote boundary | Remote bubble evidence must come from local routed status/list; stale or unavailable remote evidence fails closed. | Documented in `docs/remote-bubble-execution.md`; remote-only progression remains deferred. |
-| Live ledger record | Non-dry-run live runner invocation was intentionally not executed in this docs-only bubble. | Fail-closed by mutation boundary; use a disposable approval-ready bubble for a live operator pilot. |
+| Live ledger record | Non-dry-run disposable approval-ready pilot produced a completed run record for the dedupe key above. | The proof is a blocked runner result, not successful downstream automation. |
 
 ## Representative Operator Runbook
 
-This section records the pre-retrofit operator boundary captured by this pilot.
-The target config-driven built-in Codex backend contract is specified in task
-`5-plan-watch-codex-runner`, not in this historical evidence section.
+This section records the operator boundary after the built-in Codex runner
+retrofit.
 
 Dry-run observation:
 
@@ -146,22 +185,7 @@ pairflow plan watch plans/local-plan-watch-plan-v1.md \
 Use this when validating trigger discovery without runner mutation. A dry-run
 result is not successful automation; it is observation evidence only.
 
-Legacy local runner invocation:
-
-```bash
-pairflow plan watch plans/local-plan-watch-plan-v1.md \
-  --repo /Users/felho/dev/pairflow \
-  --once \
-  --runner-command pairflow-plan-runner
-```
-
-Use this only as pre-retrofit historical guidance or as an explicitly retained
-legacy/internal escape hatch. It is not the target V1 automation path for task
-`5-plan-watch-codex-runner`. The watcher passes a compact continuation payload
-to the runner. Route decisions and downstream workflow delegation are runner
-output, not watcher output.
-
-Config-driven counterpart after the built-in Codex runner retrofit:
+Config-driven built-in Codex invocation:
 
 ```bash
 pairflow plan watch plans/local-plan-watch-plan-v1.md \
@@ -169,26 +193,11 @@ pairflow plan watch plans/local-plan-watch-plan-v1.md \
   --once
 ```
 
-This counterpart is the target contract owned by task
-`5-plan-watch-codex-runner`; it is not claimed as evidence by this pre-retrofit
-pilot.
+The watcher passes a compact continuation payload to the built-in runner. Route
+decisions and downstream workflow delegation are runner output, not watcher
+output.
 
-Legacy foreground polling with operator-provided runner:
-
-```bash
-pairflow plan watch plans/local-plan-watch-plan-v1.md \
-  --repo /Users/felho/dev/pairflow \
-  --interval-seconds 60 \
-  --runner-command pairflow-plan-runner
-```
-
-The default interval is already 60 seconds; the explicit flag is useful in
-operator docs and pilots. Shorter local pilots may use a smaller positive value.
-The `--runner-command pairflow-plan-runner` portion is pre-retrofit legacy
-guidance and is not the target automation path for task
-`5-plan-watch-codex-runner`.
-
-Config-driven foreground counterpart after the built-in Codex runner retrofit:
+Foreground polling:
 
 ```bash
 pairflow plan watch plans/local-plan-watch-plan-v1.md \
@@ -196,8 +205,8 @@ pairflow plan watch plans/local-plan-watch-plan-v1.md \
   --interval-seconds 60
 ```
 
-This counterpart intentionally omits `--runner-command`; it is target guidance
-for the retrofit task, not pilot evidence from this document.
+The default interval is already 60 seconds; the explicit flag is useful in
+operator docs and pilots. Shorter local pilots may use a smaller positive value.
 
 ## Ledger Evidence Shape
 

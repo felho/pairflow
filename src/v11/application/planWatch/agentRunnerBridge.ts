@@ -11,22 +11,27 @@ import type {
   AgentRunnerProcessResult,
   RequiredAgentRunnerCommandConfig
 } from "./agentRunnerBridgeContract.js";
+import {
+  appendResultFileOutput,
+  buildCodexRunnerArgs,
+  CODEX_PLAN_WATCH_RUNNER_BACKEND,
+  isUnavailableExecutableError,
+  prepareCodexRunnerFiles,
+  validateContinuationPayload
+} from "./codexAgentRunnerBridge.js";
 import { parseStructuredAgentRunnerOutput } from "./agentRunnerBridgeResult.js";
 import { agentRunnerBridgeDefaults } from "../../defaults/planWatch/agentRunnerBridgeDefaults.js";
-
 const DEFAULT_TIMEOUT_MS = 10 * 60 * 1000;
-
 type PreconditionResolution =
-  | { ok: true; config: RequiredAgentRunnerCommandConfig }
+  | { ok: true; config: RequiredAgentRunnerCommandConfig; payload: AgentRunnerContinuationPayload }
   | { ok: false; result: AgentRunnerBridgeResult };
-
 export function buildAgentRunnerContinuationPayload(
   input: AgentRunnerBridgeInput,
   now: Date = input.now ?? new Date()
 ): AgentRunnerContinuationPayload {
   return {
     kind: "pairflow.execute_pairflow_plan.continuation",
-    workflow: "ExecutePairflowPlan",
+    workflow: input.workflow ?? "ExecutePairflowPlan",
     invocation_id: input.invocationId,
     plan_path: input.planPath,
     repo_path: input.repoPath,
@@ -34,7 +39,6 @@ export function buildAgentRunnerContinuationPayload(
     trigger: input.trigger
   };
 }
-
 export async function runExecutePairflowPlanContinuation(
   input: AgentRunnerBridgeInput,
   config: AgentRunnerCommandConfig,
@@ -43,23 +47,7 @@ export async function runExecutePairflowPlanContinuation(
   const clock = dependencies.now ?? (() => input.now ?? new Date());
   const startedAtDate = clock();
   const startedAt = startedAtDate.toISOString();
-
-  const preconditions = await resolvePreconditions({
-    input,
-    config,
-    dependencies,
-    startedAt,
-    completedAt: () => clock().toISOString()
-  });
-  if (!preconditions.ok) {
-    return preconditions.result;
-  }
-
-  const invocation = buildRunnerInvocation(
-    input,
-    preconditions.config,
-    input.now ?? startedAtDate
-  );
+  const payload = buildAgentRunnerContinuationPayload(input, input.now ?? startedAtDate);
   if (input.stopSignal?.aborted) {
     return blocked({
       input,
@@ -67,27 +55,73 @@ export async function runExecutePairflowPlanContinuation(
       completedAt: clock().toISOString(),
       reasonCode: "AGENT_RUNNER_ABORTED",
       failureStage: "abort",
-      command: invocation.commandIdentity,
-      payload: invocation.payload
+      command: null,
+      exitCode: null,
+      payload
     });
   }
-
+  const preconditions = await resolvePreconditions({
+    input,
+    config,
+    payload,
+    dependencies,
+    startedAt,
+    completedAt: () => clock().toISOString()
+  });
+  if (!preconditions.ok) {
+    return preconditions.result;
+  }
+  const invocation = buildRunnerInvocation(input, preconditions.config, preconditions.payload);
   try {
     const processResult = await dependencies.runCommand(invocation.processInvocation);
-    return classifyProcessResult({
-      input,
-      processResult,
-      startedAt,
-      completedAt: clock().toISOString(),
-      command: invocation.commandIdentity,
-      payload: invocation.payload
-    });
+    if (processResult.aborted || processResult.timedOut || processResult.exitCode !== 0) {
+      return classifyProcessResult({
+        input,
+        processResult,
+        startedAt,
+        completedAt: clock().toISOString(),
+        command: invocation.commandIdentity,
+        payload: invocation.payload
+      });
+    }
+    try {
+      const resolvedProcessResult = await appendResultFileOutput({
+        dependencies,
+        processResult,
+        resultFilePath: preconditions.config.resultFilePath
+      });
+      return classifyProcessResult({
+        input,
+        processResult: resolvedProcessResult,
+        startedAt,
+        completedAt: clock().toISOString(),
+        command: invocation.commandIdentity,
+        payload: invocation.payload
+      });
+    } catch (error) {
+      return blocked({
+        input,
+        startedAt,
+        completedAt: clock().toISOString(),
+        reasonCode: "PLAN_WATCH_RUNNER_FILE_IO_FAILED",
+        failureStage: "output",
+        command: invocation.commandIdentity,
+        exitCode: processResult.exitCode,
+        stdout: processResult.stdout,
+        stderr: error instanceof Error ? error.message : String(error),
+        payload: invocation.payload
+      });
+    }
   } catch (error) {
     return blocked({
       input,
       startedAt,
       completedAt: clock().toISOString(),
-      reasonCode: "AGENT_RUNNER_SPAWN_FAILED",
+      reasonCode:
+        preconditions.config.backend === CODEX_PLAN_WATCH_RUNNER_BACKEND
+          && isUnavailableExecutableError(error)
+          ? "PLAN_WATCH_CODEX_UNAVAILABLE"
+          : "AGENT_RUNNER_SPAWN_FAILED",
       failureStage: "spawn",
       command: invocation.commandIdentity,
       stderr: error instanceof Error ? error.message : String(error),
@@ -95,14 +129,17 @@ export async function runExecutePairflowPlanContinuation(
     });
   }
 }
-
 async function resolvePreconditions(input: {
   input: AgentRunnerBridgeInput;
   config: AgentRunnerCommandConfig;
+  payload: AgentRunnerContinuationPayload;
   dependencies: AgentRunnerBridgeDependencies;
   startedAt: string;
   completedAt: () => string;
 }): Promise<PreconditionResolution> {
+  if (input.config.backend !== undefined) {
+    return resolveBuiltInRunnerPreconditions(input);
+  }
   const command = input.config.command?.trim();
   if (command === undefined || command.length === 0) {
     return {
@@ -111,14 +148,121 @@ async function resolvePreconditions(input: {
         input: input.input,
         startedAt: input.startedAt,
         completedAt: input.completedAt(),
-        reasonCode: "AGENT_RUNNER_CONFIG_MISSING",
+        reasonCode: "PLAN_WATCH_RUNNER_CONFIG_MISSING",
         failureStage: "precondition",
         command: null
       })
     };
   }
-
-  const planAvailable = await input.dependencies.pathExists(input.input.planPath);
+  const payloadValidation = validateContinuationPayload(input.payload);
+  if (payloadValidation !== undefined) {
+    return {
+      ok: false,
+      result: blocked({
+        input: input.input,
+        startedAt: input.startedAt,
+        completedAt: input.completedAt(),
+        reasonCode: payloadValidation,
+        failureStage: "precondition",
+        command: null,
+        payload: input.payload
+      })
+    };
+  }
+  const requiredPaths: Array<{ path: string; reasonCode: AgentRunnerBridgeFailureReasonCode }> = [
+    { path: input.input.repoPath, reasonCode: "PLAN_WATCH_REPO_PATH_UNAVAILABLE" },
+    { path: input.input.planPath, reasonCode: "PLAN_WATCH_PLAN_PATH_UNAVAILABLE" }
+  ];
+  for (const requiredPath of requiredPaths) {
+    if (!(await input.dependencies.pathExists(requiredPath.path))) {
+      return {
+        ok: false,
+        result: blocked({
+          input: input.input,
+          startedAt: input.startedAt,
+          completedAt: input.completedAt(),
+          reasonCode: requiredPath.reasonCode,
+          failureStage: "precondition",
+          command: null
+        })
+      };
+    }
+  }
+  return {
+    ok: true,
+    payload: input.payload,
+    config: {
+      ...input.config,
+      command
+    }
+  };
+}
+async function resolveBuiltInRunnerPreconditions(input: {
+  input: AgentRunnerBridgeInput;
+  config: AgentRunnerCommandConfig;
+  payload: AgentRunnerContinuationPayload;
+  dependencies: AgentRunnerBridgeDependencies;
+  startedAt: string;
+  completedAt: () => string;
+}): Promise<PreconditionResolution> {
+  const backend = input.config.backend?.trim();
+  if (backend === undefined || backend.length === 0) {
+    return {
+      ok: false,
+      result: blocked({
+        input: input.input,
+        startedAt: input.startedAt,
+        completedAt: input.completedAt(),
+        reasonCode: "PLAN_WATCH_RUNNER_CONFIG_MISSING",
+        failureStage: "precondition",
+        command: null
+      })
+    };
+  }
+  if (backend !== CODEX_PLAN_WATCH_RUNNER_BACKEND) {
+    return {
+      ok: false,
+      result: blocked({
+        input: input.input,
+        startedAt: input.startedAt,
+        completedAt: input.completedAt(),
+        reasonCode: "PLAN_WATCH_RUNNER_BACKEND_UNSUPPORTED",
+        failureStage: "precondition",
+        command: null
+      })
+    };
+  }
+  const payloadValidation = validateContinuationPayload(input.payload);
+  if (payloadValidation !== undefined) {
+    return {
+      ok: false,
+      result: blocked({
+        input: input.input,
+        startedAt: input.startedAt,
+        completedAt: input.completedAt(),
+        reasonCode: payloadValidation,
+        failureStage: "precondition",
+        command: null,
+        payload: input.payload
+      })
+    };
+  }
+  const repoAvailable = await input.dependencies.pathExists(input.payload.repo_path);
+  if (!repoAvailable) {
+    return {
+      ok: false,
+      result: blocked({
+        input: input.input,
+        startedAt: input.startedAt,
+        completedAt: input.completedAt(),
+        reasonCode: "PLAN_WATCH_REPO_PATH_UNAVAILABLE",
+        failureStage: "precondition",
+        command: null,
+        payload: input.payload
+      })
+    };
+  }
+  const planAvailable = await input.dependencies.pathExists(input.payload.plan_path);
   if (!planAvailable) {
     return {
       ok: false,
@@ -126,26 +270,54 @@ async function resolvePreconditions(input: {
         input: input.input,
         startedAt: input.startedAt,
         completedAt: input.completedAt(),
-        reasonCode: "PLAN_PATH_UNAVAILABLE",
+        reasonCode: "PLAN_WATCH_PLAN_PATH_UNAVAILABLE",
         failureStage: "precondition",
-        command: null
+        command: null,
+        payload: input.payload
       })
     };
   }
-
+  const prepareFiles = input.dependencies.prepareCodexRunnerFiles ?? prepareCodexRunnerFiles;
+  let codexRunnerFiles: Awaited<ReturnType<typeof prepareCodexRunnerFiles>>;
+  try {
+    codexRunnerFiles = await prepareFiles(input.payload);
+  } catch (error) {
+    return {
+      ok: false,
+      result: blocked({
+        input: input.input,
+        startedAt: input.startedAt,
+        completedAt: input.completedAt(),
+        reasonCode: "PLAN_WATCH_RUNNER_FILE_IO_FAILED",
+        failureStage: "precondition",
+        command: null,
+        stderr: error instanceof Error ? error.message : String(error),
+        payload: input.payload
+      })
+    };
+  }
   return {
     ok: true,
+    payload: input.payload,
     config: {
       ...input.config,
-      command
+      backend,
+      command: input.config.command?.trim() || "codex",
+      args: buildCodexRunnerArgs({
+        payload: input.payload,
+        schemaFilePath: codexRunnerFiles.schemaFilePath,
+        resultFilePath: codexRunnerFiles.resultFilePath
+      }),
+      cwd: input.payload.repo_path,
+      resultFilePath: codexRunnerFiles.resultFilePath,
+      inputMode: "none"
     }
   };
 }
-
 function buildRunnerInvocation(
   input: AgentRunnerBridgeInput,
   config: RequiredAgentRunnerCommandConfig,
-  payloadTimestamp: Date
+  payload: AgentRunnerContinuationPayload
 ): {
   commandIdentity: AgentRunnerCommandIdentity;
   payload: AgentRunnerContinuationPayload;
@@ -155,12 +327,10 @@ function buildRunnerInvocation(
   const timeoutMs = input.timeoutMs ?? config.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   const inputMode = config.inputMode ?? "stdin_json";
   const cwd = config.cwd ?? input.repoPath;
-  const payload = buildAgentRunnerContinuationPayload(input, payloadTimestamp);
   const args =
     inputMode === "arg_json"
       ? [...(config.args ?? []), JSON.stringify(payload)]
       : [...(config.args ?? [])];
-
   return {
     commandIdentity: buildCommandIdentity({
       command,
@@ -182,7 +352,6 @@ function buildRunnerInvocation(
     }
   };
 }
-
 function classifyProcessResult(input: {
   input: AgentRunnerBridgeInput;
   processResult: AgentRunnerProcessResult;
@@ -205,7 +374,6 @@ function classifyProcessResult(input: {
       payload: input.payload
     });
   }
-
   if (input.processResult.timedOut) {
     return blocked({
       input: input.input,
@@ -220,7 +388,6 @@ function classifyProcessResult(input: {
       payload: input.payload
     });
   }
-
   if (input.processResult.exitCode === null) {
     return blocked({
       input: input.input,
@@ -235,7 +402,6 @@ function classifyProcessResult(input: {
       payload: input.payload
     });
   }
-
   if (input.processResult.exitCode !== 0) {
     return blocked({
       input: input.input,
@@ -250,7 +416,6 @@ function classifyProcessResult(input: {
       payload: input.payload
     });
   }
-
   const structuredOutput = parseStructuredAgentRunnerOutput(input.processResult.stdout);
   if (structuredOutput === null) {
     return blocked({
@@ -266,7 +431,6 @@ function classifyProcessResult(input: {
       payload: input.payload
     });
   }
-
   return {
     status: structuredOutput.status,
     invocationId: input.input.invocationId,
@@ -289,7 +453,6 @@ function classifyProcessResult(input: {
     payload: input.payload
   };
 }
-
 function buildCommandIdentity(input: {
   command: string;
   args: readonly string[];
@@ -307,7 +470,6 @@ function buildCommandIdentity(input: {
     envKeys: Object.keys(input.env ?? {}).sort()
   };
 }
-
 function blocked(input: {
   input: AgentRunnerBridgeInput;
   startedAt: string;

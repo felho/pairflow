@@ -1,4 +1,8 @@
-import { describe, expect, it, vi } from "vitest";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   getPlanWatchHelpText,
@@ -21,6 +25,22 @@ import {
 import type {
   PlanWatchLoopDependencies
 } from "../../src/v11/application/planWatch/planWatchLoopContract.js";
+
+const tempDirs: string[] = [];
+
+async function createTempDir(): Promise<string> {
+  const root = await mkdtemp(join(tmpdir(), "pairflow-plan-watch-command-"));
+  tempDirs.push(root);
+  return root;
+}
+
+afterEach(async () => {
+  await Promise.all(
+    tempDirs.splice(0).map((path) =>
+      rm(path, { recursive: true, force: true })
+    )
+  );
+});
 
 describe("plan watch command", () => {
   it("parses required options and defaults runner input mode", () => {
@@ -125,8 +145,116 @@ describe("plan watch command", () => {
 
     expect(result?.status).toBe("blocked");
     expect(result?.blockedReasonKind).toBe("runner_config_missing");
+    expect(result?.runnerResult?.failureStage).toBe("precondition");
+    expect(result?.runnerResult?.reasonCode).toBe(
+      "PLAN_WATCH_RUNNER_CONFIG_MISSING"
+    );
     expect(dependencies.ledger.reserveRun).not.toHaveBeenCalled();
     expect(dependencies.runExecutePairflowPlanContinuation).not.toHaveBeenCalled();
+  });
+
+  it("rejects legacy runner args when a config-selected backend would ignore them", async () => {
+    const repoPath = await createTempDir();
+    await writeFile(
+      join(repoPath, "pairflow.toml"),
+      '[plan_watch.runner]\nbackend = "codex"\n',
+      "utf8"
+    );
+
+    await expect(
+      runPlanWatchCommand(
+        [
+          "plans/local-plan-watch-plan-v1.md",
+          "--repo",
+          repoPath,
+          "--once",
+          "--runner-arg",
+          "legacy-arg"
+        ],
+        "/cwd",
+        () => {
+          throw new Error("createDependencies should not be called");
+        }
+      )
+    ).rejects.toThrow("PLAN_WATCH_RUNNER_ARG_UNSUPPORTED");
+  });
+
+  it("rejects legacy runner command when a config-selected backend is present", async () => {
+    const repoPath = await createTempDir();
+    await writeFile(
+      join(repoPath, "pairflow.toml"),
+      '[plan_watch.runner]\nbackend = "codex"\n',
+      "utf8"
+    );
+
+    await expect(
+      runPlanWatchCommand(
+        [
+          "plans/local-plan-watch-plan-v1.md",
+          "--repo",
+          repoPath,
+          "--once",
+          "--runner-command",
+          "legacy-runner"
+        ],
+        "/cwd",
+        () => {
+          throw new Error("createDependencies should not be called");
+        }
+      )
+    ).rejects.toThrow("PLAN_WATCH_RUNNER_COMMAND_UNSUPPORTED");
+  });
+
+  it("rejects legacy runner input mode when a config-selected backend is present", async () => {
+    const repoPath = await createTempDir();
+    await writeFile(
+      join(repoPath, "pairflow.toml"),
+      '[plan_watch.runner]\nbackend = "codex"\n',
+      "utf8"
+    );
+
+    await expect(
+      runPlanWatchCommand(
+        [
+          "plans/local-plan-watch-plan-v1.md",
+          "--repo",
+          repoPath,
+          "--once",
+          "--runner-input-mode",
+          "arg_json"
+        ],
+        "/cwd",
+        () => {
+          throw new Error("createDependencies should not be called");
+        }
+      )
+    ).rejects.toThrow("PLAN_WATCH_RUNNER_INPUT_MODE_UNSUPPORTED");
+  });
+
+  it("rejects explicit default runner input mode when a config-selected backend is present", async () => {
+    const repoPath = await createTempDir();
+    await writeFile(
+      join(repoPath, "pairflow.toml"),
+      '[plan_watch.runner]\nbackend = "codex"\n',
+      "utf8"
+    );
+
+    await expect(
+      runPlanWatchCommand(
+        [
+          "plans/local-plan-watch-plan-v1.md",
+          "--repo",
+          repoPath,
+          "--once",
+          "--runner-input-mode",
+          "stdin_json"
+        ],
+        "/cwd",
+        () => {
+          throw new Error("createDependencies should not be called");
+        }
+      )
+    ).rejects.toThrow("PLAN_WATCH_RUNNER_INPUT_MODE_UNSUPPORTED");
   });
 
   it("documents the plan watch command surface", () => {

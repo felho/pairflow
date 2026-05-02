@@ -1,6 +1,9 @@
 import { parseArgs } from "node:util";
 
 import {
+  loadPairflowRepoConfig
+} from "../../../config/repoConfig.js";
+import {
   runPlanWatchLoop
 } from "../../../v11/application/planWatch/planWatchLoop.js";
 import {
@@ -25,6 +28,7 @@ export interface PlanWatchCommandOptions {
   runnerCommand?: string | undefined;
   runnerArgs: readonly string[];
   runnerInputMode: AgentRunnerBridgeInputMode;
+  runnerInputModeSpecified?: boolean | undefined;
   help: false;
 }
 
@@ -46,9 +50,9 @@ export function getPlanWatchHelpText(): string {
     "  --interval-seconds <n>            Poll interval in seconds (default 60)",
     "  --once                            Run one iteration and exit",
     "  --dry-run                         Discover and ledger without invoking the runner",
-    "  --runner-command <cmd>            Local ExecutePairflowPlan runner command",
-    "  --runner-arg <arg>                Runner argument; may be repeated",
-    "  --runner-input-mode <mode>        stdin_json or arg_json (default stdin_json)",
+    "  --runner-command <cmd>            Legacy/internal runner command override",
+    "  --runner-arg <arg>                Legacy runner argument; may be repeated",
+    "  --runner-input-mode <mode>        Legacy stdin_json or arg_json (default stdin_json)",
     "  -h, --help                        Show this help"
   ].join("\n");
 }
@@ -96,6 +100,7 @@ export function parsePlanWatchCommandOptions(
       : {}),
     runnerArgs: parsed.values["runner-arg"] ?? [],
     runnerInputMode,
+    runnerInputModeSpecified: parsed.values["runner-input-mode"] !== undefined,
     help: false
   };
 }
@@ -111,6 +116,29 @@ export async function runPlanWatchCommand(
     return null;
   }
 
+  const repoConfig = await loadPairflowRepoConfig(options.repo);
+  const configuredRunnerBackend = repoConfig.plan_watch?.runner?.backend;
+  if (configuredRunnerBackend !== undefined && options.runnerCommand !== undefined) {
+    throw new Error(
+      "PLAN_WATCH_RUNNER_COMMAND_UNSUPPORTED: --runner-command cannot be combined with [plan_watch.runner] backend."
+    );
+  }
+  if (
+    configuredRunnerBackend !== undefined
+    && options.runnerArgs.length > 0
+  ) {
+    throw new Error(
+      "PLAN_WATCH_RUNNER_ARG_UNSUPPORTED: --runner-arg cannot be combined with [plan_watch.runner] backend."
+    );
+  }
+  if (
+    configuredRunnerBackend !== undefined
+    && options.runnerInputModeSpecified === true
+  ) {
+    throw new Error(
+      "PLAN_WATCH_RUNNER_INPUT_MODE_UNSUPPORTED: --runner-input-mode cannot be combined with [plan_watch.runner] backend."
+    );
+  }
   const stop = createPlanWatchStopSignal();
   const input: PlanWatchInput = {
     repoPath: options.repo,
@@ -119,6 +147,9 @@ export async function runPlanWatchCommand(
     once: options.once,
     dryRun: options.dryRun,
     runnerConfig: {
+      ...(options.runnerCommand === undefined && configuredRunnerBackend !== undefined
+        ? { backend: configuredRunnerBackend }
+        : {}),
       ...(options.runnerCommand !== undefined
         ? { command: options.runnerCommand }
         : {}),
