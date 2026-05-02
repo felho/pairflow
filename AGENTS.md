@@ -27,7 +27,7 @@
 ## Local Change Verification
 
 During implementation, use the narrowest relevant tests for fast feedback as needed.
-Before declaring non-docs code changes complete, use this default verification order:
+Before declaring direct non-docs code changes in the current checkout complete, use this default verification order:
 
 1. Run `pnpm typecheck`.
 2. Run `pnpm lint`.
@@ -45,10 +45,19 @@ Before declaring non-docs code changes complete, use this default verification o
 If any step is skipped, explain why in the final summary.
 If `pnpm test` fails, do not describe the repository as fully validated. Either fix the failure or report the exact failing command, failing suites/count, and why it is believed unrelated to the current change.
 
+### Bubble Close Verification Exception
+
+When closing or merging a Pairflow bubble, do not rerun the full local verification suite on `main` merely because the bubble merged code changes. The bubble workflow owns validation for its own implementation changes.
+
+After a successful bubble close, run only the checks needed to verify local aftermath work performed outside the bubble, such as progress/task/plan metadata edits, archive moves, documentation touch-ups, or cleanup state checks.
+
+Run the full local verification order on `main` only when Codex makes direct non-bubble product/source edits in the current checkout, or when the close workflow reports missing or insufficient bubble validation evidence.
+
 ## Build Freshness Policy
 
-- If Pairflow source code changes (`src/**`, `scripts/**`, or CLI/runtime-affecting config), run `pnpm build` before any bubble lifecycle command (`bubble start`, `pass`, `converged`, `meta-review`, `approve`, `commit`, `merge`).
-- If additional source edits are made later in the same session, run `pnpm build` again before continuing with lifecycle commands.
+- If Pairflow source code changes (`src/**`, `scripts/**`, or CLI/runtime-affecting config) are made directly in the current checkout, run `pnpm build` before any bubble lifecycle command (`bubble start`, `pass`, `converged`, `meta-review`, `approve`, `commit`, `merge`).
+- If additional direct source edits are made later in the same session, run `pnpm build` again before continuing with lifecycle commands.
+- A new `main` build is not required solely because a bubble branch already built, validated, and then merged during `bubble close`; use the bubble's validation evidence unless it is missing or insufficient.
 - Treat stale/missing worktree entrypoint (`dist/cli/index.js`) as a blocker; rebuild before proceeding.
 - Document in the final summary that build was executed (or explicitly state if skipped and why).
 
