@@ -23,6 +23,7 @@ interface DependencyViolation {
     | "anti_circumvention_reexport"
     | "anti_circumvention_wrapper"
     | "forbidden_process_runtime_import"
+    | "shared_promotion_single_lane"
     | "ownership_signal_shared_infra";
   severity: "fail" | "warn";
   message: string;
@@ -799,6 +800,83 @@ function detectOwnershipSignalViolations(input: {
   return violations;
 }
 
+interface SharedDirectoryConsumers {
+  applicationLanes: Set<string>;
+  hasInfrastructureConsumer: boolean;
+}
+
+function sharedDirectoryFromRelativePath(path: string): string | undefined {
+  const match = path.match(/^src\/v11\/shared\/([^/]+)(?:\/|$)/u);
+  const directoryName = match?.[1];
+  if (directoryName === undefined || directoryName === "ports") {
+    return undefined;
+  }
+  return directoryName;
+}
+
+function applicationLaneFromRelativePath(path: string): string | undefined {
+  return path.match(/^src\/v11\/application\/([^/]+)(?:\/|$)/u)?.[1];
+}
+
+function detectSharedPromotionViolations(input: {
+  repoRoot: string;
+  edges: readonly ImportEdge[];
+}): DependencyViolation[] {
+  const consumersBySharedDirectory = new Map<string, SharedDirectoryConsumers>();
+
+  for (const edge of input.edges) {
+    const fromRelative = normalizePathToPosix(relative(input.repoRoot, edge.from));
+    const toRelative = normalizePathToPosix(relative(input.repoRoot, edge.to));
+    const sharedDirectory = sharedDirectoryFromRelativePath(toRelative);
+    if (sharedDirectory === undefined) {
+      continue;
+    }
+
+    const consumers =
+      consumersBySharedDirectory.get(sharedDirectory)
+      ?? {
+        applicationLanes: new Set<string>(),
+        hasInfrastructureConsumer: false
+      };
+    consumersBySharedDirectory.set(sharedDirectory, consumers);
+
+    const applicationLane = applicationLaneFromRelativePath(fromRelative);
+    if (applicationLane !== undefined) {
+      consumers.applicationLanes.add(applicationLane);
+      continue;
+    }
+
+    if (/^src\/v11\/infrastructure(?:\/|$)/u.test(fromRelative)) {
+      consumers.hasInfrastructureConsumer = true;
+    }
+  }
+
+  const violations: DependencyViolation[] = [];
+  for (const [sharedDirectory, consumers] of consumersBySharedDirectory) {
+    if (
+      consumers.hasInfrastructureConsumer
+      || consumers.applicationLanes.size !== 1
+    ) {
+      continue;
+    }
+
+    const [applicationLane] = consumers.applicationLanes;
+    violations.push({
+      kind: "shared_promotion_single_lane",
+      severity: "warn",
+      message:
+        `src/v11/shared/${sharedDirectory}: shared-promotion warning: imported only by application lane ${applicationLane}; command-local helpers should live under src/v11/application/${applicationLane}`,
+      fromRelative: `src/v11/shared/${sharedDirectory}`,
+      toRelative: undefined,
+      cycleNodes: undefined
+    });
+  }
+
+  return violations.sort((left, right) =>
+    (left.fromRelative ?? "").localeCompare(right.fromRelative ?? "")
+  );
+}
+
 function summarizeDependencyViolations(
   violations: readonly DependencyViolation[]
 ): string[] {
@@ -900,6 +978,10 @@ export async function buildDependencyCheckReport({
       repoRoot,
       files: availableFiles,
       sourceByPath
+    }),
+    ...detectSharedPromotionViolations({
+      repoRoot,
+      edges
     }),
     ...detectCycles({
       repoRoot,

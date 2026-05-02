@@ -407,6 +407,124 @@ describe("dependency fitness check", () => {
     ).toBe(false);
   });
 
+  it("warns when a shared command directory is consumed by one application lane only", async () => {
+    const repoRoot = await createTempRoot();
+    await writeRepoFile(
+      repoRoot,
+      "src/v11/shared/pass/passCommandInputNormalization.ts",
+      "export const normalizePassInput = (value: string): string => value.trim();\n"
+    );
+    await writeRepoFile(
+      repoRoot,
+      "src/v11/application/pass/emitPassV11.ts",
+      [
+        "import { normalizePassInput } from '../../shared/pass/passCommandInputNormalization.js';",
+        "export const emit = (value: string): string => normalizePassInput(value);",
+        ""
+      ].join("\n")
+    );
+
+    const report = await buildDependencyCheckReport({
+      check: {
+        id: "dependency",
+        metric: "cycle and forbidden import direction detection",
+        mode: "report-only",
+        owner: "architecture",
+        scope: ["src/v11/**"],
+        exceptions: []
+      },
+      repoRoot,
+      fallbackMode: "report-only",
+    });
+
+    expect(report.status).toBe("warn");
+    expect(
+      report.details?.some((detail) =>
+        detail.includes(
+          "src/v11/shared/pass: shared-promotion warning: imported only by application lane pass"
+        )
+      )
+    ).toBe(true);
+  });
+
+  it("does not warn when a shared directory is consumed by multiple application lanes", async () => {
+    const repoRoot = await createTempRoot();
+    await writeRepoFile(
+      repoRoot,
+      "src/v11/shared/state/stateSchema.ts",
+      "export const stateSchema = 'state';\n"
+    );
+    await writeRepoFile(
+      repoRoot,
+      "src/v11/application/approval/approvalCommandApi.ts",
+      "import { stateSchema } from '../../shared/state/stateSchema.js';\nexport const approval = stateSchema;\n"
+    );
+    await writeRepoFile(
+      repoRoot,
+      "src/v11/application/pass/passWorkspaceContextDefaults.ts",
+      "import { stateSchema } from '../../shared/state/stateSchema.js';\nexport const pass = stateSchema;\n"
+    );
+
+    const report = await buildDependencyCheckReport({
+      check: {
+        id: "dependency",
+        metric: "cycle and forbidden import direction detection",
+        mode: "report-only",
+        owner: "architecture",
+        scope: ["src/v11/**"],
+        exceptions: []
+      },
+      repoRoot,
+      fallbackMode: "report-only",
+    });
+
+    expect(report.status).toBe("pass");
+    expect(
+      report.details?.some((detail) =>
+        detail.includes("shared-promotion warning")
+      )
+    ).toBe(false);
+  });
+
+  it("does not warn when a shared directory has an infrastructure consumer", async () => {
+    const repoRoot = await createTempRoot();
+    await writeRepoFile(
+      repoRoot,
+      "src/v11/shared/state/stateSchema.ts",
+      "export const stateSchema = 'state';\n"
+    );
+    await writeRepoFile(
+      repoRoot,
+      "src/v11/application/approval/approvalCommandApi.ts",
+      "import { stateSchema } from '../../shared/state/stateSchema.js';\nexport const approval = stateSchema;\n"
+    );
+    await writeRepoFile(
+      repoRoot,
+      "src/v11/infrastructure/state/stateStore.ts",
+      "import { stateSchema } from '../../shared/state/stateSchema.js';\nexport const store = stateSchema;\n"
+    );
+
+    const report = await buildDependencyCheckReport({
+      check: {
+        id: "dependency",
+        metric: "cycle and forbidden import direction detection",
+        mode: "report-only",
+        owner: "architecture",
+        scope: ["src/v11/**"],
+        exceptions: []
+      },
+      repoRoot,
+      fallbackMode: "report-only",
+    });
+
+    expect(report.status).toBe("pass");
+    expect(
+      report.details?.some((detail) =>
+        detail.includes("shared-promotion warning")
+      )
+    ).toBe(false);
+  });
+
   it("fails on shared direct infrastructure re-export camouflage", async () => {
     const repoRoot = await createTempRoot();
     await writeRepoFile(
