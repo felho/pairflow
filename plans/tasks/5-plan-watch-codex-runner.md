@@ -5,7 +5,7 @@ task_family_id: plan-watch-codex-runner
 sequence_key: "5"
 task_id: 5-plan-watch-codex-runner
 title: "Local Plan Watch Built-In Codex Runner"
-status: implementable
+status: in_progress
 phase: phase5-retrofit
 target_files:
   - "pairflow.toml"
@@ -35,7 +35,7 @@ normative_refs:
 owners:
   - "felho"
 doc_bubble_id: 5-plan-watch-codex-runner-doc
-impl_bubble_id: null
+impl_bubble_id: 5-plan-watch-codex-runner-impl
 supersedes: []
 superseded_by: null
 archive_group: 2026-05-01-local-plan-watch
