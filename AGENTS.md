@@ -115,7 +115,7 @@ These are mandatory operating rules for bubble lifecycle handling to avoid rebas
 
 6. **Temporary bootstrap requirement (until repo-level config exists)**
    - When creating a Pairflow bubble in this repository, always pass:
-     - `--bootstrap-command "pnpm install --frozen-lockfile && pnpm build"`
+     - `--bootstrap-command "pnpm install --frozen-lockfile && pnpm --dir ui install --frozen-lockfile && pnpm build"`
    - Apply this to bubble creation flows by default so worktree-local CLI/runtime is initialized reliably.
    - Remove this requirement once bootstrap is supported as repository-level configuration.
 
