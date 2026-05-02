@@ -463,6 +463,34 @@ pairflow bubble list --refresh
 
 When the live refresh succeeds but reports `runtimeAvailability="missing"`, the list entry must stay in the `refresh` branch and preserve the remotely confirmed lifecycle snapshot (`state`, `round`, timestamps). This is a runtime-loss diagnosis with preserved state, not a transport failure. Default cache-only `bubble list` still must not invent this diagnosis without a fresh live read.
 
+### 6.7 `pairflow plan watch` boundary for remote bubbles
+
+`pairflow plan watch` is a V1 local-control-plane process. It may observe a
+remote bubble only by asking the local Pairflow CLI to resolve the linked bubble
+status through the retained laptop-side routed status path described above. A
+fresh routed status result can become trigger evidence when the linked bubble is
+`READY_FOR_HUMAN_APPROVAL` or legacy `READY_FOR_APPROVAL`; stale cache,
+unavailable transport, missing runtime, or raw remote clone state must fail
+closed and must not be treated as approval-ready evidence.
+
+The watcher remains a trigger, dedupe, and local runner invocation surface:
+
+- It does not create or start remote bubbles.
+- It does not run `ExecutePairflowPlan` from the remote clone as a remote-only
+  supervisor.
+- It does not compute `ResolvePlanState` routes from remote status, transcript
+  text, or cache projections.
+- It does not approve, request rework, commit, merge, or otherwise mutate bubble
+  lifecycle state.
+
+When a local watch process finds fresh approval-ready evidence, it invokes the
+configured local runner for `ExecutePairflowPlan`. That runner may use normal
+Pairflow lifecycle commands, and those commands continue to route remote bubble
+operations through the laptop/local control plane unless a command-specific
+exception is explicitly documented. If the laptop/local control plane is
+unavailable, V1 plan watch does not continue remotely; remote-only plan
+progression is deferred to a future supervisor/event-hook design.
+
 ---
 
 ## 7. Repo Sync Strategy
