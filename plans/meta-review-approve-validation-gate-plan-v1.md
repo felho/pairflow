@@ -97,7 +97,7 @@ For the Pairflow repository itself, the intended policy is:
 
 | Task ID | Task Path | Purpose | Depends On | Closes Gap | Status |
 |---|---|---|---|---|---|
-| `1-meta-approve-validation-gate` | `plans/tasks/1-meta-approve-validation-gate.md` | Add and consume separate meta-review approve validation policy. | Repo-level validation profile V2 baseline | PASS-loop vs full-test approval split | draft |
+| `1-meta-approve-validation-gate` | `plans/tasks/1-meta-approve-validation-gate.md` | Add and consume separate meta-review approve validation policy. | Repo-level validation profile V2 baseline | PASS-loop vs full-test approval split | approved |
 
 ## Coverage Map
 
@@ -122,5 +122,6 @@ For the Pairflow repository itself, the intended policy is:
 
 1. Config parser and renderer tests for the new policy.
 2. Create-time resolver tests for repo config materialization.
-3. Meta-review gate tests for approve success and approve validation failure.
-4. Narrow runtime tests before broad suite; full `pnpm test` remains final validation evidence for the implementation task.
+3. Meta-review gate tests for approve success, approve validation failure, non-approve skip, and clean-rerun-threshold skip.
+4. PASS validation tests proving approve-only commands are not run by the PASS loop.
+5. Narrow runtime tests before broad suite; full `pnpm test` remains final implementation validation evidence at the approval boundary, not part of the normal PASS loop after the split policy lands.

@@ -8,20 +8,24 @@ title: "Meta-Review Approve Validation Gate"
 status: approved
 phase: phase1
 target_files:
+  - "README.md"
   - "pairflow.toml"
   - "src/types/bubble.ts"
   - "src/config/repoConfig.ts"
   - "src/config/bubbleConfig.ts"
   - "src/v11/application/create/repoValidationProfileResolver.ts"
   - "src/v11/application/create/createValidationCommandsConfig.ts"
+  - "src/v11/application/pass/passValidationGate.ts"
   - "src/v11/shared/metaReviewGate/metaReviewGateCurrentRunFinalization.ts"
   - "src/v11/shared/metaReviewGate/metaReviewGateCurrentRunRoutePersistence.ts"
   - "src/v11/shared/metaReviewGate/metaReviewGateCurrentRunTypes.ts"
   - "src/v11/infrastructure/executor/validation/passValidationCommandRunner.ts"
-  - "src/v11/infrastructure/artifact/validation/passValidationEvidenceContract.ts"
+  - "src/v11/infrastructure/artifact/validation/metaReviewApproveValidationEvidence.ts"
+  - "src/v11/infrastructure/artifact/validation/metaReviewApproveValidationEvidenceContract.ts"
   - "tests/config/repoConfig.test.ts"
   - "tests/config/bubbleConfig.test.ts"
   - "tests/v11/application/create/repoValidationProfileResolver.test.ts"
+  - "tests/v11/application/pass/passValidationGate.test.ts"
   - "tests/v11/shared/metaReviewGate/metaReviewGateCurrentRunFinalization.test.ts"
 prd_ref: null
 plan_ref: plans/meta-review-approve-validation-gate-plan-v1.md
@@ -155,7 +159,7 @@ Introduce a separate configurable validation gate that runs before meta-review a
 4. Side effects forbidden before preconditions pass:
    - appending `APPROVAL_REQUEST` for `human_gate_approve`.
    - transitioning state to `READY_FOR_HUMAN_APPROVAL` for approve route.
-5. Invalid/precondition-failure behavior: no approve-route side effects; route to fail-closed human gate/dispatch-failed path with diagnostics.
+5. Invalid/precondition-failure behavior: no `human_gate_approve` route and no `READY_FOR_HUMAN_APPROVAL` state transition; use the existing fail-closed `human_gate_dispatch_failed` route with diagnostics.
 6. Coordination primitives in scope: existing meta-review gate lock/state persistence only; no new lock primitive.
 
 ### In Scope
@@ -175,6 +179,7 @@ Introduce a separate configurable validation gate that runs before meta-review a
 3. Running approve-gate validation for non-approve meta-review recommendations.
 4. Changing human `bubble approve` semantics.
 5. Introducing a separate targeted-test discovery engine.
+6. Changing existing persistence failure semantics if writing the fail-closed `human_gate_dispatch_failed` route itself fails.
 
 ### Safety Defaults
 
@@ -234,7 +239,7 @@ Introduce a separate configurable validation gate that runs before meta-review a
 | Repo config | `validation.commands.<id>` | repo create-time command map | every required id without built-in default must have a command string | fail fast | repo config parser, create resolver |
 | Bubble config | `commands.validation_required` | runtime PASS policy | consumed only by PASS validation | existing PASS failure behavior | bubble config, PASS tests |
 | Bubble config | `commands.meta_review_approve_required` | runtime approve-gate policy | consumed only before `human_gate_approve` | fail closed before approve side effects | bubble config, meta-review gate tests |
-| Evidence logs | approve-gate validation log path | approve-gate runner | distinct from `.pairflow/evidence/pass-validation-*.log` | failing command path included in diagnostics | runtime tests |
+| Evidence logs | approve-gate validation log path | approve-gate runner | `.pairflow/evidence/meta-review-approve-validation-<command-id>-<timestamp>.log`; never `.pairflow/evidence/pass-validation-*.log` | failing command path included in diagnostics | runtime tests |
 | Pairflow repo config | `pairflow.toml` | repository policy | PASS = lint/typecheck/fitness; approve gate = test | N/A | parser/create tests |
 
 ### 0) Domain / Control Contract
@@ -307,36 +312,51 @@ Introduce a separate configurable validation gate that runs before meta-review a
 | Missing `meta_review_approve_required` | preserve current routing | no approve-gate configured | P1 | required-now |
 | Empty `meta_review_approve_required=[]` | explicit no approve-gate commands | accepted only if represented unambiguously | P2 | required-now |
 | Required id has no command | fail fast at create/config validation | unresolved command id | P1 | required-now |
-| Approve-gate command exits nonzero | no `human_gate_approve`; fail-closed route | include command id/log path/exit code | P1 | required-now |
-| Runner spawn/log error | no `human_gate_approve`; fail-closed route | include stage/log path | P1 | required-now |
+| Approve-gate command exits nonzero | no `human_gate_approve`; route `human_gate_dispatch_failed` | include command id/log path/exit code | P1 | required-now |
+| Runner spawn/log error | no `human_gate_approve`; route `human_gate_dispatch_failed` | include stage/log path; log-path may be null only when log setup itself failed | P1 | required-now |
 | Non-approve recommendation | do not run approve-gate commands | gate is approve-only | P1 | required-now |
-| Clean-run threshold requires rerun | do not run full test until final clean threshold is met | avoid repeated full suite during clean-rerun threshold | P1 | required-now |
+| Clean-run threshold requires rerun | route `meta_review_running` before approve-gate validation | avoid repeated full suite during clean-rerun threshold | P1 | required-now |
+
+### 2a) Approve-Gate Diagnostic Payload
+
+| Failure Source | Required Diagnostic Keys | Notes |
+|---|---|---|
+| Command exits nonzero | `stage="exec"`, `commandId`, `exitCode`, `logPath` | `logPath` must use the approve-gate evidence prefix. |
+| Runner spawn failure | `stage="spawn"`, `commandId`, `exitCode=null`, `logPath` | Include `logPath` when the runner can create one before failure. |
+| Evidence log setup/write failure | `stage="log"`, `commandId`, `exitCode=null`, `logPath=null` | Use when the runner cannot create or write the approve-gate evidence log. |
+| Command resolution failure | `stage="resolve"`, `commandId`, `exitCode=null`, `logPath=null` | Create-time validation should normally catch this first. |
 
 ### 3) Test Matrix
 
 | ID | Scenario | Given | When | Then | Priority |
 |---|---|---|---|---|---|
 | T1 | repo config parses approve policy | `validation.meta_review_approve_required=["test"]` | parse repo config | field is present and validated | P1 |
-| T2 | repo config rejects duplicate approve ids | duplicate id | parse repo config | schema error | P1 |
+| T2 | repo config rejects duplicate approve ids | duplicate id | parse repo config | schema error; legacy `validation.required` duplicate coverage remains in existing shared parser tests | P1 |
 | T3 | create materializes split policy | repo requires PASS `fitness`, approve `test` | bubble create resolver runs | bubble config has both lists | P1 |
 | T4 | bubble config roundtrips approve policy | `commands.meta_review_approve_required=["test"]` | parse/render/parse | list preserved | P1 |
 | T5 | PASS ignores approve-only test | PASS list lacks `test`, approve list has `test` | implementer PASS runs | only PASS list executes | P1 |
 | T6 | approve success runs full test | approve list has `test`, runner exits 0 | meta-review approve finalizes | route is `human_gate_approve` | P1 |
-| T7 | approve test failure blocks approve route | runner exits nonzero | meta-review approve finalizes | route is fail-closed, no approve request side effect | P1 |
+| T7 | approve test failure blocks approve route | runner exits nonzero | meta-review approve finalizes | route is `human_gate_dispatch_failed`, no `human_gate_approve`, no `READY_FOR_HUMAN_APPROVAL` state | P1 |
 | T8 | non-approve skips approve gate | recommendation rework/inconclusive | finalizer runs | approve-gate runner is not called | P1 |
-| T9 | clean-run threshold rerun skips full test | streak below required threshold | finalizer runs | rerun route occurs without approve-gate command | P1 |
+| T9 | clean-run threshold rerun skips full test | streak below required threshold | finalizer runs | route is `meta_review_running` and approve-gate runner is not called | P1 |
 | T10 | Pairflow repo config policy | repo `pairflow.toml` updated | parser reads it | PASS list excludes `test`, approve list includes `test` | P1 |
+| T11 | explicit empty approve policy | `commands.meta_review_approve_required=[]` | meta-review approve finalizes | no approve-gate commands run and legacy approve routing is preserved | P2 |
+| T12 | unresolved approve command id fails create/config | approve list references id without a command string | create resolver runs | fail fast before bubble runtime consumes the policy | P1 |
+| T13 | implementer guidance reflects split policy | README validation profile guidance is updated | docs/examples are inspected | normal PASS guidance names lint/typecheck/fitness/targeted tests and describes full test as approve-gate validation | P2 |
 
 ## L2 - Implementation Notes
 
+Canonical term: use `meta-review approve validation gate` for the feature and `approve-gate validation` for the command execution step.
+
 1. Prefer extending existing validation command id helpers instead of adding a parallel id grammar.
-2. Prefer reusing `runPassValidationCommand` mechanics only if log naming can be made distinct; otherwise extract a role-neutral validation runner wrapper.
-3. The meta-review approve gate should run after clean approval and clean-run threshold checks determine that this run would otherwise route to `human_gate_approve`, and before the state/envelope side effects of that route.
-4. Failure routing should reuse existing `persistDispatchFailedHumanRoute` or equivalent fail-closed path with a clear fallback reason; do not invent a new lifecycle state.
+2. Prefer reusing `runPassValidationCommand` mechanics only through an approve-gate wrapper that supplies approve-specific evidence filenames; do not edit PASS evidence artifacts unless extracting shared primitives is strictly required and tests prove PASS artifact compatibility.
+3. The meta-review approve gate must run after clean approval and clean-run threshold checks determine that this run would otherwise route to `human_gate_approve`, and before the state/envelope side effects of that route.
+4. Failure routing should reuse existing `persistDispatchFailedHumanRoute` or equivalent fail-closed path with a clear fallback reason; do not invent a new lifecycle state or a new gate route.
 5. Update `pairflow.toml` to:
    - keep `fitness = "pnpm fitness:check:ci"`;
    - set PASS `required` to `["lint", "typecheck", "fitness"]`;
    - set approve-gate required to `["test"]`.
+6. Update README validation profile guidance so examples and prose distinguish PASS-required commands from meta-review approve-required commands.
 
 ## Acceptance Criteria
 
@@ -345,9 +365,9 @@ Introduce a separate configurable validation gate that runs before meta-review a
 3. AC3: Bubble creation persists both PASS and meta-review approve validation policies from repo config.
 4. AC4: PASS validation no longer runs full `pnpm test` for Pairflow repo policy unless explicitly listed in `commands.validation_required`.
 5. AC5: Meta-review approve route runs configured approve-gate commands before `human_gate_approve`.
-6. AC6: Approve-gate failure prevents `human_gate_approve` and records actionable command diagnostics.
+6. AC6: Approve-gate failure routes `human_gate_dispatch_failed`, prevents `human_gate_approve` / `READY_FOR_HUMAN_APPROVAL`, and records actionable command diagnostics with the required keys in `Approve-Gate Diagnostic Payload`.
 7. AC7: Pairflow repo `pairflow.toml` reflects the intended split policy.
-8. AC8: Targeted tests cover config, create-time materialization, PASS separation, and meta-review approve success/failure.
+8. AC8: Targeted tests cover config, create-time materialization, PASS separation, meta-review approve success/failure, non-approve skip, clean-rerun-threshold skip, empty approve policy, unresolved approve command ids, and guidance updates.
 
 ## Verification Commands
 
