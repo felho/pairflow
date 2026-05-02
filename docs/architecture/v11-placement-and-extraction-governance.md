@@ -139,6 +139,14 @@ A module may be placed in `src/v11/shared/**` only if all are true:
 
 If these conditions are not met, keep the code local.
 
+The dependency fitness check includes a report-only Shared Promotion warning for
+the most obvious parking-lot shape: a `src/v11/shared/<name>/**` directory that
+is imported by exactly one `src/v11/application/<lane>/**` lane and has no
+infrastructure consumer. Treat that warning as triage evidence, not automatic
+proof. The usual fix is to move command-local helpers back under the owning
+`application/<lane>/**` directory; promote only the portions that have a real
+multi-lane or infrastructure-facing consumer.
+
 ## Contract Rule
 
 Every non-trivial `v11` extract must have an explicit boundary.
