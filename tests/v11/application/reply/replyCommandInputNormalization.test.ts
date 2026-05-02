@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { normalizeReplyCommandInput } from "../../../../src/v11/shared/reply/replyCommandInputNormalization.js";
+import { normalizeReplyCommandInput } from "../../../../src/v11/application/reply/replyCommandInputNormalization.js";
 
 function toErrorMessage(input: PairflowCommandErrorInput): string {
   if (typeof input === "string") {

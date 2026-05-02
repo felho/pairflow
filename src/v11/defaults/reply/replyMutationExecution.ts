@@ -1,7 +1,7 @@
 import { join } from "node:path";
 
-import { buildRunningExecutionContext } from "../state/executionContext.js";
-import type { BubblePaths } from "../bubble/bubblePaths.js";
+import { buildRunningExecutionContext } from "../../shared/state/executionContext.js";
+import type { BubblePaths } from "../../shared/bubble/bubblePaths.js";
 import { applyStateTransition } from "../../domain/state/machine.js";
 import { buildHumanReplyEnvelopeDraft } from "../../domain/reply/replyEnvelopeDraft.js";
 import {

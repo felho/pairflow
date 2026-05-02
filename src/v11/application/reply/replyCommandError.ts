@@ -1,6 +1,6 @@
 import { normalizeReplyCommandError } from "./replyCommandErrorNormalization.js";
-import { normalizePairflowCommandErrorInput } from "../errors/commandErrorDetails.js";
-import { isNamedError } from "../errors/namedError.js";
+import { normalizePairflowCommandErrorInput } from "../../shared/errors/commandErrorDetails.js";
+import { isNamedError } from "../../shared/errors/namedError.js";
 
 export class HumanReplyCommandError extends Error {
   public readonly reasonCode: string | undefined;
