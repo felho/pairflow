@@ -232,6 +232,32 @@ meta_review_consecutive_clean_runs_required = 2
     expect(rendered).not.toContain("validation_required_explicit = false");
   });
 
+  it("parses and roundtrips meta-review approve validation command policy", () => {
+    const config = parseBubbleConfigToml(
+      `${baseToml}meta_review_approve_required = ["test"]\n`
+    );
+
+    expect(config.commands.meta_review_approve_required).toEqual(["test"]);
+
+    const rendered = renderBubbleConfigToml(config);
+    expect(rendered).toContain('meta_review_approve_required = ["test"]');
+    expect(parseBubbleConfigToml(rendered).commands.meta_review_approve_required)
+      .toEqual(["test"]);
+  });
+
+  it("roundtrips explicit empty meta-review approve validation command policy", () => {
+    const config = parseBubbleConfigToml(
+      `${baseToml}meta_review_approve_required = []\n`
+    );
+
+    expect(config.commands.meta_review_approve_required).toEqual([]);
+
+    const rendered = renderBubbleConfigToml(config);
+    expect(rendered).toContain("meta_review_approve_required = []");
+    expect(parseBubbleConfigToml(rendered).commands.meta_review_approve_required)
+      .toEqual([]);
+  });
+
   it("roundtrips explicit empty pass validation policy", () => {
     const config = parseBubbleConfigToml(
       `${baseToml}validation_required = []\nvalidation_required_explicit = true\n`
@@ -322,6 +348,53 @@ cwd = "apps/web"
     expect(() =>
       parseBubbleConfigToml(
         `${baseToml}validation_required = ["typecheck", "typecheck"]\n`
+      )
+    ).toThrow(/Invalid bubble config/u);
+  });
+
+  it("rejects duplicate meta_review_approve_required ids", () => {
+    expect(() =>
+      parseBubbleConfigToml(
+        `${baseToml}meta_review_approve_required = ["test", "test"]\n`
+      )
+    ).toThrow(/Invalid bubble config/u);
+  });
+
+  it("reports duplicate meta_review_approve_required before missing command lookup", () => {
+    try {
+      parseBubbleConfigToml(
+        `${baseToml}meta_review_approve_required = ["fitness", "fitness"]\n`
+      );
+      throw new Error("Expected invalid bubble config");
+    } catch (error) {
+      expect(error).toBeInstanceOf(SchemaValidationError);
+      expect((error as SchemaValidationError).errors).toContainEqual({
+        path: "commands.meta_review_approve_required[1]",
+        message: 'Duplicate validation command id "fitness"'
+      });
+    }
+  });
+
+  it("rejects meta_review_approve_required ids without a configured command string", () => {
+    expect(() =>
+      parseBubbleConfigToml(
+        `${baseToml}meta_review_approve_required = ["fitness"]\n`
+      )
+    ).toThrow(/Invalid bubble config/u);
+  });
+
+  it("rejects optional built-in lint in meta_review_approve_required without a lint command", () => {
+    expect(() =>
+      parseBubbleConfigToml(
+        `${baseToml}meta_review_approve_required = ["lint"]\n`
+      )
+    ).toThrow(/Invalid bubble config/u);
+  });
+
+  it("rejects empty command strings referenced by meta_review_approve_required", () => {
+    expect(() =>
+      parseBubbleConfigToml(
+        `${baseToml}fitness = "   "\nmeta_review_approve_required = ["fitness"]\n`
       )
     ).toThrow(/Invalid bubble config/u);
   });

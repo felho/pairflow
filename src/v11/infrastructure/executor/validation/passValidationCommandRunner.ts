@@ -46,6 +46,13 @@ export interface RunPassValidationCommandInput {
   command: string
   worktreePath: string
   cwd?: string
+  targetId?: string
+  targetPaths?: string[]
+  evidence?: {
+    header: string
+    logPathPrefix: string
+    timestamp?: number
+  }
 }
 
 export interface RunPassValidationCommandDependencies {
@@ -55,8 +62,18 @@ export interface RunPassValidationCommandDependencies {
   now?: () => number
 }
 
-function buildLogPath(kind: PassValidationCommandId): string {
-  return `.pairflow/evidence/pass-validation-${kind}.log`
+function buildLogPath(
+  input: RunPassValidationCommandInput,
+  collisionIndex = 0
+): string {
+  const evidence = input.evidence
+  if (evidence === undefined) {
+    return `.pairflow/evidence/pass-validation-${input.kind}.log`
+  }
+  const timestampSuffix =
+    evidence.timestamp === undefined ? "" : `-${evidence.timestamp}`
+  const collisionSuffix = collisionIndex === 0 ? "" : `-${collisionIndex}`
+  return `.pairflow/evidence/${evidence.logPathPrefix}-${input.kind}${timestampSuffix}${collisionSuffix}.log`
 }
 
 function createSerializedAppender(fileHandle: FileHandle): (
@@ -126,6 +143,17 @@ async function appendStreamToHandle(
   }
 }
 
+function buildSettlementFailureReason(input: {
+  stdoutOk: boolean
+  stderrOk: boolean
+}): string {
+  return [
+    "settlement_failed",
+    ...(!input.stdoutOk ? ["stdout_capture_failed"] : []),
+    ...(!input.stderrOk ? ["stderr_capture_failed"] : [])
+  ].join(";")
+}
+
 async function preparePassValidationLogFile(input: {
   kind: PassValidationCommandId
   command: string
@@ -134,20 +162,28 @@ async function preparePassValidationLogFile(input: {
   mkdirFn: typeof mkdir
   openFn: typeof open
   relativeLogPath: string
+  header: string
+  targetId?: string
+  targetPaths?: string[]
+  openFlag: "w" | "wx"
 }): Promise<FileHandle> {
   const absoluteLogPath = join(input.worktreePath, input.relativeLogPath)
   await input.mkdirFn(join(input.worktreePath, ".pairflow", "evidence"), {
     recursive: true
   })
-  const fileHandle = await input.openFn(absoluteLogPath, "w")
+  const fileHandle = await input.openFn(absoluteLogPath, input.openFlag)
   try {
     await fileHandle.writeFile(
       [
-        `# pairflow pass validation`,
+        `# ${input.header}`,
         `kind=${input.kind}`,
         `command=${input.command}`,
         `cwd=${input.executionCwd}`,
         `worktree=${input.worktreePath}`,
+        ...(input.targetId !== undefined ? [`target_id=${input.targetId}`] : []),
+        ...(input.targetPaths !== undefined
+          ? [`target_paths=${input.targetPaths.join(",")}`]
+          : []),
         ""
       ].join("\n")
     )
@@ -221,85 +257,91 @@ async function executePassValidationChild(input: {
   durationMs: number
   executionCwd: string
 }> {
-  const stdout = input.child.stdout
-  const stderr = input.child.stderr
-  if (stdout === null || stderr === null) {
-    throw new PassValidationRunnerExecutionError({
-      kind: input.runInput.kind,
-      stage: "spawn",
+  try {
+    const stdout = input.child.stdout
+    const stderr = input.child.stderr
+    if (stdout === null || stderr === null) {
+      throw new PassValidationRunnerExecutionError({
+        kind: input.runInput.kind,
+        stage: "spawn",
+        logPath: input.relativeLogPath,
+        cause: new Error("spawned process did not expose pipe streams"),
+        context: {
+          command: input.runInput.command,
+          reason: "missing_pipe_streams",
+          worktreePath: input.runInput.worktreePath
+        }
+      })
+    }
+    const appendChunk = createSerializedAppender(input.fileHandle)
+    const [stdoutResult, stderrResult, settleResult] = await Promise.all([
+      appendStreamToHandle(stdout, appendChunk).then(
+        () => ({ ok: true as const }),
+        (error) => ({ ok: false as const, error: toError(error) })
+      ),
+      appendStreamToHandle(stderr, appendChunk).then(
+        () => ({ ok: true as const }),
+        (error) => ({ ok: false as const, error: toError(error) })
+      ),
+      input.settle
+    ])
+    if ("error" in settleResult) {
+      throw new PassValidationRunnerExecutionError({
+        kind: input.runInput.kind,
+        stage:
+          settleResult.error instanceof PassValidationRunnerExecutionError
+            ? settleResult.error.stage
+            : "settle",
+        logPath: input.relativeLogPath,
+        cause: settleResult.error,
+        context: {
+          command: input.runInput.command,
+          reason: buildSettlementFailureReason({
+            stdoutOk: stdoutResult.ok,
+            stderrOk: stderrResult.ok
+          }),
+          worktreePath: input.runInput.worktreePath
+        }
+      })
+    }
+    if (!stdoutResult.ok) {
+      throw toPassValidationStageError({
+        kind: input.runInput.kind,
+        stage: "stdout",
+        logPath: input.relativeLogPath,
+        cause: stdoutResult.error,
+        context: {
+          command: input.runInput.command,
+          reason: "stdout_capture_failed",
+          worktreePath: input.runInput.worktreePath
+        }
+      })
+    }
+    if (!stderrResult.ok) {
+      throw toPassValidationStageError({
+        kind: input.runInput.kind,
+        stage: "stderr",
+        logPath: input.relativeLogPath,
+        cause: stderrResult.error,
+        context: {
+          command: input.runInput.command,
+          reason: "stderr_capture_failed",
+          worktreePath: input.runInput.worktreePath
+        }
+      })
+    }
+    const exitCode = settleResult.exitCode
+    const durationMs = Math.max(0, input.now() - input.startedAt)
+    await input.fileHandle.writeFile(`\nexit_code=${exitCode}\nduration_ms=${durationMs}\n`)
+    return {
+      command: input.runInput.command,
+      exitCode,
       logPath: input.relativeLogPath,
-      cause: new Error("spawned process did not expose pipe streams"),
-      context: {
-        command: input.runInput.command,
-        reason: "missing_pipe_streams",
-        worktreePath: input.runInput.worktreePath
-      }
-    })
-  }
-  const appendChunk = createSerializedAppender(input.fileHandle)
-  const [stdoutResult, stderrResult, settleResult] = await Promise.all([
-    appendStreamToHandle(stdout, appendChunk).then(
-      () => ({ ok: true as const }),
-      (error) => ({ ok: false as const, error: toError(error) })
-    ),
-    appendStreamToHandle(stderr, appendChunk).then(
-      () => ({ ok: true as const }),
-      (error) => ({ ok: false as const, error: toError(error) })
-    ),
-    input.settle
-  ])
-  if ("error" in settleResult) {
-    throw new PassValidationRunnerExecutionError({
-      kind: input.runInput.kind,
-      stage:
-        settleResult.error instanceof PassValidationRunnerExecutionError
-          ? settleResult.error.stage
-          : "settle",
-      logPath: input.relativeLogPath,
-      cause: settleResult.error,
-      context: {
-        command: input.runInput.command,
-        reason: "settlement_failed",
-        worktreePath: input.runInput.worktreePath
-      }
-    })
-  }
-  if (!stdoutResult.ok) {
-    throw toPassValidationStageError({
-      kind: input.runInput.kind,
-      stage: "stdout",
-      logPath: input.relativeLogPath,
-      cause: stdoutResult.error,
-      context: {
-        command: input.runInput.command,
-        reason: "stdout_capture_failed",
-        worktreePath: input.runInput.worktreePath
-      }
-    })
-  }
-  if (!stderrResult.ok) {
-    throw toPassValidationStageError({
-      kind: input.runInput.kind,
-      stage: "stderr",
-      logPath: input.relativeLogPath,
-      cause: stderrResult.error,
-      context: {
-        command: input.runInput.command,
-        reason: "stderr_capture_failed",
-        worktreePath: input.runInput.worktreePath
-      }
-    })
-  }
-  const exitCode = settleResult.exitCode
-  const durationMs = Math.max(0, input.now() - input.startedAt)
-  await input.fileHandle.writeFile(`\nexit_code=${exitCode}\nduration_ms=${durationMs}\n`)
-  await input.fileHandle.close()
-  return {
-    command: input.runInput.command,
-    exitCode,
-    logPath: input.relativeLogPath,
-    durationMs,
-    executionCwd: input.executionCwd
+      durationMs,
+      executionCwd: input.executionCwd
+    }
+  } finally {
+    await input.fileHandle.close().catch(() => undefined)
   }
 }
 
@@ -318,7 +360,7 @@ export async function runPassValidationCommand(
   const spawnFn = dependencies.spawn ?? spawn
   const now = dependencies.now ?? (() => Date.now())
 
-  const relativeLogPath = buildLogPath(input.kind)
+  let relativeLogPath = buildLogPath(input)
   let fileHandle: FileHandle | undefined
   let executionCwd: string
   try {
@@ -329,15 +371,39 @@ export async function runPassValidationCommand(
             cwd: input.cwd
           })
         : input.worktreePath
-    fileHandle = await preparePassValidationLogFile({
-      kind: input.kind,
-      command: input.command,
-      worktreePath: input.worktreePath,
-      executionCwd,
-      mkdirFn,
-      openFn,
-      relativeLogPath
-    })
+    let collisionIndex = 0
+    while (true) {
+      relativeLogPath = buildLogPath(input, collisionIndex)
+      try {
+        fileHandle = await preparePassValidationLogFile({
+          kind: input.kind,
+          command: input.command,
+          worktreePath: input.worktreePath,
+          executionCwd,
+          mkdirFn,
+          openFn,
+          relativeLogPath,
+          header: input.evidence?.header ?? "pairflow pass validation",
+          openFlag: input.evidence === undefined ? "w" : "wx",
+          ...(input.targetId !== undefined ? { targetId: input.targetId } : {}),
+          ...(input.targetPaths !== undefined
+            ? { targetPaths: [...input.targetPaths] }
+            : {})
+        })
+        break
+      } catch (error) {
+        await fileHandle?.close().catch(() => undefined)
+        fileHandle = undefined
+        if (
+          input.evidence !== undefined
+          && hasNestedFilesystemErrorCode(error, ["EEXIST"])
+        ) {
+          collisionIndex += 1
+          continue
+        }
+        throw error
+      }
+    }
   } catch (error) {
     await fileHandle?.close().catch(() => undefined)
     throw new PassValidationRunnerExecutionError({
@@ -400,7 +466,6 @@ export async function runPassValidationCommand(
     })
   } catch (error) {
     child.kill("SIGTERM")
-    await fileHandle.close().catch(() => undefined)
     throw error
   }
 }

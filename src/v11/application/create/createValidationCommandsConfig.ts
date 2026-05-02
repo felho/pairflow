@@ -30,6 +30,12 @@ export function buildValidationCommandsConfig(
     test: resolvedCommands?.test ?? input.testCommand ?? "pnpm test",
     typecheck: resolvedCommands?.typecheck ?? input.typecheckCommand ?? "pnpm typecheck",
     ...customCommands,
+    ...(input.resolvedValidationCommands?.metaReviewApproveRequired !== undefined
+      ? {
+          meta_review_approve_required:
+            input.resolvedValidationCommands.metaReviewApproveRequired
+        }
+      : {}),
     ...(input.resolvedValidationCommands?.validationRequired !== undefined
       ? {
           validation_required:

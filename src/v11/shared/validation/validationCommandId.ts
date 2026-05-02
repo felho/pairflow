@@ -1,4 +1,5 @@
 export const validationCommandReservedIds = [
+  "meta_review_approve_required",
   "validation_required",
   "validation_required_explicit"
 ] as const;

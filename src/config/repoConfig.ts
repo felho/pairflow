@@ -24,6 +24,7 @@ import {
   type ReviewerContextMode
 } from "../types/bubble.js";
 import {
+  builtInValidationCommandIds,
   describeValidationCommandIdRule,
   isValidationCommandId
 } from "../v11/shared/validation/validationCommandId.js";
@@ -48,6 +49,10 @@ export const VALIDATION_TARGET_CWD_OUTSIDE_WORKTREE =
 export const VALIDATION_TARGET_CWD_INVALID =
   "VALIDATION_TARGET_CWD_INVALID" as const;
 
+const builtInValidationCommandIdSet = new Set<string>(
+  builtInValidationCommandIds
+);
+
 export interface RepoValidationTargetConfig {
   commands: Record<string, string>;
   required: string[];
@@ -58,6 +63,7 @@ export interface RepoValidationTargetConfig {
 
 export interface RepoValidationConfig {
   required?: string[];
+  meta_review_approve_required?: string[];
   commands?: Record<string, string>;
   targets?: Record<string, RepoValidationTargetConfig>;
 }
@@ -167,6 +173,28 @@ function readOptionalEnum<T extends string>(input: {
     return undefined;
   }
   return value;
+}
+
+function collectValidationTargetCommandIds(targets: unknown): Set<string> {
+  const commandIds = new Set<string>();
+  if (!isRecord(targets)) {
+    return commandIds;
+  }
+  for (const targetConfig of Object.values(targets)) {
+    if (!isRecord(targetConfig) || !isRecord(targetConfig.commands)) {
+      continue;
+    }
+    for (const [id, command] of Object.entries(targetConfig.commands)) {
+      if (
+        isValidationCommandId(id)
+        && typeof command === "string"
+        && command.trim().length > 0
+      ) {
+        commandIds.add(id);
+      }
+    }
+  }
+  return commandIds;
 }
 
 function validateRepoDefaultsConfig(
@@ -545,7 +573,12 @@ export function validatePairflowRepoConfig(
     return validationFail(errors);
   }
 
-  const allowedValidationKeys = new Set(["required", "commands", "targets"]);
+  const allowedValidationKeys = new Set([
+    "required",
+    "meta_review_approve_required",
+    "commands",
+    "targets"
+  ]);
   for (const key of Object.keys(validation)) {
     if (!allowedValidationKeys.has(key)) {
       errors.push({
@@ -556,47 +589,70 @@ export function validatePairflowRepoConfig(
   }
 
   const validatedValidation: RepoValidationConfig = {};
-  const required = validation.required;
-  if (required !== undefined) {
-    if (!Array.isArray(required)) {
+  const readValidationCommandIdList = (
+    value: unknown,
+    path: "validation.required" | "validation.meta_review_approve_required"
+  ): string[] | undefined => {
+    if (value === undefined) {
+      return undefined;
+    }
+    if (!Array.isArray(value)) {
       errors.push({
-        path: "validation.required",
+        path,
         message: "Must be an array of validation command ids"
       });
-    } else {
-      const seen = new Set<string>();
-      const requiredIds: string[] = [];
-      required.forEach((item, index) => {
-        if (typeof item !== "string" || item.trim().length === 0) {
-          errors.push({
-            path: `validation.required[${index}]`,
-            message: "Must be a non-empty validation command id string"
-          });
-          return;
-        }
-        const id = item.trim();
-        if (!isValidationCommandId(id)) {
-          errors.push({
-            path: `validation.required[${index}]`,
-            message: describeValidationCommandIdRule()
-          });
-          return;
-        }
-        if (seen.has(id)) {
-          errors.push({
-            path: `validation.required[${index}]`,
-            message: `Duplicate validation command id "${id}"`
-          });
-          return;
-        }
-        seen.add(id);
-        requiredIds.push(id);
-      });
-      validatedValidation.required = requiredIds;
+      return undefined;
     }
+
+    const seen = new Set<string>();
+    const requiredIds: string[] = [];
+    value.forEach((item, index) => {
+      if (typeof item !== "string" || item.trim().length === 0) {
+        errors.push({
+          path: `${path}[${index}]`,
+          message: "Must be a non-empty validation command id string"
+        });
+        return;
+      }
+      const id = item.trim();
+      if (!isValidationCommandId(id)) {
+        errors.push({
+          path: `${path}[${index}]`,
+          message: describeValidationCommandIdRule()
+        });
+        return;
+      }
+      if (seen.has(id)) {
+        errors.push({
+          path: `${path}[${index}]`,
+          message: `Duplicate validation command id "${id}"`
+        });
+        return;
+      }
+      seen.add(id);
+      requiredIds.push(id);
+    });
+    return requiredIds;
+  };
+
+  const required = readValidationCommandIdList(
+    validation.required,
+    "validation.required"
+  );
+  if (required !== undefined) {
+    validatedValidation.required = required;
+  }
+  const metaReviewApproveRequired = readValidationCommandIdList(
+    validation.meta_review_approve_required,
+    "validation.meta_review_approve_required"
+  );
+  if (metaReviewApproveRequired !== undefined) {
+    validatedValidation.meta_review_approve_required =
+      metaReviewApproveRequired;
   }
 
   const commands = validation.commands;
+  const validationCommandIds = new Set<string>();
   if (commands !== undefined) {
     if (!isRecord(commands)) {
       errors.push({
@@ -621,10 +677,30 @@ export function validatePairflowRepoConfig(
           continue;
         }
         validatedCommands[id] = command.trim();
+        validationCommandIds.add(id);
       }
       validatedValidation.commands = validatedCommands;
     }
   }
+  const targetValidationCommandIds = collectValidationTargetCommandIds(
+    validation.targets
+  );
+  metaReviewApproveRequired?.forEach((id, index) => {
+    if (
+      validationCommandIds.has(id)
+      || targetValidationCommandIds.has(id)
+      || builtInValidationCommandIdSet.has(id)
+    ) {
+      return;
+    }
+    errors.push({
+      path: `validation.meta_review_approve_required[${index}]`,
+      message:
+        `validation.meta_review_approve_required references "${id}", but no `
+        + `validation.commands.${id} or validation.targets.*.commands.${id} `
+        + "entry is configured"
+    });
+  });
 
   const targets = validation.targets;
   if (targets !== undefined) {

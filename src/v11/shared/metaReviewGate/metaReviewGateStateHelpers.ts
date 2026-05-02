@@ -31,7 +31,7 @@ export const metaReviewGateAutoReworkRetryRunIdentityInvariantReasonCode =
 export function transitionToGateState(input: {
   current: BubbleStateSnapshot;
   nowIso: string;
-  targetState: "READY_FOR_HUMAN_APPROVAL";
+  targetState: "READY_FOR_HUMAN_APPROVAL" | "RUNNING";
   stickyHumanGate: boolean;
   consecutiveCleanRuns?: number;
 }): BubbleStateSnapshot {
@@ -39,10 +39,14 @@ export function transitionToGateState(input: {
     input.current.state === input.targetState
       ? assertValidBubbleStateSnapshot({
           ...input.current,
-          active_agent: null,
-          active_role: null,
-          active_since: null,
-          execution_context: null,
+          ...(input.targetState === "READY_FOR_HUMAN_APPROVAL"
+            ? {
+                active_agent: null,
+                active_role: null,
+                active_since: null,
+                execution_context: null
+              }
+            : {}),
           last_command_at: input.nowIso,
           meta_review: clearLiveMetaReviewSnapshot(input.current.meta_review)
         })

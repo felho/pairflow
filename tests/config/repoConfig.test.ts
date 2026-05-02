@@ -339,6 +339,85 @@ validation_required = "pnpm test"
     ).toThrow(SchemaValidationError);
   });
 
+  it("parses and validates meta-review approve required command ids", () => {
+    const parsed = parsePairflowRepoConfigToml(`
+[validation]
+required = ["lint"]
+meta_review_approve_required = ["test"]
+
+[validation.commands]
+lint = "pnpm lint"
+test = "pnpm test"
+`);
+
+    expect(parsed.validation?.required).toEqual(["lint"]);
+    expect(parsed.validation?.meta_review_approve_required).toEqual(["test"]);
+
+    expect(() =>
+      parsePairflowRepoConfigToml(`
+[validation]
+meta_review_approve_required = ["test", "test"]
+`)
+    ).toThrow(SchemaValidationError);
+  });
+
+  it("allows default-resolvable meta-review approve required command ids", () => {
+    const parsed = parsePairflowRepoConfigToml(`
+[validation]
+meta_review_approve_required = ["test", "typecheck"]
+`);
+
+    expect(parsed.validation?.meta_review_approve_required).toEqual([
+      "test",
+      "typecheck"
+    ]);
+  });
+
+  it("allows meta-review approve required command ids configured on validation targets", () => {
+    const parsed = parsePairflowRepoConfigToml(`
+[validation]
+meta_review_approve_required = ["fitness"]
+
+[validation.targets.full]
+default = true
+required = []
+
+[validation.targets.full.commands]
+fitness = "pnpm fitness:check:ci"
+`);
+
+    expect(parsed.validation?.meta_review_approve_required).toEqual([
+      "fitness"
+    ]);
+    expect(parsed.validation?.targets?.full?.commands.fitness).toBe(
+      "pnpm fitness:check:ci"
+    );
+  });
+
+  it("rejects custom meta-review approve required ids missing from validation commands", () => {
+    const expectedMessage =
+      'validation.meta_review_approve_required references "fitness", but no '
+      + "validation.commands.fitness or "
+      + "validation.targets.*.commands.fitness entry is configured";
+
+    try {
+      parsePairflowRepoConfigToml(`
+[validation]
+meta_review_approve_required = ["fitness"]
+
+[validation.commands]
+test = "pnpm test"
+`);
+      throw new Error("Expected parsePairflowRepoConfigToml to throw.");
+    } catch (error) {
+      expect(error).toBeInstanceOf(SchemaValidationError);
+      expect((error as SchemaValidationError).errors).toContainEqual({
+        path: "validation.meta_review_approve_required[0]",
+        message: expectedMessage
+      });
+    }
+  });
+
   it("parses validation targets using supported section syntax", () => {
     const parsed = parsePairflowRepoConfigToml(`
 [validation]

@@ -33,6 +33,7 @@ export interface ResolvedRepoValidationProfileCommands {
   commands: Record<string, string>;
   validationRequired?: string[];
   validationRequiredExplicit?: true;
+  metaReviewApproveRequired?: string[];
   validationTarget?: {
     id: string;
     cwd?: string;
@@ -56,15 +57,49 @@ function assertValidCommandId(id: string): void {
   }
 }
 
-function assertNoDuplicateRequired(required: readonly string[]): void {
+function assertNoDuplicateRequired(input: {
+  duplicateReasonCode:
+    | "VALIDATION_REQUIRED_DUPLICATE"
+    | "VALIDATION_META_REVIEW_APPROVE_REQUIRED_DUPLICATE";
+  fieldName: "validation.required" | "validation.meta_review_approve_required";
+  required: readonly string[];
+}): void {
   const seen = new Set<string>();
-  for (const id of required) {
+  for (const id of input.required) {
     if (seen.has(id)) {
+      // VALIDATION_REQUIRED_DUPLICATE / VALIDATION_META_REVIEW_APPROVE_REQUIRED_DUPLICATE
       throw new Error(
-        `VALIDATION_REQUIRED_DUPLICATE: Duplicate validation.required id "${id}". context: command_id=${id}.`
+        `${input.duplicateReasonCode}: Duplicate ${input.fieldName} id "${id}". context: command_id=${id}.`
       );
     }
     seen.add(id);
+  }
+}
+
+function assertRequiredCommandsResolved(input: {
+  fieldName: "validation.required" | "validation.meta_review_approve_required";
+  unresolvedReasonCode:
+    | "VALIDATION_REQUIRED_COMMAND_UNRESOLVED"
+    | "VALIDATION_META_REVIEW_APPROVE_REQUIRED_COMMAND_UNRESOLVED";
+  required: readonly string[];
+  commands: Record<string, string>;
+}): void {
+  assertNoDuplicateRequired({
+    duplicateReasonCode:
+      input.fieldName === "validation.required"
+        ? "VALIDATION_REQUIRED_DUPLICATE"
+        : "VALIDATION_META_REVIEW_APPROVE_REQUIRED_DUPLICATE",
+    fieldName: input.fieldName,
+    required: input.required
+  });
+  for (const id of input.required) {
+    assertValidCommandId(id);
+    if (normalizeCommand(input.commands[id]) === undefined) {
+      // VALIDATION_REQUIRED_COMMAND_UNRESOLVED / VALIDATION_META_REVIEW_APPROVE_REQUIRED_COMMAND_UNRESOLVED
+      throw new Error(
+        `${input.unresolvedReasonCode}: ${input.fieldName} references "${id}", but no command was resolved for that id. context: command_id=${id}.`
+      );
+    }
   }
 }
 
@@ -155,7 +190,11 @@ function resolveTargetValidationResult(input: {
   allowMissingWorktreePath?: boolean;
 }): ResolvedRepoValidationProfileCommands {
   const targetRequired = input.selectedTarget.target.required;
-  assertNoDuplicateRequired(targetRequired);
+  assertNoDuplicateRequired({
+    duplicateReasonCode: "VALIDATION_REQUIRED_DUPLICATE",
+    fieldName: "validation.required",
+    required: targetRequired
+  });
   for (const id of targetRequired) {
     assertValidCommandId(id);
     if (normalizeCommand(input.commands[id]) === undefined) {
@@ -231,7 +270,7 @@ export function resolveRepoValidationProfileCommands(
 
   const required = input.repoValidation?.required;
   if (selectedTarget !== undefined) {
-    return resolveTargetValidationResult({
+    const result = resolveTargetValidationResult({
       selectedTarget,
       commands,
       ...(input.worktreePath !== undefined
@@ -241,25 +280,57 @@ export function resolveRepoValidationProfileCommands(
         ? { allowMissingWorktreePath: true }
         : {}),
     });
+    const metaReviewApproveRequired =
+      input.repoValidation?.meta_review_approve_required;
+    if (metaReviewApproveRequired !== undefined) {
+      assertRequiredCommandsResolved({
+        fieldName: "validation.meta_review_approve_required",
+        unresolvedReasonCode:
+          "VALIDATION_META_REVIEW_APPROVE_REQUIRED_COMMAND_UNRESOLVED",
+        required: metaReviewApproveRequired,
+        commands
+      });
+      return {
+        ...result,
+        metaReviewApproveRequired: [...metaReviewApproveRequired]
+      };
+    }
+    return result;
+  }
+
+  const metaReviewApproveRequired =
+    input.repoValidation?.meta_review_approve_required;
+  if (metaReviewApproveRequired !== undefined) {
+    assertRequiredCommandsResolved({
+      fieldName: "validation.meta_review_approve_required",
+      unresolvedReasonCode:
+        "VALIDATION_META_REVIEW_APPROVE_REQUIRED_COMMAND_UNRESOLVED",
+      required: metaReviewApproveRequired,
+      commands
+    });
   }
 
   if (required === undefined) {
-    return { commands };
+    return {
+      commands,
+      ...(metaReviewApproveRequired !== undefined
+        ? { metaReviewApproveRequired: [...metaReviewApproveRequired] }
+        : {})
+    };
   }
-
-  assertNoDuplicateRequired(required);
-  for (const id of required) {
-    assertValidCommandId(id);
-    if (normalizeCommand(commands[id]) === undefined) {
-      throw new Error(
-        `VALIDATION_REQUIRED_COMMAND_UNRESOLVED: validation.required references "${id}", but no command was resolved for that id. context: command_id=${id}.`
-      );
-    }
-  }
+  assertRequiredCommandsResolved({
+    fieldName: "validation.required",
+    unresolvedReasonCode: "VALIDATION_REQUIRED_COMMAND_UNRESOLVED",
+    required,
+    commands
+  });
 
   return {
     commands,
     validationRequired: [...required],
-    ...(required.length === 0 ? { validationRequiredExplicit: true } : {})
+    ...(required.length === 0 ? { validationRequiredExplicit: true } : {}),
+    ...(metaReviewApproveRequired !== undefined
+      ? { metaReviewApproveRequired: [...metaReviewApproveRequired] }
+      : {})
   };
 }

@@ -30,6 +30,7 @@ import type {
   NotifyMetaReviewerSubmissionRequest,
   ResolveMetaReviewerPaneWarning
 } from "../metaReviewGate/metaReviewGateTypes.js";
+import type { FinalizeCurrentRunMetaReviewGateInput } from "../metaReviewGate/metaReviewGateCurrentRunTypes.js";
 
 export type { MetaReviewResult, MetaReviewRunWarning } from "./metaReviewTypes.js";
 
@@ -72,6 +73,8 @@ export interface MetaReviewCommandDependencies {
   resolveMetaReviewerPaneWarning?: ResolveMetaReviewerPaneWarning;
   runtime?: MetaReviewGateRuntimeCapabilities;
   observeGateResultReconciled?: () => void;
+  runMetaReviewApproveValidationCommand?:
+    FinalizeCurrentRunMetaReviewGateInput["runMetaReviewApproveValidationCommand"];
   emitDeliveryNotification?: MetaReviewDeliveryEmitter;
   buildDeliveryMessageRef?: MetaReviewDeliveryMessageRefBuilder;
   readFile?: MetaReviewArtifactReadPort;

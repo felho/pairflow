@@ -157,6 +157,12 @@ export async function recoverMetaReviewSubmitRoute(input: {
             observeGateResultReconciled:
               input.dependencies.observeGateResultReconciled
           }
+        : {}),
+      ...(input.dependencies.runMetaReviewApproveValidationCommand !== undefined
+        ? {
+            runMetaReviewApproveValidationCommand:
+              input.dependencies.runMetaReviewApproveValidationCommand
+          }
         : {})
     });
   } catch (error) {

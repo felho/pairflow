@@ -5,6 +5,8 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { resolveRepoValidationProfileCommands } from "../../../../src/v11/application/create/repoValidationProfileResolver.js";
+import { buildValidationCommandsConfig } from "../../../../src/v11/application/create/createValidationCommandsConfig.js";
+import { parsePairflowRepoConfigToml } from "../../../../src/config/repoConfig.js";
 
 const cleanupPaths: string[] = [];
 
@@ -46,6 +48,52 @@ describe("resolveRepoValidationProfileCommands", () => {
       validationRequired: ["lint", "fitness", "typecheck", "test"]
     });
     expect(result.validationRequiredExplicit).toBeUndefined();
+  });
+
+  it("materializes split PASS and meta-review approve validation policies", () => {
+    const result = resolveRepoValidationProfileCommands({
+      explicitCommands: {},
+      repoValidation: {
+        required: ["lint", "typecheck", "fitness"],
+        meta_review_approve_required: ["test"],
+        commands: {
+          lint: "pnpm lint",
+          fitness: "pnpm fitness"
+        }
+      },
+      legacyDefaults: {
+        test: "pnpm test",
+        typecheck: "pnpm typecheck"
+      }
+    });
+
+    expect(result.validationRequired).toEqual(["lint", "typecheck", "fitness"]);
+    expect(result.metaReviewApproveRequired).toEqual(["test"]);
+    expect(buildValidationCommandsConfig({ resolvedValidationCommands: result }))
+      .toMatchObject({
+        validation_required: ["lint", "typecheck", "fitness"],
+        meta_review_approve_required: ["test"],
+        test: "pnpm test"
+      });
+  });
+
+  it("resolves parsed approve-gate test from legacy defaults without validation.commands.test", () => {
+    const repoConfig = parsePairflowRepoConfigToml(`
+[validation]
+meta_review_approve_required = ["test"]
+`);
+
+    const result = resolveRepoValidationProfileCommands({
+      explicitCommands: {},
+      repoValidation: repoConfig.validation!,
+      legacyDefaults: {
+        test: "pnpm test",
+        typecheck: "pnpm typecheck"
+      }
+    });
+
+    expect(result.metaReviewApproveRequired).toEqual(["test"]);
+    expect(result.commands.test).toBe("pnpm test");
   });
 
   it("uses repo command over legacy defaults when explicit input is absent", () => {
@@ -157,6 +205,21 @@ describe("resolveRepoValidationProfileCommands", () => {
     ).toThrow(/no command was resolved/u);
   });
 
+  it("rejects unresolved meta-review approve required ids before bubble config persistence", () => {
+    expect(() =>
+      resolveRepoValidationProfileCommands({
+        explicitCommands: {},
+        repoValidation: {
+          meta_review_approve_required: ["fitness"]
+        },
+        legacyDefaults: {
+          test: "pnpm test",
+          typecheck: "pnpm typecheck"
+        }
+      })
+    ).toThrow(/VALIDATION_META_REVIEW_APPROVE_REQUIRED_COMMAND_UNRESOLVED/u);
+  });
+
   it("rejects duplicate required ids at the resolver boundary", () => {
     expect(() =>
       resolveRepoValidationProfileCommands({
@@ -170,6 +233,21 @@ describe("resolveRepoValidationProfileCommands", () => {
         }
       })
     ).toThrow(/Duplicate validation.required id/u);
+  });
+
+  it("uses a field-specific reason code for duplicate meta-review approve ids", () => {
+    expect(() =>
+      resolveRepoValidationProfileCommands({
+        explicitCommands: {},
+        repoValidation: {
+          meta_review_approve_required: ["test", "test"]
+        },
+        legacyDefaults: {
+          test: "pnpm test",
+          typecheck: "pnpm typecheck"
+        }
+      })
+    ).toThrow(/VALIDATION_META_REVIEW_APPROVE_REQUIRED_DUPLICATE/u);
   });
 
   it("rejects invalid command ids at the resolver boundary", () => {
@@ -238,6 +316,39 @@ describe("resolveRepoValidationProfileCommands", () => {
       }
     });
     expect(result.validationRequiredExplicit).toBeUndefined();
+  });
+
+  it("preserves validation target metadata when meta-review approve required uses a target command", () => {
+    const result = resolveRepoValidationProfileCommands({
+      explicitCommands: {},
+      validationTarget: "web",
+      worktreePath: process.cwd(),
+      repoValidation: {
+        meta_review_approve_required: ["lint"],
+        targets: {
+          web: {
+            cwd: "apps/web",
+            paths: ["apps/web/**"],
+            required: [],
+            commands: {
+              lint: "pnpm --filter web lint"
+            }
+          }
+        }
+      },
+      legacyDefaults: {
+        test: "pnpm test",
+        typecheck: "pnpm typecheck"
+      }
+    });
+
+    expect(result.metaReviewApproveRequired).toEqual(["lint"]);
+    expect(result.commands.lint).toBe("pnpm --filter web lint");
+    expect(result.validationTarget).toEqual({
+      id: "web",
+      cwd: "apps/web",
+      paths: ["apps/web/**"]
+    });
   });
 
   it("uses selected target required order instead of root validation.required", () => {

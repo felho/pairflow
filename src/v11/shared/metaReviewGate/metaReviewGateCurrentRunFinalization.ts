@@ -25,6 +25,10 @@ import {
 import type { FinalizeCurrentRunMetaReviewGateInput } from "./metaReviewGateCurrentRunTypes.js";
 import { mergeRunResultWithParityResolution } from "./metaReviewGateRunResultParity.js";
 import { routeCleanMetaReviewRerun } from "./metaReviewGateCurrentRunCleanRerun.js";
+import {
+  META_REVIEW_APPROVE_VALIDATION_FAILED,
+  runMetaReviewApproveValidationGate
+} from "./metaReviewApproveValidationGate.js";
 
 export const META_REVIEW_APPROVE_THRESHOLD_BACKSTOP =
   "META_REVIEW_APPROVE_THRESHOLD_BACKSTOP" as const;
@@ -276,6 +280,23 @@ async function routeApproveMetaReviewResult(input: {
     });
   }
 
+  const approveValidation = await runMetaReviewApproveValidationGate({
+    finalizeInput: input.finalizeInput
+  });
+  if (!approveValidation.ok) {
+    return persistDispatchFailedHumanRoute({
+      finalizeInput: input.finalizeInput,
+      loaded: input.finalizeInput.loaded,
+      expectedState: "RUNNING",
+      runResultForRouting: input.runResultForRouting,
+      parityMetadata: cleanApproval.parityMetadata,
+      fallbackReason: approveValidation.fallbackReason,
+      gateReasonCode: META_REVIEW_APPROVE_VALIDATION_FAILED,
+      targetState: "RUNNING",
+      rollbackStateOnAppendFailure: input.finalizeInput.loaded.state
+    });
+  }
+
   return persistResolvedHumanRoute({
     finalizeInput: input.finalizeInput,
     runResultForRouting: input.runResultForRouting,
@@ -283,6 +304,37 @@ async function routeApproveMetaReviewResult(input: {
     parityMetadata: cleanApproval.parityMetadata,
     forceStickyHumanGateBypass: false,
     consecutiveCleanRuns: updatedStreak
+  });
+}
+
+async function maybeRunStickyApproveValidation(input: {
+  finalizeInput: FinalizeCurrentRunMetaReviewGateInput;
+  runResultForRouting: MetaReviewResult;
+  parityMetadata: FindingsParityMetadata | null;
+}): Promise<MetaReviewGateResult | null> {
+  // Sticky human-gate bypass preserves prior human routing for non-approve results;
+  // approve results still need the configured final validation gate.
+  if (input.runResultForRouting.recommendation !== "approve") {
+    return null;
+  }
+
+  const approveValidation = await runMetaReviewApproveValidationGate({
+    finalizeInput: input.finalizeInput
+  });
+  if (approveValidation.ok) {
+    return null;
+  }
+
+  return persistDispatchFailedHumanRoute({
+    finalizeInput: input.finalizeInput,
+    loaded: input.finalizeInput.loaded,
+    expectedState: "RUNNING",
+    runResultForRouting: input.runResultForRouting,
+    parityMetadata: input.parityMetadata,
+    fallbackReason: approveValidation.fallbackReason,
+    gateReasonCode: META_REVIEW_APPROVE_VALIDATION_FAILED,
+    targetState: "RUNNING",
+    rollbackStateOnAppendFailure: input.finalizeInput.loaded.state
   });
 }
 
@@ -347,11 +399,20 @@ export async function finalizeCurrentRunMetaReviewGate(
   }
 
   if (snapshot.sticky_human_gate) {
+    const stickyValidationFailure = await maybeRunStickyApproveValidation({
+      finalizeInput: input,
+      runResultForRouting: parity.runResultForRouting,
+      parityMetadata: approveBackstop.parityMetadata
+    });
+    if (stickyValidationFailure !== null) {
+      return stickyValidationFailure;
+    }
+
     return persistResolvedHumanRoute({
       finalizeInput: input,
       runResultForRouting: parity.runResultForRouting,
       budgetAvailable: parity.budgetAvailable,
-      parityMetadata: parity.parityMetadata,
+      parityMetadata: approveBackstop.parityMetadata,
       forceStickyHumanGateBypass: true,
       consecutiveCleanRuns: 0
     });
