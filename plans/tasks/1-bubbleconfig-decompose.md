@@ -22,11 +22,11 @@ normative_refs:
   - docs/modularity-review/2026-05-02-modularity-review.md
 owners:
   - "felho"
-doc_bubble_id: null
+doc_bubble_id: bconfig-decompose-doc
 impl_bubble_id: null
 supersedes: []
 superseded_by: null
-archive_group: 2026-05-02-null
+archive_group: 2026-05-02-bubbleconfig-decompose
 ---
 
 # Task: BubbleConfig Internal Decomposition
@@ -72,6 +72,7 @@ N/A.
 3. Guard elements: parser limitations, validation errors, remote-reference validation, and duplicate/unknown TOML failure behavior.
 4. Compat-only elements: existing legacy normalization and parse-warning preservation inside validation must remain semantically unchanged but need not be fully extracted in this first slice.
 5. Forbidden reinterpretations: do not broaden TOML support, narrow TOML support, rename fields, move source-of-truth to UI or command-specific code, or replace compatibility defaults.
+6. Placement interpretation: `docs/architecture/v11-placement-and-extraction-governance.md` is normative here only for boundary discipline and the "narrowest correct scope" rule. This task does not move code into `src/v11/**`, and must not use the v11 governance reference to justify promoting bubble-config internals into `src/v11/shared/**`.
 
 ### Scope Reality / Shape Proof
 
@@ -175,6 +176,9 @@ N/A.
     - trigger reasons: N/A.
     - canonical matrix source: N/A.
     - mirrored surfaces: N/A.
+15. Document-bubble status note:
+    - current doc bubble: `bconfig-decompose-doc`.
+    - lifecycle boundary: this document-refinement pass must not set `status=implementable`; that status is owned by the document-bubble close path.
 
 ## L1 - Change Contract
 
@@ -199,6 +203,7 @@ N/A.
 | Rendered TOML shape | `renderBubbleConfigToml`, round-trip tests | Deterministic output remains equivalent. | preserve | P1 | required-now |
 | Validation/defaulting | `validateBubbleConfig`, defaults tests | Validation stays in facade/source file for now. | preserve | P1 | required-now |
 | Compat shims | legacy agents/meta-review/parse-warning tests | Compatibility behavior is retained, not redesigned. | preserve | P1 | required-now |
+| Placement governance | `docs/architecture/v11-placement-and-extraction-governance.md` | Apply narrow-scope/shared-promotion discipline only; this is not a v11 migration and must not justify moving bubble-config internals into `src/v11/shared/**`. | preserve | P1 | required-now |
 
 ### 0b) Scope Reality and Shape Proof
 
@@ -285,6 +290,13 @@ Minimum verification for this task:
 
 If only the task document is changed, no code verification is required beyond checking the file content. If implementation source changes are made later, use the verification list above.
 
+### Document-Bubble Lock
+
+1. `doc_bubble_id` is linked to `bconfig-decompose-doc` for this document-refinement pass.
+2. The refined task has no required-now blocker or split trigger identified by this document-bubble pass; reviewer approval remains the doc-bubble decision.
+3. The durable task metadata transition to `status=implementable` is intentionally left to the document-bubble close workflow after approval/merge.
+4. No product/runtime/source implementation is authorized in this document bubble.
+
 ### Review Checklist
 
 1. `src/config/bubbleConfig.ts` still exposes the same public names.
@@ -293,3 +305,4 @@ If only the task document is changed, no code verification is required beyond ch
 4. `validateBubbleConfig()` behavior was not redesigned.
 5. Existing parser/render tests pass without broad expectation rewrites.
 6. Any skipped verification is explicitly justified in the close summary.
+7. Reviewer confirms whether this task document is ready for document-bubble approval.
