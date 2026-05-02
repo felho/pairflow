@@ -4,7 +4,7 @@ import {
   ResumeBubbleError,
   createResumeBubbleError
 } from "../../../../src/v11/application/resume/resumeCommandRuntime.js";
-import { normalizeResumeBubbleError } from "../../../../src/v11/shared/resume/resumeCommandErrorNormalization.js";
+import { normalizeResumeBubbleError } from "../../../../src/v11/application/resume/resumeCommandErrorNormalization.js";
 
 describe("resumeCommandErrorNormalization", () => {
   it("preserves existing ResumeBubbleError", () => {
