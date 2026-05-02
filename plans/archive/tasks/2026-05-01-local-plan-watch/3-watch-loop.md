@@ -19,7 +19,7 @@ target_files:
   - "tests/v11/application/planWatch/planWatchLoop.test.ts"
   - "tests/cli/planWatchCommand.test.ts"
 prd_ref: null
-plan_ref: plans/local-plan-watch-plan-v1.md
+plan_ref: plans/archive/plans/2026-05-01-local-plan-watch-plan-v1.md
 system_context_ref: docs/pairflow-initial-design.md
 owners:
   - "felho"

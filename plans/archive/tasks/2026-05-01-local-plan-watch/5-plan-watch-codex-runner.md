@@ -5,7 +5,7 @@ task_family_id: plan-watch-codex-runner
 sequence_key: "5"
 task_id: 5-plan-watch-codex-runner
 title: "Local Plan Watch Built-In Codex Runner"
-status: in_progress
+status: archived
 phase: phase5-retrofit
 target_files:
   - "pairflow.toml"
@@ -23,10 +23,10 @@ target_files:
   - "tests/v11/application/planWatch/planWatchLoop.test.ts"
   - "tests/cli/planWatchCommand.test.ts"
 prd_ref: null
-plan_ref: plans/local-plan-watch-plan-v1.md
+plan_ref: plans/archive/plans/2026-05-01-local-plan-watch-plan-v1.md
 system_context_ref: docs/pairflow-initial-design.md
 normative_refs:
-  - plans/local-plan-watch-plan-v1.md
+  - plans/archive/plans/2026-05-01-local-plan-watch-plan-v1.md
   - src/v11/application/planWatch/agentRunnerBridgeContract.ts
   - src/v11/application/planWatch/agentRunnerBridgeResult.ts
   - src/v11/application/planWatch/agentRunnerBridge.ts
