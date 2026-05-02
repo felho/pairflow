@@ -59,3 +59,4 @@
 - https://github.com/openai/symphony
 - https://github.com/cocoindex-io/cocoindex
 - https://github.com/mattpocock/skills/tree/main
+- pnpm-workspace.yaml
