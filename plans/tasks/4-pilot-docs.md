@@ -5,7 +5,7 @@ task_family_id: pilot-docs
 sequence_key: "4"
 task_id: 4-pilot-docs
 title: "Local Plan Watch Pilot Docs"
-status: approved
+status: implementable
 phase: phase4
 target_files:
   - "README.md"
