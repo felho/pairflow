@@ -32,7 +32,7 @@ task_tracker:
     status: archived
   - task_id: 5-plan-watch-codex-runner
     task_path: plans/tasks/5-plan-watch-codex-runner.md
-    status: draft
+    status: approved
     notes: "Retrofit the missing Pairflow-provided built-in Codex runner so plan watch can invoke ExecutePairflowPlan end-to-end without an undocumented placeholder command or per-repo script."
 ---
 
