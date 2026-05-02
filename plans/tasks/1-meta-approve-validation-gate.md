@@ -33,7 +33,7 @@ normative_refs:
   - docs/meta-review-gate-prd.md
 owners:
   - "felho"
-doc_bubble_id: null
+doc_bubble_id: meta-approve-validation-doc
 impl_bubble_id: null
 supersedes: []
 superseded_by: null
