@@ -1,7 +1,7 @@
 import {
   executeStartPreparingMutation,
   executeStartRunningMutation
-} from "../../shared/start/startStateMutation.js";
+} from "../../defaults/start/startStateMutation.js";
 import type { BubbleStateSnapshot } from "../../../types/bubble.js";
 import type { StartExecutionContext } from "./startCommandContext.js";
 import type { RemoteCloneStartContext } from "./startCommandRemoteExecutionContext.js";

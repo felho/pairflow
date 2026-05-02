@@ -37,7 +37,7 @@ owners:
    - `src/config/bubbleConfig.ts`
    - `src/v11/domain/pass/handoff.ts`
    - `src/v11/domain/convergence/policyValidation.ts`
-   - `src/v11/shared/start/startStateMutation.ts`
+   - `src/v11/defaults/start/startStateMutation.ts`
 
 ## Current-Tree Coupling Inventory
 
@@ -167,7 +167,7 @@ Source anchors:
    - `src/config/bubbleConfig.ts`
    - `src/v11/domain/pass/handoff.ts`
    - `src/v11/domain/convergence/policyValidation.ts`
-   - `src/v11/shared/start/startStateMutation.ts`
+   - `src/v11/defaults/start/startStateMutation.ts`
 4. Ez a note nem ownershipolja:
    - public protocol rewrite,
    - delivery/executor topology change,

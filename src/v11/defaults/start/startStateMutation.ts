@@ -2,7 +2,7 @@ import { applyStateTransition } from "../../domain/state/machine.js";
 import {
   buildRestartedExecutionContext,
   buildRunningExecutionContext
-} from "../state/executionContext.js";
+} from "../../shared/state/executionContext.js";
 import type {
   AgentName,
   BubbleLifecycleState,
