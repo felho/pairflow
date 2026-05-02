@@ -172,6 +172,7 @@ Progress update (2026-05-02): plan reopened with retrofit task `5-plan-watch-cod
 5. Risk: remote bubble status may be stale or unavailable. Mitigation: use existing remote routed status behavior and fail closed instead of treating stale cache as lifecycle authority for mutation.
 6. Risk: "watch" may sound fully autonomous. Mitigation: command output and docs must distinguish observe/checkpoint/handoff from supported automatic action execution.
 7. Risk: an undocumented runner command makes the watcher hook-only while the plan claims automation. Mitigation: ship config-driven built-in Codex runner behavior and require a non-dry-run proof command.
+8. Risk: the built-in Codex runner uses full local-control-plane authority via `--dangerously-bypass-approvals-and-sandbox`. Mitigation: treat `plan watch` automation as trusted local operator execution, keep route authority in `ExecutePairflowPlan`, and fail closed on invalid payloads, missing Codex, non-zero exits, timeouts, or unparseable structured output.
 
 ## Validation Strategy
 
