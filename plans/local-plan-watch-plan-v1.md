@@ -4,8 +4,8 @@ artifact_id: plan_local_plan_watch_v1
 plan_id: local-plan-watch
 created_on: "2026-05-01"
 title: "Local Plan Watch Plan (V1)"
-status: done
-plan_status: done
+status: approved
+plan_status: approved
 prd_ref: null
 owners:
   - "felho"
@@ -14,7 +14,8 @@ task_order:
   - 2-bubble-trigger-index
   - 3-watch-loop
   - 4-pilot-docs
-active_task_id: null
+  - 5-local-runner-wrapper
+active_task_id: 5-local-runner-wrapper
 archive_group: 2026-05-01-local-plan-watch
 task_tracker:
   - task_id: 1-agent-runner-bridge
@@ -29,6 +30,10 @@ task_tracker:
   - task_id: 4-pilot-docs
     task_path: plans/archive/tasks/2026-05-01-local-plan-watch/4-pilot-docs.md
     status: archived
+  - task_id: 5-local-runner-wrapper
+    task_path: plans/tasks/5-local-runner-wrapper.md
+    status: draft
+    notes: "Retrofit the missing repo-local executable runner so plan watch can invoke ExecutePairflowPlan end-to-end without an undocumented placeholder command."
 ---
 
 # Plan: Local Plan Watch (V1)
@@ -89,13 +94,13 @@ V1 is intentionally local-first: it may observe and operate remote bubbles only 
 1. `ExecutePairflowPlan` V1 exists as a repo-local skill with plan/task metadata, route taxonomy, bubble handler delegation, normalized replanning, and post-implementation aftermath contracts.
 2. Pairflow already has local bubble lifecycle commands and remote bubble execution support where the local repo remains the control plane.
 3. The remote execution documentation explicitly separates remote runtime execution from local control-plane authority.
+4. The agent-runner bridge, linked-bubble trigger index, watch loop, dedupe ledger, and pilot documentation have landed.
 
 ### Open Work
 
-1. There is no local agent-runner bridge that can invoke `ExecutePairflowPlan` as a supervised continuation rather than asking the operator to run it manually.
-2. There is no lightweight linked-bubble trigger index for a plan that can notice when a doc or implementation bubble reaches an approval-ready state.
-3. There is no local watcher that notices approval-ready linked bubbles, records dedupe state, honors a configurable polling interval, and triggers `ExecutePairflowPlan` autonomously.
-4. There is no pilot proving that the local watcher can progress a plan without constant operator polling while still stopping at real human checkpoints.
+1. The runner bridge can invoke a configured command, but the repo does not yet ship a concrete executable runner for `ExecutePairflowPlan`.
+2. The documented `pairflow-plan-runner` name is currently a placeholder; it must be replaced by a repo-local command and non-dry-run proof.
+3. The live pilot still needs a non-dry-run runner invocation plus duplicate-suppression evidence on a disposable approval-ready plan/bubble.
 
 ### Deferred / Future Work
 
@@ -118,7 +123,9 @@ Progress update (2026-05-01): document bubble `2-bubble-trigger-index-doc` close
 
 Progress update (2026-05-01): implementation bubble `3-watch-loop-impl` closed and merged after satisfying the configured multi-clean-meta-review gate. Task `3-watch-loop` is archived and the active task advanced to `4-pilot-docs`.
 
-Progress update (2026-05-02): implementation bubble `4-pilot-docs-impl` closed and merged after satisfying the configured multi-clean-meta-review gate. Task `4-pilot-docs` is archived and the local plan watch V1 plan is complete.
+Progress update (2026-05-02): implementation bubble `4-pilot-docs-impl` closed and merged after satisfying the configured multi-clean-meta-review gate. Task `4-pilot-docs` is archived.
+
+Progress update (2026-05-02): plan reopened with retrofit task `5-local-runner-wrapper` after the pilot exposed that `pairflow-plan-runner` was documented as a placeholder rather than a repo-local executable runner. The plan is not complete until this last-mile runner path is implemented and proven.
 
 ## Open Task List
 
@@ -128,6 +135,7 @@ Progress update (2026-05-02): implementation bubble `4-pilot-docs-impl` closed a
 | `2-bubble-trigger-index` | `plans/archive/tasks/2026-05-01-local-plan-watch/2-bubble-trigger-index.md`    | Add lightweight plan-linked bubble discovery and trigger evidence collection for approval-ready bubble states without resolving full plan routes.                                        | `1-agent-runner-bridge`  | Missing trustworthy trigger source for automatic continuation after a bubble reaches the human approval gate. | archived |
 | `3-watch-loop`           | `plans/archive/tasks/2026-05-01-local-plan-watch/3-watch-loop.md`    | Add local foreground `plan watch` polling with configurable interval, persisted watcher ledger, approval-ready trigger handling, dedupe, and autonomous runner invocation.               | `2-bubble-trigger-index` | Missing local trigger process and duplicate-invocation guard.                                                 | archived |
 | `4-pilot-docs`           | `plans/archive/tasks/2026-05-01-local-plan-watch/4-pilot-docs.md`    | Validate the local watcher on a representative plan, document V1 boundaries, and record deferred remote-control-plane follow-up.                                                         | `3-watch-loop`           | Missing pilot evidence and operator-facing guidance.                                                          | archived |
+| `5-local-runner-wrapper` | `plans/tasks/5-local-runner-wrapper.md` | Add a repo-local executable runner and documented command path that turns watch payloads into `ExecutePairflowPlan` invocations and returns bridge-compatible structured output. | `4-pilot-docs` | Missing last-mile executable proof for autonomous plan watch continuation. | draft |
 
 ## Coverage Map
 
@@ -141,6 +149,7 @@ Progress update (2026-05-02): implementation bubble `4-pilot-docs-impl` closed a
 | Risk of degrading back to manual notification          | `3-watch-loop`           | Watch mode must invoke the runner by default; handoff-only output is dry-run/checkpoint/blocker behavior, not the success path.            |
 | Ambiguous remote story                                 | `4-pilot-docs`           | Documentation must say remote bubbles can be observed/routed only through local control plane; remote-only creation/start is out of scope. |
 | Missing confidence that V1 helps locally               | `4-pilot-docs`           | Pilot should use a real or fixture plan and include transcript/command evidence.                                                           |
+| Missing concrete runner executable                     | `5-local-runner-wrapper` | Replace placeholder `pairflow-plan-runner` guidance with a repo-local command/script and non-dry-run pilot evidence.                      |
 
 ## Dependencies and Order
 
@@ -152,6 +161,7 @@ Progress update (2026-05-02): implementation bubble `4-pilot-docs-impl` closed a
 6. Manual nudge, one-shot continue, and initial-run automation are deferred unless a later task proves they are required for the first pilot.
 7. Remote bubble support in this plan is observation and lifecycle routing through existing local routed commands only. New remote-only control-plane authority must be handled by a separate future plan.
 8. The pilot/docs task must run after the code path exists so the documented boundary reflects tested behavior, not intended behavior.
+9. The retrofit runner task must run after the pilot because it closes a last-mile activation gap discovered by attempting to use `plan watch` against a new plan.
 
 ## Risks and Assumptions
 
@@ -161,6 +171,7 @@ Progress update (2026-05-02): implementation bubble `4-pilot-docs-impl` closed a
 4. Risk: polling may trigger duplicate runner invocations if state evidence is too coarse. Mitigation: persist trigger/action ledger entries and require material new evidence before repeat execution.
 5. Risk: remote bubble status may be stale or unavailable. Mitigation: use existing remote routed status behavior and fail closed instead of treating stale cache as lifecycle authority for mutation.
 6. Risk: "watch" may sound fully autonomous. Mitigation: command output and docs must distinguish observe/checkpoint/handoff from supported automatic action execution.
+7. Risk: an undocumented runner command makes the watcher hook-only while the plan claims automation. Mitigation: ship or document a repo-local executable runner path and require a non-dry-run proof command.
 
 ## Validation Strategy
 
@@ -173,3 +184,4 @@ Progress update (2026-05-02): implementation bubble `4-pilot-docs-impl` closed a
 7. Test remote-bubble boundary behavior with mocked or fixture remote status output: watcher may observe approval-ready status through local control-plane routing, but must not create/start remote-only bubbles.
 8. Run the repo's relevant lint/typecheck/test commands for changed CLI/watch code, and run `pnpm build` before any Pairflow lifecycle command after source changes.
 9. Record pilot evidence in the final task showing command output, runner invocation/result capture, trigger ledger behavior, interval behavior, and the explicit deferred remote-control-plane limitation.
+10. Retrofit validation must include a non-dry-run `pairflow plan watch ... --runner-command <repo-local-runner>` invocation against a disposable approval-ready plan/bubble, plus duplicate-suppression evidence for the same trigger.
