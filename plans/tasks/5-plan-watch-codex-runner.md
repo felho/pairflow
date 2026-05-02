@@ -60,7 +60,7 @@ Retrofit the local `plan watch` V1 feature with a Pairflow-provided built-in Cod
    - internal execution closure: invoke local Codex only through explicit Pairflow configuration
    - workflow/orchestration closure: remain delegated to `ExecutePairflowPlan`
    - read-model closure: update docs/pilot evidence to remove placeholder ambiguity
-   - activation closure: `pairflow plan watch <plan-path>` can run with config-provided Codex backend, without `--runner-command`
+   - activation closure: `pairflow plan watch <plan-path>` runs through the config-provided Codex backend
    - cleanup/recovery closure: no lifecycle cleanup changes
 
 ### Plan Linkage
@@ -92,7 +92,7 @@ Retrofit the local `plan watch` V1 feature with a Pairflow-provided built-in Cod
    - non-interactive execution mode support
    - payload JSON validity
    - timeout and non-zero exit classification
-4. Legacy elements to migrate: existing `--runner-command`, `--runner-arg`, and `--runner-input-mode` belong to the obsolete hook-only design and must not remain the primary operator contract after this task.
+4. Legacy elements to migrate: the prior hook-only runner command contract belongs to the obsolete design and must not remain the primary operator contract after this task.
 5. Forbidden reinterpretations:
    - do not make `plan watch` itself run `ExecutePairflowPlan` inline
    - do not treat dry-run evidence as successful automation
@@ -130,7 +130,7 @@ Retrofit the local `plan watch` V1 feature with a Pairflow-provided built-in Cod
    - dry-run still never invokes a runner
    - `stdin_json` remains the default input mode
    - invalid runner output remains `AGENT_RUNNER_OUTPUT_INVALID`
-   - the old `--runner-command` hook-only path is obsolete for this plan and must not remain in README/pilot docs as the supported automation path
+   - the old hook-only runner path is obsolete for this plan and must not remain in README/pilot docs as the supported automation path
 2. Allowed resolution paths: Pairflow config selects `codex`; Pairflow invokes the installed Codex CLI non-interactively from the local control plane.
 3. Forbidden regression interpretations: do not require a global `pairflow-plan-runner` binary or repo-local script.
 4. Replacement proof required if removed: placeholder docs must be replaced with built-in config-driven runner docs and live pilot evidence.
@@ -158,7 +158,7 @@ Retrofit the local `plan watch` V1 feature with a Pairflow-provided built-in Cod
 ### In Scope
 
 1. Add Pairflow config support for plan-watch runner backend selection, with `codex` as the only supported backend in this slice.
-2. Make non-dry-run `plan watch` use the configured built-in Codex runner by default; no `--runner-command` should be needed for the primary path.
+2. Make non-dry-run `plan watch` use the configured built-in Codex runner as the primary path.
 3. Invoke the local Codex CLI non-interactively with an `ExecutePairflowPlan` prompt for the supplied plan path and compact trigger context.
 4. Emit or derive bridge-compatible structured JSON:
    - `status`
@@ -255,7 +255,7 @@ Retrofit the local `plan watch` V1 feature with a Pairflow-provided built-in Cod
 
 1. Add a config field such as `[plan_watch.runner] backend = "codex"` or an equivalent existing config shape chosen by the implementation.
 2. Do not add a CLI `--runner` selector in this slice; backend selection comes from config.
-3. Replace the old `--runner-command` contract in docs/tests with the config-driven built-in Codex path. If compatibility code remains temporarily, it must be clearly legacy/internal and not part of the documented V1 automation path.
+3. Replace the old hook-only runner contract in docs/tests with the config-driven built-in Codex path. If compatibility code remains temporarily, it must be clearly legacy/internal and not part of the documented V1 automation path.
 4. The runner should avoid shell interpolation of payload fields and should spawn Codex with argv arrays.
 5. If Codex cannot provide structured output directly, the built-in runner must fail closed unless it can deterministically map the result into `StructuredAgentRunnerOutput`.
 6. Documentation must name the config-driven command path, for example:
@@ -279,7 +279,7 @@ pairflow plan watch <plan-path> \
 ## L2 - Acceptance Tests / Evidence
 
 1. Pairflow config supports selecting `codex` as the plan-watch runner backend.
-2. Non-dry-run `pairflow plan watch <plan-path>` can use the configured built-in Codex backend without `--runner-command`.
+2. Non-dry-run `pairflow plan watch <plan-path>` uses the configured built-in Codex backend as the documented automation path.
 3. The built-in runner validates the bridge payload and rejects malformed payloads without invoking Codex.
 4. The runner returns bridge-compatible JSON for:
    - settled checkpoint
