@@ -14,14 +14,33 @@ import type {
 } from "./metaReviewGateTypes.js";
 import type { SetMetaReviewerPaneBindingPort } from "../ports/runtimeSessions.js";
 import type { ReadTranscriptEnvelopesPort } from "../ports/transcript.js";
+import type { ValidationCommandId } from "../validation/validationCommandId.js";
+
+export interface MetaReviewApproveValidationCommandRunInput {
+  kind: ValidationCommandId;
+  command: string;
+  worktreePath: string;
+  cwd?: string;
+  evidence?: {
+    header: string;
+    logPathPrefix: string;
+    timestamp?: number;
+  };
+  targetId?: string;
+  targetPaths?: string[];
+}
 
 export interface FinalizeCurrentRunMetaReviewGateInput {
   resolved: {
     bubbleId: string;
     bubbleConfig: Pick<
       BubbleConfig,
-      "watchdog_timeout_minutes" | "agents" | "review_policy"
-    > & Partial<Pick<BubbleConfig, "pairflow_command_profile">>;
+      | "watchdog_timeout_minutes"
+      | "agents"
+      | "review_policy"
+    > & Partial<
+      Pick<BubbleConfig, "pairflow_command_profile" | "commands" | "validation_target">
+    >;
     bubblePaths: {
       artifactsDir: string;
       bubbleDir: string;
@@ -31,6 +50,7 @@ export interface FinalizeCurrentRunMetaReviewGateInput {
       statePath: string;
       taskArtifactPath?: string;
       transcriptPath: string;
+      worktreePath?: string;
     };
   };
   loaded: LoadedStateSnapshot;
@@ -48,4 +68,13 @@ export interface FinalizeCurrentRunMetaReviewGateInput {
   resolvePaneWarning?: ResolveMetaReviewerPaneWarning;
   runtime?: MetaReviewGateRuntimeCapabilities;
   observeGateResultReconciled?: () => void;
+  runMetaReviewApproveValidationCommand?: (
+    input: MetaReviewApproveValidationCommandRunInput
+  ) => Promise<{
+    command: string;
+    exitCode: number;
+    logPath: string;
+    durationMs: number;
+    executionCwd: string;
+  }>;
 }

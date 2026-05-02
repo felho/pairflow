@@ -105,7 +105,7 @@ function createRunResult(input: {
   findingsCount: number;
   blockingOpenTotal?: number;
   advisoryOpenTotal?: number;
-  recommendation?: "approve" | "rework";
+  recommendation?: "approve" | "rework" | "inconclusive";
 }): MetaReviewResult {
   const recommendation = input.recommendation ?? "rework";
   return {
@@ -263,6 +263,168 @@ function createCleanRerunDeliveryStubs(input: {
   };
 }
 
+async function createCleanFinalizeInputFixture(input?: {
+  artifactContent?: Record<string, unknown>;
+  commands?: Parameters<typeof finalizeCurrentRunMetaReviewGate>[0]["resolved"]["bubbleConfig"]["commands"];
+  consecutiveCleanRunsRequired?: number;
+  initialCleanRuns?: number;
+  omitValidationRunner?: boolean;
+  omitWorktreePath?: boolean;
+  runnerErrorStage?: "pre_header" | "spawn" | "settle" | "stdout" | "stderr";
+  runExitCodes?: Partial<Record<string, number>>;
+  runExitCode?: number;
+  runResultFactory?: (
+    artifact: Awaited<ReturnType<typeof createArtifactFixture>>
+  ) => MetaReviewResult;
+  runResult?: MetaReviewResult;
+  stickyHumanGate?: boolean;
+  validationTarget?: Parameters<
+    typeof finalizeCurrentRunMetaReviewGate
+  >[0]["resolved"]["bubbleConfig"]["validation_target"];
+}): Promise<{
+  runValidationCalls: Array<{
+    cwd?: string;
+    kind: string;
+    logPathPrefix?: string;
+    targetId?: string;
+    targetPaths?: string[];
+  }>;
+  finalizeInput: Parameters<typeof finalizeCurrentRunMetaReviewGate>[0];
+}> {
+  const artifact = await createArtifactFixture(
+    input?.artifactContent ?? {
+      findings: [],
+      summary: { open_total: 0 }
+    }
+  );
+  const append = createAppendEnvelopeStub();
+  const write = createWriteStateStub();
+  const loaded = createLoadedRunningState();
+  if (input?.stickyHumanGate === true) {
+    loaded.state.meta_review = {
+      ...loaded.state.meta_review!,
+      sticky_human_gate: true,
+      consecutive_clean_runs: input.initialCleanRuns ?? 1
+    };
+  } else if (input?.initialCleanRuns !== undefined) {
+    loaded.state.meta_review = {
+      ...loaded.state.meta_review!,
+      consecutive_clean_runs: input.initialCleanRuns
+    };
+  }
+  const delivery = createCleanRerunDeliveryStubs({
+    envelopes: append.envelopes,
+    writes: write.writes,
+    fallbackLoaded: loaded
+  });
+  const runValidationCalls: Array<{
+    cwd?: string;
+    kind: string;
+    logPathPrefix?: string;
+    targetId?: string;
+    targetPaths?: string[];
+  }> = [];
+
+  return {
+    runValidationCalls,
+    finalizeInput: {
+      resolved: {
+        bubbleId: "b_meta_gate_finalize_threshold_01",
+        bubbleConfig: {
+          pairflow_command_profile: "external",
+          watchdog_timeout_minutes: 30,
+          agents: {
+            implementer: "claude",
+            reviewer: "codex",
+            meta_reviewer: "codex"
+          },
+          review_policy: {
+            review_loop_mode: "full",
+            reviewer_blocking_min_severity: "P2",
+            meta_review_auto_rework_min_severity: "P2",
+            meta_review_consecutive_clean_runs_required:
+              input?.consecutiveCleanRunsRequired ?? 1
+          },
+          ...(input?.validationTarget !== undefined
+            ? { validation_target: input.validationTarget }
+            : {}),
+          ...(input?.commands !== undefined ? { commands: input.commands } : {})
+        },
+        bubblePaths: {
+          bubbleDir: artifact.bubbleDir,
+          artifactsDir: artifact.artifactsDir,
+          inboxPath: join(artifact.bubbleDir, "inbox.ndjson"),
+          locksDir: join(artifact.bubbleDir, "locks"),
+          sessionsPath: join(artifact.bubbleDir, "sessions.json"),
+          statePath: join(artifact.bubbleDir, "state.json"),
+          taskArtifactPath: join(artifact.artifactsDir, "task.md"),
+          transcriptPath: join(artifact.bubbleDir, "transcript.ndjson"),
+          ...(input?.omitWorktreePath === true
+            ? {}
+            : { worktreePath: artifact.bubbleDir })
+        }
+      },
+      loaded,
+      now: new Date("2026-04-22T10:05:00.000Z"),
+      refs: [],
+      summary: "Clean approval fixture",
+      runResult:
+        input?.runResultFactory?.(artifact) ??
+        input?.runResult ??
+        createCleanApproveRunResult({
+          runId: "run_meta_gate_finalize_clean_validation_fixture",
+          artifactOpenTotal: 0
+        }),
+      readFileFn: (path, encoding) => readFile(path, encoding),
+      appendEnvelope: append.appendEnvelope,
+      readState: delivery.readState,
+      readTranscript: delivery.readTranscript,
+      writeState: write.writeState,
+      setMetaReviewerPane: delivery.setMetaReviewerPane,
+      resolvePaneWarning: delivery.resolvePaneWarning,
+      ...(input?.omitValidationRunner === true
+        ? {}
+        : {
+            runMetaReviewApproveValidationCommand: async (command) => {
+              if (input?.runnerErrorStage !== undefined) {
+                const error = new Error(
+                  `simulated ${input.runnerErrorStage} failure`
+                );
+                Object.assign(error, {
+                  stage: input.runnerErrorStage,
+                  logPath:
+                    `.pairflow/evidence/${command.evidence?.logPathPrefix}-${command.kind}-fixture.log`
+                });
+                throw error;
+              }
+              runValidationCalls.push({
+                kind: command.kind,
+                ...(command.cwd !== undefined ? { cwd: command.cwd } : {}),
+                ...(command.evidence?.logPathPrefix !== undefined
+                  ? { logPathPrefix: command.evidence.logPathPrefix }
+                  : {}),
+                ...(command.targetId !== undefined
+                  ? { targetId: command.targetId }
+                  : {}),
+                ...(command.targetPaths !== undefined
+                  ? { targetPaths: [...command.targetPaths] }
+                  : {})
+              });
+              return {
+                command: command.command,
+                exitCode:
+                  input?.runExitCodes?.[command.kind] ?? input?.runExitCode ?? 0,
+                logPath:
+                  `.pairflow/evidence/${command.evidence?.logPathPrefix}-${command.kind}-fixture.log`,
+                durationMs: 1,
+                executionCwd: command.worktreePath
+              };
+            }
+          })
+    }
+  };
+}
+
 describe("finalizeCurrentRunMetaReviewGate", () => {
   it("increments the clean streak and unlocks human approval when the requirement is one", async () => {
     const artifact = await createArtifactFixture({
@@ -329,6 +491,307 @@ describe("finalizeCurrentRunMetaReviewGate", () => {
     expect(result.state.meta_review?.consecutive_clean_runs).toBe(1);
     expect(result.state.meta_review?.auto_rework_count).toBe(0);
     expect(append.envelopes).toHaveLength(1);
+  });
+
+  it("runs configured meta-review approve validation before human approval", async () => {
+    const fixture = await createCleanFinalizeInputFixture({
+      commands: {
+        test: "pnpm test",
+        typecheck: "pnpm typecheck",
+        meta_review_approve_required: ["test"]
+      }
+    });
+
+    const result = await finalizeCurrentRunMetaReviewGate(fixture.finalizeInput);
+
+    expect(result.route).toBe("human_gate_approve");
+    expect(fixture.runValidationCalls).toEqual([
+      {
+        kind: "test",
+        logPathPrefix: "meta-review-approve-validation"
+      }
+    ]);
+  });
+
+  it("passes validation target metadata to the approve validation runner", async () => {
+    const fixture = await createCleanFinalizeInputFixture({
+      commands: {
+        test: "pnpm test:web",
+        typecheck: "pnpm typecheck",
+        meta_review_approve_required: ["test"]
+      },
+      validationTarget: {
+        id: "web",
+        cwd: "apps/web",
+        paths: ["apps/web/**", "packages/ui/**"]
+      }
+    });
+
+    const result = await finalizeCurrentRunMetaReviewGate(fixture.finalizeInput);
+
+    expect(result.route).toBe("human_gate_approve");
+    expect(fixture.runValidationCalls).toEqual([
+      {
+        cwd: "apps/web",
+        kind: "test",
+        logPathPrefix: "meta-review-approve-validation",
+        targetId: "web",
+        targetPaths: ["apps/web/**", "packages/ui/**"]
+      }
+    ]);
+  });
+
+  it("blocks human approval when configured meta-review approve validation fails", async () => {
+    const fixture = await createCleanFinalizeInputFixture({
+      commands: {
+        test: "pnpm test",
+        typecheck: "pnpm typecheck",
+        meta_review_approve_required: ["test"]
+      },
+      initialCleanRuns: 2,
+      runExitCode: 1
+    });
+
+    const result = await finalizeCurrentRunMetaReviewGate(fixture.finalizeInput);
+
+    expect(result.route).toBe("human_gate_dispatch_failed");
+    expect(result.state.state).toBe("RUNNING");
+    expect(result.state.meta_review?.consecutive_clean_runs).toBe(0);
+    expect(fixture.runValidationCalls).toHaveLength(1);
+    expect(result.gateEnvelope.payload.summary).toContain(
+      "META_REVIEW_APPROVE_VALIDATION_FAILED"
+    );
+    expect(result.gateEnvelope.payload.summary).toContain("stage=exec");
+    expect(result.gateEnvelope.payload.summary).toContain("commandId=test");
+    expect(result.gateEnvelope.payload.summary).toContain("exitCode=1");
+    expect(result.gateEnvelope.payload.summary).toContain(
+      "logPath=.pairflow/evidence/meta-review-approve-validation-test-fixture.log"
+    );
+  });
+
+  it("maps approve validation runner settle failures to exec diagnostics", async () => {
+    const fixture = await createCleanFinalizeInputFixture({
+      commands: {
+        test: "pnpm test",
+        typecheck: "pnpm typecheck",
+        meta_review_approve_required: ["test"]
+      },
+      runnerErrorStage: "settle"
+    });
+
+    const result = await finalizeCurrentRunMetaReviewGate(fixture.finalizeInput);
+
+    expect(result.route).toBe("human_gate_dispatch_failed");
+    expect(result.gateEnvelope.payload.summary).toContain("stage=exec");
+    expect(result.gateEnvelope.payload.summary).toContain("runnerStage=settle");
+  });
+
+  it.each([
+    ["pre_header", "log"],
+    ["spawn", "spawn"],
+    ["stdout", "log"],
+    ["stderr", "log"]
+  ] as const)(
+    "maps approve validation runner %s failures to %s diagnostics",
+    async (runnerErrorStage, expectedStage) => {
+      const fixture = await createCleanFinalizeInputFixture({
+        commands: {
+          test: "pnpm test",
+          typecheck: "pnpm typecheck",
+          meta_review_approve_required: ["test"]
+        },
+        runnerErrorStage
+      });
+
+      const result = await finalizeCurrentRunMetaReviewGate(fixture.finalizeInput);
+
+      expect(result.route).toBe("human_gate_dispatch_failed");
+      expect(result.gateEnvelope.payload.summary).toContain(
+        `stage=${expectedStage}`
+      );
+      expect(result.gateEnvelope.payload.summary).toContain(
+        `runnerStage=${runnerErrorStage}`
+      );
+      if (runnerErrorStage === "pre_header") {
+        expect(result.gateEnvelope.payload.summary).toContain("logPath=null");
+      }
+    }
+  );
+
+  it("attributes multi-command approve validation failure to the failing command", async () => {
+    const fixture = await createCleanFinalizeInputFixture({
+      commands: {
+        test: "pnpm test",
+        typecheck: "pnpm typecheck",
+        meta_review_approve_required: ["typecheck", "test"]
+      },
+      runExitCodes: {
+        typecheck: 0,
+        test: 1
+      }
+    });
+
+    const result = await finalizeCurrentRunMetaReviewGate(fixture.finalizeInput);
+
+    expect(result.route).toBe("human_gate_dispatch_failed");
+    expect(fixture.runValidationCalls).toEqual([
+      {
+        kind: "typecheck",
+        logPathPrefix: "meta-review-approve-validation"
+      },
+      {
+        kind: "test",
+        logPathPrefix: "meta-review-approve-validation"
+      }
+    ]);
+    expect(result.gateEnvelope.payload.summary).toContain("commandId=test");
+    expect(result.gateEnvelope.payload.summary).toContain("exitCode=1");
+    expect(result.gateEnvelope.payload.summary).toContain(
+      "logPath=.pairflow/evidence/meta-review-approve-validation-test-fixture.log"
+    );
+  });
+
+  it("uses spawn diagnostics when approve validation cannot access the worktree path", async () => {
+    const fixture = await createCleanFinalizeInputFixture({
+      commands: {
+        test: "pnpm test",
+        typecheck: "pnpm typecheck",
+        meta_review_approve_required: ["test"]
+      },
+      omitWorktreePath: true
+    });
+
+    const result = await finalizeCurrentRunMetaReviewGate(fixture.finalizeInput);
+
+    expect(result.route).toBe("human_gate_dispatch_failed");
+    expect(fixture.runValidationCalls).toEqual([]);
+    expect(result.gateEnvelope.payload.summary).toContain("stage=spawn");
+    expect(result.gateEnvelope.payload.summary).toContain("commandId=test");
+    expect(result.gateEnvelope.payload.summary).toContain("exitCode=null");
+    expect(result.gateEnvelope.payload.summary).toContain("logPath=null");
+  });
+
+  it("uses spawn diagnostics when the approve validation runner is unavailable", async () => {
+    const fixture = await createCleanFinalizeInputFixture({
+      commands: {
+        test: "pnpm test",
+        typecheck: "pnpm typecheck",
+        meta_review_approve_required: ["test"]
+      },
+      omitValidationRunner: true
+    });
+
+    const result = await finalizeCurrentRunMetaReviewGate(fixture.finalizeInput);
+
+    expect(result.route).toBe("human_gate_dispatch_failed");
+    expect(fixture.runValidationCalls).toEqual([]);
+    expect(result.gateEnvelope.payload.summary).toContain("stage=spawn");
+    expect(result.gateEnvelope.payload.summary).toContain("commandId=test");
+    expect(result.gateEnvelope.payload.summary).toContain(
+      "approve-gate validation runner is unavailable"
+    );
+  });
+
+  it("uses precise diagnostics when approve validation references a non-string command value", async () => {
+    const fixture = await createCleanFinalizeInputFixture({
+      commands: {
+        test: true,
+        typecheck: "pnpm typecheck",
+        meta_review_approve_required: ["test"]
+      } as unknown as Parameters<
+        typeof finalizeCurrentRunMetaReviewGate
+      >[0]["resolved"]["bubbleConfig"]["commands"]
+    });
+
+    const result = await finalizeCurrentRunMetaReviewGate(fixture.finalizeInput);
+
+    expect(result.route).toBe("human_gate_dispatch_failed");
+    expect(fixture.runValidationCalls).toEqual([]);
+    expect(result.gateEnvelope.payload.summary).toContain("stage=resolve");
+    expect(result.gateEnvelope.payload.summary).toContain("commandId=test");
+    expect(result.gateEnvelope.payload.summary).toContain(
+      "commands.test must be a string"
+    );
+  });
+
+  it("preserves legacy human approval when approve validation policy is absent", async () => {
+    const fixture = await createCleanFinalizeInputFixture({
+      commands: {
+        test: "pnpm test",
+        typecheck: "pnpm typecheck"
+      }
+    });
+
+    const result = await finalizeCurrentRunMetaReviewGate(fixture.finalizeInput);
+
+    expect(result.route).toBe("human_gate_approve");
+    expect(fixture.runValidationCalls).toEqual([]);
+  });
+
+  it("preserves explicit empty approve validation as no-op before human approval", async () => {
+    const fixture = await createCleanFinalizeInputFixture({
+      commands: {
+        test: "pnpm test",
+        typecheck: "pnpm typecheck",
+        meta_review_approve_required: []
+      }
+    });
+
+    const result = await finalizeCurrentRunMetaReviewGate(fixture.finalizeInput);
+
+    expect(result.route).toBe("human_gate_approve");
+    expect(fixture.runValidationCalls).toEqual([]);
+  });
+
+  it("does not run approve validation before the clean-rerun threshold is met", async () => {
+    const fixture = await createCleanFinalizeInputFixture({
+      consecutiveCleanRunsRequired: 2,
+      commands: {
+        test: "pnpm test",
+        typecheck: "pnpm typecheck",
+        meta_review_approve_required: ["test"]
+      }
+    });
+
+    const result = await finalizeCurrentRunMetaReviewGate(fixture.finalizeInput);
+
+    expect(result.route).toBe("meta_review_running");
+    expect(fixture.runValidationCalls).toEqual([]);
+  });
+
+  it("does not run approve validation for an inconclusive human gate", async () => {
+    const fixture = await createCleanFinalizeInputFixture({
+      commands: {
+        test: "pnpm test",
+        typecheck: "pnpm typecheck",
+        meta_review_approve_required: ["test"]
+      },
+      runResult: {
+        bubble_id: "b_meta_gate_finalize_threshold_01",
+        run_id: "run_meta_gate_finalize_inconclusive_validation_skip_01",
+        recommendation: "inconclusive",
+        status: "inconclusive",
+        summary: "Meta-review could not make a conclusive recommendation.",
+        rework_target_message: null,
+        updated_at: "2026-04-22T10:05:00.000Z",
+        warnings: [],
+        report_json: {
+          findings_claim_state: "clean",
+          findings_claim_source: "meta_review_artifact",
+          findings_count: 0,
+          findings_claimed_open_total: 0,
+          findings_blocking_open_total: 0,
+          findings_advisory_open_total: 0,
+          meta_review_run_id:
+            "run_meta_gate_finalize_inconclusive_validation_skip_01"
+        }
+      }
+    });
+
+    const result = await finalizeCurrentRunMetaReviewGate(fixture.finalizeInput);
+
+    expect(result.route).toBe("human_gate_inconclusive");
+    expect(fixture.runValidationCalls).toEqual([]);
   });
 
   it("starts another meta-review run when a clean approval is below the required streak", async () => {
@@ -691,6 +1154,108 @@ describe("finalizeCurrentRunMetaReviewGate", () => {
     expect(result.state.meta_review?.consecutive_clean_runs).toBe(0);
   });
 
+  it("runs configured approve validation before sticky human-gate bypass", async () => {
+    const fixture = await createCleanFinalizeInputFixture({
+      stickyHumanGate: true,
+      commands: {
+        test: "pnpm test",
+        typecheck: "pnpm typecheck",
+        meta_review_approve_required: ["test"]
+      }
+    });
+
+    const result = await finalizeCurrentRunMetaReviewGate(fixture.finalizeInput);
+
+    expect(result.route).toBe("human_gate_sticky_bypass");
+    expect(fixture.runValidationCalls).toEqual([
+      {
+        kind: "test",
+        logPathPrefix: "meta-review-approve-validation"
+      }
+    ]);
+  });
+
+  it("persists post-backstop parity metadata on sticky human-gate bypass success", async () => {
+    const fixture = await createCleanFinalizeInputFixture({
+      stickyHumanGate: true,
+      artifactContent: {
+        findings: [{ severity: "P3", title: "advisory follow-up" }],
+        summary: { open_total: 1 }
+      },
+      runResultFactory: (artifact) =>
+        createRunResult({
+          runId: "run_meta_gate_finalize_sticky_parity_success_01",
+          artifactRef: artifact.artifactRef,
+          digest: artifact.digest,
+          findingsCount: 1,
+          blockingOpenTotal: 0,
+          advisoryOpenTotal: 1,
+          recommendation: "approve"
+        })
+    });
+
+    const result = await finalizeCurrentRunMetaReviewGate(fixture.finalizeInput);
+
+    expect(result.route).toBe("human_gate_sticky_bypass");
+    expect(result.gateEnvelope.payload.metadata).toMatchObject({
+      findings_claimed_open_total: 1,
+      findings_blocking_open_total: 0,
+      findings_advisory_open_total: 1,
+      findings_artifact_open_total: 1,
+      findings_parity_status: "ok"
+    });
+  });
+
+  it("keeps sticky non-approve human-gate bypass from running approve validation", async () => {
+    const fixture = await createCleanFinalizeInputFixture({
+      stickyHumanGate: true,
+      commands: {
+        test: "pnpm test",
+        typecheck: "pnpm typecheck",
+        meta_review_approve_required: ["test"]
+      },
+      runResult: {
+        bubble_id: "b_meta_gate_finalize_threshold_01",
+        run_id: "run_meta_gate_finalize_sticky_inconclusive_validation_skip_01",
+        recommendation: "inconclusive",
+        status: "inconclusive",
+        summary: "Meta-review could not make a conclusive recommendation.",
+        rework_target_message: null,
+        updated_at: "2026-04-22T10:05:00.000Z",
+        warnings: []
+      }
+    });
+
+    const result = await finalizeCurrentRunMetaReviewGate(fixture.finalizeInput);
+
+    expect(result.route).toBe("human_gate_sticky_bypass");
+    expect(fixture.runValidationCalls).toEqual([]);
+  });
+
+  it("blocks sticky human-gate bypass when approve validation fails", async () => {
+    const fixture = await createCleanFinalizeInputFixture({
+      stickyHumanGate: true,
+      commands: {
+        test: "pnpm test",
+        typecheck: "pnpm typecheck",
+        meta_review_approve_required: ["test"]
+      },
+      runExitCode: 1
+    });
+
+    const result = await finalizeCurrentRunMetaReviewGate(fixture.finalizeInput);
+
+    expect(result.route).toBe("human_gate_dispatch_failed");
+    expect(result.state.state).toBe("RUNNING");
+    expect(result.route).not.toBe("human_gate_sticky_bypass");
+    expect(result.state.state).not.toBe("READY_FOR_HUMAN_APPROVAL");
+    expect(result.state.meta_review?.consecutive_clean_runs).toBe(0);
+    expect(result.gateEnvelope.payload.summary).toContain(
+      "META_REVIEW_APPROVE_VALIDATION_FAILED"
+    );
+    expect(result.gateEnvelope.payload.summary).toContain("stage=exec");
+  });
+
   it("unlocks human approval when the updated clean streak reaches the requirement", async () => {
     const artifact = await createArtifactFixture({
       findings: [],
@@ -755,6 +1320,7 @@ describe("finalizeCurrentRunMetaReviewGate", () => {
     const append = createAppendEnvelopeStub();
     const write = createWriteStateStub();
     const loaded = createLoadedRunningState();
+    const approveValidationCalls: string[] = [];
     loaded.state.meta_review = {
       ...loaded.state.meta_review!,
       consecutive_clean_runs: 2
@@ -769,6 +1335,11 @@ describe("finalizeCurrentRunMetaReviewGate", () => {
             implementer: "claude",
             reviewer: "codex",
             meta_reviewer: "codex"
+          },
+          commands: {
+            test: "pnpm test",
+            typecheck: "pnpm typecheck",
+            meta_review_approve_required: ["test"]
           },
           review_policy: {
             review_loop_mode: "full",
@@ -798,10 +1369,21 @@ describe("finalizeCurrentRunMetaReviewGate", () => {
       }),
       readFileFn: (path, encoding) => readFile(path, encoding),
       appendEnvelope: append.appendEnvelope,
-      writeState: write.writeState
+      writeState: write.writeState,
+      runMetaReviewApproveValidationCommand: async (command) => {
+        approveValidationCalls.push(command.kind);
+        return {
+          command: command.command,
+          exitCode: 0,
+          logPath: ".pairflow/evidence/meta-review-approve-validation-test-fixture.log",
+          durationMs: 1,
+          executionCwd: command.worktreePath
+        };
+      }
     });
 
     expect(result.route).toBe("auto_rework");
+    expect(approveValidationCalls).toEqual([]);
     expect(result.state.meta_review?.consecutive_clean_runs).toBe(0);
     expect(result.state.meta_review?.auto_rework_count).toBe(1);
   });

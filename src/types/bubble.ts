@@ -129,7 +129,9 @@ export type GateReasonCode =
   | "ROUND_GATE_WARNING"
   | "ROUND_GATE_AUTODEMOTE"
   | "STATUS_GATE_SERIALIZATION_WARNING"
-  | "GATE_CONFIG_PARSE_WARNING";
+  | "GATE_CONFIG_PARSE_WARNING"
+  | "META_REVIEW_APPROVE_VALIDATION_FAILED"
+  | "META_REVIEW_APPROVE_THRESHOLD_BACKSTOP";
 
 export const attachLaunchers = [
   "auto",
@@ -192,6 +194,7 @@ export interface BubbleCommandsConfig {
   lint?: string;
   test: string;
   typecheck: string;
+  meta_review_approve_required?: string[];
   validation_required?: string[];
   validation_required_explicit?: true;
 }

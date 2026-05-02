@@ -27,6 +27,9 @@ let metaReviewDefaultsPromise:
     resolveDeliveryMessageRef: NonNullable<
       MetaReviewCommandDependencies["buildDeliveryMessageRef"]
     >;
+    runPassValidationCommand: NonNullable<
+      MetaReviewCommandDependencies["runMetaReviewApproveValidationCommand"]
+    >;
   }>
   | undefined;
 
@@ -53,6 +56,8 @@ async function withMetaReviewDefaults(
     notifyMetaReviewerSubmissionRequest:
       notifyMetaReviewerSubmissionRequestV11,
     resolveMetaReviewerPaneWarning,
+    runMetaReviewApproveValidationCommand:
+      metaReviewDefaults.runPassValidationCommand,
     runtime: metaReviewGateDefaults.runtime,
     ...dependencies
   };

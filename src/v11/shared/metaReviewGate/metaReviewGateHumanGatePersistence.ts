@@ -63,7 +63,7 @@ export interface PersistHumanGateRouteInput {
   gateReasonCode?: string;
   findings?: MetaReviewGateAdvisoryFinding[];
   fallbackRecommendation?: MetaReviewRecommendation;
-  targetState?: "READY_FOR_HUMAN_APPROVAL";
+  targetState?: "READY_FOR_HUMAN_APPROVAL" | "RUNNING";
   stickyHumanGate?: boolean;
   consecutiveCleanRuns?: number;
   rollbackStateOnAppendFailure?: BubbleStateSnapshot;

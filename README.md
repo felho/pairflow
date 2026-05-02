@@ -497,10 +497,10 @@ pairflow bubble status --id feat_login --repo /path/to/myapp --json
 #    → copy executionContext.handoffId and executionContext.executionId from the JSON output
 
 pairflow agent emit --kind pass --repo /path/to/myapp --bubble-id feat_login --handoff-id <handoff-id> --execution-id <execution-id> \
-  --summary "Login form implemented with email regex validation; validation run: lint/typecheck/test" \
+  --summary "Login form implemented with email regex validation; PASS validation run: lint/typecheck/fitness plus targeted tests" \
   --ref .pairflow/evidence/lint.log \
   --ref .pairflow/evidence/typecheck.log \
-  --ref .pairflow/evidence/test.log
+  --ref .pairflow/evidence/fitness-report.json
 
 # 4. Reviewer reviews and sends feedback back
 pairflow bubble status --id feat_login --repo /path/to/myapp --json
@@ -1097,7 +1097,8 @@ bubbles in repo-root `pairflow.toml`:
 
 ```toml
 [validation]
-required = ["lint", "typecheck", "test", "fitness"]
+required = ["lint", "typecheck", "fitness"]
+meta_review_approve_required = ["test"]
 
 [validation.commands]
 lint = "pnpm lint"
@@ -1108,14 +1109,16 @@ bootstrap = "pnpm install --frozen-lockfile && pnpm build"
 ```
 
 At `bubble create` time, Pairflow reads this profile and writes the resolved
-commands into `.pairflow/bubbles/<id>/bubble.toml`. Later PASS validation uses
-that bubble config as the execution authority; it does not re-read repo-root
-`pairflow.toml`.
+commands into `.pairflow/bubbles/<id>/bubble.toml`. Later PASS and meta-review
+approve validation use that bubble config as the execution authority; they do
+not re-read repo-root `pairflow.toml`.
 
 Behavior:
 
 - `validation.required` is the ordered list of commands PASS must run for code
-  bubbles.
+  bubbles during the normal implementer/reviewer loop.
+- `validation.meta_review_approve_required` is the ordered list of commands the
+  meta-review approve gate runs before routing to human approval.
 - Custom command ids such as `fitness` are allowed when they have an explicit
   command under `[validation.commands]`.
 - Missing `[validation]` preserves the built-in defaults.
@@ -1362,7 +1365,7 @@ pnpm check      # All of the above
 pnpm dev:ui     # Rebuild CLI + restart web UI server on port 4173
 ```
 
-Validation commands write evidence logs to `.pairflow/evidence/` (lint/typecheck/test), which can be attached in canonical actor emit refs such as `pairflow agent emit --kind pass ... --ref ...`.
+PASS validation commands write evidence logs to `.pairflow/evidence/` (for example lint/typecheck/fitness), which can be attached in canonical actor emit refs such as `pairflow agent emit --kind pass ... --ref ...`. Full-suite test runs can be configured separately as meta-review approve validation.
 
 ### CI fitness gate
 

@@ -1,5 +1,6 @@
 [validation]
-required = ["lint", "typecheck", "test", "fitness"]
+required = ["lint", "typecheck", "fitness"]
+meta_review_approve_required = ["test"]
 
 [validation.commands]
 lint = "pnpm lint"

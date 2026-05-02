@@ -475,6 +475,17 @@ function readStringArray(
   return result;
 }
 
+function resolveValidationCommandString(
+  commands: Record<string, unknown> | undefined,
+  customCommands: Record<string, string>,
+  id: string
+): unknown {
+  if (id in customCommands) {
+    return customCommands[id];
+  }
+  return commands?.[id];
+}
+
 function readReviewPolicyConsecutiveCleanRunsRequired(
   source: Record<string, unknown>,
   key: string,
@@ -788,6 +799,15 @@ export function validateBubbleConfig(input: unknown): ValidationResult<BubbleCon
         false
       )
     : undefined;
+  const metaReviewApproveRequired = commands
+    ? readStringArray(
+        commands,
+        "meta_review_approve_required",
+        "commands.meta_review_approve_required",
+        errors,
+        false
+      )
+    : undefined;
   const validationRequiredExplicitCandidate = commands
     ? readBoolean(
         commands,
@@ -806,6 +826,7 @@ export function validateBubbleConfig(input: unknown): ValidationResult<BubbleCon
       "lint",
       "test",
       "typecheck",
+      "meta_review_approve_required",
       "validation_required",
       "validation_required_explicit"
     ]);
@@ -848,6 +869,39 @@ export function validateBubbleConfig(input: unknown): ValidationResult<BubbleCon
         return;
       }
       seenValidationRequired.add(id);
+    });
+  }
+  if (metaReviewApproveRequired !== undefined) {
+    const seenMetaReviewApproveRequired = new Set<string>();
+    metaReviewApproveRequired.forEach((id, index) => {
+      if (!isValidationCommandId(id)) {
+        errors.push({
+          path: `commands.meta_review_approve_required[${index}]`,
+          message: describeValidationCommandIdRule()
+        });
+        return;
+      }
+      if (seenMetaReviewApproveRequired.has(id)) {
+        errors.push({
+          path: `commands.meta_review_approve_required[${index}]`,
+          message: `Duplicate validation command id "${id}"`
+        });
+        return;
+      }
+      seenMetaReviewApproveRequired.add(id);
+      const commandValue = resolveValidationCommandString(
+        commands,
+        customCommands,
+        id
+      );
+      if (!isNonEmptyString(commandValue)) {
+        errors.push({
+          path: `commands.${id}`,
+          message:
+            "Must be a non-empty string for configured meta-review approve validation"
+        });
+        return;
+      }
     });
   }
 
@@ -1283,6 +1337,9 @@ export function validateBubbleConfig(input: unknown): ValidationResult<BubbleCon
       test: testCommand as string,
       typecheck: typecheckCommand as string,
       ...customCommands,
+      ...(metaReviewApproveRequired !== undefined
+        ? { meta_review_approve_required: metaReviewApproveRequired }
+        : {}),
       ...(validationRequired !== undefined
         ? { validation_required: validationRequired }
         : {}),
@@ -1446,6 +1503,7 @@ function renderCustomCommandLines(commands: BubbleConfig["commands"]): string[] 
     "lint",
     "test",
     "typecheck",
+    "meta_review_approve_required",
     "validation_required",
     "validation_required_explicit"
   ]);
@@ -1573,6 +1631,9 @@ export function renderBubbleConfigToml(config: BubbleConfig): string {
     `test = ${tomlString(config.commands.test)}`,
     `typecheck = ${tomlString(config.commands.typecheck)}`,
     ...renderCustomCommandLines(config.commands),
+    config.commands.meta_review_approve_required !== undefined
+      ? `meta_review_approve_required = ${tomlStringArray(config.commands.meta_review_approve_required)}`
+      : undefined,
     config.commands.validation_required !== undefined
       ? `validation_required = ${tomlStringArray(config.commands.validation_required)}`
       : undefined,
