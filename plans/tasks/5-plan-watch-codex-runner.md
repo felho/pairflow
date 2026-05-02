@@ -14,6 +14,7 @@ target_files:
   - "src/v11/application/planWatch/agentRunnerBridge.ts"
   - "src/v11/application/planWatch/agentRunnerBridgeContract.ts"
   - "src/v11/application/planWatch/agentRunnerBridgeResult.ts"
+  - "src/v11/application/planWatch/planWatchLoopExecution.ts"
   - "src/v11/defaults/planWatch/agentRunnerBridgeDefaults.ts"
   - "README.md"
   - "docs/local-plan-watch-v1-pilot.md"
@@ -114,7 +115,7 @@ Retrofit the local `plan watch` V1 feature with a Pairflow-provided built-in Cod
 2. Actual touched scope: config contract, built-in Codex subprocess adapter, docs, and focused tests.
 3. Mutation entrypoints in scope: `plan watch` runner invocation path; no Pairflow lifecycle state mutation belongs in the runner adapter itself.
 4. Hidden scope ruled out: native reimplementation of `ExecutePairflowPlan`, remote supervisor mode, UI checkpoint inboxes, and event-driven hooks.
-5. Branch inventory note: config absent, backend unsupported, Codex missing, valid payload, invalid payload, Codex non-zero exit, Codex timeout, structured success, structured human checkpoint, structured blocked result, duplicate watch trigger after completed run, and operator environment not trusted for full-access runner execution.
+5. Branch inventory note: config absent, backend unsupported, Codex missing, unsupported workflow, missing plan path, valid payload, invalid payload, malformed/partial runner output, unknown runner output fields, duplicate/multiple JSON output candidates, Codex non-zero exit, Codex timeout, structured success, structured human checkpoint, structured blocked result, duplicate watch trigger after completed run, and operator environment not trusted for full-access runner execution.
 6. Why the declared task shape matches reality: the existing bridge already classifies runner process results; this task replaces placeholder command activation with a Pairflow-owned Codex backend path.
 
 ### Authority Boundary Map
@@ -151,7 +152,7 @@ Retrofit the local `plan watch` V1 feature with a Pairflow-provided built-in Cod
 
 1. Primary bounded task shape: activation_or_read_model.
 2. Secondary shape: subprocess_adapter.
-3. Preconditions that must pass before side effects: payload validates, plan path exists, config selects `codex`, Codex executable is available, the operator environment is trusted for full-access Codex execution, and runner can emit structured JSON.
+3. Preconditions that must pass before side effects: payload validates, `workflow="ExecutePairflowPlan"`, plan path exists, config selects `codex`, Codex executable is available, the operator environment is trusted for full-access Codex execution, and runner can emit structured JSON.
 4. Side effects forbidden before preconditions pass: no Codex invocation when payload/config preconditions fail and no successful watcher completion record.
 5. Invalid/precondition-failure behavior: emit `status="blocked"` with an actionable reason and non-success summary.
 6. Coordination primitives in scope: existing watch ledger dedupe only; no new lock primitive.
@@ -238,13 +239,15 @@ Retrofit the local `plan watch` V1 feature with a Pairflow-provided built-in Cod
 
 | Contract Item | Source / Owner | Required Behavior | Failure Behavior | Evidence |
 |---|---|---|---|---|
-| Config backend | Pairflow repo/global config | Select `codex` for plan-watch runner. | Missing or unsupported backend blocks non-dry-run watch. | Config tests. |
-| Input payload | `AgentRunnerContinuationPayload` | Build and pass JSON/context with `kind`, `workflow`, `invocation_id`, `plan_path`, `repo_path`, `triggered_at`, and `trigger`. | Invalid/missing fields return `blocked` with runner-specific reason. | Built-in runner tests. |
-| Workflow target | `ExecutePairflowPlan` skill | Invoke only `ExecutePairflowPlan` for the supplied `plan_path`. | Any other workflow value blocks. | Built-in runner tests and pilot command. |
-| Plan path | Payload + filesystem | Verify the plan exists before invoking Codex. | Missing path blocks; do not call Codex. | Built-in runner tests. |
-| Codex command | Pairflow runtime/defaults | Use installed Codex CLI in non-interactive full-access mode: `codex --dangerously-bypass-approvals-and-sandbox exec ...`. | Missing Codex blocks with actionable summary. | Runner tests and README. |
-| Output record | `StructuredAgentRunnerOutput` | Emit parseable JSON with `status` and `reason_code`; optional summary/artifacts/ledger. | Unparseable Codex result maps to `blocked`, not success. | Bridge tests and live pilot. |
-| Status mapping | Built-in runner | Preserve `settled_checkpoint`, `human_checkpoint`, and `blocked`. | Unknown status blocks. | Built-in runner tests. |
+| Config backend | Pairflow repo/global config | Select `codex` for plan-watch runner using a repo config field such as `[plan_watch.runner] backend = "codex"`; no CLI `--runner` selector is added. | Missing backend blocks non-dry-run watch with `status="blocked"`, `reason_code="PLAN_WATCH_RUNNER_CONFIG_MISSING"`; unsupported backend blocks with `reason_code="PLAN_WATCH_RUNNER_BACKEND_UNSUPPORTED"`. | Config tests and CLI command tests. |
+| Command derivation | CLI/default dependencies | When config selects `codex`, derive the bridge runner command internally from Pairflow defaults: `command="codex"`, argv-array args for full-access non-interactive `exec`, schema/result-file options when used, and the `ExecutePairflowPlan` prompt for the payload plan path. | The existing command-presence gate may remain only as a derived bridge precondition after config resolution; it must not remain an operator-required `--runner-command` path for the documented automation flow. If command derivation fails, return `blocked` with `reason_code="PLAN_WATCH_RUNNER_CONFIG_MISSING"`. | CLI command tests and built-in runner tests. |
+| Input payload | `AgentRunnerContinuationPayload` | Accept only an object with `kind="pairflow.execute_pairflow_plan.continuation"`, `workflow="ExecutePairflowPlan"`, non-empty `invocation_id`, `plan_path`, `repo_path`, ISO `triggered_at`, and object `trigger`; unknown fields are ignored, not authority. | Malformed, partial, missing required fields, wrong `kind`, or wrong field types return `blocked` with `reason_code="PLAN_WATCH_RUNNER_PAYLOAD_INVALID"` before invoking Codex. | Built-in runner tests. |
+| Workflow target | `ExecutePairflowPlan` skill | Invoke only `ExecutePairflowPlan` for the supplied `plan_path`; workflow value is a guard, not a dynamic selector. | Any workflow other than `ExecutePairflowPlan` returns `blocked` with `reason_code="PLAN_WATCH_RUNNER_WORKFLOW_UNSUPPORTED"` before invoking Codex. | Built-in runner tests and pilot command. |
+| Plan path | Payload + filesystem | Verify the plan exists before invoking Codex. | Missing path returns `blocked` with `reason_code="PLAN_PATH_UNAVAILABLE"` and does not call Codex. | Built-in runner tests. |
+| Codex executable | Pairflow runtime/defaults | Use installed Codex CLI in non-interactive full-access mode: `codex --dangerously-bypass-approvals-and-sandbox exec ...`. | Missing or spawn-failed Codex returns `blocked` with `reason_code="PLAN_WATCH_CODEX_UNAVAILABLE"` and actionable summary. | Runner tests and README. |
+| Codex process outcome | Built-in runner | Preserve timeout and non-zero exit as failed runner execution, never as plan progression. | Timeout returns `blocked` with `reason_code="AGENT_RUNNER_TIMEOUT"`; non-zero exit returns `blocked` with `reason_code="AGENT_RUNNER_NON_ZERO_EXIT"` and captured stdout/stderr tail. | Runner tests. |
+| Output record | `StructuredAgentRunnerOutput` + `agentRunnerBridgeResult.ts` | Parse bridge-compatible JSON with allowlisted `status`, non-empty `reason_code`, optional string `summary`, optional string-array `changed_artifacts`, and optional string `route_ledger_summary`; unknown fields are ignored. Preserve existing candidate behavior: multiple JSON candidates are allowed and the latest valid structured envelope wins. | Malformed JSON, partial records, invalid optional-field types, or no valid structured envelope return `blocked` with `reason_code="AGENT_RUNNER_OUTPUT_INVALID"`, not success. | Bridge tests, runner adapter tests, and live pilot. |
+| Status mapping | Built-in runner | Preserve only `settled_checkpoint`, `human_checkpoint`, and `blocked`. | Unknown status returns `blocked` with `reason_code="AGENT_RUNNER_OUTPUT_INVALID"`. | Built-in runner tests. |
 | Watch ledger | Existing watch loop | Completed runner result is recorded under the dedupe key. | Failed runner is recorded as blocked. | Non-dry-run pilot and duplicate rerun. |
 
 ### Ownership and Deferred Semantics
@@ -258,7 +261,7 @@ Retrofit the local `plan watch` V1 feature with a Pairflow-provided built-in Cod
 
 1. Add a config field such as `[plan_watch.runner] backend = "codex"` or an equivalent existing config shape chosen by the implementation.
 2. Do not add a CLI `--runner` selector in this slice; backend selection comes from config.
-3. Replace the old hook-only runner contract in docs/tests with the config-driven built-in Codex path. If compatibility code remains temporarily, it must be clearly legacy/internal and not part of the documented V1 automation path.
+3. Replace the old hook-only runner contract in docs/tests with the config-driven built-in Codex path. If compatibility code remains temporarily, it must be clearly legacy/internal and not part of the documented V1 automation path; `--runner-command` may remain only as a legacy/internal escape hatch and must not be required for the primary non-dry-run command.
 4. The runner should avoid shell interpolation of payload fields and should spawn Codex with argv arrays.
 5. If Codex cannot provide structured output directly, the built-in runner must fail closed unless it can deterministically map the result into `StructuredAgentRunnerOutput`.
 6. The Codex subprocess shape should be:
@@ -279,6 +282,28 @@ pairflow plan watch <plan-path> \
   --once
 ```
 
+### Structured Contract Rules
+
+1. Config contract:
+   - required supported backend value in this slice: `codex`
+   - missing backend: `PLAN_WATCH_RUNNER_CONFIG_MISSING`
+   - unsupported backend: `PLAN_WATCH_RUNNER_BACKEND_UNSUPPORTED`
+   - config-selected backend is the source of command derivation for the normal path
+2. Payload contract:
+   - required exact fields: `kind`, `workflow`, `invocation_id`, `plan_path`, `repo_path`, `triggered_at`, `trigger`
+   - `kind` must equal `pairflow.execute_pairflow_plan.continuation`
+   - `workflow` must equal `ExecutePairflowPlan`
+   - unknown fields must be ignored and must not become routing authority
+   - malformed or partial payload: `PLAN_WATCH_RUNNER_PAYLOAD_INVALID`
+   - unsupported workflow: `PLAN_WATCH_RUNNER_WORKFLOW_UNSUPPORTED`
+3. Output contract:
+   - allowed statuses: `settled_checkpoint`, `human_checkpoint`, `blocked`
+   - required field: non-empty `reason_code`
+   - optional fields and types: `summary` string, `changed_artifacts` string array, `route_ledger_summary` string
+   - unknown fields are ignored
+   - multiple JSON candidates preserve current parser semantics: the latest valid structured envelope wins
+   - malformed or partial output: `AGENT_RUNNER_OUTPUT_INVALID`
+
 ### Mirrored Surface Checklist
 
 1. L0 policy runner contract.
@@ -298,14 +323,18 @@ pairflow plan watch <plan-path> \
    - settled checkpoint
    - human checkpoint
    - blocked
-5. Missing Codex command/config returns `status="blocked"` with an actionable reason code and summary.
-6. Non-zero Codex exit returns `status="blocked"` and does not claim plan progression.
-7. The implementation invokes Codex with `--dangerously-bypass-approvals-and-sandbox` and documents that this is trusted local execution.
-8. README no longer presents `pairflow-plan-runner` as a primary path.
-9. `docs/local-plan-watch-v1-pilot.md` records a non-dry-run disposable pilot using the built-in Codex runner.
-10. The pilot records the watch ledger key, invocation id, runner status, runner reason code, changed artifacts if any, and route ledger summary if emitted.
-11. Rerunning the same watch trigger records or reports duplicate suppression without invoking Codex again.
-12. Focused tests pass:
+5. Missing runner config returns `status="blocked"` with `reason_code="PLAN_WATCH_RUNNER_CONFIG_MISSING"` and does not invoke Codex.
+6. Unsupported runner backend returns `status="blocked"` with `reason_code="PLAN_WATCH_RUNNER_BACKEND_UNSUPPORTED"` and does not invoke Codex.
+7. Missing or spawn-failed Codex executable returns `status="blocked"` with `reason_code="PLAN_WATCH_CODEX_UNAVAILABLE"` and an actionable summary.
+8. Malformed/partial payload and unsupported workflow return `status="blocked"` with `PLAN_WATCH_RUNNER_PAYLOAD_INVALID` or `PLAN_WATCH_RUNNER_WORKFLOW_UNSUPPORTED` before side effects.
+9. Malformed/partial runner output, unknown status, or invalid optional field types return `status="blocked"` with `reason_code="AGENT_RUNNER_OUTPUT_INVALID"` while preserving the existing latest-valid-envelope parser behavior for duplicate/multiple JSON candidates.
+10. Non-zero Codex exit returns `status="blocked"` with `reason_code="AGENT_RUNNER_NON_ZERO_EXIT"` and does not claim plan progression.
+11. The implementation invokes Codex with `--dangerously-bypass-approvals-and-sandbox` and documents that this is trusted local execution.
+12. README no longer presents `pairflow-plan-runner` as a primary path.
+13. `docs/local-plan-watch-v1-pilot.md` records a non-dry-run disposable pilot using the built-in Codex runner.
+14. The pilot records the watch ledger key, invocation id, runner status, runner reason code, changed artifacts if any, and route ledger summary if emitted.
+15. Rerunning the same watch trigger records or reports duplicate suppression without invoking Codex again.
+16. Focused tests pass:
 
 ```bash
 pnpm exec vitest run \
@@ -314,5 +343,5 @@ pnpm exec vitest run \
   tests/cli/planWatchCommand.test.ts
 ```
 
-13. Runner-specific Codex adapter tests pass.
-14. Because this task touches config and runtime activation behavior, run `pnpm typecheck`, `pnpm lint`, `pnpm fitness:check:ci`, the focused watch tests, and `pnpm build`. Run `pnpm test` only if implementation changes affect shared runtime behavior beyond the runner adapter or if reviewer evidence requires it.
+17. Runner-specific Codex adapter tests pass.
+18. Because this task touches config and runtime activation behavior, run `pnpm typecheck`, `pnpm lint`, `pnpm fitness:check:ci`, the focused watch tests, and `pnpm build`. Run `pnpm test` only if implementation changes affect shared runtime behavior beyond the runner adapter or if reviewer evidence requires it.
