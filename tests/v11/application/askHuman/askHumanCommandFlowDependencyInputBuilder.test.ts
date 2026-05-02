@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { buildAskHumanFlowDependenciesInputFromCommandOrchestration } from "../../../../src/v11/shared/askHuman/askHumanCommandFlowDependencyInputBuilder.js";
+import { buildAskHumanFlowDependenciesInputFromCommandOrchestration } from "../../../../src/v11/application/askHuman/askHumanCommandFlowDependencyInputBuilder.js";
 
 describe("askHumanCommandFlowDependencyInputBuilder", () => {
   it("forwards the canonical delivery-ack dependency", () => {

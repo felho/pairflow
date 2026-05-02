@@ -7,7 +7,7 @@ function toErrorMessage(input: PairflowCommandErrorInput): string {
   return (input.reasonCode !== undefined ? input.reasonCode + ": " : "") + input.message;
 }
 
-import { buildAskHumanCommandOrchestrationCallInput } from "../../../../src/v11/shared/askHuman/askHumanCommandOrchestrationCallInputBuilder.js";
+import { buildAskHumanCommandOrchestrationCallInput } from "../../../../src/v11/application/askHuman/askHumanCommandOrchestrationCallInputBuilder.js";
 
 describe("askHumanCommandOrchestrationCallInputBuilder", () => {
   it("maps orchestration invocation into orchestration call input", () => {

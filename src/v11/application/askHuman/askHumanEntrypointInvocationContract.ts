@@ -1,4 +1,4 @@
-import type { ActorEmitContextSnapshot } from "../actorProtocol/actorEmitContext.js";
+import type { ActorEmitContextSnapshot } from "../../shared/actorProtocol/actorEmitContext.js";
 
 export interface BuildAskHumanEntrypointInvocationInput {
   normalizedInput: {

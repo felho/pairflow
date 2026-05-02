@@ -1,8 +1,8 @@
-import type { AskHumanDeliveryResult } from "../../shared/askHuman/askHumanFlowContract.js";
+import type { AskHumanDeliveryResult } from "./askHumanFlowContract.js";
 import type {
   EmitOptionalAskHumanNotificationsDependencies,
   EmitOptionalAskHumanNotificationsInput
-} from "../../shared/askHuman/askHumanNotificationEmissionContract.js";
+} from "./askHumanNotificationEmissionContract.js";
 import type { DeliveryAck } from "../../shared/ports/tmuxDelivery.js";
 
 function describeDetachedBubbleNotificationFailure(error: unknown): void {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { buildNormalizedAskHumanCommandInput } from "../../../../src/v11/shared/askHuman/askHumanCommandNormalizedInputBuilder.js";
+import { buildNormalizedAskHumanCommandInput } from "../../../../src/v11/application/askHuman/askHumanCommandNormalizedInputBuilder.js";
 
 describe("askHumanCommandNormalizedInputBuilder", () => {
   it("normalizes ask-human command input fields", () => {

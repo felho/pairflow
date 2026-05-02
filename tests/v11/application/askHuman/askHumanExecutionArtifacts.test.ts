@@ -4,7 +4,7 @@ import {
   buildAskHumanEnvelope,
   buildAskHumanLockPath,
   buildAskHumanStateWriteFailureMessage
-} from "../../../../src/v11/shared/askHuman/askHumanExecutionArtifacts.js";
+} from "../../../../src/v11/application/askHuman/askHumanExecutionArtifacts.js";
 
 describe("askHumanExecutionArtifacts", () => {
   const input = {

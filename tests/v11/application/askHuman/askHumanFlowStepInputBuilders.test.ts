@@ -10,7 +10,7 @@ function toErrorMessage(input: PairflowCommandErrorInput): string {
 import {
   buildAskHumanExecutionStepInput,
   buildAskHumanFinalizationStepInput
-} from "../../../../src/v11/shared/askHuman/askHumanFlowStepInputBuilders.js";
+} from "../../../../src/v11/application/askHuman/askHumanFlowStepInputBuilders.js";
 
 describe("askHumanFlowStepInputBuilders", () => {
   it("builds execution step input payload", () => {

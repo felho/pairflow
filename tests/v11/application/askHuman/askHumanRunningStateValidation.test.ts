@@ -7,7 +7,7 @@ function toErrorMessage(input: PairflowCommandErrorInput): string {
   return (input.reasonCode !== undefined ? input.reasonCode + ": " : "") + input.message;
 }
 
-import { assertAskHumanRunningState } from "../../../../src/v11/shared/askHuman/askHumanRunningStateValidation.js";
+import { assertAskHumanRunningState } from "../../../../src/v11/application/askHuman/askHumanRunningStateValidation.js";
 
 class AskHumanRunningStateValidationError extends Error {
   public constructor(message: string) {

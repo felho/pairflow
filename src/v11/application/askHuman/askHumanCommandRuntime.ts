@@ -1,6 +1,6 @@
 import { throwAsNormalizedAskHumanCommandError } from "./askHumanCommandErrorBoundary.js";
 import { createAskHumanCommandErrorCreator } from "./askHumanCommandErrorCreator.js";
-import { normalizePairflowCommandErrorInput } from "../errors/commandErrorDetails.js";
+import { normalizePairflowCommandErrorInput } from "../../shared/errors/commandErrorDetails.js";
 
 export class AskHumanCommandError extends Error {
   public readonly reasonCode: string | undefined;

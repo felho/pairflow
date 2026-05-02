@@ -1,13 +1,13 @@
-import type { emitBubbleLifecycleEventBestEffort } from "../../../v11/shared/metrics/bubbleEvents.js";
+import type { emitBubbleLifecycleEventBestEffort } from "../../shared/metrics/bubbleEvents.js";
 import type {
   EmitAskHumanBubbleNotificationPort,
 } from "./askHumanDeliveryPortsContract.js";
 import type {
   EmitDeliveryNotificationAckPort,
   ResolveDeliveryMessageRefPort
-} from "../ports/tmuxDelivery.js";
+} from "../../shared/ports/tmuxDelivery.js";
 
-export interface ResolveAskHumanFinalizationDependenciesInput {
+export interface AskHumanFinalizationDependencySource {
   emitDeliveryNotificationAck?:
     | EmitDeliveryNotificationAckPort
     | undefined;
@@ -20,7 +20,7 @@ export interface ResolveAskHumanFinalizationDependenciesInput {
     | undefined;
 }
 
-export interface ResolvedAskHumanFinalizationDependencies {
+export interface AskHumanFinalizationDependencies {
   emitDeliveryNotificationAck: EmitDeliveryNotificationAckPort;
   emitBubbleNotification: EmitAskHumanBubbleNotificationPort;
   resolveDeliveryMessageRef: ResolveDeliveryMessageRefPort;

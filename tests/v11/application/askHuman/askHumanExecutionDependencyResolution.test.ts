@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { applyStateTransition } from "../../../../src/v11/domain/state/machine.js";
-import { resolveAskHumanExecutionDependencies } from "../../../../src/v11/shared/askHuman/askHumanExecutionDependencyResolution.js";
+import { resolveAskHumanExecutionDependencies } from "../../../../src/v11/application/askHuman/askHumanExecutionDependencyResolution.js";
 
 describe("askHumanExecutionDependencyResolution", () => {
   it("uses execution defaults when overrides are omitted", () => {

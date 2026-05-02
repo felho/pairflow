@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildAskHumanAppendEnvelopeInput,
   buildAskHumanWriteSnapshotCallInput
-} from "../../../../src/v11/shared/askHuman/askHumanExecutionCallInputBuilders.js";
+} from "../../../../src/v11/application/askHuman/askHumanExecutionCallInputBuilders.js";
 
 describe("askHumanExecutionCallInputBuilders", () => {
   it("builds append-envelope call input", () => {

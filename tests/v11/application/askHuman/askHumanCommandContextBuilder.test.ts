@@ -7,7 +7,7 @@ function toErrorMessage(input: PairflowCommandErrorInput): string {
   return (input.reasonCode !== undefined ? input.reasonCode + ": " : "") + input.message;
 }
 
-import { buildAskHumanCommandContext } from "../../../../src/v11/shared/askHuman/askHumanCommandContextBuilder.js";
+import { buildAskHumanCommandContext } from "../../../../src/v11/application/askHuman/askHumanCommandContextBuilder.js";
 
 describe("askHumanCommandContextBuilder", () => {
   it("builds orchestration input while preserving command-level payload", () => {

@@ -1,11 +1,11 @@
 import type { BubbleStateSnapshot } from "../../../types/bubble.js";
 import { buildAskHumanEnvelope } from "./askHumanExecutionArtifacts.js";
 import type { ExecuteAskHumanExecutionInput } from "./askHumanFlowContract.js";
-import type { AppendProtocolEnvelopeInput } from "../ports/transcript.js";
+import type { AppendProtocolEnvelopeInput } from "../../shared/ports/transcript.js";
 import type {
   WriteStateSnapshotOptions,
   WriteStateSnapshotPort
-} from "../ports/stateSnapshots.js";
+} from "../../shared/ports/stateSnapshots.js";
 
 export function buildAskHumanAppendEnvelopeInput(
   input: ExecuteAskHumanExecutionInput,

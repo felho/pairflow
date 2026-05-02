@@ -6,12 +6,12 @@ import type { ProtocolEnvelope } from "../../../types/protocol.js";
 import type {
   ActorActivationProvenance,
   ActorEmitContextSnapshot
-} from "../actorProtocol/actorEmitContext.js";
+} from "../../shared/actorProtocol/actorEmitContext.js";
 import type {
   DeliveryAck,
   DeliveryTargetReasonCode,
   EmitDeliveryNotificationAckPort
-} from "../ports/tmuxDelivery.js";
+} from "../../shared/ports/tmuxDelivery.js";
 
 export type AskHumanActivationProvenance = ActorActivationProvenance;
 

@@ -1,16 +1,16 @@
 import type {
   AppendProtocolEnvelopeResult,
   AppendProtocolEnvelopePort
-} from "../ports/transcript.js";
+} from "../../shared/ports/transcript.js";
 import type {
   LoadedStateSnapshot,
   WriteStateSnapshotPort
-} from "../ports/stateSnapshots.js";
+} from "../../shared/ports/stateSnapshots.js";
 import type { applyStateTransition } from "../../domain/state/machine.js";
 import type {
   EmitAskHumanBubbleNotificationPort,
 } from "./askHumanDeliveryPortsContract.js";
-import type { emitBubbleLifecycleEventBestEffort } from "../../../v11/shared/metrics/bubbleEvents.js";
+import type { emitBubbleLifecycleEventBestEffort } from "../../shared/metrics/bubbleEvents.js";
 import type { BubbleStateSnapshot } from "../../../types/bubble.js";
 import type { ProtocolEnvelope } from "../../../types/protocol.js";
 import type { AskHumanRoutingContext } from "./askHumanRoutingContext.js";
@@ -20,7 +20,7 @@ import type {
   DeliveryTargetReasonCode,
   EmitDeliveryNotificationAckPort,
   ResolveDeliveryMessageRefPort
-} from "../ports/tmuxDelivery.js";
+} from "../../shared/ports/tmuxDelivery.js";
 
 export interface RunAskHumanFlowInput {
   now: Date;

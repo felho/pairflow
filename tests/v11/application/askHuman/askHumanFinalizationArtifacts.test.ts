@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildAskHumanFinalizationResult,
   buildAskHumanLifecycleMetricMetadata
-} from "../../../../src/v11/shared/askHuman/askHumanFinalizationArtifacts.js";
+} from "../../../../src/v11/application/askHuman/askHumanFinalizationArtifacts.js";
 
 describe("askHumanFinalizationArtifacts", () => {
   it("builds ask-human lifecycle metric metadata", () => {

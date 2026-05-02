@@ -7,7 +7,7 @@ function toErrorMessage(input: PairflowCommandErrorInput): string {
   return (input.reasonCode !== undefined ? input.reasonCode + ": " : "") + input.message;
 }
 
-import { buildAskHumanEntrypointInvocationInput } from "../../../../src/v11/shared/askHuman/askHumanEntrypointInvocationInputBuilder.js";
+import { buildAskHumanEntrypointInvocationInput } from "../../../../src/v11/application/askHuman/askHumanEntrypointInvocationInputBuilder.js";
 
 describe("askHumanEntrypointInvocationInputBuilder", () => {
   it("builds entrypoint invocation input from normalized payload and error factory", () => {

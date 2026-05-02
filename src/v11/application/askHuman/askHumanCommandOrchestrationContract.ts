@@ -1,4 +1,4 @@
-import type { ActorEmitContextSnapshot } from "../actorProtocol/actorEmitContext.js";
+import type { ActorEmitContextSnapshot } from "../../shared/actorProtocol/actorEmitContext.js";
 import type {
   EmitAskHumanBubbleNotificationPort
 } from "./askHumanDeliveryPortsContract.js";
@@ -8,7 +8,7 @@ import type {
   RunAskHumanFlowResult
 } from "./askHumanFlowContract.js";
 import type { PrepareAskHumanRoutingFn } from "./askHumanRoutingContract.js";
-import type { EmitDeliveryNotificationAckPort } from "../ports/tmuxDelivery.js";
+import type { EmitDeliveryNotificationAckPort } from "../../shared/ports/tmuxDelivery.js";
 
 export interface AskHumanCommandOrchestrationInput {
   question: string;

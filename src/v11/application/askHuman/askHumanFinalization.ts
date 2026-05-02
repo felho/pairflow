@@ -1,14 +1,14 @@
 import {
   buildAskHumanFinalizationResult
-} from "../../shared/askHuman/askHumanFinalizationArtifacts.js";
-import { buildAskHumanFinalizationDependencyResolutionInput } from "../../shared/askHuman/askHumanFinalizationDependencyResolutionInputBuilder.js";
-import { buildAskHumanFinalizationLifecycleEventInput } from "../../shared/askHuman/askHumanFinalizationLifecycleEventInputBuilder.js";
+} from "./askHumanFinalizationArtifacts.js";
+import { buildAskHumanFinalizationDependencyResolutionInput } from "./askHumanFinalizationDependencyResolutionInputBuilder.js";
+import { buildAskHumanFinalizationLifecycleEventInput } from "./askHumanFinalizationLifecycleEventInputBuilder.js";
 import type {
   FinalizeAskHumanFlowDependencies,
   FinalizeAskHumanFlowInput,
   RunAskHumanFlowResult
-} from "../../shared/askHuman/askHumanFlowContract.js";
-import { buildAskHumanFinalizationNotificationInput } from "../../shared/askHuman/askHumanFinalizationNotificationInputBuilder.js";
+} from "./askHumanFlowContract.js";
+import { buildAskHumanFinalizationNotificationInput } from "./askHumanFinalizationNotificationInputBuilder.js";
 import { emitOptionalAskHumanNotifications } from "./askHumanNotificationEmission.js";
 import { resolveAskHumanFinalizationDependencies } from "./askHumanFinalizationDependencyResolution.js";
 export type {

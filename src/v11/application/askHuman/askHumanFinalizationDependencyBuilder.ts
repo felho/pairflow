@@ -1,7 +1,7 @@
 import type {
   AskHumanFinalizationDependencies,
   AskHumanFinalizationDependencySource
-} from "../../shared/askHuman/askHumanFinalizationDependencyBuilderContract.js";
+} from "./askHumanFinalizationDependencyBuilderContract.js";
 import { askHumanFinalizationDependencyDefaults } from "./askHumanFinalizationDependencyDefaults.js";
 
 export function buildAskHumanFinalizationDependencies(

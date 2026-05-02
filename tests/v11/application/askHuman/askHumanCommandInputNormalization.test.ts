@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { normalizeAskHumanCommandInput } from "../../../../src/v11/shared/askHuman/askHumanCommandInputNormalization.js";
+import { normalizeAskHumanCommandInput } from "../../../../src/v11/application/askHuman/askHumanCommandInputNormalization.js";
 
 describe("askHumanCommandInputNormalization", () => {
   it("preserves provided fields including now", () => {

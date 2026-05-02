@@ -1,4 +1,4 @@
-import type { emitBubbleLifecycleEventBestEffort } from "../../../v11/shared/metrics/bubbleEvents.js";
+import type { emitBubbleLifecycleEventBestEffort } from "../../shared/metrics/bubbleEvents.js";
 import type { FinalizeAskHumanFlowInput } from "./askHumanFlowContract.js";
 import { buildAskHumanLifecycleMetricMetadata } from "./askHumanFinalizationArtifacts.js";
 
