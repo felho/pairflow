@@ -4,7 +4,7 @@ import { prepareAskHumanWorkspaceContext } from "../../../../src/v11/application
 import type {
   AskHumanLoadedStateSnapshot as LoadedStateSnapshot,
   AskHumanResolvedBubbleWorkspace as ResolvedBubbleWorkspace
-} from "../../../../src/v11/shared/askHuman/askHumanRoutingPreparationDependencyResolutionContract.js";
+} from "../../../../src/v11/application/askHuman/askHumanRoutingPreparationDependencyResolutionContract.js";
 
 describe("prepareAskHumanWorkspaceContext", () => {
   it("resolves bubble context, updates config from identity, and loads state", async () => {

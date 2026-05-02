@@ -1,14 +1,14 @@
-import type { ResolvedKickoffDependencies } from "../../shared/kickoff/kickoffDependencyContract.js";
+import type { ResolvedKickoffDependencies } from "./kickoffDependencyContract.js";
 import type {
   RunKickoffFlowInput,
   RunKickoffFlowResult
-} from "../../shared/kickoff/kickoffFlowContract.js";
-import { prepareKickoffValidation } from "../../shared/kickoff/kickoffValidationPreparation.js";
-import { executeKickoffValidatedFlow } from "../../shared/kickoff/kickoffValidatedExecution.js";
+} from "./kickoffFlowContract.js";
+import { prepareKickoffValidation } from "./kickoffValidationPreparation.js";
+import { executeKickoffValidatedFlow } from "./kickoffValidatedExecution.js";
 import {
   buildKickoffExecutionStepInput,
   buildKickoffValidationStepInput
-} from "../../shared/kickoff/kickoffFlowStepInputBuilders.js";
+} from "./kickoffFlowStepInputBuilders.js";
 
 export async function runKickoffFlow(
   input: RunKickoffFlowInput,

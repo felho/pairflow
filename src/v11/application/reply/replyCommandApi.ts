@@ -8,10 +8,10 @@ import type {
 import {
   createHumanReplyCommandError,
   throwAsHumanReplyCommandError
-} from "../../shared/reply/replyCommandError.js";
+} from "./replyCommandError.js";
 import { resolveReplyCommandDependencies } from "./replyCommandDependencyResolution.js";
-import { normalizeReplyCommandInput } from "../../shared/reply/replyCommandInputNormalization.js";
-import { executeReplyMutation } from "../../shared/reply/replyMutationExecution.js";
+import { normalizeReplyCommandInput } from "./replyCommandInputNormalization.js";
+import { executeReplyMutation } from "../../defaults/reply/replyMutationExecution.js";
 
 export async function emitHumanReply(
   input: EmitHumanReplyInput,

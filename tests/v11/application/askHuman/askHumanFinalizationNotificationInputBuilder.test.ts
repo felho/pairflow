@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { buildAskHumanFinalizationNotificationInput } from "../../../../src/v11/shared/askHuman/askHumanFinalizationNotificationInputBuilder.js";
+import { buildAskHumanFinalizationNotificationInput } from "../../../../src/v11/application/askHuman/askHumanFinalizationNotificationInputBuilder.js";
 
 describe("askHumanFinalizationNotificationInputBuilder", () => {
   it("builds notification emission input from finalization state", () => {

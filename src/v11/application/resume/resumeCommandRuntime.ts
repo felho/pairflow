@@ -1,5 +1,5 @@
 import { normalizePairflowCommandErrorInput } from "../../shared/errors/commandErrorDetails.js";
-import { normalizeResumeBubbleError } from "../../shared/resume/resumeCommandErrorNormalization.js";
+import { normalizeResumeBubbleError } from "./resumeCommandErrorNormalization.js";
 import { asHumanReplyCommandErrorV11 as asHumanReplyCommandError } from "../reply/emitReplyV11.js";
 
 export class ResumeBubbleError extends Error {

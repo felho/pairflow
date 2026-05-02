@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { buildAskHumanCommandOrchestrationDependencyResolutionInput } from "../../../../src/v11/shared/askHuman/askHumanCommandOrchestrationDependencyResolutionInputBuilder.js";
+import { buildAskHumanCommandOrchestrationDependencyResolutionInput } from "../../../../src/v11/application/askHuman/askHumanCommandOrchestrationDependencyResolutionInputBuilder.js";
 
 describe("askHumanCommandOrchestrationDependencyResolutionInputBuilder", () => {
   it("forwards orchestration dependency overrides to resolution input", () => {

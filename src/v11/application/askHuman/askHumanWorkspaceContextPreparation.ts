@@ -4,7 +4,7 @@ import {
 import type {
   PreparedAskHumanWorkspaceContext,
   PrepareAskHumanWorkspaceContextInput
-} from "../../shared/askHuman/askHumanWorkspaceContextPreparationContract.js";
+} from "./askHumanWorkspaceContextPreparationContract.js";
 
 export async function prepareAskHumanWorkspaceContext(
   input: PrepareAskHumanWorkspaceContextInput

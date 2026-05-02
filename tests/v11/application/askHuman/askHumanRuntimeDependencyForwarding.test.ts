@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { forwardAskHumanRuntimeNotificationDependencies } from "../../../../src/v11/shared/askHuman/askHumanRuntimeDependencyForwarding.js";
+import { forwardAskHumanRuntimeNotificationDependencies } from "../../../../src/v11/application/askHuman/askHumanRuntimeDependencyForwarding.js";
 
 describe("askHumanRuntimeDependencyForwarding", () => {
   it("forwards only explicitly provided runtime notification dependencies", () => {

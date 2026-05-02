@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { resolveKickoffTask } from "../../../../src/v11/shared/kickoff/kickoffTaskResolution.js";
+import { resolveKickoffTask } from "../../../../src/v11/application/kickoff/kickoffTaskResolution.js";
 
 async function unsupportedRead(): Promise<string> {
   throw new Error("read should not be called in this test");

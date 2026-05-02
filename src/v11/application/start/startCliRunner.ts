@@ -1,4 +1,3 @@
-import { spawn } from "node:child_process";
 import { realpath } from "node:fs/promises";
 import { resolve as resolvePath } from "node:path";
 
@@ -17,11 +16,14 @@ import { createStartBubbleError } from "./startCommandRuntime.js";
 import { startCliDependencyDefaults } from "./startCommandDependencyDefaults.js";
 import { parseBubbleStartCommandOptions } from "./startCliOptions.js";
 import type { ResolvedBubbleById } from "../../shared/ports/bubbleLookup.js";
+import { processSpawnDefault } from "../../defaults/process/processSpawnDefaults.js";
+import type { ProcessSpawnPort } from "../../shared/ports/processSpawn.js";
 
 export interface BubbleStartCommandDependencies {
   startBubble?: typeof startBubble;
   resolveBubbleById?: typeof startCliDependencyDefaults.resolveBubbleById;
   registerRepoInRegistry?: typeof startCliDependencyDefaults.registerRepoInRegistry;
+  processSpawn?: ProcessSpawnPort;
   reportRegistryRegistrationWarning?:
     | ((message: string) => void)
     | undefined;
@@ -31,6 +33,7 @@ interface ResolvedBubbleStartDependencies {
   resolveBubble: typeof startCliDependencyDefaults.resolveBubbleById;
   register: typeof startCliDependencyDefaults.registerRepoInRegistry;
   runStartBubble: typeof startBubble;
+  processSpawn: ProcessSpawnPort;
   reportWarning: (message: string) => void;
 }
 
@@ -38,13 +41,16 @@ function isRemoteSshBubble(resolvedBubble: ResolvedBubbleById): boolean {
   return resolvedBubble.bubbleConfig.executor?.type === "ssh";
 }
 
-async function runTmuxAttach(sessionName: string): Promise<void> {
+async function runTmuxAttach(
+  sessionName: string,
+  processSpawn: ProcessSpawnPort
+): Promise<void> {
   const args =
     process.env.TMUX !== undefined && process.env.TMUX.length > 0
       ? ["switch-client", "-t", sessionName]
       : ["attach-session", "-t", sessionName];
   await new Promise<void>((resolvePromise, rejectPromise) => {
-    const child = spawn("tmux", args, {
+    const child = processSpawn("tmux", args, {
       stdio: "inherit"
     });
     child.on("error", rejectPromise);
@@ -73,6 +79,7 @@ function resolveBubbleStartDependencies(
       dependencies.registerRepoInRegistry
       ?? ((...args) => startCliDependencyDefaults.registerRepoInRegistry(...args)),
     runStartBubble: dependencies.startBubble ?? startBubble,
+    processSpawn: dependencies.processSpawn ?? processSpawnDefault,
     reportWarning:
       dependencies.reportRegistryRegistrationWarning ??
       ((message: string) => {
@@ -134,6 +141,7 @@ async function runStartAndAttachIfRequested(input: {
   cwd: string;
   attach: boolean;
   runStartBubble: typeof startBubble;
+  processSpawn: ProcessSpawnPort;
 }): Promise<StartBubbleResult> {
   const result = await input.runStartBubble({
     bubbleId: input.bubbleId,
@@ -141,7 +149,7 @@ async function runStartAndAttachIfRequested(input: {
     cwd: input.cwd
   });
   if (input.attach) {
-    await runTmuxAttach(result.tmuxSessionName);
+    await runTmuxAttach(result.tmuxSessionName, input.processSpawn);
   }
   return result;
 }
@@ -198,7 +206,8 @@ export async function runBubbleStartCommand(
       repoPathForStart,
       cwd,
       attach: options.attach,
-      runStartBubble: resolvedDependencies.runStartBubble
+      runStartBubble: resolvedDependencies.runStartBubble,
+      processSpawn: resolvedDependencies.processSpawn
     });
   } catch (error) {
     asStartBubbleError(error);

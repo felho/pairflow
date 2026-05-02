@@ -7,7 +7,7 @@ function toErrorMessage(input: PairflowCommandErrorInput): string {
   return (input.reasonCode !== undefined ? input.reasonCode + ": " : "") + input.message;
 }
 
-import { buildAskHumanCommandErrorFactory } from "../../../../src/v11/shared/askHuman/askHumanCommandErrorFactory.js";
+import { buildAskHumanCommandErrorFactory } from "../../../../src/v11/application/askHuman/askHumanCommandErrorFactory.js";
 
 class SyntheticAskHumanCommandError extends Error {
   public constructor(message: string) {

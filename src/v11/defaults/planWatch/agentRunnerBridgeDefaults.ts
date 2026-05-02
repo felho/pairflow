@@ -1,4 +1,3 @@
-import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
 import { access, readFile } from "node:fs/promises";
 
 import type {
@@ -9,6 +8,11 @@ import type {
 import {
   prepareCodexRunnerFiles
 } from "../../application/planWatch/codexAgentRunnerBridge.js";
+import { processSpawnDefault } from "../process/processSpawnDefaults.js";
+import type {
+  ProcessSpawnPipeChild,
+  ProcessSpawnPort
+} from "../../shared/ports/processSpawn.js";
 
 const TIMEOUT_KILL_GRACE_MS = 100;
 const MAX_CAPTURED_OUTPUT_CHARS = 64 * 1024;
@@ -31,12 +35,13 @@ export async function pathExists(path: string): Promise<boolean> {
 }
 
 export function runAgentRunnerCommand(
-  invocation: AgentRunnerProcessInvocation
+  invocation: AgentRunnerProcessInvocation,
+  processSpawn: ProcessSpawnPort = processSpawnDefault
 ): Promise<AgentRunnerProcessResult> {
   if (invocation.signal?.aborted) {
     return Promise.resolve(abortedBeforeSpawnResult());
   }
-  return new AgentRunnerCommandProcess(invocation).run();
+  return new AgentRunnerCommandProcess(invocation, processSpawn).run();
 }
 
 class AgentRunnerCommandProcess {
@@ -48,23 +53,31 @@ class AgentRunnerCommandProcess {
   private timeoutTimer: NodeJS.Timeout | undefined;
   private killTimer: NodeJS.Timeout | undefined;
   private finalizationTimer: NodeJS.Immediate | undefined;
-  private child: ChildProcessWithoutNullStreams | undefined;
+  private child: ProcessSpawnPipeChild | undefined;
   private resolve:
     | ((result: AgentRunnerProcessResult) => void)
     | undefined;
   private reject: ((error: Error) => void) | undefined;
 
-  public constructor(private readonly invocation: AgentRunnerProcessInvocation) {}
+  public constructor(
+    private readonly invocation: AgentRunnerProcessInvocation,
+    private readonly processSpawn: ProcessSpawnPort
+  ) {}
 
   public run(): Promise<AgentRunnerProcessResult> {
     return new Promise((resolve, reject) => {
       this.resolve = resolve;
       this.reject = reject;
-      this.child = spawn(this.invocation.command, this.invocation.args, {
+      const child = this.processSpawn(this.invocation.command, this.invocation.args, {
         cwd: this.invocation.cwd,
         ...(this.invocation.env !== undefined ? { env: this.invocation.env } : {}),
         stdio: ["pipe", "pipe", "pipe"]
       });
+      if (child.stdin === null || child.stdout === null || child.stderr === null) {
+        reject(new Error("agent runner process did not expose pipe streams"));
+        return;
+      }
+      this.child = child as ProcessSpawnPipeChild;
       this.startTimeoutTimer();
       this.invocation.signal?.addEventListener("abort", this.abortRunner, {
         once: true
@@ -107,7 +120,7 @@ class AgentRunnerCommandProcess {
     this.startKillTimer(() => this.forceResolve("abort"));
   };
 
-  private attachOutputHandlers(child: ChildProcessWithoutNullStreams): void {
+  private attachOutputHandlers(child: ProcessSpawnPipeChild): void {
     child.stdout.setEncoding("utf8");
     child.stderr.setEncoding("utf8");
     child.stdout.on("data", (chunk: string) => {
@@ -116,7 +129,7 @@ class AgentRunnerCommandProcess {
     child.stderr.on("data", (chunk: string) => {
       this.stderr = appendCapturedOutput(this.stderr, chunk);
     });
-    child.stdin.once("error", (error) => {
+    child.stdin.once("error", (error: Error) => {
       if (!this.settled) {
         this.stderr = appendCapturedOutput(
           this.stderr,
@@ -126,7 +139,7 @@ class AgentRunnerCommandProcess {
     });
   }
 
-  private attachExitHandlers(child: ChildProcessWithoutNullStreams): void {
+  private attachExitHandlers(child: ProcessSpawnPipeChild): void {
     child.once("error", (error) => {
       if (this.markSettled()) {
         this.reject?.(error);
@@ -144,7 +157,7 @@ class AgentRunnerCommandProcess {
     });
   }
 
-  private writeStdin(child: ChildProcessWithoutNullStreams): void {
+  private writeStdin(child: ProcessSpawnPipeChild): void {
     if (!child.stdin.writable) {
       if (this.markSettled()) {
         child.kill("SIGTERM");

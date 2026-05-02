@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { buildAskHumanFinalizationLifecycleEventInput } from "../../../../src/v11/shared/askHuman/askHumanFinalizationLifecycleEventInputBuilder.js";
+import { buildAskHumanFinalizationLifecycleEventInput } from "../../../../src/v11/application/askHuman/askHumanFinalizationLifecycleEventInputBuilder.js";
 
 describe("askHumanFinalizationLifecycleEventInputBuilder", () => {
   it("builds lifecycle metric event input from finalization context", () => {

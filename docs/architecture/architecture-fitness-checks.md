@@ -152,6 +152,8 @@ Implementation maturity by check:
   - ports-aware `shared/ports/**` layer handling
   - explicit anti-circumvention findings for obvious re-export / thin-wrapper camouflage
   - report-only ownership-signal warnings for strong infra-like behavior under `shared/**`
+  - report-only Shared Promotion warnings for `shared/<name>/**` directories
+    consumed by exactly one `application/<lane>/**` lane and no infrastructure
   - still limited by relative import resolution and heuristic ownership detection
 - `critical_side_effect`: AST-based invariant scan with:
   - explicit command matrix for the seed command set `kickoff`, `pass`,
@@ -259,6 +261,9 @@ Once the ports model is wired into fitness, the dependency check should enforce 
 5. `shared/ports` must not be pass-through adapter camouflage
 6. infrastructure implementations may depend on `shared/ports` contracts
 7. plain `shared/**` must not absorb obvious infrastructure ownership just to satisfy layer rules
+8. plain `shared/<name>/**` should represent a real shared concept: single-lane
+   application consumption with no infrastructure consumer is report-only debt
+   until the command-local parking lots are migrated
 
 ## Triage Matrix
 

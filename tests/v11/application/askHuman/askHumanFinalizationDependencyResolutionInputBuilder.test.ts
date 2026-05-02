@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { buildAskHumanFinalizationDependencyResolutionInput } from "../../../../src/v11/shared/askHuman/askHumanFinalizationDependencyResolutionInputBuilder.js";
+import { buildAskHumanFinalizationDependencyResolutionInput } from "../../../../src/v11/application/askHuman/askHumanFinalizationDependencyResolutionInputBuilder.js";
 
 describe("askHumanFinalizationDependencyResolutionInputBuilder", () => {
   it("forwards the canonical delivery-ack override", () => {

@@ -2,8 +2,8 @@ import type { AgentRole } from "../../../types/bubble.js";
 import type { PassIntent } from "../../../types/protocol.js";
 import { inferPassIntentFromActiveRole } from "../../domain/pass/passIntentInference.js";
 import { raiseRepeatCleanDownstreamConvergedRejected } from "../../domain/pass/repeatCleanPolicyRejection.js";
-import { createPassCommandError, throwAsPassCommandError } from "../../shared/pass/passCommandError.js";
-import { createPassCommandErrorRuntime } from "../../shared/pass/passCommandErrorRuntime.js";
+import { createPassCommandError, throwAsPassCommandError } from "./passCommandError.js";
+import { createPassCommandErrorRuntime } from "./passCommandErrorRuntime.js";
 import { buildEmitPassContext } from "./emitPassContextBuilder.js";
 import type {
   EmitPassDependencies,

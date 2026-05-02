@@ -2,12 +2,12 @@ import {
   normalizeStringList,
   requireNonEmptyString
 } from "../../shared/normalization/stringNormalization.js";
-import { assertAskHumanRunningState } from "../../shared/askHuman/askHumanRunningStateValidation.js";
+import { assertAskHumanRunningState } from "./askHumanRunningStateValidation.js";
 import type {
   PrepareAskHumanRoutingDependencies,
   PrepareAskHumanRoutingInput,
   PrepareAskHumanRoutingResult
-} from "../../shared/askHuman/askHumanRoutingContract.js";
+} from "./askHumanRoutingContract.js";
 import {
   buildOptionalActorActivationProvenance
 } from "../../shared/actorProtocol/actorEmitContext.js";

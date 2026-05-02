@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { buildAskHumanFlowRuntimeDependenciesFromCommandRuntime } from "../../../../src/v11/shared/askHuman/askHumanCommandFlowDependencyWiringInputBuilder.js";
+import { buildAskHumanFlowRuntimeDependenciesFromCommandRuntime } from "../../../../src/v11/application/askHuman/askHumanCommandFlowDependencyWiringInputBuilder.js";
 
 describe("askHumanCommandFlowDependencyWiringInputBuilder", () => {
   it("forwards the canonical runtime delivery-ack dependency", () => {

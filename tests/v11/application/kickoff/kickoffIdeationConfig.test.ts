@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { BubbleConfig } from "../../../../src/types/bubble.js";
-import { buildKickoffIdeationConfig } from "../../../../src/v11/shared/kickoff/kickoffIdeationConfig.js";
+import { buildKickoffIdeationConfig } from "../../../../src/v11/application/kickoff/kickoffIdeationConfig.js";
 
 describe("buildKickoffIdeationConfig", () => {
   it("sets kicked_off_at and task_pending while preserving started_at", () => {

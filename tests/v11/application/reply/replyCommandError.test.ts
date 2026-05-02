@@ -5,7 +5,7 @@ import {
   createHumanReplyCommandError,
   HumanReplyCommandError,
   throwAsHumanReplyCommandError
-} from "../../../../src/v11/shared/reply/replyCommandError.js";
+} from "../../../../src/v11/application/reply/replyCommandError.js";
 
 describe("replyCommandError", () => {
   it("creates typed HumanReplyCommandError instances", () => {

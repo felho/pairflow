@@ -1,7 +1,7 @@
 import type {
   ResolvedAskHumanRoutingPreparationDependencies,
   ResolveAskHumanRoutingPreparationDependenciesInput
-} from "../../shared/askHuman/askHumanRoutingPreparationDependencyResolutionContract.js";
+} from "./askHumanRoutingPreparationDependencyResolutionContract.js";
 import { askHumanRoutingPreparationDependencyDefaults } from "./askHumanRoutingPreparationDependencyDefaults.js";
 
 export function resolveAskHumanRoutingPreparationDependencies(

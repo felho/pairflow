@@ -8,7 +8,7 @@ function toErrorMessage(input: PairflowCommandErrorInput): string {
 }
 
 import { WorkspaceResolutionError } from "../../../../src/v11/infrastructure/executor/workspace/workspaceResolution.js";
-import { normalizePassCommandError } from "../../../../src/v11/shared/pass/passCommandErrorNormalization.js";
+import { normalizePassCommandError } from "../../../../src/v11/application/pass/passCommandErrorNormalization.js";
 
 class SyntheticPassCommandError extends Error {
   public constructor(message: string) {

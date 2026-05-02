@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { buildAskHumanExecutionDependencyResolutionInput } from "../../../../src/v11/shared/askHuman/askHumanExecutionDependencyResolutionInputBuilder.js";
+import { buildAskHumanExecutionDependencyResolutionInput } from "../../../../src/v11/application/askHuman/askHumanExecutionDependencyResolutionInputBuilder.js";
 
 describe("askHumanExecutionDependencyResolutionInputBuilder", () => {
   it("forwards execution dependency overrides to resolution input", () => {

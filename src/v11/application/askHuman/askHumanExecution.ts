@@ -2,18 +2,18 @@ import type { LoadedStateSnapshot } from "../../shared/ports/stateSnapshots.js";
 import {
   buildAskHumanLockPath,
   buildAskHumanStateWriteFailureMessage
-} from "../../shared/askHuman/askHumanExecutionArtifacts.js";
+} from "./askHumanExecutionArtifacts.js";
 import {
   buildAskHumanAppendEnvelopeInput,
   buildAskHumanWriteSnapshotCallInput
-} from "../../shared/askHuman/askHumanExecutionCallInputBuilders.js";
+} from "./askHumanExecutionCallInputBuilders.js";
 import type {
   ExecuteAskHumanExecutionDependencies,
   ExecuteAskHumanExecutionInput,
   ExecuteAskHumanExecutionResult
-} from "../../shared/askHuman/askHumanFlowContract.js";
-import { resolveAskHumanExecutionDependencies } from "../../shared/askHuman/askHumanExecutionDependencyResolution.js";
-import { buildAskHumanExecutionDependencyResolutionInput } from "../../shared/askHuman/askHumanExecutionDependencyResolutionInputBuilder.js";
+} from "./askHumanFlowContract.js";
+import { resolveAskHumanExecutionDependencies } from "./askHumanExecutionDependencyResolution.js";
+import { buildAskHumanExecutionDependencyResolutionInput } from "./askHumanExecutionDependencyResolutionInputBuilder.js";
 export type {
   ExecuteAskHumanExecutionDependencies,
   ExecuteAskHumanExecutionInput,

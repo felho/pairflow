@@ -3,7 +3,7 @@ export {
   emitPassFromWorkspace as emitPassFromWorkspaceV11,
   inferPassIntent as inferPassIntentV11
 } from "./passCommandOrchestration.js";
-export { PassCommandError as PassCommandErrorV11 } from "../../shared/pass/passCommandError.js";
+export { PassCommandError as PassCommandErrorV11 } from "./passCommandError.js";
 export type {
   EmitPassDependencies as EmitPassV11Dependencies,
   EmitPassInput as EmitPassV11Input,

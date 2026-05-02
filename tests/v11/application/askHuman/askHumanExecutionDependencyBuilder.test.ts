@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   buildAskHumanExecutionDependencies
-} from "../../../../src/v11/shared/askHuman/askHumanExecutionDependencyBuilder.js";
+} from "../../../../src/v11/application/askHuman/askHumanExecutionDependencyBuilder.js";
 
 describe("askHumanExecutionDependencyBuilder", () => {
   it("forwards only explicitly provided execution overrides", () => {

@@ -1,9 +1,9 @@
 import {
   resolveKickoffDependencies,
 } from "./kickoffDependencyResolution.js";
-import { buildKickoffEntrypointInvocation } from "../../shared/kickoff/kickoffEntrypointInvocationBuilder.js";
-import type { KickoffDependencyOverrides } from "../../shared/kickoff/kickoffDependencyContract.js";
-import type { RunKickoffFlowResult } from "../../shared/kickoff/kickoffFlowContract.js";
+import { buildKickoffEntrypointInvocation } from "./kickoffEntrypointInvocationBuilder.js";
+import type { KickoffDependencyOverrides } from "./kickoffDependencyContract.js";
+import type { RunKickoffFlowResult } from "./kickoffFlowContract.js";
 import { runKickoffFlow } from "./runKickoffFlow.js";
 
 export interface KickoffBubbleV11Input {

@@ -1,7 +1,7 @@
-import { spawn } from "node:child_process";
 import type { RunWorktreeBootstrapCommandInput } from "./startCommandContract.js";
 import { runTmux } from "./startCommandDependencyDefaults.js";
 import { StartBubbleError } from "./startCommandRuntime.js";
+import { processSpawnDefault } from "../../defaults/process/processSpawnDefaults.js";
 
 function truncateCommandOutput(raw: string, maxChars: number = 1200): string {
   const normalized = raw.trim();
@@ -24,10 +24,15 @@ export async function runWorktreeBootstrapCommandDefault(
     stderr: string;
     exitCode: number;
   }>((resolvePromise, rejectPromise) => {
-    const child = spawn("bash", ["-lc", command], {
+    const child = processSpawnDefault("bash", ["-lc", command], {
       cwd: input.workspacePath,
       stdio: ["ignore", "pipe", "pipe"]
     });
+
+    if (child.stdout === null || child.stderr === null) {
+      rejectPromise(new Error("spawned bootstrap command did not expose pipe streams"));
+      return;
+    }
 
     let stdout = "";
     let stderr = "";

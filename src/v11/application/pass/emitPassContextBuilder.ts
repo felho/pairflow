@@ -4,8 +4,8 @@ import type { PassIntent } from "../../../types/protocol.js";
 import {
   type ActorEmitContextSnapshot
 } from "../../shared/actorProtocol/actorEmitContext.js";
-import { normalizePassCommandInput } from "../../shared/pass/passCommandInputNormalization.js";
-import { normalizePassCommandPayload } from "../../shared/pass/passCommandPayloadNormalization.js";
+import { normalizePassCommandInput } from "./passCommandInputNormalization.js";
+import { normalizePassCommandPayload } from "./passCommandPayloadNormalization.js";
 import { normalizeBubbleReviewPolicy } from "../../shared/reviewPolicy/reviewPolicyRuntime.js";
 import type { BuildFlowBaseInput } from "./flowInvocationBuilderBase.js";
 import { buildPassRoutingInput, type BuildPassRoutingInputInput } from "./passRoutingInvocationBuilders.js";

@@ -7,7 +7,7 @@ function toErrorMessage(input: PairflowCommandErrorInput): string {
   return (input.reasonCode !== undefined ? input.reasonCode + ": " : "") + input.message;
 }
 
-import { buildAskHumanRoutingInput } from "../../../../src/v11/shared/askHuman/askHumanRoutingInvocationBuilder.js";
+import { buildAskHumanRoutingInput } from "../../../../src/v11/application/askHuman/askHumanRoutingInvocationBuilder.js";
 
 describe("askHumanRoutingInvocationBuilder", () => {
   it("omits undefined optional fields", () => {

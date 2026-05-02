@@ -2,7 +2,7 @@ import {
   executeStartFailedCleanupMutation,
   executeStartPreparingMutation,
   executeStartRunningMutation
-} from "../../shared/start/startStateMutation.js";
+} from "../../defaults/start/startStateMutation.js";
 import type { BubbleRemotePointerCreated } from "../../../types/bubble.js";
 import type {
   ExecuteRemoteBubbleStartResult,

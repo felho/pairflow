@@ -4,7 +4,7 @@ import type { BubbleStateSnapshot } from "../../../../src/types/bubble.js";
 import {
   buildKickoffFailureResult,
   buildKickoffSuccessResult
-} from "../../../../src/v11/shared/kickoff/kickoffResultBuilders.js";
+} from "../../../../src/v11/application/kickoff/kickoffResultBuilders.js";
 
 describe("kickoffResultBuilders", () => {
   it("builds failure kickoff result shape", () => {

@@ -22,6 +22,8 @@ interface DependencyViolation {
     | "cycle_detected"
     | "anti_circumvention_reexport"
     | "anti_circumvention_wrapper"
+    | "forbidden_process_runtime_import"
+    | "shared_promotion_single_lane"
     | "ownership_signal_shared_infra";
   severity: "fail" | "warn";
   message: string;
@@ -664,6 +666,58 @@ function detectAntiCircumventionViolations(input: {
   return violations;
 }
 
+const forbiddenProcessRuntimeSpecifiers = new Set([
+  "child_process",
+  "cluster",
+  "node:child_process",
+  "node:cluster",
+  "node:worker_threads",
+  "worker_threads"
+]);
+
+function isProcessRuntimeGuardedPath(relativePath: string): boolean {
+  return /^src\/v11\/(?:application|defaults)(?:\/|$)/u.test(relativePath);
+}
+
+function detectForbiddenProcessRuntimeImports(input: {
+  repoRoot: string;
+  files: readonly string[];
+  sourceByPath: ReadonlyMap<string, string>;
+}): DependencyViolation[] {
+  const violations: DependencyViolation[] = [];
+
+  for (const filePath of input.files) {
+    const fromRelative = normalizePathToPosix(relative(input.repoRoot, filePath));
+    if (!isProcessRuntimeGuardedPath(fromRelative)) {
+      continue;
+    }
+
+    const sourceText = input.sourceByPath.get(filePath) ?? "";
+    const imports = parseImportSpecifiers({
+      filePath,
+      sourceText
+    });
+
+    for (const imported of imports) {
+      if (!forbiddenProcessRuntimeSpecifiers.has(imported.specifier)) {
+        continue;
+      }
+
+      violations.push({
+        kind: "forbidden_process_runtime_import",
+        severity: "fail",
+        message:
+          `${fromRelative}:${String(imported.line)} forbidden process runtime import ${imported.specifier}; use a shared/ports capability with infrastructure implementation`,
+        fromRelative,
+        toRelative: undefined,
+        cycleNodes: undefined
+      });
+    }
+  }
+
+  return violations;
+}
+
 const ownershipSignalMatchers: readonly {
   signal: string;
   matches: (sourceText: string) => boolean;
@@ -744,6 +798,83 @@ function detectOwnershipSignalViolations(input: {
   }
 
   return violations;
+}
+
+interface SharedDirectoryConsumers {
+  applicationLanes: Set<string>;
+  hasInfrastructureConsumer: boolean;
+}
+
+function sharedDirectoryFromRelativePath(path: string): string | undefined {
+  const match = path.match(/^src\/v11\/shared\/([^/]+)(?:\/|$)/u);
+  const directoryName = match?.[1];
+  if (directoryName === undefined || directoryName === "ports") {
+    return undefined;
+  }
+  return directoryName;
+}
+
+function applicationLaneFromRelativePath(path: string): string | undefined {
+  return path.match(/^src\/v11\/application\/([^/]+)(?:\/|$)/u)?.[1];
+}
+
+function detectSharedPromotionViolations(input: {
+  repoRoot: string;
+  edges: readonly ImportEdge[];
+}): DependencyViolation[] {
+  const consumersBySharedDirectory = new Map<string, SharedDirectoryConsumers>();
+
+  for (const edge of input.edges) {
+    const fromRelative = normalizePathToPosix(relative(input.repoRoot, edge.from));
+    const toRelative = normalizePathToPosix(relative(input.repoRoot, edge.to));
+    const sharedDirectory = sharedDirectoryFromRelativePath(toRelative);
+    if (sharedDirectory === undefined) {
+      continue;
+    }
+
+    const consumers =
+      consumersBySharedDirectory.get(sharedDirectory)
+      ?? {
+        applicationLanes: new Set<string>(),
+        hasInfrastructureConsumer: false
+      };
+    consumersBySharedDirectory.set(sharedDirectory, consumers);
+
+    const applicationLane = applicationLaneFromRelativePath(fromRelative);
+    if (applicationLane !== undefined) {
+      consumers.applicationLanes.add(applicationLane);
+      continue;
+    }
+
+    if (/^src\/v11\/infrastructure(?:\/|$)/u.test(fromRelative)) {
+      consumers.hasInfrastructureConsumer = true;
+    }
+  }
+
+  const violations: DependencyViolation[] = [];
+  for (const [sharedDirectory, consumers] of consumersBySharedDirectory) {
+    if (
+      consumers.hasInfrastructureConsumer
+      || consumers.applicationLanes.size !== 1
+    ) {
+      continue;
+    }
+
+    const [applicationLane] = consumers.applicationLanes;
+    violations.push({
+      kind: "shared_promotion_single_lane",
+      severity: "warn",
+      message:
+        `src/v11/shared/${sharedDirectory}: shared-promotion warning: imported only by application lane ${applicationLane}; command-local helpers should live under src/v11/application/${applicationLane}`,
+      fromRelative: `src/v11/shared/${sharedDirectory}`,
+      toRelative: undefined,
+      cycleNodes: undefined
+    });
+  }
+
+  return violations.sort((left, right) =>
+    (left.fromRelative ?? "").localeCompare(right.fromRelative ?? "")
+  );
 }
 
 function summarizeDependencyViolations(
@@ -838,10 +969,19 @@ export async function buildDependencyCheckReport({
       files: availableFiles,
       sourceByPath
     }),
+    ...detectForbiddenProcessRuntimeImports({
+      repoRoot,
+      files: availableFiles,
+      sourceByPath
+    }),
     ...detectOwnershipSignalViolations({
       repoRoot,
       files: availableFiles,
       sourceByPath
+    }),
+    ...detectSharedPromotionViolations({
+      repoRoot,
+      edges
     }),
     ...detectCycles({
       repoRoot,
@@ -880,7 +1020,7 @@ export async function buildDependencyCheckReport({
       owner: check.owner ?? "unknown",
       mode,
       status: "pass",
-      summary: `Dependency check passed: ${availableFiles.length} scoped files scanned with no cycle or forbidden-layer violations.`,
+      summary: `Dependency check passed: ${availableFiles.length} scoped files scanned with no dependency violations.`,
       metric: check.metric,
       details
     };
@@ -916,7 +1056,7 @@ export async function buildDependencyCheckReport({
     status: "fail",
     summary:
       failViolations.length === violations.length
-        ? `Dependency check failed: ${String(failViolations.length)} violation(s) detected (cycles/forbidden-layer imports).`
+        ? `Dependency check failed: ${String(failViolations.length)} dependency violation(s) detected.`
         : `Dependency check failed: ${String(failViolations.length)} fail violation(s) and ${String(warnViolations.length)} warning(s) detected.`,
     metric: check.metric,
     details

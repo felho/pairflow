@@ -1,8 +1,8 @@
 import type {
   EmitAskHumanDependencies
-} from "../../shared/askHuman/askHumanCommandContract.js";
-import type { AskHumanCommandOrchestrationDependencies } from "../../shared/askHuman/askHumanCommandOrchestrationContract.js";
-import { buildAskHumanFlowRuntimeDependenciesFromCommandRuntime } from "../../shared/askHuman/askHumanCommandFlowDependencyWiringInputBuilder.js";
+} from "./askHumanCommandContract.js";
+import type { AskHumanCommandOrchestrationDependencies } from "./askHumanCommandOrchestrationContract.js";
+import { buildAskHumanFlowRuntimeDependenciesFromCommandRuntime } from "./askHumanCommandFlowDependencyWiringInputBuilder.js";
 import { createAskHumanCommandOrchestrationDependencies } from "./askHumanFlowDependencyWiring.js";
 
 export function buildAskHumanCommandOrchestrationDependencies(

@@ -1,7 +1,7 @@
 import type { BubbleStateSnapshot } from "../../../types/bubble.js";
 import type { ResolvedStartBubbleDependencies } from "./startCommandOrchestration.js";
 import type { StartExecutionContext } from "./startCommandContext.js";
-import { executeStartFailedCleanupMutation } from "../../shared/start/startStateMutation.js";
+import { executeStartFailedCleanupMutation } from "../../defaults/start/startStateMutation.js";
 
 export async function cleanupFailedStart(input: {
   context: StartExecutionContext;

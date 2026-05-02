@@ -1,13 +1,13 @@
-import { buildAskHumanExecutionDependencies } from "../../shared/askHuman/askHumanExecutionDependencyBuilder.js";
+import { buildAskHumanExecutionDependencies } from "./askHumanExecutionDependencyBuilder.js";
 import {
   buildAskHumanExecutionStepInput,
   buildAskHumanFinalizationStepInput
-} from "../../shared/askHuman/askHumanFlowStepInputBuilders.js";
+} from "./askHumanFlowStepInputBuilders.js";
 import type {
   RunAskHumanFlowDependencies,
   RunAskHumanFlowInput,
   RunAskHumanFlowResult
-} from "../../shared/askHuman/askHumanFlowContract.js";
+} from "./askHumanFlowContract.js";
 import { buildAskHumanFinalizationDependencies } from "./askHumanFinalizationDependencyBuilder.js";
 
 export async function runAskHumanFlow(

@@ -10,7 +10,7 @@ function toErrorMessage(input: PairflowCommandErrorInput): string {
 import {
   buildAskHumanFlowDependencies,
   buildAskHumanFlowInput
-} from "../../../../src/v11/shared/askHuman/askHumanFlowInvocationBuilders.js";
+} from "../../../../src/v11/application/askHuman/askHumanFlowInvocationBuilders.js";
 
 describe("askHumanFlowInvocationBuilders", () => {
   it("builds runAskHumanFlow input without mutation", () => {

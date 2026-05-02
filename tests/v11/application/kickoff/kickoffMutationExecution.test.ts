@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { executeKickoffMutation } from "../../../../src/v11/shared/kickoff/kickoffMutationExecution.js";
+import { executeKickoffMutation } from "../../../../src/v11/application/kickoff/kickoffMutationExecution.js";
 
 describe("executeKickoffMutation", () => {
   it("writes artifacts, snapshots transcript, and appends TASK envelope", async () => {
