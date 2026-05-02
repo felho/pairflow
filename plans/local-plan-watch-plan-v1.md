@@ -127,6 +127,8 @@ Progress update (2026-05-02): implementation bubble `4-pilot-docs-impl` closed a
 
 Progress update (2026-05-02): plan reopened with retrofit task `5-plan-watch-codex-runner` after the pilot exposed that `pairflow-plan-runner` was documented as a placeholder rather than a Pairflow-provided built-in runner. The plan is not complete until a config-driven Codex runner path is implemented and proven.
 
+Progress update (2026-05-02): document bubble `5-plan-watch-codex-runner-doc` refined the approved task handoff, aligned the task list status to `approved`, linked the document bubble in task metadata, clarified that the later implementation bubble must replace placeholder runner guidance with the built-in Codex path, and tightened validation expectations. Later review rounds broadened the normative scope to require argv-array/no-shell Codex invocation, non-primary `--runner-command` legacy framing, disposable approval-ready duplicate-suppression proof, and complete pilot ledger evidence fields.
+
 ## Open Task List
 
 | Task ID                  | Task Path | Purpose                                                                                                                                                                                  | Depends On               | Closes Gap                                                                                                    | Status      |
@@ -135,7 +137,7 @@ Progress update (2026-05-02): plan reopened with retrofit task `5-plan-watch-cod
 | `2-bubble-trigger-index` | `plans/archive/tasks/2026-05-01-local-plan-watch/2-bubble-trigger-index.md`    | Add lightweight plan-linked bubble discovery and trigger evidence collection for approval-ready bubble states without resolving full plan routes.                                        | `1-agent-runner-bridge`  | Missing trustworthy trigger source for automatic continuation after a bubble reaches the human approval gate. | archived |
 | `3-watch-loop`           | `plans/archive/tasks/2026-05-01-local-plan-watch/3-watch-loop.md`    | Add local foreground `plan watch` polling with configurable interval, persisted watcher ledger, approval-ready trigger handling, dedupe, and autonomous runner invocation.               | `2-bubble-trigger-index` | Missing local trigger process and duplicate-invocation guard.                                                 | archived |
 | `4-pilot-docs`           | `plans/archive/tasks/2026-05-01-local-plan-watch/4-pilot-docs.md`    | Validate the local watcher on a representative plan, document V1 boundaries, and record deferred remote-control-plane follow-up.                                                         | `3-watch-loop`           | Missing pilot evidence and operator-facing guidance.                                                          | archived |
-| `5-plan-watch-codex-runner` | `plans/tasks/5-plan-watch-codex-runner.md` | Add a Pairflow-provided built-in Codex runner that turns watch payloads into `ExecutePairflowPlan` invocations and returns bridge-compatible structured output. | `4-pilot-docs` | Missing last-mile executable proof for autonomous plan watch continuation. | draft |
+| `5-plan-watch-codex-runner` | `plans/tasks/5-plan-watch-codex-runner.md` | Add a Pairflow-provided built-in Codex runner that turns watch payloads into `ExecutePairflowPlan` invocations and returns bridge-compatible structured output. | `4-pilot-docs` | Missing last-mile executable proof for autonomous plan watch continuation. | approved |
 
 ## Coverage Map
 
