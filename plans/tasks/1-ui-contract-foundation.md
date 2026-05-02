@@ -5,7 +5,7 @@ task_family_id: ui-contract-foundation
 sequence_key: "1"
 task_id: 1-ui-contract-foundation
 title: "UI Contract Foundation"
-status: approved
+status: implementable
 phase: phase1
 target_files:
   - src/contracts/ui/index.ts
