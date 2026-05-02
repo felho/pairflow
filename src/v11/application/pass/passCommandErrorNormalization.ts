@@ -1,4 +1,4 @@
-import { isNamedError } from "../errors/namedError.js";
+import { isNamedError } from "../../shared/errors/namedError.js";
 
 export interface NormalizePassCommandErrorInput {
   error: unknown;

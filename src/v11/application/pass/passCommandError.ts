@@ -1,5 +1,5 @@
 import { normalizePassCommandError } from "./passCommandErrorNormalization.js";
-import { normalizePairflowCommandErrorInput } from "../errors/commandErrorDetails.js";
+import { normalizePairflowCommandErrorInput } from "../../shared/errors/commandErrorDetails.js";
 
 export class PassCommandError extends Error {
   public readonly reasonCode: string | undefined;

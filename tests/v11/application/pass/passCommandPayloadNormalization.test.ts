@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { normalizePassCommandPayload } from "../../../../src/v11/shared/pass/passCommandPayloadNormalization.js";
+import { normalizePassCommandPayload } from "../../../../src/v11/application/pass/passCommandPayloadNormalization.js";
 
 describe("passCommandPayloadNormalization", () => {
   it("returns empty payload defaults when findings are omitted", () => {

@@ -10,7 +10,7 @@ import { parsePassCommandOptions } from "../../../src/cli/commands/agent/pass.js
 import {
   emitPassFromWorkspaceV11 as emitPassFromWorkspace
 } from "../../../src/v11/application/pass/emitPassV11.js";
-import { PassCommandError } from "../../../src/v11/shared/pass/passCommandError.js";
+import { PassCommandError } from "../../../src/v11/application/pass/passCommandError.js";
 import {
   resolveMostRecentPreviousReviewerPassIsCleanFromMetadata
 } from "../../../src/v11/domain/pass/repeatCleanMetadata.js";

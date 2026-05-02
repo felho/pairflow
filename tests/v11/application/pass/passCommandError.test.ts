@@ -4,7 +4,7 @@ import {
   createPassCommandError,
   PassCommandError,
   throwAsPassCommandError
-} from "../../../../src/v11/shared/pass/passCommandError.js";
+} from "../../../../src/v11/application/pass/passCommandError.js";
 
 describe("passCommandError", () => {
   it("creates typed pass command error instances", () => {
