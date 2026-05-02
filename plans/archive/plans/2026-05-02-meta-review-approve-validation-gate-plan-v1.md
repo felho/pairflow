@@ -4,20 +4,20 @@ artifact_id: plan_meta_review_approve_validation_gate_v1
 plan_id: meta-review-approve-validation-gate-plan-v1
 created_on: "2026-05-02"
 title: "Meta-Review Approve Validation Gate Plan V1"
-status: approved
-plan_status: approved
+status: done
+plan_status: done
 prd_ref: null
 owners:
   - "felho"
 task_order:
   - 1-meta-approve-validation-gate
-active_task_id: 1-meta-approve-validation-gate
+active_task_id: null
 archive_group: 2026-05-02-meta-review-approve-validation-gate-plan-v1
 task_tracker:
   - task_id: 1-meta-approve-validation-gate
-    task_path: plans/tasks/1-meta-approve-validation-gate.md
-    status: in_progress
-    notes: "Separate PASS-loop validation from full-test validation required before meta-review approve can route to human approval."
+    task_path: plans/archive/tasks/2026-05-02-meta-review-approve-validation-gate-plan-v1/1-meta-approve-validation-gate.md
+    status: archived
+    notes: "Closed by implementation bubble meta-approve-validation-impl; approve/commit/merge/delete completed on 2026-05-02."
 ---
 
 # Plan: Meta-Review Approve Validation Gate
@@ -79,13 +79,13 @@ For the Pairflow repository itself, the intended policy is:
 1. Repo-level validation profiles already support custom command ids such as `fitness`.
 2. PASS validation already executes configured `commands.validation_required` for code bubbles.
 3. Meta-review gate already owns the `human_gate_approve` routing boundary.
+4. Separate approve-gate validation policy support landed through `1-meta-approve-validation-gate`.
+5. Bubble config materialization and meta-review approve-gate execution landed through `1-meta-approve-validation-gate`.
+6. Pairflow repo validation defaults were updated so PASS stays fast and full `pnpm test` runs at the approve gate.
 
 ### Open Work
 
-1. Add a separate approve-gate validation policy.
-2. Materialize that policy into new bubble configs.
-3. Execute the policy at the meta-review approve boundary.
-4. Update Pairflow repo validation defaults.
+1. None for this plan.
 
 ### Deferred / Future Work
 
@@ -97,7 +97,7 @@ For the Pairflow repository itself, the intended policy is:
 
 | Task ID | Task Path | Purpose | Depends On | Closes Gap | Status |
 |---|---|---|---|---|---|
-| `1-meta-approve-validation-gate` | `plans/tasks/1-meta-approve-validation-gate.md` | Add and consume separate meta-review approve validation policy. | Repo-level validation profile V2 baseline | PASS-loop vs full-test approval split | approved |
+| `1-meta-approve-validation-gate` | `plans/archive/tasks/2026-05-02-meta-review-approve-validation-gate-plan-v1/1-meta-approve-validation-gate.md` | Add and consume separate meta-review approve validation policy. | Repo-level validation profile V2 baseline | PASS-loop vs full-test approval split | archived |
 
 ## Coverage Map
 

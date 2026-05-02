@@ -5,7 +5,7 @@ task_family_id: meta-approve-validation-gate
 sequence_key: "1"
 task_id: 1-meta-approve-validation-gate
 title: "Meta-Review Approve Validation Gate"
-status: in_progress
+status: archived
 phase: phase1
 target_files:
   - "README.md"
@@ -28,10 +28,10 @@ target_files:
   - "tests/v11/application/pass/passValidationGate.test.ts"
   - "tests/v11/shared/metaReviewGate/metaReviewGateCurrentRunFinalization.test.ts"
 prd_ref: null
-plan_ref: plans/meta-review-approve-validation-gate-plan-v1.md
+plan_ref: plans/archive/plans/2026-05-02-meta-review-approve-validation-gate-plan-v1.md
 system_context_ref: docs/pairflow-initial-design.md
 normative_refs:
-  - plans/meta-review-approve-validation-gate-plan-v1.md
+  - plans/archive/plans/2026-05-02-meta-review-approve-validation-gate-plan-v1.md
   - plans/archive/plans/2026-04-29-repo-level-validation-profile-plan-v2.md
   - docs/reviewer-evidence-governance.md
   - docs/meta-review-gate-prd.md
@@ -74,7 +74,7 @@ Introduce a separate configurable validation gate that runs before meta-review a
 1. Parent plan gap closed: separate PASS-loop validation from final meta-review approve validation.
 2. Depends on: repo-level validation profile V2 baseline in `plans/archive/plans/2026-04-29-repo-level-validation-profile-plan-v2.md`.
 3. Unlocks / impacts successors: future UI/read-model surfacing of approve-gate validation evidence.
-4. Task-list impact: creates first task in `plans/meta-review-approve-validation-gate-plan-v1.md`.
+4. Task-list impact: creates first task in `plans/archive/plans/2026-05-02-meta-review-approve-validation-gate-plan-v1.md`.
 5. Inherited validation / exit expectation: implementation must keep `fitness` in the fast PASS-loop policy and move full `pnpm test` to the approve gate for this repository.
 
 ### Canonical Contract Anchors
