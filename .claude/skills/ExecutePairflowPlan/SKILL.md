@@ -11,6 +11,13 @@ Canonical metadata authority for the inputs named below lives in:
 
 1. `references/Plan-Task-Metadata-Contract.md`
 
+Mandatory delegation and mutation gates live in:
+
+1. `references/Delegation-Gates.md`
+
+Read `references/Delegation-Gates.md` before the first route-caused mutation in
+each invocation.
+
 ## Artifact Responsibilities
 
 This skill owns only the top-level orchestration contract:
@@ -81,6 +88,7 @@ Hard rules:
 3. the orchestrator must not approve, refine, create, close, or troubleshoot artifacts by approximating the downstream workflow in its own context
 4. each delegated workflow step must return a concrete result that can be recorded in the route ledger before `ResolvePlanState` is run again
 5. if a delegated workflow cannot be executed in the required surface, stop at `HumanCheckpoint` or a real blocker instead of silently downgrading to inline reasoning
+6. before any route-caused mutation or lifecycle command, apply `references/Delegation-Gates.md`
 
 Mandatory route-to-delegation mapping:
 
@@ -107,6 +115,8 @@ Plan/task review gates:
 4. no bubble route may be executed unless every upstream plan/task route in the current execution chain has a route-ledger entry with a delegated result
 5. if a delegated `ReviewSpec` returns `refine_plan` or `refine_task` and the artifact is modified, the same review mode must be delegated again from a fresh context using the refreshed artifact before the route can be considered approved
 6. a refinement loop is settled only by `approve_plan`, `approve_task`, `split_plan`, `route_back_to_plan`, `block_not_ready`, or a real blocker; the orchestrator must not treat its own post-edit inspection as a replacement for the repeated `ReviewSpec` result
+7. for `ReviewPlan` and `ReviewTask`, sub-agent delegation is mandatory whenever the runtime supports it; if unavailable, the substitute must be an explicitly separate compact workflow step, not blended local reasoning
+8. `status=approved` may be written or committed only after the route ledger contains `ReviewSpec task-mode decision=approve_task` for the latest task artifact
 
 Fresh-context requirement:
 
@@ -132,6 +142,9 @@ delegation:
   required_workflow: <workflow name>
   input_artifacts:
     - <path or id>
+  delegated_execution_method: <subagent|separate_local_step|not_applicable>
+  delegated_result: null
+mutation_allowed: false
 ```
 
 After the delegated workflow returns, update the same entry:
@@ -144,6 +157,7 @@ delegation_result:
     - <path or id>
   evidence_summary: <short factual summary>
 next_resolution_allowed: <true|false>
+mutation_allowed: <true|false>
 ```
 
 Ledger rules:
@@ -154,6 +168,8 @@ Ledger rules:
 4. if a bubble lifecycle action is attempted without ledger proof of prior plan/task review gates, treat that as a workflow violation and stop
 5. for `ReviewPlan` and `ReviewTask`, `next_resolution_allowed=true` after `refine_plan` or `refine_task` only authorizes rerunning the same ReviewSpec route from refreshed artifacts; it does not authorize task creation, bubble creation, or lifecycle actions
 6. after a repeated ReviewSpec pass returns `approve_plan` or `approve_task`, the ledger entry must mention the latest reviewed artifact version or commit/evidence summary so downstream routing is tied to the approved content, not an older pre-refinement version
+7. route-caused plan/task/progress metadata edits may not be committed while `mutation_allowed=false`
+8. before committing route-caused metadata changes, cite the delegated workflow decision that authorized each staged mutation; if no decision exists, unstage or stop at `HumanCheckpoint`
 
 ## Orchestrator Execution Style
 
@@ -183,6 +199,7 @@ Loop-bound rule:
 
 1. `auto_continue` is allowed only while each delegated step returns materially new authoritative state for the next routing decision
 2. if the same normalized route would repeat without a trustworthy state advance, the orchestrator must fail closed to a checkpoint or troubleshooting path instead of spinning
+3. `drive-until-blocked` applies only after every upstream delegated gate in the current route chain has a concrete route-ledger result; delegated gates outrank continuation momentum
 
 ### 2a. Terminal vs settled completion
 
