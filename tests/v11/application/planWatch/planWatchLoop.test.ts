@@ -917,6 +917,38 @@ describe("planWatchLoop", () => {
     expect(sleep).not.toHaveBeenCalled();
   });
 
+  it("emits progress events around candidate execution", async () => {
+    const events: string[] = [];
+    const dependencies = deps({
+      candidates: [candidate()],
+      runner: runnerResult({ status: "settled_checkpoint" })
+    });
+
+    const result = await runPlanWatchLoop(
+      {
+        repoPath: "/repo",
+        planPath: "plans/local-plan-watch-plan-v1.md",
+        once: true,
+        intervalMs: 25,
+        runnerConfig: { command: "agent" },
+        onEvent: (event) => {
+          events.push(event.kind);
+        }
+      },
+      dependencies
+    );
+
+    expect(result.status).toBe("runner_settled_checkpoint");
+    expect(events).toEqual([
+      "loop_started",
+      "candidate_selected",
+      "runner_started",
+      "runner_completed",
+      "iteration_completed",
+      "loop_stopped"
+    ]);
+  });
+
   it("keeps the reserved ledger record shape when completion write fails", async () => {
     const reservedRecords: PlanWatchLedgerRecord[] = [];
     const dependencies = deps({

@@ -52,6 +52,15 @@ export async function executePlanWatchCandidate(
       input.candidateCount - (input.candidateIndex ?? 0) - 1
     )
   };
+  await input.input.onEvent?.({
+    kind: "candidate_selected",
+    repoPath: input.repoPath,
+    planPath: input.planPath,
+    candidate: input.candidate,
+    candidateIndex: input.candidateIndex ?? 0,
+    candidateCount: input.candidateCount,
+    dedupeKey: context.dedupeKey
+  });
   const ledgerResult = await readCandidateLedger(context);
   if (ledgerResult !== undefined) {
     return ledgerResult;
@@ -207,6 +216,14 @@ async function handleRunCandidate(
     return blockedFromError(context, error, "ledger_write_failed", invocationId);
   }
 
+  await context.input.onEvent?.({
+    kind: "runner_started",
+    repoPath: context.repoPath,
+    planPath: context.planPath,
+    candidate: context.candidate,
+    invocationId,
+    dedupeKey: context.dedupeKey
+  });
   const runnerResult = await context.dependencies.runExecutePairflowPlanContinuation(
     buildRunnerInput({
       ...context,
@@ -217,6 +234,15 @@ async function handleRunCandidate(
     }),
     context.input.runnerConfig ?? {}
   ).catch((error: unknown) => runnerThrownResult(context, invocationId, error));
+  await context.input.onEvent?.({
+    kind: "runner_completed",
+    repoPath: context.repoPath,
+    planPath: context.planPath,
+    candidate: context.candidate,
+    invocationId,
+    dedupeKey: context.dedupeKey,
+    runnerResult
+  });
   const completedRecord = buildCompletedPlanWatchLedgerRecord(
     reservedRecord,
     runnerResult

@@ -47,6 +47,7 @@ export interface PlanWatchInput {
   runNow?: boolean | undefined;
   now?: Date | undefined;
   stopSignal?: AbortSignal | undefined;
+  onEvent?: ((event: PlanWatchEvent) => void | Promise<void>) | undefined;
 }
 
 export interface PlanWatchDiagnostic {
@@ -78,6 +79,52 @@ export interface PlanWatchLoopResult {
   stopped: boolean;
   stopReason?: "condition" | "max_iterations" | "signal" | undefined;
 }
+
+export type PlanWatchEvent =
+  | {
+      kind: "loop_started";
+      repoPath: string;
+      planPath: string;
+      intervalMs: number;
+      once: boolean;
+    }
+  | {
+      kind: "candidate_selected";
+      repoPath: string;
+      planPath: string;
+      candidate: LinkedBubbleTriggerCandidate;
+      candidateIndex: number;
+      candidateCount: number;
+      dedupeKey: string;
+    }
+  | {
+      kind: "runner_started";
+      repoPath: string;
+      planPath: string;
+      candidate: LinkedBubbleTriggerCandidate;
+      invocationId: string;
+      dedupeKey: string;
+    }
+  | {
+      kind: "runner_completed";
+      repoPath: string;
+      planPath: string;
+      candidate: LinkedBubbleTriggerCandidate;
+      invocationId: string;
+      dedupeKey: string;
+      runnerResult: AgentRunnerBridgeResult;
+    }
+  | {
+      kind: "iteration_completed";
+      iterationIndex: number;
+      result: PlanWatchIterationResult;
+    }
+  | {
+      kind: "loop_stopped";
+      status: PlanWatchIterationStatus;
+      iterationCount: number;
+      stopReason: NonNullable<PlanWatchLoopResult["stopReason"]>;
+    };
 
 export interface PlanWatchLoopDependencies {
   resolveLinkedBubbleTriggerIndex: (

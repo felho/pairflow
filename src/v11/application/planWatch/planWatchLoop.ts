@@ -11,6 +11,7 @@ import type {
 import {
   DEFAULT_PLAN_WATCH_INTERVAL_MS,
   type PlanWatchDiagnostic,
+  type PlanWatchEvent,
   type PlanWatchInput,
   type PlanWatchIterationResult,
   type PlanWatchLoopDependencies,
@@ -130,33 +131,56 @@ export async function runPlanWatchLoop(
   const iterations: PlanWatchIterationResult[] = [];
   let iterationCount = 0;
 
+  await emitPlanWatchEvent(input, {
+    kind: "loop_started",
+    repoPath: input.repoPath,
+    planPath: input.planPath,
+    intervalMs,
+    once: input.once === true
+  });
+
   while (maxIterations === undefined || iterationCount < maxIterations) {
     if (input.stopSignal?.aborted) {
-      return stoppedLoopResult(iterations, "signal");
+      return stopLoop(input, iterations, "signal");
     }
     const result = await runPlanWatchIteration(input, dependencies);
     iterations.push(result);
     iterationCount += 1;
+    await emitPlanWatchEvent(input, {
+      kind: "iteration_completed",
+      iterationIndex: iterationCount - 1,
+      result
+    });
     const stopReason = stopReasonFor(result, iterationCount, maxIterations);
     if (stopReason !== undefined) {
-      return { status: result.status, iterations, stopped: true, stopReason };
+      return stopLoop(input, iterations, stopReason);
     }
     try {
       await (dependencies.sleep ?? sleep)(intervalMs, input.stopSignal);
     } catch (error) {
       if (isAbortError(error)) {
-        return stoppedLoopResult(iterations, "signal");
+        return stopLoop(input, iterations, "signal");
       }
       throw error;
     }
   }
 
-  return {
-    status: iterations[iterations.length - 1]?.status ?? "idle",
-    iterations,
-    stopped: true,
-    stopReason: "max_iterations"
-  };
+  return stopLoop(input, iterations, "max_iterations");
+}
+
+async function stopLoop(
+  input: PlanWatchInput,
+  iterations: readonly PlanWatchIterationResult[],
+  stopReason: NonNullable<PlanWatchLoopResult["stopReason"]>
+): Promise<PlanWatchLoopResult> {
+  const result = stoppedLoopResult(iterations, stopReason);
+  await emitPlanWatchEvent(input, {
+    kind: "loop_stopped",
+    status: result.status,
+    iterationCount: iterations.length,
+    stopReason
+  });
+  return result;
 }
 
 function stoppedLoopResult(
@@ -169,6 +193,13 @@ function stoppedLoopResult(
     stopped: true,
     stopReason
   };
+}
+
+async function emitPlanWatchEvent(
+  input: PlanWatchInput,
+  event: PlanWatchEvent
+): Promise<void> {
+  await input.onEvent?.(event);
 }
 
 function normalizeInput(input: PlanWatchInput):

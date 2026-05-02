@@ -8,6 +8,7 @@ import {
 } from "../../../v11/application/planWatch/planWatchLoop.js";
 import {
   DEFAULT_PLAN_WATCH_INTERVAL_MS,
+  type PlanWatchEvent,
   type PlanWatchInput,
   type PlanWatchIterationResult,
   type PlanWatchLoopDependencies
@@ -113,7 +114,8 @@ export async function runPlanWatchCommand(
   args: string[] | PlanWatchCommandOptions,
   cwd: string = process.cwd(),
   createDependencies: (repo: string) => PlanWatchLoopDependencies =
-    createDefaultPlanWatchLoopDependencies
+    createDefaultPlanWatchLoopDependencies,
+  onEvent?: (event: PlanWatchEvent) => void | Promise<void>
 ): Promise<PlanWatchIterationResult | null> {
   const options = Array.isArray(args) ? parsePlanWatchCommandOptions(args, cwd) : args;
   if (options.help) {
@@ -162,7 +164,8 @@ export async function runPlanWatchCommand(
       inputMode: options.runnerInputMode,
       cwd: options.repo
     },
-    ...(stop.signal !== undefined ? { stopSignal: stop.signal } : {})
+    ...(stop.signal !== undefined ? { stopSignal: stop.signal } : {}),
+    ...(onEvent !== undefined ? { onEvent } : {})
   };
   try {
     const loop = await runPlanWatchLoop(
@@ -218,6 +221,55 @@ export function renderPlanWatchText(result: PlanWatchIterationResult): string {
     parts.push(`runner_reason=${result.runnerResult.reasonCode}`);
   }
   return parts.join(" ");
+}
+
+export function renderPlanWatchEventText(event: PlanWatchEvent): string {
+  if (event.kind === "loop_started") {
+    return [
+      "plan watch: started",
+      `plan=${event.planPath}`,
+      `repo=${event.repoPath}`,
+      `interval=${event.intervalMs / 1000}s`,
+      `once=${event.once ? "yes" : "no"}`
+    ].join(" ");
+  }
+  if (event.kind === "candidate_selected") {
+    return [
+      "plan watch: candidate",
+      `task=${event.candidate.taskId}`,
+      `bubble=${event.candidate.bubbleId}`,
+      `state=${event.candidate.observedState}`,
+      `candidate=${event.candidateIndex + 1}/${event.candidateCount}`
+    ].join(" ");
+  }
+  if (event.kind === "runner_started") {
+    return [
+      "plan watch: runner started",
+      `invocation=${event.invocationId}`,
+      `task=${event.candidate.taskId}`,
+      `bubble=${event.candidate.bubbleId}`
+    ].join(" ");
+  }
+  if (event.kind === "runner_completed") {
+    return [
+      "plan watch: runner completed",
+      `invocation=${event.invocationId}`,
+      `status=${event.runnerResult.status}`,
+      `reason=${event.runnerResult.reasonCode}`
+    ].join(" ");
+  }
+  if (event.kind === "iteration_completed") {
+    return [
+      `plan watch: iteration ${event.iterationIndex + 1}`,
+      renderPlanWatchText(event.result)
+    ].join(" ");
+  }
+  return [
+    "plan watch: stopped",
+    `status=${event.status}`,
+    `iterations=${event.iterationCount}`,
+    `reason=${event.stopReason}`
+  ].join(" ");
 }
 
 function parseIntervalSeconds(value: string | undefined): number {

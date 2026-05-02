@@ -169,6 +169,7 @@ export type {
 export type {
   PlanWatchBlockedReasonKind,
   PlanWatchDiagnostic,
+  PlanWatchEvent,
   PlanWatchInput,
   PlanWatchIterationResult,
   PlanWatchIterationStatus,
@@ -348,6 +349,7 @@ export {
 export {
   getPlanWatchHelpText,
   parsePlanWatchCommandOptions,
+  renderPlanWatchEventText,
   renderPlanWatchText,
   runPlanWatchCommand
 } from "./cli/commands/plan/watch.js";

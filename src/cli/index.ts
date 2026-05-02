@@ -131,6 +131,7 @@ import {
 } from "./commands/metrics/report.js";
 import {
   getPlanWatchHelpText,
+  renderPlanWatchEventText,
   renderPlanWatchText,
   runPlanWatchCommand
 } from "./commands/plan/watch.js";
@@ -375,7 +376,14 @@ async function handleMetricsReportCommand(args: string[]): Promise<number> {
 
 async function handlePlanWatchCommand(args: string[]): Promise<number> {
   try {
-    const result = await runPlanWatchCommand(args);
+    const result = await runPlanWatchCommand(
+      args,
+      process.cwd(),
+      undefined,
+      (event) => {
+        process.stderr.write(`${renderPlanWatchEventText(event)}\n`);
+      }
+    );
     if (result === null) {
       process.stdout.write(`${getPlanWatchHelpText()}\n`);
       return 0;
