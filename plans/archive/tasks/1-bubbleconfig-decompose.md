@@ -5,7 +5,7 @@ task_family_id: bubbleconfig-decompose
 sequence_key: "1"
 task_id: 1-bubbleconfig-decompose
 title: "BubbleConfig Internal Decomposition"
-status: draft
+status: completed
 phase: phase1
 target_files:
   - src/config/bubbleConfig.ts
@@ -23,7 +23,7 @@ normative_refs:
 owners:
   - "felho"
 doc_bubble_id: bconfig-decompose-doc
-impl_bubble_id: null
+impl_bubble_id: bconfig-decompose-impl
 supersedes: []
 superseded_by: null
 archive_group: 2026-05-02-bubbleconfig-decompose
