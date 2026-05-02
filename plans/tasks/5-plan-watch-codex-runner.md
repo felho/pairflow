@@ -32,7 +32,7 @@ normative_refs:
   - docs/local-plan-watch-v1-pilot.md
 owners:
   - "felho"
-doc_bubble_id: null
+doc_bubble_id: 5-plan-watch-codex-runner-doc
 impl_bubble_id: null
 supersedes: []
 superseded_by: null
