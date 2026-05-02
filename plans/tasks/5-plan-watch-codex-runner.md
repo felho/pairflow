@@ -1,9 +1,9 @@
 ---
 artifact_type: task
 artifact_id: task_local_plan_watch_codex_runner_v1
-task_family_id: local-runner-wrapper
+task_family_id: plan-watch-codex-runner
 sequence_key: "5"
-task_id: 5-local-runner-wrapper
+task_id: 5-plan-watch-codex-runner
 title: "Local Plan Watch Built-In Codex Runner"
 status: draft
 phase: phase5-retrofit

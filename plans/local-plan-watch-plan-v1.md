@@ -14,8 +14,8 @@ task_order:
   - 2-bubble-trigger-index
   - 3-watch-loop
   - 4-pilot-docs
-  - 5-local-runner-wrapper
-active_task_id: 5-local-runner-wrapper
+  - 5-plan-watch-codex-runner
+active_task_id: 5-plan-watch-codex-runner
 archive_group: 2026-05-01-local-plan-watch
 task_tracker:
   - task_id: 1-agent-runner-bridge
@@ -30,8 +30,8 @@ task_tracker:
   - task_id: 4-pilot-docs
     task_path: plans/archive/tasks/2026-05-01-local-plan-watch/4-pilot-docs.md
     status: archived
-  - task_id: 5-local-runner-wrapper
-    task_path: plans/tasks/5-local-runner-wrapper.md
+  - task_id: 5-plan-watch-codex-runner
+    task_path: plans/tasks/5-plan-watch-codex-runner.md
     status: draft
     notes: "Retrofit the missing Pairflow-provided built-in Codex runner so plan watch can invoke ExecutePairflowPlan end-to-end without an undocumented placeholder command or per-repo script."
 ---
@@ -125,7 +125,7 @@ Progress update (2026-05-01): implementation bubble `3-watch-loop-impl` closed a
 
 Progress update (2026-05-02): implementation bubble `4-pilot-docs-impl` closed and merged after satisfying the configured multi-clean-meta-review gate. Task `4-pilot-docs` is archived.
 
-Progress update (2026-05-02): plan reopened with retrofit task `5-local-runner-wrapper` after the pilot exposed that `pairflow-plan-runner` was documented as a placeholder rather than a Pairflow-provided built-in runner. The plan is not complete until a config-driven Codex runner path is implemented and proven.
+Progress update (2026-05-02): plan reopened with retrofit task `5-plan-watch-codex-runner` after the pilot exposed that `pairflow-plan-runner` was documented as a placeholder rather than a Pairflow-provided built-in runner. The plan is not complete until a config-driven Codex runner path is implemented and proven.
 
 ## Open Task List
 
@@ -135,7 +135,7 @@ Progress update (2026-05-02): plan reopened with retrofit task `5-local-runner-w
 | `2-bubble-trigger-index` | `plans/archive/tasks/2026-05-01-local-plan-watch/2-bubble-trigger-index.md`    | Add lightweight plan-linked bubble discovery and trigger evidence collection for approval-ready bubble states without resolving full plan routes.                                        | `1-agent-runner-bridge`  | Missing trustworthy trigger source for automatic continuation after a bubble reaches the human approval gate. | archived |
 | `3-watch-loop`           | `plans/archive/tasks/2026-05-01-local-plan-watch/3-watch-loop.md`    | Add local foreground `plan watch` polling with configurable interval, persisted watcher ledger, approval-ready trigger handling, dedupe, and autonomous runner invocation.               | `2-bubble-trigger-index` | Missing local trigger process and duplicate-invocation guard.                                                 | archived |
 | `4-pilot-docs`           | `plans/archive/tasks/2026-05-01-local-plan-watch/4-pilot-docs.md`    | Validate the local watcher on a representative plan, document V1 boundaries, and record deferred remote-control-plane follow-up.                                                         | `3-watch-loop`           | Missing pilot evidence and operator-facing guidance.                                                          | archived |
-| `5-local-runner-wrapper` | `plans/tasks/5-local-runner-wrapper.md` | Add a Pairflow-provided built-in Codex runner that turns watch payloads into `ExecutePairflowPlan` invocations and returns bridge-compatible structured output. | `4-pilot-docs` | Missing last-mile executable proof for autonomous plan watch continuation. | draft |
+| `5-plan-watch-codex-runner` | `plans/tasks/5-plan-watch-codex-runner.md` | Add a Pairflow-provided built-in Codex runner that turns watch payloads into `ExecutePairflowPlan` invocations and returns bridge-compatible structured output. | `4-pilot-docs` | Missing last-mile executable proof for autonomous plan watch continuation. | draft |
 
 ## Coverage Map
 
@@ -149,7 +149,7 @@ Progress update (2026-05-02): plan reopened with retrofit task `5-local-runner-w
 | Risk of degrading back to manual notification          | `3-watch-loop`           | Watch mode must invoke the runner by default; handoff-only output is dry-run/checkpoint/blocker behavior, not the success path.            |
 | Ambiguous remote story                                 | `4-pilot-docs`           | Documentation must say remote bubbles can be observed/routed only through local control plane; remote-only creation/start is out of scope. |
 | Missing confidence that V1 helps locally               | `4-pilot-docs`           | Pilot should use a real or fixture plan and include transcript/command evidence.                                                           |
-| Missing concrete runner executable                     | `5-local-runner-wrapper` | Replace placeholder `pairflow-plan-runner` guidance with config-driven built-in Codex runner behavior and non-dry-run pilot evidence.      |
+| Missing concrete runner executable                     | `5-plan-watch-codex-runner` | Replace placeholder `pairflow-plan-runner` guidance with config-driven built-in Codex runner behavior and non-dry-run pilot evidence.      |
 
 ## Dependencies and Order
 
