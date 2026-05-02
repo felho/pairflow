@@ -5,7 +5,7 @@ task_family_id: meta-approve-validation-gate
 sequence_key: "1"
 task_id: 1-meta-approve-validation-gate
 title: "Meta-Review Approve Validation Gate"
-status: approved
+status: implementable
 phase: phase1
 target_files:
   - "README.md"
