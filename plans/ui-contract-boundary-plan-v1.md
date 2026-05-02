@@ -14,8 +14,8 @@ task_order:
 task_tracker:
   - task_id: 1-ui-contract-foundation
     task_path: plans/tasks/1-ui-contract-foundation.md
-    status: implementable
-    notes: "Document refinement closed; ready for implementation bubble."
+    status: in_progress
+    notes: "Implementation bubble running: 1-ui-contract-foundation-impl."
   - task_id: 2-core-ui-contracts
     task_path: null
     status: not_created
@@ -110,7 +110,7 @@ tukrozve vagy vegyes strategiaval kezelve:
 
 | Task ID | Path | Purpose | Status |
 |---|---|---|---|
-| `1-ui-contract-foundation` | `plans/tasks/1-ui-contract-foundation.md` | Create the browser-safe `src/contracts/ui/**` foundation and hard-fail fitness guards for forbidden UI/runtime imports. | implementable |
+| `1-ui-contract-foundation` | `plans/tasks/1-ui-contract-foundation.md` | Create the browser-safe `src/contracts/ui/**` foundation and hard-fail fitness guards for forbidden UI/runtime imports. | in_progress |
 | `2-core-ui-contracts` | `plans/tasks/2-core-ui-contracts.md` | Move the smaller established mirrors behind the canonical surface: delete-bubble, lifecycle, meta-review route, state-validation, and remote-execution. | planned |
 | `3-ui-readmodel-contracts` | `plans/tasks/3-ui-readmodel-contracts.md` | Consolidate the wider UI API/read-model/action/event/error DTO surface and nested runtime-session/inbox/watchdog/review-policy/protocol views. | planned |
 

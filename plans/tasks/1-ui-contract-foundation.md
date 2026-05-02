@@ -5,7 +5,7 @@ task_family_id: ui-contract-foundation
 sequence_key: "1"
 task_id: 1-ui-contract-foundation
 title: "UI Contract Foundation"
-status: implementable
+status: in_progress
 phase: phase1
 target_files:
   - src/contracts/ui/index.ts
@@ -25,7 +25,7 @@ normative_refs:
 owners:
   - "felho"
 doc_bubble_id: 1-ui-contract-foundation-doc
-impl_bubble_id: null
+impl_bubble_id: 1-ui-contract-foundation-impl
 supersedes: []
 superseded_by: null
 archive_group: 2026-05-02-ui-contract-boundary-plan-v1
