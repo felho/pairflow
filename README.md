@@ -792,24 +792,24 @@ the watcher does not compute routes, approve bubbles, or mutate lifecycle state.
 
 ```bash
 # One foreground watch process with the default 60 second interval
-pairflow plan watch plans/local-plan-watch-plan-v1.md \
+pairflow plan watch plans/my-plan.md \
   --repo /path/to/repo \
   --runner-command pairflow-plan-runner
 
 # Single iteration for cron, smoke checks, or operator diagnostics
-pairflow plan watch plans/local-plan-watch-plan-v1.md \
+pairflow plan watch plans/my-plan.md \
   --repo /path/to/repo \
   --once \
   --runner-command pairflow-plan-runner
 
 # Discover trigger evidence and record a dry-run ledger observation only
-pairflow plan watch plans/local-plan-watch-plan-v1.md \
+pairflow plan watch plans/my-plan.md \
   --repo /path/to/repo \
   --once \
   --dry-run
 
 # Faster polling for a local pilot
-pairflow plan watch plans/local-plan-watch-plan-v1.md \
+pairflow plan watch plans/my-plan.md \
   --repo /path/to/repo \
   --interval-seconds 10 \
   --runner-command pairflow-plan-runner

@@ -2,8 +2,8 @@
 
 Status: pilot evidence
 Date: 2026-05-02
-Plan: `plans/local-plan-watch-plan-v1.md`
-Task: `plans/tasks/4-pilot-docs.md`
+Plan: `plans/archive/plans/2026-05-01-local-plan-watch-plan-v1.md`
+Task: `plans/archive/tasks/2026-05-01-local-plan-watch/4-pilot-docs.md`
 
 ---
 
@@ -81,7 +81,7 @@ Safe live dry-run command:
 ```bash
 bash ./scripts/run-evidence.sh .pairflow/evidence/plan-watch-live-dry-run.log \
   "plan watch live dry-run no-trigger" -- \
-  pairflow plan watch plans/local-plan-watch-plan-v1.md \
+  pairflow plan watch plans/archive/plans/2026-05-01-local-plan-watch-plan-v1.md \
     --repo /Users/felho/dev/pairflow \
     --once \
     --dry-run
@@ -130,7 +130,7 @@ Live mutation boundary:
 Dry-run observation:
 
 ```bash
-pairflow plan watch plans/local-plan-watch-plan-v1.md \
+pairflow plan watch plans/archive/plans/2026-05-01-local-plan-watch-plan-v1.md \
   --repo /Users/felho/dev/pairflow \
   --once \
   --dry-run
@@ -142,7 +142,7 @@ result is not successful automation; it is observation evidence only.
 Local runner invocation:
 
 ```bash
-pairflow plan watch plans/local-plan-watch-plan-v1.md \
+pairflow plan watch plans/archive/plans/2026-05-01-local-plan-watch-plan-v1.md \
   --repo /Users/felho/dev/pairflow \
   --once \
   --runner-command pairflow-plan-runner
@@ -156,7 +156,7 @@ output, not watcher output.
 Foreground polling:
 
 ```bash
-pairflow plan watch plans/local-plan-watch-plan-v1.md \
+pairflow plan watch plans/archive/plans/2026-05-01-local-plan-watch-plan-v1.md \
   --repo /Users/felho/dev/pairflow \
   --interval-seconds 60 \
   --runner-command pairflow-plan-runner

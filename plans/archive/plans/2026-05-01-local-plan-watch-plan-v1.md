@@ -4,8 +4,8 @@ artifact_id: plan_local_plan_watch_v1
 plan_id: local-plan-watch
 created_on: "2026-05-01"
 title: "Local Plan Watch Plan (V1)"
-status: approved
-plan_status: approved
+status: done
+plan_status: done
 prd_ref: null
 owners:
   - "felho"
@@ -14,7 +14,7 @@ task_order:
   - 2-bubble-trigger-index
   - 3-watch-loop
   - 4-pilot-docs
-active_task_id: 4-pilot-docs
+active_task_id: null
 archive_group: 2026-05-01-local-plan-watch
 task_tracker:
   - task_id: 1-agent-runner-bridge
@@ -27,8 +27,8 @@ task_tracker:
     task_path: plans/archive/tasks/2026-05-01-local-plan-watch/3-watch-loop.md
     status: archived
   - task_id: 4-pilot-docs
-    task_path: plans/tasks/4-pilot-docs.md
-    status: in_progress
+    task_path: plans/archive/tasks/2026-05-01-local-plan-watch/4-pilot-docs.md
+    status: archived
 ---
 
 # Plan: Local Plan Watch (V1)
@@ -118,6 +118,8 @@ Progress update (2026-05-01): document bubble `2-bubble-trigger-index-doc` close
 
 Progress update (2026-05-01): implementation bubble `3-watch-loop-impl` closed and merged after satisfying the configured multi-clean-meta-review gate. Task `3-watch-loop` is archived and the active task advanced to `4-pilot-docs`.
 
+Progress update (2026-05-02): implementation bubble `4-pilot-docs-impl` closed and merged after satisfying the configured multi-clean-meta-review gate. Task `4-pilot-docs` is archived and the local plan watch V1 plan is complete.
+
 ## Open Task List
 
 | Task ID                  | Task Path | Purpose                                                                                                                                                                                  | Depends On               | Closes Gap                                                                                                    | Status      |
@@ -125,7 +127,7 @@ Progress update (2026-05-01): implementation bubble `3-watch-loop-impl` closed a
 | `1-agent-runner-bridge`  | `plans/archive/tasks/2026-05-01-local-plan-watch/1-agent-runner-bridge.md` | Add a local supervised agent-runner bridge that invokes `ExecutePairflowPlan` with compact continuation input, captures the result, and distinguishes settled checkpoints from blockers. | `N/A`                    | Missing executable bridge between trigger detection and the existing orchestration skill.                     | archived |
 | `2-bubble-trigger-index` | `plans/archive/tasks/2026-05-01-local-plan-watch/2-bubble-trigger-index.md`    | Add lightweight plan-linked bubble discovery and trigger evidence collection for approval-ready bubble states without resolving full plan routes.                                        | `1-agent-runner-bridge`  | Missing trustworthy trigger source for automatic continuation after a bubble reaches the human approval gate. | archived |
 | `3-watch-loop`           | `plans/archive/tasks/2026-05-01-local-plan-watch/3-watch-loop.md`    | Add local foreground `plan watch` polling with configurable interval, persisted watcher ledger, approval-ready trigger handling, dedupe, and autonomous runner invocation.               | `2-bubble-trigger-index` | Missing local trigger process and duplicate-invocation guard.                                                 | archived |
-| `4-pilot-docs`           | `plans/tasks/4-pilot-docs.md`    | Validate the local watcher on a representative plan, document V1 boundaries, and record deferred remote-control-plane follow-up.                                                         | `3-watch-loop`           | Missing pilot evidence and operator-facing guidance.                                                          | in_progress |
+| `4-pilot-docs`           | `plans/archive/tasks/2026-05-01-local-plan-watch/4-pilot-docs.md`    | Validate the local watcher on a representative plan, document V1 boundaries, and record deferred remote-control-plane follow-up.                                                         | `3-watch-loop`           | Missing pilot evidence and operator-facing guidance.                                                          | archived |
 
 ## Coverage Map
 
