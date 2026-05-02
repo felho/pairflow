@@ -39,7 +39,13 @@ export interface FinalizeCurrentRunMetaReviewGateInput {
       | "agents"
       | "review_policy"
     > & Partial<
-      Pick<BubbleConfig, "pairflow_command_profile" | "commands" | "validation_target">
+      Pick<
+        BubbleConfig,
+        | "pairflow_command_profile"
+        | "commands"
+        | "review_artifact_type"
+        | "validation_target"
+      >
     >;
     bubblePaths: {
       artifactsDir: string;

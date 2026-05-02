@@ -41,8 +41,18 @@ function normalizeCommand(command: string | undefined): string | undefined {
 }
 
 function resolveMetaReviewApproveValidationPolicy(
-  bubbleConfig: Partial<Pick<BubbleConfig, "commands" | "validation_target">>
+  bubbleConfig: Partial<
+    Pick<BubbleConfig, "commands" | "review_artifact_type" | "validation_target">
+  >
 ): ResolvedMetaReviewApproveValidationPolicy {
+  if (bubbleConfig.review_artifact_type === "document") {
+    return {
+      policyState: "policy_explicit_null",
+      commands: [],
+      requiredCommandSetId: "docs-only"
+    };
+  }
+
   const required = bubbleConfig.commands?.meta_review_approve_required;
 
   if (required === undefined) {

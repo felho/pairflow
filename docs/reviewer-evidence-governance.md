@@ -142,9 +142,11 @@ For `review_artifact_type = "document"` or equivalent docs-only work:
 3. If the document or handoff makes an explicit command-success claim, that
    claim must be backed by trustworthy evidence or softened to an untrusted /
    not-run statement.
-4. Docs-only review should prioritize document consistency, cross-document drift,
+4. Meta-review approve gates follow the same docs-only guard: configured
+   runtime validation is not required before human approval for document scope.
+5. Docs-only review should prioritize document consistency, cross-document drift,
    contract clarity, acceptance criteria, and implementation readiness.
-5. Parser-sensitive runtime evidence failures should not block docs-only work
+6. Parser-sensitive runtime evidence failures should not block docs-only work
    unless they create a summary/artifact contradiction or invalidate an explicit
    claim.
 

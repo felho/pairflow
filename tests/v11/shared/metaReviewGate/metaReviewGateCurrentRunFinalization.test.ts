@@ -270,6 +270,9 @@ async function createCleanFinalizeInputFixture(input?: {
   initialCleanRuns?: number;
   omitValidationRunner?: boolean;
   omitWorktreePath?: boolean;
+  reviewArtifactType?: Parameters<
+    typeof finalizeCurrentRunMetaReviewGate
+  >[0]["resolved"]["bubbleConfig"]["review_artifact_type"];
   runnerErrorStage?: "pre_header" | "spawn" | "settle" | "stdout" | "stderr";
   runExitCodes?: Partial<Record<string, number>>;
   runExitCode?: number;
@@ -332,6 +335,7 @@ async function createCleanFinalizeInputFixture(input?: {
         bubbleId: "b_meta_gate_finalize_threshold_01",
         bubbleConfig: {
           pairflow_command_profile: "external",
+          review_artifact_type: input?.reviewArtifactType ?? "code",
           watchdog_timeout_minutes: 30,
           agents: {
             implementer: "claude",
@@ -511,6 +515,23 @@ describe("finalizeCurrentRunMetaReviewGate", () => {
         logPathPrefix: "meta-review-approve-validation"
       }
     ]);
+  });
+
+  it("skips configured meta-review approve validation for document review artifacts", async () => {
+    const fixture = await createCleanFinalizeInputFixture({
+      reviewArtifactType: "document",
+      commands: {
+        test: "pnpm test",
+        typecheck: "pnpm typecheck",
+        meta_review_approve_required: ["test"]
+      }
+    });
+
+    const result = await finalizeCurrentRunMetaReviewGate(fixture.finalizeInput);
+
+    expect(result.route).toBe("human_gate_approve");
+    expect(result.state.state).toBe("READY_FOR_HUMAN_APPROVAL");
+    expect(fixture.runValidationCalls).toEqual([]);
   });
 
   it("passes validation target metadata to the approve validation runner", async () => {
