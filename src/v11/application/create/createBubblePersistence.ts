@@ -9,7 +9,7 @@ import {
   resolveDocContractGateArtifactPath,
   writeDocContractGateArtifact
 } from "../../shared/gates/docContractGateArtifactDefaults.js";
-import { appendInitialTaskEnvelope } from "../../shared/create/createInitialTaskEnvelopeAppend.js";
+import { appendInitialTaskEnvelope } from "./createInitialTaskEnvelopeAppend.js";
 import { renderBubbleConfigToml } from "../../../config/bubbleConfig.js";
 import type {
   BubbleConfig,
