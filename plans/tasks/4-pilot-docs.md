@@ -5,7 +5,7 @@ task_family_id: pilot-docs
 sequence_key: "4"
 task_id: 4-pilot-docs
 title: "Local Plan Watch Pilot Docs"
-status: implementable
+status: in_progress
 phase: phase4
 target_files:
   - "README.md"
@@ -17,7 +17,7 @@ system_context_ref: docs/pairflow-initial-design.md
 owners:
   - "felho"
 doc_bubble_id: 4-pilot-docs-doc
-impl_bubble_id: null
+impl_bubble_id: 4-pilot-docs-impl
 supersedes: []
 superseded_by: null
 archive_group: 2026-05-01-local-plan-watch

@@ -28,7 +28,7 @@ task_tracker:
     status: archived
   - task_id: 4-pilot-docs
     task_path: plans/tasks/4-pilot-docs.md
-    status: implementable
+    status: in_progress
 ---
 
 # Plan: Local Plan Watch (V1)
@@ -125,7 +125,7 @@ Progress update (2026-05-01): implementation bubble `3-watch-loop-impl` closed a
 | `1-agent-runner-bridge`  | `plans/archive/tasks/2026-05-01-local-plan-watch/1-agent-runner-bridge.md` | Add a local supervised agent-runner bridge that invokes `ExecutePairflowPlan` with compact continuation input, captures the result, and distinguishes settled checkpoints from blockers. | `N/A`                    | Missing executable bridge between trigger detection and the existing orchestration skill.                     | archived |
 | `2-bubble-trigger-index` | `plans/archive/tasks/2026-05-01-local-plan-watch/2-bubble-trigger-index.md`    | Add lightweight plan-linked bubble discovery and trigger evidence collection for approval-ready bubble states without resolving full plan routes.                                        | `1-agent-runner-bridge`  | Missing trustworthy trigger source for automatic continuation after a bubble reaches the human approval gate. | archived |
 | `3-watch-loop`           | `plans/archive/tasks/2026-05-01-local-plan-watch/3-watch-loop.md`    | Add local foreground `plan watch` polling with configurable interval, persisted watcher ledger, approval-ready trigger handling, dedupe, and autonomous runner invocation.               | `2-bubble-trigger-index` | Missing local trigger process and duplicate-invocation guard.                                                 | archived |
-| `4-pilot-docs`           | `plans/tasks/4-pilot-docs.md`    | Validate the local watcher on a representative plan, document V1 boundaries, and record deferred remote-control-plane follow-up.                                                         | `3-watch-loop`           | Missing pilot evidence and operator-facing guidance.                                                          | implementable |
+| `4-pilot-docs`           | `plans/tasks/4-pilot-docs.md`    | Validate the local watcher on a representative plan, document V1 boundaries, and record deferred remote-control-plane follow-up.                                                         | `3-watch-loop`           | Missing pilot evidence and operator-facing guidance.                                                          | in_progress |
 
 ## Coverage Map
 

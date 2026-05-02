@@ -76,6 +76,29 @@ Observed result on 2026-05-02:
 - Total: 2 test files passed, 41 tests passed.
 - Evidence log: `.pairflow/evidence/plan-watch-focused.log`.
 
+Safe live dry-run command:
+
+```bash
+bash ./scripts/run-evidence.sh .pairflow/evidence/plan-watch-live-dry-run.log \
+  "plan watch live dry-run no-trigger" -- \
+  pairflow plan watch plans/local-plan-watch-plan-v1.md \
+    --repo /Users/felho/dev/pairflow \
+    --once \
+    --dry-run
+```
+
+Observed result on 2026-05-02:
+
+```text
+plan watch: idle candidates=0 deferred=0
+PAIRFLOW_EVIDENCE_COMMAND_RESULT command="plan watch live dry-run no-trigger" status=pass exit=0
+```
+
+This live command proves the safe operator path for `--once`, `--dry-run`, and
+the no-trigger case on the representative plan at the time of the pilot. It is
+not a successful automation claim because no approval-ready trigger was present
+and no runner was invoked.
+
 Live mutation boundary:
 
 - This docs-only bubble did not run a non-dry-run watcher against a live
@@ -92,12 +115,12 @@ Live mutation boundary:
 
 | Behavior | Evidence | Result |
 |---|---|---|
-| No trigger | `runPlanWatchIteration` with no candidates returns `status="idle"` and does not invoke the runner. | Verified by focused watch-loop test run. |
+| No trigger | `runPlanWatchIteration` with no candidates returns `status="idle"` and does not invoke the runner; the safe live dry-run produced `plan watch: idle candidates=0 deferred=0`. | Verified by focused watch-loop test run and `.pairflow/evidence/plan-watch-live-dry-run.log`. |
 | Approval-ready trigger | Candidate with `observedState="READY_FOR_HUMAN_APPROVAL"` reserves a ledger record, invokes the runner once, and completes the same record. The same trigger contract also accepts legacy `READY_FOR_APPROVAL`; this pilot mirrors that compatibility as a documented alias rather than claiming a separate live run. | Verified by focused watch-loop test run plus the `LinkedBubbleApprovalReadyState` contract. |
 | Runner result capture | Completed run record stores `runnerStatus`, `runnerReasonCode`, `changedArtifacts`, and `routeLedgerSummary`. | Verified by focused watch-loop test run and ledger contract assertions. |
 | Duplicate suppression | Existing completed run record for the same dedupe key returns `status="duplicate_skipped"` and does not invoke the runner again. | Verified by focused watch-loop test run. |
-| Dry-run distinction | Dry-run persists or reuses a ledger record with `mode="dry_run"` and `recordState="dry_run_observed"`; it does not reserve a `mode="run"` record or invoke the runner. | Verified by focused watch-loop test run and CLI option assertions. |
-| Interval behavior | Default interval is `60_000` ms; configured `--interval-seconds <n>` maps to `intervalMs=n*1000`; `--once` exits after one iteration. | Verified by focused CLI parser and watch-loop test run. |
+| Dry-run distinction | Dry-run persists or reuses a ledger record with `mode="dry_run"` and `recordState="dry_run_observed"` when trigger evidence exists; it does not reserve a `mode="run"` record or invoke the runner. In the live no-trigger dry-run, no runner was invoked and no successful automation was claimed. | Verified by focused watch-loop test run, CLI option assertions, and `.pairflow/evidence/plan-watch-live-dry-run.log`. |
+| Interval behavior | Default interval is `60_000` ms; configured `--interval-seconds <n>` maps to `intervalMs=n*1000`; `--once` exits after one iteration. The live dry-run used `--once` to prove single-iteration operator behavior without waiting for the default interval. | Verified by focused CLI parser, watch-loop test run, and `.pairflow/evidence/plan-watch-live-dry-run.log`. |
 | Human/checkpoint/blocker wording | Runner statuses map to `runner_settled_checkpoint`, `runner_human_checkpoint`, or `blocked`; blocked results carry `blockedReasonKind`. | Proven by `PlanWatchIterationStatus` and runner bridge result contract. |
 | Remote boundary | Remote bubble evidence must come from local routed status/list; stale or unavailable remote evidence fails closed. | Documented in `docs/remote-bubble-execution.md`; remote-only progression remains deferred. |
 | Live ledger record | Non-dry-run live runner invocation was intentionally not executed in this docs-only bubble. | Fail-closed by mutation boundary; use a disposable approval-ready bubble for a live operator pilot. |
