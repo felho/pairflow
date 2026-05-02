@@ -5,7 +5,7 @@ task_family_id: meta-approve-validation-gate
 sequence_key: "1"
 task_id: 1-meta-approve-validation-gate
 title: "Meta-Review Approve Validation Gate"
-status: implementable
+status: in_progress
 phase: phase1
 target_files:
   - "README.md"
@@ -38,7 +38,7 @@ normative_refs:
 owners:
   - "felho"
 doc_bubble_id: meta-approve-validation-doc
-impl_bubble_id: null
+impl_bubble_id: meta-approve-validation-impl
 supersedes: []
 superseded_by: null
 archive_group: 2026-05-02-meta-review-approve-validation-gate-plan-v1

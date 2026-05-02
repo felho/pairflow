@@ -16,7 +16,7 @@ archive_group: 2026-05-02-meta-review-approve-validation-gate-plan-v1
 task_tracker:
   - task_id: 1-meta-approve-validation-gate
     task_path: plans/tasks/1-meta-approve-validation-gate.md
-    status: implementable
+    status: in_progress
     notes: "Separate PASS-loop validation from full-test validation required before meta-review approve can route to human approval."
 ---
 
