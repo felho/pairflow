@@ -5,7 +5,7 @@ import type {
   StopBubbleResult
 } from "./stopCommandContract.js";
 import { stopCommandDefaults } from "./stopCommandDefaults.js";
-import { executeStopCancellationMutation } from "../../shared/stop/stopCancellationMutation.js";
+import { executeStopCancellationMutation } from "../../defaults/stop/stopCancellationMutation.js";
 import {
   StopBubbleError,
   createStopBubbleError,
