@@ -261,6 +261,12 @@ summarize or reference these rows, but must not define conflicting behavior.
 |---|---|---|---|---|
 | <CCM*> | <L0/branch inventory/§2/§4/§4a/§6/parent plan/etc.> | <what must stay aligned> | <yes/no + source row> | <how checked> |
 
+### 0l) Capability Closure (if applicable)
+
+| Capability Claim | Activation Trigger | Entrypoint | Config Owner | Repo-Provided Parts | External Prerequisites | Success Output | Failure Output | Operator/User/System Path | Last-Mile Proof | Closure Classification |
+|---|---|---|---|---|---|---|---|---|---|---|
+| <claim or `N/A`> | <trigger or `N/A`> | <entrypoint or `N/A`> | <repo|operator|deployment|external service|N/A> | <repo/product-shipped parts> | <prereqs or `N/A`> | <observable success contract> | <fail-closed/error/unavailable contract> | <documented path> | <test/pilot/evidence or successor task> | <end_to_end|externally_activated|hook_only|foundation_only|deferred_activation|`N/A`> |
+
 ### 1) Call-site Matrix
 
 | ID | File | Function/Entry | Exact Signature (args -> return) | Insertion Point | Expected Behavior | Priority | Timing | Evidence |
@@ -328,13 +334,17 @@ Use this section to track non-blocking review items (`later-hardening`) that sho
 7. If an authority fan-out exists, the authority boundary map must stay consistent with the bounded task scope.
 8. If baseline behavior is removed or replaced, the task must name the exact replacement path and the proof expected from validation.
 9. If `plan_ref` is non-null, `Plan Linkage` and the inherited validation/exit expectation are mandatory and must stay consistent with successor impact notes.
-10. If `target_files` are known, `Scope Reality / Shape Proof` is mandatory and the declared task shape must match the inspected touched scope.
-11. If the task refines an already-closed authority/shared contract, `Canonical Contract Anchors` and `Canonical Contract Preservation` are mandatory.
-12. New terminology for an existing contract must map back to source anchors and field roles explicitly before it can become `required-now`.
-13. If the Contract-Dense Task Gate triggers, `Canonical Contract Matrix`,
+10. If a capability claim is in scope, `Capability Closure` must align with
+   Done Definition / acceptance wording and the test matrix. End-to-end claims
+   require last-mile proof; hook/foundation/deferred work must not assert fully
+   usable automation.
+11. If `target_files` are known, `Scope Reality / Shape Proof` is mandatory and the declared task shape must match the inspected touched scope.
+12. If the task refines an already-closed authority/shared contract, `Canonical Contract Anchors` and `Canonical Contract Preservation` are mandatory.
+13. New terminology for an existing contract must map back to source anchors and field roles explicitly before it can become `required-now`.
+14. If the Contract-Dense Task Gate triggers, `Canonical Contract Matrix`,
    `Ownership and Deferred Semantics`, and `Mirrored Surface Checklist` are
    mandatory.
-14. If structured input/output is part of a dense contract, `Structured Contract
+15. If structured input/output is part of a dense contract, `Structured Contract
    Rules` is mandatory and must use allowlist/rejection behavior instead of
    prose-only validity language.
 

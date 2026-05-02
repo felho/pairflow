@@ -213,6 +213,53 @@ Policy:
 5. If a docs-only refinement changes implementation-significant meaning, treat it as a contract-risk issue, not as harmless wording polish.
 6. If drift is ambiguous rather than clearly absent, route to refinement or plan-level reconciliation instead of approving on style grounds.
 
+## Capability Closure Gate (Mandatory When Triggered)
+
+Before drafting, refining, or reviewing an artifact that claims a usable
+capability, run the `Capability Closure Gate`.
+
+Use `references/Capability-Closure-Gate.md`.
+
+Run this gate when the artifact claims that a user, operator, system, agent,
+scheduler, webhook, CLI, UI, CI/CD step, notification, import/export path,
+background job, config-driven behavior, or integration path can be used or has
+been automated, wired, configured, supported, or completed.
+
+Artifact-specific minimums:
+1. `Plan`
+   - keep this lightweight but explicit:
+   - capability claim,
+   - closure classification,
+   - activation path,
+   - repo-provided vs external boundary,
+   - last-mile proof status.
+2. `Task`
+   - include the detailed activation trigger, entrypoint, config owner,
+     shipped/external boundary, success/failure output contract, and last-mile
+     proof when the task owns activation or closes a parent-plan capability gap.
+3. `ReviewSpec`
+   - compare the Done Definition, acceptance criteria, and validation strategy
+     against the capability closure classification and proof.
+
+Policy:
+1. Classify each capability claim as `end_to_end`, `externally_activated`,
+   `hook_only`, `foundation_only`, or `deferred_activation`.
+2. A Done Definition must not claim a stronger capability than the closure
+   classification supports.
+3. `end_to_end` claims require a concrete last-mile proof using the same
+   documented path a real user, operator, system, or agent would use.
+4. `externally_activated` claims require explicit external prerequisites and
+   ownership.
+5. `hook_only`, `foundation_only`, and `deferred_activation` work must not use
+   completion wording that implies usable automation or full capability.
+6. Words such as `configured`, `wired`, `integrated`, `available`, `supported`,
+   `ready`, and `automation` are not sufficient unless the activation owner and
+   shipped/external boundary are named.
+7. If a pilot proves only an internal seam, dry-run, placeholder, mock, or
+   undocumented local wrapper, it cannot prove an `end_to_end` claim.
+8. If a missing activation path is required to satisfy a parent plan, route to
+   plan refinement or a new task split before approval.
+
 ## Target-File Reality Check (Mandatory for Task Drafting and Task Review)
 
 When `target_files` are known and the files exist, inspect them and, when needed, adjacent entrypoints/call-sites.
@@ -495,6 +542,14 @@ Policy:
    - forbidden reinterpretations,
    - and drift status.
 34. A refined artifact must not be marked implementable/approvable if it is only locally coherent but contradicts repo-local source anchors for the same contract.
+35. Plans or tasks that claim a usable capability must record capability closure
+    classification and must keep Done Definition / acceptance wording aligned
+    with that classification.
+36. `end_to_end` capability claims require a last-mile proof; hook/foundation/
+    deferred work must not be worded as fully usable automation.
+37. Ambiguous activation language such as `configured`, `wired`, `integrated`,
+    `available`, `supported`, or `ready` must name the configuration owner and
+    shipped/external boundary before approval.
 
 ## Templates and References
 
@@ -508,6 +563,7 @@ Policy:
 - Complexity risk gate: `references/Complexity-Risk-Gate.md`
 - Bounded-task-shape gate: `references/Bounded-Task-Shape-Gate.md`
 - Contract-dense task gate: `references/Contract-Dense-Task-Gate.md`
+- Capability closure gate: `references/Capability-Closure-Gate.md`
 - Remaining-task viability check: `references/Remaining-Task-Viability-Check.md`
 - Pairflow execution metadata contract:
   `../ExecutePairflowPlan/references/Plan-Task-Metadata-Contract.md`

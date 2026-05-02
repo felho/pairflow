@@ -30,6 +30,15 @@ task_tracker:
 1. <What must be true when the plan is complete.>
 2. <What evidence or behavior proves completion.>
 
+## Capability Closure
+
+Use this section when the plan claims a usable runtime/operator/user/system
+capability. Otherwise say `N/A`.
+
+| Capability Claim | Closure Classification | Activation Path | Repo-Provided Boundary | External Prerequisites | Last-Mile Proof |
+|---|---|---|---|---|---|
+| <claim or `N/A`> | <end_to_end|externally_activated|hook_only|foundation_only|deferred_activation|`N/A`> | <trigger/entrypoint/path or `N/A`> | <what this repo/product ships or `N/A`> | <explicit prerequisites or `N/A`> | <proven evidence, planned task, external proof, or `N/A`> |
+
 ## Guiding Principles
 
 1. Business invariant: <What must remain true from the business/domain perspective.>

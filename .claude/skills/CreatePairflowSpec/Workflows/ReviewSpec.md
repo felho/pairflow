@@ -10,6 +10,7 @@ This workflow exists to catch:
 - over-wide plans before task creation,
 - over-wide tasks before implementation,
 - plan/task drift after refinement,
+- capability claims that outpace their activation path or proof,
 - and cases where the remaining open tasks are no longer viable if the current artifact is accepted unchanged.
 
 ## Input
@@ -32,6 +33,8 @@ Allowed:
 6. task target-file reality checks that verify bounded-slice claims
 7. minimal code-path/entrypoint inspection needed to decide actual scope ownership
 8. repo-local source-anchor comparison when a refined artifact touches a closed authority/shared contract
+9. capability-closure review that compares Done Definition / acceptance claims
+   against activation path, ownership boundary, and last-mile proof
 
 Forbidden:
 1. implementation/code review for bugs, correctness defects, or quality grading
@@ -125,7 +128,8 @@ For `plan-mode`, apply:
 1. Execution metadata gate when applicable
 2. `Control-Model Readiness Gate`
 3. `Closed-Contract Drift Check` when applicable
-4. `Remaining-Task Viability Check`
+4. `Capability Closure Gate` when applicable
+5. `Remaining-Task Viability Check`
 
 For `task-mode`, apply:
 1. Execution metadata gate when applicable
@@ -137,7 +141,8 @@ For `task-mode`, apply:
 7. `Bounded-Task-Shape Gate`
 8. `Complexity-Risk Gate`
 9. `Contract-Dense Task Gate` when applicable
-10. `Remaining-Task Viability Check`
+10. `Capability Closure Gate` when applicable
+11. `Remaining-Task Viability Check`
 
 Policy:
 1. Review whether the artifact still fits the planning shape it claims.
@@ -149,6 +154,9 @@ Policy:
 7. Do not approve a contract-dense task just because each section is locally
    plausible; review the canonical matrix first, then verify all mirrored
    surfaces remain subordinate to it.
+8. Do not approve an artifact whose Done Definition, acceptance criteria, or
+   validation strategy claims a stronger capability than its activation path and
+   proof support.
 
 ### 2a) Closed-Contract Drift Check (`plan-mode|task-mode` when applicable)
 
@@ -220,6 +228,47 @@ Outcome:
 3. If only a mirrored surface is stale while the matrix is clear, require local
    `refine_task` and cite the stale surface.
 
+### 2d) Capability Closure Gate (`plan-mode|task-mode` when applicable)
+
+Use `references/Capability-Closure-Gate.md`.
+
+Run this when the reviewed artifact claims that a user, operator, system, agent,
+scheduler, webhook, CLI, UI, CI/CD step, notification, import/export path,
+background job, config-driven behavior, or integration path is usable,
+automated, wired, configured, supported, available, or complete.
+
+Required checks:
+1. Identify each capability claim in objective, Done Definition, acceptance
+   criteria, validation strategy, L0/L1, or task linkage.
+2. Verify the closure classification is explicit:
+   - `end_to_end`
+   - `externally_activated`
+   - `hook_only`
+   - `foundation_only`
+   - `deferred_activation`
+3. Verify the activation trigger and entrypoint are named when runtime behavior
+   is claimed.
+4. Verify configuration owner and repo-provided vs external boundary are named
+   when config, env, external services, installed tools, credentials, local
+   executables, operator setup, feature flags, or deployment state are required.
+5. Verify success and failure output contracts exist when the task owns
+   activation or an end-to-end claim.
+6. Verify the last-mile proof uses the same documented path a real user,
+   operator, system, or agent would use.
+7. Verify hook/foundation/deferred artifacts do not use completion wording that
+   implies full usable automation.
+
+Outcome:
+1. In `plan-mode`, return `refine_plan` when the Done Definition is stronger
+   than the closure classification.
+2. In `plan-mode`, return `split_plan` or `refine_plan` when a missing activation
+   path needs a new open task.
+3. In `task-mode`, return `refine_task` when the task can locally align claim,
+   activation boundary, and proof.
+4. In `task-mode`, return `route_back_to_plan` when the task cannot satisfy the
+   parent plan's capability claim without changing plan sequencing or adding a
+   new task.
+
 ### 3) Review in `plan-mode`
 
 When reviewing a `plan`, check:
@@ -229,7 +278,9 @@ When reviewing a `plan`, check:
 4. whether the plan-level control model is explicit enough for downstream tasks
 5. whether any lightweight sequencing note is sufficient where multi-consumer authority ordering matters
 6. whether the plan silently reinterprets any already-closed canonical contract
-7. whether downstream open tasks remain viable if this plan is accepted as written
+7. whether capability claims are aligned with activation path, closure
+   classification, repo/external boundary, and last-mile proof
+8. whether downstream open tasks remain viable if this plan is accepted as written
 
 Decision outcomes:
 1. `approve_plan`
@@ -257,6 +308,9 @@ When reviewing a `task`, check:
 9. whether downstream open tasks remain viable if this task is accepted as written
 10. whether contract-dense tasks have one canonical matrix and a complete
     mirrored-surface checklist
+11. whether capability closure claims inherited from the parent plan or created
+    by this task are aligned with activation path, output contracts, and
+    last-mile proof
 
 Decision outcomes:
 1. `approve_task`
@@ -313,6 +367,8 @@ Always include:
 12. when the decision is `refine_plan` or `refine_task`, whether a repeated fresh-context ReviewSpec pass is required before approval or downstream execution
 13. when the Contract-Dense Task Gate applies, the canonical matrix status and
     mirrored-surface checklist status
+14. when the Capability Closure Gate applies, the closure classification,
+    activation boundary status, and last-mile proof status
 
 ### 7) Output rules
 
@@ -333,6 +389,9 @@ Additional task-mode rule:
 6. If the issue is contract-dense drift, phrase it as missing canonical matrix,
    stale mirrored surface, or leaked successor-owned semantics, not as generic
    wording polish.
+7. If the issue is capability-closure drift, phrase it as claim/proof mismatch,
+   ambiguous activation owner, missing shipped/external boundary, or missing
+   last-mile proof, not as a style nit.
 
 ## Output
 

@@ -40,7 +40,14 @@ The plan is a coverage and dependency artifact, not a duplicate task-spec reposi
    - which downstream consume families remain,
    - whether cleanup/recovery is included now or deferred,
    - whether success/completion proof cutover is included now or deferred.
-7. Do not duplicate task-internal bounded-slice reasoning in the plan unless remaining-task viability or ordering depends on it.
+7. If the objective, Done Definition, or validation strategy claims a usable
+   capability, extract the minimum capability-closure context:
+   - capability claim,
+   - activation path,
+   - repo-provided vs external boundary,
+   - last-mile proof status,
+   - whether any open task owns missing activation.
+8. Do not duplicate task-internal bounded-slice reasoning in the plan unless remaining-task viability or ordering depends on it.
 
 ### 1a.0) Establish execution metadata
 
@@ -102,6 +109,49 @@ Policy:
 2. A refined plan must not silently reinterpret a closed canonical contract just because the new wording sounds cleaner.
 3. If drift is ambiguous or unauthorized, stop and refine the plan before treating its open tasks as implementation-ready.
 
+### 1a.2) Run the Capability Closure Gate
+
+Use `references/Capability-Closure-Gate.md`.
+
+Run this when the plan objective, Done Definition, validation strategy, or open
+task list claims that a user, operator, system, agent, scheduler, webhook, CLI,
+UI, CI/CD step, notification, import/export path, background job, config-driven
+behavior, or integration path is usable, automated, wired, configured,
+supported, available, or complete.
+
+Required plan-level output:
+1. `capability_claim`
+2. `closure_classification`:
+   - `end_to_end`
+   - `externally_activated`
+   - `hook_only`
+   - `foundation_only`
+   - `deferred_activation`
+3. activation path:
+   - trigger and entrypoint at plan-level granularity
+4. repo-provided vs external boundary:
+   - what this repo/product ships
+   - what an operator, deployment, external service, installed tool, or later
+     task must supply
+5. last-mile proof status:
+   - already proven,
+   - planned in a named open task,
+   - explicitly external,
+   - or out of scope because the plan is hook/foundation/deferred only
+
+Policy:
+1. Keep this section lightweight in the plan; detailed activation contracts
+   belong in the task that owns activation.
+2. The Done Definition must not claim `end_to_end` usability when the plan is
+   only `hook_only`, `foundation_only`, or `deferred_activation`.
+3. If the plan is `externally_activated`, name the external prerequisite and
+   owner explicitly.
+4. If the plan claims `end_to_end`, the validation strategy must include a
+   last-mile proof, or an open task must clearly own producing that proof.
+5. Ambiguous words such as `configured`, `wired`, `integrated`, `available`,
+   `supported`, `ready`, or `automation` must be resolved into owner/boundary
+   language before finalizing.
+
 ### 1b) Build the Decomposition
 
 1. Identify the remaining plan-level gaps that must be closed to reach the objective.
@@ -110,15 +160,20 @@ Policy:
    - one clear purpose,
    - a clear predecessor/dependency position,
    - and a clear plan-level gap it closes.
-3. Keep the plan minimal:
+3. If a capability closure gap exists, ensure an open task owns the missing
+   activation path or explicitly classify that capability as external, hook-only,
+   foundation-only, or deferred.
+4. Keep the plan minimal:
    - record what each task is for,
    - record ordering/dependencies,
    - record progress/status,
    - record successor/deferred work,
    - and do not mirror each task's internal risk triage, mutation branches, closure-budget math, or bounded-task shape.
-4. Use authority fan-out, complexity, and closure-budget reasoning as decomposition aids, but do not dump their full intermediate analysis into the plan.
-5. If multiple tasks overlap the same plan-level gap, make the sequencing explicit or simplify the task list so ownership is unambiguous.
-6. If an open gap would simultaneously:
+5. Use authority fan-out, complexity, closure-budget, and capability-closure
+   reasoning as decomposition aids, but do not dump their full intermediate
+   analysis into the plan.
+6. If multiple tasks overlap the same plan-level gap, make the sequencing explicit or simplify the task list so ownership is unambiguous.
+7. If an open gap would simultaneously:
    - move the canonical success/completion proof boundary,
    - add or tighten post-success cleanup/recovery semantics,
    - and align final result/status/event semantics,
@@ -187,6 +242,12 @@ Ask only if blocker data is missing:
    - no obsolete task left active without note,
    - no missing successor created by a recent split.
 11. If the plan refines an already-closed canonical contract, the wording must still match repo-local source anchors or explicitly cite an authorized reinterpretation.
+12. Capability claims are aligned with their closure classification:
+   - no `end_to_end` Done Definition without last-mile proof or a named open
+     task that owns it,
+   - no hook/foundation/deferred work worded as fully usable automation,
+   - no ambiguous configured/wired/integrated language without owner and
+     shipped/external boundary.
 
 ### 5) Finalize
 

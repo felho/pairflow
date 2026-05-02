@@ -38,6 +38,9 @@ Teams often have enough context already, but lose time in long interviews or end
 16. Mutable-flow tasks should make the precondition-before-side-effect boundary explicit, including invalid-input side-effect expectations.
 17. `ReviewSpec` is two-mode: `plan-mode` validates coverage/dependency/viability, while `task-mode` validates the task artifact plus target-file scope reality.
 18. Contract-dense tasks should use one canonical contract matrix, explicit ownership/deferred semantics, structured contract rules, and a mirrored-surface checklist instead of scattering equivalent truth across prose sections.
+19. Capability claims must be classified by closure level; end-to-end claims
+    require last-mile proof, while hook/foundation/deferred work must not use
+    completion wording that implies fully usable automation.
 
 ## Directory layout
 
@@ -56,6 +59,7 @@ CreatePairflowSpec/
 │   └── task-template.md
 ├── references/
 │   ├── Bounded-Task-Shape-Gate.md
+│   ├── Capability-Closure-Gate.md
 │   ├── Contract-Dense-Task-Gate.md
 │   ├── Remaining-Task-Viability-Check.md
 │   ├── L1-Contract-Boundaries.md

@@ -62,6 +62,10 @@ Create or refine a Pairflow task file using `L0 -> L1 -> L2`.
    - target success/completion proof source after this task,
    - final result/status/event surfaces that would reflect the changed proof,
    - any reused cleanup/delete/reconcile proof contract and whether parity with that contract is expected,
+   - any capability claim inherited from the parent plan or introduced by this
+     task,
+   - activation trigger, entrypoint, config owner, shipped/external boundary,
+     and last-mile proof needs when the task owns activation,
    - affected surfaces,
    - authority producer and consumer families,
    - shared contract consumers and compatibility risk,
@@ -304,6 +308,51 @@ Policy:
 3. If a reviewer finding changes a canonical matrix row, update every mirrored
    surface named by the checklist before handoff.
 
+### 1d.1a) Run the Capability Closure Gate
+
+Use `references/Capability-Closure-Gate.md`.
+
+Run this when the task:
+1. owns activation for a CLI/UI/operator/system/agent/webhook/scheduler/CI/deploy
+   path, notification, background job, import/export pipeline, external
+   integration, or config-driven runtime behavior,
+2. closes a parent-plan capability gap,
+3. changes acceptance criteria or validation for a usable capability,
+4. uses words such as `configured`, `wired`, `integrated`, `available`,
+   `supported`, `ready`, or `automation`,
+5. relies on external tools, credentials, services, local executables, operator
+   setup, feature flags, or deployment state for runtime behavior.
+
+Required output when active:
+1. `capability_claim`
+2. `activation_trigger`
+3. `entrypoint`
+4. `configuration_owner`
+5. `repo_provided_parts`
+6. `external_prerequisites`
+7. `success_output_contract`
+8. `failure_output_contract`
+9. `operator_or_user_path`
+10. `last_mile_proof`
+11. `closure_classification`:
+   - `end_to_end`
+   - `externally_activated`
+   - `hook_only`
+   - `foundation_only`
+   - `deferred_activation`
+
+Policy:
+1. If the task is `end_to_end`, the L1 test matrix or validation note must
+   include last-mile proof using the same documented path a real user, operator,
+   system, or agent would use.
+2. If the task is `externally_activated`, name the external owner and
+   prerequisite explicitly.
+3. If the task is `hook_only`, `foundation_only`, or `deferred_activation`,
+   its acceptance criteria and tests must not assert full usable automation as
+   current-task behavior.
+4. If this task cannot close a parent-plan `end_to_end` claim as written, route
+   back to plan refinement or split out the missing activation task.
+
 ### 1d.2) Run the Closure-Budget Gate
 
 Run this gate when the task touches authority/runtime/read-model/shared-contract work.
@@ -473,32 +522,41 @@ Required blockers for Task output:
    - ownership and deferred semantics,
    - structured contract rules when applicable,
    - mirrored surface checklist.
-17. If the task refines or replaces an existing canonicalization/resolution path, blockers also include:
+17. If the Capability Closure Gate triggers, blockers also include:
+   - capability claim,
+   - closure classification,
+   - activation trigger and entrypoint,
+   - configuration owner,
+   - repo-provided vs external boundary,
+   - success and failure output contracts,
+   - operator/user/system path,
+   - last-mile proof or explicit hook/foundation/deferred classification.
+18. If the task refines or replaces an existing canonicalization/resolution path, blockers also include:
    - `must_preserve_behaviors`,
    - `allowed_resolution_paths`,
    - `forbidden_regression_interpretations`,
    - `replacement_proof_required_if_removed`.
-18. If authority/runtime/read-model/shared-contract work is in scope, blockers also include closure-budget triage:
+19. If authority/runtime/read-model/shared-contract work is in scope, blockers also include closure-budget triage:
    - closure buckets touched,
    - collapsed closures,
    - deferred closures,
    - why the remaining bounded task is safe.
-19. If the task modifies an existing mutation flow, blockers also include a `Precondition and Side-Effect Boundary`:
+20. If the task modifies an existing mutation flow, blockers also include a `Precondition and Side-Effect Boundary`:
    - validations that must pass before mutations,
    - side effects forbidden before those validations pass,
    - invalid/precondition-failure behavior,
    - coordination primitives in scope or explicitly deferred.
-20. If three or more consume families are implicated, blockers also include explicit sequencing ownership:
+21. If three or more consume families are implicated, blockers also include explicit sequencing ownership:
    - whether this task is producer, consumer-family alignment, activation, read-model, or cleanup,
    - what producer/predecessor closure it depends on,
    - and which downstream closures remain for successor tasks.
-21. If the task cannot name a primary bounded-task shape, or mixes producer with fail-closed/coordination work without an explicit bounded proof, the task is not ready.
-22. If the Closed-Contract Drift Check applies, blockers also include:
+22. If the task cannot name a primary bounded-task shape, or mixes producer with fail-closed/coordination work without an explicit bounded proof, the task is not ready.
+23. If the Closed-Contract Drift Check applies, blockers also include:
    - repo-local source anchors,
    - canonical vs guard vs compat classification,
    - forbidden reinterpretations,
    - drift status proving there is no unauthorized semantic change.
-23. If the task changes an existing mutable flow's success/completion semantics, blockers also include:
+24. If the task changes an existing mutable flow's success/completion semantics, blockers also include:
    - current canonical success/completion proof source,
    - target canonical success/completion proof source,
    - final result/status/event truth-surface mapping,
@@ -555,6 +613,7 @@ Fill each section or mark `N/A`:
 17. Ownership and deferred semantics (required when the Contract-Dense Task Gate triggers; otherwise `N/A`)
 18. Structured contract rules (required when the gate triggers and structured input/output is involved; otherwise `N/A`)
 19. Mirrored surface checklist (required when the Contract-Dense Task Gate triggers; otherwise `N/A`)
+20. Capability closure (required when the Capability Closure Gate triggers; otherwise `N/A`)
 
 Rules:
 1. `target_files` must align with call-site matrix.
@@ -589,6 +648,10 @@ Rules:
    explicitly rather than relying on `valid`/`parseable` prose.
 20. If ownership is split across this task and successors, L1 tests must not
    assert successor-owned semantics as current-task behavior.
+21. If the Capability Closure Gate triggers, L1 must keep Done Definition,
+   acceptance, validation, and test wording aligned with the closure
+   classification. `end_to_end` requires last-mile proof; hook/foundation/
+   deferred work must not assert fully usable automation.
 
 ### 5a) Consistency Gate (mandatory before L2)
 
