@@ -4,8 +4,8 @@ artifact_id: plan_meta_review_approve_validation_gate_v1
 plan_id: meta-review-approve-validation-gate-plan-v1
 created_on: "2026-05-02"
 title: "Meta-Review Approve Validation Gate Plan V1"
-status: draft
-plan_status: draft
+status: approved
+plan_status: approved
 prd_ref: null
 owners:
   - "felho"
@@ -16,7 +16,7 @@ archive_group: 2026-05-02-meta-review-approve-validation-gate-plan-v1
 task_tracker:
   - task_id: 1-meta-approve-validation-gate
     task_path: plans/tasks/1-meta-approve-validation-gate.md
-    status: draft
+    status: approved
     notes: "Separate PASS-loop validation from full-test validation required before meta-review approve can route to human approval."
 ---
 
