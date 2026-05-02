@@ -58,9 +58,16 @@ read-model contracts yet.
    direct UI imports from `src/v11/**`.
 5. Allowed resolution path: create a narrow empty or marker-backed contract
    surface and enforce import-direction rules with fitness coverage.
-6. Missing-data rule: no runtime payload fields are introduced in this task; later
+6. Guard interpretation rule: forbidden import decisions are based on normalized
+   repo-relative targets for relative and root-relative specifiers; raw string
+   prefix matching alone is not sufficient.
+7. Scanner boundary rule: the required-now scanner remains dependency-light and
+   string/regex based, but it must cover ordinary static import/export syntax
+   and string-literal dynamic imports without adding a TypeScript AST or bundler
+   dependency.
+8. Missing-data rule: no runtime payload fields are introduced in this task; later
    DTO tasks must decide optional vs `null` fields at the canonical contract row.
-7. Phase boundary:
+9. Phase boundary:
    - contract closure: create canonical directory/export foundation only.
    - producer closure: deferred to `2-core-ui-contracts` and
      `3-ui-readmodel-contracts`.
@@ -76,6 +83,14 @@ read-model contracts yet.
    canonical surface without first creating the directory or guard.
 5. Plan-level validation inherited: `pnpm fitness:check:ci` must fail on
    forbidden UI/runtime contract imports.
+6. Task-level refinement: this task narrows the parent plan's guard into a
+   repo-root resolver contract for relative and root-relative specifiers; broader
+   tsconfig path-alias enforcement remains outside this foundation slice unless
+   the alias text directly matches a forbidden root.
+7. Baseline-clean activation requirement: enabling `ui_contract_boundary` in
+   hard-fail mode must include implementation evidence that the current repo
+   baseline has no violations from the expanded string-literal dynamic-import
+   scanner scope.
 
 ### Canonical Contract Anchors
 
@@ -92,9 +107,13 @@ read-model contracts yet.
    - public backend-owned UI contract barrel
    - import-boundary policy encoded in fitness
 3. Guard elements:
-   - UI must not import `src/v11/**`.
-   - `src/contracts/ui/**` must not import `src/v11/**`, `node:*`,
-     `application/**`, `defaults/**`, or `infrastructure/**`.
+   - UI must not import any module that resolves to `src/v11/**`, including
+     relative paths such as `../../src/v11/**` and root-relative specifiers such
+     as `src/v11/**`.
+   - `src/contracts/ui/**` must not import any module that resolves to
+     `src/v11/**`, `node:` built-ins, `application/**`, `defaults/**`, or
+     `infrastructure/**`, including relative paths that normalize into those
+     roots.
 4. Compat elements: current `src/shared/contracts/**` and UI-local mirror files
    may remain until successor tasks migrate them.
 5. Forbidden reinterpretations: do not treat this task as approval to declare all
@@ -168,9 +187,12 @@ read-model contracts yet.
 | Item | Rule | Implementation Consequence | Priority | Timing |
 |---|---|---|---|---|
 | Canonical surface | `src/contracts/ui/**` is the future UI/backend contract authority. | Add the directory and a public barrel/marker without migrating DTOs. | P1 | required-now |
-| Browser-safe boundary | UI contract source must remain browser-safe. | Forbid `node:*` imports and internal runtime/default/application imports from `src/contracts/ui/**`. | P1 | required-now |
+| Browser-safe boundary | UI contract source must remain browser-safe. | Forbid `node:` built-in imports and internal runtime/default/application imports from `src/contracts/ui/**`. | P1 | required-now |
 | Runtime separation | `src/v11/**` is not UI contract authority. | Fitness must catch `ui/src/**` imports from `src/v11/**`. | P1 | required-now |
 | Successor compatibility | Existing mirrors remain until later tasks migrate them. | Do not delete or rewrite `ui/src/lib/types.ts` or `src/shared/contracts/**`. | P1 | required-now |
+| Import resolution | Boundary decisions are based on normalized repo-relative targets, not raw string prefix only. | Resolve relative specifiers from the importing file directory and root-relative specifiers from repo root before deciding whether a target is forbidden. | P1 | required-now |
+| Package/alias classification | Package/alias specifiers are allowed only when they are not `node:` built-ins and do not literally name a forbidden repo root such as `src/v11/**`. | This required-now classification does not expand tsconfig aliases; it only classifies the raw specifier. | P1 | required-now |
+| Alias expansion scope | This foundation guard does not own full tsconfig path-alias expansion. | Broader alias mapping enforcement is later-hardening and must not block this foundation slice. | P2 | later-hardening |
 
 ### 0a) Canonical Contract Preservation
 
@@ -195,18 +217,21 @@ read-model contracts yet.
 |---|---|---|---|---|
 | CS1 | `src/contracts/ui/index.ts` | Add public browser-safe barrel for future UI contracts. | Re-export runtime/internal modules. | T1 |
 | CS2 | `src/contracts/ui/boundary.ts` | Add minimal marker or shared guard type that proves the surface compiles. | Add real DTO migration. | T1 |
-| CS3 | `tools/fitness/checks/ui-contract-boundary.ts` | Add check for forbidden imports in `ui/src/**` and `src/contracts/ui/**`. | Hard-code current known mirrors as failures unless they violate the new boundary rule. | T2,T3,T4 |
+| CS3 | `tools/fitness/checks/ui-contract-boundary.ts` | Add check for forbidden imports in `ui/src/**` and `src/contracts/ui/**`, normalizing relative and root-relative import specifiers to repo-relative targets where possible while keeping the implementation dependency-light. | Hard-code current known mirrors as failures unless they violate the new boundary rule. | T2,T3,T4,T6,T7 |
 | CS4 | `tools/fitness/checks/index.ts` | Dispatch the new check id. | Change existing check behavior. | T5 |
 | CS5 | `tools/fitness/policy.json` | Register the check in hard-fail mode. | Remove or weaken existing checks. | T5 |
-| CS6 | `tests/tools/fitness/uiContractBoundary.test.ts` | Cover pass/fail cases for both guarded roots. | Assert successor-owned DTO migration. | T2,T3,T4 |
+| CS6 | `tests/tools/fitness/uiContractBoundary.test.ts` | Cover pass/fail cases for both guarded roots, import syntax forms, and ignored computed imports. | Assert successor-owned DTO migration. | T2,T3,T4,T6,T7 |
 
 ### 2) Data and Interface Contract
 
 | Contract | Required Shape | Unknown / Malformed Behavior | Priority | Timing |
 |---|---|---|---|---|
 | `ui_contract_boundary` fitness check id | `id: "ui_contract_boundary"` in policy and dispatcher. | Unknown check ids still use existing not-implemented behavior. | P1 | required-now |
-| Forbidden UI import rule | Files under `ui/src/**` must not import from `src/v11/**`. | Violations produce `fail` details naming file and forbidden target. | P1 | required-now |
-| Forbidden contract import rule | Files under `src/contracts/ui/**` must not import `src/v11/**`, `node:*`, `application/**`, `defaults/**`, or `infrastructure/**`. | Violations produce `fail` details naming file and forbidden target. | P1 | required-now |
+| Forbidden UI import rule | Files under `ui/src/**` must not import from a specifier that resolves to `src/v11/**`. | Violations produce `fail` details naming file and forbidden target. | P1 | required-now |
+| Forbidden contract import rule | Files under `src/contracts/ui/**` must not import `node:` built-ins or any specifier that resolves to `src/v11/**`, `application/**`, `defaults/**`, or `infrastructure/**`. | Violations produce `fail` details naming file and normalized target. | P1 | required-now |
+| Import syntax coverage | Static `import ... from`, side-effect `import "..."`, `export ... from`, and dynamic `import("...")` with string-literal specifiers are in scope. | Template-literal dynamic imports, identifier-based imports, concatenated expressions, malformed syntax, and other computed targets may be ignored, but each ignored target must contribute to the non-failing ignored/unclassified count. | P1 | required-now |
+| Browser-safe package specifier | A non-relative package specifier that is not prefixed by `node:` and does not literally name a forbidden repo root is treated as browser-safe for this foundation guard only. | This is a guard classification rule, not a runtime/browser bundling guarantee. | P1 | required-now |
+| Resolver base | Relative specifiers resolve from the importing file directory; root-relative specifiers beginning with `src/`, `ui/`, `application/`, `defaults/`, or `infrastructure/` resolve from repo root; path separators normalize to POSIX before classification. | tsconfig alias expansion is not required now unless the raw alias string directly matches a forbidden root. | P1 | required-now |
 | Compatibility allowance | Existing `src/shared/contracts/**` and UI-local mirror files are not failed solely for existing. | Only forbidden import direction is failed. | P1 | required-now |
 
 ### 3) Side Effects Contract
@@ -219,8 +244,9 @@ runtime state, filesystem cleanup, archive, bubble, or git side effects.
 | Case | Required Behavior | Priority | Timing |
 |---|---|---|---|
 | Missing scoped files | Report pass or warn consistently with existing fitness conventions; do not crash. | P1 | required-now |
-| Forbidden import found | Hard-fail under policy and include actionable file/target detail. | P1 | required-now |
+| Forbidden import found | Hard-fail under policy and include actionable file plus normalized-target detail. | P1 | required-now |
 | Allowed relative/local import | Pass. | P1 | required-now |
+| Computed or unclassified import | Ignore when the target cannot be confidently classified; do not block on speculative parsing. Include deterministic non-failing detail counts by file and total, using the existing report `details` field, so false-negative risk is visible. | P1 | required-now |
 
 ### 5) Dependency Constraints
 
@@ -228,7 +254,7 @@ runtime state, filesystem cleanup, archive, bubble, or git side effects.
 |---|---|---|---|
 | must-use | Existing fitness check/report types and test style. | P1 | required-now |
 | must-preserve | Existing `pnpm fitness:check:ci` behavior for current checks. | P1 | required-now |
-| must-not-use | New parser or bundler dependency for import scanning. | P1 | required-now |
+| must-not-use | New parser, TypeScript AST, or bundler dependency for import scanning in this foundation slice. | P1 | required-now |
 | must-not-change | Runtime UI API payloads or state machine literals. | P1 | required-now |
 
 ### 6) Test Matrix
@@ -236,10 +262,12 @@ runtime state, filesystem cleanup, archive, bubble, or git side effects.
 | ID | Scenario | Given | When | Then | Priority | Timing |
 |---|---|---|---|---|---|---|
 | T1 | contract surface compiles | `src/contracts/ui/index.ts` exports the marker | `pnpm typecheck` runs | no browser-unsafe dependency is required | P1 | required-now |
-| T2 | UI direct v11 import fails | temp `ui/src/file.ts` imports `src/v11/shared/x` | fitness check runs | report status is `fail` with file detail | P1 | required-now |
-| T3 | contract surface internal import fails | temp `src/contracts/ui/file.ts` imports `node:fs` or `src/v11/**` | fitness check runs | report status is `fail` with target detail | P1 | required-now |
-| T4 | allowed imports pass | temp contract file imports sibling/local types only | fitness check runs | report status is `pass` | P1 | required-now |
+| T2 | UI direct v11 import fails | temp `ui/src/file.ts` imports a path that resolves to `src/v11/shared/x`, covering root-relative and relative-path cases | fitness check runs | report status is `fail` with file detail | P1 | required-now |
+| T3 | contract surface internal import fails | temp `src/contracts/ui/file.ts` imports `node:fs`, a root-relative forbidden internal root, and a relative path that resolves to `src/v11/**` or a forbidden internal root | fitness check runs | report status is `fail` with target detail | P1 | required-now |
+| T4 | allowed imports pass | temp contract file imports sibling/local types and package specifiers classified as browser-safe by the guard | fitness check runs | report status is `pass` | P1 | required-now |
 | T5 | CI policy dispatch | policy includes `ui_contract_boundary` | `pnpm fitness:check:ci` runs | new check is executed through the normal dispatcher | P1 | required-now |
+| T6 | import syntax coverage | temp files use static import, side-effect import, re-export, and string-literal dynamic import forms with forbidden and allowed targets | fitness check runs | string-literal forms are classified consistently without a new parser dependency | P1 | required-now |
+| T7 | computed import observability | temp file uses template-literal, identifier-based, or concatenated dynamic import expressions | fitness check runs | report does not fail solely for computed targets and includes deterministic ignored/unclassified detail counts by file and total | P1 | required-now |
 
 ### 7) Shared Contract Compatibility
 
@@ -274,6 +302,7 @@ migration and UI consume cutover.
 | success_output_contract | fitness report includes passing `ui_contract_boundary` check |
 | failure_output_contract | fitness report includes failing check details |
 | last_mile_proof | run `pnpm fitness:check:ci` or targeted fitness tests |
+| baseline_clean_proof | implementation evidence must show the current repo baseline passes the expanded string-literal scanner scope before hard-fail activation |
 | closure_classification | `foundation_only` for contracts, `end_to_end` for the guard |
 
 ### 10) Canonical Contract Matrix
@@ -283,8 +312,9 @@ task. Other sections must stay subordinate to these rows.
 
 | Contract Row | Owner | Accepted Input | Rejected Input | Required Output | Successor-Owned Semantics |
 |---|---|---|---|---|---|
-| CCM1: UI forbidden runtime import | `ui_contract_boundary` fitness check | `ui/src/**` files with local, package, or `src/contracts/ui/**` imports | any `ui/src/**` import resolving to `src/v11/**` | fail detail naming file and target | Later tasks decide which canonical UI contracts replace current mirrors. |
-| CCM2: contract surface browser safety | `ui_contract_boundary` fitness check | `src/contracts/ui/**` files with local/browser-safe imports | `node:*`, `src/v11/**`, `application/**`, `defaults/**`, `infrastructure/**` | fail detail naming file and target | Later tasks decide DTO fields and nullability. |
+| CCM1: UI forbidden runtime import | `ui_contract_boundary` fitness check | `ui/src/**` files with local, package, or `src/contracts/ui/**` imports | any `ui/src/**` import resolving to `src/v11/**` under the resolver base contract | fail detail naming file and normalized target | Later tasks decide which canonical UI contracts replace current mirrors. |
+| CCM2: contract surface browser safety | `ui_contract_boundary` fitness check | `src/contracts/ui/**` files with local imports and package specifiers classified as browser-safe by the guard | any `node:` built-in, or any specifier resolving under the resolver base contract to `src/v11/**`, `application/**`, `defaults/**`, `infrastructure/**` | fail detail naming file and normalized target | Later tasks decide DTO fields and nullability. |
+| CCM2a: scanner classification scope | `ui_contract_boundary` fitness check | static import/export forms and string-literal dynamic imports | template-literal, identifier-based, concatenated, malformed, or otherwise computed import targets that cannot be confidently classified | classify known string-literal targets; emit deterministic non-failing ignored/unclassified detail counts by file and total for skipped targets | Later hardening may replace this with compiler-backed parsing if needed. |
 | CCM3: canonical foundation export | `src/contracts/ui/index.ts` | marker/foundation exports only | runtime DTO migration or re-export from internal runtime modules | typecheck-safe browser contract surface | Later tasks add concrete contract exports. |
 | CCM4: policy activation | `tools/fitness/policy.json` + dispatcher | `ui_contract_boundary` check row | missing dispatcher or not-implemented fallback for the check id | check runs through `pnpm fitness:check:ci` | Later tasks may tighten scopes after migration. |
 
@@ -304,6 +334,8 @@ task. Other sections must stay subordinate to these rows.
 | Malformed import syntax | Scanner may ignore syntax it cannot confidently classify; it must not crash the check. |
 | Duplicate violations | Multiple details may be reported; exact ordering should be deterministic by path traversal. |
 | Retention/drop | Existing files are retained; only report data is emitted. |
+| Resolver basis | Normalize path separators to POSIX and classify resolved repo-relative paths from the repo root resolver base; do not depend only on raw import string prefixes. |
+| Alias limits | Full tsconfig `paths` expansion is explicitly not part of this foundation task; direct forbidden-root literals remain in scope. |
 
 ### 13) Mirrored Surface Checklist
 
@@ -311,16 +343,17 @@ When any CCM row changes, update:
 
 | Surface | Mirrors |
 |---|---|
-| L0 Domain / Control Model Summary | CCM1-CCM4 ownership and forbidden fallback |
-| L1 Data and Interface Contract | CCM1-CCM4 accepted/rejected inputs |
-| L1 Error and Fallback Contract | CCM1-CCM2 failure behavior |
-| L1 Test Matrix | CCM1-CCM4 proof rows |
-| L1 Capability Closure | CCM4 activation proof |
+| L0 Domain / Control Model Summary | CCM1-CCM4 ownership and forbidden fallback, including CCM2a scanner scope |
+| L1 Data and Interface Contract | CCM1-CCM4 accepted/rejected inputs, including CCM2a ignored/unclassified handling |
+| L1 Error and Fallback Contract | CCM1-CCM2 normalized-target failure behavior and CCM2a ignored/unclassified observability |
+| L1 Test Matrix | CCM1-CCM4 proof rows, including CCM2a syntax and computed-import rows |
+| L1 Capability Closure | CCM4 activation proof and baseline-clean proof for expanded scanner scope |
 
 ## L2 - Implementation Notes
 
 1. Prefer a small scanner similar to existing fitness checks rather than adding a
-   TypeScript AST dependency.
+   TypeScript AST dependency; the expanded syntax coverage above must still be
+   implemented with dependency-light string/regex scanning.
 2. Keep detail messages stable enough for tests but do not over-specify exact
    punctuation.
 3. Later tasks should replace current UI mirrors by importing/re-exporting from
@@ -340,4 +373,4 @@ None blocking.
 
 | ID | Item | Layer | Priority | Timing | Source | Proposed Action |
 |---|---|---|---|---|---|---|
-| HB1 | Parse import syntax with the TypeScript compiler if regex scanning becomes noisy. | tooling | P3 | later-hardening | CreateTask | Consider only after false positives appear. |
+| HB1 | Parse import syntax and resolver edge cases with the TypeScript compiler if regex scanning or repo-root resolution becomes noisy. | tooling | P3 | later-hardening | CreateTask | Consider only after false positives, false negatives, or tsconfig alias drift appear. |
