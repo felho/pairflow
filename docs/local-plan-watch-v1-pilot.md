@@ -20,26 +20,29 @@ bubble status remains the lifecycle authority.
 
 ## Command Surface
 
-Canonical usage:
+Pre-retrofit dry-run command shape observed by this pilot:
 
 ```bash
 pairflow plan watch <plan-path> \
   --repo <repo-path> \
   --interval-seconds <seconds> \
   --once \
-  --dry-run \
-  --runner-command <local-runner> \
-  --runner-arg <arg> \
-  --runner-input-mode stdin_json
+  --dry-run
 ```
 
-Observed contract from `src/cli/commands/plan/watch.ts`:
+Observed pre-retrofit contract from `src/cli/commands/plan/watch.ts`:
 
 - Default interval: `60` seconds.
 - `--once`: exits after one iteration.
 - `--dry-run`: discovers and ledgers trigger evidence without invoking the runner.
-- `--runner-command`: required for non-dry-run execution.
+- Legacy `--runner-command` / `--runner-arg`: required for non-dry-run execution before task
+  `5-plan-watch-codex-runner`; this is legacy/hook-only behavior, not the
+  target built-in Codex runner path.
 - `--runner-input-mode`: `stdin_json` by default; `arg_json` is also accepted.
+
+This evidence document records the pilot state before the built-in Codex runner
+retrofit. Task `5-plan-watch-codex-runner` owns the replacement of the
+hook-only command contract with config-driven built-in Codex runner evidence.
 
 ## Evidence Sources
 
@@ -109,15 +112,15 @@ Live mutation boundary:
   not a successful automation claim.
 - Ledger reservation, completion, dry-run observation, and duplicate suppression
   evidence comes from the focused watch-loop tests listed above.
-- A future operator pilot that uses a disposable approval-ready bubble should add
-  the concrete ledger `key`, `invocationId`, `runnerStatus`, and
-  `runnerReasonCode` from `.pairflow/runtime/plan-watch/ledger.json`.
+- This pre-retrofit pilot does not include disposable approval-ready built-in
+  runner ledger evidence. The required future evidence fields are specified by
+  task `5-plan-watch-codex-runner` rather than claimed in this historical pilot.
 
 | Behavior | Evidence | Result |
 |---|---|---|
 | No trigger | `runPlanWatchIteration` with no candidates returns `status="idle"` and does not invoke the runner; the safe live dry-run produced `plan watch: idle candidates=0 deferred=0`. | Verified by focused watch-loop test run and `.pairflow/evidence/plan-watch-live-dry-run.log`. |
 | Approval-ready trigger | Candidate with `observedState="READY_FOR_HUMAN_APPROVAL"` reserves a ledger record, invokes the runner once, and completes the same record. The same trigger contract also accepts legacy `READY_FOR_APPROVAL`; this pilot mirrors that compatibility as a documented alias rather than claiming a separate live run. | Verified by focused watch-loop test run plus the `LinkedBubbleApprovalReadyState` contract. |
-| Runner result capture | Completed run record stores `runnerStatus`, `runnerReasonCode`, `changedArtifacts`, and `routeLedgerSummary`. | Verified by focused watch-loop test run and ledger contract assertions. |
+| Runner result capture | Completed run record stores `runnerStatus`, `runnerReasonCode`, `changedArtifacts` when present, and `routeLedgerSummary` when emitted. | Verified by focused watch-loop test run and ledger contract assertions. |
 | Duplicate suppression | Existing completed run record for the same dedupe key returns `status="duplicate_skipped"` and does not invoke the runner again. | Verified by focused watch-loop test run. |
 | Dry-run distinction | Dry-run persists or reuses a ledger record with `mode="dry_run"` and `recordState="dry_run_observed"` when trigger evidence exists; it does not reserve a `mode="run"` record or invoke the runner. In the live no-trigger dry-run, no runner was invoked and no successful automation was claimed. | Verified by focused watch-loop test run, CLI option assertions, and `.pairflow/evidence/plan-watch-live-dry-run.log`. |
 | Interval behavior | Default interval is `60_000` ms; configured `--interval-seconds <n>` maps to `intervalMs=n*1000`; `--once` exits after one iteration. The live dry-run used `--once` to prove single-iteration operator behavior without waiting for the default interval. | Verified by focused CLI parser, watch-loop test run, and `.pairflow/evidence/plan-watch-live-dry-run.log`. |
@@ -126,6 +129,10 @@ Live mutation boundary:
 | Live ledger record | Non-dry-run live runner invocation was intentionally not executed in this docs-only bubble. | Fail-closed by mutation boundary; use a disposable approval-ready bubble for a live operator pilot. |
 
 ## Representative Operator Runbook
+
+This section records the pre-retrofit operator boundary captured by this pilot.
+The target config-driven built-in Codex backend contract is specified in task
+`5-plan-watch-codex-runner`, not in this historical evidence section.
 
 Dry-run observation:
 
@@ -139,7 +146,7 @@ pairflow plan watch plans/local-plan-watch-plan-v1.md \
 Use this when validating trigger discovery without runner mutation. A dry-run
 result is not successful automation; it is observation evidence only.
 
-Local runner invocation:
+Legacy local runner invocation:
 
 ```bash
 pairflow plan watch plans/local-plan-watch-plan-v1.md \
@@ -148,12 +155,25 @@ pairflow plan watch plans/local-plan-watch-plan-v1.md \
   --runner-command pairflow-plan-runner
 ```
 
-Use this only when the configured command is an operator-provided local runner
-for `ExecutePairflowPlan`. The watcher passes a compact continuation payload to
-that command. Route decisions and downstream workflow delegation are runner
+Use this only as pre-retrofit historical guidance or as an explicitly retained
+legacy/internal escape hatch. It is not the target V1 automation path for task
+`5-plan-watch-codex-runner`. The watcher passes a compact continuation payload
+to the runner. Route decisions and downstream workflow delegation are runner
 output, not watcher output.
 
-Foreground polling:
+Config-driven counterpart after the built-in Codex runner retrofit:
+
+```bash
+pairflow plan watch plans/local-plan-watch-plan-v1.md \
+  --repo /Users/felho/dev/pairflow \
+  --once
+```
+
+This counterpart is the target contract owned by task
+`5-plan-watch-codex-runner`; it is not claimed as evidence by this pre-retrofit
+pilot.
+
+Legacy foreground polling with operator-provided runner:
 
 ```bash
 pairflow plan watch plans/local-plan-watch-plan-v1.md \
@@ -164,6 +184,20 @@ pairflow plan watch plans/local-plan-watch-plan-v1.md \
 
 The default interval is already 60 seconds; the explicit flag is useful in
 operator docs and pilots. Shorter local pilots may use a smaller positive value.
+The `--runner-command pairflow-plan-runner` portion is pre-retrofit legacy
+guidance and is not the target automation path for task
+`5-plan-watch-codex-runner`.
+
+Config-driven foreground counterpart after the built-in Codex runner retrofit:
+
+```bash
+pairflow plan watch plans/local-plan-watch-plan-v1.md \
+  --repo /Users/felho/dev/pairflow \
+  --interval-seconds 60
+```
+
+This counterpart intentionally omits `--runner-command`; it is target guidance
+for the retrofit task, not pilot evidence from this document.
 
 ## Ledger Evidence Shape
 
