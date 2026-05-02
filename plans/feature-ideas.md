@@ -57,3 +57,4 @@
 - Megcsinálni azt, hogy a taskon belül a feladatok legyenek még kisebb lépésekre bontva, annak érdekében, hogy egyszerűbb modellek is meg tudják őket csinálni.
 - De előbb ki kéne próbálni, hogy ha az implementer nem a legjobb modell, akkor mi történik. Pl. konvergál-e, hány körben konvergál, lehetne tök jól nézni ilyen infókat.
 - https://github.com/openai/symphony
+- https://github.com/cocoindex-io/cocoindex
