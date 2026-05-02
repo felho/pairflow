@@ -7,7 +7,7 @@ import type {
 import type {
   ResolvedReconcileRuntimeSessionsDependencies
 } from "./reconcileCommandDependencyResolution.js";
-import { createStartupReconcilerError } from "../../shared/reconcile/reconcileCommandRuntime.js";
+import { createStartupReconcilerError } from "./reconcileCommandRuntime.js";
 import {
   normalizeReconcileRuntimeSessionsInput
 } from "./reconcileCommandInputNormalization.js";

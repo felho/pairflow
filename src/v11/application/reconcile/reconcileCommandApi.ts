@@ -17,7 +17,7 @@ import type {
 import {
   StartupReconcilerError,
   throwAsStartupReconcilerError
-} from "../../shared/reconcile/reconcileCommandRuntime.js";
+} from "./reconcileCommandRuntime.js";
 import {
   loadReconcileRuntimeSessionsDefaultDependencies
 } from "./reconcileCommandDefaults.js";

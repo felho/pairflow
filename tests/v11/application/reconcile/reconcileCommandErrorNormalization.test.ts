@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { normalizeStartupReconcilerError } from "../../../../src/v11/shared/reconcile/reconcileCommandErrorNormalization.js";
+import { normalizeStartupReconcilerError } from "../../../../src/v11/application/reconcile/reconcileCommandErrorNormalization.js";
 import {
   createStartupReconcilerError,
   StartupReconcilerError
-} from "../../../../src/v11/shared/reconcile/reconcileCommandRuntime.js";
+} from "../../../../src/v11/application/reconcile/reconcileCommandRuntime.js";
 
 describe("reconcileCommandErrorNormalization", () => {
   it("preserves startup reconciler errors", () => {

@@ -9,7 +9,7 @@ export type {
 export {
   StartupReconcilerError as StartupReconcilerErrorV11,
   throwAsStartupReconcilerError as asStartupReconcilerErrorV11
-} from "../../shared/reconcile/reconcileCommandRuntime.js";
+} from "./reconcileCommandRuntime.js";
 import {
   reconcileRuntimeSessions as reconcileRuntimeSessionsV11
 } from "./reconcileCommandApi.js";
