@@ -142,7 +142,13 @@ function buildExecutePairflowPlanPrompt(
 const STRUCTURED_OUTPUT_SCHEMA = {
   type: "object",
   additionalProperties: false,
-  required: ["status", "reason_code"],
+  required: [
+    "status",
+    "reason_code",
+    "summary",
+    "changed_artifacts",
+    "route_ledger_summary"
+  ],
   properties: {
     status: {
       type: "string",
@@ -153,16 +159,23 @@ const STRUCTURED_OUTPUT_SCHEMA = {
       minLength: 1
     },
     summary: {
-      type: "string"
+      type: ["string", "null"]
     },
     changed_artifacts: {
-      type: "array",
-      items: {
-        type: "string"
-      }
+      anyOf: [
+        {
+          type: "array",
+          items: {
+            type: "string"
+          }
+        },
+        {
+          type: "null"
+        }
+      ]
     },
     route_ledger_summary: {
-      type: "string"
+      type: ["string", "null"]
     }
   }
 } as const;

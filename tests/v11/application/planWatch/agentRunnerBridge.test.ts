@@ -252,6 +252,29 @@ describe("agentRunnerBridge", () => {
     expect(result.failureStage).toBeUndefined();
   });
 
+  it("treats nullable structured-output optional fields as omitted", async () => {
+    const result = await runExecutePairflowPlanContinuation(
+      baseInput(),
+      { command: "agent" },
+      deps({
+        runCommand: vi.fn(async () => ({
+          exitCode: 0,
+          stdout:
+            '{"status":"settled_checkpoint","reason_code":"PLAN_SETTLED","summary":null,"changed_artifacts":null,"route_ledger_summary":null}\n',
+          stderr: ""
+        }))
+      })
+    );
+
+    expect(result).toMatchObject({
+      status: "settled_checkpoint",
+      reasonCode: "PLAN_SETTLED"
+    });
+    expect(result.runnerSummary).toBeUndefined();
+    expect(result.changedArtifacts).toBeUndefined();
+    expect(result.routeLedgerSummary).toBeUndefined();
+  });
+
   it("accepts the last valid structured envelope before trailing diagnostics", async () => {
     const result = await runExecutePairflowPlanContinuation(
       baseInput(),

@@ -116,11 +116,16 @@ function parseStructuredAgentRunnerRecord(
     return null;
   }
 
-  if (raw.summary !== undefined && typeof raw.summary !== "string") {
+  if (
+    raw.summary !== undefined &&
+    raw.summary !== null &&
+    typeof raw.summary !== "string"
+  ) {
     return null;
   }
   if (
     raw.route_ledger_summary !== undefined &&
+    raw.route_ledger_summary !== null &&
     typeof raw.route_ledger_summary !== "string"
   ) {
     return null;
@@ -129,16 +134,18 @@ function parseStructuredAgentRunnerRecord(
   return {
     status: raw.status,
     reasonCode: asAgentRunnerBridgeRunnerReasonCode(raw.reason_code),
-    ...(raw.summary !== undefined ? { summary: raw.summary } : {}),
+    ...(raw.summary !== undefined && raw.summary !== null
+      ? { summary: raw.summary }
+      : {}),
     ...(changedArtifacts !== undefined ? { changedArtifacts } : {}),
-    ...(raw.route_ledger_summary !== undefined
+    ...(raw.route_ledger_summary !== undefined && raw.route_ledger_summary !== null
       ? { routeLedgerSummary: raw.route_ledger_summary }
       : {})
   };
 }
 
 function parseOptionalStringArray(value: unknown): readonly string[] | undefined | null {
-  if (value === undefined) {
+  if (value === undefined || value === null) {
     return undefined;
   }
   if (!Array.isArray(value)) {
