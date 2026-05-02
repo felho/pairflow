@@ -197,6 +197,18 @@ The watcher passes a compact continuation payload to the built-in runner. Route
 decisions and downstream workflow delegation are runner output, not watcher
 output.
 
+Explicit no-trigger continuation:
+
+```bash
+pairflow plan watch plans/local-plan-watch-plan-v1.md \
+  --repo /Users/felho/dev/pairflow \
+  --once \
+  --run-now
+```
+
+Use this when the plan should be nudged through `ExecutePairflowPlan` even
+though no linked bubble has reached an approval-ready state yet.
+
 Foreground polling:
 
 ```bash

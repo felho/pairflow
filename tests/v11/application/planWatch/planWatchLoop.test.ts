@@ -167,6 +167,68 @@ describe("planWatchLoop", () => {
     expect(dependencies.runExecutePairflowPlanContinuation).not.toHaveBeenCalled();
   });
 
+  it("invokes the runner for an explicit run-now continuation when no candidate exists", async () => {
+    const ledger = memoryLedger();
+    const dependencies = deps({ ledger });
+
+    const result = await runPlanWatchIteration(
+      {
+        repoPath: "/repo",
+        planPath: "plans/local-plan-watch-plan-v1.md",
+        once: true,
+        runNow: true,
+        runnerConfig: { command: "agent" }
+      },
+      dependencies
+    );
+
+    expect(result.status).toBe("runner_settled_checkpoint");
+    expect(result.selectedCandidate).toMatchObject({
+      taskId: "plan-continuation",
+      bubbleId: "plan-watch-run-now",
+      statusMetadata: {
+        triggerKind: "operator_run_now"
+      }
+    });
+    expect(dependencies.runExecutePairflowPlanContinuation).toHaveBeenCalledOnce();
+    expect(
+      vi.mocked(dependencies.runExecutePairflowPlanContinuation).mock.calls[0]?.[0]
+        .trigger
+    ).toMatchObject({
+      source: "plan_watch",
+      reason: "operator_run_now"
+    });
+    expect(ledger.records).toHaveLength(1);
+    expect(ledger.records[0]).toMatchObject({
+      mode: "run",
+      recordState: "completed",
+      triggerEvidence: {
+        taskId: "plan-continuation",
+        bubbleId: "plan-watch-run-now"
+      }
+    });
+  });
+
+  it("dedupes repeated explicit run-now continuations for the same plan evidence", async () => {
+    const ledger = memoryLedger();
+    const dependencies = deps({ ledger });
+    const input = {
+      repoPath: "/repo",
+      planPath: "plans/local-plan-watch-plan-v1.md",
+      once: true,
+      runNow: true,
+      runnerConfig: { command: "agent" }
+    };
+
+    const first = await runPlanWatchIteration(input, dependencies);
+    const second = await runPlanWatchIteration(input, dependencies);
+
+    expect(first.status).toBe("runner_settled_checkpoint");
+    expect(second.status).toBe("duplicate_skipped");
+    expect(dependencies.runExecutePairflowPlanContinuation).toHaveBeenCalledOnce();
+    expect(ledger.records).toHaveLength(1);
+  });
+
   it("reserves, invokes, and completes a new approval-ready trigger", async () => {
     const ledger = memoryLedger();
     const dependencies = deps({

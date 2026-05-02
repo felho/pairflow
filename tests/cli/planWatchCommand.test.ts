@@ -52,6 +52,7 @@ describe("plan watch command", () => {
         "--once",
         "--runner-command",
         "agent",
+        "--run-now",
         "--runner-arg",
         "run",
         "--runner-arg=--fast"
@@ -64,6 +65,7 @@ describe("plan watch command", () => {
       planPath: "plans/local-plan-watch-plan-v1.md",
       repo: "/repo",
       once: true,
+      runNow: true,
       runnerCommand: "agent",
       runnerArgs: ["run", "--fast"],
       runnerInputMode: "stdin_json",
@@ -259,6 +261,7 @@ describe("plan watch command", () => {
 
   it("documents the plan watch command surface", () => {
     expect(getPlanWatchHelpText()).toContain("pairflow plan watch <plan-path>");
+    expect(getPlanWatchHelpText()).toContain("--run-now");
     expect(getPlanWatchHelpText()).toContain("--runner-command");
   });
 });

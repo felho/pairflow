@@ -25,6 +25,7 @@ export interface PlanWatchCommandOptions {
   intervalSeconds: number;
   once: boolean;
   dryRun: boolean;
+  runNow: boolean;
   runnerCommand?: string | undefined;
   runnerArgs: readonly string[];
   runnerInputMode: AgentRunnerBridgeInputMode;
@@ -43,13 +44,14 @@ export type ParsedPlanWatchCommandOptions =
 export function getPlanWatchHelpText(): string {
   return [
     "Usage:",
-    "  pairflow plan watch <plan-path> [--repo <path>] [--interval-seconds <n>] [--once] [--dry-run]",
+    "  pairflow plan watch <plan-path> [--repo <path>] [--interval-seconds <n>] [--once] [--dry-run] [--run-now]",
     "",
     "Options:",
     "  --repo <path>                     Repository path (defaults to cwd)",
     "  --interval-seconds <n>            Poll interval in seconds (default 60)",
     "  --once                            Run one iteration and exit",
     "  --dry-run                         Discover and ledger without invoking the runner",
+    "  --run-now                         Invoke the runner once even when no linked bubble trigger exists",
     "  --runner-command <cmd>            Legacy/internal runner command override",
     "  --runner-arg <arg>                Legacy runner argument; may be repeated",
     "  --runner-input-mode <mode>        Legacy stdin_json or arg_json (default stdin_json)",
@@ -68,6 +70,7 @@ export function parsePlanWatchCommandOptions(
       "interval-seconds": { type: "string" },
       once: { type: "boolean" },
       "dry-run": { type: "boolean" },
+      "run-now": { type: "boolean" },
       "runner-command": { type: "string" },
       "runner-arg": { type: "string", multiple: true },
       "runner-input-mode": { type: "string" },
@@ -95,6 +98,7 @@ export function parsePlanWatchCommandOptions(
     intervalSeconds,
     once: parsed.values.once ?? false,
     dryRun: parsed.values["dry-run"] ?? false,
+    runNow: parsed.values["run-now"] ?? false,
     ...(parsed.values["runner-command"] !== undefined
       ? { runnerCommand: parsed.values["runner-command"] }
       : {}),
@@ -146,6 +150,7 @@ export async function runPlanWatchCommand(
     intervalMs: options.intervalSeconds * 1000,
     once: options.once,
     dryRun: options.dryRun,
+    runNow: options.runNow,
     runnerConfig: {
       ...(options.runnerCommand === undefined && configuredRunnerBackend !== undefined
         ? { backend: configuredRunnerBackend }

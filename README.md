@@ -807,6 +807,12 @@ pairflow plan watch plans/my-plan.md \
   --repo /path/to/repo \
   --once
 
+# Explicitly nudge plan continuation even when no linked bubble trigger exists
+pairflow plan watch plans/my-plan.md \
+  --repo /path/to/repo \
+  --once \
+  --run-now
+
 # Discover trigger evidence and record a dry-run ledger observation only
 pairflow plan watch plans/my-plan.md \
   --repo /path/to/repo \
@@ -832,6 +838,10 @@ Runner configuration:
   unsupported backends block with `PLAN_WATCH_RUNNER_BACKEND_UNSUPPORTED`.
 - `--runner-command`, `--runner-arg`, and `--runner-input-mode` are retained as
   legacy/internal escape hatches, not the primary V1 automation contract.
+- `--run-now` invokes the configured runner once with an operator nudge trigger
+  when no linked approval-ready bubble is present. Use it to start or resume
+  plan orchestration from `ExecutePairflowPlan` without waiting for a bubble
+  transition.
 - `--dry-run` records observation evidence without invoking the runner.
 
 The canonical watch evidence is the typed iteration result and the local ledger
@@ -1006,7 +1016,7 @@ The registry is stored at `~/.pairflow/repos.json` (override with `PAIRFLOW_REPO
 
 | Command | Description |
 |---------|-------------|
-| `plan watch <plan-path> [--repo <path>] [--interval-seconds <n>] [--once] [--dry-run] [--runner-command <cmd>] [--runner-arg <arg>]... [--runner-input-mode stdin_json\|arg_json]` | Poll a local plan for approval-ready linked bubbles, dedupe trigger evidence in the local watch ledger, and invoke the config-selected built-in Codex `ExecutePairflowPlan` runner unless `--dry-run` is set. The runner flags are legacy/internal overrides. Default interval is 60 seconds. |
+| `plan watch <plan-path> [--repo <path>] [--interval-seconds <n>] [--once] [--dry-run] [--run-now] [--runner-command <cmd>] [--runner-arg <arg>]... [--runner-input-mode stdin_json\|arg_json]` | Poll a local plan for approval-ready linked bubbles, dedupe trigger evidence in the local watch ledger, and invoke the config-selected built-in Codex `ExecutePairflowPlan` runner unless `--dry-run` is set. Use `--run-now` to nudge `ExecutePairflowPlan` once when no linked trigger exists. The runner flags are legacy/internal overrides. Default interval is 60 seconds. |
 
 #### Agent-facing commands
 

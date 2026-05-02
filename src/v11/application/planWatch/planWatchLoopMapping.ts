@@ -5,6 +5,7 @@ import type { LinkedBubbleTriggerCandidate } from "./linkedBubbleTriggerIndexCon
 
 const PLAN_WATCH_TRIGGER_SOURCE = "plan_watch";
 const PLAN_WATCH_TRIGGER_REASON = "linked_bubble_approval_ready";
+const PLAN_WATCH_RUN_NOW_REASON = "operator_run_now";
 
 export function buildPlanWatchDedupeKey(input: {
   repoPath: string;
@@ -44,7 +45,9 @@ export function buildRunnerInput(input: {
     ...(input.stopSignal !== undefined ? { stopSignal: input.stopSignal } : {}),
     trigger: {
       source: PLAN_WATCH_TRIGGER_SOURCE,
-      reason: PLAN_WATCH_TRIGGER_REASON,
+      reason: isRunNowCandidate(input.candidate)
+        ? PLAN_WATCH_RUN_NOW_REASON
+        : PLAN_WATCH_TRIGGER_REASON,
       observedAt: input.candidate.observedAt ?? input.now.toISOString(),
       refs: [
         ...(input.candidate.statusRef !== undefined ? [input.candidate.statusRef] : []),
@@ -63,6 +66,10 @@ export function buildRunnerInput(input: {
       }
     }
   };
+}
+
+function isRunNowCandidate(candidate: LinkedBubbleTriggerCandidate): boolean {
+  return candidate.statusMetadata?.triggerKind === "operator_run_now";
 }
 
 function normalizePlanPathForKey(repoPath: string, planPath: string): string {

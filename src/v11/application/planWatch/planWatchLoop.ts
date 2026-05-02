@@ -1,10 +1,13 @@
-import { resolve } from "node:path";
+import { resolve, sep } from "node:path";
 
 import {
   executePlanWatchCandidate,
   planWatchBlockedResult,
   planWatchDiagnostic
 } from "./planWatchLoopExecution.js";
+import type {
+  LinkedBubbleTriggerCandidate
+} from "./linkedBubbleTriggerIndexContract.js";
 import {
   DEFAULT_PLAN_WATCH_INTERVAL_MS,
   type PlanWatchDiagnostic,
@@ -40,7 +43,10 @@ export async function runPlanWatchIteration(
       planPath: normalized.planPath,
       now
     });
-    if (indexResult.candidates.length === 0) {
+    const candidates = indexResult.candidates.length === 0 && input.runNow === true
+      ? [buildRunNowCandidate(normalized.repoPath, normalized.planPath, now)]
+      : indexResult.candidates;
+    if (candidates.length === 0) {
       return {
         status: "idle",
         repoPath: normalized.repoPath,
@@ -52,7 +58,7 @@ export async function runPlanWatchIteration(
       };
     }
     let duplicateResult: PlanWatchIterationResult | undefined;
-    for (const [candidateIndex, candidate] of indexResult.candidates.entries()) {
+    for (const [candidateIndex, candidate] of candidates.entries()) {
       const result = await executePlanWatchCandidate({
         input,
         dependencies,
@@ -61,7 +67,7 @@ export async function runPlanWatchIteration(
         repoPath: normalized.repoPath,
         planPath: normalized.planPath,
         candidate,
-        candidateCount: indexResult.candidates.length,
+        candidateCount: candidates.length,
         candidateIndex,
         diagnostics: indexResult.diagnostics
       });
@@ -90,6 +96,29 @@ export async function runPlanWatchIteration(
       ]
     });
   }
+}
+
+function buildRunNowCandidate(
+  repoPath: string,
+  planPath: string,
+  now: Date
+): LinkedBubbleTriggerCandidate {
+  const normalizedPlanPath = planPath.split(sep).join("/");
+  return {
+    planPath,
+    taskId: "plan-continuation",
+    taskPath: normalizedPlanPath,
+    bubbleId: "plan-watch-run-now",
+    bubbleRole: "implementation",
+    observedState: "READY_FOR_HUMAN_APPROVAL",
+    observedAt: now.toISOString(),
+    statusRef: `plan-watch-run-now:${normalizedPlanPath}`,
+    statusMetadata: {
+      triggerKind: "operator_run_now",
+      repoPath,
+      planPath
+    }
+  };
 }
 
 export async function runPlanWatchLoop(
