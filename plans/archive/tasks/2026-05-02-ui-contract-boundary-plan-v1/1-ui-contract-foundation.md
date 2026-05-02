@@ -5,7 +5,7 @@ task_family_id: ui-contract-foundation
 sequence_key: "1"
 task_id: 1-ui-contract-foundation
 title: "UI Contract Foundation"
-status: in_progress
+status: archived
 phase: phase1
 target_files:
   - src/contracts/ui/index.ts
@@ -29,6 +29,7 @@ impl_bubble_id: 1-ui-contract-foundation-impl
 supersedes: []
 superseded_by: null
 archive_group: 2026-05-02-ui-contract-boundary-plan-v1
+archive_path: plans/archive/tasks/2026-05-02-ui-contract-boundary-plan-v1/1-ui-contract-foundation.md
 ---
 
 # Task: UI Contract Foundation

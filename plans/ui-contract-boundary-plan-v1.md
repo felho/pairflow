@@ -13,18 +13,18 @@ task_order:
   - 3-ui-readmodel-contracts
 task_tracker:
   - task_id: 1-ui-contract-foundation
-    task_path: plans/tasks/1-ui-contract-foundation.md
-    status: in_progress
-    notes: "Implementation bubble running: 1-ui-contract-foundation-impl."
+    task_path: plans/archive/tasks/2026-05-02-ui-contract-boundary-plan-v1/1-ui-contract-foundation.md
+    status: archived
+    notes: "Completed via implementation bubble 1-ui-contract-foundation-impl; merged at 24a5b11c and archived."
   - task_id: 2-core-ui-contracts
-    task_path: null
-    status: not_created
-    notes: "Move delete, lifecycle, meta-review route, state-validation, and remote-execution contracts behind the canonical surface."
+    task_path: plans/tasks/2-core-ui-contracts.md
+    status: approved
+    notes: "Task artifact created after 1-ui-contract-foundation archive aftermath; ReviewSpec task-mode approved."
   - task_id: 3-ui-readmodel-contracts
     task_path: null
     status: not_created
     notes: "Consolidate broader UI read-model, action, event, error, and nested DTO contracts."
-active_task_id: 1-ui-contract-foundation
+active_task_id: 2-core-ui-contracts
 archive_group: 2026-05-02-ui-contract-boundary-plan-v1
 owners:
   - "felho"
@@ -110,8 +110,8 @@ tukrozve vagy vegyes strategiaval kezelve:
 
 | Task ID | Path | Purpose | Status |
 |---|---|---|---|
-| `1-ui-contract-foundation` | `plans/tasks/1-ui-contract-foundation.md` | Create the browser-safe `src/contracts/ui/**` foundation and hard-fail fitness guards for forbidden UI/runtime imports. | in_progress |
-| `2-core-ui-contracts` | `plans/tasks/2-core-ui-contracts.md` | Move the smaller established mirrors behind the canonical surface: delete-bubble, lifecycle, meta-review route, state-validation, and remote-execution. | planned |
+| `1-ui-contract-foundation` | `plans/archive/tasks/2026-05-02-ui-contract-boundary-plan-v1/1-ui-contract-foundation.md` | Create the browser-safe `src/contracts/ui/**` foundation and hard-fail fitness guards for forbidden UI/runtime imports. | archived |
+| `2-core-ui-contracts` | `plans/tasks/2-core-ui-contracts.md` | Move the smaller established mirrors behind the canonical surface: delete-bubble, lifecycle, state-validation, and remote-execution. | approved |
 | `3-ui-readmodel-contracts` | `plans/tasks/3-ui-readmodel-contracts.md` | Consolidate the wider UI API/read-model/action/event/error DTO surface and nested runtime-session/inbox/watchdog/review-policy/protocol views. | planned |
 
 ## Dependencies and Ordering
