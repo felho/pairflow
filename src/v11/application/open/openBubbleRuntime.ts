@@ -1,6 +1,5 @@
 import { constants as fsConstants } from "node:fs";
 import { access } from "node:fs/promises";
-import { spawn } from "node:child_process";
 
 import {
   loadPairflowGlobalConfig,
@@ -20,6 +19,7 @@ import {
 import {
   createOpenBubbleError
 } from "./openBubbleError.js";
+import { processSpawnDefault } from "../../defaults/process/processSpawnDefaults.js";
 import {
   enrichRemoteOpenContext,
   resolveOpenCommandTemplate,
@@ -61,10 +61,15 @@ export const executeOpenCommand: OpenCommandExecutor = async (
   input: OpenCommandExecutionInput
 ): Promise<OpenCommandExecutionResult> =>
   new Promise((resolvePromise, rejectPromise) => {
-    const child = spawn("bash", ["-lc", input.command], {
+    const child = processSpawnDefault("bash", ["-lc", input.command], {
       cwd: input.cwd,
       stdio: ["ignore", "pipe", "pipe"]
     });
+
+    if (child.stdout === null || child.stderr === null) {
+      rejectPromise(new Error("spawned open command did not expose pipe streams"));
+      return;
+    }
 
     let stdout = "";
     let stderr = "";

@@ -302,6 +302,111 @@ describe("dependency fitness check", () => {
     ).toBe(false);
   });
 
+  it("fails on process runtime imports under application", async () => {
+    const repoRoot = await createTempRoot();
+    await writeRepoFile(
+      repoRoot,
+      "src/v11/application/start/startCliRunner.ts",
+      [
+        "import { spawn } from 'node:child_process';",
+        "export const run = (): void => {",
+        "  spawn('pairflow', []);",
+        "};",
+        ""
+      ].join("\n")
+    );
+
+    const report = await buildDependencyCheckReport({
+      check: {
+        id: "dependency",
+        metric: "cycle and forbidden import direction detection",
+        mode: "report-only",
+        owner: "architecture",
+        scope: ["src/v11/**"],
+        exceptions: []
+      },
+      repoRoot,
+      fallbackMode: "report-only",
+    });
+
+    expect(report.status).toBe("fail");
+    expect(
+      report.details?.some((detail) =>
+        detail.includes(
+          "forbidden process runtime import node:child_process"
+        )
+      )
+    ).toBe(true);
+  });
+
+  it("fails on process runtime imports under defaults", async () => {
+    const repoRoot = await createTempRoot();
+    await writeRepoFile(
+      repoRoot,
+      "src/v11/defaults/planWatch/agentRunnerBridgeDefaults.ts",
+      [
+        "const workerThreads = await import('node:worker_threads');",
+        "export const workerCount = Object.keys(workerThreads).length;",
+        ""
+      ].join("\n")
+    );
+
+    const report = await buildDependencyCheckReport({
+      check: {
+        id: "dependency",
+        metric: "cycle and forbidden import direction detection",
+        mode: "report-only",
+        owner: "architecture",
+        scope: ["src/v11/**"],
+        exceptions: []
+      },
+      repoRoot,
+      fallbackMode: "report-only",
+    });
+
+    expect(report.status).toBe("fail");
+    expect(
+      report.details?.some((detail) =>
+        detail.includes(
+          "forbidden process runtime import node:worker_threads"
+        )
+      )
+    ).toBe(true);
+  });
+
+  it("allows process runtime imports under infrastructure", async () => {
+    const repoRoot = await createTempRoot();
+    await writeRepoFile(
+      repoRoot,
+      "src/v11/infrastructure/executor/process/spawnProcess.ts",
+      [
+        "import { spawn } from 'node:child_process';",
+        "export const spawnProcess = spawn;",
+        ""
+      ].join("\n")
+    );
+
+    const report = await buildDependencyCheckReport({
+      check: {
+        id: "dependency",
+        metric: "cycle and forbidden import direction detection",
+        mode: "report-only",
+        owner: "architecture",
+        scope: ["src/v11/**"],
+        exceptions: []
+      },
+      repoRoot,
+      fallbackMode: "report-only",
+    });
+
+    expect(report.status).toBe("pass");
+    expect(
+      report.details?.some((detail) =>
+        detail.includes("forbidden process runtime import")
+      )
+    ).toBe(false);
+  });
+
   it("fails on shared direct infrastructure re-export camouflage", async () => {
     const repoRoot = await createTempRoot();
     await writeRepoFile(
