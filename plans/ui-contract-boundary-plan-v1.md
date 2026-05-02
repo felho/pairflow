@@ -3,8 +3,8 @@ artifact_type: plan
 artifact_id: plan_ui_contract_boundary_v1
 plan_id: ui-contract-boundary-plan-v1
 created_on: "2026-05-02"
-plan_status: draft
-status: draft
+plan_status: approved
+status: approved
 title: "UI Contract Boundary Plan"
 prd_ref: null
 task_order:
@@ -14,15 +14,15 @@ task_order:
 task_tracker:
   - task_id: 1-ui-contract-foundation
     task_path: plans/tasks/1-ui-contract-foundation.md
-    status: planned
+    status: approved
     notes: "Create browser-safe contract surface foundation and fitness guards."
   - task_id: 2-core-ui-contracts
-    task_path: plans/tasks/2-core-ui-contracts.md
-    status: planned
+    task_path: null
+    status: not_created
     notes: "Move delete, lifecycle, meta-review route, state-validation, and remote-execution contracts behind the canonical surface."
   - task_id: 3-ui-readmodel-contracts
-    task_path: plans/tasks/3-ui-readmodel-contracts.md
-    status: planned
+    task_path: null
+    status: not_created
     notes: "Consolidate broader UI read-model, action, event, error, and nested DTO contracts."
 active_task_id: 1-ui-contract-foundation
 archive_group: 2026-05-02-ui-contract-boundary-plan-v1
