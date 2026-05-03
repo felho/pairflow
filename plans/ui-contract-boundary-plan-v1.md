@@ -22,8 +22,8 @@ task_tracker:
     notes: "Completed via implementation bubble 2-core-ui-contracts-impl; merged at 5cb79919 and archived."
   - task_id: 3-ui-readmodel-contracts
     task_path: plans/tasks/3-ui-readmodel-contracts.md
-    status: implementable
-    notes: "Document bubble 3-ui-readmodel-contracts-doc merged at 0e71380c; implementation bubble not started yet."
+    status: in_progress
+    notes: "Implementation bubble running: 3-ui-readmodel-contracts-impl. Document bubble 3-ui-readmodel-contracts-doc merged at 0e71380c."
 active_task_id: 3-ui-readmodel-contracts
 archive_group: 2026-05-02-ui-contract-boundary-plan-v1
 owners:
