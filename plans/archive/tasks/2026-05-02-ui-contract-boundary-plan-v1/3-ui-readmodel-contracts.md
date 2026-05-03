@@ -5,7 +5,7 @@ task_family_id: ui-readmodel-contracts
 sequence_key: "3"
 task_id: 3-ui-readmodel-contracts
 title: "UI Readmodel Contracts"
-status: in_progress
+status: archived
 phase: phase3
 target_files:
   - src/contracts/ui/index.ts
@@ -57,6 +57,7 @@ impl_bubble_id: 3-ui-readmodel-contracts-impl
 supersedes: []
 superseded_by: null
 archive_group: 2026-05-02-ui-contract-boundary-plan-v1
+archive_path: plans/archive/tasks/2026-05-02-ui-contract-boundary-plan-v1/3-ui-readmodel-contracts.md
 ---
 
 # Task: UI Readmodel Contracts

@@ -3,8 +3,8 @@ artifact_type: plan
 artifact_id: plan_ui_contract_boundary_v1
 plan_id: ui-contract-boundary-plan-v1
 created_on: "2026-05-02"
-plan_status: approved
-status: approved
+plan_status: done
+status: done
 title: "UI Contract Boundary Plan"
 prd_ref: null
 task_order:
@@ -21,10 +21,10 @@ task_tracker:
     status: archived
     notes: "Completed via implementation bubble 2-core-ui-contracts-impl; merged at 5cb79919 and archived."
   - task_id: 3-ui-readmodel-contracts
-    task_path: plans/tasks/3-ui-readmodel-contracts.md
-    status: in_progress
-    notes: "Implementation bubble running: 3-ui-readmodel-contracts-impl. Document bubble 3-ui-readmodel-contracts-doc merged at 0e71380c."
-active_task_id: 3-ui-readmodel-contracts
+    task_path: plans/archive/tasks/2026-05-02-ui-contract-boundary-plan-v1/3-ui-readmodel-contracts.md
+    status: archived
+    notes: "Completed via implementation bubble 3-ui-readmodel-contracts-impl; merged at fbc1002c and archived. Document bubble 3-ui-readmodel-contracts-doc merged at 0e71380c."
+active_task_id: null
 archive_group: 2026-05-02-ui-contract-boundary-plan-v1
 owners:
   - "felho"
@@ -86,8 +86,8 @@ be sajat heurisztikus fallback contractot.
 
 ## Current Status
 
-Open. A modularity review szerint jelenleg tobb contract surface kezzel van
-tukrozve vagy vegyes strategiaval kezelve:
+Complete. A modularity review altal jelzett UI contract boundary drift a harom
+archivalt taskon keresztul le lett zarva:
 
 1. `src/contracts/deleteBubble.ts` es `ui/src/lib/types.ts` kozott delete-bubble
    mirror van.
@@ -123,7 +123,7 @@ tukrozve vagy vegyes strategiaval kezelve:
 |---|---|---|---|
 | `1-ui-contract-foundation` | `plans/archive/tasks/2026-05-02-ui-contract-boundary-plan-v1/1-ui-contract-foundation.md` | Create the browser-safe `src/contracts/ui/**` foundation and hard-fail fitness guards for forbidden UI/runtime imports. | archived |
 | `2-core-ui-contracts` | `plans/archive/tasks/2026-05-02-ui-contract-boundary-plan-v1/2-core-ui-contracts.md` | Move the smaller established mirrors behind the canonical surface: delete-bubble, lifecycle, state-validation, and remote-execution, including `src/types/bubble.ts` lifecycle authority plus type-only transit alignment for `src/types/uiRemoteExecution.ts` and `src/v11/shared/ports/stateSnapshots.ts`. | archived |
-| `3-ui-readmodel-contracts` | `plans/tasks/3-ui-readmodel-contracts.md` | Consolidate the wider UI API/read-model/action/event/error DTO surface and nested runtime-session/inbox/watchdog/review-policy/protocol views. | approved |
+| `3-ui-readmodel-contracts` | `plans/archive/tasks/2026-05-02-ui-contract-boundary-plan-v1/3-ui-readmodel-contracts.md` | Consolidate the wider UI API/read-model/action/event/error DTO surface and nested runtime-session/inbox/watchdog/review-policy/protocol views. | archived |
 
 ## Dependencies and Ordering
 
