@@ -151,6 +151,8 @@ Progress update (2026-05-03): document bubble `plan-watch-observability` refined
 
 Progress update (2026-05-03): reviewer round 1 for document bubble `plan-watch-observability` identified contract ambiguities in task `6-watch-runner-observability`; the follow-up refinement resolved trigger-kind optionality, timeline `runner_completed` source rules, forbidden stderr/process fallback mirroring, artifact write-failure reason codes, slug/collision/concurrency behavior, timeline schema versioning, call-site evidence mapping, and minimum README/pilot-doc content.
 
+Progress update (2026-05-03): document bubble `plan-watch-observability` approved for close after two clean meta-review runs; implementation handoff remains task `6-watch-runner-observability`.
+
 ## Task List
 
 | Task ID                  | Task Path | Purpose                                                                                                                                                                                  | Depends On               | Closes Gap                                                                                                    | Status      |
