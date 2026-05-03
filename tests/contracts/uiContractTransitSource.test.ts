@@ -67,6 +67,36 @@ function expectTypeDeclaration(source: string, symbol: string): void {
   );
 }
 
+function extractInterfaceBody(source: string, symbol: string): string {
+  const match = new RegExp(`export interface ${symbol}\\b[^\\{]*\\{`, "u").exec(
+    source
+  );
+  expect(match).not.toBeNull();
+  if (match === null) {
+    return "";
+  }
+
+  const bodyStart = match.index + match[0].length;
+  let depth = 1;
+  for (let index = bodyStart; index < source.length; index += 1) {
+    const character = source.charAt(index);
+    if (character === "{") {
+      depth += 1;
+    }
+    if (character === "}") {
+      depth -= 1;
+      if (depth === 0) {
+        const body = source.slice(bodyStart, index);
+        expect(body).not.toBe("");
+        return body;
+      }
+    }
+  }
+
+  expect(depth).toBe(0);
+  return "";
+}
+
 const producerHelperExportPattern =
   /export\s+(?:(?:function\s+)|(?:const\s+))(present|map|normalize|resolve|read)\w*/u;
 
@@ -255,25 +285,162 @@ describe("UI contract transit source guards", () => {
       "src/v11/infrastructure/ui/routerHttpBody.ts"
     );
     const uiApi = await readSource("ui/src/lib/api.ts");
-
-    for (const symbol of [
+    const uiDefaultsSources = await readTypeScriptSources("src/v11/defaults/ui");
+    const uiInfrastructureSources = await readTypeScriptSources(
+      "src/v11/infrastructure/ui"
+    );
+    const uiProjectionSources = new Map([
+      ...uiDefaultsSources,
+      ...uiInfrastructureSources
+    ]);
+    const actionEventContract = extractInterfaceBody(canonical, "UiActionEvent");
+    const actionStateContract = extractInterfaceBody(
+      canonical,
+      "UiActionBubbleState"
+    );
+    const pendingReworkIntentContract = extractInterfaceBody(
+      canonical,
+      "UiActionPendingReworkIntent"
+    );
+    const affectedResultContracts = [
+      "UiEmitApprovalDecisionResult",
+      "UiEmitRequestReworkImmediateResult",
+      "UiEmitRequestReworkQueuedResult",
+      "UiEmitHumanReplyResult",
+      "UiCommitBubbleResult",
+      "UiStartBubbleResult",
+      "UiStopBubbleResult",
+      "UiRestartBubbleResult"
+    ]
+      .map(
+        (symbol) => extractInterfaceBody(canonical, symbol)
+      )
+      .join("\n");
+    expect(affectedResultContracts).not.toBe("");
+    const inputContracts = [
+      "UiBubbleMutationInput",
       "UiEmitApproveInput",
+      "UiEmitRequestReworkInput",
+      "UiEmitHumanReplyInput",
       "UiCommitBubbleInput",
       "UiMergeBubbleInput",
+      "UiAttachBubbleInput",
       "UiUpdateBubbleReviewPolicyInput",
+      "UiDeleteBubbleInput"
+    ]
+      .map(
+        (symbol) => extractInterfaceBody(canonical, symbol)
+      )
+      .join("\n");
+    expect(inputContracts).not.toBe("");
+
+    for (const symbol of [
+      "UiActionAgentName",
+      "UiActionAgentRole",
+      "UiActionApprovalDecision",
+      "UiActionBubbleState",
+      "UiActionEvent",
+      "UiActionExecutionContextRef",
+      "UiActionFindingsClaimSource",
+      "UiActionFindingsClaimState",
+      "UiActionPassIntent",
+      "UiActionPendingReworkIntent",
+      "UiActionProtocolMessageType",
+      "UiActionProtocolParticipant",
+      "UiBubbleMutationInput",
+      "UiEmitApproveInput",
+      "UiEmitRequestReworkInput",
+      "UiEmitHumanReplyInput",
+      "UiCommitBubbleInput",
+      "UiMergeBubbleInput",
+      "UiAttachBubbleInput",
+      "UiUpdateBubbleReviewPolicyInput",
+      "UiDeleteBubbleInput",
+      "UiApprovalDecisionDeliverySignal",
+      "UiApprovalDecisionDeliverySignals",
+      "UiDeliveryFailureReason",
+      "UiDeliveryTargetReasonCode",
+      "UiDeliveryAckReasonCode",
+      "UiPassValidationRecoveryMarkerPersistWarning",
       "UiEmitApprovalDecisionResult",
+      "UiEmitRequestReworkResult",
+      "UiEmitRequestReworkQueuedResult",
+      "UiEmitRequestReworkImmediateResult",
+      "UiEmitHumanReplyResult",
       "UiCommitBubbleResult",
+      "UiStartBubbleResult",
+      "UiStopBubbleResult",
+      "UiRestartBubbleResult",
       "UiMergeBubbleResult",
+      "UiOpenBubbleResult",
+      "UiAttachBubbleResult",
       "UiUpdateBubbleReviewPolicyResult"
     ]) {
-      expect(canonical).toMatch(new RegExp(`export interface ${symbol}\\b`));
+      expectTypeDeclaration(canonical, symbol);
       expectNoTypeDeclaration(backendCompat, symbol);
       expectNoTypeDeclaration(uiTypes, symbol);
       expectNoTypeDeclaration(uiCompat, symbol);
     }
 
+    for (const symbol of [
+      "UiActionAgentName",
+      "UiActionAgentRole",
+      "UiActionApprovalDecision",
+      "UiActionBubbleState",
+      "UiActionEvent",
+      "UiActionExecutionContextRef",
+      "UiActionFindingsClaimSource",
+      "UiActionFindingsClaimState",
+      "UiActionPassIntent",
+      "UiActionPendingReworkIntent",
+      "UiActionProtocolMessageType",
+      "UiActionProtocolParticipant"
+    ]) {
+      expect(uiTypes).not.toContain(symbol);
+      expect(uiCompat).toContain(symbol);
+    }
+
     expect(canonical).not.toContain("src/v11");
     expect(canonical).not.toContain("../v11");
+    expect(canonical).not.toContain("BubbleStateSnapshot");
+    expect(canonical).not.toContain("ProtocolEnvelope");
+    expect(canonical).not.toMatch(/\bstate:\s*BubbleStateSnapshot\b/u);
+    expect(canonical).not.toMatch(/\benvelope:\s*ProtocolEnvelope\b/u);
+    expect(canonical).toContain("actionState: UiActionBubbleState");
+    expect(canonical).toContain("event: UiActionEvent");
+    expect(canonical).toContain("queuedIntent: UiActionPendingReworkIntent | null");
+    expect(canonical).toMatch(
+      /export interface UiEmitHumanReplyInput extends UiBubbleMutationInput \{/u
+    );
+    expect(uiCompat).toContain("UiEmitHumanReplyInput");
+    expect(canonical).not.toMatch(
+      /export interface UiEmitHumanReplyInput \{\s*bubbleId:/u
+    );
+    expect(pendingReworkIntentContract).toMatch(/^\s*requestedBy:\s*string;/mu);
+    expect(pendingReworkIntentContract).toMatch(/^\s*requestedAt:\s*string;/mu);
+    expect(pendingReworkIntentContract).not.toMatch(
+      /^\s*requested(?:By|At)\?:/mu
+    );
+    expect(canonical).toContain("now?: string | undefined");
+    expect(inputContracts).not.toMatch(/\bDate\b/u);
+    expect(inputContracts).not.toMatch(/\bFunction\b/u);
+    expect(inputContracts).not.toMatch(/\bclass\b/u);
+    expect(inputContracts).not.toMatch(/\bnew\s+/u);
+    expect(inputContracts).not.toMatch(/=>/u);
+    expect(canonical).toContain("export interface UiActionBubbleState");
+    expect(canonical).toContain("export interface UiActionEvent");
+    expect(canonical).toContain("executionContext: UiActionExecutionContextRef | null");
+    expect(canonical).not.toContain("round_role_history");
+    expect(canonical).not.toMatch(/\bmeta_review[?:]/u);
+    expect(actionStateContract).not.toContain("roundRoleHistory");
+    expect(actionStateContract).not.toContain("metaReview");
+    expect(actionStateContract).not.toMatch(/\battempt\b/u);
+    expect(actionStateContract).not.toMatch(/\bdeadlineAt\b/u);
+    expect(actionEventContract).not.toMatch(/\bpayload\b/u);
+    expect(actionEventContract).not.toMatch(/\bmetadata\b/u);
+    expect(actionEventContract).not.toMatch(/\bfindings\b/u);
+    expect(affectedResultContracts).not.toMatch(/^\s*state[?:]:/mu);
+    expect(affectedResultContracts).not.toMatch(/^\s*envelope[?:]:/mu);
     expect(uiCompat).toContain(
       "from \"../../../../src/contracts/ui/uiActions.js\""
     );
@@ -290,6 +457,31 @@ describe("UI contract transit source guards", () => {
     expect(routerHttpBody).toContain("Commit request requires boolean field `stageAll`.");
     expect(routerHttpBody).toContain("Merge request body must be a JSON object when provided.");
     expect(routerHttpBody).toContain("Delete request body must be a JSON object when provided.");
+    expectOnlySourcePathsContaining(
+      uiProjectionSources,
+      "projectBubbleStateToUiActionState",
+      ["src/v11/defaults/ui/routerDefaults.ts"]
+    );
+    expectOnlySourcePathsContaining(
+      uiProjectionSources,
+      "projectProtocolEnvelopeToUiActionEvent",
+      ["src/v11/defaults/ui/routerDefaults.ts"]
+    );
+    expectOnlySourcePathsContaining(
+      uiProjectionSources,
+      "projectPendingReworkIntentToUiActionPendingIntent",
+      ["src/v11/defaults/ui/routerDefaults.ts"]
+    );
+    expectOnlySourcePathsContaining(
+      uiProjectionSources,
+      "projectApprovalDecisionDeliverySignalToUiDeliverySignal",
+      ["src/v11/defaults/ui/routerDefaults.ts"]
+    );
+    expectOnlySourcePathsContaining(
+      uiProjectionSources,
+      "projectApprovalDecisionDeliverySignalsToUiDeliverySignals",
+      ["src/v11/defaults/ui/routerDefaults.ts"]
+    );
     expect(parseApproveBody({
       refs: ["artifact://review.md"],
       ignored: true

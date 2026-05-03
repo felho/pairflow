@@ -1,5 +1,5 @@
 import type {
-  AttachBubbleResult,
+  UiAttachBubbleResult,
   UiBubbleActionDispatchDependencies
 } from "../../shared/ports/uiRouter.js";
 import {
@@ -44,7 +44,7 @@ async function handleAttachAction(
   environment: BubbleActionDispatchEnvironment,
   repoPath: string,
   bubbleId: string
-): Promise<AttachBubbleResult> {
+): Promise<UiAttachBubbleResult> {
   return environment.dependencies.attachBubble({
     bubbleId,
     repoPath,

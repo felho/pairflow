@@ -11,9 +11,17 @@ import { BubbleMergeErrorV11 as BubbleMergeError } from "../../../src/v11/applic
 import { RemoteBubbleApprovalCommandError } from "../../../src/v11/infrastructure/executor/ssh/sshBubbleApprovalCommand.js";
 import { RemoteBubbleCommitCommandError } from "../../../src/v11/infrastructure/executor/ssh/sshBubbleCommitCommand.js";
 import { RemoteBubbleStatusError } from "../../../src/v11/infrastructure/executor/ssh/sshBubbleStatus.js";
-import type { RestartBubbleResult } from "../../../src/v11/application/restart/restartCommandContract.js";
 import type * as EmitApprovalModule from "../../../src/v11/application/approval/emitApprovalV11.js";
+import type * as EmitCommitModule from "../../../src/v11/application/commit/emitCommitV11.js";
+import type * as EmitReplyModule from "../../../src/v11/application/reply/emitReplyV11.js";
+import type * as RestartCommandModule from "../../../src/v11/application/restart/restartCommandApi.js";
+import type * as EmitResumeModule from "../../../src/v11/application/resume/emitResumeV11.js";
+import type * as EmitStartModule from "../../../src/v11/application/start/emitStartV11.js";
+import type * as EmitStopModule from "../../../src/v11/application/stop/emitStopV11.js";
 import {
+  projectBubbleStateToUiActionState,
+  projectPendingReworkIntentToUiActionPendingIntent,
+  projectProtocolEnvelopeToUiActionEvent,
   projectApprovalDecisionDeliverySignalToUiDeliverySignal,
   projectApprovalDecisionDeliverySignalsToUiDeliverySignals
 } from "../../../src/v11/defaults/ui/routerDefaults.js";
@@ -26,6 +34,13 @@ import type { UiEventsBroker } from "../../../src/v11/infrastructure/ui/events.j
 import type { UiRepoScope } from "../../../src/v11/infrastructure/ui/repoScope.js";
 import type { BubbleInboxView } from "../../../src/v11/shared/inbox/inboxCommandApi.js";
 import type {
+  UiActionBubbleState,
+  UiActionEvent
+} from "../../../src/contracts/ui/uiActions.js";
+import type {
+  UiStartBubbleResult,
+  UiStopBubbleResult,
+  UiRestartBubbleResult,
   UiBubbleListView,
   UiCommitBubbleResult
 } from "../../../src/v11/shared/ports/uiRouter.js";
@@ -106,9 +121,147 @@ async function createAssetsDir(): Promise<string> {
 
 const emitApprovalModulePath =
   "../../../src/v11/application/approval/emitApprovalV11.js";
+const emitCommitModulePath =
+  "../../../src/v11/application/commit/emitCommitV11.js";
+const emitReplyModulePath =
+  "../../../src/v11/application/reply/emitReplyV11.js";
+const emitResumeModulePath =
+  "../../../src/v11/application/resume/emitResumeV11.js";
+const emitStartModulePath =
+  "../../../src/v11/application/start/emitStartV11.js";
+const emitStopModulePath = "../../../src/v11/application/stop/emitStopV11.js";
+const restartCommandModulePath =
+  "../../../src/v11/application/restart/restartCommandApi.js";
+
+function uiActionStateFixture(
+  bubbleId = "b-router-action-fixture"
+): UiActionBubbleState {
+  return {
+    bubbleId,
+    lifecycleState: "RUNNING",
+    round: 1,
+    activeAgent: "codex",
+    activeRole: "implementer",
+    activeSince: "2026-02-25T00:00:00.000Z",
+    lastCommandAt: "2026-02-25T00:01:00.000Z",
+    executionContext: null
+  };
+}
+
+function uiActionEventFixture(bubbleId = "b-router-action-fixture"): UiActionEvent {
+  return {
+    id: "env-action-fixture",
+    timestamp: "2026-02-25T00:02:00.000Z",
+    bubbleId,
+    sender: "human",
+    recipient: "orchestrator",
+    type: "APPROVAL_DECISION",
+    round: 1,
+    refs: []
+  };
+}
+
+function rawProtocolEnvelopeFixture(
+  bubbleId: string,
+  type: "APPROVAL_DECISION" | "HUMAN_REPLY" | "COMMIT_RESULT",
+  overrides: Partial<{
+    id: string;
+    sender: "human" | "orchestrator";
+    recipient: "human" | "orchestrator";
+    summary: string;
+    message: string;
+    decision: "approve" | "rework";
+  }> = {}
+) {
+  return {
+    id: overrides.id ?? `env-${bubbleId}`,
+    ts: "2026-02-25T00:02:00.000Z",
+    bubble_id: bubbleId,
+    sender: overrides.sender ?? "human",
+    recipient: overrides.recipient ?? "orchestrator",
+    type,
+    round: 2,
+    payload: {
+      ...(overrides.summary !== undefined ? { summary: overrides.summary } : {}),
+      ...(overrides.message !== undefined ? { message: overrides.message } : {}),
+      ...(overrides.decision !== undefined ? { decision: overrides.decision } : {}),
+      metadata: {
+        internal_only: true
+      }
+    },
+    refs: ["artifact://action.md"]
+  } as const;
+}
+
+function rawBubbleStateFixture(
+  bubbleId: string,
+  lifecycleState: "RUNNING" | "CANCELLED" | "DONE" = "RUNNING"
+) {
+  const hasActiveRuntime = lifecycleState === "RUNNING";
+  return {
+    bubble_id: bubbleId,
+    state: lifecycleState,
+    round: 2,
+    active_agent: hasActiveRuntime ? "codex" : null,
+    active_role: hasActiveRuntime ? "implementer" : null,
+    active_since: hasActiveRuntime ? "2026-02-25T00:00:00.000Z" : null,
+    execution_context:
+      hasActiveRuntime
+        ? {
+            active_role: "implementer",
+            awaited_output_type: "pass_result",
+            handoff_id: "handoff-default",
+            execution_id: "execution-default",
+            round: 2,
+            started_at: "2026-02-25T00:00:00.000Z",
+            deadline_at: "2026-02-25T00:30:00.000Z",
+            attempt: 4
+          }
+        : null,
+    round_role_history: hasActiveRuntime
+      ? [
+          {
+            round: 1,
+            implementer: "codex",
+            reviewer: "claude",
+            switched_at: "2026-02-25T00:00:00.000Z"
+          }
+        ]
+      : [],
+    last_command_at: "2026-02-25T00:02:00.000Z",
+    pending_rework_intent: null,
+    ...(hasActiveRuntime
+      ? {
+          meta_review: {
+            auto_rework_count: 0,
+            auto_rework_limit: 10,
+            sticky_human_gate: false,
+            consecutive_clean_runs: 1,
+            execution_context: null,
+            runtime_delivery: null
+          }
+        }
+      : {})
+  } as const;
+}
 
 async function withMockedApproveRouteDependencies<T>(
   emitApproveV11: ReturnType<typeof vi.fn>,
+  run: (createUiRouterWithDefaultProjection: typeof createUiRouter) => Promise<T>
+): Promise<T> {
+  return withMockedApprovalRouteDependencies(
+    {
+      emitApproveV11
+    },
+    run
+  );
+}
+
+async function withMockedApprovalRouteDependencies<T>(
+  mocks: {
+    emitApproveV11?: ReturnType<typeof vi.fn>;
+    emitRequestReworkV11?: ReturnType<typeof vi.fn>;
+  },
   run: (createUiRouterWithDefaultProjection: typeof createUiRouter) => Promise<T>
 ): Promise<T> {
   vi.resetModules();
@@ -119,7 +272,12 @@ async function withMockedApproveRouteDependencies<T>(
 
     return {
       ...actual,
-      emitApproveV11
+      ...(mocks.emitApproveV11 !== undefined
+        ? { emitApproveV11: mocks.emitApproveV11 }
+        : {}),
+      ...(mocks.emitRequestReworkV11 !== undefined
+        ? { emitRequestReworkV11: mocks.emitRequestReworkV11 }
+        : {})
     };
   });
 
@@ -131,6 +289,106 @@ async function withMockedApproveRouteDependencies<T>(
   } finally {
     vi.resetModules();
     vi.doUnmock(emitApprovalModulePath);
+  }
+}
+
+async function withMockedLifecycleRouteDependencies<T>(
+  mocks: {
+    startBubbleV11: ReturnType<typeof vi.fn>;
+    stopBubbleV11: ReturnType<typeof vi.fn>;
+    restartBubble: ReturnType<typeof vi.fn>;
+  },
+  run: (createUiRouterWithDefaultProjection: typeof createUiRouter) => Promise<T>
+): Promise<T> {
+  vi.resetModules();
+  vi.doMock(emitStartModulePath, async () => {
+    const actual = await vi.importActual<typeof EmitStartModule>(
+      emitStartModulePath
+    );
+    return {
+      ...actual,
+      startBubbleV11: mocks.startBubbleV11
+    };
+  });
+  vi.doMock(emitStopModulePath, async () => {
+    const actual = await vi.importActual<typeof EmitStopModule>(
+      emitStopModulePath
+    );
+    return {
+      ...actual,
+      stopBubbleV11: mocks.stopBubbleV11
+    };
+  });
+  vi.doMock(restartCommandModulePath, async () => {
+    const actual = await vi.importActual<typeof RestartCommandModule>(
+      restartCommandModulePath
+    );
+    return {
+      ...actual,
+      restartBubble: mocks.restartBubble
+    };
+  });
+
+  try {
+    const { createUiRouter: createUiRouterWithDefaultProjection } = await import(
+      "../../../src/v11/infrastructure/ui/router.js"
+    );
+    return await run(createUiRouterWithDefaultProjection);
+  } finally {
+    vi.resetModules();
+    vi.doUnmock(emitStartModulePath);
+    vi.doUnmock(emitStopModulePath);
+    vi.doUnmock(restartCommandModulePath);
+  }
+}
+
+async function withMockedEventRouteDependencies<T>(
+  mocks: {
+    commitBubbleV11: ReturnType<typeof vi.fn>;
+    emitHumanReplyV11: ReturnType<typeof vi.fn>;
+    resumeBubbleV11: ReturnType<typeof vi.fn>;
+  },
+  run: (createUiRouterWithDefaultProjection: typeof createUiRouter) => Promise<T>
+): Promise<T> {
+  vi.resetModules();
+  vi.doMock(emitCommitModulePath, async () => {
+    const actual = await vi.importActual<typeof EmitCommitModule>(
+      emitCommitModulePath
+    );
+    return {
+      ...actual,
+      commitBubbleV11: mocks.commitBubbleV11
+    };
+  });
+  vi.doMock(emitReplyModulePath, async () => {
+    const actual = await vi.importActual<typeof EmitReplyModule>(
+      emitReplyModulePath
+    );
+    return {
+      ...actual,
+      emitHumanReplyV11: mocks.emitHumanReplyV11
+    };
+  });
+  vi.doMock(emitResumeModulePath, async () => {
+    const actual = await vi.importActual<typeof EmitResumeModule>(
+      emitResumeModulePath
+    );
+    return {
+      ...actual,
+      resumeBubbleV11: mocks.resumeBubbleV11
+    };
+  });
+
+  try {
+    const { createUiRouter: createUiRouterWithDefaultProjection } = await import(
+      "../../../src/v11/infrastructure/ui/router.js"
+    );
+    return await run(createUiRouterWithDefaultProjection);
+  } finally {
+    vi.resetModules();
+    vi.doUnmock(emitCommitModulePath);
+    vi.doUnmock(emitReplyModulePath);
+    vi.doUnmock(emitResumeModulePath);
   }
 }
 
@@ -172,6 +430,144 @@ describe("resolveStaticAssetPath", () => {
 });
 
 describe("approval decision delivery projection", () => {
+  it("projects raw action state to the explicit UI action DTO without hidden state slices", () => {
+    const projected = projectBubbleStateToUiActionState({
+      bubble_id: "b-router-action-state",
+      state: "RUNNING",
+      round: 3,
+      active_agent: "codex",
+      active_role: "implementer",
+      active_since: "2026-02-25T00:00:00.000Z",
+      last_command_at: "2026-02-25T00:01:00.000Z",
+      execution_context: {
+        active_role: "implementer",
+        awaited_output_type: "pass_result",
+        handoff_id: "handoff-1",
+        execution_id: "execution-1",
+        round: 3,
+        started_at: "2026-02-25T00:00:00.000Z",
+        deadline_at: "2026-02-25T00:30:00.000Z",
+        attempt: 2
+      },
+      round_role_history: [
+        {
+          round: 1,
+          implementer: "codex",
+          reviewer: "claude",
+          switched_at: "2026-02-25T00:00:00.000Z"
+        }
+      ],
+      pending_rework_intent: null,
+      rework_intent_history: [],
+      meta_review: {
+        auto_rework_count: 0,
+        auto_rework_limit: 10,
+        sticky_human_gate: false,
+        consecutive_clean_runs: 1,
+        execution_context: null,
+        runtime_delivery: null
+      }
+    });
+
+    expect(projected).toStrictEqual({
+      bubbleId: "b-router-action-state",
+      lifecycleState: "RUNNING",
+      round: 3,
+      activeAgent: "codex",
+      activeRole: "implementer",
+      activeSince: "2026-02-25T00:00:00.000Z",
+      lastCommandAt: "2026-02-25T00:01:00.000Z",
+      executionContext: {
+        handoffId: "handoff-1",
+        executionId: "execution-1"
+      }
+    });
+    expect(projected).not.toHaveProperty("round_role_history");
+    expect(projected).not.toHaveProperty("meta_review");
+    expect(projected.executionContext).not.toHaveProperty("deadlineAt");
+    expect(projected.executionContext).not.toHaveProperty("awaitedOutputType");
+  });
+
+  it("projects raw action envelopes to display-safe event fields only", () => {
+    const refs = ["artifact://approval.md"];
+    const projected = projectProtocolEnvelopeToUiActionEvent({
+      id: "env-1",
+      ts: "2026-02-25T00:02:00.000Z",
+      bubble_id: "b-router-event",
+      sender: "human",
+      recipient: "orchestrator",
+      type: "APPROVAL_DECISION",
+      round: 3,
+      refs,
+      payload: {
+        message: "Approved.",
+        decision: "approve",
+        pass_intent: "review",
+        findings_claim_state: "open_findings",
+        findings_claim_source: "payload_findings_count",
+        findings: [
+          {
+            title: "Raw finding",
+            priority: "P1",
+            timing: "required-now",
+            layer: "L1",
+            detail: "Not carried by action DTO."
+          }
+        ],
+        metadata: {
+          delivery_target_role: "status",
+          internal_only: true
+        }
+      }
+    });
+
+    expect(projected).toStrictEqual({
+      id: "env-1",
+      timestamp: "2026-02-25T00:02:00.000Z",
+      bubbleId: "b-router-event",
+      sender: "human",
+      recipient: "orchestrator",
+      type: "APPROVAL_DECISION",
+      round: 3,
+      refs: ["artifact://approval.md"],
+      message: "Approved.",
+      decision: "approve",
+      passIntent: "review",
+      findingsClaimState: "open_findings",
+      findingsClaimSource: "payload_findings_count"
+    });
+    expect(projected).not.toHaveProperty("payload");
+    expect(projected).not.toHaveProperty("metadata");
+    expect(projected).not.toHaveProperty("findings");
+    expect(projected.refs).not.toBe(refs);
+  });
+
+  it("projects queued rework intent facts explicitly", () => {
+    const refs = ["artifact://rework.md"];
+    const projected = projectPendingReworkIntentToUiActionPendingIntent({
+      intent_id: "intent-1",
+      message: "Please rework.",
+      refs,
+      requested_by: "human",
+      requested_at: "2026-02-25T00:03:00.000Z",
+      status: "pending",
+      superseded_by_intent_id: "intent-2"
+    });
+
+    expect(projected).toStrictEqual({
+      intentId: "intent-1",
+      message: "Please rework.",
+      refs: ["artifact://rework.md"],
+      requestedBy: "human",
+      requestedAt: "2026-02-25T00:03:00.000Z",
+      status: "pending",
+      supersededByIntentId: "intent-2"
+    });
+    expect(projected).not.toHaveProperty("intent_id");
+    expect(projected).not.toHaveProperty("requested_by");
+    expect(projected.refs).not.toBe(refs);
+  });
+
   it("projects application delivery compat fields out of the shared UI/public contract", () => {
     const accepted = projectApprovalDecisionDeliverySignalToUiDeliverySignal({
       status: "accepted",
@@ -999,6 +1395,156 @@ describe("createUiRouter delete action", () => {
 });
 
 describe("createUiRouter action routes", () => {
+  it("projects default start, stop, and restart route results to UI action DTOs", async () => {
+    let server: Awaited<ReturnType<typeof startRouterServer>> | undefined;
+    const repoPath = "/tmp/pairflow-ui-router-lifecycle-defaults";
+    const startBubbleV11 = vi.fn(async () => ({
+      bubbleId: "b-router-lifecycle-defaults",
+      state: rawBubbleStateFixture("b-router-lifecycle-defaults"),
+      tmuxSessionName: "pf-b-router-lifecycle-defaults",
+      worktreePath: "/tmp/worktrees/b-router-lifecycle-defaults",
+      executionTarget: "local" as const,
+      runtimeWorkspacePath: "/tmp/runtime/b-router-lifecycle-defaults"
+    }));
+    const stopBubbleV11 = vi.fn(async () => ({
+      bubbleId: "b-router-lifecycle-defaults",
+      state: rawBubbleStateFixture("b-router-lifecycle-defaults", "CANCELLED"),
+      tmuxSessionName: "pf-b-router-lifecycle-defaults",
+      tmuxSessionExisted: true,
+      runtimeSessionRemoved: true
+    }));
+    const restartBubble = vi.fn(async () => ({
+      bubbleId: "b-router-lifecycle-defaults",
+      state: rawBubbleStateFixture("b-router-lifecycle-defaults"),
+      tmuxSessionName: "pf-b-router-lifecycle-defaults",
+      worktreePath: "/tmp/worktrees/b-router-lifecycle-defaults",
+      previousTmuxSessionExisted: true,
+      previousRuntimeSessionRemoved: true
+    }));
+
+    try {
+      await withMockedLifecycleRouteDependencies(
+        {
+          startBubbleV11,
+          stopBubbleV11,
+          restartBubble
+        },
+        async (createUiRouterWithDefaultProjection) => {
+          const router = createUiRouterWithDefaultProjection({
+            repoScope: {
+              repos: [repoPath],
+              has: (value: string) => Promise.resolve(value === repoPath)
+            },
+            events: {
+              subscribe: () => () => undefined,
+              getSnapshot: () => ({
+                id: 1,
+                ts: "2026-02-25T00:00:00.000Z",
+                type: "snapshot",
+                repos: [],
+                bubbles: []
+              }),
+              refreshNow: () => Promise.resolve(undefined),
+              addRepo: () => Promise.resolve(false),
+              removeRepo: () => Promise.resolve(false),
+              close: () => Promise.resolve(undefined)
+            }
+          });
+          server = await startRouterServer(router);
+
+          const start = await fetch(
+            `${server.url}/api/bubbles/b-router-lifecycle-defaults/start?repo=${encodeURIComponent(repoPath)}`,
+            { method: "POST" }
+          );
+          const stop = await fetch(
+            `${server.url}/api/bubbles/b-router-lifecycle-defaults/stop?repo=${encodeURIComponent(repoPath)}`,
+            { method: "POST" }
+          );
+          const restart = await fetch(
+            `${server.url}/api/bubbles/b-router-lifecycle-defaults/restart?repo=${encodeURIComponent(repoPath)}`,
+            { method: "POST" }
+          );
+          const startPayload = (await start.json()) as {
+            result: UiStartBubbleResult & Record<string, unknown>;
+          };
+          const stopPayload = (await stop.json()) as {
+            result: UiStopBubbleResult & Record<string, unknown>;
+          };
+          const restartPayload = (await restart.json()) as {
+            result: UiRestartBubbleResult & Record<string, unknown>;
+          };
+
+          expect(start.status).toBe(200);
+          expect(stop.status).toBe(200);
+          expect(restart.status).toBe(200);
+          expect(startPayload.result).toStrictEqual({
+            bubbleId: "b-router-lifecycle-defaults",
+            actionState: {
+              bubbleId: "b-router-lifecycle-defaults",
+              lifecycleState: "RUNNING",
+              round: 2,
+              activeAgent: "codex",
+              activeRole: "implementer",
+              activeSince: "2026-02-25T00:00:00.000Z",
+              lastCommandAt: "2026-02-25T00:02:00.000Z",
+              executionContext: {
+                handoffId: "handoff-default",
+                executionId: "execution-default"
+              }
+            },
+            tmuxSessionName: "pf-b-router-lifecycle-defaults",
+            worktreePath: "/tmp/worktrees/b-router-lifecycle-defaults"
+          });
+          expect(stopPayload.result).toStrictEqual({
+            bubbleId: "b-router-lifecycle-defaults",
+            actionState: {
+              bubbleId: "b-router-lifecycle-defaults",
+              lifecycleState: "CANCELLED",
+              round: 2,
+              activeAgent: null,
+              activeRole: null,
+              activeSince: null,
+              lastCommandAt: "2026-02-25T00:02:00.000Z",
+              executionContext: null
+            },
+            tmuxSessionName: "pf-b-router-lifecycle-defaults",
+            tmuxSessionExisted: true,
+            runtimeSessionRemoved: true
+          });
+          expect(restartPayload.result).toStrictEqual({
+            bubbleId: "b-router-lifecycle-defaults",
+            actionState: startPayload.result.actionState,
+            tmuxSessionName: "pf-b-router-lifecycle-defaults",
+            worktreePath: "/tmp/worktrees/b-router-lifecycle-defaults",
+            previousTmuxSessionExisted: true,
+            previousRuntimeSessionRemoved: true
+          });
+          for (const result of [
+            startPayload.result,
+            stopPayload.result,
+            restartPayload.result
+          ]) {
+            expect(result).not.toHaveProperty("state");
+            expect(result).not.toHaveProperty("executionTarget");
+            expect(result).not.toHaveProperty("runtimeWorkspacePath");
+            expect(result.actionState).not.toHaveProperty("round_role_history");
+            expect(result.actionState).not.toHaveProperty("roundRoleHistory");
+            expect(result.actionState).not.toHaveProperty("meta_review");
+            expect(result.actionState).not.toHaveProperty("metaReview");
+            if (result.actionState.executionContext !== null) {
+              expect(result.actionState.executionContext).not.toHaveProperty("attempt");
+              expect(result.actionState.executionContext).not.toHaveProperty("deadlineAt");
+            }
+          }
+        }
+      );
+    } finally {
+      if (server !== undefined) {
+        await server.close();
+      }
+    }
+  });
+
   describe("attach routes", () => {
     it("returns attach error when tmux session is missing", async () => {
       const repoPath = "/tmp/pairflow-ui-router-attach-repo";
@@ -1284,8 +1830,8 @@ describe("createUiRouter action routes", () => {
       const emitApprove = vi.fn(async () => ({
         bubbleId: "b-router-approve-success",
         sequence: 7,
-        envelope: {} as never,
-        state: {} as never,
+        event: uiActionEventFixture("b-router-approve-success"),
+        actionState: uiActionStateFixture("b-router-approve-success"),
         delivery: {
           statusDelivery: {
             status: "accepted" as const,
@@ -1363,8 +1909,32 @@ describe("createUiRouter action routes", () => {
       const emitApproveV11 = vi.fn(async () => ({
         bubbleId: "b-router-approve-default",
         sequence: 9,
-        envelope: {} as never,
-        state: {} as never,
+        envelope: {
+          id: "env-approve-default",
+          ts: "2026-02-25T00:02:00.000Z",
+          bubble_id: "b-router-approve-default",
+          sender: "human" as const,
+          recipient: "orchestrator" as const,
+          type: "APPROVAL_DECISION" as const,
+          round: 2,
+          payload: {
+            decision: "approve" as const,
+            message: "Approved."
+          },
+          refs: []
+        },
+        state: {
+          bubble_id: "b-router-approve-default",
+          state: "APPROVED_FOR_COMMIT" as const,
+          round: 2,
+          active_agent: null,
+          active_role: null,
+          active_since: null,
+          execution_context: null,
+          round_role_history: [],
+          last_command_at: "2026-02-25T00:02:00.000Z",
+          pending_rework_intent: null
+        },
         delivery: {
           statusDelivery: {
             status: "accepted" as const,
@@ -1420,6 +1990,8 @@ describe("createUiRouter action routes", () => {
             );
             const payload = (await response.json()) as {
               result: {
+                event?: Record<string, unknown>;
+                actionState?: Record<string, unknown>;
                 delivery?: {
                   statusDelivery: {
                     status: string;
@@ -1439,6 +2011,30 @@ describe("createUiRouter action routes", () => {
 
             expect(response.status).toBe(200);
             expect(emitApproveV11).toHaveBeenCalledTimes(1);
+            expect(payload.result.event).toStrictEqual({
+              id: "env-approve-default",
+              timestamp: "2026-02-25T00:02:00.000Z",
+              bubbleId: "b-router-approve-default",
+              sender: "human",
+              recipient: "orchestrator",
+              type: "APPROVAL_DECISION",
+              round: 2,
+              refs: [],
+              message: "Approved.",
+              decision: "approve"
+            });
+            expect(payload.result.actionState).toStrictEqual({
+              bubbleId: "b-router-approve-default",
+              lifecycleState: "APPROVED_FOR_COMMIT",
+              round: 2,
+              activeAgent: null,
+              activeRole: null,
+              activeSince: null,
+              lastCommandAt: "2026-02-25T00:02:00.000Z",
+              executionContext: null
+            });
+            expect(payload.result).not.toHaveProperty("envelope");
+            expect(payload.result).not.toHaveProperty("state");
             expect(payload.result.delivery).toStrictEqual({
               statusDelivery: {
                 status: "accepted",
@@ -1468,14 +2064,324 @@ describe("createUiRouter action routes", () => {
       }
     });
 
-    it("preserves neutral rework delivery rejection fields on the first-party route", async () => {
+    it("projects queued rework results through the first-party route dependency chain", async () => {
+      let server: Awaited<ReturnType<typeof startRouterServer>> | undefined;
+      const repoPath = "/tmp/pairflow-ui-router-rework-default-queued";
+      const emitRequestReworkV11 = vi.fn(async () => ({
+        mode: "queued" as const,
+        bubbleId: "b-router-rework-default-queued",
+        intentId: "intent-queued-1",
+        state: {
+          ...rawBubbleStateFixture("b-router-rework-default-queued"),
+          pending_rework_intent: {
+            intent_id: "intent-queued-1",
+            message: "Please rework queued.",
+            refs: ["artifact://queued-rework.md"],
+            requested_by: "human",
+            requested_at: "2026-02-25T00:04:00.000Z",
+            status: "pending" as const,
+            superseded_by_intent_id: "intent-queued-0"
+          }
+        },
+        supersededIntentId: "intent-queued-0"
+      }));
+
+      try {
+        await withMockedApprovalRouteDependencies(
+          {
+            emitRequestReworkV11
+          },
+          async (createUiRouterWithDefaultProjection) => {
+            const router = createUiRouterWithDefaultProjection({
+              repoScope: {
+                repos: [repoPath],
+                has: (value: string) => Promise.resolve(value === repoPath)
+              },
+              events: {
+                subscribe: () => () => undefined,
+                getSnapshot: () => ({
+                  id: 1,
+                  ts: "2026-02-25T00:00:00.000Z",
+                  type: "snapshot",
+                  repos: [],
+                  bubbles: []
+                }),
+                refreshNow: () => Promise.resolve(undefined),
+                addRepo: () => Promise.resolve(false),
+                removeRepo: () => Promise.resolve(false),
+                close: () => Promise.resolve(undefined)
+              }
+            });
+            server = await startRouterServer(router);
+
+            const response = await fetch(
+              `${server.url}/api/bubbles/b-router-rework-default-queued/request-rework?repo=${encodeURIComponent(repoPath)}`,
+              {
+                method: "POST",
+                headers: {
+                  "content-type": "application/json"
+                },
+                body: JSON.stringify({
+                  message: "Please rework queued.",
+                  refs: ["artifact://queued-rework.md"]
+                })
+              }
+            );
+            const payload = (await response.json()) as {
+              result: Record<string, unknown> & {
+                actionState: Record<string, unknown>;
+                queuedIntent: Record<string, unknown>;
+              };
+            };
+
+            expect(response.status).toBe(200);
+            expect(emitRequestReworkV11).toHaveBeenCalledTimes(1);
+            expect(payload.result).toStrictEqual({
+              mode: "queued",
+              bubbleId: "b-router-rework-default-queued",
+              intentId: "intent-queued-1",
+              actionState: {
+                bubbleId: "b-router-rework-default-queued",
+                lifecycleState: "RUNNING",
+                round: 2,
+                activeAgent: "codex",
+                activeRole: "implementer",
+                activeSince: "2026-02-25T00:00:00.000Z",
+                lastCommandAt: "2026-02-25T00:02:00.000Z",
+                executionContext: {
+                  handoffId: "handoff-default",
+                  executionId: "execution-default"
+                }
+              },
+              queuedIntent: {
+                intentId: "intent-queued-1",
+                message: "Please rework queued.",
+                refs: ["artifact://queued-rework.md"],
+                requestedBy: "human",
+                requestedAt: "2026-02-25T00:04:00.000Z",
+                status: "pending",
+                supersededByIntentId: "intent-queued-0"
+              },
+              supersededIntentId: "intent-queued-0"
+            });
+            expect(payload.result).not.toHaveProperty("state");
+            expect(payload.result).not.toHaveProperty("envelope");
+            expect(payload.result.actionState).not.toHaveProperty(
+              "pending_rework_intent"
+            );
+            expect(payload.result.actionState).not.toHaveProperty(
+              "round_role_history"
+            );
+            expect(payload.result.actionState).not.toHaveProperty("meta_review");
+            expect(payload.result.queuedIntent).not.toHaveProperty("intent_id");
+            expect(payload.result.queuedIntent).not.toHaveProperty("requested_by");
+          }
+        );
+      } finally {
+        if (server !== undefined) {
+          await server.close();
+        }
+      }
+    });
+
+    it("does not synthesize queued rework intent details when state lags", async () => {
+      let server: Awaited<ReturnType<typeof startRouterServer>> | undefined;
+      const repoPath = "/tmp/pairflow-ui-router-rework-default-queued-lag";
+      const emitRequestReworkV11 = vi.fn(async () => ({
+        mode: "queued" as const,
+        bubbleId: "b-router-rework-default-queued-lag",
+        intentId: "intent-queued-lag",
+        state: {
+          ...rawBubbleStateFixture("b-router-rework-default-queued-lag"),
+          pending_rework_intent: null
+        }
+      }));
+
+      try {
+        await withMockedApprovalRouteDependencies(
+          {
+            emitRequestReworkV11
+          },
+          async (createUiRouterWithDefaultProjection) => {
+            const router = createUiRouterWithDefaultProjection({
+              repoScope: {
+                repos: [repoPath],
+                has: (value: string) => Promise.resolve(value === repoPath)
+              },
+              events: {
+                subscribe: () => () => undefined,
+                getSnapshot: () => ({
+                  id: 1,
+                  ts: "2026-02-25T00:00:00.000Z",
+                  type: "snapshot",
+                  repos: [],
+                  bubbles: []
+                }),
+                refreshNow: () => Promise.resolve(undefined),
+                addRepo: () => Promise.resolve(false),
+                removeRepo: () => Promise.resolve(false),
+                close: () => Promise.resolve(undefined)
+              }
+            });
+            server = await startRouterServer(router);
+
+            const response = await fetch(
+              `${server.url}/api/bubbles/b-router-rework-default-queued-lag/request-rework?repo=${encodeURIComponent(repoPath)}`,
+              {
+                method: "POST",
+                headers: {
+                  "content-type": "application/json"
+                },
+                body: JSON.stringify({
+                  message: "Request body must not become queuedIntent.",
+                  refs: ["artifact://request-only.md"]
+                })
+              }
+            );
+            const payload = (await response.json()) as {
+              result: Record<string, unknown>;
+            };
+
+            expect(response.status).toBe(200);
+            expect(payload.result).toMatchObject({
+              mode: "queued",
+              bubbleId: "b-router-rework-default-queued-lag",
+              intentId: "intent-queued-lag",
+              queuedIntent: null
+            });
+          }
+        );
+      } finally {
+        if (server !== undefined) {
+          await server.close();
+        }
+      }
+    });
+
+    it("projects immediate rework results through the first-party route dependency chain", async () => {
+      let server: Awaited<ReturnType<typeof startRouterServer>> | undefined;
+      const repoPath = "/tmp/pairflow-ui-router-rework-default-immediate";
+      const emitRequestReworkV11 = vi.fn(async () => ({
+        mode: "immediate" as const,
+        bubbleId: "b-router-rework-default-immediate",
+        sequence: 10,
+        envelope: rawProtocolEnvelopeFixture(
+          "b-router-rework-default-immediate",
+          "APPROVAL_DECISION",
+          {
+            message: "Please rework.",
+            decision: "rework"
+          }
+        ),
+        state: rawBubbleStateFixture("b-router-rework-default-immediate"),
+        delivery: {
+          statusDelivery: {
+            status: "accepted" as const,
+            message: "Rework request recorded for reviewer."
+          }
+        }
+      }));
+
+      try {
+        await withMockedApprovalRouteDependencies(
+          {
+            emitRequestReworkV11
+          },
+          async (createUiRouterWithDefaultProjection) => {
+            const router = createUiRouterWithDefaultProjection({
+              repoScope: {
+                repos: [repoPath],
+                has: (value: string) => Promise.resolve(value === repoPath)
+              },
+              events: {
+                subscribe: () => () => undefined,
+                getSnapshot: () => ({
+                  id: 1,
+                  ts: "2026-02-25T00:00:00.000Z",
+                  type: "snapshot",
+                  repos: [],
+                  bubbles: []
+                }),
+                refreshNow: () => Promise.resolve(undefined),
+                addRepo: () => Promise.resolve(false),
+                removeRepo: () => Promise.resolve(false),
+                close: () => Promise.resolve(undefined)
+              }
+            });
+            server = await startRouterServer(router);
+
+            const response = await fetch(
+              `${server.url}/api/bubbles/b-router-rework-default-immediate/request-rework?repo=${encodeURIComponent(repoPath)}`,
+              {
+                method: "POST",
+                headers: {
+                  "content-type": "application/json"
+                },
+                body: JSON.stringify({
+                  message: "Please rework."
+                })
+              }
+            );
+            const payload = (await response.json()) as {
+              result: Record<string, unknown>;
+            };
+
+            expect(response.status).toBe(200);
+            expect(payload.result).toStrictEqual({
+              mode: "immediate",
+              bubbleId: "b-router-rework-default-immediate",
+              sequence: 10,
+              event: {
+                id: "env-b-router-rework-default-immediate",
+                timestamp: "2026-02-25T00:02:00.000Z",
+                bubbleId: "b-router-rework-default-immediate",
+                sender: "human",
+                recipient: "orchestrator",
+                type: "APPROVAL_DECISION",
+                round: 2,
+                refs: ["artifact://action.md"],
+                message: "Please rework.",
+                decision: "rework"
+              },
+              actionState: {
+                bubbleId: "b-router-rework-default-immediate",
+                lifecycleState: "RUNNING",
+                round: 2,
+                activeAgent: "codex",
+                activeRole: "implementer",
+                activeSince: "2026-02-25T00:00:00.000Z",
+                lastCommandAt: "2026-02-25T00:02:00.000Z",
+                executionContext: {
+                  handoffId: "handoff-default",
+                  executionId: "execution-default"
+                }
+              },
+              delivery: {
+                statusDelivery: {
+                  status: "accepted",
+                  message: "Rework request recorded for reviewer."
+                }
+              }
+            });
+            expect(payload.result).not.toHaveProperty("state");
+            expect(payload.result).not.toHaveProperty("envelope");
+          }
+        );
+      } finally {
+        if (server !== undefined) {
+          await server.close();
+        }
+      }
+    });
+
+    it("serializes neutral rework delivery rejection fields from the DTO port", async () => {
       const repoPath = "/tmp/pairflow-ui-router-rework-success";
       const emitRequestRework = vi.fn(async () => ({
         mode: "immediate" as const,
         bubbleId: "b-router-rework-success",
         sequence: 8,
-        envelope: {} as never,
-        state: {} as never,
+        event: uiActionEventFixture("b-router-rework-success"),
+        actionState: uiActionStateFixture("b-router-rework-success"),
         delivery: {
           statusDelivery: {
             status: "accepted" as const,
@@ -1950,6 +2856,229 @@ describe("createUiRouter action routes", () => {
       await server.close();
     }
     });
+  });
+
+  it("projects default reply, resume, and commit route results to UI action DTOs", async () => {
+    let server: Awaited<ReturnType<typeof startRouterServer>> | undefined;
+    const repoPath = "/tmp/pairflow-ui-router-event-defaults";
+    const emitHumanReplyV11 = vi.fn(async () => ({
+      bubbleId: "b-router-event-defaults",
+      sequence: 11,
+      envelope: rawProtocolEnvelopeFixture(
+        "b-router-event-defaults",
+        "HUMAN_REPLY",
+        {
+          message: "Human reply."
+        }
+      ),
+      state: rawBubbleStateFixture("b-router-event-defaults")
+    }));
+    const resumeBubbleV11 = vi.fn(async () => ({
+      bubbleId: "b-router-event-defaults",
+      sequence: 12,
+      envelope: rawProtocolEnvelopeFixture(
+        "b-router-event-defaults",
+        "HUMAN_REPLY",
+        {
+          id: "env-resume-default",
+          message: "Resume bubble."
+        }
+      ),
+      state: rawBubbleStateFixture("b-router-event-defaults")
+    }));
+    const commitBubbleV11 = vi.fn(async () => ({
+      bubbleId: "b-router-event-defaults",
+      sequence: 13,
+      envelope: rawProtocolEnvelopeFixture(
+        "b-router-event-defaults",
+        "COMMIT_RESULT",
+        {
+          id: "env-commit-default",
+          sender: "orchestrator",
+          recipient: "human",
+          summary: "Committed abc123."
+        }
+      ),
+      state: {
+        ...rawBubbleStateFixture("b-router-event-defaults", "DONE"),
+        round: 2
+      },
+      commitSha: "abc123",
+      commitMessage: "Commit message",
+      stagedFiles: ["src/example.ts"]
+    }));
+
+    try {
+      await withMockedEventRouteDependencies(
+        {
+          commitBubbleV11,
+          emitHumanReplyV11,
+          resumeBubbleV11
+        },
+        async (createUiRouterWithDefaultProjection) => {
+          const router = createUiRouterWithDefaultProjection({
+            repoScope: {
+              repos: [repoPath],
+              has: (value: string) => Promise.resolve(value === repoPath)
+            },
+            events: {
+              subscribe: () => () => undefined,
+              getSnapshot: () => ({
+                id: 1,
+                ts: "2026-02-25T00:00:00.000Z",
+                type: "snapshot",
+                repos: [],
+                bubbles: []
+              }),
+              refreshNow: () => Promise.resolve(undefined),
+              addRepo: () => Promise.resolve(false),
+              removeRepo: () => Promise.resolve(false),
+              close: () => Promise.resolve(undefined)
+            }
+          });
+          server = await startRouterServer(router);
+
+          const reply = await fetch(
+            `${server.url}/api/bubbles/b-router-event-defaults/reply?repo=${encodeURIComponent(repoPath)}`,
+            {
+              method: "POST",
+              headers: {
+                "content-type": "application/json"
+              },
+              body: JSON.stringify({
+                message: "Human reply."
+              })
+            }
+          );
+          const resume = await fetch(
+            `${server.url}/api/bubbles/b-router-event-defaults/resume?repo=${encodeURIComponent(repoPath)}`,
+            { method: "POST" }
+          );
+          const commit = await fetch(
+            `${server.url}/api/bubbles/b-router-event-defaults/commit?repo=${encodeURIComponent(repoPath)}`,
+            {
+              method: "POST",
+              headers: {
+                "content-type": "application/json"
+              },
+              body: JSON.stringify({
+                stageAll: true,
+                message: "Commit message"
+              })
+            }
+          );
+          const replyPayload = (await reply.json()) as {
+            result: Record<string, unknown>;
+          };
+          const resumePayload = (await resume.json()) as {
+            result: Record<string, unknown>;
+          };
+          const commitPayload = (await commit.json()) as {
+            result: Record<string, unknown>;
+          };
+
+          expect(reply.status).toBe(200);
+          expect(resume.status).toBe(200);
+          expect(commit.status).toBe(200);
+          expect(replyPayload.result).toStrictEqual({
+            bubbleId: "b-router-event-defaults",
+            sequence: 11,
+            event: {
+              id: "env-b-router-event-defaults",
+              timestamp: "2026-02-25T00:02:00.000Z",
+              bubbleId: "b-router-event-defaults",
+              sender: "human",
+              recipient: "orchestrator",
+              type: "HUMAN_REPLY",
+              round: 2,
+              refs: ["artifact://action.md"],
+              message: "Human reply."
+            },
+            actionState: {
+              bubbleId: "b-router-event-defaults",
+              lifecycleState: "RUNNING",
+              round: 2,
+              activeAgent: "codex",
+              activeRole: "implementer",
+              activeSince: "2026-02-25T00:00:00.000Z",
+              lastCommandAt: "2026-02-25T00:02:00.000Z",
+              executionContext: {
+                handoffId: "handoff-default",
+                executionId: "execution-default"
+              }
+            }
+          });
+          expect(resumePayload.result).toStrictEqual({
+            bubbleId: "b-router-event-defaults",
+            sequence: 12,
+            event: {
+              id: "env-resume-default",
+              timestamp: "2026-02-25T00:02:00.000Z",
+              bubbleId: "b-router-event-defaults",
+              sender: "human",
+              recipient: "orchestrator",
+              type: "HUMAN_REPLY",
+              round: 2,
+              refs: ["artifact://action.md"],
+              message: "Resume bubble."
+            },
+            actionState: {
+              bubbleId: "b-router-event-defaults",
+              lifecycleState: "RUNNING",
+              round: 2,
+              activeAgent: "codex",
+              activeRole: "implementer",
+              activeSince: "2026-02-25T00:00:00.000Z",
+              lastCommandAt: "2026-02-25T00:02:00.000Z",
+              executionContext: {
+                handoffId: "handoff-default",
+                executionId: "execution-default"
+              }
+            }
+          });
+          expect(commitPayload.result).toStrictEqual({
+            bubbleId: "b-router-event-defaults",
+            sequence: 13,
+            event: {
+              id: "env-commit-default",
+              timestamp: "2026-02-25T00:02:00.000Z",
+              bubbleId: "b-router-event-defaults",
+              sender: "orchestrator",
+              recipient: "human",
+              type: "COMMIT_RESULT",
+              round: 2,
+              refs: ["artifact://action.md"],
+              summary: "Committed abc123."
+            },
+            actionState: {
+              bubbleId: "b-router-event-defaults",
+              lifecycleState: "DONE",
+              round: 2,
+              activeAgent: null,
+              activeRole: null,
+              activeSince: null,
+              lastCommandAt: "2026-02-25T00:02:00.000Z",
+              executionContext: null
+            },
+            commitSha: "abc123",
+            commitMessage: "Commit message",
+            stagedFiles: ["src/example.ts"]
+          });
+          for (const result of [
+            replyPayload.result,
+            resumePayload.result,
+            commitPayload.result
+          ]) {
+            expect(result).not.toHaveProperty("state");
+            expect(result).not.toHaveProperty("envelope");
+          }
+        }
+      );
+    } finally {
+      if (server !== undefined) {
+        await server.close();
+      }
+    }
   });
 
   it("accepts stageAll commit bodies and rejects legacy auto before dispatch", async () => {
@@ -2628,6 +3757,117 @@ describe("createUiRouter action routes", () => {
     }
   });
 
+  it("returns merge, open, and attach success DTOs without raw carrier fields", async () => {
+    const repoPath = "/tmp/pairflow-ui-router-success-actions";
+    const expectedMergeResult = {
+      bubbleId: "b-router-success-actions",
+      baseBranch: "main",
+      bubbleBranch: "bubble/b-router-success-actions",
+      mergeCommitSha: "abc123",
+      presentationRoute: "local" as const,
+      pushedBaseBranch: false,
+      deletedRemoteBranch: false,
+      tmuxSessionName: "pf-b-router-success-actions",
+      tmuxSessionExisted: true,
+      runtimeSessionRemoved: true,
+      removedWorktree: true,
+      removedBubbleBranch: true
+    };
+    const expectedOpenResult = {
+      bubbleId: "b-router-success-actions",
+      workspaceKind: "local_worktree" as const,
+      workspacePath: "/tmp/worktrees/b-router-success-actions",
+      worktreePath: "/tmp/worktrees/b-router-success-actions",
+      command: "code /tmp/worktrees/b-router-success-actions"
+    };
+    const expectedAttachResult = {
+      bubbleId: "b-router-success-actions",
+      tmuxSessionName: "pf-b-router-success-actions",
+      launcherRequested: "auto" as const,
+      launcherUsed: "iterm2" as const,
+      attachCommand: "tmux attach -t pf-b-router-success-actions"
+    };
+    const router = createUiRouter({
+      repoScope: {
+        repos: [repoPath],
+        has: (value: string) => Promise.resolve(value === repoPath)
+      },
+      events: {
+        subscribe: () => () => undefined,
+        getSnapshot: () => ({
+          id: 1,
+          ts: "2026-02-25T00:00:00.000Z",
+          type: "snapshot",
+          repos: [],
+          bubbles: []
+        }),
+        refreshNow: () => Promise.resolve(undefined),
+        addRepo: () => Promise.resolve(false),
+        removeRepo: () => Promise.resolve(false),
+        close: () => Promise.resolve(undefined)
+      },
+      dependencies: {
+        mergeBubble: vi.fn(async () => expectedMergeResult),
+        openBubble: vi.fn(async () => expectedOpenResult),
+        attachBubble: vi.fn(async () => expectedAttachResult)
+      }
+    });
+    const server = await startRouterServer(router);
+
+    try {
+      const merge = await fetch(
+        `${server.url}/api/bubbles/b-router-success-actions/merge?repo=${encodeURIComponent(repoPath)}`,
+        {
+          method: "POST",
+          headers: {
+            "content-type": "application/json"
+          },
+          body: JSON.stringify({
+            push: false,
+            deleteRemote: false
+          })
+        }
+      );
+      const open = await fetch(
+        `${server.url}/api/bubbles/b-router-success-actions/open?repo=${encodeURIComponent(repoPath)}`,
+        { method: "POST" }
+      );
+      const attach = await fetch(
+        `${server.url}/api/bubbles/b-router-success-actions/attach?repo=${encodeURIComponent(repoPath)}`,
+        { method: "POST" }
+      );
+      const mergePayload = (await merge.json()) as {
+        result: Record<string, unknown>;
+      };
+      const openPayload = (await open.json()) as {
+        result: Record<string, unknown>;
+      };
+      const attachPayload = (await attach.json()) as {
+        result: Record<string, unknown>;
+      };
+
+      expect(merge.status).toBe(200);
+      expect(open.status).toBe(200);
+      expect(attach.status).toBe(200);
+      expect(mergePayload.result).toStrictEqual(expectedMergeResult);
+      expect(openPayload.result).toStrictEqual(expectedOpenResult);
+      expect(attachPayload.result).toStrictEqual(expectedAttachResult);
+      for (const result of [
+        mergePayload.result,
+        openPayload.result,
+        attachPayload.result
+      ]) {
+        expect(result).not.toHaveProperty("state");
+        expect(result).not.toHaveProperty("envelope");
+        expect(result).not.toHaveProperty("actionState");
+        expect(result).not.toHaveProperty("executionTarget");
+        expect(result).not.toHaveProperty("runtimeWorkspacePath");
+      }
+    } finally {
+      await server.close();
+    }
+  });
+
   it.each([
     "REMOTE_MERGE_COMMAND_FAILED",
     "REMOTE_MERGE_TRANSPORT_FAILED",
@@ -2921,14 +4161,21 @@ describe("createUiRouter restart action", () => {
     const repoPath = "/tmp/pairflow-ui-router-restart-repo";
     const restartBubble = vi.fn(async () => ({
       bubbleId: "b-router-restart-01",
-      state: {
-        state: "RUNNING"
+      actionState: {
+        bubbleId: "b-router-restart-01",
+        lifecycleState: "RUNNING" as const,
+        round: 1,
+        activeAgent: "codex" as const,
+        activeRole: "implementer" as const,
+        activeSince: "2026-02-25T00:00:00.000Z",
+        lastCommandAt: "2026-02-25T00:01:00.000Z",
+        executionContext: null
       },
       tmuxSessionName: "pf-b-router-restart-01",
       worktreePath: "/tmp/worktree",
       previousTmuxSessionExisted: true,
       previousRuntimeSessionRemoved: true
-    } as unknown as RestartBubbleResult));
+    }));
 
     const scope: UiRepoScope = {
       repos: [repoPath],
@@ -2966,13 +4213,26 @@ describe("createUiRouter restart action", () => {
         }
       );
       const payload = (await response.json()) as {
-        result: { bubbleId: string; tmuxSessionName: string };
+        result: Awaited<ReturnType<typeof restartBubble>>;
       };
 
       expect(response.status).toBe(200);
-      expect(payload.result).toMatchObject({
+      expect(payload.result).toStrictEqual({
         bubbleId: "b-router-restart-01",
-        tmuxSessionName: "pf-b-router-restart-01"
+        actionState: {
+          bubbleId: "b-router-restart-01",
+          lifecycleState: "RUNNING",
+          round: 1,
+          activeAgent: "codex",
+          activeRole: "implementer",
+          activeSince: "2026-02-25T00:00:00.000Z",
+          lastCommandAt: "2026-02-25T00:01:00.000Z",
+          executionContext: null
+        },
+        tmuxSessionName: "pf-b-router-restart-01",
+        worktreePath: "/tmp/worktree",
+        previousTmuxSessionExisted: true,
+        previousRuntimeSessionRemoved: true
       });
       expect(restartBubble).toHaveBeenCalledWith({
         bubbleId: "b-router-restart-01",

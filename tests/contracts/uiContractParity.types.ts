@@ -26,9 +26,26 @@ import type {
   UiSnapshotEvent as CanonicalUiSnapshotEvent
 } from "../../src/contracts/ui/uiEvents.js";
 import type {
+  MetaReviewQualityPreset as CanonicalMetaReviewQualityPreset,
+  UiActionAgentName as CanonicalUiActionAgentName,
+  UiActionAgentRole as CanonicalUiActionAgentRole,
+  UiActionApprovalDecision as CanonicalUiActionApprovalDecision,
+  UiActionBubbleState as CanonicalUiActionBubbleState,
+  UiActionEvent as CanonicalUiActionEvent,
+  UiActionExecutionContextRef as CanonicalUiActionExecutionContextRef,
+  UiActionFindingsClaimSource as CanonicalUiActionFindingsClaimSource,
+  UiActionFindingsClaimState as CanonicalUiActionFindingsClaimState,
+  UiActionPassIntent as CanonicalUiActionPassIntent,
+  UiActionPendingReworkIntent as CanonicalUiActionPendingReworkIntent,
+  UiActionProtocolMessageType as CanonicalUiActionProtocolMessageType,
+  UiActionProtocolParticipant as CanonicalUiActionProtocolParticipant,
+  UiAttachLauncher as CanonicalUiAttachLauncher,
   UiCommitBubbleInput as CanonicalUiCommitBubbleInput,
   UiCommitBubbleResult as CanonicalUiCommitBubbleResult,
+  UiAttachBubbleInput as CanonicalUiAttachBubbleInput,
+  UiBubbleMutationInput as CanonicalUiBubbleMutationInput,
   UiDeleteBubbleResult as CanonicalUiDeleteBubbleResult,
+  UiDeleteBubbleInput as CanonicalUiDeleteBubbleInput,
   UiApprovalDecisionDeliverySignal as CanonicalUiApprovalDecisionDeliverySignal,
   UiApprovalDecisionDeliverySignals as CanonicalUiApprovalDecisionDeliverySignals,
   UiDeliveryAckReasonCode as CanonicalUiDeliveryAckReasonCode,
@@ -36,13 +53,17 @@ import type {
   UiDeliveryTargetReasonCode as CanonicalUiDeliveryTargetReasonCode,
   UiEmitApprovalDecisionResult as CanonicalUiEmitApprovalDecisionResult,
   UiEmitApproveInput as CanonicalUiEmitApproveInput,
+  UiEmitHumanReplyInput as CanonicalUiEmitHumanReplyInput,
   UiEmitHumanReplyResult as CanonicalUiEmitHumanReplyResult,
+  UiEmitRequestReworkImmediateResult as CanonicalUiEmitRequestReworkImmediateResult,
   UiEmitRequestReworkInput as CanonicalUiEmitRequestReworkInput,
+  UiEmitRequestReworkQueuedResult as CanonicalUiEmitRequestReworkQueuedResult,
   UiEmitRequestReworkResult as CanonicalUiEmitRequestReworkResult,
   UiAttachBubbleResult as CanonicalUiAttachBubbleResult,
   UiMergeBubbleInput as CanonicalUiMergeBubbleInput,
   UiMergeBubbleResult as CanonicalUiMergeBubbleResult,
   UiOpenBubbleResult as CanonicalUiOpenBubbleResult,
+  UiPassValidationRecoveryMarkerPersistWarning as CanonicalUiPassValidationRecoveryMarkerPersistWarning,
   UiRestartBubbleResult as CanonicalUiRestartBubbleResult,
   UiStartBubbleResult as CanonicalUiStartBubbleResult,
   UiStopBubbleResult as CanonicalUiStopBubbleResult,
@@ -92,18 +113,44 @@ import type {
   StateValidationDiagnostics as TransitStateValidationDiagnostics
 } from "../../src/v11/shared/ports/stateSnapshots.js";
 import type {
+  MetaReviewQualityPreset as RouterMetaReviewQualityPreset,
+  UiActionAgentName as RouterUiActionAgentName,
+  UiActionAgentRole as RouterUiActionAgentRole,
+  UiActionApprovalDecision as RouterUiActionApprovalDecision,
+  UiActionBubbleState as RouterUiActionBubbleState,
+  UiActionEvent as RouterUiActionEvent,
+  UiActionExecutionContextRef as RouterUiActionExecutionContextRef,
+  UiActionFindingsClaimSource as RouterUiActionFindingsClaimSource,
+  UiActionFindingsClaimState as RouterUiActionFindingsClaimState,
+  UiActionPassIntent as RouterUiActionPassIntent,
+  UiActionPendingReworkIntent as RouterUiActionPendingReworkIntent,
+  UiActionProtocolMessageType as RouterUiActionProtocolMessageType,
+  UiActionProtocolParticipant as RouterUiActionProtocolParticipant,
+  UiAttachLauncher as RouterUiAttachLauncher,
   UiCommitBubbleInput as RouterUiCommitBubbleInput,
   UiCommitBubbleResult as RouterUiCommitBubbleResult,
+  UiAttachBubbleInput as RouterUiAttachBubbleInput,
+  UiBubbleMutationInput as RouterUiBubbleMutationInput,
   UiDeleteBubbleResult as RouterUiDeleteBubbleResult,
+  UiDeleteBubbleInput as RouterUiDeleteBubbleInput,
+  UiApprovalDecisionDeliverySignal as RouterUiApprovalDecisionDeliverySignal,
+  UiApprovalDecisionDeliverySignals as RouterUiApprovalDecisionDeliverySignals,
+  UiDeliveryAckReasonCode as RouterUiDeliveryAckReasonCode,
+  UiDeliveryFailureReason as RouterUiDeliveryFailureReason,
+  UiDeliveryTargetReasonCode as RouterUiDeliveryTargetReasonCode,
   UiEmitApprovalDecisionResult as RouterUiEmitApprovalDecisionResult,
   UiEmitApproveInput as RouterUiEmitApproveInput,
+  UiEmitHumanReplyInput as RouterUiEmitHumanReplyInput,
   UiEmitHumanReplyResult as RouterUiEmitHumanReplyResult,
+  UiEmitRequestReworkImmediateResult as RouterUiEmitRequestReworkImmediateResult,
   UiEmitRequestReworkInput as RouterUiEmitRequestReworkInput,
+  UiEmitRequestReworkQueuedResult as RouterUiEmitRequestReworkQueuedResult,
   UiEmitRequestReworkResult as RouterUiEmitRequestReworkResult,
   UiAttachBubbleResult as RouterUiAttachBubbleResult,
   UiMergeBubbleInput as RouterUiMergeBubbleInput,
   UiMergeBubbleResult as RouterUiMergeBubbleResult,
   UiOpenBubbleResult as RouterUiOpenBubbleResult,
+  UiPassValidationRecoveryMarkerPersistWarning as RouterUiPassValidationRecoveryMarkerPersistWarning,
   UiRestartBubbleResult as RouterUiRestartBubbleResult,
   UiStartBubbleResult as RouterUiStartBubbleResult,
   UiStopBubbleResult as RouterUiStopBubbleResult,
@@ -158,23 +205,44 @@ import type {
   UiSnapshotEvent as UiSnapshotEvent
 } from "../../ui/src/lib/contracts/uiEvents.js";
 import type {
-  UiCommitBubbleInput as UiCommitBubbleInput,
-  UiCommitBubbleResult as UiCommitBubbleResult,
-  UiDeleteBubbleResult as UiDeleteBubbleResult,
+  MetaReviewQualityPreset as UiMetaReviewQualityPreset,
+  UiActionAgentName as UiActionAgentName,
+  UiActionAgentRole as UiActionAgentRole,
+  UiActionApprovalDecision as UiActionApprovalDecision,
+  UiActionBubbleState as UiActionBubbleState,
+  UiActionEvent as UiActionEventResult,
+  UiActionExecutionContextRef as UiActionExecutionContextRef,
+  UiActionFindingsClaimSource as UiActionFindingsClaimSource,
+  UiActionFindingsClaimState as UiActionFindingsClaimState,
+  UiActionPassIntent as UiActionPassIntent,
+  UiActionPendingReworkIntent as UiActionPendingReworkIntent,
+  UiActionProtocolMessageType as UiActionProtocolMessageType,
+  UiActionProtocolParticipant as UiActionProtocolParticipant,
   UiApprovalDecisionDeliverySignal as UiApprovalDecisionDeliverySignal,
   UiApprovalDecisionDeliverySignals as UiApprovalDecisionDeliverySignals,
+  UiAttachLauncher as UiAttachLauncher,
+  UiCommitBubbleInput as UiCommitBubbleInput,
+  UiCommitBubbleResult as UiCommitBubbleResult,
+  UiAttachBubbleInput as UiAttachBubbleInput,
+  UiBubbleMutationInput as UiBubbleMutationInput,
+  UiDeleteBubbleResult as UiDeleteBubbleResult,
+  UiDeleteBubbleInput as UiDeleteBubbleInput,
   UiDeliveryAckReasonCode as UiDeliveryAckReasonCode,
   UiDeliveryFailureReason as UiDeliveryFailureReason,
   UiDeliveryTargetReasonCode as UiDeliveryTargetReasonCode,
   UiEmitApprovalDecisionResult as UiEmitApprovalDecisionResult,
   UiEmitApproveInput as UiEmitApproveInput,
+  UiEmitHumanReplyInput as UiEmitHumanReplyInput,
   UiEmitHumanReplyResult as UiEmitHumanReplyResult,
+  UiEmitRequestReworkImmediateResult as UiEmitRequestReworkImmediateResult,
   UiEmitRequestReworkInput as UiEmitRequestReworkInput,
+  UiEmitRequestReworkQueuedResult as UiEmitRequestReworkQueuedResult,
   UiEmitRequestReworkResult as UiEmitRequestReworkResult,
   UiAttachBubbleResult as UiAttachBubbleResult,
   UiMergeBubbleInput as UiMergeBubbleInput,
   UiMergeBubbleResult as UiMergeBubbleResult,
   UiOpenBubbleResult as UiOpenBubbleResult,
+  UiPassValidationRecoveryMarkerPersistWarning as UiPassValidationRecoveryMarkerPersistWarning,
   UiRestartBubbleResult as UiRestartBubbleResult,
   UiStartBubbleResult as UiStartBubbleResult,
   UiStopBubbleResult as UiStopBubbleResult,
@@ -336,6 +404,76 @@ type _pendingInboxItemSourceParity =
 type _uiPendingInboxItemParity =
   Assert<Equal<CanonicalUiBubbleInboxItem, UiBubbleInboxItem>>;
 
+type _routerActionAgentNameParity =
+  Assert<Equal<CanonicalUiActionAgentName, RouterUiActionAgentName>>;
+type _uiActionAgentNameParity =
+  Assert<Equal<CanonicalUiActionAgentName, UiActionAgentName>>;
+type _routerActionAgentRoleParity =
+  Assert<Equal<CanonicalUiActionAgentRole, RouterUiActionAgentRole>>;
+type _uiActionAgentRoleParity =
+  Assert<Equal<CanonicalUiActionAgentRole, UiActionAgentRole>>;
+type _routerActionApprovalDecisionParity =
+  Assert<Equal<CanonicalUiActionApprovalDecision, RouterUiActionApprovalDecision>>;
+type _uiActionApprovalDecisionParity =
+  Assert<Equal<CanonicalUiActionApprovalDecision, UiActionApprovalDecision>>;
+type _routerActionBubbleStateParity =
+  Assert<Equal<CanonicalUiActionBubbleState, RouterUiActionBubbleState>>;
+type _uiActionBubbleStateParity =
+  Assert<Equal<CanonicalUiActionBubbleState, UiActionBubbleState>>;
+type _routerActionEventParity =
+  Assert<Equal<CanonicalUiActionEvent, RouterUiActionEvent>>;
+type _uiActionEventParity =
+  Assert<Equal<CanonicalUiActionEvent, UiActionEventResult>>;
+type _routerActionExecutionContextRefParity =
+  Assert<
+    Equal<
+      CanonicalUiActionExecutionContextRef,
+      RouterUiActionExecutionContextRef
+    >
+  >;
+type _uiActionExecutionContextRefParity =
+  Assert<Equal<CanonicalUiActionExecutionContextRef, UiActionExecutionContextRef>>;
+type _routerActionFindingsClaimSourceParity =
+  Assert<
+    Equal<CanonicalUiActionFindingsClaimSource, RouterUiActionFindingsClaimSource>
+  >;
+type _uiActionFindingsClaimSourceParity =
+  Assert<Equal<CanonicalUiActionFindingsClaimSource, UiActionFindingsClaimSource>>;
+type _routerActionFindingsClaimStateParity =
+  Assert<
+    Equal<CanonicalUiActionFindingsClaimState, RouterUiActionFindingsClaimState>
+  >;
+type _uiActionFindingsClaimStateParity =
+  Assert<Equal<CanonicalUiActionFindingsClaimState, UiActionFindingsClaimState>>;
+type _routerActionPassIntentParity =
+  Assert<Equal<CanonicalUiActionPassIntent, RouterUiActionPassIntent>>;
+type _uiActionPassIntentParity =
+  Assert<Equal<CanonicalUiActionPassIntent, UiActionPassIntent>>;
+type _routerActionPendingReworkIntentParity =
+  Assert<Equal<CanonicalUiActionPendingReworkIntent, RouterUiActionPendingReworkIntent>>;
+type _uiActionPendingReworkIntentParity =
+  Assert<Equal<CanonicalUiActionPendingReworkIntent, UiActionPendingReworkIntent>>;
+type _routerActionProtocolMessageTypeParity =
+  Assert<Equal<CanonicalUiActionProtocolMessageType, RouterUiActionProtocolMessageType>>;
+type _uiActionProtocolMessageTypeParity =
+  Assert<Equal<CanonicalUiActionProtocolMessageType, UiActionProtocolMessageType>>;
+type _routerActionProtocolParticipantParity =
+  Assert<Equal<CanonicalUiActionProtocolParticipant, RouterUiActionProtocolParticipant>>;
+type _uiActionProtocolParticipantParity =
+  Assert<Equal<CanonicalUiActionProtocolParticipant, UiActionProtocolParticipant>>;
+type _routerBubbleMutationInputParity =
+  Assert<Equal<CanonicalUiBubbleMutationInput, RouterUiBubbleMutationInput>>;
+type _uiBubbleMutationInputParity =
+  Assert<Equal<CanonicalUiBubbleMutationInput, UiBubbleMutationInput>>;
+type _routerAttachLauncherParity =
+  Assert<Equal<CanonicalUiAttachLauncher, RouterUiAttachLauncher>>;
+type _uiAttachLauncherParity =
+  Assert<Equal<CanonicalUiAttachLauncher, UiAttachLauncher>>;
+type _routerMetaReviewQualityPresetParity =
+  Assert<Equal<CanonicalMetaReviewQualityPreset, RouterMetaReviewQualityPreset>>;
+type _uiMetaReviewQualityPresetParity =
+  Assert<Equal<CanonicalMetaReviewQualityPreset, UiMetaReviewQualityPreset>>;
+
 type _routerApproveInputParity =
   Assert<Equal<CanonicalUiEmitApproveInput, RouterUiEmitApproveInput>>;
 type _uiApproveInputParity =
@@ -344,6 +482,10 @@ type _routerReworkInputParity =
   Assert<Equal<CanonicalUiEmitRequestReworkInput, RouterUiEmitRequestReworkInput>>;
 type _uiReworkInputParity =
   Assert<Equal<CanonicalUiEmitRequestReworkInput, UiEmitRequestReworkInput>>;
+type _routerHumanReplyInputParity =
+  Assert<Equal<CanonicalUiEmitHumanReplyInput, RouterUiEmitHumanReplyInput>>;
+type _uiHumanReplyInputParity =
+  Assert<Equal<CanonicalUiEmitHumanReplyInput, UiEmitHumanReplyInput>>;
 type _routerCommitInputParity =
   Assert<Equal<CanonicalUiCommitBubbleInput, RouterUiCommitBubbleInput>>;
 type _uiCommitInputParity =
@@ -352,6 +494,10 @@ type _routerMergeInputParity =
   Assert<Equal<CanonicalUiMergeBubbleInput, RouterUiMergeBubbleInput>>;
 type _uiMergeInputParity =
   Assert<Equal<CanonicalUiMergeBubbleInput, UiMergeBubbleInput>>;
+type _routerAttachInputParity =
+  Assert<Equal<CanonicalUiAttachBubbleInput, RouterUiAttachBubbleInput>>;
+type _uiAttachInputParity =
+  Assert<Equal<CanonicalUiAttachBubbleInput, UiAttachBubbleInput>>;
 type _routerReviewPolicyInputParity =
   Assert<
     Equal<
@@ -366,6 +512,10 @@ type _uiReviewPolicyInputParity =
       UiUpdateBubbleReviewPolicyInput
     >
   >;
+type _routerDeleteInputParity =
+  Assert<Equal<CanonicalUiDeleteBubbleInput, RouterUiDeleteBubbleInput>>;
+type _uiDeleteInputParity =
+  Assert<Equal<CanonicalUiDeleteBubbleInput, UiDeleteBubbleInput>>;
 type _routerApprovalResultParity =
   Assert<
     Equal<
@@ -375,11 +525,25 @@ type _routerApprovalResultParity =
   >;
 type _uiApprovalResultParity =
   Assert<Equal<CanonicalUiEmitApprovalDecisionResult, UiEmitApprovalDecisionResult>>;
+type _routerApprovalDeliverySignalsParity =
+  Assert<
+    Equal<
+      CanonicalUiApprovalDecisionDeliverySignals,
+      RouterUiApprovalDecisionDeliverySignals
+    >
+  >;
 type _uiApprovalDeliverySignalsParity =
   Assert<
     Equal<
       CanonicalUiApprovalDecisionDeliverySignals,
       UiApprovalDecisionDeliverySignals
+    >
+  >;
+type _routerApprovalDeliverySignalParity =
+  Assert<
+    Equal<
+      CanonicalUiApprovalDecisionDeliverySignal,
+      RouterUiApprovalDecisionDeliverySignal
     >
   >;
 type _uiApprovalDeliverySignalParity =
@@ -389,16 +553,50 @@ type _uiApprovalDeliverySignalParity =
       UiApprovalDecisionDeliverySignal
     >
   >;
+type _routerDeliveryFailureReasonParity =
+  Assert<Equal<CanonicalUiDeliveryFailureReason, RouterUiDeliveryFailureReason>>;
 type _uiDeliveryFailureReasonParity =
   Assert<Equal<CanonicalUiDeliveryFailureReason, UiDeliveryFailureReason>>;
+type _routerDeliveryTargetReasonCodeParity =
+  Assert<Equal<CanonicalUiDeliveryTargetReasonCode, RouterUiDeliveryTargetReasonCode>>;
 type _uiDeliveryTargetReasonCodeParity =
   Assert<Equal<CanonicalUiDeliveryTargetReasonCode, UiDeliveryTargetReasonCode>>;
+type _routerDeliveryAckReasonCodeParity =
+  Assert<Equal<CanonicalUiDeliveryAckReasonCode, RouterUiDeliveryAckReasonCode>>;
 type _uiDeliveryAckReasonCodeParity =
   Assert<Equal<CanonicalUiDeliveryAckReasonCode, UiDeliveryAckReasonCode>>;
 type _routerReworkResultParity =
   Assert<Equal<CanonicalUiEmitRequestReworkResult, RouterUiEmitRequestReworkResult>>;
 type _uiReworkResultParity =
   Assert<Equal<CanonicalUiEmitRequestReworkResult, UiEmitRequestReworkResult>>;
+type _routerReworkImmediateResultParity =
+  Assert<
+    Equal<
+      CanonicalUiEmitRequestReworkImmediateResult,
+      RouterUiEmitRequestReworkImmediateResult
+    >
+  >;
+type _uiReworkImmediateResultParity =
+  Assert<
+    Equal<
+      CanonicalUiEmitRequestReworkImmediateResult,
+      UiEmitRequestReworkImmediateResult
+    >
+  >;
+type _routerReworkQueuedResultParity =
+  Assert<
+    Equal<
+      CanonicalUiEmitRequestReworkQueuedResult,
+      RouterUiEmitRequestReworkQueuedResult
+    >
+  >;
+type _uiReworkQueuedResultParity =
+  Assert<
+    Equal<
+      CanonicalUiEmitRequestReworkQueuedResult,
+      UiEmitRequestReworkQueuedResult
+    >
+  >;
 type _routerReplyResultParity =
   Assert<Equal<CanonicalUiEmitHumanReplyResult, RouterUiEmitHumanReplyResult>>;
 type _uiReplyResultParity =
@@ -427,6 +625,20 @@ type _routerRestartResultParity =
   Assert<Equal<CanonicalUiRestartBubbleResult, RouterUiRestartBubbleResult>>;
 type _uiRestartResultParity =
   Assert<Equal<CanonicalUiRestartBubbleResult, UiRestartBubbleResult>>;
+type _routerPassValidationRecoveryMarkerPersistWarningParity =
+  Assert<
+    Equal<
+      CanonicalUiPassValidationRecoveryMarkerPersistWarning,
+      RouterUiPassValidationRecoveryMarkerPersistWarning
+    >
+  >;
+type _uiPassValidationRecoveryMarkerPersistWarningParity =
+  Assert<
+    Equal<
+      CanonicalUiPassValidationRecoveryMarkerPersistWarning,
+      UiPassValidationRecoveryMarkerPersistWarning
+    >
+  >;
 type _routerAttachResultParity =
   Assert<Equal<CanonicalUiAttachBubbleResult, RouterUiAttachBubbleResult>>;
 type _uiAttachResultParity =

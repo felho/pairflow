@@ -21,8 +21,19 @@ export type {
   UiBubbleStatusRemoteExecution
 } from "./uiRemoteExecution.js";
 export type {
-  AttachBubbleResult,
   MetaReviewQualityPreset,
+  UiActionAgentName,
+  UiActionAgentRole,
+  UiActionApprovalDecision,
+  UiActionBubbleState,
+  UiActionEvent,
+  UiActionExecutionContextRef,
+  UiActionFindingsClaimSource,
+  UiActionFindingsClaimState,
+  UiActionPassIntent,
+  UiActionPendingReworkIntent,
+  UiActionProtocolMessageType,
+  UiActionProtocolParticipant,
   UiApprovalDecisionDeliverySignal,
   UiApprovalDecisionDeliverySignals,
   UiAttachBubbleInput,
