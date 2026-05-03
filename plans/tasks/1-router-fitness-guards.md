@@ -5,7 +5,7 @@ task_family_id: router-fitness-guards
 sequence_key: "1"
 task_id: 1-router-fitness-guards
 title: "Router Fitness Guards"
-status: approved
+status: implementable
 phase: phase1
 target_files:
   - tools/fitness/checks/index.ts
