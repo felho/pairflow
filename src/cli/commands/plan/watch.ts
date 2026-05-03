@@ -397,8 +397,8 @@ export function renderPlanWatchRunnerTimelineLine(line: string): string | null {
   }
   if (row.type === "runner_completed") {
     return renderRunnerMessage({
-      label: "runner completed",
-      reason: asString(row.reasonCode),
+      label: "runner",
+      reason: `completed ${asString(row.reasonCode) ?? "unknown"}`,
       summary: asString(row.summary),
       status: asString(row.status)
     });
@@ -432,6 +432,110 @@ export function renderPlanWatchRunnerEventLine(line: string): string | null {
   }
   return null;
 }
+
+export class PlanWatchTerminalRenderer {
+  private intervalMs = DEFAULT_PLAN_WATCH_INTERVAL_MS;
+  private idleLineActive = false;
+
+  public constructor(
+    private readonly input: {
+      write: (text: string) => void;
+      isTty: boolean;
+      color?: boolean | undefined;
+    }
+  ) {}
+
+  public writeEvent(event: PlanWatchEvent): void {
+    if (event.kind === "loop_started") {
+      this.intervalMs = event.intervalMs;
+    }
+    if (
+      this.input.isTty
+      && event.kind === "iteration_completed"
+      && event.result.status === "idle"
+    ) {
+      this.writeIdle(event);
+      return;
+    }
+    this.flushIdleLine();
+    this.writeLine(colorizePlanWatchLine(renderPlanWatchEventText(event), this.useColor()));
+  }
+
+  public writeRunnerLine(line: string): void {
+    this.flushIdleLine();
+    this.writeLine(colorizeRunnerLine(line, this.useColor()));
+  }
+
+  public flushIdleLine(): void {
+    if (!this.idleLineActive) {
+      return;
+    }
+    this.input.write("\n");
+    this.idleLineActive = false;
+  }
+
+  private writeIdle(event: Extract<PlanWatchEvent, { kind: "iteration_completed" }>): void {
+    const iterations = event.iterationIndex + 1;
+    const text = [
+      "plan watch: idle",
+      `iterations=${iterations}`,
+      `elapsed=${formatElapsed(iterations * this.intervalMs)}`,
+      `candidates=${event.result.scannedCandidateCount}`
+    ].join(" ");
+    this.input.write(`\r\u001b[2K${colorizePlanWatchLine(text, this.useColor())}`);
+    this.idleLineActive = true;
+  }
+
+  private writeLine(line: string): void {
+    this.input.write(`${line}\n`);
+  }
+
+  private useColor(): boolean {
+    return this.input.isTty && this.input.color !== false;
+  }
+}
+
+function colorizePlanWatchLine(line: string, color: boolean): string {
+  if (!color || !line.startsWith("plan watch:")) {
+    return line;
+  }
+  return `${ansi.cyan}plan watch:${ansi.reset}${line.slice("plan watch:".length)}`;
+}
+
+function colorizeRunnerLine(line: string, color: boolean): string {
+  if (!color || !line.startsWith("runner:")) {
+    return line;
+  }
+  const rest = line.slice("runner:".length);
+  const separatorIndex = rest.indexOf(" - ");
+  if (separatorIndex < 0) {
+    return `${ansi.magenta}runner:${ansi.reset}${ansi.yellow}${rest}${ansi.reset}`;
+  }
+  const tag = rest.slice(0, separatorIndex + 3);
+  const summary = rest.slice(separatorIndex + 3);
+  return `${ansi.magenta}runner:${ansi.reset}${ansi.yellow}${tag}${ansi.reset}${summary}`;
+}
+
+function formatElapsed(ms: number): string {
+  const totalSeconds = Math.max(0, Math.round(ms / 1000));
+  if (totalSeconds < 60) {
+    return `${totalSeconds}s`;
+  }
+  const totalMinutes = Math.round(totalSeconds / 60);
+  if (totalMinutes < 60) {
+    return `${totalMinutes}m`;
+  }
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  return minutes === 0 ? `${hours}h` : `${hours}h${minutes}m`;
+}
+
+const ansi = {
+  cyan: "\u001b[36m",
+  magenta: "\u001b[35m",
+  yellow: "\u001b[33m",
+  reset: "\u001b[0m"
+} as const;
 
 function parseRunnerStatusSummary(value: string | undefined):
   | { status?: string | undefined; reason_code?: string | undefined; summary?: string | undefined }
@@ -467,18 +571,11 @@ function renderRunnerMessage(input: {
   if (summary === undefined || summary.length === 0) {
     return `${input.label}: ${headline}`;
   }
-  return `${input.label}: ${headline} - ${shortenInline(summary, 220)}`;
+  return `${input.label}: ${headline} - ${normalizeInline(summary)}`;
 }
 
-function shorten(value: string, maxLength = 120): string {
-  if (value.length <= maxLength) {
-    return value;
-  }
-  return `${value.slice(0, Math.max(0, maxLength - 1))}...`;
-}
-
-function shortenInline(value: string, maxLength: number): string {
-  return shorten(value.replace(/\s+/gu, " "), maxLength);
+function normalizeInline(value: string): string {
+  return value.replace(/\s+/gu, " ");
 }
 
 function asString(value: unknown): string | undefined {

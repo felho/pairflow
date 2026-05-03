@@ -10,6 +10,7 @@ import {
   renderPlanWatchEventText,
   renderPlanWatchRunnerEventLine,
   renderPlanWatchRunnerTimelineLine,
+  PlanWatchTerminalRenderer,
   runPlanWatchCommand,
   renderPlanWatchText
 } from "../../src/cli/commands/plan/watch.js";
@@ -189,7 +190,63 @@ describe("plan watch command", () => {
     expect(artifactText).toContain("dir=.pairflow/runtime/plan-watch/agent-runner/run");
     expect(eventText).toBeNull();
     expect(timelineText).toBe(
-      "runner completed: PLAN_COMPLETE - done"
+      "runner: completed PLAN_COMPLETE - done"
+    );
+  });
+
+  it("overwrites idle progress on TTY and flushes before real events", () => {
+    const chunks: string[] = [];
+    const renderer = new PlanWatchTerminalRenderer({
+      isTty: true,
+      color: false,
+      write: (text) => {
+        chunks.push(text);
+      }
+    });
+    const idleResult = {
+      status: "idle" as const,
+      repoPath: "/repo",
+      planPath: "/repo/plans/local-plan-watch-plan-v1.md",
+      scannedCandidateCount: 0,
+      deferredCandidateCount: 0,
+      diagnostics: [],
+      onceExit: false
+    };
+
+    renderer.writeEvent({
+      kind: "loop_started",
+      repoPath: "/repo",
+      planPath: "/repo/plans/local-plan-watch-plan-v1.md",
+      intervalMs: 60_000,
+      once: false
+    });
+    renderer.writeEvent({
+      kind: "iteration_completed",
+      iterationIndex: 54,
+      result: idleResult
+    });
+    renderer.writeEvent({
+      kind: "candidate_selected",
+      repoPath: "/repo",
+      planPath: "/repo/plans/local-plan-watch-plan-v1.md",
+      candidate: {
+        planPath: "/repo/plans/local-plan-watch-plan-v1.md",
+        taskId: "3-watch-loop",
+        taskPath: "plans/tasks/3-watch-loop.md",
+        bubbleId: "3-watch-loop-impl",
+        bubbleRole: "implementation",
+        observedState: "READY_FOR_HUMAN_APPROVAL"
+      },
+      candidateIndex: 0,
+      candidateCount: 1,
+      dedupeKey: "dedupe-1"
+    });
+
+    expect(chunks.join("")).toContain(
+      "\r\u001b[2Kplan watch: idle iterations=55 elapsed=55m candidates=0"
+    );
+    expect(chunks.join("")).toContain(
+      "\nplan watch: candidate task=3-watch-loop"
     );
   });
 
