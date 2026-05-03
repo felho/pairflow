@@ -45,7 +45,14 @@ export async function runPlanWatchIteration(
       now
     });
     const candidates = indexResult.candidates.length === 0 && input.runNow === true
-      ? [buildRunNowCandidate(normalized.repoPath, normalized.planPath, now)]
+      ? [
+          buildRunNowCandidate({
+            repoPath: normalized.repoPath,
+            planPath: normalized.planPath,
+            now,
+            forceRun: input.forceRun === true
+          })
+        ]
       : indexResult.candidates;
     if (candidates.length === 0) {
       return {
@@ -99,12 +106,17 @@ export async function runPlanWatchIteration(
   }
 }
 
-function buildRunNowCandidate(
-  repoPath: string,
-  planPath: string,
-  now: Date
-): LinkedBubbleTriggerCandidate {
+function buildRunNowCandidate(input: {
+  repoPath: string;
+  planPath: string;
+  now: Date;
+  forceRun: boolean;
+}): LinkedBubbleTriggerCandidate {
+  const { repoPath, planPath, now } = input;
   const normalizedPlanPath = planPath.split(sep).join("/");
+  const statusRef = input.forceRun
+    ? `plan-watch-run-now-force:${normalizedPlanPath}:${now.toISOString()}`
+    : `plan-watch-run-now:${normalizedPlanPath}`;
   return {
     planPath,
     taskId: "plan-continuation",
@@ -113,9 +125,10 @@ function buildRunNowCandidate(
     bubbleRole: "implementation",
     observedState: "READY_FOR_HUMAN_APPROVAL",
     observedAt: now.toISOString(),
-    statusRef: `plan-watch-run-now:${normalizedPlanPath}`,
+    statusRef,
     statusMetadata: {
       triggerKind: "operator_run_now",
+      ...(input.forceRun ? { forceRun: true } : {}),
       repoPath,
       planPath
     }

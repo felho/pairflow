@@ -45,6 +45,7 @@ export interface PlanWatchInput {
   maxIterations?: number | undefined;
   dryRun?: boolean | undefined;
   runNow?: boolean | undefined;
+  forceRun?: boolean | undefined;
   now?: Date | undefined;
   stopSignal?: AbortSignal | undefined;
   onEvent?: ((event: PlanWatchEvent) => void | Promise<void>) | undefined;

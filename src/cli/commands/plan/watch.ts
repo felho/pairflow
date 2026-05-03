@@ -27,6 +27,7 @@ export interface PlanWatchCommandOptions {
   once: boolean;
   dryRun: boolean;
   runNow: boolean;
+  forceRun: boolean;
   runnerCommand?: string | undefined;
   runnerArgs: readonly string[];
   runnerInputMode: AgentRunnerBridgeInputMode;
@@ -45,7 +46,7 @@ export type ParsedPlanWatchCommandOptions =
 export function getPlanWatchHelpText(): string {
   return [
     "Usage:",
-    "  pairflow plan watch <plan-path> [--repo <path>] [--interval-seconds <n>] [--once] [--dry-run] [--run-now]",
+    "  pairflow plan watch <plan-path> [--repo <path>] [--interval-seconds <n>] [--once] [--dry-run] [--run-now] [--force-run]",
     "",
     "Options:",
     "  --repo <path>                     Repository path (defaults to cwd)",
@@ -53,6 +54,7 @@ export function getPlanWatchHelpText(): string {
     "  --once                            Run one iteration and exit",
     "  --dry-run                         Discover and ledger without invoking the runner",
     "  --run-now                         Invoke the runner once even when no linked bubble trigger exists",
+    "  --force-run                       Re-run an explicit --run-now invocation even if the ledger has prior run evidence",
     "  --runner-command <cmd>            Legacy/internal runner command override",
     "  --runner-arg <arg>                Legacy runner argument; may be repeated",
     "  --runner-input-mode <mode>        Legacy stdin_json or arg_json (default stdin_json)",
@@ -72,6 +74,7 @@ export function parsePlanWatchCommandOptions(
       once: { type: "boolean" },
       "dry-run": { type: "boolean" },
       "run-now": { type: "boolean" },
+      "force-run": { type: "boolean" },
       "runner-command": { type: "string" },
       "runner-arg": { type: "string", multiple: true },
       "runner-input-mode": { type: "string" },
@@ -92,6 +95,11 @@ export function parsePlanWatchCommandOptions(
 
   const intervalSeconds = parseIntervalSeconds(parsed.values["interval-seconds"]);
   const runnerInputMode = parseRunnerInputMode(parsed.values["runner-input-mode"]);
+  const runNow = parsed.values["run-now"] ?? false;
+  const forceRun = parsed.values["force-run"] ?? false;
+  if (forceRun && !runNow) {
+    throw new Error("PLAN_WATCH_FORCE_RUN_REQUIRES_RUN_NOW: --force-run requires --run-now.");
+  }
 
   return {
     planPath,
@@ -99,7 +107,8 @@ export function parsePlanWatchCommandOptions(
     intervalSeconds,
     once: parsed.values.once ?? false,
     dryRun: parsed.values["dry-run"] ?? false,
-    runNow: parsed.values["run-now"] ?? false,
+    runNow,
+    forceRun,
     ...(parsed.values["runner-command"] !== undefined
       ? { runnerCommand: parsed.values["runner-command"] }
       : {}),
@@ -153,6 +162,7 @@ export async function runPlanWatchCommand(
     once: options.once,
     dryRun: options.dryRun,
     runNow: options.runNow,
+    forceRun: options.forceRun,
     runnerConfig: {
       ...(options.runnerCommand === undefined && configuredRunnerBackend !== undefined
         ? { backend: configuredRunnerBackend }

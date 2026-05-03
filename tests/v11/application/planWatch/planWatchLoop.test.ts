@@ -133,6 +133,7 @@ function deps(input: {
   candidates?: readonly LinkedBubbleTriggerCandidate[];
   ledger?: PlanWatchLedgerPort;
   runner?: AgentRunnerBridgeResult;
+  now?: Date;
 } = {}): PlanWatchLoopDependencies {
   return {
     resolveLinkedBubbleTriggerIndex: vi.fn(async () =>
@@ -142,7 +143,7 @@ function deps(input: {
     runExecutePairflowPlanContinuation: vi.fn(async () =>
       input.runner ?? runnerResult()
     ),
-    now: () => new Date("2026-05-01T10:00:00.000Z"),
+    now: () => input.now ?? new Date("2026-05-01T10:00:00.000Z"),
     sleep: vi.fn(async () => {}),
     generateInvocationId: () => "invocation-1"
   };
@@ -227,6 +228,38 @@ describe("planWatchLoop", () => {
     expect(second.status).toBe("duplicate_skipped");
     expect(dependencies.runExecutePairflowPlanContinuation).toHaveBeenCalledOnce();
     expect(ledger.records).toHaveLength(1);
+  });
+
+  it("force-runs repeated explicit run-now continuations with distinct ledger evidence", async () => {
+    const ledger = memoryLedger();
+    const dependencies = deps({ ledger });
+    const secondDependencies = deps({
+      ledger,
+      now: new Date("2026-05-01T10:00:01.000Z")
+    });
+    const input = {
+      repoPath: "/repo",
+      planPath: "plans/local-plan-watch-plan-v1.md",
+      once: true,
+      runNow: true,
+      forceRun: true,
+      runnerConfig: { command: "agent" }
+    };
+
+    const first = await runPlanWatchIteration(input, dependencies);
+    const second = await runPlanWatchIteration(input, secondDependencies);
+
+    expect(first.status).toBe("runner_settled_checkpoint");
+    expect(second.status).toBe("runner_settled_checkpoint");
+    expect(dependencies.runExecutePairflowPlanContinuation).toHaveBeenCalledOnce();
+    expect(
+      secondDependencies.runExecutePairflowPlanContinuation
+    ).toHaveBeenCalledOnce();
+    expect(ledger.records).toHaveLength(2);
+    expect(ledger.records[0]?.key).not.toBe(ledger.records[1]?.key);
+    expect(ledger.records[1]?.triggerEvidence.statusRef).toContain(
+      "plan-watch-run-now-force:"
+    );
   });
 
   it("reserves, invokes, and completes a new approval-ready trigger", async () => {

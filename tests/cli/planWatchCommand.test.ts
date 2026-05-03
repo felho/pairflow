@@ -54,6 +54,7 @@ describe("plan watch command", () => {
         "--runner-command",
         "agent",
         "--run-now",
+        "--force-run",
         "--runner-arg",
         "run",
         "--runner-arg=--fast"
@@ -67,6 +68,7 @@ describe("plan watch command", () => {
       repo: "/repo",
       once: true,
       runNow: true,
+      forceRun: true,
       runnerCommand: "agent",
       runnerArgs: ["run", "--fast"],
       runnerInputMode: "stdin_json",
@@ -82,6 +84,15 @@ describe("plan watch command", () => {
         "0"
       ])
     ).toThrow("PLAN_WATCH_INTERVAL_INVALID");
+  });
+
+  it("requires run-now for force-run", () => {
+    expect(() =>
+      parsePlanWatchCommandOptions([
+        "plans/local-plan-watch-plan-v1.md",
+        "--force-run"
+      ])
+    ).toThrow("PLAN_WATCH_FORCE_RUN_REQUIRES_RUN_NOW");
   });
 
   it("renders blocked reason without route authority output", () => {
