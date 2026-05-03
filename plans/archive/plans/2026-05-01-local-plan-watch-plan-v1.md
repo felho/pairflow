@@ -37,7 +37,7 @@ task_tracker:
     notes: "Retrofit the missing Pairflow-provided built-in Codex runner so plan watch can invoke ExecutePairflowPlan end-to-end without an undocumented placeholder command or per-repo script."
   - task_id: 6-watch-runner-observability
     task_path: plans/archive/tasks/2026-05-01-local-plan-watch/6-watch-runner-observability.md
-    status: draft
+    status: approved
     notes: "Retrofit Codex JSONL streaming, normalized timeline artifacts, and human-discoverable invocation directories for the built-in plan-watch Codex runner."
 ---
 
@@ -145,6 +145,8 @@ Progress update (2026-05-02): follow-up runtime smoke exposed that no-trigger pl
 
 Progress update (2026-05-03): plan reopened in an ideation bubble with retrofit task `6-watch-runner-observability` after local `codex exec --json` experiments showed that the current `last-message.json`-oriented bridge hides useful intermediate `ExecutePairflowPlan` progress and that `--json` mode should make the JSONL stream the source of truth.
 
+Progress update (2026-05-03): `CreatePairflowSpec reviewspec` approved task `6-watch-runner-observability` after adding explicit contract-dense ownership, structured event rules, mirrored surface coverage, and fail-closed malformed JSONL semantics.
+
 ## Task List
 
 | Task ID                  | Task Path | Purpose                                                                                                                                                                                  | Depends On               | Closes Gap                                                                                                    | Status      |
@@ -154,7 +156,7 @@ Progress update (2026-05-03): plan reopened in an ideation bubble with retrofit 
 | `3-watch-loop`           | `plans/archive/tasks/2026-05-01-local-plan-watch/3-watch-loop.md`    | Add local foreground `plan watch` polling with configurable interval, persisted watcher ledger, approval-ready trigger handling, dedupe, and autonomous runner invocation.               | `2-bubble-trigger-index` | Missing local trigger process and duplicate-invocation guard.                                                 | archived |
 | `4-pilot-docs`           | `plans/archive/tasks/2026-05-01-local-plan-watch/4-pilot-docs.md`    | Validate the local watcher on a representative plan, document V1 boundaries, and record deferred remote-control-plane follow-up.                                                         | `3-watch-loop`           | Missing pilot evidence and operator-facing guidance.                                                          | archived |
 | `5-plan-watch-codex-runner` | `plans/archive/tasks/2026-05-01-local-plan-watch/5-plan-watch-codex-runner.md` | Add a Pairflow-provided built-in Codex runner that turns watch payloads into `ExecutePairflowPlan` invocations and returns bridge-compatible structured output. | `4-pilot-docs` | Missing last-mile executable proof for autonomous plan watch continuation. | archived |
-| `6-watch-runner-observability` | `plans/archive/tasks/2026-05-01-local-plan-watch/6-watch-runner-observability.md` | Make the built-in Codex runner stream `codex exec --json` events, persist raw and normalized per-invocation artifacts, derive final runner output from the stream, and use human-discoverable artifact directory names. | `5-plan-watch-codex-runner` | Missing visibility into what `ExecutePairflowPlan` does during a watch-triggered Codex run. | draft |
+| `6-watch-runner-observability` | `plans/archive/tasks/2026-05-01-local-plan-watch/6-watch-runner-observability.md` | Make the built-in Codex runner stream `codex exec --json` events, persist raw and normalized per-invocation artifacts, derive final runner output from the stream, and use human-discoverable artifact directory names. | `5-plan-watch-codex-runner` | Missing visibility into what `ExecutePairflowPlan` does during a watch-triggered Codex run. | approved |
 
 ## Coverage Map
 

@@ -5,10 +5,13 @@ task_family_id: watch-runner-observability
 sequence_key: "6"
 task_id: 6-watch-runner-observability
 title: "Plan Watch Codex Runner Observability"
-status: draft
+status: approved
 phase: phase6-retrofit
 target_files:
   - "src/v11/application/planWatch/codexAgentRunnerBridge.ts"
+  - "src/v11/application/planWatch/codexAgentRunnerArtifacts.ts"
+  - "src/v11/application/planWatch/codexAgentRunnerStream.ts"
+  - "src/v11/application/planWatch/codexAgentRunnerTimeline.ts"
   - "src/v11/application/planWatch/agentRunnerBridge.ts"
   - "src/v11/application/planWatch/agentRunnerBridgeContract.ts"
   - "src/v11/application/planWatch/agentRunnerBridgeResult.ts"
@@ -17,6 +20,9 @@ target_files:
   - "src/v11/application/planWatch/planWatchLoopExecution.ts"
   - "src/v11/defaults/planWatch/agentRunnerBridgeDefaults.ts"
   - "tests/v11/application/planWatch/agentRunnerBridge.test.ts"
+  - "tests/v11/application/planWatch/codexAgentRunnerArtifacts.test.ts"
+  - "tests/v11/application/planWatch/codexAgentRunnerStream.test.ts"
+  - "tests/v11/application/planWatch/codexAgentRunnerTimeline.test.ts"
   - "tests/v11/application/planWatch/planWatchLedger.test.ts"
   - "tests/v11/application/planWatch/planWatchLoop.test.ts"
   - "README.md"
@@ -134,8 +140,9 @@ from the streamed structured agent message.
    - `classifyProcessResult`
    - `buildCompletedPlanWatchLedgerRecord`
    - watch loop runner completion mapping
-2. Actual touched scope: Codex subprocess adapter, artifact persistence, final
-   result parsing, ledger record shape, docs, and focused tests.
+2. Actual touched scope: Codex subprocess adapter plus narrow helper modules for
+   artifact naming/writing, JSONL stream parsing, timeline normalization, final
+   result extraction, ledger record shape, docs, and focused tests.
 3. Mutation entrypoints in scope: runner artifact writes only; no plan/task or
    bubble lifecycle mutation changes.
 4. Hidden scope ruled out: Codex SDK migration, UI timeline page, remote
@@ -268,8 +275,8 @@ from the streamed structured agent message.
 3. `identity_join_risk`: `1`
 4. `activation_coupling`: `2`
 5. `prerequisite_risk`: `1`
-6. `acceptance_multiplicity`: `2`
-7. `risk_score`: `8`
+6. `acceptance_multiplicity`: `1`
+7. `risk_score`: `7`
 8. `single-task allowed`: `yes`
 9. If `no`, required split: `N/A`.
 10. Identity/join note:
@@ -284,7 +291,8 @@ from the streamed structured agent message.
     - closure buckets touched: subprocess adapter, persisted artifact contract,
       ledger consume, docs.
     - intentionally collapsed closures: raw stream, normalized timeline, and
-      final extraction because they are one IO contract change.
+      final extraction because they are one IO contract change, with multiple
+      tests covering branches of that single acceptance contract.
     - explicitly deferred closures: UI and timeline display command.
 13. Bounded-task-shape decision:
     - primary shape: subprocess_adapter.
@@ -311,6 +319,37 @@ from the streamed structured agent message.
 | Artifact metadata | runner bridge | `metadata.json` with invocation, plan, repo, trigger, startedAt, planSlug, mode, pid | discovery/future CLI | metadata write failure -> file IO blocked before success claim | P1 |
 | Artifact directory | runner bridge | `<YYYY-MM-DD>_<HH-mm-ss>_<plan-slug>_<invocation-id>` under `.pairflow/runtime/plan-watch/agent-runner` | humans/ledger | collision gets deterministic suffix or unique invocation segment | P1 |
 | Ledger linkage | ledger record | optional `artifactDir` for new run records; legacy records still parse | watch loop/future CLI | missing legacy field is accepted; malformed new field blocks schema only if present and invalid | P1 |
+
+### Ownership and Deferred Semantics
+
+| Boundary | This Task Owns Now | This Task Records But Does Not Interpret | Deferred / Out of Scope | Forbidden Inference |
+|---|---|---|---|---|
+| Raw Codex events | Capture and persist exact JSONL lines to `events.ndjson`. | Raw Codex event type, item, command, usage, and other unknown fields. | Treating raw Codex schema as a Pairflow public API. | Lifecycle or route authority from raw events. |
+| Pairflow timeline | Normalize selected raw events to Pairflow-owned timeline rows. | Command summaries, counts, previews, statuses, and final status evidence. | CLI/UI display and filtering of timeline rows. | Timeline rows affecting dedupe or routing. |
+| Final runner result | Extract and validate the final result from the last valid structured `agent_message`. | Intermediate structured messages as timeline evidence. | Multi-run replay or external session reconstruction. | Fallback to `last-message.json`, Codex sessions, or prose stdout. |
+| Artifact discovery | Create human-discoverable directories and metadata. | PID, local timestamp, plan slug, trigger kind, and invocation id. | Retention cleanup and artifact pruning policy. | PID or timestamp as canonical identity. |
+| Ledger linkage | Persist `artifactDir` while preserving legacy read compatibility. | Artifact path for future reader commands. | Timeline display command and UI readers. | Dedupe key derived from artifact directory. |
+
+### Structured Contract Rules
+
+| Surface | Required Fields | Optional Fields | Unknown / Malformed Behavior | Retention Rule | Priority |
+|---|---|---|---|---|---|
+| `metadata.json` | `schemaVersion`, `invocationId`, `startedAt`, `repoPath`, `planPath`, `planSlug`, `mode` | `triggerKind`, `pid`, `artifactDir`, `schemaFilePath` | Runtime write failure blocks success. | Persist for every prepared run once the artifact directory exists. | P1 |
+| Raw event line | Valid JSON object line emitted by Codex. | Any Codex-owned fields. | Malformed line is retained raw and final extraction fails closed. | Preserve exact line in `events.ndjson`. | P1 |
+| Structured agent message | `item.type = "agent_message"` and text JSON matching runner output schema. | Schema-allowed runner output fields. | Invalid candidate is ignored as final output and may become timeline diagnostic; no valid final blocks with `AGENT_RUNNER_OUTPUT_INVALID`. | Keep original raw event. | P1 |
+| Timeline row | `schemaVersion`, `type`, `at` | Row-specific summary fields. | Unknown raw events map to hidden `runner_event_unrecognized` or raw-only retention. | Persist normalized rows to `timeline.ndjson`. | P1 |
+| Ledger `artifactDir` | String path when present. | N/A | Absent legacy field is accepted; non-string new value is invalid. | Retain in new run records. | P1 |
+
+### Mirrored Surface Checklist
+
+| Contract Row | L0 Surface | L1 Surface | L2 Surface | Docs / Future Surface |
+|---|---|---|---|---|
+| Codex invocation | In Scope, Baseline Preservation | Fallback / Error Contract | T1 | README and pilot docs |
+| Raw stream | Goal, Safety Defaults | Structured Contract Rules | T3,T5 | README artifact list and pilot evidence |
+| Timeline stream | Goal, Safety Defaults | Timeline Event Contract | T4,T7 | README artifact list and pilot evidence |
+| Final runner result | Read-path rule, Forbidden fallback | Fallback / Error Contract | T2,T5,T6 | README source-of-truth wording |
+| Artifact metadata / directory | In Scope, Safety Defaults | Data and Interface Contract | T9 | README discovery examples |
+| Ledger linkage | Success proof boundary | Data and Interface Contract | T8 | Future CLI timeline notes |
 
 ### Timeline Event Contract
 
@@ -354,7 +393,7 @@ from the streamed structured agent message.
 |---|---|---|---|
 | Codex spawn ENOENT | blocked | `PLAN_WATCH_CODEX_UNAVAILABLE` | unchanged |
 | stdout stream empty | blocked | `AGENT_RUNNER_OUTPUT_INVALID` | raw artifact may be empty |
-| malformed JSONL line | blocked unless valid final object policy explicitly tolerates it | `AGENT_RUNNER_OUTPUT_INVALID` | prefer fail-closed for V1 |
+| malformed JSONL line | blocked | `AGENT_RUNNER_OUTPUT_INVALID` | retain raw line; do not silently tolerate malformed stream in this task |
 | no structured agent message | blocked | `AGENT_RUNNER_OUTPUT_INVALID` | do not use last-message fallback |
 | final object schema invalid | blocked | `AGENT_RUNNER_OUTPUT_INVALID` | include output diagnostic |
 | timeline write failure | blocked | `PLAN_WATCH_RUNNER_FILE_IO_FAILED` | do not claim observability success |
