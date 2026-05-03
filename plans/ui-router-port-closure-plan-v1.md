@@ -34,7 +34,7 @@ task_tracker:
   - task_id: 4-ui-readmodel-port-closure
     task_path: plans/tasks/4-ui-readmodel-port-closure.md
     status: approved
-    notes: "Approved by ReviewSpec task-mode after CreateTask; ready for document bubble."
+    notes: "Document bubble 4-ui-readmodel-port-closure-doc started after ReviewSpec task-mode approval."
   - task_id: 5-router-port-cleanup
     task_path: null
     status: not_created
