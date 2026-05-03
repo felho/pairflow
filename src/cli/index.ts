@@ -382,6 +382,9 @@ async function handlePlanWatchCommand(args: string[]): Promise<number> {
       undefined,
       (event) => {
         process.stderr.write(`${renderPlanWatchEventText(event)}\n`);
+      },
+      (line) => {
+        process.stderr.write(`${line}\n`);
       }
     );
     if (result === null) {

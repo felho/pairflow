@@ -8,6 +8,8 @@ import {
   getPlanWatchHelpText,
   parsePlanWatchCommandOptions,
   renderPlanWatchEventText,
+  renderPlanWatchRunnerEventLine,
+  renderPlanWatchRunnerTimelineLine,
   runPlanWatchCommand,
   renderPlanWatchText
 } from "../../src/cli/commands/plan/watch.js";
@@ -55,6 +57,7 @@ describe("plan watch command", () => {
         "agent",
         "--run-now",
         "--force-run",
+        "--follow-runner",
         "--runner-arg",
         "run",
         "--runner-arg=--fast"
@@ -69,6 +72,7 @@ describe("plan watch command", () => {
       once: true,
       runNow: true,
       forceRun: true,
+      followRunner: true,
       runnerCommand: "agent",
       runnerArgs: ["run", "--fast"],
       runnerInputMode: "stdin_json",
@@ -134,6 +138,59 @@ describe("plan watch command", () => {
     expect(text).toContain("plan watch: runner started");
     expect(text).toContain("invocation=invocation-1");
     expect(text).toContain("bubble=3-watch-loop-impl");
+  });
+
+  it("renders runner artifact and timeline rows for follow output", () => {
+    const artifactText = renderPlanWatchEventText({
+      kind: "runner_artifact_ready",
+      repoPath: "/repo",
+      planPath: "/repo/plans/local-plan-watch-plan-v1.md",
+      invocationId: "invocation-1",
+      dedupeKey: "dedupe-1",
+      candidate: {
+        planPath: "/repo/plans/local-plan-watch-plan-v1.md",
+        taskId: "3-watch-loop",
+        taskPath: "plans/tasks/3-watch-loop.md",
+        bubbleId: "3-watch-loop-impl",
+        bubbleRole: "implementation",
+        observedState: "READY_FOR_HUMAN_APPROVAL"
+      },
+      artifactFiles: {
+        artifactDir: "/repo/.pairflow/runtime/plan-watch/agent-runner/run",
+        artifactDirRef: ".pairflow/runtime/plan-watch/agent-runner/run",
+        schemaFilePath: "/repo/.pairflow/runtime/plan-watch/agent-runner/run/schema.json",
+        metadataFilePath: "/repo/.pairflow/runtime/plan-watch/agent-runner/run/metadata.json",
+        eventsFilePath: "/repo/.pairflow/runtime/plan-watch/agent-runner/run/events.ndjson",
+        timelineFilePath: "/repo/.pairflow/runtime/plan-watch/agent-runner/run/timeline.ndjson"
+      }
+    });
+    const timelineText = renderPlanWatchRunnerTimelineLine(
+      JSON.stringify({
+        schemaVersion: 1,
+        type: "runner_completed",
+        status: "settled_checkpoint",
+        reasonCode: "PLAN_COMPLETE",
+        summary: "done"
+      })
+    );
+    const eventText = renderPlanWatchRunnerEventLine(
+      JSON.stringify({
+        type: "item.started",
+        item: {
+          id: "item-1",
+          type: "command_execution",
+          command: "git status",
+          status: "in_progress"
+        }
+      })
+    );
+
+    expect(artifactText).toContain("plan watch: runner artifacts");
+    expect(artifactText).toContain("dir=.pairflow/runtime/plan-watch/agent-runner/run");
+    expect(eventText).toBe('runner: command started command="git status"');
+    expect(timelineText).toBe(
+      'runner: completed status=settled_checkpoint reason=PLAN_COMPLETE summary="done"'
+    );
   });
 
   it("returns blocked runner_config_missing through the command path", async () => {
@@ -365,6 +422,7 @@ describe("plan watch command", () => {
   it("documents the plan watch command surface", () => {
     expect(getPlanWatchHelpText()).toContain("pairflow plan watch <plan-path>");
     expect(getPlanWatchHelpText()).toContain("--run-now");
+    expect(getPlanWatchHelpText()).toContain("--follow-runner");
     expect(getPlanWatchHelpText()).toContain("--runner-command");
   });
 });

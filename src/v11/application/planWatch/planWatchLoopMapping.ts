@@ -36,6 +36,7 @@ export function buildRunnerInput(input: {
   dedupeKey: string;
   now: Date;
   stopSignal?: AbortSignal | undefined;
+  onArtifactFiles?: AgentRunnerBridgeInput["onArtifactFiles"] | undefined;
 }): AgentRunnerBridgeInput {
   return {
     repoPath: input.repoPath,
@@ -43,6 +44,9 @@ export function buildRunnerInput(input: {
     invocationId: input.invocationId,
     now: input.now,
     ...(input.stopSignal !== undefined ? { stopSignal: input.stopSignal } : {}),
+    ...(input.onArtifactFiles !== undefined
+      ? { onArtifactFiles: input.onArtifactFiles }
+      : {}),
     trigger: {
       source: PLAN_WATCH_TRIGGER_SOURCE,
       reason: isRunNowCandidate(input.candidate)

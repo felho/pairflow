@@ -1,3 +1,4 @@
+import { readFile } from "node:fs/promises";
 import { parseArgs } from "node:util";
 
 import {
@@ -16,6 +17,9 @@ import {
 import {
   createDefaultPlanWatchLoopDependencies
 } from "../../../v11/defaults/planWatch/planWatchLoopDefaults.js";
+import {
+  normalizeCodexTimeline
+} from "../../../v11/application/planWatch/codexAgentRunnerTimeline.js";
 import type {
   AgentRunnerBridgeInputMode
 } from "../../../v11/application/planWatch/agentRunnerBridgeContract.js";
@@ -28,6 +32,7 @@ export interface PlanWatchCommandOptions {
   dryRun: boolean;
   runNow: boolean;
   forceRun: boolean;
+  followRunner: boolean;
   runnerCommand?: string | undefined;
   runnerArgs: readonly string[];
   runnerInputMode: AgentRunnerBridgeInputMode;
@@ -46,7 +51,7 @@ export type ParsedPlanWatchCommandOptions =
 export function getPlanWatchHelpText(): string {
   return [
     "Usage:",
-    "  pairflow plan watch <plan-path> [--repo <path>] [--interval-seconds <n>] [--once] [--dry-run] [--run-now] [--force-run]",
+    "  pairflow plan watch <plan-path> [--repo <path>] [--interval-seconds <n>] [--once] [--dry-run] [--run-now] [--force-run] [--follow-runner]",
     "",
     "Options:",
     "  --repo <path>                     Repository path (defaults to cwd)",
@@ -55,6 +60,7 @@ export function getPlanWatchHelpText(): string {
     "  --dry-run                         Discover and ledger without invoking the runner",
     "  --run-now                         Invoke the runner once even when no linked bubble trigger exists",
     "  --force-run                       Re-run an explicit --run-now invocation even if the ledger has prior run evidence",
+    "  --follow-runner                   Print normalized runner timeline rows while the runner is active",
     "  --runner-command <cmd>            Legacy/internal runner command override",
     "  --runner-arg <arg>                Legacy runner argument; may be repeated",
     "  --runner-input-mode <mode>        Legacy stdin_json or arg_json (default stdin_json)",
@@ -75,6 +81,7 @@ export function parsePlanWatchCommandOptions(
       "dry-run": { type: "boolean" },
       "run-now": { type: "boolean" },
       "force-run": { type: "boolean" },
+      "follow-runner": { type: "boolean" },
       "runner-command": { type: "string" },
       "runner-arg": { type: "string", multiple: true },
       "runner-input-mode": { type: "string" },
@@ -109,6 +116,7 @@ export function parsePlanWatchCommandOptions(
     dryRun: parsed.values["dry-run"] ?? false,
     runNow,
     forceRun,
+    followRunner: parsed.values["follow-runner"] ?? false,
     ...(parsed.values["runner-command"] !== undefined
       ? { runnerCommand: parsed.values["runner-command"] }
       : {}),
@@ -124,7 +132,8 @@ export async function runPlanWatchCommand(
   cwd: string = process.cwd(),
   createDependencies: (repo: string) => PlanWatchLoopDependencies =
     createDefaultPlanWatchLoopDependencies,
-  onEvent?: (event: PlanWatchEvent) => void | Promise<void>
+  onEvent?: (event: PlanWatchEvent) => void | Promise<void>,
+  onRunnerTimelineLine?: (line: string) => void | Promise<void>
 ): Promise<PlanWatchIterationResult | null> {
   const options = Array.isArray(args) ? parsePlanWatchCommandOptions(args, cwd) : args;
   if (options.help) {
@@ -155,6 +164,19 @@ export async function runPlanWatchCommand(
     );
   }
   const stop = createPlanWatchStopSignal();
+  const follower =
+    options.followRunner && onRunnerTimelineLine !== undefined
+      ? new PlanWatchRunnerTimelineFollower(onRunnerTimelineLine)
+      : undefined;
+  const onEventWithFollower = async (event: PlanWatchEvent): Promise<void> => {
+    if (event.kind === "runner_artifact_ready") {
+      follower?.start(event.artifactFiles.eventsFilePath);
+    }
+    if (event.kind === "runner_completed") {
+      await follower?.stop();
+    }
+    await onEvent?.(event);
+  };
   const input: PlanWatchInput = {
     repoPath: options.repo,
     planPath: options.planPath,
@@ -175,7 +197,7 @@ export async function runPlanWatchCommand(
       cwd: options.repo
     },
     ...(stop.signal !== undefined ? { stopSignal: stop.signal } : {}),
-    ...(onEvent !== undefined ? { onEvent } : {})
+    onEvent: onEventWithFollower
   };
   try {
     const loop = await runPlanWatchLoop(
@@ -184,7 +206,63 @@ export async function runPlanWatchCommand(
     );
     return loop.iterations[loop.iterations.length - 1] ?? null;
   } finally {
+    await follower?.stop();
     stop.cleanup();
+  }
+}
+
+class PlanWatchRunnerTimelineFollower {
+  private eventsFilePath: string | undefined;
+  private emittedLineCount = 0;
+  private timer: NodeJS.Timeout | undefined;
+  private flushing: Promise<void> = Promise.resolve();
+
+  public constructor(
+    private readonly onLine: (line: string) => void | Promise<void>
+  ) {}
+
+  public start(eventsFilePath: string): void {
+    this.eventsFilePath = eventsFilePath;
+    this.emittedLineCount = 0;
+    this.flushSoon();
+    this.timer = setInterval(() => {
+      this.flushSoon();
+    }, 250);
+    this.timer.unref();
+  }
+
+  public async stop(): Promise<void> {
+    if (this.timer !== undefined) {
+      clearInterval(this.timer);
+      this.timer = undefined;
+    }
+    await this.flush();
+    await this.flushing;
+  }
+
+  private flushSoon(): void {
+    this.flushing = this.flushing.then(() => this.flush());
+  }
+
+  private async flush(): Promise<void> {
+    if (this.eventsFilePath === undefined) {
+      return;
+    }
+    let text: string;
+    try {
+      text = await readFile(this.eventsFilePath, "utf8");
+    } catch {
+      return;
+    }
+    const lines = text.split(/\r?\n/u).filter((line) => line.length > 0);
+    const freshLines = lines.slice(this.emittedLineCount);
+    this.emittedLineCount = lines.length;
+    for (const line of freshLines) {
+      const rendered = renderPlanWatchRunnerEventLine(line);
+      if (rendered !== null) {
+        await this.onLine(rendered);
+      }
+    }
   }
 }
 
@@ -260,6 +338,13 @@ export function renderPlanWatchEventText(event: PlanWatchEvent): string {
       `bubble=${event.candidate.bubbleId}`
     ].join(" ");
   }
+  if (event.kind === "runner_artifact_ready") {
+    return [
+      "plan watch: runner artifacts",
+      `invocation=${event.invocationId}`,
+      `dir=${event.artifactFiles.artifactDirRef}`
+    ].join(" ");
+  }
   if (event.kind === "runner_completed") {
     return [
       "plan watch: runner completed",
@@ -280,6 +365,143 @@ export function renderPlanWatchEventText(event: PlanWatchEvent): string {
     `iterations=${event.iterationCount}`,
     `reason=${event.stopReason}`
   ].join(" ");
+}
+
+export function renderPlanWatchRunnerTimelineLine(line: string): string | null {
+  let row: unknown;
+  try {
+    row = JSON.parse(line);
+  } catch {
+    return null;
+  }
+  if (!isRecord(row) || typeof row.type !== "string") {
+    return null;
+  }
+  if (row.type === "command_started") {
+    return [
+      "runner: command started",
+      `command=${quoteValue(shorten(asString(row.command) ?? "unknown"))}`
+    ].join(" ");
+  }
+  if (row.type === "command_completed") {
+    return [
+      "runner: command completed",
+      `exit=${asNumberOrNull(row.exitCode) ?? "null"}`,
+      `lines=${asNumberOrNull(row.outputLineCount) ?? "unknown"}`,
+      `command=${quoteValue(shorten(asString(row.command) ?? "unknown"))}`
+    ].join(" ");
+  }
+  if (row.type === "runner_status") {
+    const output = parseRunnerStatusSummary(asString(row.summary));
+    if (output !== undefined) {
+      return [
+        "runner: status",
+        output.status !== undefined ? `status=${output.status}` : undefined,
+        output.reason_code !== undefined ? `reason=${output.reason_code}` : undefined,
+        output.summary !== undefined
+          ? `summary=${quoteValue(shorten(output.summary, 180))}`
+          : undefined
+      ].filter(isDefined).join(" ");
+    }
+    return [
+      "runner: status",
+      `summary=${quoteValue(shorten(asString(row.summary) ?? ""))}`
+    ].join(" ");
+  }
+  if (row.type === "runner_completed") {
+    return [
+      "runner: completed",
+      `status=${asString(row.status) ?? "unknown"}`,
+      `reason=${asString(row.reasonCode) ?? "unknown"}`,
+      asString(row.summary) !== undefined
+        ? `summary=${quoteValue(shorten(asString(row.summary) ?? "", 180))}`
+        : undefined
+    ].filter(isDefined).join(" ");
+  }
+  if (row.type === "runner_event_malformed") {
+    return "runner: malformed event";
+  }
+  return null;
+}
+
+export function renderPlanWatchRunnerEventLine(line: string): string | null {
+  let event: unknown;
+  try {
+    event = JSON.parse(line);
+  } catch {
+    return "runner: malformed event";
+  }
+  if (!isRecord(event)) {
+    return "runner: malformed event";
+  }
+  const rows = normalizeCodexTimeline({
+    events: [{ line, value: event }],
+    finalOutput: null,
+    completedAt: new Date().toISOString()
+  });
+  for (const row of rows) {
+    const rendered = renderPlanWatchRunnerTimelineLine(JSON.stringify(row));
+    if (rendered !== null) {
+      return rendered;
+    }
+  }
+  return null;
+}
+
+function parseRunnerStatusSummary(value: string | undefined):
+  | { status?: string | undefined; reason_code?: string | undefined; summary?: string | undefined }
+  | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+  try {
+    const parsed: unknown = JSON.parse(value);
+    if (!isRecord(parsed)) {
+      return undefined;
+    }
+    return {
+      ...(asString(parsed.status) !== undefined ? { status: asString(parsed.status) } : {}),
+      ...(asString(parsed.reason_code) !== undefined
+        ? { reason_code: asString(parsed.reason_code) }
+        : {}),
+      ...(asString(parsed.summary) !== undefined ? { summary: asString(parsed.summary) } : {})
+    };
+  } catch {
+    return undefined;
+  }
+}
+
+function quoteValue(value: string): string {
+  return JSON.stringify(value);
+}
+
+function shorten(value: string, maxLength = 120): string {
+  if (value.length <= maxLength) {
+    return value;
+  }
+  return `${value.slice(0, Math.max(0, maxLength - 1))}...`;
+}
+
+function asString(value: unknown): string | undefined {
+  return typeof value === "string" ? value : undefined;
+}
+
+function asNumberOrNull(value: unknown): number | null | undefined {
+  if (typeof value === "number") {
+    return value;
+  }
+  if (value === null) {
+    return null;
+  }
+  return undefined;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isDefined<T>(value: T | undefined): value is T {
+  return value !== undefined;
 }
 
 function parseIntervalSeconds(value: string | undefined): number {

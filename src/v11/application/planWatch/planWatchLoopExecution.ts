@@ -230,7 +230,18 @@ async function handleRunCandidate(
       invocationId,
       ...(context.input.stopSignal !== undefined
         ? { stopSignal: context.input.stopSignal }
-        : {})
+        : {}),
+      onArtifactFiles: async (artifactFiles) => {
+        await context.input.onEvent?.({
+          kind: "runner_artifact_ready",
+          repoPath: context.repoPath,
+          planPath: context.planPath,
+          candidate: context.candidate,
+          invocationId,
+          dedupeKey: context.dedupeKey,
+          artifactFiles
+        });
+      }
     }),
     context.input.runnerConfig ?? {}
   ).catch((error: unknown) => runnerThrownResult(context, invocationId, error));

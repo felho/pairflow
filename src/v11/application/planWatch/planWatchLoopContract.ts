@@ -1,7 +1,8 @@
 import type {
   AgentRunnerBridgeInput,
   AgentRunnerBridgeResult,
-  AgentRunnerCommandConfig
+  AgentRunnerCommandConfig,
+  CodexRunnerArtifactFiles
 } from "./agentRunnerBridgeContract.js";
 import type {
   LinkedBubbleTriggerCandidate,
@@ -105,6 +106,15 @@ export type PlanWatchEvent =
       candidate: LinkedBubbleTriggerCandidate;
       invocationId: string;
       dedupeKey: string;
+    }
+  | {
+      kind: "runner_artifact_ready";
+      repoPath: string;
+      planPath: string;
+      candidate: LinkedBubbleTriggerCandidate;
+      invocationId: string;
+      dedupeKey: string;
+      artifactFiles: CodexRunnerArtifactFiles;
     }
   | {
       kind: "runner_completed";

@@ -61,6 +61,7 @@ export interface AgentRunnerBridgeInput {
   now?: Date;
   timeoutMs?: number;
   stopSignal?: AbortSignal | undefined;
+  onArtifactFiles?: ((files: CodexRunnerArtifactFiles) => void | Promise<void>) | undefined;
 }
 
 export interface AgentRunnerCommandConfig {

@@ -820,6 +820,14 @@ pairflow plan watch plans/my-plan.md \
   --run-now \
   --force-run
 
+# Re-run an explicit nudge and print normalized runner timeline rows live
+pairflow plan watch plans/my-plan.md \
+  --repo /path/to/repo \
+  --once \
+  --run-now \
+  --force-run \
+  --follow-runner
+
 # Discover trigger evidence and record a dry-run ledger observation only
 pairflow plan watch plans/my-plan.md \
   --repo /path/to/repo \
@@ -859,6 +867,12 @@ Runner configuration:
   when no linked approval-ready bubble is present. Use it to start or resume
   plan orchestration from `ExecutePairflowPlan` without waiting for a bubble
   transition.
+- `--force-run` makes an explicit `--run-now` nudge produce fresh ledger evidence
+  so local pilots can re-run the same plan without moving aside
+  `.pairflow/runtime/plan-watch/ledger.json`.
+- `--follow-runner` prints the normalized runner timeline while the runner is
+  active. It renders the same Pairflow-owned rows that are durably written to
+  `timeline.ndjson`; raw Codex `events.ndjson` remains artifact-only.
 - `--dry-run` records observation evidence without invoking the runner.
 
 The canonical watch evidence is the typed iteration result and the local ledger
@@ -1033,7 +1047,7 @@ The registry is stored at `~/.pairflow/repos.json` (override with `PAIRFLOW_REPO
 
 | Command | Description |
 |---------|-------------|
-| `plan watch <plan-path> [--repo <path>] [--interval-seconds <n>] [--once] [--dry-run] [--run-now] [--force-run] [--runner-command <cmd>] [--runner-arg <arg>]... [--runner-input-mode stdin_json\|arg_json]` | Poll a local plan for approval-ready linked bubbles, dedupe trigger evidence in the local watch ledger, and invoke the config-selected built-in Codex `ExecutePairflowPlan` runner unless `--dry-run` is set. Use `--run-now` to nudge `ExecutePairflowPlan` once when no linked trigger exists; add `--force-run` to re-run that explicit nudge with fresh ledger evidence. The runner flags are legacy/internal overrides. Default interval is 60 seconds. |
+| `plan watch <plan-path> [--repo <path>] [--interval-seconds <n>] [--once] [--dry-run] [--run-now] [--force-run] [--follow-runner] [--runner-command <cmd>] [--runner-arg <arg>]... [--runner-input-mode stdin_json\|arg_json]` | Poll a local plan for approval-ready linked bubbles, dedupe trigger evidence in the local watch ledger, and invoke the config-selected built-in Codex `ExecutePairflowPlan` runner unless `--dry-run` is set. Use `--run-now` to nudge `ExecutePairflowPlan` once when no linked trigger exists; add `--force-run` to re-run that explicit nudge with fresh ledger evidence, and `--follow-runner` to print normalized runner timeline rows while it runs. The runner flags are legacy/internal overrides. Default interval is 60 seconds. |
 
 #### Agent-facing commands
 

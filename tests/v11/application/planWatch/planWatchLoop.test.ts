@@ -33,6 +33,7 @@ import type {
   LinkedBubbleTriggerIndexResult
 } from "../../../../src/v11/application/planWatch/linkedBubbleTriggerIndexContract.js";
 import type {
+  PlanWatchEvent,
   PlanWatchLoopDependencies
 } from "../../../../src/v11/application/planWatch/planWatchLoopContract.js";
 
@@ -1277,6 +1278,45 @@ describe("planWatchLoop", () => {
     const call = vi.mocked(dependencies.runExecutePairflowPlanContinuation).mock
       .calls[0];
     expect(call?.[0].stopSignal).toBe(controller.signal);
+  });
+
+  it("emits runner artifact readiness when the bridge reports Codex files", async () => {
+    const triggerCandidate = candidate();
+    const dependencies = deps({ candidates: [triggerCandidate] });
+    vi.mocked(dependencies.runExecutePairflowPlanContinuation).mockImplementation(
+      async (input) => {
+        await input.onArtifactFiles?.({
+          artifactDir: "/repo/.pairflow/runtime/plan-watch/agent-runner/run",
+          artifactDirRef: ".pairflow/runtime/plan-watch/agent-runner/run",
+          schemaFilePath:
+            "/repo/.pairflow/runtime/plan-watch/agent-runner/run/schema.json",
+          metadataFilePath:
+            "/repo/.pairflow/runtime/plan-watch/agent-runner/run/metadata.json",
+          eventsFilePath:
+            "/repo/.pairflow/runtime/plan-watch/agent-runner/run/events.ndjson",
+          timelineFilePath:
+            "/repo/.pairflow/runtime/plan-watch/agent-runner/run/timeline.ndjson"
+        });
+        return runnerResult();
+      }
+    );
+    const events: PlanWatchEvent["kind"][] = [];
+
+    const result = await runPlanWatchIteration(
+      {
+        repoPath: "/repo",
+        planPath: "plans/local-plan-watch-plan-v1.md",
+        once: true,
+        runnerConfig: { command: "agent" },
+        onEvent: (event) => {
+          events.push(event.kind);
+        }
+      },
+      dependencies
+    );
+
+    expect(result.status).toBe("runner_settled_checkpoint");
+    expect(events).toContain("runner_artifact_ready");
   });
 
   it("accepts the three legal ledger mode and recordState combinations", () => {

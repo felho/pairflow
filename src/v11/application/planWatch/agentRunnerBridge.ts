@@ -72,6 +72,7 @@ export async function runExecutePairflowPlanContinuation(
     return preconditions.result;
   }
   const invocation = buildRunnerInvocation(input, preconditions.config, preconditions.payload);
+  if (preconditions.config.codexRunnerFiles !== undefined) await input.onArtifactFiles?.(preconditions.config.codexRunnerFiles);
   try {
     const processResult = await dependencies.runCommand(invocation.processInvocation);
     if (preconditions.config.codexRunnerFiles !== undefined) {
