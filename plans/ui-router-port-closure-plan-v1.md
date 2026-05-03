@@ -15,13 +15,13 @@ task_order:
   - 3-ui-action-dto-closure
   - 4-ui-readmodel-port-closure
   - 5-router-port-cleanup
-active_task_id: 1-router-fitness-guards
+active_task_id: 2-router-dependency-slices
 archive_group: 2026-05-03-ui-router-port-closure-plan-v1
 task_tracker:
   - task_id: 1-router-fitness-guards
-    task_path: plans/tasks/1-router-fitness-guards.md
-    status: in_progress
-    notes: "Add architectural/fitness guards that prevent full UiRouterDependencies use in router leaf modules and forbid command-owned view imports in the UI router port."
+    task_path: plans/archive/tasks/1-router-fitness-guards.md
+    status: archived
+    notes: "Completed via implementation bubble 1-router-fitness-guards-impl; merged at 7dc3bcd9 and archived."
   - task_id: 2-router-dependency-slices
     task_path: null
     status: not_created
@@ -156,6 +156,9 @@ The plan closes the issue in two layers:
    types.
 3. The current tree has enough router/API/store tests to characterize endpoint
    behavior before refactoring.
+4. `1-router-fitness-guards` added ratcheting UI router port fitness guards,
+   policy entries, and targeted regression tests with explicit transitional
+   exceptions for known broad-bag and command-owned import violations.
 
 ### Open Work
 
@@ -167,10 +170,13 @@ The plan closes the issue in two layers:
    command-owned view/input types.
 4. `src/contracts/ui/uiActions.ts` still imports raw `BubbleStateSnapshot` and
    full `ProtocolEnvelope` for UI action results.
-5. Fitness/source guards do not yet encode the desired router-port shape.
-6. Any first guard must pass on the current repository by recording known current
-   violations as explicit transitional exceptions, then later tasks must reduce
-   that exception set to zero.
+5. Transitional fitness exceptions remain for known current violations; later
+   tasks must reduce that exception set to zero.
+
+Progress update (2026-05-03): implementation bubble `1-router-fitness-guards-impl`
+closed and merged after satisfying the configured review gate. Task
+`1-router-fitness-guards` is archived and the active task advanced to
+`2-router-dependency-slices`.
 
 ### Deferred / Future Work
 
@@ -190,7 +196,7 @@ The plan closes the issue in two layers:
 
 | Task ID | Task Path | Purpose | Depends On | Closes Gap | Status |
 |---|---|---|---|---|---|
-| `1-router-fitness-guards` | `plans/tasks/1-router-fitness-guards.md` | Add ratcheting architectural guards that focus on consumer slicing and forbidden type imports, not an arbitrary method-count threshold; the guards must pass initially with explicit known transitional exceptions. | N/A | G1, G5 | approved |
+| `1-router-fitness-guards` | `plans/archive/tasks/1-router-fitness-guards.md` | Add ratcheting architectural guards that focus on consumer slicing and forbidden type imports, not an arbitrary method-count threshold; the guards must pass initially with explicit known transitional exceptions. | N/A | G1, G5 | archived |
 | `2-router-dependency-slices` | `null` | Introduce narrow dependency slice types for router leaf modules and keep any composite only at composition/wiring boundaries. | `1-router-fitness-guards` | G1, G2 | not_created |
 | `3-ui-action-dto-closure` | `null` | Replace raw action result `BubbleStateSnapshot`/`ProtocolEnvelope` exposure with explicit UI-facing action state/event DTOs and projection tests. | `2-router-dependency-slices` | G4 | not_created |
 | `4-ui-readmodel-port-closure` | `null` | Move list/status/inbox router-facing shapes to canonical UI read-model ownership and remove command-owned imports from the UI router port. | `2-router-dependency-slices` | G3 | not_created |
