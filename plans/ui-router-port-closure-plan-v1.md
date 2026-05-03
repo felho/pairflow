@@ -24,8 +24,8 @@ task_tracker:
     notes: "Completed via implementation bubble 1-router-fitness-guards-impl; merged at 7dc3bcd9 and archived."
   - task_id: 2-router-dependency-slices
     task_path: plans/tasks/2-router-dependency-slices.md
-    status: implementable
-    notes: "Document bubble 2-router-dependency-slices-doc closed and merged; task is ready for implementation bubble creation."
+    status: in_progress
+    notes: "Implementation bubble 2-router-dependency-slices-impl started from document-approved task."
   - task_id: 3-ui-action-dto-closure
     task_path: null
     status: not_created
