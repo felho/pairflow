@@ -29,8 +29,8 @@ task_tracker:
     notes: "Completed via implementation bubble 2-router-dependency-slices-impl; merged at a4890b2f and archived."
   - task_id: 3-ui-action-dto-closure
     task_path: plans/tasks/3-ui-action-dto-closure.md
-    status: implementable
-    notes: "Document bubble 3-ui-action-dto-closure-doc closed and merged at 98381abc; ready for implementation bubble."
+    status: in_progress
+    notes: "Implementation bubble 3-ui-action-dto-closure-impl started after document bubble 3-ui-action-dto-closure-doc closed and merged at 98381abc."
   - task_id: 4-ui-readmodel-port-closure
     task_path: null
     status: not_created
@@ -199,7 +199,7 @@ closed and merged after satisfying the configured review gate. Task
 |---|---|---|---|---|---|
 | `1-router-fitness-guards` | `plans/archive/tasks/1-router-fitness-guards.md` | Add ratcheting architectural guards that focus on consumer slicing and forbidden type imports, not an arbitrary method-count threshold; the guards must pass initially with explicit known transitional exceptions. | N/A | G1, G5 | archived |
 | `2-router-dependency-slices` | `plans/archive/tasks/2026-05-03-ui-router-port-closure-plan-v1/2-router-dependency-slices.md` | Introduce narrow dependency slice types for router leaf modules and keep any composite only at composition/wiring boundaries. | `1-router-fitness-guards` | G1, G2 | archived |
-| `3-ui-action-dto-closure` | `plans/tasks/3-ui-action-dto-closure.md` | Replace raw action result `BubbleStateSnapshot`/`ProtocolEnvelope` exposure with explicit UI-facing action state/event DTOs and projection tests. | `2-router-dependency-slices` | G4 | implementable |
+| `3-ui-action-dto-closure` | `plans/tasks/3-ui-action-dto-closure.md` | Replace raw action result `BubbleStateSnapshot`/`ProtocolEnvelope` exposure with explicit UI-facing action state/event DTOs and projection tests. | `2-router-dependency-slices` | G4 | in_progress |
 | `4-ui-readmodel-port-closure` | `null` | Move list/status/inbox router-facing shapes to canonical UI read-model ownership and remove command-owned imports from the UI router port. | `2-router-dependency-slices` | G3 | not_created |
 | `5-router-port-cleanup` | `null` | Remove or localize transitional composite aliases, tighten guard allowlists, update modularity-review status, and verify no stale broad-bag path remains. | `3-ui-action-dto-closure`, `4-ui-readmodel-port-closure` | G1-G5 | not_created |
 

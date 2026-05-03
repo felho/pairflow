@@ -5,7 +5,7 @@ task_family_id: ui-action-dto-closure
 sequence_key: "3"
 task_id: 3-ui-action-dto-closure
 title: "UI Action DTO Closure"
-status: implementable
+status: in_progress
 phase: phase3
 target_files:
   - src/contracts/ui/uiActions.ts
@@ -28,7 +28,7 @@ system_context_ref: docs/pairflow-initial-design.md
 owners:
   - "felho"
 doc_bubble_id: 3-ui-action-dto-closure-doc
-impl_bubble_id: null
+impl_bubble_id: 3-ui-action-dto-closure-impl
 supersedes: []
 superseded_by: null
 archive_group: 2026-05-03-ui-router-port-closure-plan-v1
