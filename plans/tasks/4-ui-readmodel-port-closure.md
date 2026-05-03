@@ -5,7 +5,7 @@ task_family_id: ui-readmodel-port-closure
 sequence_key: "4"
 task_id: 4-ui-readmodel-port-closure
 title: "UI Read-Model Port Closure"
-status: implementable
+status: in_progress
 phase: phase4
 target_files:
   - src/contracts/ui/uiReadModel.ts
@@ -31,7 +31,7 @@ system_context_ref: docs/pairflow-initial-design.md
 owners:
   - "felho"
 doc_bubble_id: 4-ui-readmodel-port-closure-doc
-impl_bubble_id: null
+impl_bubble_id: 4-ui-readmodel-port-closure-impl
 supersedes: []
 superseded_by: null
 archive_group: 2026-05-03-ui-router-port-closure-plan-v1
