@@ -1,6 +1,6 @@
 export {
   bubbleLifecycleStates
-} from "../../types/bubble.js";
+} from "../../contracts/ui/bubbleLifecycle.js";
 export type {
   BubbleLifecycleState
-} from "../../types/bubble.js";
+} from "../../contracts/ui/bubbleLifecycle.js";

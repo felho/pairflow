@@ -13,6 +13,10 @@ export type {
   UiBubbleListRemoteExecution,
   UiBubbleStatusRemoteExecution
 } from "./contracts/uiRemoteExecution.js";
+export type {
+  DeleteBubbleArtifacts as BubbleDeleteArtifacts,
+  DeleteBubbleResult as BubbleDeleteResult
+} from "../../../src/contracts/ui/deleteBubble.js";
 export const protocolMessageTypes = [
   "TASK",
   "PASS",
@@ -41,38 +45,6 @@ export const bubbleActionKinds = [
   "delete"
 ] as const;
 export type BubbleActionKind = (typeof bubbleActionKinds)[number];
-
-// Mirrors src/contracts/deleteBubble.ts.
-// Keep these interfaces in sync with the backend delete-bubble contract.
-export interface BubbleDeleteArtifacts {
-  worktree: {
-    exists: boolean;
-    path: string;
-  };
-  tmux: {
-    exists: boolean;
-    sessionName: string;
-  };
-  runtimeSession: {
-    exists: boolean;
-    sessionName: string | null;
-  };
-  branch: {
-    exists: boolean;
-    name: string;
-  };
-}
-
-export interface BubbleDeleteResult {
-  bubbleId: string;
-  deleted: boolean;
-  requiresConfirmation: boolean;
-  artifacts: BubbleDeleteArtifacts;
-  tmuxSessionTerminated: boolean;
-  runtimeSessionRemoved: boolean;
-  removedWorktree: boolean;
-  removedBubbleBranch: boolean;
-}
 
 export interface RuntimeSessionRecord {
   bubbleId: string;

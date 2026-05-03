@@ -1,13 +1,15 @@
 import type {
-  BubbleLifecycleState,
   BubbleStateSnapshot
 } from "../../../types/bubble.js";
 import type {
+  BubbleLifecycleState
+} from "../../../contracts/ui/bubbleLifecycle.js";
+import type {
   StateValidationDiagnostics
-} from "../../../shared/contracts/stateValidation.js";
+} from "../../../contracts/ui/stateValidation.js";
 export type {
   StateValidationDiagnostics
-} from "../../../shared/contracts/stateValidation.js";
+} from "../../../contracts/ui/stateValidation.js";
 
 export interface LoadedStateSnapshot {
   state: BubbleStateSnapshot;
