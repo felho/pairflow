@@ -20,7 +20,7 @@ archive_group: 2026-05-03-ui-router-port-closure-plan-v1
 task_tracker:
   - task_id: 1-router-fitness-guards
     task_path: plans/tasks/1-router-fitness-guards.md
-    status: implementable
+    status: in_progress
     notes: "Add architectural/fitness guards that prevent full UiRouterDependencies use in router leaf modules and forbid command-owned view imports in the UI router port."
   - task_id: 2-router-dependency-slices
     task_path: null

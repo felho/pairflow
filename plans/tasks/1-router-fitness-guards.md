@@ -5,7 +5,7 @@ task_family_id: router-fitness-guards
 sequence_key: "1"
 task_id: 1-router-fitness-guards
 title: "Router Fitness Guards"
-status: implementable
+status: in_progress
 phase: phase1
 target_files:
   - tools/fitness/checks/index.ts
@@ -47,7 +47,7 @@ system_context_ref: docs/pairflow-initial-design.md
 owners:
   - "felho"
 doc_bubble_id: 1-router-fitness-guards-doc
-impl_bubble_id: null
+impl_bubble_id: 1-router-fitness-guards-impl
 supersedes: []
 superseded_by: null
 archive_group: 2026-05-03-ui-router-port-closure-plan-v1
