@@ -4,8 +4,8 @@ artifact_id: plan_ui_router_port_closure_v1
 plan_id: ui-router-port-closure-plan-v1
 created_on: "2026-05-03"
 title: "UI Router Port Closure Plan"
-status: draft
-plan_status: draft
+status: approved
+plan_status: approved
 prd_ref: null
 owners:
   - "felho"
@@ -19,8 +19,8 @@ active_task_id: 1-router-fitness-guards
 archive_group: 2026-05-03-ui-router-port-closure-plan-v1
 task_tracker:
   - task_id: 1-router-fitness-guards
-    task_path: null
-    status: not_created
+    task_path: plans/tasks/1-router-fitness-guards.md
+    status: approved
     notes: "Add architectural/fitness guards that prevent full UiRouterDependencies use in router leaf modules and forbid command-owned view imports in the UI router port."
   - task_id: 2-router-dependency-slices
     task_path: null
@@ -190,7 +190,7 @@ The plan closes the issue in two layers:
 
 | Task ID | Task Path | Purpose | Depends On | Closes Gap | Status |
 |---|---|---|---|---|---|
-| `1-router-fitness-guards` | `null` | Add ratcheting architectural guards that focus on consumer slicing and forbidden type imports, not an arbitrary method-count threshold; the guards must pass initially with explicit known transitional exceptions. | N/A | G1, G5 | not_created |
+| `1-router-fitness-guards` | `plans/tasks/1-router-fitness-guards.md` | Add ratcheting architectural guards that focus on consumer slicing and forbidden type imports, not an arbitrary method-count threshold; the guards must pass initially with explicit known transitional exceptions. | N/A | G1, G5 | approved |
 | `2-router-dependency-slices` | `null` | Introduce narrow dependency slice types for router leaf modules and keep any composite only at composition/wiring boundaries. | `1-router-fitness-guards` | G1, G2 | not_created |
 | `3-ui-action-dto-closure` | `null` | Replace raw action result `BubbleStateSnapshot`/`ProtocolEnvelope` exposure with explicit UI-facing action state/event DTOs and projection tests. | `2-router-dependency-slices` | G4 | not_created |
 | `4-ui-readmodel-port-closure` | `null` | Move list/status/inbox router-facing shapes to canonical UI read-model ownership and remove command-owned imports from the UI router port. | `2-router-dependency-slices` | G3 | not_created |
