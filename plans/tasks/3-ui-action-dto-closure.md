@@ -57,15 +57,18 @@ behavior and frontend/backend type parity.
    contracts must read only the UI DTO surface.
 4. Forbidden fallback: do not preserve raw `BubbleStateSnapshot` or full
    `ProtocolEnvelope` fields in UI action result contracts as compatibility
-   truth, and do not let frontend code reconstruct missing action state from
-   untyped `Record<string, unknown>` payloads.
+   truth, do not preserve raw-compatible `state` / `envelope` field names as
+   replacement DTO carriers for affected raw-to-DTO families, and do not
+   let frontend code reconstruct missing action state from untyped
+   `Record<string, unknown>` payloads.
 5. Allowed resolution path: introduce explicit UI action state and event DTOs,
-   project internal state/envelope values at the backend boundary, and keep
+   project internal state/envelope values at the backend boundary into named
+   fields such as `actionState`, `event`, and `queuedIntent`, and keep
    optional/null/omitted fields explicit when the UI does not need the full
    internal model.
 6. Missing-data rule: if an internal field has no UI contract equivalent, omit
-   it or model it as an explicit optional/null UI field with tests; do not
-   rehydrate hidden lifecycle state from event payloads.
+   it with tests, or model it as an explicit optional/null UI field with tests;
+   do not rehydrate hidden lifecycle state from event payloads.
 7. Phase boundary:
    - contract closure: owned here for UI action result DTOs.
    - producer closure: owned here only for projection from existing action
@@ -129,7 +132,14 @@ behavior and frontend/backend type parity.
 5. Branch inventory note: cover immediate vs queued rework, approve/reply/commit
    event results, start/stop/restart state results, and merge/delete/open/attach
    results that already use UI-shaped data.
-6. Why the declared task shape matches reality: the task changes action result
+6. Field inventory note: before removing raw fields, classify each currently
+   exposed `BubbleStateSnapshot` and `ProtocolEnvelope` member as one of:
+   UI-required, projection-internal only, or out-of-contract. Only UI-required
+   members may cross the action DTO boundary, and they must cross under named
+   UI DTO fields rather than raw `state` / `envelope` compatibility fields.
+   The out-of-contract set must be mirrored in the L1 DTO Field Contract
+   `Explicitly Not Carried` column and asserted by acceptance tests.
+7. Why the declared task shape matches reality: the task changes action result
    contract shape and projection tests while preserving the existing action
    dispatch branches and dependency methods.
 
@@ -159,8 +169,9 @@ behavior and frontend/backend type parity.
    delivery diagnostics, changing queued-vs-immediate rework semantics, or
    changing merge/delete/open/attach behavior is not authorized.
 4. Replacement proof required if removed: any raw `state` or `envelope` field
-   removal must be replaced by a named UI DTO field or explicitly proven unused
-   and out of contract by parity/API tests.
+   removal must be replaced by a named UI DTO field such as `actionState`,
+   `event`, or `queuedIntent`, or explicitly proven unused and out of contract
+   by parity/API tests.
 
 ### Success / Completion Proof Boundary
 
@@ -223,8 +234,8 @@ behavior and frontend/backend type parity.
 3. `identity_join_risk`: `0`
 4. `activation_coupling`: `0`
 5. `prerequisite_risk`: `1`
-6. `acceptance_multiplicity`: `2`
-7. `risk_score`: `6`
+6. `acceptance_multiplicity`: `3`
+7. `risk_score`: `7`
 8. `single-task allowed`: `yes`
 9. If `no`, required split: N/A
 10. Identity/join note:
@@ -276,10 +287,10 @@ behavior and frontend/backend type parity.
 | Business invariant | UI action results carry UI-facing state/event facts only. | Replace raw internal action result fields with DTOs. | P1 | required-now |
 | Control model | `src/contracts/ui/**` owns browser/backend action contracts. | Router port and frontend import from canonical UI contracts. | P1 | required-now |
 | Read-path rule | Internal command results are read only by backend projection code. | Frontend and router contracts do not import raw bubble/protocol types for action results. | P1 | required-now |
-| Forbidden fallback | Raw `BubbleStateSnapshot`, full `ProtocolEnvelope`, and untyped frontend reconstruction are not UI fallback truth. | Tests must fail on reintroduced raw UI action result imports. | P1 | required-now |
+| Forbidden fallback | Raw `BubbleStateSnapshot`, full `ProtocolEnvelope`, raw-compatible replacement carrier names, and untyped frontend reconstruction are not UI fallback truth. | Tests must fail on reintroduced raw UI action result imports, raw-compatible `state` / `envelope` replacement DTO carriers for affected raw-to-DTO families, or frontend reconstruction from `Record<string, unknown>` / ad hoc payload parsing. | P1 | required-now |
 | Allowed resolution path | Deterministic projection from internal command result to explicit UI DTO. | Projection helpers cover action state/event fields. | P1 | required-now |
 | Missing-data rule | Omit or explicitly model optional/null fields; do not synthesize hidden lifecycle state. | DTO definitions and tests name omitted/optional behavior. | P1 | required-now |
-| Phase boundary | Action DTO closure only; read-model and final cleanup stay in successor tasks. | Do not move list/status/inbox ownership or zero all guard exceptions here. | P2 | required-now |
+| Phase boundary | Successor-owned read-model and cleanup work remains stable while action DTO closure proceeds. | Enforce task 4 list/status/inbox ownership and task 5 final guard cleanup as successor-owned boundaries. | P1 | required-now |
 
 ### 0a) Canonical Contract Preservation
 
@@ -293,34 +304,60 @@ behavior and frontend/backend type parity.
 
 | Action Result Family | Current Internal Exposure | Required UI DTO Direction | Deferred Semantics |
 |---|---|---|---|
-| approve / request-rework immediate / reply / commit | full `ProtocolEnvelope` plus `BubbleStateSnapshot` | UI action event DTO plus UI action state DTO | Internal transcript envelope remains lifecycle/protocol authority. |
-| request-rework queued | `BubbleStateSnapshot` plus intent fields | UI action state DTO plus queued intent fields | Queue lifecycle interpretation remains command-owned. |
-| start / stop / restart | `BubbleStateSnapshot` plus session/worktree fields | UI action state DTO plus existing session/worktree fields | Runtime state-machine behavior unchanged. |
+| approve / request-rework immediate / reply / commit | full `ProtocolEnvelope` plus `BubbleStateSnapshot` | `event` as `UiActionEvent` plus `actionState` as `UiActionBubbleState` | Internal transcript envelope remains lifecycle/protocol authority. |
+| request-rework queued | `BubbleStateSnapshot` plus intent fields | `actionState` as `UiActionBubbleState` plus `queuedIntent` as `UiActionPendingReworkIntent` | Queue lifecycle interpretation remains command-owned. |
+| start / stop / restart | `BubbleStateSnapshot` plus session/worktree fields | `actionState` as `UiActionBubbleState` plus existing session/worktree fields | Runtime state-machine behavior unchanged. |
 | merge / delete / open / attach / review-policy delivery | already mostly UI-shaped | Preserve unless needed for type alignment | No task 4 read-model relocation. |
 
-### 0c) Mirrored Surface Checklist
+### 0c) DTO Field Contract
 
-When a row in the Canonical Contract Matrix changes, update these surfaces in
-the same task before approval or implementation handoff:
+| DTO | Source Input | Required UI Fields | Explicitly Not Carried |
+|---|---|---|---|
+| `UiActionBubbleState` or equivalent | `BubbleStateSnapshot` | bubble identity, lifecycle state, round, active role/agent/since, last command timestamp, and only the execution-context identifiers the UI action result currently needs for follow-up display or routing. | full `execution_context`, full round role history, full meta-review snapshot, hidden lifecycle bookkeeping, and any field not proven UI-required. |
+| `UiActionPendingReworkIntent` or equivalent | `BubbleStateSnapshot.pending_rework_intent` | intent id, mode/status facts, supersession facts, and display-safe message/ref facts already exposed by queued rework behavior. | command-owned queue internals that the UI does not display or send back. |
+| `UiActionEvent` or equivalent | `ProtocolEnvelope` | event id, timestamp, sender/recipient/type, round, refs, and display-safe payload facts such as summary/message/question/decision when the action result contract needs them. | full `ProtocolEnvelope`, unbounded payload metadata, raw findings payloads, and event fields used only by protocol replay. |
+
+Field naming must make the replacement intentional. Use
+`actionState` / `event` / `queuedIntent` (or similarly explicit names) for
+fields that replace raw `state` / `envelope` exposure; do not keep
+raw-compatible `state` / `envelope` field names for those replacement DTO
+carriers. The affected raw-to-DTO families are approve / request-rework
+immediate / reply / commit, request-rework queued, and start / stop / restart.
+This naming rule does not rename fields in the already UI-shaped
+merge/delete/open/attach/review-policy delivery branch unless a field is being
+used as a replacement carrier for raw internal state or envelope data.
+
+### 0d) Mirrored Surface Checklist
+
+When a row in the Canonical Contract Matrix or DTO Field Contract changes,
+mirror the effect into these dependent surfaces in the same task before
+approval or implementation handoff:
 
 1. L0 Domain / Control Model Summary.
-2. L0 Baseline Preservation.
-3. L1 Domain / Control Contract.
-4. L1 Shared Contract Compatibility.
-5. L1 Implementation Requirements.
-6. L1 Acceptance Criteria.
-7. L2 Execution Notes.
-8. Review Checklist.
+2. L0 Scope Reality / Shape Proof field inventory.
+3. L0 Baseline Preservation.
+4. L1 Domain / Control Contract.
+5. L1 Canonical Contract Preservation.
+6. L1 Shared Contract Compatibility, including barrel export rows such as
+   `src/contracts/ui/index.ts`.
+7. L1 Baseline Preservation.
+8. L1 Implementation Requirements.
+9. L1 Acceptance Criteria.
+10. L1 Validation Plan.
+11. L2 Execution Notes.
+12. Review Checklist.
 
-### 0d) Shared Contract Compatibility
+### 0e) Shared Contract Compatibility
 
 | Shared Contract | Current Consumers | Change Type | This Task Action | Deferred Alignment |
 |---|---|---|---|---|
 | `src/contracts/ui/uiActions.ts` action result exports | router ports, frontend API types, parity tests | breaking | Replace raw fields with named UI DTOs and align consumers in same task. | N/A |
+| `src/contracts/ui/index.ts` UI barrel exports | backend compatibility imports, frontend contract re-exports, parity/transit-source tests | re-export alignment | Re-export the canonical action DTOs from `uiActions.ts` without redefining or aliasing raw internal result shapes. | N/A |
 | `src/v11/shared/ports/uiRouter.ts` action dependency result types | router dependencies and action dispatch | breaking internally | Import canonical UI result DTOs, preserve dependency method behavior. | N/A |
-| frontend API action methods | `ui/src/lib/api.ts`, tests, stores/components by type import | breaking if raw fields used | Update expected response shape and compile parity. | N/A |
+| Router infrastructure action surfaces | `routerActionDispatch.ts`, `routerDependencies.ts`, `routerContracts.ts`, `router.ts` | producer/projection alignment | Apply projection at dispatch/dependency boundaries, preserve route behavior, and keep router contracts typed to canonical UI DTOs. | N/A |
+| frontend API action methods and type exports | `ui/src/lib/api.ts`, `ui/src/lib/types.ts`, tests, stores/components by type import | breaking if raw fields used | Update expected response shape and re-export canonical UI DTO types without frontend-side raw reconstruction, raw-shape redefinition, or aliasing of internal action result shapes. | N/A |
 
-### 0e) Baseline Preservation
+### 0f) Baseline Preservation
 
 | Behavior | Preservation Rule | Test Expectation | Priority | Timing |
 |---|---|---|---|---|
@@ -336,30 +373,97 @@ the same task before approval or implementation handoff:
    DTOs only when they are already UI-owned and do not import command-owned
    action internals.
 2. Replace direct `BubbleStateSnapshot` and full `ProtocolEnvelope` fields in
-   UI action result exports with the new DTOs.
+   UI action result exports with the new DTOs under explicit replacement
+   carriers such as `actionState`, `event`, and `queuedIntent`; do not retain
+   raw-compatible `state` / `envelope` field names for those replacement
+   carriers.
 3. Add projection logic at the backend UI boundary, preferably near action
    dispatch/dependency adaptation, so internal command result objects are
    converted before crossing the router/API seam.
-4. Update router port exports and dependency method result types to use the
-   canonical UI action DTO result types.
+4. Update `src/contracts/ui/index.ts`, router port exports, router contracts,
+   `router.ts`, router dependencies, and dependency method result types to use
+   or re-export the canonical UI action DTO result types without redefining raw
+   aliases.
 5. Update frontend API tests and contract parity tests to prove the browser
    surface matches the canonical backend DTO surface.
 6. Update transit-source/fitness checks so `src/contracts/ui/uiActions.ts` no
-   longer imports `BubbleStateSnapshot` or full `ProtocolEnvelope`.
+   longer imports `BubbleStateSnapshot` or full `ProtocolEnvelope`, and so
+   UI action results cannot reintroduce raw-compatible `state` / `envelope`
+   replacement carrier field names for the affected raw-to-DTO families.
+7. Projection helpers must be typed against raw internal command outputs on
+   their input side and canonical `src/contracts/ui/uiActions.ts` DTOs on their
+   output side. They must not return `unknown`, `Record<string, unknown>`, or
+   assertion-cast DTOs for any in-scope action-result projection. Backend
+   projection helpers must also not recover missing UI facts from generic
+   payload metadata, untyped `Record<string, unknown>` values, or ad hoc payload
+   parsing; any such fact must be modeled as an explicit DTO source field or
+   omitted/optional/null with tests.
+8. Action dispatch must call raw-to-DTO projection once per affected raw-to-DTO
+   dispatch branch. Avoid duplicating state/event field selection separately in
+   router tests, frontend API helpers, or UI components. Preserve-only
+   merge/delete/open/attach/review-policy delivery branches are not required to
+   run raw-to-DTO projection; they must be covered by tests proving their
+   already UI-shaped result surface remains unchanged.
+9. Frontend updates must remain thin transport/client alignment. The frontend
+   may consume the new DTO fields, but it must not reconstruct missing state or
+   event facts from generic payload metadata, untyped
+   `Record<string, unknown>` values, or other ad hoc payload parsing.
 
 ### 2) Acceptance Criteria
 
-1. `src/contracts/ui/uiActions.ts` has no import of
-   `../../types/bubble.js` for `BubbleStateSnapshot` and no import of full
-   `../../types/protocol.js` `ProtocolEnvelope` for action result contracts.
+1. `src/contracts/ui/uiActions.ts` has no direct or indirect action-result
+   contract dependency on `BubbleStateSnapshot` from `../../types/bubble.js`,
+   full `ProtocolEnvelope` from `../../types/protocol.js`, or aliases/re-exports
+   that resolve to those raw internal shapes.
 2. Action result types expose explicit UI DTO fields whose names communicate
-   UI state/event purpose.
-3. Router action responses remain behaviorally compatible except for the
-   intentional raw-field replacement.
+   UI state/event purpose, using canonical replacement names such as
+   `actionState`, `event`, and `queuedIntent` for affected raw-to-DTO families.
+3. `tests/core/ui/router.test.ts` proves router action responses preserve
+   action names, HTTP status selection, delivery diagnostics, queued-vs-immediate
+   rework facts, commit/start/stop/restart details, and merge/delete/open/attach
+   behavior, with only the intentional raw-field replacement changing the
+   response body shape.
 4. Frontend/backend parity tests compile against the same canonical DTO shape.
-5. Existing UI API tests pass after updating expected action result shape.
+5. `ui/src/lib/api.test.ts` and `tests/contracts/uiContractParity.types.ts`
+   pass after updating expected action result shape. `ui/src/lib/api.test.ts`
+   proves frontend API transport consumes the canonical DTO fields without ad
+   hoc payload reconstruction. `tests/contracts/uiContractParity.types.ts`
+   proves `ui/src/lib/types.ts` type exports consume canonical DTO fields
+   without raw-shape redefinition or aliasing of internal action result shapes.
 6. No implementation changes claim closure for list/status/inbox read-model
    ownership or final zero-exception cleanup.
+7. `tests/contracts/uiContractTransitSource.test.ts` asserts that UI action
+   contracts do not contain direct or aliased action-result dependencies on
+   `BubbleStateSnapshot`, full `ProtocolEnvelope`, raw `envelope:` result
+   fields, or raw-compatible `state: BubbleStateSnapshot` result fields, and
+   rejects raw-compatible action-result replacement DTO carriers named `state`
+   or `envelope` for the affected raw-to-DTO families named in L1 0b and
+   governed by L1 0c: approve / request-rework immediate / reply / commit,
+   request-rework queued, and start / stop / restart. Already UI-shaped
+   merge/delete/open/attach/review-policy delivery branches remain allowed
+   under the L1 0c carve-out only when no field is being used as a replacement
+   carrier for raw internal state or envelope data, and their preservation is
+   asserted by AC #8.
+8. `tests/core/ui/router.test.ts` covers projected HTTP responses for each
+   affected action-result family in the Canonical Contract Matrix: event plus
+   state results for approve/request-rework-immediate/reply/commit, queued
+   rework state plus explicit intent fields, start/stop/restart state results,
+   and preservation of already UI-shaped merge/delete/open/attach/review-policy
+   delivery results without `state` / `envelope` replacement carriers. This is
+   the AC-bound test anchor for the L1 0c preserve-only carve-out.
+9. `tests/contracts/uiContractParity.types.ts`, `tests/core/ui/router.test.ts`,
+   and `ui/src/lib/api.test.ts` prove queued rework fields remain explicit and
+   are not hidden inside the projected action state.
+10. `tests/contracts/uiContractTransitSource.test.ts`,
+   `tests/contracts/uiContractParity.types.ts`, and focused router/API tests
+   assert the `Explicitly Not Carried` boundaries from L1 0c: full
+   `execution_context`, full round role history, full meta-review snapshot,
+   hidden lifecycle bookkeeping, any field not proven UI-required, unbounded
+   payload metadata, raw findings payloads, full `ProtocolEnvelope`, event
+   fields used only by protocol replay, and command-owned queue internals do not
+   cross the UI action result contract unless later modeled as explicit
+   optional/null UI fields in this same contract with focused tests for the
+   optional/null behavior.
 
 ### 3) Validation Plan
 
@@ -367,20 +471,32 @@ the same task before approval or implementation handoff:
 2. `pnpm lint`
 3. `pnpm fitness:check:ci`
 4. `pnpm vitest run tests/contracts/uiContractParity.types.ts tests/contracts/uiContractTransitSource.test.ts tests/core/ui/router.test.ts`
-5. `pnpm --dir ui test`
+5. `pnpm --dir ui test -- src/lib/api.test.ts`
 6. `pnpm test`
 7. `pnpm build`
 8. `pnpm --dir ui build`
+9. Validation evidence must include the focused contract/router/API assertions
+   for the named DTO carriers and `Explicitly Not Carried` omissions when this
+   task is implemented as code.
 
 ## L2 - Execution Notes
 
 1. Start by adding characterization tests around the current action result
    shape and contract transit-source checks.
-2. Introduce DTO/projection types before changing router/frontend consumers.
-3. Keep projection code mechanical and avoid broad router dependency refactors.
-4. When removing raw fields, inspect frontend use sites before assuming a field
+2. Inspect `ui/src/**` and router/API tests for direct `state`, `envelope`, and
+   `payload.metadata` reads before deciding the final DTO field set.
+3. Introduce DTO/projection types before changing router/frontend consumers.
+4. Put projection next to the backend UI action boundary, with a narrow helper
+   such as `projectUiActionState` / `projectUiActionEvent` if the existing file
+   layout supports it. The helper should be local to UI infrastructure unless a
+   second backend boundary proves shared ownership.
+5. Keep projection code mechanical and avoid broad router dependency refactors.
+6. When removing raw fields, inspect frontend use sites before assuming a field
    is unused.
-5. If task 4 has already modified shared UI exports in a parallel branch, align
+7. Update tests in this order for fast feedback: transit-source guards,
+   type-parity compile checks, focused router action response tests, frontend
+   API tests.
+8. If task 4 has already modified shared UI exports in a parallel branch, align
    only through canonical `src/contracts/ui/**` exports and avoid duplicate DTO
    aliases.
 
@@ -394,3 +510,19 @@ the same task before approval or implementation handoff:
 4. Did the task avoid list/status/inbox read-model relocation and final guard
    cleanup?
 5. Are projection functions deterministic and locally testable?
+6. Is every DTO field selected from a documented UI need rather than copied
+   wholesale from `BubbleStateSnapshot` or `ProtocolEnvelope`, as required by
+   AC #10?
+7. Do transit-source guards fail if a future change reintroduces raw action
+   result `state` / `envelope` fields?
+8. Do the L0 forbidden-fallback rule, L1 implementation requirements,
+   acceptance criteria, and tests all enforce the same replacement carrier names
+   and the same raw-to-DTO family scope covered by AC #2 and AC #7?
+9. Do tests assert every L1 0c `Explicitly Not Carried` boundary instead of only
+   checking that DTO replacement fields exist?
+10. Do `src/contracts/ui/index.ts`, router port exports, router contracts,
+   `router.ts`, router dependencies, and frontend type re-exports all expose or
+   route the canonical `uiActions.ts` DTOs without redefining raw aliases?
+11. Do preserve-only merge/delete/open/attach/review-policy delivery branches
+   have tests proving they remain already UI-shaped without being forced through
+   raw-to-DTO projection?
