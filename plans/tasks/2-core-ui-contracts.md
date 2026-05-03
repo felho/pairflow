@@ -5,7 +5,7 @@ task_family_id: core-ui-contracts
 sequence_key: "2"
 task_id: 2-core-ui-contracts
 title: "Core UI Contracts"
-status: implementable
+status: in_progress
 phase: phase2
 target_files:
   - src/contracts/ui/index.ts
@@ -38,7 +38,7 @@ normative_refs:
 owners:
   - "felho"
 doc_bubble_id: 2-core-ui-contracts-doc
-impl_bubble_id: null
+impl_bubble_id: 2-core-ui-contracts-impl
 supersedes: []
 superseded_by: null
 archive_group: 2026-05-02-ui-contract-boundary-plan-v1
