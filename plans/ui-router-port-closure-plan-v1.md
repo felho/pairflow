@@ -5,7 +5,7 @@ plan_id: ui-router-port-closure-plan-v1
 created_on: "2026-05-03"
 title: "UI Router Port Closure Plan"
 status: approved
-plan_status: approved
+plan_status: in_progress
 prd_ref: null
 owners:
   - "felho"
@@ -15,7 +15,8 @@ task_order:
   - 3-ui-action-dto-closure
   - 4-ui-readmodel-port-closure
   - 5-router-port-cleanup
-active_task_id: 2-router-dependency-slices
+active_task_id: 3-ui-action-dto-closure
+last_completed_task_id: 2-router-dependency-slices
 archive_group: 2026-05-03-ui-router-port-closure-plan-v1
 task_tracker:
   - task_id: 1-router-fitness-guards
@@ -23,13 +24,13 @@ task_tracker:
     status: archived
     notes: "Completed via implementation bubble 1-router-fitness-guards-impl; merged at 7dc3bcd9 and archived."
   - task_id: 2-router-dependency-slices
-    task_path: plans/tasks/2-router-dependency-slices.md
-    status: in_progress
-    notes: "Implementation bubble 2-router-dependency-slices-impl started from document-approved task."
+    task_path: plans/archive/tasks/2026-05-03-ui-router-port-closure-plan-v1/2-router-dependency-slices.md
+    status: archived
+    notes: "Completed via implementation bubble 2-router-dependency-slices-impl; merged at a4890b2f and archived."
   - task_id: 3-ui-action-dto-closure
-    task_path: null
-    status: not_created
-    notes: "Replace action result exposure of raw BubbleStateSnapshot/ProtocolEnvelope with explicit UI-facing DTOs and projection tests."
+    task_path: plans/tasks/3-ui-action-dto-closure.md
+    status: approved
+    notes: "ReviewSpec task-mode approved UI action DTO projection closure; ready for document bubble."
   - task_id: 4-ui-readmodel-port-closure
     task_path: null
     status: not_created
@@ -197,8 +198,8 @@ closed and merged after satisfying the configured review gate. Task
 | Task ID | Task Path | Purpose | Depends On | Closes Gap | Status |
 |---|---|---|---|---|---|
 | `1-router-fitness-guards` | `plans/archive/tasks/1-router-fitness-guards.md` | Add ratcheting architectural guards that focus on consumer slicing and forbidden type imports, not an arbitrary method-count threshold; the guards must pass initially with explicit known transitional exceptions. | N/A | G1, G5 | archived |
-| `2-router-dependency-slices` | `plans/tasks/2-router-dependency-slices.md` | Introduce narrow dependency slice types for router leaf modules and keep any composite only at composition/wiring boundaries. | `1-router-fitness-guards` | G1, G2 | approved |
-| `3-ui-action-dto-closure` | `null` | Replace raw action result `BubbleStateSnapshot`/`ProtocolEnvelope` exposure with explicit UI-facing action state/event DTOs and projection tests. | `2-router-dependency-slices` | G4 | not_created |
+| `2-router-dependency-slices` | `plans/archive/tasks/2026-05-03-ui-router-port-closure-plan-v1/2-router-dependency-slices.md` | Introduce narrow dependency slice types for router leaf modules and keep any composite only at composition/wiring boundaries. | `1-router-fitness-guards` | G1, G2 | archived |
+| `3-ui-action-dto-closure` | `plans/tasks/3-ui-action-dto-closure.md` | Replace raw action result `BubbleStateSnapshot`/`ProtocolEnvelope` exposure with explicit UI-facing action state/event DTOs and projection tests. | `2-router-dependency-slices` | G4 | approved |
 | `4-ui-readmodel-port-closure` | `null` | Move list/status/inbox router-facing shapes to canonical UI read-model ownership and remove command-owned imports from the UI router port. | `2-router-dependency-slices` | G3 | not_created |
 | `5-router-port-cleanup` | `null` | Remove or localize transitional composite aliases, tighten guard allowlists, update modularity-review status, and verify no stale broad-bag path remains. | `3-ui-action-dto-closure`, `4-ui-readmodel-port-closure` | G1-G5 | not_created |
 

@@ -5,7 +5,7 @@ task_family_id: router-dependency-slices
 sequence_key: "2"
 task_id: 2-router-dependency-slices
 title: "Router Dependency Slices"
-status: in_progress
+status: archived
 phase: phase2
 target_files:
   - src/v11/shared/ports/uiRouter.ts
@@ -33,6 +33,7 @@ impl_bubble_id: 2-router-dependency-slices-impl
 supersedes: []
 superseded_by: null
 archive_group: 2026-05-03-ui-router-port-closure-plan-v1
+archive_path: plans/archive/tasks/2026-05-03-ui-router-port-closure-plan-v1/2-router-dependency-slices.md
 ---
 
 # Task: Router Dependency Slices
