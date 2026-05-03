@@ -5,7 +5,7 @@ task_family_id: core-ui-contracts
 sequence_key: "2"
 task_id: 2-core-ui-contracts
 title: "Core UI Contracts"
-status: approved
+status: implementable
 phase: phase2
 target_files:
   - src/contracts/ui/index.ts

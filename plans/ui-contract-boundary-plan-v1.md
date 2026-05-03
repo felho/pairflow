@@ -18,8 +18,8 @@ task_tracker:
     notes: "Completed via implementation bubble 1-ui-contract-foundation-impl; merged at 24a5b11c and archived."
   - task_id: 2-core-ui-contracts
     task_path: plans/tasks/2-core-ui-contracts.md
-    status: approved
-    notes: "Document bubble running: 2-core-ui-contracts-doc."
+    status: implementable
+    notes: "Document bubble 2-core-ui-contracts-doc closed and merged after satisfying the configured multi-clean-meta-review gate; task is ready for implementation."
   - task_id: 3-ui-readmodel-contracts
     task_path: null
     status: not_created
