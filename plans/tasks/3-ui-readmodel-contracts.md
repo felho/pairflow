@@ -39,7 +39,7 @@ normative_refs:
   - plans/ui-contract-boundary-plan-v1.md
 owners:
   - "felho"
-doc_bubble_id: null
+doc_bubble_id: 3-ui-readmodel-contracts-doc
 impl_bubble_id: null
 supersedes: []
 superseded_by: null

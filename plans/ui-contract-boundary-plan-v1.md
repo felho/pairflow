@@ -23,7 +23,7 @@ task_tracker:
   - task_id: 3-ui-readmodel-contracts
     task_path: plans/tasks/3-ui-readmodel-contracts.md
     status: approved
-    notes: "Task artifact created and ReviewSpec task-mode approved for broad UI read-model/action/event/error contract consolidation."
+    notes: "Document bubble running: 3-ui-readmodel-contracts-doc."
 active_task_id: 3-ui-readmodel-contracts
 archive_group: 2026-05-02-ui-contract-boundary-plan-v1
 owners:
