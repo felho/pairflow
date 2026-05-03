@@ -191,7 +191,13 @@ export class CodexRunnerArtifactError extends Error {
 const STRUCTURED_OUTPUT_SCHEMA = {
   type: "object",
   additionalProperties: false,
-  required: ["status", "reason_code"],
+  required: [
+    "status",
+    "reason_code",
+    "summary",
+    "changed_artifacts",
+    "route_ledger_summary"
+  ],
   properties: {
     status: {
       type: "string",

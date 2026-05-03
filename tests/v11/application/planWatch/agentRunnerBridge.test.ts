@@ -674,7 +674,13 @@ describe("agentRunnerBridge", () => {
     expect(metadata.schemaVersion).toBe(1);
     expect(metadata.artifactDir).not.toMatch(/^\//u);
     expect(metadata.schemaFilePath).not.toMatch(/^\//u);
-    expect(schema.required).toEqual(["status", "reason_code"]);
+    expect(schema.required).toEqual([
+      "status",
+      "reason_code",
+      "summary",
+      "changed_artifacts",
+      "route_ledger_summary"
+    ]);
     expect(relative(repoPath, first.eventsFilePath)).toMatch(
       /^\.pairflow\/runtime\/plan-watch\/agent-runner\//u
     );
