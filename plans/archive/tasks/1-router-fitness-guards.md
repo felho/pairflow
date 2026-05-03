@@ -381,10 +381,6 @@ method-count budgets.
 
 | Exception ID | Kind | Exact Match | Successor Owner | Removal Task | Priority | Timing |
 |---|---|---|---|---|---|---|
-| `router-port-deps-task2-router-actions-001` | `allow-full-dependency-bag` | `src/v11/infrastructure/ui/routerActions.ts#UiRouterDependencies` | `architecture/ui-router` | `2-router-dependency-slices` | P1 | required-now |
-| `router-port-deps-task2-router-bubble-detail-001` | `allow-full-dependency-bag` | `src/v11/infrastructure/ui/routerBubbleDetail.ts#UiRouterDependencies` | `architecture/ui-router` | `2-router-dependency-slices` | P1 | required-now |
-| `router-port-deps-task2-router-action-error-mapping-001` | `allow-full-dependency-bag` | `src/v11/infrastructure/ui/routerActionErrorMapping.ts#UiRouterDependencies` | `architecture/ui-router` | `2-router-dependency-slices` | P1 | required-now |
-| `router-port-deps-task2-router-action-dispatch-001` | `allow-full-dependency-bag` | `src/v11/infrastructure/ui/routerActionDispatch.ts#UiRouterDependencies` | `architecture/ui-router` | `2-router-dependency-slices` | P1 | required-now |
 | `router-port-command-task4-list-entry-001` | `allow-command-owned-ui-port-import` | `src/v11/shared/ports/uiRouter.ts -> src/v11/shared/list/listCommandContract.ts` | `architecture/ui-contracts` | `4-ui-readmodel-port-closure` | P1 | required-now |
 | `router-port-command-task4-inbox-api-001` | `allow-command-owned-ui-port-import` | `src/v11/shared/ports/uiRouter.ts -> src/v11/shared/inbox/inboxCommandApi.ts` | `architecture/ui-contracts` | `4-ui-readmodel-port-closure` | P1 | required-now |
 | `router-port-command-task4-status-api-001` | `allow-command-owned-ui-port-import` | `src/v11/shared/ports/uiRouter.ts -> src/v11/shared/status/statusCommandApi.ts` | `architecture/ui-contracts` | `4-ui-readmodel-port-closure` | P1 | required-now |
@@ -393,20 +389,15 @@ For `allow-command-owned-ui-port-import` rows, the arrow notation above is
 human-readable shorthand only. The canonical policy encoding is the split
 `from`/`to` pair defined in §2b.
 
-The full-bag exceptions cover direct `UiRouterDependencies` references,
-re-exported references through `routerContracts.ts`, and wrapper access through
-`UiRouterEnvironment`/`environment.dependencies.*`; every observed form
-normalizes to the listed `<leaf-file>#UiRouterDependencies` identity instead of
-requiring a literal `UiRouterDependencies` token in the leaf file.
-`routerActionDispatch.ts` is the current wrapper-only example, not the only
-normalizable form. No transitional exception is listed for `routerEvents.ts` or
-`routerRequest.ts` because the current source inventory shows no
-`UiRouterDependencies` or wrapper dependency-bag access in those files. Typing a
-request/helper with `UiRouterEnvironment` in `routerRequest.ts` remains allowed
-only while it does not read `environment.dependencies.*`; a future broad-bag
-reference there must fail as an unlisted violation. No transitional exception is
-listed for `router.ts` either because it is an explicitly allowed
-composition/wiring path, not a leaf exception.
+No full-bag exceptions remain after `2-router-dependency-slices`. The guard still
+normalizes direct `UiRouterDependencies` references, re-exported references
+through `routerContracts.ts`, and wrapper access through
+`UiRouterEnvironment`/`environment.dependencies.*` to a
+`<leaf-file>#UiRouterDependencies` identity instead of requiring a literal
+`UiRouterDependencies` token in the leaf file. Future broad-bag leaf access must
+fail as an unlisted violation unless a successor task intentionally adds a new
+exact exception. No transitional exception is listed for `router.ts` because it
+is an explicitly allowed composition/wiring path, not a leaf exception.
 
 Allowed non-exception composition/wiring uses remain limited to
 `src/v11/infrastructure/ui/router.ts`,
@@ -539,7 +530,7 @@ Rules:
 | T11 | wrapper broad-bag access fails | fixture leaf imports `UiRouterEnvironment` and reads `environment.dependencies.*`, destructures from `environment.dependencies`, or assigns `environment.dependencies` to a local alias without naming `UiRouterDependencies` directly | check runs | report fails with `FULL_UI_ROUTER_DEPENDENCY_BAG_USAGE` unless the exact file has a full-bag exception | P1 | required-now |
 | T12 | command import resolver fails closed | fixture covers both observed-source resolver failures and exception-envelope resolver failures: no-extension source import, `.ts` source import, index-directory import, package re-export, TypeScript alias, missing resolved import target, or ambiguous `.js` to `.ts` resolution for a command-owned import edge | check runs | observed-source failures report `COMMAND_OWNED_UI_PORT_IMPORT` with resolver detail; malformed exception-envelope failures report `INVALID_ROUTER_PORT_EXCEPTION` | P1 | required-now |
 | T13 | unreadable scanned file fails closed | policy `scope` is exercised in two subcases: one exact file-path scope entry points to a missing scanned source path, and one scope entry resolves to a present-but-unreadable scanned source path | check runs | each subcase fails with `ROUTER_PORT_SCAN_READ_FAILED` and reports the affected path | P1 | required-now |
-| T14 | current-repo inventory reconciliation fails on drift | an isolated temporary copy of the repo source adds violations not represented in §2a / `tools/fitness/policy.json`, including a new fifth full-bag violation and a new command-owned import from a scanned port file, and uses a test-scoped policy/report path through the existing fitness test harness configuration that leaves the real repo source and policy unchanged | `pnpm fitness:check:ci` runs against the isolated fixture root | command exits nonzero and reports the unlisted violation path/reason for both drift families | P1 | required-now |
+| T14 | current-repo inventory reconciliation fails on drift | an isolated temporary copy of the repo source adds violations not represented in §2a / `tools/fitness/policy.json`, including a new full-bag violation and a new command-owned import from a scanned port file, and uses a test-scoped policy/report path through the existing fitness test harness configuration that leaves the real repo source and policy unchanged | `pnpm fitness:check:ci` runs against the isolated fixture root | command exits nonzero and reports the unlisted violation path/reason for both drift families | P1 | required-now |
 | T15 | registry dispatches router-port check | `tools/fitness/checks/index.ts` registers `ui_router_port_boundary` in the shared check registry, with the dispatch assertion hosted in `tests/tools/fitness/fitnessCheckCi.test.ts` | `buildCheckReport` runs for the `ui_router_port_boundary` check ID | report comes from the router-port boundary check rather than the unknown-check path, proving the check ID is dispatchable by the fitness framework | P1 | required-now |
 | T16 | existing UI contract boundary preserved | existing `ui_contract_boundary` fixtures and policy entries remain present while the router-port check is added | existing UI contract boundary tests run | existing `ui_contract_boundary` pass/fail behavior is unchanged | P1 | required-now |
 | T17 | §2a inventory and policy exceptions stay synchronized | the §2a markdown table is parsed by its `Exception ID`, `Kind`, and `Exact Match` headers, and `tools/fitness/policy.json` configures router-port exceptions for `ui_router_port_boundary` | policy/inventory parity assertion runs in CI integration tests | the sorted §2a router-port exception IDs, kinds, and exact-match content match policy `paths[0]` or `from`/`to` exactly, including removal when successor tasks delete exceptions | P1 | required-now |

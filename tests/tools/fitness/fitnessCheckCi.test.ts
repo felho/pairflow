@@ -563,7 +563,10 @@ describe("fitness:check:ci", () => {
 
   it("keeps the §2a router-port exception inventory synchronized with policy", async () => {
     const task = await readFile(
-      resolve(process.cwd(), "plans/tasks/1-router-fitness-guards.md"),
+      resolve(
+        process.cwd(),
+        "plans/archive/tasks/1-router-fitness-guards.md"
+      ),
       "utf8"
     );
     const policy = JSON.parse(

@@ -4,17 +4,17 @@ import type { UiBubbleDetail } from "../../../contracts/ui/uiReadModel.js";
 import type { RuntimeSessionRecord } from "../executor/sessionRuntime/runtimeSessionsRegistry.js";
 import type { BubbleStatusView } from "../../shared/status/statusCommandApi.js";
 import { presentBubbleDetail } from "./presenters/bubblePresenter.js";
-import type { UiRouterDependencies } from "./routerContracts.js";
+import type { UiBubbleDetailDependencies } from "../../shared/ports/uiRouter.js";
 
 export interface RouterBubbleDetailEnvironment {
-  input: {
+  requestContext: {
     cwd?: string | undefined;
   };
-  dependencies: UiRouterDependencies;
+  dependencies: UiBubbleDetailDependencies;
 }
 
 async function loadRuntimeSession(
-  dependencies: UiRouterDependencies,
+  dependencies: UiBubbleDetailDependencies,
   repoPath: string,
   bubbleId: string
 ): Promise<RuntimeSessionRecord | null> {
@@ -42,12 +42,16 @@ export async function loadBubbleDetail(input: {
     environment.dependencies.getBubbleStatus({
       bubbleId,
       repoPath,
-      ...(environment.input.cwd !== undefined ? { cwd: environment.input.cwd } : {})
+      ...(environment.requestContext.cwd !== undefined
+        ? { cwd: environment.requestContext.cwd }
+        : {})
     }),
     environment.dependencies.getBubbleInbox({
       bubbleId,
       repoPath,
-      ...(environment.input.cwd !== undefined ? { cwd: environment.input.cwd } : {})
+      ...(environment.requestContext.cwd !== undefined
+        ? { cwd: environment.requestContext.cwd }
+        : {})
     }),
     loadRuntimeSession(environment.dependencies, repoPath, bubbleId)
   ]);

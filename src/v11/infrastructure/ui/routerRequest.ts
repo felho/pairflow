@@ -2,7 +2,8 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 
 import type {
   CreateUiRouterInput,
-  UiRouterEnvironment
+  UiRouterEnvironment,
+  UiRouterRequestContext
 } from "./routerContracts.js";
 import { UiApiHttpError, badRequest, notFound, sendJson } from "./routerHttp.js";
 import { handleUiEvents } from "./routerEvents.js";
@@ -69,6 +70,16 @@ function refreshEventsAfterDelete(
   });
 }
 
+function buildRouterRequestContext(
+  environment: UiRouterEnvironment
+): UiRouterRequestContext {
+  return {
+    repoScope: environment.input.repoScope,
+    ...(environment.input.cwd !== undefined ? { cwd: environment.input.cwd } : {}),
+    routerCwd: environment.routerCwd
+  };
+}
+
 export async function handleApiRequest(
   input: HandleApiRequestInput
 ): Promise<boolean> {
@@ -77,6 +88,11 @@ export async function handleApiRequest(
   if (!pathname.startsWith("/api/")) {
     return false;
   }
+
+  const routerActionEnvironment = {
+    requestContext: buildRouterRequestContext(input.environment),
+    dependencies: input.environment.dependencies
+  };
 
   if (method === "GET" && pathname === "/api/repos") {
     sendJson(input.res, 200, {
@@ -112,7 +128,7 @@ export async function handleApiRequest(
       });
     }
     const response = await handleBubbleListRequest({
-      environment: input.environment,
+      environment: routerActionEnvironment,
       url: input.url
     });
     sendJson(input.res, response.status, response.body);
@@ -138,7 +154,7 @@ export async function handleApiRequest(
     (!bubbleRoute.isAction || bubbleRoute.isTimeline)
   ) {
     const response = await handleBubbleResourceRequest({
-      environment: input.environment,
+      environment: routerActionEnvironment,
       url: input.url,
       bubbleId: bubbleRoute.bubbleId,
       pathname
@@ -149,7 +165,7 @@ export async function handleApiRequest(
 
   if (method === "POST" && bubbleRoute.isAction) {
     const response = await handleBubbleActionRequest({
-      environment: input.environment,
+      environment: routerActionEnvironment,
       req: input.req,
       url: input.url,
       bubbleId: bubbleRoute.bubbleId

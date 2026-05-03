@@ -121,42 +121,6 @@
       "owner": "architecture/ui-router",
       "exceptions": [
         {
-          "id": "router-port-deps-task2-router-actions-001",
-          "kind": "allow-full-dependency-bag",
-          "owner": "architecture/ui-router",
-          "reason": "Temporary broad dependency bag use retained until 2-router-dependency-slices introduces narrow router leaf capabilities.",
-          "paths": [
-            "src/v11/infrastructure/ui/routerActions.ts#UiRouterDependencies"
-          ]
-        },
-        {
-          "id": "router-port-deps-task2-router-bubble-detail-001",
-          "kind": "allow-full-dependency-bag",
-          "owner": "architecture/ui-router",
-          "reason": "Temporary broad dependency bag use retained until 2-router-dependency-slices introduces narrow router leaf capabilities.",
-          "paths": [
-            "src/v11/infrastructure/ui/routerBubbleDetail.ts#UiRouterDependencies"
-          ]
-        },
-        {
-          "id": "router-port-deps-task2-router-action-error-mapping-001",
-          "kind": "allow-full-dependency-bag",
-          "owner": "architecture/ui-router",
-          "reason": "Temporary broad dependency bag use retained until 2-router-dependency-slices introduces narrow router leaf capabilities.",
-          "paths": [
-            "src/v11/infrastructure/ui/routerActionErrorMapping.ts#UiRouterDependencies"
-          ]
-        },
-        {
-          "id": "router-port-deps-task2-router-action-dispatch-001",
-          "kind": "allow-full-dependency-bag",
-          "owner": "architecture/ui-router",
-          "reason": "Temporary broad dependency bag use retained until 2-router-dependency-slices introduces narrow router leaf capabilities.",
-          "paths": [
-            "src/v11/infrastructure/ui/routerActionDispatch.ts#UiRouterDependencies"
-          ]
-        },
-        {
           "id": "router-port-command-task4-list-entry-001",
           "kind": "allow-command-owned-ui-port-import",
           "owner": "architecture/ui-contracts",

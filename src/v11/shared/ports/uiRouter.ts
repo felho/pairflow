@@ -148,3 +148,42 @@ export interface UiRouterDependencies {
     input: UiDeleteBubbleInput
   ) => Promise<UiDeleteBubbleResult>;
 }
+
+export type UiBubbleListDependencies = Pick<
+  UiRouterDependencies,
+  "listBubbles"
+>;
+
+export type UiBubbleTimelineDependencies = Pick<
+  UiRouterDependencies,
+  "readBubbleTimeline"
+>;
+
+export interface UiBubbleDetailLoadingDependencies {
+  getBubbleStatus: UiRouterDependencies["getBubbleStatus"];
+  getBubbleInbox: UiRouterDependencies["getBubbleInbox"];
+  readRuntimeSessionsRegistry:
+    UiRouterDependencies["readRuntimeSessionsRegistry"];
+}
+
+export type UiBubbleDetailDependencies = UiBubbleDetailLoadingDependencies;
+
+export type UiBubbleConflictEnrichmentDependencies =
+  UiBubbleDetailLoadingDependencies;
+
+export type UiBubbleActionDispatchDependencies = Pick<
+  UiRouterDependencies,
+  | "attachBubble"
+  | "commitBubble"
+  | "deleteBubble"
+  | "emitApprove"
+  | "emitHumanReply"
+  | "emitRequestRework"
+  | "mergeBubble"
+  | "openBubble"
+  | "restartBubble"
+  | "resumeBubble"
+  | "startBubble"
+  | "stopBubble"
+  | "updateBubbleReviewPolicy"
+>;
