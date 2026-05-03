@@ -147,6 +147,8 @@ Progress update (2026-05-03): plan reopened in an ideation bubble with retrofit 
 
 Progress update (2026-05-03): `CreatePairflowSpec reviewspec` approved task `6-watch-runner-observability` after adding explicit contract-dense ownership, structured event rules, mirrored surface coverage, and fail-closed malformed JSONL semantics.
 
+Progress update (2026-05-03): document bubble `plan-watch-observability` refined task `6-watch-runner-observability` for implementation handoff by making the Codex JSONL stream the only final-result source of truth, forbidding `last-message.json` fallback, tightening `events.ndjson` / `timeline.ndjson` / `metadata.json` artifact contracts, and clarifying that timeline rows are observability/read-model evidence only.
+
 ## Task List
 
 | Task ID                  | Task Path | Purpose                                                                                                                                                                                  | Depends On               | Closes Gap                                                                                                    | Status      |

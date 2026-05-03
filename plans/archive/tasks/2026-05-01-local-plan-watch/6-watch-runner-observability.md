@@ -39,7 +39,7 @@ normative_refs:
   - docs/local-plan-watch-v1-pilot.md
 owners:
   - "felho"
-doc_bubble_id: null
+doc_bubble_id: plan-watch-observability
 impl_bubble_id: null
 supersedes: []
 superseded_by: null
@@ -66,21 +66,24 @@ from the streamed structured agent message.
    owns event persistence, timeline normalization, final-result extraction, and
    ledger artifact linkage; `ExecutePairflowPlan` remains the only route
    authority.
-3. Read-path rule: final runner status must be read from the last valid
+3. Read-path rule: final runner status must be read only from the last valid
    structured `agent_message` event in the Codex JSONL stream, not from
-   `last-message.json`, prose stdout parsing, or external Codex session history.
-4. Forbidden fallback: do not keep `--output-last-message` as a second source of
-   runner truth in JSON mode; do not require users to parse raw Codex JSONL to
-   understand a completed watch invocation; do not make the watcher compute
-   routes from timeline events.
+   `last-message.json`, prose stdout parsing, stderr text, process exit text, or
+   external Codex session history.
+4. Forbidden fallback: do not keep `--output-last-message` as a primary,
+   secondary, diagnostic, or emergency source of runner truth in JSON mode; do
+   not require users to parse raw Codex JSONL to understand a completed watch
+   invocation; do not make the watcher compute routes from timeline events.
 5. Allowed resolution path: Pairflow may invoke `codex exec --json
    --output-schema <schema> ...`, persist each JSONL event as `events.ndjson`,
    normalize selected events into `timeline.ndjson`, write `metadata.json`, and
    classify the run from the stream-derived structured final object.
-6. Missing-data rule: if the stream is empty, contains malformed JSON, contains
-   no valid structured final `agent_message`, or the final structured object
-   does not match the runner output schema, return `blocked` with
-   `AGENT_RUNNER_OUTPUT_INVALID` or the narrower existing failure code.
+6. Missing-data rule: if the stream is empty, contains any malformed JSON line,
+   contains no valid structured final `agent_message`, or the final structured
+   object does not match the runner output schema, return `blocked` with
+   `AGENT_RUNNER_OUTPUT_INVALID` or the narrower existing failure code. Do not
+   reinterpret later filesystem artifacts, Codex session history, or timeline
+   summaries as a substitute final result.
 7. Phase boundary:
    - contract closure: introduce a Pairflow-owned runner artifact/timeline
      contract
@@ -118,6 +121,8 @@ from the streamed structured agent message.
    - required final field: non-empty `reason_code`
    - invocation identity: `invocationId`
    - artifact source: `.pairflow/runtime/plan-watch/agent-runner/<artifact-dir>/`
+   - required artifact files: `metadata.json`, `events.ndjson`,
+     `timeline.ndjson`
 3. Guard elements:
    - raw event parseability
    - final structured event schema validity
@@ -127,7 +132,8 @@ from the streamed structured agent message.
    - existing ledger records without `artifactDir`
    - existing invocation directories with hash-only path segments
 5. Forbidden reinterpretations:
-   - timeline events are observability only, not orchestration authority
+   - timeline events are observability/read-model only, not orchestration,
+     dedupe, trigger, or lifecycle authority
    - `metadata.json` records provenance only, not lifecycle state
    - `events.ndjson` raw Codex schema is not a Pairflow public API
 
@@ -188,19 +194,21 @@ from the streamed structured agent message.
    stdout and parsed as structured output.
 2. Target canonical success proof source: `events.ndjson` streamed from
    `codex exec --json`, with final result extracted from the last schema-valid
-   structured `agent_message`.
+   structured `agent_message`; no file outside the stream may provide a fallback
+   final object.
 3. Current canonical completion proof source: ledger completed run record with
    runner status/reason code.
 4. Target canonical completion proof source: ledger completed run record plus
-   `artifactDir` pointing to `metadata.json`, `events.ndjson`, and
-   `timeline.ndjson`.
+   `artifactDir` pointing to an artifact directory that contains
+   `metadata.json`, `events.ndjson`, and `timeline.ndjson`.
 5. Reused proof contract: `StructuredAgentRunnerOutput`.
 6. Proof-parity rule: `upgrade_required`.
 7. Final truth surfaces affected: runner process output parsing, ledger record
    schema, artifact directory layout, README/pilot docs.
 8. Mixed-truth surfaces allowed: raw Codex event stream and normalized Pairflow
    timeline may coexist, but the final result source is the stream-derived
-   structured agent message only.
+   structured agent message only; the timeline never upgrades, repairs, or
+   overrides final-result truth.
 
 ### Precondition and Side-Effect Boundary
 
@@ -313,9 +321,9 @@ from the streamed structured agent message.
 | Contract Element | Source / Producer | Required Shape | Consumer | Failure Behavior | Priority |
 |---|---|---|---|---|---|
 | Codex invocation | `buildCodexRunnerArgs` | argv array includes `exec --json --cd <repo> --output-schema <schema> <prompt>` and excludes `--output-last-message` | subprocess runner | spawn/non-zero/timeout maps to existing blocked reasons | P1 |
-| Raw stream | spawned Codex stdout | one raw line per Codex JSONL event, persisted unchanged to `events.ndjson` | debug/audit/final extractor | malformed line recorded and final extraction fails if no valid final output | P1 |
+| Raw stream | spawned Codex stdout | one raw line per Codex JSONL event, persisted unchanged to `events.ndjson` | debug/audit/final extractor | malformed line is retained and the run fails closed; empty stream blocks | P1 |
 | Timeline stream | Pairflow normalizer | Pairflow-owned NDJSON events with schema version, timestamp, type, summary fields | operator/future UI | normalizer failure blocks if raw stream cannot be trusted; large outputs summarized | P1 |
-| Final runner result | stream extractor | last valid structured `agent_message.text` matching runner schema | bridge classifier/ledger | no valid object -> `AGENT_RUNNER_OUTPUT_INVALID` | P1 |
+| Final runner result | stream extractor | last valid structured `agent_message.text` matching runner schema; no fallback file or session lookup | bridge classifier/ledger | no valid object -> `AGENT_RUNNER_OUTPUT_INVALID` | P1 |
 | Artifact metadata | runner bridge | `metadata.json` with invocation, plan, repo, trigger, startedAt, planSlug, mode, pid | discovery/future CLI | metadata write failure -> file IO blocked before success claim | P1 |
 | Artifact directory | runner bridge | `<YYYY-MM-DD>_<HH-mm-ss>_<plan-slug>_<invocation-id>` under `.pairflow/runtime/plan-watch/agent-runner` | humans/ledger | collision gets deterministic suffix or unique invocation segment | P1 |
 | Ledger linkage | ledger record | optional `artifactDir` for new run records; legacy records still parse | watch loop/future CLI | missing legacy field is accepted; malformed new field blocks schema only if present and invalid | P1 |
@@ -335,8 +343,8 @@ from the streamed structured agent message.
 | Surface | Required Fields | Optional Fields | Unknown / Malformed Behavior | Retention Rule | Priority |
 |---|---|---|---|---|---|
 | `metadata.json` | `schemaVersion`, `invocationId`, `startedAt`, `repoPath`, `planPath`, `planSlug`, `mode` | `triggerKind`, `pid`, `artifactDir`, `schemaFilePath` | Runtime write failure blocks success. | Persist for every prepared run once the artifact directory exists. | P1 |
-| Raw event line | Valid JSON object line emitted by Codex. | Any Codex-owned fields. | Malformed line is retained raw and final extraction fails closed. | Preserve exact line in `events.ndjson`. | P1 |
-| Structured agent message | `item.type = "agent_message"` and text JSON matching runner output schema. | Schema-allowed runner output fields. | Invalid candidate is ignored as final output and may become timeline diagnostic; no valid final blocks with `AGENT_RUNNER_OUTPUT_INVALID`. | Keep original raw event. | P1 |
+| Raw event line | Valid JSON object line emitted by Codex. | Any Codex-owned fields. | Malformed line is retained raw and the invocation blocks with `AGENT_RUNNER_OUTPUT_INVALID`; the parser must not skip malformed lines to find a later success. | Preserve exact line in `events.ndjson`. | P1 |
+| Structured agent message | `item.type = "agent_message"` and text JSON matching runner output schema. | Schema-allowed runner output fields. | Invalid candidate is ignored as a valid final output and may become timeline diagnostic; no valid final blocks with `AGENT_RUNNER_OUTPUT_INVALID`. | Keep original raw event. | P1 |
 | Timeline row | `schemaVersion`, `type`, `at` | Row-specific summary fields. | Unknown raw events map to hidden `runner_event_unrecognized` or raw-only retention. | Persist normalized rows to `timeline.ndjson`. | P1 |
 | Ledger `artifactDir` | String path when present. | N/A | Absent legacy field is accepted; non-string new value is invalid. | Retain in new run records. | P1 |
 
@@ -381,11 +389,16 @@ from the streamed structured agent message.
 3. `timeline.ndjson` is Pairflow-owned and may be consumed by future CLI/UI.
 4. `artifactDir` in ledger is repo-relative when inside the repo and absolute
    only if the artifact root is outside the repo.
-5. `planSlug` is derived from the watched plan filename stem without leading
+5. `artifactDir` is an artifact pointer only: legacy records without it remain
+   readable, and trigger dedupe must continue to use trigger evidence rather
+   than artifact path or directory name.
+6. `planSlug` is derived from the watched plan filename stem without leading
    date prefix when possible; if no safe slug exists, use `plan`.
-6. Directory timestamp uses local time for operator discoverability and
+7. Directory timestamp uses local time for operator discoverability and
    `metadata.json.startedAt` stores ISO UTC for canonical ordering.
-7. PID may be recorded in metadata but must not be used as canonical identity.
+8. PID may be recorded in metadata but must not be used as canonical identity.
+9. The artifact directory name is intended for human discovery and must not be
+   parsed as lifecycle state or used as canonical ordering authority.
 
 ### Fallback / Error Contract
 
@@ -394,8 +407,8 @@ from the streamed structured agent message.
 | Codex spawn ENOENT | blocked | `PLAN_WATCH_CODEX_UNAVAILABLE` | unchanged |
 | stdout stream empty | blocked | `AGENT_RUNNER_OUTPUT_INVALID` | raw artifact may be empty |
 | malformed JSONL line | blocked | `AGENT_RUNNER_OUTPUT_INVALID` | retain raw line; do not silently tolerate malformed stream in this task |
-| no structured agent message | blocked | `AGENT_RUNNER_OUTPUT_INVALID` | do not use last-message fallback |
-| final object schema invalid | blocked | `AGENT_RUNNER_OUTPUT_INVALID` | include output diagnostic |
+| no structured agent message | blocked | `AGENT_RUNNER_OUTPUT_INVALID` | do not use last-message fallback, Codex session files, or prose output |
+| final object schema invalid | blocked | `AGENT_RUNNER_OUTPUT_INVALID` | include output diagnostic; timeline rows cannot repair final truth |
 | timeline write failure | blocked | `PLAN_WATCH_RUNNER_FILE_IO_FAILED` | do not claim observability success |
 | legacy ledger record lacks artifactDir | accepted | N/A | read compatibility |
 
@@ -410,11 +423,13 @@ from the streamed structured agent message.
 | T3 | Raw event persistence | `events.ndjson` exactly preserves emitted JSONL lines | P1 |
 | T4 | Timeline normalization | command starts/completions and runner status messages become `timeline.ndjson` events | P1 |
 | T5 | Empty stream | blocked `AGENT_RUNNER_OUTPUT_INVALID` | P1 |
-| T6 | Invalid final output | blocked `AGENT_RUNNER_OUTPUT_INVALID` | P1 |
+| T6 | Invalid final output and no fallback | blocked `AGENT_RUNNER_OUTPUT_INVALID`; `last-message.json`, stdout prose, and Codex session files are not consulted | P1 |
 | T7 | Large command output | timeline stores count/preview, not full dump | P2 |
 | T8 | Ledger artifact dir | new records include `artifactDir`; old records still read | P1 |
 | T9 | Artifact dir naming | name includes local date, local time, plan slug, invocation id and remains path-safe | P1 |
 | T10 | Docs | README/pilot docs describe raw/timeline artifacts and stream source of truth | P2 |
+| T11 | Timeline authority boundary | timeline rows are persisted/readable but do not alter route choice, trigger dedupe, lifecycle state, or final-result classification | P1 |
+| T12 | Malformed stream line before later success-looking event | raw line is retained and the run blocks fail-closed instead of skipping ahead | P1 |
 
 ### Required Commands
 
