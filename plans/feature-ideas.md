@@ -60,3 +60,4 @@
 - https://github.com/cocoindex-io/cocoindex
 - https://github.com/mattpocock/skills/tree/main
 - pnpm-workspace.yaml
+- https://github.com/BloopAI/vibe-kanban
