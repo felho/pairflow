@@ -30,7 +30,7 @@ task_tracker:
   - task_id: 3-ui-action-dto-closure
     task_path: plans/tasks/3-ui-action-dto-closure.md
     status: approved
-    notes: "ReviewSpec task-mode approved UI action DTO projection closure; ready for document bubble."
+    notes: "Document bubble 3-ui-action-dto-closure-doc started from approved task."
   - task_id: 4-ui-readmodel-port-closure
     task_path: null
     status: not_created

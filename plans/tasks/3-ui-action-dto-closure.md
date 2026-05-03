@@ -27,7 +27,7 @@ plan_ref: plans/ui-router-port-closure-plan-v1.md
 system_context_ref: docs/pairflow-initial-design.md
 owners:
   - "felho"
-doc_bubble_id: null
+doc_bubble_id: 3-ui-action-dto-closure-doc
 impl_bubble_id: null
 supersedes: []
 superseded_by: null
