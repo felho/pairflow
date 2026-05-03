@@ -5,7 +5,7 @@ task_family_id: core-ui-contracts
 sequence_key: "2"
 task_id: 2-core-ui-contracts
 title: "Core UI Contracts"
-status: in_progress
+status: archived
 phase: phase2
 target_files:
   - src/contracts/ui/index.ts
@@ -42,6 +42,7 @@ impl_bubble_id: 2-core-ui-contracts-impl
 supersedes: []
 superseded_by: null
 archive_group: 2026-05-02-ui-contract-boundary-plan-v1
+archive_path: plans/archive/tasks/2026-05-02-ui-contract-boundary-plan-v1/2-core-ui-contracts.md
 ---
 
 # Task: Core UI Contracts
