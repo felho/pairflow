@@ -36,6 +36,10 @@ target_files:
   - ui/src/lib/types.ts
   - ui/src/lib/api.ts
   - ui/src/lib/events.ts
+  - ui/src/lib/events.test.ts
+  - ui/src/components/expanded/BubbleTimeline.tsx
+  - ui/src/components/expanded/BubbleTimeline.test.tsx
+  - ui/src/state/useBubbleStore.test.ts
   - tests/contracts/uiContractParity.types.ts
   - tests/contracts/uiContractTransitSource.test.ts
 prd_ref: null

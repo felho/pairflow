@@ -4,7 +4,7 @@ import { join, resolve } from "node:path";
 
 import { getBubblePaths } from "../artifact/bubble/paths.js";
 import type { UiBubbleListEntry as BubbleListEntry } from "../../shared/ports/uiRouter.js";
-import type { UiRepoSummary } from "../../../types/ui.js";
+import type { UiRepoSummary } from "../../../contracts/ui/uiReadModel.js";
 import type { UiBubbleListRemoteExecution } from "../../../shared/contracts/uiRemoteExecution.js";
 
 function normalizeRepoPathForQueue(repoPath: string): string {

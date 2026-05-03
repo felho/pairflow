@@ -1,5 +1,11 @@
-import type { UiBubbleRemovedEvent, UiBubbleUpdatedEvent } from "../../../types/ui.js";
-import type { UiBubbleSummary, UiRepoSummary } from "../../../types/ui.js";
+import type {
+  UiBubbleRemovedEvent,
+  UiBubbleUpdatedEvent
+} from "../../../contracts/ui/uiEvents.js";
+import type {
+  UiBubbleSummary,
+  UiRepoSummary
+} from "../../../contracts/ui/uiReadModel.js";
 
 export interface BubbleFingerprintSnapshot {
   summary: UiBubbleSummary;
@@ -18,12 +24,4 @@ export interface RepoDiff {
   removed: UiBubbleRemovedEvent[];
   repoChanged: boolean;
   snapshot: RepoSnapshot;
-}
-
-export interface SnapshotView {
-  id: number;
-  ts: string;
-  type: "snapshot";
-  repos: UiRepoSummary[];
-  bubbles: UiBubbleSummary[];
 }

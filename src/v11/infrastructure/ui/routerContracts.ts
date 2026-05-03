@@ -1,10 +1,11 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 
-import type { UiApiErrorBody, UiBubbleDetail } from "../../../types/ui.js";
+import type { UiApiErrorBody } from "../../../contracts/ui/uiErrors.js";
+import type { UiBubbleDetail } from "../../../contracts/ui/uiReadModel.js";
 import type { UiEventsBroker } from "./events.js";
 import type { UiRepoScope } from "./repoScope.js";
 import type { AttachBubbleResult, UiRouterDependencies } from "../../shared/ports/uiRouter.js";
-import type { RuntimeSessionRecord } from "../../shared/ports/runtimeSessions.js";
+import type { UiRuntimeSessionRecord } from "../../../contracts/ui/uiReadModel.js";
 
 export interface UiApiError {
   status: number;
@@ -37,7 +38,7 @@ export interface BubbleActionContext {
 
 export interface UiBubbleDetailContext {
   bubble: UiBubbleDetail;
-  runtimeSession: RuntimeSessionRecord | null;
+  runtimeSession: UiRuntimeSessionRecord | null;
 }
 
 export type { AttachBubbleResult, UiRouterDependencies };

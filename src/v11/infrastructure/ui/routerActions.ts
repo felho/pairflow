@@ -1,10 +1,8 @@
 import type { IncomingMessage } from "node:http";
-import { join } from "node:path";
 
-import type { UiBubbleDetail } from "../../../types/ui.js";
-import { presentBubbleDetail, presentBubbleList } from "./presenters/bubblePresenter.js";
+import { presentBubbleList } from "./presenters/bubblePresenter.js";
+import { loadBubbleDetail } from "./routerBubbleDetail.js";
 import { mapActionErrorToApiError } from "./routerActionErrorMapping.js";
-import type { RuntimeSessionRecord } from "../executor/sessionRuntime/runtimeSessionsRegistry.js";
 import { UiRepoScopeError, resolveScopedRepoPath } from "./repoScope.js";
 import { dispatchBubbleAction } from "./routerActionDispatch.js";
 import type { CreateUiRouterInput, UiRouterDependencies } from "./routerContracts.js";
@@ -61,49 +59,6 @@ function parseRefreshQueryFlag(url: URL): boolean | undefined {
     return false;
   }
   return undefined;
-}
-
-async function loadRuntimeSession(
-  dependencies: UiRouterDependencies,
-  repoPath: string,
-  bubbleId: string
-): Promise<RuntimeSessionRecord | null> {
-  const sessionsPath = join(repoPath, ".pairflow", "runtime", "sessions.json");
-  const sessions = await dependencies.readRuntimeSessionsRegistry(sessionsPath, {
-    allowMissing: true
-  });
-  return sessions[bubbleId] ?? null;
-}
-
-async function loadBubbleDetail(input: {
-  environment: RouterActionEnvironment;
-  repoPath: string;
-  bubbleId: string;
-}): Promise<UiBubbleDetail> {
-  const { environment, repoPath, bubbleId } = input;
-  const [status, inbox, runtimeSession] = await Promise.all([
-    environment.dependencies.getBubbleStatus({
-      bubbleId,
-      repoPath,
-      ...(environment.input.cwd !== undefined ? { cwd: environment.input.cwd } : {})
-    }),
-    environment.dependencies.getBubbleInbox({
-      bubbleId,
-      repoPath,
-      ...(environment.input.cwd !== undefined ? { cwd: environment.input.cwd } : {})
-    }),
-    loadRuntimeSession(environment.dependencies, repoPath, bubbleId)
-  ]);
-  const now = new Date();
-  return {
-    ...presentBubbleDetail({
-      status,
-      inbox,
-      runtimeSession,
-      now
-    }),
-    repoPath
-  };
 }
 
 export async function handleBubbleActionRequest(input: {

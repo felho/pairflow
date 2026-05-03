@@ -138,6 +138,68 @@ describe("createRealtimeEventsClient", () => {
     expect(onEvent).not.toHaveBeenCalled();
   });
 
+  it("accepts repo removal events with shallow payload checks", () => {
+    const onEvent = vi.fn();
+
+    const client = createRealtimeEventsClient({
+      getRepos: () => ["/repo-a"],
+      onEvent,
+      onStatus: () => undefined,
+      poll: () => Promise.resolve(undefined),
+      eventSourceFactory: (url) => new MockEventSource(url)
+    });
+
+    client.start();
+
+    const stream = MockEventSource.instances[0];
+    if (stream === undefined) {
+      throw new Error("Missing mocked event source instance");
+    }
+
+    stream.emit("open");
+    stream.emit("repo.removed", {
+      id: 3,
+      ts: "2026-02-24T12:00:02.000Z",
+      type: "repo.removed",
+      repoPath: "/repo-a"
+    });
+
+    expect(onEvent).toHaveBeenCalledWith({
+      id: 3,
+      ts: "2026-02-24T12:00:02.000Z",
+      type: "repo.removed",
+      repoPath: "/repo-a"
+    });
+  });
+
+  it("rejects malformed repo removal events", () => {
+    const onEvent = vi.fn();
+
+    const client = createRealtimeEventsClient({
+      getRepos: () => ["/repo-a"],
+      onEvent,
+      onStatus: () => undefined,
+      poll: () => Promise.resolve(undefined),
+      eventSourceFactory: (url) => new MockEventSource(url)
+    });
+
+    client.start();
+
+    const stream = MockEventSource.instances[0];
+    if (stream === undefined) {
+      throw new Error("Missing mocked event source instance");
+    }
+
+    stream.emit("open");
+    stream.emit("repo.removed", {
+      id: 4,
+      ts: "2026-02-24T12:00:03.000Z",
+      type: "repo.removed"
+    });
+
+    expect(onEvent).not.toHaveBeenCalled();
+  });
+
   it("heartbeat events reset staleness timer", async () => {
     const onStatus = vi.fn();
     const poll = vi.fn().mockResolvedValue(undefined);

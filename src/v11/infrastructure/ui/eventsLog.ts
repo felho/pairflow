@@ -1,13 +1,15 @@
 import type {
   UiBubbleRemovedEvent,
   UiBubbleUpdatedEvent,
-  UiBubbleSummary,
   UiEvent,
   UiRepoRemovedEvent,
-  UiRepoSummary,
   UiRepoUpdatedEvent,
   UiSnapshotEvent
-} from "../../../types/ui.js";
+} from "../../../contracts/ui/uiEvents.js";
+import type {
+  UiBubbleSummary,
+  UiRepoSummary
+} from "../../../contracts/ui/uiReadModel.js";
 import type { UiEventsSubscriptionInput } from "./eventsTypes.js";
 import {
   createFilter,

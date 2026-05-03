@@ -60,6 +60,10 @@ function createDeferred<T>(): {
   };
 }
 
+function actionResult<T>(): T {
+  return {} as T;
+}
+
 function createApiStub(overrides: Partial<PairflowApiClient>): PairflowApiClient {
   return {
     getRepos: vi.fn(async () => []),
@@ -71,11 +75,21 @@ function createApiStub(overrides: Partial<PairflowApiClient>): PairflowApiClient
       bubbleDetail({ bubbleId, repoPath })
     ),
     getBubbleTimeline: vi.fn(async () => []),
-    startBubble: vi.fn(async () => ({})),
-    approveBubble: vi.fn(async () => ({})),
-    requestRework: vi.fn(async () => ({})),
-    replyBubble: vi.fn(async () => ({})),
-    resumeBubble: vi.fn(async () => ({})),
+    startBubble: vi.fn(async () =>
+      actionResult<Awaited<ReturnType<PairflowApiClient["startBubble"]>>>()
+    ),
+    approveBubble: vi.fn(async () =>
+      actionResult<Awaited<ReturnType<PairflowApiClient["approveBubble"]>>>()
+    ),
+    requestRework: vi.fn(async () =>
+      actionResult<Awaited<ReturnType<PairflowApiClient["requestRework"]>>>()
+    ),
+    replyBubble: vi.fn(async () =>
+      actionResult<Awaited<ReturnType<PairflowApiClient["replyBubble"]>>>()
+    ),
+    resumeBubble: vi.fn(async () =>
+      actionResult<Awaited<ReturnType<PairflowApiClient["resumeBubble"]>>>()
+    ),
     updateReviewPolicy: vi.fn(async () => ({
       kind: "review_policy_updated" as const,
       bubbleId: "unknown",
@@ -92,17 +106,27 @@ function createApiStub(overrides: Partial<PairflowApiClient>): PairflowApiClient
       activationChange: "none" as const,
       bubbleToml: ""
     })),
-    restartBubble: vi.fn(async () => ({})),
-    commitBubble: vi.fn(async () => ({})),
-    mergeBubble: vi.fn(async () => ({})),
-    openBubble: vi.fn(async () => ({})),
+    restartBubble: vi.fn(async () =>
+      actionResult<Awaited<ReturnType<PairflowApiClient["restartBubble"]>>>()
+    ),
+    commitBubble: vi.fn(async () =>
+      actionResult<Awaited<ReturnType<PairflowApiClient["commitBubble"]>>>()
+    ),
+    mergeBubble: vi.fn(async () =>
+      actionResult<Awaited<ReturnType<PairflowApiClient["mergeBubble"]>>>()
+    ),
+    openBubble: vi.fn(async () =>
+      actionResult<Awaited<ReturnType<PairflowApiClient["openBubble"]>>>()
+    ),
     attachBubble: vi.fn(async () => ({
       bubbleId: "unknown",
       tmuxSessionName: "pf-unknown",
-      launcherRequested: "auto",
-      launcherUsed: "terminal"
+      launcherRequested: "auto" as const,
+      launcherUsed: "terminal" as const
     })),
-    stopBubble: vi.fn(async () => ({})),
+    stopBubble: vi.fn(async () =>
+      actionResult<Awaited<ReturnType<PairflowApiClient["stopBubble"]>>>()
+    ),
     deleteBubble: vi.fn(async () => ({
       bubbleId: "unknown",
       deleted: true,
@@ -231,7 +255,9 @@ describe("createBubbleStore", () => {
   });
 
   it("uses stageAll for commit actions and preserves the default staging behavior", async () => {
-    const commitBubble = vi.fn(async () => ({}));
+    const commitBubble = vi.fn(async () =>
+      actionResult<Awaited<ReturnType<PairflowApiClient["commitBubble"]>>>()
+    );
     const api = createApiStub({
       getRepos: vi.fn(async () => ["/repo-a"]),
       getBubbles: vi.fn(async () => ({
@@ -1687,7 +1713,9 @@ describe("createBubbleStore", () => {
       repo: repoSummary("/repo-a"),
       bubbles: [bubbleSummary({ bubbleId: "b-a", repoPath: "/repo-a" })]
     }));
-    const approveBubble = vi.fn(async () => ({}));
+    const approveBubble = vi.fn(async () =>
+      actionResult<Awaited<ReturnType<PairflowApiClient["approveBubble"]>>>()
+    );
 
     const api = createApiStub({
       getRepos: vi.fn(async () => ["/repo-a"]),
@@ -1733,7 +1761,9 @@ describe("createBubbleStore", () => {
         })
       ]
     }));
-    const restartBubble = vi.fn(async () => ({}));
+    const restartBubble = vi.fn(async () =>
+      actionResult<Awaited<ReturnType<PairflowApiClient["restartBubble"]>>>()
+    );
 
     const api = createApiStub({
       getRepos: vi.fn(async () => ["/repo-a"]),
@@ -2201,8 +2231,8 @@ describe("createBubbleStore", () => {
       attachBubble: vi.fn(async () => ({
         bubbleId: "b-a",
         tmuxSessionName: "pf-b-a",
-        launcherRequested: "copy",
-        launcherUsed: "copy",
+        launcherRequested: "copy" as const,
+        launcherUsed: "copy" as const,
         attachCommand: "tmux attach -t pf-b-a"
       }))
     });
@@ -2247,8 +2277,8 @@ describe("createBubbleStore", () => {
       attachBubble: vi.fn(async () => ({
         bubbleId: "b-a",
         tmuxSessionName: "pf-remote-b-a",
-        launcherRequested: "copy",
-        launcherUsed: "copy",
+        launcherRequested: "copy" as const,
+        launcherUsed: "copy" as const,
         attachCommand: remoteAttachCommand
       }))
     });
@@ -2293,8 +2323,8 @@ describe("createBubbleStore", () => {
       attachBubble: vi.fn(async () => ({
         bubbleId: "b-a",
         tmuxSessionName: "pf-b-a",
-        launcherRequested: "copy",
-        launcherUsed: "copy",
+        launcherRequested: "copy" as const,
+        launcherUsed: "copy" as const,
         attachCommand: "tmux attach -t pf-b-a"
       }))
     });

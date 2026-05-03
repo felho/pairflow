@@ -7,7 +7,7 @@ import type {
   BubbleLifecycleState,
   BubbleReviewPolicyRuntimeView
 } from "../../../types/bubble.js";
-import type { UiBubbleAttention } from "../../../types/ui.js";
+import type { UiBubbleAttention } from "../../../contracts/ui/uiReadModel.js";
 import type { UiBubbleListRemoteExecution } from "../../../types/uiRemoteExecution.js";
 
 export interface BubbleListInput {

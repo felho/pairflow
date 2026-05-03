@@ -1,4 +1,5 @@
-import type { ConnectionStatus, UiEvent } from "./types";
+import type { UiEvent } from "./contracts/uiEvents.js";
+import type { ConnectionStatus } from "./types.js";
 
 export interface EventSourceLike {
   addEventListener(type: string, listener: (event: MessageEvent<string>) => void): void;
@@ -87,6 +88,8 @@ function isUiEventPayload(value: unknown): value is UiEvent {
       );
     case "repo.updated":
       return typeof value.repoPath === "string" && isRecord(value.repo);
+    case "repo.removed":
+      return typeof value.repoPath === "string";
     default:
       return false;
   }
@@ -256,6 +259,10 @@ export function createRealtimeEventsClient(
       handleMessageEvent(event);
     });
     addListener("repo.updated", (event) => {
+      touchLastEvent();
+      handleMessageEvent(event);
+    });
+    addListener("repo.removed", (event) => {
       touchLastEvent();
       handleMessageEvent(event);
     });

@@ -1,4 +1,5 @@
-import type { UiBubbleSummary } from "../../../types/ui.js";
+import type { UiSnapshotEvent } from "../../../contracts/ui/uiEvents.js";
+import type { UiBubbleSummary } from "../../../contracts/ui/uiReadModel.js";
 import type { UiEventsSubscriptionInput } from "./eventsTypes.js";
 import type { RepoSnapshot } from "./eventsState.js";
 import { createFilter } from "./eventsFilter.js";
@@ -7,13 +8,7 @@ export function buildUiEventsSnapshot(input: {
   snapshots: Map<string, RepoSnapshot>;
   nextEventId: number;
   subscription?: UiEventsSubscriptionInput | undefined;
-}): {
-  id: number;
-  ts: string;
-  type: "snapshot";
-  repos: Array<RepoSnapshot["repo"]>;
-  bubbles: UiBubbleSummary[];
-} {
+}): UiSnapshotEvent {
   const filter = createFilter(input.subscription);
   const repos: Array<RepoSnapshot["repo"]> = [];
   const bubbles: UiBubbleSummary[] = [];

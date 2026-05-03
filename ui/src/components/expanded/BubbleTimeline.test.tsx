@@ -234,7 +234,7 @@ describe("BubbleTimeline", () => {
             sender: "orchestrator",
             recipient: "codex",
             payload: {
-              decision: "revise",
+              decision: "rework",
               message: "Apply rework.",
               metadata: {
                 actor: "meta-reviewer",
