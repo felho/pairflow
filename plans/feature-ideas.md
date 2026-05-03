@@ -61,3 +61,4 @@
 - https://github.com/mattpocock/skills/tree/main
 - pnpm-workspace.yaml
 - https://github.com/BloopAI/vibe-kanban
+- https://www.hud.io/
