@@ -5,7 +5,7 @@ task_family_id: router-dependency-slices
 sequence_key: "2"
 task_id: 2-router-dependency-slices
 title: "Router Dependency Slices"
-status: approved
+status: implementable
 phase: phase2
 target_files:
   - src/v11/shared/ports/uiRouter.ts
