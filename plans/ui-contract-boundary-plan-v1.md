@@ -45,10 +45,13 @@ literal state-eket.
 2. A UI nem tart fenn kezzel masolt delete-bubble, lifecycle,
    state-validation, remote-execution vagy UI API/action/read-model/event/error
    contractot.
-3. A UI nem importal `src/v11/**` modult.
-4. A `src/contracts/ui/**` contract surface nem importal `src/v11/**`,
+3. `src/types/bubble.ts` marad az egyetlen lifecycle runtime literal source; a
+   kanonikus lifecycle contract ezt re-exportalja, es nem vezet be masodik
+   lifecycle tuple-t.
+4. A UI nem importal `src/v11/**` modult.
+5. A `src/contracts/ui/**` contract surface nem importal `src/v11/**`,
    `node:*`, `application/**`, `defaults/**` vagy `infrastructure/**` modult.
-5. Fitness szabaly akadalyazza meg a boundary visszacsuszasat.
+6. Fitness szabaly akadalyazza meg a boundary visszacsuszasat.
 
 ## Control Model
 
@@ -89,7 +92,9 @@ tukrozve vagy vegyes strategiaval kezelve:
 1. `src/contracts/deleteBubble.ts` es `ui/src/lib/types.ts` kozott delete-bubble
    mirror van.
 2. `src/types/bubble.ts` es `ui/src/lib/contracts/bubbleLifecycle.ts` kozott
-   lifecycle state mirror van.
+   lifecycle state mirror van; ennek canonical lifecycle-authority igazitasat a
+   `2-core-ui-contracts` task kezeli ugy, hogy `src/types/bubble.ts` nem maradhat
+   masodik lifecycle literal authority a canonical lifecycle contract mellett.
 3. `ui/src/lib/types.ts` direkt importal
    `src/v11/shared/metaReviewGate/metaReviewGateTypes.ts` alol.
 4. `src/types/ui.ts` szinten `src/v11/shared/metaReviewGate/**` tipusra
@@ -98,10 +103,16 @@ tukrozve vagy vegyes strategiaval kezelve:
    nem a vegleges canonical hely. Ezt a plan kompatibilitasi surface-kent kezeli,
    amelyet az uj `src/contracts/ui/**` surface moge kell igazítani vagy onnan
    kell re-exportalni.
-6. `src/types/ui.ts` es `ui/src/lib/types.ts` kozott tovabbi UI
+6. `src/types/uiRemoteExecution.ts` es
+   `src/v11/shared/ports/stateSnapshots.ts` transit import/export utjai az
+   in-scope remote-execution es state-validation contractokhoz kapcsolodnak.
+   Ezek jelenleg nem canonical contract surface-ek; task-2 donti el a szuk
+   compatibility/type-only utvonaligazitast, snapshot port vagy runtime
+   szemantika valtoztatasa nelkul.
+7. `src/types/ui.ts` es `ui/src/lib/types.ts` kozott tovabbi UI
    API/read-model/event/error DTO mirror van (`UiBubbleSummary`, `UiEvent`,
    `UiApiErrorBody` es kapcsolodo summary/detail/timeline DTO-k).
-7. `ui/src/lib/types.ts`, `src/v11/shared/ports/uiRouter.ts` es
+8. `ui/src/lib/types.ts`, `src/v11/shared/ports/uiRouter.ts` es
    `src/v11/infrastructure/ui/routerHttpBody.ts` kozott action
    request/result contractok is tukrozodnek (`CommitActionInput`,
    `MergeActionInput`, review-policy update es attach/delete action payloadok).
@@ -111,8 +122,8 @@ tukrozve vagy vegyes strategiaval kezelve:
 | Task ID | Path | Purpose | Status |
 |---|---|---|---|
 | `1-ui-contract-foundation` | `plans/archive/tasks/2026-05-02-ui-contract-boundary-plan-v1/1-ui-contract-foundation.md` | Create the browser-safe `src/contracts/ui/**` foundation and hard-fail fitness guards for forbidden UI/runtime imports. | archived |
-| `2-core-ui-contracts` | `plans/tasks/2-core-ui-contracts.md` | Move the smaller established mirrors behind the canonical surface: delete-bubble, lifecycle, state-validation, and remote-execution. | approved |
-| `3-ui-readmodel-contracts` | `plans/tasks/3-ui-readmodel-contracts.md` | Consolidate the wider UI API/read-model/action/event/error DTO surface and nested runtime-session/inbox/watchdog/review-policy/protocol views. | planned |
+| `2-core-ui-contracts` | `plans/tasks/2-core-ui-contracts.md` | Move the smaller established mirrors behind the canonical surface: delete-bubble, lifecycle, state-validation, and remote-execution, including `src/types/bubble.ts` lifecycle authority plus type-only transit alignment for `src/types/uiRemoteExecution.ts` and `src/v11/shared/ports/stateSnapshots.ts`. | approved |
+| `3-ui-readmodel-contracts` | not created yet | Consolidate the wider UI API/read-model/action/event/error DTO surface and nested runtime-session/inbox/watchdog/review-policy/protocol views. | not_created |
 
 ## Dependencies and Ordering
 
@@ -149,7 +160,16 @@ Split rationale:
 1. `pnpm typecheck`
 2. `pnpm lint`
 3. `pnpm fitness:check:ci`
-4. `pnpm exec vitest run tests/contracts/deleteBubbleContractTypes.test.ts tests/contracts/uiContractParity.types.ts`
+4. `pnpm exec vitest run tests/contracts/deleteBubbleContractTypes.test.ts tests/contracts/uiContractParity.types.ts tests/contracts/uiContractTransitSource.test.ts`
+   - For `2-core-ui-contracts`, `tests/contracts/uiContractParity.types.ts`
+     must carry T7 transit type parity for the in-scope transit surfaces, and
+     `tests/contracts/uiContractTransitSource.test.ts` must carry T8
+     source-text guard coverage for CS9a `src/types/uiRemoteExecution.ts` and
+     CS9b `src/v11/shared/ports/stateSnapshots.ts` so structural mirrors and
+     overlong compatibility chains fail required validation. The same T8 file
+     must also read CS10 `src/types/bubble.ts` and
+     `src/contracts/ui/bubbleLifecycle.ts` so the canonical lifecycle file
+     re-exports the runtime tuple instead of defining a second lifecycle tuple.
 5. `pnpm exec vitest run tests/tools/fitness/*.test.ts` vagy az uj/celzott
    fitness tesztfile
 6. `pnpm --dir ui test`
