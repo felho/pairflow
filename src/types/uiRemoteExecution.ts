@@ -4,4 +4,4 @@ export type {
   UiBubbleRemoteExecution,
   UiBubbleStatusCacheReasonCode,
   UiBubbleStatusRemoteExecution
-} from "../shared/contracts/uiRemoteExecution.js";
+} from "../contracts/ui/uiRemoteExecution.js";
