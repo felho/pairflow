@@ -23,7 +23,7 @@ import {
   isPassIntent,
   isProtocolMessageType
 } from "../../../../types/protocol.js";
-import type { UiTimelineEntry } from "../../../../types/ui.js";
+import type { UiTimelineEntry } from "../../../../contracts/ui/uiReadModel.js";
 import {
   isInteger,
   isNonEmptyString,

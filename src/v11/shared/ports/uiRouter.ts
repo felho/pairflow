@@ -1,16 +1,31 @@
-import type { DeleteBubbleResult } from "../../../contracts/deleteBubble.js";
 import type {
-  BubbleLifecycleState,
-  BubbleReviewAutoReworkSeverity,
-  BubbleReviewLoopMode,
-  BubbleReviewPolicyRuntimeView,
-  AttachLauncher,
-  BubbleStateSnapshot
+  BubbleLifecycleState
 } from "../../../types/bubble.js";
-import type { UiTimelineEntry } from "../../../types/ui.js";
+import type {
+  UiAttachBubbleInput,
+  UiAttachBubbleResult,
+  UiBubbleMutationInput,
+  UiCommitBubbleInput,
+  UiCommitBubbleResult,
+  UiDeleteBubbleInput,
+  UiDeleteBubbleResult,
+  UiEmitApprovalDecisionResult,
+  UiEmitApproveInput,
+  UiEmitHumanReplyInput,
+  UiEmitHumanReplyResult,
+  UiEmitRequestReworkInput,
+  UiEmitRequestReworkResult,
+  UiMergeBubbleInput,
+  UiMergeBubbleResult,
+  UiOpenBubbleResult,
+  UiRestartBubbleResult,
+  UiStartBubbleResult,
+  UiStopBubbleResult,
+  UiUpdateBubbleReviewPolicyInput,
+  UiUpdateBubbleReviewPolicyResult
+} from "../../../contracts/ui/uiActions.js";
+import type { UiTimelineEntry } from "../../../contracts/ui/uiReadModel.js";
 import type { BubbleListEntry } from "../list/listCommandContract.js";
-import type { ProtocolEnvelope } from "../../../types/protocol.js";
-import type { OpenBubbleResult as SharedOpenBubbleResult } from "./openBubble.js";
 import type {
   BubbleInboxInput,
   BubbleInboxView
@@ -20,15 +35,33 @@ import type {
   BubbleStatusView
 } from "../status/statusCommandApi.js";
 import type {
-  UiApprovalDecisionDeliverySignals
-} from "./uiDelivery.js";
-import type {
   ReadRuntimeSessionsRegistryPort
 } from "./runtimeSessions.js";
-import type { MetaReviewQualityPreset } from "../reviewPolicy/updateBubbleReviewPolicy.js";
-import type {
-  PassValidationRecoveryMarkerPersistWarning
-} from "./passValidationRecovery.js";
+
+export type {
+  AttachBubbleResult,
+  UiAttachBubbleInput,
+  UiAttachBubbleResult,
+  UiBubbleMutationInput,
+  UiCommitBubbleInput,
+  UiCommitBubbleResult,
+  UiDeleteBubbleInput,
+  UiDeleteBubbleResult,
+  UiEmitApprovalDecisionResult,
+  UiEmitApproveInput,
+  UiEmitHumanReplyInput,
+  UiEmitHumanReplyResult,
+  UiEmitRequestReworkInput,
+  UiEmitRequestReworkResult,
+  UiMergeBubbleInput,
+  UiMergeBubbleResult,
+  UiOpenBubbleResult,
+  UiRestartBubbleResult,
+  UiStartBubbleResult,
+  UiStopBubbleResult,
+  UiUpdateBubbleReviewPolicyInput,
+  UiUpdateBubbleReviewPolicyResult
+} from "../../../contracts/ui/uiActions.js";
 
 export interface UiBubbleListInput {
   repoPath?: string | undefined;
@@ -61,167 +94,6 @@ export interface UiBubbleTimelineInput {
   bubbleId: string;
   repoPath?: string | undefined;
   cwd?: string | undefined;
-}
-
-export interface UiBubbleMutationInput {
-  bubbleId: string;
-  repoPath?: string | undefined;
-  cwd?: string | undefined;
-  now?: Date | undefined;
-}
-
-export interface UiEmitApproveInput extends UiBubbleMutationInput {
-  refs?: string[] | undefined;
-  overrideNonApprove?: boolean | undefined;
-  overrideReason?: string | undefined;
-}
-
-export interface UiEmitApprovalDecisionResult {
-  bubbleId: string;
-  sequence: number;
-  envelope: ProtocolEnvelope;
-  state: BubbleStateSnapshot;
-  delivery?: UiApprovalDecisionDeliverySignals;
-}
-
-export interface UiEmitRequestReworkImmediateResult
-  extends UiEmitApprovalDecisionResult {
-  mode: "immediate";
-}
-
-export interface UiEmitRequestReworkQueuedResult {
-  mode: "queued";
-  bubbleId: string;
-  intentId: string;
-  state: BubbleStateSnapshot;
-  supersededIntentId?: string;
-}
-
-export type UiEmitRequestReworkResult =
-  | UiEmitRequestReworkImmediateResult
-  | UiEmitRequestReworkQueuedResult;
-
-export interface UiEmitRequestReworkInput extends UiBubbleMutationInput {
-  message: string;
-  refs?: string[] | undefined;
-}
-
-export interface UiEmitHumanReplyInput {
-  bubbleId: string;
-  repoPath?: string;
-  cwd?: string;
-  now?: Date;
-  message: string;
-  refs?: string[];
-}
-
-export interface UiEmitHumanReplyResult {
-  bubbleId: string;
-  sequence: number;
-  envelope: ProtocolEnvelope;
-  state: BubbleStateSnapshot;
-}
-
-export interface UiCommitBubbleResult {
-  bubbleId: string;
-  sequence: number;
-  envelope: ProtocolEnvelope;
-  state: BubbleStateSnapshot;
-  commitSha: string;
-  commitMessage: string;
-  stagedFiles: string[];
-}
-
-export interface UiCommitBubbleInput extends UiBubbleMutationInput {
-  refs?: string[] | undefined;
-  message?: string | undefined;
-  stageAll: boolean;
-}
-
-export interface UiMergeBubbleResult {
-  bubbleId: string;
-  baseBranch: string;
-  bubbleBranch: string;
-  mergeCommitSha: string;
-  presentationRoute: "local" | "started_remote";
-  pushedBaseBranch: boolean;
-  deletedRemoteBranch: boolean;
-  tmuxSessionName: string;
-  tmuxSessionExisted: boolean;
-  runtimeSessionRemoved: boolean;
-  removedWorktree: boolean;
-  removedBubbleBranch: boolean;
-}
-
-export interface UiMergeBubbleInput extends UiBubbleMutationInput {
-  push?: boolean | undefined;
-  deleteRemote?: boolean | undefined;
-}
-
-export type UiOpenBubbleResult = SharedOpenBubbleResult;
-
-export interface UiDeleteBubbleInput extends UiBubbleMutationInput {
-  force?: boolean | undefined;
-}
-
-export interface UiStartBubbleResult {
-  bubbleId: string;
-  state: BubbleStateSnapshot;
-  tmuxSessionName: string;
-  worktreePath: string;
-}
-
-export interface UiStopBubbleResult {
-  bubbleId: string;
-  state: BubbleStateSnapshot;
-  tmuxSessionName: string;
-  tmuxSessionExisted: boolean;
-  runtimeSessionRemoved: boolean;
-}
-
-export interface UiRestartBubbleResult {
-  bubbleId: string;
-  state: BubbleStateSnapshot;
-  tmuxSessionName: string;
-  worktreePath: string;
-  previousTmuxSessionExisted: boolean;
-  previousRuntimeSessionRemoved: boolean;
-  warnings?: PassValidationRecoveryMarkerPersistWarning[] | undefined;
-}
-
-export type UiAttachLauncher = Exclude<AttachLauncher, "auto">;
-
-export interface UiAttachBubbleInput {
-  bubbleId: string;
-  repoPath?: string | undefined;
-  cwd?: string | undefined;
-}
-
-export interface UiAttachBubbleResult {
-  bubbleId: string;
-  tmuxSessionName: string;
-  launcherRequested: AttachLauncher;
-  launcherUsed: AttachLauncher;
-  attachCommand?: string;
-}
-
-export type AttachBubbleResult = UiAttachBubbleResult;
-
-export interface UiUpdateBubbleReviewPolicyInput extends UiBubbleMutationInput {
-  reviewLoopMode: BubbleReviewLoopMode;
-  reviewBlockingMinSeverity?: BubbleReviewAutoReworkSeverity;
-  metaReviewQualityPreset?: MetaReviewQualityPreset;
-  expectedBubbleToml?: string | undefined;
-}
-
-export interface UiUpdateBubbleReviewPolicyResult {
-  kind: "review_policy_updated";
-  bubbleId: string;
-  reviewPolicy: BubbleReviewPolicyRuntimeView;
-  previousRequestedLoopMode: BubbleReviewLoopMode;
-  nextRequestedLoopMode: BubbleReviewLoopMode;
-  activationChange: "none";
-  bubbleToml: string;
 }
 
 export interface UiRouterDependencies {
@@ -274,5 +146,5 @@ export interface UiRouterDependencies {
   ) => Promise<UiRestartBubbleResult>;
   deleteBubble: (
     input: UiDeleteBubbleInput
-  ) => Promise<DeleteBubbleResult>;
+  ) => Promise<UiDeleteBubbleResult>;
 }

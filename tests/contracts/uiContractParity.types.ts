@@ -18,6 +18,50 @@ import type {
   UiBubbleStatusRemoteExecution as CanonicalUiBubbleStatusRemoteExecution
 } from "../../src/contracts/ui/uiRemoteExecution.js";
 import type {
+  UiApiErrorBody as CanonicalUiApiErrorBody
+} from "../../src/contracts/ui/uiErrors.js";
+import type {
+  UiEvent as CanonicalUiEvent,
+  UiEventsConnectedPayload as CanonicalUiEventsConnectedPayload,
+  UiSnapshotEvent as CanonicalUiSnapshotEvent
+} from "../../src/contracts/ui/uiEvents.js";
+import type {
+  UiCommitBubbleInput as CanonicalUiCommitBubbleInput,
+  UiCommitBubbleResult as CanonicalUiCommitBubbleResult,
+  UiDeleteBubbleResult as CanonicalUiDeleteBubbleResult,
+  UiApprovalDecisionDeliverySignal as CanonicalUiApprovalDecisionDeliverySignal,
+  UiApprovalDecisionDeliverySignals as CanonicalUiApprovalDecisionDeliverySignals,
+  UiDeliveryAckReasonCode as CanonicalUiDeliveryAckReasonCode,
+  UiDeliveryFailureReason as CanonicalUiDeliveryFailureReason,
+  UiDeliveryTargetReasonCode as CanonicalUiDeliveryTargetReasonCode,
+  UiEmitApprovalDecisionResult as CanonicalUiEmitApprovalDecisionResult,
+  UiEmitApproveInput as CanonicalUiEmitApproveInput,
+  UiEmitHumanReplyResult as CanonicalUiEmitHumanReplyResult,
+  UiEmitRequestReworkInput as CanonicalUiEmitRequestReworkInput,
+  UiEmitRequestReworkResult as CanonicalUiEmitRequestReworkResult,
+  UiAttachBubbleResult as CanonicalUiAttachBubbleResult,
+  UiMergeBubbleInput as CanonicalUiMergeBubbleInput,
+  UiMergeBubbleResult as CanonicalUiMergeBubbleResult,
+  UiOpenBubbleResult as CanonicalUiOpenBubbleResult,
+  UiRestartBubbleResult as CanonicalUiRestartBubbleResult,
+  UiStartBubbleResult as CanonicalUiStartBubbleResult,
+  UiStopBubbleResult as CanonicalUiStopBubbleResult,
+  UiUpdateBubbleReviewPolicyInput as CanonicalUiUpdateBubbleReviewPolicyInput,
+  UiUpdateBubbleReviewPolicyResult as CanonicalUiUpdateBubbleReviewPolicyResult
+} from "../../src/contracts/ui/uiActions.js";
+import type {
+  UiBubbleDetail as CanonicalUiBubbleDetail,
+  UiBubbleInboxItem as CanonicalUiBubbleInboxItem,
+  UiBubbleMetaReviewSummary as CanonicalUiBubbleMetaReviewSummary,
+  UiBubbleReviewPolicy as CanonicalUiBubbleReviewPolicy,
+  UiBubbleSummary as CanonicalUiBubbleSummary,
+  UiBubbleWatchdog as CanonicalUiBubbleWatchdog,
+  UiPendingInboxItemSource as CanonicalUiPendingInboxItemSource,
+  UiRepoSummary as CanonicalUiRepoSummary,
+  UiRuntimeSessionRecord as CanonicalUiRuntimeSessionRecord,
+  UiTimelineEntry as CanonicalUiTimelineEntry
+} from "../../src/contracts/ui/uiReadModel.js";
+import type {
   BubbleLifecycleState as RuntimeBubbleLifecycleState
 } from "../../src/types/bubble.js";
 import {
@@ -48,6 +92,47 @@ import type {
   StateValidationDiagnostics as TransitStateValidationDiagnostics
 } from "../../src/v11/shared/ports/stateSnapshots.js";
 import type {
+  UiCommitBubbleInput as RouterUiCommitBubbleInput,
+  UiCommitBubbleResult as RouterUiCommitBubbleResult,
+  UiDeleteBubbleResult as RouterUiDeleteBubbleResult,
+  UiEmitApprovalDecisionResult as RouterUiEmitApprovalDecisionResult,
+  UiEmitApproveInput as RouterUiEmitApproveInput,
+  UiEmitHumanReplyResult as RouterUiEmitHumanReplyResult,
+  UiEmitRequestReworkInput as RouterUiEmitRequestReworkInput,
+  UiEmitRequestReworkResult as RouterUiEmitRequestReworkResult,
+  UiAttachBubbleResult as RouterUiAttachBubbleResult,
+  UiMergeBubbleInput as RouterUiMergeBubbleInput,
+  UiMergeBubbleResult as RouterUiMergeBubbleResult,
+  UiOpenBubbleResult as RouterUiOpenBubbleResult,
+  UiRestartBubbleResult as RouterUiRestartBubbleResult,
+  UiStartBubbleResult as RouterUiStartBubbleResult,
+  UiStopBubbleResult as RouterUiStopBubbleResult,
+  UiUpdateBubbleReviewPolicyInput as RouterUiUpdateBubbleReviewPolicyInput,
+  UiUpdateBubbleReviewPolicyResult as RouterUiUpdateBubbleReviewPolicyResult
+} from "../../src/v11/shared/ports/uiRouter.js";
+import type {
+  UiApiErrorBody as BackendUiApiErrorBody,
+  UiBubbleDetail as BackendUiBubbleDetail,
+  UiBubbleReviewPolicy as BackendUiBubbleReviewPolicy,
+  UiBubbleSummary as BackendUiBubbleSummary,
+  UiBubbleWatchdog as BackendUiBubbleWatchdog,
+  UiEvent as BackendUiEvent,
+  UiEventsConnectedPayload as BackendUiEventsConnectedPayload,
+  UiPendingInboxItemSource as BackendUiPendingInboxItemSource,
+  UiRepoSummary as BackendUiRepoSummary,
+  UiSnapshotEvent as BackendUiSnapshotEvent,
+  UiTimelineEntry as BackendUiTimelineEntry
+} from "../../src/types/ui.js";
+import type {
+  RuntimeSessionRecord as RuntimeSessionRecord
+} from "../../src/v11/shared/ports/runtimeSessions.js";
+import type {
+  ActiveMetaReviewRuntimeDeliveryView
+} from "../../src/v11/shared/metaReview/metaReviewSnapshot.js";
+import type {
+  ProtocolEnvelopePayload
+} from "../../src/types/protocol.js";
+import type {
   BubbleLifecycleState as UiBubbleLifecycleState
 } from "../../ui/src/lib/contracts/bubbleLifecycle.js";
 import {
@@ -64,6 +149,52 @@ import type {
   UiBubbleStatusCacheReasonCode as UiBubbleStatusCacheReasonCode,
   UiBubbleStatusRemoteExecution as UiBubbleStatusRemoteExecution
 } from "../../ui/src/lib/contracts/uiRemoteExecution.js";
+import type {
+  UiApiErrorBody as UiApiErrorBody
+} from "../../ui/src/lib/contracts/uiErrors.js";
+import type {
+  UiEvent as UiEvent,
+  UiEventsConnectedPayload as UiEventsConnectedPayload,
+  UiSnapshotEvent as UiSnapshotEvent
+} from "../../ui/src/lib/contracts/uiEvents.js";
+import type {
+  UiCommitBubbleInput as UiCommitBubbleInput,
+  UiCommitBubbleResult as UiCommitBubbleResult,
+  UiDeleteBubbleResult as UiDeleteBubbleResult,
+  UiApprovalDecisionDeliverySignal as UiApprovalDecisionDeliverySignal,
+  UiApprovalDecisionDeliverySignals as UiApprovalDecisionDeliverySignals,
+  UiDeliveryAckReasonCode as UiDeliveryAckReasonCode,
+  UiDeliveryFailureReason as UiDeliveryFailureReason,
+  UiDeliveryTargetReasonCode as UiDeliveryTargetReasonCode,
+  UiEmitApprovalDecisionResult as UiEmitApprovalDecisionResult,
+  UiEmitApproveInput as UiEmitApproveInput,
+  UiEmitHumanReplyResult as UiEmitHumanReplyResult,
+  UiEmitRequestReworkInput as UiEmitRequestReworkInput,
+  UiEmitRequestReworkResult as UiEmitRequestReworkResult,
+  UiAttachBubbleResult as UiAttachBubbleResult,
+  UiMergeBubbleInput as UiMergeBubbleInput,
+  UiMergeBubbleResult as UiMergeBubbleResult,
+  UiOpenBubbleResult as UiOpenBubbleResult,
+  UiRestartBubbleResult as UiRestartBubbleResult,
+  UiStartBubbleResult as UiStartBubbleResult,
+  UiStopBubbleResult as UiStopBubbleResult,
+  UiUpdateBubbleReviewPolicyInput as UiUpdateBubbleReviewPolicyInput,
+  UiUpdateBubbleReviewPolicyResult as UiUpdateBubbleReviewPolicyResult
+} from "../../ui/src/lib/contracts/uiActions.js";
+import type {
+  UiBubbleDetail as UiBubbleDetail,
+  UiBubbleInboxItem as UiBubbleInboxItem,
+  UiBubbleReviewPolicy as UiBubbleReviewPolicy,
+  UiBubbleSummary as UiBubbleSummary,
+  UiBubbleWatchdog as UiBubbleWatchdog,
+  UiPendingInboxItemSource as UiPendingInboxItemSource,
+  UiRepoSummary as UiRepoSummary,
+  UiRuntimeSessionRecord as UiRuntimeSessionRecord,
+  UiTimelineEntry as UiTimelineEntry
+} from "../../ui/src/lib/contracts/uiReadModel.js";
+import type {
+  PairflowApiClient
+} from "../../ui/src/lib/api.js";
 
 type Assert<T extends true> = T;
 
@@ -156,6 +287,284 @@ type _uiRemoteExecutionParity =
   Assert<Equal<BackendUiBubbleRemoteExecution, UiBubbleRemoteExecution>>;
 type _transitRemoteExecutionParity =
   Assert<Equal<CanonicalUiBubbleRemoteExecution, TransitUiBubbleRemoteExecution>>;
+
+type _runtimeSessionRecordParity =
+  Assert<Equal<CanonicalUiRuntimeSessionRecord, RuntimeSessionRecord>>;
+type _uiRuntimeSessionRecordParity =
+  Assert<Equal<CanonicalUiRuntimeSessionRecord, UiRuntimeSessionRecord>>;
+type _metaReviewRuntimeDeliveryParity =
+  Assert<
+    Equal<
+      NonNullable<CanonicalUiBubbleMetaReviewSummary["runtimeDelivery"]>,
+      ActiveMetaReviewRuntimeDeliveryView
+    >
+  >;
+type _backendBubbleSummaryParity =
+  Assert<Equal<CanonicalUiBubbleSummary, BackendUiBubbleSummary>>;
+type _uiBubbleSummaryParity =
+  Assert<Equal<CanonicalUiBubbleSummary, UiBubbleSummary>>;
+type _backendBubbleDetailParity =
+  Assert<Equal<CanonicalUiBubbleDetail, BackendUiBubbleDetail>>;
+type _uiBubbleDetailParity =
+  Assert<Equal<CanonicalUiBubbleDetail, UiBubbleDetail>>;
+type _backendRepoSummaryParity =
+  Assert<Equal<CanonicalUiRepoSummary, BackendUiRepoSummary>>;
+type _uiRepoSummaryParity =
+  Assert<Equal<CanonicalUiRepoSummary, UiRepoSummary>>;
+type _backendTimelineParity =
+  Assert<Equal<CanonicalUiTimelineEntry, BackendUiTimelineEntry>>;
+type _uiTimelineParity =
+  Assert<Equal<CanonicalUiTimelineEntry, UiTimelineEntry>>;
+type _timelinePayloadProtocolTransit =
+  Assert<Equal<CanonicalUiTimelineEntry["payload"], ProtocolEnvelopePayload>>;
+type _backendWatchdogParity =
+  Assert<Equal<CanonicalUiBubbleWatchdog, BackendUiBubbleWatchdog>>;
+type _uiWatchdogParity =
+  Assert<Equal<CanonicalUiBubbleWatchdog, UiBubbleWatchdog>>;
+type _backendReviewPolicyParity =
+  Assert<Equal<CanonicalUiBubbleReviewPolicy, BackendUiBubbleReviewPolicy>>;
+type _uiReviewPolicyParity =
+  Assert<Equal<CanonicalUiBubbleReviewPolicy, UiBubbleReviewPolicy>>;
+type _pendingInboxSourceBackendParity =
+  Assert<
+    Equal<CanonicalUiPendingInboxItemSource, BackendUiPendingInboxItemSource>
+  >;
+type _uiPendingInboxSourceParity =
+  Assert<Equal<CanonicalUiPendingInboxItemSource, UiPendingInboxItemSource>>;
+type _pendingInboxItemSourceParity =
+  Assert<Equal<CanonicalUiBubbleInboxItem, CanonicalUiPendingInboxItemSource>>;
+type _uiPendingInboxItemParity =
+  Assert<Equal<CanonicalUiBubbleInboxItem, UiBubbleInboxItem>>;
+
+type _routerApproveInputParity =
+  Assert<Equal<CanonicalUiEmitApproveInput, RouterUiEmitApproveInput>>;
+type _uiApproveInputParity =
+  Assert<Equal<CanonicalUiEmitApproveInput, UiEmitApproveInput>>;
+type _routerReworkInputParity =
+  Assert<Equal<CanonicalUiEmitRequestReworkInput, RouterUiEmitRequestReworkInput>>;
+type _uiReworkInputParity =
+  Assert<Equal<CanonicalUiEmitRequestReworkInput, UiEmitRequestReworkInput>>;
+type _routerCommitInputParity =
+  Assert<Equal<CanonicalUiCommitBubbleInput, RouterUiCommitBubbleInput>>;
+type _uiCommitInputParity =
+  Assert<Equal<CanonicalUiCommitBubbleInput, UiCommitBubbleInput>>;
+type _routerMergeInputParity =
+  Assert<Equal<CanonicalUiMergeBubbleInput, RouterUiMergeBubbleInput>>;
+type _uiMergeInputParity =
+  Assert<Equal<CanonicalUiMergeBubbleInput, UiMergeBubbleInput>>;
+type _routerReviewPolicyInputParity =
+  Assert<
+    Equal<
+      CanonicalUiUpdateBubbleReviewPolicyInput,
+      RouterUiUpdateBubbleReviewPolicyInput
+    >
+  >;
+type _uiReviewPolicyInputParity =
+  Assert<
+    Equal<
+      CanonicalUiUpdateBubbleReviewPolicyInput,
+      UiUpdateBubbleReviewPolicyInput
+    >
+  >;
+type _routerApprovalResultParity =
+  Assert<
+    Equal<
+      CanonicalUiEmitApprovalDecisionResult,
+      RouterUiEmitApprovalDecisionResult
+    >
+  >;
+type _uiApprovalResultParity =
+  Assert<Equal<CanonicalUiEmitApprovalDecisionResult, UiEmitApprovalDecisionResult>>;
+type _uiApprovalDeliverySignalsParity =
+  Assert<
+    Equal<
+      CanonicalUiApprovalDecisionDeliverySignals,
+      UiApprovalDecisionDeliverySignals
+    >
+  >;
+type _uiApprovalDeliverySignalParity =
+  Assert<
+    Equal<
+      CanonicalUiApprovalDecisionDeliverySignal,
+      UiApprovalDecisionDeliverySignal
+    >
+  >;
+type _uiDeliveryFailureReasonParity =
+  Assert<Equal<CanonicalUiDeliveryFailureReason, UiDeliveryFailureReason>>;
+type _uiDeliveryTargetReasonCodeParity =
+  Assert<Equal<CanonicalUiDeliveryTargetReasonCode, UiDeliveryTargetReasonCode>>;
+type _uiDeliveryAckReasonCodeParity =
+  Assert<Equal<CanonicalUiDeliveryAckReasonCode, UiDeliveryAckReasonCode>>;
+type _routerReworkResultParity =
+  Assert<Equal<CanonicalUiEmitRequestReworkResult, RouterUiEmitRequestReworkResult>>;
+type _uiReworkResultParity =
+  Assert<Equal<CanonicalUiEmitRequestReworkResult, UiEmitRequestReworkResult>>;
+type _routerReplyResultParity =
+  Assert<Equal<CanonicalUiEmitHumanReplyResult, RouterUiEmitHumanReplyResult>>;
+type _uiReplyResultParity =
+  Assert<Equal<CanonicalUiEmitHumanReplyResult, UiEmitHumanReplyResult>>;
+type _routerCommitResultParity =
+  Assert<Equal<CanonicalUiCommitBubbleResult, RouterUiCommitBubbleResult>>;
+type _uiCommitResultParity =
+  Assert<Equal<CanonicalUiCommitBubbleResult, UiCommitBubbleResult>>;
+type _routerMergeResultParity =
+  Assert<Equal<CanonicalUiMergeBubbleResult, RouterUiMergeBubbleResult>>;
+type _uiMergeResultParity =
+  Assert<Equal<CanonicalUiMergeBubbleResult, UiMergeBubbleResult>>;
+type _routerOpenResultParity =
+  Assert<Equal<CanonicalUiOpenBubbleResult, RouterUiOpenBubbleResult>>;
+type _uiOpenResultParity =
+  Assert<Equal<CanonicalUiOpenBubbleResult, UiOpenBubbleResult>>;
+type _routerStartResultParity =
+  Assert<Equal<CanonicalUiStartBubbleResult, RouterUiStartBubbleResult>>;
+type _uiStartResultParity =
+  Assert<Equal<CanonicalUiStartBubbleResult, UiStartBubbleResult>>;
+type _routerStopResultParity =
+  Assert<Equal<CanonicalUiStopBubbleResult, RouterUiStopBubbleResult>>;
+type _uiStopResultParity =
+  Assert<Equal<CanonicalUiStopBubbleResult, UiStopBubbleResult>>;
+type _routerRestartResultParity =
+  Assert<Equal<CanonicalUiRestartBubbleResult, RouterUiRestartBubbleResult>>;
+type _uiRestartResultParity =
+  Assert<Equal<CanonicalUiRestartBubbleResult, UiRestartBubbleResult>>;
+type _routerAttachResultParity =
+  Assert<Equal<CanonicalUiAttachBubbleResult, RouterUiAttachBubbleResult>>;
+type _uiAttachResultParity =
+  Assert<Equal<CanonicalUiAttachBubbleResult, UiAttachBubbleResult>>;
+type _routerReviewPolicyResultParity =
+  Assert<
+    Equal<
+      CanonicalUiUpdateBubbleReviewPolicyResult,
+      RouterUiUpdateBubbleReviewPolicyResult
+    >
+  >;
+type _uiReviewPolicyResultParity =
+  Assert<
+    Equal<
+      CanonicalUiUpdateBubbleReviewPolicyResult,
+      UiUpdateBubbleReviewPolicyResult
+    >
+  >;
+type _routerDeleteResultParity =
+  Assert<Equal<CanonicalUiDeleteBubbleResult, RouterUiDeleteBubbleResult>>;
+type _uiDeleteResultParity =
+  Assert<Equal<CanonicalUiDeleteBubbleResult, UiDeleteBubbleResult>>;
+type _apiApproveResultParity =
+  Assert<
+    Equal<
+      Awaited<ReturnType<PairflowApiClient["approveBubble"]>>,
+      CanonicalUiEmitApprovalDecisionResult
+    >
+  >;
+type _apiRequestReworkResultParity =
+  Assert<
+    Equal<
+      Awaited<ReturnType<PairflowApiClient["requestRework"]>>,
+      CanonicalUiEmitRequestReworkResult
+    >
+  >;
+type _apiReplyResultParity =
+  Assert<
+    Equal<
+      Awaited<ReturnType<PairflowApiClient["replyBubble"]>>,
+      CanonicalUiEmitHumanReplyResult
+    >
+  >;
+type _apiResumeResultParity =
+  Assert<
+    Equal<
+      Awaited<ReturnType<PairflowApiClient["resumeBubble"]>>,
+      CanonicalUiEmitHumanReplyResult
+    >
+  >;
+type _apiCommitResultParity =
+  Assert<
+    Equal<
+      Awaited<ReturnType<PairflowApiClient["commitBubble"]>>,
+      CanonicalUiCommitBubbleResult
+    >
+  >;
+type _apiMergeResultParity =
+  Assert<
+    Equal<
+      Awaited<ReturnType<PairflowApiClient["mergeBubble"]>>,
+      CanonicalUiMergeBubbleResult
+    >
+  >;
+type _apiOpenResultParity =
+  Assert<
+    Equal<
+      Awaited<ReturnType<PairflowApiClient["openBubble"]>>,
+      CanonicalUiOpenBubbleResult
+    >
+  >;
+type _apiStartResultParity =
+  Assert<
+    Equal<
+      Awaited<ReturnType<PairflowApiClient["startBubble"]>>,
+      CanonicalUiStartBubbleResult
+    >
+  >;
+type _apiStopResultParity =
+  Assert<
+    Equal<
+      Awaited<ReturnType<PairflowApiClient["stopBubble"]>>,
+      CanonicalUiStopBubbleResult
+    >
+  >;
+type _apiRestartResultParity =
+  Assert<
+    Equal<
+      Awaited<ReturnType<PairflowApiClient["restartBubble"]>>,
+      CanonicalUiRestartBubbleResult
+    >
+  >;
+type _apiAttachResultParity =
+  Assert<
+    Equal<
+      Awaited<ReturnType<PairflowApiClient["attachBubble"]>>,
+      CanonicalUiAttachBubbleResult
+    >
+  >;
+type _apiUpdateReviewPolicyResultParity =
+  Assert<
+    Equal<
+      Awaited<ReturnType<PairflowApiClient["updateReviewPolicy"]>>,
+      CanonicalUiUpdateBubbleReviewPolicyResult
+    >
+  >;
+type _apiDeleteResultParity =
+  Assert<
+    Equal<
+      Awaited<ReturnType<PairflowApiClient["deleteBubble"]>>,
+      CanonicalUiDeleteBubbleResult
+    >
+  >;
+
+type _backendUiEventParity =
+  Assert<Equal<CanonicalUiEvent, BackendUiEvent>>;
+type _uiEventParity =
+  Assert<Equal<CanonicalUiEvent, UiEvent>>;
+type _backendConnectedPayloadParity =
+  Assert<Equal<CanonicalUiEventsConnectedPayload, BackendUiEventsConnectedPayload>>;
+type _uiConnectedPayloadParity =
+  Assert<Equal<CanonicalUiEventsConnectedPayload, UiEventsConnectedPayload>>;
+type _backendSnapshotParity =
+  Assert<Equal<CanonicalUiSnapshotEvent, BackendUiSnapshotEvent>>;
+type _uiSnapshotParity =
+  Assert<Equal<CanonicalUiSnapshotEvent, UiSnapshotEvent>>;
+
+type _backendErrorBodyParity =
+  Assert<Equal<CanonicalUiApiErrorBody, BackendUiApiErrorBody>>;
+type _uiErrorBodyParity =
+  Assert<Equal<CanonicalUiApiErrorBody, UiApiErrorBody>>;
+type _apiErrorCodeParity =
+  Assert<
+    Equal<
+      CanonicalUiApiErrorBody["error"]["code"],
+      UiApiErrorBody["error"]["code"]
+    >
+  >;
 
 const canonicalLifecycleSnapshot = [...canonicalBubbleLifecycleStates] as const;
 const runtimeLifecycleSnapshot = [...runtimeBubbleLifecycleStates] as const;

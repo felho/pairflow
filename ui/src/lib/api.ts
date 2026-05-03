@@ -8,9 +8,18 @@ import type {
   UiApiErrorBody,
   UiBubbleDetail,
   UiBubbleSummary,
+  UiCommitBubbleResult,
+  UiEmitApprovalDecisionResult,
+  UiEmitHumanReplyResult,
+  UiEmitRequestReworkResult,
+  UiMergeBubbleResult,
+  UiOpenBubbleResult,
   UiRepoSummary,
+  UiRestartBubbleResult,
+  UiStartBubbleResult,
+  UiStopBubbleResult,
   UiTimelineEntry
-} from "./types";
+} from "./types.js";
 
 interface ReposResponse {
   repos: string[];
@@ -42,7 +51,7 @@ export interface PairflowApiClient {
   startBubble: (
     repoPath: string,
     bubbleId: string
-  ) => Promise<Record<string, unknown>>;
+  ) => Promise<UiStartBubbleResult>;
   approveBubble: (
     repoPath: string,
     bubbleId: string,
@@ -51,35 +60,35 @@ export interface PairflowApiClient {
       overrideNonApprove?: boolean;
       overrideReason?: string;
     }
-  ) => Promise<Record<string, unknown>>;
+  ) => Promise<UiEmitApprovalDecisionResult>;
   requestRework: (
     repoPath: string,
     bubbleId: string,
     input: { message: string; refs?: string[] }
-  ) => Promise<Record<string, unknown>>;
+  ) => Promise<UiEmitRequestReworkResult>;
   replyBubble: (
     repoPath: string,
     bubbleId: string,
     input: { message: string; refs?: string[] }
-  ) => Promise<Record<string, unknown>>;
+  ) => Promise<UiEmitHumanReplyResult>;
   resumeBubble: (
     repoPath: string,
     bubbleId: string
-  ) => Promise<Record<string, unknown>>;
+  ) => Promise<UiEmitHumanReplyResult>;
   commitBubble: (
     repoPath: string,
     bubbleId: string,
     input: CommitActionInput
-  ) => Promise<Record<string, unknown>>;
+  ) => Promise<UiCommitBubbleResult>;
   mergeBubble: (
     repoPath: string,
     bubbleId: string,
     input: MergeActionInput
-  ) => Promise<Record<string, unknown>>;
+  ) => Promise<UiMergeBubbleResult>;
   openBubble: (
     repoPath: string,
     bubbleId: string
-  ) => Promise<Record<string, unknown>>;
+  ) => Promise<UiOpenBubbleResult>;
   attachBubble: (
     repoPath: string,
     bubbleId: string
@@ -87,11 +96,11 @@ export interface PairflowApiClient {
   stopBubble: (
     repoPath: string,
     bubbleId: string
-  ) => Promise<Record<string, unknown>>;
+  ) => Promise<UiStopBubbleResult>;
   restartBubble: (
     repoPath: string,
     bubbleId: string
-  ) => Promise<Record<string, unknown>>;
+  ) => Promise<UiRestartBubbleResult>;
   updateReviewPolicy: (
     repoPath: string,
     bubbleId: string,
@@ -243,7 +252,7 @@ export function createApiClient(baseUrl: string = ""): PairflowApiClient {
       return payload.timeline;
     },
 
-    async startBubble(repoPath: string, bubbleId: string): Promise<Record<string, unknown>> {
+    async startBubble(repoPath: string, bubbleId: string): Promise<UiStartBubbleResult> {
       return postBubbleAction(baseUrl, repoPath, bubbleId, "start");
     },
 
@@ -255,7 +264,7 @@ export function createApiClient(baseUrl: string = ""): PairflowApiClient {
         overrideNonApprove?: boolean;
         overrideReason?: string;
       }
-    ): Promise<Record<string, unknown>> {
+    ): Promise<UiEmitApprovalDecisionResult> {
       const refs = input?.refs;
       return postBubbleAction(
         baseUrl,
@@ -278,7 +287,7 @@ export function createApiClient(baseUrl: string = ""): PairflowApiClient {
       repoPath: string,
       bubbleId: string,
       input: { message: string; refs?: string[] }
-    ): Promise<Record<string, unknown>> {
+    ): Promise<UiEmitRequestReworkResult> {
       return postBubbleAction(baseUrl, repoPath, bubbleId, "request-rework", {
         message: input.message,
         ...(input.refs !== undefined ? { refs: input.refs } : {})
@@ -289,14 +298,14 @@ export function createApiClient(baseUrl: string = ""): PairflowApiClient {
       repoPath: string,
       bubbleId: string,
       input: { message: string; refs?: string[] }
-    ): Promise<Record<string, unknown>> {
+    ): Promise<UiEmitHumanReplyResult> {
       return postBubbleAction(baseUrl, repoPath, bubbleId, "reply", {
         message: input.message,
         ...(input.refs !== undefined ? { refs: input.refs } : {})
       });
     },
 
-    async resumeBubble(repoPath: string, bubbleId: string): Promise<Record<string, unknown>> {
+    async resumeBubble(repoPath: string, bubbleId: string): Promise<UiEmitHumanReplyResult> {
       return postBubbleAction(baseUrl, repoPath, bubbleId, "resume");
     },
 
@@ -304,7 +313,7 @@ export function createApiClient(baseUrl: string = ""): PairflowApiClient {
       repoPath: string,
       bubbleId: string,
       input: CommitActionInput
-    ): Promise<Record<string, unknown>> {
+    ): Promise<UiCommitBubbleResult> {
       return postBubbleAction(baseUrl, repoPath, bubbleId, "commit", {
         stageAll: input.stageAll,
         ...(input.message !== undefined ? { message: input.message } : {}),
@@ -316,7 +325,7 @@ export function createApiClient(baseUrl: string = ""): PairflowApiClient {
       repoPath: string,
       bubbleId: string,
       input: MergeActionInput
-    ): Promise<Record<string, unknown>> {
+    ): Promise<UiMergeBubbleResult> {
       return postBubbleAction(baseUrl, repoPath, bubbleId, "merge", {
         ...(input.push !== undefined ? { push: input.push } : {}),
         ...(input.deleteRemote !== undefined
@@ -325,7 +334,7 @@ export function createApiClient(baseUrl: string = ""): PairflowApiClient {
       });
     },
 
-    async openBubble(repoPath: string, bubbleId: string): Promise<Record<string, unknown>> {
+    async openBubble(repoPath: string, bubbleId: string): Promise<UiOpenBubbleResult> {
       return postBubbleAction(baseUrl, repoPath, bubbleId, "open");
     },
 
@@ -338,11 +347,11 @@ export function createApiClient(baseUrl: string = ""): PairflowApiClient {
       );
     },
 
-    async stopBubble(repoPath: string, bubbleId: string): Promise<Record<string, unknown>> {
+    async stopBubble(repoPath: string, bubbleId: string): Promise<UiStopBubbleResult> {
       return postBubbleAction(baseUrl, repoPath, bubbleId, "stop");
     },
 
-    async restartBubble(repoPath: string, bubbleId: string): Promise<Record<string, unknown>> {
+    async restartBubble(repoPath: string, bubbleId: string): Promise<UiRestartBubbleResult> {
       return postBubbleAction(baseUrl, repoPath, bubbleId, "restart");
     },
 

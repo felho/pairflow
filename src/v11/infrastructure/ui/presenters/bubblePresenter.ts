@@ -11,7 +11,7 @@ import type {
   UiBubbleSummary,
   UiRepoSummary,
   UiRuntimeHealth
-} from "../../../../types/ui.js";
+} from "../../../../contracts/ui/uiReadModel.js";
 import { mapPendingInboxItems } from "../../../../types/ui.js";
 import {
   isRuntimeSessionExpectedState,

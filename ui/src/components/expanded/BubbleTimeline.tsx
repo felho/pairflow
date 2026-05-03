@@ -225,10 +225,6 @@ function isCleanPass(entry: UiTimelineEntry): boolean {
   if (entry.type !== "PASS") {
     return false;
   }
-  const passIntent = entry.payload.pass_intent;
-  if (passIntent === "no_findings") {
-    return true;
-  }
   const findings = entry.payload.findings;
   if (Array.isArray(findings) && findings.length === 0) {
     return true;
@@ -241,7 +237,7 @@ function extractDecisionTag(entry: UiTimelineEntry): FindingTag | null {
     return null;
   }
   const decision = entry.payload.decision;
-  if (decision === "revise") {
+  if (decision === "rework") {
     return {
       label: "rework",
       style: "border-rose-500/20 bg-rose-500/10 text-rose-500"
@@ -329,7 +325,7 @@ function resolveRole(entry: UiTimelineEntry): RoleKind {
   if (type === "HUMAN_QUESTION" || type === "HUMAN_REPLY") {
     return "human";
   }
-  if (type === "CONVERGENCE" || type === "DONE_PACKAGE") {
+  if (type === "CONVERGENCE") {
     return "system";
   }
   const sender = entry.sender.toLowerCase();

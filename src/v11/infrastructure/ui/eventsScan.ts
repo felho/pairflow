@@ -4,7 +4,10 @@ import { join } from "node:path";
 import { getBubblePaths } from "../artifact/bubble/paths.js";
 import { pathExists } from "../foundation/fs/pathExists.js";
 import { getWatchdogPaneActivityPath } from "../artifact/watchdog/watchdogPaneActivityStore.js";
-import type { UiEvent, UiRepoUpdatedEvent } from "../../../types/ui.js";
+import type {
+  UiEvent,
+  UiRepoUpdatedEvent
+} from "../../../contracts/ui/uiEvents.js";
 import { presentBubbleSummaryFromListEntry, presentRepoSummary } from "./presenters/bubblePresenter.js";
 import type { BubbleFingerprintSnapshot, RepoDiff, RepoSnapshot } from "./eventsState.js";
 import { bubbleFingerprint, listBubbleIds, sameRepoSummary } from "./eventsFingerprint.js";

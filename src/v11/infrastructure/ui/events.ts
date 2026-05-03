@@ -2,7 +2,7 @@ import type { FSWatcher } from "node:fs";
 import type {
   UiEvent,
   UiSnapshotEvent
-} from "../../../types/ui.js";
+} from "../../../contracts/ui/uiEvents.js";
 import type { UiEventsSubscriptionInput } from "./eventsTypes.js";
 import {
   normalizeRepoPathForQueue

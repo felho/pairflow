@@ -1,4 +1,4 @@
-import type { UiEvent } from "../../../types/ui.js";
+import type { UiEvent } from "../../../contracts/ui/uiEvents.js";
 
 export interface UiEventFilter {
   repos?: Set<string> | undefined;

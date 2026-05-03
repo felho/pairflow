@@ -1,6 +1,9 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 
-import type { UiEvent, UiEventsConnectedPayload } from "../../../types/ui.js";
+import type {
+  UiEvent,
+  UiEventsConnectedPayload
+} from "../../../contracts/ui/uiEvents.js";
 import type { UiEventsBroker } from "./events.js";
 import type { UiRepoScope } from "./repoScope.js";
 import { UiRepoScopeError, resolveScopedRepoPath } from "./repoScope.js";

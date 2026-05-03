@@ -4,30 +4,88 @@ import {
 import type {
   BubbleLifecycleState
 } from "./contracts/bubbleLifecycle.js";
-import type { StateValidationDiagnostics } from "./contracts/stateValidation.js";
-import type { UiBubbleRemoteExecution } from "./contracts/uiRemoteExecution.js";
-import type { MetaReviewGateRoute as BackendMetaReviewGateRoute } from "../../../src/v11/shared/metaReviewGate/metaReviewGateTypes.js";
+import type {
+  UiBubbleReviewPolicy,
+  UiBubbleSummary
+} from "../../../src/contracts/ui/uiReadModel.js";
+import type {
+  MetaReviewQualityPreset as CanonicalMetaReviewQualityPreset,
+  UiCommitBubbleInput,
+  UiMergeBubbleInput,
+  UiUpdateBubbleReviewPolicyInput
+} from "../../../src/contracts/ui/uiActions.js";
+
 export { bubbleLifecycleStates };
 export type { BubbleLifecycleState };
 export type {
   UiBubbleListRemoteExecution,
+  UiBubbleRemoteCacheStatus,
+  UiBubbleRemoteExecution,
+  UiBubbleStatusCacheReasonCode,
   UiBubbleStatusRemoteExecution
 } from "./contracts/uiRemoteExecution.js";
 export type {
   DeleteBubbleArtifacts as BubbleDeleteArtifacts,
   DeleteBubbleResult as BubbleDeleteResult
 } from "../../../src/contracts/ui/deleteBubble.js";
-export const protocolMessageTypes = [
-  "TASK",
-  "PASS",
-  "HUMAN_QUESTION",
-  "HUMAN_REPLY",
-  "CONVERGENCE",
-  "APPROVAL_REQUEST",
-  "APPROVAL_DECISION",
-  "DONE_PACKAGE"
-] as const;
-export type ProtocolMessageType = (typeof protocolMessageTypes)[number];
+export type {
+  UiApiErrorBody
+} from "../../../src/contracts/ui/uiErrors.js";
+export type {
+  AttachBubbleResult as AttachActionResult,
+  UiAttachBubbleResult,
+  UiCommitBubbleResult,
+  UiDeleteBubbleInput,
+  UiDeleteBubbleResult,
+  UiEmitApprovalDecisionResult,
+  UiEmitApproveInput,
+  UiEmitHumanReplyInput,
+  UiEmitHumanReplyResult,
+  UiEmitRequestReworkInput,
+  UiEmitRequestReworkResult,
+  UiMergeBubbleResult,
+  UiOpenBubbleResult,
+  UiRestartBubbleResult,
+  UiStartBubbleResult,
+  UiStopBubbleResult,
+  UiUpdateBubbleReviewPolicyResult as UpdateReviewPolicyActionResult
+} from "../../../src/contracts/ui/uiActions.js";
+export type {
+  ProtocolMessageType
+} from "../../../src/types/protocol.js";
+export type {
+  UiBubbleRemovedEvent,
+  UiBubbleUpdatedEvent,
+  UiEvent,
+  UiEventBase,
+  UiEventsConnectedPayload,
+  UiRepoRemovedEvent,
+  UiRepoUpdatedEvent,
+  UiSnapshotEvent,
+  UiSseEventName
+} from "../../../src/contracts/ui/uiEvents.js";
+export type {
+  UiApprovalRequestGateRoute,
+  UiBubbleAttention,
+  UiBubbleAttentionCode,
+  UiBubbleDetail,
+  UiBubbleInbox,
+  UiBubbleInboxItem,
+  UiBubbleMetaReviewSummary,
+  UiBubbleReviewPolicy,
+  UiBubbleStateCounts,
+  UiBubbleSummary,
+  UiBubbleTranscriptSummary,
+  UiBubbleWatchdog,
+  UiPendingInboxCounts,
+  UiPendingInboxItemSource,
+  UiPendingInboxItemType,
+  UiRepoSummary,
+  UiRuntimeHealth,
+  UiRuntimeMetaReviewerPaneBinding,
+  UiRuntimeSessionRecord,
+  UiTimelineEntry
+} from "../../../src/contracts/ui/uiReadModel.js";
 
 export const bubbleActionKinds = [
   "start",
@@ -46,121 +104,25 @@ export const bubbleActionKinds = [
 ] as const;
 export type BubbleActionKind = (typeof bubbleActionKinds)[number];
 
-export interface RuntimeSessionRecord {
-  bubbleId: string;
-  repoPath: string;
-  worktreePath: string;
-  tmuxSessionName: string;
-  updatedAt: string;
-  metaReviewerPane?: {
-    role: "meta-reviewer";
-    paneIndex: number;
-    active: boolean;
-    runId: string | null;
-    updatedAt: string;
-  };
-}
-
-export interface UiRuntimeHealth {
-  expected: boolean;
-  present: boolean;
-  stale: boolean;
-}
-
-export type UiBubbleAttentionCode =
-  | "state_invalid"
-  | "runtime_missing"
-  | "startup_incomplete"
-  | "runtime_mismatch"
-  | "no_session"
-  | "pane_unreadable"
-  | "pane_activity_invalid"
-  | "watchdog_expired"
-  | "quiet_pane";
-
-export interface UiBubbleAttention {
-  code: UiBubbleAttentionCode;
-  severity: "warning" | "critical";
-  label: string;
-  detail?: string;
-}
-
-export interface UiPendingInboxCounts {
-  humanQuestions: number;
-  approvalRequests: number;
-  total: number;
-}
-
-export type UiPendingInboxItemType = "HUMAN_QUESTION" | "APPROVAL_REQUEST";
-export type UiApprovalRequestRecommendation = "rework" | "approve" | "inconclusive";
-export const uiApprovalRequestGateRoutes = [
-  "meta_review_running",
-  "auto_rework",
-  "human_gate_sticky_bypass",
-  "human_gate_approve",
-  "human_gate_budget_exhausted",
-  "human_gate_threshold_not_met",
-  "human_gate_threshold_unresolved",
-  "human_gate_inconclusive",
-  "human_gate_run_failed",
-  "human_gate_dispatch_failed"
-] as const satisfies readonly BackendMetaReviewGateRoute[];
-export type UiApprovalRequestGateRoute = (typeof uiApprovalRequestGateRoutes)[number];
-
-export interface UiBubbleInboxItem {
-  envelopeId: string;
-  type: UiPendingInboxItemType;
-  ts: string;
-  round: number;
-  sender: string;
-  summary: string;
-  refs: string[];
-  latestRecommendation?: UiApprovalRequestRecommendation;
-  gateRoute?: UiApprovalRequestGateRoute;
-}
-
-export interface UiBubbleInbox {
-  pending: UiPendingInboxCounts;
-  items: UiBubbleInboxItem[];
-}
-
-export interface UiBubbleWatchdog {
-  monitored: boolean;
-  monitoredAgent: string | null;
-  timeoutMinutes: number;
-  referenceTimestamp: string | null;
-  deadlineTimestamp: string | null;
-  remainingSeconds: number | null;
-  expired: boolean;
-}
-
-export interface UiBubbleTranscriptSummary {
-  totalMessages: number;
-  lastMessageType: ProtocolMessageType | null;
-  lastMessageTs: string | null;
-  lastMessageId: string | null;
-}
-
-export type MetaReviewRuntimeDeliveryStatus = "confirmed" | "uncertain" | "failed";
-export type BubbleReviewAutoReworkSeverity = "P1" | "P2" | "P3";
-
-export interface UiBubbleMetaReviewSummary {
-  actor: "meta-reviewer";
-  authorityActive: boolean;
-  consecutiveCleanRuns: number;
-  runtimeDelivery: {
-    status: MetaReviewRuntimeDeliveryStatus;
-    reasonCode: string | null;
-    message: string;
-    observedAt: string;
-    observedForHandoffId: string | null;
-    observedForRound: number | null;
-  } | null;
-}
-
-export type BubbleReviewLoopMode = "full" | "meta_only";
-export type BubbleReviewSupportStatus = "enabled" | "guarded";
-export type MetaReviewQualityPreset = "P1" | "P2" | "P3" | "P3+1" | "P3+2";
+export type BubbleReviewAutoReworkSeverity =
+  UiBubbleReviewPolicy["reviewer_blocking_min_severity"];
+export type BubbleReviewLoopMode =
+  UiBubbleReviewPolicy["requested_loop_mode"];
+export type BubbleReviewSupportStatus =
+  UiBubbleReviewPolicy["support_status"];
+export type MetaReviewQualityPreset = CanonicalMetaReviewQualityPreset;
+export type CommitActionInput = Omit<
+  UiCommitBubbleInput,
+  "bubbleId" | "repoPath" | "cwd" | "now"
+>;
+export type MergeActionInput = Omit<
+  UiMergeBubbleInput,
+  "bubbleId" | "repoPath" | "cwd" | "now"
+>;
+export type UpdateReviewPolicyActionInput = Omit<
+  UiUpdateBubbleReviewPolicyInput,
+  "bubbleId" | "repoPath" | "cwd" | "now"
+>;
 export type MetaReviewQualityPresetState =
   | {
       kind: "supported";
@@ -172,173 +134,10 @@ export type MetaReviewQualityPresetState =
       consecutiveCleanRunsRequired: number;
     };
 
-export interface UiBubbleReviewPolicy {
-  requested_loop_mode: BubbleReviewLoopMode;
-  effective_loop_mode: BubbleReviewLoopMode;
-  support_status: BubbleReviewSupportStatus;
-  reviewer_blocking_min_severity: BubbleReviewAutoReworkSeverity;
-  meta_review_auto_rework_min_severity: BubbleReviewAutoReworkSeverity;
-  meta_review_consecutive_clean_runs_required: number;
-  blocked_reason_code?: string;
-  blocked_prerequisites?: string[];
-  provenance_note?: string;
-}
-
-export interface UiBubbleSummary {
-  bubbleId: string;
-  repoPath: string;
-  worktreePath: string;
-  state: BubbleLifecycleState;
-  round: number;
-  activeAgent: string | null;
-  activeRole: string | null;
-  activeSince: string | null;
-  lastCommandAt: string | null;
-  stateValidation: StateValidationDiagnostics | null;
-  runtimeSession: RuntimeSessionRecord | null;
-  runtime: UiRuntimeHealth;
-  attention: UiBubbleAttention | null;
-  reviewPolicy: UiBubbleReviewPolicy | null;
-  metaReview: UiBubbleMetaReviewSummary;
-  remoteExecution?: UiBubbleRemoteExecution;
-}
-
-export interface UiRepoSummary {
-  repoPath: string;
-  total: number;
-  byState: {
-    CREATED: number;
-    PREPARING_WORKSPACE: number;
-    RUNNING: number;
-    WAITING_HUMAN: number;
-    READY_FOR_HUMAN_APPROVAL: number;
-    APPROVED_FOR_COMMIT: number;
-    COMMITTED: number;
-    DONE: number;
-    FAILED: number;
-    CANCELLED: number;
-  };
-  runtimeSessions: {
-    registered: number;
-    stale: number;
-  };
-  remoteExecutionSummary?: {
-    createdNotStarted: number;
-    unavailableStarted: number;
-    refreshedThisRun?: boolean;
-  };
-}
-
-export interface UiApiErrorBody {
-  error: {
-    code: "bad_request" | "not_found" | "conflict" | "internal_error";
-    message: string;
-    details?: Record<string, unknown>;
-  };
-}
-
-export interface UiBubbleDetail extends UiBubbleSummary {
-  bubbleToml: string | null;
-  watchdog: UiBubbleWatchdog;
-  pendingInboxItems: UiPendingInboxCounts;
-  inbox: UiBubbleInbox;
-  transcript: UiBubbleTranscriptSummary;
-}
-
-export interface UiTimelineEntry {
-  id: string;
-  ts: string;
-  round: number;
-  type: ProtocolMessageType;
-  sender: string;
-  recipient: string;
-  payload: Record<string, unknown>;
-  refs: string[];
-}
-
-export interface UiEventBase {
-  id: number;
-  ts: string;
-}
-
-export interface UiBubbleUpdatedEvent extends UiEventBase {
-  type: "bubble.updated";
-  repoPath: string;
-  bubbleId: string;
-  bubble: UiBubbleSummary;
-}
-
-export interface UiBubbleRemovedEvent extends UiEventBase {
-  type: "bubble.removed";
-  repoPath: string;
-  bubbleId: string;
-}
-
-export interface UiRepoUpdatedEvent extends UiEventBase {
-  type: "repo.updated";
-  repoPath: string;
-  repo: UiRepoSummary;
-}
-
-export interface UiSnapshotEvent {
-  id: number;
-  ts: string;
-  type: "snapshot";
-  repos: UiRepoSummary[];
-  bubbles: UiBubbleSummary[];
-}
-
-export type UiEvent =
-  | UiBubbleUpdatedEvent
-  | UiBubbleRemovedEvent
-  | UiRepoUpdatedEvent
-  | UiSnapshotEvent;
-
 export type ConnectionStatus = "idle" | "connecting" | "connected" | "stale" | "fallback";
 
 export interface BubbleCardModel extends UiBubbleSummary {
   hasRuntimeSession: boolean;
-}
-
-export interface CommitActionInput {
-  stageAll: boolean;
-  message?: string;
-  refs?: string[];
-}
-
-export interface MergeActionInput {
-  push?: boolean;
-  deleteRemote?: boolean;
-}
-
-export interface UpdateReviewPolicyActionInput {
-  reviewLoopMode: BubbleReviewLoopMode;
-  reviewBlockingMinSeverity?: BubbleReviewAutoReworkSeverity;
-  metaReviewQualityPreset?: MetaReviewQualityPreset;
-  expectedBubbleToml?: string;
-}
-
-export interface UpdateReviewPolicyActionResult {
-  kind: "review_policy_updated";
-  bubbleId: string;
-  reviewPolicy: UiBubbleReviewPolicy;
-  previousRequestedLoopMode: BubbleReviewLoopMode;
-  nextRequestedLoopMode: BubbleReviewLoopMode;
-  activationChange: "none";
-  bubbleToml: string;
-}
-
-export interface AttachActionResult {
-  bubbleId: string;
-  tmuxSessionName: string;
-  launcherRequested: string;
-  launcherUsed: string;
-  attachCommand?: string;
-  diagnostics?: Array<{
-    code: string;
-    message: string;
-    context?: Record<string, unknown>;
-  }>;
 }
 
 export interface BubblePosition {

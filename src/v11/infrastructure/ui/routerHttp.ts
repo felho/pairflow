@@ -1,3 +1,4 @@
+export type { UiApiErrorBody } from "../../../contracts/ui/uiErrors.js";
 export {
   type AttachBubbleErrorLike,
   type BubbleCommitErrorLike,

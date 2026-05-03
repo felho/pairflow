@@ -1,6 +1,7 @@
-import { join } from "node:path";
-
-import type { UiBubbleDetail } from "../../../types/ui.js";
+import type {
+  UiBubbleDetail,
+  UiBubbleReviewPolicy
+} from "../../../contracts/ui/uiReadModel.js";
 import type { BubbleReviewPolicyRuntimeView } from "../../../types/bubble.js";
 import { REVIEW_POLICY_WRITE_CONFLICT } from "../../shared/reviewPolicy/updateBubbleReviewPolicy.js";
 import {
@@ -8,8 +9,7 @@ import {
   UiBubbleReviewPolicyConflictError,
   UiBubbleReviewPolicyStateConflictError
 } from "../../defaults/ui/updateBubbleReviewPolicyForUi.js";
-import type { RuntimeSessionRecord } from "../executor/sessionRuntime/runtimeSessionsRegistry.js";
-import { presentBubbleDetail } from "./presenters/bubblePresenter.js";
+import { loadBubbleDetail } from "./routerBubbleDetail.js";
 import type { UiApiError, UiRouterDependencies } from "./routerContracts.js";
 import type { CreateUiRouterInput } from "./routerContracts.js";
 import {
@@ -34,47 +34,10 @@ export interface RouterActionMappingEnvironment {
   dependencies: UiRouterDependencies;
 }
 
-async function loadRuntimeSession(
-  dependencies: UiRouterDependencies,
-  repoPath: string,
-  bubbleId: string
-): Promise<RuntimeSessionRecord | null> {
-  const sessionsPath = join(repoPath, ".pairflow", "runtime", "sessions.json");
-  const sessions = await dependencies.readRuntimeSessionsRegistry(sessionsPath, {
-    allowMissing: true
-  });
-  return sessions[bubbleId] ?? null;
-}
-
-async function loadBubbleDetail(input: {
-  environment: RouterActionMappingEnvironment;
-  repoPath: string;
-  bubbleId: string;
-}): Promise<UiBubbleDetail> {
-  const { environment, repoPath, bubbleId } = input;
-  const [status, inbox, runtimeSession] = await Promise.all([
-    environment.dependencies.getBubbleStatus({
-      bubbleId,
-      repoPath,
-      ...(environment.input.cwd !== undefined ? { cwd: environment.input.cwd } : {})
-    }),
-    environment.dependencies.getBubbleInbox({
-      bubbleId,
-      repoPath,
-      ...(environment.input.cwd !== undefined ? { cwd: environment.input.cwd } : {})
-    }),
-    loadRuntimeSession(environment.dependencies, repoPath, bubbleId)
-  ]);
-  const now = new Date();
-  return {
-    ...presentBubbleDetail({
-      status,
-      inbox,
-      runtimeSession,
-      now
-    }),
-    repoPath
-  };
+function toUiBubbleReviewPolicy(
+  reviewPolicy: BubbleReviewPolicyRuntimeView
+): UiBubbleReviewPolicy {
+  return reviewPolicy;
 }
 
 function mergeBubbleDetailWithReviewPolicyConflict(
@@ -92,7 +55,7 @@ function mergeBubbleDetailWithReviewPolicyConflict(
   return {
     ...bubble,
     bubbleToml: reviewPolicyConflict.bubbleToml,
-    reviewPolicy: reviewPolicyConflict.reviewPolicy
+    reviewPolicy: toUiBubbleReviewPolicy(reviewPolicyConflict.reviewPolicy)
   };
 }
 

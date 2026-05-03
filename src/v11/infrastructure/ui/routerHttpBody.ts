@@ -2,13 +2,17 @@ import type { IncomingMessage } from "node:http";
 import {
   isBubbleReviewAutoReworkSeverity,
   isBubbleReviewLoopMode,
-  type BubbleReviewAutoReworkSeverity,
-  type BubbleReviewLoopMode
 } from "../../../types/bubble.js";
 import {
-  isMetaReviewQualityPreset,
-  type MetaReviewQualityPreset
+  isMetaReviewQualityPreset
 } from "../../shared/reviewPolicy/updateBubbleReviewPolicy.js";
+import type {
+  UiCommitBubbleInput,
+  UiEmitApproveInput,
+  UiMergeBubbleInput,
+  UiDeleteBubbleInput,
+  UiUpdateBubbleReviewPolicyInput
+} from "../../../contracts/ui/uiActions.js";
 import { badRequest, throwApiError } from "./routerHttpErrors.js";
 
 const maxJsonBodyBytes = 1_000_000;
@@ -63,9 +67,9 @@ export function parseOptionalRefs(body: unknown): string[] {
 }
 
 export function parseApproveBody(body: unknown): {
-  refs: string[];
+  refs: NonNullable<UiEmitApproveInput["refs"]>;
   overrideNonApprove: boolean;
-  overrideReason?: string | undefined;
+  overrideReason?: UiEmitApproveInput["overrideReason"];
 } {
   const refs = parseOptionalRefs(body);
   if (typeof body !== "object" || body === null || Array.isArray(body)) {
@@ -103,9 +107,9 @@ export function parseApproveBody(body: unknown): {
 }
 
 export function parseCommitBody(body: unknown): {
-  stageAll: boolean;
-  message?: string | undefined;
-  refs?: string[] | undefined;
+  stageAll: UiCommitBubbleInput["stageAll"];
+  message?: UiCommitBubbleInput["message"];
+  refs?: UiCommitBubbleInput["refs"];
 } {
   if (typeof body !== "object" || body === null || Array.isArray(body)) {
     throwApiError(badRequest("Commit request body must be a JSON object."));
@@ -144,8 +148,8 @@ export function parseCommitBody(body: unknown): {
 }
 
 export function parseMergeBody(body: unknown): {
-  push?: boolean | undefined;
-  deleteRemote?: boolean | undefined;
+  push?: UiMergeBubbleInput["push"];
+  deleteRemote?: UiMergeBubbleInput["deleteRemote"];
 } {
   if (body === undefined) {
     return {};
@@ -176,7 +180,7 @@ export function parseMergeBody(body: unknown): {
 }
 
 export function parseDeleteBody(body: unknown): {
-  force?: boolean | undefined;
+  force?: UiDeleteBubbleInput["force"];
 } {
   if (body === undefined) {
     return {};
@@ -198,10 +202,10 @@ export function parseDeleteBody(body: unknown): {
 }
 
 export function parseReviewPolicyBody(body: unknown): {
-  reviewLoopMode: BubbleReviewLoopMode;
-  reviewBlockingMinSeverity?: BubbleReviewAutoReworkSeverity | undefined;
-  metaReviewQualityPreset?: MetaReviewQualityPreset | undefined;
-  expectedBubbleToml?: string | undefined;
+  reviewLoopMode: UiUpdateBubbleReviewPolicyInput["reviewLoopMode"];
+  reviewBlockingMinSeverity?: UiUpdateBubbleReviewPolicyInput["reviewBlockingMinSeverity"];
+  metaReviewQualityPreset?: UiUpdateBubbleReviewPolicyInput["metaReviewQualityPreset"];
+  expectedBubbleToml?: UiUpdateBubbleReviewPolicyInput["expectedBubbleToml"];
 } {
   if (typeof body !== "object" || body === null || Array.isArray(body)) {
     throwApiError(
