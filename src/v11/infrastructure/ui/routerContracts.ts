@@ -30,6 +30,12 @@ export interface UiRouterEnvironment {
   routerCwd: string;
 }
 
+export interface UiRouterRequestContext {
+  repoScope: UiRepoScope;
+  cwd?: string | undefined;
+  routerCwd: string;
+}
+
 export interface BubbleActionContext {
   bubbleId: string;
   repoPath: string;

@@ -10,8 +10,8 @@ import {
   UiBubbleReviewPolicyStateConflictError
 } from "../../defaults/ui/updateBubbleReviewPolicyForUi.js";
 import { loadBubbleDetail } from "./routerBubbleDetail.js";
-import type { UiApiError, UiRouterDependencies } from "./routerContracts.js";
-import type { CreateUiRouterInput } from "./routerContracts.js";
+import type { UiBubbleConflictEnrichmentDependencies } from "../../shared/ports/uiRouter.js";
+import type { UiApiError } from "./routerContracts.js";
 import {
   asErrorMessage,
   badRequest,
@@ -30,8 +30,10 @@ import {
 } from "./routerHttp.js";
 
 export interface RouterActionMappingEnvironment {
-  input: CreateUiRouterInput;
-  dependencies: UiRouterDependencies;
+  requestContext: {
+    cwd?: string | undefined;
+  };
+  dependencies: UiBubbleConflictEnrichmentDependencies;
 }
 
 function toUiBubbleReviewPolicy(

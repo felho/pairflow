@@ -5,7 +5,13 @@ import { loadBubbleDetail } from "./routerBubbleDetail.js";
 import { mapActionErrorToApiError } from "./routerActionErrorMapping.js";
 import { UiRepoScopeError, resolveScopedRepoPath } from "./repoScope.js";
 import { dispatchBubbleAction } from "./routerActionDispatch.js";
-import type { CreateUiRouterInput, UiRouterDependencies } from "./routerContracts.js";
+import type {
+  UiBubbleActionDispatchDependencies,
+  UiBubbleDetailDependencies,
+  UiBubbleListDependencies,
+  UiBubbleTimelineDependencies
+} from "../../shared/ports/uiRouter.js";
+import type { UiRouterRequestContext } from "./routerContracts.js";
 import {
   badRequest,
   notFound,
@@ -14,9 +20,12 @@ import {
 } from "./routerHttp.js";
 
 interface RouterActionEnvironment {
-  input: CreateUiRouterInput;
-  dependencies: UiRouterDependencies;
-  routerCwd: string;
+  requestContext: UiRouterRequestContext;
+  dependencies:
+    & UiBubbleActionDispatchDependencies
+    & UiBubbleDetailDependencies
+    & UiBubbleListDependencies
+    & UiBubbleTimelineDependencies;
 }
 
 async function resolveRepoFromUrl(
@@ -27,10 +36,10 @@ async function resolveRepoFromUrl(
   try {
     const repoParam = url.searchParams.get("repo") ?? undefined;
     return await resolveScopedRepoPath({
-      scope: environment.input.repoScope,
+      scope: environment.requestContext.repoScope,
       repoParam,
       requireExplicitWhenMultiRepo: options.requireExplicitWhenMultiRepo,
-      cwd: environment.routerCwd
+      cwd: environment.requestContext.routerCwd
     });
   } catch (error) {
     if (error instanceof UiRepoScopeError) {
@@ -104,8 +113,8 @@ export async function handleBubbleResourceRequest(input: {
     const timeline = await input.environment.dependencies.readBubbleTimeline({
       bubbleId: input.bubbleId,
       repoPath,
-      ...(input.environment.input.cwd !== undefined
-        ? { cwd: input.environment.input.cwd }
+      ...(input.environment.requestContext.cwd !== undefined
+        ? { cwd: input.environment.requestContext.cwd }
         : {})
     });
     return {
@@ -121,7 +130,12 @@ export async function handleBubbleResourceRequest(input: {
     status: 200,
     body: {
       bubble: await loadBubbleDetail({
-        environment: input.environment,
+        environment: {
+          requestContext: {
+            cwd: input.environment.requestContext.cwd
+          },
+          dependencies: input.environment.dependencies
+        },
         repoPath,
         bubbleId: input.bubbleId
       })
@@ -138,8 +152,8 @@ export async function handleBubbleListRequest(input: {
   const view = await input.environment.dependencies.listBubbles({
     repoPath,
     ...(refresh !== undefined ? { refresh } : {}),
-    ...(input.environment.input.cwd !== undefined
-      ? { cwd: input.environment.input.cwd }
+    ...(input.environment.requestContext.cwd !== undefined
+      ? { cwd: input.environment.requestContext.cwd }
       : {})
   });
   const presented = presentBubbleList(view);

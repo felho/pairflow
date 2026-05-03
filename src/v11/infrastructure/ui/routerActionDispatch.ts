@@ -1,7 +1,7 @@
 import type {
   AttachBubbleResult,
-  UiRouterEnvironment
-} from "./routerContracts.js";
+  UiBubbleActionDispatchDependencies
+} from "../../shared/ports/uiRouter.js";
 import {
   badRequest,
   parseApproveBody,
@@ -15,11 +15,18 @@ import {
 } from "./routerHttp.js";
 
 interface BubbleActionDispatchInput {
-  environment: UiRouterEnvironment;
+  environment: BubbleActionDispatchEnvironment;
   action: string;
   bubbleId: string;
   repoPath: string;
   body: unknown;
+}
+
+interface BubbleActionDispatchEnvironment {
+  requestContext: {
+    cwd?: string | undefined;
+  };
+  dependencies: UiBubbleActionDispatchDependencies;
 }
 
 export interface BubbleActionResponse {
@@ -27,14 +34,14 @@ export interface BubbleActionResponse {
   result: unknown;
 }
 
-function resolveOptionalCwd(environment: UiRouterEnvironment) {
-  return environment.input.cwd !== undefined
-    ? { cwd: environment.input.cwd }
+function resolveOptionalCwd(environment: BubbleActionDispatchEnvironment) {
+  return environment.requestContext.cwd !== undefined
+    ? { cwd: environment.requestContext.cwd }
     : {};
 }
 
 async function handleAttachAction(
-  environment: UiRouterEnvironment,
+  environment: BubbleActionDispatchEnvironment,
   repoPath: string,
   bubbleId: string
 ): Promise<AttachBubbleResult> {
