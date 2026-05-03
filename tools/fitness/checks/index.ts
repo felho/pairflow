@@ -8,6 +8,7 @@ import { buildMutationCheckReport } from "./mutation.js";
 import { createNotImplementedCheckReport } from "./not-implemented.js";
 import { buildTransitionCheckReport } from "./transition.js";
 import { buildUiContractBoundaryCheckReport } from "./ui-contract-boundary.js";
+import { buildUiRouterPortBoundaryCheckReport } from "./ui-router-port-boundary.js";
 
 import type { FitnessPolicy, FitnessPolicyCheck, FitnessReportCheck } from "../types.js";
 
@@ -83,6 +84,13 @@ export async function buildCheckReport({
   }
   if (effectiveCheck.id === "ui_contract_boundary") {
     return buildUiContractBoundaryCheckReport({
+      check: effectiveCheck,
+      repoRoot,
+      fallbackMode
+    });
+  }
+  if (effectiveCheck.id === "ui_router_port_boundary") {
+    return buildUiRouterPortBoundaryCheckReport({
       check: effectiveCheck,
       repoRoot,
       fallbackMode
