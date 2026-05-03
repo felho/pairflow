@@ -187,9 +187,9 @@ describe("plan watch command", () => {
 
     expect(artifactText).toContain("plan watch: runner artifacts");
     expect(artifactText).toContain("dir=.pairflow/runtime/plan-watch/agent-runner/run");
-    expect(eventText).toBe('runner: command started command="git status"');
+    expect(eventText).toBeNull();
     expect(timelineText).toBe(
-      'runner: completed status=settled_checkpoint reason=PLAN_COMPLETE summary="done"'
+      "runner completed: PLAN_COMPLETE - done"
     );
   });
 

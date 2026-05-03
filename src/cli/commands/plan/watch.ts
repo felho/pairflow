@@ -377,46 +377,31 @@ export function renderPlanWatchRunnerTimelineLine(line: string): string | null {
   if (!isRecord(row) || typeof row.type !== "string") {
     return null;
   }
-  if (row.type === "command_started") {
-    return [
-      "runner: command started",
-      `command=${quoteValue(shorten(asString(row.command) ?? "unknown"))}`
-    ].join(" ");
-  }
-  if (row.type === "command_completed") {
-    return [
-      "runner: command completed",
-      `exit=${asNumberOrNull(row.exitCode) ?? "null"}`,
-      `lines=${asNumberOrNull(row.outputLineCount) ?? "unknown"}`,
-      `command=${quoteValue(shorten(asString(row.command) ?? "unknown"))}`
-    ].join(" ");
+  if (row.type === "command_started" || row.type === "command_completed") {
+    return null;
   }
   if (row.type === "runner_status") {
     const output = parseRunnerStatusSummary(asString(row.summary));
     if (output !== undefined) {
-      return [
-        "runner: status",
-        output.status !== undefined ? `status=${output.status}` : undefined,
-        output.reason_code !== undefined ? `reason=${output.reason_code}` : undefined,
-        output.summary !== undefined
-          ? `summary=${quoteValue(shorten(output.summary, 180))}`
-          : undefined
-      ].filter(isDefined).join(" ");
+      return renderRunnerMessage({
+        label: "runner",
+        reason: output.reason_code,
+        summary: output.summary,
+        status: output.status
+      });
     }
-    return [
-      "runner: status",
-      `summary=${quoteValue(shorten(asString(row.summary) ?? ""))}`
-    ].join(" ");
+    return renderRunnerMessage({
+      label: "runner",
+      summary: asString(row.summary)
+    });
   }
   if (row.type === "runner_completed") {
-    return [
-      "runner: completed",
-      `status=${asString(row.status) ?? "unknown"}`,
-      `reason=${asString(row.reasonCode) ?? "unknown"}`,
-      asString(row.summary) !== undefined
-        ? `summary=${quoteValue(shorten(asString(row.summary) ?? "", 180))}`
-        : undefined
-    ].filter(isDefined).join(" ");
+    return renderRunnerMessage({
+      label: "runner completed",
+      reason: asString(row.reasonCode),
+      summary: asString(row.summary),
+      status: asString(row.status)
+    });
   }
   if (row.type === "runner_event_malformed") {
     return "runner: malformed event";
@@ -471,8 +456,18 @@ function parseRunnerStatusSummary(value: string | undefined):
   }
 }
 
-function quoteValue(value: string): string {
-  return JSON.stringify(value);
+function renderRunnerMessage(input: {
+  label: string;
+  reason?: string | undefined;
+  summary?: string | undefined;
+  status?: string | undefined;
+}): string {
+  const headline = input.reason ?? input.status ?? "update";
+  const summary = input.summary?.trim();
+  if (summary === undefined || summary.length === 0) {
+    return `${input.label}: ${headline}`;
+  }
+  return `${input.label}: ${headline} - ${shortenInline(summary, 220)}`;
 }
 
 function shorten(value: string, maxLength = 120): string {
@@ -482,26 +477,16 @@ function shorten(value: string, maxLength = 120): string {
   return `${value.slice(0, Math.max(0, maxLength - 1))}...`;
 }
 
+function shortenInline(value: string, maxLength: number): string {
+  return shorten(value.replace(/\s+/gu, " "), maxLength);
+}
+
 function asString(value: unknown): string | undefined {
   return typeof value === "string" ? value : undefined;
 }
 
-function asNumberOrNull(value: unknown): number | null | undefined {
-  if (typeof value === "number") {
-    return value;
-  }
-  if (value === null) {
-    return null;
-  }
-  return undefined;
-}
-
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-function isDefined<T>(value: T | undefined): value is T {
-  return value !== undefined;
 }
 
 function parseIntervalSeconds(value: string | undefined): number {
