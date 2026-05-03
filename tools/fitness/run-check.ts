@@ -46,18 +46,23 @@ function isSoftFailWarning(check: FitnessReport["checks"][number]): boolean {
 async function main() {
   const scriptDir = resolve(dirname(fileURLToPath(import.meta.url)));
   const repoRoot = resolve(scriptDir, "../..");
+  const scanRepoRoot =
+    process.env.PAIRFLOW_FITNESS_REPO_ROOT === undefined
+      ? repoRoot
+      : resolve(process.env.PAIRFLOW_FITNESS_REPO_ROOT);
   const args = parseArgs(process.argv.slice(2));
   const policyPath = resolve(
     repoRoot,
     args.policy ?? "tools/fitness/policy.json"
   );
-  const outPath = resolve(
-    repoRoot,
-    args.out ?? ".pairflow/evidence/fitness-report.json"
-  );
+  const outPath =
+    args.out === undefined
+      ? resolve(scanRepoRoot, ".pairflow/evidence/fitness-report.json")
+      : resolve(scanRepoRoot, args.out);
   const report = await runReport({
     policyPath,
-    outPath
+    outPath,
+    repoRoot: scanRepoRoot
   });
 
   const blockingFailures = report.checks.filter(shouldBlock);
