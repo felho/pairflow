@@ -145,6 +145,7 @@ export type {
   AgentRunnerCommandConfig,
   AgentRunnerCommandIdentity,
   AgentRunnerContinuationPayload,
+  CodexRunnerArtifactFiles,
   RequiredAgentRunnerCommandConfig,
   StructuredAgentRunnerOutput,
   RunAgentRunnerCommandPort

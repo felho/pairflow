@@ -12,13 +12,13 @@ import type {
   RequiredAgentRunnerCommandConfig
 } from "./agentRunnerBridgeContract.js";
 import {
-  appendResultFileOutput,
   buildCodexRunnerArgs,
   CODEX_PLAN_WATCH_RUNNER_BACKEND,
   isUnavailableExecutableError,
   prepareCodexRunnerFiles,
   validateContinuationPayload
 } from "./codexAgentRunnerBridge.js";
+import { classifyCodexJsonProcessResult } from "./codexAgentRunnerBridgeResult.js";
 import { parseStructuredAgentRunnerOutput } from "./agentRunnerBridgeResult.js";
 import { agentRunnerBridgeDefaults } from "../../defaults/planWatch/agentRunnerBridgeDefaults.js";
 const DEFAULT_TIMEOUT_MS = 10 * 60 * 1000;
@@ -74,6 +74,17 @@ export async function runExecutePairflowPlanContinuation(
   const invocation = buildRunnerInvocation(input, preconditions.config, preconditions.payload);
   try {
     const processResult = await dependencies.runCommand(invocation.processInvocation);
+    if (preconditions.config.codexRunnerFiles !== undefined) {
+      return classifyCodexJsonProcessResult({
+        input,
+        processResult,
+        startedAt,
+        completedAt: clock().toISOString(),
+        command: invocation.commandIdentity,
+        payload: invocation.payload,
+        artifactFiles: preconditions.config.codexRunnerFiles
+      });
+    }
     if (processResult.aborted || processResult.timedOut || processResult.exitCode !== 0) {
       return classifyProcessResult({
         input,
@@ -84,34 +95,15 @@ export async function runExecutePairflowPlanContinuation(
         payload: invocation.payload
       });
     }
-    try {
-      const resolvedProcessResult = await appendResultFileOutput({
-        dependencies,
-        processResult,
-        resultFilePath: preconditions.config.resultFilePath
-      });
-      return classifyProcessResult({
-        input,
-        processResult: resolvedProcessResult,
-        startedAt,
-        completedAt: clock().toISOString(),
-        command: invocation.commandIdentity,
-        payload: invocation.payload
-      });
-    } catch (error) {
-      return blocked({
-        input,
-        startedAt,
-        completedAt: clock().toISOString(),
-        reasonCode: "PLAN_WATCH_RUNNER_FILE_IO_FAILED",
-        failureStage: "output",
-        command: invocation.commandIdentity,
-        exitCode: processResult.exitCode,
-        stdout: processResult.stdout,
-        stderr: error instanceof Error ? error.message : String(error),
-        payload: invocation.payload
-      });
-    }
+    const completedAt = clock().toISOString();
+    return classifyProcessResult({
+      input,
+      processResult,
+      startedAt,
+      completedAt,
+      command: invocation.commandIdentity,
+      payload: invocation.payload
+    });
   } catch (error) {
     return blocked({
       input,
@@ -125,7 +117,8 @@ export async function runExecutePairflowPlanContinuation(
       failureStage: "spawn",
       command: invocation.commandIdentity,
       stderr: error instanceof Error ? error.message : String(error),
-      payload: invocation.payload
+      payload: invocation.payload,
+      artifactDir: preconditions.config.codexRunnerFiles?.artifactDirRef
     });
   }
 }
@@ -280,7 +273,7 @@ async function resolveBuiltInRunnerPreconditions(input: {
   const prepareFiles = input.dependencies.prepareCodexRunnerFiles ?? prepareCodexRunnerFiles;
   let codexRunnerFiles: Awaited<ReturnType<typeof prepareCodexRunnerFiles>>;
   try {
-    codexRunnerFiles = await prepareFiles(input.payload);
+    codexRunnerFiles = await prepareFiles(input.payload, input.startedAt);
   } catch (error) {
     return {
       ok: false,
@@ -305,11 +298,10 @@ async function resolveBuiltInRunnerPreconditions(input: {
       command: input.config.command?.trim() || "codex",
       args: buildCodexRunnerArgs({
         payload: input.payload,
-        schemaFilePath: codexRunnerFiles.schemaFilePath,
-        resultFilePath: codexRunnerFiles.resultFilePath
+        schemaFilePath: codexRunnerFiles.schemaFilePath
       }),
       cwd: input.payload.repo_path,
-      resultFilePath: codexRunnerFiles.resultFilePath,
+      codexRunnerFiles,
       inputMode: "none"
     }
   };
@@ -348,6 +340,9 @@ function buildRunnerInvocation(
       env: config.env,
       stdin: inputMode === "stdin_json" ? `${JSON.stringify(payload)}\n` : undefined,
       timeoutMs,
+      ...(config.codexRunnerFiles !== undefined
+        ? { stdoutFilePath: config.codexRunnerFiles.eventsFilePath }
+        : {}),
       ...(input.stopSignal !== undefined ? { signal: input.stopSignal } : {})
     }
   };
@@ -358,7 +353,7 @@ function classifyProcessResult(input: {
   startedAt: string;
   completedAt: string;
   command: AgentRunnerCommandIdentity;
-  payload: AgentRunnerContinuationPayload;
+  payload: AgentRunnerContinuationPayload; artifactDir?: string | undefined;
 }): AgentRunnerBridgeResult {
   if (input.processResult.aborted) {
     return blocked({
@@ -371,7 +366,8 @@ function classifyProcessResult(input: {
       exitCode: input.processResult.exitCode,
       stdout: input.processResult.stdout,
       stderr: input.processResult.stderr,
-      payload: input.payload
+      payload: input.payload,
+      artifactDir: input.artifactDir
     });
   }
   if (input.processResult.timedOut) {
@@ -385,7 +381,8 @@ function classifyProcessResult(input: {
       exitCode: input.processResult.exitCode,
       stdout: input.processResult.stdout,
       stderr: input.processResult.stderr,
-      payload: input.payload
+      payload: input.payload,
+      artifactDir: input.artifactDir
     });
   }
   if (input.processResult.exitCode === null) {
@@ -399,7 +396,8 @@ function classifyProcessResult(input: {
       exitCode: input.processResult.exitCode,
       stdout: input.processResult.stdout,
       stderr: input.processResult.stderr,
-      payload: input.payload
+      payload: input.payload,
+      artifactDir: input.artifactDir
     });
   }
   if (input.processResult.exitCode !== 0) {
@@ -413,7 +411,8 @@ function classifyProcessResult(input: {
       exitCode: input.processResult.exitCode,
       stdout: input.processResult.stdout,
       stderr: input.processResult.stderr,
-      payload: input.payload
+      payload: input.payload,
+      artifactDir: input.artifactDir
     });
   }
   const structuredOutput = parseStructuredAgentRunnerOutput(input.processResult.stdout);
@@ -453,6 +452,7 @@ function classifyProcessResult(input: {
     payload: input.payload
   };
 }
+
 function buildCommandIdentity(input: {
   command: string;
   args: readonly string[];
@@ -477,10 +477,9 @@ function blocked(input: {
   reasonCode: AgentRunnerBridgeFailureReasonCode;
   failureStage: AgentRunnerBridgeResult["failureStage"];
   command: AgentRunnerCommandIdentity | null;
-  exitCode?: number | null | undefined;
-  stdout?: string | undefined;
-  stderr?: string | undefined;
-  payload?: AgentRunnerContinuationPayload | undefined;
+  exitCode?: number | null | undefined; stdout?: string | undefined;
+  stderr?: string | undefined; payload?: AgentRunnerContinuationPayload | undefined;
+  artifactDir?: string | undefined;
 }): AgentRunnerBridgeResult {
   return {
     status: "blocked",
@@ -493,6 +492,7 @@ function blocked(input: {
     ...(input.exitCode !== undefined ? { exitCode: input.exitCode } : {}),
     ...(input.stdout !== undefined ? { stdout: input.stdout } : {}),
     ...(input.stderr !== undefined ? { stderr: input.stderr } : {}),
+    ...(input.artifactDir !== undefined ? { artifactDir: input.artifactDir } : {}),
     ...(input.payload !== undefined ? { payload: input.payload } : {})
   };
 }

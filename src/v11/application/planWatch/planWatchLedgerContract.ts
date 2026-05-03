@@ -37,6 +37,7 @@ export interface PlanWatchLedgerRecord {
   runnerReasonCode?: AgentRunnerBridgeReasonCode | undefined;
   changedArtifacts?: readonly string[] | undefined;
   routeLedgerSummary?: string | undefined;
+  artifactDir?: string | undefined;
 }
 
 export interface PlanWatchLedgerData {

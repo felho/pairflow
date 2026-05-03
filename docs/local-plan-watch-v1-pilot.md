@@ -116,10 +116,20 @@ Built-in Codex runner pilot boundary:
 - The bridge validates payload shape, workflow target, repo path, and plan path
   before invoking Codex.
 - Codex is invoked as an argv array using `codex
-  --dangerously-bypass-approvals-and-sandbox exec --cd <repo-path>
-  --output-schema <schema-file> --output-last-message <result-file> <prompt>`.
-  The payload is included as fenced JSON data, and trigger strings are treated
-  as untrusted data rather than instructions.
+  --dangerously-bypass-approvals-and-sandbox exec --json --cd <repo-path>
+  --output-schema <schema-file> <prompt>`.
+  The payload is included as JSON string-literal data, and trigger strings are
+  treated as untrusted data rather than instructions.
+- Each non-dry-run built-in Codex attempt writes an artifact directory at
+  `.pairflow/runtime/plan-watch/agent-runner/<YYYY-MM-DD>_<HH-mm-ss>_<plan-slug>_<invocation-id>/`
+  with `metadata.json`, raw Codex `events.ndjson`, normalized Pairflow
+  `timeline.ndjson`, and the output schema file. The directory name uses the
+  local machine date and time for operator-friendly discovery; `metadata.json`
+  keeps `startedAt` as ISO UTC for canonical ordering. Completed ledger records
+  point at this directory through `artifactDir`.
+- Final runner truth comes from the last schema-valid structured
+  `agent_message` in the JSONL stream. `last-message.json`, Codex session files,
+  stderr text, and timeline rows are not fallback result sources.
 - Missing config, unsupported backend, missing repo path, missing plan path,
   missing Codex, timeout, non-zero exit, and invalid output all return blocked
   runner results with explicit reason codes.
@@ -158,7 +168,7 @@ Built-in Codex runner pilot boundary:
 |---|---|---|
 | No trigger | `runPlanWatchIteration` with no candidates returns `status="idle"` and does not invoke the runner; the safe live dry-run produced `plan watch: idle candidates=0 deferred=0`. | Verified by focused watch-loop test run and `.pairflow/evidence/plan-watch-live-dry-run.log`. |
 | Approval-ready trigger | Candidate with `observedState="READY_FOR_HUMAN_APPROVAL"` reserves a ledger record, invokes the config-selected runner once, and completes the same record. The same trigger contract also accepts legacy `READY_FOR_APPROVAL`; this pilot mirrors that compatibility as a documented alias rather than claiming a separate live run. | Verified by focused watch-loop test run, the `LinkedBubbleApprovalReadyState` contract, and the disposable non-dry-run pilot ledger. |
-| Built-in Codex invocation | `backend="codex"` derives `command="codex"` and argv args for full-access non-interactive `exec --cd <repo-path> --output-schema <schema-file> --output-last-message <result-file>` using only validated payload authority. | Verified by focused bridge tests and the disposable non-dry-run pilot, which reached Codex executable discovery and recorded `PLAN_WATCH_CODEX_UNAVAILABLE`. |
+| Built-in Codex invocation | `backend="codex"` derives `command="codex"` and argv args for full-access non-interactive `exec --json --cd <repo-path> --output-schema <schema-file>` using only validated payload authority. It writes `metadata.json`, raw `events.ndjson`, normalized `timeline.ndjson`, and ledger `artifactDir`; final truth is the stream-derived structured `agent_message`. | Verified by focused bridge tests and the disposable non-dry-run pilot, which reached Codex executable discovery and recorded `PLAN_WATCH_CODEX_UNAVAILABLE`. |
 | Built-in Codex blockers | Unsupported backend, missing repo path, missing plan path, missing Codex/spawn failure, timeout, non-zero exit, and invalid output all fail closed with bridge-compatible blocked results. | Verified by focused config and bridge tests plus `.pairflow/evidence/plan-watch-codex-pilot-worktree.log`. |
 | Runner result capture | Completed run record stores `runnerStatus`, `runnerReasonCode`, `changedArtifacts` when present, and `routeLedgerSummary` when emitted. | Verified by focused watch-loop test run, ledger contract assertions, and the disposable pilot ledger record with `runnerStatus="blocked"` and `runnerReasonCode="PLAN_WATCH_CODEX_UNAVAILABLE"`. |
 | Duplicate suppression | Existing completed run record for the same dedupe key returns `status="duplicate_skipped"` and does not invoke the runner again. | Verified by focused watch-loop test run and `.pairflow/evidence/plan-watch-codex-pilot-duplicate.log`. |

@@ -71,7 +71,7 @@ export interface AgentRunnerCommandConfig {
   env?: Readonly<Record<string, string | undefined>> | undefined;
   timeoutMs?: number | undefined;
   inputMode?: AgentRunnerBridgeInputMode | undefined;
-  resultFilePath?: string | undefined;
+  codexRunnerFiles?: CodexRunnerArtifactFiles | undefined;
 }
 
 export interface RequiredAgentRunnerCommandConfig
@@ -87,6 +87,15 @@ export interface AgentRunnerContinuationPayload {
   repo_path: string;
   triggered_at: string;
   trigger: AgentRunnerBridgeTriggerContext;
+}
+
+export interface CodexRunnerArtifactFiles {
+  artifactDir: string;
+  artifactDirRef: string;
+  schemaFilePath: string;
+  metadataFilePath: string;
+  eventsFilePath: string;
+  timelineFilePath: string;
 }
 
 export interface AgentRunnerCommandIdentity {
@@ -106,6 +115,7 @@ export interface AgentRunnerProcessInvocation {
   stdin?: string | undefined;
   timeoutMs: number;
   signal?: AbortSignal | undefined;
+  stdoutFilePath?: string | undefined;
 }
 
 export interface AgentRunnerProcessResult {
@@ -114,6 +124,7 @@ export interface AgentRunnerProcessResult {
   stderr: string;
   timedOut?: boolean | undefined;
   aborted?: boolean | undefined;
+  stdoutFileWriteError?: string | undefined;
 }
 
 export type RunAgentRunnerCommandPort = (
@@ -124,12 +135,11 @@ export interface AgentRunnerBridgeDependencies {
   pathExists: (path: string) => Promise<boolean>;
   runCommand: RunAgentRunnerCommandPort;
   prepareCodexRunnerFiles?:
-    | ((payload: AgentRunnerContinuationPayload) => Promise<{
-        schemaFilePath: string;
-        resultFilePath: string;
-      }>)
+    | ((
+        payload: AgentRunnerContinuationPayload,
+        startedAt?: string
+      ) => Promise<CodexRunnerArtifactFiles>)
     | undefined;
-  readTextFile?: ((path: string) => Promise<string>) | undefined;
   now?: (() => Date) | undefined;
 }
 
@@ -140,6 +150,10 @@ export interface AgentRunnerBridgeResult {
   completedAt: string;
   reasonCode: AgentRunnerBridgeReasonCode;
   command: AgentRunnerCommandIdentity | null;
+  /**
+   * Process exit code is absent before spawn/precondition failures, null for
+   * timeout/abort/signal-style exits, and numeric when a child process exits.
+   */
   exitCode?: number | null | undefined;
   failureStage?:
     | "precondition"
@@ -154,5 +168,6 @@ export interface AgentRunnerBridgeResult {
   runnerSummary?: string | undefined;
   changedArtifacts?: readonly string[] | undefined;
   routeLedgerSummary?: string | undefined;
+  artifactDir?: string | undefined;
   payload?: AgentRunnerContinuationPayload | undefined;
 }

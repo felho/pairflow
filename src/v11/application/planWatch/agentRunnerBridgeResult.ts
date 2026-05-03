@@ -96,7 +96,7 @@ function extractJsonObjectCandidates(value: string): string[] {
   return candidates;
 }
 
-function parseStructuredAgentRunnerRecord(
+export function parseStructuredAgentRunnerRecord(
   parsed: unknown
 ): StructuredAgentRunnerOutput | null {
   if (!isRecord(parsed)) {

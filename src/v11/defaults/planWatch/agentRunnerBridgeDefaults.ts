@@ -1,4 +1,4 @@
-import { access, readFile } from "node:fs/promises";
+import { access, appendFile } from "node:fs/promises";
 
 import type {
   AgentRunnerBridgeDependencies,
@@ -16,6 +16,7 @@ import type {
 
 const TIMEOUT_KILL_GRACE_MS = 100;
 const MAX_CAPTURED_OUTPUT_CHARS = 64 * 1024;
+const MIN_CAPTURED_DIAGNOSTIC_TAIL_CHARS = 8 * 1024;
 const STRUCTURED_OUTPUT_STATUS_PATTERN =
   /"status"\s*:\s*"(settled_checkpoint|human_checkpoint|blocked)"/u;
 const STRUCTURED_OUTPUT_REASON_PATTERN = /"reason_code"\s*:/u;
@@ -24,6 +25,12 @@ interface CapturedOutput {
   tail: string;
   structuredEnvelope?: string | undefined;
 }
+
+type StdoutArtifactWriter = (
+  path: string,
+  data: string,
+  encoding: BufferEncoding
+) => Promise<void>;
 
 export async function pathExists(path: string): Promise<boolean> {
   try {
@@ -36,12 +43,17 @@ export async function pathExists(path: string): Promise<boolean> {
 
 export function runAgentRunnerCommand(
   invocation: AgentRunnerProcessInvocation,
-  processSpawn: ProcessSpawnPort = processSpawnDefault
+  processSpawn: ProcessSpawnPort = processSpawnDefault,
+  stdoutArtifactWriter: StdoutArtifactWriter = appendFile
 ): Promise<AgentRunnerProcessResult> {
   if (invocation.signal?.aborted) {
     return Promise.resolve(abortedBeforeSpawnResult());
   }
-  return new AgentRunnerCommandProcess(invocation, processSpawn).run();
+  return new AgentRunnerCommandProcess(
+    invocation,
+    processSpawn,
+    stdoutArtifactWriter
+  ).run();
 }
 
 class AgentRunnerCommandProcess {
@@ -54,6 +66,8 @@ class AgentRunnerCommandProcess {
   private killTimer: NodeJS.Timeout | undefined;
   private finalizationTimer: NodeJS.Immediate | undefined;
   private child: ProcessSpawnPipeChild | undefined;
+  private stdoutFileWrite: Promise<void> = Promise.resolve();
+  private stdoutFileWriteError: string | undefined;
   private resolve:
     | ((result: AgentRunnerProcessResult) => void)
     | undefined;
@@ -61,7 +75,8 @@ class AgentRunnerCommandProcess {
 
   public constructor(
     private readonly invocation: AgentRunnerProcessInvocation,
-    private readonly processSpawn: ProcessSpawnPort
+    private readonly processSpawn: ProcessSpawnPort,
+    private readonly stdoutArtifactWriter: StdoutArtifactWriter
   ) {}
 
   public run(): Promise<AgentRunnerProcessResult> {
@@ -92,7 +107,9 @@ class AgentRunnerCommandProcess {
     this.timeoutTimer = setTimeout(() => {
       this.timedOut = true;
       this.child?.kill("SIGTERM");
-      this.startKillTimer(() => this.forceResolve("timeout"));
+      this.startKillTimer(() => {
+        void this.forceResolve("timeout");
+      });
     }, this.invocation.timeoutMs);
     this.timeoutTimer.unref();
   }
@@ -117,16 +134,27 @@ class AgentRunnerCommandProcess {
     }
     this.aborted = true;
     this.child?.kill("SIGTERM");
-    this.startKillTimer(() => this.forceResolve("abort"));
+    this.startKillTimer(() => {
+      void this.forceResolve("abort");
+    });
   };
 
   private attachOutputHandlers(child: ProcessSpawnPipeChild): void {
     child.stdout.setEncoding("utf8");
     child.stderr.setEncoding("utf8");
     child.stdout.on("data", (chunk: string) => {
+      if (this.settled) {
+        return;
+      }
+      if (this.invocation.stdoutFilePath !== undefined) {
+        this.appendStdoutFileChunk(chunk);
+      }
       this.stdout = appendCapturedOutput(this.stdout, chunk);
     });
     child.stderr.on("data", (chunk: string) => {
+      if (this.settled) {
+        return;
+      }
       this.stderr = appendCapturedOutput(this.stderr, chunk);
     });
     child.stdin.once("error", (error: Error) => {
@@ -150,9 +178,7 @@ class AgentRunnerCommandProcess {
         return;
       }
       this.finalizationTimer = setImmediate(() => {
-        if (this.markSettled()) {
-          this.resolve?.(this.result(exitCode));
-        }
+        void this.resolveAfterStdoutFileWrite(exitCode);
       });
     });
   }
@@ -168,16 +194,41 @@ class AgentRunnerCommandProcess {
     child.stdin.end(this.invocation.stdin ?? "");
   }
 
-  private forceResolve(reason: "timeout" | "abort"): void {
+  private async forceResolve(reason: "timeout" | "abort"): Promise<void> {
     if (!this.markSettled()) {
       return;
     }
+    await this.waitForStdoutFileWrites();
     this.resolve?.({
       exitCode: null,
       stdout: capturedOutputToString(this.stdout),
       stderr: capturedOutputToString(this.stderr),
+      ...(this.stdoutFileWriteError !== undefined
+        ? { stdoutFileWriteError: this.stdoutFileWriteError }
+        : {}),
       ...(reason === "timeout" ? { timedOut: true } : { aborted: true })
     });
+  }
+
+  private async resolveAfterStdoutFileWrite(exitCode: number | null): Promise<void> {
+    if (!this.markSettled()) {
+      return;
+    }
+    await this.waitForStdoutFileWrites();
+    this.resolve?.(this.result(exitCode));
+  }
+
+  private async waitForStdoutFileWrites(): Promise<void> {
+    for (;;) {
+      await new Promise<void>((resolve) => {
+        setImmediate(resolve);
+      });
+      const pending = this.stdoutFileWrite;
+      await pending;
+      if (pending === this.stdoutFileWrite) {
+        return;
+      }
+    }
   }
 
   private markSettled(): boolean {
@@ -207,9 +258,36 @@ class AgentRunnerCommandProcess {
       exitCode: this.timedOut || this.aborted ? null : exitCode,
       stdout: capturedOutputToString(this.stdout),
       stderr: capturedOutputToString(this.stderr),
+      ...(this.stdoutFileWriteError !== undefined
+        ? { stdoutFileWriteError: this.stdoutFileWriteError }
+        : {}),
       ...(this.aborted ? { aborted: true } : {}),
       ...(this.timedOut ? { timedOut: true } : {})
     };
+  }
+
+  private appendStdoutFileChunk(chunk: string): void {
+    if (
+      this.invocation.stdoutFilePath === undefined
+      || this.settled
+      || this.stdoutFileWriteError !== undefined
+    ) {
+      return;
+    }
+    const stdoutFilePath = this.invocation.stdoutFilePath;
+    this.stdoutFileWrite = this.stdoutFileWrite
+      .then(() => {
+        if (this.stdoutFileWriteError !== undefined) {
+          return;
+        }
+        return this.stdoutArtifactWriter(stdoutFilePath, chunk, "utf8");
+      })
+      .catch((error: unknown) => {
+        if (this.stdoutFileWriteError === undefined) {
+          this.stdoutFileWriteError =
+            error instanceof Error ? error.message : String(error);
+        }
+      });
   }
 }
 
@@ -225,8 +303,7 @@ function abortedBeforeSpawnResult(): AgentRunnerProcessResult {
 export const agentRunnerBridgeDefaults: AgentRunnerBridgeDependencies = {
   pathExists,
   runCommand: runAgentRunnerCommand,
-  prepareCodexRunnerFiles,
-  readTextFile: (path) => readFile(path, "utf8")
+  prepareCodexRunnerFiles
 };
 
 function appendCapturedOutput(
@@ -236,22 +313,25 @@ function appendCapturedOutput(
   const next = `${current.tail}${chunk}`;
   const structuredEnvelope =
     extractLastStructuredEnvelopeCandidate(next) ?? current.structuredEnvelope;
-  const retainedStructuredEnvelope =
-    structuredEnvelope !== undefined
-      ? structuredEnvelope
-      : undefined;
   const prefixLength =
-    retainedStructuredEnvelope !== undefined ? retainedStructuredEnvelope.length + 1 : 0;
-  const tailBudget = MAX_CAPTURED_OUTPUT_CHARS - prefixLength;
+    structuredEnvelope !== undefined ? structuredEnvelope.length + 1 : 0;
+  const rawTailBudget = MAX_CAPTURED_OUTPUT_CHARS - prefixLength;
+  const tailBudget =
+    structuredEnvelope === undefined
+      ? MAX_CAPTURED_OUTPUT_CHARS
+      : Math.min(
+          MAX_CAPTURED_OUTPUT_CHARS,
+          Math.max(rawTailBudget, MIN_CAPTURED_DIAGNOSTIC_TAIL_CHARS)
+        );
   const tail =
-    next.length <= tailBudget || tailBudget <= 0
-      ? next.slice(Math.max(0, next.length - Math.max(0, tailBudget)))
+    next.length <= tailBudget
+      ? next
       : next.slice(next.length - tailBudget);
 
   return {
     tail,
-    ...(retainedStructuredEnvelope !== undefined
-      ? { structuredEnvelope: retainedStructuredEnvelope }
+    ...(structuredEnvelope !== undefined
+      ? { structuredEnvelope }
       : {})
   };
 }

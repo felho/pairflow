@@ -829,11 +829,21 @@ Runner configuration:
 - `[plan_watch.runner] backend = "codex"` selects Pairflow's built-in local
   Codex runner for non-dry-run invocations.
 - The built-in runner invokes `codex --dangerously-bypass-approvals-and-sandbox
-  exec --cd <repo-path> --output-schema <schema-file>
-  --output-last-message <result-file> ...` with an argv array. The continuation
-  payload is embedded as fenced JSON data in the prompt; trigger strings are
-  explicitly treated as untrusted data, not instructions. This is trusted local
-  operator execution.
+  exec --json --cd <repo-path> --output-schema <schema-file> ...` with an argv
+  array. The continuation payload is embedded as JSON string-literal data in the
+  prompt; trigger strings are explicitly treated as untrusted data, not
+  instructions. This is trusted local operator execution.
+- Each built-in Codex runner attempt writes artifacts under
+  `.pairflow/runtime/plan-watch/agent-runner/<YYYY-MM-DD>_<HH-mm-ss>_<plan-slug>_<invocation-id>/`:
+  `metadata.json`, raw Codex `events.ndjson`, normalized Pairflow
+  `timeline.ndjson`, and the output schema file. The directory name uses the
+  local machine date and time for operator-friendly discovery; `metadata.json`
+  keeps `startedAt` as ISO UTC for canonical ordering. Completed ledger records
+  carry an `artifactDir` pointer to that directory when available.
+- Final runner truth comes from the last schema-valid structured
+  `agent_message` in the Codex JSONL stream. Pairflow does not use
+  `last-message.json`, Codex session files, stderr text, or timeline rows as a
+  fallback final result source.
 - Missing runner config blocks with `PLAN_WATCH_RUNNER_CONFIG_MISSING`;
   unsupported backends block with `PLAN_WATCH_RUNNER_BACKEND_UNSUPPORTED`.
 - `--runner-command`, `--runner-arg`, and `--runner-input-mode` are retained as

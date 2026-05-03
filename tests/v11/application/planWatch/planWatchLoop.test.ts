@@ -236,7 +236,9 @@ describe("planWatchLoop", () => {
       ledger,
       runner: runnerResult({
         changedArtifacts: ["plans/tasks/3-watch-loop.md"],
-        routeLedgerSummary: "settled"
+        routeLedgerSummary: "settled",
+        artifactDir:
+          ".pairflow/runtime/plan-watch/agent-runner/2026-05-01_10-00-00-plan_invocation-1"
       })
     });
 
@@ -264,7 +266,9 @@ describe("planWatchLoop", () => {
       runnerStatus: "settled_checkpoint",
       runnerReasonCode: asAgentRunnerBridgeRunnerReasonCode("PLAN_SETTLED"),
       changedArtifacts: ["plans/tasks/3-watch-loop.md"],
-      routeLedgerSummary: "settled"
+      routeLedgerSummary: "settled",
+      artifactDir:
+        ".pairflow/runtime/plan-watch/agent-runner/2026-05-01_10-00-00-plan_invocation-1"
     });
     expect(result.invocationId).toBe(ledger.records[0]?.invocationId);
   });
@@ -1322,6 +1326,85 @@ describe("planWatchLoop", () => {
     }
   });
 
+  it("rejects completed run records with invalid runner outcome fields", () => {
+    const validBase = {
+      schemaVersion: PLAN_WATCH_LEDGER_SCHEMA_VERSION,
+      key: "k",
+      invocationId: "i",
+      triggerEvidence: {
+        planPath: "/repo/plans/local-plan-watch-plan-v1.md",
+        taskId: "3-watch-loop",
+        taskPath: "plans/tasks/3-watch-loop.md",
+        bubbleId: "3-watch-loop-impl",
+        bubbleRole: "implementation",
+        observedState: "READY_FOR_HUMAN_APPROVAL"
+      },
+      attemptedAt: "2026-05-01T09:00:00.000Z",
+      mode: "run",
+      recordState: "completed",
+      completedAt: "2026-05-01T09:01:00.000Z"
+    };
+
+    const invalidRecords = [
+      {
+        ...validBase,
+        runnerStatus: "unknown",
+        runnerReasonCode: asAgentRunnerBridgeRunnerReasonCode("DONE")
+      },
+      {
+        ...validBase,
+        runnerStatus: "settled_checkpoint",
+        runnerReasonCode: ""
+      },
+      {
+        ...validBase,
+        runnerStatus: "settled_checkpoint",
+        runnerReasonCode: asAgentRunnerBridgeRunnerReasonCode("DONE"),
+        changedArtifacts: ["plans/a.md", 42]
+      },
+      {
+        ...validBase,
+        runnerStatus: "settled_checkpoint",
+        runnerReasonCode: asAgentRunnerBridgeRunnerReasonCode("DONE"),
+        routeLedgerSummary: 42
+      }
+    ];
+
+    for (const record of invalidRecords) {
+      expect(() =>
+        validatePlanWatchLedgerData({
+          schemaVersion: PLAN_WATCH_LEDGER_SCHEMA_VERSION,
+          records: [record]
+        })
+      ).toThrow(PlanWatchLedgerError);
+    }
+  });
+
+  it("rejects ledger records missing mode with a mode diagnostic", () => {
+    expect(() =>
+      validatePlanWatchLedgerData({
+        schemaVersion: PLAN_WATCH_LEDGER_SCHEMA_VERSION,
+        records: [
+          {
+            schemaVersion: PLAN_WATCH_LEDGER_SCHEMA_VERSION,
+            key: "k",
+            invocationId: "i",
+            triggerEvidence: {
+              planPath: "/repo/plans/local-plan-watch-plan-v1.md",
+              taskId: "3-watch-loop",
+              taskPath: "plans/tasks/3-watch-loop.md",
+              bubbleId: "3-watch-loop-impl",
+              bubbleRole: "implementation",
+              observedState: "READY_FOR_HUMAN_APPROVAL"
+            },
+            attemptedAt: "2026-05-01T09:00:00.000Z",
+            recordState: "reserved"
+          }
+        ]
+      })
+    ).toThrow(/mode=missing/u);
+  });
+
   it("rejects a second completion for the same invocation without adding records", async () => {
     const key = "plan=plans/local-plan-watch-plan-v1.md|task=3-watch-loop|taskPath=plans/tasks/3-watch-loop.md|bubble=3-watch-loop-impl|role=implementation|state=READY_FOR_HUMAN_APPROVAL|status=ref";
     const ledger = memoryLedger([
@@ -1432,6 +1515,46 @@ describe("planWatchLoop", () => {
       expect(content.records.filter((record) => record.mode === "run")).toHaveLength(1);
     } finally {
       await rm(tempDir, { recursive: true, force: true });
+    }
+  });
+
+  it("rejects dry-run records carrying run-only optional fields", () => {
+    const validBase = {
+      schemaVersion: PLAN_WATCH_LEDGER_SCHEMA_VERSION,
+      key: "k",
+      invocationId: "i",
+      triggerEvidence: {
+        planPath: "/repo/plans/local-plan-watch-plan-v1.md",
+        taskId: "3-watch-loop",
+        taskPath: "plans/tasks/3-watch-loop.md",
+        bubbleId: "3-watch-loop-impl",
+        bubbleRole: "implementation",
+        observedState: "READY_FOR_HUMAN_APPROVAL"
+      },
+      attemptedAt: "2026-05-01T09:00:00.000Z",
+      mode: "dry_run",
+      recordState: "dry_run_observed"
+    };
+
+    const invalidRecords = [
+      { ...validBase, artifactDir: ".pairflow/runtime/plan-watch/agent-runner/run" },
+      { ...validBase, completedAt: "2026-05-01T09:01:00.000Z" },
+      { ...validBase, runnerStatus: "settled_checkpoint" },
+      {
+        ...validBase,
+        runnerReasonCode: asAgentRunnerBridgeRunnerReasonCode("DONE")
+      },
+      { ...validBase, changedArtifacts: ["plans/a.md"] },
+      { ...validBase, routeLedgerSummary: "settled" }
+    ];
+
+    for (const record of invalidRecords) {
+      expect(() =>
+        validatePlanWatchLedgerData({
+          schemaVersion: PLAN_WATCH_LEDGER_SCHEMA_VERSION,
+          records: [record]
+        })
+      ).toThrow(PlanWatchLedgerError);
     }
   });
 

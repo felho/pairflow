@@ -1,4 +1,7 @@
-import type { AgentRunnerBridgeResult } from "./agentRunnerBridgeContract.js";
+import type {
+  AgentRunnerBridgeResult,
+  AgentRunnerBridgeStatus
+} from "./agentRunnerBridgeContract.js";
 import type { LinkedBubbleTriggerCandidate } from "./linkedBubbleTriggerIndexContract.js";
 import {
   PLAN_WATCH_LEDGER_SCHEMA_VERSION,
@@ -31,6 +34,7 @@ export function buildReservedPlanWatchLedgerRecord(input: {
   invocationId: string;
   candidate: LinkedBubbleTriggerCandidate;
   attemptedAt: string;
+  artifactDir?: string | undefined;
 }): PlanWatchLedgerRecord {
   return {
     schemaVersion: PLAN_WATCH_LEDGER_SCHEMA_VERSION,
@@ -39,7 +43,8 @@ export function buildReservedPlanWatchLedgerRecord(input: {
     recordState: "reserved",
     invocationId: input.invocationId,
     triggerEvidence: buildPlanWatchTriggerEvidence(input.candidate),
-    attemptedAt: input.attemptedAt
+    attemptedAt: input.attemptedAt,
+    ...(input.artifactDir !== undefined ? { artifactDir: input.artifactDir } : {})
   };
 }
 
@@ -58,6 +63,9 @@ export function buildCompletedPlanWatchLedgerRecord(
       : {}),
     ...(runnerResult.routeLedgerSummary !== undefined
       ? { routeLedgerSummary: runnerResult.routeLedgerSummary }
+      : {}),
+    ...(runnerResult.artifactDir !== undefined
+      ? { artifactDir: runnerResult.artifactDir }
       : {})
   };
 }
@@ -141,13 +149,16 @@ export function hasReservedRunForKey(
 
 function validateRecord(value: unknown): PlanWatchLedgerRecord {
   assertRecordBase(value);
-  if ("mode" in value && value.mode === "run") {
+  if (!hasString(value, "mode")) {
+    throw new PlanWatchLedgerError("ledger_schema_unsupported", "PLAN_WATCH_LEDGER_RECORD_MODE_UNSUPPORTED: Plan watch ledger record schema is unsupported. context: mode=missing");
+  }
+  if (value.mode === "run") {
     return validateRunRecord(value);
   }
   if (value.mode === "dry_run" && value.recordState === "dry_run_observed") {
-    return value as unknown as PlanWatchLedgerRecord;
+    return validateDryRunRecord(value);
   }
-  throw new PlanWatchLedgerError("ledger_schema_unsupported", "PLAN_WATCH_LEDGER_RECORD_STATE_UNSUPPORTED: Plan watch ledger record schema is unsupported. context: record_state=unsupported");
+  throw new PlanWatchLedgerError("ledger_schema_unsupported", "PLAN_WATCH_LEDGER_RECORD_STATE_UNSUPPORTED: Plan watch ledger record schema is unsupported. context: mode_or_record_state=unsupported");
 }
 
 function assertRecordBase(
@@ -169,22 +180,71 @@ function assertRecordBase(
 }
 
 function validateRunRecord(value: Record<string, unknown>): PlanWatchLedgerRecord {
+  if ("artifactDir" in value && typeof value.artifactDir !== "string") {
+    throw new PlanWatchLedgerError("ledger_schema_unsupported", "PLAN_WATCH_LEDGER_RUN_RECORD_INVALID: Plan watch ledger record schema is unsupported. context: artifact_dir=invalid");
+  }
   if (value.recordState === "reserved") {
     return value as unknown as PlanWatchLedgerRecord;
   }
   if (
     value.recordState === "completed"
     && hasString(value, "completedAt")
-    && hasString(value, "runnerStatus")
-    && hasString(value, "runnerReasonCode")
+    && isRunnerStatus(value.runnerStatus)
+    && hasNonEmptyString(value, "runnerReasonCode")
+    && hasValidChangedArtifacts(value)
+    && hasOptionalString(value, "routeLedgerSummary")
   ) {
     return value as unknown as PlanWatchLedgerRecord;
   }
   throw new PlanWatchLedgerError("ledger_schema_unsupported", "PLAN_WATCH_LEDGER_RUN_RECORD_INVALID: Plan watch ledger record schema is unsupported. context: run_record=invalid");
 }
 
+function validateDryRunRecord(value: Record<string, unknown>): PlanWatchLedgerRecord {
+  if (
+    !("artifactDir" in value)
+    && !("completedAt" in value)
+    && !("runnerStatus" in value)
+    && !("runnerReasonCode" in value)
+    && !("changedArtifacts" in value)
+    && !("routeLedgerSummary" in value)
+  ) {
+    return value as unknown as PlanWatchLedgerRecord;
+  }
+  throw new PlanWatchLedgerError("ledger_schema_unsupported", "PLAN_WATCH_LEDGER_DRY_RUN_RECORD_INVALID: Plan watch ledger record schema is unsupported. context: dry_run_record=invalid");
+}
+
 function hasString(value: object, key: string): boolean {
   return key in value && typeof (value as Record<string, unknown>)[key] === "string";
+}
+
+function hasNonEmptyString(value: object, key: string): boolean {
+  return (
+    hasString(value, key)
+    && (value as Record<string, unknown>)[key] !== ""
+  );
+}
+
+function hasOptionalString(value: object, key: string): boolean {
+  return !(key in value) || typeof (value as Record<string, unknown>)[key] === "string";
+}
+
+function hasValidChangedArtifacts(value: object): boolean {
+  if (!("changedArtifacts" in value)) {
+    return true;
+  }
+  const changedArtifacts = (value as Record<string, unknown>).changedArtifacts;
+  return (
+    Array.isArray(changedArtifacts)
+    && changedArtifacts.every((artifact) => typeof artifact === "string")
+  );
+}
+
+function isRunnerStatus(value: unknown): value is AgentRunnerBridgeStatus {
+  return (
+    value === "settled_checkpoint"
+    || value === "human_checkpoint"
+    || value === "blocked"
+  );
 }
 
 function hasTriggerEvidence(value: object): boolean {
