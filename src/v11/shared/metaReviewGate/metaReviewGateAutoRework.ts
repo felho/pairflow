@@ -73,6 +73,7 @@ interface DispatchAutoReworkInput {
   runResultForRouting: MetaReviewResult;
   parityMetadata: FindingsParityMetadata | null;
   findingsForPayload: Finding[] | undefined;
+  reworkTargetMessage?: string;
   persistDispatchFailedHumanRoute: (
     input: PersistDispatchFailedHumanRouteInput
   ) => Promise<MetaReviewGateResult>;
@@ -268,7 +269,8 @@ async function restoreReadyStateAfterAppendFailure(input: {
 export async function dispatchAutoRework(
   input: DispatchAutoReworkInput
 ): Promise<MetaReviewGateResult> {
-  const reworkMessage = input.runResultForRouting.rework_target_message;
+  const reworkMessage =
+    input.reworkTargetMessage ?? input.runResultForRouting.rework_target_message;
   if (reworkMessage === null || reworkMessage.trim().length === 0) {
     return input.persistDispatchFailedHumanRoute({
       loaded: input.finalizeInput.loaded,

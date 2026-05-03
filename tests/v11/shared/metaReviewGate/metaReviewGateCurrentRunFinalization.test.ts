@@ -562,7 +562,7 @@ describe("finalizeCurrentRunMetaReviewGate", () => {
     ]);
   });
 
-  it("blocks human approval when configured meta-review approve validation fails", async () => {
+  it("auto-reworks when configured meta-review approve validation command fails", async () => {
     const fixture = await createCleanFinalizeInputFixture({
       commands: {
         test: "pnpm test",
@@ -575,19 +575,28 @@ describe("finalizeCurrentRunMetaReviewGate", () => {
 
     const result = await finalizeCurrentRunMetaReviewGate(fixture.finalizeInput);
 
-    expect(result.route).toBe("human_gate_dispatch_failed");
+    const payload = result.gateEnvelope.payload as {
+      decision?: string;
+      message?: string;
+    };
+
+    expect(result.route).toBe("auto_rework");
     expect(result.state.state).toBe("RUNNING");
     expect(result.state.meta_review?.consecutive_clean_runs).toBe(0);
+    expect(result.state.meta_review?.auto_rework_count).toBe(1);
     expect(fixture.runValidationCalls).toHaveLength(1);
-    expect(result.gateEnvelope.payload.summary).toContain(
+    expect(payload.decision).toBe("rework");
+    expect(payload.message).toContain(
       "META_REVIEW_APPROVE_VALIDATION_FAILED"
     );
-    expect(result.gateEnvelope.payload.summary).toContain("stage=exec");
-    expect(result.gateEnvelope.payload.summary).toContain("commandId=test");
-    expect(result.gateEnvelope.payload.summary).toContain("exitCode=1");
-    expect(result.gateEnvelope.payload.summary).toContain(
+    expect(payload.message).toContain("stage=exec");
+    expect(payload.message).toContain("commandId=test");
+    expect(payload.message).toContain("exitCode=1");
+    expect(payload.message).toContain(
       "logPath=.pairflow/evidence/meta-review-approve-validation-test-fixture.log"
     );
+    expect(payload.message).toContain("try to fix it in this bubble worktree");
+    expect(payload.message).toContain("ask the human for direction");
   });
 
   it("maps approve validation runner settle failures to exec diagnostics", async () => {
@@ -654,7 +663,13 @@ describe("finalizeCurrentRunMetaReviewGate", () => {
 
     const result = await finalizeCurrentRunMetaReviewGate(fixture.finalizeInput);
 
-    expect(result.route).toBe("human_gate_dispatch_failed");
+    const payload = result.gateEnvelope.payload as {
+      decision?: string;
+      message?: string;
+    };
+
+    expect(result.route).toBe("auto_rework");
+    expect(payload.decision).toBe("rework");
     expect(fixture.runValidationCalls).toEqual([
       {
         kind: "typecheck",
@@ -665,9 +680,9 @@ describe("finalizeCurrentRunMetaReviewGate", () => {
         logPathPrefix: "meta-review-approve-validation"
       }
     ]);
-    expect(result.gateEnvelope.payload.summary).toContain("commandId=test");
-    expect(result.gateEnvelope.payload.summary).toContain("exitCode=1");
-    expect(result.gateEnvelope.payload.summary).toContain(
+    expect(payload.message).toContain("commandId=test");
+    expect(payload.message).toContain("exitCode=1");
+    expect(payload.message).toContain(
       "logPath=.pairflow/evidence/meta-review-approve-validation-test-fixture.log"
     );
   });
