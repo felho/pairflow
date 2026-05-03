@@ -231,7 +231,8 @@ from the streamed structured agent message.
 3. Persist raw Codex stream lines to `events.ndjson`.
 4. Normalize selected raw events to Pairflow-owned `timeline.ndjson`.
 5. Write `metadata.json` with invocation id, started timestamp, repo path, plan
-   path, plan slug, trigger kind, mode, PID when available, and schema version.
+   path, plan slug, mode, schema version, trigger kind when available, and PID
+   when available.
 6. Use artifact directories named
    `<local-date>_<local-time>_<plan-slug>_<invocation-id>`.
 7. Extract the final runner output from the last valid structured
@@ -260,9 +261,11 @@ from the streamed structured agent message.
    default; full output remains in raw events.
 3. Malformed raw events fail closed for final classification but should still be
    present in `events.ndjson` for debugging.
-4. Artifact directory naming must be deterministic and collision-resistant; if a
-   directory already exists, append a short stable suffix or use the invocation
-   id uniqueness path.
+4. Artifact directory creation must be concurrency-safe and collision-resistant:
+   create the target directory with exclusive-create semantics; if
+   `<local-date>_<local-time>_<plan-slug>_<invocation-id>` already exists,
+   append `-2`, then `-3`, and so on until the first available path is claimed.
+   The numeric suffix is a collision resolver only, not canonical identity.
 5. Legacy ledger reads must not fail solely because old records lack
    `artifactDir`.
 
@@ -322,10 +325,10 @@ from the streamed structured agent message.
 |---|---|---|---|---|---|
 | Codex invocation | `buildCodexRunnerArgs` | argv array includes `exec --json --cd <repo> --output-schema <schema> <prompt>` and excludes `--output-last-message` | subprocess runner | spawn/non-zero/timeout maps to existing blocked reasons | P1 |
 | Raw stream | spawned Codex stdout | one raw line per Codex JSONL event, persisted unchanged to `events.ndjson` | debug/audit/final extractor | malformed line is retained and the run fails closed; empty stream blocks | P1 |
-| Timeline stream | Pairflow normalizer | Pairflow-owned NDJSON events with schema version, timestamp, type, summary fields | operator/future UI | normalizer failure blocks if raw stream cannot be trusted; large outputs summarized | P1 |
+| Timeline stream | Pairflow normalizer | Pairflow-owned NDJSON events with schema version, timestamp, type, summary fields | operator/future UI | normalizer or write failure blocks observability completion; large outputs summarized | P1 |
 | Final runner result | stream extractor | last valid structured `agent_message.text` matching runner schema; no fallback file or session lookup | bridge classifier/ledger | no valid object -> `AGENT_RUNNER_OUTPUT_INVALID` | P1 |
-| Artifact metadata | runner bridge | `metadata.json` with invocation, plan, repo, trigger, startedAt, planSlug, mode, pid | discovery/future CLI | metadata write failure -> file IO blocked before success claim | P1 |
-| Artifact directory | runner bridge | `<YYYY-MM-DD>_<HH-mm-ss>_<plan-slug>_<invocation-id>` under `.pairflow/runtime/plan-watch/agent-runner` | humans/ledger | collision gets deterministic suffix or unique invocation segment | P1 |
+| Artifact metadata | runner bridge | `metadata.json` with invocation, plan, repo, startedAt, planSlug, mode, optional trigger, optional pid | discovery/future CLI | metadata write failure -> file IO blocked before success claim | P1 |
+| Artifact directory | runner bridge | `<YYYY-MM-DD>_<HH-mm-ss>_<plan-slug>_<invocation-id>` under `.pairflow/runtime/plan-watch/agent-runner` | humans/ledger | exclusive-create collision uses first available numeric suffix `-2`, `-3`, ... | P1 |
 | Ledger linkage | ledger record | optional `artifactDir` for new run records; legacy records still parse | watch loop/future CLI | missing legacy field is accepted; malformed new field blocks schema only if present and invalid | P1 |
 
 ### Ownership and Deferred Semantics
@@ -333,7 +336,7 @@ from the streamed structured agent message.
 | Boundary | This Task Owns Now | This Task Records But Does Not Interpret | Deferred / Out of Scope | Forbidden Inference |
 |---|---|---|---|---|
 | Raw Codex events | Capture and persist exact JSONL lines to `events.ndjson`. | Raw Codex event type, item, command, usage, and other unknown fields. | Treating raw Codex schema as a Pairflow public API. | Lifecycle or route authority from raw events. |
-| Pairflow timeline | Normalize selected raw events to Pairflow-owned timeline rows. | Command summaries, counts, previews, statuses, and final status evidence. | CLI/UI display and filtering of timeline rows. | Timeline rows affecting dedupe or routing. |
+| Pairflow timeline | Normalize selected raw events to Pairflow-owned timeline rows. Timeline persistence is P1 because it is the operator-visible read model promised by this task. | Command summaries, counts, previews, statuses, usage summaries, and final status evidence copied only from stream-derived runner truth. | CLI/UI display and filtering of timeline rows. | Timeline rows affecting dedupe, routing, lifecycle state, or final-result classification. |
 | Final runner result | Extract and validate the final result from the last valid structured `agent_message`. | Intermediate structured messages as timeline evidence. | Multi-run replay or external session reconstruction. | Fallback to `last-message.json`, Codex sessions, or prose stdout. |
 | Artifact discovery | Create human-discoverable directories and metadata. | PID, local timestamp, plan slug, trigger kind, and invocation id. | Retention cleanup and artifact pruning policy. | PID or timestamp as canonical identity. |
 | Ledger linkage | Persist `artifactDir` while preserving legacy read compatibility. | Artifact path for future reader commands. | Timeline display command and UI readers. | Dedupe key derived from artifact directory. |
@@ -342,44 +345,44 @@ from the streamed structured agent message.
 
 | Surface | Required Fields | Optional Fields | Unknown / Malformed Behavior | Retention Rule | Priority |
 |---|---|---|---|---|---|
-| `metadata.json` | `schemaVersion`, `invocationId`, `startedAt`, `repoPath`, `planPath`, `planSlug`, `mode` | `triggerKind`, `pid`, `artifactDir`, `schemaFilePath` | Runtime write failure blocks success. | Persist for every prepared run once the artifact directory exists. | P1 |
+| `metadata.json` | `schemaVersion`, `invocationId`, `startedAt`, `repoPath`, `planPath`, `planSlug`, `mode` | `triggerKind`, `pid`, `artifactDir`, `schemaFilePath` | Runtime write failure blocks success with `PLAN_WATCH_RUNNER_FILE_IO_FAILED`. | Persist for every prepared run once the artifact directory exists. | P1 |
 | Raw event line | Valid JSON object line emitted by Codex. | Any Codex-owned fields. | Malformed line is retained raw and the invocation blocks with `AGENT_RUNNER_OUTPUT_INVALID`; the parser must not skip malformed lines to find a later success. | Preserve exact line in `events.ndjson`. | P1 |
 | Structured agent message | `item.type = "agent_message"` and text JSON matching runner output schema. | Schema-allowed runner output fields. | Invalid candidate is ignored as a valid final output and may become timeline diagnostic; no valid final blocks with `AGENT_RUNNER_OUTPUT_INVALID`. | Keep original raw event. | P1 |
-| Timeline row | `schemaVersion`, `type`, `at` | Row-specific summary fields. | Unknown raw events map to hidden `runner_event_unrecognized` or raw-only retention. | Persist normalized rows to `timeline.ndjson`. | P1 |
+| Timeline row | `schemaVersion`, `type`, `at` | Row-specific summary fields. | Unknown raw events map to hidden `runner_event_unrecognized` or raw-only retention; unsupported future timeline schema versions are rejected by current readers until explicitly upgraded. | Persist normalized rows to `timeline.ndjson`. | P1 |
 | Ledger `artifactDir` | String path when present. | N/A | Absent legacy field is accepted; non-string new value is invalid. | Retain in new run records. | P1 |
 
 ### Mirrored Surface Checklist
 
 | Contract Row | L0 Surface | L1 Surface | L2 Surface | Docs / Future Surface |
 |---|---|---|---|---|
-| Codex invocation | In Scope, Baseline Preservation | Fallback / Error Contract | T1 | README and pilot docs |
-| Raw stream | Goal, Safety Defaults | Structured Contract Rules | T3,T5 | README artifact list and pilot evidence |
-| Timeline stream | Goal, Safety Defaults | Timeline Event Contract | T4,T7 | README artifact list and pilot evidence |
-| Final runner result | Read-path rule, Forbidden fallback | Fallback / Error Contract | T2,T5,T6 | README source-of-truth wording |
-| Artifact metadata / directory | In Scope, Safety Defaults | Data and Interface Contract | T9 | README discovery examples |
+| Codex invocation | In Scope, Baseline Preservation | Fallback / Error Contract | T1,T13 | README and pilot docs |
+| Raw stream | Goal, Safety Defaults | Structured Contract Rules | T3,T5,T12,T15 | README artifact list and pilot evidence |
+| Timeline stream | Goal, Safety Defaults | Timeline Event Contract | T4,T7,T11,T15 | README artifact list and pilot evidence |
+| Final runner result | Read-path rule, Forbidden fallback | Fallback / Error Contract | T2,T5,T6,T12,T16 | README source-of-truth wording |
+| Artifact metadata / directory | In Scope, Safety Defaults | Data and Interface Contract | T9,T13,T14,T15 | README discovery examples |
 | Ledger linkage | Success proof boundary | Data and Interface Contract | T8 | Future CLI timeline notes |
 
 ### Timeline Event Contract
 
 | Timeline Type | Raw Source | Required Fields | Display Rule | Priority |
 |---|---|---|---|---|
-| `runner_status` | structured `agent_message` | `at`, `reasonCode`, `summary`, optional `changedArtifacts`, optional `routeLedgerSummary` | show in main timeline | P1 |
-| `command_started` | command execution start | `at`, `command`, optional `itemId` | show command shortened | P1 |
-| `command_completed` | command execution complete | `at`, `command`, `exitCode`, `outputLineCount`, optional `outputPreview` | summarize output, do not dump full file reads | P1 |
-| `patch_applied` | apply-patch event when present | `at`, optional `changedFiles` | show changed file list | P2 |
-| `delegation_started` | spawn/wait agent raw events when present | `at`, target summary when recoverable | show review/delegation progress | P2 |
-| `runner_completed` | final structured result or `turn.completed` | `at`, `status`, `reasonCode`, optional usage summary | show final checkpoint | P1 |
-| `runner_event_unrecognized` | unknown raw event | `at`, raw type | hide by default, retain for compatibility diagnostics | P3 |
+| `runner_status` | structured `agent_message` | `schemaVersion=1`, `at`, `reasonCode`, `summary`, optional `changedArtifacts`, optional `routeLedgerSummary` | show in main timeline | P1 |
+| `command_started` | command execution start | `schemaVersion=1`, `at`, `command`, optional `itemId` | show command shortened | P1 |
+| `command_completed` | command execution complete | `schemaVersion=1`, `at`, `command`, `exitCode`, `outputLineCount`, optional `outputPreview` | summarize output, do not dump full file reads | P1 |
+| `patch_applied` | apply-patch event when present | `schemaVersion=1`, `at`, optional `changedFiles` | show changed file list | P2 |
+| `delegation_started` | spawn/wait agent raw events when present | `schemaVersion=1`, `at`, target summary when recoverable | show review/delegation progress | P2 |
+| `runner_completed` | final schema-valid structured `agent_message` only | `schemaVersion=1`, `at`, `status`, `reasonCode`, optional usage summary copied from `turn.completed` only after a valid final agent message exists | show final checkpoint | P1 |
+| `runner_event_unrecognized` | unknown raw event | `schemaVersion=1`, `at`, raw type | hide by default, retain for compatibility diagnostics | P3 |
 
 ### Call-Site Matrix
 
 | ID | File | Function / Entry | Expected Behavior | Priority | Evidence |
 |---|---|---|---|---|---|
-| CS1 | `codexAgentRunnerBridge.ts` | Codex arg/file preparation | Builds JSONL-mode args, writes schema/metadata paths, no last-message file. | P1 | T1-T4 |
-| CS2 | `agentRunnerBridge.ts` | subprocess execution/classification | Streams stdout lines to raw/timeline artifacts and classifies from stream final result. | P1 | T1-T7 |
-| CS3 | `agentRunnerBridgeResult.ts` | structured output parser | Accepts only schema-valid final object from agent message text. | P1 | T2,T5,T6 |
+| CS1 | `codexAgentRunnerBridge.ts` | Codex arg/file preparation | Builds JSONL-mode args, writes schema/metadata paths, no last-message file. | P1 | T1,T13,T14 |
+| CS2 | `agentRunnerBridge.ts` | subprocess execution/classification | Streams stdout lines to raw/timeline artifacts and classifies from stream final result. | P1 | T3,T4,T5,T6,T7,T11,T12,T15 |
+| CS3 | `agentRunnerBridgeResult.ts` | structured output parser | Accepts only schema-valid final object from agent message text. | P1 | T2,T5,T6,T12 |
 | CS4 | `planWatchLedger.ts` | record read/write | Persists `artifactDir` for new records and reads old records without it. | P1 | T8 |
-| CS5 | `planWatchLoopExecution.ts` | completion record | Includes artifact linkage in completed runner evidence. | P1 | T8,T9 |
+| CS5 | `planWatchLoopExecution.ts` | completion record | Includes artifact linkage in completed runner evidence. | P1 | T8,T15 |
 | CS6 | README/docs | operator guidance | Documents `events.ndjson`, `timeline.ndjson`, `metadata.json`, directory naming, and final source. | P2 | T10 |
 
 ### Data and Interface Contract
@@ -387,28 +390,55 @@ from the streamed structured agent message.
 1. `metadata.json` schema version starts at `1`.
 2. `events.ndjson` is raw Codex-owned JSONL and is not normalized by Pairflow.
 3. `timeline.ndjson` is Pairflow-owned and may be consumed by future CLI/UI.
+   Timeline rows use `schemaVersion=1` in this task. A future reader must ignore
+   unknown row `type` values it does not display, but must reject unsupported
+   row `schemaVersion` values until a compatibility rule is added.
 4. `artifactDir` in ledger is repo-relative when inside the repo and absolute
    only if the artifact root is outside the repo.
 5. `artifactDir` is an artifact pointer only: legacy records without it remain
    readable, and trigger dedupe must continue to use trigger evidence rather
    than artifact path or directory name.
-6. `planSlug` is derived from the watched plan filename stem without leading
-   date prefix when possible; if no safe slug exists, use `plan`.
+6. `planSlug` is derived from the watched plan filename stem by removing one
+   leading `YYYY-MM-DD-` prefix when present, lowercasing ASCII letters,
+   replacing every run of characters outside `[a-z0-9-]` with `-`, trimming
+   leading/trailing `-`, collapsing repeated `-`, and truncating to 80
+   characters without leaving a trailing `-`. If no safe slug remains, use
+   `plan`. Slug collisions are acceptable because `invocationId` plus exclusive
+   directory creation owns uniqueness.
 7. Directory timestamp uses local time for operator discoverability and
    `metadata.json.startedAt` stores ISO UTC for canonical ordering.
 8. PID may be recorded in metadata but must not be used as canonical identity.
 9. The artifact directory name is intended for human discovery and must not be
    parsed as lifecycle state or used as canonical ordering authority.
+10. Concurrent watcher invocations may share the same artifact root only through
+    independent artifact directories claimed by exclusive creation; they must
+    not share open artifact files. Existing ledger reservation/completion
+    remains the only dedupe/trigger coordination primitive in scope.
+11. Timeline persistence is hard-blocking for this task because the task's
+    acceptance claim is operator observability, not because timeline rows carry
+    orchestration authority. A failed timeline write must block the runner
+    result even though timeline content must never influence route, dedupe,
+    lifecycle, or final-result truth.
+12. README and `docs/local-plan-watch-v1-pilot.md` updates must include a
+    minimum operator-facing artifact example with the directory pattern,
+    `metadata.json`, `events.ndjson`, `timeline.ndjson`, the ledger
+    `artifactDir` pointer, and explicit wording that final runner truth comes
+    from the stream-derived structured `agent_message`, not `last-message.json`
+    or any Codex session file.
 
 ### Fallback / Error Contract
 
 | Case | Required Result | Reason Code | Notes |
 |---|---|---|---|
 | Codex spawn ENOENT | blocked | `PLAN_WATCH_CODEX_UNAVAILABLE` | unchanged |
+| artifact directory create failure | blocked | `PLAN_WATCH_RUNNER_FILE_IO_FAILED` | no completed ledger record; metadata may be absent |
+| schema file write failure | blocked | `PLAN_WATCH_RUNNER_FILE_IO_FAILED` | precondition failure before spawning Codex |
+| metadata write failure | blocked | `PLAN_WATCH_RUNNER_FILE_IO_FAILED` | do not claim artifact contract success |
+| events.ndjson write failure | blocked | `PLAN_WATCH_RUNNER_FILE_IO_FAILED` | raw stream persistence is canonical proof and cannot be best effort |
 | stdout stream empty | blocked | `AGENT_RUNNER_OUTPUT_INVALID` | raw artifact may be empty |
 | malformed JSONL line | blocked | `AGENT_RUNNER_OUTPUT_INVALID` | retain raw line; do not silently tolerate malformed stream in this task |
-| no structured agent message | blocked | `AGENT_RUNNER_OUTPUT_INVALID` | do not use last-message fallback, Codex session files, or prose output |
-| final object schema invalid | blocked | `AGENT_RUNNER_OUTPUT_INVALID` | include output diagnostic; timeline rows cannot repair final truth |
+| no structured agent message | blocked | `AGENT_RUNNER_OUTPUT_INVALID` | do not use last-message fallback, Codex session files, stdout prose, stderr text, or process exit text |
+| final object schema invalid | blocked | `AGENT_RUNNER_OUTPUT_INVALID` | include output diagnostic; timeline rows, stderr text, and process exit text cannot repair final truth |
 | timeline write failure | blocked | `PLAN_WATCH_RUNNER_FILE_IO_FAILED` | do not claim observability success |
 | legacy ledger record lacks artifactDir | accepted | N/A | read compatibility |
 
@@ -430,6 +460,10 @@ from the streamed structured agent message.
 | T10 | Docs | README/pilot docs describe raw/timeline artifacts and stream source of truth | P2 |
 | T11 | Timeline authority boundary | timeline rows are persisted/readable but do not alter route choice, trigger dedupe, lifecycle state, or final-result classification | P1 |
 | T12 | Malformed stream line before later success-looking event | raw line is retained and the run blocks fail-closed instead of skipping ahead | P1 |
+| T13 | Metadata and schema files | `metadata.json` has required fields, optional trigger/PID behavior, `schemaVersion=1`, and schema write failure blocks `PLAN_WATCH_RUNNER_FILE_IO_FAILED` | P1 |
+| T14 | Slug/collision naming | slug normalization handles dates, spaces, unsafe characters, empty stems, length cap, and exclusive-create collision suffixes | P1 |
+| T15 | Artifact write failures and concurrency | artifact directory, metadata, raw event, timeline, and schema write failures block with `PLAN_WATCH_RUNNER_FILE_IO_FAILED`; parallel invocations claim separate directories and never use artifact path for dedupe | P1 |
+| T16 | Fallback text surfaces | stderr text and process exit text are not consulted when the stream has no valid final structured agent message | P1 |
 
 ### Required Commands
 

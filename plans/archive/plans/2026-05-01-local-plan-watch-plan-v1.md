@@ -149,6 +149,8 @@ Progress update (2026-05-03): `CreatePairflowSpec reviewspec` approved task `6-w
 
 Progress update (2026-05-03): document bubble `plan-watch-observability` refined task `6-watch-runner-observability` for implementation handoff by making the Codex JSONL stream the only final-result source of truth, forbidding `last-message.json` fallback, tightening `events.ndjson` / `timeline.ndjson` / `metadata.json` artifact contracts, and clarifying that timeline rows are observability/read-model evidence only.
 
+Progress update (2026-05-03): reviewer round 1 for document bubble `plan-watch-observability` identified contract ambiguities in task `6-watch-runner-observability`; the follow-up refinement resolved trigger-kind optionality, timeline `runner_completed` source rules, forbidden stderr/process fallback mirroring, artifact write-failure reason codes, slug/collision/concurrency behavior, timeline schema versioning, call-site evidence mapping, and minimum README/pilot-doc content.
+
 ## Task List
 
 | Task ID                  | Task Path | Purpose                                                                                                                                                                                  | Depends On               | Closes Gap                                                                                                    | Status      |
