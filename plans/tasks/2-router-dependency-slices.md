@@ -18,6 +18,7 @@ target_files:
   - src/v11/infrastructure/ui/routerRequest.ts
   - tests/core/ui/router.test.ts
   - tests/core/ui/server.integration.test.ts
+  - tests/core/ui/eventsScan.test.ts
   - tests/tools/fitness/uiRouterPortBoundary.test.ts
   - tests/tools/fitness/fitnessCheckCi.test.ts
   - tools/fitness/policy.json
@@ -60,8 +61,10 @@ boundaries.
    convenience type, do not rename the broad bag into an equally broad wrapper,
    and do not satisfy the guard by broadening transitional exceptions.
 5. Allowed resolution path: introduce exported or local capability slice types
-   for list/detail/action/error-mapping needs, then adapt environment/input
-   types so call sites continue to pass the composed dependency object.
+   for list, timeline, detail, action dispatch, and conflict-enrichment needs;
+   keep shared request context as non-capability data; then adapt
+   environment/input types so call sites continue to pass the composed
+   dependency object structurally.
 6. Missing-data rule: if a leaf needs a capability not present in its slice, add
    the narrow capability explicitly rather than reaching back to the full
    composite.
@@ -105,7 +108,7 @@ boundaries.
 
 1. Inspected call sites: `routerActions.ts`, `routerBubbleDetail.ts`,
    `routerActionErrorMapping.ts`, `routerActionDispatch.ts`,
-   `routerContracts.ts`, and `routerDependencies.ts`.
+   `routerRequest.ts`, `routerContracts.ts`, and `routerDependencies.ts`.
 2. Actual touched scope: consumer-family alignment for router dependency
    contracts.
 3. Mutation entrypoints in scope: N/A; the router action handlers call existing
@@ -119,10 +122,12 @@ boundaries.
 ### Authority Boundary Map
 
 1. Authority producer: `UiRouterDependencies` and new slice types in the UI
-   router port/contracts.
+   router port/contracts. Reusable capability slices belong in
+   `src/v11/shared/ports/uiRouter.ts`; infrastructure-only environment shapes
+   may stay local to the leaf module that consumes them.
 2. Stored authority: TypeScript type declarations and fitness policy.
-3. In-scope consumers: router leaf modules and router tests that compile
-   against those environment types.
+3. In-scope consumers: CS0 request routing, router leaf modules, and router
+   tests that compile against those environment types.
 4. Out-of-scope consumers: frontend UI package, action DTO projection logic,
    list/status/inbox command API ownership, and final cleanup guard tightening.
 5. Export surfaces closed in this phase: narrow dependency slices for router
@@ -135,7 +140,8 @@ boundaries.
    dependency default resolution.
 2. Allowed resolution paths: pass the composed dependency object into leaf
    functions through narrower structural types, or split environment interfaces
-   by handler family.
+   by handler family. Do not pass `UiRouterEnvironment` into leaf modules unless
+   that module is explicitly a composition/wiring boundary.
 3. Forbidden regression interpretations: removing a handler path, dropping a
    dependency call, changing error mapping fallback behavior, or changing API
    response shape is not authorized by this task.
@@ -146,16 +152,19 @@ boundaries.
 ### In Scope
 
 1. Introduce narrow router dependency slice types for leaf modules.
-2. Update `routerActions.ts`, `routerBubbleDetail.ts`, and
-   `routerActionErrorMapping.ts` so their environment types depend only on the
-   needed slices.
+2. Update `routerRequest.ts` only as the CS0 request-routing boundary that
+   extracts and forwards RDS6 request context; update `routerActions.ts`,
+   `routerBubbleDetail.ts`, `routerActionErrorMapping.ts`, and
+   `routerActionDispatch.ts` so their leaf environment contracts accept only
+   RDS6 request context plus the needed dependency slices.
 3. Keep `CreateUiRouterInput`, `UiRouterEnvironment`,
    `resolveUiRouterDependencies`, and default dependency wiring able to compose
    the full dependency object.
-4. Update router-port fitness policy/tests to remove or reduce the broad leaf
-   dependency exceptions covered by this task.
+4. Update router-port fitness policy/tests so broad leaf dependency exceptions
+   covered by this task are removed.
 5. Add or update targeted tests that prove behavior is unchanged while the
-   broad-bag dependency path is closed for leaves.
+   broad-bag dependency path and broad-environment import path are closed for
+   leaves.
 
 ### Out of Scope
 
@@ -186,15 +195,16 @@ boundaries.
 ### Complexity Risk Gate
 
 1. `authority_risk`: `1`
-2. `surface_spread`: `2`
+2. `surface_spread`: `3`
 3. `identity_join_risk`: `0`
 4. `activation_coupling`: `0`
 5. `prerequisite_risk`: `1`
-6. `acceptance_multiplicity`: `2`
-7. `risk_score`: `6`
+6. `acceptance_multiplicity`: `3`
+7. `risk_score`: `8`
 8. Split decision: keep as one bounded consumer-family alignment task because
-   the work is limited to router dependency type boundaries plus guard
-   exception reduction; DTO/read-model closure remains in successor tasks.
+   the expanded CS0 request-routing boundary and CS4 action-dispatch leaf still
+   share the same router dependency-slice closure; DTO/read-model closure
+   remains in successor tasks.
 
 ## L1 - Implementation Contract
 
@@ -202,10 +212,11 @@ boundaries.
 
 | ID | Surface | Current Coupling | Required Slice Outcome |
 |---|---|---|---|
-| CS1 | `routerActions.ts` | Uses `UiRouterDependencies` through `RouterActionEnvironment`. | Environment depends on list, detail/timeline, and action-dispatch/error-mapping slices only as needed. |
-| CS2 | `routerBubbleDetail.ts` | Uses full composite for status, inbox, and runtime-session reads. | Detail loader depends on a `BubbleDetail`-sized read slice. |
-| CS3 | `routerActionErrorMapping.ts` | Uses full composite so conflict mapping can load detail. | Error mapper depends only on the detail-loading slice needed for conflict enrichment. |
-| CS4 | `routerActionDispatch.ts` | Already has action method access through environment. | May keep or refine a narrow action-dispatch slice; must not widen leaf typing. |
+| CS0 | `routerRequest.ts` / `handleApiRequest` | Receives full `UiRouterEnvironment` at the request-routing boundary and forwards requests into leaf handlers. | Remains a routing/composition-adjacent boundary that may receive the composed router environment and local HTTP response handle, but any metadata it passes to leaves must be RDS6 request context only: method/pathname, URL, `bubbleId`, router cwd, and request data needed for body parsing. |
+| CS1 | `routerActions.ts` | Uses `UiRouterDependencies` through `RouterActionEnvironment`. | Route-level environment exposes only RDS6 shared request context plus the exact dependency slices required by the called handler family. List handling must use RDS2 `listBubbles`; timeline handling must use RDS2 `readBubbleTimeline`; detail handling must delegate to the RDS3 detail loader contract without importing broad `UiRouterEnvironment`. Action routing may pass RDS6 action name and request body to CS4. |
+| CS2 | `routerBubbleDetail.ts` / `loadBubbleDetail` | Uses full composite for status, inbox, and runtime-session reads. | Detail loader depends on RDS3 for `getBubbleStatus`, `getBubbleInbox`, and `readRuntimeSessionsRegistry`, plus RDS6 for request context such as `cwd`, `repoPath`, and `bubbleId`. |
+| CS3 | `routerActionErrorMapping.ts` / `mapActionErrorToApiError` | Uses full composite so conflict mapping can load detail. | Error mapper depends only on RDS5 conflict enrichment and RDS6 request context needed to preserve existing `cwd` behavior. |
+| CS4 | `routerActionDispatch.ts` / `dispatchBubbleAction` | Receives broad `UiRouterEnvironment`, so action leaf methods can still type against the full composite indirectly. | Replace the broad environment dependency with an action-dispatch environment using only RDS4 mutation/action capabilities and RDS6 shared request context: `bubbleId`, resolved `repoPath`, action name, parsed request body, and optional `cwd`; do not import `UiRouterEnvironment` or `UiRouterDependencies` in this leaf. |
 | CS5 | `routerContracts.ts` / `routerDependencies.ts` | Composition boundary exposes `Partial<UiRouterDependencies>` and resolved full dependencies. | Full composite remains allowed here as composition/wiring. |
 
 ### Data and Interface Contract
@@ -214,19 +225,23 @@ boundaries.
 |---|---|
 | Slice naming | Use explicit capability names that describe the consumer family, not generic aliases such as `RouterDeps`. |
 | Full composite | Allowed only in composition/wiring surfaces: `routerContracts.ts`, `routerDependencies.ts`, `router.ts`, and default dependency construction. |
+| Boundary classification | `routerRequest.ts` is in scope as CS0 request routing, not as a dependency-consuming leaf; leaf-only prohibitions apply to the handlers it calls and to any metadata it passes onward. |
 | Leaf imports | Router leaf modules must not import or type against `UiRouterDependencies`. |
+| Leaf environment imports | Router leaf modules must not import broad composition environment contracts such as `UiRouterEnvironment`; define or consume a local or exported narrow environment contract for the needed request context. |
 | Structural compatibility | The existing composed dependency object must remain assignable to every narrow slice. |
 | Unknown capabilities | A leaf cannot access capabilities outside its declared slice. |
+| Shared request context | Use RDS6 as the canonical definition; this row exists only to require that request metadata stays separate from dependency capabilities. |
 
 ### Canonical Contract Matrix
 
 | Matrix ID | Owner | Allowed Members | Allowed Consumers | Forbidden Use |
 |---|---|---|---|---|
 | RDS1 | Composition dependency composite | All UI router dependency methods needed to construct a complete router environment. | `routerContracts.ts`, `routerDependencies.ts`, `router.ts`, default dependency wiring, and tests that construct full router inputs. | Direct typing in leaf modules that only need a subset. |
-| RDS2 | Bubble list/resource read slice | `listBubbles`, `readBubbleTimeline`, and the detail-loading capabilities actually used by the resource handler. | `routerActions.ts` resource/list handlers and structurally compatible composed dependencies. | Action mutation dispatch or unrelated lifecycle methods. |
-| RDS3 | Bubble detail read slice | `getBubbleStatus`, `getBubbleInbox`, and `readRuntimeSessionsRegistry`. | `routerBubbleDetail.ts` and error-mapping enrichment paths that load detail. | Full composite access, mutation methods, or DTO/read-model ownership moves. |
+| RDS2 | Bubble list/timeline read slices | Separate list and timeline capabilities: `listBubbles` for list handling; `readBubbleTimeline` for timeline resource handling. | `routerActions.ts` list and timeline branches, and structurally compatible composed dependencies. | Action mutation dispatch, status/inbox/runtime-session reads, detail loading, or unrelated lifecycle methods. |
+| RDS3 | Bubble detail read slice | `getBubbleStatus`, `getBubbleInbox`, and `readRuntimeSessionsRegistry`. | `routerBubbleDetail.ts` and error-mapping enrichment paths that load detail. | Full composite access, mutation methods, list/timeline reads, or DTO/read-model ownership moves. |
 | RDS4 | Bubble action dispatch slice | `startBubble`, `emitApprove`, `emitRequestRework`, `emitHumanReply`, `resumeBubble`, `commitBubble`, `mergeBubble`, `openBubble`, `attachBubble`, `updateBubbleReviewPolicy`, `stopBubble`, `restartBubble`, and `deleteBubble` as required by dispatch. | `routerActionDispatch.ts` and structurally compatible router environments. | List/detail-only handlers consuming mutation capabilities. |
-| RDS5 | Conflict/error enrichment slice | The minimum detail-loading capability needed to map current state into conflict responses. | `routerActionErrorMapping.ts`. | Reconstructing lifecycle state from errors when detail loading fails. |
+| RDS5 | Conflict/error enrichment slice | The RDS3 detail-loading capability when optional current-state enrichment is needed for conflict responses; load failure must preserve the existing fallback to `null`. | `routerActionErrorMapping.ts` / `mapActionErrorToApiError`. | Mutation/list/timeline capabilities, treating enrichment load failure as a hard error, or reconstructing bubble detail when detail loading fails. |
+| RDS6 | Shared request context | Union of non-capability request data anchored by CS0-CS4: `CreateUiRouterInput` fields needed by leaves, optional `cwd`, router cwd, URL/pathname, resolved `repoPath`, `bubbleId`, action name, and parsed request body. Each consumer may use only the subset allowed by its CS row. | CS0 request routing in `routerRequest.ts`; composition ownership of `CreateUiRouterInput` in `routerContracts.ts` and `routerDependencies.ts`; and leaf request metadata consumed by `routerActions.ts`, `routerBubbleDetail.ts`, `routerActionErrorMapping.ts`, and `routerActionDispatch.ts`. | Dependency methods, full `UiRouterDependencies`, broad `UiRouterEnvironment` access in leaf environments, or state reconstructed from dependency failures. |
 
 Canonical matrix rule: implementation must update this matrix first if a slice
 boundary changes, then align the call-site matrix, data/interface rows, tests,
@@ -275,44 +290,95 @@ When any dependency slice row changes, update all applicable mirrors:
 
 | Surface | Must Stay Aligned With |
 |---|---|
-| L0 Domain / Control Model Summary | RDS1-RDS5 ownership and forbidden fallback rules |
-| L1 Call-Site Matrix | RDS2-RDS5 consumer-to-slice mapping |
-| L1 Data and Interface Contract | RDS1-RDS5 allowed/forbidden use |
+| L0 Domain / Control Model Summary | RDS1-RDS6 ownership and forbidden fallback rules |
+| L0 Scope Reality / Shape Proof | Inspected files, target-file additions, and CS0-CS5 classification |
+| L0 Authority Boundary Map | Shared-port slice ownership, infrastructure-local environment shapes, and composition-only full composite |
+| Baseline Preservation | Leaf-environment prohibition, CS0 routing carve-out, and unchanged router behavior |
+| L0 In Scope | Target files, CS0-CS4 surfaces, RDS6 request-context separation, and broad-environment closure evidence |
+| L1 Call-Site Matrix | RDS2-RDS6 consumer-to-slice mapping, including whether `UiRouterEnvironment` remains composition-only or appears in a leaf |
+| L1 Data and Interface Contract | RDS1-RDS6 allowed/forbidden use |
+| RDS1 / CS5 composition mapping | `routerContracts.ts`, `routerDependencies.ts`, `router.ts`, and default dependency wiring remain the only full-composite composition surfaces |
+| RDS6 request-context ownership | Non-capability request metadata stays separate from dependency capabilities, and each CS0-CS4 consumer is bounded to its CS-row subset |
+| Side Effects Contract | CS0-CS4 routing, action dispatch, detail loading, and error enrichment remain behavior-preserving type-boundary changes only |
+| Error and Fallback Contract | RDS5 conflict-enrichment fallback-to-`null` behavior |
 | L1 Shared Contract Compatibility | RDS1 composition compatibility and internal narrowing decision |
-| L1 Test Matrix | Broad-bag guard coverage and behavior-preservation tests for the changed slice |
-| Acceptance Criteria | No broad leaf usage, composition-only full composite, and updated fitness exceptions |
+| L1 Test Matrix | Broad-bag and broad-environment guard coverage, plus behavior-preservation tests for changed dependency slices |
+| Acceptance Criteria | No broad leaf usage, composition-only full composite, RDS6 request-context separation, and updated fitness exceptions |
+| Closure-Budget Summary | Complexity Risk Gate score, changed CS0/CS4 surfaces, deferred closures, and bounded-task proof |
 
 ### Closure-Budget Summary
 
-1. Buckets touched: shared_contract, internal_execution_consumers, guard policy.
+1. Buckets touched: shared_contract, internal_execution_consumers, guard policy,
+   and non-capability request-context ownership.
 2. Collapsed closures: dependency-slice type introduction plus router leaf
-   migration because they are the same consumer-family alignment.
-3. Deferred closures: action DTO closure, read-model ownership closure, final
+   migration because they are the same consumer-family alignment; shared
+   request context is included only to prevent narrow capability slices from
+   being bypassed through broad environment types.
+3. Explicitly covered surfaces: `routerRequest.ts` / `handleApiRequest` as
+   CS0 request routing and `routerActionDispatch.ts` /
+   `dispatchBubbleAction` as CS4 action dispatch.
+4. Deferred closures: action DTO closure, read-model ownership closure, final
    zero-exception cleanup.
-4. Bounded-task proof: no producer behavior or lifecycle state-machine behavior
+5. Bounded-task proof: no producer behavior or lifecycle state-machine behavior
    changes are required to close broad-bag leaf consumption.
 
-### Test Matrix
+### L1 Test Matrix
 
 | ID | Scenario | Command / Surface | Required Now |
 |---|---|---|---|
 | T1 | Type boundary compiles after leaf slice migration. | `pnpm typecheck` | yes |
-| T2 | Router API behavior remains unchanged. | `pnpm exec vitest run tests/core/ui/router.test.ts tests/core/ui/server.integration.test.ts tests/core/ui/eventsScan.test.ts` | yes |
-| T3 | Fitness guard rejects broad leaf `UiRouterDependencies` usage. | `pnpm exec vitest run tests/tools/fitness/uiRouterPortBoundary.test.ts tests/tools/fitness/fitnessCheckCi.test.ts` | yes |
+| T2 | Router API behavior remains unchanged, including event-scan coverage for route/event behavior touched by router request and action wiring. | `pnpm exec vitest run tests/core/ui/router.test.ts tests/core/ui/server.integration.test.ts tests/core/ui/eventsScan.test.ts` | yes |
+| T3 | Fitness guard rejects broad leaf `UiRouterDependencies` usage and broad leaf `UiRouterEnvironment` imports or type paths that would preserve full-composite access indirectly, while preserving the explicit CS0 `routerRequest.ts` non-leaf routing carve-out. | `pnpm exec vitest run tests/tools/fitness/uiRouterPortBoundary.test.ts tests/tools/fitness/fitnessCheckCi.test.ts` | yes |
 | T4 | CI fitness check passes with updated exception set. | `pnpm fitness:check:ci` | yes |
 | T5 | Full repo validation remains green before merge. | `pnpm test` | yes |
+| T6 | Lint remains green after type-boundary and guard updates. | `pnpm lint` | yes |
+| T7 | Runtime artifacts rebuild after implementation changes. | `pnpm build` | yes |
 
 ### Acceptance Criteria
 
 1. No router leaf module imports or types against `UiRouterDependencies`.
-2. `UiRouterDependencies` remains available only at approved composition or
+2. No router leaf module imports or types against broad composition
+   environment contracts such as `UiRouterEnvironment` for full-composite
+   access; leaf modules must use a narrow local or exported environment
+   contract for the needed request context and dependency slice subset.
+3. `routerActions.ts` detail-resource handling delegates to the RDS3 detail
+   loader contract and follows the Data and Interface Contract rows for leaf
+   imports, leaf environment imports, and unknown capabilities; it does not
+   reintroduce status, inbox, or runtime-session reads through
+   `RouterActionEnvironment` or any other broad full-composite environment
+   contract. Narrow leaf environment contracts remain allowed when bounded to
+   RDS6 plus the exact dependency slices required by CS1.
+4. `routerActions.ts` list and timeline handling follow CS1: list handling uses
+   only RDS2 `listBubbles`, timeline handling uses only RDS2
+   `readBubbleTimeline`, and neither path reaches through broad environment
+   typing for unrelated capabilities.
+5. `loadBubbleDetail` follows CS2 by depending only on RDS3 detail reads
+   (`getBubbleStatus`, `getBubbleInbox`, and
+   `readRuntimeSessionsRegistry`) plus the RDS6 request context needed for
+   `cwd`, `repoPath`, and `bubbleId`.
+6. `mapActionErrorToApiError` depends only on RDS5 conflict enrichment plus
+   RDS6 request context and preserves the existing fallback-to-`null` behavior
+   when detail loading fails.
+7. `dispatchBubbleAction` depends only on RDS4 action-dispatch capabilities
+   plus RDS6 request context; it does not import or type against broad
+   composition environment contracts.
+8. `routerRequest.ts` remains in target scope only as the request-routing
+   boundary that supplies RDS6 metadata to leaf handlers. It is not classified
+   as a leaf while performing CS0 routing, must not become a new
+   dependency-consumption leaf, and must not import or type against
+   `UiRouterDependencies` for leaf-style dependency access. Its
+   `UiRouterEnvironment` access remains limited to the CS0 request-routing
+   boundary.
+9. `UiRouterDependencies` remains available only at approved composition or
    wiring boundaries.
-3. Fitness policy no longer carries broad leaf exceptions that this task was
-   supposed to remove.
-4. Existing UI router tests pass without response-shape expectation changes.
-5. `pnpm typecheck`, `pnpm lint`, `pnpm fitness:check:ci`, targeted router and
-   fitness tests, `pnpm test`, and `pnpm build` pass in the implementation
-   bubble evidence.
+10. Fitness policy no longer carries broad leaf exceptions that this task was
+   supposed to remove, while preserving only the explicit CS0 `routerRequest.ts`
+   non-leaf routing carve-out described by AC8 and T3.
+11. Existing UI router tests pass without response-shape expectation changes.
+12. The implementation bubble evidence shows all L1 Test Matrix commands pass:
+   `pnpm typecheck`; `pnpm exec vitest run tests/core/ui/router.test.ts tests/core/ui/server.integration.test.ts tests/core/ui/eventsScan.test.ts`;
+   `pnpm exec vitest run tests/tools/fitness/uiRouterPortBoundary.test.ts tests/tools/fitness/fitnessCheckCi.test.ts`;
+   `pnpm fitness:check:ci`; `pnpm test`; `pnpm lint`; and `pnpm build`.
 
 ## L2 - Notes
 
@@ -324,6 +390,15 @@ When any dependency slice row changes, update all applicable mirrors:
    only and exporting it would add noise.
 3. Keep `Partial<UiRouterDependencies>` on `CreateUiRouterInput` unless a
    narrower public override contract is proven safe for all tests.
+4. If `routerActions.ts` keeps one route-level environment to share request
+   metadata across handlers, keep that environment limited to RDS6 plus the
+   exact capability slices each called function needs. Pass narrower
+   sub-environments to `loadBubbleDetail`, `dispatchBubbleAction`, and
+   `mapActionErrorToApiError` according to CS2-CS4.
+5. Treat `UiRouterEnvironment` as a composition contract unless the
+   implementation first proves the consumer is not a leaf. `routerActionDispatch.ts`
+   should use a local action-dispatch environment or an exported action slice
+   instead.
 
 ### Assumptions
 
@@ -341,7 +416,70 @@ None.
 Approved for document-bubble routing by `CreatePairflowSpec` `ReviewSpec`
 task-mode in the `ExecutePairflowPlan` route ledger after the refreshed task
 artifact added the canonical dependency-slice matrix and mirrored-surface
-checklist.
+checklist. Round 1 document refinement further tightened the matrix by adding
+the broad `UiRouterEnvironment` leaf-import guard, separating list/timeline
+resource reads from the detail loader contract, requiring `routerActionDispatch.ts`
+to use an RDS4 action-dispatch slice instead of broad environment typing, and
+cascading those constraints through the call-site matrix, data/interface
+contract, test matrix, and acceptance criteria. Round 2/3 refinement added RDS6
+as the canonical shared request-context owner, removed detail-loading
+narration from RDS2, bound `loadBubbleDetail`, `mapActionErrorToApiError`, and
+`dispatchBubbleAction` in the call-site matrix, made RDS5's fallback-to-`null`
+rule mirror into the error/fallback contract, and cleaned terminology so broad
+environment avoidance is expressed through RDS6 rather than new ad hoc terms.
+Round 4 refinement added explicit RDS2 citations to CS1 and normalized
+environment-contract wording across the Data and Interface Contract and
+Acceptance Criteria, including AC3 anchoring of `routerActions.ts`
+detail-resource handling to RDS3 and the Data and Interface Contract rows.
+Round 5 refinement separated list, timeline, and detail in L0 item 5 so the
+enumeration matches the RDS2 list/timeline and RDS3 detail split.
+Round 6 refinement anchored `routerRequest.ts` as the request-routing boundary,
+added `routerActionDispatch.ts` to in-scope leaf migration, made the broad
+`UiRouterEnvironment` leaf prohibition unconditional, and constrained RDS6
+members to metadata explicitly referenced by CS0-CS4.
+Round 7 refinement mirrored the CS0 `routerRequest.ts` and CS4
+`routerActionDispatch.ts` additions into In Scope and the Closure-Budget
+Summary, expanded broad-environment test coverage in scope, and aligned AC3
+with CS1/Data-and-Interface broad-environment wording.
+Round 8 refinement mirrored AC10 validation commands into the L1 Test Matrix
+with `pnpm lint` and `pnpm build`, tightened AC6 around
+`routerRequest.ts` leaf import limits, and added RDS6 request-context
+separation to the Acceptance Criteria mirror row.
+Round 9 refinement completed the approval-provenance trail for the Round 7 and
+Round 8 changes so the provenance log matches the current spec surface.
+Round 10 implementer refinement responding to the Round 9 review added the
+Round 7 and Round 8 provenance entries so Approval Provenance matched the
+already-applied CS0/CS4, broad-environment, AC6, T6/T7, and RDS6 mirror
+changes.
+Round 11 implementer refinement responding to the Round 10 review fully
+mirrored AC10 to the T1-T7 command list, clarified `routerRequest.ts` as a CS0
+boundary rather than a leaf, added the missing mirrored-surface rows for In
+Scope, Side Effects, and Closure-Budget Summary, recomputed the complexity risk
+score after CS0/CS4 expansion, added the `eventsScan.test.ts` behavior test to
+target files, and named the composition modules that own `CreateUiRouterInput`
+as RDS6 consumers.
+Round 12 implementer refinement responding to the Round 11 review split CS0
+routing from leaf environment narrowing in In Scope, separated RDS6 consumer
+categories for request routing, composition ownership, and leaf metadata use,
+aligned Closure-Budget attribution with Round 6/7 provenance, expanded the
+mirror checklist for Scope Reality, Authority Boundary Map, and RDS1/CS5
+composition mapping, anchored `eventsScan.test.ts` to behavior-preservation
+coverage, added timeline capability exclusion to RDS5 forbidden use, and made
+fitness exception removal wording match AC8.
+Round 13 implementer refinement responding to the Round 12 review clarified
+that AC2/AC3 forbid broad full-composite environment access while allowing
+narrow leaf environment contracts, narrowed RDS6 forbidden use so CS0 may still
+receive `UiRouterEnvironment` at the request-routing boundary, marked RDS6
+allowed members as a union bounded by each CS row, anchored the complexity risk
+score recomputation from 6 to 8 in provenance instead of L1 contract text,
+removed review-round attribution from the L1 Closure-Budget Summary, and added
+an explicit RDS6 request-context ownership mirror row.
+Round 14 implementer refinement responding to the Round 13 review added the
+missing Round 10 provenance entry, bound CS1 list/timeline RDS2 and CS2
+`loadBubbleDetail` RDS3+RDS6 prescriptions into Acceptance Criteria, added CS0
+request routing to the Authority Boundary Map consumers, made the CS0 non-leaf
+fitness carve-out explicit in T3 and AC10, and added Baseline Preservation to
+the mirrored-surface checklist.
 
 ### Hardening Backlog
 
