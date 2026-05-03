@@ -5,7 +5,7 @@ task_family_id: ui-readmodel-contracts
 sequence_key: "3"
 task_id: 3-ui-readmodel-contracts
 title: "UI Readmodel Contracts"
-status: approved
+status: implementable
 phase: phase3
 target_files:
   - src/contracts/ui/index.ts
