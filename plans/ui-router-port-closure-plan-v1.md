@@ -15,8 +15,8 @@ task_order:
   - 3-ui-action-dto-closure
   - 4-ui-readmodel-port-closure
   - 5-router-port-cleanup
-active_task_id: 3-ui-action-dto-closure
-last_completed_task_id: 2-router-dependency-slices
+active_task_id: 4-ui-readmodel-port-closure
+last_completed_task_id: 3-ui-action-dto-closure
 archive_group: 2026-05-03-ui-router-port-closure-plan-v1
 task_tracker:
   - task_id: 1-router-fitness-guards
@@ -28,9 +28,9 @@ task_tracker:
     status: archived
     notes: "Completed via implementation bubble 2-router-dependency-slices-impl; merged at a4890b2f and archived."
   - task_id: 3-ui-action-dto-closure
-    task_path: plans/tasks/3-ui-action-dto-closure.md
-    status: in_progress
-    notes: "Implementation bubble 3-ui-action-dto-closure-impl started after document bubble 3-ui-action-dto-closure-doc closed and merged at 98381abc."
+    task_path: plans/archive/tasks/2026-05-03-ui-router-port-closure-plan-v1/3-ui-action-dto-closure.md
+    status: archived
+    notes: "Completed via implementation bubble 3-ui-action-dto-closure-impl; merged at d31df79 and archived."
   - task_id: 4-ui-readmodel-port-closure
     task_path: null
     status: not_created

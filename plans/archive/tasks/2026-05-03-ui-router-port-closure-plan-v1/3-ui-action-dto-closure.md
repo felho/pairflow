@@ -5,7 +5,7 @@ task_family_id: ui-action-dto-closure
 sequence_key: "3"
 task_id: 3-ui-action-dto-closure
 title: "UI Action DTO Closure"
-status: in_progress
+status: archived
 phase: phase3
 target_files:
   - src/contracts/ui/uiActions.ts
