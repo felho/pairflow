@@ -10,6 +10,7 @@ import type {
 } from "../../../src/contracts/ui/uiReadModel.js";
 import type {
   MetaReviewQualityPreset as CanonicalMetaReviewQualityPreset,
+  UiAttachBubbleResult as CanonicalUiAttachBubbleResult,
   UiCommitBubbleInput,
   UiMergeBubbleInput,
   UiUpdateBubbleReviewPolicyInput
@@ -32,7 +33,8 @@ export type {
   UiApiErrorBody
 } from "../../../src/contracts/ui/uiErrors.js";
 export type {
-  AttachBubbleResult as AttachActionResult,
+  UiApprovalDecisionDeliverySignal,
+  UiApprovalDecisionDeliverySignals,
   UiAttachBubbleResult,
   UiCommitBubbleResult,
   UiDeleteBubbleInput,
@@ -41,7 +43,9 @@ export type {
   UiEmitApproveInput,
   UiEmitHumanReplyInput,
   UiEmitHumanReplyResult,
+  UiEmitRequestReworkImmediateResult,
   UiEmitRequestReworkInput,
+  UiEmitRequestReworkQueuedResult,
   UiEmitRequestReworkResult,
   UiMergeBubbleResult,
   UiOpenBubbleResult,
@@ -50,6 +54,10 @@ export type {
   UiStopBubbleResult,
   UiUpdateBubbleReviewPolicyResult as UpdateReviewPolicyActionResult
 } from "../../../src/contracts/ui/uiActions.js";
+/**
+ * @deprecated Use UiAttachBubbleResult for UI action contract surfaces.
+ */
+export type AttachActionResult = CanonicalUiAttachBubbleResult;
 export type {
   ProtocolMessageType
 } from "../../../src/types/protocol.js";

@@ -4,7 +4,10 @@ import type { UiApiErrorBody } from "../../../contracts/ui/uiErrors.js";
 import type { UiBubbleDetail } from "../../../contracts/ui/uiReadModel.js";
 import type { UiEventsBroker } from "./events.js";
 import type { UiRepoScope } from "./repoScope.js";
-import type { AttachBubbleResult, UiRouterDependencies } from "../../shared/ports/uiRouter.js";
+import type {
+  UiAttachBubbleResult,
+  UiRouterDependencies
+} from "../../shared/ports/uiRouter.js";
 import type { UiRuntimeSessionRecord } from "../../../contracts/ui/uiReadModel.js";
 
 export interface UiApiError {
@@ -47,4 +50,7 @@ export interface UiBubbleDetailContext {
   runtimeSession: UiRuntimeSessionRecord | null;
 }
 
-export type { AttachBubbleResult, UiRouterDependencies };
+export type {
+  UiAttachBubbleResult,
+  UiRouterDependencies
+};

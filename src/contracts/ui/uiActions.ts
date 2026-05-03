@@ -1,20 +1,98 @@
 import type {
   AttachLauncher,
   BubbleReviewAutoReworkSeverity,
-  BubbleReviewLoopMode,
-  BubbleStateSnapshot
+  BubbleReviewLoopMode
 } from "../../types/bubble.js";
-import type { ProtocolEnvelope } from "../../types/protocol.js";
 import type { DeleteBubbleResult } from "./deleteBubble.js";
+import type { BubbleLifecycleState } from "./bubbleLifecycle.js";
 import type { UiBubbleReviewPolicy } from "./uiReadModel.js";
 
 export type MetaReviewQualityPreset = "P1" | "P2" | "P3" | "P3+1" | "P3+2";
+
+export type UiActionAgentName = "codex" | "claude";
+
+export type UiActionAgentRole = "implementer" | "reviewer" | "meta_reviewer";
+
+export type UiActionProtocolParticipant =
+  | "codex"
+  | "claude"
+  | "orchestrator"
+  | "human";
+
+export type UiActionProtocolMessageType =
+  | "TASK"
+  | "PASS"
+  | "HUMAN_QUESTION"
+  | "HUMAN_REPLY"
+  | "CONVERGENCE"
+  | "APPROVAL_REQUEST"
+  | "APPROVAL_DECISION"
+  | "COMMIT_RESULT";
+
+export type UiActionApprovalDecision = "approve" | "rework";
+
+export type UiActionPassIntent = "task" | "review" | "fix_request";
+
+export type UiActionFindingsClaimState =
+  | "clean"
+  | "open_findings"
+  | "unknown";
+
+export type UiActionFindingsClaimSource =
+  | "payload_flags"
+  | "payload_findings_count"
+  | "legacy_summary_parser"
+  | "meta_review_artifact";
+
+export interface UiActionExecutionContextRef {
+  handoffId: string;
+  executionId: string;
+}
+
+export interface UiActionBubbleState {
+  bubbleId: string;
+  lifecycleState: BubbleLifecycleState;
+  round: number;
+  activeAgent: UiActionAgentName | null;
+  activeRole: UiActionAgentRole | null;
+  activeSince: string | null;
+  lastCommandAt: string | null;
+  executionContext: UiActionExecutionContextRef | null;
+}
+
+export interface UiActionPendingReworkIntent {
+  intentId: string;
+  message: string;
+  refs: string[];
+  requestedBy: string;
+  requestedAt: string;
+  status: "pending" | "applied" | "superseded";
+  supersededByIntentId?: string | undefined;
+}
+
+export interface UiActionEvent {
+  id: string;
+  timestamp: string;
+  bubbleId: string;
+  sender: UiActionProtocolParticipant;
+  recipient: UiActionProtocolParticipant;
+  type: UiActionProtocolMessageType;
+  round: number;
+  refs: string[];
+  summary?: string | undefined;
+  question?: string | undefined;
+  message?: string | undefined;
+  decision?: UiActionApprovalDecision | undefined;
+  passIntent?: UiActionPassIntent | undefined;
+  findingsClaimState?: UiActionFindingsClaimState | undefined;
+  findingsClaimSource?: UiActionFindingsClaimSource | undefined;
+}
 
 export interface UiBubbleMutationInput {
   bubbleId: string;
   repoPath?: string | undefined;
   cwd?: string | undefined;
-  now?: Date | undefined;
+  now?: string | undefined;
 }
 
 export interface UiEmitApproveInput extends UiBubbleMutationInput {
@@ -69,8 +147,8 @@ export type UiDeliveryAckReasonCode =
 export interface UiEmitApprovalDecisionResult {
   bubbleId: string;
   sequence: number;
-  envelope: ProtocolEnvelope;
-  state: BubbleStateSnapshot;
+  event: UiActionEvent;
+  actionState: UiActionBubbleState;
   delivery?: UiApprovalDecisionDeliverySignals;
 }
 
@@ -83,7 +161,8 @@ export interface UiEmitRequestReworkQueuedResult {
   mode: "queued";
   bubbleId: string;
   intentId: string;
-  state: BubbleStateSnapshot;
+  actionState: UiActionBubbleState;
+  queuedIntent: UiActionPendingReworkIntent | null;
   supersededIntentId?: string;
 }
 
@@ -96,20 +175,16 @@ export interface UiEmitRequestReworkInput extends UiBubbleMutationInput {
   refs?: string[] | undefined;
 }
 
-export interface UiEmitHumanReplyInput {
-  bubbleId: string;
-  repoPath?: string;
-  cwd?: string;
-  now?: Date;
+export interface UiEmitHumanReplyInput extends UiBubbleMutationInput {
   message: string;
-  refs?: string[];
+  refs?: string[] | undefined;
 }
 
 export interface UiEmitHumanReplyResult {
   bubbleId: string;
   sequence: number;
-  envelope: ProtocolEnvelope;
-  state: BubbleStateSnapshot;
+  event: UiActionEvent;
+  actionState: UiActionBubbleState;
 }
 
 export interface UiCommitBubbleInput extends UiBubbleMutationInput {
@@ -121,8 +196,8 @@ export interface UiCommitBubbleInput extends UiBubbleMutationInput {
 export interface UiCommitBubbleResult {
   bubbleId: string;
   sequence: number;
-  envelope: ProtocolEnvelope;
-  state: BubbleStateSnapshot;
+  event: UiActionEvent;
+  actionState: UiActionBubbleState;
   commitSha: string;
   commitMessage: string;
   stagedFiles: string[];
@@ -159,14 +234,14 @@ export interface UiOpenBubbleResult {
 
 export interface UiStartBubbleResult {
   bubbleId: string;
-  state: BubbleStateSnapshot;
+  actionState: UiActionBubbleState;
   tmuxSessionName: string;
   worktreePath: string;
 }
 
 export interface UiStopBubbleResult {
   bubbleId: string;
-  state: BubbleStateSnapshot;
+  actionState: UiActionBubbleState;
   tmuxSessionName: string;
   tmuxSessionExisted: boolean;
   runtimeSessionRemoved: boolean;
@@ -174,7 +249,7 @@ export interface UiStopBubbleResult {
 
 export interface UiRestartBubbleResult {
   bubbleId: string;
-  state: BubbleStateSnapshot;
+  actionState: UiActionBubbleState;
   tmuxSessionName: string;
   worktreePath: string;
   previousTmuxSessionExisted: boolean;
@@ -229,6 +304,9 @@ export interface UiAttachBubbleInput {
   cwd?: string | undefined;
 }
 
+/**
+ * @deprecated Use UiAttachBubbleResult for UI action contract surfaces.
+ */
 export type AttachBubbleResult = UiAttachBubbleResult;
 
 export interface UiUpdateBubbleReviewPolicyInput extends UiBubbleMutationInput {
