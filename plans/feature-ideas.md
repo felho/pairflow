@@ -64,3 +64,4 @@
 - https://www.hud.io/
 - https://github.com/kajogo777/the-agent-sandbox-taxonomy/tree/main
 - https://github.com/jedi4ever/context-filter
+- https://tessl.io/blog/context-development-lifecycle-better-context-for-ai-coding-agents/
