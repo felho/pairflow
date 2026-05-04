@@ -5,7 +5,7 @@ task_family_id: extract-command-contract
 sequence_key: "1"
 task_id: 1-extract-command-contract
 title: "Extract Command Contract"
-status: implementable
+status: in_progress
 phase: phase1
 target_files:
   - src/v11/application/extract/extractCliCommand.ts
@@ -32,7 +32,7 @@ normative_refs:
 owners:
   - "felho"
 doc_bubble_id: 1-extract-command-contract-doc
-impl_bubble_id: null
+impl_bubble_id: 1-extract-command-contract-impl
 supersedes: []
 superseded_by: null
 archive_group: 2026-05-04-ideation-bubble-extract-plan-v1
