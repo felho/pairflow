@@ -5,7 +5,7 @@ task_family_id: contract-drift-tests
 sequence_key: "4"
 task_id: 4-contract-drift-tests
 title: "Contract Drift Tests"
-status: in_progress
+status: archived
 phase: phase4
 target_files:
   - tools/fitness/checks/ui-contract-boundary.ts
@@ -35,6 +35,7 @@ impl_bubble_id: 4-contract-drift-tests-impl
 supersedes: []
 superseded_by: null
 archive_group: 2026-05-04-ui-contract-boundary-hardening-plan-v1
+archive_path: plans/archive/tasks/2026-05-04-ui-contract-boundary-hardening-plan-v1/4-contract-drift-tests.md
 ---
 
 # Task: Contract Drift Tests
