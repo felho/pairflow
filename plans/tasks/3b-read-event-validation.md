@@ -5,7 +5,7 @@ task_family_id: read-event-validation
 sequence_key: "3b"
 task_id: 3b-read-event-validation
 title: "Read and Event Response Validation"
-status: approved
+status: implementable
 phase: phase3b
 target_files:
   - src/v11/infrastructure/ui/routerActions.ts

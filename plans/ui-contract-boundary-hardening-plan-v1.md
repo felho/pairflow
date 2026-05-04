@@ -33,7 +33,7 @@ task_tracker:
     status: archived
   - task_id: 3b-read-event-validation
     task_path: plans/tasks/3b-read-event-validation.md
-    status: approved
+    status: implementable
   - task_id: 4-contract-drift-tests
     task_path: null
     status: not_created
