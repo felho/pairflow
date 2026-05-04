@@ -8,6 +8,9 @@ title: "Commit Local Helpers"
 status: approved
 phase: phase1
 target_files:
+  - src/v11/application/commit/commitCommandError.ts
+  - src/v11/application/commit/commitCommandErrorNormalization.ts
+  - src/v11/application/commit/commitCommandFinalizationMutation.ts
   - src/v11/shared/commit/commitCommandError.ts
   - src/v11/shared/commit/commitCommandErrorNormalization.ts
   - src/v11/shared/commit/commitCommandFinalizationMutation.ts
@@ -171,8 +174,8 @@ contract module in place for the successor command-neutral rename task.
 2. Move `commitCommandErrorNormalization.ts` into
    `src/v11/application/commit/**`.
 3. Move `commitCommandFinalizationMutation.ts` into
-   `src/v11/application/commit/**` or fold it into an existing commit
-   application module only if the resulting boundary remains clear and typed.
+   `src/v11/application/commit/commitCommandFinalizationMutation.ts` as a
+   separate application-owned helper file.
 4. Update imports in commit application code and tests to the new owning path.
 5. Preserve all exported behavior, error names, reason-code behavior, transcript
    envelope shape, state transition order, and recovery text semantics.
@@ -216,9 +219,11 @@ contract module in place for the successor command-neutral rename task.
    the application commit lane.
 4. Update direct tests imports from the old shared helper path to the new
    application helper path.
-5. Use `rg "shared/commit/commitCommand"` after the move to verify no
+5. Remove the old shared helper files after their application-owned equivalents
+   are in place and all imports have moved.
+6. Use `rg "shared/commit/commitCommand"` after the move to verify no
    command-local helper imports remain.
-6. Keep `src/v11/application/commit/commitRemotePorts.ts` exporting the retained
+7. Keep `src/v11/application/commit/commitRemotePorts.ts` exporting the retained
    remote contract until the successor task renames the shared remote boundary.
 
 ### 2) Acceptance Criteria
@@ -271,8 +276,11 @@ CreatePairflowSpec `CreateTask` delegated result:
    `plans/shared-command-boundary-cleanup-plan-v1.md`.
 2. Identity matches plan tracker: `task_id=1-commit-local-helpers`,
    `sequence_key=1`, `task_family_id=commit-local-helpers`.
-3. Document and implementation bubble ids are unlinked (`null`) pending
-   `ReviewSpec` approval and subsequent bubble routes.
+3. Initial creation left document and implementation bubble ids unlinked
+   (`null`) pending `ReviewSpec` approval and subsequent bubble routes; this
+   document-refinement bubble now records `doc_bubble_id:
+   1-commit-local-helpers-doc`, while `impl_bubble_id` remains `null` until a
+   later implementation-bubble route.
 
 CreatePairflowSpec `ReviewSpec` task-mode approval:
 
