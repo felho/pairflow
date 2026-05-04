@@ -81,7 +81,7 @@ export function ConnectedBubbleExpandedCard(
         setPosition(props.bubbleId, pos);
       }}
       onPositionCommit={() => {
-        persistPositions();
+        persistPositions(props.bubbleId);
       }}
       onClose={() => {
         collapseBubble(props.bubbleId);

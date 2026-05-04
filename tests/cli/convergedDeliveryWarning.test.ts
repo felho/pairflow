@@ -21,7 +21,10 @@ describe("runCli converged delivery warning parity", () => {
     stderrSpy.mockRestore();
   });
 
-  it("prints resume guidance when auto-rework delivery is not confirmed", async () => {
+  it(
+    "prints resume guidance when auto-rework delivery is not confirmed",
+    { timeout: 10_000 },
+    async () => {
     const mockedResult = {
       bubbleId: "b_conv_warn_01",
       convergenceSequence: 10,
@@ -65,7 +68,8 @@ describe("runCli converged delivery warning parity", () => {
       "Use `pairflow bubble status --id b_conv_warn_01` and `pairflow bubble resume --id b_conv_warn_01` if the implementer did not start after auto rework dispatch."
     );
     expect(runConvergedCommand).toHaveBeenCalledWith(["--summary", "x"]);
-  }, 20000);
+    }
+  );
 
   it("prints approval-path guidance when human-gate delivery is not confirmed", async () => {
     const mockedResult = {

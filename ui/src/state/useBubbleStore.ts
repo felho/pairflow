@@ -7,7 +7,12 @@ import {
   type PairflowApiClient
 } from "../lib/api";
 import { copyToClipboard } from "../lib/clipboard";
-import { defaultPosition, resolveNonOverlappingPosition } from "../lib/canvasLayout";
+import {
+  defaultPosition,
+  resolveViewportAwarePosition,
+  type PlacementSource,
+  type ViewportRectangle
+} from "../lib/canvasLayout";
 import {
   createRealtimeEventsClient,
   type RealtimeEventsClient,
@@ -35,7 +40,7 @@ import type {
 } from "../lib/types";
 import { bubbleLifecycleStates } from "../lib/types";
 
-const positionsStorageKey = "pairflow.ui.canvas.positions.v1";
+const positionsStorageKey = "pairflow.ui.canvas.positions.v2";
 const expandedIdsStorageKey = "pairflow.ui.canvas.expandedIds.v1";
 const pollingRefreshErrorPrefix = "Polling refresh failed:";
 const expandedTimelineLagRetryDelayMs = 150;
@@ -74,6 +79,8 @@ export interface BubbleStoreState {
   repoSummaries: Record<string, UiRepoSummary>;
   loadedRepos: Record<string, boolean>;
   positions: Record<string, BubblePosition>;
+  positionSources: Record<string, BubblePositionSource>;
+  canvasViewport: ViewportRectangle | null;
   connectionStatus: ConnectionStatus;
   isLoading: boolean;
   error: string | null;
@@ -91,7 +98,8 @@ export interface BubbleStoreState {
   initialize: () => Promise<void>;
   toggleRepo: (repoPath: string) => Promise<void>;
   setPosition: (bubbleId: string, position: BubblePosition) => void;
-  persistPositions: () => void;
+  persistPositions: (bubbleId?: string) => void;
+  setCanvasViewport: (viewport: ViewportRectangle | null) => void;
   stopRealtime: () => void;
   toggleBubbleExpanded: (bubbleId: string) => Promise<void>;
   collapseBubble: (bubbleId: string) => void;
@@ -113,6 +121,8 @@ export interface BubbleStoreDependencies {
   storage?: StorageLike | null;
   pollingIntervalMs?: number;
 }
+
+type BubblePositionSource = PlacementSource | "explicit";
 
 function asMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
@@ -639,16 +649,32 @@ function readPositions(storage: StorageLike | null): Record<string, BubblePositi
   }
 }
 
+function initialPositionSources(
+  positions: Record<string, BubblePosition>
+): Record<string, BubblePositionSource> {
+  return Object.fromEntries(
+    Object.keys(positions).map((bubbleId) => [bubbleId, "explicit"])
+  );
+}
+
 function writePositions(
   storage: StorageLike | null,
-  positions: Record<string, BubblePosition>
+  positions: Record<string, BubblePosition>,
+  sources: Record<string, BubblePositionSource>
 ): void {
   if (storage === null) {
     return;
   }
 
+  const persisted: Record<string, BubblePosition> = {};
+  for (const [bubbleId, position] of Object.entries(positions)) {
+    if (sources[bubbleId] === "explicit") {
+      persisted[bubbleId] = position;
+    }
+  }
+
   try {
-    storage.setItem(positionsStorageKey, JSON.stringify(positions));
+    storage.setItem(positionsStorageKey, JSON.stringify(persisted));
   } catch {
     return;
   }
@@ -779,12 +805,39 @@ function prunePositions(
   return changed ? next : currentPositions;
 }
 
+function prunePositionSources(
+  currentSources: Record<string, BubblePositionSource>,
+  bubbles: Record<string, BubbleCardModel>
+): Record<string, BubblePositionSource> {
+  const next = { ...currentSources };
+  let changed = false;
+
+  for (const bubbleId of Object.keys(next)) {
+    if (bubbles[bubbleId] !== undefined) {
+      continue;
+    }
+    delete next[bubbleId];
+    changed = true;
+  }
+
+  return changed ? next : currentSources;
+}
+
+function positionsEqual(left: BubblePosition, right: BubblePosition): boolean {
+  return left.x === right.x && left.y === right.y;
+}
+
 function fillDefaultPositions(
   positions: Record<string, BubblePosition>,
+  positionSources: Record<string, BubblePositionSource>,
   bubbles: Record<string, BubbleCardModel>,
   selectedRepos: Set<string>,
-  expandedBubbleIds: readonly string[]
-): Record<string, BubblePosition> {
+  expandedBubbleIds: readonly string[],
+  viewport: ViewportRectangle | null
+): {
+  positions: Record<string, BubblePosition>;
+  positionSources: Record<string, BubblePositionSource>;
+} {
   const expandedSet = new Set(expandedBubbleIds);
   const visible = Object.values(bubbles)
     .filter((bubble) => selectedRepos.has(bubble.repoPath))
@@ -792,36 +845,61 @@ function fillDefaultPositions(
 
   let changed = false;
   const next = { ...positions };
+  const nextSources = { ...positionSources };
 
   for (const [index, bubble] of visible.entries()) {
-    if (next[bubble.bubbleId] === undefined) {
-      const occupied: {
-        position: BubblePosition;
-        expanded: boolean;
-      }[] = [];
-      for (const candidate of visible) {
-        if (candidate.bubbleId === bubble.bubbleId) {
-          continue;
-        }
-        const candidatePosition = next[candidate.bubbleId];
-        if (candidatePosition === undefined) {
-          continue;
-        }
-        occupied.push({
-          position: candidatePosition,
-          expanded: expandedSet.has(candidate.bubbleId)
-        });
+    const currentPosition = next[bubble.bubbleId];
+    const currentSource = nextSources[bubble.bubbleId];
+    if (currentPosition !== undefined && currentSource !== "generated-fallback") {
+      continue;
+    }
+    if (currentPosition !== undefined && currentSource === "generated-fallback" && viewport === null) {
+      continue;
+    }
+
+    const occupied: {
+      position: BubblePosition;
+      expanded: boolean;
+    }[] = [];
+    for (const candidate of visible) {
+      if (candidate.bubbleId === bubble.bubbleId) {
+        continue;
       }
-      next[bubble.bubbleId] = resolveNonOverlappingPosition(
+      const candidatePosition = next[candidate.bubbleId];
+      if (candidatePosition === undefined) {
+        continue;
+      }
+      occupied.push({
+        position: candidatePosition,
+        expanded: expandedSet.has(candidate.bubbleId)
+      });
+    }
+    const result = resolveViewportAwarePosition(
         defaultPosition(index),
         occupied,
-        expandedSet.has(bubble.bubbleId)
+        expandedSet.has(bubble.bubbleId),
+        viewport
       );
+    if (
+      currentPosition === undefined
+      || !positionsEqual(currentPosition, result.position)
+      || currentSource !== result.source
+    ) {
+      next[bubble.bubbleId] = result.position;
+      nextSources[bubble.bubbleId] = result.source;
       changed = true;
     }
   }
 
-  return changed ? next : positions;
+  return changed
+    ? {
+        positions: next,
+        positionSources: nextSources
+      }
+    : {
+        positions,
+        positionSources
+      };
 }
 
 function pruneRecordByBubbleIds<T>(
@@ -1087,12 +1165,15 @@ export function createBubbleStore(
           loadedRepos[payload.repo.repoPath] = true;
         }
 
-        const pruned = prunePositions(state.positions, bubblesById);
-        const positions = fillDefaultPositions(
-          pruned,
+        const prunedPositions = prunePositions(state.positions, bubblesById);
+        const prunedSources = prunePositionSources(state.positionSources, bubblesById);
+        const placement = fillDefaultPositions(
+          prunedPositions,
+          prunedSources,
           bubblesById,
           new Set(state.selectedRepos),
-          expandedBubbleIds
+          expandedBubbleIds,
+          state.canvasViewport
         );
         const bubbleDetails = syncExpandedFromSummary(state.bubbleDetails, bubblesById);
 
@@ -1100,7 +1181,8 @@ export function createBubbleStore(
           bubblesById,
           repoSummaries,
           loadedRepos,
-          positions,
+          positions: placement.positions,
+          positionSources: placement.positionSources,
           bubbleDetails,
           bubbleTimelines: pruneRecordByBubbleIds(state.bubbleTimelines, bubblesById),
           detailLoadingById: pruneRecordByBubbleIds(state.detailLoadingById, bubblesById),
@@ -1115,7 +1197,7 @@ export function createBubbleStore(
         };
       });
 
-      writePositions(storage, get().positions);
+      writePositions(storage, get().positions, get().positionSources);
       writeExpandedIds(storage, get().expandedBubbleIds);
     };
 
@@ -1288,11 +1370,13 @@ export function createBubbleStore(
                   state.bubblesById,
                   bubblesById
                 );
-                const positions = fillDefaultPositions(
+                const placement = fillDefaultPositions(
                   prunePositions(state.positions, bubblesById),
+                  prunePositionSources(state.positionSources, bubblesById),
                   bubblesById,
                   new Set(state.selectedRepos),
-                  expandedBubbleIds
+                  expandedBubbleIds,
+                  state.canvasViewport
                 );
                 const bubbleDetails = syncExpandedFromSummary(
                   state.bubbleDetails,
@@ -1301,7 +1385,8 @@ export function createBubbleStore(
                 return {
                   repoSummaries,
                   bubblesById,
-                  positions,
+                  positions: placement.positions,
+                  positionSources: placement.positionSources,
                   bubbleDetails,
                   bubbleTimelines: pruneRecordByBubbleIds(
                     state.bubbleTimelines,
@@ -1352,11 +1437,13 @@ export function createBubbleStore(
                   state.bubblesById,
                   bubblesById
                 );
-                const positions = fillDefaultPositions(
+                const placement = fillDefaultPositions(
                   prunePositions(state.positions, bubblesById),
+                  prunePositionSources(state.positionSources, bubblesById),
                   bubblesById,
                   new Set(state.selectedRepos),
-                  expandedBubbleIds
+                  expandedBubbleIds,
+                  state.canvasViewport
                 );
                 const existingDetail = state.bubbleDetails[event.bubbleId];
                 const bubbleDetails =
@@ -1371,22 +1458,26 @@ export function createBubbleStore(
                       };
                 return {
                   bubblesById,
-                  positions,
+                  positions: placement.positions,
+                  positionSources: placement.positionSources,
                   bubbleDetails,
                   expandedBubbleIds
                 };
               }
               case "bubble.removed": {
                 const bubblesById = removeBubble(state.bubblesById, event.bubbleId);
-                const positions = fillDefaultPositions(
+                const placement = fillDefaultPositions(
                   prunePositions(state.positions, bubblesById),
+                  prunePositionSources(state.positionSources, bubblesById),
                   bubblesById,
                   new Set(state.selectedRepos),
-                  state.expandedBubbleIds
+                  state.expandedBubbleIds,
+                  state.canvasViewport
                 );
                 return {
                   bubblesById,
-                  positions,
+                  positions: placement.positions,
+                  positionSources: placement.positionSources,
                   bubbleDetails: pruneRecordByBubbleIds(state.bubbleDetails, bubblesById),
                   bubbleTimelines: pruneRecordByBubbleIds(state.bubbleTimelines, bubblesById),
                   detailLoadingById: pruneRecordByBubbleIds(
@@ -1440,7 +1531,7 @@ export function createBubbleStore(
             }
           });
 
-          writePositions(storage, get().positions);
+          writePositions(storage, get().positions, get().positionSources);
           writeExpandedIds(storage, get().expandedBubbleIds);
 
           const expandedIds = get().expandedBubbleIds;
@@ -1494,13 +1585,17 @@ export function createBubbleStore(
       return eventsClient;
     };
 
+    const initialPositions = readPositions(storage);
+
     return {
       repos: [],
       selectedRepos: [],
       bubblesById: {},
       repoSummaries: {},
       loadedRepos: {},
-      positions: readPositions(storage),
+      positions: initialPositions,
+      positionSources: initialPositionSources(initialPositions),
+      canvasViewport: null,
       connectionStatus: "idle",
       isLoading: false,
       error: null,
@@ -1550,11 +1645,13 @@ export function createBubbleStore(
             }
           }
 
-          const positions = fillDefaultPositions(
+          const placement = fillDefaultPositions(
             prunePositions(get().positions, bubblesById),
+            prunePositionSources(get().positionSources, bubblesById),
             bubblesById,
             new Set(selectedRepos),
-            get().expandedBubbleIds
+            get().expandedBubbleIds,
+            get().canvasViewport
           );
 
           set((state) => ({
@@ -1563,7 +1660,8 @@ export function createBubbleStore(
             bubblesById,
             repoSummaries,
             loadedRepos,
-            positions,
+            positions: placement.positions,
+            positionSources: placement.positionSources,
             isLoading: false,
             error: null,
             expandedBubbleIds: state.expandedBubbleIds.filter(
@@ -1584,7 +1682,7 @@ export function createBubbleStore(
             actionFailureById: pruneRecordByBubbleIds(state.actionFailureById, bubblesById)
           }));
 
-          writePositions(storage, positions);
+          writePositions(storage, placement.positions, placement.positionSources);
           writeExpandedIds(storage, get().expandedBubbleIds);
 
           // Re-fetch details for any expanded bubbles that survived pruning
@@ -1640,14 +1738,50 @@ export function createBubbleStore(
             ...state.positions,
             [bubbleId]: position
           };
+          const positionSources = {
+            ...state.positionSources,
+            [bubbleId]: "explicit" as const
+          };
           return {
-            positions
+            positions,
+            positionSources
           };
         });
       },
 
-      persistPositions(): void {
-        writePositions(storage, get().positions);
+      persistPositions(bubbleId?: string): void {
+        if (bubbleId !== undefined) {
+          set((state) => {
+            if (state.positions[bubbleId] === undefined) {
+              return {};
+            }
+            return {
+              positionSources: {
+                ...state.positionSources,
+                [bubbleId]: "explicit" as const
+              }
+            };
+          });
+        }
+        writePositions(storage, get().positions, get().positionSources);
+      },
+
+      setCanvasViewport(viewport: ViewportRectangle | null): void {
+        set((state) => {
+          const placement = fillDefaultPositions(
+            state.positions,
+            state.positionSources,
+            state.bubblesById,
+            new Set(state.selectedRepos),
+            state.expandedBubbleIds,
+            viewport
+          );
+          return {
+            canvasViewport: viewport,
+            positions: placement.positions,
+            positionSources: placement.positionSources
+          };
+        });
       },
 
       stopRealtime(): void {

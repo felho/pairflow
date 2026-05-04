@@ -649,6 +649,35 @@ describe("state schema", () => {
     ).toBe(true);
   });
 
+  it("accepts round_role_history entries where implementer and reviewer share an agent", () => {
+    const result = validateBubbleStateSnapshot({
+      bubble_id: "b_test_same_agent_history",
+      state: "RUNNING",
+      round: 1,
+      active_agent: "codex",
+      active_since: "2026-02-21T12:00:00.000Z",
+      active_role: "implementer",
+      execution_context: buildRunningExecutionContext({
+        bubbleId: "b_test_same_agent_history",
+        round: 1,
+        activeRole: "implementer",
+        startedAt: "2026-02-21T12:00:00.000Z",
+        watchdogTimeoutMinutes: 30
+      }),
+      round_role_history: [
+        {
+          round: 1,
+          implementer: "codex",
+          reviewer: "codex",
+          switched_at: "2026-02-21T12:00:00.000Z"
+        }
+      ],
+      last_command_at: "2026-02-21T12:05:00.000Z"
+    });
+
+    expect(result.ok).toBe(true);
+  });
+
   it("accepts rework intent pending slot + immutable history records", () => {
     const result = validateBubbleStateSnapshot({
       bubble_id: "b_test_02",

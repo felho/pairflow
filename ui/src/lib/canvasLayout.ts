@@ -18,8 +18,8 @@ export const yGap = 22;
 export const startX = 22;
 export const startY = 22;
 export const columns = 4;
-const horizontalStep = cardWidth + xGap;
-const verticalStep = cardHeight + yGap;
+const horizontalStep = expandedCardDimensions.width + xGap;
+const verticalStep = expandedCardDimensions.height + yGap;
 const maxSlotX = startX + (columns - 1) * horizontalStep;
 
 export function defaultPosition(index: number): BubblePosition {
@@ -78,22 +78,37 @@ export function resolveViewportAwarePosition(
     .map((position) => ({
       position,
       visibleArea: visibleArea(position, dimensions, viewport),
-      fullyVisible: isFullyVisible(position, dimensions, viewport)
+      fullyVisible: isFullyVisible(position, dimensions, viewport),
+      horizontallyFullyVisible: isHorizontallyFullyVisible(
+        position,
+        dimensions,
+        viewport
+      )
     }))
-    .filter((candidate) => candidate.visibleArea > 0)
+    .filter((candidate) => candidate.visibleArea > 0);
+
+  const fullyVisibleCandidates = candidates
+    .filter((candidate) => candidate.fullyVisible)
+    .sort((a, b) => rowMajorCompare(a.position, b.position));
+
+  const partiallyVisibleCandidates = candidates
+    .filter((candidate) => !candidate.fullyVisible)
     .sort((a, b) => {
-      if (a.fullyVisible !== b.fullyVisible) {
-        return a.fullyVisible ? -1 : 1;
+      if (a.horizontallyFullyVisible !== b.horizontallyFullyVisible) {
+        return a.horizontallyFullyVisible ? -1 : 1;
       }
 
-      if (!a.fullyVisible && a.visibleArea !== b.visibleArea) {
+      if (a.horizontallyFullyVisible && b.horizontallyFullyVisible) {
+        return rowMajorCompare(a.position, b.position);
+      }
+
+      if (a.visibleArea !== b.visibleArea) {
         return b.visibleArea - a.visibleArea;
       }
-
       return rowMajorCompare(a.position, b.position);
     });
 
-  const bestCandidate = candidates[0];
+  const bestCandidate = fullyVisibleCandidates[0] ?? partiallyVisibleCandidates[0];
   if (!bestCandidate) {
     return fallback();
   }
@@ -227,6 +242,20 @@ function isFullyVisible(
     position.y >= viewport.y &&
     position.x + dimensions.width <= viewport.x + viewport.width &&
     position.y + dimensions.height <= viewport.y + viewport.height
+  );
+}
+
+function isHorizontallyFullyVisible(
+  position: BubblePosition,
+  dimensions: {
+    width: number;
+    height: number;
+  },
+  viewport: ViewportRectangle
+): boolean {
+  return (
+    position.x >= viewport.x &&
+    position.x + dimensions.width <= viewport.x + viewport.width
   );
 }
 

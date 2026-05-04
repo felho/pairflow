@@ -136,12 +136,65 @@ describe("BubbleCanvas", () => {
       width: `${collapsedDimensions.width}px`,
       height: `${collapsedDimensions.height}px`
     });
-    expect(screen.getByRole("main")).toHaveStyle({
+    expect(screen.getByRole("main")).not.toHaveStyle({
+      minHeight: "560px"
+    });
+    expect(screen.getByTestId("canvas-content")).toHaveStyle({
       minHeight: "560px",
       minWidth: `${40 + collapsedDimensions.width + 24}px`
     });
     expect(onPositionChange).not.toHaveBeenCalled();
     expect(onPositionCommit).not.toHaveBeenCalled();
+  });
+
+  it("reports the measured scroll viewport in canvas coordinates", async () => {
+    const onViewportChange = vi.fn();
+    render(
+      <BubbleCanvas
+        bubbles={[
+          bubbleCard({
+            bubbleId: "b-1",
+            repoPath: "/repo-a"
+          })
+        ]}
+        positions={{}}
+        expandedBubbleIds={[]}
+        onPositionChange={() => undefined}
+        onPositionCommit={() => undefined}
+        onViewportChange={onViewportChange}
+        onToggleExpand={() => undefined}
+        onDelete={(bubbleId) => Promise.resolve(deletedResult(bubbleId))}
+      />
+    );
+
+    const canvas = screen.getByRole("main");
+    Object.defineProperty(canvas, "clientWidth", {
+      configurable: true,
+      value: 640
+    });
+    Object.defineProperty(canvas, "clientHeight", {
+      configurable: true,
+      value: 360
+    });
+    Object.defineProperty(canvas, "scrollLeft", {
+      configurable: true,
+      value: 24
+    });
+    Object.defineProperty(canvas, "scrollTop", {
+      configurable: true,
+      value: 190
+    });
+
+    fireEvent.scroll(canvas);
+
+    await waitFor(() => {
+      expect(onViewportChange).toHaveBeenLastCalledWith({
+        x: 24,
+        y: 190,
+        width: 640,
+        height: 360
+      });
+    });
   });
 
   it("prefers explicit invalid-state attention over generic stale-runtime summary text", () => {

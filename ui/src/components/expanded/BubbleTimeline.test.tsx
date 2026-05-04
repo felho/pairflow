@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
 import { timelineEntry } from "../../test/fixtures";
@@ -311,6 +311,53 @@ describe("BubbleTimeline", () => {
       .getAllByText("rework")
       .filter((node) => node.className.includes("inline-block"));
     expect(reworkBadges).toHaveLength(1);
+  });
+
+  it("splits meta-review approval from orchestrator gate-failed rework", () => {
+    render(
+      <BubbleTimeline
+        entries={[
+          timelineEntry({
+            id: "env-gate-failed-rework",
+            type: "APPROVAL_DECISION",
+            round: 2,
+            sender: "orchestrator",
+            recipient: "codex",
+            payload: {
+              decision: "rework",
+              message:
+                "Meta-review approved the current change, but the required approve-gate validation failed.",
+              metadata: {
+                actor: "meta-reviewer",
+                actor_agent: "codex",
+                recommendation: "approve"
+              }
+            }
+          })
+        ]}
+        isLoading={false}
+        error={null}
+        compact={false}
+      />
+    );
+
+    const metaLabel = screen.getByText("meta-reviewer", {
+      selector: "span.font-medium"
+    });
+    expect(metaLabel).toHaveTextContent(/\(codex\)/u);
+    const metaRow = metaLabel.closest("div.flex.items-start");
+    expect(metaRow).not.toBeNull();
+    expect(within(metaRow as HTMLElement).getByText("approve")).toBeInTheDocument();
+    expect(within(metaRow as HTMLElement).queryByText("rework")).not.toBeInTheDocument();
+
+    const orchestratorLabel = screen.getByText("orchestrator", {
+      selector: "span.font-medium"
+    });
+    expect(orchestratorLabel).toHaveTextContent("orchestrator (gate failed)");
+    const orchestratorRow = orchestratorLabel.closest("div.flex.items-start");
+    expect(orchestratorRow).not.toBeNull();
+    expect(within(orchestratorRow as HTMLElement).getByText("rework")).toBeInTheDocument();
+    expect(within(orchestratorRow as HTMLElement).queryByText("approve")).not.toBeInTheDocument();
   });
 
   it("renders severity tags from payload findings on meta-review auto-rework rows", () => {

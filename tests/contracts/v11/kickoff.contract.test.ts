@@ -81,7 +81,10 @@ describe("v11 kickoff contract harness skeleton", () => {
     expect(kickoffSources).toEqual(kickoffExpectedSourcesSorted);
   });
 
-  it("builds corpus output manifest with kickoff seed entries", async () => {
+  it(
+    "builds corpus output manifest with kickoff seed entries",
+    { timeout: CONTRACT_TEST_TIMEOUT.parityLargeCorpusMs },
+    async () => {
     await execFileAsync("pnpm", [
       "exec",
       "tsx",
@@ -96,5 +99,6 @@ describe("v11 kickoff contract harness skeleton", () => {
     const kickoffSources = parseKickoffSourcesFromManifest(outputRaw);
 
     expect(kickoffSources).toEqual(kickoffExpectedSourcesSorted);
-  });
+    }
+  );
 });

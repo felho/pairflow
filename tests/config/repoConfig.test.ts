@@ -274,7 +274,6 @@ extra = 1
       expect(paths).toContain("defaults.watchdog_timeout_minutes");
       expect(paths).toContain("defaults.severity_gate_round");
       expect(paths).toContain("defaults.pairflow_command_profile");
-      expect(paths).toContain("defaults.agents");
       expect(paths).toContain("defaults.agents.unknown");
       expect(paths).toContain("defaults.review_policy.review_loop_mode");
       expect(paths).toContain(

@@ -484,13 +484,6 @@ export function validateBubbleConfig(input: unknown): ValidationResult<BubbleCon
     });
   }
 
-  if (implementer !== undefined && reviewer !== undefined && implementer === reviewer) {
-    errors.push({
-      path: "agents",
-      message: "implementer and reviewer must be different agents"
-    });
-  }
-
   const testCommand = commands
     ? readString(commands, "test", "commands.test", errors, true)
     : undefined;

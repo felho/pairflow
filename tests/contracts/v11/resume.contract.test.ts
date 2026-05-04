@@ -74,7 +74,10 @@ describe("v11 resume contract harness skeleton", () => {
     expect(resumeSources).toEqual(resumeExpectedSourcesSorted);
   });
 
-  it("builds corpus output manifest with resume seed entries", async () => {
+  it(
+    "builds corpus output manifest with resume seed entries",
+    { timeout: CONTRACT_TEST_TIMEOUT.parityStandardMs },
+    async () => {
     await execFileAsync("pnpm", [
       "exec",
       "tsx",
@@ -89,5 +92,6 @@ describe("v11 resume contract harness skeleton", () => {
     const resumeSources = parseResumeSourcesFromManifest(outputRaw);
 
     expect(resumeSources).toEqual(resumeExpectedSourcesSorted);
-  });
+    }
+  );
 });

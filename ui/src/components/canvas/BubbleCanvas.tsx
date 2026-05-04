@@ -18,6 +18,7 @@ import { copyToClipboard } from "../../lib/clipboard";
 import {
   bubbleDimensions,
   defaultPosition,
+  type ViewportRectangle
 } from "../../lib/canvasLayout";
 import { cn } from "../../lib/utils";
 import { ConnectedBubbleExpandedCard } from "./ConnectedBubbleExpandedCard";
@@ -409,7 +410,8 @@ export interface BubbleCanvasProps {
   positions: Record<string, BubblePosition>;
   expandedBubbleIds: string[];
   onPositionChange: (bubbleId: string, position: BubblePosition) => void;
-  onPositionCommit: () => void;
+  onPositionCommit: (bubbleId: string) => void;
+  onViewportChange?: (viewport: ViewportRectangle | null) => void;
   onToggleExpand: (bubbleId: string) => void;
   onDelete: (
     bubbleId: string,
@@ -434,6 +436,7 @@ export function BubbleCanvas(props: BubbleCanvasProps): JSX.Element {
   const deleteTriggerRef = useRef<HTMLButtonElement | null>(null);
   const deleteInFlightRef = useRef(false);
   const confirmInFlightRef = useRef(false);
+  const scrollContainerRef = useRef<HTMLElement | null>(null);
   const canvasContentRef = useRef<HTMLDivElement | null>(null);
   const expandedSet = useMemo(
     () => new Set(props.expandedBubbleIds),
@@ -458,6 +461,49 @@ export function BubbleCanvas(props: BubbleCanvasProps): JSX.Element {
     }
     return { minHeight: maxBottom, minWidth: maxRight };
   }, [positioned, expandedSet]);
+
+  const emitViewport = useCallback(() => {
+    const container = scrollContainerRef.current;
+    if (container === null || props.onViewportChange === undefined) {
+      return;
+    }
+    props.onViewportChange({
+      x: container.scrollLeft,
+      y: container.scrollTop,
+      width: container.clientWidth,
+      height: container.clientHeight
+    });
+  }, [props.onViewportChange]);
+
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (container === null || props.onViewportChange === undefined) {
+      props.onViewportChange?.(null);
+      return;
+    }
+
+    emitViewport();
+    container.addEventListener("scroll", emitViewport, { passive: true });
+
+    const resizeObserver =
+      typeof ResizeObserver === "undefined"
+        ? null
+        : new ResizeObserver(() => {
+            emitViewport();
+          });
+    resizeObserver?.observe(container);
+
+    return () => {
+      container.removeEventListener("scroll", emitViewport);
+      resizeObserver?.disconnect();
+      props.onViewportChange?.(null);
+    };
+  }, [
+    canvasDimensions.minHeight,
+    canvasDimensions.minWidth,
+    emitViewport,
+    props.onViewportChange
+  ]);
 
   const restoreDeleteTriggerFocus = useCallback(() => {
     const trigger = deleteTriggerRef.current;
@@ -582,8 +628,16 @@ export function BubbleCanvas(props: BubbleCanvasProps): JSX.Element {
   }, [deleteTarget]);
 
   return (
-    <main className="relative flex-1 overflow-auto px-4 pb-6 pt-4" style={canvasDimensions}>
-      <div ref={canvasContentRef} data-testid="canvas-content">
+    <main
+      ref={scrollContainerRef}
+      className="relative min-h-0 flex-1 overflow-auto px-4 pb-6 pt-4"
+    >
+      <div
+        ref={canvasContentRef}
+        className="relative"
+        data-testid="canvas-content"
+        style={canvasDimensions}
+      >
         {positioned.map((entry) => {
           const isExpanded = expandedSet.has(entry.bubble.bubbleId);
 
@@ -606,7 +660,7 @@ export function BubbleCanvas(props: BubbleCanvasProps): JSX.Element {
                 props.onPositionChange(entry.bubble.bubbleId, position);
               }}
               onPositionCommit={() => {
-                props.onPositionCommit();
+                props.onPositionCommit(entry.bubble.bubbleId);
               }}
               onDragStateChange={(dragging) => {
                 setDraggingIds((current) => {

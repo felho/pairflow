@@ -20,7 +20,7 @@ describe("runCli bubble delete confirmation exit code", () => {
     stderrSpy.mockRestore();
   });
 
-  it("returns exit code 2 when delete requires confirmation", async () => {
+  it("returns exit code 2 when delete requires confirmation", { timeout: 10_000 }, async () => {
     const runBubbleDeleteCommand = vi.fn(() => Promise.resolve({
       bubbleId: "b_delete_cli_confirm_01",
       deleted: false,
@@ -83,7 +83,7 @@ describe("runCli bubble delete confirmation exit code", () => {
     expect(output).toContain("runtime session entry: present");
     expect(output).toContain("branch: pairflow/bubble/b_delete_cli_confirm_01");
     expect(output).toContain("Re-run with --force");
-  }, 20000);
+  });
 
   it("returns exit code 1 and writes stderr when delete command throws", async () => {
     const runBubbleDeleteCommand = vi.fn(() => {

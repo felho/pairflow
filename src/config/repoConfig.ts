@@ -331,16 +331,6 @@ function validateRepoDefaultsConfig(
           validatedAgents[key] = value;
         }
       }
-      if (
-        validatedAgents.implementer !== undefined &&
-        validatedAgents.reviewer !== undefined &&
-        validatedAgents.implementer === validatedAgents.reviewer
-      ) {
-        errors.push({
-          path: "defaults.agents",
-          message: "implementer and reviewer must be different agents"
-        });
-      }
       if (Object.keys(validatedAgents).length > 0) {
         validated.agents = validatedAgents;
       }
