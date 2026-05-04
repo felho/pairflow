@@ -1,7 +1,6 @@
 import {
   assertValidation,
   isInteger,
-  isIsoTimestamp,
   isRecord,
   validationFail,
   validationOk,
@@ -31,7 +30,6 @@ import {
   type BubbleConfig
 } from "../types/bubble.js";
 import type { PairflowGlobalConfig } from "./pairflowConfig.js";
-import { IDEATION_METADATA_PARSE_WARNING } from "../v11/shared/ideation/ideationReasonCodes.js";
 import {
   describeValidationTargetIdRule,
   isValidationTargetId
@@ -45,13 +43,13 @@ import { validateBubbleExecutor } from "./bubbleConfig/executor.js";
 import { validateBubbleDocContractGates } from "./bubbleConfig/docContractGates.js";
 import { parseToml } from "./bubbleConfig/parser.js";
 import {
-  describeUnknownValue,
   readBoolean,
   readObject,
   readString,
   readStringArray
 } from "./bubbleConfig/readers.js";
 import { validateBubbleCommands } from "./bubbleConfig/commands.js";
+import { validateBubbleIdeation } from "./bubbleConfig/ideation.js";
 import { validateBubbleLocalOverlay } from "./bubbleConfig/localOverlay.js";
 import { assertValidBubbleConfigRemoteReferences } from "./bubbleConfig/remoteReferences.js";
 import { validateBubbleReviewPolicy } from "./bubbleConfig/reviewPolicy.js";
@@ -407,66 +405,7 @@ export function validateBubbleConfig(input: unknown): ValidationResult<BubbleCon
     errors
   );
 
-  const ideationWarnings: string[] = [];
-  const existingIdeationParseWarning = ideation
-    ? readString(
-        ideation,
-        "parse_warning",
-        "ideation.parse_warning",
-        errors,
-        false
-      )
-    : undefined;
-  const ideationModeCandidate = ideation?.mode;
-  let ideationMode = false;
-  if (ideationModeCandidate !== undefined) {
-    if (typeof ideationModeCandidate === "boolean") {
-      ideationMode = ideationModeCandidate;
-    } else {
-      ideationWarnings.push(
-        `${IDEATION_METADATA_PARSE_WARNING}: ideation.mode must be boolean. Received ${describeUnknownValue(ideationModeCandidate)}.`
-      );
-    }
-  }
-  const ideationTaskPendingCandidate = ideation?.task_pending;
-  let ideationTaskPending = false;
-  if (ideationTaskPendingCandidate !== undefined) {
-    if (typeof ideationTaskPendingCandidate === "boolean") {
-      ideationTaskPending = ideationTaskPendingCandidate;
-    } else {
-      ideationWarnings.push(
-        `${IDEATION_METADATA_PARSE_WARNING}: ideation.task_pending must be boolean. Received ${describeUnknownValue(ideationTaskPendingCandidate)}.`
-      );
-    }
-  }
-  const ideationStartedAtCandidate = ideation?.started_at;
-  let ideationStartedAt: string | undefined;
-  if (ideationStartedAtCandidate !== undefined) {
-    if (isIsoTimestamp(ideationStartedAtCandidate)) {
-      ideationStartedAt = ideationStartedAtCandidate;
-    } else {
-      ideationWarnings.push(
-        `${IDEATION_METADATA_PARSE_WARNING}: ideation.started_at must be an ISO timestamp. Received ${describeUnknownValue(ideationStartedAtCandidate)}.`
-      );
-    }
-  }
-  const ideationKickedOffAtCandidate = ideation?.kicked_off_at;
-  let ideationKickedOffAt: string | undefined;
-  if (ideationKickedOffAtCandidate !== undefined) {
-    if (isIsoTimestamp(ideationKickedOffAtCandidate)) {
-      ideationKickedOffAt = ideationKickedOffAtCandidate;
-    } else {
-      ideationWarnings.push(
-        `${IDEATION_METADATA_PARSE_WARNING}: ideation.kicked_off_at must be an ISO timestamp. Received ${describeUnknownValue(ideationKickedOffAtCandidate)}.`
-      );
-    }
-  }
-  if (!ideationMode && ideationTaskPending) {
-    ideationWarnings.push(
-      `${IDEATION_METADATA_PARSE_WARNING}: ideation.task_pending=true is invalid when ideation.mode=false; normalized to false.`
-    );
-    ideationTaskPending = false;
-  }
+  const validatedIdeation = validateBubbleIdeation(ideation, errors);
 
   const validatedReviewPolicy = validateBubbleReviewPolicy(reviewPolicy, errors);
 
@@ -525,39 +464,9 @@ export function validateBubbleConfig(input: unknown): ValidationResult<BubbleCon
     notifications: validatedNotifications,
     local_overlay: validatedLocalOverlay,
     doc_contract_gates: validatedDocContractGates,
-    ...(
-      ideationMode ||
-      ideationTaskPending ||
-      ideationStartedAt !== undefined ||
-      ideationKickedOffAt !== undefined ||
-      existingIdeationParseWarning !== undefined ||
-      ideationWarnings.length > 0
-        ? {
-            ideation: {
-              mode: ideationMode,
-              task_pending: ideationTaskPending,
-              ...(ideationStartedAt !== undefined
-                ? { started_at: ideationStartedAt }
-                : {}),
-              ...(ideationKickedOffAt !== undefined
-                ? { kicked_off_at: ideationKickedOffAt }
-                : {}),
-              ...((existingIdeationParseWarning !== undefined || ideationWarnings.length > 0)
-                ? {
-                    parse_warning: [
-                      existingIdeationParseWarning,
-                      ...(ideationWarnings.length > 0
-                        ? [ideationWarnings.join(" ")]
-                        : [])
-                    ]
-                      .filter((entry): entry is string => entry !== undefined)
-                      .join(" ")
-                  }
-                : {})
-            }
-          }
-        : {}
-    ),
+    ...(validatedIdeation !== undefined
+      ? { ideation: validatedIdeation }
+      : {}),
     ...(validatedExecutor !== undefined
       ? { executor: validatedExecutor }
       : {})
