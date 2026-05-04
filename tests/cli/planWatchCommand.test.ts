@@ -176,22 +176,49 @@ describe("plan watch command", () => {
     );
     const eventText = renderPlanWatchRunnerEventLine(
       JSON.stringify({
-        type: "item.started",
-        item: {
-          id: "item-1",
-          type: "command_execution",
-          command: "git status",
-          status: "in_progress"
-        }
+        type: "thread.started",
+        thread_id: "019df063-d8b1-7631-9be8-191fe2eef27c"
       })
     );
 
     expect(artifactText).toContain("plan watch: runner artifacts");
     expect(artifactText).toContain("dir=.pairflow/runtime/plan-watch/agent-runner/run");
-    expect(eventText).toBeNull();
+    expect(eventText).toBe(
+      "runner: codex session - 019df063-d8b1-7631-9be8-191fe2eef27c"
+    );
     expect(timelineText).toBe(
       "runner: completed PLAN_COMPLETE - done"
     );
+  });
+
+  it("renders Codex session id on runner completion when available", () => {
+    const text = renderPlanWatchEventText({
+      kind: "runner_completed",
+      repoPath: "/repo",
+      planPath: "/repo/plans/local-plan-watch-plan-v1.md",
+      invocationId: "invocation-1",
+      dedupeKey: "dedupe-1",
+      candidate: {
+        planPath: "/repo/plans/local-plan-watch-plan-v1.md",
+        taskId: "3-watch-loop",
+        taskPath: "plans/tasks/3-watch-loop.md",
+        bubbleId: "3-watch-loop-impl",
+        bubbleRole: "implementation",
+        observedState: "READY_FOR_HUMAN_APPROVAL"
+      },
+      runnerResult: {
+        status: "settled_checkpoint",
+        invocationId: "invocation-1",
+        startedAt: "2026-05-01T09:00:00.000Z",
+        completedAt: "2026-05-01T09:01:00.000Z",
+        reasonCode: asAgentRunnerBridgeRunnerReasonCode("PLAN_COMPLETE"),
+        command: null,
+        codexSessionId: "019df063-d8b1-7631-9be8-191fe2eef27c"
+      }
+    });
+
+    expect(text).toContain("plan watch: runner completed");
+    expect(text).toContain("codex_session=019df063-d8b1-7631-9be8-191fe2eef27c");
   });
 
   it("overwrites idle progress on TTY and flushes before real events", () => {

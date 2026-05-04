@@ -272,7 +272,8 @@ describe("planWatchLoop", () => {
         changedArtifacts: ["plans/tasks/3-watch-loop.md"],
         routeLedgerSummary: "settled",
         artifactDir:
-          ".pairflow/runtime/plan-watch/agent-runner/2026-05-01_10-00-00-plan_invocation-1"
+          ".pairflow/runtime/plan-watch/agent-runner/2026-05-01_10-00-00-plan_invocation-1",
+        codexSessionId: "019df063-d8b1-7631-9be8-191fe2eef27c"
       })
     });
 
@@ -302,7 +303,8 @@ describe("planWatchLoop", () => {
       changedArtifacts: ["plans/tasks/3-watch-loop.md"],
       routeLedgerSummary: "settled",
       artifactDir:
-        ".pairflow/runtime/plan-watch/agent-runner/2026-05-01_10-00-00-plan_invocation-1"
+        ".pairflow/runtime/plan-watch/agent-runner/2026-05-01_10-00-00-plan_invocation-1",
+      codexSessionId: "019df063-d8b1-7631-9be8-191fe2eef27c"
     });
     expect(result.invocationId).toBe(ledger.records[0]?.invocationId);
   });
@@ -1347,7 +1349,8 @@ describe("planWatchLoop", () => {
             recordState: "completed",
             completedAt: "2026-05-01T09:01:00.000Z",
             runnerStatus: "settled_checkpoint",
-            runnerReasonCode: asAgentRunnerBridgeRunnerReasonCode("DONE")
+            runnerReasonCode: asAgentRunnerBridgeRunnerReasonCode("DONE"),
+            codexSessionId: "019df063-d8b1-7631-9be8-191fe2eef27c"
           },
           {
             ...validBase,
@@ -1440,6 +1443,12 @@ describe("planWatchLoop", () => {
         runnerStatus: "settled_checkpoint",
         runnerReasonCode: asAgentRunnerBridgeRunnerReasonCode("DONE"),
         routeLedgerSummary: 42
+      },
+      {
+        ...validBase,
+        runnerStatus: "settled_checkpoint",
+        runnerReasonCode: asAgentRunnerBridgeRunnerReasonCode("DONE"),
+        codexSessionId: 42
       }
     ];
 
@@ -1618,7 +1627,8 @@ describe("planWatchLoop", () => {
         runnerReasonCode: asAgentRunnerBridgeRunnerReasonCode("DONE")
       },
       { ...validBase, changedArtifacts: ["plans/a.md"] },
-      { ...validBase, routeLedgerSummary: "settled" }
+      { ...validBase, routeLedgerSummary: "settled" },
+      { ...validBase, codexSessionId: "019df063-d8b1-7631-9be8-191fe2eef27c" }
     ];
 
     for (const record of invalidRecords) {

@@ -66,6 +66,9 @@ export function buildCompletedPlanWatchLedgerRecord(
       : {}),
     ...(runnerResult.artifactDir !== undefined
       ? { artifactDir: runnerResult.artifactDir }
+      : {}),
+    ...(runnerResult.codexSessionId !== undefined
+      ? { codexSessionId: runnerResult.codexSessionId }
       : {})
   };
 }
@@ -183,6 +186,9 @@ function validateRunRecord(value: Record<string, unknown>): PlanWatchLedgerRecor
   if ("artifactDir" in value && typeof value.artifactDir !== "string") {
     throw new PlanWatchLedgerError("ledger_schema_unsupported", "PLAN_WATCH_LEDGER_RUN_RECORD_INVALID: Plan watch ledger record schema is unsupported. context: artifact_dir=invalid");
   }
+  if ("codexSessionId" in value && typeof value.codexSessionId !== "string") {
+    throw new PlanWatchLedgerError("ledger_schema_unsupported", "PLAN_WATCH_LEDGER_RUN_RECORD_INVALID: Plan watch ledger record schema is unsupported. context: codex_session_id=invalid");
+  }
   if (value.recordState === "reserved") {
     return value as unknown as PlanWatchLedgerRecord;
   }
@@ -207,6 +213,7 @@ function validateDryRunRecord(value: Record<string, unknown>): PlanWatchLedgerRe
     && !("runnerReasonCode" in value)
     && !("changedArtifacts" in value)
     && !("routeLedgerSummary" in value)
+    && !("codexSessionId" in value)
   ) {
     return value as unknown as PlanWatchLedgerRecord;
   }

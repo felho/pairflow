@@ -96,6 +96,9 @@ export async function classifyCodexJsonProcessResult(input: {
     ...(structuredOutput.routeLedgerSummary !== undefined
       ? { routeLedgerSummary: structuredOutput.routeLedgerSummary }
       : {}),
+    ...(parsed.codexSessionId !== undefined
+      ? { codexSessionId: parsed.codexSessionId }
+      : {}),
     payload: input.payload
   };
 }

@@ -50,6 +50,14 @@ function normalizeEvent(
   options: { allowUnrecognized: boolean }
 ): CodexTimelineRow | undefined {
   const at = eventTimestamp(event, fallbackAt);
+  if (event.type === "thread.started" && typeof event.thread_id === "string") {
+    return {
+      schemaVersion: 1,
+      type: "codex_session_started",
+      at,
+      codexSessionId: event.thread_id
+    };
+  }
   const item = isRecord(event.item) ? event.item : undefined;
   const agentMessageRow = normalizeAgentMessageEvent(event, item, at);
   if (agentMessageRow !== undefined) {

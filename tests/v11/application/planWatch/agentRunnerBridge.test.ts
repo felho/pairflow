@@ -898,6 +898,10 @@ describe("agentRunnerBridge", () => {
     const artifactRoot = await createTempDir();
     const eventsFilePath = join(artifactRoot, "events.ndjson");
     const timelineFilePath = join(artifactRoot, "timeline.ndjson");
+    const sessionEvent = `${JSON.stringify({
+      type: "thread.started",
+      thread_id: "019df063-d8b1-7631-9be8-191fe2eef27c"
+    })}\n`;
     const first = codexAgentMessage({
       status: "settled_checkpoint",
       reason_code: "FIRST"
@@ -937,7 +941,7 @@ describe("agentRunnerBridge", () => {
         })),
         runCommand: vi.fn(async () => ({
           exitCode: 0,
-          stdout: `${first}${commandEvent}${second}`,
+          stdout: `${sessionEvent}${first}${commandEvent}${second}`,
           stderr: ""
         }))
       })
@@ -947,9 +951,10 @@ describe("agentRunnerBridge", () => {
       status: "human_checkpoint",
       reasonCode: "LAST",
       runnerSummary: "needs operator",
+      codexSessionId: "019df063-d8b1-7631-9be8-191fe2eef27c",
       artifactDir: ".pairflow/runtime/plan-watch/agent-runner/run"
     });
-    expect(await readFile(eventsFilePath, "utf8")).toBe(`${first}${commandEvent}${second}`);
+    expect(await readFile(eventsFilePath, "utf8")).toBe(`${sessionEvent}${first}${commandEvent}${second}`);
     const timeline = (await readFile(timelineFilePath, "utf8"))
       .trim()
       .split("\n")
@@ -957,7 +962,14 @@ describe("agentRunnerBridge", () => {
         type: string;
         outputLineCount?: number;
         outputPreview?: string;
+        codexSessionId?: string;
       });
+    expect(timeline).toContainEqual({
+      schemaVersion: 1,
+      type: "codex_session_started",
+      at: "2026-05-01T10:00:05.000Z",
+      codexSessionId: "019df063-d8b1-7631-9be8-191fe2eef27c"
+    });
     expect(timeline.map((row) => row.type)).toContain("command_completed");
     expect(timeline.map((row) => row.type)).toContain("runner_completed");
     const commandRow = timeline.find((row) => row.type === "command_completed");
@@ -1090,6 +1102,9 @@ describe("agentRunnerBridge", () => {
   it("parses Codex JSONL streams without treating timeline as final authority", () => {
     const parsed = parseCodexJsonlStream(
       `${JSON.stringify({
+        type: "thread.started",
+        thread_id: "019df063-d8b1-7631-9be8-191fe2eef27c"
+      })}\n${JSON.stringify({
         type: "item.completed",
         item: {
           type: "command_execution",
@@ -1100,6 +1115,7 @@ describe("agentRunnerBridge", () => {
 
     expect(parsed.finalOutput).toBeNull();
     expect(parsed.malformed).toBe(false);
+    expect(parsed.codexSessionId).toBe("019df063-d8b1-7631-9be8-191fe2eef27c");
   });
 
   it("parses multipart Codex agent_message content without a delimiter rewrite", () => {

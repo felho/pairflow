@@ -170,5 +170,6 @@ export interface AgentRunnerBridgeResult {
   changedArtifacts?: readonly string[] | undefined;
   routeLedgerSummary?: string | undefined;
   artifactDir?: string | undefined;
+  codexSessionId?: string | undefined;
   payload?: AgentRunnerContinuationPayload | undefined;
 }

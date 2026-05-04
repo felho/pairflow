@@ -350,7 +350,10 @@ export function renderPlanWatchEventText(event: PlanWatchEvent): string {
       "plan watch: runner completed",
       `invocation=${event.invocationId}`,
       `status=${event.runnerResult.status}`,
-      `reason=${event.runnerResult.reasonCode}`
+      `reason=${event.runnerResult.reasonCode}`,
+      ...(event.runnerResult.codexSessionId !== undefined
+        ? [`codex_session=${event.runnerResult.codexSessionId}`]
+        : [])
     ].join(" ");
   }
   if (event.kind === "iteration_completed") {
@@ -393,6 +396,13 @@ export function renderPlanWatchRunnerTimelineLine(line: string): string | null {
     return renderRunnerMessage({
       label: "runner",
       summary: asString(row.summary)
+    });
+  }
+  if (row.type === "codex_session_started") {
+    return renderRunnerMessage({
+      label: "runner",
+      reason: "codex session",
+      summary: asString(row.codexSessionId)
     });
   }
   if (row.type === "runner_completed") {

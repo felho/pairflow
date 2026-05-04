@@ -6,6 +6,7 @@ export interface ParsedCodexStream {
   events: readonly CodexJsonEvent[];
   malformed: boolean;
   finalOutput: StructuredAgentRunnerOutput | null;
+  codexSessionId?: string | undefined;
 }
 
 export interface CodexJsonEvent {
@@ -18,6 +19,7 @@ export function parseCodexJsonlStream(stdout: string): ParsedCodexStream {
   const events: CodexJsonEvent[] = [];
   let malformed = false;
   let finalOutput: StructuredAgentRunnerOutput | null = null;
+  let codexSessionId: string | undefined;
 
   for (const line of rawLines) {
     const parsed = parseJsonObject(line);
@@ -26,6 +28,7 @@ export function parseCodexJsonlStream(stdout: string): ParsedCodexStream {
       continue;
     }
     events.push({ line, value: parsed });
+    codexSessionId ??= extractCodexSessionId(parsed);
     const messageText = extractAgentMessageText(parsed);
     if (messageText === undefined) {
       continue;
@@ -40,7 +43,8 @@ export function parseCodexJsonlStream(stdout: string): ParsedCodexStream {
     rawLines,
     events,
     malformed,
-    finalOutput: malformed ? null : finalOutput
+    finalOutput: malformed ? null : finalOutput,
+    ...(codexSessionId !== undefined ? { codexSessionId } : {})
   };
 }
 
@@ -84,6 +88,15 @@ function extractAgentMessageText(event: Record<string, unknown>): string | undef
       .join("");
   }
   return undefined;
+}
+
+function extractCodexSessionId(event: Record<string, unknown>): string | undefined {
+  if (event.type !== "thread.started") {
+    return undefined;
+  }
+  return typeof event.thread_id === "string" && event.thread_id.length > 0
+    ? event.thread_id
+    : undefined;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
