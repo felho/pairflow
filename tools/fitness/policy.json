@@ -97,16 +97,7 @@
       ],
       "mode": "hard-fail",
       "owner": "architecture/ui-contracts",
-      "exceptions": [
-        {
-          "id": "ui-contract-boundary-known-meta-review-drift-001",
-          "kind": "allow-import",
-          "owner": "architecture/ui-contracts",
-          "reason": "Temporary pre-existing UI-local mirror drift retained until successor DTO migration tasks move this contract behind src/contracts/ui.",
-          "from": "ui/src/lib/types.ts",
-          "to": "src/v11/shared/metaReviewGate/metaReviewGateTypes.ts"
-        }
-      ]
+      "exceptions": []
     },
     {
       "id": "ui_router_port_boundary",

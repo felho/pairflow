@@ -448,11 +448,14 @@ describe("fitness:check:ci", () => {
   it("keeps the existing UI contract boundary policy entry alongside router-port", async () => {
     const policy = JSON.parse(
       await readFile(resolve(process.cwd(), "tools/fitness/policy.json"), "utf8")
-    ) as { checks: Array<{ id: string }> };
-
-    expect(policy.checks.some((check) => check.id === "ui_contract_boundary")).toBe(
-      true
+    ) as { checks: Array<{ id: string; exceptions?: unknown[] }> };
+    const uiContractBoundaryPolicy = policy.checks.find(
+      (check) => check.id === "ui_contract_boundary"
     );
+
+    expect(uiContractBoundaryPolicy).toBeDefined();
+    expect(uiContractBoundaryPolicy).toHaveProperty("exceptions");
+    expect(uiContractBoundaryPolicy?.exceptions).toEqual([]);
     expect(
       policy.checks.some((check) => check.id === "ui_router_port_boundary")
     ).toBe(true);
