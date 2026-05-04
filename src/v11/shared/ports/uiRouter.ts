@@ -1,7 +1,4 @@
 import type {
-  BubbleLifecycleState
-} from "../../../types/bubble.js";
-import type {
   UiAttachBubbleInput,
   UiAttachBubbleResult,
   UiBubbleMutationInput,
@@ -24,16 +21,14 @@ import type {
   UiUpdateBubbleReviewPolicyInput,
   UiUpdateBubbleReviewPolicyResult
 } from "../../../contracts/ui/uiActions.js";
-import type { UiTimelineEntry } from "../../../contracts/ui/uiReadModel.js";
-import type { BubbleListEntry } from "../list/listCommandContract.js";
 import type {
-  BubbleInboxInput,
-  BubbleInboxView
-} from "../inbox/inboxCommandApi.js";
-import type {
-  BubbleStatusInput,
-  BubbleStatusView
-} from "../status/statusCommandApi.js";
+  UiBubbleInboxInput,
+  UiBubbleInboxView,
+  UiBubbleListView,
+  UiBubbleStatusInput,
+  UiBubbleStatusView,
+  UiTimelineEntry
+} from "../../../contracts/ui/uiReadModel.js";
 import type {
   ReadRuntimeSessionsRegistryPort
 } from "./runtimeSessions.js";
@@ -84,31 +79,22 @@ export type {
   UiUpdateBubbleReviewPolicyResult
 } from "../../../contracts/ui/uiActions.js";
 
+export type {
+  UiBubbleInboxInput,
+  UiBubbleInboxView,
+  UiBubbleListEntry,
+  UiBubbleListStateCounts,
+  UiBubbleListView,
+  UiBubbleStatusInput,
+  UiBubbleStatusView,
+  UiTimelineEntry
+} from "../../../contracts/ui/uiReadModel.js";
+
 export interface UiBubbleListInput {
   repoPath?: string | undefined;
   cwd?: string | undefined;
   now?: Date | undefined;
   refresh?: boolean | undefined;
-}
-
-export type UiBubbleListStateCounts = Record<BubbleLifecycleState, number>;
-
-export type UiBubbleListEntry = BubbleListEntry;
-
-export interface UiBubbleListView {
-  repoPath: string;
-  total: number;
-  byState: UiBubbleListStateCounts;
-  runtimeSessions: {
-    registered: number;
-    stale: number;
-  };
-  bubbles: UiBubbleListEntry[];
-  remoteExecutionSummary?: {
-    createdNotStarted: number;
-    unavailableStarted: number;
-    refreshedThisRun?: boolean;
-  };
 }
 
 export interface UiBubbleTimelineInput {
@@ -120,11 +106,11 @@ export interface UiBubbleTimelineInput {
 export interface UiRouterDependencies {
   listBubbles: (input?: UiBubbleListInput) => Promise<UiBubbleListView>;
   getBubbleStatus: (
-    input: BubbleStatusInput
-  ) => Promise<BubbleStatusView>;
+    input: UiBubbleStatusInput
+  ) => Promise<UiBubbleStatusView>;
   getBubbleInbox: (
-    input: BubbleInboxInput
-  ) => Promise<BubbleInboxView>;
+    input: UiBubbleInboxInput
+  ) => Promise<UiBubbleInboxView>;
   readRuntimeSessionsRegistry: ReadRuntimeSessionsRegistryPort;
   readBubbleTimeline: (
     input: UiBubbleTimelineInput

@@ -1,10 +1,15 @@
 import type {
+  BubbleExecutionContext,
+  BubbleFailingGate,
   BubbleLifecycleState,
+  BubbleRoundGateState,
+  BubbleSpecLockState,
   BubbleReviewAutoReworkSeverity,
   BubbleReviewLoopMode,
   BubbleReviewSupportStatus,
   MetaReviewRecommendation,
   MetaReviewRuntimeDeliveryStatus,
+  PairflowCommandProfile,
   WorkMode
 } from "../../types/bubble.js";
 import type {
@@ -12,7 +17,11 @@ import type {
   ProtocolMessageType
 } from "../../types/protocol.js";
 import type { StateValidationDiagnostics } from "./stateValidation.js";
-import type { UiBubbleRemoteExecution } from "./uiRemoteExecution.js";
+import type {
+  UiBubbleListRemoteExecution,
+  UiBubbleRemoteExecution,
+  UiBubbleStatusRemoteExecution
+} from "./uiRemoteExecution.js";
 
 export interface UiBubbleStateCounts {
   CREATED: number;
@@ -26,6 +35,8 @@ export interface UiBubbleStateCounts {
   FAILED: number;
   CANCELLED: number;
 }
+
+export type UiBubbleListStateCounts = UiBubbleStateCounts;
 
 export interface UiRuntimeHealth {
   expected: boolean;
@@ -136,6 +147,20 @@ export interface UiBubbleInbox {
   items: UiBubbleInboxItem[];
 }
 
+export interface UiBubbleInboxInput {
+  bubbleId: string;
+  repoPath?: string | undefined;
+  cwd?: string | undefined;
+}
+
+export interface UiBubbleInboxView {
+  bubbleId: string;
+  repoPath: string;
+  state: BubbleLifecycleState;
+  pending: UiPendingInboxCounts;
+  items: UiPendingInboxItemSource[];
+}
+
 export interface UiBubbleWatchdog {
   monitored: boolean;
   monitoredAgent: string | null;
@@ -184,6 +209,29 @@ export interface UiBubbleSummary {
   remoteExecution?: UiBubbleRemoteExecution;
 }
 
+export interface UiBubbleListEntry {
+  bubbleId: string;
+  repoPath: string;
+  worktreePath: string;
+  state: BubbleLifecycleState;
+  round: number;
+  activeAgent: string | null;
+  activeRole: string | null;
+  activeSince: string | null;
+  lastCommandAt: string | null;
+  stateValidation: StateValidationDiagnostics | null;
+  runtimeSession: UiRuntimeSessionRecord | null;
+  attention: UiBubbleAttention | null;
+  reviewPolicy?: UiBubbleReviewPolicy;
+  metaReview: UiBubbleMetaReviewSummary;
+  remoteExecution?: UiBubbleListRemoteExecution;
+}
+
+export interface UiRuntimeSessionsSummary {
+  registered: number;
+  stale: number;
+}
+
 export interface UiBubbleDetail extends UiBubbleSummary {
   bubbleToml: string | null;
   watchdog: UiBubbleWatchdog;
@@ -192,14 +240,102 @@ export interface UiBubbleDetail extends UiBubbleSummary {
   transcript: UiBubbleTranscriptSummary;
 }
 
+export interface UiBubbleListView {
+  repoPath: string;
+  total: number;
+  byState: UiBubbleListStateCounts;
+  runtimeSessions: UiRuntimeSessionsSummary;
+  bubbles: UiBubbleListEntry[];
+  remoteExecutionSummary?: {
+    createdNotStarted: number;
+    unavailableStarted: number;
+    refreshedThisRun?: boolean;
+  };
+}
+
+export type UiReviewVerificationState =
+  | "pass"
+  | "fail"
+  | "missing"
+  | "invalid";
+
+export interface UiStatusPaneActivityView {
+  readStatus: "ok" | "missing" | "invalid";
+  lastChangedAt: string | null;
+  sampledAt: string | null;
+  sinceLastChangedSeconds: number | null;
+  sinceSampledSeconds: number | null;
+  lastSampleStatus: "sampled" | "no_session" | "pane_unreadable" | null;
+  lastSampleError: string | null;
+  sessionName: string | null;
+  targetPane: string | null;
+}
+
+export interface UiStatusExecutionContextView {
+  activeRole: BubbleExecutionContext["active_role"];
+  awaitedOutputType: BubbleExecutionContext["awaited_output_type"];
+  handoffId: string;
+  executionId: string;
+  round: number;
+  startedAt: string;
+  deadlineAt: string;
+  attempt: number;
+}
+
+export interface UiStatusCommandPathView {
+  status: "worktree_local" | "external" | "stale" | "missing" | "unknown";
+  reasonCode?:
+    | "PAIRFLOW_COMMAND_PATH_STALE"
+    | "PAIRFLOW_COMMAND_EXTERNAL_UNAVAILABLE"
+    | "PAIRFLOW_COMMAND_PATH_UNRESOLVED";
+  profile: PairflowCommandProfile;
+  localEntrypoint: string;
+  activeEntrypoint: string | null;
+  message: string;
+  pinnedCommand: string;
+}
+
+export interface UiBubbleStatusInput {
+  bubbleId: string;
+  repoPath?: string | undefined;
+  cwd?: string | undefined;
+  now?: Date | undefined;
+}
+
+export interface UiBubbleStatusView {
+  bubbleId: string;
+  repoPath: string;
+  worktreePath: string;
+  bubbleToml?: string | undefined;
+  bubbleStartedAt: string | null;
+  state: BubbleLifecycleState;
+  round: number;
+  activeAgent: string | null;
+  activeRole: string | null;
+  activeSince: string | null;
+  lastCommandAt: string | null;
+  paneActivity: UiStatusPaneActivityView;
+  executionContext: UiStatusExecutionContextView | null;
+  reviewPolicy?: UiBubbleReviewPolicy;
+  watchdog: UiBubbleWatchdog;
+  pendingInboxItems: UiPendingInboxCounts;
+  transcript: UiBubbleTranscriptSummary;
+  metaReview: UiBubbleMetaReviewSummary;
+  commandPath: UiStatusCommandPathView;
+  accuracy_critical: boolean;
+  last_review_verification: UiReviewVerificationState;
+  failing_gates: BubbleFailingGate[];
+  spec_lock_state: BubbleSpecLockState;
+  round_gate_state: BubbleRoundGateState;
+  stateValidation: StateValidationDiagnostics | null;
+  remoteExecution?: UiBubbleStatusRemoteExecution;
+}
+
 export interface UiRepoSummary {
   repoPath: string;
   total: number;
   byState: UiBubbleStateCounts;
-  runtimeSessions: {
-    registered: number;
-    stale: number;
-  };
+  runtimeSessions: UiRuntimeSessionsSummary;
   remoteExecutionSummary?: {
     createdNotStarted: number;
     unavailableStarted: number;

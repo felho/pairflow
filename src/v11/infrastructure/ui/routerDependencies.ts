@@ -5,6 +5,10 @@ import { attachBubble } from "../executor/command/pairflowCommandAttach.js";
 import { resolveBubbleById } from "../executor/workspace/bubbleLookup.js";
 import type { UiRouterDependencies } from "../../shared/ports/uiRouter.js";
 import type {
+  UiBubbleInboxInput,
+  UiBubbleInboxView
+} from "../../../contracts/ui/uiReadModel.js";
+import type {
   CreateUiRouterInput
 } from "./routerContracts.js";
 
@@ -53,9 +57,26 @@ async function loadUiRouterDependencyDefaults(): Promise<CoreUiRouterDependencyD
   return uiRouterDependencyDefaultsPromise;
 }
 
+async function getBubbleInboxView(
+  input: UiBubbleInboxInput
+): Promise<UiBubbleInboxView> {
+  const view = await getBubbleInbox({
+    bubbleId: input.bubbleId,
+    ...(input.repoPath !== undefined ? { repoPath: input.repoPath } : {}),
+    ...(input.cwd !== undefined ? { cwd: input.cwd } : {})
+  });
+  return {
+    bubbleId: view.bubbleId,
+    repoPath: view.repoPath,
+    state: view.state,
+    pending: view.pending,
+    items: view.items
+  };
+}
+
 export const defaultUiRouterDependencies: UiRouterDependencies = {
   ...await loadUiRouterDependencyDefaults(),
-  getBubbleInbox,
+  getBubbleInbox: getBubbleInboxView,
   readRuntimeSessionsRegistry,
   readBubbleTimeline,
   attachBubble: (input) =>

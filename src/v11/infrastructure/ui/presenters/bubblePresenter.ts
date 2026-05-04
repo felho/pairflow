@@ -1,9 +1,9 @@
-import type { BubbleInboxView } from "../../../shared/inbox/inboxCommandApi.js";
 import type {
+  UiBubbleInboxView,
   UiBubbleListEntry as BubbleListEntry,
-  UiBubbleListView as BubbleListView
-} from "../../../shared/ports/uiRouter.js";
-import type { BubbleStatusView } from "../../../shared/status/statusCommandApi.js";
+  UiBubbleListView as BubbleListView,
+  UiBubbleStatusView
+} from "../../../../contracts/ui/uiReadModel.js";
 import type { RuntimeSessionRecord } from "../../executor/sessionRuntime/runtimeSessionsRegistry.js";
 import type { BubbleLifecycleState } from "../../../../types/bubble.js";
 import type {
@@ -111,8 +111,8 @@ export function presentBubbleList(view: BubbleListView): {
 }
 
 export function presentBubbleDetail(input: {
-  status: BubbleStatusView;
-  inbox: BubbleInboxView;
+  status: UiBubbleStatusView;
+  inbox: UiBubbleInboxView;
   runtimeSession: RuntimeSessionRecord | null;
   now?: Date;
 }): UiBubbleDetail {

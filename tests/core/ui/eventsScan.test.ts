@@ -10,8 +10,10 @@ import {
   presentRepoSummary
 } from "../../../src/v11/infrastructure/ui/presenters/bubblePresenter.js";
 import type { RepoSnapshot } from "../../../src/v11/infrastructure/ui/eventsState.js";
-import type { UiBubbleListView } from "../../../src/v11/shared/ports/uiRouter.js";
-import type { BubbleListEntry } from "../../../src/v11/shared/list/listCommandContract.js";
+import type {
+  UiBubbleListEntry,
+  UiBubbleListView
+} from "../../../src/contracts/ui/uiReadModel.js";
 import { normalizeRepoPath } from "../../../src/v11/infrastructure/executor/workspace/repoResolution.js";
 import { initGitRepository } from "../../helpers/git.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
@@ -36,7 +38,7 @@ afterEach(async () => {
   );
 });
 
-function createListView(repoPath: string, bubble: BubbleListEntry): UiBubbleListView {
+function createListView(repoPath: string, bubble: UiBubbleListEntry): UiBubbleListView {
   return {
     repoPath,
     total: 1,
@@ -70,7 +72,7 @@ function createBubbleListEntry(input: {
   bubbleId: string;
   round: number;
   stateSource: "cache" | "refresh";
-}): BubbleListEntry {
+}): UiBubbleListEntry {
   return {
     bubbleId: input.bubbleId,
     repoPath: input.repoPath,
@@ -225,7 +227,7 @@ describe("scanUiEventsRepo remote refresh routing", () => {
       round: 1,
       stateSource: "refresh"
     });
-    const reviewerEntry: BubbleListEntry = {
+    const reviewerEntry: UiBubbleListEntry = {
       ...implementerEntry,
       activeAgent: "claude",
       activeRole: "reviewer",

@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 
 import { bubbleFingerprint } from "../../../src/v11/infrastructure/ui/eventsFingerprint.js";
-import type { BubbleListEntry } from "../../../src/v11/shared/list/listCommandContract.js";
+import type { UiBubbleListEntry } from "../../../src/contracts/ui/uiReadModel.js";
 
-function createRemoteBubbleEntry(overrides: Partial<BubbleListEntry["remoteExecution"]> = {}): BubbleListEntry {
+function createRemoteBubbleEntry(
+  overrides: Partial<UiBubbleListEntry["remoteExecution"]> = {}
+): UiBubbleListEntry {
   return {
     bubbleId: "remote-smoke20",
     repoPath: "/repo",
@@ -71,7 +73,7 @@ describe("bubbleFingerprint remote execution normalization", () => {
   });
 
   it("changes when stable remote bubble handoff fields change even if poll timestamps do not", async () => {
-    const implementer: BubbleListEntry = {
+    const implementer: UiBubbleListEntry = {
       ...createRemoteBubbleEntry({
         runtimeAvailability: "active"
       }),
@@ -80,7 +82,7 @@ describe("bubbleFingerprint remote execution normalization", () => {
       activeSince: "2026-04-19T20:34:40.000Z",
       lastCommandAt: "2026-04-19T20:34:40.000Z"
     };
-    const reviewer: BubbleListEntry = {
+    const reviewer: UiBubbleListEntry = {
       ...implementer,
       activeAgent: "claude",
       activeRole: "reviewer",
