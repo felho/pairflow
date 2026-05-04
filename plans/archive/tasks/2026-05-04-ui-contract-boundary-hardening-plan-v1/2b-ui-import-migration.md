@@ -5,7 +5,7 @@ task_family_id: ui-import-migration
 sequence_key: "2b"
 task_id: 2b-ui-import-migration
 title: "UI Contract Import Migration"
-status: in_progress
+status: archived
 phase: phase2b
 target_files:
   - ui/src/lib/types.ts
