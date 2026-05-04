@@ -1,6 +1,7 @@
 import { readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
 
+import ts from "typescript";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -42,6 +43,161 @@ async function readTypeScriptSources(
 
   await collect(root, relativeDirectory);
   return sources;
+}
+
+async function readUiBrowserSources(): Promise<Map<string, string>> {
+  const root = join(repoRoot, "ui/src");
+  const sources = new Map<string, string>();
+
+  async function collect(absoluteDirectory: string, sourceDirectory: string): Promise<void> {
+    const entries = await readdir(absoluteDirectory, { withFileTypes: true });
+    for (const entry of entries) {
+      const relativePath = `${sourceDirectory}/${entry.name}`;
+      const absolutePath = join(absoluteDirectory, entry.name);
+      if (entry.isDirectory()) {
+        await collect(absolutePath, relativePath);
+        continue;
+      }
+      if (
+        !entry.isFile()
+        || (!entry.name.endsWith(".ts") && !entry.name.endsWith(".tsx"))
+        || entry.name.includes(".test.")
+        || relativePath.startsWith("ui/src/test/")
+      ) {
+        continue;
+      }
+      sources.set(relativePath, await readFile(absolutePath, "utf8"));
+    }
+  }
+
+  await collect(root, "ui/src");
+  return sources;
+}
+
+const protocolMirrorLiterals = new Set([
+  "TASK",
+  "PASS",
+  "HUMAN_QUESTION",
+  "HUMAN_REPLY",
+  "CONVERGENCE",
+  "APPROVAL_REQUEST",
+  "APPROVAL_DECISION",
+  "COMMIT_RESULT"
+]);
+
+function collectUiProtocolLeakViolations(
+  sources: Map<string, string>
+): string[] {
+  const violations: string[] = [];
+
+  for (const [relativePath, source] of sources) {
+    const sourceFile = ts.createSourceFile(
+      relativePath,
+      source,
+      ts.ScriptTarget.Latest,
+      true,
+      relativePath.endsWith(".tsx") ? ts.ScriptKind.TSX : ts.ScriptKind.TS
+    );
+
+    const lineFor = (node: ts.Node): number =>
+      sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile)).line + 1;
+
+    const moduleSpecifierText = (node: ts.Node): string | undefined => {
+      if (
+        (ts.isImportDeclaration(node) || ts.isExportDeclaration(node))
+        && node.moduleSpecifier !== undefined
+        && ts.isStringLiteral(node.moduleSpecifier)
+      ) {
+        return node.moduleSpecifier.text;
+      }
+      if (ts.isImportTypeNode(node)) {
+        const argument = node.argument;
+        if (
+          ts.isLiteralTypeNode(argument)
+          && ts.isStringLiteral(argument.literal)
+        ) {
+          return argument.literal.text;
+        }
+      }
+      if (
+        ts.isImportEqualsDeclaration(node)
+        && ts.isExternalModuleReference(node.moduleReference)
+        && ts.isStringLiteral(node.moduleReference.expression)
+      ) {
+        return node.moduleReference.expression.text;
+      }
+      return undefined;
+    };
+
+    const collectProtocolLiterals = (node: ts.Node): Set<string> => {
+      const literals = new Set<string>();
+      const visitLiteral = (child: ts.Node): void => {
+        if (
+          (ts.isStringLiteral(child) || ts.isNoSubstitutionTemplateLiteral(child))
+          && protocolMirrorLiterals.has(child.text)
+        ) {
+          literals.add(child.text);
+        }
+        if (
+          (ts.isPropertyAssignment(child)
+            || ts.isShorthandPropertyAssignment(child)
+            || ts.isPropertySignature(child)
+            || ts.isMethodDeclaration(child)
+            || ts.isMethodSignature(child))
+          && ts.isIdentifier(child.name)
+          && protocolMirrorLiterals.has(child.name.text)
+        ) {
+          literals.add(child.name.text);
+        }
+        child.forEachChild(visitLiteral);
+      };
+      visitLiteral(node);
+      return literals;
+    };
+
+    const visit = (node: ts.Node): void => {
+      const specifier = moduleSpecifierText(node);
+      if (
+        specifier !== undefined
+        && /(?:^|\/)src\/types\/protocol(?:\.js|\.ts)?$/u.test(specifier)
+      ) {
+        violations.push(
+          `${relativePath}:${String(lineFor(node))} imports runtime protocol types directly`
+        );
+      }
+
+      if (
+        ts.isInterfaceDeclaration(node)
+        || ts.isTypeAliasDeclaration(node)
+        || ts.isEnumDeclaration(node)
+      ) {
+        if (node.name.text === "ProtocolMessageType") {
+          violations.push(
+            `${relativePath}:${String(lineFor(node))} declares ProtocolMessageType locally`
+          );
+        }
+        const mirroredLiterals = collectProtocolLiterals(node);
+        if (mirroredLiterals.size >= 2) {
+          violations.push(
+            `${relativePath}:${String(lineFor(node))} mirrors protocol message literals locally`
+          );
+        }
+      } else if (ts.isVariableStatement(node)) {
+        const mirroredLiterals = collectProtocolLiterals(node);
+        if (mirroredLiterals.size >= 2) {
+          violations.push(
+            `${relativePath}:${String(lineFor(node))} mirrors protocol message literals locally`
+          );
+        }
+      }
+
+      node.forEachChild(visit);
+    };
+
+    visit(sourceFile);
+  }
+
+  return violations;
 }
 
 function expectOnlySourcePathsContaining(
@@ -322,6 +478,60 @@ describe("UI contract transit source guards", () => {
       "from \"../../../../contracts/ui/uiReadModel.js\""
     );
     expect(uiTypes).not.toContain("src/v11/");
+  });
+
+  it("rejects browser-source ProtocolMessageType leaks and local protocol mirrors", async () => {
+    const liveViolations = collectUiProtocolLeakViolations(
+      await readUiBrowserSources()
+    );
+
+    expect(liveViolations).toStrictEqual([]);
+    expect(
+      collectUiProtocolLeakViolations(
+        new Map([
+          [
+            "ui/src/lib/directProtocol.ts",
+            "import type { ProtocolMessageType } from '../../../src/types/protocol.js';\nexport type Local = ProtocolMessageType;\n"
+          ],
+          [
+            "ui/src/lib/importTypeProtocol.ts",
+            "export type Local = import('../../../src/types/protocol.js').ProtocolMessageType;\n"
+          ],
+          [
+            "ui/src/lib/importEqualsProtocol.ts",
+            "import type Protocol = require('../../../src/types/protocol.js');\nexport type Local = Protocol.ProtocolMessageType;\n"
+          ],
+          [
+            "ui/src/lib/localProtocol.ts",
+            "type ProtocolMessageType = 'TASK' | 'PASS';\ntype LocalMessageType = 'TASK' | 'PASS' | 'HUMAN_QUESTION';\nconst protocolMessageTypes = ['TASK', 'PASS'] as const;\n"
+          ],
+          [
+            "ui/src/lib/templateProtocol.ts",
+            "type LocalMessageType = `TASK` | `PASS` | `HUMAN_QUESTION`;\n"
+          ],
+          [
+            "ui/src/lib/objectProtocol.ts",
+            "const protocolMessageTypes = { TASK: true, PASS: true, HUMAN_QUESTION: true } as const;\ntype LocalMessageType = keyof typeof protocolMessageTypes;\n"
+          ],
+          [
+            "ui/src/lib/localProtocolEnum.ts",
+            "enum ProtocolMessageType { Task = 'TASK', Pass = 'PASS' }\n"
+          ]
+        ])
+      )
+    ).toEqual([
+      "ui/src/lib/directProtocol.ts:1 imports runtime protocol types directly",
+      "ui/src/lib/importTypeProtocol.ts:1 imports runtime protocol types directly",
+      "ui/src/lib/importEqualsProtocol.ts:1 imports runtime protocol types directly",
+      "ui/src/lib/localProtocol.ts:1 declares ProtocolMessageType locally",
+      "ui/src/lib/localProtocol.ts:1 mirrors protocol message literals locally",
+      "ui/src/lib/localProtocol.ts:2 mirrors protocol message literals locally",
+      "ui/src/lib/localProtocol.ts:3 mirrors protocol message literals locally",
+      "ui/src/lib/templateProtocol.ts:1 mirrors protocol message literals locally",
+      "ui/src/lib/objectProtocol.ts:1 mirrors protocol message literals locally",
+      "ui/src/lib/localProtocolEnum.ts:1 declares ProtocolMessageType locally",
+      "ui/src/lib/localProtocolEnum.ts:1 mirrors protocol message literals locally"
+    ]);
   });
 
   it("keeps UI router read-model ownership out of command modules", async () => {
