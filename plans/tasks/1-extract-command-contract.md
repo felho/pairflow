@@ -5,7 +5,7 @@ task_family_id: extract-command-contract
 sequence_key: "1"
 task_id: 1-extract-command-contract
 title: "Extract Command Contract"
-status: approved
+status: implementable
 phase: phase1
 target_files:
   - src/v11/application/extract/extractCliCommand.ts
