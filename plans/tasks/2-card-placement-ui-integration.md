@@ -17,7 +17,7 @@ plan_ref: plans/ui-card-placement-determinism-plan-v1.md
 system_context_ref: docs/pairflow-ui-prd.md
 owners:
   - "felho"
-doc_bubble_id: null
+doc_bubble_id: 2-card-placement-ui-integration-doc
 impl_bubble_id: null
 supersedes: []
 superseded_by: null
