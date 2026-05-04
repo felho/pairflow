@@ -20,7 +20,7 @@ archive_group: 2026-05-04-pre-kickoff-admin-phase-plan-v1
 task_tracker:
   - task_id: 1-prep-admin-contract
     task_path: plans/tasks/1-prep-admin-contract.md
-    status: approved
+    status: under_review
   - task_id: 2-prep-admin-publish
     task_path: null
     status: not_created
@@ -60,11 +60,12 @@ rename of the runtime concept.
 
 ## Done Definition
 
-1. The Pairflow docs/skills define bounded pre-kickoff administration for
-   ideation-created bubbles as an optional pattern before any behavior switch.
-2. `UsePairflow` exposes a manual pre-kickoff admin publish workflow that can
-   commit bounded admin changes in the bubble worktree, publish them to `main`,
-   and fail closed without running kickoff.
+1. `ExecutePairflowPlan` defines how selected routes may use ideation-created
+   bubbles as bounded pre-kickoff admin containers before any behavior switch,
+   relying on existing `UsePairflow` round-0 hold semantics.
+2. A manual pre-kickoff admin publish workflow can commit bounded admin changes
+   in the bubble worktree, publish them to `main`, and fail closed without
+   running kickoff.
 3. `ExecutePairflowPlan` document-bubble creation uses the pre-kickoff admin
    pattern while the implementation-bubble path remains functional under the
    previous model.
@@ -81,7 +82,7 @@ rename of the runtime concept.
 
 | Capability Claim | Closure Classification | Activation Path | Repo-Provided Boundary | External Prerequisites | Last-Mile Proof |
 |---|---|---|---|---|---|
-| Operators can use an ideation-created bubble as a pre-kickoff admin carrier before normal doc or implementation work begins. | end_to_end | `pairflow bubble create --ideation`, bounded admin in the bubble worktree, pre-kickoff admin publish, then `pairflow bubble kickoff`. | Lifecycle/skill contracts, manual publish workflow, ExecutePairflowPlan route integration, and validation evidence for document and implementation start routes. | Operator approval for any manual checkpoint when publish conflicts. | Task 2 proves the manual operator path; task 3 proves the document-bubble route path; task 4 proves the implementation-bubble route path. |
+| Operators can use an ideation-created bubble as a pre-kickoff admin carrier before normal doc or implementation work begins. | end_to_end | `pairflow bubble create --ideation`, bounded admin in the bubble worktree, pre-kickoff admin publish, then `pairflow bubble kickoff`. | Existing `UsePairflow` round-0 hold/kickoff lifecycle, `ExecutePairflowPlan` admin-container route pattern, manual publish workflow, and validation evidence for document and implementation start routes. | Operator approval for any manual checkpoint when publish conflicts. | Task 2 proves the manual operator path; task 3 proves the document-bubble route path; task 4 proves the implementation-bubble route path. |
 | Post-close administration can be verified instead of always recreated on `main`. | end_to_end | Bubble close path returns settled result; `UpdateProgress` checks refreshed plan/task/admin postconditions first and applies deterministic reconciliation only when required. | Close handler contract, `UpdateProgress` verifier-first behavior, and tests/evidence for already-satisfied and deterministic-reconcile paths. | Bubble branch must include scoped admin when available; operator checkpoint remains required for ambiguous refreshed state. | Task 5 proves verifier-first no-edit behavior when admin is already present and deterministic reconciliation when it is absent but recoverable. |
 
 ## Guiding Principles
@@ -113,13 +114,18 @@ rename of the runtime concept.
    - Task 4 integrates only the implementation-bubble start path.
    - Task 5 improves close aftermath independently through verifier-first
      semantics.
-8. Skill source-of-truth and sync rule: any task that modifies repo-local
+8. Skill ownership rule: this plan should avoid modifying `UsePairflow` unless a
+   later task proves a lifecycle-surface change is actually required. The
+   intended owner for this pattern is `ExecutePairflowPlan`: it chooses when to
+   use an ideation bubble as an admin container, while `UsePairflow` continues
+   to provide the existing create/start/round-0 hold/kickoff primitives.
+9. Skill source-of-truth and sync rule: any task that modifies repo-local
    Pairflow skill files must follow the repository skill sync policy after the
-   repo-local source change is committed. For `UsePairflow` changes, this means
-   updating `.claude/skills/UsePairflow/**` first, then running the documented
-   installer/sync workflow to `~/.claude/skills`, and recording the required
-   follow-up global-skill commit separately. The plan must not treat global
-   installed skill files as the editable source.
+   repo-local source change is committed. If a later task proves that
+   `UsePairflow` must change, it must update `.claude/skills/UsePairflow/**`
+   first, run the documented installer/sync workflow to `~/.claude/skills`, and
+   record the required follow-up global-skill commit separately. The plan must
+   not treat global installed skill files as the editable source.
 
 ## Canonical Contract Anchors
 
@@ -140,17 +146,20 @@ rename of the runtime concept.
    - `status=implementable` is the durable proof that document refinement
      closed successfully.
    - `status=in_progress` means implementation work is linked or started.
-3. Explicitly authorized reinterpretation: ideation-created bubbles may perform
-   bounded pre-kickoff administration before kickoff. This does not make
-   product/source implementation valid during the pre-kickoff admin phase.
+3. Explicitly authorized route pattern: `ExecutePairflowPlan` may use an
+   ideation-created bubble as a bounded pre-kickoff admin container for selected
+   routes. This relies on existing `UsePairflow` round-0 hold semantics and does
+   not make product/source implementation valid during the pre-kickoff admin
+   phase.
 4. Downstream task impact: successor tasks must preserve operational continuity
    after each slice and must not require an unimplemented future route to keep
    `ExecutePairflowPlan` usable.
-5. Skill sync impact: tasks that modify `UsePairflow` source must include the
-   repo-local edit, repo commit, installer/sync, and separate global-skill
-   commit sequence. Tasks that modify only `ExecutePairflowPlan` still keep
-   repo-local skill files as source of truth and must not edit installed global
-   copies directly.
+5. Skill sync impact: the planned path does not modify `UsePairflow`. If a
+   later task proves that `UsePairflow` source must change, that task must add
+   the repo-local edit, repo commit, installer/sync, and separate global-skill
+   commit sequence to its own acceptance and validation contract. Tasks that
+   modify only `ExecutePairflowPlan` still keep repo-local skill files as source
+   of truth and must not edit installed global copies directly.
 
 ## Current Status
 
@@ -163,10 +172,9 @@ rename of the runtime concept.
    implementation-bubble route surfaces.
 4. Existing metadata contracts already define `doc_bubble_id`,
    `impl_bubble_id`, `approved`, `implementable`, and `in_progress` meanings.
-5. Repository policy already defines Pairflow skill source-of-truth and sync
-   rules: repo-local `.claude/skills/**` files are edited first, installed
-   global skill copies are derived artifacts, and `UsePairflow` changes require
-   the documented sync workflow after the repo-local commit.
+5. The existing `UsePairflow` semantics are sufficient as the baseline:
+   ideation-created bubbles can remain in round-0 hold until kickoff, and
+   manual pre-kickoff preparation is already possible when explicitly requested.
 
 ### Open Work
 
@@ -177,9 +185,10 @@ rename of the runtime concept.
    pre-kickoff admin.
 4. Close aftermath is not yet verifier-first; it can still duplicate admin work
    on `main` even when the bubble branch already carried it.
-5. The new plan/task sequence must carry the existing skill sync policy into
-   each skill-modifying task so the repo-local source and installed skill copies
-   do not drift.
+5. The new plan/task sequence must keep lifecycle ownership narrow: prefer
+   `ExecutePairflowPlan` route-pattern documentation and integration; touch
+   `UsePairflow` only if existing round-0 hold/kickoff semantics prove
+   insufficient.
 
 ### Deferred / Future Work
 
@@ -192,8 +201,11 @@ rename of the runtime concept.
 
 ## Progress / Phase Summary
 
-1. Phase 1: document the optional pre-kickoff admin contract.
-2. Phase 2: add a manual UsePairflow workflow to publish bounded admin.
+1. Phase 1: document the `ExecutePairflowPlan` pre-kickoff admin-container
+   route pattern.
+2. Phase 2: add a manual admin publish workflow, owned by
+   `ExecutePairflowPlan` unless a task proves it must become a generic
+   lifecycle workflow.
 3. Phase 3: route document-bubble start through the admin publish pattern.
 4. Phase 4: route implementation-bubble start through the admin publish
    pattern.
@@ -204,38 +216,35 @@ rename of the runtime concept.
 
 | Task ID | Task Path | Purpose | Depends On | Closes Gap | Status |
 |---|---|---|---|---|---|
-| `1-prep-admin-contract` | `plans/tasks/1-prep-admin-contract.md` | Document the optional pre-kickoff admin pattern in UsePairflow and ExecutePairflowPlan contracts without changing default behavior or requiring any new route. | N/A | No explicit contract exists for bounded admin before kickoff. | draft |
-| `2-prep-admin-publish` | `null` | Add a manual UsePairflow workflow for pre-kickoff admin publish: status check, scope check, bubble-worktree commit, short main publish, postcondition verification, fail-closed no-kickoff behavior, and required UsePairflow skill sync after repo-local source commit. | `1-prep-admin-contract` | Operators cannot run the pattern through a first-class workflow. | not_created |
-| `3-doc-bubble-start-integration` | `null` | Integrate only `CreateDocumentBubble` with the pre-kickoff admin publish workflow while leaving implementation-bubble creation on the existing path, including required skill sync for any UsePairflow edits. | `2-prep-admin-publish` | Document-bubble start still needs main-side admin/linkage handling. | not_created |
-| `4-impl-bubble-start-integration` | `null` | Integrate only `CreateImplementationBubble` with the pre-kickoff admin publish workflow after the document path is proven, including required skill sync for any UsePairflow edits. | `3-doc-bubble-start-integration` | Implementation-bubble start still needs main-side admin/linkage handling. | not_created |
+| `1-prep-admin-contract` | `plans/tasks/1-prep-admin-contract.md` | Document the `ExecutePairflowPlan` route pattern that uses ideation bubbles as pre-kickoff admin containers, relying on existing `UsePairflow` round-0 hold semantics and without changing default behavior. | N/A | `ExecutePairflowPlan` has no explicit contract for bounded admin before kickoff. | under_review |
+| `2-prep-admin-publish` | `null` | Add a manual pre-kickoff admin publish workflow: status check, scope check, bubble-worktree commit, short main publish, postcondition verification, and fail-closed no-kickoff behavior. Keep the owner in `ExecutePairflowPlan` unless the task proves a generic `UsePairflow` lifecycle workflow is required. | `1-prep-admin-contract` | Operators cannot run the pattern through a first-class workflow. | not_created |
+| `3-doc-bubble-start-integration` | `null` | Integrate only `CreateDocumentBubble` with the pre-kickoff admin publish workflow while leaving implementation-bubble creation on the existing path. | `2-prep-admin-publish` | Document-bubble start still needs main-side admin/linkage handling. | not_created |
+| `4-impl-bubble-start-integration` | `null` | Integrate only `CreateImplementationBubble` with the pre-kickoff admin publish workflow after the document path is proven. | `3-doc-bubble-start-integration` | Implementation-bubble start still needs main-side admin/linkage handling. | not_created |
 | `5-close-admin-verifier` | `null` | Make close aftermath verifier-first: accept scoped admin already carried by the bubble branch, and reconcile on `main` only when deterministic postconditions are missing. | `4-impl-bubble-start-integration` | Close aftermath can still spend unnecessary time editing `main`. | not_created |
 
 ## Task Acceptance Contracts
 
 1. `1-prep-admin-contract`
-   - Adds documentation/skill contract only.
+   - Adds `ExecutePairflowPlan` documentation/skill contract only.
    - Preserves the existing create/start/kickoff behavior.
    - Defines allowed and forbidden pre-kickoff admin scope.
    - Explains that the pattern is optional until later route tasks adopt it.
-   - If it edits `UsePairflow`, it must carry the repo-local edit and required
-     skill sync handoff in the task acceptance/validation wording instead of
-     treating installed global skills as out of scope forever.
+   - Does not edit `UsePairflow`; cites existing round-0 hold behavior as a
+     baseline reference only.
 2. `2-prep-admin-publish`
    - Adds a manual workflow that can be used by an operator independently.
    - Does not require `ExecutePairflowPlan` to use it yet.
    - Never kickoffs after a failed admin publish.
-   - Includes the repository-required `UsePairflow` skill install/sync workflow
-     and separate global-skill commit when the repo-local skill change lands.
+   - Keeps the workflow under `ExecutePairflowPlan` unless implementation
+     proves it must become generic `UsePairflow` lifecycle surface.
 3. `3-doc-bubble-start-integration`
    - Changes only the document-bubble create/start route.
    - Leaves implementation-bubble creation functional under the previous path.
    - Proves that a document-bubble route can publish admin and then kickoff.
-   - Preserves the skill sync policy for any touched `UsePairflow` files.
 4. `4-impl-bubble-start-integration`
    - Changes only the implementation-bubble create/start route.
    - Requires successful admin publish before implementation kickoff.
    - Preserves the existing lifecycle authority split.
-   - Preserves the skill sync policy for any touched `UsePairflow` files.
 5. `5-close-admin-verifier`
    - Does not require pre-kickoff route changes to remain useful.
    - Checks for bubble-contained admin before editing on `main`.
@@ -245,23 +254,21 @@ rename of the runtime concept.
 
 | Plan Gap | Closed By | Notes |
 |---|---|---|
-| Pre-kickoff admin is not formally allowed or bounded. | `1-prep-admin-contract` | Documentation-only first slice keeps current skills usable. |
-| No first-class manual publish workflow exists. | `2-prep-admin-publish` | Operator can use the new path before orchestration depends on it. |
+| `ExecutePairflowPlan` has no formal admin-container route pattern. | `1-prep-admin-contract` | Documentation-only first slice keeps current skills usable. |
+| No first-class manual publish workflow exists. | `2-prep-admin-publish` | Operator can use the new path before orchestration depends on it; default owner remains `ExecutePairflowPlan`. |
 | Document-bubble start still uses old admin timing. | `3-doc-bubble-start-integration` | First route integration, smallest lifecycle scope. |
 | Implementation-bubble start still uses old admin timing. | `4-impl-bubble-start-integration` | Second route integration after document route proof. |
 | Close aftermath duplicates admin on `main`. | `5-close-admin-verifier` | Independent close-side optimization. |
 
 ## Dependencies and Order
 
-1. `1-prep-admin-contract` must land first because it makes the new pattern
-   explicit without behavior risk. If this task edits `UsePairflow`, the
-   repo-local skill commit must be followed by the documented skill sync
-   workflow and separate global-skill commit before operators rely on the
-   installed skill copy.
+1. `1-prep-admin-contract` must land first because it makes the
+   `ExecutePairflowPlan` route pattern explicit without behavior risk and
+   without changing `UsePairflow`.
 2. `2-prep-admin-publish` must land before route integration because
    `ExecutePairflowPlan` should not depend on an unimplemented workflow.
-   Its UsePairflow source changes must complete the same sync sequence before
-   the manual workflow is considered available outside the repo checkout.
+   Its default owner is `ExecutePairflowPlan`; it should touch `UsePairflow`
+   only if the existing lifecycle primitives prove insufficient.
 3. `3-doc-bubble-start-integration` precedes implementation integration because
    document-bubble start has the narrower postcondition: persist
    `doc_bubble_id` while status remains `approved`.
@@ -297,7 +304,6 @@ rename of the runtime concept.
    validation.
 5. Task 5: targeted close aftermath tests proving verifier-first behavior and
    deterministic reconciliation fallback.
-6. For every task that modifies `UsePairflow`, validation includes checking the
-   repo-local diff, running the documented `.claude/skills/INSTALL.md` sync
-   workflow to `~/.claude/skills`, and recording the required separate
-   global-skill commit evidence.
+6. If a later task proves that `UsePairflow` must be modified after all, that
+   task must add repo-required skill sync validation to its own acceptance
+   contract before implementation.
