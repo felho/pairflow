@@ -2,7 +2,6 @@ import {
   assertValidation,
   isInteger,
   isIsoTimestamp,
-  isNonEmptyString,
   isRecord,
   validationFail,
   validationOk,
@@ -45,10 +44,6 @@ import {
 import type { PairflowGlobalConfig } from "./pairflowConfig.js";
 import { IDEATION_METADATA_PARSE_WARNING } from "../v11/shared/ideation/ideationReasonCodes.js";
 import {
-  describeValidationCommandIdRule,
-  isValidationCommandId
-} from "../v11/shared/validation/validationCommandId.js";
-import {
   describeValidationTargetIdRule,
   isValidationTargetId
 } from "../v11/shared/validation/validationTargetId.js";
@@ -72,6 +67,7 @@ import {
   readString,
   readStringArray
 } from "./bubbleConfig/readers.js";
+import { validateBubbleCommands } from "./bubbleConfig/commands.js";
 import { assertValidBubbleConfigRemoteReferences } from "./bubbleConfig/remoteReferences.js";
 
 export {
@@ -95,17 +91,6 @@ export {
   validateBubbleConfigRemoteReferences
 } from "./bubbleConfig/remoteReferences.js";
 export { renderBubbleConfigToml } from "./bubbleConfig/render.js";
-
-function resolveValidationCommandString(
-  commands: Record<string, unknown> | undefined,
-  customCommands: Record<string, string>,
-  id: string
-): unknown {
-  if (id in customCommands) {
-    return customCommands[id];
-  }
-  return commands?.[id];
-}
 
 function readReviewPolicyConsecutiveCleanRunsRequired(
   source: Record<string, unknown>,
@@ -371,132 +356,7 @@ export function validateBubbleConfig(input: unknown): ValidationResult<BubbleCon
     });
   }
 
-  const testCommand = commands
-    ? readString(commands, "test", "commands.test", errors, true)
-    : undefined;
-  const typecheckCommand = commands
-    ? readString(commands, "typecheck", "commands.typecheck", errors, true)
-    : undefined;
-  const lintCommand = commands
-    ? readString(commands, "lint", "commands.lint", errors, false)
-    : undefined;
-  const bootstrapCommand = commands
-    ? readString(commands, "bootstrap", "commands.bootstrap", errors, false)
-    : undefined;
-  const validationRequired = commands
-    ? readStringArray(
-        commands,
-        "validation_required",
-        "commands.validation_required",
-        errors,
-        false
-      )
-    : undefined;
-  const metaReviewApproveRequired = commands
-    ? readStringArray(
-        commands,
-        "meta_review_approve_required",
-        "commands.meta_review_approve_required",
-        errors,
-        false
-      )
-    : undefined;
-  const validationRequiredExplicitCandidate = commands
-    ? readBoolean(
-        commands,
-        "validation_required_explicit",
-        "commands.validation_required_explicit",
-        errors,
-        false
-      )
-    : undefined;
-  const validationRequiredExplicit =
-    validationRequiredExplicitCandidate === true ? true : undefined;
-  const customCommands: Record<string, string> = {};
-  if (commands !== undefined) {
-    const fixedCommandKeys = new Set([
-      "bootstrap",
-      "lint",
-      "test",
-      "typecheck",
-      "meta_review_approve_required",
-      "validation_required",
-      "validation_required_explicit"
-    ]);
-    for (const [key, value] of Object.entries(commands)) {
-      if (fixedCommandKeys.has(key)) {
-        continue;
-      }
-      if (!isValidationCommandId(key)) {
-        errors.push({
-          path: `commands.${key}`,
-          message: describeValidationCommandIdRule()
-        });
-        continue;
-      }
-      if (!isNonEmptyString(value)) {
-        errors.push({
-          path: `commands.${key}`,
-          message: "Must be a non-empty string"
-        });
-        continue;
-      }
-      customCommands[key] = value.trim();
-    }
-  }
-  if (validationRequired !== undefined) {
-    const seenValidationRequired = new Set<string>();
-    validationRequired.forEach((id, index) => {
-      if (!isValidationCommandId(id)) {
-        errors.push({
-          path: `commands.validation_required[${index}]`,
-          message: describeValidationCommandIdRule()
-        });
-        return;
-      }
-      if (seenValidationRequired.has(id)) {
-        errors.push({
-          path: `commands.validation_required[${index}]`,
-          message: `Duplicate validation command id "${id}"`
-        });
-        return;
-      }
-      seenValidationRequired.add(id);
-    });
-  }
-  if (metaReviewApproveRequired !== undefined) {
-    const seenMetaReviewApproveRequired = new Set<string>();
-    metaReviewApproveRequired.forEach((id, index) => {
-      if (!isValidationCommandId(id)) {
-        errors.push({
-          path: `commands.meta_review_approve_required[${index}]`,
-          message: describeValidationCommandIdRule()
-        });
-        return;
-      }
-      if (seenMetaReviewApproveRequired.has(id)) {
-        errors.push({
-          path: `commands.meta_review_approve_required[${index}]`,
-          message: `Duplicate validation command id "${id}"`
-        });
-        return;
-      }
-      seenMetaReviewApproveRequired.add(id);
-      const commandValue = resolveValidationCommandString(
-        commands,
-        customCommands,
-        id
-      );
-      if (!isNonEmptyString(commandValue)) {
-        errors.push({
-          path: `commands.${id}`,
-          message:
-            "Must be a non-empty string for configured meta-review approve validation"
-        });
-        return;
-      }
-    });
-  }
+  const validatedCommands = validateBubbleCommands(commands, errors);
 
   let validatedValidationTarget: BubbleConfig["validation_target"] | undefined;
   if (validationTarget !== undefined) {
@@ -920,26 +780,7 @@ export function validateBubbleConfig(input: unknown): ValidationResult<BubbleCon
       reviewer: reviewer as "codex" | "claude",
       meta_reviewer: metaReviewer as "codex" | "claude"
     },
-    commands: {
-      ...(bootstrapCommand !== undefined
-        ? { bootstrap: bootstrapCommand }
-        : {}),
-      ...(lintCommand !== undefined
-        ? { lint: lintCommand }
-        : {}),
-      test: testCommand as string,
-      typecheck: typecheckCommand as string,
-      ...customCommands,
-      ...(metaReviewApproveRequired !== undefined
-        ? { meta_review_approve_required: metaReviewApproveRequired }
-        : {}),
-      ...(validationRequired !== undefined
-        ? { validation_required: validationRequired }
-        : {}),
-      ...(validationRequiredExplicit !== undefined
-        ? { validation_required_explicit: validationRequiredExplicit }
-        : {})
-    },
+    commands: validatedCommands as BubbleConfig["commands"],
     notifications: validatedNotifications,
     local_overlay: {
       enabled: localOverlayEnabled,
