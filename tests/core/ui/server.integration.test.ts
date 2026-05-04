@@ -349,6 +349,7 @@ describe("UI server integration", () => {
       metaReview: {
         actor: "meta-reviewer",
         authorityActive: false,
+        consecutiveCleanRuns: 0,
         runtimeDelivery: null
       },
       commandPath: {

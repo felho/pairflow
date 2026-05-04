@@ -18,6 +18,12 @@ import {
 } from "./eventsFilter.js";
 import type { RepoSnapshot } from "./eventsState.js";
 import { buildUiEventsSnapshot } from "./eventsSnapshot.js";
+import {
+  UiEventPayloadValidationError,
+  logInvalidUiEventPayload,
+  logUiEventPayloadDropLimitReached,
+  validateReplayableUiEvent
+} from "./routerEventPayloadValidation.js";
 
 interface UiEventsListener {
   id: number;
@@ -25,12 +31,15 @@ interface UiEventsListener {
   callback: (event: UiEvent) => void;
 }
 
+const invalidEventDropWarningInterval = 10;
+
 export class UiEventsEventLog {
   private readonly historyLimit: number;
   private readonly listeners = new Map<number, UiEventsListener>();
   private readonly history: UiEvent[] = [];
   private nextListenerId = 1;
   private nextEventId = 1;
+  private invalidEventDropCount = 0;
 
   public constructor(historyLimit: number) {
     this.historyLimit = historyLimit;
@@ -83,16 +92,34 @@ export class UiEventsEventLog {
   }
 
   public notify(event: UiEvent): void {
-    this.history.push(event);
+    let validatedEvent: Exclude<UiEvent, UiSnapshotEvent>;
+    try {
+      validatedEvent = validateReplayableUiEvent(event);
+    } catch (error) {
+      if (error instanceof UiEventPayloadValidationError) {
+        this.invalidEventDropCount += 1;
+        logInvalidUiEventPayload(error);
+        if (this.invalidEventDropCount % invalidEventDropWarningInterval === 0) {
+          logUiEventPayloadDropLimitReached({
+            source: "event_log",
+            invalidDropCount: this.invalidEventDropCount
+          });
+        }
+        return;
+      }
+      throw error;
+    }
+
+    this.history.push(validatedEvent);
     if (this.history.length > this.historyLimit) {
       this.history.splice(0, this.history.length - this.historyLimit);
     }
 
     for (const listener of this.listeners.values()) {
-      if (!eventMatchesFilter(event, listener.filter)) {
+      if (!eventMatchesFilter(validatedEvent, listener.filter)) {
         continue;
       }
-      listener.callback(event);
+      listener.callback(validatedEvent);
     }
   }
 

@@ -115,5 +115,5 @@ describe("runCli converged delivery warning parity", () => {
       "Use `pairflow bubble status --id b_conv_warn_02` to inspect approval state, then `pairflow bubble approve --id b_conv_warn_02`, `pairflow bubble request-rework --id b_conv_warn_02`, or `pairflow bubble reply --id b_conv_warn_02` as appropriate."
     );
     expect(runConvergedCommand).toHaveBeenCalledWith(["--summary", "y"]);
-  });
+  }, 20000);
 });

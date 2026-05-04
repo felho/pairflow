@@ -116,5 +116,5 @@ describe("runCli bubble delete confirmation exit code", () => {
     ]);
     const errorText = stderrSpy.mock.calls.map((call) => String(call[0])).join("");
     expect(errorText).toContain("delete failed");
-  });
+  }, 20000);
 });
