@@ -42,7 +42,9 @@ import type {
   UiStopBubbleResult,
   UiRestartBubbleResult,
   UiBubbleListView,
-  UiCommitBubbleResult
+  UiCommitBubbleResult,
+  UiDeleteBubbleResult,
+  UiMergeBubbleResult
 } from "../../../src/v11/shared/ports/uiRouter.js";
 import type { BubbleStatusView } from "../../../src/v11/shared/status/statusCommandApi.js";
 
@@ -158,6 +160,86 @@ function uiActionEventFixture(bubbleId = "b-router-action-fixture"): UiActionEve
     type: "APPROVAL_DECISION",
     round: 1,
     refs: []
+  };
+}
+
+function uiCommitResultFixture(
+  bubbleId = "b-router-commit-fixture"
+): UiCommitBubbleResult {
+  return {
+    bubbleId,
+    sequence: 13,
+    event: {
+      ...uiActionEventFixture(bubbleId),
+      type: "COMMIT_RESULT",
+      sender: "orchestrator",
+      recipient: "human",
+      summary: "Committed abc123."
+    },
+    actionState: {
+      ...uiActionStateFixture(bubbleId),
+      lifecycleState: "DONE",
+      activeAgent: null,
+      activeRole: null,
+      activeSince: null,
+      executionContext: null
+    },
+    commitSha: "abc123",
+    commitMessage: "Commit message",
+    stagedFiles: ["src/example.ts"]
+  };
+}
+
+function uiMergeResultFixture(
+  bubbleId = "b-router-merge-fixture"
+): UiMergeBubbleResult {
+  return {
+    bubbleId,
+    baseBranch: "main",
+    bubbleBranch: `bubble/${bubbleId}`,
+    mergeCommitSha: "abc123",
+    presentationRoute: "local",
+    pushedBaseBranch: false,
+    deletedRemoteBranch: false,
+    tmuxSessionName: `pf-${bubbleId}`,
+    tmuxSessionExisted: true,
+    runtimeSessionRemoved: true,
+    removedWorktree: true,
+    removedBubbleBranch: true
+  };
+}
+
+function uiDeleteResultFixture(
+  bubbleId = "b-router-delete-fixture",
+  overrides: Partial<UiDeleteBubbleResult> = {}
+): UiDeleteBubbleResult {
+  return {
+    bubbleId,
+    deleted: true,
+    requiresConfirmation: false,
+    artifacts: {
+      worktree: {
+        exists: false,
+        path: "/tmp/worktree"
+      },
+      tmux: {
+        exists: false,
+        sessionName: `pf-${bubbleId}`
+      },
+      runtimeSession: {
+        exists: false,
+        sessionName: null
+      },
+      branch: {
+        exists: false,
+        name: `pairflow/bubble/${bubbleId}`
+      }
+    },
+    tmuxSessionTerminated: false,
+    runtimeSessionRemoved: false,
+    removedWorktree: false,
+    removedBubbleBranch: false,
+    ...overrides
   };
 }
 
@@ -1387,6 +1469,66 @@ describe("createUiRouter delete action", () => {
       expect(response.status).toBe(202);
       expect(payload.result.deleted).toBe(false);
       expect(payload.result.requiresConfirmation).toBe(true);
+      expect(refreshNow).not.toHaveBeenCalled();
+    } finally {
+      await server.close();
+    }
+  });
+
+  it("fails closed before status selection when delete action response is malformed", async () => {
+    const repoPath = "/tmp/pairflow-ui-router-delete-invalid-response";
+    const refreshNow = vi.fn(() => Promise.resolve(undefined));
+    const deleteBubble = vi.fn(() =>
+      Promise.resolve({
+        ...uiDeleteResultFixture("b-router-delete-invalid"),
+        requiresConfirmation: "yes"
+      } as unknown as UiDeleteBubbleResult)
+    );
+
+    const router = createUiRouter({
+      repoScope: {
+        repos: [repoPath],
+        has: (value: string) => Promise.resolve(value === repoPath)
+      },
+      events: {
+        subscribe: () => () => undefined,
+        getSnapshot: () => ({
+          id: 1,
+          ts: "2026-02-25T00:00:00.000Z",
+          type: "snapshot",
+          repos: [],
+          bubbles: []
+        }),
+        refreshNow,
+        addRepo: () => Promise.resolve(false),
+        removeRepo: () => Promise.resolve(false),
+        close: () => Promise.resolve(undefined)
+      },
+      dependencies: {
+        deleteBubble
+      }
+    });
+    const server = await startRouterServer(router);
+
+    try {
+      const response = await fetch(
+        `${server.url}/api/bubbles/b-router-delete-invalid/delete?repo=${encodeURIComponent(repoPath)}`,
+        { method: "POST" }
+      );
+      const payload = (await response.json()) as {
+        error: {
+          code: string;
+          details?: Record<string, unknown>;
+        };
+      };
+
+      expect(response.status).toBe(500);
+      expect(payload.error.code).toBe("internal_error");
+      expect(payload.error.details).toMatchObject({
+        reasonCode: "UI_ACTION_RESPONSE_INVALID",
+        action: "delete"
+      });
+      expect(deleteBubble).toHaveBeenCalledTimes(1);
       expect(refreshNow).not.toHaveBeenCalled();
     } finally {
       await server.close();
@@ -3084,10 +3226,7 @@ describe("createUiRouter action routes", () => {
   it("accepts stageAll commit bodies and rejects legacy auto before dispatch", async () => {
     const repoPath = "/tmp/pairflow-ui-router-commit-stage-all";
     const commitBubble = vi.fn(() =>
-      Promise.resolve({
-        bubbleId: "b-router-commit-stage-all",
-        commitSha: "abc123"
-      } as UiCommitBubbleResult)
+      Promise.resolve(uiCommitResultFixture("b-router-commit-stage-all"))
     );
     const router = createUiRouter({
       repoScope: {
@@ -3184,6 +3323,104 @@ describe("createUiRouter action routes", () => {
           refs: ["artifacts/commit-evidence.md"]
         })
       );
+    } finally {
+      await server.close();
+    }
+  });
+
+  it("fails closed when commit action response is malformed", async () => {
+    const repoPath = "/tmp/pairflow-ui-router-commit-invalid-response";
+    const missingCommitMessageResult: Record<string, unknown> = {
+      ...uiCommitResultFixture("b-router-commit-invalid")
+    };
+    delete missingCommitMessageResult.commitMessage;
+    const commitBubble = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ...uiCommitResultFixture("b-router-commit-invalid"),
+        stagedFiles: "src/example.ts"
+      } as unknown as UiCommitBubbleResult)
+      .mockResolvedValueOnce(
+        missingCommitMessageResult as unknown as UiCommitBubbleResult
+      );
+    const router = createUiRouter({
+      repoScope: {
+        repos: [repoPath],
+        has: (value: string) => Promise.resolve(value === repoPath)
+      },
+      events: {
+        subscribe: () => () => undefined,
+        getSnapshot: () => ({
+          id: 1,
+          ts: "2026-02-25T00:00:00.000Z",
+          type: "snapshot",
+          repos: [],
+          bubbles: []
+        }),
+        refreshNow: () => Promise.resolve(undefined),
+        addRepo: () => Promise.resolve(false),
+        removeRepo: () => Promise.resolve(false),
+        close: () => Promise.resolve(undefined)
+      },
+      dependencies: {
+        commitBubble
+      }
+    });
+    const server = await startRouterServer(router);
+
+    try {
+      const response = await fetch(
+        `${server.url}/api/bubbles/b-router-commit-invalid/commit?repo=${encodeURIComponent(repoPath)}`,
+        {
+          method: "POST",
+          headers: {
+            "content-type": "application/json"
+          },
+          body: JSON.stringify({
+            stageAll: true
+          })
+        }
+      );
+      const payload = (await response.json()) as {
+        error: {
+          code: string;
+          details?: Record<string, unknown>;
+        };
+      };
+
+      expect(response.status).toBe(500);
+      expect(payload.error.code).toBe("internal_error");
+      expect(payload.error.details).toMatchObject({
+        reasonCode: "UI_ACTION_RESPONSE_INVALID",
+        action: "commit"
+      });
+
+      const missingRequired = await fetch(
+        `${server.url}/api/bubbles/b-router-commit-invalid/commit?repo=${encodeURIComponent(repoPath)}`,
+        {
+          method: "POST",
+          headers: {
+            "content-type": "application/json"
+          },
+          body: JSON.stringify({
+            stageAll: true
+          })
+        }
+      );
+      const missingRequiredPayload = (await missingRequired.json()) as {
+        error: {
+          code: string;
+          details?: Record<string, unknown>;
+        };
+      };
+
+      expect(missingRequired.status).toBe(500);
+      expect(missingRequiredPayload.error.code).toBe("internal_error");
+      expect(missingRequiredPayload.error.details).toMatchObject({
+        reasonCode: "UI_ACTION_RESPONSE_INVALID",
+        action: "commit"
+      });
+      expect(commitBubble).toHaveBeenCalledTimes(2);
     } finally {
       await server.close();
     }
@@ -3863,6 +4100,65 @@ describe("createUiRouter action routes", () => {
         expect(result).not.toHaveProperty("executionTarget");
         expect(result).not.toHaveProperty("runtimeWorkspacePath");
       }
+    } finally {
+      await server.close();
+    }
+  });
+
+  it("fails closed when merge action response is malformed", async () => {
+    const repoPath = "/tmp/pairflow-ui-router-merge-invalid-response";
+    const router = createUiRouter({
+      repoScope: {
+        repos: [repoPath],
+        has: (value: string) => Promise.resolve(value === repoPath)
+      },
+      events: {
+        subscribe: () => () => undefined,
+        getSnapshot: () => ({
+          id: 1,
+          ts: "2026-02-25T00:00:00.000Z",
+          type: "snapshot",
+          repos: [],
+          bubbles: []
+        }),
+        refreshNow: () => Promise.resolve(undefined),
+        addRepo: () => Promise.resolve(false),
+        removeRepo: () => Promise.resolve(false),
+        close: () => Promise.resolve(undefined)
+      },
+      dependencies: {
+        mergeBubble: vi.fn(async () => ({
+          ...uiMergeResultFixture("b-router-merge-invalid"),
+          presentationRoute: "remote"
+        } as unknown as UiMergeBubbleResult))
+      }
+    });
+    const server = await startRouterServer(router);
+
+    try {
+      const response = await fetch(
+        `${server.url}/api/bubbles/b-router-merge-invalid/merge?repo=${encodeURIComponent(repoPath)}`,
+        {
+          method: "POST",
+          headers: {
+            "content-type": "application/json"
+          },
+          body: JSON.stringify({})
+        }
+      );
+      const payload = (await response.json()) as {
+        error: {
+          code: string;
+          details?: Record<string, unknown>;
+        };
+      };
+
+      expect(response.status).toBe(500);
+      expect(payload.error.code).toBe("internal_error");
+      expect(payload.error.details).toMatchObject({
+        reasonCode: "UI_ACTION_RESPONSE_INVALID",
+        action: "merge"
+      });
     } finally {
       await server.close();
     }

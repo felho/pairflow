@@ -13,6 +13,11 @@ import {
   requireMessage,
   throwApiError
 } from "./routerHttp.js";
+import {
+  validateUiCommitBubbleResult,
+  validateUiDeleteBubbleResult,
+  validateUiMergeBubbleResult
+} from "./routerActionResponseValidation.js";
 
 interface BubbleActionDispatchInput {
   environment: BubbleActionDispatchEnvironment;
@@ -109,9 +114,8 @@ async function handleCommitAction(
   input: BubbleActionDispatchInput
 ): Promise<BubbleActionResponse> {
   const commitInput = parseCommitBody(input.body);
-  return {
-    status: 200,
-    result: await input.environment.dependencies.commitBubble({
+  const result = validateUiCommitBubbleResult(
+    await input.environment.dependencies.commitBubble({
       bubbleId: input.bubbleId,
       repoPath: input.repoPath,
       ...(commitInput.message !== undefined
@@ -121,6 +125,10 @@ async function handleCommitAction(
       stageAll: commitInput.stageAll,
       ...resolveOptionalCwd(input.environment)
     })
+  );
+  return {
+    status: 200,
+    result
   };
 }
 
@@ -128,9 +136,8 @@ async function handleMergeAction(
   input: BubbleActionDispatchInput
 ): Promise<BubbleActionResponse> {
   const mergeInput = parseMergeBody(input.body);
-  return {
-    status: 200,
-    result: await input.environment.dependencies.mergeBubble({
+  const result = validateUiMergeBubbleResult(
+    await input.environment.dependencies.mergeBubble({
       bubbleId: input.bubbleId,
       repoPath: input.repoPath,
       ...(mergeInput.push !== undefined ? { push: mergeInput.push } : {}),
@@ -139,6 +146,10 @@ async function handleMergeAction(
         : {}),
       ...resolveOptionalCwd(input.environment)
     })
+  );
+  return {
+    status: 200,
+    result
   };
 }
 
@@ -152,9 +163,13 @@ async function handleDeleteAction(
     ...(deleteInput.force !== undefined ? { force: deleteInput.force } : {}),
     ...resolveOptionalCwd(input.environment)
   });
+  const validatedResult = validateUiDeleteBubbleResult(result);
   return {
-    status: result.requiresConfirmation && !result.deleted ? 202 : 200,
-    result
+    status:
+      validatedResult.requiresConfirmation && !validatedResult.deleted
+        ? 202
+        : 200,
+    result: validatedResult
   };
 }
 
