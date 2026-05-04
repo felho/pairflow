@@ -185,13 +185,7 @@ describe("planWatchLoop", () => {
     );
 
     expect(result.status).toBe("runner_settled_checkpoint");
-    expect(result.selectedCandidate).toMatchObject({
-      taskId: "plan-continuation",
-      bubbleId: "plan-watch-run-now",
-      statusMetadata: {
-        triggerKind: "operator_run_now"
-      }
-    });
+    expect(result.selectedCandidate).toBeUndefined();
     expect(dependencies.runExecutePairflowPlanContinuation).toHaveBeenCalledOnce();
     expect(
       vi.mocked(dependencies.runExecutePairflowPlanContinuation).mock.calls[0]?.[0]
@@ -205,10 +199,11 @@ describe("planWatchLoop", () => {
       mode: "run",
       recordState: "completed",
       triggerEvidence: {
-        taskId: "plan-continuation",
-        bubbleId: "plan-watch-run-now"
+        planPath: "/repo/plans/local-plan-watch-plan-v1.md",
+        triggerKind: "operator_run_now"
       }
     });
+    expect(JSON.stringify(ledger.records[0])).not.toContain("plan-watch-run-now");
   });
 
   it("dedupes repeated explicit run-now continuations for the same plan evidence", async () => {
@@ -258,9 +253,11 @@ describe("planWatchLoop", () => {
     ).toHaveBeenCalledOnce();
     expect(ledger.records).toHaveLength(2);
     expect(ledger.records[0]?.key).not.toBe(ledger.records[1]?.key);
-    expect(ledger.records[1]?.triggerEvidence.statusRef).toContain(
-      "plan-watch-run-now-force:"
-    );
+    expect(ledger.records[1]?.key).toContain("run-now-force:");
+    expect(ledger.records[1]?.triggerEvidence).toMatchObject({
+      triggerKind: "operator_run_now",
+      forceRun: true
+    });
   });
 
   it("uses run-now force only once inside a long-running watch loop", async () => {
@@ -482,7 +479,9 @@ describe("planWatchLoop", () => {
     expect(result.deferredCandidateCount).toBe(1);
     expect(dependencies.runExecutePairflowPlanContinuation).toHaveBeenCalledOnce();
     expect(ledger.records).toHaveLength(1);
-    expect(ledger.records[0]?.triggerEvidence.bubbleId).toBe(firstCandidate.bubbleId);
+    expect(ledger.records[0]?.triggerEvidence).toMatchObject({
+      bubbleId: firstCandidate.bubbleId
+    });
   });
 
   it("records dry-run observations without consuming a later real run", async () => {

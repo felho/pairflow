@@ -28,6 +28,23 @@ export function buildPlanWatchDedupeKey(input: {
   ].join("|");
 }
 
+export function buildPlanWatchRunNowDedupeKey(input: {
+  repoPath: string;
+  planPath: string;
+  now: Date;
+  forceRun: boolean;
+}): string {
+  const planPath = normalizePlanPathForKey(input.repoPath, input.planPath);
+  const statusEvidence = input.forceRun
+    ? `run-now-force:${input.now.toISOString()}`
+    : "run-now";
+  return [
+    `plan=${planPath}`,
+    "trigger=operator_run_now",
+    `status=${statusEvidence}`
+  ].join("|");
+}
+
 export function buildRunnerInput(input: {
   repoPath: string;
   planPath: string;
@@ -38,9 +55,6 @@ export function buildRunnerInput(input: {
   stopSignal?: AbortSignal | undefined;
   onArtifactFiles?: AgentRunnerBridgeInput["onArtifactFiles"] | undefined;
 }): AgentRunnerBridgeInput {
-  const reason = isRunNowCandidate(input.candidate)
-    ? PLAN_WATCH_RUN_NOW_REASON
-    : PLAN_WATCH_TRIGGER_REASON;
   return {
     repoPath: input.repoPath,
     planPath: input.planPath,
@@ -52,14 +66,35 @@ export function buildRunnerInput(input: {
       : {}),
     trigger: {
       source: PLAN_WATCH_TRIGGER_SOURCE,
-      reason,
+      reason: PLAN_WATCH_TRIGGER_REASON,
       observedAt: input.candidate.observedAt ?? input.now.toISOString()
     }
   };
 }
 
-function isRunNowCandidate(candidate: LinkedBubbleTriggerCandidate): boolean {
-  return candidate.statusMetadata?.triggerKind === "operator_run_now";
+export function buildRunNowRunnerInput(input: {
+  repoPath: string;
+  planPath: string;
+  invocationId: string;
+  now: Date;
+  stopSignal?: AbortSignal | undefined;
+  onArtifactFiles?: AgentRunnerBridgeInput["onArtifactFiles"] | undefined;
+}): AgentRunnerBridgeInput {
+  return {
+    repoPath: input.repoPath,
+    planPath: input.planPath,
+    invocationId: input.invocationId,
+    now: input.now,
+    ...(input.stopSignal !== undefined ? { stopSignal: input.stopSignal } : {}),
+    ...(input.onArtifactFiles !== undefined
+      ? { onArtifactFiles: input.onArtifactFiles }
+      : {}),
+    trigger: {
+      source: PLAN_WATCH_TRIGGER_SOURCE,
+      reason: PLAN_WATCH_RUN_NOW_REASON,
+      observedAt: input.now.toISOString()
+    }
+  };
 }
 
 function normalizePlanPathForKey(repoPath: string, planPath: string): string {

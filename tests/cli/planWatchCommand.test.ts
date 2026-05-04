@@ -124,6 +124,7 @@ describe("plan watch command", () => {
       planPath: "/repo/plans/local-plan-watch-plan-v1.md",
       invocationId: "invocation-1",
       dedupeKey: "dedupe-1",
+      triggerReason: "linked_bubble_approval_ready",
       candidate: {
         planPath: "/repo/plans/local-plan-watch-plan-v1.md",
         taskId: "3-watch-loop",
@@ -148,6 +149,7 @@ describe("plan watch command", () => {
       planPath: "/repo/plans/local-plan-watch-plan-v1.md",
       invocationId: "invocation-1",
       dedupeKey: "dedupe-1",
+      triggerReason: "linked_bubble_approval_ready",
       candidate: {
         planPath: "/repo/plans/local-plan-watch-plan-v1.md",
         taskId: "3-watch-loop",
@@ -198,6 +200,7 @@ describe("plan watch command", () => {
       planPath: "/repo/plans/local-plan-watch-plan-v1.md",
       invocationId: "invocation-1",
       dedupeKey: "dedupe-1",
+      triggerReason: "linked_bubble_approval_ready",
       candidate: {
         planPath: "/repo/plans/local-plan-watch-plan-v1.md",
         taskId: "3-watch-loop",

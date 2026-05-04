@@ -1,20 +1,21 @@
 import type { AgentRunnerBridgeResult } from "./agentRunnerBridgeContract.js";
-import type {
-  LinkedBubbleTriggerCandidate,
-  LinkedBubbleTriggerDiagnostic
-} from "./linkedBubbleTriggerIndexContract.js";
+import type { LinkedBubbleTriggerDiagnostic } from "./linkedBubbleTriggerIndexContract.js";
 import {
   buildCompletedPlanWatchLedgerRecord,
-  buildDryRunPlanWatchLedgerRecord,
-  buildReservedPlanWatchLedgerRecord,
+  buildDryRunPlanWatchRunNowLedgerRecord,
+  buildReservedPlanWatchRunNowLedgerRecord,
   hasCompletedRunForKey,
   hasReservedRunForKey
 } from "./planWatchLedger.js";
 import { PlanWatchLedgerError } from "./planWatchLedgerContract.js";
 import {
-  buildPlanWatchDedupeKey,
-  buildRunnerInput
+  buildPlanWatchRunNowDedupeKey,
+  buildRunNowRunnerInput
 } from "./planWatchLoopMapping.js";
+import {
+  planWatchBlockedResult,
+  planWatchDiagnostic
+} from "./planWatchLoopExecution.js";
 import type {
   PlanWatchBlockedReasonKind,
   PlanWatchDiagnostic,
@@ -23,71 +24,56 @@ import type {
   PlanWatchLoopDependencies
 } from "./planWatchLoopContract.js";
 
-interface CandidateExecutionInput {
+interface RunNowExecutionInput {
   input: PlanWatchInput;
   dependencies: PlanWatchLoopDependencies;
   now: Date;
   onceExit: boolean;
   repoPath: string;
   planPath: string;
-  candidate: LinkedBubbleTriggerCandidate;
-  candidateCount: number;
-  candidateIndex?: number | undefined;
   diagnostics: readonly LinkedBubbleTriggerDiagnostic[];
 }
 
-interface CandidateContext extends CandidateExecutionInput {
+interface RunNowContext extends RunNowExecutionInput {
   dedupeKey: string;
-  deferredCandidateCount: number;
 }
 
-export async function executePlanWatchCandidate(
-  input: CandidateExecutionInput
+export async function executePlanWatchRunNow(
+  input: RunNowExecutionInput
 ): Promise<PlanWatchIterationResult> {
   const context = {
     ...input,
-    dedupeKey: buildPlanWatchDedupeKey(input),
-    deferredCandidateCount: Math.max(
-      0,
-      input.candidateCount - (input.candidateIndex ?? 0) - 1
-    )
+    dedupeKey: buildPlanWatchRunNowDedupeKey({
+      repoPath: input.repoPath,
+      planPath: input.planPath,
+      now: input.now,
+      forceRun: input.input.forceRun === true
+    })
   };
-  await input.input.onEvent?.({
-    kind: "candidate_selected",
-    repoPath: input.repoPath,
-    planPath: input.planPath,
-    candidate: input.candidate,
-    candidateIndex: input.candidateIndex ?? 0,
-    candidateCount: input.candidateCount,
-    dedupeKey: context.dedupeKey
-  });
-  const ledgerResult = await readCandidateLedger(context);
+  const ledgerResult = await readRunNowLedger(context);
   if (ledgerResult !== undefined) {
     return ledgerResult;
   }
 
-  if (input.input.dryRun === true) {
-    const invocationId = (
-      input.dependencies.generateInvocationId ?? defaultInvocationId
-    )();
-    return handleDryRunCandidate(context, invocationId);
-  }
   const invocationId = (
     input.dependencies.generateInvocationId ?? defaultInvocationId
   )();
-  if (!hasRunnerAuthority(input.input.runnerConfig)) {
-    return runnerConfigMissingResult(context, invocationId);
+  if (input.input.dryRun === true) {
+    return handleDryRunRunNow(context, invocationId);
   }
-  return handleRunCandidate(context, invocationId);
+  if (!hasRunnerAuthority(input.input.runnerConfig)) {
+    return runnerConfigMissingRunNowResult(context, invocationId);
+  }
+  return handleRunNow(context, invocationId);
 }
 
-function runnerConfigMissingResult(
-  context: CandidateContext,
+function runnerConfigMissingRunNowResult(
+  context: RunNowContext,
   invocationId: string
 ): PlanWatchIterationResult {
   const timestamp = context.now.toISOString();
   return planWatchBlockedResult({
-    ...baseCandidateResult(context),
+    ...baseRunNowResult(context),
     invocationId,
     runnerResult: {
       status: "blocked",
@@ -110,125 +96,82 @@ function runnerConfigMissingResult(
   });
 }
 
-export function planWatchBlockedResult(input: {
-  repoPath: string;
-  planPath: string;
-  onceExit: boolean;
-  blockedReasonKind: PlanWatchBlockedReasonKind;
-  diagnostics: readonly PlanWatchIterationResult["diagnostics"][number][];
-  selectedCandidate?: LinkedBubbleTriggerCandidate | undefined;
-  dedupeKey?: string | undefined;
-  invocationId?: string | undefined;
-  ledgerRecord?: PlanWatchIterationResult["ledgerRecord"];
-  runnerResult?: AgentRunnerBridgeResult | undefined;
-  scannedCandidateCount?: number | undefined;
-  deferredCandidateCount?: number | undefined;
-}): PlanWatchIterationResult {
-  return {
-    status: "blocked",
-    repoPath: input.repoPath,
-    planPath: input.planPath,
-    scannedCandidateCount: input.scannedCandidateCount ?? 0,
-    deferredCandidateCount: input.deferredCandidateCount ?? 0,
-    diagnostics: input.diagnostics,
-    ...(input.selectedCandidate !== undefined
-      ? { selectedCandidate: input.selectedCandidate }
-      : {}),
-    ...(input.dedupeKey !== undefined ? { dedupeKey: input.dedupeKey } : {}),
-    ...(input.invocationId !== undefined ? { invocationId: input.invocationId } : {}),
-    ...(input.ledgerRecord !== undefined ? { ledgerRecord: input.ledgerRecord } : {}),
-    ...(input.runnerResult !== undefined ? { runnerResult: input.runnerResult } : {}),
-    blockedReasonKind: input.blockedReasonKind,
-    onceExit: input.onceExit
-  };
-}
-
-export function planWatchDiagnostic(
-  code: string,
-  severity: PlanWatchDiagnostic["severity"],
-  message: string
-): PlanWatchDiagnostic {
-  return {
-    kind: "plan_watch_diagnostic",
-    code,
-    severity,
-    message
-  };
-}
-
-async function readCandidateLedger(
-  context: CandidateContext
+async function readRunNowLedger(
+  context: RunNowContext
 ): Promise<PlanWatchIterationResult | undefined> {
   try {
     const ledger = await context.dependencies.ledger.read();
     if (hasCompletedRunForKey(ledger, context.dedupeKey)) {
-      return duplicateSkippedResult(context);
+      return duplicateRunNowSkippedResult(context);
     }
     if (hasReservedRunForKey(ledger, context.dedupeKey)) {
-      return interruptedAttemptResult(context);
+      return interruptedRunNowAttemptResult(context);
     }
     return undefined;
   } catch (error) {
-    return ledgerReadBlockedResult(context, error);
+    return runNowLedgerReadBlockedResult(context, error);
   }
 }
 
-async function handleDryRunCandidate(
-  context: CandidateContext,
+async function handleDryRunRunNow(
+  context: RunNowContext,
   invocationId: string
 ): Promise<PlanWatchIterationResult> {
-  const record = buildDryRunPlanWatchLedgerRecord({
+  const record = buildDryRunPlanWatchRunNowLedgerRecord({
     key: context.dedupeKey,
     invocationId: `dry-run-${invocationId}`,
-    candidate: context.candidate,
+    planPath: context.planPath,
+    forceRun: context.input.forceRun === true,
     attemptedAt: context.now.toISOString()
   });
   try {
     const ledgerRecord = await context.dependencies.ledger.observeDryRun(record);
     return {
       status: "dry_run",
-      ...baseCandidateResult(context),
+      ...baseRunNowResult(context),
       invocationId: ledgerRecord.invocationId,
       ledgerRecord
     };
   } catch (error) {
-    return blockedFromError(context, error, "ledger_write_failed", record.invocationId);
+    return blockedFromRunNowError(context, error, "ledger_write_failed", record.invocationId);
   }
 }
 
-async function handleRunCandidate(
-  context: CandidateContext,
+async function handleRunNow(
+  context: RunNowContext,
   invocationId: string
 ): Promise<PlanWatchIterationResult> {
-  const reservedRecord = buildReservedPlanWatchLedgerRecord({
+  const reservedRecord = buildReservedPlanWatchRunNowLedgerRecord({
     key: context.dedupeKey,
     invocationId,
-    candidate: context.candidate,
+    planPath: context.planPath,
+    forceRun: context.input.forceRun === true,
     attemptedAt: context.now.toISOString()
   });
   try {
     await context.dependencies.ledger.reserveRun(reservedRecord);
   } catch (error) {
-    const contentionResult = await reservationContentionResult(context, error);
+    const contentionResult = await runNowReservationContentionResult(context, error);
     if (contentionResult !== undefined) {
       return contentionResult;
     }
-    return blockedFromError(context, error, "ledger_write_failed", invocationId);
+    return blockedFromRunNowError(context, error, "ledger_write_failed", invocationId);
   }
 
   await context.input.onEvent?.({
     kind: "runner_started",
     repoPath: context.repoPath,
     planPath: context.planPath,
-    candidate: context.candidate,
-    triggerReason: "linked_bubble_approval_ready",
     invocationId,
-    dedupeKey: context.dedupeKey
+    dedupeKey: context.dedupeKey,
+    triggerReason: "operator_run_now"
   });
   const runnerResult = await context.dependencies.runExecutePairflowPlanContinuation(
-    buildRunnerInput({
-      ...context,
+    buildRunNowRunnerInput({
+      repoPath: context.repoPath,
+      planPath: context.planPath,
       invocationId,
+      now: context.now,
       ...(context.input.stopSignal !== undefined
         ? { stopSignal: context.input.stopSignal }
         : {}),
@@ -237,35 +180,39 @@ async function handleRunCandidate(
           kind: "runner_artifact_ready",
           repoPath: context.repoPath,
           planPath: context.planPath,
-          candidate: context.candidate,
-          triggerReason: "linked_bubble_approval_ready",
           invocationId,
           dedupeKey: context.dedupeKey,
+          triggerReason: "operator_run_now",
           artifactFiles
         });
       }
     }),
     context.input.runnerConfig ?? {}
-  ).catch((error: unknown) => runnerThrownResult(context, invocationId, error));
+  ).catch((error: unknown) => runnerThrownRunNowResult(context, invocationId, error));
   await context.input.onEvent?.({
     kind: "runner_completed",
     repoPath: context.repoPath,
     planPath: context.planPath,
-    candidate: context.candidate,
-    triggerReason: "linked_bubble_approval_ready",
     invocationId,
     dedupeKey: context.dedupeKey,
+    triggerReason: "operator_run_now",
     runnerResult
   });
   const completedRecord = buildCompletedPlanWatchLedgerRecord(
     reservedRecord,
     runnerResult
   );
-  return completeRunLedger(context, invocationId, reservedRecord, completedRecord, runnerResult);
+  return completeRunNowLedger(
+    context,
+    invocationId,
+    reservedRecord,
+    completedRecord,
+    runnerResult
+  );
 }
 
-async function completeRunLedger(
-  context: CandidateContext,
+async function completeRunNowLedger(
+  context: RunNowContext,
   invocationId: string,
   reservedRecord: PlanWatchIterationResult["ledgerRecord"],
   completedRecord: NonNullable<PlanWatchIterationResult["ledgerRecord"]>,
@@ -274,7 +221,7 @@ async function completeRunLedger(
   try {
     await context.dependencies.ledger.completeRun(completedRecord);
   } catch (error) {
-    return blockedFromError(
+    return blockedFromRunNowError(
       context,
       error,
       "ledger_write_failed",
@@ -286,7 +233,7 @@ async function completeRunLedger(
   const status = mapRunnerStatus(runnerResult);
   return {
     status,
-    ...baseCandidateResult(context),
+    ...baseRunNowResult(context),
     invocationId,
     ledgerRecord: completedRecord,
     runnerResult,
@@ -296,31 +243,30 @@ async function completeRunLedger(
   };
 }
 
-function baseCandidateResult(
-  context: CandidateContext
+function baseRunNowResult(
+  context: RunNowContext
 ): Omit<PlanWatchIterationResult, "status"> {
   return {
     repoPath: context.repoPath,
     planPath: context.planPath,
-    scannedCandidateCount: context.candidateCount,
-    deferredCandidateCount: context.deferredCandidateCount,
+    scannedCandidateCount: 0,
+    deferredCandidateCount: 0,
     diagnostics: context.diagnostics,
-    selectedCandidate: context.candidate,
     dedupeKey: context.dedupeKey,
     onceExit: context.onceExit
   };
 }
 
-function duplicateSkippedResult(context: CandidateContext): PlanWatchIterationResult {
+function duplicateRunNowSkippedResult(context: RunNowContext): PlanWatchIterationResult {
   return {
     status: "duplicate_skipped",
-    ...baseCandidateResult(context)
+    ...baseRunNowResult(context)
   };
 }
 
-function interruptedAttemptResult(context: CandidateContext): PlanWatchIterationResult {
+function interruptedRunNowAttemptResult(context: RunNowContext): PlanWatchIterationResult {
   return planWatchBlockedResult({
-    ...baseCandidateResult(context),
+    ...baseRunNowResult(context),
     blockedReasonKind: "interrupted_attempt_exists",
     diagnostics: [
       ...context.diagnostics,
@@ -333,8 +279,8 @@ function interruptedAttemptResult(context: CandidateContext): PlanWatchIteration
   });
 }
 
-async function reservationContentionResult(
-  context: CandidateContext,
+async function runNowReservationContentionResult(
+  context: RunNowContext,
   error: unknown
 ): Promise<PlanWatchIterationResult | undefined> {
   if (!isRunRecordContention(error)) {
@@ -343,23 +289,23 @@ async function reservationContentionResult(
   try {
     const ledger = await context.dependencies.ledger.read();
     if (hasCompletedRunForKey(ledger, context.dedupeKey)) {
-      return duplicateSkippedResult(context);
+      return duplicateRunNowSkippedResult(context);
     }
     if (hasReservedRunForKey(ledger, context.dedupeKey)) {
-      return interruptedAttemptResult(context);
+      return interruptedRunNowAttemptResult(context);
     }
   } catch (readError) {
-    return ledgerReadBlockedResult(context, readError);
+    return runNowLedgerReadBlockedResult(context, readError);
   }
-  return reservationContentionUnresolvedResult(context, error);
+  return runNowReservationContentionUnresolvedResult(context, error);
 }
 
-function reservationContentionUnresolvedResult(
-  context: CandidateContext,
+function runNowReservationContentionUnresolvedResult(
+  context: RunNowContext,
   error: unknown
 ): PlanWatchIterationResult {
   return planWatchBlockedResult({
-    ...baseCandidateResult(context),
+    ...baseRunNowResult(context),
     blockedReasonKind: "reservation_contention_unresolved",
     diagnostics: [
       ...context.diagnostics,
@@ -373,8 +319,8 @@ function reservationContentionUnresolvedResult(
   });
 }
 
-function blockedFromError(
-  context: CandidateContext,
+function blockedFromRunNowError(
+  context: RunNowContext,
   error: unknown,
   fallback: PlanWatchBlockedReasonKind,
   invocationId?: string,
@@ -382,7 +328,7 @@ function blockedFromError(
   runnerResult?: AgentRunnerBridgeResult
 ): PlanWatchIterationResult {
   return planWatchBlockedResult({
-    ...baseCandidateResult(context),
+    ...baseRunNowResult(context),
     ...(invocationId !== undefined ? { invocationId } : {}),
     ...(ledgerRecord !== undefined ? { ledgerRecord } : {}),
     ...(runnerResult !== undefined ? { runnerResult } : {}),
@@ -391,16 +337,16 @@ function blockedFromError(
   });
 }
 
-function ledgerReadBlockedResult(
-  context: CandidateContext,
+function runNowLedgerReadBlockedResult(
+  context: RunNowContext,
   error: unknown
 ): PlanWatchIterationResult {
   return planWatchBlockedResult({
     repoPath: context.repoPath,
     planPath: context.planPath,
     onceExit: context.onceExit,
-    scannedCandidateCount: context.candidateCount,
-    deferredCandidateCount: context.deferredCandidateCount,
+    scannedCandidateCount: 0,
+    deferredCandidateCount: 0,
     blockedReasonKind: ledgerErrorReason(error, "ledger_unreadable"),
     diagnostics: [...context.diagnostics, watchDiagnosticFromError(error)]
   });
@@ -438,8 +384,8 @@ function mapRunnerBlockedReason(
   return "runner_blocked_outcome";
 }
 
-function runnerThrownResult(
-  context: CandidateContext,
+function runnerThrownRunNowResult(
+  context: RunNowContext,
   invocationId: string,
   error: unknown
 ): AgentRunnerBridgeResult {
@@ -490,7 +436,7 @@ function defaultInvocationId(): string {
 }
 
 function hasRunnerAuthority(
-  config: CandidateContext["input"]["runnerConfig"]
+  config: PlanWatchInput["runnerConfig"]
 ): boolean {
   return (
     (config?.backend !== undefined && config.backend.trim().length > 0)

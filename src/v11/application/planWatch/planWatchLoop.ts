@@ -1,13 +1,13 @@
-import { resolve, sep } from "node:path";
+import { resolve } from "node:path";
 
 import {
   executePlanWatchCandidate,
   planWatchBlockedResult,
   planWatchDiagnostic
 } from "./planWatchLoopExecution.js";
-import type {
-  LinkedBubbleTriggerCandidate
-} from "./linkedBubbleTriggerIndexContract.js";
+import {
+  executePlanWatchRunNow
+} from "./planWatchRunNowExecution.js";
 import {
   DEFAULT_PLAN_WATCH_INTERVAL_MS,
   type PlanWatchDiagnostic,
@@ -44,16 +44,18 @@ export async function runPlanWatchIteration(
       planPath: normalized.planPath,
       now
     });
-    const candidates = indexResult.candidates.length === 0 && input.runNow === true
-      ? [
-          buildRunNowCandidate({
-            repoPath: normalized.repoPath,
-            planPath: normalized.planPath,
-            now,
-            forceRun: input.forceRun === true
-          })
-        ]
-      : indexResult.candidates;
+    if (indexResult.candidates.length === 0 && input.runNow === true) {
+      return executePlanWatchRunNow({
+        input,
+        dependencies,
+        now,
+        onceExit,
+        repoPath: normalized.repoPath,
+        planPath: normalized.planPath,
+        diagnostics: indexResult.diagnostics
+      });
+    }
+    const candidates = indexResult.candidates;
     if (candidates.length === 0) {
       return {
         status: "idle",
@@ -104,35 +106,6 @@ export async function runPlanWatchIteration(
       ]
     });
   }
-}
-
-function buildRunNowCandidate(input: {
-  repoPath: string;
-  planPath: string;
-  now: Date;
-  forceRun: boolean;
-}): LinkedBubbleTriggerCandidate {
-  const { repoPath, planPath, now } = input;
-  const normalizedPlanPath = planPath.split(sep).join("/");
-  const statusRef = input.forceRun
-    ? `plan-watch-run-now-force:${normalizedPlanPath}:${now.toISOString()}`
-    : `plan-watch-run-now:${normalizedPlanPath}`;
-  return {
-    planPath,
-    taskId: "plan-continuation",
-    taskPath: normalizedPlanPath,
-    bubbleId: "plan-watch-run-now",
-    bubbleRole: "implementation",
-    observedState: "READY_FOR_HUMAN_APPROVAL",
-    observedAt: now.toISOString(),
-    statusRef,
-    statusMetadata: {
-      triggerKind: "operator_run_now",
-      ...(input.forceRun ? { forceRun: true } : {}),
-      repoPath,
-      planPath
-    }
-  };
 }
 
 export async function runPlanWatchLoop(

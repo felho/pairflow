@@ -334,8 +334,9 @@ export function renderPlanWatchEventText(event: PlanWatchEvent): string {
     return [
       "plan watch: runner started",
       `invocation=${event.invocationId}`,
-      `task=${event.candidate.taskId}`,
-      `bubble=${event.candidate.bubbleId}`
+      ...(event.candidate !== undefined
+        ? [`task=${event.candidate.taskId}`, `bubble=${event.candidate.bubbleId}`]
+        : [`trigger=${event.triggerReason}`])
     ].join(" ");
   }
   if (event.kind === "runner_artifact_ready") {

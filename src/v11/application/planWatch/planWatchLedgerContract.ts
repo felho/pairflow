@@ -12,7 +12,7 @@ export type PlanWatchLedgerRecordState =
   | "completed"
   | "dry_run_observed";
 
-export interface PlanWatchTriggerEvidence {
+export interface PlanWatchLinkedBubbleTriggerEvidence {
   planPath: string;
   taskId: string;
   taskPath: string;
@@ -23,6 +23,17 @@ export interface PlanWatchTriggerEvidence {
   statusRef?: string | undefined;
   statusMetadata?: Readonly<Record<string, unknown>> | undefined;
 }
+
+export interface PlanWatchRunNowTriggerEvidence {
+  planPath: string;
+  triggerKind: "operator_run_now";
+  forceRun?: boolean | undefined;
+  observedAt?: string | undefined;
+}
+
+export type PlanWatchTriggerEvidence =
+  | PlanWatchLinkedBubbleTriggerEvidence
+  | PlanWatchRunNowTriggerEvidence;
 
 export interface PlanWatchLedgerRecord {
   schemaVersion: typeof PLAN_WATCH_LEDGER_SCHEMA_VERSION;

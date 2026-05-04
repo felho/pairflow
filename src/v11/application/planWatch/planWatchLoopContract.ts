@@ -103,7 +103,8 @@ export type PlanWatchEvent =
       kind: "runner_started";
       repoPath: string;
       planPath: string;
-      candidate: LinkedBubbleTriggerCandidate;
+      candidate?: LinkedBubbleTriggerCandidate | undefined;
+      triggerReason: string;
       invocationId: string;
       dedupeKey: string;
     }
@@ -111,7 +112,8 @@ export type PlanWatchEvent =
       kind: "runner_artifact_ready";
       repoPath: string;
       planPath: string;
-      candidate: LinkedBubbleTriggerCandidate;
+      candidate?: LinkedBubbleTriggerCandidate | undefined;
+      triggerReason: string;
       invocationId: string;
       dedupeKey: string;
       artifactFiles: CodexRunnerArtifactFiles;
@@ -120,7 +122,8 @@ export type PlanWatchEvent =
       kind: "runner_completed";
       repoPath: string;
       planPath: string;
-      candidate: LinkedBubbleTriggerCandidate;
+      candidate?: LinkedBubbleTriggerCandidate | undefined;
+      triggerReason: string;
       invocationId: string;
       dedupeKey: string;
       runnerResult: AgentRunnerBridgeResult;

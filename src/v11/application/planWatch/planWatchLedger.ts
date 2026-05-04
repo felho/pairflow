@@ -29,6 +29,19 @@ export function buildPlanWatchTriggerEvidence(
   };
 }
 
+export function buildPlanWatchRunNowTriggerEvidence(input: {
+  planPath: string;
+  forceRun: boolean;
+  observedAt: string;
+}): PlanWatchTriggerEvidence {
+  return {
+    planPath: input.planPath,
+    triggerKind: "operator_run_now",
+    ...(input.forceRun ? { forceRun: true } : {}),
+    observedAt: input.observedAt
+  };
+}
+
 export function buildReservedPlanWatchLedgerRecord(input: {
   key: string;
   invocationId: string;
@@ -43,6 +56,30 @@ export function buildReservedPlanWatchLedgerRecord(input: {
     recordState: "reserved",
     invocationId: input.invocationId,
     triggerEvidence: buildPlanWatchTriggerEvidence(input.candidate),
+    attemptedAt: input.attemptedAt,
+    ...(input.artifactDir !== undefined ? { artifactDir: input.artifactDir } : {})
+  };
+}
+
+export function buildReservedPlanWatchRunNowLedgerRecord(input: {
+  key: string;
+  invocationId: string;
+  planPath: string;
+  forceRun: boolean;
+  attemptedAt: string;
+  artifactDir?: string | undefined;
+}): PlanWatchLedgerRecord {
+  return {
+    schemaVersion: PLAN_WATCH_LEDGER_SCHEMA_VERSION,
+    key: input.key,
+    mode: "run",
+    recordState: "reserved",
+    invocationId: input.invocationId,
+    triggerEvidence: buildPlanWatchRunNowTriggerEvidence({
+      planPath: input.planPath,
+      forceRun: input.forceRun,
+      observedAt: input.attemptedAt
+    }),
     attemptedAt: input.attemptedAt,
     ...(input.artifactDir !== undefined ? { artifactDir: input.artifactDir } : {})
   };
@@ -86,6 +123,28 @@ export function buildDryRunPlanWatchLedgerRecord(input: {
     recordState: "dry_run_observed",
     invocationId: input.invocationId,
     triggerEvidence: buildPlanWatchTriggerEvidence(input.candidate),
+    attemptedAt: input.attemptedAt
+  };
+}
+
+export function buildDryRunPlanWatchRunNowLedgerRecord(input: {
+  key: string;
+  invocationId: string;
+  planPath: string;
+  forceRun: boolean;
+  attemptedAt: string;
+}): PlanWatchLedgerRecord {
+  return {
+    schemaVersion: PLAN_WATCH_LEDGER_SCHEMA_VERSION,
+    key: input.key,
+    mode: "dry_run",
+    recordState: "dry_run_observed",
+    invocationId: input.invocationId,
+    triggerEvidence: buildPlanWatchRunNowTriggerEvidence({
+      planPath: input.planPath,
+      forceRun: input.forceRun,
+      observedAt: input.attemptedAt
+    }),
     attemptedAt: input.attemptedAt
   };
 }
@@ -256,6 +315,16 @@ function isRunnerStatus(value: unknown): value is AgentRunnerBridgeStatus {
 
 function hasTriggerEvidence(value: object): boolean {
   const evidence = (value as Record<string, unknown>).triggerEvidence;
+  if (
+    typeof evidence === "object"
+    && evidence !== null
+    && hasString(evidence, "planPath")
+    && (evidence as Record<string, unknown>).triggerKind === "operator_run_now"
+    && (!("forceRun" in evidence) || typeof (evidence as Record<string, unknown>).forceRun === "boolean")
+    && hasOptionalString(evidence, "observedAt")
+  ) {
+    return true;
+  }
   return (
     typeof evidence === "object"
     && evidence !== null
