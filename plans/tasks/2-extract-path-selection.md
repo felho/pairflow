@@ -5,7 +5,7 @@ task_family_id: extract-path-selection
 sequence_key: "2"
 task_id: 2-extract-path-selection
 title: "Extract Path Selection"
-status: approved
+status: implementable
 phase: phase2
 target_files:
   - src/v11/application/extract/extractCommandContract.ts
