@@ -30,7 +30,7 @@ normative_refs:
   - plans/archive/tasks/2026-05-04-ui-contract-boundary-hardening-plan-v1/3b-read-event-validation.md
 owners:
   - "felho"
-doc_bubble_id: null
+doc_bubble_id: 4-contract-drift-tests-doc
 impl_bubble_id: null
 supersedes: []
 superseded_by: null
