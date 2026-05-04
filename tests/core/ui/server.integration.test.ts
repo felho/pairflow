@@ -535,13 +535,46 @@ describe("UI server integration", () => {
     const commitBubbleMock = vi.fn(() =>
       Promise.resolve({
         bubbleId: fixture.bubbleId,
-        commitSha: "abc123"
+        sequence: 1,
+        event: {
+          id: "env-ui-server-commit",
+          timestamp: "2026-02-25T00:02:00.000Z",
+          bubbleId: fixture.bubbleId,
+          sender: "orchestrator",
+          recipient: "human",
+          type: "COMMIT_RESULT",
+          round: 1,
+          refs: []
+        },
+        actionState: {
+          bubbleId: fixture.bubbleId,
+          lifecycleState: "DONE",
+          round: 1,
+          activeAgent: null,
+          activeRole: null,
+          activeSince: null,
+          lastCommandAt: "2026-02-25T00:02:00.000Z",
+          executionContext: null
+        },
+        commitSha: "abc123",
+        commitMessage: "Commit message",
+        stagedFiles: ["src/example.ts"]
       })
     );
     const mergeBubbleMock = vi.fn(() =>
       Promise.resolve({
         bubbleId: fixture.bubbleId,
-        mergeCommitSha: "def456"
+        baseBranch: "main",
+        bubbleBranch: `bubble/${fixture.bubbleId}`,
+        mergeCommitSha: "def456",
+        presentationRoute: "local",
+        pushedBaseBranch: false,
+        deletedRemoteBranch: false,
+        tmuxSessionName: `pf-${fixture.bubbleId}`,
+        tmuxSessionExisted: true,
+        runtimeSessionRemoved: true,
+        removedWorktree: true,
+        removedBubbleBranch: true
       })
     );
     const openBubbleMock = vi.fn()
