@@ -21,7 +21,7 @@ import {
 import { classifyCodexJsonProcessResult } from "./codexAgentRunnerBridgeResult.js";
 import { parseStructuredAgentRunnerOutput } from "./agentRunnerBridgeResult.js";
 import { agentRunnerBridgeDefaults } from "../../defaults/planWatch/agentRunnerBridgeDefaults.js";
-const DEFAULT_TIMEOUT_MS = 10 * 60 * 1000;
+const DEFAULT_TIMEOUT_MS = 30 * 60 * 1000;
 type PreconditionResolution =
   | { ok: true; config: RequiredAgentRunnerCommandConfig; payload: AgentRunnerContinuationPayload }
   | { ok: false; result: AgentRunnerBridgeResult };
