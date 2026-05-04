@@ -198,6 +198,11 @@ meta-review auto-approval proof. Task `2-extract-path-selection` is archived
 under the plan archive group, and task `3-extract-copy-commit` is now the active
 next task for creation.
 
+Progress update (2026-05-04): task `3-extract-copy-commit` was created,
+refined through task-mode ReviewSpec, approved for document-bubble routing, and
+document bubble `3-extract-copy-commit-doc` was created and started with the
+repository bootstrap command.
+
 ## Open Task List
 
 | Task ID | Task Path | Purpose | Depends On | Closes Gap | Status |
