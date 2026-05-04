@@ -36,9 +36,9 @@ task_tracker:
     status: archived
     notes: "Completed via implementation bubble 4-ui-readmodel-port-closure-impl; merged at f0eae134 and archived."
   - task_id: 5-router-port-cleanup
-    task_path: null
-    status: not_created
-    notes: "Remove or localize transitional composite aliases, tighten guards, and update review/docs state."
+    task_path: plans/tasks/5-router-port-cleanup.md
+    status: approved
+    notes: "Approved task created after task 4 archive aftermath; ready for document bubble."
 ---
 
 # Plan: UI Router Port Closure
