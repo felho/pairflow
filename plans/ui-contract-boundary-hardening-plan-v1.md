@@ -36,7 +36,7 @@ task_tracker:
     status: archived
   - task_id: 4-contract-drift-tests
     task_path: plans/tasks/4-contract-drift-tests.md
-    status: approved
+    status: implementable
 ---
 
 # Plan: UI Contract Boundary Hardening

@@ -5,7 +5,7 @@ task_family_id: contract-drift-tests
 sequence_key: "4"
 task_id: 4-contract-drift-tests
 title: "Contract Drift Tests"
-status: approved
+status: implementable
 phase: phase4
 target_files:
   - tools/fitness/checks/ui-contract-boundary.ts
