@@ -30,7 +30,7 @@ task_tracker:
     status: archived
   - task_id: 3a-action-response-validation
     task_path: plans/tasks/3a-action-response-validation.md
-    status: approved
+    status: implementable
   - task_id: 3b-read-event-validation
     task_path: null
     status: not_created
