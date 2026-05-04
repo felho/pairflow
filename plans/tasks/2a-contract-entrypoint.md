@@ -16,6 +16,7 @@ target_files:
   - src/contracts/ui/index.ts
   - ui/src/lib/types.ts
   - ui/src/lib/contracts/**
+  - tests/contracts/uiContractEntrypointResolution.test.ts
   - tests/contracts/uiContractTransitSource.test.ts
   - tests/tools/fitness/uiContractBoundary.test.ts
 prd_ref: null
@@ -42,40 +43,44 @@ archive_group: 2026-05-04-ui-contract-boundary-hardening-plan-v1
 
 ### Goal
 
-Choose and implement the smallest intentional in-repo entrypoint for browser-safe
-UI contracts so root and UI tooling can resolve one public contract surface
-before the broad import migration in task `2b-ui-import-migration`.
+Implement `@pairflow/ui-contracts` as the smallest intentional in-repo
+entrypoint for browser-safe UI contracts. Root and UI tooling must resolve this
+one public contract surface before the broad import migration in task
+`2b-ui-import-migration`.
 
 This task must prove the entrypoint shape and resolution path only. It must not
 mechanically migrate every UI contract import, change DTO fields, add runtime
-validation, or introduce a standalone package unless the alias/entrypoint proof
-fails under root and UI tooling.
+validation, or introduce a standalone package boundary. If the alias proof
+fails under root and UI tooling, stop and report the exact resolver blocker.
 
 ### Domain / Control Model Summary
 
 1. Business invariant: browser-visible UI contracts are owned once by
    `src/contracts/ui/**` and consumed through an intentional public surface.
 2. Control model: `src/contracts/ui/index.ts` remains the canonical contract
-   barrel; tooling may add an alias or package-style import path that points to
-   that surface without moving ownership into `ui/src/**`.
-3. Read-path rule: browser code may consume UI contracts through the selected
-   entrypoint and existing local compatibility barrels during this slice; direct
-   broad migration to the selected entrypoint belongs to task `2b`.
+   barrel; `@pairflow/ui-contracts` is a private in-repo resolver alias that
+   points to that surface without moving ownership into `ui/src/**`.
+3. Read-path rule: browser code may consume UI contracts through
+   `@pairflow/ui-contracts` and existing local compatibility barrels during
+   this slice; direct broad migration to `@pairflow/ui-contracts` belongs to
+   task `2b`.
 4. Forbidden fallback: do not duplicate contract shapes in `ui/src/**`, do not
    make a UI-local barrel the new authority, and do not weaken
    `ui_contract_boundary` to make resolution pass.
 5. Allowed resolution path: add the smallest root/UI resolver configuration and
-   narrow proof imports needed to demonstrate the selected entrypoint works in
+   narrow proof imports needed to demonstrate `@pairflow/ui-contracts` works in
    both TypeScript and Vite/UI test contexts.
 6. Missing-data rule: no runtime payload parsing is introduced here; absent or
    malformed wire data behavior remains successor task scope.
 7. Phase boundary:
-   - contract closure: owns entrypoint naming and resolution proof only.
+   - contract closure: owns `@pairflow/ui-contracts` naming and resolution proof
+     only.
    - producer closure: out of scope.
    - internal execution closure: out of scope.
    - workflow/orchestration closure: out of scope.
    - read-model closure: no DTO field changes.
-   - activation closure: local TS/Vite resolution proof for the entrypoint.
+   - activation closure: local TS/Vite resolution proof for
+     `@pairflow/ui-contracts`.
    - cleanup/recovery closure: out of scope except removing any temporary proof
      code that would otherwise become a permanent duplicate authority.
 
@@ -85,11 +90,11 @@ fails under root and UI tooling.
    config-level uncertainty.
 2. Depends on: archived task `1-ui-contract-guard-cleanup`.
 3. Unlocks / impacts successors: `2b-ui-import-migration` can migrate import
-   specifiers to the selected entrypoint; `4-contract-drift-tests` can later
+   specifiers to `@pairflow/ui-contracts`; `4-contract-drift-tests` can later
    harden the final import rule.
 4. Task-list impact: creates planned task `2a-contract-entrypoint`; it does not
    replace or obsolete any task id.
-5. Inherited validation / exit expectation: prove the selected entrypoint in
+5. Inherited validation / exit expectation: prove `@pairflow/ui-contracts` in
    root TypeScript tooling and the UI build/test path before broad migration.
 
 ### Canonical Contract Anchors
@@ -102,21 +107,21 @@ fails under root and UI tooling.
    - `tests/contracts/uiContractTransitSource.test.ts`
 2. Canonical elements:
    - `src/contracts/ui/**` is the browser-safe UI contract authority.
-   - `src/contracts/ui/index.ts` is the canonical barrel for the selected
-     public entrypoint unless the task proves a narrower file-level entrypoint
-     is required.
+   - `src/contracts/ui/index.ts` is the canonical barrel for
+     `@pairflow/ui-contracts`.
 3. Guard elements:
    - `ui_contract_boundary` must continue to reject UI imports from backend
      internals outside `src/contracts/ui/**`.
    - Existing `ui/src/lib/contracts/**` barrels are compatibility consumers,
      not authority producers.
 4. Compat-only elements: temporary or retained UI-local barrels may re-export
-   the selected entrypoint during the transition to task `2b`.
+   `@pairflow/ui-contracts` during the transition to task `2b`.
 5. Forbidden reinterpretations:
    - Do not treat the entrypoint as permission for browser imports from
      `src/v11/**`, `src/types/**`, or application/runtime internals.
-   - Do not introduce a published package boundary unless the in-repo
-     alias/entrypoint cannot satisfy both toolchains.
+   - Do not introduce a standalone package boundary. If
+     `@pairflow/ui-contracts` cannot satisfy both toolchains, stop and report
+     the exact resolver blocker instead of silently widening the scope.
    - Do not change contract literal sets or DTO field optionality.
 
 ### Scope Reality / Shape Proof
@@ -133,7 +138,8 @@ fails under root and UI tooling.
    proof, and narrow tests only.
 3. Mutation entrypoints in scope: none.
 4. Hidden scope ruled out: broad import migration, runtime router behavior,
-   JSON/SSE validation, DTO redesign, and workspace package publishing.
+   JSON/SSE validation, DTO redesign, and standalone package boundary
+   extraction.
 5. Branch inventory note: the only behavior branch is resolver success/failure
    under root and UI tooling.
 6. Why the declared task shape matches reality: the parent plan requires a
@@ -149,7 +155,7 @@ fails under root and UI tooling.
    barrels only as needed to demonstrate resolution.
 4. Explicit out-of-scope consumers: UI components and API/router runtime paths
    except where they compile through existing barrels.
-5. Export surfaces closed in this phase: the selected entrypoint path and its
+5. Export surfaces closed in this phase: `@pairflow/ui-contracts` and its
    root/UI resolver bindings.
 
 ### Baseline Preservation
@@ -159,17 +165,19 @@ fails under root and UI tooling.
    - `ui_contract_boundary` remains hard-fail.
    - Root and UI builds continue to resolve existing imports until task `2b`.
 2. Allowed resolution paths:
-   - TypeScript `paths`/package import map plus Vite alias that resolves to
-     `src/contracts/ui/index.ts`.
-   - A narrow in-repo package-style name if it remains private to this repo and
-     does not require publishing.
+   - Root `tsconfig.json` `compilerOptions.paths` mapping
+     `@pairflow/ui-contracts` to `src/contracts/ui/index.ts`.
+   - UI `ui/tsconfig.json` `compilerOptions.paths` mapping
+     `@pairflow/ui-contracts` to `../src/contracts/ui/index.ts`.
+   - UI `ui/vite.config.ts` alias mapping `@pairflow/ui-contracts` to the same
+     canonical source file for Vitest/Vite execution.
 3. Forbidden regression interpretations:
    - Do not weaken boundary tests to accept direct UI imports from backend
      internals.
    - Do not make UI-local type declarations a compatibility shim for canonical
      contract exports.
 4. Replacement proof required if removed: any removed transit assertion must be
-   replaced with equal or narrower proof that the selected entrypoint resolves
+   replaced with equal or narrower proof that `@pairflow/ui-contracts` resolves
    and still points at canonical contracts.
 
 ### Success / Completion Proof Boundary
@@ -177,7 +185,7 @@ fails under root and UI tooling.
 1. Current canonical success proof source: existing relative imports compile
    and `ui_contract_boundary` allows `src/contracts/ui/**`.
 2. Target canonical success proof source: root TypeScript and UI tooling resolve
-   the selected entrypoint with a narrow import proof.
+   `@pairflow/ui-contracts` with a narrow import proof.
 3. Current canonical completion proof source: N/A; no runtime mutable flow.
 4. Target canonical completion proof source: N/A; no runtime mutable flow.
 5. Reused proof contract: existing contract transit and fitness boundary tests.
@@ -189,14 +197,14 @@ fails under root and UI tooling.
 
 ### In Scope
 
-1. Select one in-repo UI contract entrypoint path and document the rejected
-   alternative if a standalone workspace package is not used.
-2. Add the minimum root and UI tooling configuration required for that entrypoint
-   to resolve.
-3. Add or update narrow proof imports/tests that compile through the selected
-   entrypoint.
+1. Add `@pairflow/ui-contracts` as the one in-repo UI contract entrypoint and
+   document that a standalone package boundary remains rejected for this slice.
+2. Add the minimum root and UI tooling configuration required for
+   `@pairflow/ui-contracts` to resolve.
+3. Add or update narrow proof imports/tests that compile through
+   `@pairflow/ui-contracts`.
 4. Preserve existing relative UI contract imports until task `2b`.
-5. Keep the selected entrypoint pointed at canonical `src/contracts/ui/**`
+5. Keep `@pairflow/ui-contracts` pointed at canonical `src/contracts/ui/**`
    exports only.
 
 ### Out of Scope
@@ -204,7 +212,7 @@ fails under root and UI tooling.
 1. Broad migration of `ui/src/**` import specifiers.
 2. Runtime response validation for actions, reads, or events.
 3. DTO field/literal changes.
-4. Published package extraction.
+4. Standalone package boundary extraction.
 5. UI visual or interaction changes.
 6. Router or Pairflow lifecycle behavior changes.
 
@@ -213,13 +221,13 @@ fails under root and UI tooling.
 | Surface | Current State | Target State | Owner |
 |---|---|---|---|
 | Canonical UI contracts | `src/contracts/ui/**` | unchanged | backend UI contract surface |
-| Public entrypoint | relative imports into `src/contracts/ui/**` | one selected in-repo entrypoint that resolves to `src/contracts/ui/index.ts` or a justified narrower equivalent | this task |
+| Public entrypoint | relative imports into `src/contracts/ui/**` | `@pairflow/ui-contracts` resolves to `src/contracts/ui/index.ts` | this task |
 | UI compatibility barrels | re-export canonical contracts by relative path | may remain as transition consumers; no authority shift | this task preserves, task `2b` migrates |
 | Tooling resolution | root and UI configs do not define the new entrypoint | root TS and UI TS/Vite tooling resolve it | this task |
 
 Structured contract rules:
 
-1. The selected entrypoint must export existing canonical symbols without
+1. `@pairflow/ui-contracts` must export existing canonical symbols without
    redeclaring them.
 2. Unknown or non-canonical backend internals remain forbidden import targets for
    browser code.
@@ -231,10 +239,11 @@ Structured contract rules:
 
 ### Ownership and Deferred Semantics
 
-1. This task owns the selected import surface, resolver bindings, and proof that
-   the surface targets canonical UI contracts.
+1. This task owns the `@pairflow/ui-contracts` import surface, resolver
+   bindings, and proof that the surface targets canonical UI contracts.
 2. This task records but does not consume the final broad migration rule; task
-   `2b-ui-import-migration` owns migrating existing UI import specifiers.
+   `2b-ui-import-migration` owns migrating existing UI import specifiers to
+   `@pairflow/ui-contracts`.
 3. This task does not interpret runtime payload validity, response shape
    correctness, or SSE/event parsing. Tasks `3a` and `3b` own those validation
    semantics.
@@ -244,34 +253,48 @@ Structured contract rules:
 
 ### Mirrored Surface Checklist
 
-When the selected entrypoint row in the Canonical Contract Matrix changes, keep
+When the public entrypoint row in the Canonical Contract Matrix changes, keep
 these surfaces aligned in the same task:
 
 1. L0 control model read-path and forbidden fallback clauses.
 2. L1 Canonical Contract Matrix and Structured Contract Rules.
 3. Target files and validation matrix.
 4. Transit or fitness tests that prove resolver mapping.
-5. Implementation summary note naming the selected entrypoint and rejected
-   package alternative.
+5. Implementation summary note naming `@pairflow/ui-contracts` and the rejected
+   standalone package boundary alternative.
 
 ### Branch / Failure Inventory
 
 | Branch | Required Behavior | Proof |
 |---|---|---|
-| Root TS resolves entrypoint | compile/type proof succeeds without generated package output | `pnpm typecheck` or targeted type proof |
-| UI TS/Vite resolves entrypoint | UI build/test resolver accepts the same public path | `pnpm --dir ui test` or narrower UI config test plus build when needed |
+| Root TS resolves entrypoint | compile/type proof imports from `@pairflow/ui-contracts` and succeeds without generated package output | `pnpm typecheck` plus `tests/contracts/uiContractEntrypointResolution.test.ts` |
+| UI TS/Vite resolves entrypoint | UI Vitest/Vite resolver imports from `@pairflow/ui-contracts` and accepts the same public path | `pnpm --dir ui test` with `ui/src/lib/contracts/uiContractEntrypoint.test.ts`; `pnpm --dir ui build` |
 | Alias would weaken boundary | reject alias shape or keep guard test failing on internals | fitness/contract boundary test |
-| Standalone package not needed | record rejected alternative and keep in-repo mapping | task summary or test note |
+
+### Implementation Decision
+
+1. Selected entrypoint: `@pairflow/ui-contracts`.
+2. Canonical target: `src/contracts/ui/index.ts`.
+3. Rejected alternative: a standalone package boundary. It would add
+   package/build ownership before the repository has external consumers, and it
+   is not the smallest proof for the current private in-repo UI package.
+4. Rejected alternative: using UI-local barrels such as
+   `ui/src/lib/contracts/**` as the public entrypoint. Those files are
+   compatibility consumers only and must not become authority surfaces.
+5. Resolver mechanism: TypeScript `paths` in both root and UI configs plus a
+   Vite alias in `ui/vite.config.ts`; all mappings must target the same
+   canonical source file.
 
 ### Validation Matrix
 
 Run the narrowest relevant checks after implementation:
 
 1. `pnpm typecheck`
-2. `pnpm --dir ui test` or the narrow UI resolver test if a narrower existing
-   suite directly proves the entrypoint.
+2. `pnpm --dir ui test` with the narrow UI resolver test that imports
+   `@pairflow/ui-contracts`.
 3. `pnpm fitness:check:ci`
-4. `pnpm --dir ui build` if Vite alias/build configuration changes.
+4. `pnpm --dir ui build` because this task changes Vite alias/build
+   configuration.
 5. `pnpm test` only if the changed proof touches shared root test behavior
    beyond the narrow contract/fitness suites.
 
@@ -280,21 +303,21 @@ the narrower proof that covers the changed boundary.
 
 ### Acceptance Criteria
 
-1. There is exactly one selected in-repo UI contract entrypoint for successor
-   migration work.
-2. Root TypeScript tooling and UI tooling can resolve that entrypoint.
-3. The entrypoint re-exports canonical contracts from `src/contracts/ui/**`
+1. `@pairflow/ui-contracts` is the only selected in-repo UI contract
+   entrypoint for successor migration work.
+2. Root TypeScript tooling and UI tooling can resolve `@pairflow/ui-contracts`.
+3. `@pairflow/ui-contracts` re-exports canonical contracts from `src/contracts/ui/**`
    without DTO duplication.
 4. Existing UI relative imports remain valid until task `2b`.
-5. A test or type proof fails if the entrypoint mapping drifts away from the
-   canonical UI contract surface.
-6. The implementation notes identify why a standalone package was deferred or,
-   if unavoidable, why it is the smallest stable boundary.
+5. Root and UI-side tests or type proofs fail if any `@pairflow/ui-contracts`
+   resolver mapping drifts away from `src/contracts/ui/index.ts`.
+6. The implementation notes identify why a standalone package boundary remains
+   rejected for this slice.
 
 ### Downstream Inheritance
 
-1. Task `2b-ui-import-migration` must use the selected entrypoint and should be
-   import-only.
+1. Task `2b-ui-import-migration` must use `@pairflow/ui-contracts` and should
+   be import-only.
 2. Task `4-contract-drift-tests` may harden final guardrails after the broad
    migration is complete.
 3. Tasks `3a` and `3b` must not use this task as permission to change DTO or
@@ -302,11 +325,20 @@ the narrower proof that covers the changed boundary.
 
 ## L2 - Execution Notes
 
-1. Start by choosing the entrypoint name and mapping shape with the least
-   resolver churn across root and UI tooling.
-2. Add resolver configuration before changing proof imports.
-3. Prove the entrypoint with one or more narrow imports from `src/contracts/ui`
-   that are already consumed by the UI.
-4. Leave broad relative import cleanup to task `2b`.
-5. Keep changes small enough that a reviewer can separate resolver proof from
+1. Add resolver configuration before changing proof imports:
+   - root `tsconfig.json`: add `baseUrl` if needed and map
+     `@pairflow/ui-contracts` to `src/contracts/ui/index.ts`;
+   - UI `ui/tsconfig.json`: add `baseUrl` if needed and map
+     `@pairflow/ui-contracts` to `../src/contracts/ui/index.ts`;
+   - UI `ui/vite.config.ts`: add a Vite alias for the same canonical file.
+2. Prove the entrypoint with one or more narrow imports from
+   `@pairflow/ui-contracts` for symbols already consumed by the UI.
+3. Add a root proof test that confirms the root TypeScript alias target remains
+   `src/contracts/ui/index.ts`; do not rely only on type equivalence because a
+   duplicated DTO mirror could type-check while violating authority.
+4. Add a UI-side proof test or config assertion that confirms both the UI
+   TypeScript `paths` mapping and the Vite alias target the same canonical
+   source file through `../src/contracts/ui/index.ts`.
+5. Leave broad relative import cleanup to task `2b`.
+6. Keep changes small enough that a reviewer can separate resolver proof from
    migration work.
