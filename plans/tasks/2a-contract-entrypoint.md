@@ -5,7 +5,7 @@ task_family_id: contract-entrypoint
 sequence_key: "2a"
 task_id: 2a-contract-entrypoint
 title: "UI Contract Entrypoint"
-status: approved
+status: implementable
 phase: phase2a
 target_files:
   - package.json
