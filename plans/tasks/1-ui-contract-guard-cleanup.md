@@ -5,7 +5,7 @@ task_family_id: ui-contract-guard-cleanup
 sequence_key: "1"
 task_id: 1-ui-contract-guard-cleanup
 title: "UI Contract Guard Cleanup"
-status: approved
+status: implementable
 phase: phase1
 target_files:
   - tools/fitness/policy.json
