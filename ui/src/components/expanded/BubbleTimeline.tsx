@@ -78,6 +78,42 @@ function extractMetaRecommendation(entry: UiTimelineEntry): string | null {
   return typeof recommendation === "string" ? recommendation : null;
 }
 
+function isApproveValidationGateFailure(entry: UiTimelineEntry): boolean {
+  if (entry.type !== "APPROVAL_DECISION" || entry.payload.decision !== "rework") {
+    return false;
+  }
+  if (extractMetaRecommendation(entry) !== "approve") {
+    return false;
+  }
+
+  const text = [entry.payload.summary, entry.payload.message]
+    .filter((value): value is string => typeof value === "string")
+    .join("\n");
+  return text.includes("approve-gate validation failed");
+}
+
+function buildSyntheticMetaApprovalEntry(entry: UiTimelineEntry): UiTimelineEntry {
+  const metadata = isRecord(entry.payload.metadata) ? entry.payload.metadata : {};
+  return {
+    ...entry,
+    id: `${entry.id}:meta-review-approve`,
+    type: "APPROVAL_REQUEST",
+    sender: typeof metadata.actor_agent === "string" ? metadata.actor_agent : entry.recipient,
+    recipient: "orchestrator",
+    payload: {
+      summary: "Meta-review approved the current change.",
+      metadata: {
+        actor: "meta-reviewer",
+        ...(typeof metadata.actor_agent === "string"
+          ? { actor_agent: metadata.actor_agent }
+          : {}),
+        recommendation: "approve"
+      }
+    },
+    refs: []
+  };
+}
+
 function readMetadataInteger(
   metadata: Record<string, unknown>,
   keys: string[]
@@ -115,6 +151,7 @@ function isMetaReviewHandoff(entry: UiTimelineEntry): boolean {
 interface DisplayTimelineItem {
   entry: UiTimelineEntry;
   metaReviewRerunCleanRunCount: number | null;
+  gateFailed: boolean;
 }
 
 function buildDisplayTimelineItems(input: {
@@ -130,6 +167,24 @@ function buildDisplayTimelineItems(input: {
   let metaRunPending = false;
 
   for (const entry of input.entries) {
+    if (isApproveValidationGateFailure(entry)) {
+      items.push({
+        entry: buildSyntheticMetaApprovalEntry(entry),
+        metaReviewRerunCleanRunCount: null,
+        gateFailed: false
+      });
+      metaCleanRuns += 1;
+      metaRunPending = false;
+
+      items.push({
+        entry,
+        metaReviewRerunCleanRunCount: null,
+        gateFailed: true
+      });
+      metaCleanRuns = 0;
+      continue;
+    }
+
     const metaRecommendation = extractMetaRecommendation(entry);
     const decisionTag = extractDecisionTag(entry);
 
@@ -143,7 +198,8 @@ function buildDisplayTimelineItems(input: {
             metaRunPending = true;
             items.push({
               entry,
-              metaReviewRerunCleanRunCount: nextCleanRunCount
+              metaReviewRerunCleanRunCount: nextCleanRunCount,
+              gateFailed: false
             });
           }
           continue;
@@ -161,7 +217,8 @@ function buildDisplayTimelineItems(input: {
         metaRunPending = true;
         items.push({
           entry,
-          metaReviewRerunCleanRunCount: nextCleanRunCount
+          metaReviewRerunCleanRunCount: nextCleanRunCount,
+          gateFailed: false
         });
       }
       continue;
@@ -192,7 +249,8 @@ function buildDisplayTimelineItems(input: {
 
     items.push({
       entry,
-      metaReviewRerunCleanRunCount: null
+      metaReviewRerunCleanRunCount: null,
+      gateFailed: false
     });
   }
 
@@ -431,15 +489,19 @@ export function BubbleTimeline(props: BubbleTimelineProps): JSX.Element {
             <>
           {displayItems.map((item) => {
             const entry = item.entry;
-            const role = resolveRole(entry);
-            const displaySender = resolveDisplaySender(entry);
+            const role = item.gateFailed ? "system" : resolveRole(entry);
+            const displaySender = item.gateFailed
+              ? "orchestrator"
+              : resolveDisplaySender(entry);
             const isConvergence = entry.type === "CONVERGENCE";
             const blocked = isBlockedEntry(entry);
             const findingTags = extractFindingTags(entry);
             const metadata = isRecord(entry.payload.metadata)
               ? entry.payload.metadata
               : null;
-            const metaRecommendation = extractMetaRecommendation(entry);
+            const metaRecommendation = item.gateFailed
+              ? null
+              : extractMetaRecommendation(entry);
             let cleanRunCount: number | null = null;
             if (item.metaReviewRerunCleanRunCount !== null) {
               metaCleanRuns = item.metaReviewRerunCleanRunCount;
@@ -456,16 +518,19 @@ export function BubbleTimeline(props: BubbleTimelineProps): JSX.Element {
               metaCleanRuns = explicitCleanRunCount ?? metaCleanRuns + 1;
               cleanRunCount = metaCleanRuns;
             } else if (
-              metaRecommendation === "rework"
+              item.gateFailed
+              || metaRecommendation === "rework"
               || metaRecommendation === "inconclusive"
             ) {
               metaCleanRuns = 0;
             }
-            const metaRecommendationTag = extractMetaRecommendationTag({
-              entry,
-              cleanRunCount,
-              cleanRunsRequired: props.metaReviewCleanRunsRequired
-            });
+            const metaRecommendationTag = item.gateFailed
+              ? null
+              : extractMetaRecommendationTag({
+                  entry,
+                  cleanRunCount,
+                  cleanRunsRequired: props.metaReviewCleanRunsRequired
+                });
             const decisionTag = extractDecisionTag(entry);
             const effectiveMetaRecommendationTag =
               metaRecommendationTag !== null &&
@@ -505,6 +570,9 @@ export function BubbleTimeline(props: BubbleTimelineProps): JSX.Element {
                     ) : role === "system" || role === "human" ? (
                       <span className="font-medium text-[#aaa]">
                         {displaySender}
+                        {item.gateFailed ? (
+                          <span className="text-[#555]"> (gate failed)</span>
+                        ) : null}
                       </span>
                     ) : (
                       <span className="font-medium text-[#aaa]">
