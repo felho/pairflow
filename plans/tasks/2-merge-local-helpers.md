@@ -5,7 +5,7 @@ task_family_id: merge-local-helpers
 sequence_key: "2"
 task_id: 2-merge-local-helpers
 title: "Merge Local Helpers"
-status: approved
+status: implementable
 phase: phase1
 target_files:
   - src/v11/application/merge/mergeCommandErrorRuntime.ts

@@ -30,7 +30,7 @@ task_tracker:
     status: archived
   - task_id: 2-merge-local-helpers
     task_path: plans/tasks/2-merge-local-helpers.md
-    status: approved
+    status: implementable
   - task_id: 3-remote-commit-rename
     task_path: null
     status: not_created
