@@ -5,7 +5,7 @@ task_family_id: contract-entrypoint
 sequence_key: "2a"
 task_id: 2a-contract-entrypoint
 title: "UI Contract Entrypoint"
-status: in_progress
+status: archived
 phase: phase2a
 target_files:
   - package.json
@@ -35,6 +35,8 @@ impl_bubble_id: 2a-contract-entrypoint-impl
 supersedes: []
 superseded_by: null
 archive_group: 2026-05-04-ui-contract-boundary-hardening-plan-v1
+archive_path: plans/archive/tasks/2026-05-04-ui-contract-boundary-hardening-plan-v1/2a-contract-entrypoint.md
+closed_at: "2026-05-04T14:26:00Z"
 ---
 
 # Task: UI Contract Entrypoint
