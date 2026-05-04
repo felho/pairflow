@@ -4,8 +4,8 @@ artifact_id: plan_ui_contract_boundary_hardening_v1
 plan_id: ui-contract-boundary-hardening-plan-v1
 created_on: "2026-05-04"
 title: "UI Contract Boundary Hardening Plan"
-status: draft
-plan_status: draft
+status: approved
+plan_status: approved
 prd_ref: null
 owners:
   - "felho"
@@ -20,8 +20,8 @@ active_task_id: 1-ui-contract-guard-cleanup
 archive_group: 2026-05-04-ui-contract-boundary-hardening-plan-v1
 task_tracker:
   - task_id: 1-ui-contract-guard-cleanup
-    task_path: null
-    status: not_created
+    task_path: plans/tasks/1-ui-contract-guard-cleanup.md
+    status: approved
   - task_id: 2a-contract-entrypoint
     task_path: null
     status: not_created
@@ -88,7 +88,7 @@ through the task sequence below after each task artifact is created and reviewed
 | Capability Claim | Closure Classification | Activation Path | Repo-Provided Boundary | External Prerequisites | Last-Mile Proof |
 |---|---|---|---|---|---|
 | Browser and backend share UI contracts through a single intentional contract boundary. | foundation_only | TypeScript imports under `ui/src/**` and backend router/UI contract imports. | `src/contracts/ui/**`, UI import entrypoint, fitness/tests. | None. | Planned in tasks 1, 2a, 2b, and 4. |
-| UI HTTP/action responses fail loudly on selected wire-shape drift. | foundation_only | Backend UI router action/status/detail response construction. | Runtime validators or explicit validation adapters for selected DTOs. | None. | Planned in tasks 3a and 3b. |
+| UI HTTP/action responses fail loudly on selected wire-shape drift. | end_to_end | Backend UI router action/status/detail response construction for the selected action, read, and event seams. | Runtime validators or explicit validation adapters for selected DTOs, plus representative failure-path tests. | None. | Planned in tasks 3a, 3b, and 4. |
 
 ## Guiding Principles
 
@@ -194,7 +194,7 @@ through the task sequence below after each task artifact is created and reviewed
 
 | Task ID | Task Path | Purpose | Depends On | Closes Gap | Status |
 |---|---|---|---|---|---|
-| `1-ui-contract-guard-cleanup` | `null` | Remove stale `ui_contract_boundary` exception, move UI-visible `ProtocolMessageType` behind `src/contracts/ui/**`, and update the narrow affected imports/tests. | N/A | Stale policy exception and direct `src/types/protocol.js` UI import. | not_created |
+| `1-ui-contract-guard-cleanup` | `plans/tasks/1-ui-contract-guard-cleanup.md` | Remove stale `ui_contract_boundary` exception, move UI-visible `ProtocolMessageType` behind `src/contracts/ui/**`, and update the narrow affected imports/tests. | N/A | Stale policy exception and direct `src/types/protocol.js` UI import. | approved |
 | `2a-contract-entrypoint` | `null` | Choose and implement the smallest intentional in-repo UI contract entrypoint or alias, with enough TS/Vite proof that both root and UI tooling can resolve it. Workspace packaging remains deferred unless this task proves an alias cannot satisfy the boundary. | `1-ui-contract-guard-cleanup` | Unclear public entrypoint and config-level uncertainty. | not_created |
 | `2b-ui-import-migration` | `null` | Mechanically migrate UI contract imports away from scattered relative `../../../src/...` paths to the entrypoint from `2a`, without changing contract shapes. | `2a-contract-entrypoint` | Fragile high-distance relative imports. | not_created |
 | `3a-action-response-validation` | `null` | Add runtime validation for selected mutation/action result payloads, starting with delete, commit, and merge, plus same-dispatch siblings only if they share the exact validation adapter shape. | `2b-ui-import-migration` | Action result wire-shape drift can still silently pass through `unknown` dispatch paths. | not_created |
