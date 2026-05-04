@@ -45,6 +45,12 @@ function parseImportSpecifiers(input: {
       sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile)).line + 1;
     imports.push({ specifier, line });
   };
+  const staticModuleSpecifierText = (node: ts.Node): string | undefined => {
+    if (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) {
+      return node.text;
+    }
+    return undefined;
+  };
 
   const visit = (node: ts.Node): void => {
     if (ts.isImportDeclaration(node) && ts.isStringLiteral(node.moduleSpecifier)) {
@@ -58,12 +64,31 @@ function parseImportSpecifiers(input: {
     } else if (
       ts.isCallExpression(node)
       && node.expression.kind === ts.SyntaxKind.ImportKeyword
-      && node.arguments.length === 1
+      && node.arguments.length >= 1
     ) {
       const argument = node.arguments[0];
-      if (argument !== undefined && ts.isStringLiteral(argument)) {
-        pushSpecifier(argument.text, argument);
+      const specifier =
+        argument === undefined ? undefined : staticModuleSpecifierText(argument);
+      if (specifier !== undefined && argument !== undefined) {
+        pushSpecifier(specifier, argument);
       }
+    } else if (ts.isImportTypeNode(node)) {
+      const argument = node.argument;
+      if (
+        ts.isLiteralTypeNode(argument)
+        && ts.isStringLiteral(argument.literal)
+      ) {
+        pushSpecifier(argument.literal.text, argument.literal);
+      }
+    } else if (
+      ts.isImportEqualsDeclaration(node)
+      && ts.isExternalModuleReference(node.moduleReference)
+      && ts.isStringLiteral(node.moduleReference.expression)
+    ) {
+      pushSpecifier(
+        node.moduleReference.expression.text,
+        node.moduleReference.expression
+      );
     }
     node.forEachChild(visit);
   };
@@ -181,6 +206,9 @@ function classifyTarget(input: {
     && /^src\/contracts\/ui(?:\/|$)/u.test(normalizedTarget)
   ) {
     return "ui source must import canonical UI contracts through @pairflow/ui-contracts, not relative src/contracts/ui paths";
+  }
+  if (fromUiSource && /^src\/types(?:\/|$)/u.test(normalizedTarget)) {
+    return "ui source must import browser-safe UI contracts through @pairflow/ui-contracts, not src/types";
   }
 
   if (!fromUiContracts) {

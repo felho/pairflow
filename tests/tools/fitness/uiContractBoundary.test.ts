@@ -1,13 +1,17 @@
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
 import { buildReportChecks } from "../../../tools/fitness/checks/index.js";
 import { buildUiContractBoundaryCheckReport } from "../../../tools/fitness/checks/ui-contract-boundary.js";
+import type { FitnessPolicy } from "../../../tools/fitness/types.js";
 
 const tempDirs: string[] = [];
+const repoRoot = process.cwd();
+const staleUiContractBoundaryExceptionId =
+  "ui-contract-boundary-known-meta-review-drift-001";
 
 async function createTempRoot(): Promise<string> {
   const root = await mkdtemp(join(tmpdir(), "pairflow-fitness-ui-contract-"));
@@ -220,6 +224,156 @@ describe("UI contract boundary fitness check", () => {
     ).toBe(true);
   });
 
+  it("fails on UI direct imports from src/types", async () => {
+    const repoRoot = await createTempRoot();
+    await writeRepoFile(
+      repoRoot,
+      "ui/src/lib/file.ts",
+      "import type { ProtocolMessageType } from '../../../src/types/protocol.js';\nexport type Local = ProtocolMessageType;\n"
+    );
+
+    const report = await buildUiContractBoundaryCheckReport({
+      check: {
+        id: "ui_contract_boundary",
+        metric: "UI/backend contract boundary import direction",
+        mode: "hard-fail",
+        owner: "architecture/ui-contracts",
+        scope: ["ui/src/**", "src/contracts/ui/**"],
+        exceptions: []
+      },
+      repoRoot,
+      fallbackMode: "hard-fail"
+    });
+
+    expect(report.status).toBe("fail");
+    expect(report.details?.some((detail) => detail.includes("ui/src/lib/file.ts:1"))).toBe(
+      true
+    );
+    expect(report.details?.some((detail) => detail.includes("src/types"))).toBe(
+      true
+    );
+  });
+
+  it("fails on UI import-type references to src/types", async () => {
+    const repoRoot = await createTempRoot();
+    await writeRepoFile(
+      repoRoot,
+      "ui/src/lib/file.ts",
+      "export type Local = import('../../../src/types/protocol.js').ProtocolMessageType;\n"
+    );
+
+    const report = await buildUiContractBoundaryCheckReport({
+      check: {
+        id: "ui_contract_boundary",
+        metric: "UI/backend contract boundary import direction",
+        mode: "hard-fail",
+        owner: "architecture/ui-contracts",
+        scope: ["ui/src/**", "src/contracts/ui/**"],
+        exceptions: []
+      },
+      repoRoot,
+      fallbackMode: "hard-fail"
+    });
+
+    expect(report.status).toBe("fail");
+    expect(report.details?.some((detail) => detail.includes("ui/src/lib/file.ts:1"))).toBe(
+      true
+    );
+    expect(report.details?.some((detail) => detail.includes("src/types"))).toBe(
+      true
+    );
+  });
+
+  it("fails on UI import-equals references to src/types", async () => {
+    const repoRoot = await createTempRoot();
+    await writeRepoFile(
+      repoRoot,
+      "ui/src/lib/file.ts",
+      "import type Protocol = require('../../../src/types/protocol.js');\nexport type Local = Protocol.ProtocolMessageType;\n"
+    );
+
+    const report = await buildUiContractBoundaryCheckReport({
+      check: {
+        id: "ui_contract_boundary",
+        metric: "UI/backend contract boundary import direction",
+        mode: "hard-fail",
+        owner: "architecture/ui-contracts",
+        scope: ["ui/src/**", "src/contracts/ui/**"],
+        exceptions: []
+      },
+      repoRoot,
+      fallbackMode: "hard-fail"
+    });
+
+    expect(report.status).toBe("fail");
+    expect(report.details?.some((detail) => detail.includes("ui/src/lib/file.ts:1"))).toBe(
+      true
+    );
+    expect(report.details?.some((detail) => detail.includes("src/types"))).toBe(
+      true
+    );
+  });
+
+  it("fails on UI dynamic imports with options from src/types", async () => {
+    const repoRoot = await createTempRoot();
+    await writeRepoFile(
+      repoRoot,
+      "ui/src/lib/file.ts",
+      "export async function loadProtocol() {\n  return import('../../../src/types/protocol.js', { with: {} });\n}\n"
+    );
+
+    const report = await buildUiContractBoundaryCheckReport({
+      check: {
+        id: "ui_contract_boundary",
+        metric: "UI/backend contract boundary import direction",
+        mode: "hard-fail",
+        owner: "architecture/ui-contracts",
+        scope: ["ui/src/**", "src/contracts/ui/**"],
+        exceptions: []
+      },
+      repoRoot,
+      fallbackMode: "hard-fail"
+    });
+
+    expect(report.status).toBe("fail");
+    expect(report.details?.some((detail) => detail.includes("ui/src/lib/file.ts:2"))).toBe(
+      true
+    );
+    expect(report.details?.some((detail) => detail.includes("src/types"))).toBe(
+      true
+    );
+  });
+
+  it("fails on UI dynamic template imports from src/types", async () => {
+    const repoRoot = await createTempRoot();
+    await writeRepoFile(
+      repoRoot,
+      "ui/src/lib/file.ts",
+      "export async function loadProtocol() {\n  return import(`../../../src/types/protocol.js`);\n}\n"
+    );
+
+    const report = await buildUiContractBoundaryCheckReport({
+      check: {
+        id: "ui_contract_boundary",
+        metric: "UI/backend contract boundary import direction",
+        mode: "hard-fail",
+        owner: "architecture/ui-contracts",
+        scope: ["ui/src/**", "src/contracts/ui/**"],
+        exceptions: []
+      },
+      repoRoot,
+      fallbackMode: "hard-fail"
+    });
+
+    expect(report.status).toBe("fail");
+    expect(report.details?.some((detail) => detail.includes("ui/src/lib/file.ts:2"))).toBe(
+      true
+    );
+    expect(report.details?.some((detail) => detail.includes("src/types"))).toBe(
+      true
+    );
+  });
+
   it("passes the public UI contracts entrypoint in browser source", async () => {
     const repoRoot = await createTempRoot();
     await writeRepoFile(
@@ -293,7 +447,7 @@ describe("UI contract boundary fitness check", () => {
         scope: ["ui/src/**", "src/contracts/ui/**"],
         exceptions: [
           {
-            id: "known-drift",
+            id: "fixture-allow-import-neutral",
             kind: "allow-import",
             owner: "architecture/ui-contracts",
             reason: "temporary known drift",
@@ -313,7 +467,7 @@ describe("UI contract boundary fitness check", () => {
     ).toBe(true);
     expect(
       report.details?.some((detail) =>
-        detail.includes("exceptions_applied_ids=known-drift")
+        detail.includes("exceptions_applied_ids=fixture-allow-import-neutral")
       )
     ).toBe(true);
   });
@@ -335,7 +489,7 @@ describe("UI contract boundary fitness check", () => {
         scope: ["ui/src/**", "src/contracts/ui/**"],
         exceptions: [
           {
-            id: "known-extensionless-drift",
+            id: "fixture-allow-import-extensionless-neutral",
             kind: "allow-import",
             owner: "architecture/ui-contracts",
             reason: "temporary known drift",
@@ -352,7 +506,9 @@ describe("UI contract boundary fitness check", () => {
     expect(report.status).toBe("pass");
     expect(
       report.details?.some((detail) =>
-        detail.includes("exceptions_applied_ids=known-extensionless-drift")
+        detail.includes(
+          "exceptions_applied_ids=fixture-allow-import-extensionless-neutral"
+        )
       )
     ).toBe(true);
   });
@@ -466,5 +622,34 @@ describe("UI contract boundary fitness check", () => {
     expect(checks[0]?.id).toBe("ui_contract_boundary");
     expect(checks[0]?.status).toBe("pass");
     expect(checks[0]?.mode).toBe("hard-fail");
+  });
+
+  it("keeps the live policy free of stale ui_contract_boundary exceptions and reports none applied", async () => {
+    const policy = JSON.parse(
+      await readFile(resolve(repoRoot, "tools/fitness/policy.json"), "utf8")
+    ) as FitnessPolicy;
+    const liveCheck = policy.checks.find(
+      (check) => check.id === "ui_contract_boundary"
+    );
+
+    expect(liveCheck).toBeDefined();
+    expect(liveCheck?.mode).toBe("hard-fail");
+    expect(liveCheck?.exceptions ?? []).toStrictEqual([]);
+    expect(
+      JSON.stringify(liveCheck).includes(staleUiContractBoundaryExceptionId)
+    ).toBe(false);
+    if (liveCheck === undefined) {
+      throw new Error("Expected live ui_contract_boundary policy check.");
+    }
+
+    const report = await buildUiContractBoundaryCheckReport({
+      check: liveCheck,
+      repoRoot,
+      fallbackMode: policy.defaults?.mode ?? "hard-fail"
+    });
+
+    expect(report.status).toBe("pass");
+    expect(report.details).toContain("exceptions_configured=0");
+    expect(report.details).toContain("exceptions_applied=0");
   });
 });
