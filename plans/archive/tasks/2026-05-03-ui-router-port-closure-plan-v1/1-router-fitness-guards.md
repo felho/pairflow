@@ -42,7 +42,7 @@ target_read_only_scan_inputs:
   - src/v11/infrastructure/ui/routerDependencies.ts
   - src/v11/infrastructure/ui/routerContracts.ts
 prd_ref: null
-plan_ref: plans/ui-router-port-closure-plan-v1.md
+plan_ref: plans/archive/plans/2026-05-03-ui-router-port-closure-plan-v1.md
 system_context_ref: docs/pairflow-initial-design.md
 owners:
   - "felho"

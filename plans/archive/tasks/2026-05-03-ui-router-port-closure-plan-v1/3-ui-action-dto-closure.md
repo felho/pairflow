@@ -23,7 +23,7 @@ target_files:
   - ui/src/lib/api.test.ts
 target_files_role: implementation_write_targets
 prd_ref: null
-plan_ref: plans/ui-router-port-closure-plan-v1.md
+plan_ref: plans/archive/plans/2026-05-03-ui-router-port-closure-plan-v1.md
 system_context_ref: docs/pairflow-initial-design.md
 owners:
   - "felho"
@@ -97,7 +97,7 @@ behavior and frontend/backend type parity.
 ### Canonical Contract Anchors
 
 1. Source-of-truth anchors:
-   - `plans/ui-router-port-closure-plan-v1.md`
+   - `plans/archive/plans/2026-05-03-ui-router-port-closure-plan-v1.md`
    - `docs/architecture/v11-ports-governance.md`
    - `docs/modularity-review/2026-05-02-modularity-review.md`
    - `src/contracts/ui/uiActions.ts`
