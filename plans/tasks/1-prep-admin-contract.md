@@ -5,7 +5,7 @@ task_family_id: prep-admin-contract
 sequence_key: "1"
 task_id: 1-prep-admin-contract
 title: "Pre-Kickoff Admin Contract"
-status: under_review
+status: approved
 phase: phase1
 target_files:
   - .claude/skills/ExecutePairflowPlan/SKILL.md
