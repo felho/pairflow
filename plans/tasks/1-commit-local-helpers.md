@@ -5,7 +5,7 @@ task_family_id: commit-local-helpers
 sequence_key: "1"
 task_id: 1-commit-local-helpers
 title: "Commit Local Helpers"
-status: implementable
+status: in_progress
 phase: phase1
 target_files:
   - src/v11/application/commit/commitCommandError.ts
@@ -27,7 +27,7 @@ normative_refs:
 owners:
   - "felho"
 doc_bubble_id: 1-commit-local-helpers-doc
-impl_bubble_id: null
+impl_bubble_id: 1-commit-local-helpers-impl
 supersedes: []
 superseded_by: null
 archive_group: 2026-05-05-shared-command-boundary-cleanup-plan-v1
