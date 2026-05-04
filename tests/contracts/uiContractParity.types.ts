@@ -72,9 +72,16 @@ import type {
 } from "../../src/contracts/ui/uiActions.js";
 import type {
   UiBubbleDetail as CanonicalUiBubbleDetail,
+  UiBubbleInboxInput as CanonicalUiBubbleInboxInput,
   UiBubbleInboxItem as CanonicalUiBubbleInboxItem,
+  UiBubbleInboxView as CanonicalUiBubbleInboxView,
+  UiBubbleListEntry as CanonicalUiBubbleListEntry,
+  UiBubbleListStateCounts as CanonicalUiBubbleListStateCounts,
+  UiBubbleListView as CanonicalUiBubbleListView,
   UiBubbleMetaReviewSummary as CanonicalUiBubbleMetaReviewSummary,
   UiBubbleReviewPolicy as CanonicalUiBubbleReviewPolicy,
+  UiBubbleStatusInput as CanonicalUiBubbleStatusInput,
+  UiBubbleStatusView as CanonicalUiBubbleStatusView,
   UiBubbleSummary as CanonicalUiBubbleSummary,
   UiBubbleWatchdog as CanonicalUiBubbleWatchdog,
   UiPendingInboxItemSource as CanonicalUiPendingInboxItemSource,
@@ -130,7 +137,14 @@ import type {
   UiCommitBubbleInput as RouterUiCommitBubbleInput,
   UiCommitBubbleResult as RouterUiCommitBubbleResult,
   UiAttachBubbleInput as RouterUiAttachBubbleInput,
+  UiBubbleInboxInput as RouterUiBubbleInboxInput,
+  UiBubbleInboxView as RouterUiBubbleInboxView,
+  UiBubbleListEntry as RouterUiBubbleListEntry,
+  UiBubbleListStateCounts as RouterUiBubbleListStateCounts,
+  UiBubbleListView as RouterUiBubbleListView,
   UiBubbleMutationInput as RouterUiBubbleMutationInput,
+  UiBubbleStatusInput as RouterUiBubbleStatusInput,
+  UiBubbleStatusView as RouterUiBubbleStatusView,
   UiDeleteBubbleResult as RouterUiDeleteBubbleResult,
   UiDeleteBubbleInput as RouterUiDeleteBubbleInput,
   UiApprovalDecisionDeliverySignal as RouterUiApprovalDecisionDeliverySignal,
@@ -155,12 +169,21 @@ import type {
   UiStartBubbleResult as RouterUiStartBubbleResult,
   UiStopBubbleResult as RouterUiStopBubbleResult,
   UiUpdateBubbleReviewPolicyInput as RouterUiUpdateBubbleReviewPolicyInput,
-  UiUpdateBubbleReviewPolicyResult as RouterUiUpdateBubbleReviewPolicyResult
+  UiUpdateBubbleReviewPolicyResult as RouterUiUpdateBubbleReviewPolicyResult,
+  UiRouterDependencies
 } from "../../src/v11/shared/ports/uiRouter.js";
 import type {
   UiApiErrorBody as BackendUiApiErrorBody,
   UiBubbleDetail as BackendUiBubbleDetail,
+  UiBubbleInboxInput as BackendUiBubbleInboxInput,
   UiBubbleReviewPolicy as BackendUiBubbleReviewPolicy,
+  UiBubbleInboxView as BackendUiBubbleInboxView,
+  UiBubbleListEntry as BackendUiBubbleListEntry,
+  UiBubbleListStateCounts as BackendUiBubbleListStateCounts,
+  UiBubbleListView as BackendUiBubbleListView,
+  UiBubbleMetaReviewSummary as BackendUiBubbleMetaReviewSummary,
+  UiBubbleStatusInput as BackendUiBubbleStatusInput,
+  UiBubbleStatusView as BackendUiBubbleStatusView,
   UiBubbleSummary as BackendUiBubbleSummary,
   UiBubbleWatchdog as BackendUiBubbleWatchdog,
   UiEvent as BackendUiEvent,
@@ -251,8 +274,16 @@ import type {
 } from "../../ui/src/lib/contracts/uiActions.js";
 import type {
   UiBubbleDetail as UiBubbleDetail,
+  UiBubbleInboxInput as UiBubbleInboxInput,
   UiBubbleInboxItem as UiBubbleInboxItem,
+  UiBubbleInboxView as UiBubbleInboxView,
+  UiBubbleListEntry as UiBubbleListEntry,
+  UiBubbleListStateCounts as UiBubbleListStateCounts,
+  UiBubbleListView as UiBubbleListView,
+  UiBubbleMetaReviewSummary as UiBubbleMetaReviewSummary,
   UiBubbleReviewPolicy as UiBubbleReviewPolicy,
+  UiBubbleStatusInput as UiBubbleStatusInput,
+  UiBubbleStatusView as UiBubbleStatusView,
   UiBubbleSummary as UiBubbleSummary,
   UiBubbleWatchdog as UiBubbleWatchdog,
   UiPendingInboxItemSource as UiPendingInboxItemSource,
@@ -274,6 +305,10 @@ type Equal<A, B> =
         ? true
         : false
     : false;
+
+type OptionalKeys<T> = {
+  [K in keyof T]-?: Pick<T, K> extends Required<Pick<T, K>> ? never : K;
+}[keyof T];
 
 type _bubbleLifecycleStateParity =
   Assert<Equal<CanonicalBubbleLifecycleState, RuntimeBubbleLifecycleState>>;
@@ -367,6 +402,10 @@ type _metaReviewRuntimeDeliveryParity =
       ActiveMetaReviewRuntimeDeliveryView
     >
   >;
+type _backendMetaReviewSummaryParity =
+  Assert<Equal<CanonicalUiBubbleMetaReviewSummary, BackendUiBubbleMetaReviewSummary>>;
+type _uiMetaReviewSummaryParity =
+  Assert<Equal<CanonicalUiBubbleMetaReviewSummary, UiBubbleMetaReviewSummary>>;
 type _backendBubbleSummaryParity =
   Assert<Equal<CanonicalUiBubbleSummary, BackendUiBubbleSummary>>;
 type _uiBubbleSummaryParity =
@@ -375,6 +414,94 @@ type _backendBubbleDetailParity =
   Assert<Equal<CanonicalUiBubbleDetail, BackendUiBubbleDetail>>;
 type _uiBubbleDetailParity =
   Assert<Equal<CanonicalUiBubbleDetail, UiBubbleDetail>>;
+type _routerBubbleListEntryParity =
+  Assert<Equal<CanonicalUiBubbleListEntry, RouterUiBubbleListEntry>>;
+type _backendBubbleListEntryParity =
+  Assert<Equal<CanonicalUiBubbleListEntry, BackendUiBubbleListEntry>>;
+type _uiBubbleListEntryParity =
+  Assert<Equal<CanonicalUiBubbleListEntry, UiBubbleListEntry>>;
+type _summaryReviewPolicyIsRequiredNullable =
+  Assert<
+    Equal<
+      CanonicalUiBubbleSummary["reviewPolicy"],
+      CanonicalUiBubbleReviewPolicy | null
+    >
+  >;
+type _listEntryReviewPolicyIsOptional =
+  Assert<
+    Equal<
+      Pick<CanonicalUiBubbleListEntry, "reviewPolicy">,
+      { reviewPolicy?: CanonicalUiBubbleReviewPolicy }
+    >
+  >;
+type _listEntryReviewPolicyAllowsOmission =
+  Assert<
+    Equal<OptionalKeys<Pick<CanonicalUiBubbleListEntry, "reviewPolicy">>, "reviewPolicy">
+  >;
+type _routerBubbleListStateCountsParity =
+  Assert<Equal<CanonicalUiBubbleListStateCounts, RouterUiBubbleListStateCounts>>;
+type _backendBubbleListStateCountsParity =
+  Assert<Equal<CanonicalUiBubbleListStateCounts, BackendUiBubbleListStateCounts>>;
+type _uiBubbleListStateCountsParity =
+  Assert<Equal<CanonicalUiBubbleListStateCounts, UiBubbleListStateCounts>>;
+type _routerBubbleListViewParity =
+  Assert<Equal<CanonicalUiBubbleListView, RouterUiBubbleListView>>;
+type _backendBubbleListViewParity =
+  Assert<Equal<CanonicalUiBubbleListView, BackendUiBubbleListView>>;
+type _uiBubbleListViewParity =
+  Assert<Equal<CanonicalUiBubbleListView, UiBubbleListView>>;
+type _routerBubbleStatusInputParity =
+  Assert<Equal<CanonicalUiBubbleStatusInput, RouterUiBubbleStatusInput>>;
+type _backendBubbleStatusInputParity =
+  Assert<Equal<CanonicalUiBubbleStatusInput, BackendUiBubbleStatusInput>>;
+type _uiBubbleStatusInputParity =
+  Assert<Equal<CanonicalUiBubbleStatusInput, UiBubbleStatusInput>>;
+type _routerBubbleStatusViewParity =
+  Assert<Equal<CanonicalUiBubbleStatusView, RouterUiBubbleStatusView>>;
+type _backendBubbleStatusViewParity =
+  Assert<Equal<CanonicalUiBubbleStatusView, BackendUiBubbleStatusView>>;
+type _uiBubbleStatusViewParity =
+  Assert<Equal<CanonicalUiBubbleStatusView, UiBubbleStatusView>>;
+type _routerBubbleInboxInputParity =
+  Assert<Equal<CanonicalUiBubbleInboxInput, RouterUiBubbleInboxInput>>;
+type _backendBubbleInboxInputParity =
+  Assert<Equal<CanonicalUiBubbleInboxInput, BackendUiBubbleInboxInput>>;
+type _uiBubbleInboxInputParity =
+  Assert<Equal<CanonicalUiBubbleInboxInput, UiBubbleInboxInput>>;
+type _routerBubbleInboxViewParity =
+  Assert<Equal<CanonicalUiBubbleInboxView, RouterUiBubbleInboxView>>;
+type _backendBubbleInboxViewParity =
+  Assert<Equal<CanonicalUiBubbleInboxView, BackendUiBubbleInboxView>>;
+type _uiBubbleInboxViewParity =
+  Assert<Equal<CanonicalUiBubbleInboxView, UiBubbleInboxView>>;
+type _routerStatusDependencyInputParity =
+  Assert<
+    Equal<
+      Parameters<UiRouterDependencies["getBubbleStatus"]>[0],
+      CanonicalUiBubbleStatusInput
+    >
+  >;
+type _routerStatusDependencyResultParity =
+  Assert<
+    Equal<
+      Awaited<ReturnType<UiRouterDependencies["getBubbleStatus"]>>,
+      CanonicalUiBubbleStatusView
+    >
+  >;
+type _routerInboxDependencyInputParity =
+  Assert<
+    Equal<
+      Parameters<UiRouterDependencies["getBubbleInbox"]>[0],
+      CanonicalUiBubbleInboxInput
+    >
+  >;
+type _routerInboxDependencyResultParity =
+  Assert<
+    Equal<
+      Awaited<ReturnType<UiRouterDependencies["getBubbleInbox"]>>,
+      CanonicalUiBubbleInboxView
+    >
+  >;
 type _backendRepoSummaryParity =
   Assert<Equal<CanonicalUiRepoSummary, BackendUiRepoSummary>>;
 type _uiRepoSummaryParity =

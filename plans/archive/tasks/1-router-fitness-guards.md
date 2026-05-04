@@ -375,15 +375,16 @@ exceptions for the known current violations that later plan tasks remove.
 
 ### 2a) Initial Transitional Exception Inventory
 
-The first implementation must start from the current source inventory below.
-These entries are transitional only; do not broaden them into directory globs or
-method-count budgets.
+The first implementation started from the source inventory below. Successor
+tasks remove entries as their corresponding boundaries close; do not broaden
+them into directory globs or method-count budgets.
 
 | Exception ID | Kind | Exact Match | Successor Owner | Removal Task | Priority | Timing |
 |---|---|---|---|---|---|---|
-| `router-port-command-task4-list-entry-001` | `allow-command-owned-ui-port-import` | `src/v11/shared/ports/uiRouter.ts -> src/v11/shared/list/listCommandContract.ts` | `architecture/ui-contracts` | `4-ui-readmodel-port-closure` | P1 | required-now |
-| `router-port-command-task4-inbox-api-001` | `allow-command-owned-ui-port-import` | `src/v11/shared/ports/uiRouter.ts -> src/v11/shared/inbox/inboxCommandApi.ts` | `architecture/ui-contracts` | `4-ui-readmodel-port-closure` | P1 | required-now |
-| `router-port-command-task4-status-api-001` | `allow-command-owned-ui-port-import` | `src/v11/shared/ports/uiRouter.ts -> src/v11/shared/status/statusCommandApi.ts` | `architecture/ui-contracts` | `4-ui-readmodel-port-closure` | P1 | required-now |
+
+No router-port exceptions remain after `4-ui-readmodel-port-closure`; the
+inventory is intentionally empty and must stay synchronized with
+`tools/fitness/policy.json`.
 
 For `allow-command-owned-ui-port-import` rows, the arrow notation above is
 human-readable shorthand only. The canonical policy encoding is the split
@@ -418,17 +419,6 @@ semantics:
   "paths": [
     "src/v11/infrastructure/ui/routerActions.ts#UiRouterDependencies"
   ]
-}
-```
-
-```json
-{
-  "id": "router-port-command-task4-list-entry-001",
-  "kind": "allow-command-owned-ui-port-import",
-  "owner": "architecture/ui-contracts",
-  "reason": "Temporary command-owned read-model import retained until 4-ui-readmodel-port-closure moves this shape behind src/contracts/ui.",
-  "from": "src/v11/shared/ports/uiRouter.ts",
-  "to": "src/v11/shared/list/listCommandContract.ts"
 }
 ```
 

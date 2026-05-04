@@ -8,11 +8,13 @@ import type {
   UiEvent,
   UiRepoUpdatedEvent
 } from "../../../contracts/ui/uiEvents.js";
+import type {
+  UiBubbleListView as BubbleListView
+} from "../../../contracts/ui/uiReadModel.js";
 import { presentBubbleSummaryFromListEntry, presentRepoSummary } from "./presenters/bubblePresenter.js";
 import type { BubbleFingerprintSnapshot, RepoDiff, RepoSnapshot } from "./eventsState.js";
 import { bubbleFingerprint, listBubbleIds, sameRepoSummary } from "./eventsFingerprint.js";
 import { listBubbles } from "./eventsScanDefaults.js";
-import type { UiBubbleListView as BubbleListView } from "../../shared/ports/uiRouter.js";
 
 function repoSnapshotHasStartedRemoteBubble(snapshot: RepoSnapshot | undefined): boolean {
   if (snapshot === undefined) {

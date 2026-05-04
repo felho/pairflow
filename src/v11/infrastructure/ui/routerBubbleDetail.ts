@@ -1,8 +1,10 @@
 import { join } from "node:path";
 
-import type { UiBubbleDetail } from "../../../contracts/ui/uiReadModel.js";
+import type {
+  UiBubbleDetail,
+  UiBubbleStatusView
+} from "../../../contracts/ui/uiReadModel.js";
 import type { RuntimeSessionRecord } from "../executor/sessionRuntime/runtimeSessionsRegistry.js";
-import type { BubbleStatusView } from "../../shared/status/statusCommandApi.js";
 import { presentBubbleDetail } from "./presenters/bubblePresenter.js";
 import type { UiBubbleDetailDependencies } from "../../shared/ports/uiRouter.js";
 
@@ -25,7 +27,10 @@ async function loadRuntimeSession(
   return sessions[bubbleId] ?? null;
 }
 
-function withDetailRepoPath(status: BubbleStatusView, repoPath: string): BubbleStatusView {
+function withDetailRepoPath(
+  status: UiBubbleStatusView,
+  repoPath: string
+): UiBubbleStatusView {
   return {
     ...status,
     repoPath

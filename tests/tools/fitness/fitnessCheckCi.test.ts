@@ -201,7 +201,7 @@ describe("fitness:check:ci", () => {
   );
 
   it(
-    "passes the current repo router-port check with explicit exception diagnostics",
+    "passes the current repo router-port check with current exception diagnostics",
     async () => {
       const root = await createTempRoot();
       const policyPath = join(root, "router-port-policy.json");
@@ -255,9 +255,11 @@ describe("fitness:check:ci", () => {
       expect(routerPort?.details).toContainEqual(
         expect.stringContaining(`exceptions_applied=${String(expectedExceptionCount)}`)
       );
-      expect(routerPort?.details).toContainEqual(
-        expect.stringContaining("TRANSITIONAL_EXCEPTION_APPLIED")
-      );
+      if (expectedExceptionCount > 0) {
+        expect(routerPort?.details).toContainEqual(
+          expect.stringContaining("TRANSITIONAL_EXCEPTION_APPLIED")
+        );
+      }
     },
     60_000
   );
@@ -635,6 +637,12 @@ describe("fitness:check:ci", () => {
             : `${exception.from ?? ""} -> ${exception.to ?? ""}`
       }))
       .sort((left, right) => left.id.localeCompare(right.id));
+
+    if (inventoryRows.length === 0 && policyRows.length === 0) {
+      expect(task).toContain(
+        "No router-port exceptions remain after `4-ui-readmodel-port-closure`"
+      );
+    }
 
     expect(policyRows).toEqual(inventoryRows);
   });

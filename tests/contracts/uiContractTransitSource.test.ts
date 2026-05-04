@@ -242,6 +242,12 @@ describe("UI contract transit source guards", () => {
     for (const symbol of [
       "UiBubbleSummary",
       "UiBubbleDetail",
+      "UiBubbleListEntry",
+      "UiBubbleListView",
+      "UiBubbleStatusInput",
+      "UiBubbleStatusView",
+      "UiBubbleInboxInput",
+      "UiBubbleInboxView",
       "UiRepoSummary",
       "UiTimelineEntry",
       "UiRuntimeSessionRecord",
@@ -273,6 +279,107 @@ describe("UI contract transit source guards", () => {
       "from \"../../../../contracts/ui/uiReadModel.js\""
     );
     expect(uiTypes).not.toContain("src/v11/");
+  });
+
+  it("keeps UI router read-model ownership out of command modules", async () => {
+    const canonical = await readSource("src/contracts/ui/uiReadModel.ts");
+    const uiBarrel = await readSource("src/contracts/ui/index.ts");
+    const routerPort = await readSource("src/v11/shared/ports/uiRouter.ts");
+    const eventsScan = await readSource("src/v11/infrastructure/ui/eventsScan.ts");
+    const eventsFingerprint = await readSource(
+      "src/v11/infrastructure/ui/eventsFingerprint.ts"
+    );
+    const presenter = await readSource(
+      "src/v11/infrastructure/ui/presenters/bubblePresenter.ts"
+    );
+    const routerBubbleDetail = await readSource(
+      "src/v11/infrastructure/ui/routerBubbleDetail.ts"
+    );
+    const eventsScanTest = await readSource("tests/core/ui/eventsScan.test.ts");
+    const eventsFingerprintTest = await readSource(
+      "tests/core/ui/eventsFingerprint.test.ts"
+    );
+    const backendCompat = await readSource("src/types/ui.ts");
+    const uiTypes = await readSource("ui/src/lib/types.ts");
+    const uiCompat = await readSource("ui/src/lib/contracts/uiReadModel.ts");
+    const forbiddenMarkers = [
+      "list/listCommandContract",
+      "inbox/inboxCommandApi",
+      "status/statusCommandApi",
+      "src/v11/shared/list",
+      "src/v11/shared/inbox",
+      "src/v11/shared/status"
+    ];
+    const forbiddenCommandOwnedMarkers = [
+      "listCommandContract",
+      "inboxCommandApi",
+      "statusCommandApi",
+      "src/v11/shared/list",
+      "src/v11/shared/inbox",
+      "src/v11/shared/status",
+      "../list/listCommandContract",
+      "../inbox/inboxCommandApi",
+      "../status/statusCommandApi",
+      "../../shared/list/listCommandContract",
+      "../../shared/inbox/inboxCommandApi",
+      "../../shared/status/statusCommandApi",
+      "../../../shared/list/listCommandContract",
+      "../../../shared/inbox/inboxCommandApi",
+      "../../../shared/status/statusCommandApi"
+    ];
+
+    for (const source of [canonical, uiBarrel, routerPort]) {
+      for (const marker of forbiddenMarkers) {
+        expect(source).not.toContain(marker);
+      }
+    }
+    for (const source of [
+      backendCompat,
+      uiTypes,
+      uiCompat,
+      eventsScan,
+      eventsFingerprint,
+      eventsScanTest,
+      eventsFingerprintTest,
+      presenter,
+      routerBubbleDetail
+    ]) {
+      for (const marker of forbiddenCommandOwnedMarkers) {
+        expect(source).not.toContain(marker);
+      }
+    }
+
+    for (const symbol of [
+      "UiBubbleListEntry",
+      "UiBubbleListView",
+      "UiBubbleStatusInput",
+      "UiBubbleStatusView",
+      "UiBubbleInboxInput",
+      "UiBubbleInboxView"
+    ]) {
+      expectTypeDeclaration(canonical, symbol);
+    }
+
+    expect(routerPort).toContain("from \"../../../contracts/ui/uiReadModel.js\"");
+    expect(routerPort).not.toContain("from \"../list/listCommandContract.js\"");
+    expect(routerPort).not.toContain("from \"../inbox/inboxCommandApi.js\"");
+    expect(routerPort).not.toContain("from \"../status/statusCommandApi.js\"");
+    expect(eventsScan).toContain("from \"../../../contracts/ui/uiReadModel.js\"");
+    expect(eventsFingerprint).toContain(
+      "from \"../../../contracts/ui/uiReadModel.js\""
+    );
+    expect(routerBubbleDetail).toContain(
+      "from \"../../../contracts/ui/uiReadModel.js\""
+    );
+    expect(eventsScan).not.toContain("shared/ports/uiRouter");
+    expect(eventsFingerprint).not.toContain("shared/ports/uiRouter");
+    expect(eventsScan).not.toContain("listCommandContract");
+    expect(eventsFingerprint).not.toContain("listCommandContract");
+    expect(eventsScanTest).toContain("from \"../../../src/contracts/ui/uiReadModel.js\"");
+    expect(eventsFingerprintTest).toContain(
+      "from \"../../../src/contracts/ui/uiReadModel.js\""
+    );
+    expect(presenter).toContain("from \"../../../../contracts/ui/uiReadModel.js\"");
   });
 
   it("keeps UI action contracts canonical and parser behavior source-owned", async () => {
