@@ -9,5 +9,8 @@ test = "pnpm test"
 fitness = "pnpm fitness:check:ci"
 bootstrap = "pnpm install --frozen-lockfile && pnpm --dir ui install --frozen-lockfile && pnpm build"
 
+[defaults.agents]
+reviewer = "codex"
+
 [plan_watch.runner]
 backend = "codex"

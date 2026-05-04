@@ -1,7 +1,3 @@
-import {
-  DEFAULT_IMPLEMENTER_AGENT,
-  DEFAULT_REVIEWER_AGENT
-} from "../../../config/defaults.js";
 import type { RepoDefaultsConfig } from "../../../config/repoConfig.js";
 import type { AgentName } from "../../../types/bubble.js";
 import type { BubbleCreateInput } from "./createCommandContract.js";
@@ -127,29 +123,6 @@ function pickResolvedAgent(input: {
   return input.explicit ?? input.repoDefault;
 }
 
-function assertResolvedImplementerReviewerAreCompatible(input: {
-  command: BubbleCreateInput;
-  implementer: AgentName | undefined;
-  reviewer: AgentName | undefined;
-}): void {
-  if (
-    input.implementer !== undefined
-    && input.reviewer !== undefined
-    && input.implementer === input.reviewer
-  ) {
-    throw toBubbleCreateError({
-      message:
-        "Create agents are invalid after resolving explicit input and repo defaults: implementer and reviewer must be different agents.",
-      context: {
-        command_name: "create",
-        bubble_id: input.command.id,
-        implementer: input.implementer,
-        reviewer: input.reviewer
-      }
-    });
-  }
-}
-
 function pickResolvedNumber(input: {
   explicit: number | undefined;
   repoDefault: number | undefined;
@@ -188,12 +161,6 @@ export function resolveRepoDefaultedCreateInput(input: {
   const metaReviewer = pickResolvedAgent({
     explicit: input.command.metaReviewer,
     repoDefault: defaults.agents?.meta_reviewer
-  });
-
-  assertResolvedImplementerReviewerAreCompatible({
-    command: input.command,
-    implementer: implementer ?? DEFAULT_IMPLEMENTER_AGENT,
-    reviewer: reviewer ?? DEFAULT_REVIEWER_AGENT
   });
 
   const watchdogTimeoutMinutes = pickResolvedNumber({

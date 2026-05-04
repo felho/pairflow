@@ -91,17 +91,6 @@ function validateRoundRoleEntry(
   }
 
   if (
-    isAgentName(implementer) &&
-    isAgentName(reviewer) &&
-    implementer === reviewer
-  ) {
-    errors.push({
-      path: pathPrefix,
-      message: "implementer and reviewer cannot be the same agent"
-    });
-  }
-
-  if (
     !isInteger(round) ||
     round <= 0 ||
     !isAgentName(implementer) ||

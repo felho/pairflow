@@ -1283,7 +1283,7 @@ typecheck = "pnpm typecheck"
     expect(result.errors.some((error) => error.path === "agents")).toBe(true);
   });
 
-  it("rejects same implementer and reviewer", () => {
+  it("accepts same implementer and reviewer", () => {
     const result = validateBubbleConfig({
       id: "b_test_01",
       repo_path: "/tmp/repo",
@@ -1308,11 +1308,12 @@ typecheck = "pnpm typecheck"
       }
     });
 
-    expect(result.ok).toBe(false);
-    if (result.ok) {
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
       return;
     }
-    expect(result.errors.some((error) => error.path === "agents")).toBe(true);
+    expect(result.value.agents.implementer).toBe("codex");
+    expect(result.value.agents.reviewer).toBe("codex");
   });
 
   it("renders and re-parses bubble TOML", () => {

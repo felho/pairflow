@@ -964,9 +964,9 @@ describe("createBubble", () => {
     await expectRemoteCreateArtifactsAbsent(repoPath, bubbleId);
   });
 
-  it("rejects explicit/default agent collisions before bubble config validation", async () => {
+  it("allows explicit reviewer to match repo-default implementer", async () => {
     const repoPath = await createTempRepo();
-    const bubbleId = "b_create_defaults_agent_collision";
+    const bubbleId = "b_create_defaults_same_agents";
     await writeFile(
       join(repoPath, "pairflow.toml"),
       [
@@ -980,24 +980,22 @@ describe("createBubble", () => {
       "utf8"
     );
 
-    await expect(
-      createBubble({
-        id: bubbleId,
-        repoPath,
-        reviewer: "claude",
-        reviewArtifactType: "code",
-        task: "Agent collision",
-        cwd: repoPath
-      })
-    ).rejects.toThrow(
-      /Create agents are invalid.*implementer and reviewer must be different agents/u
-    );
-    await expectRemoteCreateArtifactsAbsent(repoPath, bubbleId);
+    const result = await createBubble({
+      id: bubbleId,
+      repoPath,
+      reviewer: "claude",
+      reviewArtifactType: "code",
+      task: "Same agent is allowed",
+      cwd: repoPath
+    });
+
+    expect(result.config.agents.implementer).toBe("claude");
+    expect(result.config.agents.reviewer).toBe("claude");
   });
 
-  it("rejects repo-default agent collisions against built-in create agents before bubble config validation", async () => {
+  it("allows repo-default reviewer to match the built-in implementer", async () => {
     const repoPath = await createTempRepo();
-    const bubbleId = "b_create_agent_builtin_collision";
+    const bubbleId = "b_create_agent_builtin_same";
     await writeFile(
       join(repoPath, "pairflow.toml"),
       [
@@ -1011,18 +1009,16 @@ describe("createBubble", () => {
       "utf8"
     );
 
-    await expect(
-      createBubble({
-        id: bubbleId,
-        repoPath,
-        reviewArtifactType: "code",
-        task: "Built-in agent collision",
-        cwd: repoPath
-      })
-    ).rejects.toThrow(
-      /Create agents are invalid.*implementer and reviewer must be different agents/u
-    );
-    await expectRemoteCreateArtifactsAbsent(repoPath, bubbleId);
+    const result = await createBubble({
+      id: bubbleId,
+      repoPath,
+      reviewArtifactType: "code",
+      task: "Built-in same agent is allowed",
+      cwd: repoPath
+    });
+
+    expect(result.config.agents.implementer).toBe("codex");
+    expect(result.config.agents.reviewer).toBe("codex");
   });
 
   it("keeps runtime status reads anchored to materialized bubble config after repo defaults change", async () => {
