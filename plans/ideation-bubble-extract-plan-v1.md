@@ -26,7 +26,7 @@ task_tracker:
     status: archived
   - task_id: 3-extract-copy-commit
     task_path: plans/tasks/3-extract-copy-commit.md
-    status: approved
+    status: implementable
   - task_id: 4-extract-docs-validation
     task_path: null
     status: not_created
@@ -203,13 +203,18 @@ refined through task-mode ReviewSpec, approved for document-bubble routing, and
 document bubble `3-extract-copy-commit-doc` was created and started with the
 repository bootstrap command.
 
+Progress update (2026-05-04): document bubble
+`3-extract-copy-commit-doc` closed and merged after trusted multi-clean
+meta-review auto-approval proof. Task `3-extract-copy-commit` is now
+implementable and ready for implementation-bubble routing.
+
 ## Open Task List
 
 | Task ID | Task Path | Purpose | Depends On | Closes Gap | Status |
 |---|---|---|---|---|---|
 | `1-extract-command-contract` | `plans/archive/tasks/2026-05-04-ideation-bubble-extract-plan-v1/1-extract-command-contract.md` | Define `pairflow bubble extract` CLI contract, option parser/help, result shape, ideation eligibility rules, `--repo`/cwd target repository resolution, repo mismatch fail-closed behavior, no-overwrite v1 contract, commit intent including optional message, and target checkout preconditions. | N/A | No official command contract exists. | archived |
 | `2-extract-path-selection` | `plans/archive/tasks/2026-05-04-ideation-bubble-extract-plan-v1/2-extract-path-selection.md` | Implement explicit repeated `--path` validation with no glob support, repo-relative normalization, `plans/**`/`docs/**`/`progress/**` allowlist checks, source file existence checks, and target conflict detection. | `1-extract-command-contract` | No safe multi-path artifact selector exists. | archived |
-| `3-extract-copy-commit` | `plans/tasks/3-extract-copy-commit.md` | Copy selected files from bubble worktree to the clean `main` checkout and optionally stage/commit exactly those paths with an explicit selected-path commit result. | `2-extract-path-selection` | No official extract transfer/commit flow exists. | approved |
+| `3-extract-copy-commit` | `plans/tasks/3-extract-copy-commit.md` | Copy selected files from bubble worktree to the clean `main` checkout and optionally stage/commit exactly those paths with an explicit selected-path commit result. | `2-extract-path-selection` | No official extract transfer/commit flow exists. | implementable |
 | `4-extract-docs-validation` | `null` | Add operator docs, targeted tests, and final validation for success, multi-path, forbidden path, target conflict, repo mismatch, non-main/dirty target checkout, staged-scope, selected-path commit result, and source-bubble lifecycle non-mutation. | `3-extract-copy-commit` | Extract behavior would remain undocumented and regression-prone. | not_created |
 
 ## Coverage Map

@@ -5,7 +5,7 @@ task_family_id: extract-copy-commit
 sequence_key: "3"
 task_id: 3-extract-copy-commit
 title: "Extract Copy And Commit"
-status: approved
+status: implementable
 phase: phase3
 target_files:
   - src/v11/application/extract/extractCommandContract.ts
