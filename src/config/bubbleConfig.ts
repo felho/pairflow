@@ -17,9 +17,6 @@ import {
   DEFAULT_MAX_ROUNDS,
   DEFAULT_PAIRFLOW_COMMAND_PROFILE,
   DEFAULT_QUALITY_MODE,
-  DEFAULT_REVIEW_POLICY_AUTO_REWORK_MIN_SEVERITY,
-  DEFAULT_REVIEW_POLICY_REVIEWER_BLOCKING_MIN_SEVERITY,
-  DEFAULT_REVIEW_POLICY_LOOP_MODE,
   DEFAULT_REVIEW_ARTIFACT_TYPE,
   DEFAULT_REVIEWER_CONTEXT_MODE,
   DEFAULT_SEVERITY_GATE_ROUND,
@@ -30,8 +27,6 @@ import {
   isAgentName,
   isAttachLauncher,
   isBubbleExecutorType,
-  isBubbleReviewAutoReworkSeverity,
-  isBubbleReviewLoopMode,
   isLocalOverlayMode,
   isPairflowCommandProfile,
   isQualityMode,
@@ -53,10 +48,6 @@ import {
 } from "../v11/shared/validation/validationTargetPaths.js";
 import {
   BUBBLE_EXECUTOR_INVALID,
-  REVIEW_POLICY_CONSECUTIVE_CLEAN_RUNS_REQUIRED_INVALID,
-  REVIEW_POLICY_INVALID,
-  REVIEW_POLICY_LOOP_MODE_INVALID,
-  REVIEW_POLICY_THRESHOLD_INVALID,
   SEVERITY_GATE_ROUND_INVALID
 } from "./bubbleConfig/errors.js";
 import { parseToml } from "./bubbleConfig/parser.js";
@@ -69,6 +60,7 @@ import {
 } from "./bubbleConfig/readers.js";
 import { validateBubbleCommands } from "./bubbleConfig/commands.js";
 import { assertValidBubbleConfigRemoteReferences } from "./bubbleConfig/remoteReferences.js";
+import { validateBubbleReviewPolicy } from "./bubbleConfig/reviewPolicy.js";
 
 export {
   assertCreateReviewArtifactType,
@@ -91,33 +83,6 @@ export {
   validateBubbleConfigRemoteReferences
 } from "./bubbleConfig/remoteReferences.js";
 export { renderBubbleConfigToml } from "./bubbleConfig/render.js";
-
-function readReviewPolicyConsecutiveCleanRunsRequired(
-  source: Record<string, unknown>,
-  key: string,
-  path: string,
-  errors: ValidationError[],
-  required: boolean
-): number | undefined {
-  const value = source[key];
-  if (value === undefined) {
-    if (required) {
-      errors.push({ path, message: "Missing required field" });
-    }
-    return undefined;
-  }
-
-  if (!isInteger(value) || value < 1) {
-    errors.push({
-      path,
-      message:
-        `${REVIEW_POLICY_CONSECUTIVE_CLEAN_RUNS_REQUIRED_INVALID}: Must be an integer >= 1`
-    });
-    return undefined;
-  }
-
-  return value;
-}
 
 function isSafeLocalOverlayEntry(value: string): boolean {
   const normalized = value.replaceAll("\\", "/");
@@ -577,87 +542,7 @@ export function validateBubbleConfig(input: unknown): ValidationResult<BubbleCon
     ideationTaskPending = false;
   }
 
-  const allowedReviewPolicyKeys = new Set([
-    "review_loop_mode",
-    "reviewer_blocking_min_severity",
-    "meta_review_auto_rework_min_severity",
-    "meta_review_consecutive_clean_runs_required"
-  ]);
-  if (reviewPolicy !== undefined) {
-    for (const key of Object.keys(reviewPolicy)) {
-      if (allowedReviewPolicyKeys.has(key)) {
-        continue;
-      }
-
-      errors.push({
-        path: `review_policy.${key}`,
-        message:
-          `${REVIEW_POLICY_INVALID}: Unknown review_policy field "${key}"`
-      });
-    }
-  }
-
-  const hasExplicitReviewPolicyFields =
-    reviewPolicy !== undefined &&
-    Object.keys(reviewPolicy).some((key) => allowedReviewPolicyKeys.has(key));
-
-  const reviewPolicyLoopModeCandidate =
-    reviewPolicy?.review_loop_mode ?? DEFAULT_REVIEW_POLICY_LOOP_MODE;
-  if (!isBubbleReviewLoopMode(reviewPolicyLoopModeCandidate)) {
-    errors.push({
-      path: "review_policy.review_loop_mode",
-      message:
-        `${REVIEW_POLICY_LOOP_MODE_INVALID}: Must be one of: full, meta_only`
-    });
-  }
-  const reviewPolicyLoopMode = isBubbleReviewLoopMode(reviewPolicyLoopModeCandidate)
-    ? reviewPolicyLoopModeCandidate
-    : DEFAULT_REVIEW_POLICY_LOOP_MODE;
-
-  const reviewPolicyReviewerSeverityCandidate =
-    reviewPolicy?.reviewer_blocking_min_severity
-    ?? DEFAULT_REVIEW_POLICY_REVIEWER_BLOCKING_MIN_SEVERITY;
-  if (!isBubbleReviewAutoReworkSeverity(reviewPolicyReviewerSeverityCandidate)) {
-    errors.push({
-      path: "review_policy.reviewer_blocking_min_severity",
-      message:
-        `${REVIEW_POLICY_THRESHOLD_INVALID}: Must be one of: P1, P2, P3`
-    });
-  }
-  const reviewPolicyReviewerSeverity = isBubbleReviewAutoReworkSeverity(
-    reviewPolicyReviewerSeverityCandidate
-  )
-    ? reviewPolicyReviewerSeverityCandidate
-    : DEFAULT_REVIEW_POLICY_REVIEWER_BLOCKING_MIN_SEVERITY;
-
-  const reviewPolicySeverityCandidate =
-    reviewPolicy?.meta_review_auto_rework_min_severity
-    ?? DEFAULT_REVIEW_POLICY_AUTO_REWORK_MIN_SEVERITY;
-  if (!isBubbleReviewAutoReworkSeverity(reviewPolicySeverityCandidate)) {
-    errors.push({
-      path: "review_policy.meta_review_auto_rework_min_severity",
-      message:
-        `${REVIEW_POLICY_THRESHOLD_INVALID}: Must be one of: P1, P2, P3`
-    });
-  }
-  const reviewPolicySeverity = isBubbleReviewAutoReworkSeverity(
-    reviewPolicySeverityCandidate
-  )
-    ? reviewPolicySeverityCandidate
-    : DEFAULT_REVIEW_POLICY_AUTO_REWORK_MIN_SEVERITY;
-
-  const reviewPolicyConsecutiveCleanRunsRequired =
-    reviewPolicy === undefined
-      ? undefined
-      : (
-          readReviewPolicyConsecutiveCleanRunsRequired(
-            reviewPolicy,
-            "meta_review_consecutive_clean_runs_required",
-            "review_policy.meta_review_consecutive_clean_runs_required",
-            errors,
-            false
-          )
-        );
+  const validatedReviewPolicy = validateBubbleReviewPolicy(reviewPolicy, errors);
 
   let validatedExecutor: BubbleConfig["executor"] | undefined;
   if (executor !== undefined) {
@@ -729,21 +614,6 @@ export function validateBubbleConfig(input: unknown): ValidationResult<BubbleCon
   if (convergedSound !== undefined) {
     validatedNotifications.converged_sound = convergedSound;
   }
-
-  const validatedReviewPolicy: BubbleConfig["review_policy"] =
-    !hasExplicitReviewPolicyFields
-      ? undefined
-      : {
-          review_loop_mode: reviewPolicyLoopMode,
-          reviewer_blocking_min_severity: reviewPolicyReviewerSeverity,
-          meta_review_auto_rework_min_severity: reviewPolicySeverity,
-          ...(reviewPolicyConsecutiveCleanRunsRequired !== undefined
-            ? {
-                meta_review_consecutive_clean_runs_required:
-                  reviewPolicyConsecutiveCleanRunsRequired
-              }
-            : {})
-        };
 
   const validatedConfig: BubbleConfig = {
     id: id as string,
