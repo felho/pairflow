@@ -1,6 +1,6 @@
 export {
   bubbleLifecycleStates
-} from "../../../../src/contracts/ui/bubbleLifecycle.js";
+} from "@pairflow/ui-contracts";
 export type {
   BubbleLifecycleState
-} from "../../../../src/contracts/ui/bubbleLifecycle.js";
+} from "@pairflow/ui-contracts";

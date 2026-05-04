@@ -101,6 +101,13 @@ function expectModuleSpecifierCount(
   expect(matches ?? []).toHaveLength(expectedCount);
 }
 
+function expectUiContractEntrypointImport(source: string): void {
+  expect(source).toContain("from \"@pairflow/ui-contracts\"");
+  expect(source).not.toMatch(
+    /from\s+["'][^"']*src\/contracts\/ui(?:\/|["'])/u
+  );
+}
+
 function extractInterfaceBody(source: string, symbol: string): string {
   const match = new RegExp(`export interface ${symbol}\\b[^\\{]*\\{`, "u").exec(
     source
@@ -142,9 +149,7 @@ describe("UI contract transit source guards", () => {
 
     expect(transit).toContain("from \"../contracts/ui/uiRemoteExecution.js\"");
     expect(backendCompat).toContain("from \"../../contracts/ui/uiRemoteExecution.js\"");
-    expect(uiCompat).toContain(
-      "from \"../../../../src/contracts/ui/uiRemoteExecution.js\""
-    );
+    expectUiContractEntrypointImport(uiCompat);
     expect(transit).not.toMatch(/interface\s+UiBubble/);
     expect(transit).not.toMatch(/type\s+UiBubble\w+\s*=/);
     expect(backendCompat).not.toMatch(/interface\s+UiBubble/);
@@ -171,9 +176,7 @@ describe("UI contract transit source guards", () => {
     expect(canonical).not.toContain("v11/");
     expect(canonical).not.toContain("validation/primitives");
     expect(backendCompat).toContain("from \"../../contracts/ui/stateValidation.js\"");
-    expect(uiCompat).toContain(
-      "from \"../../../../src/contracts/ui/stateValidation.js\""
-    );
+    expectUiContractEntrypointImport(uiCompat);
     expect(stateSnapshots).toContain(
       "from \"../../../contracts/ui/stateValidation.js\""
     );
@@ -216,9 +219,7 @@ describe("UI contract transit source guards", () => {
     expect(canonical).not.toMatch(/bubbleLifecycleStates\s*=\s*\[/);
     expect(backendCompat).toContain("from \"../../contracts/ui/bubbleLifecycle.js\"");
     expect(backendCompat).not.toMatch(/bubbleLifecycleStates\s*=\s*\[/);
-    expect(uiCompat).toContain(
-      "from \"../../../../src/contracts/ui/bubbleLifecycle.js\""
-    );
+    expectUiContractEntrypointImport(uiCompat);
     expect(stateSnapshots).toContain(
       "from \"../../../contracts/ui/bubbleLifecycle.js\""
     );
@@ -239,7 +240,7 @@ describe("UI contract transit source guards", () => {
     expect(canonical).toContain("export interface DeleteBubbleArtifacts");
     expect(canonical).toContain("export interface DeleteBubbleResult");
     expect(backendCompat).toContain("from \"./ui/deleteBubble.js\"");
-    expect(uiTypes).toContain("from \"../../../src/contracts/ui/deleteBubble.js\"");
+    expectUiContractEntrypointImport(uiTypes);
     expect(uiTypes).toContain(
       "DeleteBubbleArtifacts as BubbleDeleteArtifacts"
     );
@@ -310,10 +311,8 @@ describe("UI contract transit source guards", () => {
     expect(canonical).not.toContain("node:");
     expect(canonical).not.toMatch(producerHelperExportPattern);
     expect(backendCompat).toContain("from \"../contracts/ui/uiReadModel.js\"");
-    expect(uiCompat).toContain(
-      "from \"../../../../src/contracts/ui/uiReadModel.js\""
-    );
-    expect(uiTypes).toContain("from \"../../../src/contracts/ui/uiReadModel.js\"");
+    expectUiContractEntrypointImport(uiCompat);
+    expectUiContractEntrypointImport(uiTypes);
     expect(uiTypes).not.toContain("from \"./contracts/uiReadModel.js\"");
     expect(uiTypes).not.toContain("from \"../../../src/types/protocol.js\"");
     expectNoTypeDeclaration(uiTypes, "ProtocolMessageType");
@@ -592,10 +591,8 @@ describe("UI contract transit source guards", () => {
     expect(actionEventContract).not.toMatch(/\bfindings\b/u);
     expect(affectedResultContracts).not.toMatch(/^\s*state[?:]:/mu);
     expect(affectedResultContracts).not.toMatch(/^\s*envelope[?:]:/mu);
-    expect(uiCompat).toContain(
-      "from \"../../../../src/contracts/ui/uiActions.js\""
-    );
-    expect(uiTypes).toContain("from \"../../../src/contracts/ui/uiActions.js\"");
+    expectUiContractEntrypointImport(uiCompat);
+    expectUiContractEntrypointImport(uiTypes);
     expect(backendCompat).not.toContain("from \"../contracts/ui/uiActions.js\"");
     expect(routerPort).toContain("from \"../../../contracts/ui/uiActions.js\"");
     expect(routerPort).toContain("UiDeleteBubbleResult");
@@ -738,10 +735,8 @@ describe("UI contract transit source guards", () => {
 
     expect(canonical).not.toContain("src/v11");
     expect(canonical).not.toContain("../v11");
-    expect(uiCompat).toContain(
-      "from \"../../../../src/contracts/ui/uiEvents.js\""
-    );
-    expect(uiTypes).toContain("from \"../../../src/contracts/ui/uiEvents.js\"");
+    expectUiContractEntrypointImport(uiCompat);
+    expectUiContractEntrypointImport(uiTypes);
     expect(backendCompat).toContain("from \"../contracts/ui/uiEvents.js\"");
     expect(routerEvents).toContain("event: connected");
     expect(routerEvents).toContain("event: snapshot");
@@ -808,9 +803,7 @@ describe("UI contract transit source guards", () => {
     expect(routerContracts).toContain("from \"../../../contracts/ui/uiErrors.js\"");
     expect(routerHttp).toContain("from \"../../../contracts/ui/uiErrors.js\"");
     expect(uiApi).toContain("UiApiErrorBody");
-    expect(uiCompat).toContain(
-      "from \"../../../../src/contracts/ui/uiErrors.js\""
-    );
+    expectUiContractEntrypointImport(uiCompat);
   });
 
   it("keeps backend compatibility free of UI-only view-state exports", async () => {

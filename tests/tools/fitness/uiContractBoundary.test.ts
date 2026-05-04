@@ -38,8 +38,8 @@ describe("UI contract boundary fitness check", () => {
     const repoRoot = await createTempRoot();
     await writeRepoFile(
       repoRoot,
-      "ui/src/file.ts",
-      "import type { RuntimeType } from \"../../src/v11/shared/runtime.js\";\nexport type Local = RuntimeType;\n"
+      "ui/src/lib/file.ts",
+      "import type { RuntimeType } from \"../../../src/v11/shared/runtime.js\";\nexport type Local = RuntimeType;\n"
     );
 
     const report = await buildUiContractBoundaryCheckReport({
@@ -56,7 +56,7 @@ describe("UI contract boundary fitness check", () => {
     });
 
     expect(report.status).toBe("fail");
-    expect(report.details?.some((detail) => detail.includes("ui/src/file.ts:1"))).toBe(
+    expect(report.details?.some((detail) => detail.includes("ui/src/lib/file.ts:1"))).toBe(
       true
     );
     expect(report.details?.some((detail) => detail.includes("src/v11"))).toBe(
@@ -136,7 +136,7 @@ describe("UI contract boundary fitness check", () => {
     ).toBe(true);
   });
 
-  it("passes allowed local UI contract imports", async () => {
+  it("fails on relative UI imports from canonical UI contracts", async () => {
     const repoRoot = await createTempRoot();
     await writeRepoFile(
       repoRoot,
@@ -150,8 +150,82 @@ describe("UI contract boundary fitness check", () => {
     );
     await writeRepoFile(
       repoRoot,
-      "ui/src/file.ts",
+      "ui/src/lib/file.ts",
       "import type { Marker } from '../../../src/contracts/ui/index.js';\nexport type Local = Marker;\n"
+    );
+
+    const report = await buildUiContractBoundaryCheckReport({
+      check: {
+        id: "ui_contract_boundary",
+        metric: "UI/backend contract boundary import direction",
+        mode: "hard-fail",
+        owner: "architecture/ui-contracts",
+        scope: ["ui/src/**", "src/contracts/ui/**"],
+        exceptions: []
+      },
+      repoRoot,
+      fallbackMode: "hard-fail"
+    });
+
+    expect(report.status).toBe("fail");
+    expect(report.details?.some((detail) => detail.includes("ui/src/lib/file.ts:1"))).toBe(
+      true
+    );
+    expect(
+      report.details?.some((detail) =>
+        detail.includes("@pairflow/ui-contracts")
+      )
+    ).toBe(true);
+  });
+
+  it("fails on relative UI re-exports from canonical UI contracts", async () => {
+    const repoRoot = await createTempRoot();
+    await writeRepoFile(
+      repoRoot,
+      "src/contracts/ui/boundary.ts",
+      "export interface Marker { readonly boundary: 'ui'; }\n"
+    );
+    await writeRepoFile(
+      repoRoot,
+      "src/contracts/ui/index.ts",
+      "export type { Marker } from './boundary.js';\n"
+    );
+    await writeRepoFile(
+      repoRoot,
+      "ui/src/lib/file.ts",
+      "export type { Marker } from '../../../src/contracts/ui/index.js';\n"
+    );
+
+    const report = await buildUiContractBoundaryCheckReport({
+      check: {
+        id: "ui_contract_boundary",
+        metric: "UI/backend contract boundary import direction",
+        mode: "hard-fail",
+        owner: "architecture/ui-contracts",
+        scope: ["ui/src/**", "src/contracts/ui/**"],
+        exceptions: []
+      },
+      repoRoot,
+      fallbackMode: "hard-fail"
+    });
+
+    expect(report.status).toBe("fail");
+    expect(report.details?.some((detail) => detail.includes("ui/src/lib/file.ts:1"))).toBe(
+      true
+    );
+    expect(
+      report.details?.some((detail) =>
+        detail.includes("@pairflow/ui-contracts")
+      )
+    ).toBe(true);
+  });
+
+  it("passes the public UI contracts entrypoint in browser source", async () => {
+    const repoRoot = await createTempRoot();
+    await writeRepoFile(
+      repoRoot,
+      "ui/src/lib/file.ts",
+      "import type { Marker } from '@pairflow/ui-contracts';\nexport type Local = Marker;\n"
     );
 
     const report = await buildUiContractBoundaryCheckReport({
@@ -170,12 +244,44 @@ describe("UI contract boundary fitness check", () => {
     expect(report.status).toBe("pass");
   });
 
+  it("fails on bare UI imports from canonical UI contracts", async () => {
+    const repoRoot = await createTempRoot();
+    await writeRepoFile(
+      repoRoot,
+      "ui/src/lib/file.ts",
+      "import type { Marker } from 'src/contracts/ui/index.js';\nexport type Local = Marker;\n"
+    );
+
+    const report = await buildUiContractBoundaryCheckReport({
+      check: {
+        id: "ui_contract_boundary",
+        metric: "UI/backend contract boundary import direction",
+        mode: "hard-fail",
+        owner: "architecture/ui-contracts",
+        scope: ["ui/src/**", "src/contracts/ui/**"],
+        exceptions: []
+      },
+      repoRoot,
+      fallbackMode: "hard-fail"
+    });
+
+    expect(report.status).toBe("fail");
+    expect(report.details?.some((detail) => detail.includes("ui/src/lib/file.ts:1"))).toBe(
+      true
+    );
+    expect(
+      report.details?.some((detail) =>
+        detail.includes("@pairflow/ui-contracts")
+      )
+    ).toBe(true);
+  });
+
   it("applies explicit import exceptions", async () => {
     const repoRoot = await createTempRoot();
     await writeRepoFile(
       repoRoot,
-      "ui/src/file.ts",
-      "import type { RuntimeType } from \"../../src/v11/shared/runtime.js\";\nexport type Local = RuntimeType;\n"
+      "ui/src/lib/file.ts",
+      "import type { RuntimeType } from \"../../../src/v11/shared/runtime.js\";\nexport type Local = RuntimeType;\n"
     );
 
     const report = await buildUiContractBoundaryCheckReport({
@@ -191,7 +297,7 @@ describe("UI contract boundary fitness check", () => {
             kind: "allow-import",
             owner: "architecture/ui-contracts",
             reason: "temporary known drift",
-            from: "ui/src/file.ts",
+            from: "ui/src/lib/file.ts",
             to: "src/v11/shared/runtime.ts",
             paths: undefined
           }
@@ -216,8 +322,8 @@ describe("UI contract boundary fitness check", () => {
     const repoRoot = await createTempRoot();
     await writeRepoFile(
       repoRoot,
-      "ui/src/file.ts",
-      "import type { RuntimeType } from \"../../src/v11/shared/runtime\";\nexport type Local = RuntimeType;\n"
+      "ui/src/lib/file.ts",
+      "import type { RuntimeType } from \"../../../src/v11/shared/runtime\";\nexport type Local = RuntimeType;\n"
     );
 
     const report = await buildUiContractBoundaryCheckReport({
@@ -233,7 +339,7 @@ describe("UI contract boundary fitness check", () => {
             kind: "allow-import",
             owner: "architecture/ui-contracts",
             reason: "temporary known drift",
-            from: "ui/src/file.ts",
+            from: "ui/src/lib/file.ts",
             to: "src/v11/shared/runtime.ts",
             paths: undefined
           }
@@ -255,8 +361,8 @@ describe("UI contract boundary fitness check", () => {
     const repoRoot = await createTempRoot();
     await writeRepoFile(
       repoRoot,
-      "ui/src/file.ts",
-      "import type { RuntimeType } from \"../../src/v11/shared/runtime.js\";\nexport type Local = RuntimeType;\n"
+      "ui/src/lib/file.ts",
+      "import type { RuntimeType } from \"../../../src/v11/shared/runtime.js\";\nexport type Local = RuntimeType;\n"
     );
 
     const report = await buildUiContractBoundaryCheckReport({
@@ -272,7 +378,7 @@ describe("UI contract boundary fitness check", () => {
             kind: "allow-import",
             owner: "architecture/ui-contracts",
             reason: "invalid relative path",
-            from: "../ui/src/file.ts",
+            from: "../ui/src/lib/file.ts",
             to: "src/v11/shared/runtime.ts",
             paths: undefined
           }

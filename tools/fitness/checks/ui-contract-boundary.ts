@@ -171,7 +171,16 @@ function classifyTarget(input: {
   const fromUiSource = input.fromRelative.startsWith("ui/src/");
 
   if (fromUiSource && /^src\/v11(?:\/|$)/u.test(normalizedTarget)) {
-    return "ui source must import backend UI contracts from src/contracts/ui, not src/v11";
+    return "ui source must import browser-safe UI contracts through @pairflow/ui-contracts, not src/v11";
+  }
+  if (fromUiSource && input.specifier === "@pairflow/ui-contracts") {
+    return undefined;
+  }
+  if (
+    fromUiSource
+    && /^src\/contracts\/ui(?:\/|$)/u.test(normalizedTarget)
+  ) {
+    return "ui source must import canonical UI contracts through @pairflow/ui-contracts, not relative src/contracts/ui paths";
   }
 
   if (!fromUiContracts) {

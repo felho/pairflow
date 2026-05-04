@@ -1,3 +1,3 @@
 export type {
   UiApiErrorBody
-} from "../../../../src/contracts/ui/uiErrors.js";
+} from "@pairflow/ui-contracts";

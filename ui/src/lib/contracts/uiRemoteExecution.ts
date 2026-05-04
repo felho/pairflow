@@ -4,4 +4,4 @@ export type {
   UiBubbleRemoteExecution,
   UiBubbleStatusCacheReasonCode,
   UiBubbleStatusRemoteExecution
-} from "../../../../src/contracts/ui/uiRemoteExecution.js";
+} from "@pairflow/ui-contracts";
