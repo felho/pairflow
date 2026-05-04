@@ -589,7 +589,7 @@ describe("planWatchLoop", () => {
     expect(dependencies.runExecutePairflowPlanContinuation).not.toHaveBeenCalled();
   });
 
-  it("maps runner trigger context without route or lifecycle mutation fields", async () => {
+  it("maps runner trigger context without candidate or lifecycle authority fields", async () => {
     const dependencies = deps({ candidates: [candidate()] });
     await runPlanWatchIteration(
       {
@@ -606,14 +606,12 @@ describe("planWatchLoop", () => {
     expect(call?.[0].trigger).toMatchObject({
       source: "plan_watch",
       reason: "linked_bubble_approval_ready",
-      observedAt: "2026-05-01T09:00:00.000Z",
-      refs: ["bubble:3-watch-loop-impl:round:2", "task:plans/tasks/3-watch-loop.md"]
+      observedAt: "2026-05-01T09:00:00.000Z"
     });
-    expect(call?.[0].trigger.metadata).toMatchObject({
-      taskId: "3-watch-loop",
-      bubbleId: "3-watch-loop-impl",
-      observedState: "READY_FOR_HUMAN_APPROVAL"
-    });
+    expect(call?.[0].trigger.refs).toBeUndefined();
+    expect(call?.[0].trigger.metadata).toBeUndefined();
+    expect(JSON.stringify(call?.[0].trigger)).not.toContain("3-watch-loop");
+    expect(JSON.stringify(call?.[0].trigger)).not.toContain("READY_FOR_HUMAN_APPROVAL");
     expect(JSON.stringify(call?.[0].trigger)).not.toContain("route_class");
     expect(JSON.stringify(call?.[0].trigger)).not.toContain("approve");
   });

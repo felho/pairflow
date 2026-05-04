@@ -38,6 +38,9 @@ export function buildRunnerInput(input: {
   stopSignal?: AbortSignal | undefined;
   onArtifactFiles?: AgentRunnerBridgeInput["onArtifactFiles"] | undefined;
 }): AgentRunnerBridgeInput {
+  const reason = isRunNowCandidate(input.candidate)
+    ? PLAN_WATCH_RUN_NOW_REASON
+    : PLAN_WATCH_TRIGGER_REASON;
   return {
     repoPath: input.repoPath,
     planPath: input.planPath,
@@ -49,25 +52,8 @@ export function buildRunnerInput(input: {
       : {}),
     trigger: {
       source: PLAN_WATCH_TRIGGER_SOURCE,
-      reason: isRunNowCandidate(input.candidate)
-        ? PLAN_WATCH_RUN_NOW_REASON
-        : PLAN_WATCH_TRIGGER_REASON,
-      observedAt: input.candidate.observedAt ?? input.now.toISOString(),
-      refs: [
-        ...(input.candidate.statusRef !== undefined ? [input.candidate.statusRef] : []),
-        `task:${input.candidate.taskPath}`
-      ],
-      metadata: {
-        taskId: input.candidate.taskId,
-        taskPath: input.candidate.taskPath,
-        bubbleId: input.candidate.bubbleId,
-        bubbleRole: input.candidate.bubbleRole,
-        observedState: input.candidate.observedState,
-        dedupeKey: input.dedupeKey,
-        ...(input.candidate.statusMetadata !== undefined
-          ? { statusMetadata: input.candidate.statusMetadata }
-          : {})
-      }
+      reason,
+      observedAt: input.candidate.observedAt ?? input.now.toISOString()
     }
   };
 }
