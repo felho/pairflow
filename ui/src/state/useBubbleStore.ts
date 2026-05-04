@@ -40,7 +40,7 @@ import type {
 } from "../lib/types";
 import { bubbleLifecycleStates } from "../lib/types";
 
-const positionsStorageKey = "pairflow.ui.canvas.positions.v1";
+const positionsStorageKey = "pairflow.ui.canvas.positions.v2";
 const expandedIdsStorageKey = "pairflow.ui.canvas.expandedIds.v1";
 const pollingRefreshErrorPrefix = "Polling refresh failed:";
 const expandedTimelineLagRetryDelayMs = 150;

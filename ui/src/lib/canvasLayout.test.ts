@@ -5,6 +5,7 @@ import {
   cardHeight,
   cardWidth,
   defaultPosition,
+  expandedCardDimensions,
   expandedCardHeight,
   resolveViewportAwarePosition,
   resolveNonOverlappingPosition,
@@ -27,7 +28,7 @@ describe("resolveNonOverlappingPosition", () => {
     expect(position).toEqual(desired);
   });
 
-  it("prefers the same-row right slot before moving down", () => {
+  it("keeps the next expanded-grid row when the expanded predecessor ends at the gap boundary", () => {
     const desired = defaultPosition(4);
 
     const position = resolveNonOverlappingPosition(
@@ -36,10 +37,10 @@ describe("resolveNonOverlappingPosition", () => {
       false
     );
 
-    expect(position).toEqual(defaultPosition(6));
+    expect(position).toEqual(desired);
   });
 
-  it("treats expanded predecessor width as blocking adjacent columns", () => {
+  it("uses one expanded-sized grid for collapsed and expanded blockers", () => {
     const desired = defaultPosition(5);
 
     const collapsedPosition = resolveNonOverlappingPosition(
@@ -55,7 +56,7 @@ describe("resolveNonOverlappingPosition", () => {
       false
     );
 
-    expect(expandedPosition).toEqual(defaultPosition(6));
+    expect(expandedPosition).toEqual(desired);
   });
 
   it("moves down only when no right-side slot is available", () => {
@@ -71,13 +72,9 @@ describe("resolveNonOverlappingPosition", () => {
     expect(position.y).toBe(startY + expandedCardHeight + yGap);
   });
 
-  it("prefers a same-row right slot for expanded new bubble when available", () => {
+  it("keeps an expanded new bubble on the shared expanded-sized grid when available", () => {
     const desired = defaultPosition(1);
     const blocker = defaultPosition(2);
-    // Boundary arithmetic with current constants:
-    // desired collapsed right edge = 308 + 260 = 568
-    // blocker padded left edge = (594 - xGap) = 568
-    // so collapsed candidate is exactly non-overlapping at the boundary.
 
     const collapsedNewPosition = resolveNonOverlappingPosition(
       desired,
@@ -92,7 +89,7 @@ describe("resolveNonOverlappingPosition", () => {
       true
     );
 
-    expect(expandedNewPosition).toEqual(defaultPosition(3));
+    expect(expandedNewPosition).toEqual(desired);
   });
 
   it("places a new bubble outside an expanded blocker footprint", () => {
@@ -108,7 +105,7 @@ describe("resolveNonOverlappingPosition", () => {
       false
     );
 
-    expect(resolved).toEqual(defaultPosition(2));
+    expect(resolved).toEqual(desired);
     const blockerBottom =
       expandedBlocker.position.y + bubbleDimensions(expandedBlocker.expanded).height;
     expect(resolved.y + bubbleDimensions(false).height).toBeLessThanOrEqual(blockerBottom + yGap);
@@ -153,9 +150,75 @@ describe("resolveViewportAwarePosition", () => {
     });
   });
 
+  it("prefers a fully visible lower row before a partially visible right-side slot", () => {
+    const partialRightSlot = {
+      x: startX + 4 * (expandedCardDimensions.width + xGap),
+      y: startY
+    };
+    const lowerLeftSlot = defaultPosition(8);
+    const result = resolveViewportAwarePosition(
+      defaultPosition(12),
+      [
+        { position: defaultPosition(0), expanded: true },
+        { position: defaultPosition(1), expanded: true },
+        { position: defaultPosition(2), expanded: true },
+        { position: defaultPosition(3), expanded: true },
+        { position: defaultPosition(4), expanded: true },
+        { position: defaultPosition(5), expanded: true },
+        { position: defaultPosition(6), expanded: true },
+        { position: defaultPosition(7), expanded: true }
+      ],
+      true,
+      {
+        x: startX,
+        y: startY,
+        width: partialRightSlot.x + 120 - startX,
+        height: lowerLeftSlot.y + expandedCardDimensions.height - startY
+      }
+    );
+
+    expect(result).toEqual({
+      position: lowerLeftSlot,
+      source: "viewport"
+    });
+  });
+
+  it("prefers a vertically partial lower-left slot before a horizontally clipped right-side slot", () => {
+    const rightClippedSlot = {
+      x: startX + 4 * (expandedCardDimensions.width + xGap),
+      y: startY
+    };
+    const lowerLeftSlot = defaultPosition(8);
+    const result = resolveViewportAwarePosition(
+      defaultPosition(12),
+      [
+        { position: defaultPosition(0), expanded: true },
+        { position: defaultPosition(1), expanded: true },
+        { position: defaultPosition(2), expanded: true },
+        { position: defaultPosition(3), expanded: true },
+        { position: defaultPosition(4), expanded: true },
+        { position: defaultPosition(5), expanded: true },
+        { position: defaultPosition(6), expanded: true },
+        { position: defaultPosition(7), expanded: true }
+      ],
+      true,
+      {
+        x: startX,
+        y: startY,
+        width: rightClippedSlot.x + 240 - startX,
+        height: lowerLeftSlot.y + 120 - startY
+      }
+    );
+
+    expect(result).toEqual({
+      position: lowerLeftSlot,
+      source: "viewport"
+    });
+  });
+
   it("discovers visible grid candidates beyond the fallback column cap", () => {
     const beyondFallbackColumns = {
-      x: startX + 4 * (cardWidth + xGap),
+      x: startX + 4 * (expandedCardDimensions.width + xGap),
       y: startY
     };
 
@@ -218,7 +281,49 @@ describe("resolveViewportAwarePosition", () => {
     );
 
     expect(result).toEqual({
-      position: defaultPosition(2),
+      position: defaultPosition(1),
+      source: "viewport"
+    });
+  });
+
+  it("uses expanded-card spacing for every viewport grid candidate", () => {
+    const expandedStepX = expandedCardDimensions.width + xGap;
+    const expandedStepY = expandedCardDimensions.height + yGap;
+
+    const secondExpanded = resolveViewportAwarePosition(
+      defaultPosition(1),
+      [{ position: { x: startX, y: startY }, expanded: true }],
+      false,
+      {
+        x: startX,
+        y: startY,
+        width: startX + expandedStepX + expandedCardDimensions.width,
+        height: expandedCardDimensions.height
+      }
+    );
+
+    expect(secondExpanded).toEqual({
+      position: { x: startX + expandedStepX, y: startY },
+      source: "viewport"
+    });
+
+    const secondExpandedRow = resolveViewportAwarePosition(
+      defaultPosition(2),
+      [
+        { position: { x: startX, y: startY }, expanded: true },
+        { position: { x: startX + expandedStepX, y: startY }, expanded: true }
+      ],
+      false,
+      {
+        x: startX,
+        y: startY,
+        width: startX + expandedStepX + expandedCardDimensions.width,
+        height: startY + expandedStepY + expandedCardDimensions.height
+      }
+    );
+
+    expect(secondExpandedRow).toEqual({
+      position: { x: startX, y: startY + expandedStepY },
       source: "viewport"
     });
   });
@@ -229,7 +334,7 @@ describe("resolveViewportAwarePosition", () => {
     expect(
       resolveViewportAwarePosition(defaultPosition(4), occupied, false, null)
     ).toEqual({
-      position: defaultPosition(6),
+      position: defaultPosition(4),
       source: "generated-fallback"
     });
 
@@ -241,7 +346,7 @@ describe("resolveViewportAwarePosition", () => {
         height: cardHeight
       })
     ).toEqual({
-      position: defaultPosition(6),
+      position: defaultPosition(4),
       source: "generated-fallback"
     });
   });

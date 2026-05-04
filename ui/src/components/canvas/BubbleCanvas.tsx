@@ -630,10 +630,14 @@ export function BubbleCanvas(props: BubbleCanvasProps): JSX.Element {
   return (
     <main
       ref={scrollContainerRef}
-      className="relative flex-1 overflow-auto px-4 pb-6 pt-4"
-      style={canvasDimensions}
+      className="relative min-h-0 flex-1 overflow-auto px-4 pb-6 pt-4"
     >
-      <div ref={canvasContentRef} data-testid="canvas-content">
+      <div
+        ref={canvasContentRef}
+        className="relative"
+        data-testid="canvas-content"
+        style={canvasDimensions}
+      >
         {positioned.map((entry) => {
           const isExpanded = expandedSet.has(entry.bubble.bubbleId);
 

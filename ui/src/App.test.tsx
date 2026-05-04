@@ -70,6 +70,9 @@ describe("App", () => {
     expect(screen.getByText("Sample error")).toBeInTheDocument();
     expect(screen.getByText("Pairflow")).toBeInTheDocument();
     expect(screen.getByText("b-1")).toBeInTheDocument();
+    expect(screen.getByText("Pairflow").closest(".h-screen")).toHaveClass(
+      "overflow-hidden"
+    );
 
     expect(initialize).toHaveBeenCalledTimes(1);
 

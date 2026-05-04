@@ -8,6 +8,8 @@ title: "Card Placement UI Integration"
 status: archived
 phase: phase2
 target_files:
+  - "ui/src/lib/canvasLayout.ts"
+  - "ui/src/lib/canvasLayout.test.ts"
   - "ui/src/state/useBubbleStore.ts"
   - "ui/src/state/useBubbleStore.test.ts"
   - "ui/src/components/canvas/BubbleCanvas.tsx"
@@ -48,8 +50,10 @@ Pairflow core or rewrite existing explicit user positions.
    slot exists.
 2. Control model: browser UI owns local card placement preferences; Pairflow
    backend/core owns bubble lifecycle truth only.
-3. Grid model: the grid is fixed in canvas coordinates. The viewport is only a
-   window over that fixed grid, not a new viewport-relative grid origin.
+3. Grid model: the grid is fixed in canvas coordinates and uses one
+   expanded-card-sized cell for both collapsed and expanded render modes. The
+   viewport is only a window over that fixed grid, not a new viewport-relative
+   grid origin.
 4. Read-path rule: missing-position placement may read current visible bubbles,
    explicit stored positions, expanded/collapsed state, the pure layout helper,
    and the measured canvas viewport rectangle.
@@ -69,7 +73,8 @@ Pairflow core or rewrite existing explicit user positions.
    - workflow/orchestration closure: N/A.
    - read-model closure: this task for browser-local placement state only.
    - activation closure: this task proves the browser canvas path.
-   - cleanup/recovery closure: localStorage migration remains out of scope.
+   - cleanup/recovery closure: legacy localStorage position entries from the
+     previous placement contract are invalidated by storage-key versioning.
 
 ### Plan Linkage
 
@@ -95,7 +100,11 @@ Pairflow core or rewrite existing explicit user positions.
    - `ui/src/components/canvas/BubbleCanvas.test.tsx`
 2. Canonical elements:
    - bubble card placement is browser-local.
-   - `pairflow.ui.canvas.positions.v1` stores explicit user/manual positions.
+   - `pairflow.ui.canvas.positions.v2` stores explicit user/manual positions
+     for the expanded-grid placement contract.
+   - legacy `pairflow.ui.canvas.positions.v1` entries are ignored so stale
+     coordinates from the prior contract cannot reserve visually empty slots.
+   - generated/default candidate coordinates use the shared expanded-card grid.
    - generated fallback placement is display/default authority only.
    - manual/persisted positions outrank generated defaults.
    - backend/core bubble state remains independent from UI placement.
@@ -105,7 +114,7 @@ Pairflow core or rewrite existing explicit user positions.
      persistence.
 4. Compat-only elements:
    - existing index-based `defaultPosition(index)` remains the no-geometry
-     fallback path only.
+     fallback path only, but its slots are now spaced for expanded cards.
 5. Forbidden reinterpretations:
    - do not turn fallback-generated positions into durable manual positions.
    - do not make the grid viewport-relative.
@@ -121,7 +130,7 @@ Pairflow core or rewrite existing explicit user positions.
    tests.
 3. Mutation entrypoints in scope: local UI position persistence only.
 4. Hidden scope ruled out: API payloads, backend state, bubble lifecycle,
-   task/core runtime, and localStorage migration of existing entries.
+   task/core runtime, and in-place localStorage migration of existing entries.
 5. Branch inventory note: initial load vs realtime event; viewport available vs
    unavailable; explicit persisted position vs missing position; generated
    fallback before viewport measurement vs explicit user move.
@@ -132,7 +141,7 @@ Pairflow core or rewrite existing explicit user positions.
 ### Authority Boundary Map
 
 1. Authority producer: browser UI store/canvas placement path.
-2. Stored authority: `pairflow.ui.canvas.positions.v1` for explicit
+2. Stored authority: `pairflow.ui.canvas.positions.v2` for explicit
    user/manual positions only.
 3. In-scope consumers: canvas render path and store tests.
 4. Explicit out-of-scope consumers: Pairflow API, core lifecycle state,
@@ -189,7 +198,8 @@ same policy that unit tests exercise.
 
 ### Out of Scope
 
-1. Migrating existing `pairflow.ui.canvas.positions.v1` entries.
+1. In-place migration of existing `pairflow.ui.canvas.positions.v1` entries;
+   the implementation may instead invalidate them by using a new storage key.
 2. Rearranging already positioned cards.
 3. Backend/core API, SSE payload, task runtime, or lifecycle changes.
 4. Cross-browser visual screenshot automation unless unit/component tests cannot
@@ -209,9 +219,12 @@ same policy that unit tests exercise.
 |---|---|---|---|---|
 | Business invariant | New missing-position bubbles prefer useful visible fixed-grid slots. | Store/canvas must call viewport-aware helper when geometry exists. | P1 | required-now |
 | Control model | Browser-local UI owns placement; backend owns lifecycle only. | Do not change API/SSE/core contracts. | P1 | required-now |
-| Grid model | Grid is fixed in canvas coordinates; viewport is a window over it. | Candidate positions must use canvas grid coordinates, not viewport-relative origin. | P1 | required-now |
+| Grid model | Grid is fixed in canvas coordinates and uses expanded-card-sized cells; viewport is a window over it. | Candidate positions must use the shared expanded-card canvas grid, not viewport-relative origin or a separate collapsed-card grid. | P1 | required-now |
+| Visibility ranking | Fully visible free slots outrank every partially visible slot; fully visible slots are selected row-major. | A partially visible right-side frontier slot must not beat a fully visible lower-left slot. | P1 | required-now |
+| Partial fallback ranking | Width-visible partial slots outrank horizontally clipped right-side slots. | When no fully visible slot exists, prefer a vertically clipped lower-left card over a right-clipped same-row card. | P1 | required-now |
 | Read-path rule | Read explicit positions, expanded state, visible bubbles, and viewport bounds. | Store/canvas interface must provide these inputs deterministically. | P1 | required-now |
 | Persistence boundary | Generated fallback is not manual/user authority. | Store must retain source distinction or defer storage until viewport placement/user commit. | P1 | required-now |
+| Legacy position invalidation | Pre-expanded-grid stored positions do not carry authority into the new placement contract. | Store must read/write the current storage key and ignore old `positions.v1` entries. | P1 | required-now |
 | Missing-data rule | Missing viewport renders fallback and remains replaceable. | First render must not block or permanently pin fallback. | P1 | required-now |
 
 ### 0a) Canonical Contract Matrix
@@ -238,13 +251,13 @@ same policy that unit tests exercise.
 | Contract | Current | Target | Compatibility | Priority |
 |---|---|---|---|---|
 | Missing position assignment input | bubble list + stored positions + expanded state | add optional viewport rectangle / placement source handling | additive internal UI contract | P1 |
-| Stored positions | explicit `BubblePosition` map | preserve explicit map; add internal/generated distinction only if needed | no migration required | P1 |
+| Stored positions | explicit `BubblePosition` map | preserve explicit map under the current storage key; add internal/generated distinction only if needed | legacy v1 entries ignored by key versioning; no in-place migration required | P1 |
 
 ### 3) Side Effects Contract
 
 | Area | Allowed | Forbidden | Priority |
 |---|---|---|---|
-| localStorage/UI store | write explicit user/manual positions and viewport-aware auto positions when source semantics are safe | backend/core writes, API/SSE payload changes, migration of existing entries | P1 |
+| localStorage/UI store | write explicit user/manual positions and viewport-aware auto positions when source semantics are safe | backend/core writes, API/SSE payload changes, in-place migration of existing entries | P1 |
 
 ### 4) Error and Fallback Contract
 
@@ -271,6 +284,8 @@ same policy that unit tests exercise.
 | T4 | geometry-unavailable fallback | viewport missing on first render | bubbles render | generated fallback appears without durable manual authority | P1 |
 | T5 | fallback replacement | generated fallback exists, viewport later becomes available, no user move | viewport update runs placement | card receives viewport-aware position | P1 |
 | T6 | user move wins | user moves card before viewport replacement | viewport update runs placement | user position remains unchanged | P1 |
+| T7 | full visibility precedence | top rows are occupied, right frontier is partially visible, lower-left slot is fully visible | viewport-aware placement runs | lower-left fully visible slot wins before the partial right frontier | P1 |
+| T8 | horizontal visibility precedence | no fully visible slot exists, lower-left slot is vertically clipped, right-side slot is horizontally clipped | viewport-aware placement runs | lower-left width-visible partial slot wins before the right-clipped slot | P1 |
 
 ## L2 - Implementation Notes
 
@@ -278,7 +293,9 @@ same policy that unit tests exercise.
    shape if the store can keep generated fallback out of durable persistence.
 2. Keep viewport bounds in canvas coordinates so helper inputs match fixed-grid
    candidate coordinates.
-3. If component tests mock geometry, mock the same boundary the running canvas
+3. Use one expanded-card grid for generated/default positions; collapsed cards
+   render on that grid rather than defining a denser collapsed-only layout.
+4. If component tests mock geometry, mock the same boundary the running canvas
    uses rather than a separate test-only placement path.
 
 ## Hardening Backlog

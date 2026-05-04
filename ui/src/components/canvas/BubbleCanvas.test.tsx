@@ -136,7 +136,10 @@ describe("BubbleCanvas", () => {
       width: `${collapsedDimensions.width}px`,
       height: `${collapsedDimensions.height}px`
     });
-    expect(screen.getByRole("main")).toHaveStyle({
+    expect(screen.getByRole("main")).not.toHaveStyle({
+      minHeight: "560px"
+    });
+    expect(screen.getByTestId("canvas-content")).toHaveStyle({
       minHeight: "560px",
       minWidth: `${40 + collapsedDimensions.width + 24}px`
     });

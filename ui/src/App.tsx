@@ -40,7 +40,7 @@ export default function App(): JSX.Element {
   }, [store]);
 
   return (
-    <div className="flex min-h-screen flex-col text-white">
+    <div className="flex h-screen min-h-0 flex-col overflow-hidden text-white">
       <HeaderBar
         repos={repos}
         selectedRepos={selectedRepos}
