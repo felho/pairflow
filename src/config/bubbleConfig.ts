@@ -11,9 +11,6 @@ import {
 import {
   DEFAULT_COMMIT_REQUIRES_APPROVAL,
   DEFAULT_DOC_CONTRACT_ROUND_GATE_APPLIES_AFTER,
-  DEFAULT_LOCAL_OVERLAY_ENABLED,
-  DEFAULT_LOCAL_OVERLAY_ENTRIES,
-  DEFAULT_LOCAL_OVERLAY_MODE,
   DEFAULT_MAX_ROUNDS,
   DEFAULT_PAIRFLOW_COMMAND_PROFILE,
   DEFAULT_QUALITY_MODE,
@@ -26,7 +23,6 @@ import {
 import {
   isAgentName,
   isAttachLauncher,
-  isLocalOverlayMode,
   isPairflowCommandProfile,
   isQualityMode,
   isReviewArtifactType,
@@ -56,6 +52,7 @@ import {
   readStringArray
 } from "./bubbleConfig/readers.js";
 import { validateBubbleCommands } from "./bubbleConfig/commands.js";
+import { validateBubbleLocalOverlay } from "./bubbleConfig/localOverlay.js";
 import { assertValidBubbleConfigRemoteReferences } from "./bubbleConfig/remoteReferences.js";
 import { validateBubbleReviewPolicy } from "./bubbleConfig/reviewPolicy.js";
 
@@ -80,15 +77,6 @@ export {
   validateBubbleConfigRemoteReferences
 } from "./bubbleConfig/remoteReferences.js";
 export { renderBubbleConfigToml } from "./bubbleConfig/render.js";
-
-function isSafeLocalOverlayEntry(value: string): boolean {
-  const normalized = value.replaceAll("\\", "/");
-  if (normalized.startsWith("/") || normalized.includes("//")) {
-    return false;
-  }
-  const segments = normalized.split("/");
-  return segments.every((segment) => segment.length > 0 && segment !== ".." && segment !== ".");
-}
 
 export function validateBubbleConfig(input: unknown): ValidationResult<BubbleConfig> {
   const errors: ValidationError[] = [];
@@ -412,49 +400,7 @@ export function validateBubbleConfig(input: unknown): ValidationResult<BubbleCon
       )
     : undefined;
 
-  const localOverlayEnabled = localOverlay
-    ? (readBoolean(
-        localOverlay,
-        "enabled",
-        "local_overlay.enabled",
-        errors,
-        false
-      ) ?? DEFAULT_LOCAL_OVERLAY_ENABLED)
-    : DEFAULT_LOCAL_OVERLAY_ENABLED;
-  const localOverlayModeCandidate =
-    localOverlay?.mode ?? DEFAULT_LOCAL_OVERLAY_MODE;
-  if (!isLocalOverlayMode(localOverlayModeCandidate)) {
-    errors.push({
-      path: "local_overlay.mode",
-      message: "Must be one of: symlink, copy"
-    });
-  }
-  const localOverlayMode = isLocalOverlayMode(localOverlayModeCandidate)
-    ? localOverlayModeCandidate
-    : DEFAULT_LOCAL_OVERLAY_MODE;
-
-  const localOverlayEntriesInput = localOverlay
-    ? readStringArray(
-        localOverlay,
-        "entries",
-        "local_overlay.entries",
-        errors,
-        false
-      )
-    : undefined;
-  const localOverlayEntries =
-    localOverlayEntriesInput === undefined
-      ? [...DEFAULT_LOCAL_OVERLAY_ENTRIES]
-      : localOverlayEntriesInput;
-  for (const entry of localOverlayEntries) {
-    if (!isSafeLocalOverlayEntry(entry)) {
-      errors.push({
-        path: "local_overlay.entries",
-        message:
-          "Entries must be normalized relative paths without '.'/'..' segments"
-      });
-    }
-  }
+  const validatedLocalOverlay = validateBubbleLocalOverlay(localOverlay, errors);
 
   const docContractGateWarnings: string[] = [];
   const existingDocContractGateParseWarning = docContractGates
@@ -594,11 +540,7 @@ export function validateBubbleConfig(input: unknown): ValidationResult<BubbleCon
     },
     commands: validatedCommands as BubbleConfig["commands"],
     notifications: validatedNotifications,
-    local_overlay: {
-      enabled: localOverlayEnabled,
-      mode: localOverlayMode,
-      entries: localOverlayEntries
-    },
+    local_overlay: validatedLocalOverlay,
     doc_contract_gates: {
       round_gate_applies_after: roundGateAppliesAfter,
       ...((existingDocContractGateParseWarning !== undefined || docContractGateWarnings.length > 0)
