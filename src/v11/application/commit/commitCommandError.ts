@@ -1,7 +1,7 @@
 import {
   normalizePairflowCommandErrorInput,
   withRequiredCommandContext
-} from "../errors/commandErrorDetails.js";
+} from "../../shared/errors/commandErrorDetails.js";
 
 export class BubbleCommitError extends Error {
   public readonly reasonCode: string | undefined;

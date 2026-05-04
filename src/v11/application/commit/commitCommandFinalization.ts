@@ -11,7 +11,7 @@ import type {
 import {
   appendCommitResultEnvelopeMutation,
   persistCommittedThenDoneStateMutation
-} from "../../shared/commit/commitCommandFinalizationMutation.js";
+} from "./commitCommandFinalizationMutation.js";
 
 export async function appendCommitResultEnvelope(input: {
   context: CommitRuntimeContext;
