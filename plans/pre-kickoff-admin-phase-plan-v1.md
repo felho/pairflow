@@ -23,8 +23,8 @@ task_tracker:
     task_path: plans/tasks/1-prep-admin-contract.md
     status: done
   - task_id: 2-prep-admin-publish
-    task_path: null
-    status: not_created
+    task_path: plans/tasks/2-prep-admin-publish.md
+    status: approved
   - task_id: 3-doc-bubble-start-integration
     task_path: null
     status: not_created
@@ -217,8 +217,8 @@ rename of the runtime concept.
 
 | Task ID | Task Path | Purpose | Depends On | Closes Gap | Status |
 |---|---|---|---|---|---|
-| `1-prep-admin-contract` | `plans/tasks/1-prep-admin-contract.md` | Document the `ExecutePairflowPlan` route pattern that uses ideation bubbles as pre-kickoff admin containers, relying on existing `UsePairflow` round-0 hold semantics and without changing default behavior. | N/A | `ExecutePairflowPlan` has no explicit contract for bounded admin before kickoff. | approved |
-| `2-prep-admin-publish` | `null` | Add a manual pre-kickoff admin publish workflow: status check, scope check, bubble-worktree commit, short main publish, postcondition verification, and fail-closed no-kickoff behavior. Keep the owner in `ExecutePairflowPlan` unless the task proves a generic `UsePairflow` lifecycle workflow is required. | `1-prep-admin-contract` | Operators cannot run the pattern through a first-class workflow. | not_created |
+| `1-prep-admin-contract` | `plans/tasks/1-prep-admin-contract.md` | Document the `ExecutePairflowPlan` route pattern that uses ideation bubbles as pre-kickoff admin containers, relying on existing `UsePairflow` round-0 hold semantics and without changing default behavior. | N/A | `ExecutePairflowPlan` has no explicit contract for bounded admin before kickoff. | done |
+| `2-prep-admin-publish` | `plans/tasks/2-prep-admin-publish.md` | Add a manual pre-kickoff admin publish workflow: status check, scope check, bubble-worktree commit, short main publish, postcondition verification, and fail-closed no-kickoff behavior. Keep the owner in `ExecutePairflowPlan` unless the task proves a generic `UsePairflow` lifecycle workflow is required. | `1-prep-admin-contract` | Operators cannot run the pattern through a first-class workflow. | approved |
 | `3-doc-bubble-start-integration` | `null` | Integrate only `CreateDocumentBubble` with the pre-kickoff admin publish workflow while leaving implementation-bubble creation on the existing path. | `2-prep-admin-publish` | Document-bubble start still needs main-side admin/linkage handling. | not_created |
 | `4-impl-bubble-start-integration` | `null` | Integrate only `CreateImplementationBubble` with the pre-kickoff admin publish workflow after the document path is proven. | `3-doc-bubble-start-integration` | Implementation-bubble start still needs main-side admin/linkage handling. | not_created |
 | `5-close-admin-verifier` | `null` | Make close aftermath verifier-first: accept scoped admin already carried by the bubble branch, and reconcile on `main` only when deterministic postconditions are missing. | `4-impl-bubble-start-integration` | Close aftermath can still spend unnecessary time editing `main`. | not_created |
