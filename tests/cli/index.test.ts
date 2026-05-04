@@ -203,6 +203,91 @@ describe("runCli", () => {
     expect(stdoutSpy).toHaveBeenCalled();
   });
 
+  it("supports bubble extract help", async () => {
+    const exitCode = await runCli(["bubble", "extract", "--help"]);
+
+    expect(exitCode).toBe(0);
+    expect(stdoutSpy).toHaveBeenCalled();
+    const output = stdoutSpy.mock.calls.map((call) => String(call[0])).join("");
+    expect(output).toContain("pairflow bubble extract");
+    expect(output).not.toContain("--delete-bubble");
+  });
+
+  it("returns zero for bubble extract when preconditions pass and transfer is deferred", async () => {
+    const repoPath = await mkdtemp(join(tmpdir(), "pairflow-cli-extract-"));
+    tempDirs.push(repoPath);
+    await initGitRepository(repoPath);
+    const bubble = await createBubble({
+      repoPath,
+      id: "b_cli_extract_01",
+      baseBranch: "main",
+      reviewArtifactType: "code",
+      ideation: true,
+      cwd: repoPath
+    });
+    await runGit(repoPath, ["add", ".pairflow"]);
+    await runGit(repoPath, ["commit", "-m", "test: add ideation bubble"]);
+
+    const previousCwd = process.cwd();
+    try {
+      process.chdir(repoPath);
+      const exitCode = await runCli([
+        "bubble",
+        "extract",
+        "--id",
+        bubble.bubbleId,
+        "--path",
+        "docs/idea.md"
+      ]);
+
+      expect(exitCode).toBe(0);
+      const output = stdoutSpy.mock.calls.map((call) => String(call[0])).join("");
+      expect(output).toContain(`Extract preconditions passed for ${bubble.bubbleId}`);
+      expect(output).toContain("Transfer is not implemented");
+    } finally {
+      process.chdir(previousCwd);
+    }
+  });
+
+  it("uses --repo to locate bubble extract when cwd is outside the repository", async () => {
+    const repoPath = await mkdtemp(join(tmpdir(), "pairflow-cli-extract-repo-"));
+    const outsideCwd = await mkdtemp(join(tmpdir(), "pairflow-cli-extract-outside-"));
+    tempDirs.push(repoPath, outsideCwd);
+    await initGitRepository(repoPath);
+    const bubble = await createBubble({
+      repoPath,
+      id: "b_cli_extract_repo_01",
+      baseBranch: "main",
+      reviewArtifactType: "code",
+      ideation: true,
+      cwd: repoPath
+    });
+    await runGit(repoPath, ["add", ".pairflow"]);
+    await runGit(repoPath, ["commit", "-m", "test: add ideation bubble"]);
+
+    const previousCwd = process.cwd();
+    try {
+      process.chdir(outsideCwd);
+      const exitCode = await runCli([
+        "bubble",
+        "extract",
+        "--id",
+        bubble.bubbleId,
+        "--repo",
+        repoPath,
+        "--path",
+        "docs/idea.md"
+      ]);
+
+      expect(exitCode).toBe(0);
+      const output = stdoutSpy.mock.calls.map((call) => String(call[0])).join("");
+      expect(output).toContain(`Extract preconditions passed for ${bubble.bubbleId}`);
+      expect(output).not.toContain("EXTRACT_BUBBLE_NOT_FOUND");
+    } finally {
+      process.chdir(previousCwd);
+    }
+  });
+
   it("supports bubble resume help", async () => {
     const exitCode = await runCli(["bubble", "resume", "--help"]);
 

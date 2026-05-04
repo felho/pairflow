@@ -8,6 +8,7 @@ const directBubbleCliShimCommands = [
   "commit",
   "create",
   "delete",
+  "extract",
   "inbox",
   "kickoff",
   "list",
