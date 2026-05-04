@@ -273,11 +273,42 @@ describe("plan watch command", () => {
     });
 
     expect(chunks.join("")).toContain(
-      "\r\u001b[2Kplan watch: idle iterations=55 elapsed=55m candidates=0"
+      "\r\u001b[2Kplan watch: idle iterations=55 elapsed=55m candidates=0 deferred=0"
     );
     expect(chunks.join("")).toContain(
       "\nplan watch: candidate task=3-watch-loop"
     );
+  });
+
+  it("keeps overwritten idle progress within narrow TTY width", () => {
+    const chunks: string[] = [];
+    const renderer = new PlanWatchTerminalRenderer({
+      isTty: true,
+      columns: 40,
+      color: false,
+      write: (text) => {
+        chunks.push(text);
+      }
+    });
+
+    renderer.writeEvent({
+      kind: "iteration_completed",
+      iterationIndex: 75,
+      result: {
+        status: "idle",
+        repoPath: "/repo",
+        planPath: "/repo/plans/local-plan-watch-plan-v1.md",
+        scannedCandidateCount: 0,
+        deferredCandidateCount: 3,
+        diagnostics: [],
+        onceExit: false
+      }
+    });
+
+    const output = chunks.join("");
+    const controlPrefix = "\r\u001b[2K";
+    expect(output).toBe(`${controlPrefix}plan watch: idle i=76 t=1h16m c=0 d=3`);
+    expect(output.length - controlPrefix.length).toBeLessThan(40);
   });
 
   it("returns blocked runner_config_missing through the command path", async () => {

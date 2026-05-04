@@ -380,7 +380,8 @@ async function handlePlanWatchCommand(args: string[]): Promise<number> {
       write: (text) => {
         process.stderr.write(text);
       },
-      isTty: process.stderr.isTTY === true
+      isTty: process.stderr.isTTY === true,
+      columns: process.stderr.columns
     });
     const result = await runPlanWatchCommand(
       args,

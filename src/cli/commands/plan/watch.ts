@@ -452,6 +452,7 @@ export class PlanWatchTerminalRenderer {
     private readonly input: {
       write: (text: string) => void;
       isTty: boolean;
+      columns?: number | undefined;
       color?: boolean | undefined;
     }
   ) {}
@@ -487,12 +488,28 @@ export class PlanWatchTerminalRenderer {
 
   private writeIdle(event: Extract<PlanWatchEvent, { kind: "iteration_completed" }>): void {
     const iterations = event.iterationIndex + 1;
-    const text = [
+    const elapsed = formatElapsed(iterations * this.intervalMs);
+    const candidates = event.result.scannedCandidateCount;
+    const deferred = event.result.deferredCandidateCount;
+    const text = chooseIdleProgressText(this.input.columns, [
       "plan watch: idle",
       `iterations=${iterations}`,
-      `elapsed=${formatElapsed(iterations * this.intervalMs)}`,
-      `candidates=${event.result.scannedCandidateCount}`
-    ].join(" ");
+      `elapsed=${elapsed}`,
+      `candidates=${candidates}`,
+      `deferred=${deferred}`
+    ].join(" "), [
+      "plan watch: idle",
+      `i=${iterations}`,
+      `t=${elapsed}`,
+      `c=${candidates}`,
+      `d=${deferred}`
+    ].join(" "), [
+      "idle",
+      `i=${iterations}`,
+      `t=${elapsed}`,
+      `c=${candidates}`,
+      `d=${deferred}`
+    ].join(" "));
     this.input.write(`\r\u001b[2K${colorizePlanWatchLine(text, this.useColor())}`);
     this.idleLineActive = true;
   }
@@ -504,6 +521,24 @@ export class PlanWatchTerminalRenderer {
   private useColor(): boolean {
     return this.input.isTty && this.input.color !== false;
   }
+}
+
+function chooseIdleProgressText(
+  columns: number | undefined,
+  fullText: string,
+  compactText: string,
+  minimalText: string
+): string {
+  if (columns === undefined || columns <= 0) {
+    return fullText;
+  }
+  const maxColumns = Math.max(1, columns - 1);
+  for (const text of [fullText, compactText, minimalText]) {
+    if (text.length <= maxColumns) {
+      return text;
+    }
+  }
+  return minimalText.slice(0, maxColumns);
 }
 
 function colorizePlanWatchLine(line: string, color: boolean): string {
