@@ -5,22 +5,22 @@ plan_id: ui-card-placement-determinism-plan-v1
 created_on: "2026-05-04"
 title: "UI Card Placement Determinism Plan"
 status: approved
-plan_status: approved
+plan_status: in_progress
 prd_ref: docs/pairflow-ui-prd.md
 owners:
   - "felho"
 task_order:
   - 1-card-placement-policy
   - 2-card-placement-ui-integration
-active_task_id: 1-card-placement-policy
+active_task_id: 2-card-placement-ui-integration
 archive_group: 2026-05-04-ui-card-placement-determinism-plan-v1
 task_tracker:
   - task_id: 1-card-placement-policy
-    task_path: plans/tasks/1-card-placement-policy.md
-    status: in_progress
+    task_path: plans/archive/tasks/2026-05-04-ui-card-placement-determinism-plan-v1/1-card-placement-policy.md
+    status: archived
   - task_id: 2-card-placement-ui-integration
-    task_path: null
-    status: not_created
+    task_path: plans/tasks/2-card-placement-ui-integration.md
+    status: approved
 ---
 
 # Plan: UI Card Placement Determinism
@@ -199,8 +199,8 @@ remains the source of truth for bubble existence and state.
 
 | Task ID | Task Path | Purpose | Depends On | Closes Gap | Status |
 |---|---|---|---|---|---|
-| `1-card-placement-policy` | `plans/tasks/1-card-placement-policy.md` | Define the pure placement policy in `ui/src/lib/canvasLayout.ts`: grid candidate generation, occupied footprint filtering, full-visibility preference, visible-area ranking, and row-major tie-breaks. | N/A | Missing viewport-aware deterministic placement policy. | approved |
-| `2-card-placement-ui-integration` | `null` | Wire the placement policy into store/canvas missing-position assignment for initial load and realtime-created bubbles without rewriting persisted/manual positions, prevent geometry-unavailable fallback positions from becoming durable manual/user authority, and prove the viewport-measured browser canvas path. | `1-card-placement-policy` | New bubbles still use the old index-first placement path in the running UI, and early generated fallback positions can be persisted before viewport geometry is known. | not_created |
+| `1-card-placement-policy` | `plans/archive/tasks/2026-05-04-ui-card-placement-determinism-plan-v1/1-card-placement-policy.md` | Define the pure placement policy in `ui/src/lib/canvasLayout.ts`: grid candidate generation, occupied footprint filtering, full-visibility preference, visible-area ranking, and row-major tie-breaks. | N/A | Missing viewport-aware deterministic placement policy. | archived |
+| `2-card-placement-ui-integration` | `plans/tasks/2-card-placement-ui-integration.md` | Wire the placement policy into store/canvas missing-position assignment for initial load and realtime-created bubbles without rewriting persisted/manual positions, prevent geometry-unavailable fallback positions from becoming durable manual/user authority, and prove the viewport-measured browser canvas path. | `1-card-placement-policy` | New bubbles still use the old index-first placement path in the running UI, and early generated fallback positions can be persisted before viewport geometry is known. | approved |
 
 ## Coverage Map
 

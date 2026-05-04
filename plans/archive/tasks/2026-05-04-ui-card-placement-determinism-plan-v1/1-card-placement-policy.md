@@ -5,7 +5,7 @@ task_family_id: card-placement-policy
 sequence_key: "1"
 task_id: 1-card-placement-policy
 title: "Card Placement Policy"
-status: in_progress
+status: archived
 phase: phase1
 target_files:
   - "ui/src/lib/canvasLayout.ts"
@@ -20,6 +20,8 @@ impl_bubble_id: card-placement-policy-impl
 supersedes: []
 superseded_by: null
 archive_group: 2026-05-04-ui-card-placement-determinism-plan-v1
+archive_path: plans/archive/tasks/2026-05-04-ui-card-placement-determinism-plan-v1/1-card-placement-policy.md
+closed_at: "2026-05-04T18:26:03+02:00"
 ---
 
 # Task: Card Placement Policy
