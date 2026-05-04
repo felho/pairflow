@@ -305,6 +305,27 @@ export {
   runBubbleDeleteCommand
 } from "./cli/commands/bubble/delete.js";
 export {
+  getBubbleExtractHelpText,
+  parseBubbleExtractCommandOptions,
+  renderBubbleExtractText,
+  runBubbleExtractCommand
+} from "./cli/commands/bubble/extract.js";
+export {
+  extractBubbleV11 as extractBubble
+} from "./v11/application/extract/emitExtractV11.js";
+export {
+  extractCommandDependencyDefaults
+} from "./v11/defaults/extract/extractCommandDefaults.js";
+export type {
+  ExtractCommandDependencies,
+  ExtractCommandDiagnostics,
+  ExtractCommandFailureReasonCode,
+  ExtractCommandInput,
+  ExtractCommandOptions,
+  ExtractCommandResult,
+  ExtractTargetCheckoutFailureReason
+} from "./v11/application/extract/extractCommandContract.js";
+export {
   getBubbleStatusHelpText,
   parseBubbleStatusCommandOptions,
   renderBubbleStatusText,

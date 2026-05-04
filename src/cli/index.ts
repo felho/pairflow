@@ -92,6 +92,12 @@ import {
   runBubbleDeleteCommand
 } from "./commands/bubble/delete.js";
 import {
+  getBubbleExtractHelpText,
+  parseBubbleExtractCommandOptions,
+  renderBubbleExtractText,
+  runBubbleExtractCommand
+} from "./commands/bubble/extract.js";
+import {
   getBubbleStatusHelpText,
   parseBubbleStatusCommandOptions,
   renderBubbleStatusTable,
@@ -663,6 +669,30 @@ async function handleBubbleDeleteCommand(args: string[]): Promise<number> {
   }
 }
 
+async function handleBubbleExtractCommand(args: string[]): Promise<number> {
+  try {
+    const parsed = parseBubbleExtractCommandOptions(args);
+    const jsonOutput = !parsed.help && parsed.json;
+    const result = await runBubbleExtractCommand(args);
+    if (result === null) {
+      process.stdout.write(`${getBubbleExtractHelpText()}\n`);
+      return 0;
+    }
+
+    if (jsonOutput) {
+      process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
+    } else {
+      process.stdout.write(`${renderBubbleExtractText(result)}\n`);
+    }
+
+    return result.status === "failed" ? 1 : 0;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    process.stderr.write(`${message}\n`);
+    return 1;
+  }
+}
+
 async function handleBubbleStatusCommand(args: string[]): Promise<number> {
   const parsed = parseBubbleStatusCommandOptions(args);
   if (parsed.help) {
@@ -825,6 +855,7 @@ const bubbleSubcommandHandlers: Readonly<
   open: handleBubbleOpenCommand,
   stop: handleBubbleStopCommand,
   delete: handleBubbleDeleteCommand,
+  extract: handleBubbleExtractCommand,
   resume: handleBubbleResumeCommand,
   restart: handleBubbleRestartCommand,
   status: handleBubbleStatusCommand,
