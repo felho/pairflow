@@ -263,6 +263,35 @@ describe("planWatchLoop", () => {
     );
   });
 
+  it("uses run-now force only once inside a long-running watch loop", async () => {
+    const ledger = memoryLedger();
+    const sleep = vi.fn(async () => {});
+    const dependencies = deps({ ledger });
+    dependencies.sleep = sleep;
+
+    const result = await runPlanWatchLoop(
+      {
+        repoPath: "/repo",
+        planPath: "plans/local-plan-watch-plan-v1.md",
+        intervalMs: 25,
+        maxIterations: 2,
+        runNow: true,
+        forceRun: true,
+        runnerConfig: { command: "agent" }
+      },
+      dependencies
+    );
+
+    expect(result.iterations.map((iteration) => iteration.status)).toEqual([
+      "runner_settled_checkpoint",
+      "idle"
+    ]);
+    expect(result.stopReason).toBe("max_iterations");
+    expect(dependencies.runExecutePairflowPlanContinuation).toHaveBeenCalledOnce();
+    expect(ledger.records).toHaveLength(1);
+    expect(sleep).toHaveBeenCalledOnce();
+  });
+
   it("reserves, invokes, and completes a new approval-ready trigger", async () => {
     const ledger = memoryLedger();
     const dependencies = deps({

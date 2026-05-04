@@ -156,7 +156,10 @@ export async function runPlanWatchLoop(
     if (input.stopSignal?.aborted) {
       return stopLoop(input, iterations, "signal");
     }
-    const result = await runPlanWatchIteration(input, dependencies);
+    const result = await runPlanWatchIteration(
+      planWatchIterationInput(input, iterationCount),
+      dependencies
+    );
     iterations.push(result);
     iterationCount += 1;
     await emitPlanWatchEvent(input, {
@@ -179,6 +182,20 @@ export async function runPlanWatchLoop(
   }
 
   return stopLoop(input, iterations, "max_iterations");
+}
+
+function planWatchIterationInput(
+  input: PlanWatchInput,
+  iterationCount: number
+): PlanWatchInput {
+  if (iterationCount === 0 || input.runNow !== true) {
+    return input;
+  }
+  return {
+    ...input,
+    runNow: false,
+    forceRun: false
+  };
 }
 
 async function stopLoop(
