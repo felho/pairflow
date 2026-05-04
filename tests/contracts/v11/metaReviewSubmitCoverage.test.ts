@@ -649,6 +649,7 @@ describe("v11 meta-review submit contract", () => {
       findings_claimed_open_total: 2,
       findings_digest_sha256: null,
       findings_parity_status: null,
+      consecutive_clean_runs: 0,
       latest_recommendation: "inconclusive",
       meta_review_gate_route: "human_gate_inconclusive",
       meta_review_run_id: "run_meta_contract_submit_inconclusive_01"

@@ -142,6 +142,64 @@ describe("BubbleTimeline", () => {
     expect(screen.queryByText("Meta-review gate opened.")).not.toBeInTheDocument();
   });
 
+  it("uses meta-review handoff attempt when the first kickoff row is absent", () => {
+    render(
+      <BubbleTimeline
+        entries={[
+          timelineEntry({
+            id: "env-implementer-pass",
+            type: "PASS",
+            sender: "codex",
+            recipient: "codex",
+            payload: {
+              summary: "Ready for meta-review.",
+              metadata: {
+                delivery_target_role: "meta_reviewer"
+              }
+            }
+          }),
+          timelineEntry({
+            id: "env-meta-gate-2",
+            type: "TASK",
+            sender: "orchestrator",
+            recipient: "codex",
+            payload: {
+              summary: "Meta-review gate opened again.",
+              metadata: {
+                delivery_target_role: "meta_reviewer",
+                actor: "meta-review-gate",
+                actor_agent: "orchestrator",
+                meta_review_handoff_id:
+                  "meta_review:b-meta-gate:round:4:attempt:2"
+              }
+            }
+          }),
+          timelineEntry({
+            id: "env-meta-approve-2",
+            type: "APPROVAL_REQUEST",
+            sender: "orchestrator",
+            recipient: "human",
+            payload: {
+              summary: "Second clean meta-review.",
+              metadata: {
+                actor: "meta-reviewer",
+                actor_agent: "codex",
+                latest_recommendation: "approve"
+              }
+            }
+          })
+        ]}
+        isLoading={false}
+        error={null}
+        compact
+        metaReviewCleanRunsRequired={2}
+      />
+    );
+
+    expect(screen.getByText("clean 1")).toBeInTheDocument();
+    expect(screen.getByText("approve")).toBeInTheDocument();
+  });
+
   it("does not render a clean-run progress row for a final single-run approval after prior rework", () => {
     render(
       <BubbleTimeline

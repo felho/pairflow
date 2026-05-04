@@ -1346,6 +1346,9 @@ describe("finalizeCurrentRunMetaReviewGate", () => {
 
     expect(result.route).toBe("human_gate_approve");
     expect(result.state.meta_review?.consecutive_clean_runs).toBe(2);
+    expect(
+      append.envelopes.at(-1)?.payload.metadata?.consecutive_clean_runs
+    ).toBe(2);
   });
 
   it("resets a stale clean streak before auto-rework dispatch", async () => {

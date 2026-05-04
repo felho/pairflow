@@ -66,6 +66,7 @@ export type AppendHumanGateApprovalRequestInput = {
   parityMetadata?: FindingsParityMetadata | null;
   findings?: MetaReviewGateAdvisoryFinding[];
   gateReasonCode?: string;
+  consecutiveCleanRuns?: number;
 }
   & (
     | {
@@ -105,6 +106,9 @@ export async function appendHumanGateApprovalRequest(
       recommendation: input.recommendation,
       parityMetadata: input.parityMetadata,
       thresholdMetadata: input.thresholdMetadata,
+      ...(input.consecutiveCleanRuns !== undefined
+        ? { consecutiveCleanRuns: input.consecutiveCleanRuns }
+        : {}),
       ...(input.gateReasonCode !== undefined
         ? { gateReasonCode: input.gateReasonCode }
         : {}),
@@ -128,6 +132,9 @@ export async function appendHumanGateApprovalRequest(
       ? { recommendation: input.recommendation }
       : {}),
     parityMetadata: input.parityMetadata,
+    ...(input.consecutiveCleanRuns !== undefined
+      ? { consecutiveCleanRuns: input.consecutiveCleanRuns }
+      : {}),
     ...(input.gateReasonCode !== undefined
       ? { gateReasonCode: input.gateReasonCode }
       : {}),

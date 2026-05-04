@@ -120,6 +120,9 @@ async function appendHumanGateRequestForRoute(input: {
     ...(input.persistInput.gateReasonCode !== undefined
       ? { gateReasonCode: input.persistInput.gateReasonCode }
       : {}),
+    ...(input.persistInput.consecutiveCleanRuns !== undefined
+      ? { consecutiveCleanRuns: input.persistInput.consecutiveCleanRuns }
+      : {}),
     ...(input.advisoryFindings !== undefined ? { findings: input.advisoryFindings } : {})
   };
 

@@ -134,12 +134,28 @@ function buildDisplayTimelineItems(input: {
     const decisionTag = extractDecisionTag(entry);
 
     if (isMetaReviewHandoff(entry)) {
+      const handoffAttempt = extractMetaReviewHandoffAttempt(entry);
       if (!metaRunPending) {
+        if (handoffAttempt !== null && handoffAttempt > 1) {
+          const nextCleanRunCount = Math.max(metaCleanRuns + 1, handoffAttempt - 1);
+          if (cleanRunsRequired > 1 && nextCleanRunCount < cleanRunsRequired) {
+            metaCleanRuns = nextCleanRunCount;
+            metaRunPending = true;
+            items.push({
+              entry,
+              metaReviewRerunCleanRunCount: nextCleanRunCount
+            });
+          }
+          continue;
+        }
         metaRunPending = true;
         continue;
       }
 
-      const nextCleanRunCount = metaCleanRuns + 1;
+      const nextCleanRunCount = Math.max(
+        metaCleanRuns + 1,
+        handoffAttempt !== null ? handoffAttempt - 1 : 0
+      );
       if (cleanRunsRequired > 1 && nextCleanRunCount < cleanRunsRequired) {
         metaCleanRuns = nextCleanRunCount;
         metaRunPending = true;

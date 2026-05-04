@@ -170,6 +170,7 @@ export async function appendHumanApprovalRequestEnvelope(input: {
   gateReasonCode?: string;
   findings?: ApprovalAdvisoryFinding[];
   reviewerSnapshot?: LatestSameRoundReviewerSnapshot;
+  consecutiveCleanRuns?: number;
 }): Promise<AppendProtocolEnvelopeResult> {
   const appendEnvelope = input.appendEnvelope ?? appendProtocolEnvelope;
   if (
@@ -246,6 +247,9 @@ export async function appendHumanApprovalRequestEnvelope(input: {
           actor_agent: input.metaReviewerAgent,
           ...(input.recommendation !== undefined
             ? { latest_recommendation: input.recommendation }
+            : {}),
+          ...(input.consecutiveCleanRuns !== undefined
+            ? { consecutive_clean_runs: input.consecutiveCleanRuns }
             : {}),
           ...resolveGateRouteMetadata({
             route: input.route,
