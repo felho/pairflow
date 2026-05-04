@@ -5,7 +5,7 @@ task_family_id: action-response-validation
 sequence_key: "3a"
 task_id: 3a-action-response-validation
 title: "Action Response Validation"
-status: implementable
+status: in_progress
 phase: phase3a
 target_files:
   - src/v11/infrastructure/ui/routerActionDispatch.ts
@@ -27,7 +27,7 @@ normative_refs:
 owners:
   - "felho"
 doc_bubble_id: 3a-action-response-validation-doc
-impl_bubble_id: null
+impl_bubble_id: 3a-action-response-validation-impl
 supersedes: []
 superseded_by: null
 archive_group: 2026-05-04-ui-contract-boundary-hardening-plan-v1
