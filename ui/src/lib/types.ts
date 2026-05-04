@@ -1,20 +1,84 @@
 import {
   bubbleLifecycleStates
-} from "./contracts/bubbleLifecycle.js";
+} from "@pairflow/ui-contracts";
 import type {
-  BubbleLifecycleState
-} from "./contracts/bubbleLifecycle.js";
-import type {
-  UiBubbleReviewPolicy,
-  UiBubbleSummary
-} from "../../../src/contracts/ui/uiReadModel.js";
-import type {
+  BubbleLifecycleState,
+  DeleteBubbleArtifacts as BubbleDeleteArtifacts,
+  DeleteBubbleResult as BubbleDeleteResult,
   MetaReviewQualityPreset as CanonicalMetaReviewQualityPreset,
+  UiApiErrorBody,
+  UiApprovalDecisionDeliverySignal,
+  UiApprovalDecisionDeliverySignals,
+  UiApprovalRequestGateRoute,
+  UiAttachBubbleResult,
   UiAttachBubbleResult as CanonicalUiAttachBubbleResult,
+  UiBubbleAttention,
+  UiBubbleAttentionCode,
+  UiBubbleDetail,
+  UiBubbleInbox,
+  UiBubbleInboxInput,
+  UiBubbleInboxItem,
+  UiBubbleInboxView,
+  UiBubbleListEntry,
+  UiBubbleListRemoteExecution,
+  UiBubbleListStateCounts,
+  UiBubbleListView,
+  UiBubbleMetaReviewSummary,
+  UiBubbleRemovedEvent,
+  UiBubbleRemoteCacheStatus,
+  UiBubbleRemoteExecution,
+  UiBubbleReviewPolicy,
+  UiBubbleStateCounts,
+  UiBubbleStatusCacheReasonCode,
+  UiBubbleStatusInput,
+  UiBubbleStatusRemoteExecution,
+  UiBubbleStatusView,
+  UiBubbleSummary,
+  UiBubbleTranscriptSummary,
+  UiBubbleUpdatedEvent,
+  UiBubbleWatchdog,
   UiCommitBubbleInput,
+  UiCommitBubbleResult,
+  UiDeleteBubbleInput,
+  UiDeleteBubbleResult,
+  UiEmitApprovalDecisionResult,
+  UiEmitApproveInput,
+  UiEmitHumanReplyInput,
+  UiEmitHumanReplyResult,
+  UiEmitRequestReworkImmediateResult,
+  UiEmitRequestReworkInput,
+  UiEmitRequestReworkQueuedResult,
+  UiEmitRequestReworkResult,
+  UiEvent,
+  UiEventBase,
+  UiEventsConnectedPayload,
   UiMergeBubbleInput,
-  UiUpdateBubbleReviewPolicyInput
-} from "../../../src/contracts/ui/uiActions.js";
+  UiMergeBubbleResult,
+  UiOpenBubbleResult,
+  UiPendingInboxCounts,
+  UiPendingInboxItemSource,
+  UiPendingInboxItemType,
+  ProtocolMessageType,
+  UiRepoRemovedEvent,
+  UiRepoSummary,
+  UiRepoUpdatedEvent,
+  UiRestartBubbleResult,
+  UiReviewVerificationState,
+  UiRuntimeHealth,
+  UiRuntimeMetaReviewerPaneBinding,
+  UiRuntimeSessionRecord,
+  UiRuntimeSessionsSummary,
+  UiSnapshotEvent,
+  UiSseEventName,
+  UiStartBubbleResult,
+  UiStatusCommandPathView,
+  UiStatusExecutionContextView,
+  UiStatusPaneActivityView,
+  UiStopBubbleResult,
+  UiTimelineEntry,
+  UiUpdateBubbleReviewPolicyInput,
+  UiUpdateBubbleReviewPolicyResult as UpdateReviewPolicyActionResult
+} from "@pairflow/ui-contracts";
 
 export { bubbleLifecycleStates };
 export type { BubbleLifecycleState };
@@ -24,14 +88,12 @@ export type {
   UiBubbleRemoteExecution,
   UiBubbleStatusCacheReasonCode,
   UiBubbleStatusRemoteExecution
-} from "./contracts/uiRemoteExecution.js";
+};
 export type {
-  DeleteBubbleArtifacts as BubbleDeleteArtifacts,
-  DeleteBubbleResult as BubbleDeleteResult
-} from "../../../src/contracts/ui/deleteBubble.js";
-export type {
+  BubbleDeleteArtifacts,
+  BubbleDeleteResult,
   UiApiErrorBody
-} from "../../../src/contracts/ui/uiErrors.js";
+};
 export type {
   UiApprovalDecisionDeliverySignal,
   UiApprovalDecisionDeliverySignals,
@@ -52,8 +114,8 @@ export type {
   UiRestartBubbleResult,
   UiStartBubbleResult,
   UiStopBubbleResult,
-  UiUpdateBubbleReviewPolicyResult as UpdateReviewPolicyActionResult
-} from "../../../src/contracts/ui/uiActions.js";
+  UpdateReviewPolicyActionResult
+};
 /**
  * @deprecated Use UiAttachBubbleResult for UI action contract surfaces.
  */
@@ -68,7 +130,7 @@ export type {
   UiRepoUpdatedEvent,
   UiSnapshotEvent,
   UiSseEventName
-} from "../../../src/contracts/ui/uiEvents.js";
+};
 export type {
   UiApprovalRequestGateRoute,
   UiBubbleAttention,
@@ -103,7 +165,7 @@ export type {
   UiStatusExecutionContextView,
   UiStatusPaneActivityView,
   UiTimelineEntry
-} from "../../../src/contracts/ui/uiReadModel.js";
+};
 
 export const bubbleActionKinds = [
   "start",

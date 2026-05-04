@@ -1,6 +1,6 @@
 export {
   uiSseEventNames
-} from "../../../../src/contracts/ui/uiEvents.js";
+} from "@pairflow/ui-contracts";
 export type {
   UiBubbleRemovedEvent,
   UiBubbleUpdatedEvent,
@@ -11,4 +11,4 @@ export type {
   UiRepoUpdatedEvent,
   UiSnapshotEvent,
   UiSseEventName
-} from "../../../../src/contracts/ui/uiEvents.js";
+} from "@pairflow/ui-contracts";

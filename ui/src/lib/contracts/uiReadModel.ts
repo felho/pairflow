@@ -1,6 +1,6 @@
 export {
   uiApprovalRequestGateRoutes
-} from "../../../../src/contracts/ui/uiReadModel.js";
+} from "@pairflow/ui-contracts";
 export type {
   UiApprovalRequestGateRoute,
   UiBubbleAttention,
@@ -34,4 +34,4 @@ export type {
   UiStatusExecutionContextView,
   UiStatusPaneActivityView,
   UiTimelineEntry
-} from "../../../../src/contracts/ui/uiReadModel.js";
+} from "@pairflow/ui-contracts";

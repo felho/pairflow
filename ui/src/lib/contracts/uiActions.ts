@@ -42,4 +42,4 @@ export type {
   UiStopBubbleResult,
   UiUpdateBubbleReviewPolicyInput,
   UiUpdateBubbleReviewPolicyResult
-} from "../../../../src/contracts/ui/uiActions.js";
+} from "@pairflow/ui-contracts";
