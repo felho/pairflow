@@ -5,7 +5,7 @@ task_family_id: extract-command-contract
 sequence_key: "1"
 task_id: 1-extract-command-contract
 title: "Extract Command Contract"
-status: in_progress
+status: archived
 phase: phase1
 target_files:
   - src/v11/application/extract/extractCliCommand.ts
@@ -36,6 +36,8 @@ impl_bubble_id: 1-extract-command-contract-impl
 supersedes: []
 superseded_by: null
 archive_group: 2026-05-04-ideation-bubble-extract-plan-v1
+archive_path: plans/archive/tasks/2026-05-04-ideation-bubble-extract-plan-v1/1-extract-command-contract.md
+closed_at: "2026-05-04"
 ---
 
 # Task: Extract Command Contract

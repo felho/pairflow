@@ -4,8 +4,8 @@ artifact_id: plan_ideation_bubble_extract_v1
 plan_id: ideation-bubble-extract-plan-v1
 created_on: "2026-05-04"
 title: "Ideation Bubble Extract Plan"
-status: approved
-plan_status: approved
+status: in_progress
+plan_status: in_progress
 prd_ref: null
 owners:
   - "felho"
@@ -14,15 +14,16 @@ task_order:
   - 2-extract-path-selection
   - 3-extract-copy-commit
   - 4-extract-docs-validation
-active_task_id: 1-extract-command-contract
+active_task_id: 2-extract-path-selection
+last_completed_task_id: 1-extract-command-contract
 archive_group: 2026-05-04-ideation-bubble-extract-plan-v1
 task_tracker:
   - task_id: 1-extract-command-contract
-    task_path: plans/tasks/1-extract-command-contract.md
-    status: in_progress
+    task_path: plans/archive/tasks/2026-05-04-ideation-bubble-extract-plan-v1/1-extract-command-contract.md
+    status: archived
   - task_id: 2-extract-path-selection
-    task_path: null
-    status: not_created
+    task_path: plans/tasks/2-extract-path-selection.md
+    status: approved
   - task_id: 3-extract-copy-commit
     task_path: null
     status: not_created
@@ -175,12 +176,18 @@ bubble branch.
 3. Phase 3: copy and optional selected-path commit.
 4. Phase 4: docs, tests, and lifecycle/operator integration polish.
 
+Progress update (2026-05-04): implementation bubble
+`1-extract-command-contract-impl` closed and merged after approval, commit, and
+merge evidence. Task `1-extract-command-contract` is archived under the plan
+archive group, and task `2-extract-path-selection` was created, reviewed, and
+approved for document-bubble routing.
+
 ## Open Task List
 
 | Task ID | Task Path | Purpose | Depends On | Closes Gap | Status |
 |---|---|---|---|---|---|
-| `1-extract-command-contract` | `plans/tasks/1-extract-command-contract.md` | Define `pairflow bubble extract` CLI contract, option parser/help, result shape, ideation eligibility rules, `--repo`/cwd target repository resolution, repo mismatch fail-closed behavior, no-overwrite v1 contract, commit intent including optional message, and target checkout preconditions. | N/A | No official command contract exists. | in_progress |
-| `2-extract-path-selection` | `null` | Implement explicit repeated `--path` validation with no glob support, repo-relative normalization, `plans/**`/`docs/**`/`progress/**` allowlist checks, source file existence checks, and target conflict detection. | `1-extract-command-contract` | No safe multi-path artifact selector exists. | not_created |
+| `1-extract-command-contract` | `plans/archive/tasks/2026-05-04-ideation-bubble-extract-plan-v1/1-extract-command-contract.md` | Define `pairflow bubble extract` CLI contract, option parser/help, result shape, ideation eligibility rules, `--repo`/cwd target repository resolution, repo mismatch fail-closed behavior, no-overwrite v1 contract, commit intent including optional message, and target checkout preconditions. | N/A | No official command contract exists. | archived |
+| `2-extract-path-selection` | `plans/tasks/2-extract-path-selection.md` | Implement explicit repeated `--path` validation with no glob support, repo-relative normalization, `plans/**`/`docs/**`/`progress/**` allowlist checks, source file existence checks, and target conflict detection. | `1-extract-command-contract` | No safe multi-path artifact selector exists. | approved |
 | `3-extract-copy-commit` | `null` | Copy selected files from bubble worktree to the clean `main` checkout and optionally stage/commit exactly those paths with an explicit selected-path commit result. | `2-extract-path-selection` | No official extract transfer/commit flow exists. | not_created |
 | `4-extract-docs-validation` | `null` | Add operator docs, targeted tests, and final validation for success, multi-path, forbidden path, target conflict, repo mismatch, non-main/dirty target checkout, staged-scope, selected-path commit result, and source-bubble lifecycle non-mutation. | `3-extract-copy-commit` | Extract behavior would remain undocumented and regression-prone. | not_created |
 
