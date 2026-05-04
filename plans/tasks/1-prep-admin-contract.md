@@ -174,15 +174,17 @@ documented route-selection contract for successor tasks to implement.
 
 ### Precondition and Side-Effect Boundary
 
-1. Primary bounded task shape: `contract_documentation`.
-2. Secondary adjacent shape: `workflow_orchestration_contract`, limited to
-   optional future behavior owned by `ExecutePairflowPlan`.
-3. Preconditions for implementation: no runtime precondition changes.
-4. Side effects forbidden: CLI behavior changes, lifecycle mutation changes,
+1. Primary bounded task shape: `contract_or_persisted_authority_foundation`.
+2. Secondary adjacent shape: N/A.
+3. Shape rationale: this is a docs-only shared route contract foundation for
+   `ExecutePairflowPlan`; runtime activation and route behavior changes are
+   explicitly deferred to successor tasks.
+4. Preconditions for implementation: no runtime precondition changes.
+5. Side effects forbidden: CLI behavior changes, lifecycle mutation changes,
    route selection changes, `UsePairflow` edits, direct manual edits to global
    installed skill copies, and product/source code edits.
-5. Invalid/path-failure behavior: N/A for this docs-only task.
-6. Coordination primitives in scope: N/A.
+6. Invalid/path-failure behavior: N/A for this docs-only task.
+7. Coordination primitives in scope: N/A.
 
 ### Closure / Risk Triage
 
@@ -250,7 +252,18 @@ documented route-selection contract for successor tasks to implement.
 | PCM5 | Route integration before manual workflow exists | current task | documented deferred | N/A | docs only | T5 |
 | PCM6 | `UsePairflow` ownership | current task | documented as baseline-only, not touched | N/A | docs only | T6 |
 
-### 0b) Ownership and Deferred Semantics
+### 0b) Validation Matrix
+
+| ID | Validates | Required Evidence | Priority |
+|---|---|---|---|
+| T1 | Preserved ideation baseline wording | Changed `ExecutePairflowPlan` wording cites existing `UsePairflow` round-0 hold/kickoff behavior as baseline and does not redefine it. | P1 |
+| T2 | Optional pattern wording | Changed `ExecutePairflowPlan` wording says pre-kickoff admin containers are optional until successor route tasks adopt them. | P1 |
+| T3 | Product/source admin prohibition | Changed wording explicitly forbids product/source implementation during pre-kickoff admin. | P1 |
+| T4 | Failed publish no-kickoff future rule | Changed wording states future integrated routes must not kickoff after failed or ambiguous admin publish. | P1 |
+| T5 | Route integration deferred | Changed wording keeps current document and implementation routes valid and defers route adoption to successor tasks. | P1 |
+| T6 | `UsePairflow` baseline-only/no-edit proof | Diff shows no `UsePairflow` files modified, and task wording describes `UsePairflow` only as an existing primitive provider. | P1 |
+
+### 0c) Ownership and Deferred Semantics
 
 | Surface / Decision | Owned Here | Emits / Records Only | Deferred Owner | Forbidden Interpretation | Priority |
 |---|---|---|---|---|---|
@@ -261,7 +274,7 @@ documented route-selection contract for successor tasks to implement.
 | Close verifier | no | yes | `5-close-admin-verifier` | Do not alter post-close behavior here. | P2 |
 | `UsePairflow` lifecycle surface | no | yes | successor task only if existing primitives prove insufficient | Do not make `UsePairflow` the owner of this route pattern. | P1 |
 
-### 0c) Mirrored Surface Checklist
+### 0d) Mirrored Surface Checklist
 
 1. `ExecutePairflowPlan/SKILL.md` route/delegation commentary.
 2. `HandleDocumentBubble.md` create route future admin postcondition note.
